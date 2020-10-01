@@ -22,12 +22,12 @@ checked_find_package (FLEX REQUIRED)
 
 if ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
     macro ( FLEX_BISON flexsrc bisonsrc prefix srclist compiler_headers )
-        # mangle osoparse & osolex symbols to avoid multiple library conflicts
-        add_definitions(-D${prefix}parse=${PROJ_NAMESPACE_V}_${prefix}parse -D${prefix}lex=${PROJ_NAMESPACE_V}_${prefix}lex)
+        # mangle osoparse & oslparse symbols to avoid multiple library conflicts
+        # XXX: This may be excessive now that OSL::pvt::ExtraArg is mangled into the function signature
+        add_definitions(-D${prefix}parse=${PROJ_NAMESPACE_V}_${prefix}parse)
 
         if (VERBOSE)
             message (STATUS "FLEX_BISON flex=${flexsrc} bison=${bisonsrc} prefix=${prefix}")
-            message (STATUS "FLEX_SYMBOLS ${PROJ_NAMESPACE_V}_${prefix}parse ${PROJ_NAMESPACE_V}_${prefix}lex")
         endif ()
         get_filename_component ( bisonsrc_we ${bisonsrc} NAME_WE )
         set ( bisonoutputcxx "${CMAKE_CURRENT_BINARY_DIR}/${bisonsrc_we}.cpp" )
@@ -60,7 +60,7 @@ if ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
             set ( FB_WINCOMPAT )
         endif ()
         add_custom_command ( OUTPUT ${flexoutputcxx}
-          COMMAND ${FLEX_EXECUTABLE} ${FB_WINCOMPAT} -o ${flexoutputcxx} "${CMAKE_CURRENT_SOURCE_DIR}/${flexsrc}"
+          COMMAND ${FLEX_EXECUTABLE} ${FB_WINCOMPAT} --prefix=${prefix} -o ${flexoutputcxx} "${CMAKE_CURRENT_SOURCE_DIR}/${flexsrc}"
           MAIN_DEPENDENCY ${flexsrc}
           DEPENDS ${${compiler_headers}}
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

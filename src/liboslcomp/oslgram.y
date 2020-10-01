@@ -6,6 +6,11 @@
 /** Parser for Open Shading Language
  **/
 
+%pure-parser
+%lex-param   { void *scanner }
+%lex-param   { OSL::pvt::OSLCompilerImpl *oslcompiler }
+%parse-param { void *scanner }
+%parse-param { OSL::pvt::OSLCompilerImpl *oslcompiler }
 
 %{
 
@@ -19,28 +24,16 @@
 
 #include "oslcomp_pvt.h"
 
-#undef yylex
-#define yylex osllex
-extern int osllex();
-
-void yyerror (const char *err);
-
-using namespace OSL;
-using namespace OSL::pvt;
-
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
 
-// Forward declaration
-OSL_NAMESPACE_ENTER
-namespace pvt {
-TypeDesc osllextype (int lex);
-};
-OSL_NAMESPACE_EXIT
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC visibility push(hidden)
+#endif
 
-static std::stack<TypeSpec> typespec_stack; // just for function_declaration
-
+using namespace OSL;
+using namespace OSL::pvt;
 %}
 
 
@@ -52,6 +45,19 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
     ASTNode    *n;  // Abstract Syntax Tree node
     const char *s;  // For string values -- guaranteed to be a ustring.c_str()
 }
+
+%{
+OSL_NAMESPACE_ENTER
+namespace pvt {
+
+int yylex(YYSTYPE* yylval_param, YYLTYPE* yylloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler);
+void yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler, const char* err);
+
+TypeDesc osllextype (int lex);
+
+} // namespace pvt
+OSL_NAMESPACE_EXIT
+%}
 
 
 // Tell Bison to track locations for improved error messages
@@ -150,7 +156,7 @@ shader_or_function_declaration
                     if ($1 == (int)ShaderType::Unknown) {
                         // It's a function declaration, not a shader
                         oslcompiler->symtab().push ();  // new scope
-                        typespec_stack.push (oslcompiler->current_typespec());
+                        oslcompiler->typespec_stack().push (oslcompiler->current_typespec());
                     }
                 }
           metadata_block_opt '(' 
@@ -169,7 +175,7 @@ shader_or_function_declaration
                         oslcompiler->symtab().pop ();  // restore scope
                         ASTfunction_declaration *f;
                         f = new ASTfunction_declaration (oslcompiler,
-                                                         typespec_stack.top(),
+                                                         oslcompiler->typespec_stack().top(),
                                                          ustring($2), $7 /*formals*/,
                                                          $11 /*statements*/,
                                                          NULL /*metadata*/,
@@ -177,7 +183,7 @@ shader_or_function_declaration
                         oslcompiler->remember_function_decl (f);
                         f->add_meta (concat($4, $10));
                         $$ = f;
-                        typespec_stack.pop ();
+                        oslcompiler->typespec_stack().pop ();
                     } else {
                         // Shader declaration
                         $$ = new ASTshader_declaration (oslcompiler, $1,
@@ -186,7 +192,7 @@ shader_or_function_declaration
                                                         concat($4,$10) /*meta*/);
                         $$->sourceline (@2.first_line);
                         if (oslcompiler->shader_is_defined()) {
-                            yyerror ("Only one shader is allowed per file.");
+                        yyerror (&yylloc, scanner, oslcompiler, YY_("Only one shader is allowed per file."));
                             delete $$;
                             $$ = NULL;
                         } else {
@@ -310,19 +316,19 @@ function_declaration
         : typespec IDENTIFIER 
                 {
                     oslcompiler->symtab().push ();  // new scope
-                    typespec_stack.push (oslcompiler->current_typespec());
+                    oslcompiler->typespec_stack().push (oslcompiler->current_typespec());
                 }
           '(' formal_params_opt ')' metadata_block_opt function_body_or_just_decl
                 {
                     oslcompiler->symtab().pop ();  // restore scope
                     auto f = new ASTfunction_declaration (oslcompiler,
-                                                     typespec_stack.top(),
+                                                     oslcompiler->typespec_stack().top(),
                                                      ustring($2), $5, $8, NULL,
                                                      @2.first_line);
                     oslcompiler->remember_function_decl (f);
                     f->add_meta ($7);
                     $$ = f;
-                    typespec_stack.pop ();
+                    oslcompiler->typespec_stack().pop ();
                 }
         ;
 
@@ -1086,7 +1092,7 @@ string_literal_group
 
 
 void
-yyerror (const char *err)
+OSL::pvt::yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler, const char* err)
 {
     oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
                         "Syntax error: %s", err);
@@ -1111,3 +1117,7 @@ OSL::pvt::osllextype (int lex)
     default: return TypeDesc::UNKNOWN;
     }
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC visibility pop
+#endif

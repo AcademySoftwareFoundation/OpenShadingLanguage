@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.9 -- 1 Nov? 2020 (compared to 1.11.8)
+---------------------------------------------------
+
 Release 1.11.8 -- 1 Oct 2020 (compared to 1.11.7)
 ---------------------------------------------------
 * Fix broken derivatives of the optional "alpha" return of texture calls

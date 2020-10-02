@@ -485,7 +485,6 @@ OSLCompilerImpl::compile(string_view filename,
                            preprocess_result);
             OSL_DASSERT(m_osofile == nullptr);
         }
-
     }
 
     return !error_encountered();
@@ -564,7 +563,6 @@ OSLCompilerImpl::compile_buffer(string_view sourcecode, std::string& osobuffer,
             osobuffer = oso_output.str();
             OSL_DASSERT(m_osofile == nullptr);
         }
-
     }
 
     return !error_encountered();

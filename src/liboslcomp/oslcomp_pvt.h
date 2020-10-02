@@ -380,10 +380,7 @@ public:
         return m_nowarn_lines.find({ filename, line }) != m_nowarn_lines.end();
     }
 
-    std::stack<TypeSpec>& typespec_stack()
-    {
-        return m_typespec_stack;
-    }
+    std::stack<TypeSpec>& typespec_stack() { return m_typespec_stack; }
 
 private:
     void initialize_globals();

@@ -238,14 +238,44 @@ public:
         return attribute (group, name, TypeDesc::STRING, &s);
     }
 
-    /// Get the named attribute, store it in value.
+    /// Get the named attribute of the ShadingSystem, store it in `*val`.
+    /// Return `true` if found and it was compatible with the type
+    /// specified, otherwise return `false` and do not modify the contents
+    /// of `*val`.  It is up to the caller to ensure that `val` points to
+    /// the right kind and size of storage for the given type.
+    ///
+    /// In addition to being able to retrieve all the attributes that are
+    /// documented as settable by the `attribute()` call, `getattribute()`
+    /// can also retrieve the following read-only attributes:
+    ///
+    /// - `string osl:simd`, `string hw:simd` : A comma-separated list of
+    ///   CPU hardware SIMD features. The `osl:simd` is a list of features
+    ///   enabled when OSL was built, and `hw:simd` is a list of features
+    ///   detected on the actual hardware at runtime.
+    ///
+    /// - `string osl:cuda_version` : The version string of the Cuda version
+    ///   OSL is using (empty string if no Cuda support was enabled at build
+    ///   time).
+    ///
+    /// - `string osl:optix_version` : The version string of the OptiX
+    ///   version OSL is using (empty string if no OptiX support was enabled
+    ///   at build time).
+    ///
+    /// - `string osl:dependencies` : A comma-separated list of OSL's major
+    ///   library build dependencies and their versions (for example,
+    ///   "OIIO-2.3.0,LLVM-10.0.0,OpenEXR-2.5.0").
     ///
     bool getattribute (string_view name, TypeDesc type, void *val);
 
-    // Shortcuts for common types
+    /// Shortcut getattribute() for retrieving a single integer.
+    /// The value is placed in `val`, and the function returns `true` if the
+    /// attribute was found and was legally convertible to an int.
     bool getattribute (string_view name, int &val) {
         return getattribute (name, TypeDesc::INT, &val);
     }
+    /// Shortcut getattribute() for retrieving a single float.
+    /// The value is placed in `val`, and the function returns `true` if the
+    /// attribute was found and was legally convertible to a float.
     bool getattribute (string_view name, float &val) {
         return getattribute (name, TypeDesc::FLOAT, &val);
     }
@@ -256,12 +286,21 @@ public:
             val = f;
         return ok;
     }
+    /// Shortcut getattribute() for retrieving a single string as a
+    /// `const char*`. The value is placed in `val`, and the function
+    /// returns `true` if the attribute was found.
     bool getattribute (string_view name, char **val) {
         return getattribute (name, TypeDesc::STRING, val);
     }
+    /// Shortcut getattribute() for retrieving a single string as a
+    /// `ustring`. The value is placed in `val`, and the function returns
+    /// `true` if the attribute was found.
     bool getattribute (string_view name, ustring &val) {
         return getattribute (name, TypeDesc::STRING, (char **)&val);
     }
+    /// Shortcut getattribute() for retrieving a single string as a
+    /// `std::string`. The value is placed in `val`, and the function
+    /// returns `true` if the attribute was found.
     bool getattribute (string_view name, std::string &val) {
         const char *s = NULL;
         bool ok = getattribute (name, TypeDesc::STRING, &s);

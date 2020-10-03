@@ -183,7 +183,12 @@ target_include_directories (${local_lib}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
     )
-target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
+target_compile_definitions (${local_lib}
+    PRIVATE
+        OSL_EXPORTS
+        OSL_CUDA_VERSION="${CUDA_VERSION}"
+        OSL_OPTIX_VERSION="${OPTIX_VERSION}"
+    )
 if (partio_FOUND)
     target_link_libraries(${local_lib} PRIVATE partio::partio)
     target_compile_definitions (${local_lib} PRIVATE USE_PARTIO=1)

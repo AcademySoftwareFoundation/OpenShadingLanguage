@@ -11,8 +11,6 @@
 #include <OpenImageIO/string_view.h>
 
 
-extern int osoparse ();
-
 
 OSL_NAMESPACE_ENTER
 

@@ -16,9 +16,6 @@
 #include "symtab.h"
 
 
-extern int
-oslparse();
-
 
 OSL_NAMESPACE_ENTER
 

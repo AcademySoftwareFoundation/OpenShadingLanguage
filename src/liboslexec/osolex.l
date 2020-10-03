@@ -295,6 +295,8 @@ public:
     }
 };
 
+
+
 bool
 OSOReader::parse_file (const std::string &filename)
 {

@@ -51,8 +51,11 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * [Boost](www.boost.org) 1.55 or newer (tested through boost 1.73)
 * [Ilmbase](http://openexr.com/downloads.html) 2.0 or newer (tested through 2.5)
-* [Flex](https://github.com/westes/flex) and
-  [GNU Bison](https://www.gnu.org/software/bison/)
+* [Flex](https://github.com/westes/flex) 2.5.35 or newer and
+  [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
+  Note that on some MacOS/xcode releases, the system-installed Bison is too
+  old, and it's better to install a newer Bison (via Homebrew is one way to
+  do this easily).
 * [PugiXML](http://pugixml.org/)
 * (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
   If it is not found at build time, the OSL `pointcloud` functions will not

@@ -17,8 +17,20 @@
 #             for the .y and .l files.
 
 
-checked_find_package (BISON REQUIRED)
-checked_find_package (FLEX REQUIRED)
+# On Mac, prefer the Homebrew version of Bison over the older version from
+# MacOS/xcode in /usr/bin, which seems to be too old for the reentrant
+# parser directives we use. Only do this if there is no BISON_ROOT
+# specifying a particular Bison to use.
+if (APPLE AND EXISTS /usr/local/opt
+        AND NOT BISON_ROOT AND NOT DEFINED ENV{BISON_ROOT})
+    find_program(BISON_EXECUTABLE NAMES /usr/local/opt/bison/bin/bison
+                 DOC "path to the bison executable")
+endif()
+
+checked_find_package (BISON 2.7 REQUIRED
+                      PRINT BISON_EXECUTABLE)
+checked_find_package (FLEX 2.3.35 REQUIRED
+                      PRINT FLEX_EXECUTABLE)
 
 if ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
     macro ( FLEX_BISON flexsrc bisonsrc prefix srclist compiler_headers )

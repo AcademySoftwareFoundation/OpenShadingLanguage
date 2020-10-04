@@ -53,7 +53,7 @@ namespace {  // anonymous
 // Subclass ErrorHandler because we want our messages to appear somewhat
 // differant than the default ErrorHandler base class, in order to match
 // typical compiler command line messages.
-class OSLC_ErrorHandler : public ErrorHandler {
+class OSLC_ErrorHandler final : public ErrorHandler {
 public:
     virtual void operator()(int errcode, const std::string& msg)
     {

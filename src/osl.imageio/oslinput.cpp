@@ -55,7 +55,7 @@ OSL_NAMESPACE_ENTER
 ///
 
 
-class OSLInput : public ImageInput {
+class OSLInput final : public ImageInput {
 public:
     OSLInput();
     virtual ~OSLInput();
@@ -137,7 +137,7 @@ OIIO_PLUGIN_EXPORTS_END
 namespace pvt {
 
 
-class OIIO_RendererServices : public RendererServices {
+class OIIO_RendererServices final : public RendererServices {
 public:
     OIIO_RendererServices(TextureSystem* texsys = NULL)
         : RendererServices(texsys)
@@ -192,7 +192,7 @@ public:
 
 
 
-class ErrorRecorder : public OIIO::ErrorHandler {
+class ErrorRecorder final : public OIIO::ErrorHandler {
 public:
     ErrorRecorder() : ErrorHandler() {}
     virtual void operator()(int errcode, const std::string& msg)

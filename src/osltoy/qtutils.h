@@ -122,7 +122,7 @@ ImageBuf_to_QImage(const OIIO::ImageBuf& ib)
 /// * KeyboardTracking turned off by default, so if you edit the value as
 ///   text, the change doesn't take effect until you hit enter or focus
 ///   on a different widget.
-class DoubleSpinBox : public QDoubleSpinBox {
+class DoubleSpinBox final : public QDoubleSpinBox {
 public:
     typedef QDoubleSpinBox parent_t;
 

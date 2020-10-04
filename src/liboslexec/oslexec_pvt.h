@@ -304,7 +304,7 @@ inline off_t vectorbytes (const std::vector<T> &v)
 /// shader that would be a .oso file on disk: symbols, instructions,
 /// arguments, you name it.  A master copy is shared by all the
 /// individual instances of the shader.
-class ShaderMaster : public RefCnt {
+class ShaderMaster final : public RefCnt {
 public:
     typedef OIIO::intrusive_ptr<ShaderMaster> ref;
     ShaderMaster (ShadingSystemImpl &shadingsys);

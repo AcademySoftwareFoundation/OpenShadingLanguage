@@ -107,7 +107,7 @@ OSL_NAMESPACE_EXIT
 namespace { // anonymous namespace
 
 template <int trans>
-struct Diffuse : public BSDF, DiffuseParams {
+struct Diffuse final : public BSDF, DiffuseParams {
     Diffuse(const DiffuseParams& params) : BSDF(), DiffuseParams(params) { if (trans) N = -N; }
     virtual float eval  (const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& wi, float& pdf) const {
         pdf = std::max(N.dot(wi), 0.0f) * float(M_1_PI);
@@ -121,7 +121,7 @@ struct Diffuse : public BSDF, DiffuseParams {
     }
 };
 
-struct OrenNayar : public BSDF, OrenNayarParams {
+struct OrenNayar final : public BSDF, OrenNayarParams {
    OrenNayar(const OrenNayarParams& params) : BSDF(), OrenNayarParams(params) {
       // precompute some constants
       float s2 = sigma * sigma;
@@ -164,7 +164,7 @@ private:
    float A, B;
 };
 
-struct Phong : public BSDF, PhongParams {
+struct Phong final : public BSDF, PhongParams {
     Phong(const PhongParams& params) : BSDF(), PhongParams(params) {}
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         float cosNI =  N.dot(wi);
@@ -205,7 +205,7 @@ struct Phong : public BSDF, PhongParams {
     }
 };
 
-struct Ward : public BSDF, WardParams {
+struct Ward final : public BSDF, WardParams {
     Ward(const WardParams& params) : BSDF(), WardParams(params) {}
     virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
         float cosNO = -N.dot(sg.I);
@@ -389,7 +389,7 @@ struct BeckmannDist {
 
 
 template <typename Distribution, int Refract>
-struct Microfacet : public BSDF, MicrofacetParams {
+struct Microfacet final : public BSDF, MicrofacetParams {
     Microfacet(const MicrofacetParams& params) : BSDF(),
         MicrofacetParams(params),
         tf(U == Vec3(0) || xalpha == yalpha ? TangentFrame(N) : TangentFrame(N, U)) { }
@@ -599,7 +599,7 @@ typedef Microfacet<BeckmannDist, 0> MicrofacetBeckmannRefl;
 typedef Microfacet<BeckmannDist, 1> MicrofacetBeckmannRefr;
 typedef Microfacet<BeckmannDist, 2> MicrofacetBeckmannBoth;
 
-struct Reflection : public BSDF, ReflectionParams {
+struct Reflection final : public BSDF, ReflectionParams {
     Reflection(const ReflectionParams& params) : BSDF(), ReflectionParams(params) {}
     virtual float albedo(const ShaderGlobals& sg) const {
         float cosNO = -N.dot(sg.I);
@@ -623,7 +623,7 @@ struct Reflection : public BSDF, ReflectionParams {
     }
 };
 
-struct Refraction : public BSDF, RefractionParams {
+struct Refraction final : public BSDF, RefractionParams {
     Refraction(const RefractionParams& params) : BSDF(), RefractionParams(params) {}
     virtual float albedo(const ShaderGlobals& sg) const {
         float cosNO = -N.dot(sg.I);
@@ -639,7 +639,7 @@ struct Refraction : public BSDF, RefractionParams {
     }
 };
 
-struct Transparent : public BSDF {
+struct Transparent final : public BSDF {
     Transparent(const int& /*dummy*/) : BSDF() {}
     virtual float eval  (const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& /*wi*/, float& pdf) const {
         return pdf = 0;

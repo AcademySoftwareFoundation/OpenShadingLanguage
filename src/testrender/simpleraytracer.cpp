@@ -29,7 +29,7 @@ static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
 
 
 // Subclass ErrorHandler
-class SimpleRaytracer::ErrorHandler : public OIIO::ErrorHandler
+class SimpleRaytracer::ErrorHandler final : public OIIO::ErrorHandler
 {
 public:
     ErrorHandler (SimpleRaytracer& rend) : m_rend(rend) { }

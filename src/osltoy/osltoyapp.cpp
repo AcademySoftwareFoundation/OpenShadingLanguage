@@ -52,7 +52,7 @@
 OSL_NAMESPACE_ENTER
 using namespace QtUtils;
 
-class ValueSlider : public QSlider {
+class ValueSlider final : public QSlider {
 public:
     ValueSlider(Qt::Orientation orientation, QWidget* parent)
         : QSlider(orientation, parent)
@@ -101,7 +101,7 @@ struct PixelInfo {
 };
 
 
-class Magnifier : public QWidget {
+class Magnifier final : public QWidget {
     QLabel* m_image;
     QLabel* m_info;
     OSLToyRenderView* m_renderview;
@@ -196,7 +196,7 @@ public:
     void mouseMoveEvent(QMouseEvent* event) override;
 };
 
-class OSLToyRenderView : public QLabel {
+class OSLToyRenderView final : public QLabel {
     Magnifier* m_magnifier;
     OIIO::ImageBuf m_framebuffer;
 
@@ -803,7 +803,7 @@ OSLToyMainWindow::osl_do_rerender(float /*frametime*/)
 
 
 
-class MyOSLCErrorHandler : public OIIO::ErrorHandler {
+class MyOSLCErrorHandler final : public OIIO::ErrorHandler {
 public:
     MyOSLCErrorHandler(OSLToyMainWindow* osltoy) : osltoy(osltoy) {}
     virtual void operator()(int /*errcode*/, const std::string& msg)

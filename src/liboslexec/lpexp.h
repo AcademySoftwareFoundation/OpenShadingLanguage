@@ -65,7 +65,7 @@ class LPexp {
 
 
 /// LPexp concatenation
-class Cat : public LPexp {
+class Cat final : public LPexp {
     public:
         virtual ~Cat();
         void append(LPexp *regexp);
@@ -80,7 +80,7 @@ class Cat : public LPexp {
 
 
 /// Basic symbol like G or 'customlabel'
-class Symbol : public LPexp {
+class Symbol final : public LPexp {
     public:
         Symbol(ustring sym) { m_sym = sym; };
         virtual ~Symbol() {};
@@ -99,7 +99,7 @@ class Symbol : public LPexp {
 /// Wildcard regexp
 ///
 /// Named like this to avoid confusion with the automata Wildcard class
-class Wildexp : public LPexp {
+class Wildexp final : public LPexp {
     public:
         Wildexp(SymbolSet &minus):m_wildcard(minus) {};
         virtual ~Wildexp() {};
@@ -116,7 +116,7 @@ class Wildexp : public LPexp {
 
 
 /// Ored list of expressions
-class Orlist : public LPexp {
+class Orlist final : public LPexp {
     public:
         virtual ~Orlist();
         void append(LPexp *regexp);
@@ -131,7 +131,7 @@ class Orlist : public LPexp {
 
 
 // Unlimited repeat: (exp)*
-class Repeat : public LPexp {
+class Repeat final : public LPexp {
     public:
         Repeat(LPexp *child):m_child(child) {};
         virtual ~Repeat() { delete m_child; };
@@ -146,7 +146,7 @@ class Repeat : public LPexp {
 
 
 // Bounded repeat: (exp){m,n}
-class NRepeat : public LPexp {
+class NRepeat final : public LPexp {
     public:
         NRepeat(LPexp *child, int min, int max):m_child(child),m_min(min),m_max(max) {};
         virtual ~NRepeat() { delete m_child; };

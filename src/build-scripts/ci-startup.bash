@@ -68,10 +68,18 @@ export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:=${PARALLEL}}
 export CTEST_PARALLEL_LEVEL=${CTEST_PARALLEL_LEVEL:=${PARALLEL}}
 
 export LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=$HOME/ext}
-export CMAKE_PREFIX_PATH=${LOCAL_DEPS_DIR}:${CMAKE_PREFIX_PATH}
+export CMAKE_PREFIX_PATH=${LOCAL_DEPS_DIR}/dist:${CMAKE_PREFIX_PATH}
+export LD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/dist/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/dist/lib64:$LD_LIBRARY_PATH
+export DYLD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/dist/lib:$DYLD_LIBRARY_PATH
 
-uname -a
-uname -n
+echo "HOME = $HOME"
+echo "PWD = $PWD"
+echo "LOCAL_DEPS_DIR = $LOCAL_DEPS_DIR"
+echo "uname -a: " `uname -a`
+echo "uname -m: " `uname -m`
+echo "uname -s: " `uname -s`
+echo "uname -n: " `uname -n`
 pwd
 ls
 env | sort

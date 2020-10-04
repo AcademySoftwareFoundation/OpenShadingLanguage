@@ -40,6 +40,14 @@ popd
 #make $MAKEFLAGS VERBOSE=1 $BUILD_FLAGS config
 #make $MAKEFLAGS $PAR_MAKEFLAGS $BUILD_FLAGS $BUILDTARGET
 
+if [[ "${DEBUG_CI:=0}" != "0" ]] ; then
+    echo "PATH=$PATH"
+    echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+    echo "PYTHONPATH=$PYTHONPATH"
+    echo "ldd testshade"
+    ldd $OSL_ROOT/bin/testshade
+fi
+
 if [[ "$SKIP_TESTS" == "" ]] ; then
     $OSL_ROOT/bin/testshade --help
     export OIIO_LIBRARY_PATH=$OSL_ROOT/lib:$OIIO_LIBRARY_PATH

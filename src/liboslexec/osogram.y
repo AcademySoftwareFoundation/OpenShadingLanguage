@@ -6,7 +6,7 @@
 /** Parser for OpenShadingLanguage 'object' files
  **/
 
-%pure-parser
+%define api.pure full
 %lex-param   { void *scanner }
 %lex-param   { OSL::pvt::OSOReader *osoreader }
 %parse-param { void *scanner }

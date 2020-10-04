@@ -6,7 +6,7 @@
 /** Parser for Open Shading Language
  **/
 
-%pure-parser
+%define api.pure full
 %lex-param   { void *scanner }
 %lex-param   { OSL::pvt::OSLCompilerImpl *oslcompiler }
 %parse-param { void *scanner }

@@ -19,7 +19,7 @@ function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
-            "-I${OPENIMAGEIO_INCLUDES}"
+            "-I${OpenImageIO_INCLUDES}"
             "-I${ILMBASE_INCLUDES}"
             "-I${Boost_INCLUDE_DIRS}"
             "-DFMT_DEPRECATED=\"\""
@@ -76,7 +76,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
-            "-I${OPENIMAGEIO_INCLUDE_DIR}"
+            "-I${OpenImageIO_INCLUDES}"
             "-I${ILMBASE_INCLUDE_DIR}"
             "-I${Boost_INCLUDE_DIRS}"
             ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS}

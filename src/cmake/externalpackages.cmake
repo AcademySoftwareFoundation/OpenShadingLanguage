@@ -108,13 +108,7 @@ endif ()
 
 
 # OpenImageIO
-set (OIIO_LIBNAME_SUFFIX "" CACHE STRING
-     "Optional name appended to OIIO libraries that are built")
-checked_find_package (OpenImageIO 2.0 REQUIRED
-                      PRINT OIIOTOOL_BIN)
-if (OPENIMAGEIO_FOUND)
-    include_directories ("${OPENIMAGEIO_INCLUDES}")
-endif ()
+checked_find_package (OpenImageIO 2.1.9 REQUIRED)
 
 
 checked_find_package (pugixml REQUIRED)

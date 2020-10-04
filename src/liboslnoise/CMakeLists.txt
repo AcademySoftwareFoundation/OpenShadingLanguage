@@ -14,7 +14,7 @@ target_include_directories (oslnoise
         ../liboslexec)
 target_link_libraries (oslnoise
     PUBLIC
-        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
+        OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES}
     PRIVATE
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
     )

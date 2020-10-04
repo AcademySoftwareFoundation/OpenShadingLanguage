@@ -123,7 +123,6 @@ ifeq (${SP_OS}, rhel7)
     else ifeq (${OSL_SPIREZ},1)
         MY_CMAKE_FLAGS += -DPYTHON_SITE_DIR="${INSTALL_PREFIX}/python"
     else ifeq (${OSL_ARNOLD},1)
-        OIIO_LIBNAME_SUFFIX ?= _Arnold
         OSL_LIBNAME_SUFFIX ?= _Arnold
     endif
 

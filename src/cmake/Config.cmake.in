@@ -6,10 +6,12 @@
 
 include(CMakeFindDependencyMacro)
 
-# add here all the find_dependency() whenever switching to config based
-# dependencies e.g. if switching to Boost::Boost instead of using
-# ${Boost_LIBRARY_DIRS} the add:
-# find_dependency(Boost @Boost_VERSION@)
+# add here all the public dependencies using find_dependency() whenever
+# switching to config based dependencies e.g. if switching to Boost::Boost
+# instead of using ${Boost_LIBRARY_DIRS} then add:
+#     find_dependency(Boost @Boost_VERSION@)
+
+find_dependency(OpenImageIO @OpenImageIO_VERSION@ REQUIRED)
 
 set_and_check (@PROJECT_NAME@_INCLUDE_DIR "@CMAKE_INSTALL_FULL_INCLUDEDIR@")
 set_and_check (@PROJECT_NAME@_INCLUDES    "@CMAKE_INSTALL_FULL_INCLUDEDIR@")

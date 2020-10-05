@@ -15,7 +15,7 @@
 OSL_NAMESPACE_ENTER
 
 
-class OptixRaytracer : public SimpleRaytracer
+class OptixRaytracer final : public SimpleRaytracer
 {
 public:
     // Just use 4x4 matrix for transformations

@@ -25,7 +25,7 @@ namespace pvt {
 
 // Custom subclass of OSOReader that just reads the .oso file and fills
 // out the right fields in the OSLQuery.
-class OSOReaderQuery : public OSOReader {
+class OSOReaderQuery final : public OSOReader {
 public:
     OSOReaderQuery(OSLQuery& query)
         : m_query(query), m_reading_param(false), m_default_values(0)

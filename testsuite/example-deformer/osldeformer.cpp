@@ -94,7 +94,7 @@ struct MyUserData {
 // how "userdata" is retrieved. We set up a subclass that overloads
 // get_userdata() to retrieve it from a per-point MyUserData that whose
 // pointer is stored in shaderglobals.renderstate.
-class MyRendererServices : public OSL::RendererServices {
+class MyRendererServices final : public OSL::RendererServices {
 public:
     virtual bool get_userdata (bool derivatives, OSL::ustring name,
                                OSL::TypeDesc type, OSL::ShaderGlobals *sg,

@@ -38,7 +38,7 @@ namespace {
 // Also if future LLVM version takes on the work of this optimization pass,
 // then it may be removed.
 template <int WidthT>
-class PreventBitMasksFromBeingLiveinsToBasicBlocks
+class PreventBitMasksFromBeingLiveinsToBasicBlocks final
     : public llvm::FunctionPass
 {
     typedef llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter> IRBuilder;
@@ -307,7 +307,7 @@ public:
 
 
 template <int WidthT>
-class PrePromoteLogicalOpsOnBitMasks
+class PrePromoteLogicalOpsOnBitMasks final
     : public llvm::FunctionPass
 {
     typedef llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter> IRBuilder;

@@ -15,7 +15,7 @@
 OSL_NAMESPACE_ENTER
 
 
-class OptixGridRenderer : public SimpleRenderer
+class OptixGridRenderer final : public SimpleRenderer
 {
 public:
     // Just use 4x4 matrix for transformations

@@ -28,7 +28,7 @@ namespace pvt {   // OSL::pvt
 
 /// OSOProcessor that generates LLVM IR and JITs it to give machine
 /// code to implement a shader group.
-class BackendLLVM : public OSOProcessorBase {
+class BackendLLVM final : public OSOProcessorBase {
 public:
     BackendLLVM (ShadingSystemImpl &shadingsys, ShaderGroup &group,
                 ShadingContext *context);

@@ -34,7 +34,7 @@ typedef std::vector<std::shared_ptr<StructSpec>> StructList;
 /// Subclass of Symbol used just for functions, which are different
 /// because they can be polymorphic, and also need to carry around more
 /// information than other symbols.
-class FunctionSymbol : public Symbol {
+class FunctionSymbol final : public Symbol {
 public:
     FunctionSymbol(ustring n, TypeSpec type, ASTNode* node = NULL)
         : Symbol(n, type, SymTypeFunction, node)
@@ -112,7 +112,7 @@ private:
 /// general case (like arrays), it allocates memory and uses the
 /// parent class's fields m_data and m_data_free, which will also cause
 /// the parent class to properly free it upon destruction.
-class ConstantSymbol : public Symbol {
+class ConstantSymbol final : public Symbol {
 public:
     ConstantSymbol(ustring n, ustring val)
         : Symbol(n, TypeDesc::TypeString, SymTypeConst)

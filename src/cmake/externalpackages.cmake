@@ -312,14 +312,39 @@ if (USE_CUDA OR USE_OPTIX)
     endif ()
 
     set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
-endif ()
 
+    find_library(cuda_lib NAMES cudart
+                 PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
+                 REQUIRED)
+    set(CUDA_LIBRARIES ${cuda_lib})
 
-# OptiX setup
-if (USE_OPTIX)
-    checked_find_package (OptiX 5.1 REQUIRED)
-    include_directories (BEFORE "${OPTIX_INCLUDES}")
-    if (NOT USE_LLVM_BITCODE OR NOT USE_FAST_MATH)
-        message (FATAL_ERROR "Enabling OptiX requires USE_LLVM_BITCODE=1 and USE_FAST_MATH=1")
+    # testrender & testshade need libnvrtc
+    if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "10.0")
+        find_library(nvrtc_lib NAMES nvrtc
+                     PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
+                     REQUIRED)
+        set(CUDA_LIBRARIES ${CUDA_LIBRARIES} ${nvrtc_lib})
+
+        set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl)
+    endif()
+
+    # OptiX setup
+    if (USE_OPTIX)
+        checked_find_package (OptiX 5.1 REQUIRED)
+        include_directories (BEFORE "${OPTIX_INCLUDES}")
+        if (NOT USE_LLVM_BITCODE OR NOT USE_FAST_MATH)
+            message (FATAL_ERROR "Enabling OptiX requires USE_LLVM_BITCODE=1 and USE_FAST_MATH=1")
+        endif ()
     endif ()
+
+    function (osl_optix_target TARGET)
+        target_include_directories (${TARGET} BEFORE PRIVATE ${CUDA_INCLUDES} ${OPTIX_INCLUDES})
+        ## XXX: Should -DPTX_PATH point to (or include) CMAKE_CURRENT_BINARY_DIR so tests can run before installation ?
+        target_compile_definitions (${TARGET} PRIVATE "-DPTX_PATH=\"${OSL_PTX_INSTALL_DIR}\"")
+        target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+    endfunction()
+
+else ()
+    function (osl_optix_target TARGET)
+    endfunction()
 endif ()

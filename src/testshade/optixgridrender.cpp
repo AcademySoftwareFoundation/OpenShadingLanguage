@@ -629,7 +629,9 @@ OptixGridRenderer::make_optix_materials ()
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth          = 1;
     pipeline_link_options.debugLevel             = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;
+#endif
 
     // Build string-table "library"
     nvrtcProgram str_lib;
@@ -677,6 +679,7 @@ OptixGridRenderer::make_optix_materials ()
     strlib_ss << "   // must have a __direct_callable__ function for the module to compile\n";
     strlib_ss << "}\n";
 
+    // XXX: Should this move to compute_60 (compute_35-compute_50 is now deprecated)
     const char *cuda_compile_options[] = { "--gpu-architecture=compute_35"  ,
                                            "--use_fast_math"                ,
                                            "-dc"                            ,
@@ -694,12 +697,17 @@ OptixGridRenderer::make_optix_materials ()
                                      0,         // number of headers
                                      nullptr,   // header paths
                                      nullptr)); // header files
-    NVRTC_CHECK (nvrtcCompileProgram (str_lib,  num_compile_flags, cuda_compile_options));
-    NVRTC_CHECK (nvrtcGetProgramLogSize (str_lib, &cuda_log_size));
-    std::vector<char> cuda_log (cuda_log_size);
-    NVRTC_CHECK (nvrtcGetProgramLog (str_lib, cuda_log.data ()));
-    //if (cuda_log_size > 1)
-    //    printf ("CUDA compilation log:\n%s\n", cuda_log.data ());
+    nvrtcResult compileResult = nvrtcCompileProgram (str_lib,  num_compile_flags, cuda_compile_options);
+    if (compileResult != NVRTC_SUCCESS) {
+        NVRTC_CHECK (nvrtcGetProgramLogSize (str_lib, &cuda_log_size));
+        std::vector<char> cuda_log(cuda_log_size+1);
+        NVRTC_CHECK (nvrtcGetProgramLog (str_lib, cuda_log.data()));
+        cuda_log.back() = 0;
+        errhandler().error ("nvrtcCompileProgram failure for:\n%s\n"
+                            "====================================\n"
+                            "%s\n", cuda_string.c_str(), cuda_log.data());
+        return false;
+    }
     NVRTC_CHECK (nvrtcGetPTXSize (str_lib, &str_lib_size));
     std::vector<char> str_lib_ptx (str_lib_size);
     NVRTC_CHECK (nvrtcGetPTX(str_lib, str_lib_ptx.data()));
@@ -879,7 +887,7 @@ OptixGridRenderer::good(TextureHandle *handle OSL_MAYBE_UNUSED)
 #if (OPTIX_VERSION < 70000)
     return intptr_t(handle) != RT_TEXTURE_ID_NULL;
 #else
-    return true;  // texture always valid?
+    return handle != nullptr;
 #endif
 #else
     return false;

@@ -280,8 +280,8 @@ ifeq (${SP_OS}, rhel7)
 
     # Cuda/OptiX
     USE_OPTIX ?= 1
-    CUDA_VERSION ?= 10.1u2
-    OPTIX_VERSION ?= 6.0.0
+    CUDA_VERSION ?= 11.0.1
+    OPTIX_VERSION ?= 7.1.0
     # CUDA_TOOLKIT_ROOT_DIR = $(shell rez-env -b cuda-${CUDA_VERSION} ${SPI_COMPILER_PLATFORM} -c "echo '$CUDA_TOOLKIT_ROOT'")
     CUDA_TOOLKIT_ROOT_DIR ?= /shots/spi/home/lib/arnold/rhel7/cuda_${CUDA_VERSION}
     CUDA_EXTRA_LIBS ?= ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libnvrtc.so

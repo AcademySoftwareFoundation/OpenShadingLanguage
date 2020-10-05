@@ -316,6 +316,10 @@ macro (add_one_testsuite testname testsrcdir)
     endif ()
     if (${testname} MATCHES "optix")
         set_tests_properties (${testname} PROPERTIES LABELS optix)
+        if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "10.0")
+            # Make sure libnvrtc-builtins.so is reachable
+            set_property (TEST ${testname} APPEND PROPERTY ENVIRONMENT LD_LIBRARY_PATH=${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+        endif()
     endif ()
 endmacro ()
 

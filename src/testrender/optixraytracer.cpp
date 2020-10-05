@@ -724,8 +724,9 @@ OptixRaytracer::make_optix_materials ()
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth          = 1;
     pipeline_link_options.debugLevel             = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;
-
+#endif
 
     // Build string-table "library"
     nvrtcProgram str_lib;
@@ -773,6 +774,7 @@ OptixRaytracer::make_optix_materials ()
     strlib_ss << "   // must have a __direct_callable__ function for the module to compile\n";
     strlib_ss << "}\n";
 
+    // XXX: Should this move to compute_60 (compute_35-compute_50 is now deprecated)
     const char *cuda_compile_options[] = { "--gpu-architecture=compute_35"  ,
                                            "--use_fast_math"                ,
                                            "-dc"                            ,
@@ -791,12 +793,18 @@ OptixRaytracer::make_optix_materials ()
                                      0,         // number of headers
                                      nullptr,   // header paths
                                      nullptr)); // header files
-    NVRTC_CHECK (nvrtcCompileProgram (str_lib,  num_compile_flags, cuda_compile_options));
-    NVRTC_CHECK (nvrtcGetProgramLogSize (str_lib, &cuda_log_size));
-    std::vector<char> cuda_log(cuda_log_size);
-    NVRTC_CHECK (nvrtcGetProgramLog (str_lib, cuda_log.data()));
-    //if (cuda_log_size > 1)
-    //    printf ("CUDA compilation log:\n%s\n", cuda_log.data());
+    nvrtcResult compileResult = nvrtcCompileProgram (str_lib,  num_compile_flags, cuda_compile_options);
+    if (compileResult != NVRTC_SUCCESS) {
+        NVRTC_CHECK (nvrtcGetProgramLogSize (str_lib, &cuda_log_size));
+        std::vector<char> cuda_log(cuda_log_size+1);
+        NVRTC_CHECK (nvrtcGetProgramLog (str_lib, cuda_log.data()));
+        cuda_log.back() = 0;
+        errhandler().error ("nvrtcCompileProgram failure for:\n%s\n"
+                            "====================================\n"
+                            "%s\n", cuda_string.c_str(), cuda_log.data());
+        return false;
+    }
+
 
     NVRTC_CHECK (nvrtcGetPTXSize (str_lib, &str_lib_size));
     std::vector<char> str_lib_ptx (str_lib_size);
@@ -1071,7 +1079,11 @@ OptixRaytracer::finalize_scene()
     unsigned int  quadSbtRecord;
     quadSbtRecord = OPTIX_GEOMETRY_FLAG_NONE;
     if (scene.quads.size() > 0) {
+#if (OPTIX_VERSION < 70100)
         OptixBuildInputCustomPrimitiveArray& quadsInput = buildInputs[numBuildInputs].aabbArray;
+#else
+        OptixBuildInputCustomPrimitiveArray& quadsInput = buildInputs[numBuildInputs].customPrimitiveArray;
+#endif
         buildInputs[numBuildInputs].type       = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
         quadsInput.flags                       = &quadSbtRecord;
         quadsInput.aabbBuffers                 = reinterpret_cast<CUdeviceptr *>(&d_quadsAabb);
@@ -1116,7 +1128,11 @@ OptixRaytracer::finalize_scene()
     unsigned int sphereSbtRecord;
     sphereSbtRecord = OPTIX_GEOMETRY_FLAG_NONE;
     if (scene.spheres.size() > 0) {
+#if (OPTIX_VERSION < 70100)
         OptixBuildInputCustomPrimitiveArray& spheresInput = buildInputs[numBuildInputs].aabbArray;
+#else
+        OptixBuildInputCustomPrimitiveArray& spheresInput = buildInputs[numBuildInputs].customPrimitiveArray;
+#endif
         buildInputs[numBuildInputs].type         = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
         spheresInput.flags                       = &sphereSbtRecord;
         spheresInput.aabbBuffers                 = reinterpret_cast<CUdeviceptr *>(&d_spheresAabb);
@@ -1184,7 +1200,7 @@ OptixRaytracer::good(TextureHandle *handle OSL_MAYBE_UNUSED)
 #if (OPTIX_VERSION < 70000)
     return intptr_t(handle) != RT_TEXTURE_ID_NULL;
 #else
-    return false;
+    return handle != nullptr;
 #endif
 
 #else

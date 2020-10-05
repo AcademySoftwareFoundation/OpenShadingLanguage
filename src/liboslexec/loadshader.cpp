@@ -25,7 +25,7 @@ namespace pvt {   // OSL::pvt
 
 /// Custom subclass of OSOReader that provide callbacks that set all the
 /// right fields in the ShaderMaster.
-class OSOReaderToMaster : public OSOReader
+class OSOReaderToMaster final : public OSOReader
 {
 public:
     OSOReaderToMaster (ShadingSystemImpl &shadingsys)

@@ -194,7 +194,7 @@ LLVM_Util::total_jit_memory_held ()
 /// MemoryManager - Create a shell that passes on requests
 /// to a real LLVMMemoryManager underneath, but can be retained after the
 /// dummy is destroyed.  Also, we don't pass along any deallocations.
-class LLVM_Util::MemoryManager : public LLVMMemoryManager {
+class LLVM_Util::MemoryManager final : public LLVMMemoryManager {
 protected:
     LLVMMemoryManager *mm;  // the real one
 public:
@@ -270,7 +270,7 @@ public:
 
 
 
-class LLVM_Util::IRBuilder : public llvm::IRBuilder<llvm::ConstantFolder,
+class LLVM_Util::IRBuilder final : public llvm::IRBuilder<llvm::ConstantFolder,
                                                llvm::IRBuilderDefaultInserter> {
     typedef llvm::IRBuilder<llvm::ConstantFolder,
                             llvm::IRBuilderDefaultInserter> Base;

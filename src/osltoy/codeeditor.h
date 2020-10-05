@@ -52,7 +52,7 @@ class QWidget;
 class LineNumberArea;
 
 
-class CodeEditor : public QPlainTextEdit {
+class CodeEditor final : public QPlainTextEdit {
     Q_OBJECT
 
 public:
@@ -90,7 +90,7 @@ private:
 
 
 
-class LineNumberArea : public QWidget {
+class LineNumberArea final : public QWidget {
 public:
     LineNumberArea(CodeEditor* editor) : QWidget(editor)
     {

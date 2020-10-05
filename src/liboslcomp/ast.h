@@ -422,7 +422,7 @@ private:
 
 
 
-class ASTshader_declaration : public ASTNode {
+class ASTshader_declaration final : public ASTNode {
 public:
     ASTshader_declaration(OSLCompilerImpl* comp, int stype, ustring name,
                           ASTNode* form, ASTNode* stmts, ASTNode* meta);
@@ -444,7 +444,7 @@ private:
 
 
 
-class ASTfunction_declaration : public ASTNode {
+class ASTfunction_declaration final : public ASTNode {
 public:
     ASTfunction_declaration(OSLCompilerImpl* comp, TypeSpec type, ustring name,
                             ASTNode* form, ASTNode* stmts, ASTNode* meta,
@@ -474,7 +474,7 @@ private:
 
 
 
-class ASTvariable_declaration : public ASTNode {
+class ASTvariable_declaration final : public ASTNode {
 public:
     ASTvariable_declaration(OSLCompilerImpl* comp, const TypeSpec& type,
                             ustring name, ASTNode* init, bool isparam,
@@ -531,7 +531,7 @@ private:
 
 
 
-class ASTvariable_ref : public ASTNode {
+class ASTvariable_ref final : public ASTNode {
 public:
     ASTvariable_ref(OSLCompilerImpl* comp, ustring name);
     const char* nodetypename() const { return "variable_ref"; }
@@ -550,7 +550,7 @@ private:
 
 
 
-class ASTpreincdec : public ASTNode {
+class ASTpreincdec final : public ASTNode {
 public:
     ASTpreincdec(OSLCompilerImpl* comp, int op, ASTNode* expr);
     const char* nodetypename() const
@@ -566,7 +566,7 @@ public:
 
 
 
-class ASTpostincdec : public ASTNode {
+class ASTpostincdec final : public ASTNode {
 public:
     ASTpostincdec(OSLCompilerImpl* comp, int op, ASTNode* expr);
     const char* nodetypename() const
@@ -582,7 +582,7 @@ public:
 
 
 
-class ASTindex : public ASTNode {
+class ASTindex final : public ASTNode {
 public:
     // ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index);
     // ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index, ASTNode *index2);
@@ -617,7 +617,7 @@ public:
 
 
 
-class ASTstructselect : public ASTNode {
+class ASTstructselect final : public ASTNode {
 public:
     ASTstructselect(OSLCompilerImpl* comp, ASTNode* expr, ustring field);
     const char* nodetypename() const { return "structselect"; }
@@ -653,7 +653,7 @@ private:
 
 
 
-class ASTconditional_statement : public ASTNode {
+class ASTconditional_statement final : public ASTNode {
 public:
     ASTconditional_statement(OSLCompilerImpl* comp, ASTNode* cond,
                              ASTNode* truestmt, ASTNode* falsestmt = NULL)
@@ -674,7 +674,7 @@ public:
 
 
 
-class ASTloop_statement : public ASTNode {
+class ASTloop_statement final : public ASTNode {
 public:
     enum LoopType { LoopWhile, LoopDo, LoopFor };
 
@@ -695,7 +695,7 @@ public:
 
 
 
-class ASTloopmod_statement : public ASTNode {
+class ASTloopmod_statement final : public ASTNode {
 public:
     enum LoopModType { LoopModBreak, LoopModContinue };
 
@@ -713,7 +713,7 @@ public:
 
 
 
-class ASTreturn_statement : public ASTNode {
+class ASTreturn_statement final : public ASTNode {
 public:
     ASTreturn_statement(OSLCompilerImpl* comp, ASTNode* expr)
         : ASTNode(return_statement_node, comp, 0, expr)
@@ -763,7 +763,8 @@ public:
 };
 
 
-class ASTcompound_initializer : public ASTtype_constructor {
+
+class ASTcompound_initializer final : public ASTtype_constructor {
     bool m_ctor;
 
     TypeSpec typecheck(TypeSpec expected, unsigned mode);
@@ -787,7 +788,7 @@ public:
 
 
 
-class ASTassign_expression : public ASTNode {
+class ASTassign_expression final : public ASTNode {
 public:
     ASTassign_expression(OSLCompilerImpl* comp, ASTNode* var, Operator op,
                          ASTNode* expr);
@@ -804,7 +805,7 @@ public:
 
 
 
-class ASTunary_expression : public ASTNode {
+class ASTunary_expression final : public ASTNode {
 public:
     ASTunary_expression(OSLCompilerImpl* comp, int op, ASTNode* expr);
 
@@ -823,7 +824,7 @@ private:
 
 
 
-class ASTbinary_expression : public ASTNode {
+class ASTbinary_expression final : public ASTNode {
 public:
     ASTbinary_expression(OSLCompilerImpl* comp, Operator op, ASTNode* left,
                          ASTNode* right);
@@ -847,7 +848,7 @@ private:
 
 
 
-class ASTternary_expression : public ASTNode {
+class ASTternary_expression final : public ASTNode {
 public:
     ASTternary_expression(OSLCompilerImpl* comp, ASTNode* cond,
                           ASTNode* trueexpr, ASTNode* falseexpr)
@@ -867,7 +868,7 @@ public:
 
 
 
-class ASTcomma_operator : public ASTNode {
+class ASTcomma_operator final : public ASTNode {
 public:
     ASTcomma_operator(OSLCompilerImpl* comp, ASTNode* exprlist)
         : ASTNode(comma_operator_node, comp, Nothing, exprlist)
@@ -884,7 +885,7 @@ public:
 
 
 
-class ASTtypecast_expression : public ASTNode {
+class ASTtypecast_expression final : public ASTNode {
 public:
     ASTtypecast_expression(OSLCompilerImpl* comp, TypeSpec typespec,
                            ASTNode* expr)
@@ -903,7 +904,7 @@ public:
 
 
 
-class ASTfunction_call : public ASTNode {
+class ASTfunction_call final : public ASTNode {
 public:
     ASTfunction_call(OSLCompilerImpl* comp, ustring name, ASTNode* args,
                      FunctionSymbol* funcsym = nullptr);
@@ -1019,7 +1020,7 @@ private:
 
 
 
-class ASTliteral : public ASTNode {
+class ASTliteral final : public ASTNode {
 public:
     ASTliteral(OSLCompilerImpl* comp, int i)
         : ASTNode(literal_node, comp), m_i(i)

@@ -19,7 +19,7 @@ typedef struct
 
 // This is a fake AOV implementation. It will just keep track
 // of what test cases wrote to it
-class MyAov : public Aov
+class MyAov final : public Aov
 {
     public:
         MyAov(const TestPath *test, int id)

@@ -38,7 +38,7 @@ class OSLToyRenderer;
 
 
 
-class ParamRec : public OSLQuery::Parameter {
+class ParamRec final : public OSLQuery::Parameter {
 public:
     using Parameter = OSLQuery::Parameter;
     // Inherits everything from OSLQuery::Parameter, and...
@@ -53,7 +53,7 @@ public:
 
 class OSLToyRenderView;
 
-class OSLToyMainWindow : public QMainWindow {
+class OSLToyMainWindow final : public QMainWindow {
     Q_OBJECT
 
 

@@ -32,7 +32,7 @@ typedef std::set<int> FastIntSet;
 
 
 /// OSOProcessor that does runtime optimization on shaders.
-class RuntimeOptimizer : public OSOProcessorBase {
+class RuntimeOptimizer final : public OSOProcessorBase {
 public:
     RuntimeOptimizer (ShadingSystemImpl &shadingsys, ShaderGroup &group,
                       ShadingContext *context);

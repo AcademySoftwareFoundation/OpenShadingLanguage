@@ -18,7 +18,7 @@ OSL_NAMESPACE_ENTER
 
 
 
-class OSLToyRenderer : public RendererServices {
+class OSLToyRenderer final : public RendererServices {
 public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;

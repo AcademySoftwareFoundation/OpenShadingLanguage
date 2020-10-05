@@ -146,7 +146,7 @@ private:
 };
 
 
-struct Sphere : public Primitive {
+struct Sphere final : public Primitive {
     Sphere(Vec3 c, float r, int shaderID, bool isLight)
         : Primitive(shaderID, isLight), c(c), r2(r * r) {
         OSL_DASSERT(r > 0);
@@ -274,7 +274,7 @@ private:
 
 
 
-struct Quad : public Primitive {
+struct Quad final : public Primitive {
     Quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID, bool isLight)
         : Primitive(shaderID, isLight), p(p), ex(ex), ey(ey) {
         n = ex.cross(ey);

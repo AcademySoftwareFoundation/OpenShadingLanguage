@@ -6,6 +6,11 @@
 /** Parser for OpenShadingLanguage 'object' files
  **/
 
+%define api.pure full
+%lex-param   { void *scanner }
+%lex-param   { OSL::pvt::OSOReader *osoreader }
+%parse-param { void *scanner }
+%parse-param { OSL::pvt::OSOReader *osoreader }
 
 %{
 
@@ -18,30 +23,13 @@
 
 #include "osoreader.h"
 
-#undef yylex
-extern int osolex();
-
-using namespace OSL;
-using namespace OSL::pvt;
-
-void yyerror (const char *err);
-
-#define yylex osolex
-#define reader OSOReader::reader
-
-static TypeSpec current_typespec;
-static std::string current_shader_name;
-
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
 
-// Forward declaration
-OSL_NAMESPACE_ENTER
-namespace pvt {
-TypeDesc osolextype (int lex);
-};
-OSL_NAMESPACE_EXIT
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC visibility push(hidden)
+#endif
 
 %}
 
@@ -54,6 +42,21 @@ OSL_NAMESPACE_EXIT
     const char *s;  // For string values -- guaranteed to be a ustring.c_str()
 }
 
+%{
+OSL_NAMESPACE_ENTER
+namespace pvt {
+
+int yylex(YYSTYPE* yylval_param, YYLTYPE* yylloc_param, void* yyscanner, OSOReader* osoreader);
+void yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSOReader* osoreader, const char* err);
+
+TypeDesc osolextype (int lex);
+
+} // namespace pvt
+OSL_NAMESPACE_EXIT
+
+using namespace OSL;
+using namespace OSL::pvt;
+%}
 
 // Tell Bison to track locations for improved error messages
 %locations
@@ -88,7 +91,7 @@ OSL_NAMESPACE_EXIT
 oso_file
         : version shader_declaration symbols_opt codemarker instructions
                 {
-                    OSOReader::osoreader->codeend ();
+                    osoreader->codeend ();
                     $$ = 0;
                 }
 	;
@@ -98,7 +101,7 @@ version
                 {
                     int major = (int) $2;
                     int minor = (int) (100*($2-major) + 0.5);
-                    OSOReader::osoreader->version ($1, major, minor);
+                    osoreader->version ($1, major, minor);
                     $$ = 0;
                 }
         ;
@@ -106,8 +109,7 @@ version
 shader_declaration
         : shader_type IDENTIFIER 
                 {
-                    OSOReader::osoreader->shader ($1, $2);
-                    current_shader_name = $2;
+                    osoreader->shader ($1, $2);
                 }
             hints_opt ENDOFLINE
                 {
@@ -123,9 +125,9 @@ symbols_opt
 codemarker
         : CODE IDENTIFIER ENDOFLINE
                 {
-                    if (! OSOReader::osoreader->parse_code_section())
+                    if (! osoreader->parse_code_section())
                         YYACCEPT;
-                    OSOReader::osoreader->codemarker ($2);
+                    osoreader->codemarker ($2);
                 }
         ;
 
@@ -137,11 +139,11 @@ instructions
 instruction
         : label opcode 
                 {
-                    OSOReader::osoreader->instruction ($1, $2);
+                    osoreader->instruction ($1, $2);
                 }
             arguments_opt jumptargets_opt hints_opt ENDOFLINE
                 {
-                    OSOReader::osoreader->instruction_end ();
+                    osoreader->instruction_end ();
                 }
         | codemarker
         | ENDOFLINE
@@ -160,16 +162,16 @@ symbol
         : SYMTYPE typespec arraylen_opt IDENTIFIER 
                 {
                     if ((SymType)$1 == SymTypeTemp &&
-                        OSOReader::osoreader->stop_parsing_at_temp_symbols())
+                        osoreader->stop_parsing_at_temp_symbols())
                         YYACCEPT;
-                    TypeSpec typespec = current_typespec;
+                    TypeSpec typespec = osoreader->current_typespec();
                     if ($3)
                         typespec.make_array ($3);
-                    OSOReader::osoreader->symbol ((SymType)$1, typespec, $4);
+                    osoreader->symbol ((SymType)$1, typespec, $4);
                 }
             initial_values_opt hints_opt
                 {
-                    OSOReader::osoreader->parameter_done ();
+                    osoreader->parameter_done ();
                 }
             ENDOFLINE
         | ENDOFLINE
@@ -179,17 +181,17 @@ symbol
 typespec
         : simple_typename
                 {
-                    current_typespec = osolextype ($1);
+                    osoreader->current_typespec(osolextype ($1));
                     $$ = 0;
                 }
         | CLOSURE simple_typename
                 {
-                    current_typespec = TypeSpec (osolextype ($2), true);
+                    osoreader->current_typespec(TypeSpec (osolextype ($2), true));
                     $$ = 0;
                 }
         | STRUCT IDENTIFIER
                 {
-                    current_typespec = TypeSpec ($2, 0);
+                    osoreader->current_typespec(TypeSpec ($2, 0));
                     $$ = 0;
                 }
         ;
@@ -225,17 +227,17 @@ initial_values
 initial_value
         : FLOAT_LITERAL
                 {
-                    OSOReader::osoreader->symdefault ($1);
+                    osoreader->symdefault ($1);
                     $$ = 0;
                 }
         | INT_LITERAL
                 {
-                    OSOReader::osoreader->symdefault ($1);
+                    osoreader->symdefault ($1);
                     $$ = 0;
                 }
         | STRING_LITERAL
                 {
-                    OSOReader::osoreader->symdefault ($1);
+                    osoreader->symdefault ($1);
                     $$ = 0;
                 }
         ;
@@ -262,7 +264,7 @@ arguments
 argument
         : IDENTIFIER
                 {
-                    OSOReader::osoreader->instruction_arg ($1);
+                    osoreader->instruction_arg ($1);
                 }
         ;
 
@@ -279,7 +281,7 @@ jumptargets
 jumptarget
         : INT_LITERAL
                 {
-                    OSOReader::osoreader->instruction_jump ($1);
+                    osoreader->instruction_jump ($1);
                 }
         ;
 
@@ -296,7 +298,7 @@ hints
 hint
         : HINT
                 {
-                    OSOReader::osoreader->hint ($1);
+                    osoreader->hint ($1);
                     $$ = 0;
                 }
         ;
@@ -307,10 +309,10 @@ hint
 
 
 void
-yyerror (const char *err)
+OSL::pvt::yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSOReader* osoreader, const char* err)
 {
-    OSOReader::osoreader->errhandler().error ("Error, line %d: %s", 
-             OSOReader::osoreader->lineno(), err);
+    osoreader->errhandler().error ("Error, line %d: %s", 
+             osoreader->lineno(), err);
 }
 
 
@@ -335,3 +337,7 @@ OSL::pvt::osolextype (int lex)
     default: return TypeDesc::UNKNOWN;
     }
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC visibility pop
+#endif

@@ -55,9 +55,9 @@ ASTfunction_declaration::typecheck(TypeSpec expected)
 {
     // Typecheck the args, remember to push/pop the function so that the
     // typechecking for 'return' will know which function it belongs to.
-    oslcompiler->push_function(func());
+    m_compiler->push_function(func());
     typecheck_children(expected);
-    oslcompiler->pop_function();
+    m_compiler->pop_function();
     if (m_typespec == TypeSpec())
         m_typespec = expected;
     return m_typespec;
@@ -233,10 +233,10 @@ ASTstructselect::typecheck(TypeSpec expected)
 TypeSpec ASTconditional_statement::typecheck(TypeSpec /*expected*/)
 {
     typecheck_list(cond());
-    oslcompiler->push_nesting(false);
+    m_compiler->push_nesting(false);
     typecheck_list(truestmt());
     typecheck_list(falsestmt());
-    oslcompiler->pop_nesting(false);
+    m_compiler->pop_nesting(false);
 
     TypeSpec c = cond()->typespec();
     if (c.is_structure())
@@ -251,11 +251,11 @@ TypeSpec ASTconditional_statement::typecheck(TypeSpec /*expected*/)
 TypeSpec ASTloop_statement::typecheck(TypeSpec /*expected*/)
 {
     typecheck_list(init());
-    oslcompiler->push_nesting(true);
+    m_compiler->push_nesting(true);
     typecheck_list(cond());
     typecheck_list(iter());
     typecheck_list(stmt());
-    oslcompiler->pop_nesting(true);
+    m_compiler->pop_nesting(true);
 
     TypeSpec c = cond()->typespec();
     if (c.is_closure())
@@ -271,7 +271,7 @@ TypeSpec ASTloop_statement::typecheck(TypeSpec /*expected*/)
 
 TypeSpec ASTloopmod_statement::typecheck(TypeSpec /*expected*/)
 {
-    if (oslcompiler->nesting_level(true /*loops*/) < 1)
+    if (m_compiler->nesting_level(true /*loops*/) < 1)
         errorf("Cannot '%s' here -- not inside a loop.", opname());
     return m_typespec = TypeDesc(TypeDesc::NONE);
 }
@@ -348,7 +348,7 @@ TypeSpec ASTassign_expression::typecheck(TypeSpec /*expected*/)
 
 TypeSpec ASTreturn_statement::typecheck(TypeSpec /*expected*/)
 {
-    FunctionSymbol* myfunc = oslcompiler->current_function();
+    FunctionSymbol* myfunc = m_compiler->current_function();
     if (myfunc) {
         // If it's a user function (as opposed to a main shader body)...
         if (expr()) {

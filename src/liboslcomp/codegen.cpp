@@ -147,7 +147,7 @@ OSLCompilerImpl::add_struct_fields(StructSpec* structspec, ustring basename,
         }
         Symbol* sym = new Symbol(fieldname, type, symtype, node);
         sym->fieldid(i);
-        oslcompiler->symtab().insert(sym);
+        symtab().insert(sym);
         if (field.type.is_structure() || field.type.is_structure_array()) {
             // nested structures -- recurse!
             add_struct_fields(type.structspec(), fieldname, symtype, arr, node,
@@ -395,7 +395,7 @@ ASTshader_declaration::codegen(Symbol*)
 Symbol*
 ASTreturn_statement::codegen(Symbol* dest)
 {
-    FunctionSymbol* myfunc = oslcompiler->current_function();
+    FunctionSymbol* myfunc = m_compiler->current_function();
     if (myfunc) {
         // If it's a user function (as opposed to a main shader body)...
         if (expr()) {
@@ -1384,17 +1384,17 @@ ASTconditional_statement::codegen(Symbol*)
     // can go back and patch it with the jump destinations.
     int ifop = emitcode("if", condvar);
     // "if" is unusual in that it doesn't write its first argument
-    oslcompiler->lastop().argread(0, true);
-    oslcompiler->lastop().argwrite(0, false);
+    m_compiler->lastop().argread(0, true);
+    m_compiler->lastop().argwrite(0, false);
 
     // Generate the code for the 'true' and 'false' code blocks, recording
     // the jump destinations for 'else' and the next op after the if.
-    oslcompiler->push_nesting(false);
+    m_compiler->push_nesting(false);
     codegen_list(truestmt());
     int falselabel = m_compiler->next_op_label();
     codegen_list(falsestmt());
     int donelabel = m_compiler->next_op_label();
-    oslcompiler->pop_nesting(false);
+    m_compiler->pop_nesting(false);
 
     // Fix up the 'if' to have the jump destinations.
     m_compiler->ircode(ifop).set_jump(falselabel, donelabel);
@@ -1414,10 +1414,10 @@ ASTloop_statement::codegen(Symbol*)
     // can go back and patch it with the jump destinations.
     int loop_op = emitcode(opname());
     // Loop ops read their first arg, not write it
-    oslcompiler->lastop().argread(0, true);
-    oslcompiler->lastop().argwrite(0, false);
+    m_compiler->lastop().argread(0, true);
+    m_compiler->lastop().argwrite(0, false);
 
-    oslcompiler->push_nesting(true);
+    m_compiler->push_nesting(true);
     codegen_list(init());
 
     int condlabel   = m_compiler->next_op_label();
@@ -1434,7 +1434,7 @@ ASTloop_statement::codegen(Symbol*)
     int iterlabel = m_compiler->next_op_label();
     codegen_list(iter());
     int donelabel = m_compiler->next_op_label();
-    oslcompiler->pop_nesting(true);
+    m_compiler->pop_nesting(true);
 
     // Fix up the loop op to have the jump destinations.
     m_compiler->ircode(loop_op).set_jump(condlabel, bodylabel, iterlabel,
@@ -1587,8 +1587,8 @@ ASTbinary_expression::codegen_logic(Symbol* dest)
 
     int ifop = emitcode("if", dest);
     // "if" is unusual in that it doesn't write its first argument
-    oslcompiler->lastop().argread(0, true);
-    oslcompiler->lastop().argwrite(0, false);
+    m_compiler->lastop().argread(0, true);
+    m_compiler->lastop().argwrite(0, false);
     int falselabel;
     m_compiler->push_nesting(false);
 
@@ -1624,25 +1624,25 @@ ASTternary_expression::codegen(Symbol* dest)
     // can go back and patch it with the jump destinations.
     int ifop = emitcode("if", condvar);
     // "if" is unusual in that it doesn't write its first argument
-    oslcompiler->lastop().argread(0, true);
-    oslcompiler->lastop().argwrite(0, false);
+    m_compiler->lastop().argread(0, true);
+    m_compiler->lastop().argwrite(0, false);
 
     // Generate the code for the 'true' and 'false' code blocks, recording
     // the jump destinations for 'else' and the next op after the if.
-    oslcompiler->push_nesting(false);
+    m_compiler->push_nesting(false);
     Symbol* trueval = trueexpr()->codegen(dest);
     if (trueval != dest)
         emitcode("assign", dest, trueval);
 
     int falselabel = m_compiler->next_op_label();
 
-    oslcompiler->push_nesting(false);
+    m_compiler->push_nesting(false);
     Symbol* falseval = falseexpr()->codegen(dest);
     if (falseval != dest)
         emitcode("assign", dest, falseval);
 
     int donelabel = m_compiler->next_op_label();
-    oslcompiler->pop_nesting(false);
+    m_compiler->pop_nesting(false);
 
     // Fix up the 'if' to have the jump destinations.
     m_compiler->ircode(ifop).set_jump(falselabel, donelabel);
@@ -1897,9 +1897,9 @@ ASTfunction_call::codegen(Symbol* dest)
                                m_compiler->make_constant(m_name));
 
         // Generate the code for the function body
-        oslcompiler->push_function(func());
+        m_compiler->push_function(func());
         codegen_list(user_function()->statements());
-        oslcompiler->pop_function();
+        m_compiler->pop_function();
 
         // Go back and mark the "functioncall" with the right jump address
         m_compiler->ircode(loop_op).argread(0, true);    // read

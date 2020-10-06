@@ -405,14 +405,14 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
 
     // Build up the argument signature for this declared function
     m_typespec           = type;
-    std::string argcodes = oslcompiler->code_from_type(m_typespec);
+    std::string argcodes = m_compiler->code_from_type(m_typespec);
     for (ASTNode* arg = form; arg; arg = arg->nextptr()) {
         const TypeSpec& t(arg->typespec());
         if (t == TypeSpec() /* UNKNOWN */) {
             m_typespec = TypeDesc::UNKNOWN;
             return;
         }
-        argcodes += oslcompiler->code_from_type(t);
+        argcodes += m_compiler->code_from_type(t);
         OSL_ASSERT(arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration* v = (ASTvariable_declaration*)arg;
         if (v->init())
@@ -425,7 +425,7 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
     // same polymorphic type in the same scope.
     if (stmts) {
         std::string err;
-        int current_scope = oslcompiler->symtab().scopeid();
+        int current_scope = m_compiler->symtab().scopeid();
         for (FunctionSymbol* f = static_cast<FunctionSymbol*>(existing_syms); f;
              f                 = f->nextpoly()) {
             if (f->scope() == current_scope && f->argcodes() == argcodes) {
@@ -462,7 +462,7 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
     func()->nextpoly((FunctionSymbol*)existing_syms);
 
     func()->argcodes(ustring(argcodes));
-    oslcompiler->symtab().insert(m_sym);
+    m_compiler->symtab().insert(m_sym);
 
     // Typecheck it right now, upon declaration
     typecheck(typespec());
@@ -583,7 +583,7 @@ ASTvariable_declaration::ASTvariable_declaration(OSLCompilerImpl* comp,
         symtype = SymTypeTemp;
     m_sym = new Symbol(name, type, symtype, this);
     if (!m_ismetadata)
-        oslcompiler->symtab().insert(m_sym);
+        m_compiler->symtab().insert(m_sym);
 
     // A struct really makes several subvariables
     if (type.is_structure() || type.is_structure_array()) {
@@ -808,7 +808,7 @@ ASTstructselect::find_fieldsym(int& structid, int& fieldid)
         OSL_DASSERT(fieldid == -1 && !m_compindex);
         fieldid = fieldname() == "r" ? 0 : (fieldname() == "g" ? 1 : 2);
         m_compindex.reset(
-            new ASTindex(m_compiler, lv, new ASTliteral(oslcompiler, fieldid)));
+            new ASTindex(m_compiler, lv, new ASTliteral(m_compiler, fieldid)));
         m_is_lvalue = true;
         return nullptr;
     } else if (lvtype.is_vectriple()
@@ -817,7 +817,7 @@ ASTstructselect::find_fieldsym(int& structid, int& fieldid)
         OSL_DASSERT(fieldid == -1 && !m_compindex);
         fieldid = fieldname() == "x" ? 0 : (fieldname() == "y" ? 1 : 2);
         m_compindex.reset(
-            new ASTindex(m_compiler, lv, new ASTliteral(oslcompiler, fieldid)));
+            new ASTindex(m_compiler, lv, new ASTliteral(m_compiler, fieldid)));
         m_is_lvalue = true;
         return nullptr;
     }

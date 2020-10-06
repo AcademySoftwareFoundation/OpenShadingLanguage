@@ -11,8 +11,6 @@
 
 
 class oslFlexLexer;
-extern int
-oslparse();
 
 
 OSL_NAMESPACE_ENTER

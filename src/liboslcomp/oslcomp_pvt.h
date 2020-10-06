@@ -16,9 +16,6 @@
 #include "symtab.h"
 
 
-extern int
-oslparse();
-
 
 OSL_NAMESPACE_ENTER
 
@@ -380,6 +377,8 @@ public:
         return m_nowarn_lines.find({ filename, line }) != m_nowarn_lines.end();
     }
 
+    std::stack<TypeSpec>& typespec_stack() { return m_typespec_stack; }
+
 private:
     void initialize_globals();
     void initialize_builtin_funcs();
@@ -499,10 +498,9 @@ private:
     std::string m_deps_filename;            ///< Where to write deps? -MF
     std::string m_deps_target;              ///< Custom target: -MF
     std::set<ustring> m_file_dependencies;  ///< All include file dependencies
+    std::stack<TypeSpec> m_typespec_stack;  ///< Just for function_declaration
 };
 
-
-extern OSLCompilerImpl* oslcompiler;
 
 
 };  // namespace pvt

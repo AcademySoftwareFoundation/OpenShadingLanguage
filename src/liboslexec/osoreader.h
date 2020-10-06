@@ -11,8 +11,6 @@
 #include <OpenImageIO/string_view.h>
 
 
-extern int osoparse ();
-
 
 OSL_NAMESPACE_ENTER
 
@@ -121,11 +119,16 @@ public:
     /// Return a reference to the error handler
     ErrorHandler& errhandler () { return m_err; }
 
-    static OSOReader *osoreader;
+    /// Store and retrieve the current typespec
+    ///
+    void current_typespec (TypeSpec t) { m_current_typespec = std::move(t); }
+    TypeSpec current_typespec () const { return m_current_typespec; }
 
 private:
+    class Scope;
     ErrorHandler &m_err;
     int m_lineno;
+    TypeSpec m_current_typespec;
 };
 
 OSL_PRAGMA_WARNING_POP

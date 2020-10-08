@@ -22,7 +22,6 @@ target_include_directories(${local_lib}
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
         ${ILMBASE_INCLUDES}
     )
-target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
 target_link_libraries (${local_lib}
     PUBLIC
         OpenImageIO::OpenImageIO
@@ -31,6 +30,11 @@ target_link_libraries (${local_lib}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}
         ${LLVM_SYSTEM_LIBRARIES})
+
+# link with (system) library to prevent missing symbols inside clangDriver.lib
+if (MSVC)
+    target_link_libraries (${local_lib} PRIVATE "Version.lib")
+endif()
 
 set_target_properties (${local_lib}
     PROPERTIES

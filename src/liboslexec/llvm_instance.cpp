@@ -7,7 +7,10 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <bitset>
+
+#ifdef __GNUC__
 #include <cxxabi.h>
+#endif
 
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>

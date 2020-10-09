@@ -75,7 +75,7 @@ enum class TargetISA
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    struct PerThreadInfo {
+    struct OSLEXECPUBLIC PerThreadInfo {
         PerThreadInfo() {}
         ~PerThreadInfo();
     private:
@@ -94,7 +94,7 @@ public:
     // controlled by the the existence of ScopedJitMemoryUser objects.
     // When the last ScopedJitMemoryUser goes out of scope or is deleted,
     // then the underlying memory managers will be deleted
-    struct ScopedJitMemoryUser {
+    struct OSLEXECPUBLIC ScopedJitMemoryUser {
         ScopedJitMemoryUser();
         ~ScopedJitMemoryUser();
     };

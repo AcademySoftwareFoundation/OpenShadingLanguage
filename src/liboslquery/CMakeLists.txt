@@ -16,7 +16,6 @@ target_include_directories (${local_lib}
         ${ILMBASE_INCLUDES}
     PRIVATE
         ../liboslexec)
-target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
 target_link_libraries (${local_lib}
     PUBLIC
         ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}

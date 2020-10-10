@@ -44,7 +44,7 @@ add_executable (testrender ${testrender_srcs})
 target_link_libraries (testrender
     PRIVATE
         oslexec oslquery
-        pugixml)
+        pugixml::pugixml)
 
 osl_optix_target (testrender)
 

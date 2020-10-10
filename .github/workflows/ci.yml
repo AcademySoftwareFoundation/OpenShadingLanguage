@@ -163,6 +163,7 @@ jobs:
           OPENEXR_VERSION: v2.5.3
           OPENIMAGEIO_VERSION: master
           OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
+          PUGIXML_VERSION: v1.10
           PYBIND11_VERSION: v2.5.0
         run: |
             source src/build-scripts/ci-startup.bash
@@ -193,6 +194,7 @@ jobs:
           OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=master
           OPENCOLORIO_VERSION: master
           PYBIND11_VERSION: master
+          PUGIXML_VERSION: master
           OSL_BUILD_MATERIALX: 1
         run: |
             source src/build-scripts/ci-startup.bash
@@ -221,6 +223,8 @@ jobs:
           PYTHON_VERSION: 2.7
           USE_SIMD: 0
           USE_PYTHON: 0
+          OPENIMAGEIO_VERSION: RB-2.1
+          PUGIXML_VERSION: v1.8
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash

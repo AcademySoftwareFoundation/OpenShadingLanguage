@@ -208,7 +208,7 @@ target_link_libraries (${local_lib}
     PUBLIC
         ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
     PRIVATE
-        pugixml
+        pugixml::pugixml
         ${ZLIB_LIBRARIES}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}

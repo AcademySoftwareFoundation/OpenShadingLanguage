@@ -37,7 +37,7 @@ fi
 
 source src/build-scripts/build_pybind11.bash
 
-CXXFLAGS=-fPIC src/build-scripts/build_pugixml.bash
+source src/build-scripts/build_pugixml.bash
 
 # Only build OpenEXR if a specific version is requested
 if [[ "$OPENEXR_VERSION" != "" ]] ; then

@@ -148,13 +148,12 @@ Dictionary::get_document_index (ustring dictionaryname)
         pugi::xml_document *doc = new pugi::xml_document;
         m_documents.push_back (doc);
         pugi::xml_parse_result parse_result;
-        if (Strutil::ends_with (dictionaryname.string(), ".xml")) {
+        if (Strutil::ends_with(dictionaryname, ".xml")) {
             // xml file -- read it
             parse_result = doc->load_file (dictionaryname.c_str());
         } else {
             // load xml directly from the string
-            parse_result = doc->load_buffer (dictionaryname.c_str(),
-                                             dictionaryname.length());
+            parse_result = doc->load_string(dictionaryname.c_str());
         }
         if (! parse_result) {
             m_context->errorf("XML parsed with errors: %s, at offset %d",

@@ -62,7 +62,7 @@ source src/build-scripts/build_llvm.bash
 # Build pybind11
 CXX="ccache $CXX" source src/build-scripts/build_pybind11.bash
 
-CXXFLAGS=-fPIC src/build-scripts/build_pugixml.bash
+source src/build-scripts/build_pugixml.bash
 
 if [[ "$OPENEXR_VERSION" != "" ]] ; then
     CXX="ccache $CXX" source src/build-scripts/build_openexr.bash

@@ -8,23 +8,8 @@
 
 # When not in VERBOSE mode, try to make things as quiet as possible
 if (NOT VERBOSE)
-    set (Bison_FIND_QUIETLY true)
-    set (Boost_FIND_QUIETLY true)
-    set (Curses_FIND_QUIETLY true)
-    set (Flex_FIND_QUIETLY true)
-    # set (LLVM_FIND_QUIETLY true)
-    set (OpenEXR_FIND_QUIETLY true)
-    # set (OpenImageIO_FIND_QUIETLY true)
-    # set (Partio_FIND_QUIETLY true)
     set (PkgConfig_FIND_QUIETLY true)
-    set (PugiXML_FIND_QUIETLY TRUE)
-    set (PythonInterp_FIND_QUIETLY true)
-    set (PythonLibs_FIND_QUIETLY true)
-    set (Qt5_FIND_QUIETLY true)
     set (Threads_FIND_QUIETLY true)
-    set (ZLIB_FIND_QUIETLY true)
-    set (CUDA_FIND_QUIETLY true)
-    set (OptiX_FIND_QUIETLY true)
 endif ()
 
 message (STATUS "${ColorBoldWhite}")
@@ -111,7 +96,7 @@ endif ()
 checked_find_package (OpenImageIO 2.1.9 REQUIRED)
 
 
-checked_find_package (pugixml REQUIRED)
+checked_find_package (pugixml 1.8 REQUIRED)
 
 
 # LLVM library setup

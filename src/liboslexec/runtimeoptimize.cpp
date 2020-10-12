@@ -764,14 +764,14 @@ OSOProcessorBase::is_nonzero (const Symbol &A)
     if (Atype.is_float_based()) {
         const float *val = (const float *)A.data();
         for (int i = 0; i < ncomponents; ++i)
-            if (val[0] == 0.0f)
+            if (val[i] == 0.0f)
                 return false;
         return true;
     }
     if (Atype.is_int_based()) {
         const int *val = (const int *)A.data();
         for (int i = 0; i < ncomponents; ++i)
-            if (val[0] == 0)
+            if (val[i] == 0)
                 return false;
         return true;
     }

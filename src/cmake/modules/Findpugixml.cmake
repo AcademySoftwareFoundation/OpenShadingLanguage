@@ -35,12 +35,10 @@ else ()
                NAMES pugixml.hpp
                #HINTS ${OpenImageIO_INCLUDE_DIR}/detail/pugixml
                PATH_SUFFIXES pugixml-1.8 pugixml-1.9 pugixml-1.10)
-    message(STATUS "1 PUGIXML_INCLUDE_DIR ${PUGIXML_INCLUDE_DIR}")
     set (pugixml_required_vars PUGIXML_INCLUDE_DIR)
     find_library (PUGIXML_LIBRARY
                   NAMES pugixml
                   PATH_SUFFIXES pugixml-1.8 pugixml-1.9 pugixml-1.10)
-    message(STATUS "1 PUGIXML_LIBRARY ${PUGIXML_LIBRARY}")
 
     if (PUGIXML_INCLUDE_DIR)
         file (STRINGS "${PUGIXML_INCLUDE_DIR}/pugixml.hpp" TMP REGEX "define PUGIXML_VERSION .*$")

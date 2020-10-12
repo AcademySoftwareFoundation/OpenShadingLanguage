@@ -124,24 +124,25 @@ jobs:
           name: ${{ github.job }}
           path: build/*/testsuite/*/*.*
 
-  linux-2020ish-clang9-llvm9:
+  linux-clang9-llvm9:
     name: "Linux clang9, C++14, llvm9, oiio release, avx, exr2.4, avx"
     runs-on: ubuntu-18.04
+    container:
+      image: aswf/ci-osl:2019-clang9
     steps:
       - uses: actions/checkout@v2
       - name: all
         env:
           CXX: clang++
-          USE_CPP: 14
           CMAKE_CXX_STANDARD: 14
-          LLVM_VERSION: 9.0.0
           USE_SIMD: avx
-          OPENEXR_VERSION: v2.4.1
           OPENIMAGEIO_VERSION: release
           PYTHON_VERSION: 2.7
         run: |
+            # Remove pesky wrong installed OIIO version
+            rm -rf /usr/local/include/OpenImageIO
             source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps.bash
+            source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()

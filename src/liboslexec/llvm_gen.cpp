@@ -270,7 +270,7 @@ LLVMGEN (llvm_gen_printf)
     size_t new_format_slot = call_args.size();
     call_args.push_back(NULL);
 
-    ustring format_ustring = *((ustring*)format_sym.data());
+    ustring format_ustring = format_sym.get_string();
     const char* format = format_ustring.c_str();
     std::string s;
     int arg = format_arg + 1;
@@ -1130,8 +1130,8 @@ LLVMGEN (llvm_gen_compref)
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.inst()->master()->range_checking()) {
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < 3)) {
+        if (! (Index.is_constant() &&  Index.get_int() >= 0 &&
+               Index.get_int() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
                                     rop.ll.constant(Val.unmangled()),
                                     rop.sg_void_ptr(),
@@ -1148,7 +1148,7 @@ LLVMGEN (llvm_gen_compref)
     for (int d = 0;  d < 3;  ++d) {  // deriv
         llvm::Value *val = NULL;
         if (Index.is_constant()) {
-            int i = *(int*)Index.data();
+            int i = Index.get_int();
             i = Imath::clamp (i, 0, 2);
             val = rop.llvm_load_value (Val, d, i);
         } else {
@@ -1173,8 +1173,8 @@ LLVMGEN (llvm_gen_compassign)
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.inst()->master()->range_checking()) {
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < 3)) {
+        if (! (Index.is_constant() &&  Index.get_int() >= 0 &&
+               Index.get_int() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
                                     rop.ll.constant(Result.unmangled()),
                                     rop.sg_void_ptr(),
@@ -1191,7 +1191,7 @@ LLVMGEN (llvm_gen_compassign)
     for (int d = 0;  d < 3;  ++d) {  // deriv
         llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat);
         if (Index.is_constant()) {
-            int i = *(int*)Index.data();
+            int i = Index.get_int();
             i = Imath::clamp (i, 0, 2);
             rop.llvm_store_value (val, Result, d, i);
         } else {
@@ -1218,8 +1218,8 @@ LLVMGEN (llvm_gen_mxcompref)
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.inst()->master()->range_checking()) {
         if (! (Row.is_constant() && Col.is_constant() &&
-               *(int *)Row.data() >= 0 && *(int *)Row.data() < 4 &&
-               *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+               Row.get_int() >= 0 && Row.get_int() < 4 &&
+               Col.get_int() >= 0 && Col.get_int() < 4)) {
             llvm::Value *args[] = { row, rop.ll.constant(4),
                                     rop.ll.constant(M.name()),
                                     rop.sg_void_ptr(),
@@ -1230,11 +1230,11 @@ LLVMGEN (llvm_gen_mxcompref)
                                     rop.ll.constant(rop.inst()->layername()),
                                     rop.ll.constant(rop.inst()->shadername()) };
             if (! (Row.is_constant() &&
-                   *(int *)Row.data() >= 0 && *(int *)Row.data() < 4)) {
+                   Row.get_int() >= 0 && Row.get_int() < 4)) {
                 row = rop.ll.call_function ("osl_range_check", args);
             }
             if (! (Col.is_constant() &&
-                   *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+                   Col.get_int() >= 0 && Col.get_int() < 4)) {
                 args[0] = col;
                 col = rop.ll.call_function ("osl_range_check", args);
             }
@@ -1243,8 +1243,8 @@ LLVMGEN (llvm_gen_mxcompref)
 
     llvm::Value *val = NULL; 
     if (Row.is_constant() && Col.is_constant()) {
-        int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
-        int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
+        int r = Imath::clamp (Row.get_int(), 0, 3);
+        int c = Imath::clamp (Col.get_int(), 0, 3);
         int comp = 4 * r + c;
         val = rop.llvm_load_value (M, 0, comp);
     } else {
@@ -1273,8 +1273,8 @@ LLVMGEN (llvm_gen_mxcompassign)
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.inst()->master()->range_checking()) {
         if (! (Row.is_constant() && Col.is_constant() &&
-               *(int *)Row.data() >= 0 && *(int *)Row.data() < 4 &&
-               *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+               Row.get_int() >= 0 && Row.get_int() < 4 &&
+               Col.get_int() >= 0 && Col.get_int() < 4)) {
             llvm::Value *args[] = { row, rop.ll.constant(4),
                                     rop.ll.constant(Result.name()),
                                     rop.sg_void_ptr(),
@@ -1285,11 +1285,11 @@ LLVMGEN (llvm_gen_mxcompassign)
                                     rop.ll.constant(rop.inst()->layername()),
                                     rop.ll.constant(rop.inst()->shadername()) };
             if (! (Row.is_constant() &&
-                   *(int *)Row.data() >= 0 && *(int *)Row.data() < 4)) {
+                   Row.get_int() >= 0 && Row.get_int() < 4)) {
                 row = rop.ll.call_function ("osl_range_check", args);
             }
             if (! (Col.is_constant() &&
-                   *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+                   Col.get_int() >= 0 && Col.get_int() < 4)) {
                 args[0] = col;
                 col = rop.ll.call_function ("osl_range_check", args);
             }
@@ -1299,8 +1299,8 @@ LLVMGEN (llvm_gen_mxcompassign)
     llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat);
 
     if (Row.is_constant() && Col.is_constant()) {
-        int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
-        int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
+        int r = Imath::clamp(Row.get_int(), 0, 3);
+        int c = Imath::clamp(Col.get_int(), 0, 3);
         int comp = 4 * r + c;
         rop.llvm_store_value (val, Result, 0, comp);
     } else {
@@ -1342,8 +1342,8 @@ LLVMGEN (llvm_gen_aref)
     if (! index)
         return false;
     if (rop.inst()->master()->range_checking()) {
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < Src.typespec().arraylength())) {
+        if (! (Index.is_constant() &&  Index.get_int() >= 0 &&
+               Index.get_int() < Src.typespec().arraylength())) {
             llvm::Value *args[] = { index,
                                     rop.ll.constant(Src.typespec().arraylength()),
                                     rop.ll.constant(Src.unmangled()),
@@ -1386,8 +1386,8 @@ LLVMGEN (llvm_gen_aassign)
     if (! index)
         return false;
     if (rop.inst()->master()->range_checking()) {
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < Result.typespec().arraylength())) {
+        if (! (Index.is_constant() &&  Index.get_int() >= 0 &&
+               Index.get_int() < Result.typespec().arraylength())) {
             llvm::Value *args[] = { index,
                                     rop.ll.constant(Result.typespec().arraylength()),
                                     rop.ll.constant(Result.unmangled()),
@@ -1506,7 +1506,7 @@ LLVMGEN (llvm_gen_construct_triple)
     if (using_space) {
         ustring from, to;  // N.B. initialize to empty strings
         if (Space.is_constant()) {
-            from = *(ustring *)Space.data();
+            from = Space.get_string();
             if (from == Strings::common ||
                 from == rop.shadingsys().commonspace_synonym())
                 return true;  // no transformation necessary
@@ -1641,8 +1641,8 @@ LLVMGEN (llvm_gen_transform)
     ustring from, to;  // N.B.: initialize to empty strings
     if ((From == NULL || From->is_constant()) && To->is_constant()) {
         // We can know all the space names at this time
-        from = From ? *((ustring *)From->data()) : Strings::common;
-        to = *((ustring *)To->data());
+        from = From ? From->get_string() : Strings::common;
+        to = To->get_string();
         ustring syn = rop.shadingsys().commonspace_synonym();
         if (from == syn)
             from = Strings::common;
@@ -2200,7 +2200,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
         OSL_DASSERT (Name.typespec().is_string() &&
                      "optional texture token must be a string");
         OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for texture");
-        ustring name = *(ustring *)Name.data();
+        ustring name = Name.get_string();
         ++a;  // advance to next argument
 
         if (name.empty())    // skip empty string param name
@@ -2260,7 +2260,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
 #define PARAM_STRING_CODE(paramname,decoder,fieldname)                  \
         if (name == Strings::paramname && valtype == TypeDesc::STRING) { \
             if (Val.is_constant()) {                                    \
-                int code = decoder (*(ustring *)Val.data());            \
+                int code = decoder (Val.get_string());                  \
                 if (! paramname##_set && code == optdefaults.fieldname) \
                     continue;                                           \
                 if (code >= 0) {                                        \
@@ -2286,7 +2286,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
 
         if (name == Strings::wrap && valtype == TypeDesc::STRING) {
             if (Val.is_constant()) {
-                int mode = TextureOpt::decode_wrapmode (*(ustring *)Val.data());
+                int mode = TextureOpt::decode_wrapmode (Val.get_string());
                 llvm::Value *val = rop.ll.constant (mode);
                 rop.ll.call_function ("osl_texture_set_stwrap_code", opt, val);
                 if (tex3d)
@@ -2311,7 +2311,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
 
         if (name == Strings::subimage && valtype == TypeDesc::STRING) {
             if (Val.is_constant()) {
-                ustring v = *(ustring *)Val.data();
+                ustring v = Val.get_string();
                 if (v.empty() && ! subimage_set) {
                     continue;     // Ignore nulls unless they are overrides
                 }
@@ -2418,7 +2418,7 @@ LLVMGEN (llvm_gen_texture)
 
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
+        texture_handle = rop.renderer()->get_texture_handle (Filename.get_string(), rop.shadingcontext());
     }
 
     // Now call the osl_texture function, passing the options and all the
@@ -2476,7 +2476,7 @@ LLVMGEN (llvm_gen_texture3d)
 
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
+        texture_handle = rop.renderer()->get_texture_handle(Filename.get_string(), rop.shadingcontext());
     }
 
     // Now call the osl_texture3d function, passing the options and all the
@@ -2531,7 +2531,7 @@ LLVMGEN (llvm_gen_environment)
 
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
+        texture_handle = rop.renderer()->get_texture_handle(Filename.get_string(), rop.shadingcontext());
     }
 
     // Now call the osl_environment function, passing the options and all the
@@ -2572,7 +2572,7 @@ llvm_gen_trace_options (BackendLLVM &rop, int opnum,
         OSL_DASSERT (Name.typespec().is_string() &&
                      "optional trace token must be a string");
         OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for trace");
-        ustring name = *(ustring *)Name.data();
+        ustring name = Name.get_string();
 
         ++a;  // advance to next argument
         Symbol &Val (*rop.opargsym(op,a));
@@ -2666,7 +2666,7 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
         OSL_DASSERT (Name.typespec().is_string() &&
                      "optional noise token must be a string");
         OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for noise");
-        ustring name = *(ustring *)Name.data();
+        ustring name = Name.get_string();
 
         ++a;  // advance to next argument
         Symbol &Val (*rop.opargsym(op,a));
@@ -2725,7 +2725,7 @@ LLVMGEN (llvm_gen_noise)
     Symbol *Name = rop.opargsym (op, arg++);
     ustring name;
     if (Name->typespec().is_string()) {
-        name = Name->is_constant() ? *(ustring *)Name->data() : ustring();
+        name = Name->is_constant() ? Name->get_string() : ustring();
     } else {
         // Not a string, must be the old-style noise/pnoise
         --arg;  // forget that arg
@@ -2969,7 +2969,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
 
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
+        texture_handle = rop.renderer()->get_texture_handle(Filename.get_string(), rop.shadingcontext());
     }
 
     llvm::Value * args[] = {
@@ -3228,7 +3228,7 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
         Symbol &Value   = *rop.opargsym (op, argno + 1);
         OSL_DASSERT(Key.typespec().is_string());
         OSL_ASSERT(Key.is_constant());
-        ustring *key = (ustring *)Key.data();
+        ustring key = Key.get_string();
         TypeDesc ValueType = Value.typespec().simpletype();
 
         bool legal = false;
@@ -3237,7 +3237,7 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
             const ClosureParam &p = clentry->params[clentry->nformal + t];
             // strcmp might be too much, we could precompute the ustring for the param,
             // but in this part of the code is not a big deal
-            if (equivalent(p.type,ValueType) && !strcmp(key->c_str(), p.key)) {
+            if (equivalent(p.type,ValueType) && !strcmp(key.c_str(), p.key)) {
             	// store data
             	OSL_DASSERT(p.offset + p.field_size <= clentry->struct_size);
                 llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
@@ -3249,7 +3249,7 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
             }
         }
         if (!legal) {
-            rop.shadingcontext()->warningf("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname, op.sourcefile(), op.sourceline());
+            rop.shadingcontext()->warningf("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key, clname, op.sourcefile(), op.sourceline());
         }
     }
 }
@@ -3267,7 +3267,7 @@ LLVMGEN (llvm_gen_closure)
     Symbol &Id     = *rop.opargsym (op, 1+weighted);
     OSL_DASSERT(Result.typespec().is_closure());
     OSL_DASSERT(Id.typespec().is_string());
-    ustring closure_name = *((ustring *)Id.data());
+    ustring closure_name = Id.get_string();
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
@@ -3419,10 +3419,10 @@ LLVMGEN (llvm_gen_pointcloud_search)
 
         OSL_DASSERT (Name.typespec().is_string());
         TypeDesc simpletype = Value.typespec().simpletype();
-        if (Name.is_constant() && *((ustring *)Name.data()) == u_index &&
+        if (Name.is_constant() && Name.get_string() == u_index &&
             simpletype.elementtype() == TypeDesc::INT) {
             args[6] = rop.llvm_void_ptr (Value);
-        } else if (Name.is_constant() && *((ustring *)Name.data()) == u_distance &&
+        } else if (Name.is_constant() && Name.get_string() == u_distance &&
                    simpletype.elementtype() == TypeDesc::FLOAT) {
             args[7] = rop.llvm_void_ptr (Value);
             if (Value.has_derivs()) {
@@ -3715,7 +3715,7 @@ LLVMGEN (llvm_gen_raytype)
     const char *func = NULL;
     if (Name.is_constant()) {
         // We can statically determine the bit pattern
-        ustring name = ((ustring *)Name.data())[0];
+        ustring name = Name.get_string();
         args[1] = rop.ll.constant (rop.shadingsys().raytype_bit (name));
         func = "osl_raytype_bit";
     } else {
@@ -3803,7 +3803,7 @@ LLVMGEN (llvm_gen_functioncall)
         Symbol &functionNameSymbol(*rop.opargsym (op, 0));
         OSL_DASSERT(functionNameSymbol.is_constant());
         OSL_DASSERT(functionNameSymbol.typespec().is_string());
-        ustring functionName = *(ustring *)functionNameSymbol.data();
+        ustring functionName = functionNameSymbol.get_string();
         ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
         unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
         rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
@@ -3833,7 +3833,7 @@ LLVMGEN (llvm_gen_functioncall_nr)
     Symbol &functionNameSymbol(*rop.opargsym (op, 0));
     OSL_ASSERT(functionNameSymbol.is_constant());
     OSL_ASSERT(functionNameSymbol.typespec().is_string());
-    ustring functionName = *(ustring *)functionNameSymbol.data();
+    ustring functionName = functionNameSymbol.get_string();
 
     int op_num_function_starts_at = opnum+1;
     int op_num_function_ends_at = op.jump(0);

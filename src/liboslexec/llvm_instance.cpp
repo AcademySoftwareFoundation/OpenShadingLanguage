@@ -527,11 +527,11 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
                 // Fill in the constant val
                 llvm::Value* init_val = 0;
                 if (elemtype.is_float_based())
-                    init_val = ll.constant (((float*)sym.data())[c]);
+                    init_val = ll.constant(sym.get_float(c));
                 else if (elemtype.is_string())
-                    init_val = ll.constant (((ustring*)sym.data())[c]);
+                    init_val = ll.constant(sym.get_string(c));
                 else if (elemtype.is_int())
-                    init_val = ll.constant (((int*)sym.data())[c]);
+                    init_val = ll.constant(sym.get_int(c));
                 OSL_DASSERT (init_val);
                 llvm_store_value (init_val, sym, 0, arrind, i);
             }

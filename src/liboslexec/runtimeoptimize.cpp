@@ -731,9 +731,9 @@ OSOProcessorBase::is_zero (const Symbol &A)
         return false;
     const TypeSpec &Atype (A.typespec());
     static Vec3 Vzero (0, 0, 0);
-    return (Atype.is_float() && *(const float *)A.data() == 0) ||
-        (Atype.is_int() && *(const int *)A.data() == 0) ||
-        (Atype.is_triple() && *(const Vec3 *)A.data() == Vzero);
+    return (Atype.is_float() && A.get_float() == 0) ||
+        (Atype.is_int() && A.get_int() == 0) ||
+        (Atype.is_triple() && A.get_vec3() == Vzero);
 }
 
 
@@ -746,10 +746,10 @@ OSOProcessorBase::is_one (const Symbol &A)
     const TypeSpec &Atype (A.typespec());
     static Vec3 Vone (1, 1, 1);
     static Matrix44 Mone (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-    return (Atype.is_float() && *(const float *)A.data() == 1) ||
-        (Atype.is_int() && *(const int *)A.data() == 1) ||
-        (Atype.is_triple() && *(const Vec3 *)A.data() == Vone) ||
-        (Atype.is_matrix() && *(const Matrix44 *)A.data() == Mone);
+    return (Atype.is_float() && A.get_float() == 1) ||
+        (Atype.is_int() && A.get_int() == 1) ||
+        (Atype.is_triple() && A.get_vec3() == Vone) ||
+        (Atype.is_matrix() && *(const Matrix44 *)A.dataptr() == Mone);
 }
 
 
@@ -791,13 +791,13 @@ OSOProcessorBase::const_value_as_string (const Symbol &A)
     s.imbue (std::locale::classic());  // force C locale
     if (type.basetype == TypeDesc::FLOAT) {
         for (int i = 0; i < n; ++i)
-            s << (i ? "," : "") << ((const float *)A.data())[i];
+            s << (i ? "," : "") << A.get_float(i);
     } else if (type.basetype == TypeDesc::INT) {
         for (int i = 0; i < n; ++i)
-            s << (i ? "," : "") << ((const int *)A.data())[i];
+            s << (i ? "," : "") << A.get_int(i);
     } else if (type.basetype == TypeDesc::STRING) {
         for (int i = 0; i < n; ++i)
-            s << (i ? "," : "") << '\"' << ((const ustring *)A.data())[i] << '\"';
+            s << (i ? "," : "") << '\"' << A.get_string(i) << '\"';
     }
     return s.str();
 }
@@ -1117,32 +1117,21 @@ RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
 
     // turn 'R_float = A_int_const' into a float const assignment
     if (A->typespec().is_int() && R->typespec().is_float()) {
-        float result = *(int *)A->data();
-        int cind = add_constant (R->typespec(), &result);
+        int cind = add_constant (A->coerce_float());
         turn_into_assign (op, cind, "coerce to correct type");
         return true;
     }
 
     // turn 'R_int = A_float_const' into an int const assignment
     if (A->typespec().is_float() && R->typespec().is_int()) {
-        int result = (int) *(float *)A->data();
-        int cind = add_constant (R->typespec(), &result);
+        int cind = add_constant (static_cast<int>(A->get_float()));
         turn_into_assign (op, cind, "coerce to correct type");
         return true;
     }
 
-    // turn 'R_triple = A_int_const' into a float const assignment
-    if (A->typespec().is_int() && R->typespec().is_triple()) {
-        float f = *(int *)A->data();
-        Vec3 result (f, f, f);
-        int cind = add_constant (R->typespec(), &result);
-        turn_into_assign (op, cind, "coerce to correct type");
-        return true;
-    }
-
-    // turn 'R_triple = A_float_const' into a triple const assignment
-    if (A->typespec().is_float() && R->typespec().is_triple()) {
-        float f = *(float *)A->data();
+    // turn 'R_triple = A_int_or_float_const' into a float const assignment
+    if (A->typespec().is_int_or_float() && R->typespec().is_triple()) {
+        float f = A->coerce_float();
         Vec3 result (f, f, f);
         int cind = add_constant (R->typespec(), &result);
         turn_into_assign (op, cind, "coerce to correct type");
@@ -1152,23 +1141,15 @@ RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
     // Turn 'R_triple = A_other_triple_constant' into a triple const assign
     if (A->typespec().is_triple() && R->typespec().is_triple() &&
         A->typespec() != R->typespec()) {
-        Vec3 *f = (Vec3 *)A->data();
+        const Vec3 *f = &A->get_vec3();
         int cind = add_constant (R->typespec(), f);
         turn_into_assign (op, cind, "coerce to correct type");
         return true;
     }
 
-    // turn 'R_matrix = A_float_const' into a matrix const assignment
-    if (A->typespec().is_float() && R->typespec().is_matrix()) {
-        float f = *(float *)A->data();
-        Matrix44 result (f, 0, 0, 0, 0, f, 0, 0, 0, 0, f, 0, 0, 0, 0, f);
-        int cind = add_constant (R->typespec(), &result);
-        turn_into_assign (op, cind, "coerce to correct type");
-        return true;
-    }
-    // turn 'R_matrix = A_int_const' into a matrix const assignment
-    if (A->typespec().is_int() && R->typespec().is_matrix()) {
-        float f = *(int *)A->data();
+    // turn 'R_matrix = A_int_or_float_const' into a matrix const assignment
+    if (A->typespec().is_int_or_float() && R->typespec().is_matrix()) {
+        float f = A->coerce_float();
         Matrix44 result (f, 0, 0, 0, 0, f, 0, 0, 0, 0, f, 0, 0, 0, 0, f);
         int cind = add_constant (R->typespec(), &result);
         turn_into_assign (op, cind, "coerce to correct type");
@@ -2389,7 +2370,7 @@ RuntimeOptimizer::optimize_instance ()
         if (op.opname() == u_setmessage) {
             Symbol &Name (*inst()->argsymbol(op.firstarg()+0));
             if (Name.is_constant())
-                m_messages_sent.push_back (*(ustring *)Name.data());
+                m_messages_sent.push_back(Name.get_string());
             else
                 m_unknown_message_sent = true;
         }
@@ -3199,8 +3180,7 @@ RuntimeOptimizer::run ()
                 Symbol *sym = opargsym (op, 1);
                 OSL_DASSERT (sym && sym->typespec().is_string());
                 if (sym->is_constant()) {
-                    ustring texname = *(ustring *)sym->data();
-                    m_textures_needed.insert (texname);
+                    m_textures_needed.insert(sym->get_string());
                 } else {
                     m_unknown_textures_needed = true;
                 }
@@ -3212,7 +3192,7 @@ RuntimeOptimizer::run ()
                     sym = opargsym (op, 2);
                 OSL_DASSERT (sym && sym->typespec().is_string());
                 if (sym->is_constant()) {
-                    ustring closurename = *(ustring *)sym->data();
+                    ustring closurename = sym->get_string();
                     m_closures_needed.insert (closurename);
                 } else {
                     m_unknown_closures_needed = true;
@@ -3223,7 +3203,7 @@ RuntimeOptimizer::run ()
                 if (sym1->is_constant()) {
                     if (op.nargs() == 3) {
                         // getattribute( attributename, result )
-                        m_attributes_needed.insert( AttributeNeeded( *(ustring *)sym1->data() ) );
+                        m_attributes_needed.insert(AttributeNeeded(sym1->get_string()));
                     } else {
                         OSL_DASSERT (op.nargs() == 4 || op.nargs() == 5);
                         Symbol *sym2 = opargsym (op, 2);
@@ -3231,15 +3211,14 @@ RuntimeOptimizer::run ()
                             // getattribute( scopename, attributename, result ) or
                             // getattribute( scopename, attributename, arrayindex, result )
                             if (sym2->is_constant()) {
-                                m_attributes_needed.insert( AttributeNeeded(
-                                    *(ustring *)sym2->data(), *(ustring *)sym1->data()
-                                ) );
+                                m_attributes_needed.insert(AttributeNeeded(
+                                    sym2->get_string(), sym1->get_string()));
                             } else {
                                 m_unknown_attributes_needed = true;
                             }
                         } else {
                             // getattribute( attributename, arrayindex, result )
-                            m_attributes_needed.insert( AttributeNeeded( *(ustring *)sym1->data() ) );
+                            m_attributes_needed.insert(AttributeNeeded(sym1->get_string()));
                         }
                     }
                 } else { // sym1 not constant

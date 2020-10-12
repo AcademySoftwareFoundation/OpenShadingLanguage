@@ -165,7 +165,7 @@ ShaderMaster::resolve_syms ()
             int bit = -1;   // could be any
             const Symbol *Name (symbol(m_args[op.firstarg()+1]));
             if (Name->is_constant())
-                if (int b = shadingsys().raytype_bit (*(ustring *)Name->data()))
+                if (int b = shadingsys().raytype_bit(Name->get_string()))
                     bit = b;
             m_raytype_queries |= bit;
         }

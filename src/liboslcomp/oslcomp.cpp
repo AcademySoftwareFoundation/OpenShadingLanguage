@@ -687,18 +687,19 @@ OSLCompilerImpl::write_oso_const_value(const ConstantSymbol* sym) const
     int nelements     = std::max(1, type.arraylen);
     if (elemtype == TypeDesc::STRING)
         for (int i = 0; i < nelements; ++i)
-            osof("\"%s\"%s", OIIO::Strutil::escape_chars(sym->strval(i)),
+            osof("\"%s\"%s", OIIO::Strutil::escape_chars(sym->get_string(i)),
                  nelements > 1 ? " " : "");
     else if (elemtype == TypeDesc::INT)
         for (int i = 0; i < nelements; ++i)
-            osof("%d%s", sym->intval(i), nelements > 1 ? " " : "");
+            osof("%d%s", sym->get_int(i), nelements > 1 ? " " : "");
     else if (elemtype == TypeDesc::FLOAT)
         for (int i = 0; i < nelements; ++i)
             osof("%.9g%s", sym->floatval(i), nelements > 1 ? " " : "");
     else if (equivalent(elemtype, TypeDesc::TypeVector))
-        for (int i = 0; i < nelements; ++i)
-            osof("%.9g %.9g %.9g%s", sym->vecval(i).x, sym->vecval(i).y,
-                 sym->vecval(i).z, nelements > 1 ? " " : "");
+        for (int i = 0; i < nelements; ++i) {
+            Vec3 v = sym->get_vec3(i);
+            osof("%.9g %.9g %.9g%s", v.x, v.y, v.z, nelements > 1 ? " " : "");
+        }
     else {
         OSL_ASSERT(0 && "Don't know how to output this constant type");
     }

@@ -458,19 +458,18 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
 
         ss << "ds_"
            << std::setbase (16) << std::setfill('0') << std::setw (16)
-           << (*(ustring *)sym.data()).hash()
+           << sym.get_string().hash()
            << "_"
            << std::setbase (16) << std::setfill('0') << std::setw (4)
-           << (*(ustring *)sym.data()).length();
+           << sym.get_string().length();
 
         auto it = m_varname_map.find(ss.str());
         const std::string old_str = (it != m_varname_map.end())
             ? it->second : "";
 
-        if (old_str != "" && old_str != (*(ustring *)sym.data()).string()) {
+        if (old_str != "" && old_str != sym.get_string().string()) {
             std::cerr << "Warning: variable name collision between " << old_str
-                      << " and " << (*(ustring *)sym.data()).string()
-                      << std::endl;
+                      << " and " << sym.get_string() << std::endl;
         }
     }
     else {
@@ -598,21 +597,21 @@ BackendLLVM::llvm_load_value (const Symbol& sym, int deriv,
         // Shortcut for simple constants
         if (sym.typespec().is_float()) {
             if (cast == TypeDesc::TypeInt)
-                return ll.constant ((int)*(float *)sym.data());
+                return ll.constant ((int)sym.get_float());
             else
-                return ll.constant (*(float *)sym.data());
+                return ll.constant (sym.get_float());
         }
         if (sym.typespec().is_int()) {
             if (cast == TypeDesc::TypeFloat)
-                return ll.constant ((float)*(int *)sym.data());
+                return ll.constant ((float)sym.get_int());
             else
-                return ll.constant (*(int *)sym.data());
+                return ll.constant (sym.get_int());
         }
         if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
-            return ll.constant (((float *)sym.data())[component]);
+            return ll.constant (sym.get_float(component));
         }
         if (sym.typespec().is_string()) {
-            return ll.constant (*(ustring *)sym.data());
+            return ll.constant (sym.get_string());
         }
         OSL_ASSERT (0 && "unhandled constant type");
     }
@@ -719,31 +718,27 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
                  "Called llvm_load_constant_value with negative array index");
 
     if (sym.typespec().is_float()) {
-        const float *val = (const float *)sym.data();
         if (cast == TypeDesc::TypeInt)
-            return ll.constant ((int)val[arrayindex]);
+            return ll.constant((int)sym.get_float(arrayindex));
         else
-            return ll.constant (val[arrayindex]);
+            return ll.constant(sym.get_float(arrayindex));
     }
     if (sym.typespec().is_int()) {
-        const int *val = (const int *)sym.data();
         if (cast == TypeDesc::TypeFloat)
-            return ll.constant ((float)val[arrayindex]);
+            return ll.constant((float)sym.get_int(arrayindex));
         else
-            return ll.constant (val[arrayindex]);
+            return ll.constant(sym.get_int(arrayindex));
     }
     if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
-        const float *val = (const float *)sym.data();
         int ncomps = (int) sym.typespec().aggregate();
-        return ll.constant (val[ncomps*arrayindex + component]);
+        return ll.constant(sym.get_float(ncomps*arrayindex + component));
     }
     if (sym.typespec().is_string() && use_optix()) {
         OSL_DASSERT ((arrayindex == 0) && "String arrays are not currently supported in OptiX");
         return llvm_load_device_string (sym, /*follow*/ false);
     }
     if (sym.typespec().is_string()) {
-        const ustring *val = (const ustring *)sym.data();
-        return ll.constant (val[arrayindex]);
+        return ll.constant(sym.get_string(arrayindex));
     }
 
     OSL_ASSERT (0 && "unhandled constant type");

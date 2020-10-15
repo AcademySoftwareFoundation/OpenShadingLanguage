@@ -90,28 +90,16 @@ DECLFOLDER(constfold_add)
     }
     if (A.is_constant() && B.is_constant()) {
         if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() + *(int *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
+            int cind = rop.add_constant (A.get_int() + B.get_int());
             rop.turn_into_assign (op, cind, "const + const");
             return 1;
         } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = *(float *)A.data() + *(float *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
+            int cind = rop.add_constant (A.get_float() + B.get_float());
             rop.turn_into_assign (op, cind, "const + const");
             return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data() + *(Vec3 *)B.data();
+        } else if (A.typespec().is_triple_or_float() && B.typespec().is_triple_or_float()) {
+            Vec3 result = A.coerce_vec3() + B.coerce_vec3();
             int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const + const");
-            return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
-            Vec3 result = *(Vec3 *)A.data() + Vec3(*(float *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const + const");
-            return 1;
-        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            Vec3 result = Vec3(*(float *)A.data()) + *(Vec3 *)B.data();
-            int cind = rop.add_constant (B.typespec(), &result);
             rop.turn_into_assign (op, cind, "const + const");
             return 1;
         }
@@ -135,27 +123,15 @@ DECLFOLDER(constfold_sub)
     // R = A - B, if both are constants, =>  R = C
     if (A.is_constant() && B.is_constant()) {
         if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() - *(int *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
+            int cind = rop.add_constant (A.get_int() - B.get_int());
             rop.turn_into_assign (op, cind, "const - const");
             return 1;
         } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = *(float *)A.data() - *(float *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
+            int cind = rop.add_constant (A.get_float() - B.get_float());
             rop.turn_into_assign (op, cind, "const - const");
             return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data() - *(Vec3 *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const - const");
-            return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
-            Vec3 result = *(Vec3 *)A.data() - Vec3(*(float *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const - const");
-            return 1;
-        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            Vec3 result = Vec3(*(float *)A.data()) - *(Vec3 *)B.data();
+        } else if (A.typespec().is_triple_or_float() && B.typespec().is_triple_or_float()) {
+            Vec3 result = A.coerce_vec3() - B.coerce_vec3();
             int cind = rop.add_constant (B.typespec(), &result);
             rop.turn_into_assign (op, cind, "const - const");
             return 1;
@@ -201,28 +177,17 @@ DECLFOLDER(constfold_mul)
     }
     if (A.is_constant() && B.is_constant()) {
         if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() * *(int *)B.data();
-            int cind = rop.add_constant (A.typespec(), &result);
+            int cind = rop.add_constant (A.get_int() * B.get_int());
             rop.turn_into_assign (op, cind, "const * const");
             return 1;
         } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = (*(float *)A.data()) * (*(float *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
+            int cind = rop.add_constant (A.get_float() * B.get_float());
             rop.turn_into_assign (op, cind, "const * const");
             return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = (*(Vec3 *)A.data()) * (*(Vec3 *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const * const");
-            return 1;
-        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
-            Vec3 result = (*(Vec3 *)A.data()) * (*(float *)B.data());
-            int cind = rop.add_constant (A.typespec(), &result);
-            rop.turn_into_assign (op, cind, "const * const");
-            return 1;
-        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            Vec3 result = (*(float *)A.data()) * (*(Vec3 *)B.data());
-            int cind = rop.add_constant (B.typespec(), &result);
+        } else if (A.typespec().is_triple_or_float() && B.typespec().is_triple_or_float()) {
+            Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
+            Vec3 result = A.coerce_vec3() * B.coerce_vec3();
+            int cind = rop.add_constant (R.typespec(), &result);
             rop.turn_into_assign (op, cind, "const * const");
             return 1;
         }
@@ -253,26 +218,11 @@ DECLFOLDER(constfold_div)
     if (A.is_constant() && B.is_constant()) {
         int cind = -1;
         if (A.typespec().is_int() && B.typespec().is_int()) {
-            int result = *(int *)A.data() / *(int *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_float() && B.typespec().is_int()) {
-            float result = *(float *)A.data() / *(int *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_float() && B.typespec().is_float()) {
-            float result = *(float *)A.data() / *(float *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_int() && B.typespec().is_float()) {
-            float result = *(int *)A.data() / *(float *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_triple() && B.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data() / *(Vec3 *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_triple() && B.typespec().is_float()) {
-            Vec3 result = *(Vec3 *)A.data() / *(float *)B.data();
-            cind = rop.add_constant (R.typespec(), &result);
-        } else if (A.typespec().is_float() && B.typespec().is_triple()) {
-            float a = *(float *)A.data();
-            Vec3 result = Vec3(a,a,a) / *(Vec3 *)B.data();
+            cind = rop.add_constant (A.get_int() / B.get_int());
+        } else if (A.typespec().is_int_or_float() && B.typespec().is_int_or_float()) {
+            cind = rop.add_constant (A.coerce_float() / B.coerce_float());
+        } else if (A.typespec().is_triple_or_float() && B.typespec().is_triple_or_float()) {
+            Vec3 result = A.coerce_vec3() / B.coerce_vec3();
             cind = rop.add_constant (R.typespec(), &result);
         }
         if (cind >= 0) {
@@ -329,7 +279,7 @@ DECLFOLDER(constfold_dot)
     // dot(const,const) -> const
     if (A.is_constant() && B.is_constant()) {
         OSL_DASSERT(A.typespec().is_triple() && B.typespec().is_triple());
-        float result = (*(Vec3 *)A.data()).dot (*(Vec3 *)B.data());
+        float result = A.get_vec3().dot(B.get_vec3());
         int cind = rop.add_constant (TypeDesc::TypeFloat, &result);
         rop.turn_into_assign (op, cind, "dot(const,const)");
         return 1;
@@ -346,17 +296,17 @@ DECLFOLDER(constfold_neg)
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     if (A.is_constant()) {
         if (A.typespec().is_int()) {
-            int result =  - *(int *)A.data();
+            int result =  - A.get_int();
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind, "-const");
             return 1;
         } else if (A.typespec().is_float()) {
-            float result =  - *(float *)A.data();
+            float result =  - A.get_float();
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind, "-const");
             return 1;
         } else if (A.typespec().is_triple()) {
-            Vec3 result = - *(Vec3 *)A.data();
+            Vec3 result = - A.get_vec3();
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind, "-const");
             return 1;
@@ -373,17 +323,17 @@ DECLFOLDER(constfold_abs)
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     if (A.is_constant()) {
         if (A.typespec().is_int()) {
-            int result = std::abs(*(int *)A.data());
+            int result = std::abs(A.get_int());
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind, "abs(const)");
             return 1;
         } else if (A.typespec().is_float()) {
-            float result =  std::abs(*(float *)A.data());
+            float result =  std::abs(A.get_float());
             int cind = rop.add_constant (A.typespec(), &result);
             rop.turn_into_assign (op, cind, "abs(const)");
             return 1;
         } else if (A.typespec().is_triple()) {
-            Vec3 result = *(Vec3 *)A.data();
+            Vec3 result = A.get_vec3();
             result.x = std::abs(result.x);
             result.y = std::abs(result.y);
             result.z = std::abs(result.z);
@@ -407,9 +357,9 @@ DECLFOLDER(constfold_eq)
         if (equivalent (A.typespec(), B.typespec())) {
             val = equal_consts (A, B);
         } else if (A.typespec().is_float() && B.typespec().is_int()) {
-            val = (*(float *)A.data() == *(int *)B.data());
+            val = (A.get_float() == B.get_int());
         } else if (A.typespec().is_int() && B.typespec().is_float()) {
-            val = (*(int *)A.data() == *(float *)B.data());
+            val = (A.get_int() == B.get_float());
         } else {
             return 0;  // unhandled cases
         }
@@ -435,9 +385,9 @@ DECLFOLDER(constfold_neq)
         if (equivalent (A.typespec(), B.typespec())) {
             val = ! equal_consts (A, B);
         } else if (A.typespec().is_float() && B.typespec().is_int()) {
-            val = (*(float *)A.data() != *(int *)B.data());
+            val = (A.get_float() != B.get_int());
         } else if (A.typespec().is_int() && B.typespec().is_float()) {
-            val = (*(int *)A.data() != *(float *)B.data());
+            val = (A.get_int() != B.get_float());
         } else {
             return 0;  // unhandled case
         }
@@ -465,13 +415,13 @@ DECLFOLDER(constfold_lt)
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() < *(float *)B.data());
+            val = (A.get_float() < B.get_float());
         } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() < *(int *)B.data());
+            val = (A.get_float() < B.get_int());
         } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() < *(float *)B.data());
+            val = (A.get_int() < B.get_float());
         } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() < *(int *)B.data());
+            val = (A.get_int() < B.get_int());
         } else {
             return 0;  // unhandled case
         }
@@ -497,13 +447,13 @@ DECLFOLDER(constfold_le)
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() <= *(float *)B.data());
+            val = (A.get_float() <= B.get_float());
         } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() <= *(int *)B.data());
+            val = (A.get_float() <= B.get_int());
         } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() <= *(float *)B.data());
+            val = (A.get_int() <= B.get_float());
         } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() <= *(int *)B.data());
+            val = (A.get_int() <= B.get_int());
         } else {
             return 0;  // unhandled case
         }
@@ -529,13 +479,13 @@ DECLFOLDER(constfold_gt)
         // Turn the 'gt R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() > *(float *)B.data());
+            val = (A.get_float() > B.get_float());
         } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() > *(int *)B.data());
+            val = (A.get_float() > B.get_int());
         } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() > *(float *)B.data());
+            val = (A.get_int() > B.get_float());
         } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() > *(int *)B.data());
+            val = (A.get_int() > B.get_int());
         } else {
             return 0;  // unhandled case
         }
@@ -561,13 +511,13 @@ DECLFOLDER(constfold_ge)
         // Turn the 'leq R A B' into 'assign R X' where X is 0 or 1.
         bool val = false;
         if (ta.is_float() && tb.is_float()) {
-            val = (*(float *)A.data() >= *(float *)B.data());
+            val = (A.get_float() >= B.get_float());
         } else if (ta.is_float() && tb.is_int()) {
-            val = (*(float *)A.data() >= *(int *)B.data());
+            val = (A.get_float() >= B.get_int());
         } else if (ta.is_int() && tb.is_float()) {
-            val = (*(int *)A.data() >= *(float *)B.data());
+            val = (A.get_int() >= B.get_float());
         } else if (ta.is_int() && tb.is_int()) {
-            val = (*(int *)A.data() >= *(int *)B.data());
+            val = (A.get_int() >= B.get_int());
         } else {
             return 0;  // unhandled case
         }
@@ -588,7 +538,7 @@ DECLFOLDER(constfold_or)
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
     if (A.is_constant() && B.is_constant()) {
         OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
-        bool val = *(int *)A.data() || *(int *)B.data();
+        bool val = A.get_int() || B.get_int();
         // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
@@ -609,7 +559,7 @@ DECLFOLDER(constfold_and)
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'and R A B' into 'assign R X' where X is 0 or 1.
         OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
-        bool val = *(int *)A.data() && *(int *)B.data();
+        bool val = A.get_int() && B.get_int();
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
                                      val ? &int_one : &int_zero);
@@ -695,13 +645,13 @@ DECLFOLDER(constfold_if)
     if (C.is_constant()) {
         int result = -1;   // -1 == we don't know
         if (C.typespec().is_int())
-            result = (((int *)C.data())[0] != 0);
+            result = (C.get_int() != 0);
         else if (C.typespec().is_float())
-            result = (((float *)C.data())[0] != 0.0f);
+            result = (C.get_float() != 0.0f);
         else if (C.typespec().is_triple())
-            result = (((Vec3 *)C.data())[0] != Vec3(0,0,0));
+            result = (C.get_vec3() != Vec3(0,0,0));
         else if (C.typespec().is_string()) {
-            ustring s = ((ustring *)C.data())[0];
+            ustring s = C.get_string();
             result = (s.length() != 0);
         }
         int changed = 0;
@@ -757,7 +707,7 @@ DECLFOLDER(constfold_aref)
         TypeSpec elemtype = A.typespec().elementtype();
         OSL_ASSERT (equivalent(elemtype, R.typespec()));
         const int length = A.typespec().arraylength();
-        const int orig_index = *(int *)Index.data(), index = OIIO::clamp(orig_index, 0, length - 1);
+        const int orig_index = Index.get_int(), index = OIIO::clamp(orig_index, 0, length - 1);
         OSL_DASSERT(index >=0 && index < length);
         int cind = rop.add_constant (elemtype,
                         (char *)A.data() + index*elemtype.simpletype().size());
@@ -858,7 +808,7 @@ DECLFOLDER(constfold_aassign)
         Symbol *Ci (rop.inst()->argsymbol(opi.firstarg()+2));
         if (! Ii->is_constant() || !Ci->is_constant())
             break;   // not assigning constants
-        int indexval = *(int *)Ii->data();
+        int indexval = Ii->get_int();
         if (indexval < 0 || indexval >= len)
             break;  // out of range index; let runtime deal with it
         if (equivalent(elemtype, Ci->typespec())) {
@@ -866,9 +816,7 @@ DECLFOLDER(constfold_aassign)
             memcpy (fill + indexval*elemsize, Ci->data(), elemsize);
         } else if (elemtype.is_float() && Ci->typespec().is_int()) {
             // special case of float[i] = int
-            float c = Ci->typespec().is_int() ? *(int *)Ci->data()
-                                              : *(float *)Ci->data();
-            ((float *)fill)[indexval] = c;
+            ((float *)fill)[indexval] = Ci->coerce_float();
         } else {
             break;   // a case we don't handle
         }
@@ -921,7 +869,7 @@ DECLFOLDER(constfold_compassign)
     // the assignment entirely.
     if (AA && AA->is_constant()) {
         OSL_DASSERT (AA->typespec().is_triple());
-        int index = *(int *)I->data();
+        int index = I->get_int();
         if (index < 0 || index >= 3) {
             // We are indexing a const triple out of range.  But this
             // isn't necessarily a reportable error, because it may be a
@@ -931,8 +879,7 @@ DECLFOLDER(constfold_compassign)
             return 0;
         }
         float *aa = (float *)AA->data();
-        float c = C->typespec().is_int() ? *(int *)C->data()
-                                         : *(float *)C->data();
+        float c = C->coerce_float();
         if (aa[index] == c) {
             // If the component assignment doesn't change that component,
             // just omit the op entirely.
@@ -969,12 +916,10 @@ DECLFOLDER(constfold_compassign)
         Symbol *Ci (rop.inst()->argsymbol(opi.firstarg()+2));
         if (! Ii->is_constant() || !Ci->is_constant())
             break;   // not assigning constants
-        int indexval = *(int *)Ii->data();
+        int indexval = Ii->get_int();
         if (indexval < 0 || indexval >= 3)
             break;  // out of range index; let runtime deal with it
-        float c = Ci->typespec().is_int() ? *(int *)Ci->data()
-                                          : *(float *)Ci->data();
-        filled_values[indexval] = c;
+        filled_values[indexval] = Ci->coerce_float();
         if (index_assigned[indexval] < 0)
             ++num_assigned;
         index_assigned[indexval] = opindex;
@@ -1026,8 +971,8 @@ DECLFOLDER(constfold_mxcompassign)
     // eliminate the assignment entirely.
     if (AA && AA->is_constant()) {
         OSL_DASSERT (AA->typespec().is_matrix());
-        int jndex = *(int *)J->data();
-        int index = *(int *)I->data();
+        int jndex = J->get_int();
+        int index = I->get_int();
         if (index < 0 || index >= 3 || jndex < 0 || jndex >= 3) {
             // We are indexing a const matrix out of range.  But this
             // isn't necessarily a reportable error, because it may be a
@@ -1036,9 +981,8 @@ DECLFOLDER(constfold_mxcompassign)
             // check to catch, if indeed it is a problem.
             return 0;
         }
-        Matrix44 *aa = (Matrix44 *)AA->data();
-        float c = C->typespec().is_int() ? *(int *)C->data()
-                                         : *(float *)C->data();
+        Matrix44 *aa = (Matrix44 *)AA->dataptr();
+        float c = C->coerce_float();
         if ((*aa)[jndex][index] == c) {
             // If the component assignment doesn't change that component,
             // just omit the op entirely.
@@ -1077,12 +1021,11 @@ DECLFOLDER(constfold_mxcompassign)
         Symbol *Ci (rop.inst()->argsymbol(opi.firstarg()+3));
         if (! Ji->is_constant() || ! Ii->is_constant() || !Ci->is_constant())
             break;   // not assigning constants
-        int jndexval = *(int *)Ji->data();
-        int indexval = *(int *)Ii->data();
+        int jndexval =Ji->get_int();
+        int indexval =Ii->get_int();
         if (jndexval < 0 || jndexval >= 4 || indexval < 0 || indexval >= 4)
             break;  // out of range index; let runtime deal with it
-        float c = Ci->typespec().is_int() ? *(int *)Ci->data()
-                                          : *(float *)Ci->data();
+        float c = Ci->coerce_float();
         filled_values[jndexval][indexval] = c;
         if (index_assigned[jndexval][indexval] < 0)
             ++num_assigned;
@@ -1116,7 +1059,7 @@ DECLFOLDER(constfold_compref)
     Symbol &Index (*rop.inst()->argsymbol(op.firstarg()+2));
     if (A.is_constant() && Index.is_constant()) {
         OSL_DASSERT (A.typespec().is_triple() && Index.typespec().is_int());
-        int index = *(int *)Index.data();
+        int index = Index.get_int();
         if (index < 0 || index >= 3) {
             // We are indexing a const triple out of range.  But this
             // isn't necessarily a reportable error, because it may be a
@@ -1125,7 +1068,7 @@ DECLFOLDER(constfold_compref)
             // check to catch, if indeed it is a problem.
             return 0;
         }
-        int cind = rop.add_constant (TypeDesc::TypeFloat, (float *)A.data() + index);
+        int cind = rop.add_constant (A.get_float(index));
         rop.turn_into_assign (op, cind, "const_triple[const]");
         return 1;
     }
@@ -1141,7 +1084,7 @@ DECLFOLDER(constfold_strlen)
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
         OSL_DASSERT (S.typespec().is_string());
-        int result = (int) (*(ustring *)S.data()).length();
+        int result = (int) (S.get_string()).length();
         int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold strlen");
         return 1;
@@ -1160,7 +1103,7 @@ DECLFOLDER(constfold_hash)
     if (S->is_constant() && (T == NULL || T->is_constant())) {
         int cind = -1;
         if (S->typespec().is_string()) {
-            cind = rop.add_constant ((int) (*(ustring *)S->data()).hash());
+            cind = rop.add_constant ((int) (S->get_string()).hash());
         } else if (op.nargs() == 2 && S->typespec().is_int()) {
             cind = rop.add_constant (inthashi (S->get_int()));
         } else if (op.nargs() == 2 && S->typespec().is_float()) {
@@ -1168,9 +1111,9 @@ DECLFOLDER(constfold_hash)
         } else if (op.nargs() == 3 && S->typespec().is_float() && T->typespec().is_float()) {
             cind = rop.add_constant (inthashf (S->get_float(), T->get_float()));
         } else if (op.nargs() == 2 && S->typespec().is_triple()) {
-            cind = rop.add_constant (inthashf ((const float *)S->data()));
+            cind = rop.add_constant (inthashf ((const float *)S->dataptr()));
         } else if (op.nargs() == 3 && S->typespec().is_triple() && T->typespec().is_float()) {
-            cind = rop.add_constant (inthashf ((const float *)S->data(), T->get_float()));
+            cind = rop.add_constant (inthashf ((const float *)S->dataptr(), T->get_float()));
         }
         if (cind >= 0) {
             rop.turn_into_assign (op, cind, "const fold hash");
@@ -1190,9 +1133,9 @@ DECLFOLDER(constfold_getchar)
     Symbol &I (*rop.inst()->argsymbol(op.firstarg()+2));
     if (S.is_constant() && I.is_constant()) {
         OSL_DASSERT (S.typespec().is_string() && I.typespec().is_int());
-        int idx = (int) (*(int *)I.data());
-        int len = (int) (*(ustring *)S.data()).length();
-        int result = idx >= 0 && idx < len ? (*(ustring *)S.data()).c_str()[idx] : 0;
+        int idx = I.get_int();
+        int len = (int) (S.get_string()).length();
+        int result = idx >= 0 && idx < len ? (S.get_string()).c_str()[idx] : 0;
         int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold getchar");
         return 1;
@@ -1210,8 +1153,8 @@ DECLFOLDER(constfold_endswith)
     Symbol &E (*rop.inst()->argsymbol(op.firstarg()+2));
     if (S.is_constant() && E.is_constant()) {
         OSL_DASSERT (S.typespec().is_string() && E.typespec().is_string());
-        ustring s = *(ustring *)S.data();
-        ustring e = *(ustring *)E.data();
+        ustring s = S.get_string();
+        ustring e = E.get_string();
         size_t elen = e.length(), slen = s.length();
         int result = 0;
         if (elen <= slen)
@@ -1232,7 +1175,7 @@ DECLFOLDER(constfold_stoi)
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
         OSL_DASSERT (S.typespec().is_string());
-        ustring s = *(ustring *)S.data();
+        ustring s = S.get_string();
         int cind = rop.add_constant (Strutil::from_string<int>(s));
         rop.turn_into_assign (op, cind, "const fold stoi");
         return 1;
@@ -1249,7 +1192,7 @@ DECLFOLDER(constfold_stof)
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
         OSL_DASSERT (S.typespec().is_string());
-        ustring s = *(ustring *)S.data();
+        ustring s = S.get_string();
         int cind = rop.add_constant (Strutil::from_string<float>(s));
         rop.turn_into_assign (op, cind, "const fold stof");
         return 1;
@@ -1272,12 +1215,11 @@ DECLFOLDER(constfold_split)
         // The split string, separator string, and maxsplit are all constants.
         // Compute the results with Strutil::split.
         int resultslen = Results.typespec().arraylength();
-        int maxsplit = Maxsplit ? *(int *)Maxsplit->data() : resultslen;
+        int maxsplit = Maxsplit ? Maxsplit->get_int() : resultslen;
         maxsplit = std::min (maxsplit, resultslen);
         std::vector<std::string> splits;
-        ustring sep = Sep ? (*(ustring *)Sep->data()) : ustring("");
-        Strutil::split ((*(ustring *)Str.data()).string(), splits,
-                        sep.string(), maxsplit);
+        ustring sep = Sep ? Sep->get_string() : ustring("");
+        Strutil::split (Str.get_string(), splits, sep.string(), maxsplit);
         int n = std::min (std::max(0,maxsplit), (int)splits.size());
         // Temporarily stash the index of the symbol holding results
         int resultsarg = rop.inst()->args()[op.firstarg()+2];
@@ -1313,7 +1255,7 @@ DECLFOLDER(constfold_concat)
         if (! S.is_constant())
             return 0;  // something non-constant
         ustring old = result;
-        ustring s = *(ustring *)S.data();
+        ustring s = S.get_string();
         result = ustring::sprintf ("%s%s", old.c_str() ? old.c_str() : "",
                                   s.c_str() ? s.c_str() : "");
     }
@@ -1333,7 +1275,7 @@ DECLFOLDER(constfold_format)
     Symbol &Format (*rop.opargsym(op, 1));
     if (! Format.is_constant())
         return 0;
-    ustring fmt = *(ustring *)Format.data();
+    ustring fmt = Format.get_string();
 
     // split fmt into the prefix (the starting part of the string that we
     // haven't yet processed) and the suffix (the ending part that we've
@@ -1379,15 +1321,15 @@ DECLFOLDER(constfold_format)
         std::string formatted;
         const TypeSpec &argtype = Arg.typespec();
         if (argtype.is_int())
-            formatted = Strutil::sprintf (mid.c_str(), *(int *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), Arg.get_int());
         else if (argtype.is_float())
-            formatted = Strutil::sprintf (mid.c_str(), *(float *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), Arg.get_float());
         else if (argtype.is_triple())
-            formatted = Strutil::sprintf (mid.c_str(), *(Vec3 *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), Arg.get_vec3());
         else if (argtype.is_matrix())
-            formatted = Strutil::sprintf (mid.c_str(), *(Matrix44 *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), *(Matrix44 *)Arg.dataptr());
         else if (argtype.is_string())
-            formatted = Strutil::sprintf (mid.c_str(), *(ustring *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), Arg.get_string());
         else
             break;   // something else we don't handle -- we're done
 
@@ -1434,9 +1376,9 @@ DECLFOLDER(constfold_substr)
     if (S.is_constant() && Start.is_constant() && Len.is_constant()) {
         OSL_DASSERT (S.typespec().is_string() && Start.typespec().is_int() &&
                      Len.typespec().is_int());
-        ustring s = *(ustring *)S.data();
-        int start = *(int *)Start.data();
-        int len = *(int *)Len.data();
+        ustring s = S.get_string();
+        int start = Start.get_int();
+        int len = Len.get_int();
         int slen = s.length();
         int b = start;
         if (b < 0)
@@ -1461,8 +1403,8 @@ DECLFOLDER(constfold_regex_search)
     if (op.nargs() == 3 // only the 2-arg version without search results
           && Subj.is_constant() && Reg.is_constant()) {
         OSL_DASSERT(Subj.typespec().is_string() && Reg.typespec().is_string());
-        const ustring &s (*(ustring *)Subj.data());
-        const ustring &r (*(ustring *)Reg.data());
+        ustring s (Subj.get_string());
+        ustring r (Reg.get_string());
         regex reg (r.string());
         int result = regex_search (s.string(), reg);
         int cind = rop.add_constant (result);
@@ -1494,9 +1436,9 @@ DECLFOLDER(constfold_clamp)
         equivalent(X.typespec(), Min.typespec()) &&
         equivalent(X.typespec(), Max.typespec()) &&
         (X.typespec().is_float() || X.typespec().is_triple())) {
-        const float *x = (const float *) X.data();
-        const float *min = (const float *) Min.data();
-        const float *max = (const float *) Max.data();
+        const float *x = (const float *) X.dataptr();
+        const float *min = (const float *) Min.dataptr();
+        const float *max = (const float *) Max.dataptr();
         float result[3];
         result[0] = clamp (x[0], min[0], max[0]);
         if (X.typespec().is_triple()) {
@@ -1537,9 +1479,9 @@ DECLFOLDER(constfold_mix)
     if (X.is_constant() && A.is_constant() && B.is_constant()) {
         // All three constants
         float result[3];
-        const float *a = (const float *) A.data();
-        const float *b = (const float *) B.data();
-        const float *x = (const float *) X.data();
+        const float *a = (const float *) A.dataptr();
+        const float *b = (const float *) B.dataptr();
+        const float *x = (const float *) X.dataptr();
         bool atriple = A.typespec().is_triple();
         bool btriple = B.typespec().is_triple();
         bool xtriple = X.typespec().is_triple();
@@ -1704,8 +1646,8 @@ DECLFOLDER(constfold_min)
     if (X.is_constant() && Y.is_constant() &&
         equivalent(X.typespec(), Y.typespec())) {
         if (X.typespec().is_float() || X.typespec().is_triple()) {
-            const float *x = (const float *) X.data();
-            const float *y = (const float *) Y.data();
+            const float *x = (const float *) X.dataptr();
+            const float *y = (const float *) Y.dataptr();
             float result[3];
             result[0] = std::min (x[0], y[0]);
             if (X.typespec().is_triple()) {
@@ -1717,8 +1659,8 @@ DECLFOLDER(constfold_min)
             return 1;
         }
         if (X.typespec().is_int()) {
-            const int *x = (const int *) X.data();
-            const int *y = (const int *) Y.data();
+            const int *x = (const int *) X.dataptr();
+            const int *y = (const int *) Y.dataptr();
             int result = std::min (x[0], y[0]);
             int cind = rop.add_constant (result);
             rop.turn_into_assign (op, cind, "const fold min");
@@ -1739,8 +1681,8 @@ DECLFOLDER(constfold_max)
     if (X.is_constant() && Y.is_constant() &&
         equivalent(X.typespec(), Y.typespec())) {
         if (X.typespec().is_float() || X.typespec().is_triple()) {
-            const float *x = (const float *) X.data();
-            const float *y = (const float *) Y.data();
+            const float *x = (const float *) X.dataptr();
+            const float *y = (const float *) Y.dataptr();
             float result[3];
             result[0] = std::max (x[0], y[0]);
             if (X.typespec().is_triple()) {
@@ -1752,8 +1694,8 @@ DECLFOLDER(constfold_max)
             return 1;
         }
         if (X.typespec().is_int()) {
-            const int *x = (const int *) X.data();
-            const int *y = (const int *) Y.data();
+            const int *x = (const int *) X.dataptr();
+            const int *y = (const int *) Y.dataptr();
             int result = std::max (x[0], y[0]);
             int cind = rop.add_constant (result);
             rop.turn_into_assign (op, cind, "const fold max");
@@ -1776,7 +1718,7 @@ DECLFOLDER(constfold_ ## name)                                          \
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));                \
     if (X.is_constant() &&                                              \
           (X.typespec().is_float() || X.typespec().is_triple())) {      \
-        const float *x = (const float *) X.data();                      \
+        const float *x = (const float *) X.dataptr();                   \
         float result[3];                                                \
         result[0] = impl (x[0]);                                        \
         if (X.typespec().is_triple()) {                                 \
@@ -1850,8 +1792,8 @@ DECLFOLDER(constfold_pow)
     }
     if (X.is_constant() && Y.is_constant()) {
         // if x and y are both constant, pre-compute x^y
-        const float *x = (const float *) X.data();
-        const float *y = (const float *) Y.data();
+        const float *x = (const float *) X.dataptr();
+        const float *y = (const float *) Y.dataptr();
         int nxcomps = X.typespec().is_triple() ? 3 : 1;
         int nycomps = Y.typespec().is_triple() ? 3 : 1;
         float result[3];
@@ -1872,7 +1814,7 @@ DECLFOLDER(constfold_pow)
     if (Y.is_constant() && Y.typespec().is_float()) {
         int resultarg = rop.inst()->args()[op.firstarg()+0];
         int xarg = rop.inst()->args()[op.firstarg()+1];
-        float yval = *(const float *)Y.data();
+        float yval = Y.get_float();
         if (yval == 2.0f) {
             rop.turn_into_new_op (op, u_mul, resultarg, xarg, xarg,
                                   "pow(x,2) => x*x");
@@ -1908,7 +1850,7 @@ DECLFOLDER(constfold_sincos)
     if (A.is_constant()) {
         int sinarg = rop.inst()->args()[op.firstarg()+1];
         int cosarg = rop.inst()->args()[op.firstarg()+2];
-        float angle = *(const float *)A.data();
+        float angle = A.get_float();
         float s, c;
 #if OSL_FAST_MATH
         OIIO::fast_sincos (angle, &s, &c);
@@ -1937,7 +1879,7 @@ DECLFOLDER(constfold_normalize)
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
     OSL_DASSERT(X.typespec().is_triple());
     if (X.is_constant()) {
-        Vec3 result = *(const Vec3 *)X.data();
+        Vec3 result = X.get_vec3();
         result.normalize();
         int cind = rop.add_constant (X.typespec(), &result);
         rop.turn_into_assign (op, cind, "const fold normalize");
@@ -1971,9 +1913,9 @@ DECLFOLDER(constfold_triple)
         OSL_DASSERT(A.typespec().is_float() &&
                  B.typespec().is_float() && C.typespec().is_float());
         float result[3];
-        result[0] = *(const float *)A.data();
-        result[1] = *(const float *)B.data();
-        result[2] = *(const float *)C.data();
+        result[0] = A.get_float();
+        result[1] = B.get_float();
+        result[2] = C.get_float();
         int cind = rop.add_constant (R.typespec(), &result);
         rop.turn_into_assign (op, cind, "triple(const,const,const) => triple constant");
         return 1;
@@ -1999,8 +1941,8 @@ DECLFOLDER(constfold_matrix)
         // and the other is the designated common space synonym.
         Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
         Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
-        ustring from = From.is_constant() ? *(ustring *)From.data() : ustring("$unknown1$");
-        ustring to   = To.is_constant()   ? *(ustring *)To.data()   : ustring("$unknown2$");
+        ustring from = From.is_constant() ? From.get_string() : ustring("$unknown1$");
+        ustring to   = To.is_constant()   ? To.get_string()   : ustring("$unknown2$");
         ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
         if (&From == &To || from == to ||
             ((from == Strings::common && to == commonsyn) ||
@@ -2047,8 +1989,8 @@ DECLFOLDER(constfold_matrix)
         // Turn matrix("common",1) info identity matrix.
         Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
         Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+2));
-        if (From.is_constant() && Val.is_constant() && *(float *)Val.data() == 1.0f) {
-            ustring from = *(ustring *)From.data();
+        if (From.is_constant() && Val.is_constant() && Val.get_float() == 1.0f) {
+            ustring from = From.get_string();
             if (from == Strings::common ||
                 from == rop.inst()->shadingsys().commonspace_synonym()) {
                 static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
@@ -2065,7 +2007,7 @@ DECLFOLDER(constfold_matrix)
         for (int i = 0; i < 16; ++i) {
             Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+1+i));
             if (Val.is_constant())
-                M[i] = *(const float *)Val.data();
+                M[i] = Val.get_float();
             else {
                 all_const = false;
                 break;
@@ -2081,7 +2023,7 @@ DECLFOLDER(constfold_matrix)
         // Try to turn matrix(const float) into just a const matrix assign.
         Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+1));
         if (Val.is_constant()) {
-            float val = *(float *)Val.data();
+            float val = Val.get_float();
             Matrix44 M (val,0,0,0, 0,val,0,0, 0,0,val,0, 0,0,0,val);
             rop.turn_into_assign (op, rop.add_constant (M), "const fold matrix");
             return 1;
@@ -2102,8 +2044,8 @@ DECLFOLDER(constfold_getmatrix)
     if (! (From.is_constant() && To.is_constant()))
         return 0;
     // OK, From and To are constant strings.
-    ustring from = *(ustring *)From.data();
-    ustring to = *(ustring *)To.data();
+    ustring from = From.get_string();
+    ustring to = To.get_string();
     ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
 
     // Shader and object spaces will vary from execution to execution,
@@ -2166,8 +2108,8 @@ DECLFOLDER(constfold_transform)
         Symbol &T (*rop.inst()->argsymbol(op.firstarg()+2));
         if (M.is_constant() && T.is_constant()) {
             OSL_DASSERT(M.typespec().is_string() && T.typespec().is_string());
-            ustring from = *(ustring *)M.data();
-            ustring to = *(ustring *)T.data();
+            ustring from = M.get_string();
+            ustring to = T.get_string();
             ustring syn = rop.shadingsys().commonspace_synonym();
             if (from == syn)
                 from = Strings::common;
@@ -2226,7 +2168,7 @@ DECLFOLDER(constfold_setmessage)
     // Record that the inst set a message
     if (Name.is_constant()) {
         OSL_DASSERT (Name.typespec().is_string());
-        rop.register_message (*(ustring *)Name.data());
+        rop.register_message (Name.get_string());
     } else {
         rop.register_unknown_message ();
     }
@@ -2246,7 +2188,7 @@ DECLFOLDER(constfold_getmessage)
     Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+1+(int)has_source));
     if (Name.is_constant()) {
         OSL_DASSERT (Name.typespec().is_string());
-        if (! rop.message_possibly_set (*(ustring *)Name.data())) {
+        if (! rop.message_possibly_set (Name.get_string())) {
             // If the messages could not have been sent, get rid of the
             // getmessage op, leave the destination value alone, and
             // assign 0 to the returned status of getmessage.
@@ -2297,7 +2239,7 @@ DECLFOLDER(constfold_getattribute)
     if (Destination.typespec().is_array())
         return 0;   // Punt on arrays for now
 
-    ustring attr_name = *(const ustring *)Attribute.data();
+    ustring attr_name = Attribute.get_string();
     const size_t maxbufsize = 1024;
     char buf[maxbufsize];
     TypeDesc attr_type = Destination.typespec().simpletype();
@@ -2332,14 +2274,14 @@ DECLFOLDER(constfold_getattribute)
         // until shade time.
         ustring obj_name;
         if (object_lookup)
-            obj_name = *(const ustring *)ObjectName.data();
+            obj_name = ObjectName.get_string();
         if (obj_name.empty())
             return 0;
 
         found = array_lookup
             ? rop.renderer()->get_array_attribute (NULL, false,
                                                    obj_name, attr_type, attr_name,
-                                                   *(const int *)Index.data(), buf)
+                                                   Index.get_int(), buf)
             : rop.renderer()->get_attribute (NULL, false,
                                              obj_name, attr_type, attr_name,
                                              buf);
@@ -2386,8 +2328,8 @@ DECLFOLDER(constfold_gettextureinfo)
                  Dataname.typespec().is_string());
 
     if (Filename.is_constant() && Dataname.is_constant()) {
-        ustring filename = *(ustring *)Filename.data();
-        ustring dataname = *(ustring *)Dataname.data();
+        ustring filename = Filename.get_string();
+        ustring dataname = Dataname.get_string();
         TypeDesc t = Data.typespec().simpletype();
         void *mydata = OIIO_ALLOCA(char, t.size());
         // FIXME(ptex) -- exclude folding of ptex, since these things
@@ -2480,9 +2422,9 @@ DECLFOLDER(constfold_texture)
         Symbol &Value = *rop.opargsym (op, i+1);
         OSL_DASSERT(Name.typespec().is_string());
         if (Name.is_constant() && Value.is_constant()) {
-            ustring name = *(ustring *)Name.data();
+            ustring name = Name.get_string();
             bool elide = false;
-            void *value = Value.data();
+            void *value = Value.dataptr();
             TypeDesc valuetype = Value.typespec().simpletype();
 
 // Keep from repeating the same tedious code for {s,t,r, }{width,blur,wrap}
@@ -2601,7 +2543,7 @@ DECLFOLDER(constfold_pointcloud_search)
     if (op.nargs() > 5 && rop.opargsym(op,5)->typespec().is_int()) {
         // Sorting requested
         Symbol *Sort = rop.opargsym(op,5);
-        if (! Sort->is_constant() || *(int *)Sort->data())
+        if (! Sort->is_constant() || Sort->get_int())
             return 0;  // forget it if sorted data might be requested
         ++attr_arg_offset;
     }
@@ -2621,7 +2563,7 @@ DECLFOLDER(constfold_pointcloud_search)
             return 0;  // unknown optional argument, punt
         if (++num_queries > RuntimeOptimizer::max_new_consts_per_fold)
             return 0;
-        names.push_back (*(ustring *)Name.data());
+        names.push_back (Name.get_string());
         value_args.push_back (rop.oparg (op, attr_arg_offset + i*2 + 1));
         value_types.push_back (Value.typespec().simpletype());
     }
@@ -2631,12 +2573,12 @@ DECLFOLDER(constfold_pointcloud_search)
     const int maxconst = 256;  // Max number of points to consider a constant
     size_t indices[maxconst+1]; // Make room for one more!
     float distances[maxconst+1];
-    int maxpoints = std::min (maxconst+1, *(int *)Max_points.data());
-    ustring filename = *(ustring *)Filename.data();
+    int maxpoints = std::min (maxconst+1, Max_points.get_int());
+    ustring filename = Filename.get_string();
     int count = 0;
     if (! filename.empty()) {
         count = rop.renderer()->pointcloud_search (rop.shaderglobals(), filename,
-                             *(Vec3 *)Center.data(), *(float *)Radius.data(),
+                             Center.get_vec3(), Radius.get_float(),
                              maxpoints, false, indices, distances, 0);
         rop.shadingsys().pointcloud_stats (1, 0, count);
     }
@@ -2740,8 +2682,8 @@ DECLFOLDER(constfold_pointcloud_get)
     // All inputs are constants -- we can just turn this into an array
     // assignment.
 
-    ustring filename = *(ustring *)Filename.data();
-    int count = *(int *)Count.data();
+    ustring filename = Filename.get_string();
+    int count = Count.get_int();
     if (filename.empty() || count < 1) {
         rop.turn_into_assign_zero (op, "Folded constant pointcloud_get");
         return 1;
@@ -2753,13 +2695,13 @@ DECLFOLDER(constfold_pointcloud_get)
     // Must transfer to size_t array
     size_t *indices = OIIO_ALLOCA(size_t, count);
     for (int i = 0;  i < count;  ++i)
-        indices[i] = ((int *)Indices.data())[i];
+        indices[i] = Indices.get_int(i);
 
     TypeDesc valtype = Data.typespec().simpletype();
     std::vector<char> data (valtype.size());
     int ok = rop.renderer()->pointcloud_get (rop.shaderglobals(), filename,
                                              indices, count,
-                                             *(ustring *)Attr_name.data(),
+                                             Attr_name.get_string(),
                                              valtype, &data[0]);
     rop.shadingsys().pointcloud_stats (0, 1, 0);
 
@@ -2792,7 +2734,7 @@ DECLFOLDER(constfold_noise)
     ustring name;
     if (Name->typespec().is_string()) {
         if (Name->is_constant())
-            name = *(ustring *)Name->data();
+            name = Name->get_string();
     } else {
         // Not a string, must be the old-style noise/pnoise
         --arg;  // forget that arg
@@ -2842,11 +2784,11 @@ DECLFOLDER(constfold_noise)
     for ( ; arg < op.nargs() && indim < 4; ++arg) {
         Symbol *in = rop.opargsym(op,arg);
         if (in->typespec().is_float()) {
-            input[indim++] = ((float *)in->data())[0];
+            input[indim++] = in->get_float(0);
         } else if (in->typespec().is_triple()) {
-            input[indim++] = ((float *)in->data())[0];
-            input[indim++] = ((float *)in->data())[1];
-            input[indim++] = ((float *)in->data())[2];
+            input[indim++] = in->get_float(0);
+            input[indim++] = in->get_float(1);
+            input[indim++] = in->get_float(2);
         }
         else
             return 0;  // optional args starting, we don't fold them yet
@@ -2959,28 +2901,28 @@ DECLFOLDER(constfold_assign)
     if (B->is_constant() && AA && AA->is_constant()) {
         // Try to turn A=C into nop if A already is C
         if (AA->typespec().is_int() && B->typespec().is_int()) {
-            if (*(int *)AA->data() == *(int *)B->data()) {
+            if (AA->get_int() == B->get_int()) {
                 rop.turn_into_nop (op, "reassignment of current value");
                 return 1;
             }
         } else if (AA->typespec().is_float() && B->typespec().is_float()) {
-            if (*(float *)AA->data() == *(float *)B->data()) {
+            if (AA->get_float() == B->get_float()) {
                 rop.turn_into_nop (op, "reassignment of current value");
                 return 1;
             }
         } else if (AA->typespec().is_float() && B->typespec().is_int()) {
-            if (*(float *)AA->data() == *(int *)B->data()) {
+            if (AA->get_float() == B->get_int()) {
                 rop.turn_into_nop (op, "reassignment of current value");
                 return 1;
             }
         } else if (AA->typespec().is_triple() && B->typespec().is_triple()) {
-            if (*(Vec3 *)AA->data() == *(Vec3 *)B->data()) {
+            if (AA->get_vec3() == B->get_vec3()) {
                 rop.turn_into_nop (op, "reassignment of current value");
                 return 1;
             }
         } else if (AA->typespec().is_triple() && B->typespec().is_float()) {
-            float b = *(float *)B->data();
-            if (*(Vec3 *)AA->data() == Vec3(b,b,b)) {
+            float b = B->get_float();
+            if (AA->get_vec3() == Vec3(b,b,b)) {
                 rop.turn_into_nop (op, "reassignment of current value");
                 return 1;
             }
@@ -3041,7 +2983,7 @@ DECLFOLDER(constfold_raytype)
     if (! Name.is_constant())
         return 0;   // Can't optimize non-constant raytype name
 
-    int bit = rop.shadingsys().raytype_bit (*(ustring *)Name.data());
+    int bit = rop.shadingsys().raytype_bit (Name.get_string());
     if (bit & rop.raytypes_on()) {
         rop.turn_into_assign_one (op, "raytype => 1");
         return 1;

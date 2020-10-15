@@ -103,14 +103,14 @@ Symbol::print_vals(std::ostream& out, int maxvals) const
     int n      = std::min(int(t.aggregate * t.numelements()), maxvals);
     if (t.basetype == TypeDesc::FLOAT) {
         for (int j = 0; j < n; ++j)
-            out << (j ? " " : "") << ((float*)data())[j];
+            out << (j ? " " : "") << get_float(j);
     } else if (t.basetype == TypeDesc::INT) {
         for (int j = 0; j < n; ++j)
-            out << (j ? " " : "") << ((int*)data())[j];
+            out << (j ? " " : "") << get_int(j);
     } else if (t.basetype == TypeDesc::STRING) {
         for (int j = 0; j < n; ++j)
             out << (j ? " " : "") << "\""
-                << Strutil::escape_chars(((ustring*)data())[j]) << "\"";
+                << Strutil::escape_chars(get_string(j)) << "\"";
     }
     if (int(t.aggregate * t.numelements()) > maxvals)
         out << "...";

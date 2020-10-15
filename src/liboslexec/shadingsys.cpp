@@ -303,6 +303,51 @@ ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
     return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
 }
 
+template<int WidthT>
+bool
+ShadingSystem::BatchedExecutor<WidthT>::execute (ShadingContext &ctx, ShaderGroup &group,
+        int batch_size, BatchedShaderGlobals<WidthT> &globals_batch, bool run)
+{
+    OSL_ASSERT(0 && "To Be Implemented");
+    return false;
+}
+
+template<int WidthT>
+bool
+ShadingSystem::BatchedExecutor<WidthT>::execute_init (ShadingContext &ctx, ShaderGroup &group,
+        int batch_size, BatchedShaderGlobals<WidthT> &globals_batch, bool run)
+{
+    OSL_ASSERT(0 && "To Be Implemented");
+    return false;
+}
+
+
+template<int WidthT>
+bool
+ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
+                              int layernumber)
+{
+    OSL_ASSERT(0 && "To Be Implemented");
+    return false;
+}
+
+template<int WidthT>
+bool
+ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
+                              ustring layername)
+{
+    OSL_ASSERT(0 && "To Be Implemented");
+    return false;
+}
+
+template<int WidthT>
+bool
+ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
+                              const ShaderSymbol *symbol)
+{
+    OSL_ASSERT(0 && "To Be Implemented");
+    return false;
+}
 
 
 bool
@@ -394,7 +439,102 @@ ShadingSystem::symbol_address (const ShadingContext &ctx,
     return ctx.symbol_data (*(const Symbol *)sym);
 }
 
+bool
+ShadingSystem::supports_batch_execution_at(int width)
+{
+    auto requestedISA = LLVM_Util::lookup_isa_by_name(m_impl->llvm_jit_target().c_str());
+    OSL_MAYBE_UNUSED bool target_requested = (requestedISA != TargetISA::UNKNOWN);
+    OSL_MAYBE_UNUSED bool jit_fma = !m_impl->llvm_jit_fma();
 
+    // Build defines preprocessor MACROS to identify which
+    // target specific ISA's it is building OSL library functions for.
+    // This could be changed to possibly search
+    // a library path for existence of target specific libraries.
+    switch(width) {
+    case 16:
+        switch(requestedISA)
+        {
+            case TargetISA::UNKNOWN:
+                // fallthrough
+            case TargetISA::AVX512:
+#ifdef __OSL_SUPPORTS_B16_AVX512
+                if (jit_fma) {
+                    if (LLVM_Util::supports_isa(TargetISA::AVX512)) {
+                        return true;
+                    }
+                    if (target_requested) { break; }
+                }
+#endif
+                // fallthrough
+            case TargetISA::AVX512_noFMA:
+#ifdef __OSL_SUPPORTS_B16_AVX512_NOFMA
+                if (LLVM_Util::supports_isa(TargetISA::AVX512_noFMA)) {
+                    return true;
+                }
+                if (target_requested) { break; }
+#endif
+                // fallthrough
+            default:
+                return false;
+        };
+        return false;
+    case 8:
+        switch(requestedISA)
+        {
+            case TargetISA::UNKNOWN:
+                // fallthrough
+            case TargetISA::AVX512:
+#ifdef __OSL_SUPPORTS_B8_AVX512
+                if (jit_fma) {
+                    if (LLVM_Util::supports_isa(TargetISA::AVX512)) {
+                        return true;
+                    }
+                    if (target_requested) { break; }
+                }
+#endif
+                // fallthrough
+            case TargetISA::AVX512_noFMA:
+#ifdef __OSL_SUPPORTS_B8_AVX512_NOFMA
+                if (LLVM_Util::supports_isa(TargetISA::AVX512_noFMA)) {
+                    return true;
+                }
+                if (target_requested) { break; }
+#endif
+                // fallthrough
+            case TargetISA::AVX2:
+#ifdef __OSL_SUPPORTS_B8_AVX2
+                if (jit_fma) {
+                    if (LLVM_Util::supports_isa(TargetISA::AVX2)) {
+                        return true;
+                    }
+                    if (target_requested) { break; }
+                }
+#endif
+                // fallthrough
+            case TargetISA::AVX2_noFMA:
+#ifdef __OSL_SUPPORTS_B8_AVX2_NOFMA
+                if (LLVM_Util::supports_isa(TargetISA::AVX2_noFMA)) {
+                    return true;
+                }
+                if (target_requested) { break; }
+#endif
+                // fallthrough
+            case TargetISA::AVX:
+#ifdef __OSL_SUPPORTS_B8_AVX
+                if (LLVM_Util::supports_isa(TargetISA::AVX)) {
+                    return true;
+                }
+                if (target_requested) { break; }
+#endif
+                // fallthrough
+            default:
+                return false;
+        };
+        return false;
+    default:
+        return false;
+    }
+}
 
 std::string
 ShadingSystem::getstats (int level) const
@@ -548,6 +688,24 @@ ShadingSystem::optimize_group (ShaderGroup *group,
     set_raytypes (group, raytypes_on, raytypes_off);
     optimize_group (group, ctx, do_jit);
 }
+
+template<int WidthT>
+void
+ShadingSystem::BatchedExecutor<WidthT>::jit_group (ShaderGroup *group, ShadingContext *ctx)
+{
+    OSL_ASSERT(0 && "To Be Implemented");
+}
+
+template<int WidthT>
+void
+ShadingSystem::BatchedExecutor<WidthT>::jit_all_groups (int nthreads)
+{
+    OSL_ASSERT(0 && "To Be Implemented");
+}
+
+// Explicitly instantiate
+template class ShadingSystem::BatchedExecutor<16>;
+template class ShadingSystem::BatchedExecutor<8>;
 
 
 

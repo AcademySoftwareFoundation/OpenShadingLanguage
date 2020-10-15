@@ -426,6 +426,7 @@ set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
                             "src/osl.imageio/*.cpp"
                             "src/osltoy/*.cpp"
                             "src/osltoy/*.h"
+                            "testsuite/*.cpp"
     CACHE STRING "Glob patterns to include for clang-format")
 set (CLANG_FORMAT_EXCLUDES
         # Files "imported and modified" that we don't want to reformat, so
@@ -445,6 +446,8 @@ set (CLANG_FORMAT_EXCLUDES
         "src/include/OSL/device_string.h"
         "src/include/OSL/oslexec.h"
         "src/testrender/cuda/*"
+        # Header files in testsuite are almost certainly osl headers, not C++
+        "testsuite/*.h"
         ""
      CACHE STRING "Glob patterns to exclude for clang-format")
 find_program (CLANG_FORMAT_EXE

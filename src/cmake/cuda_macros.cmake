@@ -80,7 +80,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             "-I${ILMBASE_INCLUDE_DIR}"
             "-I${Boost_INCLUDE_DIRS}"
             ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS}
-            -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE
+            -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security
             -O3 -fno-math-errno -ffast-math -S -emit-llvm ${extra_clang_args}

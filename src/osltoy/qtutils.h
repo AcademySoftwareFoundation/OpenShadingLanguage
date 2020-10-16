@@ -171,7 +171,7 @@ private:
         double ss = m_fixed_step;
         if (m_variable_step_digits) {
             ss        = m_variable_min_step;
-            double av = fabs(valsize);
+            double av = ::fabs(valsize);
             for (int d = 6; d > -4; --d) {
                 double p = pow(10.0, double(d));
                 if (av > p * 1.1) {

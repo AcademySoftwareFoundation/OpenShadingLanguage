@@ -10,8 +10,7 @@
 #include <type_traits>
 
 #include <OSL/oslconfig.h>
-//#include "mask.h"
-#include "dual_vec.h"
+#include <OSL/dual_vec.h>
 #include <OSL/Imathx/Imathx.h>
 
 OSL_NAMESPACE_ENTER

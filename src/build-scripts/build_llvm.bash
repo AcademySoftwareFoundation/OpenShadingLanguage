@@ -29,7 +29,7 @@ if [[ `uname` == "Linux" ]] ; then
     fi
     LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-${LLVM_DISTRO_NAME}.tar.xz
     echo LLVMTAR = $LLVMTAR
-    if [ "$LLVM_VERSION" == "10.0.0" ] ; then
+    if [[ "$LLVM_VERSION" == "10.0.0" ]] || [[ "$LLVM_VERSION" == "11.0.0" ]] ; then
         # new
         curl --location https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
     else

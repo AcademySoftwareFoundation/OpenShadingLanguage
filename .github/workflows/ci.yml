@@ -29,7 +29,7 @@ jobs:
     name: "Linux VFXP-2019: gcc6 C++11 llvm7 py2.7 boost-1.66 exr-2.3 OIIO-2.1 sse2"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2019
+      image: aswf/ci-osl:2019-clang7
     steps:
       - uses: actions/checkout@v2
       - name: all
@@ -53,7 +53,7 @@ jobs:
           path: build/*/testsuite/*/*.*
 
   vfxplatform-2020:
-    name: "Linux VFXP-2020 gcc6/C++14 llvm7 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
+    name: "Linux VFXP-2020 gcc6/C++14 llvm10 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2020
@@ -77,10 +77,10 @@ jobs:
           path: build/*/testsuite/*/*.*
 
   vfxplatform-2021:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm10 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2"
+    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2021
+      image: aswf/ci-osl:2021-clang11
     steps:
       - uses: actions/checkout@v2
       - name: all
@@ -182,8 +182,8 @@ jobs:
   linux-bleeding-edge:
     # Test against development master for relevant dependencies, latest
     # supported releases of everything else.
-    name: "Linux bleeding edge: gcc10, C++17, llvm10, oiio/ocio/exr/pybind-master, avx2"
-    runs-on: ubuntu-18.04
+    name: "Linux bleeding edge: gcc10, C++17, llvm11, oiio/ocio/exr/pybind-master, avx2"
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: all
@@ -191,7 +191,8 @@ jobs:
           CXX: g++-10
           USE_CPP: 17
           CMAKE_CXX_STANDARD: 17
-          LLVM_VERSION: 10.0.0
+          LLVM_VERSION: 11.0.0
+          LLVM_DISTRO_NAME: ubuntu-20.04
           USE_SIMD: avx2,f16c
           OPENEXR_VERSION: master
           OPENIMAGEIO_VERSION: master
@@ -216,7 +217,7 @@ jobs:
     name: "Linux oldest everything: gcc6 C++11 llvm7 py2.7 boost-1.66 oiio-2.1 no-simd exr2.3"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2019
+      image: aswf/ci-osl:2019-clang7
     steps:
       - uses: actions/checkout@v2
       - name: all

@@ -15,9 +15,14 @@
 OSL_NAMESPACE_ENTER
 
 class RendererServices;
+template<int WidthT>
+class BatchedRendererServices;
 class ShadingContext;
 struct ShaderGlobals;
 
+// Tags for polymorphic dispatch
+template <int SimdWidthT>
+class WidthOf {};
 
 
 /// Opaque pointer to whatever the renderer uses to represent a
@@ -411,6 +416,15 @@ public:
         NoiseOpt () : anisotropic(0), do_filter(true),
             direction(1.0f,0.0f,0.0f), bandwidth(1.0f), impulses(16.0f) { }
     };
+
+    /// A renderer may choose to support batched execution by providing pointers
+    /// to objects satisfying the BatchedRendererServices<WidthOf<#>> interface
+    /// for specific batch sizes.  Those objects should should derive from
+    /// BatchedRendererServicesBase and make friends with the subclass of
+    /// RendererServices to enable the downcast to BatchedRendererServices.
+    /// Unless overridden, a nullptr is returned.
+    virtual BatchedRendererServices<16> * batched(WidthOf<16>);
+    virtual BatchedRendererServices<8> * batched(WidthOf<8>);
 
 protected:
     TextureSystem *m_texturesys;   // A place to hold a TextureSystem

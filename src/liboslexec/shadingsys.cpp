@@ -1751,26 +1751,16 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         return true;
     }
     if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
-#ifdef OIIO_HAS_SPRINTF
         *(ustring *)val = ustring::sprintf ("__direct_callable__group_%s_%d_init",
                                             group->name(), group->id());
-#else
-        *(ustring *)val = ustring::format ("__direct_callable__group_%s_%d_init",
-                                           group->name(), group->id());
-#endif
         return true;
     }
     if (name == "group_entry_name" && type.basetype == TypeDesc::STRING) {
         int nlayers = group->nlayers ();
         ShaderInstance *inst = (*group)[nlayers-1];
         // This formulation mirrors OSOProcessorBase::layer_function_name()
-#ifdef OIIO_HAS_SPRINTF
         *(ustring *)val = ustring::sprintf ("__direct_callable__%s_%s_%d", group->name(),
                                            inst->layername(), inst->id());
-#else
-        *(ustring *)val = ustring::format ("__direct_callable__%s_%s_%d", group->name(),
-                                           inst->layername(), inst->id());
-#endif
         return true;
     }
     if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {

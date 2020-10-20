@@ -310,11 +310,26 @@ public:
     ///
     bool is_triple() const
     {
+        return !is_closure() && m_simple.aggregate == TypeDesc::VEC3
+               && m_simple.basetype == TypeDesc::FLOAT && !m_simple.is_array();
+    }
+
+    /// Is it based on a triple (color, point, vector, or normal)?
+    /// (It's ok for it to be an array or closure.)
+    bool is_triple_based() const
+    {
+        return !is_closure() && m_simple.aggregate == TypeDesc::VEC3
+               && m_simple.basetype == TypeDesc::FLOAT;
+    }
+
+    /// Is it a simple triple (color, point, vector, or normal) or float?
+    ///
+    bool is_triple_or_float() const
+    {
         return !is_closure()
-               && (m_simple == TypeDesc::TypeColor
-                   || m_simple == TypeDesc::TypePoint
-                   || m_simple == TypeDesc::TypeVector
-                   || m_simple == TypeDesc::TypeNormal);
+               && (m_simple.aggregate == TypeDesc::VEC3
+                   || m_simple.aggregate == TypeDesc::SCALAR)
+               && m_simple.basetype == TypeDesc::FLOAT && !m_simple.is_array();
     }
 
     /// Is it a simple numeric type (based on float or int, even if an
@@ -583,6 +598,9 @@ public:
     ///
     void* data() const { return m_data; }
 
+    // Forward compatibility
+    void* dataptr() const { return m_data; }
+
     /// Specify the location of the symbol's data.
     ///
     void data(void* d) { m_data = d; }
@@ -735,18 +753,52 @@ public:
         return ((const float*)data())[index];
     }
 
+    // Retrieve a const float value (coerce from int if necessary)
+    float coerce_float(int index = 0) const
+    {
+        OSL_DASSERT(
+            data()
+            && (typespec().is_float_based() || typespec().is_int_based()));
+        return typespec().is_int_based()
+                   ? static_cast<float>(((const int*)data())[index])
+                   : ((const float*)data())[index];
+    }
+
     // Retrieve the const int value (must be a const int!)
     int get_int(int index = 0) const
     {
-        OSL_DASSERT(data() && typespec().is_int_based());
-        return ((const int*)data())[index];
+        OSL_DASSERT(dataptr() && typespec().is_int_based());
+        return ((const int*)dataptr())[index];
     }
 
     // Retrieve the const string value (must be a const string!)
     ustring get_string(int index = 0) const
     {
-        OSL_DASSERT(data() && typespec().is_string());
-        return ((const ustring*)data())[index];
+        OSL_DASSERT(dataptr() && typespec().is_string_based());
+        return ((const ustring*)dataptr())[index];
+    }
+
+    // Retrieve the const vec3 value (must be a const triple!)
+    const Vec3& get_vec3(int index = 0) const
+    {
+        OSL_DASSERT(dataptr() && typespec().is_triple_based());
+        return ((const Vec3*)dataptr())[index];
+    }
+
+    // Retrieve the const vec3 value (coerce from float if necessary)
+    const Vec3 coerce_vec3() const
+    {
+        OSL_DASSERT(dataptr()
+                    && (typespec().is_triple() || typespec().is_float()
+                        || typespec().is_int()));
+        Vec3 v;
+        if (typespec().is_triple())
+            v = ((const Vec3*)dataptr())[0];
+        else {
+            float f = coerce_float();
+            v       = Vec3(f, f, f);
+        }
+        return v;
     }
 
     // Stream output. Note that print/print_vals assume that any string

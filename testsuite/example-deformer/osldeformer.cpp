@@ -57,8 +57,8 @@ struct MyUserData {
     float amplitude = 0.0f;
 
     // Make a retrieve-by-name function.
-    bool retrieve (OSL::ustring name, OSL::TypeDesc type, void *val,
-                   bool derivatives)
+    bool retrieve(OSL::ustring name, OSL::TypeDesc type, void* val,
+                  bool derivatives)
     {
         // For speed, it wants to use ustrings (special unique strings that
         // can be equality tested at the cost of a simple pointer compare
@@ -96,15 +96,15 @@ struct MyUserData {
 // pointer is stored in shaderglobals.renderstate.
 class MyRendererServices final : public OSL::RendererServices {
 public:
-    virtual bool get_userdata (bool derivatives, OSL::ustring name,
-                               OSL::TypeDesc type, OSL::ShaderGlobals *sg,
-                               void *val)
+    virtual bool get_userdata(bool derivatives, OSL::ustring name,
+                              OSL::TypeDesc type, OSL::ShaderGlobals* sg,
+                              void* val)
     {
         // In this case, our implementation of get_userdata just requests
         // it from the MyUserData, which we have arranged is pointed to
         // by shaderglobals.renderstate.
         MyUserData* userdata = (MyUserData*)sg->renderstate;
-        return userdata ? userdata->retrieve (name, type, val, derivatives)
+        return userdata ? userdata->retrieve(name, type, val, derivatives)
                         : false;
     }
 };
@@ -112,14 +112,15 @@ public:
 
 
 int
-main (int argc, char *argv[])
+main(int argc, char* argv[])
 {
     // Create a shading system. Note: the constructor can override with
     // optional pointers to your custom RendererServices, TextureSystem,
     // and ErrorHandler. In this case, we do supply our own subclass of
     // RendererServices, so that we can retrieve userdata.
     MyRendererServices renderer;
-    std::unique_ptr<OSL::ShadingSystem> shadsys (new OSL::ShadingSystem (&renderer));
+    std::unique_ptr<OSL::ShadingSystem> shadsys(
+        new OSL::ShadingSystem(&renderer));
 
     // Let's create a simple deformer as a displacement shader that
     // computes P+noise(P):
@@ -138,15 +139,16 @@ main (int argc, char *argv[])
     // nodes, but I am trying to illustrate how to set up the multi-node
     // case.
 
-    OSL::ShaderGroupRef mygroup = shadsys->ShaderGroupBegin ("my_noise_deformer");
-    shadsys->Shader (*mygroup, "displacement", "getP", "layer1");
-    shadsys->Parameter (*mygroup, "amplitude", 1.0f, /*lockgeom=*/false);
-    shadsys->Shader (*mygroup, "displacement", "vfBm3d", "layer2");
-    shadsys->ConnectShaders (*mygroup, "layer1", "out", "layer2", "position");
-    shadsys->Shader (*mygroup, "displacement", "vadd", "layer3");
-    shadsys->ConnectShaders (*mygroup, "layer1", "out", "layer3", "a");
-    shadsys->ConnectShaders (*mygroup, "layer2", "out", "layer3", "b");
-    shadsys->ShaderGroupEnd (*mygroup);
+    OSL::ShaderGroupRef mygroup = shadsys->ShaderGroupBegin(
+        "my_noise_deformer");
+    shadsys->Shader(*mygroup, "displacement", "getP", "layer1");
+    shadsys->Parameter(*mygroup, "amplitude", 1.0f, /*lockgeom=*/false);
+    shadsys->Shader(*mygroup, "displacement", "vfBm3d", "layer2");
+    shadsys->ConnectShaders(*mygroup, "layer1", "out", "layer2", "position");
+    shadsys->Shader(*mygroup, "displacement", "vadd", "layer3");
+    shadsys->ConnectShaders(*mygroup, "layer1", "out", "layer3", "a");
+    shadsys->ConnectShaders(*mygroup, "layer2", "out", "layer3", "b");
+    shadsys->ShaderGroupEnd(*mygroup);
 
     // Note: we could have used a serialized version equivalently:
     //
@@ -186,17 +188,18 @@ main (int argc, char *argv[])
     // it just to show how it can be done with oslquery:
     {
         int numlayers = 1;
-        shadsys->getattribute (mygroup.get(), "num_layers", numlayers);
+        shadsys->getattribute(mygroup.get(), "num_layers", numlayers);
         std::vector<OSL::ustring> output_names;
-        OSL::OSLQuery oslquery (mygroup.get(), numlayers-1);
+        OSL::OSLQuery oslquery(mygroup.get(), numlayers - 1);
         for (size_t i = 0; i < oslquery.nparams(); ++i) {
             auto p = oslquery.getparam(i);
             if (p && p->isoutput)
                 output_names.push_back(p->name);
         }
-        shadsys->attribute (mygroup.get(), "renderer_outputs",
-                            OSL::TypeDesc(OSL::TypeDesc::STRING,output_names.size()),
-                            output_names.data());
+        shadsys->attribute(mygroup.get(), "renderer_outputs",
+                           OSL::TypeDesc(OSL::TypeDesc::STRING,
+                                         output_names.size()),
+                           output_names.data());
     }
 #endif
 
@@ -209,24 +212,23 @@ main (int argc, char *argv[])
     // and a ShadingContext for *each* thread, and those separate contexts
     // may execute concurrently. For this sample program, though, we will
     // only use one thread, and thus need only one context.
-    OSL::PerThreadInfo *perthread = shadsys->create_thread_info();
-    OSL::ShadingContext *ctx = shadsys->get_context(perthread);
+    OSL::PerThreadInfo* perthread = shadsys->create_thread_info();
+    OSL::ShadingContext* ctx      = shadsys->get_context(perthread);
 
     // Get a ShaderSymbol* handle to the final output we care about. This
     // will greatly speed up retrieving the value later, rather than by
     // looking it up by name on every shade.
     // The group must already be optimized before we call find_symbol,
     // so we force that to happen now.
-    shadsys->optimize_group (mygroup.get(), ctx);
-    const OSL::ShaderSymbol *outsym =
-        shadsys->find_symbol (*mygroup.get(), OSL::ustring("layer3"),
-                              OSL::ustring("out"));
+    shadsys->optimize_group(mygroup.get(), ctx);
+    const OSL::ShaderSymbol* outsym
+        = shadsys->find_symbol(*mygroup.get(), OSL::ustring("layer3"),
+                               OSL::ustring("out"));
     OSL_ASSERT(outsym);
 
     // For illustration, let's loop over running this on points
     //     (0.1*i, 0, 0)   for i in [0,20]
     for (int i = 0; i < 20; ++i) {
-
         // First, we need a ShaderGlobals struct:
         OSL::ShaderGlobals shaderglobals;
 
@@ -238,33 +240,33 @@ main (int argc, char *argv[])
 
         // Example of initializing a global: the position, P. It just lives
         // as a hard-coded field in the ShaderGlobals itself.
-        OSL::Vec3 Pin (0.1f*i, 0.0f, 0.0f);
+        OSL::Vec3 Pin(0.1f * i, 0.0f, 0.0f);
         shaderglobals.P = Pin;
 
         // Example of initializing a varying or interpolated parameter. We
         // MUST have declared this as a "lockgeom=0" parameter (either in
         // the shader source itself, or when we instanced it with the
         // ShadingSystem::Parameter() call) or this won't work!
-        userdata.amplitude = 0.0f + 1.0f*powf(i/20.0f, 3.0f);
+        userdata.amplitude = 0.0f + 1.0f * powf(i / 20.0f, 3.0f);
 
         // Run the shader (will automagically optimize and JIT the first
         // time it executes).
-        shadsys->execute (ctx, *mygroup.get(), shaderglobals);
+        shadsys->execute(ctx, *mygroup.get(), shaderglobals);
 
         // Retrieve the result. This is fast, it's just combining the data
         // area address known by the context with the offset-within-data
         // that is known in that `outsym` we retrieved once for the group.
-        OSL::Vec3 Pout = *(OSL::Vec3*)shadsys->symbol_address (*ctx, outsym);
+        OSL::Vec3 Pout = *(OSL::Vec3*)shadsys->symbol_address(*ctx, outsym);
 
         // Print some results to prove that we generated an expected Pout.
         std::cout << "i = " << i << "\n";
-        std::cout << "Undeformed P = " << Pin << "  amplitude = " 
-                  << userdata.amplitude << "\n";
+        std::cout << "Undeformed P = " << Pin
+                  << "  amplitude = " << userdata.amplitude << "\n";
         std::cout << "Deformed " << Pin << "  -->  " << Pout << "\n";
         std::cout << "\n";
     }
 
     // All done. Release the contexts and threadinfo for each thread:
-    shadsys->release_context (ctx);
-    shadsys->destroy_thread_info (perthread);
+    shadsys->release_context(ctx);
+    shadsys->destroy_thread_info(perthread);
 }

@@ -157,15 +157,8 @@ public:
         }
     }
 
-    ustring strval(int i = 0) const { return ((const ustring*)data())[i]; }
-    int intval(int i = 0) const { return ((const int*)data())[i]; }
-    float floatval(int i = 0) const
-    {
-        return m_typespec.simpletype().basetype == TypeDesc::INT
-                   ? intval(i)
-                   : ((const float*)data())[i];
-    }
-    const Vec3& vecval(int i = 0) const { return ((const Vec3*)data())[i]; }
+    // Return the index'th float, automatically cast from int if necessary.
+    float floatval(int index = 0) const { return coerce_float(index); }
 
 private:
     union {

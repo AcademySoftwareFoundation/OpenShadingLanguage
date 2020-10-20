@@ -170,7 +170,7 @@ Symbol*
 OSLCompilerImpl::make_constant(ustring val)
 {
     for (auto&& sym : m_const_syms) {
-        if (sym->typespec().is_string() && sym->strval() == val)
+        if (sym->typespec().is_string() && sym->get_string() == val)
             return sym;
     }
     // It's not a constant we've added before
@@ -189,13 +189,13 @@ OSLCompilerImpl::make_constant(TypeDesc type, const void* val)
     size_t typesize = type.size();
     for (auto&& sym : m_const_syms) {
         if (sym->typespec().simpletype() == type
-            && !memcmp(val, sym->data(), typesize))
+            && !memcmp(val, sym->dataptr(), typesize))
             return sym;
     }
     // It's not a constant we've added before
     ustring name      = ustring::sprintf("$const%d", ++m_next_const);
     ConstantSymbol* s = new ConstantSymbol(name, type);
-    memcpy(s->data(), val, typesize);
+    memcpy(s->dataptr(), val, typesize);
     symtab().insert(s);
     m_const_syms.push_back(s);
     return s;
@@ -207,7 +207,7 @@ Symbol*
 OSLCompilerImpl::make_constant(int val)
 {
     for (auto&& sym : m_const_syms) {
-        if (sym->typespec().is_int() && sym->intval() == val)
+        if (sym->typespec().is_int() && sym->get_int() == val)
             return sym;
     }
     // It's not a constant we've added before
@@ -242,7 +242,7 @@ OSLCompilerImpl::make_constant(TypeDesc type, float x, float y, float z)
 {
     Vec3 val(x, y, z);
     for (auto&& sym : m_const_syms) {
-        if (sym->typespec().simpletype() == type && sym->vecval() == val)
+        if (sym->typespec().simpletype() == type && sym->get_vec3() == val)
             return sym;
     }
     // It's not a constant we've added before

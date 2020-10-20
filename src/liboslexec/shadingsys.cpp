@@ -442,7 +442,7 @@ ShadingSystem::symbol_address (const ShadingContext &ctx,
 bool
 ShadingSystem::supports_batch_execution_at(int width)
 {
-    auto requestedISA = LLVM_Util::lookup_isa_by_name(m_impl->llvm_jit_target().c_str());
+    auto requestedISA = LLVM_Util::lookup_isa_by_name(m_impl->llvm_jit_target());
     OSL_MAYBE_UNUSED bool target_requested = (requestedISA != TargetISA::UNKNOWN);
     OSL_MAYBE_UNUSED bool jit_fma = !m_impl->llvm_jit_fma();
 

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <locale>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -53,6 +54,9 @@ static bool debug2 = false;
 static bool llvm_debug = false;
 static bool verbose = false;
 static bool runstats = false;
+static bool batched = false;
+static int max_batch_size = -1;
+static int batch_size = -1;
 static bool vary_Pdxdy = false;
 static bool vary_udxdy = false;
 static bool vary_vdxdy = false;
@@ -157,6 +161,60 @@ set_shadingsys_options ()
         shadingsys->attribute ("options", extraoptions);
     if (texoptions.size())
         shadingsys->texturesys()->attribute ("options", texoptions);
+
+    if (const char *opt_env = getenv ("TESTSHADE_BATCHED"))
+        batched = atoi(opt_env);
+
+    max_batch_size = 16;
+    if (const char *opt_env = getenv ("TESTSHADE_MAX_BATCH_SIZE"))
+        max_batch_size = atoi(opt_env);
+
+    batch_size = -1;
+    if (const char *opt_env = getenv ("TESTSHADE_BATCH_SIZE"))
+        batch_size = atoi(opt_env);
+
+    if (batched) {
+        bool batch_size_requested = (batch_size != -1);
+        // Not really looping, just emulating goto behavior using break
+        for(;;) {
+            if (!batch_size_requested || batch_size == 16) {
+                if (shadingsys->supports_batch_execution_at(16)) {
+                    batch_size = 16;
+                    break;
+                }
+            }
+            if (!batch_size_requested || batch_size == 8) {
+                if (shadingsys->supports_batch_execution_at(8)) {
+                    batch_size = 8;
+                    break;
+                }
+            }
+            std::cout << "WARNING:  Hardware or library requirements to utilize batched execution";
+            ustring llvm_jit_target;
+            shadingsys->getattribute ("llvm_jit_target", llvm_jit_target);
+            int llvm_jit_fma;
+            shadingsys->getattribute ("llvm_jit_fma", llvm_jit_fma);
+            std::cout << " for isa("<<llvm_jit_target.c_str()<<")";
+            std::cout << " and llvm_jit_fma("<<llvm_jit_fma<<")";
+            if (batch_size_requested) {
+                std::cout << " and batch_size("<<batch_size<<")";
+            }
+            std::cout << " are not met, ignoring batched and using single point interface to OSL" << std::endl;
+            batched = false;
+            break;
+        }
+    }
+
+    if (batched) {
+        // For batched operations turn off coalesce temps
+        // Currently analysis of uniform vs. varying symbols happens in the wide backend.
+        // If we allowed temps to coalesce it creates situations where we
+        // coalesce a uniform symbol over a varying symbol and data layouts do not match
+        // TODO:  Remedy by moving the uniform vs. varying symbols out of the backend
+        // so uniform/varying can be used as part of coalesce_temps.
+        shadingsys->attribute ("opt_coalesce_temps", 0);
+    }
+
     shadingsys_options_set = true;
 }
 
@@ -487,6 +545,7 @@ getargs (int argc, const char *argv[])
                 "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
+                "--batched", &batched, "Submit batches to ShadingSystem",
                 "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",
                 "--vary_udxdy", &vary_udxdy, "populate Dx(u) & Dy(u) with varying values (vs. uniform)",
                 "--vary_vdxdy", &vary_vdxdy, "populate Dx(v) & Dy(v) with varying values (vs. uniform)",
@@ -899,7 +958,149 @@ save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
     }
 }
 
+// For batch of pixels (bx[WidthT], by[WidthT]) that was just shaded
+// by the given shading context, save each of the requested outputs
+// to the corresponding output ImageBuf.
+//
+// In a real renderer, this is illustrative of how you would pull shader
+// outputs into "AOV's" (arbitrary output variables, or additional
+// renderer outputs).  You would, of course, also grab the closure Ci
+// and integrate the lights using that BSDF to determine the radiance
+// in the direction of the camera for that pixel.
+template<int WidthT>
+static void
+batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingContext *ctx, ShaderGroup *shadergroup, int batchSize, int (&bx)[WidthT], int (&by)[WidthT])
+{
+    OSL_ASSERT(batchSize <= WidthT);
+    // Because we are choosing to loop over outputs then over the batch
+    // we will need to keep separate output streams for each batch
+    // to prevent multiplexing
+    std::unique_ptr<std::stringstream> oStreams[WidthT];
+    if (print_outputs) {
+        for(int batchIndex=0; batchIndex < batchSize; ++batchIndex) {
+            oStreams[batchIndex].reset(new std::stringstream());
+            int x = bx[batchIndex];
+            int y = by[batchIndex];
+            *oStreams[batchIndex] << "Pixel (" << x << ", " << y << "):" << std::endl;
+        }
+    }
 
+    // In batched mode, a symbol's address can be passed to the contructor of the
+    // lightweight data adapter:
+    // template <typename DataT, int WidthT> struct Wide
+    // which provides the array subscript accessor to access DataT for each batchIndex
+
+    // For each output requested on the command line...
+    for (size_t i = 0, e = rend->noutputs();  i < e;  ++i) {
+        // Skip if we couldn't open the image or didn't match a known output
+        OIIO::ImageBuf* outputimg = rend->outputbuf(i);
+        if (! outputimg)
+            continue;
+
+        const ShaderSymbol* out_symbol = shadingsys->find_symbol (*shadergroup, rend->outputname(i));
+        if (!out_symbol)
+            continue;  // Skip if symbol isn't found
+
+        TypeDesc t = shadingsys->symbol_typedesc(out_symbol);
+        int nchans = outputimg->nchannels();
+
+        // Used Wide access on the symbol's data t access per lane results
+        if (t.basetype == TypeDesc::FLOAT) {
+            // If the variable we are outputting is float-based, set it
+            // directly in the output buffer.
+            if (t.aggregate == TypeDesc::MATRIX44) {
+                OSL_DASSERT(nchans == 16);
+                Wide<const Matrix44, WidthT> batchResults(shadingsys->symbol_address(*ctx, out_symbol));
+                for(int batchIndex=0; batchIndex < batchSize; ++batchIndex) {
+                    int x = bx[batchIndex];
+                    int y = by[batchIndex];
+                    Matrix44 data = batchResults[batchIndex];
+                    outputimg->setpixel (x, y, reinterpret_cast<const float *>(&data));
+                    if (print_outputs) {
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                    }
+                }
+            }
+            if (t.aggregate == TypeDesc::VEC3) {
+                OSL_DASSERT(nchans == 3);
+                Wide<const Vec3, WidthT> batchResults(shadingsys->symbol_address(*ctx, out_symbol));
+                for(int batchIndex=0; batchIndex < batchSize; ++batchIndex) {
+                    int x = bx[batchIndex];
+                    int y = by[batchIndex];
+                    Vec3 data = batchResults[batchIndex];
+                    outputimg->setpixel (x, y, reinterpret_cast<const float *>(&data));
+                    if (print_outputs) {
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                    }
+                }
+            }
+            if (t.aggregate == TypeDesc::SCALAR) {
+                OSL_DASSERT(nchans == 1);
+                Wide<const float, WidthT> batchResults(shadingsys->symbol_address(*ctx, out_symbol));
+                for(int batchIndex=0; batchIndex < batchSize; ++batchIndex) {
+                    int x = bx[batchIndex];
+                    int y = by[batchIndex];
+                    float data = batchResults[batchIndex];
+                    outputimg->setpixel (x, y, reinterpret_cast<const float *>(&data));
+                    if (print_outputs) {
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                    }
+                }
+            }
+        } else if (t.basetype == TypeDesc::INT) {
+            // We are outputting an integer variable, so we need to
+            // convert it to floating point.
+            if (nchans == 1) {
+                Wide<const int, WidthT> batchResults(shadingsys->symbol_address(*ctx, out_symbol));
+                for(int batchIndex=0; batchIndex < batchSize; ++batchIndex) {
+                    int x = bx[batchIndex];
+                    int y = by[batchIndex];
+                    int data = batchResults[batchIndex];
+                    float pixel[1];
+                    OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), &data,
+                                         TypeDesc::FLOAT, &pixel[0], 1 /*nchans*/);
+                    outputimg->setpixel (x, y, &pixel[0]);
+                    if (print_outputs) {
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                    }
+                }
+            } else {
+                // TODO: Do we need to really need to handle handle more int chanels than 1?
+                Wide<const int[], WidthT> batchResults(shadingsys->symbol_address(*ctx, out_symbol), nchans);
+                // TODO:  Try not to do alloca's inside a loop
+                int *intPixel = OIIO_ALLOCA(int, nchans);
+                float *floatPixel = OIIO_ALLOCA(float, nchans);
+                for(int batchIndex=0; batchIndex < batchSize; ++batchIndex) {
+                    int x = bx[batchIndex];
+                    int y = by[batchIndex];
+                    for(int c=0; c < nchans; ++c) {
+                        intPixel[c] = batchResults[batchIndex][c];
+                    }
+
+                    OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), intPixel,
+                                         TypeDesc::FLOAT, floatPixel, 3 /*nchans*/);
+                    outputimg->setpixel (x, y, floatPixel);
+                    if (print_outputs) {
+                        (*oStreams[batchIndex]) << "  " << outputvarnames[i].c_str() << " :" ;
+                        for (int c = 0; c < nchans; ++c)
+                            (*oStreams[batchIndex]) << " " << (intPixel[c]);
+                        *oStreams[batchIndex] << std::endl;
+                    }
+                }
+            }
+
+        }
+        // N.B. Drop any outputs that aren't float- or int-based
+    }
+
+    if (print_outputs) {
+        // Serialize multiple output streams of the batch
+        for(int batchIndex=0; batchIndex < batchSize; ++batchIndex) {
+            std::cout << oStreams[batchIndex]->str();
+        }
+    }
+
+}
 
 static void
 test_group_attributes (ShaderGroup *group)
@@ -1061,6 +1262,228 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
             if (save)
                 save_outputs (rend, shadingsys, ctx, x, y);
         }
+    }
+
+    // We're done shading with this context.
+    shadingsys->release_context (ctx);
+    shadingsys->destroy_thread_info(thread_info);
+}
+
+
+// Set up the ShaderGlobals fields for pixel (x,y).
+template<int WidthT>
+static void
+setup_uniform_shaderglobals (BatchedShaderGlobals<WidthT> &bsg, ShadingSystem *shadingsys)
+{
+    auto &usg = bsg.uniform;
+
+    // Just zero the whole thing out to start
+    memset(&usg, 0, sizeof(UniformShaderGlobals));
+
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals.
+    usg.renderstate = &bsg;
+
+    // Just make it look like all shades are the result of 'raytype' rays.
+    usg.raytype = shadingsys->raytype_bit (ustring (raytype));;
+
+
+    // For this problem we will treat several varying members of
+    // the BatchedShaderGlobals as uniform values.  We can pass to the
+    // Block's of varying data to assign_all(proxy,value) to populate all varying
+    // entries with a uniform value;
+    auto & vsg = bsg.varying;
+    using OSL::assign_all;
+
+    // Set "shader" space to be Mshad.  In a real renderer, this may be
+    // different for each shader group.
+    assign_all(vsg.shader2common, OSL::TransformationPtr (&Mshad));
+
+    // Set "object" space to be Mobj.  In a real renderer, this may be
+    // different for each object.
+    assign_all(vsg.object2common, OSL::TransformationPtr (&Mobj));
+
+    // Set up u,v to vary across the "patch", and also their derivatives.
+    // Note that since u & x, and v & y are aligned, we only need to set
+    // values for dudx and dvdy, we can set dvdx and dudy to 0.
+    if (pixelcenters) {
+        // Our patch is like an "image" with shading samples at the
+        // centers of each pixel.
+        if (false == vary_udxdy) {
+            assign_all(vsg.dudx, uscale / xres);
+            assign_all(vsg.dudy, 0.0f);
+        }
+        if (false == vary_vdxdy) {
+            assign_all(vsg.dvdx, 0.0f);
+            assign_all(vsg.dvdy, vscale / yres);
+        }
+    } else {
+        // Our patch is like a Reyes grid of points, with the border
+        // samples being exactly on u,v == 0 or 1.
+        if (false == vary_udxdy) {
+            assign_all(vsg.dudx, uscale / std::max (1, xres-1));
+            assign_all(vsg.dudy, 0.0f);
+        }
+        if (false == vary_vdxdy) {
+            assign_all(vsg.dvdx, 0.0f);
+            assign_all(vsg.dvdy, vscale / std::max (1, yres-1));
+        }
+    }
+
+    // Assume that position P is simply (u,v,1), that makes the patch lie
+    // on [0,1] at z=1.
+    // Derivatives with respect to x,y
+    if (false == vary_Pdxdy) {
+        assign_all(vsg.dPdx, Vec3 (vsg.dudx[0], vsg.dudy[0], 0.0f));
+        assign_all(vsg.dPdy, Vec3 (vsg.dvdx[0], vsg.dvdy[0], 0.0f));
+    }
+    assign_all(vsg.dPdz, Vec3 (0.0f, 0.0f, 0.0f));  // just use 0 for volume tangent
+    // Tangents of P with respect to surface u,v
+    assign_all(vsg.dPdu, Vec3 (1.0f, 0.0f, 0.0f));
+    assign_all(vsg.dPdv, Vec3 (0.0f, 1.0f, 0.0f));
+
+    assign_all(vsg.I, Vec3 (0, 0, 0));
+    assign_all(vsg.dIdx, Vec3 (0, 0, 0));
+    assign_all(vsg.dIdy, Vec3 (0, 0, 0));
+
+    // That also implies that our normal points to (0,0,1)
+    assign_all(vsg.N, Vec3 (0, 0, 1));
+    assign_all(vsg.Ng, Vec3 (0, 0, 1));
+
+    assign_all(vsg.time, 0.0f);
+    assign_all(vsg.dtime, 0.0f);
+    assign_all(vsg.dPdtime, Vec3 (0, 0, 0));
+
+    assign_all(vsg.Ps, Vec3 (0, 0, 0));
+    assign_all(vsg.dPsdx, Vec3 (0, 0, 0));
+    assign_all(vsg.dPsdy, Vec3 (0, 0, 0));
+
+    // Set the surface area of the patch to 1 (which it is).  This is
+    // only used for light shaders that call the surfacearea() function.
+    assign_all(vsg.surfacearea, 1.0f);
+
+    assign_all(vsg.flipHandedness, 0);
+    assign_all(vsg.backfacing, 0);
+}
+
+template <int WidthT>
+static inline void
+setup_varying_shaderglobals (int lane, BatchedShaderGlobals<WidthT> & bsg, ShadingSystem *shadingsys,
+                     int x, int y)
+{
+    auto & vsg = bsg.varying;
+
+    // Set up u,v to vary across the "patch", and also their derivatives.
+    // Note that since u & x, and v & y are aligned, we only need to set
+    // values for dudx and dvdy, we can use the memset above to have set
+    // dvdx and dudy to 0.
+    float u;
+    float v;
+    if (pixelcenters) {
+        // Our patch is like an "image" with shading samples at the
+        // centers of each pixel.
+        u = uscale * (float)(x+0.5f) / xres + uoffset;
+        v = vscale * (float)(y+0.5f) / yres + voffset;
+    } else {
+        // Our patch is like a Reyes grid of points, with the border
+        // samples being exactly on u,v == 0 or 1.
+        u = uscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + uoffset;
+        v = vscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + voffset;
+    }
+
+    vsg.u[lane] = u;
+    vsg.v[lane] = v;
+    if (vary_udxdy) {
+        vsg.dudx[lane] = 1.0f - u;
+        vsg.dudy[lane] = u;
+    }
+    if (vary_vdxdy) {
+        vsg.dvdx[lane] = 1.0f - v;
+        vsg.dvdy[lane] = v;
+    }
+
+    // Assume that position P is simply (u,v,1), that makes the patch lie
+    // on [0,1] at z=1.
+    vsg.P[lane] = Vec3 (u, v, 1.0f);
+    if (vary_Pdxdy) {
+        vsg.dPdx[lane] = Vec3 (1.0f - u, 1.0f - v, u*0.5);
+        vsg.dPdy[lane] = Vec3 (1.0f - v, 1.0f - u, v*0.5);
+    }
+}
+
+
+
+
+template <int WidthT>
+void OSL_NOINLINE
+batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
+
+template <int WidthT>
+void
+batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
+{
+    // Request an OSL::PerThreadInfo for this thread.
+    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
+
+    // Request a shading context so that we can execute the shader.
+    // We could get_context/release_constext for each shading point,
+    // but to save overhead, it's more efficient to reuse a context
+    // within a thread.
+    ShadingContext *ctx = shadingsys->get_context (thread_info);
+
+    // Set up shader globals and a little test grid of points to shade.
+    BatchedShaderGlobals<WidthT> sgBatch;
+    setup_uniform_shaderglobals (sgBatch, shadingsys);
+
+    // std::cout << "shading roi y(" << roi.ybegin << ", " << roi.yend << ")";
+    // std::cout << " x(" << roi.xbegin << ", " << roi.xend << ")" << std::endl;
+
+    int rwidth = roi.width();
+    int rheight = roi.height();
+    int nhits = rwidth*rheight;
+
+    int oHitIndex = 0;
+    while (oHitIndex < nhits) {
+        int bx[WidthT];
+        int by[WidthT];
+        int batchSize = std::min(WidthT, nhits-oHitIndex);
+
+        // TODO: vectorize this loop
+        for(int bi=0; bi < batchSize; ++bi) {
+            int lHitIndex = oHitIndex + bi;
+            int lx = lHitIndex%rwidth;
+            int ly = lHitIndex/rwidth;
+            int rx = roi.xbegin + ly;
+            int ry = roi.ybegin + lx;
+            setup_varying_shaderglobals (bi, sgBatch, shadingsys, rx, ry);
+            // Remember the pixel x & y values to store the outputs after shading
+            bx[bi] = rx;
+            by[bi] = ry;
+        }
+
+        // Actually run the shader for this point
+        if (entrylayer_index.empty()) {
+            // Sole entry point for whole group, default behavior
+            shadingsys->batched<WidthT>().execute(*ctx, *shadergroup, batchSize, sgBatch);
+        } else {
+            // Explicit list of entries to call in order
+            shadingsys->batched<WidthT>().execute_init (*ctx, *shadergroup, batchSize, sgBatch);
+            if (entrylayer_symbols.size()) {
+                for (size_t i = 0, e = entrylayer_symbols.size(); i < e; ++i)
+                    shadingsys->batched<WidthT>().execute_layer (*ctx, batchSize, sgBatch, entrylayer_symbols[i]);
+            } else {
+                for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
+                    shadingsys->batched<WidthT>().execute_layer (*ctx, batchSize, sgBatch, entrylayer_index[i]);
+            }
+            shadingsys->execute_cleanup (*ctx);
+        }
+
+        if (save)
+        {
+            batched_save_outputs<WidthT>(rend, shadingsys, ctx, shadergroup, batchSize, bx, by);
+        }
+
+        oHitIndex += batchSize;
     }
 
     // We're done shading with this context.
@@ -1307,8 +1730,25 @@ test_shade (int argc, const char *argv[])
 #if 0
             shade_region (rend, shadergroup.get(), roi, save);
 #else
-            OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
-                                                std::bind (shade_region, rend, shadergroup.get(), std::placeholders::_1, save));
+            if (batched) {
+                if (batch_size == 16) {
+                    OIIO::ImageBufAlgo::parallel_image (
+                        [&](OIIO::ROI sub_roi)->void {
+                            batched_shade_region<16> (rend, shadergroup.get(), sub_roi, save);
+                        }, roi, num_threads);
+                } else {
+                    ASSERT((batch_size == 8) && "Unsupport batch size");
+                    OIIO::ImageBufAlgo::parallel_image (
+                        [&](OIIO::ROI sub_roi)->void {
+                            batched_shade_region<8> (rend, shadergroup.get(), sub_roi, save);
+                        }, roi, num_threads);
+                }
+            } else {
+                OIIO::ImageBufAlgo::parallel_image (
+                    [&](OIIO::ROI sub_roi)->void {
+                        shade_region (rend, shadergroup.get(), sub_roi, save);
+                    }, roi, num_threads);
+            }
 #endif
         }
 

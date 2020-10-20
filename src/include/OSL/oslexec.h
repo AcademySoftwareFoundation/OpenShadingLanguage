@@ -10,6 +10,8 @@
 #include <OSL/shaderglobals.h>
 #include <OSL/rendererservices.h>
 
+#include <OSL/batched_shaderglobals.h>
+
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
 
@@ -671,6 +673,49 @@ public:
     /// prior for this context, but it is a very inexpensive operation.
     const void* symbol_address (const ShadingContext &ctx,
                                 const ShaderSymbol *sym) const;
+
+    /// Based on currently set attributes for llvm_jit_target and
+    /// llvm_jit_fma, test if current machine is capable of supporting
+    /// batched execution at the specified width
+    bool supports_batch_execution_at(int width);
+
+    template<int WidthT>
+    class OSLEXECPUBLIC BatchedExecutor {
+        ShadingSystem & m_shading_system;
+    public:
+        explicit OSL_FORCEINLINE BatchedExecutor(ShadingSystem & ss)
+        :m_shading_system(ss)
+        {}
+        OSL_FORCEINLINE BatchedExecutor(const BatchedExecutor&) = default;
+
+        /// Ensure that the group has been JITed.
+        void jit_group (ShaderGroup *group, ShadingContext *ctx);
+
+        /// If option "greedyjit" was set, this call will trigger all
+        /// shader groups that have not yet been compiled to do so with the
+        /// specified number of threads (0 means use all available HW cores).
+        void jit_all_groups (int nthreads=0);
+
+        bool execute(ShadingContext &ctx, ShaderGroup &group, int batch_size,
+                         BatchedShaderGlobals<WidthT> &globals_batch, bool run=true);
+
+        bool execute_init (ShadingContext &ctx, ShaderGroup &group, int batch_size,
+                                 BatchedShaderGlobals<WidthT> &globals_batch, bool run=true);
+
+        bool execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
+                            int layernumber);
+        bool execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
+                                  ustring layername);
+        bool execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
+                                  const ShaderSymbol *symbol);
+    };
+
+    template<int WidthT>
+    OSL_FORCEINLINE BatchedExecutor<WidthT> batched() {
+        return BatchedExecutor<WidthT>(*this);
+    }
+
+
 
     /// Return the statistics output as a huge string.
     ///

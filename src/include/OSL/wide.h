@@ -10,8 +10,7 @@
 #include <type_traits>
 
 #include <OSL/oslconfig.h>
-//#include "mask.h"
-#include "dual_vec.h"
+#include <OSL/dual_vec.h>
 #include <OSL/Imathx/Imathx.h>
 
 OSL_NAMESPACE_ENTER
@@ -59,6 +58,8 @@ struct Block;
 // on a system.
 // The data itself is stored in a SOA (Structure of Arrays) layout.
 // DataT may be Dual2<T>.
+// A Block should not be passed around, instead Wide<DataT, WidthT>
+// will hold a reference to a Block and provide access to its data.
 // DataT must NOT be an array, arrays are supported by having
 // and array of Block[].
 // Implementations should support the following interface:
@@ -80,6 +81,29 @@ struct Block;
 //    impl-defined-const-proxy operator[](int lane) const
 //
 //    void dump(const char *name) const;
+//};
+
+template <typename DataT, int WidthT>
+struct Wide;
+// Reference to Block that provides a proxy to access to DataT
+// for an individual data lane inside the Block.
+// Respects const correctness DataT, ie: Wide<const float, 16>.
+// Handles DataT being fixed size array [7], Wide: wide<const float[7], 16>
+// Handles DataT being unbounded array [], Wide: wide<cpmst float[], 16>
+// Implementations should support the following interface:
+//{
+//    static constexpr int width = WidthT;
+//
+//    impl-defined-proxy operator[](int lane);  // when DataT is not const
+//    impl-defined-const-proxy operator[](int lane) const
+//
+//    // When DataT is ElementType[] unbounded array
+//    typedef impl-defined ElementType;
+//    typedef impl-defined NonConstElementType;
+//    int length() const; // length of unbounded array
+//
+//    // Provide Wide access to individual array element
+//    Wide<ElementType, WidthT> get_element(int array_index) const
 //};
 
 // More wrappers will be added here to wrap a reference to Block data along with a mask...
@@ -1324,5 +1348,553 @@ assign_all(Block<DataT, WidthT> &wide_data, const DataT &value)
     }
 }
 
+namespace pvt {
+
+    template<typename DataT, int WidthT, bool IsConstT>
+    struct WideImpl; // undefined
+
+    template <typename DataT, int WidthT>
+    struct LaneProxy
+    {
+        typedef DataT const ValueType;
+
+        explicit OSL_FORCEINLINE
+        LaneProxy(Block<DataT, WidthT> & ref_wide_data, const int lane)
+        : m_ref_wide_data(ref_wide_data)
+        , m_lane(lane)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        LaneProxy(const LaneProxy &other)
+        : m_ref_wide_data(other.m_ref_wide_data)
+        , m_lane(other.m_lane)
+        {}
+
+        OSL_FORCEINLINE
+        operator ValueType () const
+        {
+            return m_ref_wide_data.get(m_lane);
+        }
+
+        OSL_FORCEINLINE const DataT &
+        operator = (const DataT & value) const
+        {
+            m_ref_wide_data.set(m_lane, value);
+            return value;
+        }
+
+    private:
+        Block<DataT, WidthT> & m_ref_wide_data;
+        const int m_lane;
+    };
+
+    template <typename ConstDataT, int WidthT>
+    struct ConstLaneProxy
+    {
+        typedef typename std::remove_const<ConstDataT>::type DataType;
+        typedef ConstDataT ValueType;
+
+        explicit OSL_FORCEINLINE
+        ConstLaneProxy(const Block<DataType, WidthT> & ref_wide_data, const int lane)
+        : m_ref_wide_data(ref_wide_data)
+        , m_lane(lane)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        ConstLaneProxy(const ConstLaneProxy &other)
+        : m_ref_wide_data(other.m_ref_wide_data)
+        , m_lane(other.m_lane)
+        {}
+
+        OSL_FORCEINLINE
+        operator ValueType () const
+        {
+            return m_ref_wide_data.get(m_lane);
+        }
+
+    private:
+        const Block<DataType, WidthT> & m_ref_wide_data;
+        const int m_lane;
+    };
+
+    template <typename ConstDataT, int ArrayLenT, int WidthT>
+    struct ConstWideArrayLaneProxy
+    {
+        typedef typename std::remove_const<ConstDataT>::type DataType;
+
+        explicit OSL_FORCEINLINE
+        ConstWideArrayLaneProxy(const Block<DataType, WidthT> * array_of_wide_data, int lane)
+        : m_array_of_wide_data(array_of_wide_data)
+        , m_lane(lane)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        ConstWideArrayLaneProxy(const ConstWideArrayLaneProxy &other)
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_lane(other.m_lane)
+        {}
+
+        OSL_FORCEINLINE int
+        length() const { return ArrayLenT; }
+
+        OSL_FORCEINLINE ConstLaneProxy<ConstDataT, WidthT>
+        operator[](int array_index) const
+        {
+            OSL_DASSERT(array_index < ArrayLenT);
+            return ConstLaneProxy<ConstDataT, WidthT>(m_array_of_wide_data[array_index], m_lane);
+        }
+
+    private:
+        const Block<DataType, WidthT> * m_array_of_wide_data;
+        const int m_lane;
+    };
+
+    template <typename ConstDataT, int WidthT>
+    struct ConstWideUnboundedArrayLaneProxy
+    {
+        typedef typename std::remove_const<ConstDataT>::type DataType;
+
+        explicit OSL_FORCEINLINE
+        ConstWideUnboundedArrayLaneProxy(const Block<DataType, WidthT> * array_of_wide_data, int array_length, int lane)
+        : m_array_of_wide_data(array_of_wide_data)
+        , m_array_length(array_length)
+        , m_lane(lane)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        ConstWideUnboundedArrayLaneProxy(const ConstWideUnboundedArrayLaneProxy &other)
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_array_length(other.m_array_length)
+        , m_lane(other.m_lane)
+        {}
+
+        OSL_FORCEINLINE int
+        length() const { return m_array_length; }
+
+        OSL_FORCEINLINE ConstLaneProxy<ConstDataT, WidthT>
+        operator[](int array_index) const
+        {
+            OSL_DASSERT(array_index < m_array_length);
+            return ConstLaneProxy<ConstDataT, WidthT>(m_array_of_wide_data[array_index], m_lane);
+        }
+
+    private:
+        const Block<DataType, WidthT> * m_array_of_wide_data;
+        int m_array_length;
+        const int m_lane;
+    };
+
+    template <typename ConstDataT, int WidthT>
+    struct ConstWideDual2UnboundedArrayLaneProxy
+    {
+        typedef typename std::remove_const<ConstDataT>::type DataType;
+        explicit OSL_FORCEINLINE
+        ConstWideDual2UnboundedArrayLaneProxy(const Block<DataType, WidthT> * array_of_wide_data, int array_length, int lane_index)
+        : m_array_of_wide_data(array_of_wide_data)
+        , m_array_length(array_length)
+        , m_lane_index(lane_index)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        ConstWideDual2UnboundedArrayLaneProxy(const ConstWideDual2UnboundedArrayLaneProxy &other)
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_array_length(other.m_array_length)
+        , m_lane_index(other.m_lane_index)
+        {}
+
+        OSL_FORCEINLINE int
+        length() const { return m_array_length; }
+
+        struct ElementProxy
+        {
+            typedef typename std::remove_const<ConstDataT>::type DataType;
+            typedef Dual2<DataType> const ValueType;
+
+            explicit OSL_FORCEINLINE
+            ElementProxy(const Block<DataType, WidthT> *array_of_wide_data, const int lane_index, const int array_index, const int array_length)
+            : m_array_of_wide_data(array_of_wide_data)
+            , m_array_index(array_index)
+            , m_lane_index(lane_index)
+            , m_array_length(array_length)
+            {}
+
+            // Must provide user defined copy constructor to
+            // get compiler to be able to follow individual
+            // data members through back to original object
+            // when fully inlined the proxy should disappear
+            OSL_FORCEINLINE
+            ElementProxy(const ElementProxy &other)
+            : m_array_of_wide_data(other.m_array_of_wide_data)
+            , m_array_index(other.m_array_index)
+            , m_lane_index(other.m_lane_index)
+            , m_array_length(other.m_array_length)
+            {}
+
+            OSL_FORCEINLINE
+            operator ValueType () const
+            {
+                // Intentionally have local variables as an intermediate between the array accesses
+                // and the constructor of the return type.  As most constructors accept a const reference
+                // this can cause the array access itself to be forwarded through inlining to the constructor
+                // and at a minimum loose alignment tracking, but could cause other issues.
+                DataType val = m_array_of_wide_data[m_array_index].get(m_lane_index);
+                DataType dx = (m_array_of_wide_data+m_array_length)[m_array_index].get(m_lane_index);
+                DataType dy = (m_array_of_wide_data + 2*m_array_length)[m_array_index].get(m_lane_index);
+                return Dual2<DataType> (val, dx, dy);
+            }
+
+        private:
+            const Block<DataType, WidthT> * m_array_of_wide_data;
+            const int m_array_index;
+            const int m_lane_index;
+            const int m_array_length;
+        };
+
+        OSL_FORCEINLINE ElementProxy
+        operator[](int array_index) const
+        {
+            OSL_DASSERT(array_index < m_array_length);
+            return ElementProxy(m_array_of_wide_data, m_lane_index, array_index, m_array_length);
+        }
+
+    private:
+        const Block<DataType, WidthT> * m_array_of_wide_data;
+        int m_array_length;
+        const int m_lane_index;
+    };
+
+
+    template<typename DataT, int WidthT>
+    OSL_NODISCARD
+    Block<DataT, WidthT>* assume_aligned(Block<DataT, WidthT>* block_ptr)
+    {
+        static_assert(std::alignment_of<Block<DataT, WidthT>>::value == std::alignment_of<VecReg<WidthT>>::value, "Unexepected alignment");
+        return assume_aligned<VecReg<WidthT>::alignment>(block_ptr);
+    }
+
+    template<typename DataT, int WidthT>
+    OSL_NODISCARD
+    const Block<DataT, WidthT>* assume_aligned(const Block<DataT, WidthT>* block_ptr)
+    {
+        static_assert(std::alignment_of<Block<DataT, WidthT>>::value == std::alignment_of<VecReg<WidthT>>::value, "Unexepected alignment");
+        return assume_aligned<VecReg<WidthT>::alignment>(block_ptr);
+    }
+
+    template <typename DataT, int WidthT>
+    Block<DataT, WidthT> * block_cast(void *ptr_wide_data, int derivIndex = 0)
+    {
+        Block<DataT, WidthT> * block_ptr = &(reinterpret_cast<Block<DataT, WidthT> *>(ptr_wide_data)[derivIndex]);
+        return assume_aligned(block_ptr);
+    }
+
+    template <typename DataT, int WidthT>
+    const Block<DataT, WidthT> * block_cast(const void *ptr_wide_data)
+    {
+        const Block<DataT, WidthT> * block_ptr = reinterpret_cast<const Block<DataT, WidthT> *>(ptr_wide_data);
+        return assume_aligned(block_ptr);
+    }
+
+    template <typename DataT, int WidthT>
+    OSL_FORCEINLINE const Block<DataT, WidthT> & align_block_ref(const Block<DataT, WidthT> &ref) {
+        return *assume_aligned(&ref);
+    }
+
+    template <typename DataT, int WidthT>
+    OSL_FORCEINLINE Block<DataT, WidthT> & align_block_ref(Block<DataT, WidthT> &ref) {
+        return *assume_aligned(&ref);
+    }
+
+
+
+    template <typename DataT, int WidthT>
+    struct WideImpl<DataT, WidthT, false /*IsConstT */>
+    {
+        static_assert(std::is_const<DataT>::value == false, "Logic Bug:  Only meant for non-const DataT, const is meant to use specialized WideImpl");
+        static_assert(std::is_array<DataT>::value == false, "Logic Bug:  Only meant for non-array DataT, arrays are meant to use specialized WideImpl");
+        static constexpr int width = WidthT;
+        typedef DataT ValueType;
+
+        explicit OSL_FORCEINLINE
+        WideImpl(void *ptr_wide_data, int derivIndex=0)
+        : m_ref_wide_data(block_cast<DataT, WidthT>(ptr_wide_data)[derivIndex])
+        {}
+
+        // Allow implicit construction
+        OSL_FORCEINLINE
+        WideImpl(Block<DataT, WidthT> & ref_wide_data)
+        : m_ref_wide_data(align_block_ref(ref_wide_data))
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        WideImpl(const WideImpl &other) noexcept
+        : m_ref_wide_data(other.m_ref_wide_data)
+        {}
+
+
+        OSL_FORCEINLINE Block<DataT, WidthT> &  data() const { return m_ref_wide_data; }
+
+        typedef LaneProxy<DataT, WidthT> Proxy;
+        //typedef ConstLaneProxy<DataT, WidthT> ConstProxy;
+
+        OSL_FORCEINLINE Proxy
+        operator[](int lane) const
+        {
+            return Proxy(m_ref_wide_data, lane);
+        }
+
+    private:
+        Block<DataT, WidthT> & m_ref_wide_data;
+    };
+
+    template <typename ConstDataT, int WidthT>
+    struct WideImpl<ConstDataT, WidthT, true /*IsConstT */>
+    {
+        static_assert(std::is_array<ConstDataT>::value == false, "Only meant for non-array ConstDataT, arrays are meant to use specialized WideImpl");
+
+        static constexpr int width = WidthT;
+
+        typedef ConstDataT ValueType;
+        static_assert(std::is_const<ConstDataT>::value, "unexpected compiler behavior");
+        typedef typename std::remove_const<ConstDataT>::type DataT;
+        typedef DataT NonConstValueType;
+
+        explicit OSL_FORCEINLINE
+        WideImpl(const void *ptr_wide_data, int derivIndex=0)
+        : m_ref_wide_data(block_cast<DataT, WidthT>(ptr_wide_data)[derivIndex])
+        {}
+
+        // Allow implicit construction
+        OSL_FORCEINLINE
+        WideImpl(const Block<DataT, WidthT> & ref_wide_data)
+        : m_ref_wide_data(align_block_ref(ref_wide_data))
+        {}
+
+        // Allow implicit conversion of const Wide from non-const Wide
+        OSL_FORCEINLINE
+        WideImpl(const WideImpl<DataT, WidthT, false /*IsConstT */> &other)
+        : m_ref_wide_data(other.m_ref_wide_data)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        WideImpl(const WideImpl &other) noexcept
+        : m_ref_wide_data(other.m_ref_wide_data)
+        {}
+
+
+        typedef ConstLaneProxy<ConstDataT, WidthT> ConstProxy;
+
+        OSL_FORCEINLINE const Block<DataT, WidthT> &  data() const { return m_ref_wide_data; }
+
+        OSL_FORCEINLINE ConstProxy const
+        operator[](int lane) const
+        {
+            return ConstProxy(m_ref_wide_data, lane);
+        }
+
+    private:
+        const Block<DataT, WidthT> & m_ref_wide_data;
+    };
+
+    template <typename ElementT, int ArrayLenT, int WidthT>
+    struct WideImpl<const ElementT[ArrayLenT], WidthT, true /*IsConstT */>
+    {
+        static constexpr int width = WidthT;
+        static constexpr int ArrayLen = ArrayLenT;
+        static_assert(ArrayLen > 0, "OSL logic bug");
+        typedef const ElementT ElementType;
+        static_assert(std::is_const<ElementType>::value, "unexpected compiler behavior");
+        typedef ElementT NonConstElementType;
+        typedef ElementType ArrayType[ArrayLen];
+
+        explicit OSL_FORCEINLINE
+        WideImpl(const void *ptr_wide_data)
+        : m_array_of_wide_data(block_cast<ElementT, WidthT>(ptr_wide_data))
+        {}
+
+        explicit OSL_FORCEINLINE
+        WideImpl(const Block<ElementT, WidthT> *array_of_wide_data)
+        : m_array_of_wide_data(assume_aligned(array_of_wide_data))
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        WideImpl(const WideImpl &other) noexcept
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        {}
+
+        static constexpr OSL_FORCEINLINE int
+        length() { return ArrayLen; }
+
+
+        typedef ConstWideArrayLaneProxy<ElementType, ArrayLen, WidthT> Proxy;
+
+        OSL_FORCEINLINE Proxy const
+        operator[](int lane) const
+        {
+            return Proxy(m_array_of_wide_data, lane);
+        }
+
+        OSL_FORCEINLINE Wide<ElementType, WidthT>
+        get_element(int array_index) const
+        {
+            OSL_DASSERT(array_index < ArrayLen);
+            return Wide<ElementType, WidthT>(m_array_of_wide_data[array_index]);
+        }
+
+    private:
+        const Block<ElementT, WidthT> * m_array_of_wide_data;
+    };
+
+    template <typename ElementT, int WidthT>
+    struct WideImpl<const ElementT[], WidthT, true /*IsConstT */>
+    {
+        static constexpr int width = WidthT;
+        typedef const ElementT ElementType;
+        static_assert(std::is_const<ElementType>::value, "unexpected compiler behavior");
+        typedef ElementT NonConstElementType;
+
+        explicit OSL_FORCEINLINE
+        WideImpl(const void *ptr_wide_data, int array_length)
+        : m_array_of_wide_data(block_cast<ElementT, WidthT>(ptr_wide_data))
+        , m_array_length(array_length)
+        {}
+
+        explicit OSL_FORCEINLINE
+        WideImpl(const Block<ElementT, WidthT> *array_of_wide_data, int array_length)
+        : m_array_of_wide_data(assume_aligned(array_of_wide_data))
+        , m_array_length(array_length)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        WideImpl(const WideImpl &other) noexcept
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_array_length(other.m_array_length)
+        {}
+
+        OSL_FORCEINLINE int
+        length() { return m_array_length; }
+
+
+        typedef ConstWideUnboundedArrayLaneProxy<ElementType, WidthT> Proxy;
+
+        OSL_FORCEINLINE Proxy const
+        operator[](int lane) const
+        {
+            return Proxy(m_array_of_wide_data, m_array_length, lane);
+        }
+
+        OSL_FORCEINLINE Wide<ElementType, WidthT>
+        get_element(int array_index) const
+        {
+            OSL_DASSERT(array_index < m_array_length);
+            return Wide<ElementType, WidthT>(m_array_of_wide_data[array_index]);
+        }
+
+    private:
+        const Block<ElementT, WidthT> * m_array_of_wide_data;
+        int m_array_length;
+    };
+
+    template <typename ElementT, int WidthT>
+    struct WideImpl<const Dual2<ElementT>[], WidthT, true /*IsConstT */>
+    {
+        static constexpr int width = WidthT;
+        typedef const Dual2<ElementT> ElementType;
+        typedef Dual2<ElementT> NonConstElementType;
+
+        explicit OSL_FORCEINLINE
+        WideImpl(const void *ptr_wide_data, int array_length)
+        : m_array_of_wide_data(block_cast<ElementT, WidthT>(ptr_wide_data))
+        , m_array_length(array_length)
+        {}
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        WideImpl(const WideImpl &other) noexcept
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_array_length(other.m_array_length)
+        {}
+
+        OSL_FORCEINLINE int
+        length() { return m_array_length; }
+
+        typedef ConstWideDual2UnboundedArrayLaneProxy<ElementT, WidthT> Proxy;
+
+        OSL_FORCEINLINE Proxy const
+        operator[](int lane_index) const
+        {
+            return Proxy(m_array_of_wide_data, m_array_length, lane_index);
+        }
+
+        // get_element doesn't work here as val, dx, dy will be separated
+        // in memory by m_array_length.  Perhaps could add get_val(), get_dx(), get_dy()
+        // similar to MaskedData in order to enable get_element.
+    private:
+        const Block<ElementT, WidthT> * m_array_of_wide_data;
+        int m_array_length;
+    };
+
+} // namespace pvt
+
+
+#if OSL_INTEL_COMPILER || OSL_GNUC_VERSION
+    // Workaround for error #3466: inheriting constructors must be inherited from a direct base class
+    #define __OSL_INHERIT_BASE_CTORS(DERIVED, BASE) \
+        using Base = typename DERIVED::BASE; \
+        using Base::BASE;
+#else
+    #define __OSL_INHERIT_BASE_CTORS(DERIVED, BASE) \
+        using Base = typename DERIVED::BASE; \
+        using Base::Base;
+#endif
+
+template <typename DataT, int WidthT>
+struct Wide
+: pvt::WideImpl<DataT, WidthT, std::is_const<DataT>::value>
+{
+    __OSL_INHERIT_BASE_CTORS(Wide,WideImpl)
+    static constexpr int width = WidthT;
+};
+
+
+#undef __OSL_INHERIT_BASE_CTORS
 
 OSL_NAMESPACE_EXIT

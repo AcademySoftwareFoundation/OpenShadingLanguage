@@ -572,6 +572,9 @@ public:
     bool allow_shader_replacement() const { return m_allow_shader_replacement; }
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
+    bool llvm_jit_fma() const { return m_llvm_jit_fma; }
+    ustring llvm_jit_target () const { return m_llvm_jit_target; }
+
     ustring debug_groupname() const { return m_debug_groupname; }
     ustring debug_layername() const { return m_debug_layername; }
 
@@ -739,7 +742,7 @@ private:
     bool m_llvm_jit_fma;                  ///< Allow fused multiply/add in JIT
     bool m_llvm_jit_aggressive;           ///< Turn on llvm "aggressive" JIT
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
-    ustring m_llvm_jit_target;            ///< JIT based on host target
+    ustring m_llvm_jit_target;            ///< ISA target for JIT
     int m_vector_width;                   ///< SIMD width maximum (8)
     int m_opt_passes;                     ///< Opt passes per layer
     int m_llvm_optimize;                  ///< OSL optimization strategy

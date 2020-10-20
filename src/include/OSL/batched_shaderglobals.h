@@ -11,13 +11,12 @@
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
-    class BatchedBackendLLVM;
+class BatchedBackendLLVM;
 }
 
 struct UniformShaderGlobals {
-
-    UniformShaderGlobals() = default;
-    UniformShaderGlobals(const UniformShaderGlobals &other) = delete;
+    UniformShaderGlobals()                                  = default;
+    UniformShaderGlobals(const UniformShaderGlobals& other) = delete;
 
     /// There are three opaque pointers that may be set by the renderer here
     /// in the ShaderGlobals before shading execution begins, and then
@@ -45,7 +44,7 @@ struct UniformShaderGlobals {
     /// it can retrieve the output closure from after shader execution has
     /// completed.
     /// DESIGN DECISION:  NOT CURRENTLY SUPPORTING CLOSURES IN BATCH MODE
-    ClosureColor *Ci;
+    ClosureColor* Ci;
 
     /// Bit field of ray type flags.
     int raytype;
@@ -56,11 +55,12 @@ struct UniformShaderGlobals {
     int pad0;
     int pad1;
     int pad2;
-    
+
     void dump()
     {
-        #define __OSL_DUMP(VARIABLE_NAME) std::cout << #VARIABLE_NAME << " = " << VARIABLE_NAME << std::endl;
-        std::cout << "UniformShaderGlobals = {"  << std::endl;
+#define __OSL_DUMP(VARIABLE_NAME) \
+    std::cout << #VARIABLE_NAME << " = " << VARIABLE_NAME << std::endl;
+        std::cout << "UniformShaderGlobals = {" << std::endl;
         __OSL_DUMP(renderstate);
         __OSL_DUMP(tracedata);
         __OSL_DUMP(objdata);
@@ -70,19 +70,17 @@ struct UniformShaderGlobals {
         __OSL_DUMP(raytype);
 
         std::cout << "};" << std::endl;
-        #undef __OSL_DUMP
+#undef __OSL_DUMP
     }
 };
-static_assert(sizeof(UniformShaderGlobals)%64 == 0, "UniformShaderGlobals must be padded to a 64byte boundary");
+static_assert(sizeof(UniformShaderGlobals) % 64 == 0,
+              "UniformShaderGlobals must be padded to a 64byte boundary");
 
-template<int WidthT> 
-struct alignas(64) VaryingShaderGlobals {
+template<int WidthT> struct alignas(64) VaryingShaderGlobals {
+    VaryingShaderGlobals()                                  = default;
+    VaryingShaderGlobals(const VaryingShaderGlobals& other) = delete;
 
-    VaryingShaderGlobals() = default;
-    VaryingShaderGlobals(const VaryingShaderGlobals &other) = delete;
-
-    template<typename T>
-    using  Block = OSL::Block<T, WidthT>;
+    template<typename T> using Block = OSL::Block<T, WidthT>;
 
     /// Surface position (and its x & y differentials).
     Block<Vec3> P, dPdx, dPdy;
@@ -139,8 +137,8 @@ struct alignas(64) VaryingShaderGlobals {
 
     void dump()
     {
-        #define __OSL_DUMP(VARIABLE_NAME) VARIABLE_NAME.dump(#VARIABLE_NAME)
-        std::cout << "VaryingShaderGlobals = {"  << std::endl;
+#define __OSL_DUMP(VARIABLE_NAME) VARIABLE_NAME.dump(#VARIABLE_NAME)
+        std::cout << "VaryingShaderGlobals = {" << std::endl;
         __OSL_DUMP(P);
         __OSL_DUMP(dPdx);
         __OSL_DUMP(dPdy);
@@ -170,43 +168,40 @@ struct alignas(64) VaryingShaderGlobals {
         __OSL_DUMP(flipHandedness);
         __OSL_DUMP(backfacing);
         std::cout << "};" << std::endl;
-        #undef __OSL_DUMP
+#undef __OSL_DUMP
     }
-    
 };
 
-template<int WidthT>
-struct alignas(64) BatchedShaderGlobals
-{
-    BatchedShaderGlobals(){}
+template<int WidthT> struct alignas(64) BatchedShaderGlobals {
+    BatchedShaderGlobals() {}
 
     // Disallow copying
-    BatchedShaderGlobals(const BatchedShaderGlobals &) = delete;
+    BatchedShaderGlobals(const BatchedShaderGlobals&) = delete;
 
     UniformShaderGlobals uniform;
     VaryingShaderGlobals<WidthT> varying;
 
     void dump()
     {
-        std::cout << "BatchedShaderGlobals" << " = {"  << std::endl;
+        std::cout << "BatchedShaderGlobals"
+                  << " = {" << std::endl;
         uniform.dump();
         varying.dump();
         std::cout << "};" << std::endl;
     }
-
 };
 
 #define __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA) \
-using BatchedShaderGlobals = OSL::BatchedShaderGlobals<WIDTH_OF_OSL_DATA>; \
+    using BatchedShaderGlobals = OSL::BatchedShaderGlobals<WIDTH_OF_OSL_DATA>;
 
-#undef  OSL_USING_DATA_WIDTH
+#undef OSL_USING_DATA_WIDTH
 #ifdef __OSL_USING_BATCHED_TEXTURE
-#define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA) \
-    __OSL_USING_WIDE(WIDTH_OF_OSL_DATA) \
-    __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA)
+#    define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA) \
+        __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)         \
+        __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA)
 #else
-    #define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA) \
-        __OSL_USING_WIDE(WIDTH_OF_OSL_DATA) \
+#    define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA)  \
+        __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)          \
         __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA) \
         __OSL_USING_BATCHED_TEXTURE(WIDTH_OF_OSL_DATA)
 #endif

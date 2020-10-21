@@ -36,6 +36,8 @@
 #include <OSL/llvm_util.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslclosure.h>
+#include <OSL/rendererservices.h>
+#include <OSL/shaderglobals.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include "osl_pvt.h"

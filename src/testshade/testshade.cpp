@@ -30,6 +30,7 @@
 #include <OSL/oslexec.h>
 #include <OSL/oslcomp.h>
 #include <OSL/oslquery.h>
+#include <OSL/batched_shaderglobals.h>
 #include "optixgridrender.h"
 #include "simplerend.h"
 

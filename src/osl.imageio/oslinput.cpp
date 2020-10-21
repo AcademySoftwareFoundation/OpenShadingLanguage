@@ -16,6 +16,7 @@
 
 #include <OSL/oslcomp.h>
 #include <OSL/oslexec.h>
+#include <OSL/rendererservices.h>
 
 using namespace OIIO;
 

@@ -12,6 +12,7 @@
 #include <OpenImageIO/ustring.h>
 
 #include <OSL/oslexec.h>
+#include <OSL/rendererservices.h>
 #include "raytracer.h"
 #include "sampling.h"
 #include "background.h"

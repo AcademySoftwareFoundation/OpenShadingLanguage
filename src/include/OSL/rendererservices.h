@@ -9,8 +9,6 @@
 
 #include <OSL/oslconfig.h>
 
-#include <OpenImageIO/ustring.h>
-
 
 OSL_NAMESPACE_ENTER
 

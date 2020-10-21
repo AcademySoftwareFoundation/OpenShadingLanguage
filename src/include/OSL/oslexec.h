@@ -8,16 +8,13 @@
 
 #include <OSL/oslconfig.h>
 #include <OSL/shaderglobals.h>
-#include <OSL/rendererservices.h>
-
-#include <OSL/batched_shaderglobals.h>
 
 #include <OpenImageIO/refcnt.h>
-#include <OpenImageIO/ustring.h>
 
 
 OSL_NAMESPACE_ENTER
 
+// Various forward declarations
 class RendererServices;
 class ShaderGroup;
 typedef std::shared_ptr<ShaderGroup> ShaderGroupRef;
@@ -25,6 +22,7 @@ struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;
 class ShaderSymbol;
+template<int WidthT> struct alignas(64) BatchedShaderGlobals;
 
 
 

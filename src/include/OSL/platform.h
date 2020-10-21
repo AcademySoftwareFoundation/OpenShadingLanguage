@@ -445,6 +445,12 @@
 #    define OSL_DASSERT_MSG(x, ...) ((void)sizeof(x)) /*NOLINT*/
 #endif
 
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+    #define OSL_STACK_ARRAY(TYPE, NAME, DYNAMIC_COUNT) TYPE * NAME = reinterpret_cast<TYPE *>(alloca(sizeof(TYPE)*(DYNAMIC_COUNT)))
+#else
+    // Utilize variable length array compiler extension when available
+    #define OSL_STACK_ARRAY(TYPE, NAME, DYNAMIC_COUNT) TYPE NAME[DYNAMIC_COUNT]
+#endif
 
 OSL_NAMESPACE_ENTER
 

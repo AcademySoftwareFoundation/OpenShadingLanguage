@@ -419,9 +419,7 @@ public:
 
     /// A renderer may choose to support batched execution by providing pointers
     /// to objects satisfying the BatchedRendererServices<WidthOf<#>> interface
-    /// for specific batch sizes.  Those objects should should derive from
-    /// BatchedRendererServicesBase and make friends with the subclass of
-    /// RendererServices to enable the downcast to BatchedRendererServices.
+    /// for specific batch sizes.
     /// Unless overridden, a nullptr is returned.
     virtual BatchedRendererServices<16> * batched(WidthOf<16>);
     virtual BatchedRendererServices<8> * batched(WidthOf<8>);

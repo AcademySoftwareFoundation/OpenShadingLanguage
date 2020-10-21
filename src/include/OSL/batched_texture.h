@@ -161,16 +161,19 @@ public:
         return m_mask;
     }
 
+    // The return value will be Masked<float, WidthT> or Masked<Vec3, WidthT>
     OSL_FORCEINLINE MaskedData<WidthT> result()
     {
         return MaskedData<WidthT>(m_resultType, m_resultHasDerivs, m_mask, m_result);
     }
 
+    // The return value maybe invalid or be Masked<float, WidthT>
     OSL_FORCEINLINE MaskedData<WidthT> alpha()
     {
         return MaskedData<WidthT>(TypeDesc::TypeFloat, m_alphaHasDerivs, m_mask, m_alpha);
     }
 
+    // The return value maybe invalid or be Masked<ustring, WidthT>
     OSL_FORCEINLINE MaskedData<WidthT> errormessage()
     {
         return MaskedData<WidthT>(TypeDesc::TypeString, false, m_mask, m_errormessage);

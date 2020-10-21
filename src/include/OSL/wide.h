@@ -208,7 +208,7 @@ class RefData;
 // it can be constructed from the RefData.
 // Although the underlying TypeDesc has its own ways of being tested,
 // we have provided trait classes to perform the testing based on DataT.
-// IE:  void myFunction(RefData<16> any) {
+// IE:  void myFunction(RefData any) {
 //          if (Ref<Vec3>::is(any) {
 //              Ref<Vec3> vecVal(any);
 //              process(vecVal);

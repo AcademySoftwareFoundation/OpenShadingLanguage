@@ -33,6 +33,11 @@
 #include <QTextEdit>
 #include <QToolTip>
 
+// QT's extension foreach defines a foreach macro which interferes
+// with an OSL internal foreach method.  So we will undefine it here
+#undef foreach
+// It is recommended any uses ofQT's foreach be migrated
+// to use C++11 range based loops.
 
 #include <OpenImageIO/errorhandler.h>
 #include <OpenImageIO/filesystem.h>

@@ -11,7 +11,6 @@
 #include <OSL/rendererservices.h>
 
 #include <OSL/batched_shaderglobals.h>
-#include <OSL/batched_rendererservices.h>
 
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>

@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <OSL/oslconfig.h>
+#include <OSL/batched_shaderglobals.h>
 #include <OSL/batched_texture.h>
+#include <OSL/oslconfig.h>
 #include <OSL/rendererservices.h>
 
 #include <OpenImageIO/ustring.h>
@@ -41,8 +42,7 @@ OSL_NAMESPACE_ENTER
 //         if (Ref<int[2]>::is(any) {
 //             Ref<int[2]> pairVal(any);
 
-template<int WidthT>
-class OSLEXECPUBLIC BatchedRendererServices {
+template<int WidthT> class OSLEXECPUBLIC BatchedRendererServices {
 public:
     typedef TextureSystem::Perthread TexturePerthread;
 
@@ -53,33 +53,38 @@ public:
     // scoped aliases for this class's WidthT
     OSL_USING_DATA_WIDTH(WidthT);
 
-    BatchedRendererServices (TextureSystem *texsys=NULL);
-    virtual ~BatchedRendererServices () { }
+    BatchedRendererServices(TextureSystem* texsys = NULL);
+    virtual ~BatchedRendererServices() {}
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return a Mask with lanes set to
     /// true if ok, false on error.
-    virtual Mask get_matrix (BatchedShaderGlobals *bsg, Masked<Matrix44> wresult,
-            Wide<const TransformationPtr> wxform, Wide<const float> wtime) = 0;
+    virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> wresult,
+                            Wide<const TransformationPtr> wxform,
+                            Wide<const float> wtime)
+        = 0;
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return a Mask with lanes set to true
     /// if ok, false on error.  The default implementation is to use get_matrix and
     /// invert it, but a particular renderer may have a better technique
     /// and overload the implementation.
-    virtual Mask get_inverse_matrix (BatchedShaderGlobals *bsg, Masked<Matrix44> wresult,
-            Wide<const TransformationPtr> wxform, Wide<const float> wtime);
-    virtual bool is_overridden_get_inverse_matrix_WmWxWf () const = 0;
+    virtual Mask get_inverse_matrix(BatchedShaderGlobals* bsg,
+                                    Masked<Matrix44> wresult,
+                                    Wide<const TransformationPtr> wxform,
+                                    Wide<const float> wtime);
+    virtual bool is_overridden_get_inverse_matrix_WmWxWf() const = 0;
 
     /// Get the 4x4 matrix that transforms points from the named
     /// 'from' coordinate system to "common" space at the given time.
     /// Return a Mask with lanes set to  true if ok, false if the named matrix
     /// is not known.
-    virtual Mask get_matrix (BatchedShaderGlobals *bsg, Masked<Matrix44> wresult,
-                             ustring from, Wide<const float> wtime) = 0;
-    virtual Mask get_matrix (BatchedShaderGlobals *bsg, Masked<Matrix44> result,
-                             Wide<const ustring> wfrom, Wide<const float> wtime);
-    virtual bool is_overridden_get_matrix_WmWsWf () const = 0;
+    virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> wresult,
+                            ustring from, Wide<const float> wtime)
+        = 0;
+    virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> result,
+                            Wide<const ustring> wfrom, Wide<const float> wtime);
+    virtual bool is_overridden_get_matrix_WmWsWf() const = 0;
 
 
     /// Get the 4x4 matrix that transforms points from "common" space to
@@ -87,12 +92,15 @@ public:
     /// default implementation is to use get_matrix and invert it, but a
     /// particular renderer may have a better technique and overload the
     /// implementation.
-    virtual Mask get_inverse_matrix (BatchedShaderGlobals *bsg, Masked<Matrix44> wresult,
-                                     ustring to, Wide<const float> wtime);
-    virtual bool is_overridden_get_inverse_matrix_WmsWf () const = 0;
-    virtual Mask get_inverse_matrix (BatchedShaderGlobals *bsg, Masked<Matrix44> wresult,
-                                     Wide<const ustring> wto, Wide<const float> wtime);
-    virtual bool is_overridden_get_inverse_matrix_WmWsWf () const = 0;
+    virtual Mask get_inverse_matrix(BatchedShaderGlobals* bsg,
+                                    Masked<Matrix44> wresult, ustring to,
+                                    Wide<const float> wtime);
+    virtual bool is_overridden_get_inverse_matrix_WmsWf() const = 0;
+    virtual Mask get_inverse_matrix(BatchedShaderGlobals* bsg,
+                                    Masked<Matrix44> wresult,
+                                    Wide<const ustring> wto,
+                                    Wide<const float> wtime);
+    virtual bool is_overridden_get_inverse_matrix_WmWsWf() const = 0;
 
     // non linear transformations are currently unsupported,
     // but could be added if needed
@@ -102,43 +110,47 @@ public:
     /// identified as uniform by the renderer.  NOTE:  To enable constant folding of
     // an attribute value, it must be uniform and retrievable with a NULL BatchedShaderGlobals
     virtual bool is_attribute_uniform(ustring object, ustring name) = 0;
-    
+
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
     /// unsuccessful, on the currently shaded "scene".
-    virtual Mask get_attribute (BatchedShaderGlobals *bsg,
-                                ustring object, ustring name,
-                                MaskedData wval) = 0;
-    
-    /// Similar to get_attribute();  this method will fetch the 'index'
-    /// element of an attribute array.
-    virtual Mask get_array_attribute (BatchedShaderGlobals *bsg,
-                                      ustring object,
-                                      ustring name, int index, MaskedData wval) = 0;
-
-    virtual bool get_attribute_uniform (BatchedShaderGlobals *bsg,
-                                ustring object, ustring name, RefData val) = 0;
+    virtual Mask get_attribute(BatchedShaderGlobals* bsg, ustring object,
+                               ustring name, MaskedData wval)
+        = 0;
 
     /// Similar to get_attribute();  this method will fetch the 'index'
     /// element of an attribute array.
-    virtual bool get_array_attribute_uniform (BatchedShaderGlobals *bsg,
-                                      ustring object,
-                                      ustring name, int index, RefData val) = 0;
-    
+    virtual Mask get_array_attribute(BatchedShaderGlobals* bsg, ustring object,
+                                     ustring name, int index, MaskedData wval)
+        = 0;
+
+    virtual bool get_attribute_uniform(BatchedShaderGlobals* bsg,
+                                       ustring object, ustring name,
+                                       RefData val)
+        = 0;
+
+    /// Similar to get_attribute();  this method will fetch the 'index'
+    /// element of an attribute array.
+    virtual bool get_array_attribute_uniform(BatchedShaderGlobals* bsg,
+                                             ustring object, ustring name,
+                                             int index, RefData val)
+        = 0;
+
     /// Get multiple named user-data from the current object and write them into
     /// 'val'. If derivatives is true, the derivatives should be written into val
-    /// as well. It is assumed the results are varying and returns Mask 
+    /// as well. It is assumed the results are varying and returns Mask
     // with its bit set to off if no user-data with the given name and type was
     /// found.
-    virtual Mask get_userdata (ustring name, 
-                               BatchedShaderGlobals *bsg, MaskedData wval) = 0;
+    virtual Mask get_userdata(ustring name, BatchedShaderGlobals* bsg,
+                              MaskedData wval)
+        = 0;
 
     // Currently texture handles are serviced by the non-batched
     // RendererServices interface.  If necessary, customized ones could
     // be added here.  Decided to wait until the use case arises
-    
+
     /// Texturing is setup for a single filename/handle and
     /// BatchedTextureOptions (containing uniform and varying sections)
     /// and supports varying texture coordinates and derivatives.
@@ -175,14 +187,14 @@ public:
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
     ///
-    virtual Mask texture(ustring filename, TextureSystem::TextureHandle *texture_handle,
-                                  TextureSystem::Perthread *texture_thread_info,
-                                  const BatchedTextureOptions &options, BatchedShaderGlobals *bsg,
-                                  Wide<const float> ws, Wide<const float> wt,
-                                  Wide<const float> wdsdx, Wide<const float> wdtdx,
-                                  Wide<const float> wdsdy, Wide<const float> wdtdy,
-                                  BatchedTextureOutputs& outputs);
-    virtual bool is_overridden_texture () const = 0;
+    virtual Mask
+    texture(ustring filename, TextureSystem::TextureHandle* texture_handle,
+            TextureSystem::Perthread* texture_thread_info,
+            const BatchedTextureOptions& options, BatchedShaderGlobals* bsg,
+            Wide<const float> ws, Wide<const float> wt, Wide<const float> wdsdx,
+            Wide<const float> wdtdx, Wide<const float> wdsdy,
+            Wide<const float> wdtdy, BatchedTextureOutputs& outputs);
+    virtual bool is_overridden_texture() const = 0;
 
 
     /// Filtered 3D texture lookup for a single point.
@@ -210,12 +222,15 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual Mask texture3d (ustring filename, TextureSystem::TextureHandle *texture_handle,
-                            TextureSystem::Perthread *texture_thread_info,
-                            const BatchedTextureOptions &options, BatchedShaderGlobals *bsg,
-                            Wide<const Vec3> wP, Wide<const Vec3> wdPdx, Wide<const Vec3> wdPdy,
-                            Wide<const Vec3> wdPdz, BatchedTextureOutputs& outputs);
-    virtual bool is_overridden_texture3d () const = 0;
+    virtual Mask texture3d(ustring filename,
+                           TextureSystem::TextureHandle* texture_handle,
+                           TextureSystem::Perthread* texture_thread_info,
+                           const BatchedTextureOptions& options,
+                           BatchedShaderGlobals* bsg, Wide<const Vec3> wP,
+                           Wide<const Vec3> wdPdx, Wide<const Vec3> wdPdy,
+                           Wide<const Vec3> wdPdz,
+                           BatchedTextureOutputs& outputs);
+    virtual bool is_overridden_texture3d() const = 0;
 
 
     // Filtered environment lookup for a single point is T.B.D.
@@ -237,42 +252,38 @@ public:
     // Should shader's fully avoid non-constant strings we could remove this
     // method which supports Wide<const ustring> wfilename.  Or replace
     // this virtual method with a library side loop that calls the uniform version
-    virtual Mask get_texture_info (BatchedShaderGlobals *bsg,
-                                   TexturePerthread *texture_thread_info,
-                                   Wide<const ustring> wfilename,
-                                   // We do not need to support texture handle for varying data.
-                                   int subimage,
-                                   ustring dataname,
-                                   MaskedData val);
+    virtual Mask get_texture_info(
+        BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
+        Wide<const ustring> wfilename,
+        // We do not need to support texture handle for varying data.
+        int subimage, ustring dataname, MaskedData val);
 
-    virtual bool get_texture_info_uniform (BatchedShaderGlobals *bsg,
-                                           TexturePerthread *texture_thread_info,
-                                           ustring filename,
-                                           TextureSystem::TextureHandle *texture_handle,
-                                           int subimage,
-                                           ustring dataname,
-                                           RefData val);
+    virtual bool get_texture_info_uniform(
+        BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
+        ustring filename, TextureSystem::TextureHandle* texture_handle,
+        int subimage, ustring dataname, RefData val);
 
     /// Options for the trace call.
     using TraceOpt = RendererServices::TraceOpt;
 
     /// Immediately trace a ray from P in the direction R.  Return true
     /// if anything hit, otherwise false.
-    virtual void trace (TraceOpt &options,  BatchedShaderGlobals *bsg, Masked<int> result,
-                            Wide<const Vec3> wP, Wide<const Vec3> wdPdx,
-                            Wide<const Vec3> wdPdy, Wide<const Vec3> wR,
-                            Wide<const Vec3> wdRdx, Wide<const Vec3> wdRdy);
+    virtual void trace(TraceOpt& options, BatchedShaderGlobals* bsg,
+                       Masked<int> result, Wide<const Vec3> wP,
+                       Wide<const Vec3> wdPdx, Wide<const Vec3> wdPdy,
+                       Wide<const Vec3> wR, Wide<const Vec3> wdRdx,
+                       Wide<const Vec3> wdRdy);
 
-    virtual void getmessage (BatchedShaderGlobals *bsg, Masked<int> wresult,
-                             ustring source, ustring name, MaskedData wval);
+    virtual void getmessage(BatchedShaderGlobals* bsg, Masked<int> wresult,
+                            ustring source, ustring name, MaskedData wval);
 
     // pointcloud_search is T.B.D.
 
     /// Return a pointer to the texture system (if available).
-    virtual TextureSystem *texturesys () const;
+    virtual TextureSystem* texturesys() const;
 
 protected:
-    TextureSystem *m_texturesys;   // A place to hold a TextureSystem
+    TextureSystem* m_texturesys;  // A place to hold a TextureSystem
 };
 
 

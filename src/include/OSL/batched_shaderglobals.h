@@ -192,18 +192,19 @@ template<int WidthT> struct alignas(64) BatchedShaderGlobals {
 };
 
 #define __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA) \
-    using BatchedShaderGlobals = OSL::BatchedShaderGlobals<WIDTH_OF_OSL_DATA>;
+    using BatchedShaderGlobals                       \
+        = OSL_NAMESPACE::BatchedShaderGlobals<WIDTH_OF_OSL_DATA>;
 
 #undef OSL_USING_DATA_WIDTH
 #ifdef __OSL_USING_BATCHED_TEXTURE
-#    define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA) \
-        __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)         \
-        __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA)
-#else
 #    define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA)  \
         __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)          \
         __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA) \
         __OSL_USING_BATCHED_TEXTURE(WIDTH_OF_OSL_DATA)
+#else
+#    define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA) \
+        __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)         \
+        __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA)
 #endif
 
 OSL_NAMESPACE_EXIT

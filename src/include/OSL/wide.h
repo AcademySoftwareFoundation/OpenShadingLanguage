@@ -3067,26 +3067,26 @@ MaskedData<WidthT>::val_size_in_bytes() const
 
 #define __OSL_USING_WIDE(WIDTH_OF_OSL_DATA) \
     template<typename DataT> \
-    using Block = OSL::Block<DataT, WIDTH_OF_OSL_DATA>; \
+    using Block = OSL_NAMESPACE::Block<DataT, WIDTH_OF_OSL_DATA>; \
     \
-    using Mask = OSL::Mask<WIDTH_OF_OSL_DATA>; \
+    using Mask = OSL_NAMESPACE::Mask<WIDTH_OF_OSL_DATA>; \
     \
-    using MaskedData = OSL::MaskedData<WIDTH_OF_OSL_DATA>; \
+    using MaskedData = OSL_NAMESPACE::MaskedData<WIDTH_OF_OSL_DATA>; \
     \
     template<typename DataT> \
-    using Wide = OSL::Wide<DataT, WIDTH_OF_OSL_DATA>; \
+    using Wide = OSL_NAMESPACE::Wide<DataT, WIDTH_OF_OSL_DATA>; \
     \
     /*template<typename DataT>*/ \
-    /*using UniformAsWide = OSL::UniformAsWide<DataT, WIDTH_OF_OSL_DATA>;*/ \
+    /*using UniformAsWide = OSL_NAMESPACE::UniformAsWide<DataT, WIDTH_OF_OSL_DATA>;*/ \
     \
     template<typename DataT> \
-    using Masked = OSL::Masked<DataT, WIDTH_OF_OSL_DATA>; \
+    using Masked = OSL_NAMESPACE::Masked<DataT, WIDTH_OF_OSL_DATA>; \
     template<typename DataT> \
-    using MaskedDx = OSL::MaskedDx<DataT, WIDTH_OF_OSL_DATA>; \
+    using MaskedDx = OSL_NAMESPACE::MaskedDx<DataT, WIDTH_OF_OSL_DATA>; \
     template<typename DataT> \
-    using MaskedDy = OSL::MaskedDy<DataT, WIDTH_OF_OSL_DATA>; \
+    using MaskedDy = OSL_NAMESPACE::MaskedDy<DataT, WIDTH_OF_OSL_DATA>; \
     template<typename DataT> \
-    using MaskedDz = OSL::MaskedDz<DataT, WIDTH_OF_OSL_DATA>; \
+    using MaskedDz = OSL_NAMESPACE::MaskedDz<DataT, WIDTH_OF_OSL_DATA>; \
     \
 
 // Use inside of
@@ -3101,7 +3101,9 @@ MaskedData<WidthT>::val_size_in_bytes() const
 // these wrappers with WidthT parameter hardcoded
 #define OSL_USING_DATA_WIDTH(WIDTH_OF_OSL_DATA) __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)
 
-
 #undef __OSL_INHERIT_BASE_CTORS
 
 OSL_NAMESPACE_EXIT
+
+// clang-format on
+

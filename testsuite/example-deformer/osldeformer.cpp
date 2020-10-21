@@ -46,6 +46,7 @@ To run:
 
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
+#include <OSL/rendererservices.h>
 
 
 // Define a userdata structure that holds any varying per-point values that

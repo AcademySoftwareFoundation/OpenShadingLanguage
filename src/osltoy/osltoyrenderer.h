@@ -13,6 +13,7 @@
 #include <OpenImageIO/ustring.h>
 
 #include <OSL/oslexec.h>
+#include <OSL/rendererservices.h>
 
 OSL_NAMESPACE_ENTER
 

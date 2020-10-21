@@ -14,6 +14,7 @@
 
 #include <OSL/oslconfig.h>
 #include <OSL/oslquery.h>
+#include <OSL/rendererservices.h>
 
 #include <QAction>
 #include <QMainWindow>

@@ -1,0 +1,9 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+surface test_add(output color Cout = 0) {
+    point Po = transform("myspace", P);
+    float n = noise(Po / 10);
+    Ci = diffuse(N) * mix(color(1.0, 0.0, 0.0), color(0.0, 1.0, 0.0), n);
+}

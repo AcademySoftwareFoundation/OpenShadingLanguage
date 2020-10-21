@@ -153,11 +153,8 @@ struct Masked;
 //     template <typename DataT, int WidthT>
 //     struct MaskedDy;
 //
-//     template <typename DataT, int WidthT>
-//     struct MaskedDz;
-//
 // Same interface as Masked, but treats Block & as array and accesses
-// Block[1] for Dx, Block[2] for Dy, Block[3] for Dz
+// Block[1] for Dx, Block[2] for Dy
 
 
 template <int WidthT>
@@ -266,11 +263,8 @@ struct Ref;
 //     template <typename DataT>
 //     struct RefDy;
 //
-//     template <typename DataT>
-//     struct RefDz;
-//
 // Same interface as Ref, but treats DataT & as array and accesses
-// DataT*[1] for Dx, DataT*[2] for Dy, DataT*[3] for Dz
+// DataT*[1] for Dx, DataT*[2] for Dy
 
 
 // More wrappers will be added here
@@ -2667,8 +2661,6 @@ template <typename DataT, int WidthT>
 using MaskedDx = pvt::MaskedDeriv<DataT, WidthT, 1/*DerivIndexT*/>;
 template <typename DataT, int WidthT>
 using MaskedDy = pvt::MaskedDeriv<DataT, WidthT, 2/*DerivIndexT*/>;
-template <typename DataT, int WidthT>
-using MaskedDz = pvt::MaskedDeriv<DataT, WidthT, 3/*DerivIndexT*/>;
 
 
 template <typename DataT, int WidthT>
@@ -2779,7 +2771,6 @@ public:
     // Ref<DataT>(const RefData &)
     // RefDx<DataT>(const RefData &)
     // RefDy<DataT>(const RefData &)
-    // RefDz<DataT>(const RefData &)
 };
 
 
@@ -3013,8 +3004,6 @@ template <typename DataT>
 using RefDx = pvt::RefDeriv<DataT, 1/*DerivIndexT*/>;
 template <typename DataT>
 using RefDy = pvt::RefDeriv<DataT, 2/*DerivIndexT*/>;
-template <typename DataT>
-using RefDz = pvt::RefDeriv<DataT, 3/*DerivIndexT*/>;
 
 
 // The rest of MaskedData implementation that depends on
@@ -3085,8 +3074,6 @@ MaskedData<WidthT>::val_size_in_bytes() const
     using MaskedDx = OSL_NAMESPACE::MaskedDx<DataT, WIDTH_OF_OSL_DATA>; \
     template<typename DataT> \
     using MaskedDy = OSL_NAMESPACE::MaskedDy<DataT, WIDTH_OF_OSL_DATA>; \
-    template<typename DataT> \
-    using MaskedDz = OSL_NAMESPACE::MaskedDz<DataT, WIDTH_OF_OSL_DATA>; \
     \
 
 // Use inside of

@@ -175,10 +175,6 @@ if (USE_CUDA OR USE_OPTIX)
         message (FATAL_ERROR "NVPTX target is not available in the provided LLVM build")
     endif()
 
-    if (${CUDA_VERSION} VERSION_GREATER 8 AND ${LLVM_VERSION} VERSION_LESS 6)
-        message (FATAL_ERROR "CUDA ${CUDA_VERSION} requires LLVM 6.0 or greater")
-    endif ()
-
     set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
 
     find_library(cuda_lib NAMES cudart

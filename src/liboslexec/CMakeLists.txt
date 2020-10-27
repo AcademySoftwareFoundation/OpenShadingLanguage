@@ -185,6 +185,7 @@ target_include_directories (${local_lib}
 target_compile_definitions (${local_lib}
     PRIVATE
         OSL_EXPORTS
+        CUDA_TARGET_ARCH="${CUDA_TARGET_ARCH}"
         OSL_CUDA_VERSION="${CUDA_VERSION}"
         OSL_OPTIX_VERSION="${OPTIX_VERSION}"
     )

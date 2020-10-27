@@ -20,6 +20,7 @@
 #include "llvm_passes.h"
 
 #include <llvm/InitializePasses.h>
+#include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DebugInfoMetadata.h>
@@ -128,15 +129,9 @@ static bool setup_done = false;
 static std::unique_ptr<std::vector<std::shared_ptr<LLVMMemoryManager> >> jitmm_hold;
 static int jit_mem_hold_users = 0;
 
-static inline llvm::VectorType* llvmVectorGet(llvm::Type *llvmType, unsigned width) {
-#if OSL_LLVM_VERSION < 110
-    return llvm::VectorType::get(llvmType, width);
-#else
-    return llvm::VectorType::get(llvmType, width, false);
-#endif
-}
-
 }; // end anon namespace
+
+
 
 
 // ScopedJitMemoryUser will keep jitmm_hold alive until the last instance
@@ -396,16 +391,16 @@ LLVM_Util::LLVM_Util (const PerThreadInfo &per_thread_info,
     // Setup up wide aliases
     // TODO:  why are there casts to the base class llvm::Type *?
     m_vector_width = OIIO::floor2(OIIO::clamp(m_vector_width, 4, 16));
-    m_llvm_type_wide_float = llvmVectorGet(m_llvm_type_float, m_vector_width);
-    m_llvm_type_wide_double = llvmVectorGet(m_llvm_type_double, m_vector_width);
-    m_llvm_type_wide_int = llvmVectorGet(m_llvm_type_int, m_vector_width);
-    m_llvm_type_wide_bool = llvmVectorGet(m_llvm_type_bool, m_vector_width);
-    m_llvm_type_wide_char = llvmVectorGet(m_llvm_type_char, m_vector_width);
-    m_llvm_type_wide_longlong = llvmVectorGet(m_llvm_type_longlong, m_vector_width);
+    m_llvm_type_wide_float = llvm_vector_type(m_llvm_type_float, m_vector_width);
+    m_llvm_type_wide_double = llvm_vector_type(m_llvm_type_double, m_vector_width);
+    m_llvm_type_wide_int = llvm_vector_type(m_llvm_type_int, m_vector_width);
+    m_llvm_type_wide_bool = llvm_vector_type(m_llvm_type_bool, m_vector_width);
+    m_llvm_type_wide_char = llvm_vector_type(m_llvm_type_char, m_vector_width);
+    m_llvm_type_wide_longlong = llvm_vector_type(m_llvm_type_longlong, m_vector_width);
     
     m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);
-    m_llvm_type_wide_ustring_ptr = llvmVectorGet(m_llvm_type_char_ptr, m_vector_width);
-    m_llvm_type_wide_void_ptr = llvmVectorGet(m_llvm_type_void_ptr, m_vector_width);
+    m_llvm_type_wide_ustring_ptr = llvm_vector_type(m_llvm_type_char_ptr, m_vector_width);
+    m_llvm_type_wide_void_ptr = llvm_vector_type(m_llvm_type_void_ptr, m_vector_width);
     m_llvm_type_wide_int_ptr = llvm::PointerType::get(m_llvm_type_wide_int, 0);
     m_llvm_type_wide_bool_ptr = llvm::PointerType::get(m_llvm_type_wide_bool, 0);
     m_llvm_type_wide_float_ptr = llvm::PointerType::get(m_llvm_type_wide_float, 0);
@@ -1408,7 +1403,7 @@ LLVM_Util::make_jit_execengine (std::string *err,
     }
 
     m_llvm_type_native_mask = m_supports_avx512f ? m_llvm_type_wide_bool
-                : llvmVectorGet(m_llvm_type_int, m_vector_width);
+                : llvm_vector_type(m_llvm_type_int, m_vector_width);
 
     m_llvm_exec = engine_builder.create();
     if (! m_llvm_exec)
@@ -2565,60 +2560,65 @@ LLVM_Util::llvm_typenameof (llvm::Value *val) const
     return llvm_typename (llvm_typeof (val));
 }
 
-llvm::Value *
-LLVM_Util::wide_constant (llvm::Value * constant_val)
+llvm::Constant*
+LLVM_Util::wide_constant(llvm::Constant* constant_val)
 {
-    llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(constant_val);
-    OSL_ASSERT(cv  != nullptr);
-    return llvm::ConstantDataVector::getSplat(m_vector_width, cv);
+    return llvm::ConstantDataVector::getSplat(m_vector_width, constant_val);
 }
 
 
-llvm::Value *
-LLVM_Util::constant (float f)
+llvm::Constant*
+LLVM_Util::constant(float f)
 {
     return llvm::ConstantFP::get (context(), llvm::APFloat(f));
 }
 
-llvm::Value *
-LLVM_Util::wide_constant (float f)
+llvm::Constant*
+LLVM_Util::wide_constant (int width, float value)
 {
-    return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantFP::get (context(), llvm::APFloat(f)));
+    return llvm::ConstantDataVector::getSplat(width, constant(value));
 }
 
-llvm::Value *
-LLVM_Util::constant (int i)
+llvm::Constant*
+LLVM_Util::wide_constant (float f)
+{
+    return wide_constant(m_vector_width, f);
+}
+
+
+llvm::Constant*
+LLVM_Util::constant(int i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(32,i));
 }
 
 
-llvm::Value *
-LLVM_Util::constant8 (int i)
+llvm::Constant*
+LLVM_Util::constant8(int i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(8,i));
 }
 
-llvm::Value *
-LLVM_Util::constant16 (uint16_t i)
+llvm::Constant*
+LLVM_Util::constant16(uint16_t i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(16,i));
 }
 
-llvm::Value *
-LLVM_Util::constant64 (uint64_t i)
+llvm::Constant*
+LLVM_Util::constant64(uint64_t i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(64,i));
 }
 
-llvm::Value *
-LLVM_Util::constant128 (uint64_t i)
+llvm::Constant*
+LLVM_Util::constant128(uint64_t i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(128,i));
 }
 
-llvm::Value *
-LLVM_Util::constant128 (uint64_t left, uint64_t right)
+llvm::Constant*
+LLVM_Util::constant128(uint64_t left, uint64_t right)
 {
     uint64_t bigNum[2];
     bigNum[0] = left;
@@ -2628,33 +2628,39 @@ LLVM_Util::constant128 (uint64_t left, uint64_t right)
 }
 
 
-llvm::Value *
-LLVM_Util::wide_constant (int i)
+llvm::Constant*
+LLVM_Util::wide_constant(int width, int value)
 {
-    return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(32,i)));
+    return llvm::ConstantDataVector::getSplat(width, constant(value));
 }
 
-llvm::Value *
-LLVM_Util::constant (size_t i)
+llvm::Constant*
+LLVM_Util::wide_constant(int value)
+{
+    return wide_constant(m_vector_width, value);
+}
+
+llvm::Constant*
+LLVM_Util::constant(size_t i)
 {
     int bits = sizeof(size_t)*8;
     return llvm::ConstantInt::get (context(), llvm::APInt(bits,i));
 }
 
-llvm::Value *
+llvm::Constant*
 LLVM_Util::wide_constant (size_t i)
 {
     int bits = sizeof(size_t)*8;
     return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(bits,i)));
 }
 
-llvm::Value *
-LLVM_Util::constant_bool (bool i)
+llvm::Constant *
+LLVM_Util::constant_bool(bool i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(1,i));
 }
 
-llvm::Value *
+llvm::Constant*
 LLVM_Util::wide_constant_bool (bool i)
 {
     return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(1,i)));
@@ -2766,7 +2772,7 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
                 // to build a 32 bit mask value. However the only 256bit
                 // version works on floats, so we will cast from int32 to
                 // float beforehand
-                llvm::Type * w8_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 8);
+                llvm::Type* w8_float_type = llvm_vector_type(m_llvm_type_float, 8);
                 std::array<llvm::Value *,2> w8_float_masks = {{
                         builder().CreateBitCast (w8_int_masks[0], w8_float_type),
                         builder().CreateBitCast (w8_int_masks[1], w8_float_type)
@@ -2801,7 +2807,7 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
                 // to build a 32 bit mask value. However the only 256bit
                 // version works on floats, so we will cast from int32 to
                 // float beforehand
-                llvm::Type * w8_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 8);
+                llvm::Type* w8_float_type = llvm_vector_type(m_llvm_type_float, 8);
                 llvm::Value * w8_float_mask = builder().CreateBitCast (wide_int_mask, w8_float_type);
 
                 llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
@@ -2837,7 +2843,7 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
                 // to build a 32 bit mask value. However the only 128bit
                 // version works on floats, so we will cast from int32 to
                 // float beforehand
-                llvm::Type * w4_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 4);
+                llvm::Type* w4_float_type = llvm_vector_type(m_llvm_type_float, 4);
                 std::array<llvm::Value *,4> w4_float_masks = {{
                         builder().CreateBitCast (w4_int_masks[0], w4_float_type),
                         builder().CreateBitCast (w4_int_masks[1], w4_float_type),
@@ -2880,7 +2886,7 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
                 // to build a 32 bit mask value. However the only 128bit
                 // version works on floats, so we will cast from int32 to
                 // float beforehand
-                llvm::Type * w4_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 4);
+                llvm::Type* w4_float_type = llvm_vector_type(m_llvm_type_float, 4);
                 std::array<llvm::Value *,2> w4_float_masks = {{
                         builder().CreateBitCast (w4_int_masks[0], w4_float_type),
                         builder().CreateBitCast (w4_int_masks[1], w4_float_type)
@@ -2914,7 +2920,7 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
                 // to build a 32 bit mask value. However the only 128bit
                 // version works on floats, so we will cast from int32 to
                 // float beforehand
-                llvm::Type * w4_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 4);
+                llvm::Type* w4_float_type = llvm_vector_type(m_llvm_type_float, 4);
                 llvm::Value * w4_float_mask =
                         builder().CreateBitCast (wide_int_mask, w4_float_type);
 
@@ -2961,7 +2967,7 @@ LLVM_Util::mask4_as_int8(llvm::Value *mask)
     OSL_ASSERT(m_supports_llvm_bit_masks_natively);
     // combine <4xi1> mask with <4xi1> zero init to get <8xi1> and cast it
     // to i8
-    llvm::Value * zero_mask4 = llvm::ConstantVector::getSplat(4, llvm::ConstantInt::get (context(), llvm::APInt(1,0)));
+    llvm::Value * zero_mask4 = llvm::ConstantDataVector::getSplat(4, constant_bool(false));
     return builder().CreateBitCast (op_combine_4x_vectors(mask,zero_mask4), type_int8());
 }
 
@@ -3033,19 +3039,19 @@ LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
 
     switch(m_vector_width) {
     case 4:
-        extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+        extended_int_vector_type = (llvm::Type *) llvm_vector_type(type_int(), m_vector_width);
         int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
         zeroConstant = constant128(0);
         break;
     case 8:
-        extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+        extended_int_vector_type = (llvm::Type *) llvm_vector_type(type_int(), m_vector_width);
         int_reinterpret_cast_vector_type = (llvm::Type *) llvm::IntegerType::get(*m_llvm_context,256);
         zeroConstant = llvm::ConstantInt::get (context(), llvm::APInt(256,0));
         break;
     case 16:
         // TODO:  Think better way to represent for AVX512
         // also might need something other than number of vector lanes to detect AVX512
-        extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt8Ty (*m_llvm_context), m_vector_width);
+        extended_int_vector_type = (llvm::Type *) llvm_vector_type(type_int8(), m_vector_width);
         int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
         zeroConstant = constant128(0);
         break;
@@ -3166,8 +3172,8 @@ LLVM_Util::negate_mask(llvm::Value *mask)
 
 
 
-llvm::Value *
-LLVM_Util::constant (const TypeDesc &type)
+llvm::Constant*
+LLVM_Util::constant(const TypeDesc &type)
 {
     long long *i = (long long *)&type;
     return llvm::ConstantInt::get (context(), llvm::APInt(64,*i));
@@ -3175,7 +3181,7 @@ LLVM_Util::constant (const TypeDesc &type)
 
 
 
-llvm::Value *
+llvm::Constant*
 LLVM_Util::void_ptr_null ()
 {
     return llvm::ConstantPointerNull::get (type_void_ptr());
@@ -3257,6 +3263,18 @@ LLVM_Util::llvm_type (const TypeDesc &typedesc)
         lt = llvm::ArrayType::get (lt, typedesc.arraylen);
     OSL_DASSERT(lt);
     return lt;
+}
+
+
+
+llvm::VectorType*
+LLVM_Util::llvm_vector_type(llvm::Type *elementtype, unsigned numelements)
+{
+#if OSL_LLVM_VERSION >= 110
+    return llvm::FixedVectorType::get(elementtype, numelements);
+#else
+    return llvm::VectorType::get(elementtype, numelements);
+#endif
 }
 
 
@@ -3499,24 +3517,24 @@ LLVM_Util::op_load (llvm::Value *ptr)
 llvm::Value *
 LLVM_Util::op_linearize_16x_indices(llvm::Value *wide_index)
 {
-    llvm::Value *strided_indices = op_mul (wide_index, llvm::ConstantVector::getSplat(16, llvm::ConstantInt::get (context(), llvm::APInt(32,16))));
-    llvm::Constant *offsets_to_lane[16] = {
-        llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+    llvm::Value* strided_indices = op_mul(wide_index, wide_constant(16, 16));
+    llvm::Constant* offsets_to_lane[16] = {
+        constant(0),
+        constant(1),
+        constant(2),
+        constant(3),
+        constant(4),
+        constant(5),
+        constant(6),
+        constant(7),
+        constant(8),
+        constant(9),
+        constant(10),
+        constant(11),
+        constant(12),
+        constant(13),
+        constant(14),
+        constant(15),
     };
     llvm::Value *const_vec_offsets = llvm::ConstantVector::get(llvm::ArrayRef< llvm::Constant *>(&offsets_to_lane[0], 16));
 
@@ -3527,16 +3545,16 @@ LLVM_Util::op_linearize_16x_indices(llvm::Value *wide_index)
 llvm::Value *
 LLVM_Util::op_linearize_8x_indices(llvm::Value *wide_index)
 {
-    llvm::Value *strided_indices = op_mul (wide_index, llvm::ConstantVector::getSplat(8, llvm::ConstantInt::get (context(), llvm::APInt(32,8))));
-    llvm::Constant *offsets_to_lane[8] = {
-        llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
-        llvm::ConstantInt::get (context(), llvm::APInt(32,7))
+    llvm::Value* strided_indices = op_mul(wide_index, wide_constant(8, 8));
+    llvm::Constant* offsets_to_lane[8] = {
+        constant(0),
+        constant(1),
+        constant(2),
+        constant(3),
+        constant(4),
+        constant(5),
+        constant(6),
+        constant(7)
     };
     llvm::Value *const_vec_offsets = llvm::ConstantVector::get(llvm::ArrayRef< llvm::Constant *>(&offsets_to_lane[0], 8));
 
@@ -3547,8 +3565,13 @@ LLVM_Util::op_linearize_8x_indices(llvm::Value *wide_index)
 std::array<llvm::Value *,2>
 LLVM_Util::op_split_16x (llvm::Value * vector_val)
 {
-    const uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-    const uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+#if OSL_LLVM_VERSION >= 110
+    using index_t = int32_t;
+#else
+    using index_t = uint32_t;
+#endif
+    const index_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    const index_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
 
     llvm::Value * half_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_7));
     llvm::Value * half_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes8_to_15));
@@ -3559,8 +3582,13 @@ LLVM_Util::op_split_16x (llvm::Value * vector_val)
 std::array<llvm::Value *,2>
 LLVM_Util::op_split_8x (llvm::Value * vector_val)
 {
-    const uint32_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
-    const uint32_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
+#if OSL_LLVM_VERSION >= 110
+    using index_t = int32_t;
+#else
+    using index_t = uint32_t;
+#endif
+    const index_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
+    const index_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
 
     llvm::Value * half_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_3));
     llvm::Value * half_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes4_to_7));
@@ -3573,10 +3601,15 @@ LLVM_Util::op_quarter_16x (llvm::Value * vector_val)
 {
     OSL_ASSERT(m_vector_width == 16);
 
-    const uint32_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
-    const uint32_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
-    const uint32_t extractLanes8_to_11[] = { 8, 9, 10, 11};
-    const uint32_t extractLanes12_to_15[] = { 12, 13, 14, 15 };
+#if OSL_LLVM_VERSION >= 110
+    using index_t = int32_t;
+#else
+    using index_t = uint32_t;
+#endif
+    const index_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
+    const index_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
+    const index_t extractLanes8_to_11[] = { 8, 9, 10, 11};
+    const index_t extractLanes12_to_15[] = { 12, 13, 14, 15 };
 
     llvm::Value * quarter_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_3));
     llvm::Value * quarter_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes4_to_7));
@@ -3589,14 +3622,24 @@ LLVM_Util::op_quarter_16x (llvm::Value * vector_val)
 llvm::Value *
 LLVM_Util::op_combine_8x_vectors (llvm::Value * half_vec_1, llvm::Value * half_vec_2)
 {
-    static constexpr uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+#if OSL_LLVM_VERSION >= 110
+    using index_t = int32_t;
+#else
+    using index_t = uint32_t;
+#endif
+    static constexpr index_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     return builder().CreateShuffleVector (half_vec_1, half_vec_2, llvm::makeArrayRef(combineIndices));
 }
 
 llvm::Value *
 LLVM_Util::op_combine_4x_vectors (llvm::Value * half_vec_1, llvm::Value * half_vec_2)
 {
-    static constexpr uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7};
+#if OSL_LLVM_VERSION >= 110
+    using index_t = int32_t;
+#else
+    using index_t = uint32_t;
+#endif
+    static constexpr index_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7};
     return builder().CreateShuffleVector (half_vec_1, half_vec_2, llvm::makeArrayRef(combineIndices));
 }
 
@@ -3673,7 +3716,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                     llvm::Intrinsic::x86_avx2_gather_d_d_256);
             OSL_ASSERT(func_avx2_gather_pi);
 
-            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+            llvm::Constant *avx2_unmasked_value = wide_constant(8, 0);
 
             // Convert <8 x i1> -> <8 x i32>
             llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
@@ -3750,7 +3793,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                     llvm::Intrinsic::x86_avx2_gather_d_ps_256);
             OSL_ASSERT(func_avx2_gather_ps);
 
-            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+            llvm::Constant* avx2_unmasked_value = wide_constant(8, 0.0f);
 
             // Convert <? x i1> -> <?x i32> -> to
             llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
@@ -3764,12 +3807,12 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                             avx2_unmasked_value,
                         void_ptr(ptr),
                         w8_int_indices[0],
-                        builder().CreateBitCast (w8_int_masks[0], llvm::VectorType::get(type_float(), 8)),
+                        builder().CreateBitCast (w8_int_masks[0], llvm_vector_type(type_float(), 8)),
                         constant8(4)
                     };
                     llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
                     args[2] = w8_int_indices[1];
-                    args[3] = builder().CreateBitCast (w8_int_masks[1], llvm::VectorType::get(type_float(), 8));
+                    args[3] = builder().CreateBitCast (w8_int_masks[1], llvm_vector_type(type_float(), 8));
                     llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
                     return op_combine_8x_vectors(gather1,gather2);
                 }
@@ -3779,7 +3822,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                             avx2_unmasked_value,
                         void_ptr(ptr),
                         wide_index,
-                        builder().CreateBitCast (wide_int_mask, llvm::VectorType::get(type_float(), 8)),
+                        builder().CreateBitCast (wide_int_mask, llvm_vector_type(type_float(), 8)),
                         constant8(4)
                     };
                     llvm::Value *gather = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
@@ -3895,7 +3938,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                     llvm::Intrinsic::x86_avx2_gather_d_ps_256);
             OSL_ASSERT(func_avx2_gather_ps);
 
-            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+            llvm::Constant *avx2_unmasked_value = wide_constant(8, 0.0f);
             // Convert <? x i1> -> <? x i32>
             llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
             switch(m_vector_width) {
@@ -3908,12 +3951,12 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                     avx2_unmasked_value,
                     void_ptr(ptr),
                     w8_int_indices[0],
-                    builder().CreateBitCast (w8_int_masks[0], llvm::VectorType::get(type_float(), 8)),
+                    builder().CreateBitCast (w8_int_masks[0], llvm_vector_type(type_float(), 8)),
                     constant8(4)
                 };
                 llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
                 args[2] = w8_int_indices[1];
-                args[3] = builder().CreateBitCast (w8_int_masks[1], llvm::VectorType::get(type_float(), 8));
+                args[3] = builder().CreateBitCast (w8_int_masks[1], llvm_vector_type(type_float(), 8));
                 llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
                 return op_combine_8x_vectors(gather1, gather2);
             }
@@ -3924,7 +3967,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                     avx2_unmasked_value,
                     void_ptr(ptr),
                     int_indices,
-                    builder().CreateBitCast (wide_int_mask, llvm::VectorType::get(type_float(), 8)),
+                    builder().CreateBitCast (wide_int_mask, llvm_vector_type(type_float(), 8)),
                     constant8(4)
                 };
                 llvm::Value *gather_result = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
@@ -3982,7 +4025,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                         llvm::Intrinsic::x86_avx2_gather_d_d_256);
                 OSL_ASSERT(func_avx2_gather_pi);
 
-                llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+                llvm::Constant *avx2_unmasked_value = wide_constant(8, 0);
 
                 // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
                 llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
@@ -4007,7 +4050,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                         llvm::Intrinsic::x86_avx2_gather_d_d_256);
                 OSL_ASSERT(func_avx2_gather_pi);
 
-                llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+                llvm::Constant *avx2_unmasked_value = wide_constant(8, 0);
 
                 // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
                 llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
@@ -4276,7 +4319,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
 
                 // We can only scatter 8 at a time, so need to split the
                 // work over 2 scatters
-                llvm::Type * w8_address_int = llvm::VectorType::get(type_addrint(), 8);
+                llvm::Type * w8_address_int = llvm_vector_type(type_addrint(), 8);
 
                 auto w8_bit_masks = op_split_16x(current_mask());
                 auto w8_int_indices = op_split_16x(linear_indices);
@@ -4308,7 +4351,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
                         llvm::Intrinsic::x86_avx512_scatter_dpq_512);
                 OSL_ASSERT(func_avx512_scatter_dpq);
 
-                llvm::Type * wide_address_int_type = llvm::VectorType::get(type_addrint(), 8);
+                llvm::Type * wide_address_int_type = llvm_vector_type(type_addrint(), 8);
                 llvm::Value * address_int_val = builder().CreatePtrToInt(wide_val, wide_address_int_type);
 
                 llvm::Value *args[] = {
@@ -5195,7 +5238,7 @@ LLVM_Util::op_is_not_finite (llvm::Value *v)
                                                        0x08 /*Positive Infinity*/ |
                                                        0x10 /*Negative Infinity*/));
         llvm::Value *args[] = {v, flags};
-        llvm::Value *maskOfNonFiniteValues = builder().CreateCall(func, args);
+        llvm::Value *maskOfNonFiniteValues = call_function(func, args);
         return maskOfNonFiniteValues;
     } else {
         llvm::Value *fabs_v = op_fabs(v);

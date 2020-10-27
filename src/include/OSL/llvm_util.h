@@ -17,6 +17,7 @@ namespace llvm = LLVM_NAMESPACE;
 
 namespace llvm {
   class BasicBlock;
+  class Constant;
   class ConstantFolder;
   class DIBuilder;
   class DICompileUnit;
@@ -563,6 +564,10 @@ public:
     /// (this is the actual type, for example when we allocate it).
     llvm::Type *llvm_vector_type (const OIIO::TypeDesc &typedesc);
 
+    // Wrapper for llvm::VectorType::get() that handles LLVM 11 API change
+    static llvm::VectorType* llvm_vector_type(llvm::Type *elementtype,
+                                              unsigned numelements);
+
     /// This will return a llvm::Type that is the same as a C union of
     /// the given types[].
     llvm::Type *type_union (const std::vector<llvm::Type *> &types);
@@ -602,24 +607,24 @@ public:
     std::string llvm_typenameof (llvm::Value *val) const;
 
     /// Return an llvm::Value holding the given floating point constant.
-    llvm::Value *constant (float f);
+    llvm::Constant* constant(float f);
 
     /// Return an llvm::Value holding the given integer constant.
-    llvm::Value *constant (int i);
+    llvm::Constant* constant(int i);
 
     /// Return an llvm::Value holding the given integer constant.
-    llvm::Value *constant8 (int i);
-    llvm::Value *constant16 (uint16_t i);
-    llvm::Value *constant64 (uint64_t i);
-    llvm::Value *constant128 (uint64_t i);
-    llvm::Value *constant128 (uint64_t left, uint64_t right);
+    llvm::Constant* constant8(int i);
+    llvm::Constant* constant16(uint16_t i);
+    llvm::Constant* constant64(uint64_t i);
+    llvm::Constant* constant128(uint64_t i);
+    llvm::Constant* constant128(uint64_t left, uint64_t right);
 
     /// Return an llvm::Value holding the given size_t constant.
-    llvm::Value *constant (size_t i);
+    llvm::Constant* constant(size_t i);
 
     /// Return an llvm::Value holding the given bool constant.
     /// Change the name so it doesn't get mixed up with int.
-    llvm::Value *constant_bool (bool b);
+    llvm::Constant* constant_bool(bool b);
 
     /// Return a constant void pointer to the given constant address.
     /// If the type specified is NULL, it will make a 'void *'.
@@ -647,13 +652,14 @@ public:
 
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.
-    llvm::Value *constant (const OIIO::TypeDesc &type);
+    llvm::Constant* constant(const OIIO::TypeDesc &type);
 
-    // Return "wide" (SIMD vector) constants of various types.
-    llvm::Value *wide_constant (float f);
-    llvm::Value *wide_constant (int i);
-    llvm::Value *wide_constant (size_t i);
-    llvm::Value *wide_constant_bool (bool b);
+    // Return "wide" (SIMD vector) constants of various types, with
+    // vector_width.
+    llvm::Constant* wide_constant(float f);
+    llvm::Constant* wide_constant(int i);
+    llvm::Constant* wide_constant(size_t i);
+    llvm::Constant* wide_constant_bool(bool b);
     llvm::Value *wide_constant (ustring s);
     llvm::Value *wide_constant (string_view s) {
         return wide_constant(ustring(s));
@@ -661,10 +667,14 @@ public:
 
     /// Return an llvm::Value holding wide version of the given scalar
     /// constant.
-    llvm::Value *wide_constant (llvm::Value *constant_val);
+    llvm::Constant* wide_constant(llvm::Constant* constant_val);
+
+    // Return wide (SIMD vector) constant with arbitrary width.
+    llvm::Constant* wide_constant(int width, int value);
+    llvm::Constant* wide_constant(int width, float value);
 
     /// Return an llvm::Value for a void* variable with value NULL.
-    llvm::Value *void_ptr_null ();
+    llvm::Constant* void_ptr_null();
 
     /// Cast the pointer variable specified by val to the kind of pointer
     /// described by type (as an llvm pointer type).

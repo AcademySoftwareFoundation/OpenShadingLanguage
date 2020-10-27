@@ -16,7 +16,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer (tested through gcc 10)
-   - Clang 3.4 or newer (tested through clang 10)
+   - Clang 3.4 or newer (tested through clang 11)
    - Microsoft Visual Studio 2015 or newer
    - Intel C++ compiler icc version 13 (?) or newer
 
@@ -43,9 +43,9 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* [LLVM](http://www.llvm.org) 7, 8, 9, or 10, including clang libraries.
+* [LLVM](http://www.llvm.org) 7, 8, 9, 10, or 11, including clang libraries.
 
-  Note that LLVM 10 is not compatible with C++11, and requires C++14 or
+  Note that LLVM 10+ is not compatible with C++11, and requires C++14 or
   later. If you *must* build OSL with C++11, you need to use an LLVM that
   is LLVM 9 or earlier.
 

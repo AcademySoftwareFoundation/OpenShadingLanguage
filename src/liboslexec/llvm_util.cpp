@@ -5322,7 +5322,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     options.UseInitArray                           = 0;
 
     llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(
-        target_triple, "sm_35", "+ptx50", options,
+        target_triple, CUDA_TARGET_ARCH, "+ptx50", options,
         llvm::Reloc::Static, llvm::CodeModel::Small, llvm::CodeGenOpt::Aggressive);
     OSL_ASSERT (target_machine && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
 

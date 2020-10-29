@@ -77,7 +77,7 @@ option (OSL_BUILD_MATERIALX "Build MaterialX shaders" OFF)
 option (USE_OPTIX "Include OptiX support" OFF)
 set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
 set (CUDA_EXTRA_LIBS CACHE STRING "Extra lib targets needed for CUDA")
-set (CUDA_TARGET_ARCH "sm_35" CACHE STRING "CUDA GPU architecture (e.g. sm_35)")
+set (CUDA_TARGET_ARCH "sm_60" CACHE STRING "CUDA GPU architecture (e.g. sm_50)")
 set (OSL_SHADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/shaders"
      CACHE STRING "Directory where shaders will be installed")
 set (OSL_PTX_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/ptx"

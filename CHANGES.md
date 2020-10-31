@@ -3,7 +3,7 @@
 
 Release 1.12 -- ?? (compared to 1.11)
 --------------------------------------------------
-Dependency and standards changes:
+Dependency and standards requirements changes:
 * OpenImageIO 2.1-2.3: Support for OIIO 2.0 has been dropped.
 
 OSL Language and oslc compiler:
@@ -19,9 +19,12 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 
 Continued work on experimental SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
+* Add interface to ShadingSystem for batched execution. #1272 (1.12.0.1)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
+* CI tests now at least compile and build with USE_OPTIX=1 (though not yet
+  run the tests). #1281 (1.12.0.1)
 
 Performance improvements:
 
@@ -32,8 +35,18 @@ Bug fixes and other improvements (internals):
   related to the condition variable of do-while loops. #1252 (1.12.0.0)
 * Avoid some pointless copies of output variables from a used layer to a
   downstream layer that is known to not be used. #1253 (1.12.0.0)
+* Stats now print more information about build options and runtime hardware
+  capabilities. #1258 #1259 (1.12.0.1)
+* The osl and oso parsers are now re-entrant, which allows different threads
+  to concurrently compile or load shaders. #969 (1.12.0.1)
+* Fix asymptomatic potential runtime optimizer bug where certain
+  multi-component values were not correctly recognized as nonzero. #1266
+  (1.12.0.1/1.11.9)
 
 Internals/developer concerns:
+* Use the `final` keyword in certain internal classes where applicable.
+  #1260 (1.12.0.1/1.11.9)
+* Minor fixes to the internal TypeSpec and Symbol classes. #1267 (1.12.0.1)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -43,16 +56,64 @@ Build & test system improvements:
     - Miscellaneous improvements to cmake scripts. #1247 (1.12.0.0)
     - Instead of defaulting to looking for Python 2.7, the OSL build now
       defaults to whatever Python is found (though a specific one can still
-      be requested via the PYTHON_VERSION variable). #1249 (1.12.0.0)
+      be requested via the PYTHON_VERSION variable). #1249 (1.12.0.0/1.11.8)
+      #1286 (1.12.0.1/1.11.9)
 * Dependency version support:
+    - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
+    - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
+    - Cuda/OptiX back end: Add `__CUDADEVRT_INTERNAL__` define to bitcode
+      generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+
+      #1271 (1.12.0.1)
+    - Build against LLVM 11. #1274 (1.12.0.1)
+    - Fix build break against recent OIIO master change where m_mutex field
+      was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
 * Testing and Continuous integration (CI) systems:
 * Platform support:
+    - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
 * The oso and osl lexers/parsers are now given internal symbol names that
   are fully versioned, to avoid possible clash if multiple OSL releases are
   both linked into the same application. #1255 (1.12.0.0)
+
 Documentation:
 
 
+
+Release 1.11.9 -- 1 Nov 2020 (compared to 1.11.8)
+---------------------------------------------------
+* Build properly against Cuda 11 and OptiX 7.1. #1232
+* Windows compile fixes. #1263 #1285
+* PugiXML build fixes on some systems. #1262
+* Fix asymptomatic potential runtime optimizer bug where certain
+  multi-component values were not correctly recognized as nonzero. #1266
+* Fix false positive with "debug_uninit" where certain while loops might be
+  flagged as using uninitialized values when in fact they were not. #1252
+* Slightly optimize by not copying output params to layers that will not be
+  used. #1253
+* Internals: use the `final` keyword in certain internal classes where
+  applicable. #1260
+* Cuda/OptiX back end: Add `__CUDADEVRT_INTERNAL__` define to bitcode
+  generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+ #1271
+* Fix build break against recent OIIO master change where m_mutex field was
+  removed from ImageInput. #1281
+
+Release 1.11.8 -- 1 Oct 2020 (compared to 1.11.7)
+---------------------------------------------------
+* Fix broken derivatives of the optional "alpha" return of texture calls
+  when the normal color channels return don't have their derivatives used
+  but the alpha does. #1258
+* Building vs Python: instead of defaulting to searching for python 2.7
+  specifically and needing to set PYTHON_VERSION if you want (or have) a
+  different one, default to whichever version is found. If multiple versions
+  of Python are on the system, you can still use the PYTHON_VERSION cmake
+  variable to disambiguate which one you want. #1249
+* For the experimental OptiX support, explicitly set the OptiX pipeline
+  stack size (fixes some bugs). #1254
+* ShadingSystem statistics output (which is printed with `testshade --help`,
+  by the way) now includes information about the SIMD capabilities specified
+  at OSL build time, those available at runtime, and the versions of LLVM,
+  OIIO, and Imath used. This should help in debugging and issue reporting
+  by making it easy to know certain build time choices just by running
+  testshade. #1258
 
 
 Release 1.11 -- 1 Sept 2020 (compared to 1.10)

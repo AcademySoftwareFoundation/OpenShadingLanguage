@@ -332,7 +332,7 @@ Films using OSL (grouped by year of release date):
   The Kid Who Would Be King,
   Alita: Battle Angel,
   Lego Movie 2,
-  Lucky 13,
+  Lucky 13 (Love, Death, and Robots),
   Captain Marvel,
   Triple Frontier,
   Avengers: Endgame,
@@ -360,6 +360,10 @@ Films using OSL (grouped by year of release date):
   Greyhound,
   The Old Guard,
   Mulan,
+  Tenet,
+  The New Mutants,
+  The Eight Hundred,
+  Over the Moon,
   ...
 
 

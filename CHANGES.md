@@ -1,8 +1,23 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.9 -- 1 Nov? 2020 (compared to 1.11.8)
+Release 1.11.9 -- 1 Nov 2020 (compared to 1.11.8)
 ---------------------------------------------------
+* Build properly against Cuda 11 and OptiX 7.1. #1232
+* Windows compile fixes. #1263 #1285
+* PugiXML build fixes on some systems. #1262
+* Fix asymptomatic potential runtime optimizer bug where certain
+  multi-component values were not correctly recognized as nonzero. #1266
+* Fix false positive with "debug_uninit" where certain while loops might be
+  flagged as using uninitialized values when in fact they were not. #1252
+* Slightly optimize by not copying output params to layers that will not be
+  used. #1253
+* Internals: use the `final` keyword in certain internal classes where
+  applicable. #1260
+* Cuda/OptiX back end: Add `__CUDADEVRT_INTERNAL__` define to bitcode
+  generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+ #1271
+* Fix build break against recent OIIO master change where m_mutex field was
+  removed from ImageInput. #1281
 
 Release 1.11.8 -- 1 Oct 2020 (compared to 1.11.7)
 ---------------------------------------------------

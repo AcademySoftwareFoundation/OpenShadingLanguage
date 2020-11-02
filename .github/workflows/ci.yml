@@ -47,7 +47,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   vfxplatform-2020:
     name: "Linux VFXP-2020 gcc6/C++14 llvm7 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
@@ -71,7 +73,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   vfxplatform-2021:
     name: "Linux VFXP-2021 gcc9/C++17 llvm10 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2"
@@ -97,7 +101,42 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
+
+  # Build for OptiX, but don't run tests (will need a GPU instance for that)
+  gpu-optix7-2019:
+    name: "Linux GPU VFXP-2019 Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.4 OIIO-master avx2"
+    runs-on: ubuntu-latest
+    container:
+      image: aswftesting/ci-osl:2019-clang10
+    steps:
+      - uses: actions/checkout@v2
+      - name: all
+        env:
+          CXX: g++
+          CC: gcc
+          CMAKE_CXX_STANDARD: 14
+          PYTHON_VERSION: 2.7
+          USE_SIMD: avx2,f16c
+          OPENIMAGEIO_VERSION: master
+          OSL_CMAKE_FLAGS: -DUSE_OPTIX=1
+          OPTIX_VERSION: "7.0"
+          SKIP_TESTS: 1
+        run: |
+            rm -rf /usr/local/include/OpenImageIO
+            source src/build-scripts/ci-startup.bash
+            source src/build-scripts/gh-installdeps-centos.bash
+            source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
+            optix.h
 
   linux-debug-gcc7-llvm8:
     name: "Linux Debug gcc7, C++14, llvm8, OIIO release, sse4, exr2.4"
@@ -122,7 +161,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   linux-clang9-llvm9:
     name: "Linux clang9, C++14, llvm9, oiio release, avx, exr2.4, avx"
@@ -148,7 +189,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   linux-2021ish-gcc8-llvm10:
     name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.5, avx2"
@@ -174,7 +217,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   linux-bleeding-edge:
     # Test against development master for relevant dependencies, latest
@@ -205,7 +250,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   linux-oldest:
     # Oldest versions of the dependencies that we can muster, and various
@@ -234,7 +281,9 @@ jobs:
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   macos-py38:
     name: "Mac py38"
@@ -248,28 +297,22 @@ jobs:
           CMAKE_CXX_STANDARD: 14
           PYTHON_VERSION: 3.8
           LLVM_BC_GENERATOR: /usr/bin/clang++
-          LLVMBREWVER: "@9"
-            # ^^ There's a bug in the current Homebrew llvm 10.0.1 where
-            # it fails to link because of missing libxml2.tbd. It's fixed
-            # upstream in LLVM, but not yet fixed in Homebrew. Hopefully
-            # a subsequent 10.0.x or 11.x will fix it, but for now, just
-            # fall back to llvm@9.
-          MY_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
+          OSL_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
             # ^^ Force bitcode compiles to use the system clang compiler by
             # preemptively telling it the LLVM_BC_GENERATOR, to avoid some
             # library mismatches we tend to see on GH CI's Mac images.
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/install_homebrew_deps.bash
-            brew uninstall llvm
-            OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
-            source src/build-scripts/build_openimageio.bash
+            brew install openimageio
             source src/build-scripts/ci-build-and-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: ${{ github.job }}
-          path: build/*/testsuite/*/*.*
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
 
   # windows:
   #   name: "Windows"

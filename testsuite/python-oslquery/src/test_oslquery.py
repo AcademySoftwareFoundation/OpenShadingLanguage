@@ -60,8 +60,15 @@ try:
     # Iterating over the query object itself is iterating over the
     # parameters to the shader:
     print ("  Parameters:")
-    for p in q :
-        printparam(p)
+    for i in range(len(q)) :
+        printparam(q[i])
+    # FIXME(pybind11): The following way of looping over params should work.
+    # But on Mac, with a combination of python 3.8/3.9 and pybind11 2.6, it
+    # crashes. Works with older pybind11, so I think it's a pybind11 bug
+    # that will get fixed at some point. Try it again later.
+    #
+    # for p in q :
+    #     printparam(p)
 
     print ("Done.")
 except Exception as detail:

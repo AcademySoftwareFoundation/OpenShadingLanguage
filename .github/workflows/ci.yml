@@ -291,8 +291,8 @@ jobs:
             build/*/testsuite/*/*.*
             build/*/CMake*.{txt,log}
 
-  macos-py38:
-    name: "Mac py38"
+  macos-py39:
+    name: "Mac py39"
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v2
@@ -301,7 +301,7 @@ jobs:
           CXX: clang++
           USE_CPP: 14
           CMAKE_CXX_STANDARD: 14
-          PYTHON_VERSION: 3.8
+          PYTHON_VERSION: 3.9
           LLVM_BC_GENERATOR: /usr/bin/clang++
           OSL_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
             # ^^ Force bitcode compiles to use the system clang compiler by
@@ -310,7 +310,10 @@ jobs:
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/install_homebrew_deps.bash
+            # OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
+            # source src/build-scripts/build_openimageio.bash
             brew install openimageio
+            PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages
             source src/build-scripts/ci-build-and-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()

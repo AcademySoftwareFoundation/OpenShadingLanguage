@@ -21,7 +21,7 @@ fi
 
 
 brew uninstall openssl
-#brew update >/dev/null
+brew update >/dev/null
 echo ""
 echo "Before my brew installs:"
 brew list --versions

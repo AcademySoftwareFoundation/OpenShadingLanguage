@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.10 -- 1 Dec? 2020 (compared to 1.11.9)
+---------------------------------------------------
+
+
 Release 1.11.9 -- 1 Nov 2020 (compared to 1.11.8)
 ---------------------------------------------------
 * Build properly against Cuda 11 and OptiX 7.1. #1232

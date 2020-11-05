@@ -323,7 +323,7 @@ test: build
 	    LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH} \
 	    DYLD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${DYLD_LIBRARY_PATH} \
 	    OIIO_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${OIIO_LIBRARY_PATH} \
-	    PYTHONPATH=${working_dir}/${build_dir}/src/python:${PYTHONPATH} \
+	    PYTHONPATH=${working_dir}/${build_dir}/lib/python/site-packages:${PYTHONPATH} \
 	    ctest -E broken ${TEST_FLAGS} \
 	  )
 	@ ( if [[ "${CODECOV}" == "1" ]] ; then \

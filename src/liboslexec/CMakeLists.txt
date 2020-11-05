@@ -13,6 +13,7 @@ set (lib_src
           opspline.cpp opstring.cpp optexture.cpp
           oslexec.cpp
           pointcloud.cpp rendservices.cpp
+          batched_rendservices.cpp
           constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp

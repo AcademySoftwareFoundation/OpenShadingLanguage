@@ -246,6 +246,18 @@ RendererServices::get_texture_info (ustring filename,
     return status;
 }
 
+BatchedRendererServices<16> *
+RendererServices::batched(WidthOf<16>)
+{
+    // No default implementation for batched services
+    return nullptr;
+}
 
+BatchedRendererServices<8> *
+RendererServices::batched(WidthOf<8>)
+{
+    // No default implementation for batched services
+    return nullptr;
+}
 
 OSL_NAMESPACE_EXIT

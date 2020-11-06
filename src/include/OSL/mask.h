@@ -125,9 +125,9 @@ public:
     // count number of active bits
     OSL_FORCEINLINE int count() const
     {
-        // FIXME(C++20)
-        // return std::popcount(m_value);
-#if __INTEL_COMPILER
+#if OSL_CPLUSPLUS_VERSION >= 20
+        return std::popcount(m_value);
+#elif OSL_INTEL_COMPILER
         if (value_width <= 32)
             return _mm_popcnt_u32(m_value);
         else
@@ -156,35 +156,41 @@ public:
     // NOTE: undefined result if no bits are on
     OSL_FORCEINLINE int first_on() const
     {
-        // FIXME(C++20)
-        // return std::countr_zero(m_value);
-
-        if (value_width <= 32) {
-#if __INTEL_COMPILER
+#if OSL_CPLUSPLUS_VERSION >= 20
+        return std::countr_zero(m_value);
+#elif OSL_INTEL_COMPILER
+        if (value_width <= 32)
             return _bit_scan_forward(m_value);
-#else
+        else {
+            unsigned __int32 index;
+            _BitScanForward64(&index, m_value);
+            return static_cast<int>(index);
+        }
+#elif defined(__GNUC__) || defined(__clang__)
+        if (value_width <= 32)
             return __builtin_ctz(m_value);
-#endif
-        } else if (value_width <= 64) {
-#if (defined(_WIN32) || defined(_WIN64))
+        else
+            return __builtin_ctzll(m_value);
+#elif defined(_MSC_VER)
+        if (value_width <= 32) {
+            unsigned long index;
+            _BitScanForward(&index, m_value);
+            return static_cast<int>(index);
+        } else {
             unsigned long index;
             _BitScanForward64(&index, m_value);
             return static_cast<int>(index);
-#elif defined(__GNUC__) || defined(__clang__)
-            return __builtin_ctzll(m_value);
-#else
-#    error unknown compiler, update Mask<int WidthT>::first_on() to support compiler
-#endif
-        } else {
-            // reference implementation, use if ctzl is not available
-            ValueType m(m_value);
-            int lane = 0;
-            while ((m & 1) == 0) {
-                lane++;
-                m >>= 1;
-            }
-            return lane;
         }
+#else
+        // reference implementation, use if ctzl is not available
+        ValueType m(m_value);
+        int lane = 0;
+        while ((m & 1) == 0) {
+            lane++;
+            m >>= 1;
+        }
+        return lane;
+#endif
     }
 
     OSL_FORCEINLINE Mask invert() const

@@ -113,7 +113,6 @@ For example, you can open osltoy in releae mode with running **osltoy_release_la
 For adding path you should add these three paths to your global env variables:
 - **PATH** : <osl install dir>\bin;
 - **PATH** : <osl install dir>\lib;
-- **PYTHONPATH** : <osl install dir>\osl_<config>/lib/python<version>;
 
 or create your own (for example for VSCode) and run it in your config mode.
 

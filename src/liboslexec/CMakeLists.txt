@@ -111,7 +111,7 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-I${ILMBASE_INCLUDES}"
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
-          -Wno-deprecated-register
+          -Wno-deprecated-register -Wno-ignored-attributes -Wno-unknown-attributes
           -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
       COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
       COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} "osl_llvm_compiled_ops"

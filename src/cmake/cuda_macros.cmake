@@ -68,6 +68,11 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
     endif()
 
+    # fix compilation error when using MSVC
+    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        set (CLANG_MSVC_FIX "-DBOOST_CONFIG_REQUIRES_THREADS_HPP")
+    endif ()
+
     add_custom_command (OUTPUT ${bc_cuda}
         COMMAND ${LLVM_BC_GENERATOR}
             "-I${OPTIX_INCLUDES}"
@@ -79,7 +84,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             "-I${OpenImageIO_INCLUDES}"
             "-I${ILMBASE_INCLUDE_DIR}"
             "-I${Boost_INCLUDE_DIRS}"
-            ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS}
+            ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security

@@ -127,29 +127,20 @@ public:
     {
 #if OSL_CPLUSPLUS_VERSION >= 20
         return std::popcount(m_value);
-#elif OSL_INTEL_COMPILER
-        if (value_width <= 32)
-            return _mm_popcnt_u32(m_value);
-        else
-            return _mm_popcnt_u64(m_value);
-#elif defined(__GNUC__) || defined(__clang__)
-        if (value_width <= 32)
-            return __builtin_popcount(m_value);
-        else
-            return __builtin_popcountll(m_value);
-#elif defined(_MSC_VER)
-        if (value_width <= 32)
-            return __popcnt(m_value);
-        else
-            return __popcnt64(m_value);
 #else
-        // Compiler recognizable idiom, could map to 1 instruction
-        ValueType m(m_value);
-        int count = 0;
-        for (count = 0; m != 0; ++count) {
-            m &= m - 1;
-        }
-        return count;
+        static_assert(value_width <= 32,
+                      "Masks > 32 bits are only supported for >= C++20");
+        // Note: 64 bit masks would require _mm_popcount_u64,
+        // __builtin_popcountll, or __popcount64.
+#    if OSL_INTEL_COMPILER
+        return _mm_popcnt_u32(m_value);
+#    elif defined(__GNUC__) || defined(__clang__)
+        return __builtin_popcount(m_value);
+#    elif defined(_MSC_VER)
+        return __popcnt(m_value);
+#    else
+#        error "popcount implementation needed for this compiler"
+#    endif
 #endif
     }
 
@@ -158,38 +149,22 @@ public:
     {
 #if OSL_CPLUSPLUS_VERSION >= 20
         return std::countr_zero(m_value);
-#elif OSL_INTEL_COMPILER
-        if (value_width <= 32)
-            return _bit_scan_forward(m_value);
-        else {
-            unsigned __int32 index;
-            _BitScanForward64(&index, m_value);
-            return static_cast<int>(index);
-        }
-#elif defined(__GNUC__) || defined(__clang__)
-        if (value_width <= 32)
-            return __builtin_ctz(m_value);
-        else
-            return __builtin_ctzll(m_value);
-#elif defined(_MSC_VER)
-        if (value_width <= 32) {
-            unsigned long index;
-            _BitScanForward(&index, m_value);
-            return static_cast<int>(index);
-        } else {
-            unsigned long index;
-            _BitScanForward64(&index, m_value);
-            return static_cast<int>(index);
-        }
 #else
-        // reference implementation, use if ctzl is not available
-        ValueType m(m_value);
-        int lane = 0;
-        while ((m & 1) == 0) {
-            lane++;
-            m >>= 1;
-        }
-        return lane;
+        static_assert(value_width <= 32,
+                      "Masks > 32 bits are only supported for >= C++20");
+        // Note: 64 bit masks would require __builtin_ctzll or
+        // __BitScanForward64.
+#    if OSL_INTEL_COMPILER
+        return _bit_scan_forward(m_value);
+#    elif defined(__GNUC__) || defined(__clang__)
+        return __builtin_ctz(m_value);
+#    elif defined(_MSC_VER)
+        unsigned long index;
+        _BitScanForward(&index, m_value);
+        return static_cast<int>(index);
+#    else
+#        error "countr_zero implementation needed for this compiler"
+#    endif
 #endif
     }
 

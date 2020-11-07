@@ -1,0 +1,26 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+
+// This is testing the specific combination of an output parameter (which
+// is presumed to be a renderer output or otherwise definitely used) which
+// gets its value from userdata (lockgeom=0).
+//
+// Cd is what we call a "pass-through" value: its initial value is from an
+// input, it gets modified, but it's also an output.
+//
+// Here's the interesting bug, prior to 1.12: If scale is non-1, all is
+// fine, the output will be scale*input_Cd. But when scale is exactly 1.0,
+// the `Cd *= scale` will be optimized away, leaving no ops in the shader
+// that read Cd, and therefore get_userdata will never be called to retrieve
+// the value, and so the output value of Cd will be its default here, 0. But
+// in fact, it should still hold whatever value it has from teh userdata.
+
+
+shader test (float scale = 1,
+             output vector Cd = 0 [[ int lockgeom=0 ]]
+    )
+{
+    Cd *= scale;
+}

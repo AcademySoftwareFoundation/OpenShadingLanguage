@@ -656,7 +656,8 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
     for (int i = 0;  i < (int)inst()->symbols().size();  ++i) {
         Symbol *s = inst()->symbol(i);
         if (s->symtype() == SymTypeOutputParam &&
-            (s->connected() || (s->valuesource() == Symbol::DefaultVal && s->has_init_ops()))) {
+            (s->connected() || s->connected_down() || s->renderer_output() ||
+             (s->valuesource() == Symbol::DefaultVal && s->has_init_ops()))) {
             outputparams.push_back (i);
             s->initialized (true);
         }
@@ -3173,8 +3174,17 @@ RuntimeOptimizer::run ()
             const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
             if (! opd)
                 continue;
+            // a non-unused layer with a nontrivial op does something
             if (op.opname() != Strings::end && op.opname() != Strings::useparam)
-                does_nothing = false;  // a non-unused layer with a nontrivial op
+                does_nothing = false;
+            // Useparam of a down-connected or renderer output does something
+            if (op.opname() == Strings::useparam) {
+                for (int i = 0, e = op.nargs(); i < e; ++i) {
+                    Symbol *sym = opargsym (op, i);
+                    if (sym->connected_down() || sym->renderer_output())
+                        does_nothing = false;
+                }
+            }
             if (opd->flags & OpDescriptor::Tex) {
                 // for all the texture ops, arg 1 is the texture name
                 Symbol *sym = opargsym (op, 1);

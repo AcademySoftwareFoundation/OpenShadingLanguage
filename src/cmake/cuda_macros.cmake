@@ -68,9 +68,14 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
     endif()
 
-    # fix compilation error when using MSVC
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        # fix compilation error when using MSVC
         set (CLANG_MSVC_FIX "-DBOOST_CONFIG_REQUIRES_THREADS_HPP")
+
+        # these are warnings triggered by the dllimport/export attributes not being supported when
+        # compiling for Cuda. When all 3rd parties have their export macro fixed these warnings
+        # can be restored.
+        set (CLANG_MSVC_FIX "${CLANG_MSVC_FIX} -Wno-ignored-attributes -Wno-unknown-attributes")
     endif ()
 
     add_custom_command (OUTPUT ${bc_cuda}
@@ -87,7 +92,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
-            -Wno-deprecated-register -Wno-format-security -Wno-ignored-attributes -Wno-unknown-attributes
+            -Wno-deprecated-register -Wno-format-security
             -O3 -fno-math-errno -ffast-math -S -emit-llvm ${extra_clang_args}
             ${src} -o ${asm_cuda}
         COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${bc_cuda} ${asm_cuda}

@@ -1,0 +1,43 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/**",
+        "${SDKS_LOCATION}/osl_release/include",
+        "${SDKS_LOCATION}/Qt5/include",
+        "${SDKS_LOCATION}/Qt5/include/**"
+      ],
+      "defines": [],
+      "windowsSdkVersion": "10.0.17134.0",
+      "compilerPath": "cl.exe",
+      "cStandard": "c11",
+      "cppStandard": "c++14",
+      "intelliSenseMode": "msvc-x64"
+    },
+    {
+      "name": "Linux",
+      "includePath": [
+        "${workspaceFolder}/**",
+      ],
+      "defines": [],
+      "compilerPath": "/opt/rh/devtoolset-9/root/bin/gcc",
+      "cStandard": "c11",
+      "cppStandard": "c++14",
+      "intelliSenseMode": "clang-x64"
+    },
+    {
+      "name": "Mac",
+      "includePath": [
+        "${workspaceFolder}/**"
+      ],
+      "defines": [],
+      "compilerPath": "",
+      "cStandard": "c11",
+      "cppStandard": "c++14",
+      "intelliSenseMode": "clang-x64"
+    }
+  ],
+  "version": 4
+}

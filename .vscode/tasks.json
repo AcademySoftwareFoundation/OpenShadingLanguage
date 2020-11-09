@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "build",
+      "windows": {
+        "command": "${workspaceFolder}\\build_scripts\\build_osl.bat",
+      },
+      "linux": {
+        "command": "${workspaceFolder}\\build_scripts\\build_osl.sh",
+      },
+      "osx": {
+        "command": "${workspaceFolder}\\build_scripts\\build_osl.sh",
+      },
+      "args": [
+        "release",
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "type": "shell",
+      "label": "build_debug",
+      "windows": {
+        "command": "${workspaceFolder}\\build_scripts\\build_osl.bat",
+      },
+      "linux": {
+        "command": "${workspaceFolder}\\build_scripts\\build_osl.sh",
+      },
+      "osx": {
+        "command": "${workspaceFolder}\\build_scripts\\build_osl.sh",
+      },
+      "args": [
+        "debug"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+  ]
+}

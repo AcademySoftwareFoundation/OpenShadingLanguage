@@ -95,6 +95,7 @@ static float uscale = 1, vscale = 1;
 static float uoffset = 0, voffset = 0;
 static std::vector<const char*> shader_setup_args;
 static std::string localename = OIIO::Sysutil::getenv("TESTSHADE_LOCALE");
+static OIIO::ParamValueList userdata;
 
 
 
@@ -271,18 +272,11 @@ specify_expr (int argc OSL_MAYBE_UNUSED, const char *argv[])
 
 
 
+// Utility: Add {paramname, stringval} to the given parameter list.
 static void
-action_param (int /*argc*/, const char *argv[])
+add_param (ParamValueList& params, string_view command,
+           string_view paramname, string_view stringval)
 {
-    std::string command = argv[0];
-    bool use_reparam = false;
-    if (OIIO::Strutil::istarts_with(command, "--reparam") ||
-        OIIO::Strutil::istarts_with(command, "-reparam"))
-        use_reparam = true;
-    ParamValueList &params (use_reparam ? reparams : (::params));
-
-    string_view paramname (argv[1]);
-    string_view stringval (argv[2]);
     TypeDesc type = TypeDesc::UNKNOWN;
     bool unlockgeom = false;
     float f[16];
@@ -391,6 +385,21 @@ action_param (int /*argc*/, const char *argv[])
 
 
 
+static void
+action_param(int /*argc*/, const char *argv[])
+{
+    std::string command = argv[0];
+    bool use_reparam = false;
+    if (OIIO::Strutil::istarts_with(command, "--reparam") ||
+        OIIO::Strutil::istarts_with(command, "-reparam"))
+        use_reparam = true;
+    ParamValueList &params (use_reparam ? reparams : (::params));
+
+    add_param(params, command, argv[1], argv[2]);
+}
+
+
+
 // reparam -- just set reparam_layer and then let action_param do all the
 // hard work.
 static void
@@ -427,6 +436,14 @@ stash_shader_arg (int argc, const char* argv[])
 {
     for (int i = 0; i < argc; ++i)
         shader_setup_args.push_back (argv[i]);
+}
+
+
+
+static void
+stash_userdata(int argc, const char* argv[])
+{
+    add_param(userdata, argv[0], argv[1], argv[2]);
 }
 
 
@@ -531,6 +548,8 @@ getargs (int argc, const char *argv[])
                 "--offsetst %f %f", &uoffset, &voffset, "", // old name
                 "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
                 "--scalest %f %f", &uscale, &vscale, "", // old name
+                "--userdata %@ %s %s", stash_userdata, nullptr, nullptr,
+                        "Add userdata (args: name value) (options: type=%s)",
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 "--locale %s", &localename, "Set a different locale",
                 NULL);
@@ -1096,6 +1115,9 @@ test_shade (int argc, const char *argv[])
     if (debug1 || verbose)
         rend->errhandler().verbosity (ErrorHandler::VERBOSE);
     rend->attribute("saveptx", (int)saveptx);
+
+    // Hand the userdata options from the command line over to the renderer
+    rend->userdata.merge(userdata);
 
     // Request a TextureSystem (by default it will be the global shared
     // one). This isn't strictly necessary, if you pass nullptr to

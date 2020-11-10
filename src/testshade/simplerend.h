@@ -108,6 +108,7 @@ public:
 
     ShadingSystem *shadingsys = nullptr;
     OIIO::ParamValueList options;
+    OIIO::ParamValueList userdata;
 
 protected:
     // Camera parameters

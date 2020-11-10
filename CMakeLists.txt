@@ -471,7 +471,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             transitive-assign
             transform transformc trig typecast
             unknown-instruction
-            userdata
+            userdata userdata-passthrough
             vararray-connect vararray-default
             vararray-deserialize vararray-param
             vecctr vector

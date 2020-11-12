@@ -1551,7 +1551,11 @@ test_shade (int argc, const char *argv[])
     rend->attribute("saveptx", (int)saveptx);
 
     // Hand the userdata options from the command line over to the renderer
+#if OIIO_VERSION >= 20202
     rend->userdata.merge(userdata);
+#else
+    rend->userdata = userdata;
+#endif
 
     // Request a TextureSystem (by default it will be the global shared
     // one). This isn't strictly necessary, if you pass nullptr to

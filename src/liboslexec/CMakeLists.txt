@@ -99,6 +99,9 @@ macro ( LLVM_COMPILE llvm_src srclist )
     #    endif ()
     #endif ()
 
+    list (TRANSFORM IMATH_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
+
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
     add_custom_command ( OUTPUT ${llvm_bc_cpp}
@@ -108,8 +111,7 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-I${CMAKE_SOURCE_DIR}/src/include"
           "-I${CMAKE_BINARY_DIR}/include"
           "-I${OpenImageIO_INCLUDES}"
-          "-I${ILMBASE_INCLUDES}"
-          "-I${OPENEXR_INCLUDES}"
+          ${ALL_IMATH_INCLUDES}
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
           -Wno-deprecated-register
@@ -217,6 +219,15 @@ endif()
 target_link_libraries (${local_lib}
     PUBLIC
         OpenImageIO::OpenImageIO
+        # For OpenEXR/Imath 3.x:
+        $<$<TARGET_EXISTS:Imath::Imath>:Imath::Imath>
+        $<$<TARGET_EXISTS:Imath::Half>:Imath::Half>
+        # For OpenEXR >= 2.4/2.5 with reliable exported targets
+        $<$<TARGET_EXISTS:IlmBase::Imath>:IlmBase::Imath>
+        $<$<TARGET_EXISTS:IlmBase::Half>:IlmBase::Half>
+        $<$<TARGET_EXISTS:IlmBase::IlmThread>:IlmBase::IlmThread>
+        $<$<TARGET_EXISTS:IlmBase::Iex>:IlmBase::Iex>
+        # For OpenEXR <= 2.3:
         ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml::pugixml

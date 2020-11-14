@@ -117,6 +117,17 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
 }
 
 
+namespace {
+inline OSL_HOSTDEVICE Vec2
+gabor_mul_m22_v2(const Matrix22& m, const Vec2& v)
+{
+    float a = v.x * m.x[0][0] + v.y * m.x[1][0];
+    float b = v.x * m.x[0][1] + v.y * m.x[1][1];
+    return Vec2(a, b);
+}
+
+}
+
 static  OSL_HOSTDEVICE void
 filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
                         const Vec2 &omega, const Dual2<float> &phi,
@@ -133,12 +144,11 @@ filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
     Matrix22 Sigma_G_Sigma_F = Sigma_G + Sigma_F;
     Dual2<float> c_GF = c_F * c_G
         * (1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_G_Sigma_F))))
-        * expf(-0.5f * dot(Sigma_G_Sigma_F.inverse()*mu_G, mu_G));
+        * expf(-0.5f * dot(gabor_mul_m22_v2(Sigma_G_Sigma_F.inverse(),mu_G), mu_G));
     Matrix22 Sigma_G_i = Sigma_G.inverse();
     Matrix22 Sigma_GF = (Sigma_F.inverse() + Sigma_G_i).inverse();
-    Vec2 mu_GF;
     Matrix22 Sigma_GF_Gi = Sigma_GF * Sigma_G_i;
-    Sigma_GF_Gi.multMatrix (mu_G, mu_GF);
+    Vec2 mu_GF = gabor_mul_m22_v2(Sigma_GF_Gi, mu_G);
     w_f = c_GF;
     a_f = sqrtf(M_TWO_PI * sqrtf(determinant(Sigma_GF)));
     omega_f = mu_GF;

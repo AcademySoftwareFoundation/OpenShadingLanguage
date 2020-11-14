@@ -83,7 +83,6 @@ typedef long double max_align_t;
 #include <OSL/dual_vec.h>
 using namespace OSL;
 
-#include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
 

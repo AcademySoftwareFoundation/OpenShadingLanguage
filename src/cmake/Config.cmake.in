@@ -6,10 +6,12 @@
 
 include(CMakeFindDependencyMacro)
 
-# add here all the public dependencies using find_dependency() whenever
-# switching to config based dependencies e.g. if switching to Boost::Boost
-# instead of using ${Boost_LIBRARY_DIRS} then add:
-#     find_dependency(Boost @Boost_VERSION@)
+# add here all the find_dependency() whenever switching to config based dependencies
+if (@OpenEXR_VERSION@ VERSION_GREATER_EQUAL 2.5)
+    find_dependency(OpenEXR @OpenEXR_VERSION@)
+    # N.B. Only do this for OpenEXR >= 2.5, difficult to rely on their
+    # exported configs before that.
+endif ()
 
 find_dependency(OpenImageIO @OpenImageIO_VERSION@ REQUIRED)
 

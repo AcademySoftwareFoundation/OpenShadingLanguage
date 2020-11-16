@@ -3,7 +3,7 @@
 # https://github.com/imageworks/OpenShadingLanguage
 
 # The 'testshade' executable
-set ( testshade_srcs testshade.cpp simplerend.cpp optixgridrender.cpp
+set ( testshade_srcs testshade.cpp simplerend.cpp batched_simplerend.cpp optixgridrender.cpp
                      ../testrender/optix_stringtable.cpp )
 
 if (USE_OPTIX)

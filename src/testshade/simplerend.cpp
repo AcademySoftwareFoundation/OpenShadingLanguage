@@ -115,6 +115,8 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 
 
 SimpleRenderer::SimpleRenderer ()
+: m_batch_16_simple_renderer(*this)
+, m_batch_8_simple_renderer(*this)
 {
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
@@ -136,6 +138,9 @@ SimpleRenderer::SimpleRenderer ()
 }
 
 
+// Ensure destructor code gen happens in this .cpp
+SimpleRenderer::~SimpleRenderer ()
+{}
 
 int
 SimpleRenderer::supports (string_view /*feature*/) const

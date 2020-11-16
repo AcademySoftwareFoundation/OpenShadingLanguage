@@ -311,7 +311,27 @@ preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param)
         // pragma
         OIIO::string_view line (p+6);
         string_view pragmatype = OIIO::Strutil::parse_word (line);
-        if (OIIO::Strutil::iequals (pragmatype, "osl")) {
+        if (pragmatype == "error") {
+            string_view msg;
+            if (OIIO::Strutil::parse_string(line, msg))
+                oslcompiler->errorf(oslcompiler->filename(),
+                                    oslcompiler->lineno(), "%s", msg);
+            else
+                oslcompiler->errorf(oslcompiler->filename(),
+                                    oslcompiler->lineno(),
+                                    "<unknown error>");
+        }
+        else if (pragmatype == "warning") {
+            string_view msg;
+            if (OIIO::Strutil::parse_string(line, msg))
+                oslcompiler->warningf(oslcompiler->filename(),
+                                      oslcompiler->lineno(), "%s", msg);
+            else
+                oslcompiler->warningf(oslcompiler->filename(),
+                                      oslcompiler->lineno(),
+                                      "<unknown warning>");
+        }
+        else if (OIIO::Strutil::iequals (pragmatype, "osl")) {
             string_view pragmaname = OIIO::Strutil::parse_word (line);
             if (pragmaname == "nowarn") {
                 oslcompiler->pragma_nowarn ();
@@ -320,7 +340,7 @@ preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param)
                                       "Unknown pragma '%s'", pragmaname);
             }
         }
-        // N.B. Pragmas that don't start with "osl" are ignored
+        // N.B. Any other pragmas that don't start with "osl" are ignored
         oslcompiler->incr_lineno();  // the pragma ends with an EOLN
     } else {  /* probably the line number and filename */
         if (! strncmp (p, "line", 4))

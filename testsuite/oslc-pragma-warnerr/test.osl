@@ -1,0 +1,8 @@
+
+#pragma warning "this is a warning"
+
+
+shader test ()
+{
+    #pragma error "this is an error"
+}

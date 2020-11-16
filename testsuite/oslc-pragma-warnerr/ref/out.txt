@@ -1,0 +1,3 @@
+test.osl:2: warning: this is a warning
+test.osl:7: error: this is an error
+FAILED test.osl

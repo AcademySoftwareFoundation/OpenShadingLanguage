@@ -109,6 +109,7 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-I${CMAKE_BINARY_DIR}/include"
           "-I${OpenImageIO_INCLUDES}"
           "-I${ILMBASE_INCLUDES}"
+          "-I${OPENEXR_INCLUDES}"
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
           -Wno-deprecated-register

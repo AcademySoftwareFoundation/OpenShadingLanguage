@@ -12,6 +12,56 @@
 OSL_NAMESPACE_ENTER
 
 
+// clang-format off
+
+// Define popcount and countr_zero
+#if OSL_CPLUSPLUS_VERSION >= 20
+
+// For C++20 and beyond, these are in the standard library
+using std::popcount;
+using std::countr_zero;
+
+#elif OSL_INTEL_COMPILER
+
+OSL_FORCEINLINE int popcount(uint32_t x) noexcept { return _mm_popcnt_u32(x);}
+OSL_FORCEINLINE int popcount(uint64_t x) noexcept { return _mm_popcnt_u64(x); }
+OSL_FORCEINLINE int countr_zero(uint32_t x) noexcept { return _bit_scan_forward(x); }
+OSL_FORCEINLINE int countr_zero(uint64_t x) noexcept {
+    unsigned __int32 index;
+    _BitScanForward64(&index, x);
+    return static_cast<int>(index);
+}
+
+#elif defined(__GNUC__) || defined(__clang__)
+
+OSL_FORCEINLINE int popcount(uint32_t x) noexcept { return __builtin_popcount(x); }
+OSL_FORCEINLINE int popcount(uint64_t x) noexcept { return __builtin_popcountll(x); }
+OSL_FORCEINLINE int countr_zero(uint32_t x) noexcept { return __builtin_ctz(x); }
+OSL_FORCEINLINE int countr_zero(uint64_t x) noexcept { return __builtin_ctzll(x); }
+
+#elif defined(_MSC_VER)
+
+OSL_FORCEINLINE int popcount(uint32_t x) noexcept { return static_cast<int>(__popcnt(x)); }
+OSL_FORCEINLINE int popcount(uint64_t x) noexcept { return static_cast<int>(__popcnt64(x)); }
+OSL_FORCEINLINE int countr_zero(uint32_t x) noexcept {
+    unsigned long index;
+    _BitScanForward(&index, x);
+    return static_cast<int>(index);
+}
+OSL_FORCEINLINE int countr_zero(uint64_t x) noexcept {
+    unsigned long index;
+    _BitScanForward64(&index, x);
+    return static_cast<int>(index);
+}
+
+#else
+#    error "popcount and coutr_zero implementations needed for this compiler"
+#endif
+
+// clang-format on
+
+
+
 // Simple wrapper to identify a single lane index vs. a mask_value
 class Lane {
     const int m_index;
@@ -123,50 +173,10 @@ public:
     OSL_FORCEINLINE ValueType value() const { return m_value; }
 
     // count number of active bits
-    OSL_FORCEINLINE int count() const
-    {
-#if OSL_CPLUSPLUS_VERSION >= 20
-        return std::popcount(m_value);
-#else
-        static_assert(value_width <= 32,
-                      "Masks > 32 bits are only supported for >= C++20");
-        // Note: 64 bit masks would require _mm_popcount_u64,
-        // __builtin_popcountll, or __popcount64.
-#    if OSL_INTEL_COMPILER
-        return _mm_popcnt_u32(m_value);
-#    elif defined(__GNUC__) || defined(__clang__)
-        return __builtin_popcount(m_value);
-#    elif defined(_MSC_VER)
-        return __popcnt(m_value);
-#    else
-#        error "popcount implementation needed for this compiler"
-#    endif
-#endif
-    }
+    OSL_FORCEINLINE int count() const { return OSL::popcount(m_value); }
 
     // NOTE: undefined result if no bits are on
-    OSL_FORCEINLINE int first_on() const
-    {
-#if OSL_CPLUSPLUS_VERSION >= 20
-        return std::countr_zero(m_value);
-#else
-        static_assert(value_width <= 32,
-                      "Masks > 32 bits are only supported for >= C++20");
-        // Note: 64 bit masks would require __builtin_ctzll or
-        // __BitScanForward64.
-#    if OSL_INTEL_COMPILER
-        return _bit_scan_forward(m_value);
-#    elif defined(__GNUC__) || defined(__clang__)
-        return __builtin_ctz(m_value);
-#    elif defined(_MSC_VER)
-        unsigned long index;
-        _BitScanForward(&index, m_value);
-        return static_cast<int>(index);
-#    else
-#        error "countr_zero implementation needed for this compiler"
-#    endif
-#endif
-    }
+    OSL_FORCEINLINE int first_on() const { return OSL::countr_zero(m_value); }
 
     OSL_FORCEINLINE Mask invert() const
     {

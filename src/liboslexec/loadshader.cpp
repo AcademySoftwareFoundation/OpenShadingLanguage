@@ -637,7 +637,7 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
         errorf("Unable to parse preloaded shader \"%s\"", shadername);
     }
 
-    return true;
+    return ok;
 }
 
 

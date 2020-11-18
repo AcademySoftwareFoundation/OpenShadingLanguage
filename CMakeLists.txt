@@ -438,6 +438,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             oslc-err-struct-array-init oslc-err-struct-ctr
             oslc-err-struct-dup oslc-err-struct-print
             oslc-err-unknown-ctr
+            oslc-pragma-warnerr
             oslc-warn-commainit
             oslc-variadic-macro
             oslc-version

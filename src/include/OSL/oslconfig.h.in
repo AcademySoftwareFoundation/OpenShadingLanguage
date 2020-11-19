@@ -11,14 +11,27 @@
 
 
 // All the things we need from Imath.
-// We've replicated some Imath files in OSL/Imathx, adding the decorations
-// needed for them to be safe to compile with Cuda (and sometimes other
-// improvements). We will eventually push all of these fixes to OpenEXR.
-#include <OSL/Imathx/ImathLimits.h>
-#include <OSL/Imathx/ImathVec.h>
-#include <OSL/Imathx/ImathMatrix.h>
-#include <OSL/Imathx/ImathColor.h>
-#include <OSL/matrix22.h>
+#include <OpenEXR/OpenEXRConfig.h>
+#define OSL_OPENEXR_VERSION ((10000*OPENEXR_VERSION_MAJOR) + \
+                             (100*OPENEXR_VERSION_MINOR) + \
+                             OPENEXR_VERSION_PATCH)
+#if OSL_OPENEXR_VERSION >= 20599 /* 2.5.99: pre-3.0 */
+#   include <Imath/ImathLimits.h>
+#   include <Imath/ImathVec.h>
+#   include <Imath/ImathMatrix.h>
+#   include <Imath/ImathColor.h>
+#   define OSL_USING_IMATH 3
+#else
+    // OpenEXR 2.x lacks the Cuda decorators we need, so we replicated some
+    // Imath files in OSL/Imathx, adding the decorations needed for them to
+    // be safe to compile with Cuda (and sometimes other improvements).
+#   include <OSL/Imathx/ImathLimits.h>
+#   include <OSL/Imathx/ImathVec.h>
+#   include <OSL/Imathx/ImathMatrix.h>
+#   include <OSL/Imathx/ImathColor.h>
+#   include <OSL/matrix22.h>
+#   define OSL_USING_IMATH 2
+#endif
 
 // The fmt library causes trouble for Cuda. Work around by disabling it from
 // oiio headers (OIIO <= 2.1) or telling fmt not to use the troublesome
@@ -60,13 +73,17 @@ typedef float Float;
 /// matrices have the same data layout as Float[n][n]; and (c) your
 /// classes have most of the obvious constructors and overloaded
 /// operators one would expect from a C++ vector/matrix/color class.
-typedef Imath::Vec3<Float>     Vec3;
-typedef Imath::Matrix33<Float> Matrix33;
-typedef Imath::Matrix44<Float> Matrix44;
-typedef Imath::Color3<Float>   Color3;
-typedef Imath::Vec2<Float>     Vec2;
+using Vec2     = Imath::Vec2<Float>;
+using Vec3     = Imath::Vec3<Float>;
+using Color3   = Imath::Color3<Float>;
+using Matrix33 = Imath::Matrix33<Float>;
+using Matrix44 = Imath::Matrix44<Float>;
 
-typedef Imathx::Matrix22<Float> Matrix22;
+#if OSL_USING_IMATH >= 3
+using Matrix22 = Imath::Matrix22<Float>;
+#else
+using Matrix22 = Imathx::Matrix22<Float>;
+#endif
 
 
 /// Assume that we are dealing with OpenImageIO's texture system.  It

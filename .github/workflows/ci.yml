@@ -21,7 +21,7 @@ on:
       - '**.tex'
   schedule:
     # Full nightly build
-    - cron: "0 4 * * *"
+    - cron: "0 8 * * *"
 
 
 jobs:
@@ -94,6 +94,36 @@ jobs:
           OPENEXR_VERSION: v2.5.3
           OPENIMAGEIO_VERSION: RB-2.2
         run: |
+            source src/build-scripts/ci-startup.bash
+            source src/build-scripts/gh-installdeps-centos.bash
+            source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
+
+  vfxplatform-2021-exrmaster:
+    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-3.0 OIIO-2.2 avx2"
+    runs-on: ubuntu-latest
+    container:
+      image: aswf/ci-osl:2021-clang11
+    steps:
+      - uses: actions/checkout@v2
+      - name: all
+        env:
+          CXX: g++
+          CC: gcc
+          CMAKE_CXX_STANDARD: 17
+          PYTHON_VERSION: 3.7
+          USE_SIMD: avx2,f16c
+          OPENEXR_VERSION: master
+          OPENIMAGEIO_VERSION: RB-2.2
+        run: |
+            sudo rm -rf /usr/local/include/OpenEXR
+            sudo rm -rf /usr/local/lib64/cmake/{IlmBase,OpenEXR}
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash

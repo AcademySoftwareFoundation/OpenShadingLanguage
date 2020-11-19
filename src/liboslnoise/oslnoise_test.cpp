@@ -26,7 +26,6 @@ static bool make_images = false;
 const int imgres = 64;
 const float imgscale = 8.0;
 const float eps = 0.001;   // Comparison threshold for results
-const Vec3 veps (eps,eps,eps);
 
 
 

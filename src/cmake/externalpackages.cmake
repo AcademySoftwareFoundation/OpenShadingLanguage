@@ -79,10 +79,8 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 # IlmBase & OpenEXR
-checked_find_package (OpenEXR 2.0 REQUIRED)
-# We use Imath so commonly, may as well include it everywhere.
-include_directories ("${OPENEXR_INCLUDES}" "${ILMBASE_INCLUDES}"
-                     "${ILMBASE_INCLUDES}/OpenEXR")
+checked_find_package (OpenEXR 2.0 REQUIRED
+                      PRINT IMATH_INCLUDES)
 if (CMAKE_COMPILER_IS_CLANG AND OPENEXR_VERSION VERSION_LESS 2.3)
     # clang C++ >= 11 doesn't like 'register' keyword in old exr headers
     add_compile_options (-Wno-deprecated-register)

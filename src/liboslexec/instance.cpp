@@ -589,6 +589,11 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup& /*g*/) co
     if (master() != b.master())
         return false;
 
+    // If one or both instances are directly hooked up to renderer outputs,
+    // don't merge them.
+    if (renderer_outputs() || b.renderer_outputs())
+        return false;
+
     // If the shaders haven't been optimized yet, they don't yet have
     // their own symbol tables and instructions (they just refer to
     // their unoptimized master), but they may have an "instance

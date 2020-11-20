@@ -401,7 +401,6 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             derivs derivs-muldiv-clobber
             draw_string
             error-dupes error-serialized
-            example-deformer
             exit exponential
             fprintf
             function-earlyreturn function-simple function-outputelem
@@ -476,6 +475,13 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             vararray-deserialize vararray-param
             vecctr vector
             wavelength_color Werror xml )
+
+if (OPENIMAGEIO_VERSION VERSION_GREATER_EQUAL 2.1)
+    # I'm too lazy to set this test up to work with OIIO versions too old
+    # to have proper exported cmake config files. So just skip it for
+    # OIIO 2.0.
+    TESTSUITE (example-deformer)
+endif ()
 
 # Add tests that require the Python bindings if we built them.
 # We also exclude these tests if this is a sanitizer build on Linux,

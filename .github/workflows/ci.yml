@@ -301,7 +301,6 @@ jobs:
           PYTHON_VERSION: 2.7
           USE_SIMD: 0
           USE_PYTHON: 0
-          OPENIMAGEIO_VERSION: RB-2.1
           PUGIXML_VERSION: v1.8
         run: |
             source src/build-scripts/ci-startup.bash

@@ -25,7 +25,7 @@ export PATH="$PATH:$DEP_DIR/bin:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/bin:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib"
 
-# export MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+# export OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 # export OPENEXR_CMAKE_FLAGS="$OPENEXR_CMAKE_FLAGS -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
 
 ls -l "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Tools/MSVC"
@@ -79,7 +79,7 @@ cd $INT_DIR
 cmake ../.. -G "$CMAKE_GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$CMAKE_BUILD_TYPE" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR"
 cmake --build . --config $CMAKE_BUILD_TYPE --target install
 popd
-export MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DZLIB_LIBRARY=$DEP_DIR/lib/zlib.lib"
+export OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DZLIB_LIBRARY=$DEP_DIR/lib/zlib.lib"
 export OPENEXR_CMAKE_FLAGS="$OPENEXR_CMAKE_FLAGS -DZLIB_LIBRARY=$DEP_DIR/lib/zlib.lib"
 
 source src/build-scripts/build_pybind11.bash
@@ -131,4 +131,4 @@ if [[ "$PYTHON_VERSION" == "3.6" ]] ; then
 fi
 
 # For CI on Windows, prefer to pick up static libs where possible
-MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DLINKSTATIC=1 -DBUILD_SHARED_LIBS=0"
+OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DLINKSTATIC=1 -DBUILD_SHARED_LIBS=0"

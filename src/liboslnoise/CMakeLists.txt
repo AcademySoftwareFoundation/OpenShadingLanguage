@@ -10,11 +10,24 @@ add_library (oslnoise ${liboslnoise_srcs})
 target_include_directories (oslnoise
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+        ${OPENIMAGEIO_INCLUDES}
+        ${ILMBASE_INCLUDES}
+        ${IMATH_INCLUDES}
     PRIVATE
         ../liboslexec)
 target_link_libraries (oslnoise
     PUBLIC
-        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
+        ${OPENIMAGEIO_LIBRARIES}
+        # For OpenEXR/Imath 3.x:
+        $<$<TARGET_EXISTS:Imath::Imath>:Imath::Imath>
+        $<$<TARGET_EXISTS:Imath::Half>:Imath::Half>
+        # For OpenEXR >= 2.4/2.5 with reliable exported targets
+        $<$<TARGET_EXISTS:IlmBase::Imath>:IlmBase::Imath>
+        $<$<TARGET_EXISTS:IlmBase::Half>:IlmBase::Half>
+        $<$<TARGET_EXISTS:IlmBase::IlmThread>:IlmBase::IlmThread>
+        $<$<TARGET_EXISTS:IlmBase::Iex>:IlmBase::Iex>
+        # For OpenEXR <= 2.3:
+        ${ILMBASE_LIBRARIES}
     PRIVATE
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
     )

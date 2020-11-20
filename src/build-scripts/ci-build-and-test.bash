@@ -19,10 +19,10 @@ fi
 mkdir -p build/$PLATFORM dist/$PLATFORM && true
 
 if [[ "$USE_SIMD" != "" ]] ; then
-    MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
+    OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
 fi
 if [[ "$DEBUG" == "1" ]] ; then
-    MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DCMAKE_BUILD_TYPE=Debug"
+    OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DCMAKE_BUILD_TYPE=Debug"
 fi
 
 pushd build/$PLATFORM
@@ -34,7 +34,7 @@ cmake ../.. -G "$CMAKE_GENERATOR" \
         -DPYTHON_VERSION="$PYTHON_VERSION" \
         -DCMAKE_INSTALL_LIBDIR="$OSL_ROOT/lib" \
         -DCMAKE_CXX_STANDARD="$CMAKE_CXX_STANDARD" \
-        $MY_CMAKE_FLAGS -DVERBOSE=1
+        $OSL_CMAKE_FLAGS -DVERBOSE=1
 time cmake --build . --target ${BUILDTARGET:=install} --config ${CMAKE_BUILD_TYPE}
 popd
 #make $MAKEFLAGS VERBOSE=1 $BUILD_FLAGS config
@@ -51,6 +51,7 @@ fi
 if [[ "$SKIP_TESTS" == "" ]] ; then
     $OSL_ROOT/bin/testshade --help
     export OIIO_LIBRARY_PATH=$OSL_ROOT/lib:$OIIO_LIBRARY_PATH
+    export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:$OSL_ROOT/src/cmake/modules
     TESTSUITE_CLEANUP_ON_SUCCESS=1
     make $BUILD_FLAGS test
 fi

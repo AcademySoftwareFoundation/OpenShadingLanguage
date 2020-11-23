@@ -308,8 +308,7 @@ bool
 ShadingSystem::BatchedExecutor<WidthT>::execute (ShadingContext &ctx, ShaderGroup &group,
         int batch_size, BatchedShaderGlobals<WidthT> &globals_batch, bool run)
 {
-    OSL_ASSERT(0 && "To Be Implemented");
-    return false;
+    return ctx.batched<WidthT>().execute(group, batch_size, globals_batch, run);
 }
 
 template<int WidthT>
@@ -317,8 +316,7 @@ bool
 ShadingSystem::BatchedExecutor<WidthT>::execute_init (ShadingContext &ctx, ShaderGroup &group,
         int batch_size, BatchedShaderGlobals<WidthT> &globals_batch, bool run)
 {
-    OSL_ASSERT(0 && "To Be Implemented");
-    return false;
+    return ctx.batched<WidthT>().execute_init (group, batch_size, globals_batch, run);
 }
 
 
@@ -327,8 +325,7 @@ bool
 ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
                               int layernumber)
 {
-    OSL_ASSERT(0 && "To Be Implemented");
-    return false;
+    return ctx.batched<WidthT>().execute_layer (batch_size, globals_batch, layernumber);
 }
 
 template<int WidthT>
@@ -336,8 +333,8 @@ bool
 ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
                               ustring layername)
 {
-    OSL_ASSERT(0 && "To Be Implemented");
-    return false;
+    int layernumber = m_shading_system.find_layer (*ctx.group(), layername);
+    return layernumber >= 0 ? ctx.batched<WidthT>().execute_layer (batch_size, globals_batch, layernumber) : false;
 }
 
 template<int WidthT>
@@ -345,8 +342,10 @@ bool
 ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
                               const ShaderSymbol *symbol)
 {
-    OSL_ASSERT(0 && "To Be Implemented");
-    return false;
+    OSL_ASSERT (symbol);
+    const Symbol *sym = reinterpret_cast<const Symbol *>(symbol);
+    int layernumber = sym->layer();
+    return layernumber >= 0 ? ctx.batched<WidthT>().execute_layer (batch_size, globals_batch, layernumber) : false;
 }
 
 
@@ -3295,6 +3294,79 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx, bool
     m_groups_to_compile_count -= 1;
 }
 
+template <int WidthT>
+void
+ShadingSystemImpl::Batched<WidthT>::jit_group (ShaderGroup &group, ShadingContext *ctx)
+{
+    if (group.batch_jitted())
+        return;    // already optimized
+
+    bool ctx_allocated = false;
+    PerThreadInfo *thread_info = nullptr;
+    if (! ctx) {
+        thread_info = m_ssi.create_thread_info();
+        ctx = m_ssi.get_context(thread_info);
+        ctx_allocated = true;
+    }
+
+    if (!group.optimized())
+        m_ssi.optimize_group (group,
+                ctx, false /*do_jit*/);
+
+    OIIO::Timer timer;
+    // TODO: we could have separate mutexes for jit vs. batched_jit
+    // choose to keep it simple to start with
+    lock_guard lock (group.m_mutex);
+    if (group.batch_jitted()) {
+        if (ctx_allocated) {
+            // TODO: scope object to manage temporary context&threadinfo
+            m_ssi.release_context(ctx);
+            m_ssi.destroy_thread_info(thread_info);
+        }
+
+        // The group was somehow batch_jitted by another thread between the
+        // time we checked group.batch_jitted() and now that we have the lock.
+        // Nothing to do (expect maybe record how long we waited for the lock).
+        spin_lock stat_lock (m_ssi.m_stat_mutex);
+        double t = timer();
+        m_ssi.m_stat_optimization_time += t;
+        m_ssi.m_stat_opt_locking_time += t;
+        return;
+    }
+    double locking_time = timer();
+
+    // TODO:  Add BatchedBackendLLVM in subsequent pull request
+    // BatchedBackendLLVM lljitter (m_ssi, group, ctx, WidthT);
+    // lljitter.run ();
+
+    // Keep OSL instructions around in case someone
+    // wants the scalar version jitted
+    if (group.jitted()) {
+        m_ssi.group_post_jit_cleanup (group);
+    }
+
+    if (ctx_allocated) {
+        m_ssi.release_context(ctx);
+        m_ssi.destroy_thread_info(thread_info);
+    }
+
+    group.m_batch_jitted = true;
+    spin_lock stat_lock (m_ssi.m_stat_mutex);
+    m_ssi.m_stat_opt_locking_time += locking_time;
+    m_ssi.m_stat_optimization_time += timer();
+//    m_ssi.m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
+//    m_ssi.m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
+//    m_ssi.m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
+//    m_ssi.m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
+//    m_ssi.m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
+//    m_ssi.m_stat_max_llvm_local_mem = std::max (m_ssi.m_stat_max_llvm_local_mem,
+//                                          lljitter.m_llvm_local_mem);
+
+    // TODO: not sure how to count these given batched vs. not
+    m_ssi.m_stat_groups_compiled += 1;
+    m_ssi.m_stat_instances_compiled += group.nlayers();
+    m_ssi.m_groups_to_compile_count -= 1;
+}
 
 
 static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads, bool do_jit)
@@ -3302,7 +3374,11 @@ static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, in
     ss->optimize_all_groups (1, mythread, totalthreads, do_jit);
 }
 
-
+template<int WidthT>
+static void batched_jit_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
+{
+    ss->batched<WidthT>().jit_all_groups(1, mythread, totalthreads);
+}
 
 void
 ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthreads, bool do_jit)
@@ -3348,7 +3424,55 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
     destroy_thread_info(threadinfo);
 }
 
+template<int WidthT>
+void
+ShadingSystemImpl::Batched<WidthT>::jit_all_groups (int nthreads, int mythread, int totalthreads)
+{
+    // Spawn a bunch of threads to do this in parallel -- just call this
+    // routine again (with threads=1) for each thread.
+    if (nthreads < 1)  // threads <= 0 means use all hardware available
+        nthreads = std::min ((int)std::thread::hardware_concurrency(),
+                             (int)m_ssi.m_groups_to_compile_count);
+    if (nthreads > 1) {
+        if (m_ssi.m_threads_currently_compiling)
+            return;   // never mind, somebody else spawned the JIT threads
+        OIIO::thread_group threads;
+        m_ssi.m_threads_currently_compiling += nthreads;
+        for (int t = 0;  t < nthreads;  ++t)
+            threads.add_thread (new std::thread (batched_jit_all_groups_wrapper<WidthT>, &m_ssi, t, nthreads));
+        threads.join_all ();
+        m_ssi.m_threads_currently_compiling -= nthreads;
+        return;
+    }
 
+    // And here's the single thread case
+    size_t ngroups = 0;
+    {
+        spin_lock lock (m_ssi.m_all_shader_groups_mutex);
+        ngroups = m_ssi.m_all_shader_groups.size();
+    }
+    PerThreadInfo* threadinfo = m_ssi.create_thread_info();
+    ShadingContext* ctx = m_ssi.get_context(threadinfo);
+    for (size_t i = 0;  i < ngroups;  ++i) {
+        // Assign to threads based on mod of totalthreads
+        if ((i % totalthreads) == (unsigned)mythread) {
+            ShaderGroupRef group;
+            {
+                spin_lock lock (m_ssi.m_all_shader_groups_mutex);
+                group = m_ssi.m_all_shader_groups[i].lock();
+            }
+            if (group)
+                jit_group (*group, ctx);
+        }
+    }
+    m_ssi.release_context(ctx);
+    m_ssi.destroy_thread_info(threadinfo);
+}
+
+// Explicitly instantiate, although might need to specialize on target
+// machine as well, start with just the batch size
+template class pvt::ShadingSystemImpl::Batched<16>;
+template class pvt::ShadingSystemImpl::Batched<8>;
 
 int
 ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)

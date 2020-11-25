@@ -98,19 +98,59 @@ checked_find_package (pugixml 1.8 REQUIRED)
 
 
 # LLVM library setup
-checked_find_package (LLVM 7.0 REQUIRED
-                      PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
-# ensure include directory is added (in case of non-standard locations
-include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
-link_directories ("${LLVM_LIB_DIR}")
+
+############ HACK ##############
+# On OSX, the Homebrew (and maybe any build) of LLVM 10.0 seems to have a
+# link conflict with its dependency on the llvm libc++ and the system
+# libc++, both can end up dynamically linked and lead to very subtle and
+# frustrating behavior failures (in particular, osl's use of libclang will
+# botch include file parsing any time LD_LIBRARY_PATH doesn't have the llvm
+# libc++ first).
+#
+# It seems that this is not a problem when linking against the llvm and
+# libclang libraries statically. So on apple and when LLVM 10+ are involved,
+# just force that choice. Other than larger executables, it seems harmless,
+# and in any case a better choice than this beastly bug.
+#
+# We can periodically revisit this with new version of LLVM, maybe they will
+# fix things and we won't require this preemptive static linking.
+if (APPLE AND LLVM_VERSION VERSION_GREATER_EQUAL 10.0)
+    set (LLVM_STATIC ON)
+endif ()
+
+checked_find_package(LLVM REQUIRED CONFIG
+                     HINTS ${LLVM_DIRECTORY})
+
+# manual version check because "LLVM is API-compatible only with matching major.minor versions" aka it requires VERSION_EQUAL
+if ( ${LLVM_PACKAGE_VERSION} VERSION_LESS 7 )
+	message(FATAL_ERROR "LLVM 7.0+ is required but ${LLVM_PACKAGE_VERSION} was found")
+endif()
+
+include_directories(BEFORE SYSTEM ${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
+link_directories(${LLVM_LIBRARY_DIRS})
+
+llvm_map_components_to_libnames(LLVM_LIBRARIES 
+	MCJIT Passes 
+	${LLVM_TARGETS_TO_BUILD})   #this will link with all LLVM targets (x86, nvptx, ...) specific libraries (codegen, dissasembly,...)
+
 # Extract and concatenate major & minor, remove wayward patches,
 # dots, and "svn" or other suffixes.
-string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
+string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_PACKAGE_VERSION})
 add_definitions (-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION})
-add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
+add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_PACKAGE_VERSION}")
 if (LLVM_NAMESPACE)
-    add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
+	add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
 endif ()
+if (NOT LLVM_DIRECTORY)
+	set(LLVM_DIRECTORY ${LLVM_INSTALL_PREFIX})
+endif()
+set(LLVM_TARGETS ${LLVM_TARGETS_TO_BUILD})
+
+checked_find_package(Clang REQUIRED)
+include_directories(BEFORE SYSTEM ${CLANG_INCLUDE_DIRS}) 
+set(CLANG_LIBRARIES clangCrossTU) # TODO figure out what exactly we need (this seems to work though it might be overkill)	
+
 if (LLVM_VERSION VERSION_GREATER_EQUAL 10.0.0 AND
     CMAKE_CXX_STANDARD VERSION_LESS 14)
     message (FATAL_ERROR
@@ -133,6 +173,8 @@ if (APPLE AND LLVM_VERSION VERSION_EQUAL 10.0.1 AND EXISTS "/usr/local/Cellar/ll
              "${ColorReset}\n")
 endif ()
 
+
+# partio
 checked_find_package (partio)
 
 

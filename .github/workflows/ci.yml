@@ -433,7 +433,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: all
         env:
-          BUILDTARGET: clang-format
+          BUILDTARGET: osl-clang-format
           CMAKE_CXX_STANDARD: 17
           PYTHON_VERSION: 3.7
           SKIP_TESTS: 1

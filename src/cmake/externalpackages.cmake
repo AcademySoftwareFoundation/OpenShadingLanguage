@@ -57,8 +57,11 @@ else ()
     # to set the expected variables printed below. So until that's fixed
     # force FindBoost.cmake to use the original brute force path.
     set (Boost_NO_BOOST_CMAKE ON)
-    checked_find_package (Boost 1.55 REQUIRED
+    checked_find_package (Boost REQUIRED
+                       VERSION_MIN 1.55
                        COMPONENTS ${Boost_COMPONENTS}
+                       RECOMMEND_MIN 1.66
+                       RECOMMEND_MIN_REASON "Boost 1.66 is the oldest version our CI tests against"
                        PRINT Boost_INCLUDE_DIRS Boost_LIBRARIES
                       )
 endif ()
@@ -79,8 +82,13 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 # IlmBase & OpenEXR
-checked_find_package (OpenEXR 2.0 REQUIRED
-                      PRINT IMATH_INCLUDES)
+checked_find_package (OpenEXR REQUIRED
+                      VERSION_MIN 2.0
+                      RECOMMEND_MIN 2.2
+                      RECOMMEND_MIN_REASON
+                        "OpenEXR 2.2 is the oldest version our CI tests against, and the minimum that supports DWA compression"
+                      PRINT IMATH_INCLUDES
+                     )
 if (CMAKE_COMPILER_IS_CLANG AND OPENEXR_VERSION VERSION_LESS 2.3)
     # clang C++ >= 11 doesn't like 'register' keyword in old exr headers
     add_compile_options (-Wno-deprecated-register)
@@ -91,14 +99,17 @@ endif ()
 
 
 # OpenImageIO
-checked_find_package (OpenImageIO 2.1.9 REQUIRED)
+checked_find_package (OpenImageIO REQUIRED
+                      VERSION_MIN 2.1.9)
 
 
-checked_find_package (pugixml 1.8 REQUIRED)
+checked_find_package (pugixml REQUIRED
+                      VERSION_MIN 1.8)
 
 
 # LLVM library setup
-checked_find_package (LLVM 7.0 REQUIRED
+checked_find_package (LLVM REQUIRED
+                      VERSION_MIN 7.0
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
@@ -163,7 +174,8 @@ if (USE_CUDA OR USE_OPTIX)
         message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
     endif ()
 
-    checked_find_package (CUDA 8.0 REQUIRED
+    checked_find_package (CUDA REQUIRED
+                          VERSION_MIN 8.0
                           PRINT CUDA_INCLUDES)
     set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
     include_directories (BEFORE "${CUDA_INCLUDES}")
@@ -192,7 +204,8 @@ if (USE_CUDA OR USE_OPTIX)
 
     # OptiX setup
     if (USE_OPTIX)
-        checked_find_package (OptiX 5.1 REQUIRED)
+        checked_find_package (OptiX REQUIRED
+                              VERSION_MIN 5.1)
         include_directories (BEFORE "${OPTIX_INCLUDES}")
         if (NOT USE_LLVM_BITCODE OR NOT USE_FAST_MATH)
             message (FATAL_ERROR "Enabling OptiX requires USE_LLVM_BITCODE=1 and USE_FAST_MATH=1")

@@ -98,8 +98,9 @@ DECLFOLDER(constfold_add)
             rop.turn_into_assign (op, cind, "const + const");
             return 1;
         } else if (A.typespec().is_triple_or_float() && B.typespec().is_triple_or_float()) {
+            Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
             Vec3 result = A.coerce_vec3() + B.coerce_vec3();
-            int cind = rop.add_constant (A.typespec(), &result);
+            int cind = rop.add_constant (R.typespec(), &result);
             rop.turn_into_assign (op, cind, "const + const");
             return 1;
         }
@@ -131,8 +132,9 @@ DECLFOLDER(constfold_sub)
             rop.turn_into_assign (op, cind, "const - const");
             return 1;
         } else if (A.typespec().is_triple_or_float() && B.typespec().is_triple_or_float()) {
+            Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
             Vec3 result = A.coerce_vec3() - B.coerce_vec3();
-            int cind = rop.add_constant (B.typespec(), &result);
+            int cind = rop.add_constant (R.typespec(), &result);
             rop.turn_into_assign (op, cind, "const - const");
             return 1;
         }
@@ -200,7 +202,6 @@ DECLFOLDER(constfold_mul)
 DECLFOLDER(constfold_div)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
     if (rop.is_one(B)) {
@@ -222,6 +223,7 @@ DECLFOLDER(constfold_div)
         } else if (A.typespec().is_int_or_float() && B.typespec().is_int_or_float()) {
             cind = rop.add_constant (A.coerce_float() / B.coerce_float());
         } else if (A.typespec().is_triple_or_float() && B.typespec().is_triple_or_float()) {
+            Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
             Vec3 result = A.coerce_vec3() / B.coerce_vec3();
             cind = rop.add_constant (R.typespec(), &result);
         }
@@ -1021,8 +1023,8 @@ DECLFOLDER(constfold_mxcompassign)
         Symbol *Ci (rop.inst()->argsymbol(opi.firstarg()+3));
         if (! Ji->is_constant() || ! Ii->is_constant() || !Ci->is_constant())
             break;   // not assigning constants
-        int jndexval =Ji->get_int();
-        int indexval =Ii->get_int();
+        int jndexval = Ji->get_int();
+        int indexval = Ii->get_int();
         if (jndexval < 0 || jndexval >= 4 || indexval < 0 || indexval >= 4)
             break;  // out of range index; let runtime deal with it
         float c = Ci->coerce_float();
@@ -2150,7 +2152,7 @@ DECLFOLDER(constfold_transformc)
         if (C.is_constant()) {
             Color3 Cin (C.get_float(0), C.get_float(1), C.get_float(2));
             Color3 result = rop.shadingsys().colorsystem().transformc (from, to, Cin, rop.shadingcontext());
-            rop.turn_into_assign (op, rop.add_constant(result),
+            rop.turn_into_assign (op, rop.add_constantc(result),
                                   "transformc => constant");
             return 1;
         }

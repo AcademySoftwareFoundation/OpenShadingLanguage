@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.11 -- 1 Jan 2021? (compared to 1.11.10)
+----------------------------------------------------
+
+
 Release 1.11.10 -- 1 Dec 2020 (compared to 1.11.9)
 ---------------------------------------------------
 * Bug fix: optimizer interaction with output param that also is userdata.

@@ -1,9 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.10 -- 1 Dec? 2020 (compared to 1.11.9)
+Release 1.11.10 -- 1 Dec 2020 (compared to 1.11.9)
 ---------------------------------------------------
-
+* Bug fix: optimizer interaction with output param that also is userdata.
+  #1295
+* Ensure that LoadMemoryCompiledShader returns false upon parse failure.
+  #1302
+* Work to ensure that OIIO will build correctly against the upcoming
+  Imath 3.0 and OpenEXR 3.0. #1299
 
 Release 1.11.9 -- 1 Nov 2020 (compared to 1.11.8)
 ---------------------------------------------------

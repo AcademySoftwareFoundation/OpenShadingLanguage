@@ -3328,6 +3328,15 @@ LLVM_Util::offset_ptr (llvm::Value *ptr, int offset, llvm::Type *ptrtype)
 
 
 
+void
+LLVM_Util::assume_ptr_is_aligned(llvm::Value* ptr, unsigned alignment)
+{
+    const llvm::DataLayout& data_layout = m_llvm_exec->getDataLayout();
+    builder().CreateAlignmentAssumption(data_layout, ptr, alignment);
+}
+
+
+
 llvm::Value *
 LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name, int align)
 {
@@ -5397,6 +5406,17 @@ LLVM_Util::bitcode_string (llvm::Module *module)
         stream << func << '\n';
 
     return stream.str();
+}
+
+
+
+std::string
+LLVM_Util::module_string()
+{
+    std::string s;
+    llvm::raw_string_ostream stream(s);
+    m_llvm_module->print(stream, nullptr);
+    return s;
 }
 
 

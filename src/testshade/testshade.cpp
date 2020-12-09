@@ -45,7 +45,6 @@ static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static std::vector<ustring> outputvarnames;
 static std::string dataformatname = "";
-static std::string shaderpath;
 static std::vector<std::string> entrylayers;
 static std::vector<std::string> entryoutputs;
 static std::vector<int> entrylayer_index;
@@ -157,8 +156,26 @@ set_shadingsys_options ()
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);
     shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
-    if (! shaderpath.empty())
-        shadingsys->attribute ("searchpath:shader", shaderpath);
+
+	// build searchpath for ISA specific OSL shared libraries based on expected
+    // location of library directories relative to the executables path.
+    // Users can overide using the "options" command line option
+    // with "searchpath:library" 
+    static const char * relative_lib_dirs[] =
+#if (defined(_WIN32) || defined(_WIN64))
+        {"\\..\\lib64", "\\..\\lib"};
+#else
+        {"/../lib64", "/../lib"};
+#endif
+    auto executable_directory = OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path());
+    int dirNum = 0;
+	std::string librarypath;
+    for (const char * relative_lib_dir:relative_lib_dirs) {
+        if(dirNum++ > 0) librarypath	+= ":";
+        librarypath += executable_directory + relative_lib_dir;
+    }
+    shadingsys->attribute ("searchpath:library", librarypath);
+
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
     if (texoptions.size())
@@ -570,7 +587,6 @@ getargs (int argc, const char *argv[])
                 "--profile", &profile, "Print profile information",
                 "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
                 "--warmup", &warmup, "Perform a warmup launch",
-                "--path %s", &shaderpath, "Specify oso search path",
                 "--res %d %d", &xres, &yres, "Make an W x H image",
                 "-g %d %d", &xres, &yres, "", // synonym for -res
                 "--options %s", &extraoptions, "Set extra OSL options",

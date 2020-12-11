@@ -1,14 +1,12 @@
 <div align="center">
   <img src="https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/Figures/osl-short.png" width=256 height=128>
+
+  <H1>Open Shading Language</H1>
 </div>
 
+[![Open Shading Language Reel 2020](http://img.youtube.com/vi/nmwMz1YnGPA/0.jpg)](https://www.youtube.com/watch?v=nmwMz1YnGPA "Open Shading Language Reel 2020")
 
-Open Shading Language
-=====================
-
-Build status:
 [![Build Status](https://github.com/imageworks/OpenShadingLanguage/workflows/CI/badge.svg)](https://github.com/imageworks/OpenShadingLanguage/actions)
-
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage/LICENSE)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3061/badge)](https://bestpractices.coreinfrastructure.org/projects/3061)
 

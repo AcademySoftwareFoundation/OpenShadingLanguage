@@ -10,8 +10,9 @@ must comply with the terms of this Charter.
 ### 1. Mission and Scope of the Project
 
   * **a.** The mission of the Project is to develop an open source project
-    with the goals indicated in the "README" file within the Project's code
-    repository.
+    for programmable shading in advanced renderers and other applications,
+    ideal for describing materials, lights, displacement, and pattern 
+    generation.
 
   * **b.** The scope of the Project includes software development under an
     OSI-approved open source license supporting the mission, including

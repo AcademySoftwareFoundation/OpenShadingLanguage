@@ -1777,22 +1777,22 @@ test_shade (int argc, const char *argv[])
 #else
             if (batched) {
                 if (batch_size == 16) {
-                    OIIO::ImageBufAlgo::parallel_image (
+                    OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
                         [&](OIIO::ROI sub_roi)->void {
                             batched_shade_region<16> (rend, shadergroup.get(), sub_roi, save);
-                        }, roi, num_threads);
+                        });
                 } else {
                     ASSERT((batch_size == 8) && "Unsupport batch size");
-                    OIIO::ImageBufAlgo::parallel_image (
+                    OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
                         [&](OIIO::ROI sub_roi)->void {
                             batched_shade_region<8> (rend, shadergroup.get(), sub_roi, save);
-                        }, roi, num_threads);
+                        });
                 }
             } else {
-                OIIO::ImageBufAlgo::parallel_image (
+                OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
                     [&](OIIO::ROI sub_roi)->void {
                         shade_region (rend, shadergroup.get(), sub_roi, save);
-                    }, roi, num_threads);
+                    });
             }
 #endif
         }

@@ -482,6 +482,7 @@ public:
         , m_renderer_output(false)
         , m_readonly(false)
         , m_is_uniform(true)
+        , m_forced_llvm_bool(false)
         , m_valuesource(DefaultVal)
         , m_free_data(false)
         , m_fieldid(-1)
@@ -752,6 +753,21 @@ public:
     bool is_varying() const { return (m_is_uniform == 0); }
     void make_varying() { m_is_uniform = false; }
 
+    // Results of a compare_op and other ops with logically boolean
+    // results under certain conditions could be forced to be represented
+    // in llvm as a boolean <i1> vs. an integer <i32>.  This simplifies
+    // code generation, and under batched execution is a requirement
+    // to make efficient use of hardware masking registers by allowing a
+    // vector of bools <16 x i1> vs. integers <16 x i32>.  However the
+    // underlying OIIO::TypeDesc as well as OSL does not support bools,
+    // therefore they need to be promoted to integers when interacting with
+    // other integer op's.
+    // The value of forced_llvm_bool() is currently only respected during
+    // batched execution.  Forced bools should not be coalesced with regular
+    // ints, only other forced bools.
+    bool forced_llvm_bool() const { return m_forced_llvm_bool; }
+    void forced_llvm_bool(bool v) { m_forced_llvm_bool = v; }
+
     bool readonly() const { return m_readonly; }
     void readonly(bool v) { m_readonly = v; }
 
@@ -834,10 +850,11 @@ protected:
     unsigned m_allowconnect : 1;     ///< Is the param not overridden by geom?
     unsigned m_renderer_output : 1;  ///< Is this sym a renderer output?
     unsigned m_readonly : 1;         ///< read-only symbol
-    unsigned m_is_uniform : 1;    ///< symbol is uniform under batched execution
-    char m_valuesource;           ///< Where did the value come from?
-    bool m_free_data;             ///< Free m_data upon destruction?
-    short m_fieldid;              ///< Struct field of this var (or -1)
+    unsigned m_is_uniform : 1;  ///< symbol is uniform under batched execution
+    unsigned m_forced_llvm_bool : 1;  ///< Is this sym forced to be llvm bool?
+    char m_valuesource;               ///< Where did the value come from?
+    bool m_free_data;                 ///< Free m_data upon destruction?
+    short m_fieldid;                  ///< Struct field of this var (or -1)
     short m_layer;                ///< Layer (within the group) this belongs to
     int m_scope;                  ///< Scope where this symbol was declared
     int m_dataoffset;             ///< Offset of the data (-1 for unknown)

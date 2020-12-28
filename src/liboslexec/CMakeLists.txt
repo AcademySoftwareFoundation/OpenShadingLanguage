@@ -100,6 +100,8 @@ macro ( LLVM_COMPILE llvm_src srclist )
 
     list (TRANSFORM IMATH_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
+    list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
 
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
@@ -110,10 +112,13 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-I${CMAKE_SOURCE_DIR}/src/include"
           "-I${CMAKE_BINARY_DIR}/include"
           "-I${OPENIMAGEIO_INCLUDES}"
-          ${ALL_IMATH_INCLUDES}
+          ${ALL_IMATH_INCLUDES} ${ALL_OPENEXR_INCLUDES}
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
           -Wno-deprecated-register
+          # the following 2 warnings can be restored when all 3rd parties have fixed their export macros
+          # (dllimport attribute is not supported when compiling for Cuda and triggers a ton of warnings)
+          -Wno-ignored-attributes -Wno-unknown-attributes
           -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
       COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
       COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} "osl_llvm_compiled_ops"

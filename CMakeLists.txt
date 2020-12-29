@@ -252,11 +252,9 @@ install (EXPORT OSL_EXPORTED_TARGETS
         FILE ${OSL_TARGETS_EXPORT_NAME}
         NAMESPACE ${PROJECT_NAME}::)
 
-
-
-
-osl_add_all_tests()
-
+if (${PROJECT_NAME}_BUILD_TESTS AND NOT ${PROJECT_NAME}_IS_SUBPROJECT)
+	osl_add_all_tests()
+endif ()
 
 if (NOT ${PROJECT_NAME}_IS_SUBPROJECT)
     include (packaging)

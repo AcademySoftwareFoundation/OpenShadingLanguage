@@ -39,7 +39,7 @@ jobs:
           CMAKE_CXX_STANDARD: 11
           PYTHON_VERSION: 2.7
           USE_PYTHON: 0
-          OPENIMAGEIO_VERSION: RB-2.1
+          OPENIMAGEIO_VERSION: Release-2.1.20.0
         run: |
             # Remove pesky wrong installed OIIO version
             rm -rf /usr/local/include/OpenImageIO
@@ -305,7 +305,7 @@ jobs:
           PYTHON_VERSION: 2.7
           USE_SIMD: 0
           USE_PYTHON: 0
-          OPENIMAGEIO_VERSION: RB-2.1
+          OPENIMAGEIO_VERSION: Release-2.1.20.0
           PUGIXML_VERSION: v1.8
         run: |
             # Remove pesky wrong installed OIIO version

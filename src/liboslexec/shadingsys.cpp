@@ -877,6 +877,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_fold_getattribute(true),
       m_opt_middleman(true), m_opt_texture_handle(true),
       m_opt_seed_bblock_aliases(true),
+      m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr) |
+                             (renderer->batched(WidthOf<8>()) != nullptr)),
       m_llvm_jit_fma(false),
       m_llvm_jit_aggressive(false),
       m_optimize_nondebug(false),
@@ -1347,6 +1349,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("opt_middleman", int, m_opt_middleman);
     ATTR_SET ("opt_texture_handle", int, m_opt_texture_handle);
     ATTR_SET ("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
+    ATTR_SET ("opt_batched_analysis", int, m_opt_batched_analysis);
     ATTR_SET ("llvm_jit_fma", int, m_llvm_jit_fma);
     ATTR_SET ("llvm_jit_aggressive", int, m_llvm_jit_aggressive);
     ATTR_SET_STRING ("llvm_jit_target", m_llvm_jit_target);
@@ -2051,6 +2054,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (opt_middleman);
     BOOLOPT (opt_texture_handle);
     BOOLOPT (opt_seed_bblock_aliases);
+    BOOLOPT (opt_batched_analysis);
     BOOLOPT (llvm_jit_fma);
     BOOLOPT (llvm_jit_aggressive);
     INTOPT (vector_width);

@@ -768,6 +768,7 @@ private:
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_opt_texture_handle;            ///< Use texture handles?
     bool m_opt_seed_bblock_aliases;       ///< Turn on basic block alias seeds
+    bool m_opt_batched_analysis;          ///< Perform extra analysis required for batched execution?
     bool m_llvm_jit_fma;                  ///< Allow fused multiply/add in JIT
     bool m_llvm_jit_aggressive;           ///< Turn on llvm "aggressive" JIT
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!

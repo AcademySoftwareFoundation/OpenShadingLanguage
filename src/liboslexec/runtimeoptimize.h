@@ -420,6 +420,7 @@ private:
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Do mix optimizations?
     bool m_opt_middleman;                 ///< Do middleman optimizations?
+    bool m_opt_batched_analysis;          ///< Perform extra analysis required for batched execution?
     bool m_keep_no_return_function_calls; ///< To generate debug info, keep no return function calls
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 

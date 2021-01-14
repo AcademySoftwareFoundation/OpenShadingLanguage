@@ -23,9 +23,13 @@
 // Avoid a compiler warning from a duplication in tiffconf.h/pyconfig.h
 #undef SIZEOF_LONG
 
-#include <OpenEXR/half.h>
-
 #include <OSL/oslquery.h>
+
+#if OSL_USING_IMATH >= 3
+#    include <Imath/half.h>
+#else
+#    include <OpenEXR/half.h>
+#endif
 
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>

@@ -486,4 +486,6 @@ DataT* assume_aligned(DataT* ptr)
 
 #endif
 
+static constexpr int MaxSupportedSimdLaneCount = 16;
+
 OSL_NAMESPACE_EXIT

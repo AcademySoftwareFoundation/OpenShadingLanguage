@@ -40,6 +40,7 @@
 #include <OSL/shaderglobals.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/mask.h>
 #include "osl_pvt.h"
 #include "constantpool.h"
 #include "opcolor.h"
@@ -108,6 +109,7 @@ void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSyste
 /// Signature of the function that LLVM generates to run the shader
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
+typedef void (*RunLLVMGroupFuncWide)(void* /* batched shader globals */, void*, int run_mask_value);
 
 /// Signature of a constant-folding method
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
@@ -580,6 +582,9 @@ public:
     ustring debug_groupname() const { return m_debug_groupname; }
     ustring debug_layername() const { return m_debug_layername; }
 
+    std::string library_searchpath() const { return m_library_searchpath; }
+    const std::vector<std::string> & library_searchpath_dirs() const { return m_library_searchpath_dirs; }
+
     /// Look within the group for separate nodes that are actually
     /// duplicates of each other and combine them.  Return the number of
     /// instances that were eliminated.
@@ -646,6 +651,28 @@ public:
     template <typename Color> bool
     ocio_transform (StringParam fromspace, StringParam tospace,
                     const Color& C, Color& Cout);
+
+    // Group all batched methods behind a templated interface
+    // so we can support multiple widths
+    template<int WidthT>
+    class Batched {
+        ShadingSystemImpl & m_ssi;
+    public:
+        explicit OSL_FORCEINLINE Batched(ShadingSystemImpl & ssi)
+        : m_ssi(ssi)
+        {}
+        OSL_FORCEINLINE Batched(const Batched&) = default;
+
+        /// Ensure that the group has been JITed.
+        void jit_group (ShaderGroup &group, ShadingContext *ctx);
+
+        void jit_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
+    };
+
+    template<int WidthT>
+    OSL_FORCEINLINE Batched<WidthT> batched() {
+        return Batched<WidthT>(*this);
+    }
 
 private:
     void printstats () const;
@@ -741,6 +768,7 @@ private:
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_opt_texture_handle;            ///< Use texture handles?
     bool m_opt_seed_bblock_aliases;       ///< Turn on basic block alias seeds
+    bool m_opt_batched_analysis;          ///< Perform extra analysis required for batched execution?
     bool m_llvm_jit_fma;                  ///< Allow fused multiply/add in JIT
     bool m_llvm_jit_aggressive;           ///< Turn on llvm "aggressive" JIT
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
@@ -766,6 +794,8 @@ private:
     ustring m_archive_filename;           ///< Name of filename for group archive
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
+    std::string m_library_searchpath;     ///< Library search path
+    std::vector<std::string> m_library_searchpath_dirs; ///< All library searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
@@ -1433,8 +1463,14 @@ public:
     int jitted () const { return m_jitted; }
     void jitted (int jitted) { m_jitted = jitted; }
 
+    int batch_jitted () const { return m_batch_jitted; }
+    void batch_jitted (int batch_jitted) { m_batch_jitted = batch_jitted; }
+
     size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
     void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
+
+    size_t llvm_groupdata_wide_size () const { return m_llvm_groupdata_wide_size; }
+    void llvm_groupdata_wide_size (size_t size) { m_llvm_groupdata_wide_size = size; }
 
     RunLLVMGroupFunc llvm_compiled_version() const {
         return m_llvm_compiled_version;
@@ -1458,7 +1494,30 @@ public:
             m_llvm_compiled_layers[layer] = func;
     }
 
-    /// Is this shader group equivalent to ret void?
+    // Hold onto wide versions of llvm functions side by side with scalar
+    RunLLVMGroupFuncWide llvm_compiled_wide_version() const {
+        return m_llvm_compiled_wide_version;
+    }
+    void llvm_compiled_wide_version (RunLLVMGroupFuncWide func) {
+        m_llvm_compiled_wide_version = func;
+    }
+    RunLLVMGroupFuncWide llvm_compiled_wide_init() const {
+        return m_llvm_compiled_wide_init;
+    }
+    void llvm_compiled_wide_init (RunLLVMGroupFuncWide func) {
+        m_llvm_compiled_wide_init = func;
+    }
+    RunLLVMGroupFuncWide llvm_compiled_wide_layer (int layer) const {
+        return layer < (int)m_llvm_compiled_wide_layers.size()
+                            ? m_llvm_compiled_wide_layers[layer] : NULL;
+    }
+    void llvm_compiled_wide_layer (int layer, RunLLVMGroupFuncWide func) {
+        m_llvm_compiled_wide_layers.resize ((size_t)nlayers(), NULL);
+        if (layer < nlayers())
+            m_llvm_compiled_wide_layers[layer] = func;
+    }
+
+    // Is this shader group equivalent to ret void?
     bool does_nothing() const {
         return m_does_nothing;
     }
@@ -1537,12 +1596,17 @@ private:
     volatile int m_optimized = 0;    ///< Is it already optimized?
     volatile int m_jitted = 0;       ///< Is it already jitted?
     bool m_does_nothing = false;     ///< Is the shading group just func() { return; }
+    volatile int m_batch_jitted = 0; ///< Is it already jitted for batch execution?
     size_t m_llvm_groupdata_size = 0;///< Heap size needed for its groupdata
+    size_t m_llvm_groupdata_wide_size = 0;    ///< Heap size needed for its wide groupdata
     int m_id;                        ///< Unique ID for the group
     int m_num_entry_layers = 0;      ///< Number of marked entry layers
     RunLLVMGroupFunc m_llvm_compiled_version = nullptr;
     RunLLVMGroupFunc m_llvm_compiled_init = nullptr;
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
+    RunLLVMGroupFuncWide m_llvm_compiled_wide_version = nullptr;
+    RunLLVMGroupFuncWide m_llvm_compiled_wide_init = nullptr;
+    std::vector<RunLLVMGroupFuncWide> m_llvm_compiled_wide_layers;
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
     int m_exec_repeat = 1;           ///< How many times to execute group
@@ -1612,6 +1676,74 @@ public:
     /// Execute the shader group, including init, run of single entry point
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
     bool execute (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
+
+    // Group all batched methods behind a templated interface
+    // so we can support multiple widths
+    template<int WidthT>
+    class OSLEXECPUBLIC Batched {
+        ShadingContext & m_sc;
+        OSL_FORCEINLINE ShadingContext & context() { return m_sc; }
+    public:
+        explicit OSL_FORCEINLINE Batched(ShadingContext & sc)
+        : m_sc(sc)
+        {}
+        OSL_FORCEINLINE Batched(const Batched&) = default;
+
+        OSL_FORCEINLINE ShadingSystemImpl & shadingsys () { return context().m_shadingsys; }
+        OSL_FORCEINLINE ShaderGroup *group () { return context().m_group; }
+        OSL_FORCEINLINE BatchedRendererServices<WidthT> * renderer() {
+            // turn templated call to polymorphic virtual function call
+            return context().m_renderer->batched(WidthOf<WidthT>());
+        }
+
+        /// Bind a shader group and batched of globals to this context and prepare to
+        /// execute. (See similarly named method of ShadingSystem.)
+        bool execute_init (ShaderGroup &group, int batch_size, BatchedShaderGlobals<WidthT> &bsg, bool run=true);
+
+        /// Execute the layer whose index is specified. (See similarly named
+        /// method of ShadingSystem.)
+        bool execute_layer (int batch_size, BatchedShaderGlobals<WidthT> &bsg, int layer);
+
+        /// Execute the shader group, including init, run of single entry point
+        /// layer, and cleanup. (See similarly named method of ShadingSystem.)
+        bool execute(ShaderGroup &group, int batch_size, BatchedShaderGlobals<WidthT> &bsg, bool run=true);
+
+        template<typename ...ArgListT>
+        inline
+        void errorf(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_ERROR, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
+        template<typename ...ArgListT>
+        inline
+        void warningf(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_WARNING, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
+        template<typename ...ArgListT>
+        inline
+        void infof(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_INFO, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
+        template<typename ...ArgListT>
+        inline
+        void messagef(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
+        // TODO: implement messages in subsequent PR
+        //BatchedMessageList<WidthT> & messages () { return m_sc.batched_messages(WidthOf<WidthT>()); }
+    };
+
+    template<int WidthT>
+    OSL_FORCEINLINE Batched<WidthT> batched() {
+        return Batched<WidthT>(*this);
+    }
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, const Color3 &w) {
         // Allocate the component and the mul back to back
@@ -1809,8 +1941,28 @@ private:
     Dictionary *m_dictionary;
 
     // Buffering of error messages and printfs
-    typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;
+    struct ErrorItem
+    {
+        ErrorItem() = default;
+        ErrorItem(ErrorHandler::ErrCode err_code_,
+                  std::string msgString_,
+                  Mask<MaxSupportedSimdLaneCount> mask_ =
+                      Mask<MaxSupportedSimdLaneCount>(true))
+        : err_code(err_code_)
+        , msgString(msgString_)
+        , mask(mask_)
+        {}
+
+        ErrorHandler::ErrCode err_code;
+        std::string msgString;
+        Mask<MaxSupportedSimdLaneCount> mask;
+    };
     mutable std::vector<ErrorItem> m_buffered_errors;
+
+    // When interpreting symbol addresses we need to know if the
+    // wide data offsets should be used
+    int batch_size_executed;
+    bool execution_is_batched() const { return batch_size_executed != 0; }
 };
 
 

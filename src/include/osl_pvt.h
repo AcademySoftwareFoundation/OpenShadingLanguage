@@ -481,12 +481,15 @@ public:
         , m_allowconnect(true)
         , m_renderer_output(false)
         , m_readonly(false)
+        , m_is_uniform(true)
+        , m_forced_llvm_bool(false)
         , m_valuesource(DefaultVal)
         , m_free_data(false)
         , m_fieldid(-1)
         , m_layer(-1)
         , m_scope(0)
         , m_dataoffset(-1)
+        , m_wide_dataoffset(-1)
         , m_initializers(0)
         , m_node(declaration_node)
         , m_alias(NULL)
@@ -607,6 +610,9 @@ public:
 
     void dataoffset(int d) { m_dataoffset = d; }
     int dataoffset() const { return m_dataoffset; }
+
+    void wide_dataoffset(int d) { m_wide_dataoffset = d; }
+    int wide_dataoffset() const { return m_wide_dataoffset; }
 
     void initializers(int d) { m_initializers = d; }
     int initializers() const { return m_initializers; }
@@ -740,6 +746,28 @@ public:
     bool renderer_output() const { return m_renderer_output; }
     void renderer_output(bool v) { m_renderer_output = v; }
 
+    // When not uniform a symbol will have a varying value under batched
+    // execution and must use a Wide data type to hold different values
+    // for each data lane executing
+    bool is_uniform() const { return m_is_uniform; }
+    bool is_varying() const { return (m_is_uniform == 0); }
+    void make_varying() { m_is_uniform = false; }
+
+    // Results of a compare_op and other ops with logically boolean
+    // results under certain conditions could be forced to be represented
+    // in llvm as a boolean <i1> vs. an integer <i32>.  This simplifies
+    // code generation, and under batched execution is a requirement
+    // to make efficient use of hardware masking registers by allowing a
+    // vector of bools <16 x i1> vs. integers <16 x i32>.  However the
+    // underlying OIIO::TypeDesc as well as OSL does not support bools,
+    // therefore they need to be promoted to integers when interacting with
+    // other integer op's.
+    // The value of forced_llvm_bool() is currently only respected during
+    // batched execution.  Forced bools should not be coalesced with regular
+    // ints, only other forced bools.
+    bool forced_llvm_bool() const { return m_forced_llvm_bool; }
+    void forced_llvm_bool(bool v) { m_forced_llvm_bool = v; }
+
     bool readonly() const { return m_readonly; }
     void readonly(bool v) { m_readonly = v; }
 
@@ -822,12 +850,15 @@ protected:
     unsigned m_allowconnect : 1;     ///< Is the param not overridden by geom?
     unsigned m_renderer_output : 1;  ///< Is this sym a renderer output?
     unsigned m_readonly : 1;         ///< read-only symbol
-    char m_valuesource;              ///< Where did the value come from?
-    bool m_free_data;                ///< Free m_data upon destruction?
-    short m_fieldid;                 ///< Struct field of this var (or -1)
+    unsigned m_is_uniform : 1;  ///< symbol is uniform under batched execution
+    unsigned m_forced_llvm_bool : 1;  ///< Is this sym forced to be llvm bool?
+    char m_valuesource;               ///< Where did the value come from?
+    bool m_free_data;                 ///< Free m_data upon destruction?
+    short m_fieldid;                  ///< Struct field of this var (or -1)
     short m_layer;                ///< Layer (within the group) this belongs to
     int m_scope;                  ///< Scope where this symbol was declared
     int m_dataoffset;             ///< Offset of the data (-1 for unknown)
+    int m_wide_dataoffset;        ///< Offset of the wide data (-1 for unknown)
     int m_initializers;           ///< Number of default initializers
     ASTNode* m_node;              ///< Ptr to the declaration of this symbol
     Symbol* m_alias;              ///< Another symbol that this is an alias for
@@ -862,6 +893,8 @@ public:
         m_argread        = ~1;  // Default - all args are read except the first
         m_argwrite       = 1;   // Default - first arg only is written by the op
         m_argtakesderivs = 0;   // Default - doesn't take derivs
+        m_requires_masking = 0;  // Default - doesn't require masking
+        m_analysis_flag    = 0;  // Default - optional analysis flag is not set
     }
 
     ustring opname() const { return m_op; }
@@ -1023,6 +1056,18 @@ public:
     /// different form.  Only opname is changed.
     void transmute_opname(ustring opname) { m_op = opname; }
 
+    /// Op would require masking under batched execution
+    /// when its arguments are not uniform (varying)
+    bool requires_masking() const { return m_requires_masking; }
+    void requires_masking(bool v) { m_requires_masking = v; }
+
+    /// Analysis might need to tag specific operations with flags that
+    /// are later used in code generation.  The meaning of these flags
+    /// are dependent on the type of operation.  Choose to embed a flag
+    /// here so that it is stable when a OpcodeVec is modified.
+    bool analysis_flag() const { return m_analysis_flag; }
+    void analysis_flag(bool v) { m_analysis_flag = v; }
+
 private:
     ustring m_op;                   ///< Name of opcode
     int m_firstarg;                 ///< Index of first argument
@@ -1039,6 +1084,11 @@ private:
     // more than 32 args, and those that do are read-only that far out.
     // Seems silly to add complexity here to deal with arbitrary param
     // counts and read/write-ability for cases that never come up.
+
+    ///< Op requires masking under batched execution when its arguments are not uniform
+    unsigned m_requires_masking : 1;
+    ///< Op specific analysis flag, meaning depends on type of op
+    unsigned m_analysis_flag : 1;
 };
 
 

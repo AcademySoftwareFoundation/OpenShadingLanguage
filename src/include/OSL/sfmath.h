@@ -8,13 +8,12 @@
 #pragma once
 
 #include <cmath>
+#include <limits>
 
 #include "dual.h"
 #include "dual_vec.h"
 #include <OSL/Imathx/Imathx.h>
 
-#include <OpenEXR/ImathFun.h>
-#include <OpenEXR/ImathMatrix.h>
 #include <OpenImageIO/fmath.h>
 
 
@@ -144,7 +143,22 @@ namespace sfm
 #endif
     }
 
+#if OSL_USING_IMATH >= 3
+    // Imath 3.0 has adequate optimized versions of these.
 
+    OSL_FORCEINLINE OSL_HOSTDEVICE
+    float length(const Vec3 &N)
+    {
+        return N.length();
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
+    normalize(const Vec3 &N)
+    {
+        return N.normalized();
+    }
+
+#else
     // because lengthTiny does a lot of work including another
     // sqrt, we really want to skip that if possible because
     // with SIMD execution, we end up doing the sqrt twice
@@ -187,7 +201,7 @@ namespace sfm
         absY /= max;
         absZ /= max;
 
-        return max * Imath::Math<float>::sqrt (absX * absX + absY * absY + absZ * absZ);
+        return max * std::sqrt(absX * absX + absY * absY + absZ * absZ);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE
@@ -195,10 +209,10 @@ namespace sfm
     {
         float length2 = N.dot (N);
 
-        if (OSL_UNLIKELY(length2 < float (2) * Imath::limits<float>::smallest()))
+        if (OSL_UNLIKELY(length2 < 2.0f * std::numeric_limits<float>::min()))
             return accessibleTinyLength(N);
 
-        return Imath::Math<float>::sqrt (length2);
+        return std::sqrt(length2);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
@@ -211,7 +225,7 @@ namespace sfm
 
         return Vec3 (N.x / l, N.y / l, N.z / l);
     }
-
+#endif
 
     OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3>
     normalize (const Dual2<Vec3> &a)
@@ -243,10 +257,13 @@ namespace sfm
         return (right > left)? right: left;
     }
 
-    class Matrix33 : public Imath::Matrix33<float>
+#if OSL_USING_IMATH >= 3
+    using Matrix33 = OSL::Matrix33;
+#else
+    class Matrix33 : public OSL::Matrix33
     {
     public:
-        typedef Imath::Matrix33<float> parent;
+        typedef OSL::Matrix33 parent;
 
         OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (Imath::Uninitialized uninit)
         : parent(uninit)
@@ -264,14 +281,14 @@ namespace sfm
         : parent(a,b,c,d,e,f,g,h,i)
         {}
 
-        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (const Imath::Matrix33<float> &a)
+        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (const OSL::Matrix33 &a)
         : parent(a)
         {}
 
         // Avoid the memcpy that is part of the Imath::Matrix33
         OSL_FORCEINLINE OSL_HOSTDEVICE
         Matrix33 (const float a[3][3])
-        : Imath::Matrix33<float>(
+        : OSL::Matrix33(
             a[0][0], a[0][1], a[0][2],
             a[1][0], a[1][1], a[1][2],
             a[2][0], a[2][1], a[2][2])
@@ -339,7 +356,7 @@ namespace sfm
             return tmp;
         }
     };
-
+#endif
 
     OSL_FORCEINLINE OSL_HOSTDEVICE sfm::Matrix33
     make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)

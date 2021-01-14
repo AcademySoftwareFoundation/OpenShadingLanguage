@@ -115,6 +115,8 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 
 
 SimpleRenderer::SimpleRenderer ()
+: m_batch_16_simple_renderer(*this)
+, m_batch_8_simple_renderer(*this)
 {
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
@@ -136,6 +138,9 @@ SimpleRenderer::SimpleRenderer ()
 }
 
 
+// Ensure destructor code gen happens in this .cpp
+SimpleRenderer::~SimpleRenderer ()
+{}
 
 int
 SimpleRenderer::supports (string_view /*feature*/) const
@@ -394,6 +399,25 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
         }
         return true;
     }
+
+#if OIIO_VERSION >= 20202
+    if (const OIIO::ParamValue* p = userdata.find_pv(name, type)) {
+        size_t size = p->type().size();
+        memcpy(val, p->data(), size);
+        if (derivatives)
+            memcpy(val, (char*)p->data() + size, 2 * size);
+        return true;
+    }
+#else
+    auto p = userdata.find(name, type);
+    if (p != userdata.end()) {
+        size_t size = p->type().size();
+        memcpy(val, p->data(), size);
+        if (derivatives)
+            memcpy(val, (char*)p->data() + size, 2 * size);
+        return true;
+    }
+#endif
 
     return false;
 }

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -6,7 +6,7 @@
 
 # This script, which assumes it is runnign on a Mac OSX with Homebrew
 # installed, does a "brew install" in all packages reasonably needed by
-# OIIO.
+# OSL and its dependencies.
 
 if [[ `uname` != "Darwin" ]] ; then
     echo "Don't run this script unless you are on Mac OSX"
@@ -20,24 +20,24 @@ if [[ `which brew` == "" ]] ; then
 fi
 
 
-brew uninstall openssl
-brew update >/dev/null
+#brew update >/dev/null
 echo ""
 echo "Before my brew installs:"
 brew list --versions
 
 if [[ $PYTHON_VERSION != "2.7" ]] ; then
-    brew uninstall python@2 && true
+    brew uninstall python@2 || true
 fi
-brew install --display-times gcc ccache cmake ninja boost && true
+brew install --display-times gcc ccache cmake ninja boost || true
 brew link --overwrite gcc
-brew install --display-times python pybind11 && true
-brew upgrade --display-times python && true
+brew install --display-times python pybind11 || true
+brew upgrade --display-times python || true
 brew link --overwrite python
 brew install --display-times flex bison
 brew install --display-times libtiff ilmbase openexr
 brew install --display-times opencolorio partio pugixml
-brew install --display-times freetype libpng && true
+brew install --display-times freetype libpng || true
+brew install --display-times pybind11 numpy || true
 brew install --display-times llvm${LLVMBREWVER}
 brew install --display-times qt
 

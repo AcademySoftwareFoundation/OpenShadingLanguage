@@ -84,7 +84,10 @@ public:
     int add_constant (int c) { return add_constant(TypeDesc::TypeInt, &c); }
     int add_constant (ustring s) { return add_constant(TypeDesc::TypeString, &s); }
     int add_constant (const Matrix44 &c) { return add_constant(TypeDesc::TypeMatrix, &c); }
-    int add_constant (const Color3 &c) { return add_constant(TypeDesc::TypeColor, &c); }
+    int add_constantc (const Color3 &c) { return add_constant(TypeDesc::TypeColor, &c); }
+    int add_constantv (const Vec3 &c, const TypeSpec& vectype) {
+        return add_constant(vectype, &c);
+    }
     int add_constant (string_view s) {
         ustring u(s);
         return add_constant(TypeDesc::TypeString, &s);
@@ -417,6 +420,7 @@ private:
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Do mix optimizations?
     bool m_opt_middleman;                 ///< Do middleman optimizations?
+    bool m_opt_batched_analysis;          ///< Perform extra analysis required for batched execution?
     bool m_keep_no_return_function_calls; ///< To generate debug info, keep no return function calls
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 

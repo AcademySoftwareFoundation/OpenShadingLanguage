@@ -125,15 +125,15 @@ represents the project at all ASWF TAC meetings.
 
 ### TSC Members
 
-(Proposed list, subject to revision, some are placeholders while their
-organizations decide who should be the permanent representative)
+Current voting members of the TSC are:
 
-* **Chair and TAC representative**: Chris Kulla - Sony Pictures Imageworks
-* **Chief Architect**: Larry Gritz, Sony Pictures Imageworks
+* **Chair and TAC representative**: Chris Kulla - Epic Games
+* **Chief Architect**: Larry Gritz - Sony Pictures Imageworks
 
 * Luke Emrose - Animal Logic
 * Eric Enderton - NVIDIA
 * Stephen Friedman - Pixar
+* Nicolas Guiard - Isotropix
 * Derek Haase - DNEG
 * Adrien Herubel - Autodesk
 * Lee Kerley - Sony Pictures Imageworks

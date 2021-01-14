@@ -45,7 +45,6 @@ static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static std::vector<ustring> outputvarnames;
 static std::string dataformatname = "";
-static std::string shaderpath;
 static std::vector<std::string> entrylayers;
 static std::vector<std::string> entryoutputs;
 static std::vector<int> entrylayer_index;
@@ -101,6 +100,7 @@ static float uscale = 1, vscale = 1;
 static float uoffset = 0, voffset = 0;
 static std::vector<const char*> shader_setup_args;
 static std::string localename = OIIO::Sysutil::getenv("TESTSHADE_LOCALE");
+static OIIO::ParamValueList userdata;
 
 
 
@@ -156,8 +156,26 @@ set_shadingsys_options ()
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);
     shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
-    if (! shaderpath.empty())
-        shadingsys->attribute ("searchpath:shader", shaderpath);
+
+	// build searchpath for ISA specific OSL shared libraries based on expected
+    // location of library directories relative to the executables path.
+    // Users can overide using the "options" command line option
+    // with "searchpath:library" 
+    static const char * relative_lib_dirs[] =
+#if (defined(_WIN32) || defined(_WIN64))
+        {"\\..\\lib64", "\\..\\lib"};
+#else
+        {"/../lib64", "/../lib"};
+#endif
+    auto executable_directory = OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path());
+    int dirNum = 0;
+	std::string librarypath;
+    for (const char * relative_lib_dir:relative_lib_dirs) {
+        if(dirNum++ > 0) librarypath	+= ":";
+        librarypath += executable_directory + relative_lib_dir;
+    }
+    shadingsys->attribute ("searchpath:library", librarypath);
+
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
     if (texoptions.size())
@@ -206,14 +224,15 @@ set_shadingsys_options ()
         }
     }
 
-    if (batched) {
-        // For batched operations turn off coalesce temps
-        // Currently analysis of uniform vs. varying symbols happens in the wide backend.
-        // If we allowed temps to coalesce it creates situations where we
-        // coalesce a uniform symbol over a varying symbol and data layouts do not match
-        // TODO:  Remedy by moving the uniform vs. varying symbols out of the backend
-        // so uniform/varying can be used as part of coalesce_temps.
-        shadingsys->attribute ("opt_coalesce_temps", 0);
+    if (!batched) {
+        // NOTE:  When opt_batched_analysis is enabled,
+        // uniform and varying temps will not coalesce
+        // with each other.  Neither will symbols
+        // with differing forced_llvm_bool() values.
+        // This might reduce observed symbol reduction.
+        // So disable the analysis when we are not
+        // performing batched execution
+        shadingsys->attribute ("opt_batched_analysis", 0);
     }
 
     shadingsys_options_set = true;
@@ -339,18 +358,11 @@ specify_expr (int argc OSL_MAYBE_UNUSED, const char *argv[])
 
 
 
+// Utility: Add {paramname, stringval} to the given parameter list.
 static void
-action_param (int /*argc*/, const char *argv[])
+add_param (ParamValueList& params, string_view command,
+           string_view paramname, string_view stringval)
 {
-    std::string command = argv[0];
-    bool use_reparam = false;
-    if (OIIO::Strutil::istarts_with(command, "--reparam") ||
-        OIIO::Strutil::istarts_with(command, "-reparam"))
-        use_reparam = true;
-    ParamValueList &params (use_reparam ? reparams : (::params));
-
-    string_view paramname (argv[1]);
-    string_view stringval (argv[2]);
     TypeDesc type = TypeDesc::UNKNOWN;
     bool unlockgeom = false;
     float f[16];
@@ -459,6 +471,21 @@ action_param (int /*argc*/, const char *argv[])
 
 
 
+static void
+action_param(int /*argc*/, const char *argv[])
+{
+    std::string command = argv[0];
+    bool use_reparam = false;
+    if (OIIO::Strutil::istarts_with(command, "--reparam") ||
+        OIIO::Strutil::istarts_with(command, "-reparam"))
+        use_reparam = true;
+    ParamValueList &params (use_reparam ? reparams : (::params));
+
+    add_param(params, command, argv[1], argv[2]);
+}
+
+
+
 // reparam -- just set reparam_layer and then let action_param do all the
 // hard work.
 static void
@@ -495,6 +522,14 @@ stash_shader_arg (int argc, const char* argv[])
 {
     for (int i = 0; i < argc; ++i)
         shader_setup_args.push_back (argv[i]);
+}
+
+
+
+static void
+stash_userdata(int argc, const char* argv[])
+{
+    add_param(userdata, argv[0], argv[1], argv[2]);
 }
 
 
@@ -553,7 +588,6 @@ getargs (int argc, const char *argv[])
                 "--profile", &profile, "Print profile information",
                 "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
                 "--warmup", &warmup, "Perform a warmup launch",
-                "--path %s", &shaderpath, "Specify oso search path",
                 "--res %d %d", &xres, &yres, "Make an W x H image",
                 "-g %d %d", &xres, &yres, "", // synonym for -res
                 "--options %s", &extraoptions, "Set extra OSL options",
@@ -601,6 +635,8 @@ getargs (int argc, const char *argv[])
                 "--offsetst %f %f", &uoffset, &voffset, "", // old name
                 "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
                 "--scalest %f %f", &uscale, &vscale, "", // old name
+                "--userdata %@ %s %s", stash_userdata, nullptr, nullptr,
+                        "Add userdata (args: name value) (options: type=%s)",
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 "--locale %s", &localename, "Set a different locale",
                 NULL);
@@ -1066,7 +1102,7 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
                     }
                 }
             } else {
-                // TODO: Do we need to really need to handle handle more int chanels than 1?
+                // We don't expect this to happen, but leaving as example for others
                 Wide<const int[], WidthT> batchResults(shadingsys->symbol_address(*ctx, out_symbol), nchans);
                 // TODO:  Try not to do alloca's inside a loop
                 int *intPixel = OIIO_ALLOCA(int, nchans);
@@ -1452,6 +1488,7 @@ batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI 
         // TODO: vectorize this loop
         for(int bi=0; bi < batchSize; ++bi) {
             int lHitIndex = oHitIndex + bi;
+            // A real renderer would use the hit index to access data to populate shader globals
             int lx = lHitIndex%rwidth;
             int ly = lHitIndex/rwidth;
             int rx = roi.xbegin + ly;
@@ -1530,6 +1567,13 @@ test_shade (int argc, const char *argv[])
     if (debug1 || verbose)
         rend->errhandler().verbosity (ErrorHandler::VERBOSE);
     rend->attribute("saveptx", (int)saveptx);
+
+    // Hand the userdata options from the command line over to the renderer
+#if OIIO_VERSION >= 20202
+    rend->userdata.merge(userdata);
+#else
+    rend->userdata = userdata;
+#endif
 
     // Request a TextureSystem (by default it will be the global shared
     // one). This isn't strictly necessary, if you pass nullptr to
@@ -1722,6 +1766,7 @@ test_shade (int argc, const char *argv[])
         if (use_optix) {
             rend->render (xres, yres);
         } else if (use_shade_image) {
+            // TODO: do we need a batched option/version of shade_image?
             OSL::shade_image (*shadingsys, *shadergroup, NULL,
                               *rend->outputbuf(0), outputvarnames,
                               pixelcenters ? ShadePixelCenters : ShadePixelGrid,
@@ -1733,22 +1778,22 @@ test_shade (int argc, const char *argv[])
 #else
             if (batched) {
                 if (batch_size == 16) {
-                    OIIO::ImageBufAlgo::parallel_image (
+                    OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
                         [&](OIIO::ROI sub_roi)->void {
                             batched_shade_region<16> (rend, shadergroup.get(), sub_roi, save);
-                        }, roi, num_threads);
+                        });
                 } else {
                     ASSERT((batch_size == 8) && "Unsupport batch size");
-                    OIIO::ImageBufAlgo::parallel_image (
+                    OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
                         [&](OIIO::ROI sub_roi)->void {
                             batched_shade_region<8> (rend, shadergroup.get(), sub_roi, save);
-                        }, roi, num_threads);
+                        });
                 }
             } else {
-                OIIO::ImageBufAlgo::parallel_image (
+                OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
                     [&](OIIO::ROI sub_roi)->void {
                         shade_region (rend, shadergroup.get(), sub_roi, save);
-                    }, roi, num_threads);
+                    });
             }
 #endif
         }

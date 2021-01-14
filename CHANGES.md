@@ -7,6 +7,8 @@ Dependency and standards requirements changes:
 * OpenImageIO 2.1-2.3: Support for OIIO 2.0 has been dropped.
 
 OSL Language and oslc compiler:
+* `#pragma error "message"` and `#pragma warning "message"` can be used to
+  conditionally inject a compile-time error or warning. #1300 (1.12.1)
 
 OSL Standard library:
 
@@ -20,11 +22,16 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 Continued work on experimental SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
 * Add interface to ShadingSystem for batched execution. #1272 (1.12.0.1)
+* Add interface to batched RendererServices. #1276 (1.12.0.1)
+* Batched testshade. #1298 (1.12.1)
+* ShadingSystem plumbing to support batched execution. #1301 (1.12.1)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
 * CI tests now at least compile and build with USE_OPTIX=1 (though not yet
   run the tests). #1281 (1.12.0.1)
+* A simple self-contained Cuda/OptiX example has been added as
+  testsuite/example-cuda. #1280 (1.12.0.1)
 
 Performance improvements:
 
@@ -42,6 +49,15 @@ Bug fixes and other improvements (internals):
 * Fix asymptomatic potential runtime optimizer bug where certain
   multi-component values were not correctly recognized as nonzero. #1266
   (1.12.0.1/1.11.9)
+* Fix optimizer bug where an `output` parameter that is also marked as
+  `[[lockgeom=0]]`, i.e., it gets a value from a userdata input, but also
+  passes it to a downstream connection or a renderer output, could end up
+  with an incorrect value if it was never read in the shader (including if
+  the only times it was read were optimized away). #1295 (1.12.0.1)
+* Ensure that OSLCompiler::LoadMemoryCompiledShader returns false upon parse
+  failure. #1302 (1.12.1/1.11.10)
+* During runtime optimization, don't merge layers that produce renderer
+  outputs (the semantics of doing so are very fishy). #1296 (1.12.1)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -58,6 +74,8 @@ Build & test system improvements:
       defaults to whatever Python is found (though a specific one can still
       be requested via the PYTHON_VERSION variable). #1249 (1.12.0.0/1.11.8)
       #1286 (1.12.0.1/1.11.9)
+    - Extend checked_find_package with VERSION_MIN and VERSION_MAX. #1303
+      (1.12.1/1.11.10)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
@@ -67,16 +85,29 @@ Build & test system improvements:
     - Build against LLVM 11. #1274 (1.12.0.1)
     - Fix build break against recent OIIO master change where m_mutex field
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
+    - Work to ensure that OIIO will build correctly against the upcoming
+      Imath 3.0 and OpenEXR 3.0. #1299 (1.11.10/1.12.1)
 * Testing and Continuous integration (CI) systems:
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
+    - Windows+Cuda build fixes. #1292 (1.12.0.1)
 * The oso and osl lexers/parsers are now given internal symbol names that
   are fully versioned, to avoid possible clash if multiple OSL releases are
   both linked into the same application. #1255 (1.12.0.0)
 
 Documentation:
+* A simple self-contained Cuda/OptiX example has been added as
+  testsuite/example-cuda. #1280 (1.12.0.1)
 
 
+Release 1.11.10 -- 1 Dec 2020 (compared to 1.11.9)
+---------------------------------------------------
+* Bug fix: optimizer interaction with output param that also is userdata.
+  #1295
+* Ensure that LoadMemoryCompiledShader returns false upon parse failure.
+  #1302
+* Work to ensure that OIIO will build correctly against the upcoming
+  Imath 3.0 and OpenEXR 3.0. #1299
 
 Release 1.11.9 -- 1 Nov 2020 (compared to 1.11.8)
 ---------------------------------------------------

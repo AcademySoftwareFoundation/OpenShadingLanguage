@@ -15,6 +15,7 @@
 
 #pragma once
 
+#define OSL_MATRIX22_H
 
 #include <OSL/oslconfig.h>
 

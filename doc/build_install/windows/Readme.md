@@ -307,4 +307,4 @@ This method worked fine for me for release, debug and debugging in visual studio
 
 I am trying to build OSL on `Linux` with same method. If it worked fine I will Update the build system.
 
-[osl_building_on_windows](./osl_building_on_windows.jpg)
+![osl_building_on_windows](./osl_building_on_windows.jpg)

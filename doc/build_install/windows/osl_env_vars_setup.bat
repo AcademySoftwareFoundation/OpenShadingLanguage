@@ -1,6 +1,6 @@
 @REM /* --------------------- */
-@REM /* (C) 2020 madoodia.com */
-@REM /*  All Rights Reserved  */
+@REM /* 2020 madoodia.com */
+@REM /* Copyright Contributors to the Open Shading Language project. */
 @REM /* --------------------- */
 
 @REM Running Visual Studio 2019 in release mode for running OSL or editing code

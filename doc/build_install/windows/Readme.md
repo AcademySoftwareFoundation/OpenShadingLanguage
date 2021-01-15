@@ -1,5 +1,7 @@
 ## **Building, Using and Debugging OSL in Windows**
 
+#### Copyright Contributors to the Open Shading Language project.
+
 ---
 
 ### **Contents**

@@ -1,5 +1,4 @@
 #
-# 2020 madoodia.com
 # Copyright Contributors to the Open Shading Language project.
 # 
 # Based on USD build_scripts by Pixar Animation Studio

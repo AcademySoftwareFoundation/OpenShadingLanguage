@@ -1,5 +1,4 @@
 @REM /* --------------------- */
-@REM /* 2020 madoodia.com */
 @REM /* Copyright Contributors to the Open Shading Language project. */
 @REM /* --------------------- */
 

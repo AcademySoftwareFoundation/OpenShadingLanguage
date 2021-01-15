@@ -1,3 +1,10 @@
+@REM /* --------------------- */
+@REM /* (C) 2020 madoodia.com */
+@REM /*  All Rights Reserved  */
+@REM /* --------------------- */
+
+@REM Running OSLToy in release mode
+
 @echo off
 
 

@@ -3,6 +3,8 @@
 @REM /*  All Rights Reserved  */
 @REM /* --------------------- */
 
+@REM Main batch file for installing OSL
+
 @echo off
 
 

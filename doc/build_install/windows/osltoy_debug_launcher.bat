@@ -1,3 +1,10 @@
+@REM /* --------------------- */
+@REM /* (C) 2020 madoodia.com */
+@REM /*  All Rights Reserved  */
+@REM /* --------------------- */
+
+@REM Running OSLToy in debug mode
+
 @echo off
 
 
@@ -8,4 +15,4 @@ cls
 set PATH=%PYTHON_LOCATION%;%PYTHON_LOCATION%/Scripts;%QT_LOCATION%/bin;%QT_LOCATION%/lib;%BASE_LOCATION%/osl_debug/bin;%BASE_LOCATION%/osl_debug/lib;%PATH%
 set PYTHONPATH=%PYTHON_LOCATION%/Lib/site-packages;
 
-%BASE_LOCATION%\osl_debug\build\OpenShadingLanguage\OSL.sln
+osltoy

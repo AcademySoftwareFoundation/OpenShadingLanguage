@@ -1,6 +1,7 @@
 #
 # 2020 madoodia.com
 # Based on USD build_scripts by Pixar Animation Studio
+# For installing OpenShadingLanguage (OSL) on Windows
 #
 # Code is modified to be compatible for installing OSL and its dependencies
 # ---------------------------------------------------------------------------
@@ -1825,7 +1826,7 @@ class InstallContext:
 
         # Assume the OSL source directory is in the parent directory
         self.oslSrcDir = os.path.normpath(
-            os.path.join(os.path.abspath(os.path.dirname(__file__)), "..")
+            os.path.join(os.path.abspath(os.path.dirname(__file__)), "../../..")
         )
 
         # Directory where OSL will be installed

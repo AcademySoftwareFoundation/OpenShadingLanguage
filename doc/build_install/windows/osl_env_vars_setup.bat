@@ -3,6 +3,8 @@
 @REM /*  All Rights Reserved  */
 @REM /* --------------------- */
 
+@REM Running Visual Studio 2019 in release mode for running OSL or editing code
+
 @echo off
 
 @REM TIP:

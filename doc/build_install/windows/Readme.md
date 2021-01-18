@@ -1,6 +1,10 @@
 ## **Building, Using and Debugging OSL in Windows**
 
+---
+
 #### Copyright Contributors to the Open Shading Language project.
+
+#### SPDX-License-Identifier: CC-BY-4.0
 
 ---
 

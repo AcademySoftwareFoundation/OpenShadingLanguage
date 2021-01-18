@@ -1,5 +1,6 @@
 @REM /* --------------------- */
-@REM /* Copyright Contributors to the Open Shading Language project. */
+@REM Copyright Contributors to the Open Shading Language project.
+@REM SPDX-License-Identifier: BSD-3-Clause
 @REM /* --------------------- */
 
 @REM Running OSLToy in debug mode

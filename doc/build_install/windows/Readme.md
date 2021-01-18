@@ -31,7 +31,9 @@
 
 This document is prepared for those who have problem in building OSL in Windows OS, this is completely custom setup. And it is developing to make it compatible with all situations.
 
-(`Disclaimer: This Process is completely Experimental and it worked on my system, maybe you get error with changing some configs, during this process). At a first glance it seems to be complicated, but it is very easy to do, bare with me :)
+(`Disclaimer:` This Process is completely Experimental and it worked on my system, maybe you get error with changing some configs, during this process).
+
+At a first glance it seems to be complicated, but it is very easy to do, bare with me.
 So it would be great to share our experiences to reach to best way of building in Windows (and of course other Operating Systems) to save our time and energy to focus on OSL development and OSL Shader writing.
 
 ### **1.1 Experimental**

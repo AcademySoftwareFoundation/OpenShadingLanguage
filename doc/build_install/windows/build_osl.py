@@ -1,7 +1,7 @@
 #
 # Copyright Contributors to the Open Shading Language project.
-# SPDX-License-Identifier: Apache License
-# Coyright Notice From Pixar USD (Apache License)
+# SPDX-License-Identifier: Modified Apache 2.0 License
+# Coyright Notice From Pixar USD (Modified Apache 2.0 License)
 # 90% of the content is changed to be compatible for installing OSL and its dependencies
 # 
 # Based on USD build_scripts by Pixar Animation Studio

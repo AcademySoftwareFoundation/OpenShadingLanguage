@@ -252,7 +252,6 @@ OSOReaderQuery::hint(string_view hintstring)
     }
     if (m_reading_param && Strutil::parse_prefix(hintstring, "structfields{")) {
         OSLQuery::Parameter& param(m_query.m_params[m_query.nparams() - 1]);
-        string_view ident;
         while (1) {
             string_view ident = Strutil::parse_identifier(hintstring);
             if (ident.length()) {

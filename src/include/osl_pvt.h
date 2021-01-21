@@ -777,19 +777,16 @@ public:
     // Retrieve the const float value (must be a const float!)
     float get_float(int index = 0) const
     {
-        OSL_DASSERT(data() && typespec().is_float_based());
-        return ((const float*)data())[index];
+        OSL_DASSERT(dataptr() && typespec().is_float_based());
+        return ((const float*)dataptr())[index];
     }
 
     // Retrieve a const float value (coerce from int if necessary)
     float coerce_float(int index = 0) const
     {
-        OSL_DASSERT(
-            data()
-            && (typespec().is_float_based() || typespec().is_int_based()));
+        OSL_DASSERT(typespec().is_float_based() || typespec().is_int_based());
         return typespec().is_int_based()
-                   ? static_cast<float>(((const int*)data())[index])
-                   : ((const float*)data())[index];
+                   ? static_cast<float>(get_int(index)) : get_float(index);
     }
 
     // Retrieve the const int value (must be a const int!)

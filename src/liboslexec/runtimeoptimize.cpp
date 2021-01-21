@@ -274,7 +274,7 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
         } else {
             OSL_ASSERT (0 && "unsupported type for add_constant");
         }
-        newconst.data (newdata);
+        newconst.set_dataptr(SymArena::Absolute, newdata);
         ind = add_symbol (newconst);
         m_all_consts.push_back (ind);
     }
@@ -1353,7 +1353,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, string_view why)
     else if (Rtype.basetype == TypeDesc::STRING)
         Rdefault = &inst()->m_sparams[R->dataoffset()];
     OSL_DASSERT(Rdefault != NULL);
-    R->data (Rdefault);
+    R->set_dataptr(SymArena::Absolute, Rdefault);
 
     // Get rid of any init ops
     if (R->has_init_ops()) {

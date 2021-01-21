@@ -30,8 +30,8 @@ rtDeclareVariable (int,   flipv, , );
 // Buffers
 rtBuffer<float3,2> output_buffer;
 
-rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_init_func, , );
-rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_group_func, ,);
+rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, int)>, osl_init_func, , );
+rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, int)>, osl_group_func, ,);
 
 RT_PROGRAM void raygen()
 {
@@ -188,8 +188,8 @@ extern "C" __global__ void __raygen__()
     sg.renderstate = &closure_pool[0];
 
     // Run the OSL group and init functions
-    optixDirectCall<void, ShaderGlobals*, void *>(0u, &sg, params); // call osl_init_func
-    optixDirectCall<void, ShaderGlobals*, void *>(1u, &sg, params); // call osl_group_func
+    optixDirectCall<void, ShaderGlobals*, void *, void*, int>(0u, &sg, params, nullptr, 0); // call osl_init_func
+    optixDirectCall<void, ShaderGlobals*, void *, void*, int>(1u, &sg, params, nullptr, 0); // call osl_group_func
 
     float* f_output = (float*)params;
     int pixel = launch_index.y * launch_dims.x + launch_index.x;

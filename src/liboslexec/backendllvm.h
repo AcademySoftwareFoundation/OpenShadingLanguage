@@ -298,6 +298,12 @@ public:
     llvm::Value *groupdata_field_ptr (int fieldnum,
                                       TypeDesc type = TypeDesc::UNKNOWN);
 
+    /// Return the output base pointer.
+    llvm::Value *output_base_ptr () const { return m_llvm_output_base_ptr; }
+
+    /// Return the shade index
+    llvm::Value *shadeindex () const { return m_llvm_shadeindex; }
+
     /// Return a ref to the bool where the "layer_run" flag is stored for
     /// the specified layer.
     llvm::Value *layer_run_ref (int layer);
@@ -445,6 +451,8 @@ private:
     std::map<const Symbol*,int> m_param_order_map;
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
+    llvm::Value *m_llvm_output_base_ptr;
+    llvm::Value *m_llvm_shadeindex;
     llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
     llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
     llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data

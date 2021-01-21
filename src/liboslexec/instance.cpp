@@ -484,7 +484,7 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
                 si->connected_down (m_instoverrides[i].connected_down());
                 si->lockgeom (m_instoverrides[i].lockgeom());
                 si->dataoffset (m_instoverrides[i].dataoffset());
-                si->data (param_storage(i));
+                si->set_dataptr(SymArena::Absolute, param_storage(i));
             }
             if (shadingsys().is_renderer_output (layername(), si->name(), &group)) {
                 si->renderer_output (true);

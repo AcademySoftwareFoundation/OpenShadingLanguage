@@ -85,6 +85,7 @@ OSL_NAMESPACE_ENTER
 
 
 
+
 struct PerThreadInfo
 {
     PerThreadInfo ();
@@ -118,9 +119,16 @@ void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSyste
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
-typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
+typedef void (*RunLLVMGroupFunc)(void* shaderglobals,
+                                 void* heap_arena_ptr,
+                                 void* output_base_pointer,
+                                 int shadeindex);
 #if OSL_USE_BATCHED
-typedef void (*RunLLVMGroupFuncWide)(void* /* batched shader globals */, void*, int run_mask_value);
+typedef void (*RunLLVMGroupFuncWide)(void* batchedshaderglobals,
+                                     void* heap_arena_ptr,
+                                     // void* output_base_pointer,
+                                     // wide int shadeindex
+                                     int run_mask_value);
 #endif
 
 /// Signature of a constant-folding method
@@ -547,11 +555,8 @@ public:
 
     void release_context (ShadingContext *ctx);
 
-    bool execute (ShadingContext &ctx, ShaderGroup &group,
-                  ShaderGlobals &ssg, bool run=true);
-    // DEPRECATED(2.0):
-    bool execute (ShadingContext *ctx, ShaderGroup &group,
-                  ShaderGlobals &ssg, bool run=true);
+    bool execute (ShadingContext &ctx, ShaderGroup &group, int shadeindex,
+                  ShaderGlobals &ssg, void* output_base_ptr, bool run=true);
 
     const void* get_symbol (ShadingContext &ctx, ustring layername,
                             ustring symbolname, TypeDesc &type);
@@ -702,6 +707,12 @@ public:
     }
 #endif
 
+    void clear_symlocs() { m_symlocs.clear(); }
+    void add_symlocs(cspan<SymLocationDesc> symlocs) {
+        for (auto& s : symlocs)
+            m_symlocs.push_back(s);
+    }
+
 private:
     void printstats () const;
 
@@ -827,6 +838,7 @@ private:
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
+    std::vector<SymLocationDesc> m_symlocs;
     int m_max_local_mem_KB;               ///< Local storage can a shader use
     bool m_compile_report;                ///< Print compilation report?
     bool m_buffer_printf;                 ///< Buffer/batch printf output?
@@ -1626,6 +1638,26 @@ public:
     int raytypes_on ()  const { return m_raytypes_on; }
     int raytypes_off () const { return m_raytypes_off; }
 
+    void clear_symlocs() { m_symlocs.clear(); }
+    void add_symlocs(cspan<SymLocationDesc> symlocs) {
+        for (auto& s : symlocs) {
+            // Insert and maintain sorted order
+            auto f = std::lower_bound(m_symlocs.begin(), m_symlocs.end(), s.name);
+            if (f == m_symlocs.end()) // Greater than anything in the list
+                m_symlocs.emplace_back(s);
+            else if (f->name == s.name) // Already in list -- replace it
+                *f = s;
+            else   // f points to the first symbol > name
+                m_symlocs.emplace(f, s);  // Insert into the right position
+        }
+    }
+    // Find the SymLocationDesc for this named param, returning its pointer
+    // or nullptr if that name is not found.
+    const SymLocationDesc* find_symloc(ustring name) const {
+        auto f = std::lower_bound(m_symlocs.begin(), m_symlocs.end(), name);
+        return (f == m_symlocs.end() || f->name != name) ? nullptr : &(*f);
+    }
+
 private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
@@ -1667,6 +1699,7 @@ private:
     std::vector<ustring> m_attributes_needed;
     std::vector<ustring> m_attribute_scopes;
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
+    std::vector<SymLocationDesc> m_symlocs; ///< SORTED!!
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;
     bool m_unknown_attributes_needed;
@@ -1688,6 +1721,8 @@ private:
     friend class ShadingContext;
 };
 
+
+
 /// The full context for executing a shader group.
 ///
 class OSLEXECPUBLIC ShadingContext {
@@ -1705,11 +1740,13 @@ public:
 
     /// Bind a shader group and globals to this context and prepare to
     /// execute. (See similarly named method of ShadingSystem.)
-    bool execute_init (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
+    bool execute_init(ShaderGroup& group, int shadeindex,
+                      ShaderGlobals& globals, void* output_base_ptr, bool run);
 
     /// Execute the layer whose index is specified. (See similarly named
     /// method of ShadingSystem.)
-    bool execute_layer (ShaderGlobals &globals, int layer);
+    bool execute_layer(int shadeindex, ShaderGlobals& globals,
+                       void* output_base_ptr, int layer);
 
     /// Signify that this context is done with the current execution of the
     /// group. (See similarly named method of ShadingSystem.)
@@ -1717,7 +1754,8 @@ public:
 
     /// Execute the shader group, including init, run of single entry point
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
-    bool execute (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
+    bool execute(ShaderGroup& group, int shadeindex, ShaderGlobals& globals,
+                 void* output_base_ptr, bool run);
 
 #if OSL_USE_BATCHED
     // Group all batched methods behind a templated interface

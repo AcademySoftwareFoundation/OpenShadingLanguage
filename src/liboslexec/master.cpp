@@ -131,21 +131,21 @@ ShaderMaster::resolve_syms ()
             m_lastparam = i+1;
             if (s.dataoffset() >= 0) {
                 if (s.typespec().simpletype().basetype == TypeDesc::INT)
-                    s.data (&(m_idefaults[s.dataoffset()]));
+                    s.set_dataptr(SymArena::Absolute, &(m_idefaults[s.dataoffset()]));
                 else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
-                    s.data (&(m_fdefaults[s.dataoffset()]));
+                    s.set_dataptr(SymArena::Absolute, &(m_fdefaults[s.dataoffset()]));
                 else if (s.typespec().simpletype().basetype == TypeDesc::STRING)
-                    s.data (&(m_sdefaults[s.dataoffset()]));
+                    s.set_dataptr(SymArena::Absolute, &(m_sdefaults[s.dataoffset()]));
             }
         }
         if (s.symtype() == SymTypeConst) {
             if (s.dataoffset() >= 0) {
                 if (s.typespec().simpletype().basetype == TypeDesc::INT)
-                    s.data (&(m_iconsts[s.dataoffset()]));
+                    s.set_dataptr(SymArena::Absolute, &(m_iconsts[s.dataoffset()]));
                 else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
-                    s.data (&(m_fconsts[s.dataoffset()]));
+                    s.set_dataptr(SymArena::Absolute, &(m_fconsts[s.dataoffset()]));
                 else if (s.typespec().simpletype().basetype == TypeDesc::STRING)
-                    s.data (&(m_sconsts[s.dataoffset()]));
+                    s.set_dataptr(SymArena::Absolute, &(m_sconsts[s.dataoffset()]));
             }
         }
         ++i;

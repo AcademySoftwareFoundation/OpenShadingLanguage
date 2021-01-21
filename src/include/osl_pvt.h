@@ -466,8 +466,7 @@ class Symbol {
 public:
     Symbol(ustring name, const TypeSpec& datatype, SymType symtype,
            ASTNode* declaration_node = NULL)
-        : m_data(NULL)
-        , m_name(name)
+        : m_name(name)
         , m_typespec(datatype)
         , m_size(datatype.is_unsized_array()
                      ? 0
@@ -483,13 +482,14 @@ public:
         , m_readonly(false)
         , m_is_uniform(true)
         , m_forced_llvm_bool(false)
-        , m_valuesource(DefaultVal)
+        , m_arena(static_cast<unsigned int>(SymArena::Unknown))
         , m_free_data(false)
+        , m_valuesource(static_cast<unsigned int>(DefaultVal))
         , m_fieldid(-1)
         , m_layer(-1)
         , m_scope(0)
-        , m_dataoffset(-1)
-        , m_wide_dataoffset(-1)
+        , m_dataoffset(unknown_offset)
+        , m_wide_dataoffset(unknown_offset)
         , m_initializers(0)
         , m_node(declaration_node)
         , m_alias(NULL)
@@ -501,11 +501,13 @@ public:
         , m_lastwrite(-1)
     {
     }
-    Symbol() : m_data(NULL), m_free_data(false) {}
+    Symbol() : m_free_data(false) {}
     ~Symbol()
     {
-        if (m_free_data)
-            delete[](char*) m_data;
+        if (m_free_data) {
+            OSL_ASSERT(arena() == SymArena::Absolute);
+            delete[] static_cast<char*>(m_data);
+        }
     }
 
     const Symbol& operator=(const Symbol& a)
@@ -597,22 +599,46 @@ public:
         return symtype_shortname(symtype());
     }
 
+    // Special offset meaning that the offset is unknown/uninitialized.
+    // Sure, you could have an offset of -1, but because of alignment we
+    // never will.
+    static const int unknown_offset = -1;
+
     /// Return a pointer to the symbol's data.
-    ///
     void* data() const { return m_data; }
 
-    // Forward compatibility
+    /// Return a pointer to the symbol's data.
     void* dataptr() const { return m_data; }
 
-    /// Specify the location of the symbol's data.
-    ///
-    void data(void* d) { m_data = d; }
+#if 0
+    /// Return a pointer to the symbol's data.
+    void* dataptrWRONG(void* arenastart, int64_t byteoffset = 0) const {
+        OSL_ASSERT(arena() != SymArena::Unknown
+                       && "Asked for dataptr of Symbol with unknown arena");
+        OSL_ASSERT((arena() == SymArena::Absolute) == (arenastart == nullptr)
+                   && "Symbol should have null arenastart if and only if it's an absolute address");
+        return static_cast<char*>(arenastart) + m_dataoffset + byteoffset;
+    }
+#endif
+
+    /// Specify the location of the symbol's data, relative to an arena
+    /// (which for now must be Absolute).
+    void set_dataptr(SymArena arena, void* ptr)
+    {
+        OSL_ASSERT(arena == SymArena::Absolute);
+        m_arena = static_cast<unsigned int>(arena);
+        m_data  = ptr;
+        // m_dataoffset = static_cast<int64_t>((char*)ptr - (char*)0);
+    }
+
 
     void dataoffset(int d) { m_dataoffset = d; }
     int dataoffset() const { return m_dataoffset; }
 
     void wide_dataoffset(int d) { m_wide_dataoffset = d; }
     int wide_dataoffset() const { return m_wide_dataoffset; }
+
+    SymArena arena() const { return static_cast<SymArena>(m_arena); }
 
     void initializers(int d) { m_initializers = d; }
     int initializers() const { return m_initializers; }
@@ -834,12 +860,13 @@ public:
     std::ostream& print_vals(std::ostream& out, int maxvals = 100000000) const;
 
 protected:
-    void* m_data;                      ///< Pointer to the data
-    ustring m_name;                    ///< Symbol name (unmangled)
-    TypeSpec m_typespec;               ///< Data type of the symbol
-    int m_size;                        ///< Size of data (in bytes)
-    char m_symtype;                    ///< Kind of symbol (param, local, etc.)
-    unsigned m_has_derivs : 1;         ///< Step to derivs (0 == has no derivs)
+    void* m_data = nullptr;     ///< Pointer to the data relative to
+                                ///    the start of its arena.
+    ustring m_name;             ///< Symbol name (unmangled)
+    TypeSpec m_typespec;        ///< Data type of the symbol
+    int m_size;                 ///< Size of data (in bytes, without derivs)
+    unsigned m_symtype : 4;     ///< Kind of symbol (param, local, etc.)
+    unsigned m_has_derivs : 1;  ///< Step to derivs (0 == has no derivs)
     unsigned m_const_initializer : 1;  ///< initializer is a constant expression
     unsigned m_connected_down : 1;   ///< Connected to a later/downstream layer
     unsigned m_initialized : 1;      ///< If a param, has it been initialized?
@@ -849,16 +876,19 @@ protected:
     unsigned m_readonly : 1;         ///< read-only symbol
     unsigned m_is_uniform : 1;  ///< symbol is uniform under batched execution
     unsigned m_forced_llvm_bool : 1;  ///< Is this sym forced to be llvm bool?
-    char m_valuesource;               ///< Where did the value come from?
-    bool m_free_data;                 ///< Free m_data upon destruction?
+    unsigned m_arena : 3;             ///< Storage arena
+    unsigned m_free_data : 1;         ///< Free m_data upon destruction?
+    unsigned m_valuesource : 2;       ///< Where did the value come from?
     short m_fieldid;                  ///< Struct field of this var (or -1)
-    short m_layer;                ///< Layer (within the group) this belongs to
-    int m_scope;                  ///< Scope where this symbol was declared
-    int m_dataoffset;             ///< Offset of the data (-1 for unknown)
-    int m_wide_dataoffset;        ///< Offset of the wide data (-1 for unknown)
+    short m_layer;          ///< Layer (within the group) this belongs to
+    int m_scope;            ///< Scope where this symbol was declared
+    int m_dataoffset;       ///< Offset of the data (-1 for unknown)
+    int m_wide_dataoffset;  ///< Offset of the wide data (-1 for unknown)
+        // N.B. dataoffset is just used in temporary ways, like offsets into
+        // constant tables. It's not part of the actual memory address!
     int m_initializers;           ///< Number of default initializers
-    ASTNode* m_node;              ///< Ptr to the declaration of this symbol
-    Symbol* m_alias;              ///< Another symbol that this is an alias for
+    ASTNode* m_node = nullptr;    ///< Ptr to the declaration of this symbol
+    Symbol* m_alias = nullptr;    ///< Another symbol that this is an alias for
     int m_initbegin, m_initend;   ///< Range of init ops (for params)
     int m_firstread, m_lastread;  ///< First and last op the sym is read
     int m_firstwrite, m_lastwrite;  ///< First and last op the sym is written

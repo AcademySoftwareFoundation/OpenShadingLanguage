@@ -619,6 +619,9 @@ public:
     llvm::Constant* constant128(uint64_t i);
     llvm::Constant* constant128(uint64_t left, uint64_t right);
 
+    // Return an llvm::value holding an explicit signed int64_t constant.
+    llvm::Constant* constanti64(int64_t i);
+
     /// Return an llvm::Value holding the given size_t constant.
     llvm::Constant* constant(size_t i);
 
@@ -705,6 +708,11 @@ public:
     /// If ptrtype is NULL, just return a void*.
     llvm::Value *offset_ptr (llvm::Value *ptr, int offset,
                              llvm::Type *ptrtype=NULL);
+
+    /// Generate a pointer that is (ptrtype)((char *)ptr + offset).
+    /// If ptrtype is NULL, just return a void*.
+    llvm::Value *offset_ptr (llvm::Value *ptr, llvm::Value* offset,
+                             llvm::Type *ptrtype=nullptr);
 
     void assume_ptr_is_aligned(llvm::Value *ptr, unsigned alignment);
 

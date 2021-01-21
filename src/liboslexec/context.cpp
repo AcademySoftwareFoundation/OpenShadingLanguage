@@ -61,7 +61,9 @@ ShadingContext::~ShadingContext ()
 
 
 bool
-ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
+ShadingContext::execute_init(ShaderGroup& sgroup, int shadeindex,
+                             ShaderGlobals& ssg, void* output_base_ptr,
+                             bool run)
 {
     if (m_group)
         execute_cleanup ();
@@ -117,7 +119,7 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
         ssg.context = this;
         ssg.renderer = renderer();
         ssg.Ci = NULL;
-        run_func (&ssg, m_heap.get());
+        run_func (&ssg, m_heap.get(), output_base_ptr, shadeindex);
     }
 
     if (profile)
@@ -128,7 +130,8 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 
 
 bool
-ShadingContext::execute_layer (ShaderGlobals &ssg, int layernumber)
+ShadingContext::execute_layer(int shadeindex, ShaderGlobals& ssg,
+                              void* output_base_ptr, int layernumber)
 {
     if (!group() || group()->nlayers() == 0 || group()->does_nothing())
         return false;
@@ -141,7 +144,7 @@ ShadingContext::execute_layer (ShaderGlobals &ssg, int layernumber)
     if (! run_func)
         return false;
 
-    run_func (&ssg, m_heap.get());
+    run_func (&ssg, m_heap.get(), output_base_ptr, shadeindex);
 
     if (profile)
         m_ticks += timer.ticks();
@@ -174,7 +177,8 @@ ShadingContext::execute_cleanup ()
 
 
 bool
-ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
+ShadingContext::execute (ShaderGroup &sgroup, int shadeindex,
+                         ShaderGlobals &ssg, void* output_base_ptr, bool run)
 {
     int n = sgroup.m_exec_repeat;
     Vec3 Psave, Nsave;   // for repeats
@@ -190,10 +194,11 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 
     bool result = true;
     while (1) {
-        if (! execute_init (sgroup, ssg, run))
+        if (! execute_init (sgroup, shadeindex, ssg, output_base_ptr, run))
             return false;
         if (run && n)
-            execute_layer (ssg, group()->nlayers()-1);
+            execute_layer (shadeindex, ssg, output_base_ptr,
+                           group()->nlayers() - 1);
         result = execute_cleanup ();
         if (--n < 1)
             break;   // done
@@ -208,7 +213,9 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     return result;
 }
 
+
 #if OSL_USE_BATCHED
+
 template<int WidthT>
 bool
 ShadingContext::Batched<WidthT>::execute_init
@@ -489,13 +496,16 @@ ShadingContext::symbol_data (const Symbol &sym) const
         if (sym.dataoffset() >= 0 && (int)m_heapsize > sym.dataoffset()) {
             // lives on the heap
             return m_heap.get() + sym.dataoffset();
+            // TODO(arenas): OSL_ASSERT(sym.arena() == SymArena::Heap);
+            // TODO(arenas):  ??   return sym.dataptr(m_heap.get());
         }
     }
 
     // doesn't live on the heap
     if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) &&
         (sym.valuesource() == Symbol::DefaultVal || sym.valuesource() == Symbol::InstanceVal)) {
-        return sym.data();
+        // TODO(arenas): OSL_ASSERT(sym.arena() == SymArena::Absolute);
+        return sym.dataptr();
     }
 
     return NULL;  // not something we can retrieve

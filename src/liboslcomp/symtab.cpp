@@ -97,7 +97,7 @@ Symbol::valuesourcename() const
 std::ostream&
 Symbol::print_vals(std::ostream& out, int maxvals) const
 {
-    if (!data())
+    if (!data() /* TODO: arena() != SymArena::Absolute */)
         return out;
     TypeDesc t = typespec().simpletype();
     int n      = std::min(int(t.aggregate * t.numelements()), maxvals);

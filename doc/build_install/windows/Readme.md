@@ -300,12 +300,6 @@ TIP: this process is getting better, I will update the document soon
 **Conclusion:**
 For easy installation you just need to setup your Environment Variables in `yourPath/OpenShadingLanguage/doc/build_install/windows/osl_env_vars_setup.bat` based on your paths
 
-`Reza Aarabi` (`madoodia.com`)
-
----
-
-**Additional information from Reza:**
-
 It is a custom setup, for example all dependencies are built before osl, because I had lots of issues on using external installation (like llvm)
 and I tried this method on llvm 7, 8 and 9, all with error, so my current build setup is on llvm 11 and C++14, it can be changed in code. (I am trying to make it easy to use for changing configs with arguments)
 
@@ -314,5 +308,7 @@ Please take a look at docs and let me know my mistakes.
 This method worked fine for me for release, debug and debugging in visual studio.
 
 I am trying to build OSL on `Linux` with same method. If it worked fine I will Update the build system.
+
+---
 
 ![osl_building_on_windows](./osl_building_on_windows.jpg)

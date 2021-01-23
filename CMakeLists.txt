@@ -1,11 +1,11 @@
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 cmake_minimum_required (VERSION 3.12)
 project (OSL VERSION 1.12.1.0
          LANGUAGES CXX C
-         HOMEPAGE_URL "https://github.com/imageworks/OpenShadingLanguage")
+         HOMEPAGE_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")
 set (PROJ_NAME ${PROJECT_NAME})    # short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case

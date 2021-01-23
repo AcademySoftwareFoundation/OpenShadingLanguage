@@ -1,6 +1,6 @@
 // Copyright Contributors to the Open Shading Language project.
 // SPDX-License-Identifier: BSD-3-Clause
-// https://github.com/imageworks/OpenShadingLanguage
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 /// The purpose of this file is to provide a stub for the OSLQuery::init()
 /// method for an app that do not have a full ShadingSystem (oslinfo for

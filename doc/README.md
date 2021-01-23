@@ -17,7 +17,7 @@ Of particular interest are these topics. Please consider adding any information 
 
 If you have some relevant content and you'd like to discuss its inclusion, please use the OSL Documentation discussion:
 
-[OSL Documentation](https://github.com/imageworks/OpenShadingLanguage/discussions/1324)
+[OSL Documentation](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/discussions/1324)
 
 or alternatively, you may post to:
 

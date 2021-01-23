@@ -1,13 +1,13 @@
 <div align="center">
-  <img src="https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/Figures/osl-short.png" width=256 height=128>
+  <img src="https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/master/src/doc/Figures/osl-short.png" width=256 height=128>
 
   <H1>Open Shading Language</H1>
 </div>
 
 [![Open Shading Language Reel 2020](http://img.youtube.com/vi/nmwMz1YnGPA/0.jpg)](https://www.youtube.com/watch?v=nmwMz1YnGPA "Open Shading Language Reel 2020")
 
-[![Build Status](https://github.com/imageworks/OpenShadingLanguage/workflows/CI/badge.svg)](https://github.com/imageworks/OpenShadingLanguage/actions)
-[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage/LICENSE)
+[![Build Status](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/workflows/CI/badge.svg)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/actions)
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/LICENSE.md)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3061/badge)](https://bestpractices.coreinfrastructure.org/projects/3061)
 
 
@@ -36,7 +36,7 @@ renderers used for high-end VFX and animation work. For a full list of films
 and products, see the [filmography](#where-osl-has-been-used).
 
 The OSL code is distributed under the
-["New/3-clause BSD" license](https://github.com/imageworks/OpenShadingLanguage/LICENSE),
+["New/3-clause BSD" license](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/LICENSE.md),
 and the documentation under the [Creative Commons Attribution 4.0 International
 License](https://creativecommons.org/licenses/by/4.0/).  In short, you are
 free to use OSL in your own applications, whether they are free or
@@ -393,7 +393,7 @@ your question quickly (more so than a GH "issue").
 Bugs, build problems, and discovered vulnerabilities that you are relatively
 certain is a legit problem in the code, and for which you can give clear
 instructions for how to reproduce, should be [reported as
-issues](https://github.com/imageworks/OpenShadingLanguage/issues).
+issues](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues).
 
 If confidentiality precludes a public question or issue, you may contact the
 project administrator privately at [lg@imageworks.com](lg@imageworks.com),
@@ -403,36 +403,33 @@ including for security-related issues.
 Contributing
 ------------
 
-OSL welcomes code contributions, and nearly 50 people
-have done so over the years. We take code contributions via the usual GitHub
-pull request (PR) mechanism. Please see [CONTRIBUTING](CONTRIBUTING.md) for
-detailed instructions.
+OSL welcomes code contributions, and nearly 50 people have done so over the
+years. We take code contributions via the usual GitHub pull request (PR)
+mechanism. Please see [CONTRIBUTING](CONTRIBUTING.md) for detailed
+instructions.
 
 
 Contacts, Links, and References
 -------------------------------
 
-[OSL GitHub page](https://github.com/imageworks/OpenShadingLanguage)
+[OSL GitHub page](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage)
 
 [Read or subscribe to the OSL development mail list](https://lists.aswf.io/g/osl-dev)
 
-Email the lead architect:  lg AT imageworks DOT com
-
-[Most recent PDF of the OSL language specification](https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
+[Most recent PDF of the OSL language specification](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
 )
 
-[OSL home page at SPI](http://opensource.imageworks.com/?p=osl)
+[OSL home page at SPI](http://openshadinglanguage.org)
 
 [Sony Pictures Imageworks main open source page](http://opensource.imageworks.com)
 
-If you want to contribute code back to the project, you'll need to
-sign [a Contributor License Agreement](http://opensource.imageworks.com/cla/).
 
 
 Credits
 -------
 
-The current project leadership is documented in the GOVERNANCE.md file.
+The current project leadership is documented in the
+[Governance](GOVERNANCE.md) file.
 
 Many people have contributed features, bug fixes, and other changes to OSL
 over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
@@ -471,9 +468,9 @@ developers and users at other VFX and animation studios.
 The OSL implementation depends upon several other open source packages,
 all with compatible licenses:
 
-* [OpenImageIO (c) Larry Gritz, et al](http://www.openimageio.org)
-* [Boost - various authors](http://www.boost.org)
-* [IlmBase (c) Industrial Light & Magic](http://www.openexr.com)
+* [OpenImageIO](http://www.openimageio.org)
+* [Boost](http://www.boost.org)
+* [IlmBase](http://www.openexr.com)
 * [LLVM Compiler Infrastructure](http://llvm.org)
 
 OSL's documentation incorporates parts of [Markdeep](https://casual-effects.com/markdeep/)

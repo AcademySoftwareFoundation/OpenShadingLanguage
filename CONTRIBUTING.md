@@ -10,8 +10,8 @@ why it's an open source project. Please review this document to get a
 briefing on our process.
 
 
-Mail List
----------
+Mail List and Slack
+-------------------
 
 Contributors should be reading the osl-dev mail list:
 
@@ -19,12 +19,19 @@ Contributors should be reading the osl-dev mail list:
 
 You can sign up for the mail list on your own using the link above.
 
+We also have an `openshadinglanguage` channel on the
+[ASWF Slack](https://slack.aswf.io/). But note that the Slack channel is
+not archived, so while it's ok for fleeting comments, it is unreliable as
+a permanent repository of useful information. Serious discussions that are
+we would want to refer to over time should be sent to the mail list instead.
+
 
 Bug Reports and Issue Tracking
 ------------------------------
 
-We use GitHub's issue tracking system for bugs and enhancements:
-https://github.com/imageworks/OpenShadingLanguage/issues
+We use GitHub's issue tracking system for reporting bugs and requesting
+enhancements:
+https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues
 
 **If you are merely asking a question ("how do I...")**, please do not file an
 issue, but instead ask the question on the [OSL developer mail
@@ -48,46 +55,30 @@ Contributor License Agreement (CLA) and Intellectual Property
 To protect the project -- and the contributors! -- we do require a
 Contributor License Agreement (CLA) for anybody submitting changes.
 
-**While the repo is still under github.com/imageworks**
-
-* If you are an individual writing the code on your own time and you're SURE
-you are the sole owner of any intellectual property you contribute, use the
-[Individual CLA](http://opensource.imageworks.com/cla/pdf/Imageworks_Contributor_License_Agreement_Individual.pdf).
-
-* If you are writing the code as part of your job, or if there is any
-possibility that your employers might think they own any intellectual
-property you create, then you should use the [Corporate
-CLA](http://opensource.imageworks.com/cla/pdf/Imageworks_Contributor_License_Agreement_Corporate.pdf).
-
-Download the appropriate CLA from the links above, print, sign, and rescan
-it (or just add a digital signature directly), and email it to:
-opensource@imageworks.com
-
-Our CLA's are based on those used by Apache and many other open source
-projects.
-
-**After the repo is moved to github.com/AcademySoftwareFoundation**
-
-OSL uses EasyCLA for managing CLAs, which automatically checks to ensure
-CLAs are signed by a contributor before a commit can be merged.
-
-* If you are an individual writing the code on your own time and
-  you're SURE you are the sole owner of any intellectual property you
-  contribute, you can [sign the CLA as an individual contributor](https://github.com/communitybridge/easycla/blob/master/contributors/sign-a-cla-as-an-individual-contributor-to-github.md).
-
-* If you are writing the code as part of your job, or if there is any
+* [Corporate CLA](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/ASWF/OSL-CLA-corporate.md)
+  If you are writing the code as part of your job, or if there is any
   possibility that your employers might think they own any intellectual
-  property you create, then you should use the [Corporate Contributor
-  Licence Agreement](https://github.com/communitybridge/easycla/blob/master/contributors/contribute-to-a-github-company-project.md).
+  property you create. This needs to be executed by someone who has
+  signatory power for the company.
 
-The OSL CLAs may be previewed here:
-[Corporate](https://github.com/imageworks/OpenShadingLanguage/ASWF/OSL-CLA-corporate.md),
-[Individual]((https://github.com/imageworks/OpenShadingLanguage/ASWF/OSL-CLA-individual.md)).
+* [Individual]((https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/ASWF/OSL-CLA-individual.md)).
+  If you are an individual writing the code on your own time and you're SURE
+  you are the sole owner of any intellectual property you contribute.
+
+The easiest way to sign CLAs is digitally [using EasyCLA](https://corporate.v1.easycla.lfx.linuxfoundation.org).
+Companies who prefer not to use the online tools may sign, scan, and email
+the executed copy to manager@lfprojects.org.
+
+The CLA allows a company to name a "CLA Manager" (who does not need
+signatory power) who has the ability to use the online system to add or
+delete individual employees of the company who are authorized to submit pull
+requests, without needing to get an executive to amend and sign the
+agreement each time.
 
 Please note that these CLAs are based on the Apache 2.0 CLAs, and differ
 minimally, only as much as was required to correctly describe the EasyCLA
-process and our use of a "CLA manager" who can amend the list of allowed
-contributors without needing re-execute an amended signed CLA.
+process and our use of a CLA manager.
+
 
 ** Contribution sign off
 
@@ -120,7 +111,7 @@ The best way to submit changes is via GitHub Pull Request. GitHub has a
 All code must be formally reviewed before being merged into the official
 repository. The protocol is like this:
 
-1. Get a GitHub account, fork imageworks/OpenShadingLanguage to create your
+1. Get a GitHub account, fork AcademySoftwareFoundation/OpenShadingLanguage to create your
 own repository on GitHub, and then clone it to get a repository on your
 local machine.
 

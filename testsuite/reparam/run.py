@@ -2,7 +2,7 @@
 
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 command += testshade ("-g 128 128 --layer testlay -param:lockgeom=0 scale 5.0 test -iters 2 -reparam testlay scale 15.0 -od uint8 -o Cout out.tif")
 outputs = [ "out.txt", "out.tif" ]

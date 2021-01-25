@@ -2,7 +2,7 @@
 
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 command += testshade("-g 16 16 -od uint8 -o Cout out0.tif wrcloud")
 command += testshade("-g 256 256 -param radius 0.01 -od uint8 -o Cout out1.tif rdcloud")

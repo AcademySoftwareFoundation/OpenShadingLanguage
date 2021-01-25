@@ -2,7 +2,7 @@
 
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # Test what happens when an oso file contains an unknown instruction
 

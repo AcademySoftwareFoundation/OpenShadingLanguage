@@ -79,7 +79,7 @@ Here are the steps to check out, build, and test the OSL distribution:
 
 1. Check out a copy of the source code from the Git repository:
 
-        git clone https://github.com/imageworks/OpenShadingLanguage.git osl
+        git clone https://github.com/AcademySoftwareFoundation/OpenShadingLanguage.git osl
 
 2. Change to the distribution directory and 'make'
 
@@ -120,4 +120,4 @@ Here are the steps to check out, build, and test the OSL distribution:
 Troubleshooting
 ----------------
 
-- [Build issues on macOS Catalina (fatal error: 'wchar.h' file not found)](https://github.com/imageworks/OpenShadingLanguage/issues/1055#issuecomment-581920327)
+- [Build issues on macOS Catalina (fatal error: 'wchar.h' file not found)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues/1055#issuecomment-581920327)

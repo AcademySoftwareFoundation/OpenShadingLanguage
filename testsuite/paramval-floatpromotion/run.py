@@ -2,7 +2,7 @@
 
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # Here we have a parameter 'a' that's a color, and we are passing just
 # a float, and a parameter 'p' that's a point but we're passing a vector.

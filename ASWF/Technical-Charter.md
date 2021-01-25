@@ -200,7 +200,7 @@ must comply with the terms of this Charter.
 
     - **i.** All new inbound code contributions to the Project must be made
       using the BSD 3-Clause License (available here:
-      https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE)
+      https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/master/LICENSE)
       (the "Project License").
 
     - **ii.** All new inbound code contributions must:

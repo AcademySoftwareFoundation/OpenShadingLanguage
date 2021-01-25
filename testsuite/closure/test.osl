@@ -1,6 +1,6 @@
 // Copyright Contributors to the Open Shading Language project.
 // SPDX-License-Identifier: BSD-3-Clause
-// https://github.com/imageworks/OpenShadingLanguage
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 shader
 test (float Kd = 0.5, float Ks = 0.5, float exponent = 20, color opacity = 0.5,

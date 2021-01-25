@@ -2,7 +2,7 @@
 
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # Test the 'lazylayer' option.
 # We have two layers, but the first one is never connected to the second.

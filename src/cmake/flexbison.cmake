@@ -1,6 +1,6 @@
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # LG's macros for using flex and bison.
 # Merely including this file will require flex and bison to be found.

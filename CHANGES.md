@@ -1892,7 +1892,7 @@ API changes, new options, new ShadingSystem features (for renderer writers):
      a good way to "extract" a shader network from the midst of a complex
      renderer and then be able to reconstitute it inside a debugging test
      harness like testshade. (1.5.8) (#381) For more detail and explanation,
-     please see https://github.com/imageworks/OpenShadingLanguage/pull/381
+     please see https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/381
 * New per-ShaderGroup attributes:
    * ShadingSystem::getattribute(group,...) allows queries that retrieve
      all the names and types of userdata the compiled group may need

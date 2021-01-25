@@ -1,6 +1,6 @@
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # Macro to add an executable build target. The executable name can be
 # specified with NAME, otherwise is inferred from the subdirectory name. The

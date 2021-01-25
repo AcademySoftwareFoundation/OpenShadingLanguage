@@ -2,7 +2,7 @@
 
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # Set up a texture that is a gradient image with a distinct alpha gradient
 # of 0.5 from left to right and 0.25 right to left, and no change in value

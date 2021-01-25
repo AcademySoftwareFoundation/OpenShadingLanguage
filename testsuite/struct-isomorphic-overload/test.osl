@@ -1,6 +1,6 @@
 // Copyright Contributors to the Open Shading Language project.
 // SPDX-License-Identifier: BSD-3-Clause
-// https://github.com/imageworks/OpenShadingLanguage
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 // The point of this test is to see what happens when we overload
 // two structs that have the same layout. There was a bug where this

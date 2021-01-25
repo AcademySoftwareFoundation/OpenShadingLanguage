@@ -5,7 +5,7 @@ includedir=${prefix}/include
 
 Name: oslexec
 Description: oslexec Execute compiled OSL shaders
-URL: https://github.com/imageworks/OpenShadingLanguage
+URL: https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 Version: @PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@
 Libs: -L${libdir} -loslexec
 Cflags: -I${includedir}

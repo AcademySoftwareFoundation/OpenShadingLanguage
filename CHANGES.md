@@ -18,6 +18,9 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   -O1, -O2, -O3) but we think for shaders are just as performant but with
   lower JIT time. These are currently experimental, but we are benchmarking
   to determine if they should be the new defaults. #1250 (1.12.0.0)
+* ShadingSystem attribute "searcpath:library" gives a searchpath for finding
+  runtime-loadable implementation modules for ISA-optimized operaionts.
+  #1310 (1.12.1)
 
 Continued work on experimental SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
@@ -25,6 +28,9 @@ Continued work on experimental SIMD batched shading mode:
 * Add interface to batched RendererServices. #1276 (1.12.0.1)
 * Batched testshade. #1298 (1.12.1)
 * ShadingSystem plumbing to support batched execution. #1301 (1.12.1)
+* Batched analsys to figure out which symbols need to be varying or uniform,
+  and which operations require masking. #1313 #1318 #1322 (1.12.1)
+* Additional infrastructure for batched analsys. #1316 (1.12.1)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -63,6 +69,8 @@ Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
   #1260 (1.12.0.1/1.11.9)
 * Minor fixes to the internal TypeSpec and Symbol classes. #1267 (1.12.0.1)
+* Switch from deprecated call to OIIO::parallel_image to the new version.
+  #1317 (1.11.11/1.12.1)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -76,6 +84,8 @@ Build & test system improvements:
       #1286 (1.12.0.1/1.11.9)
     - Extend checked_find_package with VERSION_MIN and VERSION_MAX. #1303
       (1.12.1/1.11.10)
+    - Make the CMake build scripts more friendly to being a subproject.
+      #1304 #1319 (1.11.11/1.12.1)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
@@ -88,6 +98,7 @@ Build & test system improvements:
     - Work to ensure that OIIO will build correctly against the upcoming
       Imath 3.0 and OpenEXR 3.0. #1299 (1.11.10/1.12.1)
 * Testing and Continuous integration (CI) systems:
+
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)
@@ -98,7 +109,23 @@ Build & test system improvements:
 Documentation:
 * A simple self-contained Cuda/OptiX example has been added as
   testsuite/example-cuda. #1280 (1.12.0.1)
+* Update CLAs, Charter, GOVERNANCE, particularly after acceptance of new
+  CLAs and moving the repo to the ASWF GitHub account. #1308 #1240 #1314
+  (1.11.11/1.12.1)
+* First steps in new documentation and scripts for building OSL on Windows.
+  #1326 (1.12.1)
 
+
+Release 1.11.11 -- 1 Feb 2021 (compared to 1.11.10)
+----------------------------------------------------
+* Build: Make the CMake build system more friendly to being a subproject.
+  #1304
+* Build: Improve dependency on Imath/OpenEXR include files.
+* CI: Fixes to Mac CI. #1315
+* Docs: Update CLAs, Charter, GOVERNANCE, particularly after acceptance of
+  new CLAs and moving the repo to the ASWF GitHub account. #1308 #1240 #1314
+* Internals: Switch from deprecated call to OIIO::parallel_image to the new
+  version. #1317
 
 Release 1.11.10 -- 1 Dec 2020 (compared to 1.11.9)
 ---------------------------------------------------

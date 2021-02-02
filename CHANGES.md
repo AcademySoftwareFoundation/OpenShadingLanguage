@@ -1,9 +1,16 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.11 -- 1 Jan 2021? (compared to 1.11.10)
+Release 1.11.11 -- 1 Feb 2021 (compared to 1.11.10)
 ----------------------------------------------------
-
+* Build: Make the CMake build system more friendly to being a subproject.
+  #1304
+* Build: Improve dependency on Imath/OpenEXR include files.
+* CI: Fixes to Mac CI. #1315
+* Docs: Update CLAs, Charter, GOVERNANCE, particularly after acceptance of
+  new CLAs and moving the repo to the ASWF GitHub account. #1308 #1240 #1314
+* Internals: Switch from deprecated call to OIIO::parallel_image to the new
+  version. #1317
 
 Release 1.11.10 -- 1 Dec 2020 (compared to 1.11.9)
 ---------------------------------------------------

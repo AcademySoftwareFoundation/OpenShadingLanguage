@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.12 -- ?? 2021 (compared to 1.11.11)
+----------------------------------------------------
+
+
 Release 1.11.11 -- 1 Feb 2021 (compared to 1.11.10)
 ----------------------------------------------------
 * Build: Make the CMake build system more friendly to being a subproject.

@@ -16,6 +16,9 @@
 #error "LLVM minimum version required for OSL is 7.0"
 #endif
 
+#include <llvm/InitializePasses.h>
+#include <llvm/Pass.h>
+#include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DebugInfoMetadata.h>
@@ -46,6 +49,10 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/PrettyStackTrace.h>
+#include <llvm/Analysis/BasicAliasAnalysis.h>
+#include <llvm/Analysis/TypeBasedAliasAnalysis.h>
+#include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -57,6 +64,10 @@
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
+
+#if OSL_LLVM_VERSION >= 120
+#include <llvm/CodeGen/Passes.h>
+#endif
 
 // additional includes for PTX generation
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
@@ -115,6 +126,10 @@ static inline llvm::VectorType* llvmVectorGet(llvm::Type *llvmType, unsigned wid
     return llvm::VectorType::get(llvmType, width, false);
 #endif
 }
+
+#if OSL_LLVM_VERSION >= 120
+llvm::raw_os_ostream raw_cout(std::cout);
+#endif
 
 }; // end anon namespace
 
@@ -640,7 +655,8 @@ LLVM_Util::debug_pop_function()
     // that has been finalized, point it back to the compilation unit
     OSL_ASSERT(m_builder);
     OSL_ASSERT(m_builder->getCurrentDebugLocation().get() != nullptr);
-    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+    m_builder->SetCurrentDebugLocation(llvm::DILocation::get(getCurrentDebugScope()->getContext(),
+                static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
 
@@ -715,7 +731,8 @@ LLVM_Util::debug_set_location(ustring sourcefile, int sourceline)
     }
     if (newDebugLocation) {
         llvm::DebugLoc debug_location =
-                llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
+                llvm::DILocation::get(sp->getContext(),
+                        static_cast<unsigned int>(sourceline),
                         static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                         sp,
                         inlineSite);
@@ -793,7 +810,8 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     m_builder = new IRBuilder (block);
     if (this->debug_is_enabled()) {
         OSL_ASSERT(getCurrentDebugScope());
-        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+        m_builder->SetCurrentDebugLocation(llvm::DILocation::get(getCurrentDebugScope()->getContext(),
+                static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
     }
@@ -1217,7 +1235,13 @@ LLVM_Util::make_jit_execengine (std::string *err,
     options.RelaxELFRelocations = false;
     //options.DebuggerTuning = llvm::DebuggerKind::GDB;
 
+    // TODO: Find equivalent function for PrintMachineCode post LLVM 12
+#if OSL_LLVM_VERSION < 120
+    // This option disappeared from the TargetOptions struct in LLVM 12.
+    // It is instead accomplished with a MachineFunctionPrinterPass.
     options.PrintMachineCode = dumpasm();
+#endif
+
     engine_builder.setTargetOptions(options);
 
     detect_cpu_features(requestedISA, !jit_fma());

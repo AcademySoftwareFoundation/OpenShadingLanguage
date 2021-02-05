@@ -16,7 +16,6 @@
                              (100*OPENEXR_VERSION_MINOR) + \
                              OPENEXR_VERSION_PATCH)
 #if OSL_OPENEXR_VERSION >= 20599 /* 2.5.99: pre-3.0 */
-#   include <Imath/ImathLimits.h>
 #   include <Imath/ImathVec.h>
 #   include <Imath/ImathMatrix.h>
 #   include <Imath/ImathColor.h>

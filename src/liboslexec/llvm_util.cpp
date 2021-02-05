@@ -701,7 +701,8 @@ LLVM_Util::debug_pop_function()
     // that has been finalized, point it back to the compilation unit
     OSL_ASSERT(m_builder);
     OSL_ASSERT(m_builder->getCurrentDebugLocation().get() != nullptr);
-    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+    m_builder->SetCurrentDebugLocation(llvm::DILocation::get(getCurrentDebugScope()->getContext(),
+                static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
 
@@ -776,7 +777,8 @@ LLVM_Util::debug_set_location(ustring sourcefile, int sourceline)
     }
     if (newDebugLocation) {
         llvm::DebugLoc debug_location =
-                llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
+                llvm::DILocation::get(sp->getContext(),
+                        static_cast<unsigned int>(sourceline),
                         static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                         sp,
                         inlineSite);
@@ -958,7 +960,8 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     m_builder = new IRBuilder (block);
     if (this->debug_is_enabled()) {
         OSL_ASSERT(getCurrentDebugScope());
-        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+        m_builder->SetCurrentDebugLocation(llvm::DILocation::get(getCurrentDebugScope()->getContext(),
+                static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
     }
@@ -1386,7 +1389,6 @@ LLVM_Util::make_jit_execengine (std::string *err,
     options.RelaxELFRelocations = false;
     //options.DebuggerTuning = llvm::DebuggerKind::GDB;
 
-    options.PrintMachineCode = dumpasm();
     engine_builder.setTargetOptions(options);
 
     detect_cpu_features(requestedISA, !jit_fma());

@@ -73,9 +73,14 @@ public:
         // 16 bit and 32 bit native mask representation to be passed as a
         // livein.
         m_native_mask_type = llvm::FixedVectorType::get(llvm_type_int32, WidthT);
+#  if OSL_LLVM_VERSION >= 112
+        m_wide_zero_initializer = llvm::ConstantDataVector::getSplat(WidthT,
+                llvm::ConstantInt::get(M.getContext(), llvm::APInt(32,0)));
+#  else
         m_wide_zero_initializer = llvm::ConstantVector::getSplat(
                                     llvm::ElementCount(WidthT, false),
                                     llvm::ConstantInt::get (M.getContext(), llvm::APInt(32,0)));
+#  endif
 #else
         m_llvm_mask_type = llvm::VectorType::get(llvm_type_bool, WidthT);
         m_native_mask_type = llvm::VectorType::get(llvm_type_int32, WidthT);
@@ -341,9 +346,8 @@ public:
         // of the mask promotion will always be correct here.  Should 16 bit
         // support be needed, this pass could be extended.
         m_native_mask_type = llvm::FixedVectorType::get(llvm_type_int32, WidthT);
-        m_wide_zero_initializer = llvm::ConstantVector::getSplat(
-                                    llvm::ElementCount(WidthT, false),
-                                    llvm::ConstantInt::get (M.getContext(), llvm::APInt(32,0)));
+        m_wide_zero_initializer = llvm::ConstantDataVector::getSplat(WidthT,
+                llvm::ConstantInt::get(M.getContext(), llvm::APInt(32,0)));
 #else
         m_llvm_mask_type = llvm::VectorType::get(llvm_type_bool, WidthT);
         m_native_mask_type = llvm::VectorType::get(llvm_type_int32, WidthT);

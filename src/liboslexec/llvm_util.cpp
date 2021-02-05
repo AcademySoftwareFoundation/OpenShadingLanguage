@@ -20,6 +20,7 @@
 #include "llvm_passes.h"
 
 #include <llvm/InitializePasses.h>
+#include <llvm/Pass.h>
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
@@ -59,6 +60,7 @@
 #include <llvm/Analysis/BasicAliasAnalysis.h>
 #include <llvm/Analysis/TypeBasedAliasAnalysis.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -74,10 +76,9 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 
-
-#include <llvm/Pass.h>
-#include <llvm/IR/Function.h>
-#include <llvm/Support/raw_ostream.h>
+#if OSL_LLVM_VERSION >= 120
+#include <llvm/CodeGen/Passes.h>
+#endif
 
 // additional includes for PTX generation
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
@@ -128,6 +129,11 @@ static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
 static std::unique_ptr<std::vector<std::shared_ptr<LLVMMemoryManager> >> jitmm_hold;
 static int jit_mem_hold_users = 0;
+
+
+#if OSL_LLVM_VERSION >= 120
+llvm::raw_os_ostream raw_cout(std::cout);
+#endif
 
 }; // end anon namespace
 
@@ -701,7 +707,8 @@ LLVM_Util::debug_pop_function()
     // that has been finalized, point it back to the compilation unit
     OSL_ASSERT(m_builder);
     OSL_ASSERT(m_builder->getCurrentDebugLocation().get() != nullptr);
-    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+    m_builder->SetCurrentDebugLocation(llvm::DILocation::get(getCurrentDebugScope()->getContext(),
+                static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
 
@@ -776,7 +783,8 @@ LLVM_Util::debug_set_location(ustring sourcefile, int sourceline)
     }
     if (newDebugLocation) {
         llvm::DebugLoc debug_location =
-                llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
+                llvm::DILocation::get(sp->getContext(),
+                        static_cast<unsigned int>(sourceline),
                         static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                         sp,
                         inlineSite);
@@ -958,7 +966,8 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     m_builder = new IRBuilder (block);
     if (this->debug_is_enabled()) {
         OSL_ASSERT(getCurrentDebugScope());
-        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+        m_builder->SetCurrentDebugLocation(llvm::DILocation::get(getCurrentDebugScope()->getContext(),
+                static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
     }
@@ -1386,7 +1395,13 @@ LLVM_Util::make_jit_execengine (std::string *err,
     options.RelaxELFRelocations = false;
     //options.DebuggerTuning = llvm::DebuggerKind::GDB;
 
+    // TODO: Find equivalent function for PrintMachineCode post LLVM 12
+#if OSL_LLVM_VERSION < 120
+    // This option disappeared from the TargetOptions struct in LLVM 12.
+    // It is instead accomplished with a MachineFunctionPrinterPass.
     options.PrintMachineCode = dumpasm();
+#endif
+
     engine_builder.setTargetOptions(options);
 
     detect_cpu_features(requestedISA, !jit_fma());
@@ -1715,14 +1730,14 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
 
         mpm.add(llvm::createReassociatePass());
         mpm.add(llvm::createConstantPropagationPass());
-        mpm.add(llvm::createDeadInstEliminationPass());
+        mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
         mpm.add(llvm::createPromoteMemoryToRegisterPass());
         mpm.add(llvm::createAggressiveDCEPass());
 
         mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createDeadInstEliminationPass());
+        mpm.add(llvm::createDeadCodeEliminationPass());
 
         mpm.add(llvm::createJumpThreadingPass());
         mpm.add(llvm::createSROAPass());
@@ -1746,8 +1761,10 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
 
         // Eliminate and remove as much as possible up front
         mpm.add(llvm::createReassociatePass());
+#if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-        mpm.add(llvm::createDeadInstEliminationPass());
+#endif
+        mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
         mpm.add(llvm::createPromoteMemoryToRegisterPass());
@@ -1784,7 +1801,7 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         mpm.add(llvm::createInstructionCombiningPass());
 
         mpm.add(llvm::createPromoteMemoryToRegisterPass());
-        mpm.add(llvm::createDeadInstEliminationPass());
+        mpm.add(llvm::createDeadCodeEliminationPass());
 
         mpm.add(llvm::createGlobalDCEPass());
         mpm.add(llvm::createConstantMergePass());
@@ -1803,8 +1820,10 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         mpm.add(llvm::createLowerExpectIntrinsicPass());
 
         mpm.add(llvm::createReassociatePass());
+#if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-        mpm.add(llvm::createDeadInstEliminationPass());
+#endif
+        mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
         mpm.add(llvm::createPromoteMemoryToRegisterPass());
@@ -1814,7 +1833,7 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         // optimizations, should attempt to reduce the number of times it is
         // executed, if at all
         mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createDeadInstEliminationPass());
+        mpm.add(llvm::createDeadCodeEliminationPass());
 
         mpm.add(llvm::createSROAPass());
         mpm.add(llvm::createInstructionCombiningPass());
@@ -1822,7 +1841,16 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         mpm.add(llvm::createPromoteMemoryToRegisterPass());
         mpm.add(llvm::createGlobalOptimizerPass());
         mpm.add(llvm::createReassociatePass());
+#if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createIPConstantPropagationPass());
+#else
+        // createIPConstantPropagationPass disappeared with LLVM 12.
+        // Comments in their PR indicate that IPSCCP is better, but I don't
+        // know if that means such a pass should be *right here*. I leave it
+        // to others who use opt==13 to continue to curate this particular
+        // list of passes.
+        mpm.add(llvm::createIPSCCPPass());
+#endif
 
         mpm.add(llvm::createDeadArgEliminationPass());
         mpm.add(llvm::createInstructionCombiningPass());
@@ -1831,8 +1859,10 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         mpm.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         mpm.add(llvm::createReversePostOrderFunctionAttrsPass());
         mpm.add(llvm::createFunctionInliningPass());
+#if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-        mpm.add(llvm::createDeadInstEliminationPass());
+#endif
+        mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
         mpm.add(llvm::createArgumentPromotionPass());
@@ -1845,8 +1875,9 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         mpm.add(llvm::createTailCallEliminationPass());
 
         mpm.add(llvm::createFunctionInliningPass());
+#if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-
+#endif
 
         mpm.add(llvm::createIPSCCPPass());
         mpm.add(llvm::createDeadArgEliminationPass());

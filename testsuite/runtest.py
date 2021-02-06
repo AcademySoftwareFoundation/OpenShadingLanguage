@@ -344,10 +344,8 @@ with open(os.path.join(test_source_dir,"run.py")) as f:
 # if os.path.exists("run.py") :
 #     execfile ("run.py")
 
-# Allow a little more slop for slight pixel differences when in DEBUG
-# mode or when running on remote Travis-CI machines.
-if (("TRAVIS" in os.environ and os.environ["TRAVIS"]) or
-    ("DEBUG" in os.environ and os.environ["DEBUG"])) :
+# Allow a little more slop for slight pixel differences when in DEBUG mode.
+if "DEBUG" in os.environ and os.environ["DEBUG"] :
     failthresh *= 2.0
     hardfail *= 2.0
     failpercent *= 2.0

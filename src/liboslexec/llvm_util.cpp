@@ -1389,6 +1389,11 @@ LLVM_Util::make_jit_execengine (std::string *err,
     options.RelaxELFRelocations = false;
     //options.DebuggerTuning = llvm::DebuggerKind::GDB;
 
+    // TODO: Find equivalent function for PrintMachineCode post LLVM 12
+    #if OSL_LLVM_VERSION < 120
+      options.PrintMachineCode = dumpasm();
+    #endif
+
     engine_builder.setTargetOptions(options);
 
     detect_cpu_features(requestedISA, !jit_fma());

@@ -268,9 +268,9 @@ BatchedBackendLLVM::llvm_assign_zero(const Symbol& sym)
     int num_elements = t.numelements();
     for (int a = 0; a < num_elements; ++a) {
         int numDeriv = sym.has_derivs() ? 3 : 1;
+        llvm::Value* arrind = t.simpletype().arraylen ? ll.constant(a)
+                                                      : NULL;
         for (int d = 0; d < numDeriv; ++d) {
-            llvm::Value* arrind = t.simpletype().arraylen ? ll.constant(a)
-                                                          : NULL;
             for (int c = 0; c < t.aggregate(); ++c) {
                 llvm_store_value(zero, sym, d, arrind, c);
             }

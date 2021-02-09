@@ -76,7 +76,7 @@ PointCloud::get (ustring filename, bool write)
     // Not found. Create a new one.
     Partio::ParticlesDataMutable *partio_cloud = NULL;
     if (!write) {
-        partio_cloud = Partio::read(filename.c_str());
+        partio_cloud = Partio::read(filename.c_str(), false);
         if (! partio_cloud)
             return NULL;
     } else {

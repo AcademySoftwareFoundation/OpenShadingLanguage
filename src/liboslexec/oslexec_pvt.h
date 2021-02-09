@@ -102,6 +102,7 @@ typedef std::shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
 class BackendLLVM;
+class BatchedBackendLLVM;
 struct ConnectedParam;
 
 void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
@@ -116,18 +117,21 @@ typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
 
 /// Signature of an LLVM-IR-generating method
 typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
+typedef bool (*OpLLVMGenWide) (BatchedBackendLLVM &rop, int opnum);
 
 struct OpDescriptor {
     ustring name;           // name of op
     OpLLVMGen llvmgen;      // llvm-generating routine
+    OpLLVMGenWide llvmgenwide; // wide version of llvm-generating routine
     OpFolder folder;        // constant-folding routine
     bool simple_assign;     // wholly overwrites arg0, no other writes,
                             //     no side effects
     int flags;              // other flags
     OpDescriptor () { }
-    OpDescriptor (const char *n, OpLLVMGen ll, OpFolder fold=NULL,
-                  bool simple=false, int flags=0)
-        : name(n), llvmgen(ll), folder(fold), simple_assign(simple), flags(flags)
+    OpDescriptor (const char *n, OpLLVMGen ll, OpLLVMGenWide llw,
+                  OpFolder fold=NULL, bool simple=false, int flags=0)
+        : name(n), llvmgen(ll), llvmgenwide(llw), folder(fold),
+          simple_assign(simple), flags(flags)
     {}
 
     enum FlagValues { None=0, Tex=1, SideEffects=2 };
@@ -903,6 +907,7 @@ private:
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
     friend class BackendLLVM;
+    friend class BatchedBackendLLVM;
 };
 
 
@@ -1643,6 +1648,7 @@ private:
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;
+    friend class OSL::pvt::BatchedBackendLLVM;
     friend class ShadingContext;
 };
 

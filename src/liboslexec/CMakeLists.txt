@@ -22,6 +22,8 @@ set (lib_src
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
           batched_analysis.cpp
           batched_backendllvm.cpp
+          batched_llvm_gen.cpp
+          batched_llvm_instance.cpp
           ../liboslnoise/gabornoise.cpp
           ../liboslnoise/simplexnoise.cpp
     )

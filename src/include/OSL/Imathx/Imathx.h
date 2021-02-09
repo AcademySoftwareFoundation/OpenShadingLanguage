@@ -161,12 +161,12 @@ affineInverse(const Matrix44 &m)
 				ScalarT(1));
 
     auto r = m.x[0][0] * s.x[0][0] + m.x[0][1] * s.x[1][0] + m.x[0][2] * s.x[2][0];
-    auto abs_r = IMATH_INTERNAL_NAMESPACE::abs (r);
+    auto abs_r = std::abs (r);
 
     int may_have_divided_by_zero = 0;
     if (OSL_UNLIKELY(abs_r < ScalarT(1)))
     {
-    	auto mr = abs_r / Imath::limits<ScalarT>::smallest();
+        auto mr = abs_r / std::numeric_limits<ScalarT>::min();
 #if 0
         OSL_PRAGMA(unroll)
         for (int i = 0; i < 3; ++i)
@@ -174,7 +174,7 @@ affineInverse(const Matrix44 &m)
             OSL_PRAGMA(unroll)
             for (int j = 0; j < 3; ++j)
             {
-                if (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[i][j]))
+                if (mr <= std::abs (s.x[i][j]))
                 {
                     may_have_divided_by_zero = 1;
                 }
@@ -184,15 +184,15 @@ affineInverse(const Matrix44 &m)
         // NOTE: using bitwise OR to avoid C++ semantics that cannot evaluate
         // the right hand side of logical OR unless left hand side is false
         if (
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][0])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][1])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][2])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][0])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][1])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][2])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][0])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][1])) |
-            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][2]))
+            (mr <= std::abs (s.x[0][0])) |
+            (mr <= std::abs (s.x[0][1])) |
+            (mr <= std::abs (s.x[0][2])) |
+            (mr <= std::abs (s.x[1][0])) |
+            (mr <= std::abs (s.x[1][1])) |
+            (mr <= std::abs (s.x[1][2])) |
+            (mr <= std::abs (s.x[2][0])) |
+            (mr <= std::abs (s.x[2][1])) |
+            (mr <= std::abs (s.x[2][2]))
             ) {
             may_have_divided_by_zero = 1;
         }

@@ -9,11 +9,11 @@
 # with 'source', not in a separate shell.
 
 # Figure out the platform
-if [[ $TRAVIS_OS_NAME == osx || $RUNNER_OS == macOS ]] ; then
+if [[ $RUNNER_OS == macOS ]] ; then
       export ARCH=macosx
 elif [[ `uname -m` == aarch64 ]] ; then
     export ARCH=aarch64
-elif [[ $TRAVIS_OS_NAME == linux || $RUNNER_OS == Linux || $CIRCLECI == true ]] ; then
+elif [[ $RUNNER_OS == Linux ]] ; then
       export ARCH=linux64
 elif [[ $RUNNER_OS == Windows ]] ; then
       export ARCH=windows64

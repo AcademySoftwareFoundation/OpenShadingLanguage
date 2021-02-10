@@ -32,6 +32,19 @@ jobs:
       image: aswf/ci-osl:2019
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++
@@ -58,6 +71,19 @@ jobs:
       image: aswf/ci-osl:2020
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++
@@ -84,6 +110,19 @@ jobs:
       image: aswf/ci-osl:2021
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++
@@ -112,6 +151,19 @@ jobs:
       image: aswf/ci-osl:2021-clang11
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++
@@ -143,6 +195,19 @@ jobs:
       image: aswftesting/ci-osl:2019-clang10
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++
@@ -173,6 +238,19 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++-7
@@ -202,6 +280,19 @@ jobs:
       image: aswf/ci-osl:2019-clang9
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: clang++
@@ -228,6 +319,19 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++-8
@@ -258,6 +362,19 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++-10
@@ -293,6 +410,19 @@ jobs:
       image: aswf/ci-osl:2019
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: g++
@@ -319,6 +449,19 @@ jobs:
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /Users/runner/.ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
       - name: all
         env:
           CXX: clang++
@@ -345,73 +488,6 @@ jobs:
           path: |
             build/*/testsuite/*/*.*
             build/*/CMake*.{txt,log}
-
-  # windows:
-  #   name: "Windows"
-  #   runs-on: windows-2019
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: Setup Nuget.exe
-  #       uses: warrenbuckley/Setup-Nuget@v1
-  #     - name: all
-  #       shell: bash
-  #       env:
-  #         PYTHON_VERSION: 3.6
-  #         CMAKE_GENERATOR: "Visual Studio 16 2019"
-  #         OPENEXR_VERSION: v2.4.1
-  #       run: |
-  #           source src/build-scripts/ci-startup.bash
-  #           source src/build-scripts/gh-win-installdeps.bash
-  #           source src/build-scripts/ci-build-and-test.bash
-  #    - uses: actions/upload-artifact@v2
-  #      if: failure()
-  #      with:
-  #        name: ${{ github.job }}
-  #        path: build/*/testsuite/*/*.*
-
-  # sanitizer:
-  #   name: "Sanitizers"
-  #   runs-on: ubuntu-18.04
-  #   if: github.event_name == 'pull_request' || contains(github.ref, 'san') || contains(github.ref, 'RB') || contains(github.ref, 'release') || contains(github.ref, 'master') || contains(github.ref, 'gh')
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     #- uses: docker://aswfstaging/ci-base:2019
-  #     - name: all
-  #       env:
-  #         CXX: g++-7
-  #         CMAKE_CXX_STANDARD: 14
-  #         SANITIZE: address
-  #         USE_PYTHON: 0
-  #       run: |
-  #           source src/build-scripts/ci-startup.bash
-  #           source src/build-scripts/gh-installdeps.bash
-  #           source src/build-scripts/ci-build-and-test.bash
-  #    - uses: actions/upload-artifact@v2
-  #      if: failure()
-  #      with:
-  #        name: ${{ github.job }}
-  #        path: build/*/testsuite/*/*.*
-
-  # linux-static:
-  #   name: "Linux static libs: gcc7, C++14, exr2.3"
-  #   runs-on: ubuntu-18.04
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     #- uses: docker://aswfstaging/ci-base:2019
-  #     - name: all
-  #       env:
-  #         CXX: g++-7
-  #         CMAKE_CXX_STANDARD: 14
-  #         BUILD_SHARED_LIBS: OFF
-  #       run: |
-  #           source src/build-scripts/ci-startup.bash
-  #           source src/build-scripts/gh-installdeps.bash
-  #           source src/build-scripts/ci-build-and-test.bash
-  #    - uses: actions/upload-artifact@v2
-  #      if: failure()
-  #      with:
-  #        name: ${{ github.job }}
-  #        path: build/*/testsuite/*/*.*
 
   clang-format:
     # Test formatting. This test entry doesn't do a full build, it just runs

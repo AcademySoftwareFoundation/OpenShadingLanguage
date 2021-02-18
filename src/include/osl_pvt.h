@@ -785,8 +785,8 @@ public:
     float coerce_float(int index = 0) const
     {
         OSL_DASSERT(typespec().is_float_based() || typespec().is_int_based());
-        return typespec().is_int_based()
-                   ? static_cast<float>(get_int(index)) : get_float(index);
+        return typespec().is_int_based() ? static_cast<float>(get_int(index))
+                                         : get_float(index);
     }
 
     // Retrieve the const int value (must be a const int!)

@@ -248,7 +248,7 @@ set_target_properties (${local_lib}
         OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
     )
 
-if (VISIBILITY_COMMAND)
+if (VISIBILITY_MAP_COMMAND)
     set_property (TARGET ${local_lib}
                   APPEND PROPERTY LINK_FLAGS ${VISIBILITY_MAP_COMMAND})
 endif ()

@@ -57,7 +57,7 @@ macro (add_oiio_plugin)
                            PROPERTIES
                                PREFIX ""
                                FOLDER "Plugins")
-    if (VISIBILITY_COMMAND)
+    if (VISIBILITY_MAP_COMMAND)
         set_property (TARGET ${_plugin_name}
                       APPEND PROPERTY LINK_FLAGS ${VISIBILITY_MAP_COMMAND})
     endif ()

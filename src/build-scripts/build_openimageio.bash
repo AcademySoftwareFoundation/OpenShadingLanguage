@@ -64,4 +64,4 @@ export PYTHONPATH=$OpenImageIO_ROOT/lib/python${PYTHON_VERSION}/site-packages:$P
 echo "DYLD_LIBRARY_PATH = $DYLD_LIBRARY_PATH"
 echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
 echo "OpenImageIO_ROOT $OpenImageIO_ROOT"
-ls -R $OpenImageIO_ROOT
+# ls -R $OpenImageIO_ROOT

@@ -30,6 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019-clang7
+    env:
+      CXX: g++
+      CC: gcc
+      CMAKE_CXX_STANDARD: 11
+      PYTHON_VERSION: 2.7
+      USE_PYTHON: 0
+      OPENIMAGEIO_VERSION: Release-2.1.20.0
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -45,20 +52,20 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++
-          CC: gcc
-          CMAKE_CXX_STANDARD: 11
-          PYTHON_VERSION: 2.7
-          USE_PYTHON: 0
-          OPENIMAGEIO_VERSION: Release-2.1.20.0
+      - name: Build setup
+        run: |
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
         run: |
             # Remove pesky wrong installed OIIO version
             rm -rf /usr/local/include/OpenImageIO
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -72,6 +79,12 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2020
+    env:
+      CXX: g++
+      CC: gcc
+      CMAKE_CXX_STANDARD: 14
+      PYTHON_VERSION: 3.7
+      USE_SIMD: sse4.2
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -87,17 +100,18 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++
-          CC: gcc
-          CMAKE_CXX_STANDARD: 14
-          PYTHON_VERSION: 3.7
-          USE_SIMD: sse4.2
+      - name: Build setup
         run: |
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -111,6 +125,14 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021-clang11
+    env:
+      CXX: g++
+      CC: gcc
+      CMAKE_CXX_STANDARD: 17
+      PYTHON_VERSION: 3.7
+      USE_SIMD: avx2,f16c
+      OPENEXR_VERSION: v2.5.3
+      OPENIMAGEIO_VERSION: RB-2.2
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -126,19 +148,18 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++
-          CC: gcc
-          CMAKE_CXX_STANDARD: 17
-          PYTHON_VERSION: 3.7
-          USE_SIMD: avx2,f16c
-          OPENEXR_VERSION: v2.5.3
-          OPENIMAGEIO_VERSION: RB-2.2
+      - name: Build setup
         run: |
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -152,6 +173,14 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021-clang11
+    env:
+      CXX: g++
+      CC: gcc
+      CMAKE_CXX_STANDARD: 17
+      PYTHON_VERSION: 3.7
+      USE_SIMD: avx2,f16c
+      OPENEXR_VERSION: master
+      OPENIMAGEIO_VERSION: RB-2.2
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -167,21 +196,20 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++
-          CC: gcc
-          CMAKE_CXX_STANDARD: 17
-          PYTHON_VERSION: 3.7
-          USE_SIMD: avx2,f16c
-          OPENEXR_VERSION: master
-          OPENIMAGEIO_VERSION: RB-2.2
+      - name: Build setup
+        run: |
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
         run: |
             sudo rm -rf /usr/local/include/OpenEXR
             sudo rm -rf /usr/local/lib64/cmake/{IlmBase,OpenEXR}
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -196,6 +224,15 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: aswftesting/ci-osl:2019-clang10
+    env:
+      CXX: g++
+      CC: gcc
+      CMAKE_CXX_STANDARD: 14
+      PYTHON_VERSION: 2.7
+      USE_SIMD: avx2,f16c
+      OPENIMAGEIO_VERSION: master
+      OSL_CMAKE_FLAGS: -DUSE_OPTIX=1
+      OPTIX_VERSION: "7.0"
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -211,22 +248,20 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++
-          CC: gcc
-          CMAKE_CXX_STANDARD: 14
-          PYTHON_VERSION: 2.7
-          USE_SIMD: avx2,f16c
-          OPENIMAGEIO_VERSION: master
-          OSL_CMAKE_FLAGS: -DUSE_OPTIX=1
-          OPTIX_VERSION: "7.0"
-          SKIP_TESTS: 1
+      - name: Build setup
+        run: |
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
         run: |
             rm -rf /usr/local/include/OpenImageIO
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      # Testsuite disabled until we have GPU hardware to run on
+      #- name: Testsuite
+      #  run: |
+      #      src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -239,6 +274,16 @@ jobs:
   linux-debug-gcc7-llvm8:
     name: "Linux Debug gcc7, C++14, llvm8, OIIO release, sse4, exr2.4"
     runs-on: ubuntu-18.04
+    env:
+      CXX: g++-7
+      CMAKE_BUILD_TYPE: Debug
+      CMAKE_CXX_STANDARD: 14
+      # Debug build makes some tests run very slowly, increase timeout
+      CTEST_TEST_TIMEOUT: 240
+      LLVM_VERSION: 8.0.0
+      OPENEXR_VERSION: v2.4.1
+      OPENIMAGEIO_VERSION: release
+      USE_SIMD: sse4.2
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -254,20 +299,18 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++-7
-          USE_CPP: 14
-          CMAKE_CXX_STANDARD: 14
-          LLVM_VERSION: 8.0.0
-          OPENEXR_VERSION: v2.4.1
-          OPENIMAGEIO_VERSION: release
-          USE_SIMD: sse4.2
-          OSL_CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=Debug
+      - name: Build setup
         run: |
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -281,6 +324,12 @@ jobs:
     runs-on: ubuntu-18.04
     container:
       image: aswf/ci-osl:2019-clang9
+    env:
+      CXX: clang++
+      CMAKE_CXX_STANDARD: 14
+      USE_SIMD: avx
+      OPENIMAGEIO_VERSION: release
+      PYTHON_VERSION: 2.7
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -296,19 +345,20 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: clang++
-          CMAKE_CXX_STANDARD: 14
-          USE_SIMD: avx
-          OPENIMAGEIO_VERSION: release
-          PYTHON_VERSION: 2.7
+      - name: Build setup
+        run: |
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
         run: |
             # Remove pesky wrong installed OIIO version
             rm -rf /usr/local/include/OpenImageIO
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -320,6 +370,16 @@ jobs:
   linux-2021ish-gcc8-llvm10:
     name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.5, avx2"
     runs-on: ubuntu-18.04
+    env:
+      CXX: g++-8
+      CMAKE_CXX_STANDARD: 17
+      LLVM_VERSION: 10.0.0
+      USE_SIMD: avx2,f16c
+      OPENEXR_VERSION: v2.5.3
+      OPENIMAGEIO_VERSION: master
+      OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
+      PUGIXML_VERSION: v1.10
+      PYBIND11_VERSION: v2.5.0
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -335,21 +395,18 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++-8
-          CMAKE_CXX_STANDARD: 17
-          LLVM_VERSION: 10.0.0
-          USE_SIMD: avx2,f16c
-          OPENEXR_VERSION: v2.5.3
-          OPENIMAGEIO_VERSION: master
-          OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
-          PUGIXML_VERSION: v1.10
-          PYBIND11_VERSION: v2.5.0
+      - name: Build setup
         run: |
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -363,6 +420,20 @@ jobs:
     # supported releases of everything else.
     name: "Linux bleeding edge: gcc10, C++17, llvm11, oiio/ocio/exr/pybind-master, avx2"
     runs-on: ubuntu-20.04
+    env:
+      CXX: g++-10
+      USE_CPP: 17
+      CMAKE_CXX_STANDARD: 17
+      LLVM_VERSION: 11.0.0
+      LLVM_DISTRO_NAME: ubuntu-20.04
+      USE_SIMD: avx2,f16c
+      OPENEXR_VERSION: master
+      OPENIMAGEIO_VERSION: master
+      OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=master
+      OPENCOLORIO_VERSION: master
+      PYBIND11_VERSION: master
+      PUGIXML_VERSION: master
+      OSL_BUILD_MATERIALX: 1
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -378,25 +449,18 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++-10
-          USE_CPP: 17
-          CMAKE_CXX_STANDARD: 17
-          LLVM_VERSION: 11.0.0
-          LLVM_DISTRO_NAME: ubuntu-20.04
-          USE_SIMD: avx2,f16c
-          OPENEXR_VERSION: master
-          OPENIMAGEIO_VERSION: master
-          OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=master
-          OPENCOLORIO_VERSION: master
-          PYBIND11_VERSION: master
-          PUGIXML_VERSION: master
-          OSL_BUILD_MATERIALX: 1
+      - name: Build setup
         run: |
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -412,6 +476,15 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019-clang7
+    env:
+      CXX: g++
+      CC: gcc
+      CMAKE_CXX_STANDARD: 11
+      PYTHON_VERSION: 2.7
+      USE_SIMD: 0
+      USE_PYTHON: 0
+      OPENIMAGEIO_VERSION: Release-2.1.20.0
+      PUGIXML_VERSION: v1.8
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -427,22 +500,19 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: g++
-          CC: gcc
-          CMAKE_CXX_STANDARD: 11
-          PYTHON_VERSION: 2.7
-          USE_SIMD: 0
-          USE_PYTHON: 0
-          OPENIMAGEIO_VERSION: Release-2.1.20.0
-          PUGIXML_VERSION: v1.8
+      - name: Build setup
         run: |
-            # Remove pesky wrong installed OIIO version
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
             rm -rf /usr/local/include/OpenImageIO
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -454,6 +524,16 @@ jobs:
   macos-py39:
     name: "Mac py39"
     runs-on: macOS-latest
+    env:
+      CXX: clang++
+      USE_CPP: 14
+      CMAKE_CXX_STANDARD: 14
+      PYTHON_VERSION: 3.9
+      LLVM_BC_GENERATOR: /usr/bin/clang++
+      OSL_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
+        # ^^ Force bitcode compiles to use the system clang compiler by
+        # preemptively telling it the LLVM_BC_GENERATOR, to avoid some
+        # library mismatches we tend to see on GH CI's Mac images.
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -469,25 +549,22 @@ jobs:
           key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
           restore-keys: |
             ${{ github.job }}-
-      - name: all
-        env:
-          CXX: clang++
-          USE_CPP: 14
-          CMAKE_CXX_STANDARD: 14
-          PYTHON_VERSION: 3.9
-          LLVM_BC_GENERATOR: /usr/bin/clang++
-          OSL_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
-            # ^^ Force bitcode compiles to use the system clang compiler by
-            # preemptively telling it the LLVM_BC_GENERATOR, to avoid some
-            # library mismatches we tend to see on GH CI's Mac images.
+      - name: Build setup
         run: |
-            source src/build-scripts/ci-startup.bash
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
             source src/build-scripts/install_homebrew_deps.bash
             # OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
             # source src/build-scripts/build_openimageio.bash
-            brew install openimageio
+            brew install --display-times -q openimageio
             PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages
-            source src/build-scripts/ci-build-and-test.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -505,18 +582,21 @@ jobs:
     runs-on: ubuntu-18.04
     container:
       image: aswf/ci-osl:2021-clang10
+    env:
+      BUILDTARGET: clang-format
+      CMAKE_CXX_STANDARD: 17
+      PYTHON_VERSION: 3.7
     steps:
       - uses: actions/checkout@v2
-      - name: all
-        env:
-          BUILDTARGET: clang-format
-          CMAKE_CXX_STANDARD: 17
-          PYTHON_VERSION: 3.7
-          SKIP_TESTS: 1
+      - name: Build setup
         run: |
-            source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps-centos.bash
-            source src/build-scripts/ci-build-and-test.bash
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:

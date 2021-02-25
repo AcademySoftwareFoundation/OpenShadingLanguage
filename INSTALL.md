@@ -49,7 +49,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   later. If you *must* build OSL with C++11, you need to use an LLVM that
   is LLVM 9 or earlier.
 
-* [Boost](www.boost.org) 1.55 or newer (tested through boost 1.73)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.73)
 * [Ilmbase](http://openexr.com/downloads.html) 2.0 or newer (tested through 2.5)
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
   [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.

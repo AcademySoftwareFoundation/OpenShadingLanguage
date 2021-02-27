@@ -12,14 +12,14 @@ add_library (${local_lib} ${lib_src})
 target_include_directories (${local_lib}
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-        ${ILMBASE_INCLUDES}
     PRIVATE
+        # ${IMATH_INCLUDES}
         ../liboslexec)
 target_link_libraries (${local_lib}
     PUBLIC
         OpenImageIO::OpenImageIO
-        ${ILMBASE_LIBRARIES}
     PRIVATE
+        # ${IMATH_LIBRARIES}
         ${Boost_LIBRARIES}
     )
 

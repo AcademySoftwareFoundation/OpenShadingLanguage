@@ -25,21 +25,21 @@ echo ""
 echo "Before my brew installs:"
 brew list --versions
 
-if [[ $PYTHON_VERSION != "2.7" ]] ; then
-    brew uninstall python@2 || true
-fi
-brew install --display-times gcc ccache cmake ninja boost || true
+brew install --display-times -q gcc ccache cmake ninja boost || true
 brew link --overwrite gcc
-brew install --display-times python pybind11 || true
-brew upgrade --display-times python || true
-brew link --overwrite python
-brew install --display-times flex bison
-brew install --display-times libtiff ilmbase openexr
-brew install --display-times opencolorio partio pugixml
-brew install --display-times freetype libpng || true
-brew install --display-times pybind11 numpy || true
-brew install --display-times llvm${LLVMBREWVER}
-brew install --display-times qt
+brew unlink python@2.7 || true
+brew unlink python@3.9 || true
+brew unlink python@3.8 || true
+brew link --overwrite --force python@${PYTHON_VERSION} || true
+brew upgrade --display-times -q cmake || true
+brew install --display-times -q libtiff ilmbase openexr
+brew install --display-times -q libpng giflib webp jpeg-turbo freetype
+brew install --display-times -q opencolorio partio pugixml
+brew install --display-times -q pybind11 numpy || true
+brew install --display-times -q tbb || true
+brew install --display-times -q flex bison
+brew install --display-times -q llvm${LLVMBREWVER}
+brew install --display-times -q qt
 
 echo ""
 echo "After brew installs:"
@@ -61,3 +61,6 @@ export PATH=/usr/local/opt/llvm${LLVMBREWVER}/bin:$PATH
 export LLVM_DIRECTORY=/usr/local/opt/llvm${LLVMBREWVER}
 export LLVM_ROOT=/usr/local/opt/llvm${LLVMBREWVER}
 export PATH=/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH
+
+# Save the env for use by other stages
+src/build-scripts/save-env.bash

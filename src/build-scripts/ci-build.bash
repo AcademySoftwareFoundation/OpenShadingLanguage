@@ -8,21 +8,8 @@
 # any command in it fails. This is crucial for CI tests.
 set -ex
 
-# This script is run when CI system first starts up.
-# It expects that ci-setenv.bash was run first, so $PLATFORM and $ARCH
-# have been set.
-
-if [[ -e src/build-scripts/ci-setenv.bash ]] ; then
-    source src/build-scripts/ci-setenv.bash
-fi
-
-mkdir -p build/$PLATFORM dist/$PLATFORM && true
-
 if [[ "$USE_SIMD" != "" ]] ; then
     OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
-fi
-if [[ "$DEBUG" == "1" ]] ; then
-    OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DCMAKE_BUILD_TYPE=Debug"
 fi
 
 pushd build/$PLATFORM
@@ -37,8 +24,6 @@ cmake ../.. -G "$CMAKE_GENERATOR" \
         $OSL_CMAKE_FLAGS -DVERBOSE=1
 time cmake --build . --target ${BUILDTARGET:=install} --config ${CMAKE_BUILD_TYPE}
 popd
-#make $MAKEFLAGS VERBOSE=1 $BUILD_FLAGS config
-#make $MAKEFLAGS $PAR_MAKEFLAGS $BUILD_FLAGS $BUILDTARGET
 
 if [[ "${DEBUG_CI:=0}" != "0" ]] ; then
     echo "PATH=$PATH"
@@ -46,13 +31,6 @@ if [[ "${DEBUG_CI:=0}" != "0" ]] ; then
     echo "PYTHONPATH=$PYTHONPATH"
     echo "ldd testshade"
     ldd $OSL_ROOT/bin/testshade
-fi
-
-if [[ "$SKIP_TESTS" == "" ]] ; then
-    $OSL_ROOT/bin/testshade --help
-    export OIIO_LIBRARY_PATH=$OSL_ROOT/lib:$OIIO_LIBRARY_PATH
-    TESTSUITE_CLEANUP_ON_SUCCESS=1
-    make $BUILD_FLAGS test
 fi
 
 if [[ "$BUILDTARGET" == clang-format ]] ; then
@@ -63,7 +41,3 @@ if [[ "$BUILDTARGET" == clang-format ]] ; then
         exit 1
     fi
 fi
-
-#if [[ "$CODECOV" == 1 ]] ; then
-#    bash <(curl -s https://codecov.io/bash)
-#fi

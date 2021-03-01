@@ -43,7 +43,7 @@ cuda_compile_ptx(CUDA_PTX_FILES cuda_grid_renderer.cu
     OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc --std=c++11
             --expt-relaxed-constexpr
             -I${OSL_INCLUDES}
-            -I${ILMBASE_INCLUDES}
+            -I${IMATH_INCLUDES}
             -I${OpenImageIO_INCLUDES}
             -I${OPTIX_INCLUDES}
 )
@@ -61,7 +61,7 @@ cuda_compile_ptx(CUDA_PTX_FILES rend_lib.cu
     OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc --std=c++14
             --expt-relaxed-constexpr
             -I${OSL_INCLUDES}
-            -I${ILMBASE_INCLUDES}
+            -I${IMATH_INCLUDES}
             -I${OpenImageIO_INCLUDES}
             -I${OPTIX_INCLUDES}
 )

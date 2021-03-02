@@ -1,9 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.12 -- ?? 2021 (compared to 1.11.11)
+Release 1.11.12 -- 1 Mar 2021 (compared to 1.11.11)
 ----------------------------------------------------
-
+* Build: Changes for smooth compile against upcoming Imath 3.0. #1332 #1341
+* Build: We weren't properly hiding non-public symbols. #1337
+* CI: Cleanup and get rid of the last Travis vestiges. #1334
+* CI: Speed up CI runs by using GHA cache + ccache. #1335
+* CI: Separate CI process into several individual "steps." #1338
 
 Release 1.11.11 -- 1 Feb 2021 (compared to 1.11.10)
 ----------------------------------------------------

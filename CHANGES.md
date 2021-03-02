@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.13 -- ?? 2021 (compared to 1.11.12)
+----------------------------------------------------
+
+
 Release 1.11.12 -- 1 Mar 2021 (compared to 1.11.11)
 ----------------------------------------------------
 * Build: Changes for smooth compile against upcoming Imath 3.0. #1332 #1341

@@ -94,8 +94,8 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
     //std::string name = Strutil::format ("%s_%s_%d", m_library_selector,  parent->layername().c_str(),
     //                                  parent->id());
     std::string name
-        = Strutil::format("%s_%s", m_library_selector,
-                          layer_function_name(group(), *parent).c_str());
+        = Strutil::fmt::format("{}_{}", m_library_selector,
+                               layer_function_name(group(), *parent));
 
     // Mark the call as a fast call
     llvm::Value* funccall = ll.call_function(name.c_str(), args);

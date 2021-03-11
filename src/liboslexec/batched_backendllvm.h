@@ -741,7 +741,8 @@ private:
         virtual const char* library_selector() const                        = 0;
         virtual void init_function_map(ShadingSystemImpl& shadingsys) const = 0;
 
-        static std::unique_ptr<TargetLibraryHelper> build(int vector_width,
+        static std::unique_ptr<TargetLibraryHelper> build(ShadingContext* context,
+                                                          int vector_width,
                                                           TargetISA target_isa);
     };
     // TargetLibraryHelper is private, so need to be friend with Concrete

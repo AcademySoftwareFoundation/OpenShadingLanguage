@@ -193,6 +193,9 @@ set_shadingsys_options ()
         batch_size = atoi(opt_env);
 
     if (batched) {
+        // We are only building FMA versions, so force it on
+        shadingsys->attribute ("llvm_jit_fma", 1);
+
         bool batch_size_requested = (batch_size != -1);
         // Not really looping, just emulating goto behavior using break
         for(;;) {
@@ -852,18 +855,26 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
                                &layers[0]);
     }
 
-    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
-    ShadingContext *ctx = shadingsys->get_context(thread_info);
-    // Because we can only call find_symbol or get_symbol on something that
-    // has been set up to shade (or executed), we call execute() but tell it
-    // not to actually run the shader.
-    ShaderGlobals sg;
-    setup_shaderglobals (sg, shadingsys, 0, 0);
-
     int raytype_bit = shadingsys->raytype_bit (ustring (raytype));
     if (raytype_opt)
-        shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit, ctx);
-    shadingsys->execute (*ctx, *shadergroup, sg, false);
+        shadingsys->set_raytypes (shadergroup.get(), raytype_bit, ~raytype_bit);
+
+    // Because we can only call find_symbol after the shader group has been
+    // optimized, we will optimize it now.
+    // We also choose to JIT it now during timing for setup
+    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
+    ShadingContext *ctx = shadingsys->get_context(thread_info);
+    if (batched) {
+        // jit_group will optimize the group if necesssary
+        if (batch_size == 16) {
+            shadingsys->batched<16>().jit_group (shadergroup.get(), ctx);
+        } else {
+            ASSERT((batch_size == 8) && "Unsupport batch size");
+            shadingsys->batched<8>().jit_group (shadergroup.get(), ctx);
+        }
+    } else {
+        shadingsys->optimize_group (shadergroup.get(), ctx, true /*do_jit*/);
+    }
 
     if (entryoutputs.size()) {
         std::cout << "Entry outputs:";
@@ -887,13 +898,13 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
 
         // Ask for a pointer to the symbol's data, as computed by this
         // shader.
-        TypeDesc t;
-        const void *data = shadingsys->get_symbol (*ctx, outputvarnames[i], t);
-        if (!data) {
+        const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, outputvarnames[i]);
+        if (!sym) {
             std::cout << "Output " << outputvars[i] 
                       << " not found, skipping.\n";
             continue;  // Skip if symbol isn't found
         }
+        TypeDesc t = shadingsys->symbol_typedesc (sym);
         std::cout << "Output " << outputvars[i] << " to "
                   << outputfiles[i] << "\n";
 
@@ -1746,6 +1757,13 @@ test_shade (int argc, const char *argv[])
 
     if (num_threads < 1)
         num_threads = OIIO::Sysutil::hardware_concurrency();
+
+    // We need to set the global attribute so any helper functions
+    // respect our thread count, especially if we wanted only 1
+    // thread, we want to avoid spinning up a thread pool or
+    // OS overhead of destroying threads (like clearing virtual
+    // memory pages they occupied)
+    OIIO::attribute("threads",num_threads);
 
     synchio();
 

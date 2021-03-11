@@ -5111,7 +5111,46 @@ LLVM_Util::op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b)
     return builder().CreateSelect (cond, a, b);
 }
 
+llvm::Value *
+LLVM_Util::op_zero_if(llvm::Value *cond, llvm::Value *v)
+{
+    OSL_ASSERT (v->getType() == type_wide_float() || v->getType() == type_wide_int() ||
+                v->getType() == type_float() || v->getType() == type_int());
 
+    bool is_wide = v->getType() == type_wide_float() || v->getType() == type_wide_int();
+    bool is_float = v->getType() == type_float() || v->getType() == type_wide_float();
+    llvm::Value * c_zero = (is_wide)?
+                           (is_float) ? wide_constant(0.0f) : wide_constant(static_cast<int>(0))
+                       :   (is_float) ? constant(0.0f) : constant(static_cast<int>(0));
+
+    if (is_wide && m_supports_avx512f && ((m_vector_width == 8) || (m_vector_width == 16))) {
+        // Select for AVX512 which repeats its parameter's operation with a mask.
+        // However if that operation was used elsewhere we end up with 2 copies:
+        // the original, and the masked version to implement the select.
+        // The operation could be an expensive divide or sqrt!
+        // Work is underway to fix this for LLVM 11.
+        if (v->getNumUses() > 0) {
+
+            // Workaround to avoid duplicating an expensive instruction:
+            // insert an identity operation, to isolate original operation
+            // from being duplicated.  In other words we are choosing to add an extra
+            // inexpensive (0.5 clock) instruction rather than let something more expensive
+            // be duplicated.
+            // We can use a ternery log operation with a mask set to reproduce the 1st argument.
+            llvm::Value *func = llvm::Intrinsic::getDeclaration(module(),
+                    (m_vector_width == 16) ? llvm::Intrinsic::x86_avx512_pternlog_d_512
+                                           : llvm::Intrinsic::x86_avx512_pternlog_d_256);
+            //           (a, b, c) =  (111), (110), (101), (100), (011), (010), (001), (000)
+            // a_identity(a, b, c) =    1      1      1      1      0      0      0      0    = 0xF0
+            llvm::Value *a_identity_mask = constant(static_cast<int>(0xF0));
+            llvm::Value *int_v = is_float ? builder().CreateBitCast(v, type_wide_int()) : v;
+            llvm::Value *args[] = {int_v, int_v, int_v, a_identity_mask};
+            llvm::Value *identity_call = builder().CreateCall(func, args);
+            v = is_float ? builder().CreateBitCast(identity_call, type_wide_float()) : identity_call;
+        }
+    }
+    return op_select (cond, c_zero, v);
+}
 
 llvm::Value *
 LLVM_Util::op_extract (llvm::Value *a, int index)

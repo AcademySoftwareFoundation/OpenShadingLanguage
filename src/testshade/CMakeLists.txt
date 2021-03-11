@@ -6,6 +6,20 @@
 set ( testshade_srcs testshade.cpp simplerend.cpp batched_simplerend.cpp optixgridrender.cpp
                      ../testrender/optix_stringtable.cpp )
 
+if (CMAKE_COMPILER_IS_INTEL)
+    # Make sure our shader globals are calculated consistently
+    # especially those with division.  We want to avoid aliasing
+    # difference when running the testsuite
+    if (MSVC)
+        #add_definitions("/fp:precise")
+        add_definitions("/Qprec-div")
+    else ()
+        #add_definitions("-fp-model precise")
+        add_definitions("-prec-div")
+    endif ()
+endif ()
+
+
 if (USE_OPTIX)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu

@@ -82,6 +82,7 @@ macro ( TESTSUITE )
         set (_ats_LABEL "broken")
     endif ()
     set (test_all_optix $ENV{TESTSUITE_OPTIX})
+    set (test_all_batched $ENV{TESTSUITE_BATCHED})
     # Add the tests if all is well.
     set (ALL_TEST_LIST "")
     set (_testsuite "${CMAKE_SOURCE_DIR}/testsuite")
@@ -128,6 +129,18 @@ macro ( TESTSUITE )
             # and optimized
             add_one_testsuite ("${_testname}.optix.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 TESTSHADE_OPTIX=1 )
+        endif ()
+        
+        # When building for Batched support, also run it in Batched mode
+        # if there is an BATCHED marker file in the directory.
+        # If an environment variable $TESTSUITE_BATCHED is nonzero, then
+        # run all tests in Batched mode, even if there's no BATCHED marker.
+        if ((EXISTS "${_testsrcdir}/BATCHED" OR test_all_batched OR _testname MATCHES "batched")
+            AND NOT EXISTS "${_testsrcdir}/NOBATCHED"
+            AND NOT EXISTS "${_testsrcdir}/NOBATCHED-FIXME")
+            # optimized for right now
+            add_one_testsuite ("${_testname}.batched.opt" "${_testsrcdir}"
+                               ENV TESTSHADE_OPT=2 TESTSHADE_BATCHED=1 )
         endif ()
     endforeach ()
     if (VERBOSE)
@@ -203,7 +216,8 @@ macro (osl_add_all_tests)
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
                 render-microfacet render-oren-nayar render-veachmis render-ward
-                select shortcircuit spline splineinverse splineinverse-ident
+                select shaderglobals shortcircuit 
+                spline splineinverse splineinverse-ident
                 spline-boundarybug spline-derivbug
                 string
                 struct struct-array struct-array-mixture

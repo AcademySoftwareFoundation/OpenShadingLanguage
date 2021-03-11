@@ -10,6 +10,20 @@
 #    error must define __OSL_TARGET_ISA to AVX512, AVX2, AVX, SSE4_2, or x64 before including this header
 #endif
 
+#include <OSL/export.h>
+// Prefix for batched OSL shade op declarations.
+// Make them externally visibility, so their addresses
+// can be dynamically discoverred (DLSYM).
+// Also use "C" linkage (no C++ name mangling).
+#define OSL_BATCHOP extern "C" OSL_DLL_EXPORT
+
+// Macro helpers for xmacro include files
+#define __OSL_EXPAND(A) A
+#define __OSL_XMACRO_ARG1(A,...) A
+#define __OSL_XMACRO_ARG2(A,B,...) B
+#define __OSL_XMACRO_ARG3(A,B,C,...) C
+#define __OSL_XMACRO_ARG4(A,B,C,D,...) D
+
 
 #define __OSL_LIBRARY_SELECTOR \
     __OSL_CONCAT5(b, __OSL_WIDTH, _, __OSL_TARGET_ISA, _)

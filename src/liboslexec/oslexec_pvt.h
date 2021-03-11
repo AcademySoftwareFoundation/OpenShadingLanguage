@@ -1807,6 +1807,7 @@ public:
     ///
     ShaderGroup *group () { return m_group; }
     const ShaderGroup *group () const { return m_group; }
+    void group (ShaderGroup * grp) { m_group = grp; }
 
     /// Return a reference to the MessageList containing messages.
     ///

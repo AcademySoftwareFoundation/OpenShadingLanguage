@@ -329,9 +329,12 @@ const NameAndSignature
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
 #    define __OSL_WIDTH           16
 #    define __OSL_TARGET_ISA      AVX512
-#    include "builtindecl_wide_xmacro.h"
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
 #    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
 #    include "wide/undef_opname_macros.h"
+// clang-format on
 #    undef __OSL_TARGET_ISA
 #    undef __OSL_WIDTH
 #    undef DECL
@@ -353,9 +356,12 @@ const NameAndSignature
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
 #    define __OSL_WIDTH           16
 #    define __OSL_TARGET_ISA      AVX512_noFMA
-#    include "builtindecl_wide_xmacro.h"
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
 #    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
 #    include "wide/undef_opname_macros.h"
+// clang-format on
 #    undef __OSL_TARGET_ISA
 #    undef __OSL_WIDTH
 #    undef DECL
@@ -377,9 +383,12 @@ const NameAndSignature
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
 #    define __OSL_WIDTH           8
 #    define __OSL_TARGET_ISA      AVX512
-#    include "builtindecl_wide_xmacro.h"
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
 #    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
 #    include "wide/undef_opname_macros.h"
+// clang-format on
 #    undef __OSL_TARGET_ISA
 #    undef __OSL_WIDTH
 #    undef DECL
@@ -401,9 +410,12 @@ const NameAndSignature
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
 #    define __OSL_WIDTH           8
 #    define __OSL_TARGET_ISA      AVX512_noFMA
-#    include "builtindecl_wide_xmacro.h"
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
 #    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
 #    include "wide/undef_opname_macros.h"
+// clang-format on
 #    undef __OSL_TARGET_ISA
 #    undef __OSL_WIDTH
 #    undef DECL
@@ -425,9 +437,12 @@ const NameAndSignature
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
 #    define __OSL_WIDTH           8
 #    define __OSL_TARGET_ISA      AVX2
-#    include "builtindecl_wide_xmacro.h"
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
 #    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
 #    include "wide/undef_opname_macros.h"
+// clang-format on
 #    undef __OSL_TARGET_ISA
 #    undef __OSL_WIDTH
 #    undef DECL
@@ -449,9 +464,12 @@ const NameAndSignature
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
 #    define __OSL_WIDTH           8
 #    define __OSL_TARGET_ISA      AVX2_noFMA
-#    include "builtindecl_wide_xmacro.h"
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
 #    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
 #    include "wide/undef_opname_macros.h"
+// clang-format on
 #    undef __OSL_TARGET_ISA
 #    undef __OSL_WIDTH
 #    undef DECL
@@ -473,9 +491,12 @@ const NameAndSignature
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
 #    define __OSL_WIDTH           8
 #    define __OSL_TARGET_ISA      AVX
-#    include "builtindecl_wide_xmacro.h"
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
 #    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
 #    include "wide/undef_opname_macros.h"
+// clang-format on
 #    undef __OSL_TARGET_ISA
 #    undef __OSL_WIDTH
 #    undef DECL
@@ -488,9 +509,11 @@ const char*
 #endif
 
 std::unique_ptr<BatchedBackendLLVM::TargetLibraryHelper>
-BatchedBackendLLVM::TargetLibraryHelper::build(int vector_width,
+BatchedBackendLLVM::TargetLibraryHelper::build(ShadingContext* context,
+                                               int vector_width,
                                                TargetISA target_isa)
 {
+    OSL_ASSERT(target_isa != TargetISA::UNKNOWN);
     typedef std::unique_ptr<BatchedBackendLLVM::TargetLibraryHelper> RetType;
     switch (vector_width) {
     case 16:
@@ -506,8 +529,9 @@ BatchedBackendLLVM::TargetLibraryHelper::build(int vector_width,
                 new ConcreteTargetLibraryHelper<16, TargetISA::AVX512_noFMA>());
 #endif
         default:
-            OSL_ASSERT(0 && "unsupported target ISA for vector width of 16");
+            break;
         }
+        break;
     case 8:
         switch (target_isa) {
 #ifdef __OSL_SUPPORTS_B8_AVX512
@@ -536,10 +560,13 @@ BatchedBackendLLVM::TargetLibraryHelper::build(int vector_width,
                 new ConcreteTargetLibraryHelper<8, TargetISA::AVX>());
 #endif
         default:
-            OSL_ASSERT(0 && "unsupported target ISA for vector width of 8");
+            break;
         }
+        break;
     default: OSL_ASSERT(0 && "unsupported vector width");
     }
+    std::cerr << "Build is not configured to support TargetISA of " <<
+            LLVM_Util::target_isa_name(target_isa) << " and batch_size of " << vector_width << std::endl << std::flush;
     return nullptr;
 }
 
@@ -1662,7 +1689,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     // Note that the GroupData* is passed as a void*.
     OSL_ASSERT(m_library_selector);
     std::string unique_layer_name
-        = Strutil::sprintf("%s_%s", m_library_selector,
+        = Strutil::sprintf("%s_%s%s", m_library_selector,
+                           (groupentry ? "__direct_callable__" : ""),
                            layer_function_name().c_str());
 
     bool is_entry_layer = group().is_entry_layer(layer());
@@ -1673,11 +1701,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         llvm_type_sg_ptr(), llvm_type_groupdata_ptr(), ll.type_int()));
 
     if (ll.debug_is_enabled()) {
-        ustring file_name = inst()->op(inst()->maincodebegin()).sourcefile();
-
-        unsigned int method_line
-            = inst()->op(inst()->maincodebegin()).sourceline();
-        ll.debug_push_function(unique_layer_name, file_name, method_line);
+        const Opcode& mainbegin (inst()->op(inst()->maincodebegin()));
+        ll.debug_push_function(unique_layer_name, mainbegin.sourcefile(),
+                               mainbegin.sourceline());
     }
 
 
@@ -2283,7 +2309,8 @@ BatchedBackendLLVM::run()
         // End of mutex lock, for the OSL_LLVM_NO_BITCODE case
     }
 
-    m_target_lib_helper = TargetLibraryHelper::build(vector_width(),
+    m_target_lib_helper = TargetLibraryHelper::build(shadingcontext(),
+                                                     vector_width(),
                                                      ll.target_isa());
     OSL_ASSERT(m_target_lib_helper);
     OSL_ASSERT(m_library_selector == nullptr);

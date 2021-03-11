@@ -444,7 +444,7 @@ ShadingSystem::supports_batch_execution_at(int width)
 {
     auto requestedISA = LLVM_Util::lookup_isa_by_name(m_impl->llvm_jit_target());
     OSL_MAYBE_UNUSED bool target_requested = (requestedISA != TargetISA::UNKNOWN);
-    OSL_MAYBE_UNUSED bool jit_fma = !m_impl->llvm_jit_fma();
+    OSL_MAYBE_UNUSED bool jit_fma = m_impl->llvm_jit_fma();
 
     // Build defines preprocessor MACROS to identify which
     // target specific ISA's it is building OSL library functions for.
@@ -693,7 +693,8 @@ template<int WidthT>
 void
 ShadingSystem::BatchedExecutor<WidthT>::jit_group (ShaderGroup *group, ShadingContext *ctx)
 {
-    OSL_ASSERT(0 && "To Be Implemented");
+    OSL_ASSERT (group);
+    m_shading_system.m_impl->batched<WidthT>().jit_group(*group, ctx);
 }
 
 template<int WidthT>
@@ -1015,8 +1016,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
-    /* future PR will populate batched_llvm_gen.cpp */                   \
-                                /* llvm_gen_##ll*/nullptr,               \
+                                 llvm_gen_##ll,               \
                                                   constfold_##fold, simp, flag);
 #define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
 #define TEX OpDescriptor::Tex
@@ -3188,6 +3188,12 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 void
 ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx, bool do_jit)
 {
+    if (ctx) {
+        // Always have ShadingContext remember the group we just optimized
+        // to allow calls to find_symbol and get_symbol to be valid after
+        // optimization without needed to execute or jit
+        ctx->group(&group);
+    }
     if (group.optimized() && (!do_jit || group.jitted()))
         return;    // already optimized and optionally jitted
 
@@ -3283,7 +3289,15 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx, bool
         // NOTE: it is now possible to optimize and not JIT
         // which would leave the cleanup to happen
         // when the ShadingSystem is destroyed
-        group_post_jit_cleanup (group);
+
+        // Only cleanup when are not batching or if
+        // the batch jit has already happened,
+        // as it requires the ops so we can't delete them yet!
+        if (((renderer()->batched(WidthOf<16>()) == nullptr) &&
+             (renderer()->batched(WidthOf<8>()) == nullptr))
+            || group.batch_jitted()) {
+            group_post_jit_cleanup (group);
+        }
 
         group.m_jitted = true;
         spin_lock stat_lock (m_stat_mutex);

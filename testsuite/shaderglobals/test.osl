@@ -1,0 +1,105 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test (
+    output point out_P = 1,
+    output vector out_dPdx = 1,
+    output vector out_dPdy = 1,
+    output vector out_dPdz = 1,
+    output point out_I = 1,
+    output vector out_dIdx = 1,
+    output vector out_dIdy = 1,
+    output vector out_N = 1,
+    output vector out_Ng = 1,
+    output float out_u = 1,
+    output float out_dudx = 1,
+    output float out_dudy = 1,
+    output float out_v = 1,
+    output float out_dvdx = 1,
+    output float out_dvdy = 1,
+    output vector out_dPdu = 1,
+    output vector out_dPdv = 1,
+    output float out_time = 1,
+    output float out_dtime = 1,
+    output vector out_dPdtime = 1,    
+    output point out_Ps = 1,    
+    output vector out_dPsdx = 1,
+    output vector out_dPsdy = 1    
+)
+{
+    // Extract shader globals to local variables
+    point sg_P = P;    
+    vector sg_dPdx = Dx(P);    
+    vector sg_dPdy = Dy(P);    
+    vector sg_dPdz = Dz(P);    
+
+    point sg_I = I;    
+    vector sg_dIdx = Dx(I);    
+    vector sg_dIdy = Dy(I);    
+
+    vector sg_N = N;    
+    vector sg_Ng = Ng;    
+
+    float sg_u = u;    
+    float sg_dudx = Dx(u);    
+    float sg_dudy = Dy(u);    
+
+    float sg_v = v;    
+    float sg_dvdx = Dx(v);    
+    float sg_dvdy = Dy(v);    
+
+    vector sg_dPdu = dPdu;    
+    vector sg_dPdv = dPdv;    
+    float sg_time = time;
+    float sg_dtime = dtime;
+    vector sg_dPdtime = dPdtime;    
+
+    point sg_Ps = Ps;    
+    vector sg_dPsdx = Dx(Ps);    
+    vector sg_dPsdy = Dy(Ps);    
+    
+#if 0 // tbd    
+    int rt_camera = raytype("camera");
+    int rt_shadow = raytype("shadow");
+    int rt_diffuse = raytype("diffuse");
+    int rt_glossy = raytype("glossy");
+    int rt_reflection = raytype("reflection");
+    int rt_refraction = raytype("refraction");
+
+    point sg_object2common_of_P = transform("object","common",P);   
+    point sg_shader2common_of_P = transform("shader","common",P);
+        
+    float  sa = surfacearea();
+
+    vector sg_calculatenormal_fliphandedness = calculatenormal(P);
+    int sg_backfacing = backfacing();
+#endif
+
+    
+    // Populate outputs with values from locals
+    out_P = sg_P;
+    out_dPdx = sg_dPdx;
+    out_dPdy = sg_dPdy;
+    out_dPdz = sg_dPdz;
+    out_I = sg_I;
+    out_dIdx = sg_dIdx;
+    out_dIdy = sg_dIdy;
+    out_N = sg_N;
+    out_Ng = sg_Ng;
+    out_u = sg_u;
+    out_dudx = sg_dudx;
+    out_dudy = sg_dudy;
+    out_v = sg_v;
+    out_dvdx = sg_dvdx;
+    out_dvdy = sg_dvdy;
+    out_dPdu = sg_dPdu;
+    out_dPdv = sg_dPdv;
+    out_time = sg_time;
+    out_dtime = sg_dtime;
+    out_dPdtime = sg_dPdtime;    
+    out_Ps = sg_Ps;    
+    out_dPsdx = sg_dPsdx;
+    out_dPsdy = sg_dPsdy;    
+}

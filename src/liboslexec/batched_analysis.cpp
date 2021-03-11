@@ -367,7 +367,11 @@ is_op_result_always_logically_boolean(ustring opname)
     return lazy_lookup.find(opname) != lazy_lookup.end();
 }
 
-
+// For completeness we fully implement iterators and
+// comparison operators even if the are not "currently"
+// being referenced.  May need to disable some warnings
+// error #177: function "..." was declared but never referenced
+OSL_INTEL_PRAGMA(warning ( disable:177 ))
 
 // The Position returned by top_pos changes and symbols are pushed and popped.
 // However any given position is invariant as scopes change, and one
@@ -592,20 +596,6 @@ public:
         --m_current_depth;
     }
 
-
-
-    bool is_descendent_or_self(Position pos, Position potential_ancestor)
-    {
-        auto endAt = end();
-        auto iter  = begin_at(pos);
-        // allow testing of pos == potential_ancestor when potential_ancestor == end_pos()
-        do {
-            if (iter.pos() == potential_ancestor) {
-                return true;
-            }
-        } while (iter++ != endAt);
-        return false;
-    }
 
     Position common_ancestor_between(Position read_pos, Position write_pos)
     {
@@ -962,11 +952,6 @@ public:
 
     OSL_FORCEINLINE Position top_pos() const { return m_top_of_stack; }
 
-    OSL_FORCEINLINE bool has_early_out() const
-    {
-        return m_top_of_stack != end_pos();
-    }
-
     OSL_FORCEINLINE void pop_function_call()
     {
         OSL_DEV_ONLY(std::cout << "DependencyTreeTracker pop_function_call"
@@ -1049,9 +1034,6 @@ class ReadEvent {
     DependencyTreeTracker::Position m_pos_in_tree;
     int m_op_num;
     int m_loop_op_index;
-    static constexpr int InitialReadOp() { return -1; }
-    static constexpr int NoLoopIndex() { return -1; }
-
 public:
     ReadEvent(DependencyTreeTracker::Position pos_in_tree_
 #ifdef OSL_DEV
@@ -1104,8 +1086,6 @@ class LoopStack {
 
 public:
     bool is_inside_loop() const { return !m_loop_info_by_depth.empty(); }
-
-    int depth() const { return m_loop_info_by_depth.size(); }
 
     int current_loop_op_index() const
     {

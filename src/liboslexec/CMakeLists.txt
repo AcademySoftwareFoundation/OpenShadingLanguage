@@ -360,13 +360,13 @@ set (_b16_AVX512_noFMA_oslexec_lib _b16_AVX512_noFMA_oslexec)
 set (_b8_AVX512_noFMA_oslexec_lib _b8_AVX512_noFMA_oslexec)
 set (_b8_AVX2_noFMA_oslexec_lib _b8_AVX2_noFMA_oslexec)
 
-add_library ( ${_b16_AVX512_oslexec_lib} SHARED "${TARGET_SOURCES_B16_AVX512}" )
-add_library ( ${_b8_AVX512_oslexec_lib} SHARED "${TARGET_SOURCES_B8_AVX512}" )
-add_library ( ${_b8_AVX2_oslexec_lib} SHARED "${TARGET_SOURCES_B8_AVX2}" )
-add_library ( ${_b8_AVX_oslexec_lib} SHARED "${TARGET_SOURCES_B8_AVX}" )
-#add_library ( ${_b16_AVX512_noFMA_oslexec_lib} SHARED "${TARGET_SOURCES_B16_AVX512_NOFMA}" )
-#add_library ( ${_b8_AVX512_noFMA_oslexec_lib} SHARED "${TARGET_SOURCES_B8_AVX512_NOFMA}" )
-#add_library ( ${_b8_AVX2_noFMA_oslexec_lib} SHARED "${TARGET_SOURCES_B8_AVX2_NOFMA}" )
+add_library ( ${_b16_AVX512_oslexec_lib} MODULE "${TARGET_SOURCES_B16_AVX512}" )
+add_library ( ${_b8_AVX512_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX512}" )
+add_library ( ${_b8_AVX2_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX2}" )
+add_library ( ${_b8_AVX_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX}" )
+#add_library ( ${_b16_AVX512_noFMA_oslexec_lib} MODULE "${TARGET_SOURCES_B16_AVX512_NOFMA}" )
+#add_library ( ${_b8_AVX512_noFMA_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX512_NOFMA}" )
+#add_library ( ${_b8_AVX2_noFMA_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX2_NOFMA}" )
 
 set ( liboslexec_target_libs
     ${_b16_AVX512_oslexec_lib}

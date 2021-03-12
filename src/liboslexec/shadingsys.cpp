@@ -1247,7 +1247,7 @@ ShadingSystemImpl::~ShadingSystemImpl ()
     size_t ngroups = m_all_shader_groups.size();
     for (size_t i = 0;  i < ngroups;  ++i) {
         if (ShaderGroupRef g = m_all_shader_groups[i].lock()) {
-            if (!g->jitted() ) {
+            if (!g->jitted() || !g->batch_jitted() ) {
                 // As we are now lazier in jitting and need to keep the OSL IR
                 // around in case we want to create a batched JIT or vice versa
                 // we may have OSL IR to cleanup

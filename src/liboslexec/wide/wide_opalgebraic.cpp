@@ -20,9 +20,7 @@
 #include <OSL/sfmath.h>
 #include <OSL/wide.h>
 
-#include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
-#include <OpenImageIO/simd.h>
 
 OSL_NAMESPACE_ENTER
 namespace __OSL_WIDE_PVT {

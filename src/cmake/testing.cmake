@@ -153,6 +153,7 @@ macro (osl_add_all_tests)
     # List all the individual testsuite tests here, except those that need
     # special installed tests.
     TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
+                arithmetic-cov
                 array array-derivs array-range array-aassign
                 blackbody blendmath breakcont
                 bug-array-heapoffsets bug-locallifetime bug-outputinit

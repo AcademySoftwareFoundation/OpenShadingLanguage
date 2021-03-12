@@ -5137,7 +5137,7 @@ LLVM_Util::op_zero_if(llvm::Value *cond, llvm::Value *v)
             // inexpensive (0.5 clock) instruction rather than let something more expensive
             // be duplicated.
             // We can use a ternery log operation with a mask set to reproduce the 1st argument.
-            llvm::Value *func = llvm::Intrinsic::getDeclaration(module(),
+            llvm::Function *func = llvm::Intrinsic::getDeclaration(module(),
                     (m_vector_width == 16) ? llvm::Intrinsic::x86_avx512_pternlog_d_512
                                            : llvm::Intrinsic::x86_avx512_pternlog_d_256);
             //           (a, b, c) =  (111), (110), (101), (100), (011), (010), (001), (000)
@@ -5145,7 +5145,7 @@ LLVM_Util::op_zero_if(llvm::Value *cond, llvm::Value *v)
             llvm::Value *a_identity_mask = constant(static_cast<int>(0xF0));
             llvm::Value *int_v = is_float ? builder().CreateBitCast(v, type_wide_int()) : v;
             llvm::Value *args[] = {int_v, int_v, int_v, a_identity_mask};
-            llvm::Value *identity_call = builder().CreateCall(func, args);
+            llvm::Value *identity_call = builder().CreateCall(func, makeArrayRef(args));
             v = is_float ? builder().CreateBitCast(identity_call, type_wide_float()) : identity_call;
         }
     }

@@ -24,19 +24,16 @@ set (lib_src
           batched_backendllvm.cpp
           batched_llvm_gen.cpp
           batched_llvm_instance.cpp
-          ../liboslnoise/gabornoise.cpp
-          ../liboslnoise/simplexnoise.cpp
     )
 
 if (BUILD_SHARED_LIBS)
-    # oslcomp and oslquery symbols used in oslexec
+    # oslcomp symbols used in oslexec
     list(APPEND lib_src
         ../liboslcomp/ast.cpp
         ../liboslcomp/codegen.cpp
         ../liboslcomp/oslcomp.cpp
         ../liboslcomp/symtab.cpp
         ../liboslcomp/typecheck.cpp
-        ../liboslquery/oslquery.cpp
         )
 endif ()
 
@@ -222,6 +219,7 @@ endif()
 
 target_link_libraries (${local_lib}
     PUBLIC
+        oslquery oslnoise
         OpenImageIO::OpenImageIO
         # For OpenEXR/Imath 3.x:
         $<$<TARGET_EXISTS:Imath::Imath>:Imath::Imath>

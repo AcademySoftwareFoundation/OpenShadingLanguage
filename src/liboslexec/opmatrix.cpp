@@ -236,9 +236,9 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
     Matrix44 M;
     int ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
-    if (HDSTR(from) == StringParams::common)
+    if (HDSTR(from) == STRING_PARAMS(common))
         ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
-    else if (HDSTR(to) == StringParams::common)
+    else if (HDSTR(to) == STRING_PARAMS(common))
         ok = osl_get_matrix (sg, &M, (const char *)from);
     else
         ok = osl_get_from_to_matrix (sg, &M, (const char *)from,

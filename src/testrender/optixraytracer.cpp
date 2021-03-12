@@ -18,7 +18,6 @@
 #  include <optix_stack_size.h>
 #  include <optix_stubs.h>
 #  include <cuda.h>
-#  include <nvrtc.h>
 #  endif
 #endif
 
@@ -45,20 +44,6 @@ OSL_NAMESPACE_ENTER
     }                                                                     \
 }
 
-#define NVRTC_CHECK(call)                                                 \
-{                                                                         \
-    nvrtcResult error = call;                                             \
-    if (error != NVRTC_SUCCESS)                                           \
-    {                                                                     \
-        std::stringstream ss;                                             \
-        ss << "NVRTC call (" << #call << " ) failed with error: '"        \
-           << nvrtcGetErrorString( error )                                \
-           << "' (" __FILE__ << ":" << __LINE__ << ")\n";                 \
-           fprintf(stderr, "[NVRTC ERROR]  %s", ss.str().c_str() );       \
-    }                                                                     \
-}
-
-
 #define OPTIX_CHECK(call)                                                 \
 {                                                                         \
     OptixResult res = call;                                               \
@@ -84,19 +69,16 @@ OSL_NAMESPACE_ENTER
     }                                                                   \
 }
 
-#ifdef OSL_USE_OPTIX
-#if (OPTIX_VERSION >= 70000)
+#if defined(OSL_USE_OPTIX) && OPTIX_VERSION >= 70000
 static void context_log_cb( unsigned int level, const char* tag, const char* message, void* /*cbdata */ )
 {
 //    std::cerr << "[ ** LOGCALLBACK** " << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
 #endif
-#endif
 
 OptixRaytracer::OptixRaytracer ()
 {
-#ifdef OSL_USE_OPTIX
-#if (OPTIX_VERSION >= 70000)
+#if defined(OSL_USE_OPTIX) && OPTIX_VERSION >= 70000
     // Initialize CUDA
     cudaFree(0);
 
@@ -112,23 +94,19 @@ OptixRaytracer::OptixRaytracer ()
     CUDA_CHECK (cudaSetDevice (0));
     CUDA_CHECK (cudaStreamCreate (&m_cuda_stream));
 
-    // Set up the string table. This allocates a block of CUDA device memory to
-    // hold all of the static strings used by the OSL shaders. The strings can
-    // be accessed via OptiX variables that hold pointers to the table entries.
-    m_str_table.init(m_optix_ctx);
+#define STRDECL(str,var_name)                                           \
+    register_string (str, OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name);
+#include <OSL/strdecls.h>
+#undef STRDECL
 
-    // Register all of our string table entries
-    for (auto &&gvar : m_str_table.contents())
-        register_global (gvar.first.c_str(), gvar.second);
-#endif
 #endif
 }
 
 OptixRaytracer::~OptixRaytracer ()
 {
 #ifdef OSL_USE_OPTIX
-    m_str_table.freetable();
 #if (OPTIX_VERSION < 70000)
+    m_str_table.freetable();
     if (m_optix_ctx)
         m_optix_ctx->destroy();
 #else
@@ -148,7 +126,6 @@ OptixRaytracer::register_global (const std::string &str, uint64_t value)
        return it->second;
     }
     m_globals_map[ustring(str)] = value;
-
     return value;
 }
 
@@ -334,12 +311,15 @@ OptixRaytracer::synch_attributes ()
 
     // FIXME -- this is for testing only
     // Make some device strings to test userdata parameters
-    uint64_t addr1 = register_string ("ud_str_1", "");
-    uint64_t addr2 = register_string ("userdata string", "");
+    ustring userdata_str1("ud_str_1");
+    ustring userdata_str2("userdata string");
+
+    register_string(userdata_str1.string(), "");
+    register_string(userdata_str2.string(), "");
 
     // Store the user-data
-    register_global("test_str_1", addr1);
-    register_global("test_str_2", addr2);
+    test_str_1 = userdata_str1.hash();
+    test_str_2 = userdata_str2.hash();
 
     {
         char* colorSys = nullptr;
@@ -351,29 +331,28 @@ OptixRaytracer::synch_attributes ()
             return false;
         }
 
-        const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
-
         auto cpuDataSize = cpuDataSizes[0];
         auto numStrings = cpuDataSizes[1];
 
         // Get the size data-size, minus the ustring size
         const size_t podDataSize = cpuDataSize - sizeof(StringParam)*numStrings;
 
-        CUdeviceptr d_buffer;
-        CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_buffer), podDataSize + sizeof (DeviceString)*numStrings));
-        CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_buffer), colorSys, podDataSize, cudaMemcpyHostToDevice));
+        CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_color_system), podDataSize + sizeof (DeviceString)*numStrings));
+        CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_color_system), colorSys, podDataSize, cudaMemcpyHostToDevice));
+
+        CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_osl_printf_buffer), OSL_PRINTF_BUFFER_SIZE));
+        CUDA_CHECK (cudaMemset(reinterpret_cast<void *>(d_osl_printf_buffer), 0, OSL_PRINTF_BUFFER_SIZE));
 
         // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
         // FIXME -- Should probably handle alignment better.
         const ustring* cpuString = (const ustring*)(colorSys + (cpuDataSize - sizeof (StringParam)*numStrings));
-        CUdeviceptr gpuStrings = d_buffer + podDataSize;
+        CUdeviceptr gpuStrings = d_color_system + podDataSize;
         for (const ustring* end = cpuString + numStrings; cpuString < end; ++cpuString) {
             // convert the ustring to a device string
             uint64_t devStr = register_string (cpuString->string(), "");
             CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(gpuStrings), &devStr, sizeof (devStr), cudaMemcpyHostToDevice));
             gpuStrings += sizeof (DeviceString);
         }
-        register_global(name, d_buffer);
     }
 #endif // #if (OPTIX_VERSION < 70000)
 #endif
@@ -584,6 +563,24 @@ OptixRaytracer::make_optix_materials ()
     OptixProgramGroup  raygen_group;
     create_optix_pg(&raygen_desc, 1, &program_options, &raygen_group);
 
+    // Set Globals Raygen group
+    OptixProgramGroupDesc setglobals_raygen_desc = {};
+    setglobals_raygen_desc.kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+    setglobals_raygen_desc.raygen.module            = program_module;
+    setglobals_raygen_desc.raygen.entryFunctionName = "__raygen__setglobals";
+
+    OptixProgramGroup  setglobals_raygen_group;
+    sizeof_msg_log = sizeof (msg_log);
+    OPTIX_CHECK (optixProgramGroupCreate (m_optix_ctx,
+                                          &setglobals_raygen_desc,
+                                          1, // number of program groups
+                                          &program_options, // program options
+                                          msg_log, &sizeof_msg_log,
+                                          &setglobals_raygen_group));
+
+    //if (sizeof_msg_log > 1)
+    //    printf ("Creating set-globals 'ray-gen' program group:\n%s\n", msg_log);
+
     // Miss group
     OptixProgramGroupDesc miss_desc = {};
     miss_desc.kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
@@ -592,6 +589,14 @@ OptixRaytracer::make_optix_materials ()
 
     OptixProgramGroup  miss_group;
     create_optix_pg(&miss_desc, 1, &program_options, &miss_group);
+
+    // Set Globals Miss group
+    OptixProgramGroupDesc setglobals_miss_desc = {};
+    setglobals_miss_desc.kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
+    setglobals_miss_desc.miss.module            = program_module;
+    setglobals_miss_desc.miss.entryFunctionName = "__miss__setglobals";
+    OptixProgramGroup  setglobals_miss_group;
+    create_optix_pg(&setglobals_miss_desc, 1, &program_options, &setglobals_miss_group);
 
     // Hitgroup -- quads
     OptixProgramGroupDesc quad_hitgroup_desc = {};
@@ -728,125 +733,8 @@ OptixRaytracer::make_optix_materials ()
     pipeline_link_options.overrideUsesMotionBlur = false;
 #endif
 
-    // Build string-table "library"
-    nvrtcProgram str_lib;
-
-    auto extractNamespaces = [] (const OIIO::ustring &s) {
-        const char *str = s.c_str();
-        std::vector<std::string> ns;
-        do {
-            const char *begin = str;
-            // get to first ':'
-            while (*str != ':' && *str)
-                str++;
-            ns.push_back (std::string (begin, str));
-            // advance to second ':'
-            if (*str && *str == ':')
-                str++;
-        } while (*str++ != 0);
-        return ns;
-    };
-
-    std::stringstream strlib_ss;
-
-    strlib_ss << "// so things name-mangle properly\n";
-    strlib_ss << "struct DeviceString {\n";
-    strlib_ss << "   const char *data;\n";
-    strlib_ss << "};\n";
-    strlib_ss << "\n";
-
-    // write out all the global strings
-    for (auto &&gvar : m_globals_map) {
-        std::vector<std::string> var_ns = extractNamespaces(gvar.first);
-
-        // build namespace
-        for (size_t i = 0; i < var_ns.size() - 1; i++)
-            strlib_ss << "namespace " << var_ns[i] << " {\n";
-
-        strlib_ss << "__device__ DeviceString " << var_ns.back() << " = { (const char *)" << gvar.second << "};\n";
-        // close namespace up
-        for (size_t i = 0; i < var_ns.size() - 1; i++)
-            strlib_ss << "}\n";
-    }
-
-    strlib_ss << "extern \"C\" __global__ void __direct_callable__strlib_dummy(int *j)\n";
-    strlib_ss << "{\n";
-    strlib_ss << "   // must have a __direct_callable__ function for the module to compile\n";
-    strlib_ss << "}\n";
-
-    // XXX: Should this move to compute_60 (compute_35-compute_50 is now deprecated)
-    const char *cuda_compile_options[] = { "--gpu-architecture=compute_35"  ,
-                                           "--use_fast_math"                ,
-                                           "-dc"                            ,
-                                           "--std=c++11"
-                                         };
-
-    int num_compile_flags = int(sizeof(cuda_compile_options) / sizeof(cuda_compile_options[0]));
-    size_t str_lib_size, cuda_log_size;
-
-
-    std::string cuda_string = strlib_ss.str();
-
-    NVRTC_CHECK (nvrtcCreateProgram (&str_lib,
-                                     cuda_string.c_str(),
-                                     "cuda_strng_library",
-                                     0,         // number of headers
-                                     nullptr,   // header paths
-                                     nullptr)); // header files
-    nvrtcResult compileResult = nvrtcCompileProgram (str_lib,  num_compile_flags, cuda_compile_options);
-    if (compileResult != NVRTC_SUCCESS) {
-        NVRTC_CHECK (nvrtcGetProgramLogSize (str_lib, &cuda_log_size));
-        std::vector<char> cuda_log(cuda_log_size+1);
-        NVRTC_CHECK (nvrtcGetProgramLog (str_lib, cuda_log.data()));
-        cuda_log.back() = 0;
-        errhandler().error ("nvrtcCompileProgram failure for:\n%s\n"
-                            "====================================\n"
-                            "%s\n", cuda_string.c_str(), cuda_log.data());
-        return false;
-    }
-
-
-    NVRTC_CHECK (nvrtcGetPTXSize (str_lib, &str_lib_size));
-    std::vector<char> str_lib_ptx (str_lib_size);
-    NVRTC_CHECK (nvrtcGetPTX (str_lib, str_lib_ptx.data()));
-    NVRTC_CHECK (nvrtcDestroyProgram (&str_lib));
-
-    std::string strlib_string (str_lib_ptx.begin(), str_lib_ptx.end());
-
-    OptixModule strlib_module;
-    sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK (optixModuleCreateFromPTX (m_optix_ctx,
-                                           &module_compile_options,
-                                           &pipeline_compile_options,
-                                           str_lib_ptx.data(),
-                                           str_lib_ptx.size(),
-                                           msg_log, &sizeof_msg_log,
-                                           &strlib_module));
-    //if (sizeof_msg_log > 1)
-    //    printf ("Creating module from string-library PTX:\n%s\n", msg_log);
-
-    OptixProgramGroupDesc strlib_pg_desc = {};
-    strlib_pg_desc.kind = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    strlib_pg_desc.callables.moduleDC              = strlib_module;
-    strlib_pg_desc.callables.entryFunctionNameDC   = "__direct_callable__strlib_dummy";
-    strlib_pg_desc.callables.moduleCC              = 0;
-    strlib_pg_desc.callables.entryFunctionNameCC   = nullptr;
-
-    OptixProgramGroup strlib_group;
-
-    sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK (optixProgramGroupCreate (m_optix_ctx,
-                                          &strlib_pg_desc,
-                                          1,
-                                          &program_options,
-                                          msg_log, &sizeof_msg_log,
-                                          &strlib_group));
-    //if (sizeof_msg_log > 1)
-    //    printf ("Creating program group for string-library:\n%s\n", msg_log);
-
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
-         strlib_group,     // string globals
          raygen_group,
          miss_group
     };
@@ -861,6 +749,10 @@ OptixRaytracer::make_optix_materials ()
 
     // append the shader groups to our "official" list of program groups
     final_groups.insert (final_groups.end(), shader_groups.begin(), shader_groups.end());
+
+    // append set-globals groups
+    final_groups.push_back(setglobals_raygen_group);
+    final_groups.push_back(setglobals_miss_group);
 
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK (optixPipelineCreate (m_optix_ctx,
@@ -907,6 +799,8 @@ OptixRaytracer::make_optix_materials ()
     CUdeviceptr d_miss_record;
     CUdeviceptr d_hitgroup_records;
     CUdeviceptr d_callable_records;
+    CUdeviceptr d_setglobals_raygen_record;
+    CUdeviceptr d_setglobals_miss_record;
 
     std::vector<CUdeviceptr> d_sbt_records(final_groups.size());
 
@@ -914,8 +808,9 @@ OptixRaytracer::make_optix_materials ()
         OPTIX_CHECK (optixSbtRecordPackHeader (final_groups[i], &sbt_records[i]));
     }
 
-    int       sbtIndex       = 3;
+    int       sbtIndex       = 2;
     const int hitRecordStart = sbtIndex;
+    size_t   setglobals_start = final_groups.size() - 2;
 
     // Copy geometry data to appropriate SBT records
     if (scene.quads.size() > 0 ) {
@@ -939,15 +834,19 @@ OptixRaytracer::make_optix_materials ()
     const int nshaders   = int(shader_groups.size());
     const int nhitgroups = (scene.quads.size() > 0) + (scene.spheres.size() > 0);
 
-    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_raygen_record)    ,     sizeof(GenericRecord)));
-    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_miss_record)      ,     sizeof(GenericRecord)));
-    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_hitgroup_records) , nhitgroups * sizeof(GenericRecord)));
-    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_callable_records) , (2 + nshaders) * sizeof(GenericRecord)));
+    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_raygen_record)             ,     sizeof(GenericRecord)));
+    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_miss_record)               ,     sizeof(GenericRecord)));
+    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_hitgroup_records)          , nhitgroups * sizeof(GenericRecord)));
+    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_callable_records)          , (2 + nshaders) * sizeof(GenericRecord)));
+    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_setglobals_raygen_record)  ,     sizeof(GenericRecord)));
+    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_setglobals_miss_record)    ,     sizeof(GenericRecord)));
 
-    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_raygen_record)   , &sbt_records[1],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
-    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_miss_record)     , &sbt_records[2],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_raygen_record)   , &sbt_records[0],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_miss_record)     , &sbt_records[1],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_hitgroup_records), &sbt_records[hitRecordStart], nhitgroups * sizeof(GenericRecord), cudaMemcpyHostToDevice));
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_callable_records), &sbt_records[callableRecordStart], (2 + nshaders) * sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_setglobals_raygen_record)   , &sbt_records[setglobals_start + 0],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_setglobals_miss_record)     , &sbt_records[setglobals_start + 1],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
 
     // Looks like OptixShadingTable needs to be filled out completely
     m_optix_sbt.raygenRecord                 = d_raygen_record;
@@ -960,6 +859,13 @@ OptixRaytracer::make_optix_materials ()
     m_optix_sbt.callablesRecordBase          = d_callable_records;
     m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
     m_optix_sbt.callablesRecordCount         = 2 + nshaders;
+
+    // Shader binding table for SetGlobals stage
+    m_setglobals_optix_sbt = {};
+    m_setglobals_optix_sbt.raygenRecord                 = d_setglobals_raygen_record;
+    m_setglobals_optix_sbt.missRecordBase               = d_setglobals_miss_record;
+    m_setglobals_optix_sbt.missRecordStrideInBytes      = sizeof(GenericRecord);
+    m_setglobals_optix_sbt.missRecordCount              = 1;
 
     // Pipeline has been created so we can clean some things up
     for (auto &&i : final_groups) {
@@ -1398,9 +1304,25 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.invh = 1.0f / m_yres;
     params.output_buffer = d_output_buffer;
     params.traversal_handle = m_travHandle;
+    params.osl_printf_buffer_start = d_osl_printf_buffer;
+    // maybe send buffer size to CUDA instead of the buffer 'end'
+    params.osl_printf_buffer_end = d_osl_printf_buffer + OSL_PRINTF_BUFFER_SIZE;
+    params.color_system          = d_color_system;
+    params.test_str_1            = test_str_1;
+    params.test_str_2            = test_str_2;
 
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_launch_params), &params, sizeof(RenderParams), cudaMemcpyHostToDevice));
 
+    // Set up global variables
+    OPTIX_CHECK (optixLaunch (m_optix_pipeline,
+                              m_cuda_stream,
+                              d_launch_params,
+                              sizeof(RenderParams),
+                              &m_setglobals_optix_sbt,
+                              1, 1, 1));
+    CUDA_SYNC_CHECK();
+
+    // Launch real render
     OPTIX_CHECK (optixLaunch (m_optix_pipeline,
                               m_cuda_stream,
                               d_launch_params,
@@ -1408,11 +1330,104 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
                               &m_optix_sbt,
                               xres, yres, 1));
     CUDA_SYNC_CHECK();
+
+    //
+    //  Let's print some basic stuff
+    //
+    std::vector<uint8_t> printf_buffer(OSL_PRINTF_BUFFER_SIZE);
+    CUDA_CHECK(cudaMemcpy (printf_buffer.data(), reinterpret_cast<void *>(d_osl_printf_buffer), OSL_PRINTF_BUFFER_SIZE, cudaMemcpyDeviceToHost));
+
+    processPrintfBuffer(printf_buffer.data(), OSL_PRINTF_BUFFER_SIZE); 
 #endif
 #endif
 }
 
+#if defined(OSL_USE_OPTIX) && OPTIX_VERSION >= 70000
+void
+OptixRaytracer::processPrintfBuffer(void *buffer_data, size_t buffer_size)
+{
+    const uint8_t * ptr = reinterpret_cast<uint8_t *>(buffer_data);
+    // process until 
+    std::string fmt_string;
+    size_t total_read = 0;
+    while (total_read < buffer_size) {
+        size_t src = 0;
+        // set max size of each output string
+        const size_t BufferSize = 4096;
+        char buffer[BufferSize];
+        size_t dst = 0;
+        // get hash of the format string
+        uint64_t fmt_str_hash = *reinterpret_cast<const uint64_t *>(&ptr[src]);
+        src += sizeof(uint64_t);
+        // get sizeof the argument stack
+        uint64_t args_size = *reinterpret_cast<const uint64_t *>(&ptr[src]);
+        src += sizeof(size_t);
+        uint64_t next_args = src + args_size;
 
+        // have we reached the end?
+        if (fmt_str_hash == 0)
+            break;
+        const char *format = m_hash_map[fmt_str_hash];
+        OSL_ASSERT(format != nullptr && "The format string should have been registered with the renderer");
+        const size_t len = strlen(format);
+
+        for (size_t j = 0; j < len; j++) {
+            // If we encounter a '%', then we'l copy the format string to 'fmt_string'
+            // and provide that to printf() directly along with a pointer to the argument
+            // we're interested in printing.
+            if (format[j] == '%') {
+                fmt_string = "%";
+                bool format_end_found = false;
+                for (size_t i = 0; !format_end_found; i++) {
+                    j++;
+                    fmt_string += format[j];
+                    switch (format[j]) {
+                        case '%':
+                            // seems like a silly to print a '%', but it keeps the logic parallel with the other cases
+                            dst += snprintf(&buffer[dst], BufferSize - dst, fmt_string.c_str());
+                            format_end_found = true;
+                            break;
+                        case 'd': case 'i': case 'o': case 'x':
+                            dst += snprintf(&buffer[dst], BufferSize - dst, fmt_string.c_str(), *reinterpret_cast<const int *>(&ptr[src]));
+                            src += sizeof(int);
+                            format_end_found = true;
+                            break;
+                        case 'f': case 'g': case 'e':
+                            // TODO:  For OptiX llvm_gen_printf() aligns doubles on sizeof(double) boundaries -- since we're not
+                            // printing from the device anymore, maybe we don't need this alignment?
+                            src = (src + sizeof(double) - 1) & ~(sizeof(double)-1);
+                            dst += snprintf(&buffer[dst], BufferSize - dst, fmt_string.c_str(), *reinterpret_cast<const double *>(&ptr[src]));
+                            src += sizeof(double);
+                            format_end_found = true;
+                            break;
+                        case 's':
+                            src = (src + sizeof(double) - 1) & ~(sizeof(double)-1);
+                            uint64_t str_hash = *reinterpret_cast<const uint64_t *>(&ptr[src]);
+                            const char *str = m_hash_map[str_hash];
+                            OSL_ASSERT(str != nullptr && "The string should have been regisgtered with the renderer");
+                            dst += snprintf(&buffer[dst], BufferSize - dst, fmt_string.c_str(), str);
+                            src += sizeof(uint64_t);
+                            format_end_found = true;
+                            break;
+     
+                            break;
+                    }
+                }
+            }
+            else {
+                buffer[dst++] = format[j];
+            }
+
+        }
+        // realign
+        ptr = ptr + next_args;
+        total_read += next_args;
+
+        buffer[dst++] = '\0';
+        printf("%s", buffer);
+    }
+}
+#endif
 
 void
 OptixRaytracer::finalize_pixel_buffer ()

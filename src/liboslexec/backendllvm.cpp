@@ -328,12 +328,21 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
         // char*.
         shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
 
+#if OPTIX_VERSION < 70000
         // Leave the variable uninitialized to prevent raw pointers from
         // appearing in the generated code. The OptiX renderer will set the
         // variable to the string address before the kernel is launched.
         constant = llvm::ConstantInt::get (
             llvm::Type::getInt64Ty (ll.module()->getContext()), 0);
         m_varname_map [name] = ((ustring*)data)->string();
+#else
+        // DeviceStrings use the ustring hash to identify themselves.  These hashes will
+        // match on both the device and host side.
+        constant = llvm::ConstantInt::get (
+            llvm::Type::getInt64Ty (ll.module()->getContext()), ((ustring*)data)->hash());
+        m_varname_map [name] = ((ustring*)data)->string();
+#endif
+
     }
     else {
         // Handle unspecified types as generic byte arrays
@@ -354,17 +363,9 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
 
 #if (OPTIX_VERSION < 70000)
     g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
+#endif
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
     g_var->setInitializer(constant);
-#else
-    if (type != TypeDesc::TypeString) {
-        g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
-        g_var->setInitializer(constant);
-    }
-    else {
-        g_var->setExternallyInitialized(true);
-    }
-#endif
     m_const_map[name] = g_var;
 
     return g_var;
@@ -457,6 +458,10 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
         //       more robust solution may be called for.
 
         ss << "ds_"
+#if OPTIX_VERSION >= 70000
+           << group().name() << "_"
+           << group().id() << "_"
+#endif
            << std::setbase (16) << std::setfill('0') << std::setw (16)
            << sym.get_string().hash()
            << "_"

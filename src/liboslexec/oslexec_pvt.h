@@ -17,7 +17,14 @@
 
 // Pull in the modified Imath headers and the OSL_HOSTDEVICE macro
 #ifdef __CUDACC__
+#include <optix.h>
 #include <OSL/oslconfig.h>
+#endif
+
+#ifdef __CUDACC__
+#if OPTIX_VERSION >= 70000
+#include "string_hash.h"
+#endif
 #endif
 
 #include <OpenImageIO/ustring.h>
@@ -1238,7 +1245,12 @@ public:
     bool empty_instance () const {
         return (symbols().size() == 0 &&
                 (ops().size() == 0 ||
-                 (ops().size() == 1 && ops()[0].opname() == Strings::end)));
+#if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
+                 (ops().size() == 1 && UStringHash::Hash(ops()[0].opname().c_str()) == STRING_PARAMS(end))
+#else
+                 (ops().size() == 1 && ops()[0].opname() == Strings::end)
+#endif
+                 ));
     }
 
     /// Make our own version of the code and args from the master.
@@ -1978,13 +1990,13 @@ inline int
 tex_interp_to_code (StringParam modename)
 {
     int mode = -1;
-    if (modename == StringParams::smartcubic)
+    if (modename == STRING_PARAMS(smartcubic))
         mode = TextureOpt::InterpSmartBicubic;
-    else if (modename == StringParams::linear)
+    else if (modename == STRING_PARAMS(linear))
         mode = TextureOpt::InterpBilinear;
-    else if (modename == StringParams::cubic)
+    else if (modename == STRING_PARAMS(cubic))
         mode = TextureOpt::InterpBicubic;
-    else if (modename == StringParams::closest)
+    else if (modename == STRING_PARAMS(closest))
         mode = TextureOpt::InterpClosest;
     return mode;
 }

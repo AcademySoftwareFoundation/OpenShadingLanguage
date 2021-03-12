@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+set ($OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compiling CUDA code")
+
 # Compile a CUDA file to PTX using NVCC
 function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
     get_filename_component ( cuda_src_we ${cuda_src} NAME_WE )
@@ -26,8 +28,9 @@ function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx
-            --std=c++11 -dc -O3 --use_fast_math --expt-relaxed-constexpr
+            --std=c++14 -dc -O3 --use_fast_math --expt-relaxed-constexpr
             ${extra_nvcc_args}
+            ${OSL_EXTRA_NVCC_ARGS}
             ${cuda_src} -o ${cuda_ptx}
         MAIN_DEPENDENCY ${cuda_src}
         DEPENDS ${cuda_src} ${cuda_headers} oslexec

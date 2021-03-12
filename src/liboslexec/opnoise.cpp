@@ -676,30 +676,30 @@ struct GenericNoise {
     template<class R, class S> OSL_HOSTDEVICE
     inline void operator() (StringParam name, Dual2<R> &result, const Dual2<S> &s,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
-        if (name == StringParams::uperlin || name == StringParams::noise) {
+        if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             Noise noise;
             noise(result, s);
-        } else if (name == StringParams::perlin || name == StringParams::snoise) {
+        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
             SNoise snoise;
             snoise(result, s);
-        } else if (name == StringParams::simplexnoise || name == StringParams::simplex) {
+        } else if (name == STRING_PARAMS(simplexnoise) || name == STRING_PARAMS(simplex)) {
             SimplexNoise simplexnoise;
             simplexnoise(result, s);
-        } else if (name == StringParams::usimplexnoise || name == StringParams::usimplex) {
+        } else if (name == STRING_PARAMS(usimplexnoise) || name == STRING_PARAMS(usimplex)) {
             USimplexNoise usimplexnoise;
             usimplexnoise(result, s);
-        } else if (name == StringParams::cell) {
+        } else if (name == STRING_PARAMS(cell)) {
             CellNoise cellnoise;
             cellnoise(result.val(), s.val());
             result.clear_d();
-        } else if (name == StringParams::gabor) {
+        } else if (name == STRING_PARAMS(gabor)) {
             GaborNoise gnoise;
             gnoise (name, result, s, sg, opt);
-        } else if (name == StringParams::null) {
+        } else if (name == STRING_PARAMS(null)) {
             NullNoise noise; noise(result, s);
-        } else if (name == StringParams::unull) {
+        } else if (name == STRING_PARAMS(unull)) {
             UNullNoise noise; noise(result, s);
-        } else if (name == StringParams::hash) {
+        } else if (name == STRING_PARAMS(hash)) {
             HashNoise hashnoise;
             hashnoise(result.val(), s.val());
             result.clear_d();
@@ -718,30 +718,30 @@ struct GenericNoise {
                             const Dual2<S> &s, const Dual2<T> &t,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
 
-        if (name == StringParams::uperlin || name == StringParams::noise) {
+        if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             Noise noise;
             noise(result, s, t);
-        } else if (name == StringParams::perlin || name == StringParams::snoise) {
+        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
             SNoise snoise;
             snoise(result, s, t);
-        } else if (name == StringParams::simplexnoise || name == StringParams::simplex) {
+        } else if (name == STRING_PARAMS(simplexnoise) || name == STRING_PARAMS(simplex)) {
             SimplexNoise simplexnoise;
             simplexnoise(result, s, t);
-        } else if (name == StringParams::usimplexnoise || name == StringParams::usimplex) {
+        } else if (name == STRING_PARAMS(usimplexnoise) || name == STRING_PARAMS(usimplex)) {
             USimplexNoise usimplexnoise;
             usimplexnoise(result, s, t);
-        } else if (name == StringParams::cell) {
+        } else if (name == STRING_PARAMS(cell)) {
             CellNoise cellnoise;
             cellnoise(result.val(), s.val(), t.val());
             result.clear_d();
-        } else if (name == StringParams::gabor) {
+        } else if (name == STRING_PARAMS(gabor)) {
             GaborNoise gnoise;
             gnoise (name, result, s, t, sg, opt);
-        } else if (name == StringParams::null) {
+        } else if (name == STRING_PARAMS(null)) {
             NullNoise noise; noise(result, s, t);
-        } else if (name == StringParams::unull) {
+        } else if (name == STRING_PARAMS(unull)) {
             UNullNoise noise; noise(result, s, t);
-        } else if (name == StringParams::hash) {
+        } else if (name == STRING_PARAMS(hash)) {
             HashNoise hashnoise;
             hashnoise(result.val(), s.val(), t.val());
             result.clear_d();
@@ -771,20 +771,20 @@ struct GenericPNoise {
     inline void operator() (StringParam name, Dual2<R> &result, const Dual2<S> &s,
                             const S &sp,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
-        if (name == StringParams::uperlin || name == StringParams::noise) {
+        if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             PeriodicNoise noise;
             noise(result, s, sp);
-        } else if (name == StringParams::perlin || name == StringParams::snoise) {
+        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
             PeriodicSNoise snoise;
             snoise(result, s, sp);
-        } else if (name == StringParams::cell) {
+        } else if (name == STRING_PARAMS(cell)) {
             PeriodicCellNoise cellnoise;
             cellnoise(result.val(), s.val(), sp);
             result.clear_d();
-        } else if (name == StringParams::gabor) {
+        } else if (name == STRING_PARAMS(gabor)) {
             GaborPNoise gnoise;
             gnoise (name, result, s, sp, sg, opt);
-        } else if (name == StringParams::hash) {
+        } else if (name == STRING_PARAMS(hash)) {
             PeriodicHashNoise hashnoise;
             hashnoise(result.val(), s.val(), sp);
             result.clear_d();
@@ -803,20 +803,20 @@ struct GenericPNoise {
                             const Dual2<S> &s, const Dual2<T> &t,
                             const S &sp, const T &tp,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
-        if (name == StringParams::uperlin || name == StringParams::noise) {
+        if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             PeriodicNoise noise;
             noise(result, s, t, sp, tp);
-        } else if (name == StringParams::perlin || name == StringParams::snoise) {
+        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
             PeriodicSNoise snoise;
             snoise(result, s, t, sp, tp);
-        } else if (name == StringParams::cell) {
+        } else if (name == STRING_PARAMS(cell)) {
             PeriodicCellNoise cellnoise;
             cellnoise(result.val(), s.val(), t.val(), sp, tp);
             result.clear_d();
-        } else if (name == StringParams::gabor) {
+        } else if (name == STRING_PARAMS(gabor)) {
             GaborPNoise gnoise;
             gnoise (name, result, s, t, sp, tp, sg, opt);
-        } else if (name == StringParams::hash) {
+        } else if (name == STRING_PARAMS(hash)) {
             PeriodicHashNoise hashnoise;
             hashnoise(result.val(), s.val(), t.val(), sp, tp);
             result.clear_d();

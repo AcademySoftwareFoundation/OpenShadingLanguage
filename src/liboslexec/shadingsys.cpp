@@ -3830,6 +3830,13 @@ OSL_NAMESPACE_EXIT
 
 
 
+OSL::OSLQuery::OSLQuery(const ShaderGroup* group, int layernum)
+{
+    init(group, layernum);
+}
+
+
+
 bool
 OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
 {

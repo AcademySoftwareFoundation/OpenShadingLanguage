@@ -126,10 +126,11 @@ public:
     /// name of the shader. The optional `searchpath` paramter gives a
     /// colon-separated list of directories to search for compiled shaders.
 
-    OSLQuery(const ShaderGroup* group, int layernum) { init(group, layernum); }
+    OSLQuery(const ShaderGroup* group, int layernum);
     ///< Construct an OSLQuery and initialize it with an existing
     /// `ShaderGroup` (which must have been built using the `ShadingSystem`
-    /// runtime API for OSL.
+    /// runtime API for OSL. This constructor only exists in liboslexec,
+    /// with a full shading system, and not in liboslquery.
 
     ~OSLQuery();
     ///< Clean up and destruct the `OSLQuery`.

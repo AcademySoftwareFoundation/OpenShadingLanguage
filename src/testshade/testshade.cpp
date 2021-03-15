@@ -1704,7 +1704,7 @@ test_shade (int argc, const char *argv[])
             for (int i = 0; i < num_layers; ++i) {
                 std::cout << "    " << (layers[i] ? layers[i] : "<unnamed>") << "\n";
                 if (do_oslquery) {
-                    OSLQuery q(shadergroup.get(), i);
+                    OSLQuery q = shadingsys->oslquery(*shadergroup, i);
                     for (size_t p = 0;  p < q.nparams(); ++p) {
                         const OSLQuery::Parameter *param = q.getparam(p);
                         std::cout << "\t" << (param->isoutput ? "output "  : "")

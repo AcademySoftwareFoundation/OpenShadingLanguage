@@ -3830,6 +3830,70 @@ OSL_NAMESPACE_EXIT
 
 
 
+OSLQuery
+OSL::ShadingSystem::oslquery (const ShaderGroup& group, int layernum)
+{
+    OSLQuery Q; // This will use named return value optimization
+    if (layernum < 0 || layernum >= group.nlayers()) {
+        Q.errorf("Invalid layer number %d (valid indices: 0-%d).",
+                 layernum, group.nlayers()-1);
+        return Q;
+    }
+
+    const ShaderMaster *master = group[layernum]->master();
+    Q.m_shadername = master->shadername();
+    Q.m_shadertypename = master->shadertypename();
+    Q.m_params.clear();
+    if (int nparams = master->num_params()) {
+        Q.m_params.resize (nparams);
+        for (int i = 0;  i < nparams;  ++i) {
+            const Symbol *sym = master->symbol (i);
+            OSLQuery::Parameter &p (Q.m_params[i]);
+            p.name = sym->name().string();
+            const TypeSpec &ts (sym->typespec());
+            p.type = ts.simpletype();
+            p.isoutput = (sym->symtype() == SymTypeOutputParam);
+            p.varlenarray = ts.is_unsized_array();
+            p.isstruct = ts.is_structure() || ts.is_structure_array();
+            p.isclosure = ts.is_closure_based();
+            p.data = sym->data();
+            // In this mode, we don't fill in idefault, fdefault, sdefault,
+            // or spacename.
+            p.idefault.clear();
+            p.fdefault.clear();
+            p.sdefault.clear();
+            p.spacename.clear();
+            int n = int (p.type.numelements() * p.type.aggregate);
+            if (p.type.basetype == TypeDesc::INT) {
+                for (int i = 0; i < n; ++i)
+                    p.idefault.push_back (sym->get_int(i));
+            }
+            if (p.type.basetype == TypeDesc::FLOAT) {
+                for (int i = 0; i < n; ++i)
+                    p.fdefault.push_back (sym->get_float(i));
+            }
+            if (p.type.basetype == TypeDesc::STRING) {
+                for (int i = 0; i < n; ++i)
+                    p.sdefault.push_back (sym->get_string(i));
+            }
+            p.fields.clear();  // don't bother filling this out
+            if (StructSpec *ss = ts.structspec()) {
+                p.structname = ss->name().string();
+                for (size_t i = 0, e = ss->numfields();  i < e;  ++i)
+                    p.fields.push_back (ss->field(i).name);
+            } else {
+                p.structname.clear();
+            }
+            p.metadata.clear();   // FIXME?
+            p.validdefault = (p.data != NULL);
+        }
+    }
+
+    return Q;
+}
+
+
+
 OSL::OSLQuery::OSLQuery(const ShaderGroup* group, int layernum)
 {
     init(group, layernum);
@@ -3837,6 +3901,7 @@ OSL::OSLQuery::OSLQuery(const ShaderGroup* group, int layernum)
 
 
 
+// DEPRECATED(1.12)
 bool
 OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
 {

@@ -22,6 +22,7 @@ struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;
 class ShaderSymbol;
+class OSLQuery;
 template<int WidthT> struct alignas(64) BatchedShaderGlobals;
 
 
@@ -788,6 +789,12 @@ public:
 
     // DEPRECATED(2.0)
     bool archive_shadergroup (ShaderGroup *group, string_view filename);
+
+    /// Construct and return an OSLQuery initialized with an existing
+    /// ShaderGroup. For a shader group already loaded by the ShadingSystem,
+    /// this is much less expensive than constructing an OSLQuery by reading
+    /// the oso from disk, as would be done by liboslquery.
+    OSLQuery oslquery(const ShaderGroup& group, int layernum);
 
     /// Helper function -- copy or convert a source value (described by
     /// srctype) to destination (described by dsttype).  The function

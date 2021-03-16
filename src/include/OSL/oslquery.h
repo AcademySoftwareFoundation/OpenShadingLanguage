@@ -126,10 +126,15 @@ public:
     /// name of the shader. The optional `searchpath` paramter gives a
     /// colon-separated list of directories to search for compiled shaders.
 
-    OSLQuery(const ShaderGroup* group, int layernum) { init(group, layernum); }
+    OSL_DEPRECATED("Use ShadingSystem::oslquery(group,layernum)")
+    OSLQuery(const ShaderGroup* group, int layernum);
     ///< Construct an OSLQuery and initialize it with an existing
     /// `ShaderGroup` (which must have been built using the `ShadingSystem`
-    /// runtime API for OSL.
+    /// runtime API for OSL). This constructor only exists in liboslexec,
+    /// with a full shading system, and not in liboslquery.
+    /// This is deprecated, and instead we recommend retrieving an OSLQuery
+    /// via `ShadingSystem::oslquery(group, layernum)`.
+    // DEPRECATED(1.12)
 
     ~OSLQuery();
     ///< Clean up and destruct the `OSLQuery`.
@@ -153,6 +158,9 @@ public:
     /// fill out an OSLQuery structure for the given layer of the group.
     /// This is much faster than using open() to read it from an oso file on
     /// disk.
+    /// This is deprecated, and instead we recommend retrieving an OSLQuery
+    /// via `ShadingSystem::oslquery(group, layernum)`.
+    // DEPRECATED(1.12)
 
     const ustring shadertype(void) const { return m_shadertypename; }
     ///< Return the shader type: "surface", "displacement", "volume",
@@ -219,6 +227,8 @@ private:
             m_error += '\n';
         m_error += message;
     }
+
+    friend class ShadingSystem;
 };
 
 

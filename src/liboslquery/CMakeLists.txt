@@ -3,7 +3,7 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 set (local_lib oslquery)
-set (lib_src oslquery.cpp querystub.cpp ../liboslexec/typespec.cpp)
+set (lib_src oslquery.cpp ../liboslexec/typespec.cpp)
 file (GLOB compiler_headers "../liboslexec/*.h")
 
 FLEX_BISON (../liboslexec/osolex.l ../liboslexec/osogram.y oso lib_src compiler_headers)

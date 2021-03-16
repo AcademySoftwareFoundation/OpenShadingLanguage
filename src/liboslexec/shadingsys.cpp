@@ -3857,26 +3857,21 @@ OSL::ShadingSystem::oslquery (const ShaderGroup& group, int layernum)
             p.isstruct = ts.is_structure() || ts.is_structure_array();
             p.isclosure = ts.is_closure_based();
             p.data = sym->data();
-            // In this mode, we don't fill in idefault, fdefault, sdefault,
-            // or spacename.
-            p.idefault.clear();
-            p.fdefault.clear();
-            p.sdefault.clear();
-            p.spacename.clear();
-            int n = int (p.type.numelements() * p.type.aggregate);
-            if (p.type.basetype == TypeDesc::INT) {
-                for (int i = 0; i < n; ++i)
-                    p.idefault.push_back (sym->get_int(i));
+            if (p.type.arraylen >= 0) {
+                int n = int (p.type.numelements() * p.type.aggregate);
+                if (p.type.basetype == TypeDesc::INT) {
+                    for (int i = 0; i < n; ++i)
+                        p.idefault.push_back (sym->get_int(i));
+                }
+                if (p.type.basetype == TypeDesc::FLOAT) {
+                    for (int i = 0; i < n; ++i)
+                        p.fdefault.push_back (sym->get_float(i));
+                }
+                if (p.type.basetype == TypeDesc::STRING) {
+                    for (int i = 0; i < n; ++i)
+                        p.sdefault.push_back (sym->get_string(i));
+                }
             }
-            if (p.type.basetype == TypeDesc::FLOAT) {
-                for (int i = 0; i < n; ++i)
-                    p.fdefault.push_back (sym->get_float(i));
-            }
-            if (p.type.basetype == TypeDesc::STRING) {
-                for (int i = 0; i < n; ++i)
-                    p.sdefault.push_back (sym->get_string(i));
-            }
-            p.fields.clear();  // don't bother filling this out
             if (StructSpec *ss = ts.structspec()) {
                 p.structname = ss->name().string();
                 for (size_t i = 0, e = ss->numfields();  i < e;  ++i)
@@ -3884,8 +3879,7 @@ OSL::ShadingSystem::oslquery (const ShaderGroup& group, int layernum)
             } else {
                 p.structname.clear();
             }
-            p.metadata.clear();   // FIXME?
-            p.validdefault = (p.data != NULL);
+            p.validdefault = (p.data != nullptr);
         }
     }
 
@@ -3933,26 +3927,21 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
             p.isstruct = ts.is_structure() || ts.is_structure_array();
             p.isclosure = ts.is_closure_based();
             p.data = sym->data();
-            // In this mode, we don't fill in idefault, fdefault, sdefault,
-            // or spacename.
-            p.idefault.clear();
-            p.fdefault.clear();
-            p.sdefault.clear();
-            p.spacename.clear();
-            int n = int (p.type.numelements() * p.type.aggregate);
-            if (p.type.basetype == TypeDesc::INT) {
-                for (int i = 0; i < n; ++i)
-                    p.idefault.push_back (sym->get_int(i));
+            if (p.type.arraylen >= 0) {
+                int n = int (p.type.numelements() * p.type.aggregate);
+                if (p.type.basetype == TypeDesc::INT) {
+                    for (int i = 0; i < n; ++i)
+                        p.idefault.push_back (sym->get_int(i));
+                }
+                if (p.type.basetype == TypeDesc::FLOAT) {
+                    for (int i = 0; i < n; ++i)
+                        p.fdefault.push_back (sym->get_float(i));
+                }
+                if (p.type.basetype == TypeDesc::STRING) {
+                    for (int i = 0; i < n; ++i)
+                        p.sdefault.push_back (sym->get_string(i));
+                }
             }
-            if (p.type.basetype == TypeDesc::FLOAT) {
-                for (int i = 0; i < n; ++i)
-                    p.fdefault.push_back (sym->get_float(i));
-            }
-            if (p.type.basetype == TypeDesc::STRING) {
-                for (int i = 0; i < n; ++i)
-                    p.sdefault.push_back (sym->get_string(i));
-            }
-            p.fields.clear();  // don't bother filling this out
             if (StructSpec *ss = ts.structspec()) {
                 p.structname = ss->name().string();
                 for (size_t i = 0, e = ss->numfields();  i < e;  ++i)
@@ -3960,8 +3949,7 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
             } else {
                 p.structname.clear();
             }
-            p.metadata.clear();   // FIXME?
-            p.validdefault = (p.data != NULL);
+            p.validdefault = (p.data != nullptr);
         }
     }
 

@@ -1189,8 +1189,8 @@ OSLToyMainWindow::rebuild_param_area()
     for (int i = 0; i < nlayers; ++i) {
         OSLQuery oslquery = ss->oslquery(*group, i);
         std::string desc  = OIIO::Strutil::sprintf("layer %d %s  (%s)", i,
-                                                   layernames[i],
-                                                   oslquery.shadername());
+                                                  layernames[i],
+                                                  oslquery.shadername());
         paramLayout->addWidget(new QLabel(desc.c_str()), paramrow++, 0, 1, 2);
         for (auto&& p : m_shaderparams) {
             make_param_adjustment_row(p.get(), paramLayout, paramrow++);

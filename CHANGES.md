@@ -11,6 +11,7 @@ OSL Language and oslc compiler:
   conditionally inject a compile-time error or warning. #1300 (1.12.1)
 
 OSL Standard library:
+* vector2.h is updated with a mod() function for vector2. #1312 (1.12.1/1.11.12)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * Custom experimental llvm optimization levels 10, 11, 12, and 13. These
@@ -31,6 +32,7 @@ Continued work on experimental SIMD batched shading mode:
 * Batched analsys to figure out which symbols need to be varying or uniform,
   and which operations require masking. #1313 #1318 #1322 (1.12.1)
 * Additional infrastructure for batched analsys. #1316 (1.12.1)
+* Add implementation for BatchedBackendLLVM. #1330 (1.12.1)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -38,6 +40,9 @@ Continued work on experimental OptiX rendering:
   run the tests). #1281 (1.12.0.1)
 * A simple self-contained Cuda/OptiX example has been added as
   testsuite/example-cuda. #1280 (1.12.0.1)
+* Overhaul in how strings are communicated to the GPU side. #1309 (1.12.1)
+* Removal of runtime compilation of Cuda (libnvrtc dependency eliminated).
+  #1309 (1.12.1)
 
 Performance improvements:
 
@@ -64,6 +69,8 @@ Bug fixes and other improvements (internals):
   failure. #1302 (1.12.1/1.11.10)
 * During runtime optimization, don't merge layers that produce renderer
   outputs (the semantics of doing so are very fishy). #1296 (1.12.1)
+* Eliminate unnecessary error messages to stderr for broken point clouds.
+  #1333 (1.12.1/1.11.13)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -86,6 +93,9 @@ Build & test system improvements:
       (1.12.1/1.11.10)
     - Make the CMake build scripts more friendly to being a subproject.
       #1304 #1319 (1.11.11/1.12.1)
+    - We weren't properly hiding non-public symbols. #1337 (1.12.1/1.11.12)
+    - Fully split oslquery and oslnoise libraries from oslxec, no more
+      redundant modules put into both. #1346 #1348 (1.12.1)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
@@ -96,9 +106,14 @@ Build & test system improvements:
     - Fix build break against recent OIIO master change where m_mutex field
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming
-      Imath 3.0 and OpenEXR 3.0. #1299 (1.11.10/1.12.1)
+      Imath 3.0 and OpenEXR 3.0. #1299 (1.11.10/1.12.1) #1332 (1.11.11/1.12.1)
+      #1341 (1.11.12/1.12.1)
 * Testing and Continuous integration (CI) systems:
-
+    - Eliminate the old Travis CI and Appveyor. #1334 #1338 (1.12.1)
+    - Use ccache + GitHub 'cache' action to greatly speed up CI runs. #1335
+      (1.12.1)
+    - Divide the CI stages into separate steps, combine dependency-building
+      scripts for CentOS and Ubuntu ito a single script. #1338 (1.12.1)
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)
@@ -115,6 +130,14 @@ Documentation:
 * First steps in new documentation and scripts for building OSL on Windows.
   #1326 (1.12.1)
 
+
+Release 1.11.12 -- 1 Mar 2021 (compared to 1.11.11)
+----------------------------------------------------
+* Build: Changes for smooth compile against upcoming Imath 3.0. #1332 #1341
+* Build: We weren't properly hiding non-public symbols. #1337
+* CI: Cleanup and get rid of the last Travis vestiges. #1334
+* CI: Speed up CI runs by using GHA cache + ccache. #1335
+* CI: Separate CI process into several individual "steps." #1338
 
 Release 1.11.11 -- 1 Feb 2021 (compared to 1.11.10)
 ----------------------------------------------------

@@ -102,7 +102,7 @@ Build & test system improvements:
     - Cuda/OptiX back end: Add `__CUDADEVRT_INTERNAL__` define to bitcode
       generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+
       #1271 (1.12.0.1)
-    - Build against LLVM 11. #1274 (1.12.0.1)
+    - Build against LLVM 11 #1274 (1.12.0.1) and LLVM 12 #1351 (1.12.1.0).
     - Fix build break against recent OIIO master change where m_mutex field
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming

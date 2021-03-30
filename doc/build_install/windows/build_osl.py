@@ -1381,9 +1381,9 @@ OPENIMAGEIO = Dependency(
 # Use v1.1.0 on MacOS and Windows since v1.0.9 doesn't build properly on
 # those platforms.
 if Linux():
-    OCIO_URL = "https://github.com/imageworks/OpenColorIO/archive/v1.0.9.zip"
+    OCIO_URL = "https://github.com/AcademySoftwareFoundation/OpenColorIO/archive/v1.0.9.zip"
 else:
-    OCIO_URL = "https://github.com/imageworks/OpenColorIO/archive/v1.1.0.zip"
+    OCIO_URL = "https://github.com/AcademySoftwareFoundation/OpenColorIO/archive/v1.1.0.zip"
 
 
 def InstallOpenColorIO(context, force, buildArgs):

@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.14 -- ? ??? 2021 (compared to 1.11.13)
+----------------------------------------------------
+
+
 Release 1.11.13 -- 1 Apr 2021 (compared to 1.11.12)
 ----------------------------------------------------
 * Updated vector2.h with a `mod(vector2,vector2)` function. #1312

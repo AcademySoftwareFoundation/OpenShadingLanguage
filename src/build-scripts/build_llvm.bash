@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Utility script to download and build LLVM & clang
 #
@@ -43,5 +43,5 @@ if [[ `uname` == "Linux" ]] ; then
     mv clang+llvm*/* $LLVM_INSTALL_DIR
     export LLVM_DIRECTORY=$LLVM_INSTALL_DIR
     export PATH=${LLVM_INSTALL_DIR}/bin:$PATH
-    ls -a $LLVM_DIRECTORY
+    # ls -a $LLVM_DIRECTORY
 fi

@@ -25,13 +25,10 @@ This could easily be implemented as just one simple shader, but for
 illustrative purposes we will set it up as a 3-node shader network.
 
 
-To build:
+To build (using CMake >= 3.13, which has -B and -S):
 
-    mkdir build
-    cd build
-    cmake --config Release ..
-    cmake --build .
-    cd ..
+    cmake -S . -B build
+    cmake --build build
 
 Note that you must have OSL_ROOT set to an installed OSL in order for CMake
 to find it properly.

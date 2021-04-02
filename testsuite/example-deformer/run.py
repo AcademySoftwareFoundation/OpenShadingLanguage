@@ -5,6 +5,6 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 
-command += run_app ("cmake --config Release data >> build.txt", silent=True)
+command += run_app ("cmake -DCMAKE_BUILD_TYPE=Release data >> build.txt", silent=True)
 command += run_app ("cmake --build . >> build.txt", silent=True)
 command += run_app ("bin/osldeformer >> out.txt")

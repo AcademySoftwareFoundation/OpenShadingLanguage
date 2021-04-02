@@ -1,9 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.13 -- ?? 2021 (compared to 1.11.12)
+Release 1.11.13 -- 1 Apr 2021 (compared to 1.11.12)
 ----------------------------------------------------
-
+* Updated vector2.h with a `mod(vector2,vector2)` function. #1312
+* Fix unnecesary error messages to stderr when encountering broken point
+  clouds. #1333
 
 Release 1.11.12 -- 1 Mar 2021 (compared to 1.11.11)
 ----------------------------------------------------

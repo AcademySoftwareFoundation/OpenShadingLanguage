@@ -1,0 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_OPNAME abs
+// Try and get the input value between -MAX_INT and MAX_INT or close to it
+#define __OSL_XMACRO_VAL_TRANSFORM(val) (((2.0*2147483000.0)*val) - 2147483000.0)
+#include "test_unary_int_xmacro.h"

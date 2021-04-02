@@ -86,6 +86,24 @@ namespace sfm
     using std::isinf;
 #endif
 
+    template<typename T>
+    OSL_FORCEINLINE OSL_HOSTDEVICE T
+    negate(const T &x) {
+        #if OSL_FAST_MATH
+            // Compiler using a constant bit mask to perform negation,
+            // and reading a constant involves accessing its memory location.
+            // Alternatively the compiler can create a 0 value in register
+            // in a constant time not involving the memory subsystem.
+            // So we can subtract from 0 to effectively negate a value.
+            // Handling of +0.0f and -0.0f might differ from IEE here.
+            // But in graphics practice we don't see a problem with codes
+            // using this approach and a measurable 10%(+|-5%) performance gain
+            return T(0) - x;
+        #else
+            return -x;
+        #endif
+    }
+
     OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float>
     absf (const Dual2<float> &x)
     {

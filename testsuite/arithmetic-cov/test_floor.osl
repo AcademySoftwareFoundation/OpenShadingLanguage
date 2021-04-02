@@ -1,0 +1,10 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_OPNAME floor
+// Move input range from (0-1) to (-10 to 10) to produce a banded output
+#define __OSL_XMACRO_VAL_TRANSFORM(val) (20*(val - 0.5))
+// Return return output from (-10 to 10) to (0-1) to visualize results
+#define __OSL_XMACRO_OUT_TRANSFORM(out) ((out/20) + 0.5)
+#include "test_unary_xmacro.h"

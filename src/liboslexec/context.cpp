@@ -219,11 +219,18 @@ ShadingContext::Batched<WidthT>::execute_init
     if (sgroup.nlayers()) {
         sgroup.start_running ();
         if (! sgroup.batch_jitted()) {
-            shadingsys().template batched<WidthT>().jit_group(sgroup, &context());
+            // Matching ShadingContext::execute_init behavior
+            // of grabbing another context.
+            // TODO:  Is this necessary, why can't we just use the
+            // the existing context()?
+            //shadingsys().template batched<WidthT>().jit_group(sgroup, &context());
+            auto ctx = shadingsys().get_context(context().thread_info());
+            shadingsys().template batched<WidthT>().jit_group(sgroup, ctx);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().template batched<WidthT>().jit_all_groups();
             }
+            shadingsys().release_context(ctx);
         }
         // To handle layers that were not used but still possibly had
         // render outputs, we always generate a run function even for

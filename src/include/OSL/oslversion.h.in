@@ -86,4 +86,20 @@ namespace @PROJ_NAME@ = @PROJ_NAMESPACE_V@;
 
 #define OSL_SHADER_INSTALL_DIR "@OSL_SHADER_INSTALL_DIR@"
 
+// Macro helpers to build function names based on other macros
+#define __OSL_CONCAT_INDIRECT(A, B) A ## B
+#define __OSL_CONCAT(A, B) __OSL_CONCAT_INDIRECT(A,B)
+#define __OSL_CONCAT3(A, B, C) __OSL_CONCAT(__OSL_CONCAT(A,B),C)
+#define __OSL_CONCAT4(A, B, C, D) __OSL_CONCAT(__OSL_CONCAT3(A,B,C),D)
+#define __OSL_CONCAT5(A, B, C, D, E) __OSL_CONCAT(__OSL_CONCAT4(A,B,C,D),E)
+#define __OSL_CONCAT6(A, B, C, D, E, F) __OSL_CONCAT(__OSL_CONCAT5(A,B,C,D,E),F)
+#define __OSL_CONCAT7(A, B, C, D, E, F, G) __OSL_CONCAT(__OSL_CONCAT6(A,B,C,D,E,F),G)
+#define __OSL_CONCAT8(A, B, C, D, E, F, G, H) __OSL_CONCAT(__OSL_CONCAT7(A,B,C,D,E,F,G),H)
+#define __OSL_CONCAT9(A, B, C, D, E, F, G, H, I) __OSL_CONCAT(__OSL_CONCAT8(A,B,C,D,E,F,G,H),I)
+#define __OSL_CONCAT10(A, B, C, D, E, F, G, H, I, J) __OSL_CONCAT(__OSL_CONCAT9(A,B,C,D,E,F,G,H,I),J)
+
+#if defined(__OSL_TARGET_ISA) && defined(__OSL_WIDTH)
+    #define __OSL_WIDE_PVT __OSL_CONCAT5(b,__OSL_WIDTH,_,__OSL_TARGET_ISA,_pvt)
+#endif
+
 #endif /* OSLVERSION_H */

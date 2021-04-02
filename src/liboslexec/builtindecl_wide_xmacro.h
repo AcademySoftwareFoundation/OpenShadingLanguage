@@ -178,6 +178,7 @@
     DECL (osl_closure_to_string, "sXC")
 #endif
 
+#ifdef __OSL_TBD
 DECL(__OSL_OP(format), "xXis*")
 DECL(__OSL_OP(printf), "xXis*")
 DECL(__OSL_OP(error), "xXis*")
@@ -440,11 +441,14 @@ WIDE_UNARY_F_OP_IMPL(erf)
 WIDE_UNARY_F_OP_IMPL(erfc)
 
 WIDE_BINARY_VF_OP_IMPL(pow)
+#endif // __OSL_TBD
 
 WIDE_UNARY_OP_IMPL(sqrt)
 WIDE_UNARY_OP_IMPL(inversesqrt)
 
+#ifdef __OSL_TBD
 WIDE_UNARY_F_OR_V_OP_IMPL(logb)
+#endif
 WIDE_UNARY_F_OR_V_OP_IMPL(floor)
 
 
@@ -455,15 +459,19 @@ WIDE_UNARY_F_OR_V_OP_IMPL(trunc)
 WIDE_UNARY_F_OR_V_OP_IMPL(sign)
 WIDE_BINARY_F_OR_V_OP_IMPL(step)
 
+#ifdef __OSL_TBD
 WIDE_TEST_F_OP_IMPL(isnan)
 WIDE_TEST_F_OP_IMPL(isinf)
 WIDE_TEST_F_OP_IMPL(isfinite)
+#endif
 WIDE_UNARY_OP_IMPL(abs)
 WIDE_UNARY_I_OP_IMPL(abs)
 WIDE_UNARY_OP_IMPL(fabs)
 
 WIDE_BINARY_F_OR_V_OP_IMPL(fmod)
 // mod for integers is handled by the code generator
+
+#ifdef __OSL_TBD
 
 DECL(__OSL_OP4(smoothstep, Wf, Wf, Wf, Wf), "xXXXX")
 DECL(__OSL_MASKED_OP4(smoothstep, Wf, Wf, Wf, Wf), "xXXXXi")
@@ -640,6 +648,7 @@ DECL(__OSL_MASKED_OP2(filterwidth, Wv, Wdv), "xXXi")
 
 DECL(__OSL_OP(raytype_bit), "iXi")
 
+#endif // __OSL_TBD
 
 // Clean up local definitions
 #undef WIDE_NOISE_IMPL_INDIRECT

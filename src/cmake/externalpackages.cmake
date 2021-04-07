@@ -103,6 +103,12 @@ if (MSVC AND NOT LINKSTATIC)
     add_definitions (-DOPENEXR_DLL) # Is this needed for new versions?
 endif ()
 
+if (OPENEXR_VERSION VERSION_GREATER_EQUAL 2.5.99)
+    set (OSL_USING_IMATH 3)
+else ()
+    set (OSL_USING_IMATH 2)
+endif ()
+
 
 # OpenImageIO
 checked_find_package (OpenImageIO REQUIRED

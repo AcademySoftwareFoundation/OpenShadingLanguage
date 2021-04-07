@@ -379,7 +379,7 @@ foreach(target_lib ${liboslexec_target_libs})
     target_include_directories (${target_lib}
         PUBLIC
             ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-            ${ILMBASE_INCLUDES}
+            ${IMATH_INCLUDES}
         )
     target_compile_definitions (${target_lib}
         PRIVATE
@@ -403,7 +403,6 @@ foreach(target_lib ${liboslexec_target_libs})
             ${ILMBASE_LIBRARIES}
         PRIVATE
             pugixml::pugixml
-            ${ZLIB_LIBRARIES}
             ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
             ${CLANG_LIBRARIES}
             ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
@@ -461,7 +460,6 @@ target_link_libraries (${local_lib}
         ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml::pugixml
-        ${ZLIB_LIBRARIES}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}

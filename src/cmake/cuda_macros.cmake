@@ -90,7 +90,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             "-I${PROJECT_SOURCE_DIR}/src/include"
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
             "-I${OpenImageIO_INCLUDES}"
-            "-I${ILMBASE_INCLUDE_DIR}"
+            "-I${IMATH_INCLUDES}"
             "-I${Boost_INCLUDE_DIRS}"
             ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__

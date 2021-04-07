@@ -102,6 +102,8 @@ macro ( LLVM_COMPILE llvm_src srclist )
 
     list (TRANSFORM IMATH_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
+    list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
 
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
@@ -113,6 +115,7 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-I${CMAKE_BINARY_DIR}/include"
           "-I${OpenImageIO_INCLUDES}"
           ${ALL_IMATH_INCLUDES}
+          ${ALL_OPENEXR_INCLUDES}
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
           -Wno-deprecated-register
@@ -186,7 +189,7 @@ add_library (${local_lib} ${lib_src})
 target_include_directories (${local_lib}
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-        ${IMATH_INCLUDES}
+        ${IMATH_INCLUDES} ${OPENEXR_INCLUDES}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
     )

@@ -5,7 +5,11 @@
 #pragma once
 
 #include <OpenImageIO/oiioversion.h>
+#if OIIO_VERSION >= 22120
 #include <OpenImageIO/detail/farmhash.h>
+#else
+#include <OSL/farmhash.h>
+#endif
 
 namespace pvt {
 

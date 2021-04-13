@@ -3,8 +3,17 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testshade' executable
-set ( testshade_srcs testshade.cpp simplerend.cpp batched_simplerend.cpp optixgridrender.cpp
-                     ../testrender/optix_stringtable.cpp )
+set ( testshade_srcs 
+    testshade.cpp 
+    simplerend.cpp 
+    optixgridrender.cpp
+    ../testrender/optix_stringtable.cpp )
+
+if (BUILD_BATCHED)
+    list(APPEND testshade_srcs 
+        batched_simplerend.cpp 
+        )
+endif()    
 
 if (CMAKE_COMPILER_IS_INTEL)
     # Make sure our shader globals are calculated consistently

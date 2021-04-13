@@ -100,7 +100,8 @@ macro ( TESTSUITE )
         # Run the test unoptimized, unless it matches a few patterns that
         # we don't test unoptimized (or has an OPTIMIZEONLY marker file).
         if (NOT _testname MATCHES "^getattribute-shader" AND
-            NOT _testname MATCHES "optix" AND
+            NOT _testname MATCHES "optix" AND 
+            NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
             add_one_testsuite ("${_testname}" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=0 )
@@ -109,7 +110,8 @@ macro ( TESTSUITE )
         # optimization, triggered by setting TESTSHADE_OPT env variable.
         # Skip OptiX-only tests and those with a NOOPTIMIZE marker file.
         if (NOT _testname MATCHES "optix"
-                AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
             add_one_testsuite ("${_testname}.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 )
         endif ()
@@ -120,7 +122,8 @@ macro ( TESTSUITE )
         if (USE_OPTIX
             AND (EXISTS "${_testsrcdir}/OPTIX" OR test_all_optix OR _testname MATCHES "optix")
             AND NOT EXISTS "${_testsrcdir}/NOOPTIX"
-            AND NOT EXISTS "${_testsrcdir}/NOOPTIX-FIXME")
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIX-FIXME"
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
             # Unoptimized
             if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
                 add_one_testsuite ("${_testname}.optix" "${_testsrcdir}"
@@ -131,16 +134,27 @@ macro ( TESTSUITE )
                                ENV TESTSHADE_OPT=2 TESTSHADE_OPTIX=1 )
         endif ()
         
-        # When building for Batched support, also run it in Batched mode
-        # if there is an BATCHED marker file in the directory.
-        # If an environment variable $TESTSUITE_BATCHED is nonzero, then
-        # run all tests in Batched mode, even if there's no BATCHED marker.
-        if ((EXISTS "${_testsrcdir}/BATCHED" OR test_all_batched OR _testname MATCHES "batched")
-            AND NOT EXISTS "${_testsrcdir}/NOBATCHED"
-            AND NOT EXISTS "${_testsrcdir}/NOBATCHED-FIXME")
-            # optimized for right now
-            add_one_testsuite ("${_testname}.batched.opt" "${_testsrcdir}"
-                               ENV TESTSHADE_OPT=2 TESTSHADE_BATCHED=1 )
+        if (BUILD_BATCHED)
+            # When building for Batched support, also run it in Batched mode
+            # if there is an BATCHED marker file in the directory.
+            # If an environment variable $TESTSUITE_BATCHED is nonzero, then
+            # run all tests in Batched mode, even if there's no BATCHED marker.
+            if ((EXISTS "${_testsrcdir}/BATCHED" OR test_all_batched OR _testname MATCHES "batched")
+                AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+                AND NOT EXISTS "${_testsrcdir}/NOBATCHED"
+                AND NOT EXISTS "${_testsrcdir}/NOBATCHED-FIXME")
+                # optimized for right now
+                add_one_testsuite ("${_testname}.batched.opt" "${_testsrcdir}"
+                                   ENV TESTSHADE_OPT=2 TESTSHADE_BATCHED=1 )
+            endif ()
+            
+            # When building for Batched support, optionally run a regression test
+            # if there is an BATCHED_REGRESSION marker file in the directory.
+            if (EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
+                # optimized for right now
+                add_one_testsuite ("${_testname}.regress.batched.opt" "${_testsrcdir}"
+                                   ENV TESTSHADE_OPT=2 OSL_REGRESSION_TEST=BATCHED )
+            endif ()
         endif ()
     endforeach ()
     if (VERBOSE)

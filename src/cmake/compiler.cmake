@@ -283,6 +283,33 @@ if (NOT USE_SIMD STREQUAL "")
     add_compile_options (${SIMD_COMPILE_FLAGS})
 endif ()
 
+###########################################################################
+# Batched SIMD shader execution options.
+#
+# The USE_BATCHED option may be set to indicate that support for batched
+# SIMD shader execution be compiled along with targe specific libraries
+set (USE_BATCHED "" CACHE STRING "Build batched SIMD shader execution for (0, b8_AVX, b8_AVX2, b8_AVX2_noFMA, b8_AVX512, b8_AVX512_noFMA, b16_AVX512, b16_AVX512_noFMA)")
+set (BATCHED_SUPPORT_DEFINES "")
+set (BATCHED_TARGET_LIBS "")
+set (BUILD_BATCHED False)
+if (NOT USE_BATCHED STREQUAL "")
+    message (STATUS "Compiling with batched SIMD targets ${USE_BATCHED}")
+    if (NOT USE_BATCHED STREQUAL "0")
+        add_compile_definitions ("OSL_USE_BATCHED=1")
+        set (BUILD_BATCHED True)
+        string (REPLACE "," ";" BATCHED_TARGET_LIST ${USE_BATCHED})
+        foreach (batched_target ${BATCHED_TARGET_LIST})
+            if (VERBOSE)
+                message (STATUS "BATCHED target: ${batched_target}")
+            endif ()
+            set (BATCHED_SUPPORT_DEFINES ${BATCHED_SUPPORT_DEFINES} "__OSL_SUPPORTS_${batched_target}")
+        endforeach()
+    else ()
+        message (STATUS "Compiling with NO batched SIMD targets, USE_BATCHED=0")
+    endif ()
+else ()
+    message (STATUS "Compiling with NO batched SIMD targets, USE_BATCHED is empty")
+endif ()
 
 ###########################################################################
 # Preparation to test for compiler/language features

@@ -30,7 +30,9 @@
 #include <OSL/oslexec.h>
 #include <OSL/oslcomp.h>
 #include <OSL/oslquery.h>
-#include <OSL/batched_shaderglobals.h>
+#ifdef OSL_USE_BATCHED
+#   include <OSL/batched_shaderglobals.h>
+#endif
 #include "optixgridrender.h"
 #include "simplerend.h"
 
@@ -193,20 +195,21 @@ set_shadingsys_options ()
         batch_size = atoi(opt_env);
 
     if (batched) {
-        // We are only building FMA versions, so force it on
+#ifdef OSL_USE_BATCHED
+        // Allow FMA if build of OSL supports it
         shadingsys->attribute ("llvm_jit_fma", 1);
 
         bool batch_size_requested = (batch_size != -1);
         // Not really looping, just emulating goto behavior using break
         for(;;) {
             if (!batch_size_requested || batch_size == 16) {
-                if (shadingsys->supports_batch_execution_at(16)) {
+                if (shadingsys->configure_batch_execution_at(16)) {
                     batch_size = 16;
                     break;
                 }
             }
             if (!batch_size_requested || batch_size == 8) {
-                if (shadingsys->supports_batch_execution_at(8)) {
+                if (shadingsys->configure_batch_execution_at(8)) {
                     batch_size = 8;
                     break;
                 }
@@ -225,6 +228,9 @@ set_shadingsys_options ()
             batched = false;
             break;
         }
+#else
+        batched = false;
+#endif
     }
 
     if (!batched) {
@@ -864,6 +870,7 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
     // We also choose to JIT it now during timing for setup
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
     ShadingContext *ctx = shadingsys->get_context(thread_info);
+#ifdef OSL_USE_BATCHED
     if (batched) {
         // jit_group will optimize the group if necesssary
         if (batch_size == 16) {
@@ -872,7 +879,9 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
             ASSERT((batch_size == 8) && "Unsupport batch size");
             shadingsys->batched<8>().jit_group (shadergroup.get(), ctx);
         }
-    } else {
+    } else
+#endif
+    {
         shadingsys->optimize_group (shadergroup.get(), ctx, true /*do_jit*/);
     }
 
@@ -1006,6 +1015,7 @@ save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
     }
 }
 
+#ifdef OSL_USE_BATCHED
 // For batch of pixels (bx[WidthT], by[WidthT]) that was just shaded
 // by the given shading context, save each of the requested outputs
 // to the corresponding output ImageBuf.
@@ -1147,8 +1157,8 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
             std::cout << oStreams[batchIndex]->str();
         }
     }
-
 }
+#endif
 
 static void
 test_group_attributes (ShaderGroup *group)
@@ -1318,7 +1328,8 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
 }
 
 
-// Set up the ShaderGlobals fields for pixel (x,y).
+#ifdef OSL_USE_BATCHED
+// Set up the uniform portion of BatchedShaderGlobals fields
 template<int WidthT>
 static void
 setup_uniform_shaderglobals (BatchedShaderGlobals<WidthT> &bsg, ShadingSystem *shadingsys)
@@ -1539,7 +1550,7 @@ batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI 
     shadingsys->release_context (ctx);
     shadingsys->destroy_thread_info(thread_info);
 }
-
+#endif
 
 static void synchio() {
     // Synch all writes to stdout & stderr now (mostly for Windows)
@@ -1793,6 +1804,7 @@ test_shade (int argc, const char *argv[])
 #if 0
             shade_region (rend, shadergroup.get(), roi, save);
 #else
+#ifdef OSL_USE_BATCHED
             if (batched) {
                 if (batch_size == 16) {
                     OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
@@ -1806,7 +1818,9 @@ test_shade (int argc, const char *argv[])
                             batched_shade_region<8> (rend, shadergroup.get(), sub_roi, save);
                         });
                 }
-            } else {
+            } else
+#endif
+            {
                 OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
                     [&](OIIO::ROI sub_roi)->void {
                         shade_region (rend, shadergroup.get(), sub_roi, save);

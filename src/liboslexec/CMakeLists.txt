@@ -11,148 +11,6 @@ set ( liboslexec_target_srcs
 set ( liboslexec_override_limits
     )
     
-# Strategy is to make a copy of each cpp in liboslexec_target_srcs for 
-# each target batch width and ISA combination, applying compiler flags to define 
-# -D__OSL_WIDTH=[4|8|16]
-# -D__OSL_TARGET_ISA=[AVX512|AVX2|AVX|SSE4_2]
-# and compiler flags to choose correct target ISA for your compiler
-# You may then add/remove the desired  ${TARGET_SOURCES_B[4|8|16]_[AVX512|AVX2|AVX|SSE4_2]}
-# to your add_library call 
-foreach(target_src ${liboslexec_target_srcs})
-    
-    set(DST_B16_AVX512 "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_b16_AVX512.cpp")
-    set(DST_B16_AVX512_NOFMA "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_b16_AVX512_noFMA.cpp")
-    set(DST_B8_AVX512 "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_b8_AVX512.cpp")
-    set(DST_B8_AVX512_NOFMA "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_b8_AVX512_noFMA.cpp")
-    set(DST_B8_AVX2 "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_b8_AVX2.cpp")
-    set(DST_B8_AVX2_NOFMA "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_b8_AVX2_noFMA.cpp")
-    set(DST_B8_AVX "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_b8_AVX.cpp")
-    
-    set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/${target_src}.cpp")
-    
-    CONFIGURE_FILE("${SRC}" ${DST_B16_AVX512} COPYONLY)
-    CONFIGURE_FILE("${SRC}" ${DST_B16_AVX512_NOFMA} COPYONLY)
-    CONFIGURE_FILE(${SRC} ${DST_B8_AVX512} COPYONLY)
-    CONFIGURE_FILE(${SRC} ${DST_B8_AVX512_NOFMA} COPYONLY)
-    CONFIGURE_FILE(${SRC} ${DST_B8_AVX2} COPYONLY)
-    CONFIGURE_FILE(${SRC} ${DST_B8_AVX2_NOFMA} COPYONLY)
-    CONFIGURE_FILE(${SRC} ${DST_B8_AVX} COPYONLY)
-    
-    list(APPEND TARGET_SOURCES_B16_AVX512 "${DST_B16_AVX512}")
-    list(APPEND TARGET_SOURCES_B16_AVX512_NOFMA "${DST_B16_AVX512_NOFMA}")
-    list(APPEND TARGET_SOURCES_B8_AVX512 "${DST_B8_AVX512}")
-    list(APPEND TARGET_SOURCES_B8_AVX512_NOFMA "${DST_B8_AVX512_NOFMA}")
-    list(APPEND TARGET_SOURCES_B8_AVX2 "${DST_B8_AVX2}")
-    list(APPEND TARGET_SOURCES_B8_AVX2_NOFMA "${DST_B8_AVX2_NOFMA}")
-    list(APPEND TARGET_SOURCES_B8_AVX "${DST_B8_AVX}")
-    
-    set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}" "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}" "${DST_B4_SSE4_2}" 
-        APPEND PROPERTY COMPILE_OPTIONS 
-        "-I${CMAKE_CURRENT_SOURCE_DIR}/wide"
-        "-I${CMAKE_CURRENT_SOURCE_DIR}/../liboslnoise/wide"
-        )
-    
-    set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}"
-        APPEND PROPERTY COMPILE_DEFINITIONS "__OSL_WIDTH=16")
-    set_property(SOURCE "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}" "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}"
-        APPEND PROPERTY COMPILE_DEFINITIONS "__OSL_WIDTH=8")
-    
-    set_property(SOURCE "${DST_B16_AVX512}" "${DST_B8_AVX512}"
-        APPEND PROPERTY COMPILE_DEFINITIONS "__OSL_TARGET_ISA=AVX512")
-    set_property(SOURCE "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512_NOFMA}"
-        APPEND PROPERTY COMPILE_DEFINITIONS "__OSL_TARGET_ISA=AVX512_noFMA")
-    set_property(SOURCE "${DST_B8_AVX2}" 
-        APPEND PROPERTY COMPILE_DEFINITIONS "__OSL_TARGET_ISA=AVX2")
-    set_property(SOURCE "${DST_B8_AVX2_NOFMA}" 
-        APPEND PROPERTY COMPILE_DEFINITIONS "__OSL_TARGET_ISA=AVX2_noFMA")
-    set_property(SOURCE "${DST_B8_AVX}" 
-        APPEND PROPERTY COMPILE_DEFINITIONS "__OSL_TARGET_ISA=AVX")
-    
-    if (CMAKE_COMPILER_IS_INTEL)
-        if (MSVC)
-            set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "/QxCORE-AVX512" "/Qopt-zmm-usage:high")
-            set_property(SOURCE "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "/QxCORE-AVX512" "/Qopt-zmm-usage:low")
-            set_property(SOURCE "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "/QxCORE-AVX2")
-            set_property(SOURCE "${DST_B8_AVX}" 
-                APPEND PROPERTY COMPILE_OPTIONS "/QxAVX")
-            
-            set_property(SOURCE "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512_NOFMA}" "${DST_B8_AVX2_NOFMA}"
-                APPEND PROPERTY COMPILE_OPTIONS "/Qfma-")
-            
-            if (${target_src} IN_LIST liboslexec_override_limits)
-                set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}"
-                "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}"
-                  APPEND PROPERTY COMPILE_OPTIONS "/Qoverride-limits")
-            endif()
-            set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}"
-            "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}"
-              APPEND PROPERTY COMPILE_OPTIONS "/Qprec-div" "/Qqopt-report:5")
-        else ()
-            set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "-xCORE-AVX512" "-qopt-zmm-usage=high")
-            set_property(SOURCE "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "-xCORE-AVX512" "-qopt-zmm-usage=low")
-            set_property(SOURCE "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "-xCORE-AVX2")
-            set_property(SOURCE "${DST_B8_AVX}" 
-                APPEND PROPERTY COMPILE_OPTIONS "-xAVX")
-            
-            set_property(SOURCE "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512_NOFMA}" "${DST_B8_AVX2_NOFMA}"
-                APPEND PROPERTY COMPILE_OPTIONS "-no-fma")
-            
-            if (${target_src} IN_LIST liboslexec_override_limits)
-                set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}"
-                "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}"
-                  APPEND PROPERTY COMPILE_OPTIONS "-qoverride-limits")
-            endif()
-            set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}"
-            "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}"
-              APPEND PROPERTY COMPILE_OPTIONS "-prec-div" "-qopt-report=5")
-        endif ()
-    endif ()
-    
-    if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
-        # REQUIRES CLANG 7+ to use sucessfully vectorize with OpenMP simd
-        set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}"
-            APPEND PROPERTY COMPILE_OPTIONS "-march=skylake-avx512")
-        if (CLANG_VERSION_STRING VERSION_GREATER 7.0)
-            set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "-mprefer-vector-width=512")
-            set_property(SOURCE "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}" 
-                APPEND PROPERTY COMPILE_OPTIONS "-mprefer-vector-width=256")
-        endif ()
-        set_property(SOURCE "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" 
-            APPEND PROPERTY COMPILE_OPTIONS "-march=core-avx2")
-        set_property(SOURCE "${DST_B8_AVX}" 
-            APPEND PROPERTY COMPILE_OPTIONS "-march=corei7-avx")
-        
-        set_property(SOURCE "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512_NOFMA}" "${DST_B8_AVX2_NOFMA}"
-            APPEND PROPERTY COMPILE_OPTIONS "-mno-fma")        
-            
-        # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
-        # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]     
-        # choose to increase that limit via compiler flags vs. 
-        # workaround with __attribute__((flatten))     
-        set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}"
-        "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}"
-          APPEND PROPERTY COMPILE_OPTIONS "-mllvm" "-inline-threshold=100000")
-            
-        # For loops with small loop bodies, clang was unrolling the loop before
-        # #pragma omp simd
-        # was processed.  Thus there was no loop left for the pragma to apply to
-        # To work around this, for these wide SIMD libraries, we will disable
-        # clang's loop unrolling.  We really don't want to do this and wish to remove
-        # it as soon as clang addresses this issue.
-        set_property(SOURCE "${DST_B16_AVX512}" "${DST_B16_AVX512_NOFMA}" "${DST_B8_AVX512}" "${DST_B8_AVX512_NOFMA}"
-        "${DST_B8_AVX2}" "${DST_B8_AVX2_NOFMA}" "${DST_B8_AVX}"
-          APPEND PROPERTY COMPILE_OPTIONS "-fno-unroll-loops")
-    endif ()
-
-endforeach(target_src)
-
 set (local_lib oslexec)
 set (lib_src
           shadingsys.cpp closure.cpp
@@ -164,18 +22,22 @@ set (lib_src
           opspline.cpp opstring.cpp optexture.cpp
           oslexec.cpp
           pointcloud.cpp rendservices.cpp
-          batched_rendservices.cpp
           constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
           shadeimage.cpp
           backendllvm.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
+    )
+if (BUILD_BATCHED)
+    list(APPEND lib_src 
           batched_analysis.cpp
           batched_backendllvm.cpp
           batched_llvm_gen.cpp
           batched_llvm_instance.cpp
-    )
+          batched_rendservices.cpp
+        )
+endif()    
 
 if (BUILD_SHARED_LIBS)
     # oslcomp symbols used in oslexec
@@ -341,77 +203,167 @@ endif ()
 # For each target specific shared library being built, we need
 # we need to let a couple source files know so they can build
 # function mappings for those targets
-set_property(SOURCE "batched_llvm_instance.cpp"  "shadingsys.cpp" 
-    APPEND PROPERTY COMPILE_DEFINITIONS 
-        "__OSL_SUPPORTS_B16_AVX512"
-        "__OSL_SUPPORTS_B8_AVX512"
-        "__OSL_SUPPORTS_B8_AVX2"
-        "__OSL_SUPPORTS_B8_AVX"
-        #"__OSL_SUPPORTS_B16_AVX512_NOFMA"
-        #"__OSL_SUPPORTS_B8_AVX512_NOFMA"
-        #"__OSL_SUPPORTS_B8_AVX2_NOFMA"
-    )
-  
+set_property(SOURCE "batched_llvm_instance.cpp"  "shadingsys.cpp"  
+    APPEND PROPERTY COMPILE_DEFINITIONS ${BATCHED_SUPPORT_DEFINES}) 
 
-set (_b16_AVX512_oslexec_lib _b16_AVX512_oslexec)
-set (_b8_AVX512_oslexec_lib _b8_AVX512_oslexec)
-set (_b8_AVX2_oslexec_lib _b8_AVX2_oslexec)
-set (_b8_AVX_oslexec_lib _b8_AVX_oslexec)
-set (_b16_AVX512_noFMA_oslexec_lib _b16_AVX512_noFMA_oslexec)
-set (_b8_AVX512_noFMA_oslexec_lib _b8_AVX512_noFMA_oslexec)
-set (_b8_AVX2_noFMA_oslexec_lib _b8_AVX2_noFMA_oslexec)
+set (BATCHED_TARGET_LIBS)
+foreach(batched_target ${BATCHED_TARGET_LIST})
+    set (batched_target_lib "_${batched_target}_oslexec")
+    list (APPEND BATCHED_TARGET_LIBS ${batched_target_lib})
+    string (REPLACE "_" ";" TARGET_OPTS ${batched_target})
+    list (GET TARGET_OPTS 0 TARGET_OPT_SIZE)
+    list (GET TARGET_OPTS 1 TARGET_OPT_ISA)
+    list (LENGTH TARGET_OPTS NUM_TARGET_OPTS)
+    set (TARGET_OPT_FMA "FMA")
+    set (TARGET_ISA ${TARGET_OPT_ISA})
+    if (NUM_TARGET_OPTS EQUAL 3)
+        list (GET TARGET_OPTS 2 TARGET_OPT_FMA)
+        set (TARGET_ISA "${TARGET_OPT_ISA}_${TARGET_OPT_FMA}")
+    endif() 
+    string (SUBSTRING ${TARGET_OPT_SIZE} 1 -1 TARGET_BATCH_SIZE)
+    # Strategy is to make a copy of each cpp in liboslexec_target_srcs for 
+    # each target batch width and ISA combination, applying compiler flags to define 
+    # -D__OSL_WIDTH=[4|8|16]
+    # -D__OSL_TARGET_ISA=[AVX512|AVX2|AVX|SSE4_2]
+    # and compiler flags to choose correct target ISA for your compiler
+    # You may then add/remove the desired  ${TARGET_SOURCES_B[4|8|16]_[AVX512|AVX2|AVX|SSE4_2]}
+    # to your add_library call 
+    set (TARGET_LIB_SOURCES)
+    set (TARGET_CXX_DEFS)
+    set (TARGET_CXX_OPTS)
+    
+    list (APPEND TARGET_CXX_OPTS
+        "-I${CMAKE_CURRENT_SOURCE_DIR}/wide"
+        "-I${CMAKE_CURRENT_SOURCE_DIR}/../liboslnoise/wide"
+        )
+        
+    list (APPEND TARGET_CXX_DEFS
+        "__OSL_WIDTH=${TARGET_BATCH_SIZE}"
+        "__OSL_TARGET_ISA=${TARGET_ISA}"        
+        )
 
-add_library ( ${_b16_AVX512_oslexec_lib} MODULE "${TARGET_SOURCES_B16_AVX512}" )
-add_library ( ${_b8_AVX512_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX512}" )
-add_library ( ${_b8_AVX2_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX2}" )
-add_library ( ${_b8_AVX_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX}" )
-#add_library ( ${_b16_AVX512_noFMA_oslexec_lib} MODULE "${TARGET_SOURCES_B16_AVX512_NOFMA}" )
-#add_library ( ${_b8_AVX512_noFMA_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX512_NOFMA}" )
-#add_library ( ${_b8_AVX2_noFMA_oslexec_lib} MODULE "${TARGET_SOURCES_B8_AVX2_NOFMA}" )
-
-set ( liboslexec_target_libs
-    ${_b16_AVX512_oslexec_lib}
-    ${_b8_AVX512_oslexec_lib}  
-    ${_b8_AVX2_oslexec_lib} 
-    ${_b8_AVX_oslexec_lib}
-#    ${_b16_AVX512_noFMA_oslexec_lib}
-#    ${_b8_AVX512_noFMA_oslexec_lib}
-#    ${_b8_AVX2_noFMA_oslexec_lib}
-    )
-
-foreach(target_lib ${liboslexec_target_libs})
-    target_include_directories (${target_lib}
+    if (CMAKE_COMPILER_IS_INTEL)
+        if (MSVC)
+            if (${TARGET_OPT_ISA} STREQUAL "AVX512")
+                list (APPEND TARGET_CXX_OPTS "/QxCORE-AVX512")
+                if (${TARGET_BATCH_SIZE} STREQUAL "16")
+                    list (APPEND TARGET_CXX_OPTS "/Qopt-zmm-usage:high")
+                else ()
+                    list (APPEND TARGET_CXX_OPTS "/Qopt-zmm-usage:low")
+                endif ()
+            elseif (${TARGET_OPT_ISA} STREQUAL "AVX2")
+                list (APPEND TARGET_CXX_OPTS "/QxCORE-AVX2")
+            elseif (${TARGET_OPT_ISA} STREQUAL "AVX")
+                list (APPEND TARGET_CXX_OPTS "/QxAVX")
+            else ()
+                message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
+            endif ()
+            
+            if (${TARGET_OPT_FMA} STREQUAL "noFMA")
+                list (APPEND TARGET_CXX_OPTS "/Qfma-")
+            endif ()
+            
+            list (APPEND TARGET_CXX_OPTS "/Qprec-div" "/Qqopt-report:5")
+        else ()
+            if (${TARGET_OPT_ISA} STREQUAL "AVX512")
+                list (APPEND TARGET_CXX_OPTS "-xCORE-AVX512")
+                if (${TARGET_BATCH_SIZE} STREQUAL "16")
+                    list (APPEND TARGET_CXX_OPTS "-qopt-zmm-usage:high")
+                else ()
+                    list (APPEND TARGET_CXX_OPTS "-qopt-zmm-usage:low")
+                endif ()
+            elseif (${TARGET_OPT_ISA} STREQUAL "AVX2")
+                list (APPEND TARGET_CXX_OPTS "-xCORE-AVX2")
+            elseif (${TARGET_OPT_ISA} STREQUAL "AVX")
+                list (APPEND TARGET_CXX_OPTS "-xAVX")
+            else ()
+                message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
+            endif ()
+            
+            if (${TARGET_OPT_FMA} STREQUAL "noFMA")
+                list (APPEND TARGET_CXX_OPTS "-no-fma")
+            endif ()
+            
+            list (APPEND TARGET_CXX_OPTS "-prec-div" "-qopt-report=5")
+        endif ()
+    endif ()
+    
+    if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
+        # REQUIRES CLANG 7+ to use sucessfully vectorize with OpenMP simd
+        
+        if (${TARGET_OPT_ISA} STREQUAL "AVX512")
+            list (APPEND TARGET_CXX_OPTS "-march=skylake-avx512")
+            if (${TARGET_BATCH_SIZE} STREQUAL "16")
+                list (APPEND TARGET_CXX_OPTS "-mprefer-vector-width=512")
+            else ()
+                list (APPEND TARGET_CXX_OPTS "-mprefer-vector-width=256")
+            endif ()
+        elseif (${TARGET_OPT_ISA} STREQUAL "AVX2")
+            list (APPEND TARGET_CXX_OPTS "-march=core-avx2")
+        elseif (${TARGET_OPT_ISA} STREQUAL "AVX")
+            list (APPEND TARGET_CXX_OPTS "-march=corei7-avx")
+        else ()
+            message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
+        endif ()
+        
+        if (${TARGET_OPT_FMA} STREQUAL "noFMA")
+            list (APPEND TARGET_CXX_OPTS "-mno-fma")
+        endif ()
+        
+        if (${target_src} IN_LIST liboslexec_override_limits)
+            list (APPEND TARGET_CXX_OPTS "-qoverride-limits")
+        endif()
+       
+        # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
+        # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]     
+        # choose to increase that limit via compiler flags vs. 
+        # workaround with __attribute__((flatten))     
+        list (APPEND TARGET_CXX_OPTS "-mllvm" "-inline-threshold=100000")
+            
+        # For loops with small loop bodies, clang was unrolling the loop before
+        # #pragma omp simd
+        # was processed.  Thus there was no loop left for the pragma to apply to
+        # To work around this, for these wide SIMD libraries, we will disable
+        # clang's loop unrolling.  We really don't want to do this and wish to remove
+        # it as soon as clang addresses this issue.
+        list (APPEND TARGET_CXX_OPTS "-fno-unroll-loops")
+    endif ()
+        
+    foreach(target_src ${liboslexec_target_srcs})
+        set(TARGET_SRC "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_${batched_target}.cpp")
+        set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/${target_src}.cpp")        
+        CONFIGURE_FILE("${SRC}" ${TARGET_SRC} COPYONLY)
+        list(APPEND TARGET_LIB_SOURCES "${TARGET_SRC}")
+        
+        set_property(SOURCE ${TARGET_SRC}
+            APPEND PROPERTY COMPILE_DEFINITIONS ${TARGET_CXX_DEFS})
+            
+        set_property(SOURCE ${TARGET_SRC}  
+            APPEND PROPERTY COMPILE_OPTIONS ${TARGET_CXX_OPTS})
+            
+        if (${target_src} IN_LIST liboslexec_override_limits)
+            if (CMAKE_COMPILER_IS_INTEL)
+                if (MSVC)
+                    set_property(SOURCE ${TARGET_SRC} APPEND PROPERTY COMPILE_OPTIONS "/Qoverride-limits")
+                else ()
+                    set_property(SOURCE ${TARGET_SRC} APPEND PROPERTY COMPILE_OPTIONS "-qoverride-limits")
+                endif()
+            endif()
+        endif()
+    endforeach(target_src)
+    
+    add_library ( ${batched_target_lib} MODULE ${TARGET_LIB_SOURCES} )
+      
+    target_include_directories (${batched_target_lib}
         PUBLIC
             ${CMAKE_INSTALL_FULL_INCLUDEDIR}
             ${IMATH_INCLUDES}
         )
-    target_compile_definitions (${target_lib}
-        PRIVATE
-            OSL_EXPORTS
-            CUDA_TARGET_ARCH="${CUDA_TARGET_ARCH}"
-            OSL_CUDA_VERSION="${CUDA_VERSION}"
-            OSL_OPTIX_VERSION="${OPTIX_VERSION}"
-        )
-    target_link_libraries (${target_lib}
+    target_link_libraries (${batched_target_lib}
         PUBLIC
             OpenImageIO::OpenImageIO
-            # For OpenEXR/Imath 3.x:
-            $<$<TARGET_EXISTS:Imath::Imath>:Imath::Imath>
-            $<$<TARGET_EXISTS:Imath::Half>:Imath::Half>
-            # For OpenEXR >= 2.4/2.5 with reliable exported targets
-            $<$<TARGET_EXISTS:IlmBase::Imath>:IlmBase::Imath>
-            $<$<TARGET_EXISTS:IlmBase::Half>:IlmBase::Half>
-            $<$<TARGET_EXISTS:IlmBase::IlmThread>:IlmBase::IlmThread>
-            $<$<TARGET_EXISTS:IlmBase::Iex>:IlmBase::Iex>
-            # For OpenEXR <= 2.3:
-            ${ILMBASE_LIBRARIES}
-        PRIVATE
-            pugixml::pugixml
-            ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
-            ${CLANG_LIBRARIES}
-            ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
         )
-endforeach(target_lib)
+endforeach(batched_target)
 
 add_library (${local_lib} ${lib_src})
 target_include_directories (${local_lib}
@@ -483,13 +435,9 @@ endif ()
 
 # add_dependencies (${local_lib} "${CMAKE_SOURCE_DIR}/src/build-scripts/hidesymbols.map")
 
-install_targets ( _b16_AVX512_oslexec )
-install_targets ( _b8_AVX512_oslexec )
-install_targets ( _b8_AVX2_oslexec )
-install_targets ( _b8_AVX_oslexec )
-#install_targets ( _b16_AVX512_noFMA_oslexec )
-#install_targets ( _b8_AVX512_noFMA_oslexec )
-#install_targets ( _b8_AVX2_noFMA_oslexec )
+foreach(batched_target_lib ${BATCHED_TARGET_LIBS})
+    install_targets ( ${batched_target_lib} )
+endforeach(batched_target_lib)
 
 install_targets (${local_lib})
 

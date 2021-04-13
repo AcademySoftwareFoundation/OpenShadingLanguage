@@ -13,6 +13,7 @@ import subprocess
 import difflib
 import filecmp
 import shutil
+from itertools import chain
 
 from optparse import OptionParser
 
@@ -37,6 +38,7 @@ OpenImageIO_ROOT = os.environ.get("OpenImageIO_ROOT", None)
 OSL_TESTSUITE_ROOT = make_relpath(os.getenv('OSL_TESTSUITE_ROOT',
                                              '../../../../testsuite'))
 os.environ['OSLHOME'] = os.path.join(OSL_SOURCE_DIR, "src")
+OSL_REGRESSION_TEST = os.environ.get("OSL_REGRESSION_TEST", None)
 
 
 # Options for the command line
@@ -98,14 +100,18 @@ print ("test source dir = ", test_source_dir)
 
 if platform.system() == 'Windows' :
     if not os.path.exists("./ref") :
-        shutil.copytree (os.path.join (test_source_dir, "ref"), "./ref")
+        test_source_ref_dir = os.path.join (test_source_dir, "ref")
+        if os.path.exists(test_source_ref_dir) :
+            shutil.copytree (test_source_ref_dir, "./ref")
     if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
         shutil.copytree (os.path.join (test_source_dir, "src"), "./src")
     if not os.path.exists(os.path.abspath("data")) :
         shutil.copytree (test_source_dir, os.path.abspath("data"))
 else :
     if not os.path.exists("./ref") :
-        os.symlink (os.path.join (test_source_dir, "ref"), "./ref")
+        test_source_ref_dir = os.path.join (test_source_dir, "ref")
+        if os.path.exists(test_source_ref_dir) :
+            os.symlink (test_source_ref_dir, "./ref")
     if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
         os.symlink (os.path.join (test_source_dir, "src"), "./src")
     if not os.path.exists("./data") :
@@ -252,7 +258,7 @@ def testoptix (args) :
 # in 'ref/'.  If all outputs match their reference copies, return 0
 # to pass.  If any outputs do not match their references return 1 to
 # fail.
-def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
+def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regression=None) :
 #    print ("working dir = " + tmpdir)
     os.chdir (srcdir)
     open ("out.txt", "w").close()    # truncate out.txt
@@ -269,6 +275,11 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             libOIIO_path = libOIIO_path + '\\' + options.devenv_config
         test_environ["PATH"] = libOIIO_path + ';' + test_environ["PATH"]
 
+    if regression == "BATCHED" :
+        if test_environ == None :
+            test_environ = os.environ
+        test_environ["TESTSHADE_BATCHED"] = "1"
+         
     print ("command = ", command)
     for sub_command in command.split(splitsymbol):
         sub_command = sub_command.lstrip().rstrip()
@@ -282,50 +293,61 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             print ("--------")
             return (1)
 
-    err = 0
-    for out in outputs :
-        extension = os.path.splitext(out)[1]
-        ok = 0
-        # We will first compare out to ref/out, and if that fails, we
-        # will compare it to everything else with the same extension in
-        # the ref directory.  That allows us to have multiple matching
-        # variants for different platforms, etc.
-        for testfile in (["ref/"+out] + glob.glob (os.path.join ("ref", "*"+extension))) :
-            # print ("comparing " + out + " to " + testfile)
-            if extension == ".tif" or extension == ".exr" :
-                # images -- use idiff
-                cmpcommand = oiiodiff (out, testfile, concat=False, silent=True)
-                # print ("cmpcommand = ", cmpcommand)
-                cmpresult = os.system (cmpcommand)
-            elif extension == ".txt" :
-                cmpresult = text_diff (out, testfile, out + ".diff")
-            else :
-                # anything else
-                cmpresult = 0 if filecmp.cmp (out, testfile) else 1
-            if cmpresult == 0 :
-                ok = 1
-                break      # we're done
 
-        if ok :
-            # if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
-            #     # If we got a match for an image, save the idiff results
-            #     os.system (oiiodiff (out, testfile, silent=False))
-            print ("PASS: ", out, " matches ", testfile)
-        else :
-            err = 1
-            print ("NO MATCH for ", out)
-            print ("FAIL ", out)
-            if extension == ".txt" :
-                # If we failed to get a match for a text file, print the
-                # file and the diff, for easy debugging.
-                print ("-----" + out + "----->")
-                print (open(out,'r').read() + "<----------")
-                print ("Diff was:\n-------")
-                print (open (out+".diff", 'r').read())
-            if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
-                # If we failed to get a match for an image, send the idiff
-                # results to the console
-                os.system (oiiodiff (out, os.path.join (refdir, out), silent=False))
+    err = 0
+    if regression == "BASELINE" :
+        if not os.path.exists("./baseline") :
+            os.mkdir("./baseline") 
+        for out in outputs :
+            shutil.move(out, "./baseline/"+out) 
+    else :
+        for out in outputs :
+            extension = os.path.splitext(out)[1]
+            ok = 0
+            # We will first compare out to ref/out, and if that fails, we
+            # will compare it to everything else with the same extension in
+            # the ref directory.  That allows us to have multiple matching
+            # variants for different platforms, etc.
+            if regression != None:
+                testfiles = ["baseline/"+out]
+            else :                     
+                testfiles = ["ref/"+out] + glob.glob (os.path.join ("ref", "*"+extension))
+            for testfile in (testfiles) :
+                # print ("comparing " + out + " to " + testfile)
+                if extension == ".tif" or extension == ".exr" :
+                    # images -- use idiff
+                    cmpcommand = oiiodiff (out, testfile, concat=False, silent=True)
+                    # print ("cmpcommand = ", cmpcommand)
+                    cmpresult = os.system (cmpcommand)
+                elif extension == ".txt" :
+                    cmpresult = text_diff (out, testfile, out + ".diff")
+                else :
+                    # anything else
+                    cmpresult = 0 if filecmp.cmp (out, testfile) else 1
+                if cmpresult == 0 :
+                    ok = 1
+                    break      # we're done
+    
+            if ok :
+                # if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
+                #     # If we got a match for an image, save the idiff results
+                #     os.system (oiiodiff (out, testfile, silent=False))
+                print ("PASS: ", out, " matches ", testfile)
+            else :
+                err = 1
+                print ("NO MATCH for ", out)
+                print ("FAIL ", out)
+                if extension == ".txt" :
+                    # If we failed to get a match for a text file, print the
+                    # file and the diff, for easy debugging.
+                    print ("-----" + out + "----->")
+                    print (open(out,'r').read() + "<----------")
+                    print ("Diff was:\n-------")
+                    print (open (out+".diff", 'r').read())
+                if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
+                    # If we failed to get a match for an image, send the idiff
+                    # results to the console
+                    os.system (oiiodiff (out, os.path.join (refdir, out), silent=False))
 
     return (err)
 
@@ -375,12 +397,23 @@ if (os.path.exists("ref/out.tif") and ("out.tif" not in outputs)) :
     outputs.append ("out.tif")
 
 # Run the test and check the outputs
-ret = runtest (command, outputs, failureok=failureok,
-               failthresh=failthresh, failpercent=failpercent)
-
+if OSL_REGRESSION_TEST != None :
+    # need to produce baseline images
+    ret = runtest (command, outputs, failureok=failureok,
+                   failthresh=failthresh, failpercent=failpercent, regression="BASELINE")
+    if ret == 0 :
+        # run again comparing against baseline, not ref
+        ret = runtest (command, outputs, failureok=failureok,
+                       failthresh=failthresh, failpercent=failpercent, regression=OSL_REGRESSION_TEST)
+else :                   
+    ret = runtest (command, outputs, failureok=failureok,
+                   failthresh=failthresh, failpercent=failpercent)
+    
 if ret == 0 and cleanup_on_success :
     for ext in image_extensions + [ ".txt", ".diff" ] :
-        for f in glob.iglob (srcdir + '/*' + ext) :
+        files = glob.iglob (srcdir + '/*' + ext)
+        baselineFiles = glob.iglob (srcdir + '/baseline/*' + ext) 
+        for f in chain(files,baselineFiles) :
             os.remove(f)
             #print('REMOVED ', f)
 

@@ -109,7 +109,9 @@ typedef std::shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
 class BackendLLVM;
+#ifdef OSL_USE_BATCHED
 class BatchedBackendLLVM;
+#endif
 struct ConnectedParam;
 
 void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
@@ -117,27 +119,40 @@ void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSyste
 /// Signature of the function that LLVM generates to run the shader
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
+#ifdef OSL_USE_BATCHED
 typedef void (*RunLLVMGroupFuncWide)(void* /* batched shader globals */, void*, int run_mask_value);
+#endif
 
 /// Signature of a constant-folding method
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
 
 /// Signature of an LLVM-IR-generating method
 typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
+#ifdef OSL_USE_BATCHED
 typedef bool (*OpLLVMGenWide) (BatchedBackendLLVM &rop, int opnum);
+#endif
 
 struct OpDescriptor {
     ustring name;           // name of op
     OpLLVMGen llvmgen;      // llvm-generating routine
+#ifdef OSL_USE_BATCHED
     OpLLVMGenWide llvmgenwide; // wide version of llvm-generating routine
+#endif
     OpFolder folder;        // constant-folding routine
     bool simple_assign;     // wholly overwrites arg0, no other writes,
                             //     no side effects
     int flags;              // other flags
     OpDescriptor () { }
-    OpDescriptor (const char *n, OpLLVMGen ll, OpLLVMGenWide llw,
+    OpDescriptor (const char *n, OpLLVMGen ll,
+#ifdef OSL_USE_BATCHED
+            OpLLVMGenWide llw,
+#endif
                   OpFolder fold=NULL, bool simple=false, int flags=0)
-        : name(n), llvmgen(ll), llvmgenwide(llw), folder(fold),
+        : name(n), llvmgen(ll),
+#ifdef OSL_USE_BATCHED
+          llvmgenwide(llw),
+#endif
+          folder(fold),
           simple_assign(simple), flags(flags)
     {}
 
@@ -663,6 +678,7 @@ public:
     ocio_transform (StringParam fromspace, StringParam tospace,
                     const Color& C, Color& Cout);
 
+#ifdef OSL_USE_BATCHED
     // Group all batched methods behind a templated interface
     // so we can support multiple widths
     template<int WidthT>
@@ -684,6 +700,7 @@ public:
     OSL_FORCEINLINE Batched<WidthT> batched() {
         return Batched<WidthT>(*this);
     }
+#endif
 
 private:
     void printstats () const;
@@ -914,7 +931,9 @@ private:
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
     friend class BackendLLVM;
+#ifdef OSL_USE_BATCHED
     friend class BatchedBackendLLVM;
+#endif
 };
 
 
@@ -1511,6 +1530,7 @@ public:
             m_llvm_compiled_layers[layer] = func;
     }
 
+#ifdef OSL_USE_BATCHED
     // Hold onto wide versions of llvm functions side by side with scalar
     RunLLVMGroupFuncWide llvm_compiled_wide_version() const {
         return m_llvm_compiled_wide_version;
@@ -1533,7 +1553,7 @@ public:
         if (layer < nlayers())
             m_llvm_compiled_wide_layers[layer] = func;
     }
-
+#endif
     // Is this shader group equivalent to ret void?
     bool does_nothing() const {
         return m_does_nothing;
@@ -1621,9 +1641,11 @@ private:
     RunLLVMGroupFunc m_llvm_compiled_version = nullptr;
     RunLLVMGroupFunc m_llvm_compiled_init = nullptr;
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
+#ifdef OSL_USE_BATCHED
     RunLLVMGroupFuncWide m_llvm_compiled_wide_version = nullptr;
     RunLLVMGroupFuncWide m_llvm_compiled_wide_init = nullptr;
     std::vector<RunLLVMGroupFuncWide> m_llvm_compiled_wide_layers;
+#endif
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
     int m_exec_repeat = 1;           ///< How many times to execute group
@@ -1660,7 +1682,9 @@ private:
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;
+#ifdef OSL_USE_BATCHED
     friend class OSL::pvt::BatchedBackendLLVM;
+#endif
     friend class ShadingContext;
 };
 
@@ -1695,6 +1719,7 @@ public:
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
     bool execute (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
 
+#ifdef OSL_USE_BATCHED
     // Group all batched methods behind a templated interface
     // so we can support multiple widths
     template<int WidthT>
@@ -1762,6 +1787,7 @@ public:
     OSL_FORCEINLINE Batched<WidthT> batched() {
         return Batched<WidthT>(*this);
     }
+#endif
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, const Color3 &w) {
         // Allocate the component and the mul back to back

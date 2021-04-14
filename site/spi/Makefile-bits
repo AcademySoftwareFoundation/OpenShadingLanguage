@@ -32,6 +32,7 @@ OSL_REZ_NAME ?= OSL
 OSL_VERS = $(shell grep "OSL VERSION" CMakeLists.txt | egrep -o "[0-9.]+")
 ONEVERS = $(shell site/spi/format_version.py ${OSL_VERS})
 OSL_SPCOMP2_VERSION ?= ${ONEVERS}
+OPENEXR_VERSION ?= 2.4.1-2
 
 ifeq (${OSL_SPCOMP2},1)
     $(info Building for SpComp2)
@@ -56,7 +57,7 @@ else ifeq (${OSL_SPIREZ},1)
     MY_CMAKE_FLAGS += -DOSL_SPIREZ=1 -DOSL_REZ_PACKAGE_NAME=${OSL_REZ_NAME}
     MY_CMAKE_FLAGS += -DCMAKE_DEBUG_POSTFIX=_d
     OPENIMAGEIO_VERSION ?= 2.2.0.0
-    OPENEXR_VERSION ?= 2.4.0
+    OPENEXR_VERSION ?= 2.4.1-2
     $(info Building against OpenImageIO ${OPENIMAGEIO_VERSION})
 else
     $(info Building generic OSL)
@@ -243,7 +244,7 @@ ifeq (${SP_OS}, rhel7)
     # with custom/test version.
     ifneq (${OPENEXR_VERSION},)
         # If OPENEXR_VERSION is set, grab from the rez area
-        OpenEXR_ROOT ?= ${REZ_PACKAGE_ROOT}/OpenEXR/${OPENEXR_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}
+        OpenEXR_ROOT ?= ${REZ_PACKAGE_ROOT}/OpenEXR/${OPENEXR_VERSION}/${SPI_COMPILER_PLATFORM}
         MY_CMAKE_FLAGS += -DOpenEXR_ROOT=${OpenEXR_ROOT}
     else ifeq (${OpenEXR_ROOT},)
         # If not getting from rez, get from the system install

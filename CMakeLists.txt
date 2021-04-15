@@ -11,7 +11,8 @@ string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
-set (${PROJECT_NAME}_SUPPORTED_RELEASE 0)  # Change to 1 after release branch
+set (${PROJECT_NAME}_SUPPORTED_RELEASE 0)  # Change to 1 for release branch
+set (${PROJECT_NAME}_DEV_RELEASE 1)  # Change to 0 for release branch
 set (PROJECT_AUTHORS "Contributors to the Open Shading Language project")
 
 # Identify whether this is included as a subproject of something else
@@ -61,11 +62,6 @@ include (GNUInstallDirs)
 
 
 option (VERBOSE "Print lots of messages while compiling" OFF)
-set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING
-     "Customized outer namespace base name (version will be added)")
-option (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH "Should the inner namespace include the patch number" OFF)
-set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-     CACHE STRING "Set the SO version in the SO name of the output library")
 set (OSL_LIBNAME_SUFFIX "" CACHE STRING
      "Optional name appended to ${PROJECT_NAME} libraries that are built")
 option (OSL_BUILD_TESTS "Build the unit tests, testshade, testrender" ON)
@@ -112,13 +108,17 @@ endif ()
 
 # Set the default namespace. For symbol hiding reasons, it's important that
 # the project name is a subset of the namespace name.
+set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING
+     "Customized outer namespace base name (version will be added)")
+option (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH
+        "Should the inner namespace include the patch number" ${${PROJECT_NAME}_DEV_RELEASE})
 set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
 string(REGEX MATCH ${PROJECT_NAME} NAMESPACE_HAS_PROJECT_NAME ${PROJ_NAMESPACE})
 if (NOT NAMESPACE_HAS_PROJECT_NAME)
     set (PROJ_NAMESPACE ${PROJECT_NAME}_${PROJ_NAMESPACE})
 endif ()
 set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
-if (OIIO_NAMESPACE_INCLUDE_PATCH)
+if (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH)
     set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE_V}_${PROJECT_VERSION_PATCH}")
 endif ()
 message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")

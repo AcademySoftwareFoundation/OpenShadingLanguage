@@ -11,15 +11,11 @@
 
 
 // All the things we need from Imath.
-#include <OpenEXR/OpenEXRConfig.h>
-#define OSL_OPENEXR_VERSION ((10000*OPENEXR_VERSION_MAJOR) + \
-                             (100*OPENEXR_VERSION_MINOR) + \
-                             OPENEXR_VERSION_PATCH)
-#if OSL_OPENEXR_VERSION >= 20599 /* 2.5.99: pre-3.0 */
+#define OSL_USING_IMATH @OSL_USING_IMATH@
+#if OSL_USING_IMATH >= 3
 #   include <Imath/ImathVec.h>
 #   include <Imath/ImathMatrix.h>
 #   include <Imath/ImathColor.h>
-#   define OSL_USING_IMATH 3
 #else
     // OpenEXR 2.x lacks the Cuda decorators we need, so we replicated some
     // Imath files in OSL/Imathx, adding the decorations needed for them to
@@ -29,7 +25,6 @@
 #   include <OSL/Imathx/ImathMatrix.h>
 #   include <OSL/Imathx/ImathColor.h>
 #   include <OSL/matrix22.h>
-#   define OSL_USING_IMATH 2
 #endif
 
 // The fmt library causes trouble for Cuda. Work around by disabling it from

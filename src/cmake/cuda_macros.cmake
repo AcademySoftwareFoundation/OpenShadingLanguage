@@ -11,6 +11,13 @@ function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
     set (${ptx_generated} ${cuda_ptx} PARENT_SCOPE)
     file ( GLOB cuda_headers "${cuda_src_dir}/*.h" )
 
+    list (TRANSFORM IMATH_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
+    list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
+    list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
+
     add_custom_command ( OUTPUT ${cuda_ptx}
         COMMAND ${CUDA_NVCC_EXECUTABLE}
             "-I${OPTIX_INCLUDES}"
@@ -19,8 +26,9 @@ function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
-            "-I${OPENIMAGEIO_INCLUDES}"
-            "-I${IMATH_INCLUDES}"
+            ${ALL_OpenImageIO_INCLUDES}
+            ${ALL_IMATH_INCLUDES}
+            ${ALL_OPENEXR_INCLUDES}
             "-I${Boost_INCLUDE_DIRS}"
             "-DFMT_DEPRECATED=\"\""
             ${LLVM_COMPILE_FLAGS}
@@ -68,6 +76,23 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
     endif()
 
+    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        # fix compilation error when using MSVC
+        set (CLANG_MSVC_FIX "-DBOOST_CONFIG_REQUIRES_THREADS_HPP")
+
+        # these are warnings triggered by the dllimport/export attributes not being supported when
+        # compiling for Cuda. When all 3rd parties have their export macro fixed these warnings
+        # can be restored.
+        set (CLANG_MSVC_FIX "${CLANG_MSVC_FIX} -Wno-ignored-attributes -Wno-unknown-attributes")
+    endif ()
+
+    list (TRANSFORM IMATH_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
+    list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
+    list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
+
     add_custom_command (OUTPUT ${bc_cuda}
         COMMAND ${LLVM_BC_GENERATOR}
             "-I${OPTIX_INCLUDES}"
@@ -76,8 +101,9 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
-            "-I${OPENIMAGEIO_INCLUDE_DIR}"
-            "-I${ILMBASE_INCLUDE_DIR}"
+            ${ALL_OpenImageIO_INCLUDES}
+            ${ALL_IMATH_INCLUDES}
+            ${ALL_OPENEXR_INCLUDES}
             "-I${Boost_INCLUDE_DIRS}"
             ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__

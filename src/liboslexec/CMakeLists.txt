@@ -102,6 +102,8 @@ macro ( LLVM_COMPILE llvm_src srclist )
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
     list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
+    list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
+          OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
 
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
@@ -111,8 +113,8 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-I${CMAKE_CURRENT_SOURCE_DIR}"
           "-I${CMAKE_SOURCE_DIR}/src/include"
           "-I${CMAKE_BINARY_DIR}/include"
-          "-I${OPENIMAGEIO_INCLUDES}"
-          ${ALL_IMATH_INCLUDES} ${ALL_OPENEXR_INCLUDES}
+          ${ALL_OpenImageIO_INCLUDES}
+          ${ALL_IMATH_INCLUDES}
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
           -Wno-deprecated-register
@@ -227,7 +229,6 @@ target_link_libraries (${local_lib}
         ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml::pugixml
-        ${ZLIB_LIBRARIES}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}

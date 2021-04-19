@@ -10,8 +10,6 @@ add_library (oslnoise ${liboslnoise_srcs})
 target_include_directories (oslnoise
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-        ${OPENIMAGEIO_INCLUDES}
-        ${ILMBASE_INCLUDES}
         ${IMATH_INCLUDES}
     PRIVATE
         ../liboslexec)

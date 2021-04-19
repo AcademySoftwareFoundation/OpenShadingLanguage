@@ -36,7 +36,7 @@ jobs:
       CMAKE_CXX_STANDARD: 11
       PYTHON_VERSION: 2.7
       USE_PYTHON: 0
-      OPENIMAGEIO_VERSION: Release-2.1.20.0
+      OPENIMAGEIO_VERSION: Release-2.0.14
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -131,7 +131,7 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       PYTHON_VERSION: 3.7
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v2.5.3
+      OPENEXR_VERSION: v2.5.5
       OPENIMAGEIO_VERSION: RB-2.2
     steps:
       - uses: actions/checkout@v2
@@ -168,7 +168,7 @@ jobs:
             build/*/testsuite/*/*.*
             build/*/CMake*.{txt,log}
 
-  vfxplatform-2021-exrmaster:
+  vfxplatform-2021-exr3:
     name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-3.0 OIIO-2.2 avx2"
     runs-on: ubuntu-latest
     container:
@@ -376,7 +376,7 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       LLVM_VERSION: 10.0.0
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v2.5.3
+      OPENEXR_VERSION: v2.5.5
       OPENIMAGEIO_VERSION: master
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
       PUGIXML_VERSION: v1.10
@@ -484,7 +484,7 @@ jobs:
       PYTHON_VERSION: 2.7
       USE_SIMD: 0
       USE_PYTHON: 0
-      OPENIMAGEIO_VERSION: Release-2.1.20.0
+      OPENIMAGEIO_VERSION: Release-2.0.14
       PUGIXML_VERSION: v1.8
     steps:
       - uses: actions/checkout@v2

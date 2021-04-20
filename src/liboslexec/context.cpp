@@ -11,6 +11,8 @@
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 
+#include <OSL/oslconfig.h>
+
 #ifdef OSL_USE_BATCHED
 #include <OSL/batched_shaderglobals.h>
 #endif

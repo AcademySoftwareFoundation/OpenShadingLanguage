@@ -19,6 +19,8 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
+#include <OSL/oslconfig.h>
+
 #include <OSL/batched_shaderglobals.h>
 #include <OSL/batched_texture.h>
 

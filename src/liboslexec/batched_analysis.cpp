@@ -13,6 +13,8 @@
 
 #include <llvm/ADT/SmallVector.h>
 
+#include <OSL/oslconfig.h>
+
 #include <OSL/batched_rendererservices.h>
 
 #include "batched_analysis.h"

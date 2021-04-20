@@ -14,7 +14,7 @@
 #include <OSL/oslexec.h>
 #include <OSL/rendererservices.h>
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 #   include "batched_simplerend.h"
 #endif
 
@@ -118,13 +118,14 @@ public:
     OIIO::ParamValueList options;
     OIIO::ParamValueList userdata;
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
     virtual BatchedRendererServices<16> * batched(WidthOf<16>) { return &m_batch_16_simple_renderer; }
     virtual BatchedRendererServices<8> * batched(WidthOf<8>) { return &m_batch_8_simple_renderer; }
 #endif
 
 protected:
-#ifdef OSL_USE_BATCHED
+
+#if OSL_USE_BATCHED
     BatchedSimpleRenderer<16> m_batch_16_simple_renderer;
     BatchedSimpleRenderer<8> m_batch_8_simple_renderer;
 #endif

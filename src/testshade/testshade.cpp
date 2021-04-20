@@ -30,7 +30,7 @@
 #include <OSL/oslexec.h>
 #include <OSL/oslcomp.h>
 #include <OSL/oslquery.h>
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 #   include <OSL/batched_shaderglobals.h>
 #endif
 #include "optixgridrender.h"
@@ -195,7 +195,7 @@ set_shadingsys_options ()
         batch_size = atoi(opt_env);
 
     if (batched) {
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
         // Allow FMA if build of OSL supports it
         shadingsys->attribute ("llvm_jit_fma", 1);
 
@@ -870,7 +870,7 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
     // We also choose to JIT it now during timing for setup
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
     ShadingContext *ctx = shadingsys->get_context(thread_info);
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
     if (batched) {
         // jit_group will optimize the group if necesssary
         if (batch_size == 16) {
@@ -1015,7 +1015,7 @@ save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
     }
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 // For batch of pixels (bx[WidthT], by[WidthT]) that was just shaded
 // by the given shading context, save each of the requested outputs
 // to the corresponding output ImageBuf.
@@ -1328,7 +1328,7 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
 }
 
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 // Set up the uniform portion of BatchedShaderGlobals fields
 template<int WidthT>
 static void
@@ -1804,7 +1804,7 @@ test_shade (int argc, const char *argv[])
 #if 0
             shade_region (rend, shadergroup.get(), roi, save);
 #else
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
             if (batched) {
                 if (batch_size == 16) {
                     OIIO::ImageBufAlgo::parallel_image (roi, num_threads,

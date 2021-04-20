@@ -2769,7 +2769,7 @@ RuntimeOptimizer::post_optimize_instance ()
 
     add_useparam (allsymptrs);
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
     // We must identify which symbols are uniform before
     // trying to coalesce to avoid merging a varying with
     // a uniform symbol or forced_llvm_bool with an integer

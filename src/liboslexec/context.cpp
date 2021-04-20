@@ -13,7 +13,7 @@
 
 #include <OSL/oslconfig.h>
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 #include <OSL/batched_shaderglobals.h>
 #endif
 
@@ -208,7 +208,7 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     return result;
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 template<int WidthT>
 bool
 ShadingContext::Batched<WidthT>::execute_init
@@ -429,7 +429,7 @@ ShadingContext::process_errors () const
     // interleaved with other threads.
     lock_guard lock (buffered_errors_mutex);
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
     if (execution_is_batched()) {
         OSL_DASSERT(batch_size_executed <= MaxSupportedSimdLaneCount);
         // Process each data lane separately and in the correct order
@@ -471,7 +471,7 @@ const void *
 ShadingContext::symbol_data (const Symbol &sym) const
 {
     const ShaderGroup &sgroup (*group());
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
     if (execution_is_batched()) {
         if (! sgroup.batch_jitted())
             return NULL;   // can't retrieve symbol if we didn't optimize & batched jit
@@ -560,7 +560,8 @@ osl_incr_layers_executed (ShaderGlobals *sg)
     ctx->incr_layers_executed ();
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
+// Explicit template instantiation for supported batch sizes
 template class ShadingContext::Batched<16>;
 template class ShadingContext::Batched<8>;
 #endif

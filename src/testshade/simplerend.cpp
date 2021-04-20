@@ -115,7 +115,7 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 
 
 SimpleRenderer::SimpleRenderer ()
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 : m_batch_16_simple_renderer(*this)
 , m_batch_8_simple_renderer(*this)
 #endif

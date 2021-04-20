@@ -23,7 +23,7 @@ struct PerThreadInfo;
 class ShadingContext;
 class ShaderSymbol;
 class OSLQuery;
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 template<int WidthT> struct alignas(64) BatchedShaderGlobals;
 #endif
 
@@ -687,7 +687,7 @@ public:
     const void* symbol_address (const ShadingContext &ctx,
                                 const ShaderSymbol *sym) const;
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
     /// Based on currently set attributes for llvm_jit_target and
     /// llvm_jit_fma, test if current machine is capable of supporting
     /// batched execution at the specified width.  If no specific

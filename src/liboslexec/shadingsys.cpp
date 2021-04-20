@@ -12,7 +12,7 @@
 #include "oslexec_pvt.h"
 #include <OSL/genclosure.h>
 #include "backendllvm.h"
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 #include "batched_backendllvm.h"
 #endif
 #include <OSL/oslquery.h>
@@ -306,7 +306,7 @@ ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
     return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 template<int WidthT>
 bool
 ShadingSystem::BatchedExecutor<WidthT>::execute (ShadingContext &ctx, ShaderGroup &group,
@@ -442,7 +442,7 @@ ShadingSystem::symbol_address (const ShadingContext &ctx,
     return ctx.symbol_data (*(const Symbol *)sym);
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 bool
 ShadingSystem::configure_batch_execution_at(int width)
 {
@@ -715,7 +715,7 @@ ShadingSystem::optimize_group (ShaderGroup *group,
     optimize_group (group, ctx, do_jit);
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 template<int WidthT>
 void
 ShadingSystem::BatchedExecutor<WidthT>::jit_group (ShaderGroup *group, ShadingContext *ctx)
@@ -906,7 +906,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_fold_getattribute(true),
       m_opt_middleman(true), m_opt_texture_handle(true),
       m_opt_seed_bblock_aliases(true),
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
       m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr) |
                              (renderer->batched(WidthOf<8>()) != nullptr)),
 #else
@@ -1042,7 +1042,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 #define OP2(alias,name,ll,fold,simp,flag)                                \
     extern bool llvm_gen_##ll (BatchedBackendLLVM &rop, int opnum);      \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
@@ -3362,7 +3362,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx, bool
     m_groups_to_compile_count -= 1;
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 template <int WidthT>
 void
 ShadingSystemImpl::Batched<WidthT>::jit_group (ShaderGroup &group, ShadingContext *ctx)
@@ -3444,7 +3444,7 @@ static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, in
 }
 
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 template<int WidthT>
 static void batched_jit_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
 {
@@ -3496,7 +3496,7 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
     destroy_thread_info(threadinfo);
 }
 
-#ifdef OSL_USE_BATCHED
+#if OSL_USE_BATCHED
 template<int WidthT>
 void
 ShadingSystemImpl::Batched<WidthT>::jit_all_groups (int nthreads, int mythread, int totalthreads)

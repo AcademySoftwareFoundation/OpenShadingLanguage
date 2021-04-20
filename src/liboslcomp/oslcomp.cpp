@@ -490,6 +490,13 @@ OSLCompilerImpl::compile(string_view filename,
             write_oso_file(OIIO::Strutil::join(options, " "),
                            preprocess_result);
             OSL_DASSERT(m_osofile == nullptr);
+
+            oso_output.close();
+            if (!oso_output.good()) {
+                errorf(ustring(), 0, "Failed to write to \"%s\"",
+                       m_output_filename);
+                return false;
+            }
         }
 
         oslcompiler = nullptr;

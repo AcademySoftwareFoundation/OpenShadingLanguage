@@ -3430,8 +3430,9 @@ LLVM_Util::call_function (llvm::Value *func, cspan<llvm::Value *> args)
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
 #if OSL_LLVM_VERSION >= 110
-    OSL_DASSERT(llvm::isa<llvm::Function>(func));
-    llvm::Value *r = builder().CreateCall(llvm::cast<llvm::Function>(func), llvm::ArrayRef<llvm::Value *>(args.data(), args.size()));
+    llvm::Value* r = builder().CreateCall(
+        llvm::cast<llvm::FunctionType>(func->getType()->getPointerElementType()), func,
+        llvm::ArrayRef<llvm::Value*>(args.data(), args.size()));
 #else
     llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args.data(), args.size()));
 #endif

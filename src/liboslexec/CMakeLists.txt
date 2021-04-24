@@ -258,7 +258,7 @@ if (OSL_BUILD_TESTS)
     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
 
     add_executable (dual_test dual_test.cpp)
-    target_link_libraries (dual_test PRIVATE ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
 

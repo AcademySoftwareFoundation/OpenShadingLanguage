@@ -15,7 +15,7 @@ target_include_directories (oslnoise
         ../liboslexec)
 target_link_libraries (oslnoise
     PUBLIC
-        ${OPENIMAGEIO_LIBRARIES}
+        OpenImageIO::OpenImageIO
         # For OpenEXR/Imath 3.x:
         $<$<TARGET_EXISTS:Imath::Imath>:Imath::Imath>
         $<$<TARGET_EXISTS:Imath::Half>:Imath::Half>

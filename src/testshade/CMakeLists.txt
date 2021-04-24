@@ -68,7 +68,7 @@ install_targets ( libtestshade )
 add_executable ( testshade_dso testshade_dso.cpp )
 target_link_libraries (testshade_dso
                        PRIVATE
-                           ${OPENIMAGEIO_LIBRARIES} ${OPENEXR_LIBRARIES}
+                           OpenImageIO::OpenImageIO ${OPENEXR_LIBRARIES}
                            ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
 install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 

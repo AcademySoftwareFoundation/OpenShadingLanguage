@@ -17,7 +17,8 @@ target_include_directories (${local_lib}
         ../liboslexec)
 target_link_libraries (${local_lib}
     PUBLIC
-        ${OPENIMAGEIO_LIBRARIES} ${IMATH_LIBRARIES}
+        OpenImageIO::OpenImageIO
+        ${IMATH_LIBRARIES}
     PRIVATE
         ${Boost_LIBRARIES}
     )

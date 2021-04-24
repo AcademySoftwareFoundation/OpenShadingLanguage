@@ -49,6 +49,12 @@
 ###########################################################################
 
 
+# Prefer an OpenImageIO cmake config file if it can be found
+find_package(OpenImageIO CONFIG)
+if (TARGET OpenImageIO::OpenImageIO)
+    set (OPENIMAGEIO_VERSION ${OpenImageIO_VERSION})
+else ()
+
 # If 'OPENIMAGE_HOME' not set, use the env variable of that name if available
 if (NOT OPENIMAGEIO_ROOT_DIR AND NOT $ENV{OPENIMAGEIO_ROOT_DIR} STREQUAL "")
     set (OPENIMAGEIO_ROOT_DIR $ENV{OPENIMAGEIO_ROOT_DIR})
@@ -94,6 +100,7 @@ find_package_handle_standard_args (OpenImageIO
     )
 
 if (OPENIMAGEIO_FOUND)
+    set (OpenImageIO_VERSION ${OPENIMAGEIO_VERSION})
     set (OPENIMAGEIO_INCLUDES ${OPENIMAGEIO_INCLUDE_DIR})
     set (OpenImageIO_INCLUDES ${OPENIMAGEIO_INCLUDE_DIR})
     set (OPENIMAGEIO_LIBRARIES ${OPENIMAGEIO_LIBRARY})
@@ -125,3 +132,5 @@ mark_as_advanced (
     OPENIMAGEIO_INCLUDE_DIR
     OPENIMAGEIO_LIBRARY
     )
+
+endif ()

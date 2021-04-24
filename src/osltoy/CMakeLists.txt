@@ -14,5 +14,6 @@ target_link_libraries (osltoy
     PRIVATE
         oslexec
         Qt5::Core Qt5::Gui Qt5::Widgets
-        ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+        OpenImageIO::OpenImageIO
+        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 install_targets (osltoy)

@@ -12,5 +12,5 @@ if (NOT BUILD_SHARED_LIBS)
 endif ()
 
 add_executable ( oslc ${oslc_srcs} )
-target_link_libraries ( oslc PRIVATE oslcomp ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries ( oslc PRIVATE oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 install_targets (oslc)

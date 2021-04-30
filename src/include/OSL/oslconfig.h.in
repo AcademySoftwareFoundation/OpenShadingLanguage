@@ -4,7 +4,6 @@
 
 #pragma once
 
-
 #include <OSL/platform.h>
 #include <OSL/export.h>
 #include <OSL/oslversion.h>
@@ -46,6 +45,8 @@
 
 
 OSL_NAMESPACE_ENTER
+
+#define OSL_USE_BATCHED @BUILD_BATCHED@
 
 /// Various compile-time defaults are defined here that could, in
 /// principle, be redefined if you are using OSL in some particular

@@ -13,10 +13,11 @@
 
 #include <cmath>
 
+#include <OSL/oslconfig.h>
+
 #include <OSL/batched_shaderglobals.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
-#include <OSL/oslconfig.h>
 #include <OSL/sfmath.h>
 #include <OSL/wide.h>
 

@@ -12,7 +12,9 @@
 #include "oslexec_pvt.h"
 #include <OSL/genclosure.h>
 #include "backendllvm.h"
+#if OSL_USE_BATCHED
 #include "batched_backendllvm.h"
+#endif
 #include <OSL/oslquery.h>
 
 #include <OpenImageIO/filesystem.h>
@@ -304,6 +306,7 @@ ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
     return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
 }
 
+#if OSL_USE_BATCHED
 template<int WidthT>
 bool
 ShadingSystem::BatchedExecutor<WidthT>::execute (ShadingContext &ctx, ShaderGroup &group,
@@ -348,7 +351,7 @@ ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int 
     int layernumber = sym->layer();
     return layernumber >= 0 ? ctx.batched<WidthT>().execute_layer (batch_size, globals_batch, layernumber) : false;
 }
-
+#endif
 
 bool
 ShadingSystem::execute_cleanup (ShadingContext &ctx)
@@ -439,8 +442,9 @@ ShadingSystem::symbol_address (const ShadingContext &ctx,
     return ctx.symbol_data (*(const Symbol *)sym);
 }
 
+#if OSL_USE_BATCHED
 bool
-ShadingSystem::supports_batch_execution_at(int width)
+ShadingSystem::configure_batch_execution_at(int width)
 {
     auto requestedISA = LLVM_Util::lookup_isa_by_name(m_impl->llvm_jit_target());
     OSL_MAYBE_UNUSED bool target_requested = (requestedISA != TargetISA::UNKNOWN);
@@ -457,22 +461,28 @@ ShadingSystem::supports_batch_execution_at(int width)
             case TargetISA::UNKNOWN:
                 // fallthrough
             case TargetISA::AVX512:
-#ifdef __OSL_SUPPORTS_B16_AVX512
                 if (jit_fma) {
+#ifdef __OSL_SUPPORTS_b16_AVX512
                     if (LLVM_Util::supports_isa(TargetISA::AVX512)) {
+                        if (!target_requested)
+                            m_impl->attribute("llvm_jit_target", LLVM_Util::target_isa_name(TargetISA::AVX512));
                         return true;
                     }
+#endif
                     if (target_requested) { break; }
                 }
-#endif
                 // fallthrough
             case TargetISA::AVX512_noFMA:
-#ifdef __OSL_SUPPORTS_B16_AVX512_NOFMA
+#ifdef __OSL_SUPPORTS_b16_AVX512_noFMA
                 if (LLVM_Util::supports_isa(TargetISA::AVX512_noFMA)) {
+                    if (!target_requested) {
+                        m_impl->attribute("llvm_jit_target", LLVM_Util::target_isa_name(TargetISA::AVX512_noFMA));
+                    }
+                    m_impl->attribute ("llvm_jit_fma", 0);
                     return true;
                 }
-                if (target_requested) { break; }
 #endif
+                if (target_requested) { break; }
                 // fallthrough
             default:
                 return false;
@@ -484,48 +494,63 @@ ShadingSystem::supports_batch_execution_at(int width)
             case TargetISA::UNKNOWN:
                 // fallthrough
             case TargetISA::AVX512:
-#ifdef __OSL_SUPPORTS_B8_AVX512
                 if (jit_fma) {
+#ifdef __OSL_SUPPORTS_b8_AVX512
                     if (LLVM_Util::supports_isa(TargetISA::AVX512)) {
+                        if (!target_requested)
+                            m_impl->attribute("llvm_jit_target", LLVM_Util::target_isa_name(TargetISA::AVX512));
                         return true;
                     }
+#endif
                     if (target_requested) { break; }
                 }
-#endif
                 // fallthrough
             case TargetISA::AVX512_noFMA:
-#ifdef __OSL_SUPPORTS_B8_AVX512_NOFMA
+#ifdef __OSL_SUPPORTS_b8_AVX512_noFMA
                 if (LLVM_Util::supports_isa(TargetISA::AVX512_noFMA)) {
+                    if (!target_requested) {
+                        m_impl->attribute("llvm_jit_target", LLVM_Util::target_isa_name(TargetISA::AVX512_noFMA));
+                    }
+                    m_impl->attribute ("llvm_jit_fma", 0);
                     return true;
                 }
-                if (target_requested) { break; }
 #endif
+                if (target_requested) { break; }
                 // fallthrough
             case TargetISA::AVX2:
-#ifdef __OSL_SUPPORTS_B8_AVX2
                 if (jit_fma) {
+#ifdef __OSL_SUPPORTS_b8_AVX2
                     if (LLVM_Util::supports_isa(TargetISA::AVX2)) {
+                        if (!target_requested)
+                            m_impl->attribute("llvm_jit_target", LLVM_Util::target_isa_name(TargetISA::AVX2));
                         return true;
                     }
+#endif
                     if (target_requested) { break; }
                 }
-#endif
                 // fallthrough
             case TargetISA::AVX2_noFMA:
-#ifdef __OSL_SUPPORTS_B8_AVX2_NOFMA
+#ifdef __OSL_SUPPORTS_b8_AVX2_noFMA
                 if (LLVM_Util::supports_isa(TargetISA::AVX2_noFMA)) {
+                    if (!target_requested)
+                        m_impl->attribute("llvm_jit_target", LLVM_Util::target_isa_name(TargetISA::AVX2_noFMA));
+                    m_impl->attribute ("llvm_jit_fma", 0);
                     return true;
                 }
-                if (target_requested) { break; }
 #endif
+                if (target_requested) { break; }
                 // fallthrough
             case TargetISA::AVX:
-#ifdef __OSL_SUPPORTS_B8_AVX
+#ifdef __OSL_SUPPORTS_b8_AVX
                 if (LLVM_Util::supports_isa(TargetISA::AVX)) {
+                    if (!target_requested)
+                        m_impl->attribute("llvm_jit_target", LLVM_Util::target_isa_name(TargetISA::AVX));
+                    // AVX doesn't support FMA
+                    m_impl->attribute ("llvm_jit_fma", 0);
                     return true;
                 }
-                if (target_requested) { break; }
 #endif
+                if (target_requested) { break; }
                 // fallthrough
             default:
                 return false;
@@ -535,6 +560,7 @@ ShadingSystem::supports_batch_execution_at(int width)
         return false;
     }
 }
+#endif
 
 std::string
 ShadingSystem::getstats (int level) const
@@ -689,6 +715,7 @@ ShadingSystem::optimize_group (ShaderGroup *group,
     optimize_group (group, ctx, do_jit);
 }
 
+#if OSL_USE_BATCHED
 template<int WidthT>
 void
 ShadingSystem::BatchedExecutor<WidthT>::jit_group (ShaderGroup *group, ShadingContext *ctx)
@@ -707,7 +734,7 @@ ShadingSystem::BatchedExecutor<WidthT>::jit_all_groups (int nthreads)
 // Explicitly instantiate
 template class ShadingSystem::BatchedExecutor<16>;
 template class ShadingSystem::BatchedExecutor<8>;
-
+#endif
 
 
 static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
@@ -879,8 +906,12 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_fold_getattribute(true),
       m_opt_middleman(true), m_opt_texture_handle(true),
       m_opt_seed_bblock_aliases(true),
+#if OSL_USE_BATCHED
       m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr) |
                              (renderer->batched(WidthOf<8>()) != nullptr)),
+#else
+      m_opt_batched_analysis(false),
+#endif
       m_llvm_jit_fma(false),
       m_llvm_jit_aggressive(false),
       m_optimize_nondebug(false),
@@ -1011,6 +1042,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
+#if OSL_USE_BATCHED
 #define OP2(alias,name,ll,fold,simp,flag)                                \
     extern bool llvm_gen_##ll (BatchedBackendLLVM &rop, int opnum);      \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
@@ -1018,6 +1050,14 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
                                  llvm_gen_##ll,               \
                                                   constfold_##fold, simp, flag);
+#else
+#define OP2(alias,name,ll,fold,simp,flag)                                \
+    extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
+    extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
+    op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
+                                                  constfold_##fold, simp, flag);
+#endif
+
 #define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
 #define TEX OpDescriptor::Tex
 #define SIDE OpDescriptor::SideEffects
@@ -3322,6 +3362,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx, bool
     m_groups_to_compile_count -= 1;
 }
 
+#if OSL_USE_BATCHED
 template <int WidthT>
 void
 ShadingSystemImpl::Batched<WidthT>::jit_group (ShaderGroup &group, ShadingContext *ctx)
@@ -3395,18 +3436,21 @@ ShadingSystemImpl::Batched<WidthT>::jit_group (ShaderGroup &group, ShadingContex
     m_ssi.m_stat_instances_compiled += group.nlayers();
     m_ssi.m_groups_to_compile_count -= 1;
 }
-
+#endif
 
 static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads, bool do_jit)
 {
     ss->optimize_all_groups (1, mythread, totalthreads, do_jit);
 }
 
+
+#if OSL_USE_BATCHED
 template<int WidthT>
 static void batched_jit_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
 {
     ss->batched<WidthT>().jit_all_groups(1, mythread, totalthreads);
 }
+#endif
 
 void
 ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthreads, bool do_jit)
@@ -3452,6 +3496,7 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
     destroy_thread_info(threadinfo);
 }
 
+#if OSL_USE_BATCHED
 template<int WidthT>
 void
 ShadingSystemImpl::Batched<WidthT>::jit_all_groups (int nthreads, int mythread, int totalthreads)
@@ -3501,6 +3546,7 @@ ShadingSystemImpl::Batched<WidthT>::jit_all_groups (int nthreads, int mythread, 
 // machine as well, start with just the batch size
 template class pvt::ShadingSystemImpl::Batched<16>;
 template class pvt::ShadingSystemImpl::Batched<8>;
+#endif
 
 int
 ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)

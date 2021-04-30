@@ -167,6 +167,10 @@ ifneq (${USE_SIMD},)
 MY_CMAKE_FLAGS += -DUSE_SIMD:STRING="${USE_SIMD}"
 endif
 
+ifneq (${USE_BATCHED},)
+MY_CMAKE_FLAGS += -DUSE_BATCHED:STRING="${USE_BATCHED}"
+endif
+
 ifneq (${TEST},)
 TEST_FLAGS += -R ${TEST}
 endif
@@ -407,6 +411,10 @@ help:
 	@echo "                                  0, sse2, sse3, ssse3, sse4.1, sse4.2, f16c,"
 	@echo "                                  avx, avx2, avx512f)"
 	@echo "      USE_OPTIX=1              Build the OptiX test renderer"
+	@echo "      USE_BATCHED=targets      Build batched SIMD execution of shaders for (comma-separated choices:"
+	@echo "                                  0, b8_AVX, b8_AVX2, b8_AVX2_noFMA,"
+	@echo "                                  b8_AVX512, b8_AVX512_noFMA,"
+	@echo "                                  b16_AVX512, b16_AVX512_noFMA)"
 	@echo "  make test, extra options:"
 	@echo "      TEST=regex               Run only tests matching the regex"
 	@echo ""

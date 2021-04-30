@@ -488,7 +488,7 @@ LLVMGEN (llvm_gen_mul)
         func_spec.arg(Result,false,op_is_uniform);
         Symbol* A_prime = &A;
         Symbol* B_prime = &B;
-        if (B.typespec().is_matrix()) {
+        if (!A.typespec().is_matrix()) {
             // Always pass the matrix as the 1st operand
             std::swap(A_prime,B_prime);
         }

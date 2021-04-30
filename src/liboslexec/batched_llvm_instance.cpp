@@ -19,6 +19,8 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
+#include <OSL/oslconfig.h>
+
 #include <OSL/batched_shaderglobals.h>
 #include <OSL/batched_texture.h>
 
@@ -319,7 +321,7 @@ public:
 // NOTE:  Because builtindecl_wide_xmacro.h passes macros through the name
 // parameter of DECL(name,signature), we must have a layer of indirection
 // to allow those macros to expand.  Thus the use of DECL_INDIRECT.
-#ifdef __OSL_SUPPORTS_B16_AVX512
+#ifdef __OSL_SUPPORTS_b16_AVX512
 template<>
 const NameAndSignature
     ConcreteTargetLibraryHelper<16, TargetISA::AVX512>::library_functions[]
@@ -346,7 +348,7 @@ const char*
     = "b16_AVX512_";
 #endif
 
-#ifdef __OSL_SUPPORTS_B16_AVX512_NOFMA
+#ifdef __OSL_SUPPORTS_b16_AVX512_noFMA
 template<>
 const NameAndSignature
     ConcreteTargetLibraryHelper<16, TargetISA::AVX512_noFMA>::library_functions[]
@@ -373,7 +375,7 @@ const char* ConcreteTargetLibraryHelper<
     = "b16_AVX512_noFMA_";
 #endif
 
-#ifdef __OSL_SUPPORTS_B8_AVX512
+#ifdef __OSL_SUPPORTS_b8_AVX512
 template<>
 const NameAndSignature
     ConcreteTargetLibraryHelper<8, TargetISA::AVX512>::library_functions[]
@@ -400,7 +402,7 @@ const char*
     = "b8_AVX512_";
 #endif
 
-#ifdef __OSL_SUPPORTS_B8_AVX512_NOFMA
+#ifdef __OSL_SUPPORTS_b8_AVX512_noFMA
 template<>
 const NameAndSignature
     ConcreteTargetLibraryHelper<8, TargetISA::AVX512_noFMA>::library_functions[]
@@ -427,7 +429,7 @@ const char* ConcreteTargetLibraryHelper<
     = "b8_AVX512_noFMA_";
 #endif
 
-#ifdef __OSL_SUPPORTS_B8_AVX2
+#ifdef __OSL_SUPPORTS_b8_AVX2
 template<>
 const NameAndSignature
     ConcreteTargetLibraryHelper<8, TargetISA::AVX2>::library_functions[]
@@ -454,7 +456,7 @@ const char*
     = "b8_AVX2_";
 #endif
 
-#ifdef __OSL_SUPPORTS_B8_AVX2_NOFMA
+#ifdef __OSL_SUPPORTS_b8_AVX2_noFMA
 template<>
 const NameAndSignature
     ConcreteTargetLibraryHelper<8, TargetISA::AVX2_noFMA>::library_functions[]
@@ -481,7 +483,7 @@ const char*
     = "b8_AVX2_noFMA_";
 #endif
 
-#ifdef __OSL_SUPPORTS_B8_AVX
+#ifdef __OSL_SUPPORTS_b8_AVX
 template<>
 const NameAndSignature
     ConcreteTargetLibraryHelper<8, TargetISA::AVX>::library_functions[]
@@ -518,12 +520,12 @@ BatchedBackendLLVM::TargetLibraryHelper::build(ShadingContext* context,
     switch (vector_width) {
     case 16:
         switch (target_isa) {
-#ifdef __OSL_SUPPORTS_B16_AVX512
+#ifdef __OSL_SUPPORTS_b16_AVX512
         case TargetISA::AVX512:
             return RetType(
                 new ConcreteTargetLibraryHelper<16, TargetISA::AVX512>());
 #endif
-#ifdef __OSL_SUPPORTS_B16_AVX512_NOFMA
+#ifdef __OSL_SUPPORTS_b16_AVX512_noFMA
         case TargetISA::AVX512_noFMA:
             return RetType(
                 new ConcreteTargetLibraryHelper<16, TargetISA::AVX512_noFMA>());
@@ -534,27 +536,27 @@ BatchedBackendLLVM::TargetLibraryHelper::build(ShadingContext* context,
         break;
     case 8:
         switch (target_isa) {
-#ifdef __OSL_SUPPORTS_B8_AVX512
+#ifdef __OSL_SUPPORTS_b8_AVX512
         case TargetISA::AVX512:
             return RetType(
                 new ConcreteTargetLibraryHelper<8, TargetISA::AVX512>());
 #endif
-#ifdef __OSL_SUPPORTS_B8_AVX512_NOFMA
+#ifdef __OSL_SUPPORTS_b8_AVX512_noFMA
         case TargetISA::AVX512_noFMA:
             return RetType(
                 new ConcreteTargetLibraryHelper<8, TargetISA::AVX512_noFMA>());
 #endif
-#ifdef __OSL_SUPPORTS_B8_AVX2
+#ifdef __OSL_SUPPORTS_b8_AVX2
         case TargetISA::AVX2:
             return RetType(
                 new ConcreteTargetLibraryHelper<8, TargetISA::AVX2>());
 #endif
-#ifdef __OSL_SUPPORTS_B8_AVX2_NOFMA
+#ifdef __OSL_SUPPORTS_b8_AVX2_noFMA
         case TargetISA::AVX2_noFMA:
             return RetType(
                 new ConcreteTargetLibraryHelper<8, TargetISA::AVX2_noFMA>());
 #endif
-#ifdef __OSL_SUPPORTS_B8_AVX
+#ifdef __OSL_SUPPORTS_b8_AVX
         case TargetISA::AVX:
             return RetType(
                 new ConcreteTargetLibraryHelper<8, TargetISA::AVX>());

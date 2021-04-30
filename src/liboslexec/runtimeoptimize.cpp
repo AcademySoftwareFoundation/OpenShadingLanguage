@@ -2769,6 +2769,7 @@ RuntimeOptimizer::post_optimize_instance ()
 
     add_useparam (allsymptrs);
 
+#if OSL_USE_BATCHED
     // We must identify which symbols are uniform before
     // trying to coalesce to avoid merging a varying with
     // a uniform symbol or forced_llvm_bool with an integer
@@ -2776,6 +2777,7 @@ RuntimeOptimizer::post_optimize_instance ()
         BatchedAnalysis batched_analysis(shadingsys(), group());
         batched_analysis.analyze_layer(inst());
     }
+#endif
 
     if (optimize() >= 1 && m_opt_coalesce_temps)
         coalesce_temporaries ();

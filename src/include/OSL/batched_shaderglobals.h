@@ -4,6 +4,10 @@
 
 #pragma once
 
+#if !defined(OSL_USE_BATCHED) || (OSL_USE_BATCHED == 0)
+#    error batched_shaderglobals.h should not be included unless OSL_USE_BATCHED is defined to 1
+#endif
+
 #include <OSL/wide.h>
 
 #include <OSL/shaderglobals.h>

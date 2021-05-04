@@ -31,6 +31,9 @@ target_link_libraries (${local_lib}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
     )
 
+target_compile_features (${local_lib}
+                         PUBLIC cxx_std_${CMAKE_CXX_STANDARD})
+
 set_target_properties (${local_lib}
                        PROPERTIES
                        VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}

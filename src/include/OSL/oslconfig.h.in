@@ -137,47 +137,14 @@ enum class SymArena {
 
 namespace pvt {
 
-#if (OSL_CPLUSPLUS_VERSION >= 14)
-    template<int... IntegerListT>
-    using int_sequence = std::integer_sequence<int, IntegerListT...>;
+template<int... IntegerListT>
+using int_sequence = std::integer_sequence<int, IntegerListT...>;
 
-    template<int EndBeforeT>
-    using make_int_sequence =  std::make_integer_sequence<int, EndBeforeT>;
+template<int EndBeforeT>
+using make_int_sequence =  std::make_integer_sequence<int, EndBeforeT>;
 
-    template<bool... BoolListT >
-    using bool_sequence = std::integer_sequence<bool, BoolListT... >;
-#else
-    // std::integer_sequence requires c++14 library support,
-    // we have our own version here in case the environment is c++14 compiler
-    // building against c++11 library.
-    template<int... IntegerListT>
-    struct int_sequence
-    {
-    };
-
-    template<int StartAtT, int EndBeforeT, typename IntSequenceT>
-    struct int_sequence_generator;
-
-    template<int StartAtT, int EndBeforeT, int... IntegerListT>
-    struct int_sequence_generator<StartAtT, EndBeforeT, int_sequence<IntegerListT...>>
-    {
-        typedef typename int_sequence_generator<StartAtT+1, EndBeforeT, int_sequence<IntegerListT..., StartAtT>>::type type;
-    };
-
-    template<int EndBeforeT, int... IntegerListT>
-    struct int_sequence_generator<EndBeforeT, EndBeforeT, int_sequence<IntegerListT...>>
-    {
-        typedef int_sequence<IntegerListT...> type;
-    };
-
-    template<int EndBeforeT>
-    using make_int_sequence = typename int_sequence_generator<0, EndBeforeT, int_sequence<> >::type;
-
-    template<bool... BoolListT >
-    struct bool_sequence
-	{
-	};
-#endif
+ template<bool... BoolListT >
+using bool_sequence = std::integer_sequence<bool, BoolListT... >;
 
 #if (OSL_CPLUSPLUS_VERSION >= 17)
     template<class... ListT>
@@ -211,21 +178,8 @@ static OSL_FORCEINLINE OSL_HOSTDEVICE void static_foreach(const FunctorT &iFunct
     static_foreach<ConstantWrapperT>(pvt::make_int_sequence<N>(), iFunctor);
 }
 
-#if (OSL_CPLUSPLUS_VERSION >= 14)
-    template<int N>
-    using ConstIndex = std::integral_constant<int, N>;
-#else
-    template<int N>
-    struct ConstIndex : public std::integral_constant<int, N>
-    {
-        // C++14 adds this conversion operator we need to allow non-generic
-        // lambda functions (pre C++14) to accept an "int" instead of a
-        // typed ConstIndex<N> with "auto"
-        constexpr int operator()() const noexcept {
-            return N;
-        }
-    };
-#endif
+template<int N>
+using ConstIndex = std::integral_constant<int, N>;
 
 
 // During development it can be useful to output extra information

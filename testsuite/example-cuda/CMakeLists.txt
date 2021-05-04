@@ -40,7 +40,7 @@ set(CUDA_TARGET_ARCH sm_35)
 
 # Compile our "renderer" to PTX
 cuda_compile_ptx(CUDA_PTX_FILES cuda_grid_renderer.cu
-    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc --std=c++11
+    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc --std=c++14
             --expt-relaxed-constexpr
             -I${OSL_INCLUDES}
             -I${IMATH_INCLUDES}

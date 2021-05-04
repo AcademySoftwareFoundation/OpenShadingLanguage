@@ -86,17 +86,6 @@ using namespace OSL;
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
 
-#if defined(_MSC_VER) && _MSC_VER < 1700
-using OIIO::isinf;
-#endif
-
-#if defined(_MSC_VER) && _MSC_VER < 1800
-using OIIO::roundf;
-using OIIO::truncf;
-using OIIO::erff;
-using OIIO::erfcf;
-#endif
-
 #if defined(__FreeBSD__)
 #include <sys/param.h>
 #if __FreeBSD_version < 803000

@@ -14,15 +14,11 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.20)
 
-* A suitable C++11 compiler to build OSL itself, which may be any of:
-   - GCC 4.8.5 or newer (tested through gcc 10)
+* A suitable **C++14 or C++17** compiler to build OSL itself, which may be any of:
+   - **GCC 6.1 or newer** (tested through gcc 10)
    - Clang 3.4 or newer (tested through clang 12)
-   - Microsoft Visual Studio 2015 or newer
-   - Intel C++ compiler icc version 13 (?) or newer
-
-  OSL should compile also properly with C++14 or C++17, but they are not
-  required (unless you are using LLVM >= 10, in which case at least C++14
-  is needed).
+   - Microsoft Visual Studio **2017 or newer**
+   - Intel C++ compiler icc **version 17 or newer**
 
 * **[OpenImageIO](http://openimageio.org) 2.1 or newer** (tested through 2.2)
 
@@ -45,10 +41,6 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * **[LLVM](http://www.llvm.org) 7, 8, 9, 10, 11, or 12**, including clang
   libraries.
-
-  Note that LLVM 10+ is not compatible with C++11, and requires C++14 or
-  later. If you *must* build OSL with C++11, you need to use an LLVM that
-  is LLVM 9 or earlier.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.73)
 * [Ilmbase or Imath](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.0)

@@ -529,11 +529,6 @@ jobs:
       USE_CPP: 14
       CMAKE_CXX_STANDARD: 14
       PYTHON_VERSION: 3.9
-      LLVM_BC_GENERATOR: /usr/bin/clang++
-      OSL_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
-        # ^^ Force bitcode compiles to use the system clang compiler by
-        # preemptively telling it the LLVM_BC_GENERATOR, to avoid some
-        # library mismatches we tend to see on GH CI's Mac images.
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp

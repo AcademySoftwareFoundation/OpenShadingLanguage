@@ -778,7 +778,11 @@ OptixRaytracer::make_optix_materials ()
     const char *cuda_compile_options[] = { "--gpu-architecture=compute_35"  ,
                                            "--use_fast_math"                ,
                                            "-dc"                            ,
+#if OSL_CPLUSPLUS_VERSION >= 14
+                                           "--std=c++14"
+#else
                                            "--std=c++11"
+#endif
                                          };
 
     int num_compile_flags = int(sizeof(cuda_compile_options) / sizeof(cuda_compile_options[0]));

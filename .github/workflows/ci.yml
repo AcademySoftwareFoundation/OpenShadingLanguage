@@ -121,7 +121,7 @@ jobs:
             build/*/CMake*.{txt,log}
 
   vfxplatform-2021:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2"
+    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2 batch-b8avx2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021-clang11
@@ -133,6 +133,7 @@ jobs:
       USE_SIMD: avx2,f16c
       OPENEXR_VERSION: v2.5.5
       OPENIMAGEIO_VERSION: RB-2.2
+      USE_BATCHED: b8_AVX2_noFMA
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -169,7 +170,7 @@ jobs:
             build/*/CMake*.{txt,log}
 
   vfxplatform-2021-exr3:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-3.0 OIIO-2.2 avx2"
+    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-3.0 OIIO-2.2 avx2 batch-b8avx2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021-clang11
@@ -181,6 +182,7 @@ jobs:
       USE_SIMD: avx2,f16c
       OPENEXR_VERSION: master
       OPENIMAGEIO_VERSION: RB-2.2
+      USE_BATCHED: b8_AVX2
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -418,7 +420,7 @@ jobs:
   linux-bleeding-edge:
     # Test against development master for relevant dependencies, latest
     # supported releases of everything else.
-    name: "Linux bleeding edge: gcc10, C++17, llvm11, oiio/ocio/exr/pybind-master, avx2"
+    name: "Linux bleeding edge: gcc10, C++17, llvm11, oiio/ocio/exr/pybind-master, avx2, batch-b16avx512"
     runs-on: ubuntu-20.04
     env:
       CXX: g++-10
@@ -434,6 +436,7 @@ jobs:
       PYBIND11_VERSION: master
       PUGIXML_VERSION: master
       OSL_BUILD_MATERIALX: 1
+      USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp

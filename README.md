@@ -345,23 +345,36 @@ Films using OSL (grouped by year of release date):
   Angry Birds 2,
   The Art of Racing in the Rain,
   Secret Life of Pets,
-  The Mandalorian,
+  The Mandalorian (S1),
   The Dark Crystal: Age of Resistance,
   The King,
   Jumanji: The Next Level,
   Richard Jewell,
-  Game of Thrones,
-  Lost in Space,
-* **(2020 / upcoming)**
+  Game of Thrones (S8),
+  Lost in Space (S1),
+  Togo
+* **(2020)**
+  Underwater,
   Birds of Prey,
   Onward,
+  Bloodshot,
   Greyhound,
   The Old Guard,
   Mulan,
   Tenet,
   The New Mutants,
+  Artemis Fowl,
   The Eight Hundred,
   Over the Moon,
+  Wonder Woman 1984,
+  Soul,
+  The Mandalorian (S2)
+* **(2021 / upcoming)**
+  Chaos Walking,
+  Peter Rabbit 2: The Runaway,
+  The Falcon and the Winder Soldier,
+  Secret Magic Control Agency,
+  The Mitchells vs the Machines,
   ...
 
 

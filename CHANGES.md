@@ -5,10 +5,14 @@ Release 1.12 -- ?? (compared to 1.11)
 --------------------------------------------------
 Dependency and standards requirements changes:
 * OpenImageIO 2.1-2.3: Support for OIIO 2.0 has been dropped.
+* The default compilation mode is now C++14 (though can still be overridden
+  to build for C++11). #1362
 
 OSL Language and oslc compiler:
 * `#pragma error "message"` and `#pragma warning "message"` can be used to
   conditionally inject a compile-time error or warning. #1300 (1.12.1)
+* Check for errors when when writing oso files (for example, disk volume
+  full). #1360 (1.12.2/1.11.14)
 
 OSL Standard library:
 * vector2.h is updated with a mod() function for vector2. #1312 (1.12.1/1.11.12)
@@ -33,6 +37,8 @@ Continued work on experimental SIMD batched shading mode:
   and which operations require masking. #1313 #1318 #1322 (1.12.1)
 * Additional infrastructure for batched analsys. #1316 (1.12.1)
 * Add implementation for BatchedBackendLLVM. #1330 (1.12.1)
+* ISA-specific modules. #1345 (1.12.2)
+* Introduction of CI testing of batched mode. #1357 #1367 (1.12.2)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -96,6 +102,7 @@ Build & test system improvements:
     - We weren't properly hiding non-public symbols. #1337 (1.12.1/1.11.12)
     - Fully split oslquery and oslnoise libraries from oslxec, no more
       redundant modules put into both. #1346 #1348 (1.12.1)
+    - Support for CMake 3.20 #1354 (1.12.2/1.11.14)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
@@ -107,7 +114,7 @@ Build & test system improvements:
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming
       Imath 3.0 and OpenEXR 3.0. #1299 (1.11.10/1.12.1) #1332 (1.11.11/1.12.1)
-      #1341 (1.11.12/1.12.1)
+      #1341 (1.11.12/1.12.1) #1356 (1.11.13/1.12.2)
 * Testing and Continuous integration (CI) systems:
     - Eliminate the old Travis CI and Appveyor. #1334 #1338 (1.12.1)
     - Use ccache + GitHub 'cache' action to greatly speed up CI runs. #1335
@@ -130,6 +137,23 @@ Documentation:
 * First steps in new documentation and scripts for building OSL on Windows.
   #1326 (1.12.1)
 
+
+
+Release 1.11.14 -- 10 May 2021 (compared to 1.11.13)
+----------------------------------------------------
+* oslc/OSLCompiler: Check for errors when when writing oso (for example,
+  disk volume full). #1360
+* Fix crash generating closure function calls with LLVM 11. #1361
+* Build: LLVM 12 compatibility. #1351
+* Build: Support for CMake 3.20 #1354
+* Build: Be robust to certain OpenEXR 2.x config fies. #1356
+* Build: Fixes to deal with newer OIIO builds that are C++14.
+
+Release 1.11.13 -- 1 Apr 2021 (compared to 1.11.12)
+----------------------------------------------------
+* Updated vector2.h with a `mod(vector2,vector2)` function. #1312
+* Fix unnecesary error messages to stderr when encountering broken point
+  clouds. #1333
 
 Release 1.11.12 -- 1 Mar 2021 (compared to 1.11.11)
 ----------------------------------------------------

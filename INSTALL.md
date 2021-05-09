@@ -43,7 +43,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* **[LLVM](http://www.llvm.org) 7, 8, 9, 10, or 11**, including
+* **[LLVM](http://www.llvm.org) 7, 8, 9, 10, 11, or 12**, including
   clang libraries.
 
   Note that LLVM 10+ is not compatible with C++11, and requires C++14 or
@@ -60,7 +60,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
    testsuite:
-     * Python >= 2.7 (tested against 2.7, 3.6, 3.7, 3.8)
+     * Python >= 2.7 (tested against 2.7, 3.6, 3.7, 3.8, 3.9)
      * pybind11 >= 2.4.2 (Tested through 2.5)
      * NumPy
 * (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,

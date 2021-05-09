@@ -1,9 +1,15 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.14 -- ? ??? 2021 (compared to 1.11.13)
+Release 1.11.14 -- 10 May 2021 (compared to 1.11.13)
 ----------------------------------------------------
-
+* oslc/OSLCompiler: Check for errors when when writing oslc (for example,
+  disk volume full). #1360
+* Fix crash generating closure function calls with LLVM 11. #1361
+* Build: LLVM 12 compatibility. #1351
+* Build: Support for CMake 3.20 #1354
+* Build: Be robust to certain OpenEXR 2.x config fies. #1356
+* Build: Fixes to deal with newer OIIO builds that are C++14.
 
 Release 1.11.13 -- 1 Apr 2021 (compared to 1.11.12)
 ----------------------------------------------------

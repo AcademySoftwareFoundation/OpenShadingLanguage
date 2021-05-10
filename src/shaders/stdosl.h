@@ -470,6 +470,235 @@ closure color debug(string tag) BUILTIN;
 closure color holdout() BUILTIN;
 closure color subsurface(float eta, float g, color mfp, color albedo) BUILTIN;
 
+#ifdef MATERIALX_CLOSURES
+
+// -------------------------------------------------------------//
+// BSDF closures                                                //
+// -------------------------------------------------------------//
+​
+// Constructs a diffuse reflection BSDF based on the Oren-Nayar reflectance model.
+//
+//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  albedo      Surface albedo.
+//  \param  roughness   Surface roughness [0,1]. A value of 0.0 gives Lambertian reflectance.
+//  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color oren_nayar_diffuse_bsdf(normal N, color albedo, float roughness) BUILTIN;
+​
+// Constructs a diffuse reflection BSDF based on the corresponding component of 
+// the Disney Principled shading model.
+//
+//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  albedo      Surface albedo.
+//  \param  roughness   Surface roughness [0,1].
+//  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color burley_diffuse_bsdf(normal N, color albedo, float roughness) BUILTIN;
+​
+// Constructs a reflection and/or transmission BSDF based on a microfacet reflectance
+// model and a Fresnel curve for dielectrics. The two tint parameters control the 
+// contribution of each reflection/transmission lobe. The tints should remain 100% white
+// for a physically correct dielectric, but can be tweaked for artistic control or set
+// to 0.0 for disabling a lobe.
+// The closure may be vertically layered over a base BSDF for the surface beneath the
+// dielectric layer. This is done using the layer() closure. By chaining multiple 
+// dielectric_bsdf closures you can describe a surface with multiple specular lobes.
+// If transmission is enabled (transmission_tint > 0.0) the closure may be layered over
+// a VDF closure describing the surface interior to handle absorption and scattering
+// inside the medium.
+//
+//  \param  N                   Normal vector of the surface point beeing shaded.
+//  \param  U                   Tangent vector of the surface point beeing shaded.
+//  \param  reflection_tint     Weight per color channel for the reflection lobe. Should be (1,1,1) for a physically-correct dielectric surface, 
+//                              but can be tweaked for artistic control. Set to (0,0,0) to disable reflection.
+//  \param  transmission_tint   Weight per color channel for the transmission lobe. Should be (1,1,1) for a physically-correct dielectric surface, 
+//                              but can be tweaked for artistic control. Set to (0,0,0) to disable transmission.
+//  \param  roughness_x         Surface roughness in the U direction with a perceptually linear response over its range.
+//  \param  roughness_y         Surface roughness in the V direction with a perceptually linear response over its range.
+//  \param  ior                 Refraction index.
+//  \param  distribution        Microfacet distribution. An implementation is expected to support the following distributions: { "ggx" }
+//  \param  thinfilm_thickness  Optional float parameter for thickness of an iridescent thin film layer on top of this BSDF. Given in nanometers.
+//  \param  thinfilm_ior        Optional float parameter for refraction index of the thin film layer.
+//  \param  label               Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color dielectric_bsdf(normal N, vector U, color reflection_tint, color transmission_tint, float roughness_x, float roughness_y, float ior, string distribution) BUILTIN;
+​
+// Constructs a reflection BSDF based on a microfacet reflectance model.
+// Uses a Fresnel curve with complex refraction index for conductors/metals.
+// If an artistic parametrization is preferred the artistic_ior() utility function
+// can be used to convert from artistic to physical parameters.
+//
+//  \param  N                   Normal vector of the surface point beeing shaded.
+//  \param  U                   Tangent vector of the surface point beeing shaded.
+//  \param  roughness_x         Surface roughness in the U direction with a perceptually linear response over its range.
+//  \param  roughness_y         Surface roughness in the V direction with a perceptually linear response over its range.
+//  \param  ior                 Refraction index.
+//  \param  extinction          Extinction coefficient.
+//  \param  distribution        Microfacet distribution. An implementation is expected to support the following distributions: { "ggx" }
+//  \param  thinfilm_thickness  Optional float parameter for thickness of an iridescent thin film layer on top of this BSDF. Given in nanometers.
+//  \param  thinfilm_ior        Optional float parameter for refraction index of the thin film layer.
+//  \param  label               Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color conductor_bsdf(normal N, vector U, float roughness_x, float roughness_y, color ior, color extinction, string distribution) BUILTIN;
+​
+// Constructs a reflection and/or transmission BSDF based on a microfacet reflectance model
+// and a generalized Schlick Fresnel curve. The two tint parameters control the contribution
+// of each reflection/transmission lobe.
+// The closure may be vertically layered over a base BSDF for the surface beneath the
+// dielectric layer. This is done using the layer() closure. By chaining multiple 
+// dielectric_bsdf closures you can describe a surface with multiple specular lobes.
+// If transmission is enabled (transmission_tint > 0.0) the closure may be layered over
+// a VDF closure describing the surface interior to handle absorption and scattering
+// inside the medium.
+//
+//  \param  N                   Normal vector of the surface point beeing shaded.
+//  \param  U                   Tangent vector of the surface point beeing shaded.
+//  \param  reflection_tint     Weight per color channel for the reflection lobe. Set to (0,0,0) to disable reflection.
+//  \param  transmission_tint   Weight per color channel for the transmission lobe. Set to (0,0,0) to disable transmission.
+//  \param  roughness_x         Surface roughness in the U direction with a perceptually linear response over its range.
+//  \param  roughness_y         Surface roughness in the V direction with a perceptually linear response over its range.
+//  \param  f0                  Reflectivity per color channel at facing angles.
+//  \param  f90                 Reflectivity per color channel at grazing angles.
+//  \param  distribution        Microfacet distribution. An implementation is expected to support the following distributions: { "ggx" }
+//  \param  thinfilm_thickness  Optional float parameter for thickness of an iridescent thin film layer on top of this BSDF. Given in nanometers.
+//  \param  thinfilm_ior        Optional float parameter for refraction index of the thin film layer.
+//  \param  label               Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color generalized_schlick_bsdf(normal N, vector U, color reflection_tint, color transmission_tint, float roughness_x, float roughness_y, color f0, color f90, float exponent, string distribution) BUILTIN;
+​
+// Constructs a translucent (diffuse transmission) BSDF based on the Lambert reflectance model.
+//
+//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  albedo      Surface albedo.
+//  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color translucent_bsdf(normal N, color albedo) BUILTIN;
+
+// Constructs a closure that represents straight transmission through a surface.
+//
+//  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+// NOTE:
+//  - This is not a node in the MaterialX library, but the surface shader constructor
+//    node has an 'opacity' parameter to control textured cutout opacity.
+//
+closure color transparent_bsdf() BUILTIN;
+​
+// Constructs a BSSRDF for subsurface scattering within a homogeneous medium.
+//
+//  \param  N                   Normal vector of the surface point beeing shaded.
+//  \param  albedo              Single-scattering albedo of the medium.
+//  \param  transmission_depth  Distance travelled inside the medium by white light before its color becomes transmission_color by Beer's law.
+//                              Given in scene length units, range [0,infinity). Together with transmission_color this determines the extinction
+//                              coefficient of the medium.
+//  \param  transmission_color  Desired color resulting from white light transmitted a distance of 'transmission_depth' through the medium.
+//                              Together with transmission_depth this determines the extinction coefficient of the medium.
+//  \param  anisotropy          Scattering anisotropy [-1,1]. Negative values give backwards scattering, positive values give forward scattering, 
+//                              and 0.0 gives uniform scattering.
+//  \param  label               Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color subsurface_bssrdf(normal N, color albedo, float transmission_depth, color transmission_color, float anisotropy) BUILTIN;
+​
+// Constructs a microfacet BSDF for the back-scattering properties of cloth-like materials.
+// This closure may be vertically layered over a base BSDF, where energy that is not reflected
+// will be transmitted to the base closure.
+//
+//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  albedo      Surface albedo.
+//  \param  roughness   Surface roughness [0,1].
+//  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color sheen_bsdf(normal N, color albedo, float roughness) BUILTIN;
+​
+​
+// -------------------------------------------------------------//
+// EDF closures                                                 //
+// -------------------------------------------------------------//
+​
+// Constructs an EDF emitting light uniformly in all directions.
+//
+//  \param  emittance   Radiant emittance of light leaving the surface.
+//  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color uniform_edf(color emittance) BUILTIN;
+​
+​
+// -------------------------------------------------------------//
+// VDF closures                                                 //
+// -------------------------------------------------------------//
+​
+// Constructs a VDF scattering light for a general participating medium, based on the Henyey-Greenstein
+// phase function. Forward, backward and uniform scattering is supported and controlled by the anisotropy input.
+//
+//  \param  albedo      Volume single-scattering albedo.
+//  \param  extinction  Volume extinction coefficient.
+//  \param  anisotropy  Scattering anisotropy [-1,1]. Negative values give backwards scattering, positive values give forward scattering, 
+//                      and 0.0 gives uniform scattering.
+//  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color anisotropic_vdf(color albedo, color extinction, float anisotropy) BUILTIN;
+
+// Constructs a VDF for light passing through a dielectric homogenous medium, such as glass or liquids.
+// The parameters transmission_depth and transmission_color control the extinction coefficient of the medium
+// in and artist-friendly way. A priority can be set to determine the ordering of overlapping media.
+//
+//  \param  albedo              Single-scattering albedo of the medium.
+//  \param  transmission_depth  Distance travelled inside the medium by white light before its color becomes transmission_color by Beer's law.
+//                              Given in scene length units, range [0,infinity). Together with transmission_color this determines the extinction
+//                              coefficient of the medium.
+//  \param  transmission_color  Desired color resulting from white light transmitted a distance of 'transmission_depth' through the medium.
+//                              Together with transmission_depth this determines the extinction coefficient of the medium.
+//  \param  anisotropy          Scattering anisotropy [-1,1]. Negative values give backwards scattering, positive values give forward scattering, 
+//                              and 0.0 gives uniform scattering.
+//  \param  ior                 Refraction index of the medium.
+//  \param  priority            Priority of this medium (for nested dielectrics).
+//  \param  label               Optional string parameter to name this component. For use in AOVs / LPEs.
+//
+closure color medium_vdf(color albedo, float transmission_depth, color transmission_color, float anisotropy, float ior, int priority) BUILTIN;
+
+// -------------------------------------------------------------//
+// Layering closures                                            //
+// -------------------------------------------------------------//
+​
+// Vertically layer a layerable BSDF such as dielectric_bsdf, generalized_schlick_bsdf or
+// sheen_bsdf over a BSDF or VDF. The implementation is target specific, but a standard way
+// of handling this is by albedo scaling, using "base*(1-reflectance(top)) + top", where
+// reflectance() calculates the directional albedo of a given top BSDF.
+//
+//  \param  top   Closure defining the top layer.
+//  \param  base  Closure defining the base layer.
+//
+// TODO:
+// - This could also be achived by closure nesting where each layerable closure takes
+//   a closure color "base" input instead.
+// - One advantage having a dedicated layer() closure is that in the future we may want to
+//   introduce parameters to describe the sandwitched medium between the layer interfaces.
+//   Such parameterization could then be added on this layer() closure as extra arguments.
+// - Do we want/need parameters for the medium here now, or do we look at that later?
+//
+closure color layer(closure color top, closure color base) BUILTIN;
+
+// NOTE: For "horisontal layering" closure mix() already exists in OSL.
+​
+​
+// -------------------------------------------------------------//
+// Utility functions                                            //
+// -------------------------------------------------------------//
+​
+// Converts the artistic parameterization reflectivity and edge_color to complex IOR values.
+// To be used with the conductor_bsdf() closure.
+// [OG14] "Artist Friendly Metallic Fresnel", http://jcgt.org/published/0003/04/03/paper.pdf
+//
+//  \param  reflectivity  Reflectivity per color channel at facing angles ('r' parameter in [OG14]).
+//  \param  edge_tint     Color bias for grazing angles ('g' parameter in [OG14]).
+//                        NOTE: This is not equal to 'f90' in a Schlick Fresnel parameterization.
+//  \param  ior           Output refraction index.
+//  \param  extinction    Output extinction coefficient.
+//
+void artistic_ior(color reflectivity, color edge_tint, output color ior, output color extinction);
+​
+#endif // MATERIALX_CLOSURES
+
 // Renderer state
 int backfacing () BUILTIN;
 int raytype (string typename) BUILTIN;

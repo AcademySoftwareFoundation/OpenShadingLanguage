@@ -685,7 +685,7 @@ closure color layer(closure color top, closure color base) BUILTIN;
 // Utility functions                                            //
 // -------------------------------------------------------------//
 ​
-// Converts the artistic parameterization reflectivity and edge_color to complex IOR values.
+// Converts the artistic parameterization reflectivity and edge_tint to complex IOR values.
 // To be used with the conductor_bsdf() closure.
 // [OG14] "Artist Friendly Metallic Fresnel", http://jcgt.org/published/0003/04/03/paper.pdf
 //
@@ -695,8 +695,21 @@ closure color layer(closure color top, closure color base) BUILTIN;
 //  \param  ior           Output refraction index.
 //  \param  extinction    Output extinction coefficient.
 //
-void artistic_ior(color reflectivity, color edge_tint, output color ior, output color extinction);
-​
+void artistic_ior(color reflectivity, color edge_tint, output color ior, output color extinction)
+​{
+    color r = clamp(reflectivity, 0.0, 0.99);
+    color r_sqrt = sqrt(r);
+    color n_min = (1.0 - r) / (1.0 + r);
+    color n_max = (1.0 + r_sqrt) / (1.0 - r_sqrt);
+    ior = mix(n_max, n_min, edge_tint);
+
+    color np1 = ior + 1.0;
+    color nm1 = ior - 1.0;
+    color k2 = (np1*np1 * r - nm1*nm1) / (1.0 - r);
+    k2 = max(k2, 0.0);
+    extinction = sqrt(k2);
+}
+
 #endif // MATERIALX_CLOSURES
 
 // Renderer state

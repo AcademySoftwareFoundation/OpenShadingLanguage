@@ -16,7 +16,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer (tested through gcc 10)
-   - Clang 3.4 or newer (tested through clang 11)
+   - Clang 3.4 or newer (tested through clang 12)
    - Microsoft Visual Studio 2015 or newer
    - Intel C++ compiler icc version 13 (?) or newer
 
@@ -51,7 +51,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   is LLVM 9 or earlier.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.75)
-* [Ilmbase](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.0)
+* [Ilmbase or Imath](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.0)
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)

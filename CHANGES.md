@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.15 -- ? Jun 2021 (compared to 1.11.14)
+----------------------------------------------------
+
+
 Release 1.11.14 -- 10 May 2021 (compared to 1.11.13)
 ----------------------------------------------------
 * oslc/OSLCompiler: Check for errors when when writing oslc (for example,

@@ -27,7 +27,7 @@ set_target_properties (${local_lib}
     PROPERTIES
         VERSION     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
         SOVERSION   ${SOVERSION}
-        OUTPUT_NAME oslquery${OSL_LIBNAME_SUFFIX}
+        OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
         POSITION_INDEPENDENT_CODE ON
     )
 

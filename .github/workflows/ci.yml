@@ -180,7 +180,7 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       PYTHON_VERSION: 3.7
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: master
+      OPENEXR_VERSION: v3.0.1
       OPENIMAGEIO_VERSION: RB-2.2
       USE_BATCHED: b8_AVX2
     steps:

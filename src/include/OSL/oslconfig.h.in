@@ -98,6 +98,20 @@ using OIIO::span;
 using OIIO::cspan;
 
 
+// N.B. SymArena is not really "configuration", but we cram it here for
+// lack of a better home.
+
+/// The different memory arenas where symbols may live on the app side
+enum class SymArena {
+    Unknown = 0,        // Unknown/uninitialized value
+    Absolute,           // Absolute address
+    Heap,               // Belongs to context heap
+    Outputs             // Belongs to output arena
+    // ShaderGlobals,   // RESERVED
+    // UserData,        // RESERVED
+};
+
+
 
 /////////////////////////////////////////////////////////////////////////
 // Define various macros and templates that need to be different for

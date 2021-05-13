@@ -5,7 +5,6 @@ Connect B.out to E.in
 Connect E.out to F.in
 Connect E.out to G.in
 
-Marking group outputs, not global renderer outputs.
 Output D.out to out.exr
 (node G) enter layer 6 G node
 (node A) enter layer 0 A node
@@ -33,7 +32,6 @@ Connect B.out to E.in
 Connect E.out to F.in
 Connect E.out to G.in
 
-Marking group outputs, not global renderer outputs.
 Entry layers: B(1) F(5) E(4)
 Output D.out to out.exr
 (node B) checking for already-run layer 1 B node
@@ -59,10 +57,9 @@ Connect B.out to E.in
 Connect E.out to F.in
 Connect E.out to G.in
 
-Marking group outputs, not global renderer outputs.
 Entry layers: B(1) F(5) E(4)
-Entry outputs: E.out
 Output D.out to out.exr
+Entry outputs: E.out
 (node E) checking for already-run layer 4 E node
 (node E) enter layer 4 E node
 Running layer E:

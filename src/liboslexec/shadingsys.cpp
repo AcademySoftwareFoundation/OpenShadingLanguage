@@ -249,61 +249,60 @@ ShadingSystem::release_context (ShadingContext *ctx)
 
 
 bool
-ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &group,
-                        ShaderGlobals &globals, bool run)
+ShadingSystem::execute(ShadingContext& ctx, ShaderGroup& group, int index,
+                       ShaderGlobals& globals, void* output_base_ptr,
+                       bool run)
 {
-    return m_impl->execute (ctx, group, globals, run);
-}
-
-
-
-// DEPRECATED(2.0)
-bool
-ShadingSystem::execute (ShadingContext *ctx, ShaderGroup &group,
-                        ShaderGlobals &globals, bool run)
-{
-    return m_impl->execute (ctx, group, globals, run);
+    return m_impl->execute (ctx, group, index, globals, output_base_ptr, run);
 }
 
 
 
 bool
-ShadingSystem::execute_init (ShadingContext &ctx, ShaderGroup &group,
-                             ShaderGlobals &globals, bool run)
+ShadingSystem::execute_init(ShadingContext& ctx, ShaderGroup& group,
+                            int index, ShaderGlobals& globals,
+                            void* output_base_ptr, bool run)
 {
-    return ctx.execute_init (group, globals, run);
+    return ctx.execute_init(group, index, globals, output_base_ptr, run);
 }
 
 
 
 bool
-ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                              int layernumber)
+ShadingSystem::execute_layer(ShadingContext& ctx, int index,
+                             ShaderGlobals& globals,
+                             void* output_base_ptr, int layernumber)
 {
-    return ctx.execute_layer (globals, layernumber);
+    return ctx.execute_layer (index, globals, output_base_ptr, layernumber);
 }
 
 
 
 bool
-ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                              ustring layername)
+ShadingSystem::execute_layer(ShadingContext &ctx, int index,
+                             ShaderGlobals &globals, void* output_base_ptr,
+                             ustring layername)
 {
     int layernumber = find_layer (*ctx.group(), layername);
-    return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
+    return layernumber >= 0
+        ? ctx.execute_layer (index, globals, output_base_ptr, layernumber)
+        : false;
 }
 
 
 
 bool
-ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                              const ShaderSymbol *symbol)
+ShadingSystem::execute_layer(ShadingContext& ctx, int index,
+                             ShaderGlobals& globals, void* output_base_ptr,
+                             const ShaderSymbol* symbol)
 {
     if (! symbol)
         return false;
     const Symbol *sym = reinterpret_cast<const Symbol *>(symbol);
     int layernumber = sym->layer();
-    return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
+    return layernumber >= 0
+        ? ctx.execute_layer (index, globals, output_base_ptr, layernumber)
+        : false;
 }
 
 #if OSL_USE_BATCHED
@@ -693,6 +692,44 @@ ShadingSystem::set_raytypes (ShaderGroup *group, int raytypes_on, int raytypes_o
     if (group)
         group->set_raytypes(raytypes_on, raytypes_off);
 }
+
+
+void
+ShadingSystem::clear_symlocs()
+{
+    m_impl->clear_symlocs();
+}
+
+
+
+void
+ShadingSystem::clear_symlocs(ShaderGroup *group)
+{
+    if (group)
+        group->clear_symlocs();
+    else
+        clear_symlocs();  // no group specified, make it global
+}
+
+
+
+void
+ShadingSystem::add_symlocs(cspan<SymLocationDesc> symlocs)
+{
+    m_impl->add_symlocs(symlocs);
+}
+
+
+
+void
+ShadingSystem::add_symlocs(ShaderGroup *group, cspan<SymLocationDesc> symlocs)
+{
+    if (group)
+        group->add_symlocs(symlocs);
+    else
+        add_symlocs(symlocs);  // no group specified, make it global
+}
+
 
 
 void
@@ -2354,6 +2391,9 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname)
     {
         // Record the group in the SS's census of all extant groups
         spin_lock lock (m_all_shader_groups_mutex);
+        // Group inherits global symbol location information that was
+        // active at the time the group was created.
+        group->add_symlocs(m_symlocs);
         m_all_shader_groups.push_back (group);
         ++m_groups_to_compile_count;
         m_curgroup = group;
@@ -2991,32 +3031,11 @@ ShadingSystemImpl::release_context (ShadingContext *ctx)
 
 
 bool
-ShadingSystemImpl::execute (ShadingContext &ctx, ShaderGroup &group,
-                            ShaderGlobals &ssg, bool run)
+ShadingSystemImpl::execute(ShadingContext& ctx, ShaderGroup& group,
+                           int index, ShaderGlobals& ssg,
+                           void* output_base_ptr, bool run)
 {
-    return ctx.execute (group, ssg, run);
-}
-
-
-
-// Deprecated
-bool
-ShadingSystemImpl::execute (ShadingContext *ctx, ShaderGroup &group,
-                            ShaderGlobals &ssg, bool run)
-{
-    bool free_context = false;
-    OSL::PerThreadInfo *thread_info = nullptr;
-    if (! ctx) {
-        thread_info = create_thread_info();
-        ctx = get_context(thread_info);
-        free_context = true;
-    }
-    bool result = ctx->execute (group, ssg, run);
-    if (free_context) {
-        release_context(ctx);
-        destroy_thread_info(thread_info);
-    }
-    return result;
+    return ctx.execute(group, index, ssg, output_base_ptr, run);
 }
 
 
@@ -3165,13 +3184,18 @@ bool
 ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
                                        ShaderGroup *group) const
 {
+    ustring name2 = ustring::sprintf("%s.%s", layername, paramname);
     if (group) {
+        for (auto&& sl : group->m_symlocs) {
+            if (sl.arena == SymArena::Outputs &&
+                (sl == paramname || sl == name2))
+                return true;
+        }
         const std::vector<ustring> &aovs (group->m_renderer_outputs);
         if (aovs.size() > 0) {
             if (std::find(aovs.begin(), aovs.end(), paramname) != aovs.end())
                 return true;
             // Try "layer.name"
-            ustring name2 = ustring::sprintf("%s.%s", layername, paramname);
             if (std::find(aovs.begin(), aovs.end(), name2) != aovs.end())
                 return true;
         }
@@ -3180,7 +3204,7 @@ ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
     if (aovs.size() > 0) {
         if (std::find(aovs.begin(), aovs.end(), paramname) != aovs.end())
             return true;
-        ustring name2 = ustring::sprintf("%s.%s", layername, paramname);
+        // Try "layer.name"
         if (std::find(aovs.begin(), aovs.end(), name2) != aovs.end())
             return true;
     }

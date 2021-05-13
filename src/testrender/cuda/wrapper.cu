@@ -43,8 +43,8 @@ rtDeclareVariable (float,      t_hit,        rtIntersectionDistance, );
 rtBuffer<float3,2> output_buffer;
 
 // Function pointers for the OSL shader
-rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_init_func, , );
-rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_group_func, ,);
+rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, int)>, osl_init_func, , );
+rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, int)>, osl_group_func, ,);
 
 RT_PROGRAM void any_hit_shadow()
 {
@@ -373,8 +373,8 @@ extern "C" __global__  void __closesthit__closest_hit_osl()
     // Run the OSL group and init functions
     const unsigned int shaderInitOpIdx = 2u + 2u * sg.shaderID + 0u;
     const unsigned int shaderGroupIdx  = 2u + 2u * sg.shaderID + 1u;
-    optixDirectCall<void, ShaderGlobals*, void *>(shaderInitOpIdx, &sg, params); // call osl_init_func
-    optixDirectCall<void, ShaderGlobals*, void *>(shaderGroupIdx , &sg, params); // call osl_group_func
+    optixDirectCall<void, ShaderGlobals*, void *, void*, int>(shaderInitOpIdx, &sg, params, nullptr, 0); // call osl_init_func
+    optixDirectCall<void, ShaderGlobals*, void *, void*, int>(shaderGroupIdx , &sg, params, nullptr, 0); // call osl_group_func
 
     float3 result = process_closure ((OSL::ClosureColor*) sg.Ci);
     uint3 launch_dims  = optixGetLaunchDimensions();

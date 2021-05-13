@@ -115,13 +115,14 @@ BackendLLVM::llvm_call_layer (int layer, bool unconditional)
 {
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer])
-    //         parent_layer (sg, groupdata);
+    //         parent_layer (sg, groupdata, output_base_ptr, shadeindex);
     // if it's a conditional call, or
-    //     parent_layer (sg, groupdata);
+    //     parent_layer (sg, groupdata, output_base_ptr, shadeindex);
     // if it's run unconditionally.
     // The code in the parent layer itself will set its 'executed' flag.
 
-    llvm::Value *args[] = { sg_ptr (), groupdata_ptr () };
+    llvm::Value *args[] = { sg_ptr(), groupdata_ptr(), output_base_ptr(),
+                            shadeindex() };
 
     ShaderInstance *parent = group()[layer];
     llvm::Value *trueval = ll.constant_bool(true);
@@ -350,7 +351,8 @@ LLVMGEN (llvm_gen_printf)
                             // Mangle the element's name in case llvm_load_device_string calls getOrAllocateLLVMSymbol
                             ustring name = ustring::sprintf("__symname__%s[%d]", sym.mangled(), a);
                             Symbol lsym(name, TypeDesc::TypeString, sym.symtype());
-                            lsym.data(&((ustring*)sym.data())[a]);
+                            lsym.set_dataptr(SymArena::Absolute,
+                                             &((ustring*)sym.dataptr())[a]);
                             loaded = rop.llvm_load_device_string (lsym, /*follow*/ true);
                         } else {
                             loaded = rop.llvm_load_device_string (sym, /*follow*/ true);
@@ -418,8 +420,7 @@ LLVMGEN (llvm_gen_printf)
 
         Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
         format_ustring = s;
-        sym.data(&format_ustring);
-
+        sym.set_dataptr(SymArena::Absolute, &format_ustring);
         call_args[new_format_slot] = rop.llvm_load_device_string (sym, /*follow*/ true);
 #else
         // Make sure host has the format string so it can print it

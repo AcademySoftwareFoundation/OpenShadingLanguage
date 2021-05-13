@@ -1126,11 +1126,15 @@ OptixGridRenderer::finalize_pixel_buffer ()
     const void* buffer_ptr = m_optix_ctx[buffer_name]->getBuffer()->map();
     if (! buffer_ptr)
         errhandler().severe ("Unable to map buffer %s", buffer_name);
-    outputbuf(0)->set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
+    OIIO::ImageBuf* buf = outputbuf(0);
+    if (buf)
+        buf->set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
 #else
     std::vector<float> tmp_buff(m_xres * m_yres * 3);
     CUDA_CHECK (cudaMemcpy (tmp_buff.data(), reinterpret_cast<void *>(d_output_buffer), m_xres * m_yres * 3 * sizeof(float), cudaMemcpyDeviceToHost));
-    outputbuf(0)->set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, tmp_buff.data());
+    OIIO::ImageBuf* buf = outputbuf(0);
+    if (buf)
+        buf->set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, tmp_buff.data());
 #endif
 #endif
 }

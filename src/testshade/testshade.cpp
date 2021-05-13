@@ -37,7 +37,6 @@
 #include "simplerend.h"
 
 using namespace OSL;
-using OIIO::TypeDesc;
 using OIIO::ParamValue;
 using OIIO::ParamValueList;
 
@@ -46,6 +45,7 @@ static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static std::vector<ustring> outputvarnames;
+static std::vector<TypeDesc> outputvartypes;
 static std::string dataformatname = "";
 static std::vector<std::string> entrylayers;
 static std::vector<std::string> entryoutputs;
@@ -76,6 +76,7 @@ static bool inbuffer = false;
 static bool use_shade_image = false;
 static bool userdata_isconnected = false;
 static bool print_outputs = false;
+static bool output_placement = true;
 static bool use_optix = OIIO::Strutil::stoi(OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
 static int xres = 1, yres = 1;
 static int num_threads = 0;
@@ -103,6 +104,7 @@ static float uoffset = 0, voffset = 0;
 static std::vector<const char*> shader_setup_args;
 static std::string localename = OIIO::Sysutil::getenv("TESTSHADE_LOCALE");
 static OIIO::ParamValueList userdata;
+static char* output_base_ptr = nullptr;
 
 
 
@@ -200,6 +202,9 @@ set_shadingsys_options ()
         shadingsys->attribute ("llvm_jit_fma", 1);
 
         bool batch_size_requested = (batch_size != -1);
+        // FIXME: For now, output placement is not supported for batched
+        // shading.
+        output_placement = false;
         // Not really looping, just emulating goto behavior using break
         for(;;) {
             if (!batch_size_requested || batch_size == 16) {
@@ -242,6 +247,11 @@ set_shadingsys_options ()
         // So disable the analysis when we are not
         // performing batched execution
         shadingsys->attribute ("opt_batched_analysis", 0);
+    }
+
+    if (use_optix) {
+        // FIXME: For now, output placement is disabled for OptiX mode
+        output_placement = false;
     }
 
     shadingsys_options_set = true;
@@ -637,6 +647,8 @@ getargs (int argc, const char *argv[])
                 "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
                 "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
                 "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
+                "--no-output-placement %!", &output_placement,
+                        "Turn off use of output placement, rely only on get_symbol",
                 "--shadeimage", &use_shade_image, "Use shade_image utility",
                 "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
                 "--expr %@ %s", stash_shader_arg, NULL, "Specify an OSL expression to evaluate",
@@ -825,8 +837,113 @@ static void
 setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
                      ShaderGroupRef &shadergroup)
 {
-    // Tell the shading system which outputs we want
-    if (outputvars.size()) {
+    // If the command line didn't specify any outputs, default to Cout.
+    if (! outputvars.size()) {
+        outputvars.emplace_back("Cout");
+        outputfiles.emplace_back("null");
+    }
+
+    // Declare entry layers, if specified
+    // N.B. Maybe nobody cares about running individual layers manually,
+    // and all this entry layer output nonsense can go away.
+    if (entrylayers.size()) {
+        std::vector<const char *> layers;
+        std::cout << "Entry layers:";
+        for (size_t i = 0; i < entrylayers.size(); ++i) {
+            ustring layername (entrylayers[i]);  // convert to ustring
+            int layid = shadingsys->find_layer (*shadergroup, layername);
+            layers.push_back (layername.c_str());
+            entrylayer_index.push_back (layid);
+            std::cout << ' ' << entrylayers[i] << "(" << layid << ")";
+        }
+        std::cout << "\n";
+        shadingsys->attribute (shadergroup.get(), "entry_layers",
+                               TypeDesc(TypeDesc::STRING,(int)entrylayers.size()),
+                               &layers[0]);
+    }
+
+    // Get info about the number of layers in the shader group
+    int num_layers = 0;
+    shadingsys->getattribute(shadergroup.get(), "num_layers", num_layers);
+    std::vector<ustring> layernames(num_layers);
+    if (num_layers)
+        shadingsys->getattribute(shadergroup.get(), "layer_names",
+                                 TypeDesc(TypeDesc::STRING, num_layers),
+                                 &layernames[0]);
+
+
+    // For each output file specified on the command line, figure out if
+    // it's really an output of some layer (and its type), and tell the
+    // renderer that it's an output.
+    for (size_t i = 0;  i < outputfiles.size();  ++i) {
+        auto pieces = OIIO::Strutil::splitsv(outputvars[i], ".", 2);
+        string_view layer(pieces.size() > 1 ? pieces.front() : string_view());
+        string_view var(pieces.back());
+        TypeDesc vartype;
+        bool found = false;
+        // We need to walk the layers and find out the type of this output.
+        // This complexity is only because we allow the command line to
+        // specifify outputs by name only. Go back to front so if the name
+        // we were given doesn't designate a layer, we preferentially find
+        // it at the end.
+        // std::cout << "Considering " << outputfiles[i] << " - " << outputvars[i] << "\n";
+        // std::cout << "  seeking layer=" << layer << " var=" << var << "\n";
+        for (int lay = num_layers - 1; lay >= 0 && !found; --lay) {
+            // std::cout << "   layer " << lay << " " << layernames[lay] << "\n";
+            if (layer == layernames[lay] || layer.empty()) {
+                OSLQuery oslquery = shadingsys->oslquery(*shadergroup, lay);
+                for (const auto& param : oslquery) {
+                    // std::cout << "    param " << param.type << " " << param.name
+                    //           << " isoutput=" << param.isoutput << "\n";
+                    if (param.isoutput && param.name == var) {
+                        // std::cout << "    found param " << param.name << "\n";
+                        vartype = param.type;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (found) {
+            outputvarnames.emplace_back(var);  // ?? outputvars[i]
+            outputvartypes.emplace_back(vartype);
+            if (outputfiles[i] != "null")
+                std::cout << "Output " << outputvars[i] << " to "
+                          << outputfiles[i] << "\n";
+
+            TypeDesc tbase((TypeDesc::BASETYPE)vartype.basetype);
+            int nchans = vartype.basevalues();
+
+            // Make an ImageBuf of the right type and size to hold this
+            // symbol's output, and initially clear it to all black pixels.
+            rend->add_output (outputvars[i], outputfiles[i], tbase, nchans);
+        }
+    }
+
+    if (output_placement && rend->noutputs()) {
+        // Set up SymLocationDesc for the outputs
+        std::vector<SymLocationDesc> symlocs;
+        for (size_t i = 0; i < rend->noutputs(); ++i) {
+            OIIO::ImageBuf* ib = rend->outputbuf(i);
+            char* outptr = static_cast<char*>(ib->pixeladdr(0,0));
+            if (i == 0) {
+                // The output arena is the start of the first output buffer
+                output_base_ptr = outptr;
+            }
+            ptrdiff_t offset = outptr - output_base_ptr;
+            TypeDesc t = outputvartypes[i];
+            symlocs.emplace_back(outputvars[i], t, /*derivs*/ false,
+                                 SymArena::Outputs, offset,
+                                 /*stride*/ t.size());
+            // std::cout.flush();
+            // OIIO::Strutil::print("  symloc {} {} off={} size={}\n",
+            //                      outputvars[i], t, offset, t.size());
+        }
+        shadingsys->add_symlocs(shadergroup.get(), symlocs);
+    }
+
+    if (!output_placement && outputvars.size()) {
+        // Old fashined way -- tell the shading system which outputs we want
         std::vector<const char *> aovnames (outputvars.size());
         for (size_t i = 0; i < outputvars.size(); ++i) {
             ustring varname (outputvars[i]);
@@ -845,47 +962,32 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
             std::cout << "Marking group outputs, not global renderer outputs.\n";
     }
 
-    if (entrylayers.size()) {
-        std::vector<const char *> layers;
-        std::cout << "Entry layers:";
-        for (size_t i = 0; i < entrylayers.size(); ++i) {
-            ustring layername (entrylayers[i]);  // convert to ustring
-            int layid = shadingsys->find_layer (*shadergroup, layername);
-            layers.push_back (layername.c_str());
-            entrylayer_index.push_back (layid);
-            std::cout << ' ' << entrylayers[i] << "(" << layid << ")";
-        }
-        std::cout << "\n";
-        shadingsys->attribute (shadergroup.get(), "entry_layers",
-                               TypeDesc(TypeDesc::STRING,(int)entrylayers.size()),
-                               &layers[0]);
-    }
-
-    int raytype_bit = shadingsys->raytype_bit (ustring (raytype));
-    if (raytype_opt)
-        shadingsys->set_raytypes (shadergroup.get(), raytype_bit, ~raytype_bit);
-
-    // Because we can only call find_symbol after the shader group has been
-    // optimized, we will optimize it now.
-    // We also choose to JIT it now during timing for setup
-    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
-    ShadingContext *ctx = shadingsys->get_context(thread_info);
-#if OSL_USE_BATCHED
-    if (batched) {
-        // jit_group will optimize the group if necesssary
-        if (batch_size == 16) {
-            shadingsys->batched<16>().jit_group (shadergroup.get(), ctx);
-        } else {
-            ASSERT((batch_size == 8) && "Unsupport batch size");
-            shadingsys->batched<8>().jit_group (shadergroup.get(), ctx);
-        }
-    } else
-#endif
-    {
-        shadingsys->optimize_group (shadergroup.get(), ctx, true /*do_jit*/);
-    }
-
+    // N.B. Maybe nobody cares about running individual layers manually,
+    // and all this entry layer output nonsense can go away.
     if (entryoutputs.size()) {
+        // Because we can only call find_symbol or get_symbol on something that
+        // has been set up to shade (or executed), we call execute() but tell it
+        // not to actually run the shader.
+        OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
+        ShadingContext *ctx = shadingsys->get_context(thread_info);
+        ShaderGlobals sg;
+        setup_shaderglobals (sg, shadingsys, 0, 0);
+
+        int raytype_bit = shadingsys->raytype_bit (ustring (raytype));
+#if OSL_USE_BATCHED
+        if (batched) {
+            // jit_group will optimize the group if necesssary
+            if (batch_size == 16) {
+                shadingsys->batched<16>().jit_group (shadergroup.get(), ctx);
+            } else {
+                ASSERT((batch_size == 8) && "Unsupport batch size");
+                shadingsys->batched<8>().jit_group (shadergroup.get(), ctx);
+            }
+        } else
+#endif
+        if (raytype_opt)
+            shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit, ctx);
+        shadingsys->execute (*ctx, *shadergroup, sg, false);
         std::cout << "Entry outputs:";
         for (size_t i = 0; i < entryoutputs.size(); ++i) {
             ustring name (entryoutputs[i]);  // convert to ustring
@@ -898,61 +1000,9 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
             std::cout << ' ' << entryoutputs[i];
         }
         std::cout << "\n";
+        shadingsys->release_context (ctx);  // don't need this anymore for now
+        shadingsys->destroy_thread_info(thread_info);
     }
-
-    // For each output file specified on the command line...
-    for (size_t i = 0;  i < outputfiles.size();  ++i) {
-        // Make a ustring version of the output name, for fast manipulation
-        outputvarnames.emplace_back(outputvars[i]);
-
-        // Ask for a pointer to the symbol's data, as computed by this
-        // shader.
-        const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, outputvarnames[i]);
-        if (!sym) {
-            std::cout << "Output " << outputvars[i] 
-                      << " not found, skipping.\n";
-            continue;  // Skip if symbol isn't found
-        }
-        TypeDesc t = shadingsys->symbol_typedesc (sym);
-        std::cout << "Output " << outputvars[i] << " to "
-                  << outputfiles[i] << "\n";
-
-        if (outputfiles[i] == "null") {
-            // Filename "null" means to consider this a "renderer output",
-            // but not save it in an image file.
-            continue;
-        }
-
-        // And the "base" type, i.e. the type of each element or channel
-        TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);
-
-        // But which type are we going to write?  Use the true data type
-        // from OSL, unless the command line options indicated that
-        // something else was desired.
-        TypeDesc outtypebase = tbase;
-        if (dataformatname == "uint8")
-            outtypebase = TypeDesc::UINT8;
-        else if (dataformatname == "half")
-            outtypebase = TypeDesc::HALF;
-        else if (dataformatname == "float")
-            outtypebase = TypeDesc::FLOAT;
-
-        // Number of channels to write to the image is the number of (array)
-        // elements times the number of channels (e.g. 1 for scalar, 3 for
-        // vector, etc.)
-        int nchans = t.numelements() * t.aggregate;
-
-        // Make an ImageBuf of the right type and size to hold this
-        // symbol's output, and initially clear it to all black pixels.
-        rend->add_output (outputvars[i], outputfiles[i], tbase, nchans);
-    }
-
-    if (! rend->noutputs()) {
-        rend->add_output ("Cout", "Cout.tif", OIIO::TypeFloat, 3);
-    }
-
-    shadingsys->release_context (ctx);  // don't need this anymore for now
-    shadingsys->destroy_thread_info(thread_info);
 }
 
 
@@ -970,6 +1020,7 @@ static void
 save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
               ShadingContext *ctx, int x, int y)
 {
+    using OIIO::Strutil::printf;
     if (print_outputs)
         printf ("Pixel (%d, %d):\n", x, y);
     // For each output requested on the command line...
@@ -992,7 +1043,7 @@ save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
             // directly in the output buffer.
             outputimg->setpixel (x, y, (const float *)data);
             if (print_outputs) {
-                printf ("  %s :", outputvarnames[i].c_str());
+                printf ("  %s :", outputvarnames[i]);
                 for (int c = 0; c < nchans; ++c)
                     printf (" %g", ((const float *)data)[c]);
                 printf ("\n");
@@ -1005,7 +1056,7 @@ save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
                                  TypeDesc::FLOAT, pixel, nchans);
             outputimg->setpixel (x, y, &pixel[0]);
             if (print_outputs) {
-                printf ("  %s :", outputvarnames[i].c_str());
+                printf ("  %s :", outputvarnames[i]);
                 for (int c = 0; c < nchans; ++c)
                     printf (" %d", ((const int *)data)[c]);
                 printf ("\n");
@@ -1015,7 +1066,9 @@ save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
     }
 }
 
+
 #if OSL_USE_BATCHED
+
 // For batch of pixels (bx[WidthT], by[WidthT]) that was just shaded
 // by the given shading context, save each of the requested outputs
 // to the corresponding output ImageBuf.
@@ -1160,6 +1213,8 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
 }
 #endif
 
+
+
 static void
 test_group_attributes (ShaderGroup *group)
 {
@@ -1280,7 +1335,8 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
 
     // Loop over all pixels in the image (in x and y)...
     for (int y = roi.ybegin;  y < roi.yend;  ++y) {
-        for (int x = roi.xbegin;  x < roi.xend;  ++x) {
+        int shadeindex = y * xres + roi.xbegin;
+        for (int x = roi.xbegin;  x < roi.xend;  ++x, ++shadeindex) {
             // In a real renderer, this is where you would figure
             // out what object point is visible in this pixel (or
             // this sample, for antialiasing).  Once determined,
@@ -1299,16 +1355,22 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
             // Actually run the shader for this point
             if (entrylayer_index.empty()) {
                 // Sole entry point for whole group, default behavior
-                shadingsys->execute (*ctx, *shadergroup, shaderglobals);
+                shadingsys->execute (*ctx, *shadergroup, shadeindex,
+                                     shaderglobals, output_base_ptr);
             } else {
                 // Explicit list of entries to call in order
-                shadingsys->execute_init (*ctx, *shadergroup, shaderglobals);
+                shadingsys->execute_init (*ctx, *shadergroup, shadeindex,
+                                          shaderglobals, output_base_ptr);
                 if (entrylayer_symbols.size()) {
                     for (size_t i = 0, e = entrylayer_symbols.size(); i < e; ++i)
-                        shadingsys->execute_layer (*ctx, shaderglobals, entrylayer_symbols[i]);
+                        shadingsys->execute_layer (*ctx, shadeindex,
+                                                   shaderglobals, output_base_ptr,
+                                                   entrylayer_symbols[i]);
                 } else {
                     for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
-                        shadingsys->execute_layer (*ctx, shaderglobals, entrylayer_index[i]);
+                        shadingsys->execute_layer (*ctx, shadeindex,
+                                                   shaderglobals, output_base_ptr,
+                                                   entrylayer_index[i]);
                 }
                 shadingsys->execute_cleanup (*ctx);
             }
@@ -1317,7 +1379,7 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
             // are on the last iteration requested, so that if we are
             // doing a bunch of iterations for time trials, we only
             // including the output pixel copying once in the timing.
-            if (save)
+            if (save && (print_outputs || !output_placement))
                 save_outputs (rend, shadingsys, ctx, x, y);
         }
     }
@@ -1328,7 +1390,9 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
 }
 
 
+
 #if OSL_USE_BATCHED
+
 // Set up the uniform portion of BatchedShaderGlobals fields
 template<int WidthT>
 static void
@@ -1740,7 +1804,7 @@ test_shade (int argc, const char *argv[])
     if (archivegroup.size())
         shadingsys->archive_shadergroup (shadergroup.get(), archivegroup);
 
-    if (outputfiles.size() != 0)
+    if (outputfiles.size())
         std::cout << "\n";
 
     rend->shaders().push_back (shadergroup);
@@ -1841,44 +1905,40 @@ test_shade (int argc, const char *argv[])
     }
     double runtime = timer.lap();
 
-    if (outputfiles.size() == 0)
+    // This awkward condition preserves an output oddity from long ago,
+    // eliminating the need to update hundreds of ref outputs.
+    if (outputfiles.size() == 1 && outputfiles[0] == "null")
         std::cout << "\n";
 
     // Write the output images to disk
     rend->finalize_pixel_buffer ();
     for (size_t i = 0;  i < rend->noutputs();  ++i) {
-        OIIO::ImageBuf* outputimg = rend->outputbuf(i);
-        if (outputimg) {
-            if (! print_outputs) {
-                std::string filename = outputimg->name();
-                TypeDesc datatype = outputimg->spec().format;
-                if (dataformatname == "uint8")
-                    datatype = TypeDesc::UINT8;
-                else if (dataformatname == "half")
-                    datatype = TypeDesc::HALF;
-                else if (dataformatname == "float")
-                    datatype = TypeDesc::FLOAT;
+        if (print_outputs || outputfiles[i] == "null")
+            continue;  // don't write an image file
+        if (OIIO::ImageBuf* outputimg = rend->outputbuf(i)) {
+            std::string filename = outputimg->name();
+            TypeDesc datatype = outputimg->spec().format;
+            if (dataformatname == "uint8")
+                datatype = TypeDesc::UINT8;
+            else if (dataformatname == "half")
+                datatype = TypeDesc::HALF;
+            else if (dataformatname == "float")
+                datatype = TypeDesc::FLOAT;
 
-                // JPEG, GIF, and PNG images should be automatically saved
-                // as sRGB because they are almost certainly supposed to
-                // be displayed on web pages.
-                using namespace OIIO;
-                if (Strutil::iends_with (filename, ".jpg") ||
-                    Strutil::iends_with (filename, ".jpeg") ||
-                    Strutil::iends_with (filename, ".gif") ||
-                    Strutil::iends_with (filename, ".png")) {
-                    ImageBuf ccbuf;
-                    ImageBufAlgo::colorconvert (ccbuf, *outputimg,
-                                                "linear", "sRGB", false,
-                                                "", "");
-                    ccbuf.set_write_format (datatype);
-                    ccbuf.write (filename);
-                } else {
-                    outputimg->set_write_format (datatype);
-                    outputimg->write (filename);
-                }
+            // JPEG, GIF, and PNG images should be automatically saved
+            // as sRGB because they are almost certainly supposed to
+            // be displayed on web pages.
+            using namespace OIIO;
+            if (Strutil::iends_with (filename, ".jpg") ||
+                Strutil::iends_with (filename, ".jpeg") ||
+                Strutil::iends_with (filename, ".gif") ||
+                Strutil::iends_with (filename, ".png")) {
+                ImageBuf ccbuf = ImageBufAlgo::colorconvert (*outputimg,
+                                            "linear", "sRGB");
+                ccbuf.write (filename, datatype);
+            } else {
+                outputimg->write (filename, datatype);
             }
-            // outputimg->reset();
         }
     }
 

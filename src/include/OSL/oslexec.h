@@ -69,6 +69,40 @@ namespace Strings {
 
 
 
+/// Description of where a symbol is located on the app side.
+struct SymLocationDesc {
+public:
+    using offset_t = int64_t;
+    using stride_t = int64_t;
+    static const int64_t AutoStride = std::numeric_limits<stride_t>::min();
+
+    SymLocationDesc() {}
+    SymLocationDesc(string_view name, TypeDesc type, bool derivs = false,
+                    SymArena arena = SymArena::Heap, offset_t offset = -1,
+                    stride_t stride = AutoStride)
+        : name(name), type(type), offset(offset),
+          stride(stride == AutoStride ? type.size() : stride),
+          arena(arena), derivs(derivs)
+    {}
+
+    bool operator==(ustring n) const { return name == n; }
+    friend bool operator<(ustring n, const SymLocationDesc& sld) {
+        return n < sld.name;
+    }
+    friend bool operator<(const SymLocationDesc& sld, ustring n) {
+        return sld.name < n;
+    }
+
+    ustring name;                     ///< Name of the symbol
+    TypeDesc type;                    ///< Data type of the symbol
+    offset_t offset = -1;             ///< Offset from arena base for point 0
+    stride_t stride = AutoStride;     ///< Stride in bytes between shade points
+    SymArena arena = SymArena::Heap;  ///< Memory arena type for the symbol
+    bool derivs = false;              ///< Space allocated for derivs also
+};
+
+
+
 class OSLEXECPUBLIC ShadingSystem
 {
 public:
@@ -590,18 +624,28 @@ public:
     ///
     void release_context (ShadingContext *ctx);
 
-    /// Execute the shader group in this context. If ctx is NULL, then
-    /// execute will request one (based on the running thread) on its own
-    /// and then return it when it's done.  This is just a wrapper around
-    /// execute_init, execute_layer of the last (presumably group entry)
-    /// layer, and execute_cleanup. If run==false, just do the binding and
-    /// setup, don't actually run the shader.
+    /// Execute the shader group in this context on shading point
+    /// `shadeindex`. If ctx is nullptr, then execute will request one
+    /// (based on the running thread) on its own and then return it when
+    /// it's done.  This is just a wrapper around execute_init,
+    /// execute_layer of the last (presumably group entry) layer, and
+    /// execute_cleanup. If run==false, just do the binding and setup, don't
+    /// actually run the shader.
+    bool execute(ShadingContext &ctx, ShaderGroup &group, int shadeindex,
+                 ShaderGlobals& globals, void* output_base_ptr,
+                 bool run = true);
+
+    // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute (ShadingContext &ctx, ShaderGroup &group,
-                  ShaderGlobals &globals, bool run=true);
+                  ShaderGlobals &globals, bool run=true) {
+        return execute(ctx, group, 0, globals, nullptr, run);
+    }
 
     // DEPRECATED(2.0): ctx pointer
     bool execute (ShadingContext *ctx, ShaderGroup &group,
-                  ShaderGlobals &globals, bool run=true);
+                  ShaderGlobals &globals, bool run=true) {
+        return execute(*ctx, group, globals, run);
+    }
 
     /// Bind a shader group and globals to the context, in preparation to
     /// execute, including optimization and JIT of the group (if it has not
@@ -611,23 +655,43 @@ public:
     /// preparation, but don't actually run the shader.  Return true if the
     /// shader executed, false if it did not (including if the shader itself
     /// was empty).
+    bool execute_init(ShadingContext &ctx, ShaderGroup &group, int shadeindex,
+                      ShaderGlobals &globals, void* output_base_ptr,
+                      bool run=true);
+    // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute_init (ShadingContext &ctx, ShaderGroup &group,
-                       ShaderGlobals &globals, bool run=true);
+                       ShaderGlobals &globals, bool run=true) {
+        return execute_init(ctx, group, 0, globals, nullptr, run);
+    }
 
-    /// Execute the layer whose index is specified, in this context. It is
-    /// presumed that execute_init() has already been called, with
+    /// Execute the layer whose layernumber is specified, in this context.
+    /// It is presumed that execute_init() has already been called, with
     /// run==true, and that the call to execute_init() returned true. (One
     /// reason why it might have returned false is if the shader group
     /// turned out, after optimization, to do nothing.)
-    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                        int layernumber);
+    bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
+                       void* output_base_ptr, int layernumber);
     /// Execute the layer by name.
-    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                        ustring layername);
+    bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
+                       void* output_base_ptr, ustring layername);
     /// Execute the layer that has the given ShaderSymbol as an output.
     /// (The symbol is one returned by find_symbol()).
+    bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
+                       void* output_base_ptr, const ShaderSymbol *symbol);
+
+    // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                        const ShaderSymbol *symbol);
+                        int layernumber) {
+        return execute_layer(ctx, 0, globals, nullptr, layernumber);
+    }
+    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                        ustring layername) {
+        return execute_layer(ctx, 0, globals, nullptr, layername);
+    }
+    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
+                        const ShaderSymbol *symbol) {
+        return execute_layer(ctx, 0, globals, nullptr, symbol);
+    }
 
     /// Signify that the context is done with the current execution of the
     /// group that was kicked off by execute_init and one or more calls to
@@ -767,6 +831,14 @@ public:
     /// known to be 0. Bits that are not set in either set of flags are not known
     /// to the optimizer, and will be determined strictly at execution time.
     void set_raytypes(ShaderGroup *group, int raytypes_on, int raytypes_off);
+
+    /// Clear any known mappings of symbol locations.
+    void clear_symlocs();
+    void clear_symlocs(ShaderGroup* group);
+
+    /// Add symbol location mappings.
+    void add_symlocs(cspan<SymLocationDesc> symlocs);
+    void add_symlocs(ShaderGroup* group, cspan<SymLocationDesc> symlocs);
 
     /// Ensure that the group has been optimized and optionally JITed. The ctx pointer
     /// supplies a ShadingContext to use.

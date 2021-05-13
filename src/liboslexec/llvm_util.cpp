@@ -2620,7 +2620,7 @@ LLVM_Util::wide_constant (float f)
 llvm::Constant*
 LLVM_Util::constant(int i)
 {
-    return llvm::ConstantInt::get (context(), llvm::APInt(32,i));
+    return llvm::ConstantInt::get (context(), llvm::APInt(32,i,true));
 }
 
 
@@ -2640,6 +2640,12 @@ llvm::Constant*
 LLVM_Util::constant64(uint64_t i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(64,i));
+}
+
+llvm::Constant*
+LLVM_Util::constanti64(int64_t i)
+{
+    return llvm::ConstantInt::get (context(), llvm::APInt(64, i, true /*signed*/));
 }
 
 llvm::Constant*
@@ -3346,15 +3352,24 @@ LLVM_Util::llvm_vector_type (const TypeDesc &typedesc)
 
 
 
-llvm::Value *
-LLVM_Util::offset_ptr (llvm::Value *ptr, int offset, llvm::Type *ptrtype)
+llvm::Value*
+LLVM_Util::offset_ptr (llvm::Value* ptr, llvm::Value* offset, llvm::Type* ptrtype)
 {
-    llvm::Value *i = builder().CreatePtrToInt (ptr, type_addrint());
-    i = builder().CreateAdd (i, constant ((size_t)offset));
-    ptr = builder().CreateIntToPtr (i, type_void_ptr());
+    llvm::Value *i = builder().CreatePtrToInt(ptr, type_addrint());
+    if (offset)
+        i = op_add(i, offset);
+    ptr = int_to_ptr_cast(i);
     if (ptrtype)
-        ptr = ptr_cast (ptr, ptrtype);
+        ptr = ptr_cast(ptr, ptrtype);
     return ptr;
+}
+
+
+
+llvm::Value*
+LLVM_Util::offset_ptr (llvm::Value* ptr, int offset, llvm::Type* ptrtype)
+{
+    return offset_ptr(ptr, constant(size_t(offset)), ptrtype);
 }
 
 
@@ -4907,7 +4922,8 @@ LLVM_Util::op_add (llvm::Value *a, llvm::Value *b)
         (a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFAdd (a, b);
     if ((a->getType() == type_int() && b->getType() == type_int()) ||
-        (a->getType() == type_wide_int() && b->getType() == type_wide_int()))
+        (a->getType() == type_wide_int() && b->getType() == type_wide_int()) ||
+        (a->getType() == type_longlong() && b->getType() == type_longlong()))
         return builder().CreateAdd (a, b);
     OSL_ASSERT (0 && "Op has bad value type combination");
     return nullptr;
@@ -4922,7 +4938,8 @@ LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
         (a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFSub (a, b);
     if ((a->getType() == type_int() && b->getType() == type_int()) ||
-        (a->getType() == type_wide_int() && b->getType() == type_wide_int()))
+        (a->getType() == type_wide_int() && b->getType() == type_wide_int()) ||
+        (a->getType() == type_longlong() && b->getType() == type_longlong()))
         return builder().CreateSub (a, b);
     OSL_ASSERT (0 && "Op has bad value type combination");
     return nullptr;
@@ -4952,7 +4969,8 @@ LLVM_Util::op_mul (llvm::Value *a, llvm::Value *b)
         (a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFMul (a, b);
     if ((a->getType() == type_int() && b->getType() == type_int()) ||
-        (a->getType() == type_wide_int() && b->getType() == type_wide_int()))
+        (a->getType() == type_wide_int() && b->getType() == type_wide_int()) ||
+        (a->getType() == type_longlong() && b->getType() == type_longlong()))
         return builder().CreateMul (a, b);
     OSL_ASSERT (0 && "Op has bad value type combination");
     return nullptr;

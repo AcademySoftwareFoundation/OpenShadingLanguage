@@ -118,19 +118,19 @@ public:
         : Symbol(n, TypeDesc::TypeString, SymTypeConst)
     {
         m_val.s = val.c_str();
-        m_data  = &m_val.s;
+        set_dataptr(SymArena::Absolute, &m_val.s);
     }
     ConstantSymbol(ustring n, int val)
         : Symbol(n, TypeDesc::TypeInt, SymTypeConst)
     {
         m_val.i = val;
-        m_data  = &m_val.i;
+        set_dataptr(SymArena::Absolute, &m_val.i);
     }
     ConstantSymbol(ustring n, float val)
         : Symbol(n, TypeDesc::TypeFloat, SymTypeConst)
     {
         m_val.f = val;
-        m_data  = &m_val.f;
+        set_dataptr(SymArena::Absolute, &m_val.f);
     }
     ConstantSymbol(ustring n, TypeDesc type, float x, float y, float z)
         : Symbol(n, type, SymTypeConst)
@@ -138,21 +138,21 @@ public:
         m_val.v[0] = x;
         m_val.v[1] = y;
         m_val.v[2] = z;
-        m_data     = &m_val.v;
+        set_dataptr(SymArena::Absolute, &m_val.v);
     }
     ConstantSymbol(ustring n, TypeDesc type) : Symbol(n, type, SymTypeConst)
     {
         if (type == TypeDesc::FLOAT)
-            m_data = &m_val.f;
+            set_dataptr(SymArena::Absolute, &m_val.f);
         else if (type == TypeDesc::INT)
-            m_data = &m_val.i;
+            set_dataptr(SymArena::Absolute, &m_val.i);
         else if (type == TypeDesc::STRING)
-            m_data = &m_val.s;
+            set_dataptr(SymArena::Absolute, &m_val.s);
         else if (equivalent(type, TypeDesc::TypeVector))
-            m_data = &m_val.v;
+            set_dataptr(SymArena::Absolute, &m_val.v);
         else {
-            OSL_DASSERT(m_data == nullptr);
-            m_data      = new char[type.size()];
+            OSL_DASSERT(arena() == SymArena::Unknown);
+            set_dataptr(SymArena::Absolute, new char[type.size()]);
             m_free_data = true;
         }
     }

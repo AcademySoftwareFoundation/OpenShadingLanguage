@@ -604,8 +604,9 @@ SimpleRenderer::add_output (string_view varname, string_view filename,
     // FIXME: use name to figure out
     OIIO::ImageSpec spec(m_xres, m_yres, nchannels, datatype);
     m_outputvars.emplace_back(varname);
-    m_outputbufs.emplace_back(new OIIO::ImageBuf(filename, spec));
-    OIIO::ImageBufAlgo::zero (*m_outputbufs.back());
+    m_outputbufs.emplace_back(new OIIO::ImageBuf(filename, spec,
+                                                 OIIO::InitializePixels::Yes));
+    // OIIO::ImageBufAlgo::zero (*m_outputbufs.back());
     return true;
 }
 

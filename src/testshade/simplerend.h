@@ -91,8 +91,16 @@ public:
                              TypeDesc datatype = OIIO::TypeFloat,
                              int nchannels = 3);
 
+    // Get the output ImageBuf by index
     OIIO::ImageBuf* outputbuf (int index) {
         return index < (int)m_outputbufs.size() ? m_outputbufs[index].get() : nullptr;
+    }
+    // Get the output ImageBuf by name
+    OIIO::ImageBuf* outputbuf (string_view name) {
+        for (size_t i = 0; i < m_outputbufs.size(); ++i)
+            if (m_outputvars[i] == name)
+                return m_outputbufs[i].get();
+        return nullptr;
     }
     ustring outputname (int index) const { return m_outputvars[index]; }
     size_t noutputs () const { return m_outputbufs.size(); }

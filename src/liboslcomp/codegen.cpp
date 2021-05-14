@@ -1831,7 +1831,7 @@ ASTfunction_call::codegen(Symbol* dest)
         TypeSpec formaltype = (i < (int)polyargs.size())
                                   ? polyargs[i]
                                   : TypeSpec(TypeDesc::UNKNOWN);
-        bool writearg = argwrite(i + returnarg);
+        bool writearg       = argwrite(i + returnarg);
         codegen_arg(argdest, index, index2, index3, i, a, form, formaltype,
                     writearg, indexed_output_params);
         if (form)

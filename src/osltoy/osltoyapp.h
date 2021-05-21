@@ -121,7 +121,7 @@ private:
                         const std::string& hotkey = "",
                         ACT trigger_action        = nullptr)
     {
-        QAction* act  = new QAction(label.size() ? label.c_str() : name.c_str(),
+        QAction* act = new QAction(label.size() ? label.c_str() : name.c_str(),
                                    this);
         actions[name] = act;
         if (hotkey.size())

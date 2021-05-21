@@ -131,7 +131,7 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       PYTHON_VERSION: 3.7
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v2.5.5
+      OPENEXR_VERSION: v2.5.6
       OPENIMAGEIO_VERSION: RB-2.2
       USE_BATCHED: b8_AVX2_noFMA
     steps:
@@ -180,7 +180,7 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       PYTHON_VERSION: 3.7
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v3.0.1
+      OPENEXR_VERSION: v3.0.3
       OPENIMAGEIO_VERSION: RB-2.2
       USE_BATCHED: b8_AVX2
     steps:
@@ -283,7 +283,7 @@ jobs:
       # Debug build makes some tests run very slowly, increase timeout
       CTEST_TEST_TIMEOUT: 240
       LLVM_VERSION: 8.0.0
-      OPENEXR_VERSION: v2.4.1
+      OPENEXR_VERSION: v2.4.3
       OPENIMAGEIO_VERSION: release
       USE_SIMD: sse4.2
     steps:
@@ -377,7 +377,7 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       LLVM_VERSION: 10.0.0
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v2.5.5
+      OPENEXR_VERSION: v2.5.6
       OPENIMAGEIO_VERSION: master
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
       PUGIXML_VERSION: v1.10

@@ -73,16 +73,14 @@ ifeq (${SP_OS}, rhel7)
     # Rhel7 (current)
     platform := rhel7
     SPI_COMPILER_PLATFORM ?= gcc-6.3
-    ifeq (${SPI_COMPILER_PLATFORM},gcc-4.8)
-        SPCOMP2_COMPILER ?= gcc48m64
-        CMAKE_CXX_STANDARD ?= 11
-    else
+    ifeq (${SPI_COMPILER_PLATFORM},gcc-6.3)
         SPCOMP2_COMPILER ?= gcc63
         CMAKE_CXX_STANDARD ?= 14
     endif
     SP_PLATFORM ?= linux
     SP_PROC ?= x86_64
     SP_REZ_OS ?= CentOS-7
+    LLVM_VERSION ?= 12.0.0
 else ifeq (${platform}, macosx)
     # Generic OSX machines (including LG's laptop)
     COMPILER ?= clang
@@ -132,20 +130,9 @@ ifeq (${SP_OS}, rhel7)
     #
     # A variety of tags can be used to try specific versions of gcc or
     # clang from the site-specific places we have installed them.
-    LLVM_DIRECTORY ?= /shots/spi/home/lib/arnold/rhel7/llvm_8.0.0
-    ifeq (${COMPILER},clang6)
-	    LLVM_DIRECTORY := /shots/spi/home/lib/arnold/rhel7/llvm_6.0.1
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
-                          -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
-    else ifeq (${COMPILER},clang7)
-        LLVM_DIRECTORY := /shots/spi/home/lib/arnold/rhel7/llvm_7.0.1
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
-                          -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
-    else ifeq (${COMPILER},clang8)
-        LLVM_DIRECTORY := /shots/spi/home/lib/arnold/rhel7/llvm_8.0.0
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
-                          -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
-    else ifeq (${COMPILER},clang9)
+    LLVM_DIRECTORY ?= /shots/spi/home/lib/arnold/rhel7/llvm_12.0.0
+    LLVM_DIRECTORY ?= /shots/spi/home/software/packages/llvm/${LLVM_VERSION}/${SPI_COMPILER_PLATFORM}
+    ifeq (${COMPILER},clang9)
         LLVM_DIRECTORY := /shots/spi/home/software/packages/llvm/9.0.1-1/${SPI_COMPILER_PLATFORM}
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
                           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
@@ -155,6 +142,10 @@ ifeq (${SP_OS}, rhel7)
                           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
     else ifeq (${COMPILER},clang11)
         LLVM_DIRECTORY := /shots/spi/home/software/packages/llvm/11.0.0/${SPI_COMPILER_PLATFORM}
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
+                          -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+    else ifeq (${COMPILER},clang11)
+        LLVM_DIRECTORY := /shots/spi/home/software/packages/llvm/12.0.0-final/${SPI_COMPILER_PLATFORM}
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
                           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
     else ifeq (${COMPILER},clang)
@@ -171,11 +162,6 @@ ifeq (${SP_OS}, rhel7)
            -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
            -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
     endif
-    ifeq (${SPI_COMPILER_PLATFORM},gcc-4.8)
-            MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" \
-                              -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr" \
-                              -DTOOLCHAIN_FLAGS="--gcc-toolchain=/usr"
-    endif
 
     MY_CMAKE_FLAGS +=
         -DLLVM_STATIC=1 \
@@ -190,29 +176,12 @@ ifeq (${SP_OS}, rhel7)
     BOOSTVERSSP=${BOOSTVERS}${BOOSTSPSUFFIX}
     MY_CMAKE_FLAGS += -DBOOST_VERS_SP=${BOOSTVERSSP}
     # $(info BOOSTVERSSP ${BOOSTVERSSP})
-    ifeq (${BOOSTVERS},1.55)
-        SPBOOST_INC_DIR ?= /usr/include/boost_${BOOSTVERSSP}
-        SPBOOST_LIB_DIR ?= /usr/lib64/boost_${BOOSTVERSSP}
-        ifeq (${BOOSTSPSUFFIX}, sp)
-            SPBOOST_LIBNAMESTART ?= lib${BOOSTSPSUFFIX}boost_${shell echo ${BOOSTVERS} | sed "s/\\./_/"}_0
-        else
-            SPBOOST_LIBNAMESTART ?= lib${BOOSTSPSUFFIX}boost
-        endif
-        SPBOOST_LIBNAMEEND ?= -gcc48-mt-${shell echo ${BOOSTVERS} | sed "s/\\./_/"}
-        MY_CMAKE_FLAGS += \
-            -DBOOST_CUSTOM=1 \
-            -DBoost_VERSION=${BOOSTVERS} \
-            -DBoost_INCLUDE_DIRS=${SPBOOST_INC_DIR} \
-            -DBoost_LIBRARY_DIRS=${SPBOOST_LIB_DIR} \
-            -DBoost_LIBRARIES:STRING="${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_filesystem${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_regex${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_system${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_thread${SPBOOST_LIBNAMEEND}.so"
-    else
-        # Our Boost >= 1.61 setup is MUCH simpler and more standard
-        SPBOOST_INC_DIR := /usr/include/boostroot/boost${BOOSTVERSSP}.0
-        SPBOOST_LIB_DIR := /usr/lib64/boostroot/boost${BOOSTVERSSP}.0
-        MY_CMAKE_FLAGS += \
+    # Our Boost >= 1.61 setup is MUCH simpler and more standard
+    SPBOOST_INC_DIR := /usr/include/boostroot/boost${BOOSTVERSSP}.0
+    SPBOOST_LIB_DIR := /usr/lib64/boostroot/boost${BOOSTVERSSP}.0
+    MY_CMAKE_FLAGS += \
             -DBOOST_INCLUDEDIR=${SPBOOST_INC_DIR} \
             -DBOOST_LIBRARYDIR=${SPBOOST_LIB_DIR}
-    endif
 
     #
     # Python
@@ -220,11 +189,7 @@ ifeq (${SP_OS}, rhel7)
     Python_INCLUDE_DIR ?= /usr/include/python${PYTHON_VERSION}
     PYTHON_LIBRARY_DIR ?= /usr/lib64
     Python_LIBRARY ?= ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
-    ifeq (${PYTHON_VERSION},3.6)
-        # Special sauce for Python 3.6
-        Python_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
-        Python_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
-    else ifeq (${PYTHON_VERSION},3.7)
+    ifeq (${PYTHON_VERSION},3.7)
         # Special sauce for Python 3.7
         Python_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
         Python_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
@@ -241,16 +206,10 @@ ifeq (${SP_OS}, rhel7)
 
     # Set our preferred OpenEXR path, but allow env variable to override
     # with custom/test version.
-    ifneq (${OPENEXR_VERSION},)
-        # If OPENEXR_VERSION is set, grab from the rez area
-        OpenEXR_ROOT ?= ${REZ_PACKAGE_ROOT}/OpenEXR/${OPENEXR_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}
-        MY_CMAKE_FLAGS += -DOpenEXR_ROOT=${OpenEXR_ROOT}
-    else ifeq (${OpenEXR_ROOT},)
-        # If not getting from rez, get from the system install
-        MY_CMAKE_FLAGS += \
-            -DOPENEXR_INCLUDE_DIR=/usr/include/OpenEXR2 \
-            -DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2
-    endif
+    OPENEXR_VERSION ?= 2.4.1-2
+    OpenEXR_ROOT ?= ${REZ_PACKAGE_ROOT}/OpenEXR/${OPENEXR_VERSION}/${SPI_COMPILER_PLATFORM}
+    $(info OpenEXR_ROOT = $(OpenEXR_ROOT))
+    MY_CMAKE_FLAGS += -DOpenEXR_ROOT=${OpenEXR_ROOT}
 
     Partio_VERSION ?= 1.10.6
     partio_ROOT ?= ${REZ_PACKAGE_ROOT}/partio/${Partio_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
@@ -306,15 +265,7 @@ else ifeq (${platform}, macosx)
 
     # A variety of tags can be used to try specific versions of gcc or
     # clang from the site-specific places we have installed them.
-    ifeq (${COMPILER}, gcc48)
-        MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=gcc-4.8 -DCMAKE_CXX_COMPILER=g++-4.8
-        USE_LIBCPLUSPLUS := 0
-    else ifeq (${COMPILER}, gcc5)
-        MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
-        USE_LIBCPLUSPLUS := 0
-    else ifeq (${COMPILER}, gcc6)
+    ifeq (${COMPILER}, gcc6)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
         USE_LIBCPLUSPLUS := 0
@@ -326,26 +277,14 @@ else ifeq (${platform}, macosx)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9
         USE_LIBCPLUSPLUS := 0
-    else ifeq (${COMPILER},clang6)
+    else ifeq (${COMPILER},clang11)
         MY_CMAKE_FLAGS += \
-            -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@6/6.0.1_2/bin/clang \
-            -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@6/6.0.1_2/bin/clang++
-    else ifeq (${COMPILER},clang7)
+            -DCMAKE_C_COMPILER=/usr/local/opt/llvm@11/bin/clang \
+            -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@11/bin/clang++
+    else ifeq (${COMPILER},clang12)
         MY_CMAKE_FLAGS += \
-            -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@7/7.0.1_1/bin/clang \
-            -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@7/7.0.1_1/bin/clang++
-    else ifeq (${COMPILER},clang8)
-        MY_CMAKE_FLAGS += \
-            -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@8/8.0.1_1/bin/clang \
-            -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/8.0.1/bin/clang++
-    else ifeq (${COMPILER},clang9)
-        MY_CMAKE_FLAGS += \
-            -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@9/9.0.1/bin/clang \
-            -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@9/9.0.1/bin/clang++
-    else ifeq (${COMPILER},clang10)
-        MY_CMAKE_FLAGS += \
-            -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/10.0.0/bin/clang \
-            -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/10.0.0/bin/clang++
+            -DCMAKE_C_COMPILER=/usr/local/opt/llvm@12/bin/clang \
+            -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@12/bin/clang++
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     else ifeq (${COMPILER},gcc)

@@ -31,7 +31,9 @@
 // int128 that Cuda doesn't understand (OIIO >= 2.2).
 #ifdef __CUDA_ARCH__
 #    define OIIO_USE_FMT 0
-#    define FMT_USE_INT128 0
+#    ifndef FMT_USE_INT128
+#        define FMT_USE_INT128 0
+#    endif
 #endif
 
 // All the things we need from OpenImageIO

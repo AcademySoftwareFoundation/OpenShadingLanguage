@@ -25,6 +25,7 @@
 OSL_NAMESPACE_ENTER
 
 static mutex buffered_errors_mutex;
+static mutex buffered_file_output_mutex;
 
 
 namespace pvt {
@@ -54,6 +55,9 @@ ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
 ShadingContext::~ShadingContext ()
 {
     process_errors ();
+#if OSL_USE_BATCHED
+    process_file_output();
+#endif
     m_shadingsys.m_stat_contexts -= 1;
     free_dict_resources ();
 }
@@ -164,6 +168,9 @@ ShadingContext::execute_cleanup ()
 
     // Process any queued up error messages, warnings, printfs from shaders
     process_errors ();
+#if OSL_USE_BATCHED
+    process_file_output();
+#endif
 
     if (shadingsys().m_profile) {
         record_runtime_stats ();   // Transfer runtime stats to the shadingsys
@@ -373,6 +380,24 @@ ShadingContext::Batched<WidthT>::execute(ShaderGroup &sgroup, int batch_size, Ba
     }
     return result;
 }
+
+void
+ShadingContext::record_error (ErrorHandler::ErrCode code,
+                              const std::string &text, Mask<MaxSupportedSimdLaneCount> mask) const
+{
+    m_buffered_errors.emplace_back (code,text, mask);
+    // If we aren't buffering, just process immediately
+    if (! shadingsys().m_buffer_printf)
+        process_errors ();
+}
+
+void
+ShadingContext::record_to_file (ustring filename,
+                              const std::string &text, Mask<MaxSupportedSimdLaneCount> mask) const
+{
+    m_buffered_file_output.emplace_back (filename,text, mask);
+}
+
 #endif
 
 void
@@ -440,13 +465,13 @@ ShadingContext::process_errors () const
     if (execution_is_batched()) {
         OSL_DASSERT(batch_size_executed <= MaxSupportedSimdLaneCount);
         // Process each data lane separately and in the correct order
-        for(int lane_mask=0; lane_mask < batch_size_executed; ++lane_mask) {
+        for(int lane=0; lane < batch_size_executed; ++lane) {
             OSL_INTEL_PRAGMA(noinline)
             process_errors_helper(shadingsys(), m_buffered_errors, 0, nerrors,
                 // Test Function returns true to process the ErrorItem
                 [=](Mask<MaxSupportedSimdLaneCount> mask)->bool
                 {
-                    return mask.is_on(lane_mask);
+                    return mask.is_on(lane);
                 });
         }
     } else
@@ -464,7 +489,37 @@ ShadingContext::process_errors () const
     m_buffered_errors.clear();
 }
 
+#if OSL_USE_BATCHED
+void
+ShadingContext::process_file_output () const
+{
+    int nerrors(m_buffered_file_output.size());
+    if (! nerrors)
+        return;
 
+    // Use a mutex to make sure output from different threads stays
+    // together, at least for one shader invocation, rather than being
+    // interleaved with other threads.
+    lock_guard lock (buffered_file_output_mutex);
+
+    OSL_ASSERT(execution_is_batched());
+    OSL_DASSERT(batch_size_executed <= MaxSupportedSimdLaneCount);
+    // Process each data lane separately and in the correct order
+    for(int lane=0; lane < batch_size_executed; ++lane) {
+        for (int i = 0;  i < nerrors;  ++i) {
+            const auto & item = m_buffered_file_output[i];
+            if (item.mask.is_on(lane)){
+                // TODO: if performance critical, one could keep a cache of
+                // open files instead of closing and reopening
+                FILE *file = fopen (item.filename.c_str(), "a");
+                fputs (item.msgString.c_str(), file);
+                fclose (file);
+            }
+        }
+    }
+    m_buffered_file_output.clear();
+}
+#endif
 
 const Symbol *
 ShadingContext::symbol (ustring layername, ustring symbolname) const

@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+float some_init_ops()
+{
+    exit();   
+    return 9.0;
+}
+
+shader exit_in_initops_of_unlockedgeom_notfound(
+    float s_notfound = some_init_ops() [[ int lockgeom=0 ]],
+    output float outputVal = 0 )
+{
+    printf ("This should print inputVal=%g\n",s_notfound);
+    outputVal = s_notfound;
+    exit ();
+    printf ("This should NOT NOT NOT print\n");
+}

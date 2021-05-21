@@ -112,6 +112,14 @@ template<typename DataT, int WidthT>
 OSL_FORCEINLINE void
 assign_all(Block<DataT, WidthT>&, const DataT&);
 
+// Scalar execution of Functor for each unique value in the Wide data out
+// of the data_mask, the functor must be of the form
+//     (const DataT &, Mask<WidthT>)->void
+// where the DataT is a unique value from the wide data,
+// the mask identifies which data lanes contain that unique value.
+template<typename DataT, int WidthT, typename FunctorT>
+OSL_FORCEINLINE void foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f);
+
 
 // IMPLEMENTATION BELOW
 // NOTE: not all combinations of DataT, const DataT, DataT[], DataT[3] are implemented
@@ -2476,6 +2484,35 @@ assign_all(Masked<DataT[], WidthT> wide_data, const DataT* value_array)
 }
 
 
+template<typename DataT, int WidthT, typename FunctorT>
+OSL_FORCEINLINE
+void foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f) {
+    OSL_DASSERT(data_mask.any_on());
+    // The following control flow assumes at least 1 data lane is active in the data_mask
+    Mask<WidthT> remaining_mask(data_mask);
+    do {
+        ActiveLane lead_lane(remaining_mask.first_on());
+        DataT lead_data = wdata[lead_lane];
+        Mask<WidthT> matching_lanes(false);
+        OSL_FORCEINLINE_BLOCK
+        {
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            for(int lane=0; lane < WidthT; ++lane) {
+                // NOTE: the comparison ignores the remaining_mask
+                bool lane_matches = (lead_data == wdata[lane]);
+                // NOTE: using bitwise & to avoid branches
+                if (lane_matches & remaining_mask[lane]) {
+                    matching_lanes.set_on(lane);
+                }
+            }
+        }
+
+        f(lead_data, matching_lanes);
+        remaining_mask &= ~matching_lanes;
+    } while (remaining_mask.any_on());
+}
+
+
 // MaskedData is a combination of a pointer to a Block unknown DataT,
 // a TypeDesc to identify it, and a flag to indicate if derivatives are present.
 // Used to pass a Block of data whose type could anything to a function.
@@ -2831,6 +2868,13 @@ template<typename DataT, int DerivIndexT> struct RefDeriv : public Ref<DataT> {
 template<typename DataT> using RefDx = pvt::RefDeriv<DataT, 1 /*DerivIndexT*/>;
 template<typename DataT> using RefDy = pvt::RefDeriv<DataT, 2 /*DerivIndexT*/>;
 
+
+template <typename LaneProxyT>
+typename LaneProxyT::ValueType const
+unproxy(const LaneProxyT &proxy)
+{
+    return proxy.operator typename LaneProxyT::ValueType ();
+}
 
 // The rest of MaskedData implementation that depends on
 // Masked<DataT> being defined

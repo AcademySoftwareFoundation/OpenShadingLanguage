@@ -1,0 +1,35 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader u_vector (output vector cout = 0,
+		output vector mcout = 0)
+{
+    vector ufva [3];
+    
+    ufva[0] = vector(1.2, 1.3, 1.1);
+    ufva[1] = vector(1.4, 1.1 , 2.3);
+    ufva[2] = vector(1.6, 2.3, 1.8);
+    
+    int zlen = int(P[0]);
+    zlen = arraylength(ufva);
+    
+    cout = vector(u/zlen, u-v, v/zlen);
+    
+    vector mcout_ = cout;
+    
+    if (int(P[0]*P[0]*P[1]*32)%2) {    
+        vector mufva [4];
+        
+        mufva[0] = vector(8.9 , 5.6 , 2.3);
+        mufva[1] = vector(1.9 , 5.4 , 1.7);
+        mufva[2] = vector(2.1 , 9.9 , 2.3);
+        mufva[3] = vector(0.5 , 0.6 , 0.7);
+        
+        zlen = arraylength(mufva);
+        
+        mcout_ = vector(v-u/zlen, u*v, P[0]/zlen);
+    }
+    
+    mcout = mcout_;
+}

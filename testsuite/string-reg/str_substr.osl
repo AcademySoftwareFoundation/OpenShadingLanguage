@@ -1,0 +1,96 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader str_substr (output vector res = 0,
+                   output vector res1 = 0,
+                   output vector res2 = 0,
+                   output vector res_m = 0,
+                   output vector res1_m = 0,
+                   output vector res2_m = 0)
+{
+    string s_uni = "abcdefg";
+    vector res_;
+    string wide_s = format ("%g", P);
+    int begin = 3;
+    int len = 2;
+    
+    string s = concat(s_uni, wide_s);
+    // printf("%s", s);
+    // printf ("substr(\"%s\", %d, %d) = \"%s\"\n",s, begin, len, substr(s,3,2));
+   
+    string sub1 = substr(s,3,2);
+    // printf("%s\n", sub1);
+   
+    float sf1 = stof(sub1);
+    // printf("stof is %f", sf1);
+
+    begin = 7; 
+    // printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+    
+    string sub2 = substr(s, begin);
+    // printf("%s\n", sub2);
+    
+    float sf2 = stof(sub2);
+    // printf("stof is %f", sf2);
+
+    begin = 6;
+    // printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+    string sub3 = substr(s, 6);
+    // printf("%s\n", sub3);
+    
+    float sf3 = stof(sub3);
+    // printf("stof is %f", sf3);
+    
+    res = vector(-u-v, u*sf1, v);
+    res1 = vector(-u+v, v*sf2, u);
+    res2 = vector(u+v, v*sf3, v);
+    
+    vector res_m_ = res;
+    vector res1_m_ = res1;
+    vector res2_m_ = res2;
+    
+    if(int(P[0]*64)%2) {
+        s_uni = "foobars";
+      
+        wide_s = format ("%g", P);
+        begin = 3;
+        //len = 2;
+         
+        s = concat(s_uni, wide_s);
+        // printf("%s", s);
+          
+        // printf ("substr(\"%s\", %d, %d) = \"%s\"\n",s, begin, len, substr(s,3,2));
+          
+        string sub1_m = substr(s,3,2);
+        // printf("%s\n", sub1_m);
+          
+        float sf1_m = stof(sub1_m);
+        // printf("stof is %f", sf1_m);
+
+        begin = 7; 
+        // printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+           
+        string sub2_m = substr(s, begin);
+        // printf("%s\n", sub2_m);
+           
+        float sf2_m = stof(sub2_m);
+        // printf("stof is %f", sf2_m);
+
+        begin = 6;
+ 
+        string sub3_m = substr(s, 6);
+        // printf("%s\n", sub3_m);
+        
+        float sf3_m = stof(sub3_m);
+        // printf("stof is %f", sf3_m);
+           
+        res_m_ = vector(-u-v, v*sf1_m, u);
+        res1_m_ = vector( u+v, v*sf2_m, (v+u));
+        res2_m_ = vector( -u+v, u*sf3_m, u);
+    }
+
+    res_m = res_m_;
+    res1_m = res1_m_;
+    res2_m = res2_m_;
+}

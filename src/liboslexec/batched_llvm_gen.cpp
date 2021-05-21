@@ -17,19 +17,28 @@ OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
+static ustring op_break("break");
 static ustring op_ceil("ceil");
+static ustring op_continue("continue");
+static ustring op_dowhile("dowhile");
 static ustring op_eq("eq");
+static ustring op_error("error");
 static ustring op_floor("floor");
+static ustring op_format("format");
+static ustring op_fprintf("fprintf");
 static ustring op_ge("ge");
 static ustring op_gt("gt");
 static ustring op_logb("logb");
 static ustring op_le("le");
 static ustring op_lt("lt");
+static ustring op_min("min");
 static ustring op_neq("neq");
+static ustring op_printf("printf");
 static ustring op_round("round");
 static ustring op_sign("sign");
 static ustring op_step("step");
 static ustring op_trunc("trunc");
+static ustring op_warning("warning");
 
 /// Macro that defines the arguments to LLVM IR generating routines
 ///
@@ -205,6 +214,466 @@ LLVMGEN (llvm_gen_useparam)
 }
 
 
+// Used for printf, error, warning, format, fprintf
+LLVMGEN (llvm_gen_printf)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    // Prepare the args for the call
+
+    // Which argument is the format string?  Usually 0, but for op
+    // format() and fprintf(), the formatting string is argument #1.
+    int format_arg = (op.opname() == "format" || op.opname() == "fprintf") ? 1 : 0;
+    Symbol& format_sym = *rop.opargsym (op, format_arg);
+
+    OSL_ASSERT(format_sym.is_uniform());
+
+    // For WIDE parameters we want to test the lane first to see
+    // if we need to extract values or not
+    struct DelayedExtraction
+    {
+        int argument_slot;
+        bool is_float;
+        llvm::Value* loaded_value;
+    };
+
+    std::vector<DelayedExtraction> delay_extraction_args;
+    std::vector<llvm::Value*> call_args;
+    if (!format_sym.is_constant()) {
+        rop.shadingcontext()->warningf ("%s must currently have constant format\n",
+                                  op.opname().c_str());
+        return false;
+    }
+
+    ustring format_ustring = *((ustring*)format_sym.data());
+    const char* format = format_ustring.c_str();
+    std::string s;
+    int arg = format_arg + 1;
+
+    // Check all arguments to see if we will need to generate
+    // a separate printf call for each data lane or not
+    // consider the op to be uniform until we find an argument that isn't
+    bool op_is_uniform = true;
+    for (int a=arg; a < op.nargs(); ++a)
+    {
+        Symbol& sym (*rop.opargsym (op, a));
+        bool arg_is_uniform = sym.is_uniform();
+        if (arg_is_uniform == false)
+        {
+            op_is_uniform = false;
+        }
+    }
+
+
+    int mask_slot;
+    // For some ops, we push the shader globals pointer
+    if (op.opname() == op_printf || op.opname() == op_error ||
+            op.opname() == op_warning || op.opname() == op_fprintf) {
+        auto sg = rop.sg_void_ptr();
+        call_args.push_back (sg);
+        // Add mask or placeholder
+        mask_slot = call_args.size();
+        call_args.push_back (op_is_uniform ?  rop.ll.mask_as_int(rop.ll.current_mask()) : nullptr);
+    }
+
+    if (op.opname() == op_fprintf) {
+        Symbol& Filename = *rop.opargsym (op, 0);
+        llvm::Value* fn = rop.llvm_load_value (Filename);
+        call_args.push_back (fn);
+    }
+
+    // For some ops, we push the output symbol & mask
+    if ((op.opname() == op_format) && (false == op_is_uniform)) {
+        Symbol &outSymbol = *rop.opargsym (op, 0);
+
+        llvm::Value * outPtr = rop.llvm_void_ptr(outSymbol);
+        call_args.push_back (outPtr);
+        // Add placeholder for mask
+        mask_slot = call_args.size();
+        call_args.push_back (nullptr);
+    }
+
+    // We're going to need to adjust the format string as we go, but I'd
+    // like to reserve a spot for the char*.
+    size_t new_format_slot = call_args.size();
+    call_args.push_back (NULL);
+
+    while (*format != '\0') {
+        if (*format == '%') {
+            if (format[1] == '%') {
+                // '%%' is a literal '%'
+                s += "%%";
+                format += 2;  // skip both percentages
+                continue;
+            }
+            const char *oldfmt = format;  // mark beginning of format
+            while (*format &&
+                   *format != 'c' && *format != 'd' && *format != 'e' &&
+                   *format != 'f' && *format != 'g' && *format != 'i' &&
+                   *format != 'm' && *format != 'n' && *format != 'o' &&
+                   *format != 'p' && *format != 's' && *format != 'u' &&
+                   *format != 'v' && *format != 'x' && *format != 'X')
+                ++format;
+            char formatchar = *format++;  // Also eat the format char
+            if (arg >= op.nargs()) {
+                rop.shadingcontext()->errorf ("Mismatch between format string and arguments (%s:%d)",
+                                        op.sourcefile().c_str(), op.sourceline());
+                return false;
+            }
+
+            std::string ourformat (oldfmt, format);  // straddle the format
+            // Doctor it to fix mismatches between format and data
+            Symbol& sym (*rop.opargsym (op, arg));
+            OSL_ASSERT (! sym.typespec().is_structure_based());
+
+            bool arg_is_uniform = sym.is_uniform();
+
+            TypeDesc simpletype (sym.typespec().simpletype());
+            int num_elements = simpletype.numelements();
+            int num_components = simpletype.aggregate;
+            if ((sym.typespec().is_closure_based() ||
+                 simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                ourformat[ourformat.length()-1] = 's';
+            }
+            if (simpletype.basetype == TypeDesc::INT && formatchar != 'd' &&
+                formatchar != 'i' && formatchar != 'o' && formatchar != 'u' &&
+                formatchar != 'x' && formatchar != 'X') {
+                ourformat[ourformat.length()-1] = 'd';
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f' &&
+                formatchar != 'g' && formatchar != 'c' && formatchar != 'e' &&
+                formatchar != 'm' && formatchar != 'n' && formatchar != 'p' &&
+                formatchar != 'v') {
+                ourformat[ourformat.length()-1] = 'f';
+            }
+            // NOTE(boulos): Only for debug mode do the derivatives get printed...
+            for (int a = 0;  a < num_elements;  ++a) {
+                llvm::Value *arrind = simpletype.arraylen ? rop.ll.constant(a) : NULL;
+                if (sym.typespec().is_closure_based()) {
+                    s += ourformat;
+                    llvm::Value *v = rop.llvm_load_value (sym, 0, arrind, 0);
+                    OSL_ASSERT(0 && "incomplete");
+                    v = rop.ll.call_function ("osl_closure_to_string", rop.sg_void_ptr(), v);
+                    call_args.push_back (v);
+                    continue;
+                }
+
+                for (int c = 0; c < num_components; c++) {
+                    if (c != 0 || a != 0)
+                        s += " ";
+                    s += ourformat;
+
+                    // As the final printf library call does not handle wide
+                    // data types, we will load the wide data type here and
+                    // in a loop extract scalar values for the current data
+                    // lane before making the scalar printf call.
+                    // NOTE:  We don't want any uniform arguments to be
+                    // widened, so our typical op_is_uniform doesn't do what we
+                    // want for this when loading.  So just pass arg_is_uniform
+                    // which will avoid widening any uniform arguments.
+                    llvm::Value* loaded = rop.llvm_load_value (sym, 0, arrind,
+                            c, TypeDesc::UNKNOWN,
+                            /*op_is_uniform*/arg_is_uniform,
+                            /*index_is_uniform*/true);
+
+                    if (arg_is_uniform) {
+                        if (simpletype.basetype == TypeDesc::FLOAT) {
+                            // C varargs convention upconverts float->double.
+                            loaded = rop.ll.op_float_to_double(loaded);
+                        }
+                        call_args.push_back (loaded);
+                    } else {
+                        OSL_ASSERT(false == op_is_uniform);
+                        delay_extraction_args.push_back(DelayedExtraction{static_cast<int>(call_args.size()), simpletype.basetype == TypeDesc::FLOAT, loaded});
+                        // Need to populate s call arguments with a place holder
+                        // that we can fill in later from a loop that loads values
+                        // for each lane
+                        call_args.push_back (nullptr);
+                    }
+                }
+            }
+            ++arg;
+        } else {
+            // Everything else -- just copy the character and advance
+            s += *format++;
+        }
+    }
+
+    // Some ops prepend things
+    if (op.opname() == op_error || op.opname() == op_warning) {
+        std::string prefix = Strutil::sprintf ("Shader %s [%s]: ",
+                                               op.opname(),
+                                               rop.inst()->shadername());
+        s = prefix + s;
+    }
+
+    // Now go back and put the new format string in its place
+    auto llvm_new_format_string = rop.ll.constant (s.c_str());
+    call_args[new_format_slot] = llvm_new_format_string;
+
+    // Construct the function name and call it.
+    FuncSpec func_spec(op.opname().c_str());
+
+    if ((op.opname() == op_format) && op_is_uniform) {
+        func_spec.unbatch();
+    }
+    const char * func_name = rop.build_name(func_spec);
+
+    if (op_is_uniform) {
+        llvm::Value *ret = rop.ll.call_function (func_name, call_args);
+
+        // The format op returns a string value, put in in the right spot
+        if (op.opname() == op_format)
+            rop.llvm_store_value (ret, *rop.opargsym (op, 0));
+    } else {
+
+        // Loop over each lane, if mask is active for the lane,
+        // extract values and call printf
+        llvm::Value * loc_of_lane_index = rop.ll.op_alloca(rop.ll.type_int(), 1, rop.llvm_debug() ? std::string("printf index") : std::string());
+        rop.ll.op_unmasked_store(rop.ll.constant(0), loc_of_lane_index);
+        llvm::Value* mask = rop.ll.current_mask();
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("printf loop over:",mask);
+#endif
+
+        llvm::BasicBlock* cond_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("printf_cond") : std::string());
+        llvm::BasicBlock* step_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("printf_step") : std::string());
+        llvm::BasicBlock* body_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("printf_body") : std::string());
+        llvm::BasicBlock* nested_body_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("printf_nested_body") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_printf") : std::string());
+        rop.ll.op_branch(cond_block);
+        {
+            // Condition
+            llvm::Value * lane_index = rop.ll.op_load(loc_of_lane_index);
+            llvm::Value * more_lanes_to_process = rop.ll.op_lt(lane_index, rop.ll.constant(rop.vector_width()));
+
+            rop.ll.op_branch (more_lanes_to_process, body_block,
+                    after_block);
+
+            // body_block
+            // do printf of a single lane
+            llvm::Value * lane_active = rop.ll.test_mask_lane(mask, lane_index);
+            rop.ll.op_branch (lane_active, nested_body_block,
+                    step_block);
+
+            // nested_body_block
+            llvm::Value * int_value_lane_mask = rop.ll.op_shl(rop.ll.constant(1), lane_index);
+            call_args[mask_slot] = int_value_lane_mask;
+            for(const DelayedExtraction &de : delay_extraction_args)
+            {
+                llvm::Value* scalar_val = rop.ll.op_extract(de.loaded_value, lane_index);
+
+                if (de.is_float) {
+                    // C varargs convention upconverts float->double.
+                    scalar_val = rop.ll.op_float_to_double(scalar_val);
+                }
+                call_args[de.argument_slot] = scalar_val;
+            }
+            rop.ll.call_function (func_name, call_args);
+
+            rop.ll.op_branch (step_block);
+
+            // Step
+            //lane_index = rop.ll.op_load(loc_of_lane_index);
+            llvm::Value *next_lane_index = rop.ll.op_add(lane_index, rop.ll.constant(1));
+            rop.ll.op_unmasked_store(next_lane_index, loc_of_lane_index);
+            rop.ll.op_branch (cond_block);
+
+            // Continue on with the previous flow
+            rop.ll.set_insert_point (after_block);
+        }
+    }
+
+    return true;
+}
+
+
+// Array length
+LLVMGEN (llvm_gen_arraylength)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    OSL_DASSERT (Result.typespec().is_int() && A.typespec().is_array());
+
+    int len = A.typespec().is_unsized_array() ? A.initializers()
+                                              : A.typespec().arraylength();
+
+    // Array's size should be uniform accross all lanes
+    OSL_ASSERT(Result.is_uniform());
+    rop.llvm_store_value (rop.ll.constant(len), Result);
+    return true;
+}
+
+
+// Array reference
+LLVMGEN (llvm_gen_aref)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Src = *rop.opargsym (op, 1);
+    Symbol& Index = *rop.opargsym (op, 2);
+
+    bool op_is_uniform = Result.is_uniform();
+    bool index_is_uniform = Index.is_uniform();
+
+    // Get array index we're interested in
+    llvm::Value *index = rop.loadLLVMValue (Index, 0, 0, TypeDesc::TypeInt, index_is_uniform);
+    if (! index)
+        return false;
+
+    if (rop.inst()->master()->range_checking()) {
+        if (index_is_uniform) {
+            if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+                   *(int *)Index.data() < Src.typespec().arraylength())) {
+                llvm::Value *args[] = { index,
+                                        rop.ll.constant(Src.typespec().arraylength()),
+                                        rop.ll.constant(Src.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                index = rop.ll.call_function (rop.build_name("range_check"), args);
+            }
+        } else {
+            BatchedBackendLLVM::TempScope temp_scope(rop);
+
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.getOrAllocateTemp (TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/, false /*forceBool*/, std::string("range clamped index:") + Src.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(index, loc_clamped_wide_index);
+
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(Src.typespec().arraylength()),
+                                    rop.ll.constant(Src.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            rop.ll.call_function (rop.build_name(FuncSpec("range_check").mask()), args);
+            // Use the range check indices
+            index = rop.ll.op_load(loc_clamped_wide_index);
+        }
+    }
+
+    int num_components = Src.typespec().simpletype().aggregate;
+    for (int d = 0;  d <= 2;  ++d) {
+        for (int c = 0;  c < num_components;  ++c) {
+            llvm::Value *val = rop.llvm_load_value (Src, d, index, c, TypeDesc::UNKNOWN, op_is_uniform, index_is_uniform);
+            rop.storeLLVMValue (val, Result, c, d);
+        }
+        if (! Result.has_derivs())
+            break;
+    }
+
+    return true;
+}
+
+
+// Array assignment
+LLVMGEN (llvm_gen_aassign)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Index = *rop.opargsym (op, 1);
+    Symbol& Src = *rop.opargsym (op, 2);
+
+    bool resultIsUniform = Result.is_uniform();
+    bool index_is_uniform = Index.is_uniform();
+    OSL_ASSERT(index_is_uniform || !resultIsUniform);
+
+    // Get array index we're interested in
+    llvm::Value *index = rop.loadLLVMValue (Index, 0, 0, TypeDesc::TypeInt, index_is_uniform);
+
+    if (! index)
+        return false;
+
+    if (rop.inst()->master()->range_checking()) {
+        if (index_is_uniform) {
+            if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+                   *(int *)Index.data() < Result.typespec().arraylength())) {
+                llvm::Value *args[] = { index,
+                                        rop.ll.constant(Result.typespec().arraylength()),
+                                        rop.ll.constant(Result.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                index = rop.ll.call_function (rop.build_name("range_check"), args);
+            }
+        } else {
+            BatchedBackendLLVM::TempScope temp_scope(rop);
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.getOrAllocateTemp (TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/, false /*forceBool*/, std::string("range clamped index:") + Result.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(index, loc_clamped_wide_index);
+
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(Result.typespec().arraylength()),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            rop.ll.call_function (rop.build_name(FuncSpec("range_check").mask()), args);
+            // Use the range check indices
+            index = rop.ll.op_load(loc_clamped_wide_index);
+        }
+    }
+
+    int num_components = Result.typespec().simpletype().aggregate;
+
+    // Allow float <=> int casting
+    TypeDesc cast; // defaults to TypeDesc::UNKNOWN
+    if (num_components == 1 && !Result.typespec().is_closure() && !Src.typespec().is_closure() &&
+        (Result.typespec().is_int_based() ||  Result.typespec().is_float_based()) &&
+        (Src.typespec().is_int_based() ||  Src.typespec().is_float_based())) {
+        cast = Result.typespec().simpletype();
+        cast.arraylen = 0;
+    } else {
+        // Try to warn before llvm_fatal_error is called which provides little
+        // context as to what went wrong.
+        OSL_ASSERT (Result.typespec().simpletype().basetype ==
+                Src.typespec().simpletype().basetype);
+    }
+
+    for (int d = 0;  d <= 2;  ++d) {
+        for (int c = 0;  c < num_components;  ++c) {
+            llvm::Value *val = rop.loadLLVMValue (Src, c, d, cast, resultIsUniform);
+
+            // Bool is not a supported OSL type, so if we find one it needs
+            // to be promoted to an int
+            llvm::Type * typeOfVal = rop.ll.llvm_typeof(val);
+            if (typeOfVal == rop.ll.type_bool() || typeOfVal == rop.ll.type_wide_bool()) {
+                val = rop.ll.op_bool_to_int(val);
+            }
+
+            rop.llvm_store_value (val, Result, d, index, c, index_is_uniform);
+        }
+        if (! Result.has_derivs())
+            break;
+    }
+
+    return true;
+}
+
+
+
 // Generic llvm code generation.  See the comments in llvm_ops.cpp for
 // the full list of assumptions and conventions.  But in short:
 //   1. All polymorphic and derivative cases implemented as functions in
@@ -317,6 +786,180 @@ LLVMGEN (llvm_gen_generic)
 
     OSL_DEV_ONLY(std::cout << std::endl);
 
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_if)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& cond = *rop.opargsym (op, 0);
+
+    const char * cond_name = cond.name().c_str();
+    bool op_is_uniform = cond.is_uniform();
+
+    bool elseBlockRequired = op.jump(0) != op.jump(1);
+
+    int beforeThenElseReturnCount = rop.ll.masked_return_count();
+    int beforeThenElseBreakCount = rop.ll.masked_break_count();
+    int beforeThenElseContinueCount = rop.ll.masked_continue_count();
+
+    if (op_is_uniform) {
+        // Load the condition variable and figure out if it's nonzero
+        llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+
+        // Branch on the condition, to our blocks
+        llvm::BasicBlock* then_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("then (uniform)") + cond_name : std::string());
+        llvm::BasicBlock* else_block = elseBlockRequired ?
+                                       rop.ll.new_basic_block (rop.llvm_debug() ? std::string("else (uniform)") + cond_name : std::string()) :
+                                       nullptr;
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_if (uniform)") + cond_name : std::string());
+        rop.ll.op_branch (cond_val, then_block, elseBlockRequired ? else_block : after_block);
+
+        // Then block
+        rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+        rop.ll.op_branch (after_block); // insert point is now after_block
+        if (elseBlockRequired) {
+            // Else block
+            rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
+            rop.ll.op_branch (after_block);  // insert point is now after_block
+        }
+
+        // NOTE: if a return or exit is encounter inside a uniform
+        // conditional block, then it will branch to the last
+        // rop.ll.push_masked_return_block(...)
+        // or if there is none, operate in a scalar fashion
+        // branching to the return_block() or exit_instance()
+    } else {
+
+        llvm::Value* mask = rop.llvm_load_mask(cond);
+        OSL_ASSERT(mask->getType() == rop.ll.type_wide_bool());
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("if(cond)",mask);
+#endif
+        rop.ll.push_mask(mask);
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("if STACK");
+#endif
+
+        // TODO:  Add heuristic to control if we can avoid testing
+        // for any lanes active and just execute masked.
+        // However must make sure the then or else block does not
+        // contain a call to a lower level, those must not be executed
+        // if the mask is all off
+//#define SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH 1
+        // NOTE: if SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH is defineed then
+        // library and layer functions may get called with an entirely empty mask
+#ifndef SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH
+        // We use the combined mask stack + the if condition's mask we aready pushed
+        llvm::Value* anyThenLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
+#endif
+        // Branch on the condition, to our blocks
+        llvm::BasicBlock* then_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("then (varying)") + cond_name : std::string());
+
+        llvm::BasicBlock* test_else_block = elseBlockRequired ? rop.ll.new_basic_block (rop.llvm_debug() ? std::string("test_else (varying)") + cond_name : std::string()) : nullptr;
+        llvm::BasicBlock* else_block = elseBlockRequired ? rop.ll.new_basic_block (rop.llvm_debug() ? std::string("else (varying)") + cond_name : std::string()) : nullptr;
+
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_if (varying)") + cond_name : std::string());
+
+        // Then block
+        // Perhaps mask should be parameter to build_llvm_code?
+#ifndef SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH
+        rop.ll.op_branch (anyThenLanesActive, then_block, elseBlockRequired ? test_else_block : after_block);
+#else
+        rop.ll.op_branch (then_block);
+#endif
+
+        rop.ll.set_insert_point (then_block);
+        //rop.ll.push_mask(mask); // we pushed this mask before the then block so we can test for 0 active lanes
+        rop.ll.push_masked_return_block(elseBlockRequired ? test_else_block : after_block);
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("then");
+#endif
+        rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+        rop.ll.pop_masked_return_block();
+        rop.ll.pop_mask();
+        // Execute both the "then" and the "else" blocks with masking
+        rop.ll.op_branch (elseBlockRequired ? test_else_block : after_block);
+        if (elseBlockRequired) {
+            // Else block
+            // insertion point should be test_else_block
+            rop.ll.push_mask(mask, true /* negate */);
+            llvm::Value* anyElseLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
+
+            rop.ll.op_branch (anyElseLanesActive, else_block, after_block);
+            rop.ll.set_insert_point (else_block);
+            rop.ll.push_masked_return_block(after_block);
+#ifdef __OSL_TRACE_MASKS
+            rop.llvm_print_mask("else");
+#endif
+            rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
+            rop.ll.pop_masked_return_block();
+            rop.ll.pop_mask();
+            rop.ll.op_branch (after_block);
+        }
+    }
+
+    bool requiresTestForActiveLanes = false;
+    if (rop.ll.masked_continue_count() > beforeThenElseContinueCount) {
+        // Inside the 'then' or 'else' blocks a continue may have been executed
+        // we need to update the current mask to reflect the disabled lanes
+        // We needed to wait until were were in the after block so the produced
+        // mask is available to subsequent instructions
+        rop.ll.apply_continue_to_mask_stack();
+        requiresTestForActiveLanes = true;
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("continue applied");
+#endif
+    }
+    if (rop.ll.masked_break_count() > beforeThenElseBreakCount) {
+        // Inside the 'then' or 'else' blocks a return may have been executed
+        // we need to update the current mask to reflect the disabled lanes
+        // We needed to wait until were were in the after block so the produced
+        // mask is available to subsequent instructions
+        rop.ll.apply_break_to_mask_stack();
+        requiresTestForActiveLanes = true;
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("break applied");
+#endif
+    }
+    if (rop.ll.masked_return_count() > beforeThenElseReturnCount) {
+        // Inside the 'then' or 'else' blocks a return may have been executed
+        // we need to update the current mask to reflect the disabled lanes
+        // We needed to wait until were were in the after block so the produced
+        // mask is available to subsequent instructions
+        rop.ll.apply_return_to_mask_stack();
+        requiresTestForActiveLanes = true;
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("return applied");
+#endif
+    }
+    if (requiresTestForActiveLanes) {
+
+        // through a combination of the break or return mask and any lanes conditionally
+        // masked off, all lanes could be 0 at this point and we wouldn't
+        // want to call down to any layers at this point
+
+        // NOTE: testing the return/exit masks themselves is not sufficient
+        // as some lanes may be disabled by the conditional mask stack
+
+        // TODO: do we want a test routine that can handle negated masks?
+        llvm::Value* anyLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
+
+        llvm::BasicBlock * nextMaskScope;
+        if (rop.ll.has_masked_return_block()) {
+            nextMaskScope = rop.ll.masked_return_block();
+        } else {
+            nextMaskScope = rop.ll.inside_function() ?
+                            rop.ll.return_block() :
+                            rop.llvm_exit_instance_block();
+        }
+        llvm::BasicBlock* after_applying_return_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_if_applied_return_mask (varying)") + cond_name : std::string());
+
+        rop.ll.op_branch (anyLanesActive, after_applying_return_block, nextMaskScope);
+    }
+
+    // Continue on with the previous flow
     return true;
 }
 
@@ -781,8 +1424,103 @@ LLVMGEN (llvm_gen_modulus)
 }
 
 
+LLVMGEN (llvm_gen_neg)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+
+    bool op_is_uniform = A.is_uniform();
+    bool result_is_uniform = Result.is_uniform();
+    OSL_ASSERT(op_is_uniform || !result_is_uniform);
+
+    TypeDesc type = Result.typespec().simpletype();
+    int num_components = type.aggregate;
+    for (int d = 0;  d < 3;  ++d) {  // dx, dy
+        for (int i = 0; i < num_components; i++) {
+            llvm::Value *a = rop.llvm_load_value (A, d, i, type, op_is_uniform);
+            llvm::Value *r = rop.ll.op_neg (a);
+            if (op_is_uniform && !result_is_uniform)
+            {
+                r = rop.ll.widen_value(r);
+            }
+            rop.llvm_store_value (r, Result, d, i);
+        }
+        if (! Result.has_derivs())
+            break;
+    }
+    return true;
+}
+
+
+// Implementation for min/max
+LLVMGEN (llvm_gen_minmax)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& x = *rop.opargsym (op, 1);
+    Symbol& y = *rop.opargsym (op, 2);
+
+    bool op_is_uniform = x.is_uniform() && y.is_uniform();
+    bool result_is_uniform = Result.is_uniform();
+
+    TypeDesc type = Result.typespec().simpletype();
+    int num_components = type.aggregate;
+    for (int i = 0; i < num_components; i++) {
+        // First do the lower bound
+        llvm::Value *x_val = rop.llvm_load_value (x, 0, i, type, op_is_uniform);
+        llvm::Value *y_val = rop.llvm_load_value (y, 0, i, type, op_is_uniform);
+
+        llvm::Value* cond = NULL;
+        // NOTE(boulos): Using <= instead of < to match old behavior
+        // (only matters for derivs)
+        if (op.opname() == op_min) {
+            cond = rop.ll.op_le (x_val, y_val);
+        } else {
+            cond = rop.ll.op_gt (x_val, y_val);
+        }
+
+        llvm::Value* res_val = rop.ll.op_select (cond, x_val, y_val);
+        if (op_is_uniform && !result_is_uniform)
+        {
+            res_val = rop.ll.widen_value(res_val);
+        }
+        rop.llvm_store_value (res_val, Result, 0, i);
+        if (Result.has_derivs()) {
+          llvm::Value* x_dx = rop.llvm_load_value (x, 1, i, type, op_is_uniform);
+          llvm::Value* x_dy = rop.llvm_load_value (x, 2, i, type, op_is_uniform);
+          llvm::Value* y_dx = rop.llvm_load_value (y, 1, i, type, op_is_uniform);
+          llvm::Value* y_dy = rop.llvm_load_value (y, 2, i, type, op_is_uniform);
+
+          llvm::Value* res_dx = rop.ll.op_select(cond, x_dx, y_dx);
+          llvm::Value* res_dy = rop.ll.op_select(cond, x_dy, y_dy);
+          if (op_is_uniform && !result_is_uniform)
+          {
+              res_dx = rop.ll.widen_value(res_dx);
+              res_dy = rop.ll.widen_value(res_dy);
+          }
+
+          rop.llvm_store_value (res_dx, Result, 1, i);
+          rop.llvm_store_value (res_dy, Result, 2, i);
+        }
+    }
+    return true;
+}
+
+
 // Simple assignment
 LLVMGEN (llvm_gen_assign)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result (*rop.opargsym (op, 0));
+    Symbol& Src (*rop.opargsym (op, 1));
+
+    return rop.llvm_assign_impl (Result, Src);
+}
+
+
+// Entire array copying
+LLVMGEN (llvm_gen_arraycopy)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& Result (*rop.opargsym (op, 0));
@@ -888,6 +1626,281 @@ LLVMGEN (llvm_gen_compref)
             if (! Result.has_derivs())  // skip the derivs if we don't need them
                 break;
         }
+    }
+    return true;
+}
+
+
+// Vector component assignment
+LLVMGEN (llvm_gen_compassign)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Index = *rop.opargsym (op, 1);
+    Symbol& Val = *rop.opargsym (op, 2);
+
+    bool op_is_uniform = Result.is_uniform();
+
+    llvm::Value *c = rop.llvm_load_value(Index);
+
+    if (Index.is_uniform()) {
+        if (rop.inst()->master()->range_checking()) {
+            if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+                   *(int *)Index.data() < 3)) {
+                llvm::Value *args[] = { c, rop.ll.constant(3),
+                                        rop.ll.constant(Result.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                c = rop.ll.call_function (rop.build_name("range_check"), args);
+                OSL_ASSERT (c);
+            }
+        }
+
+        for (int d = 0;  d < 3;  ++d) {  // deriv
+            llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat, op_is_uniform);
+            if (Index.is_constant()) {
+                int i = *(int*)Index.data();
+                i = Imath::clamp (i, 0, 2);
+                rop.llvm_store_value (val, Result, d, i);
+            } else {
+                rop.llvm_store_component_value (val, Result, d, c);
+            }
+            if (! Result.has_derivs())  // skip the derivs if we don't need them
+                break;
+        }
+    } else {
+        OSL_ASSERT(Index.is_constant() == false);
+        OSL_ASSERT(op_is_uniform == false);
+
+        if (rop.inst()->master()->range_checking()) {
+            BatchedBackendLLVM::TempScope temp_scope(rop);
+
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.getOrAllocateTemp (TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/, false /*forceBool*/, std::string("range clamped index:") + Val.name().c_str());
+                // copy the indices into our temporary
+               rop.ll.op_unmasked_store(c, loc_clamped_wide_index);
+               llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                       rop.ll.mask_as_int(rop.ll.current_mask()),
+                                       rop.ll.constant(3),
+                                       rop.ll.constant(Val.name()),
+                                       rop.sg_void_ptr(),
+                                       rop.ll.constant(op.sourcefile()),
+                                       rop.ll.constant(op.sourceline()),
+                                       rop.ll.constant(rop.group().name()),
+                                       rop.ll.constant(rop.layer()),
+                                       rop.ll.constant(rop.inst()->layername()),
+                                       rop.ll.constant(rop.inst()->shadername()) };
+               rop.ll.call_function (rop.build_name(FuncSpec("range_check").mask()), args);
+               // Use the range check indices
+               // Although as our implementation below doesn't use any
+               // out of range values, clamping the indices here
+               // is of questionable value
+               c = rop.ll.op_load(loc_clamped_wide_index);
+       }
+
+        // As the index is logically bound to 0, 1, or 2
+        // instead of doing a scatter
+        // We can just load all 3 components and blend them based on the index == 0, index == 1, index == 2
+        llvm::Value *comp0Mask = rop.ll.op_eq(c, rop.ll.wide_constant(0));
+        llvm::Value *comp1Mask = rop.ll.op_eq(c, rop.ll.wide_constant(1));
+        llvm::Value *comp2Mask = rop.ll.op_eq(c, rop.ll.wide_constant(2));
+        // If index != 0 && index != 1, assume index == 2
+        // Essentially free clamping
+
+        for (int d = 0;  d < 3;  ++d) {  // deriv
+
+            llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat, op_is_uniform);
+
+            llvm::Value *valc0 = rop.llvm_load_value (Result, d, 0, TypeDesc::UNKNOWN, op_is_uniform);
+            llvm::Value *valc1 = rop.llvm_load_value (Result, d, 1, TypeDesc::UNKNOWN, op_is_uniform);
+            llvm::Value *valc2 = rop.llvm_load_value (Result, d, 2, TypeDesc::UNKNOWN, op_is_uniform);
+
+            llvm::Value *resultc0 = rop.ll.op_select(comp0Mask,val,valc0);
+            llvm::Value *resultc1 = rop.ll.op_select(comp1Mask,val,valc1);
+            llvm::Value *resultc2 = rop.ll.op_select(comp2Mask,val,valc2);
+
+            rop.llvm_store_value (resultc0, Result, d, 0);
+            rop.llvm_store_value (resultc1, Result, d, 1);
+            rop.llvm_store_value (resultc2, Result, d, 2);
+
+            if (! Result.has_derivs())  // skip the derivs if we don't need them
+                break;
+        }
+    }
+    return true;
+}
+
+
+// Matrix component reference
+LLVMGEN (llvm_gen_mxcompref)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& M = *rop.opargsym (op, 1);
+    Symbol& Row = *rop.opargsym (op, 2);
+    Symbol& Col = *rop.opargsym (op, 3);
+
+    bool op_is_uniform = Result.is_uniform();
+    bool components_are_uniform = Row.is_uniform() && Col.is_uniform();
+
+    llvm::Value *row = rop.llvm_load_value (Row, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+    llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+
+    if (rop.inst()->master()->range_checking()) {
+        if (components_are_uniform) {
+            if (! (Row.is_constant() &&
+                   *(int *)Row.data() >= 0 &&
+                   *(int *)Row.data() < 4 &&
+                    Col.is_constant() &&
+                    *(int *)Col.data() >= 0 &&
+                    *(int *)Col.data() < 4)) {
+                llvm::Value *args[] = { row, rop.ll.constant(4),
+                                        rop.ll.constant(M.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                const char *func_name = rop.build_name("range_check");
+                row = rop.ll.call_function (func_name, args);
+                args[0] = col;
+                col = rop.ll.call_function (func_name, args);
+            }
+        } else {
+            BatchedBackendLLVM::TempScope temp_scope(rop);
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.getOrAllocateTemp (TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/, false /*forceBool*/, std::string("range clamped row or col:") + M.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
+            llvm::Value *args[] = {rop.ll.void_ptr(loc_clamped_wide_index),
+                                   rop.ll.mask_as_int(rop.ll.current_mask()),
+                                   rop.ll.constant(4),
+                                   rop.ll.constant(M.name()),
+                                   rop.sg_void_ptr(),
+                                   rop.ll.constant(op.sourcefile()),
+                                   rop.ll.constant(op.sourceline()),
+                                   rop.ll.constant(rop.group().name()),
+                                   rop.ll.constant(rop.layer()),
+                                   rop.ll.constant(rop.inst()->layername()),
+                                   rop.ll.constant(rop.inst()->shadername()) };
+            const char * func_name = rop.build_name(FuncSpec("range_check").mask());
+            rop.ll.call_function (func_name, args);
+            // Use the range check row
+            row = rop.ll.op_load(loc_clamped_wide_index);
+
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(col, loc_clamped_wide_index);
+            rop.ll.call_function (func_name, args);
+            // Use the range check col
+            col = rop.ll.op_load(loc_clamped_wide_index);
+        }
+    }
+
+    llvm::Value *val = NULL;
+    if (Row.is_constant() && Col.is_constant()) {
+        int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
+        int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
+        int comp = 4 * r + c;
+        val = rop.llvm_load_value (M, 0, comp, TypeDesc::TypeFloat, op_is_uniform);
+    } else {
+        llvm::Value *comp = rop.ll.op_mul (row, components_are_uniform ? rop.ll.constant(4) : rop.ll.wide_constant(4));
+        comp = rop.ll.op_add (comp, col);
+        val = rop.llvm_load_component_value (M, 0, comp, op_is_uniform, components_are_uniform);
+    }
+    rop.llvm_store_value (val, Result);
+    rop.llvm_zero_derivs (Result);
+
+    return true;
+}
+
+
+// Matrix component assignment
+LLVMGEN (llvm_gen_mxcompassign)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Row = *rop.opargsym (op, 1);
+    Symbol& Col = *rop.opargsym (op, 2);
+    Symbol& Val = *rop.opargsym (op, 3);
+
+    bool op_is_uniform = Result.is_uniform();
+    bool components_are_uniform = Row.is_uniform() && Col.is_uniform();
+
+    llvm::Value *row = rop.llvm_load_value (Row, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+    llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+
+    if (rop.inst()->master()->range_checking()) {
+        if (components_are_uniform) {
+            if (! (Row.is_constant() &&
+                   *(int *)Row.data() >= 0 &&
+                   *(int *)Row.data() < 4 &&
+                    Col.is_constant() &&
+                    *(int *)Col.data() >= 0 &&
+                    *(int *)Col.data() < 4)) {
+
+                llvm::Value *args[] = { row, rop.ll.constant(4),
+                                        rop.ll.constant(Result.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                const char * func_name = rop.build_name("range_check");
+                row = rop.ll.call_function (func_name, args);
+
+                args[0] = col;
+                col = rop.ll.call_function (func_name, args);
+            }
+        } else {
+            BatchedBackendLLVM::TempScope temp_scope(rop);
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.getOrAllocateTemp (TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/, false /*forceBool*/, std::string("range clamped row:") + Result.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                   rop.ll.mask_as_int(rop.ll.current_mask()),
+                                   rop.ll.constant(4),
+                                   rop.ll.constant(Result.name()),
+                                   rop.sg_void_ptr(),
+                                   rop.ll.constant(op.sourcefile()),
+                                   rop.ll.constant(op.sourceline()),
+                                   rop.ll.constant(rop.group().name()),
+                                   rop.ll.constant(rop.layer()),
+                                   rop.ll.constant(rop.inst()->layername()),
+                                   rop.ll.constant(rop.inst()->shadername()) };
+            const char * func_name = rop.build_name(FuncSpec("range_check").mask());
+            rop.ll.call_function (func_name, args);
+            // Use the range check row
+            row = rop.ll.op_load(loc_clamped_wide_index);
+
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(col, loc_clamped_wide_index);
+            rop.ll.call_function (func_name, args);
+            // Use the range check col
+            col = rop.ll.op_load(loc_clamped_wide_index);
+        }
+    }
+
+    llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat, op_is_uniform);
+
+    if (Row.is_constant() && Col.is_constant()) {
+        int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
+        int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
+        int comp = 4 * r + c;
+        rop.llvm_store_value (val, Result, 0, comp);
+    } else {
+        llvm::Value *comp = rop.ll.op_mul (row, components_are_uniform ? rop.ll.constant(4) : rop.ll.wide_constant(4));
+        comp = rop.ll.op_add (comp, col);
+        rop.llvm_store_component_value (val, Result, 0, comp, components_are_uniform);
     }
     return true;
 }
@@ -1160,6 +2173,103 @@ LLVMGEN (llvm_gen_compare_op)
 }
 
 
+// int regex_search (string subject, string pattern)
+// int regex_search (string subject, int results[], string pattern)
+// int regex_match (string subject, string pattern)
+// int regex_match (string subject, int results[], string pattern)
+LLVMGEN (llvm_gen_regex)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    OSL_ASSERT (nargs == 3 || nargs == 4);
+    Symbol &Result (*rop.opargsym (op, 0));
+    Symbol &Subject (*rop.opargsym (op, 1));
+    bool do_match_results = (nargs == 4);
+    bool fullmatch = (op.opname() == "regex_match");
+    Symbol &Match (*rop.opargsym (op, 2));
+    Symbol &Pattern (*rop.opargsym (op, 2+do_match_results));
+    OSL_ASSERT (Result.typespec().is_int() && Subject.typespec().is_string() &&
+            Pattern.typespec().is_string());
+    OSL_ASSERT (!do_match_results ||
+            (Match.typespec().is_array() &&
+             Match.typespec().elementtype().is_int()));
+
+    bool op_is_uniform = Subject.is_uniform() && Pattern.is_uniform();
+    bool result_is_uniform = Result.is_uniform();
+    bool match_is_uniform = (do_match_results && Match.is_uniform());
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    std::vector<llvm::Value*> call_args;
+    // First arg is ShaderGlobals ptr
+    call_args.push_back (rop.sg_void_ptr());
+
+    // Next arg is subject string
+
+    if(!op_is_uniform) {
+        call_args.push_back (rop.llvm_void_ptr(Result));
+        call_args.push_back(rop.llvm_load_arg (Subject, false, op_is_uniform));
+    } else {
+        call_args.push_back (rop.llvm_load_value (Subject));
+    }
+
+    llvm::Value *temp_match_array = nullptr;
+    // Pass the results array and length (just pass 0 if no results wanted).
+    if (op_is_uniform && !match_is_uniform) {
+        // allocate a temporary to hold the uniform match result
+        // then afterwards broadcast it out to the varying match
+        temp_match_array = rop.getOrAllocateTemp (Match.typespec(), false /*derivs*/, true /*is_uniform*/, false /*forceBool*/ , "uniform match result");
+        call_args.push_back(rop.ll.void_ptr(temp_match_array));
+    } else {
+        call_args.push_back (rop.llvm_void_ptr(Match));
+    }
+    if (do_match_results)
+        call_args.push_back (rop.ll.constant(Match.typespec().arraylength()));
+    else
+        call_args.push_back (rop.ll.constant(0));
+    // Pass the regex match pattern
+   // call_args.push_back (rop.llvm_load_value (Pattern));
+
+    if(!op_is_uniform) {
+        call_args.push_back(rop.llvm_load_arg (Pattern, false, op_is_uniform));
+    } else {
+        call_args.push_back (rop.llvm_load_value (Pattern));
+    }
+
+    // Pass whether or not to do the full match
+    call_args.push_back (rop.ll.constant(fullmatch));
+
+    FuncSpec func_spec("regex_impl");
+    if (!op_is_uniform) {
+        func_spec.mask();
+        call_args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+    }
+
+    llvm::Value *ret = rop.ll.call_function (rop.build_name(func_spec), call_args);
+
+    if (op_is_uniform) {
+
+        if (!result_is_uniform) {
+            ret = rop.ll.widen_value(ret);
+        }
+        rop.llvm_store_value (ret, Result);
+        if (!match_is_uniform) {
+            OSL_ASSERT(temp_match_array);
+            for(int ai=0; ai < Match.typespec().arraylength(); ++ai) {
+                llvm::Value * elem_ptr = rop.ll.GEP (temp_match_array, ai);
+                llvm::Value * elem = rop.ll.op_load(elem_ptr);
+                llvm::Value * wide_elem = rop.ll.widen_value(elem);
+                rop.llvm_store_value (wide_elem, Match, 0 /*deriv*/,
+                        rop.ll.constant(ai) /*arrayindex*/, 0 /* component*/);
+            }
+        }
+    }
+
+
+    return true;
+}
+
+
 // Construct spatial triple (point, vector, normal), optionally with a
 // transformation from a named coordinate system.
 LLVMGEN (llvm_gen_construct_triple)
@@ -1296,6 +2406,785 @@ LLVMGEN (llvm_gen_construct_triple)
 }
 
 
+LLVMGEN (llvm_gen_loop_op)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& cond = *rop.opargsym (op, 0);
+
+    bool op_is_uniform = cond.is_uniform();
+    const char * cond_name = cond.name().c_str();
+
+    if (op_is_uniform) {
+        OSL_DEV_ONLY(std::cout << "llvm_gen_loop_op UNIFORM based on " << cond.name().c_str() << std::endl);
+
+        // Branch on the condition, to our blocks
+        llvm::BasicBlock* cond_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("cond (uniform)") + cond_name : std::string());
+        llvm::BasicBlock* body_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("body (uniform)") + cond_name : std::string());
+        llvm::BasicBlock* step_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("step (uniform)") + cond_name : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_loop (uniform)") + cond_name : std::string());
+        // Save the step and after block pointers for possible break/continue
+        rop.ll.push_loop (step_block, after_block);
+        // We need to track uniform loops as well
+        // to properly handle a uniform loop inside of a varying loop
+        // and since the "break" op has no symbol for us to check for
+        // uniformity, it can check the current masked loop condition location
+        // to see if it is null or not (uniform vs. varying)
+        rop.ll.push_masked_loop(nullptr, nullptr);
+
+        // Initialization (will be empty except for "for" loops)
+        rop.build_llvm_code (opnum+1, op.jump(0));
+
+        // For "do-while", we go straight to the body of the loop, but for
+        // "for" or "while", we test the condition next.
+        rop.ll.op_branch (op.opname() == op_dowhile ? body_block : cond_block);
+
+        // Load the condition variable and figure out if it's nonzero
+        rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
+        llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+
+        // Jump to either LoopBody or AfterLoop
+        rop.ll.op_branch (cond_val, body_block, after_block);
+
+        // Body of loop
+        rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
+        rop.ll.op_branch (step_block);
+
+        // Step
+        rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
+        rop.ll.op_branch (cond_block);
+
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+        rop.ll.pop_masked_loop();
+        rop.ll.pop_loop ();
+    } else {
+        OSL_DEV_ONLY(std::cout << "llvm_gen_loop_op VARYING based on " << cond.name().c_str() << std::endl);
+
+        // make sure that any temps created for control flow
+        // are not released until we are done using them!
+        BatchedBackendLLVM::TempScope temp_scope(rop);
+
+        // Branch on the condition, to our blocks
+        llvm::BasicBlock* cond_block;
+        llvm::BasicBlock* body_block;
+        // Improve readability of generated IR by creating basic blocks in the order they
+        // will be processed
+        if (op.opname() == op_dowhile) {
+            body_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("body (varying):") + cond_name : std::string());
+            cond_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("cond (varying):") + cond_name : std::string());
+        } else {
+            cond_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("cond (varying):") + cond_name : std::string());
+            body_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("body (varying):") + cond_name : std::string());
+        }
+        llvm::BasicBlock* step_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("step (varying):") + cond_name : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_loop (varying):") + cond_name : std::string());
+
+        int return_count_before_loop = rop.ll.masked_return_count();
+
+        // Save the step and after block pointers for possible break/continue
+        rop.ll.push_loop (step_block, after_block);
+
+        // The analysis flag for loop Opcodes
+        // indicates if the loop contains a continue.
+        // NOTE: BatchedAnalysis populates the analysis_flag.
+        bool loopHasContinue = op.analysis_flag();
+        // TODO: possible optimization when the condition has been forced to be a bool, that we
+        // might be able to use the condition as the control mask, but only if that condition is never
+        // used after the loop as the control mask will be all 0's at the end of the loop which might
+        // be different value that the condition symbol should be.
+        llvm::Value * loc_of_control_mask = rop.getTempMask(std::string("control flow mask:") + cond_name);
+        llvm::Value * loc_of_continue_mask = loopHasContinue ? rop.getTempMask(std::string("continue mask:") + cond_name) : nullptr;
+
+        rop.ll.push_masked_loop(loc_of_control_mask, loc_of_continue_mask);
+
+        // Initialization (will be empty except for "for" loops)
+        rop.build_llvm_code (opnum+1, op.jump(0));
+
+        // Store current top of the mask stack (or all 1's) as the current mask value
+        // as we enter the loop
+        llvm::Value* initial_mask = rop.ll.current_mask();
+        rop.ll.op_store_mask(initial_mask, loc_of_control_mask);
+
+        // If all lanes inside the loop become inactive,
+        // jump to the step as it may have been cause by a continue.
+        // If no continue is possible, then we can just jump to the
+        // after_block when all lanes become inactive
+        rop.ll.push_masked_return_block(loopHasContinue ? step_block : after_block);
+
+        // For "do-while", we go straight to the body of the loop, but for
+        // "for" or "while", we test the condition next.
+        if (op.opname() == op_dowhile) {
+            rop.ll.op_branch (body_block);
+
+            llvm::Value* pre_condition_mask = rop.ll.op_load_mask(loc_of_control_mask);
+            OSL_ASSERT(pre_condition_mask->getType() == rop.ll.type_wide_bool());
+
+            rop.ll.push_mask(pre_condition_mask, false /* negate */, true /* absolute */);
+#ifdef __OSL_TRACE_MASKS
+            rop.llvm_print_mask("pre_condition_mask");
+#endif
+
+            // Body of loop
+            // We need to zero out the continue mask at the top loop body, as the previous
+            // iteration could have set continue.
+            // TODO, move allocation of continue mask inside the loop body to minimize its
+            // scope, although it is still a loop resource perhaps we can delay
+            // setting it until now
+            if (loopHasContinue) {
+                rop.ll.op_store_mask(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
+            }
+
+            rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
+            rop.ll.op_branch (step_block);
+
+            // Step
+            // The step shares the same mask as the body, unless a continue was called
+            if (rop.ll.masked_continue_count() > 0) {
+                //std::cout << "(rop.ll.masked_continue_count() > 0) == true\n";
+                // Get rid of any modified mask that had the continue mask applied to it
+                rop.ll.pop_mask();
+                // Restore the condition mask for the step to execute with
+                llvm::Value * pre_step_mask = pre_condition_mask;
+                // We are trying to reuse the conditional loaded before the body
+                // executes, however a 'break' would have written to that conditional mask
+                // In that case, we need to reload the mask
+                if (rop.ll.masked_break_count() > 0)
+                {
+                    pre_step_mask = rop.ll.op_load_mask(loc_of_control_mask);
+                    // The break could have caused all lanes to be 0,
+                    // If there was no continue that would have jumped to the after block already.
+                    // But we are here because perhaps some lanes were 0 because of the continue.
+                    // Reloading the condition variable will not contain any continued lanes.
+                    // So we can test it to see if any lanes are active. If not,
+                    // we don't want to execute the condition block as it might contain function calls
+                    // or use param which calls down to subsequent layers.
+                    // So we will test to see if any lanes are active
+                    llvm::Value* anyLanesActive = rop.ll.test_if_mask_is_non_zero(pre_step_mask);
+                    llvm::BasicBlock* some_lanes_active_after_continue_break = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("some_lanes_active_after_continue_break (varying)") + cond_name : std::string());
+
+                    rop.ll.op_branch (anyLanesActive, some_lanes_active_after_continue_break, after_block);
+                }
+                rop.ll.push_mask(pre_step_mask, false /* negate */, true /* absolute */);
+#ifdef __OSL_TRACE_MASKS
+                rop.llvm_print_mask("pre_step_mask");
+#endif
+            }
+            OSL_ASSERT(op.jump(2) == op.jump(3));
+            // why bother building empty step
+            //rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
+            rop.ll.op_branch (cond_block);
+
+            // Load the condition variable and figure out if it's nonzero
+            // The step shares the same mask as the step
+            rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
+            rop.ll.pop_mask();
+            // Here we will look at the actual conditional symbol (vs. the loop control)
+            // and store it to the loop control mask, if necessary
+            llvm::Value* post_condition_mask = rop.llvm_load_mask(cond);
+            post_condition_mask = rop.ll.op_and(post_condition_mask, pre_condition_mask);
+
+            // if a return could have been
+            // executed, we need to mask out those lanes from the conditional symbol
+            // because the step function would have executed with those lanes off
+            // causing an endless loop
+            // No need to handle break here, if encountered, it was immediately applied to the condition mask
+            if (rop.ll.masked_return_count() > return_count_before_loop) {
+                post_condition_mask = rop.ll.apply_return_to(post_condition_mask);
+            }
+
+            // we need to store the masked conditional result to the control flow mask
+            rop.ll.op_store_mask(post_condition_mask, loc_of_control_mask);
+            llvm::Value* cond_val = rop.ll.test_if_mask_is_non_zero(post_condition_mask);
+
+            // Jump to either LoopBody or AfterLoop
+            rop.ll.op_branch (cond_val, body_block, after_block);
+
+        } else {
+
+            rop.ll.op_branch (cond_block);
+
+            llvm::Value* pre_condition_mask = rop.ll.op_load_mask(loc_of_control_mask);
+            OSL_ASSERT(pre_condition_mask->getType() == rop.ll.type_wide_bool());
+
+            rop.ll.push_mask(pre_condition_mask, false /* negate */, true /* absolute */);
+            rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
+            rop.ll.pop_mask();
+            // Load the condition variable and figure out if it's nonzero
+            // Here we will look at the actual conditional symbol (vs. the loop control)
+            // and store it to the loop control mask, if necessary
+            llvm::Value* post_condition_mask = rop.llvm_load_mask(cond);
+            post_condition_mask = rop.ll.op_and(post_condition_mask, pre_condition_mask);
+            // we need to store the masked conditional result to the control flow mask
+            rop.ll.op_store_mask(post_condition_mask, loc_of_control_mask);
+
+            // The condition was initialized with the current_mask before the loop
+            // and considered an absolute value, therefore should be OK to test directly
+            llvm::Value* cond_val = rop.ll.test_if_mask_is_non_zero(post_condition_mask);
+
+            // Jump to either LoopBody or AfterLoop
+            rop.ll.op_branch (cond_val, body_block, after_block);
+
+            // Body of loop
+            rop.ll.push_mask(post_condition_mask, false /* negate */, true /* absolute */);
+            // We need to zero out the continue mask at the top loop body, as the previous
+            // iteration could have set continue, alternatively we could zero at the end
+            // of the loop body so its ready for the next iteration, perhaps as part
+            // of the step, but if we know we will need it simplest to do at top of loop body
+            // TODO, move allocation of continue mask inside the loop body to minimize its
+            // scope, although it is still a loop resource perhaps we can delay
+            // setting it until now
+            if (loopHasContinue) {
+                rop.ll.op_store_mask(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
+            }
+            rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
+
+            rop.ll.op_branch (step_block);
+
+            // Step
+            // The step shares the same mask as the body, unless a continue was called
+            if (rop.ll.masked_continue_count() > 0) {
+                // Get rid of any modified mask that had the continue mask applied to it
+                rop.ll.pop_mask();
+                // Restore the condition mask for the step to execute with
+                llvm::Value * pre_step_mask = post_condition_mask;
+                // We are trying to reuse the conditional loaded before the body
+                // executes, however a 'break' would have written to that conditional mask
+                // In that case, we need to reload the mask
+                if (rop.ll.masked_break_count() > 0)
+                {
+                    pre_step_mask = rop.ll.op_load_mask(loc_of_control_mask);
+                }
+                rop.ll.push_mask(pre_step_mask, false /* negate */, true /* absolute */);
+#ifdef __OSL_TRACE_MASKS
+                rop.llvm_print_mask("pre_step_mask");
+#endif
+            }
+            rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
+            rop.ll.pop_mask();
+
+            // before we jump back to the condition block, if a return could have been
+            // executed, we need to mask out those lanes from the conditional symbol
+            // because the step function would have executed with those lanes off
+            // causing an endless loop
+            // No need to handle break here, if encountered, it was immediately applied to the condition mask
+            if (rop.ll.masked_return_count() > return_count_before_loop) {
+                // We are trying to reuse the conditional loaded before the body
+                // executes, however a 'break' would have written to that conditional mask
+                // In that case, we need to reload the mask
+                if (rop.ll.masked_break_count() > 0)
+                {
+                    post_condition_mask = rop.ll.op_load_mask(loc_of_control_mask);
+                }
+                llvm::Value * post_step_mask = rop.ll.apply_return_to(post_condition_mask);
+                rop.ll.op_store_mask(post_step_mask, loc_of_control_mask);
+            }
+            rop.ll.op_branch (cond_block);
+
+        }
+        rop.ll.pop_masked_loop();
+        rop.ll.pop_loop ();
+
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+
+        rop.ll.pop_masked_return_block();
+
+        if (rop.ll.masked_return_count() > return_count_before_loop) {
+
+            // Inside the loop a return may have been executed
+            // we need to update the current mask to reflect the disabled lanes
+            // We needed to wait until were were in the after block so the produced
+            // mask is available to subsequent instructions
+            rop.ll.apply_return_to_mask_stack();
+
+            // through a combination of the return mask and any lanes conditionally
+            // masked off, all lanes could be 0 at this point and we wouldn't
+            // want to call down to any layers at this point
+
+            // NOTE: testing the return/exit masks themselves is not sufficient
+            // as some lanes may be disabled by the conditional mask stack
+
+            // TODO: do we want a test routine that can handle negated masks?
+            llvm::Value* anyLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
+
+            llvm::BasicBlock * nextMaskScope;
+            if (rop.ll.has_masked_return_block()) {
+                nextMaskScope = rop.ll.masked_return_block();
+            } else {
+                nextMaskScope = rop.ll.inside_function() ?
+                                rop.ll.return_block() :
+                                rop.llvm_exit_instance_block();
+            }
+            llvm::BasicBlock* after_applying_return_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_loop_applied_return_mask (varying)") + cond_name : std::string());
+            rop.ll.op_branch (anyLanesActive, after_applying_return_block, nextMaskScope);
+        }
+
+
+    }
+
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_loopmod_op)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() == 0);
+
+    bool inside_masked_loop = rop.ll.is_innermost_loop_masked();
+    if (false == inside_masked_loop)
+    {
+        // Inside a uniform loop, can use branching
+        if (op.opname() == op_break) {
+            rop.ll.op_branch (rop.ll.loop_after_block());
+        } else {  // continue
+            rop.ll.op_branch (rop.ll.loop_step_block());
+        }
+        llvm::BasicBlock* next_block = rop.ll.new_basic_block (rop.llvm_debug() ? "next_block": std::string());
+        rop.ll.set_insert_point (next_block);
+    } else {
+
+        if (op.opname() == op_break) {
+
+            // Inside a varying loop, can not only branch
+            // must mask off additional lanes for remainder of loop
+            // We can just take the absolute mask that is executing the 'break'
+            // instruction and store an absolute modified mask to the
+            // condition variable (which the conditional block of the loop
+            // will hopefully pickup and use)
+            // Trick is we then will need to pop and push a different mask
+            // back on the stack for the remainder of the loop body.
+            rop.ll.op_masked_break();
+            // But there may still be more instructions in the body after the break
+            // Rely on front end dead code elimination to remove any instructions
+            // after a break.
+        } else {
+            OSL_ASSERT(op.opname() == op_continue);
+            // Inside a varying loop, can not only branch
+            // must mask off additional lanes for remainder of loop
+            // We can just take the absolute mask that is executing the 'break'
+            // instruction and store an absolute modified mask to the
+            // condition variable (which the conditional block of the loop
+            // will hopefully pickup and use)
+            // Trick is we then will need to pop and push a different mask
+            // back on the stack for the remainder of the loop body.
+            rop.ll.op_masked_continue();
+            // But there may still be more instructions in the body after the break
+            // Rely on front end dead code elimination to remove any instructions
+            // after a break.
+
+        }
+    }
+
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_getattribute)
+{
+    // getattribute() has eight "flavors":
+    //   * getattribute (attribute_name, value)
+    //   * getattribute (attribute_name, value[])
+    //   * getattribute (attribute_name, index, value)
+    //   * getattribute (attribute_name, index, value[])
+    //   * getattribute (object, attribute_name, value)
+    //   * getattribute (object, attribute_name, value[])
+    //   * getattribute (object, attribute_name, index, value)
+    //   * getattribute (object, attribute_name, index, value[])
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    OSL_DASSERT (nargs >= 3 && nargs <= 5);
+
+    bool array_lookup = rop.opargsym(op,nargs-2)->typespec().is_int();
+    bool object_lookup = rop.opargsym(op,2)->typespec().is_string() && nargs >= 4;
+    int object_slot = (int)object_lookup;
+    int attrib_slot = object_slot + 1;
+    int index_slot = array_lookup ? nargs - 2 : 0;
+
+    Symbol& Result      = *rop.opargsym (op, 0);
+    Symbol& ObjectName  = *rop.opargsym (op, object_slot); // only valid if object_slot is true
+    Symbol& Attribute   = *rop.opargsym (op, attrib_slot);
+    Symbol& Index       = *rop.opargsym (op, index_slot);  // only valid if array_lookup is true
+    Symbol& Destination = *rop.opargsym (op, nargs-1);
+    OSL_DASSERT (!Result.typespec().is_closure_based() &&
+             !ObjectName.typespec().is_closure_based() &&
+             !Attribute.typespec().is_closure_based() &&
+             !Index.typespec().is_closure_based() &&
+             !Destination.typespec().is_closure_based());
+
+
+    // Special case for get attributes where the result uniformity can differ
+    // from the callback
+    bool result_is_uniform = Result.is_uniform();
+    bool destination_is_uniform = Destination.is_uniform();
+    bool attribute_is_uniform = Attribute.is_uniform();
+
+    OSL_ASSERT((!array_lookup || Index.is_uniform()) && "incomplete");
+    OSL_ASSERT((!object_lookup || ObjectName.is_uniform()) && "incomplete");
+
+    // The analysis flag was populated by BatchedAnalysis and
+    // indicates if the render will provide a uniform result
+    bool op_is_uniform = op.analysis_flag();
+
+    // We'll pass the destination's attribute type directly to the
+    // RenderServices callback so that the renderer can perform any
+    // necessary conversions from its internal format to OSL's.
+    const TypeDesc* dest_type = &Destination.typespec().simpletype();
+
+    if (false == op_is_uniform) {
+        OSL_ASSERT((!result_is_uniform) && (!destination_is_uniform));
+
+        llvm::Value * args[] = {
+            rop.sg_void_ptr(),
+            rop.ll.constant ((int)Destination.has_derivs()),
+            object_lookup ? rop.llvm_load_value (ObjectName) :
+                                        rop.ll.constant (ustring()),
+            attribute_is_uniform ? rop.llvm_load_value (Attribute) : rop.llvm_void_ptr(Attribute),
+            rop.ll.constant ((int)array_lookup),
+            array_lookup ? rop.llvm_load_value (Index) : rop.ll.constant((int)0), // Never load a symbol that is invalid
+            rop.ll.constant_ptr ((void *) dest_type),
+            rop.llvm_void_ptr (Destination),
+            rop.ll.mask_as_int(rop.ll.current_mask())};
+
+        FuncSpec func_spec("get_attribute");
+        func_spec.arg(Attribute,attribute_is_uniform);
+        if (!attribute_is_uniform) {
+            func_spec.mask();
+        }
+
+        llvm::Value *r = rop.ll.call_function (rop.build_name(func_spec), args);
+        rop.llvm_conversion_store_masked_status(r, Result);
+    } else {
+        OSL_ASSERT((!object_lookup || ObjectName.is_uniform()) && Attribute.is_uniform());
+
+        BatchedBackendLLVM::TempScope temp_scope(rop);
+        llvm::Value *tempUniformDestination = nullptr;
+        llvm::Value *uniformDestination = nullptr;
+        if (destination_is_uniform)
+        {
+            uniformDestination = rop.llvm_void_ptr (Destination);
+        } else {
+            tempUniformDestination = rop.getOrAllocateTemp (Destination.typespec(), Destination.has_derivs(), true /*is_uniform*/);
+            uniformDestination = rop.ll.void_ptr(tempUniformDestination);
+        }
+
+        llvm::Value * args[] = {
+            rop.sg_void_ptr(),
+            rop.ll.constant ((int)Destination.has_derivs()),
+            object_lookup ? rop.llvm_load_value (ObjectName) :
+                                        rop.ll.constant (ustring()),
+            rop.llvm_load_value (Attribute),
+            rop.ll.constant ((int)array_lookup),
+            array_lookup ? rop.llvm_load_value (Index) : rop.ll.constant((int)0), // Never load a symbol that is invalid
+            rop.ll.constant_ptr ((void *) dest_type),
+            uniformDestination};
+
+        llvm::Value *r = rop.ll.call_function (rop.build_name(FuncSpec("get_attribute_uniform"))
+                , args);
+
+        if (!destination_is_uniform)
+        {
+            // Only broadcast our result if the value lookup succeeded
+            // Branch on the condition, to our blocks
+            llvm::Value* cond_val = rop.ll.op_int_to_bool (r);
+            llvm::BasicBlock* broadcast_block = rop.ll.new_basic_block (std::string("uniform getattribute result broadcast"));
+            llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after uniform getattribute result broadcast"));
+            rop.ll.op_branch (cond_val, broadcast_block, after_block);
+
+            rop.ll.set_insert_point(broadcast_block);
+            rop.llvm_broadcast_uniform_value_from_mem(tempUniformDestination, Destination);
+            rop.ll.op_branch (after_block);
+
+            rop.ll.set_insert_point(after_block);
+
+        }
+
+        rop.llvm_conversion_store_uniform_status(r, Result);
+    }
+
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_functioncall)
+{
+    //std::cout << "llvm_gen_functioncall" << std::endl;
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 1);
+
+    Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+    OSL_ASSERT(functionNameSymbol.is_constant());
+    OSL_ASSERT(functionNameSymbol.typespec().is_string());
+    ustring functionName = *(ustring *)functionNameSymbol.data();
+
+    int exit_count_before_functioncall = rop.ll.masked_exit_count();
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("function_call",rop.ll.current_mask());
+#endif
+
+    rop.ll.push_function_mask(rop.ll.current_mask());
+    llvm::BasicBlock* after_block = rop.ll.push_function ();
+    unsigned int op_num_function_starts_at = opnum+1;
+    unsigned int op_num_function_ends_at = op.jump(0);
+    if (rop.ll.debug_is_enabled()) {
+        ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
+        unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
+        rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
+    }
+
+    // Generate the code for the body of the function
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
+    rop.ll.op_branch (after_block);
+
+    // Continue on with the previous flow
+    if (rop.ll.debug_is_enabled()) {
+        rop.ll.debug_pop_inlined_function();
+    }
+    rop.ll.pop_function ();
+    rop.ll.pop_function_mask();
+
+    if (rop.ll.masked_exit_count() > exit_count_before_functioncall)
+    {
+        // At some point one or more calls to exit have been made
+        // we need to apply that exit mask the the current function scope's return mask
+        rop.ll.apply_exit_to_mask_stack();
+    }
+
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_functioncall_nr)
+{
+    OSL_DEV_ONLY(std::cout << "llvm_gen_functioncall_nr" << std::endl);
+    OSL_ASSERT(rop.ll.debug_is_enabled()  && "no return version should only exist when debug is enabled");
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 1);
+
+    Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+    OSL_ASSERT(functionNameSymbol.is_constant());
+    OSL_ASSERT(functionNameSymbol.typespec().is_string());
+    ustring functionName = *(ustring *)functionNameSymbol.data();
+
+    int op_num_function_starts_at = opnum+1;
+    int op_num_function_ends_at = op.jump(0);
+    OSL_ASSERT(op.farthest_jump() == op_num_function_ends_at && "As we are not doing any branching, we should ensure that the inlined function truly ends at the farthest jump");
+    {
+        ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
+        unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
+        rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
+    }
+
+    // Generate the code for the body of the function
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
+
+    // Continue on with the previous flow
+    rop.ll.debug_pop_inlined_function();
+
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_split)
+{
+    // int split (string str, output string result[], string sep, int maxsplit)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() >= 3 && op.nargs() <= 5);
+    Symbol& R       = *rop.opargsym (op, 0);
+    Symbol& Str     = *rop.opargsym (op, 1);
+    Symbol& Results = *rop.opargsym (op, 2);
+    OSL_DASSERT (R.typespec().is_int() && Str.typespec().is_string() &&
+             Results.typespec().is_array() &&
+             Results.typespec().is_string_based());
+
+    Symbol * optSep = (op.nargs() >= 4) ?  rop.opargsym (op, 3) : nullptr;
+    Symbol * optMaxsplit = (op.nargs() >= 5) ?  rop.opargsym (op, 4) : nullptr;
+
+
+    OSL_ASSERT(R.is_uniform() == Results.is_uniform());
+
+    bool op_is_uniform = Str.is_uniform() &&
+                         ((!optSep) || (*optSep).is_uniform()) &&
+                         ((!optMaxsplit) || (*optMaxsplit).is_uniform());
+    bool result_is_uniform = Results.is_uniform();
+    OSL_ASSERT(op_is_uniform || (op_is_uniform == result_is_uniform));
+
+
+    FuncSpec func_spec("split");
+
+   // llvm::Value *args[5];
+    std::vector<llvm::Value *> args;
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    if (!op_is_uniform) {
+        args.push_back(rop.llvm_void_ptr (R));
+    }
+
+    args.push_back(rop.llvm_load_arg (Str, false /*derivs*/, op_is_uniform));
+
+    llvm::Value *temp_results_array = nullptr;
+    if (op_is_uniform && !result_is_uniform) {
+        temp_results_array = rop.getOrAllocateTemp (Results.typespec(), false /*derivs*/, true /*is_uniform*/, false /*forceBool*/ , "uniform split result");
+        args.push_back(rop.ll.void_ptr(temp_results_array));
+    } else {
+        args.push_back(rop.llvm_void_ptr (Results));
+    }
+
+    if (optSep)  {
+        args.push_back(rop.llvm_load_arg (*optSep, false /*derivs*/, op_is_uniform));
+    } else {
+        if (op_is_uniform) {
+            args.push_back(rop.ll.constant(""));
+        } else {
+
+           llvm::Value *wide_sep = rop.ll.wide_constant("");
+           llvm::Value *temp_wide_sep = rop.getOrAllocateTemp (TypeSpec(TypeDesc::STRING), false/*derivs*/, false /*op_is_uniform*/, false /*forceBool*/, "wide seperator");
+           rop.ll.op_unmasked_store(wide_sep, temp_wide_sep);
+           args.push_back(rop.ll.void_ptr(temp_wide_sep));
+        }
+    }
+
+    if (optMaxsplit)  {
+        OSL_DASSERT (optMaxsplit->typespec().is_int());
+        args.push_back(rop.llvm_load_arg (*optMaxsplit, false /*derivs*/, op_is_uniform));
+    } else {
+        if (op_is_uniform) {
+            args.push_back(rop.ll.constant(Results.typespec().arraylength()));
+        } else {
+           llvm::Value *wide_max_split = rop.ll.wide_constant(Results.typespec().arraylength());
+           llvm::Value *temp_wide_max_split = rop.getOrAllocateTemp (TypeSpec(TypeDesc::INT), false/*derivs*/, false /*op_is_uniform*/, false /*forceBool*/, "wide wide max split");
+           rop.ll.op_unmasked_store(wide_max_split, temp_wide_max_split);
+           args.push_back(rop.ll.void_ptr(temp_wide_max_split));
+        }
+    }
+
+    args.push_back(rop.ll.constant (Results.typespec().arraylength()));
+
+
+    if (!op_is_uniform) {
+        func_spec.mask();
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+        // std::cout<<"LLVM GEN: added on mask"<<std::endl;
+    } else {
+        func_spec.unbatch();
+    }
+    llvm::Value *ret = rop.ll.call_function (rop.build_name(func_spec), args);
+    if (op_is_uniform && !result_is_uniform) {
+        ret = rop.ll.widen_value(ret);
+
+        OSL_ASSERT(temp_results_array);
+        for(int ai=0; ai < Results.typespec().arraylength(); ++ai) {
+            llvm::Value * elem_ptr = rop.ll.GEP (temp_results_array, ai);
+            llvm::Value * elem = rop.ll.op_load(elem_ptr);
+            llvm::Value * wide_elem = rop.ll.widen_value(elem);
+            rop.llvm_store_value (wide_elem, Results, 0 /*deriv*/,
+                    rop.ll.constant(ai) /*arrayindex*/, 0 /* component*/);
+        }
+    }
+    if (op_is_uniform) {
+        rop.llvm_store_value (ret, R);
+    }
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_raytype)
+{
+    // int raytype (string name)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() == 2);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Name = *rop.opargsym (op, 1);
+
+    bool result_is_uniform = Result.is_uniform();
+    bool op_is_uniform = Name.is_uniform();
+
+    llvm::Value * sg = rop.sg_void_ptr();
+    if (Name.is_constant()) {
+        // We can statically determine the bit pattern
+        ustring name = ((ustring *)Name.data())[0];
+        llvm::Value *args[] = {
+            sg,
+            rop.ll.constant (rop.shadingsys().raytype_bit (name))};
+
+        llvm::Value *ret = rop.ll.call_function (rop.build_name("raytype_bit"), args);
+
+        if(!result_is_uniform)
+        {
+            ret = rop.ll.widen_value(ret);
+        }
+        rop.llvm_store_value (ret, Result);
+
+    } else {
+        FuncSpec func_spec("raytype_name");
+        // No way to know which name is being asked for
+        if (op_is_uniform) {
+
+            llvm::Value *args[] = {
+                sg,
+                rop.llvm_get_pointer (Name) };
+            llvm::Value *ret = rop.ll.call_function (rop.build_name(func_spec), args);
+
+            if(!result_is_uniform)
+            {
+                ret = rop.ll.widen_value(ret);
+            }
+            rop.llvm_store_value (ret, Result);
+
+        } else {
+            func_spec.mask();
+            OSL_ASSERT(!result_is_uniform);
+            llvm::Value *args[] = {
+                sg,
+                rop.llvm_void_ptr (Result),
+                rop.llvm_void_ptr (Name),
+                rop.ll.mask_as_int(rop.ll.current_mask())};
+
+            rop.ll.call_function (rop.build_name(func_spec), args);
+        }
+    }
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_return)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 0);
+
+    // mask stack is never empty as we keep one around to handle early returns
+    if (rop.ll.has_masked_return_block()) {
+        // Rely on front end dead code elimination to ensure no instructions
+        // exist in the same scope after a return/exit.
+        // Do not bother updating the mask stack for the current scope
+        if (op.opname() == Strings::op_exit) {
+            rop.ll.op_masked_exit();
+        } else {
+            rop.ll.op_masked_return();
+        }
+        OSL_DEV_ONLY(std::cout << " branching to rop.ll.masked_return_block()");
+       rop.ll.op_branch (rop.ll.masked_return_block());
+    } else {
+        if (op.opname() == Strings::op_exit) {
+            OSL_DEV_ONLY(std::cout << " branching to rop.llvm_exit_instance_block()");
+            // If it's a real "exit", totally jump out of the shader instance.
+            // The exit instance block will be created if it doesn't yet exist.
+            rop.ll.op_branch (rop.llvm_exit_instance_block());
+        } else {
+            OSL_DEV_ONLY(std::cout << " branching to rop.ll.return_block()");
+            // If it's a "return", jump to the exit point of the function.
+            rop.ll.op_branch (rop.ll.return_block());
+        }
+    }
+    // Need an unreachable block for any instuctions after the return
+    // or exit
+    llvm::BasicBlock* next_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after ")+op.opname().c_str() : std::string());
+    rop.ll.set_insert_point (next_block);
+
+    return true;
+}
+
+
 LLVMGEN (llvm_gen_end)
 {
     // Dummy routine needed only for the op_descriptor table
@@ -1311,48 +3200,29 @@ LLVMGEN(NAME) \
     return false; \
 } \
 
-TBD_LLVMGEN(llvm_gen_getattribute)
 TBD_LLVMGEN(llvm_gen_calculatenormal)
-TBD_LLVMGEN(llvm_gen_compassign)
 TBD_LLVMGEN(llvm_gen_sincos)
 TBD_LLVMGEN(llvm_gen_andor)
 TBD_LLVMGEN(llvm_gen_filterwidth)
-TBD_LLVMGEN(llvm_gen_arraylength)
-TBD_LLVMGEN(llvm_gen_arraycopy)
-TBD_LLVMGEN(llvm_gen_neg)
 TBD_LLVMGEN(llvm_gen_texture)
-TBD_LLVMGEN(llvm_gen_printf)
 TBD_LLVMGEN(llvm_gen_area)
 TBD_LLVMGEN(llvm_gen_getmessage)
 TBD_LLVMGEN(llvm_gen_bitwise_binary_op)
-TBD_LLVMGEN(llvm_gen_if)
 TBD_LLVMGEN(llvm_gen_noise)
 TBD_LLVMGEN(llvm_gen_transformc)
 TBD_LLVMGEN(llvm_gen_pointcloud_search)
-TBD_LLVMGEN(llvm_gen_mxcompref)
 TBD_LLVMGEN(llvm_gen_dict_find)
-TBD_LLVMGEN(llvm_gen_functioncall)
-TBD_LLVMGEN(llvm_gen_functioncall_nr)
 TBD_LLVMGEN(llvm_gen_clamp)
-TBD_LLVMGEN(llvm_gen_aassign)
-TBD_LLVMGEN(llvm_gen_mxcompassign)
 TBD_LLVMGEN(llvm_gen_get_simple_SG_field)
-TBD_LLVMGEN(llvm_gen_raytype)
 TBD_LLVMGEN(llvm_gen_trace)
 TBD_LLVMGEN(llvm_gen_pointcloud_get)
-TBD_LLVMGEN(llvm_gen_return)
-TBD_LLVMGEN(llvm_gen_regex)
 TBD_LLVMGEN(llvm_gen_pointcloud_write)
 TBD_LLVMGEN(llvm_gen_isconstant)
-TBD_LLVMGEN(llvm_gen_loop_op)
 TBD_LLVMGEN(llvm_gen_matrix)
 TBD_LLVMGEN(llvm_gen_select)
-TBD_LLVMGEN(llvm_gen_split)
 TBD_LLVMGEN(llvm_gen_unary_op)
-TBD_LLVMGEN(llvm_gen_aref)
 TBD_LLVMGEN(llvm_gen_luminance)
 TBD_LLVMGEN(llvm_gen_dict_value)
-TBD_LLVMGEN(llvm_gen_loopmod_op)
 TBD_LLVMGEN(llvm_gen_transform)
 TBD_LLVMGEN(llvm_gen_closure)
 TBD_LLVMGEN(llvm_gen_gettextureinfo)
@@ -1361,7 +3231,6 @@ TBD_LLVMGEN(llvm_gen_spline)
 TBD_LLVMGEN(llvm_gen_dict_next)
 TBD_LLVMGEN(llvm_gen_texture3d)
 TBD_LLVMGEN(llvm_gen_nop)
-TBD_LLVMGEN(llvm_gen_minmax)
 TBD_LLVMGEN(llvm_gen_getmatrix)
 TBD_LLVMGEN(llvm_gen_environment)
 TBD_LLVMGEN(llvm_gen_mix)

@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+color init()
+{
+    if (P[0] > 0.75) {
+        exit();
+    }
+    return color(0,1,0);
+}
+
+shader exit_in_varying_then_of_input_initfunc(
+    output color c = color(1,0,0),
+    color in = init())
+{
+    c += in;
+}
+

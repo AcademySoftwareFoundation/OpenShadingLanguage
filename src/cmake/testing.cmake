@@ -99,8 +99,7 @@ macro ( TESTSUITE )
 
         # Run the test unoptimized, unless it matches a few patterns that
         # we don't test unoptimized (or has an OPTIMIZEONLY marker file).
-        if (NOT _testname MATCHES "^getattribute-shader" AND
-            NOT _testname MATCHES "optix" AND 
+        if (NOT _testname MATCHES "optix" AND 
             NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
             add_one_testsuite ("${_testname}" "${_testsrcdir}"
@@ -142,8 +141,17 @@ macro ( TESTSUITE )
             if ((EXISTS "${_testsrcdir}/BATCHED" OR test_all_batched OR _testname MATCHES "batched")
                 AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
                 AND NOT EXISTS "${_testsrcdir}/NOBATCHED"
-                AND NOT EXISTS "${_testsrcdir}/NOBATCHED-FIXME")
-                # optimized for right now
+                AND NOT EXISTS "${_testsrcdir}/NOBATCHED-FIXME"
+                AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+                add_one_testsuite ("${_testname}.batched" "${_testsrcdir}"
+                                   ENV TESTSHADE_OPT=0 TESTSHADE_BATCHED=1 )
+            endif ()
+            
+            if ((EXISTS "${_testsrcdir}/BATCHED" OR test_all_batched OR _testname MATCHES "batched")
+                AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+                AND NOT EXISTS "${_testsrcdir}/NOBATCHED"
+                AND NOT EXISTS "${_testsrcdir}/NOBATCHED-FIXME"
+                AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
                 add_one_testsuite ("${_testname}.batched.opt" "${_testsrcdir}"
                                    ENV TESTSHADE_OPT=2 TESTSHADE_BATCHED=1 )
             endif ()
@@ -162,20 +170,20 @@ macro ( TESTSUITE )
     endif ()
 endmacro ()
 
-
 macro (osl_add_all_tests)
     # List all the individual testsuite tests here, except those that need
     # special installed tests.
     TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
                 arithmetic-reg
-                array array-derivs array-range array-aassign
-                blackbody blendmath breakcont
+                array array-copy-reg array-derivs array-range array-aassign
+                array-assign-reg array-length-reg
+                blackbody blendmath breakcont breakcont-reg
                 bug-array-heapoffsets bug-locallifetime bug-outputinit
                 bug-param-duplicate bug-peep bug-return
                 cellnoise closure closure-array color comparison
-                compile-buffer
+                compile-buffer compassign-reg
                 component-range
-                connect-components
+                control-flow-reg connect-components
                 const-array-params const-array-fill
                 debugnan debug-uninit
                 derivs derivs-muldiv-clobber
@@ -183,21 +191,22 @@ macro (osl_add_all_tests)
                 error-dupes error-serialized
                 example-deformer
                 exit exponential
-                fprintf
+                for-reg format-reg fprintf
                 function-earlyreturn function-simple function-outputelem
                 function-overloads function-redef
                 geomath getattribute-camera getattribute-shader
                 getsymbol-nonheap gettextureinfo
                 group-outputs groupstring
                 hash hashnoise hex hyperb
-                ieee_fp if incdec initlist initops intbits isconnected isconstant
+                ieee_fp if if-reg incdec initlist initops intbits isconnected
+                isconstant
                 layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
                 layers-nonlazycopy layers-repeatedoutputs
                 linearstep
-                logic loop matrix message
+                logic loop matrix max-reg message
                 mergeinstances-duplicate-entrylayers
                 mergeinstances-nouserdata mergeinstances-vararray
-                metadata-braces miscmath missing-shader
+                metadata-braces min-reg miscmath missing-shader
                 named-components
                 noise noise-cell
                 noise-gabor noise-gabor2d-filter noise-gabor3d-filter
@@ -226,15 +235,17 @@ macro (osl_add_all_tests)
                 osl-imageio
                 paramval-floatpromotion
                 pragma-nowarn
+                printf-reg
                 printf-whole-array
-                raytype raytype-specialized reparam
+                raytype raytype-reg raytype-specialized regex-reg reparam
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
                 render-microfacet render-oren-nayar render-veachmis render-ward
                 select shaderglobals shortcircuit 
                 spline splineinverse splineinverse-ident
                 spline-boundarybug spline-derivbug
-                string
+                split-reg
+                string string-reg
                 struct struct-array struct-array-mixture
                 struct-err struct-init-copy
                 struct-isomorphic-overload struct-layers

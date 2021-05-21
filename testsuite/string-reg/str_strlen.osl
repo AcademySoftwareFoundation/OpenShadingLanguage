@@ -1,0 +1,31 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader str_strlen (output vector res = 0,
+                   output vector res_m = 0)
+{
+    string a = "foo", b = format ("%g", P),  c = " bar";
+    string catstr = concat(a,b,c);
+    int str_length = strlen(catstr);
+    //printf ("strlen(\"%s\") = %d\n", catstr, strlen(catstr));
+    
+    float sf = (float) str_length*0.02;
+    vector res_ = vector(-u-v, u*sf, v);
+    vector res_m_ = res;
+ 
+    if(int(P[0]*64)%2) {
+        string a_m = "magic", b_m = format ("%g", P),  c_m = " mirror";
+        string catstr_m = concat(a_m,b_m,c_m);
+        int str_length_m = strlen(catstr_m);
+        //printf ("strlen(\"%s\") = %d\n", catstr, strlen(catstr));
+           
+        float sf_m = (float) str_length_m*0.08;
+        res_m_ = vector(-u-v, u*sf_m, v);
+    }
+   
+    res = res_;
+    res_m = res_m_;
+}
+
+    

@@ -1,0 +1,44 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader str_concat (output vector res = 0,
+                   output vector res_m = 0)
+{
+    string a = "0.48";
+    string b = format ("%g", P);
+    string c = "0.64";
+    string catstr_ = " ";
+    
+    catstr_ = concat(a,b,c);
+    //prfloatf("String  value is %s\n", catstr_);
+    
+    if(int(P[0]*64)%2) {
+    
+        string a_m = "0.25";
+        string b_m = format("%g", u);
+        string c_m = "0.75";
+        string catstr_m = concat(a_m,b_m,c_m); //Gets floato: osl_concat_w16sw16sw16s
+        //catstr_ = concat(a, b_m, c);
+        
+        float si_m = stof (catstr_m);
+        float ia_m = stof(a_m);
+        float ib_m = stof(b_m);
+        float ic_m = stof(c_m);
+            
+        res_m = vector((-u-v)*si_m, ia_m*u, ib_m*v);
+        //printf("%g\n", res_m);
+        //prfloatf("%d\n", si_m);
+        //prfloatf("%s\n", catstr_m);
+    }
+
+    string catstr = catstr_;
+    float si = stof (catstr);
+    float ia = stof(a);
+    float ib = stof(b);
+    float ic = stof(c);
+    
+    res = vector((-u-v)*si, ia*u, ib*v);
+    //prfloatf("%d\n", si);
+    //prfloatf("%s\n", catstr);
+}

@@ -2209,6 +2209,21 @@ struct Analyzer {
         }
     }
 
+    void make_interpolated_parameters_varying()
+    {
+        // Mark all interpolated parameters as varying,
+        // As we expect interpolated data,  get_userdata will
+        // only provide varying values, so we must mark
+        // our symbols appropriately!
+        FOREACH_PARAM(Symbol & s, inst())
+        {
+            if (s.everread() && !s.lockgeom() && !s.typespec().is_closure()
+                    && !(s.symtype() == SymTypeOutputParam)) {
+                recursively_mark_varying(&s);
+            }
+        }
+    }
+
     void push_varying_of_upstream_connections()
     {
         OSL_DEV_ONLY(std::cout << "connections to layer begin" << std::endl);
@@ -2295,6 +2310,7 @@ BatchedAnalysis::analyze_layer(ShaderInstance* inst)
     OSL_DEV_ONLY(std::cout << "About to find which symbols need to be varying()"
                            << std::endl);
     analyzer.push_varying_of_shader_globals();
+    analyzer.make_interpolated_parameters_varying();
     analyzer.make_renderer_outputs_varying();
     analyzer.push_varying_of_upstream_connections();
     analyzer.push_varying_of_implicitly_varying_ops();

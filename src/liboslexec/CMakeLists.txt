@@ -5,7 +5,9 @@
 # NOTE: for any additions/deletions from liboslexec_target_srcs,
 # please update wide_target_combine_text_and_rodata.ld
 set ( liboslexec_target_srcs
-    wide/wide_opalgebraic    
+    wide/wide_opalgebraic
+    wide/wide_opstring
+    wide/wide_shadingsys
     )
 
 set ( liboslexec_override_limits

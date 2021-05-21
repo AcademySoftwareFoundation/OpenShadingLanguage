@@ -1577,8 +1577,8 @@ batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI 
             // A real renderer would use the hit index to access data to populate shader globals
             int lx = lHitIndex%rwidth;
             int ly = lHitIndex/rwidth;
-            int rx = roi.xbegin + ly;
-            int ry = roi.ybegin + lx;
+            int rx = roi.xbegin + lx;
+            int ry = roi.ybegin + ly;
             setup_varying_shaderglobals (bi, sgBatch, shadingsys, rx, ry);
             // Remember the pixel x & y values to store the outputs after shading
             bx[bi] = rx;

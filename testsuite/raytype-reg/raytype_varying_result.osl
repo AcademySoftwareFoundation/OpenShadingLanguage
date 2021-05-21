@@ -1,0 +1,15 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader raytype_varying_result (output vector cout = 0)
+{
+    int e = 10;
+    e = raytype("refraction");
+    e += int(P[0]-P[0]);
+
+    cout = e;
+    if ((P[0] > 0.5) && (e < 5))
+        cout = color(1,0,1);
+}

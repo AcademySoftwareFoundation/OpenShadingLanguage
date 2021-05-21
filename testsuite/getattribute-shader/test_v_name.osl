@@ -1,0 +1,27 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader
+test_v_name ()
+{
+    string shadername = "unknown";
+    string layername  = "unknown";
+    string groupname  = "unknown";
+    
+    string names[3] = { "shader:shadername", "shader:layername", "shader:groupname" };
+    int varying_index = max(int(P[0] - 100), 0);
+    
+    getattribute (names[varying_index + 0], shadername);
+    getattribute (names[varying_index + 1], layername);
+    getattribute (names[varying_index + 2], groupname);
+
+    // NOTE: shader:* attributes are implemented at compile time with constant folding
+    // because the name value is coming from an array of strings whose index is not
+    // known at compile time, we expect the printed results to be "unknown"
+    // but we want to make sure the plumbing works 
+    printf ("%s: %s\n", names[varying_index + 0], shadername);
+    printf ("%s: %s\n", names[varying_index + 1], layername);
+    printf ("%s: %s\n", names[varying_index + 2], groupname);
+}

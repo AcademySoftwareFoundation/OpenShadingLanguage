@@ -1,0 +1,21 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+float helper2(float val)
+{
+    float r = val;
+    if (P[0] < 1.0/3.0) {        
+        exit();
+    }
+    r = 0.5;
+    return r;
+}
+
+shader exit_in_varying_then_of_func(output color c = 1.0)
+{
+    float in = c[0];
+    float out = helper2(in);
+    c = color(in, out, in+out);
+}
+

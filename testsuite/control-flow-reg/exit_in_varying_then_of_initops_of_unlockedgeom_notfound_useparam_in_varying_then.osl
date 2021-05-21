@@ -1,0 +1,22 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+float some_init_ops()
+{
+    if (P[0] > 0.5)
+        exit ();   
+    return 9.0;
+}
+
+shader exit_in_varying_then_of_initops_of_unlockedgeom_notfound_useparam_in_varying_then(
+    output float outputVal = 0,
+    float s_notfound = some_init_ops() [[ int lockgeom=0 ]]
+     )
+{
+    printf ("This maybe print inputVal=%g\n",s_notfound);
+    if (P[1] > 0.5) {
+        outputVal = s_notfound;
+    }
+    printf ("This maybe print outputVal=%g\n",outputVal);
+}

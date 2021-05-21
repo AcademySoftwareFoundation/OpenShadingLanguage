@@ -1,0 +1,23 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test_u_index_conditional_int (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    int rarray[3] = { 0, 0, 0 };
+    int garray[3] = { 0, 0, 0 };
+    int barray[3] = { 0, 0, 0 };
+    
+    int cond_val = P[0] < 0.25;
+    for(int i = 0; i < 5; ++i) {
+        rarray[0] = cond_val;
+        garray[1] = float(cond_val); // test implicit float->int
+        barray[2] = cond_val;
+    }
+    
+    Cout = color((rarray[0]+rarray[1]+rarray[2])/3.0,
+                 (garray[0]+garray[1]+garray[2])/3.0,
+                 (barray[0]+barray[1]+barray[2])/3.0);
+}

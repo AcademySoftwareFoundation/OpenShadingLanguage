@@ -1,0 +1,14 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader layer_b_exit_in_varying_then (float f_in = 41,
+          color c_in = 42,
+          output color c_outb = 0
+    )
+{    
+    printf ("b: f_in = %g, c_in = %g\n", f_in, c_in);
+    if (P[1] > 0.5)
+        exit();
+    c_outb = c_in;
+}

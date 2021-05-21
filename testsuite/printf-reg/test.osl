@@ -1,0 +1,25 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test()
+{
+    // To avoid floating pint difference scaling up using integers
+    int resolution[2] = { -1, -1 };
+    getattribute ("camera:resolution", resolution);
+       
+    int scaledP[3];
+    scaledP[0] = int(P[0]*resolution[0]);
+    scaledP[1] = int(P[1]*resolution[1]);
+    scaledP[2] = int(P[2]*resolution[0]*resolution[1]);
+
+    int scaledU;
+    scaledU = int(u*resolution[0]);
+
+    int scaledV;
+    scaledV = int(v*resolution[1]);
+
+    printf ("scaledP = (%i, %i, %i)\n", scaledP[0], scaledP[1], scaledP[2]);
+    printf ("scaledU = %i\n", scaledU);
+    printf ("scaledV = %i\n", scaledV);
+}

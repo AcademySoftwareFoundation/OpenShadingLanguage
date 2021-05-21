@@ -1,0 +1,25 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader u_subj_u_pattern (output vector cout = 0)
+{
+
+    string u_subj = "electric blue";
+   
+    int a = 3;
+    int b = 2;
+    int c = 5;
+    int d = 1;
+    int e = 6;
+    int f = 8;
+
+    a =  regex_match (u_subj, "ham");         // should not match
+    b =  regex_match (u_subj, "ue");  // should match
+    c =  regex_match (u_subj, "$el");
+    d =  regex_match (u_subj, "el[a-b]");
+    e =  regex_match (u_subj, ".*tric");       // should match
+    f =  regex_search (u_subj, "blue");
+
+    cout = vector(a+b/u, (c+d/v+u), (e*f/v*u));
+}

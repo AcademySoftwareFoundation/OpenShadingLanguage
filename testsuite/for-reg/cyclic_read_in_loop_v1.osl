@@ -1,0 +1,20 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+cyclic_read_in_loop_v1 (output color rgb = 0)
+{
+    int farthestIndex = -1;
+    float dist = 0.0;
+    for(int index = 0; index < 9; ++index)   {
+        if(dist < P[0]) {
+            // Note that dist is not read by anything after the loop
+            // Bug if the assignment to dist is not masked
+            dist = (9 - index)*0.1;
+            farthestIndex = index;
+        }        
+    }
+    
+    rgb = float(farthestIndex)/9.0; 
+}

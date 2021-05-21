@@ -1,0 +1,45 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader v_subj_v_pattern_ura (output vector cout = 0)
+{
+    string v_subj = concat(format("%g", P[0]),"electric blue");
+    string v_pat1 = concat(format("%g", P[0]), "ham");
+    string v_pat2 = concat(format("%g", P[0]), "ue");
+    string v_pat3 = concat(format("%g", P[0]), "$el");
+    string v_pat4 = concat(format("%g", P[0]), "el[a-b]");
+    string v_pat5 = concat(format("%g", P[0]), ".*tric");
+    string v_pat6 = concat(format("%g", P[0]), "blue");
+  
+    int matches_m[3] = {1, 1,1};
+    int matches_s[3] = {1, 1, 1};
+ 
+    int a = -1;
+    int b = -1;
+    int c = -1;
+    int d = -1;
+    int e = -1;
+    int f = -1;
+    int g = -1;
+    int h = -1;
+    int j = -1;
+
+    a =  regex_match (v_subj, v_pat1);         // should not match
+    b =  regex_match (v_subj, v_pat2);  // should match
+    c =  regex_match (v_subj, v_pat3);
+    d =  regex_match (v_subj, v_pat4);
+    e =  regex_match (v_subj, v_pat5);       // should match
+    f =  regex_search (v_subj,matches_s, v_pat6);
+    g = regex_match(v_subj, matches_m, v_pat6);
+
+    for (int i = 0; i < 3; ++i) {
+        h += matches_s[i];
+        j += matches_m[i];
+    }
+    
+    if( (a >=0) && (b>=0) && (c>=0) && (d>=0) && (e>=0) && 
+        (f>=0) && (g>=0) && (h>=0) && (j>=0)) {
+        cout = vector(a+b+j/u, (c+d+h/v+u), (e*f+g/v*u));
+    }  
+}

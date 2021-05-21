@@ -38,5 +38,5 @@ test ()
             hither, yon, clip[0], clip[1]);
     printf ("Shutter:    open = %g, close = %g (also %g %g)\n",
             shutter_open, shutter_close, shutter[0], shutter[1]);
-    printf ("Screen window: %g", screen_window);
+    printf ("Screen window: %g\n", screen_window);
 }

@@ -1021,6 +1021,9 @@ BatchedBackendLLVM::llvm_assign_initial_value(
     // it will return 1 if it put the userdata in the right spot (either
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.
+    // TODO:  Can we check with renderer services to identify
+    // symbols which will NEVER be interpolated and avoid
+    // generating the get_userdata callback?
     llvm::BasicBlock* after_userdata_block = NULL;
     bool partial_userdata_mask_was_pushed  = false;
     LLVM_Util::ScopedMasking partial_data_masking_scope;
@@ -1037,9 +1040,6 @@ BatchedBackendLLVM::llvm_assign_initial_value(
         std::vector<llvm::Value*> args;
         args.push_back(sg_void_ptr());
         args.push_back(ll.constant(symname));
-#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
-        args.push_back(ll.constant(inst()->layername()));
-#endif
         args.push_back(ll.constant(type));
         args.push_back(
             ll.constant((int)group().m_userdata_derivs[userdata_index]));
@@ -1081,7 +1081,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
             "partial_userdata");
         after_userdata_block  = ll.new_basic_block();
         llvm::Value* cond_val = ll.op_ne(got_userdata,
-                                         ll.constant(true_mask_value()));
+                                         llvm_initial_shader_mask_value);
         ll.op_branch(cond_val, partial_userdata_block, after_userdata_block);
 
         // If we got no or partial user data, we need to mask out the lanes
@@ -1094,6 +1094,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
         partial_userdata_mask_was_pushed = true;
     }
 
+    int exit_count_before_init_ops = ll.masked_exit_count();
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Forcing masking shouldn't be required here,
         // believe our discovery handled this correctly
@@ -1151,12 +1152,25 @@ BatchedBackendLLVM::llvm_assign_initial_value(
     if (partial_userdata_mask_was_pushed) {
         partial_data_masking_scope.release();
         ll.pop_mask();
+#ifdef __OSL_TRACE_MASKS
+        llvm_print_mask("after partial_data_masking_scope ends");
+#endif
     }
 
     if (after_userdata_block) {
         // If we enclosed the default initialization in an "if", jump to the
         // next basic block now.
         ll.op_branch(after_userdata_block);
+        // NOTE: we must be in the after block to apply the exit mask
+        if (ll.masked_exit_count() > exit_count_before_init_ops)
+        {
+            // At some point one or more calls to exit have been made
+            // we need to apply that exit mask the the current function scope's mask
+            ll.apply_exit_to_mask_stack();
+        }
+#ifdef __OSL_TRACE_MASKS
+        llvm_print_mask("after_userdata_block starts");
+#endif
     }
 }
 
@@ -1733,7 +1747,6 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     llvm::Value* initial_shader_mask = ll.int_as_mask(
         llvm_initial_shader_mask_value);
     ll.push_shader_instance(initial_shader_mask);
-//#define __OSL_TRACE_MASKS 1
 #ifdef __OSL_TRACE_MASKS
     llvm_print_mask("initial_shader_mask", initial_shader_mask);
 #endif

@@ -265,7 +265,7 @@ LLVMGEN (llvm_gen_printf)
     }
 
 
-    int mask_slot;
+    int mask_slot=-1;
     // For some ops, we push the shader globals pointer
     if (op.opname() == op_printf || op.opname() == op_error ||
             op.opname() == op_warning || op.opname() == op_fprintf) {

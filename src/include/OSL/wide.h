@@ -118,7 +118,8 @@ assign_all(Block<DataT, WidthT>&, const DataT&);
 // where the DataT is a unique value from the wide data,
 // the mask identifies which data lanes contain that unique value.
 template<typename DataT, int WidthT, typename FunctorT>
-OSL_FORCEINLINE void foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f);
+OSL_FORCEINLINE void
+foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f);
 
 
 // IMPLEMENTATION BELOW
@@ -2485,8 +2486,9 @@ assign_all(Masked<DataT[], WidthT> wide_data, const DataT* value_array)
 
 
 template<typename DataT, int WidthT, typename FunctorT>
-OSL_FORCEINLINE
-void foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f) {
+OSL_FORCEINLINE void
+foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f)
+{
     OSL_DASSERT(data_mask.any_on());
     // The following control flow assumes at least 1 data lane is active in the data_mask
     Mask<WidthT> remaining_mask(data_mask);
@@ -2497,7 +2499,7 @@ void foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT 
         OSL_FORCEINLINE_BLOCK
         {
             OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-            for(int lane=0; lane < WidthT; ++lane) {
+            for (int lane = 0; lane < WidthT; ++lane) {
                 // NOTE: the comparison ignores the remaining_mask
                 bool lane_matches = (lead_data == wdata[lane]);
                 // NOTE: using bitwise & to avoid branches
@@ -2869,11 +2871,11 @@ template<typename DataT> using RefDx = pvt::RefDeriv<DataT, 1 /*DerivIndexT*/>;
 template<typename DataT> using RefDy = pvt::RefDeriv<DataT, 2 /*DerivIndexT*/>;
 
 
-template <typename LaneProxyT>
+template<typename LaneProxyT>
 typename LaneProxyT::ValueType const
-unproxy(const LaneProxyT &proxy)
+unproxy(const LaneProxyT& proxy)
 {
-    return proxy.operator typename LaneProxyT::ValueType ();
+    return proxy.operator typename LaneProxyT::ValueType();
 }
 
 // The rest of MaskedData implementation that depends on

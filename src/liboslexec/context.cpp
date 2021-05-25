@@ -25,7 +25,9 @@
 OSL_NAMESPACE_ENTER
 
 static mutex buffered_errors_mutex;
+#if OSL_USE_BATCHED
 static mutex buffered_file_output_mutex;
+#endif
 
 
 namespace pvt {

@@ -347,7 +347,12 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
                 if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
                     # If we failed to get a match for an image, send the idiff
                     # results to the console
-                    os.system (oiiodiff (out, os.path.join (refdir, out), silent=False))
+                    testfile = None
+                    if regression != None:
+                        testfile = os.path.join ("baseline/", out)
+                    else :
+                        testfile = os.path.join (refdir, out)
+                    os.system (oiiodiff (out, testfile, silent=False))
 
     return (err)
 

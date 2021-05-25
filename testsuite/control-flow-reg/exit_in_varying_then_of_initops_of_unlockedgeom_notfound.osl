@@ -10,7 +10,7 @@ float some_init_ops()
 }
 
 shader exit_in_varying_then_of_initops_of_unlockedgeom_notfound(
-    output float outputVal = 0,
+    output float outputVal = 0.5,
     float s_notfound = some_init_ops() [[ int lockgeom=0 ]]
      )
 {

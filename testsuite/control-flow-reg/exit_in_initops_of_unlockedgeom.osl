@@ -9,7 +9,7 @@ float some_init_ops()
 }
 
 shader exit_in_initops_of_unlockedgeom(
-    output float outputVal = 0, 
+    output float outputVal = 0.5, 
     float s = some_init_ops() [[ int lockgeom=0 ]]
     )
 {

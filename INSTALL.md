@@ -51,7 +51,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   is LLVM 9 or earlier.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.73)
-* [Ilmbase](http://openexr.com/downloads.html) 2.0 or newer (tested through 2.5)
+* [Ilmbase or Imath](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.0)
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
   [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
@@ -64,7 +64,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * (optional) Python: If you are building the Python bindings or running the
    testsuite:
      * Python >= 2.7 (tested against 2.7, 3.6, 3.7, 3.8, 3.9)
-     * pybind11 >= 2.4.2 (Tested through 2.5)
+     * pybind11 >= 2.4.2 (Tested through 2.6)
      * NumPy
 * (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
   the `osltoy` application will be disabled.

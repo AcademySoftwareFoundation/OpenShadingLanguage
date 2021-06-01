@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.15 -- 1 Jul? 2021 (compared to 1.11.14)
+-----------------------------------------------------
+
+
 Release 1.11.14.1 -- 1 Jun 2021 (compared to 1.11.14)
 -----------------------------------------------------
 * Fix library setup for LLVM installations consisting of static libraries.

@@ -18,11 +18,6 @@
 
 #include <OpenImageIO/fmath.h>
 
-#if defined(_MSC_VER) && _MSC_VER < 1800
-using OIIO::expm1;
-using OIIO::cbrtf;
-#endif
-
 #ifdef __CUDACC__
   #include <optix.h>
 #endif

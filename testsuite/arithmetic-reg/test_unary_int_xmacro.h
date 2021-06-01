@@ -6,6 +6,10 @@
 #    error must define __OSL_XMACRO_OPNAME to name of unary operation before including this header
 #endif
 
+#ifndef __OSL_XMACRO_OP
+#   define __OSL_XMACRO_OP __OSL_XMACRO_OPNAME
+#endif
+
 #ifndef __OSL_XMACRO_VAL_TRANSFORM
 #    define __OSL_XMACRO_VAL_TRANSFORM(val) val
 #endif
@@ -25,10 +29,9 @@ shader __OSL_CONCAT3(test_, __OSL_XMACRO_OPNAME, _int)(int numStripes     = 0,
 {
     int int_val = int(__OSL_XMACRO_VAL_TRANSFORM(((P[0] + P[1]) * 0.5)));
 
-    // After "if" is supported in batching, uncomment conditional
-    // if ((numStripes == 0) || ((numStripes != 0) && (int(P[0]*2*numStripes)%2)))
+    if ((numStripes == 0) || ((numStripes != 0) && (int(P[0]*P[0]*P[1]*2*numStripes)%2)))
     {
-        int_val = __OSL_XMACRO_OPNAME(int_val);
+        int_val = __OSL_XMACRO_OP(int_val);
     }
 
     out_int = __OSL_XMACRO_OUT_TRANSFORM(int_val);

@@ -650,6 +650,7 @@ public:
     llvm::Value* test_if_mask_is_non_zero(llvm::Value* mask);
 
     llvm::Value* test_mask_lane(llvm::Value* mask, int lane_index);
+    llvm::Value* test_mask_lane(llvm::Value* mask, llvm::Value* lane_index);
     llvm::Value* widen_value (llvm::Value* val);
     llvm::Value* negate_mask(llvm::Value* mask);
 

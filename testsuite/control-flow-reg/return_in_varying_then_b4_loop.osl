@@ -1,0 +1,16 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader return_in_varying_then_b4_loop(output color c = 0.0)
+{
+    float r = 0.0;
+    float g = 0.0;
+    if (P[0] > 0.5) {
+        return;
+    }   
+    for(int i=0; i < 3; ++i) {
+        g += 0.25;
+    }
+    c= color(r,g,0);
+}

@@ -1,0 +1,16 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test3()
+{
+    string letters[8] = { "A", "B", "C", "D", "E", "F", "G", "H" };
+    
+    int index = int(u*arraylength(letters));
+    if (index >= arraylength(letters)) { 
+        index = arraylength(letters)-1;
+    }
+    
+    string letter = letters[index];
+    printf ("The letter is %s\n", letter);
+}

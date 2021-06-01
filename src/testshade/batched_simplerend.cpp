@@ -22,6 +22,7 @@ struct UniqueStringCache {
         , blahblah("blahblah")
         , options("options")
         , global("global")
+        , osl_version("osl:version")
         , camera_resolution("camera:resolution")
         , camera_projection("camera:projection")
         , camera_pixelaspect("camera:pixelaspect")
@@ -47,6 +48,7 @@ struct UniqueStringCache {
     ustring blahblah;
     ustring options;
     ustring global;
+    ustring osl_version;
     ustring camera_resolution;
     ustring camera_projection;
     ustring camera_pixelaspect;
@@ -76,6 +78,8 @@ BatchedSimpleRenderer<WidthT>::BatchedSimpleRenderer(SimpleRenderer& sr)
     m_uniform_objects.insert(ucache().global);
     m_uniform_objects.insert(ucache().options);
 
+    m_varying_attr_getters[ucache().osl_version]
+        = &BatchedSimpleRenderer::get_osl_version<MaskedData>;
     m_varying_attr_getters[ucache().camera_resolution]
         = &BatchedSimpleRenderer::get_camera_resolution<MaskedData>;
     m_varying_attr_getters[ucache().camera_projection]

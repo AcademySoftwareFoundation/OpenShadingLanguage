@@ -1,0 +1,20 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader break_in_varying_then_return_in_uniform_then_in_uniform_loop_in_varying_then(output float c = 0.0)
+{
+    if (P[0] > 0.5) {
+        for(int i = 0 ; i < 10; ++i)
+        {
+            c+= 0.075;
+            if (c > P[0]) {
+                break;
+            }
+            if (i > 7) {
+                return;
+            }
+        }
+        c *= 1.25;
+    }
+}

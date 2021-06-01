@@ -1,0 +1,23 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test2()
+{
+    // To avoid floating pint difference scaling up and truncating
+    point scaledP = point(int(P[0]*100), int(P[1]*100), int(P[2]*100));
+
+    float scaledU;
+    scaledU = float(int(u*100));
+
+    float scaledV;
+    scaledV = float(int(u*100));
+
+    printf ("scaledP = %g\n", scaledP);
+    printf ("scaledU = %f\n", scaledU);
+    printf ("scaledV = %f\n", scaledV);
+    
+    matrix m = matrix(int(P[0]*100));
+    printf ("m = %g\n", m);
+    
+}

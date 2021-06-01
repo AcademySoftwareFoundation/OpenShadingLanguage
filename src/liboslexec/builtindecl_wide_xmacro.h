@@ -178,15 +178,15 @@
     DECL (osl_closure_to_string, "sXC")
 #endif
 
-#ifdef __OSL_TBD
 DECL(__OSL_OP(format), "xXis*")
 DECL(__OSL_OP(printf), "xXis*")
 DECL(__OSL_OP(error), "xXis*")
 DECL(__OSL_OP(warning), "xXis*")
 DECL(__OSL_OP(fprintf), "xXiss*")
 
-
 DECL(__OSL_MASKED_OP(split), "xXXXXXii")
+
+#ifdef __OSL_TBD
 
 // DECL (osl_incr_layers_executed, "xX") // original used by wide currently
 
@@ -358,6 +358,7 @@ DECL(__OSL_MASKED_OP(dict_next), "xXXXi")
 DECL(__OSL_OP(dict_value), "iXiXLX")
 DECL(__OSL_MASKED_OP(dict_value), "xXXXXLXi")
 
+#endif
 
 DECL(__OSL_OP(raytype_name), "iXX")
 DECL(__OSL_MASKED_OP(raytype_name), "xXXXi")
@@ -376,11 +377,10 @@ DECL(__OSL_MASKED_OP1(get_attribute, Ws), "iXiXXiiXXi")
 DECL(__OSL_OP(get_attribute_uniform), "iXiXXiiXX")
 
 // TODO:  shouldn't bind_interpolated_param be MASKED?  change name to reflect
-#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
-DECL(__OSL_OP(bind_interpolated_param), "iXXXLiXiXiXii")
-#else
 DECL(__OSL_OP(bind_interpolated_param), "iXXLiXiXiXii")
-#endif
+
+#ifdef __OSL_TBD
+
 //DECL (osl_get_texture_options, "XX") // uneeded
 DECL(__OSL_OP(get_noise_options), "XX")
 
@@ -604,6 +604,8 @@ DECL(__OSL_MASKED_OP2(transpose, Wm, Wm), "xXXi")
 DECL(__OSL_OP2(determinant, Wf, Wm), "xXX")
 DECL(__OSL_MASKED_OP2(determinant, Wf, Wm), "xXXi")
 
+#endif
+
 // forced masked version only
 DECL(__OSL_MASKED_OP3(concat, Ws, Ws, Ws), "xXXXi")
 DECL(__OSL_MASKED_OP2(strlen, Wi, Ws), "xXXi")
@@ -614,8 +616,11 @@ DECL(__OSL_MASKED_OP3(endswith, Wi, Ws, Ws), "xXXXi")
 DECL(__OSL_MASKED_OP2(stoi, Wi, Ws), "xXXi")
 DECL(__OSL_MASKED_OP2(stof, Wf, Ws), "xXXi")
 DECL(__OSL_MASKED_OP4(substr, Ws, Ws, Wi, Wi), "xXXXXi")
+
 DECL(__OSL_MASKED_OP(regex_impl), "xXXXXiXii")
 DECL(__OSL_OP(regex_impl), "iXsXisi")
+
+#ifdef __OSL_TBD
 
 // BATCH texturing manages the BatchedTextureOptions
 // directly in LLVM ir, and has no need for wide versions
@@ -646,9 +651,10 @@ DECL(__OSL_OP2(filterwidth, Wv, Wdv), "xXX")
 DECL(__OSL_MASKED_OP2(filterwidth, Wf, Wdf), "xXXi")
 DECL(__OSL_MASKED_OP2(filterwidth, Wv, Wdv), "xXXi")
 
+#endif // __OSL_TBD
+
 DECL(__OSL_OP(raytype_bit), "iXi")
 
-#endif // __OSL_TBD
 
 // Clean up local definitions
 #undef WIDE_NOISE_IMPL_INDIRECT

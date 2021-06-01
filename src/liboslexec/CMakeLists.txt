@@ -5,7 +5,9 @@
 # NOTE: for any additions/deletions from liboslexec_target_srcs,
 # please update wide_target_combine_text_and_rodata.ld
 set ( liboslexec_target_srcs
-    wide/wide_opalgebraic    
+    wide/wide_opalgebraic
+    wide/wide_opstring
+    wide/wide_shadingsys
     )
 
 set ( liboslexec_override_limits
@@ -310,10 +312,6 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             list (APPEND TARGET_CXX_OPTS "-mno-fma")
         endif ()
         
-        if (${target_src} IN_LIST liboslexec_override_limits)
-            list (APPEND TARGET_CXX_OPTS "-qoverride-limits")
-        endif()
-       
         # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
         # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]     
         # choose to increase that limit via compiler flags vs. 

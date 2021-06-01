@@ -1,0 +1,24 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+float some_init_ops()
+{
+    exit();   
+    return 0.5;
+}
+
+shader exit_in_initops_of_unlockedgeom_useparam_in_uniform_then(
+    output float outputVal = 0.5,
+    float s = some_init_ops() [[ int lockgeom=0 ]]
+    )
+{
+    printf ("This should print inputVal=%g\n",s);
+    if (raytype("camera")) {
+        outputVal = s;
+    }
+    outputVal *= 2.0;
+    printf ("This should print outputVal=%g\n",s);
+    exit ();
+    printf ("This should NOT NOT NOT print\n");
+}

@@ -1,0 +1,64 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader str_getchar (output vector res_t1 = 0,
+                    output vector res_t2 = 0, 
+                    output vector res_f1 = 0,
+                    output vector res_f2 = 0,
+                    
+                    output vector res_t1_m = 0,
+                    output vector res_t2_m = 0,
+                    output vector res_f1_m = 0,
+                    output vector res_f2_m = 0)
+{
+    string a = "elves", b = format("%g", P),  c = "and the", d = "shoemaker";
+    string concat_str = concat(a,b,c,d);
+   
+    int s1 = getchar(concat_str, 0);
+    int s2 = getchar(concat_str, 10);
+    int s3 = getchar(concat_str, 100);
+    int s4 = getchar(concat_str, -99);
+   
+    float fs1 = s1*0.002;
+    res_t1 = vector (-v*fs1, -u-v, u);
+    // printf("%g\n", res_t1);
+   
+    float fs2 = s2*0.004;
+    res_t2 = vector (v*fs2, -u-v, u);
+    // printf("%g\n", res_t2);
+   
+    float fs3 = s3+0.001;
+    res_f1 = vector (v*fs3, -u-v, u);
+    //  printf("%g\n", res_f1);
+   
+    float fs4 = s4+0.002;
+    res_f2 = vector (v, u+v, u*fs4);
+    //  printf("%g\n", res_f2);
+    
+    if (int(P[0]*64)%2) {
+        string a_m = "jack", b_m = format("%g", P),  c_m = "and the", d_m = "beanstalk";
+        string concat_str_m = concat(a_m,b_m,c_m,d_m);
+          
+        int s1_m = getchar(concat_str_m, 0);
+        int s2_m = getchar(concat_str_m, 10);
+        int s3_m = getchar(concat_str_m, 100);
+        int s4_m = getchar(concat_str_m, -99);
+       
+        float fs1_m = s1*0.002;
+        res_t1_m = vector (-v*fs1_m, -u-v, u);
+        // printf("%g\n", res_t1_m);
+           
+        float fs2_m = s2*0.004;
+        res_t2_m = vector (v*fs2_m, -u-v, u);
+        // printf("%g\n", res_t2_m);
+           
+        float fs3_m = s3+0.001;
+        res_f1_m = vector (v*fs3_m, -u-v, u);
+        // printf("%g\n", res_f1_m);
+           
+        float fs4_m = s4+0.002;
+        res_f2_m = vector (v, u+v, u*fs4_m);
+        //  printf("%g\n", res_f2_m);
+    }
+}

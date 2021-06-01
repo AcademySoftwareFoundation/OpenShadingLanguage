@@ -2700,7 +2700,7 @@ LLVM_Util::constant_bool(bool i)
 llvm::Constant*
 LLVM_Util::wide_constant_bool (bool i)
 {
-    return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(1,i)));
+    return llvm::ConstantInt::get (type_wide_bool(), llvm::APInt(1,i));
 }
 
 llvm::Value *
@@ -3114,6 +3114,16 @@ LLVM_Util::test_mask_lane(llvm::Value *mask, int lane_index)
 
     return builder().CreateExtractElement (mask, lane_index);
 }
+
+llvm::Value *
+LLVM_Util::test_mask_lane(llvm::Value *mask, llvm::Value * lane_index)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+    OSL_ASSERT(lane_index->getType() == type_int());
+
+    return builder().CreateExtractElement (mask, lane_index);
+}
+
 
 
 

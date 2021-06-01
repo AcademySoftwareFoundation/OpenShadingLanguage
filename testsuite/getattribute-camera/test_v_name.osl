@@ -1,0 +1,56 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader
+test_v_name ()
+{
+    int resolution[2] = { -1, -1 };
+    string projection = "";
+    float hither = -1, yon = -1;
+    float clip[2] = { -1, -1 };
+    float pixelaspect = -1;
+    float fov = -1;
+    float shutter_open = -1, shutter_close = -1;
+    float shutter[2] = { -1, -1 };
+    float screen_window[4] = { -1, -1, -1, -1 };
+
+    string names[11] = {
+        "camera:resolution", 
+        "camera:projection", 
+        "camera:fov", 
+        "camera:pixelaspect", 
+        "camera:clip_near", 
+        "camera:clip_far", 
+        "camera:clip", 
+        "camera:shutter_open", 
+        "camera:shutter_close", 
+        "camera:shutter", 
+        "camera:screen_window"
+    };
+    int varying_0 = max(int(P[0] - 100), 0);
+
+    printf ("Camera parameters\n");
+    getattribute (names[varying_0 + 0], resolution);
+    getattribute (names[varying_0 + 1], projection);
+    getattribute (names[varying_0 + 2], fov);
+    getattribute (names[varying_0 + 3], pixelaspect);
+    getattribute (names[varying_0 + 4], hither);
+    getattribute (names[varying_0 + 5], yon);
+    getattribute (names[varying_0 + 6], clip);
+    getattribute (names[varying_0 + 7], shutter_open);
+    getattribute (names[varying_0 + 8], shutter_close);
+    getattribute (names[varying_0 + 9], shutter);
+    getattribute (names[varying_0 + 10], screen_window);
+
+    printf ("Resolution: %d x %d\n", resolution[0], resolution[1]);
+    printf ("Projection: %s\n", projection);
+    printf ("fov: %g\n", fov);
+    printf ("Pixel aspect: %g\n", pixelaspect);
+    printf ("Clipping:   hither = %g, yon = %g (also %g %g)\n",
+            hither, yon, clip[0], clip[1]);
+    printf ("Shutter:    open = %g, close = %g (also %g %g)\n",
+            shutter_open, shutter_close, shutter[0], shutter[1]);
+    printf ("Screen window: %g\n", screen_window);
+}

@@ -1,0 +1,46 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+float translate0to1(int val)
+{
+    return (((float)val) + 2147483000.0)/(2*2147483000.0);
+}
+
+shader str_hash (output vector res = 0,
+                output vector res_m = 0)
+{
+    string a = "foo0bar", b = format ("%g", P),  c = "bar";
+    string foo = "foo";
+    string bar = "bar";
+    string foo0bar = concat(foo, format ("%d", int(u)), bar);
+    string a2 = "foo";
+    string concat_str = concat(a,b,c);
+    
+    int hA1 = hash(a);
+    int hA2 = hash(a);
+    int hFoo0Bar = hash(foo0bar);
+    int hC = hash(c);
+    int hB = hash(b);
+
+    int h3 = hash(concat_str);
+    
+    vector res_ = vector(0);
+    if ((hA1 == hA2) && (hA1 == hFoo0Bar) && (hA1 != hB) && (hA1 != hC)) {
+        res_ = vector(translate0to1(hA1), translate0to1(hB), translate0to1(h3));
+    }   
+    
+    vector res_m_ = res_;
+    
+    if(int(P[0]*64)%2) {
+        int s1 = hash(b);
+        int s2 = hash(b);
+           
+        if ((s1 == s2) && (s1 != hFoo0Bar)) {
+           res_m_ = vector(v, u+v, u);
+        }
+    }
+
+    res = res_;
+    res_m = res_m_;
+}

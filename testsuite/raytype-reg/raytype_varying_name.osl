@@ -1,0 +1,22 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader raytype_varying_name(output vector cout = 0)
+{
+    string lookup[7] = {
+        "camera",
+        "refraction",
+        "glossy",
+        "shadow",
+        "diffuse",
+        "reflection",
+        "displacement"
+    };
+   
+    string name = lookup[int(P[0]*64)%7];
+    //printf("raytype = %s\n",name);
+    int is_this_type_of_ray = raytype(name);
+    cout = color(is_this_type_of_ray);
+}

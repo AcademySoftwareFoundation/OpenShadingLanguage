@@ -1,0 +1,16 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader u_string_u_result (output vector cout = 0) 
+{
+    string u_string = concat("astro physics", "12");
+    string u_result = "spam";
+    int rtype = raytype("camera");
+    
+    u_result = concat(format("%d", rtype), u_string);
+    
+    if(endswith(u_result, "12")){
+        cout = vector(u, u/v, v);
+    }
+}

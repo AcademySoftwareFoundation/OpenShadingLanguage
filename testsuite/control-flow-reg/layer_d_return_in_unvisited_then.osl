@@ -1,0 +1,22 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader layer_d_return_in_unvisited_then (float f_in = 41,
+          color c_in = 42,
+          output color c_outb = 0
+    )
+{    
+    // All lanes should return, so the upstream layers should never be executed
+    if(P[0] < .75) {
+        if (P[0] > -100000) {
+            return;
+        }   
+        c_outb = color(f_in);
+        //printf ("d: f_in = %g, c_in = %g\n", f_in, c_in);
+        c_outb = c_in;
+    } else 
+    {
+        c_outb = color(0,0,1);
+    }
+}

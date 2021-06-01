@@ -1,0 +1,15 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+if_varying (output color rgb = 0)
+{
+	if (P[0] > 0.5) {
+		if(P[1] > 0.5) 
+		{
+			rgb = color(P[0], P[1], P[2]);
+			rgb[0] = 0.5;
+		}
+	} 
+}

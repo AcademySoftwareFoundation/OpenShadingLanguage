@@ -1,0 +1,47 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader
+test_varying ()
+{
+     printf ("Testing Varying P = %g\n", P);
+
+     printf ("Testing break:\n");
+     for (int i = 0;  i < 10; ++i) {
+         if (P[0] > 0.5)
+             break;
+         printf ("  i = %d\n", i);
+	 }
+  	 printf ("\nTesting continue:\n");
+     for (int i = 0;  i < 10;  ++i) {
+   	     printf ("  i = %d\n", i);
+   	     if (P[0] < 0.4 ||  P[0] > 0.6)
+              continue;
+         printf ("  Did NOT continue.\n");
+     }
+
+     printf ("\nTesting nested break/continue:\n");
+     for (int j = 0;  j < P[1]*10;  ++j) {
+         printf ("start of outer, j=%d\n", j);
+         for (int i = 0;  i < 10; ++i) {
+             if (P[0] > 0.6)
+                 continue;
+             printf ("  i = %d\n", i);
+             if (P[0] < 0.4)
+                 break;
+         }
+         if (j > P[0]*10) {
+             break;
+         }
+     }
+     printf ("\nTesting break in an infinite for loop:\n");
+     for ( ; ; ) {
+        if( P[0] >= 0.5)
+	       break;
+        if( P[0] < 0.5)
+           break;
+     }
+     printf ("worked\n");
+}

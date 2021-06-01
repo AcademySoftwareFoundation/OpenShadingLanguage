@@ -49,8 +49,7 @@ shader __OSL_CONCAT(test_, __OSL_XMACRO_OPNAME)(
     vector vector_val2 = vector(x_comp2, y_comp2, z_comp2);
     normal normal_val2 = normal(x_comp2, y_comp2, z_comp2);
 
-    // After "if" is supported in batching, uncomment conditional
-    // if ((numStripes == 0) || ((numStripes != 0) && (int(P[0]*2*numStripes)%2)))
+    if ((numStripes == 0) || ((numStripes != 0) && (int(P[0]*P[0]*P[1]*2*numStripes)%2)))
     {
         float_val  = float_val __OSL_XMACRO_OPERATOR float_val2;
         color_val  = color_val __OSL_XMACRO_OPERATOR color_val2;

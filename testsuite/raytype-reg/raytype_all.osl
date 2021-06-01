@@ -1,0 +1,28 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader raytype_all (output vector cout = 0)
+{
+   int a = int(P[0]);
+   a = raytype("glossy") * int(P[1]);
+
+   int b = int(P[1]);
+   b = raytype("camera") * int(P[0]);
+
+   float fb = raytype("shadow") * u;
+   
+   int c = int(P[1]);
+   c = raytype("diffuse") * int(P[0]);
+
+   int d = int(P[1]);
+   d = raytype("reflection") * int(P[0]);
+
+   int e = raytype("refraction");
+
+   int f = int(P[1]-P[1]);
+   f = raytype("displacement");
+
+   cout = vector((a+d+f), (v/u+b+e+c), (u*v/v-fb));
+}

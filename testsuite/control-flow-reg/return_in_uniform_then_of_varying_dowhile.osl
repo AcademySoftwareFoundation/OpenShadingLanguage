@@ -1,0 +1,23 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader return_in_uniform_then_of_varying_dowhile(output color c = 0.0)
+{    
+    float r = 1.0;
+    int endIndex = int(P[0]*10);
+    int i = 0;
+    do
+    {
+        if (P[0] > 0.5) 
+        {
+            r-=0.10;
+        }
+        ++i;
+        if (raytype("camera")) {
+           c = color(r, float(i)/3, 0);
+           return;
+        }
+    } while (i < endIndex);
+    c = color(1);
+}

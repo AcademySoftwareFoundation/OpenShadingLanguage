@@ -1,5 +1,19 @@
 Compiled test.osl -> test.oso
+Compiled test_v_name.osl -> test_v_name.oso
 shader name: test
 layer name:  Cake
 group name:  Beatles
+
+shader:shadername: unknown
+shader:layername: unknown
+shader:groupname: unknown
+shader:shadername: unknown
+shader:layername: unknown
+shader:groupname: unknown
+shader:shadername: unknown
+shader:layername: unknown
+shader:groupname: unknown
+shader:shadername: unknown
+shader:layername: unknown
+shader:groupname: unknown
 

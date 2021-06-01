@@ -1,4 +1,5 @@
 Compiled test.osl -> test.oso
+Compiled test_v_name.osl -> test_v_name.oso
 Camera parameters
 Resolution: 1 x 1
 Projection: perspective
@@ -7,3 +8,37 @@ Pixel aspect: 1
 Clipping:   hither = 0.1, yon = 1000 (also 0.1 1000)
 Shutter:    open = 0, close = 1 (also 0 1)
 Screen window: -1 -1 1 1
+
+Camera parameters
+Resolution: 2 x 2
+Projection: perspective
+fov: 90
+Pixel aspect: 1
+Clipping:   hither = 0.1, yon = 1000 (also 0.1 1000)
+Shutter:    open = 0, close = 1 (also 0 1)
+Screen window: -1 -1 1 1
+Camera parameters
+Resolution: 2 x 2
+Projection: perspective
+fov: 90
+Pixel aspect: 1
+Clipping:   hither = 0.1, yon = 1000 (also 0.1 1000)
+Shutter:    open = 0, close = 1 (also 0 1)
+Screen window: -1 -1 1 1
+Camera parameters
+Resolution: 2 x 2
+Projection: perspective
+fov: 90
+Pixel aspect: 1
+Clipping:   hither = 0.1, yon = 1000 (also 0.1 1000)
+Shutter:    open = 0, close = 1 (also 0 1)
+Screen window: -1 -1 1 1
+Camera parameters
+Resolution: 2 x 2
+Projection: perspective
+fov: 90
+Pixel aspect: 1
+Clipping:   hither = 0.1, yon = 1000 (also 0.1 1000)
+Shutter:    open = 0, close = 1 (also 0 1)
+Screen window: -1 -1 1 1
+

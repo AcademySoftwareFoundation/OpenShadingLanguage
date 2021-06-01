@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader test (output vector cout = 0, int uval=1)
+{
+    int b = int(P[1]);
+    b = raytype("camera") * int(P[0]);
+
+    float fb = raytype("camera") * u;
+    string rin = format("%g", P[2]);
+    rin = "camera";
+
+    int e = int(P[1]); 
+    e = raytype(rin);
+
+    cout = e*0.25+b*0.25+fb;
+}

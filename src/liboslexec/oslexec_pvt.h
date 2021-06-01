@@ -1964,6 +1964,12 @@ public:
 
     // Record an error (or warning, printf, etc.)
     void record_error (ErrorHandler::ErrCode code, const std::string &text) const;
+#if OSL_USE_BATCHED
+    void record_error (ErrorHandler::ErrCode code, const std::string &text, Mask<MaxSupportedSimdLaneCount> mask) const;
+    void record_to_file(ustring filename, const std::string &text, Mask<MaxSupportedSimdLaneCount> mask) const;
+    // Process all the recorded fprintf messages
+    void process_file_output () const;
+#endif
     // Process all the recorded errors, warnings, printfs
     void process_errors () const;
 
@@ -2042,6 +2048,27 @@ private:
     };
     mutable std::vector<ErrorItem> m_buffered_errors;
 
+#if OSL_USE_BATCHED
+    // Buffering of fprintf's so they can be output
+    // to the file one data lane at a time
+    struct FileItem
+    {
+        FileItem() = default;
+        FileItem(ustring filename_,
+                  std::string msgString_,
+                  Mask<MaxSupportedSimdLaneCount> mask_)
+        : filename(filename_)
+        , msgString(msgString_)
+        , mask(mask_)
+        {}
+
+        ustring filename;
+        std::string msgString;
+        Mask<MaxSupportedSimdLaneCount> mask;
+    };
+    mutable std::vector<FileItem> m_buffered_file_output;
+
+#endif
     // When interpreting symbol addresses we need to know if the
     // wide data offsets should be used
     int batch_size_executed;

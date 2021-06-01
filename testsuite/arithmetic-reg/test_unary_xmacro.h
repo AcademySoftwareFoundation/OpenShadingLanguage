@@ -6,6 +6,10 @@
 #    error must define __OSL_XMACRO_OPNAME to name of unary operation before including this header
 #endif
 
+#ifndef __OSL_XMACRO_OP
+#   define __OSL_XMACRO_OP __OSL_XMACRO_OPNAME
+#endif
+
 #ifndef __OSL_XMACRO_VAL_TRANSFORM
 #    define __OSL_XMACRO_VAL_TRANSFORM(val) val
 #endif
@@ -33,14 +37,13 @@ shader __OSL_CONCAT(test_, __OSL_XMACRO_OPNAME)(
     vector vector_val = vector(x_comp, y_comp, z_comp);
     normal normal_val = normal(x_comp, y_comp, z_comp);
 
-    // After "if" is supported in batching, uncomment conditional
-    // if ((numStripes == 0) || ((numStripes != 0) && (int(P[0]*2*numStripes)%2)))
+    if ((numStripes == 0) || ((numStripes != 0) && (int(P[0]*P[0]*P[1]*2*numStripes)%2)))
     {
-        float_val  = __OSL_XMACRO_OPNAME(float_val);
-        color_val  = __OSL_XMACRO_OPNAME(color_val);
-        point_val  = __OSL_XMACRO_OPNAME(point_val);
-        vector_val = __OSL_XMACRO_OPNAME(vector_val);
-        normal_val = __OSL_XMACRO_OPNAME(normal_val);
+        float_val  = __OSL_XMACRO_OP(float_val);
+        color_val  = __OSL_XMACRO_OP(color_val);
+        point_val  = __OSL_XMACRO_OP(point_val);
+        vector_val = __OSL_XMACRO_OP(vector_val);
+        normal_val = __OSL_XMACRO_OP(normal_val);
     }
 
     if (derivX) {

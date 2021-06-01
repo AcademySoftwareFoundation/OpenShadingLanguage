@@ -312,10 +312,6 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             list (APPEND TARGET_CXX_OPTS "-mno-fma")
         endif ()
         
-        if (${target_src} IN_LIST liboslexec_override_limits)
-            list (APPEND TARGET_CXX_OPTS "-qoverride-limits")
-        endif()
-       
         # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
         # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]     
         # choose to increase that limit via compiler flags vs. 

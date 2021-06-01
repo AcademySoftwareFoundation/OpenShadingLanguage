@@ -570,14 +570,14 @@ ShadingContext::symbol_data (const Symbol &sym) const
 
 
 
-const regex &
+const std::regex&
 ShadingContext::find_regex (ustring r)
 {
     RegexMap::const_iterator found = m_regex_map.find (r);
     if (found != m_regex_map.end())
         return *found->second;
     // otherwise, it wasn't found, add it
-    m_regex_map[r].reset (new regex(r.c_str()));
+    m_regex_map[r].reset(new std::regex(r.c_str()));
     m_shadingsys.m_stat_regexes += 1;
     // std::cerr << "Made new regex for " << r << "\n";
     return *m_regex_map[r];

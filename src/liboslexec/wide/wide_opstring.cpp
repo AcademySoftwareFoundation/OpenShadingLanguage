@@ -277,12 +277,12 @@ OSL_BATCHOP int __OSL_OP(regex_impl)(void* bsg_, const char* subject_,
     OSL_ASSERT(ustring::is_unique(pattern));
 
     const std::string& subject(ustring::from_unique(subject_).string());
-    match_results<std::string::const_iterator> mresults;
-    const regex& regex(ctx->find_regex(USTR(pattern)));
+    std::match_results<std::string::const_iterator> mresults;
+    const std::regex& regex(ctx->find_regex(USTR(pattern)));
     if (nresults > 0) {
         std::string::const_iterator start = subject.begin();
-        int res = fullmatch ? regex_match(subject, mresults, regex)
-                            : regex_search(subject, mresults, regex);
+        int res = fullmatch ? std::regex_match(subject, mresults, regex)
+                            : std::regex_search(subject, mresults, regex);
         int* m  = (int*)results;
         for (int r = 0; r < nresults; ++r) {
             if (r / 2 < (int)mresults.size()) {
@@ -328,12 +328,12 @@ OSL_BATCHOP void __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr,
         auto results = wresults[lane];
 
         const std::string& subject = usubject.string();
-        match_results<std::string::const_iterator> mresults;
-        const regex& regex(ctx->find_regex(USTR(pattern)));
+        std::match_results<std::string::const_iterator> mresults;
+        const std::regex& regex(ctx->find_regex(USTR(pattern)));
         if (nresults > 0) {
             std::string::const_iterator start = subject.begin();
-            int res = fullmatch ? regex_match(subject, mresults, regex)
-                                : regex_search(subject, mresults, regex);
+            int res = fullmatch ? std::regex_match(subject, mresults, regex)
+                                : std::regex_search(subject, mresults, regex);
             for (int r = 0; r < nresults; ++r) {
                 if (r / 2 < (int)mresults.size()) {
                     if ((r & 1) == 0)

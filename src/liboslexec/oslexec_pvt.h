@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <list>
+#include <regex>
 #include <set>
 #include <unordered_map>
 
@@ -32,12 +33,6 @@
 #include <OpenImageIO/paramlist.h>
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/color.h>
-
-#ifdef USE_BOOST_REGEX
-# include <boost/regex.hpp>
-#else
-# include <regex>
-#endif
 
 #include <OSL/genclosure.h>
 #include <OSL/llvm_util.h>
@@ -71,20 +66,6 @@ namespace Strutil = OIIO::Strutil;
 OSL_NAMESPACE_ENTER
 
 
-#ifdef USE_BOOST_REGEX
-  using boost::regex;
-  using boost::regex_search;
-  using boost::regex_match;
-  using boost::match_results;
-#else
-  using std::regex;
-  using std::regex_search;
-  using std::regex_match;
-  using std::match_results;
-#endif
-
-
-
 
 struct PerThreadInfo
 {
@@ -95,8 +76,6 @@ struct PerThreadInfo
     std::stack<ShadingContext *> context_pool;
     LLVM_Util::PerThreadInfo llvm_thread_info;
 };
-
-
 
 
 
@@ -1877,7 +1856,7 @@ public:
     /// Return a reference to a compiled regular expression for the
     /// given string, being careful to cache already-created ones so we
     /// aren't constantly compiling new ones.
-    const regex & find_regex (ustring r);
+    const std::regex& find_regex (ustring r);
 
     /// Return a pointer to the shading group for this context.
     ///
@@ -2012,7 +1991,7 @@ private:
     // Heap memory
     std::unique_ptr<char, decltype(&OIIO::aligned_free)> m_heap { nullptr, &OIIO::aligned_free };
     size_t m_heapsize = 0;
-    typedef std::unordered_map<ustring, std::unique_ptr<regex>, ustringHash> RegexMap;
+    using RegexMap = std::unordered_map<ustring, std::unique_ptr<std::regex>, ustringHash>;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
     int m_max_warnings;                 ///< To avoid processing too many warnings

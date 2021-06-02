@@ -1407,8 +1407,8 @@ DECLFOLDER(constfold_regex_search)
         OSL_DASSERT(Subj.typespec().is_string() && Reg.typespec().is_string());
         ustring s (Subj.get_string());
         ustring r (Reg.get_string());
-        regex reg (r.string());
-        int result = regex_search (s.string(), reg);
+        std::regex reg(r.string());
+        int result = std::regex_search(s.string(), reg);
         int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold regex_search");
         return 1;

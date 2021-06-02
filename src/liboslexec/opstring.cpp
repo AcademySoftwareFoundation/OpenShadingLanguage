@@ -125,12 +125,12 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = sg->context;
     const std::string &subject (ustring::from_unique(subject_).string());
-    match_results<std::string::const_iterator> mresults;
-    const regex &regex (ctx->find_regex (USTR(pattern)));
+    std::match_results<std::string::const_iterator> mresults;
+    const std::regex &regex (ctx->find_regex (USTR(pattern)));
     if (nresults > 0) {
         std::string::const_iterator start = subject.begin();
-        int res = fullmatch ? regex_match (subject, mresults, regex)
-                            : regex_search (subject, mresults, regex);
+        int res = fullmatch ? std::regex_match(subject, mresults, regex)
+                            : std::regex_search(subject, mresults, regex);
         int *m = (int *)results;
         for (int r = 0;  r < nresults;  ++r) {
             if (r/2 < (int)mresults.size()) {
@@ -144,8 +144,8 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
         }
         return res;
     } else {
-        return fullmatch ? regex_match (subject, regex)
-                         : regex_search (subject, regex);
+        return fullmatch ? std::regex_match(subject, regex)
+                         : std::regex_search(subject, regex);
     }
 }
 

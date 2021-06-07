@@ -55,6 +55,8 @@ else
         time sudo apt-get install -y g++-9
     elif [[ "$CXX" == "g++-10" ]] ; then
         time sudo apt-get install -y g++-10
+    elif [[ "$CXX" == "g++-11" ]] ; then
+        time sudo apt-get install -y g++-11
     fi
 
     source src/build-scripts/build_llvm.bash

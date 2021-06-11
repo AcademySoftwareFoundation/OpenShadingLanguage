@@ -175,8 +175,8 @@ macro (osl_add_all_tests)
     # special installed tests.
     TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
                 arithmetic-reg
-                array array-copy-reg array-derivs array-range array-aassign
-                array-assign-reg array-length-reg
+                array array-reg array-copy-reg array-derivs array-range 
+                array-aassign array-assign-reg array-length-reg
                 blackbody blendmath breakcont breakcont-reg
                 bug-array-heapoffsets bug-locallifetime bug-outputinit
                 bug-param-duplicate bug-peep bug-return
@@ -203,7 +203,8 @@ macro (osl_add_all_tests)
                 layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
                 layers-nonlazycopy layers-repeatedoutputs
                 linearstep
-                logic loop matrix max-reg message
+                logic loop matrix matrix-reg matrix-arithmetic-reg 
+                matrix-compref-reg max-reg message
                 mergeinstances-duplicate-entrylayers
                 mergeinstances-nouserdata mergeinstances-vararray
                 metadata-braces min-reg miscmath missing-shader
@@ -262,7 +263,7 @@ macro (osl_add_all_tests)
                 texture-width texture-withderivs texture-wrap
                 trailing-commas
                 transitive-assign
-                transform transformc trig typecast
+                transform transform-reg transformc trig typecast
                 unknown-instruction
                 userdata userdata-passthrough
                 vararray-connect vararray-default

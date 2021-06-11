@@ -452,4 +452,43 @@ multiplyMatrixByMatrix (const Matrix44 &a,
 
 }
 
+// Calculate the determinant of a 2x2 matrix.
+template<typename F>
+static OSL_FORCEINLINE OSL_HOSTDEVICE F
+det2x2(F a, F b, F c, F d)
+{
+    return a * d - b * c;
+}
+
+// calculate the determinant of a 3x3 matrix in the form:
+//     | a1,  b1,  c1 |
+//     | a2,  b2,  c2 |
+//     | a3,  b3,  c3 |
+template<typename F>
+static OSL_FORCEINLINE OSL_HOSTDEVICE F
+det3x3(F a1, F a2, F a3, F b1, F b2, F b3, F c1, F c2, F c3)
+{
+    return a1 * det2x2( b2, b3, c2, c3 )
+         - b1 * det2x2( a2, a3, c2, c3 )
+         + c1 * det2x2( a2, a3, b2, b3 );
+}
+
+// calculate the determinant of a 4x4 matrix.
+template<typename F>
+static OSL_FORCEINLINE OSL_HOSTDEVICE F
+det4x4(const Imath::Matrix44<F>& m)
+{
+    // Changed all Vec3 subscripts to access data members versus array casts
+    // assign to individual variable names to aid selecting correct elements
+    F a1 = m.x[0][0], b1 = m.x[0][1], c1 = m.x[0][2], d1 = m.x[0][3];
+    F a2 = m.x[1][0], b2 = m.x[1][1], c2 = m.x[1][2], d2 = m.x[1][3];
+    F a3 = m.x[2][0], b3 = m.x[2][1], c3 = m.x[2][2], d3 = m.x[2][3];
+    F a4 = m.x[3][0], b4 = m.x[3][1], c4 = m.x[3][2], d4 = m.x[3][3];
+    return a1 * det3x3( b2, b3, b4, c2, c3, c4, d2, d3, d4)
+         - b1 * det3x3( a2, a3, a4, c2, c3, c4, d2, d3, d4)
+         + c1 * det3x3( a2, a3, a4, b2, b3, b4, d2, d3, d4)
+         - d1 * det3x3( a2, a3, a4, b2, b3, b4, c2, c3, c4);
+}
+
+
 OSL_NAMESPACE_EXIT

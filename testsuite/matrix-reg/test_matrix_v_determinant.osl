@@ -1,0 +1,15 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test_matrix_v_determinant (output color Cout = 0)
+{
+    matrix m1 = matrix(u);
+    matrix m2 = matrix(v);
+    Cout = color(determinant(m1));
+    
+    if (int(P[0]*64)%2==0) {
+        Cout = color(determinant(m2));
+    } 
+}

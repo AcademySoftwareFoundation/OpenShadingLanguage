@@ -6,6 +6,7 @@
 # please update wide_target_combine_text_and_rodata.ld
 set ( liboslexec_target_srcs
     wide/wide_opalgebraic
+    wide/wide_opmatrix
     wide/wide_opstring
     wide/wide_shadingsys
     )

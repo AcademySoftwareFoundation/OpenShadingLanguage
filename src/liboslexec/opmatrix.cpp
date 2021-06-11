@@ -317,7 +317,7 @@ osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
                                  from, to, vectype);
 }
 
-
+#if 0
 // Calculate the determinant of a 2x2 matrix.
 template <typename F>
 OSL_HOSTDEVICE inline F det2x2(F a, F b, F c, F d)
@@ -351,6 +351,7 @@ OSL_HOSTDEVICE inline F det4x4(const Imath::Matrix44<F> &m)
          + c1 * det3x3( a2, a3, a4, b2, b3, b4, d2, d3, d4)
          - d1 * det3x3( a2, a3, a4, b2, b3, b4, c2, c3, c4);
 }
+#endif
 
 OSL_SHADEOP OSL_HOSTDEVICE float
 osl_determinant_fm (void *m)

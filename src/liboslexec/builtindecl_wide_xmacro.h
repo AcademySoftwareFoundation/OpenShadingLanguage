@@ -329,6 +329,8 @@ DECL(__OSL_OP(prepend_color_from_vs), "xXXs")
 DECL(__OSL_MASKED_OP2(prepend_color_from, Wv, s), "xXXsi")
 DECL(__OSL_MASKED_OP2(prepend_color_from, Wv, Ws), "xXXXi")
 
+#endif
+
 // forced masked version only
 DECL(__OSL_MASKED_OP2(prepend_matrix_from, Wm, s), "xXXsi")
 DECL(__OSL_MASKED_OP2(prepend_matrix_from, Wm, Ws), "xXXXi")
@@ -345,6 +347,7 @@ DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s), "iXXXXi")
 DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws), "iXXXXi")
 DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, Ws), "iXXXXi")
 
+#ifdef __OSL_TBD
 
 DECL(__OSL_OP(dict_find_iis), "iXiX")
 DECL(__OSL_MASKED_OP3(dict_find, Wi, Wi, Ws), "xXXXXi")
@@ -490,6 +493,7 @@ DECL(__OSL_MASKED_OP4(smoothstep, Wdf, Wdf, Wf, Wf), "xXXXXi")
 DECL(__OSL_OP4(smoothstep, Wdf, Wf, Wdf, Wf), "xXXXX")
 DECL(__OSL_MASKED_OP4(smoothstep, Wdf, Wf, Wdf, Wf), "xXXXXi")
 
+#endif
 
 // Replaced by osl_transform_[point|vector|normal]
 // DECL (osl_transform_vmv, "xXXX")
@@ -523,6 +527,8 @@ DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, Wm), "xXXXii")
 
 DECL(__OSL_MASKED_OP3(transform_normal, Wv, Wv, m), "xXXXii")
 DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, m), "xXXXii")
+
+#ifdef __OSL_TBD
 
 DECL(__OSL_MASKED_OP(transform_color), "xXXiXiXXi")
 DECL(__OSL_OP(transform_color), "xXXiXiXX")
@@ -580,6 +586,8 @@ DECL(__OSL_MASKED_OP2(normalize, Wv, Wv), "xXXi")
 DECL(__OSL_OP2(normalize, Wdv, Wdv), "xXX")
 DECL(__OSL_MASKED_OP2(normalize, Wdv, Wdv), "xXXi")
 
+#endif
+
 DECL(__OSL_OP3(mul, Wm, Wm, Wm), "xXXX")
 DECL(__OSL_MASKED_OP3(mul, Wm, Wm, Wm), "xXXXi")
 DECL(__OSL_OP3(mul, Wm, Wm, Wf), "xXXX")
@@ -603,8 +611,6 @@ DECL(__OSL_MASKED_OP2(transpose, Wm, Wm), "xXXi")
 
 DECL(__OSL_OP2(determinant, Wf, Wm), "xXX")
 DECL(__OSL_MASKED_OP2(determinant, Wf, Wm), "xXXi")
-
-#endif
 
 // forced masked version only
 DECL(__OSL_MASKED_OP3(concat, Ws, Ws, Ws), "xXXXi")

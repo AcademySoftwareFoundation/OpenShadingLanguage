@@ -89,6 +89,10 @@ template<typename DataT, int WidthT> struct Block;
 template<typename DataT, int WidthT> struct Wide;
 template<typename DataT, int WidthT> struct Masked;
 
+// To pass a single const uniform value to an algorithm designed
+// to work with Wide data.
+template<typename ConstDataT, int WidthT> struct UniformAsWide;
+
 // For variant blocks of data (where the type is unknown,
 // we have a special wrapper MaskedData.  Intent is type
 // specific wrapper Masked<DataT, WidthT> be used to
@@ -1842,6 +1846,199 @@ struct Wide : pvt::WideImpl<DataT, WidthT, std::is_const<DataT>::value> {
     static constexpr int width = WidthT;
 };
 
+
+namespace pvt {
+
+template<typename ConstDataT, int WidthT> struct UniformAsWideImpl {
+    static_assert(std::is_const<ConstDataT>::value,
+                  "Only meant for const ConstDataT");
+    static_assert(
+        std::is_array<ConstDataT>::value == false,
+        "Only meant for non-array ConstDataT, arrays are meant to use specialized UniformAsWideImpl");
+    static constexpr int width = WidthT;
+    typedef typename std::remove_const<ConstDataT>::type NonConstValueType;
+
+    explicit OSL_FORCEINLINE UniformAsWideImpl(const void* ptr_uniform_data,
+                                               int derivIndex = 0)
+        : m_ref_uniform_data(
+            reinterpret_cast<ConstDataT*>(ptr_uniform_data)[derivIndex])
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    UniformAsWideImpl(const UniformAsWideImpl& other) noexcept
+        : m_ref_uniform_data(other.m_ref_uniform_data)
+    {
+    }
+
+    OSL_FORCEINLINE ConstDataT& data() const { return m_ref_uniform_data; }
+
+
+    OSL_FORCEINLINE ConstDataT& operator[](int /*lane*/) const
+    {
+        return m_ref_uniform_data;
+    }
+
+private:
+    ConstDataT& m_ref_uniform_data;
+};
+
+template<typename ElementT, int WidthT>
+struct UniformAsWideImpl<const ElementT[], WidthT> {
+    static constexpr int width = WidthT;
+    typedef const ElementT ElementType;
+    typedef ElementT NonConstElementType;
+
+
+    explicit OSL_FORCEINLINE UniformAsWideImpl(const void* ptr_data,
+                                               int array_length)
+        : m_array_of_data(reinterpret_cast<ElementType*>(ptr_data))
+        , m_array_length(array_length)
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    UniformAsWideImpl(const UniformAsWideImpl& other) noexcept
+        : m_array_of_data(other.m_array_of_data)
+        , m_array_length(other.m_array_length)
+    {
+    }
+
+    struct LaneProxy {
+    private:
+        const ElementT* m_array_of_data;
+        int m_array_length;
+
+    public:
+        explicit OSL_FORCEINLINE LaneProxy(const ElementT* array_of_data,
+                                           int array_length)
+            : m_array_of_data(array_of_data), m_array_length(array_length)
+        {
+        }
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        LaneProxy(const LaneProxy& other)
+            : m_array_of_data(other.m_array_of_data)
+            , m_array_length(other.m_array_length)
+        {
+        }
+
+        OSL_FORCEINLINE int length() const { return m_array_length; }
+
+        OSL_FORCEINLINE ElementType const& operator[](int array_index) const
+        {
+            OSL_DASSERT(array_index < m_array_length);
+            return m_array_of_data[array_index];
+        }
+    };
+
+
+    OSL_FORCEINLINE LaneProxy const operator[](int /*lane*/) const
+    {
+        return LaneProxy(m_array_of_data, m_array_length);
+    }
+
+private:
+    ElementType* m_array_of_data;
+    int m_array_length;
+};
+
+template<typename ElementT, int WidthT>
+struct UniformAsWideImpl<const Dual2<ElementT>[], WidthT> {
+    static constexpr int width = WidthT;
+    typedef const Dual2<ElementT> ElementType;
+    typedef Dual2<ElementT> NonConstElementType;
+
+    explicit OSL_FORCEINLINE UniformAsWideImpl(const void* ptr_data,
+                                               int array_length)
+        : m_array_of_data(reinterpret_cast<const ElementT*>(ptr_data))
+        , m_array_length(array_length)
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    UniformAsWideImpl(const UniformAsWideImpl& other) noexcept
+        : m_array_of_data(other.m_array_of_data)
+        , m_array_length(other.m_array_length)
+    {
+    }
+
+
+    struct LaneProxy {
+    private:
+        const ElementT* m_array_of_data;
+        int m_array_length;
+
+    public:
+        explicit OSL_FORCEINLINE LaneProxy(const ElementT* array_of_data,
+                                           int array_length)
+            : m_array_of_data(array_of_data), m_array_length(array_length)
+        {
+        }
+
+        // Must provide user defined copy constructor to
+        // get compiler to be able to follow individual
+        // data members through back to original object
+        // when fully inlined the proxy should disappear
+        OSL_FORCEINLINE
+        LaneProxy(const LaneProxy& other)
+            : m_array_of_data(other.m_array_of_data)
+            , m_array_length(other.m_array_length)
+        {
+        }
+
+        OSL_FORCEINLINE int length() const { return m_array_length; }
+
+        OSL_FORCEINLINE const Dual2<ElementT> operator[](int array_index) const
+        {
+            OSL_DASSERT(array_index < m_array_length);
+            ElementT lx  = m_array_of_data[array_index];
+            ElementT ldx = (m_array_of_data + m_array_length)[array_index];
+            ElementT ldy = (m_array_of_data
+                            + (2 * m_array_length))[array_index];
+            return Dual2<ElementT>(lx, ldx, ldy);
+        }
+    };
+
+    OSL_FORCEINLINE LaneProxy const operator[](int /*lane*/) const
+    {
+        return LaneProxy(m_array_of_data, m_array_length);
+    }
+
+private:
+    const ElementT* m_array_of_data;
+    int m_array_length;
+};
+}  // namespace pvt
+
+template<typename DataT, int WidthT>
+struct UniformAsWide : public pvt::UniformAsWideImpl<DataT, WidthT> {
+    static_assert(
+        std::is_const<DataT>::value,
+        "UniformAsWide<typename DataT> is only valid when DataT is const");
+    static_assert(
+        std::extent<DataT>::value == 0,
+        "Only unbounded arrays[] are implemented, additional specializations can be added for fixed size arrays[#] if needed");
+    __OSL_INHERIT_BASE_CTORS(UniformAsWide, UniformAsWideImpl)
+};
+
+
 // End users can add specialize wide for their own types
 // and specialize traits to enable them to be used in the proxies
 // NOTE: array detection is handled separately
@@ -2926,25 +3123,26 @@ MaskedData<WidthT>::val_size_in_bytes() const
 }
 
 
-#define __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)                                           \
-    template<typename DataT>                                                          \
-    using Block = OSL_NAMESPACE::Block<DataT, WIDTH_OF_OSL_DATA>;                     \
-                                                                                      \
-    using Mask = OSL_NAMESPACE::Mask<WIDTH_OF_OSL_DATA>;                              \
-                                                                                      \
-    using MaskedData = OSL_NAMESPACE::MaskedData<WIDTH_OF_OSL_DATA>;                  \
-                                                                                      \
-    template<typename DataT>                                                          \
-    using Wide = OSL_NAMESPACE::Wide<DataT, WIDTH_OF_OSL_DATA>;                       \
-                                                                                      \
-    /*template<typename DataT>*/                                                      \
-    /*using UniformAsWide = OSL_NAMESPACE::UniformAsWide<DataT, WIDTH_OF_OSL_DATA>;*/ \
-                                                                                      \
-    template<typename DataT>                                                          \
-    using Masked = OSL_NAMESPACE::Masked<DataT, WIDTH_OF_OSL_DATA>;                   \
-    template<typename DataT>                                                          \
-    using MaskedDx = OSL_NAMESPACE::MaskedDx<DataT, WIDTH_OF_OSL_DATA>;               \
-    template<typename DataT>                                                          \
+#define __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)                             \
+    template<typename DataT>                                            \
+    using Block = OSL_NAMESPACE::Block<DataT, WIDTH_OF_OSL_DATA>;       \
+                                                                        \
+    using Mask = OSL_NAMESPACE::Mask<WIDTH_OF_OSL_DATA>;                \
+                                                                        \
+    using MaskedData = OSL_NAMESPACE::MaskedData<WIDTH_OF_OSL_DATA>;    \
+                                                                        \
+    template<typename DataT>                                            \
+    using Wide = OSL_NAMESPACE::Wide<DataT, WIDTH_OF_OSL_DATA>;         \
+                                                                        \
+    template<typename DataT>                                            \
+    using UniformAsWide                                                 \
+        = OSL_NAMESPACE::UniformAsWide<DataT, WIDTH_OF_OSL_DATA>;       \
+                                                                        \
+    template<typename DataT>                                            \
+    using Masked = OSL_NAMESPACE::Masked<DataT, WIDTH_OF_OSL_DATA>;     \
+    template<typename DataT>                                            \
+    using MaskedDx = OSL_NAMESPACE::MaskedDx<DataT, WIDTH_OF_OSL_DATA>; \
+    template<typename DataT>                                            \
     using MaskedDy = OSL_NAMESPACE::MaskedDy<DataT, WIDTH_OF_OSL_DATA>;
 
 

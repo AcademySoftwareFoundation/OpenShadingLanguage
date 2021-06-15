@@ -114,6 +114,7 @@ OSL_NAMESPACE_EXIT
 // flex uses the 'register' keyword, warned because it's deprecated in C++17.
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wdeprecated-register"
+#pragma GCC diagnostic ignored "-Wregister"
 #endif
 #if OSL_GNUC_VERSION >= 90000
 #pragma GCC diagnostic ignored "-Wregister"

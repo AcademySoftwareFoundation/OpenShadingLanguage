@@ -2406,6 +2406,316 @@ LLVMGEN (llvm_gen_construct_triple)
 }
 
 
+/// matrix constructor.  Comes in several varieties:
+///    matrix (float)
+///    matrix (space, float)
+///    matrix (...16 floats...)
+///    matrix (space, ...16 floats...)
+///    matrix (fromspace, tospace)
+LLVMGEN (llvm_gen_matrix)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    int nargs = op.nargs();
+    bool using_space = (nargs == 3 || nargs == 18);
+    bool using_two_spaces = (nargs == 3 && rop.opargsym(op,2)->typespec().is_string());
+    int nfloats = nargs - 1 - (int)using_space;
+    OSL_ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
+
+    bool result_is_uniform = Result.is_uniform();
+
+    if (using_two_spaces) {
+        // Implicit dependencies to shader globals
+        // could mean the result needs to be varying
+        Symbol& From = *rop.opargsym (op, 1);
+        Symbol& To = *rop.opargsym (op, 2);
+        bool from_is_uniform = From.is_uniform();
+        bool to_is_uniform = To.is_uniform();
+
+        llvm::Value *args[] = {
+            rop.sg_void_ptr(),  // shader globals
+            rop.llvm_void_ptr(Result),  // result
+            from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From),
+            to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To),
+            rop.ll.mask_as_int(rop.ll.current_mask())};
+
+        // Dynamically build width suffix
+        FuncSpec func_spec("get_from_to_matrix");
+        func_spec.arg(Result, result_is_uniform);
+        func_spec.arg(From, from_is_uniform);
+        func_spec.arg(To, to_is_uniform);
+        // Because we want to mask off potentially expensive scalar
+        // non-affine matrix inversion, we will always call a masked version
+        func_spec.mask();
+
+        rop.ll.call_function (rop.build_name(func_spec), args);
+    } else {
+        if (nfloats == 1) {
+            llvm::Value *zero;
+            if (result_is_uniform)
+                zero = rop.ll.constant (0.0f);
+            else
+                zero = rop.ll.wide_constant (0.0f);
+
+            for (int i = 0; i < 16; i++) {
+                llvm::Value* src_val = ((i%4) == (i/4))
+                    ? rop.llvm_load_value (*rop.opargsym(op,1+using_space),0,0,TypeDesc::UNKNOWN,result_is_uniform)
+                    : zero;
+                rop.llvm_store_value (src_val, Result, 0, i);
+            }
+        } else if (nfloats == 16) {
+            for (int i = 0; i < 16; i++) {
+                llvm::Value* src_val = rop.llvm_load_value (*rop.opargsym(op,i+1+using_space),0,0,TypeDesc::UNKNOWN,result_is_uniform);
+                rop.llvm_store_value (src_val, Result, 0, i);
+            }
+        } else {
+            OSL_ASSERT (0);
+        }
+        if (using_space) {
+            // Implicit dependencies to shader globals
+            // could mean the result needs to be varying
+            Symbol& From = *rop.opargsym (op, 1);
+            // Avoid the prepend call if the from space is common which
+            // would be identity matrix.
+            if (!From.is_constant() ||
+                (From.get_string() != Strings::common &&
+                 From.get_string() != rop.shadingsys().commonspace_synonym())) {
+
+                bool from_is_uniform = From.is_uniform();
+                llvm::Value *args[] = {
+                    rop.sg_void_ptr(),  // shader globals
+                    rop.llvm_void_ptr(Result),  // result
+                    from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From),
+                    rop.ll.mask_as_int(rop.ll.current_mask())};
+
+                // Dynamically build width suffix
+                FuncSpec func_spec("prepend_matrix_from");
+                func_spec.arg(Result, result_is_uniform);
+                func_spec.arg(From, from_is_uniform);
+                // Because we want to mask off potentially expensive calls to
+                // renderer services to lookup matrices,  we will always call a masked version
+                func_spec.mask();
+
+                rop.ll.call_function (rop.build_name(func_spec), args);
+            }
+        }
+    }
+    if (Result.has_derivs())
+        rop.llvm_zero_derivs (Result);
+    return true;
+}
+
+
+
+/// int getmatrix (fromspace, tospace, M)
+LLVMGEN (llvm_gen_getmatrix)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    OSL_ASSERT (nargs == 4);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& From = *rop.opargsym (op, 1);
+    Symbol& To = *rop.opargsym (op, 2);
+    Symbol& M = *rop.opargsym (op, 3);
+
+
+    // Implicit dependencies to shader globals
+    // could mean the result needs to be varying
+    bool result_is_uniform = Result.is_uniform();
+    OSL_ASSERT(M.is_uniform() == result_is_uniform);
+
+    bool from_is_uniform = From.is_uniform();
+    bool to_is_uniform = To.is_uniform();
+
+    llvm::Value *args[] = {
+        rop.sg_void_ptr(),  // shader globals
+        rop.llvm_void_ptr(M),  // matrix result
+        from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From),
+        to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To),
+        rop.ll.mask_as_int(rop.ll.current_mask())};
+
+    FuncSpec func_spec("get_from_to_matrix");
+    func_spec.arg(M, result_is_uniform);
+    func_spec.arg(From, from_is_uniform);
+    func_spec.arg(To, to_is_uniform);
+    // Because we want to mask off potentially expensive scalar
+    // non-affine matrix inversion, we will always call a masked version
+    func_spec.mask();
+
+    llvm::Value *result = rop.ll.call_function (rop.build_name(func_spec), args);
+    rop.llvm_conversion_store_masked_status(result, Result);
+    rop.llvm_zero_derivs (M);
+    return true;
+}
+
+
+
+// transform{,v,n} (string tospace, triple p)
+// transform{,v,n} (string fromspace, string tospace, triple p)
+// transform{,v,n} (matrix, triple p)
+LLVMGEN (llvm_gen_transform)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    int nargs = op.nargs();
+    Symbol *Result = rop.opargsym (op, 0);
+    Symbol *From = (nargs == 3) ? NULL : rop.opargsym (op, 1);
+    Symbol *To = rop.opargsym (op, (nargs == 3) ? 1 : 2);
+    Symbol *P = rop.opargsym (op, (nargs == 3) ? 2 : 3);
+
+    bool result_is_uniform = Result->is_uniform();
+    bool to_is_uniform = To->is_uniform();
+    bool P_is_uniform = P->is_uniform();
+    bool from_is_uniform = (From == NULL) ? true : From->is_uniform();
+
+    TypeDesc::VECSEMANTICS vectype = TypeDesc::POINT;
+    // TODO: switch statement with static/extern strings to avoid lookup
+    ustring triple_type("point");
+    if (op.opname() == "transformv") {
+        vectype = TypeDesc::VECTOR;
+        triple_type = ustring("vector");
+    } else if (op.opname() == "transformn") {
+        vectype = TypeDesc::NORMAL;
+        triple_type = ustring("normal");
+    }
+
+    llvm::Value * transform = nullptr;
+    llvm::Value *succeeded_as_int = nullptr;
+    if (To->typespec().is_matrix()) {
+        OSL_ASSERT(From == NULL);
+        // llvm_ops has the matrix version already implemented
+        //llvm_gen_generic (rop, opnum);
+        //return true;
+        transform = rop.llvm_void_ptr(*To);
+        succeeded_as_int = rop.ll.mask_as_int(rop.ll.current_mask());
+    } else {
+
+        // Named space versions from here on out.
+        if ((From == NULL || From->is_constant()) && To->is_constant()) {
+            // We can know all the space names at this time
+            ustring from = From ? *((ustring *)From->data()) : Strings::common;
+            ustring to = *((ustring *)To->data());
+            ustring syn = rop.shadingsys().commonspace_synonym();
+            if (from == syn)
+                from = Strings::common;
+            if (to == syn)
+                to = Strings::common;
+            if (from == to) {
+                // An identity transformation, just copy
+                if (Result != P) // don't bother in-place copy
+                    rop.llvm_assign_impl (*Result, *P);
+                return true;
+            }
+        }
+        //OSL_DEV_ONLY(std::cout << "wide transform 'source space' = " << from << " 'dest space' = " << to << std::endl);
+
+        RendererServices *rend (rop.shadingsys().renderer());
+
+        OSL_ASSERT((false == rend->transform_points (NULL, Strings::_emptystring_, Strings::_emptystring_, 0.0f, NULL, NULL, 0, vectype)) && "incomplete");
+        // Didn't want to make RenderServices have to deal will all variants of from/to
+        // unless it is going to be used, yes it will have to be done though
+    //    if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
+    //
+    //        // TODO: Handle non-uniform case below minding mask values
+    //        OSL_ASSERT(Result->is_uniform());
+    //        OSL_ASSERT(0 && "incomplete"); // needs uniform version accepting BatchedShaderGlobals
+    //
+    //        // renderer potentially knows about a nonlinear transformation.
+    //        // Note that for the case of non-constant strings, passing empty
+    //        // from & to will make transform_points just tell us if ANY
+    //        // nonlinear transformations potentially are supported.
+    //        rop.ll.call_function ("osl_transform_triple_nonlinear", args, 8);
+    //    } else
+        transform = rop.temp_wide_matrix_ptr();
+        {
+            OSL_ASSERT(From != NULL && "expect NULL was replaced by constant folding to a common_space");
+            llvm::Value *args[] = {
+                rop.sg_void_ptr(),
+                rop.ll.void_ptr(transform),
+                from_is_uniform ? rop.llvm_load_value(*From) : rop.llvm_void_ptr(*From),
+                to_is_uniform ? rop.llvm_load_value(*To) : rop.llvm_void_ptr(*To),
+                rop.ll.mask_as_int(rop.ll.current_mask())};
+
+            FuncSpec func_spec("build_transform_matrix");
+            func_spec.arg_varying(TypeDesc::TypeMatrix44);
+            // Ignore derivatives if uneeded or unsupplied
+            func_spec.arg(*From, from_is_uniform);
+            func_spec.arg(*To, to_is_uniform);
+            func_spec.mask();
+
+            succeeded_as_int = rop.ll.call_function (rop.build_name(func_spec), args);
+        }
+        // The results of looking up a transform are always wide
+    }
+    {
+        if (result_is_uniform)
+        {
+            OSL_ASSERT(to_is_uniform);
+            OSL_ASSERT(P_is_uniform);
+
+            llvm::Value *args[] = {
+                rop.llvm_void_ptr(*Result),
+                rop.ll.void_ptr(transform),
+                rop.llvm_void_ptr(*P)};
+
+            // Dynamically build function name
+            FuncSpec func_spec(op.opname().c_str());
+            func_spec.unbatch();
+            //std::string func_name = std::string("osl_") + op.opname().c_str() + "_";
+            // Ignore derivatives if uneeded or unsupplied
+            bool has_derivs = (Result->has_derivs() && P->has_derivs());
+            func_spec.arg(*P, has_derivs, P_is_uniform);
+            // The matrix is always varying if we looked it up,
+            // if it was passed directly in "To", then we respect to's uniformity
+            // otherwise it will be the varying result of the callback to the renderer
+            func_spec.arg(TypeDesc::TypeMatrix44, To->typespec().is_matrix() ? to_is_uniform : false );
+            func_spec.arg(*Result, has_derivs, result_is_uniform);
+
+            rop.ll.call_function (rop.build_name(func_spec), args);
+        } else {
+            llvm::Value *args[] = {
+                rop.llvm_void_ptr(*P),
+                rop.llvm_void_ptr(*Result),
+                rop.ll.void_ptr(transform),
+                succeeded_as_int,
+                rop.ll.mask_as_int(rop.ll.current_mask())};
+
+            // definitely not a nonlinear transformation
+
+            auto func_name = llvm::Twine("transform_") + triple_type.c_str();
+            FuncSpec func_spec(func_name);
+            // Ignore derivatives if uneeded or unsupplied
+            // NOTE: odd case where P is uniform but still reported as having
+            // derivatives.  Choose to ignore uniform derivatives
+            bool has_derivs = (Result->has_derivs() && (P->has_derivs() && !P_is_uniform));
+            func_spec.arg(*P, has_derivs, P_is_uniform);
+            func_spec.arg(*Result, has_derivs, result_is_uniform);
+            // The matrix is always varying if we looked it up,
+            // if it was passed directly in "To", then we respect to's uniformity
+            // otherwise it will be the varying result of the callback to the renderer
+            func_spec.arg(TypeDesc::TypeMatrix44, To->typespec().is_matrix() ? to_is_uniform : false );
+            func_spec.mask();
+
+            rop.ll.call_function (rop.build_name(func_spec), args);
+        }
+
+        // To reduce the number of combinations to support
+        // we take on the work of zero'ing out the derivatives here
+        // versus adding another version of the functions that just
+        // zeros them out.
+        // NOTE:  the original scalar version 0's out derivatives
+        // regardless of the success of the transformation
+        // however the operation mask should still be respected
+        // NOTE: odd case where P is uniform but still reported as having
+        // derivatives.  Choose to ignore uniform derivatives
+        if (Result->has_derivs() && (!P->has_derivs() || P_is_uniform)) {
+            rop.llvm_zero_derivs (*Result);
+        }
+
+    }
+    return true;
+}
+
+
 LLVMGEN (llvm_gen_loop_op)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -3218,12 +3528,10 @@ TBD_LLVMGEN(llvm_gen_trace)
 TBD_LLVMGEN(llvm_gen_pointcloud_get)
 TBD_LLVMGEN(llvm_gen_pointcloud_write)
 TBD_LLVMGEN(llvm_gen_isconstant)
-TBD_LLVMGEN(llvm_gen_matrix)
 TBD_LLVMGEN(llvm_gen_select)
 TBD_LLVMGEN(llvm_gen_unary_op)
 TBD_LLVMGEN(llvm_gen_luminance)
 TBD_LLVMGEN(llvm_gen_dict_value)
-TBD_LLVMGEN(llvm_gen_transform)
 TBD_LLVMGEN(llvm_gen_closure)
 TBD_LLVMGEN(llvm_gen_gettextureinfo)
 TBD_LLVMGEN(llvm_gen_blackbody)
@@ -3231,7 +3539,6 @@ TBD_LLVMGEN(llvm_gen_spline)
 TBD_LLVMGEN(llvm_gen_dict_next)
 TBD_LLVMGEN(llvm_gen_texture3d)
 TBD_LLVMGEN(llvm_gen_nop)
-TBD_LLVMGEN(llvm_gen_getmatrix)
 TBD_LLVMGEN(llvm_gen_environment)
 TBD_LLVMGEN(llvm_gen_mix)
 TBD_LLVMGEN(llvm_gen_setmessage)

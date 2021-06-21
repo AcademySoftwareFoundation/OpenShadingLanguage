@@ -179,7 +179,7 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       PYTHON_VERSION: 3.7
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v3.0.1
+      OPENEXR_VERSION: v3.0.4
       OPENIMAGEIO_VERSION: RB-2.2
     steps:
       - uses: actions/checkout@v2
@@ -321,7 +321,7 @@ jobs:
             build/*/CMake*.{txt,log}
 
   linux-clang9-llvm9:
-    name: "Linux clang9, C++14, llvm9, oiio release, avx, exr2.4, avx"
+    name: "Linux clang9, C++14, llvm9, oiio release, avx2, exr2.4"
     runs-on: ubuntu-18.04
     container:
       image: aswf/ci-osl:2019-clang9
@@ -353,6 +353,57 @@ jobs:
         run: |
             # Remove pesky wrong installed OIIO version
             rm -rf /usr/local/include/OpenImageIO
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: |
+            build/*/testsuite/*/*.*
+            build/*/CMake*.{txt,log}
+
+  linux-clang11-llvm11:
+    name: "Linux clang11/C++17 llvm-11 oiio-master avx2 exr3.0"
+    runs-on: ubuntu-latest
+    container:
+      image: aswf/ci-osl:2021-clang11
+    env:
+      CXX: clang++
+      CC: clang
+      CMAKE_CXX_STANDARD: 17
+      PYTHON_VERSION: 3.7
+      USE_SIMD: avx2,f16c
+      OPENEXR_VERSION: v3.0.4
+      OPENIMAGEIO_VERSION: master
+      PYBIND11_VERSION: v2.6.2
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
+      - name: Build setup
+        run: |
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            sudo rm -rf /usr/local/include/OpenEXR
+            sudo rm -rf /usr/local/lib64/cmake/{IlmBase,OpenEXR}
             src/build-scripts/gh-installdeps.bash
       - name: Build
         run: |

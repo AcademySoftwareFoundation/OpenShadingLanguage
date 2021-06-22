@@ -2453,8 +2453,13 @@ ShadingSystemImpl::ShaderGroupEnd (ShaderGroup& group)
     ustring groupname = group.name();
     if (groupname.size() && groupname == m_archive_groupname) {
         std::string filename = m_archive_filename.string();
-        if (! filename.size())
+        if (! filename.size()) {
             filename = OIIO::Filesystem::filename (groupname.string()) + ".tar.gz";
+            // Colons will ruin our day when passed to tar as a filename.
+            // Why, yes, some people name their shader groups with colons.
+            if (OIIO::Strutil::contains(filename, ":"))
+                filename = OIIO::Strutil::replace(filename, ":", "_");
+        }
         archive_shadergroup (group, filename);
     }
 

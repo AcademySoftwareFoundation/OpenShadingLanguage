@@ -163,7 +163,7 @@ OptixGridRenderer::load_ptx_file (string_view filename)
             return ptx_string;
     }
 #endif
-    errhandler().severe ("Unable to load %s", filename);
+    errhandler().severef("Unable to load %s", filename);
     return {};
 }
 
@@ -213,7 +213,7 @@ OptixGridRenderer::init_optix_context (int xres OSL_MAYBE_UNUSED,
     std::string progName = "optix_grid_renderer.ptx";
     std::string renderer_ptx = load_ptx_file(progName);
     if (renderer_ptx.empty()) {
-        errhandler().severe ("Could not find PTX for the raygen program");
+        errhandler().severef("Could not find PTX for the raygen program");
         return false;
     }
 
@@ -248,7 +248,7 @@ OptixGridRenderer::synch_attributes ()
         if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys) ||
             !shadingsys->getattribute("colorsystem:sizes", TypeDesc(TypeDesc::LONGLONG,2), (void*)&cpuDataSizes) ||
             !colorSys || !cpuDataSizes[0]) {
-            errhandler().error ("No colorsystem available.");
+            errhandler().errorf("No colorsystem available.");
             return false;
         }
 
@@ -260,7 +260,7 @@ OptixGridRenderer::synch_attributes ()
 
         optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
         if (!buffer) {
-            errhandler().error ("Could not create buffer for '%s'.", name);
+            errhandler().errorf("Could not create buffer for '%s'.", name);
             return false;
         }
 
@@ -273,7 +273,7 @@ OptixGridRenderer::synch_attributes ()
         // copy the base data
         char* gpuData = (char*) buffer->map();
         if (!gpuData) {
-            errhandler().error ("Could not map buffer for '%s' (size: %lu).",
+            errhandler().errorf("Could not map buffer for '%s' (size: %lu).",
                                 name, podDataSize + sizeof(DeviceString)*numStrings);
             return false;
         }
@@ -309,7 +309,7 @@ OptixGridRenderer::synch_attributes ()
         if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys) ||
             !shadingsys->getattribute("colorsystem:sizes", TypeDesc(TypeDesc::LONGLONG,2), (void*)&cpuDataSizes) ||
             !colorSys || !cpuDataSizes[0]) {
-            errhandler().error ("No colorsystem available.");
+            errhandler().errorf("No colorsystem available.");
             return false;
         }
 
@@ -385,7 +385,7 @@ OptixGridRenderer::make_optix_materials ()
                                   OSL::TypeDesc::PTR, &osl_ptx);
 
         if (osl_ptx.empty()) {
-            errhandler().error ("Failed to generate PTX for ShaderGroup %s",
+            errhandler().errorf("Failed to generate PTX for ShaderGroup %s",
                                 group_name);
             return false;
         }
@@ -441,7 +441,7 @@ OptixGridRenderer::make_optix_materials ()
     std::string progName = "optix_grid_renderer.ptx";
     std::string program_ptx = load_ptx_file(progName);
     if (program_ptx.empty()) {
-        errhandler().severe ("Could not find PTX for the raygen program");
+        errhandler().severef("Could not find PTX for the raygen program");
         return false;
     }
 
@@ -579,7 +579,7 @@ OptixGridRenderer::make_optix_materials ()
                                   OSL::TypeDesc::PTR, &osl_ptx);
 
         if (osl_ptx.empty()) {
-            errhandler().error ("Failed to generate PTX for ShaderGroup %s",
+            errhandler().errorf("Failed to generate PTX for ShaderGroup %s",
                                 group_name);
             return false;
         }
@@ -838,7 +838,7 @@ OptixGridRenderer::get_texture_handle (ustring filename OSL_MAYBE_UNUSED,
 
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
-            errhandler().error ("Could not load: %s", filename);
+            errhandler().errorf("Could not load: %s", filename);
             return (TextureHandle*)(intptr_t(RT_TEXTURE_ID_NULL));
         }
         int nchan = image.spec().nchannels;
@@ -872,7 +872,7 @@ OptixGridRenderer::get_texture_handle (ustring filename OSL_MAYBE_UNUSED,
         // Open image
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
-            errhandler().error ("Could not load: %s", filename);
+            errhandler().errorf("Could not load: %s", filename);
             return (TextureHandle*)(intptr_t(nullptr));
         }
 
@@ -1125,7 +1125,7 @@ OptixGridRenderer::finalize_pixel_buffer ()
 #if (OPTIX_VERSION < 70000)
     const void* buffer_ptr = m_optix_ctx[buffer_name]->getBuffer()->map();
     if (! buffer_ptr)
-        errhandler().severe ("Unable to map buffer %s", buffer_name);
+        errhandler().severef("Unable to map buffer %s", buffer_name);
     OIIO::ImageBuf* buf = outputbuf(0);
     if (buf)
         buf->set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);

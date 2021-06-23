@@ -250,7 +250,7 @@ main (int argc, const char *argv[])
         }
         rend->pixelbuf.set_write_format (TypeDesc::HALF);
         if (! rend->pixelbuf.write (imagefile))
-            rend->errhandler().error ("Unable to write output image: %s",
+            rend->errhandler().errorf("Unable to write output image: %s",
                                       rend->pixelbuf.geterror());
         double writetime = timer.lap();
 

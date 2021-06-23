@@ -290,7 +290,7 @@ public:
         yy_switch_to_buffer(m_buffer, m_scanner);
         int errcode = osoparse(m_scanner, reader); // osoparse returns nonzero if error
         if (errcode) {
-            reader->errhandler().error ("Failed parse of %s (error code %d)", what, errcode);
+            reader->errhandler().errorf("Failed parse of %s (error code %d)", what, errcode);
         }
         return ! errcode;
     }
@@ -313,7 +313,7 @@ OSOReader::parse_file (const std::string &filename)
 
     FILE* osoin = OIIO::Filesystem::fopen (filename, "r");
     if (! osoin) {
-        m_err.error ("File %s not found", filename.c_str());
+        m_err.errorf("File %s not found", filename.c_str());
         return false;
     }
 

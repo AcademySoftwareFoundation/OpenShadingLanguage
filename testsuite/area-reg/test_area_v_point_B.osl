@@ -1,0 +1,18 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test_area_v_point_B (output color Cout = 0)
+{
+    point trip1 = P;
+    point trip2 = P*8;
+
+    float val1 = area(trip1);
+    float val2 = 0.0;
+    if (int(P[0]*32)%2==0) {
+        val2 = area(trip2);
+    }
+    
+    Cout = color(val1, val2, val1+val2);
+}

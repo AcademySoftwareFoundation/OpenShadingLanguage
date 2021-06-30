@@ -1,0 +1,30 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test_filterwidth_v_dfloat (
+    output float op = 0, 
+    output float dxop = P[0],
+    output float dyop = P[1],
+    output float mop = 0,
+    output float mdxop = P[0],
+    output float mdyop = P[1])
+{
+    float x = u;
+    float op_ = 0;
+    float dxop_ = 0;
+    float dyop_ = 0;
+
+    op_ = filterwidth(x);
+    dxop_ = Dx(op_);
+    dyop_ = Dy(op_);
+
+    if (int(P[0]*32)%2) {
+        mop = filterwidth(float(v));
+        mdxop = Dx(mop);
+        mdyop = Dy(mop);
+    }
+    op = op_;
+    dxop = dxop_;
+    dyop = dyop_;
+}

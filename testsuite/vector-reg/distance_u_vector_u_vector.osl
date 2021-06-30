@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader distance_u_vector_u_vector (output float ddistance = 0,
+                                   output float mddistance = 0)
+{
+    vector a = vector(1.0, 1.0, 1.0);
+    vector b = vector(1.0/raytype("camera"), 2.0/raytype("camera"), 3.0/raytype("camera"));
+    
+    float ddistance_ = 0.0;
+    ddistance_ = distance(a,b);
+    
+    if (int(P[0]*32)%2) {
+        mddistance = distance(vector(0.1,0.2,0.3),vector(0.1, 0.2, 0.3));
+    }
+
+    ddistance = ddistance_;
+}

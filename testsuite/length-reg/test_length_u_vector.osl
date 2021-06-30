@@ -1,0 +1,15 @@
+shader
+test_length_u_vector (output color Cout = 0)
+{
+    vector trip1 = vector(1.0/(2*raytype("camera")), 1.0/(3*raytype("camera")), 1.0/(4*raytype("camera")));
+    
+    vector trip2 = vector(2.0/(3*raytype("camera")), 2.0/(4*raytype("camera")), 2.0/(2*raytype("camera")));
+
+    float val1 = length(trip1);
+    float val2 = 0.0;
+    if (int(P[0]*64)%2==0) {
+        val2 = length(trip2);
+    }
+    
+    Cout = color(val1, val2, val1+val2);
+}

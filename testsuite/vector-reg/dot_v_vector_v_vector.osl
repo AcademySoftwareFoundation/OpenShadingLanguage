@@ -1,0 +1,35 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader dot_v_vector_v_vector (
+    output color ddot = 0,
+    output color dxdot = 0,
+    output color dydot = 0,
+                                
+    output color mddot = 0,
+    output color mdxdot = 0,
+    output color mdydot = 0)
+{
+    vector a = vector(u+v, -u-v, u+v);
+    vector b = vector(u+v,  u+v, u+v);
+    
+    ddot = dot(a,b);
+    dxdot = Dx(ddot);
+    dydot = Dy(ddot);
+    
+    float mddot_ = 0.0;
+    float mdxdot_ = 0.0;
+    float mdydot_ = 0.0;
+
+    if (int(P[0]*32)%2) {
+        a = vector(u-v, -u-v, u+v);
+        mddot_ = dot(a,b+vector(0.1,0.1,0.3));
+        mdxdot_ = Dx(mddot_);
+        mdydot_ = Dy(mddot_);
+    }
+
+    mddot = mddot_;
+    mdxdot = mdxdot_;
+    mdydot = mdydot_;
+}

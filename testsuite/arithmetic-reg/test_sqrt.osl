@@ -3,7 +3,7 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 #define __OSL_XMACRO_OPNAME sqrt
-#include "test_unary_xmacro.h"
+#include "../common/shaders/test_unary_xmacro.h"
     
 
     

@@ -8,7 +8,9 @@ set ( liboslexec_target_srcs
     wide/wide_opalgebraic
     wide/wide_opmatrix
     wide/wide_opstring
+    wide/wide_optranscendental
     wide/wide_shadingsys
+    wide/wide_optrigonometric
     )
 
 set ( liboslexec_override_limits

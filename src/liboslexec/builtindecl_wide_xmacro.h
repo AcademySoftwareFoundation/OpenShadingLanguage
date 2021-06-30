@@ -133,30 +133,29 @@
     DECL(__OSL_OP2(name, Wv, Wv), "xXX")         \
     DECL(__OSL_MASKED_OP2(name, Wv, Wv), "xXXi")
 
-#define WIDE_BINARY_OP_IMPL(name)                        \
-    DECL(__OSL_OP3(name, Wf, Wf, Wf), "xXXX")            \
+#define WIDE_BINARY_OP_MASKED_IMPL(name)                 \
     DECL(__OSL_MASKED_OP3(name, Wf, Wf, Wf), "xXXXi")    \
-    DECL(__OSL_OP3(name, Wdf, Wdf, Wdf), "xXXX")         \
     DECL(__OSL_MASKED_OP3(name, Wdf, Wdf, Wdf), "xXXXi") \
-    DECL(__OSL_OP3(name, Wdf, Wf, Wdf), "xXXX")          \
     DECL(__OSL_MASKED_OP3(name, Wdf, Wf, Wdf), "xXXXi")  \
-    DECL(__OSL_OP3(name, Wdf, Wdf, Wf), "xXXX")          \
     DECL(__OSL_MASKED_OP3(name, Wdf, Wdf, Wf), "xXXXi")  \
-    DECL(__OSL_OP3(name, Wv, Wv, Wv), "xXXX")            \
     DECL(__OSL_MASKED_OP3(name, Wv, Wv, Wv), "xXXXi")    \
-    DECL(__OSL_OP3(name, Wdv, Wdv, Wdv), "xXXX")         \
     DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wdv), "xXXXi") \
-    DECL(__OSL_OP3(name, Wdv, Wv, Wdv), "xXXX")          \
     DECL(__OSL_MASKED_OP3(name, Wdv, Wv, Wdv), "xXXXi")  \
-    DECL(__OSL_OP3(name, Wdv, Wdv, Wv), "xXXX")          \
     DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wv), "xXXXi")
 
+#define WIDE_BINARY_OP_IMPL(name)                        \
+    DECL(__OSL_OP3(name, Wf, Wf, Wf), "xXXX")            \
+    DECL(__OSL_OP3(name, Wdf, Wdf, Wdf), "xXXX")         \
+    DECL(__OSL_OP3(name, Wdf, Wf, Wdf), "xXXX")          \
+    DECL(__OSL_OP3(name, Wdf, Wdf, Wf), "xXXX")          \
+    DECL(__OSL_OP3(name, Wv, Wv, Wv), "xXXX")            \
+    DECL(__OSL_OP3(name, Wdv, Wdv, Wdv), "xXXX")         \
+    DECL(__OSL_OP3(name, Wdv, Wv, Wdv), "xXXX")          \
+    DECL(__OSL_OP3(name, Wdv, Wdv, Wv), "xXXX")          \
+    WIDE_BINARY_OP_MASKED_IMPL(name)
 
-#define WIDE_BINARY_VF_OP_IMPL(name)                     \
-    DECL(__OSL_OP3(name, Wv, Wv, Wf), "xXXX")            \
-    DECL(__OSL_OP3(name, Wdv, Wdv, Wdf), "xXXX")         \
-    DECL(__OSL_OP3(name, Wdv, Wdv, Wf), "xXXX")          \
-    DECL(__OSL_OP3(name, Wdv, Wv, Wdf), "xXXX")          \
+
+#define WIDE_BINARY_VF_OP_MASKED_IMPL(name)              \
     DECL(__OSL_MASKED_OP3(name, Wv, Wv, Wf), "xXXXi")    \
     DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wdf), "xXXXi") \
     DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wf), "xXXXi")  \
@@ -396,12 +395,13 @@ DECL(__OSL_OP(get_noise_options), "XX")
 // Can be revisited as an optimization.
 #endif
 
+#endif // __OSL_TBD
 
 WIDE_UNARY_OP_IMPL(sin)
 WIDE_UNARY_OP_IMPL(cos)
 WIDE_UNARY_OP_IMPL(tan)
 WIDE_UNARY_OP_IMPL(asin)
-WIDE_UNARY_OP_IMPL(acos)  //MAKE_WIDE_UNARY_PERCOMPONENT_OP
+WIDE_UNARY_OP_IMPL(acos)
 WIDE_UNARY_OP_IMPL(atan)
 WIDE_BINARY_OP_IMPL(atan2)
 WIDE_UNARY_OP_IMPL(sinh)
@@ -432,26 +432,25 @@ DECL(__OSL_MASKED_OP3(sincos, Wdv, Wdv, Wv), "xXXXi")
 DECL(__OSL_MASKED_OP3(sincos, Wdv, Wv, Wdv), "xXXXi")
 DECL(__OSL_MASKED_OP3(sincos, Wdv, Wdv, Wdv), "xXXXi")
 
-
 WIDE_UNARY_OP_IMPL(log)
 WIDE_UNARY_OP_IMPL(log2)
 WIDE_UNARY_OP_IMPL(log10)
 WIDE_UNARY_OP_IMPL(exp)
 WIDE_UNARY_OP_IMPL(exp2)
 WIDE_UNARY_OP_IMPL(expm1)
-WIDE_BINARY_OP_IMPL(pow)
+// pow is only masked implementation for performance reasons
+WIDE_BINARY_OP_MASKED_IMPL(pow)
 WIDE_UNARY_F_OP_IMPL(erf)
 WIDE_UNARY_F_OP_IMPL(erfc)
 
-WIDE_BINARY_VF_OP_IMPL(pow)
-#endif // __OSL_TBD
+// pow is only masked implementation for performance reasons
+WIDE_BINARY_VF_OP_MASKED_IMPL(pow)
 
 WIDE_UNARY_OP_IMPL(sqrt)
 WIDE_UNARY_OP_IMPL(inversesqrt)
+WIDE_UNARY_OP_IMPL(cbrt)
 
-#ifdef __OSL_TBD
 WIDE_UNARY_F_OR_V_OP_IMPL(logb)
-#endif
 WIDE_UNARY_F_OR_V_OP_IMPL(floor)
 
 
@@ -474,8 +473,6 @@ WIDE_UNARY_OP_IMPL(fabs)
 WIDE_BINARY_F_OR_V_OP_IMPL(fmod)
 // mod for integers is handled by the code generator
 
-#ifdef __OSL_TBD
-
 DECL(__OSL_OP4(smoothstep, Wf, Wf, Wf, Wf), "xXXXX")
 DECL(__OSL_MASKED_OP4(smoothstep, Wf, Wf, Wf, Wf), "xXXXXi")
 DECL(__OSL_OP4(smoothstep, Wdf, Wdf, Wdf, Wdf), "xXXXX")
@@ -492,8 +489,6 @@ DECL(__OSL_OP4(smoothstep, Wdf, Wdf, Wf, Wf), "xXXXX")
 DECL(__OSL_MASKED_OP4(smoothstep, Wdf, Wdf, Wf, Wf), "xXXXXi")
 DECL(__OSL_OP4(smoothstep, Wdf, Wf, Wdf, Wf), "xXXXX")
 DECL(__OSL_MASKED_OP4(smoothstep, Wdf, Wf, Wdf, Wf), "xXXXXi")
-
-#endif
 
 // Replaced by osl_transform_[point|vector|normal]
 // DECL (osl_transform_vmv, "xXXX")
@@ -533,6 +528,7 @@ DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, m), "xXXXii")
 DECL(__OSL_MASKED_OP(transform_color), "xXXiXiXXi")
 DECL(__OSL_OP(transform_color), "xXXiXiXX")
 
+#endif
 
 DECL(__OSL_OP3(dot, Wf, Wv, Wv), "xXXX")
 DECL(__OSL_MASKED_OP3(dot, Wf, Wv, Wv), "xXXXi")
@@ -586,7 +582,6 @@ DECL(__OSL_MASKED_OP2(normalize, Wv, Wv), "xXXi")
 DECL(__OSL_OP2(normalize, Wdv, Wdv), "xXX")
 DECL(__OSL_MASKED_OP2(normalize, Wdv, Wdv), "xXXi")
 
-#endif
 
 DECL(__OSL_OP3(mul, Wm, Wm, Wm), "xXXX")
 DECL(__OSL_MASKED_OP3(mul, Wm, Wm, Wm), "xXXXi")
@@ -646,6 +641,7 @@ DECL(__OSL_OP(get_textureinfo_uniform), "iXXXXXX")
 //DECL (osl_trace_set_shade, "xXi") // unneeded
 //DECL (osl_trace_set_traceset, "xXs") // unneeded
 DECL(__OSL_MASKED_OP(trace), "xXXXXXXXXXi")
+#endif // __OSL_TBD
 
 DECL(__OSL_OP(calculatenormal), "xXXX")
 DECL(__OSL_MASKED_OP(calculatenormal), "xXXXi")
@@ -657,7 +653,6 @@ DECL(__OSL_OP2(filterwidth, Wv, Wdv), "xXX")
 DECL(__OSL_MASKED_OP2(filterwidth, Wf, Wdf), "xXXi")
 DECL(__OSL_MASKED_OP2(filterwidth, Wv, Wdv), "xXXi")
 
-#endif // __OSL_TBD
 
 DECL(__OSL_OP(raytype_bit), "iXi")
 
@@ -679,6 +674,7 @@ DECL(__OSL_OP(raytype_bit), "iXi")
 #undef WIDE_UNARY_F_OR_V_OP_IMPL
 #undef WIDE_TEST_F_OP_IMPL
 #undef WIDE_BINARY_OP_IMPL
+#undef WIDE_BINARY_OP_MASKED_IMPL
 #undef WIDE_BINARY_F_OR_V_OP_IMPL
 #undef WIDE_BINARY_FI_OP_IMPL
-#undef WIDE_BINARY_VF_OP_IMPL
+#undef WIDE_BINARY_VF_OP_MASKED_IMPL

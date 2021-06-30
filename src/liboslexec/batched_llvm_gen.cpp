@@ -186,6 +186,12 @@ BatchedBackendLLVM::llvm_run_connected_layers(const Symbol& sym, int symindex,
 }
 
 
+LLVMGEN (llvm_gen_nop)
+{
+    return true;
+}
+
+
 LLVMGEN (llvm_gen_useparam)
 {
     OSL_ASSERT (! rop.inst()->unused() &&
@@ -785,6 +791,107 @@ LLVMGEN (llvm_gen_generic)
     }
 
     OSL_DEV_ONLY(std::cout << std::endl);
+
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_sincos)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    Symbol& Theta   = *rop.opargsym (op, 0); //Input
+    Symbol& Sin_out = *rop.opargsym (op, 1); //Output
+    Symbol& Cos_out = *rop.opargsym (op, 2); //Output
+
+    bool theta_deriv   = Theta.has_derivs();
+    bool result_derivs = (Sin_out.has_derivs() || Cos_out.has_derivs());
+
+    bool op_is_uniform = Theta.is_uniform();
+
+    OSL_ASSERT(op_is_uniform || (!Sin_out.is_uniform() && !Cos_out.is_uniform()));
+
+    // Handle broadcasting results to wide results
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value* theta_param = nullptr;
+    // Need 2 pointers, because the parameter must be void *
+    // but we need a typed * for the broadcast later
+    llvm::Value* sin_out_typed_temp = nullptr;
+    llvm::Value* sin_out_param = nullptr;
+
+    llvm::Value* cos_out_typed_temp = nullptr;
+    llvm::Value* cos_out_param = nullptr;
+
+    if(true ==  ((theta_deriv && result_derivs) || Theta.typespec().is_triple() || !op_is_uniform) ){
+        theta_param = rop.llvm_void_ptr(Theta, 0); //If varying
+    }
+    else {
+        theta_param = rop.llvm_load_value(Theta);
+    }
+
+    //rop.llvm_store_value(wideTheta, Theta);
+    FuncSpec func_spec("sincos");
+
+    func_spec.arg(Theta, result_derivs && theta_deriv, op_is_uniform);
+    func_spec.arg(Sin_out, Sin_out.has_derivs() && result_derivs  && theta_deriv, op_is_uniform);
+    func_spec.arg(Cos_out, Cos_out.has_derivs() && result_derivs  && theta_deriv, op_is_uniform);
+
+
+    if (op_is_uniform && !Sin_out.is_uniform())
+    {
+        sin_out_typed_temp = rop.getOrAllocateTemp(Sin_out.typespec(), Sin_out.has_derivs(), true /*is_uniform*/);
+        sin_out_param = rop.ll.void_ptr(sin_out_typed_temp);
+    } else {
+        sin_out_param = rop.llvm_void_ptr(Sin_out, 0);
+    }
+
+    if (op_is_uniform && !Cos_out.is_uniform())
+    {
+        cos_out_typed_temp = rop.getOrAllocateTemp(Cos_out.typespec(), Cos_out.has_derivs(), true /*is_uniform*/);
+        cos_out_param = rop.ll.void_ptr(cos_out_typed_temp);
+    } else {
+        cos_out_param = rop.llvm_void_ptr(Cos_out, 0);
+    }
+
+    llvm::Value * args[] = {
+        theta_param,
+        sin_out_param,
+        cos_out_param,
+        nullptr};
+    int arg_count = 3;
+
+    if(!op_is_uniform) {
+        if (rop.ll.is_masking_required() ) {
+            func_spec.mask();
+            args[arg_count++] = rop.ll.mask_as_int(rop.ll.current_mask());
+        }
+    } else {
+        func_spec.unbatch();
+    }
+
+    rop.ll.call_function (rop.build_name(func_spec), cspan<llvm::Value *>(args, arg_count));
+
+    if (op_is_uniform && !Sin_out.is_uniform())
+    {
+        rop.llvm_broadcast_uniform_value_from_mem(sin_out_typed_temp,
+                                         Sin_out);
+    }
+
+    if (op_is_uniform && !Cos_out.is_uniform())
+    {
+        rop.llvm_broadcast_uniform_value_from_mem(cos_out_typed_temp,
+                                         Cos_out);
+    }
+
+    // If the input angle didn't have derivatives, we would not have
+    // called the version of sincos with derivs; however in that case we
+    // need to clear the derivs of either of the outputs that has them.
+    if (Sin_out.has_derivs() && !theta_deriv)
+        rop.llvm_zero_derivs (Sin_out);
+    if (Cos_out.has_derivs() && !theta_deriv)
+        rop.llvm_zero_derivs (Cos_out);
 
     return true;
 }
@@ -1411,7 +1518,7 @@ LLVMGEN (llvm_gen_modulus)
             // Modulus of duals: (a mod b, ax, ay)
             for (int d = 1;  d <= 2;  ++d) {
                 for (int i = 0; i < num_components; i++) {
-                    llvm::Value *deriv = rop.loadLLVMValue (A, i, d, type, op_is_uniform);
+                    llvm::Value *deriv = rop.loadLLVMValue (A, i, d, type, result_is_uniform);
                     rop.storeLLVMValue (deriv, Result, i, d);
                 }
             }
@@ -2030,6 +2137,89 @@ LLVMGEN (llvm_gen_Dz)
         // FIXME?
         rop.llvm_assign_zero (Result);
     }
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_filterwidth)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result (*rop.opargsym (op, 0));
+    Symbol& Src (*rop.opargsym (op, 1));
+
+    OSL_ASSERT (Src.typespec().is_float() || Src.typespec().is_triple());
+
+
+    bool result_is_uniform = Result.is_uniform();
+    bool op_is_uniform = Src.is_uniform();
+
+
+    if (Src.has_derivs()) {
+        if (op_is_uniform)
+        {// result is Uniform
+            if (Src.typespec().is_float()) {
+                llvm::Value *r = rop.ll.call_function ("osl_filterwidth_fdf", rop.llvm_void_ptr(Src));
+
+                if (!result_is_uniform) {
+                    r = rop.ll.widen_value(r);
+                }
+                rop.llvm_store_value (r, Result);
+
+            } else {
+
+                BatchedBackendLLVM::TempScope temp_scope(rop);
+                // Need 2 pointers, because the parameter must be void *
+                // but we need a typed triple * for the broadcast later
+                llvm::Value* result_typed_temp = nullptr;
+                llvm::Value* result_param = nullptr;
+                if (!result_is_uniform) {
+                    result_typed_temp = rop.getOrAllocateTemp(Result.typespec(), Result.has_derivs(), true /*is_uniform*/);
+                    result_param = rop.ll.void_ptr(result_typed_temp);
+                } else {
+                    result_param = rop.llvm_void_ptr (Result);
+                }
+                rop.ll.call_function("osl_filterwidth_vdv",
+                                        result_param,
+                                        rop.llvm_void_ptr(Src));
+
+                if (!result_is_uniform) {
+                    rop.llvm_broadcast_uniform_value_from_mem(result_typed_temp,
+                                                     Result);
+                }
+
+            }
+            // Don't have 2nd order derivs
+            rop.llvm_zero_derivs (Result);
+        } else { // op is Varying
+
+            FuncSpec func_spec("filterwidth");
+            // The result may have derivatives, but we zero them out after this
+            // function call, so just always treat the result as not having derivates
+            func_spec.arg(Result, false/*derivs*/, false/*is_uniform*/);
+            func_spec.arg(Src, true/*derivs*/, false/*is_uniform*/);
+
+            llvm::Value *args[3];
+            args[0] = rop.llvm_void_ptr(Result);
+            args[1] = rop.llvm_void_ptr(Src);
+            int argCount = 2;
+
+            if (rop.ll.is_masking_required()) {
+                func_spec.mask();
+                args[2] = rop.ll.mask_as_int(rop.ll.current_mask());
+                argCount = 3;
+            }
+
+            rop.ll.call_function (rop.build_name(func_spec), {&args[0], argCount});
+            // Don't have 2nd order derivs
+            rop.llvm_zero_derivs (Result);
+        }
+    }
+
+    else {//If source has no derivs
+        // No derivs to be had
+        rop.llvm_assign_zero (Result);
+    }
+
     return true;
 }
 
@@ -3216,6 +3406,92 @@ LLVMGEN (llvm_gen_getattribute)
 }
 
 
+LLVMGEN (llvm_gen_calculatenormal)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT (op.nargs() == 2);
+
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& P      = *rop.opargsym (op, 1);
+
+    // NOTE: because calculatenormal implicitly uses the flip-handedness
+    // of the BatchedShaderGlobals, all of its results must be varying
+    OSL_ASSERT(false == Result.is_uniform());
+
+    OSL_DASSERT (Result.typespec().is_triple() && P.typespec().is_triple());
+    if (! P.has_derivs()) {
+        rop.llvm_assign_zero (Result);
+        return true;
+    }
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value *args[] = {
+        rop.llvm_void_ptr (Result),
+        rop.sg_void_ptr(),
+        rop.llvm_load_arg (P, true /*derivs*/, false /*op_is_uniform*/),
+        nullptr};
+    int arg_count = 3;
+
+    FuncSpec func_spec("calculatenormal");
+    if(rop.ll.is_masking_required()) {
+        args[arg_count++] = rop.ll.mask_as_int(rop.ll.current_mask());
+        func_spec.mask();
+    }
+    rop.ll.call_function (rop.build_name(func_spec), {&args[0], arg_count});
+
+    if (Result.has_derivs())
+        rop.llvm_zero_derivs (Result);
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_area)
+
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT (op.nargs() == 2);
+
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& P      = *rop.opargsym (op, 1);
+
+    OSL_DASSERT (Result.typespec().is_float() && P.typespec().is_triple());
+    if (! P.has_derivs()) {
+        rop.llvm_assign_zero (Result);
+        return true;
+    }
+
+    bool op_is_uniform = Result.is_uniform();
+
+    FuncSpec func_spec("area");
+    if (op_is_uniform) {
+        func_spec.unbatch();
+
+        llvm::Value *r = rop.ll.call_function (rop.build_name(func_spec), rop.llvm_void_ptr (P));
+        rop.llvm_store_value (r, Result);
+
+    } else {
+        func_spec.arg_varying(Result);
+        func_spec.arg(P,true/*derivs*/,false/*uniform*/);
+
+
+        const Symbol * args[] = { &Result,
+                                  &P };
+
+        rop.llvm_call_function(func_spec,&args[0],2,
+                                true/*deriv_ptrs*/, false /*function_is_uniform*/,
+                                false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
+    }
+
+    if (Result.has_derivs())
+        rop.llvm_zero_derivs (Result);
+
+    return true;
+}
+
+
 LLVMGEN (llvm_gen_functioncall)
 {
     //std::cout << "llvm_gen_functioncall" << std::endl;
@@ -3510,12 +3786,8 @@ LLVMGEN(NAME) \
     return false; \
 } \
 
-TBD_LLVMGEN(llvm_gen_calculatenormal)
-TBD_LLVMGEN(llvm_gen_sincos)
 TBD_LLVMGEN(llvm_gen_andor)
-TBD_LLVMGEN(llvm_gen_filterwidth)
 TBD_LLVMGEN(llvm_gen_texture)
-TBD_LLVMGEN(llvm_gen_area)
 TBD_LLVMGEN(llvm_gen_getmessage)
 TBD_LLVMGEN(llvm_gen_bitwise_binary_op)
 TBD_LLVMGEN(llvm_gen_noise)
@@ -3538,7 +3810,6 @@ TBD_LLVMGEN(llvm_gen_blackbody)
 TBD_LLVMGEN(llvm_gen_spline)
 TBD_LLVMGEN(llvm_gen_dict_next)
 TBD_LLVMGEN(llvm_gen_texture3d)
-TBD_LLVMGEN(llvm_gen_nop)
 TBD_LLVMGEN(llvm_gen_environment)
 TBD_LLVMGEN(llvm_gen_mix)
 TBD_LLVMGEN(llvm_gen_setmessage)

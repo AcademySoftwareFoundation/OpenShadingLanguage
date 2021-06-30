@@ -1,0 +1,30 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test_filterwidth_v_dvector (
+    output vector op = 0, 
+    output vector dxop = P,
+    output vector dyop = P,
+    output vector mop = 0,
+    output vector mdxop = P,
+    output vector mdyop = P)
+{
+    vector x = u;
+    vector op_ = 0;
+    vector dxop_ = 0;
+    vector dyop_ = 0;
+
+    op_ = filterwidth(x);
+    dxop_ = Dx(op_);
+    dyop_ = Dy(op_);
+
+    if (int(P[0]*32)%2) {
+        mop = filterwidth(vector(u,v,u));
+        mdxop = Dx(mop);
+        mdyop = Dy(mop);
+    }
+    op = op_;
+    dxop = dxop_;
+    dyop = dyop_;
+}

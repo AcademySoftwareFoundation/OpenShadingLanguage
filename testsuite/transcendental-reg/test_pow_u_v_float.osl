@@ -1,0 +1,9 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_OPNAME pow_u_v_float
+#define __OSL_XMACRO_OP pow
+#define __OSL_XMACRO_UNIFORM_IN
+
+#include "../common/shaders/test_binary_mixed_triple_float_xmacro.h"

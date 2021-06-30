@@ -1,0 +1,31 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test_cross_v_dvector_u_vector (
+    output color dcross = 0,
+    output color dxcross = 0,
+	output color dycross = 0,
+				  
+	output color mdcross = 0,
+	output color mdxcross = 0,
+	output color mdycross = 0)
+{
+    vector a = vector(u+v, -u-v, u+v);
+    vector b = vector(1.0, 1.0, 1.0);
+    
+    color um_dcross = cross(a,b);
+    color um_dxcross = Dx(um_dcross);
+    color um_dycross = Dy(um_dcross);
+
+    if (int(P[0]*32)%2) {
+          a = vector(u-v, -u-v, u+v);
+          mdcross = cross (a,b);
+          mdxcross = Dx(mdcross);
+          mdycross = Dy(mdcross);
+    }
+
+    dcross = um_dcross;
+    dxcross = um_dxcross;
+    dycross = um_dycross;
+}

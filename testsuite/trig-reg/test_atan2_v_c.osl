@@ -1,0 +1,16 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_OPNAME atan2_v_c
+#define __OSL_XMACRO_OP atan2
+#define __OSL_XMACRO_IN_TRANSFORM(val) (-4 + (8*val))
+#define __OSL_XMACRO_IN_TRANSFORM2(val) (2 - (4*val))
+#define __OSL_XMACRO_OUT_TRANSFORM(val) ((M_PI_2 + val)*(1.0/(2*M_PI)))
+
+#define __OSL_XMACRO_STRIPE_TRANSFORM(...) (-(__VA_ARGS__))
+#define __OSL_XMACRO_STRIPE_TRANSFORM2(...) (__VA_ARGS__)
+
+#define __OSL_XMACRO_CONSTANT_IN2
+
+#include "../common/shaders/test_binary_xmacro.h"

@@ -616,7 +616,7 @@ OSLInput::read_native_scanlines(int subimage, int miplevel, int ybegin,
         return false;
 
     if (!m_group.get()) {
-        error("read_native_scanlines called with missing shading group");
+        errorf("read_native_scanlines called with missing shading group");
         return false;
     }
 
@@ -660,7 +660,7 @@ OSLInput::read_native_tiles(int subimage, int miplevel, int xbegin, int xend,
     if (!seek_subimage(subimage, miplevel))
         return false;
     if (!m_group.get()) {
-        error("read_native_scanlines called with missing shading group");
+        errorf("read_native_scanlines called with missing shading group");
         return false;
     }
 

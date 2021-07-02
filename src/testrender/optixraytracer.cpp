@@ -157,7 +157,7 @@ OptixRaytracer::load_ptx_file (string_view filename)
             return ptx_string;
     }
 #endif
-    errhandler().severe ("Unable to load %s", filename);
+    errhandler().severef("Unable to load %s", filename);
     return {};
 }
 
@@ -195,7 +195,7 @@ OptixRaytracer::init_optix_context (int xres OSL_MAYBE_UNUSED,
     std::string progName = "optix_raytracer.ptx";
     std::string renderer_ptx = load_ptx_file(progName);
     if (renderer_ptx.empty()) {
-        errhandler().severe ("Could not find PTX for the raygen program");
+        errhandler().severef("Could not find PTX for the raygen program");
         return false;
     }
 
@@ -371,7 +371,7 @@ OptixRaytracer::load_optix_module (const char*                        filename,
     // Load the renderer CUDA source and generate PTX for it
     std::string program_ptx = load_ptx_file(filename);
     if (program_ptx.empty()) {
-        errhandler().severe ("Could not find PTX file:  %s", filename);
+        errhandler().severef("Could not find PTX file:  %s", filename);
         return false;
     }
 
@@ -1437,7 +1437,7 @@ OptixRaytracer::finalize_pixel_buffer ()
 #if (OPTIX_VERSION < 70000)
     const void* buffer_ptr = m_optix_ctx[buffer_name]->getBuffer()->map();
     if (! buffer_ptr)
-        errhandler().severe ("Unable to map buffer %s", buffer_name);
+        errhandler().severef("Unable to map buffer %s", buffer_name);
     pixelbuf.set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
 #else
     std::vector<float> tmp_buff(m_xres * m_yres * 3);

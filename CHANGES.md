@@ -1,12 +1,15 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.15 -- 1 Jul? 2021 (compared to 1.11.14)
------------------------------------------------------
+Release 1.11.14.2 -- 1 Jul 2021 (compared to 1.11.14.1)
+-------------------------------------------------------
+* Fix warnings that occur when compiling with clang and C++17 mode. #1379
+* CI/testing: Additional CI tests for clang+c++17 (#1379), gcc11 (#1381),
+  llvm 12 (#1381), speed up CI builds by not building the testing components
+  of OIIO (#1380).
 
-
-Release 1.11.14.1 -- 1 Jun 2021 (compared to 1.11.14)
------------------------------------------------------
+Release 1.11.14.1 -- 1 Jun 2021 (compared to 1.11.14.0)
+-------------------------------------------------------
 * Fix library setup for LLVM installations consisting of static libraries.
   This fixes a build problem that can crop up on MacOS using
   Homebrew-installed LLVM 12. #1375

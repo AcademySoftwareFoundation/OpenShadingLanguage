@@ -2453,8 +2453,15 @@ ShadingSystemImpl::ShaderGroupEnd (ShaderGroup& group)
     ustring groupname = group.name();
     if (groupname.size() && groupname == m_archive_groupname) {
         std::string filename = m_archive_filename.string();
-        if (! filename.size())
+        if (! filename.size()) {
             filename = OIIO::Filesystem::filename (groupname.string()) + ".tar.gz";
+            // Transform characters that will ruin our day when passed to
+            // tar as a filename.
+            if (OIIO::Strutil::contains(filename, ":"))
+                filename = OIIO::Strutil::replace(filename, ":", "_");
+            if (OIIO::Strutil::contains(filename, "|"))
+                filename = OIIO::Strutil::replace(filename, "|", "_");
+        }
         archive_shadergroup (group, filename);
     }
 
@@ -3817,16 +3824,20 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename
                 entries.insert (osoname);
                 std::string localfile = tmpdir + "/" + osoname;
                 OIIO::Filesystem::copy (osofile, localfile);
-                filename_list += " " + osoname;
+                filename_list += Strutil::fmt::format(" \"{}\"",
+                                                      Strutil::escape_chars(osoname));
             }
         }
     }
 
+    std::string full_filename = Strutil::fmt::format("{}{}",
+                                              Strutil::escape_chars(filename),
+                                              extension);
     if (extension == ".tar" || extension == ".tar.gz" || extension == ".tgz") {
         std::string z = Strutil::ends_with (extension, "gz") ? "-z" : "";
-        std::string cmd = Strutil::sprintf ("tar -c %s -C %s -f %s%s %s",
-                                           z, tmpdir, filename, extension,
-                                           filename_list);
+        std::string cmd = Strutil::sprintf("tar -c %s -C \"%s\" -f \"%s\" %s",
+                                           z, Strutil::escape_chars(tmpdir),
+                                           full_filename, filename_list);
         // std::cout << "Command =\n" << cmd << "\n";
         if (system (cmd.c_str()) != 0) {
             error ("archive_shadergroup: executing tar command failed");
@@ -3834,9 +3845,8 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename
         }
 
     } else if (extension == ".zip") {
-        std::string cmd = Strutil::sprintf ("zip -q %s%s %s",
-                                           filename, extension,
-                                           filename_list);
+        std::string cmd = Strutil::sprintf("zip -q \"%s\" %s",
+                                           full_filename, filename_list);
         // std::cout << "Command =\n" << cmd << "\n";
         if (system (cmd.c_str()) != 0) {
             error ("archive_shadergroup: executing zip command failed");

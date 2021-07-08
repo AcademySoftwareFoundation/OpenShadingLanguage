@@ -1,0 +1,15 @@
+shader
+test_length_v_dvector (output color Cout = 0)
+{
+    vector trip1 = vector(u,v,u-v);
+    
+    vector trip2 = vector(v,u,v-u);
+
+    float val1 = length(trip1);
+    float val2 = 0.0;
+    if (int(P[0]*64)%2==0) {
+        val2 = length(trip2);
+    }
+    
+    Cout = color(Dx(val1), Dy(val2), Dx(val1+val2) + Dy(val1 + val2));
+}

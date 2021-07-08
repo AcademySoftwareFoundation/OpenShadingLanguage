@@ -1,0 +1,13 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_OPNAME tan_u
+#define __OSL_XMACRO_OP tan
+// derivatives of tan could cause NAN's if close enough to +-M_PI_2, 
+// so restrict range to -1.4 to  1.4
+#define __OSL_XMACRO_IN_TRANSFORM(val) (-1.4 + (2.8*(val)))
+#define __OSL_XMACRO_OUT_TRANSFORM(val) ((6 + (val))*(1.0/12.0))
+#define __OSL_XMACRO_UNIFORM_IN
+
+#include "../common/shaders/test_unary_xmacro.h"

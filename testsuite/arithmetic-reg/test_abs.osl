@@ -3,5 +3,5 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 #define __OSL_XMACRO_OPNAME abs
-#define __OSL_XMACRO_VAL_TRANSFORM(val) (val - 1.0)
-#include "test_unary_xmacro.h"
+#define __OSL_XMACRO_IN_TRANSFORM(val) (val - 1.0)
+#include "../common/shaders/test_unary_xmacro.h"

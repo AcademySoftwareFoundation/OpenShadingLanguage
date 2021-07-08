@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_OPNAME expm1_u
+#define __OSL_XMACRO_OP expm1
+#define __OSL_XMACRO_IN_TRANSFORM(...) (2*(__VA_ARGS__))
+#define __OSL_XMACRO_OUT_TRANSFORM(...) (((__VA_ARGS__) + 1)/(M_E*M_E))
+#define __OSL_XMACRO_UNIFORM_IN
+
+#include "../common/shaders/test_unary_xmacro.h"

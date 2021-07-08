@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test_filterwidth_u_float (
+    output float op = 0,
+    output float mop = 0)
+{
+    float x = 3.3 * (1/raytype("glossy"));
+
+    float op_ = P[0];
+    op_ = filterwidth(x);
+
+    if (int(P[0]*32)%2) {
+        x = 1.67 * (1/raytype("camera"));
+        mop = filterwidth(x);
+    }
+    op = op_;
+}

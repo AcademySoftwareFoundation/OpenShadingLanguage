@@ -5,8 +5,8 @@
 #define __OSL_XMACRO_OPNAME inversesqrt
 // Do our best to make sure the results will be in [0-1] by
 // transforming the input values
-#define __OSL_XMACRO_VAL_TRANSFORM(val) (1.0 + (val*100.0))
-#include "test_unary_xmacro.h"
+#define __OSL_XMACRO_IN_TRANSFORM(val) (1.0 + (val*100.0))
+#include "../common/shaders/test_unary_xmacro.h"
     
 
     

@@ -1,0 +1,18 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test_filterwidth_v_vector (output vector op = 0)
+{
+    vector x = 3.3 * (1/(0.1 + P));
+
+    vector op_ = P[0];
+
+    op_ = filterwidth(x);
+
+    if (int(P[0]*32)%2) {
+        op_ = filterwidth(4*x);
+    }
+    
+    op = op_;
+}

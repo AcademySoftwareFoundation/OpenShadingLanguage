@@ -174,12 +174,13 @@ macro (osl_add_all_tests)
     # List all the individual testsuite tests here, except those that need
     # special installed tests.
     TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
-                arithmetic-reg
+                area-reg arithmetic-reg
                 array array-reg array-copy-reg array-derivs array-range 
                 array-aassign array-assign-reg array-length-reg
                 blackbody blendmath breakcont breakcont-reg
                 bug-array-heapoffsets bug-locallifetime bug-outputinit
                 bug-param-duplicate bug-peep bug-return
+                calculatenormal-reg
                 cellnoise closure closure-array color comparison
                 compile-buffer compassign-reg
                 component-range
@@ -191,6 +192,7 @@ macro (osl_add_all_tests)
                 error-dupes error-serialized
                 example-deformer
                 exit exponential
+                filterwidth-reg
                 for-reg format-reg fprintf
                 function-earlyreturn function-simple function-outputelem
                 function-overloads function-redef
@@ -202,8 +204,8 @@ macro (osl_add_all_tests)
                 isconstant
                 layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
                 layers-nonlazycopy layers-repeatedoutputs
-                linearstep
-                logic loop matrix matrix-reg matrix-arithmetic-reg 
+                length-reg linearstep
+                logic loop matrix matrix-reg matrix-arithmetic-reg
                 matrix-compref-reg max-reg message
                 mergeinstances-duplicate-entrylayers
                 mergeinstances-nouserdata mergeinstances-vararray
@@ -212,6 +214,7 @@ macro (osl_add_all_tests)
                 noise noise-cell
                 noise-gabor noise-gabor2d-filter noise-gabor3d-filter
                 noise-perlin noise-simplex
+                normalize-reg
                 pnoise pnoise-cell pnoise-gabor pnoise-perlin
                 operator-overloading
                 opt-warnings
@@ -242,7 +245,8 @@ macro (osl_add_all_tests)
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
                 render-microfacet render-oren-nayar render-veachmis render-ward
-                select shaderglobals shortcircuit 
+                select shaderglobals shortcircuit
+                smoothstep-reg 
                 spline splineinverse splineinverse-ident
                 spline-boundarybug spline-derivbug
                 split-reg
@@ -262,13 +266,15 @@ macro (osl_add_all_tests)
                 texture-smallderivs texture-swirl texture-udim
                 texture-width texture-withderivs texture-wrap
                 trailing-commas
+                transcendental-reg
                 transitive-assign
-                transform transform-reg transformc trig typecast
+                transform transform-reg transformc trig trig-reg 
+                typecast
                 unknown-instruction
                 userdata userdata-passthrough
                 vararray-connect vararray-default
                 vararray-deserialize vararray-param
-                vecctr vector
+                vecctr vector vector-reg
                 wavelength_color Werror xml )
 
     # Add tests that require the Python bindings if we built them.

@@ -1,0 +1,10 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_OPNAME smoothstep_u_v_v
+#define __OSL_XMACRO_OP smoothstep
+#define __OSL_XMACRO_IN_TRANSFORM(...) (__VA_ARGS__)/4
+#define __OSL_XMACRO_UNIFORM_IN
+
+#include "../common/shaders/test_ternary_xmacro.h"

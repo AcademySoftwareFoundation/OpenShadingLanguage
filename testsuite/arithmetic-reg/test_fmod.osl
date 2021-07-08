@@ -3,7 +3,7 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 #define __OSL_XMACRO_OPNAME fmod
-#include "test_binary_xmacro.h"
+#include "../common/shaders/test_binary_xmacro.h"
     
 
     

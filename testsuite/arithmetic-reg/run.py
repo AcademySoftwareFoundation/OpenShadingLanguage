@@ -4,332 +4,129 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-# neg
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_neg.tif -o out_color out_color_neg.tif -o out_point out_point_neg.tif -o out_vector out_vector_neg.tif -o out_normal out_normal_neg.tif test_neg")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_neg.tif -o out_color out_color_Dx_neg.tif -o out_point out_point_Dx_neg.tif -o out_vector out_vector_Dx_neg.tif -o out_normal out_normal_Dx_neg.tif test_neg")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_neg.tif -o out_color out_color_Dy_neg.tif -o out_point out_point_Dy_neg.tif -o out_vector out_vector_Dy_neg.tif -o out_normal out_normal_Dy_neg.tif test_neg")
+def run_multi_type_test (opname, tagname, options) :
+    global command
+    command += testshade("-g 32 32 --param numStripes 16 "+options+" -od uint8 -o out_float out_float_"+tagname+".tif -o out_color out_color_"+tagname+".tif -o out_point out_point_"+tagname+".tif -o out_vector out_vector_"+tagname+".tif -o out_normal out_normal_"+tagname+".tif test_"+opname)
+    global outputs     
+    outputs.append ("out_float_"+tagname+".tif")
+    outputs.append ("out_color_"+tagname+".tif")
+    outputs.append ("out_point_"+tagname+".tif")
+    outputs.append ("out_vector_"+tagname+".tif")
+    outputs.append ("out_normal_"+tagname+".tif")
+    return
 
-# neg int
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_int out_int_neg.tif test_neg_int")
+def run_unary_tests (opname) :
+    run_multi_type_test (opname, opname, "")
+    run_multi_type_test (opname, "Dx_"+opname, "--vary_pdxdy --param derivX 1")
+    run_multi_type_test (opname, "Dy_"+opname, "--vary_pdxdy --param derivY 1")
+    return
 
-# sqrt
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_sqrt.tif -o out_color out_color_sqrt.tif -o out_point out_point_sqrt.tif -o out_vector out_vector_sqrt.tif -o out_normal out_normal_sqrt.tif test_sqrt")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_sqrt.tif -o out_color out_color_Dx_sqrt.tif -o out_point out_point_Dx_sqrt.tif -o out_vector out_vector_Dx_sqrt.tif -o out_normal out_normal_Dx_sqrt.tif test_sqrt")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_sqrt.tif -o out_color out_color_Dy_sqrt.tif -o out_point out_point_Dy_sqrt.tif -o out_vector out_vector_Dy_sqrt.tif -o out_normal out_normal_Dy_sqrt.tif test_sqrt")
+# Run unary tests with varying and a 2nd time with uniform(u) argument to the op
+# Choose not to test variation of a constant argument, as that should be constant folded 
+run_unary_tests ("neg")
+run_unary_tests ("neg_u")
 
-# inversesqrt
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_inversesqrt.tif -o out_color out_color_inversesqrt.tif -o out_point out_point_inversesqrt.tif -o out_vector out_vector_inversesqrt.tif -o out_normal out_normal_inversesqrt.tif test_inversesqrt")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 --param derivScale -1.0 -od uint8 -o out_float out_float_Dx_inversesqrt.tif -o out_color out_color_Dx_inversesqrt.tif -o out_point out_point_Dx_inversesqrt.tif -o out_vector out_vector_Dx_inversesqrt.tif -o out_normal out_normal_Dx_inversesqrt.tif test_inversesqrt")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 --param derivScale -1.0 -od uint8 -o out_float out_float_Dy_inversesqrt.tif -o out_color out_color_Dy_inversesqrt.tif -o out_point out_point_Dy_inversesqrt.tif -o out_vector out_vector_Dy_inversesqrt.tif -o out_normal out_normal_Dy_inversesqrt.tif test_inversesqrt")
+run_unary_tests ("sqrt")
+run_unary_tests ("sqrt_u")
 
-# abs
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_abs.tif -o out_color out_color_abs.tif -o out_point out_point_abs.tif -o out_vector out_vector_abs.tif -o out_normal out_normal_abs.tif test_abs")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 --param derivScale -1.0 -od uint8 -o out_float out_float_Dx_abs.tif -o out_color out_color_Dx_abs.tif -o out_point out_point_Dx_abs.tif -o out_vector out_vector_Dx_abs.tif -o out_normal out_normal_Dx_abs.tif test_abs")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 --param derivScale -1.0 -od uint8 -o out_float out_float_Dy_abs.tif -o out_color out_color_Dy_abs.tif -o out_point out_point_Dy_abs.tif -o out_vector out_vector_Dy_abs.tif -o out_normal out_normal_Dy_abs.tif test_abs")
+run_unary_tests ("inversesqrt")
+run_unary_tests ("inversesqrt_u")
 
-# abs int
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_int out_int_abs.tif test_abs_int")
+run_unary_tests ("abs")
+run_unary_tests ("abs_u")
 
-# floor
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_floor.tif -o out_color out_color_floor.tif -o out_point out_point_floor.tif -o out_vector out_vector_floor.tif -o out_normal out_normal_floor.tif test_floor")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_floor.tif -o out_color out_color_Dx_floor.tif -o out_point out_point_Dx_floor.tif -o out_vector out_vector_Dx_floor.tif -o out_normal out_normal_Dx_floor.tif test_floor")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_floor.tif -o out_color out_color_Dy_floor.tif -o out_point out_point_Dy_floor.tif -o out_vector out_vector_Dy_floor.tif -o out_normal out_normal_Dy_floor.tif test_floor")
+run_unary_tests ("floor")
+run_unary_tests ("floor_u")
 
-# ceil
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_ceil.tif -o out_color out_color_ceil.tif -o out_point out_point_ceil.tif -o out_vector out_vector_ceil.tif -o out_normal out_normal_ceil.tif test_ceil")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_ceil.tif -o out_color out_color_Dx_ceil.tif -o out_point out_point_Dx_ceil.tif -o out_vector out_vector_Dx_ceil.tif -o out_normal out_normal_Dx_ceil.tif test_ceil")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_ceil.tif -o out_color out_color_Dy_ceil.tif -o out_point out_point_Dy_ceil.tif -o out_vector out_vector_Dy_ceil.tif -o out_normal out_normal_Dy_ceil.tif test_ceil")
+run_unary_tests ("ceil")
+run_unary_tests ("ceil_u")
 
-# trunc
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_trunc.tif -o out_color out_color_trunc.tif -o out_point out_point_trunc.tif -o out_vector out_vector_trunc.tif -o out_normal out_normal_trunc.tif test_trunc")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_trunc.tif -o out_color out_color_Dx_trunc.tif -o out_point out_point_Dx_trunc.tif -o out_vector out_vector_Dx_trunc.tif -o out_normal out_normal_Dx_trunc.tif test_trunc")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_trunc.tif -o out_color out_color_Dy_trunc.tif -o out_point out_point_Dy_trunc.tif -o out_vector out_vector_Dy_trunc.tif -o out_normal out_normal_Dy_trunc.tif test_trunc")
+run_unary_tests ("trunc")
+run_unary_tests ("trunc_u")
 
-# round
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_round.tif -o out_color out_color_round.tif -o out_point out_point_round.tif -o out_vector out_vector_round.tif -o out_normal out_normal_round.tif test_round")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_round.tif -o out_color out_color_Dx_round.tif -o out_point out_point_Dx_round.tif -o out_vector out_vector_Dx_round.tif -o out_normal out_normal_Dx_round.tif test_round")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_round.tif -o out_color out_color_Dy_round.tif -o out_point out_point_Dy_round.tif -o out_vector out_vector_Dy_round.tif -o out_normal out_normal_Dy_round.tif test_round")
+run_unary_tests ("round")
+run_unary_tests ("round_u")
 
-# fmod
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_fmod.tif -o out_color out_color_fmod.tif -o out_point out_point_fmod.tif -o out_vector out_vector_fmod.tif -o out_normal out_normal_fmod.tif test_fmod")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_fmod.tif -o out_color out_color_Dx_fmod.tif -o out_point out_point_Dx_fmod.tif -o out_vector out_vector_Dx_fmod.tif -o out_normal out_normal_Dx_fmod.tif test_fmod")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_fmod.tif -o out_color out_color_Dy_fmod.tif -o out_point out_point_Dy_fmod.tif -o out_vector out_vector_Dy_fmod.tif -o out_normal out_normal_Dy_fmod.tif test_fmod")
+def run_int_test (opname, tagname, options) :
+    global command
+    command += testshade("-g 32 32 --param numStripes 16 "+options+" -od uint8 -o out_int out_int_"+tagname+".tif test_"+opname)
+    global outputs     
+    outputs.append ("out_int_"+tagname+".tif")
+    return
 
-# step
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_step.tif -o out_color out_color_step.tif -o out_point out_point_step.tif -o out_vector out_vector_step.tif -o out_normal out_normal_step.tif test_step")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_step.tif -o out_color out_color_Dx_step.tif -o out_point out_point_Dx_step.tif -o out_vector out_vector_Dx_step.tif -o out_normal out_normal_Dx_step.tif test_step")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_step.tif -o out_color out_color_Dy_step.tif -o out_point out_point_Dy_step.tif -o out_vector out_vector_Dy_step.tif -o out_normal out_normal_Dy_step.tif test_step")
+def run_unary_int_tests (opname) :
+    run_int_test (opname, opname, "")
 
-# add
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_add.tif -o out_color out_color_add.tif -o out_point out_point_add.tif -o out_vector out_vector_add.tif -o out_normal out_normal_add.tif test_add")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_add.tif -o out_color out_color_Dx_add.tif -o out_point out_point_Dx_add.tif -o out_vector out_vector_Dx_add.tif -o out_normal out_normal_Dx_add.tif test_add")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_add.tif -o out_color out_color_Dy_add.tif -o out_point out_point_Dy_add.tif -o out_vector out_vector_Dy_add.tif -o out_normal out_normal_Dy_add.tif test_add")
+run_unary_int_tests ("neg_int")
+run_unary_int_tests ("neg_u_int")
 
-# sub
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_sub.tif -o out_color out_color_sub.tif -o out_point out_point_sub.tif -o out_vector out_vector_sub.tif -o out_normal out_normal_sub.tif test_sub")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_sub.tif -o out_color out_color_Dx_sub.tif -o out_point out_point_Dx_sub.tif -o out_vector out_vector_Dx_sub.tif -o out_normal out_normal_Dx_sub.tif test_sub")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_sub.tif -o out_color out_color_Dy_sub.tif -o out_point out_point_Dy_sub.tif -o out_vector out_vector_Dy_sub.tif -o out_normal out_normal_Dy_sub.tif test_sub")
-
-# mul
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_mul.tif -o out_color out_color_mul.tif -o out_point out_point_mul.tif -o out_vector out_vector_mul.tif -o out_normal out_normal_mul.tif test_mul")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_mul.tif -o out_color out_color_Dx_mul.tif -o out_point out_point_Dx_mul.tif -o out_vector out_vector_Dx_mul.tif -o out_normal out_normal_Dx_mul.tif test_mul")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_mul.tif -o out_color out_color_Dy_mul.tif -o out_point out_point_Dy_mul.tif -o out_vector out_vector_Dy_mul.tif -o out_normal out_normal_Dy_mul.tif test_mul")
-
-# div
-command += testshade("-g 64 64 --param numStripes 16 -od uint8 -o out_float out_float_div.tif -o out_color out_color_div.tif -o out_point out_point_div.tif -o out_vector out_vector_div.tif -o out_normal out_normal_div.tif test_div")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivX 1 -od uint8 -o out_float out_float_Dx_div.tif -o out_color out_color_Dx_div.tif -o out_point out_point_Dx_div.tif -o out_vector out_vector_Dx_div.tif -o out_normal out_normal_Dx_div.tif test_div")
-command += testshade("-g 64 64 --param numStripes 16 --vary_pdxdy --param derivY 1 -od uint8 -o out_float out_float_Dy_div.tif -o out_color out_color_Dy_div.tif -o out_point out_point_Dy_div.tif -o out_vector out_vector_Dy_div.tif -o out_normal out_normal_Dy_div.tif test_div")
-
-outputs = [ 
-    "out_int_neg.tif",
-    
-    "out_float_neg.tif",
-    "out_color_neg.tif",
-    "out_point_neg.tif",
-    "out_vector_neg.tif",
-    "out_normal_neg.tif",
-
-    "out_float_sqrt.tif",
-    "out_color_sqrt.tif",
-    "out_point_sqrt.tif",
-    "out_vector_sqrt.tif",
-    "out_normal_sqrt.tif",
-
-    "out_float_Dx_sqrt.tif",
-    "out_color_Dx_sqrt.tif",
-    "out_point_Dx_sqrt.tif",
-    "out_vector_Dx_sqrt.tif",
-    "out_normal_Dx_sqrt.tif",
-
-    "out_float_Dy_sqrt.tif",
-    "out_color_Dy_sqrt.tif",
-    "out_point_Dy_sqrt.tif",
-    "out_vector_Dy_sqrt.tif",
-    "out_normal_Dy_sqrt.tif",
-    
-    "out_float_inversesqrt.tif",
-    "out_color_inversesqrt.tif",
-    "out_point_inversesqrt.tif",
-    "out_vector_inversesqrt.tif",
-    "out_normal_inversesqrt.tif",
-
-    "out_float_Dx_inversesqrt.tif",
-    "out_color_Dx_inversesqrt.tif",
-    "out_point_Dx_inversesqrt.tif",
-    "out_vector_Dx_inversesqrt.tif",
-    "out_normal_Dx_inversesqrt.tif",
-
-    "out_float_Dy_inversesqrt.tif",
-    "out_color_Dy_inversesqrt.tif",
-    "out_point_Dy_inversesqrt.tif",
-    "out_vector_Dy_inversesqrt.tif",
-    "out_normal_Dy_inversesqrt.tif",
-    
-    "out_float_abs.tif",
-    "out_color_abs.tif",
-    "out_point_abs.tif",
-    "out_vector_abs.tif",
-    "out_normal_abs.tif",
-
-    "out_float_Dx_abs.tif",
-    "out_color_Dx_abs.tif",
-    "out_point_Dx_abs.tif",
-    "out_vector_Dx_abs.tif",
-    "out_normal_Dx_abs.tif",
-
-    "out_float_Dy_abs.tif",
-    "out_color_Dy_abs.tif",
-    "out_point_Dy_abs.tif",
-    "out_vector_Dy_abs.tif",
-    "out_normal_Dy_abs.tif",
-    
-    "out_int_abs.tif",        
-    
-    
-    "out_float_floor.tif",
-    "out_color_floor.tif",
-    "out_point_floor.tif",
-    "out_vector_floor.tif",
-    "out_normal_floor.tif",
-
-    "out_float_Dx_floor.tif",
-    "out_color_Dx_floor.tif",
-    "out_point_Dx_floor.tif",
-    "out_vector_Dx_floor.tif",
-    "out_normal_Dx_floor.tif",
-
-    "out_float_Dy_floor.tif",
-    "out_color_Dy_floor.tif",
-    "out_point_Dy_floor.tif",
-    "out_vector_Dy_floor.tif",
-    "out_normal_Dy_floor.tif",
-    
-    "out_float_ceil.tif",
-    "out_color_ceil.tif",
-    "out_point_ceil.tif",
-    "out_vector_ceil.tif",
-    "out_normal_ceil.tif",
-
-    "out_float_Dx_ceil.tif",
-    "out_color_Dx_ceil.tif",
-    "out_point_Dx_ceil.tif",
-    "out_vector_Dx_ceil.tif",
-    "out_normal_Dx_ceil.tif",
-
-    "out_float_Dy_ceil.tif",
-    "out_color_Dy_ceil.tif",
-    "out_point_Dy_ceil.tif",
-    "out_vector_Dy_ceil.tif",
-    "out_normal_Dy_ceil.tif",
-    
-    
-    "out_float_trunc.tif",
-    "out_color_trunc.tif",
-    "out_point_trunc.tif",
-    "out_vector_trunc.tif",
-    "out_normal_trunc.tif",
-
-    "out_float_Dx_trunc.tif",
-    "out_color_Dx_trunc.tif",
-    "out_point_Dx_trunc.tif",
-    "out_vector_Dx_trunc.tif",
-    "out_normal_Dx_trunc.tif",
-
-    "out_float_Dy_trunc.tif",
-    "out_color_Dy_trunc.tif",
-    "out_point_Dy_trunc.tif",
-    "out_vector_Dy_trunc.tif",
-    "out_normal_Dy_trunc.tif",
-    
-    "out_float_round.tif",
-    "out_color_round.tif",
-    "out_point_round.tif",
-    "out_vector_round.tif",
-    "out_normal_round.tif",
-
-    "out_float_Dx_round.tif",
-    "out_color_Dx_round.tif",
-    "out_point_Dx_round.tif",
-    "out_vector_Dx_round.tif",
-    "out_normal_Dx_round.tif",
-
-    "out_float_Dy_round.tif",
-    "out_color_Dy_round.tif",
-    "out_point_Dy_round.tif",
-    "out_vector_Dy_round.tif",
-    "out_normal_Dy_round.tif",
-    
-    
-    "out_float_fmod.tif",
-    "out_color_fmod.tif",
-    "out_point_fmod.tif",
-    "out_vector_fmod.tif",
-    "out_normal_fmod.tif",
-
-    "out_float_Dx_fmod.tif",
-    "out_color_Dx_fmod.tif",
-    "out_point_Dx_fmod.tif",
-    "out_vector_Dx_fmod.tif",
-    "out_normal_Dx_fmod.tif",
-
-    "out_float_Dy_fmod.tif",
-    "out_color_Dy_fmod.tif",
-    "out_point_Dy_fmod.tif",
-    "out_vector_Dy_fmod.tif",
-    "out_normal_Dy_fmod.tif",      
-
-    "out_float_step.tif",
-    "out_color_step.tif",
-    "out_point_step.tif",
-    "out_vector_step.tif",
-    "out_normal_step.tif",
-
-    "out_float_Dx_step.tif",
-    "out_color_Dx_step.tif",
-    "out_point_Dx_step.tif",
-    "out_vector_Dx_step.tif",
-    "out_normal_Dx_step.tif",
-
-    "out_float_Dy_step.tif",
-    "out_color_Dy_step.tif",
-    "out_point_Dy_step.tif",
-    "out_vector_Dy_step.tif",
-    "out_normal_Dy_step.tif",      
-
-    "out_float_add.tif",
-    "out_color_add.tif",
-    "out_point_add.tif",
-    "out_vector_add.tif",
-    "out_normal_add.tif",
-
-    "out_float_Dx_add.tif",
-    "out_color_Dx_add.tif",
-    "out_point_Dx_add.tif",
-    "out_vector_Dx_add.tif",
-    "out_normal_Dx_add.tif",
-
-    "out_float_Dy_add.tif",
-    "out_color_Dy_add.tif",
-    "out_point_Dy_add.tif",
-    "out_vector_Dy_add.tif",
-    "out_normal_Dy_add.tif",
-    
-    "out_float_sub.tif",
-    "out_color_sub.tif",
-    "out_point_sub.tif",
-    "out_vector_sub.tif",
-    "out_normal_sub.tif",
-
-    "out_float_Dx_sub.tif",
-    "out_color_Dx_sub.tif",
-    "out_point_Dx_sub.tif",
-    "out_vector_Dx_sub.tif",
-    "out_normal_Dx_sub.tif",
-
-    "out_float_Dy_sub.tif",
-    "out_color_Dy_sub.tif",
-    "out_point_Dy_sub.tif",
-    "out_vector_Dy_sub.tif",
-    "out_normal_Dy_sub.tif",            
-                  
-    "out_float_mul.tif",
-    "out_color_mul.tif",
-    "out_point_mul.tif",
-    "out_vector_mul.tif",
-    "out_normal_mul.tif",
-
-    "out_float_Dx_mul.tif",
-    "out_color_Dx_mul.tif",
-    "out_point_Dx_mul.tif",
-    "out_vector_Dx_mul.tif",
-    "out_normal_Dx_mul.tif",
-
-    "out_float_Dy_mul.tif",
-    "out_color_Dy_mul.tif",
-    "out_point_Dy_mul.tif",
-    "out_vector_Dy_mul.tif",
-    "out_normal_Dy_mul.tif",              
-                  
-    "out_float_div.tif",
-    "out_color_div.tif",
-    "out_point_div.tif",
-    "out_vector_div.tif",
-    "out_normal_div.tif",
-
-    "out_float_Dx_div.tif",
-    "out_color_Dx_div.tif",
-    "out_point_Dx_div.tif",
-    "out_vector_Dx_div.tif",
-    "out_normal_Dx_div.tif",
-
-    "out_float_Dy_div.tif",
-    "out_color_Dy_div.tif",
-    "out_point_Dy_div.tif",
-    "out_vector_Dy_div.tif",
-    "out_normal_Dy_div.tif"    
-]
+run_unary_int_tests ("abs_int")
+run_unary_int_tests ("abs_u_int")
 
 
+def run_binary_tests (opname) :
+    run_multi_type_test (opname, opname, "")
+    run_multi_type_test (opname, "Dx_"+opname, "--vary_pdxdy --param derivX 1")
+    run_multi_type_test (opname, "Dy_"+opname, "--vary_pdxdy --param derivY 1")
+    return
+
+# Run binary tests with mixing combinations of varying(v), uniform(u), and constant(c) parameters.
+# Test with constants to pass non-deriviative parameters to functions
+# Choose not to test variation of 2 constant argument, as that should be constant folded 
+run_binary_tests ("fmod")
+run_binary_tests ("fmod_u_u")
+run_binary_tests ("fmod_v_u")
+run_binary_tests ("fmod_u_v")
+run_binary_tests ("fmod_v_c")
+run_binary_tests ("fmod_c_v")
+run_binary_tests ("fmod_u_c")
+run_binary_tests ("fmod_c_u")
+
+run_binary_tests ("step")
+run_binary_tests ("step_u_u")
+run_binary_tests ("step_v_u")
+run_binary_tests ("step_u_v")
+run_binary_tests ("step_v_c")
+run_binary_tests ("step_c_v")
+run_binary_tests ("step_u_c")
+run_binary_tests ("step_c_u")
+
+
+run_binary_tests ("add")
+run_binary_tests ("add_u_u")
+run_binary_tests ("add_v_u")
+run_binary_tests ("add_u_v")
+run_binary_tests ("add_v_c")
+run_binary_tests ("add_c_v")
+run_binary_tests ("add_u_c")
+run_binary_tests ("add_c_u")
+
+run_binary_tests ("sub")
+run_binary_tests ("sub_u_u")
+run_binary_tests ("sub_v_u")
+run_binary_tests ("sub_u_v")
+run_binary_tests ("sub_v_c")
+run_binary_tests ("sub_c_v")
+run_binary_tests ("sub_u_c")
+run_binary_tests ("sub_c_u")
+
+run_binary_tests ("mul")
+run_binary_tests ("mul_u_u")
+run_binary_tests ("mul_v_u")
+run_binary_tests ("mul_u_v")
+run_binary_tests ("mul_v_c")
+run_binary_tests ("mul_c_v")
+run_binary_tests ("mul_u_c")
+run_binary_tests ("mul_c_u")
+
+run_binary_tests ("div")
+run_binary_tests ("div_u_u")
+run_binary_tests ("div_v_u")
+run_binary_tests ("div_u_v")
+run_binary_tests ("div_v_c")
+run_binary_tests ("div_c_v")
+run_binary_tests ("div_u_c")
+run_binary_tests ("div_c_u")
 
 
 # expect a few LSB failures

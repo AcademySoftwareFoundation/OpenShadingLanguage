@@ -214,7 +214,7 @@ private:
     std::vector<Parameter> m_meta;    //< Meta-data about the shader
     friend class pvt::OSOReaderQuery;
 
-    // Internal error reporting routine, with printf-like arguments.
+    // Internal error reporting routine, with std::format-like arguments.
     template<typename Str, typename... Args>
     inline void errorfmt(const Str& fmt, Args&&... args) const
     {

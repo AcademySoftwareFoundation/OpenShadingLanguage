@@ -494,28 +494,28 @@ public:
                       TypeDesc type, const void *val);
 
     // Internal error, warning, info, and message reporting routines that
-    // take printf-like arguments.
-    template<typename T1, typename... Args>
-    inline void errorf (const char* fmt, const T1& v1, const Args&... args) const {
-        error (Strutil::sprintf (fmt, v1, args...));
+    // take std::format-like arguments.
+    template<typename Str, typename... Args>
+    inline void errorfmt(const Str& fmt, Args&&... args) const {
+        error(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
     }
     void error (const std::string &message) const;
 
-    template<typename T1, typename... Args>
-    inline void warningf (const char* fmt, const T1& v1, const Args&... args) const {
-        warning (Strutil::sprintf (fmt, v1, args...));
+    template<typename Str, typename... Args>
+    inline void warningfmt(const Str& fmt, Args&&... args) const {
+        warning(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
     }
     void warning (const std::string &message) const;
 
-    template<typename T1, typename... Args>
-    inline void infof (const char* fmt, const T1& v1, const Args&... args) const {
-        info (Strutil::sprintf (fmt, v1, args...));
+    template<typename Str, typename... Args>
+    inline void infofmt(const Str& fmt, Args&&... args) const {
+        info(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
     }
     void info (const std::string &message) const;
 
-    template<typename T1, typename... Args>
-    inline void messagef (const char* fmt, const T1& v1, const Args&... args) const {
-        message (Strutil::sprintf (fmt, v1, args...));
+    template<typename Str, typename... Args>
+    inline void messagefmt(const Str& fmt, Args&&... args) const {
+        message(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
     }
     void message (const std::string &message) const;
 
@@ -1796,6 +1796,42 @@ public:
             m_sc.record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
         }
 
+        template<typename Str, typename... Args>
+        inline
+        void errorfmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_ERROR,
+                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
+        template<typename Str, typename... Args>
+        inline
+        void warningfmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_WARNING,
+                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
+        template<typename Str, typename... Args>
+        inline
+        void infofmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_INFO,
+                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
+        template<typename Str, typename... Args>
+        inline
+        void messagefmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
+        {
+            m_sc.record_error(ErrorHandler::EH_MESSAGE,
+                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+        }
+
         // TODO: implement messages in subsequent PR
         //BatchedMessageList<WidthT> & messages () { return m_sc.batched_messages(WidthOf<WidthT>()); }
     };
@@ -1970,6 +2006,26 @@ public:
     template<typename... Args>
     inline void messagef(const char* fmt, const Args&... args) const {
         record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void errorfmt(const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_ERROR, Strutil::fmt::format(fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void warningfmt(const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_WARNING, Strutil::fmt::format(fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void infofmt(const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_INFO, Strutil::fmt::format(fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void messagefmt(const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_MESSAGE, Strutil::fmt::format(fmt, args...));
     }
 
     void reserve_heap(size_t size) {

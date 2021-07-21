@@ -61,7 +61,7 @@ ShadingSystem::ShadingSystem (RendererServices *renderer,
     }
     m_impl = new ShadingSystemImpl (renderer, texturesystem, err);
 #ifndef NDEBUG
-    err->infof("creating new ShadingSystem %p", (void *)this);
+    err->infofmt("creating new ShadingSystem {:p}", (void *)this);
 #endif
 }
 
@@ -1286,7 +1286,8 @@ ShadingSystemImpl::register_closure (string_view name, int id,
 {
     for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
         if (params[i].key == NULL && params[i].type.size() != (size_t)params[i].field_size) {
-            errorf("Parameter %d of '%s' closure is assigned to a field of incompatible size", i + 1, name);
+            errorfmt("Parameter {} of '{}' closure is assigned to a field of incompatible size",
+                     i + 1, name);
             return;
         }
     }
@@ -1499,7 +1500,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
         if (colorsystem().set_colorspace(c))
             m_colorspace = c;
         else
-            errorf("Unknown color space \"%s\"", c);
+            errorfmt("Unknown color space \"{}\"", c);
         return true;
     }
     if (name == "raytypes" && type.basetype == TypeDesc::STRING) {
@@ -1518,7 +1519,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     }
     if (name == "lib_bitcode" && type.basetype == TypeDesc::UINT8) {
         if (type.arraylen < 0) {
-            errorf("Invalid bitcode size: %d", type.arraylen);
+            errorfmt("Invalid bitcode size: {}", type.arraylen);
             return false;
         }
         m_lib_bitcode.clear();
@@ -2492,16 +2493,16 @@ ShadingSystemImpl::Shader (ShaderGroup& group, string_view shaderusage,
 {
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
-        errorf("Could not find shader \"%s\"\n"
-               "        group: %s",
-               shadername, group.name());
+        errorfmt("Could not find shader \"{}\"\n"
+                 "        group: {}",
+                 shadername, group.name());
         return false;
     }
 
     if (shaderusage.empty()) {
-        errorf("Shader usage required\n"
-               "        group: %s",
-               shadername, group.name());
+        errorfmt("Shader usage required\n"
+                 "        group: {}",
+                 shadername, group.name());
         return false;
     }
 
@@ -2524,9 +2525,9 @@ ShadingSystemImpl::Shader (ShaderGroup& group, string_view shaderusage,
         m_stat_groups += 1;
         group.m_group_use = shaderusage;
     } else if (shaderusage != group.m_group_use) {
-        errorf("Shader usage \"%s\" does not match current group (%s)\n"
-               "        group: %s",
-               shaderusage, group.m_group_use, group.name());
+        errorfmt("Shader usage \"{}\" does not match current group ({})\n"
+                 "        group: {}",
+                 shaderusage, group.m_group_use, group.name());
         return false;
     }
 
@@ -2561,13 +2562,13 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     // Basic sanity checks
     // ConnectShaders, and that the layer and parameter names are not empty.
     if (! srclayer.size() || ! srcparam.size()) {
-        errorf("ConnectShaders: badly formed source layer/parameter\n"
-               "        group: %s", group.name());
+        errorfmt("ConnectShaders: badly formed source layer/parameter\n"
+                 "        group: {}", group.name());
         return false;
     }
     if (! dstlayer.size() || ! dstparam.size()) {
-        errorf("ConnectShaders: badly formed destination layer/parameter\n"
-               "        group: %s", group.name());
+        errorfmt("ConnectShaders: badly formed destination layer/parameter\n"
+                 "        group: {}", group.name());
         return false;
     }
 
@@ -2578,19 +2579,19 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     int srcinstindex = find_named_layer_in_group (group, ustring(srclayer), srcinst);
     int dstinstindex = find_named_layer_in_group (group, ustring(dstlayer), dstinst);
     if (! srcinst) {
-        errorf("ConnectShaders: source layer \"%s\" not found\n"
-               "        group: %s", srclayer, group.name());
+        errorfmt("ConnectShaders: source layer \"{}\" not found\n"
+                 "        group: {}", srclayer, group.name());
         return false;
     }
     if (! dstinst) {
-        errorf("ConnectShaders: destination layer \"%s\" not found\n"
-               "        group: %s", dstlayer, group.name());
+        errorfmt("ConnectShaders: destination layer \"{}\" not found\n"
+                 "        group: {}", dstlayer, group.name());
         return false;
     }
     if (dstinstindex <= srcinstindex) {
-        errorf("ConnectShaders: destination layer must follow source layer (tried to connect %s.%s -> %s.%s)\n"
-               "        group: %s", srclayer, srcparam, dstlayer, dstparam,
-               group.name());
+        errorfmt("ConnectShaders: destination layer must follow source layer (tried to connect {}.{} -> {}.{})\n"
+                 "        group: {}", srclayer, srcparam, dstlayer, dstparam,
+                 group.name());
         return false;
     }
 
@@ -2601,13 +2602,13 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
     if (! (srccon.valid() && dstcon.valid())) {
         if (connection_error())
-            errorf("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection\n"
-                   "        group: %s",
-                   srccon.type, srcparam, dstcon.type, dstparam, group.name());
-        else
-            warningf("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection\n"
-                     "        group: %s",
+            errorfmt("ConnectShaders: cannot connect a {} ({}) to a {} ({}), invalid connection\n"
+                     "        group: {}",
                      srccon.type, srcparam, dstcon.type, dstparam, group.name());
+        else
+            warningfmt("ConnectShaders: cannot connect a {} ({}) to a {} ({}), invalid connection\n"
+                       "        group: {}",
+                       srccon.type, srcparam, dstcon.type, dstparam, group.name());
         return false;
     }
 
@@ -2628,13 +2629,13 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
 
     if (! assignable (dstcon.type, srccon.type)) {
         if (connection_error())
-            errorf("ConnectShaders: cannot connect a %s (%s) to a %s (%s)\n"
-                   "        group: %s",
-                   srccon.type, srcparam, dstcon.type, dstparam, group.name());
-        else
-            warningf("ConnectShaders: cannot connect a %s (%s) to a %s (%s)\n"
-                     "        group: %s",
+            errorfmt("ConnectShaders: cannot connect a {} ({}) to a {} ({})\n"
+                     "        group: {}",
                      srccon.type, srcparam, dstcon.type, dstparam, group.name());
+        else
+            warningfmt("ConnectShaders: cannot connect a {} ({}) to a {} ({})\n"
+                       "        group: {}",
+                       srccon.type, srcparam, dstcon.type, dstparam, group.name());
         return false;
     }
 
@@ -2642,8 +2643,8 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     if (dstsym && !dstsym->allowconnect()) {
         std::string name = dstlayer.size() ? Strutil::sprintf("%s.%s", dstlayer, dstparam)
                                            : std::string(dstparam);
-        errorf("ConnectShaders: cannot connect to %s because it has metadata allowconnect=0\n"
-               "        group: %s", name, group.name());
+        errorfmt("ConnectShaders: cannot connect to {} because it has metadata allowconnect=0\n"
+                 "        group: {}", name, group.name());
         return false;
     }
 
@@ -2932,9 +2933,9 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
         if (errstatement.size())
             msg += Strutil::sprintf("\n        problem might be here: %s",
                                     errstatement);
-        errorf("%s", msg);
+        error(msg);
         if (debug())
-            infof("Broken group was:\n---%s\n---\n", groupspec);
+            infofmt("Broken group was:\n---{}\n---\n", groupspec);
         return ShaderGroupRef();
     }
 
@@ -3097,11 +3098,11 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
     c.param = inst->findsymbol (param);
     if (c.param < 0) {
         if (connection_error())
-            errorf("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
-                   param, layername, inst->shadername());
-        else
-            warningf("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
+            errorfmt("ConnectShaders: \"{}\" is not a parameter or global of layer \"{}\" (shader \"{}\")",
                      param, layername, inst->shadername());
+        else
+            warningfmt("ConnectShaders: \"{}\" is not a parameter or global of layer \"{}\" (shader \"{}\")",
+                       param, layername, inst->shadername());
         return c;
     }
 
@@ -3112,8 +3113,8 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
     if (! (sym->symtype() == SymTypeParam ||
            sym->symtype() == SymTypeOutputParam ||
            sym->symtype() == SymTypeGlobal)) {
-        errorf("ConnectShaders: \"%s\" is not a parameter or global of layer \"%s\" (shader \"%s\")",
-               param, layername, inst->shadername());
+        errorfmt("ConnectShaders: \"{}\" is not a parameter or global of layer \"{}\" (shader \"%s\")",
+                 param, layername, inst->shadername());
         c.param = -1;  // mark as invalid
         return c;
     }
@@ -3127,13 +3128,13 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
         if (! (Strutil::parse_char (cname_remaining, '[') &&
                Strutil::parse_int  (cname_remaining, index) &&
                Strutil::parse_char (cname_remaining, ']'))) {
-            errorf("ConnectShaders: malformed parameter \"%s\"", connectionname);
+            errorfmt("ConnectShaders: malformed parameter \"{}\"", connectionname);
             c.param = -1;  // mark as invalid
             return c;
         }
         c.arrayindex = index;
         if (c.arrayindex >= c.type.arraylength()) {
-            errorf("ConnectShaders: cannot request array element %s from a %s",
+            errorfmt("ConnectShaders: cannot request array element {} from a {}",
                    connectionname, c.type);
             c.arrayindex = c.type.arraylength() - 1;  // clamp it
         }
@@ -3149,13 +3150,13 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
         if (! (Strutil::parse_char (cname_remaining, '[') &&
                Strutil::parse_int  (cname_remaining, index) &&
                Strutil::parse_char (cname_remaining, ']'))) {
-            errorf("ConnectShaders: malformed parameter \"%s\"", connectionname);
+            errorfmt("ConnectShaders: malformed parameter \"{}\"", connectionname);
             c.param = -1;  // mark as invalid
             return c;
         }
         c.channel = index;
         if (c.channel >= (int)c.type.aggregate()) {
-            errorf("ConnectShaders: cannot request component %s from a %s",
+            errorfmt("ConnectShaders: cannot request component {} from a {}",
                    connectionname, c.type);
             c.channel = (int)c.type.aggregate() - 1;  // clamp it
         }
@@ -3167,8 +3168,8 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
     // Deal with left over nonsense or unsupported param designations
     if (! cname_remaining.empty()) {
         // Still a leftover bracket, no idea what to do about that
-        errorf("ConnectShaders: don't know how to connect '%s' when \"%s\" is a \"%s\"",
-               connectionname, param, c.type);
+        errorfmt("ConnectShaders: don't know how to connect '{}' when \"{}\" is a \"{}\"",
+                 connectionname, param, c.type);
         c.param = -1;  // mark as invalid
     }
     return c;
@@ -3778,7 +3779,7 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename
         filename.remove_suffix (e.size());
     }
     if (extension.size() < 2 || extension[0] != '.') {
-        errorf("archive_shadergroup: invalid filename \"%s\"", filename);
+        errorfmt("archive_shadergroup: invalid filename \"{}\"", filename);
         return false;
     }
     filename_base.erase (filename_base.size() - extension.size());
@@ -3796,8 +3797,8 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename
     std::string errmessage;
     bool dir_ok = OIIO::Filesystem::create_directory (tmpdir, errmessage);
     if (! dir_ok) {
-        errorf("archive_shadergroup: Could not create temp directory %s (%s)",
-               tmpdir, errmessage);
+        errorfmt("archive_shadergroup: Could not create temp directory {} ({})",
+                 tmpdir, errmessage);
         return false;
     }
 
@@ -3929,8 +3930,8 @@ OSL::ShadingSystem::oslquery (const ShaderGroup& group, int layernum)
 {
     OSLQuery Q; // This will use named return value optimization
     if (layernum < 0 || layernum >= group.nlayers()) {
-        Q.errorf("Invalid layer number %d (valid indices: 0-%d).",
-                 layernum, group.nlayers()-1);
+        Q.errorfmt("Invalid layer number {} (valid indices: 0-{}).",
+                   layernum, group.nlayers()-1);
         return Q;
     }
 
@@ -3995,12 +3996,12 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
 {
     geterror();   // clear the error, we're newly initializing
     if (! group) {
-        errorf("No group pointer supplied.");
+        errorfmt("No group pointer supplied.");
         return false;
     }
     if (layernum < 0 || layernum >= group->nlayers()) {
-        errorf("Invalid layer number %d (valid indices: 0-%d).",
-               layernum, group->nlayers()-1);
+        errorfmt("Invalid layer number {} (valid indices: 0-{}).",
+                 layernum, group->nlayers()-1);
         return false;
     }
 

@@ -5,8 +5,10 @@ Release 1.12 -- ?? (compared to 1.11)
 --------------------------------------------------
 Dependency and standards requirements changes:
 * OpenImageIO 2.1-2.3: Support for OIIO 2.0 has been dropped.
-* The default compilation mode is now C++14 (though can still be overridden
-  to build for C++11). #1362
+* The minimum (and default) compilation mode is now C++14. C++17 and 20 are
+  also supported. #1362 #1369 (1.12.2)
+* Minimum compilers are now gcc 6.1 (no more support for gcc 4.8), MSVS
+  2017 or newer (no more support for 2015).
 
 OSL Language and oslc compiler:
 * `#pragma error "message"` and `#pragma warning "message"` can be used to
@@ -16,6 +18,7 @@ OSL Language and oslc compiler:
 
 OSL Standard library:
 * vector2.h is updated with a mod() function for vector2. #1312 (1.12.1/1.11.12)
+* Preliminary work for adding standard MaterialX closures. 31371 (1.12.2)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * Custom experimental llvm optimization levels 10, 11, 12, and 13. These
@@ -26,6 +29,9 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem attribute "searcpath:library" gives a searchpath for finding
   runtime-loadable implementation modules for ISA-optimized operaionts.
   #1310 (1.12.1)
+* Output variable placement -- now you can designate where shader outputs
+  should go and the shader will put resuls there, intead of the app using
+  find_symbol() and symbol_address after the shader is executed. #1328 (1.12.2)
 
 Continued work on experimental SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
@@ -39,6 +45,9 @@ Continued work on experimental SIMD batched shading mode:
 * Add implementation for BatchedBackendLLVM. #1330 (1.12.1)
 * ISA-specific modules. #1345 (1.12.2)
 * Introduction of CI testing of batched mode. #1357 #1367 (1.12.2)
+* Control flow and string ops. #1372 (1.12.2)
+* Matrix operations. #1378 (1.12.2)
+* Batched algebraic, trig, and transcendental functions. #1385 (1.12.2)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -84,6 +93,8 @@ Internals/developer concerns:
 * Minor fixes to the internal TypeSpec and Symbol classes. #1267 (1.12.0.1)
 * Switch from deprecated call to OIIO::parallel_image to the new version.
   #1317 (1.11.11/1.12.1)
+* The "archive_groupname" handling is now careful to sanitize the filenames
+  it deals with, closing some security and safety holes. #1383 (1.12.2)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -114,13 +125,20 @@ Build & test system improvements:
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming
       Imath 3.0 and OpenEXR 3.0. #1299 (1.11.10/1.12.1) #1332 (1.11.11/1.12.1)
-      #1341 (1.11.12/1.12.1) #1356 (1.11.13/1.12.2)
+      #1341 (1.11.12/1.12.1) #1356 #1368 (1.11.13/1.12.2)
+    - Improved finding of llvm components when using static libraries. #1375
+      (1.12.2)
+    - No longer use boost regex, completely rely on std::regex now that OSL
+      is C++14 minimum. #1377. (1.12.2)
 * Testing and Continuous integration (CI) systems:
     - Eliminate the old Travis CI and Appveyor. #1334 #1338 (1.12.1)
     - Use ccache + GitHub 'cache' action to greatly speed up CI runs. #1335
       (1.12.1)
     - Divide the CI stages into separate steps, combine dependency-building
       scripts for CentOS and Ubuntu ito a single script. #1338 (1.12.1)
+    - CI tests clang11, also batched shading with clang. #1379 (1.12.2)
+    - CI speeds up OIIO builds by not building its tests. #1380 (1.12.2)
+    - CI tests gcc11. #1381 (1.12.2)
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)

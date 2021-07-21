@@ -374,8 +374,13 @@ Films using OSL (grouped by year of release date):
   Peter Rabbit 2: The Runaway,
   The Falcon and the Winder Soldier,
   Secret Magic Control Agency,
+  Zack Snyder's Justice League,
   The Mitchells vs the Machines,
+  Jupiter's Legacy,
+  Luca,
+  F9,
   ...
+
 
 
 Building and Installation
@@ -447,16 +452,17 @@ The current project leadership is documented in the
 Many people have contributed features, bug fixes, and other changes to OSL
 over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
 Bidgolirad, Nicholas Bishop, Solomon Boulos, Stefan Bruens, Stefan Büttner,
-Matthaus G. Chajdas, Alejandro Conty, Thomas Dinges, Luke Emrose, Louis
-Feng, Mark Final, Henri Fousse, Syoyo Fujita, Tim Grant, Larry Gritz, Derek
-Haase, Sven-Hendrik Haase, John Haddon, Daniel Heckenberg, Thiago Ize, Matt
-Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Adam Martinez,
-John Mertic, Bastien Montagne, Steena Monteiro, Alexis Oblet, Erich Ocean,
-Mikko Ohtamaa, Jino Park, Alexei Pawlow, Jay Reynolds, Declan Russell,
-Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Cliff
-Stein, Stephan Steinbach, Esteban Tovagliari, Brecht Van Lommel, Alexander
-von Knorring, Alex Wells, Roman Zulak. (Listed alphabetically; if we've left
-anybody out, it is inadvertent, please let us know.)
+Matthaus G. Chajdas, Clark Chen, Alejandro Conty, Thomas Dinges, Mads
+Drøschler, Luke Emrose, Louis Feng, Mark Final, Henri Fousse, Syoyo Fujita,
+Tim Grant, Larry Gritz, Derek Haase, Sven-Hendrik Haase, John Haddon,
+Daniel Heckenberg, Thiago Ize, Niklas Harrysson, Matt Johnson, Ronan
+Keryell, Chris Kulla, Elvic Liang, Max Liani, Adam Martinez, John Mertic,
+Bastien Montagne, Steena Monteiro, Alexis Oblet, Erich Ocean, Mikko
+Ohtamaa, Jino Park, Alexei Pawlow, Jay Reynolds, Declan Russell, Patrick
+Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Sandip Shukla,
+Cliff Stein, Stephan Steinbach, Esteban Tovagliari, Brecht Van Lommel,
+Alexander von Knorring, Alex Wells, Roman Zulak.(Listed alphabetically; if
+we've left anybody out, it is inadvertent, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

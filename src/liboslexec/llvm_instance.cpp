@@ -815,9 +815,8 @@ BackendLLVM::build_llvm_init ()
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
-                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                             ll.type_void_ptr(),
-                             ll.type_int()));
+                             { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                               ll.type_void_ptr(), ll.type_int() }));
 
     if (ll.debug_is_enabled()) {
         ustring sourcefile = group()[0]->op(group()[0]->maincodebegin()).sourcefile();
@@ -905,9 +904,8 @@ BackendLLVM::build_llvm_instance (bool groupentry)
            ll.make_function (unique_layer_name,
                              !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
-                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                             ll.type_void_ptr(),
-                             ll.type_int()));
+                             { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                               ll.type_void_ptr(), ll.type_int() }));
 
     if (ll.debug_is_enabled()) {
         const Opcode& mainbegin (inst()->op(inst()->maincodebegin()));

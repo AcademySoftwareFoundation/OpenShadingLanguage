@@ -150,6 +150,7 @@ public:
 
     /// Create a new function (that will later be populated with
     /// instructions) with up to 4 args.
+    OSL_DEPRECATED("Use make_function flavor that takes a cspan (1.12)")
     llvm::Function *make_function (const std::string &name, bool fastcall,
                                    llvm::Type *rettype,
                                    llvm::Type *arg1=NULL,
@@ -158,10 +159,10 @@ public:
                                    llvm::Type *arg4=NULL);
 
     /// Create a new function (that will later be populated with
-    /// instructions) with a vector of args.
+    /// instructions) with a cspan of args.
     llvm::Function *make_function (const std::string &name, bool fastcall,
                                    llvm::Type *rettype,
-                                   const std::vector<llvm::Type*> &paramtypes,
+                                   cspan<llvm::Type*> paramtypes,
                                    bool varargs=false);
 
     /// Add a global mapping of a function to its callable address
@@ -570,11 +571,11 @@ public:
 
     /// This will return a llvm::Type that is the same as a C union of
     /// the given types[].
-    llvm::Type *type_union (const std::vector<llvm::Type *> &types);
+    llvm::Type *type_union (cspan<llvm::Type *> types);
 
     /// This will return a llvm::Type that is the same as a C struct
     /// comprised fields of the given types[], in order.
-    llvm::Type *type_struct (const std::vector<llvm::Type *> &types,
+    llvm::Type *type_struct (cspan<llvm::Type *> types,
                              const std::string &name="", bool is_packed=false);
 
     /// Return the llvm::Type that is a pointer to the given llvm type.
@@ -585,16 +586,16 @@ public:
     llvm::Type *type_array (llvm::Type *type, int n);
 
     /// Return an llvm::FunctionType that describes a function with the
-    /// given return types, parameter types (in a vector), and whether it
+    /// given return types, parameter types (in a cspan), and whether it
     /// uses varargs conventions.
     llvm::FunctionType *type_function (llvm::Type *rettype,
-                                       const std::vector<llvm::Type*> &params,
+                                       cspan<llvm::Type*> params,
                                        bool varargs=false);
 
     /// Return a llvm::PointerType that's a pointer to the described
     /// kind of function.
     llvm::PointerType *type_function_ptr (llvm::Type *rettype,
-                                          const std::vector<llvm::Type*> &params,
+                                          cspan<llvm::Type*> params,
                                           bool varargs=false);
 
     /// Return the human-readable name of the type of the llvm type.

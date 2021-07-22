@@ -632,13 +632,13 @@ public:
     /// execute_cleanup. If run==false, just do the binding and setup, don't
     /// actually run the shader.
     bool execute(ShadingContext &ctx, ShaderGroup &group, int shadeindex,
-                 ShaderGlobals& globals, void* output_base_ptr,
-                 bool run = true);
+                 ShaderGlobals& globals, void* userdata_base_ptr,
+                 void* output_base_ptr, bool run = true);
 
     // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute (ShadingContext &ctx, ShaderGroup &group,
                   ShaderGlobals &globals, bool run=true) {
-        return execute(ctx, group, 0, globals, nullptr, run);
+        return execute(ctx, group, 0, globals, nullptr, nullptr, run);
     }
 
     // DEPRECATED(2.0): ctx pointer
@@ -656,12 +656,12 @@ public:
     /// shader executed, false if it did not (including if the shader itself
     /// was empty).
     bool execute_init(ShadingContext &ctx, ShaderGroup &group, int shadeindex,
-                      ShaderGlobals &globals, void* output_base_ptr,
-                      bool run=true);
+                      ShaderGlobals &globals, void* userdata_base_ptr,
+                      void* output_base_ptr, bool run=true);
     // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute_init (ShadingContext &ctx, ShaderGroup &group,
                        ShaderGlobals &globals, bool run=true) {
-        return execute_init(ctx, group, 0, globals, nullptr, run);
+        return execute_init(ctx, group, 0, globals, nullptr, nullptr, run);
     }
 
     /// Execute the layer whose layernumber is specified, in this context.
@@ -670,27 +670,30 @@ public:
     /// reason why it might have returned false is if the shader group
     /// turned out, after optimization, to do nothing.)
     bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
-                       void* output_base_ptr, int layernumber);
+                       void* userdata_base_ptr, void* output_base_ptr,
+                       int layernumber);
     /// Execute the layer by name.
     bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
-                       void* output_base_ptr, ustring layername);
+                       void* userdata_base_ptr, void* output_base_ptr,
+                       ustring layername);
     /// Execute the layer that has the given ShaderSymbol as an output.
     /// (The symbol is one returned by find_symbol()).
     bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
-                       void* output_base_ptr, const ShaderSymbol *symbol);
+                       void* userdata_base_ptr, void* output_base_ptr,
+                       const ShaderSymbol *symbol);
 
     // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
                         int layernumber) {
-        return execute_layer(ctx, 0, globals, nullptr, layernumber);
+        return execute_layer(ctx, 0, globals, nullptr, nullptr, layernumber);
     }
     bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
                         ustring layername) {
-        return execute_layer(ctx, 0, globals, nullptr, layername);
+        return execute_layer(ctx, 0, globals, nullptr, nullptr, layername);
     }
     bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
                         const ShaderSymbol *symbol) {
-        return execute_layer(ctx, 0, globals, nullptr, symbol);
+        return execute_layer(ctx, 0, globals, nullptr, nullptr, symbol);
     }
 
     /// Signify that the context is done with the current execution of the

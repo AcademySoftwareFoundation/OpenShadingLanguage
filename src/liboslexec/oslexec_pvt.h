@@ -100,11 +100,13 @@ void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSyste
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* shaderglobals,
                                  void* heap_arena_ptr,
+                                 void* userdata_base_pointer,
                                  void* output_base_pointer,
                                  int shadeindex);
 #if OSL_USE_BATCHED
 typedef void (*RunLLVMGroupFuncWide)(void* batchedshaderglobals,
                                      void* heap_arena_ptr,
+                                     // void* userdata_base_pointer,
                                      // void* output_base_pointer,
                                      // wide int shadeindex
                                      int run_mask_value);
@@ -535,7 +537,8 @@ public:
     void release_context (ShadingContext *ctx);
 
     bool execute (ShadingContext &ctx, ShaderGroup &group, int shadeindex,
-                  ShaderGlobals &ssg, void* output_base_ptr, bool run=true);
+                  ShaderGlobals &ssg, void* userdata_base_ptr,
+                  void* output_base_ptr, bool run=true);
 
     const void* get_symbol (ShadingContext &ctx, ustring layername,
                             ustring symbolname, TypeDesc &type);
@@ -1637,6 +1640,18 @@ public:
         return (f == m_symlocs.end() || f->name != name) ? nullptr : &(*f);
     }
 
+    // Find the SymLocationDesc for this named param but only if it matches
+    // the arena type, returning its pointer or nullptr if that name is not
+    // found.
+    const SymLocationDesc* find_symloc(ustring name, SymArena arena) const {
+        auto f = std::lower_bound(m_symlocs.begin(), m_symlocs.end(), name);
+        if (f != m_symlocs.end() && f->name == name && f->arena == arena
+            && f->offset != -1)
+            return &(*f);
+        else
+            return nullptr;
+    }
+
 private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
@@ -1720,12 +1735,14 @@ public:
     /// Bind a shader group and globals to this context and prepare to
     /// execute. (See similarly named method of ShadingSystem.)
     bool execute_init(ShaderGroup& group, int shadeindex,
-                      ShaderGlobals& globals, void* output_base_ptr, bool run);
+                      ShaderGlobals& globals, void* userdata_base_ptr,
+                      void* output_base_ptr, bool run);
 
     /// Execute the layer whose index is specified. (See similarly named
     /// method of ShadingSystem.)
     bool execute_layer(int shadeindex, ShaderGlobals& globals,
-                       void* output_base_ptr, int layer);
+                       void* userdata_base_ptr, void* output_base_ptr,
+                       int layer);
 
     /// Signify that this context is done with the current execution of the
     /// group. (See similarly named method of ShadingSystem.)
@@ -1734,7 +1751,7 @@ public:
     /// Execute the shader group, including init, run of single entry point
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
     bool execute(ShaderGroup& group, int shadeindex, ShaderGlobals& globals,
-                 void* output_base_ptr, bool run);
+                 void* userdata_base_ptr, void* output_base_ptr, bool run);
 
 #if OSL_USE_BATCHED
     // Group all batched methods behind a templated interface

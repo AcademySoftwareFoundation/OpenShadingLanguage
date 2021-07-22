@@ -105,6 +105,7 @@ static float uoffset = 0, voffset = 0;
 static std::vector<const char*> shader_setup_args;
 static std::string localename = OIIO::Sysutil::getenv("TESTSHADE_LOCALE");
 static OIIO::ParamValueList userdata;
+static char* userdata_base_ptr = nullptr;
 static char* output_base_ptr = nullptr;
 
 
@@ -1362,20 +1363,26 @@ shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
             if (entrylayer_index.empty()) {
                 // Sole entry point for whole group, default behavior
                 shadingsys->execute (*ctx, *shadergroup, shadeindex,
-                                     shaderglobals, output_base_ptr);
+                                     shaderglobals, userdata_base_ptr,
+                                     output_base_ptr);
             } else {
                 // Explicit list of entries to call in order
                 shadingsys->execute_init (*ctx, *shadergroup, shadeindex,
-                                          shaderglobals, output_base_ptr);
+                                          shaderglobals, userdata_base_ptr,
+                                          output_base_ptr);
                 if (entrylayer_symbols.size()) {
                     for (size_t i = 0, e = entrylayer_symbols.size(); i < e; ++i)
                         shadingsys->execute_layer (*ctx, shadeindex,
-                                                   shaderglobals, output_base_ptr,
+                                                   shaderglobals,
+                                                   userdata_base_ptr,
+                                                   output_base_ptr,
                                                    entrylayer_symbols[i]);
                 } else {
                     for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
                         shadingsys->execute_layer (*ctx, shadeindex,
-                                                   shaderglobals, output_base_ptr,
+                                                   shaderglobals,
+                                                   userdata_base_ptr,
+                                                   output_base_ptr,
                                                    entrylayer_index[i]);
                 }
                 shadingsys->execute_cleanup (*ctx);

@@ -68,8 +68,8 @@ ShadingContext::~ShadingContext ()
 
 bool
 ShadingContext::execute_init(ShaderGroup& sgroup, int shadeindex,
-                             ShaderGlobals& ssg, void* output_base_ptr,
-                             bool run)
+                             ShaderGlobals& ssg, void* userdata_base_ptr,
+                             void* output_base_ptr, bool run)
 {
     if (m_group)
         execute_cleanup ();
@@ -125,7 +125,8 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int shadeindex,
         ssg.context = this;
         ssg.renderer = renderer();
         ssg.Ci = NULL;
-        run_func (&ssg, m_heap.get(), output_base_ptr, shadeindex);
+        run_func (&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr,
+                  shadeindex);
     }
 
     if (profile)
@@ -137,7 +138,8 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int shadeindex,
 
 bool
 ShadingContext::execute_layer(int shadeindex, ShaderGlobals& ssg,
-                              void* output_base_ptr, int layernumber)
+                              void* userdata_base_ptr, void* output_base_ptr,
+                              int layernumber)
 {
     if (!group() || group()->nlayers() == 0 || group()->does_nothing())
         return false;
@@ -150,7 +152,8 @@ ShadingContext::execute_layer(int shadeindex, ShaderGlobals& ssg,
     if (! run_func)
         return false;
 
-    run_func (&ssg, m_heap.get(), output_base_ptr, shadeindex);
+    run_func (&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr,
+              shadeindex);
 
     if (profile)
         m_ticks += timer.ticks();
@@ -187,7 +190,8 @@ ShadingContext::execute_cleanup ()
 
 bool
 ShadingContext::execute (ShaderGroup &sgroup, int shadeindex,
-                         ShaderGlobals &ssg, void* output_base_ptr, bool run)
+                         ShaderGlobals &ssg, void* userdata_base_ptr,
+                         void* output_base_ptr, bool run)
 {
     int n = sgroup.m_exec_repeat;
     Vec3 Psave, Nsave;   // for repeats
@@ -203,10 +207,11 @@ ShadingContext::execute (ShaderGroup &sgroup, int shadeindex,
 
     bool result = true;
     while (1) {
-        if (! execute_init (sgroup, shadeindex, ssg, output_base_ptr, run))
+        if (! execute_init (sgroup, shadeindex, ssg, userdata_base_ptr,
+                            output_base_ptr, run))
             return false;
         if (run && n)
-            execute_layer (shadeindex, ssg, output_base_ptr,
+            execute_layer (shadeindex, ssg, userdata_base_ptr, output_base_ptr,
                            group()->nlayers() - 1);
         result = execute_cleanup ();
         if (--n < 1)

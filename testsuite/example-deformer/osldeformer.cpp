@@ -202,11 +202,18 @@ main(int argc, char* argv[])
 #endif
 
     // Use the new symlocs API to say where to place outputs
-    OSL::SymLocationDesc outputs("layer3.out", OIIO::TypePoint, false,
+    OSL::SymLocationDesc outputs("layer3.out", OSL::TypePoint, false,
                                  OSL::SymArena::Outputs,
                                  0 /* output arena offset of "out" */,
                                  sizeof(OSL::Vec3) /* point to point stride */);
     shadsys->add_symlocs(mygroup.get(), outputs);
+
+    // And where to place inputs
+    OSL::SymLocationDesc udinputs("amplitude", OSL::TypeFloat, /*derivs=*/false,
+                                  OSL::SymArena::UserData,
+                                  0 /* userdata arena offset of "amplitude" */,
+                                  sizeof(MyUserData) /* stride */);
+    shadsys->add_symlocs(mygroup.get(), udinputs);
 
     // Now we want to create a context in which we can execute the shader.
     // We need one context per thread. A context can be used over and over
@@ -236,8 +243,11 @@ main(int argc, char* argv[])
     const int npoints = 20;
     OSL::Vec3 Pin[npoints];
     OSL::Vec3 Pout[npoints];
+    MyUserData userdata[npoints];
     for (int i = 0; i < npoints; ++i) {
         Pin[i] = OSL::Vec3(0.1f * i, 0.0f, 0.0f);
+        // Fill in the userdata struct for the point
+        userdata[i].amplitude = 0.0f + 1.0f * powf(i / float(npoints), 3.0f);
     }
 
     // Shade the points:
@@ -245,26 +255,31 @@ main(int argc, char* argv[])
         // First, we need a ShaderGlobals struct:
         OSL::ShaderGlobals shaderglobals;
 
-        // Make a userdata record. Make sure the shaderglobals points to it.
-        MyUserData userdata;
-        shaderglobals.renderstate = &userdata;
-
         // Set up inputs.
 
         // Example of initializing a global: the position, P. It just lives
         // as a hard-coded field in the ShaderGlobals itself.
         shaderglobals.P = Pin[i];
 
+#if 0
+        // OBSOLETE: This is the old way.
+        // Make a userdata record. Make sure the shaderglobals points to it.
+        // MyUserData userdata;
+        shaderglobals.renderstate = &userdata[i];
+
         // Example of initializing a varying or interpolated parameter. We
         // MUST have declared this as a "lockgeom=0" parameter (either in
         // the shader source itself, or when we instanced it with the
         // ShadingSystem::Parameter() call) or this won't work!
-        userdata.amplitude = 0.0f + 1.0f * powf(i / float(npoints), 3.0f);
+        userdata[i].amplitude = 0.0f + 1.0f * powf(i / float(npoints), 3.0f);
+#endif
 
         // Run the shader (will automagically optimize and JIT the first
         // time it executes).
         shadsys->execute(*ctx, *mygroup.get(), /*shade point index= */ i,
-                         shaderglobals, /*output arena start=*/&Pout);
+                         shaderglobals,
+                         /*userdata arena start=*/&userdata,
+                         /*output arena start=*/&Pout);
 
         // OBSOLETE: This is the old way.
         // Retrieve the result. This is fast, it's just combining the data

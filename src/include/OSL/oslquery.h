@@ -214,8 +214,16 @@ private:
     std::vector<Parameter> m_meta;    //< Meta-data about the shader
     friend class pvt::OSOReaderQuery;
 
-    // Internal error reporting routine, with printf-like arguments.
+    // Internal error reporting routine, with std::format-like arguments.
+    template<typename Str, typename... Args>
+    inline void errorfmt(const Str& fmt, Args&&... args) const
+    {
+        append_error(
+            OIIO::Strutil::fmt::format(fmt, std::forward<Args>(args)...));
+    }
+    // DEPRECATED(1.12): old style printf-like arguments.
     template<typename... Args>
+    OSL_DEPRECATED("Use errfmt instead, with std::format args")
     inline void errorf(const char* fmt, const Args&... args) const
     {
         append_error(OIIO::Strutil::sprintf(fmt, args...));

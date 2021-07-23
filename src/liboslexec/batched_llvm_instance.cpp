@@ -246,9 +246,9 @@ init_wide_function_map(const ConcreteT&, ShadingSystemImpl& shadingsys)
 
     // TODO: consider trying to open it even if searchpath_find failed, so that LD_LIBRARY_PATH has a chance
     if (filename.empty()) {
-        shadingsys.errorf(
-            "%s could not be found along the attribute \"searchpath:library\" of \"%s\"",
-            shared_lib_name.c_str(), shadingsys.library_searchpath().c_str());
+        shadingsys.errorfmt(
+            "{} could not be found along the attribute \"searchpath:library\" of \"{}\"",
+            shared_lib_name, shadingsys.library_searchpath());
         // Something later will ASSERT/Fail now, we can't really continue successfully
         return;
     }
@@ -256,8 +256,8 @@ init_wide_function_map(const ConcreteT&, ShadingSystemImpl& shadingsys)
 
     auto shared_lib = OIIO::Plugin::open(filename, /*global=*/false);
     if (shared_lib == 0) {
-        shadingsys.errorf("%s could not be loaded with error \"%s\"",
-                          filename.c_str(), OIIO::Plugin::geterror().c_str());
+        shadingsys.errorfmt("{} could not be loaded with error \"{}\"",
+                            filename, OIIO::Plugin::geterror());
         // Something later will ASSERT/Fail, now we can't really continue successfully
         return;
     }
@@ -273,7 +273,7 @@ init_wide_function_map(const ConcreteT&, ShadingSystemImpl& shadingsys)
             std::cout << ">>>Failed attempting to getsym " << name_and_sig.name
                       << std::endl
                       << "OIIO::Plugin::geterror()="
-                      << OIIO::Plugin::geterror().c_str();
+                      << OIIO::Plugin::geterror();
             ASSERT(
                 0
                 && "Unable to find precompiled OSL library function in shared library.  This indicates a build/configuration problem.  We can't continue");
@@ -1568,8 +1568,8 @@ BatchedBackendLLVM::build_llvm_code(int beginop, int endop,
         } else if (op.opname() == op_nop || op.opname() == op_end) {
             // Skip this op, it does nothing...
         } else {
-            shadingcontext()->errorf("LLVMOSL: Unsupported op %s in layer %s\n",
-                                     op.opname(), inst()->layername());
+            shadingcontext()->errorfmt("LLVMOSL: Unsupported op {} in layer {}\n",
+                                       op.opname(), inst()->layername());
             return false;
         }
 
@@ -2306,8 +2306,7 @@ BatchedBackendLLVM::run()
                                          osl_llvm_compiled_ops_size, "llvm_ops",
                                          &err));
         if (err.length())
-            shadingcontext()->errorf("ParseBitcodeFile returned '%s'\n",
-                                     err.c_str());
+            shadingcontext()->errorfmt("ParseBitcodeFile returned '{}'\n", err);
         OSL_ASSERT(ll.module());
 #endif
         // Create the ExecutionEngine
@@ -2315,8 +2314,7 @@ BatchedBackendLLVM::run()
                 &err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
                 shadingsys().llvm_debugging_symbols(),
                 shadingsys().llvm_profiling_events())) {
-            shadingcontext()->errorf("Failed to create engine: %s\n",
-                                     err.c_str());
+            shadingcontext()->errorfmt("Failed to create engine: {}\n", err);
             OSL_ASSERT(0);
             return;
         }
@@ -2409,8 +2407,8 @@ BatchedBackendLLVM::run()
 
     if (shadingsys().m_max_local_mem_KB
         && m_llvm_local_mem / 1024 > shadingsys().m_max_local_mem_KB) {
-        shadingcontext()->errorf(
-            "Shader group \"%s\" needs too much local storage: %d KB",
+        shadingcontext()->errorfmt(
+            "Shader group \"{}\" needs too much local storage: {} KB",
             group().name(), m_llvm_local_mem / 1024);
     }
 
@@ -2463,7 +2461,7 @@ BatchedBackendLLVM::run()
         if (out.good()) {
             out << ll.bitcode_string(ll.module());
         } else {
-            shadingcontext()->errorf("Could not write to '%s'", name);
+            shadingcontext()->errorfmt("Could not write to '{}'", name);
         }
     }
 
@@ -2509,7 +2507,7 @@ BatchedBackendLLVM::run()
         if (out.good()) {
             out << ll.bitcode_string(ll.module());
         } else {
-            shadingcontext()->errorf("Could not write to '%s'", name);
+            shadingcontext()->errorfmt("Could not write to '{}'", name);
         }
     }
 

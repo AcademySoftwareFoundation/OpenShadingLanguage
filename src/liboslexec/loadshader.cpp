@@ -363,9 +363,9 @@ OSOReaderToMaster::hint (string_view hintstring)
         string_view str = Strutil::parse_until (h, "}");
         Strutil::parse_string (str, str, false, Strutil::DeleteQuotes);
         if (str.size() != m_nargs) {
-            m_shadingsys.errorf("Parsing shader %s: malformed hint '%s' on op %s line %d",
-                                m_master->shadername(), hintstring,
-                                m_master->m_ops.back().opname(), m_sourceline);
+            m_shadingsys.errorfmt("Parsing shader {}: malformed hint '{}' on op {} line {}",
+                                  m_master->shadername(), hintstring,
+                                  m_master->m_ops.back().opname(), m_sourceline);
             m_errors = true;
         }
         for (size_t i = 0; str.size() && i < m_nargs; i++, str.remove_prefix(1)) {
@@ -448,8 +448,8 @@ OSOReaderToMaster::codemarker (const char *name)
     if (m_codesection == "___main___") {
         m_master->m_maincodebegin = nextop;
     } else if (m_codesym < 0) {
-        m_shadingsys.errorf("Parsing shader %s: don't know what to do with code section \"%s\"",
-                            m_master->shadername(), name);
+        m_shadingsys.errorfmt("Parsing shader {}: don't know what to do with code section \"{}\"",
+                              m_master->shadername(), name);
         m_errors = true;
     }
 }
@@ -487,8 +487,8 @@ OSOReaderToMaster::instruction (int /*label*/, const char *opcode)
         // Replace the name in case it was aliased for compatibility
         uopcode = od->name;
     } else {
-        m_shadingsys.errorf("Parsing shader \"%s\": instruction \"%s\" is not known. Maybe compiled with a too-new oslc?",
-                            m_master->shadername(), opcode);
+        m_shadingsys.errorfmt("Parsing shader \"{}\": instruction \"{}\" is not known. Maybe compiled with a too-new oslc?",
+                              m_master->shadername(), opcode);
         m_errors = true;
     }
 }
@@ -505,8 +505,8 @@ OSOReaderToMaster::instruction_arg (const char *name)
         ++m_nargs;
         return;
     }
-    m_shadingsys.errorf("Parsing shader %s: unknown arg %s",
-                        m_master->shadername(), name);
+    m_shadingsys.errorfmt("Parsing shader {}: unknown arg {}",
+                          m_master->shadername(), name);
     m_errors = true;
 }
 
@@ -545,7 +545,7 @@ ShadingSystemImpl::loadshader (string_view cname)
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
     if (found != m_shader_masters.end()) {
         // if (debug())
-        //     infof("Found %s in shader_masters", name);
+        //     infofmt("Found {} in shader_masters", name);
         // Already loaded this shader, return its reference
         return (*found).second;
     }
@@ -557,7 +557,7 @@ ShadingSystemImpl::loadshader (string_view cname)
                                                         m_searchpath_dirs,
                                                         testcwd);
     if (filename.empty ()) {
-        errorf("No .oso file could be found for shader \"%s\"", name);
+        errorfmt("No .oso file could be found for shader \"{}\"", name);
         return NULL;
     }
     OIIO::Timer timer;
@@ -571,8 +571,8 @@ ShadingSystemImpl::loadshader (string_view cname)
     }
     if (ok) {
         ++m_stat_shaders_loaded;
-        infof("Loaded \"%s\" (took %s)", filename,
-              Strutil::timeintervalformat(loadtime, 2));
+        infofmt("Loaded \"{}\" (took {})", filename,
+                Strutil::timeintervalformat(loadtime, 2));
         OSL_DASSERT (r);
         r->resolve_syms ();
         // if (debug()) {
@@ -581,7 +581,7 @@ ShadingSystemImpl::loadshader (string_view cname)
         //         infof("%s", s);
         // }
     } else {
-        errorf("Unable to read \"%s\"", filename);
+        errorfmt("Unable to read \"{}\"", filename);
     }
 
     return r;
@@ -598,7 +598,7 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
         return false;
     }
     if (! buffer.size()) {
-        errorf ("Attempt to load shader \"%s\" with empty OSO data.", shadername);
+        errorfmt("Attempt to load shader \"{}\" with empty OSO data.", shadername);
         return false;
     }
 
@@ -607,7 +607,7 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
     if (found != m_shader_masters.end() && ! allow_shader_replacement()) {
         if (debug())
-            infof("Preload shader %s already exists in shader_masters", name);
+            infofmt("Preload shader {} already exists in shader_masters", name);
         return false;
     }
 
@@ -624,8 +624,8 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
     }
     if (ok) {
         ++m_stat_shaders_loaded;
-        infof("Loaded \"%s\" (took %s)", shadername,
-              Strutil::timeintervalformat(loadtime, 2));
+        infofmt("Loaded \"{}\" (took {})", shadername,
+                Strutil::timeintervalformat(loadtime, 2));
         OSL_DASSERT (r);
         r->resolve_syms ();
         // if (debug()) {
@@ -634,7 +634,7 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
         //         infof ("%s", s);
         // }
     } else {
-        errorf("Unable to parse preloaded shader \"%s\"", shadername);
+        errorfmt("Unable to parse preloaded shader \"{}\"", shadername);
     }
 
     return ok;

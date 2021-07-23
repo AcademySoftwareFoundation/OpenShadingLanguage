@@ -1426,9 +1426,9 @@ BackendLLVM::run ()
         OIIO::Filesystem::open(out, name);
         if (out) {
             out << ll.bitcode_string (ll.module());
-            shadingsys().infof("Wrote pre-optimized bitcode to '%s'", name);
+            shadingsys().infofmt("Wrote pre-optimized bitcode to '{}'", name);
         } else {
-            shadingsys().errorf("Could not write to '%s'", name);
+            shadingsys().errorfmt("Could not write to '{}'", name);
         }
     }
 
@@ -1439,10 +1439,10 @@ BackendLLVM::run ()
     m_stat_llvm_opt_time += timer.lap();
 
     if (llvm_debug()) {
-        for (int layer = 0; layer < nlayers; ++layer)
-            if (funcs[layer])
-                std::cout << "func after opt  = " << ll.bitcode_string (funcs[layer]) << "\n";
-        std::cout.flush();
+        for (auto&& f : funcs)
+            if (f)
+                shadingsys().infofmt("func after opt  = {}\n",
+                                     ll.bitcode_string(f));
     }
 
     // Debug code to dump the post-optimized bitcode to a file
@@ -1459,9 +1459,9 @@ BackendLLVM::run ()
         OIIO::Filesystem::open(out, name);
         if (out) {
             out << ll.bitcode_string (ll.module());
-            shadingsys().infof("Wrote post-optimized bitcode to '%s'", name);
+            shadingsys().infofmt("Wrote post-optimized bitcode to '{}'", name);
         } else {
-            shadingsys().errorf("Could not write to '%s'", name);
+            shadingsys().errorfmt("Could not write to '{}'", name);
         }
     }
 

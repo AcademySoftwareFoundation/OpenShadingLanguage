@@ -65,11 +65,10 @@ test_int_func ()
 
     // Make a function with prototype:   int myadd (int arg1, int arg2)
     // and make it the current function.
-    llvm::Function *func = ll.make_function ("myadd",         // name
-                                             false,           // fastcall
-                                             ll.type_int(),   // return
-                                             ll.type_int(),   // arg1
-                                             ll.type_int());  // arg2
+    auto func = ll.make_function ("myadd",         // name
+                                  false,           // fastcall
+                                  ll.type_int(),   // return
+                                  { ll.type_int(), ll.type_int() });  // args
     ll.current_function (func);
 
     // Generate the ops for this function:  return arg1 + arg2
@@ -113,12 +112,12 @@ test_triple_func ()
 
     // Make a function with prototype:   int myadd (int arg1, int arg2)
     // and make it the current function.
-    llvm::Function *func = ll.make_function ("myaddv",        // name
-                                             false,           // fastcall
-                                             ll.type_void(),  // return
-                                             (llvm::Type *)ll.type_triple_ptr(), // result
-                                             (llvm::Type *)ll.type_triple_ptr(), // arg1
-                                             ll.type_float());  // arg2
+    auto func = ll.make_function ("myaddv",        // name
+                                  false,           // fastcall
+                                  ll.type_void(),  // return
+                                  { (llvm::Type *)ll.type_triple_ptr(), // result
+                                    (llvm::Type *)ll.type_triple_ptr(), // arg1
+                                    ll.type_float() });  // arg2
     ll.current_function (func);
 
     // Generate the ops for this function:  r = a*b
@@ -171,11 +170,10 @@ test_big_func (bool do_print=false)
 
     // Make a function with prototype:  int myadd (int arg1, int arg2)
     // and make it the current function in the current module.
-    llvm::Function *func = ll.make_function ("myadd",         // name
-                                             false,           // fastcall
-                                             ll.type_int(),   // return
-                                             ll.type_int(),   // arg1
-                                             ll.type_int());  // arg2
+    auto func = ll.make_function ("myadd",         // name
+                                  false,           // fastcall
+                                  ll.type_int(),   // return
+                                  { ll.type_int(), ll.type_int() });  // args
     // Make it the current function and get it ready to accept IR.
     ll.current_function (func);
 

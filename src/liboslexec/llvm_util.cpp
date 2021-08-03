@@ -92,6 +92,25 @@
 
 OSL_NAMESPACE_ENTER
 
+
+// Convert our cspan<> to llvm's ArrayRef.
+template<class T>
+inline llvm::ArrayRef<T>
+makeArrayRef(cspan<T> A)
+{
+    return { A.data(), size_t(A.size()) };
+}
+
+
+// Convert our span<> to llvm's MutableArrayRef.
+template<typename T>
+inline llvm::MutableArrayRef<T>
+makeMutableArrayRef(span<T> A) {
+    return { A.data(), size_t(A.size()) };
+}
+
+
+
 namespace pvt {
 
 typedef llvm::SectionMemoryManager LLVMMemoryManager;
@@ -2317,8 +2336,7 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
 
 llvm::Function *
 LLVM_Util::make_function (const std::string &name, bool fastcall,
-                          llvm::Type *rettype,
-                          const std::vector<llvm::Type*> &params,
+                          llvm::Type *rettype, cspan<llvm::Type*> params,
                           bool varargs)
 {
     llvm::FunctionType *functype = type_function (rettype, params, varargs);
@@ -2488,14 +2506,14 @@ LLVM_Util::loop_after_block () const
 
 
 llvm::Type *
-LLVM_Util::type_union(const std::vector<llvm::Type *> &types)
+LLVM_Util::type_union(cspan<llvm::Type*> types)
 {
     llvm::DataLayout target(module());
     size_t max_size = 0;
     size_t max_align = 1;
-    for (size_t i = 0; i < types.size(); ++i) {
-        size_t size = target.getTypeStoreSize(types[i]);
-        size_t align = target.getABITypeAlignment(types[i]);
+    for (auto t : types) {
+        size_t size = target.getTypeStoreSize(t);
+        size_t align = target.getABITypeAlignment(t);
         max_size  = size  > max_size  ? size  : max_size;
         max_align = align > max_align ? align : max_align;
     }
@@ -2521,10 +2539,11 @@ LLVM_Util::type_union(const std::vector<llvm::Type *> &types)
 
 
 llvm::Type *
-LLVM_Util::type_struct (const std::vector<llvm::Type *> &types,
-                        const std::string &name, bool is_packed)
+LLVM_Util::type_struct(cspan<llvm::Type*> types, const std::string &name,
+                       bool is_packed)
 {
-    return llvm::StructType::create(context(), types, name, is_packed);
+    return llvm::StructType::create(context(), makeArrayRef(types), name,
+                                    is_packed);
 }
 
 
@@ -2546,19 +2565,17 @@ LLVM_Util::type_array (llvm::Type *type, int n)
 
 
 llvm::FunctionType *
-LLVM_Util::type_function (llvm::Type *rettype,
-                          const std::vector<llvm::Type*> &params,
-                          bool varargs)
+LLVM_Util::type_function(llvm::Type *rettype, cspan<llvm::Type*> params,
+                         bool varargs)
 {
-    return llvm::FunctionType::get (rettype, params, varargs);
+    return llvm::FunctionType::get(rettype, makeArrayRef(params), varargs);
 }
 
 
 
 llvm::PointerType *
-LLVM_Util::type_function_ptr (llvm::Type *rettype,
-                              const std::vector<llvm::Type*> &params,
-                              bool varargs)
+LLVM_Util::type_function_ptr(llvm::Type *rettype, cspan<llvm::Type*> params,
+                             bool varargs)
 {
     llvm::FunctionType *functype = type_function (rettype, params, varargs);
     return llvm::PointerType::getUnqual (functype);

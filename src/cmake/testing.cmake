@@ -213,9 +213,14 @@ macro (osl_add_all_tests)
                 named-components
                 noise noise-cell
                 noise-gabor noise-gabor2d-filter noise-gabor3d-filter
+                noise-gabor-reg
+                noise-generic
                 noise-perlin noise-simplex
+                noise-reg
                 normalize-reg
-                pnoise pnoise-cell pnoise-gabor pnoise-perlin
+                pnoise pnoise-cell pnoise-gabor 
+                pnoise-generic pnoise-perlin
+                pnoise-reg
                 operator-overloading
                 opt-warnings
                 oslc-comma oslc-D oslc-M

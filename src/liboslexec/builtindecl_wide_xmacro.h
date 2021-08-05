@@ -185,15 +185,15 @@ DECL(__OSL_OP(fprintf), "xXiss*")
 
 DECL(__OSL_MASKED_OP(split), "xXXXXXii")
 
-#ifdef __OSL_TBD
-
 // DECL (osl_incr_layers_executed, "xX") // original used by wide currently
-
-
 
 WIDE_NOISE_IMPL(cellnoise)
 // commented out in non-wide, there is no derivative version of cellnoise
 //WIDE_NOISE_DERIV_IMPL(cellnoise)
+
+WIDE_NOISE_IMPL(hashnoise)
+// There is no derivative version of hashnoise
+//WIDE_NOISE_DERIV_IMPL(hashnoise)
 
 WIDE_NOISE_IMPL(noise)
 WIDE_NOISE_DERIV_IMPL(noise)
@@ -218,6 +218,10 @@ WIDE_PNOISE_IMPL(pcellnoise)
 // commented out in non-wide, there is no derivative version of pcellnoise
 //WIDE_PNOISE_DERIV_IMPL(pcellnoise)
 
+WIDE_PNOISE_IMPL(phashnoise)
+// commented out in non-wide, there is no derivative version of phashnoise
+//WIDE_PNOISE_DERIV_IMPL(phashnoise)
+
 
 WIDE_GENERIC_NOISE_DERIV_IMPL(gabornoise)
 WIDE_GENERIC_PNOISE_DERIV_IMPL(gaborpnoise)
@@ -237,7 +241,9 @@ WIDE_NOISE_DERIV_IMPL(unullnoise)
 //DECL (osl_noiseparams_set_bandwidth, "xXf") // share non-wide impl
 //DECL (osl_noiseparams_set_impulses, "xXf")  // share non-wide impl
 
-DECL(__OSL_OP(count_noise), "xX")
+DECL(__OSL_MASKED_OP(count_noise), "xXi")
+
+#ifdef __OSL_TBD
 
 // Need wide for combinations of the 3 parameters allowed to be uniform
 // caveat, some combos are unreachable/uneeded
@@ -381,8 +387,6 @@ DECL(__OSL_OP(get_attribute_uniform), "iXiXXiiXX")
 // TODO:  shouldn't bind_interpolated_param be MASKED?  change name to reflect
 DECL(__OSL_OP(bind_interpolated_param), "iXXLiXiXiXii")
 
-#ifdef __OSL_TBD
-
 //DECL (osl_get_texture_options, "XX") // uneeded
 DECL(__OSL_OP(get_noise_options), "XX")
 
@@ -395,7 +399,6 @@ DECL(__OSL_OP(get_noise_options), "XX")
 // Can be revisited as an optimization.
 #endif
 
-#endif // __OSL_TBD
 
 WIDE_UNARY_OP_IMPL(sin)
 WIDE_UNARY_OP_IMPL(cos)

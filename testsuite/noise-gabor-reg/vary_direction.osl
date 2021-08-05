@@ -1,0 +1,6 @@
+shader
+vary_direction (
+    output vector direction = 0)
+{
+    direction = 10*(P - vector(0.5, 0.5, 0.5));
+}

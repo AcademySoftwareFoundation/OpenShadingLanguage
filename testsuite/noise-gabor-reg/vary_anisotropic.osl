@@ -1,0 +1,6 @@
+shader
+vary_anisotropic (
+    output int anisotropic = 0)
+{
+    anisotropic = int(P[0]*16)%4;
+}

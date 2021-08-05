@@ -7,13 +7,85 @@
 set ( liboslexec_target_srcs
     wide/wide_opalgebraic
     wide/wide_opmatrix
+    wide/wide_opnoise
+    wide/wide_opnoise_cell
+    wide/wide_opnoise_gabor_impl
+    wide/wide_opnoise_generic_impl
+    wide/wide_opnoise_hash
+    wide/wide_opnoise_null
+    wide/wide_opnoise_null_deriv
+    wide/wide_opnoise_periodic_cell
+    wide/wide_opnoise_periodic_gabor_impl
+    wide/wide_opnoise_periodic_generic_impl
+    wide/wide_opnoise_periodic_hash
+    wide/wide_opnoise_periodic_perlin_float
+    wide/wide_opnoise_periodic_perlin_deriv_float
+    wide/wide_opnoise_periodic_perlin_Vec3
+    wide/wide_opnoise_periodic_perlin_deriv_Vec3
+    wide/wide_opnoise_periodic_uperlin_float
+    wide/wide_opnoise_periodic_uperlin_deriv_float
+    wide/wide_opnoise_periodic_uperlin_Vec3
+    wide/wide_opnoise_periodic_uperlin_deriv_Vec3
+    wide/wide_opnoise_perlin_float
+    wide/wide_opnoise_perlin_deriv_float
+    wide/wide_opnoise_perlin_Vec3
+    wide/wide_opnoise_perlin_deriv_Vec3
+    wide/wide_opnoise_simplex_float
+    wide/wide_opnoise_simplex_deriv_float
+    wide/wide_opnoise_simplex_Vec3
+    wide/wide_opnoise_simplex_deriv_Vec3
+    wide/wide_opnoise_unull
+    wide/wide_opnoise_unull_deriv
+    wide/wide_opnoise_uperlin_float
+    wide/wide_opnoise_uperlin_deriv_float
+    wide/wide_opnoise_uperlin_Vec3
+    wide/wide_opnoise_uperlin_deriv_Vec3
+    wide/wide_opnoise_usimplex_float
+    wide/wide_opnoise_usimplex_deriv_float
+    wide/wide_opnoise_usimplex_Vec3
+    wide/wide_opnoise_usimplex_deriv_Vec3
     wide/wide_opstring
     wide/wide_optranscendental
-    wide/wide_shadingsys
     wide/wide_optrigonometric
+    wide/wide_shadingsys
+   ../liboslnoise/wide/wide_gabor_anisotropic_disabled
+   ../liboslnoise/wide/wide_gabor_anisotropic_enabled
+   ../liboslnoise/wide/wide_gabor_hybrid_disabled
+   ../liboslnoise/wide/wide_gabor_hybrid_enabled
+   ../liboslnoise/wide/wide_gabor_isotropic_disabled
+   ../liboslnoise/wide/wide_gabor_isotropic_enabled   
+   ../liboslnoise/wide/wide_gabor3_anisotropic_disabled
+   ../liboslnoise/wide/wide_gabor3_anisotropic_enabled
+   ../liboslnoise/wide/wide_gabor3_hybrid_disabled
+   ../liboslnoise/wide/wide_gabor3_hybrid_enabled
+   ../liboslnoise/wide/wide_gabor3_isotropic_disabled
+   ../liboslnoise/wide/wide_gabor3_isotropic_enabled   
     )
 
+
 set ( liboslexec_override_limits
+    wide/wide_opnoise_periodic_perlin_deriv_float
+    wide/wide_opnoise_periodic_perlin_deriv_Vec3
+    wide/wide_opnoise_periodic_perlin_float
+    wide/wide_opnoise_periodic_perlin_Vec3
+    wide/wide_opnoise_periodic_uperlin_deriv_float
+    wide/wide_opnoise_periodic_uperlin_deriv_Vec3
+    wide/wide_opnoise_periodic_uperlin_float
+    wide/wide_opnoise_periodic_uperlin_Vec3
+    wide/wide_opnoise_perlin_deriv_float
+    wide/wide_opnoise_perlin_deriv_Vec3
+    wide/wide_opnoise_perlin_float
+    wide/wide_opnoise_perlin_Vec3
+    wide/wide_opnoise_uperlin_deriv_float
+    wide/wide_opnoise_uperlin_deriv_Vec3
+    wide/wide_opnoise_uperlin_float
+    wide/wide_opnoise_uperlin_Vec3
+   ../liboslnoise/wide/wide_gabor3_anisotropic_disabled
+   ../liboslnoise/wide/wide_gabor3_anisotropic_enabled
+   ../liboslnoise/wide/wide_gabor3_hybrid_disabled
+   ../liboslnoise/wide/wide_gabor3_hybrid_enabled
+   ../liboslnoise/wide/wide_gabor3_isotropic_disabled
+   ../liboslnoise/wide/wide_gabor3_isotropic_enabled   
     )
     
 set (local_lib oslexec)
@@ -245,6 +317,7 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
     list (APPEND TARGET_CXX_DEFS
         "__OSL_WIDTH=${TARGET_BATCH_SIZE}"
         "__OSL_TARGET_ISA=${TARGET_ISA}"        
+        "OSL_OPENMP_SIMD"        
         )
 
     if (CMAKE_COMPILER_IS_INTEL)
@@ -268,7 +341,12 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
                 list (APPEND TARGET_CXX_OPTS "/Qfma-")
             endif ()
             
-            list (APPEND TARGET_CXX_OPTS "/Qprec-div" "/Qqopt-report:5")
+            list (APPEND TARGET_CXX_OPTS 
+                "/Qprec-div" 
+                "/Qopt-report:5"
+                "/Qopenmp-simd"
+                )
+                
         else ()
             if (${TARGET_OPT_ISA} STREQUAL "AVX512")
                 list (APPEND TARGET_CXX_OPTS "-xCORE-AVX512")
@@ -289,7 +367,12 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
                 list (APPEND TARGET_CXX_OPTS "-no-fma")
             endif ()
             
-            list (APPEND TARGET_CXX_OPTS "-prec-div" "-qopt-report=5")
+            list (APPEND TARGET_CXX_OPTS 
+                "-prec-div" 
+                "-qopt-report=5" 
+                "-qopenmp-simd"
+                )
+                
         endif ()
     endif ()
     
@@ -328,6 +411,8 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         # clang's loop unrolling.  We really don't want to do this and wish to remove
         # it as soon as clang addresses this issue.
         list (APPEND TARGET_CXX_OPTS "-fno-unroll-loops")
+
+        list (APPEND TARGET_CXX_OPTS "-fopenmp")
     endif ()
         
     foreach(target_src ${liboslexec_target_srcs})

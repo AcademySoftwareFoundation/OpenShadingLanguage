@@ -1,0 +1,7 @@
+shader
+vary_impulses (
+    output float impulses = 0)
+{
+    // it is clamped beteen 1 - 32
+    impulses = 1 + (P[0]*31.5);
+}

@@ -654,7 +654,7 @@ public:
     /// archive.
     bool archive_shadergroup (ShaderGroup& group, string_view filename);
 
-    void count_noise () { m_stat_noise_calls += 1; }
+    void count_noise (int number=1) { m_stat_noise_calls += number; }
 
     ColorSystem& colorsystem() { return m_colorsystem; }
 

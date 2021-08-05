@@ -100,7 +100,9 @@ struct NoiseParams;
 namespace pvt {
 using namespace OIIO::simd;
 using namespace OIIO::bjhash;
-
+#ifdef __OSL_WIDE_PVT
+    namespace sfm = OSL::__OSL_WIDE_PVT::sfm;
+#endif
 typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
                                  int indim, const float *in,
                                  const float *period, NoiseParams *params);
@@ -2241,6 +2243,9 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
     Dual2<float> t = fade(fz);
     Dual2<float> s = fade(fw);
 
+    // With Dual2<Vec3> data types, a lot of code is generated below
+    // which caused some runaway compiler memory consumption when vectorizing
+#if 0
     auto l_result = OIIO::lerp (
                OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
@@ -2261,7 +2266,40 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                               grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
                               u, v, t),
                s);
+#else
+    // Use a loop to avoid repeating code gen twice
+    Dual2<Vec3> v0, v1;
+    OSL_INTEL_PRAGMA(nounroll_and_jam)
+    for(int vIndex=0; vIndex<2;++vIndex) {
 
+        // use masking to modify inputs that differ between the 2 iterations
+        int vW = W;
+        if (vIndex != 0) { vW += 1; }
+        Dual2<float> vfw = fw;
+        if (vIndex != 0) { vfw -= 1.0f; }
+
+        Dual2<Vec3> vResult = OIIO::trilerp (
+            grad (hash (X  , Y  , Z  , vW  ), fx     , fy     , fz     , vfw     ),
+            grad (hash (X+1, Y  , Z  , vW  ), fx-1.0f, fy     , fz     , vfw     ),
+            grad (hash (X  , Y+1, Z  , vW  ), fx     , fy-1.0f, fz     , vfw     ),
+            grad (hash (X+1, Y+1, Z  , vW  ), fx-1.0f, fy-1.0f, fz     , vfw     ),
+            grad (hash (X  , Y  , Z+1, vW  ), fx     , fy     , fz-1.0f, vfw     ),
+            grad (hash (X+1, Y  , Z+1, vW  ), fx-1.0f, fy     , fz-1.0f, vfw     ),
+            grad (hash (X  , Y+1, Z+1, vW  ), fx     , fy-1.0f, fz-1.0f, vfw     ),
+            grad (hash (X+1, Y+1, Z+1, vW  ), fx-1.0f, fy-1.0f, fz-1.0f, vfw     ),
+            u, v, t);
+        // Rather than dynamic indexing array,
+        // use masking to store outputs,
+        // to better enable SROA (Scalar Replacement of Aggregates) optimizations
+        if (vIndex == 0) {
+            v0 = vResult;
+        } else {
+            v1 = vResult;
+        }
+    }
+    auto l_result = OIIO::lerp (v0, v1, s);
+
+#endif
     result = scale4 (l_result);
     }
 }

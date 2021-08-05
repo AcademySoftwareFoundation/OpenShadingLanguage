@@ -2245,7 +2245,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
 
     // With Dual2<Vec3> data types, a lot of code is generated below
     // which caused some runaway compiler memory consumption when vectorizing
-#if 0
+#if OSL_GNUC_VERSION
     auto l_result = OIIO::lerp (
                OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
@@ -2269,6 +2269,8 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
 #else
     // Use a loop to avoid repeating code gen twice
     Dual2<Vec3> v0, v1;
+    // GCC emits -Wmaybe-uninitialized errors for v0,v1.
+    // To avoid, GCC uses reference version above
     OSL_INTEL_PRAGMA(nounroll_and_jam)
     for(int vIndex=0; vIndex<2;++vIndex) {
 

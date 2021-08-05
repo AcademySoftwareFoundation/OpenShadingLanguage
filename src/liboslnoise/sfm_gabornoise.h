@@ -432,7 +432,7 @@ gabor_cell(const sfm::GaborUniformParams& gup, const sfm::GaborParams& gp,
 template<int AnisotropicT, typename FilterPolicyT, bool PeriodicT>
 static OSL_FORCEINLINE Dual2<float>
 gabor_grid(const sfm::GaborUniformParams& gup, const sfm::GaborParams& gp,
-           const Dual2<Vec3>& x_g, int seed = 0)
+           const Dual2<Vec3>& x_g, const int seed = 0)
 {
     using pvt::floor;
     Vec3 floor_x_g(floor(x_g));  // Vec3 because floor has no derivs
@@ -526,7 +526,7 @@ gabor_evaluate(const sfm::GaborUniformParams& gup, const sfm::GaborParams& gp,
 template<int AnisotropicT, typename FilterPolicyT, bool PeriodicT>
 static OSL_FORCEINLINE Dual2<float>
 gabor_evaluate(const sfm::GaborUniformParams& gup, const sfm::GaborParams& gp,
-               const Dual2<Vec3>& x, int seed)
+               const Dual2<Vec3>& x, const int seed)
 {
     Dual2<Vec3> x_g = x * gup.radius_inv;
     return sfm::gabor_grid<AnisotropicT, FilterPolicyT, PeriodicT>(gup, gp, x_g,
@@ -568,13 +568,15 @@ scalar_gabor3(const Dual2<Vec3>& P, const sfm::GaborUniformParams& gup,
         // versus runtime seed value with dynamic masking to storing results.
         // Normally we would choose compile time known values,
         // but this is a large amount of code to let be duplicated 3 times.
-#if 0
+#if OSL_GNUC_VERSION
         Dual2<Vec3> result = make_Vec3 (sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(gup, gp, P, 0 /*seed*/),
                                         sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(gup, gp, P, 1 /*seed*/),
                                         sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(gup, gp, P, 2 /*seed*/));
 #else
     // Choose to reduce code gen size by using a loop and pragma to avoid unrolling
     Dual2<Vec3> result;
+    // GCC emits -Wmaybe-uninitialized errors for result.
+    // To avoid, GCC uses reference version above
     OSL_INTEL_PRAGMA(nounroll_and_jam)
     for (int seed = 0; seed < 3; ++seed) {
         auto resultPart = sfm::gabor_evaluate<AnisotropicT, FilterPolicyT,
@@ -644,13 +646,15 @@ scalar_pgabor3(const Dual2<Vec3>& P, const Vec3& Pperiod,
         // versus runtime seed value with dynamic masking to storing results.
         // Normally we would choose compile time known values,
         // but this is a large amount of code to let be duplicated 3 times.
-#if 0
+#if OSL_GNUC_VERSION
         Dual2<Vec3> result = make_Vec3 (sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/, 0 /*seed*/>(gup, gp, P),
                                         sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/, 1 /*seed*/>(gup, gp, P),
                                         sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/, 2 /*seed*/>(gup, gp, P));
 #else
     // Choose to reduce code gen size by using a loop and pragma to avoid unrolling
     Dual2<Vec3> result;
+    // GCC emits -Wmaybe-uninitialized errors for result.
+    // To avoid, GCC uses reference version above
     OSL_INTEL_PRAGMA(nounroll_and_jam)
     for (int seed = 0; seed < 3; ++seed) {
         auto resultPart = sfm::gabor_evaluate<AnisotropicT, FilterPolicyT,

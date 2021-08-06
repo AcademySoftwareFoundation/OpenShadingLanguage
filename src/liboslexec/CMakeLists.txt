@@ -413,6 +413,13 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         list (APPEND TARGET_CXX_OPTS "-fno-unroll-loops")
 
         list (APPEND TARGET_CXX_OPTS "-fopenmp")
+        
+        # Uncomment next section to investigate failures in vectorization
+        #list (APPEND TARGET_CXX_OPTS 
+        #    "-Rpass=loop-vectorize" 
+        #    "-Rpass-analysis=loop-vectorize" 
+        #    "-Rpass-missed=loop-vectorize"
+        #    )
     endif ()
     
     

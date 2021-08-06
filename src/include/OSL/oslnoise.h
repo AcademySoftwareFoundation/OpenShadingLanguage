@@ -2245,7 +2245,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
 
     // With Dual2<Vec3> data types, a lot of code is generated below
     // which caused some runaway compiler memory consumption when vectorizing
-#if OSL_GNUC_VERSION
+#if !OSL_INTEL_COMPILER
     auto l_result = OIIO::lerp (
                OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
@@ -2271,14 +2271,13 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
     Dual2<Vec3> v0, v1;
     // GCC emits -Wmaybe-uninitialized errors for v0,v1.
     // To avoid, GCC uses reference version above
-    OSL_INTEL_PRAGMA(nounroll_and_jam)
-    for(int vIndex=0; vIndex<2;++vIndex) {
 
-        // use masking to modify inputs that differ between the 2 iterations
-        int vW = W;
-        if (vIndex != 0) { vW += 1; }
-        Dual2<float> vfw = fw;
-        if (vIndex != 0) { vfw -= 1.0f; }
+    // Clang doesn't want to vectorize with the vIndex loop
+    // To enable vectorization, Clang uses reference version above
+    OSL_INTEL_PRAGMA(nounroll_and_jam)
+    for(int vIndex=0; vIndex < 2;++vIndex) {
+        int vW = W + vIndex;
+        Dual2<float> vfw = fw - float(vIndex);
 
         Dual2<Vec3> vResult = OIIO::trilerp (
             grad (hash (X  , Y  , Z  , vW  ), fx     , fy     , fz     , vfw     ),
@@ -2300,8 +2299,8 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
         }
     }
     auto l_result = OIIO::lerp (v0, v1, s);
-
 #endif
+
     result = scale4 (l_result);
     }
 }

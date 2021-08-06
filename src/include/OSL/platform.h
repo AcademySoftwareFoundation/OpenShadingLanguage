@@ -208,6 +208,11 @@
     #define OSL_CLANG_ATTRIBUTE(value)
 #endif
 
+#if OSL_GNUC_VERSION
+    #define OSL_GNUC_ATTRIBUTE(value) __attribute__((value))
+#else
+    #define OSL_GNUC_ATTRIBUTE(value)
+#endif
 
 
 #ifndef OSL_DEBUG

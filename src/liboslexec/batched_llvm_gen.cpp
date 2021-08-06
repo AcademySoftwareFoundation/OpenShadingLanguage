@@ -2873,7 +2873,7 @@ LLVMGEN (llvm_gen_transform)
 
             auto func_name = llvm::Twine("transform_") + triple_type.c_str();
             FuncSpec func_spec(func_name);
-            // Ignore derivatives if uneeded or unsupplied
+            // Ignore derivatives if unneeded or not supplied
             // NOTE: odd case where P is uniform but still reported as having
             // derivatives.  Choose to ignore uniform derivatives
             bool has_derivs = (Result->has_derivs() && (P->has_derivs() && !P_is_uniform));

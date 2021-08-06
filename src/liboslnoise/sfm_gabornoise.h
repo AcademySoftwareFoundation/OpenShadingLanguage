@@ -175,9 +175,12 @@ gabor_setup_filter(const Dual2<Vec3>& P, sfm::GaborParams& gp)
         // No way to do filter if we have no derivs, and no reason to
         // do it if it's too small to have any effect.
         do_filter = 0;
+#if OSL_GNUC_VERSION
         // Just to get rid of "may be used uninitialized in this function [-Werror=maybe-uninitialized]"
+        gp.filter = Matrix22{};
         gp.local = sfm::Matrix33();
         gp.N     = Vec3(0.0f);
+#endif
     } else {
         make_orthonormals(n, t, b);
 

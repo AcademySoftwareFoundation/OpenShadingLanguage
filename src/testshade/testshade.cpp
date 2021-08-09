@@ -196,11 +196,14 @@ set_shadingsys_options ()
     if (const char *opt_env = getenv ("TESTSHADE_BATCH_SIZE"))
         batch_size = atoi(opt_env);
 
+    // For batched allow FMA if build of OSL supports it
+    int llvm_jit_fma = batched;
+    if (const char *opt_env = getenv ("TESTSHADE_LLVM_JIT_FMA"))
+        llvm_jit_fma = atoi(opt_env);
+    shadingsys->attribute ("llvm_jit_fma", llvm_jit_fma);
+
     if (batched) {
 #if OSL_USE_BATCHED
-        // Allow FMA if build of OSL supports it
-        shadingsys->attribute ("llvm_jit_fma", 1);
-
         bool batch_size_requested = (batch_size != -1);
         // FIXME: For now, output placement is not supported for batched
         // shading.
@@ -224,8 +227,10 @@ set_shadingsys_options ()
             shadingsys->getattribute ("llvm_jit_target", llvm_jit_target);
             int llvm_jit_fma;
             shadingsys->getattribute ("llvm_jit_fma", llvm_jit_fma);
-            std::cout << " for isa("<<llvm_jit_target.c_str()<<")";
-            std::cout << " and llvm_jit_fma("<<llvm_jit_fma<<")";
+            if (!llvm_jit_target.empty()) {
+                std::cout << " for isa("<<llvm_jit_target.c_str()<<") and ";
+            }
+            std::cout << " llvm_jit_fma("<<llvm_jit_fma<<")";
             if (batch_size_requested) {
                 std::cout << " and batch_size("<<batch_size<<")";
             }

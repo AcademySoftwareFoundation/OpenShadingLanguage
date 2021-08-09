@@ -252,7 +252,7 @@ affineInverse(const Matrix44 &m)
 static inline OSL_HOSTDEVICE Matrix44 OSL_GNUC_ATTRIBUTE(optimize("O0"))
 nonAffineInverse(const Matrix44 &source) OSL_CLANG_ATTRIBUTE(optnone);
 
-Matrix44 nonAffineInverse(const Matrix44 &source)
+Matrix44 OSL_HOSTDEVICE nonAffineInverse(const Matrix44 &source)
 {
     OSL_INTEL_PRAGMA(float_control(strict,on,push))
 

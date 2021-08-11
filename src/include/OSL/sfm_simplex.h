@@ -86,14 +86,14 @@ namespace fast_grad2 {
         Vec2( -1.0f, -1.0f ), Vec2( 1.0f,  0.0f ), Vec2( -1.0f, 0.0f ), Vec2( 1.0f,  1.0f ),
         Vec2( -1.0f,  1.0f ), Vec2( 0.0f, -1.0f ), Vec2(  0.0f, 1.0f ), Vec2(  1.0f, -1.0f ));
 
-    //static constexpr uint8_t x_one_mask = 0b10001010;
-    static constexpr uint8_t x_one_mask = 0x8A;
+    //static constexpr uint8_t x_one_mask     = 0b10001010;
+    static constexpr uint8_t x_one_mask       = 0x8A;
     //static constexpr uint8_t x_neg_one_mask = 0b00010101;
-    static constexpr uint8_t x_neg_one_mask = 0x15;
-    //static constexpr uint8_t y_one_mask = 0b01011000;
-    static constexpr uint8_t y_one_mask = 0x58;
+    static constexpr uint8_t x_neg_one_mask   = 0x15;
+    //static constexpr uint8_t y_one_mask     = 0b01011000;
+    static constexpr uint8_t y_one_mask       = 0x58;
     //static constexpr uint8_t y_neg_one_mask = 0b10100001;
-    static constexpr uint8_t y_neg_one_mask = 0xA1;
+    static constexpr uint8_t y_neg_one_mask   = 0xA1;
 
 #ifdef __OSL_EMIT_GRAD_MASKS
     class OSLEXECPUBLIC mask_emitter {
@@ -193,22 +193,23 @@ namespace fast_grad4 {
       Vec4( -1.0f, 1.0f, 1.0f, 0.0f ), Vec4( -1.0f, 1.0f, -1.0f, 0.0f ), Vec4( -1.0f, -1.0f, 1.0f, 0.0f ), Vec4( -1.0f, -1.0f, -1.0f, 0.0f ));
 
 
-    //static constexpr uint32_t x_one_mask = 0b00001111000011110000111100000000;
-    static constexpr uint32_t x_one_mask = 0x0F0F0F00;
+    //static constexpr uint32_t x_one_mask     = 0b00001111000011110000111100000000;
+    static constexpr uint32_t x_one_mask       = 0x0F0F0F00;
     //static constexpr uint32_t x_neg_one_mask = 0b11110000111100001111000000000000;
-    static constexpr uint32_t x_neg_one_mask = 0xF0F0F000;
-    //static constexpr uint32_t y_one_mask = 0b00110011001100110000000000001111;
-    static constexpr uint32_t y_one_mask = 0x3333000F;
+    static constexpr uint32_t x_neg_one_mask   = 0xF0F0F000;
+    //static constexpr uint32_t y_one_mask     = 0b00110011001100110000000000001111;
+    static constexpr uint32_t y_one_mask       = 0x3333000F;
     //static constexpr uint32_t y_neg_one_mask = 0b11001100110011000000000011110000;
-    static constexpr uint32_t y_neg_one_mask = 0xCCCC00F0;
-    //static constexpr uint32_t z_one_mask = 0b01010101000000000011001100110011;
-    static constexpr uint32_t z_one_mask = 0x55003333;
+    static constexpr uint32_t y_neg_one_mask   = 0xCCCC00F0;
+    //static constexpr uint32_t z_one_mask     = 0b01010101000000000011001100110011;
+    static constexpr uint32_t z_one_mask       = 0x55003333;
     //static constexpr uint32_t z_neg_one_mask = 0b10101010000000001100110011001100;
-    static constexpr uint32_t z_neg_one_mask = 0xAA00CCCC;
-    //static constexpr uint32_t w_one_mask = 0b00000000010101010101010101010101;
-    static constexpr uint32_t w_one_mask = 0x00555555;
+    static constexpr uint32_t z_neg_one_mask   = 0xAA00CCCC;
+    //static constexpr uint32_t w_one_mask     = 0b00000000010101010101010101010101;
+    static constexpr uint32_t w_one_mask       = 0x00555555;
     //static constexpr uint32_t w_neg_one_mask = 0b00000000101010101010101010101010;
-    static constexpr uint32_t w_neg_one_mask = 0x00AAAAAA;
+    static constexpr uint32_t w_neg_one_mask   = 0x00AAAAAA;
+
 
 #ifdef __OSL_EMIT_GRAD_MASKS
     class OSLEXECPUBLIC mask_emitter {
@@ -254,29 +255,29 @@ namespace fast_simplex {
 
 
     //static constexpr uint64_t corner2_i_offset_mask = 0b1101000010110000000000000000000000000000000000000000000000000000;
-    static constexpr uint64_t corner2_i_offset_mask = 0xD0B0000000000000;
+    static constexpr uint64_t corner2_i_offset_mask   = 0xD0B0000000000000;
     //static constexpr uint64_t corner2_j_offset_mask = 0b0000000000000000000000000000000011000100000000001000110000000000;
-    static constexpr uint64_t corner2_j_offset_mask = 0x00000000C4008C00;
+    static constexpr uint64_t corner2_j_offset_mask   = 0x00000000C4008C00;
     //static constexpr uint64_t corner2_k_offset_mask = 0b0000000000000000000000001010001000000000000000000000000010001010;
-    static constexpr uint64_t corner2_k_offset_mask = 0x000000A20000008A;
+    static constexpr uint64_t corner2_k_offset_mask   = 0x000000A20000008A;
     //static constexpr uint64_t corner2_l_offset_mask = 0b0000000100000001000000000000000100000001000000000000000100000001;
-    static constexpr uint64_t corner2_l_offset_mask = 0x0101000101000101;
+    static constexpr uint64_t corner2_l_offset_mask   = 0x0101000101000101;
     //static constexpr uint64_t corner3_i_offset_mask = 0b1101000110110001000000001010000011000000000000000000000000000000;
-    static constexpr uint64_t corner3_i_offset_mask = 0xD1B100A0C0000000;
+    static constexpr uint64_t corner3_i_offset_mask   = 0xD1B100A0C0000000;
     //static constexpr uint64_t corner3_j_offset_mask = 0b1100000000000000000000000000000011000101000000001000110110001000;
-    static constexpr uint64_t corner3_j_offset_mask = 0xC0000000C5008D88;
+    static constexpr uint64_t corner3_j_offset_mask   = 0xC0000000C5008D88;
     //static constexpr uint64_t corner3_k_offset_mask = 0b0000000010100000000000001010001100000000000000001000100010001011;
-    static constexpr uint64_t corner3_k_offset_mask = 0x00A000A30000888B;
+    static constexpr uint64_t corner3_k_offset_mask   = 0x00A000A30000888B;
     //static constexpr uint64_t corner3_l_offset_mask = 0b0001000100010001000000000000001100000101000000000000010100000011;
-    static constexpr uint64_t corner3_l_offset_mask = 0x1111000305000503;
+    static constexpr uint64_t corner3_l_offset_mask   = 0x1111000305000503;
     //static constexpr uint64_t corner4_i_offset_mask = 0b1101000110110001000000001010001111000101000000001000000010000000;
-    static constexpr uint64_t corner4_i_offset_mask = 0xD1B100A3C5008080;
+    static constexpr uint64_t corner4_i_offset_mask   = 0xD1B100A3C5008080;
     //static constexpr uint64_t corner4_j_offset_mask = 0b1101000110000000000000001000000011000101000000001000110110001011;
-    static constexpr uint64_t corner4_j_offset_mask = 0xD1800080C5008D8B;
+    static constexpr uint64_t corner4_j_offset_mask   = 0xD1800080C5008D8B;
     //static constexpr uint64_t corner4_k_offset_mask = 0b1000000010110001000000001010001110000000000000001000110110001011;
-    static constexpr uint64_t corner4_k_offset_mask = 0x80B100A380008D8B;
+    static constexpr uint64_t corner4_k_offset_mask   = 0x80B100A380008D8B;
     //static constexpr uint64_t corner4_l_offset_mask = 0b0101000100110001000000000010001101000101000000000000110100001011;
-    static constexpr uint64_t corner4_l_offset_mask = 0x5131002345000D0B;
+    static constexpr uint64_t corner4_l_offset_mask   = 0x5131002345000D0B;
 
 
 #ifdef __OSL_EMIT_GRAD_MASKS
@@ -389,7 +390,7 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         return fast_grad2::lut_wide.get(h & 7);
     #else
         int clamped_index = h&7;
-        uint8_t bit_index = 0x01 << clamped_index;
+        uint8_t bit_index = uint8_t(1) << clamped_index;
         float x = 0.0f;
         if (bit_index & fast_grad2::x_one_mask)
             x = 1.0f;
@@ -419,7 +420,7 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         // and use a mask to blend 1.0f and -1.0f on the appropriate indices
         //return fast_grad3::lut_wide.get(h & 15);
         int clamped_index = h&15;
-        uint16_t bit_index = 0x0001 << clamped_index;
+        uint16_t bit_index = uint16_t(1) << clamped_index;
         float x = 0.0f;
         if (bit_index & fast_grad3::x_one_mask)
             x = 1.0f;
@@ -439,8 +440,8 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
             z = -1.0f;
 
         return Vec3(x,y,z);
-    }
 #endif
+    }
 
     template<int seedT>
     static OSL_FORCEINLINE const Vec4
@@ -455,7 +456,7 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         // table lookup, so turn index into a linear bit index
         // and use a mask to blend 1.0f and -1.0f on the appropriate indices
         int clamped_index = h&31;
-        uint32_t bit_index = 0x00000001 << clamped_index;
+        uint32_t bit_index = uint32_t(1) << clamped_index;
         float x = 0.0f;
         if (bit_index & fast_grad4::x_one_mask)
             x = 1.0f;
@@ -656,27 +657,36 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
 
         // Noise contributions from the simplex corners
         // Calculate the contribution from the three corners
-        Vec2 g0 = grad2<seedT> (i, j);
-        Vec2 g1 = grad2<seedT> (i+i1, j+j1);
-        Vec2 g2 = grad2<seedT> (i+1, j+1);
 
+        // As we do not expect any coherency between data lanes
+        // Hoisted work out of conditionals to encourage masking blending
+        // versus a check for coherency
+        // In other words we will do all the work, all the time versus
+        // trying to manage it on a per lane basis.
+        // NOTE: this may be slower if used for serial vs. simd
         float t0 = 0.5f - x0 * x0 - y0 * y0;
         float t20 = t0 * t0;
         float t40 = t20 * t20;
-        float tn0 = t40 * (g0.x * x0 + g0.y * y0);
-        float n0 = (t0 >= 0.0f) ? tn0 : 0.0f;
+        Vec2 g0 = grad2<seedT> (i, j);
+        float n0 = t40 * (g0.x * x0 + g0.y * y0);
+        if (t0 < 0.0f)
+            n0 = 0.0f;
 
         float t1 = 0.5f - x1 * x1 - y1 * y1;
         float t21 = t1 * t1;
         float t41 = t21 * t21;
-        float tn1 = t41 * (g1.x * x1 + g1.y * y1);
-        float n1 = (t1 >= 0.0f) ? tn1 : 0.0f;
+        Vec2 g1 = grad2<seedT> (i+i1, j+j1);
+        float n1 = t41 * (g1.x * x1 + g1.y * y1);
+        if (t1 < 0.0f)
+            n1 = 0.0f;
 
         float t2 = 0.5f - x2 * x2 - y2 * y2;
         float t22 = t2 * t2;
         float t42 = t22 * t22;
-        float tn2 = t42 * (g2.x * x2 + g2.y * y2);
-        float n2 = (t2 >= 0.0f) ? tn2 : 0.0f;
+        Vec2 g2 = grad2<seedT> (i+1, j+1);
+        float n2 = t42 * (g2.x * x2 + g2.y * y2);
+        if (t2 < 0.0f)
+            n2 = 0.0f;
 
         // Sum up and scale the result.  The scale is empirical, to make it
         // cover [-1,1], and to make it approximately match the range of our
@@ -687,26 +697,29 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         // Compute derivative, if requested by supplying non-null pointers
         // for the last two arguments
         if (derivPolicy.has_derivs()) {
+        /*  A straight, unoptimised calculation would be like:
+         *    *dnoise_dx = -8.0f * t20 * t0 * x0 * ( g0.x * x0 + g0.y * y0 ) + t40 * g0.x;
+         *    *dnoise_dy = -8.0f * t20 * t0 * y0 * ( g0.x * x0 + g0.y * y0 ) + t40 * g0.y;
+         *    *dnoise_dx += -8.0f * t21 * t1 * x1 * ( g1.x * x1 + g1.y * y1 ) + t41 * g1.x;
+         *    *dnoise_dy += -8.0f * t21 * t1 * y1 * ( g1.x * x1 + g1.y * y1 ) + t41 * g1.y;
+         *    *dnoise_dx += -8.0f * t22 * t2 * x2 * ( g2.x * x2 + g2.y * y2 ) + t42 * g2.x;
+         *    *dnoise_dy += -8.0f * t22 * t2 * y2 * ( g2.x * x2 + g2.y * y2 ) + t42 * g2.y;
+         */
             // As we always calculated g# above,
             // we need to zero out those who were invalid
             // before they are used in more calculations
-            g0 = (t0 >= 0.0f) ? g0 : Vec2(0.0f);
-            g1 = (t1 >= 0.0f) ? g1 : Vec2(0.0f);
-            g2 = (t2 >= 0.0f) ? g2 : Vec2(0.0f);
-        /*  A straight, unoptimised calculation would be like:
-         *    *dnoise_dx = -8.0f * t20 * t0 * x0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[0];
-         *    *dnoise_dy = -8.0f * t20 * t0 * y0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[1];
-         *    *dnoise_dx += -8.0f * t21 * t1 * x1 * ( g1[0] * x1 + g1[1] * y1 ) + t41 * g1[0];
-         *    *dnoise_dy += -8.0f * t21 * t1 * y1 * ( g1[0] * x1 + g1[1] * y1 ) + t41 * g1[1];
-         *    *dnoise_dx += -8.0f * t22 * t2 * x2 * ( g2[0] * x2 + g2[1] * y2 ) + t42 * g2[0];
-         *    *dnoise_dy += -8.0f * t22 * t2 * y2 * ( g2[0] * x2 + g2[1] * y2 ) + t42 * g2[1];
-         */
+            if (t0 < 0.0f)
+                g0 = Vec2(0.0f);
             float temp0 = t20 * t0 * (g0.x * x0 + g0.y * y0);
             float dnoise_dx = temp0 * x0;
             float dnoise_dy = temp0 * y0;
+            if (t1 < 0.0f)
+                g1 = Vec2(0.0f);
             float temp1 = t21 * t1 * (g1.x * x1 + g1.y * y1);
             dnoise_dx += temp1 * x1;
             dnoise_dy += temp1 * y1;
+            if (t2 < 0.0f)
+                g2 = Vec2(0.0f);
             float temp2 = t22 * t2 * (g2.x* x2 + g2.y * y2);
             dnoise_dx += temp2 * x2;
             dnoise_dy += temp2 * y2;
@@ -844,38 +857,42 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         // In other words we will do all the work, all the time versus
         // trying to manage it on a per lane basis.
         // NOTE: this may be slower if used for serial vs. simd
-        Vec3 g0 = grad3<seedT>(i, j, k);
-        Vec3 g1 = grad3<seedT>(i+i1, j+j1, k+k1);
-        Vec3 g2 = grad3<seedT>(i+i2, j+j2, k+k2);
-        Vec3 g3 = grad3<seedT>(i+1, j+1, k+1);
 
         // Calculate the contribution from the four corners
         float t0 = 0.5f - x0*x0 - y0*y0 - z0*z0;
         float t20 = t0 * t0;
         float t40 = t20 * t20;
+        Vec3 g0 = grad3<seedT>(i, j, k);
         // NOTE: avoid array access of points, always use
         // the real data members to avoid aliasing issues
-        //n0 = t40 * (g0[0] * x0 + g0[1] * y0 + g0[2] * z0);
-        float tn0 = t40 * (g0.x * x0 + g0.y * y0 + g0.z * z0);
-        float n0 = (t0 >= 0.0f) ? tn0 : 0.0f;
+        //n0 = t40 * (g0.x * x0 + g0.y * y0 + g0.z * z0);
+        float n0 = t40 * (g0.x * x0 + g0.y * y0 + g0.z * z0);
+        if (t0 < 0.0f)
+            n0 = 0.0f;
 
         float t1 = 0.5f - x1*x1 - y1*y1 - z1*z1;
         float t21 = t1 * t1;
         float t41 = t21 * t21;
-        float tn1 = t41 * (g1.x * x1 + g1.y * y1 + g1.z * z1);
-        float n1 = (t1 >= 0.0f) ? tn1 : 0.0f;
+        Vec3 g1 = grad3<seedT>(i+i1, j+j1, k+k1);
+        float n1 = t41 * (g1.x * x1 + g1.y * y1 + g1.z * z1);
+        if (t1 < 0.0f)
+            n1 = 0.0f;
 
         float t2 = 0.5f - x2*x2 - y2*y2 - z2*z2;
         float t22 = t2 * t2;
         float t42 = t22 * t22;
-        float tn2 = t42 * (g2.x * x2 + g2.y * y2 + g2.z * z2);
-        float n2 = (t2 >= 0.0f) ? tn2 : 0.0f;
+        Vec3 g2 = grad3<seedT>(i+i2, j+j2, k+k2);
+        float n2 = t42 * (g2.x * x2 + g2.y * y2 + g2.z * z2);
+        if (t2 < 0.0f)
+            n2 = 0.0f;
 
         float t3 = 0.5f - x3*x3 - y3*y3 - z3*z3;
         float t23 = t3 * t3;
         float t43 = t23 * t23;
-        float tn3 = t43 * (g3.x * x3 + g3.y * y3 + g3.z * z3);
-        float n3 = (t3 >= 0.0f) ? tn3 : 0.0f;
+        Vec3 g3 = grad3<seedT>(i+1, j+1, k+1);
+        float n3 = t43 * (g3.x * x3 + g3.y * y3 + g3.z * z3);
+        if (t3 < 0.0f)
+            n3 = 0.0f;
 
         // Sum up and scale the result.  The scale is empirical, to make it
         // cover [-1,1], and to make it approximately match the range of our
@@ -885,40 +902,43 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
 
 
         if (derivPolicy.has_derivs()) {
+            /*  A straight, unoptimized calculation would be like:
+            *    *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0.x, g0.y, g0.z, x0, y0, z0) + t40 * g0.x;
+            *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0.x, g0.y, g0.z, x0, y0, z0) + t40 * g0.y;
+            *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0.x, g0.y, g0.z, x0, y0, z0) + t40 * g0.z;
+            *    *dnoise_dx += -8.0f * t21 * t1 * x1 * dot(g1.x, g1.y, g1.z, x1, y1, z1) + t41 * g1.x;
+            *    *dnoise_dy += -8.0f * t21 * t1 * y1 * dot(g1.x, g1.y, g1.z, x1, y1, z1) + t41 * g1.y;
+            *    *dnoise_dz += -8.0f * t21 * t1 * z1 * dot(g1.x, g1.y, g1.z, x1, y1, z1) + t41 * g1.z;
+            *    *dnoise_dx += -8.0f * t22 * t2 * x2 * dot(g2.x, g2.y, g2.z, x2, y2, z2) + t42 * g2.x;
+            *    *dnoise_dy += -8.0f * t22 * t2 * y2 * dot(g2.x, g2.y, g2.z, x2, y2, z2) + t42 * g2.y;
+            *    *dnoise_dz += -8.0f * t22 * t2 * z2 * dot(g2.x, g2.y, g2.z, x2, y2, z2) + t42 * g2.z;
+            *    *dnoise_dx += -8.0f * t23 * t3 * x3 * dot(g3.x, g3.y, g3.z, x3, y3, z3) + t43 * g3.x;
+            *    *dnoise_dy += -8.0f * t23 * t3 * y3 * dot(g3.x, g3.y, g3.z, x3, y3, z3) + t43 * g3.y;
+            *    *dnoise_dz += -8.0f * t23 * t3 * z3 * dot(g3.x, g3.y, g3.z, x3, y3, z3) + t43 * g3.z;
+            */
             // As we always calculated g# above,
             // we need to zero out those who were invalid
             // before they are used in more calculations
-            g0 = (t0 >= 0.0f) ? g0 : Vec3(0.0f);
-            g1 = (t1 >= 0.0f) ? g1 : Vec3(0.0f);
-            g2 = (t2 >= 0.0f) ? g2 : Vec3(0.0f);
-            g3 = (t3 >= 0.0f) ? g3 : Vec3(0.0f);
-
-            /*  A straight, unoptimized calculation would be like:
-            *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[0];
-            *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[1];
-            *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[2];
-            *    *dnoise_dx += -8.0f * t21 * t1 * x1 * dot(g1[0], g1[1], g1[2], x1, y1, z1) + t41 * g1[0];
-            *    *dnoise_dy += -8.0f * t21 * t1 * y1 * dot(g1[0], g1[1], g1[2], x1, y1, z1) + t41 * g1[1];
-            *    *dnoise_dz += -8.0f * t21 * t1 * z1 * dot(g1[0], g1[1], g1[2], x1, y1, z1) + t41 * g1[2];
-            *    *dnoise_dx += -8.0f * t22 * t2 * x2 * dot(g2[0], g2[1], g2[2], x2, y2, z2) + t42 * g2[0];
-            *    *dnoise_dy += -8.0f * t22 * t2 * y2 * dot(g2[0], g2[1], g2[2], x2, y2, z2) + t42 * g2[1];
-            *    *dnoise_dz += -8.0f * t22 * t2 * z2 * dot(g2[0], g2[1], g2[2], x2, y2, z2) + t42 * g2[2];
-            *    *dnoise_dx += -8.0f * t23 * t3 * x3 * dot(g3[0], g3[1], g3[2], x3, y3, z3) + t43 * g3[0];
-            *    *dnoise_dy += -8.0f * t23 * t3 * y3 * dot(g3[0], g3[1], g3[2], x3, y3, z3) + t43 * g3[1];
-            *    *dnoise_dz += -8.0f * t23 * t3 * z3 * dot(g3[0], g3[1], g3[2], x3, y3, z3) + t43 * g3[2];
-            */
+            if (t0 < 0.0f)
+                g0 = Vec3(0.0f);
             float temp0 = t20 * t0 * (g0.x * x0 + g0.y * y0 + g0.z * z0);
             float dnoise_dx = temp0 * x0;
             float dnoise_dy = temp0 * y0;
             float dnoise_dz = temp0 * z0;
+            if (t1 < 0.0f)
+                g1 = Vec3(0.0f);
             float temp1 = t21 * t1 * (g1.x * x1 + g1.y * y1 + g1.z * z1);
             dnoise_dx += temp1 * x1;
             dnoise_dy += temp1 * y1;
             dnoise_dz += temp1 * z1;
+            if (t2 < 0.0f)
+                g2 = Vec3(0.0f);
             float temp2 = t22 * t2 * (g2.x * x2 + g2.y * y2 + g2.z * z2);
             dnoise_dx += temp2 * x2;
             dnoise_dy += temp2 * y2;
             dnoise_dz += temp2 * z2;
+            if (t3 < 0.0f)
+                g3 = Vec3(0.0f);
             float temp3 = t23 * t3 * (g3.x * x3 + g3.y * y3 + g3.z * z3);
             dnoise_dx += temp3 * x3;
             dnoise_dy += temp3 * y3;
@@ -1074,45 +1094,49 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         // In other words we will do all the work, all the time versus
         // trying to manage it on a per lane basis.
         // NOTE: this may be slower if used for serial vs. simd
-        Vec4 g0 = grad4<seedT>(i, j, k, l);
-        Vec4 g1 = grad4<seedT>(i+i1, j+j1, k+k1, l+l1);
-        Vec4 g2 = grad4<seedT>(i+i2, j+j2, k+k2, l+l2);
-        Vec4 g3 = grad4<seedT>(i+i3, j+j3, k+k3, l+l3);
-        Vec4 g4 = grad4<seedT>(i+1, j+1, k+1, l+1);
 
         // Calculate the contribution from the five corners
-        float t0 = 0.5f - x0*x0 - y0*y0 - z0*z0 - w0*w0;
         // NOTE: avoid array access of points, always use
         // the real data members to avoid aliasing issues
-
+        float t0 = 0.5f - x0*x0 - y0*y0 - z0*z0 - w0*w0;
         float t20 = t0 * t0;
         float t40 = t20 * t20;
-        float tn0 = t40 * (g0.x * x0 + g0.y * y0 + g0.z * z0 + g0.w * w0);
-        float n0 = (t0 >= 0.0f) ? tn0 : 0.0f;
+        Vec4 g0 = grad4<seedT>(i, j, k, l);
+        float n0 = t40 * (g0.x * x0 + g0.y * y0 + g0.z * z0 + g0.w * w0);
+        if (t0 < 0.0f)
+            n0 = 0.0f;
 
         float t1 = 0.5f - x1*x1 - y1*y1 - z1*z1 - w1*w1;
         float t21 = t1 * t1;
         float t41 = t21 * t21;
-        float tn1 = t41 * (g1.x * x1 + g1.y * y1 + g1.z * z1 + g1.w * w1);
-        float n1 = (t1 >= 0.0f) ? tn1 : 0.0f;
+        Vec4 g1 = grad4<seedT>(i+i1, j+j1, k+k1, l+l1);
+        float n1 = t41 * (g1.x * x1 + g1.y * y1 + g1.z * z1 + g1.w * w1);
+        if (t1 < 0.0f)
+            n1 = 0.0f;
 
         float t2 = 0.5f - x2*x2 - y2*y2 - z2*z2 - w2*w2;
         float t22 = t2 * t2;
         float t42 = t22 * t22;
-        float tn2 = t42 * (g2.x * x2 + g2.y * y2 + g2.z * z2 + g2.w * w2);
-        float n2 = (t2 >= 0.0f) ? tn2 : 0.0f;
+        Vec4 g2 = grad4<seedT>(i+i2, j+j2, k+k2, l+l2);
+        float n2 = t42 * (g2.x * x2 + g2.y * y2 + g2.z * z2 + g2.w * w2);
+        if (t2 < 0.0f)
+            n2 = 0.0f;
 
         float t3 = 0.5f - x3*x3 - y3*y3 - z3*z3 - w3*w3;
         float t23 = t3 * t3;
         float t43 = t23 * t23;
-        float tn3 = t43 * (g3.x * x3 + g3.y * y3 + g3.z * z3 + g3.w * w3);
-        float n3 = (t3 >= 0.0f) ? tn3 : 0.0f;
+        Vec4 g3 = grad4<seedT>(i+i3, j+j3, k+k3, l+l3);
+        float n3 = t43 * (g3.x * x3 + g3.y * y3 + g3.z * z3 + g3.w * w3);
+        if (t3 < 0.0f)
+            n3 = 0.0f;
 
         float t4 = 0.5f - x4*x4 - y4*y4 - z4*z4 - w4*w4;
         float t24 = t4 * t4;
         float t44 = t24 * t24;
-        float tn4 = t44 * (g4.x * x4 + g4.y * y4 + g4.z * z4 + g4.w * w4);
-        float n4 = (t4 >= 0.0f) ? tn4 : 0.0f;
+        Vec4 g4 = grad4<seedT>(i+1, j+1, k+1, l+1);
+        float n4 = t44 * (g4.x * x4 + g4.y * y4 + g4.z * z4 + g4.w * w4);
+        if (t4 < 0.0f)
+            n4 = 0.0f;
 
         // Sum up and scale the result.  The scale is empirical, to make it
         // cover [-1,1], and to make it approximately match the range of our
@@ -1121,57 +1145,61 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         float noise = scale * (n0 + n1 + n2 + n3 + n4);
 
         if (derivPolicy.has_derivs()) {
+            /*  A straight, unoptimised calculation would be like:
+            *    *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0.x, g0.y, g0.z, g0.w, x0, y0, z0, w0) + t40 * g0.x;
+            *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0.x, g0.y, g0.z, g0.w, x0, y0, z0, w0) + t40 * g0.y;
+            *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0.x, g0.y, g0.z, g0.w, x0, y0, z0, w0) + t40 * g0.z;
+            *    *dnoise_dw = -8.0f * t20 * t0 * w0 * dot(g0.x, g0.y, g0.z, g0.w, x0, y0, z0, w0) + t40 * g0.w;
+            *    *dnoise_dx += -8.0f * t21 * t1 * x1 * dot(g1.x, g1.y, g1.z, g1.w, x1, y1, z1, w1) + t41 * g1.x;
+            *    *dnoise_dy += -8.0f * t21 * t1 * y1 * dot(g1.x, g1.y, g1.z, g1.w, x1, y1, z1, w1) + t41 * g1.y;
+            *    *dnoise_dz += -8.0f * t21 * t1 * z1 * dot(g1.x, g1.y, g1.z, g1.w, x1, y1, z1, w1) + t41 * g1.z;
+            *    *dnoise_dw = -8.0f * t21 * t1 * w1 * dot(g1.x, g1.y, g1.z, g1.w, x1, y1, z1, w1) + t41 * g1.w;
+            *    *dnoise_dx += -8.0f * t22 * t2 * x2 * dot(g2.x, g2.y, g2.z, g2.w, x2, y2, z2, w2) + t42 * g2.x;
+            *    *dnoise_dy += -8.0f * t22 * t2 * y2 * dot(g2.x, g2.y, g2.z, g2.w, x2, y2, z2, w2) + t42 * g2.y;
+            *    *dnoise_dz += -8.0f * t22 * t2 * z2 * dot(g2.x, g2.y, g2.z, g2.w, x2, y2, z2, w2) + t42 * g2.z;
+            *    *dnoise_dw += -8.0f * t22 * t2 * w2 * dot(g2.x, g2.y, g2.z, g2.w, x2, y2, z2, w2) + t42 * g2.w;
+            *    *dnoise_dx += -8.0f * t23 * t3 * x3 * dot(g3.x, g3.y, g3.z, g3.w, x3, y3, z3, w3) + t43 * g3.x;
+            *    *dnoise_dy += -8.0f * t23 * t3 * y3 * dot(g3.x, g3.y, g3.z, g3.w, x3, y3, z3, w3) + t43 * g3.y;
+            *    *dnoise_dz += -8.0f * t23 * t3 * z3 * dot(g3.x, g3.y, g3.z, g3.w, x3, y3, z3, w3) + t43 * g3.z;
+            *    *dnoise_dw += -8.0f * t23 * t3 * w3 * dot(g3.x, g3.y, g3.z, g3.w, x3, y3, z3, w3) + t43 * g3.w;
+            *    *dnoise_dx += -8.0f * t24 * t4 * x4 * dot(g4.x, g4.y, g4.z, g4.w, x4, y4, z4, w4) + t44 * g4.x;
+            *    *dnoise_dy += -8.0f * t24 * t4 * y4 * dot(g4.x, g4.y, g4.z, g4.w, x4, y4, z4, w4) + t44 * g4.y;
+            *    *dnoise_dz += -8.0f * t24 * t4 * z4 * dot(g4.x, g4.y, g4.z, g4.w, x4, y4, z4, w4) + t44 * g4.z;
+            *    *dnoise_dw += -8.0f * t24 * t4 * w4 * dot(g4.x, g4.y, g4.z, g4.w, x4, y4, z4, w4) + t44 * g4.w;
+            */
             // As we always calculated g# above,
             // we need to zero out those who were invalid
             // before they are used in more calculations
-            g0 = (t0 >= 0.0f) ? g0 : Vec4(0.0f);
-            g1 = (t1 >= 0.0f) ? g1 : Vec4(0.0f);
-            g2 = (t2 >= 0.0f) ? g2 : Vec4(0.0f);
-            g3 = (t3 >= 0.0f) ? g3 : Vec4(0.0f);
-            g4 = (t4 >= 0.0f) ? g4 : Vec4(0.0f);
-
-            /*  A straight, unoptimised calculation would be like:
-            *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[0];
-            *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[1];
-            *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[2];
-            *    *dnoise_dw = -8.0f * t20 * t0 * w0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[3];
-            *    *dnoise_dx += -8.0f * t21 * t1 * x1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[0];
-            *    *dnoise_dy += -8.0f * t21 * t1 * y1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[1];
-            *    *dnoise_dz += -8.0f * t21 * t1 * z1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[2];
-            *    *dnoise_dw = -8.0f * t21 * t1 * w1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[3];
-            *    *dnoise_dx += -8.0f * t22 * t2 * x2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[0];
-            *    *dnoise_dy += -8.0f * t22 * t2 * y2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[1];
-            *    *dnoise_dz += -8.0f * t22 * t2 * z2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[2];
-            *    *dnoise_dw += -8.0f * t22 * t2 * w2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[3];
-            *    *dnoise_dx += -8.0f * t23 * t3 * x3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[0];
-            *    *dnoise_dy += -8.0f * t23 * t3 * y3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[1];
-            *    *dnoise_dz += -8.0f * t23 * t3 * z3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[2];
-            *    *dnoise_dw += -8.0f * t23 * t3 * w3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[3];
-            *    *dnoise_dx += -8.0f * t24 * t4 * x4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[0];
-            *    *dnoise_dy += -8.0f * t24 * t4 * y4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[1];
-            *    *dnoise_dz += -8.0f * t24 * t4 * z4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[2];
-            *    *dnoise_dw += -8.0f * t24 * t4 * w4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[3];
-            */
+            if (t0 < 0.0f)
+                g0 = Vec4(0.0f);
             float temp0 = t20 * t0 * (g0.x * x0 + g0.y * y0 + g0.z * z0 + g0.w * w0);
             float dnoise_dx = temp0 * x0;
             float dnoise_dy = temp0 * y0;
             float dnoise_dz = temp0 * z0;
             float dnoise_dw = temp0 * w0;
+            if (t1 < 0.0f)
+                g1 = Vec4(0.0f);
             float temp1 = t21 * t1 * (g1.x * x1 + g1.y * y1 + g1.z * z1 + g1.w * w1);
             dnoise_dx += temp1 * x1;
             dnoise_dy += temp1 * y1;
             dnoise_dz += temp1 * z1;
             dnoise_dw += temp1 * w1;
+            if (t2 < 0.0f)
+                g2 = Vec4(0.0f);
             float temp2 = t22 * t2 * (g2.x * x2 + g2.y * y2 + g2.z * z2 + g2.w * w2);
             dnoise_dx += temp2 * x2;
             dnoise_dy += temp2 * y2;
             dnoise_dz += temp2 * z2;
             dnoise_dw += temp2 * w2;
+            if (t3 < 0.0f)
+                g3 = Vec4(0.0f);
             float temp3 = t23 * t3 * (g3.x * x3 + g3.y * y3 + g3.z * z3 + g3.w * w3);
             dnoise_dx += temp3 * x3;
             dnoise_dy += temp3 * y3;
             dnoise_dz += temp3 * z3;
             dnoise_dw += temp3 * w3;
+            if (t4 < 0.0f)
+                g4 = Vec4(0.0f);
             float temp4 = t24 * t4 * (g4.x * x4 + g4.y * y4 + g4.z * z4 + g4.w * w4);
             dnoise_dx += temp4 * x4;
             dnoise_dy += temp4 * y4;

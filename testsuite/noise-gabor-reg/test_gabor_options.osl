@@ -1,0 +1,44 @@
+shader
+test_gabor_options(float angle = 10, float inscale = 20,
+           float offset = 0.5, float scale = 0.5,
+           int anisotropic = 0,
+           vector direction = vector(1,0,0),
+           float bandwidth = 4.0,
+           float impulses = 16,
+           int do_filter = 1,
+           output color Cout = 0)
+{
+   // setup some coordinates
+   float theta = radians(angle);
+   float s = mod(u,0.25) - 0.125;
+   float t = mod(v,0.5) - 0.25;
+   float ru = cos(theta) * s + sin(theta) * t;
+   float rv = sin(theta) * s - cos(theta) * t;
+   ru *= inscale;
+   rv *= inscale;
+   float rz = (inscale * (s + t)) / M_SQRT2;
+   float ttime = s*inscale;
+
+   Cout = 0;
+   if (v < 0.49) {
+       // float noise in 1,2,3,4 dimensions
+       if (u < 0.24)
+           Cout = offset + scale * (float) noise ("gabor", ru, "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+       else if (u > 0.26 && u < 0.49)
+           Cout = offset + scale * (float) noise ("gabor", ru, rv, "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+       else if (u > 0.51 && u < 0.74)
+           Cout = offset + scale * (float) noise ("gabor", point(ru, rv, rz), "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+       else if (u > 0.76)
+           Cout = offset + scale * (float) noise ("gabor", point(ru, rv, rz), ttime, "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+   } else if (v > 0.51) {
+       // color noise in 1,2,3,4 dimensions
+       if (u < 0.24)
+           Cout = offset + scale * (color) noise ("gabor", ru, "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+       else if (u > 0.26 && u < 0.49)
+           Cout = offset + scale * (color) noise ("gabor", ru, rv, "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+       else if (u > 0.51 && u < 0.74)
+           Cout = offset + scale * (color) noise ("gabor", point(ru, rv, rz), "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+       else if (u > 0.76)
+           Cout = offset + scale * (color) noise ("gabor", point(ru, rv, rz), ttime, "anisotropic",anisotropic, "direction", direction, "bandwidth", bandwidth, "impulses", impulses, "do_filter", do_filter);
+   }
+}

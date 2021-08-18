@@ -1069,7 +1069,7 @@ OSL_FORCEINLINE void
 impl_copy_untransformed_lanes(InputAccessorT inVec, void* Pout, Mask succeeded,
                               Mask op_mask)
 {
-    typedef typename InputAccessorT::NonConstValueType data_type;
+    typedef typename InputAccessorT::NonConstValueType DataType;
     // if Pin != Pout, we still need to copy inactive data over to Pout
     // Handle cleaning up any data lanes that did not succeed
     if (((void*)&inVec.data() != Pout)) {
@@ -1081,7 +1081,7 @@ impl_copy_untransformed_lanes(InputAccessorT inVec, void* Pout, Mask succeeded,
         if (OSL_UNLIKELY(failed.any_on())) {
             OSL_FORCEINLINE_BLOCK
             {
-                Masked<data_type> failedOutVec(Pout, failed);
+                Masked<DataType> failedOutVec(Pout, failed);
                 OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
                 for (int i = 0; i < __OSL_WIDTH; ++i) {
                     failedOutVec[i] = inVec[i];
@@ -1097,7 +1097,7 @@ impl_transform_point_masked(void* Pin, void* Pout, void* transform,
                             unsigned int mask_transform,
                             unsigned int mask_value)
 {
-    typedef typename InputAccessorT::NonConstValueType data_type;
+    typedef typename InputAccessorT::NonConstValueType DataType;
 
     // ignore derivs because output doesn't need it
     OSL_FORCEINLINE_BLOCK
@@ -1109,17 +1109,17 @@ impl_transform_point_masked(void* Pin, void* Pout, void* transform,
         // only operate on active lanes
         Mask activeMask = mask & succeeded;
 
-        Masked<data_type> wresult(Pout, activeMask);
+        Masked<DataType> wresult(Pout, activeMask);
         MatrixAccessorT wM(transform);
 
         // Transform with Vector semantics
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             const Matrix44 m  = wM[lane];
-            const data_type v = inPoints[lane];
+            const DataType v = inPoints[lane];
 
             if (wresult.mask()[lane]) {
-                data_type r;
+                DataType r;
 
                 // Do to illegal aliasing in OpenEXR version
                 // we call our own flavor without aliasing
@@ -1202,7 +1202,7 @@ impl_transform_vector_masked(void* Pin, void* Pout, void* transform,
                              unsigned int mask_transform,
                              unsigned int mask_value)
 {
-    typedef typename InputAccessorT::NonConstValueType data_type;
+    typedef typename InputAccessorT::NonConstValueType DataType;
 
     // ignore derivs because output doesn't need it
     OSL_FORCEINLINE_BLOCK
@@ -1214,14 +1214,14 @@ impl_transform_vector_masked(void* Pin, void* Pout, void* transform,
         // only operate on active lanes
         Mask activeMask = mask & succeeded;
 
-        Masked<data_type> wresult(Pout, activeMask);
+        Masked<DataType> wresult(Pout, activeMask);
         MatrixAccessorT wM(transform);
 
         // Transform with Vector semantics
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Matrix44 m  = wM[lane];
-            data_type v = inPoints[lane];
+            DataType v = inPoints[lane];
             if (wresult.mask()[lane]) {
                 // Do to illegal aliasing in OpenEXR version
                 // we call our own flavor without aliasing
@@ -1302,13 +1302,13 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, Wdv, Wdv,
 }
 
 namespace {
-template<typename InputAccessorT, typename MatrixAccessorT>
+template<typename InputAccessorT>
 OSL_FORCEINLINE void
-impl_transform_normal_masked(void* Pin, void* Pout, void* transform,
+impl_transform_normal_masked(void* Pin, void* Pout, Wide<const Matrix44> wM,
                              unsigned int mask_transform,
                              unsigned int mask_value)
 {
-    typedef typename InputAccessorT::NonConstValueType data_type;
+    typedef typename InputAccessorT::NonConstValueType DataType;
 
     Mask mask(mask_value);
     Mask succeeded(mask_transform);
@@ -1316,9 +1316,8 @@ impl_transform_normal_masked(void* Pin, void* Pout, void* transform,
     // only operate on active lanes
     Mask activeMask = mask & succeeded;
 
-    Masked<data_type> wresult(Pout, activeMask);
+    Masked<DataType> wresult(Pout, activeMask);
     InputAccessorT inPoints(Pin);
-    MatrixAccessorT wM(transform);
 
     // Transform with Normal semantics
 
@@ -1329,7 +1328,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, void* transform,
     {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-            data_type v    = inPoints[lane];
+            DataType v    = inPoints[lane];
             Matrix44 M     = wM[lane];
             bool is_affine = true;
             if (wresult.mask()[lane]) {
@@ -1349,8 +1348,8 @@ impl_transform_normal_masked(void* Pin, void* Pout, void* transform,
                 if (wnotAffine[lane]) {
                     OSL_DASSERT(wresult.mask().is_on(lane));
 
-                    data_type v = inPoints[lane];
-                    Matrix44 M  = wM[lane];
+                    DataType v = inPoints[lane];
+                    const Matrix44 M  = wM[lane];
 
                     //M.inverse().transposed().multDirMatrix (v, r);
                     // Use helper that has specializations for Dual2
@@ -1363,6 +1362,51 @@ impl_transform_normal_masked(void* Pin, void* Pout, void* transform,
 
     impl_copy_untransformed_lanes(inPoints, Pout, succeeded, mask);
 }
+
+template<typename InputAccessorT>
+OSL_FORCEINLINE void
+impl_transform_normal_masked(void* Pin, void* Pout, const Matrix44& M,
+                             unsigned int mask_transform,
+                             unsigned int mask_value)
+{
+    typedef typename InputAccessorT::NonConstValueType DataType;
+
+    Mask mask(mask_value);
+    Mask succeeded(mask_transform);
+
+    // only operate on active lanes
+    Mask activeMask = mask & succeeded;
+
+    Masked<DataType> wresult(Pout, activeMask);
+    InputAccessorT inPoints(Pin);
+
+    // Transform with Normal semantics
+
+    Matrix44 invM;
+    if (OSL_UNLIKELY(!test_if_affine(M))) {
+        invM = OSL::nonAffineInverse(M);
+    } else {
+        invM = OSL::affineInverse(M);
+    }
+    OSL_FORCEINLINE_BLOCK
+    {
+        Matrix44 normalTransform = inlinedTransposed(invM);
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            // Should InputAccessorT be UniformAsWide<DataType>,
+            // we expect the compiler to hoist the next 2 lines
+            // outside the loops and keep the broadcasting
+            // of the result as SIMD
+            DataType v    = inPoints[lane];
+            DataType result = multiplyDirByMatrix(normalTransform, v);
+
+            wresult[lane] = result;
+        }
+    }
+
+    impl_copy_untransformed_lanes(inPoints, Pout, succeeded, mask);
+}
+
 }  // namespace
 
 OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, v, Wv,
@@ -1371,11 +1415,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, v, Wv,
                                      unsigned int mask_value)
 {
     // TODO: see if we can get gen_transform to call the vvm version then do a masked broadcast
-    impl_transform_normal_masked<UniformAsWide<const Vec3>,
-                                 UniformAsWide<const Matrix44>>(Pin, Pout,
-                                                                transform,
-                                                                mask_transform,
-                                                                mask_value);
+    impl_transform_normal_masked<UniformAsWide<const Vec3>>(
+        Pin, Pout, MAT(transform), mask_transform, mask_value);
 }
 
 
@@ -1384,10 +1425,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, v, Wv,
                                       unsigned int mask_transform,
                                       unsigned int mask_value)
 {
-    impl_transform_normal_masked<UniformAsWide<const Vec3>,
-                                 Wide<const Matrix44>>(Pin, Pout, transform,
-                                                       mask_transform,
-                                                       mask_value);
+    impl_transform_normal_masked<UniformAsWide<const Vec3>>(
+        Pin, Pout, Wide<const Matrix44>(transform), mask_transform, mask_value);
 }
 
 OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wv, Wv,
@@ -1395,8 +1434,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wv, Wv,
                                       unsigned int mask_transform,
                                       unsigned int mask_value)
 {
-    impl_transform_normal_masked<Wide<const Vec3>, Wide<const Matrix44>>(
-        Pin, Pout, transform, mask_transform, mask_value);
+    impl_transform_normal_masked<Wide<const Vec3>>(
+        Pin, Pout, Wide<const Matrix44>(transform), mask_transform, mask_value);
 }
 
 OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
@@ -1404,8 +1443,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
                                       unsigned int mask_transform,
                                       unsigned int mask_value)
 {
-    impl_transform_normal_masked<Wide<const Dual2<Vec3>>, Wide<const Matrix44>>(
-        Pin, Pout, transform, mask_transform, mask_value);
+    impl_transform_normal_masked<Wide<const Dual2<Vec3>>>(
+        Pin, Pout, Wide<const Matrix44>(transform), mask_transform, mask_value);
 }
 
 
@@ -1415,8 +1454,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wv, Wv,
                                      unsigned int mask_transform,
                                      unsigned int mask_value)
 {
-    impl_transform_normal_masked<Wide<const Vec3>, UniformAsWide<const Matrix44>>(
-        Pin, Pout, transform, mask_transform, mask_value);
+    impl_transform_normal_masked<Wide<const Vec3>>(
+        Pin, Pout, MAT(transform), mask_transform, mask_value);
 }
 
 OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
@@ -1424,11 +1463,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
                                      unsigned int mask_transform,
                                      unsigned int mask_value)
 {
-    impl_transform_normal_masked<Wide<const Dual2<Vec3>>,
-                                 UniformAsWide<const Matrix44>>(Pin, Pout,
-                                                                transform,
-                                                                mask_transform,
-                                                                mask_value);
+    impl_transform_normal_masked<Wide<const Dual2<Vec3>>>(
+        Pin, Pout, MAT(transform), mask_transform, mask_value);
 }
 
 OSL_BATCHOP void __OSL_OP2(determinant, Wf, Wm)(void* wr_, void* wm_)

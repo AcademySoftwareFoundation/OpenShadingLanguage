@@ -1,0 +1,7 @@
+shader
+vary_do_filter (
+    output int do_filter = 0)
+{
+    // it is 0 or 1
+    do_filter = int(P[0]*8)%2;
+}

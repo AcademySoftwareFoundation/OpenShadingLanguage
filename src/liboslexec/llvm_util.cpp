@@ -3488,6 +3488,10 @@ llvm::Value *
 LLVM_Util::call_function (const char *name, cspan<llvm::Value *> args)
 {
     llvm::Function *func = module()->getFunction (name);
+    if (func == nullptr) {
+        std::cerr << "LLVM_Util::call_function(" << name << ", args), requested function name doesn't exist in the current module!" << std::endl;
+        OSL_ASSERT(func);
+    }
     return call_function (func, args);
 }
 

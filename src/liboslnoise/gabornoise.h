@@ -20,13 +20,13 @@ namespace pvt {
 //       all cases, but these templates should suffice until a more complete
 //       device-friendly version of Imath is available.
 namespace hostdevice {
-template <typename T> inline OSL_HOSTDEVICE T clamp (T x, T lo, T hi);
+template <typename T> OSL_FORCEINLINE OSL_HOSTDEVICE T clamp (T x, T lo, T hi);
 #ifndef __CUDA_ARCH__
-template <> inline OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return Imath::clamp (x, lo, hi); }
-template <> inline OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return Imath::clamp (x, lo, hi); }
+template <> OSL_FORCEINLINE OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return Imath::clamp (x, lo, hi); }
+template <> OSL_FORCEINLINE OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return Imath::clamp (x, lo, hi); }
 #else
-template <> inline OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return (x < lo) ? lo : ((x > hi) ? hi : x); }
-template <> inline OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return (x < lo) ? lo : ((x > hi) ? hi : x); }
+template <> OSL_FORCEINLINE OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return (x < lo) ? lo : ((x > hi) ? hi : x); }
+template <> OSL_FORCEINLINE OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return (x < lo) ? lo : ((x > hi) ? hi : x); }
 #endif
 }
 
@@ -87,7 +87,7 @@ private:
 //                          in [Lagae09].
 //   \param  x           the position being sampled
 template <class VEC>   // VEC should be Vec3 or Vec2
-inline OSL_HOSTDEVICE Dual2<float>
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float>
 gabor_kernel (const Dual2<float> &weight, const VEC &omega,
               const Dual2<float> &phi, float bandwidth, const Dual2<VEC> &x)
 {
@@ -99,7 +99,7 @@ gabor_kernel (const Dual2<float> &weight, const VEC &omega,
 
 
 
-inline OSL_HOSTDEVICE void
+OSL_FORCEINLINE OSL_HOSTDEVICE void
 slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
                        const Vec3 &omega, float phi,
                        Dual2<float> &w_s, Vec2 &omega_s, Dual2<float> &phi_s)
@@ -118,7 +118,7 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
 
 
 namespace {
-inline OSL_HOSTDEVICE Vec2
+OSL_FORCEINLINE OSL_HOSTDEVICE Vec2
 gabor_mul_m22_v2(const Matrix22& m, const Vec2& v)
 {
     float a = v.x * m.x[0][0] + v.y * m.x[1][0];
@@ -128,7 +128,7 @@ gabor_mul_m22_v2(const Matrix22& m, const Vec2& v)
 
 }
 
-static  OSL_HOSTDEVICE void
+static OSL_FORCEINLINE OSL_HOSTDEVICE void
 filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
                         const Vec2 &omega, const Dual2<float> &phi,
                         Dual2<float> &w_f, float &a_f,
@@ -182,7 +182,7 @@ wrap (const Vec3 &s, const Vec3 &period)
 // points roughly toward (1,0,0), in which case we cross with (0,1,0).
 // Either way, we get something orthogonal.  Then cross(v,a) is mutually
 // orthogonal to the other two.
-inline OSL_HOSTDEVICE void
+OSL_FORCEINLINE OSL_HOSTDEVICE void
 make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
 {
     // avoid aliasing issues by not using the [] operator
@@ -199,7 +199,7 @@ make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
 
 
 // Helper function: per-component 'floor' of a Dual2<Vec3>.
-inline OSL_HOSTDEVICE Vec3
+OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
 floor (const Dual2<Vec3> &vd)
 {
     // avoid aliasing issues by not using the [] operator

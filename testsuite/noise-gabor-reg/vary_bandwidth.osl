@@ -1,0 +1,7 @@
+shader
+vary_bandwidth (
+    output float bandwidth = 0)
+{
+    // it is clamped beteen 0.01f - 100.0f
+    bandwidth = 0.01 + int(P[0]*100);
+}

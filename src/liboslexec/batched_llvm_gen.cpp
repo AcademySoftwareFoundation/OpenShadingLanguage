@@ -2873,7 +2873,7 @@ LLVMGEN (llvm_gen_transform)
 
             auto func_name = llvm::Twine("transform_") + triple_type.c_str();
             FuncSpec func_spec(func_name);
-            // Ignore derivatives if uneeded or unsupplied
+            // Ignore derivatives if unneeded or not supplied
             // NOTE: odd case where P is uniform but still reported as having
             // derivatives.  Choose to ignore uniform derivatives
             bool has_derivs = (Result->has_derivs() && (P->has_derivs() && !P_is_uniform));
@@ -3275,6 +3275,492 @@ LLVMGEN (llvm_gen_loopmod_op)
 
         }
     }
+
+    return true;
+}
+
+
+// TODO: future optimization, don't call multiple functions to set noise options.
+// Instead modify a NoiseOptions directly from LLVM (similar to batched texturing).
+static llvm::Value *
+llvm_batched_noise_options (BatchedBackendLLVM &rop, int opnum,
+                        int first_optional_arg, llvm::Value* &loc_wide_direction, bool &all_options_are_uniform)
+{
+    llvm::Value* opt = rop.ll.call_function (rop.build_name("get_noise_options"),
+                                             rop.sg_void_ptr());
+
+    bool is_anisotropic_uniform = true;
+    bool is_bandwidth_uniform = true;
+    bool is_impulses_uniform = true;
+    bool is_do_filter_uniform = true;
+
+    OSL_DASSERT(loc_wide_direction == nullptr);
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name (*rop.opargsym(op,a));
+        OSL_ASSERT (Name.typespec().is_string() &&
+                "optional noise token must be a string");
+        OSL_ASSERT (a+1 < op.nargs() && "malformed argument list for noise");
+        ustring name = *(ustring *)Name.data();
+
+        ++a;  // advance to next argument
+        Symbol &Val (*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+
+        if (name.empty())    // skip empty string param name
+            continue;
+
+        bool nameIsVarying = !Name.is_uniform();
+        // assuming option names can't be varying
+        OSL_ASSERT(!nameIsVarying);
+
+        // Make sure to skip varying values, but track
+        // if option was specified
+        if (name == Strings::anisotropic && Val.typespec().is_int()) {
+            if (!Val.is_uniform()) {
+                is_anisotropic_uniform = false;
+                continue; // We are only setting uniform options here
+            }
+            rop.ll.call_function ("osl_noiseparams_set_anisotropic", opt,
+                                    rop.llvm_load_value (Val));
+        } else if (name == Strings::do_filter && Val.typespec().is_int()) {
+            if (!Val.is_uniform()) {
+                is_do_filter_uniform = false;
+                continue; // We are only setting uniform options here
+            }
+            rop.ll.call_function ("osl_noiseparams_set_do_filter", opt,
+                                    rop.llvm_load_value (Val));
+        } else if (name == Strings::direction && Val.typespec().is_triple()) {
+            // We are not going to bin by varing direction
+            // instead we will pass a pointer to its wide value
+            // as an extra parameter.
+            // If it is null, then the uniform value from noise options
+            // should be used.
+            llvm::Value * loc_of_val = rop.llvm_void_ptr (Val);
+            if (!Val.is_uniform()) {
+                loc_wide_direction = loc_of_val;
+            } else {
+                rop.ll.call_function ("osl_noiseparams_set_direction", opt,
+                                      loc_of_val);
+            }
+        } else if (name == Strings::bandwidth &&
+                   (Val.typespec().is_float() || Val.typespec().is_int())) {
+            if (!Val.is_uniform()) {
+                is_bandwidth_uniform = false;
+                continue; // We are only setting uniform options here
+            }
+            rop.ll.call_function ("osl_noiseparams_set_bandwidth", opt,
+                                    rop.llvm_load_value (Val, 0, NULL, 0,
+                                                         TypeDesc::TypeFloat));
+        } else if (name == Strings::impulses &&
+                   (Val.typespec().is_float() || Val.typespec().is_int())) {
+            if (!Val.is_uniform()) {
+                is_impulses_uniform = false;
+                continue; // We are only setting uniform options here
+            }
+            rop.ll.call_function ("osl_noiseparams_set_impulses", opt,
+                                    rop.llvm_load_value (Val, 0, NULL, 0,
+                                                         TypeDesc::TypeFloat));
+        } else {
+            rop.shadingcontext()->errorf ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
+                                    op.opname().c_str(),
+                                    name.c_str(), valtype.c_str(),
+                                    op.sourcefile().c_str(), op.sourceline());
+        }
+    }
+
+    // NOTE: may have been previously set to false if name wasn't uniform
+    all_options_are_uniform &= is_anisotropic_uniform &&
+                               is_bandwidth_uniform &&
+                               is_impulses_uniform &&
+                               is_do_filter_uniform;
+
+    return opt;
+}
+
+
+static llvm::Value *
+llvm_batched_noise_varying_options (
+    BatchedBackendLLVM &rop,
+    int opnum,
+    int first_optional_arg,
+    llvm::Value * opt,
+    llvm::Value *remainingMask,
+    llvm::Value * leadLane)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name (*rop.opargsym(op,a));
+        OSL_ASSERT (Name.typespec().is_string() &&
+                "optional noise token must be a string");
+        OSL_ASSERT (a+1 < op.nargs() && "malformed argument list for noise");
+        ustring name = *(ustring *)Name.data();
+
+        ++a;  // advance to next argument
+        Symbol &Val (*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+
+        if (name.empty())    // skip empty string param name
+            continue;
+
+        bool nameIsVarying = !Name.is_uniform();
+        // assuming option names can't be varying
+        OSL_ASSERT(!nameIsVarying);
+        // data could be uniform
+        if (Val.is_uniform())
+            continue;
+
+        OSL_ASSERT(!Val.is_constant() && "can't be a varying constant");
+
+        if (name == Strings::anisotropic && Val.typespec().is_int()) {
+            OSL_DEV_ONLY(std::cout << "Varying anisotropic" << std::endl);
+            llvm::Value *wide_anisotropic = rop.llvm_load_value (Val,
+                    /*deriv=*/0, /*component=*/0, /*cast=*/TypeDesc::UNKNOWN, /*op_is_uniform=*/false);
+            llvm::Value *scalar_anisotropic = rop.ll.op_extract(wide_anisotropic, leadLane);
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_anisotropic, wide_anisotropic, remainingMask);
+            rop.ll.call_function ("osl_noiseparams_set_anisotropic", opt,
+                                  scalar_anisotropic);
+        } else if (name == Strings::do_filter && Val.typespec().is_int()) {
+            OSL_DEV_ONLY(std::cout << "Varying do_filter" << std::endl);
+            llvm::Value *wide_do_filter = rop.llvm_load_value (Val,
+                    /*deriv=*/0, /*component=*/0, /*cast=*/TypeDesc::UNKNOWN, /*op_is_uniform=*/false);
+            llvm::Value *scalar_do_filter = rop.ll.op_extract(wide_do_filter, leadLane);
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_do_filter, wide_do_filter, remainingMask);
+            rop.ll.call_function ("osl_noiseparams_set_do_filter", opt,
+                                  scalar_do_filter);
+        } else if (name == Strings::bandwidth &&
+                   (Val.typespec().is_float() || Val.typespec().is_int())) {
+            OSL_DEV_ONLY(std::cout << "Varying bandwidth" << std::endl);
+            llvm::Value *wide_bandwidth = rop.llvm_load_value (Val,
+                    /*deriv=*/0, /*component=*/0, /*cast=*/TypeDesc::TypeFloat, /*op_is_uniform=*/false);
+            llvm::Value *scalar_bandwidth = rop.ll.op_extract(wide_bandwidth, leadLane);
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_bandwidth, wide_bandwidth, remainingMask);
+            rop.ll.call_function ("osl_noiseparams_set_bandwidth", opt,
+                                  scalar_bandwidth);
+        } else if (name == Strings::impulses &&
+                   (Val.typespec().is_float() || Val.typespec().is_int())) {
+            OSL_DEV_ONLY(std::cout << "Varying impulses" << std::endl);
+            llvm::Value *wide_impulses = rop.llvm_load_value (Val,
+                    /*deriv=*/0, /*component=*/0, /*cast=*/TypeDesc::TypeFloat, /*op_is_uniform=*/false);
+            llvm::Value *scalar_impulses = rop.ll.op_extract(wide_impulses, leadLane);
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_impulses, wide_impulses, remainingMask);
+            rop.ll.call_function ("osl_noiseparams_set_impulses", opt,
+                                  scalar_impulses);
+        } else if (name == Strings::direction && Val.typespec().is_triple()) {
+                    OSL_DEV_ONLY(std::cout << "Varying direction" << std::endl);
+                    // As we passed the pointer to the varying direction along
+                    // with the uniform noise options, there is no need to
+                    // do any binning for the varying direction.
+                    continue;
+        } else {
+            rop.shadingcontext()->errorf ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
+                                    op.opname().c_str(),
+                                    name.c_str(), valtype.c_str(),
+                                    op.sourcefile().c_str(), op.sourceline());
+        }
+    }
+    return remainingMask;
+}
+
+
+
+// T noise ([string name,] float s, ...);
+// T noise ([string name,] float s, float t, ...);
+// T noise ([string name,] point P, ...);
+// T noise ([string name,] point P, float t, ...);
+// T pnoise ([string name,] float s, float sper, ...);
+// T pnoise ([string name,] float s, float t, float sper, float tper, ...);
+// T pnoise ([string name,] point P, point Pper, ...);
+// T pnoise ([string name,] point P, float t, point Pper, float tper, ...);
+LLVMGEN (llvm_gen_noise)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    bool periodic = (op.opname() == Strings::pnoise ||
+                     op.opname() == Strings::psnoise);
+
+    int arg = 0;   // Next arg to read
+    Symbol &Result = *rop.opargsym (op, arg++);
+
+    // TODO: We could check all parameters to see if we can operate in uniform fashion
+    // and just broadcast the result if needed
+    bool op_is_uniform = Result.is_uniform();
+    OSL_DEV_ONLY(std::cout << "llvm_gen_noise op_is_uniform="<<op_is_uniform<< std::endl);
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    int outdim =  Result.typespec().is_triple() ? 3 : 1;
+    Symbol *Name = rop.opargsym (op, arg++);
+    ustring name;
+    // NOTE: Name may not be a string, in which case we can treat it as uniform
+    bool name_is_uniform = true;
+    if (Name->typespec().is_string()) {
+        name = Name->is_constant() ? *(ustring *)Name->data() : ustring();
+        name_is_uniform = Name->is_uniform();
+    } else {
+        // Not a string, must be the old-style noise/pnoise
+        --arg;  // forget that arg
+        Name = NULL;
+        name = op.opname();
+    }
+
+    Symbol *S = rop.opargsym (op, arg++), *T = NULL;
+    Symbol *Sper = NULL, *Tper = NULL;
+    int indim = S->typespec().is_triple() ? 3 : 1;
+    bool derivs = S->has_derivs();
+
+    if (periodic) {
+        if (op.nargs() > (arg+1) &&
+                (rop.opargsym(op,arg+1)->typespec().is_float() ||
+                 rop.opargsym(op,arg+1)->typespec().is_triple())) {
+            // 2D or 4D
+            ++indim;
+            T = rop.opargsym (op, arg++);
+            derivs |= T->has_derivs();
+        }
+        Sper = rop.opargsym (op, arg++);
+        if (indim == 2 || indim == 4)
+            Tper = rop.opargsym (op, arg++);
+    } else {
+        // non-periodic case
+        if (op.nargs() > arg && rop.opargsym(op,arg)->typespec().is_float()) {
+            // either 2D or 4D, so needs a second index
+            ++indim;
+            T = rop.opargsym (op, arg++);
+            derivs |= T->has_derivs();
+        }
+    }
+    derivs &= Result.has_derivs();  // ignore derivs if result doesn't need
+
+    bool pass_name = false, pass_sg = false, pass_options = false;
+    bool all_options_are_uniform = true;
+    if (name.empty()) {
+        // name is not a constant
+        name = periodic ? Strings::genericpnoise : Strings::genericnoise;
+        pass_name = true;
+        pass_sg = true;
+        pass_options = true;
+        derivs = true;   // always take derivs if we don't know noise type
+        all_options_are_uniform &= name_is_uniform;
+    } else if (name == Strings::perlin || name == Strings::snoise ||
+               name == Strings::psnoise) {
+        name = periodic ? Strings::psnoise : Strings::snoise;
+        // derivs = false;
+    } else if (name == Strings::uperlin || name == Strings::noise ||
+               name == Strings::pnoise) {
+        name = periodic ? Strings::pnoise : Strings::noise;
+        // derivs = false;
+    } else if (name == Strings::cell || name == Strings::cellnoise) {
+        name = periodic ? Strings::pcellnoise : Strings::cellnoise;
+        derivs = false;  // cell noise derivs are always zero
+    } else if (name == Strings::hash || name == Strings::hashnoise) {
+        name = periodic ? Strings::phashnoise : Strings::hashnoise;
+        derivs = false;  // hash noise derivs are always zero
+    } else if (name == Strings::simplex && !periodic) {
+        name = Strings::simplexnoise;
+    } else if (name == Strings::usimplex && !periodic) {
+        name = Strings::usimplexnoise;
+    } else if (name == Strings::gabor) {
+        // already named
+        pass_name = true;
+        pass_sg = true;
+        pass_options = true;
+        derivs = true;
+        name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
+    } else {
+        rop.shadingcontext()->errorf ("%snoise type \"%s\" is unknown, called from (%s:%d)",
+                                (periodic ? "periodic " : ""), name.c_str(),
+                                op.sourcefile().c_str(), op.sourceline());
+        return false;
+    }
+
+    if (rop.shadingsys().no_noise()) {
+        // renderer option to replace noise with constant value. This can be
+        // useful as a profiling aid, to see how much it speeds up to have
+        // trivial expense for noise calls.
+        if (name == Strings::uperlin || name == Strings::noise ||
+            name == Strings::usimplexnoise || name == Strings::usimplex ||
+            name == Strings::cell || name == Strings::cellnoise ||
+            name == Strings::hash || name == Strings::hashnoise ||
+            name == Strings::pcellnoise || name == Strings::pnoise)
+            name = ustring("unullnoise");
+        else
+            name = ustring("nullnoise");
+        pass_name = false;
+        periodic = false;
+        pass_sg = false;
+        pass_options = false;
+    }
+
+    llvm::Value *opt = NULL;
+    llvm::Value* loc_wide_direction = nullptr;
+    if (pass_options) {
+        opt = llvm_batched_noise_options (rop, opnum, arg, loc_wide_direction, all_options_are_uniform);
+    }
+
+    OSL_DEV_ONLY(std::cout << "llvm_gen_noise function name=" << name << std::endl);
+
+
+    FuncSpec func_spec(name.c_str());
+    func_spec.arg(Result,derivs,op_is_uniform);
+    std::vector<llvm::Value *> args;
+
+    llvm::Value * nameVal = nullptr;
+    int nameArgumentIndex = -1;
+    if (pass_name) {
+        nameArgumentIndex = args.size();
+        nameVal = rop.llvm_load_value (*Name, /*deriv=*/ 0, /*component=*/ 0,
+                                       /*cast=*/ TypeDesc::UNKNOWN, name_is_uniform);
+        // If we are binning the name, we will replace this
+        // argument later in the binning code;
+        args.push_back (nameVal);
+    }
+    llvm::Value *tmpresult = NULL;
+
+
+    // triple return, or float return with derivs, passes result pointer
+    // Always pass result as we can't return a wide type through C ABI
+    if (outdim == 3 || derivs || !op_is_uniform) {
+        if (derivs && !Result.has_derivs()) {
+            tmpresult = rop.llvm_load_arg (Result, true, op_is_uniform);
+            args.push_back (tmpresult);
+        }
+        else
+            args.push_back (rop.llvm_void_ptr (Result));
+    }
+    func_spec.arg(*S, derivs, op_is_uniform);
+    args.push_back (rop.llvm_load_arg (*S, derivs, op_is_uniform));
+    if (T) {
+        func_spec.arg(*T, derivs, op_is_uniform);
+        args.push_back (rop.llvm_load_arg (*T, derivs, op_is_uniform));
+    }
+
+    if (periodic) {
+        func_spec.arg(*Sper, false /* no derivs */, op_is_uniform);
+        args.push_back (rop.llvm_load_arg (*Sper, false, op_is_uniform));
+        if (Tper) {
+            func_spec.arg(*Tper, false /* no derivs */, op_is_uniform);
+            args.push_back (rop.llvm_load_arg (*Tper, false, op_is_uniform));
+        }
+    }
+
+    if (pass_sg)
+        args.push_back (rop.sg_void_ptr());
+    if (pass_options) {
+        args.push_back (opt);
+        // The non wide versions don't take a varying direction
+        // so don't push it on the argument list
+        if(!op_is_uniform) {
+            if (loc_wide_direction == nullptr) {
+                loc_wide_direction = rop.ll.void_ptr_null();
+            }
+            args.push_back (loc_wide_direction);
+        }
+    }
+
+#ifdef OSL_DEV
+    std::cout << "About to push " << rop.build_name(func_spec) << "\n";
+    for (size_t i = 0;  i < args.size();  ++i) {
+        {
+            llvm::raw_os_ostream os_cout(std::cout);
+            args[i]->print(os_cout);
+        }
+        std::cout << "\n";
+    }
+#endif
+
+    if (pass_options && !all_options_are_uniform) {
+        OSL_DASSERT(!op_is_uniform);
+        func_spec.mask();
+
+        // do while(remaining)
+        llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to gen noise");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_noise_options (varying noise options)") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_noise_options (varying noise options)") : std::string());
+        rop.ll.op_branch(bin_block);
+        {
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+            llvm::Value * lanesMatchingName = remainingMask;
+            #ifdef __OSL_TRACE_MASKS
+                rop.llvm_print_mask("before remainingMask", remainingMask);
+            #endif
+
+            if(false == name_is_uniform) {
+                llvm::Value *scalar_name = rop.ll.op_extract(nameVal, leadLane);
+                args[nameArgumentIndex] = scalar_name;
+                lanesMatchingName = rop.ll.op_lanes_that_match_masked(scalar_name, nameVal, lanesMatchingName);
+            }
+
+            llvm::Value * lanesMatchingOptions = llvm_batched_noise_varying_options (rop, opnum, arg, opt, lanesMatchingName, leadLane);
+
+            OSL_ASSERT(lanesMatchingOptions);
+            #ifdef __OSL_TRACE_MASKS
+                rop.llvm_print_mask("lanesMatchingOptions", lanesMatchingOptions);
+            #endif
+            args.push_back (rop.ll.mask_as_int(lanesMatchingOptions));
+
+            rop.ll.call_function (rop.build_name(func_spec), args);
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingOptions);
+            #ifdef __OSL_TRACE_MASKS
+                rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+            #endif
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            #ifdef __OSL_TRACE_MASKS
+                rop.llvm_print_mask("remainingMask", remainingMask);
+            #endif
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+    } else {
+
+        if (!op_is_uniform) {
+            // force masking, but wait push it on as we might be binning for options
+            args.push_back ( rop.ll.mask_as_int(rop.ll.current_mask()) );
+            func_spec.mask();
+        } else {
+            func_spec.unbatch();
+        }
+
+        llvm::Value *r = rop.ll.call_function (rop.build_name(func_spec),
+                                                 args);
+
+        if (op_is_uniform && outdim == 1 && !derivs) {
+                // Just plain float (no derivs) returns its value
+                rop.llvm_store_value (r, Result);
+        }
+    }
+    if (derivs && !Result.has_derivs()) {
+        // Function needed to take derivs, but our result doesn't have them.
+        // We created a temp, now we need to copy to the real result.
+
+        //tmpresult = rop.llvm_ptr_cast (tmpresult, Result.typespec());
+        if (op_is_uniform)
+            tmpresult = rop.llvm_ptr_cast (tmpresult, Result.typespec());
+        else
+            tmpresult = rop.llvm_wide_ptr_cast (tmpresult, Result.typespec());
+
+        for (int c = 0;  c < Result.typespec().aggregate();  ++c) {
+            llvm::Value *v = rop.llvm_load_value (tmpresult, Result.typespec(),
+                                                  0, NULL, c, TypeDesc::UNKNOWN, op_is_uniform);
+            rop.llvm_store_value (v, Result, 0, c);
+        }
+    } // N.B. other cases already stored their result in the right place
+
+    // Clear derivs if result has them but we couldn't compute them
+    if (Result.has_derivs() && !derivs)
+        rop.llvm_zero_derivs (Result);
+
+    if (rop.shadingsys().profile() >= 1)
+        rop.ll.call_function (rop.build_name(FuncSpec("count_noise").mask()),
+                              { rop.sg_void_ptr(), rop.ll.mask_as_int(rop.ll.current_mask())});
 
     return true;
 }
@@ -3790,7 +4276,6 @@ TBD_LLVMGEN(llvm_gen_andor)
 TBD_LLVMGEN(llvm_gen_texture)
 TBD_LLVMGEN(llvm_gen_getmessage)
 TBD_LLVMGEN(llvm_gen_bitwise_binary_op)
-TBD_LLVMGEN(llvm_gen_noise)
 TBD_LLVMGEN(llvm_gen_transformc)
 TBD_LLVMGEN(llvm_gen_pointcloud_search)
 TBD_LLVMGEN(llvm_gen_dict_find)

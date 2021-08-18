@@ -342,7 +342,7 @@ public:
     // mixing serial code gen with call site which could inhibit
     // ability to generate SIMD code.
     template<int MinOccupancyT, int MaxOccupancyT = width, typename FunctorT>
-    OSL_FORCEINLINE void invoke_foreach(FunctorT f) const;
+    OSL_NOINLINE void invoke_foreach(FunctorT f) const;
 
     template<typename FunctorT>
     OSL_NOINLINE void invoke_foreach(FunctorT f) const;

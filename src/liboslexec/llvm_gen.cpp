@@ -115,14 +115,16 @@ BackendLLVM::llvm_call_layer (int layer, bool unconditional)
 {
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer])
-    //         parent_layer (sg, groupdata, output_base_ptr, shadeindex);
+    //         parent_layer (sg, groupdata, userdata_base_ptr,
+    //                       output_base_ptr, shadeindex);
     // if it's a conditional call, or
-    //     parent_layer (sg, groupdata, output_base_ptr, shadeindex);
+    //     parent_layer (sg, groupdata, userdata_base_ptr,
+    //                   output_base_ptr, shadeindex);
     // if it's run unconditionally.
     // The code in the parent layer itself will set its 'executed' flag.
 
-    llvm::Value *args[] = { sg_ptr(), groupdata_ptr(), output_base_ptr(),
-                            shadeindex() };
+    llvm::Value *args[] = { sg_ptr(), groupdata_ptr(), userdata_base_ptr(),
+                            output_base_ptr(), shadeindex() };
 
     ShaderInstance *parent = group()[layer];
     llvm::Value *trueval = ll.constant_bool(true);

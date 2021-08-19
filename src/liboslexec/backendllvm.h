@@ -298,11 +298,29 @@ public:
     llvm::Value *groupdata_field_ptr (int fieldnum,
                                       TypeDesc type = TypeDesc::UNKNOWN);
 
+    /// Return the userdata base pointer.
+    llvm::Value *userdata_base_ptr () const { return m_llvm_userdata_base_ptr; }
+
     /// Return the output base pointer.
     llvm::Value *output_base_ptr () const { return m_llvm_output_base_ptr; }
 
     /// Return the shade index
     llvm::Value *shadeindex () const { return m_llvm_shadeindex; }
+
+    // For a symloc, compute the llvm::Value of the pointer to its true,
+    // offset location from the base pointer for shade index `sindex`
+    // (which should already be a i64, or if nullptr, then use
+    // m_llvm_shadeindex and convert it to i64).
+    llvm::Value *symloc_ptr(const SymLocationDesc* symloc,
+                            llvm::Value* base_ptr,
+                            llvm::Value* sindex = nullptr) {
+        llvm::Value* offset = ll.constanti64(symloc->offset);
+        llvm::Value* stride = ll.constanti64(symloc->stride);
+        if (!sindex)
+            sindex = ll.op_int_to_longlong(m_llvm_shadeindex);
+        llvm::Value* fulloffset = ll.op_add(offset, ll.op_mul(stride, sindex));
+        return ll.offset_ptr(base_ptr, fulloffset);
+    }
 
     /// Return a ref to the bool where the "layer_run" flag is stored for
     /// the specified layer.
@@ -451,6 +469,7 @@ private:
     std::map<const Symbol*,int> m_param_order_map;
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
+    llvm::Value *m_llvm_userdata_base_ptr;
     llvm::Value *m_llvm_output_base_ptr;
     llvm::Value *m_llvm_shadeindex;
     llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance

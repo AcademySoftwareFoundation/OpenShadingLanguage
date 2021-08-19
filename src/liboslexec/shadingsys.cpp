@@ -250,10 +250,11 @@ ShadingSystem::release_context (ShadingContext *ctx)
 
 bool
 ShadingSystem::execute(ShadingContext& ctx, ShaderGroup& group, int index,
-                       ShaderGlobals& globals, void* output_base_ptr,
-                       bool run)
+                       ShaderGlobals& globals, void* userdata_base_ptr,
+                       void* output_base_ptr, bool run)
 {
-    return m_impl->execute (ctx, group, index, globals, output_base_ptr, run);
+    return m_impl->execute (ctx, group, index, globals, userdata_base_ptr,
+                            output_base_ptr, run);
 }
 
 
@@ -261,31 +262,35 @@ ShadingSystem::execute(ShadingContext& ctx, ShaderGroup& group, int index,
 bool
 ShadingSystem::execute_init(ShadingContext& ctx, ShaderGroup& group,
                             int index, ShaderGlobals& globals,
-                            void* output_base_ptr, bool run)
+                            void* userdata_base_ptr, void* output_base_ptr,
+                            bool run)
 {
-    return ctx.execute_init(group, index, globals, output_base_ptr, run);
+    return ctx.execute_init(group, index, globals, userdata_base_ptr,
+                            output_base_ptr, run);
 }
 
 
 
 bool
 ShadingSystem::execute_layer(ShadingContext& ctx, int index,
-                             ShaderGlobals& globals,
+                             ShaderGlobals& globals, void* userdata_base_ptr,
                              void* output_base_ptr, int layernumber)
 {
-    return ctx.execute_layer (index, globals, output_base_ptr, layernumber);
+    return ctx.execute_layer (index, globals, userdata_base_ptr,
+                              output_base_ptr, layernumber);
 }
 
 
 
 bool
 ShadingSystem::execute_layer(ShadingContext &ctx, int index,
-                             ShaderGlobals &globals, void* output_base_ptr,
-                             ustring layername)
+                             ShaderGlobals &globals, void* userdata_base_ptr,
+                             void* output_base_ptr, ustring layername)
 {
     int layernumber = find_layer (*ctx.group(), layername);
     return layernumber >= 0
-        ? ctx.execute_layer (index, globals, output_base_ptr, layernumber)
+        ? ctx.execute_layer (index, globals, userdata_base_ptr,
+                             output_base_ptr, layernumber)
         : false;
 }
 
@@ -293,15 +298,16 @@ ShadingSystem::execute_layer(ShadingContext &ctx, int index,
 
 bool
 ShadingSystem::execute_layer(ShadingContext& ctx, int index,
-                             ShaderGlobals& globals, void* output_base_ptr,
-                             const ShaderSymbol* symbol)
+                             ShaderGlobals& globals, void* userdata_base_ptr,
+                             void* output_base_ptr, const ShaderSymbol* symbol)
 {
     if (! symbol)
         return false;
     const Symbol *sym = reinterpret_cast<const Symbol *>(symbol);
     int layernumber = sym->layer();
     return layernumber >= 0
-        ? ctx.execute_layer (index, globals, output_base_ptr, layernumber)
+        ? ctx.execute_layer (index, globals, userdata_base_ptr,
+                             output_base_ptr, layernumber)
         : false;
 }
 
@@ -3041,9 +3047,11 @@ ShadingSystemImpl::release_context (ShadingContext *ctx)
 bool
 ShadingSystemImpl::execute(ShadingContext& ctx, ShaderGroup& group,
                            int index, ShaderGlobals& ssg,
-                           void* output_base_ptr, bool run)
+                           void* userdata_base_ptr, void* output_base_ptr,
+                           bool run)
 {
-    return ctx.execute(group, index, ssg, output_base_ptr, run);
+    return ctx.execute(group, index, ssg, userdata_base_ptr, output_base_ptr,
+                       run);
 }
 
 

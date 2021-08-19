@@ -62,7 +62,8 @@ Schematically, we want to create code that resembles the following:
     };
 
     // Name of layer entry is $layer_ID
-    void $layer_0(ShaderGlobals* sg, GroupData* group, void* output_base_ptr,
+    void $layer_0(ShaderGlobals* sg, GroupData* group,
+                  void* userdatda_base_ptr, void* output_base_ptr,
                   int shadeindex)
     {
         // Declare locals, temps, constants, params with known values.
@@ -75,19 +76,22 @@ Schematically, we want to create code that resembles the following:
         group->param_1_foo = *x;
     }
 
-    void $layer_1(ShaderGlobals* sg, GroupData* group, void* output_base_ptr,
+    void $layer_1(ShaderGlobals* sg, GroupData* group,
+                  void* userdatda_base_ptr, void* output_base_ptr,
                   int shadeindex)
     {
         // Because we need the outputs of layer 0 now, we call it if it
         // hasn't already run:
         if (! group->layer_run[0]) {
             group->layer_run[0] = 1;
-            $layer_0 (sg, group, output_base_ptr, shadeindex); // because we need its outputs
+            $layer_0 (sg, group, userdata_base_ptr, output_base_ptr,
+                     shadeindex); // because we need its outputs
         }
         *y = sg->u * group->$param_1_bar;
     }
 
-    void $group_1(ShaderGlobals* sg, GroupData* group, void* output_base_ptr,
+    void $group_1(ShaderGlobals* sg, GroupData* group,
+                  void* userdatda_base_ptr, void* output_base_ptr,
                   int shadeindex)
     {
         group->layer_run[...] = 0;
@@ -95,7 +99,8 @@ Schematically, we want to create code that resembles the following:
 
         if (! group->layer_run[1]) {
             group->layer_run[1] = 1;
-            $layer_1(sg, group, output_base_ptr, shadeindex);
+            $layer_1(sg, group, userdata_base_ptr, output_base_ptr,
+                     shadeindex);
         }
     }
 
@@ -452,31 +457,59 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         int userdata_index = find_userdata_index (sym);
         OSL_DASSERT (userdata_index >= 0);
 
-        llvm::Value* name_arg = NULL;
-        if (use_optix()) {
-            // We need to make a DeviceString for the parameter name
-            ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
-            Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
-            symname_const.set_dataptr(SymArena::Absolute, &symname);
-            name_arg = llvm_load_device_string (symname_const, /*follow*/ true);
-        } else {
-            name_arg = ll.constant (symname);
-        }
+        llvm::Value* got_userdata = nullptr;
 
-        llvm::Value* args[] = {
-            sg_void_ptr(),
-            name_arg,
-            ll.constant (type),
-            ll.constant ((int) group().m_userdata_derivs[userdata_index]),
-            groupdata_field_ptr (2 + userdata_index), // userdata data ptr
-            ll.constant ((int) sym.has_derivs()),
-            llvm_void_ptr (sym),
-            ll.constant (sym.derivsize()),
-            ll.void_ptr (userdata_initialized_ref(userdata_index)),
-            ll.constant (userdata_index),
-        };
-        llvm::Value *got_userdata =
-            ll.call_function ("osl_bind_interpolated_param", args);
+        // See if userdata input placement has been used for this symbol
+        ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
+                                              sym.name());
+        const SymLocationDesc* symloc = group().find_symloc(layersym, SymArena::UserData);
+        if (! symloc)
+            symloc = group().find_symloc(sym.name(), SymArena::UserData);
+        if (symloc) {
+            // We had a userdata pre-placement record for this variable.
+            // Just copy from teh correct offset location!
+
+            // Strutil::print("GEN found placeable userdata input {} -> {} {} size={}\n",
+            //                sym.name(), symloc->name, sym.typespec(),
+            //                symloc->type.size());
+            int size = int(symloc->type.size());
+            if (symloc->derivs && sym.has_derivs())
+                size *= 3;  // If we're copying the derivs
+            llvm::Value* srcptr = symloc_ptr(symloc, m_llvm_userdata_base_ptr);
+            llvm::Value* dstptr = llvm_void_ptr(sym);
+            ll.op_memcpy (dstptr, srcptr, size);
+            // Clear derivs if the variable wants derivs but placement
+            // source didn't have them.
+            if (sym.has_derivs() && !symloc->derivs)
+                ll.op_memset(ll.offset_ptr(dstptr, size), 0, 2*size);
+            got_userdata = ll.constant(1);  // always succeeds
+        } else {
+            // No pre-placement: fall back to call to the renderer callback.
+            llvm::Value* name_arg = NULL;
+            if (use_optix()) {
+                // We need to make a DeviceString for the parameter name
+                ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
+                Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
+                symname_const.set_dataptr(SymArena::Absolute, &symname);
+                name_arg = llvm_load_device_string (symname_const, /*follow*/ true);
+            } else {
+                name_arg = ll.constant (symname);
+            }
+
+            llvm::Value* args[] = {
+                sg_void_ptr(),
+                name_arg,
+                ll.constant (type),
+                ll.constant ((int) group().m_userdata_derivs[userdata_index]),
+                groupdata_field_ptr (2 + userdata_index), // userdata data ptr
+                ll.constant ((int) sym.has_derivs()),
+                llvm_void_ptr (sym),
+                ll.constant (sym.derivsize()),
+                ll.void_ptr (userdata_initialized_ref(userdata_index)),
+                ll.constant (userdata_index),
+            };
+            got_userdata = ll.call_function ("osl_bind_interpolated_param", args);
+        }
         if (shadingsys().debug_nan() && type.basetype == TypeDesc::FLOAT) {
             // check for NaN/Inf for float-based types
             int ncomps = type.numelements() * type.aggregate;
@@ -816,7 +849,9 @@ BackendLLVM::build_llvm_init ()
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
                              { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                               ll.type_void_ptr(), ll.type_int() }));
+                               ll.type_void_ptr(), // userdata_base_ptr
+                               ll.type_void_ptr(), // output_base_ptr
+                               ll.type_int() }));
 
     if (ll.debug_is_enabled()) {
         ustring sourcefile = group()[0]->op(group()[0]->maincodebegin()).sourcefile();
@@ -826,8 +861,9 @@ BackendLLVM::build_llvm_init ()
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
-    m_llvm_output_base_ptr = ll.current_function_arg(2); //arg_it++;
-    m_llvm_shadeindex = ll.current_function_arg(3); //arg_it++;
+    m_llvm_userdata_base_ptr = ll.current_function_arg(2); //arg_it++;
+    m_llvm_output_base_ptr = ll.current_function_arg(3); //arg_it++;
+    m_llvm_shadeindex = ll.current_function_arg(4); //arg_it++;
 
     // Set up a new IR builder
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
@@ -905,7 +941,9 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                              !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
                              { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                               ll.type_void_ptr(), ll.type_int() }));
+                               ll.type_void_ptr(), // userdata_base_ptr
+                               ll.type_void_ptr(), // output_base_ptr
+                               ll.type_int() } ));
 
     if (ll.debug_is_enabled()) {
         const Opcode& mainbegin (inst()->op(inst()->maincodebegin()));
@@ -916,8 +954,9 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
-    m_llvm_output_base_ptr = ll.current_function_arg(2); //arg_it++;
-    m_llvm_shadeindex = ll.current_function_arg(3); //arg_it++;
+    m_llvm_userdata_base_ptr = ll.current_function_arg(2); //arg_it++;
+    m_llvm_output_base_ptr = ll.current_function_arg(3); //arg_it++;
+    m_llvm_shadeindex = ll.current_function_arg(4); //arg_it++;
 
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_layer_name);
     m_exit_instance_block = NULL;
@@ -1119,16 +1158,13 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         // specification first. If that fails, look for name only.
         ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
                                               s.name());
-        auto symloc = group().find_symloc(layersym);
+        auto symloc = group().find_symloc(layersym, SymArena::Outputs);
         if (! symloc)
-            symloc = group().find_symloc(s.name());
+            symloc = group().find_symloc(s.name(), SymArena::Outputs);
         if (! symloc) {
             // std::cout << "No output copy for " << s.name()
             //           << " because no symloc was found\n";
             continue;   // not found in either place
-        }
-        if (symloc->arena != SymArena::Outputs || symloc->offset == -1) {
-            continue;  // just copying outputs
         }
 
         if (! equivalent(s.typespec(), symloc->type)
@@ -1147,12 +1183,13 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         //           << symloc->name << ' ' << s.typespec() << " size="
         //           << symloc->type.size() << "\n";
         llvm::Value* srcptr = llvm_void_ptr(s);
-        llvm::Value* offset = ll.constanti64(symloc->offset);
-        llvm::Value* stride = ll.constanti64(symloc->stride);
+        // llvm::Value* offset = ll.constanti64(symloc->offset);
+        // llvm::Value* stride = ll.constanti64(symloc->stride);
         if (!sindex)
             sindex = ll.op_int_to_longlong(m_llvm_shadeindex);
-        llvm::Value* fulloffset = ll.op_add(offset, ll.op_mul(stride, sindex));
-        llvm::Value* dstptr = ll.offset_ptr(m_llvm_output_base_ptr, fulloffset);
+        // llvm::Value* fulloffset = ll.op_add(offset, ll.op_mul(stride, sindex));
+        // llvm::Value* dstptr = ll.offset_ptr(m_llvm_output_base_ptr, fulloffset);
+        llvm::Value* dstptr = symloc_ptr(symloc, m_llvm_output_base_ptr, sindex);
         ll.op_memcpy (dstptr, srcptr, size);
         // Clear derivs if output wants derivs but source didn't have them
         if (symloc->derivs && !s.has_derivs())

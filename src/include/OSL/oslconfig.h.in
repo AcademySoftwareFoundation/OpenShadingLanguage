@@ -92,12 +92,28 @@ using OIIO::TextureOpt;
 
 // And some other things we borrow from OIIO...
 using OIIO::ErrorHandler;
-using OIIO::TypeDesc;
 using OIIO::ustring;
 using OIIO::ustringHash;
 using OIIO::string_view;
 using OIIO::span;
 using OIIO::cspan;
+
+using OIIO::TypeDesc;
+using OIIO::TypeUnknown;
+using OIIO::TypeFloat;
+using OIIO::TypeColor;
+using OIIO::TypePoint;
+using OIIO::TypeVector;
+using OIIO::TypeNormal;
+using OIIO::TypeMatrix;
+using OIIO::TypeFloat4;
+using OIIO::TypeString;
+using OIIO::TypeInt;
+#if OIIO_VERSION >= 20203
+using OIIO::TypeFloat2;
+using OIIO::TypeVector2;
+using OIIO::TypeVector4;
+#endif
 
 
 // N.B. SymArena is not really "configuration", but we cram it here for
@@ -108,9 +124,9 @@ enum class SymArena {
     Unknown = 0,        // Unknown/uninitialized value
     Absolute,           // Absolute address
     Heap,               // Belongs to context heap
-    Outputs             // Belongs to output arena
+    Outputs,            // Belongs to output arena
+    UserData,           // UserData arena
     // ShaderGlobals,   // RESERVED
-    // UserData,        // RESERVED
 };
 
 

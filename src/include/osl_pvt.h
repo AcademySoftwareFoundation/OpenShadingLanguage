@@ -502,7 +502,7 @@ public:
     {
     }
     Symbol() : m_free_data(false) {}
-    ~Symbol()
+    virtual ~Symbol()
     {
         if (m_free_data) {
             OSL_ASSERT(arena() == SymArena::Absolute);

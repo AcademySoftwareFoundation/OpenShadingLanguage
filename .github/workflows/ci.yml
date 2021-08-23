@@ -75,7 +75,7 @@ jobs:
             build/*/CMake*.{txt,log}
 
   vfxplatform-2020:
-    name: "Linux VFXP-2020 gcc6/C++14 llvm10 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
+    name: "Linux VFXP-2020 gcc6/C++14 llvm7 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2020
@@ -121,7 +121,7 @@ jobs:
             build/*/CMake*.{txt,log}
 
   vfxplatform-2021:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2 batch-b8avx2"
+    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.73 exr-2.5 OIIO-2.2 avx2 batch-b8avx2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021-clang11
@@ -132,7 +132,7 @@ jobs:
       PYTHON_VERSION: 3.7
       USE_SIMD: avx2,f16c
       OPENEXR_VERSION: v2.5.6
-      OPENIMAGEIO_VERSION: RB-2.2
+      OPENIMAGEIO_VERSION: dev-2.2
       USE_BATCHED: b8_AVX2_noFMA
     steps:
       - uses: actions/checkout@v2
@@ -169,20 +169,21 @@ jobs:
             build/*/testsuite/*/*.*
             build/*/CMake*.{txt,log}
 
-  vfxplatform-2021-exr3:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-3.0 OIIO-2.2 avx2 batch-b8avx2"
+  vfxplatform-2022:
+    name: "Linux VFXP-2022 gcc9/C++17 llvm11 py3.9 boost-1.75 exr-3.1 OIIO-2.3 avx2"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2021-clang11
+      image: aswf/ci-osl:2022-clang11
     env:
       CXX: g++
       CC: gcc
       CMAKE_CXX_STANDARD: 17
-      PYTHON_VERSION: 3.7
-      USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v3.0.4
-      OPENIMAGEIO_VERSION: RB-2.2
+      OPENEXR_VERSION: v3.1.1
+      OPENIMAGEIO_VERSION: dev-2.3
+      PYBIND11_VERSION: v2.7.1
+      PYTHON_VERSION: 3.9
       USE_BATCHED: b8_AVX2
+      USE_SIMD: avx2,f16c
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -203,8 +204,8 @@ jobs:
             src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
-            sudo rm -rf /usr/local/include/OpenEXR
-            sudo rm -rf /usr/local/lib64/cmake/{IlmBase,OpenEXR}
+            sudo rm -rf /usr/local/include/{Imath,OpenEXR}
+            sudo rm -rf /usr/local/lib64/cmake/{Imath,OpenEXR}
             src/build-scripts/gh-installdeps.bash
       - name: Build
         run: |
@@ -222,7 +223,7 @@ jobs:
 
   # Build for OptiX, but don't run tests (will need a GPU instance for that)
   gpu-optix7-2019:
-    name: "Linux GPU VFXP-2019 Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.4 OIIO-master avx2"
+    name: "Linux GPU VFXP-2019 Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.3 OIIO-master avx2"
     runs-on: ubuntu-latest
     container:
       image: aswftesting/ci-osl:2019-clang10
@@ -274,7 +275,7 @@ jobs:
             optix.h
 
   linux-debug-gcc7-llvm8:
-    name: "Linux Debug gcc7, C++14, llvm8, OIIO release, sse4, exr2.4"
+    name: "Linux Debug gcc7/C++14 llvm8 py2.7 oiio2.3 sse4 boost1.65 exr2.4"
     runs-on: ubuntu-18.04
     env:
       CXX: g++-7
@@ -284,7 +285,7 @@ jobs:
       CTEST_TEST_TIMEOUT: 240
       LLVM_VERSION: 8.0.0
       OPENEXR_VERSION: v2.4.3
-      OPENIMAGEIO_VERSION: release
+      OPENIMAGEIO_VERSION: dev-2.3
       USE_SIMD: sse4.2
     steps:
       - uses: actions/checkout@v2
@@ -322,7 +323,7 @@ jobs:
             build/*/CMake*.{txt,log}
 
   linux-clang9-llvm9:
-    name: "Linux clang9, C++14, llvm9, oiio release, avx2, exr2.4"
+    name: "Linux clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7"
     runs-on: ubuntu-18.04
     container:
       image: aswf/ci-osl:2019-clang9
@@ -370,7 +371,7 @@ jobs:
             build/*/CMake*.{txt,log}
 
   linux-clang11-llvm11-batch:
-    name: "Linux clang11/C++17 llvm-11 oiio-master avx2 exr3.0 batch-avx512"
+    name: "Linux clang11/C++17 llvm11 oiio-master boost1.73 exr3.0 py3.7 avx2 batch-avx512"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021-clang11
@@ -421,16 +422,16 @@ jobs:
             build/*/testsuite/*/*.*
             build/*/CMake*.{txt,log}
 
-  linux-2021ish-gcc8-llvm10:
-    name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.5, avx2"
+  linux-2021ish-gcc10-llvm10:
+    name: "Linux gcc10/C++17 llvm10 oiio-release boost1.65 exr2.5 avx2"
     runs-on: ubuntu-18.04
     env:
-      CXX: g++-8
+      CXX: g++-10
       CMAKE_CXX_STANDARD: 17
       LLVM_VERSION: 10.0.0
       USE_SIMD: avx2,f16c
       OPENEXR_VERSION: v2.5.6
-      OPENIMAGEIO_VERSION: master
+      OPENIMAGEIO_VERSION: release
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
       PUGIXML_VERSION: v1.10
       PYBIND11_VERSION: v2.5.0
@@ -472,20 +473,20 @@ jobs:
   linux-latest-release:
     # Test against development master for relevant dependencies, latest
     # supported releases of everything else.
-    name: "Linux latest releases: gcc10, C++17, llvm11, avx2, batch-b16avx512"
+    name: "Linux latest releases: gcc11/C++17 llvm12 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512"
     runs-on: ubuntu-20.04
     env:
-      CXX: g++-10
+      CXX: g++-11
       USE_CPP: 17
       CMAKE_CXX_STANDARD: 17
-      LLVM_VERSION: 11.0.0
+      LLVM_VERSION: 12.0.0
       LLVM_DISTRO_NAME: ubuntu-20.04
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v3.1.0
+      OPENEXR_VERSION: v3.1.1
       OPENIMAGEIO_VERSION: master
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=8.0.0
       OPENCOLORIO_VERSION: v2.0.1
-      PYBIND11_VERSION: v2.7.0
+      PYBIND11_VERSION: v2.7.1
       PUGIXML_VERSION: v1.11.4
       USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
       PYTHON_VERSION: 3.8
@@ -527,11 +528,10 @@ jobs:
   linux-bleeding-edge:
     # Test against development master for relevant dependencies, latest
     # supported releases of everything else.
-    name: "Linux bleeding edge: gcc11, C++17, llvm12, oiio/ocio/exr/pybind-master, avx2, batch-b16avx512"
+    name: "Linux bleeding edge: gcc11/C++17 llvm12 oiio/ocio/exr/pybind-master boost1.71 py3.9 avx2 batch-b16avx512"
     runs-on: ubuntu-20.04
     env:
       CXX: g++-11
-      USE_CPP: 17
       CMAKE_CXX_STANDARD: 17
       LLVM_VERSION: 12.0.0
       LLVM_DISTRO_NAME: ubuntu-20.04
@@ -540,8 +540,9 @@ jobs:
       OPENIMAGEIO_VERSION: master
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=master
       OPENCOLORIO_VERSION: master
-      PYBIND11_VERSION: master
       PUGIXML_VERSION: master
+      PYBIND11_VERSION: master
+      PYTHON_VERSION: 3.9
       OSL_BUILD_MATERIALX: 1
       USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
     steps:
@@ -582,7 +583,7 @@ jobs:
   linux-oldest:
     # Oldest versions of the dependencies that we can muster, and various
     # things disabled.
-    name: "Linux oldest everything: gcc6 C++14 llvm7 py2.7 boost-1.66 oiio-2.1 no-simd exr2.3"
+    name: "Linux oldest everything: gcc6/C++14 llvm7 py2.7 boost-1.66 oiio-2.1 no-simd exr2.3"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019-clang7

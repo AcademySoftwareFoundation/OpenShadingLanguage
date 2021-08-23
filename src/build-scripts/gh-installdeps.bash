@@ -31,8 +31,7 @@ else
 
     time sudo apt-get -q install -y \
         git cmake ninja-build ccache g++ \
-        libboost-dev libboost-thread-dev \
-        libboost-filesystem-dev libboost-regex-dev \
+        libboost-dev libboost-thread-dev libboost-filesystem-dev \
         libilmbase-dev libopenexr-dev \
         python-dev python-numpy \
         libtiff-dev libgif-dev libpng-dev \
@@ -43,9 +42,7 @@ else
 
     export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
 
-    if [[ "$CXX" == "g++-4.8" ]] ; then
-        time sudo apt-get install -y g++-4.8
-    elif [[ "$CXX" == "g++-6" ]] ; then
+    if [[ "$CXX" == "g++-6" ]] ; then
         time sudo apt-get install -y g++-6
     elif [[ "$CXX" == "g++-7" ]] ; then
         time sudo apt-get install -y g++-7
@@ -57,6 +54,14 @@ else
         time sudo apt-get install -y g++-10
     elif [[ "$CXX" == "g++-11" ]] ; then
         time sudo apt-get install -y g++-11
+    fi
+
+    # Nonstandard python versions
+    if [[ "${PYTHON_VERSION}" == "3.8" ]] ; then
+        #time sudo apt-get -q install -y python3.8-dev python3-numpy
+        echo "skip?"
+    elif [[ "${PYTHON_VERSION}" == "3.9" ]] ; then
+        time sudo apt-get -q install -y python3.9-dev python3-numpy
     fi
 
     source src/build-scripts/build_llvm.bash

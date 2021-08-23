@@ -22,15 +22,6 @@ working_dir	:= ${shell pwd}
 # Figure out which architecture we're on
 include ${working_dir}/src/make/detectplatform.mk
 
-# Presence of make variables DEBUG and PROFILE cause us to make special
-# builds, which we put in their own areas.
-ifdef DEBUG
-    variant +=.debug
-endif
-ifdef PROFILE
-    variant +=.profile
-endif
-
 MY_MAKE_FLAGS ?=
 MY_NINJA_FLAGS ?=
 MY_CMAKE_FLAGS ?=
@@ -47,10 +38,8 @@ endif
 
 # Set up variables holding the names of platform-dependent directories --
 # set these after evaluating site-specific instructions
-top_build_dir ?= build
-build_dir     ?= ${top_build_dir}/${platform}${variant}
-top_dist_dir  ?= dist
-dist_dir      ?= ${top_dist_dir}/${platform}${variant}
+build_dir ?= build
+dist_dir  ?= dist
 
 INSTALL_PREFIX ?= ${working_dir}/${dist_dir}
 
@@ -251,7 +240,7 @@ endif
 #########################################################################
 # Top-level documented targets
 
-all: dist
+all: install
 
 # 'make debug' is implemented via recursive make setting DEBUG
 debug:
@@ -271,7 +260,7 @@ config:
 		cd ${build_dir} ; \
 		${CMAKE} -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE} \
 			 -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
-			 ${MY_CMAKE_FLAGS} ../.. ; \
+			 ${MY_CMAKE_FLAGS} ${working_dir} ; \
 	 fi)
 
 
@@ -309,7 +298,7 @@ clang-format: config
 	  )
 
 
-# 'make dist' is just a synonym for 'make install'
+# DEPRECATED: 'make dist' is just a synonym for 'make install'
 dist : install
 
 TEST_FLAGS += --force-new-ctest-process --output-on-failure
@@ -341,10 +330,10 @@ clean:
 realclean: clean
 	${CMAKE} -E remove_directory ${dist_dir}
 
-# 'make nuke' blows away the build and dist areas for all platforms
+# DEPRECATED: use 'make realclean'
 nuke:
-	${CMAKE} -E remove_directory ${top_build_dir}
-	${CMAKE} -E remove_directory ${top_dist_dir}
+	${CMAKE} -E remove_directory ${build_dir}
+	${CMAKE} -E remove_directory ${dist_dir}
 
 #########################################################################
 
@@ -361,7 +350,6 @@ help:
 	@echo "  make profile      Build and install for profiling"
 	@echo "  make clean        Remove the temporary files in ${build_dir}"
 	@echo "  make realclean    Remove both ${build_dir} AND ${dist_dir}"
-	@echo "  make nuke         Remove ALL of build and dist (not just ${platform})"
 	@echo "  make test         Run tests"
 	@echo "  make testall      Run all tests, even broken ones"
 	@echo "  make clang-format Run clang-format on all the source files"

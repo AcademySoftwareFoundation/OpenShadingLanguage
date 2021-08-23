@@ -71,8 +71,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   vfxplatform-2020:
     name: "Linux VFXP-2020 gcc6/C++14 llvm10 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
@@ -117,8 +117,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   vfxplatform-2021:
     name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2 batch-b8avx2"
@@ -166,8 +166,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   vfxplatform-2021-exr3:
     name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.70 exr-3.0 OIIO-2.2 avx2 batch-b8avx2"
@@ -217,8 +217,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   # Build for OptiX, but don't run tests (will need a GPU instance for that)
   gpu-optix7-2019:
@@ -269,8 +269,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
             optix.h
 
   linux-debug-gcc7-llvm8:
@@ -318,8 +318,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   linux-clang9-llvm9:
     name: "Linux clang9, C++14, llvm9, oiio release, avx2, exr2.4"
@@ -366,8 +366,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   linux-clang11-llvm11-batch:
     name: "Linux clang11/C++17 llvm-11 oiio-master avx2 exr3.0 batch-avx512"
@@ -418,8 +418,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   linux-2021ish-gcc8-llvm10:
     name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.5, avx2"
@@ -466,8 +466,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   linux-latest-release:
     # Test against development master for relevant dependencies, latest
@@ -521,8 +521,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   linux-bleeding-edge:
     # Test against development master for relevant dependencies, latest
@@ -576,8 +576,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   linux-oldest:
     # Oldest versions of the dependencies that we can muster, and various
@@ -628,8 +628,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   macos-py39:
     name: "Mac py39"
@@ -675,8 +675,8 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            build/*/testsuite/*/*.*
-            build/*/CMake*.{txt,log}
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
 
   clang-format:
     # Test formatting. This test entry doesn't do a full build, it just runs

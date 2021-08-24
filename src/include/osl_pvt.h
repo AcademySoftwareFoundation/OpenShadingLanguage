@@ -484,7 +484,7 @@ public:
     {
     }
     Symbol() : m_data(NULL), m_free_data(false) {}
-    ~Symbol()
+    virtual ~Symbol()
     {
         if (m_free_data)
             delete[](char*) m_data;

@@ -3000,15 +3000,19 @@ LLVMGEN (llvm_gen_gettextureinfo)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    OSL_DASSERT(op.nargs() == 4);
-
+    OSL_DASSERT(op.nargs() == 4 || op.nargs() == 6);
+    bool use_coords = (op.nargs() == 6);
     Symbol& Result   = *rop.opargsym (op, 0);
     Symbol& Filename = *rop.opargsym (op, 1);
-    Symbol& Dataname = *rop.opargsym (op, 2);
-    Symbol& Data     = *rop.opargsym (op, 3);
+    Symbol& Dataname = *rop.opargsym (op, use_coords ? 4 : 2);
+    Symbol& Data     = *rop.opargsym (op, use_coords ? 5 : 3);
+    Symbol* S        = use_coords ? rop.opargsym(op, 2) : nullptr;
+    Symbol* T        = use_coords ? rop.opargsym(op, 3) : nullptr;
 
     OSL_DASSERT(!Result.typespec().is_closure_based() &&
-             Filename.typespec().is_string() && 
+             Filename.typespec().is_string() &&
+             (S == nullptr || S->typespec().is_float()) &&
+             (T == nullptr || T->typespec().is_float()) &&
              Dataname.typespec().is_string() &&
              !Data.typespec().is_closure_based() && 
              Result.typespec().is_int());
@@ -3018,21 +3022,26 @@ LLVMGEN (llvm_gen_gettextureinfo)
         texture_handle = rop.renderer()->get_texture_handle(Filename.get_string(), rop.shadingcontext());
     }
 
-    llvm::Value * args[] = {
-        rop.sg_void_ptr(),
-        rop.llvm_load_value (Filename),
-        rop.ll.constant_ptr (texture_handle),
-        rop.llvm_load_value (Dataname),
-        // this is passes a TypeDesc to an LLVM op-code
-        rop.ll.constant((int) Data.typespec().simpletype().basetype),
-        rop.ll.constant((int) Data.typespec().simpletype().arraylen),
-        rop.ll.constant((int) Data.typespec().simpletype().aggregate),
-        // destination
-        rop.llvm_void_ptr (Data),
-        // errormessage
-        rop.ll.void_ptr_null(),
-    };
-    llvm::Value *r = rop.ll.call_function ("osl_get_textureinfo", args);
+    std::vector<llvm::Value*> args;
+    args.push_back(rop.sg_void_ptr());
+    args.push_back(rop.llvm_load_value (Filename));
+    args.push_back(rop.ll.constant_ptr (texture_handle));
+    if (use_coords) {
+        args.push_back(rop.llvm_load_value(*S));
+        args.push_back(rop.llvm_load_value(*T));
+    }
+    args.push_back(rop.llvm_load_value(Dataname));
+    // this passes a TypeDesc to an LLVM op-code
+    args.push_back(rop.ll.constant((int) Data.typespec().simpletype().basetype));
+    args.push_back(rop.ll.constant((int) Data.typespec().simpletype().arraylen));
+    args.push_back(rop.ll.constant((int) Data.typespec().simpletype().aggregate));
+    // destination
+    args.push_back(rop.llvm_void_ptr (Data));
+    // errormessage
+    args.push_back(rop.ll.void_ptr_null());
+    llvm::Value* r = rop.ll.call_function(use_coords ? "osl_get_textureinfo_st"
+                                                     : "osl_get_textureinfo",
+                                          args);
     rop.llvm_store_value (r, Result);
     /* Do not leave derivs uninitialized */
     if (Data.has_derivs())

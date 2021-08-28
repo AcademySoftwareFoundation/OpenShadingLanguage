@@ -2117,7 +2117,7 @@ static const char * builtin_func_args [] = {
     "fprintf", "xss*", "!printf", NULL,
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
-    "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
+    "gettextureinfo", "iss?", "iss?[]", "isffs?", "isffs?[]", "!rw", NULL,  // FIXME -- further checking?
     "hashnoise", NOISE_ARGS, NULL,
     "isconnected", "i?", NULL,
     "isconstant", "i?", NULL,

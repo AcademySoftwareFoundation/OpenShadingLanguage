@@ -1,0 +1,27 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#include "oslutil.h"
+
+shader
+test (string texturename = "file.<UDIM>.tx",
+      output color Cout = 0)
+{
+    int channels = 0;
+    gettextureinfo (texturename, "channels", channels);
+    int res[2] = { 0, 0 };
+    int ok = gettextureinfo (texturename, u, v, "resolution", res);
+    Cout = (color) texture (texturename, u, v,
+                            "missingcolor", color(0.25,0,0));
+    string text = "unknown";
+    if (res[0] == 128)
+        text = "128";
+    else if (res[0] == 256)
+        text = "256";
+    if (res[0] == 512)
+        text = "512";
+    if (ok)
+        Cout = mix (Cout, color(1,1,1),
+                    draw_string(text, u*50, v*50, 1, 1, 0));
+}

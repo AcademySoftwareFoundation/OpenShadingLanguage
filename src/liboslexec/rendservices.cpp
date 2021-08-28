@@ -246,8 +246,38 @@ RendererServices::get_texture_info (ustring filename,
     return status;
 }
 
-BatchedRendererServices<16> *
-RendererServices::batched(WidthOf<16>)
+
+
+bool
+RendererServices::get_texture_info(ustring filename,
+                                   TextureHandle* texture_handle,
+                                   float s, float t,
+                                   TexturePerthread* texture_thread_info,
+                                   ShadingContext* shading_context,
+                                   int subimage, ustring dataname,
+                                   TypeDesc datatype, void* data,
+                                   ustring* errormessage)
+{
+#if OPENIMAGEIO_VERSION >= 20307
+    // Newer versions of the TextureSystem interface are able to determine the
+    // specific UDIM tile we're using.
+    if (!texture_thread_info)
+        texture_thread_info = shading_context->texture_thread_info();
+    if (!texture_handle)
+        texture_handle = texturesys()->get_texture_handle(filename,
+                                                          texture_thread_info);
+    if (texturesys()->is_udim(texture_handle))
+        texture_handle = texturesys()->resolve_udim(texture_handle,
+                                                    texture_thread_info, s, t);
+#endif
+    return get_texture_info(filename, texture_handle, texture_thread_info,
+                            shading_context, subimage, dataname, datatype, data,
+                            errormessage);
+}
+
+
+
+BatchedRendererServices<16>* RendererServices::batched(WidthOf<16>)
 {
     // No default implementation for batched services
     return nullptr;

@@ -12,7 +12,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.20)
+* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.21)
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer (tested through gcc 11)
@@ -24,7 +24,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   required (unless you are using LLVM >= 10, in which case at least C++14
   is needed).
 
-* **[OpenImageIO](http://openimageio.org) 2.0 or newer** (tested through 2.2)
+* **[OpenImageIO](http://openimageio.org) 2.0 or newer** (tested through 2.3)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -50,8 +50,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   later. If you *must* build OSL with C++11, you need to use an LLVM that
   is LLVM 9 or earlier.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.75)
-* [Ilmbase or Imath](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.0)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.76)
+* [Ilmbase or Imath](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.1)
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)
@@ -61,7 +61,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * (optional) Python: If you are building the Python bindings or running the
    testsuite:
      * Python >= 2.7 (tested against 2.7, 3.6, 3.7, 3.8, 3.9)
-     * pybind11 >= 2.4.2 (Tested through 2.7)
+     * pybind11 >= 2.4.2 (Tested through 2.7).
      * NumPy
 * (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
   the `osltoy` application will be disabled.

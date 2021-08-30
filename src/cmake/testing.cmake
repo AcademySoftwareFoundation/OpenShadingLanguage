@@ -282,6 +282,11 @@ macro (osl_add_all_tests)
                 vecctr vector vector-reg
                 wavelength_color Werror xml )
 
+    # Coordinate-aware gettextureinfo only works for TextureSystem >= 2.3.7
+    if (OPENIMAGEIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
+        TESTSUITE ( gettextureinfo-udim )
+    endif ()
+
     # Add tests that require the Python bindings if we built them.
     # We also exclude these tests if this is a sanitizer build on Linux,
     # because the Python interpreter itself won't be linked with the right asan

@@ -405,6 +405,27 @@ osl_get_textureinfo (void *sg_, const char *name, void *handle,
 
 
 
+OSL_SHADEOP int
+osl_get_textureinfo_st(void* sg_, const char* name, void* handle, float s,
+                       float t, void* dataname, int type, int arraylen,
+                       int aggregate, void* data, ustring* errormessage)
+{
+    // recreate TypeDesc
+    TypeDesc typedesc;
+    typedesc.basetype  = type;
+    typedesc.arraylen  = arraylen;
+    typedesc.aggregate = aggregate;
+
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+
+    return sg->renderer->get_texture_info(
+        USTR(name), (RendererServices::TextureHandle*)handle, s, t,
+        sg->context->texture_thread_info(), sg->context, 0 /*FIXME-ptex*/,
+        USTR(dataname), typedesc, data, errormessage);
+}
+
+
+
 // Trace
 
 // Utility: retrieve a pointer to the ShadingContext's trace options

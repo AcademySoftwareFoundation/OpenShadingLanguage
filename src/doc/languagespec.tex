@@ -4370,7 +4370,10 @@ variable specified.  This allows for RGBA lookups in a single call to
 
 \newpage
 \apiitem{int {\ce gettextureinfo} (string texturename, string paramname,\\
-\bigspc\bigspc output \emph{type} destination)}
+\bigspc\bigspc output \emph{type} destination) \\
+int {\ce gettextureinfo} (string texturename, float s, float t, string paramname,\\
+\bigspc\bigspc output \emph{type} destination)
+}
 \indexapi{gettextureinfo()}
 
 Retrieves a parameter from a named texture file.  If the file is found,
@@ -4378,8 +4381,19 @@ and has a parameter that matches the name and type specified, its value
 will be stored in \emph{destination} and {\cf gettextureinfo} will
 return {\cf 1}.  If the file is not found, or doesn't have a matching
 parameter (including if the type does not match), \emph{destination}
-will not be modified and {\cf gettextureinfo} will return {\cf 0}.  Valid
-parameters recognized are listed below:
+will not be modified and {\cf gettextureinfo} will return {\cf 0}.
+
+The version of {\cf gettextureinfo} that takes {\cf s} and {\cf t} parameters
+retrieves information about the texture file that will be used for those
+texture coordinates. This can be useful for UDIM textures that may use
+different texture files for different regions, based on the coodinates. For
+regular, non-UDIM textures, the coordinates, if supplied, will be ignored.
+When UDIM textures are queried without coordinates supplied, it will succeed
+and return the texture info only if that parameter is found and has the same
+value in all files comprising the UDIM set. (Note: the version with
+coordinates was added in OSL 1.12.)
+
+Valid parameters recognized are listed below:
 
 \smallskip
 

@@ -2321,10 +2321,19 @@ DECLFOLDER(constfold_getattribute)
 DECLFOLDER(constfold_gettextureinfo)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    OSL_MAYBE_UNUSED Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
+
+    // FIXME: For now, punt on constant folding the variety of gettextureinfo
+    // that is passed texture coordinates. Eventually, if we can determine that
+    // the filename is constant and is known to not be UDIM, we can fall back
+    // to the other case.
+    bool use_coords = (op.nargs() == 6);
+    if (use_coords)
+        return 0;
+
+    OSL_MAYBE_UNUSED Symbol& Result(*rop.inst()->argsymbol(op.firstarg() + 0));
     Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
-    Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg()+2));
-    Symbol &Data (*rop.inst()->argsymbol(op.firstarg()+3));
+    Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg() + (use_coords ? 4 : 2)));
+    Symbol &Data (*rop.inst()->argsymbol(op.firstarg() + (use_coords ? 5 : 3)));
     OSL_DASSERT (Result.typespec().is_int() &&
                  Filename.typespec().is_string() &&
                  Dataname.typespec().is_string());

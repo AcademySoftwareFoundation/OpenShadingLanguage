@@ -5,9 +5,9 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # DEP_DIR="$PWD/ext/dist"
-DEP_DIR="$PWD/dist/$PLATFORM"
+DEP_DIR="$PWD/dist"
 mkdir -p "$DEP_DIR"
-INT_DIR="build/$PLATFORM"
+INT_DIR="build"
 VCPKG_INSTALLATION_ROOT=/c/vcpkg
 
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:=.}

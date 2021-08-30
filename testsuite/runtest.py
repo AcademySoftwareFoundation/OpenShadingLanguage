@@ -31,12 +31,12 @@ def make_relpath (path, start=os.curdir):
 srcdir = "."
 tmpdir = "."
 
-OSL_BUILD_DIR = os.environ.get("OSL_BUILD_DIR", "../..")
-OSL_SOURCE_DIR = os.environ.get("OSL_SOURCE_DIR", "../../../..")
+OSL_BUILD_DIR = os.environ.get("OSL_BUILD_DIR", "..")
+OSL_SOURCE_DIR = os.environ.get("OSL_SOURCE_DIR", "../../..")
 OSL_TESTSUITE_DIR = os.path.join(OSL_SOURCE_DIR, "testsuite")
 OpenImageIO_ROOT = os.environ.get("OpenImageIO_ROOT", None)
 OSL_TESTSUITE_ROOT = make_relpath(os.getenv('OSL_TESTSUITE_ROOT',
-                                             '../../../../testsuite'))
+                                             '../../../testsuite'))
 os.environ['OSLHOME'] = os.path.join(OSL_SOURCE_DIR, "src")
 OSL_REGRESSION_TEST = os.environ.get("OSL_REGRESSION_TEST", None)
 

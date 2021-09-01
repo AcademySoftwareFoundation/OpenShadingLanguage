@@ -179,8 +179,9 @@ jobs:
       CMAKE_CXX_STANDARD: 17
       PYTHON_VERSION: 3.9
       USE_SIMD: avx2,f16c
+      OPENCOLORIO_VERSION: v2.1.0
       OPENEXR_VERSION: v3.1.1
-      OPENIMAGEIO_VERSION: dev-2.3
+      OPENIMAGEIO_VERSION: release
       PYBIND11_VERSION: v2.7.1
     steps:
       - uses: actions/checkout@v2
@@ -471,7 +472,7 @@ jobs:
   linux-latest-release:
     # Test against development master for relevant dependencies, latest
     # supported releases of everything else.
-    name: "Linux latest releases: gcc10/C++17, llvm12, oiio-master, py3.8, boost1.71, exr3.1, ocio2.0, avx2"
+    name: "Linux latest releases: gcc10/C++17, llvm12, oiio-2.3, py3.8, boost1.71, exr3.1, ocio2.1, avx2"
     runs-on: ubuntu-20.04
     env:
       CXX: g++-10
@@ -481,9 +482,9 @@ jobs:
       LLVM_DISTRO_NAME: ubuntu-20.04
       USE_SIMD: avx2,f16c
       OPENEXR_VERSION: v3.1.0
-      OPENIMAGEIO_VERSION: master
+      OPENIMAGEIO_VERSION: release
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=8.0.0
-      OPENCOLORIO_VERSION: v2.0.1
+      OPENCOLORIO_VERSION: v2.1.0
       PUGIXML_VERSION: v1.11.4
       PYBIND11_VERSION: v2.7.1
       PYTHON_VERSION: 3.8

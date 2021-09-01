@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.15.0 -- 1 Sep 2021 (compared to 1.11.14.2)
+-------------------------------------------------------
+* Changes for compatibility with OpenImageIO 2.3. #1393 #1388
+* Fix potential crashes (or at least undefined behavior) due to missing
+  virtual destructor of internal Symbol type. #1397
+
 Release 1.11.14.2 -- 1 Jul 2021 (compared to 1.11.14.1)
 -------------------------------------------------------
 * Fix warnings that occur when compiling with clang and C++17 mode. #1379

@@ -244,17 +244,14 @@ affineInverse(const Matrix44 &m)
 // match results between LLVM IR based implementation and
 // compiler optimized versions which may have optimized
 // differently than the LLVM IR version.
-// Clang doesn't currently have a way to control fast-math/fp:strict
-// at a per function level, so we will resort to disabling optimization
-// for this function.  Not ideal, but this is already a slow path
-// for exceptional situations.
 // NOTE:  only using "inline" to get ODR (One Definition Rule) behavior
-static inline OSL_HOSTDEVICE Matrix44 OSL_GNUC_ATTRIBUTE(optimize("O0"))
-nonAffineInverse(const Matrix44 &source) OSL_CLANG_ATTRIBUTE(optnone);
+static inline OSL_HOSTDEVICE Matrix44 OSL_GNUC_ATTRIBUTE(optimize("fp-contract=off"))
+nonAffineInverse(const Matrix44 &source);
 
 Matrix44 OSL_HOSTDEVICE nonAffineInverse(const Matrix44 &source)
 {
     OSL_INTEL_PRAGMA(float_control(strict,on,push))
+    OSL_CLANG_PRAGMA(clang fp contract(off))
 
 	using ScalarT = typename Matrix44::BaseType;
     Matrix44 t(source);

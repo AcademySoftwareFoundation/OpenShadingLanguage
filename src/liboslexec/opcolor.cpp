@@ -563,11 +563,11 @@ ColorSystem::set_colorspace (StringParam colorspace)
 // For Optix, this will be defined by the renderer. Otherwise inline a getter.
 #ifdef __CUDACC__
     extern "C"  __device__
-    void osl_printf (void* sg_, char* fmt_str, void* args) __attribute__((weak));
+    void osl_printf (void* sg_, char* fmt_str, void* args);
 
     extern "C" __device__ int
     rend_get_userdata (StringParam name, void* data, int data_size,
-                       const OSL::TypeDesc& type, int index) __attribute__((weak));
+                       const OSL::TypeDesc& type, int index);
 
     OSL_HOSTDEVICE void
     ColorSystem::error(StringParam src, StringParam dst, Context sg) {

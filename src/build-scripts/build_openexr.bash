@@ -11,8 +11,8 @@
 set -ex
 
 # Which OpenEXR to retrieve, how to build it
-OPENEXR_REPO=${OPENEXR_REPO:=https://github.com/openexr/openexr.git}
-OPENEXR_VERSION=${OPENEXR_VERSION:=v2.4.1}
+OPENEXR_REPO=${OPENEXR_REPO:=https://github.com/AcademySoftwareFoundation/openexr.git}
+OPENEXR_VERSION=${OPENEXR_VERSION:=v3.1.1}
 
 # Where to install the final results
 LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=${PWD}/ext}
@@ -48,27 +48,7 @@ mkdir -p ${OPENEXR_BUILD_DIR} && true
 pushd ${OPENEXR_SOURCE_DIR}
 git checkout ${OPENEXR_VERSION} --force
 
-if [[ ${OPENEXR_VERSION} == "v2.2.0" ]] || [[ ${OPENEXR_VERSION} == "v2.2.1" ]] \
-        || [[ ${OPENEXR_VERSION} == "v2.2.2" ]] ; then
-    mkdir -p ${OPENEXR_BUILD_DIR}/IlmBase && true
-    mkdir -p ${OPENEXR_BUILD_DIR}/OpenEXR && true
-    cd ${OPENEXR_BUILD_DIR}/IlmBase
-    cmake -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} ${OPENEXR_GENERATOR_CMD} \
-            -DCMAKE_INSTALL_PREFIX="${OPENEXR_INSTALL_DIR}" \
-            -DCMAKE_CXX_FLAGS="${OPENEXR_CXX_FLAGS}" \
-            -DCMAKE_CXX_STANDARD=11 \
-            ${OPENEXR_CMAKE_FLAGS} ${OPENEXR_SOURCE_DIR}/IlmBase
-    time cmake --build . --target install --config ${OPENEXR_BUILD_TYPE}
-    cd ${OPENEXR_BUILD_DIR}/OpenEXR
-    cmake -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} ${OPENEXR_GENERATOR_CMD} \
-            -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}\;${OPENEXR_INSTALL_DIR}" \
-            -DCMAKE_INSTALL_PREFIX="${OPENEXR_INSTALL_DIR}" \
-            -DILMBASE_PACKAGE_PREFIX="${OPENEXR_INSTALL_DIR}" \
-            -DBUILD_UTILS=0 -DBUILD_TESTS=0 \
-            -DCMAKE_CXX_FLAGS="${OPENEXR_CXX_FLAGS}" \
-            ${OPENEXR_CMAKE_FLAGS} ${OPENEXR_SOURCE_DIR}/OpenEXR
-    time cmake --build . --target install --config ${OPENEXR_BUILD_TYPE}
-elif [[ ${OPENEXR_VERSION} == "v2.3.0" ]] ; then
+if [[ ${OPENEXR_VERSION} == "v2.3.0" ]] ; then
     # Simplified setup for 2.3+
     cd ${OPENEXR_BUILD_DIR}
     cmake -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} -G "$CMAKE_GENERATOR" \

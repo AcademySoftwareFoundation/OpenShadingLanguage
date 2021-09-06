@@ -43,7 +43,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   libraries.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.77)
-* [Ilmbase or Imath](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.1)
+* [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/openexr) 2.3
+   or newer (recommended: 2.4 or higher; tested through 3.1)
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
   [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
   Note that on some MacOS/xcode releases, the system-installed Bison is too

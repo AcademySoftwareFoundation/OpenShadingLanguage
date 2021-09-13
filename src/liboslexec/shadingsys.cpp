@@ -4189,7 +4189,7 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
                              void *attr_name_,
                              int   array_lookup,
                              int   index,
-                             const void *attr_type,
+                             long long attr_type,
                              void *attr_dest)
 {
     ShaderGlobals *sg   = (ShaderGlobals *)sg_;
@@ -4199,7 +4199,7 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
     return sg->context->osl_get_attribute (sg, sg->objdata,
                                            dest_derivs, obj_name, attr_name,
                                            array_lookup, index,
-                                           *(const TypeDesc *)attr_type,
+                                           TYPEDESC(attr_type),
                                            attr_dest);
 }
 

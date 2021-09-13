@@ -26,7 +26,7 @@ on:
 
 jobs:
   vfxplatform-2019:
-    name: "Linux VFXP-2019: gcc6 C++14 llvm7 py2.7 boost-1.66 exr-2.3 OIIO-2.1 sse2"
+    name: "Linux VFXP-2019: gcc6/C++14 llvm7.1 py2.7 boost1.66 exr2.3 oiio2.1 sse2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019-clang7
@@ -75,7 +75,7 @@ jobs:
             build/CMake*.{txt,log}
 
   vfxplatform-2020:
-    name: "Linux VFXP-2020 gcc6/C++14 llvm7 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
+    name: "Linux VFXP-2020 gcc6/C++14 llvm7.1 py3.7 boost1.70 exr2.4 oiio2.1 sse4"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2020
@@ -121,7 +121,7 @@ jobs:
             build/CMake*.{txt,log}
 
   vfxplatform-2021:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost-1.73 exr-2.5 OIIO-2.2 avx2 batch-b8avx2"
+    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost1.73 exr2.5 oiio2.2 avx2 batch-b8avx2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021-clang11
@@ -170,7 +170,7 @@ jobs:
             build/CMake*.{txt,log}
 
   vfxplatform-2022:
-    name: "Linux VFXP-2022 gcc9/C++17 llvm11 py3.9 boost-1.75 exr-3.1 OIIO-2.3 avx2"
+    name: "Linux VFXP-2022 gcc9/C++17 llvm11 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2022-clang11
@@ -178,8 +178,6 @@ jobs:
       CXX: g++
       CC: gcc
       CMAKE_CXX_STANDARD: 17
-      OPENEXR_VERSION: v3.1.1
-      OPENIMAGEIO_VERSION: dev-2.3
       PYBIND11_VERSION: v2.7.1
       PYTHON_VERSION: 3.9
       USE_BATCHED: b8_AVX2
@@ -204,8 +202,6 @@ jobs:
             src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
-            sudo rm -rf /usr/local/include/{Imath,OpenEXR}
-            sudo rm -rf /usr/local/lib64/cmake/{Imath,OpenEXR}
             src/build-scripts/gh-installdeps.bash
       - name: Build
         run: |

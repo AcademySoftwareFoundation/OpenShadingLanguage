@@ -618,9 +618,9 @@ template <typename Color> OSL_HOSTDEVICE Color
 ColorSystem::ocio_transform (StringParam fromspace, StringParam tospace,
                              const Color& C, Context ctx)
 {
-#if OIIO_HAS_COLORPROCESSOR
+#ifndef __CUDA_ARCH__
     Color Cout;
-    if (ctx->shadingsys().ocio_transform(fromspace, tospace, C, Cout))
+    if (ctx->ocio_transform(fromspace, tospace, C, Cout))
         return Cout;
 #endif
 

@@ -287,6 +287,11 @@ macro (osl_add_all_tests)
         TESTSUITE ( gettextureinfo-udim )
     endif ()
 
+    # Only run the ocio test if the OIIO we are using has OCIO support
+    if (OpenImageIO_HAS_OpenColorIO)
+        TESTSUITE ( ocio )
+    endif ()
+
     # Add tests that require the Python bindings if we built them.
     # We also exclude these tests if this is a sanitizer build on Linux,
     # because the Python interpreter itself won't be linked with the right asan

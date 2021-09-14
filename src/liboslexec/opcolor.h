@@ -18,9 +18,6 @@
 
 #include <OpenImageIO/color.h>
 
-#ifdef __CUDACC__
-  #undef OIIO_HAS_COLORPROCESSOR
-#endif
 
 
 OSL_NAMESPACE_ENTER
@@ -108,17 +105,16 @@ private:
 
 
 class OCIOColorSystem {
-#if OIIO_HAS_COLORPROCESSOR
+#ifndef __CUDACC__
 public:
-
-    OIIO::ColorProcessorHandle
-    load_transform(StringParam fromspace, StringParam tospace);
-
-    const OIIO::ColorConfig& colorconfig () const { return m_colorconfig; }
+    OIIO::ColorProcessorHandle load_transform(StringParam fromspace,
+                                              StringParam tospace,
+                                              ShadingSystemImpl* shadingsys);
 
 private:
+    const OIIO::ColorConfig& colorconfig (ShadingSystemImpl* shadingsys);
 
-    OIIO::ColorConfig m_colorconfig; ///< OIIO/OCIO color configuration
+    std::shared_ptr<OIIO::ColorConfig> m_colorconfig; ///< OIIO/OCIO color configuration
 
     // 1-item cache for the last requested custom color conversion processor
     OIIO::ColorProcessorHandle m_last_colorproc;

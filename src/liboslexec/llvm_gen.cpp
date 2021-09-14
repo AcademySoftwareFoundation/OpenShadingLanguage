@@ -2976,7 +2976,7 @@ LLVMGEN (llvm_gen_getattribute)
     // We'll pass the destination's attribute type directly to the 
     // RenderServices callback so that the renderer can perform any
     // necessary conversions from its internal format to OSL's.
-    const TypeDesc* dest_type = &Destination.typespec().simpletype();
+    TypeDesc dest_type = Destination.typespec().simpletype();
 
     llvm::Value * args[] = {
             rop.sg_void_ptr(),
@@ -2985,7 +2985,7 @@ LLVMGEN (llvm_gen_getattribute)
             rop.llvm_load_value (Attribute),
             rop.ll.constant ((int)array_lookup),
             rop.llvm_load_value (Index),
-            rop.ll.constant_ptr ((void *) dest_type),
+            rop.ll.constant (dest_type),
             rop.llvm_void_ptr (Destination),
     };
     llvm::Value *r = rop.ll.call_function ("osl_get_attribute", args);

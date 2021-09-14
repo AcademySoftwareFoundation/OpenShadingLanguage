@@ -210,7 +210,7 @@ DECL (osl_range_check, "iiiXXXiXiXX")
 DECL (osl_range_check_err, "iiiXXXiXiXX")
 DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")
-DECL (osl_get_attribute, "iXiXXiiXX")
+DECL (osl_get_attribute, "iXiXXiiLX")
 DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
 DECL (osl_get_texture_options, "XX");
 DECL (osl_get_noise_options, "XX");

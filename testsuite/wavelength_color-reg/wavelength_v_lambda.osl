@@ -1,0 +1,5 @@
+shader wavelength_v_lambda (output color Cout = 0)
+{
+    float lambda = 380+u*320; //Increase visibility
+    Cout = wavelength_color (lambda);
+}

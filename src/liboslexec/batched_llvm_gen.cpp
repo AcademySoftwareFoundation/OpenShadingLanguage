@@ -2906,6 +2906,145 @@ LLVMGEN (llvm_gen_transform)
 }
 
 
+// transformc (string fromspace, string tospace, color p)
+LLVMGEN (llvm_gen_transformc)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 4);
+    Symbol &Result = *rop.opargsym (op, 0);
+    Symbol &From = *rop.opargsym (op, 1);
+    Symbol &To = *rop.opargsym (op, 2);
+    Symbol &C = *rop.opargsym (op, 3);
+
+    bool op_is_uniform = C.is_uniform() && From.is_uniform() && To.is_uniform();
+    bool result_is_uniform = Result.is_uniform();
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+    FuncSpec func_spec("transform_color");
+    func_spec.arg(C, false, op_is_uniform);
+    // We will only call a transform library with uniform 'From'
+    // and 'To' spaces.  If our 'From' and 'To' are not uniform we will
+    // loop identifying which lanes have the same 'From' and 'To' values and
+    // call the library function multiple times with different combinations
+    // of 'From' and 'To' and different masks
+    func_spec.arg(From,false, true /*is_uniform*/);
+    func_spec.arg(To,false, true /*is_uniform*/);
+    if (!op_is_uniform) {
+        OSL_ASSERT(!result_is_uniform);
+        func_spec.mask();
+
+        const char * transformColorFuncName = rop.build_name(func_spec);
+
+        if (From.is_uniform() && To.is_uniform()) {
+            // When both From and To are uniform, we can just
+            // skip the loop and call the library function once
+            llvm::Value *args[] = { rop.sg_void_ptr(),
+                rop.llvm_load_arg (C, C.has_derivs(), op_is_uniform),
+                rop.ll.constant(C.has_derivs()),
+                rop.llvm_void_ptr(Result),
+                rop.ll.constant(Result.has_derivs()),
+                rop.llvm_load_arg (From, false /*has_derivs*/, true /*is_uniform*/),
+                rop.llvm_load_arg (To, false /*has_derivs*/, true /*is_uniform*/),
+                rop.ll.mask_as_int(rop.ll.current_mask())
+            };
+
+            rop.ll.call_function (transformColorFuncName, args);
+
+        } else {
+            // From or To must be varying, setup a loop to call the library
+            // function with uniform from and to values adjusting the mask
+            // to identify which lanes match the from and to combinations.
+            llvm::Value * FromVal = rop.llvm_load_value (From, 0 /*deriv*/, 0 /*component*/, TypeDesc::UNKNOWN, From.is_uniform());
+            llvm::Value * ToVal = rop.llvm_load_value (To, 0 /*deriv*/, 0 /*component*/, TypeDesc::UNKNOWN, To.is_uniform());
+
+            llvm::Value *args[] = { rop.sg_void_ptr(),
+                rop.llvm_load_arg (C, C.has_derivs(), op_is_uniform),
+                rop.ll.constant(C.has_derivs()),
+                rop.llvm_void_ptr(Result),
+                rop.ll.constant(Result.has_derivs()),
+                From.is_uniform() ? FromVal : nullptr /* filled in by loop */,
+                To.is_uniform() ? ToVal : nullptr /* filled in by loop */,
+                nullptr /*mask filled in by loop*/
+            };
+            constexpr int fromArgumentIndex = 5;
+            constexpr int toArgumentIndex = 6;
+            constexpr int maskArgumentIndex = 7;
+
+            // do while(remaining)
+            llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to transformc");
+            rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+            llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_transformc (varying spaces)") : std::string());
+            llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_transformc (varying spaces)") : std::string());
+            rop.ll.op_branch(bin_block);
+            {
+
+                llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+                llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+                llvm::Value * lanesMatchingSpaces = remainingMask;
+
+                if (!From.is_uniform()) {
+                    llvm::Value *scalar_fromSpace = rop.ll.op_extract(FromVal, leadLane);
+                    args[fromArgumentIndex] = scalar_fromSpace;
+                    lanesMatchingSpaces = rop.ll.op_lanes_that_match_masked(scalar_fromSpace, FromVal, remainingMask);
+                    OSL_DASSERT(lanesMatchingSpaces);
+                }
+
+                if (!To.is_uniform()) {
+                    llvm::Value *scalar_toSpace = rop.ll.op_extract(ToVal, leadLane);
+                    args[toArgumentIndex] = scalar_toSpace;
+                    lanesMatchingSpaces = rop.ll.op_lanes_that_match_masked(scalar_toSpace, ToVal, lanesMatchingSpaces);
+                    OSL_DASSERT(lanesMatchingSpaces);
+                }
+
+                //rop.llvm_print_mask("lanesMatchingSplineName", lanesMatchingSplineName);
+                args[maskArgumentIndex] = rop.ll.mask_as_int(lanesMatchingSpaces);
+
+                rop.ll.call_function (transformColorFuncName, args);
+
+                remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingSpaces);
+                //rop.llvm_print_mask("xor remainingMask,lanesMatchingSpaces", remainingMask);
+                rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+                llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+                //rop.llvm_print_mask("remainingMask", remainingMask);
+                llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+                rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+            }
+            // Continue on with the previous flow
+            rop.ll.set_insert_point (after_block);
+        }
+    } else {
+        // All inputs (Color, From, To) are uniform, but result might be varying.
+        // In that case still call the uniform version of the library function,
+        // but allocate a temp for the result and after library call,
+        // broadcast the temp result out to the varying result symbol
+        llvm::Value* result_param = nullptr;
+        if (!result_is_uniform) {
+            result_param = rop.getOrAllocateTemp(Result.typespec(), Result.has_derivs(), true /*is_uniform*/);
+        } else {
+            result_param = rop.llvm_void_ptr (Result);
+        }
+
+        llvm::Value *args[7] = { rop.sg_void_ptr(),
+            rop.llvm_load_arg (C, C.has_derivs(), true /*op_is_uniform*/),
+            rop.ll.constant(C.has_derivs()),
+            rop.ll.void_ptr(result_param), rop.ll.constant(Result.has_derivs()),
+            rop.llvm_load_arg (From, false /*has_derivs*/, true /*op_is_uniform*/),
+            rop.llvm_load_arg (To, false /*has_derivs*/, true /*op_is_uniform*/)
+        };
+
+        func_spec.unmask();
+        rop.ll.call_function (rop.build_name(func_spec), args);
+
+        if (!result_is_uniform) {
+            rop.llvm_broadcast_uniform_value_from_mem(result_param, Result);
+        }
+
+    }
+    return true;
+}
+
+
 LLVMGEN (llvm_gen_loop_op)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -4219,6 +4358,117 @@ LLVMGEN (llvm_gen_raytype)
 }
 
 
+// color blackbody (float temperatureK)
+// color wavelength_color (float wavelength_nm)  // same function signature
+LLVMGEN (llvm_gen_blackbody)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 2);
+    Symbol &Result (*rop.opargsym (op, 0));
+    Symbol &Temperature (*rop.opargsym (op, 1));
+    OSL_ASSERT (Result.typespec().is_triple() && Temperature.typespec().is_float());
+
+    bool result_is_uniform = Result.is_uniform();
+    bool op_is_uniform = Temperature.is_uniform();
+
+
+    std::vector<llvm::Value *> args;
+    args.push_back(rop.sg_void_ptr());
+
+    FuncSpec func_spec(op.opname().c_str());
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+    llvm::Value *u_result = nullptr;
+
+    if (op_is_uniform && !result_is_uniform) {
+        u_result = rop.getOrAllocateTemp (Result.typespec(), false /*derivs()*/, true /*is_uniform*/, false /*forceBool*/, "blackbody temp result");
+        args.push_back(rop.ll.void_ptr(u_result));
+    } else {
+        args.push_back(rop.llvm_void_ptr(Result));
+    }
+    func_spec.arg(Result, false /* no derivs */, op_is_uniform);
+    func_spec.arg(Temperature, false /* no derivs */, op_is_uniform);
+    args.push_back(op_is_uniform ? rop.llvm_load_value(Temperature) : rop.llvm_void_ptr(Temperature));
+
+    if (!op_is_uniform) {
+        func_spec.mask();
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+        // tack on additional mask argument
+    }
+
+
+    rop.ll.call_function (rop.build_name(func_spec), args);
+
+
+    if (op_is_uniform && !result_is_uniform) {
+        rop.llvm_broadcast_uniform_value_from_mem(u_result,
+                Result,
+                true /* ignore_derivs */);
+    }
+
+    // Punt, zero out derivs.
+     // FIXME -- only of some day, someone truly needs blackbody() to
+     // correctly return derivs with spatially-varying temperature.
+     if (Result.has_derivs())
+         rop.llvm_zero_derivs (Result);
+
+    return true;
+}
+
+
+
+// float luminance (color c)
+LLVMGEN (llvm_gen_luminance)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 2);
+    Symbol &Result (*rop.opargsym (op, 0));
+    Symbol &C (*rop.opargsym (op, 1));
+    OSL_ASSERT (Result.typespec().is_float() && C.typespec().is_triple());
+
+    // luminance = red * luminance_scale.red + green * luminance_scale.green + blue * luminance_scale.blue;
+
+    // Although color systems can be changed via a ShadingSystem attribute,
+    // any change of attributes should cause/require a rebuild of the shaders
+    // So we will emit the luminance scale as comple time constants
+    // and emit the simple math, vs. incur the overhead of a function call
+    // TODO: same logic could be applied to the non batched gen
+
+    Color3 luminance_scale = rop.shadingsys().colorsystem().luminance_scale();
+    //
+    bool result_is_uniform = Result.is_uniform();
+    bool op_is_uniform = C.is_uniform();
+
+    llvm::Value *red_scale = op_is_uniform ? rop.ll.constant(luminance_scale.x) : rop.ll.wide_constant(luminance_scale.x);
+    llvm::Value *green_scale = op_is_uniform ? rop.ll.constant(luminance_scale.y) : rop.ll.wide_constant(luminance_scale.y);
+    llvm::Value *blue_scale = op_is_uniform ? rop.ll.constant(luminance_scale.z) : rop.ll.wide_constant(luminance_scale.z);
+
+    for (int d = 0;  d < 3;  ++d) {  // deriv
+        llvm::Value *red = rop.llvm_load_value (C, d, 0, TypeDesc::UNKNOWN, op_is_uniform);
+        llvm::Value *green = rop.llvm_load_value (C, d, 1, TypeDesc::UNKNOWN, op_is_uniform);
+        llvm::Value *blue = rop.llvm_load_value (C, d, 2, TypeDesc::UNKNOWN, op_is_uniform);
+
+        llvm::Value *scaled_red = rop.ll.op_mul(red_scale, red);
+        llvm::Value *scaled_green = rop.ll.op_mul(green_scale, green);
+        llvm::Value *scaled_blue = rop.ll.op_mul(blue_scale, blue);
+
+        llvm::Value *result = rop.ll.op_add(rop.ll.op_add(scaled_red,scaled_green),scaled_blue);
+
+        OSL_ASSERT(op_is_uniform || !result_is_uniform);
+        if (op_is_uniform && !result_is_uniform)
+        {
+            result = rop.ll.widen_value(result);
+        }
+
+        rop.llvm_store_value (result, Result, d);
+        if (! Result.has_derivs())  // skip the derivs if we don't need them
+            break;
+    }
+
+    return true;
+}
+
+
 LLVMGEN (llvm_gen_return)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -4276,7 +4526,6 @@ TBD_LLVMGEN(llvm_gen_andor)
 TBD_LLVMGEN(llvm_gen_texture)
 TBD_LLVMGEN(llvm_gen_getmessage)
 TBD_LLVMGEN(llvm_gen_bitwise_binary_op)
-TBD_LLVMGEN(llvm_gen_transformc)
 TBD_LLVMGEN(llvm_gen_pointcloud_search)
 TBD_LLVMGEN(llvm_gen_dict_find)
 TBD_LLVMGEN(llvm_gen_clamp)
@@ -4287,11 +4536,9 @@ TBD_LLVMGEN(llvm_gen_pointcloud_write)
 TBD_LLVMGEN(llvm_gen_isconstant)
 TBD_LLVMGEN(llvm_gen_select)
 TBD_LLVMGEN(llvm_gen_unary_op)
-TBD_LLVMGEN(llvm_gen_luminance)
 TBD_LLVMGEN(llvm_gen_dict_value)
 TBD_LLVMGEN(llvm_gen_closure)
 TBD_LLVMGEN(llvm_gen_gettextureinfo)
-TBD_LLVMGEN(llvm_gen_blackbody)
 TBD_LLVMGEN(llvm_gen_spline)
 TBD_LLVMGEN(llvm_gen_dict_next)
 TBD_LLVMGEN(llvm_gen_texture3d)

@@ -50,49 +50,75 @@ public:
 
     /// Convert an XYZ color to RGB in our preferred color space.
     template <typename T> OSL_HOSTDEVICE T
-    XYZ_to_RGB (const T &XYZ) { return XYZ * m_XYZ2RGB; }
+    XYZ_to_RGB (const T &XYZ) const { return XYZ * m_XYZ2RGB; }
 
     /// Convert an RGB color in our preferred color space to XYZ.
     template <typename T> OSL_HOSTDEVICE T
-    RGB_to_XYZ (const T &RGB) { return RGB * m_RGB2XYZ; }
+    RGB_to_XYZ (const T &RGB) const { return RGB * m_RGB2XYZ; }
 
     /// Return the luminance of an RGB color in the current color space.
     OSL_HOSTDEVICE float
-    luminance (const Color3 &RGB) { return RGB.dot(m_luminance_scale); }
+    luminance (const Color3 &RGB) const { return RGB.dot(m_luminance_scale); }
+
+    /// Return the luminance scale  of the current color space.
+    const Color3 & luminance_scale() const { return m_luminance_scale; }
 
     /// Return the RGB in the current color space for blackbody radiation
     /// at temperature T (in Kelvin).
-    OSL_HOSTDEVICE Color3
-    blackbody_rgb (float T /*Kelvin*/);
+    OSL_HOSTDEVICE inline Color3
+    blackbody_rgb (float T /*Kelvin*/) const;
+
+    // Interface to access underlying optimized lookup table for blackbody
+    // When can_lookup_blackbody() returns true,
+    // then lookup_blackbody_rgb can be safely called,
+    // otherwise the compute_blackbody_rgb is required.
+    OSL_HOSTDEVICE inline bool
+    can_lookup_blackbody(float T /*Kelvin*/) const;
+
+    OSL_HOSTDEVICE inline Color3
+    lookup_blackbody_rgb (float T /*Kelvin*/) const;
+
+    // Expensive real computation without lookup table
+    OSL_HOSTDEVICE inline Color3
+    compute_blackbody_rgb (float T /*Kelvin*/) const;
+
 
     /// Set the current color space.
     OSL_HOSTDEVICE bool
     set_colorspace (StringParam colorspace);
 
     OSL_HOSTDEVICE Color3
-    to_rgb (StringParam fromspace, const Color3& C, Context);
+    to_rgb (StringParam fromspace, const Color3& C, Context) const;
 
     OSL_HOSTDEVICE Color3
-    from_rgb (StringParam fromspace, const Color3& C, Context);
+    from_rgb (StringParam fromspace, const Color3& C, Context) const;
 
     OSL_HOSTDEVICE Dual2<Color3>
     transformc (StringParam fromspace, StringParam tospace,
-                const Dual2<Color3>& color, Context ctx);
+                const Dual2<Color3>& color, Context ctx) const;
 
     OSL_HOSTDEVICE Color3
     transformc (StringParam fromspace, StringParam tospace,
-                const Color3& color, Context ctx);
+                const Color3& color, Context ctx) const;
 
-    template <typename Color> OSL_HOSTDEVICE Color
-    ocio_transform (StringParam fromspace, StringParam tospace, const Color& C, Context);
+    OSL_HOSTDEVICE Dual2<Color3>
+    ocio_transform (StringParam fromspace, StringParam tospace, const Dual2<Color3>& C, Context) const;
+
+    OSL_HOSTDEVICE Color3
+    ocio_transform (StringParam fromspace, StringParam tospace, const Color3& C, Context) const;
+
 
     OSL_HOSTDEVICE const StringParam& colorspace() const { return m_colorspace; }
 
-    OSL_HOSTDEVICE void error(StringParam src, StringParam dst, Context);
+    OSL_HOSTDEVICE void error(StringParam src, StringParam dst, Context) const;
 
 private:
-    template <typename Color> OSL_HOSTDEVICE Color
-    transformc (StringParam fromspace, StringParam tospace, const Color& C, Context);
+    template <typename Color> OSL_HOSTDEVICE inline Color
+    transformc (StringParam fromspace, StringParam tospace, const Color& C, Context) const;
+
+    template <typename Color> OSL_HOSTDEVICE inline Color
+    ocio_transform (StringParam fromspace, StringParam tospace, const Color& C, Context) const;
+
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;   ///< Color primaries (xyY)

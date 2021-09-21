@@ -2,72 +2,74 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+#include "../common/shaders/pretty.h"
+
 shader
 test (color cparam = color (.1, .7, .2),
       color cparam2 = color (.1),
       color cparam3 = color ("hsv", .1, .2, .3))
 {
-    printf ("  parameter initialization test: cparam = %g\n", cparam);
-    printf ("  parameter initialization test2: cparam2 = %g\n", cparam2);
+    printf ("  parameter initialization test: cparam = %g\n", pretty(cparam));
+    printf ("  parameter initialization test2: cparam2 = %g\n", pretty(cparam2));
     printf ("\n");
 
     {
         float a = 0.1, b = 0.2, c = 0.5;
-        printf ("  color (%g) = %g\n", a, color(a));
-        printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
+        printf ("  color (%g) = %g\n", a, pretty(color(a)));
+        printf ("  color (%g, %g, %g) = %g\n", a, b, c, pretty(color(a,b,c)));
     }
 
     {
         color C = color (0, 1, 2);
         printf ("  C = color (%g) has components %g, %g, %g\n",
-                C, C[0], C[1], C[2]);
+                pretty(C), pretty(C[0]), pretty(C[1]), pretty(C[2]));
         C[1] = 8;
-        printf ("  After C[1] = 8, V = (%g)\n", C);
+        printf ("  After C[1] = 8, V = (%g)\n", pretty(C));
         C[2] = 0.5;
-        printf ("  After C[2] = 0.5, V = (%g)\n", C);
+        printf ("  After C[2] = 0.5, V = (%g)\n", pretty(C));
         printf ("  C = color (%g) has rgb components %g, %g, %g\n",
-                C, C.r, C.g, C.b);
+                pretty(C), pretty(C.r), pretty(C.g), pretty(C.b));
         C.r = 14.5;
-        printf ("  After C.r = 14.5, C = (%g)\n", C);
+        printf ("  After C.r = 14.5, C = (%g)\n", pretty(C));
         C.g = 15.5;
-        printf ("  After C.g = 15.5, C = (%g)\n", C);
+        printf ("  After C.g = 15.5, C = (%g)\n", pretty(C));
         C.b = 16.5;
-        printf ("  After C.b = 16.5, C = (%g)\n", C);
+        printf ("  After C.b = 16.5, C = (%g)\n", pretty(C));
     }
 
     {
         float a = 0.1, b = 0.2, c = 0.5;
         printf ("\ntesting with spaces:\n");
         printf ("  color (\"rgb\", %g, %g, %g) = %g\n",
-                a, b, c, color("rgb",a,b,c));
+                pretty(a), pretty(b), pretty(c), pretty(color("rgb",a,b,c)));
         printf ("  color (\"hsv\", %g, %g, %g) = %g\n",
-                a, b, c, color("hsv",a,b,c));
+                pretty(a), pretty(b), pretty(c), pretty(color("hsv",a,b,c)));
         float h, s, v, l;
         h = 0; s = 0; v = 0.5;
         printf ("  color (\"hsv\", %g, %g, %g) = %g\n",
-                h, s, v, color("hsv",h,s,v));
+                pretty(h), pretty(s), pretty(v), pretty(color("hsv",h,s,v)));
         h = 0.5; s = 1; v = 0.5;
         printf ("  color (\"hsv\", %g, %g, %g) = %g\n",
-                h, s, v, color("hsv",h,s,v));
+                pretty(h), pretty(s), pretty(v), pretty(color("hsv",h,s,v)));
 
         h = 0; s = 0; l = 0.5;
         printf ("  color (\"hsl\", %g, %g, %g) = %g\n",
-                h, s, l, color("hsl",h,s,l));
+                pretty(h), pretty(s), pretty(l), pretty(color("hsl",h,s,l)));
         h = 0.5; s = 1; l = 0.1;
         printf ("  color (\"hsl\", %g, %g, %g) = %g\n",
-                h, s, l, color("hsl",h,s,l));
+                pretty(h), pretty(s), pretty(l), pretty(color("hsl",h,s,l)));
 
         float Y = 0.5, I = 0.25, Q = 0.25;
         printf ("  color (\"YIQ\", %g, %g, %g) = %g\n",
-                Y, I, Q, color("YIQ", Y,I,Q));
+                pretty(Y), pretty(I), pretty(Q), pretty(color("YIQ", Y,I,Q)));
         float x = 0.25, y = 0.5, z = 0.25;
         printf ("  color (\"XYZ\", %g, %g, %g) = %g\n",
-                x, y, z, color("XYZ",x,y,z));
+                pretty(x), pretty(y), pretty(z), pretty(color("XYZ",x,y,z)));
     }
 
     printf ("\n");
     color c = color (0.5, 0.75, 0.75);
-    printf ("  luminance(%g) = %g\n", c, luminance(c));
+    printf ("  luminance(%g) = %g\n", pretty(c), pretty(luminance(c)));
     c = 0.5;
-    printf ("  luminance(%g) = %g\n", c, luminance(c));
+    printf ("  luminance(%g) = %g\n", pretty(c), pretty(luminance(c)));
 }

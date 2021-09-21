@@ -378,8 +378,8 @@ template <class T> class Matrix33
 
 
     //-------------------------------------------------------------
-    // Set matrix to shear x for each y coord. by given factor h[0]
-    // and to shear y for each x coord. by given factor h[1]
+    // Set matrix to shear x for each y coord. by given factor h.x
+    // and to shear y for each x coord. by given factor h.y
     //-------------------------------------------------------------
 
     template <class S>
@@ -1133,7 +1133,7 @@ Matrix33<T>::equalWithAbsError (const Matrix33<T> &m, T e) const
 {
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
-            if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
@@ -1145,7 +1145,7 @@ Matrix33<T>::equalWithRelError (const Matrix33<T> &m, T e) const
 {
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
-            if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
@@ -1356,9 +1356,9 @@ Matrix33<T>::multVecMatrix(const Vec2<S> &src, Vec2<S> &dst) const
 {
     S a, b, w;
 
-    a = src[0] * x[0][0] + src[1] * x[1][0] + x[2][0];
-    b = src[0] * x[0][1] + src[1] * x[1][1] + x[2][1];
-    w = src[0] * x[0][2] + src[1] * x[1][2] + x[2][2];
+    a = src.x * x[0][0] + src.y * x[1][0] + x[2][0];
+    b = src.x * x[0][1] + src.y * x[1][1] + x[2][1];
+    w = src.x * x[0][2] + src.y * x[1][2] + x[2][2];
 
     dst.x = a / w;
     dst.y = b / w;
@@ -1371,8 +1371,8 @@ Matrix33<T>::multDirMatrix(const Vec2<S> &src, Vec2<S> &dst) const
 {
     S a, b;
 
-    a = src[0] * x[0][0] + src[1] * x[1][0];
-    b = src[0] * x[0][1] + src[1] * x[1][1];
+    a = src.x * x[0][0] + src.y * x[1][0];
+    b = src.x * x[0][1] + src.y * x[1][1];
 
     dst.x = a;
     dst.y = b;
@@ -1464,14 +1464,14 @@ Matrix33<T>::gjInverse (bool singExc) const
     {
         int pivot = i;
 
-        T pivotsize = t[i][i];
+        T pivotsize = t.x[i][i];
 
         if (pivotsize < 0)
             pivotsize = -pivotsize;
 
         for (j = i + 1; j < 3; j++)
         {
-            T tmp = t[j][i];
+            T tmp = t.x[j][i];
 
             if (tmp < 0)
                 tmp = -tmp;
@@ -1497,24 +1497,24 @@ Matrix33<T>::gjInverse (bool singExc) const
             {
                 T tmp;
 
-                tmp = t[i][j];
-                t[i][j] = t[pivot][j];
-                t[pivot][j] = tmp;
+                tmp = t.x[i][j];
+                t.x[i][j] = t.x[pivot][j];
+                t.x[pivot][j] = tmp;
 
-                tmp = s[i][j];
-                s[i][j] = s[pivot][j];
-                s[pivot][j] = tmp;
+                tmp = s.x[i][j];
+                s.x[i][j] = s.x[pivot][j];
+                s.x[pivot][j] = tmp;
             }
         }
 
         for (j = i + 1; j < 3; j++)
         {
-            T f = t[j][i] / t[i][i];
+            T f = t.x[j][i] / t.x[i][i];
 
             for (k = 0; k < 3; k++)
             {
-                t[j][k] -= f * t[i][k];
-                s[j][k] -= f * s[i][k];
+                t.x[j][k] -= f * t.x[i][k];
+                s.x[j][k] -= f * s.x[i][k];
             }
         }
     }
@@ -1525,7 +1525,7 @@ Matrix33<T>::gjInverse (bool singExc) const
     {
         T f;
 
-        if ((f = t[i][i]) == 0)
+        if ((f = t.x[i][i]) == 0)
         {
             if (singExc)
                 throw ::IMATH_INTERNAL_NAMESPACE::SingMatrixExc ("Cannot invert singular matrix.");
@@ -1535,18 +1535,18 @@ Matrix33<T>::gjInverse (bool singExc) const
 
         for (j = 0; j < 3; j++)
         {
-            t[i][j] /= f;
-            s[i][j] /= f;
+            t.x[i][j] /= f;
+            s.x[i][j] /= f;
         }
 
         for (j = 0; j < i; j++)
         {
-            f = t[j][i];
+            f = t.x[j][i];
 
             for (k = 0; k < 3; k++)
             {
-                t[j][k] -= f * t[i][k];
-                s[j][k] -= f * s[i][k];
+                t.x[j][k] -= f * t.x[i][k];
+                s.x[j][k] -= f * s.x[i][k];
             }
         }
     }
@@ -1580,7 +1580,7 @@ Matrix33<T>::inverse (bool singExc) const
                     x[2][0] * x[0][1] - x[0][0] * x[2][1],
                     x[0][0] * x[1][1] - x[1][0] * x[0][1]);
 
-        T r = x[0][0] * s[0][0] + x[0][1] * s[1][0] + x[0][2] * s[2][0];
+        T r = x[0][0] * s.x[0][0] + x[0][1] * s.x[1][0] + x[0][2] * s.x[2][0];
 
         if (IMATH_INTERNAL_NAMESPACE::abs (r) >= 1)
         {
@@ -1588,7 +1588,7 @@ Matrix33<T>::inverse (bool singExc) const
             {
                 for (int j = 0; j < 3; ++j)
                 {
-                    s[i][j] /= r;
+                    s.x[i][j] /= r;
                 }
             }
         }
@@ -1600,9 +1600,9 @@ Matrix33<T>::inverse (bool singExc) const
             {
                 for (int j = 0; j < 3; ++j)
                 {
-                    if (mr > IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
+                    if (mr > IMATH_INTERNAL_NAMESPACE::abs (s.x[i][j]))
                     {
-                        s[i][j] /= r;
+                        s.x[i][j] /= r;
                     }
                     else
                     {
@@ -1641,7 +1641,7 @@ Matrix33<T>::inverse (bool singExc) const
             {
                 for (int j = 0; j < 2; ++j)
                 {
-                    s[i][j] /= r;
+                    s.x[i][j] /= r;
                 }
             }
         }
@@ -1653,9 +1653,9 @@ Matrix33<T>::inverse (bool singExc) const
             {
                 for (int j = 0; j < 2; ++j)
                 {
-                    if (mr > IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
+                    if (mr > IMATH_INTERNAL_NAMESPACE::abs (s.x[i][j]))
                     {
-                        s[i][j] /= r;
+                        s.x[i][j] /= r;
                     }
                     else
                     {
@@ -1670,8 +1670,8 @@ Matrix33<T>::inverse (bool singExc) const
             }
         }
 
-        s[2][0] = -x[2][0] * s[0][0] - x[2][1] * s[1][0];
-        s[2][1] = -x[2][0] * s[0][1] - x[2][1] * s[1][1];
+        s.x[2][0] = -x[2][0] * s.x[0][0] - x[2][1] * s.x[1][0];
+        s.x[2][1] = -x[2][0] * s.x[0][1] - x[2][1] * s.x[1][1];
 
         return s;
     }
@@ -1758,8 +1758,8 @@ IMATH_HOSTDEVICE const Matrix33<T> &
 Matrix33<T>::setScale (const Vec2<S> &s)
 {
     memset (x, 0, sizeof (x));
-    x[0][0] = s[0];
-    x[1][1] = s[1];
+    x[0][0] = s.x;
+    x[1][1] = s.y;
     x[2][2] = 1;
 
     return *this;
@@ -1770,13 +1770,13 @@ template <class S>
 IMATH_HOSTDEVICE const Matrix33<T> &
 Matrix33<T>::scale (const Vec2<S> &s)
 {
-    x[0][0] *= s[0];
-    x[0][1] *= s[0];
-    x[0][2] *= s[0];
+    x[0][0] *= s.x;
+    x[0][1] *= s.x;
+    x[0][2] *= s.x;
 
-    x[1][0] *= s[1];
-    x[1][1] *= s[1];
-    x[1][2] *= s[1];
+    x[1][0] *= s.y;
+    x[1][1] *= s.y;
+    x[1][2] *= s.y;
 
     return *this;
 }
@@ -1794,8 +1794,8 @@ Matrix33<T>::setTranslation (const Vec2<S> &t)
     x[1][1] = 1;
     x[1][2] = 0;
 
-    x[2][0] = t[0];
-    x[2][1] = t[1];
+    x[2][0] = t.x;
+    x[2][1] = t.y;
     x[2][2] = 1;
 
     return *this;
@@ -1813,9 +1813,9 @@ template <class S>
 IMATH_HOSTDEVICE const Matrix33<T> &
 Matrix33<T>::translate (const Vec2<S> &t)
 {
-    x[2][0] += t[0] * x[0][0] + t[1] * x[1][0];
-    x[2][1] += t[0] * x[0][1] + t[1] * x[1][1];
-    x[2][2] += t[0] * x[0][2] + t[1] * x[1][2];
+    x[2][0] += t.x * x[0][0] + t.y * x[1][0];
+    x[2][1] += t.x * x[0][1] + t.y * x[1][1];
+    x[2][2] += t.x * x[0][2] + t.y * x[1][2];
 
     return *this;
 }
@@ -1846,10 +1846,10 @@ IMATH_HOSTDEVICE const Matrix33<T> &
 Matrix33<T>::setShear (const Vec2<S> &h)
 {
     x[0][0] = 1;
-    x[0][1] = h[1];
+    x[0][1] = h.y;
     x[0][2] = 0;
 
-    x[1][0] = h[0];
+    x[1][0] = h.x;
     x[1][1] = 1;
     x[1][2] = 0;
 
@@ -1885,13 +1885,13 @@ Matrix33<T>::shear (const Vec2<S> &h)
 {
     Matrix33<T> P (*this);
 
-    x[0][0] = P[0][0] + h[1] * P[1][0];
-    x[0][1] = P[0][1] + h[1] * P[1][1];
-    x[0][2] = P[0][2] + h[1] * P[1][2];
+    x[0][0] = P.x[0][0] + h.y * P.x[1][0];
+    x[0][1] = P.x[0][1] + h.y * P.x[1][1];
+    x[0][2] = P.x[0][2] + h.y * P.x[1][2];
 
-    x[1][0] = P[1][0] + h[0] * P[0][0];
-    x[1][1] = P[1][1] + h[0] * P[0][1];
-    x[1][2] = P[1][2] + h[0] * P[0][2];
+    x[1][0] = P.x[1][0] + h.x * P.x[0][0];
+    x[1][1] = P.x[1][1] + h.x * P.x[0][1];
+    x[1][2] = P.x[1][2] + h.x * P.x[0][2];
 
     return *this;
 }
@@ -1983,21 +1983,21 @@ template <class T>
 IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 (Matrix33<T> r, Vec3<T> t)
 {
-    x[0][0] = r[0][0];
-    x[0][1] = r[0][1];
-    x[0][2] = r[0][2];
+    x[0][0] = r.x[0][0];
+    x[0][1] = r.x[0][1];
+    x[0][2] = r.x[0][2];
     x[0][3] = 0;
-    x[1][0] = r[1][0];
-    x[1][1] = r[1][1];
-    x[1][2] = r[1][2];
+    x[1][0] = r.x[1][0];
+    x[1][1] = r.x[1][1];
+    x[1][2] = r.x[1][2];
     x[1][3] = 0;
-    x[2][0] = r[2][0];
-    x[2][1] = r[2][1];
-    x[2][2] = r[2][2];
+    x[2][0] = r.x[2][0];
+    x[2][1] = r.x[2][1];
+    x[2][2] = r.x[2][2];
     x[2][3] = 0;
-    x[3][0] = t[0];
-    x[3][1] = t[1];
-    x[3][2] = t[2];
+    x[3][0] = t.x;
+    x[3][1] = t.y;
+    x[3][2] = t.z;
     x[3][3] = 1;
 }
 
@@ -2261,7 +2261,7 @@ Matrix44<T>::equalWithAbsError (const Matrix44<T> &m, T e) const
 {
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
@@ -2273,7 +2273,7 @@ Matrix44<T>::equalWithRelError (const Matrix44<T> &m, T e) const
 {
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i][j], m[i][j], e))
+            if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
@@ -2598,10 +2598,10 @@ Matrix44<T>::multVecMatrix(const Vec3<S> &src, Vec3<S> &dst) const
 {
     S a, b, c, w;
 
-    a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
-    b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
-    c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
-    w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
+    a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0] + x[3][0];
+    b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1] + x[3][1];
+    c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2] + x[3][2];
+    w = src.x * x[0][3] + src.y * x[1][3] + src.z * x[2][3] + x[3][3];
 
     dst.x = a / w;
     dst.y = b / w;
@@ -2614,9 +2614,9 @@ Matrix44<T>::multDirMatrix(const Vec3<S> &src, Vec3<S> &dst) const
 {
     S a, b, c;
 
-    a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0];
-    b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1];
-    c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2];
+    a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0];
+    b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1];
+    c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2];
 
     dst.x = a;
     dst.y = b;
@@ -2737,14 +2737,14 @@ Matrix44<T>::gjInverse (bool singExc) const
     {
         int pivot = i;
 
-        T pivotsize = t[i][i];
+        T pivotsize = t.x[i][i];
 
         if (pivotsize < 0)
             pivotsize = -pivotsize;
 
         for (j = i + 1; j < 4; j++)
         {
-            T tmp = t[j][i];
+            T tmp = t.x[j][i];
 
             if (tmp < 0)
                 tmp = -tmp;
@@ -2772,24 +2772,24 @@ Matrix44<T>::gjInverse (bool singExc) const
             {
                 T tmp;
 
-                tmp = t[i][j];
-                t[i][j] = t[pivot][j];
-                t[pivot][j] = tmp;
+                tmp = t.x[i][j];
+                t.x[i][j] = t.x[pivot][j];
+                t.x[pivot][j] = tmp;
 
-                tmp = s[i][j];
-                s[i][j] = s[pivot][j];
-                s[pivot][j] = tmp;
+                tmp = s.x[i][j];
+                s.x[i][j] = s.x[pivot][j];
+                s.x[pivot][j] = tmp;
             }
         }
 
         for (j = i + 1; j < 4; j++)
         {
-            T f = t[j][i] / t[i][i];
+            T f = t.x[j][i] / t.x[i][i];
 
             for (k = 0; k < 4; k++)
             {
-                t[j][k] -= f * t[i][k];
-                s[j][k] -= f * s[i][k];
+                t.x[j][k] -= f * t.x[i][k];
+                s.x[j][k] -= f * s.x[i][k];
             }
         }
     }
@@ -2812,18 +2812,18 @@ Matrix44<T>::gjInverse (bool singExc) const
 
         for (j = 0; j < 4; j++)
         {
-            t[i][j] /= f;
-            s[i][j] /= f;
+            t.x[i][j] /= f;
+            s.x[i][j] /= f;
         }
 
         for (j = 0; j < i; j++)
         {
-            f = t[j][i];
+            f = t.x[j][i];
 
             for (k = 0; k < 4; k++)
             {
-                t[j][k] -= f * t[i][k];
-                s[j][k] -= f * s[i][k];
+                t.x[j][k] -= f * t.x[i][k];
+                s.x[j][k] -= f * s.x[i][k];
             }
         }
     }
@@ -2866,7 +2866,7 @@ Matrix44<T>::inverse (bool singExc) const
                 0,
                 1);
 
-    T r = x[0][0] * s[0][0] + x[0][1] * s[1][0] + x[0][2] * s[2][0];
+    T r = x[0][0] * s.x[0][0] + x[0][1] * s.x[1][0] + x[0][2] * s.x[2][0];
 
     if (IMATH_INTERNAL_NAMESPACE::abs (r) >= 1)
     {
@@ -2874,7 +2874,7 @@ Matrix44<T>::inverse (bool singExc) const
         {
             for (int j = 0; j < 3; ++j)
             {
-                s[i][j] /= r;
+                s.x[i][j] /= r;
             }
         }
     }
@@ -2886,9 +2886,9 @@ Matrix44<T>::inverse (bool singExc) const
         {
             for (int j = 0; j < 3; ++j)
             {
-                if (mr > IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
+                if (mr > IMATH_INTERNAL_NAMESPACE::abs (s.x[i][j]))
                 {
-                    s[i][j] /= r;
+                    s.x[i][j] /= r;
                 }
                 else
                 {
@@ -2903,9 +2903,9 @@ Matrix44<T>::inverse (bool singExc) const
         }
     }
 
-    s[3][0] = -x[3][0] * s[0][0] - x[3][1] * s[1][0] - x[3][2] * s[2][0];
-    s[3][1] = -x[3][0] * s[0][1] - x[3][1] * s[1][1] - x[3][2] * s[2][1];
-    s[3][2] = -x[3][0] * s[0][2] - x[3][1] * s[1][2] - x[3][2] * s[2][2];
+    s.x[3][0] = -x[3][0] * s.x[0][0] - x[3][1] * s.x[1][0] - x[3][2] * s.x[2][0];
+    s.x[3][1] = -x[3][0] * s.x[0][1] - x[3][1] * s.x[1][1] - x[3][2] * s.x[2][1];
+    s.x[3][2] = -x[3][0] * s.x[0][2] - x[3][1] * s.x[1][2] - x[3][2] * s.x[2][2];
 
     return s;
 }
@@ -2959,13 +2959,13 @@ Matrix44<T>::setEulerAngles (const Vec3<S>& r)
 {
     S cos_rz, sin_rz, cos_ry, sin_ry, cos_rx, sin_rx;
 
-    cos_rz = Math<T>::cos (r[2]);
-    cos_ry = Math<T>::cos (r[1]);
-    cos_rx = Math<T>::cos (r[0]);
+    cos_rz = Math<T>::cos (r.z);
+    cos_ry = Math<T>::cos (r.y);
+    cos_rx = Math<T>::cos (r.x);
 
-    sin_rz = Math<T>::sin (r[2]);
-    sin_ry = Math<T>::sin (r[1]);
-    sin_rx = Math<T>::sin (r[0]);
+    sin_rz = Math<T>::sin (r.z);
+    sin_ry = Math<T>::sin (r.y);
+    sin_rx = Math<T>::sin (r.x);
 
     x[0][0] =  cos_rz * cos_ry;
     x[0][1] =  sin_rz * cos_ry;
@@ -2999,19 +2999,19 @@ Matrix44<T>::setAxisAngle (const Vec3<S>& axis, S angle)
     S sine   = Math<T>::sin (angle);
     S cosine = Math<T>::cos (angle);
 
-    x[0][0] = unit[0] * unit[0] * (1 - cosine) + cosine;
-    x[0][1] = unit[0] * unit[1] * (1 - cosine) + unit[2] * sine;
-    x[0][2] = unit[0] * unit[2] * (1 - cosine) - unit[1] * sine;
+    x[0][0] = unit.x * unit.x * (1 - cosine) + cosine;
+    x[0][1] = unit.x * unit.y * (1 - cosine) + unit.z * sine;
+    x[0][2] = unit.x * unit.z * (1 - cosine) - unit.y * sine;
     x[0][3] = 0;
 
-    x[1][0] = unit[0] * unit[1] * (1 - cosine) - unit[2] * sine;
-    x[1][1] = unit[1] * unit[1] * (1 - cosine) + cosine;
-    x[1][2] = unit[1] * unit[2] * (1 - cosine) + unit[0] * sine;
+    x[1][0] = unit.x * unit.y * (1 - cosine) - unit.z * sine;
+    x[1][1] = unit.y * unit.y * (1 - cosine) + cosine;
+    x[1][2] = unit.y * unit.z * (1 - cosine) + unit.x * sine;
     x[1][3] = 0;
 
-    x[2][0] = unit[0] * unit[2] * (1 - cosine) + unit[1] * sine;
-    x[2][1] = unit[1] * unit[2] * (1 - cosine) - unit[0] * sine;
-    x[2][2] = unit[2] * unit[2] * (1 - cosine) + cosine;
+    x[2][0] = unit.x * unit.z * (1 - cosine) + unit.y * sine;
+    x[2][1] = unit.y * unit.z * (1 - cosine) - unit.x * sine;
+    x[2][2] = unit.z * unit.z * (1 - cosine) + cosine;
     x[2][3] = 0;
 
     x[3][0] = 0;
@@ -3032,13 +3032,13 @@ Matrix44<T>::rotate (const Vec3<S> &r)
     S m10, m11, m12;
     S m20, m21, m22;
 
-    cos_rz = Math<S>::cos (r[2]);
-    cos_ry = Math<S>::cos (r[1]);
-    cos_rx = Math<S>::cos (r[0]);
+    cos_rz = Math<S>::cos (r.z);
+    cos_ry = Math<S>::cos (r.y);
+    cos_rx = Math<S>::cos (r.x);
 
-    sin_rz = Math<S>::sin (r[2]);
-    sin_ry = Math<S>::sin (r[1]);
-    sin_rx = Math<S>::sin (r[0]);
+    sin_rz = Math<S>::sin (r.z);
+    sin_ry = Math<S>::sin (r.y);
+    sin_rx = Math<S>::sin (r.x);
 
     m00 =  cos_rz *  cos_ry;
     m01 =  sin_rz *  cos_ry;
@@ -3052,20 +3052,20 @@ Matrix44<T>::rotate (const Vec3<S> &r)
 
     Matrix44<T> P (*this);
 
-    x[0][0] = P[0][0] * m00 + P[1][0] * m01 + P[2][0] * m02;
-    x[0][1] = P[0][1] * m00 + P[1][1] * m01 + P[2][1] * m02;
-    x[0][2] = P[0][2] * m00 + P[1][2] * m01 + P[2][2] * m02;
-    x[0][3] = P[0][3] * m00 + P[1][3] * m01 + P[2][3] * m02;
+    x[0][0] = P.x[0][0] * m00 + P.x[1][0] * m01 + P.x[2][0] * m02;
+    x[0][1] = P.x[0][1] * m00 + P.x[1][1] * m01 + P.x[2][1] * m02;
+    x[0][2] = P.x[0][2] * m00 + P.x[1][2] * m01 + P.x[2][2] * m02;
+    x[0][3] = P.x[0][3] * m00 + P.x[1][3] * m01 + P.x[2][3] * m02;
 
-    x[1][0] = P[0][0] * m10 + P[1][0] * m11 + P[2][0] * m12;
-    x[1][1] = P[0][1] * m10 + P[1][1] * m11 + P[2][1] * m12;
-    x[1][2] = P[0][2] * m10 + P[1][2] * m11 + P[2][2] * m12;
-    x[1][3] = P[0][3] * m10 + P[1][3] * m11 + P[2][3] * m12;
+    x[1][0] = P.x[0][0] * m10 + P.x[1][0] * m11 + P.x[2][0] * m12;
+    x[1][1] = P.x[0][1] * m10 + P.x[1][1] * m11 + P.x[2][1] * m12;
+    x[1][2] = P.x[0][2] * m10 + P.x[1][2] * m11 + P.x[2][2] * m12;
+    x[1][3] = P.x[0][3] * m10 + P.x[1][3] * m11 + P.x[2][3] * m12;
 
-    x[2][0] = P[0][0] * m20 + P[1][0] * m21 + P[2][0] * m22;
-    x[2][1] = P[0][1] * m20 + P[1][1] * m21 + P[2][1] * m22;
-    x[2][2] = P[0][2] * m20 + P[1][2] * m21 + P[2][2] * m22;
-    x[2][3] = P[0][3] * m20 + P[1][3] * m21 + P[2][3] * m22;
+    x[2][0] = P.x[0][0] * m20 + P.x[1][0] * m21 + P.x[2][0] * m22;
+    x[2][1] = P.x[0][1] * m20 + P.x[1][1] * m21 + P.x[2][1] * m22;
+    x[2][2] = P.x[0][2] * m20 + P.x[1][2] * m21 + P.x[2][2] * m22;
+    x[2][3] = P.x[0][3] * m20 + P.x[1][3] * m21 + P.x[2][3] * m22;
 
     return *this;
 }
@@ -3089,9 +3089,9 @@ IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setScale (const Vec3<S> &s)
 {
     memset (x, 0, sizeof (x));
-    x[0][0] = s[0];
-    x[1][1] = s[1];
-    x[2][2] = s[2];
+    x[0][0] = s.x;
+    x[1][1] = s.y;
+    x[2][2] = s.z;
     x[3][3] = 1;
 
     return *this;
@@ -3102,20 +3102,20 @@ template <class S>
 IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::scale (const Vec3<S> &s)
 {
-    x[0][0] *= s[0];
-    x[0][1] *= s[0];
-    x[0][2] *= s[0];
-    x[0][3] *= s[0];
+    x[0][0] *= s.x;
+    x[0][1] *= s.x;
+    x[0][2] *= s.x;
+    x[0][3] *= s.x;
 
-    x[1][0] *= s[1];
-    x[1][1] *= s[1];
-    x[1][2] *= s[1];
-    x[1][3] *= s[1];
+    x[1][0] *= s.y;
+    x[1][1] *= s.y;
+    x[1][2] *= s.y;
+    x[1][3] *= s.y;
 
-    x[2][0] *= s[2];
-    x[2][1] *= s[2];
-    x[2][2] *= s[2];
-    x[2][3] *= s[2];
+    x[2][0] *= s.z;
+    x[2][1] *= s.z;
+    x[2][2] *= s.z;
+    x[2][3] *= s.z;
 
     return *this;
 }
@@ -3140,9 +3140,9 @@ Matrix44<T>::setTranslation (const Vec3<S> &t)
     x[2][2] = 1;
     x[2][3] = 0;
 
-    x[3][0] = t[0];
-    x[3][1] = t[1];
-    x[3][2] = t[2];
+    x[3][0] = t.x;
+    x[3][1] = t.y;
+    x[3][2] = t.z;
     x[3][3] = 1;
 
     return *this;
@@ -3160,10 +3160,10 @@ template <class S>
 IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::translate (const Vec3<S> &t)
 {
-    x[3][0] += t[0] * x[0][0] + t[1] * x[1][0] + t[2] * x[2][0];
-    x[3][1] += t[0] * x[0][1] + t[1] * x[1][1] + t[2] * x[2][1];
-    x[3][2] += t[0] * x[0][2] + t[1] * x[1][2] + t[2] * x[2][2];
-    x[3][3] += t[0] * x[0][3] + t[1] * x[1][3] + t[2] * x[2][3];
+    x[3][0] += t.x * x[0][0] + t.y * x[1][0] + t.z * x[2][0];
+    x[3][1] += t.x * x[0][1] + t.y * x[1][1] + t.z * x[2][1];
+    x[3][2] += t.x * x[0][2] + t.y * x[1][2] + t.z * x[2][2];
+    x[3][3] += t.x * x[0][3] + t.y * x[1][3] + t.z * x[2][3];
 
     return *this;
 }
@@ -3178,13 +3178,13 @@ Matrix44<T>::setShear (const Vec3<S> &h)
     x[0][2] = 0;
     x[0][3] = 0;
 
-    x[1][0] = h[0];
+    x[1][0] = h.x;
     x[1][1] = 1;
     x[1][2] = 0;
     x[1][3] = 0;
 
-    x[2][0] = h[1];
-    x[2][1] = h[2];
+    x[2][0] = h.y;
+    x[2][1] = h.z;
     x[2][2] = 1;
     x[2][3] = 0;
 
@@ -3237,8 +3237,8 @@ Matrix44<T>::shear (const Vec3<S> &h)
 
     for (int i=0; i < 4; i++)
     {
-        x[2][i] += h[1] * x[0][i] + h[2] * x[1][i];
-        x[1][i] += h[0] * x[0][i];
+        x[2][i] += h.y * x[0][i] + h.z * x[1][i];
+        x[1][i] += h.x * x[0][i];
     }
 
     return *this;
@@ -3253,9 +3253,9 @@ Matrix44<T>::shear (const Shear6<S> &h)
 
     for (int i=0; i < 4; i++)
     {
-        x[0][i] = P[0][i] + h.yx * P[1][i] + h.zx * P[2][i];
-        x[1][i] = h.xy * P[0][i] + P[1][i] + h.zy * P[2][i];
-        x[2][i] = h.xz * P[0][i] + h.yz * P[1][i] + P[2][i];
+        x[0][i] = P.x[0][i] + h.yx * P.x[1][i] + h.zx * P.x[2][i];
+        x[1][i] = h.xy * P.x[0][i] + P.x[1][i] + h.zy * P.x[2][i];
+        x[2][i] = h.xz * P.x[0][i] + h.yz * P.x[1][i] + P.x[2][i];
     }
 
     return *this;
@@ -3285,17 +3285,17 @@ operator << (std::ostream &s, const Matrix33<T> &m)
         width = static_cast<int>(s.precision()) + 8;
     }
 
-    s << "(" << std::setw (width) << m[0][0] <<
-         " " << std::setw (width) << m[0][1] <<
-         " " << std::setw (width) << m[0][2] << "\n" <<
+    s << "(" << std::setw (width) << m.x[0][0] <<
+         " " << std::setw (width) << m.x[0][1] <<
+         " " << std::setw (width) << m.x[0][2] << "\n" <<
 
-         " " << std::setw (width) << m[1][0] <<
-         " " << std::setw (width) << m[1][1] <<
-         " " << std::setw (width) << m[1][2] << "\n" <<
+         " " << std::setw (width) << m.x[1][0] <<
+         " " << std::setw (width) << m.x[1][1] <<
+         " " << std::setw (width) << m.x[1][2] << "\n" <<
 
-         " " << std::setw (width) << m[2][0] <<
-         " " << std::setw (width) << m[2][1] <<
-         " " << std::setw (width) << m[2][2] << ")\n";
+         " " << std::setw (width) << m.x[2][0] <<
+         " " << std::setw (width) << m.x[2][1] <<
+         " " << std::setw (width) << m.x[2][2] << ")\n";
 
     s.flags (oldFlags);
     return s;
@@ -3320,25 +3320,25 @@ operator << (std::ostream &s, const Matrix44<T> &m)
         width = static_cast<int>(s.precision()) + 8;
     }
 
-    s << "(" << std::setw (width) << m[0][0] <<
-         " " << std::setw (width) << m[0][1] <<
-         " " << std::setw (width) << m[0][2] <<
-         " " << std::setw (width) << m[0][3] << "\n" <<
+    s << "(" << std::setw (width) << m.x[0][0] <<
+         " " << std::setw (width) << m.x[0][1] <<
+         " " << std::setw (width) << m.x[0][2] <<
+         " " << std::setw (width) << m.x[0][3] << "\n" <<
 
-         " " << std::setw (width) << m[1][0] <<
-         " " << std::setw (width) << m[1][1] <<
-         " " << std::setw (width) << m[1][2] <<
-         " " << std::setw (width) << m[1][3] << "\n" <<
+         " " << std::setw (width) << m.x[1][0] <<
+         " " << std::setw (width) << m.x[1][1] <<
+         " " << std::setw (width) << m.x[1][2] <<
+         " " << std::setw (width) << m.x[1][3] << "\n" <<
 
-         " " << std::setw (width) << m[2][0] <<
-         " " << std::setw (width) << m[2][1] <<
-         " " << std::setw (width) << m[2][2] <<
-         " " << std::setw (width) << m[2][3] << "\n" <<
+         " " << std::setw (width) << m.x[2][0] <<
+         " " << std::setw (width) << m.x[2][1] <<
+         " " << std::setw (width) << m.x[2][2] <<
+         " " << std::setw (width) << m.x[2][3] << "\n" <<
 
-         " " << std::setw (width) << m[3][0] <<
-         " " << std::setw (width) << m[3][1] <<
-         " " << std::setw (width) << m[3][2] <<
-         " " << std::setw (width) << m[3][3] << ")\n";
+         " " << std::setw (width) << m.x[3][0] <<
+         " " << std::setw (width) << m.x[3][1] <<
+         " " << std::setw (width) << m.x[3][2] <<
+         " " << std::setw (width) << m.x[3][3] << ")\n";
 
     s.flags (oldFlags);
     return s;
@@ -3353,9 +3353,9 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline const Vec2<S> &
 operator *= (Vec2<S> &v, const Matrix33<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + m[2][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + m[2][1]);
-    S w = S(v.x * m[0][2] + v.y * m[1][2] + m[2][2]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + m.x[2][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + m.x[2][1]);
+    S w = S(v.x * m.x[0][2] + v.y * m.x[1][2] + m.x[2][2]);
 
     v.x = x / w;
     v.y = y / w;
@@ -3367,9 +3367,9 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline Vec2<S>
 operator * (const Vec2<S> &v, const Matrix33<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + m[2][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + m[2][1]);
-    S w = S(v.x * m[0][2] + v.y * m[1][2] + m[2][2]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + m.x[2][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + m.x[2][1]);
+    S w = S(v.x * m.x[0][2] + v.y * m.x[1][2] + m.x[2][2]);
 
     return Vec2<S> (x / w, y / w);
 }
@@ -3379,9 +3379,9 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline const Vec3<S> &
 operator *= (Vec3<S> &v, const Matrix33<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1]);
-    S z = S(v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + v.z * m.x[2][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + v.z * m.x[2][1]);
+    S z = S(v.x * m.x[0][2] + v.y * m.x[1][2] + v.z * m.x[2][2]);
 
     v.x = x;
     v.y = y;
@@ -3394,9 +3394,9 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline Vec3<S>
 operator * (const Vec3<S> &v, const Matrix33<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1]);
-    S z = S(v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + v.z * m.x[2][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + v.z * m.x[2][1]);
+    S z = S(v.x * m.x[0][2] + v.y * m.x[1][2] + v.z * m.x[2][2]);
 
     return Vec3<S> (x, y, z);
 }
@@ -3406,10 +3406,10 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline const Vec3<S> &
 operator *= (Vec3<S> &v, const Matrix44<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + m[3][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1] + m[3][1]);
-    S z = S(v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2] + m[3][2]);
-    S w = S(v.x * m[0][3] + v.y * m[1][3] + v.z * m[2][3] + m[3][3]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + v.z * m.x[2][0] + m.x[3][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + v.z * m.x[2][1] + m.x[3][1]);
+    S z = S(v.x * m.x[0][2] + v.y * m.x[1][2] + v.z * m.x[2][2] + m.x[3][2]);
+    S w = S(v.x * m.x[0][3] + v.y * m.x[1][3] + v.z * m.x[2][3] + m.x[3][3]);
 
     v.x = x / w;
     v.y = y / w;
@@ -3422,10 +3422,10 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline Vec3<S>
 operator * (const Vec3<S> &v, const Matrix44<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + m[3][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1] + m[3][1]);
-    S z = S(v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2] + m[3][2]);
-    S w = S(v.x * m[0][3] + v.y * m[1][3] + v.z * m[2][3] + m[3][3]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + v.z * m.x[2][0] + m.x[3][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + v.z * m.x[2][1] + m.x[3][1]);
+    S z = S(v.x * m.x[0][2] + v.y * m.x[1][2] + v.z * m.x[2][2] + m.x[3][2]);
+    S w = S(v.x * m.x[0][3] + v.y * m.x[1][3] + v.z * m.x[2][3] + m.x[3][3]);
 
     return Vec3<S> (x / w, y / w, z / w);
 }
@@ -3435,10 +3435,10 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline const Vec4<S> &
 operator *= (Vec4<S> &v, const Matrix44<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + v.w * m[3][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1] + v.w * m[3][1]);
-    S z = S(v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2] + v.w * m[3][2]);
-    S w = S(v.x * m[0][3] + v.y * m[1][3] + v.z * m[2][3] + v.w * m[3][3]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + v.z * m.x[2][0] + v.w * m.x[3][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + v.z * m.x[2][1] + v.w * m.x[3][1]);
+    S z = S(v.x * m.x[0][2] + v.y * m.x[1][2] + v.z * m.x[2][2] + v.w * m.x[3][2]);
+    S w = S(v.x * m.x[0][3] + v.y * m.x[1][3] + v.z * m.x[2][3] + v.w * m.x[3][3]);
 
     v.x = x;
     v.y = y;
@@ -3452,10 +3452,10 @@ template <class S, class T>
 IMATH_HOSTDEVICE inline Vec4<S>
 operator * (const Vec4<S> &v, const Matrix44<T> &m)
 {
-    S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + v.w * m[3][0]);
-    S y = S(v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1] + v.w * m[3][1]);
-    S z = S(v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2] + v.w * m[3][2]);
-    S w = S(v.x * m[0][3] + v.y * m[1][3] + v.z * m[2][3] + v.w * m[3][3]);
+    S x = S(v.x * m.x[0][0] + v.y * m.x[1][0] + v.z * m.x[2][0] + v.w * m.x[3][0]);
+    S y = S(v.x * m.x[0][1] + v.y * m.x[1][1] + v.z * m.x[2][1] + v.w * m.x[3][1]);
+    S z = S(v.x * m.x[0][2] + v.y * m.x[1][2] + v.z * m.x[2][2] + v.w * m.x[3][2]);
+    S w = S(v.x * m.x[0][3] + v.y * m.x[1][3] + v.z * m.x[2][3] + v.w * m.x[3][3]);
 
     return Vec4<S> (x, y, z, w);
 }

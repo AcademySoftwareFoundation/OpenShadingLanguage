@@ -1,0 +1,5 @@
+shader wavelength_u_lambda (output color Cout = 0)
+{
+    float lambda = raytype("camera")*600;
+    Cout = wavelength_color (lambda);
+}

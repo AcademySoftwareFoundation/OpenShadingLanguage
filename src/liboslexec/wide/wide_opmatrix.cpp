@@ -45,31 +45,6 @@ invoke(FunctorT f)
     f();
 }
 
-template<typename T>
-OSL_FORCEINLINE bool
-testIfAnyLaneIsOn(const Wide<T>& wvalues)
-{
-#if OSL_NON_INTEL_CLANG
-    int anyLaneIsOn = 0;
-    OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH) reduction(max : anyLaneIsOn))
-    for (int i = 0; i < __OSL_WIDTH; ++i) {
-        if (wvalues[i] > anyLaneIsOn)
-            anyLaneIsOn = wvalues[i];
-    }
-    return anyLaneIsOn;
-#else
-    // NOTE: do not explicitly vectorize as it would require a
-    // reduction.  Instead let compiler optimize this itself.
-    bool anyLaneIsOn = false;
-    for (int i = 0; i < __OSL_WIDTH; ++i) {
-        if (wvalues[i] != T(0))
-            anyLaneIsOn = true;
-    }
-    return anyLaneIsOn;
-#endif
-}
-
-
 OSL_FORCEINLINE void
 invert_wide_matrix(Masked<Matrix44> wresult, Wide<const Matrix44> wmatrix)
 {
@@ -95,7 +70,7 @@ invert_wide_matrix(Masked<Matrix44> wresult, Wide<const Matrix44> wmatrix)
             }
         }
 
-        if (testIfAnyLaneIsOn(wnotAffine)) {
+        if (testIfAnyLaneIsNonZero(wnotAffine)) {
             invoke([=]() -> void {
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (wnotAffine[lane]) {
@@ -364,7 +339,7 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wm, Wm)(void* wr_, void* wa_,
         }
     }
 
-    if (testIfAnyLaneIsOn(wnotAffine)) {
+    if (testIfAnyLaneIsNonZero(wnotAffine)) {
         invoke([=]() -> void {
             // DO NOT VECTORIZE the slow path
             for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -456,7 +431,7 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wf, Wm)(void* wr_, void* wa_,
         }
     }
 
-    if (testIfAnyLaneIsOn(wnotAffine)) {
+    if (testIfAnyLaneIsNonZero(wnotAffine)) {
         invoke([=]() -> void {
             for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                 if (wnotAffine[lane]) {
@@ -1342,7 +1317,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, Wide<const Matrix44> wM,
         }
     }
 
-    if (testIfAnyLaneIsOn(wnotAffine)) {
+    if (testIfAnyLaneIsNonZero(wnotAffine)) {
         invoke([=]() -> void {
             for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                 if (wnotAffine[lane]) {

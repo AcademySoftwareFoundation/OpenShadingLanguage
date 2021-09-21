@@ -1,0 +1,8 @@
+shader test_batched (output color Cout = 0)
+{
+    float lambda = 0.10/100;
+    Cout = wavelength_color (lambda);
+}
+
+//testshade --llvm_debug --batched -g 200 200 test_batched -od uint -o Cout a.tif
+//calls vf_batched

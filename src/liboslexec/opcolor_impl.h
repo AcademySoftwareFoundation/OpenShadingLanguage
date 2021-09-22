@@ -106,7 +106,7 @@ wavelength_color_XYZ (float lambda_nm)
     Color3 XYZ = OIIO::lerp (Color3((cie_colour_match+0)[si], (cie_colour_match+1)[si], (cie_colour_match+2)[si]),
                              Color3((cie_colour_match+3)[si], (cie_colour_match+4)[si], (cie_colour_match+5)[si]), remainder);
 #if 0
-    float n = (XYZ[0] + XYZ[1] + XYZ[2]);
+    float n = (XYZ.x + XYZ.y + XYZ.z);
     float n_inv = (n >= 1.0e-6f ? 1.0f/n : 0.0f);
     XYZ *= n_inv;
 #endif
@@ -146,15 +146,10 @@ OSL_HOSTDEVICE inline float BB_TABLE_MAP(float i) {
 OSL_HOSTDEVICE inline float BB_TABLE_UNMAP(float T) {
     // return powf ((T - BB_DRAPER) / BB_TABLE_SPACING, 1.0f/BB_TABLE_XPOWER);
     float t  = (T - BB_DRAPER) / BB_TABLE_SPACING;
-    //using cbrtf_impl = OIIO::fast_cbrtf;
-    //using cbrtf_impl = ::cbrtf;
-#if defined(__OSL_WIDE_PVT) && OSL_CLANG_VERSION && !OSL_INTEL_COMPILER
     // Clang doesn't have vectorizing version of cbrtf,
-    // so use OIIO's instead (TODO: should we always use OIIO version?)
+    // so use OIIO's instead
     float ic = OIIO::fast_cbrt(t);
-#else
-    float ic = cbrtf(t);
-#endif
+
     return ic * ic; // ^2/3
 }
 
@@ -179,32 +174,27 @@ OSL_HOSTDEVICE inline float BB_TABLE_UNMAP(float T) {
 class bb_spectrum {
 public:
     OSL_HOSTDEVICE bb_spectrum (float temperature=5000) : m_temp(temperature) { }
-    OSL_HOSTDEVICE float operator() (float wavelength_nm) const {
-        // TODO: Evaluate if this math has to be double precision?
-        double wlm = wavelength_nm * 1e-9;   // Wavelength in meters
-        const double c1 = 3.74183e-16; // 2*pi*h*c^2, W*m^2
-        const double c2 = 1.4388e-2;   // h*c/k, m*K
-                                       // h is Planck's const, k is Boltzmann's
-#if OSL_CLANG_VERSION && !OSL_INTEL_COMPILER
-        // Clang doesn't have vectorizing version of expm1,
-        // so define a double version based on OIIO::fast_expm1
-        auto expm1 = [](double val)->double {
-            if (abs(val) < 0.03) {
-                double v = 1.0 - (1.0 - val); // handle denormals
-                double v2 = v*v;
-                return copysign(((0.5*v2) + v2), val);
-            } else {
-                return ::exp(val) - 1.0;
-            }
-        };
-#else
-        using ::expm1;
-#endif
 
-        return float((c1 * std::pow(wlm,-5.0)) / expm1(c2 / (wlm * m_temp)));
+    OSL_HOSTDEVICE float operator() (float wavelength_nm) const {
+        // Testing showed < .0000534058f differences between single and double
+        // precision.  So choose to perform math using single precision.
+        float wlm = wavelength_nm * 1e-9f;   // Wavelength in meters
+        const float c1 = 3.74183e-16f; // 2*pi*h*c^2, W*m^2
+        const float c2 = 1.4388e-2f;   // h*c/k, m*K
+                                       // h is Planck's const, k is Boltzmann's
+        //const float inverse_of_wlm5 = std::pow(wlm,-5.0f);
+        // Rather than calling powf, just implement exact power and inverse
+        // directly here.  Confirmed with ICC that identical optimized assembly
+        // is produced to std::powf and more SIMD friendly to other compilers.
+        const float wlm2 = wlm*wlm;
+        const float wlm4 = wlm2*wlm2;
+        const float wlm5 = wlm4*wlm;
+        const float inverse_of_wlm5 = 1.0f/wlm5;
+        // Clang doesn't have vectorizing version of expm1, so use OIIO::fast_expm1
+        return float((c1 * inverse_of_wlm5) / OIIO::fast_expm1(c2 / (wlm * m_temp)));
     }
 private:
-    double m_temp;
+    float m_temp;
 };
 
 
@@ -223,9 +213,9 @@ spectrum_to_XYZ (const SPECTRUM &spec_intens)
         float Me = spec_intens(lambda) * dlambda;
         constexpr int stride = sizeof(Color3)/sizeof(float);
         const int si = stride*i;
-        X += Me * cie_colour_match[si + 0];
-        Y += Me * cie_colour_match[si + 1];
-        Z += Me * cie_colour_match[si + 2];
+        X += Me * (cie_colour_match + 0)[si];
+        Y += Me * (cie_colour_match + 1)[si];
+        Z += Me * (cie_colour_match + 2)[si];
     }
     return Color3 (X, Y, Z);
 }
@@ -298,6 +288,9 @@ rgb_to_hsv (const COLOR3& rgb)
     // See Foley & van Dam
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
     FLOAT r = comp_x(rgb), g = comp_y(rgb), b = comp_z(rgb);
+    // NOTE: use sfm::min_val and sfm::max_val instead of std::min and
+    //       std::max which return references
+    //       that can interfere with vectorization
     FLOAT mincomp = sfm::min_val (r, sfm::min_val (g, b));
     FLOAT maxcomp = sfm::max_val (r, sfm::max_val (g, b));
     FLOAT delta = maxcomp - mincomp;  // chroma
@@ -356,16 +349,33 @@ rgb_to_hsl (const COLOR3& rgb)
     // See Foley & van Dam
     // First convert rgb to hsv, then to hsl
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    // NOTE: use sfm::min_val instead of std::min which returns references
+    //       that can interfere with vectorization
     FLOAT minval = sfm::min_val (comp_x(rgb), sfm::min_val (comp_y(rgb), comp_z(rgb)));
     COLOR3 hsv = rgb_to_hsv (rgb);
     FLOAT maxval = comp_z(hsv);   // v == maxval
     FLOAT h = comp_x(hsv), s, l = (minval+maxval) / 2.0f;
     if (equalVal (minval, maxval))
         s = 0.0f;  // special 'achromatic' case, hue is 0
+#if 0 // reference version
     else if (l <= 0.5f)
         s = (maxval - minval) / (maxval + minval);
     else
-        s = (maxval - minval) / (2.0f - maxval - minval);
+        s = (maxval - minval) / (2.0f - maxval - minval)
+#else
+    else
+    {
+        // Share computation of min2max and divide vs. repeating in 2 branches
+        // which both could execute masked
+        FLOAT min2max = (maxval - minval);
+        FLOAT divisor;
+        if (l <= 0.5f)
+            divisor = (maxval + minval);
+        else
+            divisor = (2.0f - maxval - minval);
+        s = min2max / divisor;
+    }
+#endif
     return make_Color3 (h, s, l);
 }
 
@@ -391,9 +401,9 @@ rgb_to_YIQ (const COLOR3& rgb)
 OSL_HOSTDEVICE static inline Color3
 XYZ_to_xyY (const Color3 &XYZ)
 {
-    float n = (XYZ[0] + XYZ[1] + XYZ[2]);
+    float n = (XYZ.x + XYZ.y + XYZ.z);
     float n_inv = (n >= 1.0e-6 ? 1.0f/n : 0.0f);
-    return Color3 (XYZ[0]*n_inv, XYZ[1]*n_inv, XYZ[1]);
+    return Color3 (XYZ.x*n_inv, XYZ.y*n_inv, XYZ.y);
     // N.B. http://brucelindbloom.com/ suggests returning xy of the
     // reference white in the X+Y+Z==0 case.
 }
@@ -466,74 +476,6 @@ namespace pvt {
 #endif
 
 
-#ifdef __OSL_WIDE_PVT
-OSL_HOSTDEVICE Color3
-ColorSystem::blackbody_rgb (float T) const
-{
-    // Choose to access Color3 lookup table as 3 float components.
-    // When vectorized, this helps generate individual gather instructions with
-    // 32bit offsets with a common base address.  This is preferred to
-    // dereferencing Color3 which was using 64bit gathers which can take
-    // multiple registers to hold the 64bit offsets and multiple gather
-    // instructions who's results need to be merged into a single register.
-    const float *blackbody_components = reinterpret_cast<const float *>(m_blackbody_table);
-
-    if (T < BB_DRAPER)
-        return Color3(1.0e-6f,0.0f,0.0f);  // very very dim red
-    if (T < BB_MAX_TABLE_RANGE) {
-        float t = BB_TABLE_UNMAP(T);
-        uint16_t ti = static_cast<uint16_t>(t);
-        uint16_t ti_offset = static_cast<uint16_t>(ti*(sizeof(Color3)/sizeof(float)));
-        float remainder = t - ti;
-        // Color3 rgb = OIIO::lerp (m_blackbody_table[ti], m_blackbody_table[ti+1], t);
-        Color3 rgb = OIIO::lerp (
-            // Have all gathers use the same indices by having different base registers
-            // for each of the 6 components
-            Color3((blackbody_components+0)[ti_offset],
-                   (blackbody_components+1)[ti_offset],
-                   (blackbody_components+2)[ti_offset]),
-            Color3((blackbody_components+3)[ti_offset],
-                   (blackbody_components+4)[ti_offset],
-                   (blackbody_components+5)[ti_offset]),
-                   remainder);
-        //return colpow(rgb, BB_TABLE_YPOWER);
-        Color3 rgb2 = rgb * rgb;
-        Color3 rgb4 = rgb2 * rgb2;
-        return rgb4 * rgb; // ^5
-    }
-
-    // Otherwise, compute for real
-    bb_spectrum spec (T);
-    Color3 rgb = XYZ_to_RGB (spectrum_to_XYZ (spec));
-    clamp_zero (rgb);
-    return rgb;
-}
-#else
-// TODO: Keeping original dereferencing Color3 vs. 3 floats until
-// it can be determined if it is faster or not for scalar or GPU
-OSL_HOSTDEVICE Color3
-ColorSystem::blackbody_rgb (float T) const
-{
-    if (T < BB_DRAPER)
-        return Color3(1.0e-6f,0.0f,0.0f);  // very very dim red
-    if (T < BB_MAX_TABLE_RANGE) {
-        float t = BB_TABLE_UNMAP(T);
-        int ti = (int)t;
-        t -= ti;
-        Color3 rgb = OIIO::lerp (m_blackbody_table[ti], m_blackbody_table[ti+1], t);
-        //return colpow(rgb, BB_TABLE_YPOWER);
-        Color3 rgb2 = rgb * rgb;
-        Color3 rgb4 = rgb2 * rgb2;
-        return rgb4 * rgb; // ^5
-    }
-    // Otherwise, compute for real
-    bb_spectrum spec (T);
-    Color3 rgb = XYZ_to_RGB (spectrum_to_XYZ (spec));
-    clamp_zero (rgb);
-    return rgb;
-}
-#endif
-
 OSL_HOSTDEVICE bool
 ColorSystem::can_lookup_blackbody(float T /*Kelvin*/) const
 {
@@ -543,6 +485,15 @@ ColorSystem::can_lookup_blackbody(float T /*Kelvin*/) const
 OSL_HOSTDEVICE Color3
 ColorSystem::lookup_blackbody_rgb (float T /*Kelvin*/) const
 {
+    if (T < BB_DRAPER)
+        return Color3(1.0e-6f,0.0f,0.0f);  // very very dim red
+
+    // can_lookup_blackbody() should have checked before now
+    OSL_DASSERT(T < BB_MAX_TABLE_RANGE);
+    float t = BB_TABLE_UNMAP(T);
+    int ti = static_cast<int>(t);
+    float remainder = t - ti;
+#ifdef __OSL_WIDE_PVT
     // Choose to access Color3 lookup table as 3 float components.
     // When vectorized, this helps generate individual gather instructions with
     // 32bit offsets with a common base address.  This is preferred to
@@ -550,27 +501,21 @@ ColorSystem::lookup_blackbody_rgb (float T /*Kelvin*/) const
     // multiple registers to hold the 64bit offsets and multiple gather
     // instructions who's results need to be merged into a single register.
     const float *blackbody_components = reinterpret_cast<const float *>(m_blackbody_table);
-
-    if (T < BB_DRAPER)
-        return Color3(1.0e-6f,0.0f,0.0f);  // very very dim red
-
-    // can_lookup_blackbody() should have been used
-    OSL_DASSERT(T < BB_MAX_TABLE_RANGE);
-    float t = BB_TABLE_UNMAP(T);
-    uint16_t ti = static_cast<uint16_t>(t);
-    uint16_t ti_offset = static_cast<uint16_t>(ti*(sizeof(Color3)/sizeof(float)));
-    float remainder = t - ti;
-    //Color3 rgb = OIIO::lerp (m_blackbody_table[ti], m_blackbody_table[ti+1], t);
+    constexpr int stride = sizeof(Color3)/sizeof(float);
+    int sti = stride*ti;
     Color3 rgb = OIIO::lerp (
         // Have all gathers use the same indices by having different base registers
         // for each of the 6 components
-        Color3((blackbody_components+0)[ti_offset],
-               (blackbody_components+1)[ti_offset],
-               (blackbody_components+2)[ti_offset]),
-        Color3((blackbody_components+3)[ti_offset],
-               (blackbody_components+4)[ti_offset],
-               (blackbody_components+5)[ti_offset]),
+        Color3((blackbody_components+0)[sti],
+               (blackbody_components+1)[sti],
+               (blackbody_components+2)[sti]),
+        Color3((blackbody_components+3)[sti],
+               (blackbody_components+4)[sti],
+               (blackbody_components+5)[sti]),
        remainder);
+#else
+    Color3 rgb = OIIO::lerp (m_blackbody_table[ti], m_blackbody_table[ti+1], remainder);
+#endif
     //return colpow(rgb, BB_TABLE_YPOWER);
     Color3 rgb2 = rgb * rgb;
     Color3 rgb4 = rgb2 * rgb2;
@@ -587,6 +532,15 @@ ColorSystem::compute_blackbody_rgb (float T /*Kelvin*/) const
     return rgb;
 }
 
+OSL_HOSTDEVICE Color3
+ColorSystem::blackbody_rgb (float T) const
+{
+    if (can_lookup_blackbody(T)) {
+        return lookup_blackbody_rgb(T);
+    }
+    // Otherwise, compute for real
+    return compute_blackbody_rgb(T);
+}
 
 }  // namespace pvt
 OSL_NAMESPACE_EXIT

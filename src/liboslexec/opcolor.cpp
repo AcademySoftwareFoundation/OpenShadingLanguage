@@ -487,7 +487,9 @@ ColorSystem::set_colorspace (StringParam colorspace)
         clamp_zero (rgb);
         rgb = colpow (rgb, 1.0f/BB_TABLE_YPOWER);
         m_blackbody_table[i] = rgb;
-        // std::cout << "Table[" << i << "; T=" << T << "] = " << rgb << "\n";
+#if !defined(__CUDACC__)
+        //std::cout << "Table[" << i << "; T=" << T << "] = " << rgb << "\n";
+#endif
     }
 
 #if 0 && !defined(__CUDACC__)

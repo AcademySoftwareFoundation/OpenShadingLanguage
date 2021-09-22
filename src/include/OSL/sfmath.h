@@ -268,7 +268,7 @@ namespace sfm
     }
 
 #if OSL_CLANG_VERSION && !OSL_INTEL_COMPILER
-    // To make clang's loop vectorizor hapy
+    // To make clang's loop vectorizor happy
     // we need to make sure result of min and max
     // is truly by value, not address or reference
     // to the original.

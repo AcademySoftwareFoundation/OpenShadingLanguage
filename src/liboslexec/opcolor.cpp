@@ -239,18 +239,17 @@ rgb_to_YIQ (const COLOR3& rgb)
 }
 
 
-
-#if 0
-OSL_HOSTDEVICE inline Color3
-XYZ_to_xyY (const Color3 &XYZ)
+template <typename COLOR3> OSL_HOSTDEVICE
+static COLOR3
+XYZ_to_xyY (const COLOR3 &XYZ)
 {
-    float n = (XYZ[0] + XYZ[1] + XYZ[2]);
-    float n_inv = (n >= 1.0e-6 ? 1.0f/n : 0.0f);
-    return Color3 (XYZ[0]*n_inv, XYZ[1]*n_inv, XYZ[1]);
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    FLOAT n = (comp_x(XYZ) + comp_y(XYZ) + comp_z(XYZ));
+    FLOAT n_inv = (n >= 1.0e-6f ? 1.0f/n : 0.0f);
+    return make_Color3 (comp_x(XYZ)*n_inv, comp_y(XYZ)*n_inv, comp_y(XYZ));
     // N.B. http://brucelindbloom.com/ suggests returning xy of the
     // reference white in the X+Y+Z==0 case.
 }
-#endif
 
 
 template <typename COLOR3> OSL_HOSTDEVICE
@@ -460,7 +459,7 @@ colpow (const Color3 &c, float p)
 //   i = ((T-Draper)/spacing)^(1/xpower)
 //   T = pow(i, xpower) * spacing + Draper
 // And furthermore, we store in the table the true value raised ^(1/5).
-// I tuned this a bit, and with the current values we can have all 
+// I tuned this a bit, and with the current values we can have all
 // blackbody results accurate to within 0.1% with a table size of 317
 // (about 5 KB of data).
 #define BB_DRAPER 800.0f /* really 798K, below this visible BB is negligible */
@@ -667,7 +666,7 @@ ColorSystem::from_rgb (StringParam tospace, const Color3& C, Context context)
     if (tospace == STRING_PARAMS(XYZ))
         return RGB_to_XYZ (C);
     if (tospace == STRING_PARAMS(xyY))
-        return RGB_to_XYZ (xyY_to_XYZ (C));
+        return XYZ_to_xyY (RGB_to_XYZ (C));
     else
         return ocio_transform (STRING_PARAMS(RGB), tospace, C, context);
 }
@@ -715,7 +714,7 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
     else if (tospace == STRING_PARAMS(XYZ))
         Cto = RGB_to_XYZ (Crgb);
     else if (tospace == STRING_PARAMS(xyY))
-        Cto = RGB_to_XYZ (xyY_to_XYZ (Crgb));
+        Cto = XYZ_to_xyY (RGB_to_XYZ (Crgb));
     else if (tospace == STRING_PARAMS(sRGB))
         Cto = linear_to_sRGB (Crgb);
     else {

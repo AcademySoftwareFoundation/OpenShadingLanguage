@@ -135,7 +135,7 @@ template <class T> class Matrix33
     //------------
 
     ~Matrix33 () = default;
-	
+
     //----------------------
     // Compatibility with Sb
     //----------------------
@@ -867,16 +867,16 @@ template <class S, class T>
 IMATH_HOSTDEVICE Vec3<S>                    operator * (const Vec3<S> &v, const Matrix33<T> &m);
 
 template <class S, class T>
-const Vec3<S> &            operator *= (Vec3<S> &v, const Matrix44<T> &m);
+IMATH_HOSTDEVICE const Vec3<S> &            operator *= (Vec3<S> &v, const Matrix44<T> &m);
 
 template <class S, class T>
-Vec3<S>                    operator * (const Vec3<S> &v, const Matrix44<T> &m);
+IMATH_HOSTDEVICE Vec3<S>                    operator * (const Vec3<S> &v, const Matrix44<T> &m);
 
 template <class S, class T>
-const Vec4<S> &            operator *= (Vec4<S> &v, const Matrix44<T> &m);
+IMATH_HOSTDEVICE const Vec4<S> &            operator *= (Vec4<S> &v, const Matrix44<T> &m);
 
 template <class S, class T>
-Vec4<S>                    operator * (const Vec4<S> &v, const Matrix44<T> &m);
+IMATH_HOSTDEVICE Vec4<S>                    operator * (const Vec4<S> &v, const Matrix44<T> &m);
 
 //-------------------------
 // Typedefs for convenience
@@ -3403,7 +3403,7 @@ operator * (const Vec3<S> &v, const Matrix33<T> &m)
 
 
 template <class S, class T>
-inline const Vec3<S> &
+IMATH_HOSTDEVICE inline const Vec3<S> &
 operator *= (Vec3<S> &v, const Matrix44<T> &m)
 {
     S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + m[3][0]);
@@ -3419,7 +3419,7 @@ operator *= (Vec3<S> &v, const Matrix44<T> &m)
 }
 
 template <class S, class T>
-inline Vec3<S>
+IMATH_HOSTDEVICE inline Vec3<S>
 operator * (const Vec3<S> &v, const Matrix44<T> &m)
 {
     S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + m[3][0]);
@@ -3432,7 +3432,7 @@ operator * (const Vec3<S> &v, const Matrix44<T> &m)
 
 
 template <class S, class T>
-inline const Vec4<S> &
+IMATH_HOSTDEVICE inline const Vec4<S> &
 operator *= (Vec4<S> &v, const Matrix44<T> &m)
 {
     S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + v.w * m[3][0]);
@@ -3449,7 +3449,7 @@ operator *= (Vec4<S> &v, const Matrix44<T> &m)
 }
 
 template <class S, class T>
-inline Vec4<S>
+IMATH_HOSTDEVICE inline Vec4<S>
 operator * (const Vec4<S> &v, const Matrix44<T> &m)
 {
     S x = S(v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + v.w * m[3][0]);

@@ -1177,7 +1177,7 @@ OptixRaytracer::get_texture_handle (ustring filename OSL_MAYBE_UNUSED,
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
             errhandler().error ("Could not load: %s", filename);
-            return (TextureHandle*)(intptr_t(nullptr));
+            return (TextureHandle*)nullptr;
         }
 
         OIIO::ROI roi = OIIO::get_roi_full(image.spec());
@@ -1337,7 +1337,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     std::vector<uint8_t> printf_buffer(OSL_PRINTF_BUFFER_SIZE);
     CUDA_CHECK(cudaMemcpy (printf_buffer.data(), reinterpret_cast<void *>(d_osl_printf_buffer), OSL_PRINTF_BUFFER_SIZE, cudaMemcpyDeviceToHost));
 
-    processPrintfBuffer(printf_buffer.data(), OSL_PRINTF_BUFFER_SIZE); 
+    processPrintfBuffer(printf_buffer.data(), OSL_PRINTF_BUFFER_SIZE);
 #endif
 #endif
 }
@@ -1347,7 +1347,7 @@ void
 OptixRaytracer::processPrintfBuffer(void *buffer_data, size_t buffer_size)
 {
     const uint8_t * ptr = reinterpret_cast<uint8_t *>(buffer_data);
-    // process until 
+    // process until
     std::string fmt_string;
     size_t total_read = 0;
     while (total_read < buffer_size) {
@@ -1409,7 +1409,7 @@ OptixRaytracer::processPrintfBuffer(void *buffer_data, size_t buffer_size)
                             src += sizeof(uint64_t);
                             format_end_found = true;
                             break;
-     
+
                             break;
                     }
                 }

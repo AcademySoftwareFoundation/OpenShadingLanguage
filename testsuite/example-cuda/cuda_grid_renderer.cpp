@@ -90,7 +90,7 @@ CudaGridRenderer::get_texture_handle(OIIO::ustring filename,
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
             std::cerr << "Could not load " << filename << std::endl;
-            return (TextureHandle*)(intptr_t(nullptr));
+            return (TextureHandle*)nullptr;
         }
 
         OIIO::ROI roi = OIIO::get_roi_full(image.spec());

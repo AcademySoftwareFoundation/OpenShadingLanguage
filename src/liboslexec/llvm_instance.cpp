@@ -1500,14 +1500,10 @@ BackendLLVM::run ()
         }
     }
 
-#if (OPTIX_VERSION >= 70000)
-    // FIXME:  I'm thinking this probably shouldn't be necessary, but I'm having
-    // trouble linking in shadeops multiple times.  So, only allow it to be
-    // linked in once.
-    static bool added_library = false;
-#endif
-
     if (use_optix()) {
+        std::string name = Strutil::sprintf ("%s_%d", group().name(), group().id());
+
+#if (OPTIX_VERSION < 70000)
         // Create an llvm::Module from the renderer-supplied library bitcode
         std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
         OSL_ASSERT (bitcode.size() && "Library bitcode is empty");
@@ -1517,19 +1513,14 @@ BackendLLVM::run ()
             ll.module_from_bitcode (static_cast<const char*>(bitcode.data()),
                                     bitcode.size(), "cuda_lib");
 
-        std::string name = Strutil::sprintf ("%s_%d", group().name(), group().id());
-#if (OPTIX_VERSION < 70000)
         ll.ptx_compile_group (lib_module, name, group().m_llvm_ptx_compiled_version);
 #else
-        ll.ptx_compile_group (added_library ? nullptr : lib_module, name, group().m_llvm_ptx_compiled_version);
+        ll.ptx_compile_group (nullptr, name, group().m_llvm_ptx_compiled_version);
 #endif
 
         if (group().m_llvm_ptx_compiled_version.empty()) {
              OSL_ASSERT (0 && "Unable to generate PTX");
         }
-#if (OPTIX_VERSION >= 70000)
-        added_library = true;
-#endif
     }
     else {
         // Force the JIT to happen now and retrieve the JITed function pointers

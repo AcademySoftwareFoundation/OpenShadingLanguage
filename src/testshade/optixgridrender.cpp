@@ -190,7 +190,9 @@ OptixGridRenderer::init_shadingsys (ShadingSystem *ss)
 {
     shadingsys = ss;
 
-#ifdef OSL_USE_OPTIX
+#if defined(OSL_USE_OPTIX) && OPTIX_VERSION < 70000
+    // NB: renderers using OptiX7+ are expected to link to rend_lib.cu manually
+    // to avoid duplicate 'rend_lib' symbols in each shader group.
     shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
                            rend_llvm_compiled_ops_block);
 #endif
@@ -551,6 +553,48 @@ OptixGridRenderer::make_optix_materials ()
     //if (sizeof_msg_log > 1)
     //    printf ("Creating 'hitgroup' program group:\n%s\n", msg_log);
 
+    // Load the renderer support library CUDA source and generate PTX for it
+    std::string rendlibName = "rend_lib.ptx";
+    std::string rend_lib_ptx = load_ptx_file(rendlibName);
+    if (rend_lib_ptx.empty()) {
+        errhandler().severef("Could not find PTX for the raygen program");
+        return false;
+    }
+
+    // Create support library program group
+    sizeof_msg_log = sizeof(msg_log);
+    OptixModule rend_lib_module;
+    OPTIX_CHECK (optixModuleCreateFromPTX (m_optix_ctx,
+                                           &module_compile_options,
+                                           &pipeline_compile_options,
+                                           rend_lib_ptx.c_str(),
+                                           rend_lib_ptx.size(),
+                                           msg_log, &sizeof_msg_log,
+                                           &rend_lib_module));
+    //if (sizeof_msg_log > 1)
+    //    printf ("Creating module from PTX-file %s:\n%s\n", progName.c_str(), msg_log);
+
+    // Record it so we can destroy it later
+    modules.push_back(rend_lib_module);
+
+    // Direct-callable -- support functions for OSL on the device
+    OptixProgramGroupDesc rend_lib_desc = {};
+    rend_lib_desc.kind = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    rend_lib_desc.callables.moduleDC            = rend_lib_module;
+    rend_lib_desc.callables.entryFunctionNameDC = "__direct_callable__dummy_rend_lib";
+    rend_lib_desc.callables.moduleCC            = 0;
+    rend_lib_desc.callables.entryFunctionNameCC = nullptr;
+    OptixProgramGroup rend_lib_group;
+    sizeof_msg_log = sizeof(msg_log);
+    OPTIX_CHECK (optixProgramGroupCreate (m_optix_ctx,
+                                          &rend_lib_desc,
+                                          1, // number of program groups
+                                          &program_options, // program options
+                                          msg_log, &sizeof_msg_log,
+                                          &rend_lib_group));
+    //if (sizeof_msg_log > 1)
+    //    printf ("Creating 'hitgroup' program group:\n%s\n", msg_log);
+
     // Create materials
     for (const auto& groupref : shaders()) {
         shadingsys->attribute (groupref.get(), "renderer_outputs",
@@ -647,6 +691,7 @@ OptixGridRenderer::make_optix_materials ()
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
+        rend_lib_group,
         raygen_group,
         miss_group,
         hitgroup_group,

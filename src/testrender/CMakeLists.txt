@@ -10,7 +10,8 @@ if (USE_OPTIX)
          cuda/quad.cu
          cuda/optix_raytracer.cu
          cuda/sphere.cu
-         cuda/wrapper.cu )
+         cuda/wrapper.cu
+         cuda/rend_lib.cu )
     set (testrender_cuda_headers
          cuda/rend_lib.h )
 

@@ -397,17 +397,17 @@ rgb_to_YIQ (const COLOR3& rgb)
                           0.114, -0.321,  0.311);
 }
 
-#if 0
-OSL_HOSTDEVICE static inline Color3
-XYZ_to_xyY (const Color3 &XYZ)
+template <typename COLOR3> OSL_HOSTDEVICE
+static COLOR3
+XYZ_to_xyY (const COLOR3 &XYZ)
 {
-    float n = (XYZ.x + XYZ.y + XYZ.z);
-    float n_inv = (n >= 1.0e-6 ? 1.0f/n : 0.0f);
-    return Color3 (XYZ.x*n_inv, XYZ.y*n_inv, XYZ.y);
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    FLOAT n = (comp_x(XYZ) + comp_y(XYZ) + comp_z(XYZ));
+    FLOAT n_inv = (n >= 1.0e-6f ? 1.0f/n : 0.0f);
+    return make_Color3 (comp_x(XYZ)*n_inv, comp_y(XYZ)*n_inv, comp_y(XYZ));
     // N.B. http://brucelindbloom.com/ suggests returning xy of the
     // reference white in the X+Y+Z==0 case.
 }
-#endif
 
 template <typename COLOR3> OSL_HOSTDEVICE
 static COLOR3

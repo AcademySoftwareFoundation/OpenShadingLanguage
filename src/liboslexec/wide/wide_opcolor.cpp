@@ -425,7 +425,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
-                COLOR Cto = cs.RGB_to_XYZ (xyY_to_XYZ (Crgb));
+                COLOR Cto = XYZ_to_xyY (cs.RGB_to_XYZ (Crgb));
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }

@@ -23,3 +23,14 @@ Output out_dPdtime to out_dPdtime.tif
 Output out_Ps to out_Ps.tif
 Output out_dPsdx to out_dPsdx.tif
 Output out_dPsdy to out_dPsdy.tif
+Output out_backfacing to out_backfacing.tif
+Output out_surfacearea to out_surfacearea.tif
+Output out_object2common_of_P to out_object2common_of_P.tif
+Output out_shader2common_of_P to out_shader2common_of_P.tif
+Output out_calculatenormal_fliphandedness to out_calculatenormal_fliphandedness.tif
+Output out_rt_camera to out_rt_camera.tif
+Output out_rt_shadow to out_rt_shadow.tif
+Output out_rt_diffuse to out_rt_diffuse.tif
+Output out_rt_glossy to out_rt_glossy.tif
+Output out_rt_reflection to out_rt_reflection.tif
+Output out_rt_refraction to out_rt_refraction.tif

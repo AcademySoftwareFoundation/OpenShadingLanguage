@@ -26,7 +26,20 @@ test (
     output vector out_dPdtime = 1,    
     output point out_Ps = 1,    
     output vector out_dPsdx = 1,
-    output vector out_dPsdy = 1    
+    output vector out_dPsdy = 1,
+    output float out_surfacearea = 0,
+    output point out_object2common_of_P = 0,   
+    output point out_shader2common_of_P = 0,
+    output vector out_calculatenormal_fliphandedness = 0,
+    // Use float for bool/int results so we can tell that
+    // default was overwritten with 0 or 1
+    output float out_backfacing = 0.5,
+    output float out_rt_camera = 0.5,
+    output float out_rt_shadow = 0.5,
+    output float out_rt_diffuse = 0.5,
+    output float out_rt_glossy = 0.5,
+    output float out_rt_reflection = 0.5,
+    output float out_rt_refraction = 0.5
 )
 {
     // Extract shader globals to local variables
@@ -60,7 +73,6 @@ test (
     vector sg_dPsdx = Dx(Ps);    
     vector sg_dPsdy = Dy(Ps);    
     
-#if 0 // tbd    
     int rt_camera = raytype("camera");
     int rt_shadow = raytype("shadow");
     int rt_diffuse = raytype("diffuse");
@@ -71,11 +83,10 @@ test (
     point sg_object2common_of_P = transform("object","common",P);   
     point sg_shader2common_of_P = transform("shader","common",P);
         
-    float  sa = surfacearea();
-
     vector sg_calculatenormal_fliphandedness = calculatenormal(P);
+
     int sg_backfacing = backfacing();
-#endif
+    float sg_surfacearea = surfacearea();
 
     
     // Populate outputs with values from locals
@@ -102,4 +113,16 @@ test (
     out_Ps = sg_Ps;    
     out_dPsdx = sg_dPsdx;
     out_dPsdy = sg_dPsdy;    
+    out_backfacing = sg_backfacing;
+    out_surfacearea = sg_surfacearea;
+    out_object2common_of_P = sg_object2common_of_P;   
+    out_shader2common_of_P = sg_shader2common_of_P;
+    out_calculatenormal_fliphandedness = sg_calculatenormal_fliphandedness;
+    out_rt_camera = rt_camera;
+    out_rt_shadow = rt_shadow;
+    out_rt_diffuse = rt_diffuse;
+    out_rt_glossy = rt_glossy;
+    out_rt_reflection = rt_reflection;
+    out_rt_refraction = rt_refraction;
+    
 }

@@ -1,0 +1,38 @@
+shader a_float_v_b_float_v (output vector cout = 0, output vector mcout = 0)
+{
+    float a = P[0];
+    float b = P[1];
+    
+    int c = int(P[2]);
+    c = a&&b;
+    
+    if(c)
+    {
+        cout = vector(tan(v), tan(u*v/v+c), u-v);
+    }
+    else
+    {
+        cout = vector(tan(P[0]*v), tan(u/v+c), u*v);
+    }
+    
+    vector mcout_ = cout;
+    
+    if(int(P[0]*200)%2)
+    {
+        a = P[2];
+        b = P[1]/0.95;
+        c = a&&b;
+        
+        if (c)
+        {
+            mcout_ = vector(tan(u*v), tan(v-u/c*u), v/u);
+        }
+        
+        else
+        {
+            mcout_ = vector(sin(u*v), tan(P[0]/c), P[1]);
+        }
+    }
+    
+    mcout  = mcout_;
+}

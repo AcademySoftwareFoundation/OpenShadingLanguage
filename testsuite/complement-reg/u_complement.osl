@@ -1,0 +1,18 @@
+shader u_complement (output vector cout = 0,output vector mcout = 0 ) 
+{
+    int a = raytype("camera")*2;
+    int b = int(P[0]);
+    b = ~a;
+    
+    cout = vector(tan(u/a), tan(v/b), tan(u*v));
+    vector mcout_ = cout;
+    
+    if(int(P[0])%32){
+        a = int(4.5);
+        b = ~a;
+        
+        mcout_ = vector(tan(u*v/a), tan(u/b), tan(v));
+    }
+    
+    mcout = mcout_;
+}

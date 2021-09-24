@@ -173,16 +173,17 @@ endmacro ()
 macro (osl_add_all_tests)
     # List all the individual testsuite tests here, except those that need
     # special installed tests.
-    TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
-                area-reg arithmetic-reg
+    TESTSUITE ( aastep allowconnect-err andor-reg and-or-not-synonyms
+                arithmetic area-reg arithmetic-reg
                 array array-reg array-copy-reg array-derivs array-range 
                 array-aassign array-assign-reg array-length-reg
+                bitwise-and-reg bitwise-or-reg bitwise-shl-reg  bitwise-shr-reg bitwise-xor-reg
                 blackbody blackbody-reg blendmath breakcont breakcont-reg
                 bug-array-heapoffsets bug-locallifetime bug-outputinit
                 bug-param-duplicate bug-peep bug-return
                 calculatenormal-reg
                 cellnoise closure closure-array color color-reg comparison
-                compile-buffer compassign-reg
+                complement-reg compile-buffer compassign-reg
                 component-range
                 control-flow-reg connect-components
                 const-array-params const-array-fill
@@ -211,6 +212,7 @@ macro (osl_add_all_tests)
                 mergeinstances-duplicate-entrylayers
                 mergeinstances-nouserdata mergeinstances-vararray
                 metadata-braces min-reg miscmath missing-shader
+                mix-reg
                 named-components
                 noise noise-cell
                 noise-gabor noise-gabor2d-filter noise-gabor3d-filter
@@ -251,7 +253,7 @@ macro (osl_add_all_tests)
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
                 render-microfacet render-oren-nayar render-veachmis render-ward
-                select shaderglobals shortcircuit
+                select select-reg shaderglobals shortcircuit
                 smoothstep-reg 
                 spline splineinverse splineinverse-ident
                 spline-boundarybug spline-derivbug

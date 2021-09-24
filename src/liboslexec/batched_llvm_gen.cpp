@@ -17,8 +17,12 @@ OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
+static ustring op_and("and");
+static ustring op_bitand("bitand");
+static ustring op_bitor("bitor");
 static ustring op_break("break");
 static ustring op_ceil("ceil");
+static ustring op_compl("compl");
 static ustring op_continue("continue");
 static ustring op_dowhile("dowhile");
 static ustring op_eq("eq");
@@ -35,10 +39,13 @@ static ustring op_min("min");
 static ustring op_neq("neq");
 static ustring op_printf("printf");
 static ustring op_round("round");
+static ustring op_shl("shl");
+static ustring op_shr("shr");
 static ustring op_sign("sign");
 static ustring op_step("step");
 static ustring op_trunc("trunc");
 static ustring op_warning("warning");
+static ustring op_xor("xor");
 
 /// Macro that defines the arguments to LLVM IR generating routines
 ///
@@ -382,6 +389,11 @@ LLVMGEN (llvm_gen_printf)
                             c, TypeDesc::UNKNOWN,
                             /*op_is_uniform*/arg_is_uniform,
                             /*index_is_uniform*/true);
+
+                    // Always expand llvm booleans to integers
+                    if (sym.forced_llvm_bool() ) {
+                        loaded = rop.ll.op_bool_to_int (loaded);
+                    }
 
                     if (arg_is_uniform) {
                         if (simpletype.basetype == TypeDesc::FLOAT) {
@@ -812,7 +824,6 @@ LLVMGEN (llvm_gen_sincos)
     OSL_ASSERT(op_is_uniform || (!Sin_out.is_uniform() && !Cos_out.is_uniform()));
 
     // Handle broadcasting results to wide results
-
     BatchedBackendLLVM::TempScope temp_scope(rop);
 
     llvm::Value* theta_param = nullptr;
@@ -895,6 +906,71 @@ LLVMGEN (llvm_gen_sincos)
 
     return true;
 }
+
+
+
+LLVMGEN (llvm_gen_andor)
+{
+    Opcode& op (rop.inst()->ops()[opnum]);
+    Symbol& result = *rop.opargsym (op, 0);
+    Symbol& a = *rop.opargsym (op, 1);
+    Symbol& b = *rop.opargsym (op, 2);
+
+    bool op_is_uniform = a.is_uniform() && b.is_uniform();
+    bool result_is_uniform = result.is_uniform();
+
+
+    llvm::Value* i1_res = NULL;
+    llvm::Value* a_val = rop.llvm_load_value (a, 0, 0, TypeDesc::TypeInt, op_is_uniform);
+    llvm::Value* b_val = rop.llvm_load_value (b, 0, 0, TypeDesc::TypeInt, op_is_uniform);
+    llvm::Value* zero_set = op_is_uniform ? rop.ll.constant(0): rop.ll.wide_constant(0);
+
+    if (op.opname() == op_and) {
+        // From the old bitcode generated
+        // define i32 @osl_and_iii(i32 %a, i32 %b) nounwind readnone ssp {
+        //     %1 = icmp ne i32 %b, 0
+        //  %not. = icmp ne i32 %a, 0
+        //     %2 = and i1 %1, %not.
+        //     %3 = zext i1 %2 to i32
+        //   ret i32 %3
+
+
+        llvm::Value* b_ne_0 = rop.ll.op_ne (b_val, zero_set);
+        llvm::Value* a_ne_0 = rop.ll.op_ne (a_val, zero_set);
+        llvm::Value* both_ne_0 = rop.ll.op_and (b_ne_0, a_ne_0);
+        i1_res = both_ne_0;
+    } else {
+        OSL_DASSERT(op.opname() == ustring("or"));
+        // Also from the bitcode
+        // %1 = or i32 %b, %a
+        // %2 = icmp ne i32 %1, 0
+        // %3 = zext i1 %2 to i32
+        llvm::Value* or_ab = rop.ll.op_or(a_val, b_val);
+        llvm::Value* or_ab_ne_0 = rop.ll.op_ne (or_ab, zero_set);
+        i1_res = or_ab_ne_0;
+    }
+
+    if(op_is_uniform && !result_is_uniform)
+    {
+        i1_res = rop.ll.widen_value(i1_res);
+    }
+
+    // Although we try to use llvm bool (i1) for comparison results
+    // sometimes we could not force the data type to be an bool and it remains
+    // an int, for those cases we will need to convert the boolean to int
+    if (!result.forced_llvm_bool() ) {
+        llvm::Type * resultType = rop.ll.llvm_typeof(rop.llvm_get_pointer(result));
+        OSL_ASSERT((resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_wide_int_ptr())) ||
+               (resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_int_ptr())));
+        llvm::Type * typeOfR = rop.ll.llvm_typeof(i1_res);
+        OSL_ASSERT(typeOfR == rop.ll.type_wide_bool() || typeOfR == rop.ll.type_bool());
+        i1_res = rop.ll.op_bool_to_int (i1_res);
+    }
+
+    rop.llvm_store_value(i1_res, result, 0, 0);
+    return true;
+}
+
 
 
 LLVMGEN (llvm_gen_if)
@@ -1560,6 +1636,232 @@ LLVMGEN (llvm_gen_neg)
 }
 
 
+
+// Implementation for clamp
+LLVMGEN (llvm_gen_clamp)
+{
+    // NOTE: stdosl.h appears to not expose clamp as a builtin
+    // so don't expect this to be executed
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& X = *rop.opargsym (op, 1);
+    Symbol& Min = *rop.opargsym (op, 2);
+    Symbol& Max = *rop.opargsym (op, 3);
+
+    bool op_is_uniform = X.is_uniform() && Min.is_uniform() && Max.is_uniform();
+    bool result_is_uniform = Result.is_uniform();
+    OSL_ASSERT(op_is_uniform || !result_is_uniform);
+
+    TypeDesc type = Result.typespec().simpletype();
+    int num_components = type.aggregate;
+    for (int i = 0; i < num_components; i++) {
+        // First do the lower bound
+        llvm::Value *val = rop.llvm_load_value (X, 0, i, type, op_is_uniform);
+        llvm::Value *min = rop.llvm_load_value (Min, 0, i, type, op_is_uniform);
+        llvm::Value *cond = rop.ll.op_lt (val, min);
+        val = rop.ll.op_select (cond, min, val);
+        llvm::Value *valdx=NULL, *valdy=NULL;
+        if (Result.has_derivs()) {
+            valdx = rop.llvm_load_value (X, 1, i, type, op_is_uniform);
+            valdy = rop.llvm_load_value (X, 2, i, type, op_is_uniform);
+            llvm::Value *mindx = rop.llvm_load_value (Min, 1, i, type, op_is_uniform);
+            llvm::Value *mindy = rop.llvm_load_value (Min, 2, i, type, op_is_uniform);
+            valdx = rop.ll.op_select (cond, mindx, valdx);
+            valdy = rop.ll.op_select (cond, mindy, valdy);
+        }
+        // Now do the upper bound
+        llvm::Value *max = rop.llvm_load_value (Max, 0, i, type, op_is_uniform);
+        cond = rop.ll.op_gt (val, max);
+        val = rop.ll.op_select (cond, max, val);
+        if (Result.has_derivs()) {
+            llvm::Value *maxdx = rop.llvm_load_value (Max, 1, i, type, op_is_uniform);
+            llvm::Value *maxdy = rop.llvm_load_value (Max, 2, i, type, op_is_uniform);
+            valdx = rop.ll.op_select (cond, maxdx, valdx);
+            valdy = rop.ll.op_select (cond, maxdy, valdy);
+        }
+
+        if (op_is_uniform && !result_is_uniform)
+        {
+            val = rop.ll.widen_value(val);
+            valdx = rop.ll.widen_value(valdx);
+            valdy = rop.ll.widen_value(valdy);
+        }
+
+        rop.llvm_store_value (val, Result, 0, i);
+        rop.llvm_store_value (valdx, Result, 1, i);
+        rop.llvm_store_value (valdy, Result, 2, i);
+    }
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_mix)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    Symbol& B = *rop.opargsym (op, 2);
+    Symbol& X = *rop.opargsym (op, 3);
+
+    bool op_is_uniform = Result.is_uniform();
+
+    TypeDesc type = Result.typespec().simpletype();
+    OSL_ASSERT (!Result.typespec().is_closure_based() &&
+            Result.typespec().is_float_based());
+    int num_components = type.aggregate;
+    int x_components = X.typespec().aggregate();
+    bool derivs = (Result.has_derivs() &&
+                   (A.has_derivs() || B.has_derivs() || X.has_derivs()));
+
+    llvm::Value *one;
+    if (op_is_uniform)
+        one = rop.ll.constant (1.0f);
+    else
+        one = rop.ll.wide_constant (1.0f);
+
+    llvm::Value *x = rop.llvm_load_value (X, 0, 0, type, op_is_uniform);
+    llvm::Value *one_minus_x = rop.ll.op_sub (one, x);
+    llvm::Value *xx = derivs ? rop.llvm_load_value (X, 1, 0, type, op_is_uniform) : NULL;
+    llvm::Value *xy = derivs ? rop.llvm_load_value (X, 2, 0, type, op_is_uniform) : NULL;
+    for (int i = 0; i < num_components; i++) {
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type, op_is_uniform);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type, op_is_uniform);
+        if (!a || !b)
+            return false;
+        if (i > 0 && x_components > 1) {
+            // Only need to recompute x and 1-x if they change
+            x = rop.llvm_load_value (X, 0, i, type, op_is_uniform);
+            one_minus_x = rop.ll.op_sub (one, x);
+        }
+        // r = a*one_minus_x + b*x
+        llvm::Value *r1 = rop.ll.op_mul (a, one_minus_x);
+        llvm::Value *r2 = rop.ll.op_mul (b, x);
+        llvm::Value *r = rop.ll.op_add (r1, r2);
+        rop.llvm_store_value (r, Result, 0, i);
+
+        if (derivs) {
+            // mix of duals:
+            //   (a*one_minus_x + b*x,
+            //    a*one_minus_x.dx + a.dx*one_minus_x + b*x.dx + b.dx*x,
+            //    a*one_minus_x.dy + a.dy*one_minus_x + b*x.dy + b.dy*x)
+            // and since one_minus_x.dx = -x.dx, one_minus_x.dy = -x.dy,
+            //   (a*one_minus_x + b*x,
+            //    -a*x.dx + a.dx*one_minus_x + b*x.dx + b.dx*x,
+            //    -a*x.dy + a.dy*one_minus_x + b*x.dy + b.dy*x)
+            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type, op_is_uniform);
+            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type, op_is_uniform);
+            if (i > 0 && x_components > 1)
+                xx = rop.llvm_load_value (X, 1, i, type, op_is_uniform);
+            llvm::Value *rx1 = rop.ll.op_mul (a, xx);
+            llvm::Value *rx2 = rop.ll.op_mul (ax, one_minus_x);
+            llvm::Value *rx = rop.ll.op_sub (rx2, rx1);
+            llvm::Value *rx3 = rop.ll.op_mul (b, xx);
+            rx = rop.ll.op_add (rx, rx3);
+            llvm::Value *rx4 = rop.ll.op_mul (bx, x);
+            rx = rop.ll.op_add (rx, rx4);
+
+            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type, op_is_uniform);
+            llvm::Value *by = rop.llvm_load_value (B, 2, i, type, op_is_uniform);
+            if (i > 0 && x_components > 1)
+                xy = rop.llvm_load_value (X, 2, i, type, op_is_uniform);
+            llvm::Value *ry1 = rop.ll.op_mul (a, xy);
+            llvm::Value *ry2 = rop.ll.op_mul (ay, one_minus_x);
+            llvm::Value *ry = rop.ll.op_sub (ry2, ry1);
+            llvm::Value *ry3 = rop.ll.op_mul (b, xy);
+            ry = rop.ll.op_add (ry, ry3);
+            llvm::Value *ry4 = rop.ll.op_mul (by, x);
+            ry = rop.ll.op_add (ry, ry4);
+
+            rop.llvm_store_value (rx, Result, 1, i);
+            rop.llvm_store_value (ry, Result, 2, i);
+        }
+    }
+
+    if (Result.has_derivs() && !derivs) {
+        // Result has derivs, operands do not
+        rop.llvm_zero_derivs (Result);
+    }
+
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_select)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    Symbol& B = *rop.opargsym (op, 2);
+    Symbol& X = *rop.opargsym (op, 3);
+    TypeDesc type = Result.typespec().simpletype();
+    OSL_ASSERT (!Result.typespec().is_closure_based() &&
+            Result.typespec().is_float_based());
+    int num_components = type.aggregate;
+    int x_components = X.typespec().aggregate();
+    bool derivs = (Result.has_derivs() &&
+                   (A.has_derivs() || B.has_derivs()));
+
+
+    bool op_is_uniform = A.is_uniform() &&
+                         B.is_uniform() &&
+                         X.is_uniform();
+    bool result_is_uniform = Result.is_uniform();
+    OSL_ASSERT(op_is_uniform || (op_is_uniform == result_is_uniform));
+
+    llvm::Value *zero;
+    if (X.is_uniform()) {
+        zero = X.typespec().is_int() ? rop.ll.constant (0)
+                                     : rop.ll.constant (0.0f);
+    } else {
+        zero = X.typespec().is_int() ? rop.ll.wide_constant (0)
+                                     : rop.ll.wide_constant (0.0f);
+    }
+    llvm::Value *cond[3];
+    for (int i = 0; i < x_components; ++i) {
+        llvm::Value * x_val = rop.llvm_load_value (X, 0, i, TypeDesc::UNKNOWN, X.is_uniform());
+        if (rop.ll.llvm_typeof(x_val) == rop.ll.type_wide_bool()) {
+            // X was already a result of a comparison we can use it directly
+            // in the select, no need to promote it to integer and
+            // compare to 0
+            cond[i] = x_val;
+        } else {
+            cond[i] = rop.ll.op_ne (x_val, zero);
+        }
+    }
+
+    for (int i = 0; i < num_components; i++) {
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type, op_is_uniform);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type, op_is_uniform);
+        llvm::Value *c = (i >= x_components) ? cond[0] : cond[i];
+        llvm::Value *r = rop.ll.op_select (c, b, a);
+        if (op_is_uniform && !result_is_uniform) {
+            r = rop.ll.widen_value(r);
+        }
+        rop.llvm_store_value (r, Result, 0, i);
+        if (derivs) {
+            for (int d = 1; d < 3; ++d) {
+                a = rop.llvm_load_value (A, d, i, type, op_is_uniform);
+                b = rop.llvm_load_value (B, d, i, type, op_is_uniform);
+                r = rop.ll.op_select (c, b, a);
+                if (op_is_uniform && !result_is_uniform) {
+                    r = rop.ll.widen_value(r);
+                }
+                rop.llvm_store_value (r, Result, d, i);
+            }
+        }
+    }
+
+    if (Result.has_derivs() && !derivs) {
+        // Result has derivs, operands do not
+        rop.llvm_zero_derivs (Result);
+    }
+    return true;
+}
+
+
+
 // Implementation for min/max
 LLVMGEN (llvm_gen_minmax)
 {
@@ -1609,6 +1911,158 @@ LLVMGEN (llvm_gen_minmax)
 
           rop.llvm_store_value (res_dx, Result, 1, i);
           rop.llvm_store_value (res_dy, Result, 2, i);
+        }
+    }
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_bitwise_binary_op)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    Symbol& B = *rop.opargsym (op, 2);
+    OSL_ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
+            B.typespec().is_int());
+
+    bool op_is_uniform = A.is_uniform() && B.is_uniform();
+    bool result_is_uniform = Result.is_uniform();
+
+    TypeDesc type = TypeDesc::TypeInt;
+    bool is_logical_op = op.opname() == op_bitand ||
+                         op.opname() == op_bitor ||
+                         op.opname() == op_xor;
+    if (is_logical_op) {
+        // NOTE: we are loading with TypeDesc::UNKNOWN to avoid automatically
+        // promoting bools to ints, so we can perform the logic operation on booleans
+        // when possible
+        type = TypeDesc::UNKNOWN;
+    }
+
+    llvm::Value *a = rop.loadLLVMValue (A, 0, 0, type, op_is_uniform);
+    llvm::Value *b = rop.loadLLVMValue (B, 0, 0, type, op_is_uniform);
+
+    if (is_logical_op) {
+        llvm::Type * typeOfA = rop.ll.llvm_typeof(a);
+        llvm::Type * typeOfB = rop.ll.llvm_typeof(b);
+        if (typeOfA != typeOfB) {
+
+            if(typeOfA == rop.ll.type_wide_bool() || typeOfA == rop.ll.type_bool()) {
+                a = rop.ll.op_bool_to_int(a);
+            }
+            if(typeOfB == rop.ll.type_wide_bool() || typeOfB == rop.ll.type_bool()) {
+                b = rop.ll.op_bool_to_int(b);
+            }
+        }
+    }
+
+    if (!a || !b)
+        return false;
+    llvm::Value *r = NULL;
+    if (op.opname() == op_bitand) {
+        r = rop.ll.op_and (a, b);
+    } else if (op.opname() == op_bitor) {
+        r = rop.ll.op_or (a, b);
+    } else if (op.opname() == op_xor) {
+        r = rop.ll.op_xor (a, b);
+    } else if (op.opname() == op_shl) {
+        r = rop.ll.op_shl (a, b);
+    } else if (op.opname() == op_shr) {
+        r = rop.ll.op_shr (a, b);
+    } else
+        return false;
+
+    if (op_is_uniform && !result_is_uniform)
+    {
+        r = rop.ll.widen_value(r);
+    }
+
+    // TODO: currently only only the results of a 'compare op' or
+    // getattribute success return value are forced to be boolean
+    // Would be nice if results of and,or,xor were allowed to be boolean,
+    // but that would only be true when both operands are bool as well
+    // which would require work in BatchedAnalysis, so leave for later
+
+    // We allowed boolean values to pass through or,and,xor
+    // so we might need to promote to integer before storage
+    if (!Result.forced_llvm_bool() ) {
+        llvm::Type * resultType = rop.ll.llvm_typeof(rop.llvm_get_pointer(Result));
+        OSL_ASSERT((resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_wide_int_ptr())) ||
+               (resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_int_ptr())));
+        llvm::Type * typeOfR = rop.ll.llvm_typeof(r);
+        if(typeOfR == rop.ll.type_wide_bool() || typeOfR == rop.ll.type_bool()) {
+            r = rop.ll.op_bool_to_int (r);
+        }
+    }
+
+    rop.storeLLVMValue (r, Result);
+    return true;
+}
+
+
+
+// Simple (pointwise) unary ops (Abs, ...,
+LLVMGEN (llvm_gen_unary_op)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& dst  = *rop.opargsym (op, 0);
+    Symbol& src = *rop.opargsym (op, 1);
+    bool dst_derivs = dst.has_derivs();
+    int num_components = dst.typespec().simpletype().aggregate;
+
+    bool op_is_uniform = src.is_uniform();
+    bool result_is_uniform = dst.is_uniform();
+
+    bool dst_float = dst.typespec().is_float_based();
+    bool src_float = src.typespec().is_float_based();
+
+    TypeDesc type = dst.typespec().simpletype();
+
+    for (int i = 0; i < num_components; i++) {
+        // Get src1/2 component i
+        llvm::Value* src_load = rop.loadLLVMValue (src, i, 0, type, op_is_uniform);
+        if (!src_load) return false;
+
+        llvm::Value* src_val = src_load;
+
+        // Perform the op
+        llvm::Value* result = 0;
+        ustring opname = op.opname();
+
+        if (opname == op_compl) {
+            OSL_ASSERT (dst.typespec().is_int());
+            result = rop.ll.op_not (src_val);
+
+            //Uniform/Varying check
+
+            if(op_is_uniform && ! result_is_uniform)
+            {
+                result = rop.ll.widen_value(result);
+            }
+        } else {
+            // Don't know how to handle this.
+            rop.shadingcontext()->errorf ("Don't know how to handle op '%s', eliding the store\n", opname.c_str());
+        }
+
+        // Store the result
+        if (result) {
+            // if our op type doesn't match result, convert
+            if (dst_float && !src_float) {
+                // Op was int, but we need to store float
+                result = rop.ll.op_int_to_float (result);
+            } else if (!dst_float && src_float) {
+                // Op was float, but we need to store int
+                result = rop.ll.op_float_to_int (result);
+            } // otherwise just fine
+            rop.storeLLVMValue (result, dst, i, 0);
+        }
+
+        if (dst_derivs) {
+            // mul results in <a * b, a * b_dx + b * a_dx, a * b_dy + b * a_dy>
+            rop.shadingcontext()->infof ("punting on derivatives for now\n");
+            // FIXME!!
         }
     }
     return true;
@@ -4031,6 +4485,26 @@ LLVMGEN (llvm_gen_getattribute)
 }
 
 
+
+LLVMGEN (llvm_gen_get_simple_SG_field)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT (op.nargs() == 1);
+
+    Symbol& Result = *rop.opargsym (op, 0);
+    bool is_uniform;
+    int sg_index = rop.ShaderGlobalNameToIndex (op.opname(), is_uniform);
+    OSL_ASSERT (sg_index >= 0);
+    llvm::Value *sg_field = rop.ll.GEP (rop.sg_ptr(), 0, sg_index);
+    llvm::Value* r = rop.ll.op_load(sg_field);
+    rop.llvm_store_value (r, Result);
+
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_calculatenormal)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -4115,6 +4589,24 @@ LLVMGEN (llvm_gen_area)
 
     return true;
 }
+
+
+
+LLVMGEN (llvm_gen_isconstant)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() == 2);
+    Symbol &Result (*rop.opargsym (op, 0));
+    OSL_DASSERT (Result.typespec().is_int());
+    Symbol &A (*rop.opargsym (op, 1));
+    llvm::Value * result = rop.ll.constant(A.is_constant() ? 1 : 0);
+    if (!Result.is_uniform()) {
+        result = rop.ll.widen_value(result);
+    }
+    rop.llvm_store_value (result, Result);
+    return true;
+}
+
 
 
 LLVMGEN (llvm_gen_functioncall)
@@ -4522,20 +5014,13 @@ LLVMGEN(NAME) \
     return false; \
 } \
 
-TBD_LLVMGEN(llvm_gen_andor)
 TBD_LLVMGEN(llvm_gen_texture)
 TBD_LLVMGEN(llvm_gen_getmessage)
-TBD_LLVMGEN(llvm_gen_bitwise_binary_op)
 TBD_LLVMGEN(llvm_gen_pointcloud_search)
 TBD_LLVMGEN(llvm_gen_dict_find)
-TBD_LLVMGEN(llvm_gen_clamp)
-TBD_LLVMGEN(llvm_gen_get_simple_SG_field)
 TBD_LLVMGEN(llvm_gen_trace)
 TBD_LLVMGEN(llvm_gen_pointcloud_get)
 TBD_LLVMGEN(llvm_gen_pointcloud_write)
-TBD_LLVMGEN(llvm_gen_isconstant)
-TBD_LLVMGEN(llvm_gen_select)
-TBD_LLVMGEN(llvm_gen_unary_op)
 TBD_LLVMGEN(llvm_gen_dict_value)
 TBD_LLVMGEN(llvm_gen_closure)
 TBD_LLVMGEN(llvm_gen_gettextureinfo)
@@ -4543,7 +5028,6 @@ TBD_LLVMGEN(llvm_gen_spline)
 TBD_LLVMGEN(llvm_gen_dict_next)
 TBD_LLVMGEN(llvm_gen_texture3d)
 TBD_LLVMGEN(llvm_gen_environment)
-TBD_LLVMGEN(llvm_gen_mix)
 TBD_LLVMGEN(llvm_gen_setmessage)
 
 

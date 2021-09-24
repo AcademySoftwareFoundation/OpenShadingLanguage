@@ -1,0 +1,37 @@
+shader a_int_u_b_float_u (output vector cout = 0, output vector mcout = 0)
+{
+    int a = 6;
+    float b = 8.0;
+    
+    int c = 9;
+    c = a&&b;
+    
+    if(c)
+    {
+        cout = vector(tan(v), tan(u*v/v+c), u-v);
+    }
+    else
+    {
+        cout = vector(tan(P[0]*v), tan(u/v+c), u*v);
+    }
+    
+    vector mcout_ = cout;
+    
+    if(int(P[0]*32)%2)
+    {
+        a = -9;
+        b = 0.0;
+        c = a&&b;
+        
+        if (c)
+        {
+            mcout_ = vector(tan(u*v), tan(v-u/c*u), v/u);
+        }
+        else
+        {
+            mcout_ = vector(sin(u*v), tan(P[0]/c), P[1]);
+        }
+    }
+    
+    mcout = mcout_;
+}

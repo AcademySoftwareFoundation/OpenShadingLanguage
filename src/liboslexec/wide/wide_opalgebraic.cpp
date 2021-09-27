@@ -984,13 +984,12 @@ __OSL_MASKED_OP2(filterwidth,Wv,Wdv)
 
 OSL_BATCHOP void
 __OSL_OP(calculatenormal)
-    (void *out, void *bsg_, void *P_)
+    (void *out, void *P_, void* flip_)
 {
-    auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Dual2<Vec3>> wP(P_);
-        Wide<const int> wFlipHandedness(bsg->varying.flipHandedness);
+        Wide<const int> wFlipHandedness(flip_);
         Wide<Vec3> wr(out);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
@@ -1004,21 +1003,19 @@ __OSL_OP(calculatenormal)
 
 OSL_BATCHOP void
 __OSL_MASKED_OP(calculatenormal)
-    (void *out, void *bsg_, void *P_, unsigned int mask_value)
+    (void *out, void *P_, void* flip_, unsigned int mask_value)
 {
-    auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Dual2<Vec3>> wP(P_);
-        Wide<const int> wFlipHandedness(bsg->varying.flipHandedness);
+        Wide<const int> wFlipHandedness(flip_);
         Masked<Vec3> wr(out, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for(int lane=0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> P = wP[lane];
             int flip_handedness = wFlipHandedness[lane];
-            //std::cout << "P=" << P.val() << "," << P.dx() << "," << P.dy() << std::endl;
-
+            //std::cout << "P=" << P << std::endl;
             if (wr.mask()[lane]) {
                 Vec3 N = calculatenormal(P, flip_handedness);
                 wr[ActiveLane(lane)] = N;

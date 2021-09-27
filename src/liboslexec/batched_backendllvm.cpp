@@ -27,7 +27,6 @@ static ustring backfacing("backfacing");
 static ustring surfacearea("surfacearea");
 static ustring object2common("object2common");
 static ustring shader2common("shader2common");
-static ustring flipHandedness("flipHandedness");
 }  // namespace Strings
 
 namespace pvt {

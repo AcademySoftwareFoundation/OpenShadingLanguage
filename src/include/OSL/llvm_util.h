@@ -804,6 +804,9 @@ public:
     /// Dereference a pointer:  return *ptr
     llvm::Value *op_load (llvm::Value *ptr);
 
+    /// Dereference an int ptr (casting ptr type if necessary)
+    llvm::Value *op_load_int (llvm::Value *ptr);
+
     llvm::Value *op_gather(llvm::Value *ptr, llvm::Value *index);
 
     /// Store to a dereferenced pointer
@@ -858,6 +861,10 @@ public:
     llvm::Value *op_int_to_bool (llvm::Value *a);
     llvm::Value *op_float_to_double (llvm::Value *a);
     llvm::Value *op_int_to_longlong (llvm::Value *a);
+    // int_to_bool_to_int is essentially turning any nonzero -> 1
+    llvm::Value *op_int_to_bool_to_int (llvm::Value *a) {
+        return op_bool_to_int(op_int_to_bool(a));
+    }
 
     llvm::Value *op_and (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_or (llvm::Value *a, llvm::Value *b);

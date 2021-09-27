@@ -203,7 +203,7 @@ DECL (osl_dict_find_iis, "iXiX")
 DECL (osl_dict_find_iss, "iXXX")
 DECL (osl_dict_next, "iXi")
 DECL (osl_dict_value, "iXiXLX")
-DECL (osl_raytype_name, "iXX")
+DECL (osl_raytype_bit, "iXX")
 #ifdef OSL_LLVM_NO_BITCODE
 DECL (osl_range_check, "iiiXXXiXiXX")
 #endif
@@ -376,11 +376,11 @@ DECL (osl_trace_set_traceset, "xXs")
 DECL (osl_trace, "iXXXXXXXX")
 
 #ifdef OSL_LLVM_NO_BITCODE
-DECL (osl_calculatenormal, "xXXX")
+DECL (osl_calculatenormal, "xXXi")
 DECL (osl_area, "fX")
 DECL (osl_filterwidth_fdf, "fX")
 DECL (osl_filterwidth_vdv, "xXX")
-DECL (osl_raytype_bit, "iXi")
+DECL (osl_raytype_bit_from_name, "iXi")
 #endif
 
 

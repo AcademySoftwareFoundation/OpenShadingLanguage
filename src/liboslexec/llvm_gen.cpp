@@ -3165,11 +3165,11 @@ LLVMGEN (llvm_gen_calculatenormal)
         rop.llvm_assign_zero (Result);
         return true;
     }
-    
+
     llvm::Value * args[] = {
-        rop.llvm_void_ptr (Result),
-        rop.sg_void_ptr(),
-        rop.llvm_void_ptr (P),
+        rop.llvm_void_ptr(Result),
+        rop.llvm_void_ptr(P),
+        rop.ll.op_load_int(rop.llvm_global_symbol_ptr(Strings::flipHandedness))
     };
     rop.ll.call_function ("osl_calculatenormal", args);
     if (Result.has_derivs())
@@ -3766,20 +3766,22 @@ LLVMGEN (llvm_gen_raytype)
     OSL_DASSERT(op.nargs() == 2);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& Name = *rop.opargsym (op, 1);
-    llvm::Value *args[2] = { rop.sg_void_ptr(), NULL };
-    const char *func = NULL;
+
+    llvm::Value* bit = nullptr;
     if (Name.is_constant()) {
         // We can statically determine the bit pattern
-        ustring name = Name.get_string();
-        args[1] = rop.ll.constant (rop.shadingsys().raytype_bit (name));
-        func = "osl_raytype_bit";
+        bit = rop.ll.constant(rop.shadingsys().raytype_bit(Name.get_string()));
     } else {
         // No way to know which name is being asked for
-        args[1] = rop.llvm_get_pointer (Name);
-        func = "osl_raytype_name";
+        bit = rop.ll.call_function("osl_raytype_bit",
+                                   rop.sg_void_ptr(),
+                                   rop.llvm_get_pointer(Name));
     }
-    llvm::Value *ret = rop.ll.call_function (func, args);
-    rop.llvm_store_value (ret, Result);
+
+    llvm::Value* raytype = rop.ll.op_load_int(
+        rop.llvm_global_symbol_ptr(Strings::raytype));
+    llvm::Value* bitanded = rop.ll.op_and(raytype, bit);
+    rop.llvm_store_value (rop.ll.op_int_to_bool_to_int(bitanded), Result);
     return true;
 }
 

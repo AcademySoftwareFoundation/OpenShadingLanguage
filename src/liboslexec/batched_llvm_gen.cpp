@@ -4054,8 +4054,8 @@ LLVMGEN (llvm_gen_calculatenormal)
 
     llvm::Value *args[] = {
         rop.llvm_void_ptr (Result),
-        rop.sg_void_ptr(),
         rop.llvm_load_arg (P, true /*derivs*/, false /*op_is_uniform*/),
+        rop.llvm_global_symbol_ptr(Strings::flipHandedness),
         nullptr};
     int arg_count = 3;
 
@@ -4313,19 +4313,15 @@ LLVMGEN (llvm_gen_raytype)
     llvm::Value * sg = rop.sg_void_ptr();
     if (Name.is_constant()) {
         // We can statically determine the bit pattern
-        ustring name = ((ustring *)Name.data())[0];
-        llvm::Value *args[] = {
-            sg,
-            rop.ll.constant (rop.shadingsys().raytype_bit (name))};
-
-        llvm::Value *ret = rop.ll.call_function (rop.build_name("raytype_bit"), args);
-
-        if(!result_is_uniform)
-        {
+        llvm::Value* bit;
+        bit = rop.ll.constant(rop.shadingsys().raytype_bit(Name.get_string()));
+        llvm::Value* raytype = rop.ll.op_load_int(
+            rop.llvm_global_symbol_ptr(Strings::raytype));
+        llvm::Value* bitanded = rop.ll.op_and(raytype, bit);
+        llvm::Value* ret = rop.ll.op_int_to_bool_to_int(bitanded);
+        if (!result_is_uniform)
             ret = rop.ll.widen_value(ret);
-        }
         rop.llvm_store_value (ret, Result);
-
     } else {
         FuncSpec func_spec("raytype_name");
         // No way to know which name is being asked for

@@ -59,11 +59,6 @@ examples), as you are just coding in C++, but there are some rules:
   may write templates or helper functions (which do NOT need to use
   OSL_SHADEOP, since they don't need to be runtime-discoverable by LLVM.
 
-* If you need to access non-passed globals (P, N, etc.) or make renderer
-  callbacks, just make the first argument to the function a void* that
-  you cast to a ShaderGlobals* and access the globals, shading
-  context (sg->context), opaque renderer state (sg->renderstate), etc.
-
 */
 
 
@@ -78,7 +73,6 @@ typedef long double max_align_t;
 #include <cstddef>
 
 #include <OSL/oslconfig.h>
-#include <OSL/shaderglobals.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 using namespace OSL;
@@ -768,10 +762,9 @@ OSL_HOSTDEVICE inline Vec3 calculatenormal(void *P_, bool flipHandedness)
         return tmpP.dx().cross( tmpP.dy());
 }
 
-OSL_SHADEOP void osl_calculatenormal(void *out, void *sg_, void *P_)
+OSL_SHADEOP void osl_calculatenormal(void *out, void *P_, int flipHandedness)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    Vec3 N = calculatenormal(P_, sg->flipHandedness);
+    Vec3 N = calculatenormal(P_, flipHandedness);
     // Don't normalize N
     VEC(out) = N;
 }
@@ -802,15 +795,6 @@ OSL_SHADEOP void osl_filterwidth_vdv(void *out, void *x_)
     VEC(out).x = filter_width (x.dx().x, x.dy().x);
     VEC(out).y = filter_width (x.dx().y, x.dy().y);
     VEC(out).z = filter_width (x.dx().z, x.dy().z);
-}
-
-
-
-// Asked if the raytype includes a bit pattern.
-OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
-{
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    return (sg->raytype & bit) != 0;
 }
 
 

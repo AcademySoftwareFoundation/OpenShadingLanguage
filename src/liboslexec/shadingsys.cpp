@@ -4174,13 +4174,15 @@ osl_range_check_err (int indexvalue, int length, const char *symname,
 
 
 
+// Return the raytype bit corresponding to a raytype name.
 // Asked if the raytype is a name we can't know until mid-shader.
-OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
+// FIXME: We should pass the context, not the sg.
+OSL_SHADEOP int osl_raytype_bit (void *sg_, void *name)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    int bit = sg->context->shadingsys().raytype_bit (USTR(name));
-    return (sg->raytype & bit) != 0;
+    return sg->context->shadingsys().raytype_bit(USTR(name));
 }
+
 
 
 OSL_SHADEOP int osl_get_attribute(void *sg_,

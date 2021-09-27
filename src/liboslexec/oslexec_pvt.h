@@ -631,6 +631,7 @@ public:
     /// Set the current color space.
     bool set_colorspace (ustring colorspace);
 
+    /// Return the bit that corresponds to the named ray type.
     int raytype_bit (ustring name);
 
     void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1, bool do_jit=true);

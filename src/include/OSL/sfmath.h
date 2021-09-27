@@ -267,13 +267,48 @@ namespace sfm
         }
     }
 
+#if OSL_CLANG_VERSION && !OSL_INTEL_COMPILER
+    // To make clang's loop vectorizor happy
+    // we need to make sure result of min and max
+    // is truly by value, not address or reference
+    // to the original.
+    // This required creating temporary result
+    // versus just returning by value (which could have been elided)
+    template<typename T>
+    OSL_FORCEINLINE OSL_HOSTDEVICE
+    T min_val(const T &left, const T &right)
+    {
+        T result(right);
+        if (right > left)
+            result = left;
+        return result;
+    }
+
+    template<typename T>
+    OSL_FORCEINLINE OSL_HOSTDEVICE
+    T max_val(const T &left, const T &right)
+    {
+        T result(left);
+        if (right > left)
+            result = right;
+        return result;
+    }
+#else
+    template<typename T>
+    OSL_FORCEINLINE OSL_HOSTDEVICE
+    T min_val(T left, T right)
+    {
+        return (right > left)? left : right;
+    }
 
     template<typename T>
     OSL_FORCEINLINE OSL_HOSTDEVICE
     T max_val(T left, T right)
     {
-        return (right > left)? right: left;
+        return (right > left)? right : left;
     }
+
+#endif
 
 #if OSL_USING_IMATH >= 3
     using Matrix33 = OSL::Matrix33;

@@ -3075,6 +3075,30 @@ unproxy(const LaneProxyT& proxy)
     return proxy.operator typename LaneProxyT::ValueType();
 }
 
+template<typename DataT, int WidthT>
+OSL_FORCEINLINE bool
+testIfAnyLaneIsNonZero(const Wide<DataT, WidthT>& wvalues)
+{
+#if OSL_NON_INTEL_CLANG
+    int anyLaneIsOn = 0;
+    OSL_OMP_PRAGMA(omp simd simdlen(WidthT) reduction(max : anyLaneIsOn))
+    for (int i = 0; i < WidthT; ++i) {
+        if (wvalues[i] > anyLaneIsOn)
+            anyLaneIsOn = wvalues[i];
+    }
+    return anyLaneIsOn;
+#else
+    // NOTE: do not explicitly vectorize as it would require a
+    // reduction.  Instead let compiler optimize this itself.
+    bool anyLaneIsOn = false;
+    for (int i = 0; i < WidthT; ++i) {
+        if (wvalues[i] != DataT(0))
+            anyLaneIsOn = true;
+    }
+    return anyLaneIsOn;
+#endif
+}
+
 // The rest of MaskedData implementation that depends on
 // Masked<DataT> being defined
 template<int WidthT>

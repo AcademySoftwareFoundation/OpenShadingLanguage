@@ -310,8 +310,6 @@ DECL (osl_pointcloud_search, "iXsXfiiXXii*")
 DECL (osl_pointcloud_get, "iXsXisLX")
 DECL (osl_pointcloud_write, "iXsXiXXX")
 DECL (osl_pointcloud_write_helper, "xXXXisLX")
-//DECL (osl_blackbody_vf, "xXXf")
-//DECL (osl_wavelength_color_vf, "xXXf")
 #endif
 
 DECL(__OSL_MASKED_OP(getmessage), "xXXssLXiisii")
@@ -319,6 +317,7 @@ DECL(__OSL_MASKED_OP(getmessage), "xXXssLXiisii")
 //DECL (osl_setmessage_varying_name_wide_data_masked, "xXXLXisii")
 DECL(__OSL_MASKED_OP(setmessage_uniform_name_wide_data), "xXXLXisii")
 DECL(__OSL_MASKED_OP(setmessage_varying_name_wide_data), "xXXLXisii")
+#endif
 
 DECL(__OSL_OP(blackbody_vf), "xXXf")
 DECL(__OSL_MASKED_OP2(blackbody, Wv, Wf), "xXXXi")
@@ -334,7 +333,6 @@ DECL(__OSL_OP(prepend_color_from_vs), "xXXs")
 DECL(__OSL_MASKED_OP2(prepend_color_from, Wv, s), "xXXsi")
 DECL(__OSL_MASKED_OP2(prepend_color_from, Wv, Ws), "xXXXi")
 
-#endif
 
 // forced masked version only
 DECL(__OSL_MASKED_OP2(prepend_matrix_from, Wm, s), "xXXsi")
@@ -526,12 +524,8 @@ DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, Wm), "xXXXii")
 DECL(__OSL_MASKED_OP3(transform_normal, Wv, Wv, m), "xXXXii")
 DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, m), "xXXXii")
 
-#ifdef __OSL_TBD
-
-DECL(__OSL_MASKED_OP(transform_color), "xXXiXiXXi")
-DECL(__OSL_OP(transform_color), "xXXiXiXX")
-
-#endif
+DECL(__OSL_MASKED_OP3(transform_color, Wv, s, s), "xXXiXiXXi")
+DECL(__OSL_OP3(transform_color, v, s, s), "xXXiXiXX")
 
 DECL(__OSL_OP3(dot, Wf, Wv, Wv), "xXXX")
 DECL(__OSL_MASKED_OP3(dot, Wf, Wv, Wv), "xXXXi")

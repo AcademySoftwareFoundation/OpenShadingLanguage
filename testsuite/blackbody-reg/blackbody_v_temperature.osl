@@ -1,0 +1,16 @@
+shader blackbody_v_temperature (output color Cout = 0, output color mCout = 0)
+{
+    float T = 10000.0*u;    // map u range from 0K to 10,000K
+    float Tm = 20000.0*v;
+    color cout_ = blackbody (T) / 10000.0;  // scale so we can see it
+    color mcout_ = cout_;
+
+    if (int(P[0]*200)%2){
+        // bottom half: just show color temperature with constant luminance
+        color mtemp = blackbody  (Tm)/20000.0;
+        mcout_ *= 0.7/luminance(mtemp);
+    }
+    
+    mCout = mcout_;
+    Cout = cout_;
+}

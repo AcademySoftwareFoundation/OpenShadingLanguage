@@ -177,11 +177,11 @@ macro (osl_add_all_tests)
                 area-reg arithmetic-reg
                 array array-reg array-copy-reg array-derivs array-range 
                 array-aassign array-assign-reg array-length-reg
-                blackbody blendmath breakcont breakcont-reg
+                blackbody blackbody-reg blendmath breakcont breakcont-reg
                 bug-array-heapoffsets bug-locallifetime bug-outputinit
                 bug-param-duplicate bug-peep bug-return
                 calculatenormal-reg
-                cellnoise closure closure-array color comparison
+                cellnoise closure closure-array color color-reg comparison
                 compile-buffer compassign-reg
                 component-range
                 control-flow-reg connect-components
@@ -205,7 +205,8 @@ macro (osl_add_all_tests)
                 layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
                 layers-nonlazycopy layers-repeatedoutputs
                 length-reg linearstep
-                logic loop matrix matrix-reg matrix-arithmetic-reg
+                logic loop luminance-reg
+                matrix matrix-reg matrix-arithmetic-reg
                 matrix-compref-reg max-reg message
                 mergeinstances-duplicate-entrylayers
                 mergeinstances-nouserdata mergeinstances-vararray
@@ -273,14 +274,14 @@ macro (osl_add_all_tests)
                 trailing-commas
                 transcendental-reg
                 transitive-assign
-                transform transform-reg transformc trig trig-reg 
+                transform transform-reg transformc transformc-reg trig trig-reg 
                 typecast
                 unknown-instruction
                 userdata userdata-passthrough
                 vararray-connect vararray-default
                 vararray-deserialize vararray-param
                 vecctr vector vector-reg
-                wavelength_color Werror xml )
+                wavelength_color wavelength_color-reg Werror xml )
 
     # Coordinate-aware gettextureinfo only works for TextureSystem >= 2.3.7
     if (OPENIMAGEIO_VERSION VERSION_GREATER_EQUAL 2.3.7)

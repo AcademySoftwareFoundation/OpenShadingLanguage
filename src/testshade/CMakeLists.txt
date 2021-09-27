@@ -32,7 +32,8 @@ endif ()
 if (USE_OPTIX)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu
-        ../testrender/cuda/wrapper.cu )
+        ../testrender/cuda/wrapper.cu
+        ../testrender/cuda/rend_lib.cu )
     set ( testshade_cuda_headers
         ../testrender/cuda/rend_lib.h )
 

@@ -169,11 +169,11 @@ OptixRaytracer::init_optix_context (int xres OSL_MAYBE_UNUSED,
 {
 #ifdef OSL_USE_OPTIX
 
+#if (OPTIX_VERSION < 70000)
+    // NB: renderers using OptiX7+ are expected to link it rend_lib.cu manually
+    // to avoid duplicate 'rend_lib' symbols in each shader group.
     shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
                            rend_llvm_compiled_ops_block);
-
-
-#if (OPTIX_VERSION < 70000)
 
     // Set up the OptiX context
     m_optix_ctx = optix::Context::create();
@@ -549,6 +549,10 @@ OptixRaytracer::make_optix_materials ()
     load_optix_module("wrapper.ptx", &module_compile_options,
                                     &pipeline_compile_options,
                                     &wrapper_module);
+    OptixModule rend_lib_module;
+    load_optix_module("rend_lib.ptx", &module_compile_options,
+                                    &pipeline_compile_options,
+                                    &rend_lib_module);
 
 
     OptixProgramGroupOptions program_options = {};
@@ -609,6 +613,16 @@ OptixRaytracer::make_optix_materials ()
     quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
     OptixProgramGroup quad_hitgroup;
     create_optix_pg(&quad_hitgroup_desc, 1, &program_options, &quad_hitgroup);
+
+    // Direct-callable -- support functions for OSL on the device
+    OptixProgramGroupDesc rend_lib_desc = {};
+    rend_lib_desc.kind = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    rend_lib_desc.callables.moduleDC            = rend_lib_module;
+    rend_lib_desc.callables.entryFunctionNameDC = "__direct_callable__dummy_rend_lib";
+    rend_lib_desc.callables.moduleCC            = 0;
+    rend_lib_desc.callables.entryFunctionNameCC = nullptr;
+    OptixProgramGroup rend_lib_group;
+    create_optix_pg(&rend_lib_desc, 1, &program_options, &rend_lib_group);
 
     // Direct-callable -- fills in ShaderGlobals for Quads
     OptixProgramGroupDesc quad_fillSG_desc = {};
@@ -735,6 +749,7 @@ OptixRaytracer::make_optix_materials ()
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
+         rend_lib_group,
          raygen_group,
          miss_group
     };
@@ -808,7 +823,7 @@ OptixRaytracer::make_optix_materials ()
         OPTIX_CHECK (optixSbtRecordPackHeader (final_groups[i], &sbt_records[i]));
     }
 
-    int       sbtIndex       = 2;
+    int       sbtIndex       = 3;
     const int hitRecordStart = sbtIndex;
     size_t   setglobals_start = final_groups.size() - 2;
 
@@ -841,8 +856,8 @@ OptixRaytracer::make_optix_materials ()
     CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_setglobals_raygen_record)  ,     sizeof(GenericRecord)));
     CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_setglobals_miss_record)    ,     sizeof(GenericRecord)));
 
-    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_raygen_record)   , &sbt_records[0],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
-    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_miss_record)     , &sbt_records[1],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_raygen_record)   , &sbt_records[1],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_miss_record)     , &sbt_records[2],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_hitgroup_records), &sbt_records[hitRecordStart], nhitgroups * sizeof(GenericRecord), cudaMemcpyHostToDevice));
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_callable_records), &sbt_records[callableRecordStart], (2 + nshaders) * sizeof(GenericRecord), cudaMemcpyHostToDevice));
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_setglobals_raygen_record)   , &sbt_records[setglobals_start + 0],     sizeof(GenericRecord), cudaMemcpyHostToDevice));

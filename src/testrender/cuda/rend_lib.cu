@@ -432,6 +432,9 @@ static inline size_t alignment_offset_calc (void* ptr, size_t alignment)
 // These functions are declared extern to prevent name mangling.
 extern "C" {
 
+    // add OptiX entry point to prevent OptiX from discarding the module
+   __global__ void __direct_callable__dummy_rend_lib() { }
+
     __device__
     void* closure_component_allot (void* pool, int id, size_t prim_size, const OSL::Color3& w)
     {

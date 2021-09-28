@@ -80,10 +80,10 @@ checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 # IlmBase & OpenEXR
 checked_find_package (OpenEXR REQUIRED
-                      VERSION_MIN 2.0
-                      RECOMMEND_MIN 2.2
+                      VERSION_MIN 2.3
+                      RECOMMEND_MIN 2.4
                       RECOMMEND_MIN_REASON
-                        "OpenEXR 2.2 is the oldest version our CI tests against, and the minimum that supports DWA compression"
+                        "Even extremely critical patches are no longer supplied to < 2.4"
                       PRINT IMATH_INCLUDES
                      )
 # Force Imath includes to be before everything else to ensure that we have
@@ -92,10 +92,6 @@ checked_find_package (OpenEXR REQUIRED
 # building against Imath/OpenEXR 3.x when there is still a system-level
 # install version of 2.x.
 include_directories(BEFORE ${IMATH_INCLUDES})
-if (CMAKE_COMPILER_IS_CLANG AND OPENEXR_VERSION VERSION_LESS 2.3)
-    # clang C++ >= 11 doesn't like 'register' keyword in old exr headers
-    add_compile_options (-Wno-deprecated-register)
-endif ()
 if (MSVC AND NOT LINKSTATIC)
     add_definitions (-DOPENEXR_DLL) # Is this needed for new versions?
 endif ()

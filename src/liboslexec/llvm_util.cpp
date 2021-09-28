@@ -1407,7 +1407,9 @@ LLVM_Util::make_jit_execengine (std::string *err,
 
     options.NoZerosInBSS = false;
     options.GuaranteedTailCallOpt = false;
+#if OSL_LLVM_VERSION < 120
     options.StackAlignmentOverride = 0;
+#endif
     options.FunctionSections = true;
     options.UseInitArray = false;
     options.FloatABIType = llvm::FloatABI::Default;
@@ -5385,7 +5387,7 @@ void
 LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
 {
     std::error_code local_error;
-    llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::F_None);
+    llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::OF_None);
     if (! out.has_error()) {
         llvm::WriteBitcodeToFile (*module(), out);
         if (err && local_error)
@@ -5447,7 +5449,9 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     options.AllowFPOpFusion                        = llvm::FPOpFusion::Fast;
     options.NoZerosInBSS                           = 0;
     options.GuaranteedTailCallOpt                  = 0;
+#if OSL_LLVM_VERSION < 120
     options.StackAlignmentOverride                 = 0;
+#endif
     options.UseInitArray                           = 0;
 
     llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(

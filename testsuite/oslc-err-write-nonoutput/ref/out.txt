@@ -2,5 +2,6 @@ test.osl:8: error: cannot write to non-output parameter "x"
 test.osl:9: error: cannot write to non-output parameter "x"
 test.osl:10: error: cannot write to non-output parameter "i"
 test.osl:11: error: cannot write to non-output parameter "i"
-test.osl:24: error: cannot write to non-output parameter "u"
+test.osl:22: error: cannot write to non-output parameter "a", as passed to function g() as arg 1 (output parameter "b")
+test.osl:35: error: cannot write to non-output parameter "u"
 FAILED test.osl

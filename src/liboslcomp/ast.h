@@ -387,10 +387,14 @@ protected:
     Symbol* codegen_aassign(TypeSpec elemtype, Symbol* src, Symbol* lval,
                             Symbol* index, int i = 0);
 
-    // Check whether the node's symbol destination is ok to write. Return
-    // true if ok, return false and issue error or warning if not. (Used to
-    // check for writing to read-only variables like non-output parameters.)
-    bool check_symbol_writeability(ASTNode* var);
+    // Check whether the node's symbol destination is ok to write. Return true
+    // if ok, return false and issue error or warning if not. If `quiet` is
+    // true, do not actually issue the error/warning, leave it to the caller.
+    // If `dest_sym` is non-null, store in it the `Symbol*` of the destination
+    // symbol designated. This method is used to check for writing to
+    // read-only variables like non-output parameters.
+    bool check_symbol_writeability(ASTNode* var, bool quiet = false,
+                                   Symbol** dest_sym = nullptr);
 
     // Helper for param_default_literals: generate the string that gives
     // the initialization of the literal value (and/or the default, if

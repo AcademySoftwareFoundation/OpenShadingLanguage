@@ -234,6 +234,7 @@ adding OSL support):
 * Ubisoft motion picture group's proprietary renderer
 * [Autodesk/SolidAngle: Arnold](https://www.solidangle.com/arnold/)
 * [Autodesk: 3DS Max 2019](https://help.autodesk.com/view/3DSMAX/2019/ENU/?guid=__developer_3ds_max_sdk_features_rendering_osl_html)
+* [Maxon: Redshift](https://www.maxon.net/en/redshift)
 
 Films using OSL (grouped by year of release date):
 * **(2012)**

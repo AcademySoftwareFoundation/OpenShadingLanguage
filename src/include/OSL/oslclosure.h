@@ -120,7 +120,7 @@ OSL_ALIGNAS(16) ClosureComponent : public ClosureColor
 
     template<typename T> OSL_HOSTDEVICE T* as()
     {
-        return reinterpret_cast<const T*>(data());
+        return reinterpret_cast<T*>(data());
     }
 };
 

@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test ()
+{
+    color clin = 0.5;
+    printf ("linear %g -> Cineon %g\n", clin,
+            transformc("linear", "Cineon", clin));
+}

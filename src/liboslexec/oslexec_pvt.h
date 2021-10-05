@@ -661,9 +661,7 @@ public:
 
     ColorSystem& colorsystem() { return m_colorsystem; }
 
-    template <typename Color> bool
-    ocio_transform (StringParam fromspace, StringParam tospace,
-                    const Color& C, Color& Cout);
+    std::shared_ptr<OIIO::ColorConfig> colorconfig();
 
 #if OSL_USE_BATCHED
     // Group all batched methods behind a templated interface
@@ -835,7 +833,7 @@ private:
 
     ustring m_colorspace;                 ///< What RGB colors mean
     ColorSystem m_colorsystem;            ///< Data for current colorspace
-    OCIOColorSystem m_ocio_system;        ///< OCIO color system (when OIIO_HAS_COLORPROCESSOR=1)
+    std::shared_ptr<OIIO::ColorConfig> m_colorconfig;  ///< OIIO/OCIO color configuration
 
     // Thread safety
     mutable mutex m_mutex;
@@ -1966,6 +1964,10 @@ public:
         return m_scratch_pool.alloc (size, align);
     }
 
+    template <typename Color> bool
+    ocio_transform (StringParam fromspace, StringParam tospace,
+                    const Color& C, Color& Cout);
+
     void incr_layers_executed () { ++m_stat_layers_executed; }
 
     void incr_get_userdata_calls () { ++m_stat_get_userdata_calls; }
@@ -2080,6 +2082,8 @@ private:
     SimplePool<64 * 1024> m_scratch_pool;
 
     Dictionary *m_dictionary;
+
+    OCIOColorSystem m_ocio_system;
 
     // Buffering of error messages and printfs
     struct ErrorItem

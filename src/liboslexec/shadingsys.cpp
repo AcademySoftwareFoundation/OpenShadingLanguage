@@ -3710,67 +3710,46 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
 
 
 
-#if OIIO_HAS_COLORPROCESSOR
+#ifndef __CUDACC__
 
 OIIO::ColorProcessorHandle
-OCIOColorSystem::load_transform (StringParam fromspace, StringParam tospace)
+OCIOColorSystem::load_transform (StringParam fromspace, StringParam tospace,
+                                 ShadingSystemImpl* ss)
 {
     if (fromspace != m_last_colorproc_fromspace ||
         tospace != m_last_colorproc_tospace) {
-        m_last_colorproc = m_colorconfig.createColorProcessor (fromspace, tospace);
+        m_last_colorproc = colorconfig(ss).createColorProcessor(fromspace, tospace);
         m_last_colorproc_fromspace = fromspace;
         m_last_colorproc_tospace = tospace;
     }
     return m_last_colorproc;
 }
 
-#endif
 
 
-
-template <> bool
-ShadingSystemImpl::ocio_transform (StringParam fromspace, StringParam tospace,
-                                   const Color3& C, Color3& Cout) {
-#if OIIO_HAS_COLORPROCESSOR
-    OIIO::ColorProcessorHandle cp;
-    {
-        lock_guard lock (m_mutex);
-        cp = m_ocio_system.load_transform(fromspace, tospace);
+const OIIO::ColorConfig&
+OCIOColorSystem::colorconfig (ShadingSystemImpl* shadingsys)
+{
+    if (!m_colorconfig) {
+        if (shadingsys)
+            m_colorconfig = shadingsys->colorconfig();
+        else
+            m_colorconfig.reset(new OIIO::ColorConfig);
     }
-    if (cp) {
-        Cout = C;
-        cp->apply ((float *)&Cout);
-        return true;
-    }
-#endif
-    return false;
+    return *m_colorconfig;
 }
 
-
-
-template <> bool
-ShadingSystemImpl::ocio_transform (StringParam fromspace, StringParam tospace,
-                                   const Dual2<Color3>& C, Dual2<Color3>& Cout) {
-#if OIIO_HAS_COLORPROCESSOR
-    OIIO::ColorProcessorHandle cp;
-    {
-        lock_guard lock (m_mutex);
-        cp = m_ocio_system.load_transform(fromspace, tospace);
-    }
-
-    if (cp) {
-        // Use finite differencing to approximate the derivative. Make 3
-        // color values to convert.
-        const float eps = 0.001f;
-        Color3 CC[3] = { C.val(), C.val() + eps*C.dx(), C.val() + eps*C.dy() };
-        cp->apply ((float *)&CC, 3, 1, 3, sizeof(float), sizeof(Color3), 0);
-        Cout.set (CC[0],
-                  (CC[1] - CC[0]) * (1.0f / eps),
-                  (CC[2] - CC[0]) * (1.0f / eps));
-        return true;
-    }
 #endif
-    return false;
+
+
+
+std::shared_ptr<OIIO::ColorConfig>
+ShadingSystemImpl::colorconfig()
+{
+    lock_guard lock(m_mutex);
+    if (!m_colorconfig)
+        m_colorconfig.reset(new OIIO::ColorConfig);
+    return m_colorconfig;
 }
 
 
@@ -3927,8 +3906,45 @@ ClosureRegistry::get_entry(ustring name) const
 }
 
 
-
 }; // namespace pvt
+
+
+
+template <> bool
+ShadingContext::ocio_transform (StringParam fromspace, StringParam tospace,
+                                const Color3& C, Color3& Cout) {
+#ifndef __CUDA_ARCH__
+    if (auto cp = m_ocio_system.load_transform(fromspace, tospace, &shadingsys())) {
+        Cout = C;
+        cp->apply ((float *)&Cout);
+        return true;
+    }
+#endif
+    return false;
+}
+
+
+template <> bool
+ShadingContext::ocio_transform (StringParam fromspace, StringParam tospace,
+                                const Dual2<Color3>& C, Dual2<Color3>& Cout) {
+#ifndef __CUDA_ARCH__
+    if (auto cp = m_ocio_system.load_transform(fromspace, tospace, &shadingsys())) {
+        // Use finite differencing to approximate the derivative. Make 3
+        // color values to convert.
+        const float eps = 0.001f;
+        Color3 CC[3] = { C.val(), C.val() + eps*C.dx(), C.val() + eps*C.dy() };
+        cp->apply ((float *)&CC, 3, 1, 3, sizeof(float), sizeof(Color3), 0);
+        Cout.set (CC[0],
+                  (CC[1] - CC[0]) * (1.0f / eps),
+                  (CC[2] - CC[0]) * (1.0f / eps));
+        return true;
+    }
+#endif
+    return false;
+}
+
+
+
 OSL_NAMESPACE_EXIT
 
 

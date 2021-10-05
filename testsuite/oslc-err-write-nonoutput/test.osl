@@ -13,6 +13,17 @@ float func (float x, int i)
 }
 
 
+
+void g(output float b) {
+    b = 1;  // ok, since b is marked as output
+}
+
+void f(float a) {
+    g(a);  // <--- should be disallowed, a is not output, but the arg of g() is output
+}
+
+
+
 shader test ()
 {
     float y = 1;
@@ -22,4 +33,7 @@ shader test ()
 
     // Try writing to non-writeable global
     u = 0;
+
+    // Try transitive write through f and g -- this used to be a missed error
+    f(y);
 }

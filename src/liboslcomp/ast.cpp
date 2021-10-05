@@ -1003,8 +1003,10 @@ const char* ASTcompound_initializer::childname(size_t /*i*/) const
 
 
 bool
-ASTNode::check_symbol_writeability(ASTNode* var)
+ASTNode::check_symbol_writeability(ASTNode* var, bool quiet, Symbol** dest_sym)
 {
+    if (dest_sym)
+        *dest_sym = nullptr;
     if (var->nodetype() == index_node)
         return check_symbol_writeability(
             static_cast<ASTindex*>(var)->lvalue().get());
@@ -1019,9 +1021,12 @@ ASTNode::check_symbol_writeability(ASTNode* var)
         dest = static_cast<ASTvariable_declaration*>(var)->sym();
 
     if (dest) {
+        if (dest_sym)
+            *dest_sym = dest;
         if (dest->readonly()) {
-            warningf("cannot write to non-output parameter \"%s\"",
-                     dest->name());
+            if (!quiet)
+                warningf("cannot write to non-output parameter \"%s\"",
+                         dest->name());
             // Note: Consider it only a warning to write to a non-output
             // parameter. Users who want it to be a hard error can use
             // -Werror. Writing to any other readonly symbols is a full

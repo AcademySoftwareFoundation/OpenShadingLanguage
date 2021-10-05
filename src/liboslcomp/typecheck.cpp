@@ -2036,21 +2036,40 @@ ASTfunction_call::typecheck(TypeSpec expected)
         }
     }
 
-    if (m_sym != nullptr) {
-        if (is_user_function()) {
-            if (func()->number_of_returns() == 0
-                && !func()->typespec().is_void()) {
-                errorf("non-void function \"%s\" had no 'return' statement.",
-                       func()->name());
+    if (!m_sym)
+        return TypeSpec();  // no match found
+
+    // Double check that any variables we pass to output params of the
+    // function are themselves writable.
+    if (is_user_function()) {
+        ASTfunction_declaration* uf = user_function();
+        int i                       = 0;
+        ASTNode* f                  = uf->formals().get();  // formal param
+        ASTNode* a                  = args().get();         // actual param
+        for (; f && a; f = f->nextptr(), a = a->nextptr(), ++i) {
+            OSL_DASSERT(f->nodetype() == ASTNode::variable_declaration_node);
+            auto formal      = (ASTvariable_declaration*)f;
+            Symbol* dest_sym = nullptr;
+            if (formal->is_output()
+                && !check_symbol_writeability(a, true, &dest_sym)) {
+                OSL_DASSERT(dest_sym);
+                warningf(
+                    "cannot write to non-output parameter \"%s\", as passed to function %s() as arg %d (output parameter \"%s\")",
+                    dest_sym->name(), func()->name(), i + 1, formal->name());
             }
-        } else {
-            // built-in
-            typecheck_builtin_specialcase();
         }
-        return m_typespec;
     }
 
-    return TypeSpec();
+    if (is_user_function()) {
+        if (func()->number_of_returns() == 0 && !func()->typespec().is_void()) {
+            errorf("non-void function \"%s\" had no 'return' statement.",
+                   func()->name());
+        }
+    } else {
+        // built-in
+        typecheck_builtin_specialcase();
+    }
+    return m_typespec;
 }
 
 

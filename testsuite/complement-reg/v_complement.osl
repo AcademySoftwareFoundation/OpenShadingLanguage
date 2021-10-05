@@ -1,0 +1,15 @@
+shader v_complement (output vector cout = 0, output vector mcout = 0) 
+{
+    int a = int(u);
+    int b = 9;
+    b = ~a;
+    cout = vector(tan(u/a), tan(v/b), tan(u*v));
+    vector mcout_ = cout;
+    
+    if(int(P[0])%32){
+        a = int(P[1]);
+        b = ~a;
+        mcout_ = vector(tan(u*v/a), tan(v/b), tan(u/v));
+    }
+    mcout = mcout_;
+}

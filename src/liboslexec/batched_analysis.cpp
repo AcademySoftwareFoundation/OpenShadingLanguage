@@ -357,17 +357,21 @@ protected_shader_globals_op_implicitly_depends_on(ShaderInstance& inst,
     return lazyDependencies.lookup(inst, opcode);
 }
 
-
 bool
 is_op_result_always_logically_boolean(ustring opname)
 {
     // Test if explicit comparison is faster or not
     static boost::container::flat_set<ustring> lazy_lookup(
-        { Strings::op_getattribute, Strings::op_compl, Strings::op_eq,
+        { Strings::op_getattribute, Strings::op_eq,
           Strings::op_ge, Strings::op_gt, Strings::op_le, Strings::op_lt,
           Strings::op_neq, Strings::op_and, Strings::op_or });
     return lazy_lookup.find(opname) != lazy_lookup.end();
 }
+
+// TODO: Add more analysis to identify boolean results from the class of
+// operations who would produce a boolean result if given boolean inputs.
+// For example complement (~) would have a boolean result when passed a
+// boolean input.  Bitwise operations &, |, ^ are other examples
 
 // For completeness we fully implement iterators and
 // comparison operators even if the are not "currently"

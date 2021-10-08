@@ -9,16 +9,23 @@ Dependency and standards requirements changes:
   also supported. #1362 #1369 (1.12.2)
 * Minimum compilers are now gcc 6.1 (no more support for gcc 4.8), MSVS
   2017 or newer (no more support for 2015).
+* Minimum OpenEXR version is now 2.3 (raised from 2.0). #1406 (1.12.3)
 
 OSL Language and oslc compiler:
 * `#pragma error "message"` and `#pragma warning "message"` can be used to
   conditionally inject a compile-time error or warning. #1300 (1.12.1)
 * Check for errors when when writing oso files (for example, disk volume
   full). #1360 (1.12.2/1.11.14)
+* A new flavor of `gettextureinfo(texturename, paramname, s, t, destination)`
+  allows for querying of texture metadata about the particular UDIM tile
+  that will be used for particular (s,t) texture coordinates. #1398 (1.12.3)
+* Better error detection when OSL user functions write to function parameters
+  that are not marked as output. #1417 (1.12.3)
 
 OSL Standard library:
 * vector2.h is updated with a mod() function for vector2. #1312 (1.12.1/1.11.12)
 * Preliminary work for adding standard MaterialX closures. 31371 (1.12.2)
+* Fix previously-broken color conversions from RGB to xyY. #1410 (1.12.3)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * Custom experimental llvm optimization levels 10, 11, 12, and 13. These
@@ -26,12 +33,15 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   -O1, -O2, -O3) but we think for shaders are just as performant but with
   lower JIT time. These are currently experimental, but we are benchmarking
   to determine if they should be the new defaults. #1250 (1.12.0.0)
-* ShadingSystem attribute "searcpath:library" gives a searchpath for finding
-  runtime-loadable implementation modules for ISA-optimized operaionts.
+* ShadingSystem attribute "searchpath:library" gives a searchpath for finding
+  runtime-loadable implementation modules for ISA-optimized operations.
   #1310 (1.12.1)
 * Output variable placement -- now you can designate where shader outputs
-  should go and the shader will put resuls there, intead of the app using
+  should go and the shader will put results there, instead of the app using
   find_symbol() and symbol_address after the shader is executed. #1328 (1.12.2)
+* Userdata input placement -- now you can designate where interpolated
+  userdata should be copied from directly, rather then via callbacks to
+  RendererServices::get_userdata(). #1391 (1.12.3)
 
 Continued work on experimental SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
@@ -39,15 +49,18 @@ Continued work on experimental SIMD batched shading mode:
 * Add interface to batched RendererServices. #1276 (1.12.0.1)
 * Batched testshade. #1298 (1.12.1)
 * ShadingSystem plumbing to support batched execution. #1301 (1.12.1)
-* Batched analsys to figure out which symbols need to be varying or uniform,
+* Batched analysis to figure out which symbols need to be varying or uniform,
   and which operations require masking. #1313 #1318 #1322 (1.12.1)
-* Additional infrastructure for batched analsys. #1316 (1.12.1)
+* Additional infrastructure for batched analysis. #1316 (1.12.1)
 * Add implementation for BatchedBackendLLVM. #1330 (1.12.1)
 * ISA-specific modules. #1345 (1.12.2)
 * Introduction of CI testing of batched mode. #1357 #1367 (1.12.2)
 * Control flow and string ops. #1372 (1.12.2)
 * Matrix operations. #1378 (1.12.2)
 * Batched algebraic, trig, and transcendental functions. #1385 (1.12.2)
+* Batched noise. #1394 (1.12.3)
+* Batched implementation of all color operations. #1408 (1.12.3)
+* Batched bitwise ops. #1413 (1.12.3)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -58,8 +71,16 @@ Continued work on experimental OptiX rendering:
 * Overhaul in how strings are communicated to the GPU side. #1309 (1.12.1)
 * Removal of runtime compilation of Cuda (libnvrtc dependency eliminated).
   #1309 (1.12.1)
+* Fix problems with unresolved symbols on GPU, particularly when multiple
+  shaders call certain functions like printf. #1401 (1.12.3)
+* Changed prototype of osl_get_attribute callback to work properly on
+  GPU. #1404 (1.12.3)
+* Fix missing hostdevice modifier on some matrix operators. #1409 (1.12.3)
+* Fix race conditions when compiling for OptiX 7. #1411 (1.12.3)
 
 Performance improvements:
+* Less mutex locking around use and retrieval of ColorSystem related to
+  doing color transforms. #1405 (1.12.3)
 
 Bug fixes and other improvements (internals):
 * Fix derivatives of texture calls when only derivatives of the "alpha"
@@ -86,6 +107,8 @@ Bug fixes and other improvements (internals):
   outputs (the semantics of doing so are very fishy). #1296 (1.12.1)
 * Eliminate unnecessary error messages to stderr for broken point clouds.
   #1333 (1.12.1/1.11.13)
+* Fix undefined behavior that could result in crashes that resulted from
+  the Symbol class having no virtual destructor. #1397 (1.12.3)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -95,6 +118,8 @@ Internals/developer concerns:
   #1317 (1.11.11/1.12.1)
 * The "archive_groupname" handling is now careful to sanitize the filenames
   it deals with, closing some security and safety holes. #1383 (1.12.2)
+* More migration of string formatting to new std::format style. #1389 (1.12.3)
+* llvm_util: Switch some uses of ptr+len to span. #1390 (1.12.3)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -111,16 +136,22 @@ Build & test system improvements:
     - Make the CMake build scripts more friendly to being a subproject.
       #1304 #1319 (1.11.11/1.12.1)
     - We weren't properly hiding non-public symbols. #1337 (1.12.1/1.11.12)
-    - Fully split oslquery and oslnoise libraries from oslxec, no more
+    - Fully split oslquery and oslnoise libraries from oslexec, no more
       redundant modules put into both. #1346 #1348 (1.12.1)
     - Support for CMake 3.20 #1354 (1.12.2/1.11.14)
+    - Important change to `Makefile` wrapper: We have a 'Makefile' that just
+      wraps cmake for ease of use. This has changed its practice of putting
+      builds in `build/ARCH` to just `build` (and local installs from
+      `dist/ARCH` to `dist`) to better match common cmake practice. So where
+      your local builds end up may shift a bit. #1396 (1.12.3)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
     - Cuda/OptiX back end: Add `__CUDADEVRT_INTERNAL__` define to bitcode
       generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+
       #1271 (1.12.0.1)
-    - Build against LLVM 11 #1274 (1.12.0.1) and LLVM 12 #1351 (1.12.1.0).
+    - Build against LLVM 11 #1274 (1.12.0.1) and LLVM 12 #1351 (1.12.1.0)
+      #1412 (1.12.3).
     - Fix build break against recent OIIO master change where m_mutex field
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming
@@ -130,6 +161,7 @@ Build & test system improvements:
       (1.12.2)
     - No longer use boost regex, completely rely on std::regex now that OSL
       is C++14 minimum. #1377. (1.12.2)
+    - Support for OpenImageIO 2.3 changes. #1393 (1.12.3)
 * Testing and Continuous integration (CI) systems:
     - Eliminate the old Travis CI and Appveyor. #1334 #1338 (1.12.1)
     - Use ccache + GitHub 'cache' action to greatly speed up CI runs. #1335

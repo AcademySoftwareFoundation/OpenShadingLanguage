@@ -48,7 +48,7 @@
 
 \def\langname{Open Shading Language\xspace}
 \def\product{{\sffamily Open Shading Language}\xspace}
-\def\versionnumber{1.11}
+\def\versionnumber{1.12}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
 
@@ -66,7 +66,7 @@ All rights reserved.
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 11 Aug 2020 \\
+\date{{\large Date: 30 Aug 2021 \\
 % (with corrections, 21 Jul 2020)
 }
 \bigskip
@@ -4432,6 +4432,13 @@ texture file. \\[0.75ex]
 specifically distinguishes between the different types of shadows and
 environment maps.  \\[0.75ex]
 
+\noindent ...continued...
+\end{tabular}
+
+\begin{tabular}{p{1.1in} p{0.5in} p{3.4in}}
+{\bf Name} & {\bf Type} & {\bf Description} \\
+\hline
+
 \qkw{datawindow} & {\cf int[]} &
 Returns the pixel data window of the image.  The argument is an {\cf int}
 array either of length 4 or 6, in which will be placed the (xmin, ymin,
@@ -4445,13 +4452,6 @@ array either of length 4 or 6, in which will be placed the (xmin, ymin,
 xmax, ymax) or (xmin, ymin, zmin, xmax, ymax, zmax), respectively.
 (N.B. the $z$ values may be useful for 3D/volumetric images; for 2D images
 they will be 0). \\[0.75ex]
-
-\noindent ...continued...
-\end{tabular}
-
-\begin{tabular}{p{1.1in} p{0.5in} p{3.4in}}
-{\bf Name} & {\bf Type} & {\bf Description} \\
-\hline
 
 \qkw{worldtocamera} & \matrix & If the texture is a rendered image,
 retrieves the world-to-camera 3D transformation matrix that was used when it

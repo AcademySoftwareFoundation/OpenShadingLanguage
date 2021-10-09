@@ -16,7 +16,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * A suitable **C++14 or C++17** compiler to build OSL itself, which may be any of:
    - **GCC 6.1 or newer** (tested through gcc 11.2)
-   - Clang 3.4 or newer (tested through clang 12)
+   - Clang 3.4 or newer (tested through clang 13)
    - Microsoft Visual Studio **2017 or newer**
    - Intel C++ compiler icc **version 17 or newer**
 
@@ -39,7 +39,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* **[LLVM](http://www.llvm.org) 7, 8, 9, 10, 11, or 12**, including clang
+* **[LLVM](http://www.llvm.org) 7, 8, 9, 10, 11, 12, or 13**, including clang
   libraries.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.77)
@@ -69,13 +69,13 @@ Build process
 
 Here are the steps to check out, build, and test the OSL distribution:
 
-0. Install and build dependencies.
+1. Install and build dependencies.
 
-1. Check out a copy of the source code from the Git repository:
+2. Check out a copy of the source code from the Git repository:
 
         git clone https://github.com/AcademySoftwareFoundation/OpenShadingLanguage.git osl
 
-2. Change to the distribution directory and 'make'
+3. Change to the distribution directory and 'make'
 
         cd osl
         make
@@ -91,7 +91,7 @@ Here are the steps to check out, build, and test the OSL distribution:
    "make STOP_ON_WARNING=0", that create a build that will only stop for
    full errors, not warnings.
 
-3. After compilation, you'll end up with a full OSL distribution in
+4. After compilation, you'll end up with a full OSL distribution in
    dist/ARCH, where ARCH is the architecture you are building on, one of
    "linux", "linux64", "macosx", "windows", or "windows64".
 
@@ -99,14 +99,14 @@ Here are the steps to check out, build, and test the OSL distribution:
    instead type 'make debug' at the top level, you will end up with
    a debug build (no optimization, full symbols) in "dist/ARCH.debug".
 
-4. Add the "dist/ARCH/bin" to your $PATH, and "dist/ARCH/lib" to your
+5. Add the "dist/ARCH/bin" to your $PATH, and "dist/ARCH/lib" to your
    $LD_LIBRAY_PATH (or $DYLD_LIBRARY_PATH on OS X), or copy the contents
    of those files to appropriate directories.  Public include files
    (those needed when building applications that incorporate OSL)
    can be found in "dist/ARCH/include", and documentation can be found
    in "dist/ARCH/share/doc".
 
-5. After building (and setting your library path), you can run the
+6. After building (and setting your library path), you can run the
    test suite with:
 
         make test

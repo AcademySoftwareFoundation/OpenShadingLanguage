@@ -3596,9 +3596,17 @@ LLVM_Util::op_memcpy (llvm::Value *dst, int dstalign,
 
 
 llvm::Value *
+LLVM_Util::op_load (llvm::Type* type, llvm::Value* ptr)
+{
+    return builder().CreateLoad (type, ptr);
+}
+
+
+
+llvm::Value *
 LLVM_Util::op_load (llvm::Value *ptr)
 {
-    return builder().CreateLoad (ptr);
+    return op_load(ptr->getType()->getPointerElementType(), ptr);
 }
 
 
@@ -4883,7 +4891,7 @@ LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
             // happen and a read+.
             // TODO: Optimization, if we know this was the final store to
             // the ptr, we could force a masked store vs. load/blend
-            llvm::Value *previous_value = builder().CreateLoad (ptr);
+            llvm::Value *previous_value = op_load(ptr);
             if (false == mi.negate) {
                 llvm::Value *blended_value = builder().CreateSelect(mi.mask, val, previous_value);
                 builder().CreateStore(blended_value, ptr);
@@ -4925,9 +4933,26 @@ LLVM_Util::op_store_mask (llvm::Value *llvm_mask, llvm::Value *native_mask_ptr)
 
 
 llvm::Value *
+LLVM_Util::GEP (llvm::Type* type, llvm::Value* ptr, llvm::Value* elem)
+{
+    return builder().CreateGEP(type, ptr, elem);
+}
+
+
+
+llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, llvm::Value *elem)
 {
-    return builder().CreateGEP (ptr, elem);
+    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
+               elem);
+}
+
+
+
+llvm::Value *
+LLVM_Util::GEP (llvm::Type* type, llvm::Value* ptr, int elem)
+{
+    return builder().CreateConstGEP1_32(type, ptr, elem);
 }
 
 
@@ -4935,7 +4960,16 @@ LLVM_Util::GEP (llvm::Value *ptr, llvm::Value *elem)
 llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, int elem)
 {
-    return builder().CreateConstGEP1_32 (ptr, elem);
+    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
+               elem);
+}
+
+
+
+llvm::Value *
+LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2)
+{
+    return builder().CreateConstGEP2_32 (type, ptr, elem1, elem2);
 }
 
 
@@ -4943,7 +4977,8 @@ LLVM_Util::GEP (llvm::Value *ptr, int elem)
 llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, int elem1, int elem2)
 {
-    return builder().CreateConstGEP2_32 (nullptr, ptr, elem1, elem2);
+    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
+               elem1, elem2);
 }
 
 

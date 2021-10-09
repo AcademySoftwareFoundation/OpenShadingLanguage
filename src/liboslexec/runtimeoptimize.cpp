@@ -2284,7 +2284,6 @@ RuntimeOptimizer::optimize_instance ()
     // passes, but we have a hard cutoff just to be sure we don't
     // ever get into an infinite loop from an unforseen cycle where we
     // end up inadvertently transforming A => B => A => etc.
-    int totalchanged = 0;
     int reallydone = 0;   // Force a few passes after we think we're done
     int npasses = shadingsys().opt_passes();
     for (m_pass = 0;  m_pass < npasses;  ++m_pass) {
@@ -2345,7 +2344,6 @@ RuntimeOptimizer::optimize_instance ()
         // If nothing changed, we're done optimizing.  But wait, it may be
         // that after re-tracking variable lifetimes, we can notice new
         // optimizations!  So force another pass, then we're really done.
-        totalchanged += changed;
         if (changed < 1) {
             if (++reallydone > 3)
                 break;

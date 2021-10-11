@@ -1,0 +1,10 @@
+#include "runspline.h"
+
+shader test_spline_u_float_c_colorarray (
+    output color Cout = 0)
+{
+    float uniform_x = 0.5*raytype("camera");
+
+    Cout = run_all_csplines(uniform_x, color(0.5, 0.75, 1.0));
+
+}

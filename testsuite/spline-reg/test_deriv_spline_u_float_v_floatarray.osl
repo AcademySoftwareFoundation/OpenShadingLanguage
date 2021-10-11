@@ -1,0 +1,11 @@
+#include "runspline.h"
+
+shader test_deriv_spline_u_float_v_floatarray (
+    output color ValDxDyOut = 0)
+{
+    float uniform_x = 0.5*raytype("camera");
+    float value = run_all_fsplines(uniform_x, u);
+    float dxVal = Dx(value);
+    float dyVal = Dy(value);
+    ValDxDyOut = color(value, dxVal, dyVal);
+}

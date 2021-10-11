@@ -45,6 +45,7 @@ set ( liboslexec_target_srcs
     wide/wide_opnoise_usimplex_deriv_float
     wide/wide_opnoise_usimplex_Vec3
     wide/wide_opnoise_usimplex_deriv_Vec3
+    wide/wide_opspline
     wide/wide_opstring
     wide/wide_optranscendental
     wide/wide_optrigonometric
@@ -81,6 +82,7 @@ set ( liboslexec_override_limits
     wide/wide_opnoise_uperlin_deriv_Vec3
     wide/wide_opnoise_uperlin_float
     wide/wide_opnoise_uperlin_Vec3
+    wide/wide_opspline
    ../liboslnoise/wide/wide_gabor3_anisotropic_disabled
    ../liboslnoise/wide/wide_gabor3_anisotropic_enabled
    ../liboslnoise/wide/wide_gabor3_hybrid_disabled
@@ -372,6 +374,7 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
                 "-prec-div" 
                 "-qopt-report=5" 
                 "-qopenmp-simd"
+                "-qno-opt-multiple-gather-scatter-by-shuffles"
                 )
                 
         endif ()

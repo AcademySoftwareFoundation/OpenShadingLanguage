@@ -1,0 +1,8 @@
+#include "runspline.h"
+
+shader test_spline_u_float_v_floatarray (
+    output float Fout = 0)
+{
+    float uniform_x = 0.5*raytype("camera");
+    Fout = run_all_fsplines(uniform_x, u);
+}

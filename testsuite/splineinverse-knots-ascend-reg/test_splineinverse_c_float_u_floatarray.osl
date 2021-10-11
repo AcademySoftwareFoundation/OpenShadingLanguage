@@ -1,0 +1,10 @@
+#include "runsplineinverse.h"
+
+shader test_splineinverse_c_float_u_floatarray (
+    output float Fout = 0)
+{
+    float uniform_scale = 0.75*raytype("camera");
+
+    Fout = run_all_fsplineinverses(0.5, uniform_scale);
+
+}

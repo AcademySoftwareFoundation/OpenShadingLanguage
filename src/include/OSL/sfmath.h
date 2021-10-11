@@ -268,6 +268,7 @@ namespace sfm
     }
 
 #if OSL_CLANG_VERSION && !OSL_INTEL_COMPILER
+
     // To make clang's loop vectorizor happy
     // we need to make sure result of min and max
     // is truly by value, not address or reference
@@ -293,7 +294,18 @@ namespace sfm
             result = right;
         return result;
     }
+
+    template<typename T>
+    OSL_FORCEINLINE OSL_HOSTDEVICE
+    T select_val(bool cond, const T &left, const T &right)
+    {
+        T result(right);
+        if (cond)
+            result = left;
+        return result;
+    }
 #else
+
     template<typename T>
     OSL_FORCEINLINE OSL_HOSTDEVICE
     T min_val(T left, T right)
@@ -306,6 +318,16 @@ namespace sfm
     T max_val(T left, T right)
     {
         return (right > left)? right : left;
+    }
+
+    template<typename T>
+    OSL_FORCEINLINE OSL_HOSTDEVICE
+    T select_val(bool cond, const T left, const T right)
+    {
+        if (cond)
+            return left;
+        else
+            return right;
     }
 
 #endif

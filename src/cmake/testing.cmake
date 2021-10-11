@@ -184,7 +184,7 @@ macro (osl_add_all_tests)
                 calculatenormal-reg
                 cellnoise closure closure-array color color-reg comparison
                 complement-reg compile-buffer compassign-reg
-                component-range
+                component-range 
                 control-flow-reg connect-components
                 const-array-params const-array-fill
                 debugnan debug-uninit
@@ -255,7 +255,8 @@ macro (osl_add_all_tests)
                 render-microfacet render-oren-nayar render-veachmis render-ward
                 select select-reg shaderglobals shortcircuit
                 smoothstep-reg 
-                spline splineinverse splineinverse-ident
+                spline spline-reg splineinverse splineinverse-ident 
+                splineinverse-knots-ascend-reg splineinverse-knots-descend-reg
                 spline-boundarybug spline-derivbug
                 split-reg
                 string string-reg

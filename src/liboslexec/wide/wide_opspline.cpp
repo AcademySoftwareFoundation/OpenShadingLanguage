@@ -120,88 +120,124 @@ void spline_weighted_evaluate(
 
 /// Solve for the x for which func(x) == y on the interval [xmin,xmax].
 /// Use a maximum of maxiter iterations, and stop any time the remaining
-/// search interval or the function evaluations <= eps.  If brack is
-/// non-NULL, set it to true if y is in [f(xmin), f(xmax)], otherwise
-/// false (in which case the caller should know that the results may be
-/// unreliable.  Results are undefined if the function is not monotonic
+/// search interval or the function evaluations <= eps.
+/// is_bracketed_by(xmin, xmax) returns true if y is in [f(xmin), f(xmax)],
+/// otherwise false (in which case the caller should know that the results
+/// may be unreliable.  A 2nd call to bracketed_invert(xmin, xmax) is then
+/// required to search within that bracketed span.  The test for bracketing
+/// is separated out so the calling code can exit the knot iteration loop,
+/// before calling bracketed_invert (which has its own loop).  The separation
+/// allows the avoidance of a nested loop which would have lower coherency
+/// under SIMD/SIMT execution than 2 separate loops.
+/// Results are undefined if the function is not monotonic
 /// on that interval or if there are multiple roots in the interval (it
 /// may not converge, or may converge to any of the roots without
 /// telling you that there are more than one).
-template<int maxiters = 32, class T, class Func> OSL_FORCEINLINE
-T invert (bool &brack, Func &func, const T & y, const T &xmin, const T & xmax,
-          const T &eps)
+template<class T, class Func, int maxiters = 32>
+class Inverter
 {
-    using ::fabs;
-    // Use the Regula Falsi method, falling back to bisection if it
-    // hasn't converged after 3/4 of the maximum number of iterations.
-    // See, e.g., Numerical Recipes for the basic ideas behind both
-    // methods.
-    T v0 = func(xmin);
-    T v1 = func(xmax);
-    T x = xmin;
-    T v = v0;
-    bool increasing = (v0 < v1);
-#if 0
-    // ternary was using pointer to v0 or v1 which disallows privatization
-    // of their data layouts, causing lots of strided memory stores
-    T vmin = increasing ? v0 : v1;
-    T vmax = increasing ? v1 : v0;
-#else
-    // Instead make sure only values are used, no pointers which
-    // enables Scalar Replacement of Aggregates avoiding memory stores
-    T vmin = sfm::select_val(increasing, v0, v1);
-    T vmax = sfm::select_val(increasing, v1, v0);
-#endif
-    // To simply control flow for vectorizor, changed logical &&
-    // to bitwise &.  This is also preferable to minimize extra
-    // masking and potential branching
-    brack = ((y >= vmin) & (y <= vmax));
-    if (! brack) {
-        // If our bounds don't bracket the zero, just give up, and
-        // return the appropriate "edge" of the interval
-#if 0
-        // ternary was using pointer to v0 or v1 which disallows privatization
+    Func &m_func;
+    const T &m_y;
+    const T &m_eps;
+    T m_result;
+    T m_v0;
+    T m_v1;
+    bool m_increasing;
+
+public:
+    Inverter(T initial_result, Func &func, const T & y, const T &eps)
+    : m_func(func)
+    , m_y(y)
+    , m_eps(eps)
+    , m_result(initial_result)
+    {}
+
+    const T & result() const { return m_result; }
+
+    OSL_FORCEINLINE
+    bool is_bracketed_by (const T &xmin, const T & xmax)
+    {
+        using ::fabs;
+        // Use the Regula Falsi method, falling back to bisection if it
+        // hasn't converged after 3/4 of the maximum number of iterations.
+        // See, e.g., Numerical Recipes for the basic ideas behind both
+        // methods.
+        m_v0 = m_func(xmin);
+        m_v1 = m_func(xmax);
+        m_increasing = (m_v0 < m_v1);
+    #if 0
+        // ternary was using pointer to m_v0 or m_v1 which disallows privatization
         // of their data layouts, causing lots of strided memory stores
-        return ((y < vmin) == increasing) ? xmin : xmax;
-#else
+        T vmin = m_increasing ? m_v0 : m_v1;
+        T vmax = m_increasing ? m_v1 : m_v0;
+    #else
         // Instead make sure only values are used, no pointers which
         // enables Scalar Replacement of Aggregates avoiding memory stores
-        return sfm::select_val(((y < vmin) == increasing), xmin, xmax);
-#endif
+        T vmin = sfm::select_val(m_increasing, m_v0, m_v1);
+        T vmax = sfm::select_val(m_increasing, m_v1, m_v0);
+    #endif
+        // To simply control flow for vectorizor, changed logical &&
+        // to bitwise &.  This is also preferable to minimize extra
+        // masking and potential branching
+        bool brack = ((m_y >= vmin) & (m_y <= vmax));
+        if (! brack) {
+            // If our bounds don't bracket the zero, just give up, and
+            // return the appropriate "edge" of the interval
+    #if 0
+            // ternary was using pointer to m_v0 or m_v1 which disallows privatization
+            // of their data layouts, causing lots of strided memory stores
+            m_result = ((m_y < vmin) == m_increasing) ? xmin : xmax;
+    #else
+            // Instead make sure only values are used, no pointers which
+            // enables Scalar Replacement of Aggregates avoiding memory stores
+            m_result = sfm::select_val(((m_y < vmin) == m_increasing), xmin, xmax);
+    #endif
+        }
+        return brack;
     }
-    if (fabs(v0-v1) < eps)   // already close enough
-        return x;
-    T xmax2{xmax};
-    T xmin2{xmin};
-    constexpr int rfiters = (3*maxiters)/4;   // how many times to try regula falsi
-    for (int iters = 0;  iters < maxiters;  ++iters) {
-        T t;  // interpolation factor
-        if (iters < rfiters) {
-            // Regula falsi
-            t = (y-v0)/(v1-v0);
+
+    OSL_FORCEINLINE
+    void bracketed_invert (T xmin, T xmax)
+    {
+        // Assumes that is_bracketed_by(xmin, xmax) was called and returned true
+        using ::fabs;
+
+        m_result = xmin;
+        if (fabs(m_v0-m_v1) < m_eps) {   // already close enough
+            return;
+        }
+
+        constexpr int rfiters = (3*maxiters)/4;   // how many times to try regula falsi
+        for (int iters = 0;  iters < maxiters;  ++iters) {
+            T t;  // interpolation factor
+            if (iters < rfiters) {
+                // Regula falsi
+                t = (m_y-m_v0)/(m_v1-m_v0);
+                // To simply control flow for vectorizor, changed logical ||
+                // to bitwise |.  This is also preferable to minimize extra
+                // masking and potential branching
+                if ((t <= T(0)) | (t >= T(1)))
+                    t = T(0.5);  // RF convergence failure -- bisect instead
+            } else {
+                t = T(0.5);            // bisection
+            }
+            m_result = OIIO::lerp (xmin, xmax, t);
+            T v = m_func(m_result);
+            if ((v < m_y) == m_increasing) {
+                xmin = m_result; m_v0 = v;
+            } else {
+                xmax = m_result; m_v1 = v;
+            }
             // To simply control flow for vectorizor, changed logical ||
             // to bitwise |.  This is also preferable to minimize extra
             // masking and potential branching
-            if ((t <= T(0)) | (t >= T(1)))
-                t = T(0.5);  // RF convergence failure -- bisect instead
-        } else {
-            t = T(0.5);            // bisection
+            if ((fabs(xmax-xmin) < m_eps) | (fabs(v-m_y) < m_eps))
+                return;   // converged
         }
-        x = OIIO::lerp (xmin2, xmax2, t);
-        v = func(x);
-        if ((v < y) == increasing) {
-            xmin2 = x; v0 = v;
-        } else {
-            xmax2 = x; v1 = v;
-        }
-        // To simply control flow for vectorizor, changed logical ||
-        // to bitwise |.  This is also preferable to minimize extra
-        // masking and potential branching
-        if ((fabs(xmax2-xmin2) < eps) | (fabs(v-y) < eps))
-            return x;   // converged
     }
-    return x;
-}
+};
+
+
 
 // Spline functor for use with the inverse function
 template <
@@ -314,32 +350,42 @@ void splineinverse_search(
         return;
     }
 #endif
-    SplineSearchFunctor<K_T,IsBasisUConstantT,BasisStepT,MatrixT,R_T,X_T,KArrayT> S (M, knots, knot_count);
+    typedef SplineSearchFunctor<K_T,IsBasisUConstantT,BasisStepT,MatrixT,R_T,X_T,KArrayT> Functor;
+    Functor S (M, knots, knot_count);
+
+    // NOTE: OIIO::invert has a loop which was called from inside the search
+    // interval loop, created a nested loop.  Under SIMD/SIMT the nested
+    // loop could execute incoherently.  Instead we choose to use the class
+    // sfm::Inverter to manage state between is_bracketed_by(min,max), meant to
+    // be called from the search interval loop, and bracketed_invert(min,max)
+    // meant to be called after exiting the search interval loop, avoiding
+    // a nested loop that could be executed at different interval's
+    // for each SIMD/SIMT lane/thread.
+    sfm::Inverter<X_T, Functor, /*maxiters=*/32> inverter{/*initial_result=*/0, S, xval, X_T(1.0e-6)};
+
     // Because of the nature of spline interpolation, monotonic knots
     // can still lead to a non-monotonic curve.  To deal with this,
     // search separately on each spline segment and hope for the best.
     int nsegs = (knot_count - 4) / BasisStepT + 1;
     float nseginv = 1.0f / nsegs;
     X_T r0 = 0.0;
-    result = 0;
+    X_T r1;
+    bool bracket_found = false;
     for (int s = 0;  s < nsegs;  ++s)
     {  // Search each interval
-        X_T r1 = nseginv * (s+1);
-        bool brack;
-        // control flow inside of OIIO::invert was too complex to vectorize,
-        // so use a slightly modified version in the SIMD Friendly Math namespace
-        //result = OIIO::invert (S, xval, r0, r1, 32, X_T(1.0e-6), &brack);
-        result = sfm::invert<32/*maxiters*/> (
-                brack,
-                S,
-                xval,
-                r0,
-                r1,
-                X_T(1.0e-6));
-        if (brack)
-            return;
+        r1 = nseginv * (s+1);
+        bracket_found = inverter.is_bracketed_by(r0,r1);
+        if (bracket_found)
+            break;
         r0 = r1;  // Start of next interval is end of this one
     }
+
+    if (bracket_found) {
+        // NOTE: do not call bracketed_invert
+        // from inside the search interval loop
+        inverter.bracketed_invert(r0,r1);
+    }
+    result = inverter.result();
 }
 
 } // namespace sfm

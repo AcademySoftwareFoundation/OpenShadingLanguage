@@ -138,14 +138,14 @@ class Inverter
 {
     Func &m_func;
     const T &m_y;
-    const T &m_eps;
+    const T m_eps;
     T m_result;
     T m_v0;
     T m_v1;
     bool m_increasing;
 
 public:
-    Inverter(T initial_result, Func &func, const T & y, const T &eps)
+    Inverter(const T &initial_result, Func &func, const T & y, const T &eps)
     : m_func(func)
     , m_y(y)
     , m_eps(eps)

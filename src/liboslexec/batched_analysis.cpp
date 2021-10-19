@@ -1232,7 +1232,14 @@ struct Analyzer {
         const Symbol* symbol_to_check, DependencyTreeTracker::Position read_pos)
     {
         // Check if reading a Symbol that was written to from a different
-        // dependency lineage than we are reading, if so we need to mark it as requiring masking
+        // dependency lineage than we are reading, if so we need to mark it as
+        // requiring masking.
+        //
+        // TODO:  Overly conservative because reads and writes are looked at
+        // as if all symbols are global, when in fact local variables within
+        // a helper functions that are called multiple times should restrict
+        // their analysis to just that function.  This will require more
+        // analysis to identify local variables.
         auto lookup = m_write_chronology_by_symbol.find(symbol_to_check);
         if (lookup != m_write_chronology_by_symbol.end()) {
             auto& write_chronology = lookup->second;

@@ -1,0 +1,13 @@
+#include "runsplineinverse.h"
+
+shader test_deriv_splineinverse_u_float_u_floatarray (
+    output color ValDxDyOut = 0)
+{
+    float uniform_x = 0.5*raytype("camera");
+    float uniform_scale = 0.75*raytype("camera");
+
+    float value = run_all_fsplineinverses(uniform_x, uniform_scale);
+    float dxVal = Dx(value);
+    float dyVal = Dy(value);
+    ValDxDyOut = color(value, dxVal, dyVal);
+}

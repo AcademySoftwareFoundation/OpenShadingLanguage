@@ -3450,7 +3450,7 @@ LLVMGEN (llvm_gen_transformc)
                     OSL_DASSERT(lanesMatchingSpaces);
                 }
 
-                //rop.llvm_print_mask("lanesMatchingSplineName", lanesMatchingSplineName);
+                //rop.llvm_print_mask("lanesMatchingSpaces", lanesMatchingSpaces);
                 args[maskArgumentIndex] = rop.ll.mask_as_int(lanesMatchingSpaces);
 
                 rop.ll.call_function (transformColorFuncName, args);
@@ -4592,6 +4592,131 @@ LLVMGEN (llvm_gen_area)
 
 
 
+LLVMGEN (llvm_gen_spline)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT (op.nargs() >= 4 && op.nargs() <= 5);
+
+    bool has_knot_count = (op.nargs() == 5);
+    Symbol& Result   = *rop.opargsym (op, 0);
+    Symbol& Spline   = *rop.opargsym (op, 1);
+    Symbol& Value    = *rop.opargsym (op, 2);
+    Symbol& Knot_count = *rop.opargsym (op, 3); // might alias Knots
+    Symbol& Knots    = has_knot_count ? *rop.opargsym (op, 4) :
+                                        *rop.opargsym (op, 3);
+
+    OSL_DASSERT (!Result.typespec().is_closure_based() &&
+             Spline.typespec().is_string()  &&
+             Value.typespec().is_float() &&
+             !Knots.typespec().is_closure_based() &&
+             Knots.typespec().is_array() &&
+             (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
+
+
+
+    bool op_is_uniform = Spline.is_uniform() && Value.is_uniform() && Knots.is_uniform();
+
+    FuncSpec func_spec(op.opname().c_str());
+
+    //std::string name = Strutil::sprintf("osl_%s_", op.opname());
+    std::vector<llvm::Value *> args;
+    // only use derivatives for result if:
+    //   result has derivs and (value || knots) have derivs
+    bool op_derivs = Result.has_derivs() && (Value.has_derivs() || Knots.has_derivs());
+
+    func_spec.arg(Result,op_derivs,op_is_uniform);
+    func_spec.arg(Value,op_derivs && Value.has_derivs(), Value.is_uniform());
+    func_spec.arg(Knots.typespec().simpletype().elementtype(), op_derivs && Knots.has_derivs(), Knots.is_uniform());
+
+    if (op_is_uniform) {
+        func_spec.unbatch();
+    } else {
+        // for simplicity, always call the masked version
+        func_spec.mask();
+    }
+    const char * splineFuncName = rop.build_name(func_spec);
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value *temp_uniform_results = nullptr;
+    if (op_is_uniform && !Result.is_uniform()) {
+        temp_uniform_results = rop.getOrAllocateTemp (Result.typespec(), Result.has_derivs(), true /*is_uniform*/, false /*forceBool*/, "uniform spline result");
+        args.push_back (rop.ll.void_ptr(temp_uniform_results));
+
+    } else {
+        args.push_back (rop.llvm_void_ptr (Result));
+    }
+    // We will just load the spline name here if we are uniform,
+    // otherwise just remember where the spline name
+    // is so we can update it later in the loop over varying spline names
+    int splineNameArgumentIndex = args.size();
+    llvm::Value * splineNameVal = rop.llvm_load_value (Spline, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Spline.is_uniform());
+    args.push_back ( Spline.is_uniform() ? splineNameVal : nullptr);
+
+    args.push_back (rop.llvm_void_ptr (Value)); // make things easy
+    args.push_back (rop.llvm_void_ptr (Knots));
+    if (has_knot_count)
+        args.push_back (rop.llvm_load_value (Knot_count));
+    else
+        args.push_back (rop.ll.constant ((int)Knots.typespec().arraylength()));
+    args.push_back (rop.ll.constant ((int)Knots.typespec().arraylength()));
+
+    if (false == op_is_uniform) {
+        // We always call the masked version, need to pass the mask value
+        args.push_back (Spline.is_uniform() ? rop.ll.mask_as_int(rop.ll.current_mask()) : nullptr);
+    }
+
+    if (Spline.is_uniform()) {
+        rop.ll.call_function (splineFuncName, args);
+        if (op_is_uniform && !Result.is_uniform()) {
+            rop.llvm_broadcast_uniform_value_from_mem(temp_uniform_results, Result);
+        }
+    } else {
+        // do while(remaining)
+        llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to spline");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_spline (varying spline name)") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_spline (varying spline name)") : std::string());
+        rop.ll.op_branch(bin_block);
+        {
+
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+            llvm::Value * lanesMatchingSplineName = remainingMask;
+
+            llvm::Value *scalar_splineName = rop.ll.op_extract(splineNameVal, leadLane);
+            args[splineNameArgumentIndex] = scalar_splineName;
+            lanesMatchingSplineName = rop.ll.op_lanes_that_match_masked(scalar_splineName, splineNameVal, remainingMask);
+
+            OSL_ASSERT(lanesMatchingSplineName);
+            //rop.llvm_print_mask("lanesMatchingSplineName", lanesMatchingSplineName);
+            args.back() = rop.ll.mask_as_int(lanesMatchingSplineName);
+
+            rop.ll.call_function (splineFuncName, args);
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingSplineName);
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingSplineName", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+    }
+
+    if (Result.has_derivs() && !op_derivs)
+        rop.llvm_zero_derivs (Result);
+
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_isconstant)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -5024,7 +5149,6 @@ TBD_LLVMGEN(llvm_gen_pointcloud_write)
 TBD_LLVMGEN(llvm_gen_dict_value)
 TBD_LLVMGEN(llvm_gen_closure)
 TBD_LLVMGEN(llvm_gen_gettextureinfo)
-TBD_LLVMGEN(llvm_gen_spline)
 TBD_LLVMGEN(llvm_gen_dict_next)
 TBD_LLVMGEN(llvm_gen_texture3d)
 TBD_LLVMGEN(llvm_gen_environment)

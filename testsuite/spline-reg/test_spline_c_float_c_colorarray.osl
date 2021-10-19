@@ -1,0 +1,8 @@
+#include "runspline.h"
+
+shader test_spline_c_float_c_colorarray (
+    output color Cout = 0)
+{
+    Cout = run_all_csplines(0.5, color(0.5, 0.75, 1.0));
+
+}

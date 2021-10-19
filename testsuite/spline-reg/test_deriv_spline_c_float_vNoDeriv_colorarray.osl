@@ -1,0 +1,16 @@
+#include "runspline.h"
+
+shader test_deriv_spline_c_float_vNoDeriv_colorarray (
+    output color ValOut = 0,
+    output color DxOut = 0,
+    output color DyOut = 0)
+{
+    color value = run_all_csplines_knots_with_no_derivs(0.5, N);
+    
+    color dxVal = Dx(value);
+    color dyVal = Dy(value);
+    ValOut = value;
+    DxOut = dxVal;
+    DyOut = dyVal;
+}
+

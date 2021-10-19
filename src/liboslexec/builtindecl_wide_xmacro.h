@@ -243,8 +243,6 @@ WIDE_NOISE_DERIV_IMPL(unullnoise)
 
 DECL(__OSL_MASKED_OP(count_noise), "xXi")
 
-#ifdef __OSL_TBD
-
 // Need wide for combinations of the 3 parameters allowed to be uniform
 // caveat, some combos are unreachable/uneeded
 // When result has a derivative, there is
@@ -262,9 +260,9 @@ DECL(__OSL_MASKED_OP3(spline, Wf, f, Wf), "xXXXXiii")
 
 DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, Wdf), "xXXXXiii")
 DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, df), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, Wf, df), "xXXXXiii")
 DECL(__OSL_MASKED_OP3(spline, Wdf, df, Wdf), "xXXXXiii")
 
-//SM: Check other previously-thought-impossible variants
 DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, f), "xXXXXiii")
 
 DECL(__OSL_MASKED_OP3(spline, Wv, Wf, Wv), "xXXXXiii")
@@ -279,7 +277,6 @@ DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, v), "xXXXXiii")
 DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, Wv), "xXXXXiii")
 DECL(__OSL_MASKED_OP3(spline, Wdv, df, Wv), "xXXXXiii")
 
-//SM: Check other previously-thought-impossible variants
 DECL(__OSL_MASKED_OP3(spline, Wdf, f, Wdf), "xXXXXiii")
 DECL(__OSL_MASKED_OP3(spline, Wdf, Wf, Wdf), "xXXXXiii")
 
@@ -301,8 +298,10 @@ DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wdf, f), "xXXXXiii")
 
 //dffdf is treated as fff
 DECL(__OSL_MASKED_OP3(splineinverse, Wdf, f, Wdf), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wf, Wdf), "xXXXXiii")
+// // unreachable, can't find .osl to produce this combination
+//DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wf, Wdf), "xXXXXiii")
 
+#ifdef __OSL_TBD
 #if 0  // incomplete
 // setmessage/getmessage involve closures, leave to next iteration
 //DECL (osl_setmessage, "xXsLXisi")

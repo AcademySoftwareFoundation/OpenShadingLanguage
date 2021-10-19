@@ -1,0 +1,16 @@
+#include "runspline.h"
+
+shader test_deriv_spline_vNoDeriv_float_v_colorarray (
+    output color ValOut = 0,
+    output color DxOut = 0,
+    output color DyOut = 0)
+{
+    // time is varying yet does not participate in derivs
+    color value = run_all_csplines(time, color(u,(1 - (0.5*v)),(1 - (0.5*u) + 0.5*v)));
+    color dxVal = Dx(value);
+    color dyVal = Dy(value);
+    ValOut = value;
+    DxOut = dxVal;
+    DyOut = dyVal;
+}
+

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+#include "../common/shaders/pretty.h"
+
 shader test
   (
     float in = u,
@@ -25,7 +27,7 @@ shader test
     Cout = spline (basis, in, knots, values);
     if (u > 0.49 && u < 0.51 && v > 0.49 && v < 0.51)
         printf ("spline in=%.3g, result = %.3g    dx = %.3g   dy = %.3g\n",
-                in, Cout, Dx(Cout), Dy(Cout));
+                pretty(in), pretty(Cout), pretty(Dx(Cout)), pretty(Dy(Cout)));
     Cout_dx = 0.5 + 10 * Dx(Cout);
     Cout_dy = 0.5 + 10 * Dy(Cout);
 }

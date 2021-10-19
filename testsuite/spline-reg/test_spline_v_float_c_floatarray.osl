@@ -1,0 +1,8 @@
+#include "runspline.h"
+
+shader test_spline_v_float_c_floatarray (
+    output float Fout = 0)
+{
+    Fout = run_all_fsplines(u, 1.0);
+
+}

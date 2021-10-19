@@ -1,0 +1,8 @@
+#include "runsplineinverse.h"
+
+shader test_splineinverse_v_float_c_floatarray (
+    output float Fout = 0)
+{
+    Fout = run_all_fsplineinverses(u, 1.0);
+
+}

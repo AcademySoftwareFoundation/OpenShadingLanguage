@@ -109,11 +109,9 @@ using OIIO::TypeMatrix;
 using OIIO::TypeFloat4;
 using OIIO::TypeString;
 using OIIO::TypeInt;
-#if OIIO_VERSION >= 20203
 using OIIO::TypeFloat2;
 using OIIO::TypeVector2;
 using OIIO::TypeVector4;
-#endif
 
 
 // N.B. SymArena is not really "configuration", but we cram it here for

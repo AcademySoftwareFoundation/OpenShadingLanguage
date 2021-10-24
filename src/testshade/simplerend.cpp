@@ -402,7 +402,6 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
         return true;
     }
 
-#if OIIO_VERSION >= 20202
     if (const OIIO::ParamValue* p = userdata.find_pv(name, type)) {
         size_t size = p->type().size();
         memcpy(val, p->data(), size);
@@ -410,16 +409,6 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
             memcpy(val, (char*)p->data() + size, 2 * size);
         return true;
     }
-#else
-    auto p = userdata.find(name, type);
-    if (p != userdata.end()) {
-        size_t size = p->type().size();
-        memcpy(val, p->data(), size);
-        if (derivatives)
-            memcpy(val, (char*)p->data() + size, 2 * size);
-        return true;
-    }
-#endif
 
     return false;
 }

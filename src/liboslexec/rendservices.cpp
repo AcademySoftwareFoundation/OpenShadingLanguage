@@ -258,7 +258,7 @@ RendererServices::get_texture_info(ustring filename,
                                    TypeDesc datatype, void* data,
                                    ustring* errormessage)
 {
-#if OPENIMAGEIO_VERSION >= 20307
+#if OIIO_VERSION >= 20307
     // Newer versions of the TextureSystem interface are able to determine the
     // specific UDIM tile we're using.
     if (!texture_thread_info)

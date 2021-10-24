@@ -15,8 +15,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.21)
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
-   - GCC 4.8.5 or newer (tested through gcc 11)
-   - Clang 3.4 or newer (tested through clang 12)
+   - GCC 4.8.5 or newer (tested through gcc 11.2)
+   - Clang 3.4 or newer (tested through clang 13)
    - Microsoft Visual Studio 2015 or newer
    - Intel C++ compiler icc version 13 (?) or newer
 
@@ -43,8 +43,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* **[LLVM](http://www.llvm.org) 7, 8, 9, 10, 11, or 12**, including
-  clang libraries.
+* **[LLVM](http://www.llvm.org) 7, 8, 9, 10, 11, 12, or 13**, including clang
+  libraries.
 
   Note that LLVM 10+ is not compatible with C++11, and requires C++14 or
   later. If you *must* build OSL with C++11, you need to use an LLVM that
@@ -52,8 +52,11 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.76)
 * [Ilmbase or Imath](http://openexr.com/downloads.html) 2.0 or newer (tested through 3.1)
-* [Flex](https://github.com/westes/flex) and
-  [GNU Bison](https://www.gnu.org/software/bison/)
+* [Flex](https://github.com/westes/flex) 2.5.35 or newer and
+  [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
+  Note that on some MacOS/xcode releases, the system-installed Bison is too
+  old, and it's better to install a newer Bison (via Homebrew is one way to
+  do this easily).
 * [PugiXML](http://pugixml.org/)
 * (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
   If it is not found at build time, the OSL `pointcloud` functions will not

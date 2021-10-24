@@ -2592,9 +2592,17 @@ LLVM_Util::op_memcpy (llvm::Value *dst, int dstalign,
 
 
 llvm::Value *
+LLVM_Util::op_load (llvm::Type* type, llvm::Value* ptr)
+{
+    return builder().CreateLoad (type, ptr);
+}
+
+
+
+llvm::Value *
 LLVM_Util::op_load (llvm::Value *ptr)
 {
-    return builder().CreateLoad (ptr);
+    return op_load(ptr->getType()->getPointerElementType(), ptr);
 }
 
 
@@ -2608,9 +2616,26 @@ LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
 
 
 llvm::Value *
+LLVM_Util::GEP (llvm::Type* type, llvm::Value* ptr, llvm::Value* elem)
+{
+    return builder().CreateGEP(type, ptr, elem);
+}
+
+
+
+llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, llvm::Value *elem)
 {
-    return builder().CreateGEP (ptr, elem);
+    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
+               elem);
+}
+
+
+
+llvm::Value *
+LLVM_Util::GEP (llvm::Type* type, llvm::Value* ptr, int elem)
+{
+    return builder().CreateConstGEP1_32(type, ptr, elem);
 }
 
 
@@ -2618,7 +2643,16 @@ LLVM_Util::GEP (llvm::Value *ptr, llvm::Value *elem)
 llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, int elem)
 {
-    return builder().CreateConstGEP1_32 (ptr, elem);
+    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
+               elem);
+}
+
+
+
+llvm::Value *
+LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2)
+{
+    return builder().CreateConstGEP2_32 (type, ptr, elem1, elem2);
 }
 
 
@@ -2626,7 +2660,8 @@ LLVM_Util::GEP (llvm::Value *ptr, int elem)
 llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, int elem1, int elem2)
 {
-    return builder().CreateConstGEP2_32 (nullptr, ptr, elem1, elem2);
+    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
+               elem1, elem2);
 }
 
 

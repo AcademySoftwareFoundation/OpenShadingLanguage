@@ -802,6 +802,9 @@ public:
                     llvm::Value *src, int srcalign, int len);
 
     /// Dereference a pointer:  return *ptr
+    /// type is the type of the thing being pointed to.
+    llvm::Value *op_load (llvm::Type* type, llvm::Value *ptr);
+    // Blind pointer version that's deprecated as of LLVM13:
     llvm::Value *op_load (llvm::Value *ptr);
 
     llvm::Value *op_gather(llvm::Value *ptr, llvm::Value *index);
@@ -830,17 +833,25 @@ public:
 
     /// Generate a GEP (get element pointer) where the element index is an
     /// llvm::Value, which can be generated from either a constant or a
-    /// runtime-computed integer element index.
+    /// runtime-computed integer element index. `type` is the type of the data
+    /// we're retrieving.
+    llvm::Value *GEP (llvm::Type* type, llvm::Value *ptr, llvm::Value *elem);
+    // Blind pointer version that's deprecated as of LLVM13:
     llvm::Value *GEP (llvm::Value *ptr, llvm::Value *elem);
 
     /// Generate a GEP (get element pointer) with an integer element
-    /// offset.
+    /// offset. `type` is the type of the data we're retrieving.
+    llvm::Value *GEP (llvm::Type* type, llvm::Value *ptr, int elem);
+    // Blind pointer version that's deprecated as of LLVM13:
     llvm::Value *GEP (llvm::Value *ptr, int elem);
 
     /// Generate a GEP (get element pointer) with two integer element
     /// offsets.  This is just a special (and common) case of GEP where
     /// we have a 2-level hierarchy and we have fixed element indices
-    /// that are known at compile time.
+    /// that are known at compile time.  `type` is the type of the data we're
+    /// retrieving.
+    llvm::Value *GEP (llvm::Type* type, llvm::Value *ptr, int elem1, int elem2);
+    // Blind pointer version that's deprecated as of LLVM13:
     llvm::Value *GEP (llvm::Value *ptr, int elem1, int elem2);
 
     // Arithmetic ops.  It auto-detects the type (int vs float).

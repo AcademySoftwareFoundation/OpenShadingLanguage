@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.16.0 -- 1 Nov 2021 (compared to 1.11.15.0)
+-------------------------------------------------------
+
+
 Release 1.11.15.0 -- 1 Sep 2021 (compared to 1.11.14.2)
 -------------------------------------------------------
 * Changes for compatibility with OpenImageIO 2.3. #1393 #1388

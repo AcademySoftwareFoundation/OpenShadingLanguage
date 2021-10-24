@@ -26,13 +26,13 @@ target_link_libraries (${local_lib}
     PUBLIC
         OpenImageIO::OpenImageIO
         # For OpenEXR/Imath 3.x:
-        $<$<TARGET_EXISTS:Imath::Imath>:Imath::Imath>
-        $<$<TARGET_EXISTS:Imath::Half>:Imath::Half>
+        $<TARGET_NAME_IF_EXISTS:Imath::Imath>
+        $<TARGET_NAME_IF_EXISTS:Imath::Half>
         # For OpenEXR >= 2.4/2.5 with reliable exported targets
-        $<$<TARGET_EXISTS:IlmBase::Imath>:IlmBase::Imath>
-        $<$<TARGET_EXISTS:IlmBase::Half>:IlmBase::Half>
-        $<$<TARGET_EXISTS:IlmBase::IlmThread>:IlmBase::IlmThread>
-        $<$<TARGET_EXISTS:IlmBase::Iex>:IlmBase::Iex>
+        $<TARGET_NAME_IF_EXISTS:IlmBase::Imath>
+        $<TARGET_NAME_IF_EXISTS:IlmBase::Half>
+        $<TARGET_NAME_IF_EXISTS:IlmBase::IlmThread>
+        $<TARGET_NAME_IF_EXISTS:IlmBase::Iex>
         # For OpenEXR <= 2.3:
         ${ILMBASE_LIBRARIES}
     PRIVATE

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/master/src/doc/Figures/osl-short.png" width=256 height=128>
+  <img src="https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/src/doc/Figures/osl-short.png" width=256 height=128>
 
   <H1>Open Shading Language</H1>
 </div>
@@ -435,10 +435,10 @@ Contacts, Links, and References
 
 [Read or subscribe to the OSL development mail list](https://lists.aswf.io/g/osl-dev)
 
-[Most recent PDF of the OSL language specification](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/master/src/doc/osl-languagespec.pdf
+[Most recent PDF of the OSL language specification](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/src/doc/osl-languagespec.pdf
 )
 
-[OSL home page at SPI](http://openshadinglanguage.org)
+[OSL home page](http://openshadinglanguage.org)
 
 [Sony Pictures Imageworks main open source page](http://opensource.imageworks.com)
 

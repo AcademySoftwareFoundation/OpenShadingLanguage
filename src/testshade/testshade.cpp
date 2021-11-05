@@ -384,6 +384,21 @@ specify_expr (int argc OSL_MAYBE_UNUSED, const char *argv[])
 
 
 
+// Parse str for `len` floats, separated by commas.
+inline bool
+parse_float_list(string_view str, float* f, int len)
+{
+    bool ok = true;
+    for (int i = 0; i < len && ok; ++i) {
+        ok &= OIIO::Strutil::parse_float(str, f[i]);
+        if (ok && i < len - 1)
+            ok &= OIIO::Strutil::parse_char(str, ',');
+    }
+    return ok;
+}
+
+
+
 // Utility: Add {paramname, stringval} to the given parameter list.
 static void
 add_param (ParamValueList& params, string_view command,
@@ -407,11 +422,7 @@ add_param (ParamValueList& params, string_view command,
 
     // If it is or might be a matrix, look for 16 comma-separated floats
     if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeMatrix)
-        && sscanf (stringval.c_str(),
-                   "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
-                   &f[0], &f[1], &f[2], &f[3],
-                   &f[4], &f[5], &f[6], &f[7], &f[8], &f[9], &f[10], &f[11],
-                   &f[12], &f[13], &f[14], &f[15]) == 16) {
+        && parse_float_list(stringval, f, 16)) {
         params.emplace_back (paramname, TypeDesc::TypeMatrix, 1, f);
         if (unlockgeom)
             params.back().interp (ParamValue::INTERP_VERTEX);
@@ -419,7 +430,7 @@ add_param (ParamValueList& params, string_view command,
     }
     // If it is or might be a vector type, look for 3 comma-separated floats
     if ((type == TypeDesc::UNKNOWN || equivalent(type,TypeDesc::TypeVector))
-        && sscanf (stringval.c_str(), "%g, %g, %g", &f[0], &f[1], &f[2]) == 3) {
+        && parse_float_list(stringval, f, 3)) {
         if (type == TypeDesc::UNKNOWN)
             type = TypeDesc::TypeVector;
         params.emplace_back (paramname, type, 1, f);

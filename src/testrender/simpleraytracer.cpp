@@ -182,6 +182,13 @@ struct ParamStorage {
         return &fparamdata[fparamindex - 3];
     }
 
+    void* Vec(const float* xyz) {
+        Float(xyz[0]);
+        Float(xyz[1]);
+        Float(xyz[2]);
+        return &fparamdata[fparamindex - 3];
+    }
+
     void* Str(const char* str) {
         OSL_DASSERT(sparamindex < N);
         sparamdata[sparamindex] = ustring(str);
@@ -198,6 +205,28 @@ private:
     int iparamindex;
     int sparamindex;
 };
+
+
+
+inline bool
+parse_prefix_and_floats(string_view str, string_view prefix, int nvals,
+                        float* vals)
+{
+    bool ok = OIIO::Strutil::parse_prefix(str, prefix);
+    for (int i = 0; i < nvals && ok; ++i)
+        ok &= OIIO::Strutil::parse_float(str, vals[i]);
+    return ok;
+}
+
+
+inline bool
+parse_prefix_and_ints(string_view str, string_view prefix, int nvals, int* vals)
+{
+    bool ok = OIIO::Strutil::parse_prefix(str, prefix);
+    for (int i = 0; i < nvals && ok; ++i)
+        ok &= OIIO::Strutil::parse_int(str, vals[i]);
+    return ok;
+}
 
 
 
@@ -224,9 +253,8 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
         if (strcmp(node.name(), "Option") == 0) {
             for (auto attr = node.first_attribute(); attr; attr = attr.next_attribute()) {
                 int i = 0;
-                if (sscanf(attr.value(), " int %d ", &i) == 1) {
+                if (parse_prefix_and_ints(attr.value(), "int ", 1, &i))
                     attribute(attr.name(), i);
-                }
                 // TODO: pass any extra options to shading system (or texture system?)
             }
         } else if (strcmp(node.name(), "Camera") == 0) {
@@ -298,25 +326,32 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 if (strcmp(gnode.name(), "Parameter") == 0) {
                     // handle parameters
                     for (auto attr = gnode.first_attribute(); attr; attr = attr.next_attribute()) {
-                        int i = 0; float x = 0, y = 0, z = 0;
-                        if (sscanf(attr.value(), " int %d ", &i) == 1)
+                        int i = 0;
+                        float f[3];
+                        string_view val(attr.value());
+                        if (parse_prefix_and_ints(val, "int ", 1, &i))
                             shadingsys->Parameter(*group, attr.name(),
                                                   TypeDesc::TypeInt, store.Int(i));
-                        else if (sscanf(attr.value(), " float %f ", &x) == 1)
+                        else if (parse_prefix_and_floats(val, "float ", 1, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeFloat, store.Float(x));
-                        else if (sscanf(attr.value(), " vector %f %f %f", &x, &y, &z) == 3)
+                                                  TypeDesc::TypeFloat,
+                                                  store.Float(f[0]));
+                        else if (parse_prefix_and_floats(val, "vector ", 3, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeVector, store.Vec(x, y, z));
-                        else if (sscanf(attr.value(), " point %f %f %f", &x, &y, &z) == 3)
+                                                  TypeDesc::TypeVector,
+                                                  store.Vec(f));
+                        else if (parse_prefix_and_floats(val, "point ", 3, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypePoint, store.Vec(x, y, z));
-                        else if (sscanf(attr.value(), " color %f %f %f", &x, &y, &z) == 3)
+                                                  TypeDesc::TypePoint,
+                                                  store.Vec(f));
+                        else if (parse_prefix_and_floats(val, "color ", 3, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeColor, store.Vec(x, y, z));
+                                                  TypeDesc::TypeColor,
+                                                  store.Vec(f));
                         else
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeString, store.Str(attr.value()));
+                                                  TypeDesc::TypeString,
+                                                  store.Str(attr.value()));
                     }
                 } else if (strcmp(gnode.name(), "Shader") == 0) {
                     pugi::xml_attribute  type_attr = gnode.attribute("type");

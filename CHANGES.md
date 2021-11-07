@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.17.0 -- ??? (compared to 1.11.16.0)
+-------------------------------------------------------
+
 Release 1.11.16.0 -- 1 Nov 2021 (compared to 1.11.15.0)
 -------------------------------------------------------
 * Fixes to work with LLVM 13, and to compile with clang 13. #1412 #1420

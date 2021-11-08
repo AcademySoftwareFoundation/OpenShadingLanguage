@@ -20,7 +20,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
    - Microsoft Visual Studio **2017 or newer**
    - Intel C++ compiler icc **version 17 or newer**
 
-* **[OpenImageIO](http://openimageio.org) 2.1 or newer** (tested through 2.3)
+* **[OpenImageIO](http://openimageio.org) 2.2 or newer** (tested through 2.3)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing

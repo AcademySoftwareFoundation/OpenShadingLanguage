@@ -112,11 +112,7 @@ namespace sfm
         // return x.val() >= 0.0f ? x : -x;
 
         // NOTE: negation happens outside of conditional, then is blended based on the condition
-#if OPENIMAGEIO_VERSION >= 20112
         Dual2<float> neg_x = OIIO::fast_neg(x);
-#else
-        Dual2<float> neg_x = -x;
-#endif
 
         bool cond = x.val() < 0.0f;
         // Blend per builtin component to allow

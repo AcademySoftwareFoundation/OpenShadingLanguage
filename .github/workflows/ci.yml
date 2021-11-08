@@ -26,7 +26,7 @@ on:
 
 jobs:
   vfxplatform-2019:
-    name: "Linux VFXP-2019: gcc6/C++14 llvm7.1 py2.7 boost1.66 exr2.3 oiio2.1 sse2"
+    name: "Linux VFXP-2019: gcc6/C++14 llvm7.1 py2.7 boost1.66 exr2.3 oiio2.2 sse2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019-clang7
@@ -34,9 +34,9 @@ jobs:
       CXX: g++
       CC: gcc
       CMAKE_CXX_STANDARD: 14
+      OPENIMAGEIO_VERSION: v2.2.17.0
       PYTHON_VERSION: 2.7
       USE_PYTHON: 0
-      OPENIMAGEIO_VERSION: Release-2.1.20.0
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -75,7 +75,7 @@ jobs:
             build/CMake*.{txt,log}
 
   vfxplatform-2020:
-    name: "Linux VFXP-2020 gcc6/C++14 llvm7.1 py3.7 boost1.70 exr2.4 oiio2.1 sse4"
+    name: "Linux VFXP-2020 gcc6/C++14 llvm7.1 py3.7 boost1.70 exr2.4 oiio2.2 sse4"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2020
@@ -83,6 +83,7 @@ jobs:
       CXX: g++
       CC: gcc
       CMAKE_CXX_STANDARD: 14
+      OPENIMAGEIO_VERSION: v2.2.17.0
       PYTHON_VERSION: 3.7
       USE_SIMD: sse4.2
     steps:
@@ -579,7 +580,7 @@ jobs:
   linux-oldest:
     # Oldest versions of the dependencies that we can muster, and various
     # things disabled.
-    name: "Linux oldest everything: gcc6/C++14 llvm7 py2.7 boost-1.66 oiio-2.1 no-simd exr2.3"
+    name: "Linux oldest everything: gcc6/C++14 llvm7 py2.7 boost-1.66 oiio-2.2 no-simd exr2.3"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019-clang7
@@ -590,7 +591,7 @@ jobs:
       PYTHON_VERSION: 2.7
       USE_SIMD: 0
       USE_PYTHON: 0
-      OPENIMAGEIO_VERSION: Release-2.1.20.0
+      OPENIMAGEIO_VERSION: v2.2.17.0
       PUGIXML_VERSION: v1.8
     steps:
       - uses: actions/checkout@v2

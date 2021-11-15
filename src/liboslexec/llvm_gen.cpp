@@ -2978,11 +2978,25 @@ LLVMGEN (llvm_gen_getattribute)
     // necessary conversions from its internal format to OSL's.
     TypeDesc dest_type = Destination.typespec().simpletype();
 
+    llvm::Value* obj_name_arg = NULL;
+    llvm::Value* attr_name_arg = NULL;
+    if (rop.use_optix()) {
+        // We need to make a DeviceString for the parameter names
+        if (object_lookup)
+            obj_name_arg = rop.llvm_load_device_string(ObjectName, true);
+        else
+            obj_name_arg = rop.ll.constant(ustring());
+        attr_name_arg = rop.llvm_load_device_string (Attribute, true);
+    } else {
+        obj_name_arg = object_lookup ? rop.llvm_load_value (ObjectName) : rop.ll.constant (ustring());
+        attr_name_arg = rop.llvm_load_value (Attribute);
+    }
+
     llvm::Value * args[] = {
             rop.sg_void_ptr(),
             rop.ll.constant ((int)Destination.has_derivs()),
-            object_lookup ? rop.llvm_load_value (ObjectName) : rop.ll.constant (ustring()),
-            rop.llvm_load_value (Attribute),
+            obj_name_arg,
+            attr_name_arg,
             rop.ll.constant ((int)array_lookup),
             rop.llvm_load_value (Index),
             rop.ll.constant (dest_type),

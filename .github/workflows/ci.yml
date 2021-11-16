@@ -171,10 +171,10 @@ jobs:
             build/CMake*.{txt,log}
 
   vfxplatform-2022:
-    name: "Linux VFXP-2022 gcc9/C++17 llvm11 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
+    name: "Linux VFXP-2022 gcc9/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2022-clang11
+      image: aswftesting/ci-osl:2022-clang13
     env:
       CXX: g++
       CC: gcc
@@ -629,13 +629,58 @@ jobs:
             build/testsuite/*/*.*
             build/CMake*.{txt,log}
 
-  macos-py39:
-    name: "Mac py39"
-    runs-on: macOS-latest
+  macos10-py39:
+    name: "MacOS-10.15 appleclang12/C++14 py39"
+    runs-on: macos-10.15
     env:
       CXX: clang++
-      USE_CPP: 14
       CMAKE_CXX_STANDARD: 14
+      PYTHON_VERSION: 3.9
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /Users/runner/.ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
+      - name: Build setup
+        run: |
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            source src/build-scripts/install_homebrew_deps.bash
+            # OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
+            # source src/build-scripts/build_openimageio.bash
+            brew install --display-times -q openimageio
+            PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: |
+            build/testsuite/*/*.*
+            build/CMake*.{txt,log}
+
+  macos11-py39:
+    name: "MacOS-11 appleclang13/C++17 py39"
+    runs-on: macos-11
+    env:
+      CXX: clang++
+      CMAKE_CXX_STANDARD: 17
       PYTHON_VERSION: 3.9
     steps:
       - uses: actions/checkout@v2

@@ -32,8 +32,8 @@ brew unlink python@3.9 || true
 brew unlink python@3.8 || true
 brew link --overwrite --force python@${PYTHON_VERSION} || true
 brew upgrade --display-times -q cmake || true
-brew install --display-times -q libtiff ilmbase openexr
-brew install --display-times -q libpng giflib webp jpeg-turbo freetype
+brew install --display-times -q ilmbase openexr
+#brew install --display-times -q freetype
 brew install --display-times -q opencolorio partio pugixml
 brew install --display-times -q pybind11 numpy || true
 brew install --display-times -q tbb || true
@@ -57,7 +57,7 @@ fi
 export PATH=/usr/local/opt/qt5/bin:$PATH
 export PATH=/usr/local/opt/python/libexec/bin:$PATH
 export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
-export PATH=/usr/local/opt/llvm${LLVMBREWVER}/bin:$PATH
+# export PATH=/usr/local/opt/llvm${LLVMBREWVER}/bin:$PATH
 export LLVM_DIRECTORY=/usr/local/opt/llvm${LLVMBREWVER}
 export LLVM_ROOT=/usr/local/opt/llvm${LLVMBREWVER}
 export PATH=/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH

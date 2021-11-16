@@ -23,6 +23,24 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
     sudo yum install -y Field3D Field3D-devel && true
     sudo yum install -y ffmpeg ffmpeg-devel && true
 
+    if [[ "${CONAN_LLVM}" != "" ]] ; then
+        mkdir conan
+        pushd conan
+        # Simple way to conan install just one package:
+        #   conan install clang/${CONAN_LLVM}@aswftesting/ci_common1 -g deploy -g virtualenv
+        # But the below method can accommodate multiple requirements:
+        echo "[imports]" >> conanfile.txt
+        echo "., * -> ." >> conanfile.txt
+        echo "[requires]" >> conanfile.txt
+        echo "clang/${CONAN_LLVM}@aswftesting/ci_common1" >> conanfile.txt
+        time conan install .
+        echo "--ls--"
+        ls -R .
+        export PATH=$PWD/bin:$PATH
+        export LD_LIBRARY_PATH=$PWD/lib:$LD_LIBRARY_PATH
+        export LLVM_ROOT=$PWD
+        popd
+    fi
 else
     # Using native Ubuntu runner
 

@@ -329,6 +329,13 @@ public:
                                    void *data,
                                    ustring *errormessage);
 
+    virtual bool get_texture_info_type (ustring filename,
+                                   TextureHandle *texture_handle,
+                                   TexturePerthread *texture_thread_info,
+                                   ShadingContext *shading_context,
+                                   int subimage,
+                                   ustring dataname, TypeDesc &datatype,
+                                   ustring *errormessage);
 
     /// Lookup nearest points in a point cloud. It will search for
     /// points around the given center within the specified radius. A

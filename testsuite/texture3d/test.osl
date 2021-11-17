@@ -3,8 +3,8 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 shader
-test (string filename = "data/sparse_half.f3d",
+test (string filename = "data/sphere.vdb",
       output color Cout = 0)
 {
-    Cout = (color) texture3d (filename, point(u,v,0.5));
+    Cout = (color) texture3d (filename, point(u*2-1,v*2-1,0));
 }

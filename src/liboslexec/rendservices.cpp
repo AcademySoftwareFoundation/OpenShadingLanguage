@@ -114,7 +114,11 @@ RendererServices::good (TextureHandle *texture_handle)
 bool
 RendererServices::is_udim (TextureHandle *texture_handle)
 {
+#if OPENIMAGEIO_VERSION >= 20307
     return texturesys()->is_udim(texture_handle);
+#else
+    return false;
+#endif
 }
 
 

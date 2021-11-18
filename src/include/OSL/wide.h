@@ -269,8 +269,7 @@ struct Block<int, WidthT> : public BlockOfBuiltin<int, WidthT> {
 };
 
 template<typename DataT, int WidthT>
-struct Block<DataT *, WidthT>
-    : public BlockOfBuiltin<DataT *, WidthT> {
+struct Block<DataT*, WidthT> : public BlockOfBuiltin<DataT*, WidthT> {
 };
 
 
@@ -2320,8 +2319,7 @@ private:
     const int m_lane;
 };
 
-template<typename DataT, int WidthT>
-struct MaskedImpl {
+template<typename DataT, int WidthT> struct MaskedImpl {
     static constexpr int width = WidthT;
     typedef DataT ValueType;
 
@@ -2477,8 +2475,7 @@ private:
     Mask<WidthT> m_mask;
 };
 
-template<typename ElementT, int WidthT>
-struct MaskedImpl<ElementT[], WidthT> {
+template<typename ElementT, int WidthT> struct MaskedImpl<ElementT[], WidthT> {
     static constexpr int width = WidthT;
     typedef ElementT ElementType;
 

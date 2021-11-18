@@ -251,14 +251,15 @@ public:
 
     virtual TextureSystem::TextureHandle* resolve_udim_uniform(
         BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-        ustring filename, TextureSystem::TextureHandle* texture_handle,
-        float S, float T);
+        ustring filename, TextureSystem::TextureHandle* texture_handle, float S,
+        float T);
 
-    virtual void resolve_udim(
-        BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-        ustring filename, TextureSystem::TextureHandle* texture_handle,
-        Wide<const float> wS, Wide<const float> wT,
-        Masked<TextureSystem::TextureHandle*> wresult);
+    virtual void resolve_udim(BatchedShaderGlobals* bsg,
+                              TexturePerthread* texture_thread_info,
+                              ustring filename,
+                              TextureSystem::TextureHandle* texture_handle,
+                              Wide<const float> wS, Wide<const float> wT,
+                              Masked<TextureSystem::TextureHandle*> wresult);
 
     // Assumes any UDIM has been resolved already
     virtual bool get_texture_info_uniform(

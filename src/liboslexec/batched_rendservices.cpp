@@ -99,8 +99,8 @@ template<int WidthT>
 TextureSystem::TextureHandle*
 BatchedRendererServices<WidthT>::resolve_udim_uniform(
     BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-    ustring filename, TextureSystem::TextureHandle* texture_handle,
-    float S, float T)
+    ustring filename, TextureSystem::TextureHandle* texture_handle, float S,
+    float T)
 {
     if (!texture_thread_info)
         texture_thread_info = bsg->uniform.context->texture_thread_info();
@@ -111,10 +111,9 @@ BatchedRendererServices<WidthT>::resolve_udim_uniform(
     if (texturesys()->is_udim(texture_handle)) {
         // Newer versions of the TextureSystem interface are able to determine the
         // specific UDIM tile we're using.
-        TextureSystem::TextureHandle* udim_handle = texturesys()->resolve_udim(texture_handle,
-                                                texture_thread_info,
-                                                S,
-                                                T);
+        TextureSystem::TextureHandle* udim_handle
+            = texturesys()->resolve_udim(texture_handle, texture_thread_info, S,
+                                         T);
         // NOTE:  udim_handle may be nullptr if no corresponding texture exists
         if (udim_handle == nullptr) {
             // Optimization to just reuse the <udim> texture handle vs.
@@ -124,7 +123,7 @@ BatchedRendererServices<WidthT>::resolve_udim_uniform(
         return udim_handle;
     } else
 #endif
-    return texture_handle;
+        return texture_handle;
 }
 
 template<int WidthT>
@@ -145,10 +144,9 @@ BatchedRendererServices<WidthT>::resolve_udim(
         // Newer versions of the TextureSystem interface are able to determine the
         // specific UDIM tile we're using.
         wresult.mask().foreach ([&](ActiveLane l) -> void {
-            TextureSystem::TextureHandle* udim_handle = texturesys()->resolve_udim(texture_handle,
-                                                    texture_thread_info,
-                                                    wS[l],
-                                                    wT[l]);
+            TextureSystem::TextureHandle* udim_handle
+                = texturesys()->resolve_udim(texture_handle,
+                                             texture_thread_info, wS[l], wT[l]);
             // NOTE:  udim_handle may be nullptr if no corresponding texture exists
             if (udim_handle == nullptr) {
                 // Optimization to just reuse the <udim> texture handle vs.
@@ -159,7 +157,7 @@ BatchedRendererServices<WidthT>::resolve_udim(
         });
     } else
 #endif
-    assign_all(wresult, texture_handle);
+        assign_all(wresult, texture_handle);
 }
 
 
@@ -170,18 +168,20 @@ BatchedRendererServices<WidthT>::get_texture_info_uniform(
     ustring filename, TextureSystem::TextureHandle* texture_handle,
     int subimage, ustring dataname, RefData val)
 {
-    if (! texture_thread_info)
+    if (!texture_thread_info)
         texture_thread_info = bsg->uniform.context->texture_thread_info();
-    if (! texture_handle)
-        texture_handle = texturesys()->get_texture_handle (filename, texture_thread_info);
+    if (!texture_handle)
+        texture_handle = texturesys()->get_texture_handle(filename,
+                                                          texture_thread_info);
     bool status = texturesys()->get_texture_info(texture_handle, NULL, subimage,
-                                                dataname, val.type(),
-                                                val.ptr());
+                                                 dataname, val.type(),
+                                                 val.ptr());
 
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && bsg) {
-            bsg->uniform.context->errorf ("[RendererServices::get_texture_info] %s", err);
+            bsg->uniform.context->errorf(
+                "[RendererServices::get_texture_info] %s", err);
         }
     }
     return status;

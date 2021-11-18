@@ -294,9 +294,9 @@ macro (osl_add_all_tests)
                 wavelength_color wavelength_color-reg Werror xml )
 
     # Coordinate-aware gettextureinfo only works for TextureSystem >= 2.3.7
-    #if (OPENIMAGEIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
+    if (OpenImageIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
         TESTSUITE ( gettextureinfo-udim gettextureinfo-udim-reg )
-    #endif ()
+    endif ()
 
     # Only run the ocio test if the OIIO we are using has OCIO support
     if (OpenImageIO_HAS_OpenColorIO)

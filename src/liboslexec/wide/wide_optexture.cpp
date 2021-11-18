@@ -8,28 +8,6 @@
 /// Shader interpreter implementation of texture operations.
 ///
 /////////////////////////////////////////////////////////////////////////
-//#include <OpenImageIO/fmath.h>
-//#include <OpenImageIO/simd.h>
-//
-//#include <iostream>
-//#include <cmath>
-//
-//#include <OSL/oslconfig.h>
-//
-//
-//
-//#include "oslexec_pvt.h"
-//#include "OSL/dual.h"
-//
-//#include "define_opname_macros.h"
-//
-//OSL_NAMESPACE_ENTER
-//namespace __OSL_WIDE_PVT {
-//
-//OSL_USING_DATA_WIDTH(__OSL_WIDTH)
-//using BatchedRendererServices = OSL::BatchedRendererServices<__OSL_WIDTH>;
-//using WidthTag = OSL::WidthOf<__OSL_WIDTH>;
-
 #include <OSL/oslconfig.h>
 
 #include <OSL/batched_rendererservices.h>

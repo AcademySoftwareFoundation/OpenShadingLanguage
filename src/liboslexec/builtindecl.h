@@ -338,6 +338,10 @@ DECL (osl_stof_fs, "fs")
 DECL (osl_substr_ssii, "ssii")
 DECL (osl_regex_impl, "iXsXisi")
 
+// Used by wide code generator, but are uniform calls
+DECL (osl_texture_decode_wrapmode, "iX");
+DECL (osl_texture_decode_interpmode, "iX");
+
 DECL (osl_texture_set_firstchannel, "xXi")
 DECL (osl_texture_set_swrap, "xXs")
 DECL (osl_texture_set_twrap, "xXs")

@@ -112,6 +112,13 @@ RendererServices::good (TextureHandle *texture_handle)
 
 
 bool
+RendererServices::is_udim (TextureHandle *texture_handle)
+{
+    return texturesys()->is_udim(texture_handle);
+}
+
+
+bool
 RendererServices::texture (ustring filename, TextureHandle *texture_handle,
                            TexturePerthread *texture_thread_info,
                            TextureOpt &options, ShaderGlobals *sg,
@@ -266,9 +273,16 @@ RendererServices::get_texture_info(ustring filename,
     if (!texture_handle)
         texture_handle = texturesys()->get_texture_handle(filename,
                                                           texture_thread_info);
-    if (texturesys()->is_udim(texture_handle))
-        texture_handle = texturesys()->resolve_udim(texture_handle,
+    if (texturesys()->is_udim(texture_handle)) {
+        TextureSystem::TextureHandle* udim_handle = texturesys()->resolve_udim(texture_handle,
                                                     texture_thread_info, s, t);
+        // NOTE:  udim_handle may be nullptr if no corresponding texture exists
+        // Optimization to just reuse the <udim> texture handle vs.
+        // forcing get_texture_info_uniform to redo the lookup we have already done.
+        if (udim_handle != nullptr) {
+            texture_handle = udim_handle;
+        }
+    }
 #endif
     return get_texture_info(filename, texture_handle, texture_thread_info,
                             shading_context, subimage, dataname, datatype, data,

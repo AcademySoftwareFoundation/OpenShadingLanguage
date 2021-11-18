@@ -6,6 +6,9 @@
 
 #include <llvm/IR/Constant.h>
 
+#include <OSL/oslconfig.h>
+#include <OSL/batched_rendererservices.h>
+
 #include "batched_backendllvm.h"
 
 
@@ -3873,6 +3876,705 @@ LLVMGEN (llvm_gen_loopmod_op)
 }
 
 
+static llvm::Value*
+llvm_batched_texture_options(BatchedBackendLLVM &rop, int opnum,
+                             int first_optional_arg, bool tex3d, int nchans,
+                             llvm::Value* &alpha, bool & alphaHasDerivs, llvm::Value* &errormessage,
+                             llvm::Value* &missingcolor_buffer)
+{
+    llvm::Value * bto = rop.temp_batched_texture_options_ptr();
+
+    // The BatchedTextureOptions & missingcolor_buffer are local alloca,
+    // so no need to mask off non-active lanes
+
+    // Explicitly assign a default value or an optional parameter value to every data member
+    // of BatchedTextureOptions.
+    llvm::Value * wide_const_fzero_value = rop.ll.wide_constant(0.0f);
+    llvm::Value * wide_const_fone_value = rop.ll.wide_constant(1.0f);
+    llvm::Value * const_zero_value = rop.ll.constant(0);
+    llvm::Value * wrap_default_value = rop.ll.constant(static_cast<int>(Tex::Wrap::Default));
+
+    llvm::Value * sblur = wide_const_fzero_value;
+    llvm::Value * tblur= wide_const_fzero_value;
+    llvm::Value * rblur = wide_const_fzero_value;
+    llvm::Value * swidth = wide_const_fone_value;
+    llvm::Value * twidth = wide_const_fone_value;
+    llvm::Value * rwidth = wide_const_fone_value;
+
+    llvm::Value * firstchannel = const_zero_value;
+    llvm::Value * subimage = const_zero_value;
+    llvm::Value * subimagename = rop.ll.constant_ptr(nullptr);
+    llvm::Value * swrap = wrap_default_value;
+    llvm::Value * twrap = wrap_default_value;
+    llvm::Value * rwrap = wrap_default_value;
+    llvm::Value * mipmode = rop.ll.constant(static_cast<int>(Tex::MipMode::Default));
+    llvm::Value * interpmode = rop.ll.constant(static_cast<int>(Tex::InterpMode::SmartBicubic));
+    llvm::Value * anisotropic = rop.ll.constant(32);
+    llvm::Value * conservative_filter = rop.ll.constant(1);
+    llvm::Value * fill = rop.ll.constant(0.0f);
+
+    bool is_swrap_uniform = true;
+    bool is_twrap_uniform = true;
+    bool is_rwrap_uniform = true;
+
+    bool is_fill_uniform = true;
+    bool is_firstchannel_uniform = true;
+    bool is_subimage_uniform = true;
+    bool is_subimagename_uniform = true;
+    bool is_interpmode_uniform = true;
+
+
+    llvm::Value * missingcolor = rop.ll.constant_ptr(nullptr, rop.ll.type_float_ptr());
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name(*rop.opargsym(op,a));
+        OSL_ASSERT (Name.typespec().is_string() &&
+                "optional texture token must be a string");
+        OSL_ASSERT (a+1 < op.nargs() && "malformed argument list for texture");
+        ustring name = *(ustring *)Name.data();
+        ++a;  // advance to next argument (value)
+
+        if (name.empty())    // skip empty string param name
+            continue;
+        Symbol &Val(*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+
+
+        bool nameIsVarying = !Name.is_uniform();
+        // assuming option names can't be varying
+        OSL_ASSERT(!nameIsVarying);
+        // data could be varying
+        bool valIsVarying = !Val.is_uniform();
+
+#define PARAM_WIDE_FLOAT(paramname)                                     \
+        if (name == Strings::paramname &&                               \
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
+            llvm::Value *val = rop.llvm_load_value (Val, /*deriv=*/0,  \
+                /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+            if (valtype == TypeDesc::INT)                               \
+                val = rop.ll.op_int_to_float (val);                     \
+            paramname = val;                                            \
+            continue;                                                   \
+        }
+
+#define PARAM_WIDE_FLOAT_S_T_R(paramname)                                 \
+        if (name == Strings::paramname &&                                 \
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {   \
+            llvm::Value *val = rop.llvm_load_value (Val, /*deriv=*/0,  \
+                /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+              if (valtype == TypeDesc::INT) {                             \
+                  val = rop.ll.op_int_to_float (val);                     \
+              }                                                           \
+              s##paramname = val;                                         \
+              t##paramname = val;                                         \
+              if (tex3d) {                                                \
+                  r##paramname = val;                                     \
+              }                                                           \
+            continue;                                                     \
+        }
+
+        PARAM_WIDE_FLOAT_S_T_R(width)
+        PARAM_WIDE_FLOAT(swidth)
+        PARAM_WIDE_FLOAT(twidth)
+        if (tex3d) {
+            PARAM_WIDE_FLOAT(rwidth)
+        }
+
+        PARAM_WIDE_FLOAT_S_T_R(blur)
+        PARAM_WIDE_FLOAT(sblur)
+        PARAM_WIDE_FLOAT(tblur)
+        if (tex3d) {
+            PARAM_WIDE_FLOAT(rblur)
+        }
+
+
+#define PARAM_UNIFORM_FLOAT(paramname)                                  \
+        if (name == Strings::paramname &&                               \
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
+            is_##paramname##_uniform = !valIsVarying;                   \
+            if (valIsVarying) {                                         \
+                continue;                                               \
+            }                                                           \
+            llvm::Value *val = rop.llvm_load_value (Val);               \
+            if (valtype == TypeDesc::INT)                               \
+                val = rop.ll.op_int_to_float (val);                     \
+            paramname = val;                                            \
+            continue;                                                   \
+        }
+
+#define PARAM_UNIFORM_INT(paramname)                                    \
+        if (name == Strings::paramname &&                               \
+            (valtype == TypeDesc::INT)) {                               \
+            is_##paramname##_uniform = !valIsVarying;                   \
+            if (valIsVarying) {                                         \
+                continue;                                               \
+            }                                                           \
+            llvm::Value *val = rop.llvm_load_value (Val);               \
+            paramname = val;                                            \
+            continue;                                                   \
+        }
+
+
+#define PARAM_UNIFORM_STRING_CODE(paramname,decoder, llvm_decoder, fieldname)                 \
+        if (name == Strings::paramname && valtype == TypeDesc::STRING) {           \
+            if (valIsVarying) {                                                    \
+                is_##fieldname##_uniform = false;                                  \
+                continue;                                                          \
+            }                                                                      \
+            llvm::Value *val = nullptr;                                            \
+            if (Val.is_constant()) {                                               \
+                int mode = decoder (*(ustring *)Val.data());                       \
+                val = rop.ll.constant (mode);                                      \
+            } else {                                                               \
+                val = rop.llvm_load_value (Val);                                   \
+                val = rop.ll.call_function(#llvm_decoder, val);                    \
+            }                                                                      \
+            fieldname = val;                                                       \
+            continue;                                                              \
+        }
+
+        if (name == Strings::wrap && valtype == TypeDesc::STRING) {
+            if (valIsVarying) {
+                is_swrap_uniform = false;
+                is_twrap_uniform = false;
+                if (tex3d) {
+                    is_rwrap_uniform = false;
+                }
+                continue;
+            }
+            llvm::Value *val = nullptr;
+            if (Val.is_constant()) {
+                int mode = TextureOpt::decode_wrapmode (*(ustring *)Val.data());
+                val = rop.ll.constant (mode);
+            } else {
+                val = rop.llvm_load_value (Val);
+                val = rop.ll.call_function("osl_texture_decode_wrapmode", val);
+            }
+            swrap = val;
+            twrap = val;
+            if (tex3d) {
+                rwrap = val;
+            }
+            continue;
+        }
+        PARAM_UNIFORM_STRING_CODE(swrap, OIIO::TextureOpt::decode_wrapmode, osl_texture_decode_wrapmode, swrap)
+        PARAM_UNIFORM_STRING_CODE(twrap, OIIO::TextureOpt::decode_wrapmode, osl_texture_decode_wrapmode, twrap)
+        if (tex3d) {
+            PARAM_UNIFORM_STRING_CODE(rwrap, OIIO::TextureOpt::decode_wrapmode, osl_texture_decode_wrapmode, rwrap)
+        }
+
+        PARAM_UNIFORM_FLOAT(fill)
+        PARAM_UNIFORM_INT(firstchannel)
+        PARAM_UNIFORM_INT(subimage)
+
+        if (name == Strings::subimage && valtype == TypeDesc::STRING) {
+            if (valIsVarying) {
+                is_subimagename_uniform = false;
+                continue;
+            }
+            if (Val.is_constant()) {
+                ustring v = *(ustring *)Val.data();
+                if (v.empty() && (subimage == const_zero_value)) {
+                    continue;     // Ignore nulls unless they are overrides
+                }
+            }
+            llvm::Value *val = rop.llvm_load_value (Val);
+            subimagename = val;
+            continue;
+        }
+
+        PARAM_UNIFORM_STRING_CODE(interp, tex_interp_to_code, osl_texture_decode_interpmode, interpmode)
+
+
+        if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
+            OSL_ASSERT(valIsVarying && "thought to be unreachable as texture is inherently wide, so any alpha variable needs to be as well");
+            // We will handle this as part of the uniform section, as we will point to wide variables
+            // and technically the alpha is part of the output parameters not a texture option
+            alpha = rop.llvm_get_pointer (Val);
+            alphaHasDerivs = Val.has_derivs();
+            continue;
+        }
+
+        if (name == Strings::errormessage && valtype == TypeDesc::STRING) {
+            OSL_ASSERT(valIsVarying && "thought to be unreachable as texture is inherently wide, so any errormessage variable needs to be as well");
+            // We will handle this as part of the uniform section, as we will point to wide variables
+            // and technically the alpha is part of the output parameters not a texture option
+            errormessage = rop.llvm_get_pointer (Val);
+            continue;
+        }
+
+        if (name == Strings::missingcolor &&
+                   equivalent(valtype,TypeDesc::TypeColor)) {
+            if (! missingcolor_buffer) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor_buffer = rop.getOrAllocateTemp (TypeSpec(TypeDesc(TypeDesc::FLOAT,4)), false /*derivs()*/, true /*is_uniform*/, false /*forceBool*/, "float missingcolor[4]");
+                missingcolor = missingcolor_buffer;
+            }
+            if (valIsVarying) {
+                // For the varying case, we still wanted to allocate a scalar missingcolor_buffer
+                // and point the uniform portion of the BatchedTextureOptions at it
+                // So we don't track if its uniform, as we always write it out
+                continue;
+            }
+            OSL_ASSERT(missingcolor_buffer != nullptr);
+            rop.ll.op_memcpy (rop.ll.void_ptr(missingcolor_buffer),
+                              rop.llvm_void_ptr(Val), (int)sizeof(Color3));
+            continue;
+        }
+
+        if (name == Strings::missingalpha &&
+                   valtype == TypeDesc::FLOAT) {
+            if (! missingcolor_buffer) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor_buffer = rop.getOrAllocateTemp (TypeSpec(TypeDesc(TypeDesc::FLOAT,4)), false /*derivs()*/, true /*is_uniform*/, false /*forceBool*/, "float missingcolor[4]");
+                missingcolor = missingcolor_buffer;
+            }
+            if (valIsVarying) {
+                // For the varying case, we still wanted to allocate a scalar missingcolor_buffer
+                // and point the uniform portion of the BatchedTextureOptions at it
+                // So we don't track if its uniform, as we always write it out
+                continue;
+            }
+            OSL_ASSERT(missingcolor_buffer != nullptr);
+            llvm::Value *val = rop.llvm_load_value (Val);
+            // Depending on how render services handles channels, might need to be 3 period.
+            rop.ll.op_unmasked_store (val, rop.ll.GEP(missingcolor_buffer, nchans));
+            continue;
+        }
+
+        rop.shadingcontext()->errorf ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
+                                     tex3d ? "3d" : "",
+                                     name.c_str(), valtype.c_str(),
+                                     op.sourcefile().c_str(), op.sourceline());
+
+#undef PARAM_WIDE_FLOAT
+#undef PARAM_WIDE_FLOAT_S_T_R
+#undef PARAM_UNIFORM_FLOAT
+#undef PARAM_UNIFORM_INT
+#undef PARAM_UNIFORM_STRING_CODE
+    }
+
+    // The LLVMMemberIndex will be the same for any width of BatchedTextureOptions,
+    // so we will just use a WidthT=16 to look them up
+    typedef OSL::BatchedTextureOptions<16>::LLVMMemberIndex LLVMMemberIndex;
+
+    if (is_firstchannel_uniform)
+        rop.ll.op_unmasked_store (firstchannel, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::firstchannel)));
+    if (is_subimage_uniform)
+        rop.ll.op_unmasked_store (subimage, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::subimage)));
+
+    if (is_subimagename_uniform)
+        rop.ll.op_unmasked_store (subimagename, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::subimagename)));
+
+    if (is_swrap_uniform)
+        rop.ll.op_unmasked_store (swrap, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::swrap)));
+    if (is_twrap_uniform)
+        rop.ll.op_unmasked_store (twrap, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::twrap)));
+    if (is_rwrap_uniform)
+        rop.ll.op_unmasked_store (rwrap, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::rwrap)));
+
+    // No way to set mipmode option from OSL
+    rop.ll.op_unmasked_store (mipmode, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::mipmode)));
+
+    if (is_interpmode_uniform)
+        rop.ll.op_unmasked_store (interpmode, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::interpmode)));
+
+    // No way to set anisotropic option from OSL
+    rop.ll.op_unmasked_store (anisotropic, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::anisotropic)));
+
+    // No way to set conservative_filter option from OSL
+    rop.ll.op_unmasked_store (conservative_filter, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::conservative_filter)));
+
+    if (is_fill_uniform)
+        rop.ll.op_unmasked_store (fill, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::fill)));
+
+    // For uniform and varying we point the missingcolor to nullptr or the missingcolor_buffer,
+    // The varying options will copy the lead lane's missing color value into the missingcolor_buffer
+    rop.ll.op_unmasked_store (missingcolor, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::missingcolor)));
+
+    // blur's and width's are always communicated as wide, we we will handle them here
+    rop.ll.op_unmasked_store (sblur, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::sblur)));
+    rop.ll.op_unmasked_store (tblur, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::tblur)));
+    rop.ll.op_unmasked_store (swidth, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::swidth)));
+    rop.ll.op_unmasked_store (twidth, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::twidth)));
+
+    if (tex3d) {
+            rop.ll.op_unmasked_store (rblur, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::rblur)));
+            rop.ll.op_unmasked_store (rwidth, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::rwidth)));
+    }
+
+    return rop.ll.void_ptr(bto);
+
+}
+
+
+static llvm::Value*
+llvm_batched_texture_varying_options(BatchedBackendLLVM &rop, int opnum,
+                                     int first_optional_arg, bool tex3d, int nchans, llvm::Value *remainingMask,
+                                     llvm::Value * leadLane,
+                                     llvm::Value* missingcolor_buffer)
+{
+    llvm::Value * bto = rop.temp_batched_texture_options_ptr();
+
+    // The BatchedTextureOptions & missingcolor_buffer are local alloca,
+    // so no need to mask off non-active lanes
+
+    // The LLVMMemberIndex will be the same for any width of BatchedTextureOptions,
+    // so we will just use a WidthT=16 to look them up
+    typedef OSL::BatchedTextureOptions<16>::LLVMMemberIndex LLVMMemberIndex;
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name(*rop.opargsym(op,a));
+        OSL_ASSERT (Name.typespec().is_string() &&
+                "optional texture token must be a string");
+        OSL_ASSERT (a+1 < op.nargs() && "malformed argument list for texture");
+        ustring name = *(ustring *)Name.data();
+        ++a;  // advance to next argument (value)
+
+        if (name.empty())    // skip empty string param name
+            continue;
+        Symbol &Val(*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+
+
+        bool nameIsVarying = !Name.is_uniform();
+        // assuming option names can't be varying
+        OSL_ASSERT(!nameIsVarying);
+
+        // data could be uniform
+        bool valIsVarying = !Val.is_uniform();
+        if (!valIsVarying)
+            continue;
+
+        OSL_ASSERT(!Val.is_constant() && "can't be a varying constant");
+
+#define SKIP_PARAM_WIDE_FLOAT(paramname)                                \
+        if (name == Strings::paramname &&                               \
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
+            continue;                                                   \
+        }
+
+#define SKIP_PARAM_WIDE_STRING(paramname)                                \
+        if (name == Strings::paramname &&                               \
+            valtype == TypeDesc::STRING) { \
+            continue;                                                   \
+        }
+
+        SKIP_PARAM_WIDE_FLOAT(width)
+        SKIP_PARAM_WIDE_FLOAT(swidth)
+        SKIP_PARAM_WIDE_FLOAT(twidth)
+        SKIP_PARAM_WIDE_FLOAT(rwidth)
+
+        SKIP_PARAM_WIDE_FLOAT(blur)
+        SKIP_PARAM_WIDE_FLOAT(sblur)
+        SKIP_PARAM_WIDE_FLOAT(tblur)
+        SKIP_PARAM_WIDE_FLOAT(rblur)
+
+        SKIP_PARAM_WIDE_FLOAT(alpha)
+        SKIP_PARAM_WIDE_STRING(errormessage)
+
+        if (name == Strings::wrap && valtype == TypeDesc::STRING) {
+            llvm::Value *wide_wrap = rop.llvm_load_value (Val, /*deriv=*/0, /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+            llvm::Value *scalar_value = rop.ll.op_extract(wide_wrap, leadLane);
+            llvm::Value *wrap_code = rop.ll.call_function("osl_texture_decode_wrapmode", scalar_value);
+            rop.ll.op_unmasked_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::swrap)));
+            rop.ll.op_unmasked_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::twrap)));
+
+            if (tex3d)
+                rop.ll.op_unmasked_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::rwrap)));
+
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_wrap, remainingMask);
+            continue;
+        }
+
+#define PARAM_VARYING_STRING_CODE(paramname, llvm_decoder, fieldname)                 \
+        if (name == Strings::paramname && valtype == TypeDesc::STRING) {                      \
+            llvm::Value *wide_value = rop.llvm_load_value (Val, /*deriv=*/0, /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+            llvm::Value *scalar_value = rop.ll.op_extract(wide_value, leadLane);              \
+            llvm::Value *scalar_code = rop.ll.call_function(#llvm_decoder, scalar_value); \
+            rop.ll.op_unmasked_store (scalar_code, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::fieldname))); \
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_value, remainingMask); \
+            continue;                                                                         \
+        }
+
+        PARAM_VARYING_STRING_CODE(swrap, osl_texture_decode_wrapmode, swrap)
+        PARAM_VARYING_STRING_CODE(twrap, osl_texture_decode_wrapmode, twrap)
+        if (tex3d) {
+            PARAM_VARYING_STRING_CODE(rwrap, osl_texture_decode_wrapmode, rwrap)
+        }
+
+
+        if (name == Strings::fill && (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {
+            llvm::Value *wide_val = rop.llvm_load_value (Val, /*deriv=*/0, /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false);
+            llvm::Value *scalar_value = rop.ll.op_extract(wide_val, leadLane);
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_val, remainingMask);
+            if (valtype == TypeDesc::INT)
+                scalar_value = rop.ll.op_int_to_float (scalar_value);
+            rop.ll.op_unmasked_store (scalar_value, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::fill)));
+            continue;
+        }
+
+#define PARAM_VARYING(paramname, paramtype, fieldname)                 \
+        if (name == Strings::paramname && valtype == paramtype) {      \
+            llvm::Value *wide_val = rop.llvm_load_value (Val, /*deriv=*/0, /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+            llvm::Value *scalar_value = rop.ll.op_extract(wide_val, leadLane); \
+            rop.ll.op_unmasked_store (scalar_value, rop.ll.GEP (bto, 0, static_cast<int>(LLVMMemberIndex::fieldname))); \
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_val, remainingMask); \
+            continue; \
+        }
+        PARAM_VARYING(firstchannel, TypeDesc::INT, firstchannel)
+        PARAM_VARYING(subimage, TypeDesc::INT, subimage)
+        PARAM_VARYING(subimage, TypeDesc::STRING, subimagename)
+
+        PARAM_VARYING_STRING_CODE(interp, osl_texture_decode_interpmode, interpmode)
+
+        if (name == Strings::missingcolor &&
+                   equivalent(valtype,TypeDesc::TypeColor)) {
+            OSL_ASSERT(missingcolor_buffer != nullptr);
+
+            int num_components = valtype.aggregate;
+            for (int i = 0; i < num_components; i++) {
+                llvm::Value *wide_component = rop.llvm_load_value (Val, 0, i, valtype, false /*op_is_uniform*/);
+                llvm::Value *scalar_component = rop.ll.op_extract(wide_component, leadLane);
+                // The missingcolor_buffer is a local alloca, so no need to mask off non-active lanes
+                rop.ll.op_unmasked_store (scalar_component, rop.ll.GEP(missingcolor_buffer,i));
+
+                remainingMask = rop.ll.op_lanes_that_match_masked(scalar_component, wide_component, remainingMask);
+            }
+            continue;
+        }
+
+        if (name == Strings::missingalpha && valtype == TypeDesc::FLOAT) {
+            OSL_ASSERT(missingcolor_buffer != nullptr);
+
+            llvm::Value *wide_missingalpha = rop.llvm_load_value (Val, /*deriv=*/0, /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+            llvm::Value *scalar_missingalpha = rop.ll.op_extract(wide_missingalpha, leadLane);
+            // Depending on how render services handles channels, might need to be 3 period.
+            rop.ll.op_unmasked_store (scalar_missingalpha, rop.ll.GEP(missingcolor_buffer, nchans));
+
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_missingalpha, wide_missingalpha, remainingMask);
+            continue;
+        }
+
+        rop.shadingcontext()->errorf ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
+                                     tex3d ? "3d" : "",
+                                     name.c_str(), valtype.c_str(),
+                                     op.sourcefile().c_str(), op.sourceline());
+
+#undef SKIP_PARAM_WIDE_FLOAT
+#undef SKIP_PARAM_WIDE_STRING
+#undef PARAM_VARYING_STRING_CODE
+#undef PARAM_VARYING
+
+    }
+
+    return remainingMask;
+}
+
+LLVMGEN (llvm_gen_texture)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Result = *rop.opargsym (op, 0);
+    Symbol &Filename = *rop.opargsym (op, 1);
+    Symbol &S = *rop.opargsym (op, 2);
+    Symbol &T = *rop.opargsym (op, 3);
+
+    // The current texture interface doesn't support uniform results
+    // If uniform results become a common use-case, it should probably
+    // be a special call added to get_texture_info so it can be
+    // constant folded.
+    OSL_ASSERT(Result.is_uniform() == false);
+
+    int nchans = Result.typespec().aggregate();
+
+    bool user_derivs = false;
+    int first_optional_arg = 4;
+    if (op.nargs() > 4 && rop.opargsym(op,4)->typespec().is_float()) {
+        user_derivs = true;
+        first_optional_arg = 8;
+        OSL_DASSERT (rop.opargsym(op,5)->typespec().is_float());
+        OSL_DASSERT (rop.opargsym(op,6)->typespec().is_float());
+        OSL_DASSERT (rop.opargsym(op,7)->typespec().is_float());
+    }
+
+    // make sure that any temps created by llvm_batched_texture_options
+    // and llvm_batched_texture_varying_options
+    // are not released until we are done using them!
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value* opt;   // TextureOpt
+    llvm::Value *alpha = NULL;
+    bool alphaHasDerivs = false;
+    llvm::Value *errormessage = NULL;
+
+    llvm::Value* missingcolor_buffer = nullptr;
+    opt = llvm_batched_texture_options (rop, opnum, first_optional_arg,
+                                    false /*3d*/, nchans,
+                                    alpha, alphaHasDerivs, errormessage,
+                                    missingcolor_buffer);
+
+    // Now call the osl_texture function, passing the options and all the
+    // explicit args like texture coordinates.
+    llvm::Value * args[17];
+    args[0] = rop.sg_void_ptr();
+
+    const char * texFuncName = rop.build_name(FuncSpec("texture").mask());
+    RendererServices::TextureHandle *texture_handle = NULL;
+    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+        OSL_ASSERT(Filename.is_uniform());
+        texture_handle = rop.renderer()->get_texture_handle (Filename.get_string(), rop.shadingcontext());
+    }
+
+    // We will just load the filename here if we are uniform, otherwise just remember where the filename
+    // is so we can update it later in the loop over varying options
+    static constexpr int filenameArgumentIndex = 1;
+    llvm::Value * filenameVal = rop.llvm_load_value (Filename, /*deriv=*/0, /*component=*/0, TypeDesc::UNKNOWN, Filename.is_uniform());
+    args[filenameArgumentIndex] = Filename.is_uniform() ? filenameVal : nullptr;
+
+    args[2] = rop.ll.constant_ptr (texture_handle);
+    rop.generated_texture_call (texture_handle != NULL);
+
+    // check S & T are not uniform
+
+    llvm::Value* wideS = nullptr;
+    llvm::Value* wideSD1 = nullptr;
+    llvm::Value* wideSD2 = nullptr;
+    llvm::Value* wideT = nullptr;
+    llvm::Value* wideTD1 = nullptr;
+    llvm::Value* wideTD2 = nullptr;
+
+    if (S.is_uniform()) {
+        wideS = rop.llvm_widen_value_into_temp(S, 0);
+        if (!user_derivs) {
+            wideSD1 = rop.llvm_widen_value_into_temp(S, 1);
+            wideSD2 = rop.llvm_widen_value_into_temp(S, 2);
+        }
+    }
+    else {
+        wideS = rop.llvm_void_ptr(S, 0);
+        if (!user_derivs) {
+            wideSD1 = rop.llvm_void_ptr(S, 1);
+            wideSD2 = rop.llvm_void_ptr(S, 2);
+        }
+    }
+    if (T.is_uniform()) {
+        wideT = rop.llvm_widen_value_into_temp(T, 0);
+        if (!user_derivs) {
+            wideTD1 = rop.llvm_widen_value_into_temp(T, 1);
+            wideTD2 = rop.llvm_widen_value_into_temp(T, 2);
+        }
+    }
+    else {
+        wideT = rop.llvm_void_ptr(T);
+        if (!user_derivs) {
+            wideTD1 = rop.llvm_void_ptr(T, 1);
+            wideTD2 = rop.llvm_void_ptr(T, 2);
+        }
+    }
+    args[3] = opt;
+    args[4] = wideS;
+    args[5] = wideT;
+    llvm::Value* wideDsDx = nullptr;
+    llvm::Value* wideDtDx = nullptr;
+    llvm::Value* wideDsDy = nullptr;
+    llvm::Value* wideDtDy = nullptr;
+
+    if (user_derivs) {
+        Symbol &DsDx = *rop.opargsym (op, 4);
+        Symbol &DtDx = *rop.opargsym (op, 5);
+        Symbol &DsDy = *rop.opargsym (op, 6);
+        Symbol &DtDy = *rop.opargsym (op, 7);
+        if (DsDx.is_uniform()) {
+            wideDsDx = rop.llvm_widen_value_into_temp(DsDx, 0);
+        } else {
+            wideDsDx = rop.llvm_void_ptr(DsDx, 0);
+        }
+        if (DtDx.is_uniform()) {
+            wideDtDx = rop.llvm_widen_value_into_temp(DtDx, 0);
+        } else {
+            wideDtDx = rop.llvm_void_ptr(DtDx, 0);
+        }
+        if (DsDy.is_uniform()) {
+            wideDsDy = rop.llvm_widen_value_into_temp(DsDy, 0);
+        } else {
+            wideDsDy = rop.llvm_void_ptr(DsDy, 0);
+        }
+        if (DtDy.is_uniform()) {
+            wideDtDy = rop.llvm_widen_value_into_temp(DtDy, 0);
+        } else {
+            wideDtDy = rop.llvm_void_ptr(DtDy, 0);
+        }
+
+    } else {
+        // Auto derivs of S and T
+        wideDsDx = wideSD1;
+        wideDtDx = wideTD1;
+        wideDsDy = wideSD2;
+        wideDtDy = wideTD2;
+    }
+    args[6] = wideDsDx;
+    args[7] = wideDtDx;
+    args[8] = wideDsDy;
+    args[9] = wideDtDy;
+
+    OSL_DEV_ONLY(std::cout << "texture result type: " << rop.ll.llvm_typenameof(rop.llvm_get_pointer (Result, 1)) << std::endl);
+    args[10] = rop.ll.constant (nchans);
+    args[11] = rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0));
+    args[12] = Result.has_derivs() ? rop.ll.constant(1) : rop.ll.constant(0);
+    args[13] = rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null());
+    args[14] = alphaHasDerivs ? rop.ll.constant(1) : rop.ll.constant(0);
+    args[15] = rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null());
+
+    // do while(remaining)
+    llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to texture");
+    rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+    llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_texture_options (varying texture options)") : std::string());
+    llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_texture_options (varying texture options)") : std::string());
+    rop.ll.op_branch(bin_block);
+    {
+
+        llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+        llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+        llvm::Value * lanesMatchingFilename = remainingMask;
+
+        if(false == Filename.is_uniform()) {
+            llvm::Value *scalar_filename = rop.ll.op_extract(filenameVal, leadLane);
+            args[filenameArgumentIndex] = scalar_filename;
+            lanesMatchingFilename = rop.ll.op_lanes_that_match_masked(scalar_filename, filenameVal, remainingMask);
+        }
+
+        //rop.llvm_print_mask("before remainingMask", remainingMask);
+        llvm::Value * lanesMatchingOptions = llvm_batched_texture_varying_options (rop, opnum, first_optional_arg,
+                                        false /*3d*/, nchans, lanesMatchingFilename, leadLane, missingcolor_buffer);
+        OSL_ASSERT(lanesMatchingOptions);
+        //rop.llvm_print_mask("lanesMatchingOptions", lanesMatchingOptions);
+        args[16] = rop.ll.mask_as_int(lanesMatchingOptions);
+
+        rop.ll.call_function (texFuncName, args);
+
+        remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingOptions);
+        //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+        rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+        llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+        //rop.llvm_print_mask("remainingMask", remainingMask);
+        llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+        rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+    }
+    // Continue on with the previous flow
+    rop.ll.set_insert_point (after_block);
+
+    return true;
+}
+
+
 // TODO: future optimization, don't call multiple functions to set noise options.
 // Instead modify a NoiseOptions directly from LLVM (similar to batched texturing).
 static llvm::Value *
@@ -4484,6 +5186,228 @@ LLVMGEN (llvm_gen_getattribute)
     return true;
 }
 
+
+LLVMGEN (llvm_gen_gettextureinfo)
+{
+    OSL_DEV_ONLY(std::cout << "llvm_gen_gettextureinfo" << std::endl);
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT(op.nargs() == 4 || op.nargs() == 6);
+    bool use_coords = (op.nargs() == 6);
+    Symbol& Result   = *rop.opargsym (op, 0);
+    Symbol& Filename = *rop.opargsym (op, 1);
+    Symbol& Dataname = *rop.opargsym (op, use_coords ? 4 : 2);
+    Symbol& Data     = *rop.opargsym (op, use_coords ? 5 : 3);
+    Symbol* S        = use_coords ? rop.opargsym(op, 2) : nullptr;
+    Symbol* T        = use_coords ? rop.opargsym(op, 3) : nullptr;
+
+    OSL_DASSERT(!Result.typespec().is_closure_based() &&
+             Filename.typespec().is_string() &&
+             (S == nullptr || S->typespec().is_float()) &&
+             (T == nullptr || T->typespec().is_float()) &&
+             Dataname.typespec().is_string() &&
+             !Data.typespec().is_closure_based() &&
+             Result.typespec().is_int());
+
+    const TypeDesc* dest_type = &Data.typespec().simpletype();
+
+    std::vector<llvm::Value *> args;
+    args.push_back (rop.sg_void_ptr());
+
+    // We will just load the spline name here if we are uniform,
+    // otherwise just remember where the spline name
+    // is so we can update it later in the loop over varying spline names
+    int fileNameArgumentIndex = args.size();
+    llvm::Value * fileNameVal = rop.llvm_load_value (Filename, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Filename.is_uniform());
+    args.push_back ( Filename.is_uniform() ? fileNameVal : nullptr);
+
+    RendererServices::TextureHandle *texture_handle = NULL;
+    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+        texture_handle = rop.renderer()->get_texture_handle(Filename.get_string(), rop.shadingcontext());
+        if (!rop.renderer()->is_udim(texture_handle))
+            use_coords = false;
+    }
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+    llvm::Value * loc_texture_handles = nullptr;
+    llvm::Value * udim_texture_handles = nullptr;
+    llvm::Value * resolve_udim_args[7];
+    constexpr int udim_fileName_arg_index = 1;
+    constexpr int udim_mask_arg_index = 6;
+    std::string resolve_udim_name;
+    // BatchedAnalysis should have made Data varying if any of the inputs (include S and T)
+    // were varying, so we can just check it to see if we can resolve uniformly or not
+    bool resolve_is_uniform = Data.is_uniform();
+    if (use_coords) {
+        FuncSpec resolve_udim_spec(resolve_is_uniform ? "resolve_udim_uniform" : "resolve_udim");
+        if (!resolve_is_uniform) {
+            loc_texture_handles = rop.getOrAllocateTemp (TypeSpec(TypeDesc::PTR), false /*has_derivs*/, false /*is_uniform*/);
+            resolve_udim_spec.mask();
+        }
+        // NOTE: we make a copy so the build name internal buffer can be reused.
+        resolve_udim_name = rop.build_name(resolve_udim_spec);
+        resolve_udim_args[0] = rop.sg_void_ptr();
+        resolve_udim_args[1] = Filename.is_uniform() ? fileNameVal : nullptr;
+        resolve_udim_args[2] = rop.ll.constant_ptr (texture_handle);
+        resolve_udim_args[3] = rop.llvm_load_arg (*S, /*has_derivs*/false, resolve_is_uniform);
+        resolve_udim_args[4] = rop.llvm_load_arg (*T, /*has_derivs*/false, resolve_is_uniform);
+
+        if (!resolve_is_uniform) {
+            resolve_udim_args[5] = rop.ll.void_ptr(loc_texture_handles);
+            resolve_udim_args[6] = nullptr; // mask_as_int
+            if (Filename.is_uniform()) {
+                resolve_udim_args[udim_mask_arg_index] = rop.ll.mask_as_int(rop.ll.current_mask());
+                rop.ll.call_function (resolve_udim_name.c_str(), resolve_udim_args);
+                udim_texture_handles = rop.ll.op_load(loc_texture_handles);
+            }
+        }
+    }
+
+    int textureHandleArgumentIndex = args.size();
+    llvm::Value * texture_handle_value = nullptr;
+    if (use_coords && resolve_is_uniform) {
+        texture_handle_value = rop.ll.call_function (resolve_udim_name.c_str(), cspan<llvm::Value *>(resolve_udim_args, 5));
+        // because the resolve was uniform and we just resolved the texture handle
+        // no need to do binning because of coords
+        use_coords = false;
+    } else {
+        texture_handle_value = rop.ll.constant_ptr (texture_handle);
+    }
+    args.push_back (texture_handle_value);
+
+    int dataNameArgumentIndex = args.size();
+    llvm::Value * dataNameVal = rop.llvm_load_value (Dataname, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Dataname.is_uniform());
+    args.push_back ( Dataname.is_uniform() ? dataNameVal : nullptr);
+
+    // this is passes a TypeDesc to an LLVM op-code
+    // NOTE: not GPU friendly to pass pointer to host memory,
+    //       but this is CPU only right now
+    args.push_back (rop.ll.constant_ptr ((void *) dest_type));
+    // destination
+    llvm::Value *tempUniformData = nullptr;
+    if (Data.is_uniform()) {
+        args.push_back (rop.llvm_void_ptr (Data));
+    } else {
+        tempUniformData = rop.getOrAllocateTemp (Data.typespec(), Data.has_derivs(), true /*is_uniform*/);
+        args.push_back (rop.ll.void_ptr(tempUniformData));
+    }
+
+    FuncSpec func_spec("get_textureinfo_uniform");
+    const char * funcName = rop.build_name(func_spec);
+
+    bool requires_binning = (!Filename.is_uniform()) | (!Dataname.is_uniform()) | use_coords;
+    if (requires_binning) {
+        // Result mask starts at 0 and success is bitwise OR'd in
+        llvm::Value * loc_of_successMask = rop.getTempMask("lanes succeeded to gettextureinfo");
+        rop.ll.op_store_mask(rop.ll.int_as_mask(rop.ll.constant(0)), loc_of_successMask);
+        // do while(remaining)
+        llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to gettextureinfo");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_gettextureinfo") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_gettextureinfo") : std::string());
+        rop.ll.op_branch(bin_block);
+        {
+
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+            llvm::Value * lanesMatching = remainingMask;
+
+            if (!Filename.is_uniform()) {
+                llvm::Value *scalar_fileName = rop.ll.op_extract(fileNameVal, leadLane);
+                args[fileNameArgumentIndex] = scalar_fileName;
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_fileName, fileNameVal, remainingMask);
+
+                if (use_coords) {
+                    resolve_udim_args[udim_fileName_arg_index] = scalar_fileName;
+                    resolve_udim_args[udim_mask_arg_index] = rop.ll.mask_as_int(lanesMatching);
+                    rop.ll.call_function (resolve_udim_name.c_str(), resolve_udim_args);
+                    udim_texture_handles = rop.ll.op_load(loc_texture_handles);
+                }
+            }
+            OSL_ASSERT(lanesMatching);
+
+            if (use_coords) {
+                OSL_ASSERT(udim_texture_handles != nullptr);
+                llvm::Value *scalar_textureHandle = rop.ll.op_extract(udim_texture_handles, leadLane);
+                args[textureHandleArgumentIndex] = scalar_textureHandle;
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_textureHandle, udim_texture_handles, lanesMatching);
+            }
+
+            if (!Dataname.is_uniform()) {
+                llvm::Value *scalar_dataName = rop.ll.op_extract(dataNameVal, leadLane);
+                args[dataNameArgumentIndex] = scalar_dataName;
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_dataName, dataNameVal, lanesMatching);
+            }
+            //rop.llvm_print_mask("lanesMatching", lanesMatching);
+            rop.ll.push_mask(lanesMatching);
+
+            llvm::Value * success = rop.ll.call_function (funcName, args);
+
+            // Only broadcast our result if the value lookup succeeded
+            // Branch on the condition, to our blocks
+            llvm::Value* broadcast_cond_val = rop.ll.op_int_to_bool (success);
+            llvm::BasicBlock* broadcast_block = rop.ll.new_basic_block (std::string("uniform gettextureinfo broadcast"));
+            llvm::BasicBlock* after_broadcast_block = rop.ll.new_basic_block (std::string("after uniform gettextureinfo broadcast"));
+            rop.ll.op_branch (broadcast_cond_val, broadcast_block, after_broadcast_block);
+
+            rop.ll.set_insert_point(broadcast_block);
+            llvm::Value * success_mask = rop.ll.op_load_mask(loc_of_successMask);
+            success_mask = rop.ll.op_or(success_mask, lanesMatching);
+            rop.ll.op_store_mask(success_mask, loc_of_successMask);
+            // this broadcast should respect current mask stack
+            OSL_ASSERT(false == Data.is_uniform());
+            rop.llvm_broadcast_uniform_value_from_mem(tempUniformData, Data);
+            rop.ll.op_branch (after_broadcast_block);
+            rop.ll.set_insert_point(after_broadcast_block);
+
+            rop.ll.pop_mask(); // lanes matching
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatching);
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingSplineName", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+        OSL_ASSERT(false == Result.is_uniform());
+        llvm::Value * success_mask = rop.ll.op_load_mask(loc_of_successMask);
+        rop.llvm_conversion_store_masked_status(rop.ll.mask_as_int(success_mask), Result);
+    } else {
+        llvm::Value * success = rop.ll.call_function (funcName, args);
+
+        if (!Data.is_uniform()) {
+            // Only broadcast our result if the value lookup succeeded
+            // Branch on the condition, to our blocks
+            llvm::Value* broadcast_cond_val = rop.ll.op_int_to_bool (success);
+            llvm::BasicBlock* broadcast_block = rop.ll.new_basic_block (std::string("uniform gettextureinfo broadcast"));
+            llvm::BasicBlock* after_broadcast_block = rop.ll.new_basic_block (std::string("after uniform gettextureinfo broadcast"));
+            rop.ll.op_branch (broadcast_cond_val, broadcast_block, after_broadcast_block);
+
+            rop.ll.set_insert_point(broadcast_block);
+            // this broadcast should respect current mask stack
+            rop.llvm_broadcast_uniform_value_from_mem(tempUniformData, Data);
+            rop.ll.op_branch (after_broadcast_block);
+            rop.ll.set_insert_point(after_broadcast_block);
+        }
+
+        if (!Result.is_uniform()) {
+            rop.llvm_broadcast_uniform_value(success, Result);
+        } else {
+            rop.llvm_store_value (success, Result);
+        }
+    }
+
+    /* Do not leave derivs uninitialized */
+    if (Data.has_derivs())
+        rop.llvm_zero_derivs (Data);
+
+    return true;
+}
 
 
 LLVMGEN (llvm_gen_get_simple_SG_field)
@@ -5139,7 +6063,6 @@ LLVMGEN(NAME) \
     return false; \
 } \
 
-TBD_LLVMGEN(llvm_gen_texture)
 TBD_LLVMGEN(llvm_gen_getmessage)
 TBD_LLVMGEN(llvm_gen_pointcloud_search)
 TBD_LLVMGEN(llvm_gen_dict_find)
@@ -5148,7 +6071,6 @@ TBD_LLVMGEN(llvm_gen_pointcloud_get)
 TBD_LLVMGEN(llvm_gen_pointcloud_write)
 TBD_LLVMGEN(llvm_gen_dict_value)
 TBD_LLVMGEN(llvm_gen_closure)
-TBD_LLVMGEN(llvm_gen_gettextureinfo)
 TBD_LLVMGEN(llvm_gen_dict_next)
 TBD_LLVMGEN(llvm_gen_texture3d)
 TBD_LLVMGEN(llvm_gen_environment)

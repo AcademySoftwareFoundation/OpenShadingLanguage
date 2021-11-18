@@ -96,97 +96,92 @@ BatchedRendererServices<WidthT>::texturesys() const
 }
 
 template<int WidthT>
-Mask<WidthT>
-BatchedRendererServices<WidthT>::get_texture_info(
-    BatchedShaderGlobals* bsg, TexturePerthread* /*texture_thread_info*/,
-    Wide<const ustring> wfilename, int subimage, ustring dataname,
-    MaskedData wval)
+TextureSystem::TextureHandle*
+BatchedRendererServices<WidthT>::resolve_udim_uniform(
+    BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
+    ustring filename, TextureSystem::TextureHandle* texture_handle,
+    float S, float T)
 {
-    Mask success(false);
-
-#define TEXTURE_INFO_FOR_TYPE(data_type)                                                                                                                \
-    if (Masked<data_type>::is(wval)) {                                                                                                                  \
-        Masked<data_type> out(wval);                                                                                                                    \
-        wval.mask().foreach ([=, &success](ActiveLane l) -> void {                                                                                      \
-            data_type data;                                                                                                                             \
-            bool status = texturesys()->get_texture_info(wfilename[l],                                                                                  \
-                                                         subimage, dataname,                                                                            \
-                                                         wval.type(), &data);                                                                           \
-            if (status) {                                                                                                                               \
-                /* masked assignment */                                                                                                                 \
-                out[l] = data;                                                                                                                          \
-                success.set_on(l);                                                                                                                      \
-            } else {                                                                                                                                    \
-                std::string err = texturesys()->geterror();                                                                                             \
-                if (err.size() && bsg) {                                                                                                                \
-                    /* TODO:  enable in future pull request */                                                                                          \
-                    /* bsg->uniform.context->template batched<WidthT>().errorf (Mask(Lane(l)), "[BatchRendererServices::get_texture_info] %s", err); */ \
-                }                                                                                                                                       \
-            }                                                                                                                                           \
-        });                                                                                                                                             \
-        return success;                                                                                                                                 \
-    }
-
-
-#define TEXTURE_INFO_FOR_ARRAY(data_type)                                                                                                               \
-    if (Masked<data_type[]>::is(wval)) {                                                                                                                \
-        Masked<data_type[]> out(wval);                                                                                                                  \
-        wval.mask().foreach ([=, &success](ActiveLane l) -> void {                                                                                      \
-            auto arrayData = out[l];                                                                                                                    \
-            OSL_STACK_ARRAY(data_type, data, arrayData.length());                                                                                       \
-            bool status = texturesys()->get_texture_info(wfilename[l],                                                                                  \
-                                                         subimage, dataname,                                                                            \
-                                                         wval.type(), data);                                                                            \
-            if (status) {                                                                                                                               \
-                success.set_on(l);                                                                                                                      \
-                /* masked assignment */                                                                                                                 \
-                for (int i = 0; i < arrayData.length(); ++i) {                                                                                          \
-                    arrayData[i] = data[i];                                                                                                             \
-                }                                                                                                                                       \
-            } else {                                                                                                                                    \
-                std::string err = texturesys()->geterror();                                                                                             \
-                if (err.size() && bsg) {                                                                                                                \
-                    /* TODO:  enable in future pull request */                                                                                          \
-                    /* bsg->uniform.context->template batched<WidthT>().errorf (Mask(Lane(l)), "[BatchRendererServices::get_texture_info] %s", err); */ \
-                }                                                                                                                                       \
-            }                                                                                                                                           \
-        });                                                                                                                                             \
-        return success;                                                                                                                                 \
-    }
-
-    TEXTURE_INFO_FOR_TYPE(int);
-    TEXTURE_INFO_FOR_ARRAY(int);
-    TEXTURE_INFO_FOR_TYPE(float);
-    TEXTURE_INFO_FOR_ARRAY(float);
-    TEXTURE_INFO_FOR_TYPE(Vec2);
-    TEXTURE_INFO_FOR_TYPE(Vec3);
-    TEXTURE_INFO_FOR_TYPE(Color3);
-    TEXTURE_INFO_FOR_TYPE(Matrix44);
-    TEXTURE_INFO_FOR_TYPE(ustring);
-
-    return success;
+    if (!texture_thread_info)
+        texture_thread_info = bsg->uniform.context->texture_thread_info();
+    if (!texture_handle)
+        texture_handle = texturesys()->get_texture_handle(filename,
+                                                          texture_thread_info);
+#if OPENIMAGEIO_VERSION >= 20307
+    if (texturesys()->is_udim(texture_handle)) {
+        // Newer versions of the TextureSystem interface are able to determine the
+        // specific UDIM tile we're using.
+        TextureSystem::TextureHandle* udim_handle = texturesys()->resolve_udim(texture_handle,
+                                                texture_thread_info,
+                                                S,
+                                                T);
+        // NOTE:  udim_handle may be nullptr if no corresponding texture exists
+        if (udim_handle == nullptr) {
+            // Optimization to just reuse the <udim> texture handle vs.
+            // forcing get_texture_info_uniform to redo the lookup we have already done.
+            udim_handle = texture_handle;
+        }
+        return udim_handle;
+    } else
+#endif
+    return texture_handle;
 }
+
+template<int WidthT>
+void
+BatchedRendererServices<WidthT>::resolve_udim(
+    BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
+    ustring filename, TextureSystem::TextureHandle* texture_handle,
+    Wide<const float> wS, Wide<const float> wT,
+    Masked<TextureSystem::TextureHandle*> wresult)
+{
+    if (!texture_thread_info)
+        texture_thread_info = bsg->uniform.context->texture_thread_info();
+    if (!texture_handle)
+        texture_handle = texturesys()->get_texture_handle(filename,
+                                                          texture_thread_info);
+#if OPENIMAGEIO_VERSION >= 20307
+    if (texturesys()->is_udim(texture_handle)) {
+        // Newer versions of the TextureSystem interface are able to determine the
+        // specific UDIM tile we're using.
+        wresult.mask().foreach ([&](ActiveLane l) -> void {
+            TextureSystem::TextureHandle* udim_handle = texturesys()->resolve_udim(texture_handle,
+                                                    texture_thread_info,
+                                                    wS[l],
+                                                    wT[l]);
+            // NOTE:  udim_handle may be nullptr if no corresponding texture exists
+            if (udim_handle == nullptr) {
+                // Optimization to just reuse the <udim> texture handle vs.
+                // forcing get_texture_info_uniform to redo the lookup we have already done.
+                udim_handle = texture_handle;
+            }
+            wresult[l] = udim_handle;
+        });
+    } else
+#endif
+    assign_all(wresult, texture_handle);
+}
+
 
 template<int WidthT>
 bool
 BatchedRendererServices<WidthT>::get_texture_info_uniform(
-    BatchedShaderGlobals* bsg, TexturePerthread* /*texture_thread_info*/,
+    BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
     ustring filename, TextureSystem::TextureHandle* texture_handle,
     int subimage, ustring dataname, RefData val)
 {
-    bool status;
-    if (texture_handle)
-        status = texturesys()->get_texture_info(texture_handle, NULL, subimage,
+    if (! texture_thread_info)
+        texture_thread_info = bsg->uniform.context->texture_thread_info();
+    if (! texture_handle)
+        texture_handle = texturesys()->get_texture_handle (filename, texture_thread_info);
+    bool status = texturesys()->get_texture_info(texture_handle, NULL, subimage,
                                                 dataname, val.type(),
                                                 val.ptr());
-    else
-        status = texturesys()->get_texture_info(filename, subimage, dataname,
-                                                val.type(), val.ptr());
+
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && bsg) {
-            // TODO:  enable in future pull request
-            // bsg->uniform().context->errorf ("[BatchRendererServices::get_texture_info_uniform] %s", err);
+            bsg->uniform.context->errorf ("[RendererServices::get_texture_info] %s", err);
         }
     }
     return status;

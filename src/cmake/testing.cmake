@@ -205,7 +205,7 @@ macro (osl_add_all_tests)
                 function-earlyreturn function-simple function-outputelem
                 function-overloads function-redef
                 geomath getattribute-camera getattribute-shader
-                getsymbol-nonheap gettextureinfo
+                getsymbol-nonheap gettextureinfo gettextureinfo-reg
                 group-outputs groupstring
                 hash hashnoise hex hyperb
                 ieee_fp if if-reg incdec initlist initops intbits isconnected
@@ -278,7 +278,7 @@ macro (osl_add_all_tests)
                 texture-blur texture-connected-options
                 texture-derivs texture-environment texture-errormsg
                 texture-firstchannel texture-interp
-                texture-missingalpha texture-missingcolor texture-simple
+                texture-missingalpha texture-missingcolor texture-opts-reg texture-simple
                 texture-smallderivs texture-swirl texture-udim
                 texture-width texture-withderivs texture-wrap
                 trailing-commas
@@ -294,9 +294,9 @@ macro (osl_add_all_tests)
                 wavelength_color wavelength_color-reg Werror xml )
 
     # Coordinate-aware gettextureinfo only works for TextureSystem >= 2.3.7
-    if (OPENIMAGEIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
-        TESTSUITE ( gettextureinfo-udim )
-    endif ()
+    #if (OPENIMAGEIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
+        TESTSUITE ( gettextureinfo-udim gettextureinfo-udim-reg )
+    #endif ()
 
     # Only run the ocio test if the OIIO we are using has OCIO support
     if (OpenImageIO_HAS_OpenColorIO)

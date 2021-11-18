@@ -249,15 +249,18 @@ public:
     /// can) use that extra information to perform a less expensive texture
     /// lookup.
 
-    // Should shader's fully avoid non-constant strings we could remove this
-    // method which supports Wide<const ustring> wfilename.  Or replace
-    // this virtual method with a library side loop that calls the uniform version
-    virtual Mask get_texture_info(
+    virtual TextureSystem::TextureHandle* resolve_udim_uniform(
         BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-        Wide<const ustring> wfilename,
-        // We do not need to support texture handle for varying data.
-        int subimage, ustring dataname, MaskedData val);
+        ustring filename, TextureSystem::TextureHandle* texture_handle,
+        float S, float T);
 
+    virtual void resolve_udim(
+        BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
+        ustring filename, TextureSystem::TextureHandle* texture_handle,
+        Wide<const float> wS, Wide<const float> wT,
+        Masked<TextureSystem::TextureHandle*> wresult);
+
+    // Assumes any UDIM has been resolved already
     virtual bool get_texture_info_uniform(
         BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
         ustring filename, TextureSystem::TextureHandle* texture_handle,

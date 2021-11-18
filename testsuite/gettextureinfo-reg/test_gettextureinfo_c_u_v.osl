@@ -1,0 +1,9 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#define __OSL_XMACRO_SUFFIX c_u_v
+#define CONSTANT_FILENAME 1
+#define UNIFORM_PARAM_NAME 1
+#define VARYING_DATA 1
+#include "test_gettextureinfo_xmacro.h"

@@ -42,6 +42,12 @@ osl_texture_set_firstchannel (void *opt, int x)
     ((TextureOpt *)opt)->firstchannel = x;
 }
 
+OSL_SHADEOP int
+osl_texture_decode_wrapmode(void * name)
+{
+    const ustring & uname = USTR(name);
+    return OIIO::TextureOpt::decode_wrapmode(uname);
+}
 
 OSL_SHADEOP void
 osl_texture_set_swrap (void *opt, const char *x)
@@ -156,24 +162,11 @@ osl_texture_set_time (void *opt, float x)
     ((TextureOpt *)opt)->time = x;
 }
 
-inline int
-tex_interp_to_code (ustring modename)
+OSL_SHADEOP int
+osl_texture_decode_interpmode(void * name)
 {
-    static ustring u_linear ("linear");
-    static ustring u_smartcubic ("smartcubic");
-    static ustring u_cubic ("cubic");
-    static ustring u_closest ("closest");
-
-    int mode = -1;
-    if (modename == u_smartcubic)
-        mode = TextureOpt::InterpSmartBicubic;
-    else if (modename == u_linear)
-        mode = TextureOpt::InterpBilinear;
-    else if (modename == u_cubic)
-        mode = TextureOpt::InterpBicubic;
-    else if (modename == u_closest)
-        mode = TextureOpt::InterpClosest;
-    return mode;
+    const ustring & uname = USTR(name);
+    return tex_interp_to_code(uname);
 }
 
 OSL_SHADEOP void

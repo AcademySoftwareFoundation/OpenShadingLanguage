@@ -193,6 +193,10 @@ public:
     /// read or sampled.
     virtual bool good (TextureHandle *texture_handle);
 
+    /// Return true if the texture handle (previously returned by
+    /// get_texture_handle()) is udim
+    virtual bool is_udim (TextureHandle *texture_handle);
+
     /// Filtered 2D texture lookup for a single point.
     ///
     /// s,t are the texture coordinates; dsdx, dtdx, dsdy, and dtdy are

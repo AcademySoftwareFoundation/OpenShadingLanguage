@@ -8,22 +8,23 @@
 # these texture files because their DateTime attributes would be different
 # between the BASELINE and REGRESSION runs possibly causing different
 # results.  To avoid this we use the --no-clobber option to leave the 
-# texture files created by BASELINE undisturbed
-command += oiiotool ("--no-clobber -q -pattern constant:color=.5,.1,.1 128x128 3 -d uint8 -otex file.1001.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.1,.5,.1 256x256 3 -d uint8 -otex file.1002.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.1,.1,.5 512x512 3 -d uint8 -otex file.1011.tx")
+# texture files created by BASELINE undisturbed.  And we use the silent option
+# to avoid "file already exists" warnings 
+command += oiiotool ("--no-clobber -pattern constant:color=.5,.1,.1 128x128 3 -d uint8 -otex file.1001.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.1,.5,.1 256x256 3 -d uint8 -otex file.1002.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.1,.1,.5 512x512 3 -d uint8 -otex file.1011.tx", silent=True)
 
-command += oiiotool ("--no-clobber -q -pattern constant:color=.25,.35,.45 512x512 3 -d uint8 -otex fileB.1001.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.95,.75,.65 256x256 3 -d uint8 -otex fileB.1002.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.125,.35,.5 128x128 3 -d uint8 -otex fileB.1011.tx")
+command += oiiotool ("--no-clobber -pattern constant:color=.25,.35,.45 512x512 3 -d uint8 -otex fileB.1001.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.95,.75,.65 256x256 3 -d uint8 -otex fileB.1002.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.125,.35,.5 128x128 3 -d uint8 -otex fileB.1011.tx", silent=True)
 
-command += oiiotool ("--no-clobber -q -pattern constant:color=.45,.25,.85 256x256 3 -d uint8 -otex fileC.1001.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.15,.55,.75 128x128 3 -d uint8 -otex fileC.1002.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.75,.15,.35 512x512 3 -d uint8 -otex fileC.1011.tx")
+command += oiiotool ("--no-clobber -pattern constant:color=.45,.25,.85 256x256 3 -d uint8 -otex fileC.1001.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.15,.55,.75 128x128 3 -d uint8 -otex fileC.1002.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.75,.15,.35 512x512 3 -d uint8 -otex fileC.1011.tx", silent=True)
 
-command += oiiotool ("--no-clobber -q -pattern constant:color=.45,.33,.2 128x128 3 -d uint8 -otex fileD.1001.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.33,.66,.8 512x512 3 -d uint8 -otex fileD.1002.tx")
-command += oiiotool ("--no-clobber -q -pattern constant:color=.8,.6,.2 256x256 3 -d uint8 -otex fileD.1011.tx")
+command += oiiotool ("--no-clobber -pattern constant:color=.45,.33,.2 128x128 3 -d uint8 -otex fileD.1001.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.33,.66,.8 512x512 3 -d uint8 -otex fileD.1002.tx", silent=True)
+command += oiiotool ("--no-clobber -pattern constant:color=.8,.6,.2 256x256 3 -d uint8 -otex fileD.1011.tx", silent=True)
 
 def run_test (suffix) :
     global command

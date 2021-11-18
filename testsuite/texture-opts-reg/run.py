@@ -9,7 +9,7 @@
 # between the BASELINE and REGRESSION runs possibly causing different
 # results.  To avoid this we use the --no-clobber option to leave the 
 # texture files created by BASELINE undisturbed
-command += oiiotool("--no-clobber -q --pattern fill:topleft=0.125,0.25,0.5,0:topright=0.125,0.25,0.5,0.5:bottomleft=0.125,0.25,0.5,0.25:bottomright=0.125,0.25,0.5,0.75 64x64 4 -d half -o alpharamp.exr")
+command += oiiotool("--pattern fill:topleft=0.125,0.25,0.5,0:topright=0.125,0.25,0.5,0.5:bottomleft=0.125,0.25,0.5,0.25:bottomright=0.125,0.25,0.5,0.75 64x64 4 -d half -o alpharamp.exr")
 
 def run_test (suffix) :
     global command

@@ -199,9 +199,12 @@ def oslinfo (args) :
 
 # Construct a command that runs oiiotool, appending console output
 # to the file "out.txt".
-def oiiotool (args) :
-    return (oiio_app("oiiotool") + args + redirect + " ;\n")
-
+def oiiotool (args, silent=False) :
+    oiiotool_cmd = (oiio_app("oiiotool") + args)
+    if not silent :
+        oiiotool_cmd += redirect
+    oiiotool_cmd += " ;\n"
+    return oiiotool_cmd;
 
 # Construct a command that runs maketx, appending console output
 # to the file "out.txt".

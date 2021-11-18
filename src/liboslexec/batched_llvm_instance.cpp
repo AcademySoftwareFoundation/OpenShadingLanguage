@@ -671,6 +671,9 @@ BatchedBackendLLVM::llvm_type_batched_texture_options()
     sg_types.push_back(ll.type_wide_float());  // swidth
     sg_types.push_back(ll.type_wide_float());  // twidth
     sg_types.push_back(ll.type_wide_float());  // rwidth
+#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
+    sg_types.push_back(ll.type_wide_float());  // rnd
+#endif
 
     // Uniform values of the batch
     sg_types.push_back(ll.type_int());                 // firstchannel

@@ -91,6 +91,10 @@ default_texture(BatchedRendererServices *bsr, ustring filename, TextureSystem::T
         opt.swidth = vary_opt.swidth[lane];
         opt.twidth = vary_opt.twidth[lane];
 
+#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
+        opt.rnd = vary_opt.rnd[lane];
+#endif
+
         // For 3D volume texture lookups only:
         //opt.rblur = vary_opt.rblur[lane];
         //opt.rwidth = vary_opt.rwidth[lane];

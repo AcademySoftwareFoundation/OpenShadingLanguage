@@ -1548,7 +1548,7 @@ BatchedBackendLLVM::build_llvm_code(int beginop, int endop,
                 // TODO: optionally enable
 #ifdef OSL_DEV
             std::cout << "Generating :" << op.opname() << std::endl;
-            if (requiresMasking(opnum))
+            if (op.requires_masking())
                 std::cout << " with MASKING";
             std::cout << std::endl;
 #endif
@@ -2252,6 +2252,10 @@ BatchedBackendLLVM::build_offsets_of_BatchedTextureOptions(
         varying_offset + offsetof(VaryingTextureOptions<WidthT>, twidth));
     offset_by_index.push_back(
         varying_offset + offsetof(VaryingTextureOptions<WidthT>, rwidth));
+#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
+    offset_by_index.push_back(
+        varying_offset + offsetof(VaryingTextureOptions<WidthT>, rnd));
+#endif
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformTextureOptions, firstchannel));
     offset_by_index.push_back(uniform_offset

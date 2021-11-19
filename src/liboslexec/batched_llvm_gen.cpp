@@ -3905,6 +3905,8 @@ llvm_batched_texture_options(BatchedBackendLLVM &rop, int opnum,
     llvm::Value * twidth = wide_const_fone_value;
     llvm::Value * rwidth = wide_const_fone_value;
 #if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
+    // TODO: llvm_gen is not yet populating rnd, so neither will the batched
+    //       version.  But below is where we would do so
     llvm::Value * rnd = wide_const_fzero_value;
 #endif
 
@@ -3987,12 +3989,6 @@ llvm_batched_texture_options(BatchedBackendLLVM &rop, int opnum,
         if (tex3d) {
             PARAM_WIDE_FLOAT(rwidth)
         }
-
-// TODO: llvm_gen is not yet populating rnd, so neither will the batched
-//       version.  But below is where we would do so
-//#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
-//        PARAM_WIDE_FLOAT(rnd)
-//#endif
 
         PARAM_WIDE_FLOAT_S_T_R(blur)
         PARAM_WIDE_FLOAT(sblur)
@@ -4286,11 +4282,6 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM &rop, int opnum,
         SKIP_PARAM_WIDE_FLOAT(swidth)
         SKIP_PARAM_WIDE_FLOAT(twidth)
         SKIP_PARAM_WIDE_FLOAT(rwidth)
-// TODO: llvm_gen is not yet populating rnd, so neither will the batched
-//       version.  But below is where we would do so
-//#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
-//        SKIP_PARAM_WIDE_FLOAT(rnd)
-//#endif
 
         SKIP_PARAM_WIDE_FLOAT(blur)
         SKIP_PARAM_WIDE_FLOAT(sblur)

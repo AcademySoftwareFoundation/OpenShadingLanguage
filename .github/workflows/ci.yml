@@ -179,6 +179,7 @@ jobs:
       CXX: g++
       CC: gcc
       CMAKE_CXX_STANDARD: 17
+      OPENIMAGEIO_VERSION: release
       PYBIND11_VERSION: v2.7.1
       PYTHON_VERSION: 3.9
       USE_BATCHED: b8_AVX2
@@ -203,6 +204,7 @@ jobs:
             src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
+            rm -rf /usr/local/include/OpenImageIO /usr/local/lib/cmake/OpenImageIO
             src/build-scripts/gh-installdeps.bash
       - name: Build
         run: |

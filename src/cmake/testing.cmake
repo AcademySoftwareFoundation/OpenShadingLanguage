@@ -244,11 +244,11 @@ macro (osl_add_all_tests)
         TESTSUITE ( python-oslquery )
     endif ()
 
-    # Only run field3d-related tests if the local OIIO was built with f3d support.
-    execute_process ( COMMAND ${OPENIMAGEIO_BIN} --help
+    # Only run openvdb-related tests if the local OIIO has openvdb support.
+    execute_process ( COMMAND ${OpenImageIO_LIB_DIR}/../bin/oiiotool --help
                       OUTPUT_VARIABLE oiiotool_help )
-    if (oiiotool_help MATCHES "field3d")
-        TESTSUITE ( texture-field3d )
+    if (oiiotool_help MATCHES "openvdb")
+        TESTSUITE ( texture3d )
     endif()
 
     # Only run pointcloud tests if Partio is found

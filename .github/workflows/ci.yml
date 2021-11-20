@@ -203,8 +203,7 @@ jobs:
             src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
-            sudo rm -rf /usr/local/include/{Imath,OpenEXR}
-            sudo rm -rf /usr/local/lib64/cmake/{Imath,OpenEXR}
+            rm -rf /usr/local/include/OpenImageIO /usr/local/lib/cmake/OpenImageIO
             src/build-scripts/gh-installdeps.bash
       - name: Build
         run: |

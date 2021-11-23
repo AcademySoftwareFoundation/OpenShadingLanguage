@@ -228,7 +228,6 @@ public:
                            const BatchedTextureOptions& options,
                            BatchedShaderGlobals* bsg, Wide<const Vec3> wP,
                            Wide<const Vec3> wdPdx, Wide<const Vec3> wdPdy,
-                           Wide<const Vec3> wdPdz,
                            BatchedTextureOutputs& outputs);
     virtual bool is_overridden_texture3d() const = 0;
 

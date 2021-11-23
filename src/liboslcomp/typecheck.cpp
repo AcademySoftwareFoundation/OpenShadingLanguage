@@ -2159,7 +2159,7 @@ static const char * builtin_func_args [] = {
     "surfacearea", "f", NULL,
     "texture", "fsff.", "fsffffff.","csff.", "csffffff.",
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
-    "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.",
+    "texture3d", "fsp.", "fspvv.","csp.", "cspvv.",
                "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
     "trace", "ipv.", "!deriv", NULL,
     "warning", "xs*", "!printf", NULL,   // FIXME -- further checking

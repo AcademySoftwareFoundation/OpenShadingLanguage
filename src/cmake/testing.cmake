@@ -315,7 +315,7 @@ macro (osl_add_all_tests)
     execute_process ( COMMAND ${OpenImageIO_LIB_DIR}/../bin/oiiotool --help
                       OUTPUT_VARIABLE oiiotool_help )
     if (oiiotool_help MATCHES "openvdb")
-        TESTSUITE ( texture3d )
+        TESTSUITE ( texture3d texture3d-opts-reg )
     endif()
 
     # Only run pointcloud tests if Partio is found

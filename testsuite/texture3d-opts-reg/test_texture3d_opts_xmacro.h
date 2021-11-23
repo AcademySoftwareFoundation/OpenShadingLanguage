@@ -137,7 +137,7 @@ string init(string val, string const_init) {
 }
 #endif
 
-shader __OSL_CONCAT(test_texture_opts_, __OSL_XMACRO_SUFFIX) (
+shader __OSL_CONCAT(test_texture3d_opts_, __OSL_XMACRO_SUFFIX) (
       output vector out_alpha = 0,
       output vector out_alpha_derivs = 0,
       output vector out_blur = 0,
@@ -146,7 +146,6 @@ shader __OSL_CONCAT(test_texture_opts_, __OSL_XMACRO_SUFFIX) (
       output vector out_dy = 0,
       output vector out_errormsg = 0,
       output vector out_firstchannel = 0,
-      output vector out_interp = 0,
       output vector out_missingalpha = 0,
       output vector out_missing_color = 0,
       output vector out_simple = 0,
@@ -158,47 +157,43 @@ shader __OSL_CONCAT(test_texture_opts_, __OSL_XMACRO_SUFFIX) (
 {
 
 #if defined(VARYING_FILENAME)
-    string filename = "../common/textures/grid.tx";
-    if (v > 0.33)
-        filename = "../common/textures/mandrill.tif";
-    if (v > 0.66)
-        filename = "alpharamp.exr";
-    if (v > 0.75)
-        filename = "data/ramp.exr";
+    string filename = "data/sphere.vdb";
     if (v > 0.85)
         filename = "missing.tx";
 #elif defined(UNIFORM_FILENAME)
-    string filename = "../common/textures/grid.tx";
+    string filename = "data/sphere.vdb";
     if (raytype("camera") == 0)
-        filename = "../common/textures/mandrill.tif";
+        filename = "data/sphere.vdb";
 #elif defined(CONSTANT_FILENAME)
-    string filename = "../common/textures/grid.tx";
+    string filename = "data/sphere.vdb";
 #endif
+
+    point vP = point(u*2-1,v*2-1,0);
 
     {
         // This tests single-channel reads as well as "alpha" (one past the
         // last channel directly read, stored in another variable)
         float r, g, b;
-        r = (float) texture (filename, u, v);
+        r = (float) texture3d (filename, vP);
         int firstchannel_val = init(1);
-        g = (float) texture (filename, u, v, "firstchannel", firstchannel_val, "alpha", b);
+        g = (float) texture3d (filename, vP, "firstchannel", firstchannel_val, "alpha", b);
         out_alpha = color (r, g, b);
     }
 
     {
         float a=-1.0;
         string wrap_val = init("clamp");
-        color C = texture (filename, u, v, "alpha", a, "wrap", wrap_val);
+        color C = texture3d (filename, vP, "alpha", a, "wrap", wrap_val);
         out_alpha_derivs = color (a, Dx(a)/Dx(u), Dy(a)/Dy(v));
     }
 
     {
         float b = init(pow (u/2, 2.0), 0.5);
-        out_blur = (color) texture (filename, u, v, "blur", b);
+        out_blur = (color) texture3d (filename, vP, "blur", b);
     }
 
     {
-        out_color = (color) texture (filename, u, v);
+        out_color = (color) texture3d (filename, vP);
         out_dx = Dx (out_color) * 128.0;
         out_dy = Dy (out_color) * 128.0;
     }
@@ -206,33 +201,26 @@ shader __OSL_CONCAT(test_texture_opts_, __OSL_XMACRO_SUFFIX) (
     {
         string err = init("uninitialized");
         string filename = (u > 0.5) ? "bad.tif" : filename;
-        color C = (color) texture (filename, u, v, "errormessage", err);
+        color C = (color) texture3d (filename, vP, "errormessage", err);
         if (err == "") {
             out_errormsg = mix (color(0,1,0), C, 0.75);
         } else {
             out_errormsg = color(1,0,0);
             if (err != "unknown")
-                printf ("err %0.03g %0.03g: %s\n", u, v, err);
+                printf ("err %0.03g : %s\n", vP, err);
         }
     }
 
     {
         int firstchannel_val = init(1);
         float fill_val = init(0.5);
-        out_firstchannel = (color) texture (filename, u, v, "firstchannel", firstchannel_val, "fill", fill_val);
+        out_firstchannel = (color) texture3d (filename, vP, "firstchannel", firstchannel_val, "fill", fill_val);
     }
     
     {
-        float width_val = init(8.0);
-        string inter_val = init(u<0.5 ? "linear" : "cubic", "closest");
-        out_interp = (color) texture (filename, u, v, "width", width_val,
-                "interp", inter_val);
-    }
-
-    {
         float alpha = 0;
         float missingalpha_val = init(float(int(u*8+v*8))/16.0,0.75);
-        float x = texture (filename, u, v, "missingalpha", missingalpha_val,
+        float x = texture3d (filename, vP, "missingalpha", missingalpha_val,
                 "alpha", alpha);
         out_missingalpha = alpha;
         if (alpha != 0.75)
@@ -241,31 +229,34 @@ shader __OSL_CONCAT(test_texture_opts_, __OSL_XMACRO_SUFFIX) (
     
     {
         color missingcolor_val = init(color(1,0,0));
-        out_missing_color = (color) texture (filename, u, v, "missingcolor", missingcolor_val);
+        out_missing_color = (color) texture3d (filename, vP, "missingcolor", missingcolor_val);
     }
     
     {
-        out_simple = (color) texture (filename, u, v);
+        out_simple = (color) texture3d (filename, vP);
     }
     
     {
-        float uwidth = u * 2e-8;
-        float vwidth = v * 2e-8;
+        float xwidth = u * 2e-8;
+        float ywidth = v * 2e-8;
         float blur_val = init(0.01);
-        out_smallderivs = (color) texture (filename, u, v, uwidth, 0, 0, vwidth, "blur", blur_val);
+        // TODO: fixme to not take dpdz
+        out_smallderivs = (color) texture3d (filename, vP, vector(xwidth, 0, 0), vector(0, ywidth, 0), "blur", blur_val);
+        //out_smallderivs = (color) texture3d (filename, vP, vector(xwidth, 0, 0), vector(0, ywidth, 0), vector(0,0,0));
     }
+
+    // TODO: add test of "time" attribute.
 
     {
         float width_val = init(1+u*10, 0.5);
-        out_width = (color) texture (filename, u, v, "width", width_val);
+        out_width = (color) texture3d (filename, vP, "width", width_val);
     }
 
     {
-        float uwidth = u*u * 10;
-        float vwidth = v*v * 5;
-        out_widthderivs = (color) texture (filename, u, v,
-                                Dx(u)*uwidth, Dx(v)*vwidth,
-                                Dy(u)*uwidth, Dy(v)*vwidth);
+        float xwidth = u*u * 10;
+        float ywidth = v*v * 5;
+        out_widthderivs = (color) texture3d (filename, vP, Dx(vP)*xwidth, Dy(vP)*ywidth);
+        //out_widthderivs = (color) texture3d (filename, vP, Dx(vP)*xwidth, Dy(vP)*ywidth, vector(0,0,0));
     }
 
     {
@@ -275,7 +266,7 @@ shader __OSL_CONCAT(test_texture_opts_, __OSL_XMACRO_SUFFIX) (
         if (u > 0.6) wrap_varying = "clamp";
         if (u > 0.6) wrap_varying = "mirror";
         string wrap_val = init(wrap_varying,"clamp");
-        out_wrap = (color) texture (filename, -0.1 + 2 * u, -0.2 + 2 * v,
+        out_wrap = (color) texture3d (filename, point(-0.1 + 2 * u, -0.2 + 2 * v, -0.3 + (u+v)),
                 "wrap", wrap_val);
     }
 }

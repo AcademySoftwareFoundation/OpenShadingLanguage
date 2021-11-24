@@ -53,7 +53,8 @@ macro (add_one_testsuite testname testsrcdir)
     # from piling up together, allocate a few cores each.
     if (${testname} MATCHES "^render-")
         set_tests_properties (${testname} PROPERTIES LABELS render
-                              PROCESSORS 4 COST 10)
+                              TIMEOUT 240
+                              PROCESSORS 4 COST 10 TIMEOUT 240)
     endif ()
     # Some labeling for fun
     if (${testname} MATCHES "^texture")
@@ -70,6 +71,12 @@ macro (add_one_testsuite testname testsrcdir)
             # Make sure libnvrtc-builtins.so is reachable
             set_property (TEST ${testname} APPEND PROPERTY ENVIRONMENT LD_LIBRARY_PATH=${CUDA_TOOLKIT_ROOT_DIR}/lib64:$ENV{LD_LIBRARY_PATH})
         endif()
+    endif ()
+    if (${testname} MATCHES "-reg")
+        # These are batched shading regression tests. Some are quite
+        # long, so give them a higher cost and timeout.
+        set_tests_properties (${testname} PROPERTIES LABELS batchregression
+                              COST 15 TIMEOUT 300)
     endif ()
 endmacro ()
 

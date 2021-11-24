@@ -1,0 +1,13 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test (string filename = "ramp.env",
+      output color Cout = 0)
+{
+    float theta = 2.0 * M_PI * u;
+    float phi = M_PI * v;
+    vector R = vector(sin(phi) * sin(theta), cos(phi), -sin(phi) * cos(theta));
+    Cout = (color) environment(filename, R);
+}

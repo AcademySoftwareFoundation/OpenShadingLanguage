@@ -56,7 +56,7 @@ macro (add_one_testsuite testname testsrcdir)
                               PROCESSORS 4 COST 10)
     endif ()
     # Some labeling for fun
-    if (${testname} MATCHES "^texture-")
+    if (${testname} MATCHES "^texture")
         set_tests_properties (${testname} PROPERTIES LABELS texture
                               PROCESSORS 2 COST 4)
     endif ()
@@ -269,7 +269,7 @@ macro (osl_add_all_tests)
                 testshade-expr
                 texture-alpha texture-alpha-derivs
                 texture-blur texture-connected-options
-                texture-derivs texture-errormsg
+                texture-derivs texture-environment texture-errormsg
                 texture-firstchannel texture-interp
                 texture-missingalpha texture-missingcolor texture-simple
                 texture-smallderivs texture-swirl texture-udim

@@ -13,8 +13,8 @@
 #include <OSL/llvm_util.h>
 #include <OSL/wide.h>
 
-#if OSL_LLVM_VERSION < 70
-#error "LLVM minimum version required for OSL is 7.0"
+#if OSL_LLVM_VERSION < 90
+#error "LLVM minimum version required for OSL is 9.0"
 #endif
 
 #include "llvm_passes.h"
@@ -480,17 +480,11 @@ LLVM_Util::SetupLLVM ()
     llvm::initializeTarget(registry);
     llvm::initializeCodeGen(registry);
 
-    // PreventBitMasksFromBeingLiveinsToBasicBlocks and PrePromoteLogicalOpsOnBitMasks are defined in llvm_passes.h
+    // PreventBitMasksFromBeingLiveinsToBasicBlocks
     static llvm::RegisterPass<PreventBitMasksFromBeingLiveinsToBasicBlocks<8>> sRegCustomPass0("PreventBitMasksFromBeingLiveinsToBasicBlocks<8>", "Prevent Bit Masks <8xi1> From Being Liveins To Basic Blocks Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
     static llvm::RegisterPass<PreventBitMasksFromBeingLiveinsToBasicBlocks<16>> sRegCustomPass1("PreventBitMasksFromBeingLiveinsToBasicBlocks<16>", "Prevent Bit Masks <16xi1> From Being Liveins To Basic Blocks Pass",
-                                 false /* Only looks at CFG */,
-                                 false /* Analysis Pass */);
-    static llvm::RegisterPass<PrePromoteLogicalOpsOnBitMasks<8>> sRegCustomPass2("PrePromoteLogicalOpsOnBitMasks<8>", "Pre-promote <8xi1> logical operations to <8xi32> to avoid default <8xi16> promotion",
-                                 false /* Only looks at CFG */,
-                                 false /* Analysis Pass */);
-    static llvm::RegisterPass<PrePromoteLogicalOpsOnBitMasks<16>> sRegCustomPass3("PrePromoteLogicalOpsOnBitMasks<16>", "Pre-promote <16xi1> logical operations to <16xi32> to avoid default <16xi16> promotion",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
@@ -595,17 +589,9 @@ LLVM_Util::debug_push_function(const std::string& function_name,
             file, // File
             static_cast<unsigned int>(sourceline), // Line Number
             mSubTypeForInlinedFunction, // subroutine type
-#if OSL_LLVM_VERSION < 80
-            false, // isLocalToUnit
-            true,  // isDefinition
-            method_scope_line,  // Scope Line
-            llvm::DINode::FlagPrototyped, // Flags
-            false // isOptimized
-#else
             method_scope_line,  // Scope Line
             llvm::DINode::FlagPrototyped,  // Flags
             llvm::DISubprogram::toSPFlags(false /*isLocalToUnit*/, true /*isDefinition*/, false /*isOptimized*/)
-#endif
             );
 
     OSL_ASSERT(mLexicalBlocks.empty());
@@ -647,17 +633,9 @@ LLVM_Util::debug_push_inlined_function(OIIO::ustring function_name,
         file, // File
         static_cast<unsigned int>(sourceline), // Line Number
         mSubTypeForInlinedFunction, // subroutine type
-#if OSL_LLVM_VERSION < 80
-        true, // isLocalToUnit
-        true, // isDefinition
-        method_scope_line, // Scope Line
-        fnFlags, // Flags
-        true /*false*/ //isOptimized
-#else
         method_scope_line, // Scope Line,
         fnFlags,
         llvm::DISubprogram::toSPFlags(true /*isLocalToUnit*/, true /*isDefinition*/, true /*false*/ /*isOptimized*/)
-#endif
         );
 
     mLexicalBlocks.push_back(function);
@@ -1320,17 +1298,12 @@ LLVM_Util::supports_isa(TargetISA target)
     auto features = get_required_cpu_features_for(target);
     OSL_DEV_ONLY(std::cout << "Inspecting features for " << target_isa_names[static_cast<int>(target)] << std::endl);
     for (auto f : features) {
-        // Bug in llvm::sys::getHostCPUFeatures does not add "x87","fxsr","mpx"
-        // LLVM release 9.0+ should fix "fxsr".
+        // Bug in llvm::sys::getHostCPUFeatures does not add "x87","mpx"
         // We want to leave the features in our required_cpu_features_by_XXX
         // so we can use it to enable JIT features (even though its doubtful
         // to be useful). So we will skip testing of missing features from
         // the sCpuFeatures
-        if ((strncmp(f, "x87", 3) == 0) || (strncmp(f, "mpx", 3) == 0)
-#if OSL_LLVM_VERSION < 90
-            || (strncmp(f, "fxsr", 4) == 0)
-#endif
-            ) {
+        if (strncmp(f, "x87", 3) == 0 || strncmp(f, "mpx", 3) == 0) {
             continue;
         }
         OSL_DEV_ONLY(std::cout << "Testing for cpu feature[" << i << "]:" << f << std::endl);
@@ -1355,15 +1328,6 @@ LLVM_Util::make_jit_execengine (std::string *err,
                                 bool debugging_symbols,
                                 bool profiling_events)
 {
-#if OSL_GNUC_VERSION && OSL_LLVM_VERSION < 71
-    // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
-    // calling any llvm API's that accept an llvm::Optional parameter will break
-    // ABI causing issues.
-    // https://bugs.llvm.org/show_bug.cgi?id=39427
-    // Fixed in llvm 7.1.0+
-    OSL_ASSERT(debugging_symbols == false && "To enable llvm debug symbols with GCC you must use LLVM 7.1.0 or higher");
-#endif
-
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
@@ -1714,9 +1678,6 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         builder.SLPVectorize = false;
         builder.LoopVectorize = false;
         builder.DisableTailCalls = false;
-#if OSL_LLVM_VERSION < 90
-        builder.DisableUnitAtATime = false;
-#endif
 
         if (target_machine)
             target_machine->adjustPassManager(builder);
@@ -1948,16 +1909,10 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         if (!m_supports_llvm_bit_masks_natively) {
             switch(m_vector_width) {
             case 16:
-    #if OSL_LLVM_VERSION < 80
-                mpm.add(new PrePromoteLogicalOpsOnBitMasks<16>());
-    #endif
                 // MUST BE THE FINAL PASS!
                 mpm.add(new PreventBitMasksFromBeingLiveinsToBasicBlocks<16>());
                 break;
             case 8:
-    #if OSL_LLVM_VERSION < 80
-                mpm.add(new PrePromoteLogicalOpsOnBitMasks<8>());
-    #endif
                 // MUST BE THE FINAL PASS!
                 mpm.add(new PreventBitMasksFromBeingLiveinsToBasicBlocks<8>());
                 break;
@@ -2342,29 +2297,16 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
                           bool varargs)
 {
     llvm::FunctionType *functype = type_function (rettype, params, varargs);
-#if OSL_LLVM_VERSION < 90
-    auto maybe_func = module()->getOrInsertFunction(name, functype);
-#else
     auto maybe_func = module()->getOrInsertFunction(name, functype).getCallee();
-#endif
     OSL_ASSERT (maybe_func && "getOrInsertFunction returned NULL");
     OSL_ASSERT_MSG (llvm::isa<llvm::Function>(maybe_func),
                     "Declaration for %s is wrong, LLVM had to make a cast", name.c_str());
     llvm::Function *func = llvm::cast<llvm::Function>(maybe_func);
 
-#if OSL_LLVM_VERSION >= 80
-    // We have found that when running on AVX512 hardware and targeting
-    // AVX512 (and to a lesser degree targeting AVX2), performance with
-    // single-point shading can suffer significantly. This is ameliorated by
-    // restricting the largest vector width that it will use. It doesn't
-    // seem to matter when running on AVX2 hardware. We therefore do not
-    // advise choosing a wide vector width on AVX512 hardware unless you
-    // are using LLVM >= 8.0.
     int vectorRegisterBitWidth = 8 * sizeof(float) * m_vector_width;
     std::string vectorRegisterBitWidthString = std::to_string(vectorRegisterBitWidth);
     func->addFnAttr ("prefer-vector-width", vectorRegisterBitWidthString);
     func->addFnAttr ("min-legal-vector-width", vectorRegisterBitWidthString);
-#endif
 
     if (fastcall)
         func->setCallingConv(llvm::CallingConv::Fast);

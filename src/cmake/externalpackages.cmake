@@ -114,7 +114,7 @@ checked_find_package (pugixml REQUIRED
 
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
-                      VERSION_MIN 7.0
+                      VERSION_MIN 8.0
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
@@ -127,25 +127,13 @@ add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
 endif ()
-if (LLVM_VERSION VERSION_GREATER_EQUAL 10.0.0 AND
-    CMAKE_CXX_STANDARD VERSION_LESS 14)
-    message (FATAL_ERROR
-             "LLVM 10+ requires C++14 or higher (was ${CMAKE_CXX_STANDARD}). "
-             "To build against this LLVM ${LLVM_VERSION}, you need to set "
-             "build option CMAKE_CXX_STANDARD=14. The minimum requirements "
-             "for that are gcc >= 5.1, clang >= 3.5, Apple clang >= 7, "
-             "icc >= 7, MSVS >= 2017. "
-             "If you must use C++11, you need to build against LLVM 9 or earlier.")
-endif ()
 if (APPLE AND LLVM_VERSION VERSION_EQUAL 10.0.1 AND EXISTS "/usr/local/Cellar/llvm")
     message (WARNING
              "${ColorYellow}If you are using LLVM 10.0.1 installed by Homebrew, "
              "please note that a known bug in LLVM may produce a link error where "
              "it says it can't find libxml2.tbd. If you encounter this, please "
-             "try downgrading to LLVM 9: \n"
-             "    brew uninstall llvm \n"
-             "    brew install llvm@9 \n"
-             "    export LLVM_DIRECTORY=/usr/local/opt/llvm@9 "
+             "try upgrading to a newer LLVM: \n"
+             "    brew upgrade llvm \n"
              "${ColorReset}\n")
 endif ()
 

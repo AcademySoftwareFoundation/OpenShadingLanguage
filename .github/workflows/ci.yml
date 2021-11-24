@@ -26,10 +26,10 @@ on:
 
 jobs:
   vfxplatform-2019:
-    name: "Linux VFXP-2019: gcc6/C++14 llvm7.1 py2.7 boost1.66 exr2.3 oiio2.2 sse2"
+    name: "Linux VFXP-2019: gcc6/C++14 llvm9 py2.7 boost1.66 exr2.3 oiio2.2 sse2"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2019-clang7
+      image: aswf/ci-osl:2019-clang9
     env:
       CXX: g++
       CC: gcc
@@ -75,7 +75,7 @@ jobs:
             build/CMake*.{txt,log}
 
   vfxplatform-2020:
-    name: "Linux VFXP-2020 gcc6/C++14 llvm7.1 py3.7 boost1.70 exr2.4 oiio2.2 sse4"
+    name: "Linux VFXP-2020 gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2020
@@ -83,6 +83,7 @@ jobs:
       CXX: g++
       CC: gcc
       CMAKE_CXX_STANDARD: 14
+      CONAN_LLVM_VERSION: 10.0.1
       OPENIMAGEIO_VERSION: v2.2.17.0
       PYTHON_VERSION: 3.7
       USE_SIMD: sse4.2
@@ -273,8 +274,8 @@ jobs:
             build/CMake*.{txt,log}
             optix.h
 
-  linux-debug-gcc7-llvm8:
-    name: "Linux Debug gcc7/C++14 llvm8 py2.7 oiio2.3 sse4 boost1.65 exr2.4"
+  linux-debug-gcc7-llvm9:
+    name: "Linux Debug gcc7/C++14 llvm9 py2.7 oiio2.3 sse4 boost1.65 exr2.4"
     runs-on: ubuntu-18.04
     env:
       CXX: g++-7
@@ -282,7 +283,7 @@ jobs:
       CMAKE_CXX_STANDARD: 14
       # Debug build makes some tests run very slowly, increase timeout
       CTEST_TEST_TIMEOUT: 240
-      LLVM_VERSION: 8.0.0
+      LLVM_VERSION: 9.0.0
       OPENEXR_VERSION: v2.4.3
       OPENIMAGEIO_VERSION: dev-2.3
       USE_SIMD: sse4.2
@@ -369,18 +370,17 @@ jobs:
             build/testsuite/*/*.*
             build/CMake*.{txt,log}
 
-  linux-clang11-llvm11-batch:
-    name: "Linux clang11/C++17 llvm11 oiio-master boost1.73 exr3.0 py3.7 avx2 batch-avx512"
+  linux-clang12-llvm12-batch:
+    name: "Linux clang12/C++17 llvm12 oiio-master boost1.73 exr3.1 py3.9 avx2 batch-avx512"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2021-clang11
+      image: aswf/ci-osl:2022-clang12
     env:
       CXX: clang++
       CC: clang
       CMAKE_CXX_STANDARD: 17
-      PYTHON_VERSION: 3.7
+      PYTHON_VERSION: 3.9
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v3.0.4
       OPENIMAGEIO_VERSION: master
       PYBIND11_VERSION: v2.6.2
       USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
@@ -405,8 +405,8 @@ jobs:
             src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
-            sudo rm -rf /usr/local/include/OpenEXR
-            sudo rm -rf /usr/local/lib64/cmake/{IlmBase,OpenEXR}
+            # Remove installed OIIO version
+            rm -rf /usr/local/include/OpenImageIO
             src/build-scripts/gh-installdeps.bash
       - name: Build
         run: |
@@ -583,10 +583,10 @@ jobs:
   linux-oldest:
     # Oldest versions of the dependencies that we can muster, and various
     # things disabled.
-    name: "Linux oldest everything: gcc6/C++14 llvm7 py2.7 boost-1.66 oiio-2.2 no-simd exr2.3"
+    name: "Linux oldest everything: gcc6/C++14 llvm9 py2.7 boost-1.66 oiio-2.2 no-simd exr2.3"
     runs-on: ubuntu-latest
     container:
-      image: aswf/ci-osl:2019-clang7
+      image: aswf/ci-osl:2019-clang9
     env:
       CXX: g++
       CC: gcc

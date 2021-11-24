@@ -1449,17 +1449,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_SET ("llvm_target_host", int, m_llvm_target_host);
-
-    // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
-    // calling any llvm APIs that accept an llvm::Optional parameter will break
-    // ABI causing issues.
-    // https://bugs.llvm.org/show_bug.cgi?id=39427
-    // Fixed in llvm 7.1.0+
-    // Workaround don't enable debug symbols which would use llvm::Optional APIs
-#if (!OSL_GNUC_VERSION) || (OSL_LLVM_VERSION >= 71)
     ATTR_SET ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
-#endif
-
     ATTR_SET ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_SET ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_SET ("llvm_dumpasm", int, m_llvm_dumpasm);

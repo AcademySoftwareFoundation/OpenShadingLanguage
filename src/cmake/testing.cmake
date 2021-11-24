@@ -197,7 +197,6 @@ macro (osl_add_all_tests)
                 debugnan debug-uninit
                 derivs derivs-muldiv-clobber
                 draw_string
-                environment environment-opts-reg
                 error-dupes error-serialized
                 example-deformer
                 exit exponential

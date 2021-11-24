@@ -150,6 +150,7 @@ shader __OSL_CONCAT(test_texture3d_opts_, __OSL_XMACRO_SUFFIX) (
       output vector out_missing_color = 0,
       output vector out_simple = 0,
       output vector out_smallderivs = 0,
+      output vector out_time = 0,
       output vector out_width = 0,
       output vector out_widthderivs = 0,
       output vector out_wrap = 0,
@@ -244,7 +245,14 @@ shader __OSL_CONCAT(test_texture3d_opts_, __OSL_XMACRO_SUFFIX) (
         out_smallderivs = (color) texture3d (filename, vP, vector(xwidth, 0, 0), vector(0, ywidth, 0), vector(0, 0, zwidth), "blur", blur_val);
     }
 
-    // TODO: add test of "time" attribute.
+    {
+        // NOTE: no supported 3d texture format makes use of time.
+        // So it may not be represented or populated in texture options passed to
+        // the texture subsystem.
+        // Test is to exercise front end and make sure code gen doesn't complain
+        float time_val = init((u+v)*0.5, 0.5);
+        out_time = (color) texture3d (filename, vP, "time", time_val);
+    }
 
     {
         float width_val = init(1+u*10, 0.5);

@@ -28,7 +28,6 @@ def run_test (suffix) :
                          "-o out_smallderivs out_smallderivs_"+suffix+".tif "
                          "-o out_width out_width_"+suffix+".tif "
                          "-o out_widthderivs out_widthderivs_"+suffix+".tif "
-                         "-o out_wrap out_wrap_"+suffix+".tif "
                          "test_environment_opts_"+suffix)
     global outputs     
     outputs.append ("out_alpha_"+suffix+".tif")
@@ -45,7 +44,6 @@ def run_test (suffix) :
     outputs.append ("out_smallderivs_"+suffix+".tif")
     outputs.append ("out_width_"+suffix+".tif")
     outputs.append ("out_widthderivs_"+suffix+".tif")
-    outputs.append ("out_wrap_"+suffix+".tif")
     
     return
     

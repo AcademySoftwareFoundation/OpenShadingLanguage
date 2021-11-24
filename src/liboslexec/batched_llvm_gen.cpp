@@ -4157,6 +4157,14 @@ llvm_batched_texture_options(BatchedBackendLLVM &rop, int opnum,
             continue;
         }
 
+        if (name == Strings::time &&
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {
+            // NOTE: currently no supported 3d texture format makes use of time.
+            // Therefore we will not represented time in BatchedTextureOptions
+            // but will silently accept and ignore the time option
+            continue;
+        }
+
         rop.shadingcontext()->errorf ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
                                      tex3d ? "3d" : "",
                                      name.c_str(), valtype.c_str(),
@@ -4374,6 +4382,8 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM &rop, int opnum,
             remainingMask = rop.ll.op_lanes_that_match_masked(scalar_missingalpha, wide_missingalpha, remainingMask);
             continue;
         }
+
+        SKIP_PARAM_WIDE_FLOAT(time)
 
         rop.shadingcontext()->errorf ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
                                      tex3d ? "3d" : "",

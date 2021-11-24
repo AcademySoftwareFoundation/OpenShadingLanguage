@@ -1,0 +1,10 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test (string filename = "ramp.env",
+      output color Cout = 0)
+{
+    Cout = (color) environment (filename, vector(u*2-1, v*2-1, (u+v)-2));
+}

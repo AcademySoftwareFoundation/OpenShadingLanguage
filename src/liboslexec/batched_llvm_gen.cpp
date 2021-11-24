@@ -4769,6 +4769,173 @@ LLVMGEN (llvm_gen_texture3d)
 
 
 
+LLVMGEN (llvm_gen_environment)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Result = *rop.opargsym (op, 0);
+    Symbol &Filename = *rop.opargsym (op, 1);
+    Symbol &R = *rop.opargsym (op, 2);
+
+    // The current texture interface doesn't support uniform results
+    OSL_ASSERT(Result.is_uniform() == false);
+
+    int nchans = Result.typespec().aggregate();
+
+    bool user_derivs = false;
+    int first_optional_arg = 3;// Optional arguments after filename and point.
+
+    // derivatives
+    if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
+        user_derivs = true;
+        first_optional_arg = 5;
+        OSL_DASSERT (rop.opargsym(op,4)->typespec().is_triple()); // vector dpdy
+    }
+
+    // make sure that any temps created by llvm_batched_texture_options
+    // and llvm_batched_texture_varying_options
+    // are not released until we are done using them!
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value* opt;   // TextureOpt
+    llvm::Value *alpha = NULL;
+    bool alphaHasDerivs = false;
+    llvm::Value *errormessage = NULL;
+
+    llvm::Value* missingcolor_buffer = nullptr;
+    opt = llvm_batched_texture_options (rop, opnum, first_optional_arg,
+                                    false /*enable 3d*/, nchans,
+                                    alpha, alphaHasDerivs, errormessage,
+                                    missingcolor_buffer);
+
+    // Now call the osl_texture function, passing the options and all the
+    // explicit args like texture coordinates.
+    llvm::Value * args[14];
+    args[0] = rop.sg_void_ptr();
+
+    bool fileNameIsUniform = Filename.is_uniform();
+
+    const char * texFuncName = rop.build_name(FuncSpec("environment").mask());
+    RendererServices::TextureHandle *texture_handle = NULL;
+    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+        OSL_ASSERT(fileNameIsUniform);
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
+        if (! rop.renderer()->good (texture_handle))
+            texture_handle = NULL;
+    }
+
+    // We will just load the filename here if we are uniform, otherwise just remember where the filename
+    // is so we can update it later in the loop over varying options
+    int filenameArgumentIndex = 1;
+    llvm::Value * filenameVal = rop.llvm_load_value (Filename, /*deriv=*/0, /*component=*/0, TypeDesc::UNKNOWN, Filename.is_uniform());
+    args[filenameArgumentIndex] = fileNameIsUniform ? filenameVal : nullptr;
+
+    args[2] = rop.ll.constant_ptr (texture_handle);
+    rop.generated_texture_call (texture_handle != NULL);
+
+    // check S & T & R are not uniform
+
+    llvm::Value* wideR = nullptr;
+    llvm::Value* wideRD1 = nullptr;
+    llvm::Value* wideRD2 = nullptr;
+
+    if (R.is_uniform()) {
+        wideR = rop.llvm_widen_value_into_temp(R, 0);
+        if(!user_derivs) {
+            wideRD1 = rop.llvm_widen_value_into_temp(R, 1);
+            wideRD2 = rop.llvm_widen_value_into_temp(R, 2);
+        }
+    } else {
+        wideR = rop.llvm_void_ptr(R, 0);
+        if (!user_derivs) {
+            wideRD1 = rop.llvm_void_ptr(R, 1);
+            wideRD2 = rop.llvm_void_ptr(R, 2);
+        }
+    }
+
+    args[3] = opt;
+    args[4] = wideR;
+
+    llvm::Value* wideRDx = nullptr;
+    llvm::Value* wideRDy = nullptr;
+
+    if (user_derivs) {
+        Symbol &RDx = *rop.opargsym (op, 3);
+        Symbol &RDy = *rop.opargsym (op, 4);
+
+        if (RDx.is_uniform()) {
+           wideRDx = rop.llvm_widen_value_into_temp(RDx, 0);
+        } else {
+           wideRDx = rop.llvm_void_ptr(RDx, 0);
+        }
+
+
+        if (RDy.is_uniform()) {
+           wideRDy = rop.llvm_widen_value_into_temp(RDy, 0);
+        } else {
+           wideRDy = rop.llvm_void_ptr(RDy, 0);
+        }
+
+    } else {
+        // Auto derivs of S and T, leave R as nullptr and
+        // ensure implmementation can handle a nullptr
+        wideRDx = wideRD1;
+        wideRDy = wideRD2;
+    }
+
+    args[5] = wideRDx;
+    args[6] = wideRDy;
+
+    OSL_DEV_ONLY(std::cout << "environment result type: " << rop.ll.llvm_typenameof(rop.llvm_get_pointer (Result, 1)) << std::endl);
+    args[7] =  rop.ll.constant (nchans);
+    args[8] =  rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0));
+    args[9] =  Result.has_derivs() ? rop.ll.constant(1) : rop.ll.constant(0);
+    args[10] =  rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null());
+    args[11] =  alphaHasDerivs ? rop.ll.constant(1) : rop.ll.constant(0);
+    args[12] =  rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null());
+
+    // do while(remaining)
+    llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to environment");
+    rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+    llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_environment_options (varying environment options)") : std::string());
+    llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_environment_options (varying environment options)") : std::string());
+    rop.ll.op_branch(bin_block);
+    {
+        llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+        llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+        llvm::Value * lanesMatchingFilename = remainingMask;
+
+        if(false == fileNameIsUniform) {
+            llvm::Value *scalar_filename = rop.ll.op_extract(filenameVal, leadLane);
+            args[filenameArgumentIndex] = scalar_filename;
+            lanesMatchingFilename = rop.ll.op_lanes_that_match_masked(scalar_filename, filenameVal, remainingMask);
+        }
+
+        //rop.llvm_print_mask("before remainingMask", remainingMask);
+        llvm::Value * lanesMatchingOptions = llvm_batched_texture_varying_options (rop, opnum, first_optional_arg,
+                                        false /* enable 3d*/, nchans, lanesMatchingFilename, leadLane, missingcolor_buffer);
+        OSL_ASSERT(lanesMatchingOptions);
+        //rop.llvm_print_mask("lanesMatchingOptions", lanesMatchingOptions);
+        args[13] = rop.ll.mask_as_int(lanesMatchingOptions);
+
+        rop.ll.call_function (texFuncName, args);
+
+        remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingOptions);
+        //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+        rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+        llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+        //rop.llvm_print_mask("remainingMask", remainingMask);
+        llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+        rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+    }
+    // Continue on with the previous flow
+    rop.ll.set_insert_point (after_block);
+
+    return true;
+}
+
+
 // TODO: future optimization, don't call multiple functions to set noise options.
 // Instead modify a NoiseOptions directly from LLVM (similar to batched texturing).
 static llvm::Value *
@@ -6257,20 +6424,22 @@ LLVMGEN(NAME) \
     return false; \
 } \
 
-TBD_LLVMGEN(llvm_gen_getmessage)
-TBD_LLVMGEN(llvm_gen_pointcloud_search)
+// TODO: rest of gen functions to be added in separate PR
+
 TBD_LLVMGEN(llvm_gen_dict_find)
+TBD_LLVMGEN(llvm_gen_dict_next)
+TBD_LLVMGEN(llvm_gen_dict_value)
+
+TBD_LLVMGEN(llvm_gen_getmessage)
+TBD_LLVMGEN(llvm_gen_setmessage)
 TBD_LLVMGEN(llvm_gen_trace)
+
+TBD_LLVMGEN(llvm_gen_pointcloud_search)
 TBD_LLVMGEN(llvm_gen_pointcloud_get)
 TBD_LLVMGEN(llvm_gen_pointcloud_write)
-TBD_LLVMGEN(llvm_gen_dict_value)
+
 TBD_LLVMGEN(llvm_gen_closure)
-TBD_LLVMGEN(llvm_gen_dict_next)
-TBD_LLVMGEN(llvm_gen_environment)
-TBD_LLVMGEN(llvm_gen_setmessage)
 
-
-// TODO: rest of gen functions to be added in separate PR
 
 };  // namespace pvt
 OSL_NAMESPACE_EXIT

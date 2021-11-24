@@ -622,9 +622,7 @@ DECL(__OSL_OP(regex_impl), "iXsXisi")
 // of osl_texture_set_XXX functions
 DECL(__OSL_MASKED_OP(texture), "iXXXXXXXXXXiXiXiXi")
 DECL(__OSL_MASKED_OP(texture3d), "iXXXXXXXXiXiXiXi")
-#ifdef __OSL_TBD
-DECL(__OSL_MASKED_OP(environment), "iXXXXXXXiXXXXXXXi")
-#endif
+DECL(__OSL_MASKED_OP(environment), "iXXXXXXXiXiXiXi")
 DECL(__OSL_OP(resolve_udim_uniform), "XXXXff")
 DECL(__OSL_MASKED_OP(resolve_udim), "xXXXXXXi")
 DECL(__OSL_OP(get_textureinfo_uniform), "iXXXXXX")

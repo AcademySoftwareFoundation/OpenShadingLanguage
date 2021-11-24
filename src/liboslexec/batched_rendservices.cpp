@@ -219,6 +219,21 @@ BatchedRendererServices<WidthT>::texture3d(
 }
 
 template<int WidthT>
+Mask<WidthT>
+BatchedRendererServices<WidthT>::environment(
+    ustring filename, TextureSystem::TextureHandle* texture_handle,
+    TextureSystem::Perthread* texture_thread_info,
+    const BatchedTextureOptions& options, BatchedShaderGlobals* bsg,
+    Wide<const Vec3> wR, Wide<const Vec3> wdRdx, Wide<const Vec3> wdRdy,
+    BatchedTextureOutputs& outputs)
+{
+    OSL_ASSERT(
+        0
+        && "UNREACHABLE:  BatchedRendererServices<WidthT>::environment calls should be overridden or the target specific version in wide_optexture.cpp should be called");
+    return Mask(false);
+}
+
+template<int WidthT>
 void
 BatchedRendererServices<WidthT>::trace(
     TraceOpt& options, BatchedShaderGlobals* bsg, Masked<int> wresult,

@@ -56,8 +56,6 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
 
     MaskedData resultRef     = outputs.result();
     MaskedData alphaRef      = outputs.alpha();
-    bool alphaIsValid        = outputs.alpha().valid();
-    bool errormessageIsValid = outputs.errormessage().valid();
     bool has_derivs          = resultRef.has_derivs() || alphaRef.has_derivs();
 
     OSL_ASSERT(resultRef.valid());
@@ -165,7 +163,7 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
         }
 
 
-        if (alphaIsValid) {
+        if (alphaRef.valid()) {
             Masked<float> alpha(alphaRef);
             alpha[lane] = result_simd[alphaChannelIndex];
             if (alphaRef.has_derivs()) {
@@ -181,7 +179,7 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
         } else {
             std::string err = bsr->texturesys()->geterror();
             bool errMsgSize = err.size() > 0;
-            if (errormessageIsValid) {
+            if (outputs.errormessage().valid()) {
                 Masked<ustring> errormessage(outputs.errormessage());
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
@@ -218,6 +216,8 @@ dispatch_texture(BatchedRendererServices* bsr, ustring filename,
     }
 }
 
+
+
 Mask
 default_texture3d(BatchedRendererServices* bsr, ustring filename,
                   TextureSystem::TextureHandle* texture_handle,
@@ -241,9 +241,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
 
     MaskedData resultRef     = outputs.result();
     MaskedData alphaRef      = outputs.alpha();
-    bool alphaIsValid        = outputs.alpha().valid();
     bool has_derivs          = resultRef.has_derivs() | alphaRef.has_derivs();
-    bool errormessageIsValid = outputs.errormessage().valid();
 
     ASSERT(resultRef.valid());
 
@@ -251,7 +249,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
     // and submit them 1 at a time through existing non-batched interface
     // Renderers could implement their own batched texturing,
     // although expected a future version of OIIO will support
-    // this exact batched iterface
+    // this exact batched interface
     const auto& uniform_opt = options.uniform;
     TextureOpt opt;
     // opt.time = ignoring (deprecated?)
@@ -359,7 +357,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
         }
 
 
-        if (alphaIsValid) {
+        if (alphaRef.valid()) {
             Masked<float> alpha(alphaRef);
             alpha[lane] = result_simd[alphaChannelIndex];
             if (alphaRef.has_derivs()) {
@@ -376,7 +374,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
         } else {
             std::string err = bsr->texturesys()->geterror();
             bool errMsgSize = err.size() > 0;
-            if (errormessageIsValid) {
+            if (outputs.errormessage().valid()) {
                 Masked<ustring> errormessage(outputs.errormessage());
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
@@ -408,6 +406,155 @@ dispatch_texture3d(BatchedRendererServices* bsr, ustring filename,
         return default_texture3d(bsr, filename, texture_handle,
                                  texture_thread_info, options, bsg, P, dPdx,
                                  dPdy, dPdz, outputs);
+    }
+}
+
+
+
+Mask
+default_environment(BatchedRendererServices* bsr, ustring filename,
+                  TextureSystem::TextureHandle* texture_handle,
+                  TextureSystem::Perthread* texture_thread_info,
+                  const BatchedTextureOptions& options,
+                  BatchedShaderGlobals* bsg, Wide<const Vec3> wR,
+                  Wide<const Vec3> wdRdx, Wide<const Vec3> wdRdy,
+                  BatchedTextureOutputs& outputs)
+{
+    Mask status(false);
+    ASSERT(nullptr != bsg);
+    ShadingContext* context = bsg->uniform.context;
+    if (!texture_thread_info)
+        texture_thread_info = context->texture_thread_info();
+    if (!texture_handle)
+        texture_handle
+            = bsr->texturesys()->get_texture_handle(filename,
+                                                    texture_thread_info);
+
+    Mask mask = outputs.mask();
+
+    MaskedData resultRef     = outputs.result();
+    MaskedData alphaRef      = outputs.alpha();
+
+    ASSERT(resultRef.valid());
+
+    // Convert our BatchedTextureOptions to a single TextureOpt
+    // and submit them 1 at a time through existing non-batched interface
+    // Renderers could implement their own batched environment,
+    // although expected a future version of OIIO will support
+    // this exact batched interface
+    const auto& uniform_opt = options.uniform;
+    TextureOpt opt;
+    // opt.time = ignoring (deprecated?)
+    // opt.bias = ignoring (deprecated?)
+    // opt.samples = ignoring (deprecated?)
+    opt.firstchannel = uniform_opt.firstchannel;
+    opt.subimage     = uniform_opt.subimage;
+    opt.subimagename = uniform_opt.subimagename;
+    opt.swrap        = (OIIO::TextureOpt::Wrap)uniform_opt.swrap;
+    opt.twrap        = (OIIO::TextureOpt::Wrap)uniform_opt.twrap;
+    opt.rwrap        = (OIIO::TextureOpt::Wrap)uniform_opt.rwrap;
+    opt.mipmode      = (OIIO::TextureOpt::MipMode)uniform_opt.mipmode;
+    opt.interpmode   = (OIIO::TextureOpt::InterpMode)uniform_opt.interpmode;
+    opt.anisotropic  = uniform_opt.anisotropic;
+    opt.conservative_filter = uniform_opt.conservative_filter;
+    opt.fill                = uniform_opt.fill;
+    opt.missingcolor        = uniform_opt.missingcolor;
+
+    const auto& vary_opt = options.varying;
+
+    mask.foreach ([=, &opt, &vary_opt, &outputs, &status](ActiveLane lane) {
+        opt.sblur = vary_opt.sblur[lane];
+        opt.tblur = vary_opt.tblur[lane];
+        // For 3D volume texture lookups only:
+        // opt.rblur = vary_opt.rblur[lane];
+
+        opt.swidth = vary_opt.swidth[lane];
+        opt.twidth = vary_opt.twidth[lane];
+        // For 3D volume texture lookups only:
+        // opt.rwidth = vary_opt.rwidth[lane];
+
+        // It's actually faster to ask for 4 channels (even if we need fewer)
+        // and ensure that they're being put in aligned memory.
+        // TODO:  investigate if the above statement is true when nchannels==1
+
+        // NOTE: using simd::float4 to speedup texture transformation below
+        OIIO::simd::float4 result_simd;
+
+        bool retVal = false;
+
+        const Vec3 dPdx = wdRdx[lane];
+        const Vec3 dPdy = wdRdy[lane];
+
+        retVal = bsr->texturesys()->environment(
+            texture_handle, texture_thread_info, opt, wR[lane], dPdx, dPdy,
+            4, (float*)&result_simd,
+            nullptr,
+            nullptr);
+
+        // NOTE: regardless of the value of "retVal" we will always copy over the texture system's results.
+        // We are relying on the texture system properly filling in missing or fill colors
+
+        // Per the OSL language specification
+        // "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
+        // so despite the fact the alpha channel really is
+        // we will always use +1 the final channel requested
+        int alphaChannelIndex = 0;
+        if (Masked<Color3>::is(resultRef)) {
+            alphaChannelIndex = 3;
+            Masked<Color3> result(resultRef);
+            result[lane] = Color3(result_simd[0], result_simd[1],
+                                  result_simd[2]);
+        } else if (Masked<float>::is(resultRef)) {
+            alphaChannelIndex = 1;
+            Masked<float> result(resultRef);
+            result[lane] = result_simd[0];
+        }
+
+        if (alphaRef.valid()) {
+            Masked<float> alpha(alphaRef);
+            alpha[lane] = result_simd[alphaChannelIndex];
+        }
+
+        //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
+        if (retVal) {
+            status.set_on(lane);
+        } else {
+            std::string err = bsr->texturesys()->geterror();
+            bool errMsgSize = err.size() > 0;
+            if (outputs.errormessage().valid()) {
+                Masked<ustring> errormessage(outputs.errormessage());
+                if (errMsgSize) {
+                    errormessage[lane] = ustring(err);
+                } else {
+                    errormessage[lane] = Strings::unknown;
+                }
+            } else if (errMsgSize) {
+                context->batched<__OSL_WIDTH>().errorf(
+                    Mask(Lane(lane)), "[RendererServices::environment] %s", err);
+            }
+        }
+    });
+    return status;
+}
+
+
+
+OSL_FORCEINLINE Mask
+dispatch_environment(BatchedRendererServices* bsr, ustring filename,
+                   TextureSystem::TextureHandle* texture_handle,
+                   TextureSystem::Perthread* texture_thread_info,
+                   const BatchedTextureOptions& options,
+                   BatchedShaderGlobals* bsg, Wide<const Vec3> R,
+                   Wide<const Vec3> dRdx, Wide<const Vec3> dRdy,
+                   BatchedTextureOutputs& outputs)
+{
+    if (bsr->is_overridden_texture3d()) {
+        return bsr->environment(filename, texture_handle, texture_thread_info,
+                              options, bsg, R, dRdx, dRdy, outputs);
+    } else {
+        return default_environment(bsr, filename, texture_handle,
+                                 texture_thread_info, options, bsg, R, dRdx,
+                                 dRdy, outputs);
     }
 }
 
@@ -503,6 +650,76 @@ OSL_BATCHOP int __OSL_MASKED_OP(texture3d)(void* bsg_, void* name, void* handle,
     return retVal.value();
 }
 
+
+OSL_BATCHOP int __OSL_MASKED_OP(environment)(void* bsg_, void* name, void* handle,
+                                           const void* opt_, const void* wR,
+                                           const void* wRdx, const void* wRdy,
+                                           int chans, void* result,
+                                           int resultHasDerivs, void* alpha,
+                                           int alphaHasDerivs,
+                                           void* errormessage, int mask_)
+{
+    Mask mask(mask_);
+    ASSERT(!mask.all_off());
+
+    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    auto& opt = *reinterpret_cast<const BatchedTextureOptions*>(opt_);
+
+    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans, alpha,
+                                  (bool)alphaHasDerivs, errormessage, mask);
+
+    // NOTE:  If overriden, BatchedRendererServiced::texture is responsible
+    // for correcting our str texture space gradients into xyz-space gradients
+    Mask retVal
+        = dispatch_environment(bsg->uniform.renderer->batched(WidthTag()),
+                             USTR(name), (TextureSystem::TextureHandle*)handle,
+                             bsg->uniform.context->texture_thread_info(), opt,
+                             bsg, Wide<const Vec3>(wR), Wide<const Vec3>(wRdx),
+                             Wide<const Vec3>(wRdy), outputs);
+
+    // For now, just zero out the result derivatives.  If somebody needs
+    // derivatives of environment lookups, we'll fix it.  The reason
+    // that this is a pain is that OIIO's environment call (unwisely?)
+    // returns the st gradients, but we want the xy gradients, which is
+    // tricky because we (this function you're reading) don't know which
+    // projection is used to generate st from R.  Ugh.  Sweep under the
+    // rug for a day when somebody is really asking for it.
+    auto resultRef = outputs.result();
+    if (resultRef.has_derivs()) {
+        if (Masked<Color3>::is(resultRef)) {
+            MaskedDx<Color3> resultDx(resultRef);
+            MaskedDy<Color3> resultDy(resultRef);
+            assign_all(resultDx, Color3(0.0f));
+            assign_all(resultDy, Color3(0.0f));
+        } else if (Masked<float>::is(resultRef)) {
+            MaskedDx<float> resultDx(resultRef);
+            MaskedDy<float> resultDy(resultRef);
+            assign_all(resultDx, 0.0f);
+            assign_all(resultDy, 0.0f);
+        }
+    }
+    auto alphaRef = outputs.alpha();
+    if (alphaRef.valid() && alphaRef.has_derivs()) {
+        MaskedDx<float> alphaDx(alphaRef);
+        MaskedDy<float> alphaDy(alphaRef);
+        assign_all(alphaDx, 0.0f);
+        assign_all(alphaDy, 0.0f);
+    }
+
+
+    OSL_FORCEINLINE_BLOCK
+    if (outputs.errormessage().valid()) {
+        Masked<ustring> err(outputs.errormessage());
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        for (int i = 0; i < __OSL_WIDTH; ++i) {
+            if (retVal[i]) {
+                err[i] = Strings::_emptystring_;
+            }
+        }
+    }
+
+    return retVal.value();
+}
 
 
 OSL_BATCHOP TextureSystem::TextureHandle*

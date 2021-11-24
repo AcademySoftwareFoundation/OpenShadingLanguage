@@ -256,12 +256,12 @@ public:
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
     virtual Mask environment(ustring filename,
-                           TextureSystem::TextureHandle* texture_handle,
-                           TextureSystem::Perthread* texture_thread_info,
-                           const BatchedTextureOptions& options,
-                           BatchedShaderGlobals* bsg, Wide<const Vec3> wR,
-                           Wide<const Vec3> wdRdx, Wide<const Vec3> wdRdy,
-                           BatchedTextureOutputs& outputs);
+                             TextureSystem::TextureHandle* texture_handle,
+                             TextureSystem::Perthread* texture_thread_info,
+                             const BatchedTextureOptions& options,
+                             BatchedShaderGlobals* bsg, Wide<const Vec3> wR,
+                             Wide<const Vec3> wdRdx, Wide<const Vec3> wdRdy,
+                             BatchedTextureOutputs& outputs);
     virtual bool is_overridden_environment() const = 0;
 
 

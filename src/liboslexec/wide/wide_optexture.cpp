@@ -225,7 +225,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
                   const BatchedTextureOptions& options,
                   BatchedShaderGlobals* bsg, Wide<const Vec3> wP,
                   Wide<const Vec3> wdPdx, Wide<const Vec3> wdPdy,
-                  BatchedTextureOutputs& outputs)
+                  Wide<const Vec3> wdPdz, BatchedTextureOutputs& outputs)
 {
     Mask status(false);
     ASSERT(nullptr != bsg);
@@ -306,10 +306,11 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
 
         const Vec3 dPdx = wdPdx[lane];
         const Vec3 dPdy = wdPdy[lane];
+        const Vec3 dPdz = wdPdz[lane];
 
         retVal = bsr->texturesys()->texture3d(
             texture_handle, texture_thread_info, opt, wP[lane], dPdx, dPdy,
-            Vec3(0), 4, (float*)&result_simd,
+            dPdz, 4, (float*)&result_simd,
             has_derivs ? (float*)&dresultds_simd : nullptr,
             has_derivs ? (float*)&dresultdt_simd : nullptr,
             has_derivs ? (float*)&dresultdr_simd : nullptr);
@@ -398,15 +399,15 @@ dispatch_texture3d(BatchedRendererServices* bsr, ustring filename,
                    const BatchedTextureOptions& options,
                    BatchedShaderGlobals* bsg, Wide<const Vec3> P,
                    Wide<const Vec3> dPdx, Wide<const Vec3> dPdy,
-                   BatchedTextureOutputs& outputs)
+                   Wide<const Vec3> dPdz, BatchedTextureOutputs& outputs)
 {
     if (bsr->is_overridden_texture3d()) {
         return bsr->texture3d(filename, texture_handle, texture_thread_info,
-                              options, bsg, P, dPdx, dPdy, outputs);
+                              options, bsg, P, dPdx, dPdy, dPdz, outputs);
     } else {
         return default_texture3d(bsr, filename, texture_handle,
                                  texture_thread_info, options, bsg, P, dPdx,
-                                 dPdy, outputs);
+                                 dPdy, dPdz, outputs);
     }
 }
 
@@ -457,8 +458,9 @@ OSL_BATCHOP int __OSL_MASKED_OP(texture)(
 
 
 OSL_BATCHOP int __OSL_MASKED_OP(texture3d)(void* bsg_, void* name, void* handle,
-                                           const void* opt_, const void* P,
-                                           const void* Pdx, const void* Pdy,
+                                           const void* opt_, const void* wP,
+                                           const void* wPdx, const void* wPdy,
+                                           const void* wPdz,
                                            int chans, void* result,
                                            int resultHasDerivs, void* alpha,
                                            int alphaHasDerivs,
@@ -473,14 +475,19 @@ OSL_BATCHOP int __OSL_MASKED_OP(texture3d)(void* bsg_, void* name, void* handle,
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans, alpha,
                                   (bool)alphaHasDerivs, errormessage, mask);
 
+    Block<Vec3> blockPdz;
+    if (wPdz == nullptr) {
+        assign_all(blockPdz, Vec3(0.0f));
+        wPdz = &blockPdz;
+    }
     // NOTE:  If overriden, BatchedRendererServiced::texture is responsible
     // for correcting our str texture space gradients into xyz-space gradients
     Mask retVal
         = dispatch_texture3d(bsg->uniform.renderer->batched(WidthTag()),
                              USTR(name), (TextureSystem::TextureHandle*)handle,
                              bsg->uniform.context->texture_thread_info(), opt,
-                             bsg, Wide<const Vec3>(P), Wide<const Vec3>(Pdx),
-                             Wide<const Vec3>(Pdy), outputs);
+                             bsg, Wide<const Vec3>(wP), Wide<const Vec3>(wPdx),
+                             Wide<const Vec3>(wPdy), Wide<const Vec3>(wPdz), outputs);
 
     OSL_FORCEINLINE_BLOCK
     if (outputs.errormessage().valid()) {

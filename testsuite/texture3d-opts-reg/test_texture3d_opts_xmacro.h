@@ -239,10 +239,9 @@ shader __OSL_CONCAT(test_texture3d_opts_, __OSL_XMACRO_SUFFIX) (
     {
         float xwidth = u * 2e-8;
         float ywidth = v * 2e-8;
+        float zwidth = (2.0-(u+v)) * 2e-8;
         float blur_val = init(0.01);
-        // TODO: fixme to not take dpdz
-        out_smallderivs = (color) texture3d (filename, vP, vector(xwidth, 0, 0), vector(0, ywidth, 0), "blur", blur_val);
-        //out_smallderivs = (color) texture3d (filename, vP, vector(xwidth, 0, 0), vector(0, ywidth, 0), vector(0,0,0));
+        out_smallderivs = (color) texture3d (filename, vP, vector(xwidth, 0, 0), vector(0, ywidth, 0), vector(0, 0, zwidth), "blur", blur_val);
     }
 
     // TODO: add test of "time" attribute.
@@ -255,8 +254,7 @@ shader __OSL_CONCAT(test_texture3d_opts_, __OSL_XMACRO_SUFFIX) (
     {
         float xwidth = u*u * 10;
         float ywidth = v*v * 5;
-        out_widthderivs = (color) texture3d (filename, vP, Dx(vP)*xwidth, Dy(vP)*ywidth);
-        //out_widthderivs = (color) texture3d (filename, vP, Dx(vP)*xwidth, Dy(vP)*ywidth, vector(0,0,0));
+        out_widthderivs = (color) texture3d (filename, vP, Dx(vP)*xwidth, Dy(vP)*ywidth, vector(0,0,0));
     }
 
     {

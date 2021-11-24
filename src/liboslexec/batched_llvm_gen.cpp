@@ -4606,9 +4606,10 @@ LLVMGEN (llvm_gen_texture3d)
     // derivatives
     if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
         user_derivs = true;
-        first_optional_arg = 5;
+        first_optional_arg = 6;
         OSL_DASSERT (rop.opargsym(op,3)->typespec().is_triple()); // vector dpdx
         OSL_DASSERT (rop.opargsym(op,4)->typespec().is_triple()); // vector dpdy
+        OSL_DASSERT (rop.opargsym(op,5)->typespec().is_triple()); // vector dpdy
     }
 
     // make sure that any temps created by llvm_batched_texture_options
@@ -4629,7 +4630,7 @@ LLVMGEN (llvm_gen_texture3d)
 
     // Now call the osl_texture function, passing the options and all the
     // explicit args like texture coordinates.
-    llvm::Value * args[14];
+    llvm::Value * args[15];
     args[0] = rop.sg_void_ptr();
 
     bool fileNameIsUniform = Filename.is_uniform();
@@ -4677,10 +4678,12 @@ LLVMGEN (llvm_gen_texture3d)
 
     llvm::Value* wideSTRDx = nullptr;
     llvm::Value* wideSTRDy = nullptr;
+    llvm::Value* wideSTRDz = nullptr;
 
     if (user_derivs) {
         Symbol &PDx = *rop.opargsym (op, 3);
         Symbol &PDy = *rop.opargsym (op, 4);
+        Symbol &PDz = *rop.opargsym (op, 5);
 
           if (PDx.is_uniform()) {
                wideSTRDx = rop.llvm_widen_value_into_temp(PDx, 0);
@@ -4695,22 +4698,31 @@ LLVMGEN (llvm_gen_texture3d)
                wideSTRDy = rop.llvm_void_ptr(PDy, 0);
           }
 
+          if (PDz.is_uniform()) {
+               wideSTRDz = rop.llvm_widen_value_into_temp(PDz, 0);
+          } else {
+               wideSTRDz = rop.llvm_void_ptr(PDz, 0);
+          }
+
     } else {
-        // Auto derivs of S and T
+        // Auto derivs of S and T, leave R as nullptr and
+        // ensure implmementation can handle a nullptr
         wideSTRDx = wideSTRD1;
         wideSTRDy = wideSTRD2;
+        wideSTRDz = rop.ll.void_ptr_null();
     }
 
     args[5] = wideSTRDx;
     args[6] = wideSTRDy;
+    args[7] = wideSTRDz;
 
     OSL_DEV_ONLY(std::cout << "texture result type: " << rop.ll.llvm_typenameof(rop.llvm_get_pointer (Result, 1)) << std::endl);
-    args[7] =  rop.ll.constant (nchans);
-    args[8] =  rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0));
-    args[9] =  Result.has_derivs() ? rop.ll.constant(1) : rop.ll.constant(0);
-    args[10] =  rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null());
-    args[11] =  alphaHasDerivs ? rop.ll.constant(1) : rop.ll.constant(0);
-    args[12] =  rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null());
+    args[8] =  rop.ll.constant (nchans);
+    args[9] =  rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0));
+    args[10] =  Result.has_derivs() ? rop.ll.constant(1) : rop.ll.constant(0);
+    args[11] =  rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null());
+    args[12] =  alphaHasDerivs ? rop.ll.constant(1) : rop.ll.constant(0);
+    args[13] =  rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null());
 
     // do while(remaining)
     llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to texture");
@@ -4736,7 +4748,7 @@ LLVMGEN (llvm_gen_texture3d)
                                         true /* enable 3d*/, nchans, lanesMatchingFilename, leadLane, missingcolor_buffer);
         OSL_ASSERT(lanesMatchingOptions);
         //rop.llvm_print_mask("lanesMatchingOptions", lanesMatchingOptions);
-        args[13] = rop.ll.mask_as_int(lanesMatchingOptions);
+        args[14] = rop.ll.mask_as_int(lanesMatchingOptions);
 
         rop.ll.call_function (texFuncName, args);
 

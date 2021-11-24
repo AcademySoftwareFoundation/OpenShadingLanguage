@@ -621,7 +621,7 @@ DECL(__OSL_OP(regex_impl), "iXsXisi")
 // directly in LLVM ir, and has no need for wide versions
 // of osl_texture_set_XXX functions
 DECL(__OSL_MASKED_OP(texture), "iXXXXXXXXXXiXiXiXi")
-DECL(__OSL_MASKED_OP(texture3d), "iXXXXXXXiXiXiXi")
+DECL(__OSL_MASKED_OP(texture3d), "iXXXXXXXXiXiXiXi")
 #ifdef __OSL_TBD
 DECL(__OSL_MASKED_OP(environment), "iXXXXXXXiXXXXXXXi")
 #endif

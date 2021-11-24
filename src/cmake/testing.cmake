@@ -197,7 +197,6 @@ macro (osl_add_all_tests)
                 debugnan debug-uninit
                 derivs derivs-muldiv-clobber
                 draw_string
-                environment environment-opts-reg
                 error-dupes error-serialized
                 example-deformer
                 exit exponential
@@ -278,6 +277,7 @@ macro (osl_add_all_tests)
                 texture-alpha texture-alpha-derivs
                 texture-blur texture-connected-options
                 texture-derivs texture-environment texture-errormsg
+                texture-environment-opts-reg
                 texture-firstchannel texture-interp
                 texture-missingalpha texture-missingcolor texture-opts-reg texture-simple
                 texture-smallderivs texture-swirl texture-udim

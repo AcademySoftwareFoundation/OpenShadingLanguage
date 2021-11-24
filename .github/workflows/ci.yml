@@ -384,6 +384,7 @@ jobs:
       OPENIMAGEIO_VERSION: master
       PYBIND11_VERSION: v2.6.2
       USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
+      USE_OPENVDB: 0
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp

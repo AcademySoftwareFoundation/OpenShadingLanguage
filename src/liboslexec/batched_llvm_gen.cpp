@@ -6108,6 +6108,193 @@ LLVMGEN (llvm_gen_functioncall_nr)
 }
 
 
+
+LLVMGEN (llvm_gen_dict_find)
+{
+    // OSL has two variants of this function:
+    //     dict_find (string dict, string query)
+    //     dict_find (int nodeID, string query)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() == 3);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Source = *rop.opargsym (op, 1);//Can be nodeID or string; can be uniform or varying
+    Symbol& Query  = *rop.opargsym (op, 2);//can be uniform or varying
+    OSL_DASSERT (Result.typespec().is_int() && Query.typespec().is_string() &&
+             (Source.typespec().is_int() || Source.typespec().is_string()));
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+    std::vector<llvm::Value *> args;
+    bool op_is_uniform = Source.is_uniform() && Query.is_uniform();
+
+    //Load shader global
+    args.push_back(rop.sg_void_ptr());
+
+    if(!op_is_uniform) {
+        args.push_back(rop.llvm_void_ptr(Result));
+        args.push_back(rop.llvm_load_arg(Source, false, false /*op_is_uniform*/));
+        args.push_back(rop.llvm_load_arg(Query, false, false /*op_is_uniform*/));
+    }
+    else
+    {
+        args.push_back(rop.llvm_load_value(Source));
+        args.push_back(rop.llvm_load_value(Query));
+    }
+
+    FuncSpec func_spec("dict_find");
+    func_spec.arg(Result, op_is_uniform);
+    func_spec.arg(Source, op_is_uniform);
+    func_spec.arg(Query, op_is_uniform);
+
+    if (!op_is_uniform) {
+       func_spec.mask();
+       args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+    }
+
+    llvm::Value *ret = rop.ll.call_function (rop.build_name(func_spec), args);
+
+    if (op_is_uniform) {
+
+        if (!Result.is_uniform()) {
+            ret = rop.ll.widen_value(ret);
+        }
+
+        rop.llvm_store_value (ret, Result);
+    }
+
+    return true;
+}
+
+
+LLVMGEN (llvm_gen_dict_next)
+{
+    // dict_net is very straightforward -- just insert sg ptr as first arg
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() == 2);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& NodeID = *rop.opargsym (op, 1);
+    OSL_DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int());
+
+    bool op_is_uniform = NodeID.is_uniform();
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+    std::vector<llvm::Value *> args;
+
+    FuncSpec func_spec("dict_next");
+
+    args.push_back(rop.sg_void_ptr());
+
+    if (!op_is_uniform) {
+        args.push_back(rop.llvm_void_ptr(Result));
+        args.push_back(rop.llvm_load_arg(NodeID, /*derivs=*/false, false /*op_is_uniform*/));
+    }
+    else
+    {
+        args.push_back(rop.llvm_load_value(NodeID));
+    }
+
+
+    if (!op_is_uniform) {
+        func_spec.mask();
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+    }
+    llvm::Value *ret = rop.ll.call_function(rop.build_name(func_spec), args);
+
+    if (op_is_uniform) {
+        if (!Result.is_uniform()) {
+            ret = rop.ll.widen_value(ret);
+        }
+        rop.llvm_store_value (ret, Result);
+    }
+
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_dict_value)
+{
+    // int dict_value (int nodeID, string attribname, output TYPE value)
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() == 4);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& NodeID = *rop.opargsym (op, 1);
+    Symbol& Name   = *rop.opargsym (op, 2);
+    Symbol& Value  = *rop.opargsym (op, 3);
+    OSL_DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int() &&
+             Name.typespec().is_string());
+
+    bool op_is_uniform = NodeID.is_uniform() && Name.is_uniform();
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    FuncSpec func_spec("dict_value");
+    if (op_is_uniform) {
+
+        OSL_ASSERT(!Value.has_derivs());
+        BatchedBackendLLVM::TempScope temp_scope(rop);
+        llvm::Value *temp_uniform_value = nullptr;
+        llvm::Value *uniform_value = nullptr;
+        if (!Value.is_uniform()) {
+            temp_uniform_value = rop.getOrAllocateTemp (Value.typespec(), Value.has_derivs(), true /*is_uniform*/, false /*forceBool*/, "uniform dictionary value");
+            uniform_value = rop.ll.void_ptr(temp_uniform_value);
+        } else {
+            uniform_value = rop.llvm_void_ptr (Value);
+        }
+
+        llvm::Value *args[] = {
+            // arg 0: shaderglobals ptr
+            rop.sg_void_ptr(),
+            // arg 1: nodeID
+            rop.llvm_load_value(NodeID),
+            // arg 2: attribute name
+            rop.llvm_load_value(Name),
+            // arg 3: encoded type of Value
+            rop.ll.constant(Value.typespec().simpletype()),
+            // arg 4: pointer to Value
+            uniform_value};
+
+        llvm::Value *ret = rop.ll.call_function (rop.build_name(func_spec), args);
+
+        if (!Value.is_uniform()) {
+            // Only broadcast our result if the value lookup succeeded
+            // Branch on the condition, to our blocks
+            llvm::Value* cond_val = rop.ll.op_int_to_bool (ret);
+            llvm::BasicBlock* broadcast_block = rop.ll.new_basic_block (std::string("uniform dict_value broadcast"));
+            llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after uniform dict_value broadcast"));
+            rop.ll.op_branch (cond_val, broadcast_block, after_block);
+
+            rop.ll.set_insert_point(broadcast_block);
+            rop.llvm_broadcast_uniform_value_from_mem(temp_uniform_value, Value);
+            rop.ll.op_branch (after_block);
+
+            rop.ll.set_insert_point(after_block);
+        }
+
+        if (!Result.is_uniform()) {
+            ret = rop.ll.widen_value(ret);
+        }
+        rop.llvm_store_value (ret, Result);
+    } else {
+        func_spec.mask();
+        OSL_DASSERT(!Value.is_uniform());
+        llvm::Value *args[] = {
+            rop.sg_void_ptr(),
+            rop.llvm_void_ptr(Result),
+            rop.llvm_load_arg (NodeID, false /*derivs*/, false /*op_is_uniform*/),
+            rop.llvm_load_arg (Name, false /*derivs*/, false /*op_is_uniform*/),
+            rop.ll.constant(Value.typespec().simpletype()),
+            rop.llvm_void_ptr (Value),
+            rop.ll.mask_as_int(rop.ll.current_mask())
+        };
+
+        rop.ll.call_function (rop.build_name(func_spec), args);
+
+    }
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_split)
 {
     // int split (string str, output string result[], string sep, int maxsplit)
@@ -6435,10 +6622,6 @@ LLVMGEN(NAME) \
 } \
 
 // TODO: rest of gen functions to be added in separate PR
-
-TBD_LLVMGEN(llvm_gen_dict_find)
-TBD_LLVMGEN(llvm_gen_dict_next)
-TBD_LLVMGEN(llvm_gen_dict_value)
 
 TBD_LLVMGEN(llvm_gen_getmessage)
 TBD_LLVMGEN(llvm_gen_setmessage)

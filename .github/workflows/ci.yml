@@ -383,6 +383,7 @@ jobs:
       OPENEXR_VERSION: v3.0.4
       OPENIMAGEIO_VERSION: master
       PYBIND11_VERSION: v2.6.2
+      USE_OPENVDB: 0
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp

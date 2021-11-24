@@ -13,7 +13,7 @@ $OSL_ROOT/bin/testshade --help
 echo "Parallel test " ${CTEST_PARALLEL_LEVEL}
 pushd build
 time ctest -C ${CMAKE_BUILD_TYPE} -E broken --force-new-ctest-process \
-    --output-on-failure --timeout ${CTEST_TEST_TIMEOUT:=240} ${CTEST_ARGS}
+    --output-on-failure --timeout ${CTEST_TEST_TIMEOUT:=300} ${CTEST_ARGS}
 popd
 
 

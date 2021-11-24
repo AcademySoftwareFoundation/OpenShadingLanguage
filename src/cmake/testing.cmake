@@ -329,4 +329,10 @@ macro (osl_add_all_tests)
         TESTSUITE ( testoptix testoptix-noise example-cuda)
     endif ()
 
+    # Some regression tests have alot of combinations and may need more time to finish 
+    if (BUILD_BATCHED)
+        set_tests_properties (arithmetic-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
+        set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
+    endif ()
+        
 endmacro()

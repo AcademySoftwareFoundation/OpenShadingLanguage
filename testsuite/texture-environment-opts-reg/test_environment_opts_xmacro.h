@@ -251,8 +251,8 @@ shader __OSL_CONCAT(test_environment_opts_, __OSL_XMACRO_SUFFIX) (
     }
 
     {
-        float xwidth = u*u * 10;
-        float ywidth = v*v * 5;
+        float xwidth = u*u * 5;
+        float ywidth = v*v * 2;
         out_widthderivs = (color) environment (filename, R, Dx(R)*xwidth, Dy(R)*ywidth);
     }
 }

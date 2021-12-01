@@ -211,9 +211,27 @@ if (CCACHE_FOUND AND USE_CCACHE)
     if (CMAKE_COMPILER_IS_CLANG AND USE_QT AND (NOT DEFINED ENV{CCACHE_CPP2}))
         message (STATUS "Ignoring ccache because clang + Qt + env CCACHE_CPP2 is not set")
     else ()
-        set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-        set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+        set (MY_RULE_LAUNCH ccache)
     endif ()
+endif ()
+
+
+###########################################################################
+# Build time debugging aid: time all compile & link commands
+#
+# Note, though, that this is not especially helpful when doing a parallel
+# build. If you wish to time individual compile commands, it's best to also
+# set `-j 1` or CMAKE_BUILD_PARALLEL_LEVEL to 1.
+option (TIME_COMMANDS "Time each compile and link command" OFF)
+if (TIME_COMMANDS)
+    set (MY_RULE_LAUNCH "${CMAKE_COMMAND} -E time ${MY_RULE_LAUNCH}")
+endif ()
+
+
+# Note: This must be after any option that alters MY_RULE_LAUNCH
+if (MY_RULE_LAUNCH)
+    set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${MY_RULE_LAUNCH})
+    set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ${MY_RULE_LAUNCH})
 endif ()
 
 
@@ -420,66 +438,70 @@ endif ()
 # correct any deviations. If clang-format is found on the system, a
 # "clang-format" build target will trigger a reformatting.
 #
-set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
-set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
-                            "src/include/*.h"
-                            "src/liboslcomp/*.cpp"
-                            "src/liboslcomp/*.h"
-                            "src/liboslexec/batched_rendservices.cpp"
-                            "src/liboslquery/*.cpp"
-                            "src/liboslquery/*.h"
-                            "src/oslinfo/*.cpp"
-                            "src/oslc/*.cpp"
-                            "src/osl.imageio/*.cpp"
-                            "src/osltoy/*.cpp"
-                            "src/osltoy/*.h"
-                            "testsuite/*.cpp"
-    CACHE STRING "Glob patterns to include for clang-format")
-set (CLANG_FORMAT_EXCLUDES
-        # Files "imported and modified" that we don't want to reformat, so
-        # they continue to match their upstream versions.
-        "src/include/OSL/Imathx/*"
-        "src/include/OSL/matrix22.h"
-        # Files that are currently being modified with the SIMD batch
-        # shading -- we'll reformat those only after that project work is
-        # completed, to avoid nasty merge conflicts.
-        "src/include/OSL/rendererservices.h"
-        "src/include/OSL/*llvm*"
-        "src/liboslexec/*llvm*"
-        "src/liboslexec/oslexec_pvt.h"
-        # Files that are currently being modified with the OptiX work --
-        # we'll reformat those only after that project work is completed, to
-        # avoid nasty merge conflicts.
-        "src/include/OSL/device_string.h"
-        "src/include/OSL/oslexec.h"
-        "src/testrender/cuda/*"
-        # Header files in testsuite are almost certainly osl headers, not C++
-        "testsuite/*.h"
-        ""
-     CACHE STRING "Glob patterns to exclude for clang-format")
-find_program (CLANG_FORMAT_EXE
-              NAMES clang-format bin/clang-format
-              HINTS ${CLANG_FORMAT_EXE_HINT} ENV CLANG_FORMAT_EXE_HINT
-                    ENV LLVM_DIRECTORY
-              NO_DEFAULT_PATH
-              DOC "Path to clang-format executable")
-find_program (CLANG_FORMAT_EXE NAMES clang-format bin/clang-format)
-if (CLANG_FORMAT_EXE)
-    message (STATUS "clang-format found: ${CLANG_FORMAT_EXE}")
-    # Start with the list of files to include when formatting...
-    file (GLOB_RECURSE FILES_TO_FORMAT ${CLANG_FORMAT_INCLUDES})
-    # ... then process any list of excludes we are given
-    foreach (_pat ${CLANG_FORMAT_EXCLUDES})
-        file (GLOB_RECURSE _excl ${_pat})
-        list (REMOVE_ITEM FILES_TO_FORMAT ${_excl})
-    endforeach ()
-    # message (STATUS "clang-format file list: ${FILES_TO_FORMAT}")
-    file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/.clang-format
-          DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    add_custom_target (clang-format
-        COMMAND "${CLANG_FORMAT_EXE}" -i -style=file ${FILES_TO_FORMAT} )
-else ()
-    message (STATUS "clang-format not found.")
+# Note: skip all of this checking, setup, and cmake-format target if this
+# is being built as a subproject.
+if (PROJECT_IS_TOP_LEVEL)
+    set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
+    set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
+                                "src/include/*.h"
+                                "src/liboslcomp/*.cpp"
+                                "src/liboslcomp/*.h"
+                                "src/liboslexec/batched_rendservices.cpp"
+                                "src/liboslquery/*.cpp"
+                                "src/liboslquery/*.h"
+                                "src/oslinfo/*.cpp"
+                                "src/oslc/*.cpp"
+                                "src/osl.imageio/*.cpp"
+                                "src/osltoy/*.cpp"
+                                "src/osltoy/*.h"
+                                "testsuite/*.cpp"
+        CACHE STRING "Glob patterns to include for clang-format")
+    set (CLANG_FORMAT_EXCLUDES
+            # Files "imported and modified" that we don't want to reformat, so
+            # they continue to match their upstream versions.
+            "src/include/OSL/Imathx/*"
+            "src/include/OSL/matrix22.h"
+            # Files that are currently being modified with the SIMD batch
+            # shading -- we'll reformat those only after that project work is
+            # completed, to avoid nasty merge conflicts.
+            "src/include/OSL/rendererservices.h"
+            "src/include/OSL/*llvm*"
+            "src/liboslexec/*llvm*"
+            "src/liboslexec/oslexec_pvt.h"
+            # Files that are currently being modified with the OptiX work --
+            # we'll reformat those only after that project work is completed, to
+            # avoid nasty merge conflicts.
+            "src/include/OSL/device_string.h"
+            "src/include/OSL/oslexec.h"
+            "src/testrender/cuda/*"
+            # Header files in testsuite are almost certainly osl headers, not C++
+            "testsuite/*.h"
+            ""
+         CACHE STRING "Glob patterns to exclude for clang-format")
+    find_program (CLANG_FORMAT_EXE
+                  NAMES clang-format bin/clang-format
+                  HINTS ${CLANG_FORMAT_EXE_HINT} ENV CLANG_FORMAT_EXE_HINT
+                        ENV LLVM_DIRECTORY
+                  NO_DEFAULT_PATH
+                  DOC "Path to clang-format executable")
+    find_program (CLANG_FORMAT_EXE NAMES clang-format bin/clang-format)
+    if (CLANG_FORMAT_EXE)
+        message (STATUS "clang-format found: ${CLANG_FORMAT_EXE}")
+        # Start with the list of files to include when formatting...
+        file (GLOB_RECURSE FILES_TO_FORMAT ${CLANG_FORMAT_INCLUDES})
+        # ... then process any list of excludes we are given
+        foreach (_pat ${CLANG_FORMAT_EXCLUDES})
+            file (GLOB_RECURSE _excl ${_pat})
+            list (REMOVE_ITEM FILES_TO_FORMAT ${_excl})
+        endforeach ()
+        # message (STATUS "clang-format file list: ${FILES_TO_FORMAT}")
+        file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/.clang-format
+              DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+        add_custom_target (clang-format
+            COMMAND "${CLANG_FORMAT_EXE}" -i -style=file ${FILES_TO_FORMAT} )
+    else ()
+        message (STATUS "clang-format not found.")
+    endif ()
 endif ()
 
 

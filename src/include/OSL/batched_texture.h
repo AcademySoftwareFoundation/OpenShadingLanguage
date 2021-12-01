@@ -69,6 +69,9 @@ template<int WidthT> struct BatchedTextureOptions {
         swidth,
         twidth,
         rwidth,
+#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
+        rnd,
+#endif
         firstchannel,
         subimage,
         subimagename,

@@ -2508,9 +2508,10 @@ LLVMGEN (llvm_gen_texture3d)
     int first_optional_arg = 3;
     if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
         user_derivs = true;
-        first_optional_arg = 5;
+        first_optional_arg = 6;
         OSL_DASSERT(rop.opargsym(op,3)->typespec().is_triple());
         OSL_DASSERT(rop.opargsym(op,4)->typespec().is_triple());
+        OSL_DASSERT(rop.opargsym(op,5)->typespec().is_triple());
     }
 
     llvm::Value* opt;   // TextureOpt
@@ -2536,6 +2537,8 @@ LLVMGEN (llvm_gen_texture3d)
         // Auto derivs of P if !user_derivs
         user_derivs ? rop.llvm_void_ptr (*rop.opargsym (op, 3)) : rop.llvm_void_ptr (P, 1),
         user_derivs ? rop.llvm_void_ptr (*rop.opargsym (op, 4)) : rop.llvm_void_ptr (P, 2),
+        // NOTE:  osl_texture3d will need to handle *dPdz possibly being null
+        user_derivs ? rop.llvm_void_ptr (*rop.opargsym (op, 5)) : rop.ll.void_ptr_null(),
         rop.ll.constant (nchans),
         rop.ll.void_ptr (rop.llvm_void_ptr (Result, 0)),
         rop.ll.void_ptr (rop.llvm_void_ptr (Result, 1)),
@@ -2545,6 +2548,7 @@ LLVMGEN (llvm_gen_texture3d)
         rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()),
         rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()),
     };
+
     rop.ll.call_function ("osl_texture3d", args);
     rop.generated_texture_call (texture_handle != NULL);
     return true;

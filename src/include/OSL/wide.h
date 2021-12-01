@@ -268,9 +268,8 @@ template<int WidthT>
 struct Block<int, WidthT> : public BlockOfBuiltin<int, WidthT> {
 };
 
-template<int WidthT>
-struct Block<TransformationPtr, WidthT>
-    : public BlockOfBuiltin<TransformationPtr, WidthT> {
+template<typename DataT, int WidthT>
+struct Block<DataT*, WidthT> : public BlockOfBuiltin<DataT*, WidthT> {
 };
 
 

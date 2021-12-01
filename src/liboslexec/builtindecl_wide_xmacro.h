@@ -617,19 +617,17 @@ DECL(__OSL_MASKED_OP4(substr, Ws, Ws, Wi, Wi), "xXXXXi")
 DECL(__OSL_MASKED_OP(regex_impl), "xXXXXiXii")
 DECL(__OSL_OP(regex_impl), "iXsXisi")
 
-#ifdef __OSL_TBD
-
 // BATCH texturing manages the BatchedTextureOptions
 // directly in LLVM ir, and has no need for wide versions
 // of osl_texture_set_XXX functions
 DECL(__OSL_MASKED_OP(texture), "iXXXXXXXXXXiXiXiXi")
-DECL(__OSL_MASKED_OP(texture3d), "iXXXXXXXiXiXiXi")
-#if 0  // incomplete
-DECL (osl_environment, "iXXXXXXXiXXXXXXX")
-#endif
-DECL(__OSL_MASKED_OP(get_textureinfo), "iXXXXXi")
+DECL(__OSL_MASKED_OP(texture3d), "iXXXXXXXXiXiXiXi")
+DECL(__OSL_MASKED_OP(environment), "iXXXXXXXiXiXiXi")
+DECL(__OSL_OP(resolve_udim_uniform), "XXXXff")
+DECL(__OSL_MASKED_OP(resolve_udim), "xXXXXXXi")
 DECL(__OSL_OP(get_textureinfo_uniform), "iXXXXXX")
 
+#ifdef __OSL_TBD
 // Wide Code generator will set trace options directly in LLVM IR
 // without calling helper functions
 //DECL (osl_trace_set_mindist, "xXf") // unneeded

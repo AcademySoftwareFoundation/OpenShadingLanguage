@@ -233,7 +233,38 @@ public:
     virtual bool is_overridden_texture3d() const = 0;
 
 
-    // Filtered environment lookup for a single point is T.B.D.
+    /// Filtered environment lookup for a single point.
+    ///
+    /// R is the directional texture coordinate; dRd[xy] are the
+    /// differentials of R in canonical directions x, y.
+    ///
+    /// The filename will always be passed, and it's ok for the renderer
+    /// implementation to use only that (and in fact should be prepared to
+    /// deal with texture_handle and texture_thread_info being NULL). But
+    /// sometimes OSL can figure out the texture handle or thread info also
+    /// and may pass them as non-NULL, in which case the renderer may (if it
+    /// can) use that extra information to perform a less expensive texture
+    /// lookup.
+    ///
+    /// Return a Mask with lanes set to true if the file is found and could
+    /// be opened, otherwise return false.
+    ///
+    /// If the errormessage parameter is NULL, this method is expected to
+    /// handle the errors fully, including forwarding them to the renderer
+    /// or shading system. If errormessage is non-NULL, any resulting error
+    /// messages (in case of failure, when the function returns false) will
+    /// be stored there, leaving it up to the caller/shader to handle the
+    /// error.
+    virtual Mask environment(ustring filename,
+                             TextureSystem::TextureHandle* texture_handle,
+                             TextureSystem::Perthread* texture_thread_info,
+                             const BatchedTextureOptions& options,
+                             BatchedShaderGlobals* bsg, Wide<const Vec3> wR,
+                             Wide<const Vec3> wdRdx, Wide<const Vec3> wdRdy,
+                             BatchedTextureOutputs& outputs);
+    virtual bool is_overridden_environment() const = 0;
+
+
 
     /// Get information about the given texture.  Return a Mask with lanes
     /// set to true if found and the data has been put in *data.  Mask lanes
@@ -249,15 +280,19 @@ public:
     /// can) use that extra information to perform a less expensive texture
     /// lookup.
 
-    // Should shader's fully avoid non-constant strings we could remove this
-    // method which supports Wide<const ustring> wfilename.  Or replace
-    // this virtual method with a library side loop that calls the uniform version
-    virtual Mask get_texture_info(
+    virtual TextureSystem::TextureHandle* resolve_udim_uniform(
         BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-        Wide<const ustring> wfilename,
-        // We do not need to support texture handle for varying data.
-        int subimage, ustring dataname, MaskedData val);
+        ustring filename, TextureSystem::TextureHandle* texture_handle, float S,
+        float T);
 
+    virtual void resolve_udim(BatchedShaderGlobals* bsg,
+                              TexturePerthread* texture_thread_info,
+                              ustring filename,
+                              TextureSystem::TextureHandle* texture_handle,
+                              Wide<const float> wS, Wide<const float> wT,
+                              Masked<TextureSystem::TextureHandle*> wresult);
+
+    // Assumes any UDIM has been resolved already
     virtual bool get_texture_info_uniform(
         BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
         ustring filename, TextureSystem::TextureHandle* texture_handle,

@@ -80,14 +80,18 @@ endif ()
 ###########################################################################
 # Turn on more detailed warnings and optionally consider warnings as errors
 #
-option (STOP_ON_WARNING "Stop building if there are any compiler warnings" ON)
+if (${PROJECT_NAME}_SUPPORTED_RELEASE)
+    option (STOP_ON_WARNING "Stop building if there are any compiler warnings" OFF)
+else ()
+    option (STOP_ON_WARNING "Stop building if there are any compiler warnings" ON)
+endif()
 option (EXTRA_WARNINGS "Enable lots of extra pedantic warnings" OFF)
 if (NOT MSVC)
     add_compile_options ("-Wall")
     if (EXTRA_WARNINGS)
         add_compile_options ("-Wextra")
     endif ()
-    if (STOP_ON_WARNING OR DEFINED ENV{CI})
+    if (STOP_ON_WARNING OR DEFINED ENV{${PROJECT_NAME}_CI})
         add_compile_options ("-Werror")
         # N.B. Force CI builds to use -Werror, even if STOP_ON_WARNING has
         # been switched off by default, which we may do in release branches.
@@ -563,9 +567,10 @@ endif ()
 
 ###########################################################################
 # Any extra logic to be run only for CI builds goes here.
+# We expect our own CI runs to define env variable ${PROJECT_NAME}_CI
 #
-if (DEFINED ENV{CI} OR DEFINED ENV{GITHUB_ACTIONS})
-    add_definitions ("-D${PROJ_NAME}_CI=1" "-DBUILD_CI=1")
+if (DEFINED ENV{${PROJECT_NAME}_CI})
+    add_definitions (-D${PROJ_NAME}_CI=1 -DBUILD_CI=1)
     if (APPLE)
         # Keep Mono framework from being incorrectly searched for include
         # files on GitHub Actions CI.

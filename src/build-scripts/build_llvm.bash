@@ -14,7 +14,7 @@ uname
 
 
 if [[ `uname` == "Linux" ]] ; then
-    LLVM_VERSION=${LLVM_VERSION:=8.0.0}
+    LLVM_VERSION=${LLVM_VERSION:=13.0.0}
     LLVM_INSTALL_DIR=${LLVM_INSTALL_DIR:=${PWD}/llvm-install}
     if [[ "$GITHUB_WORKFLOW" != "" ]] ; then
         LLVM_DISTRO_NAME=${LLVM_DISTRO_NAME:=ubuntu-18.04}

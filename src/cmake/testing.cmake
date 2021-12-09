@@ -292,7 +292,7 @@ macro (osl_add_all_tests)
                 vararray-connect vararray-default
                 vararray-deserialize vararray-param
                 vecctr vector vector-reg
-                wavelength_color wavelength_color-reg Werror xml )
+                wavelength_color wavelength_color-reg Werror xml xml-reg )
 
     # Coordinate-aware gettextureinfo only works for TextureSystem >= 2.3.7
     if (OpenImageIO_VERSION VERSION_GREATER_EQUAL 2.3.7)

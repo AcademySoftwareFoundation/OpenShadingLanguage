@@ -1,0 +1,33 @@
+<paintsetup  blend="0.000000" blendMode="3">
+ <camerapack name="default" twoSidesOn="1">
+  <camera name="main_cam">
+   <xform matrix="1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 10.0 1.0"/>
+   <lens bottom="-1.0" fovHorz="5.72" left="-1.0" right="1.0" top="1.0"/>
+  </camera>
+  <image channel="color" path="textures/view1.tif">
+  </image>
+ </camerapack>
+
+ <camerapack name="second cam" twoSidesOn="0">
+  <camera name="right_cam">
+   <xform matrix="3.14159 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -20.5 0.0 0.0 1.0"/>
+   <lens bottom="-1.0" fovHorz="30" left="-1.0" right="1.0" top="1.0"/>
+   <filter color="0.25 0.85 0.3"/>
+  </camera>
+  <image channel="color" path="textures/view2.tif">
+  </image>
+  <image channel="bump" path="textures/view2.bump.tif">
+  </image>
+ </camerapack>
+
+ <camerapack name="thrid cam" twoSidesOn="1">
+  <camera name="left_cam">
+   <xform matrix="-3.14159 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 +20.5 0.0 0.0 1.0"/>
+   <lens bottom="-1.0" fovHorz="60" left="-1.0" right="1.0" top="1.0"/>
+  </camera>
+  <image channel="color" path="textures/view3.tif">
+  </image>
+  <image channel="bump" path="textures/view3.bump.tif">
+  </image>
+ </camerapack>
+</paintsetup>

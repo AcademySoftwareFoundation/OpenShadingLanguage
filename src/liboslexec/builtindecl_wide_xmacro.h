@@ -349,8 +349,6 @@ DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s), "iXXXXi")
 DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws), "iXXXXi")
 DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, Ws), "iXXXXi")
 
-#ifdef __OSL_TBD
-
 DECL(__OSL_OP(dict_find_iis), "iXiX")
 DECL(__OSL_MASKED_OP3(dict_find, Wi, Wi, Ws), "xXXXXi")
 
@@ -363,7 +361,6 @@ DECL(__OSL_MASKED_OP(dict_next), "xXXXi")
 DECL(__OSL_OP(dict_value), "iXiXLX")
 DECL(__OSL_MASKED_OP(dict_value), "xXXXXLXi")
 
-#endif
 
 DECL(__OSL_OP(raytype_name), "iXX")
 DECL(__OSL_MASKED_OP(raytype_name), "xXXXi")

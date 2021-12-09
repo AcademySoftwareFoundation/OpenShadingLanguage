@@ -1287,7 +1287,7 @@ LLVM_Util::supports_isa(TargetISA target)
         return false;
 
 #ifdef OSL_DEV
-    for (auto f : sCpuFeatures)
+    for (const auto & f : sCpuFeatures)
         std::cout << "Featuremap[" << f.getKey().str() << "]=" << f.getValue() << std::endl;
 #endif
 
@@ -1306,9 +1306,9 @@ LLVM_Util::supports_isa(TargetISA target)
         if (strncmp(f, "x87", 3) == 0 || strncmp(f, "mpx", 3) == 0) {
             continue;
         }
-        OSL_DEV_ONLY(std::cout << "Testing for cpu feature[" << i << "]:" << f << std::endl);
+        OSL_DEV_ONLY(std::cout << "Testing for cpu feature:" << f << std::endl);
         if (sCpuFeatures[f] == false) {
-            OSL_DEV_ONLY(std::cout << "MISSING cpu feature[" << i << "]:" << f << std::endl);
+            OSL_DEV_ONLY(std::cout << "MISSING cpu feature:" << f << std::endl);
             return false;
         }
     }

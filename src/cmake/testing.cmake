@@ -53,7 +53,8 @@ macro (add_one_testsuite testname testsrcdir)
     # from piling up together, allocate a few cores each.
     if (${testname} MATCHES "^render-")
         set_tests_properties (${testname} PROPERTIES LABELS render
-                              PROCESSORS 4 COST 10)
+                              TIMEOUT 240
+                              PROCESSORS 4 COST 10 TIMEOUT 240)
     endif ()
     # Some labeling for fun
     if (${testname} MATCHES "^texture")
@@ -70,6 +71,12 @@ macro (add_one_testsuite testname testsrcdir)
             # Make sure libnvrtc-builtins.so is reachable
             set_property (TEST ${testname} APPEND PROPERTY ENVIRONMENT LD_LIBRARY_PATH=${CUDA_TOOLKIT_ROOT_DIR}/lib64:$ENV{LD_LIBRARY_PATH})
         endif()
+    endif ()
+    if (${testname} MATCHES "-reg")
+        # These are batched shading regression tests. Some are quite
+        # long, so give them a higher cost and timeout.
+        set_tests_properties (${testname} PROPERTIES LABELS batchregression
+                              COST 15 TIMEOUT 300)
     endif ()
 endmacro ()
 
@@ -198,7 +205,7 @@ macro (osl_add_all_tests)
                 function-earlyreturn function-simple function-outputelem
                 function-overloads function-redef
                 geomath getattribute-camera getattribute-shader
-                getsymbol-nonheap gettextureinfo
+                getsymbol-nonheap gettextureinfo gettextureinfo-reg
                 group-outputs groupstring
                 hash hashnoise hex hyperb
                 ieee_fp if if-reg incdec initlist initops intbits isconnected
@@ -270,8 +277,9 @@ macro (osl_add_all_tests)
                 texture-alpha texture-alpha-derivs
                 texture-blur texture-connected-options
                 texture-derivs texture-environment texture-errormsg
+                texture-environment-opts-reg
                 texture-firstchannel texture-interp
-                texture-missingalpha texture-missingcolor texture-simple
+                texture-missingalpha texture-missingcolor texture-opts-reg texture-simple
                 texture-smallderivs texture-swirl texture-udim
                 texture-width texture-withderivs texture-wrap
                 trailing-commas
@@ -287,8 +295,8 @@ macro (osl_add_all_tests)
                 wavelength_color wavelength_color-reg Werror xml )
 
     # Coordinate-aware gettextureinfo only works for TextureSystem >= 2.3.7
-    if (OPENIMAGEIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
-        TESTSUITE ( gettextureinfo-udim )
+    if (OpenImageIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
+        TESTSUITE ( gettextureinfo-udim gettextureinfo-udim-reg )
     endif ()
 
     # Only run the ocio test if the OIIO we are using has OCIO support
@@ -308,7 +316,7 @@ macro (osl_add_all_tests)
     execute_process ( COMMAND ${OpenImageIO_LIB_DIR}/../bin/oiiotool --help
                       OUTPUT_VARIABLE oiiotool_help )
     if (oiiotool_help MATCHES "openvdb")
-        TESTSUITE ( texture3d )
+        TESTSUITE ( texture3d texture3d-opts-reg )
     endif()
 
     # Only run pointcloud tests if Partio is found
@@ -321,4 +329,10 @@ macro (osl_add_all_tests)
         TESTSUITE ( testoptix testoptix-noise example-cuda)
     endif ()
 
+    # Some regression tests have alot of combinations and may need more time to finish 
+    if (BUILD_BATCHED)
+        set_tests_properties (arithmetic-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
+        set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
+    endif ()
+        
 endmacro()

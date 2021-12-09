@@ -47,6 +47,7 @@ set ( liboslexec_target_srcs
     wide/wide_opnoise_usimplex_deriv_Vec3
     wide/wide_opspline
     wide/wide_opstring
+    wide/wide_optexture
     wide/wide_optranscendental
     wide/wide_optrigonometric
     wide/wide_shadingsys

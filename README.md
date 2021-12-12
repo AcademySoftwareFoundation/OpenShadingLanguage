@@ -226,6 +226,7 @@ adding OSL support):
 * [Chaos Group: V-Ray](https://www.chaosgroup.com/)
 * [Pixar: PhotoRealistic RenderMan RIS](https://renderman.pixar.com)
 * [Isotropix: Clarisse](http://www.isotropix.com/clarisse)
+* [Isotropix: Angie](http://www.isotropix.com/angie)
 * [Autodesk Beast](http://www.autodesk.com/products/beast/overview)
 * [Appleseed](http://appleseedhq.net)
 * [Animal Logic: Glimpse renderer](https://www.fxguide.com/featured/a-glimpse-at-animal-logic/)
@@ -374,7 +375,20 @@ Films using OSL (grouped by year of release date):
   Peter Rabbit 2: The Runaway,
   The Falcon and the Winder Soldier,
   Secret Magic Control Agency,
+  Zack Snyder's Justice League,
   The Mitchells vs the Machines,
+  Jupiter's Legacy,
+  Luca,
+  F9,
+  Vivo,
+  Jungle Cruise,
+  Dune,
+  No Time To Die,
+  Ron's Gone Wrong,
+  Venom: Let There Be Carnage,
+  Eternals,
+  Last Night in Soho,
+  Ghostbusters: Afterlife,
   ...
 
 

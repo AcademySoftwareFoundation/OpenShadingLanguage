@@ -3053,6 +3053,11 @@ RuntimeOptimizer::run ()
         old_nops += inst()->ops().size();
     }
 
+    // Clear messages sent for the group, they will be filled in by
+    // optimize_instance().
+    m_messages_sent.clear();
+    m_unknown_message_sent = false;
+
     if (shadingsys().m_opt_merge_instances == 1)
         shadingsys().merge_instances (group());
 

@@ -359,7 +359,7 @@ BatchedSimpleRenderer<WidthT>::trace(
 
         float dot_val = point_lane.dot(dir_lane);
 
-        if ((bsg->varying.u[lane] / dot_val) > 0.75) {
+        if ((bsg->varying.u[lane] / dot_val) > 0.5) {
             result[lane] = 1;
         }
 
@@ -375,12 +375,47 @@ BatchedSimpleRenderer<WidthT>::getmessage(BatchedShaderGlobals* bsg,
                                           Masked<int> result, ustring source,
                                           ustring name, MaskedData val)
 {
+    OSL_ASSERT(source == ustring("trace"));
     for (int lane = 0; lane < WidthT; ++lane) {
-        if (bsg->varying.u[lane] > 0.75) {
+        if (bsg->varying.u[lane] > 0.5) {
+            if (name == ustring("hitdist")) {
+                if (Masked<float>::is(val)) {
+                    Masked<float> dest(val);
+                    dest[lane] = 0.5;
+                }
+            }
+            if (name == ustring("hit")) {
+                if (Masked<int>::is(val)) {
+                    Masked<int> dest(val);
+                    dest[lane] = 1;
+                }
+            }
+            if (name == ustring("geom:name")) {
+                if (Masked<ustring>::is(val)) {
+                    Masked<ustring> dest(val);
+                    dest[lane] =  ustring("teapot");
+                }
+            }
+            if (name == ustring("N")) {
+                if (Masked<Vec3>::is(val)) {
+                    Masked<Vec3> dest(val);
+                    dest[lane] = Vec3(1.0 - bsg->varying.v[lane], 0.25, 1.0 - bsg->varying.u[lane]);
+                } else {
+                    OSL_ASSERT(0 && "Oops");
+                }
+            }
+
             result[lane] = 1;
         }
+        else
+        {
+            if (name == ustring("hit")) {
+                if (Masked<int>::is(val)) {
+                    Masked<int> dest(val);
+                    dest[lane] = 0;
+                }
+            }
 
-        else {
             result[lane] = 0;
         }
     }

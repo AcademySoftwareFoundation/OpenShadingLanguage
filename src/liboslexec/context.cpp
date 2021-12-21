@@ -288,8 +288,7 @@ ShadingContext::Batched<WidthT>::execute_init
 
     // Clear the message blackboard
     context().m_messages.clear ();
-    // TODO: implement batched_messages
-    //context().batched_messages(WidthOf<WidthT>()).clear ();
+    context().batched_messages_buffer().clear ();
 
     // Clear miscellaneous scratch space
     context().m_scratch_pool.clear ();

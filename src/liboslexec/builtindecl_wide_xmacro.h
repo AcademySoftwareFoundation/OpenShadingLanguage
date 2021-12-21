@@ -302,8 +302,6 @@ DECL(__OSL_MASKED_OP3(splineinverse, Wdf, f, Wdf), "xXXXXiii")
 //DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wf, Wdf), "xXXXXiii")
 
 #ifdef __OSL_TBD
-#if 0  // incomplete
-// setmessage/getmessage involve closures, leave to next iteration
 //DECL (osl_setmessage, "xXsLXisi")
 DECL (osl_pointcloud_search, "iXsXfiiXXii*")
 DECL (osl_pointcloud_get, "iXsXisLX")
@@ -312,11 +310,8 @@ DECL (osl_pointcloud_write_helper, "xXXXisLX")
 #endif
 
 DECL(__OSL_MASKED_OP(getmessage), "xXXssLXiisii")
-//DECL (osl_setmessage_uniform_name_wide_data_masked, "xXXLXisii")
-//DECL (osl_setmessage_varying_name_wide_data_masked, "xXXLXisii")
-DECL(__OSL_MASKED_OP(setmessage_uniform_name_wide_data), "xXXLXisii")
-DECL(__OSL_MASKED_OP(setmessage_varying_name_wide_data), "xXXLXisii")
-#endif
+DECL(__OSL_MASKED_OP2(setmessage, s, WX),  "xXXLXisii")
+DECL(__OSL_MASKED_OP2(setmessage, Ws, WX), "xXXLXisii")
 
 DECL(__OSL_OP(blackbody_vf), "xXXf")
 DECL(__OSL_MASKED_OP2(blackbody, Wv, Wf), "xXXXi")
@@ -624,7 +619,6 @@ DECL(__OSL_OP(resolve_udim_uniform), "XXXXff")
 DECL(__OSL_MASKED_OP(resolve_udim), "xXXXXXXi")
 DECL(__OSL_OP(get_textureinfo_uniform), "iXXXXXX")
 
-#ifdef __OSL_TBD
 // Wide Code generator will set trace options directly in LLVM IR
 // without calling helper functions
 //DECL (osl_trace_set_mindist, "xXf") // unneeded
@@ -632,7 +626,6 @@ DECL(__OSL_OP(get_textureinfo_uniform), "iXXXXXX")
 //DECL (osl_trace_set_shade, "xXi") // unneeded
 //DECL (osl_trace_set_traceset, "xXs") // unneeded
 DECL(__OSL_MASKED_OP(trace), "xXXXXXXXXXi")
-#endif // __OSL_TBD
 
 DECL(__OSL_OP(calculatenormal), "xXXX")
 DECL(__OSL_MASKED_OP(calculatenormal), "xXXXi")

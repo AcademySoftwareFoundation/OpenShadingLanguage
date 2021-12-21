@@ -1453,6 +1453,25 @@ private:
 };
 
 
+#if OSL_USE_BATCHED
+
+struct BatchedMessageBuffer {
+    BatchedMessageBuffer() : list_head(nullptr), message_data() {}
+    BatchedMessageBuffer(const BatchedMessageBuffer &) = delete;
+    BatchedMessageBuffer & operator=(const BatchedMessageBuffer &) = delete;
+
+    void clear() {
+        list_head = NULL;
+        message_data.clear();
+    }
+
+    void * list_head;
+    SimplePool<16*1024> message_data;
+};
+
+
+#endif
+
 }; // namespace pvt
 
 
@@ -1846,9 +1865,6 @@ public:
                               Strutil::fmt::format(fmt, std::forward<Args>(args)...),
                               static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
         }
-
-        // TODO: implement messages in subsequent PR
-        //BatchedMessageList<WidthT> & messages () { return m_sc.batched_messages(WidthOf<WidthT>()); }
     };
 
     template<int WidthT>
@@ -1918,6 +1934,9 @@ public:
     /// Return a reference to the MessageList containing messages.
     ///
     MessageList & messages () { return m_messages; }
+#if OSL_USE_BATCHED
+    BatchedMessageBuffer & batched_messages_buffer() { return m_batched_messages_buffer; }
+#endif
 
     /// Look up a query from a dictionary (typically XML), staring the
     /// search from the root of the dictionary, and returning ID of the
@@ -2069,6 +2088,9 @@ private:
     using RegexMap = std::unordered_map<ustring, std::unique_ptr<std::regex>, ustringHash>;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
+#if OSL_USE_BATCHED
+    BatchedMessageBuffer m_batched_messages_buffer;    ///< Buffer for Batched Message blackboard
+#endif
     int m_max_warnings;                 ///< To avoid processing too many warnings
     int m_stat_get_userdata_calls;      ///< Number of calls to get_userdata
     int m_stat_layers_executed;         ///< Number of layers executed

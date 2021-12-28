@@ -35,6 +35,7 @@ jobs:
       CC: gcc
       CMAKE_CXX_STANDARD: 14
       OPENIMAGEIO_VERSION: v2.2.17.0
+      PYBIND11_VERSION: v2.4.2
       PYTHON_VERSION: 2.7
       USE_PYTHON: 0
     steps:
@@ -85,6 +86,7 @@ jobs:
       CMAKE_CXX_STANDARD: 14
       CONAN_LLVM_VERSION: 10.0.1
       OPENIMAGEIO_VERSION: v2.2.17.0
+      PYBIND11_VERSION: v2.5.0
       PYTHON_VERSION: 3.7
       USE_SIMD: sse4.2
     steps:
@@ -131,10 +133,11 @@ jobs:
       CXX: g++
       CC: gcc
       CMAKE_CXX_STANDARD: 17
-      PYTHON_VERSION: 3.7
       USE_SIMD: avx2,f16c
       OPENEXR_VERSION: v2.5.6
       OPENIMAGEIO_VERSION: dev-2.2
+      PYBIND11_VERSION: v2.7.0
+      PYTHON_VERSION: 3.7
       USE_BATCHED: b8_AVX2_noFMA
     steps:
       - uses: actions/checkout@v2
@@ -181,7 +184,7 @@ jobs:
       CC: gcc
       CMAKE_CXX_STANDARD: 17
       OPENIMAGEIO_VERSION: release
-      PYBIND11_VERSION: v2.7.1
+      PYBIND11_VERSION: v2.9.0
       PYTHON_VERSION: 3.9
       USE_BATCHED: b8_AVX2
       USE_SIMD: avx2,f16c
@@ -434,7 +437,7 @@ jobs:
       OPENIMAGEIO_VERSION: release
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
       PUGIXML_VERSION: v1.10
-      PYBIND11_VERSION: v2.5.0
+      PYBIND11_VERSION: v2.8.1
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
@@ -486,7 +489,7 @@ jobs:
       OPENIMAGEIO_VERSION: master
       OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=8.0.1
       OPENCOLORIO_VERSION: v2.1.0
-      PYBIND11_VERSION: v2.8.1
+      PYBIND11_VERSION: v2.9.0
       PUGIXML_VERSION: v1.11.4
       USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
       PYTHON_VERSION: 3.8

@@ -39,7 +39,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* **[LLVM](http://www.llvm.org) 7, 8, 9, 10, 11, 12, or 13**, including clang
+* **[LLVM](http://www.llvm.org) 9, 10, 11, 12, or 13**, including clang
   libraries.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.77)
@@ -55,10 +55,10 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   If it is not found at build time, the OSL `pointcloud` functions will not
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
-   testsuite:
-     * Python >= 2.7 (tested against 2.7, 3.6, 3.7, 3.8, 3.9)
-     * pybind11 >= 2.4.2 (Tested through 2.7)
-     * NumPy
+  testsuite:
+    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9)
+    * pybind11 >= 2.4.2 (Tested through 2.9)
+    * NumPy
 * (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
   the `osltoy` application will be disabled.
 

@@ -324,6 +324,10 @@ public:
     /// Retrieve the named global ("P", "N", etc.).
     /// is_uniform is output parameter
     llvm::Value* llvm_global_symbol_ptr(ustring name, bool& is_uniform);
+    llvm::Value* llvm_global_symbol_ptr(ustring name) {
+        bool is_uniform;
+        return llvm_global_symbol_ptr(name, is_uniform);
+    }
 
     /// Test whether val is nonzero, return the llvm::Value* that's the
     /// result of a CreateICmpNE or CreateFCmpUNE (depending on the

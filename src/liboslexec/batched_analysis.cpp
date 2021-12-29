@@ -72,7 +72,6 @@ static ustring op_texture3d("texture3d");
 // Shader global strings
 static ustring object2common("object2common");
 static ustring shader2common("shader2common");
-static ustring flipHandedness("flipHandedness");
 }  // namespace Strings
 
 namespace pvt {

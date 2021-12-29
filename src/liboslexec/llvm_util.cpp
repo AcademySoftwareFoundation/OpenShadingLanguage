@@ -3208,7 +3208,7 @@ LLVM_Util::ptr_to_cast (llvm::Value* val, llvm::Type *type)
 llvm::Value *
 LLVM_Util::ptr_cast (llvm::Value* val, llvm::Type *type)
 {
-    return builder().CreatePointerCast(val,type);
+    return val->getType() == type ? val : builder().CreatePointerCast(val,type);
 }
 
 
@@ -3550,6 +3550,14 @@ LLVM_Util::op_load (llvm::Value *ptr)
 {
     return op_load(ptr->getType()->getPointerElementType(), ptr);
 }
+
+
+llvm::Value*
+LLVM_Util::op_load_int(llvm::Value* ptr)
+{
+    return op_load(ptr_cast(ptr, type_int_ptr()));
+}
+
 
 
 

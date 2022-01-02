@@ -113,10 +113,6 @@ ifneq (${OSL_BUILD_SHADERS},)
 MY_CMAKE_FLAGS += -DOSL_BUILD_SHADERS:BOOL=${OSL_BUILD_SHADERS}
 endif
 
-ifneq (${OSL_BUILD_MATERIALX},)
-MY_CMAKE_FLAGS += -DOSL_BUILD_MATERIALX:BOOL=${OSL_BUILD_MATERIALX}
-endif
-
 ifdef DEBUG
 CMAKE_BUILD_TYPE=Debug
 endif
@@ -394,7 +390,6 @@ help:
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo "      OSL_BUILD_TESTS=0        Don't build unit tests, testshade, testrender"
 	@echo "      OSL_BUILD_SHADERS=0      Don't build any shaders"
-	@echo "      OSL_BUILD_MATERIALX=1    Build MaterialX shaders"
 	@echo "      USE_SIMD=arch            Build with SIMD support (comma-separated choices:"
 	@echo "                                  0, sse2, sse3, ssse3, sse4.1, sse4.2, f16c,"
 	@echo "                                  avx, avx2, avx512f)"

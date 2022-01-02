@@ -543,7 +543,6 @@ jobs:
       PUGIXML_VERSION: master
       PYBIND11_VERSION: master
       PYTHON_VERSION: 3.9
-      OSL_BUILD_MATERIALX: 1
       USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
     steps:
       - uses: actions/checkout@v2

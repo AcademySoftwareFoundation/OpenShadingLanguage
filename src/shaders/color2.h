@@ -1,9 +1,7 @@
 // Copyright Contributors to the Open Shading Language project.
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
-//
-// MaterialX specification (c) 2017 Lucasfilm Ltd.
-// http://www.materialx.org/
+
 
 #pragma once
 #define COLOR2_H

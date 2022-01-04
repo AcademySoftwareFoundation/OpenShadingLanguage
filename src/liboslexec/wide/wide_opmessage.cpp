@@ -59,7 +59,8 @@ public:
         Masked<int> alayeridx(wlayeridx, lanes_to_populate);
         Masked<ustring> asourcefile(wsourcefile, lanes_to_populate);
         Masked<int> asourceline(wsourceline, lanes_to_populate);
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        // TODO: renable after issue with bleeding edge CI identified
+        // OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             alayeridx[lane]   = layeridx;
             asourcefile[lane] = sourcefile;
@@ -345,7 +346,8 @@ OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
         auto missing_lanes = mask & ~m->valid_mask & ~m->get_before_set_mask;
 
         Mask lanes_set_by_deeper_layer(false);
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        // TODO: renable after issue with bleeding edge CI identified
+        // OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             int msg_layerid = msg_wlayeridx[lane];
             // NOTE: using bitwise & to avoid branches
@@ -384,7 +386,8 @@ OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
                 Masked<int> wlayeridx(m->wlayeridx, missing_lanes);
                 Masked<ustring> wsourcefile(m->wsourcefile, missing_lanes);
                 Masked<int> wsourceline(m->wsourceline, missing_lanes);
-                OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+                // TODO: renable after issue with bleeding edge CI identified
+                // OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     wlayeridx[lane]   = layeridx;
                     wsourcefile[lane] = sourcefile;

@@ -3206,8 +3206,7 @@ MaskedData<WidthT>::assign_from_type(void* ptr_wide_data)
 
             Masked<DataT, WidthT> wdest(bdst, mask());
 
-            // TODO: renable after issue with bleeding edge CI identified
-            // OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
             for (int lane = 0; lane < WidthT; ++lane) {
                 wdest[lane] = unproxy(bsrc[lane]);
             }

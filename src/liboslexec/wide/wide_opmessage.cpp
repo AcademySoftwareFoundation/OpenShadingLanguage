@@ -48,7 +48,7 @@ struct MessageBlock {
         wsourceline;  ///< source code line that contains the call that created this message
     Mask valid_mask;           ///< which lanes of have been set
     Mask get_before_set_mask;  ///< which lanes had get called before a set, track to create errors if set is called later
-    ustring name;  ///< name of this message
+    ustring name;              ///< name of this message
     char* data;  ///< actual data of the message (will never change once the message is created)
     TypeDesc
         type;  ///< what kind of data is stored here? FIXME: should be TypeSpec
@@ -62,8 +62,7 @@ public:
         Masked<int> alayeridx(wlayeridx, lanes_to_populate);
         Masked<ustring> asourcefile(wsourcefile, lanes_to_populate);
         Masked<int> asourceline(wsourceline, lanes_to_populate);
-        // TODO: renable after issue with bleeding edge CI identified
-        // OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             alayeridx[lane]   = layeridx;
             asourcefile[lane] = sourcefile;
@@ -118,10 +117,10 @@ public:
              Mask lanes_to_populate, int layeridx, ustring sourcefile,
              int sourceline)
     {
-        constexpr size_t alignment = sizeof(float)*__OSL_WIDTH;
-        set_list_head(new (m_buffer.message_data.alloc(sizeof(MessageBlock),
-                                                       alignment))
-                          MessageBlock(name, wsrcval.type(), list_head()));
+        constexpr size_t alignment = sizeof(float) * __OSL_WIDTH;
+        set_list_head(
+            new (m_buffer.message_data.alloc(sizeof(MessageBlock), alignment))
+                MessageBlock(name, wsrcval.type(), list_head()));
         list_head()->data
             = m_buffer.message_data.alloc(wsrcval.val_size_in_bytes(),
                                           alignment);
@@ -350,8 +349,7 @@ OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
         auto missing_lanes = mask & ~m->valid_mask & ~m->get_before_set_mask;
 
         Mask lanes_set_by_deeper_layer(false);
-        // TODO: renable after issue with bleeding edge CI identified
-        // OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             int msg_layerid = msg_wlayeridx[lane];
             // NOTE: using bitwise & to avoid branches
@@ -390,8 +388,7 @@ OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
                 Masked<int> wlayeridx(m->wlayeridx, missing_lanes);
                 Masked<ustring> wsourcefile(m->wsourcefile, missing_lanes);
                 Masked<int> wsourceline(m->wsourceline, missing_lanes);
-                // TODO: renable after issue with bleeding edge CI identified
-                // OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+                OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     wlayeridx[lane]   = layeridx;
                     wsourcefile[lane] = sourcefile;

@@ -21,11 +21,11 @@ using WidthTag                = OSL::WidthOf<__OSL_WIDTH>;
 
 struct MessageBlock {
     MessageBlock(ustring name, const TypeDesc& type, MessageBlock* next)
-        : name(name)
+        : valid_mask(false)
+        , get_before_set_mask(false)
+        , name(name)
         , data(nullptr)
         , type(type)
-        , valid_mask(false)
-        , get_before_set_mask(false)
         , next(next)
     {
     }
@@ -38,17 +38,20 @@ struct MessageBlock {
     ///
     bool has_data() const { return data != nullptr; }
 
-    ustring name;  ///< name of this message
-    char* data;  ///< actual data of the message (will never change once the message is created)
-    TypeDesc
-        type;  ///< what kind of data is stored here? FIXME: should be TypeSpec
-    Mask valid_mask;           ///< which lanes of have been set
-    Mask get_before_set_mask;  ///< which lanes had get called before a set, track to create errors if set is called later
+    // Place larger blocks at front of structure as they have alignment
+    // requirements which could cause excess padding if smaller members
+    // where placed ahead of them
     Block<int> wlayeridx;  ///< layer index where this was message was created
     Block<ustring>
         wsourcefile;  ///< source code file that contains the call that created this message
     Block<int>
         wsourceline;  ///< source code line that contains the call that created this message
+    Mask valid_mask;           ///< which lanes of have been set
+    Mask get_before_set_mask;  ///< which lanes had get called before a set, track to create errors if set is called later
+    ustring name;  ///< name of this message
+    char* data;  ///< actual data of the message (will never change once the message is created)
+    TypeDesc
+        type;  ///< what kind of data is stored here? FIXME: should be TypeSpec
     MessageBlock*
         next;  ///< linked list of messages (managed by MessageList below)
 
@@ -115,12 +118,13 @@ public:
              Mask lanes_to_populate, int layeridx, ustring sourcefile,
              int sourceline)
     {
-        set_list_head(new (m_buffer.message_data.alloc(sizeof(MessageBlock)))
+        constexpr size_t alignment = sizeof(float)*__OSL_WIDTH;
+        set_list_head(new (m_buffer.message_data.alloc(sizeof(MessageBlock),
+                                                       alignment))
                           MessageBlock(name, wsrcval.type(), list_head()));
         list_head()->data
             = m_buffer.message_data.alloc(wsrcval.val_size_in_bytes(),
-                                          /*alignment=*/sizeof(float)
-                                              * __OSL_WIDTH);
+                                          alignment);
         list_head()->import_data(wsrcval, lanes_to_populate, layeridx,
                                  sourcefile, sourceline);
     }

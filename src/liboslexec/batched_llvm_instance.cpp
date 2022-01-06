@@ -1129,11 +1129,11 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                 // Fill in the constant val
                 llvm::Value* init_val = 0;
                 if (elemtype.is_float_based())
-                    init_val = ll.constant(((float*)sym.data())[c]);
+                    init_val = ll.constant(sym.get_float(c));
                 else if (elemtype.is_string())
-                    init_val = ll.constant(((ustring*)sym.data())[c]);
+                    init_val = ll.constant(sym.get_string(c));
                 else if (elemtype.is_int())
-                    init_val = ll.constant(((int*)sym.data())[c]);
+                    init_val = ll.constant(sym.get_int(c));
                 OSL_ASSERT(init_val);
 
                 if (sym.is_uniform()) {
@@ -1445,7 +1445,7 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                                     ll.constant(int(&op - &inst()->ops()[0])),
                                     ll.constant(op.opname()),
                                     ll.constant(i),
-                                    ll.constant(sym.name()),
+                                    ll.constant(sym.unmangled()),
                                     ll.void_ptr(loc_varying_offsets),
                                     ncheck };
 
@@ -1479,7 +1479,7 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                         ll.constant(int(&op - &inst()->ops()[0])),
                         ll.constant(op.opname()),
                         ll.constant(i),
-                        ll.constant(sym.name()),
+                        ll.constant(sym.unmangled()),
                         offset,
                         ncheck };
                 ll.call_function(build_name(
@@ -1502,7 +1502,7 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                         ll.constant(int(&op - &inst()->ops()[0])),
                         ll.constant(op.opname()),
                         ll.constant(i),
-                        ll.constant(sym.name()),
+                        ll.constant(sym.unmangled()),
                         offset,
                         ncheck };
                 ll.call_function(build_name(

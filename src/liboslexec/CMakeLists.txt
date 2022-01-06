@@ -8,6 +8,7 @@ set ( liboslexec_target_srcs
     wide/wide_opalgebraic
     wide/wide_opcolor
     wide/wide_opdictionary
+    wide/wide_ophash
     wide/wide_opmatrix
     wide/wide_opmessage
     wide/wide_opnoise

@@ -2777,6 +2777,12 @@ public:
     }
 
     OSL_NOINLINE size_t val_size_in_bytes() const;
+
+    OSL_FORCEINLINE void assign_from(void* ptr_wide_data);
+
+private:
+    template<typename DataT>
+    OSL_NOINLINE void assign_from_type(void* ptr_wide_data);
 };
 
 
@@ -3104,45 +3110,124 @@ template<int WidthT>
 OSL_NOINLINE size_t
 MaskedData<WidthT>::val_size_in_bytes() const
 {
-    if (Masked<ustring, WidthT>::is(*this)) {
-        return sizeof(Block<ustring, WidthT>);
-    }
-    if (Masked<int, WidthT>::is(*this)) {
-        return sizeof(Block<int, WidthT>);
-    }
-    if (Masked<float, WidthT>::is(*this)) {
-        return sizeof(Block<float, WidthT>);
-    }
-    if (Masked<Vec3, WidthT>::is(*this)) {
-        return sizeof(Block<Vec3, WidthT>);
-    }
-    if (Masked<Matrix44, WidthT>::is(*this)) {
-        return sizeof(Block<Matrix44, WidthT>);
-    }
+    // Avoid having lots conditional checks for exact type
+    // by making assumptions about the wide data layout.
+    // Treat layout as either 32bit integer or 64bit ustring
+    // arrays of wide components
+    static_assert(sizeof(Block<float, WidthT>) == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    typedef Block<Vec3, WidthT> BlockVec3;
+    static_assert(sizeof(BlockVec3) == 3 * sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert(offsetof(BlockVec3, y) == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockVec3, z) - offsetof(BlockVec3, y))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((sizeof(BlockVec3) - offsetof(BlockVec3, z))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    typedef Block<Matrix44, WidthT> BlockMatrix44;
+    static_assert(sizeof(BlockMatrix44) == 16 * sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert(offsetof(BlockMatrix44, x01) == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x02) - offsetof(BlockMatrix44, x01))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x03) - offsetof(BlockMatrix44, x02))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x10) - offsetof(BlockMatrix44, x03))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x11) - offsetof(BlockMatrix44, x10))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x12) - offsetof(BlockMatrix44, x11))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x13) - offsetof(BlockMatrix44, x12))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x20) - offsetof(BlockMatrix44, x13))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x21) - offsetof(BlockMatrix44, x20))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x22) - offsetof(BlockMatrix44, x21))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x23) - offsetof(BlockMatrix44, x22))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x30) - offsetof(BlockMatrix44, x23))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x31) - offsetof(BlockMatrix44, x30))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x32) - offsetof(BlockMatrix44, x31))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((offsetof(BlockMatrix44, x33) - offsetof(BlockMatrix44, x32))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
+    static_assert((sizeof(BlockMatrix44) - offsetof(BlockMatrix44, x33))
+                      == sizeof(Block<int, WidthT>),
+                  "assumption broken");
 
+    size_t elem_count = m_type.numelements();
+    int comp_count    = m_type.aggregate;
+    bool isBase32bit  = (m_type.basetype != TypeDesc::STRING);
+    int baseSize      = isBase32bit ? sizeof(Block<int, WidthT>)
+                                    : sizeof(Block<ustring, WidthT>);
+    return elem_count * comp_count * baseSize;
+}
 
-    if (Masked<ustring[], WidthT>::is(*this)) {
-        return sizeof(Block<ustring, WidthT>) * m_type.arraylen;
-    }
-    if (Masked<int[], WidthT>::is(*this)) {
-        return sizeof(Block<int, WidthT>) * m_type.arraylen;
-    }
-    if (Masked<float[], WidthT>::is(*this)) {
-        return sizeof(Block<float, WidthT>) * m_type.arraylen;
-    }
-    if (Masked<Vec3[], WidthT>::is(*this)) {
-        return sizeof(Block<Vec3, WidthT>) * m_type.arraylen;
-    }
-    if (Masked<Matrix44[], WidthT>::is(*this)) {
-        return sizeof(Block<Matrix44, WidthT>) * m_type.arraylen;
-    }
+template<int WidthT>
+template<typename DataT>
+OSL_NOINLINE void
+MaskedData<WidthT>::assign_from_type(void* ptr_wide_data)
+{
+    // We can't just do a memcopy because some lanes may be masked off
+    // Use a SIMD loop to perform a wide load and masked assignment.
+    auto* src_blocks = pvt::block_cast<DataT, WidthT>(ptr_wide_data);
+    auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
+    int elem_count   = static_cast<int>(m_type.numelements());
+    int comp_count   = m_type.aggregate;
+    for (int array_index = 0; array_index < elem_count; ++array_index) {
+        int array_offset = array_index * comp_count;
+        for (int comp_index = 0; comp_index < comp_count; ++comp_index) {
+            int combined_index = array_offset + comp_index;
+            auto& bsrc         = src_blocks[combined_index];
+            auto& bdst         = dst_blocks[combined_index];
 
+            Masked<DataT, WidthT> wdest(bdst, mask());
 
-    // Not exposed in OSL language itself
-    if (Masked<Vec2, WidthT>::is(*this)) {
-        return sizeof(Block<Vec2, WidthT>);
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            for (int lane = 0; lane < WidthT; ++lane) {
+                wdest[lane] = unproxy(bsrc[lane]);
+            }
+        }
     }
-    OSL_DASSERT(0 && "unsupported or incomplete for TypeDesc");
+}
+
+template<int WidthT>
+OSL_FORCEINLINE void
+MaskedData<WidthT>::assign_from(void* ptr_wide_data)
+{
+    // To avoid having lots combinations of type safe loops,
+    // we will make some assumptions about the wide data layout
+    // and alias as either 32bit integer or 64bit ustring
+    // arrays of wide components
+    bool isBase32bit = (m_type.basetype != TypeDesc::STRING);
+    if (isBase32bit) {
+        assign_from_type<int>(ptr_wide_data);
+    } else {
+        assign_from_type<ustring>(ptr_wide_data);
+    }
 }
 
 

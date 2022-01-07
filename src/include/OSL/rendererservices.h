@@ -373,6 +373,15 @@ public:
         bool shade;       ///< whether to shade what is hit
         ustring traceset; ///< named trace set
         TraceOpt () : mindist(0.0f), maxdist(1.0e30), shade(false) { }
+
+        enum class LLVMMemberIndex
+        {
+            mindist = 0,
+            maxdist,
+            shade,
+            traceset,
+            count
+        };
     };
 
     /// Immediately trace a ray from P in the direction R.  Return true

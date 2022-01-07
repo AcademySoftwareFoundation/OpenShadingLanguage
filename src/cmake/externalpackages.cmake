@@ -114,7 +114,7 @@ checked_find_package (pugixml REQUIRED
 
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
-                      VERSION_MIN 8.0
+                      VERSION_MIN 9.0
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")

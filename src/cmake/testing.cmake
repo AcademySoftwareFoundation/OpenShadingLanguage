@@ -215,7 +215,7 @@ macro (osl_add_all_tests)
                 length-reg linearstep
                 logic loop luminance-reg
                 matrix matrix-reg matrix-arithmetic-reg
-                matrix-compref-reg max-reg message
+                matrix-compref-reg max-reg message message-no-closure message-reg
                 mergeinstances-duplicate-entrylayers
                 mergeinstances-nouserdata mergeinstances-vararray
                 metadata-braces min-reg miscmath missing-shader
@@ -282,6 +282,7 @@ macro (osl_add_all_tests)
                 texture-missingalpha texture-missingcolor texture-opts-reg texture-simple
                 texture-smallderivs texture-swirl texture-udim
                 texture-width texture-withderivs texture-wrap
+                trace-reg
                 trailing-commas
                 transcendental-reg
                 transitive-assign

@@ -4946,6 +4946,253 @@ LLVMGEN (llvm_gen_environment)
 }
 
 
+static llvm::Value*
+llvm_batched_trace_options(BatchedBackendLLVM &rop, int opnum,
+                           int first_optional_arg)
+{
+    using TraceOpt = RendererServices::TraceOpt;
+    llvm::Value * bto = rop.temp_batched_trace_options_ptr();
+
+    // Explicitly assign a default value or an optional parameter value to every data member
+    // of TraceOpt.
+    llvm::Value * mindist = rop.ll.constant(0.0f);
+    llvm::Value * maxdist = rop.ll.constant(1.0e30f);
+    llvm::Value * shade = rop.ll.constant(0);
+    llvm::Value * traceset = rop.ll.constant_ptr(nullptr);
+
+
+    bool is_mindist_uniform = true;
+    bool is_maxdist_uniform = true;
+    bool is_shade_uniform = true;
+    bool is_traceset_uniform = true;
+
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name(*rop.opargsym(op,a));
+        OSL_DASSERT (Name.typespec().is_string() &&
+                "optional trace token must be a string");
+        OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for trace");
+        ustring name = *(ustring *)Name.data();
+        ++a;  // advance to next argument (value)
+
+        if (name.empty())    // skip empty string param name
+            continue;
+        Symbol &Val(*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+
+
+        bool nameIsVarying = !Name.is_uniform();
+        // assuming option names can't be varying
+        OSL_ASSERT(!nameIsVarying);
+        // data could be varying
+        bool valIsVarying = !Val.is_uniform();
+
+#define PARAM_UNIFORM(paramname, paramtype)                             \
+        if (name == Strings::paramname && (valtype == paramtype)) {     \
+            if (valIsVarying) {                                         \
+                is_##paramname##_uniform = false;                       \
+                continue;                                               \
+            }                                                           \
+            llvm::Value *val = rop.llvm_load_value (Val);               \
+            paramname = val;                                            \
+            continue;                                                   \
+        }
+
+        PARAM_UNIFORM(mindist, TypeDesc::FLOAT)
+        PARAM_UNIFORM(maxdist, TypeDesc::FLOAT)
+        PARAM_UNIFORM(shade, TypeDesc::INT)
+        PARAM_UNIFORM(traceset, TypeDesc::STRING)
+
+        rop.shadingcontext()->errorf ("Unknown trace optional argument: \"%s\", <%s> (%s:%d)",
+                                     name.c_str(), valtype.c_str(),
+                                     op.sourcefile().c_str(), op.sourceline());
+
+#undef PARAM_UNIFORM
+    }
+
+    if (is_mindist_uniform)
+        rop.ll.op_unmasked_store (mindist, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt::LLVMMemberIndex::mindist)));
+
+    if (is_maxdist_uniform)
+        rop.ll.op_unmasked_store (maxdist, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt::LLVMMemberIndex::maxdist)));
+
+    if (is_shade_uniform)
+        rop.ll.op_unmasked_store (shade, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt::LLVMMemberIndex::shade)));
+
+    if (is_traceset_uniform)
+        rop.ll.op_unmasked_store (traceset, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt::LLVMMemberIndex::traceset)));
+
+
+    return rop.ll.void_ptr(bto);
+
+}
+
+
+
+
+llvm::Value* llvm_batched_trace_varying_options(BatchedBackendLLVM &rop, int opnum,
+                                       int first_optional_arg, llvm::Value *remainingMask,
+                                       llvm::Value * leadLane)
+{
+    using TraceOpt = RendererServices::TraceOpt;
+    llvm::Value * bto = rop.temp_batched_trace_options_ptr();
+
+    // The BatchedTraceOptions is local alloca,
+    // so no need to mask off non-active lanes
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name(*rop.opargsym(op,a));
+        OSL_DASSERT (Name.typespec().is_string() &&
+                "optional trace token must be a string");
+        OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for texture");
+        ustring name = *(ustring *)Name.data();
+        ++a;  // advance to next argument (value)
+
+        if (name.empty())    // skip empty string param name
+            continue;
+        Symbol &Val(*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+
+
+        bool nameIsVarying = !Name.is_uniform();
+        // assuming option names can't be varying
+        OSL_ASSERT(!nameIsVarying);
+
+        // data could be uniform
+        bool valIsVarying = !Val.is_uniform();
+        if (!valIsVarying)
+            continue;
+
+        OSL_ASSERT(!Val.is_constant() && "can't be a varying constant");
+
+#define PARAM_VARYING(paramname, paramtype)                                   \
+        if (name == Strings::paramname && valtype == paramtype) {             \
+            llvm::Value *wide_val = rop.llvm_load_value (Val, /*deriv=*/0,    \
+                /*component=*/0, TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+            llvm::Value *scalar_value = rop.ll.op_extract(wide_val, leadLane);\
+            rop.ll.op_unmasked_store (scalar_value, rop.ll.GEP (bto, 0,       \
+                static_cast<int>(TraceOpt::LLVMMemberIndex::paramname)));     \
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value,   \
+                wide_val, remainingMask);                                     \
+            continue;                                                         \
+        }
+        PARAM_VARYING(mindist, TypeDesc::FLOAT)
+        PARAM_VARYING(maxdist, TypeDesc::FLOAT)
+        PARAM_VARYING(shade, TypeDesc::INT)
+        PARAM_VARYING(traceset, TypeDesc::STRING)
+
+        rop.shadingcontext()->errorf ("Unknown trace optional argument: \"%s\", <%s> (%s:%d)",
+                                     name.c_str(), valtype.c_str(),
+                                     op.sourcefile().c_str(), op.sourceline());
+
+#undef PARAM_VARYING
+
+    }
+
+    return remainingMask;
+}
+
+LLVMGEN (llvm_gen_trace)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol &Result = *rop.opargsym (op, 0);
+    Symbol &Pos = *rop.opargsym (op, 1);
+    Symbol &Dir = *rop.opargsym (op, 2);
+    int first_optional_arg = 3;
+
+    OSL_ASSERT(!Result.is_uniform());
+
+    // make sure that any temps created by llvm_batched_trace_options
+    // and llvm_batched_trace_varying_options
+    // are not released until we are done using them!
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value* opt;   // TraceOpt
+    opt = llvm_batched_trace_options (rop, opnum, first_optional_arg); //These are uniform
+
+    // Now call the osl_trace function, passing the options and all the
+    // explicit args like trace coordinates.
+    llvm::Value * args[10];
+    args[0] = rop.sg_void_ptr();
+    args[1] = rop.llvm_void_ptr(Result);
+
+    llvm::Value* widePos = nullptr;
+    llvm::Value* widePosDx = nullptr;
+    llvm::Value* widePosDy = nullptr;
+    if (Pos.is_uniform()) {
+        widePos = rop.llvm_widen_value_into_temp(Pos, 0);
+        widePosDx = rop.llvm_widen_value_into_temp(Pos, 1);
+        widePosDy = rop.llvm_widen_value_into_temp(Pos, 2);
+    }
+    else {
+        widePos = rop.llvm_void_ptr(Pos, 0);
+        widePosDx = rop.llvm_void_ptr(Pos, 1);
+        widePosDy = rop.llvm_void_ptr(Pos, 2);
+    }
+
+    llvm::Value* wideDir = nullptr;
+    llvm::Value* wideDirDx = nullptr;
+    llvm::Value* wideDirDy = nullptr;
+    if (Dir.is_uniform()) {
+        wideDir = rop.llvm_widen_value_into_temp(Dir, 0);
+        wideDirDx = rop.llvm_widen_value_into_temp(Dir, 1);
+        wideDirDy = rop.llvm_widen_value_into_temp(Dir, 2);
+    }
+    else {
+        wideDir = rop.llvm_void_ptr(Dir, 0);
+        wideDirDx = rop.llvm_void_ptr(Dir, 1);
+        wideDirDy = rop.llvm_void_ptr(Dir, 2);
+
+    }
+
+    args[2] = opt;
+    args[3] = widePos;
+    args[4] = widePosDx;
+    args[5] = widePosDy;
+    args[6] = wideDir;
+    args[7] = wideDirDx;
+    args[8] = wideDirDy;
+
+
+    // do while(remaining)
+    llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to trace");
+    rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+    llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_trace_options (varying trace options)") : std::string());
+    llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_trace_options (varying trace options)") : std::string());
+    rop.ll.op_branch(bin_block);
+    {
+
+        llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+        llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+
+        //rop.llvm_print_mask("before remainingMask", remainingMask);
+        llvm::Value * lanesMatchingOptions = llvm_batched_trace_varying_options (rop, opnum, first_optional_arg,
+                                        remainingMask, leadLane);
+        OSL_ASSERT(lanesMatchingOptions);
+        //rop.llvm_print_mask("lanesMatchingOptions", lanesMatchingOptions);
+        args[9] = rop.ll.mask_as_int(lanesMatchingOptions);
+
+        rop.ll.call_function (rop.build_name(FuncSpec("trace").mask()), args);
+
+        remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingOptions);
+        //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+        rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+        llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+        //rop.llvm_print_mask("remainingMask", remainingMask);
+        llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+        rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+    }
+    // Continue on with the previous flow
+    rop.ll.set_insert_point (after_block);
+
+    return true;
+}
+
+
 // TODO: future optimization, don't call multiple functions to set noise options.
 // Instead modify a NoiseOptions directly from LLVM (similar to batched texturing).
 static llvm::Value *
@@ -5779,6 +6026,200 @@ LLVMGEN (llvm_gen_gettextureinfo)
 
     return true;
 }
+
+
+
+LLVMGEN (llvm_gen_getmessage)
+{
+    // getmessage() has four "flavors":
+    //   * getmessage (attribute_name, value)
+    //   * getmessage (attribute_name, value[])
+    //   * getmessage (source, attribute_name, value)
+    //   * getmessage (source, attribute_name, value[])
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT (op.nargs() == 3 || op.nargs() == 4);
+    int has_source = (op.nargs() == 4);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& Source = *rop.opargsym (op, 1);
+    Symbol& Name   = *rop.opargsym (op, 1+has_source);
+    Symbol& Data   = *rop.opargsym (op, 2+has_source);
+    OSL_DASSERT (Result.typespec().is_int() && Name.typespec().is_string());
+    OSL_DASSERT (has_source == 0 || Source.typespec().is_string());
+
+    // BatchedAnalysis should guarantee varying results
+    OSL_ASSERT(Result.is_uniform() == false);
+    OSL_ASSERT(Data.is_uniform() == false);
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+    std::vector<llvm::Value *> args;
+
+    //arg[0]: Push shader global
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_void_ptr(Result));
+
+    //arg[1]: source (deferred)
+    int sourceArgumentIndex = args.size();
+    args.push_back(nullptr);
+
+    //arg[2]: name (deferred)
+    int nameArgumentIndex = args.size();
+    args.push_back(nullptr);
+
+
+
+    //Data
+    //args[3]
+    args.push_back(rop.ll.constant (Data.typespec().simpletype()));
+
+    //Check for closures, and skip it
+    if (Data.typespec().is_closure_based()) {
+      OSL_ASSERT(0 && "incomplete");
+    }
+    else
+    {
+        args.push_back(rop.llvm_void_ptr(Data));
+    }
+
+    //Do not leave derivs uninitialized or bad things may happen
+
+    if(Data.has_derivs())
+    {
+        rop.llvm_zero_derivs(Data);
+    }
+
+    //args[5]: Data.has_derivs
+    args.push_back(rop.ll.constant ((int)Data.has_derivs()));
+
+    //args[6]: ID
+    args.push_back(rop.ll.constant(rop.inst()->id()));
+
+    //args[7]: sourcefile
+    args.push_back(rop.ll.constant(op.sourcefile()));
+
+    //args[8]: sourceline
+    args.push_back(rop.ll.constant(op.sourceline()));
+
+
+    bool sourceVal_is_uniform = !has_source || Source.is_uniform();
+    bool nameVal_is_uniform = Name.is_uniform();
+    if(nameVal_is_uniform && sourceVal_is_uniform) { //&& has_source
+        args[nameArgumentIndex] = rop.llvm_load_value (Name);
+        args[sourceArgumentIndex]  = has_source ? rop.llvm_load_value(Source)
+                             : rop.ll.constant(ustring());
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+        rop.ll.call_function (rop.build_name(FuncSpec("getmessage").mask()), args);
+    } else {
+
+
+        llvm::Value * nameVal = rop.llvm_load_value (Name);
+        if(nameVal_is_uniform) {
+            args[nameArgumentIndex] = nameVal;
+        }
+
+        llvm::Value * sourceVal = has_source ? rop.llvm_load_value (Source) : rop.ll.constant(ustring());
+        if (sourceVal_is_uniform) {
+            args[sourceArgumentIndex] = sourceVal;
+        }
+
+        llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to getmessage");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_getmessage") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_getmessage") : std::string());
+
+        rop.ll.op_branch(bin_block);
+        {
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+
+            llvm::Value * lanesMatching = remainingMask;
+            if (!nameVal_is_uniform) {
+                llvm::Value * scalar_name = rop.ll.op_extract(nameVal, leadLane);
+                args[nameArgumentIndex] = scalar_name;
+
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_name,
+                    nameVal, lanesMatching);
+            }
+
+            if (!sourceVal_is_uniform) {
+                llvm::Value * scalar_source = rop.ll.op_extract(sourceVal, leadLane);
+                args[sourceArgumentIndex] = scalar_source;
+
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_source,
+                    sourceVal, lanesMatching);
+            }
+
+            //Check matched masks, and push. Get matching lane
+            args.push_back (rop.ll.mask_as_int(lanesMatching));
+
+            rop.ll.call_function (rop.build_name(FuncSpec("getmessage").mask()), args);
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatching);
+
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+
+    }
+
+
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_setmessage)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT (op.nargs() == 2);
+    Symbol& Name   = *rop.opargsym (op, 0);
+    Symbol& Data   = *rop.opargsym (op, 1);
+    OSL_DASSERT (Name.typespec().is_string());
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value *args[8];
+    args[0] = rop.sg_void_ptr();
+    args[1] = rop.llvm_load_arg (Name, false /*derivs*/, Name.is_uniform());
+
+    if (Data.typespec().is_closure_based())
+    {
+        OSL_ASSERT(0 && "incomplete");
+        // FIXME: secret handshake for closures ...
+        args[2] = rop.ll.constant (TypeDesc(TypeDesc::UNKNOWN,
+                                              Data.typespec().arraylength()));
+        // We need a void ** here so the function can modify the closure
+        args[3] = rop.llvm_void_ptr(Data);
+    } else {
+        args[2] = rop.ll.constant (Data.typespec().simpletype());
+
+        // Implementation chooses to only accept wide Data
+        // broadcast uniform data values if necessary
+        args[3] = rop.llvm_load_arg (Data, Data.has_derivs(), false /*data is always wide*/);
+    }
+    args[4] = rop.ll.constant(rop.inst()->id());
+    args[5] = rop.ll.constant(op.sourcefile());
+    args[6] = rop.ll.constant(op.sourceline());
+    args[7] = rop.ll.mask_as_int(rop.ll.current_mask());
+
+    FuncSpec func("setmessage");
+    func.arg(Name, Name.is_uniform());
+    func.arg_varying(TypeDesc{TypeDesc::PTR});
+    func.mask();
+    rop.ll.call_function (rop.build_name(func), args);
+
+    return true;
+}
+
 
 
 LLVMGEN (llvm_gen_get_simple_SG_field)
@@ -6622,10 +7063,6 @@ LLVMGEN(NAME) \
 } \
 
 // TODO: rest of gen functions to be added in separate PR
-
-TBD_LLVMGEN(llvm_gen_getmessage)
-TBD_LLVMGEN(llvm_gen_setmessage)
-TBD_LLVMGEN(llvm_gen_trace)
 
 TBD_LLVMGEN(llvm_gen_pointcloud_search)
 TBD_LLVMGEN(llvm_gen_pointcloud_get)

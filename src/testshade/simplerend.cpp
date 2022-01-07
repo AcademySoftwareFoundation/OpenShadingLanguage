@@ -415,6 +415,72 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
 
 
 bool
+SimpleRenderer::trace (TraceOpt &options, ShaderGlobals *sg,
+                    const OSL::Vec3 &P, const OSL::Vec3 &dPdx,
+                    const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
+                    const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy)
+{
+    // Don't do real ray tracing, just
+    // use source and direction to alter hit results
+    // so they are repeatable values for testsuite.
+    float dot_val = P.dot(R);
+
+    if((sg->u)/dot_val > 0.5)
+    {
+        return true; //1 in batched
+    } else {
+        return false;
+    }
+}
+
+bool
+SimpleRenderer::getmessage (ShaderGlobals *sg, ustring source, ustring name,
+                         TypeDesc type, void *val, bool derivatives)
+{
+    OSL_ASSERT(source == ustring("trace"));
+    // Don't have any real ray tracing results
+    // so just fill in some repeatable values for testsuite
+    if(sg->u > 0.5)
+    {
+        if (name == ustring("hitdist")) {
+            if (type == TypeFloat) {
+                *reinterpret_cast<float *>(val) = 0.5f;
+            }
+        }
+        if (name == ustring("hit")) {
+            if (type == TypeInt) {
+                *reinterpret_cast<int *>(val) = 1;
+            }
+        }
+        if (name == ustring("geom:name")) {
+            if (type == TypeString) {
+                *reinterpret_cast<ustring *>(val) = ustring("teapot");
+            }
+        }
+        if (name == ustring("N")) {
+            if (type == TypeNormal) {
+                *reinterpret_cast<Vec3 *>(val) = Vec3(1.0 - sg->v, 0.25, 1.0 - sg->u);
+            } else {
+
+                OSL_ASSERT(0 && "Oops");
+            }
+        }
+        return true; //1 in batched
+
+    }
+    else
+    {
+        if (name == ustring("hit")) {
+            if (type == TypeInt) {
+                *reinterpret_cast<int *>(val) = 0;
+            }
+        }
+        return false;
+    }
+}
+
+
+bool
 SimpleRenderer::get_osl_version (ShaderGlobals* /*sg*/, bool /*derivs*/, ustring /*object*/,
                                  TypeDesc type, ustring /*name*/, void *val)
 {

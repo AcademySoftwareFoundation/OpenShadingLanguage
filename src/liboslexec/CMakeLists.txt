@@ -9,6 +9,7 @@ set ( liboslexec_target_srcs
     wide/wide_opcolor
     wide/wide_opdictionary
     wide/wide_opmatrix
+    wide/wide_opmessage
     wide/wide_opnoise
     wide/wide_opnoise_cell
     wide/wide_opnoise_gabor_impl

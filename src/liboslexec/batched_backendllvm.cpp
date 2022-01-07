@@ -1056,12 +1056,19 @@ BatchedBackendLLVM::llvm_load_arg(const Symbol& sym, bool derivs,
 
         auto disable_masked_stores = ll.create_masking_scope(false);
         int copy_deriv_count       = (derivs && sym.has_derivs()) ? 3 : 1;
+
+        int copy_elem_count = t.numelements();
+        bool is_array = t.is_array();
         for (int d = 0; d < copy_deriv_count; ++d) {
-            for (int c = 0; c < t.aggregate(); ++c) {
-                // Will automatically widen value if needed
-                llvm::Value* v = llvm_load_value(sym, d, c, TypeDesc::UNKNOWN,
-                                                 op_is_uniform);
-                llvm_store_value(v, tmpptr, t, d, NULL, c);
+            for(int ai=0; ai < copy_elem_count; ++ai) {
+                llvm::Value * arrayIndex = is_array ? ll.constant(ai) : nullptr;
+                for (int c = 0; c < t.aggregate(); ++c) {
+
+                    // Will automatically widen value if needed
+                    llvm::Value* v = llvm_load_value(sym, d, arrayIndex, c, TypeDesc::UNKNOWN,
+                                                     op_is_uniform);
+                    llvm_store_value(v, tmpptr, t, d, arrayIndex, c);
+                }
             }
         }
         if (derivs && !sym.has_derivs()) {

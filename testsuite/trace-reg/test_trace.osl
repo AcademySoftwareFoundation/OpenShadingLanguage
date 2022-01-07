@@ -1,0 +1,42 @@
+shader test_trace ( 
+    int numStripes = 0,
+    output vector Cout = 0)
+{
+   
+    point src = P;
+    vector dir = vector (1.0, 1.0, 1.0) - P;
+  
+    int trace_res = 0;
+    float mindist_val = 1;
+    trace_res = trace(src, dir, "mindist", mindist_val, "maxdist", (1000 + (1000*u)), "shade", 2, "traceset", "teapot");
+    
+    if (trace_res) {
+        Cout = vector(1.0, 1.0, 1.0);
+        float hitdist = 1.0;
+        int get_res = getmessage ("trace", "hitdist", hitdist);
+        if (get_res) {
+            Cout = hitdist;
+        }
+    }
+    
+    // Exercise the op masked
+    if ((numStripes != 0) && (int(P[0]*P[0]*P[1]*(2*numStripes))%2==0))
+    {
+        point src2 = vector (1.0, 1.0, 1.0) - P;
+        vector dir2 = P;
+        int trace_res2 = 0;
+        string traceset = "teapot";
+        if (int(64*P[1])%2 == 0) { 
+            traceset = "bunny";
+        }
+        trace_res2 = trace(src2, dir2, "mindist", 1.0, "maxdist", 2000.0, "shade", 2, "traceset", traceset);
+        if (trace_res2) {
+            Cout = vector(1.0, 0.0, 1.0);
+            normal tracedN = normal(0);
+            int get_res = getmessage ("trace", "N", tracedN);
+            if (get_res) {
+                Cout = tracedN;
+            }
+        }
+    }    
+}

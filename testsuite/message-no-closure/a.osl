@@ -1,0 +1,32 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader a (float Kd = 0.5,
+          output float f_out = 0,
+          output color c_out = 0,
+          output float dummy = u+v  // just to force a real connection when opt is on
+    )
+{
+    f_out = Kd;
+    c_out = color (Kd/2, 1, 1);
+    printf ("a: f_out = %g, c_out = %g\n", f_out, c_out);
+    setmessage ("foo", c_out/2);
+    printf ("a: set message 'foo' to %g\n", c_out/2);
+
+    // Try setting a color message
+    color cc = 0.5*N;
+    setmessage ("cc", cc);
+    printf ("a: set message 'cc' to %g\n", cc);
+
+    // Set an array
+    float array[4] = { 42, 43, 44, 45 };
+    setmessage ("array", array);
+    printf ("a: set message 'array' to { %g %g %g %g }\n",
+            array[0], array[1], array[2], array[3]);
+
+    // Should produce an error when executing backwards (or forward)
+    int c;
+    if (getmessage("wrong_direction_test", c) != 0)
+       error("unexpected result from getmessage - fetched value %d", c);
+}

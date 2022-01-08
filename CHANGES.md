@@ -1,8 +1,20 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.17.0 -- ??? (compared to 1.11.16.0)
+Release 1.11.17.0 -- 7 Jan 2022 (compared to 1.11.16.0)
 -------------------------------------------------------
+* Fix in runtime optimizer where tracking of messages and unknown messages
+  relied on uninitialized variables. #1447
+* Minor changes related to OpenColorIO changing their master branch name to
+  "main". #1431
+* Testing: Get texture3d tests operational again. #1437
+* Docs: Fix missing "errormessage" explanation for environment() and
+  texture3d(). #1442
+* Build/cmake fixes: Make PROJECT_VERSION_RELEASE_TYPE and
+  OSL_SUPPORTED_RELEASE be cache strings, so they can be overridden; change
+  OSL_IS_SUBPROJECT to PROJECT_IS_TOP_LEVEL (and change its sense) to match
+  CMake 21+ behavior; add a TIME_COMMANDS option to help debug performance of
+  the build. #1443
 
 Release 1.11.16.0 -- 1 Nov 2021 (compared to 1.11.15.0)
 -------------------------------------------------------

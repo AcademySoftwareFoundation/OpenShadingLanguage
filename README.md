@@ -370,7 +370,7 @@ Films using OSL (grouped by year of release date):
   Wonder Woman 1984,
   Soul,
   The Mandalorian (S2)
-* **(2021 / upcoming)**
+* **(2021)**
   Chaos Walking,
   Peter Rabbit 2: The Runaway,
   The Falcon and the Winder Soldier,
@@ -386,9 +386,12 @@ Films using OSL (grouped by year of release date):
   No Time To Die,
   Ron's Gone Wrong,
   Venom: Let There Be Carnage,
-  Eternals,
   Last Night in Soho,
   Ghostbusters: Afterlife,
+  Spider-Man 3: No Way Home,
+  Matrix Resurrections
+* **(2022 / upcoming)**
+  Hotel Transylvania 4: Transformania,
   ...
 
 
@@ -461,16 +464,18 @@ The current project leadership is documented in the
 Many people have contributed features, bug fixes, and other changes to OSL
 over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
 Bidgolirad, Nicholas Bishop, Solomon Boulos, Stefan Bruens, Stefan Büttner,
-Matthaus G. Chajdas, Alejandro Conty, Thomas Dinges, Luke Emrose, Louis
-Feng, Mark Final, Henri Fousse, Syoyo Fujita, Tim Grant, Larry Gritz, Derek
-Haase, Sven-Hendrik Haase, John Haddon, Daniel Heckenberg, Thiago Ize, Matt
+Matthaus G. Chajdas, Clark Chen, Alejandro Conty, Thomas Dinges, Mads
+Drøschler, Luke Emrose, Louis Feng, Mark Final, Henri Fousse, Syoyo Fujita,
+Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase, Sven-Hendrik
+Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Thiago Ize, Matt
 Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Adam Martinez,
 John Mertic, Bastien Montagne, Steena Monteiro, Alexis Oblet, Erich Ocean,
-Mikko Ohtamaa, Jino Park, Alexei Pawlow, Jay Reynolds, Declan Russell,
-Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Cliff
-Stein, Stephan Steinbach, Esteban Tovagliari, Brecht Van Lommel, Alexander
-von Knorring, Alex Wells, Roman Zulak. (Listed alphabetically; if we've left
-anybody out, it is inadvertent, please let us know.)
+Mikko Ohtamaa, Jino Park, Alexei Pawlow, Jay Reynolds, Benoit Ruiz, Declan
+Russell, Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin,
+Sandip Shukla, Cliff Stein, Stephan Steinbach, Luya Tshimbalanga, Esteban
+Tovagliari, Brecht Van Lommel, Alexander von Knorring, Alex Wells, Roman
+Zulak. (Listed alphabetically; if we've left anybody out, it is inadvertent,
+please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

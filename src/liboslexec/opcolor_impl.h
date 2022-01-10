@@ -48,7 +48,7 @@ OSL_HOSTDEVICE inline void clamp_zero (Color3 &c)
 //        cie_colour_match[(lambda - 380) / 5][2] = zBar
 //OSL_CONSTANT_DATA const float cie_colour_match[81][3] =
 // Choose to access 1d array vs 2d to allow better code generation of gathers
-OSL_CONSTANT_DATA const float cie_colour_match[81*3] __attribute__((aligned(64))) =
+OSL_CONSTANT_DATA const float cie_colour_match[81*3] OSL_ALIGNAS(64) =
 {
     0.0014,0.0000,0.0065, 0.0022,0.0001,0.0105, 0.0042,0.0001,0.0201,
     0.0076,0.0002,0.0362, 0.0143,0.0004,0.0679, 0.0232,0.0006,0.1102,

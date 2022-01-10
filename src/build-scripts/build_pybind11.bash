@@ -11,7 +11,7 @@ set -ex
 
 # Repo and branch/tag/commit of pybind11 to download if we don't have it yet
 PYBIND11_REPO=${PYBIND11_REPO:=https://github.com/pybind/pybind11.git}
-PYBIND11_VERSION=${PYBIND11_VERSION:=v2.4.3}
+PYBIND11_VERSION=${PYBIND11_VERSION:=v2.8.1}
 
 # Where to put pybind11 repo source (default to the ext area)
 PYBIND11_SRC_DIR=${PYBIND11_SRC_DIR:=${PWD}/ext/pybind11}
@@ -20,7 +20,7 @@ PYBIND11_BUILD_DIR=${PYBIND11_BUILD_DIR:=${PYBIND11_SRC_DIR}/build}
 # Install area for pybind11 (default to ext/dist)
 LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=${PWD}/ext}
 PYBIND11_INSTALL_DIR=${PYBIND11_INSTALL_DIR:=${LOCAL_DEPS_DIR}/dist}
-PYBIND11_BUILD_OPTS=${PYBIND11_BUILD_OPTS:=}
+#PYBIND11_BUILD_OPTS=${PYBIND11_BUILD_OPTS:=}
 
 if [[ "${PYTHON_VERSION}" != "" ]] ; then
     PYBIND11_BUILD_OPTS+=" -DPYBIND11_PYTHON_VERSION=${PYTHON_VERSION}"
@@ -38,16 +38,20 @@ if [[ ! -e ${PYBIND11_SRC_DIR} ]] ; then
     git clone ${PYBIND11_REPO} ${PYBIND11_SRC_DIR}
 fi
 cd ${PYBIND11_SRC_DIR}
+
 echo "git checkout ${PYBIND11_VERSION} --force"
 git checkout ${PYBIND11_VERSION} --force
 
 mkdir -p ${PYBIND11_BUILD_DIR}
 cd ${PYBIND11_BUILD_DIR}
-time cmake -DCMAKE_BUILD_TYPE=Release \
-           -DCMAKE_INSTALL_PREFIX=${PYBIND11_INSTALL_DIR} \
-           -DPYBIND11_TEST=OFF \
-           ${PYBIND11_BUILD_OPTS} ..
-time cmake --build . --config Release --target install
+
+if [[ -z $DEP_DOWNLOAD_ONLY ]]; then
+    time cmake -DCMAKE_BUILD_TYPE=Release \
+               -DCMAKE_INSTALL_PREFIX=${PYBIND11_INSTALL_DIR} \
+               -DPYBIND11_TEST=OFF \
+               ${PYBIND11_BUILD_OPTS} ..
+    time cmake --build . --config Release --target install
+fi
 
 # ls -R ${PYBIND11_INSTALL_DIR}
 popd

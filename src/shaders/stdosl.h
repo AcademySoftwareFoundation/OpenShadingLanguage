@@ -669,7 +669,7 @@ closure color medium_vdf(color albedo, float transmission_depth, color transmiss
 //  \param  base  Closure defining the base layer.
 //
 // TODO:
-// - This could also be achived by closure nesting where each layerable closure takes
+// - This could also be achieved by closure nesting where each layerable closure takes
 //   a closure color "base" input instead.
 // - One advantage having a dedicated layer() closure is that in the future we may want to
 //   introduce parameters to describe the sandwitched medium between the layer interfaces.
@@ -678,7 +678,7 @@ closure color medium_vdf(color albedo, float transmission_depth, color transmiss
 //
 closure color layer(closure color top, closure color base) BUILTIN;
 
-// NOTE: For "horisontal layering" closure mix() already exists in OSL.
+// NOTE: For "horizontal layering" closure mix() already exists in OSL.
 ​
 ​
 // -------------------------------------------------------------//

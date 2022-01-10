@@ -61,6 +61,14 @@ public:
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
                                ShaderGlobals *sg, void *val);
 
+    virtual bool trace (TraceOpt &options, ShaderGlobals *sg,
+                        const OSL::Vec3 &P, const OSL::Vec3 &dPdx,
+                        const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
+                        const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy);
+
+    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name,
+                             TypeDesc type, void *val, bool derivatives);
+
 
     // Set and get renderer attributes/options
     void attribute (string_view name, TypeDesc type, const void *value);

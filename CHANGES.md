@@ -4,11 +4,14 @@
 Release 1.12 -- ?? (compared to 1.11)
 --------------------------------------------------
 Dependency and standards requirements changes:
-* OpenImageIO 2.1-2.3: Support for OIIO 2.0 has been dropped.
 * The minimum (and default) compilation mode is now C++14. C++17 and 20 are
   also supported. #1362 #1369 (1.12.2)
 * Minimum compilers are now gcc 6.1 (no more support for gcc 4.8), MSVS
   2017 or newer (no more support for 2015).
+* Minimum LLVM is now 9.0. Support for LLVM 7 and 8 have ben dropped.
+  #1441 (1.12.3)
+* Minimum OpenImageIO is now 2.2: Support for OIIO 2.0 and 2.1 have been
+  dropped. #1426 (1.12.3)
 * Minimum OpenEXR version is now 2.3 (raised from 2.0). #1406 (1.12.3)
 
 OSL Language and oslc compiler:
@@ -26,6 +29,8 @@ OSL Standard library:
 * vector2.h is updated with a mod() function for vector2. #1312 (1.12.1/1.11.12)
 * Preliminary work for adding standard MaterialX closures. 31371 (1.12.2)
 * Fix previously-broken color conversions from RGB to xyY. #1410 (1.12.3)
+* Fully removed MaterialX shaders (get those from the MaterialX project).
+  #1450 (1.12.3)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * Custom experimental llvm optimization levels 10, 11, 12, and 13. These
@@ -61,6 +66,9 @@ Continued work on experimental SIMD batched shading mode:
 * Batched noise. #1394 (1.12.3)
 * Batched implementation of all color operations. #1408 (1.12.3)
 * Batched bitwise ops. #1413 (1.12.3)
+* Batched spline and spline inverse. #1422 (1.12.3)
+* Batched texture, gettextureinfo, texture3d, environment. #1436 (1.12.3)
+* Batched dictionary functionality (dict_find, etc.) #1445 (1.12.3)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -77,6 +85,8 @@ Continued work on experimental OptiX rendering:
   GPU. #1404 (1.12.3)
 * Fix missing hostdevice modifier on some matrix operators. #1409 (1.12.3)
 * Fix race conditions when compiling for OptiX 7. #1411 (1.12.3)
+* osl_get_attribute() uses device strings when compiling for OptiX.
+  #1435 (1.12.3)
 
 Performance improvements:
 * Less mutex locking around use and retrieval of ColorSystem related to
@@ -109,6 +119,8 @@ Bug fixes and other improvements (internals):
   #1333 (1.12.1/1.11.13)
 * Fix undefined behavior that could result in crashes that resulted from
   the Symbol class having no virtual destructor. #1397 (1.12.3)
+* Fix in runtime optimizer where tracking of messages and unknown messages
+  relied on uninitialized variables. #1447 (1.11.17/1.12.3)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -120,6 +132,9 @@ Internals/developer concerns:
   it deals with, closing some security and safety holes. #1383 (1.12.2)
 * More migration of string formatting to new std::format style. #1389 (1.12.3)
 * llvm_util: Switch some uses of ptr+len to span. #1390 (1.12.3)
+* OSL no longer uses sscanf internally (which has icky locale-dependent
+  behavior), and instead use locale-independent OIIO::Strutil utilities
+  whenever we need to parse strings. #1432 (1.12.3)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -144,14 +159,22 @@ Build & test system improvements:
       builds in `build/ARCH` to just `build` (and local installs from
       `dist/ARCH` to `dist`) to better match common cmake practice. So where
       your local builds end up may shift a bit. #1396 (1.12.3)
+    - Be more careful about not writing over a sensitive install area
+      unless CMAKE_INSTALL_PREFIX is explicitly set. #1421 (1.12.3)
+    - PROJECT_VERSION_RELEASE_TYPE and OSL_SUPPORTED_RELEASE are now
+      cache variables that can have build-time overrides. #1443 (1.12.3)
+    - Use PROJECT_IS_TOP_LEVEL (not OSL_IS_SUBPROJECT) to confirm with
+      CMake 21 conventions. #1443 (1.12.3)
+    - New TIME_COMMANDS option, when enabled, can help debug performance of
+      the build. #1443 (1.12.3)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
     - Cuda/OptiX back end: Add `__CUDADEVRT_INTERNAL__` define to bitcode
       generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+
       #1271 (1.12.0.1)
-    - Build against LLVM 11 #1274 (1.12.0.1) and LLVM 12 #1351 (1.12.1.0)
-      #1412 (1.12.3).
+    - Build against LLVM 11 #1274 (1.12.0.1), LLVM 12 #1351 (1.12.1.0)
+      #1412 (1.12.3), LLVM 13 #1420 (1.12.3)
     - Fix build break against recent OIIO master change where m_mutex field
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming
@@ -171,6 +194,16 @@ Build & test system improvements:
     - CI tests clang11, also batched shading with clang. #1379 (1.12.2)
     - CI speeds up OIIO builds by not building its tests. #1380 (1.12.2)
     - CI tests gcc11. #1381 (1.12.2)
+    - Deal with OpenColorIO changing its master branch to "main". #1429
+      (1.12.3)
+    - Fix tests for texture3d now that OIIO has dropped support for Field3D.
+      #1437 (1.12.3)
+    - Test against LLVM13/clang13 for the VFX Platform 2022 tests. #1434
+      (1.12.3)
+    - Test against MacOS-11. #1434 (1.12.3)
+    - Add testsuite coverage of environment(). #1438 (1.12.3)
+    - Use a project-specific environment variable `OSL_CI` instead of the more
+      generic `CI` to avoid clashes with other systems. #1446 (1.12.3)
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)
@@ -186,8 +219,48 @@ Documentation:
   (1.11.11/1.12.1)
 * First steps in new documentation and scripts for building OSL on Windows.
   #1326 (1.12.1)
+* Fix missing explanation of the optional "errormessage" parameter to
+  environment() and texture3d(). #1442 (1.12.3/1.11.17)
 
 
+
+Release 1.11.17.0 -- 7 Jan 2022 (compared to 1.11.16.0)
+-------------------------------------------------------
+* Fix in runtime optimizer where tracking of messages and unknown messages
+  relied on uninitialized variables. #1447
+* Minor changes related to OpenColorIO changing their master branch name to
+  "main". #1431
+* Testing: Get texture3d tests operational again. #1437
+* Docs: Fix missing "errormessage" explanation for environment() and
+  texture3d(). #1442
+* Build/cmake fixes: Make PROJECT_VERSION_RELEASE_TYPE and
+  OSL_SUPPORTED_RELEASE be cache strings, so they can be overridden; change
+  OSL_IS_SUBPROJECT to PROJECT_IS_TOP_LEVEL (and change its sense) to match
+  CMake 21+ behavior; add a TIME_COMMANDS option to help debug performance of
+  the build. #1443
+
+Release 1.11.16.0 -- 1 Nov 2021 (compared to 1.11.15.0)
+-------------------------------------------------------
+* Fixes to work with LLVM 13, and to compile with clang 13. #1412 #1420
+
+Release 1.11.15.0 -- 1 Sep 2021 (compared to 1.11.14.2)
+-------------------------------------------------------
+* Changes for compatibility with OpenImageIO 2.3. #1393 #1388
+* Fix potential crashes (or at least undefined behavior) due to missing
+  virtual destructor of internal Symbol type. #1397
+
+Release 1.11.14.2 -- 1 Jul 2021 (compared to 1.11.14.1)
+-------------------------------------------------------
+* Fix warnings that occur when compiling with clang and C++17 mode. #1379
+* CI/testing: Additional CI tests for clang+c++17 (#1379), gcc11 (#1381),
+  llvm 12 (#1381), speed up CI builds by not building the testing components
+  of OIIO (#1380).
+
+Release 1.11.14.1 -- 1 Jun 2021 (compared to 1.11.14.0)
+-------------------------------------------------------
+* Fix library setup for LLVM installations consisting of static libraries.
+  This fixes a build problem that can crop up on MacOS using
+  Homebrew-installed LLVM 12. #1375
 
 Release 1.11.14 -- 10 May 2021 (compared to 1.11.13)
 ----------------------------------------------------

@@ -976,8 +976,12 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
                                "renderer_outputs",
                                TypeDesc(TypeDesc::STRING,(int)aovnames.size()),
                                &aovnames[0]);
+#if 0
+        // TODO:  Why would we output this when only !output_placement?
+        //        disabling because causing differences in testsuite results
         if (use_group_outputs)
             std::cout << "Marking group outputs, not global renderer outputs.\n";
+#endif
     }
 
     // N.B. Maybe nobody cares about running individual layers manually,
@@ -1914,7 +1918,7 @@ test_shade (int argc, const char *argv[])
         }
 
         // If any reparam was requested, do it now
-        if (reparams.size() && reparam_layer.size()) {
+        if (reparams.size() && reparam_layer.size() && (iter + 1 < iters)) {
             for (size_t p = 0;  p < reparams.size();  ++p) {
                 const ParamValue &pv (reparams[p]);
                 shadingsys->ReParameter (*shadergroup, reparam_layer.c_str(),

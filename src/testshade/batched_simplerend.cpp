@@ -658,6 +658,16 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustring name,
         return val.mask();
     }
 
+#if 0  // TBD, but need to rebase to get updated assign_from helper in wide.h
+    if (const OIIO::ParamValue* p = m_sr.userdata.find_pv(name, val.type())) {
+        size_t size = p->type().size();
+        memcpy(val, p->data(), size);
+        if (val.has_derivs())
+            memcpy(val, (char*)p->data() + size, 2 * size);
+        return true;
+    }
+#endif
+
 #ifdef __OSL_DEBUG_MISSING_USER_DATA
     static std::unordered_set<ustring> missingUserData;
     if (missingUserData.find(name) == missingUserData.end()) {

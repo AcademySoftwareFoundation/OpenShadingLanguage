@@ -25,6 +25,7 @@
 #include <OSL/batched_texture.h>
 
 #include <llvm/IR/Constant.h>
+#include <llvm/IR/DerivedTypes.h>
 
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "batched_backendllvm.h"
@@ -1030,8 +1031,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
     llvm::BasicBlock* after_userdata_block = NULL;
     bool partial_userdata_mask_was_pushed  = false;
     LLVM_Util::ScopedMasking partial_data_masking_scope;
-    if (!sym.lockgeom() && !sym.typespec().is_closure()
-        && !(sym.symtype() == SymTypeOutputParam)) {
+    if (!sym.lockgeom() && !sym.typespec().is_closure()) {
         ustring symname = sym.name();
         TypeDesc type   = sym.typespec().simpletype();
 
@@ -1120,31 +1120,57 @@ BatchedBackendLLVM::llvm_assign_initial_value(
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;
         TypeSpec elemtype  = sym.typespec().elementtype();
+
+        OSL_ASSERT(!sym.is_uniform() || !sym.renderer_output()
+                   && "All render outputs should be varying");
+
         for (int a = 0, c = 0; a < arraylen; ++a) {
             llvm::Value* arrind = sym.typespec().is_array() ? ll.constant(a)
                                                             : NULL;
             if (sym.typespec().is_closure_based())
                 continue;
             for (int i = 0; i < num_components; ++i, ++c) {
-                // Fill in the constant val
-                llvm::Value* init_val = 0;
-                if (elemtype.is_float_based())
-                    init_val = ll.constant(sym.get_float(c));
-                else if (elemtype.is_string())
-                    init_val = ll.constant(sym.get_string(c));
-                else if (elemtype.is_int())
-                    init_val = ll.constant(sym.get_int(c));
-                OSL_ASSERT(init_val);
+                llvm::Value* init_val = nullptr;
+                if(! sym.lockgeom() && ! sym.typespec().is_closure()) {
+                    // Reload value from symbol memory as reparam
+                    // may have changed it
+                    llvm::PointerType * ptr_type = nullptr;
+                    llvm::Type * data_type = nullptr;
+                    if (elemtype.is_float_based()) {
+                        ptr_type = ll.type_float_ptr();
+                        data_type = ll.type_float();
+                    } else if (elemtype.is_string()) {
+                        ptr_type = ll.type_ustring_ptr();
+                        data_type = static_cast<llvm::Type *>(ll.type_string());
+                    } else if (elemtype.is_int()) {
+                        ptr_type = ll.type_int_ptr();
+                        data_type = ll.type_int();
+                    }
+                    OSL_ASSERT(ptr_type && data_type);
 
-                if (sym.is_uniform()) {
-                    OSL_ASSERT(!sym.renderer_output()
-                               && "All render outputs should be varying");
-                    llvm_store_value(init_val, sym, 0, arrind, i);
+                    llvm::Value * sym_data_src = ll.GEP(data_type, ll.constant_ptr (sym.dataptr(), ptr_type), c);
+                    init_val = ll.op_load (data_type, sym_data_src);
+                    OSL_ASSERT(init_val);
+                    if (sym.is_varying()) {
+                        init_val = ll.widen_value(init_val);
+                    }
                 } else {
-                    llvm::Value* wide_init_val = ll.wide_constant(
-                        static_cast<llvm::Constant*>(init_val));
-                    llvm_store_value(wide_init_val, sym, 0, arrind, i);
+                    // Fill in the constant val
+                    if (elemtype.is_float_based())
+                        init_val = ll.constant(sym.get_float(c));
+                    else if (elemtype.is_string())
+                        init_val = ll.constant(sym.get_string(c));
+                    else if (elemtype.is_int())
+                        init_val = ll.constant(sym.get_int(c));
+                    OSL_ASSERT(init_val);
+
+                    if (sym.is_varying()) {
+                        init_val = ll.wide_constant(
+                            static_cast<llvm::Constant*>(init_val));
+                    }
                 }
+
+                llvm_store_value(init_val, sym, 0, arrind, i);
             }
         }
         if (sym.has_derivs()) {
@@ -1785,7 +1811,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
             = ll.op_select(initial_shader_mask, previously_executed,
                            ll.wide_constant_bool(false));
         llvm::Value* all_required_lanes_already_executed
-            = ll.op_eq(initial_shader_mask, required_lanes_executed);
+            = ll.op_eq(ll.mask_as_int(initial_shader_mask), ll.mask_as_int(required_lanes_executed));
+        std::string cond_type = ll.llvm_typenameof(all_required_lanes_already_executed);
 
         llvm::BasicBlock* then_block  = ll.new_basic_block();
         llvm::BasicBlock* after_block = ll.new_basic_block();

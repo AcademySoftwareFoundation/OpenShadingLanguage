@@ -1150,7 +1150,16 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
                     Matrix44 data = batchResults[batchIndex];
                     outputimg->setpixel (x, y, reinterpret_cast<const float *>(&data));
                     if (print_outputs) {
-                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        // Match the scalar save_outputs behavior of outputting
+                        // each component without surrounding parenthesis we
+                        // get with << operator
+                        //*oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :"
+                            << " " << data.x[0][0] << " " << data.x[0][1] << " " << data.x[0][2] << " " << data.x[0][3]
+                            << " " << data.x[1][0] << " " << data.x[1][1] << " " << data.x[1][2] << " " << data.x[3][3]
+                            << " " << data.x[2][0] << " " << data.x[2][1] << " " << data.x[2][2] << " " << data.x[3][3]
+                            << " " << data.x[3][0] << " " << data.x[3][1] << " " << data.x[3][2] << " " << data.x[3][3]
+                            << std::endl;
                     }
                 }
             }
@@ -1163,7 +1172,11 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
                     Vec3 data = batchResults[batchIndex];
                     outputimg->setpixel (x, y, reinterpret_cast<const float *>(&data));
                     if (print_outputs) {
-                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        // Match the scalar save_outputs behavior of outputting
+                        // each component without surrounding parenthesis we
+                        // get with << operator
+                        //*oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " : " << data.x << " " << data.y << " " << data.z << std::endl;
                     }
                 }
             }

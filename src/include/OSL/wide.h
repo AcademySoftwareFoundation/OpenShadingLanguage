@@ -2778,12 +2778,25 @@ public:
 
     OSL_NOINLINE size_t val_size_in_bytes() const;
 
-    OSL_FORCEINLINE void assign_from(void* ptr_wide_data);
+    // Populate the MaskedData by copying from wide block of data pointed to.
+    // It's not a memcpy because the masked off lanes are not overwritten.
+    // Only the value is copied, NOT Dx or Dy.
+    OSL_FORCEINLINE void assign_val_from(const void* ptr_wide_data);
+
+    // Populate all data lanes of the MaskedData by broadcasting the
+    // single instance of data pointed to.
+    // Masked off lanes are not overwritten.
+    // Includes value, as well as Dx and Dy when has_derivs() is true
+    OSL_FORCEINLINE void assign_all_from(const void* ptr_data);
 
 private:
     template<typename DataT>
-    OSL_NOINLINE void assign_from_type(void* ptr_wide_data);
+    OSL_NOINLINE void assign_from_type(const void* ptr_wide_data);
+
+    template<typename DataT>
+    OSL_NOINLINE void assign_all_from_type(const void* ptr_data, int deriv_index);
 };
+
 
 
 // For consistency, for passing unknown uniform data, RefData can be used
@@ -3189,11 +3202,11 @@ MaskedData<WidthT>::val_size_in_bytes() const
 template<int WidthT>
 template<typename DataT>
 OSL_NOINLINE void
-MaskedData<WidthT>::assign_from_type(void* ptr_wide_data)
+MaskedData<WidthT>::assign_from_type(const void* ptr_wide_data)
 {
     // We can't just do a memcopy because some lanes may be masked off
     // Use a SIMD loop to perform a wide load and masked assignment.
-    auto* src_blocks = pvt::block_cast<DataT, WidthT>(ptr_wide_data);
+    const auto* src_blocks = pvt::block_cast<DataT, WidthT>(ptr_wide_data);
     auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
     int elem_count   = static_cast<int>(m_type.numelements());
     int comp_count   = m_type.aggregate;
@@ -3216,7 +3229,7 @@ MaskedData<WidthT>::assign_from_type(void* ptr_wide_data)
 
 template<int WidthT>
 OSL_FORCEINLINE void
-MaskedData<WidthT>::assign_from(void* ptr_wide_data)
+MaskedData<WidthT>::assign_val_from(const void* ptr_wide_data)
 {
     // To avoid having lots combinations of type safe loops,
     // we will make some assumptions about the wide data layout
@@ -3227,6 +3240,65 @@ MaskedData<WidthT>::assign_from(void* ptr_wide_data)
         assign_from_type<int>(ptr_wide_data);
     } else {
         assign_from_type<ustring>(ptr_wide_data);
+    }
+}
+
+
+template<int WidthT>
+template<typename DataT>
+OSL_NOINLINE void
+MaskedData<WidthT>::assign_all_from_type(const void* ptr_data, int deriv_index)
+{
+    // We can't just do a memcopy because some lanes may be masked off
+    // Use a SIMD loop to perform a wide load and masked assignment.
+    auto* src_data = reinterpret_cast<const DataT *>(ptr_data);
+    auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
+    int elem_count   = static_cast<int>(m_type.numelements());
+    int comp_count   = m_type.aggregate;
+    int deriv_offset = deriv_index*elem_count*comp_count;
+    for (int array_index = 0; array_index < elem_count; ++array_index) {
+        int array_offset = array_index * comp_count;
+        for (int comp_index = 0; comp_index < comp_count; ++comp_index) {
+            int combined_index = deriv_offset + array_offset + comp_index;
+            auto& bsrc         = src_data[combined_index];
+            auto& bdst         = dst_blocks[combined_index];
+
+            Masked<DataT, WidthT> wdest(bdst, mask());
+
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            for (int lane = 0; lane < WidthT; ++lane) {
+                wdest[lane] = bsrc;
+            }
+        }
+    }
+}
+
+template<int WidthT>
+OSL_FORCEINLINE void
+MaskedData<WidthT>::assign_all_from(const void* ptr_data)
+{
+    // To avoid having lots combinations of type safe loops,
+    // we will make some assumptions about the wide data layout
+    // and alias as either 32bit integer or 64bit ustring
+    // arrays of wide components
+    bool isBase32bit = (m_type.basetype != TypeDesc::STRING);
+    if (isBase32bit) {
+        assign_all_from_type<int>(ptr_data, /*deriv_index*/ 0);
+    } else {
+        assign_all_from_type<ustring>(ptr_data, /*deriv_index*/ 0);
+    }
+    if(has_derivs()) {
+        size_t src_size = type().size();
+        const char * dx_src = reinterpret_cast<const char *>(ptr_data) + src_size;
+        const char * dy_src = dx_src + src_size;
+
+        if (isBase32bit) {
+            assign_all_from_type<int>(dx_src, /*deriv_index*/ 1);
+            assign_all_from_type<int>(dy_src, /*deriv_index*/ 2);
+        } else {
+            assign_all_from_type<ustring>(dx_src, /*deriv_index*/ 1);
+            assign_all_from_type<ustring>(dy_src, /*deriv_index*/ 2);
+        }
     }
 }
 

@@ -2794,7 +2794,8 @@ private:
     OSL_NOINLINE void assign_from_type(const void* ptr_wide_data);
 
     template<typename DataT>
-    OSL_NOINLINE void assign_all_from_type(const void* ptr_data, int deriv_index);
+    OSL_NOINLINE void assign_all_from_type(const void* ptr_data,
+                                           int deriv_index);
 };
 
 
@@ -3207,9 +3208,9 @@ MaskedData<WidthT>::assign_from_type(const void* ptr_wide_data)
     // We can't just do a memcopy because some lanes may be masked off
     // Use a SIMD loop to perform a wide load and masked assignment.
     const auto* src_blocks = pvt::block_cast<DataT, WidthT>(ptr_wide_data);
-    auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
-    int elem_count   = static_cast<int>(m_type.numelements());
-    int comp_count   = m_type.aggregate;
+    auto* dst_blocks       = pvt::block_cast<DataT, WidthT>(m_ptr);
+    int elem_count         = static_cast<int>(m_type.numelements());
+    int comp_count         = m_type.aggregate;
     for (int array_index = 0; array_index < elem_count; ++array_index) {
         int array_offset = array_index * comp_count;
         for (int comp_index = 0; comp_index < comp_count; ++comp_index) {
@@ -3251,11 +3252,11 @@ MaskedData<WidthT>::assign_all_from_type(const void* ptr_data, int deriv_index)
 {
     // We can't just do a memcopy because some lanes may be masked off
     // Use a SIMD loop to perform a wide load and masked assignment.
-    auto* src_data = reinterpret_cast<const DataT *>(ptr_data);
+    auto* src_data   = reinterpret_cast<const DataT*>(ptr_data);
     auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
     int elem_count   = static_cast<int>(m_type.numelements());
     int comp_count   = m_type.aggregate;
-    int deriv_offset = deriv_index*elem_count*comp_count;
+    int deriv_offset = deriv_index * elem_count * comp_count;
     for (int array_index = 0; array_index < elem_count; ++array_index) {
         int array_offset = array_index * comp_count;
         for (int comp_index = 0; comp_index < comp_count; ++comp_index) {
@@ -3287,10 +3288,10 @@ MaskedData<WidthT>::assign_all_from(const void* ptr_data)
     } else {
         assign_all_from_type<ustring>(ptr_data, /*deriv_index*/ 0);
     }
-    if(has_derivs()) {
-        size_t src_size = type().size();
-        const char * dx_src = reinterpret_cast<const char *>(ptr_data) + src_size;
-        const char * dy_src = dx_src + src_size;
+    if (has_derivs()) {
+        size_t src_size    = type().size();
+        const char* dx_src = reinterpret_cast<const char*>(ptr_data) + src_size;
+        const char* dy_src = dx_src + src_size;
 
         if (isBase32bit) {
             assign_all_from_type<int>(dx_src, /*deriv_index*/ 1);

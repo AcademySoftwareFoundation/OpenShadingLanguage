@@ -1121,7 +1121,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
         int num_components = sym.typespec().simpletype().aggregate;
         TypeSpec elemtype  = sym.typespec().elementtype();
 
-        OSL_ASSERT(!sym.is_uniform() || !sym.renderer_output()
+        OSL_ASSERT((!sym.is_uniform() || !sym.renderer_output())
                    && "All render outputs should be varying");
 
         for (int a = 0, c = 0; a < arraylen; ++a) {

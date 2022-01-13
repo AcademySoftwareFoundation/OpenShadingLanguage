@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test_colors (color colors[2] = {{0,0,0},{0,0,0}} [[ int lockgeom = 0 ]],
+      output color Cout = 0)
+{
+    point in = P*colors[0];
+    Cout = colors[1]*(color)noise(in);
+}

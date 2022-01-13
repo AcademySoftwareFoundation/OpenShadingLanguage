@@ -1,0 +1,10 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test_array (float scale[2] = {0,0} [[ int lockgeom = 0 ]],
+      output color Cout = 0)
+{
+   Cout = (float) noise(u*scale[0], v*scale[1]);
+}

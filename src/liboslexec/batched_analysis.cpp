@@ -2000,7 +2000,8 @@ struct Analyzer {
                 continue;
             // Skip if it's an interpolated (userdata) parameter and we're
             // initializing them lazily.
-            if (s.symtype() == SymTypeParam && !s.lockgeom()
+            if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+                && !s.lockgeom()
                 && !s.typespec().is_closure() && !s.connected()
                 && !s.connected_down() && m_ba.shadingsys().lazy_userdata())
                 continue;
@@ -2228,8 +2229,7 @@ struct Analyzer {
         // our symbols appropriately!
         FOREACH_PARAM(Symbol & s, inst())
         {
-            if (s.everread() && !s.lockgeom() && !s.typespec().is_closure()
-                    && !(s.symtype() == SymTypeOutputParam)) {
+            if (s.everread() && !s.lockgeom() && !s.typespec().is_closure()) {
                 recursively_mark_varying(&s);
             }
         }

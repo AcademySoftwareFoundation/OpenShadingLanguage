@@ -243,6 +243,17 @@ WIDE_NOISE_DERIV_IMPL(unullnoise)
 
 DECL(__OSL_MASKED_OP(count_noise), "xXi")
 
+DECL (__OSL_OP2(hash,Wi,Wi), "xXX")
+DECL (__OSL_OP2(hash,Wi,Wf), "xXX")
+DECL (__OSL_OP3(hash,Wi,Wf,Wf), "xXXX")
+DECL (__OSL_OP2(hash,Wi,Wv), "xXX")
+DECL (__OSL_OP3(hash,Wi,Wv,Wf), "xXXX")
+DECL (__OSL_MASKED_OP2(hash,Wi,Wi), "xXXi")
+DECL (__OSL_MASKED_OP2(hash,Wi,Wf), "xXXi")
+DECL (__OSL_MASKED_OP3(hash,Wi,Wf,Wf), "xXXXi")
+DECL (__OSL_MASKED_OP2(hash,Wi,Wv), "xXXi")
+DECL (__OSL_MASKED_OP3(hash,Wi,Wv,Wf), "xXXXi")
+
 // Need wide for combinations of the 3 parameters allowed to be uniform
 // caveat, some combos are unreachable/uneeded
 // When result has a derivative, there is

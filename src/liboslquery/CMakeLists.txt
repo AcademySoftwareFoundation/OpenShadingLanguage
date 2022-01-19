@@ -24,7 +24,7 @@ target_link_libraries (${local_lib}
     )
 
 target_compile_features (${local_lib}
-                         PUBLIC cxx_std_${CMAKE_CXX_STANDARD})
+                         INTERFACE cxx_std_${DOWNSTREAM_CXX_STANDARD})
 
 set_target_properties (${local_lib}
     PROPERTIES

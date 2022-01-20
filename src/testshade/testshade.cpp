@@ -976,8 +976,12 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
                                "renderer_outputs",
                                TypeDesc(TypeDesc::STRING,(int)aovnames.size()),
                                &aovnames[0]);
+#if 0
+        // TODO:  Why would we output this when only !output_placement?
+        //        disabling because causing differences in testsuite results
         if (use_group_outputs)
             std::cout << "Marking group outputs, not global renderer outputs.\n";
+#endif
     }
 
     // N.B. Maybe nobody cares about running individual layers manually,
@@ -1146,7 +1150,16 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
                     Matrix44 data = batchResults[batchIndex];
                     outputimg->setpixel (x, y, reinterpret_cast<const float *>(&data));
                     if (print_outputs) {
-                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        // Match the scalar save_outputs behavior of outputting
+                        // each component without surrounding parenthesis we
+                        // get with << operator
+                        //*oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :"
+                            << " " << data.x[0][0] << " " << data.x[0][1] << " " << data.x[0][2] << " " << data.x[0][3]
+                            << " " << data.x[1][0] << " " << data.x[1][1] << " " << data.x[1][2] << " " << data.x[3][3]
+                            << " " << data.x[2][0] << " " << data.x[2][1] << " " << data.x[2][2] << " " << data.x[3][3]
+                            << " " << data.x[3][0] << " " << data.x[3][1] << " " << data.x[3][2] << " " << data.x[3][3]
+                            << std::endl;
                     }
                 }
             }
@@ -1159,7 +1172,11 @@ batched_save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys, ShadingCo
                     Vec3 data = batchResults[batchIndex];
                     outputimg->setpixel (x, y, reinterpret_cast<const float *>(&data));
                     if (print_outputs) {
-                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        // Match the scalar save_outputs behavior of outputting
+                        // each component without surrounding parenthesis we
+                        // get with << operator
+                        //*oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " :" << data << std::endl;
+                        *oStreams[batchIndex] << "  " << outputvarnames[i].c_str() << " : " << data.x << " " << data.y << " " << data.z << std::endl;
                     }
                 }
             }
@@ -1914,7 +1931,7 @@ test_shade (int argc, const char *argv[])
         }
 
         // If any reparam was requested, do it now
-        if (reparams.size() && reparam_layer.size()) {
+        if (reparams.size() && reparam_layer.size() && (iter + 1 < iters)) {
             for (size_t p = 0;  p < reparams.size();  ++p) {
                 const ParamValue &pv (reparams[p]);
                 shadingsys->ReParameter (*shadergroup, reparam_layer.c_str(),

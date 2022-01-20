@@ -658,6 +658,11 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustring name,
         return val.mask();
     }
 
+    if (const OIIO::ParamValue* p = m_sr.userdata.find_pv(name, val.type())) {
+        val.assign_all_from(p->data());
+        return val.mask();
+    }
+
 #ifdef __OSL_DEBUG_MISSING_USER_DATA
     static std::unordered_set<ustring> missingUserData;
     if (missingUserData.find(name) == missingUserData.end()) {

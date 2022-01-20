@@ -398,7 +398,7 @@ BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
     if (map_iter == named_values().end()) {
         shadingcontext()->errorf(
             "Couldn't find symbol '%s' (unmangled = '%s'). Did you forget to allocate it?",
-            mangled_name.c_str(), dealiased->name().c_str());
+            mangled_name.c_str(), dealiased->unmangled());
         return 0;
     }
     return (llvm::Value*)map_iter->second;
@@ -626,45 +626,51 @@ BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
     if (sym.is_constant() && !sym.typespec().is_array() && !arrayindex) {
         // Shortcut for simple constants
         if (sym.typespec().is_float()) {
-            if (cast == TypeDesc::TypeInt)
+            float float_val = sym.get_float();
+            if (cast == TypeDesc::TypeInt) {
+                int int_val = static_cast<int>(float_val);
                 if (op_is_uniform) {
-                    return ll.constant((int)*(float*)sym.data());
+                    return ll.constant(int_val);
                 } else {
-                    return ll.wide_constant((int)*(float*)sym.data());
+                    return ll.wide_constant(int_val);
                 }
-            else if (op_is_uniform) {
-                return ll.constant(*(float*)sym.data());
+            } else if (op_is_uniform) {
+                return ll.constant(float_val);
             } else {
-                return ll.wide_constant(*(float*)sym.data());
+                return ll.wide_constant(float_val);
             }
         }
         if (sym.typespec().is_int()) {
-            if (cast == TypeDesc::TypeFloat)
+            int int_val = sym.get_int();
+            if (cast == TypeDesc::TypeFloat) {
+                float float_val = static_cast<float>(int_val);
                 if (op_is_uniform) {
-                    return ll.constant((float)*(int*)sym.data());
+                    return ll.constant(float_val);
                 } else {
-                    return ll.wide_constant((float)*(int*)sym.data());
+                    return ll.wide_constant(float_val);
                 }
-            else {
+            } else {
                 if (op_is_uniform) {
-                    return ll.constant(*(int*)sym.data());
+                    return ll.constant(int_val);
                 } else {
-                    return ll.wide_constant(*(int*)sym.data());
+                    return ll.wide_constant(int_val);
                 }
             }
         }
         if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
+            float float_val = sym.get_float(component);
             if (op_is_uniform) {
-                return ll.constant(((float*)sym.data())[component]);
+                return ll.constant(float_val);
             } else {
-                return ll.wide_constant(((float*)sym.data())[component]);
+                return ll.wide_constant(float_val);
             }
         }
         if (sym.typespec().is_string()) {
+            ustring string_val = sym.get_string();
             if (op_is_uniform) {
-                return ll.constant(*(ustring*)sym.data());
+                return ll.constant(string_val);
             } else {
-                return ll.wide_constant(*(ustring*)sym.data());
+                return ll.wide_constant(string_val);
             }
         }
         OSL_ASSERT(0 && "unhandled constant type");
@@ -889,53 +895,53 @@ BatchedBackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
     elementType.make_array(0);
 
     if (elementType.is_float()) {
-        const float* val = (const float*)sym.data();
-        if (cast == TypeDesc::TypeInt)
+        float float_elem = sym.get_float(arrayindex);
+        if (cast == TypeDesc::TypeInt) {
+            int int_elem = static_cast<int>(float_elem);
             if (op_is_uniform) {
-                return ll.constant((int)val[arrayindex]);
+                return ll.constant(int_elem);
             } else {
-                return ll.wide_constant((int)val[arrayindex]);
+                return ll.wide_constant(int_elem);
             }
-        else if (op_is_uniform) {
-            return ll.constant(val[arrayindex]);
+        } else if (op_is_uniform) {
+            return ll.constant(float_elem);
         } else {
-            return ll.wide_constant(val[arrayindex]);
+            return ll.wide_constant(float_elem);
         }
     }
     if (elementType.is_int()) {
-        const int* val = (const int*)sym.data();
-        if (cast == TypeDesc::TypeFloat)
+        int int_elem = sym.get_int(arrayindex);
+        if (cast == TypeDesc::TypeFloat) {
+            float float_elem = static_cast<float>(int_elem);
             if (op_is_uniform) {
-                return ll.constant((float)val[arrayindex]);
+                return ll.constant(float_elem);
             } else {
-                return ll.wide_constant((float)val[arrayindex]);
+                return ll.wide_constant(float_elem);
             }
-        else if (op_is_uniform) {
-            return ll.constant(val[arrayindex]);
+        } else if (op_is_uniform) {
+            return ll.constant(int_elem);
         } else {
-            return ll.wide_constant(val[arrayindex]);
+            return ll.wide_constant(int_elem);
         }
     }
     if (elementType.is_triple() || elementType.is_matrix()) {
-        const float* val = (const float*)sym.data();
         int ncomps       = (int)sym.typespec().aggregate();
+        float float_elem = sym.get_float(ncomps*arrayindex + component);
         if (op_is_uniform) {
-            return ll.constant(val[ncomps * arrayindex + component]);
+            return ll.constant(float_elem);
         } else {
-            return ll.wide_constant(val[ncomps * arrayindex + component]);
+            return ll.wide_constant(float_elem);
         }
     }
     if (elementType.is_string()) {
-        const ustring* val = (const ustring*)sym.data();
+        ustring string_elem = sym.get_string(arrayindex);
         if (op_is_uniform) {
-            return ll.constant(val[arrayindex]);
+            return ll.constant(string_elem);
         } else {
-            return ll.wide_constant(val[arrayindex]);
+            return ll.wide_constant(string_elem);
         }
     }
 
-    std::cout << "SYMBOL " << sym.name().c_str() << " type=" << sym.typespec()
-              << std::endl;
     OSL_ASSERT(0 && "unhandled constant type");
     return NULL;
 }

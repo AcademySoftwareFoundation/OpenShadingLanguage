@@ -2424,9 +2424,9 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
         // Helps me find any constant optional params that aren't elided
         if (Name.is_constant() && Val.is_constant()) {
             std::cout << "! texture constant optional arg '" << name << "'\n";
-            if (Val.typespec().is_float()) std::cout << "\tf " << *(float *)Val.data() << "\n";
-            if (Val.typespec().is_int()) std::cout << "\ti " << *(int *)Val.data() << "\n";
-            if (Val.typespec().is_string()) std::cout << "\t" << *(ustring *)Val.data() << "\n";
+            if (Val.typespec().is_float()) std::cout << "\tf " << Val.get_float() << "\n";
+            if (Val.typespec().is_int()) std::cout << "\ti " << Val.get_int() << "\n";
+            if (Val.typespec().is_string()) std::cout << "\t" << Val.get_string() << "\n";
         }
 #endif
     }

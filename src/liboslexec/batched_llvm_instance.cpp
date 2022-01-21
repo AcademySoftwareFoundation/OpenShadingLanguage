@@ -1908,7 +1908,6 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                            ll.wide_constant_bool(false));
         llvm::Value* all_required_lanes_already_executed
             = ll.op_eq(ll.mask_as_int(initial_shader_mask), ll.mask_as_int(required_lanes_executed));
-        std::string cond_type = ll.llvm_typenameof(all_required_lanes_already_executed);
 
         llvm::BasicBlock* then_block  = ll.new_basic_block();
         llvm::BasicBlock* after_block = ll.new_basic_block();

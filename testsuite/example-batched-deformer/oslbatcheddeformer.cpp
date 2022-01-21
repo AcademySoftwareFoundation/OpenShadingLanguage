@@ -43,10 +43,10 @@ NOTE: keep in changes sync with the scalar version testsuite/example-deformer
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/sysutil.h>
 
+#include <OSL/batched_rendererservices.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
 #include <OSL/rendererservices.h>
-#include <OSL/batched_rendererservices.h>
 
 
 // Define a userdata structure that holds any varying per-point values that
@@ -92,14 +92,13 @@ struct MyUserData {
         return false;
     }
 #endif
-
 };
 
 
 
 template<int WidthT>
-class MyBatchedRendererServices final : public OSL::BatchedRendererServices<WidthT> {
-
+class MyBatchedRendererServices final
+    : public OSL::BatchedRendererServices<WidthT> {
     OSL_USING_DATA_WIDTH(WidthT);
 
 #if 0
@@ -124,14 +123,22 @@ class MyBatchedRendererServices final : public OSL::BatchedRendererServices<Widt
 
     // Explicitly let code generator know what we have or haven't overridden
     // so it can call an internal optimized version vs. a virtual function.
-    virtual bool is_overridden_get_inverse_matrix_WmWxWf() const { return false; }
+    virtual bool is_overridden_get_inverse_matrix_WmWxWf() const
+    {
+        return false;
+    }
     virtual bool is_overridden_get_matrix_WmWsWf() const { return false; }
-    virtual bool is_overridden_get_inverse_matrix_WmsWf() const { return false; }
-    virtual bool is_overridden_get_inverse_matrix_WmWsWf() const { return false; }
+    virtual bool is_overridden_get_inverse_matrix_WmsWf() const
+    {
+        return false;
+    }
+    virtual bool is_overridden_get_inverse_matrix_WmWsWf() const
+    {
+        return false;
+    }
     virtual bool is_overridden_texture() const { return false; }
     virtual bool is_overridden_texture3d() const { return false; }
     virtual bool is_overridden_environment() const { return false; }
-
 };
 
 // RendererServices is the interface through which OSL requests things back
@@ -142,13 +149,18 @@ class MyBatchedRendererServices final : public OSL::BatchedRendererServices<Widt
 // pointer is stored in shaderglobals.renderstate.
 class MyRendererServices final : public OSL::RendererServices {
 public:
+    virtual OSL::BatchedRendererServices<16>* batched(OSL::WidthOf<16>)
+    {
+        return &m_batch_16_rs;
+    }
+    virtual OSL::BatchedRendererServices<8>* batched(OSL::WidthOf<8>)
+    {
+        return &m_batch_8_rs;
+    }
 
-    virtual OSL::BatchedRendererServices<16> * batched(OSL::WidthOf<16>) { return &m_batch_16_rs; }
-    virtual OSL::BatchedRendererServices<8> * batched(OSL::WidthOf<8>) { return &m_batch_8_rs; }
 private:
     MyBatchedRendererServices<16> m_batch_16_rs;
     MyBatchedRendererServices<8> m_batch_8_rs;
-
 };
 
 
@@ -165,27 +177,29 @@ main(int argc, char* argv[])
 
 
     // For batched allow FMA if build of OSL supports it
-     const int llvm_jit_fma = 1;
-     shadsys->attribute ("llvm_jit_fma", llvm_jit_fma);
+    const int llvm_jit_fma = 1;
+    shadsys->attribute("llvm_jit_fma", llvm_jit_fma);
 
     // build searchpath for ISA specific OSL shared libraries based on expected
     // location of library directories relative to the executables path.
     // Users can overide using the "options" command line option
     // with "searchpath:library"
-    static const char * relative_lib_dirs[] =
+    static const char* relative_lib_dirs[] =
 #if (defined(_WIN32) || defined(_WIN64))
-        {"\\..\\..\\..\\lib64", "\\..\\..\\..\\lib"};
+        { "\\..\\..\\..\\lib64", "\\..\\..\\..\\lib" };
 #else
-        {"/../../../lib64", "/../../../lib"};
+        { "/../../../lib64", "/../../../lib" };
 #endif
-    auto executable_directory = OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path());
+    auto executable_directory = OIIO::Filesystem::parent_path(
+        OIIO::Sysutil::this_program_path());
     int dirNum = 0;
     std::string librarypath;
-    for (const char * relative_lib_dir:relative_lib_dirs) {
-        if(dirNum++ > 0) librarypath    += ":";
+    for (const char* relative_lib_dir : relative_lib_dirs) {
+        if (dirNum++ > 0)
+            librarypath += ":";
         librarypath += executable_directory + relative_lib_dir;
     }
-    shadsys->attribute ("searchpath:library", librarypath);
+    shadsys->attribute("searchpath:library", librarypath);
 
 
     int batch_width = -1;
@@ -194,8 +208,11 @@ main(int argc, char* argv[])
     } else if (shadsys->configure_batch_execution_at(8)) {
         batch_width = 8;
     } else {
-        std::cout << "Error:  Hardware doesn't support 8 or 16 wide SIMD or the OSL has not been configured and built with a proper USE_BATCHED." << std::endl;
-        std::cout << "Error:  e.g.:  USE_BATCHED=b8_AVX2,b8_AVX512,b16_AVX512" << std::endl;
+        std::cout
+            << "Error:  Hardware doesn't support 8 or 16 wide SIMD or the OSL has not been configured and built with a proper USE_BATCHED."
+            << std::endl;
+        std::cout << "Error:  e.g.:  USE_BATCHED=b8_AVX2,b8_AVX512,b16_AVX512"
+                  << std::endl;
         return -1;
     }
 
@@ -329,22 +346,20 @@ main(int argc, char* argv[])
         userdata[i].amplitude = 0.0f + 1.0f * powf(i / float(npoints), 3.0f);
     }
 
-    auto batched_shadepoints = [&](auto integral_constant_width)->void {
-
+    auto batched_shadepoints = [&](auto integral_constant_width) -> void {
         constexpr int WidthT = integral_constant_width();
 
         // Shade the points:
         int outter_point_index = 0;
         while (outter_point_index < npoints) {
-
-            int batchSize = std::min(WidthT, npoints-outter_point_index);
+            int batchSize = std::min(WidthT, npoints - outter_point_index);
 
             // First, we need a ShaderGlobals struct:
             OSL::BatchedShaderGlobals<WidthT> shaderglobals;
             OSL::Block<int, WidthT> wide_shadeindex_block;
 
             // Set up inputs.
-            for(int bi=0; bi < batchSize; ++bi) {
+            for (int bi = 0; bi < batchSize; ++bi) {
                 int point_index = outter_point_index + bi;
 
                 wide_shadeindex_block[bi] = point_index;
@@ -356,7 +371,7 @@ main(int argc, char* argv[])
             }
 
 
-    #if 0
+#if 0
             // OBSOLETE: This is the old way.
             // Make a userdata record. Make sure the shaderglobals points to it.
             // MyUserData userdata;
@@ -370,16 +385,15 @@ main(int argc, char* argv[])
                 int point_index = outter_point_index + bi;
                 userdata[point_index].amplitude = 0.0f + 1.0f * powf(point_index / float(npoints), 3.0f);
             }
-    #endif
+#endif
 
             // Run the shader (will automagically optimize and JIT the first
             // time it executes).
-            shadsys->batched<WidthT>().execute(*ctx, *mygroup.get(),
-                             batchSize,
-                             wide_shadeindex_block,
-                             shaderglobals,
-                             /*userdata arena start=*/&userdata,
-                             /*output arena start=*/&Pout);
+            shadsys->batched<WidthT>().execute(
+                *ctx, *mygroup.get(), batchSize, wide_shadeindex_block,
+                shaderglobals,
+                /*userdata arena start=*/&userdata,
+                /*output arena start=*/&Pout);
 
             // OBSOLETE: This is the old way.
             // Retrieve the result. This is fast, it's just combining the data
@@ -392,9 +406,9 @@ main(int argc, char* argv[])
     };
 
     if (batch_width == 16) {
-        batched_shadepoints(std::integral_constant<int,16>{});
+        batched_shadepoints(std::integral_constant<int, 16> {});
     } else {
-        batched_shadepoints(std::integral_constant<int,8>{});
+        batched_shadepoints(std::integral_constant<int, 8> {});
     }
 
     // Print some results to prove that we generated an expected Pout.

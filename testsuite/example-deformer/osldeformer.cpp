@@ -86,7 +86,6 @@ struct MyUserData {
         return false;
     }
 #endif
-
 };
 
 

@@ -43,10 +43,11 @@ NOTE: keep in changes sync with the scalar version testsuite/example-deformer
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/sysutil.h>
 
-#include <OSL/batched_rendererservices.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
 #include <OSL/rendererservices.h>
+
+#include <OSL/batched_rendererservices.h>
 
 
 // Define a userdata structure that holds any varying per-point values that

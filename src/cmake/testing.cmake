@@ -106,9 +106,10 @@ macro ( TESTSUITE )
 
         # Run the test unoptimized, unless it matches a few patterns that
         # we don't test unoptimized (or has an OPTIMIZEONLY marker file).
-        if (NOT _testname MATCHES "optix" AND 
-            NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION" AND
-            NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+        if (NOT _testname MATCHES "optix" 
+            AND NOT EXISTS "${_testsrcdir}/NOSCALAR"
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
             add_one_testsuite ("${_testname}" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=0 )
         endif ()
@@ -116,6 +117,7 @@ macro ( TESTSUITE )
         # optimization, triggered by setting TESTSHADE_OPT env variable.
         # Skip OptiX-only tests and those with a NOOPTIMIZE marker file.
         if (NOT _testname MATCHES "optix"
+            AND NOT EXISTS "${_testsrcdir}/NOSCALAR"
             AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
             AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
             add_one_testsuite ("${_testname}.opt" "${_testsrcdir}"
@@ -199,6 +201,7 @@ macro (osl_add_all_tests)
                 draw_string
                 error-dupes error-serialized
                 example-deformer
+                example-batched-deformer
                 exit exponential
                 filterwidth-reg
                 for-reg format-reg fprintf

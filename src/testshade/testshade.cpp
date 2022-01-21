@@ -207,9 +207,6 @@ set_shadingsys_options ()
     if (batched) {
 #if OSL_USE_BATCHED
         bool batch_size_requested = (batch_size != -1);
-        // FIXME: For now, output placement is not supported for batched
-        // shading.
-        output_placement = false;
         // Not really looping, just emulating goto behavior using break
         for(;;) {
             if (!batch_size_requested || batch_size == 16) {
@@ -1608,9 +1605,12 @@ batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI 
 
     int oHitIndex = 0;
     while (oHitIndex < nhits) {
+        OSL::Block<int, WidthT> wide_shadeindex_block;
         int bx[WidthT];
         int by[WidthT];
+
         int batchSize = std::min(WidthT, nhits-oHitIndex);
+
 
         // TODO: vectorize this loop
         for(int bi=0; bi < batchSize; ++bi) {
@@ -1621,29 +1621,56 @@ batched_shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI 
             int rx = roi.xbegin + lx;
             int ry = roi.ybegin + ly;
             setup_varying_shaderglobals (bi, sgBatch, shadingsys, rx, ry);
-            // Remember the pixel x & y values to store the outputs after shading
-            bx[bi] = rx;
-            by[bi] = ry;
+
+            int shadeindex = ry * xres + rx;
+            wide_shadeindex_block[bi] = shadeindex;
+
+            if (print_outputs || !output_placement) {
+                // Remember the pixel x & y values to store the outputs after shading
+                bx[bi] = rx;
+                by[bi] = ry;
+            }
+
         }
 
         // Actually run the shader for this point
         if (entrylayer_index.empty()) {
             // Sole entry point for whole group, default behavior
-            shadingsys->batched<WidthT>().execute(*ctx, *shadergroup, batchSize, sgBatch);
+            shadingsys->batched<WidthT>().execute(*ctx, *shadergroup,
+                                                  batchSize,
+                                                  wide_shadeindex_block,
+                                                  sgBatch, userdata_base_ptr,
+                                                  output_base_ptr);
         } else {
             // Explicit list of entries to call in order
-            shadingsys->batched<WidthT>().execute_init (*ctx, *shadergroup, batchSize, sgBatch);
+            shadingsys->batched<WidthT>().execute_init (*ctx, *shadergroup,
+                                                        batchSize,
+                                                        wide_shadeindex_block,
+                                                        sgBatch,
+                                                        userdata_base_ptr,
+                                                        output_base_ptr);
             if (entrylayer_symbols.size()) {
                 for (size_t i = 0, e = entrylayer_symbols.size(); i < e; ++i)
-                    shadingsys->batched<WidthT>().execute_layer (*ctx, batchSize, sgBatch, entrylayer_symbols[i]);
+                    shadingsys->batched<WidthT>().execute_layer (*ctx,
+                                                                 batchSize,
+                                                                 wide_shadeindex_block,
+                                                                 sgBatch,
+                                                                 userdata_base_ptr,
+                                                                 output_base_ptr,
+                                                                 entrylayer_symbols[i]);
             } else {
                 for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
-                    shadingsys->batched<WidthT>().execute_layer (*ctx, batchSize, sgBatch, entrylayer_index[i]);
+                    shadingsys->batched<WidthT>().execute_layer (*ctx, batchSize,
+                                                                 wide_shadeindex_block,
+                                                                 sgBatch,
+                                                                 userdata_base_ptr,
+                                                                 output_base_ptr,
+                                                                 entrylayer_index[i]);
             }
             shadingsys->execute_cleanup (*ctx);
         }
 
-        if (save)
+        if (save && (print_outputs || !output_placement))
         {
             batched_save_outputs<WidthT>(rend, shadingsys, ctx, shadergroup, batchSize, bx, by);
         }

@@ -25,6 +25,7 @@ class ShaderSymbol;
 class OSLQuery;
 #if OSL_USE_BATCHED
 template<int WidthT> struct alignas(64) BatchedShaderGlobals;
+template<typename DataT, int WidthT> struct Wide;
 #endif
 
 
@@ -780,18 +781,33 @@ public:
         /// specified number of threads (0 means use all available HW cores).
         void jit_all_groups (int nthreads=0);
 
-        bool execute(ShadingContext &ctx, ShaderGroup &group, int batch_size,
-                         BatchedShaderGlobals<WidthT> &globals_batch, bool run=true);
+        bool execute (ShadingContext &ctx, ShaderGroup &group, int batch_size,
+                      Wide<const int, WidthT> wide_shadeindex,
+                      BatchedShaderGlobals<WidthT> &globals_batch,
+                      void* userdata_base_ptr,
+                      void* output_base_ptr, bool run=true);
 
         bool execute_init (ShadingContext &ctx, ShaderGroup &group, int batch_size,
-                                 BatchedShaderGlobals<WidthT> &globals_batch, bool run=true);
+                           Wide<const int, WidthT> wide_shadeindex,
+                           BatchedShaderGlobals<WidthT> &globals_batch,
+                           void* userdata_base_ptr,
+                           void* output_base_ptr, bool run=true);
 
-        bool execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
-                            int layernumber);
-        bool execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
-                                  ustring layername);
-        bool execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
-                                  const ShaderSymbol *symbol);
+        bool execute_layer (ShadingContext &ctx, int batch_size,
+                            Wide<const int, WidthT> wide_shadeindex,
+                            BatchedShaderGlobals<WidthT> &globals_batch,
+                            void* userdata_base_ptr,
+                            void* output_base_ptr, int layernumber);
+        bool execute_layer (ShadingContext &ctx, int batch_size,
+                            Wide<const int, WidthT> wide_shadeindex,
+                            BatchedShaderGlobals<WidthT> &globals_batch,
+                            void* userdata_base_ptr,
+                            void* output_base_ptr, ustring layername);
+        bool execute_layer (ShadingContext &ctx, int batch_size,
+                            Wide<const int, WidthT> wide_shadeindex,
+                            BatchedShaderGlobals<WidthT> &globals_batch,
+                            void* userdata_base_ptr,
+                            void* output_base_ptr, const ShaderSymbol *symbol);
     };
 
     template<int WidthT>

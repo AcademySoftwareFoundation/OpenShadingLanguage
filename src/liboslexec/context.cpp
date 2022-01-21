@@ -232,8 +232,12 @@ ShadingContext::execute (ShaderGroup &sgroup, int shadeindex,
 
 template<int WidthT>
 bool
-ShadingContext::Batched<WidthT>::execute_init
-(ShaderGroup &sgroup, int batch_size, BatchedShaderGlobals<WidthT> &bsg, bool run)
+ShadingContext::Batched<WidthT>::execute_init( ShaderGroup &sgroup,
+                                               int batch_size,
+                                               Wide<const int, WidthT> wide_shadeindex,
+                                               BatchedShaderGlobals<WidthT> &bsg,
+                                               void* userdata_base_ptr,
+                                               void* output_base_ptr, bool run)
 {
     if (context().m_group)
         context().execute_cleanup ();
@@ -308,7 +312,8 @@ ShadingContext::Batched<WidthT>::execute_init
             Mask<WidthT> run_mask(false);
             run_mask.set_count_on(batch_size);
 
-            run_func (&bsg, context().m_heap.get(), run_mask.value());
+            run_func (&bsg, context().m_heap.get(), &wide_shadeindex.data(),
+            		  userdata_base_ptr, output_base_ptr, run_mask.value());
         }
     }
 
@@ -319,7 +324,12 @@ ShadingContext::Batched<WidthT>::execute_init
 
 template<int WidthT>
 bool
-ShadingContext::Batched<WidthT>::execute_layer (int batch_size, BatchedShaderGlobals<WidthT> &bsg, int layernumber)
+ShadingContext::Batched<WidthT>::execute_layer (int batch_size,
+                                                Wide<const int, WidthT> wide_shadeindex,
+                                                BatchedShaderGlobals<WidthT> &bsg,
+                                                void* userdata_base_ptr,
+                                                void* output_base_ptr,
+                                                int layernumber)
 {
     if (!group() || group()->nlayers() == 0 || group()->does_nothing() || (context().batch_size_executed != batch_size))
         return false;
@@ -339,7 +349,8 @@ ShadingContext::Batched<WidthT>::execute_layer (int batch_size, BatchedShaderGlo
         Mask<WidthT> run_mask(false);
         run_mask.set_count_on(batch_size);
 
-        run_func (&bsg, context().m_heap.get(), run_mask.value());
+        run_func (&bsg, context().m_heap.get(), &wide_shadeindex.data(),
+        		  userdata_base_ptr, output_base_ptr, run_mask.value());
     }
 
     if (profile)
@@ -351,7 +362,11 @@ ShadingContext::Batched<WidthT>::execute_layer (int batch_size, BatchedShaderGlo
 
 template<int WidthT>
 bool
-ShadingContext::Batched<WidthT>::execute(ShaderGroup &sgroup, int batch_size, BatchedShaderGlobals<WidthT> &bsg, bool run)
+ShadingContext::Batched<WidthT>::execute(ShaderGroup &sgroup, int batch_size,
+                                         Wide<const int, WidthT> wide_shadeindex,
+                                         BatchedShaderGlobals<WidthT> &bsg,
+                                         void* userdata_base_ptr,
+                                         void* output_base_ptr, bool run)
 {
     OSL_ASSERT(is_aligned<64>(&bsg));
     int n = sgroup.m_exec_repeat;
@@ -369,10 +384,13 @@ ShadingContext::Batched<WidthT>::execute(ShaderGroup &sgroup, int batch_size, Ba
 
     bool result = true;
     while (1) {
-        if (! execute_init (sgroup, batch_size, bsg, run))
+        if (! execute_init (sgroup, batch_size, wide_shadeindex, bsg,
+                            userdata_base_ptr, output_base_ptr, run))
             return false;
         if (run && n)
-            execute_layer (batch_size, bsg, group()->nlayers()-1);
+            execute_layer (batch_size, wide_shadeindex, bsg,
+                           userdata_base_ptr, output_base_ptr,
+                           group()->nlayers()-1);
         result = context().execute_cleanup ();
         if (--n < 1)
             break;   // done

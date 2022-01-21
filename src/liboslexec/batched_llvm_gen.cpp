@@ -95,9 +95,12 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
     // if it's run unconditionally.
     // The code in the parent layer itself will set its 'executed' flag.
 
-    llvm::Value* args[3];
+    llvm::Value* args[6];
     args[0] = sg_ptr();
     args[1] = groupdata_ptr();
+    args[2] = ll.void_ptr(wide_shadeindex_ptr ());
+    args[3] = userdata_base_ptr ();
+    args[4] = output_base_ptr ();
 
     ShaderInstance* parent       = group()[layer];
     llvm::Value* layerfield      = layer_run_ref(layer_remap(layer));
@@ -127,7 +130,7 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
         lanes_requiring_execution_value = ll.mask_as_int(ll.shader_mask());
     }
 
-    args[2] = lanes_requiring_execution_value;
+    args[5] = lanes_requiring_execution_value;
 
     // Before the merge, keeping in case we broke it
     //std::string name = Strutil::format ("%s_%s_%d", m_library_selector,  parent->layername().c_str(),
@@ -2210,7 +2213,11 @@ LLVMGEN (llvm_gen_compassign)
 
     bool op_is_uniform = Result.is_uniform();
 
-    llvm::Value *c = rop.llvm_load_value(Index);
+    llvm::Value *c = rop.llvm_load_value(Index,
+                                         /*deriv*/0,
+                                         /*component*/0,
+                                         TypeDesc::UNKNOWN,
+                                         Index.is_uniform());
 
     if (Index.is_uniform()) {
         if (rop.inst()->master()->range_checking()) {
@@ -2245,32 +2252,33 @@ LLVMGEN (llvm_gen_compassign)
     } else {
         OSL_ASSERT(Index.is_constant() == false);
         OSL_ASSERT(op_is_uniform == false);
-
+        OSL_ASSERT(Result.typespec().aggregate() == 3 && "Implementation assumes 3 components");
         if (rop.inst()->master()->range_checking()) {
             BatchedBackendLLVM::TempScope temp_scope(rop);
 
             // We need a copy of the indices incase the range check clamps them
             llvm::Value * loc_clamped_wide_index = rop.getOrAllocateTemp (TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/, false /*forceBool*/, std::string("range clamped index:") + Val.name().c_str());
-                // copy the indices into our temporary
-               rop.ll.op_unmasked_store(c, loc_clamped_wide_index);
-               llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                       rop.ll.mask_as_int(rop.ll.current_mask()),
-                                       rop.ll.constant(3),
-                                       rop.ll.constant(Result.unmangled()),
-                                       rop.sg_void_ptr(),
-                                       rop.ll.constant(op.sourcefile()),
-                                       rop.ll.constant(op.sourceline()),
-                                       rop.ll.constant(rop.group().name()),
-                                       rop.ll.constant(rop.layer()),
-                                       rop.ll.constant(rop.inst()->layername()),
-                                       rop.ll.constant(rop.inst()->shadername()) };
-               rop.ll.call_function (rop.build_name(FuncSpec("range_check").mask()), args);
-               // Use the range check indices
-               // Although as our implementation below doesn't use any
-               // out of range values, clamping the indices here
-               // is of questionable value
-               c = rop.ll.op_load(loc_clamped_wide_index);
-       }
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(c, loc_clamped_wide_index);
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(3),
+                                    rop.ll.constant(Result.unmangled()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            rop.ll.call_function (rop.build_name(FuncSpec("range_check").mask()), args);
+            // Use the range check indices
+            // Although as our implementation below doesn't use any
+            // out of range values, clamping the indices here
+            // is of questionable value
+            c = rop.ll.op_load(loc_clamped_wide_index);
+        }
+
 
         // As the index is logically bound to 0, 1, or 2
         // instead of doing a scatter

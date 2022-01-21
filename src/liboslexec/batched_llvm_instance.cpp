@@ -965,10 +965,10 @@ BatchedBackendLLVM::llvm_assign_initial_value(
         return;
     }
 
+    bool isarray   = sym.typespec().is_array();
     if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp)
         && shadingsys().debug_uninit()) {
         // Handle the "debug uninitialized values" case
-        bool isarray   = sym.typespec().is_array();
         int alen       = isarray ? sym.typespec().arraylength() : 1;
         llvm::Value* u = NULL;
         if (sym.typespec().is_closure_based()) {
@@ -1028,8 +1028,9 @@ BatchedBackendLLVM::llvm_assign_initial_value(
     // TODO:  Can we check with renderer services to identify
     // symbols which will NEVER be interpolated and avoid
     // generating the get_userdata callback?
-    llvm::BasicBlock* after_userdata_block = NULL;
+    llvm::BasicBlock* after_userdata_block = nullptr;
     bool partial_userdata_mask_was_pushed  = false;
+    const SymLocationDesc* symloc = nullptr;
     LLVM_Util::ScopedMasking partial_data_masking_scope;
     if (!sym.lockgeom() && !sym.typespec().is_closure()) {
         ustring symname = sym.name();
@@ -1040,23 +1041,85 @@ BatchedBackendLLVM::llvm_assign_initial_value(
 
         // User connectable params must be varying
         OSL_ASSERT(sym.is_varying());
-        std::vector<llvm::Value*> args;
-        args.push_back(sg_void_ptr());
-        args.push_back(ll.constant(symname));
-        args.push_back(ll.constant(type));
-        args.push_back(
-            ll.constant((int)group().m_userdata_derivs[userdata_index]));
-        args.push_back(
-            groupdata_field_ptr(2 + userdata_index));  // userdata data ptr
-        args.push_back(ll.constant((int)sym.has_derivs()));
-        args.push_back(llvm_void_ptr(sym));
-        args.push_back(ll.constant(sym.derivsize() * m_width));
-        args.push_back(ll.void_ptr(userdata_initialized_ref(userdata_index)));
-        args.push_back(ll.constant(userdata_index));
-        args.push_back(llvm_initial_shader_mask_value);
-        llvm::Value* got_userdata
-            = ll.call_function(build_name("bind_interpolated_param"), args);
-        llvm::Value* got_userdata_mask = ll.int_as_mask(got_userdata);
+
+        llvm::Value* got_userdata = nullptr;
+        // See if userdata input placement has been used for this symbol
+        ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
+                         sym.name());
+        symloc = group().find_symloc(layersym, SymArena::UserData);
+        if (! symloc)
+            symloc = group().find_symloc(sym.name(), SymArena::UserData);
+        if (symloc) {
+            // We had a userdata pre-placement record for this variable.
+            // Just copy from the correct offset location!
+
+            // Strutil::print("GEN found placeable userdata input {} -> {} {} size={}\n",
+            //                sym.name(), symloc->name, sym.typespec(),
+            //                symloc->type.size());
+            const int deriv_count = (symloc->derivs && sym.has_derivs()) ? 3 : 1;
+
+            llvm::Value* sym_offset = ll.constanti64(symloc->offset);
+            llvm::Value* userdata_sym_base_ptr = ll.ptr_cast(ll.offset_ptr(m_llvm_userdata_base_ptr, sym_offset), type.scalartype());
+            bool isBase32bit = (symloc->type != TypeDesc::STRING);
+            int bytesPerElem = isBase32bit ? 4 : 8;
+            // TODO:  could move assert inside SymLocation
+            OSL_ASSERT((symloc->stride % bytesPerElem) == 0);
+
+            llvm::Value* wide_shadeindex = ll.op_load(ll.type_wide_int(), m_llvm_wide_shadeindex_ptr);
+            const int elem_stride = static_cast<int>(symloc->stride/bytesPerElem);
+            llvm::Value* wide_index_to_output = nullptr;
+            if (elem_stride == 1) {
+                wide_index_to_output = wide_shadeindex;
+            } else {
+                llvm::Value* element_stride = ll.wide_constant(elem_stride);
+                wide_index_to_output = ll.op_mul(element_stride, wide_shadeindex);
+            }
+
+            const int elem_count   = static_cast<int>(type.numelements());
+            const int comp_count   = type.aggregate;
+
+            int c = 0;
+            for (int d = 0; d < deriv_count; ++d) {
+                for (int a = 0; a < elem_count; ++a) {
+                    llvm::Value* arrind = isarray ? ll.constant(a)
+                                                            : nullptr;
+                    for (int i = 0; i < comp_count; ++i, ++c) {
+                        llvm::Value* wide_index = wide_index_to_output;
+                        if (c != 0) {
+                            wide_index = ll.op_add(wide_index_to_output, ll.wide_constant(c));
+                        }
+                        // For ISA without a native mask (AVX & AVX2), this gather op will
+                        // clamp the indices of masked off lanes to 0.
+                        // This means the user data base pointer + sym_offset
+                        // must be dereferencable with a shadeindex of 0.
+                        llvm::Value *wide_val = ll.op_gather(userdata_sym_base_ptr, wide_index);
+
+                        llvm_store_value(wide_val, sym, d, arrind,
+                                     /*component*/i, /*index_is_uniform*/true);
+                    }
+                }
+            }
+            // Clear derivs if the variable wants derivs but placement
+            // source didn't have them.
+            if (sym.has_derivs() && !symloc->derivs)
+                llvm_zero_derivs(sym);
+        } else {
+            llvm::Value* args[] = {
+                sg_void_ptr(),
+                ll.constant(symname),
+                ll.constant(type),
+                ll.constant((int)group().m_userdata_derivs[userdata_index]),
+                groupdata_field_ptr(2 + userdata_index),  // userdata data ptr
+                ll.constant((int)sym.has_derivs()),
+                llvm_void_ptr(sym),
+                ll.constant(sym.derivsize() * m_width),
+                ll.void_ptr(userdata_initialized_ref(userdata_index)),
+                ll.constant(userdata_index),
+                llvm_initial_shader_mask_value
+            };
+            got_userdata
+                = ll.call_function(build_name("bind_interpolated_param"), args);
+        }
 
         if (shadingsys().debug_nan() && type.basetype == TypeDesc::FLOAT) {
             // check for NaN/Inf for float-based types
@@ -1077,129 +1140,139 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                                             .mask()),
                              args);
         }
-        // We will enclose the subsequent initialization of default values
-        // or init ops in an "if" so that the extra copies or code don't
-        // happen if the userdata was retrieved.
-        llvm::BasicBlock* partial_userdata_block = ll.new_basic_block(
-            "partial_userdata");
-        after_userdata_block  = ll.new_basic_block();
-        llvm::Value* cond_val = ll.op_ne(got_userdata,
-                                         llvm_initial_shader_mask_value);
-        ll.op_branch(cond_val, partial_userdata_block, after_userdata_block);
+        // userdata pre-placement always succeeds, we don't need to bother
+        // with handing partial results possibly from bind_interpolated_param
+        if (symloc == nullptr) {
+            // We will enclose the subsequent initialization of default values
+            // or init ops in an "if" so that the extra copies or code don't
+            // happen if the userdata was retrieved.
+            llvm::BasicBlock* partial_userdata_block = ll.new_basic_block(
+                "partial_userdata");
+            after_userdata_block  = ll.new_basic_block();
+            OSL_ASSERT(got_userdata != nullptr);
+            llvm::Value* cond_val = ll.op_ne(got_userdata,
+                                             llvm_initial_shader_mask_value);
+            ll.op_branch(cond_val, partial_userdata_block, after_userdata_block);
 
-        // If we got no or partial user data, we need to mask out the lanes
-        // that successfully got user data from the initops or default value
-        // assignment
-        ll.push_mask(
-            got_userdata_mask, /* negate */
-            true /*, absolute = false (not sure how it wouldn't be an absolute mask) */);
-        partial_data_masking_scope = ll.create_masking_scope(/*enabled=*/true);
-        partial_userdata_mask_was_pushed = true;
+            // If we got no or partial user data, we need to mask out the lanes
+            // that successfully got user data from the initops or default value
+            // assignment
+            llvm::Value* got_userdata_mask = ll.int_as_mask(got_userdata);
+            ll.push_mask(
+                got_userdata_mask, /* negate */
+                true /*, absolute = false (not sure how it wouldn't be an absolute mask) */);
+            partial_data_masking_scope = ll.create_masking_scope(/*enabled=*/true);
+            partial_userdata_mask_was_pushed = true;
+        }
     }
 
     int exit_count_before_init_ops = ll.masked_exit_count();
-    if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
-        // Forcing masking shouldn't be required here,
-        // believe our discovery handled this correctly
-        // as these are initialization op's that are being processed,
-        // they should have corresponding require's masking entries,
-        // unlike the rest of the copies/initialization going on here
+    // Only generate init_ops or default assignment when userdata pre-placement
+    // is not found
+    if (symloc == nullptr) {
+        if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
+            // Forcing masking shouldn't be required here,
+            // believe our discovery handled this correctly
+            // as these are initialization op's that are being processed,
+            // they should have corresponding require's masking entries,
+            // unlike the rest of the copies/initialization going on here
 
-        // Handle init ops.
-        build_llvm_code(sym.initbegin(), sym.initend());
-    } else {
-        // We think the non-memcpy route is preferable as it give the compiler
-        // a chance to optimize constant values Also memcpy would ignoring the
-        // mask stack, which is problematic
-        LLVM_Util::ScopedMasking render_output_masking_scope;
-        if (sym.renderer_output()) {
-            render_output_masking_scope = ll.create_masking_scope(
-                /*enabled=*/true);
-        }
+            // Handle init ops.
+            build_llvm_code(sym.initbegin(), sym.initend());
+        } else {
+            // We think the non-memcpy route is preferable as it give the compiler
+            // a chance to optimize constant values Also memcpy would ignoring the
+            // mask stack, which is problematic
+            LLVM_Util::ScopedMasking render_output_masking_scope;
+            if (sym.renderer_output()) {
+                render_output_masking_scope = ll.create_masking_scope(
+                    /*enabled=*/true);
+            }
 
-        // Use default value
-        int num_components = sym.typespec().simpletype().aggregate;
-        TypeSpec elemtype  = sym.typespec().elementtype();
+            // Use default value
+            int num_components = sym.typespec().simpletype().aggregate;
+            TypeSpec elemtype  = sym.typespec().elementtype();
 
-        OSL_ASSERT((!sym.is_uniform() || !sym.renderer_output())
-                   && "All render outputs should be varying");
+            OSL_ASSERT((!sym.is_uniform() || !sym.renderer_output())
+                       && "All render outputs should be varying");
 
-        for (int a = 0, c = 0; a < arraylen; ++a) {
-            llvm::Value* arrind = sym.typespec().is_array() ? ll.constant(a)
-                                                            : NULL;
-            if (sym.typespec().is_closure_based())
-                continue;
-            for (int i = 0; i < num_components; ++i, ++c) {
-                llvm::Value* init_val = nullptr;
-                if(! sym.lockgeom() && ! sym.typespec().is_closure()) {
-                    // Reload value from symbol memory as reparam
-                    // may have changed it
-                    llvm::PointerType * ptr_type = nullptr;
-                    llvm::Type * data_type = nullptr;
-                    if (elemtype.is_float_based()) {
-                        ptr_type = ll.type_float_ptr();
-                        data_type = ll.type_float();
-                    } else if (elemtype.is_string()) {
-                        ptr_type = ll.type_ustring_ptr();
-                        data_type = static_cast<llvm::Type *>(ll.type_string());
-                    } else if (elemtype.is_int()) {
-                        ptr_type = ll.type_int_ptr();
-                        data_type = ll.type_int();
+            for (int a = 0, c = 0; a < arraylen; ++a) {
+                llvm::Value* arrind = sym.typespec().is_array() ? ll.constant(a)
+                                                                : NULL;
+                if (sym.typespec().is_closure_based())
+                    continue;
+                for (int i = 0; i < num_components; ++i, ++c) {
+                    llvm::Value* init_val = nullptr;
+                    if(! sym.lockgeom() && ! sym.typespec().is_closure()) {
+                        // Reload value from symbol memory as reparam
+                        // may have changed it
+                        llvm::PointerType * ptr_type = nullptr;
+                        llvm::Type * data_type = nullptr;
+                        if (elemtype.is_float_based()) {
+                            ptr_type = ll.type_float_ptr();
+                            data_type = ll.type_float();
+                        } else if (elemtype.is_string()) {
+                            ptr_type = ll.type_ustring_ptr();
+                            data_type = static_cast<llvm::Type *>(ll.type_string());
+                        } else if (elemtype.is_int()) {
+                            ptr_type = ll.type_int_ptr();
+                            data_type = ll.type_int();
+                        }
+                        OSL_ASSERT(ptr_type && data_type);
+
+                        llvm::Value * sym_data_src = ll.GEP(data_type, ll.constant_ptr (sym.dataptr(), ptr_type), c);
+                        init_val = ll.op_load (data_type, sym_data_src);
+                        OSL_ASSERT(init_val);
+                        if (sym.is_varying()) {
+                            init_val = ll.widen_value(init_val);
+                        }
+                    } else {
+                        // Fill in the constant val
+                        if (elemtype.is_float_based())
+                            init_val = ll.constant(sym.get_float(c));
+                        else if (elemtype.is_string())
+                            init_val = ll.constant(sym.get_string(c));
+                        else if (elemtype.is_int())
+                            init_val = ll.constant(sym.get_int(c));
+                        OSL_ASSERT(init_val);
+
+                        if (sym.is_varying()) {
+                            init_val = ll.wide_constant(
+                                static_cast<llvm::Constant*>(init_val));
+                        }
                     }
-                    OSL_ASSERT(ptr_type && data_type);
 
-                    llvm::Value * sym_data_src = ll.GEP(data_type, ll.constant_ptr (sym.dataptr(), ptr_type), c);
-                    init_val = ll.op_load (data_type, sym_data_src);
-                    OSL_ASSERT(init_val);
-                    if (sym.is_varying()) {
-                        init_val = ll.widen_value(init_val);
-                    }
-                } else {
-                    // Fill in the constant val
-                    if (elemtype.is_float_based())
-                        init_val = ll.constant(sym.get_float(c));
-                    else if (elemtype.is_string())
-                        init_val = ll.constant(sym.get_string(c));
-                    else if (elemtype.is_int())
-                        init_val = ll.constant(sym.get_int(c));
-                    OSL_ASSERT(init_val);
-
-                    if (sym.is_varying()) {
-                        init_val = ll.wide_constant(
-                            static_cast<llvm::Constant*>(init_val));
-                    }
+                    llvm_store_value(init_val, sym, 0, arrind, i);
                 }
-
-                llvm_store_value(init_val, sym, 0, arrind, i);
+            }
+            if (sym.has_derivs()) {
+                llvm_zero_derivs(sym);
             }
         }
-        if (sym.has_derivs()) {
-            llvm_zero_derivs(sym);
-        }
-    }
 
-    if (partial_userdata_mask_was_pushed) {
-        partial_data_masking_scope.release();
-        ll.pop_mask();
+        if (partial_userdata_mask_was_pushed) {
+            partial_data_masking_scope.release();
+            ll.pop_mask();
 #ifdef __OSL_TRACE_MASKS
-        llvm_print_mask("after partial_data_masking_scope ends");
+            llvm_print_mask("after partial_data_masking_scope ends");
 #endif
-    }
-
-    if (after_userdata_block) {
-        // If we enclosed the default initialization in an "if", jump to the
-        // next basic block now.
-        ll.op_branch(after_userdata_block);
-        // NOTE: we must be in the after block to apply the exit mask
-        if (ll.masked_exit_count() > exit_count_before_init_ops)
-        {
-            // At some point one or more calls to exit have been made
-            // we need to apply that exit mask the the current function scope's mask
-            ll.apply_exit_to_mask_stack();
         }
+
+        if (after_userdata_block) {
+            // If we enclosed the default initialization in an "if", jump to the
+            // next basic block now.
+            ll.op_branch(after_userdata_block);
+            // NOTE: we must be in the after block to apply the exit mask
+            if (ll.masked_exit_count() > exit_count_before_init_ops)
+            {
+                // At some point one or more calls to exit have been made
+                // we need to apply that exit mask the the current function scope's mask
+                ll.apply_exit_to_mask_stack();
+            }
 #ifdef __OSL_TRACE_MASKS
-        llvm_print_mask("after_userdata_block starts");
+            llvm_print_mask("after_userdata_block starts");
 #endif
+        }
     }
 }
 
@@ -1627,7 +1700,11 @@ BatchedBackendLLVM::build_llvm_init()
                                          ll.type_void(),  // return type
                                          { llvm_type_sg_ptr(),
                                            llvm_type_groupdata_ptr(),
-                                           ll.type_int() }));
+                                           static_cast<llvm::Type *>(ll.type_void_ptr()), // wide_shader_index
+                                           static_cast<llvm::Type *>(ll.type_void_ptr()), // userdata_base_ptr
+                                           static_cast<llvm::Type *>(ll.type_void_ptr()), // output_base_ptr
+                                           ll.type_int() // mask
+                                         }));
 
     if (ll.debug_is_enabled()) {
         ustring file_name
@@ -1639,8 +1716,12 @@ BatchedBackendLLVM::build_llvm_init()
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0);  //arg_it++;
     m_llvm_groupdata_ptr     = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_wide_shadeindex_ptr = ll.current_function_arg(2); //arg_it++;
+    m_llvm_userdata_base_ptr = ll.current_function_arg(3); //arg_it++;
+    m_llvm_output_base_ptr = ll.current_function_arg(4); //arg_it++;
+
     // TODO: do we need to utilize the shader mask in the init function?
-    //llvm::Value * llvm_initial_shader_mask_value = ll.current_function_arg(2); //arg_it++;
+    //llvm::Value * llvm_initial_shader_mask_value = ll.current_function_arg(5); //arg_it++;
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr             = nullptr;
@@ -1650,6 +1731,9 @@ BatchedBackendLLVM::build_llvm_init()
     // Set up a new IR builder
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_name);
     ll.new_builder(entry_bb);
+
+    // Fixup type of wide shadeindex, we had to wait until we were in a basic block
+    m_llvm_wide_shadeindex_ptr = ll.ptr_cast(m_llvm_wide_shadeindex_ptr, ll.type_wide_int_ptr()); //arg_it++;
 
     ll.assume_ptr_is_aligned(m_llvm_shaderglobals_ptr, 64);
     ll.assume_ptr_is_aligned(m_llvm_groupdata_ptr, 64);
@@ -1739,11 +1823,16 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                            layer_function_name().c_str());
 
     bool is_entry_layer = group().is_entry_layer(layer());
-    ll.current_function(ll.make_function(
-        unique_layer_name,
-        !is_entry_layer,  // fastcall for non-entry layer functions
-        ll.type_void(),   // return type
-        { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(), ll.type_int() }));
+    ll.current_function(
+		ll.make_function(unique_layer_name,
+                         !is_entry_layer,  // fastcall for non-entry layer functions
+                         ll.type_void(),   // return type
+                         { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                           static_cast<llvm::Type *>(ll.type_void_ptr()), // wide_shader_index
+                           static_cast<llvm::Type *>(ll.type_void_ptr()), // userdata_base_ptr
+                           static_cast<llvm::Type *>(ll.type_void_ptr()), // output_base_ptr
+                           ll.type_int() // mask
+                         }));
 
     if (ll.debug_is_enabled()) {
         const Opcode& mainbegin (inst()->op(inst()->maincodebegin()));
@@ -1755,8 +1844,12 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0);  //arg_it++;
     m_llvm_groupdata_ptr     = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_wide_shadeindex_ptr = ll.current_function_arg(2); //arg_it++;
+    m_llvm_userdata_base_ptr = ll.current_function_arg(3); //arg_it++;
+    m_llvm_output_base_ptr = ll.current_function_arg(4); //arg_it++;
+
     llvm::Value* llvm_initial_shader_mask_value = ll.current_function_arg(
-        2);  //arg_it++;
+        5);  //arg_it++;
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr             = nullptr;
@@ -1768,6 +1861,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
 
     // Set up a new IR builder
     ll.new_builder(entry_bb);
+
+    // Fixup type of wide shadeindex, we had to wait until we were in a basic block
+    m_llvm_wide_shadeindex_ptr = ll.ptr_cast(m_llvm_wide_shadeindex_ptr, ll.type_wide_int_ptr()); //arg_it++;
 
     ll.assume_ptr_is_aligned(m_llvm_shaderglobals_ptr, 64);
     ll.assume_ptr_is_aligned(m_llvm_groupdata_ptr, 64);
@@ -2017,7 +2113,7 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                                     if (child->symbol(next.dst.param)
                                         == dstsym) {
                                         if (next.dst.channel != -1) {
-                                            assert(next.dst.channel
+                                        	OSL_DASSERT(next.dst.channel
                                                    < (int)inited.size());
                                             if (!inited[next.dst.channel]) {
                                                 inited[next.dst.channel] = true;
@@ -2051,6 +2147,90 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         ll.pop_mask();
         // llvm_gen_debug_printf ("done copying connections");
     }
+
+
+    // Copy results to renderer outputs
+    // The current mask could be altered by early returns or exit
+    // But for copying output parameters to output locations,
+    // we want to use the shader mask
+    ll.push_mask(initial_shader_mask, /*negate=*/false,
+                 /*absolute = */ true);
+    FOREACH_PARAM(Symbol& s, inst()) {
+        if (! s.renderer_output())  // Skip if not a renderer output
+            continue;
+        // Try to look up the sym among the outputs with the full layer.name
+        // specification first. If that fails, look for name only.
+        ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
+                                              s.name());
+        auto symloc = group().find_symloc(layersym, SymArena::Outputs);
+        if (! symloc)
+            symloc = group().find_symloc(s.name(), SymArena::Outputs);
+        if (! symloc) {
+            // std::cout << "No output copy for " << s.name()
+            //           << " because no symloc was found\n";
+            continue;   // not found in either place
+        }
+
+        if (! equivalent(s.typespec(), symloc->type)
+            || s.typespec().is_closure()) {
+            std::cout << "No output copy for " << s.typespec() << ' ' << s.name()
+                      << " because of type mismatch vs symloc=" << symloc->type
+                      << "\n";
+            continue;  // types didn't match
+        }
+        auto type = s.typespec().simpletype();
+
+        //const int deriv_count = (symloc->derivs && s.has_derivs()) ? 3 : 1;
+        const int output_deriv_count = symloc->derivs ? 3 : 1;
+        const int s_deriv_count = s.has_derivs() ? 3 : 1;
+
+        llvm::Value* sym_offset = ll.constanti64(symloc->offset);
+        llvm::Value* output_sym_base_ptr = ll.ptr_cast(ll.offset_ptr(m_llvm_output_base_ptr, sym_offset), type.scalartype());
+        bool isBase32bit = (symloc->type != TypeDesc::STRING);
+        int bytesPerElem = isBase32bit ? 4 : 8;
+        // TODO:  could move assert inside SymLocation
+        OSL_ASSERT((symloc->stride % bytesPerElem) == 0);
+
+
+        llvm::Value* wide_shadeindex = ll.op_load(ll.type_wide_int(), m_llvm_wide_shadeindex_ptr);
+        const int elem_stride = static_cast<int>(symloc->stride/bytesPerElem);
+        llvm::Value* wide_index_to_output = nullptr;
+        if (elem_stride == 1) {
+            wide_index_to_output = wide_shadeindex;
+        } else {
+            llvm::Value* element_stride = ll.wide_constant(elem_stride);
+            wide_index_to_output = ll.op_mul(element_stride, wide_shadeindex);
+        }
+
+        const int elem_count   = static_cast<int>(type.numelements());
+        const int comp_count   = type.aggregate;
+
+        int c = 0;
+        for (int d = 0; d < output_deriv_count; ++d) {
+            for (int a = 0; a < elem_count; ++a) {
+                llvm::Value* arrind = s.typespec().is_array() ? ll.constant(a)
+                                                              : nullptr;
+                bool s_deriv_exists = d < s_deriv_count;
+                for (int i = 0; i < comp_count; ++i, ++c) {
+                    // It is fine if the symbol is uniform, it will get broadcast
+                    // to a wide value for use in the scatter.
+                    llvm::Value *wide_val = s_deriv_exists
+                            ? llvm_load_value(s, d,
+                                            arrind, /*component*/i,
+                                            TypeDesc::UNKNOWN,
+                                            /*op_is_uniform*/false)
+                            : ll.wide_constant(0.0f);
+
+                    llvm::Value* wide_index = wide_index_to_output;
+                    if (c != 0) {
+                        wide_index = ll.op_add(wide_index_to_output, ll.wide_constant(c));
+                    }
+                    ll.op_scatter(wide_val, output_sym_base_ptr, wide_index);
+                }
+            }
+        }
+    }
+    ll.pop_mask();
 
     // All done
     if (shadingsys().llvm_debug_layers())

@@ -96,7 +96,7 @@ public:
 
     ustring name;                     ///< Name of the symbol
     TypeDesc type;                    ///< Data type of the symbol
-    offset_t offset = -1;             ///< Offset from arena base for point 0
+    offset_t offset = -1;             ///< Offset from arena base for point 0 (batched mode assumes userdata at point 0 is readable)
     stride_t stride = AutoStride;     ///< Stride in bytes between shade points
     SymArena arena = SymArena::Heap;  ///< Memory arena type for the symbol
     bool derivs = false;              ///< Space allocated for derivs also

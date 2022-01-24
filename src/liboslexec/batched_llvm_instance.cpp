@@ -1067,12 +1067,12 @@ BatchedBackendLLVM::llvm_assign_initial_value(
 
             llvm::Value* wide_shadeindex = ll.op_load(ll.type_wide_int(), m_llvm_wide_shadeindex_ptr);
             const int elem_stride = static_cast<int>(symloc->stride/bytesPerElem);
-            llvm::Value* wide_index_to_output = nullptr;
+            llvm::Value* wide_index_for_userdata = nullptr;
             if (elem_stride == 1) {
-                wide_index_to_output = wide_shadeindex;
+                wide_index_for_userdata = wide_shadeindex;
             } else {
                 llvm::Value* element_stride = ll.wide_constant(elem_stride);
-                wide_index_to_output = ll.op_mul(element_stride, wide_shadeindex);
+                wide_index_for_userdata = ll.op_mul(element_stride, wide_shadeindex);
             }
 
             const int elem_count   = static_cast<int>(type.numelements());
@@ -1084,9 +1084,9 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                     llvm::Value* arrind = isarray ? ll.constant(a)
                                                             : nullptr;
                     for (int i = 0; i < comp_count; ++i, ++c) {
-                        llvm::Value* wide_index = wide_index_to_output;
+                        llvm::Value* wide_index = wide_index_for_userdata;
                         if (c != 0) {
-                            wide_index = ll.op_add(wide_index_to_output, ll.wide_constant(c));
+                            wide_index = ll.op_add(wide_index_for_userdata, ll.wide_constant(c));
                         }
                         // For ISA without a native mask (AVX & AVX2), this gather op will
                         // clamp the indices of masked off lanes to 0.

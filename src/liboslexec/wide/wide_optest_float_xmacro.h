@@ -4,51 +4,53 @@
 
 #ifdef __OSL_XMACRO_ARGS
 
-#define __OSL_XMACRO_OPNAME __OSL_EXPAND(__OSL_XMACRO_ARG1 __OSL_XMACRO_ARGS)
-#define __OSL_XMACRO_FLOAT_FUNC __OSL_EXPAND(__OSL_XMACRO_ARG2 __OSL_XMACRO_ARGS)
+#    define __OSL_XMACRO_OPNAME \
+        __OSL_EXPAND(__OSL_XMACRO_ARG1 __OSL_XMACRO_ARGS)
+#    define __OSL_XMACRO_FLOAT_FUNC \
+        __OSL_EXPAND(__OSL_XMACRO_ARG2 __OSL_XMACRO_ARGS)
 
 #endif
 
 #ifndef __OSL_XMACRO_OPNAME
-#error must define __OSL_XMACRO_OPNAME to name of unary operation before including this header
+#    error must define __OSL_XMACRO_OPNAME to name of unary operation before including this header
 #endif
 
 #ifndef __OSL_XMACRO_FLOAT_FUNC
-#error must define __OSL_XMACRO_FLOAT_FUNC to name of SIMD friendly unary implementation before including this header
+#    error must define __OSL_XMACRO_FLOAT_FUNC to name of SIMD friendly unary implementation before including this header
 #endif
 
 #ifndef __OSL_WIDTH
-#error must define __OSL_WIDTH to number of SIMD lanes before including this header
+#    error must define __OSL_WIDTH to number of SIMD lanes before including this header
 #endif
 
-OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wi,Wf)
-    (void *r_, void *val_)
+OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wi, Wf)(void* r_, void* val_)
 {
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const float> wval(val_);
         Wide<int> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             float val = wval[lane];
-            int r = __OSL_XMACRO_FLOAT_FUNC(val);
-            wr[lane] = r;
+            int r     = __OSL_XMACRO_FLOAT_FUNC(val);
+            wr[lane]  = r;
         }
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wi,Wf)
-    (void *r_, void *val_, unsigned int mask_value)
+OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wi,
+                                  Wf)(void* r_, void* val_,
+                                      unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const float> wval(val_);
         Masked<int> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             float val = wval[lane];
             if (wr.mask()[lane]) {
-                int r = __OSL_XMACRO_FLOAT_FUNC(val);
+                int r                = __OSL_XMACRO_FLOAT_FUNC(val);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -58,6 +60,3 @@ OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wi,Wf)
 #undef __OSL_XMACRO_ARGS
 #undef __OSL_XMACRO_OPNAME
 #undef __OSL_XMACRO_FLOAT_FUNC
-
-
-

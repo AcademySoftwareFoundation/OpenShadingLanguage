@@ -449,7 +449,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
     // it will return 1 if it put the userdata in the right spot (either
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.
-    llvm::BasicBlock *after_userdata_block = NULL;
+    llvm::BasicBlock *after_userdata_block = nullptr;
+    const SymLocationDesc* symloc = nullptr;
     if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         ustring symname = sym.name();
         TypeDesc type = sym.typespec().simpletype();
@@ -462,12 +463,12 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         // See if userdata input placement has been used for this symbol
         ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
                                               sym.name());
-        const SymLocationDesc* symloc = group().find_symloc(layersym, SymArena::UserData);
+        symloc = group().find_symloc(layersym, SymArena::UserData);
         if (! symloc)
             symloc = group().find_symloc(sym.name(), SymArena::UserData);
         if (symloc) {
             // We had a userdata pre-placement record for this variable.
-            // Just copy from teh correct offset location!
+            // Just copy from the correct offset location!
 
             // Strutil::print("GEN found placeable userdata input {} -> {} {} size={}\n",
             //                sym.name(), symloc->name, sym.typespec(),
@@ -482,7 +483,6 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             // source didn't have them.
             if (sym.has_derivs() && !symloc->derivs)
                 ll.op_memset(ll.offset_ptr(dstptr, size), 0, 2*size);
-            got_userdata = ll.constant(1);  // always succeeds
         } else {
             // No pre-placement: fall back to call to the renderer callback.
             llvm::Value* name_arg = NULL;
@@ -522,76 +522,84 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             };
             ll.call_function ("osl_naninf_check", args);
         }
-        // We will enclose the subsequent initialization of default values
-        // or init ops in an "if" so that the extra copies or code don't
-        // happen if the userdata was retrieved.
-        llvm::BasicBlock *no_userdata_block = ll.new_basic_block ("no_userdata");
-        after_userdata_block = ll.new_basic_block ();
-        llvm::Value *cond_val = ll.op_eq (got_userdata, ll.constant(0));
-        ll.op_branch (cond_val, no_userdata_block, after_userdata_block);
-    }
-
-    if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
-        // Handle init ops.
-        build_llvm_code (sym.initbegin(), sym.initend());
-    } else if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
-        // If the call to osl_bind_interpolated_param returns 0, the default
-        // value needs to be loaded from a CUDA variable.
-        ustring var_name = ustring::sprintf ("%s_%s_%s_%d", sym.name(),
-                                            inst()->layername(), group().name(), group().id());
-
-        // The "true" argument triggers the creation of the metadata needed to
-        // make the variable visible to OptiX.
-        llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym, true);
-
-        // memcpy the initial value from the CUDA variable
-        llvm::Value* src = ll.ptr_cast (ll.GEP (cuda_var, 0), ll.type_void_ptr());
-        llvm::Value* dst = llvm_void_ptr (sym);
-        TypeDesc t = sym.typespec().simpletype();
-        ll.op_memcpy (dst, src, t.size(), t.basesize());
-    } else if (use_optix() && ! sym.typespec().is_closure()) {
-        // For convenience, we always pack string addresses into the groupdata
-        // struct.
-        int userdata_index = find_userdata_index (sym);
-        llvm::Value* init_val = getOrAllocateCUDAVariable (sym);
-        init_val = ll.ptr_cast (init_val, ll.type_void_ptr());
-        ll.op_memcpy (groupdata_field_ptr (2 + userdata_index), init_val, 8, 4);
-    } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
-        // geometrically-varying param; memcpy its default value
-        TypeDesc t = sym.typespec().simpletype();
-        ll.op_memcpy (llvm_void_ptr (sym), ll.constant_ptr (sym.data()),
-                      t.size(), t.basesize() /*align*/);
-        if (sym.has_derivs())
-            llvm_zero_derivs (sym);
-    } else {
-        // Use default value
-        int num_components = sym.typespec().simpletype().aggregate;
-        TypeSpec elemtype = sym.typespec().elementtype();
-        for (int a = 0, c = 0; a < arraylen;  ++a) {
-            llvm::Value *arrind = sym.typespec().is_array() ? ll.constant(a) : NULL;
-            if (sym.typespec().is_closure_based())
-                continue;
-            for (int i = 0; i < num_components; ++i, ++c) {
-                // Fill in the constant val
-                llvm::Value* init_val = 0;
-                if (elemtype.is_float_based())
-                    init_val = ll.constant(sym.get_float(c));
-                else if (elemtype.is_string())
-                    init_val = ll.constant(sym.get_string(c));
-                else if (elemtype.is_int())
-                    init_val = ll.constant(sym.get_int(c));
-                OSL_DASSERT (init_val);
-                llvm_store_value (init_val, sym, 0, arrind, i);
-            }
+        // userdata pre-placement always succeeds, we don't need to bother
+        // with handing partial results possibly from bind_interpolated_param
+        if (symloc == nullptr) {
+            // We will enclose the subsequent initialization of default values
+            // or init ops in an "if" so that the extra copies or code don't
+            // happen if the userdata was retrieved.
+            llvm::BasicBlock *no_userdata_block = ll.new_basic_block ("no_userdata");
+            after_userdata_block = ll.new_basic_block ();
+            llvm::Value *cond_val = ll.op_eq (got_userdata, ll.constant(0));
+            ll.op_branch (cond_val, no_userdata_block, after_userdata_block);
         }
-        if (sym.has_derivs())
-            llvm_zero_derivs (sym);
     }
 
-    if (after_userdata_block) {
-        // If we enclosed the default initialization in an "if", jump to the
-        // next basic block now.
-        ll.op_branch (after_userdata_block);
+    // Only generate init_ops or default assignment when userdata pre-placement
+    // is not found
+    if (symloc == nullptr) {
+        if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
+            // Handle init ops.
+            build_llvm_code (sym.initbegin(), sym.initend());
+        } else if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
+            // If the call to osl_bind_interpolated_param returns 0, the default
+            // value needs to be loaded from a CUDA variable.
+            ustring var_name = ustring::sprintf ("%s_%s_%s_%d", sym.name(),
+                                                inst()->layername(), group().name(), group().id());
+
+            // The "true" argument triggers the creation of the metadata needed to
+            // make the variable visible to OptiX.
+            llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym, true);
+
+            // memcpy the initial value from the CUDA variable
+            llvm::Value* src = ll.ptr_cast (ll.GEP (cuda_var, 0), ll.type_void_ptr());
+            llvm::Value* dst = llvm_void_ptr (sym);
+            TypeDesc t = sym.typespec().simpletype();
+            ll.op_memcpy (dst, src, t.size(), t.basesize());
+        } else if (use_optix() && ! sym.typespec().is_closure()) {
+            // For convenience, we always pack string addresses into the groupdata
+            // struct.
+            int userdata_index = find_userdata_index (sym);
+            llvm::Value* init_val = getOrAllocateCUDAVariable (sym);
+            init_val = ll.ptr_cast (init_val, ll.type_void_ptr());
+            ll.op_memcpy (groupdata_field_ptr (2 + userdata_index), init_val, 8, 4);
+        } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
+            // geometrically-varying param; memcpy its default value
+            TypeDesc t = sym.typespec().simpletype();
+            ll.op_memcpy (llvm_void_ptr (sym), ll.constant_ptr (sym.data()),
+                          t.size(), t.basesize() /*align*/);
+            if (sym.has_derivs())
+                llvm_zero_derivs (sym);
+        } else {
+            // Use default value
+            int num_components = sym.typespec().simpletype().aggregate;
+            TypeSpec elemtype = sym.typespec().elementtype();
+            for (int a = 0, c = 0; a < arraylen;  ++a) {
+                llvm::Value *arrind = sym.typespec().is_array() ? ll.constant(a) : NULL;
+                if (sym.typespec().is_closure_based())
+                    continue;
+                for (int i = 0; i < num_components; ++i, ++c) {
+                    // Fill in the constant val
+                    llvm::Value* init_val = 0;
+                    if (elemtype.is_float_based())
+                        init_val = ll.constant(sym.get_float(c));
+                    else if (elemtype.is_string())
+                        init_val = ll.constant(sym.get_string(c));
+                    else if (elemtype.is_int())
+                        init_val = ll.constant(sym.get_int(c));
+                    OSL_DASSERT (init_val);
+                    llvm_store_value (init_val, sym, 0, arrind, i);
+                }
+            }
+            if (sym.has_derivs())
+                llvm_zero_derivs (sym);
+        }
+
+        if (after_userdata_block) {
+            // If we enclosed the default initialization in an "if", jump to the
+            // next basic block now.
+            ll.op_branch (after_userdata_block);
+        }
     }
 }
 

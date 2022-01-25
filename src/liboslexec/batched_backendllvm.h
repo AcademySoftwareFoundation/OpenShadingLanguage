@@ -414,6 +414,15 @@ public:
                                      bool is_uniform = true);
 
 
+    /// Return the pointer to the block of shadeindices.
+    llvm::Value *wide_shadeindex_ptr () const { return m_llvm_wide_shadeindex_ptr; }
+
+    /// Return the userdata base pointer.
+    llvm::Value *userdata_base_ptr () const { return m_llvm_userdata_base_ptr; }
+
+    /// Return the output base pointer.
+    llvm::Value *output_base_ptr () const { return m_llvm_output_base_ptr; }
+
     /// Return a pointer to an WideMatrix that was previously alloca
     /// on the stack, meant for generator to reuse as a temporary
     llvm::Value* temp_wide_matrix_ptr();
@@ -770,6 +779,10 @@ private:
     std::map<const Symbol*, int> m_param_order_map;
     llvm::Value* m_llvm_shaderglobals_ptr;
     llvm::Value* m_llvm_groupdata_ptr;
+
+    llvm::Value *m_llvm_wide_shadeindex_ptr;
+    llvm::Value *m_llvm_userdata_base_ptr;
+    llvm::Value *m_llvm_output_base_ptr;
 
     // Reused allocas for temps used to pass options or intermediates
     llvm::Value* m_llvm_temp_wide_matrix_ptr;  // for gen_tranform

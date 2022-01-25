@@ -5,8 +5,8 @@
 
 /*
 
-This is an example of using OSL to perform calculations on a bunch of
-points, perhaps as you would to run a deformer.
+This is an example of using OSL in batch mode to perform SIMD calculations
+on a bunch of points, perhaps as you would to run a deformer.
 
 We set up an example of the following:
 
@@ -37,14 +37,17 @@ To run:
 
     build/bin/osldeformer
 
-NOTE: keep in changes sync with the batched version testsuite/example-batched-deformer
+NOTE: keep in changes sync with the scalar version testsuite/example-deformer
 */
 
-
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/sysutil.h>
 
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
 #include <OSL/rendererservices.h>
+
+#include <OSL/batched_rendererservices.h>
 
 
 // Define a userdata structure that holds any varying per-point values that
@@ -58,8 +61,8 @@ struct MyUserData {
 #if 0
     // OBSOLETE: This is the old way.
     // Make a retrieve-by-name function.
-    bool retrieve(OSL::ustring name, OSL::TypeDesc type, void* val,
-                  bool derivatives)
+    template<int WidthT>
+    bool retrieve(OSL::ustring name, OSL::MaskedData<WidthT> wdata, OSL::ActiveLane lane)
     {
         // For speed, it wants to use ustrings (special unique strings that
         // can be equality tested at the cost of a simple pointer compare
@@ -69,16 +72,20 @@ struct MyUserData {
         static OSL::ustring uamplitude("amplitude");
 
         // Check if the name and type is something we know how to supply.
-        if (name == uamplitude && type == OIIO::TypeFloat) {
+        if (name == uamplitude && wdata.type() == OIIO::TypeFloat) {
             // Found! Fill in the value. The renderer may ask for
             // derivatives. If that's not something we know how to compute,
-            // just set them to zero. They will always just be the next two
-            // slots after the value. If derivatives is false, don't write
+            // just set them to zero. Just pass the MaskedData to MaskedDx
+            // and MaskedDy to access the derivatives.
+            /// If derivatives is false, don't write
             // to that memory!
-            ((float*)val)[0] = amplitude;
-            if (derivatives) {
-                ((float*)val)[1] = 0.0f;
-                ((float*)val)[2] = 0.0f;
+            OSL::Masked<float, WidthT> wval(wdata);
+            wval[lane] = amplitude;
+            if (wdata.has_derivs()) {
+                OSL::MaskedDx<float, WidthT> wdx(wdata);
+                OSL::MaskedDx<float, WidthT> wdy(wdata);
+                wdx[lane] = 0.0f;
+                wdy[lane] = 0.0f;
             }
             return true;
         }
@@ -90,6 +97,51 @@ struct MyUserData {
 
 
 
+template<int WidthT>
+class MyBatchedRendererServices final
+    : public OSL::BatchedRendererServices<WidthT> {
+    OSL_USING_DATA_WIDTH(WidthT);
+
+#if 0
+    // OBSOLETE: This is the old way.
+    virtual Mask get_userdata(OSL::ustring name, BatchedShaderGlobals* bsg,
+                                  MaskedData wdata)
+    {
+        // In this case, our implementation of get_userdata just requests
+        // it from the MyUserData, which we have arranged is pointed to
+        // by shaderglobals.renderstate.
+        MyUserData* userdata_base = (MyUserData*)bsg->uniform.renderstate;
+        Mask success(false);
+        wdata.mask().foreach([=,&success](OSL::ActiveLane lane)->void {
+            auto & userdata = userdata_base[lane];
+            if (userdata.retrieve(name, wdata, lane)) {
+                success.set_on(lane);
+            }
+        });
+        return success;
+    }
+#endif
+
+    // Explicitly let code generator know what we have or haven't overridden
+    // so it can call an internal optimized version vs. a virtual function.
+    virtual bool is_overridden_get_inverse_matrix_WmWxWf() const
+    {
+        return false;
+    }
+    virtual bool is_overridden_get_matrix_WmWsWf() const { return false; }
+    virtual bool is_overridden_get_inverse_matrix_WmsWf() const
+    {
+        return false;
+    }
+    virtual bool is_overridden_get_inverse_matrix_WmWsWf() const
+    {
+        return false;
+    }
+    virtual bool is_overridden_texture() const { return false; }
+    virtual bool is_overridden_texture3d() const { return false; }
+    virtual bool is_overridden_environment() const { return false; }
+};
+
 // RendererServices is the interface through which OSL requests things back
 // from the app (called a "renderer", but it doesn't have to literally be
 // one). The important feature we are concerned about here is that this is
@@ -98,22 +150,19 @@ struct MyUserData {
 // pointer is stored in shaderglobals.renderstate.
 class MyRendererServices final : public OSL::RendererServices {
 public:
-#if 0
-    // OBSOLETE: This is the old way.
-    virtual bool get_userdata(bool derivatives, OSL::ustring name,
-                              OSL::TypeDesc type, OSL::ShaderGlobals* sg,
-                              void* val)
+    virtual OSL::BatchedRendererServices<16>* batched(OSL::WidthOf<16>)
     {
-        // In this case, our implementation of get_userdata just requests
-        // it from the MyUserData, which we have arranged is pointed to
-        // by shaderglobals.renderstate.
-        MyUserData* userdata = (MyUserData*)sg->renderstate;
-        return userdata ? userdata->retrieve(name, type, val, derivatives)
-                        : false;
+        return &m_batch_16_rs;
     }
-#endif
-};
+    virtual OSL::BatchedRendererServices<8>* batched(OSL::WidthOf<8>)
+    {
+        return &m_batch_8_rs;
+    }
 
+private:
+    MyBatchedRendererServices<16> m_batch_16_rs;
+    MyBatchedRendererServices<8> m_batch_8_rs;
+};
 
 
 int
@@ -126,6 +175,47 @@ main(int argc, char* argv[])
     MyRendererServices renderer;
     std::unique_ptr<OSL::ShadingSystem> shadsys(
         new OSL::ShadingSystem(&renderer));
+
+
+    // For batched allow FMA if build of OSL supports it
+    const int llvm_jit_fma = 1;
+    shadsys->attribute("llvm_jit_fma", llvm_jit_fma);
+
+    // build searchpath for ISA specific OSL shared libraries based on expected
+    // location of library directories relative to the executables path.
+    // Users can overide using the "options" command line option
+    // with "searchpath:library"
+    static const char* relative_lib_dirs[] =
+#if (defined(_WIN32) || defined(_WIN64))
+        { "\\..\\..\\..\\lib64", "\\..\\..\\..\\lib" };
+#else
+        { "/../../../lib64", "/../../../lib" };
+#endif
+    auto executable_directory = OIIO::Filesystem::parent_path(
+        OIIO::Sysutil::this_program_path());
+    int dirNum = 0;
+    std::string librarypath;
+    for (const char* relative_lib_dir : relative_lib_dirs) {
+        if (dirNum++ > 0)
+            librarypath += ":";
+        librarypath += executable_directory + relative_lib_dir;
+    }
+    shadsys->attribute("searchpath:library", librarypath);
+
+
+    int batch_width = -1;
+    if (shadsys->configure_batch_execution_at(16)) {
+        batch_width = 16;
+    } else if (shadsys->configure_batch_execution_at(8)) {
+        batch_width = 8;
+    } else {
+        std::cout
+            << "Error:  Hardware doesn't support 8 or 16 wide SIMD or the OSL has not been configured and built with a proper USE_BATCHED."
+            << std::endl;
+        std::cout << "Error:  e.g.:  USE_BATCHED=b8_AVX2,b8_AVX512,b16_AVX512"
+                  << std::endl;
+        return -1;
+    }
 
     // Let's create a simple deformer as a displacement shader that
     // computes P+noise(P):
@@ -257,42 +347,69 @@ main(int argc, char* argv[])
         userdata[i].amplitude = 0.0f + 1.0f * powf(i / float(npoints), 3.0f);
     }
 
-    // Shade the points:
-    for (int i = 0; i < npoints; ++i) {
-        // First, we need a ShaderGlobals struct:
-        OSL::ShaderGlobals shaderglobals;
+    auto batched_shadepoints = [&](auto integral_constant_width) -> void {
+        constexpr int WidthT = integral_constant_width();
 
-        // Set up inputs.
+        // Shade the points:
+        int outter_point_index = 0;
+        while (outter_point_index < npoints) {
+            int batchSize = std::min(WidthT, npoints - outter_point_index);
 
-        // Example of initializing a global: the position, P. It just lives
-        // as a hard-coded field in the ShaderGlobals itself.
-        shaderglobals.P = Pin[i];
+            // First, we need a ShaderGlobals struct:
+            OSL::BatchedShaderGlobals<WidthT> shaderglobals;
+            OSL::Block<int, WidthT> wide_shadeindex_block;
+
+            // Set up inputs.
+            for (int bi = 0; bi < batchSize; ++bi) {
+                int point_index = outter_point_index + bi;
+
+                wide_shadeindex_block[bi] = point_index;
+                // Example of initializing a global: the position, P. It just lives
+                // as a hard-coded field in the ShaderGlobals itself.
+                // We must populate a P for each SIMD lane using the
+                // array subscript with an index in [0-WidthT)
+                shaderglobals.varying.P[bi] = Pin[point_index];
+            }
+
 
 #if 0
-        // OBSOLETE: This is the old way.
-        // Make a userdata record. Make sure the shaderglobals points to it.
-        // MyUserData userdata;
-        shaderglobals.renderstate = &userdata[i];
+            // OBSOLETE: This is the old way.
+            // Make a userdata record. Make sure the shaderglobals points to it.
+            // MyUserData userdata;
+            shaderglobals.uniform.renderstate = &userdata[outter_point_index];
 
-        // Example of initializing a varying or interpolated parameter. We
-        // MUST have declared this as a "lockgeom=0" parameter (either in
-        // the shader source itself, or when we instanced it with the
-        // ShadingSystem::Parameter() call) or this won't work!
-        userdata[i].amplitude = 0.0f + 1.0f * powf(i / float(npoints), 3.0f);
+            // Example of initializing a varying or interpolated parameter. We
+            // MUST have declared this as a "lockgeom=0" parameter (either in
+            // the shader source itself, or when we instanced it with the
+            // ShadingSystem::Parameter() call) or this won't work!
+            for(int bi=0; bi < batchSize; ++bi) {
+                int point_index = outter_point_index + bi;
+                userdata[point_index].amplitude = 0.0f + 1.0f * powf(point_index / float(npoints), 3.0f);
+            }
 #endif
 
-        // Run the shader (will automagically optimize and JIT the first
-        // time it executes).
-        shadsys->execute(*ctx, *mygroup.get(), /*shade point index= */ i,
-                         shaderglobals,
-                         /*userdata arena start=*/&userdata,
-                         /*output arena start=*/&Pout);
+            // Run the shader (will automagically optimize and JIT the first
+            // time it executes).
+            shadsys->batched<WidthT>().execute(
+                *ctx, *mygroup.get(), batchSize, wide_shadeindex_block,
+                shaderglobals,
+                /*userdata arena start=*/&userdata,
+                /*output arena start=*/&Pout);
 
-        // OBSOLETE: This is the old way.
-        // Retrieve the result. This is fast, it's just combining the data
-        // area address known by the context with the offset-within-data
-        // that is known in that `outsym` we retrieved once for the group.
-        // Pout[i] = *(OSL::Vec3*)shadsys->symbol_address(*ctx, outsym);
+            // OBSOLETE: This is the old way.
+            // Retrieve the result. This is fast, it's just combining the data
+            // area address known by the context with the offset-within-data
+            // that is known in that `outsym` we retrieved once for the group.
+            // Pout[i] = *(OSL::Vec3*)shadsys->symbol_address(*ctx, outsym);
+
+            outter_point_index += batchSize;
+        }
+    };
+
+    if (batch_width == 16) {
+        batched_shadepoints(std::integral_constant<int, 16> {});
+    } else {
+        batched_shadepoints(std::integral_constant<int, 8> {});
     }
 
     // Print some results to prove that we generated an expected Pout.

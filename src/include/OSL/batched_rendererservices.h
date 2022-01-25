@@ -62,7 +62,9 @@ public:
     virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> wresult,
                             Wide<const TransformationPtr> wxform,
                             Wide<const float> wtime)
-        = 0;
+    {
+        return Mask(false);
+    }
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return a Mask with lanes set to true
@@ -81,7 +83,9 @@ public:
     /// is not known.
     virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> wresult,
                             ustring from, Wide<const float> wtime)
-        = 0;
+    {
+        return Mask(false);
+    }
     virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> result,
                             Wide<const ustring> wfrom, Wide<const float> wtime);
     virtual bool is_overridden_get_matrix_WmWsWf() const = 0;
@@ -108,8 +112,12 @@ public:
     /// Identify if the the named attribute from the renderer can be treated as uniform
     /// across all batches to the shader.  We assume all attributes are varying unless
     /// identified as uniform by the renderer.  NOTE:  To enable constant folding of
-    // an attribute value, it must be uniform and retrievable with a NULL BatchedShaderGlobals
-    virtual bool is_attribute_uniform(ustring object, ustring name) = 0;
+    /// an attribute value, it must be uniform and retrievable with
+    /// a NULL BatchedShaderGlobals
+    virtual bool is_attribute_uniform(ustring object, ustring name)
+    {
+        return false;
+    }
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is
@@ -118,25 +126,33 @@ public:
     /// unsuccessful, on the currently shaded "scene".
     virtual Mask get_attribute(BatchedShaderGlobals* bsg, ustring object,
                                ustring name, MaskedData wval)
-        = 0;
+    {
+        return Mask(false);
+    }
 
     /// Similar to get_attribute();  this method will fetch the 'index'
     /// element of an attribute array.
     virtual Mask get_array_attribute(BatchedShaderGlobals* bsg, ustring object,
                                      ustring name, int index, MaskedData wval)
-        = 0;
+    {
+        return Mask(false);
+    }
 
     virtual bool get_attribute_uniform(BatchedShaderGlobals* bsg,
                                        ustring object, ustring name,
                                        RefData val)
-        = 0;
+    {
+        return false;
+    }
 
     /// Similar to get_attribute();  this method will fetch the 'index'
     /// element of an attribute array.
     virtual bool get_array_attribute_uniform(BatchedShaderGlobals* bsg,
                                              ustring object, ustring name,
                                              int index, RefData val)
-        = 0;
+    {
+        return false;
+    }
 
     /// Get multiple named user-data from the current object and write them into
     /// 'val'. If derivatives is true, the derivatives should be written into val
@@ -145,7 +161,9 @@ public:
     /// found.
     virtual Mask get_userdata(ustring name, BatchedShaderGlobals* bsg,
                               MaskedData wval)
-        = 0;
+    {
+        return Mask(false);
+    }
 
     // Currently texture handles are serviced by the non-batched
     // RendererServices interface.  If necessary, customized ones could

@@ -4205,18 +4205,25 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
 {
     OSL_ASSERT(wide_index->getType() == type_wide_int());
 
-    auto scatter_using_conditional_block_per_lane = [this, wide_val, wide_index](llvm::Value * cast_ptr)->void {
+    auto scatter_using_conditional_block_per_lane = [this, wide_val, wide_index]
+                                                    (llvm::Value * cast_ptr,
+                                                     bool is_dest_wide = true)
+                                                     ->void {
         llvm::Value * linear_indices = nullptr;
-        switch(m_vector_width) {
-        case 16:
-            linear_indices = op_linearize_16x_indices(wide_index);
-            break;
-        case 8:
-            linear_indices = op_linearize_8x_indices(wide_index);
-            break;
-        default:
-            OSL_ASSERT(0 && "unsupported vector width for scatter");
-        };
+        if (is_dest_wide) {
+            switch(m_vector_width) {
+            case 16:
+                linear_indices = op_linearize_16x_indices(wide_index);
+                break;
+            case 8:
+                linear_indices = op_linearize_8x_indices(wide_index);
+                break;
+            default:
+                OSL_ASSERT(0 && "unsupported vector width for scatter");
+            };
+        } else {
+            linear_indices = wide_index;
+        }
 
         llvm::BasicBlock* test_scatter_per_lane[MaxSupportedSimdLaneCount+1];
         for(int l=0; l < m_vector_width; ++l) {
@@ -4252,7 +4259,146 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
         }
     };
 
-    if (ptr->getType() == type_wide_float_ptr()) {
+    if (ptr->getType() == type_float_ptr()) {
+        OSL_ASSERT(wide_val->getType() == type_wide_float());
+        if (m_supports_avx512f) {
+            llvm::Function* func_avx512_scatter_ps = nullptr;
+            llvm::Value *int_mask = nullptr;
+            switch(m_vector_width) {
+                case 16:
+                    int_mask = mask_as_int16(current_mask());
+                    func_avx512_scatter_ps = llvm::Intrinsic::getDeclaration (module(),
+                            llvm::Intrinsic::x86_avx512_scatter_dps_512);
+                    break;
+                case 8:
+                    int_mask = mask_as_int8(current_mask());
+                    func_avx512_scatter_ps = llvm::Intrinsic::getDeclaration (module(),
+                            llvm::Intrinsic::x86_avx512_scattersiv8_sf);
+                    break;
+                default:
+                    OSL_ASSERT(0 && "incomplete vector width for AVX512 scatter");
+            };
+            OSL_ASSERT(int_mask);
+            OSL_ASSERT(func_avx512_scatter_ps);
+
+            llvm::Value *args[] = {
+                void_ptr(ptr),
+				int_mask,
+                wide_index,
+                wide_val,
+                constant(4)
+            };
+            builder().CreateCall (func_avx512_scatter_ps, makeArrayRef(args));
+            return;
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            scatter_using_conditional_block_per_lane(ptr, /*is_dest_wide*/false);
+            return;
+        }
+    } else if (ptr->getType() == type_int_ptr()) {
+        OSL_ASSERT(wide_val->getType() == type_wide_int());
+        if (m_supports_avx512f) {
+        	llvm::Function* func_avx512_scatter_pi = nullptr;
+            llvm::Value *int_mask = nullptr;
+            switch(m_vector_width) {
+                case 16:
+                    int_mask = mask_as_int16(current_mask());
+                    func_avx512_scatter_pi = llvm::Intrinsic::getDeclaration (module(),
+                                                                              llvm::Intrinsic::x86_avx512_scatter_dpi_512);
+                    break;
+                case 8:
+                    int_mask = mask_as_int8(current_mask());
+                    func_avx512_scatter_pi = llvm::Intrinsic::getDeclaration (module(),
+                                                                              llvm::Intrinsic::x86_avx512_scattersiv8_si);
+                    break;
+                default:
+                    OSL_ASSERT(0 && "incomplete vector width for AVX512 scatter");
+			};
+            OSL_ASSERT(int_mask);
+            OSL_ASSERT(func_avx512_scatter_pi);
+            llvm::Value *args[] = {
+                void_ptr(ptr),
+                int_mask,
+                wide_index,
+                wide_val,
+                constant(4)
+            };
+            builder().CreateCall (func_avx512_scatter_pi, makeArrayRef(args));
+            return;
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            scatter_using_conditional_block_per_lane(ptr, /*is_dest_wide*/false);
+            return;
+        }
+    }  else if (ptr->getType() == type_ustring_ptr()) {
+        OSL_ASSERT(wide_val->getType() == type_wide_string());
+        if (m_supports_avx512f) {
+
+            switch(m_vector_width) {
+            case 16:
+            {
+                llvm::Value * linear_indices = wide_index;
+
+                llvm::Function* func_avx512_scatter_dpq = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scatter_dpq_512);
+                OSL_ASSERT(func_avx512_scatter_dpq);
+
+                // We can only scatter 8 at a time, so need to split the
+                // work over 2 scatters
+                llvm::Type * w8_address_int = llvm_vector_type(type_addrint(), 8);
+
+                auto w8_bit_masks = op_split_16x(current_mask());
+                auto w8_int_indices = op_split_16x(linear_indices);
+                auto w8_string_vals = op_split_16x(wide_val);
+                std::array<llvm::Value *,2> w8_address_int_val = {{
+                        builder().CreatePtrToInt(w8_string_vals[0], w8_address_int),
+                        builder().CreatePtrToInt(w8_string_vals[1], w8_address_int)
+                }};
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int8(w8_bit_masks[0]),
+                    w8_int_indices[0],
+                    w8_address_int_val[0],
+                    constant(8)
+                };
+                builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+                args[1] = mask_as_int8(w8_bit_masks[1]);
+                args[2] = w8_int_indices[1];
+                args[3] = w8_address_int_val[1];
+                builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+                return;
+            }
+            case 8:
+            {
+                llvm::Value * linear_indices = wide_index;
+
+                llvm::Function* func_avx512_scatter_dpq = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scatter_dpq_512);
+                OSL_ASSERT(func_avx512_scatter_dpq);
+
+                llvm::Type * wide_address_int_type = llvm_vector_type(type_addrint(), 8);
+                llvm::Value * address_int_val = builder().CreatePtrToInt(wide_val, wide_address_int_type);
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int8(current_mask()),
+                    linear_indices,
+                    address_int_val,
+                    constant(8)
+                };
+                builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+                return;
+            }
+            default:
+                OSL_ASSERT(0 && "incomplete vector width for AVX512 scatter");
+            }
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            scatter_using_conditional_block_per_lane(ptr, /*is_dest_wide*/false);
+            return;
+        }
+    } else if (ptr->getType() == type_wide_float_ptr()) {
         OSL_ASSERT(wide_val->getType() == type_wide_float());
         if (m_supports_avx512f) {
             switch(m_vector_width) {
@@ -4294,7 +4440,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
             llvm::Value * float_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_float_ptr());
-            scatter_using_conditional_block_per_lane(float_ptr);
+            scatter_using_conditional_block_per_lane(float_ptr, /*is_dest_wide*/true);
             return;
         }
     }
@@ -4340,7 +4486,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
             llvm::Value * int_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_int_ptr());
-            scatter_using_conditional_block_per_lane(int_ptr);
+            scatter_using_conditional_block_per_lane(int_ptr, /*is_dest_wide*/true);
             return;
         }
     } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
@@ -4409,7 +4555,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
             llvm::Value * ustring_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_ustring_ptr());
-            scatter_using_conditional_block_per_lane(ustring_ptr);
+            scatter_using_conditional_block_per_lane(ustring_ptr, /*is_dest_wide*/true);
             return;
         }
     }

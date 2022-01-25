@@ -106,9 +106,9 @@ typedef void (*RunLLVMGroupFunc)(void* shaderglobals,
 #if OSL_USE_BATCHED
 typedef void (*RunLLVMGroupFuncWide)(void* batchedshaderglobals,
                                      void* heap_arena_ptr,
-                                     // void* userdata_base_pointer,
-                                     // void* output_base_pointer,
-                                     // wide int shadeindex
+                                     const void* wide_shade_index,
+                                     void* userdata_base_pointer,
+                                     void* output_base_pointer,
                                      int run_mask_value);
 #endif
 
@@ -1792,15 +1792,27 @@ public:
 
         /// Bind a shader group and batched of globals to this context and prepare to
         /// execute. (See similarly named method of ShadingSystem.)
-        bool execute_init (ShaderGroup &group, int batch_size, BatchedShaderGlobals<WidthT> &bsg, bool run=true);
+        bool execute_init (ShaderGroup &group, int batch_size,
+                           Wide<const int, WidthT> wide_shadeindex,
+                           BatchedShaderGlobals<WidthT> &bsg,
+                           void* userdata_base_ptr, void* output_base_ptr,
+                           bool run=true);
 
         /// Execute the layer whose index is specified. (See similarly named
         /// method of ShadingSystem.)
-        bool execute_layer (int batch_size, BatchedShaderGlobals<WidthT> &bsg, int layer);
+        bool execute_layer (int batch_size,
+                            Wide<const int, WidthT> wide_shadeindex,
+                            BatchedShaderGlobals<WidthT> &bsg,
+                            void* userdata_base_ptr, void* output_base_ptr,
+                            int layer);
 
         /// Execute the shader group, including init, run of single entry point
         /// layer, and cleanup. (See similarly named method of ShadingSystem.)
-        bool execute(ShaderGroup &group, int batch_size, BatchedShaderGlobals<WidthT> &bsg, bool run=true);
+        bool execute (ShaderGroup &group, int batch_size,
+                      Wide<const int, WidthT> wide_shadeindex,
+                      BatchedShaderGlobals<WidthT> &bsg,
+                      void* userdata_base_ptr, void* output_base_ptr,
+                      bool run=true);
 
         template<typename ...ArgListT>
         inline

@@ -14,6 +14,7 @@
 #include "backendllvm.h"
 #if OSL_USE_BATCHED
 #include "batched_backendllvm.h"
+#include <OSL/wide.h>
 #endif
 #include <OSL/oslquery.h>
 
@@ -314,47 +315,92 @@ ShadingSystem::execute_layer(ShadingContext& ctx, int index,
 #if OSL_USE_BATCHED
 template<int WidthT>
 bool
-ShadingSystem::BatchedExecutor<WidthT>::execute (ShadingContext &ctx, ShaderGroup &group,
-        int batch_size, BatchedShaderGlobals<WidthT> &globals_batch, bool run)
+ShadingSystem::BatchedExecutor<WidthT>::execute (ShadingContext &ctx,
+                                                 ShaderGroup &group,
+                                                 int batch_size,
+                                                 Wide<const int, WidthT> wide_shadeindex,
+                                                 BatchedShaderGlobals<WidthT> &globals_batch,
+                                                 void* userdata_base_ptr,
+                                                 void* output_base_ptr,
+                                                 bool run)
 {
-    return ctx.batched<WidthT>().execute(group, batch_size, globals_batch, run);
+    return ctx.batched<WidthT>().execute(group, batch_size, wide_shadeindex,
+                                         globals_batch, userdata_base_ptr,
+                                         output_base_ptr, run);
 }
 
 template<int WidthT>
 bool
-ShadingSystem::BatchedExecutor<WidthT>::execute_init (ShadingContext &ctx, ShaderGroup &group,
-        int batch_size, BatchedShaderGlobals<WidthT> &globals_batch, bool run)
+ShadingSystem::BatchedExecutor<WidthT>::execute_init (ShadingContext &ctx,
+                                                      ShaderGroup &group,
+                                                      int batch_size,
+                                                      Wide<const int, WidthT> wide_shadeindex,
+                                                      BatchedShaderGlobals<WidthT> &globals_batch,
+                                                      void* userdata_base_ptr,
+                                                      void* output_base_ptr,
+                                                      bool run)
 {
-    return ctx.batched<WidthT>().execute_init (group, batch_size, globals_batch, run);
+    return ctx.batched<WidthT>().execute_init (group, batch_size,
+                                               wide_shadeindex, globals_batch,
+                                               userdata_base_ptr,
+                                               output_base_ptr, run);
 }
 
 
 template<int WidthT>
 bool
-ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
-                              int layernumber)
+ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx,
+                                                       int batch_size,
+                                                       Wide<const int, WidthT> wide_shadeindex,
+                                                       BatchedShaderGlobals<WidthT> &globals_batch,
+                                                       void* userdata_base_ptr,
+                                                       void* output_base_ptr,
+                                                       int layernumber)
 {
-    return ctx.batched<WidthT>().execute_layer (batch_size, globals_batch, layernumber);
+    return ctx.batched<WidthT>().execute_layer (batch_size, wide_shadeindex,
+                                                globals_batch,
+                                                userdata_base_ptr,
+                                                output_base_ptr, layernumber);
 }
 
 template<int WidthT>
 bool
-ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
-                              ustring layername)
+ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx,
+                                                       int batch_size,
+                                                       Wide<const int, WidthT> wide_shadeindex,
+                                                       BatchedShaderGlobals<WidthT> &globals_batch,
+                                                       void* userdata_base_ptr,
+                                                       void* output_base_ptr,
+                                                       ustring layername)
 {
     int layernumber = m_shading_system.find_layer (*ctx.group(), layername);
-    return layernumber >= 0 ? ctx.batched<WidthT>().execute_layer (batch_size, globals_batch, layernumber) : false;
+    return (layernumber >= 0)
+        ? ctx.batched<WidthT>().execute_layer (batch_size, wide_shadeindex,
+                                               globals_batch,
+                                               userdata_base_ptr,
+                                               output_base_ptr, layernumber)
+        : false;
 }
 
 template<int WidthT>
 bool
-ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx, int batch_size, BatchedShaderGlobals<WidthT> &globals_batch,
-                              const ShaderSymbol *symbol)
+ShadingSystem::BatchedExecutor<WidthT>::execute_layer (ShadingContext &ctx,
+                                                       int batch_size,
+                                                       Wide<const int, WidthT> wide_shadeindex,
+                                                       BatchedShaderGlobals<WidthT> &globals_batch,
+                                                       void* userdata_base_ptr,
+                                                       void* output_base_ptr,
+                                                       const ShaderSymbol *symbol)
 {
     OSL_ASSERT (symbol);
     const Symbol *sym = reinterpret_cast<const Symbol *>(symbol);
     int layernumber = sym->layer();
-    return layernumber >= 0 ? ctx.batched<WidthT>().execute_layer (batch_size, globals_batch, layernumber) : false;
+    return (layernumber >= 0)
+        ? ctx.batched<WidthT>().execute_layer (batch_size, wide_shadeindex,
+                                               globals_batch,
+                                               userdata_base_ptr,
+                                               output_base_ptr, layernumber)
+        : false;
 }
 #endif
 

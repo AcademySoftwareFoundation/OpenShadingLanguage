@@ -50,6 +50,7 @@ set ( liboslexec_target_srcs
     wide/wide_opnoise_usimplex_deriv_Vec3
     wide/wide_opspline
     wide/wide_opstring
+    wide/wide_optest_float
     wide/wide_optexture
     wide/wide_optranscendental
     wide/wide_optrigonometric
@@ -554,7 +555,7 @@ target_link_libraries (${local_lib}
     )
 
 target_compile_features (${local_lib}
-                         PUBLIC cxx_std_${CMAKE_CXX_STANDARD})
+                         INTERFACE cxx_std_${DOWNSTREAM_CXX_STANDARD})
 
 set_target_properties (${local_lib}
         PROPERTIES

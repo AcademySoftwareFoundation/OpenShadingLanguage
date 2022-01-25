@@ -1,0 +1,66 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test_ieee_fp_log2(output color Cout = 0)
+{
+    //float u_float = raytype("camera");
+    float v_float = u;
+    float v_float2 = v;
+    color v_color = color(1 + (3*0.3*v_float), 1 + (3*0.5*v_float), 1 + (3*0.75*v_float));
+
+    if ((v_float2 > 0.3) && (v_float2 < 0.4)) {
+        // Ensure we exercise divide by 0,
+        // which should result in a 0 result instead of INF
+        v_float2 = -0;
+        v_color[2] = v_float2;
+    }
+    if ((v_float2 > 0.4) && (v_float2 < 0.5)) {
+        // Ensure we exercise divide by 0,
+        // which should result in a 0 result instead of INF
+        v_float2 = -10;
+        v_color[1] = v_float2;
+    }
+    if ((v_float2 >= 0.8) && (v_float2 < 0.9)) {
+        // Ensure we exercise divide by -0,
+        // which should result in a 0 result instead of NAN
+        v_float2 = -1e37;
+        v_color[0] = v_float2;
+    }
+
+    Cout = log2(v_float2);
+    if (int(P[0]*64)%2==0) {
+        Cout = log2(v_color);
+    }
+
+    if (u > 0.75) {
+        // Purposefully create overflow in multiplication 
+        Cout += 1.0e37;
+        Cout *= 1.0e37;
+    }
+    
+    if (isnan(Cout[0]) || isnan(Cout[1]) || isnan(Cout[2])) {
+        printf("NAN!\n");
+        Cout = color(0.0,1.0,0.0);
+    }
+
+
+    if (u < 0.85) {
+        if (!isfinite(Cout[0]) || !isfinite(Cout[1]) || !isfinite(Cout[2])) {
+            Cout = color(1.0,0.5,0.25);
+        }
+    }
+
+    if ((v_float2 > 0.45) && (v_float2 < 0.55)) {
+        if ((Cout[0] > 1.0) || (Cout[1] > 1.0) || (Cout[2] > 1.0)) {
+            Cout = color(0.0,0.0,1.0);
+        }
+    }
+
+    if (u >= 0.85) {
+        if (isinf(Cout[0]) || isinf(Cout[1]) || isinf(Cout[2])) {
+            Cout = color(1.0,0.0,1.0);
+        }
+    }
+}

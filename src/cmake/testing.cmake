@@ -208,7 +208,7 @@ macro (osl_add_all_tests)
                 getsymbol-nonheap gettextureinfo gettextureinfo-reg
                 group-outputs groupstring
                 hash hashnoise hex hyperb
-                ieee_fp if if-reg incdec initlist initops intbits isconnected
+                ieee_fp ieee_fp-reg if if-reg incdec initlist initops intbits isconnected
                 isconstant
                 layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
                 layers-nonlazycopy layers-repeatedoutputs

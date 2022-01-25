@@ -564,8 +564,31 @@ OSL_SHADEOP int osl_safe_mod_iii (int a, int b) {
 MAKE_BINARY_PERCOMPONENT_OP (fmod, safe_fmod, safe_fmod);
 MAKE_BINARY_PERCOMPONENT_VF_OP (fmod, safe_fmod, safe_fmod)
 
+static OSL_HOSTDEVICE OSL_FORCEINLINE float safe_div (float a, float b) {
+#if 0
+    // Checking for b for 0.0f can avoid generating a NaN when a == 0.0f
+    // or an INF when a != 0.0f
+    // return (b != 0.0f) ? (a / b) : 0.0f;
+#else
+    // Checking for b == 0.0f is not good enough to avoid
+    // +INF or -INF that can be produced
+    // by small near 0 values like b == 1.0e-40;
+    // Assuming floating point mode is not SIGNALING when INF is created that
+    // value will then percolate forward.
+
+    // Better would be to ensure FTZ (Flush To Zero) mode is enabled
+    // which should just flush NAN/INF to 0.0f all by itself in hardware.
+    // In lieu of FTZ being enabled, we can just check the result of the divide
+    // to see if is finite and return 0.0f when it is not.
+    // Typical implementation isfinite is (fabs(v) != INF), so not too expensive.
+    float q = a/b;
+    return OIIO::isfinite(q) ? q : 0.0f;
+    // TODO: add a FTZ mode and only add checking the result when FTZ is disabled
+#endif
+}
+
 OSL_SHADEOP float osl_safe_div_fff (float a, float b) {
-    return (b != 0.0f) ? (a / b) : 0.0f;
+    return safe_div(a, b);
 }
 
 OSL_SHADEOP int osl_safe_div_iii (int a, int b) {

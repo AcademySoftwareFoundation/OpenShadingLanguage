@@ -649,6 +649,10 @@ ASTvariable_ref::ASTvariable_ref(OSLCompilerImpl* comp, ustring name)
         errorf("function '%s' can't be used as a variable", name);
         return;
     }
+    if (m_sym->symtype() == SymTypeType) {
+        errorf("type name '%s' can't be used as a variable", name);
+        return;
+    }
     m_typespec = m_sym->typespec();
 }
 

@@ -15,7 +15,7 @@ test (
     output testStruct out = input
 )
 {
-    printf("testStruct: %g\n", testStruct.c);
-    printf("testStruct: %g\n", testStruct);
-    printf("testStruct: %d\n", testStruct);
+    printf("testStruct: %g\n", input.c);
+    printf("testStruct: %g\n", input);
+    printf("testStruct: %d\n", input);
 }

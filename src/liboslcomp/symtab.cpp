@@ -43,9 +43,9 @@ Symbol::unmangled() const
 const char*
 Symbol::symtype_shortname(SymType s)
 {
-    OSL_DASSERT((int)s >= 0 && (int)s < (int)SymTypeType);
+    OSL_DASSERT((int)s >= 0 && (int)s < (int)SymTypeLast);
     static const char* names[] = { "param",  "oparam", "local", "temp",
-                                   "global", "const",  "func" };
+                                   "global", "const",  "func",  "typename" };
     return names[(int)s];
 }
 

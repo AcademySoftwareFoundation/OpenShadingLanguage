@@ -51,7 +51,8 @@ enum SymType {
     SymTypeGlobal,
     SymTypeConst,
     SymTypeFunction,
-    SymTypeType
+    SymTypeType,
+    SymTypeLast
 };
 
 

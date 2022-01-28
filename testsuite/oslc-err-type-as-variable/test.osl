@@ -1,0 +1,18 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+struct Data {
+    float height;
+};
+
+Data foo(Data a, float b)
+{
+    return Data;   // Error: type name 'Data' can't be used as a variable
+}
+
+shader test ()
+{
+    Data d;
+    d = foo(d, 1.0);
+}

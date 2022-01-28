@@ -61,7 +61,8 @@ public:
         attribute (name, TypeDesc::FLOAT, &value);
     }
     void attribute (string_view name, string_view value) {
-        const char *s = value.c_str();
+        std::string valstr(value);
+        const char *s = valstr.c_str();
         attribute (name, TypeDesc::STRING, &s);
     }
     OIIO::ParamValue * find_attribute (string_view name,

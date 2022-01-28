@@ -497,7 +497,7 @@ add_param (ParamValueList& params, string_view command,
     }
 
     // All remaining cases -- it's a string
-    const char *s = stringval.c_str();
+    const char *s = ustring(stringval).c_str();
     params.emplace_back (paramname, TypeDesc::TypeString, 1, &s);
     if (unlockgeom)
         params.back().interp (ParamValue::INTERP_VERTEX);

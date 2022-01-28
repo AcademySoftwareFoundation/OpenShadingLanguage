@@ -3912,7 +3912,7 @@ ClosureRegistry::register_closure (string_view name, int id,
              * because we will be allocating the real struct inside it. */
             OSL_ASSERT_MSG(params[i].field_size <= int(alignof(ClosureComponent)),
                 "Closure %s wants alignment of %d which is larger than that of ClosureComponent",
-                name.c_str(),
+                name.str().c_str(),
                 params[i].field_size);
             break;
         }

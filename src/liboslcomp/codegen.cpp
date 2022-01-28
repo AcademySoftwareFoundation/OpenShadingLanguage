@@ -695,12 +695,12 @@ ASTNode::one_default_literal(const Symbol* sym, ASTNode* init, std::string& out,
             float f = lit->intval();
             for (int c = 0; c < 16; ++c)
                 out += Strutil::sprintf("%.9g%s", (c / 4) == (c % 4) ? f : 0.0f,
-                                        c < 15 ? sep.c_str() : "");
+                                        c < 15 ? sep : "");
         } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
             for (int c = 0; c < 16; ++c)
                 out += Strutil::sprintf("%.9g%s", (c / 4) == (c % 4) ? f : 0.0f,
-                                        c < 15 ? sep.c_str() : "");
+                                        c < 15 ? sep : "");
         } else if (init && init->typespec() == type
                    && init->nodetype() == ASTNode::type_constructor_node) {
             ASTtype_constructor* ctr = (ASTtype_constructor*)init;
@@ -730,15 +730,14 @@ ASTNode::one_default_literal(const Symbol* sym, ASTNode* init, std::string& out,
                 for (int c = 0; c < 16; ++c)
                     out += Strutil::sprintf("%.9g%s",
                                             (c / 4) == (c % 4) ? f[0] : 0.0f,
-                                            c < 15 ? sep.c_str() : "");
+                                            c < 15 ? sep : "");
             } else {
                 for (int c = 0; c < 16; ++c)
-                    out += Strutil::sprintf("%.9g%s", f[c],
-                                            c < 15 ? sep.c_str() : "");
+                    out += Strutil::sprintf("%.9g%s", f[c], c < 15 ? sep : "");
             }
         } else {
             for (int c = 0; c < 16; ++c)
-                out += Strutil::sprintf("0%s", c < 15 ? sep.c_str() : "");
+                out += Strutil::sprintf("0%s", c < 15 ? sep : "");
             completed = false;
         }
     } else if (type.is_string()) {

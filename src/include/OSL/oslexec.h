@@ -254,7 +254,8 @@ public:
         return attribute (name, TypeDesc::FLOAT, &f);
     }
     bool attribute (string_view name, string_view val) {
-        const char *s = val.c_str();
+        std::string valstr(val);
+        const char *s = valstr.c_str();
         return attribute (name, TypeDesc::STRING, &s);
     }
 
@@ -284,7 +285,8 @@ public:
         return attribute (group, name, TypeDesc::FLOAT, &f);
     }
     bool attribute (ShaderGroup *group, string_view name, string_view val) {
-        const char *s = val.c_str();
+        std::string valstr(val);
+        const char *s = valstr.c_str();
         return attribute (group, name, TypeDesc::STRING, &s);
     }
 

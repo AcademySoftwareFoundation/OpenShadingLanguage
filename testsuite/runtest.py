@@ -22,7 +22,7 @@ from optparse import OptionParser
 def make_relpath (path, start=os.curdir):
     "Wrapper around os.path.relpath which always uses '/' as the separator."
     p = os.path.relpath (path, start)
-    return p if sys.platform != "win32" else p.replace ('\\', '/')
+    return p if sys.platform != "Windows" else p.replace ('\\', '/')
 
 
 #
@@ -84,7 +84,7 @@ failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
-idiff_program = "idiff"
+idiff_program = "oiiotool"
 idiff_postfilecmd = ""
 
 filter_re = None

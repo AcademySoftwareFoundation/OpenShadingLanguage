@@ -19,9 +19,7 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
     #ls /etc/yum.repos.d
 
     sudo yum install -y giflib giflib-devel && true
-    sudo yum install -y opencv opencv-devel && true
-    sudo yum install -y Field3D Field3D-devel && true
-    sudo yum install -y ffmpeg ffmpeg-devel && true
+    # sudo yum install -y ffmpeg ffmpeg-devel && true
 
     if [[ "${CONAN_LLVM_VERSION}" != "" ]] ; then
         mkdir conan
@@ -41,6 +39,14 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
         export LLVM_ROOT=$PWD
         popd
     fi
+
+    if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" ]] ; then
+        sudo cp src/build-scripts/oneAPI.repo /etc/yum.repos.d
+        sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+        set +e; source /opt/intel/oneapi/setvars.sh; set -e
+        icpc --version
+    fi
+
 else
     # Using native Ubuntu runner
 
@@ -72,6 +78,16 @@ else
         time sudo apt-get install -y g++-10
     elif [[ "$CXX" == "g++-11" ]] ; then
         time sudo apt-get install -y g++-11
+    fi
+
+    if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" ]] ; then
+        wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+        echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+        time sudo apt-get update
+        time sudo apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+        set +e; source /opt/intel/oneapi/setvars.sh; set -e
+        icpc --version
     fi
 
     # Nonstandard python versions
@@ -118,8 +134,6 @@ fi
 # fi
 
 if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
-    # Temporary (?) fix: GH ninja having problems, fall back to make
-    CMAKE_GENERATOR="Unix Makefiles" \
     source src/build-scripts/build_opencolorio.bash
 fi
 

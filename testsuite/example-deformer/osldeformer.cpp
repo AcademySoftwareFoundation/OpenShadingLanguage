@@ -297,8 +297,9 @@ main(int argc, char* argv[])
 
     // Print some results to prove that we generated an expected Pout.
     for (int i = 0; i < npoints; ++i) {
-        OIIO::Strutil::print("{:2}: Undeformed P = {}  -->  Deformed {}\n", i,
-                             Pin[i], Pout[i]);
+        OIIO::Strutil::print(
+            "{:2}: Undeformed P = {}  -->  Deformed ({:0.5g} {:0.5g} {:0.5g})\n",
+            i, Pin[i], Pout[i][0], Pout[i][1], Pout[i][2]);
     }
 
     // All done. Release the contexts and threadinfo for each thread:

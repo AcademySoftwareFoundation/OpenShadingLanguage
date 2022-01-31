@@ -26,6 +26,18 @@
 /////////////////////////////////////////////////////////////////////////
 // Detect which compiler and version we're using
 
+// Notes:
+//   __GNUC__ is defined for gcc and all clang varieties
+//   __clang__ is defined for all clang varieties (generic and Apple)
+//   __apple_build_version__ is only defined for Apple clang
+//   __INTEL_COMPILER is defined only for icc
+//   _MSC_VER is defined for MSVS compiler (not gcc/clang/icc even on Windows)
+//   _WIN32 is defined on Windows regardless of compiler
+//   __CUDACC__   is defined any time we are compiling a module for Cuda
+//                (both for the host pass and the device pass). "Do this
+//                when using nvcc or clang with ptx target."
+//   __CUDA_ARCH__  is only defined when doing the device pass. "Do this only
+//                for code that will actually run on the GPU."
 
 // Define OSL_GNUC_VERSION to hold an encoded gcc version (e.g. 40802 for
 // 4.8.2), or 0 if not a GCC release. N.B.: This will be 0 for clang.
@@ -89,14 +101,6 @@
 #  define OSL_MSVS_BEFORE_2017   0
 #endif
 
-
-// Note about __CUDACC__ versus __CUDA_ARCH__:
-//
-// __CUDACC__     defined any time we are compiling a module for Cuda
-//                (both for the host pass and the device pass). "Do this
-//                when using nvcc or clang with ptx target."
-// __CUDA_ARCH__  is only defined when doing the device pass. "Do this only
-//                for code that will actually run on the GPU."
 
 
 /////////////////////////////////////////////////////////////////////////

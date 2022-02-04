@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <OSL/oslconfig.h>
+
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>

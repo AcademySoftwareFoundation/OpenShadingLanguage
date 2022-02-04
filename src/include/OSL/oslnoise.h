@@ -9,6 +9,8 @@
 #include <limits>
 #include <type_traits>
 
+#include <OSL/oslconfig.h>
+
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <OSL/platform.h>
 #include <OSL/export.h>
 #include <OSL/oslversion.h>
+#include <OSL/platform.h>
 
 
 // All the things we need from Imath.
@@ -25,6 +25,12 @@
 #   include <OSL/Imathx/ImathColor.h>
 #   include <OSL/matrix22.h>
 #endif
+
+// We included the Imath files we needed, so set the OIIO_IMATH_H_INCLUDED
+// symbol to prevent OpenImageIO/Imath.h from including them again (or
+// before), which is critical if they turn out to be different versions.
+#define OIIO_IMATH_H_INCLUDED 1
+
 
 // The fmt library causes trouble for Cuda. Work around by disabling it from
 // oiio headers (OIIO <= 2.1) or telling fmt not to use the troublesome

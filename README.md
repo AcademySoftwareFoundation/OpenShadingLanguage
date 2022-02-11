@@ -466,8 +466,9 @@ The current project leadership is documented in the
 Many people have contributed features, bug fixes, and other changes to OSL
 over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
 Bidgolirad, Nicholas Bishop, Solomon Boulos, Stefan Bruens, Stefan Büttner,
-Matthaus G. Chajdas, Clark Chen, Alejandro Conty, Thomas Dinges, Mads
-Drøschler, Luke Emrose, Louis Feng, Mark Final, Henri Fousse, Syoyo Fujita,
+Matthaus G. Chajdas, Clark Chen, Alejandro Conty,
+Dieter De Baets, Thomas Dinges, Mads Drøschler,
+Luke Emrose, Louis Feng, Mark Final, Henri Fousse, Syoyo Fujita,
 Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase, Sven-Hendrik
 Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Thiago Ize, Matt
 Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Adam Martinez,

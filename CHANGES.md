@@ -24,6 +24,8 @@ OSL Language and oslc compiler:
   that will be used for particular (s,t) texture coordinates. #1398 (1.12.3)
 * Better error detection when OSL user functions write to function parameters
   that are not marked as output. #1417 (1.12.3)
+* Detect and better error message when using a type name where a variable
+  identifier should be. #1457 (1.12.4.2)
 
 OSL Standard library:
 * vector2.h is updated with a mod() function for vector2. #1312 (1.12.1/1.11.12)
@@ -69,6 +71,9 @@ Continued work on experimental SIMD batched shading mode:
 * Batched spline and spline inverse. #1422 (1.12.3)
 * Batched texture, gettextureinfo, texture3d, environment. #1436 (1.12.3)
 * Batched dictionary functionality (dict_find, etc.) #1445 (1.12.3)
+* Enable batched execution of most testsuite. #1453 (1.12.4.1)
+* Batched isnan, isinf, isfinite. #1456 (1.12.4.2)
+* Batched userdata and output placement. #1455 (1.12.4.2)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -121,6 +126,8 @@ Bug fixes and other improvements (internals):
   the Symbol class having no virtual destructor. #1397 (1.12.3)
 * Fix in runtime optimizer where tracking of messages and unknown messages
   relied on uninitialized variables. #1447 (1.11.17/1.12.3)
+* Stop internally using OIIO::string_view::c_str(), which will someday be
+  removed. #1458 (1.12.4.2)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -167,6 +174,11 @@ Build & test system improvements:
       CMake 21 conventions. #1443 (1.12.3)
     - New TIME_COMMANDS option, when enabled, can help debug performance of
       the build. #1443 (1.12.3)
+    - New CMake variable `DOWNSTREAM_CXX_STANDARD` sets the downstream
+      minimum C++ requirement, separately from `CMAKE_CXX_STANDARD` which sets
+      what we build OSL itself with. Clarify that currently, OSL can be used
+      downstream by C++14, even if it is built with C++17 or higher. #1454
+      (1.12.4.1)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
@@ -185,6 +197,10 @@ Build & test system improvements:
     - No longer use boost regex, completely rely on std::regex now that OSL
       is C++14 minimum. #1377. (1.12.2)
     - Support for OpenImageIO 2.3 changes. #1393 (1.12.3)
+    - Some rearrangement of `#include` and other trickery ensures that OSL
+      always includes headers from its favored version of Imath, rather than
+      the ones that OIIO prefers (in cases where OIIO and OSL were each based
+      on different Imath versions). #1460 (1.12.4.2)
 * Testing and Continuous integration (CI) systems:
     - Eliminate the old Travis CI and Appveyor. #1334 #1338 (1.12.1)
     - Use ccache + GitHub 'cache' action to greatly speed up CI runs. #1335

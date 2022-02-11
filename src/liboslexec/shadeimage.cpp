@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+#include <OSL/oslconfig.h>
+
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo_util.h>

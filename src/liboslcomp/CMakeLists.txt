@@ -45,6 +45,12 @@ if (MSVC)
     target_link_libraries (${local_lib} PRIVATE "Version.lib")
 endif()
 
+set (link_flags "${VISIBILITY_MAP_COMMAND} ${EXTRA_DSO_LINK_ARGS}")
+if (UNIX AND NOT APPLE)
+    # Hide symbols from any static dependent libraries embedded here.
+    set (link_flags "${link_flags} -Wl,--exclude-libs,ALL")
+endif ()
+
 target_compile_features (${local_lib}
                          INTERFACE cxx_std_${DOWNSTREAM_CXX_STANDARD})
 
@@ -53,14 +59,9 @@ set_target_properties (${local_lib}
         VERSION     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
         SOVERSION   ${SOVERSION}
         OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
+        LINK_FLAGS  ${link_flags}
         POSITION_INDEPENDENT_CODE ON
     )
-
-
-if (VISIBILITY_MAP_COMMAND)
-    set_property (TARGET ${local_lib}
-                  APPEND PROPERTY LINK_FLAGS ${VISIBILITY_MAP_COMMAND})
-endif ()
 
 install_targets (${local_lib})
 

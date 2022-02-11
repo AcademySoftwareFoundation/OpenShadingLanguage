@@ -116,7 +116,7 @@ set (CXX_VISIBILITY_PRESET "hidden" CACHE STRING "Symbol visibility (hidden or d
 option (VISIBILITY_INLINES_HIDDEN "Hide symbol visibility of inline functions" ON)
 set (VISIBILITY_MAP_FILE "${PROJECT_SOURCE_DIR}/src/build-scripts/hidesymbols.map" CACHE FILEPATH "Visibility map file")
 set (C_VISIBILITY_PRESET ${CXX_VISIBILITY_PRESET})
-if (${CXX_VISIBILITY_PRESET} STREQUAL "hidden" AND
+if (${CXX_VISIBILITY_PRESET} STREQUAL "hidden" AND VISIBILITY_MAP_FILE AND
     (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG) AND
     (CMAKE_SYSTEM_NAME MATCHES "Linux|kFreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "GNU"))
     # Linux/FreeBSD/Hurd: also hide all the symbols of dependent libraries
@@ -150,7 +150,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
         add_compile_options ("-Wno-unused-local-typedefs")
     endif ()
     if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 3.9)
-        # Don't warn about using unknown preprocessor symbols in #if'set
+        # Don't warn about using unknown preprocessor symbols in `#if`
         add_compile_options ("-Wno-expansion-to-defined")
     endif ()
     # disable warning in flex-generated code
@@ -197,11 +197,16 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD"
 endif ()
 
 
+# Remember the -std flags we need will be used later for custom Cuda builds
 set (CSTD_FLAGS "")
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_INTEL)
     set (CSTD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
 endif ()
 
+
+
+# We wil use this for ccache and timing
+set (MY_RULE_LAUNCH "")
 
 
 ###########################################################################

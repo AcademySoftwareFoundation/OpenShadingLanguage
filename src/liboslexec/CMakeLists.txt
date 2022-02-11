@@ -557,17 +557,19 @@ target_link_libraries (${local_lib}
 target_compile_features (${local_lib}
                          INTERFACE cxx_std_${DOWNSTREAM_CXX_STANDARD})
 
+set (link_flags "${VISIBILITY_MAP_COMMAND} ${EXTRA_DSO_LINK_ARGS}")
+if (UNIX AND NOT APPLE)
+    # Hide symbols from any static dependent libraries embedded here.
+    set (link_flags "${link_flags} -Wl,--exclude-libs,ALL")
+endif ()
+
 set_target_properties (${local_lib}
         PROPERTIES
         VERSION     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
-        SOVERSION ${SOVERSION}
+        SOVERSION   ${SOVERSION}
         OUTPUT_NAME ${local_lib}${OSL_LIBNAME_SUFFIX}
+        LINK_FLAGS  ${link_flags}
     )
-
-if (VISIBILITY_MAP_COMMAND)
-    set_property (TARGET ${local_lib}
-                  APPEND PROPERTY LINK_FLAGS ${VISIBILITY_MAP_COMMAND})
-endif ()
 
 # add_dependencies (${local_lib} "${CMAKE_SOURCE_DIR}/src/build-scripts/hidesymbols.map")
 

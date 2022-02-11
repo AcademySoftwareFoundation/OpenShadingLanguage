@@ -13,6 +13,7 @@ import subprocess
 import difflib
 import filecmp
 import shutil
+import re
 from itertools import chain
 
 from optparse import OptionParser
@@ -81,6 +82,7 @@ failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
+filter_re = None
 cleanup_on_success = False
 if int(os.getenv('TESTSUITE_CLEANUP_ON_SUCCESS', '0')) :
     cleanup_on_success = True;
@@ -130,13 +132,18 @@ if os.getenv("PYTHON_VERSION") :
 # a non-zero value and writes the differences to "diff_file".
 # Based on the command-line interface to difflib example from the Python
 # documentation
-def text_diff (fromfile, tofile, diff_file=None):
+def text_diff (fromfile, tofile, diff_file=None, filter_re=None):
     import time
     try:
         fromdate = time.ctime (os.stat (fromfile).st_mtime)
         todate = time.ctime (os.stat (tofile).st_mtime)
-        fromlines = open (fromfile, 'r').readlines()
-        tolines   = open (tofile, 'r').readlines()
+        if filter_re:
+          filt = re.compile(filter_re)
+          fromlines = [l for l in open (fromfile, 'r').readlines() if filt.match(l) is not None]
+          tolines   = [l for l in open (tofile, 'r').readlines() if filt.match(l) is not None]
+        else:         
+          fromlines = open (fromfile, 'r').readlines()
+          tolines   = open (tofile, 'r').readlines()
     except:
         print ("Unexpected error:", sys.exc_info()[0])
         return -1
@@ -261,7 +268,7 @@ def testoptix (args) :
 # in 'ref/'.  If all outputs match their reference copies, return 0
 # to pass.  If any outputs do not match their references return 1 to
 # fail.
-def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regression=None) :
+def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regression=None, filter_re=None) :
 #    print ("working dir = " + tmpdir)
     os.chdir (srcdir)
     open ("out.txt", "w").close()    # truncate out.txt
@@ -323,7 +330,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
                     # print ("cmpcommand = ", cmpcommand)
                     cmpresult = os.system (cmpcommand)
                 elif extension == ".txt" :
-                    cmpresult = text_diff (out, testfile, out + ".diff")
+                    cmpresult = text_diff (out, testfile, out + ".diff", filter_re=filter_re)
                 else :
                     # anything else
                     cmpresult = 0 if filecmp.cmp (out, testfile) else 1
@@ -374,6 +381,7 @@ with open(os.path.join(test_source_dir,"run.py")) as f:
 # if os.path.exists("run.py") :
 #     execfile ("run.py")
 
+
 # Allow a little more slop for slight pixel differences when in DEBUG mode.
 if "DEBUG" in os.environ and os.environ["DEBUG"] :
     failthresh *= 2.0
@@ -408,14 +416,14 @@ if (os.path.exists("ref/out.tif") and ("out.tif" not in outputs)) :
 if OSL_REGRESSION_TEST != None :
     # need to produce baseline images
     ret = runtest (command, outputs, failureok=failureok,
-                   failthresh=failthresh, failpercent=failpercent, regression="BASELINE")
+                   failthresh=failthresh, failpercent=failpercent, regression="BASELINE", filter_re=filter_re)
     if ret == 0 :
         # run again comparing against baseline, not ref
         ret = runtest (command, outputs, failureok=failureok,
-                       failthresh=failthresh, failpercent=failpercent, regression=OSL_REGRESSION_TEST)
+                       failthresh=failthresh, failpercent=failpercent, regression=OSL_REGRESSION_TEST, filter_re=filter_re)
 else :                   
     ret = runtest (command, outputs, failureok=failureok,
-                   failthresh=failthresh, failpercent=failpercent)
+                   failthresh=failthresh, failpercent=failpercent, filter_re=filter_re)
     
 if ret == 0 and cleanup_on_success :
     for ext in image_extensions + [ ".txt", ".diff" ] :

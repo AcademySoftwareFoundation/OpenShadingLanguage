@@ -209,6 +209,7 @@ macro (osl_add_all_tests)
                 function-overloads function-redef
                 geomath getattribute-camera getattribute-shader
                 getsymbol-nonheap gettextureinfo gettextureinfo-reg
+                globals-needed
                 group-outputs groupstring
                 hash hashnoise hex hyperb
                 ieee_fp ieee_fp-reg if if-reg incdec initlist initops intbits isconnected

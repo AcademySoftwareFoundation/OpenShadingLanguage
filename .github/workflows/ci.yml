@@ -551,7 +551,7 @@ jobs:
       LLVM_VERSION: 13.0.0
       LLVM_DISTRO_NAME: ubuntu-20.04
       USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: master
+      OPENEXR_VERSION: main
       OPENIMAGEIO_VERSION: master
       OPENCOLORIO_VERSION: main
       PUGIXML_VERSION: master

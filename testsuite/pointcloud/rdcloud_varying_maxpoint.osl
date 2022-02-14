@@ -1,0 +1,31 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader rdcloud_varying_maxpoint (float radius = 0.1,
+                output color Cout = 0)
+{
+    int maxpoint = 10;
+    int indices[10];
+    float distances[10];
+    color uv[10];
+    
+    string filename = "cloud.geo";
+    
+    // NOTE: when u > 0.916 maxpoint will 11 which is larger than arrays
+    //       however OSL language spec says impl should just limit results
+    maxpoint = int(u*12);
+    
+    int n = pointcloud_search (filename, P, radius, maxpoint, 1,
+                               "index", indices, "distance", distances, "uv", uv);
+    Cout = 0;
+    if (n > 0) {
+        float weight = 0;
+        for (int i = 0;  i < n;  ++i) {
+            float w = 1 - distances[i]/radius;
+            Cout += uv[i]*w;
+            weight += w;
+        }
+        Cout /= weight;
+    }
+}

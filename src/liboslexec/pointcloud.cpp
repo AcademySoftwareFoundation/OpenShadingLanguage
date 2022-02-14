@@ -4,65 +4,16 @@
 
 #include <cstdarg>
 
+#include "pointcloud.h"
+
 #include "oslexec_pvt.h"
-using namespace OSL;
-using namespace OSL::pvt;
 
-#ifdef USE_PARTIO
-#include <Partio.h>
-#include <unordered_map>
-#endif
+OSL_NAMESPACE_ENTER
+namespace pvt {
 
-
-
-namespace { // anon
-
-#ifdef USE_PARTIO
-
-class PointCloud {
-public:
-    PointCloud (ustring filename, Partio::ParticlesDataMutable *partio_cloud, bool write);
-    ~PointCloud ();
-    static PointCloud *get (ustring filename, bool write = false);
-
-    typedef std::unordered_map<ustring, std::shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
-    // N.B./FIXME(C++11): shared_ptr is probably overkill, but
-    // scoped_ptr is not copyable and therefore can't be used in
-    // standard containers.  When C++11 is ubiquitous, unique_ptr is the
-    // one that should really be used.
-
-    const Partio::ParticlesData* read_access() const { OSL_DASSERT(!m_write); return m_partio_cloud; }
-    Partio::ParticlesDataMutable* write_access() const { OSL_DASSERT(m_write); return m_partio_cloud; }
-
-    ustring m_filename;
-private:
-    // hide just this field, because we want to control how it is accessed
-    Partio::ParticlesDataMutable *m_partio_cloud;
-public:
-
-    AttributeMap m_attributes;
-    bool m_write;
-    Partio::ParticleAttribute m_position_attribute;
-    spin_mutex m_mutex;
-};
-
-
-typedef std::unordered_map<ustring, std::shared_ptr<PointCloud>, ustringHash> PointCloudMap;
-// See above note about shared_ptr vs unique_ptr.
+typedef std::unordered_map<ustring, std::unique_ptr<PointCloud>, ustringHash> PointCloudMap;
 static PointCloudMap pointclouds;
-static spin_mutex pointcloudmap_mutex;
-static ustring u_position ("position");
-
-
-// some helper classes to make the sort easy
-typedef std::pair<float,int> SortedPointRecord;  // dist,index
-struct SortedPointCompare {
-    bool operator() (const SortedPointRecord &a, const SortedPointRecord &b) {
-        return a.first < b.first;
-    }
-};
-
-
+static OIIO::spin_mutex pointcloudmap_mutex;
 
 PointCloud *
 PointCloud::get (ustring filename, bool write)
@@ -121,97 +72,11 @@ PointCloud::~PointCloud ()
         m_partio_cloud->release ();
 }
 
-
-
-inline Partio::ParticleAttributeType
-PartioType (TypeDesc t)
-{
-    if (t == TypeDesc::TypeFloat)
-        return Partio::FLOAT;
-    if (t.basetype == TypeDesc::FLOAT && t.aggregate == TypeDesc::VEC3)
-        return Partio::VECTOR;
-    if (t == TypeDesc::TypeInt)
-        return Partio::INT;
-    if (t == TypeDesc::TypeString)
-        return Partio::INDEXEDSTR;
-    return Partio::NONE;
-}
-
-
-
-// Helper: number of base values
-inline int
-basevals (TypeDesc t)
-{
-    return t.numelements() * int(t.aggregate);
-}
-
-
-
-bool
-compatiblePartioType (TypeDesc partio_type, TypeDesc osl_element_type)
-{
-    // Matching types (treating all VEC3 aggregates as equivalent)...
-    if (equivalent (partio_type, osl_element_type))
-        return true;
-
-    // Consider arrays and aggregates as interchangeable, as long as the
-    // totals are the same.
-    if (partio_type.basetype == osl_element_type.basetype &&
-        basevals(partio_type) == basevals(osl_element_type))
-        return true;
-
-    // The Partio file may contain an array size that OSL can't exactly
-    // represent, for example the partio type may be float[4], and the
-    // OSL array will be float[] but the element type will be just float
-    // because OSL doesn't permit multi-dimensional arrays.
-    // Just allow it anyway and fill in the OSL array.
-    if (TypeDesc::BASETYPE(partio_type.basetype) == osl_element_type)
-        return true;
-
-    return false;
-}
-
-
-
-TypeDesc
-TypeDescOfPartioType (const Partio::ParticleAttribute *ptype)
-{
-    TypeDesc type;  // default to UNKNOWN
-    switch (ptype->type) {
-    case Partio::INT:
-        type = TypeDesc::INT;
-        if (ptype->count > 1)
-            type.arraylen = ptype->count;
-        break;
-    case Partio::FLOAT:
-        type = TypeDesc::FLOAT;
-        if (ptype->count > 1)
-            type.arraylen = ptype->count;
-        break;
-    case Partio::VECTOR:
-        type = TypeDesc (TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::NOSEMANTICS);
-        if (ptype->count != 3)
-            type = TypeDesc::UNKNOWN;  // Must be 3: punt
-        break;
-    case Partio::INDEXEDSTR:
-        type = TypeDesc::STRING;
-        break;
-    default:
-        break;   // Any other future types -- return UNKNOWN
-    }
-    return type;
-}
-
-#endif
-
-}  // anon namespace
-
-
+} // namespace pvt
 
 int
 RendererServices::pointcloud_search (ShaderGlobals *sg,
-                                     ustring filename, const OSL::Vec3 &center,
+                                     ustring filename, const Vec3 &center,
                                      float radius, int max_points, bool sort,
                                      size_t *out_indices,
                                      float *out_distances, int derivs_offset)
@@ -280,11 +145,11 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
         if (derivs_offset) {
             // We are going to need the positions if we need to compute
             // distance derivs
-            OSL::Vec3 *positions = (OSL::Vec3 *) sg->context->alloc_scratch (sizeof(OSL::Vec3) * count, sizeof(float));
+            Vec3 *positions = (Vec3 *) sg->context->alloc_scratch (sizeof(Vec3) * count, sizeof(float));
             // FIXME(Partio): this function really should be marked as const because it is just a wrapper of a private const method
             const_cast<Partio::ParticlesData*>(cloud)->data (*pos_attr, count, indices, true, (void *)positions);
-            const OSL::Vec3 &dCdx = (&center)[1];
-            const OSL::Vec3 &dCdy = (&center)[2];
+            const Vec3 &dCdx = (&center)[1];
+            const Vec3 &dCdy = (&center)[2];
             float *d_distance_dx = out_distances + derivs_offset;
             float *d_distance_dy = out_distances + derivs_offset * 2;
             for (int i = 0; i < count; ++i) {
@@ -369,11 +234,11 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
     // then copy them back to the caller's indices.
 
     // Actual data query
-    if (partio_type == OIIO::TypeString) {
+    if (partio_type == TypeString) {
         // strings are special cases because they are stored as int index
         int* strindices = OIIO_ALLOCA(int, count);
         const_cast<Partio::ParticlesData*>(cloud)->data (*attr, count,
-                    (const Partio::ParticleIndex *)indices, true, (void*)strindices);
+                    (const Partio::ParticleIndex *)indices, /*sorted=*/false, (void*)strindices);
         const auto& strings = cloud->indexedStrs(*attr);
         int sicount = int(strings.size());
         for (int i = 0; i < count; ++i) {
@@ -386,7 +251,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
     } else {
         // All cases aside from strings are simple.
         const_cast<Partio::ParticlesData*>(cloud)->data (*attr, count,
-                    (const Partio::ParticleIndex *)indices, true, out_data);
+                    (const Partio::ParticleIndex *)indices, /*sorted=*/false, out_data);
         // FIXME: it is regrettable that we need this const_cast (and the
         // one a few lines above). It's to work around a bug in partio where
         // they fail to declare this method as const, even though it could
@@ -402,7 +267,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
 bool
 RendererServices::pointcloud_write (ShaderGlobals* /*sg*/,
-                                    ustring filename, const OSL::Vec3 &pos,
+                                    ustring filename, const Vec3 &pos,
                                     int nattribs, const ustring *names,
                                     const TypeDesc *types,
                                     const void **data)
@@ -479,7 +344,7 @@ RendererServices::pointcloud_write (ShaderGlobals* /*sg*/,
 #endif
 }
 
-
+namespace pvt {
 
 OSL_SHADEOP int
 osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
@@ -575,5 +440,6 @@ osl_pointcloud_write (ShaderGlobals *sg, const char *filename, const Vec3 *pos,
                                            nattribs, names, types, values);
 }
 
-
+} // namespace pvt
+OSL_NAMESPACE_EXIT
 

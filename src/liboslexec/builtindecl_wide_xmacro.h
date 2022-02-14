@@ -312,13 +312,9 @@ DECL(__OSL_MASKED_OP3(splineinverse, Wdf, f, Wdf), "xXXXXiii")
 // // unreachable, can't find .osl to produce this combination
 //DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wf, Wdf), "xXXXXiii")
 
-#ifdef __OSL_TBD
-//DECL (osl_setmessage, "xXsLXisi")
-DECL (osl_pointcloud_search, "iXsXfiiXXii*")
-DECL (osl_pointcloud_get, "iXsXisLX")
-DECL (osl_pointcloud_write, "iXsXiXXX")
-DECL (osl_pointcloud_write_helper, "xXXXisLX")
-#endif
+DECL(__OSL_MASKED_OP(pointcloud_search), "xXXsXXiiXiXiiii*")
+DECL(__OSL_MASKED_OP(pointcloud_get), "iXsXiXsLXi")
+DECL(__OSL_MASKED_OP(pointcloud_write), "iXsXiXXXi")
 
 DECL(__OSL_MASKED_OP(getmessage), "xXXssLXiisii")
 DECL(__OSL_MASKED_OP2(setmessage, s, WX),  "xXXLXisii")

@@ -659,7 +659,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustring name,
     }
 
     if (const OIIO::ParamValue* p = m_sr.userdata.find_pv(name, val.type())) {
-        val.assign_all_from(p->data());
+        val.assign_all_from_scalar(p->data());
         return val.mask();
     }
 

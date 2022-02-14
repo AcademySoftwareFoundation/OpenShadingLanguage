@@ -1,0 +1,41 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader rdcloud_zero_derivs (string filename = "cloud.geo",
+                float radius = 0.1,
+                output color Cout = 0)
+{
+    int maxpoint = 10;
+    int indices[10] = {0,0,0,0,0,0,0,0,0,0};
+    float distances[10];
+    color uv[10];
+    
+    uv[0] = P;
+    int n = pointcloud_search (filename, P, radius, maxpoint, 1,
+                               "index", indices, "distance", distances);    
+    Cout = 0;
+    
+    // ask for more values than will fit in the array 
+    if (v > 0.8) {
+        // Set N larger than attribute array length
+        // to test implementation's handling 
+        n = 11;
+    }
+    
+    if (u > 0.25) {
+        if (pointcloud_get (filename, indices, n, "uv", uv)) {
+            float weight = 0;
+            for (int i = 0;  i < n;  ++i) {
+                float w = 1 - distances[i]/radius;
+                Cout += uv[i]*w;
+                weight += w;
+            }
+            Cout /= weight;
+            Cout *= max(0.0, 2*(0.5-v));
+        }
+    }
+    color uv0dx = Dx(uv[0]); 
+    color uv1dy = Dy(uv[0]); 
+    Cout += (uv0dx + uv1dy)/2;
+}

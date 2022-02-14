@@ -48,6 +48,7 @@ set ( liboslexec_target_srcs
     wide/wide_opnoise_usimplex_deriv_float
     wide/wide_opnoise_usimplex_Vec3
     wide/wide_opnoise_usimplex_deriv_Vec3
+    wide/wide_oppointcloud
     wide/wide_opspline
     wide/wide_opstring
     wide/wide_optest_float
@@ -496,6 +497,11 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         PUBLIC
             OpenImageIO::OpenImageIO
         )
+    if (partio_FOUND)
+        target_link_libraries(${batched_target_lib} PRIVATE partio::partio)
+        target_compile_definitions (${batched_target_lib} PRIVATE USE_PARTIO=1)
+    endif ()
+        
 endforeach(batched_target)
 
 add_library (${local_lib} ${lib_src})

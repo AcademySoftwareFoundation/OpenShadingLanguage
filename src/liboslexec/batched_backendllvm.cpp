@@ -322,22 +322,67 @@ BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym)
 }
 
 
-
 void
 BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym, llvm::Value* count)
 {
-    if (sym.typespec().is_closure_based())
-        return;  // Closures don't have derivs
     // Same thing as the above version but with just the first count derivs
-    TypeSpec elemtype = sym.typespec().elementtype();
+    const TypeSpec& t = sym.typespec();
+
+    OSL_ASSERT((count->getType() == ll.type_int()) ||
+               (count->getType() == ll.type_wide_int()));
+
+
+    if (t.is_closure_based())
+        return;  // Closures don't have derivs
+
+    TypeSpec elemtype = t.elementtype();
     if (sym.has_derivs() && elemtype.is_float_based()) {
-        OSL_ASSERT(
-            sym.is_uniform());  // TODO: handle varying case and remove OSL_ASSERT
-        size_t esize = sym.typespec().simpletype().elementsize();
-        size_t align = sym.typespec().simpletype().basesize();
-        count        = ll.op_mul(count, ll.constant((int)esize));
-        ll.op_memset(llvm_void_ptr(sym, 1), 0, count, (int)align);  // X derivs
-        ll.op_memset(llvm_void_ptr(sym, 2), 0, count, (int)align);  // Y derivs
+        llvm::Value* zero;
+        if (sym.is_uniform())
+            zero = ll.constant(0.0f);
+        else
+            zero = ll.wide_constant(0.0f);
+
+        if(!t.is_array()) {
+            // Not an array, probably shouldn't have called this method
+            // just fallback to non-count based version
+            llvm_zero_derivs(sym);
+            return;
+        }
+
+        llvm::Value* pre_condition_mask = ll.current_mask();
+
+        llvm::Value * index_loc = ll.op_alloca(ll.type_int(), 1);
+        ll.op_store(ll.constant(0), index_loc);
+
+        llvm::BasicBlock* cond_block = ll.new_basic_block ("zero deriv cond");
+        llvm::BasicBlock* body_block = ll.new_basic_block ("zero deriv body");
+        llvm::BasicBlock* step_block = ll.new_basic_block ("zero deriv step");
+        llvm::BasicBlock* after_block = ll.new_basic_block ("zero deriv after");
+
+        ll.op_branch (cond_block);
+        llvm::Value * index_val = ll.op_load(index_loc);
+        llvm::Value * windex_val = ll.widen_value(index_val);
+        llvm::Value * condition_mask = ll.op_lt(windex_val, count);
+        llvm::Value * post_condition_mask = ll.op_and(condition_mask, pre_condition_mask);
+        llvm::Value* cond_val = ll.test_if_mask_is_non_zero(post_condition_mask);
+
+        // Jump to either LoopBody or AfterLoop
+        ll.op_branch (cond_val, body_block, after_block);
+        ll.push_mask(post_condition_mask, false /* negate */, true /* absolute */);
+        for (int c = 0; c < t.aggregate(); ++c)
+            llvm_store_value(zero, sym, 1, index_val, c);
+        for (int c = 0; c < t.aggregate(); ++c)
+            llvm_store_value(zero, sym, 2, index_val, c);
+        ll.pop_mask();
+
+        ll.op_branch (step_block);
+        index_val = ll.op_add(index_val, ll.constant(1));
+        ll.op_store(index_val, index_loc);
+        ll.op_branch (cond_block);
+
+        // Continue on with the previous flow
+        ll.set_insert_point (after_block);
     }
 }
 

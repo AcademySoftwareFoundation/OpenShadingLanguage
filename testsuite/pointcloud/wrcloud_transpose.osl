@@ -1,0 +1,10 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader wrcloud_transpose (string filename = "cloud_transpose.geo",
+                output color Cout = 0)
+{
+    pointcloud_write (filename, P, "uv", color(v,u,0), "u", v, "v", u);
+    Cout = color(v,u,0);
+}

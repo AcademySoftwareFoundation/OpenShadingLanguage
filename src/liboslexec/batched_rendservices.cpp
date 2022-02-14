@@ -235,6 +235,42 @@ BatchedRendererServices<WidthT>::environment(
 
 template<int WidthT>
 void
+BatchedRendererServices<WidthT>::pointcloud_search(
+    BatchedShaderGlobals* bsg, ustring filename, const void* wcenter,
+    Wide<const float> wradius, int max_points, bool sort,
+    PointCloudSearchResults& results)
+{
+    OSL_ASSERT(
+        0
+        && "UNREACHABLE:  BatchedRendererServices<WidthT>::pointcloud_search calls should be overridden or the target specific version in wide_oppointcloud.cpp should be called");
+}
+
+template<int WidthT>
+Mask<WidthT>
+BatchedRendererServices<WidthT>::pointcloud_get(
+    BatchedShaderGlobals* bsg, ustring filename, Wide<const int[]> windices,
+    Wide<const int> wnum_points, ustring attr_name, MaskedData wout_data)
+{
+    OSL_ASSERT(
+        0
+        && "UNREACHABLE:  BatchedRendererServices<WidthT>::pointcloud_get calls should be overridden or the target specific version in wide_oppointcloud.cpp should be called");
+}
+
+
+template<int WidthT>
+Mask<WidthT>
+BatchedRendererServices<WidthT>::pointcloud_write(
+    BatchedShaderGlobals* bsg, ustring filename, Wide<const OSL::Vec3> wpos,
+    int nattribs, const ustring* attr_names, const TypeDesc* attr_types,
+    const void** pointers_to_wide_attr_value, Mask mask)
+{
+    OSL_ASSERT(
+        0
+        && "UNREACHABLE:  BatchedRendererServices<WidthT>::pointcloud_write calls should be overridden or the target specific version in wide_oppointcloud.cpp should be called");
+}
+
+template<int WidthT>
+void
 BatchedRendererServices<WidthT>::trace(
     TraceOpt& options, BatchedShaderGlobals* bsg, Masked<int> wresult,
     Wide<const Vec3> wP, Wide<const Vec3> wdPdx, Wide<const Vec3> wdPdy,

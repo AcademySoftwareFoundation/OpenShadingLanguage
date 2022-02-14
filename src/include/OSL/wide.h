@@ -81,6 +81,11 @@ OSL_NAMESPACE_ENTER
 //};
 template<typename DataT, int WidthT> struct Block;
 
+namespace pvt {
+template<typename DataT, int WidthT, int DerivIndexT> struct MaskedDeriv;
+template<typename DataT, int DerivIndexT> struct RefDeriv;
+}  // namespace pvt
+
 // Typically Block's of data aren't passed around, instead
 // a Wide<DataT, WidthT> or Masked<DataT, WidthT> are passed
 // by value.  These wrapper's hold onto a reference to a Block
@@ -88,6 +93,24 @@ template<typename DataT, int WidthT> struct Block;
 // data and enforce masking.
 template<typename DataT, int WidthT> struct Wide;
 template<typename DataT, int WidthT> struct Masked;
+
+// Block<Dual2<DataT>> actually stores val, dx, dy in separate adjacent Blocks.
+// Masked<> should not be instantiated with a Dual2, but instead
+// use these additional wrappers to get at derivative data
+//
+//     template <typename DataT, int WidthT>
+//     struct MaskedDx;
+//
+//     template <typename DataT, int WidthT>
+//     struct MaskedDy;
+//
+// Same interface as Masked, but treats Block & as array and accesses
+// Block[1] for Dx, Block[2] for Dy
+template<typename DataT, int WidthT>
+using MaskedDx = pvt::MaskedDeriv<DataT, WidthT, 1 /*DerivIndexT*/>;
+template<typename DataT, int WidthT>
+using MaskedDy = pvt::MaskedDeriv<DataT, WidthT, 2 /*DerivIndexT*/>;
+
 
 // To pass a single const uniform value to an algorithm designed
 // to work with Wide data.
@@ -101,6 +124,21 @@ template<int WidthT> class MaskedData;
 
 // For type specific access to uniform variant data
 template<typename DataT> struct Ref;
+
+// Ref<> should not be instantiated with a Dual2, but instead
+// use these additional wrappers to get at derivative data
+//
+//     template <typename DataT>
+//     struct RefDx;
+//
+//     template <typename DataT>
+//     struct RefDy;
+//
+// Same interface as Ref, but treats DataT & as array and accesses
+// DataT*[1] for Dx, DataT*[2] for Dy
+template<typename DataT> using RefDx = pvt::RefDeriv<DataT, 1 /*DerivIndexT*/>;
+template<typename DataT> using RefDy = pvt::RefDeriv<DataT, 2 /*DerivIndexT*/>;
+
 
 // For variant uniform data (where the type is unknown,
 // we have a special wrapper RefData.  Intent is type
@@ -1543,6 +1581,13 @@ align_block_ref(Block<DataT, WidthT>& ref)
     return *assume_aligned(&ref);
 }
 
+template<typename DataT, int WidthT>
+OSL_FORCEINLINE Block<DataT, WidthT>&
+align_block_ref(Block<DataT, WidthT>& ref, int derivIndex)
+{
+    return *assume_aligned(&((&ref)[derivIndex]));
+}
+
 
 
 template<typename DataT, int WidthT>
@@ -2319,243 +2364,6 @@ private:
     const int m_lane;
 };
 
-template<typename DataT, int WidthT> struct MaskedImpl {
-    static constexpr int width = WidthT;
-    typedef DataT ValueType;
-
-    explicit OSL_FORCEINLINE MaskedImpl(void* ptr_wide_data, Mask<WidthT> mask,
-                                        int derivIndex = 0)
-        : m_ref_wide_data(*block_cast<DataT, WidthT>(ptr_wide_data, derivIndex))
-        , m_mask(mask)
-    {
-    }
-
-    explicit OSL_FORCEINLINE MaskedImpl(Block<DataT, WidthT>& ref_wide_data,
-                                        Mask<WidthT> mask)
-        : m_ref_wide_data(align_block_ref(ref_wide_data)), m_mask(mask)
-    {
-    }
-
-    explicit OSL_FORCEINLINE MaskedImpl(const MaskedData<WidthT>& md,
-                                        int derivIndex)
-        : MaskedImpl(md.ptr(), md.mask(), derivIndex)
-    {
-    }
-
-protected:
-    explicit OSL_FORCEINLINE MaskedImpl(const MaskedImpl& other,
-                                        Mask<WidthT> mask)
-        : m_ref_wide_data(other.m_ref_wide_data), m_mask(mask)
-    {
-    }
-
-    friend struct Masked<DataT, WidthT>;
-
-    static OSL_FORCEINLINE bool supports(const MaskedData<WidthT>& md)
-    {
-        // NOTE: using bitwise & to avoid branches
-        return (md.type().arraylen == 0)
-               & WideTraits<DataT>::matches(md.type());
-    }
-
-public:
-    // Must provide user defined copy constructor to
-    // get compiler to be able to follow individual
-    // data members through back to original object
-    // when fully inlined the proxy should disappear
-    OSL_FORCEINLINE
-    MaskedImpl(const MaskedImpl& other) noexcept
-        : m_ref_wide_data(other.m_ref_wide_data), m_mask(other.m_mask)
-    {
-    }
-
-
-
-    OSL_FORCEINLINE Block<DataT, WidthT>& data() const
-    {
-        return m_ref_wide_data;
-    }
-    OSL_FORCEINLINE const Mask<WidthT>& mask() const { return m_mask; }
-
-    typedef MaskedLaneProxy<DataT, WidthT> Proxy;
-
-    OSL_FORCEINLINE Proxy operator[](int lane) const
-    {
-        return Proxy(m_ref_wide_data, m_mask, lane);
-    }
-
-    // Allow an ActiveLane to skip checking the mask
-    typedef LaneProxy<DataT, WidthT> ActiveProxy;
-
-    OSL_FORCEINLINE ActiveProxy operator[](ActiveLane lane) const
-    {
-        return ActiveProxy(m_ref_wide_data, lane.value());
-    }
-
-    // implicit conversion to constant read only access
-    operator Wide<const DataT, WidthT>() const
-    {
-        return Wide<const DataT, WidthT>(m_ref_wide_data);
-    }
-
-private:
-    Block<DataT, WidthT>& m_ref_wide_data;
-    Mask<WidthT> m_mask;
-};
-
-template<typename ElementT, int ArrayLenT, int WidthT>
-struct MaskedImpl<ElementT[ArrayLenT], WidthT> {
-    static constexpr int width    = WidthT;
-    static constexpr int ArrayLen = ArrayLenT;
-    static_assert(ArrayLen > 0, "OSL logic bug");
-    typedef ElementT ElementType;
-    typedef ElementType ArrayType[ArrayLen];
-
-    explicit OSL_FORCEINLINE MaskedImpl(void* ptr_wide_data, Mask<WidthT> mask,
-                                        int derivIndex)
-        : m_array_of_wide_data(&block_cast<ElementType, WidthT>(
-            ptr_wide_data)[ArrayLen * derivIndex])
-        , m_mask(mask)
-    {
-    }
-
-    explicit OSL_FORCEINLINE MaskedImpl(const MaskedData<WidthT>& md,
-                                        int derivIndex)
-        : MaskedImpl(md.ptr(), md.mask(), derivIndex)
-    {
-    }
-
-protected:
-    explicit OSL_FORCEINLINE MaskedImpl(const MaskedImpl& other,
-                                        Mask<WidthT> mask)
-        : m_array_of_wide_data(other.m_array_of_wide_data), m_mask(mask)
-    {
-    }
-
-    friend struct Masked<ElementT[ArrayLenT], WidthT>;
-
-    static OSL_FORCEINLINE bool supports(const MaskedData<WidthT>& md)
-    {
-        // NOTE: using bitwise & to avoid branches
-        return (md.type().arraylen == ArrayLen)
-               & WideTraits<ElementType>::matches(md.type());
-    }
-
-public:
-    // Must provide user defined copy constructor to
-    // get compiler to be able to follow individual
-    // data members through back to original object
-    // when fully inlined the proxy should disappear
-    OSL_FORCEINLINE
-    MaskedImpl(const MaskedImpl& other) noexcept
-        : m_array_of_wide_data(other.m_array_of_wide_data), m_mask(other.m_mask)
-    {
-    }
-
-
-    static constexpr OSL_FORCEINLINE int length() { return ArrayLen; }
-
-    typedef MaskedArrayLaneProxy<ElementType, ArrayLen, WidthT> Proxy;
-
-    OSL_FORCEINLINE Proxy const operator[](int lane) const
-    {
-        return Proxy(m_array_of_wide_data, m_mask, lane);
-    }
-
-    OSL_FORCEINLINE Masked<ElementType, WidthT>
-    get_element(int array_index) const
-    {
-        OSL_DASSERT(array_index < ArrayLen);
-        return Masked<ElementType, WidthT>(m_array_of_wide_data[array_index],
-                                           m_mask);
-    }
-
-private:
-    mutable Block<ElementType, WidthT>* m_array_of_wide_data;
-    Mask<WidthT> m_mask;
-};
-
-template<typename ElementT, int WidthT> struct MaskedImpl<ElementT[], WidthT> {
-    static constexpr int width = WidthT;
-    typedef ElementT ElementType;
-
-    explicit OSL_FORCEINLINE MaskedImpl(void* ptr_wide_data, int array_length,
-                                        Mask<WidthT> mask, int derivIndex)
-        : m_array_of_wide_data(assume_aligned(&block_cast<ElementType, WidthT>(
-            ptr_wide_data)[array_length * derivIndex]))
-        , m_array_length(array_length)
-        , m_mask(mask)
-    {
-    }
-
-    explicit OSL_FORCEINLINE MaskedImpl(const MaskedData<WidthT>& md,
-                                        int derivIndex)
-        : MaskedImpl(md.ptr(), md.type().arraylen, md.mask(), derivIndex)
-    {
-    }
-
-protected:
-    OSL_FORCEINLINE
-    MaskedImpl(const MaskedImpl& other, Mask<WidthT> mask)
-        : m_array_of_wide_data(other.m_array_of_wide_data)
-        , m_array_length(other.m_array_length)
-        , m_mask(mask)
-    {
-    }
-
-    friend struct Masked<ElementT[], WidthT>;
-
-    static OSL_FORCEINLINE bool supports(const MaskedData<WidthT>& md)
-    {
-        // NOTE: using bitwise & to avoid branches
-        return (md.type().arraylen != 0)
-               & WideTraits<ElementType>::matches(md.type());
-    }
-
-public:
-    // Must provide user defined copy constructor to
-    // get compiler to be able to follow individual
-    // data members through back to original object
-    // when fully inlined the proxy should disappear
-    OSL_FORCEINLINE
-    MaskedImpl(const MaskedImpl& other) noexcept
-        : m_array_of_wide_data(other.m_array_of_wide_data)
-        , m_array_length(other.m_array_length)
-        , m_mask(other.m_mask)
-    {
-    }
-
-    OSL_FORCEINLINE int length() const { return m_array_length; }
-
-    typedef MaskedUnboundedArrayLaneProxy<ElementType, WidthT> Proxy;
-
-    OSL_FORCEINLINE Proxy const operator[](int lane) const
-    {
-        return Proxy(m_array_of_wide_data, m_array_length, m_mask, lane);
-    }
-
-    OSL_FORCEINLINE Masked<ElementType, WidthT>
-    get_element(int array_index) const
-    {
-        OSL_DASSERT(array_index < m_array_length);
-        return Masked<ElementType, WidthT>(m_array_of_wide_data[array_index],
-                                           m_mask);
-    }
-
-    // implicit conversion to constant read only access
-    operator Wide<const ElementT[], WidthT>() const
-    {
-        return Wide<const ElementT[], WidthT>(m_array_of_wide_data,
-                                              m_array_length);
-    }
-
-private:
-    mutable Block<ElementType, WidthT>* m_array_of_wide_data;
-    int m_array_length;
-    Mask<WidthT> m_mask;
-};
-
-
 }  // namespace pvt
 
 
@@ -2591,70 +2399,298 @@ private:
 //    // Test MaskedData (could by any data type) if it match this DataT
 //    static bool is(const MaskedData<WidthT> &)
 //};
-template<typename DataT, int WidthT>
-struct Masked : public pvt::MaskedImpl<DataT, WidthT> {
+
+template<typename DataT, int WidthT> struct Masked {
     static_assert(std::is_const<DataT>::value == false,
                   "Masked<> is only valid when DataT is NOT const");
 
-    __OSL_INHERIT_BASE_CTORS(Masked, MaskedImpl)
+    static constexpr int width = WidthT;
+    typedef DataT ValueType;
 
-    // Allow implicit construction
-    OSL_FORCEINLINE
-    Masked(const MaskedData<WidthT>& md) noexcept
-        : pvt::MaskedImpl<DataT, WidthT>(md, 0 /*derivIndex*/)
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Masked(void* ptr_wide_data, Mask<WidthT> mask,
+                                    DerivIndexT derivIndex = DerivIndexT {})
+        : m_ref_wide_data(
+            *pvt::block_cast<DataT, WidthT>(ptr_wide_data, derivIndex))
+        , m_mask(mask)
     {
     }
 
-    OSL_FORCEINLINE Masked operator&(const Mask<WidthT>& conjunction_mask) const
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Masked(Block<DataT, WidthT>& ref_wide_data,
+                                    Mask<WidthT> mask,
+                                    DerivIndexT derivIndex = DerivIndexT {})
+        : m_ref_wide_data(pvt::align_block_ref(ref_wide_data, derivIndex))
+        , m_mask(mask)
     {
-        return Masked(*this, pvt::MaskedImpl<DataT, WidthT>::mask()
-                                 & conjunction_mask);
+    }
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Masked(const MaskedData<WidthT>& md,
+                                    DerivIndexT derivIndex = DerivIndexT {})
+        : Masked(md.ptr(), md.mask(), derivIndex)
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    Masked(const Masked& other) noexcept
+        : m_ref_wide_data(other.m_ref_wide_data), m_mask(other.m_mask)
+    {
+    }
+
+    explicit OSL_FORCEINLINE Masked(const Masked& other, Mask<WidthT> mask)
+        : m_ref_wide_data(other.m_ref_wide_data), m_mask(mask)
+    {
+    }
+
+
+    static OSL_FORCEINLINE bool is(const MaskedData<WidthT>& md)
+    {
+        // NOTE: using bitwise & to avoid branches
+        return (md.type().arraylen == 0)
+               & WideTraits<DataT>::matches(md.type());
+    }
+
+
+    OSL_FORCEINLINE Block<DataT, WidthT>& data() const
+    {
+        return m_ref_wide_data;
+    }
+    OSL_FORCEINLINE const Mask<WidthT>& mask() const { return m_mask; }
+
+    typedef pvt::MaskedLaneProxy<DataT, WidthT> Proxy;
+
+    OSL_FORCEINLINE Proxy operator[](int lane) const
+    {
+        return Proxy(m_ref_wide_data, m_mask, lane);
+    }
+
+    // Allow an ActiveLane to skip checking the mask
+    typedef pvt::LaneProxy<DataT, WidthT> ActiveProxy;
+
+    OSL_FORCEINLINE ActiveProxy operator[](ActiveLane lane) const
+    {
+        return ActiveProxy(m_ref_wide_data, lane.value());
+    }
+
+    // implicit conversion to constant read only access
+    operator Wide<const DataT, WidthT>() const
+    {
+        return Wide<const DataT, WidthT>(m_ref_wide_data);
+    }
+
+private:
+    Block<DataT, WidthT>& m_ref_wide_data;
+    Mask<WidthT> m_mask;
+};
+
+template<typename ElementT, int ArrayLenT, int WidthT>
+struct Masked<ElementT[ArrayLenT], WidthT> {
+    static constexpr int width    = WidthT;
+    static constexpr int ArrayLen = ArrayLenT;
+    static_assert(ArrayLen > 0, "OSL logic bug");
+    typedef ElementT ElementType;
+    typedef ElementType ArrayType[ArrayLen];
+    static_assert(std::is_const<ElementType>::value == false,
+                  "Masked<> is only valid when DataT is NOT const");
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Masked(void* ptr_wide_data, Mask<WidthT> mask,
+                                    DerivIndexT derivIndex = DerivIndexT {})
+        : m_array_of_wide_data(&pvt::block_cast<ElementType, WidthT>(
+            ptr_wide_data)[ArrayLen * derivIndex])
+        , m_mask(mask)
+    {
+    }
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Masked(const MaskedData<WidthT>& md,
+                                    DerivIndexT derivIndex = DerivIndexT {})
+        : Masked(md.ptr(), md.mask(), derivIndex)
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    Masked(const Masked& other) noexcept
+        : m_array_of_wide_data(other.m_array_of_wide_data), m_mask(other.m_mask)
+    {
+    }
+
+    // Allow copy construction substituting a different mask
+    explicit OSL_FORCEINLINE Masked(const Masked& other,
+                                    Mask<WidthT> different_mask)
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_mask(different_mask)
+    {
     }
 
     static OSL_FORCEINLINE bool is(const MaskedData<WidthT>& md)
     {
-        return pvt::MaskedImpl<DataT, WidthT>::supports(md);
+        // NOTE: using bitwise & to avoid branches
+        return (md.type().arraylen == ArrayLen)
+               & WideTraits<ElementType>::matches(md.type());
     }
+
+    static constexpr OSL_FORCEINLINE int length() { return ArrayLen; }
+
+    typedef pvt::MaskedArrayLaneProxy<ElementType, ArrayLen, WidthT> Proxy;
+
+    OSL_FORCEINLINE Proxy const operator[](int lane) const
+    {
+        return Proxy(m_array_of_wide_data, m_mask, lane);
+    }
+
+    OSL_FORCEINLINE Masked<ElementType, WidthT>
+    get_element(int array_index) const
+    {
+        OSL_DASSERT(array_index < ArrayLen);
+        return Masked<ElementType, WidthT>(m_array_of_wide_data[array_index],
+                                           m_mask);
+    }
+
+private:
+    mutable Block<ElementType, WidthT>* m_array_of_wide_data;
+    Mask<WidthT> m_mask;
 };
+
+template<typename ElementT, int WidthT> struct Masked<ElementT[], WidthT> {
+    static constexpr int width = WidthT;
+    typedef ElementT ElementType;
+    static_assert(std::is_const<ElementType>::value == false,
+                  "Masked<> is only valid when DataT is NOT const");
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Masked(void* ptr_wide_data, int array_length,
+                                    Mask<WidthT> mask,
+                                    DerivIndexT derivIndex = DerivIndexT {})
+        : m_array_of_wide_data(
+            pvt::assume_aligned(&pvt::block_cast<ElementType, WidthT>(
+                ptr_wide_data)[array_length * derivIndex]))
+        , m_array_length(array_length)
+        , m_mask(mask)
+    {
+    }
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Masked(const MaskedData<WidthT>& md,
+                                    DerivIndexT derivIndex = DerivIndexT {})
+        : Masked(md.ptr(), md.type().arraylen, md.mask(), derivIndex)
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    Masked(const Masked& other) noexcept
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_array_length(other.m_array_length)
+        , m_mask(other.m_mask)
+    {
+    }
+
+    // Allow copy construction substituting a different mask
+    explicit OSL_FORCEINLINE Masked(const Masked& other,
+                                    Mask<WidthT> different_mask)
+        : m_array_of_wide_data(other.m_array_of_wide_data)
+        , m_array_length(other.m_array_length)
+        , m_mask(different_mask)
+    {
+    }
+
+    static OSL_FORCEINLINE bool is(const MaskedData<WidthT>& md)
+    {
+        // NOTE: using bitwise & to avoid branches
+        return (md.type().arraylen != 0)
+               & WideTraits<ElementType>::matches(md.type());
+    }
+
+    OSL_FORCEINLINE int length() const { return m_array_length; }
+
+    typedef pvt::MaskedUnboundedArrayLaneProxy<ElementType, WidthT> Proxy;
+
+    OSL_FORCEINLINE Proxy const operator[](int lane) const
+    {
+        return Proxy(m_array_of_wide_data, m_array_length, m_mask, lane);
+    }
+
+    OSL_FORCEINLINE Masked<ElementType, WidthT>
+    get_element(int array_index) const
+    {
+        OSL_DASSERT(array_index < m_array_length);
+        return Masked<ElementType, WidthT>(m_array_of_wide_data[array_index],
+                                           m_mask);
+    }
+
+    // implicit conversion to constant read only access
+    operator Wide<const ElementT[], WidthT>() const
+    {
+        return Wide<const ElementT[], WidthT>(m_array_of_wide_data,
+                                              m_array_length);
+    }
+
+private:
+    mutable Block<ElementType, WidthT>* m_array_of_wide_data;
+    int m_array_length;
+    Mask<WidthT> m_mask;
+};
+
+template<typename DataT, int WidthT>
+OSL_FORCEINLINE auto
+operator&(const Masked<DataT, WidthT>& masked,
+          const Mask<WidthT>& conjunction_mask)
+{
+    return Masked<DataT, WidthT>(masked, masked.mask() & conjunction_mask);
+}
 
 namespace pvt {
+
 template<typename DataT, int WidthT, int DerivIndexT>
 struct MaskedDeriv : public Masked<DataT, WidthT> {
-    // Allow implicit construction
-    OSL_FORCEINLINE
-    MaskedDeriv(const MaskedData<WidthT>& md)
-        : Masked<DataT, WidthT>(md, DerivIndexT)
+    // Forward copy constructors
+    template<typename FirstT, typename... ListT,
+             std::enable_if_t<std::is_same<typename std::decay<FirstT>::type,
+                                           MaskedDeriv>::value,
+                              bool> = true>
+    OSL_FORCEINLINE MaskedDeriv(FirstT&& first, ListT&&... argList)
+        : Masked<DataT, WidthT>(std::forward<FirstT>(first),
+                                std::forward<ListT>(argList)...)
     {
     }
 
-    explicit OSL_FORCEINLINE MaskedDeriv(void* ptr_wide_data, Mask<WidthT> mask)
-        : Masked<DataT, WidthT>(ptr_wide_data, mask, DerivIndexT)
+    // Forward non-copy constructors with DerivIndexT
+    template<typename FirstT, typename... ListT,
+             std::enable_if_t<!std::is_same<typename std::decay<FirstT>::type,
+                                            MaskedDeriv>::value,
+                              bool> = true>
+    OSL_FORCEINLINE MaskedDeriv(FirstT&& first, ListT&&... argList)
+        : Masked<DataT, WidthT>(std::forward<FirstT>(first),
+                                std::forward<ListT>(argList)...,
+                                ConstIndex<DerivIndexT> {})
     {
-    }
-
-    OSL_FORCEINLINE MaskedDeriv operator&(const Mask<WidthT>& mask) const
-    {
-        return MaskedDeriv(*this, Masked<DataT, WidthT>::mask() & mask);
     }
 };
-}  // namespace pvt
 
-// Block<Dual2<DataT>> actually stores val, dx, dy in separate adjacent Blocks.
-// Masked<> should not be instantiated with a Dual2, but instead
-// use these additional wrappers to get at derivative data
-//
-//     template <typename DataT, int WidthT>
-//     struct MaskedDx;
-//
-//     template <typename DataT, int WidthT>
-//     struct MaskedDy;
-//
-// Same interface as Masked, but treats Block & as array and accesses
-// Block[1] for Dx, Block[2] for Dy
-template<typename DataT, int WidthT>
-using MaskedDx = pvt::MaskedDeriv<DataT, WidthT, 1 /*DerivIndexT*/>;
-template<typename DataT, int WidthT>
-using MaskedDy = pvt::MaskedDeriv<DataT, WidthT, 2 /*DerivIndexT*/>;
+template<typename DataT, int WidthT, int DerivIndexT>
+OSL_FORCEINLINE auto
+operator&(const MaskedDeriv<DataT, WidthT, DerivIndexT>& masked,
+          const Mask<WidthT>& conjunction_mask)
+{
+    return MaskedDeriv<DataT, WidthT, DerivIndexT>(masked,
+                                                   masked.mask()
+                                                       & conjunction_mask);
+}
+
+}  // namespace pvt
 
 
 template<typename DataT, int WidthT>
@@ -2781,21 +2817,35 @@ public:
     // Populate the MaskedData by copying from wide block of data pointed to.
     // It's not a memcpy because the masked off lanes are not overwritten.
     // Only the value is copied, NOT Dx or Dy.
-    OSL_FORCEINLINE void assign_val_from(const void* ptr_wide_data);
+    OSL_FORCEINLINE void assign_val_from_wide(const void* ptr_wide_data) const;
+
+    // Populate lane of the MaskedData with single instance of data
+    // pointed to.
+    // Only the value is copied, NOT Dx or Dy.
+    OSL_FORCEINLINE void
+    assign_val_lane_from_scalar(ActiveLane lane, const void* ptr_data) const;
 
     // Populate all data lanes of the MaskedData by broadcasting the
     // single instance of data pointed to.
     // Masked off lanes are not overwritten.
     // Includes value, as well as Dx and Dy when has_derivs() is true
-    OSL_FORCEINLINE void assign_all_from(const void* ptr_data);
+    OSL_FORCEINLINE void assign_all_from_scalar(const void* ptr_data) const;
+
+
 
 private:
     template<typename DataT>
-    OSL_NOINLINE void assign_from_type(const void* ptr_wide_data);
+    OSL_NOINLINE void
+    assign_val_from_wide_type(const void* ptr_wide_data) const;
 
     template<typename DataT>
-    OSL_NOINLINE void assign_all_from_type(const void* ptr_data,
-                                           int deriv_index);
+    OSL_NOINLINE void
+    assign_val_lane_from_scalar_type(ActiveLane lane,
+                                     const void* ptr_data) const;
+
+    template<typename DataT>
+    OSL_NOINLINE void assign_all_from_scalar_type(const void* ptr_data,
+                                                  int deriv_index) const;
 };
 
 
@@ -2859,169 +2909,6 @@ public:
     // RefDy<DataT>(const RefData &)
 };
 
-namespace pvt {
-
-// Pretty much just allows "auto" to be used on the stack to
-// keep a reference vs. a copy of DataT
-template<typename DataT> struct RefImpl {
-    static_assert(std::is_const<DataT>::value == false,
-                  "Logic Bug:  Only meant for non-const DataT");
-    static_assert(
-        std::is_array<DataT>::value == false,
-        "Logic Bug:  Only meant for non-array DataT, arrays are meant to use specialized RefImpl");
-
-    explicit OSL_FORCEINLINE RefImpl(DataT& ref_data) : m_ref_data(ref_data) {}
-
-    explicit OSL_FORCEINLINE RefImpl(const RefData& rd, int derivIndex)
-        : RefImpl(reinterpret_cast<DataT*>(rd.ptr())[derivIndex])
-    {
-    }
-
-protected:
-    friend struct Ref<DataT>;
-
-    static OSL_FORCEINLINE bool supports(const RefData& rd)
-    {
-        // NOTE: using bitwise & to avoid branches
-        return (rd.type().arraylen == 0)
-               & WideTraits<DataT>::matches(rd.type());
-    }
-
-public:
-    // Must provide user defined copy constructor to
-    // get compiler to be able to follow individual
-    // data members through back to original object
-    // when fully inlined the proxy should disappear
-    OSL_FORCEINLINE
-    RefImpl(const RefImpl& other) : m_ref_data(other.m_ref_data) {}
-
-
-    OSL_FORCEINLINE
-    operator DataT&() const { return m_ref_data; }
-
-    OSL_FORCEINLINE const DataT& operator=(const DataT& value) const
-    {
-        m_ref_data = value;
-        return value;
-    }
-
-private:
-    DataT& m_ref_data;
-};
-
-
-template<typename ElementT, int ArrayLenT> struct RefImpl<ElementT[ArrayLenT]> {
-    static constexpr int ArrayLen = ArrayLenT;
-    static_assert(ArrayLen > 0, "OSL logic bug");
-    typedef ElementT ElementType;
-    typedef ElementType ArrayType[ArrayLen];
-
-    explicit OSL_FORCEINLINE RefImpl(ArrayType& ref_array_data)
-        : m_ref_array_data(ref_array_data)
-    {
-    }
-
-    explicit OSL_FORCEINLINE RefImpl(const RefData& rd, int derivIndex)
-        : RefImpl(reinterpret_cast<ArrayType*>(rd.ptr())[derivIndex])
-    {
-    }
-
-protected:
-    friend struct Ref<ArrayType>;
-
-    static OSL_FORCEINLINE bool supports(const RefData& rd)
-    {
-        // NOTE: using bitwise & to avoid branches
-        return (rd.type().arraylen == ArrayLen)
-               & WideTraits<ElementType>::matches(rd.type());
-    }
-
-public:
-    // Must provide user defined copy constructor to
-    // get compiler to be able to follow individual
-    // data members through back to original object
-    // when fully inlined the proxy should disappear
-    OSL_FORCEINLINE
-    RefImpl(const RefImpl& other) : m_ref_array_data(other.m_ref_array_data) {}
-
-    OSL_FORCEINLINE constexpr int length() const { return ArrayLen; }
-
-    OSL_FORCEINLINE
-    const RefImpl& operator=(const ArrayType& value) const
-    {
-        static_foreach<ConstIndex, ArrayLenT>(
-            [&](int i) { m_ref_array_data[i] = value[i]; });
-        return *this;
-    }
-
-    OSL_FORCEINLINE
-    operator ArrayType&() const { return m_ref_array_data; }
-
-
-    OSL_FORCEINLINE ElementType& operator[](int array_index) const
-    {
-        OSL_DASSERT(array_index >= 0 && array_index < ArrayLen);
-        return m_ref_array_data[array_index];
-    }
-
-private:
-    ArrayType& m_ref_array_data;
-};
-
-
-
-template<typename ElementT> struct RefImpl<ElementT[]> {
-    typedef ElementT ElementType;
-
-    explicit OSL_FORCEINLINE RefImpl(ElementType* array_data, int array_length)
-        : m_array_data(array_data), m_array_length(array_length)
-    {
-    }
-
-    explicit OSL_FORCEINLINE RefImpl(const RefData& rd, int derivIndex)
-        : RefImpl(&(reinterpret_cast<ElementType*>(
-                      rd.ptr())[derivIndex * rd.type().arraylen]),
-                  rd.type().arraylen)
-    {
-    }
-
-protected:
-    friend struct Ref<ElementT[]>;
-
-    static OSL_FORCEINLINE bool supports(const RefData& rd)
-    {
-        // NOTE: using bitwise & to avoid branches
-        return (rd.type().arraylen != 0)
-               & WideTraits<ElementType>::matches(rd.type());
-    }
-
-public:
-    // Must provide user defined copy constructor to
-    // get compiler to be able to follow individual
-    // data members through back to original object
-    // when fully inlined the proxy should disappear
-    OSL_FORCEINLINE
-    RefImpl(const RefImpl& other)
-        : m_array_data(other.m_array_data), m_array_length(other.m_array_length)
-    {
-    }
-
-    OSL_FORCEINLINE int length() const { return m_array_length; }
-
-    // Omit conversion operator & assignment for unbounded array
-
-    OSL_FORCEINLINE ElementType& operator[](int array_index) const
-    {
-        OSL_DASSERT(array_index >= 0 && array_index < m_array_length);
-        return m_array_data[array_index];
-    }
-
-private:
-    mutable ElementType* m_array_data;
-    int m_array_length;
-};
-
-}  // namespace pvt
 
 
 // Reference to DataT
@@ -3046,45 +2933,199 @@ private:
 //    // Test RefData (could by any data type) if it match this DataT
 //    static bool is(const RefData &)
 //};
-template<typename DataT> struct Ref : public pvt::RefImpl<DataT> {
-    __OSL_INHERIT_BASE_CTORS(Ref, RefImpl)
-    using Base::operator=;
 
-    // Allow implicit construction
+// Pretty much just allows "auto" to be used on the stack to
+// keep a reference vs. a copy of DataT
+template<typename DataT> struct Ref {
+    static_assert(std::is_const<DataT>::value == false,
+                  "Logic Bug:  Only meant for non-const DataT");
+    static_assert(
+        std::is_array<DataT>::value == false,
+        "Logic Bug:  Only meant for non-array DataT, arrays are meant to use specialized Ref");
+
+    explicit OSL_FORCEINLINE Ref(DataT& ref_data) : m_ref_data(ref_data) {}
+
+    // No default derivIndex because we have separate constructor when no derivIndex provided
+    template<typename DerivIndexT>
+    explicit OSL_FORCEINLINE Ref(DataT& ref_data, DerivIndexT derivIndex)
+        : m_ref_data((&ref_data)[derivIndex])
+    {
+    }
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Ref(const RefData& rd,
+                                 DerivIndexT derivIndex = DerivIndexT {})
+        : Ref(reinterpret_cast<DataT*>(rd.ptr())[derivIndex])
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
     OSL_FORCEINLINE
-    Ref(const RefData& rd) : pvt::RefImpl<DataT>(rd, 0 /*derivIndex*/) {}
+    Ref(const Ref& other) : m_ref_data(other.m_ref_data) {}
 
     static OSL_FORCEINLINE bool is(const RefData& rd)
     {
-        return pvt::RefImpl<DataT>::supports(rd);
+        // NOTE: using bitwise & to avoid branches
+        return (rd.type().arraylen == 0)
+               & WideTraits<DataT>::matches(rd.type());
     }
+
+    OSL_FORCEINLINE const Ref& operator=(const DataT& value) const
+    {
+        m_ref_data = value;
+        return *this;
+    }
+
+    OSL_FORCEINLINE
+    operator DataT&() const { return m_ref_data; }
+
+private:
+    DataT& m_ref_data;
+};
+
+
+template<typename ElementT, int ArrayLenT> struct Ref<ElementT[ArrayLenT]> {
+    static constexpr int ArrayLen = ArrayLenT;
+    static_assert(ArrayLen > 0, "OSL logic bug");
+    typedef ElementT ElementType;
+    typedef ElementType ArrayType[ArrayLen];
+
+    explicit OSL_FORCEINLINE Ref(ArrayType& ref_array_data)
+        : m_ref_array_data(ref_array_data)
+    {
+    }
+
+    // No default derivIndex because we have separate constructor when no derivIndex provided
+    template<typename DerivIndexT>
+    explicit OSL_FORCEINLINE Ref(ArrayType& ref_array_data,
+                                 DerivIndexT derivIndex)
+        : m_ref_array_data((&ref_array_data)[derivIndex])
+    {
+    }
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Ref(const RefData& rd,
+                                 DerivIndexT derivIndex = DerivIndexT {})
+        : Ref(reinterpret_cast<ArrayType*>(rd.ptr())[derivIndex])
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    Ref(const Ref& other) : m_ref_array_data(other.m_ref_array_data) {}
+
+    static OSL_FORCEINLINE bool is(const RefData& rd)
+    {
+        // NOTE: using bitwise & to avoid branches
+        return (rd.type().arraylen == ArrayLen)
+               & WideTraits<ElementType>::matches(rd.type());
+    }
+
+    OSL_FORCEINLINE constexpr int length() const { return ArrayLen; }
+
+    OSL_FORCEINLINE
+    const Ref& operator=(const ArrayType& value) const
+    {
+        static_foreach<ConstIndex, ArrayLenT>(
+            [&](int i) { m_ref_array_data[i] = value[i]; });
+        return *this;
+    }
+
+    OSL_FORCEINLINE
+    operator ArrayType&() const { return m_ref_array_data; }
+
+
+    OSL_FORCEINLINE ElementType& operator[](int array_index) const
+    {
+        OSL_DASSERT(array_index >= 0 && array_index < ArrayLen);
+        return m_ref_array_data[array_index];
+    }
+
+private:
+    ArrayType& m_ref_array_data;
+};
+
+
+
+template<typename ElementT> struct Ref<ElementT[]> {
+    typedef ElementT ElementType;
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Ref(ElementType* array_data, int array_length,
+                                 DerivIndexT derivIndex = DerivIndexT {})
+        : m_array_data(array_data + (derivIndex * array_length))
+        , m_array_length(array_length)
+    {
+    }
+
+    template<typename DerivIndexT = ConstIndex<0>>
+    explicit OSL_FORCEINLINE Ref(const RefData& rd,
+                                 DerivIndexT derivIndex = DerivIndexT {})
+        : Ref(&(reinterpret_cast<ElementType*>(
+                  rd.ptr())[derivIndex * rd.type().arraylen]),
+              rd.type().arraylen)
+    {
+    }
+
+    // Must provide user defined copy constructor to
+    // get compiler to be able to follow individual
+    // data members through back to original object
+    // when fully inlined the proxy should disappear
+    OSL_FORCEINLINE
+    Ref(const Ref& other)
+        : m_array_data(other.m_array_data), m_array_length(other.m_array_length)
+    {
+    }
+
+    static OSL_FORCEINLINE bool is(const RefData& rd)
+    {
+        // NOTE: using bitwise & to avoid branches
+        return (rd.type().arraylen != 0)
+               & WideTraits<ElementType>::matches(rd.type());
+    }
+
+    OSL_FORCEINLINE int length() const { return m_array_length; }
+
+    // Omit conversion operator & assignment for unbounded array
+
+    OSL_FORCEINLINE ElementType& operator[](int array_index) const
+    {
+        OSL_DASSERT(array_index >= 0 && array_index < m_array_length);
+        return m_array_data[array_index];
+    }
+
+private:
+    mutable ElementType* m_array_data;
+    int m_array_length;
 };
 
 namespace pvt {
 template<typename DataT, int DerivIndexT> struct RefDeriv : public Ref<DataT> {
-    // Allow implicit construction
-    OSL_FORCEINLINE
-    RefDeriv(const RefData& rd) : Ref<DataT>(rd, DerivIndexT /*derivIndex*/) {}
+    // Forward implicit copy constructor
+    OSL_FORCEINLINE RefDeriv(const RefDeriv& other) : Ref<DataT>(other) {}
 
-    using Base          = typename RefDeriv::Ref;
-    using Base::operator=;
+    // Forward non-copy constructors with DerivIndexT
+    template<typename FirstT, typename... ListT,
+             std::enable_if_t<!std::is_same<typename std::decay<FirstT>::type,
+                                            RefDeriv>::value,
+                              bool> = true>
+    explicit OSL_FORCEINLINE RefDeriv(FirstT&& first, ListT&&... argList)
+        : Ref<DataT>(std::forward<FirstT>(first),
+                     std::forward<ListT>(argList)...,
+                     ConstIndex<DerivIndexT> {})
+    {
+    }
+
+    using Ref<DataT>::operator=;
 };
 }  // namespace pvt
 
-
-// Ref<> should not be instantiated with a Dual2, but instead
-// use these additional wrappers to get at derivative data
-//
-//     template <typename DataT>
-//     struct RefDx;
-//
-//     template <typename DataT>
-//     struct RefDy;
-//
-// Same interface as Ref, but treats DataT & as array and accesses
-// DataT*[1] for Dx, DataT*[2] for Dy
-template<typename DataT> using RefDx = pvt::RefDeriv<DataT, 1 /*DerivIndexT*/>;
-template<typename DataT> using RefDy = pvt::RefDeriv<DataT, 2 /*DerivIndexT*/>;
 
 
 template<typename LaneProxyT>
@@ -3203,9 +3244,9 @@ MaskedData<WidthT>::val_size_in_bytes() const
 template<int WidthT>
 template<typename DataT>
 OSL_NOINLINE void
-MaskedData<WidthT>::assign_from_type(const void* ptr_wide_data)
+MaskedData<WidthT>::assign_val_from_wide_type(const void* ptr_wide_data) const
 {
-    // We can't just do a memcopy because some lanes may be masked off
+    // We can't just do a memcpy because some lanes may be masked off
     // Use a SIMD loop to perform a wide load and masked assignment.
     const auto* src_blocks = pvt::block_cast<DataT, WidthT>(ptr_wide_data);
     auto* dst_blocks       = pvt::block_cast<DataT, WidthT>(m_ptr);
@@ -3230,7 +3271,7 @@ MaskedData<WidthT>::assign_from_type(const void* ptr_wide_data)
 
 template<int WidthT>
 OSL_FORCEINLINE void
-MaskedData<WidthT>::assign_val_from(const void* ptr_wide_data)
+MaskedData<WidthT>::assign_val_from_wide(const void* ptr_wide_data) const
 {
     // To avoid having lots combinations of type safe loops,
     // we will make some assumptions about the wide data layout
@@ -3238,19 +3279,63 @@ MaskedData<WidthT>::assign_val_from(const void* ptr_wide_data)
     // arrays of wide components
     bool isBase32bit = (m_type.basetype != TypeDesc::STRING);
     if (isBase32bit) {
-        assign_from_type<int>(ptr_wide_data);
+        assign_val_from_wide_type<int>(ptr_wide_data);
     } else {
-        assign_from_type<ustring>(ptr_wide_data);
+        assign_val_from_wide_type<ustring>(ptr_wide_data);
+    }
+}
+
+template<int WidthT>
+template<typename DataT>
+OSL_NOINLINE void
+MaskedData<WidthT>::assign_val_lane_from_scalar_type(ActiveLane lane,
+                                                     const void* ptr_data) const
+{
+    // We can't just do a memcpy because some lanes may be masked off
+    // Use a SIMD loop to perform a wide load and masked assignment.
+    auto* src_data   = reinterpret_cast<const DataT*>(ptr_data);
+    auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
+    int elem_count   = static_cast<int>(m_type.numelements());
+    int comp_count   = m_type.aggregate;
+    for (int array_index = 0; array_index < elem_count; ++array_index) {
+        int array_offset = array_index * comp_count;
+        for (int comp_index = 0; comp_index < comp_count; ++comp_index) {
+            int combined_index = array_offset + comp_index;
+            auto& bsrc         = src_data[combined_index];
+            auto& bdst         = dst_blocks[combined_index];
+
+            bdst[lane] = bsrc;
+        }
     }
 }
 
 
 template<int WidthT>
+OSL_FORCEINLINE void
+MaskedData<WidthT>::assign_val_lane_from_scalar(ActiveLane lane,
+                                                const void* ptr_data) const
+{
+    // To avoid having lots combinations of type safe loops,
+    // we will make some assumptions about the wide data layout
+    // and alias as either 32bit integer or 64bit ustring
+    // arrays of wide components
+    bool isBase32bit = (m_type.basetype != TypeDesc::STRING);
+    if (isBase32bit) {
+        assign_val_lane_from_scalar_type<int>(lane, ptr_data);
+    } else {
+        assign_val_lane_from_scalar_type<ustring>(lane, ptr_data);
+    }
+}
+
+
+
+template<int WidthT>
 template<typename DataT>
 OSL_NOINLINE void
-MaskedData<WidthT>::assign_all_from_type(const void* ptr_data, int deriv_index)
+MaskedData<WidthT>::assign_all_from_scalar_type(const void* ptr_data,
+                                                int deriv_index) const
 {
-    // We can't just do a memcopy because some lanes may be masked off
+    // We can't just do a memcpy because some lanes may be masked off
     // Use a SIMD loop to perform a wide load and masked assignment.
     auto* src_data   = reinterpret_cast<const DataT*>(ptr_data);
     auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
@@ -3276,7 +3361,7 @@ MaskedData<WidthT>::assign_all_from_type(const void* ptr_data, int deriv_index)
 
 template<int WidthT>
 OSL_FORCEINLINE void
-MaskedData<WidthT>::assign_all_from(const void* ptr_data)
+MaskedData<WidthT>::assign_all_from_scalar(const void* ptr_data) const
 {
     // To avoid having lots combinations of type safe loops,
     // we will make some assumptions about the wide data layout
@@ -3284,9 +3369,9 @@ MaskedData<WidthT>::assign_all_from(const void* ptr_data)
     // arrays of wide components
     bool isBase32bit = (m_type.basetype != TypeDesc::STRING);
     if (isBase32bit) {
-        assign_all_from_type<int>(ptr_data, /*deriv_index*/ 0);
+        assign_all_from_scalar_type<int>(ptr_data, /*deriv_index*/ 0);
     } else {
-        assign_all_from_type<ustring>(ptr_data, /*deriv_index*/ 0);
+        assign_all_from_scalar_type<ustring>(ptr_data, /*deriv_index*/ 0);
     }
     if (has_derivs()) {
         size_t src_size    = type().size();
@@ -3294,11 +3379,11 @@ MaskedData<WidthT>::assign_all_from(const void* ptr_data)
         const char* dy_src = dx_src + src_size;
 
         if (isBase32bit) {
-            assign_all_from_type<int>(dx_src, /*deriv_index*/ 1);
-            assign_all_from_type<int>(dy_src, /*deriv_index*/ 2);
+            assign_all_from_scalar_type<int>(dx_src, /*deriv_index*/ 1);
+            assign_all_from_scalar_type<int>(dy_src, /*deriv_index*/ 2);
         } else {
-            assign_all_from_type<ustring>(dx_src, /*deriv_index*/ 1);
-            assign_all_from_type<ustring>(dy_src, /*deriv_index*/ 2);
+            assign_all_from_scalar_type<ustring>(dx_src, /*deriv_index*/ 1);
+            assign_all_from_scalar_type<ustring>(dy_src, /*deriv_index*/ 2);
         }
     }
 }

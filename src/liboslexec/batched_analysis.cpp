@@ -68,6 +68,9 @@ static ustring op_transformv("transformv");
 static ustring op_transformn("transformn");
 static ustring op_texture("texture");
 static ustring op_texture3d("texture3d");
+static ustring op_pointcloud_search("pointcloud_search");
+static ustring op_pointcloud_get("pointcloud_get");
+static ustring op_pointcloud_write("pointcloud_write");
 
 // Shader global strings
 static ustring object2common("object2common");
@@ -105,7 +108,10 @@ are_op_results_always_implicitly_varying(ustring opname)
 {
     return (opname == Strings::op_getmessage) | (opname == Strings::op_trace)
            | (opname == Strings::op_texture)
-           | (opname == Strings::op_texture3d);
+           | (opname == Strings::op_texture3d)
+           | (opname == Strings::op_pointcloud_search)
+           | (opname == Strings::op_pointcloud_get)
+           | (opname == Strings::op_pointcloud_write);
     // Renderer might identify result of getattribute as always uniform
     // depending on the attribute itself, so it cannot
     // be "always" implicitly varying based solely on the opname.
@@ -1357,7 +1363,7 @@ struct Analyzer {
                     op(write_op_num).requires_masking(true);
                     OSL_DEV_ONLY(
                         std::cout
-                        << "cyclic read of " << symbol_to_check->name().c_str()
+                        << "cyclic read of " << symbol_to_check->unmangled().c_str()
                         << " from loop [" << read_iter->loop_op_index()
                         << "] op(" << write_op_num << ").requires_masking()="
                         << op(write_op_num).requires_masking() << std::endl);
@@ -1378,7 +1384,7 @@ struct Analyzer {
 #ifdef OSL_DEV
                 else {
                     std::cout << "rejected cyclic read of "
-                              << symbol_to_check->name().c_str()
+                              << symbol_to_check->unmangled().c_str()
                               << " from loop [" << read_iter->loop_op_index()
                               << "] for opnum[" << write_op_num << "]"
                               << std::endl;
@@ -1433,8 +1439,8 @@ struct Analyzer {
                                     << m_execution_scope_stack.end_pos()()
                                     << " write_scope_pos()="
                                     << write_scope_pos()
-                                    << " symbol_to_check->name()="
-                                    << symbol_to_check->name().c_str()
+                                    << " symbol_to_check->unmangled()="
+                                    << symbol_to_check->unmangled().c_str()
                                     << std::endl);
                             }
                         } else {
@@ -1454,8 +1460,8 @@ struct Analyzer {
                                            [write_iter->op_num()]()
                                     << " write_scope_pos()="
                                     << write_scope_pos()
-                                    << " symbol_to_check->name()="
-                                    << symbol_to_check->name().c_str()
+                                    << " symbol_to_check->unmangled()="
+                                    << symbol_to_check->unmangled().c_str()
                                     << std::endl);
                             }
                         }
@@ -1485,9 +1491,9 @@ struct Analyzer {
              *cond_iter != loop_condition; ++cond_iter) {
             auto conditionContinueDependsOn = *cond_iter;
             OSL_DEV_ONLY(std::cout << ">>>Loop Conditional "
-                                   << loop_condition->name().c_str()
+                                   << loop_condition->unmangled().c_str()
                                    << " needs to depend on conditional "
-                                   << conditionContinueDependsOn->name().c_str()
+                                   << conditionContinueDependsOn->unmangled().c_str()
                                    << std::endl);
             m_symbols_dependent_upon.insert(
                 std::make_pair(conditionContinueDependsOn, loop_condition));
@@ -1522,9 +1528,9 @@ struct Analyzer {
                     symbols_read_by_op[read_count++] = sym;
                     OSL_DEV_ONLY(std::cout << " read from ");
                 }
-                OSL_DEV_ONLY(std::cout << " " << sym->name());
+                OSL_DEV_ONLY(std::cout << " " << sym->unmangled());
 
-                OSL_DEV_ONLY(std::cout << " discovery " << sym->name()
+                OSL_DEV_ONLY(std::cout << " discovery " << sym->unmangled()
                                        << std::endl);
             }
             OSL_DEV_ONLY(std::cout << std::endl);
@@ -2097,7 +2103,7 @@ struct Analyzer {
                             auto sym_written_to = opargsym(opcode, arg_index);
 #ifdef OSL_DEV
                             std::cout << "Symbol written to "
-                                      << sym_written_to->name().c_str()
+                                      << sym_written_to->unmangled().c_str()
                                       << std::endl;
                             std::cout << "begin_dep_iter "
                                       << begin_dep_iter.pos()() << std::endl;
@@ -2112,7 +2118,7 @@ struct Analyzer {
                                     OSL_DEV_ONLY(
                                         std::cout
                                         << "Mapping "
-                                        << sym_mask_depends_on->name().c_str()
+                                        << sym_mask_depends_on->unmangled().c_str()
                                         << std::endl);
                                     m_symbols_dependent_upon.insert(
                                         std::make_pair(sym_mask_depends_on,
@@ -2145,7 +2151,7 @@ struct Analyzer {
                             auto sym_written_to = opargsym(opcode, arg_index);
 #ifdef OSL_DEV
                             std::cout << "Symbol written to "
-                                      << sym_written_to->name().c_str()
+                                      << sym_written_to->unmangled().c_str()
                                       << std::endl;
                             std::cout << "begin_dep_iter "
                                       << begin_dep_iter.pos()() << std::endl;
@@ -2160,7 +2166,7 @@ struct Analyzer {
                                     OSL_DEV_ONLY(
                                         std::cout
                                         << "Mapping "
-                                        << sym_mask_depends_on->name().c_str()
+                                        << sym_mask_depends_on->unmangled().c_str()
                                         << std::endl);
                                     m_symbols_dependent_upon.insert(
                                         std::make_pair(sym_mask_depends_on,
@@ -2257,10 +2263,10 @@ struct Analyzer {
                 // then the dest must be made varying as well
                 if (srcsym->is_varying()) {
                     OSL_DEV_ONLY(std::cout
-                                 << "symbol " << srcsym->name().c_str()
+                                 << "symbol " << srcsym->unmangled().c_str()
                                  << " from layer " << con.srclayer
                                  << " is varying and connected to symbol "
-                                 << dstsym->name().c_str() << std::endl);
+                                 << dstsym->unmangled().c_str() << std::endl);
                     recursively_mark_varying(dstsym);
                 }
             }
@@ -2273,7 +2279,7 @@ struct Analyzer {
         OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps begin"
                                << std::endl);
         for (auto s : m_symbols_written_to_by_implicitly_varying_ops) {
-            OSL_DEV_ONLY(std::cout << s->name() << std::endl);
+            OSL_DEV_ONLY(std::cout << s->unmangled() << std::endl);
             recursively_mark_varying(s);
         }
         OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps end"
@@ -2341,7 +2347,7 @@ BatchedAnalysis::dump_symbol_uniformity(ShaderInstance* inst)
 
         FOREACH_SYM(Symbol & s, inst)
         {
-            std::cout << "--->" << &s << " " << s.name() << " is "
+            std::cout << "--->" << &s << " " << s.unmangled() << " is "
                       << (s.is_uniform() ? "UNIFORM" : "VARYING") << std::endl;
         }
         std::cout << std::flush;
@@ -2412,7 +2418,7 @@ BatchedAnalysis::dump_layer(ShaderInstance* inst)
         FOREACH_SYM(Symbol & s, inst)
         {
             if (s.forced_llvm_bool()) {
-                std::cout << "--->" << &s << " " << s.name()
+                std::cout << "--->" << &s << " " << s.unmangled()
                           << " is forced_llvm_bool" << std::endl;
             }
         }

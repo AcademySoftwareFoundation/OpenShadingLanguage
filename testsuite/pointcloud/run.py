@@ -22,7 +22,7 @@ command += testshade("-g 256 256 -param radius 0.1 -od uint8 -o Cout out2.tif rd
 
 command += testshade("--vary_pdxdy -g 256 256 -t 1 -param radius 0.01 -od uint8 -o Cout out_rdcloud_varying_filename.tif rdcloud_varying_filename")
 command += testshade("--center --vary_pdxdy -g 256 256 -t 1 -param radius 0.1 -od uint8 -o Cout out_rdcloud_varying_maxpoint.tif rdcloud_varying_maxpoint")
-command += testshade("--center --vary_pdxdy -g 256 256 -t 1 -param radius 0.5 -od uint8 -o Cout out_rdcloud_varying_sort.tif rdcloud_varying_sort")
+command += testshade("--center --vary_pdxdy -g 256 256 -t 1 -param radius 0.1 -od uint8 -o Cout out_rdcloud_varying_sort.tif rdcloud_varying_sort")
 
 command += testshade("--vary_pdxdy -g 256 256 -t 1 -param radius 0.01 -od uint8 -o Cout out_rdcloud_get_varying_filename.tif rdcloud_get_varying_filename")
 

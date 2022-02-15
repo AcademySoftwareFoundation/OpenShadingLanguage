@@ -16,9 +16,9 @@ shader rdcloud_varying(
         sort = 1;
     }
     
-    // NOTE: when u > 0.916 maxpoint will 11 which is larger than arrays
+    // NOTE: when u > 0.625 maxpoint will be larger than arrays
     //       however OSL language spec says impl should just limit results
-    maxpoint = int(u*12);
+    maxpoint = int(u*16);
     
     string filename = "cloud.geo";
     if ((int(P[1]*P[1]*P[0]*2*16)%2)==0) {
@@ -29,9 +29,6 @@ shader rdcloud_varying(
                                "index", indices, "distance", distances, "uv", uv);
     Cout = 0;
     if (n > 0) {
-        if (n > arraylength(uv)) 
-            n = arraylength(uv); // limit n to size of uv
-    
         float weight = 0;
         for (int i = 0;  i < n;  ++i) {
             float w = 1 - distances[i]/radius;

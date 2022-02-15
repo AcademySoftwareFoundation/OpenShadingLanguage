@@ -104,8 +104,8 @@ class MyBatchedRendererServices final
 
 #if 0
     // OBSOLETE: This is the old way.
-    virtual Mask get_userdata(OSL::ustring name, BatchedShaderGlobals* bsg,
-                                  MaskedData wdata)
+    Mask get_userdata(OSL::ustring name, BatchedShaderGlobals* bsg,
+                                  MaskedData wdata) override
     {
         // In this case, our implementation of get_userdata just requests
         // it from the MyUserData, which we have arranged is pointed to
@@ -124,22 +124,25 @@ class MyBatchedRendererServices final
 
     // Explicitly let code generator know what we have or haven't overridden
     // so it can call an internal optimized version vs. a virtual function.
-    virtual bool is_overridden_get_inverse_matrix_WmWxWf() const
+    bool is_overridden_get_inverse_matrix_WmWxWf() const override
     {
         return false;
     }
-    virtual bool is_overridden_get_matrix_WmWsWf() const { return false; }
-    virtual bool is_overridden_get_inverse_matrix_WmsWf() const
+    bool is_overridden_get_matrix_WmWsWf() const override { return false; }
+    bool is_overridden_get_inverse_matrix_WmsWf() const override
     {
         return false;
     }
-    virtual bool is_overridden_get_inverse_matrix_WmWsWf() const
+    bool is_overridden_get_inverse_matrix_WmWsWf() const override
     {
         return false;
     }
-    virtual bool is_overridden_texture() const { return false; }
-    virtual bool is_overridden_texture3d() const { return false; }
-    virtual bool is_overridden_environment() const { return false; }
+    bool is_overridden_texture() const override { return false; }
+    bool is_overridden_texture3d() const override { return false; }
+    bool is_overridden_environment() const override { return false; }
+    bool is_overridden_pointcloud_search() const override { return false; }
+    bool is_overridden_pointcloud_get() const override { return false; }
+    bool is_overridden_pointcloud_write() const override { return false; }
 };
 
 // RendererServices is the interface through which OSL requests things back
@@ -150,11 +153,11 @@ class MyBatchedRendererServices final
 // pointer is stored in shaderglobals.renderstate.
 class MyRendererServices final : public OSL::RendererServices {
 public:
-    virtual OSL::BatchedRendererServices<16>* batched(OSL::WidthOf<16>)
+    OSL::BatchedRendererServices<16>* batched(OSL::WidthOf<16>) override
     {
         return &m_batch_16_rs;
     }
-    virtual OSL::BatchedRendererServices<8>* batched(OSL::WidthOf<8>)
+    OSL::BatchedRendererServices<8>* batched(OSL::WidthOf<8>) override
     {
         return &m_batch_8_rs;
     }

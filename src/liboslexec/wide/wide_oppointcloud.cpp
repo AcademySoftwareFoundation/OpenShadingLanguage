@@ -437,7 +437,7 @@ Mask default_pointcloud_write(BatchedShaderGlobals* bsg,
         }
     });
 
-    return mask;
+    return ok ? mask : Mask{false};
 #else
     return Mask{false};
 #endif

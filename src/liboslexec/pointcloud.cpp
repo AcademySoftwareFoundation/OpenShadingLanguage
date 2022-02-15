@@ -11,6 +11,7 @@
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
+#ifdef USE_PARTIO
 typedef std::unordered_map<ustring, std::unique_ptr<PointCloud>, ustringHash> PointCloudMap;
 static PointCloudMap pointclouds;
 static OIIO::spin_mutex pointcloudmap_mutex;
@@ -71,6 +72,7 @@ PointCloud::~PointCloud ()
     if (m_partio_cloud)
         m_partio_cloud->release ();
 }
+#endif
 
 } // namespace pvt
 

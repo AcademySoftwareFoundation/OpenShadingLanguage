@@ -25,7 +25,7 @@ shader rdcloud_varying(
         filename = "cloud_transpose.geo";
     }
     
-    int n = pointcloud_search (filename, P+vector(1.0/1024.0,1.0/1024.0,0), radius, maxpoint, sort,
+    int n = pointcloud_search (filename, (P*vector(1.1,1.1,1.0))+vector(1.0/1024.0,1.0/1024.0,0), radius, maxpoint, sort,
                                "index", indices, "distance", distances, "uv", uv);
     Cout = 0;
     if (n > 0) {

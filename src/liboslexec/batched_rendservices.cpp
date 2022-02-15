@@ -254,6 +254,7 @@ BatchedRendererServices<WidthT>::pointcloud_get(
     OSL_ASSERT(
         0
         && "UNREACHABLE:  BatchedRendererServices<WidthT>::pointcloud_get calls should be overridden or the target specific version in wide_oppointcloud.cpp should be called");
+    return Mask(false);
 }
 
 
@@ -267,6 +268,7 @@ BatchedRendererServices<WidthT>::pointcloud_write(
     OSL_ASSERT(
         0
         && "UNREACHABLE:  BatchedRendererServices<WidthT>::pointcloud_write calls should be overridden or the target specific version in wide_oppointcloud.cpp should be called");
+    return Mask(false);
 }
 
 template<int WidthT>

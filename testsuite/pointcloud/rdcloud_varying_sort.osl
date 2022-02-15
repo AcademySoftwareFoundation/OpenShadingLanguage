@@ -23,7 +23,13 @@ shader rdcloud_varying_sort (string filename = "cloud.geo",
         float weight = 0;
         for (int i = 0;  i < n;  ++i) {
             float w = 1 - distances[i]/radius;
-            Cout += 2*i*(uv[i]*w)/n;
+            if (sort) {
+                Cout += 2*i*(uv[i]*w)/n;
+            } else {
+                // if not sorted can't let order of results contribute to
+                // final color or results will be undeterministic 
+                Cout += uv[i]*w;
+            }
             weight += w;
         }
         Cout /= weight;

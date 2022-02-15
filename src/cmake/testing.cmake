@@ -167,10 +167,17 @@ macro ( TESTSUITE )
             
             # When building for Batched support, optionally run a regression test
             # if there is an BATCHED_REGRESSION marker file in the directory.
-            if (EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
+            if ((EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
+                AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
                 # optimized for right now
                 add_one_testsuite ("${_testname}.regress.batched.opt" "${_testsrcdir}"
                                    ENV TESTSHADE_OPT=2 OSL_REGRESSION_TEST=BATCHED )
+            endif ()
+            if ((EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
+                AND EXISTS "${_testsrcdir}/NOOPTIMIZE")
+                # optimized for right now
+                add_one_testsuite ("${_testname}.regress.batched" "${_testsrcdir}"
+                                   ENV TESTSHADE_OPT=0 OSL_REGRESSION_TEST=BATCHED )
             endif ()
         endif ()
     endforeach ()

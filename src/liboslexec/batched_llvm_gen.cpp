@@ -532,9 +532,10 @@ LLVMGEN (llvm_gen_arraylength)
     int len = A.typespec().is_unsized_array() ? A.initializers()
                                               : A.typespec().arraylength();
 
-    // Array's size should be uniform accross all lanes
-    OSL_ASSERT(Result.is_uniform());
-    rop.llvm_store_value (rop.ll.constant(len), Result);
+    // Even thought the array's size should be uniform accross all lanes,
+    // the symbol its being stored in maybe varying
+    llvm::Value * const_length = Result.is_uniform() ? rop.ll.constant(len) : rop.ll.wide_constant(len);
+    rop.llvm_store_value (const_length, Result);
     return true;
 }
 

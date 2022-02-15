@@ -20,6 +20,9 @@ shader rdcloud_varying_maxpoint (float radius = 0.1,
                                "index", indices, "distance", distances, "uv", uv);
     Cout = 0;
     if (n > 0) {
+        if (n > arraylength(uv)) 
+            n = arraylength(uv); // limit n to size of uv
+    
         float weight = 0;
         for (int i = 0;  i < n;  ++i) {
             float w = 1 - distances[i]/radius;

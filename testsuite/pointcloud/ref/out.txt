@@ -25,8 +25,6 @@ Output Cout to out1_masked_1.tif
 Output Cout to out1_masked_2.tif
 
 Output Cout to out_zero_derivs.tif
-ERROR: Index [10] out of range distances[0..9]: rdcloud_zero_derivs.osl:30 (group unnamed_group_1, layer 0 rdcloud_zero_derivs_0, shader rdcloud_zero_derivs)
-ERROR: Index [10] out of range uv[0..9]: rdcloud_zero_derivs.osl:31 (group unnamed_group_1, layer 0 rdcloud_zero_derivs_0, shader rdcloud_zero_derivs)
 
 Output Cout to out_zero_derivs_search_only.tif
 

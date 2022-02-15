@@ -9,33 +9,36 @@ shader rdcloud_zero_derivs (string filename = "cloud.geo",
     int maxpoint = 10;
     int indices[10] = {0,0,0,0,0,0,0,0,0,0};
     float distances[10];
-    color uv[10];
     
-    uv[0] = P;
-    int n = pointcloud_search (filename, P, radius, maxpoint, 1,
+    // Array is too small to handle n (which could be up to 10) to
+    // test implementation's handling 
+    color uv[5] = {P,P,P,P,P};
+    
+    //uv[0] = P;
+    float rscaled = radius + radius*3*v;
+    int n = pointcloud_search (filename, P, rscaled, maxpoint, 1,
                                "index", indices, "distance", distances);    
     Cout = 0;
-    
-    // ask for more values than will fit in the array 
-    if (v > 0.8) {
-        // Set N larger than attribute array length
-        // to test implementation's handling 
-        n = 11;
-    }
     
     if (u > 0.25) {
         if (pointcloud_get (filename, indices, n, "uv", uv)) {
             float weight = 0;
+            if (n > arraylength(uv)) 
+                n = arraylength(uv); // limit n to size of uv
             for (int i = 0;  i < n;  ++i) {
                 float w = 1 - distances[i]/radius;
                 Cout += uv[i]*w;
                 weight += w;
             }
             Cout /= weight;
-            Cout *= max(0.0, 2*(0.5-v));
+            Cout *= max(0.0, 2*(0.75-v));
         }
+    } 
+    if (n > arraylength(uv)) 
+        n = arraylength(uv); // limit n to size of uv
+    for (int i = 0;  i < n;  ++i) {
+        color uv0dx = Dx(uv[i]); 
+        color uv1dy = Dy(uv[i]);
+        Cout += (uv0dx + uv1dy)/(2*n);
     }
-    color uv0dx = Dx(uv[0]); 
-    color uv1dy = Dy(uv[0]); 
-    Cout += (uv0dx + uv1dy)/2;
 }

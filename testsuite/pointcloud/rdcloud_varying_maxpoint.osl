@@ -16,7 +16,7 @@ shader rdcloud_varying_maxpoint (float radius = 0.1,
     //       however OSL language spec says impl should just limit results
     maxpoint = int(u*16);
     
-    int n = pointcloud_search (filename, P, radius, maxpoint, 1,
+    int n = pointcloud_search (filename, P+vector(1.0/1024.0,1.0/1024.0,0), radius, maxpoint, 1,
                                "index", indices, "distance", distances, "uv", uv);
     Cout = 0;
     if (n > 0) {

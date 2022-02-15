@@ -16,7 +16,7 @@ shader rdcloud_varying_sort (string filename = "cloud.geo",
         sort = 1;
     }
     
-    int n = pointcloud_search (filename, P, radius, maxpoint, sort,
+    int n = pointcloud_search (filename, P+vector(1.0/1024.0,1.0/1024.0,0), radius, maxpoint, sort,
                                "index", indices, "distance", distances, "uv", uv);
     Cout = 0;
     if (n > 0) {

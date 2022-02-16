@@ -3775,7 +3775,7 @@ LLVMGEN (llvm_gen_raytype)
         func = "osl_raytype_bit";
     } else {
         // No way to know which name is being asked for
-        args[1] = rop.llvm_get_pointer (Name);
+        args[1] = rop.llvm_load_string (Name);
         func = "osl_raytype_name";
     }
     llvm::Value *ret = rop.ll.call_function (func, args);

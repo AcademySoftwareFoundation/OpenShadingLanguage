@@ -148,13 +148,12 @@ private:
 
 struct Sphere final : public Primitive {
     Sphere(Vec3 c, float r, int shaderID, bool isLight)
-        : Primitive(shaderID, isLight), c(c), r2(r * r) {
+        : Primitive(shaderID, isLight), c(c), r(r), r2(r * r) {
         OSL_DASSERT(r > 0);
     }
 
     void getBounds (float &minx, float &miny, float &minz,
                     float &maxx, float &maxy, float &maxz) const {
-        const float r = sqrtf(r2);
         minx = c.x - r;
         miny = c.y - r;
         minz = c.z - r;
@@ -192,6 +191,32 @@ struct Sphere final : public Primitive {
         Dual2<float> nz(n.val().z, n.dx().z, n.dy().z);
         Dual2<float> u = (atan2(nx, nz) + Dual2<float>(M_PI)) * 0.5f * float(M_1_PI);
         Dual2<float> v = safe_acos(ny) * float(M_1_PI);
+        // Review of sphere parameterization:
+        //    x = r * -sin(2pi*u) * sin(pi*v)
+        //    y = r * cos(pi*v)
+        //    z = r * -cos(2pi*u) * sin(pi*v)
+        // partial derivs:
+        //    dPdu.x = -r * sin(pi*v) * 2pi * cos(2pi*u)
+        //    dPdu.y = 0
+        //    dPdu.z = r * sin(pi*v) * 2pi * sin(2pi*u)
+        //    dPdv.x = r * -cos(pi*v) * pi * sin(2pi*u)
+        //    dPdv.y = r * -pi * sin(pi*v)
+        //    dPdv.z = r * -cos(pi*v) * pi * cos(2pi*u)
+#if 1
+        const float pi = float(M_PI);
+        float twopiu = 2.0f * pi * u.val();
+        float sin2piu, cos2piu;
+        OIIO::sincos(twopiu, &sin2piu, &cos2piu);
+        float sinpiv, cospiv;
+        OIIO::sincos(pi * v.val(), &sinpiv, &cospiv);
+        float pir = pi * r;
+        dPdu.x = -2.0f * pir * sinpiv * cos2piu;
+        dPdu.y = 0.0f;
+        dPdu.z = 2.0f * pir * sinpiv * sin2piu;
+        dPdv.x = -pir * cospiv * sin2piu;
+        dPdv.y = -pir * sinpiv;
+        dPdv.z = -pir * cospiv * cos2piu;
+#else
         float xz2 = nx.val() * nx.val() + nz.val() * nz.val();
         if (xz2 > 0) {
             const float PI = float(M_PI);
@@ -214,6 +239,7 @@ struct Sphere final : public Primitive {
                 dPdv = Vec3(-1, 0, 0);
             }
         }
+#endif
         return make_Vec2(u, v);
     }
 
@@ -269,7 +295,7 @@ struct Sphere final : public Primitive {
 
 private:
     Vec3  c;
-    float r2;
+    float r, r2;
 };
 
 

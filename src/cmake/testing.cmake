@@ -175,7 +175,7 @@ macro ( TESTSUITE )
             endif ()
             if ((EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
                 AND EXISTS "${_testsrcdir}/NOOPTIMIZE")
-                # optimized for right now
+                # not optimized
                 add_one_testsuite ("${_testname}.regress.batched" "${_testsrcdir}"
                                    ENV TESTSHADE_OPT=0 OSL_REGRESSION_TEST=BATCHED )
             endif ()

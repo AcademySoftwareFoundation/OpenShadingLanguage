@@ -1,0 +1,14 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader wrcloud_varying_filename (
+                output color Cout = 0)
+{
+    string filename = "cloud_masked_1.geo";
+    if ((int(P[0]*P[0]*P[1]*2*32)%2)==0) {
+        filename = "cloud_masked_2.geo";
+    }
+    pointcloud_write (filename, P, "uv", color(u,v,0), "u", u, "v", v);
+    Cout = color(u,v,0);
+}

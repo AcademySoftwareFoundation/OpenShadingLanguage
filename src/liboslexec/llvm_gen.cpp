@@ -3473,14 +3473,19 @@ LLVMGEN (llvm_gen_pointcloud_search)
     args.push_back (rop.llvm_load_value (Filename));   // 1 filename
     args.push_back (rop.llvm_void_ptr   (Center));     // 2 center
     args.push_back (rop.llvm_load_value (Radius));     // 3 radius
-    args.push_back (rop.llvm_load_value (Max_points)); // 4 max_points
+
+    constexpr int maxPointsArgumentIndex = 4;           // 4 max_points
+    OSL_ASSERT(args.size() == maxPointsArgumentIndex);
+    llvm::Value * maxPointsVal = rop.llvm_load_value (Max_points);
+    args.push_back (maxPointsVal); // 4 max_points
+
     args.push_back (Sort ? rop.llvm_load_value(*Sort)  // 5 sort
                          : rop.ll.constant(0));
     args.push_back (rop.ll.constant_ptr (NULL));      // 6 indices
     args.push_back (rop.ll.constant_ptr (NULL));      // 7 distances
     args.push_back (rop.ll.constant (0));             // 8 derivs_offset
     args.push_back (NULL);                              // 9 nattrs
-    size_t capacity = 0x7FFFFFFF; // Lets put a 32 bit limit
+    int capacity = 0x7FFFFFFF; // Lets put a 32 bit limit
     int extra_attrs = 0; // Extra query attrs to search
     // This loop does three things. 1) Look for the special attributes
     // "distance", "index" and grab the pointer. 2) Compute the minimmum
@@ -3515,44 +3520,38 @@ LLVMGEN (llvm_gen_pointcloud_search)
             extra_attrs++;
         }
         // minimum capacity of the output arrays
-        capacity = std::min (simpletype.numelements(), capacity);
+        capacity = std::min (static_cast<int>(simpletype.numelements()), capacity);
     }
 
     args[9] = rop.ll.constant (extra_attrs);
 
-    // Compare capacity to the requested number of points. The available
-    // space on the arrays is a constant, the requested number of
-    // points is not, so runtime check.
-    llvm::Value *sizeok = rop.ll.op_ge (rop.ll.constant((int)capacity), args[4]); // max_points
+    if (Max_points.is_constant()) {
+        // Compare capacity to the requested number of points.
+        // Choose not to do a runtime check because generated code will still work,
+        // arrays will only be filled up to the capacity,
+        // per the OSL language specification
+        const int const_max_points = Max_points.get_int();
+        if (capacity < const_max_points) {
+            rop.shadingcontext()->warningf (
+                "Arrays too small for pointcloud lookup at (%s:%d) (%s:%d)",
+                op.sourcefile().c_str(), op.sourceline());
+            args[maxPointsArgumentIndex] = rop.ll.constant(capacity);
+        }
+    } else {
+        // Clamp max points to the capacity of the arrays
+        llvm::Value *capacity_val = rop.ll.constant(capacity);
+        llvm::Value *cond = rop.ll.op_le (capacity_val, maxPointsVal);
+        llvm::Value *clampedMaxPoints = rop.ll.op_select(cond, capacity_val, maxPointsVal);
+        args[maxPointsArgumentIndex] = clampedMaxPoints;
+    }
 
-    llvm::BasicBlock* sizeok_block = rop.ll.new_basic_block ("then");
-    llvm::BasicBlock* badsize_block = rop.ll.new_basic_block ("else");
-    llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
-    rop.ll.op_branch (sizeok, sizeok_block, badsize_block);
-    // N.B. the op_branch sets sizeok_block as the new insert point
-
-    // non-error code case
     llvm::Value *count = rop.ll.call_function ("osl_pointcloud_search", args);
     // Clear derivs if necessary
     for (size_t i = 0; i < clear_derivs_of.size(); ++i)
         rop.llvm_zero_derivs (*clear_derivs_of[i], count);
     // Store result
     rop.llvm_store_value (count, Result);
-    rop.ll.op_branch (after_block);
 
-    // error code case
-    rop.ll.set_insert_point (badsize_block);
-    args.clear();
-    static ustring errorfmt("Arrays too small for pointcloud lookup at (%s:%d)");
-    llvm::Value *err_args[] = {
-        rop.sg_void_ptr(),
-        rop.ll.constant_ptr ((void *)errorfmt.c_str()),
-        rop.ll.constant_ptr ((void *)op.sourcefile().c_str()),
-        rop.ll.constant (op.sourceline()),
-    };
-    rop.ll.call_function ("osl_error", err_args);
-
-    rop.ll.op_branch (after_block);
     return true;
 }
 
@@ -3573,46 +3572,29 @@ LLVMGEN (llvm_gen_pointcloud_get)
 
     llvm::Value *count = rop.llvm_load_value (Count);
 
-    int capacity = std::min ((int)Data.typespec().simpletype().numelements(), (int)Indices.typespec().simpletype().numelements());
-    // Check available space
-    llvm::Value *sizeok = rop.ll.op_ge (rop.ll.constant(capacity), count);
-
-    llvm::BasicBlock* sizeok_block = rop.ll.new_basic_block ("then");
-    llvm::BasicBlock* badsize_block = rop.ll.new_basic_block ("else");
-    llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
-    rop.ll.op_branch (sizeok, sizeok_block, badsize_block);
-    // N.B. sets insert point to true case
-
-    // non-error code case
+    // reduce the specified count to be below the arraylength of the indices and data
+    int element_count = std::min(Data.typespec().arraylength(),
+                                 Indices.typespec().arraylength());
+    llvm::Value *elem_count_val = rop.ll.constant(element_count);
+    llvm::Value *cond = rop.ll.op_le (elem_count_val, count);
+    llvm::Value *clampedCount = rop.ll.op_select(cond, elem_count_val, count);
 
     // Convert 32bit indices to 64bit
     llvm::Value * args[] = {
         rop.sg_void_ptr(),
         rop.llvm_load_value (Filename),
         rop.llvm_void_ptr (Indices),
-        count,
+        clampedCount,
         rop.llvm_load_value (Attr_name),
         rop.ll.constant (Data.typespec().simpletype()),
         rop.llvm_void_ptr (Data),
     };
     llvm::Value *found = rop.ll.call_function ("osl_pointcloud_get", args);
     rop.llvm_store_value (found, Result);
-    if (Data.has_derivs())
-        rop.llvm_zero_derivs (Data, count);
-    rop.ll.op_branch (after_block);
+    if (Data.has_derivs()) {
+        rop.llvm_zero_derivs (Data, clampedCount);
+    }
 
-    // error code case
-    rop.ll.set_insert_point (badsize_block);
-    static ustring errorfmt("Arrays too small for pointcloud attribute get at (%s:%d)");
-    llvm::Value *err_args[] = {
-        rop.sg_void_ptr(),
-        rop.ll.constant_ptr ((void *)errorfmt.c_str()),
-        rop.ll.constant_ptr ((void *)op.sourcefile().c_str()),
-        rop.ll.constant (op.sourceline()),
-    };
-    rop.ll.call_function ("osl_error", err_args);
-
-    rop.ll.op_branch (after_block);
     return true;
 }
 
@@ -3793,7 +3775,7 @@ LLVMGEN (llvm_gen_raytype)
         func = "osl_raytype_bit";
     } else {
         // No way to know which name is being asked for
-        args[1] = rop.llvm_get_pointer (Name);
+        args[1] = rop.llvm_load_string (Name);
         func = "osl_raytype_name";
     }
     llvm::Value *ret = rop.ll.call_function (func, args);

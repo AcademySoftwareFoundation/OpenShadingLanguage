@@ -1,10 +1,43 @@
 Compiled rdcloud.osl -> rdcloud.oso
+Compiled rdcloud_get_varying_filename.osl -> rdcloud_get_varying_filename.oso
+Compiled rdcloud_search_only.osl -> rdcloud_search_only.oso
+Compiled rdcloud_varying.osl -> rdcloud_varying.oso
+Compiled rdcloud_varying_filename.osl -> rdcloud_varying_filename.oso
+Compiled rdcloud_varying_maxpoint.osl -> rdcloud_varying_maxpoint.oso
+Compiled rdcloud_varying_sort.osl -> rdcloud_varying_sort.oso
+Compiled rdcloud_zero_derivs.osl -> rdcloud_zero_derivs.oso
+Compiled rdcloud_zero_derivs_search_only.osl -> rdcloud_zero_derivs_search_only.oso
 Compiled test.osl -> test.oso
 Compiled wrcloud.osl -> wrcloud.oso
+Compiled wrcloud_transpose.osl -> wrcloud_transpose.oso
+Compiled wrcloud_varying_filename.osl -> wrcloud_varying_filename.oso
 
 Output Cout to out0.tif
-Partio: sort, Failed to find position in particle
+
+Output Cout to out0_transpose.tif
+
+Output Cout to out0_varying_filename.tif
 
 Output Cout to out1.tif
 
+Output Cout to out1_masked_1.tif
+
+Output Cout to out1_masked_2.tif
+
+Output Cout to out_zero_derivs.tif
+
+Output Cout to out_zero_derivs_search_only.tif
+
+Output Cout to out_search_only.tif
+
 Output Cout to out2.tif
+
+Output Cout to out_rdcloud_varying_filename.tif
+
+Output Cout to out_rdcloud_varying_maxpoint.tif
+
+Output Cout to out_rdcloud_varying_sort.tif
+
+Output Cout to out_rdcloud_get_varying_filename.tif
+
+Output Cout to out_rdcloud_varying.tif

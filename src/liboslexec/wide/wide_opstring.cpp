@@ -318,7 +318,7 @@ OSL_BATCHOP void __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr,
     OSL_ASSERT(mask.any_on());
 
     Masked<int> wsuccess(wsuccess_ptr, mask);
-    Masked<int[]> wresults(wresults_ptr, nresults, mask, 0 /*derivIndex*/);
+    Masked<int[]> wresults(wresults_ptr, nresults, mask);
     Wide<const ustring> wsubject(wsubject_ptr);
     Wide<const ustring> wpattern(wpattern_ptr);
 
@@ -464,8 +464,7 @@ OSL_BATCHOP void
     Wide<const ustring> wS(wstr);
 
     Masked<int> wR(wresults, Mask(mask_value));  //length of split array
-    Masked<ustring[]> wRString(wresult_string, resultslen, Mask(mask_value),
-                               0 /*deriv_index*/);  //Split string
+    Masked<ustring[]> wRString(wresult_string, resultslen, Mask(mask_value));  //Split string
 
     Wide<const ustring> wSep(wsep);
     Wide<const int> wMaxSplit(wmaxsplit);

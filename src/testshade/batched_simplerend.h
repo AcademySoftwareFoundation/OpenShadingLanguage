@@ -84,6 +84,9 @@ public:
     bool is_overridden_texture() const override { return false; }
     bool is_overridden_texture3d() const override { return false; }
     bool is_overridden_environment() const override { return false; }
+    bool is_overridden_pointcloud_search() const override { return false; }
+    bool is_overridden_pointcloud_get() const override { return false; }
+    bool is_overridden_pointcloud_write() const override { return false; }
 
     void trace(TraceOpt& options, BatchedShaderGlobals* bsg, Masked<int> result,
                Wide<const Vec3> P, Wide<const Vec3> dPdx, Wide<const Vec3> dPdy,

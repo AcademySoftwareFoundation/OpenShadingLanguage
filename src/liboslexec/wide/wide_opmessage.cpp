@@ -78,10 +78,10 @@ public:
 
         MaskedData dest(wsrcval.type(), /*has_derivs=*/false, lanes_to_populate,
                         data);
-        dest.assign_val_from(wsrcval.ptr());
+        dest.assign_val_from_wide(wsrcval.ptr());
     }
 
-    void export_data(MaskedData wdestval) { wdestval.assign_val_from(data); }
+    void export_data(MaskedData wdestval) { wdestval.assign_val_from_wide(data); }
 };
 
 struct BatchedMessageList {

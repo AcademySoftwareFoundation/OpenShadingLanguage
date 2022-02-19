@@ -55,6 +55,9 @@ static ustring op_trunc("trunc");
 static ustring op_warning("warning");
 static ustring op_xor("xor");
 
+static ustring u_distance ("distance");
+static ustring u_index ("index");
+
 /// Macro that defines the arguments to LLVM IR generating routines
 ///
 #define LLVMGEN_ARGS BatchedBackendLLVM &rop, int opnum
@@ -529,9 +532,10 @@ LLVMGEN (llvm_gen_arraylength)
     int len = A.typespec().is_unsized_array() ? A.initializers()
                                               : A.typespec().arraylength();
 
-    // Array's size should be uniform accross all lanes
-    OSL_ASSERT(Result.is_uniform());
-    rop.llvm_store_value (rop.ll.constant(len), Result);
+    // Even thought the array's size should be uniform accross all lanes,
+    // the symbol its being stored in maybe varying
+    llvm::Value * const_length = Result.is_uniform() ? rop.ll.constant(len) : rop.ll.wide_constant(len);
+    rop.llvm_store_value (const_length, Result);
     return true;
 }
 
@@ -6469,6 +6473,497 @@ LLVMGEN (llvm_gen_spline)
 
 
 
+LLVMGEN (llvm_gen_pointcloud_search)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT(op.nargs() >= 5);
+    Symbol& Result     = *rop.opargsym (op, 0);
+    Symbol& Filename   = *rop.opargsym (op, 1);
+    Symbol& Center     = *rop.opargsym (op, 2);
+    Symbol& Radius     = *rop.opargsym (op, 3);
+    Symbol& Max_points = *rop.opargsym (op, 4);
+
+    OSL_ASSERT(Result.is_varying());
+    OSL_DASSERT(Result.typespec().is_int() && Filename.typespec().is_string() &&
+             Center.typespec().is_triple() && Radius.typespec().is_float() &&
+             Max_points.typespec().is_int());
+
+    // NOTE:  It would be trivial to pass a wide max_points through RendererServices.
+    //        But as we don't really expect them to ever be, we can just pay the
+    //        binning overhead should it accidentally happen.  If Max_points ends
+    //        up being varying in practice, suggest changing what is passed to
+    //        RendererServices to avoid binning.
+    bool requires_binning = Filename.is_varying() | Max_points.is_varying();
+
+    std::vector<Symbol *> clear_derivs_of; // arguments whose derivs we need to zero at the end
+    int attr_arg_offset = 5; // where the opt attrs begin
+    Symbol *Sort = NULL;
+    llvm::Value * sortVal = nullptr;
+    if (op.nargs() > 5 && rop.opargsym(op,5)->typespec().is_int()) {
+        Sort = rop.opargsym(op,5);
+        requires_binning = requires_binning | Sort->is_varying();
+        sortVal = rop.llvm_load_value (*Sort, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Sort->is_uniform());
+        ++attr_arg_offset;
+    }
+    int nattrs = (op.nargs() - attr_arg_offset) / 2;
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    bool pass_center_derivs = false;
+    std::vector<llvm::Value *> args;
+    args.push_back (rop.sg_void_ptr());                // 0 sg
+    args.push_back (rop.llvm_void_ptr(Result));        // 1 result
+
+    constexpr int fileNameArgumentIndex = 2;           // 2 filename
+    OSL_ASSERT(args.size() == fileNameArgumentIndex);
+    llvm::Value * fileNameVal = rop.llvm_load_value (Filename, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Filename.is_uniform());
+    args.push_back ( Filename.is_uniform() ? fileNameVal : nullptr);
+
+    args.push_back(nullptr /*deferred*/);              // 3 center
+    args.push_back(rop.llvm_load_arg (Radius, false/*derivs*/, false/*is_uniform*/)); // 4 radius
+    constexpr int maxPointsArgumentIndex = 5;           // 5 max_points
+    OSL_ASSERT(args.size() == maxPointsArgumentIndex);
+    llvm::Value * maxPointsVal = rop.llvm_load_value (Max_points, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Max_points.is_uniform());
+    args.push_back ( Max_points.is_uniform() ? maxPointsVal : nullptr);
+
+    constexpr int sortArgumentIndex = 6;           // 6 sort
+    OSL_ASSERT(args.size() == sortArgumentIndex);
+    args.push_back ((Sort && Sort->is_uniform()) ? sortVal
+                         : rop.ll.constant(0));
+    args.push_back (rop.ll.constant_ptr (nullptr));   // 7 indices
+    args.push_back (rop.ll.constant (0));             // 8 indices array length
+    args.push_back (rop.ll.constant_ptr (nullptr));   // 9 distances
+    args.push_back (rop.ll.constant (1));             // 10 distances array length
+    args.push_back (rop.ll.constant (0));             // 11 distances_has_derivs
+
+    constexpr int maskArgumentIndex = 12;             // 12 mask_value
+    OSL_ASSERT(args.size() == maskArgumentIndex);
+    args.push_back (nullptr /*deferred*/);
+
+    args.push_back (nullptr /*deferred*/);            // 13 nattrs
+    int capacity = 0x7FFFFFFF; // Lets put a 32 bit limit
+    int extra_attrs = 0; // Extra query attrs to search
+    // This loop does three things. 1) Look for the special attributes
+    // "distance", "index" and grab the pointer. 2) Compute the minimmum
+    // size of the provided output arrays to check against max_points
+    // 3) push optional args to the arg list
+    for (int i = 0; i < nattrs; ++i) {
+        Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
+        Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
+
+        OSL_DASSERT (Name.typespec().is_string());
+        TypeDesc simpletype = Value.typespec().simpletype();
+        if (Name.is_constant() && Name.get_string() == u_index &&
+            simpletype.elementtype() == TypeDesc::INT) {
+            args[7] = rop.llvm_void_ptr (Value);
+            args[8] = rop.ll.constant(Value.typespec().arraylength());
+        } else if (Name.is_constant() && Name.get_string() == u_distance &&
+                   simpletype.elementtype() == TypeDesc::FLOAT) {
+            args[9] = rop.llvm_void_ptr (Value);
+            args[10] = rop.ll.constant(Value.typespec().arraylength());
+            if (Value.has_derivs()) {
+                if (Center.has_derivs()) {
+                    pass_center_derivs = true;
+                    args[11] = rop.ll.constant (1);
+                } else
+                    clear_derivs_of.push_back(&Value);
+            }
+        } else {
+            // It is a regular attribute, push it to the arg list
+            if (!Name.is_uniform()) {
+                rop.shadingcontext()->errorf (
+                    "pointcloud_search named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from (%s:%d)",
+                    op.sourcefile().c_str(), op.sourceline());
+                return false;
+            }
+
+            OSL_ASSERT(Name.is_uniform());
+            OSL_ASSERT(Value.is_varying());
+            args.push_back (rop.llvm_load_value (Name));
+            args.push_back (rop.ll.constant (simpletype));
+            args.push_back (rop.llvm_void_ptr (Value));
+            if (Value.has_derivs())
+                clear_derivs_of.push_back(&Value);
+            extra_attrs++;
+        }
+        // minimum capacity of the output arrays
+        capacity = std::min (static_cast<int>(simpletype.numelements()), capacity);
+    }
+    args[3] = rop.llvm_load_arg (Center, pass_center_derivs, false/*is_uniform*/); // 3 center
+
+    args[13] = rop.ll.constant (extra_attrs);
+
+    if (Max_points.is_constant()) {
+        // Compare capacity to the requested number of points.
+        // Choose not to do a runtime check because generated code will still work,
+        // arrays will only be filled up to the capacity,
+        // per the OSL language specification
+        const int const_max_points = Max_points.get_int();
+        if (capacity < const_max_points) {
+            rop.shadingcontext()->warningf (
+                "Arrays too small for pointcloud lookup at (%s:%d) (%s:%d)",
+                op.sourcefile().c_str(), op.sourceline());
+            args[maxPointsArgumentIndex] = rop.ll.constant(capacity);
+        }
+    } else {
+        // Clamp max points to the capacity of the arrays
+        if (Max_points.is_uniform()) {
+            llvm::Value *capacity_val = rop.ll.constant(capacity);
+            llvm::Value *cond = rop.ll.op_le (capacity_val, maxPointsVal);
+            llvm::Value *clampedMaxPoints = rop.ll.op_select(cond, capacity_val, maxPointsVal);
+            args[maxPointsArgumentIndex] = clampedMaxPoints;
+        } else {
+            llvm::Value *wcapacity_val = rop.ll.wide_constant(capacity);
+            llvm::Value *cond = rop.ll.op_le (wcapacity_val, maxPointsVal);
+            maxPointsVal = rop.ll.op_select(cond, wcapacity_val, maxPointsVal);
+        }
+    }
+
+    // non-error code case
+    FuncSpec func_spec("pointcloud_search");
+    func_spec.mask();
+    const char * funcName = rop.build_name(func_spec);
+
+    if (requires_binning) {
+        // do while(remaining)
+        llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to pointcloud_search");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_pointcloud_search") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_pointcloud_search") : std::string());
+        rop.ll.op_branch(bin_block);
+        {
+
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+            llvm::Value * lanesMatching = remainingMask;
+
+            if (!Filename.is_uniform()) {
+                llvm::Value *scalar_fileName = rop.ll.op_extract(fileNameVal, leadLane);
+                args[fileNameArgumentIndex] = scalar_fileName;
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_fileName, fileNameVal, remainingMask);
+            }
+            OSL_ASSERT(lanesMatching);
+
+            if (!Max_points.is_uniform()) {
+                llvm::Value *scalar_maxPoints = rop.ll.op_extract(maxPointsVal, leadLane);
+                args[maxPointsArgumentIndex] = scalar_maxPoints;
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_maxPoints, maxPointsVal, lanesMatching);
+            }
+
+            if (Sort && (!Sort->is_uniform())) {
+                OSL_ASSERT(sortVal);
+                llvm::Value *scalar_sort = rop.ll.op_extract(sortVal, leadLane);
+                args[sortArgumentIndex] = scalar_sort;
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_sort, sortVal, lanesMatching);
+            }
+
+            //rop.llvm_print_mask("lanesMatching", lanesMatching);
+
+            args[maskArgumentIndex] = rop.ll.mask_as_int(lanesMatching);
+
+            rop.ll.call_function (funcName, args);
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatching);
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingSplineName", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+
+    } else {
+        args[maskArgumentIndex] = rop.ll.mask_as_int(rop.ll.current_mask());
+
+        rop.ll.call_function (funcName, args);
+    }
+    // Clear derivs if necessary
+    if (!clear_derivs_of.empty()) {
+        llvm::Value *count = rop.llvm_load_value (Result, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, /*is_uniform*/false);
+        // NOTE: normally BatchedAnalysis would have handled requiring masking, however
+        // the clearing of these derivs is conditional based on the count stored in Result.
+        // We will always need masking when clearing the results, so choose to just do
+        // that here versus complicating BatchedAnalysis
+        auto zero_deriv_masking_scope = rop.ll.create_masking_scope(true);
+        for (size_t i = 0; i < clear_derivs_of.size(); ++i)
+            rop.llvm_zero_derivs (*clear_derivs_of[i], count);
+    }
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_pointcloud_get)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT(op.nargs() >= 6);
+
+    Symbol& Result     = *rop.opargsym (op, 0);
+    Symbol& Filename   = *rop.opargsym (op, 1);
+    Symbol& Indices    = *rop.opargsym (op, 2);
+    Symbol& Count      = *rop.opargsym (op, 3);
+    Symbol& Attr_name  = *rop.opargsym (op, 4);
+    Symbol& Data       = *rop.opargsym (op, 5);
+
+    OSL_ASSERT(Data.is_varying());
+    if (!Attr_name.is_uniform()) {
+        rop.shadingcontext()->errorf (
+            "pointcloud_get named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from (%s:%d)",
+            op.sourcefile().c_str(), op.sourceline());
+        return false;
+    }
+    bool requires_binning = Filename.is_varying();
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    llvm::Value *count_value = rop.llvm_load_value (Count, /*deriv*/0, /*component*/ 0,
+            TypeDesc::UNKNOWN, Count.is_uniform());
+
+    constexpr int fileNameArgumentIndex = 1;
+    llvm::Value * fileNameVal = rop.llvm_load_value (Filename, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Filename.is_uniform());
+
+    constexpr int maskArgumentIndex = 8;
+
+    llvm::Value * wcount_val = rop.llvm_load_value (Count, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, /*is_uniform*/false);
+    int element_count = std::min(Data.typespec().arraylength(),
+                                 Indices.typespec().arraylength());
+    llvm::Value *welem_count_val = rop.ll.wide_constant(element_count);
+    llvm::Value *wcond = rop.ll.op_le (welem_count_val, wcount_val);
+    llvm::Value *wclampedCountVal = rop.ll.op_select(wcond, welem_count_val, wcount_val);
+    llvm::Value* loc_clampedCount = rop.getOrAllocateTemp(Count.typespec(), /*derivs*/ false, /*is_uniform*/false);
+    rop.ll.op_unmasked_store(wclampedCountVal, loc_clampedCount);
+
+    llvm::Value * args[] = {
+        rop.sg_void_ptr(),
+        Filename.is_uniform() ? fileNameVal : nullptr,
+        rop.llvm_load_arg (Indices, false/*derivs*/, false/*is_uniform*/),
+        rop.ll.constant(Indices.typespec().arraylength()),
+        rop.ll.void_ptr(loc_clampedCount),
+        rop.llvm_load_value (Attr_name),
+        rop.ll.constant (Data.typespec().simpletype()),
+        rop.llvm_void_ptr (Data),
+        nullptr /*deferred*/ // mask value
+    };
+    FuncSpec func_spec("pointcloud_get");
+    func_spec.mask();
+    const char * funcName = rop.build_name(func_spec);
+
+    llvm::Value *found_mask_value = nullptr;
+    if (requires_binning) {
+        // do while(remaining)
+        llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to pointcloud_get");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+        llvm::Value * loc_of_foundMaskVal = rop.getOrAllocateTemp(TypeSpec(TypeDesc::INT), false /*derivs*/,
+                true /*is_uniform*/, false /*forceBool*/,
+                "found mask value");
+        rop.ll.op_store(rop.ll.constant(0), loc_of_foundMaskVal);
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_pointcloud_get") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_pointcloud_get") : std::string());
+        rop.ll.op_branch(bin_block);
+        {
+
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+            llvm::Value * lanesMatching = remainingMask;
+
+            if (!Filename.is_uniform()) {
+                llvm::Value *scalar_fileName = rop.ll.op_extract(fileNameVal, leadLane);
+                args[fileNameArgumentIndex] = scalar_fileName;
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_fileName, fileNameVal, remainingMask);
+            }
+            OSL_ASSERT(lanesMatching);
+            //rop.llvm_print_mask("lanesMatching", lanesMatching);
+
+            args[maskArgumentIndex] = rop.ll.mask_as_int(lanesMatching);
+
+            llvm::Value *binned_found_mask_value = rop.ll.call_function (funcName, args);
+            found_mask_value = rop.ll.op_load(loc_of_foundMaskVal);
+            found_mask_value = rop.ll.op_or(found_mask_value, binned_found_mask_value);
+            rop.ll.op_store(found_mask_value, loc_of_foundMaskVal);
+
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatching);
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingSplineName", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+        found_mask_value = rop.ll.op_load(loc_of_foundMaskVal);
+    } else {
+        args[maskArgumentIndex] = rop.ll.mask_as_int(rop.ll.current_mask());
+        found_mask_value = rop.ll.call_function (funcName, args);
+    }
+
+
+    llvm::Value *found_mask = rop.ll.int_as_mask(found_mask_value);
+    llvm::Value *found = rop.ll.op_bool_to_int(found_mask);
+    rop.llvm_store_value (found, Result);
+    if (Data.has_derivs()) {
+        // NOTE: normally BatchedAnalysis would have handled requiring masking, however
+        // the clearing of these derivs is conditional based on the count_value.
+        // We will always need masking when clearing the results, so choose to just do
+        // that here versus complicating BatchedAnalysis
+        auto zero_deriv_masking_scope = rop.ll.create_masking_scope(true);
+        rop.llvm_zero_derivs (Data, count_value);
+    }
+
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_pointcloud_write)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+
+    OSL_DASSERT(op.nargs() >= 3);
+    Symbol& Result   = *rop.opargsym (op, 0);
+    Symbol& Filename = *rop.opargsym (op, 1);
+    Symbol& Pos      = *rop.opargsym (op, 2);
+    OSL_DASSERT(Result.typespec().is_int() && Filename.typespec().is_string() &&
+             Pos.typespec().is_triple());
+    OSL_DASSERT((op.nargs() & 1) && "must have an even number of attribs");
+
+    OSL_ASSERT(Result.is_varying());
+
+    bool requires_binning = Filename.is_varying();
+
+    int nattrs = (op.nargs() - 3) / 2;
+
+    BatchedBackendLLVM::TempScope temp_scope(rop);
+
+    // Generate local space for the names/types/values arrays
+    TypeSpec namesArrayType{TypeDesc{TypeDesc::STRING, TypeDesc::SCALAR, TypeDesc::NOSEMANTICS, nattrs}};
+    TypeSpec typesArrayType{TypeDesc{TypeDesc::LONGLONG, TypeDesc::SCALAR, TypeDesc::NOSEMANTICS, nattrs}};
+    TypeSpec valuesArrayType{TypeDesc{TypeDesc::PTR, TypeDesc::SCALAR, TypeDesc::NOSEMANTICS, nattrs}};
+    llvm::Value *names = rop.ll.op_alloca (rop.ll.type_string(), nattrs);
+    llvm::Value *types = rop.ll.op_alloca (rop.ll.type_typedesc(), nattrs);
+    llvm::Value *values = rop.ll.op_alloca (rop.ll.type_void_ptr(), nattrs);
+
+    // Fill in the arrays with the params, use helper function because
+    // it's a pain to offset things into the array ourselves.
+    for (int i = 0;  i < nattrs;  ++i) {
+        Symbol *namesym = rop.opargsym (op, 3+2*i);
+        if (!namesym->is_uniform()) {
+            rop.shadingcontext()->errorf (
+                "pointcloud_write named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from (%s:%d)",
+                op.sourcefile().c_str(), op.sourceline());
+            return false;
+        }
+
+        llvm::Value * arrayindex = rop.ll.constant (i);
+
+        // name[i]
+        llvm::Value *name_value = rop.llvm_load_value (*namesym);
+        rop.llvm_store_value(name_value, names,
+                namesArrayType, /*deriv*/0, arrayindex, /*component*/0);
+
+        // type[i]
+        Symbol *valsym = rop.opargsym (op, 3+2*i+1);
+        llvm::Value *type_value = rop.ll.constant (valsym->typespec().simpletype());
+        rop.llvm_store_value(type_value, types,
+                typesArrayType, /*deriv*/0, arrayindex, /*component*/0);
+
+        // value[i]
+        llvm::Value *attr_value_ptr = rop.llvm_load_arg (*valsym, false/*derivs*/, false/*is_uniform*/);
+                rop.llvm_store_value(attr_value_ptr, values,
+                        valuesArrayType, /*deriv*/0, arrayindex, /*component*/0);
+    }
+
+    constexpr int fileNameArgumentIndex = 1;
+    llvm::Value * fileNameVal = rop.llvm_load_value (Filename, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Filename.is_uniform());
+
+    constexpr int maskArgumentIndex = 7;
+
+    llvm::Value * args[] = {
+        rop.sg_void_ptr(),   // shaderglobals pointer
+        Filename.is_uniform() ? fileNameVal : nullptr,  // name
+        rop.llvm_load_arg (Pos, false/*derivs*/, false/*is_uniform*/),
+        rop.ll.constant (nattrs),  // number of attributes
+        rop.ll.void_ptr (names),   // attribute names array
+        rop.ll.void_ptr (types),   // attribute types array
+        rop.ll.void_ptr (values),   // attribute values array
+        nullptr /*deferred*/ // mask value
+    };
+
+    FuncSpec func_spec("pointcloud_write");
+    func_spec.mask();
+    const char * funcName = rop.build_name(func_spec);
+
+    llvm::Value *success_mask_value = nullptr;
+    if (requires_binning) {
+        // do while(remaining)
+        llvm::Value * loc_of_remainingMask = rop.getTempMask("lanes remaining to pointcloud_write");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+        llvm::Value * loc_of_successesMaskVal = rop.getOrAllocateTemp(TypeSpec(TypeDesc::INT), false /*derivs*/,
+                true /*is_uniform*/, false /*forceBool*/,
+                "found mask value");
+        rop.ll.op_store(rop.ll.constant(0), loc_of_successesMaskVal);
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("bin_pointcloud_write") : std::string());
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (rop.llvm_debug() ? std::string("after_bin_pointcloud_write") : std::string());
+        rop.ll.op_branch(bin_block);
+        {
+
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+            llvm::Value * lanesMatching = remainingMask;
+
+            OSL_ASSERT(!Filename.is_uniform());
+            llvm::Value *scalar_fileName = rop.ll.op_extract(fileNameVal, leadLane);
+            args[fileNameArgumentIndex] = scalar_fileName;
+            lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_fileName, fileNameVal, remainingMask);
+            OSL_ASSERT(lanesMatching);
+            //rop.llvm_print_mask("lanesMatching", lanesMatching);
+
+            args[maskArgumentIndex] = rop.ll.mask_as_int(lanesMatching);
+
+            llvm::Value *binned_success_mask_value = rop.ll.call_function (funcName, args);
+            success_mask_value = rop.ll.op_load(loc_of_successesMaskVal);
+            success_mask_value = rop.ll.op_or(success_mask_value, binned_success_mask_value);
+            rop.ll.op_store(success_mask_value, loc_of_successesMaskVal);
+
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatching);
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingSplineName", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+        success_mask_value = rop.ll.op_load(loc_of_successesMaskVal);
+    } else {
+        args[maskArgumentIndex] = rop.ll.mask_as_int(rop.ll.current_mask());
+        success_mask_value = rop.ll.call_function (funcName, args);
+    }
+
+    llvm::Value *success_mask = rop.ll.int_as_mask(success_mask_value);
+    llvm::Value *success = rop.ll.op_bool_to_int(success_mask);
+    rop.llvm_store_value (success, Result);
+
+    return true;
+}
+
+
+
 LLVMGEN (llvm_gen_isconstant)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -7079,10 +7574,6 @@ LLVMGEN(NAME) \
 } \
 
 // TODO: rest of gen functions to be added in separate PR
-
-TBD_LLVMGEN(llvm_gen_pointcloud_search)
-TBD_LLVMGEN(llvm_gen_pointcloud_get)
-TBD_LLVMGEN(llvm_gen_pointcloud_write)
 
 TBD_LLVMGEN(llvm_gen_closure)
 

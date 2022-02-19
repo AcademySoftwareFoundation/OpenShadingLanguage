@@ -316,6 +316,119 @@ public:
         ustring filename, TextureSystem::TextureHandle* texture_handle,
         int subimage, ustring dataname, RefData val);
 
+
+    /// Lookup nearest points in a point cloud. It will search for
+    /// points around the given center within the specified radius. A
+    /// list of indices is returned so the programmer can later retrieve
+    /// attributes with pointcloud_get. The indices array is mandatory,
+    /// but distances MaskedData can be invalid (empty), may or may not
+    /// have derivs, will always be float[], and contains the mask to use
+    /// for the operations.
+    ///
+    /// out_num_points will contain the number of points found, always < max_points
+
+    // To enable sharing of single mask with multiple outputs we use
+    // a class to encapsulate multiple wide pointers with a single mask.
+    // Because the Masked accessors will be constructed by the helper methods
+    // once inlined compilers will see the same mask_value is used for both.
+    class PointCloudSearchResults {
+        void* m_wnum_points;
+        void* m_windices;
+        int m_indices_array_length;
+        void* m_wdistances;
+        int m_distances_array_length;
+        bool m_distances_have_derivs;
+        Mask m_mask;
+
+    public:
+        PointCloudSearchResults(void* wnum_points, void* windices,
+                                int indices_array_length, void* wdistances,
+                                int distances_array_length,
+                                int distances_have_derivs, int mask_value)
+            : m_wnum_points(wnum_points)
+            , m_windices(windices)
+            , m_indices_array_length(indices_array_length)
+            , m_wdistances(wdistances)
+            , m_distances_array_length(distances_array_length)
+            , m_distances_have_derivs(distances_have_derivs)
+            , m_mask(mask_value)
+        {
+        }
+
+        OSL_FORCEINLINE Mask mask() const { return m_mask; }
+
+        // NOTE:  Always assign to a local object before calling an
+        // array subscript operator [].  Bugs can occur if the []
+        // is called on a temporary object as a reference to a
+        // temporary object would be created.
+        // DO NOT DO THIS:
+        //     auto out_num_points = results.wnum_points()[lane];
+        // instead
+        //     auto wnum_points = results.wnum_points();
+        //     auto out_num_points = wnum_points[lane];
+
+        OSL_FORCEINLINE Masked<int> wnum_points() const
+        {
+            return Masked<int>(m_wnum_points, m_mask);
+        }
+
+        OSL_FORCEINLINE Masked<int[]> windices() const
+        {
+            return Masked<int[]>(m_windices, m_indices_array_length, m_mask);
+        }
+
+        OSL_FORCEINLINE bool has_distances() const
+        {
+            return m_wdistances != nullptr;
+        }
+
+        OSL_FORCEINLINE Masked<float[]> wdistances() const
+        {
+            return Masked<float[]>(m_wdistances, m_distances_array_length,
+                                   m_mask);
+        }
+
+        OSL_FORCEINLINE bool distances_have_derivs() const
+        {
+            return m_distances_have_derivs;
+        }
+
+        OSL_FORCEINLINE MaskedDx<float[]> wdistancesDx() const
+        {
+            return MaskedDx<float[]>(m_wdistances, m_distances_array_length,
+                                     m_mask);
+        }
+
+        OSL_FORCEINLINE MaskedDy<float[]> wdistancesDy() const
+        {
+            return MaskedDy<float[]>(m_wdistances, m_distances_array_length,
+                                     m_mask);
+        }
+    };
+
+
+    virtual void pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
+                                   const void* wcenter,
+                                   Wide<const float> wradius, int max_points,
+                                   bool sort, PointCloudSearchResults& results);
+    virtual bool is_overridden_pointcloud_search() const = 0;
+
+
+    virtual Mask pointcloud_get(BatchedShaderGlobals* bsg, ustring filename,
+                                Wide<const int[]> windices,
+                                Wide<const int> wnum_points, ustring attr_name,
+                                MaskedData wout_data);
+    virtual bool is_overridden_pointcloud_get() const = 0;
+
+
+    virtual Mask pointcloud_write(BatchedShaderGlobals* bsg, ustring filename,
+                                  Wide<const OSL::Vec3> wpos, int nattribs,
+                                  const ustring* attr_names,
+                                  const TypeDesc* attr_types,
+                                  const void** pointers_to_wide_attr_value,
+                                  Mask mask);
+    virtual bool is_overridden_pointcloud_write() const = 0;
+
     /// Options for the trace call.
     using TraceOpt = RendererServices::TraceOpt;
 

@@ -22,7 +22,7 @@ shader v_float (output vector cout = 0,
     float_array[9] = 2.3 * P[0];
     
     int zlen = int(P[0]);
-    zlen = arraylength(float_array);
+    zlen += arraylength(float_array);
     
     cout = vector(u/zlen, u-v*float_array[4], v/zlen);
     

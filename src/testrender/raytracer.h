@@ -202,7 +202,6 @@ struct Sphere final : public Primitive {
         //    dPdv.x = r * -cos(pi*v) * pi * sin(2pi*u)
         //    dPdv.y = r * -pi * sin(pi*v)
         //    dPdv.z = r * -cos(pi*v) * pi * cos(2pi*u)
-#if 1
         const float pi = float(M_PI);
         float twopiu = 2.0f * pi * u.val();
         float sin2piu, cos2piu;
@@ -216,30 +215,6 @@ struct Sphere final : public Primitive {
         dPdv.x = -pir * cospiv * sin2piu;
         dPdv.y = -pir * sinpiv;
         dPdv.z = -pir * cospiv * cos2piu;
-#else
-        float xz2 = nx.val() * nx.val() + nz.val() * nz.val();
-        if (xz2 > 0) {
-            const float PI = float(M_PI);
-            const float TWOPI = float(2 * M_PI);
-            float xz = sqrtf(xz2);
-            float inv = 1 / xz;
-            dPdu.x = -TWOPI * nx.val();
-            dPdu.y = TWOPI * nz.val();
-            dPdu.z = 0;
-            dPdv.x = -PI * nz.val() * inv * ny.val();
-            dPdv.y = -PI * nx.val() * inv * ny.val();
-            dPdv.z = PI * xz;
-        } else {
-            // pick arbitrary axes for poles to avoid division by 0
-            if (ny.val() > 0) {
-                dPdu = Vec3(0, 0, 1);
-                dPdv = Vec3(1, 0, 0);
-            } else {
-                dPdu = Vec3( 0, 0, 1);
-                dPdv = Vec3(-1, 0, 0);
-            }
-        }
-#endif
         return make_Vec2(u, v);
     }
 

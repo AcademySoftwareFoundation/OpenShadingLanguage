@@ -8,7 +8,7 @@
    <ShaderGroup>
       float sigma 0.3;
       color Cs 0.2 0.7 0.2;
-      shader rough_matte layer1;
+      shader matte layer1;
    </ShaderGroup>
    <Sphere center="  0,30,60"        radius="30" />
    <ShaderGroup>

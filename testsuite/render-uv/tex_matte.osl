@@ -1,0 +1,13 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+surface tex_matte(
+    float Kd = 1,
+    string filename = "")
+{
+    color Cs = 0;
+    if (filename)
+        Cs = texture(filename, u, v);
+    Ci = Kd * Cs * diffuse(N);
+}

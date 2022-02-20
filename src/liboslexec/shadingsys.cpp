@@ -2766,7 +2766,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
         string_view typestring;
         if (keyword == "param") {
             typestring = Strutil::parse_word (p);
-        } else if (TypeDesc(keyword.str().c_str()) != TypeDesc::UNKNOWN) {
+        } else if (TypeDesc(keyword) != TypeDesc::UNKNOWN) {
             // compatibility: let the 'param' keyword be optional, if it's
             // obvious that it's a type name.
             typestring = keyword;
@@ -2899,7 +2899,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
                 Strutil::skip_whitespace (p);
                 string_view hint_typename = Strutil::parse_word (p);
                 string_view hint_name = Strutil::parse_identifier (p);
-                TypeDesc hint_type (hint_typename.str().c_str());
+                TypeDesc hint_type (hint_typename);
                 if (! hint_name.size() || hint_type == TypeDesc::UNKNOWN) {
                     err = true;
                     errdesc = "malformed hint";
@@ -3912,7 +3912,7 @@ ClosureRegistry::register_closure (string_view name, int id,
              * because we will be allocating the real struct inside it. */
             OSL_ASSERT_MSG(params[i].field_size <= int(alignof(ClosureComponent)),
                 "Closure %s wants alignment of %d which is larger than that of ClosureComponent",
-                name.str().c_str(),
+                std::string(name).c_str(),
                 params[i].field_size);
             break;
         }

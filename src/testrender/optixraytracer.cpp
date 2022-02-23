@@ -157,7 +157,7 @@ OptixRaytracer::load_ptx_file (string_view filename)
             return ptx_string;
     }
 #endif
-    errhandler().severef("Unable to load %s", filename);
+    errhandler().severefmt("Unable to load {}", filename);
     return {};
 }
 
@@ -184,7 +184,7 @@ OptixRaytracer::init_optix_context (int xres OSL_MAYBE_UNUSED,
     m_str_table.init(m_optix_ctx);
 
     if (m_optix_ctx->getEnabledDeviceCount() != 1)
-        errhandler().warning ("Only one CUDA device is currently supported");
+        errhandler().warningfmt("Only one CUDA device is currently supported");
 
     m_optix_ctx->setRayTypeCount (2);
     m_optix_ctx->setEntryPointCount (1);
@@ -195,7 +195,7 @@ OptixRaytracer::init_optix_context (int xres OSL_MAYBE_UNUSED,
     std::string progName = "optix_raytracer.ptx";
     std::string renderer_ptx = load_ptx_file(progName);
     if (renderer_ptx.empty()) {
-        errhandler().severef("Could not find PTX for the raygen program");
+        errhandler().severefmt("Could not find PTX for the raygen program");
         return false;
     }
 
@@ -263,7 +263,7 @@ OptixRaytracer::synch_attributes ()
         if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys) ||
             !shadingsys->getattribute("colorsystem:sizes", TypeDesc(TypeDesc::LONGLONG,2), (void*)&cpuDataSizes) ||
             !colorSys || !cpuDataSizes[0]) {
-            errhandler().error ("No colorsystem available.");
+            errhandler().errorfmt("No colorsystem available.");
             return false;
         }
         auto cpuDataSize = cpuDataSizes[0];
@@ -274,7 +274,7 @@ OptixRaytracer::synch_attributes ()
 
         optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
         if (!buffer) {
-            errhandler().error ("Could not create buffer for '%s'.", name);
+            errhandler().errorfmt("Could not create buffer for '{}'.", name);
             return false;
         }
 
@@ -287,7 +287,7 @@ OptixRaytracer::synch_attributes ()
         // copy the base data
         char* gpuData = (char*) buffer->map();
         if (!gpuData) {
-            errhandler().error ("Could not map buffer for '%s' (size: %lu).",
+            errhandler().errorfmt("Could not map buffer for '{}' (size: {}).",
                                 name, podDataSize + sizeof(DeviceString)*numStrings);
             return false;
         }
@@ -327,7 +327,7 @@ OptixRaytracer::synch_attributes ()
         if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys) ||
             !shadingsys->getattribute("colorsystem:sizes", TypeDesc(TypeDesc::LONGLONG,2), (void*)&cpuDataSizes) ||
             !colorSys || !cpuDataSizes[0]) {
-            errhandler().error ("No colorsystem available.");
+            errhandler().errorfmt("No colorsystem available.");
             return false;
         }
 
@@ -371,7 +371,7 @@ OptixRaytracer::load_optix_module (const char*                        filename,
     // Load the renderer CUDA source and generate PTX for it
     std::string program_ptx = load_ptx_file(filename);
     if (program_ptx.empty()) {
-        errhandler().severef("Could not find PTX file:  %s", filename);
+        errhandler().severefmt("Could not find PTX file:  {}", filename);
         return false;
     }
 
@@ -441,8 +441,8 @@ OptixRaytracer::make_optix_materials ()
 
         if (!scene.num_prims()) {
             if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
-                errhandler().warning ("Requested output '%s', which wasn't found",
-                                      outputs[0]);
+                errhandler().warningfmt("Requested output '{}', which wasn't found",
+                                        outputs[0]);
             }
         }
 
@@ -457,8 +457,8 @@ OptixRaytracer::make_optix_materials ()
                                   OSL::TypeDesc::PTR, &osl_ptx);
 
         if (osl_ptx.empty()) {
-            errhandler().error ("Failed to generate PTX for ShaderGroup %s",
-                                group_name);
+            errhandler().errorfmt("Failed to generate PTX for ShaderGroup {}",
+                                  group_name);
             return false;
         }
 
@@ -673,8 +673,8 @@ OptixRaytracer::make_optix_materials ()
             // FIXME: This is for cases where testshade is run with 1x1 resolution
             //        Those tests may not have a Cout parameter to write to.
             if (m_xres > 1 && m_yres > 1) {
-                errhandler().warning ("Requested output '%s', which wasn't found",
-                                      outputs[0]);
+                errhandler().warningfmt("Requested output '{}', which wasn't found",
+                                        outputs[0]);
             }
         }
 
@@ -684,8 +684,8 @@ OptixRaytracer::make_optix_materials ()
                                   OSL::TypeDesc::PTR, &osl_ptx);
 
         if (osl_ptx.empty()) {
-            errhandler().error ("Failed to generate PTX for ShaderGroup %s",
-                                group_name);
+            errhandler().errorfmt("Failed to generate PTX for ShaderGroup {}",
+                                  group_name);
             return false;
         }
 
@@ -1155,7 +1155,7 @@ OptixRaytracer::get_texture_handle (ustring filename OSL_MAYBE_UNUSED,
 
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
-            errhandler().error ("Could not load: %s", filename);
+            errhandler().errorfmt("Could not load: {}", filename);
             return (TextureHandle*)(intptr_t(RT_TEXTURE_ID_NULL));
         }
         int nchan = image.spec().nchannels;
@@ -1191,7 +1191,7 @@ OptixRaytracer::get_texture_handle (ustring filename OSL_MAYBE_UNUSED,
         // Open image
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
-            errhandler().error ("Could not load: %s", filename);
+            errhandler().errorfmt("Could not load: {}", filename);
             return (TextureHandle*)nullptr;
         }
 
@@ -1452,7 +1452,7 @@ OptixRaytracer::finalize_pixel_buffer ()
 #if (OPTIX_VERSION < 70000)
     const void* buffer_ptr = m_optix_ctx[buffer_name]->getBuffer()->map();
     if (! buffer_ptr)
-        errhandler().severef("Unable to map buffer %s", buffer_name);
+        errhandler().severefmt("Unable to map buffer {}", buffer_name);
     pixelbuf.set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
 #else
     std::vector<float> tmp_buff(m_xres * m_yres * 3);

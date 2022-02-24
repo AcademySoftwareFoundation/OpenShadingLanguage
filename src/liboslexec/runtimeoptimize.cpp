@@ -40,7 +40,10 @@ static ustring u_nop    ("nop"),
                u_isconnected ("isconnected"),
                u_setmessage ("setmessage"),
                u_getmessage ("getmessage"),
-               u_getattribute ("getattribute");
+               u_getattribute ("getattribute"),
+               u_backfacing ("backfacing"),
+               u_N ("N"),
+               u_I ("I");
 
 
 OSL_NAMESPACE_ENTER
@@ -3224,6 +3227,9 @@ RuntimeOptimizer::run ()
                 } else {
                     m_unknown_closures_needed = true;
                 }
+            } else if (op.opname() == u_backfacing) {
+                m_globals_needed.insert(u_N);
+                m_globals_needed.insert(u_I);
             } else if (op.opname() == u_getattribute) {
                 Symbol *sym1 = opargsym (op, 1);
                 OSL_DASSERT (sym1 && sym1->typespec().is_string());

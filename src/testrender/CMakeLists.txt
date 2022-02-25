@@ -26,7 +26,7 @@ if (USE_OPTIX)
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testrender_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} ptx_generated "" )
+        NVCC_COMPILE ( ${cudasrc} "" ptx_generated "" )
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 

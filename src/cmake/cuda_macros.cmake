@@ -5,13 +5,14 @@
 set ($OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compiling CUDA code")
 
 # Compile a CUDA file to PTX using NVCC
-function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
+function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
     get_filename_component ( cuda_src_we ${cuda_src} NAME_WE )
     get_filename_component ( cuda_src_dir ${cuda_src} DIRECTORY )
     set (cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.ptx" )
     set (${ptxlist} ${${ptxlist}} ${cuda_ptx} )
     set (${ptx_generated} ${cuda_ptx} PARENT_SCOPE)
     file ( GLOB cuda_headers "${cuda_src_dir}/*.h" )
+    list (APPEND cuda_headers ${extra_headers})
 
     list (TRANSFORM IMATH_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)

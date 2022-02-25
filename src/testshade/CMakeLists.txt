@@ -22,6 +22,10 @@ if (USE_OPTIX)
         ../testrender/cuda/rend_lib.cu )
     set ( testshade_cuda_headers
         ../testrender/cuda/rend_lib.h )
+    # We need to make sure that the PTX files are regenerated whenever these
+    # headers change.
+    set ( extra_cuda_headers
+        render_params.h )
 
     LLVM_COMPILE_CUDA (
         ${CMAKE_CURRENT_SOURCE_DIR}/../testrender/cuda/rend_lib.cu
@@ -34,7 +38,7 @@ if (USE_OPTIX)
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testshade_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} ptx_generated "-I../testrender/cuda" )
+        NVCC_COMPILE ( ${cudasrc} ${extra_cuda_headers} ptx_generated "-I../testrender/cuda" )
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 

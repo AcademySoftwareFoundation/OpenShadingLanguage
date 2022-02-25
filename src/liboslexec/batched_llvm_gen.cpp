@@ -77,8 +77,8 @@ typedef typename BatchedBackendLLVM::FuncSpec FuncSpec;
 void
 BatchedBackendLLVM::llvm_gen_debug_printf(string_view message)
 {
-    ustring s = ustring::format("(%s %s) %s", inst()->shadername(),
-                                inst()->layername(), message);
+    ustring s = ustring::sprintf("(%s %s) %s", inst()->shadername(),
+                                 inst()->layername(), message);
     ll.call_function(build_name("printf"), sg_void_ptr(), ll.constant("%s\n"),
                      ll.constant(s));
 }

@@ -607,8 +607,8 @@ OptixGridRenderer::make_optix_materials ()
             // FIXME: This is for cases where testshade is run with 1x1 resolution
             //        Those tests may not have a Cout parameter to write to.
             if (m_xres > 1 && m_yres > 1) {
-                errhandler().warning ("Requested output '%s', which wasn't found",
-                                      outputs[0]);
+                errhandler().warningfmt("Requested output '{}', which wasn't found",
+                                        outputs[0]);
             }
         }
 

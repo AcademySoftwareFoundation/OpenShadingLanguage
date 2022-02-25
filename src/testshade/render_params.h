@@ -9,7 +9,9 @@ struct RenderParams
     bool flipv;
     CUdeviceptr osl_printf_buffer_start;
     CUdeviceptr osl_printf_buffer_end;
-    CUdeviceptr color_system;                                                
+    CUdeviceptr color_system;
+    CUdeviceptr object2common;
+    CUdeviceptr shader2common;
     // for used-data tests
     uint64_t test_str_1;
     uint64_t test_str_2;

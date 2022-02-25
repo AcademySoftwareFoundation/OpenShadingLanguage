@@ -6,6 +6,7 @@
 #include <optix_device.h>
 #if (OPTIX_VERSION < 70000)
 #include <optix_math.h>
+#include <optixu/optixu_matrix_namespace.h>
 #else
 #define OPTIX_COMPATIBILITY 7
 #include <optix_device.h>
@@ -21,6 +22,10 @@ rtDeclareVariable (uint2, launch_index, rtLaunchIndex, );
 rtDeclareVariable (uint2, launch_dim,   rtLaunchDim, );
 rtDeclareVariable (char*, test_str_1, , );
 rtDeclareVariable (char*, test_str_2, , );
+
+// N.B. These will be cast to OSL::Matrix44 variables when used.
+rtDeclareVariable (optix::Matrix4x4, object2common, , );
+rtDeclareVariable (optix::Matrix4x4, shader2common, , );
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
@@ -357,18 +362,20 @@ extern "C" {
     int osl_get_matrix (void *sg_, void *r, const char *from)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(from) == STRING_PARAMS(common) ||
-            //HDSTR(from) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(from) == STRING_PARAMS(shader))
+        if (HDSTR(from) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(from) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(&object2common);
+            return true;
+        }
+        if (HDSTR(from) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(&shader2common);
+            return true;
         }
         int ok = false; // TODO: Implement transform
         if (!ok)
@@ -383,18 +390,22 @@ extern "C" {
     int osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(to) == STRING_PARAMS(common) ||
-            //HDSTR(to) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(to) == STRING_PARAMS(shader))
+        if (HDSTR(to) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(to) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(&object2common);
+            MAT(r).invert();
+            return true;
+        }
+        if (HDSTR(to) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(&shader2common);
+            MAT(r).invert();
+            return true;
         }
         int ok = false; // TODO: Implement transform
         if (!ok)
@@ -781,18 +792,20 @@ extern "C" {
     int osl_get_matrix (void *sg_, void *r, const char *from)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(from) == STRING_PARAMS(common) ||
-            //HDSTR(from) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(from) == STRING_PARAMS(shader))
+        if (HDSTR(from) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(from) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(sg->object2common);
+            return true;
+        }
+        if (HDSTR(from) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(sg->shader2common);
+            return true;
         }
         int ok = false; // TODO: Implement transform
         if (!ok)
@@ -807,17 +820,22 @@ extern "C" {
     int osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        if (HDSTR(to) == STRING_PARAMS(common) ||
-            //HDSTR(to) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(to) == STRING_PARAMS(shader))
+        if (HDSTR(to) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(to) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(sg->object2common);
+            MAT(r).invert();
+            return true;
+        }
+        if (HDSTR(to) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(sg->shader2common);
+            MAT(r).invert();
+            return true;
         }
         int ok = false; // TODO: Implement transform
         if (!ok)

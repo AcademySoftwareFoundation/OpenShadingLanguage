@@ -183,6 +183,9 @@ extern "C" __global__ void __raygen__()
     sg.raytype = CAMERA;
     sg.flipHandedness = 0;
 
+    sg.shader2common = reinterpret_cast<void*>(render_params.shader2common);
+    sg.object2common = reinterpret_cast<void*>(render_params.object2common);
+
     // Pack the "closure pool" into one of the ShaderGlobals pointers
     *(int*) &closure_pool[0] = 0;
     sg.renderstate = &closure_pool[0];

@@ -63,6 +63,9 @@ public:
     virtual void finalize_pixel_buffer ();
     virtual void clear ();
 
+    virtual void set_transforms( const OSL::Matrix44& object2common,
+                                 const OSL::Matrix44& shader2common );
+
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
@@ -101,6 +104,8 @@ private:
     CUdeviceptr             d_launch_params = 0;
     CUdeviceptr             d_osl_printf_buffer;
     CUdeviceptr             d_color_system;
+    CUdeviceptr             d_object2common;
+    CUdeviceptr             d_shader2common;
     uint64_t                test_str_1;
     uint64_t                test_str_2;
     const unsigned long     OSL_PRINTF_BUFFER_SIZE = 8 * 1024 * 1024;
@@ -110,6 +115,12 @@ private:
     std::string m_materials_ptx;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
     std::unordered_map<OIIO::ustring, uint64_t, OIIO::ustringHash> m_globals_map;
+
+    OSL::Matrix44 m_shader2common;  // "shader" space to "common" space matrix
+    OSL::Matrix44 m_object2common;  // "object" space to "common" space matrix
+
+    // CUdeviceptrs that need to be freed after we are done
+    std::vector<void*> m_ptrs_to_free;
 };
 
 #if (OPTIX_VERSION >= 70000)

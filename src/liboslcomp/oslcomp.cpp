@@ -675,7 +675,7 @@ OSLCompilerImpl::write_oso_metadata(const ASTNode* metanode) const
     bool ok = metavar->param_default_literals(metasym, metavar->init().get(),
                                               pdl, ",");
     if (ok) {
-        osof("%%meta{%s,%s,%s} ", ts, metasym->name(), pdl);
+        osofmt("%meta{{{},{},{}}} ", ts, metasym->name(), pdl);
     } else {
         errorf(metanode->sourcefile(), metanode->sourceline(),
                "Don't know how to print metadata %s (%s) with node type %s",
@@ -694,18 +694,18 @@ OSLCompilerImpl::write_oso_const_value(const ConstantSymbol* sym) const
     int nelements     = std::max(1, type.arraylen);
     if (elemtype == TypeDesc::STRING)
         for (int i = 0; i < nelements; ++i)
-            osof("\"%s\"%s", OIIO::Strutil::escape_chars(sym->get_string(i)),
-                 nelements > 1 ? " " : "");
+            osofmt("\"{}\"{}", OIIO::Strutil::escape_chars(sym->get_string(i)),
+                   nelements > 1 ? " " : "");
     else if (elemtype == TypeDesc::INT)
         for (int i = 0; i < nelements; ++i)
-            osof("%d%s", sym->get_int(i), nelements > 1 ? " " : "");
+            osofmt("{}{}", sym->get_int(i), nelements > 1 ? " " : "");
     else if (elemtype == TypeDesc::FLOAT)
         for (int i = 0; i < nelements; ++i)
-            osof("%.9g%s", sym->floatval(i), nelements > 1 ? " " : "");
+            osofmt("{}{}", sym->floatval(i), nelements > 1 ? " " : "");
     else if (equivalent(elemtype, TypeDesc::TypeVector))
         for (int i = 0; i < nelements; ++i) {
             Vec3 v = sym->get_vec3(i);
-            osof("%.9g %.9g %.9g%s", v.x, v.y, v.z, nelements > 1 ? " " : "");
+            osofmt("{} {} {}{}", v.x, v.y, v.z, nelements > 1 ? " " : "");
         }
     else {
         OSL_ASSERT(0 && "Don't know how to output this constant type");
@@ -718,8 +718,8 @@ void
 OSLCompilerImpl::write_oso_symbol(const Symbol* sym)
 {
     // symtype / datatype / name
-    osof("%s\t%s\t%s", sym->symtype_shortname(), sym->typespec(),
-         sym->mangled());
+    osofmt("{}\t{}\t{}", sym->symtype_shortname(), sym->typespec(),
+           sym->mangled());
 
     ASTvariable_declaration* v = NULL;
     if (sym->node()
@@ -730,13 +730,13 @@ OSLCompilerImpl::write_oso_symbol(const Symbol* sym)
     bool isparam = (sym->symtype() == SymTypeParam
                     || sym->symtype() == SymTypeOutputParam);
     if (sym->symtype() == SymTypeConst) {
-        osof("\t");
+        osofmt("\t");
         write_oso_const_value(static_cast<const ConstantSymbol*>(sym));
-        osof("\t");
+        osofmt("\t");
     } else if (v && isparam) {
         std::string out;
         v->param_default_literals(sym, v->init().get(), out);
-        osof("\t%s\t", out);
+        osofmt("\t{}\t", out);
     }
 
     //
@@ -749,15 +749,15 @@ OSLCompilerImpl::write_oso_symbol(const Symbol* sym)
     if (v) {
         for (ASTNode::ref m = v->meta(); m; m = m->next()) {
             if (hints++ == 0)
-                osof("\t");
+                osofmt("\t");
             write_oso_metadata(m.get());
         }
     }
 
     // %read and %write give the range of ops over which a symbol is used.
-    osof("%c%%read{%d,%d} %%write{%d,%d}", hints++ ? ' ' : '\t',
-         sym->firstread(), sym->lastread(), sym->firstwrite(),
-         sym->lastwrite());
+    osofmt("{}%read{{{},{}}} %write{{{},{}}}", hints++ ? ' ' : '\t',
+           sym->firstread(), sym->lastread(), sym->firstwrite(),
+           sym->lastwrite());
 
     // %struct, %structfields, and %structfieldtypes document the
     // definition of a structure and which other symbols comprise the
@@ -771,28 +771,29 @@ OSLCompilerImpl::write_oso_symbol(const Symbol* sym)
             fieldlist += structspec->field(i).name.string();
             signature += code_from_type(structspec->field(i).type);
         }
-        osof("%c%%struct{\"%s\"} %%structfields{%s} %%structfieldtypes{\"%s\"} %%structnfields{%d}",
-             hints++ ? ' ' : '\t', structspec->mangled(), fieldlist, signature,
-             structspec->numfields());
+        osofmt(
+            "{}%struct{{\"{}\"}} %structfields{{{}}} %structfieldtypes{{\"{}\"}} %structnfields{{{}}}",
+            hints++ ? ' ' : '\t', structspec->mangled(), fieldlist, signature,
+            structspec->numfields());
     }
     // %mystruct and %mystructfield document the symbols holding structure
     // fields, linking them back to the structures they are part of.
     if (sym->fieldid() >= 0) {
         ASTvariable_declaration* vd = (ASTvariable_declaration*)sym->node();
         if (vd)
-            osof("%c%%mystruct{%s} %%mystructfield{%d}", hints++ ? ' ' : '\t',
-                 vd->sym()->mangled(), sym->fieldid());
+            osofmt("{}%mystruct{{{}}} %mystructfield{{{}}}",
+                   hints++ ? ' ' : '\t', vd->sym()->mangled(), sym->fieldid());
     }
 
     // %derivs hint marks symbols that need to carry derivatives
     if (sym->has_derivs())
-        osof("%c%%derivs", hints++ ? ' ' : '\t');
+        osofmt("{}%derivs", hints++ ? ' ' : '\t');
 
     // %initexpr hint marks parameters whose default is the result of code
     // that must be executed (an expression, like =noise(P) or =u), rather
     // than a true default value that is statically known (like =3.14).
     if (isparam && sym->has_init_ops())
-        osof("%c%%initexpr", hints++ ? ' ' : '\t');
+        osofmt("{}%initexpr", hints++ ? ' ' : '\t');
 
 #if 0  // this is recomputed by the runtime optimizer, no need to bloat the .oso with these
 
@@ -812,22 +813,22 @@ OSLCompilerImpl::write_oso_symbol(const Symbol* sym)
                 inputdeps.push_back (d);
         if (inputdeps.size()) {
             if (hints++ == 0)
-                osof("\t");
-            osof(" %%depends{");
+                osofmt("\t");
+            osofmt(" %depends{{");
             int deps = 0;
             for (size_t i = 0;  i < inputdeps.size();  ++i) {
                 if (inputdeps[i]->symtype() == SymTypeTemp &&
                     inputdeps[i]->dealias() != inputdeps[i])
                     continue;   // Skip aliased temporaries
                 if (deps++)
-                    osof(",");
-                osof("%s",  inputdeps[i]->mangled());
+                    osofmt(",");
+                osofmt("{}",  inputdeps[i]->mangled());
             }
-            osof("}");
+            osofmt("}}");
         }
     }
 #endif
-    osof("\n");
+    osofmt("\n");
 }
 
 
@@ -837,23 +838,23 @@ OSLCompilerImpl::write_oso_file(string_view options,
                                 string_view preprocessed_source)
 {
     OSL_DASSERT(m_osofile && m_osofile->good());
-    osof("OpenShadingLanguage %d.%02d\n", OSO_FILE_VERSION_MAJOR,
-         OSO_FILE_VERSION_MINOR);
-    osof("# Compiled by oslc %s\n", OSL_LIBRARY_VERSION_STRING);
-    osof("# options: %s\n", options);
+    osofmt("OpenShadingLanguage {}.{:02d}\n", OSO_FILE_VERSION_MAJOR,
+           OSO_FILE_VERSION_MINOR);
+    osofmt("# Compiled by oslc {}\n", OSL_LIBRARY_VERSION_STRING);
+    osofmt("# options: {}\n", options);
 
     ASTshader_declaration* shaderdecl = shader_decl();
-    osof("%s %s", shaderdecl->shadertypename(), shaderdecl->shadername());
+    osofmt("{} {}", shaderdecl->shadertypename(), shaderdecl->shadername());
 
     // output global hints and metadata
     int hints = 0;
     for (ASTNode::ref m = shaderdecl->metadata(); m; m = m->next()) {
         if (hints++ == 0)
-            osof("\t");
+            osofmt("\t");
         write_oso_metadata(m.get());
     }
 
-    osof("\n");
+    osofmt("\n");
 
     // Output params, so they are first
     for (auto&& s : symtab()) {
@@ -877,7 +878,7 @@ OSLCompilerImpl::write_oso_file(string_view options,
     ustring lastmethod("___uninitialized___");
     for (auto& op : m_ircode) {
         if (lastmethod != op.method()) {
-            osof("code %s\n", op.method());
+            osofmt("code {}\n", op.method());
             lastmethod = op.method();
             lastfile   = ustring();
             lastline   = -1;
@@ -887,25 +888,25 @@ OSLCompilerImpl::write_oso_file(string_view options,
             ustring file = op.sourcefile();
             int line     = op.sourceline();
             if (file != lastfile || line != lastline)
-                osof("# %s:%d\n# %s\n", file, line,
-                     retrieve_source(file, line));
+                osofmt("# {}:{}\n# {}\n", file, line,
+                       retrieve_source(file, line));
         }
 
         // Op name
-        osof("\t%s", op.opname());
+        osofmt("\t{}", op.opname());
 
         // Register arguments
         if (op.nargs())
-            osof(op.opname().length() < 8 ? "\t\t" : "\t");
+            osofmt(op.opname().length() < 8 ? "\t\t" : "\t");
         for (int i = 0; i < op.nargs(); ++i) {
             int arg = op.firstarg() + i;
-            osof("%s ", m_opargs[arg]->dealias()->mangled());
+            osofmt("{} ", m_opargs[arg]->dealias()->mangled());
         }
 
         // Jump targets
         for (size_t i = 0; i < Opcode::max_jumps; ++i)
             if (op.jump(i) >= 0)
-                osof("%d ", op.jump(i));
+                osofmt("{} ", op.jump(i));
 
         //
         // Opcode Hints
@@ -919,55 +920,56 @@ OSLCompilerImpl::write_oso_file(string_view options,
         if (!op.sourcefile().empty()) {
             if (op.sourcefile() != lastfile) {
                 lastfile = op.sourcefile();
-                osof("%c%%filename{\"%s\"}", firsthint ? '\t' : ' ', lastfile);
+                osofmt("{}%filename{{\"{}\"}}", firsthint ? '\t' : ' ',
+                       lastfile);
                 firsthint = false;
             }
             if (op.sourceline() != lastline) {
                 lastline = op.sourceline();
-                osof("%c%%line{%d}", firsthint ? '\t' : ' ', lastline);
+                osofmt("{}%line{{{}}}", firsthint ? '\t' : ' ', lastline);
                 firsthint = false;
             }
         }
 
         // %argrw documents which arguments are read, written, or both (rwW).
         if (op.nargs()) {
-            osof("%c%%argrw{\"", firsthint ? '\t' : ' ');
+            osofmt("{}%argrw{{\"", firsthint ? '\t' : ' ');
             for (int i = 0; i < op.nargs(); ++i) {
                 if (op.argwrite(i))
-                    osof(op.argread(i) ? "W" : "w");
+                    osofmt(op.argread(i) ? "W" : "w");
                 else
-                    osof(op.argread(i) ? "r" : "-");
+                    osofmt(op.argread(i) ? "r" : "-");
             }
-            osof("\"}");
+            osofmt("\"}}");
             firsthint = false;
         }
 
         // %argderivs documents which arguments have derivs taken of
         // them by the op.
         if (op.argtakesderivs_all()) {
-            osof(" %%argderivs{");
+            osofmt(" %argderivs{{");
             int any = 0;
             for (int i = 0; i < op.nargs(); ++i)
                 if (op.argtakesderivs(i)) {
                     if (any++)
-                        osof(",");
-                    osof("%d", i);
+                        osofmt(",");
+                    osofmt("{}", i);
                 }
-            osof("}");
+            osofmt("}}");
             firsthint = false;
         }
 
-        osof("\n");
+        osofmt("\n");
     }
 
     // If no code, still need a code marker
     if (lastmethod != main_method_name())
-        osof("code %s\n", main_method_name());
+        osofmt("code {}\n", main_method_name());
 
-    osof("\tend\n");
+    osofmt("\tend\n");
 
     if (m_embed_source)
-        osof("%%preprocessed_source\n%s\n", preprocessed_source);
+        osofmt("%preprocessed_source\n{}\n", preprocessed_source);
 
     m_osofile = NULL;
 }

@@ -18,10 +18,18 @@ endif()
 if (USE_OPTIX)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu
-        ../testrender/cuda/wrapper.cu
-        ../testrender/cuda/rend_lib.cu )
+        ../testrender/cuda/wrapper.cu )
+
+    # We only need to generate the PTX for rend_lib.cu if we are using OptiX 7.0+.
+    # Some of OptiX 6 device functions defined in rend_lib.cu cannot be compiled
+    # with NVCC, they must be compiled with clang using the LLVM_COMPILE_CUDA macro.
+    if (OPTIX_VERSION VERSION_GREATER_EQUAL 7)
+        list (APPEND testshade_cuda_srcs ../testrender/cuda/rend_lib.cu)
+    endif ()
+
     set ( testshade_cuda_headers
         ../testrender/cuda/rend_lib.h )
+
     # We need to make sure that the PTX files are regenerated whenever these
     # headers change.
     set ( extra_cuda_headers

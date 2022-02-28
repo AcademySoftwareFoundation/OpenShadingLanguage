@@ -30,8 +30,8 @@ rtDeclareVariable (int,   flipv, , );
 // Buffers
 rtBuffer<float3,2> output_buffer;
 
-rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, void*, int)>, osl_init_func, , );
-rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, void*, int)>, osl_group_func, ,);
+rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_init_func, , );
+rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_group_func, ,);
 
 RT_PROGRAM void raygen()
 {
@@ -55,7 +55,7 @@ RT_PROGRAM void raygen()
     sg.u           = d.x * invw;
     sg.v           = d.y * invh;
     if (flipv)
-         sg.v      = 1.f - sg.v;
+        sg.v       = 1.f - sg.v;
 
     sg.dudx        = invw;
     sg.dudy        = 0;

@@ -1067,6 +1067,9 @@ OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.test_str_2            = test_str_2;
     params.object2common         = d_object2common;
     params.shader2common         = d_shader2common;
+    params.num_named_xforms      = m_num_named_xforms;
+    params.xform_name_buffer     = d_xform_name_buffer;
+    params.xform_buffer          = d_xform_buffer;
 
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_launch_params), &params, sizeof(RenderParams), cudaMemcpyHostToDevice));
 
@@ -1238,6 +1241,64 @@ OptixGridRenderer::set_transforms(const OSL::Matrix44& object2common,
 {
     m_object2common = object2common;
     m_shader2common = shader2common;
+}
+
+void
+OptixGridRenderer::register_named_transforms()
+{
+#ifdef OSL_USE_OPTIX
+    std::vector<uint64_t>      xform_name_buffer;
+    std::vector<OSL::Matrix44> xform_buffer;
+
+    // Gather:
+    //   1) All of the named transforms
+    //   2) The "string" value associated with the transform name:
+    //        for OptiX 6, this is the address of the string variable;
+    //        for OptiX 7+, this is the ustring hash of the transform name.
+    for( const auto& item : m_named_xforms )
+    {
+        const uint64_t addr = OptixGridRenderer::register_string( item.first.c_str(), "" );
+        xform_name_buffer.push_back(addr);
+        xform_buffer.push_back(*item.second);
+    }
+
+    // Push the names and transforms to the device
+#if (OPTIX_VERSION < 70000)
+    optix::Buffer name_buffer
+        = m_optix_ctx->createBuffer(RT_BUFFER_INPUT,
+                                    RT_FORMAT_UNSIGNED_LONG_LONG,
+                                    xform_name_buffer.size());
+    uint64_t* names = reinterpret_cast<uint64_t*>(name_buffer->map());
+    memcpy(names, xform_name_buffer.data(),
+           sizeof(uint64_t) * xform_name_buffer.size());
+    name_buffer->unmap();
+    m_optix_ctx["xform_name_buffer"]->setBuffer(name_buffer);
+
+    optix::Buffer transform_buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT);
+    transform_buffer->setFormat(RT_FORMAT_USER);
+    transform_buffer->setElementSize(sizeof(OSL::Matrix44));
+    transform_buffer->setSize(xform_buffer.size());
+    void* transforms = transform_buffer->map();
+    memcpy(transforms, xform_buffer.data(), sizeof(OSL::Matrix44) * xform_buffer.size());
+    transform_buffer->unmap();
+    m_optix_ctx["xform_buffer"]->setBuffer(transform_buffer);
+#else
+    size_t sz = sizeof(uint64_t) * xform_name_buffer.size();
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_xform_name_buffer), sz));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_xform_name_buffer),
+                          xform_name_buffer.data(), sz,
+                          cudaMemcpyHostToDevice));
+    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_name_buffer));
+
+    sz = sizeof(OSL::Matrix44) * xform_buffer.size();
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_xform_buffer), sz));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_xform_buffer),
+                          xform_buffer.data(), sz, cudaMemcpyHostToDevice));
+    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_buffer));
+
+    m_num_named_xforms = xform_name_buffer.size();
+#endif // if (OPTIX_VERSION < 70000)
+#endif // ifdef OSL_USE_OPTIX
 }
 
 OSL_NAMESPACE_EXIT

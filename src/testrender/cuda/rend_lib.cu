@@ -27,6 +27,9 @@ rtDeclareVariable (char*, test_str_2, , );
 rtDeclareVariable (optix::Matrix4x4, object2common, , );
 rtDeclareVariable (optix::Matrix4x4, shader2common, , );
 
+rtBuffer<uint64_t>         xform_name_buffer;
+rtBuffer<optix::Matrix4x4> xform_buffer;
+
 OSL_NAMESPACE_ENTER
 namespace pvt {
     rtBuffer<char,1> s_color_system;
@@ -377,6 +380,22 @@ extern "C" {
             MAT(r) = MAT(&shader2common);
             return true;
         }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < xform_name_buffer.size(); ++idx ) {
+            if (HDSTR(from) == HDSTR(xform_name_buffer[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = MAT(&xform_buffer[match_idx]);
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {
@@ -407,6 +426,23 @@ extern "C" {
             MAT(r).invert();
             return true;
         }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < xform_name_buffer.size(); ++idx ) {
+            if (HDSTR(to) == HDSTR(xform_name_buffer[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = MAT(&xform_buffer[match_idx]);
+            MAT(r).invert();
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {
@@ -423,11 +459,14 @@ extern "C" {
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
-__device__ CUdeviceptr s_color_system           = 0;
-__device__ CUdeviceptr osl_printf_buffer_start  = 0;
-__device__ CUdeviceptr osl_printf_buffer_end    = 0;
-__device__ uint64_t test_str_1 = 0;
-__device__ uint64_t test_str_2 = 0;
+__device__ CUdeviceptr s_color_system          = 0;
+__device__ CUdeviceptr osl_printf_buffer_start = 0;
+__device__ CUdeviceptr osl_printf_buffer_end   = 0;
+__device__ uint64_t test_str_1                 = 0;
+__device__ uint64_t test_str_2                 = 0;
+__device__ uint64_t num_named_xforms           = 0;
+__device__ CUdeviceptr xform_name_buffer       = 0;
+__device__ CUdeviceptr xform_buffer            = 0;
 }
 OSL_NAMESPACE_EXIT
 
@@ -807,6 +846,22 @@ extern "C" {
             MAT(r) = MAT(sg->shader2common);
             return true;
         }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < OSL::pvt::num_named_xforms; ++idx ) {
+            if (HDSTR(from) == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = reinterpret_cast<OSL::Matrix44*>(OSL::pvt::xform_buffer)[match_idx];
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {
@@ -837,6 +892,22 @@ extern "C" {
             MAT(r).invert();
             return true;
         }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < OSL::pvt::num_named_xforms; ++idx ) {
+            if (HDSTR(to) == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = reinterpret_cast<OSL::Matrix44*>(OSL::pvt::xform_buffer)[match_idx];
+            MAT(r).invert();
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {

@@ -1562,11 +1562,28 @@ LLVMGEN (llvm_gen_construct_triple)
             vectype = TypeDesc::VECTOR;
         else if (op.opname() == "normal")
             vectype = TypeDesc::NORMAL;
+
+        llvm::Value *from_arg = nullptr;
+        llvm::Value *to_arg   = nullptr;
+        if (! rop.use_optix()) {
+            from_arg = rop.llvm_load_value(Space);
+            to_arg   = rop.ll.constant(Strings::common);
+        } else {
+            // Create a Symbol for Strings::common. The symbol name isn't important,
+            // since a new name will be created based on the string hash.
+            //
+            // TODO: This pattern is used elsewhere (e.g., in llvm_assign_initial_value),
+            //       so it might make sense to refactor it.
+            Symbol to_sym(ustring("Strings__common"), TypeDesc::TypeString, SymTypeConst);
+            to_sym.set_dataptr(SymArena::Absolute, (void *)&Strings::common);
+            from_arg = rop.llvm_load_device_string(Space, /*follow*/ true);
+            to_arg   = rop.llvm_load_device_string(to_sym, /*follow*/ true);
+        }
+
         llvm::Value *args[] = { rop.sg_void_ptr(),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
-            rop.llvm_load_value(Space), rop.ll.constant(Strings::common),
-            rop.ll.constant((int)vectype) };
+            from_arg, to_arg, rop.ll.constant((int)vectype) };
         RendererServices *rend (rop.shadingsys().renderer());
         if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
             // renderer potentially knows about a nonlinear transformation.

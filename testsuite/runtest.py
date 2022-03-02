@@ -78,10 +78,15 @@ test_source_dir = os.getenv('OSL_TESTSUITE_SRC',
 
 command = ""
 outputs = [ "out.txt" ]    # default
+
+# Control image differencing
 failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
+idiff_program = "idiff"
+idiff_postfilecmd = ""
+
 filter_re = None
 cleanup_on_success = False
 if int(os.getenv('TESTSUITE_CLEANUP_ON_SUCCESS', '0')) :
@@ -222,15 +227,18 @@ def maketx (args) :
 # the file "out.txt".  We allow a small number of pixels to have up to
 # 1 LSB (8 bit) error, it's very hard to make different platforms and
 # compilers always match to every last floating point bit.
-def oiiodiff (fileA, fileB, extraargs="", silent=True, concat=True) :
-    command = (oiio_app("idiff") + "-a"
+def oiiodiff (fileA, fileB, extraargs="", silent=True, concat=True,
+              diffprogram=idiff_program, postfilecmd=idiff_postfilecmd) :
+    command = (oiio_app(diffprogram) + "-a"
                + " -fail " + str(failthresh)
                + " -failpercent " + str(failpercent)
                + " -hardfail " + str(hardfail)
                + " -warn " + str(2*failthresh)
                + " -warnpercent " + str(failpercent)
-               + " " + extraargs + " " + make_relpath(fileA,tmpdir)
-               + " " + make_relpath(fileB,tmpdir))
+               + " " + extraargs
+               + " " + make_relpath(fileA,tmpdir) + postfilecmd
+               + " " + make_relpath(fileB,tmpdir) + postfilecmd
+               + (" --diff" if diffprogram == "oiiotool" else ""))
     if not silent :
         command += redirect
     if concat:

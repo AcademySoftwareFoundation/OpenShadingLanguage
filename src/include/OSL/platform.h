@@ -51,7 +51,7 @@
 // 30402 for clang 3.4.2), or 0 if not a generic Clang release.
 // N.B. This will be 0 for the clang Apple distributes (which has different
 // version numbers entirely).
-#if defined(__clang__) && !defined(__apple_build_version__)
+#if defined(__clang__) && !defined(__apple_build_version__) && !defined(__INTEL_LLVM_COMPILER)
 #  define OSL_CLANG_VERSION (10000*__clang_major__ + 100*__clang_minor__ + __clang_patchlevel__)
 #else
 #  define OSL_CLANG_VERSION 0
@@ -60,26 +60,44 @@
 // Define OSL_APPLE_CLANG_VERSION to hold an encoded Apple Clang version
 // (e.g. 70002 for clang 7.0.2), or 0 if not an Apple Clang release.
 #if defined(__clang__) && defined(__apple_build_version__)
+#  if defined(__INTEL_LLVM_COMPILER)
+#    error Not expected for __INTEL_LLVM_COMPILER to be defined with an __apple_build_version__
+#  endif
 #  define OSL_APPLE_CLANG_VERSION (10000*__clang_major__ + 100*__clang_minor__ + __clang_patchlevel__)
 #else
 #  define OSL_APPLE_CLANG_VERSION 0
 #endif
+// The classic Intel(r) C++ Compiler on OSX may still define __clang__
+// combine with testing OSL_INTEL_COMPILER to further differentiate if needed.
 
-// Define OSL_INTEL_COMPILER to hold an encoded Intel compiler version
-// (e.g. 1900), or 0 if not an Intel compiler.
+// Define OSL_INTEL_COMPILER to hold an encoded Intel(r) C++ Compiler version
+// (e.g. 1900), or 0 if not an Intel(r) C++ Compiler.
 #if defined(__INTEL_COMPILER)
 #  define OSL_INTEL_COMPILER __INTEL_COMPILER
 #else
 #  define OSL_INTEL_COMPILER 0
 #endif
 
-// Intel's compiler on OSX may still define __clang__
-// and we have need to know when using a true clang compiler
-#if !defined(__INTEL_COMPILER) && defined(__clang__)
-    #define OSL_NON_INTEL_CLANG  __clang__
+// Define OSL_INTEL_LLVM_COMPILER to hold an encoded Intel(r) LLVM Compiler version
+// (e.g. 20220000), or 0 if not an Intel(r) LLVM Compiler.
+// Define OSL_INTEL_CLANG_VERSION to hold the encoded Clang version the
+// Intel(r) LLVM Compiler is based on (e.g. 140000),
+// or 0 if not an Intel(r) LLVM compiler.
+#if defined(__INTEL_LLVM_COMPILER)
+#  define OSL_INTEL_LLVM_COMPILER __INTEL_LLVM_COMPILER
+#  define OSL_INTEL_CLANG_VERSION (10000*__clang_major__ + 100*__clang_minor__ + __clang_patchlevel__)
 #else
-	#define OSL_NON_INTEL_CLANG  0
+#  define OSL_INTEL_LLVM_COMPILER 0
+#  define OSL_INTEL_CLANG_VERSION 0
 #endif
+
+// Define OSL_ANY_CLANG to 0 or 1 to indicate if any Clang based compiler is in use
+#if defined(__clang__)
+#  define OSL_ANY_CLANG 1
+#else
+#  define OSL_ANY_CLANG 0
+#endif
+
 
 // Tests for MSVS versions, always 0 if not MSVS at all.
 #if defined(_MSC_VER)

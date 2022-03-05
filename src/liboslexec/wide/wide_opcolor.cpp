@@ -84,7 +84,7 @@ __OSL_MASKED_OP2(blackbody,Wv,Wf)
     }
 
     if (testIfAnyLaneIsNonZero(wcomputeRequired)) {
-#if !OSL_CLANG_VERSION || OSL_INTEL_COMPILER
+#if !OSL_ANY_CLANG || OSL_INTEL_COMPILER
         // Clang was unable to vectorize the nested loop in the real computation
         // which is why we have split off the fast path of using the lookup table
         // so it can be vectorized independently

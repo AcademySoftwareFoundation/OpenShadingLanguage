@@ -175,6 +175,21 @@ include_directories (
   )
 
 
+# Make sure our math calculations are consistent,
+# especially division.  Different compilers may have choose to use
+# reciprocal division loosing precision causing slightly different
+# results which can lead to aliasing differences when running the testsuite
+# Disable reciprocal division
+if (CMAKE_COMPILER_IS_INTEL)
+    if (MSVC)
+        add_compile_options("/Qprec-div")
+    else ()
+        add_compile_options("-prec-div")
+    endif ()
+elseif (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR CMAKE_COMPILER_IS_INTELCLANG)
+    add_compile_options("-fno-reciprocal-math")
+endif ()
+       
 # Tell CMake to process the sub-directories
 add_subdirectory (src/include)
 add_subdirectory (src/liboslcomp)

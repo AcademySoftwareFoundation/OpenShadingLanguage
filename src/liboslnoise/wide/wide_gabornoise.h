@@ -41,7 +41,8 @@ wide_gabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -71,7 +72,8 @@ wide_gabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -100,7 +102,8 @@ wide_gabor(Masked<Dual2<float>> wResult, Wide<const Dual2<Vec3>> wP,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -128,7 +131,8 @@ wide_gabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -157,7 +161,8 @@ wide_gabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -186,7 +191,8 @@ wide_gabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<Vec3>> wP,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -215,7 +221,8 @@ wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -249,7 +256,8 @@ wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -284,7 +292,8 @@ wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<Vec3>> wP,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -315,7 +324,8 @@ wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -349,7 +359,8 @@ wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -384,7 +395,8 @@ wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<Vec3>> wP,
         sfm::GaborUniformParams gup(*opt);
         __OSL_SETUP_WIDE_DIRECTION
 
-#if !OSL_NON_INTEL_CLANG  // Control flow too complex for clang's loop vectorizor
+#if (!OSL_ANY_CLANG || OSL_INTEL_COMPILER)
+        // Control flow too complex for clang's loop vectorizor
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {

@@ -433,6 +433,7 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wf, Wm)(void* wr_, void* wa_,
 
     if (testIfAnyLaneIsNonZero(wnotAffine)) {
         invoke([=]() -> void {
+            // DO NOT VECTORIZE the slow path
             for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                 if (wnotAffine[lane]) {
                     OSL_DASSERT(wresult.mask().is_on(lane));
@@ -1319,6 +1320,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, Wide<const Matrix44> wM,
 
     if (testIfAnyLaneIsNonZero(wnotAffine)) {
         invoke([=]() -> void {
+            // DO NOT VECTORIZE the slow path
             for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                 if (wnotAffine[lane]) {
                     OSL_DASSERT(wresult.mask().is_on(lane));
@@ -1357,9 +1359,14 @@ impl_transform_normal_masked(void* Pin, void* Pout, const Matrix44& M,
 
     // Transform with Normal semantics
 
-    Matrix44 invM;
+    Matrix44 invM{Imath::UNINITIALIZED};
     if (OSL_UNLIKELY(!test_if_affine(M))) {
-        invM = OSL::nonAffineInverse(M);
+        // Isolate expensive unlikley code
+        // in its own function as to not influence
+        // the optimization of the fast path
+        invoke([&]() -> void {
+            invM = OSL::nonAffineInverse(M);
+        });
     } else {
         invM = OSL::affineInverse(M);
     }

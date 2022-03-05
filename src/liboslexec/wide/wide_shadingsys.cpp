@@ -2,28 +2,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-//#include <vector>
-//#include <string>
-//#include <cstdio>
-//#include <fstream>
-//#include <cstdlib>
-//#include <mutex>
-
 #include <OSL/oslconfig.h>
 
 #include <OSL/batched_rendererservices.h>
 #include <OSL/batched_shaderglobals.h>
 #include <OSL/wide.h>
 
-//#include "OSL/genclosure.h"
-//#include "OSL/oslquery.h"
-
-//#include <OpenImageIO/strutil.h>
-//#include <OpenImageIO/dassert.h>
-//#include <OpenImageIO/thread.h>
-//#include <OpenImageIO/timer.h>
-//#include <OpenImageIO/filesystem.h>
-//#include <OpenImageIO/optparser.h>
 #include <OpenImageIO/fmath.h>
 
 #include "oslexec_pvt.h"

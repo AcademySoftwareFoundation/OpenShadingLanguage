@@ -40,6 +40,13 @@ if (USE_OPTIX)
              DESTINATION ${OSL_PTX_INSTALL_DIR})
 endif()
 
+if (CMAKE_COMPILER_IS_INTELCLANG)
+    # To better match existing test results
+    add_compile_options("-fp-model=precise")
+    # Better performance is likely by not requiring a precise floating point 
+    # model, although with slightly different numerical results.
+endif ()
+
 add_executable (testrender ${testrender_srcs})
 
 target_link_libraries (testrender

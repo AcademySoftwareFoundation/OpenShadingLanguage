@@ -540,7 +540,7 @@ void splineinverse_evaluate_loop_over_wide(
 
     OSL_FORCEINLINE_BLOCK
     {
-#if !OSL_CLANG_VERSION || OSL_INTEL_COMPILER
+#if !OSL_ANY_CLANG || OSL_INTEL_COMPILER
         // Clang was unable to vectorize the nested loops
         OSL_OMP_PRAGMA(omp simd simdlen(vec_width))
 #endif

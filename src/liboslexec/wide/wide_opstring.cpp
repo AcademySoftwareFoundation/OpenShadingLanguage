@@ -73,8 +73,9 @@ OSL_BATCHOP void __OSL_MASKED_OP2(strlen, Wi, Ws)(void* wr_, void* ws_,
 
     OSL_FORCEINLINE_BLOCK
     {
+#if (!OSL_CLANG_VERSION || OSL_INTEL_COMPILER)
+        // Clang 11 generated SIMD crashes at runtime
         // TODO: investigate clang crash when vectorizing
-#if !OSL_NON_INTEL_CLANG  // Clang 11 generated SIMD crashes
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
 #endif
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {

@@ -28,9 +28,10 @@
 
 // Notes:
 //   __GNUC__ is defined for gcc and all clang varieties
-//   __clang__ is defined for all clang varieties (generic and Apple)
+//   __clang__ is defined for all clang varieties (generic, Apple, and Intel)
 //   __apple_build_version__ is only defined for Apple clang
 //   __INTEL_COMPILER is defined only for icc
+//   __INTEL_LLVM_COMPILER is defined only for icx
 //   _MSC_VER is defined for MSVS compiler (not gcc/clang/icc even on Windows)
 //   _WIN32 is defined on Windows regardless of compiler
 //   __CUDACC__   is defined any time we are compiling a module for Cuda

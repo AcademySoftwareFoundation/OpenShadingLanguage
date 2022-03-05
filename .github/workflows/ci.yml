@@ -542,7 +542,7 @@ jobs:
             build/*.cmake
             build/testsuite/*/*.*
 
-icx-vp2022:
+  icx-vp2022:
     name: "Linux VFXP-2022 icx/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
     runs-on: ubuntu-latest
     container:

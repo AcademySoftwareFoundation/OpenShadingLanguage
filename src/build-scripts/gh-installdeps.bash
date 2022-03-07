@@ -45,9 +45,11 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
         sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
         set +e; source /opt/intel/oneapi/setvars.sh; set -e
         if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" ]] ; then
+            echo "Verifying installation of Intel(r) C++ Compiler:"
             icpc --version
         fi
         if [[ "$CXX" == "icpx" || "$CC" == "icx" || "$USE_ICX" != "" ]] ; then
+            echo "Verifying installation of Intel(r) oneAPI DPC++/C++ Compiler:"
             icpx --version
         fi
     fi

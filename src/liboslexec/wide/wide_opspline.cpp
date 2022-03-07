@@ -540,10 +540,7 @@ void splineinverse_evaluate_loop_over_wide(
 
     OSL_FORCEINLINE_BLOCK
     {
-#if !OSL_ANY_CLANG || OSL_INTEL_COMPILER
-        // Clang was unable to vectorize the nested loops
-        OSL_OMP_PRAGMA(omp simd simdlen(vec_width))
-#endif
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(vec_width))
         for(int lane=0; lane < vec_width; ++lane) {
             X_Type x = wX[lane];
             auto knots = wK[lane];

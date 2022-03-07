@@ -246,7 +246,7 @@ affineInverse(const Matrix44 &m)
 // differently than the LLVM IR version.
 // NOTE:  only using "inline" to get ODR (One Definition Rule) behavior
 static inline OSL_HOSTDEVICE Matrix44
-#if !OSL_INTEL_COMPILER
+#if !OSL_INTEL_CLASSIC_COMPILER_VERSION
     OSL_GNUC_ATTRIBUTE(optimize("fp-contract=off"))
 #endif
 nonAffineInverse(const Matrix44 &source);

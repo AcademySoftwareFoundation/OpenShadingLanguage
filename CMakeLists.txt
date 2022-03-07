@@ -177,7 +177,7 @@ include_directories (
 
 # Make sure our math calculations are consistent,
 # especially division.  Different compilers may have choose to use
-# reciprocal division loosing precision causing slightly different
+# reciprocal division losing precision causing slightly different
 # results which can lead to aliasing differences when running the testsuite
 # Disable reciprocal division
 if (CMAKE_COMPILER_IS_INTEL)

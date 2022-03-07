@@ -69,26 +69,26 @@
 #  define OSL_APPLE_CLANG_VERSION 0
 #endif
 // The classic Intel(r) C++ Compiler on OSX may still define __clang__
-// combine with testing OSL_INTEL_COMPILER to further differentiate if needed.
+// combine with testing OSL_INTEL_CLASSIC_COMPILER_VERSION to further differentiate if needed.
 
-// Define OSL_INTEL_COMPILER to hold an encoded Intel(r) C++ Compiler version
+// Define OSL_INTEL_CLASSIC_COMPILER_VERSION to hold an encoded Intel(r) C++ Compiler version
 // (e.g. 1900), or 0 if not an Intel(r) C++ Compiler.
 #if defined(__INTEL_COMPILER)
-#  define OSL_INTEL_COMPILER __INTEL_COMPILER
+#  define OSL_INTEL_CLASSIC_COMPILER_VERSION __INTEL_COMPILER
 #else
-#  define OSL_INTEL_COMPILER 0
+#  define OSL_INTEL_CLASSIC_COMPILER_VERSION 0
 #endif
 
-// Define OSL_INTEL_LLVM_COMPILER to hold an encoded Intel(r) LLVM Compiler version
+// Define OSL_INTEL_LLVM_COMPILER_VERSION to hold an encoded Intel(r) LLVM Compiler version
 // (e.g. 20220000), or 0 if not an Intel(r) LLVM Compiler.
 // Define OSL_INTEL_CLANG_VERSION to hold the encoded Clang version the
 // Intel(r) LLVM Compiler is based on (e.g. 140000),
 // or 0 if not an Intel(r) LLVM compiler.
 #if defined(__INTEL_LLVM_COMPILER)
-#  define OSL_INTEL_LLVM_COMPILER __INTEL_LLVM_COMPILER
+#  define OSL_INTEL_LLVM_COMPILER_VERSION __INTEL_LLVM_COMPILER
 #  define OSL_INTEL_CLANG_VERSION (10000*__clang_major__ + 100*__clang_minor__ + __clang_patchlevel__)
 #else
-#  define OSL_INTEL_LLVM_COMPILER 0
+#  define OSL_INTEL_LLVM_COMPILER_VERSION 0
 #  define OSL_INTEL_CLANG_VERSION 0
 #endif
 
@@ -260,6 +260,15 @@
     #define OSL_OMP_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
 #else
     #define OSL_OMP_PRAGMA(aUnQuotedPragma)
+#endif
+
+#define OSL_OMP_SIMD_LOOP(...) OSL_OMP_PRAGMA(omp simd __VA_ARGS__)
+#if (OSL_GCCVERSION || OSL_INTEL_CLASSIC_COMPILER_VERSION)
+#   define OSL_OMP_COMPLEX_SIMD_LOOP(...) OSL_OMP_SIMD_LOOP(__VA_ARGS__)
+#else
+    // Ignore requests to vectorize complex/nested SIMD loops for certain
+    // compilers/versions that are not currently vectorizing complex loops.
+#   define OSL_OMP_COMPLEX_SIMD_LOOP(...)
 #endif
 
 // OSL_FORCEINLINE is a function attribute that attempts to make the

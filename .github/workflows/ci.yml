@@ -556,7 +556,7 @@ jobs:
       PYTHON_VERSION: 3.9
       USE_BATCHED: b8_AVX2_noFMA
       USE_SIMD: avx2,f16c
-      OSL_CMAKE_FLAGS: -DSTOP_ON_WARNING=OFF -DEXTRA_CPP_ARGS=-fp-model=consistent
+      OSL_CMAKE_FLAGS: -DSTOP_ON_WARNING=OFF
       USE_OPENVDB: 0
       
     steps:

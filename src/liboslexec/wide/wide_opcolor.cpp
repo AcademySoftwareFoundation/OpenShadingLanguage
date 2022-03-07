@@ -87,7 +87,7 @@ __OSL_MASKED_OP2(blackbody,Wv,Wf)
         // Complex nested loop in the real computation may not vectorize in
         // in all compilers, which is why we have split off the fast path of
         // using the lookup table so it can be vectorized independently
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(vec_width))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             float temperature = wL[lane];
             int computeRequired = wcomputeRequired[lane];

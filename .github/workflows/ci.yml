@@ -21,773 +21,345 @@ on:
       - '**.tex'
   schedule:
     # Full nightly build
-    - cron: "0 8 * * *"
+    - cron: "0 6 * * *"
 
 
 jobs:
-  vfxplatform-2019:
-    name: "Linux VFXP-2019: gcc6/C++14 llvm9 py2.7 boost1.66 exr2.3 oiio2.2 sse2"
-    runs-on: ubuntu-latest
+
+  aswf:
+    name: "VFX${{matrix.vfxyear}} ${{matrix.desc}}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - desc: gcc6/C++14 llvm9 py2.7 boost1.66 exr2.3 oiio2.2 sse2
+            nametag: linux-vfx2019
+            os: ubuntu-latest
+            vfxyear: 2019
+            vfxsuffix: -clang9
+            cxx_std: 14
+            openimageio_ver: v2.2.17.0
+            python_ver: 2.7
+            pybind11_ver: v2.4.2
+            setenvs: export xUSE_PYTHON=0
+          - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7
+            nametag: linux-clang9-llvm9
+            os: ubuntu-18.04
+            vfxyear: 2019
+            vfxsuffix: -clang9
+            cc_compiler: clang
+            cxx_compiler: clang++
+            cxx_std: 14
+            openimageio_ver: release
+            python_ver: 2.7
+            # pybind11_ver: v2.9.0
+            simd: avx
+          - desc: GPU Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.3 OIIO-master avx2
+            nametag: linux-optix7-2019
+            os: ubuntu-latest
+            vfxyear: 2019
+            vfxsuffix: -clang10
+            cxx_std: 14
+            openimageio_ver: master
+            python_ver: 2.7
+            # pybind11_ver: v2.9.0
+            simd: avx2,f16c
+            skip_tests: 1
+            setenvs: export OSL_CMAKE_FLAGS="-DUSE_OPTIX=1" OPTIX_VERSION=7.0 
+          - desc: gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4
+            nametag: linux-vfx2020
+            os: ubuntu-latest
+            vfxyear: 2020
+            cxx_std: 14
+            openimageio_ver: v2.2.17.0
+            python_ver: 3.7
+            pybind11_ver: v2.5.0
+            simd: sse4.2
+            setenvs: export CONAN_LLVM_VERSION=10.0.1
+          - desc: gcc9/C++17 llvm11 py3.7 boost1.73 exr2.5 oiio2.2 avx2 batch-b8avx2
+            nametag: linux-vfx2021
+            os: ubuntu-latest
+            vfxyear: 2021
+            vfxsuffix: -clang11
+            cxx_std: 17
+            openimageio_ver: dev-2.2
+            python_ver: 3.7
+            pybind11_ver: v2.7.0
+            simd: avx2,f16c
+            batched: b8_AVX2_noFMA
+          - desc: gcc9/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+            nametag: linux-vfx2022
+            os: ubuntu-latest
+            vfxyear: 2022
+            vfxsuffix: -clang13
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: 3.9
+            pybind11_ver: v2.9.0
+            simd: avx2,f16c
+            batched: b8_AVX2
+          - desc: clang12/C++17 llvm12 oiio-master boost1.73 exr3.1 py3.9 avx2 batch-avx512
+            nametag: linux-clang12-llvm12-batch
+            os: ubuntu-latest
+            vfxyear: 2022
+            vfxsuffix: -clang12
+            cxx_std: 17
+            openimageio_ver: master
+            python_ver: 3.9
+            pybind11_ver: v2.6.2
+            simd: avx2,f16c
+            batched: b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: USE_OPENVDB=0
+          - desc: icc/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio-master avx2
+            os: ubuntu-latest
+            vfxyear: 2022
+            vfxsuffix: -clang13
+            cc_compiler: icc
+            cxx_compiler: icpc
+            cxx_std: 17
+            fmt_ver: 7.1.3
+            openimageio_ver: master
+            python_ver: 3.9
+            pybind11_ver: v2.9.0
+            # simd: avx2,f16c
+            batched: b8_AVX2_noFMA
+            setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF -DEXTRA_CPP_ARGS=-fp-model=consistent"
+                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=7.1.3
+                            USE_OPENVDB=0
+          - desc:  icx/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+            os: ubuntu-latest
+            vfxyear: 2022
+            vfxsuffix: -clang13
+            cc_compiler: icx
+            cxx_compiler: icpx
+            cxx_std: 17
+            fmt_ver: 7.1.3
+            openimageio_ver: master
+            python_ver: 3.9
+            pybind11_ver: v2.9.0
+            simd: avx2,f16c
+            batched: b8_AVX2_noFMA
+            setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
+          - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.2 no-simd exr2.3
+            nametag: linux-oldest
+            os: ubuntu-latest
+            vfxyear: 2019
+            vfxsuffix: -clang9
+            cxx_std: 14
+            openimageio_ver: v2.2.17.0
+            python_ver: 2.7
+            pybind11_ver: v2.6.2
+            simd: 0
+            setenvs: export USE_PYTHON=0 PUGIXML_VERSION=v1.8
+
+    runs-on: ${{matrix.os}}
     container:
-      image: aswf/ci-osl:2019-clang9
+      image: aswftesting/ci-osl:${{matrix.vfxyear}}${{matrix.vfxsuffix}}
     env:
-      CXX: g++
-      CC: gcc
-      CMAKE_CXX_STANDARD: 14
-      OPENIMAGEIO_VERSION: v2.2.17.0
-      PYBIND11_VERSION: v2.4.2
-      PYTHON_VERSION: 2.7
-      USE_PYTHON: 0
+      CXX: ${{matrix.cxx_compiler}}
+      CC: ${{matrix.cc_compiler}}
+      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
+      FMT_VERSION: ${{matrix.fmt_ver}}
+      OPENEXR_VERSION: ${{matrix.openexr_ver}}
+      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
+      PYBIND11_VERSION: ${{matrix.pybind11_ver}}
+      PYTHON_VERSION: ${{matrix.python_ver}}
+      USE_BATCHED: ${{matrix.batched}}
+      USE_SIMD: ${{matrix.simd}}
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
         id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+        run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
         uses: actions/cache@v2
         with:
           path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
+          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
+          restore-keys: ${{github.job}}-${{matrix.nametag}}-
       - name: Build setup
         run: |
+            ${{matrix.setenvs}}
             src/build-scripts/ci-startup.bash
+      - name: Remove existing OIIO
+        if: matrix.openimageio_ver != ''
+        run: |
+            sudo rm -rf /usr/local/include/OpenImageIO
+            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
+            sudo rm -rf /usr/local/lib*/libOpenImageIO*
+            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
       - name: Dependencies
         run: |
-            # Remove pesky wrong installed OIIO version
-            rm -rf /usr/local/include/OpenImageIO
+            ${{matrix.depcmds}}
             src/build-scripts/gh-installdeps.bash
       - name: Build
         run: |
             src/build-scripts/ci-build.bash
       - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
+        if: matrix.skip_tests != '1'
+        run: src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: osl-${{github.job}}
+          name: osl-${{github.job}}-${{matrix.nametag}}
           path: |
-            build/CMake*
             build/*.cmake
+            build/CMake*
             build/testsuite/*/*.*
 
-  vfxplatform-2020:
-    name: "Linux VFXP-2020 gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4"
-    runs-on: ubuntu-latest
-    container:
-      image: aswf/ci-osl:2020
+
+  ubuntu:
+    name: "Ubuntu ${{matrix.desc}}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - desc: Debug gcc7/C++14 llvm9 py2.7 oiio2.3 exr2.4 sse4 boost1.65 exr2.4
+            nametag: linux-debug-gcc7-llvm9
+            os: ubuntu-18.04
+            cxx_compiler: g++-7
+            cxx_std: 14
+            openexr_ver: v2.4.3
+            openimageio_ver: dev-2.3
+            pybind11_ver: v2.6.2
+            python_ver: 2.7
+            simd: sse4.2
+            setenvs: export CMAKE_BUILD_TYPE=Debug
+                            LLVM_VERSION=9.0.0
+                            PUGIXML_VERSION=v1.9
+                            CTEST_TEST_TIMEOUT=240
+          - desc: gcc10/C++17 llvm10 oiio-release boost1.65 exr2.5 avx2
+            nametag: linux-2021ish-gcc10-llvm10
+            os: ubuntu-18.04
+            cxx_compiler: g++-10
+            cxx_std: 17
+            fmt_ver: 7.0.1
+            openexr_ver: v2.5.6
+            openimageio_ver: release
+            pybind11_ver: v2.8.1
+            # python_ver: 2.7   FIXME
+            simd: avx2,f16c
+            setenvs: export LLVM_VERSION=10.0.0
+                            OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
+                            PUGIXML_VERSION=v1.10
+          - desc: latest releases gcc11/C++17 llvm12 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512
+            nametag: linux-latest-releases
+            os: ubuntu-20.04
+            cxx_compiler: g++-11
+            cxx_std: 17
+            fmt_ver: 8.1.1
+            openexr_ver: v3.1.4
+            openimageio_ver: master
+            pybind11_ver: v2.9.1
+            python_ver: 3.8
+            simd: avx2,f16c
+            batched: b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: export LLVM_VERSION=12.0.0
+                            LLVM_DISTRO_NAME=ubuntu-20.04
+                            OPENCOLORIO_VERSION=v2.1.1
+                            PUGIXML_VERSION=v1.11.4
+          - desc: bleeding edge gcc11/C++17 llvm13 oiio/ocio/exr/pybind-master boost1.71 py3.9 avx2 batch-b16avx512
+            nametag: linux-bleeding-edge
+            os: ubuntu-20.04
+            cxx_compiler: g++-11
+            cxx_std: 17
+            fmt_ver: master
+            openexr_ver: main
+            openimageio_ver: master
+            pybind11_ver: master
+            python_ver: 3.9
+            simd: avx2,f16c
+            batched: b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: export LLVM_VERSION=13.0.0
+                            LLVM_DISTRO_NAME=ubuntu-20.04
+                            OPENCOLORIO_VERSION=main
+                            PUGIXML_VERSION=master
+
+    runs-on: ${{matrix.os}}
     env:
-      CXX: g++
-      CC: gcc
-      CMAKE_CXX_STANDARD: 14
-      CONAN_LLVM_VERSION: 10.0.1
-      OPENIMAGEIO_VERSION: v2.2.17.0
-      PYBIND11_VERSION: v2.5.0
-      PYTHON_VERSION: 3.7
-      USE_SIMD: sse4.2
+      CXX: ${{matrix.cxx_compiler}}
+      CC: ${{matrix.cc_compiler}}
+      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
+      FMT_VERSION: ${{matrix.fmt_ver}}
+      OPENEXR_VERSION: ${{matrix.openexr_ver}}
+      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
+      PYBIND11_VERSION: ${{matrix.pybind11_ver}}
+      PYTHON_VERSION: ${{matrix.python_ver}}
+      USE_BATCHED: ${{matrix.batched}}
+      USE_SIMD: ${{matrix.simd}}
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
         id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+        run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
         uses: actions/cache@v2
         with:
           path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
+          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
+          restore-keys: ${{github.job}}-${{matrix.nametag}}-
       - name: Build setup
         run: |
+            ${{matrix.setenvs}}
             src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
+            ${{matrix.depcmds}}
             src/build-scripts/gh-installdeps.bash
       - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
+        run: src/build-scripts/ci-build.bash
       - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
+        if: matrix.skip_tests != '1'
+        run: src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: osl-${{github.job}}
+          name: osl-${{github.job}}-${{matrix.nametag}}
           path: |
-            build/CMake*
             build/*.cmake
+            build/CMake*
             build/testsuite/*/*.*
 
-  vfxplatform-2021:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm11 py3.7 boost1.73 exr2.5 oiio2.2 avx2 batch-b8avx2"
-    runs-on: ubuntu-latest
-    container:
-      image: aswf/ci-osl:2021-clang11
-    env:
-      CXX: g++
-      CC: gcc
-      CMAKE_CXX_STANDARD: 17
-      USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v2.5.6
-      OPENIMAGEIO_VERSION: dev-2.2
-      PYBIND11_VERSION: v2.7.0
-      PYTHON_VERSION: 3.7
-      USE_BATCHED: b8_AVX2_noFMA
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
 
-  vfxplatform-2022:
-    name: "Linux VFXP-2022 gcc9/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
-    runs-on: ubuntu-latest
-    container:
-      image: aswftesting/ci-osl:2022-clang13
+  macos:
+    name: "${{matrix.os}} appleclang${{matrix.aclang}}/C++${{matrix.cxx_std}} py${{matrix.python_ver}} ${{matrix.desc}}"
+    strategy:
+      matrix:
+        include:
+          - desc: llvm11
+            os: macos-10.15
+            nametag: macos10-py39
+            cxx_std: 14
+            python_ver: 3.9
+            aclang: 12
+          - desc: llvm11
+            os: macos-11
+            nametag: macos11-py39
+            cxx_std: 17
+            python_ver: 3.9
+            aclang: 13
+    runs-on: ${{matrix.os}}
     env:
-      CXX: g++
-      CC: gcc
-      CMAKE_CXX_STANDARD: 17
-      OPENIMAGEIO_VERSION: release
-      PYBIND11_VERSION: v2.9.0
-      PYTHON_VERSION: 3.9
-      USE_BATCHED: b8_AVX2
-      USE_SIMD: avx2,f16c
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            rm -rf /usr/local/include/OpenImageIO /usr/local/lib/cmake/OpenImageIO
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  # Build for OptiX, but don't run tests (will need a GPU instance for that)
-  gpu-optix7-2019:
-    name: "Linux GPU VFXP-2019 Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.3 OIIO-master avx2"
-    runs-on: ubuntu-latest
-    container:
-      image: aswftesting/ci-osl:2019-clang10
-    env:
-      CXX: g++
-      CC: gcc
-      CMAKE_CXX_STANDARD: 14
-      PYTHON_VERSION: 2.7
-      USE_SIMD: avx2,f16c
-      OPENIMAGEIO_VERSION: master
-      OSL_CMAKE_FLAGS: -DUSE_OPTIX=1
-      OPTIX_VERSION: "7.0"
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            rm -rf /usr/local/include/OpenImageIO
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      # Testsuite disabled until we have GPU hardware to run on
-      #- name: Testsuite
-      #  run: |
-      #      src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-            optix.h
-
-  linux-debug-gcc7-llvm9:
-    name: "Linux Debug gcc7/C++14 llvm9 py2.7 oiio2.3 sse4 boost1.65 exr2.4"
-    runs-on: ubuntu-18.04
-    env:
-      CXX: g++-7
-      CMAKE_BUILD_TYPE: Debug
-      CMAKE_CXX_STANDARD: 14
-      # Debug build makes some tests run very slowly, increase timeout
-      CTEST_TEST_TIMEOUT: 240
-      LLVM_VERSION: 9.0.0
-      OPENEXR_VERSION: v2.4.3
-      OPENIMAGEIO_VERSION: dev-2.3
-      USE_SIMD: sse4.2
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  linux-clang9-llvm9:
-    name: "Linux clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7"
-    runs-on: ubuntu-18.04
-    container:
-      image: aswf/ci-osl:2019-clang9
-    env:
-      CXX: clang++
-      CMAKE_CXX_STANDARD: 14
-      USE_SIMD: avx
-      OPENIMAGEIO_VERSION: release
-      PYTHON_VERSION: 2.7
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            # Remove pesky wrong installed OIIO version
-            rm -rf /usr/local/include/OpenImageIO
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  linux-clang12-llvm12-batch:
-    name: "Linux clang12/C++17 llvm12 oiio-master boost1.73 exr3.1 py3.9 avx2 batch-avx512"
-    runs-on: ubuntu-latest
-    container:
-      image: aswf/ci-osl:2022-clang12
-    env:
-      CXX: clang++
       CC: clang
-      CMAKE_CXX_STANDARD: 17
-      PYTHON_VERSION: 3.9
-      USE_SIMD: avx2,f16c
-      OPENIMAGEIO_VERSION: master
-      PYBIND11_VERSION: v2.6.2
-      USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
-      USE_OPENVDB: 0
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            # Remove installed OIIO version
-            rm -rf /usr/local/include/OpenImageIO
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  linux-2021ish-gcc10-llvm10:
-    name: "Linux gcc10/C++17 llvm10 oiio-release boost1.65 exr2.5 avx2"
-    runs-on: ubuntu-18.04
-    env:
-      CXX: g++-10
-      CMAKE_CXX_STANDARD: 17
-      FMT_VERSION: 7.0.1
-      LLVM_VERSION: 10.0.0
-      USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v2.5.6
-      OPENIMAGEIO_VERSION: release
-      OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
-      PUGIXML_VERSION: v1.10
-      PYBIND11_VERSION: v2.8.1
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  icc-vp2022:
-    name: "Linux VFXP-2022 icc/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
-    runs-on: ubuntu-latest
-    container:
-      image: aswftesting/ci-osl:2022-clang13
-    env:
-      CXX: icpc
-      CC: icc
-      CMAKE_CXX_STANDARD: 17
-      FMT_VERSION: 7.1.3
-      OPENIMAGEIO_VERSION: master
-      OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.1.3
-      PYBIND11_VERSION: v2.9.0
-      PYTHON_VERSION: 3.9
-      USE_BATCHED: b8_AVX2_noFMA
-      # USE_BATCHED: b16_AVX512
-      # USE_SIMD: avx2,f16c
-      OSL_CMAKE_FLAGS: -DSTOP_ON_WARNING=OFF -DEXTRA_CPP_ARGS=-fp-model=consistent
-      USE_OPENVDB: 0
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            sudo rm -rf /usr/local/include/OpenImageIO
-            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
-            sudo rm -rf /usr/local/lib*/libOpenImageIO*
-            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  icx-vp2022:
-    name: "Linux VFXP-2022 icx/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
-    runs-on: ubuntu-latest
-    container:
-      image: aswftesting/ci-osl:2022-clang13
-    env:
-      CXX: icpx
-      CC: icx
-      CMAKE_CXX_STANDARD: 17
-      OPENIMAGEIO_VERSION: master
-      PYBIND11_VERSION: v2.9.0
-      PYTHON_VERSION: 3.9
-      USE_BATCHED: b8_AVX2_noFMA
-      USE_SIMD: avx2,f16c
-      OSL_CMAKE_FLAGS: -DSTOP_ON_WARNING=OFF
-      USE_OPENVDB: 0
-      
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            sudo rm -rf /usr/local/include/OpenImageIO
-            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
-            sudo rm -rf /usr/local/lib*/libOpenImageIO*
-            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  linux-latest-release:
-    # Test against development master for relevant dependencies, latest
-    # supported releases of everything else.
-    name: "Linux latest releases: gcc11/C++17 llvm12 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512"
-    runs-on: ubuntu-20.04
-    env:
-      CXX: g++-11
-      USE_CPP: 17
-      CMAKE_CXX_STANDARD: 17
-      FMT_VERSION: 8.1.1
-      LLVM_VERSION: 12.0.0
-      LLVM_DISTRO_NAME: ubuntu-20.04
-      USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: v3.1.4
-      OPENIMAGEIO_VERSION: master
-      OPENCOLORIO_VERSION: v2.1.1
-      PYBIND11_VERSION: v2.9.1
-      PUGIXML_VERSION: v1.11.4
-      USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
-      PYTHON_VERSION: 3.8
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  linux-bleeding-edge:
-    # Test against development master for relevant dependencies, latest
-    # supported releases of everything else.
-    name: "Linux bleeding edge: gcc11/C++17 llvm13 oiio/ocio/exr/pybind-master boost1.71 py3.9 avx2 batch-b16avx512"
-    runs-on: ubuntu-20.04
-    env:
-      CXX: g++-11
-      CMAKE_CXX_STANDARD: 17
-      FMT_VERSION: master
-      LLVM_VERSION: 13.0.0
-      LLVM_DISTRO_NAME: ubuntu-20.04
-      USE_SIMD: avx2,f16c
-      OPENEXR_VERSION: main
-      OPENIMAGEIO_VERSION: master
-      OPENCOLORIO_VERSION: main
-      PUGIXML_VERSION: master
-      PYBIND11_VERSION: master
-      PYTHON_VERSION: 3.9
-      USE_BATCHED: b8_AVX2,b8_AVX512,b16_AVX512
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  linux-oldest:
-    # Oldest versions of the dependencies that we can muster, and various
-    # things disabled.
-    name: "Linux oldest everything: gcc6/C++14 llvm9 py2.7 boost-1.66 oiio-2.2 no-simd exr2.3"
-    runs-on: ubuntu-latest
-    container:
-      image: aswf/ci-osl:2019-clang9
-    env:
-      CXX: g++
-      CC: gcc
-      CMAKE_CXX_STANDARD: 14
-      PYTHON_VERSION: 2.7
-      USE_SIMD: 0
-      USE_PYTHON: 0
-      OPENIMAGEIO_VERSION: v2.2.17.0
-      PUGIXML_VERSION: v1.8
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            rm -rf /usr/local/include/OpenImageIO
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
-
-  macos10-py39:
-    name: "MacOS-10.15 appleclang12/C++14 py39"
-    runs-on: macos-10.15
-    env:
       CXX: clang++
-      CMAKE_CXX_STANDARD: 14
-      PYTHON_VERSION: 3.9
+      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
+      PYTHON_VERSION: ${{matrix.python_ver}}
     steps:
       - uses: actions/checkout@v2
       - name: Prepare ccache timestamp
         id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+        run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
         uses: actions/cache@v2
         with:
           path: /Users/runner/.ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
+          key: ${{github.job}}-${{matrix.os}}-${{steps.ccache_cache_keys.outputs.date}}
+          restore-keys: ${{github.job}}-${{matrix.os}}-
       - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
+        run: src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
             source src/build-scripts/install_homebrew_deps.bash
@@ -799,63 +371,16 @@ jobs:
         run: |
             src/build-scripts/ci-build.bash
       - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
+        run: src/build-scripts/ci-test.bash
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
           name: osl-${{github.job}}
           path: |
-            build/CMake*
             build/*.cmake
+            build/CMake*
             build/testsuite/*/*.*
 
-  macos11-py39:
-    name: "MacOS-11 appleclang13/C++17 py39"
-    runs-on: macos-11
-    env:
-      CXX: clang++
-      CMAKE_CXX_STANDARD: 17
-      PYTHON_VERSION: 3.9
-    steps:
-      - uses: actions/checkout@v2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        shell: bash
-        run: |
-          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@v2
-        with:
-          path: /Users/runner/.ccache
-          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
-          restore-keys: |
-            ${{ github.job }}-
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            source src/build-scripts/install_homebrew_deps.bash
-            # OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
-            # source src/build-scripts/build_openimageio.bash
-            brew install --display-times -q openimageio
-            PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: |
-            src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: |
-            build/CMake*
-            build/*.cmake
-            build/testsuite/*/*.*
 
   clang-format:
     # Test formatting. This test entry doesn't do a full build, it just runs

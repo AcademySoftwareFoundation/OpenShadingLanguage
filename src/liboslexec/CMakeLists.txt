@@ -97,6 +97,12 @@ set ( liboslexec_override_limits
    ../liboslnoise/wide/wide_gabor3_isotropic_enabled   
     )
     
+set ( liboslexec_require_INF_NaN
+    shadingsys.cpp
+    wide/wide_shadingsys
+    wide/wide_optest_float
+    )
+    
 set (local_lib oslexec)
 set (lib_src
           shadingsys.cpp closure.cpp
@@ -143,6 +149,31 @@ FLEX_BISON ( osolex.l osogram.y oso lib_src exec_headers )
 FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl lib_src compiler_headers )
 
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
+
+
+macro ( REQUIRE_INF_NAN SRC )
+    if (CMAKE_COMPILER_IS_INTELCLANG)
+        # if -ffast-math is enabled to to the underlying compiler, 
+        # inf's and NaN's may not be handled properly (by design)
+        if (MSVC)
+            set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS "/fp:precise")
+            #message (STATUS "SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS /fp:precise")
+        else ()
+            #set_property(SOURCE $SRC} APPEND PROPERTY COMPILE_OPTIONS "-fp-model=precise")
+            # Disabling fast-math should be enough to enable proper support of INF and NaN
+            set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS "-fno-fast-math")
+            #message (STATUS "SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS -fno-fast-math")
+        endif()
+    endif()
+endmacro ( )
+
+# Apply complilation options as needed
+foreach(src ${lib_src})
+    if (${src} IN_LIST liboslexec_require_INF_NaN)
+        set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
+        REQUIRE_INF_NAN ( ${SRC} )  
+    endif()
+endforeach(src)
 
 macro ( LLVM_COMPILE llvm_src srclist )
     get_filename_component ( llvmsrc_we ${llvm_src} NAME_WE )
@@ -422,7 +453,11 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         # it as soon as clang addresses this issue.
         list (APPEND TARGET_CXX_OPTS "-fno-unroll-loops")
 
-        list (APPEND TARGET_CXX_OPTS "-fopenmp")
+        if (CMAKE_COMPILER_IS_INTELCLANG)
+            list (APPEND TARGET_CXX_OPTS "-qopenmp-simd")
+        else ()
+            list (APPEND TARGET_CXX_OPTS "-fopenmp")
+        endif ()
         
         # Uncomment next section to investigate failures in vectorization
         #list (APPEND TARGET_CXX_OPTS 
@@ -484,6 +519,11 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
                 endif()
             endif()
         endif()
+        
+        if (${target_src} IN_LIST liboslexec_require_INF_NaN)
+            REQUIRE_INF_NAN ( ${TARGET_SRC} ) 
+        endif()
+        
     endforeach(target_src)
     
     add_library ( ${batched_target_lib} MODULE ${TARGET_LIB_SOURCES} )

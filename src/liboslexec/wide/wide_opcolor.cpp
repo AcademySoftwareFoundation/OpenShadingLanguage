@@ -84,12 +84,10 @@ __OSL_MASKED_OP2(blackbody,Wv,Wf)
     }
 
     if (testIfAnyLaneIsNonZero(wcomputeRequired)) {
-#if !OSL_CLANG_VERSION || OSL_INTEL_COMPILER
-        // Clang was unable to vectorize the nested loop in the real computation
-        // which is why we have split off the fast path of using the lookup table
-        // so it can be vectorized independently
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-#endif
+        // Complex nested loop in the real computation may not vectorize in
+        // in all compilers, which is why we have split off the fast path of
+        // using the lookup table so it can be vectorized independently
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             float temperature = wL[lane];
             int computeRequired = wcomputeRequired[lane];

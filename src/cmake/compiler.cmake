@@ -51,7 +51,8 @@ else ()
     set (GCC_VERSION 0)
 endif ()
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lang"
+    OR CMAKE_CXX_COMPILER_ID MATCHES "IntelLLVM")
     # If using any flavor of clang, set CMAKE_COMPILER_IS_CLANG. If it's
     # Apple's variety, set CMAKE_COMPILER_IS_APPLECLANG and
     # APPLECLANG_VERSION_STRING, otherwise for generic clang set
@@ -64,6 +65,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" APPLECLANG_VERSION_STRING ${clang_full_version_string})
         if (VERBOSE)
             message (STATUS "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${APPLECLANG_VERSION_STRING}")
+        endif ()
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "IntelLLVM")
+        set (CMAKE_COMPILER_IS_INTELCLANG 1)
+        string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})
+        if (VERBOSE)
+            message (STATUS "The compiler is Intel Clang: ${CMAKE_CXX_COMPILER_ID} version ${CLANG_VERSION_STRING}")
         endif ()
     else ()
         string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})

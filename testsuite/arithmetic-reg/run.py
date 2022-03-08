@@ -6,7 +6,7 @@
 
 def run_multi_type_test (opname, tagname, options) :
     global command
-    command += testshade("-g 32 32 --param numStripes 16 "+options+" -od uint8 -o out_float out_float_"+tagname+".tif -o out_color out_color_"+tagname+".tif -o out_point out_point_"+tagname+".tif -o out_vector out_vector_"+tagname+".tif -o out_normal out_normal_"+tagname+".tif test_"+opname)
+    command += testshade("--center -t 1 -g 32 32 --param numStripes 16 "+options+" -od uint8 -o out_float out_float_"+tagname+".tif -o out_color out_color_"+tagname+".tif -o out_point out_point_"+tagname+".tif -o out_vector out_vector_"+tagname+".tif -o out_normal out_normal_"+tagname+".tif test_"+opname)
     global outputs     
     outputs.append ("out_float_"+tagname+".tif")
     outputs.append ("out_color_"+tagname+".tif")
@@ -22,7 +22,7 @@ def run_unary_tests (opname) :
     return
 
 # Run unary tests with varying and a 2nd time with uniform(u) argument to the op
-# Choose not to test variation of a constant argument, as that should be constant folded 
+# Choose not to test variation of a constant argument, as that should be constant folded
 run_unary_tests ("neg")
 run_unary_tests ("neg_u")
 
@@ -49,7 +49,7 @@ run_unary_tests ("round_u")
 
 def run_int_test (opname, tagname, options) :
     global command
-    command += testshade("-g 32 32 --param numStripes 16 "+options+" -od uint8 -o out_int out_int_"+tagname+".tif test_"+opname)
+    command += testshade("--center -t 1 -g 32 32 --param numStripes 16 "+options+" -od uint8 -o out_int out_int_"+tagname+".tif test_"+opname)
     global outputs     
     outputs.append ("out_int_"+tagname+".tif")
     return

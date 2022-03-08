@@ -1853,7 +1853,7 @@ private:
 }  // namespace pvt
 
 
-#if OSL_INTEL_COMPILER || OSL_GNUC_VERSION
+#if OSL_INTEL_CLASSIC_COMPILER_VERSION || OSL_GNUC_VERSION
 // Workaround for error #3466: inheriting constructors must be inherited from a direct base class
 #    define __OSL_INHERIT_BASE_CTORS(DERIVED, BASE) \
         using Base = typename DERIVED::BASE;        \
@@ -3139,7 +3139,8 @@ template<typename DataT, int WidthT>
 OSL_FORCEINLINE bool
 testIfAnyLaneIsNonZero(const Wide<DataT, WidthT>& wvalues)
 {
-#if OSL_NON_INTEL_CLANG
+#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION \
+    && !OSL_INTEL_LLVM_COMPILER_VERSION
     int anyLaneIsOn = 0;
     OSL_OMP_PRAGMA(omp simd simdlen(WidthT) reduction(max : anyLaneIsOn))
     for (int i = 0; i < WidthT; ++i) {
@@ -3149,7 +3150,8 @@ testIfAnyLaneIsNonZero(const Wide<DataT, WidthT>& wvalues)
     return anyLaneIsOn;
 #else
     // NOTE: do not explicitly vectorize as it would require a
-    // reduction.  Instead let compiler optimize this itself.
+    // reduction.  Instead let compiler optimize/auto-vectorize this by itself
+    // which can produce less/better code than a full blown openmp reduction.
     bool anyLaneIsOn = false;
     for (int i = 0; i < WidthT; ++i) {
         if (wvalues[i] != DataT(0))

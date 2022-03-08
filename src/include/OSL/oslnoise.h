@@ -640,7 +640,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> select(const bool b, const Dual2<flo
     // versus requiring a stack location.
     // Without this work per component, gathers & scatters were being emitted
     // when used inside SIMD loops.
-#if OSL_NON_INTEL_CLANG
+#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION
     // Clang's vectorizor was really insistent that a select operation could not be replaced
     // with control flow, so had to re-introduce the ? operator to make it happy
     return Dual2<float> (
@@ -2247,7 +2247,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
 
     // With Dual2<Vec3> data types, a lot of code is generated below
     // which caused some runaway compiler memory consumption when vectorizing
-#if !OSL_INTEL_COMPILER
+#if !OSL_INTEL_CLASSIC_COMPILER_VERSION
     auto l_result = OIIO::lerp (
                OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),

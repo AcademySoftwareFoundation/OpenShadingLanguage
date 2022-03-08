@@ -68,7 +68,7 @@ namespace sfm
        OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     */
 
-#if OSL_INTEL_COMPILER
+#if OSL_INTEL_CLASSIC_COMPILER_VERSION
     // std::isinf wasn't vectorizing and was branchy. This slightly
     // perturbed version fairs better and is branch free when vectorized
     // with the Intel compiler.
@@ -263,7 +263,7 @@ namespace sfm
         }
     }
 
-#if OSL_CLANG_VERSION && !OSL_INTEL_COMPILER
+#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION
 
     // To make clang's loop vectorizor happy
     // we need to make sure result of min and max

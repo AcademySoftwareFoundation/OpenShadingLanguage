@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+#include "../common/shaders/pretty.h"
+
 shader
 test (vector vparam = vector (.1, .7, .2),
       vector vparam2 = vector (.1),
@@ -9,8 +11,8 @@ test (vector vparam = vector (.1, .7, .2),
 {
     vector X = vector (1, 0, 0);
 
-    printf ("  parameter initialization test: vparam = %g\n", vparam);
-    printf ("  parameter initialization test2: vparam2 = %g\n", vparam2);
+    printf ("  parameter initialization test: vparam = %g\n", pretty(vparam));
+    printf ("  parameter initialization test2: vparam2 = %g\n", pretty(vparam2));
     printf ("\n");
 
     printf ("Test vector functions\n\n");
@@ -20,56 +22,56 @@ test (vector vparam = vector (.1, .7, .2),
 
     {
         float a = 0.1, b = 0.2, c = 0.5;
-        printf ("  vector (%g) = %g\n", a, vector(a));
-        printf ("  vector (%g, %g, %g) = %g\n", a, b, c, vector(a,b,c));
+        printf ("  vector (%g) = %g\n", pretty(a), pretty(vector(a)));
+        printf ("  vector (%g, %g, %g) = %g\n", pretty(a), pretty(b), pretty(c), pretty(vector(a,b,c)));
     }
 
     {
         vector V = vector (0, 1, 2);
         printf ("  V = vector (%g) has components %g, %g, %g\n",
-                V, V[0], V[1], V[2]);
+                pretty(V), pretty(V[0]), pretty(V[1]), pretty(V[2]));
         V[1] = 8;
-        printf ("  After V[1] = 8, V = (%g)\n", V);
+        printf ("  After V[1] = 8, V = (%g)\n", pretty(V));
         V[2] = 0.5;
-        printf ("  After V[2] = 0.5, V = (%g)\n", V);
+        printf ("  After V[2] = 0.5, V = (%g)\n", pretty(V));
         printf ("  V = vector (%g) has xyz components %g, %g, %g\n",
-                V, V.x, V.y, V.z);
+                pretty(V), pretty(V.x), pretty(V.y), pretty(V.z));
         V.x = 14.5;
-        printf ("  After V.x = 14.5, V = (%g)\n", V);
+        printf ("  After V.x = 14.5, V = (%g)\n", pretty(V));
         V.y = 15.5;
-        printf ("  After V.y = 15.5, V = (%g)\n", V);
+        printf ("  After V.y = 15.5, V = (%g)\n", pretty(V));
         V.z = 16.5;
-        printf ("  After V.z = 16.5, V = (%g)\n", V);
+        printf ("  After V.z = 16.5, V = (%g)\n", pretty(V));
     }
 
     {
         vector V = vector (0, 8, 0.5);
         printf (" V = %g\n", V);
-        printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
-        printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
-        printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
-        printf ("  length (%g) = %g\n", Y, length(Y));
-        printf ("  length (%g) = %g\n", XY, length(XY));
-        printf ("  distance ((%g), (%g)) = %g\n", X, Y, distance(X,Y));
-        printf ("  distance ((%g), (%g)) = %g\n", X, XY, distance(X,XY));
+        printf ("  dot ((%g), (%g)) = %g\n", pretty(V), pretty(V), pretty(dot(V,V)));
+        printf ("  dot ((%g), (%g)) = %g\n", pretty(V), pretty(Y), pretty(dot(V,Y)));
+        printf ("  cross ((%g), (%g)) = %g\n", pretty(X), pretty(Y), pretty(cross(X,Y)));
+        printf ("  length (%g) = %g\n", pretty(Y), pretty(length(Y)));
+        printf ("  length (%g) = %g\n", pretty(XY), pretty(length(XY)));
+        printf ("  distance ((%g), (%g)) = %g\n", pretty(X), pretty(Y), pretty(distance(X,Y)));
+        printf ("  distance ((%g), (%g)) = %g\n", pretty(X), pretty(XY), pretty(distance(X,XY)));
         printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, X, distance(X,Y,X));
+                pretty(X), pretty(Y), pretty(X), pretty(distance(X,Y,X)));
         printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Y, distance(X,Y,Y));
+                pretty(X), pretty(Y), pretty(Y), pretty(distance(X,Y,Y)));
         point Q = point(0.5,0.5,0);
         printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Q, distance(X,Y,Q));
+                pretty(X), pretty(Y), pretty(Q), pretty(distance(X,Y,Q)));
         Q = point(0.5,0.5,0.5);
         printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Q, distance(X,Y,Q));
+                pretty(X), pretty(Y), pretty(Q), pretty(distance(X,Y,Q)));
         Q = point(2,1,0);
         printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Q, distance(X,Y,Q));
-        printf ("  normalize (%g) = %g\n", XY, normalize(XY));
-        printf ("  normalize (%g) = %g\n", V, normalize(V));
-        printf ("  normalize (%g) = %g\n", Zero, normalize(Zero));
+                pretty(X), pretty(Y), pretty(Q), pretty(distance(X,Y,Q)));
+        printf ("  normalize (%g) = %g\n", pretty(XY), pretty(normalize(XY)));
+        printf ("  normalize (%g) = %g\n", pretty(V), pretty(normalize(V)));
+        printf ("  normalize (%g) = %g\n", pretty(Zero), pretty(normalize(Zero)));
     }
 
     printf ("  rotate(%g, PI/2, (0,0,0), (0,0,1)) = %g\n", 
-            X, rotate (X, M_PI/2, point(0,0,0), point(0,0,1)));
+            pretty(X), pretty(rotate (X, M_PI/2, point(0,0,0), point(0,0,1))));
 }

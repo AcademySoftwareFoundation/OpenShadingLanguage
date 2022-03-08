@@ -542,6 +542,63 @@ jobs:
             build/*.cmake
             build/testsuite/*/*.*
 
+  icx-vp2022:
+    name: "Linux VFXP-2022 icx/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2"
+    runs-on: ubuntu-latest
+    container:
+      image: aswftesting/ci-osl:2022-clang13
+    env:
+      CXX: icpx
+      CC: icx
+      CMAKE_CXX_STANDARD: 17
+      OPENIMAGEIO_VERSION: master
+      PYBIND11_VERSION: v2.9.0
+      PYTHON_VERSION: 3.9
+      USE_BATCHED: b8_AVX2_noFMA
+      USE_SIMD: avx2,f16c
+      OSL_CMAKE_FLAGS: -DSTOP_ON_WARNING=OFF
+      USE_OPENVDB: 0
+      
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        shell: bash
+        run: |
+          echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@v2
+        with:
+          path: /tmp/ccache
+          key: ${{ github.job }}-${{ steps.ccache_cache_keys.outputs.date }}
+          restore-keys: |
+            ${{ github.job }}-
+      - name: Build setup
+        run: |
+            src/build-scripts/ci-startup.bash
+      - name: Dependencies
+        run: |
+            sudo rm -rf /usr/local/include/OpenImageIO
+            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
+            sudo rm -rf /usr/local/lib*/libOpenImageIO*
+            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        run: |
+            src/build-scripts/ci-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: osl-${{github.job}}
+          path: |
+            build/CMake*
+            build/*.cmake
+            build/testsuite/*/*.*
+
   linux-latest-release:
     # Test against development master for relevant dependencies, latest
     # supported releases of everything else.

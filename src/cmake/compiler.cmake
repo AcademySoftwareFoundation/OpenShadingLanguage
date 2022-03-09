@@ -327,6 +327,7 @@ endif ()
 # The USE_BATCHED option may be set to indicate that support for batched
 # SIMD shader execution be compiled along with targe specific libraries
 set (USE_BATCHED "" CACHE STRING "Build batched SIMD shader execution for (0, b8_AVX, b8_AVX2, b8_AVX2_noFMA, b8_AVX512, b8_AVX512_noFMA, b16_AVX512, b16_AVX512_noFMA)")
+option (VEC_REPORT "Enable compiler's reporting system for vectorization" OFF)
 set (BATCHED_SUPPORT_DEFINES "")
 set (BATCHED_TARGET_LIBS "")
 set (BUILD_BATCHED False)

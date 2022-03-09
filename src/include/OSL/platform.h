@@ -263,7 +263,7 @@
 #endif
 
 #define OSL_OMP_SIMD_LOOP(...) OSL_OMP_PRAGMA(omp simd __VA_ARGS__)
-#if (OSL_GCCVERSION || OSL_INTEL_CLASSIC_COMPILER_VERSION)
+#if (OSL_GCCVERSION || OSL_INTEL_CLASSIC_COMPILER_VERSION || OSL_INTEL_LLVM_COMPILER_VERSION)
 #   define OSL_OMP_COMPLEX_SIMD_LOOP(...) OSL_OMP_SIMD_LOOP(__VA_ARGS__)
 #else
     // Ignore requests to vectorize complex/nested SIMD loops for certain

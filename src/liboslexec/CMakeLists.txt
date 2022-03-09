@@ -161,8 +161,12 @@ macro ( REQUIRE_INF_NAN SRC )
         else ()
             #set_property(SOURCE $SRC} APPEND PROPERTY COMPILE_OPTIONS "-fp-model=precise")
             # Disabling fast-math should be enough to enable proper support of INF and NaN
-            set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS "-fno-fast-math")
-            #message (STATUS "SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS -fno-fast-math")
+            #set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS "-fno-fast-math")
+            # We can explicitly honor inf, nans, and signed 0's
+            set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS 
+                "-fhonor-infinities" 
+                "-fhonor-nans" 
+                "-fsigned-zeros")
         endif()
     endif()
 endmacro ( )
@@ -383,9 +387,12 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             
             list (APPEND TARGET_CXX_OPTS 
                 "/Qprec-div" 
-                "/Qopt-report:5"
                 "/Qopenmp-simd"
                 )
+            if (VEC_REPORT)
+                list (APPEND TARGET_CXX_OPTS "/Qopt-report:5")
+            endif ()
+                
                 
         else ()
             if (${TARGET_OPT_ISA} STREQUAL "AVX512")
@@ -409,10 +416,13 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             
             list (APPEND TARGET_CXX_OPTS 
                 "-prec-div" 
-                "-qopt-report=5" 
                 "-qopenmp-simd"
                 "-qno-opt-multiple-gather-scatter-by-shuffles"
                 )
+                
+            if (VEC_REPORT)
+                list (APPEND TARGET_CXX_OPTS "-qopt-report=5")
+            endif ()
                 
         endif ()
     endif ()
@@ -459,12 +469,20 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             list (APPEND TARGET_CXX_OPTS "-fopenmp")
         endif ()
         
-        # Uncomment next section to investigate failures in vectorization
-        #list (APPEND TARGET_CXX_OPTS 
-        #    "-Rpass=loop-vectorize" 
-        #    "-Rpass-analysis=loop-vectorize" 
-        #    "-Rpass-missed=loop-vectorize"
-        #    )
+        if (VEC_REPORT)
+            if (CMAKE_COMPILER_IS_INTELCLANG)
+                list (APPEND TARGET_CXX_OPTS 
+                    "-qopt-report=3"
+                    )
+            else ()
+                list (APPEND TARGET_CXX_OPTS 
+                    "-Rpass=loop-vectorize" 
+                    "-Rpass-analysis=loop-vectorize" 
+                    # Uncomment next section to investigate failures in vectorization
+                    #"-Rpass-missed=loop-vectorize"
+                    )
+            endif ()
+        endif ()
     endif ()
     
     

@@ -243,7 +243,7 @@ hsv_to_rgb (const COLOR3& hsv)
         // Avoid switch statement vectorizor doesn't like
         // Also avoid if/else nest which some optimizers might
         // convert back into a switch statement
-#   if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION
+#   if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION && !OSL_INTEL_LLVM_COMPILER_VERSION
         // Clang was still transforming series of if's back into a switch.
         // Alternate between == and <= comparisons to avoid
 #       define __OSL_ASC_EQ <=

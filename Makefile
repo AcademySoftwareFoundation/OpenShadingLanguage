@@ -156,6 +156,10 @@ ifneq (${USE_BATCHED},)
 MY_CMAKE_FLAGS += -DUSE_BATCHED:STRING="${USE_BATCHED}"
 endif
 
+ifneq (${VEC_REPORT},)
+MY_CMAKE_FLAGS += -DVEC_REPORT:BOOL="${VEC_REPORT}"
+endif
+
 ifneq (${TEST},)
 TEST_FLAGS += -R ${TEST}
 endif
@@ -398,6 +402,7 @@ help:
 	@echo "                                  0, b8_AVX, b8_AVX2, b8_AVX2_noFMA,"
 	@echo "                                  b8_AVX512, b8_AVX512_noFMA,"
 	@echo "                                  b16_AVX512, b16_AVX512_noFMA)"
+	@echo "      VEC_REPORT=0             Generate compiler vectorization reports"
 	@echo "  make test, extra options:"
 	@echo "      TEST=regex               Run only tests matching the regex"
 	@echo ""

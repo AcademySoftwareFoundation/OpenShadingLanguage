@@ -640,7 +640,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> select(const bool b, const Dual2<flo
     // versus requiring a stack location.
     // Without this work per component, gathers & scatters were being emitted
     // when used inside SIMD loops.
-#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION
+#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION && !OSL_INTEL_LLVM_COMPILER_VERSION
     // Clang's vectorizor was really insistent that a select operation could not be replaced
     // with control flow, so had to re-introduce the ? operator to make it happy
     return Dual2<float> (

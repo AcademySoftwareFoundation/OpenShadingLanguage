@@ -263,7 +263,7 @@ namespace sfm
         }
     }
 
-#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION
+#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION && !OSL_INTEL_LLVM_COMPILER_VERSION
 
     // To make clang's loop vectorizor happy
     // we need to make sure result of min and max

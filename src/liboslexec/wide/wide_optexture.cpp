@@ -307,8 +307,8 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
         const Vec3 dPdz = wdPdz[lane];
 
         retVal = bsr->texturesys()->texture3d(
-            texture_handle, texture_thread_info, opt, wP[lane], dPdx, dPdy,
-            dPdz, 4, (float*)&result_simd,
+            texture_handle, texture_thread_info, opt, Vec3(wP[lane]),
+            Vec3(dPdx), Vec3(dPdy), dPdz, 4, (float*)&result_simd,
             has_derivs ? (float*)&dresultds_simd : nullptr,
             has_derivs ? (float*)&dresultdt_simd : nullptr,
             has_derivs ? (float*)&dresultdr_simd : nullptr);
@@ -486,10 +486,8 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
         const Vec3 dPdy = wdRdy[lane];
 
         retVal = bsr->texturesys()->environment(
-            texture_handle, texture_thread_info, opt, wR[lane], dPdx, dPdy,
-            4, (float*)&result_simd,
-            nullptr,
-            nullptr);
+            texture_handle, texture_thread_info, opt, Vec3(wR[lane]),
+            Vec3(dPdx), Vec3(dPdy), 4, (float*)&result_simd, nullptr, nullptr);
 
         // NOTE: regardless of the value of "retVal" we will always copy over the texture system's results.
         // We are relying on the texture system properly filling in missing or fill colors

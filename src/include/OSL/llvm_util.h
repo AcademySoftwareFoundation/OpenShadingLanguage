@@ -590,6 +590,9 @@ public:
     /// Return the llvm::Type that is a pointer to the given llvm type.
     llvm::Type *type_ptr (llvm::Type *type);
 
+    /// Return the llvm::Type that is the wide version of the given llvm type
+    llvm::Type *type_wide(llvm::Type *type);
+
     /// Return the llvm::Type that is an array of n elements of the given
     /// llvm type.
     llvm::Type *type_array (llvm::Type *type, int n);

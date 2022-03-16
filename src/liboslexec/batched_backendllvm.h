@@ -362,8 +362,9 @@ public:
     ///
     llvm::Value* sg_ptr() const { return m_llvm_shaderglobals_ptr; }
 
-    llvm::Type* llvm_type_closure_component();
-    llvm::Type* llvm_type_closure_component_ptr();
+    llvm::Type* llvm_type_closure_component ();
+    llvm::Type* llvm_type_closure_component_ptr ();
+    llvm::Type* llvm_type_closure_component_wide_ptr ();
 
     /// Return the ShaderGlobals pointer cast as a void*.
     ///

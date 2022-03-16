@@ -168,14 +168,12 @@
     DECL(__OSL_OP3(name, Wv, Wv, Wv), "xXXX")         \
     DECL(__OSL_MASKED_OP3(name, Wv, Wv, Wv), "xXXXi")
 
-#if 0  // incomplete closure support
-    DECL (osl_add_closure_closure, "CXCC")
-    DECL (osl_mul_closure_float, "CXCf")
-    DECL (osl_mul_closure_color, "CXCc")
-    DECL (osl_allocate_closure_component, "CXii")
-    DECL (osl_allocate_weighted_closure_component, "CXiiX")
-    DECL (osl_closure_to_string, "sXC")
-#endif
+DECL (__OSL_MASKED_OP(allocate_closure_component), "xXXiii")
+DECL (__OSL_MASKED_OP(allocate_weighted_closure_component), "xXXiiXi")
+DECL (__OSL_MASKED_OP(add_closure_closure), "xXXXXi")
+DECL (__OSL_MASKED_OP(mul_closure_float), "xXXXXi")
+DECL (__OSL_MASKED_OP(mul_closure_color), "xXXXXi")
+DECL (__OSL_OP(closure_to_string), "sXX")
 
 DECL(__OSL_OP(format), "xXis*")
 DECL(__OSL_OP(printf), "xXis*")

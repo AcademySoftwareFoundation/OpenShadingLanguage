@@ -11,6 +11,7 @@
 #include <OSL/dual_vec.h>
 #include <OSL/mask.h>
 #include <OSL/oslconfig.h>
+#include <OSL/oslclosure.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -309,6 +310,18 @@ struct Block<int, WidthT> : public BlockOfBuiltin<int, WidthT> {
 template<typename DataT, int WidthT>
 struct Block<DataT*, WidthT> : public BlockOfBuiltin<DataT*, WidthT> {
 };
+
+template <int WidthT>
+struct Block<ClosureColorPtr, WidthT> : public BlockOfBuiltin<ClosureColorPtr, WidthT> {};
+
+template <int WidthT>
+struct Block<ClosureComponentPtr, WidthT> : public BlockOfBuiltin<ClosureComponentPtr, WidthT> {};
+
+template <int WidthT>
+struct Block<ClosureAddPtr, WidthT> : public BlockOfBuiltin<ClosureAddPtr, WidthT> {};
+
+template <int WidthT>
+struct Block<ClosureMulPtr, WidthT> : public BlockOfBuiltin<ClosureMulPtr, WidthT> {};
 
 
 // Vec4 isn't used by external interfaces, but some internal

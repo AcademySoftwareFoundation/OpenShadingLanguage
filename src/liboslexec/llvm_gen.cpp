@@ -423,12 +423,12 @@ LLVMGEN (llvm_gen_printf)
         Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
         format_ustring = s;
         sym.set_dataptr(SymArena::Absolute, &format_ustring);
-        call_args[new_format_slot] = rop.llvm_load_device_string (sym, /*follow*/ true);
+        call_args[new_format_slot] = rop.ll.int_to_ptr_cast (rop.llvm_load_device_string (sym, /*follow*/ true));
 #else
         // Make sure host has the format string so it can print it
         format_ustring = s;
         rop.shadingsys().renderer()->register_string (format_ustring.string(), "");
-        call_args[new_format_slot] = rop.ll.constant64 (format_ustring.hash());
+        call_args[new_format_slot] = rop.ll.int_to_ptr_cast (rop.ll.constant64 (format_ustring.hash()));
 #endif
         size_t nargs = call_args.size() - (new_format_slot+1);
         // Allocate space to store the arguments to osl_printf().
@@ -444,7 +444,7 @@ LLVMGEN (llvm_gen_printf)
         {
             llvm::Value* args_size = rop.ll.constant64(optix_size);
             llvm::Value* memptr = rop.ll.offset_ptr (voids, 0);
-            llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_int_ptr());
+            llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_longlong_ptr());
             rop.ll.op_store (args_size, iptr);
         }
         optix_size = sizeof(uint64_t);  // first 'args' element is the size of the argument list

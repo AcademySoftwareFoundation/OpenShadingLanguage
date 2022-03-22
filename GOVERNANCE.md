@@ -139,6 +139,7 @@ Current voting members of the TSC are:
 * Lee Kerley - Sony Pictures Imageworks
 * Mitch Prater - Laika
 * Brecht Van Lommel - Blender
+* Alex Wells - Intel
 
 ### TSC Nomination and Succession
 

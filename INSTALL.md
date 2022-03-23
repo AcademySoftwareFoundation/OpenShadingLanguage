@@ -12,13 +12,14 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.21)
+* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.22)
 
 * A suitable **C++14 or C++17** compiler to build OSL itself, which may be any of:
    - **GCC 6.1 or newer** (tested through gcc 11.2)
    - Clang 3.4 or newer (tested through clang 13)
    - Microsoft Visual Studio **2017 or newer**
-   - Intel C++ compiler icc **version 17 or newer**
+   - Intel C++ compiler icc **version 17 or newer** and LLVM-based icx compiler
+     **version 2022 or newer**.
 
 * **[OpenImageIO](http://openimageio.org) 2.2 or newer** (tested through 2.3)
 
@@ -42,7 +43,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * **[LLVM](http://www.llvm.org) 9, 10, 11, 12, or 13**, including clang
   libraries.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.77)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.78)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/openexr) 2.3
    or newer (recommended: 2.4 or higher; tested through 3.1)
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and

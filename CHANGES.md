@@ -74,6 +74,7 @@ Continued work on experimental SIMD batched shading mode:
 * Enable batched execution of most testsuite. #1453 (1.12.4.1)
 * Batched isnan, isinf, isfinite. #1456 (1.12.4.2)
 * Batched userdata and output placement. #1455 (1.12.4.2)
+* Batched pointcloud functions. #1464 (1.12.4.4)
 
 Continued work on experimental OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -128,6 +129,10 @@ Bug fixes and other improvements (internals):
   relied on uninitialized variables. #1447 (1.11.17/1.12.3)
 * Stop internally using OIIO::string_view::c_str(), which will someday be
   removed. #1458 (1.12.4.2)
+* Correctly track that the backfacing() function requires N and I shader
+  globals. #1462 (1.12.4.4)
+* Print all 4 levels of version numbers in help messages. #1477 (1.12.4.4)
+* Fix GPU code generation crash. #1479 (1.12.4.4)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -138,10 +143,13 @@ Internals/developer concerns:
 * The "archive_groupname" handling is now careful to sanitize the filenames
   it deals with, closing some security and safety holes. #1383 (1.12.2)
 * More migration of string formatting to new std::format style. #1389 (1.12.3)
+  #1469 #1470 (1.12.4.4)
 * llvm_util: Switch some uses of ptr+len to span. #1390 (1.12.3)
 * OSL no longer uses sscanf internally (which has icky locale-dependent
   behavior), and instead use locale-independent OIIO::Strutil utilities
   whenever we need to parse strings. #1432 (1.12.3)
+* Avoid use of OIIO::string_view::str() which is not corresponding to the
+  official C++17 std::string_view. #1467 (1.12.4.4)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -179,6 +187,8 @@ Build & test system improvements:
       what we build OSL itself with. Clarify that currently, OSL can be used
       downstream by C++14, even if it is built with C++17 or higher. #1454
       (1.12.4.1)
+    - Make exported cmake configs relocatable by using relative paths. #1466
+      (1.12.4.4)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
@@ -201,6 +211,10 @@ Build & test system improvements:
       always includes headers from its favored version of Imath, rather than
       the ones that OIIO prefers (in cases where OIIO and OSL were each based
       on different Imath versions). #1460 (1.12.4.2)
+    - Various fixes for functionality and warnings for Intel icc and icx
+      compilers. #1459 #1473 #1475. (1.12.4.4)
+    - Fixes for recent OIIO TextureSystem changes that hide Imath types.
+      #1476 (1.12.4.4)
 * Testing and Continuous integration (CI) systems:
     - Eliminate the old Travis CI and Appveyor. #1334 #1338 (1.12.1)
     - Use ccache + GitHub 'cache' action to greatly speed up CI runs. #1335
@@ -220,6 +234,15 @@ Build & test system improvements:
     - Add testsuite coverage of environment(). #1438 (1.12.3)
     - Use a project-specific environment variable `OSL_CI` instead of the more
       generic `CI` to avoid clashes with other systems. #1446 (1.12.3)
+    - Deal with OpenEXR and Imath changing its master branch to "main". #1463
+      (1.12.4.4)
+    - testrender fix sphere tangents, per MaterialX suggestion. #1465
+      (1.12.4.4)
+    - Allow testsuite tests to use oiiotool for image diffs instead of idiff.
+      #1472 (1.12.4.4)
+    - Allow `-Werror` to be disabled even on CI branches. #1471 (1.12.4.4)
+    - CI Tests against the Intel icc and icx compilers! #1459 #1473 (1.12.4.4)
+    - Overhaul of GHA ci.yml to use strategy matrix. #1474 (1.12.4.4)
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)

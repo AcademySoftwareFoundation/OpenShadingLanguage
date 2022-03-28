@@ -680,8 +680,8 @@ BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
     int userdata_index = find_userdata_index (sym);
 
     llvm::Value* val = NULL;
-    if (sym.symtype() == SymTypeLocal) {
-        // Handle temporary local variables
+    if (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp) {
+        // Handle temporary and local variables
         val = getOrAllocateLLVMSymbol (sym);
         val = ll.ptr_cast (val, ll.type_longlong_ptr());
     }

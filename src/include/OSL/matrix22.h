@@ -959,7 +959,7 @@ Matrix22<T>::inverse (bool singExc) const
                 {
 #ifndef __CUDA_ARCH__
                     if (singExc)
-                        throw Imath::SingMatrixExc ("Cannot invert "
+                        throw std::invalid_argument ("Cannot invert "
                                              "singular matrix.");
 #endif
                     return Matrix22();

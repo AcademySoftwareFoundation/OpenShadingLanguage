@@ -23,7 +23,6 @@
 #   include <OSL/Imathx/ImathVec.h>
 #   include <OSL/Imathx/ImathMatrix.h>
 #   include <OSL/Imathx/ImathColor.h>
-#   include <OSL/matrix22.h>
 #endif
 
 // We included the Imath files we needed, so set the OIIO_IMATH_H_INCLUDED
@@ -32,11 +31,9 @@
 #define OIIO_IMATH_H_INCLUDED 1
 
 
-// The fmt library causes trouble for Cuda. Work around by disabling it from
-// oiio headers (OIIO <= 2.1) or telling fmt not to use the troublesome
-// int128 that Cuda doesn't understand (OIIO >= 2.2).
+// The fmt library causes trouble for Cuda. Work around by telling fmt not to
+// use the troublesome int128 that Cuda doesn't understand.
 #ifdef __CUDA_ARCH__
-#    define OIIO_USE_FMT 0
 #    ifndef FMT_USE_INT128
 #        define FMT_USE_INT128 0
 #    endif
@@ -82,11 +79,6 @@ using Color3   = Imath::Color3<Float>;
 using Matrix33 = Imath::Matrix33<Float>;
 using Matrix44 = Imath::Matrix44<Float>;
 
-#if OSL_USING_IMATH >= 3
-using Matrix22 = Imath::Matrix22<Float>;
-#else
-using Matrix22 = Imathx::Matrix22<Float>;
-#endif
 
 
 /// Assume that we are dealing with OpenImageIO's texture system.  It

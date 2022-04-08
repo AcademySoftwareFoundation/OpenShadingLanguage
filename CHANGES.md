@@ -49,6 +49,8 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 * Userdata input placement -- now you can designate where interpolated
   userdata should be copied from directly, rather then via callbacks to
   RendererServices::get_userdata(). #1391 (1.12.3)
+* Better hiding of the Matrix22 class, which was never actually part of the
+  public APIs. #1480 (1.12.4.4)
 
 Continued work on experimental SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
@@ -246,6 +248,7 @@ Build & test system improvements:
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)
+    - Fix warnings about pointer casts on Windows. #1484 (1.12.4.4)
 * The oso and osl lexers/parsers are now given internal symbol names that
   are fully versioned, to avoid possible clash if multiple OSL releases are
   both linked into the same application. #1255 (1.12.0.0)

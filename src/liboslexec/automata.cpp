@@ -113,7 +113,7 @@ NdfAutomata::State::tostr()const
     // and finally the rule if we have it
     if (m_rule) {
         s += " | ";
-        s += Strutil::sprintf("%lx", (long unsigned int)m_rule);
+        s += Strutil::sprintf("%p", m_rule);
     }
     return s;
 }
@@ -362,7 +362,7 @@ DfAutomata::State::tostr()const
         for (RuleSet::const_iterator i = m_rules.begin(); i != m_rules.end(); ++i) {
             if (s[s.size()-1] != '[')
                 s += ", ";
-            s += Strutil::sprintf("%lx", (long unsigned int)*i);
+            s += Strutil::sprintf("%p", *i);
         }
         s += "]";
     }

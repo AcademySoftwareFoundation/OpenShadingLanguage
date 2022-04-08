@@ -44,7 +44,7 @@ class MyAov final : public Aov
             // our custom argument to write is the rule's number so we
             // can check what. But you normally would pass information
             // about the pixel.
-            long int testno = (long int)flush_data;
+            size_t testno = reinterpret_cast<size_t>(flush_data);
             if (has_color && color.x > 0)
                 // only mrk with true if there is a positive color present
                 m_received[testno] = true;
@@ -64,7 +64,7 @@ class MyAov final : public Aov
 };
 
 // Simulate the tracing of a path with the accumulator
-void simulate(Accumulator &accum, const char **events, int testno)
+void simulate(Accumulator &accum, const char **events, size_t testno)
 {
     accum.begin();
     accum.pushState();
@@ -86,7 +86,7 @@ void simulate(Accumulator &accum, const char **events, int testno)
     accum.accum(Color3(1, 1, 1));
     // Restore state and flush
     accum.popState();
-    accum.end((void *)(long int)testno);
+    accum.end(reinterpret_cast<void*>(testno));
 }
 
 int main()

@@ -1,0 +1,18 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#include "../common/shaders/pretty.h"
+
+shader
+test ()
+{
+    color c = color (.1, .7, .2);
+    printf ("  RGB to XYZ (%g) = (%g)\n", pretty(c), pretty(transformc("RGB", "XYZ", c)));
+
+    float temperature = 1500;
+    printf ("  blackbody (%g) = %g\n", pretty(temperature), pretty(blackbody(temperature)));
+
+    float cyan = 500;
+    printf ("  wavelength (%g) = %g\n", pretty(cyan), pretty(wavelength_color(cyan)));
+}

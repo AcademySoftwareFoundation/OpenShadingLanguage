@@ -96,6 +96,7 @@ static std::string raytype = "camera";
 static bool raytype_opt = false;
 static std::string extraoptions;
 static std::string texoptions;
+static std::string colorspace;
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 static ShaderGroupRef shadergroup;
@@ -188,6 +189,9 @@ set_shadingsys_options ()
         shadingsys->attribute ("options", extraoptions);
     if (texoptions.size())
         shadingsys->texturesys()->attribute ("options", texoptions);
+
+    if (colorspace.size())
+      shadingsys->attribute ("colorspace", colorspace);
 
     if (const char *opt_env = getenv ("TESTSHADE_BATCHED"))
         batched = atoi(opt_env);
@@ -628,6 +632,7 @@ getargs (int argc, const char *argv[])
                 "-g %d %d", &xres, &yres, "", // synonym for -res
                 "--options %s", &extraoptions, "Set extra OSL options",
                 "--texoptions %s", &texoptions, "Set extra TextureSystem options",
+                "--colorspace %s", &colorspace, "Set ShadingSysem colorspace",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)   [filename='null' means don't save]",
                 "-d %s", &dataformatname, "Set the output data format to one of: "

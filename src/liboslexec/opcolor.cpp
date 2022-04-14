@@ -30,23 +30,26 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 // White point chromaticities.
-#define IlluminantC   0.3101, 0.3162          /* For NTSC television */
-#define IlluminantD65 0.3127, 0.3291          /* For EBU and SMPTE */
-#define IlluminantE   0.33333333, 0.33333333  /* CIE equal-energy illuminant */
+#define IlluminantC    0.3101, 0.3162          /* For NTSC television */
+#define IlluminantD65  0.3127, 0.3291          /* For EBU and SMPTE */
+#define IlluminantE    0.33333333, 0.33333333  /* CIE equal-energy illuminant */
+#define IlluminantACES 0.32168, 0.33767        /* For ACES, approximate D60 */
 
-OSL_CONSTANT_DATA const static ColorSystem::Chroma k_color_systems[11] = {
-   // Index, Name       xRed    yRed   xGreen  yGreen   xBlue  yBlue    White point
-   /* 0  Rec709    */ { 0.64,   0.33,   0.30,   0.60,   0.15,   0.06,   IlluminantD65 },
-   /* 1  sRGB      */ { 0.64,   0.33,   0.30,   0.60,   0.15,   0.06,   IlluminantD65 },
-   /* 2  NTSC      */ { 0.67,   0.33,   0.21,   0.71,   0.14,   0.08,   IlluminantC },
-   /* 3  EBU       */ { 0.64,   0.33,   0.29,   0.60,   0.15,   0.06,   IlluminantD65 },
-   /* 4  PAL       */ { 0.64,   0.33,   0.29,   0.60,   0.15,   0.06,   IlluminantD65 },
-   /* 5  SECAM     */ { 0.64,   0.33,   0.29,   0.60,   0.15,   0.06,   IlluminantD65 },
-   /* 6  SMPTE     */ { 0.630,  0.340,  0.310,  0.595,  0.155,  0.070,  IlluminantD65 },
-   /* 7  HDTV      */ { 0.670,  0.330,  0.210,  0.710,  0.150,  0.060,  IlluminantD65 },
-   /* 8  CIE       */ { 0.7355, 0.2645, 0.2658, 0.7243, 0.1669, 0.0085, IlluminantE },
-   /* 9  AdobeRGB  */ { 0.64,   0.33,   0.21,   0.71,   0.15,   0.06,   IlluminantD65 },
-   /* 10 XYZ       */ { 1.0,    0.0,    0.0,    1.0,    0.0,    0.0,    IlluminantE },
+OSL_CONSTANT_DATA const static ColorSystem::Chroma k_color_systems[13] = {
+   // Index, Name        xRed    yRed   xGreen  yGreen   xBlue   yBlue    White point
+   /* 0  Rec709     */ { 0.64,   0.33,   0.30,   0.60,   0.15,   0.06,   IlluminantD65 },
+   /* 1  sRGB       */ { 0.64,   0.33,   0.30,   0.60,   0.15,   0.06,   IlluminantD65 },
+   /* 2  NTSC       */ { 0.67,   0.33,   0.21,   0.71,   0.14,   0.08,   IlluminantC },
+   /* 3  EBU        */ { 0.64,   0.33,   0.29,   0.60,   0.15,   0.06,   IlluminantD65 },
+   /* 4  PAL        */ { 0.64,   0.33,   0.29,   0.60,   0.15,   0.06,   IlluminantD65 },
+   /* 5  SECAM      */ { 0.64,   0.33,   0.29,   0.60,   0.15,   0.06,   IlluminantD65 },
+   /* 6  SMPTE      */ { 0.630,  0.340,  0.310,  0.595,  0.155,  0.070,  IlluminantD65 },
+   /* 7  HDTV       */ { 0.670,  0.330,  0.210,  0.710,  0.150,  0.060,  IlluminantD65 },
+   /* 8  CIE        */ { 0.7355, 0.2645, 0.2658, 0.7243, 0.1669, 0.0085, IlluminantE },
+   /* 9  AdobeRGB   */ { 0.64,   0.33,   0.21,   0.71,   0.15,   0.06,   IlluminantD65 },
+   /* 10 XYZ        */ { 1.0,    0.0,    0.0,    1.0,    0.0,    0.0,    IlluminantE },
+   /* 11 ACES2065-1 */ { 0.7347, 0.2653, 0.0,    1.0,    0.0001, -0.077, IlluminantACES },
+   /* 12 ACEScg     */ { 0.713,  0.293,  0.165,  0.83,   0.128,  0.044,  IlluminantACES },
 };
 
 
@@ -74,6 +77,10 @@ ColorSystem::fromString(StringParam colorspace) {
         return &k_color_systems[9];
     if (colorspace == STRING_PARAMS(XYZ))
         return &k_color_systems[10];
+    if (colorspace == STRING_PARAMS(ACES2065_1))
+        return &k_color_systems[11];
+    if (colorspace == STRING_PARAMS(ACEScg))
+        return &k_color_systems[12];
     return nullptr;
 }
 

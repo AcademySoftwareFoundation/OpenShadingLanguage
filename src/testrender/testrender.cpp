@@ -261,8 +261,8 @@ main (int argc, const char *argv[])
         }
         rend->pixelbuf.set_write_format (TypeDesc::HALF);
         if (! rend->pixelbuf.write (imagefile))
-            rend->errhandler().errorf("Unable to write output image: %s",
-                                      rend->pixelbuf.geterror());
+            rend->errhandler().errorfmt("Unable to write output image: {}",
+                                        rend->pixelbuf.geterror());
         double writetime = timer.lap();
 
         // Print some debugging info
@@ -286,9 +286,9 @@ main (int argc, const char *argv[])
         delete rend;
 #if (OPTIX_VERSION < 70000)
     } catch (const OSL::optix::Exception& e) {
-        printf("Optix Error: %s\n", e.what());
+        OSL::print("Optix Error: {}\n", e.what());
     } catch (const std::exception& e) {
-        printf("Unknown Error: %s\n", e.what());
+        OSL::print("Unknown Error: {}\n", e.what());
     }
 #endif
     return EXIT_SUCCESS;

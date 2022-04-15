@@ -242,11 +242,11 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
         parse_result = doc.load_buffer(scenefile.c_str(), scenefile.size());
     }
     if (!parse_result)
-        errhandler().severef("XML parsed with errors: %s at offset %d",
+        errhandler().severefmt("XML parsed with errors: {} at offset {}",
                              parse_result.description(), parse_result.offset);
     pugi::xml_node root = doc.child("World");
     if (!root)
-        errhandler().severef("Error reading scene: Root element <World> is missing");
+        errhandler().severefmt("Error reading scene: Root element <World> is missing");
 
     // loop over all children of world
     for (auto node = root.first_child(); node; node = node.next_sibling()) {
@@ -382,10 +382,10 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
         }
     }
     if (root.next_sibling())
-        errhandler().severef("Error reading %s: Found multiple top-level elements",
-                             scenefile);
+        errhandler().severefmt("Error reading {}: Found multiple top-level elements",
+                               scenefile);
     if (shaders().empty())
-        errhandler().severef("No shaders in scene");
+        errhandler().severefmt("No shaders in scene");
     camera.finalize();
 }
 

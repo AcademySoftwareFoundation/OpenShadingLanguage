@@ -1,0 +1,5 @@
+Compiled test.osl -> test.oso
+  RGB to XYZ (0.1 0.7 0.2) = (0.191286 0.509818 0.204353)
+  blackbody (1500) = 75.0559 22.3461 2.22219
+  wavelength (500) = 0 0.207563 0.105645
+

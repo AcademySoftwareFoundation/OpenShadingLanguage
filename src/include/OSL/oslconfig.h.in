@@ -39,6 +39,12 @@
 #    endif
 #endif
 
+// For OSL internal compilation only, get deprecation warnings if we call
+// OIIO ErrorHandler methods that use the old printf style interface.
+#if defined(OSL_INTERNAL) && !defined(OIIO_ERRORHANDLER_HIDE_PRINTF)
+#    define OIIO_ERRORHANDLER_HIDE_PRINTF 1
+#endif
+
 // All the things we need from OpenImageIO
 #include <OpenImageIO/oiioversion.h>
 #include <OpenImageIO/errorhandler.h>
@@ -95,6 +101,7 @@ using OIIO::ustringHash;
 using OIIO::string_view;
 using OIIO::span;
 using OIIO::cspan;
+using OIIO::Strutil::print;
 
 using OIIO::TypeDesc;
 using OIIO::TypeUnknown;

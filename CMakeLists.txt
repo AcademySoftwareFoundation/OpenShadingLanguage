@@ -121,6 +121,9 @@ if (USE_OPTIX)
     add_definitions ("-DOSL_USE_OPTIX=1")
 endif ()
 
+# Define OSL_INTERNAL symbol only when building OSL itself, will not be
+# defined for downstream projects using OSL.
+add_definitions (-DOSL_INTERNAL=1)
 
 # Set the default namespace. For symbol hiding reasons, it's important that
 # the project name is a subset of the namespace name.

@@ -85,9 +85,9 @@ public:
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
-            m_errhandler->errorf("%s:%d: error: %s", filename, line, msg);
+            m_errhandler->errorfmt("{}:{}: error: {}", filename, line, msg);
         else
-            m_errhandler->errorf("error: %s", msg);
+            m_errhandler->errorfmt("error: {}", msg);
         m_err = true;
     }
 
@@ -103,13 +103,13 @@ public:
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (m_err_on_warning) {
-            errorf(filename, line, "%s", msg);
+            errorfmt(filename, line, "{}", msg);
             return;
         }
         if (filename.size())
-            m_errhandler->warningf("%s:%d: warning: %s", filename, line, msg);
+            m_errhandler->warningfmt("{}:{}: warning: {}", filename, line, msg);
         else
-            m_errhandler->warningf("warning: %s", msg);
+            m_errhandler->warningfmt("warning: {}", msg);
     }
 
     /// Info reporting
@@ -122,9 +122,9 @@ public:
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
-            m_errhandler->infof("%s:%d: info: %s", filename, line, msg);
+            m_errhandler->infofmt("{}:{}: info: {}", filename, line, msg);
         else
-            m_errhandler->infof("info: %s", msg);
+            m_errhandler->infofmt("info: {}", msg);
     }
 
     /// message reporting
@@ -137,9 +137,76 @@ public:
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
-            m_errhandler->messagef("%s:%d: %s", filename, line, msg);
+            m_errhandler->messagefmt("{}:{}: {}", filename, line, msg);
         else
-            m_errhandler->messagef("%s", msg);
+            m_errhandler->messagefmt("{}", msg);
+    }
+
+    /// Error reporting
+    template<typename... Args>
+    void errorfmt(ustring filename, int line, const char* format,
+                  const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        std::string msg = OIIO::Strutil::fmt::format(format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
+        if (filename.size())
+            m_errhandler->errorfmt("{}:{}: error: {}", filename, line, msg);
+        else
+            m_errhandler->errorfmt("error: {}", msg);
+        m_err = true;
+    }
+
+    /// Warning reporting
+    template<typename... Args>
+    void warningfmt(ustring filename, int line, const char* format,
+                    const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        if (nowarn(filename, line))
+            return;  // skip if the filename/line is on the nowarn list
+        std::string msg = OIIO::Strutil::fmt::format(format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
+        if (m_err_on_warning) {
+            errorfmt(filename, line, "{}", msg);
+            return;
+        }
+        if (filename.size())
+            m_errhandler->warningfmt("{}:{}: warning: {}", filename, line, msg);
+        else
+            m_errhandler->warningfmt("warning: {}", msg);
+    }
+
+    /// Info reporting
+    template<typename... Args>
+    void infofmt(ustring filename, int line, const char* format,
+                 const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        std::string msg = OIIO::Strutil::fmt::format(format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
+        if (filename.size())
+            m_errhandler->infofmt("{}:{}: info: {}", filename, line, msg);
+        else
+            m_errhandler->infofmt("info: {}", msg);
+    }
+
+    /// message reporting
+    template<typename... Args>
+    void messagefmt(ustring filename, int line, const char* format,
+                    const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        std::string msg = OIIO::Strutil::fmt::format(format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
+        if (filename.size())
+            m_errhandler->messagefmt("{}:{}: {}", filename, line, msg);
+        else
+            m_errhandler->messagefmt("{}", msg);
     }
 
     /// Have we hit an error?

@@ -176,10 +176,10 @@ OSL_NAMESPACE_EXIT
 "protected"|"short"|"signed"|"sizeof"|"static"|"struct" |    \
 "switch"|"template"|"this"|"true"|"typedef"|"uniform" |      \
 "union"|"unsigned"|"varying"|"virtual" {
-                            oslcompiler->errorf(oslcompiler->filename(),
-                                                oslcompiler->lineno(),
-                                                "'%s' is a reserved word",
-                                                yytext);
+                            oslcompiler->errorfmt(oslcompiler->filename(),
+                                                  oslcompiler->lineno(),
+                                                  "'{}' is a reserved word",
+                                                  yytext);
                             SETLINE;
                             return (yylval->i=RESERVED);
                         }
@@ -198,10 +198,10 @@ OSL_NAMESPACE_EXIT
                             // we do not detect overflow when the value is INT_MAX+1,
                             // because negation happens later and -(INT_MAX+1) == INT_MIN
                             if (llval > ((long long)INT_MAX)+1) {
-                                oslcompiler->errorf(oslcompiler->filename(),
-                                                    oslcompiler->lineno(),
-                                                    "integer overflow, value must be between %d and %d.",
-                                                    INT_MIN, INT_MAX);
+                                oslcompiler->errorfmt(oslcompiler->filename(),
+                                                      oslcompiler->lineno(),
+                                                      "integer overflow, value must be between {} and {}.",
+                                                      INT_MIN, INT_MAX);
                             }
                             yylval->i = (int)llval;
                             SETLINE;
@@ -212,10 +212,10 @@ OSL_NAMESPACE_EXIT
                             // we do not detect overflow when the value is INT_MAX+1,
                             // because negation happens later and -(INT_MAX+1) == INT_MIN
                             if (llval > ((long long)UINT_MAX)+1) {
-                                oslcompiler->errorf(oslcompiler->filename(),
-                                                    oslcompiler->lineno(),
-                                                    "integer overflow, value must be between %d and %d.",
-                                                    INT_MIN, INT_MAX);
+                                oslcompiler->errorfmt(oslcompiler->filename(),
+                                                      oslcompiler->lineno(),
+                                                      "integer overflow, value must be between {} and {}.",
+                                                      INT_MIN, INT_MAX);
                             }
                             yylval->i = (int)llval;
                             SETLINE;
@@ -300,8 +300,8 @@ preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param)
     while (*p == ' ' || *p == '\t')
         p++;
     if (*p != '#') {
-        oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
-                            "Possible bug in shader preprocess");
+        oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                              "Possible bug in shader preprocess");
         SETLINE;
         return;
     }
@@ -315,30 +315,30 @@ preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param)
         if (pragmatype == "error") {
             string_view msg;
             if (OIIO::Strutil::parse_string(line, msg))
-                oslcompiler->errorf(oslcompiler->filename(),
-                                    oslcompiler->lineno(), "%s", msg);
+                oslcompiler->errorfmt(oslcompiler->filename(),
+                                      oslcompiler->lineno(), "{}", msg);
             else
-                oslcompiler->errorf(oslcompiler->filename(),
-                                    oslcompiler->lineno(),
-                                    "<unknown error>");
+                oslcompiler->errorfmt(oslcompiler->filename(),
+                                      oslcompiler->lineno(),
+                                      "<unknown error>");
         }
         else if (pragmatype == "warning") {
             string_view msg;
             if (OIIO::Strutil::parse_string(line, msg))
-                oslcompiler->warningf(oslcompiler->filename(),
-                                      oslcompiler->lineno(), "%s", msg);
+                oslcompiler->warningfmt(oslcompiler->filename(),
+                                      oslcompiler->lineno(), "{}", msg);
             else
-                oslcompiler->warningf(oslcompiler->filename(),
-                                      oslcompiler->lineno(),
-                                      "<unknown warning>");
+                oslcompiler->warningfmt(oslcompiler->filename(),
+                                        oslcompiler->lineno(),
+                                        "<unknown warning>");
         }
         else if (OIIO::Strutil::iequals (pragmatype, "osl")) {
             string_view pragmaname = OIIO::Strutil::parse_word (line);
             if (pragmaname == "nowarn") {
                 oslcompiler->pragma_nowarn ();
             } else {
-                oslcompiler->warningf(oslcompiler->filename(), oslcompiler->lineno(),
-                                      "Unknown pragma '%s'", pragmaname);
+                oslcompiler->warningfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                                        "Unknown pragma '{}'", pragmaname);
             }
         }
         // N.B. Any other pragmas that don't start with "osl" are ignored
@@ -377,8 +377,8 @@ preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param)
             }
             oslcompiler->lineno (line);
         } else {
-            oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
-                                "Unrecognized preprocessor command: #%s", p);
+            oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                                  "Unrecognized preprocessor command: #{}", p);
         }
     }
     SETLINE;

@@ -311,8 +311,8 @@ hint
 void
 OSL::pvt::yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSOReader* osoreader, const char* err)
 {
-    osoreader->errhandler().errorf("Error, line %d: %s",
-                                   osoreader->lineno(), err);
+    osoreader->errhandler().errorfmt("Error, line : ",
+                                     osoreader->lineno(), err);
 }
 
 

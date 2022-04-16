@@ -248,11 +248,11 @@ formal_param
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     if (! t.is_structure() && ! t.is_triple() && ! t.is_matrix())
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Can't use '= {...}' initializer "
-                                            "except with arrays, structs, vectors, "
-                                            "or matrix (%s)", $3);
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Can't use '= {{...}}' initializer "
+                                              "except with arrays, structs, vectors, "
+                                              "or matrix ({})", $3);
                     auto var = new ASTvariable_declaration (oslcompiler, t,
                                             ustring($3), $4 /*init*/,
                                             oslcompiler->declaring_shader_formals() /*isparam*/,
@@ -294,9 +294,9 @@ metadatum
                     TypeDesc simple = osllextype ($1);
                     simple.arraylen = $3;
                     if (simple.arraylen < 1)
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Invalid array length for %s", $2);
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Invalid array length for {}", $2);
                     TypeSpec t (simple, false);
                     auto var = new ASTvariable_declaration (oslcompiler, t, 
                                      ustring ($2), $4, false,
@@ -338,13 +338,13 @@ struct_declaration
                     ustring name ($2);
                     Symbol *s = oslcompiler->symtab().clash (name);
                     if (s) {
-                        oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
-                                            "\"%s\" already declared in this scope", name);
+                        oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                                              "\"{}\" already declared in this scope", name);
                         // FIXME -- print the file and line of the other definition
                     }
                     if (OIIO::Strutil::starts_with (name, "___")) {
-                        oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
-                                            "\"%s\" : sorry, can't start with three underscores", name);
+                        oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                                              "\"{}\" : sorry, can't start with three underscores", name);
                     }
                     oslcompiler->symtab().new_struct (name);
                 }
@@ -375,10 +375,10 @@ typed_field
                     TypeSpec t = oslcompiler->current_typespec();
                     StructSpec *s = oslcompiler->symtab().current_struct();
                     if (s->lookup_field (name) >= 0)
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Field \"%s\" already exists in struct \"%s\"",
-                                            name, s->name());
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Field \"{}\" already exists in struct \"{}\"",
+                                              name, s->name());
                     else
                         oslcompiler->symtab().add_struct_field (t, name);
                     $$ = 0;
@@ -390,15 +390,15 @@ typed_field
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if (t.arraylength() < 1)
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Invalid array length for %s", name);
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Invalid array length for {}", name);
                     StructSpec *s = oslcompiler->symtab().current_struct();
                     if (s->lookup_field (name) >= 0)
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Field \"%s\" already exists in struct \"%s\"",
-                                            name, s->name());
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Field \"{}\" already exists in struct \"{}\"",
+                                              name, s->name());
                     else
                         oslcompiler->symtab().add_struct_field (t, name);
                     $$ = 0;
@@ -434,9 +434,9 @@ def_expression
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if ($2 < 1)
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Invalid array length for %s", $1);
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Invalid array length for {}", $1);
                     $$ = new ASTvariable_declaration (oslcompiler, t,
                                  ustring($1), $3, false, false, false,
                                  true /* initlist */, @1.first_line);
@@ -445,11 +445,11 @@ def_expression
                 {
                     TypeSpec t = oslcompiler->current_typespec();
                     if (! t.is_structure() && ! t.is_triple() && ! t.is_matrix())
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Can't use '= {...}' initializer "
-                                            "except with arrays, struct, vectors, "
-                                            "or matrix (%s)", $1);
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Can't use '= {{...}}' initializer "
+                                              "except with arrays, struct, vectors, "
+                                              "or matrix ({})", $1);
                     $$ = new ASTvariable_declaration (oslcompiler, t,
                                  ustring($1), $2, false, false, false,
                                  true /* initlist */, @1.first_line);
@@ -483,10 +483,10 @@ compound_initializer
         | '{' '}'
                 {
                     if (!oslcompiler->declaring_shader_formals())
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Empty compound initializers '{ }' "
-                                            "only allowed for shader parameters.");
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Empty compound initializers '{{ }}' "
+                                              "only allowed for shader parameters.");
                     $$ = new ASTcompound_initializer (oslcompiler, nullptr);
                     $$->sourceline (@1.first_line);
                 }
@@ -566,9 +566,9 @@ arrayspec
         : '[' INT_LITERAL ']'
                 {
                     if ($2 < 1)
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Invalid array length (%d)", $2);
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Invalid array length ({})", $2);
                     $$ = $2;
                 }
         | '[' ']'                       { $$ = -1; }
@@ -594,9 +594,9 @@ typespec
                         oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
                     else {
                         oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
-                        oslcompiler->errorf(oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Unknown struct name: %s", $1);
+                        oslcompiler->errorfmt(oslcompiler->filename(),
+                                              oslcompiler->lineno(),
+                                              "Unknown struct name: {}", $1);
                     }
                     $$ = 0;
                 }
@@ -635,9 +635,9 @@ typespec_or_shadertype
                             oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
                         else {
                             oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
-                            oslcompiler->errorf(oslcompiler->filename(),
-                                                oslcompiler->lineno(),
-                                                "Unknown struct name: %s", $1);
+                            oslcompiler->errorfmt(oslcompiler->filename(),
+                                                  oslcompiler->lineno(),
+                                                  "Unknown struct name: {}", $1);
                         }
                         $$ = (int)ShaderType::Unknown;
                     }
@@ -797,9 +797,9 @@ expression
                         //     color x = Cd * (a, b, c); // same as:  x = Cd * c
                         // when they really meant
                         //     color x = Cd * color(a, b, c);
-                        oslcompiler->warningf(oslcompiler->filename(),
-                                              @1.first_line,
-                                              "Comma operator inside parenthesis is probably an error -- it is not a vector/color.");
+                        oslcompiler->warningfmt(oslcompiler->filename(),
+                                                @1.first_line,
+                                                "Comma operator inside parenthesis is probably an error -- it is not a vector/color.");
                     }
                     $$ = $2;
                 }
@@ -1094,8 +1094,8 @@ string_literal_group
 void
 OSL::pvt::yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler, const char* err)
 {
-    oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
-                        "Syntax error: %s", err);
+    oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                          "Syntax error: {}", err);
 }
 
 

@@ -39,10 +39,15 @@
 #    endif
 #endif
 
-// For OSL internal compilation only, get deprecation warnings if we call
-// OIIO ErrorHandler methods that use the old printf style interface.
-#if defined(OSL_INTERNAL) && !defined(OIIO_ERRORHANDLER_HIDE_PRINTF)
-#    define OIIO_ERRORHANDLER_HIDE_PRINTF 1
+// For OSL internal compilation only, get deprecation warnings if we call OIIO
+// methods that use the old printf style interface.
+#ifdef OSL_INTERNAL
+#    ifdef OIIO_ERRORHANDLER_HIDE_PRINTF
+#        define OIIO_ERRORHANDLER_HIDE_PRINTF 1
+#    endif
+#    ifdef OIIO_HIDE_FORMAT
+#        define OIIO_HIDE_FORMAT 1
+#    endif
 #endif
 
 // All the things we need from OpenImageIO

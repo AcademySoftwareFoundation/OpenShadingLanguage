@@ -705,7 +705,7 @@ BatchedBackendLLVM::llvm_type_batched_texture_options()
 
     {
         std::vector<unsigned int> offset_by_index;
-        switch (m_width) {
+        switch (m_batch_width) {
         case 8:
             build_offsets_of_BatchedTextureOptions<8>(offset_by_index);
             break;
@@ -774,14 +774,6 @@ BatchedBackendLLVM::llvm_type_batched_trace_options()
 
 
 llvm::Type*
-BatchedBackendLLVM::llvm_type_sg_ptr()
-{
-    return ll.type_ptr(llvm_type_sg());
-}
-
-
-
-llvm::Type*
 BatchedBackendLLVM::llvm_type_groupdata()
 {
     // If already computed, return it
@@ -830,7 +822,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
             type.arraylen = n;
             fields.push_back(llvm_wide_type(type));
             // Alignment
-            int align = type.basesize() * m_width;
+            int align = type.basesize() * m_batch_width;
             offset    = OIIO::round_to_multiple_of_pow2(offset, align);
             if (llvm_debug() >= 2) {
                 std::cout << "  userdata ";
@@ -843,7 +835,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
                           << offset << std::endl;
             }
             offsets[i] = offset;
-            offset += int(type.size()) * m_width;
+            offset += int(type.size()) * m_batch_width;
             ++order;
         }
     }
@@ -876,7 +868,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
             size_t align = sym.typespec().is_closure_based()
                                ? sizeof(void*)
                                : sym.typespec().simpletype().basesize()
-                                     * m_width;
+                                     * m_batch_width;
             if (offset & (align - 1))
                 offset += align - (offset & (align - 1));
             if (llvm_debug() >= 2)
@@ -886,7 +878,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
                           << derivSize * int(sym.size()) << ", offset "
                           << offset << std::endl;
             sym.wide_dataoffset((int)offset);
-            offset += derivSize * int(sym.size()) * m_width;
+            offset += derivSize * int(sym.size()) * m_batch_width;
 
             m_param_order_map[&sym] = order;
             ++order;
@@ -904,14 +896,6 @@ BatchedBackendLLVM::llvm_type_groupdata()
                                            false /*is_packed*/);
 
     return m_llvm_type_groupdata;
-}
-
-
-
-llvm::Type*
-BatchedBackendLLVM::llvm_type_groupdata_ptr()
-{
-    return ll.type_ptr(llvm_type_groupdata());
 }
 
 
@@ -1112,7 +1096,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                 groupdata_field_ptr(2 + userdata_index),  // userdata data ptr
                 ll.constant((int)sym.has_derivs()),
                 llvm_void_ptr(sym),
-                ll.constant(sym.derivsize() * m_width),
+                ll.constant(sym.derivsize() * m_batch_width),
                 ll.void_ptr(userdata_initialized_ref(userdata_index)),
                 ll.constant(userdata_index),
                 llvm_initial_shader_mask_value
@@ -2295,7 +2279,7 @@ BatchedBackendLLVM::initialize_llvm_group()
          i != e; ++i) {
         // In case we have loaded multiple target libraries, we need to filter out
         // library functions for different isa's or vector widths
-        if ((i->second.vector_width != 0 && i->second.vector_width != m_width)
+        if ((i->second.vector_width != 0 && i->second.vector_width != m_batch_width)
             || (i->second.target_isa != TargetISA::UNKNOWN
                 && i->second.target_isa != ll.target_isa())) {
             continue;  // Skip declaring functions for different vector widths and ISA targets
@@ -2536,7 +2520,7 @@ BatchedBackendLLVM::run()
     }
 
     m_target_lib_helper = TargetLibraryHelper::build(shadingcontext(),
-                                                     vector_width(),
+                                                     batch_width(),
                                                      ll.target_isa());
     OSL_ASSERT(m_target_lib_helper);
     OSL_ASSERT(m_library_selector == nullptr);
@@ -2584,7 +2568,7 @@ BatchedBackendLLVM::run()
 #endif
     {
         std::vector<unsigned int> offset_by_index;
-        switch (m_width) {
+        switch (m_batch_width) {
         case 8:
             build_offsets_of_BatchedShaderGlobals<8>(offset_by_index);
             break;

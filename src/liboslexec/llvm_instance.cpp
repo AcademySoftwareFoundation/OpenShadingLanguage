@@ -224,14 +224,6 @@ BackendLLVM::llvm_type_sg ()
 
 
 llvm::Type *
-BackendLLVM::llvm_type_sg_ptr ()
-{
-    return ll.type_ptr (llvm_type_sg());
-}
-
-
-
-llvm::Type *
 BackendLLVM::llvm_type_groupdata ()
 {
     // If already computed, return it
@@ -346,14 +338,6 @@ BackendLLVM::llvm_type_groupdata ()
     m_llvm_type_groupdata = ll.type_struct (fields, groupdataname);
 
     return m_llvm_type_groupdata;
-}
-
-
-
-llvm::Type *
-BackendLLVM::llvm_type_groupdata_ptr ()
-{
-    return ll.type_ptr (llvm_type_groupdata());
 }
 
 

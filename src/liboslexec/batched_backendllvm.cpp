@@ -120,25 +120,16 @@ is_shader_global_uniform_by_name(ustring name)
 BatchedBackendLLVM::BatchedBackendLLVM(ShadingSystemImpl& shadingsys,
                                        ShaderGroup& group, ShadingContext* ctx,
                                        int width)
-    : OSOProcessorBase(shadingsys, group, ctx)
-    , ll(ctx->llvm_thread_info(), llvm_debug(), width)
-    , m_width(width)
+    : BackendLLVMCommon(shadingsys, group, ctx, width)
     , m_library_selector(nullptr)
-    , m_stat_total_llvm_time(0)
-    , m_stat_llvm_setup_time(0)
-    , m_stat_llvm_irgen_time(0)
-    , m_stat_llvm_opt_time(0)
-    , m_stat_llvm_jit_time(0)
 {
+    m_batch_width = width;
     m_wide_arg_prefix = "W";
-    switch (vector_width()) {
+    switch (batch_width()) {
     case 16: m_true_mask_value = Mask<16>(true).value(); break;
     case 8: m_true_mask_value = Mask<8>(true).value(); break;
     default: OSL_ASSERT(0 && "unsupported vector width");
     }
-    ll.dumpasm(shadingsys.m_llvm_dumpasm);
-    ll.jit_fma(shadingsys.m_llvm_jit_fma);
-    ll.jit_aggressive(shadingsys.m_llvm_jit_aggressive);
 }
 
 
@@ -146,64 +137,6 @@ BatchedBackendLLVM::BatchedBackendLLVM(ShadingSystemImpl& shadingsys,
 BatchedBackendLLVM::~BatchedBackendLLVM() {}
 
 
-
-int
-BatchedBackendLLVM::llvm_debug() const
-{
-    if (shadingsys().llvm_debug() == 0)
-        return 0;
-    if (!shadingsys().debug_groupname().empty()
-        && shadingsys().debug_groupname() != group().name()) {
-        return 0;
-    }
-    if (inst() && !shadingsys().debug_layername().empty()
-        && shadingsys().debug_layername() != inst()->layername())
-        return 0;
-    return shadingsys().llvm_debug();
-}
-
-
-void
-BatchedBackendLLVM::set_inst(int layer)
-{
-    OSOProcessorBase::set_inst(layer);  // parent does the heavy lifting
-    ll.debug(llvm_debug());
-}
-
-
-
-llvm::Type*
-BatchedBackendLLVM::llvm_pass_type(const TypeSpec& typespec)
-{
-    if (typespec.is_closure_based())
-        return (llvm::Type*)ll.type_void_ptr();
-    TypeDesc t     = typespec.simpletype().elementtype();
-    llvm::Type* lt = NULL;
-    if (t == TypeDesc::FLOAT)
-        lt = ll.type_float();
-    else if (t == TypeDesc::INT)
-        lt = ll.type_int();
-    else if (t == TypeDesc::STRING)
-        lt = (llvm::Type*)ll.type_string();
-    else if (t.aggregate == TypeDesc::VEC3)
-        lt = (llvm::Type*)ll.type_void_ptr();  //llvm_type_triple_ptr();
-    else if (t.aggregate == TypeDesc::MATRIX44)
-        lt = (llvm::Type*)ll.type_void_ptr();  //llvm_type_matrix_ptr();
-    else if (t == TypeDesc::NONE)
-        lt = ll.type_void();
-    else if (t == TypeDesc::PTR)
-        lt = (llvm::Type*)ll.type_void_ptr();
-    else if (t == TypeDesc::LONGLONG)
-        lt = ll.type_longlong();
-    else {
-        std::cerr << "Bad llvm_pass_type(" << typespec.c_str() << ")\n";
-        OSL_ASSERT(0 && "not handling this type yet");
-    }
-    if (t.arraylen) {
-        OSL_ASSERT(0 && "should never pass an array directly as a parameter");
-    }
-    return lt;
-}
 
 llvm::Type*
 BatchedBackendLLVM::llvm_pass_wide_type(const TypeSpec& typespec)
@@ -919,81 +852,6 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
 
 
 llvm::Value*
-BatchedBackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
-                                             int component, TypeDesc cast,
-                                             bool op_is_uniform)
-{
-    OSL_ASSERT(sym.is_constant()
-               && "Called llvm_load_constant_value for a non-constant symbol");
-
-    // set array indexing to zero for non-arrays
-    if (!sym.typespec().is_array())
-        arrayindex = 0;
-    OSL_ASSERT(arrayindex >= 0
-               && "Called llvm_load_constant_value with negative array index");
-
-
-    // TODO: might want to take this fix for array types back to the non-wide backend
-    TypeSpec elementType = sym.typespec();
-    // The symbol we are creating a constant for might be an array
-    // and our checks for types use non-array types
-    elementType.make_array(0);
-
-    if (elementType.is_float()) {
-        float float_elem = sym.get_float(arrayindex);
-        if (cast == TypeDesc::TypeInt) {
-            int int_elem = static_cast<int>(float_elem);
-            if (op_is_uniform) {
-                return ll.constant(int_elem);
-            } else {
-                return ll.wide_constant(int_elem);
-            }
-        } else if (op_is_uniform) {
-            return ll.constant(float_elem);
-        } else {
-            return ll.wide_constant(float_elem);
-        }
-    }
-    if (elementType.is_int()) {
-        int int_elem = sym.get_int(arrayindex);
-        if (cast == TypeDesc::TypeFloat) {
-            float float_elem = static_cast<float>(int_elem);
-            if (op_is_uniform) {
-                return ll.constant(float_elem);
-            } else {
-                return ll.wide_constant(float_elem);
-            }
-        } else if (op_is_uniform) {
-            return ll.constant(int_elem);
-        } else {
-            return ll.wide_constant(int_elem);
-        }
-    }
-    if (elementType.is_triple() || elementType.is_matrix()) {
-        int ncomps       = (int)sym.typespec().aggregate();
-        float float_elem = sym.get_float(ncomps*arrayindex + component);
-        if (op_is_uniform) {
-            return ll.constant(float_elem);
-        } else {
-            return ll.wide_constant(float_elem);
-        }
-    }
-    if (elementType.is_string()) {
-        ustring string_elem = sym.get_string(arrayindex);
-        if (op_is_uniform) {
-            return ll.constant(string_elem);
-        } else {
-            return ll.wide_constant(string_elem);
-        }
-    }
-
-    OSL_ASSERT(0 && "unhandled constant type");
-    return NULL;
-}
-
-
-
-llvm::Value*
 BatchedBackendLLVM::llvm_load_component_value(const Symbol& sym, int deriv,
                                               llvm::Value* component,
                                               bool op_is_uniform,
@@ -1409,27 +1267,7 @@ BatchedBackendLLVM::llvm_conversion_store_uniform_status(llvm::Value* val,
     llvm_store_value(val, Status);
 }
 
-llvm::Value*
-BatchedBackendLLVM::groupdata_field_ref(int fieldnum)
-{
-    return ll.GEP(groupdata_ptr(), 0, fieldnum);
-}
 
-
-llvm::Value*
-BatchedBackendLLVM::groupdata_field_ptr(int fieldnum, TypeDesc type,
-                                        bool is_uniform)
-{
-    llvm::Value* result = ll.void_ptr(groupdata_field_ref(fieldnum));
-    if (type != TypeDesc::UNKNOWN) {
-        if (is_uniform) {
-            result = ll.ptr_to_cast(result, llvm_type(type));
-        } else {
-            result = ll.ptr_to_cast(result, llvm_wide_type(type));
-        }
-    }
-    return result;
-}
 
 llvm::Value*
 BatchedBackendLLVM::temp_wide_matrix_ptr()
@@ -1905,20 +1743,6 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
     return true;
 }
 
-int
-BatchedBackendLLVM::find_userdata_index(const Symbol& sym)
-{
-    int userdata_index = -1;
-    for (int i = 0, e = (int)group().m_userdata_names.size(); i < e; ++i) {
-        if (sym.name() == group().m_userdata_names[i]
-            && equivalent(sym.typespec().simpletype(),
-                          group().m_userdata_types[i])) {
-            userdata_index = i;
-            break;
-        }
-    }
-    return userdata_index;
-}
 
 
 void

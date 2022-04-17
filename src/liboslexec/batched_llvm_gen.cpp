@@ -478,7 +478,7 @@ LLVMGEN (llvm_gen_printf)
         {
             // Condition
             llvm::Value * lane_index = rop.ll.op_load(loc_of_lane_index);
-            llvm::Value * more_lanes_to_process = rop.ll.op_lt(lane_index, rop.ll.constant(rop.vector_width()));
+            llvm::Value * more_lanes_to_process = rop.ll.op_lt(lane_index, rop.ll.constant(rop.batch_width()));
 
             rop.ll.op_branch (more_lanes_to_process, body_block,
                     after_block);

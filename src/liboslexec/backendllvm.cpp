@@ -64,10 +64,11 @@ check_cwd (ShadingSystemImpl &shadingsys)
 
 
 
-BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
-                          ShaderGroup &group, ShadingContext *ctx)
-    : OSOProcessorBase (shadingsys, group, ctx),
-      ll(ctx->llvm_thread_info(), llvm_debug(), shadingsys.m_vector_width),
+BackendLLVMCommon::BackendLLVMCommon(ShadingSystemImpl& shadingsys,
+                                     ShaderGroup& group, ShadingContext* ctx,
+                                     int width)
+    : OSOProcessorBase(shadingsys, group, ctx),
+      ll(ctx->llvm_thread_info(), llvm_debug(), width),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
       m_stat_llvm_jit_time(0)
@@ -77,10 +78,24 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
     // getcwd inside LLVM. Oy.
     check_cwd (shadingsys);
 #endif
-    m_use_optix = shadingsys.renderer()->supports ("OptiX");
     ll.dumpasm(shadingsys.m_llvm_dumpasm);
     ll.jit_fma(shadingsys.m_llvm_jit_fma);
     ll.jit_aggressive(shadingsys.m_llvm_jit_aggressive);
+}
+
+
+
+BackendLLVMCommon::~BackendLLVMCommon ()
+{
+}
+
+
+
+BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
+                          ShaderGroup &group, ShadingContext *ctx)
+    : BackendLLVMCommon(shadingsys, group, ctx, shadingsys.m_vector_width)
+{
+    m_use_optix = shadingsys.renderer()->supports("OptiX");
 }
 
 
@@ -92,7 +107,7 @@ BackendLLVM::~BackendLLVM ()
 
 
 int
-BackendLLVM::llvm_debug() const
+BackendLLVMCommon::llvm_debug() const
 {
     if (shadingsys().llvm_debug() == 0)
         return 0;
@@ -108,7 +123,7 @@ BackendLLVM::llvm_debug() const
 
 
 void
-BackendLLVM::set_inst (int layer)
+BackendLLVMCommon::set_inst (int layer)
 {
     OSOProcessorBase::set_inst (layer);  // parent does the heavy lifting
     ll.debug (llvm_debug());
@@ -117,7 +132,7 @@ BackendLLVM::set_inst (int layer)
 
 
 llvm::Type *
-BackendLLVM::llvm_pass_type (const TypeSpec &typespec)
+BackendLLVMCommon::llvm_pass_type (const TypeSpec &typespec)
 {
     if (typespec.is_closure_based())
         return (llvm::Type *) ll.type_void_ptr();
@@ -140,6 +155,7 @@ BackendLLVM::llvm_pass_type (const TypeSpec &typespec)
     else if (t == TypeDesc::LONGLONG)
         lt = ll.type_longlong();
     else {
+        std::cerr << "Bad llvm_pass_type(" << typespec.c_str() << ")\n";
         OSL_ASSERT_MSG (0, "not handling %s type yet", typespec.c_str());
     }
     if (t.arraylen) {
@@ -582,11 +598,14 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_value (const Symbol& sym, int deriv,
-                                   llvm::Value *arrayindex, int component,
-                                   TypeDesc cast)
+llvm::Value*
+BackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
+                             llvm::Value* arrayindex, int component,
+                             TypeDesc cast, bool op_is_uniform,
+                             bool index_is_uniform)
 {
+    OSL_ASSERT(op_is_uniform && index_is_uniform);
+
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
         // Regardless of what object this is, if it doesn't have derivs but
@@ -627,11 +646,14 @@ BackendLLVM::llvm_load_value (const Symbol& sym, int deriv,
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
-                                   int deriv, llvm::Value *arrayindex,
-                                   int component, TypeDesc cast)
+llvm::Value*
+BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
+                             llvm::Value* arrayindex, int component,
+                             TypeDesc cast, bool op_is_uniform,
+                             bool index_is_uniform, bool symbol_forced_boolean)
 {
+    OSL_ASSERT(op_is_uniform && index_is_uniform && !symbol_forced_boolean);
+
     if (!ptr)
         return NULL;  // Error
 
@@ -708,45 +730,81 @@ BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_constant_value (const Symbol& sym, 
-                                       int arrayindex, int component,
-                                       TypeDesc cast)
+llvm::Value*
+BackendLLVMCommon::llvm_load_constant_value(const Symbol& sym, int arrayindex,
+                                            int component, TypeDesc cast,
+                                            bool op_is_uniform)
 {
-    OSL_DASSERT (sym.is_constant() &&
-                 "Called llvm_load_constant_value for a non-constant symbol");
+    OSL_ASSERT(sym.is_constant()
+               && "Called llvm_load_constant_value for a non-constant symbol");
 
     // set array indexing to zero for non-arrays
-    if (! sym.typespec().is_array())
+    if (!sym.typespec().is_array())
         arrayindex = 0;
-    OSL_DASSERT (arrayindex >= 0 &&
-                 "Called llvm_load_constant_value with negative array index");
+    OSL_ASSERT(arrayindex >= 0
+               && "Called llvm_load_constant_value with negative array index");
 
-    if (sym.typespec().is_float()) {
-        if (cast == TypeDesc::TypeInt)
-            return ll.constant((int)sym.get_float(arrayindex));
-        else
-            return ll.constant(sym.get_float(arrayindex));
+
+    // TODO: might want to take this fix for array types back to the non-wide backend
+    TypeSpec elementType = sym.typespec();
+    // The symbol we are creating a constant for might be an array
+    // and our checks for types use non-array types
+    elementType.make_array(0);
+
+    if (elementType.is_float()) {
+        float float_elem = sym.get_float(arrayindex);
+        if (cast == TypeDesc::TypeInt) {
+            int int_elem = static_cast<int>(float_elem);
+            if (op_is_uniform) {
+                return ll.constant(int_elem);
+            } else {
+                return ll.wide_constant(int_elem);
+            }
+        } else if (op_is_uniform) {
+            return ll.constant(float_elem);
+        } else {
+            return ll.wide_constant(float_elem);
+        }
     }
-    if (sym.typespec().is_int()) {
-        if (cast == TypeDesc::TypeFloat)
-            return ll.constant((float)sym.get_int(arrayindex));
-        else
-            return ll.constant(sym.get_int(arrayindex));
+    if (elementType.is_int()) {
+        int int_elem = sym.get_int(arrayindex);
+        if (cast == TypeDesc::TypeFloat) {
+            float float_elem = static_cast<float>(int_elem);
+            if (op_is_uniform) {
+                return ll.constant(float_elem);
+            } else {
+                return ll.wide_constant(float_elem);
+            }
+        } else if (op_is_uniform) {
+            return ll.constant(int_elem);
+        } else {
+            return ll.wide_constant(int_elem);
+        }
     }
-    if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
-        int ncomps = (int) sym.typespec().aggregate();
-        return ll.constant(sym.get_float(ncomps*arrayindex + component));
+    if (elementType.is_triple() || elementType.is_matrix()) {
+        int ncomps       = (int)sym.typespec().aggregate();
+        float float_elem = sym.get_float(ncomps * arrayindex + component);
+        if (op_is_uniform) {
+            return ll.constant(float_elem);
+        } else {
+            return ll.wide_constant(float_elem);
+        }
     }
-    if (sym.typespec().is_string() && use_optix()) {
-        OSL_DASSERT ((arrayindex == 0) && "String arrays are not currently supported in OptiX");
+    if (elementType.is_string() && use_optix()) {
+        OSL_DASSERT(op_is_uniform && "OptiX string must be uniform");
+        OSL_DASSERT((arrayindex == 0) && "String arrays are not currently supported in OptiX");
         return llvm_load_device_string (sym, /*follow*/ false);
     }
-    if (sym.typespec().is_string()) {
-        return ll.constant(sym.get_string(arrayindex));
+    if (elementType.is_string()) {
+        ustring string_elem = sym.get_string(arrayindex);
+        if (op_is_uniform) {
+            return ll.constant(string_elem);
+        } else {
+            return ll.wide_constant(string_elem);
+        }
     }
 
-    OSL_ASSERT (0 && "unhandled constant type");
+    OSL_ASSERT(0 && "unhandled constant type");
     return NULL;
 }
 
@@ -894,21 +952,21 @@ BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
 
 
 
-llvm::Value *
-BackendLLVM::groupdata_field_ref (int fieldnum)
+llvm::Value*
+BackendLLVMCommon::groupdata_field_ptr(int fieldnum, TypeDesc type,
+                                       bool is_uniform)
 {
-    return ll.GEP (groupdata_ptr(), 0, fieldnum);
-}
-
-
-llvm::Value *
-BackendLLVM::groupdata_field_ptr (int fieldnum, TypeDesc type)
-{
-    llvm::Value *result = ll.void_ptr (groupdata_field_ref (fieldnum));
-    if (type != TypeDesc::UNKNOWN)
-        result = ll.ptr_to_cast (result, llvm_type(type));
+    llvm::Value* result = ll.void_ptr(groupdata_field_ref(fieldnum));
+    if (type != TypeUnknown) {
+        if (is_uniform) {
+            result = ll.ptr_to_cast(result, llvm_type(type));
+        } else {
+            result = ll.ptr_to_cast(result, llvm_wide_type(type));
+        }
+    }
     return result;
 }
+
 
 
 llvm::Value *
@@ -1125,7 +1183,7 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
 
 
 
-int BackendLLVM::find_userdata_index (const Symbol& sym)
+int BackendLLVMCommon::find_userdata_index (const Symbol& sym)
 {
     int userdata_index = -1;
     for (int i = 0, e = (int)group().m_userdata_names.size(); i < e; ++i) {

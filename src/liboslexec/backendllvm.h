@@ -27,29 +27,283 @@ namespace pvt {   // OSL::pvt
 
 
 /// OSOProcessor that generates LLVM IR and JITs it to give machine
-/// code to implement a shader group.
-class BackendLLVM final : public OSOProcessorBase {
+/// code to implement a shader group. This is a common base class to
+/// BackendLLVM and BatchedBackendLLVM.
+class BackendLLVMCommon : public OSOProcessorBase {
+public:
+    BackendLLVMCommon(ShadingSystemImpl& shadingsys, ShaderGroup& group,
+                      ShadingContext* context, int width);
+
+    virtual ~BackendLLVMCommon();
+
+    virtual void set_inst(int layer) override;
+
+    // Create an llvm function for the whole shader group, JIT it,
+    // and store the llvm::Function* handle to it with the ShaderGroup.
+    // This will be overridden separately for BackendLLVM and BatchedBackendLLVM.
+    // virtual void run () = 0;
+
+    /// What LLVM debug level are we at?
+    int llvm_debug() const;
+
+    int layer_remap(int origlayer) const { return m_layer_remap[origlayer]; }
+
+    /// Return an llvm::Value* corresponding to the address of the given
+    /// symbol element, with derivative (0=value, 1=dx, 2=dy) and array
+    /// index (NULL if it's not an array).
+    /// FIXME: this seems so close between BackendLLVM and BatchedBackendLLVM,
+    /// they should probably be unified.
+    virtual llvm::Value* llvm_get_pointer(const Symbol& sym, int deriv = 0,
+                                          llvm::Value* arrayindex = nullptr) = 0;
+
+    /// Return the llvm::Value* corresponding to the given element
+    /// value, with derivative (0=value, 1=dx, 2=dy), array index (NULL
+    /// if it's not an array), and component (x=0 or scalar, y=1, z=2).
+    /// If deriv >0 and the symbol doesn't have derivatives, return 0
+    /// for the derivative.  If the component >0 and it's a scalar,
+    /// return the scalar -- this allows automatic casting to triples.
+    /// Finally, auto-cast int<->float if requested (no conversion is
+    /// performed if cast is the default of UNKNOWN).
+    virtual llvm::Value* llvm_load_value(const Symbol& sym, int deriv,
+                                         llvm::Value* arrayindex, int component,
+                                         TypeDesc cast, bool op_is_uniform,
+                                         bool index_is_uniform = true) = 0;
+
+    /// Given an llvm::Value* of a pointer (and the type of the data
+    /// that it points to), Return the llvm::Value* corresponding to the
+    /// given element value, with derivative (0=value, 1=dx, 2=dy),
+    /// array index (NULL if it's not an array), and component (x=0 or
+    /// scalar, y=1, z=2).  If deriv >0 and the symbol doesn't have
+    /// derivatives, return 0 for the derivative.  If the component >0
+    /// and it's a scalar, return the scalar -- this allows automatic
+    /// casting to triples.  Finally, auto-cast int<->float if requested
+    /// (no conversion is performed if cast is the default of UNKNOWN).
+    virtual llvm::Value* llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
+                                         int deriv, llvm::Value* arrayindex,
+                                         int component, TypeDesc cast,
+                                         bool op_is_uniform,
+                                         bool index_is_uniform,
+                                         bool symbol_forced_boolean) = 0;
+
+    /// Just like llvm_load_value, but when both the symbol and the
+    /// array index are known to be constants.  This can even handle
+    /// pulling constant-indexed elements out of constant arrays.  Use
+    /// arrayindex==-1 to indicate that it's not an array dereference.
+    llvm::Value *llvm_load_constant_value(const Symbol& sym,
+                                          int arrayindex, int component,
+                                          TypeDesc cast = TypeUnknown,
+                                          bool op_is_uniform = true);
+
+    /// Load the address of a global device-side string pointer, which may
+    /// reside in a global variable, the groupdata struct, or a local value.
+    /// This is only used for OptiX.
+    virtual llvm::Value* llvm_load_device_string(const Symbol& sym, bool follow)
+    {
+        return nullptr;  // only implemented for back ends supporting GPUs
+    }
+
+    /// Legacy version
+    llvm::Value* loadLLVMValue(const Symbol& sym, int component = 0,
+                               int deriv = 0, TypeDesc cast = TypeUnknown,
+                               bool op_is_uniform = true)
+    {
+        return llvm_load_value(sym, deriv, NULL, component, cast,
+                               op_is_uniform);
+    }
+
+    typedef std::map<std::string, llvm::Value*> AllocationMap;
+
+    llvm::LLVMContext& llvm_context() const { return ll.context(); }
+    AllocationMap& named_values() { return m_named_values; }
+
+    /// Return the LLVM type handle for the shader globals struct.
+    /// Overloaded separately for BackendLLVM and BatchedBackendLLVM.
+    virtual llvm::Type* llvm_type_sg() = 0;
+
+    /// Return the LLVM type handle for a pointer to a shader globals struct.
+    llvm::Type* llvm_type_sg_ptr() { return ll.type_ptr(llvm_type_sg()); }
+
+    /// Return the shader globals pointer.
+    llvm::Value* sg_ptr() const { return m_llvm_shaderglobals_ptr; }
+
+    /// Return the ShaderGlobals pointer cast as a void*.
+    llvm::Value* sg_void_ptr() { return ll.void_ptr(m_llvm_shaderglobals_ptr); }
+
+    llvm::Value *llvm_ptr_cast (llvm::Value* val, const TypeSpec &type) {
+        return ll.ptr_cast (val, type.simpletype());
+    }
+
+    llvm::Value* llvm_wide_ptr_cast(llvm::Value* val, const TypeSpec& type)
+    {
+        return ll.wide_ptr_cast(val, type.simpletype());
+    }
+
+    llvm::Value *llvm_void_ptr (const Symbol &sym, int deriv=0) {
+        return ll.void_ptr (llvm_get_pointer(sym, deriv));
+    }
+
+    /// Return the LLVM type handle for a structure of the common group
+    /// data that holds all the shader params.
+    /// FIXME? This is sooooooo close between BackendLLVM and
+    /// BatchedBackendLLVM, maybe even the same in practice, we should really
+    /// see if we can unify them.
+    virtual llvm::Type* llvm_type_groupdata() = 0;
+
+    /// Return the LLVM type handle for a pointer to the common group
+    /// data that holds all the shader params.
+    llvm::Type* llvm_type_groupdata_ptr()
+    {
+        return ll.type_ptr(llvm_type_groupdata());
+    }
+
+    /// Return the group data pointer.
+    llvm::Value* groupdata_ptr() const { return m_llvm_groupdata_ptr; }
+
+    /// Return the group data pointer cast as a void*.
+    llvm::Value *groupdata_void_ptr () {
+        return ll.void_ptr(m_llvm_groupdata_ptr);
+    }
+
+    /// Return a reference to the specified field within the group data.
+    llvm::Value* groupdata_field_ref(int fieldnum)
+    {
+        return ll.GEP(groupdata_ptr(), 0, fieldnum);
+    }
+
+    /// Return a pointer to the specified field within the group data,
+    /// optionally cast to pointer to a particular data type.
+    llvm::Value *groupdata_field_ptr (int fieldnum,
+                                      TypeDesc type = TypeUnknown,
+                                      bool is_uniform = true);
+
+    TypeDesc llvm_typedesc (const TypeSpec &typespec) {
+        return typespec.is_closure_based()
+                   ? TypeDesc(TypeDesc::PTR, typespec.arraylength())
+                   : typespec.simpletype();
+    }
+
+    /// Generate the appropriate llvm type definition for a TypeSpec
+    /// (this is the actual type, for example when we allocate it).
+    /// Allocates ptrs for closures.
+    llvm::Type *llvm_type (const TypeSpec &typespec) {
+        return ll.llvm_type (llvm_typedesc(typespec));
+    }
+
+    /// Generate the appropriate llvm type definition for a wide version
+    /// of the type described by this TypeSpec.
+    llvm::Type* llvm_wide_type(const TypeSpec& typespec)
+    {
+        // We are the "wide" backend, so all types will be vector types
+        return ll.llvm_vector_type(llvm_typedesc(typespec));
+    }
+
+    /// Generate the parameter-passing llvm type definition for an OSL
+    /// TypeSpec.
+    llvm::Type *llvm_pass_type (const TypeSpec &typespec);
+
+    llvm::PointerType* llvm_type_prepare_closure_func()
+    {
+        return m_llvm_type_prepare_closure_func;
+    }
+    llvm::PointerType* llvm_type_setup_closure_func()
+    {
+        return m_llvm_type_setup_closure_func;
+    }
+
+    /// Return the basic block of the exit for the whole instance.
+    bool llvm_has_exit_instance_block() const { return m_exit_instance_block; }
+
+    /// Return the basic block of the exit for the whole instance.
+    llvm::BasicBlock *llvm_exit_instance_block () {
+        if (! m_exit_instance_block) {
+            std::string name      = Strutil::sprintf("%s_%d_exit_",
+                                                     inst()->layername(),
+                                                     inst()->id());
+            m_exit_instance_block = ll.new_basic_block (name);
+        }
+        return m_exit_instance_block;
+    }
+
+    llvm::Function *layer_func () const { return ll.current_function(); }
+
+    /// Call this when JITing a texture-like call, to track how many.
+    void generated_texture_call (bool handle) {
+        shadingsys().m_stat_tex_calls_codegened += 1;
+        if (handle)
+            shadingsys().m_stat_tex_calls_as_handles += 1;
+    }
+
+    /// Return the userdata index for the given Symbol.  Return -1 if the Symbol
+    /// is not an input parameter or is constant and therefore doesn't have an
+    /// entry in the groupdata struct.
+    int find_userdata_index (const Symbol& sym);
+
+    /// Return the batch width, or 1 for a scalar shading back end.
+    int batch_width() const { return m_batch_width; }
+
+    /// Is this a batching back end?
+    bool is_batch() const { return m_batch_width > 1; }
+
+    /// Return whether or not we are compiling for an OptiX-based renderer.
+    bool use_optix() { return m_use_optix; }
+
+    LLVM_Util ll;
+
+protected:
+    std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
+    std::set<int> m_layers_already_run; ///< List of layers run
+    int m_num_used_layers;              ///< Number of layers actually used
+
+    double m_stat_total_llvm_time;        ///<   total time spent on LLVM
+    double m_stat_llvm_setup_time;        ///<     llvm setup time
+    double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
+    double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
+    double m_stat_llvm_jit_time;          ///<     llvm JIT time
+
+    // LLVM stuff
+    AllocationMap m_named_values;
+    std::map<const Symbol*,int> m_param_order_map;
+    llvm::Value *m_llvm_shaderglobals_ptr;
+    llvm::Value *m_llvm_groupdata_ptr;
+    llvm::Value *m_llvm_userdata_base_ptr;
+    llvm::Value *m_llvm_output_base_ptr;
+
+    llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
+    llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
+    llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
+    llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
+    llvm::PointerType *m_llvm_type_prepare_closure_func;
+    llvm::PointerType *m_llvm_type_setup_closure_func;
+    int m_llvm_local_mem;             // Amount of memory we use for locals
+
+    int m_batch_width = 1;  ///< 1 for scalar, bigger for batched shading
+    bool m_use_optix  = false;  ///< Compile for OptiX?
+};
+
+
+
+/// OSOProcessor that generates LLVM IR and JITs it to give machine
+/// code to implement a shader group that shades one point at a time.
+class BackendLLVM final : public BackendLLVMCommon {
 public:
     BackendLLVM (ShadingSystemImpl &shadingsys, ShaderGroup &group,
                 ShadingContext *context);
 
     virtual ~BackendLLVM ();
 
-    virtual void set_inst (int layer);
+    // virtual void set_inst (int layer);
 
     /// Create an llvm function for the whole shader group, JIT it,
     /// and store the llvm::Function* handle to it with the ShaderGroup.
-    virtual void run ();
+    virtual void run () override;
 
-
-    /// What LLVM debug level are we at?
-    int llvm_debug() const;
+    // int llvm_debug() const;
 
     /// Set up a bunch of static things we'll need for the whole group.
     ///
     void initialize_llvm_group ();
 
-    int layer_remap (int origlayer) const { return m_layer_remap[origlayer]; }
+    // int layer_remap (int origlayer) const { return m_layer_remap[origlayer]; }
 
     /// Create an llvm function for the current shader instance.
     /// This will end up being the group entry if 'groupentry' is true.
@@ -63,17 +317,16 @@ public:
     /// current basic block if bb==NULL).
     bool build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb=NULL);
 
-    typedef std::map<std::string, llvm::Value*> AllocationMap;
-
     void llvm_assign_initial_value (const Symbol& sym, bool force = false);
-    llvm::LLVMContext &llvm_context () const { return ll.context(); }
-    AllocationMap &named_values () { return m_named_values; }
+    // llvm::LLVMContext &llvm_context () const { return ll.context(); }
+    // AllocationMap &named_values () { return m_named_values; }
 
     /// Return an llvm::Value* corresponding to the address of the given
     /// symbol element, with derivative (0=value, 1=dx, 2=dy) and array
     /// index (NULL if it's not an array).
-    llvm::Value *llvm_get_pointer (const Symbol& sym, int deriv=0,
-                                   llvm::Value *arrayindex=NULL);
+    virtual llvm::Value*
+    llvm_get_pointer(const Symbol& sym, int deriv = 0,
+                     llvm::Value* arrayindex = nullptr) override;
 
     /// Return the llvm::Value* corresponding to the given element
     /// value, with derivative (0=value, 1=dx, 2=dy), array index (NULL
@@ -83,9 +336,11 @@ public:
     /// return the scalar -- this allows automatic casting to triples.
     /// Finally, auto-cast int<->float if requested (no conversion is
     /// performed if cast is the default of UNKNOWN).
-    llvm::Value *llvm_load_value (const Symbol& sym, int deriv,
-                                  llvm::Value *arrayindex, int component,
-                                  TypeDesc cast=TypeDesc::UNKNOWN);
+    virtual llvm::Value* llvm_load_value(const Symbol& sym, int deriv,
+                                         llvm::Value* arrayindex, int component,
+                                         TypeDesc cast         = TypeUnknown,
+                                         bool op_is_uniform    = true,
+                                         bool index_is_uniform = true) override;
 
 
     /// Given an llvm::Value* of a pointer (and the type of the data
@@ -97,17 +352,13 @@ public:
     /// and it's a scalar, return the scalar -- this allows automatic
     /// casting to triples.  Finally, auto-cast int<->float if requested
     /// (no conversion is performed if cast is the default of UNKNOWN).
-    llvm::Value *llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
-                              int deriv, llvm::Value *arrayindex,
-                              int component, TypeDesc cast=TypeDesc::UNKNOWN);
-
-    /// Just like llvm_load_value, but when both the symbol and the
-    /// array index are known to be constants.  This can even handle
-    /// pulling constant-indexed elements out of constant arrays.  Use
-    /// arrayindex==-1 to indicate that it's not an array dereference.
-    llvm::Value *llvm_load_constant_value (const Symbol& sym,
-                                           int arrayindex, int component,
-                                           TypeDesc cast=TypeDesc::UNKNOWN);
+    virtual llvm::Value* llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
+                                         int deriv, llvm::Value* arrayindex,
+                                         int component,
+                                         TypeDesc cast         = TypeUnknown,
+                                         bool op_is_uniform    = true,
+                                         bool index_is_uniform = true,
+                                         bool symbol_forced_boolean = false) override;
 
     /// llvm_load_value with non-constant component designation.  Does
     /// not work with arrays or do type casts!
@@ -126,7 +377,8 @@ public:
 
     /// Load the address of a global device-side string pointer, which may
     /// reside in a global variable, the groupdata struct, or a local value.
-    llvm::Value *llvm_load_device_string (const Symbol& sym, bool follow);
+    /// This is only used for OptiX.
+    virtual llvm::Value *llvm_load_device_string (const Symbol& sym, bool follow) override;
 
     /// Convenience function to load a string for CPU or GPU device
     llvm::Value *llvm_load_string (const Symbol& sym) {
@@ -136,12 +388,10 @@ public:
             : llvm_load_value(sym);
     }
 
-    /// Legacy version
-    ///
-    llvm::Value *loadLLVMValue (const Symbol& sym, int component=0,
-                                int deriv=0, TypeDesc cast=TypeDesc::UNKNOWN) {
-        return llvm_load_value (sym, deriv, NULL, component, cast);
-    }
+    // Legacy version
+    // llvm::Value* loadLLVMValue(const Symbol& sym, int component = 0,
+    //                            int deriv = 0, TypeDesc cast = TypeUnknown,
+    //                            bool op_is_uniform = true);
 
     /// Return an llvm::Value* that is either a scalar and derivs is
     /// false, or a pointer to sym's values (if sym is an aggregate or
@@ -244,59 +494,51 @@ public:
     int ShaderGlobalNameToIndex (ustring name);
 
     /// Return the LLVM type handle for the ShaderGlobals struct.
-    ///
-    llvm::Type *llvm_type_sg ();
+    virtual llvm::Type *llvm_type_sg () override;
 
-    /// Return the LLVM type handle for a pointer to a
-    /// ShaderGlobals struct.
-    llvm::Type *llvm_type_sg_ptr ();
+    // llvm::Type *llvm_type_sg_ptr ();
+    // llvm::Value *sg_ptr () const { return m_llvm_shaderglobals_ptr; }
 
-    /// Return the ShaderGlobals pointer.
-    ///
-    llvm::Value *sg_ptr () const { return m_llvm_shaderglobals_ptr; }
+    // Return the ShaderGlobals pointer cast as a void*.
+    // llvm::Value *sg_void_ptr () {
+    //     return ll.void_ptr (m_llvm_shaderglobals_ptr);
+    // }
 
     llvm::Type *llvm_type_closure_component ();
     llvm::Type *llvm_type_closure_component_ptr ();
 
-    /// Return the ShaderGlobals pointer cast as a void*.
-    ///
-    llvm::Value *sg_void_ptr () {
-        return ll.void_ptr (m_llvm_shaderglobals_ptr);
-    }
+    // llvm::Value *llvm_ptr_cast (llvm::Value* val, const TypeSpec &type) {
+    //     return ll.ptr_cast (val, type.simpletype());
+    // }
 
-    llvm::Value *llvm_ptr_cast (llvm::Value* val, const TypeSpec &type) {
-        return ll.ptr_cast (val, type.simpletype());
-    }
-
-    llvm::Value *llvm_void_ptr (const Symbol &sym, int deriv=0) {
-        return ll.void_ptr (llvm_get_pointer(sym, deriv));
-    }
+    // llvm::Value *llvm_void_ptr (const Symbol &sym, int deriv=0) {
+    //     return ll.void_ptr (llvm_get_pointer(sym, deriv));
+    // }
 
     /// Return the LLVM type handle for a structure of the common group
     /// data that holds all the shader params.
-    llvm::Type *llvm_type_groupdata ();
+    virtual llvm::Type* llvm_type_groupdata() override;
 
-    /// Return the LLVM type handle for a pointer to the common group
-    /// data that holds all the shader params.
-    llvm::Type *llvm_type_groupdata_ptr ();
+    // Return the LLVM type handle for a pointer to the common group
+    // data that holds all the shader params.
+    // llvm::Type* llvm_type_groupdata_ptr();
 
-    /// Return the group data pointer.
-    ///
-    llvm::Value *groupdata_ptr () const { return m_llvm_groupdata_ptr; }
+    // Return the group data pointer.
+    // llvm::Value *groupdata_ptr () const { return m_llvm_groupdata_ptr; }
 
     /// Return the group data pointer cast as a void*.
-    ///
-    llvm::Value *groupdata_void_ptr () {
-        return ll.void_ptr (m_llvm_groupdata_ptr);
-    }
+    // llvm::Value *groupdata_void_ptr () {
+    //     return ll.void_ptr (m_llvm_groupdata_ptr);
+    // }
 
-    /// Return a reference to the specified field within the group data.
-    llvm::Value *groupdata_field_ref (int fieldnum);
+    // Return a reference to the specified field within the group data.
+    // llvm::Value* groupdata_field_ref(int fieldnum);
 
-    /// Return a pointer to the specified field within the group data,
-    /// optionally cast to pointer to a particular data type.
-    llvm::Value *groupdata_field_ptr (int fieldnum,
-                                      TypeDesc type = TypeDesc::UNKNOWN);
+    // Return a pointer to the specified field within the group data,
+    // optionally cast to pointer to a particular data type.
+    // llvm::Value *groupdata_field_ptr (int fieldnum,
+    //                                   TypeDesc type = TypeUnknown,
+    //                                   bool is_uniform = true);
 
     /// Return the userdata base pointer.
     llvm::Value *userdata_base_ptr () const { return m_llvm_userdata_base_ptr; }
@@ -388,41 +630,41 @@ public:
         return llvm_call_function (name, { &A, &B, &C }, deriv_ptrs);
     }
 
-    TypeDesc llvm_typedesc (const TypeSpec &typespec) {
-        return typespec.is_closure_based()
-           ? TypeDesc(TypeDesc::PTR, typespec.arraylength())
-           : typespec.simpletype();
-    }
+    // TypeDesc llvm_typedesc (const TypeSpec &typespec) {
+    //     return typespec.is_closure_based()
+    //                ? TypeDesc(TypeDesc::PTR, typespec.arraylength())
+    //                : typespec.simpletype();
+    // }
 
-    /// Generate the appropriate llvm type definition for a TypeSpec
-    /// (this is the actual type, for example when we allocate it).
-    /// Allocates ptrs for closures.
-    llvm::Type *llvm_type (const TypeSpec &typespec) {
-        return ll.llvm_type (llvm_typedesc(typespec));
-    }
+    // Generate the appropriate llvm type definition for a TypeSpec
+    // (this is the actual type, for example when we allocate it).
+    // Allocates ptrs for closures.
+    // llvm::Type *llvm_type (const TypeSpec &typespec) {
+    //     return ll.llvm_type (llvm_typedesc(typespec));
+    // }
 
-    /// Generate the parameter-passing llvm type definition for an OSL
-    /// TypeSpec.
-    llvm::Type *llvm_pass_type (const TypeSpec &typespec);
+    // Generate the parameter-passing llvm type definition for an OSL
+    // TypeSpec.
+    // llvm::Type *llvm_pass_type (const TypeSpec &typespec);
 
-    llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
-    llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
+    // llvm::PointerType *llvm_type_prepare_closure_func() { return m_llvm_type_prepare_closure_func; }
+    // llvm::PointerType *llvm_type_setup_closure_func() { return m_llvm_type_setup_closure_func; }
 
-    /// Return the basic block of the exit for the whole instance.
-    ///
-    bool llvm_has_exit_instance_block () const {
-        return m_exit_instance_block;
-    }
+    // Return the basic block of the exit for the whole instance.
+    //
+    // bool llvm_has_exit_instance_block () const {
+    //     return m_exit_instance_block;
+    // }
 
-    /// Return the basic block of the exit for the whole instance.
-    ///
-    llvm::BasicBlock *llvm_exit_instance_block () {
-        if (! m_exit_instance_block) {
-            std::string name = Strutil::sprintf ("%s_%d_exit_", inst()->layername(), inst()->id());
-            m_exit_instance_block = ll.new_basic_block (name);
-        }
-        return m_exit_instance_block;
-    }
+    // Return the basic block of the exit for the whole instance.
+    //
+    // llvm::BasicBlock *llvm_exit_instance_block () {
+    //     if (! m_exit_instance_block) {
+    //         std::string name = Strutil::sprintf ("%s_%d_exit_", inst()->layername(), inst()->id());
+    //         m_exit_instance_block = ll.new_basic_block (name);
+    //     }
+    //     return m_exit_instance_block;
+    // }
 
     /// Check for inf/nan in all written-to arguments of the op
     void llvm_generate_debugnan (const Opcode &op);
@@ -431,54 +673,21 @@ public:
     /// Print debugging line for the op
     void llvm_generate_debug_op_printf (const Opcode &op);
 
-    llvm::Function *layer_func () const { return ll.current_function(); }
+    // llvm::Function *layer_func () const { return ll.current_function(); }
 
-    /// Call this when JITing a texture-like call, to track how many.
-    void generated_texture_call (bool handle) {
-        shadingsys().m_stat_tex_calls_codegened += 1;
-        if (handle)
-            shadingsys().m_stat_tex_calls_as_handles += 1;
-    }
+    // Call this when JITing a texture-like call, to track how many.
+    // void generated_texture_call (bool handle) {
+    //     shadingsys().m_stat_tex_calls_codegened += 1;
+    //     if (handle)
+    //         shadingsys().m_stat_tex_calls_as_handles += 1;
+    // }
 
     /// Return the mapping from symbol names to GlobalVariables.
     std::map<std::string,llvm::GlobalVariable*>& get_const_map() { return m_const_map; }
 
-    /// Return whether or not we are compiling for an OptiX-based renderer.
-    bool use_optix() { return m_use_optix; }
-
-    /// Return the userdata index for the given Symbol.  Return -1 if the Symbol
-    /// is not an input parameter or is constant and therefore doesn't have an
-    /// entry in the groupdata struct.
-    int find_userdata_index (const Symbol& sym);
-
-    LLVM_Util ll;
-
 private:
-    std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
-    std::set<int> m_layers_already_run; ///< List of layers run
-    int m_num_used_layers;              ///< Number of layers actually used
-
-    double m_stat_total_llvm_time;        ///<   total time spent on LLVM
-    double m_stat_llvm_setup_time;        ///<     llvm setup time
-    double m_stat_llvm_irgen_time;        ///<     llvm IR generation time
-    double m_stat_llvm_opt_time;          ///<     llvm IR optimization time
-    double m_stat_llvm_jit_time;          ///<     llvm JIT time
-
     // LLVM stuff
-    AllocationMap m_named_values;
-    std::map<const Symbol*,int> m_param_order_map;
-    llvm::Value *m_llvm_shaderglobals_ptr;
-    llvm::Value *m_llvm_groupdata_ptr;
-    llvm::Value *m_llvm_userdata_base_ptr;
-    llvm::Value *m_llvm_output_base_ptr;
     llvm::Value *m_llvm_shadeindex;
-    llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
-    llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
-    llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
-    llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
-    llvm::PointerType *m_llvm_type_prepare_closure_func;
-    llvm::PointerType *m_llvm_type_setup_closure_func;
-    int m_llvm_local_mem;             // Amount of memory we use for locals
 
     // A mapping from symbol names to llvm::GlobalVariables
     std::map<std::string,llvm::GlobalVariable*> m_const_map;
@@ -487,8 +696,6 @@ private:
     // detect collisions that might occur due to using the string hash to
     // create variable names.
     std::map<std::string,std::string>           m_varname_map;
-
-    bool m_use_optix;                   ///< Compile for OptiX?
 
     friend class ShadingSystemImpl;
 };

@@ -45,8 +45,8 @@ private:
 ScopeExit print_node_counts([]() {
     for (int i = 0; i < ASTNode::_last_node; ++i)
         if (node_counts[i] > 0)
-            Strutil::printf("ASTNode type %2d: %5d   (peak %5d)\n", i,
-                            node_counts[i], node_counts_peak[i]);
+            Strutil::print("ASTNode type {:2}: {:5}   (peak {:5})\n", i,
+                           node_counts[i], node_counts_peak[i]);
 });
 }  // namespace
 #endif
@@ -213,7 +213,7 @@ ASTNode::~ASTNode()
 void
 ASTNode::error_impl(string_view msg) const
 {
-    m_compiler->errorf(sourcefile(), sourceline(), "%s", msg);
+    m_compiler->errorfmt(sourcefile(), sourceline(), "{}", msg);
 }
 
 
@@ -221,7 +221,7 @@ ASTNode::error_impl(string_view msg) const
 void
 ASTNode::warning_impl(string_view msg) const
 {
-    m_compiler->warningf(sourcefile(), sourceline(), "%s", msg);
+    m_compiler->warningfmt(sourcefile(), sourceline(), "{}", msg);
 }
 
 
@@ -229,7 +229,7 @@ ASTNode::warning_impl(string_view msg) const
 void
 ASTNode::info_impl(string_view msg) const
 {
-    m_compiler->infof(sourcefile(), sourceline(), "%s", msg);
+    m_compiler->infofmt(sourcefile(), sourceline(), "{}", msg);
 }
 
 
@@ -237,7 +237,7 @@ ASTNode::info_impl(string_view msg) const
 void
 ASTNode::message_impl(string_view msg) const
 {
-    m_compiler->messagef(sourcefile(), sourceline(), "%s", msg);
+    m_compiler->messagefmt(sourcefile(), sourceline(), "{}", msg);
 }
 
 
@@ -246,12 +246,11 @@ void
 ASTNode::print(std::ostream& out, int indentlevel) const
 {
     indent(out, indentlevel);
-    out << "(" << nodetypename() << " : "
-        << "    (type: " << typespec().string() << ") "
-        << (opname() ? opname() : "") << "\n";
+    OSL::print(out, "({} :     (type: {}) {}\n", nodetypename(), typespec(),
+               (opname() ? opname() : ""));
     printchildren(out, indentlevel);
     indent(out, indentlevel);
-    out << ")\n";
+    OSL::print(out, ")\n");
 }
 
 
@@ -264,13 +263,13 @@ ASTNode::printchildren(std::ostream& out, int indentlevel) const
             continue;
         indent(out, indentlevel);
         if (childname(i))
-            out << "  " << childname(i);
+            OSL::print(out, "  {}", childname(i));
         else
-            out << "  child" << i;
-        out << ": ";
+            OSL::print(out, "  child{}", i);
+        OSL::print(out, ": ");
         if (typespec() != TypeSpec() && !child(i)->next())
-            out << " (type: " << typespec().string() << ")";
-        out << "\n";
+            OSL::print(out, " (type: {})", typespec());
+        OSL::print(out, "\n");
         printlist(out, child(i), indentlevel + 1);
     }
 }
@@ -314,11 +313,8 @@ std::string
 ASTNode::list_to_types_string(const ASTNode* node)
 {
     std::ostringstream result;
-    for (int i = 0; node; node = node->nextptr(), ++i) {
-        if (i)
-            result << ", ";
-        result << node->typespec();
-    }
+    for (int i = 0; node; node = node->nextptr(), ++i)
+        OSL::print(result, "{}{}", i ? ", " : "", node->typespec());
     return result.str();
 }
 
@@ -335,11 +331,11 @@ ASTshader_declaration::ASTshader_declaration(OSLCompilerImpl* comp, int stype,
         OSL_ASSERT(arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration* v = (ASTvariable_declaration*)arg;
         if (!v->init())
-            v->errorf("shader parameter '%s' requires a default initializer",
-                      v->name());
+            v->errorfmt("shader parameter '{}' requires a default initializer",
+                        v->name());
         if (v->is_output() && v->typespec().is_unsized_array())
-            v->errorf("shader output parameter '%s' can't be unsized array",
-                      v->name());
+            v->errorfmt("shader output parameter '{}' can't be unsized array",
+                        v->name());
     }
 }
 
@@ -358,11 +354,11 @@ void
 ASTshader_declaration::print(std::ostream& out, int indentlevel) const
 {
     indent(out, indentlevel);
-    out << "(" << nodetypename() << " " << shadertypename() << " \""
-        << m_shadername << "\"\n";
+    OSL::print(out, "({} {} \"{}\"\n", nodetypename(), shadertypename(),
+               m_shadername);
     printchildren(out, indentlevel);
     indent(out, indentlevel);
-    out << ")\n";
+    OSL::print(out, ")\n");
 }
 
 
@@ -392,13 +388,13 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
         m_sourceline = sourceline_start;
 
     if (Strutil::starts_with(name, "___"))
-        errorf("\"%s\" : sorry, can't start with three underscores", name);
+        errorfmt("\"{}\" : sorry, can't start with three underscores", name);
 
     // Get a pointer to the first of the existing symbols of that name.
     Symbol* existing_syms = comp->symtab().clash(name);
     if (existing_syms && existing_syms->symtype() != SymTypeFunction) {
-        errorf("\"%s\" already declared in this scope as a %s", name,
-               existing_syms->typespec());
+        errorfmt("\"{}\" already declared in this scope as a {}", name,
+                 existing_syms->typespec());
         // FIXME -- print the file and line of the other definition
         existing_syms = NULL;
     }
@@ -416,8 +412,8 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
         OSL_ASSERT(arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration* v = (ASTvariable_declaration*)arg;
         if (v->init())
-            v->errorf(
-                "function parameter '%s' may not have a default initializer.",
+            v->errorfmt(
+                "function parameter '{}' may not have a default initializer.",
                 v->name());
     }
 
@@ -435,16 +431,15 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
                 auto other = static_cast<ASTfunction_declaration*>(f->node());
                 if (!other || (other->statements() || other->is_builtin())) {
                     if (err.empty()) {
-                        err = Strutil::sprintf("Function '%s %s (%s)' redefined "
-                                               "in the same scope\n"
-                                               "  Previous definitions:",
-                                               type, name,
-                                               list_to_types_string(form));
+                        err = Strutil::fmt::format(
+                            "Function '{} {} ({})' redefined in the same scope\n"
+                            "  Previous definitions:",
+                            type, name, list_to_types_string(form));
                     }
                     err += "\n    ";
                     if (other) {
-                        err += Strutil::sprintf(
-                            "%s:%d",
+                        err += Strutil::fmt::format(
+                            "{}:{}",
                             OIIO::Filesystem::filename(
                                 other->sourcefile().string()),
                             other->sourceline());
@@ -454,7 +449,7 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
             }
         }
         if (!err.empty())
-            warningf("%s", err);
+            warningfmt("{}", err);
     }
 
 
@@ -519,10 +514,10 @@ void
 ASTfunction_declaration::print(std::ostream& out, int indentlevel) const
 {
     indent(out, indentlevel);
-    out << nodetypename() << " " << m_sym->mangled();
+    OSL::print(out, "{} {}", nodetypename(), m_sym->mangled());
     if (m_sym->scope())
-        out << " (" << m_sym->name() << " in scope " << m_sym->scope() << ")";
-    out << "\n";
+        OSL::print(out, " ({} in scope {})", m_sym->name(), m_sym->scope());
+    OSL::print(out, "\n");
     printchildren(out, indentlevel);
 }
 
@@ -557,23 +552,24 @@ ASTvariable_declaration::ASTvariable_declaration(OSLCompilerImpl* comp,
     m_typespec = type;
     Symbol* f  = comp->symtab().clash(name);
     if (f && !m_ismetadata) {
-        std::string e = Strutil::sprintf("\"%s\" already declared in this scope",
-                                         name.c_str());
+        std::string e
+            = Strutil::fmt::format("\"{}\" already declared in this scope",
+                                   name);
         if (f->node()) {
             std::string filename = OIIO::Filesystem::filename(
                 f->node()->sourcefile().string());
-            e += Strutil::sprintf("\n\t\tprevious declaration was at %s:%d",
-                                  filename, f->node()->sourceline());
+            e += Strutil::fmt::format("\n\t\tprevious declaration was at {}:{}",
+                                      filename, f->node()->sourceline());
         }
         if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
             // special case: only a warning for param to mask global function
-            warningf("%s", e);
+            warningfmt("{}", e);
         } else {
-            errorf("%s", e);
+            errorfmt("{}", e);
         }
     }
     if (OIIO::Strutil::starts_with(name, "___")) {
-        errorf("\"%s\" : sorry, can't start with three underscores", name);
+        errorfmt("\"{}\" : sorry, can't start with three underscores", name);
     }
     SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
                               : SymTypeLocal;
@@ -620,17 +616,15 @@ void
 ASTvariable_declaration::print(std::ostream& out, int indentlevel) const
 {
     indent(out, indentlevel);
-    out << "(" << nodetypename() << " " << m_sym->typespec().string() << " "
-        << m_sym->mangled();
+    OSL::print(out, "({} {}", nodetypename(), m_sym->mangled());
 #if 0
     if (m_sym->scope())
-        out << " (" << m_sym->name()
-                  << " in scope " << m_sym->scope() << ")";
+        OSL::print(out, " ({} in scope {})", m_sym->name(), m_sym->scope());
 #endif
-    out << "\n";
+    OSL::print(out, "\n");
     printchildren(out, indentlevel);
     indent(out, indentlevel);
-    out << ")\n";
+    OSL::print(out, ")\n");
 }
 
 
@@ -640,17 +634,17 @@ ASTvariable_ref::ASTvariable_ref(OSLCompilerImpl* comp, ustring name)
 {
     m_sym = comp->symtab().find(name);
     if (!m_sym) {
-        errorf("'%s' was not declared in this scope", name);
+        errorfmt("'{}' was not declared in this scope", name);
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
         return;
     }
     if (m_sym->symtype() == SymTypeFunction) {
-        errorf("function '%s' can't be used as a variable", name);
+        errorfmt("function '{}' can't be used as a variable", name);
         return;
     }
     if (m_sym->symtype() == SymTypeType) {
-        errorf("type name '%s' can't be used as a variable", name);
+        errorfmt("type name '{}' can't be used as a variable", name);
         return;
     }
     m_typespec = m_sym->typespec();
@@ -662,9 +656,9 @@ void
 ASTvariable_ref::print(std::ostream& out, int indentlevel) const
 {
     indent(out, indentlevel);
-    out << "(" << nodetypename()
-        << " (type: " << (m_sym ? m_sym->typespec().string() : "unknown")
-        << ") " << (m_sym ? m_sym->mangled() : m_name.string()) << ")\n";
+    OSL::print(out, "({} (type: {}) {})\n", nodetypename(),
+               m_sym ? m_sym->typespec().string() : "unknown",
+               m_sym ? m_sym->mangled() : m_name.string());
     OSL_DASSERT(nchildren() == 0);
 }
 
@@ -762,7 +756,7 @@ ASTindex::ASTindex(OSLCompilerImpl* comp, ASTNode* expr, ASTNode* index,
     }
 
     if (m_typespec.is_unknown()) {
-        errorf("indexing into non-array or non-component type");
+        errorfmt("indexing into non-array or non-component type");
     }
 }
 
@@ -827,7 +821,7 @@ ASTstructselect::find_fieldsym(int& structid, int& fieldid)
     }
 
     if (!lvtype.is_structure() && !lvtype.is_structure_array()) {
-        errorf("type '%s' does not have a member '%s'", lvtype, m_field);
+        errorfmt("type '{}' does not have a member '{}'", lvtype, m_field);
         return NULL;
     }
 
@@ -846,14 +840,14 @@ ASTstructselect::find_fieldsym(int& structid, int& fieldid)
     }
 
     if (fieldid < 0) {
-        errorf("struct type '%s' does not have a member '%s'",
-               structspec->name(), m_field);
+        errorfmt("struct type '{}' does not have a member '{}'",
+                 structspec->name(), m_field);
         return NULL;
     }
 
     const StructSpec::FieldSpec& fieldrec(structspec->field(fieldid));
-    ustring fieldsymname = ustring::sprintf("%s.%s", structsymname,
-                                            fieldrec.name);
+    ustring fieldsymname = ustring::fmtformat("{}.{}", structsymname,
+                                              fieldrec.name);
     Symbol* sym          = m_compiler->symtab().find(fieldsymname);
     return sym;
 }
@@ -914,7 +908,7 @@ ASTstructselect::print(std::ostream& out, int indentlevel) const
 {
     ASTNode::print(out, indentlevel);
     indent(out, indentlevel + 1);
-    out << "select " << field() << "\n";
+    OSL::print(out, "select {}\n", field());
 }
 
 
@@ -1029,8 +1023,8 @@ ASTNode::check_symbol_writeability(ASTNode* var, bool quiet, Symbol** dest_sym)
             *dest_sym = dest;
         if (dest->readonly()) {
             if (!quiet)
-                warningf("cannot write to non-output parameter \"%s\"",
-                         dest->name());
+                warningfmt("cannot write to non-output parameter \"{}\"",
+                           dest->name());
             // Note: Consider it only a warning to write to a non-output
             // parameter. Users who want it to be a hard error can use
             // -Werror. Writing to any other readonly symbols is a full
@@ -1038,8 +1032,8 @@ ASTNode::check_symbol_writeability(ASTNode* var, bool quiet, Symbol** dest_sym)
             return false;
         }
     } else {
-        // std::cout << "Don't know how to check_symbol_writeability "
-        //           << var->nodetypename() << "\n";
+        // OSL::print("Don't know how to check_symbol_writeability {}\n",
+        //            var->nodetypename());
     }
     return true;
 }
@@ -1298,7 +1292,7 @@ ASTfunction_call::ASTfunction_call(OSLCompilerImpl* comp, ustring name,
     , m_argtakesderivs(0)  // Default - doesn't take derivs
 {
     if (!m_sym) {
-        errorf("function '%s' was not declared in this scope", name);
+        errorfmt("function '{}' was not declared in this scope", name);
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
         return;
@@ -1307,7 +1301,7 @@ ASTfunction_call::ASTfunction_call(OSLCompilerImpl* comp, ustring name,
         return;  // It's a struct constructor
     }
     if (m_sym->symtype() != SymTypeFunction) {
-        errorf("'%s' is not a function", name);
+        errorfmt("'{}' is not a function", name);
         m_sym = NULL;
         return;
     }
@@ -1318,7 +1312,7 @@ ASTfunction_call::ASTfunction_call(OSLCompilerImpl* comp, ustring name,
 const char*
 ASTfunction_call::childname(size_t i) const
 {
-    return ustring::sprintf("param%d", (int)i).c_str();
+    return ustring::fmtformat("param{}", (int)i).c_str();
 }
 
 
@@ -1337,9 +1331,9 @@ ASTfunction_call::print(std::ostream& out, int indentlevel) const
     ASTNode::print(out, indentlevel);
 #if 0
     if (is_user_function()) {
-        out << "\n";
+        OSL::print(out, "\n");
         user_function()->print (out, indentlevel+1);
-        out << "\n";
+        OSL::print(out, "\n");
     }
 #endif
 }
@@ -1357,14 +1351,14 @@ void
 ASTliteral::print(std::ostream& out, int indentlevel) const
 {
     indent(out, indentlevel);
-    out << "(" << nodetypename() << " (type: " << m_typespec.string() << ") ";
+    OSL::print(out, "({} (type: {}) ", nodetypename(), m_typespec);
     if (m_typespec.is_int())
-        out << m_i;
+        OSL::print(out, "{}", m_i);
     else if (m_typespec.is_float())
-        out << m_f;
+        OSL::print(out, "{}", m_f);
     else if (m_typespec.is_string())
-        out << "\"" << m_s << "\"";
-    out << ")\n";
+        OSL::print(out, "\"{}\"", m_s);
+    OSL::print(out, ")\n");
 }
 
 

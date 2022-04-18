@@ -45,7 +45,11 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/ValueSymbolTable.h>
+#if OSL_LLVM_VERSION < 140
 #include <llvm/Support/TargetRegistry.h>
+#else
+#include <llvm/MC/TargetRegistry.h>
+#endif
 
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
@@ -1677,8 +1681,9 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         builder.DisableUnrollLoops = false;
         builder.SLPVectorize = false;
         builder.LoopVectorize = false;
+#if OSL_LLVM_VERSION < 140
         builder.DisableTailCalls = false;
-
+#endif
         if (target_machine)
             target_machine->adjustPassManager(builder);
 

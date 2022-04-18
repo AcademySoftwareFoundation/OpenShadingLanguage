@@ -40,7 +40,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* **[LLVM](http://www.llvm.org) 9, 10, 11, 12, or 13**, including clang
+* **[LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, or 14**, including clang
   libraries.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.78)

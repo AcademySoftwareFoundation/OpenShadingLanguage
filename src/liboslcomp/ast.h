@@ -202,37 +202,6 @@ public:
     void sourceline(int line) { m_sourceline = line; }
 
     template<typename... Args>
-    void errorf(const char* format, const Args&... args) const
-    {
-        OSL_DASSERT(format && format[0]);
-        error_impl(OIIO::Strutil::sprintf(format, args...));
-    }
-
-    /// Warning reporting
-    template<typename... Args>
-    void warningf(const char* format, const Args&... args) const
-    {
-        OSL_DASSERT(format && format[0]);
-        warning_impl(OIIO::Strutil::sprintf(format, args...));
-    }
-
-    /// info reporting
-    template<typename... Args>
-    void infof(const char* format, const Args&... args) const
-    {
-        OSL_DASSERT(format && format[0]);
-        info_impl(OIIO::Strutil::sprintf(format, args...));
-    }
-
-    /// message reporting
-    template<typename... Args>
-    void messagef(const char* format, const Args&... args) const
-    {
-        OSL_DASSERT(format && format[0]);
-        message_impl(OIIO::Strutil::sprintf(format, args...));
-    }
-
-    template<typename... Args>
     void errorfmt(const char* format, const Args&... args) const
     {
         OSL_DASSERT(format && format[0]);

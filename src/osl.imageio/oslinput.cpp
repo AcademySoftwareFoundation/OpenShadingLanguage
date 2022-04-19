@@ -340,8 +340,8 @@ compile_buffer(const std::string& sourcecode, const std::string& shadername,
         if (errhandler.haserror())
             errormessage = errhandler.geterror();
         else
-            errormessage = Strutil::sprintf("OSL: Could not compile \"%s\"",
-                                            shadername);
+            errormessage = Strutil::fmt::format("OSL: Could not compile \"{}\"",
+                                                shadername);
         return false;
     }
     // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
@@ -349,8 +349,8 @@ compile_buffer(const std::string& sourcecode, const std::string& shadername,
         if (errhandler.haserror())
             errormessage = errhandler.geterror();
         else
-            errormessage = Strutil::sprintf(
-                "OSL: Could not load compiled buffer from \"%s\"", shadername);
+            errormessage = Strutil::fmt::format(
+                "OSL: Could not load compiled buffer from \"{}\"", shadername);
         return false;
     }
     return true;
@@ -504,8 +504,8 @@ OSLInput::open(const std::string& name, ImageSpec& newspec,
                                   pv.interp() == ParamValue::INTERP_CONSTANT);
         }
         if (!shadingsys->Shader("surface", shadername, "" /*layername*/)) {
-            errorf("y %s", errhandler.haserror() ? errhandler.geterror()
-                                                 : std::string("OSL error"));
+            errorfmt("y {}", errhandler.haserror() ? errhandler.geterror()
+                                                   : std::string("OSL error"));
             ok = false;
         }
         shadingsys->ShaderGroupEnd();
@@ -517,30 +517,28 @@ OSLInput::open(const std::string& name, ImageSpec& newspec,
         OIIO::lock_guard lock(shading_mutex);
         shadername.remove_suffix(8);
         static int exprcount   = 0;
-        std::string exprname   = OIIO::Strutil::sprintf("expr_%d", exprcount++);
-        std::string sourcecode = "shader " + exprname
-                                 + " (\n"
-                                   "    float s = u [[ int lockgeom=0 ]],\n"
-                                   "    float t = v [[ int lockgeom=0 ]],\n"
-                                   "    output color result = 0,\n"
-                                   "    output float alpha = 1,\n"
-                                   "  )\n"
-                                   "{\n"
-                                   "    "
-                                 + std::string(shadername)
-                                 + "\n"
-                                   "    ;\n"
-                                   "}\n";
-        // std::cout << "Expression-based shader text is:\n---\n"
-        //           << sourcecode << "---\n";
+        std::string exprname   = OIIO::Strutil::fmt::format("expr_{}",
+                                                          exprcount++);
+        std::string sourcecode = OIIO::Strutil::fmt::format(
+            "shader {} (\n"
+            "    float s = u [[ int lockgeom=0 ]],\n"
+            "    float t = v [[ int lockgeom=0 ]],\n"
+            "    output color result = 0,\n"
+            "    output float alpha = 1,\n"
+            "  )\n"
+            "{{\n"
+            "    {}\n"
+            "    ;\n"
+            "}}\n",
+            exprname, shadername);
+        // print("Expression-based shader text is:\n---\n{}\n---\n", sourcecode);
         std::string err;
         if (!compile_buffer(sourcecode, exprname, err)) {
-            errorf("%s", err);
+            errorfmt("{}", err);
             return false;
         }
         m_group = shadingsys->ShaderGroupBegin();
-        for (size_t p = 0, np = m_topspec.extra_attribs.size(); p < np; ++p) {
-            const ParamValue& pv(m_topspec.extra_attribs[p]);
+        for (const auto& pv : m_topspec.extra_attribs) {
             shadingsys->Parameter(pv.name(), pv.type(), pv.data(),
                                   pv.interp() == ParamValue::INTERP_CONSTANT);
         }
@@ -616,7 +614,7 @@ OSLInput::read_native_scanlines(int subimage, int miplevel, int ybegin,
         return false;
 
     if (!m_group.get()) {
-        errorf("read_native_scanlines called with missing shading group");
+        errorfmt("read_native_scanlines called with missing shading group");
         return false;
     }
 
@@ -660,7 +658,7 @@ OSLInput::read_native_tiles(int subimage, int miplevel, int xbegin, int xend,
     if (!seek_subimage(subimage, miplevel))
         return false;
     if (!m_group.get()) {
-        errorf("read_native_scanlines called with missing shading group");
+        errorfmt("read_native_scanlines called with missing shading group");
         return false;
     }
 

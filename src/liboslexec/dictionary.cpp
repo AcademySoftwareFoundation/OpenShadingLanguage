@@ -156,9 +156,9 @@ Dictionary::get_document_index (ustring dictionaryname)
             parse_result = doc->load_string(dictionaryname.c_str());
         }
         if (! parse_result) {
-            m_context->errorf("XML parsed with errors: %s, at offset %d",
-                              parse_result.description(),
-                              parse_result.offset);
+            m_context->errorfmt("XML parsed with errors: {}, at offset {}",
+                                parse_result.description(),
+                                parse_result.offset);
             m_document_map[dictionaryname] = -1;
             return -1;
         }
@@ -194,8 +194,8 @@ Dictionary::dict_find (ustring dictionaryname, ustring query)
         matches = doc->select_nodes (query.c_str());
     }
     catch (const pugi::xpath_exception& e) {
-        m_context->errorf("Invalid dict_find query '%s': %s",
-                          query.c_str(), e.what());
+        m_context->errorfmt("Invalid dict_find query '{}': {}", query,
+                            e.what());
         return 0;
     }
 
@@ -241,8 +241,8 @@ Dictionary::dict_find (int nodeID, ustring query)
         matches = m_nodes[nodeID].node.select_nodes (query.c_str());
     }
     catch (const pugi::xpath_exception& e) {
-        m_context->errorf("Invalid dict_find query '%s': %s",
-                          query.c_str(), e.what());
+        m_context->errorfmt("Invalid dict_find query '{}': {}", query,
+                            e.what());
         return 0;
     }
 

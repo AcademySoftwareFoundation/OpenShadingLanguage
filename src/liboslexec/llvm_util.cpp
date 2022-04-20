@@ -1681,9 +1681,6 @@ LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
         builder.DisableUnrollLoops = false;
         builder.SLPVectorize = false;
         builder.LoopVectorize = false;
-#if OSL_LLVM_VERSION < 140
-        builder.DisableTailCalls = false;
-#endif
         if (target_machine)
             target_machine->adjustPassManager(builder);
 

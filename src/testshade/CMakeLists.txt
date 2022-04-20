@@ -60,6 +60,10 @@ if (USE_OPTIX)
              DESTINATION ${OSL_PTX_INSTALL_DIR})
 endif()
 
+set ( rs_srcs 
+    rs_simplerend.cpp )
+EMBED_LLVM_BITCODE_IN_CPP ( "${rs_srcs}" "_host" "testshade_llvm_compiled_rs" testshade_srcs "-DOSL_HOST_RS_BITCODE=1")
+
 add_executable ( testshade ${testshade_srcs} testshademain.cpp )
 
 target_link_libraries (testshade

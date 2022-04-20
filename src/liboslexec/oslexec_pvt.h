@@ -758,6 +758,8 @@ private:
     // Pre-compiled support library
     std::vector<char> m_lib_bitcode;      ///> Container for the pre-compiled library bitcode
 
+    std::vector<char> m_rs_bitcode;       ///> Container for the pre-compiled renderer services free function bitcode
+
     // Options
     int m_statslevel;                     ///< Statistics level
     bool m_lazylayers;                    ///< Evaluate layers on demand?

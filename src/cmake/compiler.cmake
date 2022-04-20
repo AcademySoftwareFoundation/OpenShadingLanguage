@@ -468,6 +468,7 @@ if (PROJECT_IS_TOP_LEVEL)
                                 "src/liboslcomp/*.cpp"
                                 "src/liboslcomp/*.h"
                                 "src/liboslexec/batched_rendservices.cpp"
+                                "src/liboslexec/rs_fallback.cpp"
                                 "src/liboslquery/*.cpp"
                                 "src/liboslquery/*.h"
                                 "src/oslinfo/*.cpp"
@@ -475,6 +476,8 @@ if (PROJECT_IS_TOP_LEVEL)
                                 "src/osl.imageio/*.cpp"
                                 "src/osltoy/*.cpp"
                                 "src/osltoy/*.h"
+                                "src/testshade/render_state.h"
+                                "src/testshade/rs_simplerend.cpp"
                                 "testsuite/*.cpp"
         CACHE STRING "Glob patterns to include for clang-format")
     set (CLANG_FORMAT_EXCLUDES

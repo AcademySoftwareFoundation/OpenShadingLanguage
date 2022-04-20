@@ -161,6 +161,7 @@ include (pythonutils)
 include (externalpackages)
 include (flexbison)
 include (cuda_macros)
+include (llvm_macros)
 
 # Include all our testing apparatus and utils, but not if it's a subproject
 if (${PROJECT_NAME}_BUILD_TESTS AND PROJECT_IS_TOP_LEVEL)

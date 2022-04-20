@@ -90,6 +90,7 @@ macro ( TESTSUITE )
     endif ()
     set (test_all_optix $ENV{TESTSUITE_OPTIX})
     set (test_all_batched $ENV{TESTSUITE_BATCHED})
+    set (test_all_rs_bitcode $ENV{TESTSUITE_RS_BITCODE})
     # Add the tests if all is well.
     set (ALL_TEST_LIST "")
     set (_testsuite "${CMAKE_SOURCE_DIR}/testsuite")
@@ -180,6 +181,25 @@ macro ( TESTSUITE )
                                    ENV TESTSHADE_OPT=0 OSL_REGRESSION_TEST=BATCHED )
             endif ()
         endif ()
+
+        # if there is an RS_BITCODE marker file in the directory.
+        if ((EXISTS "${_testsrcdir}/RS_BITCODE" OR test_all_rs_bitcode)
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/RS_BITCODE_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
+            add_one_testsuite ("${_testname}.rsbitcode.opt" "${_testsrcdir}"
+                                ENV TESTSHADE_OPT=2 TESTSHADE_RS_BITCODE=1 )
+        endif ()
+
+        # if there is an RS_BITCODE_REGRESSION marker file in the directory.
+        if (EXISTS "${_testsrcdir}/RS_BITCODE_REGRESSION" OR (
+                test_all_rs_bitcode AND EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
+            # optimized for right now
+            add_one_testsuite ("${_testname}.regress.rsbitcode.opt" "${_testsrcdir}"
+                                ENV TESTSHADE_OPT=2 OSL_REGRESSION_TEST=RS_BITCODE )
+        endif ()
+
     endforeach ()
     if (VERBOSE)
         message (STATUS "Added tests: ${ALL_TEST_LIST}")
@@ -348,5 +368,6 @@ macro (osl_add_all_tests)
         set_tests_properties (arithmetic-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
         set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
     endif ()
+    set_tests_properties (matrix-reg.regress.rsbitcode.opt PROPERTIES TIMEOUT 800)
         
 endmacro()

@@ -228,6 +228,15 @@ public:
     // Name for this TargetISA enum.
     static const char* target_isa_name(TargetISA isa);
 
+    /// Add a global mapping of a variable to its address
+    /// explicitly instead of relying on dlsym.
+    static void add_global_mapping (const char *global_var_name, void *global_var_addr);
+
+    /// Check all external global variables to ensure they have 
+    /// been mapped to an address, a vector is populated with
+    /// the names that are unmapped.
+    void validate_global_mappings (std::vector<std::string> &names_of_unmapped_globals);
+
     // For CPU compilation, inventory the host CPU capabilities. You can
     // optionally request a specific ISA by name. If `no_fma` is true,
     // specifically pretend there is no FMA capability, even if the hardware
@@ -907,6 +916,11 @@ public:
     /// Write the module's bitcode (after compilation/optimization) to a
     /// file.  If err is not NULL, errors will be deposited there.
     void write_bitcode_file (const char *filename, std::string *err=NULL);
+
+    /// Insert bitcode from another module into the current Module
+    /// returns true if successful, false otherwise. 
+    /// Ownership of the other_module is transferred.
+    bool absorb_module (std::unique_ptr<llvm::Module> other_module );
 
     /// Generate PTX for the current Module and return it as a string
     bool ptx_compile_group (llvm::Module* lib_module, const std::string& name,

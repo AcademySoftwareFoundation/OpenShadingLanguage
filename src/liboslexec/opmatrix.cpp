@@ -14,6 +14,7 @@
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/device_string.h>
+#include <OSL/rs_free_function.h>
 
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
@@ -133,20 +134,20 @@ osl_get_matrix (void *sg_, void *r, const char *from)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = (ShadingContext *)sg->context;
-    if (USTR(from) == Strings::common ||
-            USTR(from) == ctx->shadingsys().commonspace_synonym()) {
+    if (HDSTR(from) == STRING_PARAMS(common) ||
+            HDSTR(from) == ctx->shadingsys().commonspace_synonym()) {
         MAT(r).makeIdentity ();
         return true;
     }
-    if (USTR(from) == Strings::shader) {
-        ctx->renderer()->get_matrix (sg, MAT(r), sg->shader2common, sg->time);
+    if (HDSTR(from) == STRING_PARAMS(shader)) {
+        rs_get_matrix_xform_time(sg, MAT(r), sg->shader2common, sg->time);
         return true;
     }
-    if (USTR(from) == Strings::object) {
-        ctx->renderer()->get_matrix (sg, MAT(r), sg->object2common, sg->time);
+    if (HDSTR(from) == STRING_PARAMS(object)) {
+        rs_get_matrix_xform_time(sg, MAT(r), sg->object2common, sg->time);
         return true;
     }
-    int ok = ctx->renderer()->get_matrix (sg, MAT(r), USTR(from), sg->time);
+    int ok = rs_get_matrix_space_time(sg, MAT(r), HDSTR(from), sg->time);
     if (! ok) {
         MAT(r).makeIdentity();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
@@ -163,20 +164,20 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = (ShadingContext *)sg->context;
-    if (USTR(to) == Strings::common ||
-            USTR(to) == ctx->shadingsys().commonspace_synonym()) {
+    if (HDSTR(to) == STRING_PARAMS(common) ||
+            HDSTR(to) == ctx->shadingsys().commonspace_synonym()) {
         MAT(r).makeIdentity ();
         return true;
     }
-    if (USTR(to) == Strings::shader) {
-        ctx->renderer()->get_inverse_matrix (sg, MAT(r), sg->shader2common, sg->time);
+    if (HDSTR(to) == STRING_PARAMS(shader)) {
+        rs_get_inverse_matrix_xform_time(sg, MAT(r), sg->shader2common, sg->time);
         return true;
     }
-    if (USTR(to) == Strings::object) {
-        ctx->renderer()->get_inverse_matrix (sg, MAT(r), sg->object2common, sg->time);
+    if (HDSTR(to) == STRING_PARAMS(object)) {
+        rs_get_inverse_matrix_xform_time(sg, MAT(r), sg->object2common, sg->time);
         return true;
     }
-    int ok = ctx->renderer()->get_inverse_matrix (sg, MAT(r), USTR(to), sg->time);
+    int ok = rs_get_inverse_matrix_space_time(sg, MAT(r), HDSTR(to), sg->time);
     if (! ok) {
         MAT(r).makeIdentity ();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
@@ -290,15 +291,15 @@ osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
 #ifndef __CUDACC__
-    RendererServices *rend = sg->renderer;
-    if (rend->transform_points (sg, USTR(from), USTR(to), sg->time,
+    
+    if (rs_transform_points (sg, HDSTR(from), HDSTR(to), sg->time,
                                 (const Vec3 *)Pin, (Vec3 *)Pout, 1,
                                 (TypeDesc::VECSEMANTICS)vectype)) {
         // Renderer had a direct way to transform the points between the
         // two spaces.
         if (Pout_derivs) {
             if (Pin_derivs) {
-                rend->transform_points (sg, USTR(from), USTR(to), sg->time,
+                rs_transform_points (sg, HDSTR(from), HDSTR(to), sg->time,
                                         (const Vec3 *)Pin+1,
                                         (Vec3 *)Pout+1, 2, TypeDesc::VECTOR);
             } else {

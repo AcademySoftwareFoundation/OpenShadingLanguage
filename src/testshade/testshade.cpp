@@ -37,7 +37,13 @@
 #   include <OSL/batched_shaderglobals.h>
 #endif
 #include "optixgridrender.h"
+
+#include "render_state.h"
 #include "simplerend.h"
+
+
+extern int testshade_llvm_compiled_rs_size;
+extern unsigned char testshade_llvm_compiled_rs_block[];
 
 using namespace OSL;
 using OIIO::ParamValue;
@@ -110,6 +116,7 @@ static std::string localename = OIIO::Sysutil::getenv("TESTSHADE_LOCALE");
 static OIIO::ParamValueList userdata;
 static char* userdata_base_ptr = nullptr;
 static char* output_base_ptr = nullptr;
+static bool use_rs_bitcode = false; // use free function bitcode version of renderer services 
 
 
 
@@ -159,6 +166,16 @@ set_shadingsys_options ()
     if (const char *llvm_opt_env = getenv ("TESTSHADE_LLVM_OPT"))  // overrides llvm_opt
         llvm_opt = atoi(llvm_opt_env);
     shadingsys->attribute ("llvm_optimize", llvm_opt);
+
+    if (const char *use_rs_bitcode_env = getenv ("TESTSHADE_RS_BITCODE")) {
+        use_rs_bitcode = atoi(use_rs_bitcode_env);
+        }
+ 
+    if(use_rs_bitcode)
+    {
+        shadingsys->attribute("rs_bitcode", {OSL::TypeDesc::UINT8, testshade_llvm_compiled_rs_size},
+                          testshade_llvm_compiled_rs_block);
+    }
 
     shadingsys->attribute ("profile", int(profile));
     shadingsys->attribute ("lockgeom", 1);
@@ -682,6 +699,7 @@ getargs (int argc, const char *argv[])
                         "Add userdata (args: name value) (options: type=%s)",
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 "--locale %s", &localename, "Set a different locale",
+                "--use_rs_bitcode", &use_rs_bitcode, "Use free function bitcode Renderer services",
                 NULL);
     if (ap.parse(argc, argv) < 0 /*|| (shadernames.empty() && groupspec.empty())*/) {
         std::cerr << ap.geterror() << std::endl;
@@ -764,6 +782,9 @@ setup_transformations (SimpleRenderer &rend, OSL::Matrix44 &Mshad,
     rend.name_transform ("myspace", Mmyspace);
 }
 
+// NOTE:  each host thread could end up with its own RenderState.
+//        Starting simple with a single instance for now 
+static RenderState theRenderState;
 
 
 // Set up the ShaderGlobals fields for pixel (x,y).
@@ -774,9 +795,17 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     // Just zero the whole thing out to start
     memset ((char *)&sg, 0, sizeof(ShaderGlobals));
 
-    // In our SimpleRenderer, the "renderstate" itself just a pointer to
-    // the ShaderGlobals.
-    sg.renderstate = &sg;
+    if (use_rs_bitcode) {
+        // When using free function bitcode to implement renderer services,
+        // any state data they need will need to be passed here
+        // the ShaderGlobals.
+        sg.renderstate = &theRenderState;
+
+    } else {
+        // In our SimpleRenderer, the "renderstate" itself just a pointer to
+        // the ShaderGlobals.
+        sg.renderstate = &sg;
+    }
 
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.
@@ -1723,7 +1752,7 @@ test_shade (int argc, const char *argv[])
     else
 #endif
         rend = new SimpleRenderer;
-
+    
     // Other renderer and global options
     if (debug1 || verbose)
         rend->errhandler().verbosity (ErrorHandler::VERBOSE);
@@ -1817,6 +1846,11 @@ test_shade (int argc, const char *argv[])
     // Set shading sys options again, in case late-encountered command line
     // options change their values.
     set_shadingsys_options ();
+
+    if(use_rs_bitcode)
+    {
+         SimpleRenderer::register_JIT_Global_Variables();
+    }
 
     if (groupname.size())
         shadingsys->attribute (shadergroup.get(), "groupname", groupname);
@@ -1917,6 +1951,10 @@ test_shade (int argc, const char *argv[])
     synchio();
 
     rend->prepare_render ();
+    if (use_rs_bitcode) {
+        // SimpleRend to supply the required state for render service free functions
+        rend->export_state(theRenderState);
+    }
 
     double setuptime = timer.lap ();
 

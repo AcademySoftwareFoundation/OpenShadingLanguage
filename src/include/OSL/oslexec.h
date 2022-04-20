@@ -29,6 +29,11 @@ template<typename DataT, int WidthT> struct Wide;
 #endif
 
 
+/// RendererServices free function bitcode may reference global variables that
+/// only exist in the renderer's program space and won't automatically be 
+/// found when referenced in JIT'd code inside OSL.  A renderer may register
+/// the addresses of these global variables to allow valid JIT to occur.
+void register_JIT_Global(const char* global_var_name, void* global_var_addr);
 
 /// Opaque pointer to whatever the renderer uses to represent a
 /// (potentially motion-blurred) coordinate transformation.
@@ -45,9 +50,7 @@ class ShadingSystemImpl;
 }
 
 #if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
-#  define STRINGIFY(x) XSTR(x)
-#  define XSTR(x) #x
-#  define STRING_PARAMS(x)  UStringHash::Hash(STRINGIFY(x))
+#  define STRING_PARAMS(x)  UStringHash::Hash(__OSL_STRINGIFY(x))
 #else
 #  define STRING_PARAMS(x)  StringParams::x
 #endif

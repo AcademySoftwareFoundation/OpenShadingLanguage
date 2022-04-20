@@ -930,7 +930,11 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
     return false;   // Unsupported conversion
 }
 
-
+void
+register_JIT_Global (const char *global_var_name, void *global_var_addr)
+{
+    LLVM_Util::add_global_mapping(global_var_name, global_var_addr);
+}
 
 PerThreadInfo::PerThreadInfo ()
 {
@@ -1576,6 +1580,20 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
         }
         return true;
     }
+    if (name == "rs_bitcode" && type.basetype == TypeDesc::UINT8) {
+        if (type.arraylen < 0) {
+            errorfmt("Invalid bitcode size: {}", type.arraylen);
+            return false;
+        }
+        m_rs_bitcode.clear();
+        if (type.arraylen) {
+            const char* bytes = static_cast<const char*>(val);
+            std::copy(bytes, bytes + type.arraylen,
+                      back_inserter(m_rs_bitcode));
+        }
+        return true;
+    }
+
     if (name == "error_repeats") {
         // Special case: setting error_repeats also clears the "previously
         // seen" error and warning lists.

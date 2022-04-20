@@ -80,6 +80,8 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 
+#include <llvm/Support/DynamicLibrary.h>
+
 #if OSL_LLVM_VERSION >= 120
 #include <llvm/CodeGen/Passes.h>
 #endif
@@ -1620,6 +1622,11 @@ LLVM_Util::getPointerToFunction (llvm::Function *func)
 }
 
 
+void
+LLVM_Util::add_global_mapping (const char *global_var_name, void *global_var_addr)
+{
+    llvm::sys::DynamicLibrary::AddSymbol(global_var_name, global_var_addr);
+}
 
 void
 LLVM_Util::InstallLazyFunctionCreator (void* (*P)(const std::string &))
@@ -1974,6 +1981,21 @@ void
 LLVM_Util::prune_and_internalize_module (std::unordered_set<llvm::Function*> external_functions,
                     Linkage default_linkage, std::string *out_err)
 {
+    // Avoid calling global variable constructors
+    // as it is generally creates order of execution issues
+    // and difficult to support on devices.
+    // When pruning, lots of extraneous code is materialized
+    // and kept alive by global constructors that are 
+    // NEVER ACTUALLY CALLED!
+    // Should plumbing to execute the global constructors 
+    // be created, then this should be revisitted 
+    llvm::GlobalVariable *ctorgv = m_llvm_module->getGlobalVariable("llvm.global_ctors");
+    if(ctorgv==nullptr)
+    {
+        OSL_ASSERT("llvm.global_ctors not found");
+    }
+    ctorgv->eraseFromParent();
+
     // Turn tracing for pruning on locally
     #if defined(OSL_DEV)
         #define __OSL_PRUNE_ONLY(...) __VA_ARGS__
@@ -2199,6 +2221,19 @@ LLVM_Util::prune_and_internalize_module (std::unordered_set<llvm::Function*> ext
     #undef __OSL_PRUNE_ONLY
 
     m_ModuleIsPruned = true;
+}
+
+void
+LLVM_Util::validate_global_mappings(std::vector<std::string> &names_of_unmapped_globals)
+{
+    for (llvm::GlobalVariable& global : m_llvm_module->globals()) {
+        if (global.hasExternalLinkage()) {
+            void *global_addr = llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(global.getName().data());
+            if (global_addr == nullptr) {
+                names_of_unmapped_globals.push_back(global.getName().str());
+            } 
+        }
+    }
 }
 
 
@@ -5520,7 +5555,12 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
     }
 }
 
-
+bool
+LLVM_Util::absorb_module (std::unique_ptr<llvm::Module> other_module_ptr /*We claim ownership of this module */)
+{
+    bool failed = llvm::Linker::linkModules (*module(), std::move (other_module_ptr));
+    return !failed;  
+}
 
 bool
 LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,

@@ -3,7 +3,7 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 #ifndef OSL_HOST_RS_BITCODE
-#  error OSL_HOST_RS_BITCODE must be defined by your build system.
+#    error OSL_HOST_RS_BITCODE must be defined by your build system.
 #endif
 
 #include <OSL/rs_free_function.h>
@@ -14,12 +14,12 @@
 // NOTE:  C linkage with a "RS_" prefix is used to allow for unmangled
 // non-colliding global symbol names, so its easier to pass them to
 // OSL::register_JIT_Global(name, addr) for host execution
-// NOTE:  the STRING_PARAMS macro adapts to OSL_HOST_RS_BITCODE 
+// NOTE:  the STRING_PARAMS macro adapts to OSL_HOST_RS_BITCODE
 // to utilize the RS_ prefix.  RS_ prefixed versions of all OSL::Strings
 // intances have been created by rs_free_function.h, so the same STRING_PARAMS
 // macro can be used for renderer service or OSL strings.
-#define RS_STRDECL(str, var_name) extern "C" OSL::ustring RS_##var_name; 
-#include "rs_strdecls.h" 
+#define RS_STRDECL(str, var_name) extern "C" OSL::ustring RS_##var_name;
+#include "rs_strdecls.h"
 #undef RS_STRDECL
 
 

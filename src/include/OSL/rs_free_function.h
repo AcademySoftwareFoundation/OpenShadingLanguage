@@ -16,9 +16,10 @@ OSL_NAMESPACE_EXIT
 
 #ifdef OSL_HOST_RS_BITCODE
 extern "C" {
-#  define STRDECL(str, var_name) const OSL::ustring & RS_##var_name = OSL::Strings::var_name;
-#  include <OSL/strdecls.h>
-#  undef STRDECL
+#    define STRDECL(str, var_name) \
+        const OSL::ustring& RS_##var_name = OSL::Strings::var_name;
+#    include <OSL/strdecls.h>
+#    undef STRDECL
 }
 #endif
 

@@ -1981,6 +1981,7 @@ void
 LLVM_Util::prune_and_internalize_module (std::unordered_set<llvm::Function*> external_functions,
                     Linkage default_linkage, std::string *out_err)
 {
+    // WIP:  Investigating stripping global constructors and destructors
     // Avoid calling global variable constructors
     // as it is generally creates order of execution issues
     // and difficult to support on devices.
@@ -1989,12 +1990,22 @@ LLVM_Util::prune_and_internalize_module (std::unordered_set<llvm::Function*> ext
     // NEVER ACTUALLY CALLED!
     // Should plumbing to execute the global constructors 
     // be created, then this should be revisitted 
-    llvm::GlobalVariable *ctorgv = m_llvm_module->getGlobalVariable("llvm.global_ctors");
-    if(ctorgv==nullptr)
-    {
-        OSL_ASSERT("llvm.global_ctors not found");
-    }
-    ctorgv->eraseFromParent();
+    // llvm::GlobalVariable *ctors_gv = m_llvm_module->getGlobalVariable("llvm.global_ctors");
+    // if(ctors_gv!=nullptr)
+    // {
+    //     ctors_gv->eraseFromParent();
+    // } else {
+    //     // TODO: investigate if this symbol exists on Mac OS
+    //     OSL_ASSERT("llvm.global_ctors not found");
+    // }
+    // llvm::GlobalVariable *dtors_gv = m_llvm_module->getGlobalVariable("llvm.global_dtors");
+    // if(dtors_gv!=nullptr)
+    // {
+    //     dtors_gv->eraseFromParent();
+    // } else {
+    //     // TODO: investigate if this symbol exists on Mac OS
+    //     OSL_ASSERT("llvm.global_dtors not found");
+    // }
 
     // Turn tracing for pruning on locally
     #if defined(OSL_DEV)

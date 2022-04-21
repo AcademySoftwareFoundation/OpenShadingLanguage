@@ -135,10 +135,11 @@ OSLCompilerImpl::add_struct_fields(StructSpec* structspec, ustring basename,
         TypeSpec type     = field.type;
         int arr           = type.arraylength();
         if (arr && arraylen) {
-            errorf(node ? node->sourcefile() : ustring(),
-                   node ? node->sourceline() : 1,
-                   "Nested structs with >1 levels of arrays are not allowed: %s",
-                   structspec->name());
+            errorfmt(
+                node ? node->sourcefile() : ustring(),
+                node ? node->sourceline() : 1,
+                "Nested structs with >1 levels of arrays are not allowed: {}",
+                structspec->name());
         }
         if (arraylen || arr) {
             // Translate an outer array into an inner array
@@ -453,9 +454,9 @@ ASTcompound_initializer::codegen(Symbol* sym)
         return sym;
     }
 
-    errorf("Possible compiler bug: compound_initializer codegen does not "
-           "know how to handle type %s",
-           typespec());
+    errorfmt("Possible compiler bug: compound_initializer codegen does not "
+             "know how to handle type {}",
+             typespec());
     return nullptr;
 }
 
@@ -921,7 +922,7 @@ ASTNode::codegen_initlist(ref init, TypeSpec type, Symbol* sym)
         // Warn early about struct array paramters.
         // Handling this will likely need changes to oso format.
         if (type.is_structure_array()) {
-            errorf("array of struct are not allowed as parameters");
+            errorfmt("array of struct are not allowed as parameters");
             return;
         }
         // For parameter initialization, don't really generate ops if it
@@ -1511,10 +1512,10 @@ ASTbinary_expression::codegen(Symbol* dest)
         // in order to codegen this overloaded operator. Slightly tricky
         // is that we need to concatenate our left and right arguments into
         // an arg list.
-        ustring funcname = ustring::sprintf("__operator__%s__", opword());
+        ustring funcname = ustring::fmtformat("__operator__{}__", opword());
         if (left()->nextptr() || right()->nextptr()) {
-            errorf("Overloaded %s cannot be passed arguments %s and %s",
-                   funcname, left()->nodetypename(), right()->nodetypename());
+            errorfmt("Overloaded %s cannot be passed arguments {} and {}",
+                     funcname, left()->nodetypename(), right()->nodetypename());
             return dest;
         }
         ref args = left();
@@ -1994,10 +1995,10 @@ ASTfunction_call::codegen_arg(SymbolPtrVec& argdest, SymbolPtrVec& index1,
             && !equivalent(origarg->typespec(), form->typespec())
             && form->nodetype() == variable_declaration_node
             && ((ASTvariable_declaration*)form)->is_output()) {
-            errorf("Cannot pass '%s %s' as argument %d to %s\n\t"
-                   "because it is an output parameter that must be a %s",
-                   origarg->typespec(), origarg->name(), argnum + 1,
-                   user_function()->func()->name(), form->typespec());
+            errorfmt("Cannot pass '{} {}' as argument {} to {}\n\t"
+                     "because it is an output parameter that must be a %s",
+                     origarg->typespec(), origarg->name(), argnum + 1,
+                     user_function()->func()->name(), form->typespec());
         }
     }
     if (thisarg) {
@@ -2006,7 +2007,7 @@ ASTfunction_call::codegen_arg(SymbolPtrVec& argdest, SymbolPtrVec& index1,
         index2.push_back(ind2);
         index3.push_back(ind3);
     } else
-        arg->errorf("Invalid argument to function");
+        arg->errorfmt("Invalid argument to function");
 }
 
 

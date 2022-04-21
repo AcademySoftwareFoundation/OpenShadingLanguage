@@ -131,7 +131,7 @@ OSLCompilerImpl::preprocess_file(const std::string& filename,
     // Read file contents into a string
     std::string instring;
     if (!OIIO::Filesystem::read_text_file(filename, instring)) {
-        errorf(ustring(filename), 0, "Could not open \"%s\"\n", filename);
+        errorfmt(ustring(filename), 0, "Could not open \"{}\"\n", filename);
         return false;
     }
     return preprocess_buffer(instring, filename, stdoslpath, defines,
@@ -148,11 +148,11 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
                                    const std::vector<std::string>& includepaths,
                                    std::string& result)
 {
+    using OIIO::Strutil::fmt::format;
     std::string instring;
     if (!stdoslpath.empty()) {
-        instring
-            = OIIO::Strutil::sprintf("#include \"%s\"\n",
-                                     OIIO::Strutil::escape_chars(stdoslpath));
+        instring = format("#include \"{}\"\n",
+                          OIIO::Strutil::escape_chars(stdoslpath));
         // Note: because we're turning this from a regular string into a
         // double-quoted string injected into the OSL parse stream, we need
         // to fully escape any backslashes used in Windows file paths. We
@@ -217,14 +217,13 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
 
     clang::PreprocessorOptions& preprocOpts = inst.getPreprocessorOpts();
     preprocOpts.UsePredefines               = 0;
-    preprocOpts.addMacroDef(OIIO::Strutil::sprintf("OSL_VERSION_MAJOR=%d",
-                                                   OSL_LIBRARY_VERSION_MAJOR));
-    preprocOpts.addMacroDef(OIIO::Strutil::sprintf("OSL_VERSION_MINOR=%d",
-                                                   OSL_LIBRARY_VERSION_MINOR));
-    preprocOpts.addMacroDef(OIIO::Strutil::sprintf("OSL_VERSION_PATCH=%d",
-                                                   OSL_LIBRARY_VERSION_PATCH));
     preprocOpts.addMacroDef(
-        OIIO::Strutil::sprintf("OSL_VERSION=%d", OSL_LIBRARY_VERSION_CODE));
+        format("OSL_VERSION_MAJOR={}", OSL_LIBRARY_VERSION_MAJOR));
+    preprocOpts.addMacroDef(
+        format("OSL_VERSION_MINOR={}", OSL_LIBRARY_VERSION_MINOR));
+    preprocOpts.addMacroDef(
+        format("OSL_VERSION_PATCH={}", OSL_LIBRARY_VERSION_PATCH));
+    preprocOpts.addMacroDef(format("OSL_VERSION={}", OSL_LIBRARY_VERSION_CODE));
     for (auto&& d : defines) {
         if (d[1] == 'D')
             preprocOpts.addMacroDef(d.c_str() + 2);
@@ -245,7 +244,7 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
         while (preproc_errors.size()
                && preproc_errors[preproc_errors.size() - 1] == '\n')
             preproc_errors.erase(preproc_errors.size() - 1);
-        errorf(ustring(), -1, "%s", preproc_errors);
+        errorfmt(ustring(), -1, "{}", preproc_errors);
         return false;
     }
     return true;
@@ -342,8 +341,8 @@ find_stdoslpath(const std::vector<std::string>& includepaths)
 
     // If that doesn't work, look in a bunch of likely places.
 
-    std::string install_loc = OIIO::Strutil::sprintf("%s/stdosl.h",
-                                                     OSL_SHADER_INSTALL_DIR);
+    std::string install_loc
+        = OIIO::Strutil::fmt::format("{}/stdosl.h", OSL_SHADER_INSTALL_DIR);
     if (OIIO::Filesystem::exists(install_loc))
         return ustring(install_loc);
 
@@ -407,7 +406,7 @@ OSLCompilerImpl::compile(string_view filename,
                          string_view stdoslpath)
 {
     if (!OIIO::Filesystem::exists(filename)) {
-        errorf(ustring(), 0, "Input file \"%s\" not found", filename);
+        errorfmt(ustring(), 0, "Input file \"{}\" not found", filename);
         return false;
     }
 
@@ -425,7 +424,7 @@ OSLCompilerImpl::compile(string_view filename,
         stdoslpath = find_stdoslpath(includepaths);
     }
     if (stdoslpath.empty() || !OIIO::Filesystem::exists(stdoslpath))
-        warningf(ustring(filename), 0, "Unable to find \"stdosl.h\"");
+        warningfmt(ustring(filename), 0, "Unable to find \"stdosl.h\"");
     else {
         // Add the directory of stdosl.h to the include paths
         includepaths.push_back(OIIO::Filesystem::parent_path(stdoslpath));
@@ -445,7 +444,7 @@ OSLCompilerImpl::compile(string_view filename,
             if (shader())
                 shader()->typecheck();
             else
-                errorf(ustring(), 0, "No shader function defined");
+                errorfmt(ustring(), 0, "No shader function defined");
         }
 
         // Print the parse tree if there were no errors
@@ -474,8 +473,8 @@ OSLCompilerImpl::compile(string_view filename,
             OIIO::ofstream oso_output;
             OIIO::Filesystem::open(oso_output, m_output_filename);
             if (!oso_output.good()) {
-                errorf(ustring(), 0, "Could not open \"%s\"",
-                       m_output_filename);
+                errorfmt(ustring(), 0, "Could not open \"{}\"",
+                         m_output_filename);
                 return false;
             }
             OSL_DASSERT(m_osofile == nullptr);
@@ -487,8 +486,8 @@ OSLCompilerImpl::compile(string_view filename,
 
             oso_output.close();
             if (!oso_output.good()) {
-                errorf(ustring(), 0, "Failed to write to \"%s\"",
-                       m_output_filename);
+                errorfmt(ustring(), 0, "Failed to write to \"{}\"",
+                         m_output_filename);
                 return false;
             }
         }
@@ -521,7 +520,7 @@ OSLCompilerImpl::compile_buffer(string_view sourcecode, std::string& osobuffer,
         stdoslpath = find_stdoslpath(includepaths);
     }
     if (stdoslpath.empty() || !OIIO::Filesystem::exists(stdoslpath))
-        warningf(ustring(filename), 0, "Unable to find \"stdosl.h\"");
+        warningfmt(ustring(filename), 0, "Unable to find \"stdosl.h\"");
 
     std::string preprocess_result;
     if (!preprocess_buffer(sourcecode, filename, stdoslpath, defines,
@@ -537,7 +536,7 @@ OSLCompilerImpl::compile_buffer(string_view sourcecode, std::string& osobuffer,
             if (shader())
                 shader()->typecheck();
             else
-                errorf(ustring(), 0, "No shader function defined");
+                errorfmt(ustring(), 0, "No shader function defined");
         }
 
         // Print the parse tree if there were no errors
@@ -606,8 +605,9 @@ OSLCompilerImpl::write_dependency_file(string_view filename)
         if (depfile != stdout)
             fclose(depfile);
     } else {
-        errorf(ustring(), 0, "Could not open dependency file '%s' for writing",
-               m_deps_filename);
+        errorfmt(ustring(), 0,
+                 "Could not open dependency file '{}' for writing",
+                 m_deps_filename);
     }
 }
 
@@ -677,9 +677,9 @@ OSLCompilerImpl::write_oso_metadata(const ASTNode* metanode) const
     if (ok) {
         osofmt("%meta{{{},{},{}}} ", ts, metasym->name(), pdl);
     } else {
-        errorf(metanode->sourcefile(), metanode->sourceline(),
-               "Don't know how to print metadata %s (%s) with node type %s",
-               metasym->name(), ts, metavar->init()->nodetypename());
+        errorfmt(metanode->sourcefile(), metanode->sourceline(),
+                 "Don't know how to print metadata {} ({}) with node type {}",
+                 metasym->name(), ts, metavar->init()->nodetypename());
     }
 }
 
@@ -1073,7 +1073,8 @@ const char*
 OSLCompilerImpl::type_c_str(const TypeSpec& type) const
 {
     if (type.is_structure())
-        return ustring::sprintf("struct %s", type.structspec()->name()).c_str();
+        return ustring::fmtformat("struct {}", type.structspec()->name())
+            .c_str();
     else
         return type.c_str();
 }
@@ -1094,8 +1095,8 @@ OSLCompilerImpl::struct_field_pair(Symbol* sym1, Symbol* sym2, int fieldnum,
     const StructSpec::FieldSpec& field(structspec->field(fieldnum));
     // Construct mangled names that describe the symbols for the
     // individual fields
-    ustring name1 = ustring::sprintf("%s.%s", sym1->mangled(), field.name);
-    ustring name2 = ustring::sprintf("%s.%s", sym2->mangled(), field.name);
+    ustring name1 = ustring::fmtformat("{}.{}", sym1->mangled(), field.name);
+    ustring name2 = ustring::fmtformat("{}.{}", sym2->mangled(), field.name);
     // Retrieve the symbols
     field1 = symtab().find_exact(name1);
     field2 = symtab().find_exact(name2);
@@ -1111,8 +1112,8 @@ OSLCompilerImpl::struct_field_pair(const StructSpec* structspec, int fieldnum,
 {
     // Find the FieldSpec for the field we are interested in
     const StructSpec::FieldSpec& field(structspec->field(fieldnum));
-    ustring name1 = ustring::sprintf("%s.%s", sym1, field.name);
-    ustring name2 = ustring::sprintf("%s.%s", sym2, field.name);
+    ustring name1 = ustring::fmtformat("{}.{}", sym1, field.name);
+    ustring name2 = ustring::fmtformat("{}.{}", sym2, field.name);
     // Retrieve the symbols
     field1 = symtab().find_exact(name1);
     field2 = symtab().find_exact(name2);
@@ -1130,15 +1131,15 @@ OSLCompilerImpl::check_write_legality(const Opcode& op, int opnum,
 {
     // We can never write to constant symbols
     if (sym->symtype() == SymTypeConst) {
-        errorf(op.sourcefile(), op.sourceline(),
-               "Attempted to write to a constant value");
+        errorfmt(op.sourcefile(), op.sourceline(),
+                 "Attempted to write to a constant value");
     }
 
     // Params can only write if it's part of their initialization
     if (sym->symtype() == SymTypeParam
         && (opnum < sym->initbegin() || opnum >= sym->initend())) {
-        errorf(op.sourcefile(), op.sourceline(),
-               "cannot write to non-output parameter \"%s\"", sym->name());
+        errorfmt(op.sourcefile(), op.sourceline(),
+                 "cannot write to non-output parameter \"{}\"", sym->name());
     }
 }
 

@@ -232,6 +232,37 @@ public:
         message_impl(OIIO::Strutil::sprintf(format, args...));
     }
 
+    template<typename... Args>
+    void errorfmt(const char* format, const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        error_impl(OIIO::Strutil::fmt::format(format, args...));
+    }
+
+    /// Warning reporting
+    template<typename... Args>
+    void warningfmt(const char* format, const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        warning_impl(OIIO::Strutil::fmt::format(format, args...));
+    }
+
+    /// info reporting
+    template<typename... Args>
+    void infofmt(const char* format, const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        info_impl(OIIO::Strutil::fmt::format(format, args...));
+    }
+
+    /// message reporting
+    template<typename... Args>
+    void messagefmt(const char* format, const Args&... args) const
+    {
+        OSL_DASSERT(format && format[0]);
+        message_impl(OIIO::Strutil::fmt::format(format, args...));
+    }
+
     bool is_lvalue() const { return m_is_lvalue; }
 
     /// Return a reference-counted pointer to the next node in the sequence.

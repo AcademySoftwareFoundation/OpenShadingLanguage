@@ -77,6 +77,7 @@ public:
 
     /// Error reporting
     template<typename... Args>
+    OIIO_DEPRECATED("use errorfmt")
     void errorf(ustring filename, int line, const char* format,
                 const Args&... args) const
     {
@@ -93,6 +94,7 @@ public:
 
     /// Warning reporting
     template<typename... Args>
+    OIIO_DEPRECATED("use warningfmt")
     void warningf(ustring filename, int line, const char* format,
                   const Args&... args) const
     {
@@ -114,6 +116,7 @@ public:
 
     /// Info reporting
     template<typename... Args>
+    OIIO_DEPRECATED("use infofmt")
     void infof(ustring filename, int line, const char* format,
                const Args&... args) const
     {
@@ -129,6 +132,7 @@ public:
 
     /// message reporting
     template<typename... Args>
+    OIIO_DEPRECATED("use messagef")
     void messagef(ustring filename, int line, const char* format,
                   const Args&... args) const
     {

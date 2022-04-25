@@ -3,10 +3,27 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 
-set (REQUIED_DEPS "" CACHE STRING
+set (REQUIRED_DEPS "" CACHE STRING
      "Additional dependencies to consider required (semicolon-separated list, or ALL)")
 set (OPTIONAL_DEPS "" CACHE STRING
      "Additional dependencies to consider optional (semicolon-separated list, or ALL)")
+option (ALWAYS_PREFER_CONFIG "Prefer a dependency's exported config file if it's available" OFF)
+
+
+# Utility function to list the names and values of all variables matching
+# the pattern (case-insensitive)
+function (dump_matching_variables pattern)
+    string (TOLOWER ${pattern} _pattern_lower)
+    get_cmake_property(_allvars VARIABLES)
+    list (SORT _allvars)
+    foreach (_var IN LISTS _allvars)
+        string (TOLOWER ${_var} _var_lower)
+        if (_var_lower MATCHES ${_pattern_lower})
+            message (STATUS "    ${_var} = ${${_var}}")
+        endif ()
+    endforeach ()
+endfunction ()
+
 
 
 # checked_find_package(Pkgname ...) is a wrapper for find_package, with the
@@ -20,8 +37,11 @@ set (OPTIONAL_DEPS "" CACHE STRING
 #     turned off explicitly from one of these sources.
 #   * Print a message if the package is enabled but not found. This is based
 #     on ${Pkgname}_FOUND or $PKGNAME_FOUND.
-#   * Optional DEFINITIONS <string> are passed to add_definitions if the
+#   * Optional DEFINITIONS <string>... are passed to add_definitions if the
 #     package is found.
+#   * Optional SETVARIABLES <id>... is a list of CMake variables to set to
+#     TRUE if the package is found (they will not be set or changed if the
+#     package is not found).
 #   * Optional PRINT <list> is a list of variables that will be printed
 #     if the package is found, if VERBOSE is on.
 #   * Optional DEPS <list> is a list of hard dependencies; for each one, if
@@ -42,6 +62,10 @@ set (OPTIONAL_DEPS "" CACHE STRING
 #     version, accepting but warning if it is below this number (even
 #     if above the true minimum version accepted). The warning message
 #     can give an optional explanation, passed as RECOMMEND_MIN_REASON.
+#   * Optional PREFER_CONFIG, if supplied, tries to use an exported config
+#     file from the package before using a FindPackage.cmake module.
+#   * Optional DEBUG turns on extra debugging information related to how
+#     this package is found.
 #
 # N.B. This needs to be a macro, not a function, because the find modules
 # will set(blah val PARENT_SCOPE) and we need that to be the global scope,
@@ -49,16 +73,20 @@ set (OPTIONAL_DEPS "" CACHE STRING
 macro (checked_find_package pkgname)
     cmake_parse_arguments(_pkg   # prefix
         # noValueKeywords:
-        "REQUIRED"
+        "REQUIRED;PREFER_CONFIG;DEBUG"
         # singleValueKeywords:
         "ENABLE;ISDEPOF;VERSION_MIN;VERSION_MAX;RECOMMEND_MIN;RECOMMEND_MIN_REASON"
         # multiValueKeywords:
-        "DEFINITIONS;PRINT;DEPS"
+        "DEFINITIONS;PRINT;DEPS;SETVARIABLES"
         # argsToParse:
         ${ARGN})
     string (TOLOWER ${pkgname} pkgname_lower)
     string (TOUPPER ${pkgname} pkgname_upper)
-    if (NOT VERBOSE)
+    set (_pkg_VERBOSE ${VERBOSE})
+    if (_pkg_DEBUG)
+        set (_pkg_VERBOSE ON)
+    endif ()
+    if (NOT _pkg_VERBOSE)
         set (${pkgname}_FIND_QUIETLY true)
         set (${pkgname_upper}_FIND_QUIETLY true)
     endif ()
@@ -85,8 +113,19 @@ macro (checked_find_package pkgname)
             set (_quietskip true)
         endif ()
     endif ()
+    set (_config_status "")
     if (_enable OR _pkg_REQUIRED)
-        find_package (${pkgname} ${_pkg_UNPARSED_ARGUMENTS})
+        if (${pkgname}_FOUND OR ${pkgname_upper}_FOUND)
+            # was already found
+        elseif (_pkg_PREFER_CONFIG OR ALWAYS_PREFER_CONFIG)
+            find_package (${pkgname} CONFIG ${_pkg_UNPARSED_ARGUMENTS})
+            if (${pkgname}_FOUND OR ${pkgname_upper}_FOUND)
+                set (_config_status "from CONFIG")
+            endif ()
+        endif ()
+        if (NOT (${pkgname}_FOUND OR ${pkgname_upper}_FOUND))
+            find_package (${pkgname} ${_pkg_UNPARSED_ARGUMENTS})
+        endif()
         if ((${pkgname}_FOUND OR ${pkgname_upper}_FOUND)
               AND ${pkgname}_VERSION
               AND (_pkg_VERSION_MIN OR _pkg_VERSION_MAX))
@@ -106,21 +145,11 @@ macro (checked_find_package pkgname)
                     set (${pkgname}_VERSION ${${_vervar}})
                 endif ()
             endforeach ()
-            message (STATUS "${ColorGreen}Found ${pkgname} ${${pkgname}_VERSION} ${ColorReset}")
-            if (VERBOSE)
-                set (_vars_to_print ${pkgname}_INCLUDES ${pkgname_upper}_INCLUDES
-                                    ${pkgname}_INCLUDE_DIR ${pkgname_upper}_INCLUDE_DIR
-                                    ${pkgname}_INCLUDE_DIRS ${pkgname_upper}_INCLUDE_DIRS
-                                    ${pkgname}_LIBRARIES ${pkgname_upper}_LIBRARIES
-                                    ${_pkg_PRINT})
-                list (REMOVE_DUPLICATES _vars_to_print)
-                foreach (_v IN LISTS _vars_to_print)
-                    if (NOT "${${_v}}" STREQUAL "")
-                        message (STATUS "    ${_v} = ${${_v}}")
-                    endif ()
-                endforeach ()
-            endif ()
+            message (STATUS "${ColorGreen}Found ${pkgname} ${${pkgname}_VERSION} ${_config_status}${ColorReset}")
             add_definitions (${_pkg_DEFINITIONS})
+            foreach (_v IN LISTS _pkg_SETVARIABLES)
+                set (${_v} TRUE)
+            endforeach ()
             if (_pkg_RECOMMEND_MIN)
                 if (${${pkgname}_VERSION} VERSION_LESS ${_pkg_RECOMMEND_MIN})
                     message (STATUS "${ColorYellow}Recommend ${pkgname} >= ${_pkg_RECOMMEND_MIN} ${_pkg_RECOMMEND_MIN_REASON} ${ColorReset}")
@@ -148,6 +177,22 @@ macro (checked_find_package pkgname)
                 message (FATAL_ERROR "${ColorRed}${pkgname} is required, aborting.${ColorReset}")
             endif ()
         endif()
+        if (_pkg_VERBOSE AND (${pkgname}_FOUND OR ${pkgname_upper}_FOUND OR _pkg_DEBUG))
+            if (_pkg_DEBUG)
+                dump_matching_variables (${pkgname})
+            endif ()
+            set (_vars_to_print ${pkgname}_INCLUDES ${pkgname_upper}_INCLUDES
+                                ${pkgname}_INCLUDE_DIR ${pkgname_upper}_INCLUDE_DIR
+                                ${pkgname}_INCLUDE_DIRS ${pkgname_upper}_INCLUDE_DIRS
+                                ${pkgname}_LIBRARIES ${pkgname_upper}_LIBRARIES
+                                ${_pkg_PRINT})
+            list (REMOVE_DUPLICATES _vars_to_print)
+            foreach (_v IN LISTS _vars_to_print)
+                if (NOT "${${_v}}" STREQUAL "")
+                    message (STATUS "    ${_v} = ${${_v}}")
+                endif ()
+            endforeach ()
+        endif ()
     else ()
         if (NOT _quietskip)
             message (STATUS "${ColorRed}Not using ${pkgname} -- disabled ${_disablereason} ${ColorReset}")

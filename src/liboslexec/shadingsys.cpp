@@ -1150,6 +1150,8 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
 #define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
 #define TEX OpDescriptor::Tex
 #define SIDE OpDescriptor::SideEffects
+#define STRCHARS OpDescriptor::StrChars
+#define STRCREATE OpDescriptor::StrCreate
 
     // name          llvmgen              folder         simple     flags
     OP (aassign,     aassign,             aassign,       false,     0);
@@ -1180,7 +1182,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (compassign,  compassign,          compassign,    false,     0);
     OP (compl,       unary_op,            compl,         true,      0);
     OP (compref,     compref,             compref,       true,      0);
-    OP (concat,      generic,             concat,        true,      0);
+    OP (concat,      generic,             concat,        true,      STRCREATE);
     OP (continue,    loopmod_op,          none,          false,     0);
     OP (cos,         generic,             cos,           true,      0);
     OP (cosh,        generic,             none,          true,      0);
@@ -1198,7 +1200,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (Dz,          Dz,                  deriv,         true,      0);
     OP (dowhile,     loop_op,             none,          false,     0);
     OP (end,         end,                 none,          false,     0);
-    OP (endswith,    generic,             endswith,      true,      0);
+    OP (endswith,    generic,             endswith,      true,      STRCHARS);
     OP (environment, environment,         none,          true,      TEX);
     OP (eq,          compare_op,          eq,            true,      0);
     OP (erf,         generic,             erf,           true,      0);
@@ -1213,13 +1215,13 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (floor,       generic,             floor,         true,      0);
     OP (fmod,        modulus,             none,          true,      0);
     OP (for,         loop_op,             none,          false,     0);
-    OP (format,      printf,              format,        true,      0);
+    OP (format,      printf,              format,        true,      STRCREATE);
     OP (fprintf,     printf,              none,          false,     SIDE);
     OP (functioncall, functioncall,       functioncall,  false,     0);
     OP (functioncall_nr,functioncall_nr,  none,          false,     0);
     OP (ge,          compare_op,          ge,            true,      0);
     OP (getattribute, getattribute,       getattribute,  false,     0);
-    OP (getchar,      generic,            getchar,       true,      0);
+    OP (getchar,      generic,            getchar,       true,      STRCHARS);
     OP (getmatrix,   getmatrix,           getmatrix,     false,     0);
     OP (getmessage,  getmessage,          getmessage,    false,     0);
     OP (gettextureinfo, gettextureinfo,   gettextureinfo,false,     TEX);
@@ -1267,8 +1269,8 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (psnoise,     noise,               noise,         true,      0);
     OP (radians,     generic,             radians,       true,      0);
     OP (raytype,     raytype,             raytype,       true,      0);
-    OP (regex_match, regex,               none,          false,     0);
-    OP (regex_search, regex,              regex_search,  false,     0);
+    OP (regex_match, regex,               none,          false,     STRCHARS);
+    OP (regex_search, regex,              regex_search,  false,     STRCHARS);
     OP (return,      return,              none,          false,     0);
     OP (round,       generic,             none,          true,      0);
     OP (select,      select,              select,        true,      0);
@@ -1285,15 +1287,15 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (splineinverse, spline,            none,          true,      0);
     OP (split,       split,               split,         false,     0);
     OP (sqrt,        generic,             sqrt,          true,      0);
-    OP (startswith,  generic,             none,          true,      0);
+    OP (startswith,  generic,             none,          true,      STRCHARS);
     OP (step,        generic,             none,          true,      0);
-    OP (stof,        generic,             stof,          true,      0);
-    OP (stoi,        generic,             stoi,          true,      0);
-    OP (strlen,      generic,             strlen,        true,      0);
-    OP2(strtof,stof, generic,             stof,          true,      0);
-    OP2(strtoi,stoi, generic,             stoi,          true,      0);
+    OP (stof,        generic,             stof,          true,      STRCHARS);
+    OP (stoi,        generic,             stoi,          true,      STRCHARS);
+    OP (strlen,      generic,             strlen,        true,      STRCHARS);
+    OP2(strtof,stof, generic,             stof,          true,      STRCHARS);
+    OP2(strtoi,stoi, generic,             stoi,          true,      STRCHARS);
     OP (sub,         sub,                 sub,           true,      0);
-    OP (substr,      generic,             substr,        true,      0);
+    OP (substr,      generic,             substr,        true,      STRCHARS | STRCREATE);
     OP (surfacearea, get_simple_SG_field, none,          true,      0);
     OP (tan,         generic,             none,          true,      0);
     OP (tanh,        generic,             none,          true,      0);
@@ -1315,6 +1317,8 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
 #undef OP
 #undef TEX
 #undef SIDE
+#undef STRCHARS
+#undef STRCREATE
 }
 
 

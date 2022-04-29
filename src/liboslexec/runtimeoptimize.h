@@ -405,8 +405,27 @@ public:
     /// After optimization, check for things that should not be left
     /// unoptimized.
     bool police_failed_optimizations ();
-    enum { police_opt_warn = 1, police_gpu_err = 3, police_gpu_err_only = 2 };  // bit field
-    bool police(const Opcode& op, string_view msg, int type = police_opt_warn);
+    enum {  // bit field
+        police_opt_warn           = 1,
+        police_gpu_err_only       = 2,
+        police_gpu_err            = 3,
+        police_string_create_only = 4,
+        police_string_create      = 5,
+        police_string_chars_only  = 8,
+        police_string_chars       = 9
+    };
+    bool police_(int type, const Opcode& op, string_view msg);
+
+    template<typename Str, typename... Args>
+    bool police(int type, const Opcode& op, const Str& fmt, Args&&... args) {
+        return police_(type, op, fmtformat(fmt, std::forward<Args>(args)...));
+    }
+
+    template<typename Str, typename... Args>
+    bool police(const Opcode& op, const Str& fmt, Args&&... args) {
+        return police_(police_opt_warn, op,
+                       fmtformat(fmt, std::forward<Args>(args)...));
+    }
 
 private:
     int m_optimize;                   ///< Current optimization level

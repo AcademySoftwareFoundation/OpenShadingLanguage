@@ -1888,10 +1888,14 @@ test_shade (int argc, const char *argv[])
     setup_transformations (*rend, Mshad, Mobj);
 
 #ifdef OSL_USE_OPTIX
-#if (OPTIX_VERSION >= 70000)
     if (use_optix)
+    {
+        reinterpret_cast<OptixGridRenderer *> (rend)->set_transforms(Mobj, Mshad);
+        reinterpret_cast<OptixGridRenderer *> (rend)->register_named_transforms();
+#if (OPTIX_VERSION >= 70000)
         reinterpret_cast<OptixGridRenderer *> (rend)->synch_attributes();
 #endif
+    }
 #endif
 
     // Set up the image outputs requested on the command line

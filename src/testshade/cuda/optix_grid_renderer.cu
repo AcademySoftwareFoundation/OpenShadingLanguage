@@ -30,8 +30,8 @@ rtDeclareVariable (int,   flipv, , );
 // Buffers
 rtBuffer<float3,2> output_buffer;
 
-rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, void*, int)>, osl_init_func, , );
-rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, void*, int)>, osl_group_func, ,);
+rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_init_func, , );
+rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_group_func, ,);
 
 RT_PROGRAM void raygen()
 {
@@ -55,7 +55,7 @@ RT_PROGRAM void raygen()
     sg.u           = d.x * invw;
     sg.v           = d.y * invh;
     if (flipv)
-         sg.v      = 1.f - sg.v;
+        sg.v       = 1.f - sg.v;
 
     sg.dudx        = invw;
     sg.dudy        = 0;
@@ -117,13 +117,15 @@ extern "C" __global__ void __anyhit__()
 
 extern "C" __global__ void __raygen__setglobals()
 {
-
     // Set global variables
     OSL::pvt::osl_printf_buffer_start    = render_params.osl_printf_buffer_start;
     OSL::pvt::osl_printf_buffer_end      = render_params.osl_printf_buffer_end;
     OSL::pvt::s_color_system             = render_params.color_system;
     OSL::pvt::test_str_1                 = render_params.test_str_1;
     OSL::pvt::test_str_2                 = render_params.test_str_2;
+    OSL::pvt::num_named_xforms           = render_params.num_named_xforms;
+    OSL::pvt::xform_name_buffer          = render_params.xform_name_buffer;
+    OSL::pvt::xform_buffer               = render_params.xform_buffer;
 }
 extern "C" __global__ void __miss__setglobals() { }
 
@@ -182,6 +184,9 @@ extern "C" __global__ void __raygen__()
     // NB: These variables are not used in the current iteration of the sample
     sg.raytype = CAMERA;
     sg.flipHandedness = 0;
+
+    sg.shader2common = reinterpret_cast<void*>(render_params.shader2common);
+    sg.object2common = reinterpret_cast<void*>(render_params.object2common);
 
     // Pack the "closure pool" into one of the ShaderGlobals pointers
     *(int*) &closure_pool[0] = 0;

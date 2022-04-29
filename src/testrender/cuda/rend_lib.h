@@ -38,8 +38,11 @@ namespace pvt {
 extern __device__ CUdeviceptr s_color_system;
 extern __device__ CUdeviceptr osl_printf_buffer_start;
 extern __device__ CUdeviceptr osl_printf_buffer_end;
-extern __device__ uint64_t test_str_1;
-extern __device__ uint64_t test_str_2;
+extern __device__ uint64_t    test_str_1;
+extern __device__ uint64_t    test_str_2;
+extern __device__ uint64_t    num_named_xforms;
+extern __device__ CUdeviceptr xform_name_buffer;
+extern __device__ CUdeviceptr xform_buffer;
 }
 #endif
 OSL_NAMESPACE_EXIT

@@ -309,13 +309,13 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
     Wide<COLOR> wCrgb(bCrgb);
     if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
          || fromspace == STRING_PARAMS(linear) || fromspace == cs.colorspace()) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             wCrgb[lane] = C;
         }
     } else if (fromspace == STRING_PARAMS(hsv)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -324,7 +324,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(hsl)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -333,7 +333,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(YIQ)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -342,7 +342,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(XYZ)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -351,7 +351,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(xyY)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -360,7 +360,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(sRGB)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -377,13 +377,13 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
     }
     else if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
          || tospace == STRING_PARAMS(linear) || tospace == cs.colorspace()) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wCrgb[lane];
             wOutput[lane] = C;
         }
     } else if (tospace == STRING_PARAMS(hsv)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -392,7 +392,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(hsl)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -401,7 +401,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(YIQ)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -410,7 +410,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(XYZ)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -419,7 +419,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(xyY)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -428,7 +428,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(sRGB)) {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {

@@ -245,6 +245,10 @@ namespace sfm
     normalize (const Dual2<Vec3> &a)
     {
         // NOTE: using bitwise & to avoid branches
+        OIIO_PRAGMA_WARNING_PUSH
+#if OIIO_CLANG_VERSION >= 140000
+        OIIO_CLANG_PRAGMA(GCC diagnostic ignored "-Wbitwise-instead-of-logical")
+#endif
         if (OSL_UNLIKELY((a.val().x == 0.0f) & (a.val().y == 0.0f) & (a.val().z == 0.0f))) {
             return Dual2<Vec3> (Vec3(0.0f, 0.0f, 0.0f),
                                 Vec3(0.0f, 0.0f, 0.0f),
@@ -261,6 +265,7 @@ namespace sfm
                                 Vec3(ax.dx(),  ay.dx(),  az.dx() ),
                                 Vec3(ax.dy(),  ay.dy(),  az.dy() ));
         }
+        OIIO_PRAGMA_WARNING_POP
     }
 
 #if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION && !OSL_INTEL_LLVM_COMPILER_VERSION

@@ -5933,7 +5933,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
     FuncSpec func_spec("get_textureinfo_uniform");
     const char * funcName = rop.build_name(func_spec);
 
-    bool requires_binning = (!Filename.is_uniform()) | (!Dataname.is_uniform()) | use_coords;
+    bool requires_binning = (!Filename.is_uniform()) || (!Dataname.is_uniform()) || use_coords;
     if (requires_binning) {
         // Result mask starts at 0 and success is bitwise OR'd in
         llvm::Value * loc_of_successMask = rop.getTempMask("lanes succeeded to gettextureinfo");
@@ -6494,7 +6494,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
     //        binning overhead should it accidentally happen.  If Max_points ends
     //        up being varying in practice, suggest changing what is passed to
     //        RendererServices to avoid binning.
-    bool requires_binning = Filename.is_varying() | Max_points.is_varying();
+    bool requires_binning = Filename.is_varying() || Max_points.is_varying();
 
     std::vector<Symbol *> clear_derivs_of; // arguments whose derivs we need to zero at the end
     int attr_arg_offset = 5; // where the opt attrs begin
@@ -6502,7 +6502,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
     llvm::Value * sortVal = nullptr;
     if (op.nargs() > 5 && rop.opargsym(op,5)->typespec().is_int()) {
         Sort = rop.opargsym(op,5);
-        requires_binning = requires_binning | Sort->is_varying();
+        requires_binning = requires_binning || Sort->is_varying();
         sortVal = rop.llvm_load_value (*Sort, /*deriv=*/0, /*component=*/ 0, TypeDesc::UNKNOWN, Sort->is_uniform());
         ++attr_arg_offset;
     }

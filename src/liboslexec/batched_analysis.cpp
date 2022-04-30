@@ -106,6 +106,10 @@ namespace  // Unnamed
 bool
 are_op_results_always_implicitly_varying(ustring opname)
 {
+    OIIO_PRAGMA_WARNING_PUSH
+#if OIIO_CLANG_VERSION >= 140000
+    OIIO_CLANG_PRAGMA(GCC diagnostic ignored "-Wbitwise-instead-of-logical")
+#endif
     return (opname == Strings::op_getmessage) | (opname == Strings::op_trace)
            | (opname == Strings::op_texture)
            | (opname == Strings::op_texture3d)
@@ -116,6 +120,7 @@ are_op_results_always_implicitly_varying(ustring opname)
     // depending on the attribute itself, so it cannot
     // be "always" implicitly varying based solely on the opname.
     // We consider getattribute during discovery.
+    OIIO_PRAGMA_WARNING_POP
 }
 
 // Even when all inputs to an operation are varying,

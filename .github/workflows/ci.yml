@@ -41,7 +41,6 @@ jobs:
             openimageio_ver: v2.2.17.0
             python_ver: 2.7
             pybind11_ver: v2.4.2
-            setenvs: export xUSE_PYTHON=0
           - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7
             nametag: linux-clang9-llvm9
             os: ubuntu-18.04
@@ -150,7 +149,7 @@ jobs:
             python_ver: 2.7
             pybind11_ver: v2.6.2
             simd: 0
-            setenvs: export USE_PYTHON=0 PUGIXML_VERSION=v1.8
+            setenvs: export PUGIXML_VERSION=v1.8
 
     runs-on: ${{matrix.os}}
     container:
@@ -275,6 +274,23 @@ jobs:
                             LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master
+          - desc: clang14/C++17 llvm14 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512
+            nametag: linux-latest-releases
+            os: ubuntu-20.04
+            cxx_compiler: clang++
+            cc_compiler: clang
+            cxx_std: 17
+            fmt_ver: 8.1.1
+            openexr_ver: v3.1.5
+            openimageio_ver: master
+            pybind11_ver: v2.9.2
+            python_ver: 3.8
+            simd: avx2,f16c
+            batched: b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: export LLVM_VERSION=14.0.0
+                            LLVM_DISTRO_NAME=ubuntu-18.04
+                            OPENCOLORIO_VERSION=v2.1.1
+                            PUGIXML_VERSION=v1.11.4
 
     runs-on: ${{matrix.os}}
     env:

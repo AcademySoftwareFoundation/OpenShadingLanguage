@@ -8,6 +8,7 @@
 shader test (
     // Purposefully make a param that can't be constant-folded
     int frame = 1 [[ int lockgeom = 0 ]],
+    string bar = "bar" [[ int lockgeom = 0 ]],
     output color Cout = 0)
 {
     string varying_name = format("foo%04d.tif", frame);
@@ -22,6 +23,18 @@ shader test (
     {
         int exists = 0;
         gettextureinfo (varying_name, "exists", exists);
-        printf ("exists = %d", exists);
+        printf ("exists = %d\n", exists);
+    }
+
+    // Creation of strings mid-shader
+    {
+        string s = concat("foo", bar);
+        printf ("\"foo\" + bar = %s\n",s);
+    }
+
+    // Access to string characters mid-shader
+    {
+        int e = endswith(bar, "help");
+        printf ("endswith(bar,\"help\") = %d\n", e);
     }
 }

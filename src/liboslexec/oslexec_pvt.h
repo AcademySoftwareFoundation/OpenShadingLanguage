@@ -145,7 +145,15 @@ struct OpDescriptor {
           simple_assign(simple), flags(flags)
     {}
 
-    enum FlagValues { None=0, Tex=1, SideEffects=2 };
+    enum FlagValues {
+        None        = 0,
+        SideEffects = 1,
+        Tex         = 2,
+        StrCreate   = 4,   // creates strings
+        StrChars    = 8,   // accesses string characters
+        PoliceMisc  = 16,  // misc opcodes to be policed
+        Police      = Tex | StrCreate | StrChars | PoliceMisc
+    };
 };
 
 

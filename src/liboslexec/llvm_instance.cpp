@@ -1336,17 +1336,16 @@ BackendLLVM::run ()
                                                osl_llvm_compiled_rs_dependant_ops_size,
                                                "llvm_rs_dependant_ops", &err));
             if (err.length())
-                shadingcontext()->errorf("ParseBitcodeFile returned '%s'\n", err);
-
+                shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for llvm_rs_dependant_ops\n", err);
 
             std::vector<char>& rs_free_function_bitcode = shadingsys().m_rs_bitcode;
             OSL_ASSERT (rs_free_function_bitcode.size() && "Free Function bitcode is empty");
             
             llvm::Module* rs_free_functions_module =
-            ll.module_from_bitcode (static_cast<const char*>(rs_free_function_bitcode.data()),
-                                    rs_free_function_bitcode.size(), "rs_free_functions");
+                ll.module_from_bitcode (static_cast<const char*>(rs_free_function_bitcode.data()),
+                                        rs_free_function_bitcode.size(), "rs_free_functions", &err);
             if (err.length())
-                shadingcontext()->errorf("ParseBitcodeFile returned '%s'\n", err);
+                shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for rs_free_functions\n", err);
 
             std::unique_ptr<llvm::Module> rs_free_functions_module_ptr (rs_free_functions_module);
             bool success = ll.absorb_module(std::move(rs_free_functions_module_ptr));
@@ -1356,6 +1355,8 @@ BackendLLVM::run ()
             ll.module (ll.module_from_bitcode ((char*)osl_llvm_compiled_ops_block,
                                                osl_llvm_compiled_ops_size,
                                                "llvm_ops", &err));
+            if (err.length())
+                shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for llvm_ops\n", err);
         }
 
     } else {
@@ -1363,12 +1364,12 @@ BackendLLVM::run ()
         ll.module (ll.module_from_bitcode ((char*)osl_llvm_compiled_ops_cuda_block,
                                            osl_llvm_compiled_ops_cuda_size,
                                            "llvm_ops", &err));
+        if (err.length())
+            shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for cuda llvm_ops\n", err);
 #else
         OSL_ASSERT (0 && "Must generate LLVM CUDA bitcode for OptiX");
 #endif
     }
-    if (err.length())
-        shadingcontext()->errorf("ParseBitcodeFile returned '%s'\n", err);
     OSL_ASSERT (ll.module());
 #endif
 

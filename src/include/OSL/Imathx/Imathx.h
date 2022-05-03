@@ -194,12 +194,7 @@ affineInverse(const Matrix44 &m)
         }
 #else
         // NOTE: using bitwise OR to avoid C++ semantics that cannot evaluate
-        // the right hand side of logical OR unless left hand side is false.
-        // But for some compilers, need to keep them from warning.
-        OIIO_PRAGMA_WARNING_PUSH
-#if OIIO_CLANG_VERSION >= 140000
-        OIIO_CLANG_PRAGMA(GCC diagnostic ignored "-Wbitwise-instead-of-logical")
-#endif
+        // the right hand side of logical OR unless left hand side is false
         if (
             (mr <= std::abs (s.x[0][0])) |
             (mr <= std::abs (s.x[0][1])) |
@@ -213,7 +208,6 @@ affineInverse(const Matrix44 &m)
             ) {
             may_have_divided_by_zero = 1;
         }
-        OIIO_PRAGMA_WARNING_POP
 #endif
     }
 

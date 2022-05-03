@@ -12,13 +12,6 @@
 #include <OSL/mask.h>
 #include <OSL/oslconfig.h>
 
-// We frequently use bitwise & and | instead of boolean, to avoid branching.
-// Suppress warnings from that.
-#if OIIO_CLANG_VERSION >= 140000
-OIIO_CLANG_PRAGMA(GCC diagnostic ignored "-Wbitwise-instead-of-logical")
-#endif
-
-
 OSL_NAMESPACE_ENTER
 
 // template<DataT>

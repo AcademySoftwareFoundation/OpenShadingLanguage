@@ -162,6 +162,12 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
         # Don't warn about using unknown preprocessor symbols in `#if`
         add_compile_options ("-Wno-expansion-to-defined")
     endif ()
+    # Suppress warnings about our strategic use of bitwise operations in place
+    # of logical operators to produce branchless code in some places.
+    if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 14.0)
+        add_compile_options ("-Wno-bitwise-instead-of-logical")
+    endif ()
+
     # disable warning in flex-generated code
     add_compile_options ("-Wno-null-conversion")
     add_compile_options ("-Wno-error=strict-overflow")

@@ -292,13 +292,20 @@ __OSL_MASKED_OP2(prepend_color_from,Wv,Ws)
 
 namespace {
 
+// Note: Clang 14 seems to no longer allow vectorizing these loops
+#if ((OSL_GCCVERSION && OSL_CLANG_VERSION < 140000) || OSL_INTEL_CLASSIC_COMPILER_VERSION || OSL_INTEL_LLVM_COMPILER_VERSION)
+#   define WIDE_TRANSFORMC_OMP_SIMD_LOOP(...) OSL_OMP_SIMD_LOOP(__VA_ARGS__)
+#else
+#   define WIDE_TRANSFORMC_OMP_SIMD_LOOP(...)
+#endif
+
 template <typename COLOR> OSL_NOINLINE void
-wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
+wide_transformc (const ColorSystem cs, StringParam fromspace, StringParam tospace,
         Masked<COLOR> wOutput, Wide<const COLOR> wInput, ShadingContext* context);
 
 // NOTE: keep implementation as mirror of ColorSystem::transformc
 template <typename COLOR> void
-wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
+wide_transformc (const ColorSystem cs, StringParam fromspace, StringParam tospace,
         Masked<COLOR> wOutput, Wide<const COLOR> wInput, ShadingContext* context)
 {
     // Rather than attempt outer loop vectorization of ColorSystem::transformc
@@ -309,13 +316,13 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
     Wide<COLOR> wCrgb(bCrgb);
     if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
          || fromspace == STRING_PARAMS(linear) || fromspace == cs.colorspace()) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             wCrgb[lane] = C;
         }
     } else if (fromspace == STRING_PARAMS(hsv)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -324,7 +331,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(hsl)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -333,7 +340,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(YIQ)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -342,7 +349,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(XYZ)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -351,7 +358,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(xyY)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -360,7 +367,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (fromspace == STRING_PARAMS(sRGB)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
             if (wOutput.mask()[lane]) {
@@ -377,13 +384,13 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
     }
     else if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
          || tospace == STRING_PARAMS(linear) || tospace == cs.colorspace()) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wCrgb[lane];
             wOutput[lane] = C;
         }
     } else if (tospace == STRING_PARAMS(hsv)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -392,7 +399,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(hsl)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -401,7 +408,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(YIQ)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -410,7 +417,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(XYZ)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -419,7 +426,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(xyY)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -428,7 +435,7 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
             }
         }
     } else if (tospace == STRING_PARAMS(sRGB)) {
-        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
+        WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
             if (wOutput.mask()[lane]) {
@@ -449,6 +456,8 @@ wide_transformc (ColorSystem cs, StringParam fromspace, StringParam tospace,
         });
     }
 }
+
+#undef WIDE_TRANSFORMC_OMP_SIMD_LOOP
 
 } // namespace
 

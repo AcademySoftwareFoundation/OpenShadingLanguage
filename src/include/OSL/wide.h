@@ -11,7 +11,6 @@
 #include <OSL/dual_vec.h>
 #include <OSL/mask.h>
 #include <OSL/oslconfig.h>
-#include <OSL/oslclosure.h>
 
 OSL_NAMESPACE_ENTER
 

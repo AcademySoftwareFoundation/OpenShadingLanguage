@@ -311,18 +311,6 @@ template<typename DataT, int WidthT>
 struct Block<DataT*, WidthT> : public BlockOfBuiltin<DataT*, WidthT> {
 };
 
-template <int WidthT>
-struct Block<ClosureColorPtr, WidthT> : public BlockOfBuiltin<ClosureColorPtr, WidthT> {};
-
-template <int WidthT>
-struct Block<ClosureComponentPtr, WidthT> : public BlockOfBuiltin<ClosureComponentPtr, WidthT> {};
-
-template <int WidthT>
-struct Block<ClosureAddPtr, WidthT> : public BlockOfBuiltin<ClosureAddPtr, WidthT> {};
-
-template <int WidthT>
-struct Block<ClosureMulPtr, WidthT> : public BlockOfBuiltin<ClosureMulPtr, WidthT> {};
-
 
 // Vec4 isn't used by external interfaces, but some internal
 // noise functions utilize a wide version of it.

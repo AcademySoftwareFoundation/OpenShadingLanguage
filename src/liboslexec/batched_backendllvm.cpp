@@ -1777,9 +1777,9 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
             llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0, TypeDesc::UNKNOWN, op_is_uniform);
             llvm_store_value(srcval, Result, 0, arrind, 0);
         } else {
-            llvm::Value *null = ll.constant_ptr(NULL, ll.type_void_ptr());
-            if (!op_is_uniform) null = ll.widen_value(null);
-            llvm_store_value (null, Result, 0, arrind, 0);
+            llvm::Value *null_value = ll.constant_ptr(NULL, ll.type_void_ptr());
+            if (!op_is_uniform) null_value = ll.widen_value(null_value);
+            llvm_store_value (null_value, Result, 0, arrind, 0);
         }
         return true;
     }

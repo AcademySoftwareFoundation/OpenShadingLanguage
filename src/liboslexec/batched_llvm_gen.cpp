@@ -1317,7 +1317,7 @@ LLVMGEN (llvm_gen_mul)
 
         llvm::Value *valargs[5];
         valargs[0] = rop.sg_void_ptr();
-        valargs[1] = rop.llvm_void_ptr(Result, 0);
+        valargs[1] = rop.llvm_void_ptr(Result);
         bool tfloat;
         bool aIsTheClosure = A.typespec().is_closure();
         Symbol& inClosure = aIsTheClosure ? A : B ;

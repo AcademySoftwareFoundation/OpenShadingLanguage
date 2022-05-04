@@ -8,6 +8,7 @@
 
 #include <OSL/genclosure.h>
 #include <OSL/batched_shaderglobals.h>
+#include <OSL/wide.h>
 
 #include "oslexec_pvt.h"
 
@@ -25,21 +26,23 @@ __OSL_MASKED_OP(add_closure_closure) (void *bsg_, void *wide_out_,
 {
     // TODO avoid allot if !a or !b?
     auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
-    Wide<ClosureColorPtr> wide_out (wide_out_);
-    Wide<ClosureColorPtr> wide_closure_a (wide_closure_a_);
-    Wide<ClosureColorPtr> wide_closure_b (wide_closure_b_);
-    Mask mask (mask_value);
+    Mask mask(mask_value);
+    Masked<ClosureColorPtr> wide_out (wide_out_, mask);
+    Wide<const ClosureColorPtr> wide_closure_a (wide_closure_a_);
+    Wide<const ClosureColorPtr> wide_closure_b (wide_closure_b_);
     
     ClosureAdd *add = bsg->uniform.context->batched<__OSL_WIDTH>().closure_add_allot ();
 
     // Currently this is done as AOS, future work may improve this by converting to SOA
     OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+        ClosureAdd *a = &add[lane];
+        const ClosureColor* ca = wide_closure_a[lane];
+        const ClosureColor* cb = wide_closure_b[lane];
         if (mask[lane]) {
-            ClosureAdd *a = &add[lane];
             a->id = ClosureColor::ADD;
-            a->closureA = wide_closure_a[lane];
-            a->closureB = wide_closure_b[lane];
+            a->closureA = ca;
+            a->closureB = cb;
         }
     }
     
@@ -48,10 +51,8 @@ __OSL_MASKED_OP(add_closure_closure) (void *bsg_, void *wide_out_,
     // new result
     OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-        if (mask[lane]) {
-            ClosureColorPtr a = (ClosureColorPtr)&add[lane];
-            wide_out[lane] = a;
-        }
+        ClosureColorPtr a = (ClosureColorPtr)&add[lane];
+        wide_out[lane] = a;
     }
 }
 
@@ -61,21 +62,23 @@ __OSL_MASKED_OP(mul_closure_color) (void *bsg_, void *wide_out_,
 {
     auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
     // TODO avoid allot if weight = 0 or closure = null?
-    Wide<ClosureColorPtr> wide_out (wide_out_);
-    Wide<Color3>          wide_weight (wide_weight_);
-    Wide<ClosureColorPtr> wide_closure_a (wide_closure_a_);
     Mask mask(mask_value);
-
+    Masked<ClosureColorPtr> wide_out (wide_out_, mask);
+    Wide<const Color3> wide_weight (wide_weight_);
+    Wide<const ClosureColorPtr> wide_closure_a (wide_closure_a_);
+    
     ClosureMul *mul = bsg->uniform.context->batched<__OSL_WIDTH>().closure_mul_allot();
 
     // Currently this is done as AOS, future work may improve this by converting to SOA
     OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-         if (mask[lane]) {
-           ClosureMul *m = &mul[lane];
-           m->id = ClosureColor::MUL;
-           m->weight = wide_weight[lane];
-           m->closure = wide_closure_a[lane];
+        ClosureMul *m = &mul[lane];
+        const Color3 w = wide_weight[lane];
+        const ClosureColor* ca = wide_closure_a[lane]; 
+        if (mask[lane]) {
+            m->id = ClosureColor::MUL;
+            m->weight = w;
+            m->closure = ca;
         }
     }
     
@@ -84,10 +87,8 @@ __OSL_MASKED_OP(mul_closure_color) (void *bsg_, void *wide_out_,
     // new result
     OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-        if (mask[lane]) {
-            ClosureColorPtr m = (ClosureColorPtr)&mul[lane];
-            wide_out[lane] = m;
-        }
+        ClosureColorPtr m = (ClosureColorPtr)&mul[lane];
+        wide_out[lane] = m;
     }
 }
 
@@ -98,22 +99,24 @@ __OSL_MASKED_OP(mul_closure_float) (void *bsg_, void *wide_out_,
 {
     auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
     // TODO avoid allot if weight = 0 or closure = null?
-    Wide<ClosureColorPtr> wide_out (wide_out_);
-    Wide<float>           wide_weight (wide_weight_);
-    Wide<ClosureColorPtr> wide_closure_a (wide_closure_a_);
     Mask mask(mask_value);
+    Masked<ClosureColorPtr> wide_out (wide_out_, mask);
+    Wide<const float> wide_weight (wide_weight_);
+    Wide<const ClosureColorPtr> wide_closure_a (wide_closure_a_);
 
     ClosureMul *mul = bsg->uniform.context->batched<__OSL_WIDTH>().closure_mul_allot ();
 
     // Currently this is done as AOS, future work may improve this by converting to SOA
     OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+        ClosureMul *m = &mul[lane];
+        const float w = wide_weight[lane];
+        const Color3 weight(w, w, w);
+        const ClosureColor* ca = wide_closure_a[lane]; 
         if (mask[lane]) {
-           ClosureMul *m = &mul[lane];
-           m->id = ClosureColor::MUL;
-           float w = wide_weight[lane];
-           m->weight.setValue (w,w,w);
-           m->closure = wide_closure_a[lane];
+            m->id = ClosureColor::MUL;
+            m->weight = weight;
+            m->closure = ca;
         }
     }
     
@@ -122,15 +125,13 @@ __OSL_MASKED_OP(mul_closure_float) (void *bsg_, void *wide_out_,
     // new result
     OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-        if (mask[lane]) {
-            ClosureColorPtr m = (ClosureColorPtr)&mul[lane];
-            wide_out[lane] = m;
-        }
+        ClosureColorPtr m = (ClosureColorPtr)&mul[lane];
+        wide_out[lane] = m;
     }
 }
 
 
-void init_closure_component(Masked<ClosureComponentPtr> &wComp, int id, int size, Wide<Color3> wWeight, ClosureComponent* comp_mem)
+void init_closure_component(Masked<ClosureComponentPtr> &wComp, int id, int size, Wide<const Color3> wWeight, ClosureComponent* comp_mem)
 {
 
     constexpr int alignment = alignof(ClosureComponent);
@@ -138,11 +139,12 @@ void init_closure_component(Masked<ClosureComponentPtr> &wComp, int id, int size
     // Currently this is done as AOS, future work may improve this by converting to SOA
     OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
     for(int lane = 0; lane < __OSL_WIDTH; ++lane) {
+        ClosureComponent * comp = (ClosureComponent *)((char*)comp_mem + lane * stride);
+        const Color3 w = wWeight[lane];
         if (wComp.mask()[lane]) {
-            ClosureComponent * comp = (ClosureComponent *)((char*)comp_mem + lane * stride);
             wComp[lane] = comp;
             comp->id = id;
-            comp->w = wWeight[lane];
+            comp->w = w;
         }
     }
 }
@@ -155,7 +157,7 @@ __OSL_MASKED_OP(allocate_closure_component) (void *bsg_, void *wide_out_, int id
     Masked<ClosureComponentPtr> wComp(wide_out_, Mask(mask_value));
     Block<Color3> one_block;
     assign_all(one_block, Color3(1.0f));
-    Wide<Color3> wWeight (&one_block);
+    Wide<const Color3> wWeight (&one_block);
     ClosureComponent *comp_mem = bsg->uniform.context->batched<__OSL_WIDTH>().closure_component_allot (size);
     init_closure_component (wComp, id, size, wWeight, comp_mem);
 }
@@ -167,7 +169,7 @@ __OSL_MASKED_OP(allocate_weighted_closure_component) (void *bsg_, void *wide_out
     // TODO return nullptr if all are 0 or masked?
     auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
     Masked<ClosureComponentPtr> wComp (wide_out_, Mask(mask_value));
-    Wide<Color3> wWeight (wide_weight_);
+    Wide<const Color3> wWeight (wide_weight_);
     ClosureComponent *comp_mem = bsg->uniform.context->batched<__OSL_WIDTH>().closure_component_allot (size);
     init_closure_component (wComp, id, size, wWeight, comp_mem);
 }

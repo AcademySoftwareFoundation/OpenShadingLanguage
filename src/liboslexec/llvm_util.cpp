@@ -2549,7 +2549,7 @@ LLVM_Util::type_ptr (llvm::Type *type)
 llvm::Type *
 LLVM_Util::type_wide(llvm::Type *type)
 {
-    return llvm::VectorType::get(type, m_vector_width);
+    return llvm_vector_type(type, m_vector_width);
 }
 
 

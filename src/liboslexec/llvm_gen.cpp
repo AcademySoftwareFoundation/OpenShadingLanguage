@@ -423,12 +423,12 @@ LLVMGEN (llvm_gen_printf)
         Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
         format_ustring = s;
         sym.set_dataptr(SymArena::Absolute, &format_ustring);
-        call_args[new_format_slot] = rop.llvm_load_device_string (sym, /*follow*/ true);
+        call_args[new_format_slot] = rop.ll.int_to_ptr_cast (rop.llvm_load_device_string (sym, /*follow*/ true));
 #else
         // Make sure host has the format string so it can print it
         format_ustring = s;
         rop.shadingsys().renderer()->register_string (format_ustring.string(), "");
-        call_args[new_format_slot] = rop.ll.constant64 (format_ustring.hash());
+        call_args[new_format_slot] = rop.ll.int_to_ptr_cast (rop.ll.constant64 (format_ustring.hash()));
 #endif
         size_t nargs = call_args.size() - (new_format_slot+1);
         // Allocate space to store the arguments to osl_printf().
@@ -444,7 +444,7 @@ LLVMGEN (llvm_gen_printf)
         {
             llvm::Value* args_size = rop.ll.constant64(optix_size);
             llvm::Value* memptr = rop.ll.offset_ptr (voids, 0);
-            llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_int_ptr());
+            llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_longlong_ptr());
             rop.ll.op_store (args_size, iptr);
         }
         optix_size = sizeof(uint64_t);  // first 'args' element is the size of the argument list
@@ -1562,11 +1562,28 @@ LLVMGEN (llvm_gen_construct_triple)
             vectype = TypeDesc::VECTOR;
         else if (op.opname() == "normal")
             vectype = TypeDesc::NORMAL;
+
+        llvm::Value *from_arg = nullptr;
+        llvm::Value *to_arg   = nullptr;
+        if (! rop.use_optix()) {
+            from_arg = rop.llvm_load_value(Space);
+            to_arg   = rop.ll.constant(Strings::common);
+        } else {
+            // Create a Symbol for Strings::common. The symbol name isn't important,
+            // since a new name will be created based on the string hash.
+            //
+            // TODO: This pattern is used elsewhere (e.g., in llvm_assign_initial_value),
+            //       so it might make sense to refactor it.
+            Symbol to_sym(ustring("Strings__common"), TypeDesc::TypeString, SymTypeConst);
+            to_sym.set_dataptr(SymArena::Absolute, (void *)&Strings::common);
+            from_arg = rop.llvm_load_device_string(Space, /*follow*/ true);
+            to_arg   = rop.llvm_load_device_string(to_sym, /*follow*/ true);
+        }
+
         llvm::Value *args[] = { rop.sg_void_ptr(),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
-            rop.llvm_load_value(Space), rop.ll.constant(Strings::common),
-            rop.ll.constant((int)vectype) };
+            from_arg, to_arg, rop.ll.constant((int)vectype) };
         RendererServices *rend (rop.shadingsys().renderer());
         if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
             // renderer potentially knows about a nonlinear transformation.

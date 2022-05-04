@@ -43,8 +43,8 @@ rtDeclareVariable (float,      t_hit,        rtIntersectionDistance, );
 rtBuffer<float3,2> output_buffer;
 
 // Function pointers for the OSL shader
-rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, void*, int)>, osl_init_func, , );
-rtDeclareVariable (rtCallableProgramId<void (void*, void*, void*, void*, int)>, osl_group_func, ,);
+rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_init_func, , );
+rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_group_func, ,);
 
 RT_PROGRAM void any_hit_shadow()
 {

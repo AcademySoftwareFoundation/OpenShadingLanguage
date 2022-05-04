@@ -6,6 +6,7 @@
 #include <optix_device.h>
 #if (OPTIX_VERSION < 70000)
 #include <optix_math.h>
+#include <optixu/optixu_matrix_namespace.h>
 #else
 #define OPTIX_COMPATIBILITY 7
 #include <optix_device.h>
@@ -21,6 +22,13 @@ rtDeclareVariable (uint2, launch_index, rtLaunchIndex, );
 rtDeclareVariable (uint2, launch_dim,   rtLaunchDim, );
 rtDeclareVariable (char*, test_str_1, , );
 rtDeclareVariable (char*, test_str_2, , );
+
+// N.B. These will be cast to OSL::Matrix44 variables when used.
+rtDeclareVariable (optix::Matrix4x4, object2common, , );
+rtDeclareVariable (optix::Matrix4x4, shader2common, , );
+
+rtBuffer<uint64_t>         xform_name_buffer;
+rtBuffer<optix::Matrix4x4> xform_buffer;
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
@@ -357,19 +365,37 @@ extern "C" {
     int osl_get_matrix (void *sg_, void *r, const char *from)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(from) == STRING_PARAMS(common) ||
-            //HDSTR(from) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(from) == STRING_PARAMS(shader))
+        if (HDSTR(from) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(from) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(&object2common);
+            return true;
         }
+        if (HDSTR(from) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(&shader2common);
+            return true;
+        }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < xform_name_buffer.size(); ++idx ) {
+            if (HDSTR(from) == HDSTR(xform_name_buffer[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = MAT(&xform_buffer[match_idx]);
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {
@@ -383,19 +409,40 @@ extern "C" {
     int osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(to) == STRING_PARAMS(common) ||
-            //HDSTR(to) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(to) == STRING_PARAMS(shader))
+        if (HDSTR(to) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(to) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(&object2common);
+            MAT(r).invert();
+            return true;
         }
+        if (HDSTR(to) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(&shader2common);
+            MAT(r).invert();
+            return true;
+        }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < xform_name_buffer.size(); ++idx ) {
+            if (HDSTR(to) == HDSTR(xform_name_buffer[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = MAT(&xform_buffer[match_idx]);
+            MAT(r).invert();
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {
@@ -412,11 +459,14 @@ extern "C" {
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
-__device__ CUdeviceptr s_color_system           = 0;
-__device__ CUdeviceptr osl_printf_buffer_start  = 0;
-__device__ CUdeviceptr osl_printf_buffer_end    = 0;
-__device__ uint64_t test_str_1 = 0;
-__device__ uint64_t test_str_2 = 0;
+__device__ CUdeviceptr s_color_system          = 0;
+__device__ CUdeviceptr osl_printf_buffer_start = 0;
+__device__ CUdeviceptr osl_printf_buffer_end   = 0;
+__device__ uint64_t test_str_1                 = 0;
+__device__ uint64_t test_str_2                 = 0;
+__device__ uint64_t num_named_xforms           = 0;
+__device__ CUdeviceptr xform_name_buffer       = 0;
+__device__ CUdeviceptr xform_buffer            = 0;
 }
 OSL_NAMESPACE_EXIT
 
@@ -781,19 +831,37 @@ extern "C" {
     int osl_get_matrix (void *sg_, void *r, const char *from)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(from) == STRING_PARAMS(common) ||
-            //HDSTR(from) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(from) == STRING_PARAMS(shader))
+        if (HDSTR(from) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(from) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(sg->object2common);
+            return true;
         }
+        if (HDSTR(from) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(sg->shader2common);
+            return true;
+        }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < OSL::pvt::num_named_xforms; ++idx ) {
+            if (HDSTR(from) == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = reinterpret_cast<OSL::Matrix44*>(OSL::pvt::xform_buffer)[match_idx];
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {
@@ -807,18 +875,39 @@ extern "C" {
     int osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        if (HDSTR(to) == STRING_PARAMS(common) ||
-            //HDSTR(to) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(to) == STRING_PARAMS(shader))
+        if (HDSTR(to) == STRING_PARAMS(common))
         {
-            MAT(r).makeIdentity ();
+            MAT(r).makeIdentity();
             return true;
         }
         if (HDSTR(to) == STRING_PARAMS(object))
         {
-            // TODO: Implement transform
-            return false;
+            MAT(r) = MAT(sg->object2common);
+            MAT(r).invert();
+            return true;
         }
+        if (HDSTR(to) == STRING_PARAMS(shader))
+        {
+            MAT(r) = MAT(sg->shader2common);
+            MAT(r).invert();
+            return true;
+        }
+
+        // Find the index of the named transform in the transform list
+        int match_idx = -1;
+        for( size_t idx = 0; idx < OSL::pvt::num_named_xforms; ++idx ) {
+            if (HDSTR(to) == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
+                match_idx = static_cast<int>(idx);
+                break;
+            }
+        }
+        // Return the transform if there is a match
+        if (match_idx >= 0 ) {
+            MAT(r) = reinterpret_cast<OSL::Matrix44*>(OSL::pvt::xform_buffer)[match_idx];
+            MAT(r).invert();
+            return true;
+        }
+
         int ok = false; // TODO: Implement transform
         if (!ok)
         {

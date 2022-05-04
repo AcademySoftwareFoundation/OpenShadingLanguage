@@ -106,7 +106,6 @@ using OIIO::ustringHash;
 using OIIO::string_view;
 using OIIO::span;
 using OIIO::cspan;
-using OIIO::Strutil::print;
 
 using OIIO::TypeDesc;
 using OIIO::TypeUnknown;
@@ -122,6 +121,16 @@ using OIIO::TypeInt;
 using OIIO::TypeFloat2;
 using OIIO::TypeVector2;
 using OIIO::TypeVector4;
+
+using OIIO::Strutil::print;
+
+template<typename Str, typename... Args>
+OSL_NODISCARD inline std::string
+fmtformat(const Str& fmt, Args&&... args)
+{
+    return OIIO::Strutil::fmt::format(fmt, std::forward<Args>(args)...);
+}
+
 
 
 // N.B. SymArena is not really "configuration", but we cram it here for

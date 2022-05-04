@@ -2,12 +2,30 @@ Compiled test.osl -> test.oso
 WARNING: Optimization warning:
   group:  MyGroup
   layer:  TestLayer
-  source: test.osl:17
-  issue:  texture(): texture name cannot be reduced to a constant.
+  source: test.osl:14
+  issue:  format(): new string creation couldn't be optimized to a constant.
 WARNING: Optimization warning:
   group:  MyGroup
   layer:  TestLayer
-  source: test.osl:24
-  issue:  gettextureinfo(): texture name cannot be reduced to a constant.
+  source: test.osl:18
+  issue:  texture(): texture name cannot be converted to a handle.
+WARNING: Optimization warning:
+  group:  MyGroup
+  layer:  TestLayer
+  source: test.osl:25
+  issue:  gettextureinfo(): texture name cannot be converted to a handle.
+WARNING: Optimization warning:
+  group:  MyGroup
+  layer:  TestLayer
+  source: test.osl:31
+  issue:  concat(): new string creation couldn't be optimized to a constant.
+WARNING: Optimization warning:
+  group:  MyGroup
+  layer:  TestLayer
+  source: test.osl:37
+  issue:  endswith(): need for string characters couldn't be optimized away.
 C = 1 0 0
 exists = 0
+"foo" + bar = foobar
+endswith(bar,"help") = 0
+

@@ -7,11 +7,20 @@ file(GLOB testrender_srcs *.cpp)
 
 if (USE_OPTIX)
     set (testrender_cuda_srcs
-         cuda/quad.cu
-         cuda/optix_raytracer.cu
-         cuda/sphere.cu
-         cuda/wrapper.cu
-         cuda/rend_lib.cu )
+        cuda/quad.cu
+        cuda/optix_raytracer.cu
+        cuda/sphere.cu
+        cuda/wrapper.cu )
+
+    # We only need to generate the PTX for rend_lib.cu if we are using OptiX 7.0+.
+    # Some of OptiX 6 device functions defined in rend_lib.cu cannot be compiled
+    # with NVCC, they must be compiled with clang using the LLVM_COMPILE_CUDA macro.
+    if (OPTIX_VERSION VERSION_GREATER_EQUAL 7)
+        list (APPEND testshade_cuda_srcs cuda/rend_lib.cu)
+    endif ()
+
+    # We need to make sure that the PTX files are regenerated whenever these
+    # headers change.
     set (testrender_cuda_headers
          cuda/rend_lib.h )
 
@@ -26,7 +35,7 @@ if (USE_OPTIX)
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testrender_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} ptx_generated "" )
+        NVCC_COMPILE ( ${cudasrc} "" ptx_generated "" )
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 

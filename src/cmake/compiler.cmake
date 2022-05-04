@@ -518,7 +518,7 @@ if (PROJECT_IS_TOP_LEVEL)
         # message (STATUS "clang-format file list: ${FILES_TO_FORMAT}")
         file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/.clang-format
               DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-        add_custom_target (clang-format
+        add_custom_target (run-clang-format
             COMMAND "${CLANG_FORMAT_EXE}" -i -style=file ${FILES_TO_FORMAT} )
     else ()
         message (STATUS "clang-format not found.")

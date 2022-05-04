@@ -3310,25 +3310,25 @@ RuntimeOptimizer::run ()
 
 
 bool
-RuntimeOptimizer::police(const Opcode& op, string_view msg, int type)
+RuntimeOptimizer::police_(int type, const Opcode& op, string_view msg)
 {
     if ((type & police_gpu_err) && shadingsys().m_gpu_opt_error) {
-        shadingcontext()->errorf("Optimization error for GPUs:\n"
-                                 "  group:  %s\n"
-                                 "  layer:  %s\n"
-                                 "  source: %s:%d\n"
-                                 "  issue:  %s",
-                                 group().name(), inst()->layername(),
-                                 op.sourcefile(), op.sourceline(), msg);
-        return true;
-    } else if ((type & police_opt_warn) && shadingsys().m_opt_warnings) {
-        shadingcontext()->warningf("Optimization warning:\n"
-                                   "  group:  %s\n"
-                                   "  layer:  %s\n"
-                                   "  source: %s:%d\n"
-                                   "  issue:  %s",
+        shadingcontext()->errorfmt("Optimization error for GPUs:\n"
+                                   "  group:  {}\n"
+                                   "  layer:  {}\n"
+                                   "  source: {}:{}\n"
+                                   "  issue:  {}",
                                    group().name(), inst()->layername(),
                                    op.sourcefile(), op.sourceline(), msg);
+        return true;
+    } else if ((type & police_opt_warn) && shadingsys().m_opt_warnings) {
+        shadingcontext()->warningfmt("Optimization warning:\n"
+                                     "  group:  {}\n"
+                                     "  layer:  {}\n"
+                                     "  source: {}:{}\n"
+                                     "  issue:  {}",
+                                     group().name(), inst()->layername(),
+                                     op.sourcefile(), op.sourceline(), msg);
     }
     return false;
 }
@@ -3354,8 +3354,7 @@ RuntimeOptimizer::check_for_error_calls(bool warn)
             if (op.opname() == Strings::error) {
                 inst()->has_error_op(true);
                 if (warn)
-                    err |= police (op, "error() call present in optimized shader.",
-                                   police_opt_warn);
+                    err |= police(op, "error() call present in optimized shader.");
             }
         }
     }
@@ -3368,7 +3367,7 @@ bool
 RuntimeOptimizer::police_failed_optimizations()
 {
     bool err = false;
-    bool do_warn = shadingsys().m_opt_warnings;
+    int do_warn = shadingsys().m_opt_warnings;
     bool do_gpu_err = shadingsys().m_gpu_opt_error;
     if (!do_warn && !do_gpu_err)
         return false;  // no need for any of this expense
@@ -3382,14 +3381,29 @@ RuntimeOptimizer::police_failed_optimizations()
             const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
             if (! opd)
                 continue;
+            if (! (opd->flags & OpDescriptor::Police))
+                continue;
             if (opd->flags & OpDescriptor::Tex) {
                 Symbol *sym = opargsym (op, 1);  // arg 1 is texture name
                 OSL_DASSERT(sym && sym->typespec().is_string());
                 if (! sym->is_constant()) {
-                    err |= police (op, OIIO::Strutil::sprintf("%s(): texture name cannot be reduced to a constant.",
-                                              op.opname()),
-                                   police_gpu_err);
+                    err |= police(
+                        police_gpu_err, op,
+                        "{}(): texture name cannot be converted to a handle.",
+                        op.opname());
                 }
+            }
+            if (opd->flags & OpDescriptor::StrChars) {
+                err |= police(
+                    op,
+                    "{}(): need for string characters couldn't be optimized away.",
+                    op.opname());
+            }
+            if (opd->flags & OpDescriptor::StrCreate) {
+                err |= police(
+                    op,
+                    "{}(): new string creation couldn't be optimized to a constant.",
+                    op.opname());
             }
             // FIXME: Will add more tests and warnings as we go
         }

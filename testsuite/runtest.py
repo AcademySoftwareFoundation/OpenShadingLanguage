@@ -297,6 +297,13 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
         if test_environ == None :
             test_environ = os.environ
         test_environ["TESTSHADE_BATCHED"] = "1"
+
+    if regression == "RS_BITCODE" :
+        if test_environ == None :
+            test_environ = os.environ
+        test_environ["TESTSHADE_RS_BITCODE"] = "1"
+       
+
          
     print ("command = ", command)
     for sub_command in command.split(splitsymbol):

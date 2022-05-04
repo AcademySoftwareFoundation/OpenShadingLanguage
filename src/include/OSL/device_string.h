@@ -132,7 +132,11 @@ namespace DeviceStrings {
 #undef STRDECL
 }
 #else
-#  define STRING_PARAMS(x)  StringParams::x
+#  ifdef OSL_HOST_RS_BITCODE
+#    define STRING_PARAMS(x)  RS_##x
+#  else
+#    define STRING_PARAMS(x)  StringParams::x
+#  endif
 #endif
 
 
@@ -146,3 +150,5 @@ namespace StringParams = OSL_NAMESPACE::DeviceStrings;
 #else
 namespace StringParams = OSL_NAMESPACE::Strings;
 #endif
+
+

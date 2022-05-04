@@ -446,6 +446,9 @@ public:
     /// Return whether or not we are compiling for an OptiX-based renderer.
     bool use_optix() { return m_use_optix; }
 
+    /// Return if we should compile against free function versions of Renderer Service.
+    bool use_rs_bitcode() {return m_use_rs_bitcode; }
+
     /// Return the userdata index for the given Symbol.  Return -1 if the Symbol
     /// is not an input parameter or is constant and therefore doesn't have an
     /// entry in the groupdata struct.
@@ -489,6 +492,8 @@ private:
     std::map<std::string,std::string>           m_varname_map;
 
     bool m_use_optix;                   ///< Compile for OptiX?
+
+    bool m_use_rs_bitcode;              /// To use free function versions of Renderer Service functions.
 
     friend class ShadingSystemImpl;
 };

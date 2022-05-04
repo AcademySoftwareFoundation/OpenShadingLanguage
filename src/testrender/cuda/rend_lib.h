@@ -21,9 +21,7 @@ namespace DeviceStrings {
     rtDeclareVariable(OSL_NAMESPACE::DeviceString, var_name, , );
 #   define STRING_PARAMS(x)  StringParams::x
 #else
-#   define STRINGIFY(x) XSTR(x)
-#   define XSTR(x) #x
-#   define STRING_PARAMS(x)  UStringHash::Hash(STRINGIFY(x))
+#   define STRING_PARAMS(x)  UStringHash::Hash(__OSL_STRINGIFY(x))
 // Don't declare anything
 #   define STRDECL(str,var_name) 
 

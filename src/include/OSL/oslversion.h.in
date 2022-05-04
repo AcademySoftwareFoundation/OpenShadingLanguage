@@ -103,4 +103,7 @@ namespace @PROJ_NAME@ = @PROJ_NAMESPACE_V@;
     #define __OSL_WIDE_PVT __OSL_CONCAT5(b,__OSL_WIDTH,_,__OSL_TARGET_ISA,_pvt)
 #endif
 
+#define __OSL_INDIRECT_STRINGIFY(x) #x
+#define __OSL_STRINGIFY(x) __OSL_INDIRECT_STRINGIFY(x)
+
 #endif /* OSLVERSION_H */

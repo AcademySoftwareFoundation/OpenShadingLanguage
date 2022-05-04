@@ -8,7 +8,22 @@
 #include <OSL/oslexec.h>
 #include <OSL/genclosure.h>
 #include "simplerend.h"
+
+
+// Instance all global string variables used by SimpleRend.cpp or 
+// rs_simplerend.cpp (free functions).
+// NOTE:  C linkage with a "RS_" prefix is used to allow for unmangled
+// non-colliding global symbol names, so its easier to pass them to
+// OSL::register_JIT_Global(name, addr) for host execution
+extern "C" {
+#define RS_STRDECL(str, var_name) OSL::ustring RS_##var_name{str};
+#include "rs_strdecls.h"
+#undef RS_STRDECL
+}
+
+
 using namespace OSL;
+
 
 
 // anonymous namespace
@@ -190,6 +205,13 @@ SimpleRenderer::attribute (string_view name, TypeDesc type, const void *value)
     f->init(name, type, 1, value);
 }
 
+void 
+SimpleRenderer::register_JIT_Global_Variables() //callable from testshade
+{
+    #define RS_STRDECL(str, var_name) OSL::register_JIT_Global(__OSL_STRINGIFY(RS_##var_name), &RS_##var_name);
+    #include "rs_strdecls.h"
+    #undef RS_STRDECL
+}
 
 
 void
@@ -664,6 +686,25 @@ SimpleRenderer::add_output (string_view varname, string_view filename,
     // OIIO::ImageBufAlgo::zero (*m_outputbufs.back());
     return true;
 }
+
+
+void
+SimpleRenderer::export_state(RenderState &state) const 
+{
+    state.xres = m_xres;
+    state.yres = m_yres;
+    state.fov = m_fov;
+    state.hither = m_hither;
+    state.yon = m_yon;
+
+    state.world_to_camera = OSL::Matrix44(1.0, 0.0, 0.0, 0.0,
+                                        0.0, 1.0, 0.0, 0.0,
+                                        0.0, 0.0, 1.0, 0.0,
+                                        0.0, 0.0, 0.0, 1.0);                                        
+    //perspective is not  a member of StringParams (i.e not in strdecls.h)
+    state.projection = u_perspective;
+}
+
 
 
 

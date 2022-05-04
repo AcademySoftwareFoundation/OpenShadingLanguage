@@ -42,6 +42,7 @@ OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wunused-parameter")
 /// RendererServices defines an abstract interface through which a
 /// renderer may provide callback to the ShadingSystem.
 class OSLEXECPUBLIC RendererServices {
+    // Keep interface in sync with rs_free_function.h
 public:
     typedef TextureSystem::TextureHandle TextureHandle;
     typedef TextureSystem::Perthread TexturePerthread;

@@ -18,6 +18,7 @@
 #   include "batched_simplerend.h"
 #endif
 
+#include "render_state.h"
 
 OSL_NAMESPACE_ENTER
 
@@ -28,6 +29,7 @@ void register_closures(OSL::ShadingSystem* shadingsys);
 
 class SimpleRenderer : public RendererServices
 {
+    // Keep implementation in sync with rs_simplerend.cpp
     template<int>
     friend class BatchedSimpleRenderer;
 public:
@@ -117,6 +119,7 @@ public:
     virtual void init_shadingsys (ShadingSystem *ss) {
         shadingsys = ss;
     }
+    virtual void export_state(RenderState &) const;
     virtual void prepare_render () { }
     virtual void warmup () { }
     virtual void render (int /*xres*/, int /*yres*/) { }
@@ -125,6 +128,8 @@ public:
     // After render, get the pixel data into the output buffers, if
     // they aren't already.
     virtual void finalize_pixel_buffer () { }
+
+    static void register_JIT_Global_Variables();
 
     // ShaderGroupRef storage
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }

@@ -78,6 +78,7 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
     check_cwd (shadingsys);
 #endif
     m_use_optix = shadingsys.renderer()->supports ("OptiX");
+    m_use_rs_bitcode = !shadingsys.m_rs_bitcode.empty();
     ll.dumpasm(shadingsys.m_llvm_dumpasm);
     ll.jit_fma(shadingsys.m_llvm_jit_fma);
     ll.jit_aggressive(shadingsys.m_llvm_jit_aggressive);

@@ -1000,7 +1000,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_middleman(true), m_opt_texture_handle(true),
       m_opt_seed_bblock_aliases(true),
 #if OSL_USE_BATCHED
-      m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr) |
+      m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr) ||
                              (renderer->batched(WidthOf<8>()) != nullptr)),
 #else
       m_opt_batched_analysis(false),

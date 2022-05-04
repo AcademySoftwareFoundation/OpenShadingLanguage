@@ -51,6 +51,12 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   RendererServices::get_userdata(). #1391 (1.12.3)
 * Better hiding of the Matrix22 class, which was never actually part of the
   public APIs. #1480 (1.12.4.5)
+* Add ACES2065-1 and ACEScg as shading system color spaces (#1486) (1.12.4.6)
+* Expanded warnings (via enabling the "opt_warnings" attribute of the
+  ShadingSystem) for operations that try to create new strings mid-shader, or
+  that need to access the characters of strings mid-shader. These are only
+  triggered for those cases that cannot be resolved by the end of the "runtime
+  optimization" phase. #1497 (1.12.4.6)
 
 Continued work on experimental SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
@@ -65,7 +71,7 @@ Continued work on experimental SIMD batched shading mode:
 * ISA-specific modules. #1345 (1.12.2)
 * Introduction of CI testing of batched mode. #1357 #1367 (1.12.2)
 * Control flow and string ops. #1372 (1.12.2)
-* Matrix operations. #1378 (1.12.2)
+* Matrix operations. #1378 (1.12.2) #1485 (1.12.4.6)
 * Batched algebraic, trig, and transcendental functions. #1385 (1.12.2)
 * Batched noise. #1394 (1.12.3)
 * Batched implementation of all color operations. #1408 (1.12.3)
@@ -135,6 +141,9 @@ Bug fixes and other improvements (internals):
   globals. #1462 (1.12.4.4)
 * Print all 4 levels of version numbers in help messages. #1477 (1.12.4.4)
 * Fix GPU code generation crash. #1479 (1.12.4.4)
+* Work to transition internals to use modern std::format notation for
+  formatted output. #1487 #1490 (1.12.4.6)
+* Fix testrender memory error on teardown. #1499 (1.12.4.6)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -198,12 +207,12 @@ Build & test system improvements:
       generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+
       #1271 (1.12.0.1)
     - Build against LLVM 11 #1274 (1.12.0.1), LLVM 12 #1351 (1.12.1.0)
-      #1412 (1.12.3), LLVM 13 #1420 (1.12.3)
+      #1412 (1.12.3), LLVM 13 #1420 (1.12.3), LLVM 14 #1492 (1.12.4.6)
     - Fix build break against recent OIIO master change where m_mutex field
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming
       Imath 3.0 and OpenEXR 3.0. #1299 (1.11.10/1.12.1) #1332 (1.11.11/1.12.1)
-      #1341 (1.11.12/1.12.1) #1356 #1368 (1.11.13/1.12.2)
+      #1341 (1.11.12/1.12.1) #1356 #1368 (1.11.13/1.12.2) #1489 (1.12.4.6)
     - Improved finding of llvm components when using static libraries. #1375
       (1.12.2)
     - No longer use boost regex, completely rely on std::regex now that OSL

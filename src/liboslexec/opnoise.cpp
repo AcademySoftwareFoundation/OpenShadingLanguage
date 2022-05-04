@@ -29,7 +29,7 @@ void test_perlin(int d) {
     float noise_stddev;
     std::mt19937 rndgen;
     std::uniform_real_distribution<float> rnd (0.0f, 1.0f);
-    printf("Running perlin-%d noise test ...\n", d);
+    print("Running perlin-{} noise test ...\n", d);
     const int n = 100000000;
     const float r = 1024;
     for (int i = 0; i < n; i++) {
@@ -51,9 +51,9 @@ void test_perlin(int d) {
     }
     noise_avg /= n;
     noise_stddev = std::sqrt((noise_avg2 - noise_avg * noise_avg * n) / n);
-    printf("Result: perlin-%d noise stats:\n\tmin: %.17g\n\tmax: %.17g\n\tavg: %.17g\n\tdev: %.17g\n",
+    print("Result: perlin-{} noise stats:\n\tmin: {:.17g}\n\tmax: {:.17g}\n\tavg: {:.17g}\n\tdev: {:.17g}\n",
             d, noise_min, noise_max, noise_avg, noise_stddev);
-    printf("Normalization: %.17g\n", 1.0f / std::max(fabsf(noise_min), fabsf(noise_max)));
+    print("Normalization: {:.17g}\n", 1.0f / std::max(fabsf(noise_min), fabsf(noise_max)));
 }
 
 #endif
@@ -705,7 +705,7 @@ struct GenericNoise {
             result.clear_d();
         } else {
 #ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorf("Unknown noise type \"%s\"", name);
+            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
 #else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
@@ -747,7 +747,7 @@ struct GenericNoise {
             result.clear_d();
         } else {
 #ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorf("Unknown noise type \"%s\"", name);
+            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
 #else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
@@ -790,7 +790,7 @@ struct GenericPNoise {
             result.clear_d();
         } else {
 #ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorf("Unknown noise type \"%s\"", name);
+            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
 #else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
@@ -822,7 +822,7 @@ struct GenericPNoise {
             result.clear_d();
         } else {
 #ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorf("Unknown noise type \"%s\"", name);
+            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
 #else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();

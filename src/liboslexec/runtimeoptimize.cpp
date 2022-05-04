@@ -342,8 +342,8 @@ RuntimeOptimizer::debug_opt_ops (int opbegin, int opend, string_view message) co
         oprange = Strutil::sprintf ("ops %d-%d ", opbegin, opend);
     else if (opbegin >= 0)
         oprange = Strutil::sprintf ("op %d ", opbegin);
-    debug_optf("  %s%s (@ %s:%d)\n", oprange, message,
-               op.sourcefile(), op.sourceline());
+    debug_optfmt("  {}{} (@ {}:{})\n", oprange, message, op.sourcefile(),
+                 op.sourceline());
 }
 
 
@@ -357,18 +357,18 @@ RuntimeOptimizer::debug_turn_into (const Opcode &op, int numops,
     int opnum = &op - &(inst()->ops()[0]);
     std::string msg;
     if (numops == 1)
-        msg = Strutil::sprintf ("turned '%s' to '%s", op_string(op), newop);
+        msg = Strutil::fmt::format("turned '{}' to '{}", op_string(op), newop);
     else
-        msg = Strutil::sprintf ("turned to '%s", newop);
+        msg = Strutil::fmt::format("turned to '{}", newop);
     if (newarg0 >= 0)
-        msg += Strutil::sprintf (" %s", inst()->symbol(newarg0)->name());
+        msg += Strutil::fmt::format(" {}", inst()->symbol(newarg0)->name());
     if (newarg1 >= 0)
-        msg += Strutil::sprintf (" %s", inst()->symbol(newarg1)->name());
+        msg += Strutil::fmt::format(" {}", inst()->symbol(newarg1)->name());
     if (newarg2 >= 0)
-        msg += Strutil::sprintf (" %s", inst()->symbol(newarg2)->name());
+        msg += Strutil::fmt::format(" {}", inst()->symbol(newarg2)->name());
     msg += "'";
     if (why.size())
-        msg += Strutil::sprintf (" : %s", why);
+        msg += Strutil::fmt::format(" : {}", why);
     debug_opt_ops (opnum, opnum+numops, msg);
 }
 
@@ -935,11 +935,12 @@ RuntimeOptimizer::simplify_params ()
                     auto f = g.find (srcsym->name());
                     if (f != g.end()) {
                         if (debug() > 1)
-                            debug_optf("Remapping %s.%s because it's connected to "
-                                       "%s.%s, which is known to be %s\n",
-                                       inst()->layername(), s->name(),
-                                       uplayer->layername(), srcsym->name(),
-                                       f->second);
+                            debug_optfmt(
+                                "Remapping {}.{} because it's connected to "
+                                "{}.{}, which is known to be {}\n",
+                                inst()->layername(), s->name(),
+                                uplayer->layername(), srcsym->name(),
+                                f->second);
                         make_symbol_room (1);
                         s = inst()->symbol(i);  // In case make_symbol_room changed ptrs
                         int ind = add_global (f->second, srcsym->typespec());
@@ -1014,8 +1015,8 @@ RuntimeOptimizer::find_params_holding_globals ()
             continue;   // only interested in global assignments
 
         if (debug() > 1)
-            debug_optf("I think that %s.%s will always be %s\n",
-                       inst()->layername(), s.name(), src->name());
+            debug_optfmt("I think that {}.{} will always be {}\n",
+                         inst()->layername(), s.name(), src->name());
         m_params_holding_globals[layer()][s.name()] = src->name();
     }
 }
@@ -1214,7 +1215,7 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
             Opcode &uselessop (inst()->ops()[i->second]);
             if (uselessop.opname() != u_nop && uselessop.opname() != u_functioncall_nr)
                 turn_into_nop (uselessop,
-                           debug() > 1 ? Strutil::sprintf("remove stale value assignment to %s, reassigned on op %d",
+                           debug() > 1 ? Strutil::fmt::format("remove stale value assignment to {}, reassigned on op {}",
                                                          opargsym(uselessop,0)->name(), opnum).c_str() : "");
         }
     }
@@ -1407,9 +1408,9 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         // replace its default value entirely and get rid of the assignment.
         if (R->firstread() > opnum && ! R->renderer_output() &&
                 m_opt_elide_unconnected_outputs) {
-            make_param_use_instanceval (R, Strutil::sprintf("- written once, with a constant (%s), before any reads", const_value_as_string(*A)));
+            make_param_use_instanceval (R, Strutil::fmt::format("- written once, with a constant ({}), before any reads", const_value_as_string(*A)));
             replace_param_value (R, A->data(), A->typespec());
-            turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name()).c_str() : "");
+            turn_into_nop (op, debug() > 1 ? Strutil::fmt::format("oparam {} never subsequently read or connected", R->name()).c_str() : "");
             return true;
         }
     }
@@ -1419,7 +1420,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // assignment at all. Note that unread_after() does take into
     // consideration whether it's a renderer output.
     if (unread_after(R,opnum)) {
-        turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name()).c_str() : "");
+        turn_into_nop (op, debug() > 1 ? Strutil::fmt::format("oparam {} never subsequently read or connected", R->name()).c_str() : "");
         return true;
     }
 
@@ -1804,7 +1805,7 @@ RuntimeOptimizer::remove_unused_params ()
         if (param_never_used(s) && s.has_init_ops()) {
             std::string why;
             if (debug() > 1)
-                why = Strutil::sprintf ("remove init ops of unused param %s %s", s.typespec(), s.name());
+                why = Strutil::fmt::format("remove init ops of unused param {} {}", s.typespec(), s.name());
             turn_into_nop (s.initbegin(), s.initend(), why);
             s.set_initrange (0, 0);
             s.clear_rw();   // mark as totally unused
@@ -1816,9 +1817,9 @@ RuntimeOptimizer::remove_unused_params ()
     if (debug() > 1) {
         for (auto&& c : inst()->connections()) {
             if (param_never_used(c)) {
-                debug_optf("  Connection no longer needed: %s %s\n",
-                           group()[c.srclayer]->layername(),
-                           c.str(group(), inst()));
+                debug_optfmt("  Connection no longer needed: {} {}\n",
+                             group()[c.srclayer]->layername(),
+                             c.str(group(), inst()));
             }
         }
     }
@@ -2301,8 +2302,8 @@ RuntimeOptimizer::optimize_instance ()
             break;
 
         if (debug() > 1)
-            debug_optf("layer %d \"%s\", pass %d:\n",
-                       layer(), inst()->layername(), m_pass);
+            debug_optfmt("layer {} \"{}\", pass {}:\n", layer(),
+                         inst()->layername(), m_pass);
 
         // Track basic blocks and conditional states
         find_conditionals ();
@@ -2362,7 +2363,7 @@ RuntimeOptimizer::optimize_instance ()
         // Not needed.  Remove all its connections and ops.
         inst()->connections().clear ();
         turn_into_nop (0, (int)inst()->ops().size()-1,
-                       debug() > 1 ? Strutil::sprintf("eliminate layer %s with no outward connections", inst()->layername().c_str()).c_str() : "");
+                       debug() > 1 ? Strutil::fmt::format("eliminate layer {} with no outward connections", inst()->layername()).c_str() : "");
         for (auto&& s : inst()->symbols())
             s.clear_rw ();
     }
@@ -2983,7 +2984,7 @@ RuntimeOptimizer::printinst (std::ostream &out) const
             if (op.jump(j) >= 0)
                 out << " " << op.jump(j);
         out << "\t# ";
-//        out << "    rw " << Strutil::sprintf("%x",op.argread_bits())
+//        out << "    rw " << Strutil::fmt::format("{:x}", op.argread_bits())
 //            << ' ' << op.argwrite_bits();
         if (op.argtakesderivs_all())
             out << " %derivs(" << op.argtakesderivs_all() << ") ";
@@ -3028,8 +3029,9 @@ RuntimeOptimizer::run ()
     Timer rop_timer;
     int nlayers = (int) group().nlayers ();
     if (debug())
-        shadingcontext()->infof("About to optimize shader group %s (%d layers):",
-                           group().name(), nlayers);
+        shadingcontext()->infofmt(
+            "About to optimize shader group {} ({} layers):", group().name(),
+            nlayers);
     if (debug())
         std::cout << "About to optimize shader group " << group().name() << "\n";
 
@@ -3276,33 +3278,33 @@ RuntimeOptimizer::run ()
             ss.m_stat_empty_groups += 1;
     }
     if (shadingsys().m_compile_report) {
-        shadingcontext()->infof("Optimized shader group %s:", group().name());
-        shadingcontext()->infof(" spec %1.2fs, New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+        shadingcontext()->infofmt("Optimized shader group {}:", group().name());
+        shadingcontext()->infofmt(" spec {:1.2f}s, New syms {}/{} ({:5.1f}%), ops {}/{} ({:5.1f}%)",
               m_stat_specialization_time, new_nsyms, old_nsyms,
               100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
               new_nops, old_nops,
               100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
         if (does_nothing)
-            shadingcontext()->infof("Group does nothing");
+            shadingcontext()->infofmt("Group does nothing");
         if (m_textures_needed.size()) {
-            shadingcontext()->infof("Group needs textures:");
+            shadingcontext()->infofmt("Group needs textures:");
             for (auto&& f : m_textures_needed)
-                shadingcontext()->infof("    %s", f);
+                shadingcontext()->infofmt("    {}", f);
             if (m_unknown_textures_needed)
-                shadingcontext()->infof("    Also may construct texture names on the fly.");
+                shadingcontext()->infofmt("    Also may construct texture names on the fly.");
         }
         if (m_userdata_needed.size()) {
-            shadingcontext()->infof("Group potentially needs userdata:");
+            shadingcontext()->infofmt("Group potentially needs userdata:");
             for (auto&& f : m_userdata_needed)
-                shadingcontext()->infof("    %s %s %s", f.name, f.type,
-                                        f.derivs ? "(derivs)" : "");
+                shadingcontext()->infofmt("    {} {} {}", f.name, f.type,
+                                          f.derivs ? "(derivs)" : "");
         }
         if (m_attributes_needed.size()) {
-            shadingcontext()->infof("Group needs attributes:");
+            shadingcontext()->infofmt("Group needs attributes:");
             for (auto&& f : m_attributes_needed)
-                shadingcontext()->infof("    %s %s", f.name, f.scope);
+                shadingcontext()->infofmt("    {} {}", f.name, f.scope);
             if (m_unknown_attributes_needed)
-                shadingcontext()->infof("    Also may construct attribute names on the fly.");
+                shadingcontext()->infofmt("    Also may construct attribute names on the fly.");
         }
     }
 }

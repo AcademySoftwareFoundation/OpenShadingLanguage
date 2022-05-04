@@ -150,6 +150,11 @@ public:
         debug_opt_impl (OIIO::Strutil::sprintf (fmt, args...));
     }
 
+    template<typename... Args>
+    inline void debug_optfmt (const char* fmt, const Args&... args) const {
+        debug_opt_impl (OIIO::Strutil::fmt::format(fmt, args...));
+    }
+
     void debug_opt_ops (int opbegin, int opend, string_view message) const;
     void debug_turn_into (const Opcode &op, int numops,
                           string_view newop, int newarg0,

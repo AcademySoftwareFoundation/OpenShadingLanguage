@@ -173,7 +173,7 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
 #endif
     std::string s = Strutil::vsprintf (format_str, args);
     va_end (args);
-    sg->context->messagef("%s", s);
+    sg->context->messagefmt("{}", s);
 }
 
 
@@ -184,7 +184,7 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
     va_start (args, format_str);
     std::string s = Strutil::vsprintf (format_str, args);
     va_end (args);
-    sg->context->errorf("%s", s);
+    sg->context->errorfmt("{}", s);
 }
 
 
@@ -196,7 +196,7 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
         va_start (args, format_str);
         std::string s = Strutil::vsprintf (format_str, args);
         va_end (args);
-        sg->context->warningf("%s", s);
+        sg->context->warningfmt("{}", s);
     }
 }
 

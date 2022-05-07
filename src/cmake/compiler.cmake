@@ -68,9 +68,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         endif ()
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "IntelLLVM")
         set (CMAKE_COMPILER_IS_INTELCLANG 1)
-        string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})
+        string (REGEX MATCH "[0-9]+(\\.[0-9]+)+" INTELCLANG_VERSION_STRING ${clang_full_version_string})
         if (VERBOSE)
-            message (STATUS "The compiler is Intel Clang: ${CMAKE_CXX_COMPILER_ID} version ${CLANG_VERSION_STRING}")
+            message (STATUS "The compiler is Intel Clang: ${CMAKE_CXX_COMPILER_ID} version ${INTELCLANG_VERSION_STRING}")
         endif ()
     else ()
         string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})
@@ -164,7 +164,8 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     endif ()
     # Suppress warnings about our strategic use of bitwise operations in place
     # of logical operators to produce branchless code in some places.
-    if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 14.0)
+    if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 14.0
+        OR INTELCLANG_VERSION_STRING VERSION_GREATER_EQUAL 14.0)
         add_compile_options ("-Wno-bitwise-instead-of-logical")
     endif ()
 
@@ -193,6 +194,11 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
     add_definitions ("-D__STDC_CONSTANT_MACROS")
     # this allows native instructions to be used for sqrtf instead of a function call
     add_compile_options ("-fno-math-errno")
+endif ()
+
+if (INTELCLANG_VERSION_STRING VERSION_GREATER_EQUAL 2022.1.0)
+    # New versions of icx warn about changing certain floating point options
+    add_compile_options ("-Wno-overriding-t-option")
 endif ()
 
 if (MSVC)

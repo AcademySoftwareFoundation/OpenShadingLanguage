@@ -7,6 +7,10 @@
 /** Lexical scanner for OpenShadingLanguage 'object' files
  **/
 
+%top{
+/* Include this first to avoid warnings about re-definitions on windows */
+#include <stdint.h>
+}
 
 /************************************************************
  * Definitions section

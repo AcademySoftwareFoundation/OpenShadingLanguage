@@ -80,6 +80,20 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
     endif()
 
+    if (NOT LLVM_AS_TOOL)
+      find_program (LLVM_AS_TOOL NAMES "llvm-as"
+                PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+                NO_CMAKE_PATH NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH
+                NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
+    endif ()
+
+    if (NOT LLVM_LINK_TOOL)
+        find_program (LLVM_LINK_TOOL NAMES "llvm-link"
+                PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+                NO_CMAKE_PATH NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH
+                NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
+    endif ()
+
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         # fix compilation error when using MSVC
         set (CLANG_MSVC_FIX "-DBOOST_CONFIG_REQUIRES_THREADS_HPP")
@@ -115,7 +129,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             -Wno-deprecated-register -Wno-format-security
             -O3 -fno-math-errno -ffast-math -S -emit-llvm ${extra_clang_args}
             ${src} -o ${asm_cuda}
-        COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${bc_cuda} ${asm_cuda}
+        COMMAND ${LLVM_AS_TOOL} -f -o ${bc_cuda} ${asm_cuda}
         DEPENDS ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 endfunction ()
@@ -130,7 +144,7 @@ function ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated extra
     MAKE_CUDA_BITCODE (${llvm_src} "" llvm_bc "${extra_clang_args}")
 
     add_custom_command (OUTPUT ${llvm_bc_cpp}
-        COMMAND python "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} ${prefix}
+        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} ${prefix}
         MAIN_DEPENDENCY ${llvm_src}
         DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${llvm_src} ${headers} ${llvm_bc}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )

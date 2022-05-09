@@ -204,13 +204,13 @@ macro ( CUDA_SHADEOPS_COMPILE srclist )
 
     # Link all of the individual LLVM bitcode files
     add_custom_command ( OUTPUT ${linked_shadeops_bc}
-        COMMAND "${LLVM_DIRECTORY}/bin/llvm-link" -internalize ${shadeops_bc_list} -o ${linked_shadeops_bc}
+        COMMAND ${LLVM_LINK_TOOL} -internalize ${shadeops_bc_list} -o ${linked_shadeops_bc}
         DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
     # Serialize the linked bitcode into a CPP file and add it to the list of liboslexec soures
     add_custom_command ( OUTPUT ${shadeops_bc_cuda_cpp}
-        COMMAND python "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
+        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
             ${linked_shadeops_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
         DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_shadeops_bc}
         ${exec_headers} ${PROJECT_PUBLIC_HEADERS}

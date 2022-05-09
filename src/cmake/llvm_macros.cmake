@@ -34,14 +34,9 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         # Figure out what program we will use to make the bitcode.
         if (NOT LLVM_BC_GENERATOR)
             find_program (LLVM_BC_GENERATOR NAMES "clang++"
-                        PATHS "${LLVM_DIRECTORY}/bin"
+                        PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
                         NO_CMAKE_PATH NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH
                         NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
-        endif ()
-        # If that didn't work, look anywhere
-        if (NOT LLVM_BC_GENERATOR)
-            # Wasn't in their build, look anywhere
-            find_program (LLVM_BC_GENERATOR NAMES clang++ llvm-g++)
         endif ()
 
         if (NOT LLVM_BC_GENERATOR)
@@ -50,6 +45,21 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         if (VERBOSE)
             message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
         endif()
+
+        if (NOT LLVM_AS_TOOL)
+            find_program (LLVM_AS_TOOL NAMES "llvm-as"
+                        PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+                        NO_CMAKE_PATH NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH
+                        NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
+        endif ()
+
+        if (NOT LLVM_LINK_TOOL)
+            find_program (LLVM_LINK_TOOL NAMES "llvm-link"
+                    PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+                    NO_CMAKE_PATH NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH
+                    NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
+        endif ()
+
 
         # Fix specific problem I had on new Apple systems (e.g. Mavericks) with
         # LLVM/libc++ installed -- for some reason, LLVM 3.4 wasn't finding it,
@@ -92,7 +102,7 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
             -Wno-ignored-attributes -Wno-unknown-attributes
             -O3 -fno-math-errno -S -emit-llvm ${extra_clang_args}
             -o ${src_asm} ${src}
-        COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${src_bc} ${src_asm}
+        COMMAND ${LLVM_AS_TOOL} -f -o ${src_bc} ${src_asm}
         # Do NOT setup a MAIN_DEPENDENCY because only 1 may exist 
         # and we may have the several outputs dependant on the same source 
         DEPENDS ${src} ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
@@ -109,14 +119,14 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
     # Link all of the individual LLVM bitcode files
     set ( linked_src_bc "${CMAKE_CURRENT_BINARY_DIR}/${output_name}.bc" )
     add_custom_command ( OUTPUT ${linked_src_bc}
-        COMMAND "${LLVM_DIRECTORY}/bin/llvm-link" -internalize ${src_bc_list} -o ${linked_src_bc}
+        COMMAND ${LLVM_LINK_TOOL} -internalize ${src_bc_list} -o ${linked_src_bc}
         DEPENDS ${src_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src_list}
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" )
     
      # Serialize the linked bitcode into a CPP file 
     set ( src_bc_cpp "${CMAKE_CURRENT_BINARY_DIR}/${output_name}.bc.cpp" )
     add_custom_command ( OUTPUT ${src_bc_cpp}
-        COMMAND python "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
+        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
             ${linked_src_bc} ${src_bc_cpp} ${output_name}
         DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_src_bc}
         ${exec_headers} ${PROJECT_PUBLIC_HEADERS}

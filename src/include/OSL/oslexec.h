@@ -33,7 +33,7 @@ template<typename DataT, int WidthT> struct Wide;
 /// only exist in the renderer's program space and won't automatically be 
 /// found when referenced in JIT'd code inside OSL.  A renderer may register
 /// the addresses of these global variables to allow valid JIT to occur.
-void register_JIT_Global(const char* global_var_name, void* global_var_addr);
+void OSLEXECPUBLIC register_JIT_Global(const char* global_var_name, void* global_var_addr);
 
 /// Opaque pointer to whatever the renderer uses to represent a
 /// (potentially motion-blurred) coordinate transformation.

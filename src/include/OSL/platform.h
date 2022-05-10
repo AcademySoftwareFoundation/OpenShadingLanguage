@@ -102,6 +102,7 @@
 
 // Tests for MSVS versions, always 0 if not MSVS at all.
 #if defined(_MSC_VER)
+#  define OSL_MSVS_VERSION       _MSC_VER
 #  define OSL_MSVS_AT_LEAST_2013 (_MSC_VER >= 1800)
 #  define OSL_MSVS_BEFORE_2013   (_MSC_VER <  1800)
 #  define OSL_MSVS_AT_LEAST_2015 (_MSC_VER >= 1900)
@@ -112,6 +113,7 @@
 #    error "This version of OSL is meant to work only with Visual Studio 2017 or later"
 #  endif
 #else
+#  define OSL_MSVS_VERSION       0
 #  define OSL_MSVS_AT_LEAST_2013 0
 #  define OSL_MSVS_BEFORE_2013   0
 #  define OSL_MSVS_AT_LEAST_2015 0

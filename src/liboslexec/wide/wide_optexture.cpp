@@ -187,8 +187,8 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
                     errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
-                context->batched<__OSL_WIDTH>().errorf(
-                    Mask(Lane(lane)), "[RendererServices::texture] %s", err);
+                context->batched<__OSL_WIDTH>().errorfmt(
+                    Mask(Lane(lane)), "[RendererServices::texture] {}", err);
             }
         }
     });
@@ -382,8 +382,8 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
                     errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
-                context->batched<__OSL_WIDTH>().errorf(
-                    Mask(Lane(lane)), "[RendererServices::texture3d] %s", err);
+                context->batched<__OSL_WIDTH>().errorfmt(
+                    Mask(Lane(lane)), "[RendererServices::texture3d] {}", err);
             }
         }
     });
@@ -527,8 +527,8 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
                     errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
-                context->batched<__OSL_WIDTH>().errorf(
-                    Mask(Lane(lane)), "[RendererServices::environment] %s", err);
+                context->batched<__OSL_WIDTH>().errorfmt(
+                    Mask(Lane(lane)), "[RendererServices::environment] {}", err);
             }
         }
     });

@@ -84,8 +84,8 @@ LLVMGEN (llvm_gen_generic);
 void
 BackendLLVM::llvm_gen_debug_printf (string_view message)
 {
-    ustring s = ustring::sprintf ("(%s %s) %s", inst()->shadername(),
-                                 inst()->layername(), message);
+    ustring s = ustring::fmtformat("({} {}) {}", inst()->shadername(),
+                                   inst()->layername(), message);
     ll.call_function ("osl_printf", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(s));
 }
@@ -256,8 +256,8 @@ LLVMGEN (llvm_gen_printf)
 
     std::vector<llvm::Value*> call_args;
     if (!format_sym.is_constant()) {
-        rop.shadingcontext()->warningf("%s must currently have constant format\n",
-                                       op.opname());
+        rop.shadingcontext()->warningfmt(
+            "{} must currently have constant format\n", op.opname());
         return false;
     }
 
@@ -301,8 +301,8 @@ LLVMGEN (llvm_gen_printf)
                 ++format;
             char formatchar = *format++;  // Also eat the format char
             if (arg >= op.nargs()) {
-                rop.shadingcontext()->errorf("Mismatch between format string and arguments (%s:%d)",
-                                             op.sourcefile(), op.sourceline());
+                rop.shadingcontext()->errorfmt("Mismatch between format string and arguments ({}:{})",
+                                               op.sourcefile(), op.sourceline());
                 return false;
             }
 
@@ -351,7 +351,9 @@ LLVMGEN (llvm_gen_printf)
                         // In the OptiX case, we register each string separately.
                         if (simpletype.arraylen >= 1) {
                             // Mangle the element's name in case llvm_load_device_string calls getOrAllocateLLVMSymbol
-                            ustring name = ustring::sprintf("__symname__%s[%d]", sym.mangled(), a);
+                            ustring name
+                                = ustring::fmtformat("__symname__{}[{}]",
+                                                     sym.mangled(), a);
                             Symbol lsym(name, TypeDesc::TypeString, sym.symtype());
                             lsym.set_dataptr(SymArena::Absolute,
                                              &((ustring*)sym.dataptr())[a]);
@@ -1115,7 +1117,7 @@ LLVMGEN (llvm_gen_unary_op)
             result = rop.ll.op_not (src_val);
         } else {
             // Don't know how to handle this.
-            rop.shadingcontext()->errorf("Don't know how to handle op '%s', eliding the store\n", opname);
+            rop.shadingcontext()->errorfmt("Don't know how to handle op '{}', eliding the store\n", opname);
         }
 
         // Store the result
@@ -1133,7 +1135,7 @@ LLVMGEN (llvm_gen_unary_op)
 
         if (dst_derivs) {
             // mul results in <a * b, a * b_dx + b * a_dx, a * b_dy + b * a_dy>
-            rop.shadingcontext()->infof("punting on derivatives for now\n");
+            rop.shadingcontext()->infofmt("punting on derivatives for now\n");
             // FIXME!!
         }
     }
@@ -2429,9 +2431,9 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
             continue;
 
         }
-        rop.shadingcontext()->errorf("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
-                                     tex3d ? "3d" : "", name, valtype,
-                                     op.sourcefile(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "Unknown texture{} optional argument: \"{}\", <{}> ({}:{})",
+            tex3d ? "3d" : "", name, valtype, op.sourcefile(), op.sourceline());
 #undef PARAM_INT
 #undef PARAM_FLOAT
 #undef PARAM_FLOAT_STR
@@ -2655,9 +2657,9 @@ llvm_gen_trace_options (BackendLLVM &rop, int opnum,
         } else if (name == Strings::traceset && valtype == TypeDesc::STRING) {
             rop.ll.call_function ("osl_trace_set_traceset", opt, val);
         } else {
-            rop.shadingcontext()->errorf("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",
-                                         name, valtype,
-                                         op.sourcefile(), op.sourceline());
+            rop.shadingcontext()->errorfmt(
+                "Unknown trace() optional argument: \"{}\", <{}> ({}:{})", name,
+                valtype, op.sourcefile(), op.sourceline());
         }
     }
 
@@ -2762,9 +2764,9 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
                                     rop.llvm_load_value (Val, 0, NULL, 0,
                                                          TypeDesc::TypeFloat));
         } else {
-            rop.shadingcontext()->errorf("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
-                                         op.opname(), name, valtype,
-                                         op.sourcefile(), op.sourceline());
+            rop.shadingcontext()->errorfmt(
+                "Unknown {} optional argument: \"{}\", <{}> ({}:{})",
+                op.opname(), name, valtype, op.sourcefile(), op.sourceline());
         }
     }
     return opt;
@@ -2862,9 +2864,10 @@ LLVMGEN (llvm_gen_noise)
         derivs = true;
         name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
     } else {
-        rop.shadingcontext()->errorf("%snoise type \"%s\" is unknown, called from (%s:%d)",
-                                (periodic ? "periodic " : ""), name,
-                                op.sourcefile(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "{}noise type \"{}\" is unknown, called from ({}:{})",
+            (periodic ? "periodic " : ""), name, op.sourcefile(),
+            op.sourceline());
         return false;
     }
 
@@ -3339,7 +3342,9 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
             }
         }
         if (!legal) {
-            rop.shadingcontext()->warningf("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key, clname, op.sourcefile(), op.sourceline());
+            rop.shadingcontext()->warningfmt(
+                "Unsupported closure keyword arg \"{}\" for {} ({}:{})", key,
+                clname, op.sourcefile(), op.sourceline());
         }
     }
 }
@@ -3361,10 +3366,11 @@ LLVMGEN (llvm_gen_closure)
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.llvm_gen_error (Strutil::sprintf("Closure '%s' is not supported by the current renderer, called from %s:%d in shader \"%s\", layer %d \"%s\", group \"%s\"",
-                                     closure_name, op.sourcefile(), op.sourceline(),
-                                     rop.inst()->shadername(), rop.layer(),
-                                     rop.inst()->layername(), rop.group().name()));
+        rop.llvm_gen_error(fmtformat(
+            "Closure '{}' is not supported by the current renderer, called from {}:{} in shader \"{}\", layer {} \"{}\", group \"{}\"",
+            closure_name, op.sourcefile(), op.sourceline(),
+            rop.inst()->shadername(), rop.layer(), rop.inst()->layername(),
+            rop.group().name()));
         return false;
     }
 
@@ -3431,10 +3437,10 @@ LLVMGEN (llvm_gen_closure)
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),
                              4 /* use 4 byte alignment for now */);
         } else {
-            rop.shadingcontext()->errorf("Incompatible formal argument %d to '%s' closure (%s %s, expected %s). Prototypes don't match renderer registry (%s:%d).",
-                                         carg + 1, closure_name,
-                                         sym.typespec(), sym.unmangled(), p.type,
-                                         op.sourcefile(), op.sourceline());
+            rop.shadingcontext()->errorfmt(
+                "Incompatible formal argument {} to '{}' closure ({} {}, expected {}). Prototypes don't match renderer registry ({}:{}).",
+                carg + 1, closure_name, sym.typespec(), sym.unmangled(), p.type,
+                op.sourcefile(), op.sourceline());
         }
     }
 
@@ -3549,8 +3555,8 @@ LLVMGEN (llvm_gen_pointcloud_search)
         // per the OSL language specification
         const int const_max_points = Max_points.get_int();
         if (capacity < const_max_points) {
-            rop.shadingcontext()->warningf (
-                "Arrays too small for pointcloud lookup at (%s:%d) (%s:%d)",
+            rop.shadingcontext()->warningfmt(
+                "Arrays too small for pointcloud lookup at ({}:{}) ({}:{})",
                 op.sourcefile().c_str(), op.sourceline());
             args[maxPointsArgumentIndex] = rop.ll.constant(capacity);
         }

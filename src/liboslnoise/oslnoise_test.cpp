@@ -73,7 +73,7 @@ inline float abs (const Vec3& a) {
                     img.setpixel (x, y, r_comp);                        \
                 }                                                       \
             }                                                           \
-            img.write (Strutil::sprintf ("osl_%s_%d_%d.tif", #noisename, outdim, indim)); \
+            img.write (Strutil::fmt::format("osl_{}_{}_{}.tif", #noisename, outdim, indim)); \
         }                                                               \
     }
 
@@ -367,7 +367,7 @@ getargs (int argc, const char *argv[])
                 "-v", &verbose, "Verbose mode",
                 "--img", &make_images, "Make test images",
                 "--iterations %d", &iterations,
-                    ustring::sprintf("Number of iterations (default: %d)", iterations).c_str(),
+                    ustring::fmtformat("Number of iterations (default: {})", iterations).c_str(),
                 "--trials %d", &ntrials, "Number of trials",
                 NULL);
     if (ap.parse (argc, (const char**)argv) < 0) {

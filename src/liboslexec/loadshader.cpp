@@ -578,7 +578,7 @@ ShadingSystemImpl::loadshader (string_view cname)
         // if (debug()) {
         //     std::string s = r->print ();
         //     if (s.length())
-        //         infof("%s", s);
+        //         infofmt("{}", s);
         // }
     } else {
         errorfmt("Unable to read \"{}\"", filename);

@@ -1796,9 +1796,9 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
         return true;
     }
     if (name == "osl:dependencies" && type == TypeDesc::STRING) {
-        std::string deps = OIIO::Strutil::sprintf("LLVM-%s,OpenImageIO-%s,Imath-%s",
-                OSL_LLVM_FULL_VERSION, OIIO_VERSION_STRING,
-                OPENEXR_VERSION_STRING);
+        std::string deps = fmtformat("LLVM-{},OpenImageIO-{},Imath-{}",
+                                     OSL_LLVM_FULL_VERSION, OIIO_VERSION_STRING,
+                                     OPENEXR_VERSION_STRING);
         if (!strcmp(OSL_CUDA_VERSION, ""))
             deps += ",Cuda-NONE";
         else
@@ -1905,16 +1905,18 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         return true;
     }
     if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
-        *(ustring *)val = ustring::sprintf ("__direct_callable__group_%s_%d_init",
-                                            group->name(), group->id());
+        *(ustring*)val
+            = ustring::fmtformat("__direct_callable__group_{}_{}_init",
+                                 group->name(), group->id());
         return true;
     }
     if (name == "group_entry_name" && type.basetype == TypeDesc::STRING) {
         int nlayers = group->nlayers ();
         ShaderInstance *inst = (*group)[nlayers-1];
         // This formulation mirrors OSOProcessorBase::layer_function_name()
-        *(ustring *)val = ustring::sprintf ("__direct_callable__%s_%s_%d", group->name(),
-                                           inst->layername(), inst->id());
+        *(ustring*)val = ustring::fmtformat("__direct_callable__{}_{}_{}",
+                                            group->name(), inst->layername(),
+                                            inst->id());
         return true;
     }
     if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {
@@ -3258,7 +3260,7 @@ bool
 ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
                                        ShaderGroup *group) const
 {
-    ustring name2 = ustring::sprintf("%s.%s", layername, paramname);
+    ustring name2 = ustring::fmtformat("{}.{}", layername, paramname);
     if (group) {
         for (auto&& sl : group->m_symlocs) {
             if (sl.arena == SymArena::Outputs &&
@@ -4156,10 +4158,10 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
         for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
             int i = d*ncomps + c;
             if (! OIIO::isfinite(vals[i])) {
-                ctx->errorf("Detected %g value in %s%s at %s:%d (op %s)",
-                            vals[i], d > 0 ? "the derivatives of " : "",
-                            USTR(symbolname), USTR(sourcefile), sourceline,
-                            USTR(opname));
+                ctx->errorfmt("Detected {} value in {}{} at {}:{} (op {})",
+                              vals[i], d > 0 ? "the derivatives of " : "",
+                              USTR(symbolname), USTR(sourcefile), sourceline,
+                              USTR(opname));
                 return;
             }
         }
@@ -4213,11 +4215,12 @@ osl_uninit_check (long long typedesc_, void *vals_,
             }
     }
     if (uninit) {
-        ctx->errorf("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
-                    typedesc.c_str(), USTR(symbolname), USTR(sourcefile), sourceline,
-                    (groupname && groupname[0]) ? groupname: "<unnamed group>",
-                    layer, (layername && layername[0]) ? layername : "<unnamed layer>",
-                    shadername, opnum, USTR(opname), argnum);
+        ctx->errorfmt(
+            "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {})",
+            typedesc.c_str(), USTR(symbolname), USTR(sourcefile), sourceline,
+            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
+            (layername && layername[0]) ? layername : "<unnamed layer>",
+            shadername, opnum, USTR(opname), argnum);
     }
 }
 
@@ -4231,13 +4234,12 @@ osl_range_check_err (int indexvalue, int length, const char *symname,
 {
     if (indexvalue < 0 || indexvalue >= length) {
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
-        ctx->errorf("Index [%d] out of range %s[0..%d]: %s:%d"
-                    " (group %s, layer %d %s, shader %s)",
-                    indexvalue, USTR(symname), length-1,
-                    USTR(sourcefile), sourceline,
-                    (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-                    (layername && layername[0]) ? layername : "<unnamed layer>",
-                    USTR(shadername));
+        ctx->errorfmt(
+            "Index [{}] out of range {}[0..{}]: {}:{} (group {}, layer {} {}, shader {})",
+            indexvalue, USTR(symname), length - 1, USTR(sourcefile), sourceline,
+            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
+            (layername && layername[0]) ? layername : "<unnamed layer>",
+            USTR(shadername));
         if (indexvalue >= length)
             indexvalue = length-1;
         else

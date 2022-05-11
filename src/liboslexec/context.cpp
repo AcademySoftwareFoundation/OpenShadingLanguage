@@ -167,7 +167,7 @@ bool
 ShadingContext::execute_cleanup ()
 {
     if (! group()) {
-        errorf("execute_cleanup called again on a cleaned-up context");
+        errorfmt("execute_cleanup called again on a cleaned-up context");
         return false;
     }
 

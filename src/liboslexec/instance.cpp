@@ -511,11 +511,12 @@ std::string
 ConnectedParam::str (const ShaderInstance *inst, bool unmangle) const
 {
     const Symbol *s = inst->symbol(param);
-    return Strutil::sprintf ("%s%s%s (%s)",
-                            unmangle ? s->unmangled() : string_view(s->name()),
-                            arrayindex >= 0 ? Strutil::sprintf("[%d]", arrayindex) : std::string(),
-                            channel >= 0 ? Strutil::sprintf("[%d]", channel) : std::string(),
-                            type);
+    return fmtformat("{}{}{} ({})",
+                     unmangle ? s->unmangled() : string_view(s->name()),
+                     arrayindex >= 0 ? fmtformat("[{}]", arrayindex)
+                                     : std::string(),
+                     channel >= 0 ? fmtformat("[{}]", channel) : std::string(),
+                     type);
 }
 
 
@@ -524,8 +525,8 @@ std::string
 Connection::str (const ShaderGroup &group, const ShaderInstance *dstinst,
                  bool unmangle) const
 {
-    return Strutil::sprintf ("%s -> %s", src.str(group[srclayer], unmangle),
-                             dst.str(dstinst, unmangle));
+    return fmtformat("{} -> {}", src.str(group[srclayer], unmangle),
+                     dst.str(dstinst, unmangle));
 }
 
 
@@ -718,7 +719,7 @@ ShaderGroup::ShaderGroup (string_view name)
         m_name = name;
     } else {
         // No name -- make one up using the unique
-        m_name = ustring::sprintf ("unnamed_group_%d", m_id);
+        m_name = ustring::fmtformat("unnamed_group_{}", m_id);
     }
 }
 

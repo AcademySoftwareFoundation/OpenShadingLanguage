@@ -144,8 +144,8 @@ zero_derivs(Masked<Dual2<float>> wr)
             zero_derivs(wr);                                                  \
         } else {                                                              \
             ((BatchedShaderGlobals*)bsg)                                      \
-                ->uniform.context->errorf("Unknown noise type \"%s\"",        \
-                                          name.c_str());                      \
+                ->uniform.context->errorfmt("Unknown noise type \"{}\"",      \
+                                            name);                            \
         }                                                                     \
     }
 
@@ -232,8 +232,8 @@ __OSL_GENERIC_DISPATCH2(Wdf, Wdf, Wf, Wf, Dual2<float>)
             zero_derivs(wr);                                                   \
         } else {                                                               \
             ((BatchedShaderGlobals*)bsg)                                       \
-                ->uniform.context->errorf("Unknown noise type \"%s\"",         \
-                                          name.c_str());                       \
+                ->uniform.context->errorfmt("Unknown noise type \"{}\"",       \
+                                            name);                             \
         }                                                                      \
     }
 

@@ -49,14 +49,18 @@ default_pointcloud_search(BatchedShaderGlobals* bsg,
     }
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        ctx->batched<__OSL_WIDTH>().errorf(results.mask(), "pointcloud_search: could not open \"%s\"", filename);
+        ctx->batched<__OSL_WIDTH>().errorfmt(
+            results.mask(), "pointcloud_search: could not open \"{}\"",
+            filename);
         assign_all(results.wnum_points(), 0);
         return;
     }
 
     const Partio::ParticlesData *cloud = pc->read_access();
     if (cloud == NULL) { // The file failed to load
-        ctx->batched<__OSL_WIDTH>().errorf(results.mask(), "pointcloud_search: could not open \"%s\"", filename);
+        ctx->batched<__OSL_WIDTH>().errorfmt(
+            results.mask(), "pointcloud_search: could not open \"{}\"",
+            filename);
         assign_all(results.wnum_points(), 0);
         return;
     }
@@ -260,33 +264,44 @@ default_pointcloud_get(BatchedShaderGlobals* bsg,
         }
 
         if (pc == nullptr) { // The file failed to load
-            ctx->batched<__OSL_WIDTH>().errorf(Mask{lane}, "pointcloud_get: could not open \"%s\"", filename);
+            ctx->batched<__OSL_WIDTH>().errorfmt(
+                Mask { lane }, "pointcloud_get: could not open \"{}\"",
+                filename);
             return;
         }
 
         if (cloud == nullptr) { // The file failed to load
-            ctx->batched<__OSL_WIDTH>().errorf(Mask{lane}, "pointcloud_get: could not open \"%s\"", filename);
+            ctx->batched<__OSL_WIDTH>().errorfmt(
+                Mask { lane }, "pointcloud_get: could not open \"{}\"",
+                filename);
             return;
         }
 
         // lookup the ParticleAttribute pointer needed for a query
         if (attr == nullptr) {
-            ctx->batched<__OSL_WIDTH>().errorf(Mask{lane}, "Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name, filename);
+            ctx->batched<__OSL_WIDTH>().errorfmt(
+                Mask { lane },
+                "Accessing unexisting attribute {} in pointcloud \"{}\"",
+                attr_name, filename);
             return;
         }
 
 
         // Finally check for some equivalent types like float3 and vector
         if (!is_compatible_with_partio) {
-            ctx->batched<__OSL_WIDTH>().errorf(Mask{lane}, "Type of attribute \"%s\" : %s not compatible with OSL's %s in \"%s\" pointcloud",
-                                attr_name, partio_type, element_type, filename);
+            ctx->batched<__OSL_WIDTH>().errorfmt(
+                Mask { lane },
+                "Type of attribute \"{}\" : {} not compatible with OSL's {} in \"{}\" pointcloud",
+                attr_name, partio_type, element_type, filename);
             return;
         }
 
         // For safety, clamp the count to the most that will fit in the output
         if (maxn < count) {
-            ctx->batched<__OSL_WIDTH>().errorf(Mask{lane}, "Point cloud attribute \"%s\" : %s with retrieval count %d will not fit in %s",
-                                attr_name, partio_type, count, attr_type);
+            ctx->batched<__OSL_WIDTH>().errorfmt(
+                Mask { lane },
+                "Point cloud attribute \"{}\" : {} with retrieval count {} will not fit in {}",
+                attr_name, partio_type, count, attr_type);
             count = maxn;
         }
         // Copy int indices out of SOA wide format into local AOS size_t

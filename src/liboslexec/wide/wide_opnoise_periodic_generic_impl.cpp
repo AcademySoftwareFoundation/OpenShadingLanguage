@@ -86,8 +86,8 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
             }                                                                        \
         } else {                                                                     \
             ((BatchedShaderGlobals*)bsg)                                             \
-                ->uniform.context->errorf("Unknown noise type \"%s\"",               \
-                                          name.c_str());                             \
+                ->uniform.context->errorfmt("Unknown noise type \"{}\"",             \
+                                            name);                                   \
         }                                                                            \
     }
 
@@ -166,8 +166,8 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
             }                                                                        \
         } else {                                                                     \
             ((BatchedShaderGlobals*)bsg)                                             \
-                ->uniform.context->errorf("Unknown noise type \"%s\"",               \
-                                          name.c_str());                             \
+                ->uniform.context->errorfmt("Unknown noise type \"{}\"",             \
+                                            name);                                   \
         }                                                                            \
     }
 

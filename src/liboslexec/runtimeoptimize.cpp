@@ -234,8 +234,8 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
         if (type.is_unsized_array())
             newtype.make_array (datatype.numelements());
 
-        Symbol newconst (ustring::sprintf ("$newconst%d", m_next_newconst++),
-                         newtype, SymTypeConst);
+        Symbol newconst(ustring::fmtformat("$newconst{}", m_next_newconst++),
+                        newtype, SymTypeConst);
         void *newdata = nullptr;
         TypeDesc t (newtype.simpletype());
         size_t n = t.aggregate * t.numelements();
@@ -289,8 +289,8 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
 int
 RuntimeOptimizer::add_temp (const TypeSpec &type)
 {
-    return add_symbol (Symbol (ustring::sprintf ("$opttemp%d", m_next_newtemp++),
-                               type, SymTypeTemp));
+    return add_symbol(Symbol(ustring::fmtformat("$opttemp{}", m_next_newtemp++),
+                             type, SymTypeTemp));
 }
 
 
@@ -339,9 +339,9 @@ RuntimeOptimizer::debug_opt_ops (int opbegin, int opend, string_view message) co
     const Opcode &op (inst()->ops()[opbegin]);
     std::string oprange;
     if (opbegin >= 0 && opend-opbegin > 1)
-        oprange = Strutil::sprintf ("ops %d-%d ", opbegin, opend);
+        oprange = fmtformat("ops {}-{} ", opbegin, opend);
     else if (opbegin >= 0)
-        oprange = Strutil::sprintf ("op %d ", opbegin);
+        oprange = fmtformat("op {} ", opbegin);
     debug_optfmt("  {}{} (@ {}:{})\n", oprange, message, op.sourcefile(),
                  op.sourceline());
 }
@@ -357,18 +357,18 @@ RuntimeOptimizer::debug_turn_into (const Opcode &op, int numops,
     int opnum = &op - &(inst()->ops()[0]);
     std::string msg;
     if (numops == 1)
-        msg = Strutil::fmt::format("turned '{}' to '{}", op_string(op), newop);
+        msg = fmtformat("turned '{}' to '{}", op_string(op), newop);
     else
-        msg = Strutil::fmt::format("turned to '{}", newop);
+        msg = fmtformat("turned to '{}", newop);
     if (newarg0 >= 0)
-        msg += Strutil::fmt::format(" {}", inst()->symbol(newarg0)->name());
+        msg += fmtformat(" {}", inst()->symbol(newarg0)->name());
     if (newarg1 >= 0)
-        msg += Strutil::fmt::format(" {}", inst()->symbol(newarg1)->name());
+        msg += fmtformat(" {}", inst()->symbol(newarg1)->name());
     if (newarg2 >= 0)
-        msg += Strutil::fmt::format(" {}", inst()->symbol(newarg2)->name());
+        msg += fmtformat(" {}", inst()->symbol(newarg2)->name());
     msg += "'";
     if (why.size())
-        msg += Strutil::fmt::format(" : {}", why);
+        msg += fmtformat(" : {}", why);
     debug_opt_ops (opnum, opnum+numops, msg);
 }
 
@@ -1215,7 +1215,7 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
             Opcode &uselessop (inst()->ops()[i->second]);
             if (uselessop.opname() != u_nop && uselessop.opname() != u_functioncall_nr)
                 turn_into_nop (uselessop,
-                           debug() > 1 ? Strutil::fmt::format("remove stale value assignment to {}, reassigned on op {}",
+                           debug() > 1 ? fmtformat("remove stale value assignment to {}, reassigned on op {}",
                                                          opargsym(uselessop,0)->name(), opnum).c_str() : "");
         }
     }
@@ -1408,9 +1408,9 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         // replace its default value entirely and get rid of the assignment.
         if (R->firstread() > opnum && ! R->renderer_output() &&
                 m_opt_elide_unconnected_outputs) {
-            make_param_use_instanceval (R, Strutil::fmt::format("- written once, with a constant ({}), before any reads", const_value_as_string(*A)));
+            make_param_use_instanceval (R, fmtformat("- written once, with a constant ({}), before any reads", const_value_as_string(*A)));
             replace_param_value (R, A->data(), A->typespec());
-            turn_into_nop (op, debug() > 1 ? Strutil::fmt::format("oparam {} never subsequently read or connected", R->name()).c_str() : "");
+            turn_into_nop (op, debug() > 1 ? fmtformat("oparam {} never subsequently read or connected", R->name()).c_str() : "");
             return true;
         }
     }
@@ -1420,7 +1420,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // assignment at all. Note that unread_after() does take into
     // consideration whether it's a renderer output.
     if (unread_after(R,opnum)) {
-        turn_into_nop (op, debug() > 1 ? Strutil::fmt::format("oparam {} never subsequently read or connected", R->name()).c_str() : "");
+        turn_into_nop (op, debug() > 1 ? fmtformat("oparam {} never subsequently read or connected", R->name()).c_str() : "");
         return true;
     }
 
@@ -1696,9 +1696,9 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
               (a->symtype() != SymTypeGlobal && a->symtype() != SymTypeOutputParam) &&
               equivalent (a->typespec(), c->typespec())) {
             if (debug() > 1)
-                debug_opt_ops (opnum, opnum+1,
-                               Strutil::sprintf ("turned '%s %s...' to '%s %s...' as part of daisy-chain",
-                                 op.opname(), a->name(), op.opname(), c->name()));
+                debug_opt_ops(opnum, opnum+1,
+                              fmtformat("turned '{} {}...' to '{} {}...' as part of daisy-chain",
+                                op.opname(), a->name(), op.opname(), c->name()));
             inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
             c->mark_rw (opnum, false, true);
             // Any time we write to a variable that wasn't written to at
@@ -1805,7 +1805,7 @@ RuntimeOptimizer::remove_unused_params ()
         if (param_never_used(s) && s.has_init_ops()) {
             std::string why;
             if (debug() > 1)
-                why = Strutil::fmt::format("remove init ops of unused param {} {}", s.typespec(), s.name());
+                why = fmtformat("remove init ops of unused param {} {}", s.typespec(), s.name());
             turn_into_nop (s.initbegin(), s.initend(), why);
             s.set_initrange (0, 0);
             s.clear_rw();   // mark as totally unused
@@ -2363,7 +2363,7 @@ RuntimeOptimizer::optimize_instance ()
         // Not needed.  Remove all its connections and ops.
         inst()->connections().clear ();
         turn_into_nop (0, (int)inst()->ops().size()-1,
-                       debug() > 1 ? Strutil::fmt::format("eliminate layer {} with no outward connections", inst()->layername()).c_str() : "");
+                       debug() > 1 ? fmtformat("eliminate layer {} with no outward connections", inst()->layername()).c_str() : "");
         for (auto&& s : inst()->symbols())
             s.clear_rw ();
     }
@@ -2984,7 +2984,7 @@ RuntimeOptimizer::printinst (std::ostream &out) const
             if (op.jump(j) >= 0)
                 out << " " << op.jump(j);
         out << "\t# ";
-//        out << "    rw " << Strutil::fmt::format("{:x}", op.argread_bits())
+//        out << "    rw " << fmtformat("{:x}", op.argread_bits())
 //            << ' ' << op.argwrite_bits();
         if (op.argtakesderivs_all())
             out << " %derivs(" << op.argtakesderivs_all() << ") ";

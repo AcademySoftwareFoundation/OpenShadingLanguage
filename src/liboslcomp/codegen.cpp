@@ -101,7 +101,7 @@ OSLCompilerImpl::insert_code(int opnum, const char* opname, size_t nargs,
 Symbol*
 OSLCompilerImpl::make_temporary(const TypeSpec& type)
 {
-    ustring name = ustring::sprintf("$tmp%d", ++m_next_temp);
+    ustring name = ustring::fmtformat("$tmp{}", ++m_next_temp);
     Symbol* s    = new Symbol(name, type, SymTypeTemp);
     symtab().insert(s);
 
@@ -131,7 +131,7 @@ OSLCompilerImpl::add_struct_fields(StructSpec* structspec, ustring basename,
     // arraylen is the length of the array of the surrounding data type
     for (int i = 0; i < (int)structspec->numfields(); ++i) {
         const StructSpec::FieldSpec& field(structspec->field(i));
-        ustring fieldname = ustring::sprintf("%s.%s", basename, field.name);
+        ustring fieldname = ustring::fmtformat("{}.{}", basename, field.name);
         TypeSpec type     = field.type;
         int arr           = type.arraylength();
         if (arr && arraylen) {
@@ -175,7 +175,7 @@ OSLCompilerImpl::make_constant(ustring val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name      = ustring::sprintf("$const%d", ++m_next_const);
+    ustring name      = ustring::fmtformat("$const{}", ++m_next_const);
     ConstantSymbol* s = new ConstantSymbol(name, val);
     symtab().insert(s);
     m_const_syms.push_back(s);
@@ -194,7 +194,7 @@ OSLCompilerImpl::make_constant(TypeDesc type, const void* val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name      = ustring::sprintf("$const%d", ++m_next_const);
+    ustring name      = ustring::fmtformat("$const{}", ++m_next_const);
     ConstantSymbol* s = new ConstantSymbol(name, type);
     memcpy(s->dataptr(), val, typesize);
     symtab().insert(s);
@@ -212,7 +212,7 @@ OSLCompilerImpl::make_constant(int val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name      = ustring::sprintf("$const%d", ++m_next_const);
+    ustring name      = ustring::fmtformat("$const{}", ++m_next_const);
     ConstantSymbol* s = new ConstantSymbol(name, val);
     symtab().insert(s);
     m_const_syms.push_back(s);
@@ -229,7 +229,7 @@ OSLCompilerImpl::make_constant(float val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name      = ustring::sprintf("$const%d", ++m_next_const);
+    ustring name      = ustring::fmtformat("$const{}", ++m_next_const);
     ConstantSymbol* s = new ConstantSymbol(name, val);
     symtab().insert(s);
     m_const_syms.push_back(s);
@@ -247,7 +247,7 @@ OSLCompilerImpl::make_constant(TypeDesc type, float x, float y, float z)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name      = ustring::sprintf("$const%d", ++m_next_const);
+    ustring name      = ustring::fmtformat("$const{}", ++m_next_const);
     ConstantSymbol* s = new ConstantSymbol(name, type, x, y, z);
     symtab().insert(s);
     m_const_syms.push_back(s);
@@ -550,8 +550,8 @@ ASTNode::codegen_assign_struct(StructSpec* structspec, ustring dstsym,
             // struct within struct -- recurse
             ustring fieldname(structspec->field(i).name);
             codegen_assign_struct(fieldtype.structspec(),
-                                  ustring::sprintf("%s.%s", dstsym, fieldname),
-                                  ustring::sprintf("%s.%s", srcsym, fieldname),
+                                  ustring::fmtformat("{}.{}", dstsym, fieldname),
+                                  ustring::fmtformat("{}.{}", srcsym, fieldname),
                                   arrayindex, copywholearrays, 0, paraminit);
             continue;
         }
@@ -560,8 +560,8 @@ ASTNode::codegen_assign_struct(StructSpec* structspec, ustring dstsym,
             // struct array within struct -- loop over indices and recurse
             OSL_ASSERT(!arrayindex && "two levels of arrays not allowed");
             ustring fieldname(structspec->field(i).name);
-            ustring dstfield = ustring::sprintf("%s.%s", dstsym, fieldname);
-            ustring srcfield = ustring::sprintf("%s.%s", srcsym, fieldname);
+            ustring dstfield = ustring::fmtformat("{}.{}", dstsym, fieldname);
+            ustring srcfield = ustring::fmtformat("{}.{}", srcsym, fieldname);
             for (int i = 0; i < fieldtype.arraylength(); ++i) {
                 codegen_assign_struct(fieldtype.structspec(), dstfield,
                                       srcfield, m_compiler->make_constant(i),
@@ -632,16 +632,16 @@ ASTNode::one_default_literal(const Symbol* sym, ASTNode* init, std::string& out,
         completed = false;
     } else if (type.is_int()) {
         if (islit && lit->typespec().is_int())
-            out += Strutil::sprintf("%d", lit->intval());
+            out += fmtformat("{}", lit->intval());
         else {
             out += "0";  // FIXME?
             completed = false;
         }
     } else if (type.is_float()) {
         if (islit && lit->typespec().is_int())
-            out += Strutil::sprintf("%d", lit->intval());
+            out += fmtformat("{}", lit->intval());
         else if (islit && lit->typespec().is_float())
-            out += Strutil::sprintf("%.9g", lit->floatval());
+            out += fmtformat("{:.9g}", lit->floatval());
         else {
             out += "0";  // FIXME?
             completed = false;
@@ -649,10 +649,10 @@ ASTNode::one_default_literal(const Symbol* sym, ASTNode* init, std::string& out,
     } else if (type.is_triple()) {
         if (islit && lit->typespec().is_int()) {
             float f = lit->intval();
-            out += Strutil::sprintf("%.9g%s%.9g%s%.9g", f, sep, f, sep, f);
+            out += fmtformat("{:.9g}{}{:.9g}{}{:.9g}", f, sep, f, sep, f);
         } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
-            out += Strutil::sprintf("%.9g%s%.9g%s%.9g", f, sep, f, sep, f);
+            out += fmtformat("{:.9g}{}{:.9g}{}{:.9g}", f, sep, f, sep, f);
         } else if (init && init->typespec() == type
                    && (init->nodetype() == ASTNode::type_constructor_node
                        || (init->nodetype() == ASTNode::compound_initializer_node
@@ -682,26 +682,26 @@ ASTNode::one_default_literal(const Symbol* sym, ASTNode* init, std::string& out,
                 }
             }
             if (nargs == 1)
-                out += Strutil::sprintf("%.9g%s%.9g%s%.9g", f[0], sep, f[0],
-                                        sep, f[0]);
+                out += fmtformat("{:.9g}{}{:.9g}{}{:.9g}", f[0], sep, f[0], sep,
+                                 f[0]);
             else
-                out += Strutil::sprintf("%.9g%s%.9g%s%.9g", f[0], sep, f[1],
-                                        sep, f[2]);
+                out += fmtformat("{:.9g}{}{:.9g}{}{:.9g}", f[0], sep, f[1], sep,
+                                 f[2]);
         } else {
-            out += Strutil::sprintf("0%s0%s0", sep, sep);
+            out += fmtformat("0{}0{}0", sep, sep);
             completed = false;
         }
     } else if (type.is_matrix()) {
         if (islit && lit->typespec().is_int()) {
             float f = lit->intval();
             for (int c = 0; c < 16; ++c)
-                out += Strutil::sprintf("%.9g%s", (c / 4) == (c % 4) ? f : 0.0f,
-                                        c < 15 ? sep : "");
+                out += fmtformat("{:.9g}{}", (c / 4) == (c % 4) ? f : 0.0f,
+                                 c < 15 ? sep : "");
         } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
             for (int c = 0; c < 16; ++c)
-                out += Strutil::sprintf("%.9g%s", (c / 4) == (c % 4) ? f : 0.0f,
-                                        c < 15 ? sep : "");
+                out += fmtformat("{:.9g}{}", (c / 4) == (c % 4) ? f : 0.0f,
+                                 c < 15 ? sep : "");
         } else if (init && init->typespec() == type
                    && init->nodetype() == ASTNode::type_constructor_node) {
             ASTtype_constructor* ctr = (ASTtype_constructor*)init;
@@ -729,22 +729,21 @@ ASTNode::one_default_literal(const Symbol* sym, ASTNode* init, std::string& out,
             }
             if (nargs == 1) {
                 for (int c = 0; c < 16; ++c)
-                    out += Strutil::sprintf("%.9g%s",
-                                            (c / 4) == (c % 4) ? f[0] : 0.0f,
-                                            c < 15 ? sep : "");
+                    out += fmtformat("{:.9g}{}",
+                                     (c / 4) == (c % 4) ? f[0] : 0.0f,
+                                     c < 15 ? sep : "");
             } else {
                 for (int c = 0; c < 16; ++c)
-                    out += Strutil::sprintf("%.9g%s", f[c], c < 15 ? sep : "");
+                    out += fmtformat("{:.9g}{}", f[c], c < 15 ? sep : "");
             }
         } else {
             for (int c = 0; c < 16; ++c)
-                out += Strutil::sprintf("0%s", c < 15 ? sep : "");
+                out += fmtformat("0{}", c < 15 ? sep : "");
             completed = false;
         }
     } else if (type.is_string()) {
         if (islit && lit->typespec().is_string())
-            out += Strutil::sprintf("\"%s\"",
-                                    Strutil::escape_chars(lit->strval()));
+            out += fmtformat("\"{}\"", Strutil::escape_chars(lit->strval()));
         else {
             out += "\"\"";  // FIXME?
             completed = false;
@@ -903,8 +902,8 @@ ASTNode::codegen_initlist(ref init, TypeSpec type, Symbol* sym)
         for (int i = 0; init && i < structspec->numfields();
              init  = init->next(), ++i) {
             const StructSpec::FieldSpec& field(structspec->field(i));
-            ustring fieldname = ustring::sprintf("%s.%s", sym->mangled(),
-                                                 field.name);
+            ustring fieldname = ustring::fmtformat("{}.{}", sym->mangled(),
+                                                   field.name);
             Symbol* fieldsym  = m_compiler->symtab().find_exact(fieldname);
             if (paraminit) {
                 OSL_DASSERT(nodetype() == variable_declaration_node);
@@ -1073,8 +1072,8 @@ ASTNode::codegen_struct_initializers(ref init, Symbol* sym, bool is_constructor,
          init  = init->next(), ++i) {
         // Structure element -- assign to the i-th member field
         const StructSpec::FieldSpec& field(structspec->field(i));
-        ustring fieldname = ustring::sprintf("%s.%s", sym->mangled(),
-                                             field.name);
+        ustring fieldname = ustring::fmtformat("{}.{}", sym->mangled(),
+                                               field.name);
         Symbol* fieldsym  = m_compiler->symtab().find_exact(fieldname);
         if (fieldsym->typespec().is_structure_based()
             && (init->nodetype() == type_constructor_node
@@ -1240,8 +1239,8 @@ ASTindex::codegen_copy_struct_array_element(StructSpec* structspec,
             // struct within struct -- recurse!
             codegen_copy_struct_array_element(
                 type.structspec(),
-                ustring::sprintf("%s.%s", destname, field.name),
-                ustring::sprintf("%s.%s", srcname, field.name), index);
+                ustring::fmtformat("{}.{}", destname, field.name),
+                ustring::fmtformat("{}.{}", srcname, field.name), index);
         } else {
             OSL_ASSERT(!type.is_array());
             Symbol *dfield, *sfield;
@@ -1464,7 +1463,7 @@ ASTunary_expression::codegen(Symbol* dest)
     if (m_function_overload) {
         // A little crazy, but we temporarily construct an ASTfunction_call
         // in order to codegen this overloaded operator.
-        ustring funcname = ustring::sprintf("__operator__%s__", opword());
+        ustring funcname = ustring::fmtformat("__operator__{}__", opword());
         ASTfunction_call fc(m_compiler, funcname, expr().get(),
                             m_function_overload);
         fc.typecheck(typespec());
@@ -2023,8 +2022,8 @@ ASTfunction_call::struct_pair_all_fields(StructSpec* structspec, ustring formal,
             // struct within struct -- recurse!
             struct_pair_all_fields(
                 type.structspec(),
-                ustring::sprintf("%s.%s", formal, field.name),
-                ustring::sprintf("%s.%s", actual, field.name), arrayindex);
+                ustring::fmtformat("{}.{}", formal, field.name),
+                ustring::fmtformat("{}.{}", actual, field.name), arrayindex);
         } else {
             Symbol *fsym, *asym;
             m_compiler->struct_field_pair(structspec, fi, formal, actual, fsym,

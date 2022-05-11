@@ -66,15 +66,15 @@ clear_layout(QLayout* lay)
 
 
 
-// Create a label whose text is given by printf-style arguments (type safe).
-// The label will be "autotext" which means it will auto-detect RTF and
+// Create a label whose text is given by std::format-style arguments (type
+// safe). The label will be "autotext" which means it will auto-detect RTF and
 // render a subset of HTML formatting. For example, "<i>blah</i>" will
 // render the 'blah' in italics.
 template<typename... Args>
 inline QLabel*
-make_qlabelf(const char* fmt, const Args&... args)
+make_qlabelfmt(const char* fmt, const Args&... args)
 {
-    std::string text = OIIO::Strutil::sprintf(fmt, args...);
+    std::string text = OIIO::Strutil::fmt::format(fmt, args...);
     auto label       = new QLabel(text.c_str());
     label->setTextFormat(Qt::AutoText);
     return label;

@@ -450,9 +450,9 @@ BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
     std::string mangled_name         = dealiased->mangled();
     AllocationMap::iterator map_iter = named_values().find(mangled_name);
     if (map_iter == named_values().end()) {
-        shadingcontext()->errorf(
-            "Couldn't find symbol '%s' (unmangled = '%s'). Did you forget to allocate it?",
-            mangled_name.c_str(), dealiased->unmangled());
+        shadingcontext()->errorfmt(
+            "Couldn't find symbol '{}' (unmangled = '{}'). Did you forget to allocate it?",
+            mangled_name, dealiased->unmangled());
         return 0;
     }
     return (llvm::Value*)map_iter->second;

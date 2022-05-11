@@ -390,13 +390,6 @@ private:
     void write_oso_metadata(const ASTNode* metanode) const;
     void write_dependency_file(string_view filename);
 
-    template<typename... Args>
-    OSL_DEPRECATED("Use osofmt with std::format conventions")
-    inline void osof(const char* fmt, const Args&... args) const
-    {
-        (*m_osofile) << OIIO::Strutil::sprintf(fmt, args...);
-    }
-
     // Output text to the osofile, using std::format formatting conventions.
     template<typename... Args>
     inline void osofmt(const char* fmt, const Args&... args) const

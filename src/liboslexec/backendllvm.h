@@ -418,7 +418,8 @@ public:
     ///
     llvm::BasicBlock *llvm_exit_instance_block () {
         if (! m_exit_instance_block) {
-            std::string name = Strutil::sprintf ("%s_%d_exit_", inst()->layername(), inst()->id());
+            std::string name = fmtformat("{}_{}_exit_", inst()->layername(),
+                                         inst()->id());
             m_exit_instance_block = ll.new_basic_block (name);
         }
         return m_exit_instance_block;

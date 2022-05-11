@@ -341,11 +341,10 @@ BackendLLVM::llvm_type_groupdata ()
     }
     group().llvm_groupdata_size (offset);
     if (llvm_debug() >= 2)
-        std::cout << " Group struct had " << order << " fields, total size "
-                  << offset << "\n\n";
+        print(" Group struct had {} fields, total size {}\n\n", order, offset);
 
-    std::string groupdataname = Strutil::sprintf("Groupdata_%llu",
-                                                (long long unsigned int)group().name().hash());
+    std::string groupdataname = fmtformat("Groupdata_{}",
+                                          group().name().hash());
     m_llvm_type_groupdata = ll.type_struct (fields, groupdataname);
 
     return m_llvm_type_groupdata;
@@ -857,8 +856,8 @@ BackendLLVM::build_llvm_init ()
 {
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_name = Strutil::sprintf ("__direct_callable__group_%s_%d_init",
-                                                group().name(), group().id());
+    std::string unique_name = fmtformat("__direct_callable__group_{}_{}_init",
+                                        group().name(), group().id());
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
@@ -884,7 +883,7 @@ BackendLLVM::build_llvm_init ()
     ll.new_builder (entry_bb);
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
-        llvm_gen_debug_printf (Strutil::sprintf("\n\n\n\nGROUP! %s",group().name()));
+        llvm_gen_debug_printf (fmtformat("\n\n\n\nGROUP! {}",group().name()));
         llvm_gen_debug_printf ("enter group initlayer %d %s %s",
                                this->layer(), inst()->layername(), inst()->shadername()));
     }
@@ -923,15 +922,13 @@ BackendLLVM::build_llvm_init ()
     // All done
 #if 0 /* helpful for debugging */
     if (llvm_debug())
-        llvm_gen_debug_printf (Strutil::sprintf("exit group init %s",
-                                               group().name());
+        llvm_gen_debug_printf(fmtformat("exit group init {}", group().name());
 #endif
     ll.op_return();
 
     if (llvm_debug())
-        std::cout << "group init func (" << unique_name << ") "
-                  << " after llvm  = " 
-                  << ll.bitcode_string(ll.current_function()) << "\n";
+        print("group init func ({}) after llvm  = {}\n", unique_name,
+              ll.bitcode_string(ll.current_function()));
 
     if (ll.debug_is_enabled())
         ll.debug_pop_function();
@@ -984,8 +981,10 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         // ran. If it has, do an early return. Otherwise, set the 'ran' flag
         // and then run the layer.
         if (shadingsys().llvm_debug_layers())
-            llvm_gen_debug_printf (Strutil::sprintf("checking for already-run layer %d %s %s",
-                                   this->layer(), inst()->layername(), inst()->shadername()));
+            llvm_gen_debug_printf(
+                fmtformat("checking for already-run layer {} {} {}",
+                          this->layer(), inst()->layername(),
+                          inst()->shadername()));
         llvm::Value *executed = ll.op_eq (ll.op_load (layerfield), ll.constant_bool(true));
         llvm::BasicBlock *then_block = ll.new_basic_block();
         llvm::BasicBlock *after_block = ll.new_basic_block();
@@ -993,15 +992,17 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         // insert point is now then_block
         // we've already executed, so return early
         if (shadingsys().llvm_debug_layers())
-            llvm_gen_debug_printf (Strutil::sprintf("  taking early exit, already executed layer %d %s %s",
-                                   this->layer(), inst()->layername(), inst()->shadername()));
+            llvm_gen_debug_printf(fmtformat(
+                "  taking early exit, already executed layer {} {} {}",
+                this->layer(), inst()->layername(), inst()->shadername()));
         ll.op_return ();
         ll.set_insert_point (after_block);
     }
 
     if (shadingsys().llvm_debug_layers())
-        llvm_gen_debug_printf (Strutil::sprintf("enter layer %d %s %s",
-                               this->layer(), inst()->layername(), inst()->shadername()));
+        llvm_gen_debug_printf(fmtformat("enter layer {} {} {}", this->layer(),
+                                        inst()->layername(),
+                                        inst()->shadername()));
     // Mark this layer as executed
     if (! group().is_last_layer(layer())) {
         ll.op_store (ll.constant_bool(true), layerfield);
@@ -1212,8 +1213,9 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 
     // All done
     if (shadingsys().llvm_debug_layers())
-        llvm_gen_debug_printf (Strutil::sprintf("exit layer %d %s %s",
-                               this->layer(), inst()->layername(), inst()->shadername()));
+        llvm_gen_debug_printf(fmtformat("exit layer {} {} {}", this->layer(),
+                                        inst()->layername(),
+                                        inst()->shadername()));
     ll.op_return();
 
     if (llvm_debug())

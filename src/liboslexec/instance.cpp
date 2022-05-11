@@ -850,7 +850,7 @@ ShaderGroup::serialize () const
                 bool lockgeom = dstsyms_exist ? s->lockgeom()
                                               : inst->instoverride(p)->lockgeom();
                 if (! lockgeom)
-                    out << Strutil::sprintf (" [[int lockgeom=%d]]", lockgeom);
+                    print(out, " [[int lockgeom={}]]", lockgeom);
                 out << " ;\n";
             }
         }

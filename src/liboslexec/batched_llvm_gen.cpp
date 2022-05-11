@@ -136,8 +136,8 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
     args[5] = lanes_requiring_execution_value;
 
     // Before the merge, keeping in case we broke it
-    //std::string name = Strutil::format ("%s_%s_%d", m_library_selector,  parent->layername().c_str(),
-    //                                  parent->id());
+    //std::string name = fmtformat("{}_{}_{}", m_library_selector,  parent->layername().c_str(),
+    //                             parent->id());
     std::string name
         = Strutil::fmt::format("{}_{}", m_library_selector,
                                layer_function_name(group(), *parent));
@@ -436,10 +436,8 @@ LLVMGEN (llvm_gen_printf)
 
     // Some ops prepend things
     if (op.opname() == op_error || op.opname() == op_warning) {
-        std::string prefix = Strutil::sprintf ("Shader %s [%s]: ",
-                                               op.opname(),
-                                               rop.inst()->shadername());
-        s = prefix + s;
+        s = fmtformat("Shader {} [{}]: {}", op.opname(),
+                      rop.inst()->shadername(), s);
     }
 
     // Now go back and put the new format string in its place
@@ -6398,7 +6396,7 @@ LLVMGEN (llvm_gen_spline)
 
     FuncSpec func_spec(op.opname().c_str());
 
-    //std::string name = Strutil::sprintf("osl_%s_", op.opname());
+    //std::string name = fmtfrmat("osl_{}_", op.opname());
     std::vector<llvm::Value *> args;
     // only use derivatives for result if:
     //   result has derivs and (value || knots) have derivs

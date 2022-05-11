@@ -29,19 +29,21 @@ check_cwd (ShadingSystemImpl &shadingsys)
     char pathname[1024] = { "" };
     if (! getcwd (pathname, sizeof(pathname)-1)) {
         int e = errno;
-        err += Strutil::sprintf ("Failed getcwd(), errno is %d: %s\n",
-                                errno, pathname);
+        err += fmtformat("Failed getcwd(), errno is {}: {}\n", errno, pathname);
         if (e == EACCES || e == ENOENT) {
             err += "Read/search permission problem or dir does not exist.\n";
             const char *pwdenv = getenv ("PWD");
             if (! pwdenv) {
                 err += "$PWD is not even found in the environment.\n";
             } else {
-                err += Strutil::sprintf ("$PWD is \"%s\"\n", pwdenv);
-                err += Strutil::sprintf ("That %s.\n",
-                          OIIO::Filesystem::exists(pwdenv) ? "exists" : "does NOT exist");
-                err += Strutil::sprintf ("That %s a directory.\n",
-                          OIIO::Filesystem::is_directory(pwdenv) ? "is" : "is NOT");
+                err += fmtformat("$PWD is \"{}\"\n", pwdenv);
+                err += fmtformat("That {}.\n", OIIO::Filesystem::exists(pwdenv)
+                                                   ? "exists"
+                                                   : "does NOT exist");
+                err += fmtformat("That {} a directory.\n",
+                                 OIIO::Filesystem::is_directory(pwdenv)
+                                     ? "is"
+                                     : "is NOT");
                 std::vector<std::string> pieces;
                 Strutil::split (pwdenv, pieces, "/");
                 std::string p;
@@ -50,9 +52,13 @@ check_cwd (ShadingSystemImpl &shadingsys)
                         continue;
                     p += "/";
                     p += pieces[i];
-                    err += Strutil::sprintf ("  %s : %s and is%s a directory.\n", p,
-                        OIIO::Filesystem::exists(p) ? "exists" : "does NOT exist",
-                        OIIO::Filesystem::is_directory(p) ? "" : " NOT");
+                    err += fmtformat("  {} : {} and is{} a directory.\n", p,
+                                     OIIO::Filesystem::exists(p)
+                                         ? "exists"
+                                         : "does NOT exist",
+                                     OIIO::Filesystem::is_directory(p)
+                                         ? ""
+                                         : " NOT");
                 }
             }
         }
@@ -389,8 +395,8 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
     OSL_ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
     auto mangle_name = [](const std::string& name, const std::string& prefix) {
-        return OIIO::Strutil::sprintf ("_ZN%drti_internal_%s%d%sE",
-                                      prefix.size()+13, prefix, name.size(), name);
+        return fmtformat("_ZN{}rti_internal_{}{}{}E", prefix.size() + 13,
+                         prefix, name.size(), name);
     };
 
     std::string optix_type;
@@ -417,8 +423,8 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
         // with no problem. Larger arrays, or arrays of other element types,
         // will be treated as a user datatype and will not work natively with
         // OptiX's variable mechanism.
-        optix_type = OIIO::Strutil::sprintf ("%s%d", sym.typespec().elementtype().c_str(),
-                                             sym.typespec().arraylength());
+        optix_type = fmtformat("{}{}", sym.typespec().elementtype(),
+                               sym.typespec().arraylength());
     }
 
     struct rti_typeinfo {
@@ -483,12 +489,9 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
         std::string sym_name = sym.name().c_str();
         std::replace (sym_name.begin(), sym_name.end(), '.', '_');
 
-        std::string var_name = Strutil::sprintf ("%s_%s_%d_%s_%d",
-                                                 sym_name,
-                                                 group().name(),
-                                                 group().id(),
-                                                 inst()->layername(),
-                                                 sym.layer());
+        std::string var_name = fmtformat("{}_{}_{}_{}_{}", sym_name,
+                                         group().name(), group().id(),
+                                         inst()->layername(), sym.layer());
 
         // Leading dollar signs are not allowed in PTX variable names,
         // so prepend an underscore.

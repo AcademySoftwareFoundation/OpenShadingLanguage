@@ -401,10 +401,8 @@ LLVMGEN (llvm_gen_printf)
 
     // Some ops prepend things
     if (op.opname() == op_error || op.opname() == op_warning) {
-        std::string prefix = Strutil::sprintf ("Shader %s [%s]: ",
-                                               op.opname(),
-                                               rop.inst()->shadername());
-        s = prefix + s;
+        s = fmtformat("Shader {} [{}]: {}", op.opname(),
+                      rop.inst()->shadername(), s);
     }
 
     // Now go back and put the new format string in its place
@@ -3262,7 +3260,7 @@ LLVMGEN (llvm_gen_spline)
              Knots.typespec().is_array() &&  
              (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
 
-    std::string name = Strutil::sprintf("osl_%s_", op.opname());
+    std::string name = fmtformat("osl_{}_", op.opname());
     // only use derivatives for result if:
     //   result has derivs and (value || knots) have derivs
     bool result_derivs = Result.has_derivs() && (Value.has_derivs() || Knots.has_derivs());
@@ -3820,7 +3818,7 @@ LLVMGEN (llvm_gen_blackbody)
 
     llvm::Value* args[] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                             rop.llvm_load_value(Temperature) };
-    rop.ll.call_function (Strutil::sprintf("osl_%s_vf",op.opname()).c_str(), args);
+    rop.ll.call_function (fmtformat("osl_{}_vf",op.opname()).c_str(), args);
 
     // Punt, zero out derivs.
     // FIXME -- only of some day, someone truly needs blackbody() to

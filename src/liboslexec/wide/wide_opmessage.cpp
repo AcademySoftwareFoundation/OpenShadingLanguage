@@ -161,12 +161,12 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
                 ustring msg_sourcefile = msg_wsourcefile[lane];
                 int msg_sourceline     = msg_wsourceline[lane];
 
-                bsg->uniform.context->batched<__OSL_WIDTH>().errorf(
+                bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                     lanes_with_data,
-                    "message \"%s\" already exists (created here: %s:%d)"
-                    " cannot set again from %s:%d",
-                    name.c_str(), msg_sourcefile.c_str(), msg_sourceline,
-                    sourcefile.c_str(), sourceline);
+                    "message \"{}\" already exists (created here: {}:{})"
+                    " cannot set again from {}:{}",
+                    name, msg_sourcefile, msg_sourceline, sourcefile,
+                    sourceline);
             });
             auto lanes_to_populate = (~m->valid_mask & matching_lanes)
                                      & ~m->get_before_set_mask;
@@ -180,12 +180,11 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
         lanes_that_getmessage_called_on.foreach ([=](ActiveLane lane) -> void {
             ustring msg_sourcefile = msg_wsourcefile[lane];
             int msg_sourceline     = msg_wsourceline[lane];
-            bsg->uniform.context->batched<__OSL_WIDTH>().errorf(
+            bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                 Mask(Lane(lane)),
-                "message \"%s\" was queried before being set (queried here: %s:%d)"
-                " setting it now (%s:%d) would lead to inconsistent results",
-                name.c_str(), msg_sourcefile.c_str(), msg_sourceline,
-                sourcefile.c_str(), sourceline);
+                "message \"{}\" was queried before being set (queried here: {}:{})"
+                " setting it now ({}:{}) would lead to inconsistent results",
+                name, msg_sourcefile, msg_sourceline, sourcefile, sourceline);
         });
     } else {
         // The message didn't exist - create it
@@ -324,16 +323,16 @@ OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
                 // found message, but was set by a layer deeper than the one querying the message
                 bool has_data = m->has_data() ? m->valid_mask[lane] : false;
 
-                bsg->uniform.context->batched<__OSL_WIDTH>().errorf(
+                bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                     Mask(lane),
-                    "type mismatch for message \"%s\" (%s as %s here: %s:%d)"
-                    " cannot fetch as %s from %s:%d",
+                    "type mismatch for message \"{}\" ({} as {} here: {}:{})"
+                    " cannot fetch as {} from {}:{}",
                     name.c_str(), has_data ? "created" : "queried",
                     m->type == TypeDesc::PTR ? "closure color"
                                              : m->type.c_str(),
-                    msg_sourcefile.c_str(), msg_sourceline,
-                    is_closure ? "closure color" : type.c_str(),
-                    sourcefile.c_str(), sourceline);
+                    msg_sourcefile, msg_sourceline,
+                    is_closure ? "closure color" : type.c_str(), sourcefile,
+                    sourceline);
             });
 
             assign_all(wR, 0);
@@ -364,14 +363,14 @@ OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
             int msg_sourceline     = msg_wsourceline[lane];
 
             // found message, but was set by a layer deeper than the one querying the message
-            bsg->uniform.context->batched<__OSL_WIDTH>().errorf(
+            bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                 Mask(lane),
-                "message \"%s\" was set by layer #%d (%s:%d)"
-                " but is being queried by layer #%d (%s:%d)"
+                "message \"{}\" was set by layer #{} ({}:{})"
+                " but is being queried by layer #{} ({}:{})"
                 " - messages may only be transfered from nodes "
                 "that appear earlier in the shading network",
-                name.c_str(), msg_layerid, msg_sourcefile.c_str(),
-                msg_sourceline, layeridx, sourcefile.c_str(), sourceline);
+                name, msg_layerid, msg_sourcefile, msg_sourceline, layeridx,
+                sourcefile, sourceline);
             wR[lane] = 0;
         });
 

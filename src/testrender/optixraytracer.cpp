@@ -463,11 +463,8 @@ OptixRaytracer::make_optix_materials ()
         }
 
         if (options.get_int("saveptx")) {
-            std::string filename = OIIO::Strutil::sprintf("%s_%d.ptx", group_name,
-                                                          mtl_id++);
-            OIIO::ofstream out;
-            OIIO::Filesystem::open (out, filename);
-            out << osl_ptx;
+            std::string filename = fmtformat("{}_{}.ptx", group_name, mtl_id++);
+            OIIO::Filesystem::write_text_file(filename, osl_ptx);
         }
 
         // Create Programs from the init and group_entry functions,
@@ -690,11 +687,8 @@ OptixRaytracer::make_optix_materials ()
         }
 
         if (options.get_int ("saveptx")) {
-            std::string filename = OIIO::Strutil::sprintf("%s_%d.ptx", group_name,
-                                                          mtl_id++);
-            OIIO::ofstream out;
-            OIIO::Filesystem::open (out, filename);
-            out << osl_ptx;
+            std::string filename = fmtformat("{}_{}.ptx", group_name, mtl_id++);
+            OIIO::Filesystem::write_text_file(filename, osl_ptx);
         }
 
         OptixModule optix_module;

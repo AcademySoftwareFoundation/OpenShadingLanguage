@@ -40,10 +40,10 @@ OSL_BATCHOP void __OSL_OP(naninf_check)(int ncomps, const void* vals_,
         for (int c = firstcheck, e = c + nchecks; c < e; ++c) {
             int i = d * ncomps + c;
             if (!OIIO::isfinite(vals[i])) {
-                ctx->errorf("Detected %g value in %s%s at %s:%d (op %s)",
-                            vals[i], d > 0 ? "the derivatives of " : "",
-                            USTR(symbolname), USTR(sourcefile), sourceline,
-                            USTR(opname));
+                ctx->errorfmt("Detected {} value in {}{} at {}:{} (op {})",
+                              vals[i], d > 0 ? "the derivatives of " : "",
+                              USTR(symbolname), USTR(sourcefile), sourceline,
+                              USTR(opname));
                 return;
             }
         }
@@ -65,8 +65,8 @@ OSL_BATCHOP void __OSL_MASKED_OP1(naninf_check_offset, i)(
             int i = d * ncomps + c;
             mask.foreach ([=](ActiveLane lane) -> void {
                 if (!OIIO::isfinite(vals[i * __OSL_WIDTH + lane])) {
-                    ctx->errorf(
-                        "Detected %g value in %s%s at %s:%d (op %s) batch lane:%d",
+                    ctx->errorfmt(
+                        "Detected {} value in {}{} at {}:{} (op {}) batch lane:{}",
                         vals[i * __OSL_WIDTH + lane],
                         d > 0 ? "the derivatives of " : "", USTR(symbolname),
                         USTR(sourcefile), sourceline, USTR(opname), lane);
@@ -98,8 +98,8 @@ OSL_BATCHOP void __OSL_MASKED_OP1(naninf_check_offset, Wi)(
             for (int c = firstcheck, e = c + nchecks; c < e; ++c) {
                 int i = d * ncomps + c;
                 if (!OIIO::isfinite(vals[i * __OSL_WIDTH + lane])) {
-                    ctx->errorf(
-                        "Detected %g value in %s%s at %s:%d (op %s) batch lane:%d",
+                    ctx->errorfmt(
+                        "Detected {} value in {}{} at {}:{} (op {}) batch lane:{}",
                         vals[i * __OSL_WIDTH + lane],
                         d > 0 ? "the derivatives of " : "", USTR(symbolname),
                         USTR(sourcefile), sourceline, USTR(opname), lane);
@@ -152,8 +152,8 @@ OSL_BATCHOP void __OSL_OP2(uninit_check_values_offset, X,
             }
     }
     if (uninit) {
-        ctx->errorf(
-            "Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
+        ctx->errorfmt(
+            "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {})",
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
             (layername && layername[0]) ? layername : "<unnamed layer>",
@@ -210,8 +210,8 @@ OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, WX, i)(
             });
     }
     if (lanes_uninit.any_on()) {
-        ctx->errorf(
-            "Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
+        ctx->errorfmt(
+            "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
             (layername && layername[0]) ? layername : "<unnamed layer>",
@@ -270,8 +270,8 @@ OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, X, Wi)(
     }
 
     if (lanes_uninit.any_on()) {
-        ctx->errorf(
-            "Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
+        ctx->errorfmt(
+            "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
             (layername && layername[0]) ? layername : "<unnamed layer>",
@@ -332,8 +332,8 @@ OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi)(
     }
 
     if (lanes_uninit.any_on()) {
-        ctx->errorf(
-            "Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
+        ctx->errorfmt(
+            "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
             (layername && layername[0]) ? layername : "<unnamed layer>",
@@ -351,8 +351,8 @@ OSL_BATCHOP int __OSL_OP(range_check)(int indexvalue, int length,
     if (indexvalue < 0 || indexvalue >= length) {
         auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
         ShadingContext* ctx = bsg->uniform.context;
-        ctx->errorf("Index [%d] out of range %s[0..%d]: %s:%d"
-                    " (group %s, layer %d %s, shader %s)",
+        ctx->errorfmt("Index [{}] out of range {}[0..{}]: {}:{}"
+                    " (group {}, layer {} {}, shader {})",
                     indexvalue, USTR(symname), length - 1, USTR(sourcefile),
                     sourceline,
                     (groupname && groupname[0]) ? groupname : "<unnamed group>",
@@ -380,16 +380,14 @@ OSL_BATCHOP void
         int indexvalue = wIndexValue[lane];
         if (indexvalue < 0 || indexvalue >= length) {
             ShadingContext* ctx = bsg->uniform.context;
-            ctx->errorf("Index [%d] out of range %s[0..%d]: %s:%d"
-                        " (group %s, layer %d %s, shader %s)",
-                        indexvalue, USTR(symname), length - 1, USTR(sourcefile),
-                        sourceline,
-                        (groupname && groupname[0]) ? groupname
-                                                    : "<unnamed group>",
-                        layer,
-                        (layername && layername[0]) ? layername
-                                                    : "<unnamed layer>",
-                        USTR(shadername));
+            ctx->errorfmt(
+                "Index [{}] out of range {}[0..{}]: {}:{} (group {}, layer {} {}, shader {})",
+                indexvalue, USTR(symname), length - 1, USTR(sourcefile),
+                sourceline,
+                (groupname && groupname[0]) ? groupname : "<unnamed group>",
+                layer,
+                (layername && layername[0]) ? layername : "<unnamed layer>",
+                USTR(shadername));
             if (indexvalue >= length)
                 indexvalue = length - 1;
             else
@@ -528,8 +526,8 @@ OSL_BATCHOP int __OSL_OP(bind_interpolated_param)(
         Mask foundUserData = bsg->uniform.renderer->batched(WidthTag())
                                  ->get_userdata(USTR(name), bsg, userDest);
 
-        // printf ("Binding %s %s : index %d, ok = %d\n", name,
-        //         TYPEDESC(type).c_str(),userdata_index, foundUserData.value());
+        // print("Binding {} {} : index {}, ok = {}\n", name,
+        //       TYPEDESC(type).c_str(),userdata_index, foundUserData.value());
 
         *userdata_initialized = (1 << 31) | foundUserData.value();
         bsg->uniform.context->incr_get_userdata_calls();

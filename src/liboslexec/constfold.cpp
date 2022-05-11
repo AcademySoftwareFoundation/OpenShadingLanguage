@@ -1258,8 +1258,7 @@ DECLFOLDER(constfold_concat)
             return 0;  // something non-constant
         ustring old = result;
         ustring s = S.get_string();
-        result = ustring::sprintf ("%s%s", old.c_str() ? old.c_str() : "",
-                                  s.c_str() ? s.c_str() : "");
+        result = ustring::fmtformat("{}{}", old, s);
     }
     // If we made it this far, all args were constants, and the
     // concatenation is in result.

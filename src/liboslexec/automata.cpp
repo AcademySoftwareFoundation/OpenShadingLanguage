@@ -86,7 +86,7 @@ NdfAutomata::State::tostr()const
         for (IntSet::const_iterator j = dest.begin(); j != dest.end(); ++j) {
             if (s[s.size()-1] != '{')
                 s += ", ";
-            s += Strutil::sprintf("%d", *j);
+            s += Strutil::to_string(*j);
         }
         s += "}";
     }
@@ -108,12 +108,12 @@ NdfAutomata::State::tostr()const
             }
             s += "]:";
         }
-        s += Strutil::sprintf("%d", m_wildcard_trans);
+        s += Strutil::to_string(m_wildcard_trans);
     }
     // and finally the rule if we have it
     if (m_rule) {
         s += " | ";
-        s += Strutil::sprintf("%p", m_rule);
+        s += Strutil::fmt::format("{:p}", m_rule);
     }
     return s;
 }
@@ -336,7 +336,7 @@ DfAutomata::State::tostr()const
         else
             s += sym.c_str();
         s += ":";
-        s += Strutil::sprintf("%d", dest);
+        s += Strutil::to_string(dest);
     }
     // wildcard
     if (m_wildcard_trans >= 0) {
@@ -354,7 +354,7 @@ DfAutomata::State::tostr()const
             }
             s += "}:";
         }
-        s += Strutil::sprintf("%d", m_wildcard_trans);
+        s += Strutil::to_string(m_wildcard_trans);
     }
     // and the rules
     if (m_rules.size()) {
@@ -362,7 +362,7 @@ DfAutomata::State::tostr()const
         for (RuleSet::const_iterator i = m_rules.begin(); i != m_rules.end(); ++i) {
             if (s[s.size()-1] != '[')
                 s += ", ";
-            s += Strutil::sprintf("%p", *i);
+            s += Strutil::fmt::format("{:p}", *i);
         }
         s += "]";
     }

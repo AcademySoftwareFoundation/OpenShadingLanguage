@@ -375,7 +375,7 @@ static void
 specify_expr (int argc OSL_MAYBE_UNUSED, const char *argv[])
 {
     OSL_DASSERT(argc == 2);
-    std::string shadername = OIIO::Strutil::sprintf("expr_%d", exprcount++);
+    std::string shadername = OSL::fmtformat("expr_{}", exprcount++);
     std::string sourcecode =
         "shader " + shadername + " (\n"
         "    float s = u [[ int lockgeom=0 ]],\n"

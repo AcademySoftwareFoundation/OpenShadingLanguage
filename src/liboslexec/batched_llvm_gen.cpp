@@ -77,8 +77,8 @@ typedef typename BatchedBackendLLVM::FuncSpec FuncSpec;
 void
 BatchedBackendLLVM::llvm_gen_debug_printf(string_view message)
 {
-    ustring s = ustring::sprintf("(%s %s) %s", inst()->shadername(),
-                                 inst()->layername(), message);
+    ustring s = ustring::fmtformat("({} {}) {}", inst()->shadername(),
+                                   inst()->layername(), message);
     ll.call_function(build_name("printf"), sg_void_ptr(), ll.constant("%s\n"),
                      ll.constant(s));
 }
@@ -268,8 +268,8 @@ LLVMGEN (llvm_gen_printf)
     std::vector<DelayedExtraction> delay_extraction_args;
     std::vector<llvm::Value*> call_args;
     if (!format_sym.is_constant()) {
-        rop.shadingcontext()->warningf ("%s must currently have constant format\n",
-                                  op.opname().c_str());
+        rop.shadingcontext()->warningfmt(
+            "{} must currently have constant format\n", op.opname());
         return false;
     }
 
@@ -344,8 +344,9 @@ LLVMGEN (llvm_gen_printf)
                 ++format;
             char formatchar = *format++;  // Also eat the format char
             if (arg >= op.nargs()) {
-                rop.shadingcontext()->errorf ("Mismatch between format string and arguments (%s:%d)",
-                                        op.sourcefile().c_str(), op.sourceline());
+                rop.shadingcontext()->errorfmt(
+                    "Mismatch between format string and arguments ({}:{})",
+                    op.sourcefile(), op.sourceline());
                 return false;
             }
 
@@ -2079,7 +2080,9 @@ LLVMGEN (llvm_gen_unary_op)
             }
         } else {
             // Don't know how to handle this.
-            rop.shadingcontext()->errorf ("Don't know how to handle op '%s', eliding the store\n", opname.c_str());
+            rop.shadingcontext()->errorfmt(
+                "Don't know how to handle op '{}', eliding the store\n",
+                opname);
         }
 
         // Store the result
@@ -2097,7 +2100,7 @@ LLVMGEN (llvm_gen_unary_op)
 
         if (dst_derivs) {
             // mul results in <a * b, a * b_dx + b * a_dx, a * b_dy + b * a_dy>
-            rop.shadingcontext()->infof ("punting on derivatives for now\n");
+            rop.shadingcontext()->infofmt("punting on derivatives for now\n");
             // FIXME!!
         }
     }
@@ -4210,10 +4213,9 @@ llvm_batched_texture_options(BatchedBackendLLVM &rop, int opnum,
             continue;
         }
 
-        rop.shadingcontext()->errorf ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
-                                     tex3d ? "3d" : "",
-                                     name.c_str(), valtype.c_str(),
-                                     op.sourcefile().c_str(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "Unknown texture{} optional argument: \"{}\", <{}> ({}:{})",
+            tex3d ? "3d" : "", name, valtype, op.sourcefile(), op.sourceline());
 
 #undef PARAM_WIDE_FLOAT
 #undef PARAM_WIDE_FLOAT_S_T_R
@@ -4430,10 +4432,9 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM &rop, int opnum,
 
         SKIP_PARAM_WIDE_FLOAT(time)
 
-        rop.shadingcontext()->errorf ("Unknown texture%s optional argument: \"%s\", <%s> (%s:%d)",
-                                     tex3d ? "3d" : "",
-                                     name.c_str(), valtype.c_str(),
-                                     op.sourcefile().c_str(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "Unknown texture{} optional argument: \"{}\", <{}> ({}:{})",
+            tex3d ? "3d" : "", name, valtype, op.sourcefile(), op.sourceline());
 
 #undef SKIP_PARAM_WIDE_FLOAT
 #undef SKIP_PARAM_WIDE_STRING
@@ -5045,9 +5046,9 @@ llvm_batched_trace_options(BatchedBackendLLVM &rop, int opnum,
         PARAM_UNIFORM(shade, TypeDesc::INT)
         PARAM_UNIFORM(traceset, TypeDesc::STRING)
 
-        rop.shadingcontext()->errorf ("Unknown trace optional argument: \"%s\", <%s> (%s:%d)",
-                                     name.c_str(), valtype.c_str(),
-                                     op.sourcefile().c_str(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "Unknown trace optional argument: \"{}\", <{}> ({}:{})", name,
+            valtype, op.sourcefile(), op.sourceline());
 
 #undef PARAM_UNIFORM
     }
@@ -5124,9 +5125,9 @@ llvm::Value* llvm_batched_trace_varying_options(BatchedBackendLLVM &rop, int opn
         PARAM_VARYING(shade, TypeDesc::INT)
         PARAM_VARYING(traceset, TypeDesc::STRING)
 
-        rop.shadingcontext()->errorf ("Unknown trace optional argument: \"%s\", <%s> (%s:%d)",
-                                     name.c_str(), valtype.c_str(),
-                                     op.sourcefile().c_str(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "Unknown trace optional argument: \"{}\", <{}> ({}:{})", name,
+            valtype, op.sourcefile(), op.sourceline());
 
 #undef PARAM_VARYING
 
@@ -5317,10 +5318,9 @@ llvm_batched_noise_options (BatchedBackendLLVM &rop, int opnum,
                                     rop.llvm_load_value (Val, 0, NULL, 0,
                                                          TypeDesc::TypeFloat));
         } else {
-            rop.shadingcontext()->errorf ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
-                                    op.opname().c_str(),
-                                    name.c_str(), valtype.c_str(),
-                                    op.sourcefile().c_str(), op.sourceline());
+            rop.shadingcontext()->errorfmt(
+                "Unknown {} optional argument: \"{}\", <{}> ({}:{})",
+                op.opname(), name, valtype, op.sourcefile(), op.sourceline());
         }
     }
 
@@ -5408,10 +5408,9 @@ llvm_batched_noise_varying_options (
                     // do any binning for the varying direction.
                     continue;
         } else {
-            rop.shadingcontext()->errorf ("Unknown %s optional argument: \"%s\", <%s> (%s:%d)",
-                                    op.opname().c_str(),
-                                    name.c_str(), valtype.c_str(),
-                                    op.sourcefile().c_str(), op.sourceline());
+            rop.shadingcontext()->errorfmt(
+                "Unknown {} optional argument: \"{}\", <{}> ({}:{})",
+                op.opname(), name, valtype, op.sourcefile(), op.sourceline());
         }
     }
     return remainingMask;
@@ -5522,9 +5521,10 @@ LLVMGEN (llvm_gen_noise)
         derivs = true;
         name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
     } else {
-        rop.shadingcontext()->errorf ("%snoise type \"%s\" is unknown, called from (%s:%d)",
-                                (periodic ? "periodic " : ""), name.c_str(),
-                                op.sourcefile().c_str(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "{}noise type \"{}\" is unknown, called from ({}:{})",
+            (periodic ? "periodic " : ""), name, op.sourcefile(),
+            op.sourceline());
         return false;
     }
 
@@ -6530,7 +6530,9 @@ llvm_gen_keyword_fill(BatchedBackendLLVM &rop, Opcode &op, const ClosureRegistry
             }
         }
         if (!legal) {
-            rop.shadingcontext()->warningf("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
+            rop.shadingcontext()->warningfmt(
+                "Unsupported closure keyword arg \"{}\" for {} ({}:{})", *key,
+                clname, op.sourcefile(), op.sourceline());
         }
     }
 }
@@ -6554,10 +6556,11 @@ LLVMGEN (llvm_gen_closure)
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.shadingcontext()->errorf("Closure '%s' is not supported by the current renderer, called from %s:%d in shader \"%s\", layer %d \"%s\", group \"%s\"",
-                                     closure_name, op.sourcefile(), op.sourceline(),
-                                     rop.inst()->shadername(), rop.layer(),
-                                     rop.inst()->layername(), rop.group().name());
+        rop.shadingcontext()->errorfmt(
+            "Closure '{}' is not supported by the current renderer, called from {}:{} in shader \"{}\", layer {} \"{}\", group \"{}\"",
+            closure_name, op.sourcefile(), op.sourceline(),
+            rop.inst()->shadername(), rop.layer(), rop.inst()->layername(),
+            rop.group().name());
         return false;
     }
 
@@ -6806,9 +6809,9 @@ LLVMGEN (llvm_gen_pointcloud_search)
         } else {
             // It is a regular attribute, push it to the arg list
             if (!Name.is_uniform()) {
-                rop.shadingcontext()->errorf (
-                    "pointcloud_search named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from (%s:%d)",
-                    op.sourcefile().c_str(), op.sourceline());
+                rop.shadingcontext()->errorfmt(
+                    "pointcloud_search named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from ({}:{})",
+                    op.sourcefile(), op.sourceline());
                 return false;
             }
 
@@ -6835,9 +6838,9 @@ LLVMGEN (llvm_gen_pointcloud_search)
         // per the OSL language specification
         const int const_max_points = Max_points.get_int();
         if (capacity < const_max_points) {
-            rop.shadingcontext()->warningf (
-                "Arrays too small for pointcloud lookup at (%s:%d) (%s:%d)",
-                op.sourcefile().c_str(), op.sourceline());
+            rop.shadingcontext()->warningfmt(
+                "Arrays too small for pointcloud lookup at ({}:{}) ({}:{})",
+                op.sourcefile(), op.sourceline());
             args[maxPointsArgumentIndex] = rop.ll.constant(capacity);
         }
     } else {
@@ -6947,9 +6950,9 @@ LLVMGEN (llvm_gen_pointcloud_get)
 
     OSL_ASSERT(Data.is_varying());
     if (!Attr_name.is_uniform()) {
-        rop.shadingcontext()->errorf (
-            "pointcloud_get named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from (%s:%d)",
-            op.sourcefile().c_str(), op.sourceline());
+        rop.shadingcontext()->errorfmt(
+            "pointcloud_get named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from ({}:{})",
+            op.sourcefile(), op.sourceline());
         return false;
     }
     bool requires_binning = Filename.is_varying();
@@ -7092,9 +7095,9 @@ LLVMGEN (llvm_gen_pointcloud_write)
     for (int i = 0;  i < nattrs;  ++i) {
         Symbol *namesym = rop.opargsym (op, 3+2*i);
         if (!namesym->is_uniform()) {
-            rop.shadingcontext()->errorf (
-                "pointcloud_write named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from (%s:%d)",
-                op.sourcefile().c_str(), op.sourceline());
+            rop.shadingcontext()->errorfmt(
+                "pointcloud_write named attribute parameter is varying, batched code gen requires a constant or uniform attribute name, called from ({}:{})",
+                op.sourcefile(), op.sourceline());
             return false;
         }
 

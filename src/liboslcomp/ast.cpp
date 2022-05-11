@@ -1116,7 +1116,7 @@ ASTunary_expression::ASTunary_expression (OSLCompilerImpl *comp, int op,
     : ASTNode (unary_expression_node, comp, op, expr)
 {
     // Check for a user-overloaded function for this operator
-    Symbol *sym = comp->symtab().find (ustring::sprintf ("__operator__%s__", opword()));
+    Symbol *sym = comp->symtab().find(ustring::fmtformat("__operator__{}__", opword()));
     if (sym && sym->symtype() == SymTypeFunction)
         m_function_overload = (FunctionSymbol *)sym;
 }
@@ -1171,7 +1171,7 @@ ASTbinary_expression::ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
     // Check for a user-overloaded function for this operator.
     // Disallow a few ops from overloading.
     if (op != And && op != Or) {
-        ustring funcname = ustring::sprintf ("__operator__%s__", opword());
+        ustring funcname = ustring::fmtformat("__operator__{}__", opword());
         Symbol *sym = comp->symtab().find (funcname);
         if (sym && sym->symtype() == SymTypeFunction)
             m_function_overload = (FunctionSymbol *)sym;

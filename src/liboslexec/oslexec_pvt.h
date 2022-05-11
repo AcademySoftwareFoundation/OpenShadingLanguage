@@ -508,25 +508,25 @@ public:
     // take std::format-like arguments.
     template<typename Str, typename... Args>
     inline void errorfmt(const Str& fmt, Args&&... args) const {
-        error(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
+        error(fmtformat(fmt, std::forward<Args>(args)...));
     }
     void error (const std::string &message) const;
 
     template<typename Str, typename... Args>
     inline void warningfmt(const Str& fmt, Args&&... args) const {
-        warning(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
+        warning(fmtformat(fmt, std::forward<Args>(args)...));
     }
     void warning (const std::string &message) const;
 
     template<typename Str, typename... Args>
     inline void infofmt(const Str& fmt, Args&&... args) const {
-        info(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
+        info(fmtformat(fmt, std::forward<Args>(args)...));
     }
     void info (const std::string &message) const;
 
     template<typename Str, typename... Args>
     inline void messagefmt(const Str& fmt, Args&&... args) const {
-        message(Strutil::fmt::format(fmt, std::forward<Args>(args)...));
+        message(fmtformat(fmt, std::forward<Args>(args)...));
     }
     void message (const std::string &message) const;
 
@@ -1843,41 +1843,14 @@ public:
             return (ClosureAdd *) m_sc.m_closure_pool.alloc(WidthT * sizeof(ClosureAdd), alignof(ClosureAdd));
         }
 
-        template<typename ...ArgListT>
-        inline
-        void errorf(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
-        {
-            m_sc.record_error(ErrorHandler::EH_ERROR, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
-        }
-
-        template<typename ...ArgListT>
-        inline
-        void warningf(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
-        {
-            m_sc.record_error(ErrorHandler::EH_WARNING, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
-        }
-
-        template<typename ...ArgListT>
-        inline
-        void infof(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
-        {
-            m_sc.record_error(ErrorHandler::EH_INFO, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
-        }
-
-        template<typename ...ArgListT>
-        inline
-        void messagef(Mask<WidthT> mask, const char* fmt, ArgListT... args) const
-        {
-            m_sc.record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...), static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
-        }
-
         template<typename Str, typename... Args>
         inline
         void errorfmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
         {
             m_sc.record_error(ErrorHandler::EH_ERROR,
-                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
-                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+                              fmtformat(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(
+                                  mask));
         }
 
         template<typename Str, typename... Args>
@@ -1885,8 +1858,9 @@ public:
         void warningfmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
         {
             m_sc.record_error(ErrorHandler::EH_WARNING,
-                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
-                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+                              fmtformat(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(
+                                  mask));
         }
 
         template<typename Str, typename... Args>
@@ -1894,8 +1868,9 @@ public:
         void infofmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
         {
             m_sc.record_error(ErrorHandler::EH_INFO,
-                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
-                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+                              fmtformat(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(
+                                  mask));
         }
 
         template<typename Str, typename... Args>
@@ -1903,8 +1878,9 @@ public:
         void messagefmt(Mask<WidthT> mask, const Str& fmt, Args&&... args) const
         {
             m_sc.record_error(ErrorHandler::EH_MESSAGE,
-                              Strutil::fmt::format(fmt, std::forward<Args>(args)...),
-                              static_cast<Mask<MaxSupportedSimdLaneCount>>(mask));
+                              fmtformat(fmt, std::forward<Args>(args)...),
+                              static_cast<Mask<MaxSupportedSimdLaneCount>>(
+                                  mask));
         }
     };
 
@@ -2068,43 +2044,23 @@ public:
     void process_errors () const;
 
     template<typename... Args>
-    inline void errorf(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_ERROR, Strutil::sprintf (fmt, args...));
-    }
-
-    template<typename... Args>
-    inline void warningf(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_WARNING, Strutil::sprintf (fmt, args...));
-    }
-
-    template<typename... Args>
-    inline void infof(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_INFO, Strutil::sprintf (fmt, args...));
-    }
-
-    template<typename... Args>
-    inline void messagef(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...));
-    }
-
-    template<typename... Args>
     inline void errorfmt(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_ERROR, Strutil::fmt::format(fmt, args...));
+        record_error(ErrorHandler::EH_ERROR, fmtformat(fmt, args...));
     }
 
     template<typename... Args>
     inline void warningfmt(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_WARNING, Strutil::fmt::format(fmt, args...));
+        record_error(ErrorHandler::EH_WARNING, fmtformat(fmt, args...));
     }
 
     template<typename... Args>
     inline void infofmt(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_INFO, Strutil::fmt::format(fmt, args...));
+        record_error(ErrorHandler::EH_INFO, fmtformat(fmt, args...));
     }
 
     template<typename... Args>
     inline void messagefmt(const char* fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_MESSAGE, Strutil::fmt::format(fmt, args...));
+        record_error(ErrorHandler::EH_MESSAGE, fmtformat(fmt, args...));
     }
 
     void reserve_heap(size_t size) {
@@ -2338,8 +2294,7 @@ public:
     // Mangle the group and layer into a unique function name
     std::string layer_function_name (const ShaderGroup &group,
                                      const ShaderInstance &inst) {
-        return Strutil::sprintf ("%s_%s_%d", group.name(),
-                                inst.layername(), inst.id());
+        return fmtformat("{}_{}_{}", group.name(), inst.layername(), inst.id());
     }
     std::string layer_function_name () {
         return layer_function_name (group(), *inst());

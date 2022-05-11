@@ -897,12 +897,11 @@ BatchedBackendLLVM::llvm_type_groupdata()
     }
     group().llvm_groupdata_wide_size(offset);
     if (llvm_debug() >= 2)
-        std::cout << " Group struct had " << order << " fields, total size "
-                  << offset << "\n\n";
+        OSL::print(" Group struct had {} fields, total size {}\n\n", order,
+                   offset);
 
-    std::string groupdataname
-        = Strutil::sprintf("Groupdata_%llu",
-                           (long long unsigned int)group().name().hash());
+    std::string groupdataname = fmtformat("Groupdata_{}",
+                                          group().name().hash());
     m_llvm_type_groupdata = ll.type_struct(fields, groupdataname,
                                            false /*is_packed*/);
 
@@ -1063,9 +1062,9 @@ BatchedBackendLLVM::llvm_assign_initial_value(
             // We had a userdata pre-placement record for this variable.
             // Just copy from the correct offset location!
 
-            // Strutil::print("GEN found placeable userdata input {} -> {} {} size={}\n",
-            //                sym.name(), symloc->name, sym.typespec(),
-            //                symloc->type.size());
+            // OSL::print("GEN found placeable userdata input {} -> {} {} size={}\n",
+            //            sym.name(), symloc->name, sym.typespec(),
+            //            symloc->type.size());
             const int deriv_count = (symloc->derivs && sym.has_derivs()) ? 3 : 1;
 
             llvm::Value* sym_offset = ll.constanti64(symloc->offset);
@@ -1703,9 +1702,8 @@ BatchedBackendLLVM::build_llvm_init()
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
     OSL_ASSERT(m_library_selector);
-    std::string unique_name = Strutil::sprintf("%s_group_%d_init",
-                                               m_library_selector,
-                                               group().id());
+    std::string unique_name = fmtformat("{}_group_{}_init", m_library_selector,
+                                        group().id());
     ll.current_function(ll.make_function(unique_name, false,
                                          ll.type_void(),  // return type
                                          { llvm_type_sg_ptr(),
@@ -1750,7 +1748,7 @@ BatchedBackendLLVM::build_llvm_init()
 
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
-        llvm_gen_debug_printf (Strutil::sprintf("\n\n\n\nGROUP! %s",group().name()));
+        llvm_gen_debug_printf (fmtformat("\n\n\n\nGROUP! {}",group().name()));
         llvm_gen_debug_printf ("enter group initlayer %d %s %s");                               this->layer(), inst()->layername(), inst()->shadername()));
     }
 #endif
@@ -1794,15 +1792,13 @@ BatchedBackendLLVM::build_llvm_init()
     // All done
 #if 0 /* helpful for debugging */
     if (llvm_debug())
-        llvm_gen_debug_printf (Strutil::sprintf("exit group init %s",
-                                               group().name());
+        llvm_gen_debug_printf(fmtformat("exit group init {}", group().name());
 #endif
     ll.op_return();
 
     if (llvm_debug())
-        std::cout << "group init func (" << unique_name << ") "
-                  << " after llvm  = "
-                  << ll.bitcode_string(ll.current_function()) << "\n";
+        OSL::print("group init func ({}) after llvm  = {}\n", unique_name,
+                   ll.bitcode_string(ll.current_function()));
 
     if (ll.debug_is_enabled()) {
         ll.debug_pop_function();
@@ -1828,9 +1824,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     // Note that the GroupData* is passed as a void*.
     OSL_ASSERT(m_library_selector);
     std::string unique_layer_name
-        = Strutil::sprintf("%s_%s%s", m_library_selector,
-                           (groupentry ? "__direct_callable__" : ""),
-                           layer_function_name().c_str());
+        = fmtformat("{}_{}{}", m_library_selector,
+                    (groupentry ? "__direct_callable__" : ""),
+                    layer_function_name());
 
     bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function(
@@ -1908,9 +1904,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         // and then run the layer.
         if (shadingsys().llvm_debug_layers())
             llvm_gen_debug_printf(
-                Strutil::sprintf("checking for already-run layer %d %s %s",
-                                 this->layer(), inst()->layername(),
-                                 inst()->shadername()));
+                fmtformat("checking for already-run layer {} {} {}",
+                          this->layer(), inst()->layername(),
+                          inst()->shadername()));
         llvm::Value* previously_executed = ll.int_as_mask(
             previously_executed_value);
         llvm::Value* required_lanes_executed
@@ -1926,17 +1922,17 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         // insert point is now then_block
         // we've already executed, so return early
         if (shadingsys().llvm_debug_layers())
-            llvm_gen_debug_printf(Strutil::sprintf(
-                "  taking early exit, already executed layer %d %s %s",
+            llvm_gen_debug_printf(fmtformat(
+                "  taking early exit, already executed layer {} {} {}",
                 this->layer(), inst()->layername(), inst()->shadername()));
         ll.op_return();
         ll.set_insert_point(after_block);
     }
 
     if (shadingsys().llvm_debug_layers())
-        llvm_gen_debug_printf(
-            Strutil::sprintf("enter layer %d %s %s", this->layer(),
-                             inst()->layername(), inst()->shadername()));
+        llvm_gen_debug_printf(fmtformat("enter layer {} {} {}", this->layer(),
+                                        inst()->layername(),
+                                        inst()->shadername()));
     // Mark this layer as executed
     if (!group().is_last_layer(layer())) {
         // Caller may only be asking for a subset of the lanes to be executed
@@ -1980,8 +1976,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         // If debugnan is turned on, globals check that their values are ok
         if (s.symtype() == SymTypeGlobal && shadingsys().debug_nan()) {
             TypeDesc t = s.typespec().simpletype();
-            if (t.basetype
-                == TypeDesc::FLOAT) {  // just check float-based types
+            if (t.basetype == TypeDesc::FLOAT) {  
+                // just check float-based types
                 int ncomps = t.numelements() * t.aggregate;
                 if (s.is_uniform()) {
                     llvm::Value* args[]
@@ -2182,9 +2178,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
 
         if (! equivalent(s.typespec(), symloc->type)
             || s.typespec().is_closure()) {
-            std::cout << "No output copy for " << s.typespec() << ' ' << s.name()
-                      << " because of type mismatch vs symloc=" << symloc->type
-                      << "\n";
+            // print("No output copy for {} {} because of type mismatch vs symloc={}\n",
+            //     s.typespec(), s.name(), symloc->type);
             continue;  // types didn't match
         }
         auto type = s.typespec().simpletype();
@@ -2243,9 +2238,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
 
     // All done
     if (shadingsys().llvm_debug_layers())
-        llvm_gen_debug_printf(
-            Strutil::sprintf("exit layer %d %s %s", this->layer(),
-                             inst()->layername(), inst()->shadername()));
+        llvm_gen_debug_printf(fmtformat("exit layer {} {} {}", this->layer(),
+                                        inst()->layername(),
+                                        inst()->shadername()));
     ll.op_return();
 
     if (llvm_debug())
@@ -2679,11 +2674,10 @@ BatchedBackendLLVM::run()
         std::string safegroup = Strutil::replace(group().name(), "/", ".",
                                                  true);
         if (safegroup.size() > 235)
-            safegroup
-                = Strutil::sprintf("TRUNC_%s_%d",
-                                   safegroup.substr(safegroup.size() - 235),
-                                   group().id());
-        std::string name = Strutil::sprintf("%s.ll", safegroup);
+            safegroup = fmtformat("TRUNC_{}_{}",
+                                  safegroup.substr(safegroup.size() - 235),
+                                  group().id());
+        std::string name = fmtformat("{}.ll", safegroup);
         std::ofstream out(name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string(ll.module());
@@ -2725,11 +2719,10 @@ BatchedBackendLLVM::run()
         std::string safegroup = Strutil::replace(group().name(), "/", ".",
                                                  true);
         if (safegroup.size() > 235)
-            safegroup
-                = Strutil::sprintf("TRUNC_%s_%d",
-                                   safegroup.substr(safegroup.size() - 235),
-                                   group().id());
-        std::string name = Strutil::sprintf("%s_opt.ll", safegroup);
+            safegroup = fmtformat("TRUNC_{}_{}",
+                                  safegroup.substr(safegroup.size() - 235),
+                                  group().id());
+        std::string name = fmtformat("{}_opt.ll", safegroup);
         std::ofstream out(name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string(ll.module());
@@ -2769,9 +2762,9 @@ BatchedBackendLLVM::run()
     m_stat_total_llvm_time = timer();
 
     if (shadingsys().m_compile_report) {
-        shadingcontext()->infof("JITed shader group %s:", group().name());
-        shadingcontext()->infof(
-            "    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
+        shadingcontext()->infofmt("JITed shader group {}:", group().name());
+        shadingcontext()->infofmt(
+            "    ({:1.2f}s = {:1.2f} setup, {:1.2f} ir, {:1.2f} opt, {:1.2f} jit; local mem {}KB)",
             m_stat_total_llvm_time, m_stat_llvm_setup_time,
             m_stat_llvm_irgen_time, m_stat_llvm_opt_time, m_stat_llvm_jit_time,
             m_llvm_local_mem / 1024);

@@ -535,7 +535,7 @@ impl_get_uniform_from_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
         makeIdentity(failedResults);
         ShadingContext* ctx = bsg->uniform.context;
         if (ctx->shadingsys().unknown_coordsys_error()) {
-            ctx->errorf("Unknown transformation \"%s\"", from);
+            ctx->errorfmt("Unknown transformation \"{}\"", from);
         }
     }
     return succeeded;
@@ -579,7 +579,7 @@ impl_get_uniform_to_inverse_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
     if (failedResults.mask().any_on()) {
         makeIdentity(failedResults);
         if (ctx->shadingsys().unknown_coordsys_error()) {
-            ctx->errorf("Unknown transformation \"%s\"", to);
+            ctx->errorfmt("Unknown transformation \"{}\"", to);
         }
     }
     return succeeded;
@@ -673,8 +673,8 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustring from = wFrom[lane];
-                        ctx->batched<__OSL_WIDTH>().errorf(
-                            Mask(Lane(lane)), "Unknown transformation \"%s\"",
+                        ctx->batched<__OSL_WIDTH>().errorfmt(
+                            Mask(Lane(lane)), "Unknown transformation \"{}\"",
                             from);
                     }
                 }
@@ -790,8 +790,8 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustring to = wTo[lane];
-                        ctx->batched<__OSL_WIDTH>().errorf(
-                            Mask(Lane(lane)), "Unknown transformation \"%s\"",
+                        ctx->batched<__OSL_WIDTH>().errorfmt(
+                            Mask(Lane(lane)), "Unknown transformation \"{}\"",
                             to);
                     }
                 }

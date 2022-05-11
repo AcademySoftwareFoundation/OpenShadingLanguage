@@ -19,7 +19,7 @@ namespace pvt {  // OSL::pvt
 std::string
 Symbol::mangled() const
 {
-    std::string result = scope() ? Strutil::sprintf("___%d_%s", scope(), m_name)
+    std::string result = scope() ? fmtformat("___{}_{}", scope(), m_name)
                                  : m_name.string();
     return result;  // Force NRVO (named value return optimization)
 }
@@ -54,8 +54,7 @@ Symbol::symtype_shortname(SymType s)
 std::string
 StructSpec::mangled() const
 {
-    return scope() ? Strutil::sprintf("___%d_%s", scope(), m_name)
-                   : m_name.string();
+    return scope() ? fmtformat("___{}_{}", scope(), m_name) : m_name.string();
 }
 
 

@@ -587,7 +587,7 @@ void
 OSLToyMainWindow::update_statusbar_fps(float time, float fps)
 {
     statusFPS->setText(
-        OIIO::Strutil::sprintf("  %.2f    FPS: %5.1f", time, fps).c_str());
+        fmtformat("  {:.2f}    FPS: {:5.1f}", time, fps).c_str());
 }
 
 
@@ -637,7 +637,7 @@ OSLToyMainWindow::add_new_editor_window(const std::string& filename)
         textTabs->addTab(editor_and_error_display,
                          texteditor->brief_filename().c_str());
     } else {
-        std::string title = OIIO::Strutil::sprintf("untitled %d", n + 1);
+        std::string title = OSL::fmtformat("untitled {}", n + 1);
         textTabs->addTab(editor_and_error_display, title.c_str());
     }
     textTabs->setCurrentIndex(n);
@@ -736,8 +736,7 @@ OSLToyMainWindow::action_save()
     if (out)
         out << text;
     if (out.fail()) {
-        std::string msg = OIIO::Strutil::sprintf("Could not write %s",
-                                                 filename);
+        std::string msg = OSL::fmtformat("Could not write {}", filename);
         QErrorMessage err(nullptr);
         err.showMessage(msg.c_str());
         err.exec();
@@ -996,16 +995,15 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
 
     std::string typetext(param->type.c_str());
     if (param->isclosure)
-        typetext = OIIO::Strutil::sprintf("closure %s", typetext);
+        typetext = OSL::fmtformat("closure {}", typetext);
     if (param->isstruct)
-        typetext = OIIO::Strutil::sprintf("struct %s", param->structname);
+        typetext = OSL::fmtformat("struct {}", param->structname);
     if (param->isoutput)
-        typetext = OIIO::Strutil::sprintf("output %s", typetext);
-    //    auto typeLabel = QtUtils::make_qlabelf ("<i>%s</i>", typetext);
+        typetext = OSL::fmtformat("output {}", typetext);
+    //    auto typeLabel = QtUtils::mtmt{}<i>{}</i>", typetext);
     //    layout->addWidget (typeLabel, row, 1);
     auto nameLabel = new QLabel(
-        OIIO::Strutil::sprintf("<i>%s</i>&nbsp;  <b>%s</b>", typetext,
-                               param->name)
+        OSL::fmtformat("<i>{}</i>&nbsp;  <b>{}</b>", typetext, param->name)
             .c_str());
     nameLabel->setTextFormat(Qt::RichText);
     layout->addWidget(nameLabel, row, 1);
@@ -1044,7 +1042,7 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
                 labeltext = string_view(&("RGB"[c]), 1);
             else
                 labeltext = string_view(&("xyz"[c]), 1);
-            auto channellabel = QtUtils::make_qlabelf("%s", labeltext);
+            auto channellabel = QtUtils::make_qlabelfmt("{}", labeltext);
             label_and_adjust_layout->addWidget(channellabel);
             auto adjustWidget = new QtUtils::DoubleSpinBox(param->fdefault[c]);
             if (param->type == TypeDesc::TypeColor) {
@@ -1188,9 +1186,8 @@ OSLToyMainWindow::rebuild_param_area()
                      TypeDesc(TypeDesc::STRING, nlayers), &layernames[0]);
     for (int i = 0; i < nlayers; ++i) {
         OSLQuery oslquery = ss->oslquery(*group, i);
-        std::string desc  = OIIO::Strutil::sprintf("layer %d %s  (%s)", i,
-                                                  layernames[i],
-                                                  oslquery.shadername());
+        std::string desc = OSL::fmtformat("layer {} {}  ({})", i, layernames[i],
+                                          oslquery.shadername());
         paramLayout->addWidget(new QLabel(desc.c_str()), paramrow++, 0, 1, 2);
         for (auto&& p : m_shaderparams) {
             make_param_adjustment_row(p.get(), paramLayout, paramrow++);

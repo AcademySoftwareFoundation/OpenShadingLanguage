@@ -491,7 +491,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             llvm::Value* name_arg = NULL;
             if (use_optix()) {
                 // We need to make a DeviceString for the parameter name
-                ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
+                ustring arg_name = ustring::fmtformat("osl_paramname_{}_{}",
+                                                      symname, sym.layer());
                 Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
                 symname_const.set_dataptr(SymArena::Absolute, &symname);
                 name_arg = llvm_load_device_string (symname_const, /*follow*/ true);
@@ -547,8 +548,9 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         } else if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
-            ustring var_name = ustring::sprintf ("%s_%s_%s_%d", sym.name(),
-                                                inst()->layername(), group().name(), group().id());
+            ustring var_name = ustring::fmtformat("{}_{}_{}_{}", sym.name(),
+                                                  inst()->layername(),
+                                                  group().name(), group().id());
 
             // The "true" argument triggers the creation of the metadata needed to
             // make the variable visible to OptiX.
@@ -833,8 +835,9 @@ BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                    op.opname() == op_end) {
             // Skip this op, it does nothing...
         } else {
-            shadingcontext()->errorf("LLVMOSL: Unsupported op %s in layer %s\n",
-                                     op.opname(), inst()->layername());
+            shadingcontext()->errorfmt(
+                "LLVMOSL: Unsupported op {} in layer {}\n", op.opname(),
+                inst()->layername());
             return false;
         }
 
@@ -1336,7 +1339,9 @@ BackendLLVM::run ()
                                                osl_llvm_compiled_rs_dependant_ops_size,
                                                "llvm_rs_dependant_ops", &err));
             if (err.length())
-                shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for llvm_rs_dependant_ops\n", err);
+                shadingcontext()->errorfmt(
+                    "llvm::parseBitcodeFile returned '{}' for llvm_rs_dependant_ops\n",
+                    err);
 
             std::vector<char>& rs_free_function_bitcode = shadingsys().m_rs_bitcode;
             OSL_ASSERT (rs_free_function_bitcode.size() && "Free Function bitcode is empty");
@@ -1345,18 +1350,20 @@ BackendLLVM::run ()
                 ll.module_from_bitcode (static_cast<const char*>(rs_free_function_bitcode.data()),
                                         rs_free_function_bitcode.size(), "rs_free_functions", &err);
             if (err.length())
-                shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for rs_free_functions\n", err);
-
+                shadingcontext()->errorfmt(
+                    "llvm::parseBitcodeFile returned '{}' for rs_free_functions\n",
+                    err);
             std::unique_ptr<llvm::Module> rs_free_functions_module_ptr (rs_free_functions_module);
             bool success = ll.absorb_module(std::move(rs_free_functions_module_ptr));
             if (!success)
-                shadingcontext()->errorf("LLVM_Util::absorb_module failed'\n");
+                shadingcontext()->errorfmt("LLVM_Util::absorb_module failed'\n");
         } else {
             ll.module (ll.module_from_bitcode ((char*)osl_llvm_compiled_ops_block,
                                                osl_llvm_compiled_ops_size,
                                                "llvm_ops", &err));
             if (err.length())
-                shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for llvm_ops\n", err);
+                shadingcontext()->errorfmt(
+                    "llvm::parseBitcodeFile returned '{}' for llvm_ops\n", err);
         }
 
     } else {
@@ -1365,7 +1372,7 @@ BackendLLVM::run ()
                                            osl_llvm_compiled_ops_cuda_size,
                                            "llvm_ops", &err));
         if (err.length())
-            shadingcontext()->errorf("llvm::parseBitcodeFile returned '%s' for cuda llvm_ops\n", err);
+            shadingcontext()->errorfmt("llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n", err);
 #else
         OSL_ASSERT (0 && "Must generate LLVM CUDA bitcode for OptiX");
 #endif
@@ -1379,7 +1386,7 @@ BackendLLVM::run ()
         ! ll.make_jit_execengine (&err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
                                   shadingsys().llvm_debugging_symbols(),
                                   shadingsys().llvm_profiling_events())) {
-        shadingcontext()->errorf("Failed to create engine: %s\n", err);
+        shadingcontext()->errorfmt("Failed to create engine: {}\n", err);
         OSL_ASSERT (0);
         return;
     }
@@ -1432,8 +1439,9 @@ BackendLLVM::run ()
 
     if (shadingsys().m_max_local_mem_KB &&
         m_llvm_local_mem/1024 > shadingsys().m_max_local_mem_KB) {
-        shadingcontext()->errorf("Shader group \"%s\" needs too much local storage: %d KB",
-                                 group().name(), m_llvm_local_mem/1024);
+        shadingcontext()->errorfmt(
+            "Shader group \"{}\" needs too much local storage: {} KB",
+            group().name(), m_llvm_local_mem / 1024);
     }
 
     // The module contains tons of "library" functions that our generated IR
@@ -1492,8 +1500,10 @@ BackendLLVM::run ()
         safegroup = Strutil::replace (group().name(), "/", "_", true);
         safegroup = Strutil::replace (safegroup     , ":", "_", true);
         if (safegroup.size() > 235)
-            safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
-        std::string name = Strutil::sprintf ("%s.ll", safegroup);
+            safegroup = fmtformat("TRUNC_{}_{}",
+                                  safegroup.substr(safegroup.size() - 235),
+                                  group().id());
+        std::string name = fmtformat("{}.ll", safegroup);
         OIIO::ofstream out;
         OIIO::Filesystem::open(out, name);
         if (out) {
@@ -1547,8 +1557,11 @@ BackendLLVM::run ()
         safegroup = Strutil::replace (group().name(), "/", "_", true);
         safegroup = Strutil::replace (safegroup     , ":", "_", true);
         if (safegroup.size() > 235)
-            safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
-        std::string name = Strutil::sprintf ("%s_O%d.ll", safegroup, shadingsys().llvm_optimize());
+            safegroup = fmtformat("TRUNC_{}_{}",
+                                  safegroup.substr(safegroup.size() - 235),
+                                  group().id());
+        std::string name = fmtformat("{}_O{}.ll", safegroup,
+                                     shadingsys().llvm_optimize());
         OIIO::ofstream out;
         OIIO::Filesystem::open(out, name);
         if (out) {
@@ -1560,7 +1573,7 @@ BackendLLVM::run ()
     }
 
     if (use_optix()) {
-        std::string name = Strutil::sprintf ("%s_%d", group().name(), group().id());
+        std::string name = fmtformat("{}_{}", group().name(), group().id());
 
 #if (OPTIX_VERSION < 70000)
         // Create an llvm::Module from the renderer-supplied library bitcode
@@ -1622,11 +1635,12 @@ BackendLLVM::run ()
     m_stat_total_llvm_time = timer();
 
     if (shadingsys().m_compile_report) {
-        shadingcontext()->infof("JITed shader group %s:", group().name());
-        shadingcontext()->infof("    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
-                                m_stat_total_llvm_time, m_stat_llvm_setup_time,
-                                m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
-                                m_stat_llvm_jit_time, m_llvm_local_mem/1024);
+        shadingcontext()->infofmt("JITed shader group {}:", group().name());
+        shadingcontext()->infofmt(
+            "    ({:1.2f}s = {:1.2f} setup, {:1.2f} ir, {:1.2f} opt, {:1.2f} jit; local mem {}KB)",
+            m_stat_total_llvm_time, m_stat_llvm_setup_time,
+            m_stat_llvm_irgen_time, m_stat_llvm_opt_time, m_stat_llvm_jit_time,
+            m_llvm_local_mem / 1024);
     }
 }
 

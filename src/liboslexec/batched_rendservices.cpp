@@ -180,8 +180,8 @@ BatchedRendererServices<WidthT>::get_texture_info_uniform(
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && bsg) {
-            bsg->uniform.context->errorf(
-                "[RendererServices::get_texture_info] %s", err);
+            bsg->uniform.context->errorfmt(
+                "[RendererServices::get_texture_info] {}", err);
         }
     }
     return status;

@@ -6530,7 +6530,9 @@ llvm_gen_keyword_fill(BatchedBackendLLVM &rop, Opcode &op, const ClosureRegistry
             }
         }
         if (!legal) {
-            rop.shadingcontext()->warningf("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
+            rop.shadingcontext()->warningfmt(
+                "Unsupported closure keyword arg \"{}\" for {} ({}:{})", *key,
+                clname, op.sourcefile(), op.sourceline());
         }
     }
 }
@@ -6554,10 +6556,11 @@ LLVMGEN (llvm_gen_closure)
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.shadingcontext()->errorf("Closure '%s' is not supported by the current renderer, called from %s:%d in shader \"%s\", layer %d \"%s\", group \"%s\"",
-                                     closure_name, op.sourcefile(), op.sourceline(),
-                                     rop.inst()->shadername(), rop.layer(),
-                                     rop.inst()->layername(), rop.group().name());
+        rop.shadingcontext()->errorfmt(
+            "Closure '{}' is not supported by the current renderer, called from {}:{} in shader \"{}\", layer {} \"{}\", group \"{}\"",
+            closure_name, op.sourcefile(), op.sourceline(),
+            rop.inst()->shadername(), rop.layer(), rop.inst()->layername(),
+            rop.group().name());
         return false;
     }
 

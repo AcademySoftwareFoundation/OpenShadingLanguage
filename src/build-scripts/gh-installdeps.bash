@@ -150,15 +150,26 @@ if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
 fi
 
 if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
-    # There are many parts of OIIO we don't need to build
+    # There are many parts of OIIO we don't need to build for OSL's tests
     export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0
     export ENABLE_iconvert=0 ENABLE_testtex=0
+    # For speed of compiling OIIO, disable the file formats that we don't
+    # need for OSL's tests
     export ENABLE_BMP=0 ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
     export ENABLE_ICO=0 ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
     export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
     export ENABLE_TARGA=0 ENABLE_WEBP=0
-    export OPENIMAGEIO_CMAKE_FLAGS+=" -DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
-    export OPENIMAGEIO_CMAKE_FLAGS+=" -DOIIO_BUILD_TESTING=OFF -DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
+    # We don't need to run OIIO's tests
+    export OPENIMAGEIO_CMAKE_FLAGS+=" -DOIIO_BUILD_TESTING=OFF -DOIIO_BUILD_TESTS=0"
+    # Don't let warnings in OIIO break OSL's CI run
+    export OPENIMAGEIO_CMAKE_FLAGS+=" -DSTOP_ON_WARNING=OFF"
+    export OPENIMAGEIO_CMAKE_FLAGS+=" -DUSE_OPENGL=0"
+    if [[ $OPENIMAGEIO_VERSION == master ]] ; then
+        # Speed up the OIIO build by doing a "unity" build. (Note: this is
+        # only a savings in CI where there are only 1-2 cores available, and
+        # is only supported for OIIO 2.3.14 and later)
+        export OPENIMAGEIO_CMAKE_FLAGS+=" -DCMAKE_UNITY_BUILD=ON -DCMAKE_UNITY_BUILD_MODE=BATCH"
+    fi
     source src/build-scripts/build_openimageio.bash
 fi
 

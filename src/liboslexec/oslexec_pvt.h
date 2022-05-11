@@ -94,7 +94,7 @@ class BatchedBackendLLVM;
 #endif
 struct ConnectedParam;
 
-void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
+OSL_DLL_EXPORT void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
@@ -1824,6 +1824,24 @@ public:
                       BatchedShaderGlobals<WidthT> &bsg,
                       void* userdata_base_ptr, void* output_base_ptr,
                       bool run=true);
+
+        ClosureComponent *closure_component_allot(size_t prim_size) {
+            // Allocate the component and the mul back to back
+            constexpr int alignment = alignof(ClosureComponent);
+            size_t stride = (int)((sizeof(ClosureComponent) + prim_size + alignment-1)/alignment)*alignment;
+            size_t needed = WidthT * stride;
+            ClosureComponent *comp_mem = (ClosureComponent *)m_sc.m_closure_pool.alloc(needed, alignment);
+            return comp_mem;
+        }
+
+        ClosureMul *closure_mul_allot () {
+            return (ClosureMul *) m_sc.m_closure_pool.alloc(WidthT * sizeof(ClosureMul), alignof(ClosureMul));
+
+        }
+
+        ClosureAdd *closure_add_allot () {
+            return (ClosureAdd *) m_sc.m_closure_pool.alloc(WidthT * sizeof(ClosureAdd), alignof(ClosureAdd));
+        }
 
         template<typename ...ArgListT>
         inline

@@ -619,11 +619,12 @@ BatchedBackendLLVM::llvm_type_sg()
     sg_types.push_back(vp);             // opaque objdata*
     sg_types.push_back(vp);             // ShadingContext*
     sg_types.push_back(vp);             // RendererServices*
-    sg_types.push_back(vp);             // Ci
     sg_types.push_back(ll.type_int());  // raytype
     sg_types.push_back(ll.type_int());  // pad0
     sg_types.push_back(ll.type_int());  // pad1
     sg_types.push_back(ll.type_int());  // pad2
+    sg_types.push_back(ll.type_int());  // pad3
+    sg_types.push_back(ll.type_int());  // pad4
 
 
     // VaryingShaderGlobals of the batch
@@ -643,6 +644,8 @@ BatchedBackendLLVM::llvm_type_sg()
 
     sg_types.push_back(wide_vp);  // object2common
     sg_types.push_back(wide_vp);  // shader2common
+
+    sg_types.push_back(wide_vp);                 // Ci
 
     sg_types.push_back(ll.type_wide_float());  // surfacearea
     sg_types.push_back(ll.type_wide_int());    // flipHandedness
@@ -873,10 +876,10 @@ BatchedBackendLLVM::llvm_type_groupdata()
 
             // Alignment
             // TODO:  this isn't quite right, cant rely on batch size to == ISA SIMD requirements
-            size_t align = sym.typespec().is_closure_based()
+            size_t base_size = sym.typespec().is_closure_based()
                                ? sizeof(void*)
-                               : sym.typespec().simpletype().basesize()
-                                     * m_width;
+                               : sym.typespec().simpletype().basesize();
+            size_t align = base_size * m_width;
             if (offset & (align - 1))
                 offset += align - (offset & (align - 1));
             if (llvm_debug() >= 2)
@@ -937,6 +940,13 @@ llvm::Type*
 BatchedBackendLLVM::llvm_type_closure_component_ptr()
 {
     return ll.type_ptr(llvm_type_closure_component());
+}
+
+
+llvm::Type *
+BatchedBackendLLVM::llvm_type_closure_component_wide_ptr ()
+{
+    return ll.type_wide(llvm_type_closure_component_ptr());
 }
 
 
@@ -1765,11 +1775,11 @@ BatchedBackendLLVM::build_llvm_init()
         ShaderInstance* gi = group()[i];
         if (gi->unused() || gi->empty_instance())
             continue;
-        FOREACH_PARAM(Symbol & sym, gi)
-        {
+        FOREACH_PARAM(Symbol & sym, gi) {
             if (sym.typespec().is_closure_based()) {
                 int arraylen     = std::max(1, sym.typespec().arraylength());
                 llvm::Value* val = ll.constant_ptr(NULL, ll.type_void_ptr());
+                if (!sym.is_uniform()) val = ll.widen_value(val);
                 for (int a = 0; a < arraylen; ++a) {
                     llvm::Value* arrind = sym.typespec().is_array()
                                               ? ll.constant(a)
@@ -2374,8 +2384,6 @@ BatchedBackendLLVM::build_offsets_of_BatchedShaderGlobals(
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, renderer));
     offset_by_index.push_back(uniform_offset
-                              + offsetof(UniformShaderGlobals, Ci));
-    offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, raytype));
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, pad0));
@@ -2383,6 +2391,10 @@ BatchedBackendLLVM::build_offsets_of_BatchedShaderGlobals(
                               + offsetof(UniformShaderGlobals, pad1));
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, pad2));
+    offset_by_index.push_back(uniform_offset
+                              + offsetof(UniformShaderGlobals, pad3));
+    offset_by_index.push_back(uniform_offset
+                              + offsetof(UniformShaderGlobals, pad4));
 
     offset_by_index.push_back(varying_offset
                               + offsetof(VaryingShaderGlobals<WidthT>, P));
@@ -2429,6 +2441,8 @@ BatchedBackendLLVM::build_offsets_of_BatchedShaderGlobals(
         varying_offset + offsetof(VaryingShaderGlobals<WidthT>, object2common));
     offset_by_index.push_back(
         varying_offset + offsetof(VaryingShaderGlobals<WidthT>, shader2common));
+    offset_by_index.push_back(
+        varying_offset + offsetof(VaryingShaderGlobals<WidthT>,Ci));
     offset_by_index.push_back(
         varying_offset + offsetof(VaryingShaderGlobals<WidthT>, surfacearea));
     offset_by_index.push_back(

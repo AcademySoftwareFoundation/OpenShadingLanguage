@@ -43,13 +43,6 @@ struct UniformShaderGlobals {
     /// way back to the renderer for callbacks.
     RendererServices* renderer;
 
-    /// The output closure will be placed here. The rendererer should
-    /// initialize this to NULL before shading execution, and this is where
-    /// it can retrieve the output closure from after shader execution has
-    /// completed.
-    /// DESIGN DECISION:  NOT CURRENTLY SUPPORTING CLOSURES IN BATCH MODE
-    ClosureColor* Ci;
-
     /// Bit field of ray type flags.
     int raytype;
 
@@ -59,6 +52,8 @@ struct UniformShaderGlobals {
     int pad0;
     int pad1;
     int pad2;
+    int pad3;
+    int pad4;
 
     void dump()
     {
@@ -70,7 +65,6 @@ struct UniformShaderGlobals {
         __OSL_DUMP(objdata);
         __OSL_DUMP(context);
         __OSL_DUMP(renderer);
-        __OSL_DUMP(Ci);
         __OSL_DUMP(raytype);
 
         std::cout << "};" << std::endl;
@@ -129,6 +123,12 @@ template<int WidthT> struct alignas(64) VaryingShaderGlobals {
     Block<TransformationPtr> object2common;
     Block<TransformationPtr> shader2common;
 
+    /// The output closure will be placed here. The rendererer should
+    /// initialize this to NULL before shading execution, and this is where
+    /// it can retrieve the output closure from after shader execution has
+    /// completed.
+    Block<ClosureColor *>Ci;
+
     /// Surface area of the emissive object (used by light shaders for
     /// energy normalization).
     Block<float> surfacearea;
@@ -168,6 +168,7 @@ template<int WidthT> struct alignas(64) VaryingShaderGlobals {
         __OSL_DUMP(dPsdy);
         __OSL_DUMP(object2common);
         __OSL_DUMP(shader2common);
+        __OSL_DUMP(Ci);
         __OSL_DUMP(surfacearea);
         __OSL_DUMP(flipHandedness);
         __OSL_DUMP(backfacing);

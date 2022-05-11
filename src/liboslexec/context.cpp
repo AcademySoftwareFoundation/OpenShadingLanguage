@@ -303,7 +303,7 @@ ShadingContext::Batched<WidthT>::execute_init( ShaderGroup &sgroup,
     if (run) {
         bsg.uniform.context = &context();
         bsg.uniform.renderer = context().renderer();
-        bsg.uniform.Ci = NULL;
+        assign_all(bsg.varying.Ci, (ClosureColor *)nullptr);
         RunLLVMGroupFuncWide run_func = sgroup.llvm_compiled_wide_init();
         OSL_DASSERT (run_func);
         OSL_DASSERT (sgroup.llvm_groupdata_wide_size() <= context().m_heapsize);
@@ -399,7 +399,7 @@ ShadingContext::Batched<WidthT>::execute(ShaderGroup &sgroup, int batch_size,
             // can.
             bsg.varying.P = Psave;
             bsg.varying.N = Nsave;
-            bsg.uniform.Ci = NULL;
+            assign_all(bsg.varying.Ci, (ClosureColor *)nullptr);
         }
     }
     return result;

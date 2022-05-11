@@ -261,6 +261,7 @@ LLVMGEN (llvm_gen_printf)
     {
         int argument_slot;
         bool is_float;
+        bool is_closure;
         llvm::Value* loaded_value;
     };
 
@@ -377,14 +378,6 @@ LLVMGEN (llvm_gen_printf)
             // NOTE(boulos): Only for debug mode do the derivatives get printed...
             for (int a = 0;  a < num_elements;  ++a) {
                 llvm::Value *arrind = simpletype.arraylen ? rop.ll.constant(a) : NULL;
-                if (sym.typespec().is_closure_based()) {
-                    s += ourformat;
-                    llvm::Value *v = rop.llvm_load_value (sym, 0, arrind, 0);
-                    OSL_ASSERT(0 && "incomplete");
-                    v = rop.ll.call_function ("osl_closure_to_string", rop.sg_void_ptr(), v);
-                    call_args.push_back (v);
-                    continue;
-                }
 
                 for (int c = 0; c < num_components; c++) {
                     if (c != 0 || a != 0)
@@ -413,15 +406,23 @@ LLVMGEN (llvm_gen_printf)
                         if (simpletype.basetype == TypeDesc::FLOAT) {
                             // C varargs convention upconverts float->double.
                             loaded = rop.ll.op_float_to_double(loaded);
+                        } else if (sym.typespec().is_closure_based()) {
+                            // we need to convert this closure to a string
+                            FuncSpec to_string("closure_to_string");
+                            loaded = rop.ll.call_function (rop.build_name(to_string), rop.sg_void_ptr(), loaded);
                         }
                         call_args.push_back (loaded);
                     } else {
                         OSL_ASSERT(false == op_is_uniform);
-                        delay_extraction_args.push_back(DelayedExtraction{static_cast<int>(call_args.size()), simpletype.basetype == TypeDesc::FLOAT, loaded});
-                        // Need to populate s call arguments with a place holder
+                        delay_extraction_args.push_back(DelayedExtraction{static_cast<int>(call_args.size()), 
+                                                                          simpletype.basetype == TypeDesc::FLOAT,
+                                                                          sym.typespec().is_closure_based(), 
+                                                                          loaded});
+                        // Need to populate call arguments with a place holder
                         // that we can fill in later from a loop that loads values
                         // for each lane
                         call_args.push_back (nullptr);
+
                     }
                 }
             }
@@ -450,10 +451,9 @@ LLVMGEN (llvm_gen_printf)
     if ((op.opname() == op_format) && op_is_uniform) {
         func_spec.unbatch();
     }
-    const char * func_name = rop.build_name(func_spec);
 
     if (op_is_uniform) {
-        llvm::Value *ret = rop.ll.call_function (func_name, call_args);
+        llvm::Value *ret = rop.ll.call_function (rop.build_name(func_spec), call_args);
 
         // The format op returns a string value, put in in the right spot
         if (op.opname() == op_format)
@@ -499,10 +499,14 @@ LLVMGEN (llvm_gen_printf)
                 if (de.is_float) {
                     // C varargs convention upconverts float->double.
                     scalar_val = rop.ll.op_float_to_double(scalar_val);
-                }
+                } else if (de.is_closure) {
+                    // we need to convert this closure to a string
+                    FuncSpec to_string("closure_to_string");
+                    scalar_val = rop.ll.call_function (rop.build_name(to_string), rop.sg_void_ptr(), scalar_val);
+                } 
                 call_args[de.argument_slot] = scalar_val;
             }
-            rop.ll.call_function (func_name, call_args);
+            rop.ll.call_function (rop.build_name(func_spec), call_args);
 
             rop.ll.op_branch (step_block);
 
@@ -1175,15 +1179,20 @@ LLVMGEN (llvm_gen_add)
 
     OSL_ASSERT (! A.typespec().is_array() && ! B.typespec().is_array());
     if (Result.typespec().is_closure()) {
-        OSL_ASSERT(0 && "incomplete");
         OSL_ASSERT (A.typespec().is_closure() && B.typespec().is_closure());
         llvm::Value *valargs[] = {
             rop.sg_void_ptr(),
-            rop.llvm_load_value (A),
-            rop.llvm_load_value (B)};
-        OSL_ASSERT(0 && "incomplete");
-        llvm::Value *res = rop.ll.call_function ("osl_add_closure_closure", valargs);
-        rop.llvm_store_value (res, Result, 0, NULL, 0);
+            rop.llvm_void_ptr (Result),  
+            rop.llvm_void_ptr (A),
+            rop.llvm_void_ptr (B),
+            rop.ll.mask_as_int(rop.ll.current_mask())};
+
+        FuncSpec add_closure("add_closure_closure");
+        add_closure.mask();
+        // we directly write the result in add_closure_closure instead of using a
+        // store to write it back to result as in the single-point path
+        rop.ll.call_function (rop.build_name(add_closure), valargs);
+
         return true;
     }
 
@@ -1303,23 +1312,35 @@ LLVMGEN (llvm_gen_mul)
 
     // multiplication involving closures
     if (Result.typespec().is_closure()) {
-        OSL_ASSERT(0 && "incomplete");
-        llvm::Value *valargs[3];
+
+        BatchedBackendLLVM::TempScope temp_scope(rop);
+
+        llvm::Value *valargs[5];
         valargs[0] = rop.sg_void_ptr();
+        valargs[1] = rop.llvm_void_ptr(Result);
         bool tfloat;
-        if (A.typespec().is_closure()) {
-            tfloat = B.typespec().is_float();
-            valargs[1] = rop.llvm_load_value (A);
-            valargs[2] = tfloat ? rop.llvm_load_value (B) : rop.llvm_void_ptr(B);
+        bool aIsTheClosure = A.typespec().is_closure();
+        Symbol& inClosure = aIsTheClosure ? A : B ;
+        Symbol& t = aIsTheClosure? B : A;
+ 
+        valargs[2] = rop.llvm_void_ptr (inClosure);
+
+        tfloat = t.typespec().is_float();
+        if (t.is_uniform()) { 
+            valargs[3] = rop.llvm_widen_value_into_temp(t,0);
         } else {
-            tfloat = A.typespec().is_float();
-            valargs[1] = rop.llvm_load_value (B);
-            valargs[2] = tfloat ? rop.llvm_load_value (A) : rop.llvm_void_ptr(A);
+            valargs[3] = rop.llvm_void_ptr(t);
         }
-        OSL_ASSERT(0 && "incomplete");
-        llvm::Value *res = tfloat ? rop.ll.call_function ("osl_mul_closure_float", valargs)
-                                  : rop.ll.call_function ("osl_mul_closure_color", valargs);
-        rop.llvm_store_value (res, Result, 0, NULL, 0);
+
+        valargs[4] = rop.ll.mask_as_int(rop.ll.current_mask());
+
+        FuncSpec mul_closure(tfloat ? "mul_closure_float" : "mul_closure_color");
+        mul_closure.mask();
+
+        // we directly write the result in add_closure_closure instead of using a
+        // store to write it back to result as in the single-point path
+        rop.ll.call_function (rop.build_name(mul_closure), valargs);
+
         return true;
     }
 
@@ -6094,7 +6115,8 @@ LLVMGEN (llvm_gen_getmessage)
 
     //Check for closures, and skip it
     if (Data.typespec().is_closure_based()) {
-      OSL_ASSERT(0 && "incomplete");
+        // Needed for closure support
+        OSL_ASSERT(0 && "incomplete");
     }
     else
     {
@@ -6213,6 +6235,7 @@ LLVMGEN (llvm_gen_setmessage)
 
     if (Data.typespec().is_closure_based())
     {
+        // Still needed for complete batched closure support
         OSL_ASSERT(0 && "incomplete");
         // FIXME: secret handshake for closures ...
         args[2] = rop.ll.constant (TypeDesc(TypeDesc::UNKNOWN,
@@ -6467,6 +6490,217 @@ LLVMGEN (llvm_gen_spline)
 
     if (Result.has_derivs() && !op_derivs)
         rop.llvm_zero_derivs (Result);
+
+    return true;
+}
+
+
+
+static void
+llvm_gen_keyword_fill(BatchedBackendLLVM &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *mem_void_ptr, int argsoffset)
+{
+    OSL_DASSERT(((op.nargs() - argsoffset) % 2) == 0);
+
+    int Nattrs = (op.nargs() - argsoffset) / 2;
+
+    for (int attr_i = 0; attr_i < Nattrs; ++attr_i) {
+        int argno = attr_i * 2 + argsoffset;
+        Symbol &Key     = *rop.opargsym (op, argno);
+        Symbol &Value   = *rop.opargsym (op, argno + 1);
+        OSL_ASSERT(Key.typespec().is_string());
+        OSL_ASSERT(Key.is_constant());
+        ustring *key = (ustring *)Key.data();
+        TypeDesc ValueType = Value.typespec().simpletype();
+
+        bool legal = false;
+        // Make sure there is some keyword arg that has the name and the type
+        for (int t = 0; t < clentry->nkeyword; ++t) {
+            const ClosureParam &p = clentry->params[clentry->nformal + t];
+            // strcmp might be too much, we could precompute the ustring for the param,
+            // but in this part of the code is not a big deal
+            if (equivalent(p.type,ValueType) && !strcmp(key->c_str(), p.key)) {
+                // store data
+                OSL_DASSERT(p.offset + p.field_size <= clentry->struct_size);
+                llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
+                llvm::Value* src = rop.llvm_void_ptr (Value);
+                rop.ll.op_memcpy (dst, src, (int)p.type.size(),
+                                    4 /* use 4 byte alignment for now */);
+                legal = true;
+                break;
+            }
+        }
+        if (!legal) {
+            rop.shadingcontext()->warningf("Unsupported closure keyword arg \"%s\" for %s (%s:%d)", key->c_str(), clname.c_str(), op.sourcefile().c_str(), op.sourceline());
+        }
+    }
+}
+
+
+
+LLVMGEN (llvm_gen_closure)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_DASSERT (op.nargs() >= 2); // at least the result and the ID
+
+
+    Symbol &Result = *rop.opargsym (op, 0);
+    int weighted   = rop.opargsym(op,1)->typespec().is_string() ? 0 : 1;
+    Symbol *weight = weighted ? rop.opargsym (op, 1) : NULL;
+    Symbol &Id     = *rop.opargsym (op, 1+weighted);
+    OSL_DASSERT(Result.typespec().is_closure());
+    OSL_DASSERT(Id.typespec().is_string());
+    OSL_DASSERT (Id.is_uniform()); // we have to know which closure at compile time
+    ustring closure_name = Id.get_string();
+
+    const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
+    if (!clentry) {
+        rop.shadingcontext()->errorf("Closure '%s' is not supported by the current renderer, called from %s:%d in shader \"%s\", layer %d \"%s\", group \"%s\"",
+                                     closure_name, op.sourcefile(), op.sourceline(),
+                                     rop.inst()->shadername(), rop.layer(),
+                                     rop.inst()->layername(), rop.group().name());
+        return false;
+    }
+
+    OSL_DASSERT (op.nargs() >= (2 + weighted + clentry->nformal));
+    
+    OSL_DASSERT (!Result.is_uniform()); // we don't optimize for when closures happen to be uniform
+    
+    bool weight_is_uniform = weighted ? weight->is_uniform(): false/*don't care*/;
+    
+    // Call osl_allocate_{weighted_}closure_component(globals, result, id, size,{ weight,} mask).  
+    // It writes WidthT pointers into result that map to the memory for the closure parameter data.
+    // this is just a batch of closures instead of a closure for a batch
+    llvm::Value *render_ptr = rop.ll.constant_ptr(rop.shadingsys().renderer(), rop.ll.type_void_ptr());
+    llvm::Value *sg_ptr = rop.sg_void_ptr();
+    llvm::Value *id_int = rop.ll.constant(clentry->id);
+    llvm::Value *size_int = rop.ll.constant(clentry->struct_size);
+    FuncSpec func_spec(weighted ? "allocate_weighted_closure_component":
+                                  "allocate_closure_component");
+    func_spec.mask();
+
+    // make sure that any temps created to widen uniform values 
+    // are not released until we are done using them!
+    BatchedBackendLLVM::TempScope temp_scope(rop);    
+
+    llvm::Value *args[6] = {
+                            sg_ptr,
+                            rop.llvm_void_ptr (Result),
+                            id_int, 
+                            size_int, 
+                            nullptr,
+                            nullptr
+    };
+    if (weighted) {
+        if (weighted && weight_is_uniform) {
+            args[4] =  rop.llvm_widen_value_into_temp(*weight,0);
+        } else {
+            args[4] = rop.llvm_void_ptr(*weight);
+        }
+
+        args[5] = rop.ll.mask_as_int(rop.ll.current_mask());
+        rop.ll.call_function (rop.build_name(func_spec), cspan<llvm::Value *>(args, 6));
+    } else {
+        args[4] = rop.ll.mask_as_int(rop.ll.current_mask());
+        rop.ll.call_function (rop.build_name(func_spec), cspan<llvm::Value *>(args, 5));
+    }
+
+    llvm::Value *comp_void_ptr = rop.llvm_get_pointer(Result);
+
+    llvm::Value *comp_wide_ptr_ptr = rop.ll.ptr_cast(comp_void_ptr, rop.ll.type_ptr (rop.llvm_type_closure_component_wide_ptr()));
+    llvm::Value *comp_wide_ptr = rop.ll.op_load(comp_wide_ptr_ptr);
+
+    // This is an unrolled vector-width loop.  It was unrolled because it's
+    // was more expedient to write the for in C++ than IR, but if compiliation
+    // of the extra ops becomes problematic, this choice can be revisited
+    for (int lane_index = 0; lane_index < rop.vector_width(); ++lane_index)
+    {
+        llvm::Value *comp_ptr = rop.ll.op_extract(comp_wide_ptr, lane_index);
+        // Get the address of the primitive buffer, which is the 2nd field
+        llvm::Value *mem_void_ptr = rop.ll.GEP (comp_ptr, 0, 2);;
+        mem_void_ptr = rop.ll.ptr_cast(mem_void_ptr, rop.ll.type_void_ptr());
+
+        // For the weighted closures, we need a surrounding "if" so that it's safe
+        // for osl_allocate_weighted_closure_component to return NULL (unless we
+        // know for sure that it's constant weighted and that the weight is
+        // not zero).
+        llvm::BasicBlock *next_block = NULL;
+        llvm::BasicBlock *notnull_block = rop.ll.new_basic_block ("non_null_closure");
+        next_block = rop.ll.new_basic_block ("");
+        llvm::Value *cond = rop.ll.op_ne (rop.ll.ptr_cast(comp_ptr,rop.ll.type_void_ptr()), rop.ll.void_ptr_null());
+        rop.ll.op_branch (cond, notnull_block, next_block);
+        
+        // If the closure has a "prepare" method, call
+        // prepare(renderer, id, memptr).  If there is no prepare method, just
+        // zero out the closure parameter memory.
+        if (clentry->prepare) {
+            // Call clentry->prepare(renderservices *, int id, void *mem)
+            llvm::Value *funct_ptr = rop.ll.constant_ptr((void *)clentry->prepare, rop.llvm_type_prepare_closure_func());
+            llvm::Value *args[] = {render_ptr, id_int, mem_void_ptr};
+            rop.ll.call_function (funct_ptr, args);
+        } else {
+            rop.ll.op_memset (mem_void_ptr, 0, clentry->struct_size, 4 /*align*/);
+        }
+
+        for (int carg = 0; carg < clentry->nformal; ++carg) {
+            const ClosureParam &p = clentry->params[carg];
+
+            if (p.key != NULL) break;
+            OSL_DASSERT(p.offset + p.field_size <= clentry->struct_size);
+            Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
+
+            bool arg_is_uniform = sym.is_uniform();
+            
+            TypeDesc simpletype (sym.typespec().simpletype());
+            int num_elements = simpletype.numelements();
+            int num_components = simpletype.aggregate;
+
+            llvm::Value *dest_base = rop.ll.offset_ptr (mem_void_ptr, p.offset);
+            dest_base = rop.llvm_ptr_cast(dest_base, p.type);
+
+            for (int a = 0;  a < num_elements;  ++a) {
+                llvm::Value *arrind = simpletype.arraylen ? rop.ll.constant(a) : NULL;
+                for (int c = 0; c < num_components; c++) {
+
+                    llvm::Value *dest_elem;
+                    if (num_components > 1)
+                        dest_elem = rop.ll.GEP(dest_base, a, c);
+                    else 
+                        dest_elem = dest_base;
+
+                    // NOTE:  We don't want any uniform arguments to be
+                    // widened, so our typical op_is_uniform doesn't do what we
+                    // want for this when loading.  So just pass arg_is_uniform
+                    // which will avoid widening any uniform arguments.
+                    llvm::Value* loaded = rop.llvm_load_value (sym, 0, arrind,
+                            c, TypeDesc::UNKNOWN,
+                            /*op_is_uniform*/arg_is_uniform,
+                            /*index_is_uniform*/true);
+
+                    if (!arg_is_uniform) {
+                        loaded = rop.ll.op_extract(loaded, lane_index);
+                    } 
+                    rop.ll.op_unmasked_store(loaded, dest_elem);
+                }
+            }
+        }
+    
+        // If the closure has a "setup" method, call
+        // setup(render_services, id, mem_ptr).
+        if (clentry->setup) {
+            // Call clentry->setup(renderservices *, int id, void *mem)
+            llvm::Value *funct_ptr = rop.ll.constant_ptr((void *)clentry->setup, rop.llvm_type_setup_closure_func());
+            llvm::Value *args[] = {render_ptr, id_int, mem_void_ptr};
+            rop.ll.call_function (funct_ptr, args);
+        }
+    
+        llvm_gen_keyword_fill(rop, op, clentry, closure_name, mem_void_ptr,
+                              2 + weighted + clentry->nformal);
+        
+        if (next_block)
+            rop.ll.op_branch (next_block);
+        
+    }
+
 
     return true;
 }
@@ -7565,18 +7799,6 @@ LLVMGEN (llvm_gen_end)
 }
 
 
-// batched code gen left to be implemented
-#define TBD_LLVMGEN(NAME) \
-LLVMGEN(NAME) \
-{ \
-    OSL_ASSERT(0 && #NAME && " To Be Implemented"); \
-    return false; \
-} \
 
-// TODO: rest of gen functions to be added in separate PR
-
-TBD_LLVMGEN(llvm_gen_closure)
-
-
-};  // namespace pvt
+}; // namespace pvt
 OSL_NAMESPACE_EXIT

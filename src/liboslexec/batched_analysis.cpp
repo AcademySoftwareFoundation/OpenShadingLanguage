@@ -35,6 +35,7 @@ static ustring op_and("and");
 static ustring op_backfacing("backfacing");
 static ustring op_break("break");
 static ustring op_calculatenormal("calculatenormal");
+static ustring op_closure("closure");
 static ustring op_compl("compl");
 static ustring op_concat("concat");
 static ustring op_continue("continue");
@@ -111,7 +112,8 @@ are_op_results_always_implicitly_varying(ustring opname)
            | (opname == Strings::op_texture3d)
            | (opname == Strings::op_pointcloud_search)
            | (opname == Strings::op_pointcloud_get)
-           | (opname == Strings::op_pointcloud_write);
+           | (opname == Strings::op_pointcloud_write)
+           | (opname == Strings::op_closure);
     // Renderer might identify result of getattribute as always uniform
     // depending on the attribute itself, so it cannot
     // be "always" implicitly varying based solely on the opname.

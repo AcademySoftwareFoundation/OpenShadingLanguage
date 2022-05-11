@@ -45,11 +45,12 @@ static ustring fields[] = {
     ustring("objdata"),         //
     ustring("shadingcontext"),  //
     ustring("renderer"),        //
-    Strings::Ci,                //
     Strings::raytype,           //
     ustring("pad0"),            //
     ustring("pad1"),            //
     ustring("pad2"),            //
+    ustring("pad3"),            //
+    ustring("pad4"),            //
     // Varying
     Strings::P,               //
     ustring("dPdz"),          //
@@ -66,6 +67,7 @@ static ustring fields[] = {
     Strings::Ps,              //
     Strings::object2common,   //
     Strings::shader2common,   //
+    Strings::Ci,              //
     Strings::surfacearea,     //
     Strings::flipHandedness,  //
     Strings::backfacing
@@ -78,11 +80,12 @@ static bool field_is_uniform[] = {
     true,  // objdata
     true,  // shadingcontext
     true,  // renderer
-    true,  // Ci
     true,  // raytype
     true,  // pad0
     true,  // pad1
     true,  // pad2
+    true,  // pad3
+    true,  // pad4
     // Varying
     false,  // P
     false,  // dPdz
@@ -99,6 +102,7 @@ static bool field_is_uniform[] = {
     false,  // Ps
     false,  // object2common
     false,  // shader2common
+    false,  // Ci,
     false,  // surfacearea
     false,  // flipHandedness
     false,  // backfacing
@@ -263,6 +267,11 @@ BatchedBackendLLVM::llvm_assign_zero(const Symbol& sym)
             zero = ll.constant(ustring());
         else
             zero = ll.wide_constant(ustring());
+    } else if (elemtype.is_closure_based()) {
+        if (sym.is_uniform())
+            zero = ll.void_ptr_null();
+        else
+            zero = ll.widen_value(ll.void_ptr_null());
     } else {
         OSL_ASSERT(0 && "Unsupported element type");
         zero = nullptr;
@@ -1763,14 +1772,14 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
     llvm::Value* arrind = arrayindex >= 0 ? ll.constant(arrayindex) : NULL;
 
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
-        OSL_ASSERT(0 && "unhandled case");  // TODO: implement
 
         if (Src.typespec().is_closure()) {
-            llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0);
+            llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0, TypeDesc::UNKNOWN, op_is_uniform);
             llvm_store_value(srcval, Result, 0, arrind, 0);
         } else {
-            llvm::Value* null = ll.constant_ptr(NULL, ll.type_void_ptr());
-            llvm_store_value(null, Result, 0, arrind, 0);
+            llvm::Value *null_value = ll.constant_ptr(NULL, ll.type_void_ptr());
+            if (!op_is_uniform) null_value = ll.widen_value(null_value);
+            llvm_store_value (null_value, Result, 0, arrind, 0);
         }
         return true;
     }

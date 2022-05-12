@@ -1,6 +1,8 @@
 // Copyright Contributors to the Open Shading Language project.
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 #ifdef __OSL_XMACRO_ARGS
 #    define __OSL_XMACRO_OPNAME \
         __OSL_EXPAND(__OSL_XMACRO_ARG1 __OSL_XMACRO_ARGS)
@@ -30,7 +32,8 @@
 #include "wide_opunary_float_xmacro.h"
 
 
-OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wv, Wv)(void* r_, void* val_)
+OSL_BATCHOP void
+__OSL_OP2(__OSL_XMACRO_OPNAME, Wv, Wv)(void* r_, void* val_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -47,9 +50,11 @@ OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wv, Wv)(void* r_, void* val_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wv,
-                                  Wv)(void* r_, void* val_,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wv, Wv)(void* r_, void* val_,
+                                              unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -68,7 +73,10 @@ OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wv,
     }
 }
 
-OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wdv, Wdv)(void* r_, void* val_)
+
+
+OSL_BATCHOP void
+__OSL_OP2(__OSL_XMACRO_OPNAME, Wdv, Wdv)(void* r_, void* val_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -91,9 +99,11 @@ OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wdv, Wdv)(void* r_, void* val_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wdv,
-                                  Wdv)(void* r_, void* val_,
-                                       unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wdv, Wdv)(void* r_, void* val_,
+                                                unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {

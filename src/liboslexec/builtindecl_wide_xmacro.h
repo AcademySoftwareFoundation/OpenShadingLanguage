@@ -143,15 +143,15 @@
     DECL(__OSL_MASKED_OP3(name, Wdv, Wv, Wdv), "xXXXi")  \
     DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wv), "xXXXi")
 
-#define WIDE_BINARY_OP_IMPL(name)                        \
-    DECL(__OSL_OP3(name, Wf, Wf, Wf), "xXXX")            \
-    DECL(__OSL_OP3(name, Wdf, Wdf, Wdf), "xXXX")         \
-    DECL(__OSL_OP3(name, Wdf, Wf, Wdf), "xXXX")          \
-    DECL(__OSL_OP3(name, Wdf, Wdf, Wf), "xXXX")          \
-    DECL(__OSL_OP3(name, Wv, Wv, Wv), "xXXX")            \
-    DECL(__OSL_OP3(name, Wdv, Wdv, Wdv), "xXXX")         \
-    DECL(__OSL_OP3(name, Wdv, Wv, Wdv), "xXXX")          \
-    DECL(__OSL_OP3(name, Wdv, Wdv, Wv), "xXXX")          \
+#define WIDE_BINARY_OP_IMPL(name)                \
+    DECL(__OSL_OP3(name, Wf, Wf, Wf), "xXXX")    \
+    DECL(__OSL_OP3(name, Wdf, Wdf, Wdf), "xXXX") \
+    DECL(__OSL_OP3(name, Wdf, Wf, Wdf), "xXXX")  \
+    DECL(__OSL_OP3(name, Wdf, Wdf, Wf), "xXXX")  \
+    DECL(__OSL_OP3(name, Wv, Wv, Wv), "xXXX")    \
+    DECL(__OSL_OP3(name, Wdv, Wdv, Wdv), "xXXX") \
+    DECL(__OSL_OP3(name, Wdv, Wv, Wdv), "xXXX")  \
+    DECL(__OSL_OP3(name, Wdv, Wdv, Wv), "xXXX")  \
     WIDE_BINARY_OP_MASKED_IMPL(name)
 
 
@@ -168,12 +168,12 @@
     DECL(__OSL_OP3(name, Wv, Wv, Wv), "xXXX")         \
     DECL(__OSL_MASKED_OP3(name, Wv, Wv, Wv), "xXXXi")
 
-DECL (__OSL_MASKED_OP(allocate_closure_component), "xXXiii")
-DECL (__OSL_MASKED_OP(allocate_weighted_closure_component), "xXXiiXi")
-DECL (__OSL_MASKED_OP(add_closure_closure), "xXXXXi")
-DECL (__OSL_MASKED_OP(mul_closure_float), "xXXXXi")
-DECL (__OSL_MASKED_OP(mul_closure_color), "xXXXXi")
-DECL (__OSL_OP(closure_to_string), "sXX")
+DECL(__OSL_MASKED_OP(allocate_closure_component), "xXXiii")
+DECL(__OSL_MASKED_OP(allocate_weighted_closure_component), "xXXiiXi")
+DECL(__OSL_MASKED_OP(add_closure_closure), "xXXXXi")
+DECL(__OSL_MASKED_OP(mul_closure_float), "xXXXXi")
+DECL(__OSL_MASKED_OP(mul_closure_color), "xXXXXi")
+DECL(__OSL_OP(closure_to_string), "sXX")
 
 DECL(__OSL_OP(format), "xXis*")
 DECL(__OSL_OP(printf), "xXis*")
@@ -241,16 +241,16 @@ WIDE_NOISE_DERIV_IMPL(unullnoise)
 
 DECL(__OSL_MASKED_OP(count_noise), "xXi")
 
-DECL (__OSL_OP2(hash,Wi,Wi), "xXX")
-DECL (__OSL_OP2(hash,Wi,Wf), "xXX")
-DECL (__OSL_OP3(hash,Wi,Wf,Wf), "xXXX")
-DECL (__OSL_OP2(hash,Wi,Wv), "xXX")
-DECL (__OSL_OP3(hash,Wi,Wv,Wf), "xXXX")
-DECL (__OSL_MASKED_OP2(hash,Wi,Wi), "xXXi")
-DECL (__OSL_MASKED_OP2(hash,Wi,Wf), "xXXi")
-DECL (__OSL_MASKED_OP3(hash,Wi,Wf,Wf), "xXXXi")
-DECL (__OSL_MASKED_OP2(hash,Wi,Wv), "xXXi")
-DECL (__OSL_MASKED_OP3(hash,Wi,Wv,Wf), "xXXXi")
+DECL(__OSL_OP2(hash, Wi, Wi), "xXX")
+DECL(__OSL_OP2(hash, Wi, Wf), "xXX")
+DECL(__OSL_OP3(hash, Wi, Wf, Wf), "xXXX")
+DECL(__OSL_OP2(hash, Wi, Wv), "xXX")
+DECL(__OSL_OP3(hash, Wi, Wv, Wf), "xXXX")
+DECL(__OSL_MASKED_OP2(hash, Wi, Wi), "xXXi")
+DECL(__OSL_MASKED_OP2(hash, Wi, Wf), "xXXi")
+DECL(__OSL_MASKED_OP3(hash, Wi, Wf, Wf), "xXXXi")
+DECL(__OSL_MASKED_OP2(hash, Wi, Wv), "xXXi")
+DECL(__OSL_MASKED_OP3(hash, Wi, Wv, Wf), "xXXXi")
 
 // Need wide for combinations of the 3 parameters allowed to be uniform
 // caveat, some combos are unreachable/uneeded
@@ -315,7 +315,7 @@ DECL(__OSL_MASKED_OP(pointcloud_get), "iXsXiXsLXi")
 DECL(__OSL_MASKED_OP(pointcloud_write), "iXsXiXXXi")
 
 DECL(__OSL_MASKED_OP(getmessage), "xXXssLXiisii")
-DECL(__OSL_MASKED_OP2(setmessage, s, WX),  "xXXLXisii")
+DECL(__OSL_MASKED_OP2(setmessage, s, WX), "xXXLXisii")
 DECL(__OSL_MASKED_OP2(setmessage, Ws, WX), "xXXLXisii")
 
 DECL(__OSL_OP(blackbody_vf), "xXXf")

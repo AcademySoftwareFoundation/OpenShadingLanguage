@@ -224,7 +224,8 @@ dispatch_get_inverse_matrix(BatchedRendererServices* bsr,
 
 }  // namespace
 
-OSL_BATCHOP void __OSL_OP3(mul, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_)
+OSL_BATCHOP void
+__OSL_OP3(mul, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -242,9 +243,11 @@ OSL_BATCHOP void __OSL_OP3(mul, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(mul, Wm, Wm, Wf)(void* wr_, void* wa_,
-                                                   void* wb_,
-                                                   unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(mul, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_,
+                                  unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -262,7 +265,10 @@ OSL_BATCHOP void __OSL_MASKED_OP3(mul, Wm, Wm, Wf)(void* wr_, void* wa_,
     }
 }
 
-OSL_BATCHOP void __OSL_OP3(mul, Wm, Wm, Wm)(void* wr_, void* wa_, void* wb_)
+
+
+OSL_BATCHOP void
+__OSL_OP3(mul, Wm, Wm, Wm)(void* wr_, void* wa_, void* wb_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -283,9 +289,11 @@ OSL_BATCHOP void __OSL_OP3(mul, Wm, Wm, Wm)(void* wr_, void* wa_, void* wb_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(mul, Wm, Wm, Wm)(void* wr_, void* wa_,
-                                                   void* wb_,
-                                                   unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(mul, Wm, Wm, Wm)(void* wr_, void* wa_, void* wb_,
+                                  unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -305,9 +313,9 @@ OSL_BATCHOP void __OSL_MASKED_OP3(mul, Wm, Wm, Wm)(void* wr_, void* wa_,
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wm, Wm)(void* wr_, void* wa_,
-                                                   void* wb_,
-                                                   unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(div, Wm, Wm, Wm)(void* wr_, void* wa_, void* wb_,
+                                  unsigned int mask_value)
 {
     Wide<const Matrix44> wa(wa_);
     Wide<const Matrix44> wb(wb_);
@@ -345,8 +353,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wm, Wm)(void* wr_, void* wa_,
             for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                 if (wnotAffine[lane]) {
                     OSL_DASSERT(wresult.mask().is_on(lane));
-                    Matrix44 a = wa[lane];
-                    Matrix44 b = wb[lane];
+                    Matrix44 a                = wa[lane];
+                    Matrix44 b                = wb[lane];
                     Matrix44 r                = a * OSL::nonAffineInverse(b);
                     wresult[ActiveLane(lane)] = r;
                 }
@@ -355,7 +363,10 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wm, Wm)(void* wr_, void* wa_,
     }
 }
 
-OSL_BATCHOP void __OSL_OP3(div, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_)
+
+
+OSL_BATCHOP void
+__OSL_OP3(div, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -373,9 +384,11 @@ OSL_BATCHOP void __OSL_OP3(div, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wm, Wf)(void* wr_, void* wa_,
-                                                   void* wb_,
-                                                   unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(div, Wm, Wm, Wf)(void* wr_, void* wa_, void* wb_,
+                                  unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -396,9 +409,9 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wm, Wf)(void* wr_, void* wa_,
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wf, Wm)(void* wr_, void* wa_,
-                                                   void* wb_,
-                                                   unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(div, Wm, Wf, Wm)(void* wr_, void* wa_, void* wb_,
+                                  unsigned int mask_value)
 {
     Wide<const float> wa(wa_);
     Wide<const Matrix44> wb(wb_);
@@ -437,8 +450,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wf, Wm)(void* wr_, void* wa_,
             for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                 if (wnotAffine[lane]) {
                     OSL_DASSERT(wresult.mask().is_on(lane));
-                    float a    = wa[lane];
-                    Matrix44 b = wb[lane];
+                    float a                   = wa[lane];
+                    Matrix44 b                = wb[lane];
                     Matrix44 r                = a * OSL::nonAffineInverse(b);
                     wresult[ActiveLane(lane)] = r;
                 }
@@ -447,7 +460,10 @@ OSL_BATCHOP void __OSL_MASKED_OP3(div, Wm, Wf, Wm)(void* wr_, void* wa_,
     }
 }
 
-OSL_BATCHOP void __OSL_OP2(transpose, Wm, Wm)(void* wr_, void* wm_)
+
+
+OSL_BATCHOP void
+__OSL_OP2(transpose, Wm, Wm)(void* wr_, void* wm_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -467,8 +483,11 @@ OSL_BATCHOP void __OSL_OP2(transpose, Wm, Wm)(void* wr_, void* wm_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(transpose, Wm, Wm)(void* wr_, void* wm_,
-                                                     unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(transpose, Wm, Wm)(void* wr_, void* wm_,
+                                    unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -688,9 +707,10 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
 }
 }  // namespace
 
-OSL_BATCHOP void __OSL_MASKED_OP2(prepend_matrix_from, Wm,
-                                  s)(void* bsg_, void* wr, const char* from,
-                                     unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP2(prepend_matrix_from, Wm, s)(void* bsg_, void* wr,
+                                             const char* from,
+                                             unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -704,9 +724,12 @@ OSL_BATCHOP void __OSL_MASKED_OP2(prepend_matrix_from, Wm,
     impl_wide_mat_multiply(wrm, from_matrix, wrm);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(prepend_matrix_from, Wm,
-                                  Ws)(void* bsg_, void* wr, void* w_from_name,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(prepend_matrix_from, Wm, Ws)(void* bsg_, void* wr,
+                                              void* w_from_name,
+                                              unsigned int mask_value)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -825,9 +848,10 @@ impl_get_uniform_from_to_matrix_masked(BatchedShaderGlobals* bsg,
 }
 }  // namespace
 
-OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
-                                 s)(void* bsg_, void* wr, const char* from,
-                                    const char* to, unsigned int mask_value)
+OSL_BATCHOP int
+__OSL_MASKED_OP3(get_from_to_matrix, Wm, s, s)(void* bsg_, void* wr,
+                                               const char* from, const char* to,
+                                               unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Masked<Matrix44> wrm(wr, Mask(mask_value));
@@ -835,9 +859,10 @@ OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
 }
 
 
-OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
-                                 Ws)(void* bsg_, void* wr, const char* from,
-                                     void* w_to_ptr, unsigned int mask_value)
+OSL_BATCHOP int
+__OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
+                 Ws)(void* bsg_, void* wr, const char* from, void* w_to_ptr,
+                     unsigned int mask_value)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -860,9 +885,10 @@ OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
 }
 
 
-OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
-                                 s)(void* bsg_, void* wr, void* w_from_ptr,
-                                    const char* to, unsigned int mask_value)
+OSL_BATCHOP int
+__OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
+                 s)(void* bsg_, void* wr, void* w_from_ptr, const char* to,
+                    unsigned int mask_value)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -887,9 +913,10 @@ OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
 }
 
 
-OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
-                                 Ws)(void* bsg_, void* wr, void* w_from_ptr,
-                                     void* w_to_ptr, unsigned int mask_value)
+OSL_BATCHOP int
+__OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
+                 Ws)(void* bsg_, void* wr, void* w_from_ptr, void* w_to_ptr,
+                     unsigned int mask_value)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -925,9 +952,10 @@ OSL_BATCHOP int __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
 // is called that represents the uniformity and data types of the src and destination triples.
 // Also zeroing of derivatives is left to the code generator.
 
-OSL_BATCHOP int __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
-                                 s)(void* bsg_, void* WM_, void* from_,
-                                    void* to_, unsigned int mask_value)
+OSL_BATCHOP int
+__OSL_MASKED_OP3(build_transform_matrix, Wm, s, s)(void* bsg_, void* WM_,
+                                                   void* from_, void* to_,
+                                                   unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -958,9 +986,12 @@ OSL_BATCHOP int __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
     return succeeded.value();
 }
 
-OSL_BATCHOP int __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
-                                 s)(void* bsg_, void* WM_, void* wfrom_,
-                                    void* to_, unsigned int mask_value)
+
+
+OSL_BATCHOP int
+__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s)(void* bsg_, void* WM_,
+                                                    void* wfrom_, void* to_,
+                                                    unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -985,9 +1016,12 @@ OSL_BATCHOP int __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
     return succeeded.value();
 }
 
-OSL_BATCHOP int __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
-                                 Ws)(void* bsg_, void* WM_, void* from_,
-                                     void* wto_, unsigned int mask_value)
+
+
+OSL_BATCHOP int
+__OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws)(void* bsg_, void* WM_,
+                                                    void* from_, void* wto_,
+                                                    unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -1012,9 +1046,12 @@ OSL_BATCHOP int __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
     return succeeded.value();
 }
 
-OSL_BATCHOP int __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
-                                 Ws)(void* bsg_, void* WM_, void* wfrom_,
-                                     void* wto_, unsigned int mask_value)
+
+
+OSL_BATCHOP int
+__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, Ws)(void* bsg_, void* WM_,
+                                                     void* wfrom_, void* wto_,
+                                                     unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -1091,7 +1128,7 @@ impl_transform_point_masked(void* Pin, void* Pout, void* transform,
         // Transform with Vector semantics
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-            const Matrix44 m  = wM[lane];
+            const Matrix44 m = wM[lane];
             const DataType v = inPoints[lane];
 
             if (wresult.mask()[lane]) {
@@ -1110,10 +1147,10 @@ impl_transform_point_masked(void* Pin, void* Pout, void* transform,
 }
 }  // namespace
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_point, v, Wv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_point, v, Wv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
     // TODO: see if we can get gen_transform to call the vvm version then do a masked broadcast
     impl_transform_point_masked<UniformAsWide<const Vec3>,
@@ -1123,46 +1160,56 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_point, v, Wv,
                                                                mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_point, v, Wv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_point, v, Wv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_point_masked<UniformAsWide<const Vec3>, Wide<const Matrix44>>(
         Pin, Pout, transform, mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_point, Wv, Wv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_point, Wv, Wv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_point_masked<Wide<const Vec3>, Wide<const Matrix44>>(
         Pin, Pout, transform, mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_point, Wdv, Wdv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_point, Wdv, Wdv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_point_masked<Wide<const Dual2<Vec3>>, Wide<const Matrix44>>(
         Pin, Pout, transform, mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_point, Wv, Wv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_point, Wv, Wv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_point_masked<Wide<const Vec3>, UniformAsWide<const Matrix44>>(
         Pin, Pout, transform, mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_point, Wdv, Wdv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_point, Wdv, Wdv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_point_masked<Wide<const Dual2<Vec3>>,
                                 UniformAsWide<const Matrix44>>(Pin, Pout,
@@ -1196,7 +1243,7 @@ impl_transform_vector_masked(void* Pin, void* Pout, void* transform,
         // Transform with Vector semantics
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-            Matrix44 m  = wM[lane];
+            Matrix44 m = wM[lane];
             DataType v = inPoints[lane];
             if (wresult.mask()[lane]) {
                 // Do to illegal aliasing in OpenEXR version
@@ -1212,10 +1259,10 @@ impl_transform_vector_masked(void* Pin, void* Pout, void* transform,
 }
 }  // namespace
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, v, Wv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_vector, v, Wv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
     // TODO: see if we can get gen_transform to call the vvm version then do a masked broadcast
     impl_transform_vector_masked<UniformAsWide<const Vec3>,
@@ -1225,10 +1272,12 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, v, Wv,
                                                                 mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, v, Wv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_vector, v, Wv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_vector_masked<UniformAsWide<const Vec3>,
                                  Wide<const Matrix44>>(Pin, Pout, transform,
@@ -1236,39 +1285,43 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, v, Wv,
                                                        mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, Wv, Wv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_vector, Wv, Wv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_vector_masked<Wide<const Vec3>, Wide<const Matrix44>>(
         Pin, Pout, transform, mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, Wdv, Wdv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_vector, Wdv, Wdv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_vector_masked<Wide<const Dual2<Vec3>>, Wide<const Matrix44>>(
         Pin, Pout, transform, mask_transform, mask_value);
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, Wv, Wv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_vector, Wv, Wv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_vector_masked<Wide<const Vec3>, UniformAsWide<const Matrix44>>(
         Pin, Pout, transform, mask_transform, mask_value);
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_vector, Wdv, Wdv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_vector, Wdv, Wdv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_vector_masked<Wide<const Dual2<Vec3>>,
                                  UniformAsWide<const Matrix44>>(Pin, Pout,
@@ -1304,7 +1357,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, Wide<const Matrix44> wM,
     {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-            DataType v    = inPoints[lane];
+            DataType v     = inPoints[lane];
             Matrix44 M     = wM[lane];
             bool is_affine = true;
             if (wresult.mask()[lane]) {
@@ -1325,8 +1378,8 @@ impl_transform_normal_masked(void* Pin, void* Pout, Wide<const Matrix44> wM,
                 if (wnotAffine[lane]) {
                     OSL_DASSERT(wresult.mask().is_on(lane));
 
-                    DataType v = inPoints[lane];
-                    const Matrix44 M  = wM[lane];
+                    DataType v       = inPoints[lane];
+                    const Matrix44 M = wM[lane];
 
                     //M.inverse().transposed().multDirMatrix (v, r);
                     // Use helper that has specializations for Dual2
@@ -1359,14 +1412,12 @@ impl_transform_normal_masked(void* Pin, void* Pout, const Matrix44& M,
 
     // Transform with Normal semantics
 
-    Matrix44 invM{Imath::UNINITIALIZED};
+    Matrix44 invM { Imath::UNINITIALIZED };
     if (OSL_UNLIKELY(!test_if_affine(M))) {
         // Isolate expensive unlikley code
         // in its own function as to not influence
         // the optimization of the fast path
-        invoke([&]() -> void {
-            invM = OSL::nonAffineInverse(M);
-        });
+        invoke([&]() -> void { invM = OSL::nonAffineInverse(M); });
     } else {
         invM = OSL::affineInverse(M);
     }
@@ -1379,7 +1430,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, const Matrix44& M,
             // we expect the compiler to hoist the next 2 lines
             // outside the loops and keep the broadcasting
             // of the result as SIMD
-            DataType v    = inPoints[lane];
+            DataType v      = inPoints[lane];
             DataType result = multiplyDirByMatrix(normalTransform, v);
 
             wresult[lane] = result;
@@ -1391,39 +1442,45 @@ impl_transform_normal_masked(void* Pin, void* Pout, const Matrix44& M,
 
 }  // namespace
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, v, Wv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_normal, v, Wv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
     // TODO: see if we can get gen_transform to call the vvm version then do a masked broadcast
-    impl_transform_normal_masked<UniformAsWide<const Vec3>>(
-        Pin, Pout, MAT(transform), mask_transform, mask_value);
+    impl_transform_normal_masked<UniformAsWide<const Vec3>>(Pin, Pout,
+                                                            MAT(transform),
+                                                            mask_transform,
+                                                            mask_value);
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, v, Wv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_normal, v, Wv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_normal_masked<UniformAsWide<const Vec3>>(
         Pin, Pout, Wide<const Matrix44>(transform), mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wv, Wv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_normal, Wv, Wv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_normal_masked<Wide<const Vec3>>(
         Pin, Pout, Wide<const Matrix44>(transform), mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
-                                  Wm)(void* Pin, void* Pout, void* transform,
-                                      unsigned int mask_transform,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
+                 Wm)(void* Pin, void* Pout, void* transform,
+                     unsigned int mask_transform, unsigned int mask_value)
 {
     impl_transform_normal_masked<Wide<const Dual2<Vec3>>>(
         Pin, Pout, Wide<const Matrix44>(transform), mask_transform, mask_value);
@@ -1431,25 +1488,32 @@ OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
 
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wv, Wv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_normal, Wv, Wv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
-    impl_transform_normal_masked<Wide<const Vec3>>(
-        Pin, Pout, MAT(transform), mask_transform, mask_value);
+    impl_transform_normal_masked<Wide<const Vec3>>(Pin, Pout, MAT(transform),
+                                                   mask_transform, mask_value);
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
-                                  m)(void* Pin, void* Pout, void* transform,
-                                     unsigned int mask_transform,
-                                     unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(transform_normal, Wdv, Wdv,
+                 m)(void* Pin, void* Pout, void* transform,
+                    unsigned int mask_transform, unsigned int mask_value)
 {
-    impl_transform_normal_masked<Wide<const Dual2<Vec3>>>(
-        Pin, Pout, MAT(transform), mask_transform, mask_value);
+    impl_transform_normal_masked<Wide<const Dual2<Vec3>>>(Pin, Pout,
+                                                          MAT(transform),
+                                                          mask_transform,
+                                                          mask_value);
 }
 
-OSL_BATCHOP void __OSL_OP2(determinant, Wf, Wm)(void* wr_, void* wm_)
+
+
+OSL_BATCHOP void
+__OSL_OP2(determinant, Wf, Wm)(void* wr_, void* wm_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1465,8 +1529,11 @@ OSL_BATCHOP void __OSL_OP2(determinant, Wf, Wm)(void* wr_, void* wm_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(determinant, Wf, Wm)(void* wr_, void* wm_,
-                                                       unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(determinant, Wf, Wm)(void* wr_, void* wm_,
+                                      unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {

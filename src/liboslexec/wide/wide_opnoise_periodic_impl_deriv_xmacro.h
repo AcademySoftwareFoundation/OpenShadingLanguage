@@ -58,9 +58,9 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
 #ifndef __OSL_XMACRO_VEC3_RESULTS_ONLY
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdf, Wf)(char* r_ptr, char* x_ptr,
-                                                char* px_ptr,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdf, Wdf, Wf)(char* r_ptr, char* x_ptr, char* px_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -96,10 +96,12 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdf, Wf)(char* r_ptr, char* x_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdf, Wdf, Wf,
-                                  Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
-                                      char* px_ptr, char* py_ptr,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdf, Wdf, Wdf, Wf, Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
+                                        char* px_ptr, char* py_ptr,
+                                        unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -144,9 +146,9 @@ OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdf, Wdf, Wf,
 }
 
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdv, Wv)(char* r_ptr, char* p_ptr,
-                                                char* pp_ptr,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdf, Wdv, Wv)(char* r_ptr, char* p_ptr, char* pp_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);
@@ -182,10 +184,12 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdv, Wv)(char* r_ptr, char* p_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdv, Wdf, Wv,
-                                  Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
-                                      char* pp_ptr, char* pt_ptr,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdf, Wdv, Wdf, Wv, Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
+                                        char* pp_ptr, char* pt_ptr,
+                                        unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);
@@ -233,9 +237,9 @@ OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdv, Wdf, Wv,
 
 #ifndef __OSL_XMACRO_FLOAT_RESULTS_ONLY
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdf, Wf)(char* r_ptr, char* x_ptr,
-                                                char* px_ptr,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdv, Wdf, Wf)(char* r_ptr, char* x_ptr, char* px_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -271,10 +275,12 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdf, Wf)(char* r_ptr, char* x_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdv, Wdf, Wdf, Wf,
-                                  Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
-                                      char* px_ptr, char* py_ptr,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdv, Wdf, Wdf, Wf, Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
+                                        char* px_ptr, char* py_ptr,
+                                        unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -319,9 +325,9 @@ OSL_BATCHOP void __OSL_PNOISE_OP5(Wdv, Wdf, Wdf, Wf,
 }
 
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdv, Wv)(char* r_ptr, char* p_ptr,
-                                                char* pp_ptr,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdv, Wdv, Wv)(char* r_ptr, char* p_ptr, char* pp_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);
@@ -358,10 +364,10 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdv, Wv)(char* r_ptr, char* p_ptr,
 }
 
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdv, Wdv, Wdf, Wv,
-                                  Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
-                                      char* pp_ptr, char* pt_ptr,
-                                      unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdv, Wdv, Wdf, Wv, Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
+                                        char* pp_ptr, char* pt_ptr,
+                                        unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);

@@ -209,6 +209,8 @@ BatchedBackendLLVM::llvm_pass_type(const TypeSpec& typespec)
     return lt;
 }
 
+
+
 llvm::Type*
 BatchedBackendLLVM::llvm_pass_wide_type(const TypeSpec& typespec)
 {
@@ -279,9 +281,8 @@ BatchedBackendLLVM::llvm_assign_zero(const Symbol& sym)
 
     int num_elements = t.numelements();
     for (int a = 0; a < num_elements; ++a) {
-        int numDeriv = sym.has_derivs() ? 3 : 1;
-        llvm::Value* arrind = t.simpletype().arraylen ? ll.constant(a)
-                                                      : NULL;
+        int numDeriv        = sym.has_derivs() ? 3 : 1;
+        llvm::Value* arrind = t.simpletype().arraylen ? ll.constant(a) : NULL;
         for (int d = 0; d < numDeriv; ++d) {
             for (int c = 0; c < t.aggregate(); ++c) {
                 llvm_store_value(zero, sym, d, arrind, c);
@@ -321,7 +322,6 @@ BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym)
              ++arrayindex) {
             llvm::Value* arrind = arrayindex >= 0 ? ll.constant(arrayindex)
                                                   : NULL;
-
             for (int c = 0; c < t.aggregate(); ++c)
                 llvm_store_value(zero, sym, 1, arrind, c);
             for (int c = 0; c < t.aggregate(); ++c)
@@ -331,15 +331,15 @@ BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym)
 }
 
 
+
 void
 BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym, llvm::Value* count)
 {
     // Same thing as the above version but with just the first count derivs
     const TypeSpec& t = sym.typespec();
 
-    OSL_ASSERT((count->getType() == ll.type_int()) ||
-               (count->getType() == ll.type_wide_int()));
-
+    OSL_ASSERT((count->getType() == ll.type_int())
+               || (count->getType() == ll.type_wide_int()));
 
     if (t.is_closure_based())
         return;  // Closures don't have derivs
@@ -352,7 +352,7 @@ BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym, llvm::Value* count)
         else
             zero = ll.wide_constant(0.0f);
 
-        if(!t.is_array()) {
+        if (!t.is_array()) {
             // Not an array, probably shouldn't have called this method
             // just fallback to non-count based version
             llvm_zero_derivs(sym);
@@ -361,39 +361,44 @@ BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym, llvm::Value* count)
 
         llvm::Value* pre_condition_mask = ll.current_mask();
 
-        llvm::Value * index_loc = ll.op_alloca(ll.type_int(), 1);
+        llvm::Value* index_loc = ll.op_alloca(ll.type_int(), 1);
         ll.op_store(ll.constant(0), index_loc);
 
-        llvm::BasicBlock* cond_block = ll.new_basic_block ("zero deriv cond");
-        llvm::BasicBlock* body_block = ll.new_basic_block ("zero deriv body");
-        llvm::BasicBlock* step_block = ll.new_basic_block ("zero deriv step");
-        llvm::BasicBlock* after_block = ll.new_basic_block ("zero deriv after");
+        llvm::BasicBlock* cond_block  = ll.new_basic_block("zero deriv cond");
+        llvm::BasicBlock* body_block  = ll.new_basic_block("zero deriv body");
+        llvm::BasicBlock* step_block  = ll.new_basic_block("zero deriv step");
+        llvm::BasicBlock* after_block = ll.new_basic_block("zero deriv after");
 
-        ll.op_branch (cond_block);
-        llvm::Value * index_val = ll.op_load(index_loc);
-        llvm::Value * windex_val = ll.widen_value(index_val);
-        llvm::Value * condition_mask = ll.op_lt(windex_val, count);
-        llvm::Value * post_condition_mask = ll.op_and(condition_mask, pre_condition_mask);
-        llvm::Value* cond_val = ll.test_if_mask_is_non_zero(post_condition_mask);
+        ll.op_branch(cond_block);
+        llvm::Value* index_val           = ll.op_load(index_loc);
+        llvm::Value* windex_val          = ll.widen_value(index_val);
+        llvm::Value* condition_mask      = ll.op_lt(windex_val, count);
+        llvm::Value* post_condition_mask = ll.op_and(condition_mask,
+                                                     pre_condition_mask);
+        llvm::Value* cond_val            = ll.test_if_mask_is_non_zero(
+                       post_condition_mask);
 
         // Jump to either LoopBody or AfterLoop
-        ll.op_branch (cond_val, body_block, after_block);
-        ll.push_mask(post_condition_mask, false /* negate */, true /* absolute */);
+        ll.op_branch(cond_val, body_block, after_block);
+        ll.push_mask(post_condition_mask, false /* negate */,
+                     true /* absolute */);
         for (int c = 0; c < t.aggregate(); ++c)
             llvm_store_value(zero, sym, 1, index_val, c);
         for (int c = 0; c < t.aggregate(); ++c)
             llvm_store_value(zero, sym, 2, index_val, c);
         ll.pop_mask();
 
-        ll.op_branch (step_block);
+        ll.op_branch(step_block);
         index_val = ll.op_add(index_val, ll.constant(1));
         ll.op_store(index_val, index_loc);
-        ll.op_branch (cond_block);
+        ll.op_branch(cond_block);
 
         // Continue on with the previous flow
-        ll.set_insert_point (after_block);
+        ll.set_insert_point(after_block);
     }
 }
+
+
 
 int
 BatchedBackendLLVM::ShaderGlobalNameToIndex(ustring name, bool& is_uniform)
@@ -408,6 +413,8 @@ BatchedBackendLLVM::ShaderGlobalNameToIndex(ustring name, bool& is_uniform)
     return -1;
 }
 
+
+
 llvm::Value*
 BatchedBackendLLVM::llvm_global_symbol_ptr(ustring name, bool& is_uniform)
 {
@@ -418,6 +425,8 @@ BatchedBackendLLVM::llvm_global_symbol_ptr(ustring name, bool& is_uniform)
     OSL_ASSERT(sg_index >= 0);
     return ll.void_ptr(ll.GEP(sg_ptr(), 0, sg_index));
 }
+
+
 
 llvm::Value*
 BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
@@ -458,6 +467,8 @@ BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
     return (llvm::Value*)map_iter->second;
 }
 
+
+
 llvm::Value*
 BatchedBackendLLVM::llvm_alloca(const TypeSpec& type, bool derivs,
                                 bool is_uniform, bool forceBool,
@@ -485,11 +496,15 @@ BatchedBackendLLVM::llvm_alloca(const TypeSpec& type, bool derivs,
     }
 }
 
+
+
 BatchedBackendLLVM::TempScope::TempScope(BatchedBackendLLVM& backend)
     : m_backend(backend)
 {
     m_backend.m_temp_scopes.push_back(this);
 }
+
+
 
 BatchedBackendLLVM::TempScope::~TempScope()
 {
@@ -505,6 +520,8 @@ BatchedBackendLLVM::TempScope::~TempScope()
     }
     m_backend.m_temp_scopes.pop_back();
 }
+
+
 
 llvm::Value*
 BatchedBackendLLVM::getOrAllocateTemp(const TypeSpec& type, bool derivs,
@@ -545,6 +562,8 @@ BatchedBackendLLVM::getOrAllocateTemp(const TypeSpec& type, bool derivs,
     m_temp_scopes.back()->m_in_use_indices.push_back(temp_count);
     return allocation;
 }
+
+
 
 llvm::Value*
 BatchedBackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
@@ -629,6 +648,8 @@ BatchedBackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
     return result;
 }
 
+
+
 llvm::Value*
 BatchedBackendLLVM::llvm_widen_value_into_temp(const Symbol& sym, int deriv)
 {
@@ -642,7 +663,7 @@ BatchedBackendLLVM::llvm_widen_value_into_temp(const Symbol& sym, int deriv)
     OSL_ASSERT(symType.is_unknown() == false);
 
     llvm::Value* widePtr       = getOrAllocateTemp(t, false /*derivs*/,
-                                             false /*is_uniform*/);
+                                                   false /*is_uniform*/);
     auto disable_masked_stores = ll.create_masking_scope(false);
     for (int c = 0; c < t.aggregate(); ++c) {
         // NOTE: we use the passed deriv to load, but store to value (deriv==0)
@@ -652,6 +673,8 @@ BatchedBackendLLVM::llvm_widen_value_into_temp(const Symbol& sym, int deriv)
     }
     return ll.void_ptr(widePtr);
 }
+
+
 
 llvm::Value*
 BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
@@ -738,6 +761,7 @@ BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
 }
 
 
+
 llvm::Value*
 BatchedBackendLLVM::llvm_load_mask(const Symbol& cond)
 {
@@ -758,6 +782,7 @@ BatchedBackendLLVM::llvm_load_mask(const Symbol& cond)
     OSL_ASSERT(ll.llvm_typeof(llvm_mask) == ll.type_wide_bool());
     return llvm_mask;
 }
+
 
 
 llvm::Value*
@@ -897,7 +922,6 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
             // vs. the hardcoded 4 and avoid the multiplication above
         }
 
-
         // Now grab the value
         llvm::Value* result;
         result = ll.op_gather(ptr, arrayindex);
@@ -941,7 +965,6 @@ BatchedBackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
     OSL_ASSERT(arrayindex >= 0
                && "Called llvm_load_constant_value with negative array index");
 
-
     // TODO: might want to take this fix for array types back to the non-wide backend
     TypeSpec elementType = sym.typespec();
     // The symbol we are creating a constant for might be an array
@@ -980,7 +1003,7 @@ BatchedBackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
     }
     if (elementType.is_triple() || elementType.is_matrix()) {
         int ncomps       = (int)sym.typespec().aggregate();
-        float float_elem = sym.get_float(ncomps*arrayindex + component);
+        float float_elem = sym.get_float(ncomps * arrayindex + component);
         if (op_is_uniform) {
             return ll.constant(float_elem);
         } else {
@@ -1118,14 +1141,14 @@ BatchedBackendLLVM::llvm_load_arg(const Symbol& sym, bool derivs,
         int copy_deriv_count       = (derivs && sym.has_derivs()) ? 3 : 1;
 
         int copy_elem_count = t.numelements();
-        bool is_array = t.is_array();
+        bool is_array       = t.is_array();
         for (int d = 0; d < copy_deriv_count; ++d) {
-            for(int ai=0; ai < copy_elem_count; ++ai) {
-                llvm::Value * arrayIndex = is_array ? ll.constant(ai) : nullptr;
+            for (int ai = 0; ai < copy_elem_count; ++ai) {
+                llvm::Value* arrayIndex = is_array ? ll.constant(ai) : nullptr;
                 for (int c = 0; c < t.aggregate(); ++c) {
-
                     // Will automatically widen value if needed
-                    llvm::Value* v = llvm_load_value(sym, d, arrayIndex, c, TypeDesc::UNKNOWN,
+                    llvm::Value* v = llvm_load_value(sym, d, arrayIndex, c,
+                                                     TypeDesc::UNKNOWN,
                                                      op_is_uniform);
                     llvm_store_value(v, tmpptr, t, d, arrayIndex, c);
                 }
@@ -1211,7 +1234,6 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
         OSL_ASSERT(ll.type_ptr(ll.llvm_typeof(new_val))
                    == ll.llvm_typeof(dst_ptr));
 
-
         // Finally, store the value.
         ll.op_store(new_val, dst_ptr);
         return true;
@@ -1254,6 +1276,7 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
 }
 
 
+
 bool
 BatchedBackendLLVM::llvm_store_mask(llvm::Value* new_mask, const Symbol& cond)
 {
@@ -1266,6 +1289,7 @@ BatchedBackendLLVM::llvm_store_mask(llvm::Value* new_mask, const Symbol& cond)
         return llvm_store_value(ll.op_bool_to_int(new_mask), cond);
     }
 }
+
 
 
 bool
@@ -1310,6 +1334,8 @@ BatchedBackendLLVM::llvm_store_component_value(llvm::Value* new_val,
     }
     return true;
 }
+
+
 
 void
 BatchedBackendLLVM::llvm_broadcast_uniform_value_from_mem(
@@ -1358,6 +1384,8 @@ BatchedBackendLLVM::llvm_broadcast_uniform_value_from_mem(
     }
 }
 
+
+
 void
 BatchedBackendLLVM::llvm_broadcast_uniform_value(llvm::Value* tempUniform,
                                                  const Symbol& Destination,
@@ -1369,6 +1397,8 @@ BatchedBackendLLVM::llvm_broadcast_uniform_value(llvm::Value* tempUniform,
     llvm::Value* wide_value = ll.widen_value(tempUniform);
     llvm_store_value(wide_value, Destination, derivs, nullptr, component);
 }
+
+
 
 void
 BatchedBackendLLVM::llvm_conversion_store_masked_status(llvm::Value* val,
@@ -1391,6 +1421,8 @@ BatchedBackendLLVM::llvm_conversion_store_masked_status(llvm::Value* val,
 
     llvm_store_value(mask, Status);
 }
+
+
 
 void
 BatchedBackendLLVM::llvm_conversion_store_uniform_status(llvm::Value* val,
@@ -1418,11 +1450,14 @@ BatchedBackendLLVM::llvm_conversion_store_uniform_status(llvm::Value* val,
     llvm_store_value(val, Status);
 }
 
+
+
 llvm::Value*
 BatchedBackendLLVM::groupdata_field_ref(int fieldnum)
 {
     return ll.GEP(groupdata_ptr(), 0, fieldnum);
 }
+
 
 
 llvm::Value*
@@ -1440,6 +1475,8 @@ BatchedBackendLLVM::groupdata_field_ptr(int fieldnum, TypeDesc type,
     return result;
 }
 
+
+
 llvm::Value*
 BatchedBackendLLVM::temp_wide_matrix_ptr()
 {
@@ -1451,6 +1488,7 @@ BatchedBackendLLVM::temp_wide_matrix_ptr()
     }
     return m_llvm_temp_wide_matrix_ptr;
 }
+
 
 
 llvm::Value*
@@ -1466,6 +1504,8 @@ BatchedBackendLLVM::temp_batched_texture_options_ptr()
     return m_llvm_temp_batched_texture_options_ptr;
 }
 
+
+
 llvm::Value*
 BatchedBackendLLVM::temp_batched_trace_options_ptr()
 {
@@ -1478,6 +1518,7 @@ BatchedBackendLLVM::temp_batched_trace_options_ptr()
     }
     return m_llvm_temp_batched_trace_options_ptr;
 }
+
 
 
 llvm::Value*
@@ -1623,7 +1664,6 @@ BatchedBackendLLVM::llvm_call_function(const FuncSpec& name,
                 // return pointer to our stacked wide constant
                 valargs[i] = ll.void_ptr(tmpptr);
             }
-
 
             OSL_DEV_ONLY(std::cout << "....pushing " << s.name().c_str()
                                    << " as void_ptr" << std::endl);
@@ -1772,14 +1812,16 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
     llvm::Value* arrind = arrayindex >= 0 ? ll.constant(arrayindex) : NULL;
 
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
-
         if (Src.typespec().is_closure()) {
-            llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0, TypeDesc::UNKNOWN, op_is_uniform);
+            llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0,
+                                                  TypeDesc::UNKNOWN,
+                                                  op_is_uniform);
             llvm_store_value(srcval, Result, 0, arrind, 0);
         } else {
-            llvm::Value *null_value = ll.constant_ptr(NULL, ll.type_void_ptr());
-            if (!op_is_uniform) null_value = ll.widen_value(null_value);
-            llvm_store_value (null_value, Result, 0, arrind, 0);
+            llvm::Value* null_value = ll.constant_ptr(NULL, ll.type_void_ptr());
+            if (!op_is_uniform)
+                null_value = ll.widen_value(null_value);
+            llvm_store_value(null_value, Result, 0, arrind, 0);
         }
         return true;
     }
@@ -1821,7 +1863,7 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
         if (result_t.is_array() && src_t.is_array()) {
             start_array_index = 0;
             end_array_index   = std::min(result_t.arraylength(),
-                                       src_t.arraylength());
+                                         src_t.arraylength());
         }
     }
     for (arrayindex = start_array_index; arrayindex < end_array_index;
@@ -1914,6 +1956,8 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
     return true;
 }
 
+
+
 int
 BatchedBackendLLVM::find_userdata_index(const Symbol& sym)
 {
@@ -1928,6 +1972,7 @@ BatchedBackendLLVM::find_userdata_index(const Symbol& sym)
     }
     return userdata_index;
 }
+
 
 
 void
@@ -1957,6 +2002,8 @@ BatchedBackendLLVM::append_arg_to(llvm::raw_svector_ostream& OS,
         OSL_ASSERT(0);
     OS << name;
 }
+
+
 
 const char*
 BatchedBackendLLVM::build_name(const FuncSpec& fs)

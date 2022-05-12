@@ -23,7 +23,8 @@
 #    error must define __OSL_WIDTH to number of SIMD lanes before including this header
 #endif
 
-OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wi, Wf)(void* r_, void* val_)
+OSL_BATCHOP void
+__OSL_OP2(__OSL_XMACRO_OPNAME, Wi, Wf)(void* r_, void* val_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -38,9 +39,11 @@ OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wi, Wf)(void* r_, void* val_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wi,
-                                  Wf)(void* r_, void* val_,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wi, Wf)(void* r_, void* val_,
+                                              unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {

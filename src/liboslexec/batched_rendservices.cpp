@@ -13,6 +13,7 @@ using namespace OSL::pvt;
 
 OSL_NAMESPACE_ENTER
 
+
 template<int WidthT>
 BatchedRendererServices<WidthT>::BatchedRendererServices(TextureSystem* texsys)
     : m_texturesys(texsys)
@@ -35,6 +36,7 @@ BatchedRendererServices<WidthT>::BatchedRendererServices(TextureSystem* texsys)
 }
 
 
+
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::get_matrix(BatchedShaderGlobals* bsg,
@@ -47,6 +49,7 @@ BatchedRendererServices<WidthT>::get_matrix(BatchedShaderGlobals* bsg,
         && "UNREACHABLE:  BatchedRendererServices<WidthT>::get_matrix calls should be overridden or the target specific version in wide_opmatrix.cpp should be called");
     return Mask(false);
 }
+
 
 
 template<int WidthT>
@@ -62,6 +65,7 @@ BatchedRendererServices<WidthT>::get_inverse_matrix(
 }
 
 
+
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
@@ -74,6 +78,8 @@ BatchedRendererServices<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
         && "UNREACHABLE:  BatchedRendererServices<WidthT>::get_inverse_matrix calls should be overridden or the target specific version in wide_opmatrix.cpp should be called");
     return Mask(false);
 }
+
+
 
 template<int WidthT>
 Mask<WidthT>
@@ -88,12 +94,16 @@ BatchedRendererServices<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
     return Mask(false);
 }
 
+
+
 template<int WidthT>
 TextureSystem*
 BatchedRendererServices<WidthT>::texturesys() const
 {
     return m_texturesys;
 }
+
+
 
 template<int WidthT>
 TextureSystem::TextureHandle*
@@ -125,6 +135,8 @@ BatchedRendererServices<WidthT>::resolve_udim_uniform(
 #endif
         return texture_handle;
 }
+
+
 
 template<int WidthT>
 void
@@ -161,6 +173,7 @@ BatchedRendererServices<WidthT>::resolve_udim(
 }
 
 
+
 template<int WidthT>
 bool
 BatchedRendererServices<WidthT>::get_texture_info_uniform(
@@ -187,6 +200,8 @@ BatchedRendererServices<WidthT>::get_texture_info_uniform(
     return status;
 }
 
+
+
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::texture(
@@ -203,6 +218,8 @@ BatchedRendererServices<WidthT>::texture(
     return Mask(false);
 }
 
+
+
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::texture3d(
@@ -217,6 +234,8 @@ BatchedRendererServices<WidthT>::texture3d(
         && "UNREACHABLE:  BatchedRendererServices<WidthT>::texture calls should be overridden or the target specific version in wide_optexture.cpp should be called");
     return Mask(false);
 }
+
+
 
 template<int WidthT>
 Mask<WidthT>
@@ -233,6 +252,8 @@ BatchedRendererServices<WidthT>::environment(
     return Mask(false);
 }
 
+
+
 template<int WidthT>
 void
 BatchedRendererServices<WidthT>::pointcloud_search(
@@ -245,6 +266,8 @@ BatchedRendererServices<WidthT>::pointcloud_search(
         && "UNREACHABLE:  BatchedRendererServices<WidthT>::pointcloud_search calls should be overridden or the target specific version in wide_oppointcloud.cpp should be called");
 }
 
+
+
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::pointcloud_get(
@@ -256,6 +279,7 @@ BatchedRendererServices<WidthT>::pointcloud_get(
         && "UNREACHABLE:  BatchedRendererServices<WidthT>::pointcloud_get calls should be overridden or the target specific version in wide_oppointcloud.cpp should be called");
     return Mask(false);
 }
+
 
 
 template<int WidthT>
@@ -271,6 +295,8 @@ BatchedRendererServices<WidthT>::pointcloud_write(
     return Mask(false);
 }
 
+
+
 template<int WidthT>
 void
 BatchedRendererServices<WidthT>::trace(
@@ -282,6 +308,8 @@ BatchedRendererServices<WidthT>::trace(
         wresult[lane] = 0;
     }
 }
+
+
 
 template<int WidthT>
 void
@@ -295,6 +323,8 @@ BatchedRendererServices<WidthT>::getmessage(BatchedShaderGlobals* bsg,
         wresult[lane] = 0;
     }
 }
+
+
 
 // Explicitly instantiate BatchedRendererServices template
 template class OSLEXECPUBLIC BatchedRendererServices<16>;

@@ -27,11 +27,11 @@ using WidthTag = OSL::WidthOf<__OSL_WIDTH>;
 // derivatives if present.  Note that if firstcheck==0 and nchecks==ncomps,
 // we are checking the entire contents of the symbol.  More restrictive
 // firstcheck,nchecks are used to check just one element of an array.
-OSL_BATCHOP void __OSL_OP(naninf_check)(int ncomps, const void* vals_,
-                                        int has_derivs, void* bsg_,
-                                        const void* sourcefile, int sourceline,
-                                        void* symbolname, int firstcheck,
-                                        int nchecks, const void* opname)
+OSL_BATCHOP void
+__OSL_OP(naninf_check)(int ncomps, const void* vals_, int has_derivs,
+                       void* bsg_, const void* sourcefile, int sourceline,
+                       void* symbolname, int firstcheck, int nchecks,
+                       const void* opname)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -50,11 +50,15 @@ OSL_BATCHOP void __OSL_OP(naninf_check)(int ncomps, const void* vals_,
     }
 }
 
+
+
 // Wide vals + mask, but uniform index
-OSL_BATCHOP void __OSL_MASKED_OP1(naninf_check_offset, i)(
-    int mask_value, int ncomps, const void* vals_, int has_derivs, void* bsg_,
-    const void* sourcefile, int sourceline, void* symbolname, int firstcheck,
-    int nchecks, const void* opname)
+OSL_BATCHOP void
+__OSL_MASKED_OP1(naninf_check_offset,
+                 i)(int mask_value, int ncomps, const void* vals_,
+                    int has_derivs, void* bsg_, const void* sourcefile,
+                    int sourceline, void* symbolname, int firstcheck,
+                    int nchecks, const void* opname)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -80,11 +84,16 @@ OSL_BATCHOP void __OSL_MASKED_OP1(naninf_check_offset, i)(
     }
 }
 
+
+
 // Wide vals + mask + varying index
-OSL_BATCHOP void __OSL_MASKED_OP1(naninf_check_offset, Wi)(
-    int mask_value, int ncomps, const void* vals_, int has_derivs, void* bsg_,
-    const void* sourcefile, int sourceline, void* symbolname,
-    const void* wide_offsets_ptr, int nchecks, const void* opname)
+OSL_BATCHOP void
+__OSL_MASKED_OP1(naninf_check_offset, Wi)(int mask_value, int ncomps,
+                                          const void* vals_, int has_derivs,
+                                          void* bsg_, const void* sourcefile,
+                                          int sourceline, void* symbolname,
+                                          const void* wide_offsets_ptr,
+                                          int nchecks, const void* opname)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -113,15 +122,17 @@ OSL_BATCHOP void __OSL_MASKED_OP1(naninf_check_offset, Wi)(
     }
 }
 
+
+
 // Many parameters, but the 2 parameter used in the function name
 // correspond to:  "vals" and "firstcheck"
-OSL_BATCHOP void __OSL_OP2(uninit_check_values_offset, X,
-                           i)(long long typedesc_, void* vals_, void* bsg_,
-                              const void* sourcefile, int sourceline,
-                              const char* groupname, int layer,
-                              const char* layername, const char* shadername,
-                              int opnum, const char* opname, int argnum,
-                              void* symbolname, int firstcheck, int nchecks)
+OSL_BATCHOP void
+__OSL_OP2(uninit_check_values_offset, X,
+          i)(long long typedesc_, void* vals_, void* bsg_,
+             const void* sourcefile, int sourceline, const char* groupname,
+             int layer, const char* layername, const char* shadername,
+             int opnum, const char* opname, int argnum, void* symbolname,
+             int firstcheck, int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -161,14 +172,17 @@ OSL_BATCHOP void __OSL_OP2(uninit_check_values_offset, X,
     }
 }
 
+
+
 // Many parameters, but the 2 parameter used in the function name
 // correspond to:  "vals" and "firstcheck"
-OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, WX, i)(
-    int mask_value, long long typedesc_, void* vals_, void* bsg_,
-    const void* sourcefile, int sourceline, const char* groupname, int layer,
-    const char* layername, const char* shadername, int opnum,
-    const char* opname, int argnum, void* symbolname, int firstcheck,
-    int nchecks)
+OSL_BATCHOP void
+__OSL_MASKED_OP2(uninit_check_values_offset, WX,
+                 i)(int mask_value, long long typedesc_, void* vals_,
+                    void* bsg_, const void* sourcefile, int sourceline,
+                    const char* groupname, int layer, const char* layername,
+                    const char* shadername, int opnum, const char* opname,
+                    int argnum, void* symbolname, int firstcheck, int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -219,14 +233,18 @@ OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, WX, i)(
     }
 }
 
+
+
 // Many parameters, but the 2 parameter used in the function name
 // correspond to:  "vals" and "wide_offsets_ptr"
-OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, X, Wi)(
-    int mask_value, long long typedesc_, void* vals_, void* bsg_,
-    const void* sourcefile, int sourceline, const char* groupname, int layer,
-    const char* layername, const char* shadername, int opnum,
-    const char* opname, int argnum, void* symbolname,
-    const void* wide_offsets_ptr, int nchecks)
+OSL_BATCHOP void
+__OSL_MASKED_OP2(uninit_check_values_offset, X,
+                 Wi)(int mask_value, long long typedesc_, void* vals_,
+                     void* bsg_, const void* sourcefile, int sourceline,
+                     const char* groupname, int layer, const char* layername,
+                     const char* shadername, int opnum, const char* opname,
+                     int argnum, void* symbolname, const void* wide_offsets_ptr,
+                     int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -279,14 +297,18 @@ OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, X, Wi)(
     }
 }
 
+
+
 // Many parameters, but the 2 parameter used in the function name
 // correspond to:  "vals" and "wide_offsets_ptr"
-OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi)(
-    int mask_value, long long typedesc_, void* vals_, void* bsg_,
-    const void* sourcefile, int sourceline, const char* groupname, int layer,
-    const char* layername, const char* shadername, int opnum,
-    const char* opname, int argnum, void* symbolname,
-    const void* wide_offsets_ptr, int nchecks)
+OSL_BATCHOP void
+__OSL_MASKED_OP2(uninit_check_values_offset, WX,
+                 Wi)(int mask_value, long long typedesc_, void* vals_,
+                     void* bsg_, const void* sourcefile, int sourceline,
+                     const char* groupname, int layer, const char* layername,
+                     const char* shadername, int opnum, const char* opname,
+                     int argnum, void* symbolname, const void* wide_offsets_ptr,
+                     int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -341,24 +363,24 @@ OSL_BATCHOP void __OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi)(
     }
 }
 
-OSL_BATCHOP int __OSL_OP(range_check)(int indexvalue, int length,
-                                      const char* symname, void* bsg_,
-                                      const void* sourcefile, int sourceline,
-                                      const char* groupname, int layer,
-                                      const char* layername,
-                                      const char* shadername)
+
+
+OSL_BATCHOP int
+__OSL_OP(range_check)(int indexvalue, int length, const char* symname,
+                      void* bsg_, const void* sourcefile, int sourceline,
+                      const char* groupname, int layer, const char* layername,
+                      const char* shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
         auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
         ShadingContext* ctx = bsg->uniform.context;
-        ctx->errorfmt("Index [{}] out of range {}[0..{}]: {}:{}"
-                    " (group {}, layer {} {}, shader {})",
-                    indexvalue, USTR(symname), length - 1, USTR(sourcefile),
-                    sourceline,
-                    (groupname && groupname[0]) ? groupname : "<unnamed group>",
-                    layer,
-                    (layername && layername[0]) ? layername : "<unnamed layer>",
-                    USTR(shadername));
+        ctx->errorfmt(
+            "Index [{}] out of range {}[0..{}]: {}:{}"
+            " (group {}, layer {} {}, shader {})",
+            indexvalue, USTR(symname), length - 1, USTR(sourcefile), sourceline,
+            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
+            (layername && layername[0]) ? layername : "<unnamed layer>",
+            USTR(shadername));
         if (indexvalue >= length)
             indexvalue = length - 1;
         else
@@ -367,12 +389,14 @@ OSL_BATCHOP int __OSL_OP(range_check)(int indexvalue, int length,
     return indexvalue;
 }
 
+
+
 OSL_BATCHOP void
-    __OSL_MASKED_OP(range_check)(void* wide_indexvalue, unsigned int mask_value,
-                                 int length, const char* symname, void* bsg_,
-                                 const void* sourcefile, int sourceline,
-                                 const char* groupname, int layer,
-                                 const char* layername, const char* shadername)
+__OSL_MASKED_OP(range_check)(void* wide_indexvalue, unsigned int mask_value,
+                             int length, const char* symname, void* bsg_,
+                             const void* sourcefile, int sourceline,
+                             const char* groupname, int layer,
+                             const char* layername, const char* shadername)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Masked<int> wIndexValue(wide_indexvalue, Mask(mask_value));
@@ -400,11 +424,11 @@ OSL_BATCHOP void
 
 
 
-OSL_BATCHOP int __OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs,
-                                            void* obj_name_, void* attr_name_,
-                                            int array_lookup, int index,
-                                            const void* attr_type,
-                                            void* wide_attr_dest, int mask_)
+OSL_BATCHOP int
+__OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs, void* obj_name_,
+                            void* attr_name_, int array_lookup, int index,
+                            const void* attr_type, void* wide_attr_dest,
+                            int mask_)
 {
     Mask mask(mask_);
     ASSERT(mask.any_on());
@@ -429,12 +453,13 @@ OSL_BATCHOP int __OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs,
     return success.value();
 }
 
-OSL_BATCHOP int __OSL_MASKED_OP1(get_attribute,
-                                 Ws)(void* bsg_, int dest_derivs,
-                                     void* obj_name_, void* wattr_name_,
-                                     int array_lookup, int index,
-                                     const void* attr_type,
-                                     void* wide_attr_dest, int mask_)
+
+
+OSL_BATCHOP int
+__OSL_MASKED_OP1(get_attribute,
+                 Ws)(void* bsg_, int dest_derivs, void* obj_name_,
+                     void* wattr_name_, int array_lookup, int index,
+                     const void* attr_type, void* wide_attr_dest, int mask_)
 {
     Mask mask(mask_);
     ASSERT(mask.any_on());
@@ -442,9 +467,6 @@ OSL_BATCHOP int __OSL_MASKED_OP1(get_attribute,
     auto* bsg               = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     const ustring& obj_name = USTR(obj_name_);
     Wide<const ustring> wAttrName(wattr_name_);
-
-
-
     auto* renderer = bsg->uniform.context->batched<__OSL_WIDTH>().renderer();
 
     Mask retVal(false);
@@ -473,8 +495,6 @@ OSL_BATCHOP int __OSL_MASKED_OP1(get_attribute,
                 lanesPopulated = renderer->get_attribute(bsg, obj_name,
                                                          attr_name, dest);
             }
-
-
             retVal |= lanesPopulated;
         });
 
@@ -483,9 +503,10 @@ OSL_BATCHOP int __OSL_MASKED_OP1(get_attribute,
 
 
 
-OSL_BATCHOP bool __OSL_OP(get_attribute_uniform)(
-    void* bsg_, int dest_derivs, void* obj_name_, void* attr_name_,
-    int array_lookup, int index, const void* attr_type, void* attr_dest)
+OSL_BATCHOP bool
+__OSL_OP(get_attribute_uniform)(void* bsg_, int dest_derivs, void* obj_name_,
+                                void* attr_name_, int array_lookup, int index,
+                                const void* attr_type, void* attr_dest)
 {
     auto* bsg                = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     const ustring& obj_name  = USTR(obj_name_);
@@ -508,11 +529,13 @@ OSL_BATCHOP bool __OSL_OP(get_attribute_uniform)(
 }
 
 
-OSL_BATCHOP int __OSL_OP(bind_interpolated_param)(
-    void* bsg_, const void* name, long long type, int userdata_has_derivs,
-    void* userdata_data, int symbol_has_derivs, void* symbol_data,
-    int symbol_data_size, unsigned int* userdata_initialized,
-    int userdata_index, unsigned int mask_value)
+OSL_BATCHOP int
+__OSL_OP(bind_interpolated_param)(void* bsg_, const void* name, long long type,
+                                  int userdata_has_derivs, void* userdata_data,
+                                  int symbol_has_derivs, void* symbol_data,
+                                  int symbol_data_size,
+                                  unsigned int* userdata_initialized,
+                                  int userdata_index, unsigned int mask_value)
 {
     // Top bit indicate if we have checked for user data yet or not
     // the bottom half is a mask of which lanes successfully retrieved
@@ -546,23 +569,29 @@ OSL_BATCHOP int __OSL_OP(bind_interpolated_param)(
 
 
 // Asked if the raytype includes a bit pattern.
-OSL_BATCHOP int __OSL_OP(raytype_bit)(void* bsg_, int bit)
+OSL_BATCHOP int
+__OSL_OP(raytype_bit)(void* bsg_, int bit)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return (bsg->uniform.raytype & bit) != 0;
 }
 
+
+
 // Asked if the raytype is a name we can't know until mid-shader.
-OSL_BATCHOP int __OSL_OP(raytype_name)(void* bsg_, void* name)
+OSL_BATCHOP int
+__OSL_OP(raytype_name)(void* bsg_, void* name)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     int bit   = bsg->uniform.context->shadingsys().raytype_bit(USTR(name));
     return (bsg->uniform.raytype & bit) != 0;
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP(raytype_name)(void* bsg_, void* r_,
-                                               void* name_,
-                                               unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP(raytype_name)(void* bsg_, void* r_, void* name_,
+                              unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Wide<const ustring> wname(name_);

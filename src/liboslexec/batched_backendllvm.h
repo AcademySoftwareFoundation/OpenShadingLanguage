@@ -362,9 +362,9 @@ public:
     ///
     llvm::Value* sg_ptr() const { return m_llvm_shaderglobals_ptr; }
 
-    llvm::Type* llvm_type_closure_component ();
-    llvm::Type* llvm_type_closure_component_ptr ();
-    llvm::Type* llvm_type_closure_component_wide_ptr ();
+    llvm::Type* llvm_type_closure_component();
+    llvm::Type* llvm_type_closure_component_ptr();
+    llvm::Type* llvm_type_closure_component_wide_ptr();
 
     /// Return the ShaderGlobals pointer cast as a void*.
     ///
@@ -416,13 +416,16 @@ public:
 
 
     /// Return the pointer to the block of shadeindices.
-    llvm::Value *wide_shadeindex_ptr () const { return m_llvm_wide_shadeindex_ptr; }
+    llvm::Value* wide_shadeindex_ptr() const
+    {
+        return m_llvm_wide_shadeindex_ptr;
+    }
 
     /// Return the userdata base pointer.
-    llvm::Value *userdata_base_ptr () const { return m_llvm_userdata_base_ptr; }
+    llvm::Value* userdata_base_ptr() const { return m_llvm_userdata_base_ptr; }
 
     /// Return the output base pointer.
-    llvm::Value *output_base_ptr () const { return m_llvm_output_base_ptr; }
+    llvm::Value* output_base_ptr() const { return m_llvm_output_base_ptr; }
 
     /// Return a pointer to an WideMatrix that was previously alloca
     /// on the stack, meant for generator to reuse as a temporary
@@ -750,12 +753,11 @@ private:
         virtual const char* library_selector() const                        = 0;
         virtual void init_function_map(ShadingSystemImpl& shadingsys) const = 0;
 
-        static std::unique_ptr<TargetLibraryHelper> build(ShadingContext* context,
-                                                          int vector_width,
-                                                          TargetISA target_isa);
+        static std::unique_ptr<TargetLibraryHelper>
+        build(ShadingContext* context, int vector_width, TargetISA target_isa);
     };
     // TargetLibraryHelper is private, so need to be friend with Concrete
-    template <int WidthT, TargetISA IsaT>
+    template<int WidthT, TargetISA IsaT>
     friend class ConcreteTargetLibraryHelper;
 
     std::unique_ptr<TargetLibraryHelper> m_target_lib_helper;
@@ -780,9 +782,9 @@ private:
     llvm::Value* m_llvm_shaderglobals_ptr;
     llvm::Value* m_llvm_groupdata_ptr;
 
-    llvm::Value *m_llvm_wide_shadeindex_ptr;
-    llvm::Value *m_llvm_userdata_base_ptr;
-    llvm::Value *m_llvm_output_base_ptr;
+    llvm::Value* m_llvm_wide_shadeindex_ptr;
+    llvm::Value* m_llvm_userdata_base_ptr;
+    llvm::Value* m_llvm_output_base_ptr;
 
     // Reused allocas for temps used to pass options or intermediates
     llvm::Value* m_llvm_temp_wide_matrix_ptr;  // for gen_tranform

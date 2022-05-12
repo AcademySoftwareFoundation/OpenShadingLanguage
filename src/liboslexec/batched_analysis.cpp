@@ -102,14 +102,14 @@ is_shader_global_uniform_by_name(ustring name);
 
 namespace  // Unnamed
 {
+
 // Even when all inputs to an operation are uniform,
 // the results written to output symbols maybe varying.
 bool
 are_op_results_always_implicitly_varying(ustring opname)
 {
     return (opname == Strings::op_getmessage) | (opname == Strings::op_trace)
-           | (opname == Strings::op_texture)
-           | (opname == Strings::op_texture3d)
+           | (opname == Strings::op_texture) | (opname == Strings::op_texture3d)
            | (opname == Strings::op_pointcloud_search)
            | (opname == Strings::op_pointcloud_get)
            | (opname == Strings::op_pointcloud_write)
@@ -119,6 +119,7 @@ are_op_results_always_implicitly_varying(ustring opname)
     // be "always" implicitly varying based solely on the opname.
     // We consider getattribute during discovery.
 }
+
 
 // Even when all inputs to an operation are varying,
 // the results written to output symbols maybe uniform.
@@ -168,6 +169,8 @@ does_op_implementation_require_masking(ustring opname)
     return lazy_lookup.find(opname) != lazy_lookup.end();
 }
 
+
+
 // Create some placeholder symbols for shader globals that have don't
 // normally have symbols.
 // Purpose is to allow our data structures to use Symbol * as a key
@@ -209,6 +212,8 @@ struct Symbols4ProtectedShaderGlobals {
     }
 };
 
+
+
 Symbols4ProtectedShaderGlobals&
 psg()
 {
@@ -237,7 +242,6 @@ private:
     // Map opcode names to a Dependency info
     std::unordered_map<ustring, Dependency, ustringHash> m_lookup;
 
-
     /// Return the ptr to the symbol that is the argnum-th argument to the
     /// given op in the instance.
     static Symbol* opargsym(ShaderInstance& inst, const Opcode& op, int argnum)
@@ -261,8 +265,8 @@ private:
                 // We can know all the space names at this time
                 ustring from = From ? *((ustring*)From->data())
                                     : Strings::common;
-                ustring to  = *((ustring*)To->data());
-                ustring syn = inst.shadingsys().commonspace_synonym();
+                ustring to   = *((ustring*)To->data());
+                ustring syn  = inst.shadingsys().commonspace_synonym();
                 if (from == syn)
                     from = Strings::common;
                 if (to == syn)
@@ -357,6 +361,8 @@ public:
     }
 };
 
+
+
 static SymbolPtrVec*
 protected_shader_globals_op_implicitly_depends_on(ShaderInstance& inst,
                                                   Opcode& opcode)
@@ -365,16 +371,19 @@ protected_shader_globals_op_implicitly_depends_on(ShaderInstance& inst,
     return lazyDependencies.lookup(inst, opcode);
 }
 
+
+
 bool
 is_op_result_always_logically_boolean(ustring opname)
 {
     // Test if explicit comparison is faster or not
     static boost::container::flat_set<ustring> lazy_lookup(
-        { Strings::op_getattribute, Strings::op_eq,
-          Strings::op_ge, Strings::op_gt, Strings::op_le, Strings::op_lt,
-          Strings::op_neq, Strings::op_and, Strings::op_or });
+        { Strings::op_getattribute, Strings::op_eq, Strings::op_ge,
+          Strings::op_gt, Strings::op_le, Strings::op_lt, Strings::op_neq,
+          Strings::op_and, Strings::op_or });
     return lazy_lookup.find(opname) != lazy_lookup.end();
 }
+
 
 // TODO: Add more analysis to identify boolean results from the class of
 // operations who would produce a boolean result if given boolean inputs.
@@ -385,7 +394,8 @@ is_op_result_always_logically_boolean(ustring opname)
 // comparison operators even if the are not "currently"
 // being referenced.  May need to disable some warnings
 // error #177: function "..." was declared but never referenced
-OSL_INTEL_PRAGMA(warning ( disable:177 ))
+OSL_INTEL_PRAGMA(warning(disable : 177))
+
 
 // The Position returned by top_pos changes and symbols are pushed and popped.
 // However any given position is invariant as scopes change, and one
@@ -444,7 +454,6 @@ public:
     DependencyTreeTracker() : m_top_of_stack(end_pos()), m_current_depth(0) {}
 
     DependencyTreeTracker(const DependencyTreeTracker&) = delete;
-
 
     class Iterator {
         Position m_pos;
@@ -610,7 +619,6 @@ public:
         --m_current_depth;
     }
 
-
     Position common_ancestor_between(Position read_pos, Position write_pos)
     {
         // To find common anscenstor
@@ -654,8 +662,6 @@ public:
         const int write_level = write_depth - 1;
         OSL_ASSERT(write_path[write_level] == end_pos());
         OSL_ASSERT(read_path[read_level] == end_pos());
-
-
 
         int level = 0;
         OSL_ASSERT(read_path[read_level - level]
@@ -748,7 +754,6 @@ public:
     }
 
     FunctionTreeTracker(const FunctionTreeTracker&) = delete;
-
 
     class Iterator {
         Position m_pos;
@@ -963,7 +968,6 @@ public:
         m_nodes.push_back(node);
     }
 
-
     OSL_FORCEINLINE Position top_pos() const { return m_top_of_stack; }
 
     OSL_FORCEINLINE void pop_function_call()
@@ -996,6 +1000,8 @@ public:
         }
     }
 };
+
+
 
 class WriteEvent {
     DependencyTreeTracker::Position m_pos_in_tree;
@@ -1036,18 +1042,20 @@ public:
         return m_op_num;
     }
 
-
     OSL_FORCEINLINE int loop_op_index() const { return m_loop_op_index; }
 };
 
+
 typedef std::vector<WriteEvent> WriteChronology;
 //typedef llvm::SmallVector<WriteEvent, 8> WriteChronology;
+
 
 
 class ReadEvent {
     DependencyTreeTracker::Position m_pos_in_tree;
     int m_op_num;
     int m_loop_op_index;
+
 public:
     ReadEvent(DependencyTreeTracker::Position pos_in_tree_
 #ifdef OSL_DEV
@@ -1075,9 +1083,12 @@ public:
 #endif
 };
 
+
 typedef std::vector<ReadEvent> ReadChronology;
 // Testing showed 6 read events a typically max
 //typedef llvm::SmallVector<ReadEvent, 6> ReadChronology;
+
+
 
 class LoopStack {
     std::vector<int> m_conditions_op_index_stack;
@@ -1158,6 +1169,8 @@ public:
     }
 };
 
+
+
 struct ReadBranch {
     DependencyTreeTracker::Position pos;
     int depth;  // how deep in the m_conditional_symbol_stack did the read occur
@@ -1168,6 +1181,8 @@ struct ReadBranch {
     {
     }
 };
+
+
 
 struct Analyzer {
     BatchedAnalysis& m_ba;
@@ -1203,7 +1218,6 @@ struct Analyzer {
         m_symbols_dependent_upon;
 
     std::unordered_set<Symbol*> m_symbols_written_to_by_implicitly_varying_ops;
-
 
     // Remember which symbols we've force to be boolean so we can
     // reverse that decision if we see them used by any boolean operations
@@ -1365,7 +1379,8 @@ struct Analyzer {
                     op(write_op_num).requires_masking(true);
                     OSL_DEV_ONLY(
                         std::cout
-                        << "cyclic read of " << symbol_to_check->unmangled().c_str()
+                        << "cyclic read of "
+                        << symbol_to_check->unmangled().c_str()
                         << " from loop [" << read_iter->loop_op_index()
                         << "] op(" << write_op_num << ").requires_masking()="
                         << op(write_op_num).requires_masking() << std::endl);
@@ -1492,11 +1507,12 @@ struct Analyzer {
         for (auto cond_iter = m_conditional_symbol_stack.begin();
              *cond_iter != loop_condition; ++cond_iter) {
             auto conditionContinueDependsOn = *cond_iter;
-            OSL_DEV_ONLY(std::cout << ">>>Loop Conditional "
-                                   << loop_condition->unmangled().c_str()
-                                   << " needs to depend on conditional "
-                                   << conditionContinueDependsOn->unmangled().c_str()
-                                   << std::endl);
+            OSL_DEV_ONLY(std::cout
+                         << ">>>Loop Conditional "
+                         << loop_condition->unmangled().c_str()
+                         << " needs to depend on conditional "
+                         << conditionContinueDependsOn->unmangled().c_str()
+                         << std::endl);
             m_symbols_dependent_upon.insert(
                 std::make_pair(conditionContinueDependsOn, loop_condition));
         }
@@ -1720,7 +1736,6 @@ struct Analyzer {
                 m_deferred_op_indices_to_be_masked.push_back(op_index);
             }
 
-
             // Track dependencies between symbols written to in this basic block
             // to the set of symbols the code blocks where dependent upon to be executed
             m_pos_in_dependent_sym_stack_by_op_index[op_index]
@@ -1790,7 +1805,6 @@ struct Analyzer {
                     OSL_ASSERT(read_count == 1);
                     m_loop_stack.push_loop(op_index, symbols_read_by_op[0]);
 
-
                     // Body block
                     OSL_DEV_ONLY(std::cout << " FOR BODY BLOCK BEGIN"
                                            << std::endl);
@@ -1810,7 +1824,6 @@ struct Analyzer {
 
                     OSL_ASSERT(m_conditional_symbol_stack.top() == condition);
                     m_conditional_symbol_stack.pop();
-
 
                     // Condition block
                     // NOTE: Processing condition like it was a do/while
@@ -1838,7 +1851,6 @@ struct Analyzer {
                     OSL_ASSERT(m_conditional_symbol_stack.top() == condition);
                     m_conditional_symbol_stack.pop();
                     m_loop_stack.pop_loop(op_index);
-
 
                 } else if (opcode.opname() == Strings::op_functioncall) {
                     // Function call itself operates on the same symbol dependencies
@@ -2008,9 +2020,9 @@ struct Analyzer {
                 continue;
             // Skip if it's an interpolated (userdata) parameter and we're
             // initializing them lazily.
-            if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
-                && !s.lockgeom()
-                && !s.typespec().is_closure() && !s.connected()
+            if ((s.symtype() == SymTypeParam
+                 || s.symtype() == SymTypeOutputParam)
+                && !s.lockgeom() && !s.typespec().is_closure() && !s.connected()
                 && !s.connected_down() && m_ba.shadingsys().lazy_userdata())
                 continue;
             // Set initial value for params (may contain init ops)
@@ -2120,7 +2132,8 @@ struct Analyzer {
                                     OSL_DEV_ONLY(
                                         std::cout
                                         << "Mapping "
-                                        << sym_mask_depends_on->unmangled().c_str()
+                                        << sym_mask_depends_on->unmangled()
+                                               .c_str()
                                         << std::endl);
                                     m_symbols_dependent_upon.insert(
                                         std::make_pair(sym_mask_depends_on,
@@ -2142,7 +2155,7 @@ struct Analyzer {
 #endif
                     const auto& early_out = *earlyOutIter;
                     auto begin_dep_iter   = m_conditional_symbol_stack.begin_at(
-                        early_out.dtt_pos);
+                          early_out.dtt_pos);
                     auto end_dep_iter = m_conditional_symbol_stack.end();
 
                     const Opcode& opcode = m_opcodes[op_index];
@@ -2168,7 +2181,8 @@ struct Analyzer {
                                     OSL_DEV_ONLY(
                                         std::cout
                                         << "Mapping "
-                                        << sym_mask_depends_on->unmangled().c_str()
+                                        << sym_mask_depends_on->unmangled()
+                                               .c_str()
                                         << std::endl);
                                     m_symbols_dependent_upon.insert(
                                         std::make_pair(sym_mask_depends_on,
@@ -2299,11 +2313,15 @@ struct Analyzer {
 
 }  // namespace
 
+
+
 BatchedAnalysis::BatchedAnalysis(ShadingSystemImpl& shadingsys,
                                  ShaderGroup& group)
     : m_shadingsys(shadingsys), m_group(group)
 {
 }
+
+
 
 void
 BatchedAnalysis::analyze_layer(ShaderInstance* inst)
@@ -2341,6 +2359,8 @@ BatchedAnalysis::analyze_layer(ShaderInstance* inst)
 #endif
 }
 
+
+
 void
 BatchedAnalysis::dump_symbol_uniformity(ShaderInstance* inst)
 {
@@ -2356,6 +2376,8 @@ BatchedAnalysis::dump_symbol_uniformity(ShaderInstance* inst)
         std::cout << "done with Symbol uniformity" << std::endl;
     }
 }
+
+
 
 void
 BatchedAnalysis::dump_layer(ShaderInstance* inst)

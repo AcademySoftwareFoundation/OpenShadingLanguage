@@ -81,7 +81,10 @@ public:
         dest.assign_val_from_wide(wsrcval.ptr());
     }
 
-    void export_data(MaskedData wdestval) { wdestval.assign_val_from_wide(data); }
+    void export_data(MaskedData wdestval)
+    {
+        wdestval.assign_val_from_wide(data);
+    }
 };
 
 struct BatchedMessageList {
@@ -196,11 +199,11 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
 }  // namespace
 
 
-OSL_BATCHOP void __OSL_MASKED_OP2(setmessage, s,
-                                  WX)(BatchedShaderGlobals* bsg_, void* wname,
-                                      long long type, void* wvalue,
-                                      int layeridx, const char* sourcefile_,
-                                      int sourceline, unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP2(setmessage, s, WX)(BatchedShaderGlobals* bsg_, void* wname,
+                                    long long type, void* wvalue, int layeridx,
+                                    const char* sourcefile_, int sourceline,
+                                    unsigned int mask_value)
 {
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
@@ -231,11 +234,11 @@ OSL_BATCHOP void __OSL_MASKED_OP2(setmessage, s,
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP2(setmessage, Ws,
-                                  WX)(BatchedShaderGlobals* bsg_, void* wname,
-                                      long long type, void* wvalue,
-                                      int layeridx, const char* sourcefile_,
-                                      int sourceline, unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP2(setmessage, Ws, WX)(BatchedShaderGlobals* bsg_, void* wname,
+                                     long long type, void* wvalue, int layeridx,
+                                     const char* sourcefile_, int sourceline,
+                                     unsigned int mask_value)
 {
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
@@ -270,10 +273,11 @@ OSL_BATCHOP void __OSL_MASKED_OP2(setmessage, Ws,
 
 
 
-OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
-    void* bsg_, void* result, char* source_, char* name_, long long type_,
-    void* val, int derivs, int layeridx, const char* sourcefile_,
-    int sourceline, unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP(getmessage)(void* bsg_, void* result, char* source_,
+                            char* name_, long long type_, void* val, int derivs,
+                            int layeridx, const char* sourcefile_,
+                            int sourceline, unsigned int mask_value)
 {
     const ustring& source(USTR(source_));
     const ustring& name(USTR(name_));
@@ -414,11 +418,10 @@ OSL_BATCHOP void __OSL_MASKED_OP(getmessage)(
 // Utility: retrieve a pointer to the ShadingContext's trace options
 // struct, also re-initialize its contents.
 
-OSL_BATCHOP void __OSL_MASKED_OP(trace)(void* bsg_, void* result, void* opt_,
-                                        void* Pos_, void* dPosdx_,
-                                        void* dPosdy_, void* Dir_,
-                                        void* dDirdx_, void* dDirdy_,
-                                        unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP(trace)(void* bsg_, void* result, void* opt_, void* Pos_,
+                       void* dPosdx_, void* dPosdy_, void* Dir_, void* dDirdx_,
+                       void* dDirdy_, unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     auto* opt = reinterpret_cast<BatchedRendererServices::TraceOpt*>(opt_);

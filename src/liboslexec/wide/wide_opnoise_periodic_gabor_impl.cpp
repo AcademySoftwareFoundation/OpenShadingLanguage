@@ -85,11 +85,11 @@ dispatch_pgabor_Vec3_result(const NoiseParams* opt,
 
 }  // namespace
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdf, Wf)(char* name, char* r_ptr,
-                                                char* x_ptr, char* px_ptr,
-                                                char* sgb, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdf, Wdf, Wf)(char* name, char* r_ptr, char* x_ptr,
+                               char* px_ptr, char* sgb, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     dispatch_pgabor_float_result(reinterpret_cast<const NoiseParams*>(opt),
                                  reinterpret_cast<Block<Vec3>*>(
@@ -99,12 +99,13 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdf, Wf)(char* name, char* r_ptr,
                                  Wide<const float>(px_ptr));
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdf, Wdf, Wf,
-                                  Wf)(char* name, char* r_ptr, char* x_ptr,
-                                      char* y_ptr, char* px_ptr, char* py_ptr,
-                                      char* sgb, char* opt,
-                                      char* varying_direction_ptr,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdf, Wdf, Wdf, Wf,
+                 Wf)(char* name, char* r_ptr, char* x_ptr, char* y_ptr,
+                     char* px_ptr, char* py_ptr, char* sgb, char* opt,
+                     char* varying_direction_ptr, unsigned int mask_value)
 {
     dispatch_pgabor_float_result(
         reinterpret_cast<const NoiseParams*>(opt),
@@ -114,11 +115,13 @@ OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdf, Wdf, Wf,
         Wide<const float>(px_ptr), Wide<const float>(py_ptr));
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdv, Wv)(char* name, char* r_ptr,
-                                                char* p_ptr, char* pp_ptr,
-                                                char* sgb, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdf, Wdv, Wv)(char* name, char* r_ptr, char* p_ptr,
+                               char* pp_ptr, char* sgb, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     dispatch_pgabor_float_result(reinterpret_cast<const NoiseParams*>(opt),
                                  reinterpret_cast<Block<Vec3>*>(
@@ -128,12 +131,13 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdf, Wdv, Wv)(char* name, char* r_ptr,
                                  Wide<const Vec3>(pp_ptr));
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdv, Wdf, Wv,
-                                  Wf)(char* name, char* r_ptr, char* p_ptr,
-                                      char* t_ptr, char* pp_ptr, char* pt_ptr,
-                                      char* sgb, char* opt,
-                                      char* varying_direction_ptr,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdf, Wdv, Wdf, Wv,
+                 Wf)(char* name, char* r_ptr, char* p_ptr, char* t_ptr,
+                     char* pp_ptr, char* pt_ptr, char* sgb, char* opt,
+                     char* varying_direction_ptr, unsigned int mask_value)
 {
     /* FIXME -- This is very broken, we are ignoring 4D! */
     dispatch_pgabor_float_result(reinterpret_cast<const NoiseParams*>(opt),
@@ -144,11 +148,13 @@ OSL_BATCHOP void __OSL_PNOISE_OP5(Wdf, Wdv, Wdf, Wv,
                                  Wide<const Vec3>(pp_ptr));
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdf, Wf)(char* name, char* r_ptr,
-                                                char* x_ptr, char* px_ptr,
-                                                char* sgb, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdv, Wdf, Wf)(char* name, char* r_ptr, char* x_ptr,
+                               char* px_ptr, char* sgb, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     dispatch_pgabor_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),
                                 reinterpret_cast<Block<Vec3>*>(
@@ -158,12 +164,13 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdf, Wf)(char* name, char* r_ptr,
                                 Wide<const float>(px_ptr));
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdv, Wdf, Wdf, Wf,
-                                  Wf)(char* name, char* r_ptr, char* x_ptr,
-                                      char* y_ptr, char* px_ptr, char* py_ptr,
-                                      char* sgb, char* opt,
-                                      char* varying_direction_ptr,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdv, Wdf, Wdf, Wf,
+                 Wf)(char* name, char* r_ptr, char* x_ptr, char* y_ptr,
+                     char* px_ptr, char* py_ptr, char* sgb, char* opt,
+                     char* varying_direction_ptr, unsigned int mask_value)
 {
     dispatch_pgabor_Vec3_result(
         reinterpret_cast<const NoiseParams*>(opt),
@@ -173,11 +180,13 @@ OSL_BATCHOP void __OSL_PNOISE_OP5(Wdv, Wdf, Wdf, Wf,
         Wide<const float>(px_ptr), Wide<const float>(py_ptr));
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdv, Wv)(char* name, char* r_ptr,
-                                                char* p_ptr, char* pp_ptr,
-                                                char* sgb, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP3(Wdv, Wdv, Wv)(char* name, char* r_ptr, char* p_ptr,
+                               char* pp_ptr, char* sgb, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     dispatch_pgabor_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),
                                 reinterpret_cast<Block<Vec3>*>(
@@ -187,12 +196,13 @@ OSL_BATCHOP void __OSL_PNOISE_OP3(Wdv, Wdv, Wv)(char* name, char* r_ptr,
                                 Wide<const Vec3>(pp_ptr));
 }
 
-OSL_BATCHOP void __OSL_PNOISE_OP5(Wdv, Wdv, Wdf, Wv,
-                                  Wf)(char* name, char* r_ptr, char* p_ptr,
-                                      char* t_ptr, char* pp_ptr, char* pt_ptr,
-                                      char* sgb, char* opt,
-                                      char* varying_direction_ptr,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_PNOISE_OP5(Wdv, Wdv, Wdf, Wv,
+                 Wf)(char* name, char* r_ptr, char* p_ptr, char* t_ptr,
+                     char* pp_ptr, char* pt_ptr, char* sgb, char* opt,
+                     char* varying_direction_ptr, unsigned int mask_value)
 {
     /* FIXME -- This is very broken, we are ignoring 4D! */
     dispatch_pgabor_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),

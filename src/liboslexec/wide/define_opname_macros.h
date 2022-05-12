@@ -18,11 +18,11 @@
 #define OSL_BATCHOP extern "C" OSL_DLL_EXPORT
 
 // Macro helpers for xmacro include files
-#define __OSL_EXPAND(A) A
-#define __OSL_XMACRO_ARG1(A,...) A
-#define __OSL_XMACRO_ARG2(A,B,...) B
-#define __OSL_XMACRO_ARG3(A,B,C,...) C
-#define __OSL_XMACRO_ARG4(A,B,C,D,...) D
+#define __OSL_EXPAND(A)                    A
+#define __OSL_XMACRO_ARG1(A, ...)          A
+#define __OSL_XMACRO_ARG2(A, B, ...)       B
+#define __OSL_XMACRO_ARG3(A, B, C, ...)    C
+#define __OSL_XMACRO_ARG4(A, B, C, D, ...) D
 
 
 #define __OSL_LIBRARY_SELECTOR \

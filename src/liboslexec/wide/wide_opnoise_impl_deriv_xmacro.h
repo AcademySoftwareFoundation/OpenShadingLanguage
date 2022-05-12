@@ -57,8 +57,8 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
 #ifndef __OSL_XMACRO_VEC3_RESULTS_ONLY
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdf)(char* r_ptr, char* x_ptr,
-                                           unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdf, Wdf)(char* r_ptr, char* x_ptr, unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -91,9 +91,11 @@ OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdf)(char* r_ptr, char* x_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* r_ptr, char* x_ptr,
-                                                char* y_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* r_ptr, char* x_ptr, char* y_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -129,8 +131,10 @@ OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* r_ptr, char* x_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdv)(char* r_ptr, char* p_ptr,
-                                           unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdf, Wdv)(char* r_ptr, char* p_ptr, unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);
@@ -163,9 +167,11 @@ OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdv)(char* r_ptr, char* p_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* r_ptr, char* p_ptr,
-                                                char* t_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* r_ptr, char* p_ptr, char* t_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<float>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);
@@ -205,8 +211,8 @@ OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* r_ptr, char* p_ptr,
 
 #ifndef __OSL_XMACRO_FLOAT_RESULTS_ONLY
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdv, Wdf)(char* r_ptr, char* x_ptr,
-                                           unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdv, Wdf)(char* r_ptr, char* x_ptr, unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -239,9 +245,11 @@ OSL_BATCHOP void __OSL_NOISE_OP2(Wdv, Wdf)(char* r_ptr, char* x_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* r_ptr, char* x_ptr,
-                                                char* y_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* r_ptr, char* x_ptr, char* y_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<float>> wx(x_ptr);
@@ -277,8 +285,10 @@ OSL_BATCHOP void __OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* r_ptr, char* x_ptr,
     }
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdv, Wdv)(char* r_ptr, char* p_ptr,
-                                           unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdv, Wdv)(char* r_ptr, char* p_ptr, unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);
@@ -312,9 +322,9 @@ OSL_BATCHOP void __OSL_NOISE_OP2(Wdv, Wdv)(char* r_ptr, char* p_ptr,
 }
 
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* r_ptr, char* p_ptr,
-                                                char* t_ptr,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* r_ptr, char* p_ptr, char* t_ptr,
+                               unsigned int mask_value)
 {
     Masked<Dual2<Vec3>> wresult(r_ptr, Mask(mask_value));
     Wide<const Dual2<Vec3>> wp(p_ptr);

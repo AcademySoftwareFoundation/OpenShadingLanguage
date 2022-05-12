@@ -1,6 +1,8 @@
 // Copyright Contributors to the Open Shading Language project.
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 #ifdef __OSL_XMACRO_ARGS
 #    define __OSL_XMACRO_OPNAME \
         __OSL_EXPAND(__OSL_XMACRO_ARG1 __OSL_XMACRO_ARGS)
@@ -21,7 +23,8 @@
 #endif
 
 
-OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wi, Wi)(void* r_, void* val_)
+OSL_BATCHOP void
+__OSL_OP2(__OSL_XMACRO_OPNAME, Wi, Wi)(void* r_, void* val_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -36,9 +39,11 @@ OSL_BATCHOP void __OSL_OP2(__OSL_XMACRO_OPNAME, Wi, Wi)(void* r_, void* val_)
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wi,
-                                  Wi)(void* r_, void* val_,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(__OSL_XMACRO_OPNAME, Wi, Wi)(void* r_, void* val_,
+                                              unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {

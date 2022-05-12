@@ -19,7 +19,8 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
 // Utility: retrieve a pointer to the ShadingContext's noise params
 // struct, also re-initialize its contents.
-OSL_BATCHOP void* __OSL_OP(get_noise_options)(void* bsg_)
+OSL_BATCHOP void*
+__OSL_OP(get_noise_options)(void* bsg_)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -28,8 +29,10 @@ OSL_BATCHOP void* __OSL_OP(get_noise_options)(void* bsg_)
     return opt;
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP(count_noise)(void* bsg_,
-                                              unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP(count_noise)(void* bsg_, unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Mask mask(mask_value);

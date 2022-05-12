@@ -30,9 +30,9 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 #include "define_opname_macros.h"
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(concat, Ws, Ws, Ws)(void* wr_, void* ws_,
-                                                      void* wt_,
-                                                      unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(concat, Ws, Ws, Ws)(void* wr_, void* ws_, void* wt_,
+                                     unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Wide<const ustring> wT(wt_);
@@ -65,8 +65,10 @@ OSL_BATCHOP void __OSL_MASKED_OP3(concat, Ws, Ws, Ws)(void* wr_, void* ws_,
         });
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(strlen, Wi, Ws)(void* wr_, void* ws_,
-                                                  unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(strlen, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Masked<int> wR(wr_, Mask(mask_value));
@@ -88,8 +90,8 @@ OSL_BATCHOP void __OSL_MASKED_OP2(strlen, Wi, Ws)(void* wr_, void* ws_,
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP2(hash, Wi, Ws)(void* wr_, void* ws_,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP2(hash, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Masked<int> wR(wr_, Mask(mask_value));
@@ -106,9 +108,11 @@ OSL_BATCHOP void __OSL_MASKED_OP2(hash, Wi, Ws)(void* wr_, void* ws_,
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(getchar, Wi, Ws, Wi)(void* wr_, void* ws_,
-                                                       void* wi_,
-                                                       unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(getchar, Wi, Ws, Wi)(void* wr_, void* ws_, void* wi_,
+                                      unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Wide<const int> wI(wi_);
@@ -143,6 +147,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(getchar, Wi, Ws, Wi)(void* wr_, void* ws_,
 #endif
 }
 
+
+
 // TODO: duplicated in opstring.cpp, move to common header (or not)
 static OSL_FORCEINLINE int
 startswith_iss_impl(ustring s, ustring substr)
@@ -156,9 +162,11 @@ startswith_iss_impl(ustring s, ustring substr)
     return strncmp(s.c_str(), substr.c_str(), substr_len) == 0;
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(startswith, Wi, Ws,
-                                  Ws)(void* wr_, void* ws_, void* wsubs_,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(startswith, Wi, Ws, Ws)(void* wr_, void* ws_, void* wsubs_,
+                                         unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Wide<const ustring> wSubs(wsubs_);
@@ -170,6 +178,8 @@ OSL_BATCHOP void __OSL_MASKED_OP3(startswith, Wi, Ws,
         wR[lane]       = startswith_iss_impl(s, substr);
     });
 }
+
+
 
 // TODO: duplicated in opstring.cpp, move to common header (or not)
 static OSL_FORCEINLINE int
@@ -186,9 +196,9 @@ endswith_iss_impl(ustring s, ustring substr)
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP3(endswith, Wi, Ws, Ws)(void* wr_, void* ws_,
-                                                        void* wsubs_,
-                                                        unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_MASKED_OP3(endswith, Wi, Ws, Ws)(void* wr_, void* ws_, void* wsubs_,
+                                       unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Wide<const ustring> wSubs(wsubs_);
@@ -202,8 +212,10 @@ OSL_BATCHOP void __OSL_MASKED_OP3(endswith, Wi, Ws, Ws)(void* wr_, void* ws_,
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP2(stoi, Wi, Ws)(void* wint_ptr, void* wstr_ptr,
-                                                unsigned int mask_value)
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(stoi, Wi, Ws)(void* wint_ptr, void* wstr_ptr,
+                               unsigned int mask_value)
 {
     Wide<const ustring> wstr(wstr_ptr);
     Masked<int> wR(wint_ptr, Mask(mask_value));
@@ -219,8 +231,10 @@ OSL_BATCHOP void __OSL_MASKED_OP2(stoi, Wi, Ws)(void* wint_ptr, void* wstr_ptr,
     });
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP2(stof, Wf, Ws)(void* wr_, void* ws_,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP2(stof, Wf, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Masked<float> wR(wr_, Mask(mask_value));
@@ -235,6 +249,8 @@ OSL_BATCHOP void __OSL_MASKED_OP2(stof, Wf, Ws)(void* wr_, void* ws_,
         wR[lane] = str ? OIIO::Strutil::from_string<float>(str) : 0.0f;
     });
 }
+
+
 
 // TODO: duplicated in opstring.cpp, move to common header (or not)
 static OSL_FORCEINLINE ustring
@@ -251,9 +267,12 @@ substr_ssii_impl(ustring s, int start, int length)
     return ustring(s, b, Imath::clamp(length, 0, slen));
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP4(substr, Ws, Ws, Wi,
-                                  Wi)(void* wr_, void* ws_, void* wstart_,
-                                      void* wlength_, unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP4(substr, Ws, Ws, Wi, Wi)(void* wr_, void* ws_, void* wstart_,
+                                         void* wlength_,
+                                         unsigned int mask_value)
 {
     Wide<const ustring> wS(ws_);
     Wide<const int> wL(wlength_);
@@ -269,9 +288,10 @@ OSL_BATCHOP void __OSL_MASKED_OP4(substr, Ws, Ws, Wi,
 }
 
 
-OSL_BATCHOP int __OSL_OP(regex_impl)(void* bsg_, const char* subject_,
-                                     void* results, int nresults,
-                                     const char* pattern, int fullmatch)
+
+OSL_BATCHOP int
+__OSL_OP(regex_impl)(void* bsg_, const char* subject_, void* results,
+                     int nresults, const char* pattern, int fullmatch)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -306,11 +326,12 @@ OSL_BATCHOP int __OSL_OP(regex_impl)(void* bsg_, const char* subject_,
 }
 
 
-OSL_BATCHOP void __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr,
-                                             void* wsubject_ptr,
-                                             void* wresults_ptr, int nresults,
-                                             void* wpattern_ptr, int fullmatch,
-                                             unsigned int mask_value)
+
+OSL_BATCHOP void
+__OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr, void* wsubject_ptr,
+                            void* wresults_ptr, int nresults,
+                            void* wpattern_ptr, int fullmatch,
+                            unsigned int mask_value)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -357,8 +378,10 @@ OSL_BATCHOP void __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr,
 }
 
 
-OSL_BATCHOP void __OSL_OP(format)(void* wide_output, unsigned int mask_value,
-                                  const char* format_str, ...)
+
+OSL_BATCHOP void
+__OSL_OP(format)(void* wide_output, unsigned int mask_value,
+                 const char* format_str, ...)
 {
     va_list args;
     va_start(args, format_str);
@@ -371,9 +394,11 @@ OSL_BATCHOP void __OSL_OP(format)(void* wide_output, unsigned int mask_value,
     OSL::assign_all(wOut, result);
 }
 
-OSL_BATCHOP void __OSL_OP(printf)(BatchedShaderGlobals* bsg,
-                                  unsigned int mask_value,
-                                  const char* format_str, ...)
+
+
+OSL_BATCHOP void
+__OSL_OP(printf)(BatchedShaderGlobals* bsg, unsigned int mask_value,
+                 const char* format_str, ...)
 {
     Mask mask(mask_value);
     // Not strictly necessary, but using to ensure "current" logic that conditionals should skip
@@ -391,9 +416,10 @@ OSL_BATCHOP void __OSL_OP(printf)(BatchedShaderGlobals* bsg,
 }
 
 
-OSL_BATCHOP void __OSL_OP(error)(BatchedShaderGlobals* bsg,
-                                 unsigned int mask_value,
-                                 const char* format_str, ...)
+
+OSL_BATCHOP void
+__OSL_OP(error)(BatchedShaderGlobals* bsg, unsigned int mask_value,
+                const char* format_str, ...)
 {
     Mask mask(mask_value);
     // Not strictly necessary, but using to ensure "current" logic that conditionals should skip
@@ -410,9 +436,11 @@ OSL_BATCHOP void __OSL_OP(error)(BatchedShaderGlobals* bsg,
         static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
 }
 
-OSL_BATCHOP void __OSL_OP(warning)(BatchedShaderGlobals* bsg,
-                                   unsigned int mask_value,
-                                   const char* format_str, ...)
+
+
+OSL_BATCHOP void
+__OSL_OP(warning)(BatchedShaderGlobals* bsg, unsigned int mask_value,
+                  const char* format_str, ...)
 {
     if (bsg->uniform.context->allow_warnings()) {
         Mask mask(mask_value);
@@ -431,10 +459,11 @@ OSL_BATCHOP void __OSL_OP(warning)(BatchedShaderGlobals* bsg,
     }
 }
 
-OSL_BATCHOP void __OSL_OP(fprintf)(BatchedShaderGlobals* bsg,
-                                   unsigned int mask_value,
-                                   const char* filename, const char* format_str,
-                                   ...)
+
+
+OSL_BATCHOP void
+__OSL_OP(fprintf)(BatchedShaderGlobals* bsg, unsigned int mask_value,
+                  const char* filename, const char* format_str, ...)
 {
     OSL_ASSERT(bsg != nullptr);
     OSL_ASSERT(filename != nullptr);
@@ -454,18 +483,21 @@ OSL_BATCHOP void __OSL_OP(fprintf)(BatchedShaderGlobals* bsg,
         static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
 }
 
+
+
 OSL_BATCHOP void
-    __OSL_MASKED_OP(split)(void* wresults,
-                           /*stores n*/ void* wstr, /*input string*/
-                           void* wresult_string,    /*resulting split string*/
-                           void* wsep,              /*sep*/
-                           void* wmaxsplit,         /*void *wrlen,*/
-                           int resultslen, unsigned int mask_value)
+__OSL_MASKED_OP(split)(void* wresults,
+                       /*stores n*/ void* wstr, /*input string*/
+                       void* wresult_string,    /*resulting split string*/
+                       void* wsep,              /*sep*/
+                       void* wmaxsplit,         /*void *wrlen,*/
+                       int resultslen, unsigned int mask_value)
 {
     Wide<const ustring> wS(wstr);
 
     Masked<int> wR(wresults, Mask(mask_value));  //length of split array
-    Masked<ustring[]> wRString(wresult_string, resultslen, Mask(mask_value));  //Split string
+    Masked<ustring[]> wRString(wresult_string, resultslen,
+                               Mask(mask_value));  //Split string
 
     Wide<const ustring> wSep(wsep);
     Wide<const int> wMaxSplit(wmaxsplit);

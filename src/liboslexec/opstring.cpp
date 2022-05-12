@@ -19,8 +19,6 @@
 #include "oslexec_pvt.h"
 
 
-#define USTR(cstr) (*((ustring *)&cstr))
-
 OSL_NAMESPACE_ENTER
 namespace pvt {
 

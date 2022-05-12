@@ -107,23 +107,27 @@ impl_step(float edge, float x)
     return result;
 }
 
+
 // TODO: consider moving step to batched_llvm_gen.cpp
 #define __OSL_XMACRO_ARGS (step, impl_step)
 #include "wide_opbinary_per_component_float_or_vector_xmacro.h"
 
-inline Vec3 calculatenormal(const Dual2<Vec3> &tmpP, bool flipHandedness)
+
+
+inline Vec3
+calculatenormal(const Dual2<Vec3>& tmpP, bool flipHandedness)
 {
     // Encourage compiles to test for coherency and skip branch when false
     if (OSL_UNLIKELY(flipHandedness))
-        return tmpP.dy().cross( tmpP.dx());
+        return tmpP.dy().cross(tmpP.dx());
     else
-        return tmpP.dx().cross( tmpP.dy());
+        return tmpP.dx().cross(tmpP.dy());
 }
 
 
+
 OSL_BATCHOP void
-__OSL_OP2(length,Wf,Wv)
-    (void *r_, void *V_)
+__OSL_OP2(length, Wf, Wv)(void* r_, void* V_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -131,17 +135,18 @@ __OSL_OP2(length,Wf,Wv)
         Wide<float> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            Vec3 V = wV[lane];
-            float r = sfm::length(V);
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Vec3 V   = wV[lane];
+            float r  = sfm::length(V);
             wr[lane] = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP2(length,Wf,Wv)
-    (void *r_, void *V_, unsigned int mask_value)
+__OSL_MASKED_OP2(length, Wf, Wv)(void* r_, void* V_, unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -149,19 +154,20 @@ __OSL_MASKED_OP2(length,Wf,Wv)
         Masked<float> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 V = wV[lane];
             if (wr.mask()[lane]) {
-                float r = sfm::length(V);
+                float r              = sfm::length(V);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP2(length,Wdf,Wdv)
-    (void *r_, void *V_)
+__OSL_OP2(length, Wdf, Wdv)(void* r_, void* V_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -169,17 +175,18 @@ __OSL_OP2(length,Wdf,Wdv)
         Wide<Dual2<float>> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            Dual2<Vec3> V = wV[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Dual2<Vec3> V  = wV[lane];
             Dual2<float> r = length(V);
-            wr[lane] = r;
+            wr[lane]       = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP2(length,Wdf,Wdv)
-    (void *r_, void *V_, unsigned int mask_value)
+__OSL_MASKED_OP2(length, Wdf, Wdv)(void* r_, void* V_, unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -187,10 +194,10 @@ __OSL_MASKED_OP2(length,Wdf,Wdv)
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> V = wV[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = length(V);
+                Dual2<float> r       = length(V);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -198,9 +205,9 @@ __OSL_MASKED_OP2(length,Wdf,Wdv)
 }
 
 
+
 OSL_BATCHOP void
-__OSL_OP2(area,Wf,Wdv)
-    (void *r_, void *DP_)
+__OSL_OP2(area, Wf, Wdv)(void* r_, void* DP_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -209,20 +216,21 @@ __OSL_OP2(area,Wf,Wdv)
         Wide<float> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> DP = wDP[lane];
 
             Vec3 N = calculatenormal(DP, false);
             //float r = N.length();
-            float r = sfm::length(N);
+            float r  = sfm::length(N);
             wr[lane] = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP2(area,Wf,Wdv)
-    (void *r_, void *DP_, unsigned int mask_value)
+__OSL_MASKED_OP2(area, Wf, Wdv)(void* r_, void* DP_, unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -231,12 +239,12 @@ __OSL_MASKED_OP2(area,Wf,Wdv)
         Masked<float> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> DP = wDP[lane];
             if (wr.mask()[lane]) {
                 Vec3 N = calculatenormal(DP, false);
                 //float r = N.length();
-                float r = sfm::length(N);
+                float r              = sfm::length(N);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -244,11 +252,10 @@ __OSL_MASKED_OP2(area,Wf,Wdv)
 }
 
 
-OSL_BATCHOP void
-__OSL_OP3(distance,Wf,Wv,Wv)
-    (void *r_, void *a_, void *b_)
-{
 
+OSL_BATCHOP void
+__OSL_OP3(distance, Wf, Wv, Wv)(void* r_, void* a_, void* b_)
+{
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Vec3> wA(a_);
@@ -256,25 +263,26 @@ __OSL_OP3(distance,Wf,Wv,Wv)
         Wide<float> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Vec3 b = wB[lane];
 
             // TODO: couldn't we just (b-a).length()?
-           float x = a.x - b.x;
-           float y = a.y - b.y;
-           float z = a.z - b.z;
-           float r = sqrtf (x*x + y*y + z*z);
-           wr[lane] = r;
+            float x  = a.x - b.x;
+            float y  = a.y - b.y;
+            float z  = a.z - b.z;
+            float r  = sqrtf(x * x + y * y + z * z);
+            wr[lane] = r;
         }
     }
 }
 
-OSL_BATCHOP void
-__OSL_MASKED_OP3(distance,Wf,Wv,Wv)
-    (void *r_, void *a_, void *b_, unsigned int mask_value)
-{
 
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(distance, Wf, Wv, Wv)(void* r_, void* a_, void* b_,
+                                       unsigned int mask_value)
+{
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Vec3> wA(a_);
@@ -282,26 +290,26 @@ __OSL_MASKED_OP3(distance,Wf,Wv,Wv)
         Masked<float> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Vec3 b = wB[lane];
             if (wr.mask()[lane]) {
                 // TODO: couldn't we just (b-a).length()?
-                float x = a.x - b.x;
-                float y = a.y - b.y;
-                float z = a.z - b.z;
-                float r = sqrtf (x*x + y*y + z*z);
+                float x              = a.x - b.x;
+                float y              = a.y - b.y;
+                float z              = a.z - b.z;
+                float r              = sqrtf(x * x + y * y + z * z);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
-OSL_BATCHOP void
-__OSL_OP3(distance,Wdf,Wdv,Wv)
-    (void *r_, void *a_, void *b_)
-{
 
+
+OSL_BATCHOP void
+__OSL_OP3(distance, Wdf, Wdv, Wv)(void* r_, void* a_, void* b_)
+{
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Dual2<Vec3>> wA(a_);
@@ -309,23 +317,22 @@ __OSL_OP3(distance,Wdf,Wdv,Wv)
         Wide<Dual2<float>> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
-            Vec3 b = wB[lane];
+            Vec3 b        = wB[lane];
 
-            Dual2<float> r = distance(a,b);
-            wr[lane] = r;
-
+            Dual2<float> r = distance(a, b);
+            wr[lane]       = r;
         }
     }
 }
 
-OSL_BATCHOP void
-__OSL_MASKED_OP3(distance,Wdf,Wdv,Wv)
-    (void *r_, void *a_, void *b_, unsigned int mask_value)
-{
 
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(distance, Wdf, Wdv, Wv)(void* r_, void* a_, void* b_,
+                                         unsigned int mask_value)
+{
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Dual2<Vec3>> wA(a_);
@@ -333,23 +340,22 @@ __OSL_MASKED_OP3(distance,Wdf,Wdv,Wv)
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
-            Vec3 b = wB[lane];
+            Vec3 b        = wB[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = distance(a,b);
+                Dual2<float> r       = distance(a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
-OSL_BATCHOP void
-__OSL_OP3(distance,Wdf,Wv,Wdv)
-    (void *r_, void *a_, void *b_)
-{
 
+
+OSL_BATCHOP void
+__OSL_OP3(distance, Wdf, Wv, Wdv)(void* r_, void* a_, void* b_)
+{
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Vec3> wA(a_);
@@ -357,21 +363,21 @@ __OSL_OP3(distance,Wdf,Wv,Wdv)
         Wide<Dual2<float>> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
-            Vec3 a = wA[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Vec3 a        = wA[lane];
             Dual2<Vec3> b = wB[lane];
 
-            Dual2<float> r = distance(a,b);
-            wr[lane] = r;
-
+            Dual2<float> r = distance(a, b);
+            wr[lane]       = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(distance,Wdf,Wv,Wdv)
-    (void *r_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(distance, Wdf, Wv, Wdv)(void* r_, void* a_, void* b_,
+                                         unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -380,21 +386,21 @@ __OSL_MASKED_OP3(distance,Wdf,Wv,Wdv)
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
-            Vec3 a = wA[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Vec3 a        = wA[lane];
             Dual2<Vec3> b = wB[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = distance(a,b);
+                Dual2<float> r       = distance(a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP3(distance,Wdf,Wdv,Wdv)
-    (void *r_, void *a_, void *b_)
+__OSL_OP3(distance, Wdf, Wdv, Wdv)(void* r_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -403,21 +409,22 @@ __OSL_OP3(distance,Wdf,Wdv,Wdv)
         Wide<Dual2<float>> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
             Dual2<Vec3> b = wB[lane];
 
-            Dual2<float> r = distance(a,b);
-            wr[lane] = r;
+            Dual2<float> r = distance(a, b);
+            wr[lane]       = r;
         }
     }
 }
 
-OSL_BATCHOP void
-__OSL_MASKED_OP3(distance,Wdf,Wdv,Wdv)
-(void *r_, void *a_, void *b_, unsigned int mask_value)
-{
 
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(distance, Wdf, Wdv, Wdv)(void* r_, void* a_, void* b_,
+                                          unsigned int mask_value)
+{
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Dual2<Vec3>> wA(a_);
@@ -425,11 +432,11 @@ __OSL_MASKED_OP3(distance,Wdf,Wdv,Wdv)
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
             Dual2<Vec3> b = wB[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = distance(a,b);
+                Dual2<float> r       = distance(a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -438,10 +445,8 @@ __OSL_MASKED_OP3(distance,Wdf,Wdv,Wdv)
 
 
 
-
 OSL_BATCHOP void
-__OSL_OP2(normalize,Wv,Wv)
-    (void *r_, void *V_)
+__OSL_OP2(normalize, Wv, Wv)(void* r_, void* V_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -449,9 +454,9 @@ __OSL_OP2(normalize,Wv,Wv)
         Wide<Vec3> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            Vec3 V = wV[lane];
-            Vec3 N = sfm::normalize(V);
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Vec3 V   = wV[lane];
+            Vec3 N   = sfm::normalize(V);
             wr[lane] = N;
         }
     }
@@ -459,8 +464,7 @@ __OSL_OP2(normalize,Wv,Wv)
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP2(normalize,Wv,Wv)
-(void *r_, void *V_, unsigned int mask_value)
+__OSL_MASKED_OP2(normalize, Wv, Wv)(void* r_, void* V_, unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -468,19 +472,20 @@ __OSL_MASKED_OP2(normalize,Wv,Wv)
         Masked<Vec3> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 V = wV[lane];
             if (wr.mask()[lane]) {
-                Vec3 N = sfm::normalize(V);
+                Vec3 N               = sfm::normalize(V);
                 wr[ActiveLane(lane)] = N;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP2(normalize,Wdv,Wdv)
-    (void *r_, void *V_)
+__OSL_OP2(normalize, Wdv, Wdv)(void* r_, void* V_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -488,17 +493,19 @@ __OSL_OP2(normalize,Wdv,Wdv)
         Wide<Dual2<Vec3>> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> V = wV[lane];
             Dual2<Vec3> N = sfm::normalize(V);
-            wr[lane] = N;
+            wr[lane]      = N;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP2(normalize,Wdv,Wdv)
-    (void *r_, void *V_, unsigned int mask_value)
+__OSL_MASKED_OP2(normalize, Wdv, Wdv)(void* r_, void* V_,
+                                      unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -506,10 +513,10 @@ __OSL_MASKED_OP2(normalize,Wdv,Wdv)
         Masked<Dual2<Vec3>> wr(r_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> V = wV[lane];
             if (wr.mask()[lane]) {
-                Dual2<Vec3> N = sfm::normalize(V);
+                Dual2<Vec3> N        = sfm::normalize(V);
                 wr[ActiveLane(lane)] = N;
             }
         }
@@ -519,8 +526,7 @@ __OSL_MASKED_OP2(normalize,Wdv,Wdv)
 
 
 OSL_BATCHOP void
-__OSL_OP3(cross,Wv,Wv,Wv)
-    (void *result_, void *a_, void *b_)
+__OSL_OP3(cross, Wv, Wv, Wv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -529,19 +535,21 @@ __OSL_OP3(cross,Wv,Wv,Wv)
         Wide<Vec3> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Vec3 b = wB[lane];
 
-            Vec3 r = a.cross(b);
+            Vec3 r   = a.cross(b);
             wr[lane] = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(cross,Wv,Wv,Wv)
-    (void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(cross, Wv, Wv, Wv)(void* result_, void* a_, void* b_,
+                                    unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -550,12 +558,11 @@ __OSL_MASKED_OP3(cross,Wv,Wv,Wv)
         Masked<Vec3> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Vec3 b = wB[lane];
             if (wr.mask()[lane]) {
-                Vec3 r = a.cross(b);
+                Vec3 r               = a.cross(b);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -565,8 +572,7 @@ __OSL_MASKED_OP3(cross,Wv,Wv,Wv)
 
 
 OSL_BATCHOP void
-__OSL_OP3(cross,Wdv,Wdv,Wv)
-    (void *result_, void *a_, void *b_)
+__OSL_OP3(cross, Wdv, Wdv, Wv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -575,20 +581,22 @@ __OSL_OP3(cross,Wdv,Wdv,Wv)
         Wide<Dual2<Vec3>> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
-            Vec3 b = wB[lane];
+            Vec3 b        = wB[lane];
 
             Dual2<Vec3> dv_b(b);
             Dual2<Vec3> r = cross(a, dv_b);
-            wr[lane] = r;
+            wr[lane]      = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(cross,Wdv,Wdv,Wv)
-    (void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(cross, Wdv, Wdv, Wv)(void* result_, void* a_, void* b_,
+                                      unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -597,23 +605,23 @@ __OSL_MASKED_OP3(cross,Wdv,Wdv,Wv)
         Masked<Dual2<Vec3>> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
-            Vec3 b = wB[lane];
+            Vec3 b        = wB[lane];
             Dual2<Vec3> dv_b(b);
 
             if (wr.mask()[lane]) {
-                Dual2<Vec3> r = cross(a, dv_b);
+                Dual2<Vec3> r        = cross(a, dv_b);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP3(cross,Wdv,Wv,Wdv)
-    (void *result_, void *a_, void *b_)
+__OSL_OP3(cross, Wdv, Wv, Wdv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -622,20 +630,22 @@ __OSL_OP3(cross,Wdv,Wv,Wdv)
         Wide<Dual2<Vec3>> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Dual2<Vec3> dv_a(a);
             Dual2<Vec3> b = wB[lane];
 
-            Dual2<Vec3> r = cross(dv_a,b);
-            wr[lane] = r;
+            Dual2<Vec3> r = cross(dv_a, b);
+            wr[lane]      = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(cross,Wdv,Wv,Wdv)
-    (void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(cross, Wdv, Wv, Wdv)(void* result_, void* a_, void* b_,
+                                      unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -644,24 +654,23 @@ __OSL_MASKED_OP3(cross,Wdv,Wv,Wdv)
         Masked<Dual2<Vec3>> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Dual2<Vec3> dv_a(a);
             Dual2<Vec3> b = wB[lane];
 
             if (wr.mask()[lane]) {
-
-                Dual2<Vec3> r = cross(dv_a,b);
+                Dual2<Vec3> r        = cross(dv_a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP3(cross,Wdv,Wdv,Wdv)
-(void *result_, void *a_, void *b_)
+__OSL_OP3(cross, Wdv, Wdv, Wdv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -670,19 +679,21 @@ __OSL_OP3(cross,Wdv,Wdv,Wdv)
         Wide<Dual2<Vec3>> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
             Dual2<Vec3> b = wB[lane];
 
-            Dual2<Vec3> r = cross(a,b);
-            wr[lane] = r;
+            Dual2<Vec3> r = cross(a, b);
+            wr[lane]      = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(cross,Wdv,Wdv,Wdv)
-(void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(cross, Wdv, Wdv, Wdv)(void* result_, void* a_, void* b_,
+                                       unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -691,13 +702,12 @@ __OSL_MASKED_OP3(cross,Wdv,Wdv,Wdv)
         Masked<Dual2<Vec3>> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
             Dual2<Vec3> b = wB[lane];
 
             if (wr.mask()[lane]) {
-                Dual2<Vec3> r = cross(a,b);
+                Dual2<Vec3> r        = cross(a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -706,8 +716,7 @@ __OSL_MASKED_OP3(cross,Wdv,Wdv,Wdv)
 
 
 OSL_BATCHOP void
-__OSL_OP3(dot,Wf,Wv,Wv)
-    (void *result_, void *a_, void *b_)
+__OSL_OP3(dot, Wf, Wv, Wv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -716,19 +725,21 @@ __OSL_OP3(dot,Wf,Wv,Wv)
         Wide<float> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Vec3 b = wB[lane];
 
-            float r = a.dot(b);
+            float r  = a.dot(b);
             wr[lane] = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(dot,Wf,Wv,Wv)
-(void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(dot, Wf, Wv, Wv)(void* result_, void* a_, void* b_,
+                                  unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -737,13 +748,12 @@ __OSL_MASKED_OP3(dot,Wf,Wv,Wv)
         Masked<float> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 a = wA[lane];
             Vec3 b = wB[lane];
 
             if (wr.mask()[lane]) {
-                float r = a.dot(b);
+                float r              = a.dot(b);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -752,11 +762,8 @@ __OSL_MASKED_OP3(dot,Wf,Wv,Wv)
 
 
 
-
-
 OSL_BATCHOP void
-__OSL_OP3(dot,Wdf,Wdv,Wv)
-    (void *result_, void *a_, void *b_)
+__OSL_OP3(dot, Wdf, Wdv, Wv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -765,20 +772,20 @@ __OSL_OP3(dot,Wdf,Wdv,Wv)
         Wide<Dual2<float>> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
-            Vec3 b = wB[lane];
+            Vec3 b        = wB[lane];
 
             Dual2<float> r = dot(a, b);
-            wr[lane] = r;
+            wr[lane]       = r;
         }
     }
 }
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(dot,Wdf,Wdv,Wv)
-    (void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(dot, Wdf, Wdv, Wv)(void* result_, void* a_, void* b_,
+                                    unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -787,22 +794,22 @@ __OSL_MASKED_OP3(dot,Wdf,Wdv,Wv)
         Masked<Dual2<float>> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
-            Vec3 b = wB[lane];
+            Vec3 b        = wB[lane];
 
             if (wr.mask()[lane]) {
-                Dual2<float> r = dot(a, b);
+                Dual2<float> r       = dot(a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP3(dot,Wdf,Wv,Wdv)
-    (void *result_, void *a_, void *b_)
+__OSL_OP3(dot, Wdf, Wv, Wdv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -811,19 +818,21 @@ __OSL_OP3(dot,Wdf,Wv,Wdv)
         Wide<Dual2<float>> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            Vec3 a = wA[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Vec3 a        = wA[lane];
             Dual2<Vec3> b = wB[lane];
 
             Dual2<float> r = dot(a, b);
-            wr[lane] = r;
+            wr[lane]       = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(dot,Wdf,Wv,Wdv)
-    (void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(dot, Wdf, Wv, Wdv)(void* result_, void* a_, void* b_,
+                                    unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -832,22 +841,22 @@ __OSL_MASKED_OP3(dot,Wdf,Wv,Wdv)
         Masked<Dual2<float>> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
-            Vec3 a = wA[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Vec3 a        = wA[lane];
             Dual2<Vec3> b = wB[lane];
 
             if (wr.mask()[lane]) {
-                Dual2<float> r = dot(a, b);
+                Dual2<float> r       = dot(a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP3(dot,Wdf,Wdv,Wdv)
-    (void *result_, void *a_, void *b_)
+__OSL_OP3(dot, Wdf, Wdv, Wdv)(void* result_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -856,19 +865,21 @@ __OSL_OP3(dot,Wdf,Wdv,Wdv)
         Wide<Dual2<float>> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
             Dual2<Vec3> b = wB[lane];
 
             Dual2<float> r = dot(a, b);
-            wr[lane] = r;
+            wr[lane]       = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP3(dot,Wdf,Wdv,Wdv)
-(void *result_, void *a_, void *b_, unsigned int mask_value)
+__OSL_MASKED_OP3(dot, Wdf, Wdv, Wdv)(void* result_, void* a_, void* b_,
+                                     unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -877,12 +888,11 @@ __OSL_MASKED_OP3(dot,Wdf,Wdv,Wdv)
         Masked<Dual2<float>> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> a = wA[lane];
             Dual2<Vec3> b = wB[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = dot(a, b);
+                Dual2<float> r       = dot(a, b);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -890,15 +900,15 @@ __OSL_MASKED_OP3(dot,Wdf,Wdv,Wdv)
 }
 
 
-inline float filter_width(float dx, float dy)
+inline float
+filter_width(float dx, float dy)
 {
-    return sqrtf(dx*dx + dy*dy);
+    return sqrtf(dx * dx + dy * dy);
 }
 
 
 OSL_BATCHOP void
-__OSL_OP2(filterwidth,Wf,Wdf)
-    (void *result_, void *x_)
+__OSL_OP2(filterwidth, Wf, Wdf)(void* result_, void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -907,16 +917,18 @@ __OSL_OP2(filterwidth,Wf,Wdf)
         Wide<float> wr(result_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> x = wX[lane];
-            wr[lane] = filter_width(x.dx(), x.dy());
+            wr[lane]       = filter_width(x.dx(), x.dy());
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP2(filterwidth,Wf,Wdf)
-    (void *result_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP2(filterwidth, Wf, Wdf)(void* result_, void* x_,
+                                       unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -925,7 +937,7 @@ __OSL_MASKED_OP2(filterwidth,Wf,Wdf)
         Masked<float> wr(result_, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> x = wX[lane];
             if (wr.mask()[lane]) {
                 wr[ActiveLane(lane)] = filter_width(x.dx(), x.dy());
@@ -934,9 +946,10 @@ __OSL_MASKED_OP2(filterwidth,Wf,Wdf)
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP2(filterwidth,Wv,Wdv)
-    (void *out, void *x_)
+__OSL_OP2(filterwidth, Wv, Wdv)(void* out, void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -945,21 +958,23 @@ __OSL_OP2(filterwidth,Wv,Wdv)
         Wide<Vec3> wr(out);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> x = wX[lane];
             Vec3 r;
-            r.x = filter_width (x.dx().x, x.dy().x);
-            r.y = filter_width (x.dx().y, x.dy().y);
-            r.z = filter_width (x.dx().z, x.dy().z);
+            r.x = filter_width(x.dx().x, x.dy().x);
+            r.y = filter_width(x.dx().y, x.dy().y);
+            r.z = filter_width(x.dx().z, x.dy().z);
 
             wr[lane] = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP2(filterwidth,Wv,Wdv)
-    (void *out, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP2(filterwidth, Wv, Wdv)(void* out, void* x_,
+                                       unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -968,13 +983,13 @@ __OSL_MASKED_OP2(filterwidth,Wv,Wdv)
         Masked<Vec3> wr(out, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> x = wX[lane];
             if (wr.mask()[lane]) {
                 Vec3 r;
-                r.x = filter_width (x.dx().x, x.dy().x);
-                r.y = filter_width (x.dx().y, x.dy().y);
-                r.z = filter_width (x.dx().z, x.dy().z);
+                r.x = filter_width(x.dx().x, x.dy().x);
+                r.y = filter_width(x.dx().y, x.dy().y);
+                r.z = filter_width(x.dx().z, x.dy().z);
 
                 wr[ActiveLane(lane)] = r;
             }
@@ -982,11 +997,12 @@ __OSL_MASKED_OP2(filterwidth,Wv,Wdv)
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP(calculatenormal)
-    (void *out, void *bsg_, void *P_)
+__OSL_OP(calculatenormal)(void* out, void* bsg_, void* P_)
 {
-    auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
+    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Dual2<Vec3>> wP(P_);
@@ -994,19 +1010,21 @@ __OSL_OP(calculatenormal)
         Wide<Vec3> wr(out);
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> P = wP[lane];
-            Vec3 N = calculatenormal(P, wFlipHandedness[lane]);
-            wr[lane] = N;
+            Vec3 N        = calculatenormal(P, wFlipHandedness[lane]);
+            wr[lane]      = N;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP(calculatenormal)
-    (void *out, void *bsg_, void *P_, unsigned int mask_value)
+__OSL_MASKED_OP(calculatenormal)(void* out, void* bsg_, void* P_,
+                                 unsigned int mask_value)
 {
-    auto *bsg = reinterpret_cast<BatchedShaderGlobals *>(bsg_);
+    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     OSL_FORCEINLINE_BLOCK
     {
         Wide<const Dual2<Vec3>> wP(P_);
@@ -1014,13 +1032,13 @@ __OSL_MASKED_OP(calculatenormal)
         Masked<Vec3> wr(out, Mask(mask_value));
 
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            Dual2<Vec3> P = wP[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            Dual2<Vec3> P       = wP[lane];
             int flip_handedness = wFlipHandedness[lane];
             //std::cout << "P=" << P.val() << "," << P.dx() << "," << P.dy() << std::endl;
 
             if (wr.mask()[lane]) {
-                Vec3 N = calculatenormal(P, flip_handedness);
+                Vec3 N               = calculatenormal(P, flip_handedness);
                 wr[ActiveLane(lane)] = N;
             }
         }
@@ -1029,8 +1047,7 @@ __OSL_MASKED_OP(calculatenormal)
 
 
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wf,Wf,Wf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wf, Wf, Wf, Wf)(void* r_, void* e0_, void* e1_, void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1039,19 +1056,21 @@ __OSL_OP4(smoothstep,Wf,Wf,Wf,Wf)
         Wide<const float> wx(x_);
         Wide<float> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             float e0 = we0[lane];
             float e1 = we1[lane];
-            float x = wx[lane];
-            float r = smoothstep(e0, e1, x);
+            float x  = wx[lane];
+            float r  = smoothstep(e0, e1, x);
             wr[lane] = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wf,Wf,Wf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wf, Wf, Wf, Wf)(void* r_, void* e0_, void* e1_,
+                                             void* x_, unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1060,21 +1079,23 @@ __OSL_MASKED_OP4(smoothstep,Wf,Wf,Wf,Wf)
         Wide<const float> wx(x_);
         Masked<float> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             float e0 = we0[lane];
             float e1 = we1[lane];
-            float x = wx[lane];
+            float x  = wx[lane];
             if (wr.mask()[lane]) {
-                float r = smoothstep(e0, e1, x);
+                float r              = smoothstep(e0, e1, x);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wdf,Wdf,Wdf,Wdf)
-    (void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wdf, Wdf, Wdf, Wdf)(void* r_, void* e0_, void* e1_,
+                                          void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1083,19 +1104,22 @@ __OSL_OP4(smoothstep,Wdf,Wdf,Wdf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Wide<Dual2<float>> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
             Dual2<float> e1 = we1[lane];
-            Dual2<float> x = wx[lane];
-            Dual2<float> r = smoothstep(e0, e1, x);
-            wr[lane] = r;
+            Dual2<float> x  = wx[lane];
+            Dual2<float> r  = smoothstep(e0, e1, x);
+            wr[lane]        = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wdf,Wdf)
-(void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wdf, Wdf, Wdf, Wdf)(void* r_, void* e0_, void* e1_,
+                                                 void* x_,
+                                                 unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1104,21 +1128,23 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wdf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
             Dual2<float> e1 = we1[lane];
-            Dual2<float> x = wx[lane];
+            Dual2<float> x  = wx[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = smoothstep(e0, e1, x);
+                Dual2<float> r       = smoothstep(e0, e1, x);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wdf,Wf,Wdf,Wdf)
-    (void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wdf, Wf, Wdf, Wdf)(void* r_, void* e0_, void* e1_,
+                                         void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1127,19 +1153,22 @@ __OSL_OP4(smoothstep,Wdf,Wf,Wdf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Wide<Dual2<float>> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            float e0 = we0[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            float e0        = we0[lane];
             Dual2<float> e1 = we1[lane];
-            Dual2<float> x = wx[lane];
-            Dual2<float> r = smoothstep(Dual2<float>(e0), e1, x);
-            wr[lane] = r;
+            Dual2<float> x  = wx[lane];
+            Dual2<float> r  = smoothstep(Dual2<float>(e0), e1, x);
+            wr[lane]        = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wdf,Wf,Wdf,Wdf)
-    (void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wdf, Wf, Wdf, Wdf)(void* r_, void* e0_, void* e1_,
+                                                void* x_,
+                                                unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1148,21 +1177,23 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wf,Wdf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            float e0 = we0[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            float e0        = we0[lane];
             Dual2<float> e1 = we1[lane];
-            Dual2<float> x = wx[lane];
+            Dual2<float> x  = wx[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = smoothstep(Dual2<float>(e0), e1, x);
+                Dual2<float> r       = smoothstep(Dual2<float>(e0), e1, x);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wdf,Wdf,Wf,Wdf)
-    (void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wdf, Wdf, Wf, Wdf)(void* r_, void* e0_, void* e1_,
+                                         void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1171,19 +1202,22 @@ __OSL_OP4(smoothstep,Wdf,Wdf,Wf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Wide<Dual2<float>> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
-            float e1 = we1[lane];
-            Dual2<float> x = wx[lane];
-            Dual2<float> r = smoothstep(e0, Dual2<float>(e1), x);
-            wr[lane] = r;
+            float e1        = we1[lane];
+            Dual2<float> x  = wx[lane];
+            Dual2<float> r  = smoothstep(e0, Dual2<float>(e1), x);
+            wr[lane]        = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wf,Wdf)
-    (void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wdf, Wdf, Wf, Wdf)(void* r_, void* e0_, void* e1_,
+                                                void* x_,
+                                                unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1192,12 +1226,12 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
-            float e1 = we1[lane];
-            Dual2<float> x = wx[lane];
+            float e1        = we1[lane];
+            Dual2<float> x  = wx[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = smoothstep(e0, Dual2<float>(e1), x);
+                Dual2<float> r       = smoothstep(e0, Dual2<float>(e1), x);
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -1206,8 +1240,8 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wf,Wdf)
 
 
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wdf,Wdf,Wdf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wdf, Wdf, Wdf, Wf)(void* r_, void* e0_, void* e1_,
+                                         void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1216,19 +1250,22 @@ __OSL_OP4(smoothstep,Wdf,Wdf,Wdf,Wf)
         Wide<const float> wx(x_);
         Wide<Dual2<float>> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
             Dual2<float> e1 = we1[lane];
-            float x = wx[lane];
-            Dual2<float> r = smoothstep(e0, e1, Dual2<float>(x));
-            wr[lane] = r;
+            float x         = wx[lane];
+            Dual2<float> r  = smoothstep(e0, e1, Dual2<float>(x));
+            wr[lane]        = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wdf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wdf, Wdf, Wdf, Wf)(void* r_, void* e0_, void* e1_,
+                                                void* x_,
+                                                unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1237,21 +1274,23 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wdf,Wf)
         Wide<const float> wx(x_);
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
             Dual2<float> e1 = we1[lane];
-            float x = wx[lane];
+            float x         = wx[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = smoothstep(e0, e1, Dual2<float>(x));
+                Dual2<float> r       = smoothstep(e0, e1, Dual2<float>(x));
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wdf,Wf,Wf,Wdf)
-(void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wdf, Wf, Wf, Wdf)(void* r_, void* e0_, void* e1_,
+                                        void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1260,19 +1299,22 @@ __OSL_OP4(smoothstep,Wdf,Wf,Wf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Wide<Dual2<float>> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            float e0 = we0[lane];
-            float e1 = we1[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            float e0       = we0[lane];
+            float e1       = we1[lane];
             Dual2<float> x = wx[lane];
             Dual2<float> r = smoothstep(Dual2<float>(e0), Dual2<float>(e1), x);
-            wr[lane] = r;
+            wr[lane]       = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wdf,Wf,Wf,Wdf)
-    (void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wdf, Wf, Wf, Wdf)(void* r_, void* e0_, void* e1_,
+                                               void* x_,
+                                               unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1281,21 +1323,24 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wf,Wf,Wdf)
         Wide<const Dual2<float>> wx(x_);
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            float e0 = we0[lane];
-            float e1 = we1[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            float e0       = we0[lane];
+            float e1       = we1[lane];
             Dual2<float> x = wx[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = smoothstep(Dual2<float>(e0), Dual2<float>(e1), x);
+                Dual2<float> r = smoothstep(Dual2<float>(e0), Dual2<float>(e1),
+                                            x);
                 wr[ActiveLane(lane)] = r;
             }
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wdf,Wdf,Wf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wdf, Wdf, Wf, Wf)(void* r_, void* e0_, void* e1_,
+                                        void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1304,19 +1349,22 @@ __OSL_OP4(smoothstep,Wdf,Wdf,Wf,Wf)
         Wide<const float> wx(x_);
         Wide<Dual2<float>> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
-            float e1 = we1[lane];
-            float x = wx[lane];
-            Dual2<float> r = smoothstep(e0, Dual2<float>(e1), Dual2<float>(x));
-            wr[lane] = r;
+            float e1        = we1[lane];
+            float x         = wx[lane];
+            Dual2<float> r  = smoothstep(e0, Dual2<float>(e1), Dual2<float>(x));
+            wr[lane]        = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wdf, Wdf, Wf, Wf)(void* r_, void* e0_, void* e1_,
+                                               void* x_,
+                                               unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1325,12 +1373,13 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wf,Wf)
         Wide<const float> wx(x_);
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<float> e0 = we0[lane];
-            float e1 = we1[lane];
-            float x = wx[lane];
+            float e1        = we1[lane];
+            float x         = wx[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = smoothstep(e0, Dual2<float>(e1), Dual2<float>(x));
+                Dual2<float> r       = smoothstep(e0, Dual2<float>(e1),
+                                                  Dual2<float>(x));
                 wr[ActiveLane(lane)] = r;
             }
         }
@@ -1339,8 +1388,8 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wdf,Wf,Wf)
 
 
 OSL_BATCHOP void
-__OSL_OP4(smoothstep,Wdf,Wf,Wdf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_)
+__OSL_OP4(smoothstep, Wdf, Wf, Wdf, Wf)(void* r_, void* e0_, void* e1_,
+                                        void* x_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1349,19 +1398,22 @@ __OSL_OP4(smoothstep,Wdf,Wf,Wdf,Wf)
         Wide<const float> wx(x_);
         Wide<Dual2<float>> wr(r_);
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            float e0 = we0[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            float e0        = we0[lane];
             Dual2<float> e1 = we1[lane];
-            float x = wx[lane];
-            Dual2<float> r = smoothstep(Dual2<float>(e0), e1, Dual2<float>(x));
-            wr[lane] = r;
+            float x         = wx[lane];
+            Dual2<float> r  = smoothstep(Dual2<float>(e0), e1, Dual2<float>(x));
+            wr[lane]        = r;
         }
     }
 }
 
+
+
 OSL_BATCHOP void
-__OSL_MASKED_OP4(smoothstep,Wdf,Wf,Wdf,Wf)
-    (void *r_, void *e0_, void *e1_, void *x_, unsigned int mask_value)
+__OSL_MASKED_OP4(smoothstep, Wdf, Wf, Wdf, Wf)(void* r_, void* e0_, void* e1_,
+                                               void* x_,
+                                               unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -1370,12 +1422,13 @@ __OSL_MASKED_OP4(smoothstep,Wdf,Wf,Wdf,Wf)
         Wide<const float> wx(x_);
         Masked<Dual2<float>> wr(r_, Mask(mask_value));
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
-        for(int lane=0; lane < __OSL_WIDTH; ++lane) {
-            float e0 = we0[lane];
+        for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
+            float e0        = we0[lane];
             Dual2<float> e1 = we1[lane];
-            float x = wx[lane];
+            float x         = wx[lane];
             if (wr.mask()[lane]) {
-                Dual2<float> r = smoothstep(Dual2<float>(e0), e1, Dual2<float>(x));
+                Dual2<float> r       = smoothstep(Dual2<float>(e0), e1,
+                                                  Dual2<float>(x));
                 wr[ActiveLane(lane)] = r;
             }
         }

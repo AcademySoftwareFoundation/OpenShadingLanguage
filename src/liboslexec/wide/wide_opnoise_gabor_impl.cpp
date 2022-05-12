@@ -78,10 +78,10 @@ dispatch_Vec3_result(const NoiseParams* opt, Block<Vec3>* opt_varying_direction,
 
 }  // namespace
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
-                                           char* bsg, char* opt,
-                                           char* varying_direction_ptr,
-                                           unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr, char* bsg,
+                          char* opt, char* varying_direction_ptr,
+                          unsigned int mask_value)
 {
     dispatch_float_result(reinterpret_cast<const NoiseParams*>(opt),
                           reinterpret_cast<Block<Vec3>*>(varying_direction_ptr),
@@ -89,11 +89,13 @@ OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
                           Wide<const Dual2<float>>(x_ptr));
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* name, char* r_ptr,
-                                                char* x_ptr, char* y_ptr,
-                                                char* bsg, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
+                               char* y_ptr, char* bsg, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     dispatch_float_result(reinterpret_cast<const NoiseParams*>(opt),
                           reinterpret_cast<Block<Vec3>*>(varying_direction_ptr),
@@ -102,10 +104,12 @@ OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* name, char* r_ptr,
                           Wide<const Dual2<Float>>(y_ptr));
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdv)(char* name, char* r_ptr, char* p_ptr,
-                                           char* bsg, char* opt,
-                                           char* varying_direction_ptr,
-                                           unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdf, Wdv)(char* name, char* r_ptr, char* p_ptr, char* bsg,
+                          char* opt, char* varying_direction_ptr,
+                          unsigned int mask_value)
 {
     dispatch_float_result(reinterpret_cast<const NoiseParams*>(opt),
                           reinterpret_cast<Block<Vec3>*>(varying_direction_ptr),
@@ -113,11 +117,13 @@ OSL_BATCHOP void __OSL_NOISE_OP2(Wdf, Wdv)(char* name, char* r_ptr, char* p_ptr,
                           Wide<const Dual2<Vec3>>(p_ptr));
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* name, char* r_ptr,
-                                                char* p_ptr, char* t_ptr,
-                                                char* bsg, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* name, char* r_ptr, char* p_ptr,
+                               char* t_ptr, char* bsg, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     /* FIXME -- This is very broken, we are ignoring 4D! */
     dispatch_float_result(reinterpret_cast<const NoiseParams*>(opt),
@@ -128,11 +134,11 @@ OSL_BATCHOP void __OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* name, char* r_ptr,
 
 
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* name, char* r_ptr,
-                                                char* p_ptr, char* t_ptr,
-                                                char* bsg, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* name, char* r_ptr, char* p_ptr,
+                               char* t_ptr, char* bsg, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     /* FIXME -- This is very broken, we are ignoring 4D! */
     dispatch_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),
@@ -141,10 +147,12 @@ OSL_BATCHOP void __OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* name, char* r_ptr,
                          Wide<const Dual2<Vec3>>(p_ptr));
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdv, Wdf)(char* name, char* r_ptr, char* x_ptr,
-                                           char* bsg, char* opt,
-                                           char* varying_direction_ptr,
-                                           unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdv, Wdf)(char* name, char* r_ptr, char* x_ptr, char* bsg,
+                          char* opt, char* varying_direction_ptr,
+                          unsigned int mask_value)
 {
     dispatch_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),
                          reinterpret_cast<Block<Vec3>*>(varying_direction_ptr),
@@ -152,11 +160,13 @@ OSL_BATCHOP void __OSL_NOISE_OP2(Wdv, Wdf)(char* name, char* r_ptr, char* x_ptr,
                          Wide<const Dual2<float>>(x_ptr));
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* name, char* r_ptr,
-                                                char* x_ptr, char* y_ptr,
-                                                char* bsg, char* opt,
-                                                char* varying_direction_ptr,
-                                                unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
+                               char* y_ptr, char* bsg, char* opt,
+                               char* varying_direction_ptr,
+                               unsigned int mask_value)
 {
     dispatch_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),
                          reinterpret_cast<Block<Vec3>*>(varying_direction_ptr),
@@ -165,10 +175,12 @@ OSL_BATCHOP void __OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* name, char* r_ptr,
                          Wide<const Dual2<float>>(y_ptr));
 }
 
-OSL_BATCHOP void __OSL_NOISE_OP2(Wdv, Wdv)(char* name, char* r_ptr, char* p_ptr,
-                                           char* bsg, char* opt,
-                                           char* varying_direction_ptr,
-                                           unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_NOISE_OP2(Wdv, Wdv)(char* name, char* r_ptr, char* p_ptr, char* bsg,
+                          char* opt, char* varying_direction_ptr,
+                          unsigned int mask_value)
 {
     dispatch_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),
                          reinterpret_cast<Block<Vec3>*>(varying_direction_ptr),

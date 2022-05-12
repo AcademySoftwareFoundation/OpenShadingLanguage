@@ -21,8 +21,8 @@
 #    error must define __OSL_WIDTH to number of SIMD lanes before including this header
 #endif
 
-OSL_BATCHOP void __OSL_OP3(__OSL_XMACRO_OPNAME, Wf, Wf, Wf)(void* r_, void* a_,
-                                                            void* b_)
+OSL_BATCHOP void
+__OSL_OP3(__OSL_XMACRO_OPNAME, Wf, Wf, Wf)(void* r_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -39,9 +39,11 @@ OSL_BATCHOP void __OSL_OP3(__OSL_XMACRO_OPNAME, Wf, Wf, Wf)(void* r_, void* a_,
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(__OSL_XMACRO_OPNAME, Wf, Wf,
-                                  Wf)(void* r_, void* a_, void* b_,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(__OSL_XMACRO_OPNAME, Wf, Wf, Wf)(void* r_, void* a_, void* b_,
+                                                  unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -60,8 +62,10 @@ OSL_BATCHOP void __OSL_MASKED_OP3(__OSL_XMACRO_OPNAME, Wf, Wf,
     }
 }
 
-OSL_BATCHOP void __OSL_OP3(__OSL_XMACRO_OPNAME, Wv, Wv, Wv)(void* r_, void* a_,
-                                                            void* b_)
+
+
+OSL_BATCHOP void
+__OSL_OP3(__OSL_XMACRO_OPNAME, Wv, Wv, Wv)(void* r_, void* a_, void* b_)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -80,9 +84,11 @@ OSL_BATCHOP void __OSL_OP3(__OSL_XMACRO_OPNAME, Wv, Wv, Wv)(void* r_, void* a_,
     }
 }
 
-OSL_BATCHOP void __OSL_MASKED_OP3(__OSL_XMACRO_OPNAME, Wv, Wv,
-                                  Wv)(void* r_, void* a_, void* b_,
-                                      unsigned int mask_value)
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(__OSL_XMACRO_OPNAME, Wv, Wv, Wv)(void* r_, void* a_, void* b_,
+                                                  unsigned int mask_value)
 {
     OSL_FORCEINLINE_BLOCK
     {

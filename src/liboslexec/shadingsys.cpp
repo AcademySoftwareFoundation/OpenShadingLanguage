@@ -2158,9 +2158,9 @@ ShadingSystemImpl::getstats (int level) const
         << "\n";
 
     std::string opt;
-#define BOOLOPT(name) opt += Strutil::sprintf(#name "=%d ", m_##name)
-#define INTOPT(name) opt += Strutil::sprintf(#name "=%d ", m_##name)
-#define STROPT(name) if (m_##name.size()) opt += Strutil::sprintf(#name "=\"%s\" ", m_##name)
+#define BOOLOPT(name) opt += fmtformat(#name "={} ", m_##name)
+#define INTOPT(name) opt += fmtformat(#name "={} ", m_##name)
+#define STROPT(name) if (m_##name.size()) opt += fmtformat(#name "=\"{}\" ", m_##name)
     INTOPT (optimize);
     INTOPT (llvm_optimize);
     INTOPT (debug);
@@ -2231,11 +2231,13 @@ ShadingSystemImpl::getstats (int level) const
             Strutil::join(Strutil::splitsv(buildsimd,","), ", "), columns, 20)
         << "\n";
     out << Strutil::wordwrap(
-        OIIO::Strutil::sprintf("  Runtime HW: %d cores, %.1fGB, %s",
-                           OIIO::Sysutil::hardware_concurrency(),
-                           OIIO::Sysutil::physical_memory() / float(1 << 30),
-                           Strutil::replace(OIIO::get_string_attribute("hw:simd"), ",", ", ", true)),
-        columns, 8) << "\n";
+        fmtformat("  Runtime HW: {} cores, {:.1f}GB, {}",
+                  OIIO::Sysutil::hardware_concurrency(),
+                  OIIO::Sysutil::physical_memory() / float(1 << 30),
+                  Strutil::replace(OIIO::get_string_attribute("hw:simd"), ",",
+                                   ", ", true)),
+        columns, 8)
+        << "\n";
     // TODO: detect GPU info and print it here
     out << "\n";
 
@@ -2259,7 +2261,7 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
     float iperg = (float)m_stat_groupinstances/std::max((int)m_stat_groups,1);
     out << "    Avg instances per group: "
-        << Strutil::sprintf ("%.1f", iperg) << "\n";
+        << fmtformat("{:.1f}", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
     if (m_countlayerexecs)
         out << "  Total layers executed: " << m_stat_layers_executed << "\n";
@@ -2267,17 +2269,17 @@ ShadingSystemImpl::getstats (int level) const
 #if 0
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +
                           m_layers_executed_never;
-    out << Strutil::sprintf ("  Total layers run: %10lld\n", totalexec);
+    print(out, "  Total layers run: {:10}\n", totalexec);
     double inv_totalexec = 1.0 / std::max (totalexec, 1LL);  // prevent div by 0
-    out << Strutil::sprintf ("    Unconditional:  %10lld  (%.1f%%)\n",
-                            (long long)m_layers_executed_uncond,
-                            (100.0*m_layers_executed_uncond) * inv_totalexec);
-    out << Strutil::sprintf ("    On demand:      %10lld  (%.1f%%)\n",
-                            (long long)m_layers_executed_lazy,
-                            (100.0*m_layers_executed_lazy) * inv_totalexec);
-    out << Strutil::sprintf ("    Skipped:        %10lld  (%.1f%%)\n",
-                            (long long)m_layers_executed_never,
-                            (100.0*m_layers_executed_never) * inv_totalexec);
+    print(out, "    Unconditional:  {:10}  ({:.1f}%)\n",
+          m_layers_executed_uncond,
+          (100.0*m_layers_executed_uncond) * inv_totalexec);
+    print(out, "    On demand:      {:10}  ({:.1f}%)\n",
+          m_layers_executed_lazy,
+          (100.0*m_layers_executed_lazy) * inv_totalexec);
+    print(out, "    Skipped:        {:10}  ({:.1f}%)\n",
+          m_layers_executed_never,
+          (100.0*m_layers_executed_never) * inv_totalexec);
 
 #endif
 
@@ -2295,24 +2297,29 @@ ShadingSystemImpl::getstats (int level) const
         out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
             << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
     if (m_stat_instances_compiled > 0 || m_stat_groups_compiled > 0) {
-        out << Strutil::sprintf ("  Optimized %llu ops to %llu (%.1f%%)\n",
-                                (long long)m_stat_preopt_ops,
-                                (long long)m_stat_postopt_ops,
-                                100.0*(double(m_stat_postopt_ops)/double(std::max(1,(int)m_stat_preopt_ops))-1.0));
-        out << Strutil::sprintf ("  Optimized %llu symbols to %llu (%.1f%%)\n",
-                                (long long)m_stat_preopt_syms,
-                                (long long)m_stat_postopt_syms,
-                                100.0*(double(m_stat_postopt_syms)/double(std::max(1,(int)m_stat_preopt_syms))-1.0));
+        print(out, "  Optimized {} ops to {} ({:.1f}%)\n", m_stat_preopt_ops,
+              m_stat_postopt_ops,
+              100.0
+                  * (double(m_stat_postopt_ops)
+                         / (std::max(1, (int)m_stat_preopt_ops))
+                     - 1.0));
+        print(out, "  Optimized {} symbols to {} ({:.1f}%)\n",
+              m_stat_preopt_syms, m_stat_postopt_syms,
+              100.0
+                  * (double(m_stat_postopt_syms)
+                         / (std::max(1, (int)m_stat_preopt_syms))
+                     - 1.0));
     }
-    out << Strutil::sprintf ("  Constant connections eliminated: %d\n",
-                            (int)m_stat_const_connections);
-    out << Strutil::sprintf ("  Global connections eliminated: %d\n",
-                            (int)m_stat_global_connections);
-    out << Strutil::sprintf ("  Middlemen eliminated: %d\n",
-                            (int)m_stat_middlemen_eliminated);
-    out << Strutil::sprintf ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
-                            (int)m_stat_syms_with_derivs, (int)m_stat_postopt_syms,
-                            (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_postopt_syms,1));
+    print(out, "  Constant connections eliminated: {}\n",
+          (int)m_stat_const_connections);
+    print(out, "  Global connections eliminated: {}\n",
+          (int)m_stat_global_connections);
+    print(out, "  Middlemen eliminated: {}\n",
+          (int)m_stat_middlemen_eliminated);
+    print(out, "  Derivatives needed on {} / {} symbols ({:.1f}%)\n",
+          (int)m_stat_syms_with_derivs, (int)m_stat_postopt_syms,
+          (100.0 * (int)m_stat_syms_with_derivs)
+              / std::max((int)m_stat_postopt_syms, 1));
     out << "  Runtime optimization cost: "
         << Strutil::timeintervalformat (m_stat_optimization_time, 2) << "\n";
     out << "    locking:                   "
@@ -2351,7 +2358,7 @@ ShadingSystemImpl::getstats (int level) const
         out << "      max query results: " << m_stat_pointcloud_max_results << "\n";
         double avg = m_stat_pointcloud_searches ?
             (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches : 0.0;
-        out << "      average query results: " << Strutil::sprintf ("%.1f", avg) << "\n";
+        out << "      average query results: " << fmtformat("{:.1f}", avg) << "\n";
         out << "      failures: " << m_stat_pointcloud_failures << "\n";
         out << "    pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
         out << "    pointcloud_write calls: " << m_stat_pointcloud_writes << "\n";
@@ -2575,8 +2582,8 @@ ShadingSystemImpl::Shader (ShaderGroup& group, string_view shaderusage,
     // If a layer name was not supplied, make one up.
     std::string local_layername;
     if (layername.empty()) {
-        local_layername = OIIO::Strutil::sprintf ("%s_%d", master->shadername(),
-                                                 group.nlayers());
+        local_layername = fmtformat("{}_{}", master->shadername(),
+                                    group.nlayers());
         layername = string_view (local_layername);
     }
 
@@ -2686,8 +2693,8 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
         StructSpec *srcstruct = srccon.type.structspec();
         StructSpec *dststruct = dstcon.type.structspec();
         for (size_t i = 0;  i < (size_t)srcstruct->numfields();  ++i) {
-            std::string s = Strutil::sprintf("%s.%s", srcparam, srcstruct->field(i).name);
-            std::string d = Strutil::sprintf("%s.%s", dstparam, dststruct->field(i).name);
+            std::string s = fmtformat("{}.{}", srcparam, srcstruct->field(i).name);
+            std::string d = fmtformat("{}.{}", dstparam, dststruct->field(i).name);
             ConnectShaders (group, srclayer, s, dstlayer, d);
         }
         return true;
@@ -2707,7 +2714,7 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
 
     const Symbol *dstsym = dstinst->mastersymbol(dstcon.param);
     if (dstsym && !dstsym->allowconnect()) {
-        std::string name = dstlayer.size() ? Strutil::sprintf("%s.%s", dstlayer, dstparam)
+        std::string name = dstlayer.size() ? fmtformat("{}.{}", dstlayer, dstparam)
                                            : std::string(dstparam);
         errorfmt("ConnectShaders: cannot connect to {} because it has metadata allowconnect=0\n"
                  "        group: {}", name, group.name());
@@ -2720,8 +2727,8 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     srcinst->outgoing_connections (true);
 
     // if (debug())
-    //     message ("ConnectShaders %s %s -> %s %s\n",
-    //              srclayer, srcparam, dstlayer, dstparam);
+    //     messagefmt("ConnectShaders {} {} -> {} {}\n",
+    //                srclayer, srcparam, dstlayer, dstparam);
 
     return true;
 }
@@ -2796,9 +2803,9 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             typestring = keyword;
         } else {
             err = true;
-            errdesc = Strutil::sprintf ("Unknown statement (expected 'param', "
-                                       "'shader', or 'connect'): \"%s\"",
-                                       keyword);
+            errdesc = fmtformat("Unknown statement (expected 'param', "
+                                "'shader', or 'connect'): \"{}\"",
+                                keyword);
             break;
         }
         TypeDesc type;
@@ -2820,7 +2827,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             type = TypeDesc::TypeString;
         else {
             err = true;
-            errdesc = Strutil::sprintf ("Unknown type: %s", typestring);
+            errdesc = fmtformat("Unknown type: {}", typestring);
             break;  // error
         }
         if (Strutil::parse_char (p, '[')) {
@@ -2937,13 +2944,14 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
                 if (hint_name == "lockgeom" && hint_type == TypeDesc::INT) {
                     if (! Strutil::parse_int (p, lockgeom)) {
                         err = true;
-                        errdesc = Strutil::sprintf ("hint %s expected int value", hint_name);
+                        errdesc = fmtformat("hint {} expected int value",
+                                            hint_name);
                         break;
                     }
                 } else {
                     err = true;
-                    errdesc = Strutil::sprintf ("unknown hint '%s %s'",
-                                               hint_type, hint_name);
+                    errdesc = fmtformat("unknown hint '{} {}'", hint_type,
+                                        hint_name);
                     break;
                 }
             } while (Strutil::parse_char (p, ','));
@@ -2985,10 +2993,10 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
     }
 
     if (err) {
-        std::string msg = Strutil::sprintf(
-                "ShaderGroupBegin: error parsing group description: %s\n"
-                "        group: %s",
-                errdesc, g->name());
+        std::string msg
+            = fmtformat("ShaderGroupBegin: error parsing group description: {}\n"
+                        "        group: {}",
+                        errdesc, g->name());
         if (errstatement.empty()) {
             size_t offset = p.data() - groupspec.data();
             size_t begin_stmt = std::min (groupspec.find_last_of (';', offset),
@@ -2997,8 +3005,8 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             errstatement = groupspec.substr (begin_stmt+1, end_stmt-begin_stmt);
         }
         if (errstatement.size())
-            msg += Strutil::sprintf("\n        problem might be here: %s",
-                                    errstatement);
+            msg += fmtformat("\n        problem might be here: {}",
+                             errstatement);
         error(msg);
         if (debug())
             infofmt("Broken group was:\n---{}\n---\n", groupspec);
@@ -3883,9 +3891,9 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename
                                               extension);
     if (extension == ".tar" || extension == ".tar.gz" || extension == ".tgz") {
         std::string z = Strutil::ends_with (extension, "gz") ? "-z" : "";
-        std::string cmd = Strutil::sprintf("tar -c %s -C \"%s\" -f \"%s\" %s",
-                                           z, Strutil::escape_chars(tmpdir),
-                                           full_filename, filename_list);
+        std::string cmd = fmtformat("tar -c {} -C \"{}\" -f \"{}\" {}", z,
+                                    Strutil::escape_chars(tmpdir),
+                                    full_filename, filename_list);
         // std::cout << "Command =\n" << cmd << "\n";
         if (system (cmd.c_str()) != 0) {
             error ("archive_shadergroup: executing tar command failed");
@@ -3893,8 +3901,8 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename
         }
 
     } else if (extension == ".zip") {
-        std::string cmd = Strutil::sprintf("zip -q \"%s\" %s",
-                                           full_filename, filename_list);
+        std::string cmd = fmtformat("zip -q \"{}\" {}", full_filename,
+                                    filename_list);
         // std::cout << "Command =\n" << cmd << "\n";
         if (system (cmd.c_str()) != 0) {
             error ("archive_shadergroup: executing zip command failed");

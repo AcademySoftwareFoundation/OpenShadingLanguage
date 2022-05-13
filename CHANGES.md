@@ -105,6 +105,7 @@ Continued work on experimental OptiX rendering:
 Performance improvements:
 * Less mutex locking around use and retrieval of ColorSystem related to
   doing color transforms. #1405 (1.12.3)
+* Constant folding of OSL startswith() function. #1507 (1.12.4.7)
 
 Bug fixes and other improvements (internals):
 * Fix derivatives of texture calls when only derivatives of the "alpha"

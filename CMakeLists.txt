@@ -3,7 +3,7 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 cmake_minimum_required (VERSION 3.12)
-project (OSL VERSION 1.12.4.6
+project (OSL VERSION 1.12.4.7
          LANGUAGES CXX C
          HOMEPAGE_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")
 set (PROJ_NAME ${PROJECT_NAME})    # short name

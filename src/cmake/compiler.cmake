@@ -479,7 +479,9 @@ if (PROJECT_IS_TOP_LEVEL)
                                 "src/include/*.h"
                                 "src/liboslcomp/*.cpp"
                                 "src/liboslcomp/*.h"
-                                "src/liboslexec/batched_rendservices.cpp"
+                                "src/liboslexec/batch*.cpp"
+                                "src/liboslexec/wide/*.cpp"
+                                "src/liboslexec/wide/*.h"
                                 "src/liboslexec/rs_fallback.cpp"
                                 "src/liboslquery/*.cpp"
                                 "src/liboslquery/*.h"
@@ -502,13 +504,12 @@ if (PROJECT_IS_TOP_LEVEL)
             # completed, to avoid nasty merge conflicts.
             "src/include/OSL/rendererservices.h"
             "src/include/OSL/*llvm*"
-            "src/liboslexec/*llvm*"
             "src/liboslexec/oslexec_pvt.h"
             # Files that are currently being modified with the OptiX work --
             # we'll reformat those only after that project work is completed, to
             # avoid nasty merge conflicts.
-            "src/include/OSL/device_string.h"
-            "src/include/OSL/oslexec.h"
+            # "src/include/OSL/device_string.h"
+            # "src/include/OSL/oslexec.h"
             "src/testrender/cuda/*"
             # Header files in testsuite are almost certainly osl headers, not C++
             "testsuite/*.h"

@@ -1287,7 +1287,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (splineinverse, spline,            none,          true,      0);
     OP (split,       split,               split,         false,     0);
     OP (sqrt,        generic,             sqrt,          true,      0);
-    OP (startswith,  generic,             none,          true,      STRCHARS);
+    OP (startswith,  generic,             startswith,    true,      STRCHARS);
     OP (step,        generic,             none,          true,      0);
     OP (stof,        generic,             stof,          true,      STRCHARS);
     OP (stoi,        generic,             stoi,          true,      STRCHARS);

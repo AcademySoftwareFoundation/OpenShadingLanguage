@@ -1157,12 +1157,27 @@ DECLFOLDER(constfold_endswith)
         OSL_DASSERT (S.typespec().is_string() && E.typespec().is_string());
         ustring s = S.get_string();
         ustring e = E.get_string();
-        size_t elen = e.length(), slen = s.length();
-        int result = 0;
-        if (elen <= slen)
-            result = (strncmp (s.c_str()+slen-elen, e.c_str(), elen) == 0);
-        int cind = rop.add_constant (result);
+        int cind  = rop.add_constant(OIIO::Strutil::ends_with(s, e) ? 1 : 0);
         rop.turn_into_assign (op, cind, "const fold endswith");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_startswith)
+{
+    // Try to turn R=startswith(s,e) into R=C
+    Opcode& op(rop.inst()->ops()[opnum]);
+    Symbol& S(*rop.inst()->argsymbol(op.firstarg() + 1));
+    Symbol& E(*rop.inst()->argsymbol(op.firstarg() + 2));
+    if (S.is_constant() && E.is_constant()) {
+        OSL_DASSERT(S.typespec().is_string() && E.typespec().is_string());
+        ustring s = S.get_string();
+        ustring e = E.get_string();
+        int cind  = rop.add_constant(OIIO::Strutil::starts_with(s, e) ? 1 : 0);
+        rop.turn_into_assign(op, cind, "const fold startswith");
         return 1;
     }
     return 0;

@@ -7,7 +7,7 @@
 #include <OSL/oslconfig.h>
 
 #ifdef __CUDA_ARCH__
-#include <optix.h>
+#    include <optix.h>
 #endif
 
 // USAGE NOTES:
@@ -37,7 +37,7 @@ OSL_NAMESPACE_ENTER
 
 struct DeviceString {
 #if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
-    size_t      m_chars;
+    size_t m_chars;
 #else
     const char* m_chars;
 #endif
@@ -58,7 +58,7 @@ struct DeviceString {
 
     // In OptiX 7 we don't store the string's length. Make this a compile
     // time error.
-#if ! (defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000)
+#if !(defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000)
     OSL_HOSTDEVICE uint64_t length() const
     {
         return *(uint64_t*)(m_chars - sizeof(uint64_t));
@@ -67,31 +67,28 @@ struct DeviceString {
 
     // In OptiX 7 we can't return the string's contents. Make this a compile
     // time error.
-#if ! (defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000)
-    OSL_HOSTDEVICE const char* c_str() const
-    {
-        return m_chars;
-    }
+#if !(defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000)
+    OSL_HOSTDEVICE const char* c_str() const { return m_chars; }
 #endif
 
-    OSL_HOSTDEVICE bool operator== (const DeviceString& other) const
+    OSL_HOSTDEVICE bool operator==(const DeviceString& other) const
     {
         return m_chars == other.m_chars;
     }
 
-    OSL_HOSTDEVICE bool operator!= (const DeviceString& other) const
+    OSL_HOSTDEVICE bool operator!=(const DeviceString& other) const
     {
         return m_chars != other.m_chars;
     }
 
 #if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
 
-    OSL_HOSTDEVICE bool operator== (const size_t other) const
+    OSL_HOSTDEVICE bool operator==(const size_t other) const
     {
         return hash() == other;
     }
 
-    OSL_HOSTDEVICE bool operator!= (const size_t other) const
+    OSL_HOSTDEVICE bool operator!=(const size_t other) const
     {
         return hash() != other;
     }
@@ -106,9 +103,9 @@ struct DeviceString {
 // macro is the same as the USTR macro defined in oslexec_pvt.h when compiling
 // for the host.
 #ifndef __CUDA_ARCH__
-# define HDSTR(cstr) (*((ustring *)&cstr))
+#    define HDSTR(cstr) (*((ustring*)&cstr))
 #else
-#define HDSTR(cstr) (*((OSL::DeviceString*)&cstr))
+#    define HDSTR(cstr) (*((OSL::DeviceString*)&cstr))
 #endif
 
 
@@ -124,19 +121,19 @@ typedef DeviceString StringParam;
 
 #ifdef __CUDA_ARCH__
 namespace DeviceStrings {
-#define STRDECL(str,var_name)                       \
-    extern __device__ OSL_NAMESPACE::DeviceString var_name;
-#if OPTIX_VERSION < 70000
-# include <OSL/strdecls.h>
-#endif
-#undef STRDECL
-}
+#    define STRDECL(str, var_name) \
+        extern __device__ OSL_NAMESPACE::DeviceString var_name;
+#    if OPTIX_VERSION < 70000
+#        include <OSL/strdecls.h>
+#    endif
+#    undef STRDECL
+}  // namespace DeviceStrings
 #else
-#  ifdef OSL_HOST_RS_BITCODE
-#    define STRING_PARAMS(x)  RS_##x
-#  else
-#    define STRING_PARAMS(x)  StringParams::x
-#  endif
+#    ifdef OSL_HOST_RS_BITCODE
+#        define STRING_PARAMS(x) RS_##x
+#    else
+#        define STRING_PARAMS(x) StringParams::x
+#    endif
 #endif
 
 
@@ -144,11 +141,9 @@ OSL_NAMESPACE_EXIT
 
 
 #ifdef __CUDA_ARCH__
-#if OPTIX_VERSION < 70000
+#    if OPTIX_VERSION < 70000
 namespace StringParams = OSL_NAMESPACE::DeviceStrings;
-#endif
+#    endif
 #else
 namespace StringParams = OSL_NAMESPACE::Strings;
 #endif
-
-

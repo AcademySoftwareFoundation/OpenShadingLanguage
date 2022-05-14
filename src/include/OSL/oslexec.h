@@ -30,10 +30,11 @@ template<typename DataT, int WidthT> struct Wide;
 
 
 /// RendererServices free function bitcode may reference global variables that
-/// only exist in the renderer's program space and won't automatically be 
+/// only exist in the renderer's program space and won't automatically be
 /// found when referenced in JIT'd code inside OSL.  A renderer may register
 /// the addresses of these global variables to allow valid JIT to occur.
-void OSLEXECPUBLIC register_JIT_Global(const char* global_var_name, void* global_var_addr);
+void OSLEXECPUBLIC
+register_JIT_Global(const char* global_var_name, void* global_var_addr);
 
 /// Opaque pointer to whatever the renderer uses to represent a
 /// (potentially motion-blurred) coordinate transformation.
@@ -50,70 +51,76 @@ class ShadingSystemImpl;
 }
 
 #if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
-#  define STRING_PARAMS(x)  UStringHash::Hash(__OSL_STRINGIFY(x))
+#    define STRING_PARAMS(x) UStringHash::Hash(__OSL_STRINGIFY(x))
 #else
-#  define STRING_PARAMS(x)  StringParams::x
+#    define STRING_PARAMS(x) StringParams::x
 #endif
 
 namespace Strings {
 #ifdef __CUDA_ARCH__
-# if OPTIX_VERSION >= 70000
-#  define STRDECL(str,var_name)
+#    if OPTIX_VERSION >= 70000
+#        define STRDECL(str, var_name)
+#    else
+#        define STRDECL(str, var_name) extern __device__ ustring var_name;
+#    endif
 #else
-#  define STRDECL(str,var_name) extern __device__ ustring var_name;
-#endif
-#else
-    // Any strings referenced inside of a libsoslexec/wide/*.cpp
-    // or liboslnoise/wide/*.cpp will need OSLEXECPUBLIC
-    #define STRDECL(str,var_name) OSLEXECPUBLIC extern const ustring var_name;
+// Any strings referenced inside of a libsoslexec/wide/*.cpp
+// or liboslnoise/wide/*.cpp will need OSLEXECPUBLIC
+#    define STRDECL(str, var_name) OSLEXECPUBLIC extern const ustring var_name;
 #endif
 #include <OSL/strdecls.h>
 #undef STRDECL
-}; // namespace Strings
+};  // namespace Strings
 
 
 
 /// Description of where a symbol is located on the app side.
 struct SymLocationDesc {
 public:
-    using offset_t = int64_t;
-    using stride_t = int64_t;
+    using offset_t                  = int64_t;
+    using stride_t                  = int64_t;
     static const int64_t AutoStride = std::numeric_limits<stride_t>::min();
 
     SymLocationDesc() {}
     SymLocationDesc(string_view name, TypeDesc type, bool derivs = false,
                     SymArena arena = SymArena::Heap, offset_t offset = -1,
                     stride_t stride = AutoStride)
-        : name(name), type(type), offset(offset),
-          stride(stride == AutoStride ? type.size() : stride),
-          arena(arena), derivs(derivs)
-    {}
+        : name(name)
+        , type(type)
+        , offset(offset)
+        , stride(stride == AutoStride ? type.size() : stride)
+        , arena(arena)
+        , derivs(derivs)
+    {
+    }
 
     bool operator==(ustring n) const { return name == n; }
-    friend bool operator<(ustring n, const SymLocationDesc& sld) {
+    friend bool operator<(ustring n, const SymLocationDesc& sld)
+    {
         return n < sld.name;
     }
-    friend bool operator<(const SymLocationDesc& sld, ustring n) {
+    friend bool operator<(const SymLocationDesc& sld, ustring n)
+    {
         return sld.name < n;
     }
 
-    ustring name;                     ///< Name of the symbol
-    TypeDesc type;                    ///< Data type of the symbol
-    offset_t offset = -1;             ///< Offset from arena base for point 0 (batched mode assumes userdata at point 0 is readable)
-    stride_t stride = AutoStride;     ///< Stride in bytes between shade points
-    SymArena arena = SymArena::Heap;  ///< Memory arena type for the symbol
-    bool derivs = false;              ///< Space allocated for derivs also
+    ustring name;   ///< Name of the symbol
+    TypeDesc type;  ///< Data type of the symbol
+    offset_t offset
+        = -1;  ///< Offset from arena base for point 0 (batched mode assumes userdata at point 0 is readable)
+    stride_t stride = AutoStride;      ///< Stride in bytes between shade points
+    SymArena arena  = SymArena::Heap;  ///< Memory arena type for the symbol
+    bool derivs     = false;           ///< Space allocated for derivs also
 };
 
 
 
-class OSLEXECPUBLIC ShadingSystem
-{
+class OSLEXECPUBLIC ShadingSystem {
 public:
-    ShadingSystem (RendererServices *renderer=NULL,
-                   TextureSystem *texturesystem=NULL,
-                   ErrorHandler *err=NULL);
-    ~ShadingSystem ();
+    ShadingSystem(RendererServices* renderer   = NULL,
+                  TextureSystem* texturesystem = NULL,
+                  ErrorHandler* err            = NULL);
+    ~ShadingSystem();
 
     /// Set an attribute controlling the shading system.  Return true
     /// if the name and type were recognized and the attrib was set.
@@ -244,23 +251,27 @@ public:
     /// Note: the attributes referred to as "string" are actually on the app
     /// side as ustring or const char* (they have the same data layout), NOT
     /// std::string!
-    bool attribute (string_view name, TypeDesc type, const void *val);
+    bool attribute(string_view name, TypeDesc type, const void* val);
 
     // Shortcuts for common types
-    bool attribute (string_view name, int val) {
-        return attribute (name, TypeDesc::INT, &val);
+    bool attribute(string_view name, int val)
+    {
+        return attribute(name, TypeDesc::INT, &val);
     }
-    bool attribute (string_view name, float val) {
-        return attribute (name, TypeDesc::FLOAT, &val);
+    bool attribute(string_view name, float val)
+    {
+        return attribute(name, TypeDesc::FLOAT, &val);
     }
-    bool attribute (string_view name, double val) {
-        float f = (float) val;
-        return attribute (name, TypeDesc::FLOAT, &f);
+    bool attribute(string_view name, double val)
+    {
+        float f = (float)val;
+        return attribute(name, TypeDesc::FLOAT, &f);
     }
-    bool attribute (string_view name, string_view val) {
+    bool attribute(string_view name, string_view val)
+    {
         std::string valstr(val);
-        const char *s = valstr.c_str();
-        return attribute (name, TypeDesc::STRING, &s);
+        const char* s = valstr.c_str();
+        return attribute(name, TypeDesc::STRING, &s);
     }
 
 
@@ -276,22 +287,26 @@ public:
     ///                                 called unconditionally.
     ///    int exec_repeat            How many times to run the group (1).
     ///
-    bool attribute (ShaderGroup *group, string_view name,
-                    TypeDesc type, const void *val);
-    bool attribute (ShaderGroup *group, string_view name, int val) {
-        return attribute (group, name, TypeDesc::INT, &val);
+    bool attribute(ShaderGroup* group, string_view name, TypeDesc type,
+                   const void* val);
+    bool attribute(ShaderGroup* group, string_view name, int val)
+    {
+        return attribute(group, name, TypeDesc::INT, &val);
     }
-    bool attribute (ShaderGroup *group, string_view name, float val) {
-        return attribute (group, name, TypeDesc::FLOAT, &val);
+    bool attribute(ShaderGroup* group, string_view name, float val)
+    {
+        return attribute(group, name, TypeDesc::FLOAT, &val);
     }
-    bool attribute (ShaderGroup *group, string_view name, double val) {
-        float f = (float) val;
-        return attribute (group, name, TypeDesc::FLOAT, &f);
+    bool attribute(ShaderGroup* group, string_view name, double val)
+    {
+        float f = (float)val;
+        return attribute(group, name, TypeDesc::FLOAT, &f);
     }
-    bool attribute (ShaderGroup *group, string_view name, string_view val) {
+    bool attribute(ShaderGroup* group, string_view name, string_view val)
+    {
         std::string valstr(val);
-        const char *s = valstr.c_str();
-        return attribute (group, name, TypeDesc::STRING, &s);
+        const char* s = valstr.c_str();
+        return attribute(group, name, TypeDesc::STRING, &s);
     }
 
     /// Get the named attribute of the ShadingSystem, store it in `*val`.
@@ -321,23 +336,26 @@ public:
     ///   library build dependencies and their versions (for example,
     ///   "OIIO-2.3.0,LLVM-10.0.0,OpenEXR-2.5.0").
     ///
-    bool getattribute (string_view name, TypeDesc type, void *val);
+    bool getattribute(string_view name, TypeDesc type, void* val);
 
     /// Shortcut getattribute() for retrieving a single integer.
     /// The value is placed in `val`, and the function returns `true` if the
     /// attribute was found and was legally convertible to an int.
-    bool getattribute (string_view name, int &val) {
-        return getattribute (name, TypeDesc::INT, &val);
+    bool getattribute(string_view name, int& val)
+    {
+        return getattribute(name, TypeDesc::INT, &val);
     }
     /// Shortcut getattribute() for retrieving a single float.
     /// The value is placed in `val`, and the function returns `true` if the
     /// attribute was found and was legally convertible to a float.
-    bool getattribute (string_view name, float &val) {
-        return getattribute (name, TypeDesc::FLOAT, &val);
+    bool getattribute(string_view name, float& val)
+    {
+        return getattribute(name, TypeDesc::FLOAT, &val);
     }
-    bool getattribute (string_view name, double &val) {
+    bool getattribute(string_view name, double& val)
+    {
         float f;
-        bool ok = getattribute (name, TypeDesc::FLOAT, &f);
+        bool ok = getattribute(name, TypeDesc::FLOAT, &f);
         if (ok)
             val = f;
         return ok;
@@ -345,21 +363,24 @@ public:
     /// Shortcut getattribute() for retrieving a single string as a
     /// `const char*`. The value is placed in `val`, and the function
     /// returns `true` if the attribute was found.
-    bool getattribute (string_view name, char **val) {
-        return getattribute (name, TypeDesc::STRING, val);
+    bool getattribute(string_view name, char** val)
+    {
+        return getattribute(name, TypeDesc::STRING, val);
     }
     /// Shortcut getattribute() for retrieving a single string as a
     /// `ustring`. The value is placed in `val`, and the function returns
     /// `true` if the attribute was found.
-    bool getattribute (string_view name, ustring &val) {
-        return getattribute (name, TypeDesc::STRING, (char **)&val);
+    bool getattribute(string_view name, ustring& val)
+    {
+        return getattribute(name, TypeDesc::STRING, (char**)&val);
     }
     /// Shortcut getattribute() for retrieving a single string as a
     /// `std::string`. The value is placed in `val`, and the function
     /// returns `true` if the attribute was found.
-    bool getattribute (string_view name, std::string &val) {
-        const char *s = NULL;
-        bool ok = getattribute (name, TypeDesc::STRING, &s);
+    bool getattribute(string_view name, std::string& val)
+    {
+        const char* s = NULL;
+        bool ok       = getattribute(name, TypeDesc::STRING, &s);
         if (ok)
             val = s;
         return ok;
@@ -430,31 +451,37 @@ public:
     /// Note: the attributes referred to as "string" are actually on the app
     /// side as ustring or const char* (they have the same data layout), NOT
     /// std::string!
-    bool getattribute (ShaderGroup *group, string_view name,
-                       TypeDesc type, void *val);
+    bool getattribute(ShaderGroup* group, string_view name, TypeDesc type,
+                      void* val);
     // Shortcuts for common types
-    bool getattribute (ShaderGroup *group, string_view name, int &val) {
-        return getattribute (group, name, TypeDesc::INT, &val);
+    bool getattribute(ShaderGroup* group, string_view name, int& val)
+    {
+        return getattribute(group, name, TypeDesc::INT, &val);
     }
-    bool getattribute (ShaderGroup *group, string_view name, float &val) {
-        return getattribute (group, name, TypeDesc::FLOAT, &val);
+    bool getattribute(ShaderGroup* group, string_view name, float& val)
+    {
+        return getattribute(group, name, TypeDesc::FLOAT, &val);
     }
-    bool getattribute (ShaderGroup *group, string_view name, double &val) {
+    bool getattribute(ShaderGroup* group, string_view name, double& val)
+    {
         float f;
-        bool ok = getattribute (group, name, TypeDesc::FLOAT, &f);
+        bool ok = getattribute(group, name, TypeDesc::FLOAT, &f);
         if (ok)
             val = f;
         return ok;
     }
-    bool getattribute (ShaderGroup *group, string_view name, char **val) {
-        return getattribute (group, name, TypeDesc::STRING, val);
+    bool getattribute(ShaderGroup* group, string_view name, char** val)
+    {
+        return getattribute(group, name, TypeDesc::STRING, val);
     }
-    bool getattribute (ShaderGroup *group, string_view name, ustring &val) {
-        return getattribute (group, name, TypeDesc::STRING, (char **)&val);
+    bool getattribute(ShaderGroup* group, string_view name, ustring& val)
+    {
+        return getattribute(group, name, TypeDesc::STRING, (char**)&val);
     }
-    bool getattribute (ShaderGroup *group, string_view name, std::string &val) {
-        const char *s = NULL;
-        bool ok = getattribute (group, name, TypeDesc::STRING, &s);
+    bool getattribute(ShaderGroup* group, string_view name, std::string& val)
+    {
+        const char* s = NULL;
+        bool ok       = getattribute(group, name, TypeDesc::STRING, &s);
         if (ok)
             val = s;
         return ok;
@@ -463,8 +490,7 @@ public:
 
     /// Load compiled shader (oso) from a memory buffer, overriding
     /// shader lookups in the shader search path
-    bool LoadMemoryCompiledShader (string_view shadername,
-                                   string_view buffer);
+    bool LoadMemoryCompiledShader(string_view shadername, string_view buffer);
 
     // The basic sequence for declaring a shader group looks like this:
     // ShadingSystem *ss = ...;
@@ -490,7 +516,7 @@ public:
 
     /// Signal the start of a new shader group.  The return value is a
     /// reference-counted opaque handle to the ShaderGroup.
-    ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
+    ShaderGroupRef ShaderGroupBegin(string_view groupname = string_view());
 
     /// Alternate way to specify a shader group. The group specification
     /// syntax looks like this: (as a string, all whitespace is equivalent):
@@ -500,13 +526,13 @@ public:
     /// For the sake of easy assembling on command lines, a comma ',' may
     /// substitute for the semicolon as a separator, and the last separator
     /// before the end of the string is optional.
-    ShaderGroupRef ShaderGroupBegin (string_view groupname,
-                                     string_view shaderusage,
-                                     string_view groupspec = string_view());
+    ShaderGroupRef ShaderGroupBegin(string_view groupname,
+                                    string_view shaderusage,
+                                    string_view groupspec = string_view());
 
     /// Signal the end of a new shader group.
     ///
-    bool ShaderGroupEnd (ShaderGroup& group);
+    bool ShaderGroupEnd(ShaderGroup& group);
 
     /// Set a parameter of the next shader that will be added to the group,
     /// optionally setting the 'lockgeom' metadata for that parameter
@@ -515,32 +541,37 @@ public:
     /// against changes by the geometry, and therefore the shader should not
     /// optimize assuming that the instance value (the 'val' specified by
     /// this call) is a constant.
-    bool Parameter (ShaderGroup& group, string_view name, TypeDesc t,
-                    const void *val, bool lockgeom=true);
+    bool Parameter(ShaderGroup& group, string_view name, TypeDesc t,
+                   const void* val, bool lockgeom = true);
     // Shortcuts for param passing a single int, float, or string.
-    bool Parameter (ShaderGroup& group, string_view name,
-                    int val, bool lockgeom=true) {
-        return Parameter (group, name, TypeDesc::INT, &val, lockgeom);
+    bool Parameter(ShaderGroup& group, string_view name, int val,
+                   bool lockgeom = true)
+    {
+        return Parameter(group, name, TypeDesc::INT, &val, lockgeom);
     }
-    bool Parameter (ShaderGroup& group, string_view name,
-                    float val, bool lockgeom=true) {
-        return Parameter (group, name, TypeDesc::FLOAT, &val, lockgeom);
+    bool Parameter(ShaderGroup& group, string_view name, float val,
+                   bool lockgeom = true)
+    {
+        return Parameter(group, name, TypeDesc::FLOAT, &val, lockgeom);
     }
-    bool Parameter (ShaderGroup& group, string_view name,
-                    const std::string& val, bool lockgeom=true) {
-        const char *s = val.c_str();
-        return Parameter (group, name, TypeDesc::STRING, &s, lockgeom);
+    bool Parameter(ShaderGroup& group, string_view name, const std::string& val,
+                   bool lockgeom = true)
+    {
+        const char* s = val.c_str();
+        return Parameter(group, name, TypeDesc::STRING, &s, lockgeom);
     }
-    bool Parameter (ShaderGroup& group, string_view name,
-                    ustring val, bool lockgeom=true) {
-        return Parameter (group, name, TypeDesc::STRING, (const char**)&val, lockgeom);
+    bool Parameter(ShaderGroup& group, string_view name, ustring val,
+                   bool lockgeom = true)
+    {
+        return Parameter(group, name, TypeDesc::STRING, (const char**)&val,
+                         lockgeom);
     }
 
     /// Append a new shader instance onto the specified group. The shader
     /// instance will get any pending parameters that were set by
     /// Parameter() calls since the last Shader() call for the group.
-    bool Shader (ShaderGroup& group, string_view shaderusage,
-                 string_view shadername, string_view layername);
+    bool Shader(ShaderGroup& group, string_view shaderusage,
+                string_view shadername, string_view layername);
 
     /// Connect two shaders within the specified group. The source layer
     /// must be *upstream* of down destination layer (i.e. source must be
@@ -556,9 +587,9 @@ public:
     ///   `ConnectShaders (group, "lay1", "mycolorout[2]",
     ///                    "lay2", "myfloatinput")`
     ///
-    bool ConnectShaders (ShaderGroup &group,
-                         string_view srclayer, string_view srcparam,
-                         string_view dstlayer, string_view dstparam);
+    bool ConnectShaders(ShaderGroup& group, string_view srclayer,
+                        string_view srcparam, string_view dstlayer,
+                        string_view dstparam);
 
     /// Replace a parameter value in a previously-declared shader group.
     /// This is meant to called after the ShaderGroupBegin/End, but will
@@ -567,27 +598,30 @@ public:
     /// indicates that it's a parameter that may be overridden by the
     /// geometric primitive).  This call gives you a way of changing the
     /// instance value, even if it's not a geometric override.
-    bool ReParameter (ShaderGroup &group,
-                      string_view layername, string_view paramname,
-                      TypeDesc type, const void *val);
+    bool ReParameter(ShaderGroup& group, string_view layername,
+                     string_view paramname, TypeDesc type, const void* val);
     // Shortcuts for param passing a single int, float, or string.
-    bool ReParameter (ShaderGroup &group, string_view layername,
-                      string_view paramname, int val) {
-        return ReParameter (group, layername, paramname, TypeDesc::INT, &val);
+    bool ReParameter(ShaderGroup& group, string_view layername,
+                     string_view paramname, int val)
+    {
+        return ReParameter(group, layername, paramname, TypeDesc::INT, &val);
     }
-    bool ReParameter (ShaderGroup &group, string_view layername,
-                      string_view paramname, float val) {
-        return ReParameter (group, layername, paramname, TypeDesc::FLOAT, &val);
+    bool ReParameter(ShaderGroup& group, string_view layername,
+                     string_view paramname, float val)
+    {
+        return ReParameter(group, layername, paramname, TypeDesc::FLOAT, &val);
     }
-    bool ReParameter (ShaderGroup &group, string_view layername,
-                      string_view paramname, const std::string& val) {
-        const char *s = val.c_str();
-        return ReParameter (group, layername, paramname, TypeDesc::STRING, &s);
+    bool ReParameter(ShaderGroup& group, string_view layername,
+                     string_view paramname, const std::string& val)
+    {
+        const char* s = val.c_str();
+        return ReParameter(group, layername, paramname, TypeDesc::STRING, &s);
     }
-    bool ReParameter (ShaderGroup &group, string_view layername,
-                      string_view paramname, ustring val) {
-        return ReParameter (group, layername, paramname, TypeDesc::STRING,
-                            (const char**)&val);
+    bool ReParameter(ShaderGroup& group, string_view layername,
+                     string_view paramname, ustring val)
+    {
+        return ReParameter(group, layername, paramname, TypeDesc::STRING,
+                           (const char**)&val);
     }
 
     // Non-threadsafe versions of Parameter, Shader, ConnectShaders, and
@@ -598,13 +632,13 @@ public:
     // concurrently). If there is any doubt about that, use the versions
     // above that take an explicit `ShaderGroup&`, which are thread-safe
     // and re-entrant.
-    bool Parameter (string_view name, TypeDesc t, const void *val,
-                    bool lockgeom=true);
-    bool Shader (string_view shaderusage, string_view shadername,
-                 string_view layername);
-    bool ConnectShaders (string_view srclayer, string_view srcparam,
-                         string_view dstlayer, string_view dstparam);
-    bool ShaderGroupEnd (void);
+    bool Parameter(string_view name, TypeDesc t, const void* val,
+                   bool lockgeom = true);
+    bool Shader(string_view shaderusage, string_view shadername,
+                string_view layername);
+    bool ConnectShaders(string_view srclayer, string_view srcparam,
+                        string_view dstlayer, string_view dstparam);
+    bool ShaderGroupEnd(void);
 
     /// Create a per-thread data needed for shader execution.  It's very
     /// important for the app to never use a PerThreadInfo from more than
@@ -612,11 +646,11 @@ public:
     /// for each renderer thread), and destroy it with destroy_thread_info
     /// when the thread terminates (and before the ShadingSystem is
     /// destroyed).
-    PerThreadInfo * create_thread_info();
+    PerThreadInfo* create_thread_info();
 
     /// Destroy a PerThreadInfo that was allocated by
     /// create_thread_info().
-    void destroy_thread_info (PerThreadInfo *threadinfo);
+    void destroy_thread_info(PerThreadInfo* threadinfo);
 
     /// Get a ShadingContext that we can use.  The context is specific to a
     /// renderer thread, and should never be passed between or shared by
@@ -624,12 +658,13 @@ public:
     /// thread-specific pointer created by create_thread_info.  The context
     /// can be used to shade many points; a typical usage is to allocate
     /// just one context per thread and use it for the whole run.
-    ShadingContext *get_context (PerThreadInfo *threadinfo,
-                                 TextureSystem::Perthread *texture_threadinfo=NULL);
+    ShadingContext*
+    get_context(PerThreadInfo* threadinfo,
+                TextureSystem::Perthread* texture_threadinfo = NULL);
 
     /// Return a ShadingContext to the pool.
     ///
-    void release_context (ShadingContext *ctx);
+    void release_context(ShadingContext* ctx);
 
     /// Execute the shader group in this context on shading point
     /// `shadeindex`. If ctx is nullptr, then execute will request one
@@ -638,19 +673,21 @@ public:
     /// execute_layer of the last (presumably group entry) layer, and
     /// execute_cleanup. If run==false, just do the binding and setup, don't
     /// actually run the shader.
-    bool execute(ShadingContext &ctx, ShaderGroup &group, int shadeindex,
+    bool execute(ShadingContext& ctx, ShaderGroup& group, int shadeindex,
                  ShaderGlobals& globals, void* userdata_base_ptr,
                  void* output_base_ptr, bool run = true);
 
     // DEPRECATED(2.0): no shadeindex or base pointers
-    bool execute (ShadingContext &ctx, ShaderGroup &group,
-                  ShaderGlobals &globals, bool run=true) {
+    bool execute(ShadingContext& ctx, ShaderGroup& group,
+                 ShaderGlobals& globals, bool run = true)
+    {
         return execute(ctx, group, 0, globals, nullptr, nullptr, run);
     }
 
     // DEPRECATED(2.0): ctx pointer
-    bool execute (ShadingContext *ctx, ShaderGroup &group,
-                  ShaderGlobals &globals, bool run=true) {
+    bool execute(ShadingContext* ctx, ShaderGroup& group,
+                 ShaderGlobals& globals, bool run = true)
+    {
         return execute(*ctx, group, globals, run);
     }
 
@@ -662,12 +699,13 @@ public:
     /// preparation, but don't actually run the shader.  Return true if the
     /// shader executed, false if it did not (including if the shader itself
     /// was empty).
-    bool execute_init(ShadingContext &ctx, ShaderGroup &group, int shadeindex,
-                      ShaderGlobals &globals, void* userdata_base_ptr,
-                      void* output_base_ptr, bool run=true);
+    bool execute_init(ShadingContext& ctx, ShaderGroup& group, int shadeindex,
+                      ShaderGlobals& globals, void* userdata_base_ptr,
+                      void* output_base_ptr, bool run = true);
     // DEPRECATED(2.0): no shadeindex or base pointers
-    bool execute_init (ShadingContext &ctx, ShaderGroup &group,
-                       ShaderGlobals &globals, bool run=true) {
+    bool execute_init(ShadingContext& ctx, ShaderGroup& group,
+                      ShaderGlobals& globals, bool run = true)
+    {
         return execute_init(ctx, group, 0, globals, nullptr, nullptr, run);
     }
 
@@ -676,41 +714,44 @@ public:
     /// run==true, and that the call to execute_init() returned true. (One
     /// reason why it might have returned false is if the shader group
     /// turned out, after optimization, to do nothing.)
-    bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
-                       void* userdata_base_ptr, void* output_base_ptr,
-                       int layernumber);
+    bool execute_layer(ShadingContext& ctx, int shadeindex,
+                       ShaderGlobals& globals, void* userdata_base_ptr,
+                       void* output_base_ptr, int layernumber);
     /// Execute the layer by name.
-    bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
-                       void* userdata_base_ptr, void* output_base_ptr,
-                       ustring layername);
+    bool execute_layer(ShadingContext& ctx, int shadeindex,
+                       ShaderGlobals& globals, void* userdata_base_ptr,
+                       void* output_base_ptr, ustring layername);
     /// Execute the layer that has the given ShaderSymbol as an output.
     /// (The symbol is one returned by find_symbol()).
-    bool execute_layer(ShadingContext &ctx, int shadeindex, ShaderGlobals &globals,
-                       void* userdata_base_ptr, void* output_base_ptr,
-                       const ShaderSymbol *symbol);
+    bool execute_layer(ShadingContext& ctx, int shadeindex,
+                       ShaderGlobals& globals, void* userdata_base_ptr,
+                       void* output_base_ptr, const ShaderSymbol* symbol);
 
     // DEPRECATED(2.0): no shadeindex or base pointers
-    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                        int layernumber) {
+    bool execute_layer(ShadingContext& ctx, ShaderGlobals& globals,
+                       int layernumber)
+    {
         return execute_layer(ctx, 0, globals, nullptr, nullptr, layernumber);
     }
-    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                        ustring layername) {
+    bool execute_layer(ShadingContext& ctx, ShaderGlobals& globals,
+                       ustring layername)
+    {
         return execute_layer(ctx, 0, globals, nullptr, nullptr, layername);
     }
-    bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
-                        const ShaderSymbol *symbol) {
+    bool execute_layer(ShadingContext& ctx, ShaderGlobals& globals,
+                       const ShaderSymbol* symbol)
+    {
         return execute_layer(ctx, 0, globals, nullptr, nullptr, symbol);
     }
 
     /// Signify that the context is done with the current execution of the
     /// group that was kicked off by execute_init and one or more calls to
     /// execute_layer.
-    bool execute_cleanup (ShadingContext &ctx);
+    bool execute_cleanup(ShadingContext& ctx);
 
     /// Find the named layer within a group and return its index, or -1
     /// if no such named layer exists.
-    int find_layer (const ShaderGroup &group, ustring layername) const;
+    int find_layer(const ShaderGroup& group, ustring layername) const;
 
     /// Get a raw pointer to a named symbol (such as you'd need to pull
     /// out the value of an output parameter).  ctx is the shading
@@ -727,10 +768,10 @@ public:
     ///
     /// These are considered somewhat deprecated, in favor of using
     /// find_symbol(), symbol_typedesc(), and symbol_address().
-    const void* get_symbol (const ShadingContext &ctx, ustring layername,
-                            ustring symbolname, TypeDesc &type) const;
-    const void* get_symbol (const ShadingContext &ctx, ustring symbolname,
-                            TypeDesc &type) const;
+    const void* get_symbol(const ShadingContext& ctx, ustring layername,
+                           ustring symbolname, TypeDesc& type) const;
+    const void* get_symbol(const ShadingContext& ctx, ustring symbolname,
+                           TypeDesc& type) const;
 
     /// Search for an output symbol by name (and optionally, layer) within
     /// the optimized shader group. If the symbol is found, return an opaque
@@ -744,22 +785,22 @@ public:
     /// separately, or by concatenating "layername.symbolname", but note
     /// that the latter will involve string manipulation inside find_symbol
     /// and is much more expensive than specifying them separately.
-    const ShaderSymbol* find_symbol (const ShaderGroup &group,
-                             ustring layername, ustring symbolname) const;
-    const ShaderSymbol* find_symbol (const ShaderGroup &group,
-                                     ustring symbolname) const;
+    const ShaderSymbol* find_symbol(const ShaderGroup& group, ustring layername,
+                                    ustring symbolname) const;
+    const ShaderSymbol* find_symbol(const ShaderGroup& group,
+                                    ustring symbolname) const;
 
     /// Given an opaque ShaderSymbol*, return the TypeDesc describing it.
     /// Note that a closure will end up with a TypeDesc::UNKNOWN value.
-    TypeDesc symbol_typedesc (const ShaderSymbol *sym) const;
+    TypeDesc symbol_typedesc(const ShaderSymbol* sym) const;
 
     /// Given a context (that has executed a shader) and an opaque
     /// ShaderSymbol*, return the actual memory address where the value of
     /// the symbol resides within the heap memory of the context. This
     /// is only valid for the shader execution that had happened immediately
     /// prior for this context, but it is a very inexpensive operation.
-    const void* symbol_address (const ShadingContext &ctx,
-                                const ShaderSymbol *sym) const;
+    const void* symbol_address(const ShadingContext& ctx,
+                               const ShaderSymbol* sym) const;
 
 #if OSL_USE_BATCHED
     /// Based on currently set attributes for llvm_jit_target and
@@ -770,54 +811,56 @@ public:
     /// Returns true if supported, false otherwise
     bool configure_batch_execution_at(int width);
 
-    template<int WidthT>
-    class OSLEXECPUBLIC BatchedExecutor {
-        ShadingSystem & m_shading_system;
+    template<int WidthT> class OSLEXECPUBLIC BatchedExecutor {
+        ShadingSystem& m_shading_system;
+
     public:
-        explicit OSL_FORCEINLINE BatchedExecutor(ShadingSystem & ss)
-        :m_shading_system(ss)
-        {}
+        explicit OSL_FORCEINLINE BatchedExecutor(ShadingSystem& ss)
+            : m_shading_system(ss)
+        {
+        }
         OSL_FORCEINLINE BatchedExecutor(const BatchedExecutor&) = default;
 
         /// Ensure that the group has been JITed.
-        void jit_group (ShaderGroup *group, ShadingContext *ctx);
+        void jit_group(ShaderGroup* group, ShadingContext* ctx);
 
         /// If option "greedyjit" was set, this call will trigger all
         /// shader groups that have not yet been compiled to do so with the
         /// specified number of threads (0 means use all available HW cores).
-        void jit_all_groups (int nthreads=0);
+        void jit_all_groups(int nthreads = 0);
 
-        bool execute (ShadingContext &ctx, ShaderGroup &group, int batch_size,
-                      Wide<const int, WidthT> wide_shadeindex,
-                      BatchedShaderGlobals<WidthT> &globals_batch,
-                      void* userdata_base_ptr,
-                      void* output_base_ptr, bool run=true);
+        bool execute(ShadingContext& ctx, ShaderGroup& group, int batch_size,
+                     Wide<const int, WidthT> wide_shadeindex,
+                     BatchedShaderGlobals<WidthT>& globals_batch,
+                     void* userdata_base_ptr, void* output_base_ptr,
+                     bool run = true);
 
-        bool execute_init (ShadingContext &ctx, ShaderGroup &group, int batch_size,
+        bool execute_init(ShadingContext& ctx, ShaderGroup& group,
+                          int batch_size,
+                          Wide<const int, WidthT> wide_shadeindex,
+                          BatchedShaderGlobals<WidthT>& globals_batch,
+                          void* userdata_base_ptr, void* output_base_ptr,
+                          bool run = true);
+
+        bool execute_layer(ShadingContext& ctx, int batch_size,
                            Wide<const int, WidthT> wide_shadeindex,
-                           BatchedShaderGlobals<WidthT> &globals_batch,
-                           void* userdata_base_ptr,
-                           void* output_base_ptr, bool run=true);
-
-        bool execute_layer (ShadingContext &ctx, int batch_size,
-                            Wide<const int, WidthT> wide_shadeindex,
-                            BatchedShaderGlobals<WidthT> &globals_batch,
-                            void* userdata_base_ptr,
-                            void* output_base_ptr, int layernumber);
-        bool execute_layer (ShadingContext &ctx, int batch_size,
-                            Wide<const int, WidthT> wide_shadeindex,
-                            BatchedShaderGlobals<WidthT> &globals_batch,
-                            void* userdata_base_ptr,
-                            void* output_base_ptr, ustring layername);
-        bool execute_layer (ShadingContext &ctx, int batch_size,
-                            Wide<const int, WidthT> wide_shadeindex,
-                            BatchedShaderGlobals<WidthT> &globals_batch,
-                            void* userdata_base_ptr,
-                            void* output_base_ptr, const ShaderSymbol *symbol);
+                           BatchedShaderGlobals<WidthT>& globals_batch,
+                           void* userdata_base_ptr, void* output_base_ptr,
+                           int layernumber);
+        bool execute_layer(ShadingContext& ctx, int batch_size,
+                           Wide<const int, WidthT> wide_shadeindex,
+                           BatchedShaderGlobals<WidthT>& globals_batch,
+                           void* userdata_base_ptr, void* output_base_ptr,
+                           ustring layername);
+        bool execute_layer(ShadingContext& ctx, int batch_size,
+                           Wide<const int, WidthT> wide_shadeindex,
+                           BatchedShaderGlobals<WidthT>& globals_batch,
+                           void* userdata_base_ptr, void* output_base_ptr,
+                           const ShaderSymbol* symbol);
     };
 
-    template<int WidthT>
-    OSL_FORCEINLINE BatchedExecutor<WidthT> batched() {
+    template<int WidthT> OSL_FORCEINLINE BatchedExecutor<WidthT> batched()
+    {
         return BatchedExecutor<WidthT>(*this);
     }
 #endif
@@ -825,37 +868,36 @@ public:
 
     /// Return the statistics output as a huge string.
     ///
-    std::string getstats (int level=1) const;
+    std::string getstats(int level = 1) const;
 
-    void register_closure (string_view name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup);
+    void register_closure(string_view name, int id, const ClosureParam* params,
+                          PrepareClosureFunc prepare, SetupClosureFunc setup);
 
     /// Query either by name or id an existing closure. If name is non
     /// NULL it will use it for the search, otherwise id would be used
     /// and the name will be placed in name if successful. Also return
     /// pointer to the params array in the last argument. All args are
     /// optional but at least one of name or id must non NULL.
-    bool query_closure (const char **name, int *id,
-                        const ClosureParam **params);
+    bool query_closure(const char** name, int* id, const ClosureParam** params);
 
     /// For the proposed shader "global" name, return the corresponding
     /// SGBits enum.
-    static SGBits globals_bit (ustring name);
+    static SGBits globals_bit(ustring name);
 
     /// For the SGBits value, return the shader "globals" name.
-    static ustring globals_name (SGBits bit);
+    static ustring globals_name(SGBits bit);
 
     /// For the proposed raytype name, return the bit pattern that
     /// describes it, or 0 for an unrecognized name.  (This retrieves
     /// data passed in via attribute("raytypes")).
-    int raytype_bit (ustring name);
+    int raytype_bit(ustring name);
 
     /// Configure the default raytypes to assume to be on (or off) at optimization
     /// time for the given group. The raytypes_on gives a bitfield describing which
     /// ray flags are known to be 1, and raytypes_off describes which ray flags are
     /// known to be 0. Bits that are not set in either set of flags are not known
     /// to the optimizer, and will be determined strictly at execution time.
-    void set_raytypes(ShaderGroup *group, int raytypes_on, int raytypes_off);
+    void set_raytypes(ShaderGroup* group, int raytypes_on, int raytypes_off);
 
     /// Clear any known mappings of symbol locations.
     void clear_symlocs();
@@ -867,31 +909,32 @@ public:
 
     /// Ensure that the group has been optimized and optionally JITed. The ctx pointer
     /// supplies a ShadingContext to use.
-    void optimize_group (ShaderGroup *group, ShadingContext *ctx, bool do_jit = true);
+    void optimize_group(ShaderGroup* group, ShadingContext* ctx,
+                        bool do_jit = true);
 
     /// Ensure that the group has been optimized and optionally JITed. This is a
     /// convenience function that simply calls set_raytypes followed by
     /// optimize_group. The ctx supplies a ShadingContext to use.
-    void optimize_group (ShaderGroup *group, int raytypes_on,
-                         int raytypes_off, ShadingContext *ctx, bool do_jit = true);
+    void optimize_group(ShaderGroup* group, int raytypes_on, int raytypes_off,
+                        ShadingContext* ctx, bool do_jit = true);
 
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the
     /// specified number of threads (0 means use all available HW cores).
-    void optimize_all_groups (int nthreads=0, bool do_jit = true);
+    void optimize_all_groups(int nthreads = 0, bool do_jit = true);
 
     /// Return a pointer to the TextureSystem being used.
-    TextureSystem * texturesys () const;
+    TextureSystem* texturesys() const;
 
     /// Return a pointer to the RendererServices being used.
-    RendererServices * renderer () const;
+    RendererServices* renderer() const;
 
     /// Archive the entire shader group so that it can be reconstituted
     /// later.
-    bool archive_shadergroup (ShaderGroup &group, string_view filename);
+    bool archive_shadergroup(ShaderGroup& group, string_view filename);
 
     // DEPRECATED(2.0)
-    bool archive_shadergroup (ShaderGroup *group, string_view filename);
+    bool archive_shadergroup(ShaderGroup* group, string_view filename);
 
     /// Construct and return an OSLQuery initialized with an existing
     /// ShaderGroup. For a shader group already loaded by the ShadingSystem,
@@ -970,9 +1013,8 @@ bool
 shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
             const ShaderGlobals* defaultsg, OIIO::ImageBuf& buf,
             cspan<ustring> outputs,
-            ShadeImageLocations shadelocations              = ShadePixelCenters,
-            OIIO::ROI roi                                   = OIIO::ROI(),
-            OIIO::parallel_options popt = 0);
+            ShadeImageLocations shadelocations = ShadePixelCenters,
+            OIIO::ROI roi = OIIO::ROI(), OIIO::parallel_options popt = 0);
 
 #endif
 

@@ -141,9 +141,9 @@ struct OSLEXECPUBLIC ClosureAdd : public ClosureColor {
 };
 
 /// Type for pointers to closures
-typedef ClosureColor * ClosureColorPtr;
-typedef ClosureComponent * ClosureComponentPtr;
-typedef ClosureAdd * ClosureAddPtr;
-typedef ClosureMul * ClosureMulPtr;
+typedef ClosureColor* ClosureColorPtr;
+typedef ClosureComponent* ClosureComponentPtr;
+typedef ClosureAdd* ClosureAddPtr;
+typedef ClosureMul* ClosureMulPtr;
 
 OSL_NAMESPACE_EXIT

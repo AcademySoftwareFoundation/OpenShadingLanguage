@@ -125,7 +125,8 @@ OSLToyRenderer::render_image()
 
 
 
-int OSLToyRenderer::supports(string_view /*feature*/) const
+int
+OSLToyRenderer::supports(string_view /*feature*/) const
 {
     return false;
 }

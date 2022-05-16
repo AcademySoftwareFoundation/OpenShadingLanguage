@@ -62,6 +62,8 @@ struct UniqueStringCache {
     ustring camera_shutter_close;
 };
 
+
+
 // Lazily construct UniqueStringCache to avoid static construction issues of a global
 const UniqueStringCache&
 ucache()
@@ -69,6 +71,7 @@ ucache()
     static UniqueStringCache unique_string_cache;
     return unique_string_cache;
 }
+
 
 
 template<int WidthT>
@@ -130,6 +133,7 @@ BatchedSimpleRenderer<WidthT>::BatchedSimpleRenderer(SimpleRenderer& sr)
 template<int WidthT> BatchedSimpleRenderer<WidthT>::~BatchedSimpleRenderer() {}
 
 
+
 template<int WidthT>
 typename BatchedSimpleRenderer<WidthT>::Mask
 BatchedSimpleRenderer<WidthT>::get_matrix(BatchedShaderGlobals* bsg,
@@ -185,6 +189,8 @@ BatchedSimpleRenderer<WidthT>::get_matrix(BatchedShaderGlobals* bsg,
     return Mask(true);
 }
 
+
+
 template<int WidthT>
 typename BatchedSimpleRenderer<WidthT>::Mask
 BatchedSimpleRenderer<WidthT>::get_matrix(BatchedShaderGlobals* /*bsg*/,
@@ -207,6 +213,8 @@ BatchedSimpleRenderer<WidthT>::get_matrix(BatchedShaderGlobals* /*bsg*/,
     }
 }
 
+
+
 template<int WidthT>
 typename BatchedSimpleRenderer<WidthT>::Mask
 BatchedSimpleRenderer<WidthT>::get_matrix(BatchedShaderGlobals* /*bsg*/,
@@ -227,6 +235,8 @@ BatchedSimpleRenderer<WidthT>::get_matrix(BatchedShaderGlobals* /*bsg*/,
         });
     return succeeded;
 }
+
+
 
 template<int WidthT>
 template<typename RAccessorT>
@@ -288,6 +298,8 @@ BatchedSimpleRenderer<WidthT>::impl_get_inverse_matrix(RAccessorT& result,
     }
 }
 
+
+
 template<int WidthT>
 typename BatchedSimpleRenderer<WidthT>::Mask
 BatchedSimpleRenderer<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
@@ -307,6 +319,8 @@ BatchedSimpleRenderer<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
     }
     return Mask(false);
 }
+
+
 
 template<int WidthT>
 typename BatchedSimpleRenderer<WidthT>::Mask
@@ -331,6 +345,7 @@ BatchedSimpleRenderer<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
 }
 
 
+
 template<int WidthT>
 bool
 BatchedSimpleRenderer<WidthT>::is_attribute_uniform(ustring object,
@@ -345,6 +360,8 @@ BatchedSimpleRenderer<WidthT>::is_attribute_uniform(ustring object,
 
     return false;
 }
+
+
 
 template<int WidthT>
 void
@@ -368,6 +385,8 @@ BatchedSimpleRenderer<WidthT>::trace(
         }
     }
 }
+
+
 
 template<int WidthT>
 void
@@ -393,22 +412,21 @@ BatchedSimpleRenderer<WidthT>::getmessage(BatchedShaderGlobals* bsg,
             if (name == ustring("geom:name")) {
                 if (Masked<ustring>::is(val)) {
                     Masked<ustring> dest(val);
-                    dest[lane] =  ustring("teapot");
+                    dest[lane] = ustring("teapot");
                 }
             }
             if (name == ustring("N")) {
                 if (Masked<Vec3>::is(val)) {
                     Masked<Vec3> dest(val);
-                    dest[lane] = Vec3(1.0 - bsg->varying.v[lane], 0.25, 1.0 - bsg->varying.u[lane]);
+                    dest[lane] = Vec3(1.0 - bsg->varying.v[lane], 0.25,
+                                      1.0 - bsg->varying.u[lane]);
                 } else {
                     OSL_ASSERT(0 && "Oops");
                 }
             }
 
             result[lane] = 1;
-        }
-        else
-        {
+        } else {
             if (name == ustring("hit")) {
                 if (Masked<int>::is(val)) {
                     Masked<int> dest(val);
@@ -528,6 +546,8 @@ BatchedSimpleRenderer<WidthT>::get_array_attribute(BatchedShaderGlobals* bsg,
     return Mask(false);
 }
 
+
+
 template<int WidthT>
 typename BatchedSimpleRenderer<WidthT>::Mask
 BatchedSimpleRenderer<WidthT>::get_attribute(BatchedShaderGlobals* bsg,
@@ -592,6 +612,8 @@ BatchedSimpleRenderer<WidthT>::get_array_attribute_uniform(
     return false;
 }
 
+
+
 template<int WidthT>
 bool
 BatchedSimpleRenderer<WidthT>::get_attribute_uniform(BatchedShaderGlobals* bsg,
@@ -600,6 +622,8 @@ BatchedSimpleRenderer<WidthT>::get_attribute_uniform(BatchedShaderGlobals* bsg,
 {
     return get_array_attribute_uniform(bsg, object, name, -1, val);
 }
+
+
 
 template<int WidthT>
 typename BatchedSimpleRenderer<WidthT>::Mask
@@ -675,6 +699,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustring name,
 }
 
 namespace {  // anonymous
+
 template<typename DataT>
 OSL_FORCEINLINE bool
 assign_and_zero_derivs(RefData data, const DataT& val)
@@ -693,6 +718,8 @@ assign_and_zero_derivs(RefData data, const DataT& val)
     }
     return false;
 }
+
+
 
 template<typename DataT, int WidthT>
 OSL_FORCEINLINE bool
@@ -714,6 +741,8 @@ assign_and_zero_derivs(MaskedData<WidthT> data, const DataT& val)
 }
 }  // anonymous namespace
 
+
+
 template<int WidthT>
 template<typename RefOrMaskedT>
 bool
@@ -723,6 +752,8 @@ BatchedSimpleRenderer<WidthT>::get_osl_version(ustring /*object*/,
 {
     return assign_and_zero_derivs(data, int(OSL_VERSION));
 }
+
+
 
 template<int WidthT>
 template<typename RefOrMaskedT>
@@ -735,6 +766,8 @@ BatchedSimpleRenderer<WidthT>::get_camera_resolution(ustring /*object*/,
     return assign_and_zero_derivs(data, res);
 }
 
+
+
 template<int WidthT>
 template<typename RefOrMaskedT>
 bool
@@ -744,6 +777,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_projection(ustring /*object*/,
 {
     return assign_and_zero_derivs(data, m_sr.m_projection);
 }
+
 
 
 template<int WidthT>
@@ -758,6 +792,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_fov(ustring /*object*/,
 }
 
 
+
 template<int WidthT>
 template<typename RefOrMaskedT>
 bool
@@ -767,6 +802,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_pixelaspect(ustring /*object*/,
 {
     return assign_and_zero_derivs(data, m_sr.m_pixelaspect);
 }
+
 
 
 template<int WidthT>
@@ -781,6 +817,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_clip(ustring /*object*/,
 }
 
 
+
 template<int WidthT>
 template<typename RefOrMaskedT>
 bool
@@ -790,6 +827,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_clip_near(ustring /*object*/,
 {
     return assign_and_zero_derivs(data, m_sr.m_hither);
 }
+
 
 
 template<int WidthT>
@@ -815,6 +853,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_shutter(ustring /*object*/,
 }
 
 
+
 template<int WidthT>
 template<typename RefOrMaskedT>
 bool
@@ -826,6 +865,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_shutter_open(ustring /*object*/,
 }
 
 
+
 template<int WidthT>
 template<typename RefOrMaskedT>
 bool
@@ -835,6 +875,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_shutter_close(ustring /*object*/,
 {
     return assign_and_zero_derivs(data, m_sr.m_shutter[1]);
 }
+
 
 
 template<int WidthT>

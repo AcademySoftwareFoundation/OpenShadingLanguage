@@ -127,7 +127,7 @@ template<int WidthT> struct alignas(64) VaryingShaderGlobals {
     /// initialize this to NULL before shading execution, and this is where
     /// it can retrieve the output closure from after shader execution has
     /// completed.
-    Block<ClosureColor *>Ci;
+    Block<ClosureColor*> Ci;
 
     /// Surface area of the emissive object (used by light shaders for
     /// energy normalization).

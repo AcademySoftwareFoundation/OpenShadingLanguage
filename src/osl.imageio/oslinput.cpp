@@ -518,7 +518,7 @@ OSLInput::open(const std::string& name, ImageSpec& newspec,
         shadername.remove_suffix(8);
         static int exprcount   = 0;
         std::string exprname   = OIIO::Strutil::fmt::format("expr_{}",
-                                                          exprcount++);
+                                                            exprcount++);
         std::string sourcecode = OIIO::Strutil::fmt::format(
             "shader {} (\n"
             "    float s = u [[ int lockgeom=0 ]],\n"

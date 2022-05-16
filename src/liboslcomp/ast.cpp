@@ -958,7 +958,8 @@ ASTloop_statement::opname() const
 
 
 
-const char* ASTloopmod_statement::childname(size_t /*i*/) const
+const char*
+ASTloopmod_statement::childname(size_t /*i*/) const
 {
     return NULL;  // no children
 }
@@ -977,7 +978,8 @@ ASTloopmod_statement::opname() const
 
 
 
-const char* ASTreturn_statement::childname(size_t /*i*/) const
+const char*
+ASTreturn_statement::childname(size_t /*i*/) const
 {
     return "expression";  // only child
 }
@@ -993,7 +995,8 @@ ASTcompound_initializer::ASTcompound_initializer(OSLCompilerImpl* comp,
 
 
 
-const char* ASTcompound_initializer::childname(size_t /*i*/) const
+const char*
+ASTcompound_initializer::childname(size_t /*i*/) const
 {
     return canconstruct() ? "args" : "expression_list";
 }
@@ -1340,7 +1343,8 @@ ASTfunction_call::print(std::ostream& out, int indentlevel) const
 
 
 
-const char* ASTliteral::childname(size_t /*i*/) const
+const char*
+ASTliteral::childname(size_t /*i*/) const
 {
     return NULL;
 }

@@ -2,20 +2,21 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-#include "optix_compat.h" // Also tests this header can be included first
+#include "optix_compat.h"  // Also tests this header can be included first
+#include <exception>
 #include <stdio.h>
 #include <stdlib.h>
-#include <exception>
 
 #include <OpenImageIO/sysutil.h>
 
-using namespace OSL;         // For OSL::optix when OSL_USE_OPTIX=0
+using namespace OSL;  // For OSL::optix when OSL_USE_OPTIX=0
 
-extern "C" int test_shade (int argc, const char *argv[]);
+extern "C" int
+test_shade(int argc, const char* argv[]);
 
 
 int
-main (int argc, const char *argv[])
+main(int argc, const char* argv[])
 {
 #ifdef OIIO_HAS_STACKTRACE
     // Helpful for debugging to make sure that any crashes dump a stack
@@ -25,7 +26,7 @@ main (int argc, const char *argv[])
 
     int result = EXIT_FAILURE;
     try {
-        result = test_shade (argc, argv);
+        result = test_shade(argc, argv);
     }
 #if (OPTIX_VERSION < 70000)
     catch (const OSL::optix::Exception& e) {

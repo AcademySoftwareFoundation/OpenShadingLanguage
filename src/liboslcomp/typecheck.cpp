@@ -65,7 +65,8 @@ ASTfunction_declaration::typecheck(TypeSpec expected)
 
 
 
-TypeSpec ASTvariable_declaration::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTvariable_declaration::typecheck(TypeSpec /*expected*/)
 {
     typecheck_children(m_typespec);
     ASTNode* init = this->init().get();
@@ -118,7 +119,8 @@ TypeSpec ASTvariable_declaration::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTvariable_ref::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTvariable_ref::typecheck(TypeSpec /*expected*/)
 {
     m_is_lvalue = true;  // A var ref is an lvalue
     return m_typespec;
@@ -126,7 +128,8 @@ TypeSpec ASTvariable_ref::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTpreincdec::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTpreincdec::typecheck(TypeSpec /*expected*/)
 {
     typecheck_children();
     m_is_lvalue = var()->is_lvalue();
@@ -136,7 +139,8 @@ TypeSpec ASTpreincdec::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTpostincdec::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTpostincdec::typecheck(TypeSpec /*expected*/)
 {
     typecheck_children();
     if (!var()->is_lvalue())
@@ -148,7 +152,8 @@ TypeSpec ASTpostincdec::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTindex::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTindex::typecheck(TypeSpec /*expected*/)
 {
     typecheck_children();
     const char* indextype = "";
@@ -231,7 +236,8 @@ ASTstructselect::typecheck(TypeSpec expected)
 
 
 
-TypeSpec ASTconditional_statement::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTconditional_statement::typecheck(TypeSpec /*expected*/)
 {
     typecheck_list(cond());
     m_compiler->push_nesting(false);
@@ -249,7 +255,8 @@ TypeSpec ASTconditional_statement::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTloop_statement::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTloop_statement::typecheck(TypeSpec /*expected*/)
 {
     typecheck_list(init());
     m_compiler->push_nesting(true);
@@ -270,7 +277,8 @@ TypeSpec ASTloop_statement::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTloopmod_statement::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTloopmod_statement::typecheck(TypeSpec /*expected*/)
 {
     if (m_compiler->nesting_level(true /*loops*/) < 1)
         errorfmt("Cannot '{}' here -- not inside a loop.", opname());
@@ -279,7 +287,8 @@ TypeSpec ASTloopmod_statement::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTassign_expression::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTassign_expression::typecheck(TypeSpec /*expected*/)
 {
     TypeSpec vt = var()->typecheck();     // Type of the variable
     TypeSpec et = expr()->typecheck(vt);  // Type of the expression assigned
@@ -347,7 +356,8 @@ TypeSpec ASTassign_expression::typecheck(TypeSpec /*expected*/)
 
 
 
-TypeSpec ASTreturn_statement::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTreturn_statement::typecheck(TypeSpec /*expected*/)
 {
     FunctionSymbol* myfunc = m_compiler->current_function();
     if (myfunc) {
@@ -635,7 +645,8 @@ ASTcomma_operator::typecheck(TypeSpec expected)
 
 
 
-TypeSpec ASTtypecast_expression::typecheck(TypeSpec /*expected*/)
+TypeSpec
+ASTtypecast_expression::typecheck(TypeSpec /*expected*/)
 {
     // FIXME - closures
     typecheck_children(m_typespec);

@@ -9,8 +9,9 @@
 
 #include <OSL/oslconfig.h>
 
-#include "render_params.h"
 #include "optixgridrender.h"
+
+#include "render_params.h"
 
 #ifdef OSL_USE_OPTIX
 #    if (OPTIX_VERSION >= 70000)

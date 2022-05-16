@@ -491,8 +491,8 @@ if (PROJECT_IS_TOP_LEVEL)
                                 "src/osl.imageio/*.cpp"
                                 "src/osltoy/*.cpp"
                                 "src/osltoy/*.h"
-                                "src/testshade/render_state.h"
-                                "src/testshade/rs_simplerend.cpp"
+                                "src/testshade/*.h"
+                                "src/testshade/*.cpp"
                                 "testsuite/*.cpp"
         CACHE STRING "Glob patterns to include for clang-format")
     set (CLANG_FORMAT_EXCLUDES
@@ -500,18 +500,6 @@ if (PROJECT_IS_TOP_LEVEL)
             # they continue to match their upstream versions.
             "src/include/OSL/Imathx/*"
             "src/include/OSL/matrix22.h"
-            # Files that are currently being modified with the SIMD batch
-            # shading -- we'll reformat those only after that project work is
-            # completed, to avoid nasty merge conflicts.
-            "src/include/OSL/rendererservices.h"
-            "src/include/OSL/*llvm*"
-            "src/liboslexec/oslexec_pvt.h"
-            # Files that are currently being modified with the OptiX work --
-            # we'll reformat those only after that project work is completed, to
-            # avoid nasty merge conflicts.
-            # "src/include/OSL/device_string.h"
-            # "src/include/OSL/oslexec.h"
-            "src/testrender/cuda/*"
             # Header files in testsuite are almost certainly osl headers, not C++
             "testsuite/*.h"
             ""

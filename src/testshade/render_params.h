@@ -1,8 +1,7 @@
 #pragma once
 
 #if (OPTIX_VERSION >= 70000)
-struct RenderParams
-{
+struct RenderParams {
     float invw;
     float invh;
     CUdeviceptr output_buffer;
@@ -14,7 +13,7 @@ struct RenderParams
     // for transforms
     CUdeviceptr object2common;
     CUdeviceptr shader2common;
-    uint64_t    num_named_xforms;
+    uint64_t num_named_xforms;
     CUdeviceptr xform_name_buffer;
     CUdeviceptr xform_buffer;
 
@@ -23,4 +22,3 @@ struct RenderParams
     uint64_t test_str_2;
 };
 #endif
-

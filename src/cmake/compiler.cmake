@@ -476,6 +476,7 @@ endif ()
 if (PROJECT_IS_TOP_LEVEL)
     set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
     set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
+                                "src/*.cu"
                                 "src/include/*.h"
                                 "src/liboslcomp/*.cpp"
                                 "src/liboslcomp/*.h"

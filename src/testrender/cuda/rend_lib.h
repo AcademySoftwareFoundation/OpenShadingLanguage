@@ -5,10 +5,10 @@
 #pragma once
 
 #if (OPTIX_VERSION < 70000)
-#include <optix_math.h>
+#    include <optix_math.h>
 #else
-#include <OSL/oslexec.h>
-#include "../../liboslexec/string_hash.h"
+#    include "../../liboslexec/string_hash.h"
+#    include <OSL/oslexec.h>
 #endif
 #include <OSL/device_string.h>
 
@@ -17,40 +17,40 @@ OSL_NAMESPACE_ENTER
 // <OSL/strdecls.h>.
 namespace DeviceStrings {
 #if OPTIX_VERSION < 70000
-#define STRDECL(str,var_name)                           \
-    rtDeclareVariable(OSL_NAMESPACE::DeviceString, var_name, , );
-#   define STRING_PARAMS(x)  StringParams::x
+#    define STRDECL(str, var_name) \
+        rtDeclareVariable(OSL_NAMESPACE::DeviceString, var_name, , );
+#    define STRING_PARAMS(x) StringParams::x
 #else
-#   define STRING_PARAMS(x)  UStringHash::Hash(__OSL_STRINGIFY(x))
+#    define STRING_PARAMS(x) UStringHash::Hash(__OSL_STRINGIFY(x))
 // Don't declare anything
-#   define STRDECL(str,var_name) 
+#    define STRDECL(str, var_name)
 
 #endif
 
 #include <OSL/strdecls.h>
 #undef STRDECL
-}
+}  // namespace DeviceStrings
 
 #if OPTIX_VERSION >= 70000
 namespace pvt {
 extern __device__ CUdeviceptr s_color_system;
 extern __device__ CUdeviceptr osl_printf_buffer_start;
 extern __device__ CUdeviceptr osl_printf_buffer_end;
-extern __device__ uint64_t    test_str_1;
-extern __device__ uint64_t    test_str_2;
-extern __device__ uint64_t    num_named_xforms;
+extern __device__ uint64_t test_str_1;
+extern __device__ uint64_t test_str_2;
+extern __device__ uint64_t num_named_xforms;
 extern __device__ CUdeviceptr xform_name_buffer;
 extern __device__ CUdeviceptr xform_buffer;
-}
+}  // namespace pvt
 #endif
 OSL_NAMESPACE_EXIT
 
 namespace {  // anonymous namespace
 
 #if (OPTIX_VERSION < 70000)
-#ifdef __cplusplus
-    typedef optix::float3 float3;
-#endif
+#    ifdef __cplusplus
+typedef optix::float3 float3;
+#    endif
 #endif
 
 // These are CUDA variants of various OSL options structs. Their layouts and
@@ -59,19 +59,18 @@ namespace {  // anonymous namespace
 // avoid including additional host headers.
 
 struct NoiseOptCUDA {
-    int    anisotropic;
-    int    do_filter;
+    int anisotropic;
+    int do_filter;
     float3 direction;
-    float  bandwidth;
-    float  impulses;
+    float bandwidth;
+    float impulses;
 
-    __device__
-    NoiseOptCUDA ()
-        : anisotropic (0),
-          do_filter   (true),
-          direction   (make_float3(1.0f,0.0f,0.0f)),
-          bandwidth   (1.0f),
-          impulses    (16.0f)
+    __device__ NoiseOptCUDA()
+        : anisotropic(0)
+        , do_filter(true)
+        , direction(make_float3(1.0f, 0.0f, 0.0f))
+        , bandwidth(1.0f)
+        , impulses(16.0f)
     {
     }
 };
@@ -91,13 +90,13 @@ struct TraceOptCUDA {
 // instead, it is used as a container for a handful of pointers accessed during
 // shader executions that are accessed via the ShadingContext.
 struct ShadingContextCUDA {
-    NoiseOptCUDA*   m_noiseopt;
+    NoiseOptCUDA* m_noiseopt;
     TextureOptCUDA* m_textureopt;
-    TraceOptCUDA*   m_traceopt;
+    TraceOptCUDA* m_traceopt;
 
-    __device__ void* noise_options_ptr ()   { return m_noiseopt; }
-    __device__ void* texture_options_ptr () { return m_textureopt; }
-    __device__ void* trace_options_ptr ()   { return m_traceopt; }
+    __device__ void* noise_options_ptr() { return m_noiseopt; }
+    __device__ void* texture_options_ptr() { return m_textureopt; }
+    __device__ void* trace_options_ptr() { return m_traceopt; }
 };
 
 
@@ -107,26 +106,26 @@ struct ShaderGlobals {
     float3 I, dIdx, dIdy;
     float3 N;
     float3 Ng;
-    float  u, dudx, dudy;
-    float  v, dvdx, dvdy;
+    float u, dudx, dudy;
+    float v, dvdx, dvdy;
     float3 dPdu, dPdv;
-    float  time;
-    float  dtime;
+    float time;
+    float dtime;
     float3 dPdtime;
     float3 Ps, dPsdx, dPsdy;
-    void*  renderstate;
-    void*  tracedata;
-    void*  objdata;
-    void*  context;
-    void*  renderer;
-    void*  object2common;
-    void*  shader2common;
-    void*  Ci;
-    float  surfacearea;
-    int    raytype;
-    int    flipHandedness;
-    int    backfacing;
-    int    shaderID;
+    void* renderstate;
+    void* tracedata;
+    void* objdata;
+    void* context;
+    void* renderer;
+    void* object2common;
+    void* shader2common;
+    void* Ci;
+    float surfacearea;
+    int raytype;
+    int flipHandedness;
+    int backfacing;
+    int shaderID;
 };
 
 
@@ -165,43 +164,50 @@ enum ClosureIDs {
 //
 // Some helper vector functions
 //
-static __forceinline__ __device__ float3 operator*(const float a, const float3& b)
+static __forceinline__ __device__ float3
+operator*(const float a, const float3& b)
 {
-      return make_float3(a * b.x, a * b.y, a * b.z);
+    return make_float3(a * b.x, a * b.y, a * b.z);
 }
 
-static __forceinline__ __device__ float3 operator*(const float3 & a, const float b)
+static __forceinline__ __device__ float3
+operator*(const float3& a, const float b)
 {
-      return make_float3(a.x * b, a.y * b, a.z * b);
+    return make_float3(a.x * b, a.y * b, a.z * b);
 }
 
-static __forceinline__ __device__ float3 operator+(const float3& a, const float3& b)
+static __forceinline__ __device__ float3
+operator+(const float3& a, const float3& b)
 {
-      return make_float3(a.x + b.x, a.y + b.y, a.z + b.z);
+    return make_float3(a.x + b.x, a.y + b.y, a.z + b.z);
 }
 
-static __forceinline__ __device__ float3 operator-(const float3& a, const float3& b)
+static __forceinline__ __device__ float3
+operator-(const float3& a, const float3& b)
 {
-      return make_float3(a.x - b.x, a.y - b.y, a.z - b.z);
+    return make_float3(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
-static __forceinline__ __device__ float3 operator-(const float3& a)
+static __forceinline__ __device__ float3
+operator-(const float3& a)
 {
-      return make_float3(-a.x, -a.y, -a.z);
+    return make_float3(-a.x, -a.y, -a.z);
 }
 
-static __forceinline__ __device__ float dot(const float3& a, const float3& b)
+static __forceinline__ __device__ float
+dot(const float3& a, const float3& b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-static __forceinline__ __device__ float3 normalize(const float3& v)
+static __forceinline__ __device__ float3
+normalize(const float3& v)
 {
     float invLen = 1.0f / sqrtf(dot(v, v));
     return invLen * v;
 }
 //
 // ========================================
-#endif //#if (OPTIX_VERSION >= 70000)
+#endif  //#if (OPTIX_VERSION >= 70000)
 
 }  // anonymous namespace

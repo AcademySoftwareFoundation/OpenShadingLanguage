@@ -590,7 +590,7 @@ OSLCompilerImpl::write_dependency_file(string_view filename)
                          ? stdout
                          : OIIO::Filesystem::fopen(m_deps_filename, "w"));
     if (depfile) {
-        OIIO::Strutil::fprintf(depfile, "%s: %s", target, filename);
+        OSL::print(depfile, "{}: {}", target, filename);
         for (const auto& dep : m_file_dependencies) {
             if (OIIO::Strutil::ends_with(dep, "stdosl.h")
                 && !m_generate_system_deps)
@@ -599,9 +599,9 @@ OSLCompilerImpl::write_dependency_file(string_view filename)
                 continue;  // skip pseudo files
             if (dep == filename)
                 continue;  // skip this file, since we already put it first
-            OIIO::Strutil::fprintf(depfile, " \\\n  %s", dep);
+            OSL::print(depfile, " \\\n  {}", dep);
         }
-        OIIO::Strutil::fprintf(depfile, "\n");
+        OSL::print(depfile, "\n");
         if (depfile != stdout)
             fclose(depfile);
     } else {

@@ -5,16 +5,17 @@
 #pragma once
 
 #include <map>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 
-#include <OpenImageIO/ustring.h>
-#include <OSL/oslexec.h>
 #include "optix_compat.h"
+#include <OSL/oslexec.h>
+#include <OpenImageIO/ustring.h>
 
 OSL_NAMESPACE_ENTER
 
-typedef std::unordered_map<OIIO::ustring, int64_t, OIIO::ustringHash> StringTableMap;
+typedef std::unordered_map<OIIO::ustring, int64_t, OIIO::ustringHash>
+    StringTableMap;
 
 
 // The OptiXStringTable manages a block of CUDA device memory designated
@@ -31,11 +32,9 @@ public:
 
     // Allocate CUDA device memory for the raw string table and add the
     // "standard" strings declared in strdecls.h.
-    void init (optix::Context ctx);
+    void init(optix::Context ctx);
 
-    const StringTableMap &contents() const {
-        return m_addr_table;
-    }
+    const StringTableMap& contents() const { return m_addr_table; }
 
     // Add a string to the table (if it hasn't already been added), and return
     // its address in device memory. Also, create an OptiX variable to hold the
@@ -50,14 +49,14 @@ public:
     // This function should not be called when a kernel that could potentially
     // access the table is running, since it has the potential to invalidate
     // pointers if reallocation is triggered.
-    uint64_t addString (OIIO::ustring str, OIIO::ustring var_name);
+    uint64_t addString(OIIO::ustring str, OIIO::ustring var_name);
 
     void freetable();
 
 private:
     // If a string has already been added to the table, return its offset in the
     // char array; otherwise, return -1.
-    int getOffset (const std::string& str) const;
+    int getOffset(const std::string& str) const;
 
     // Free the previous allocation, allocate a new block of GPU memory of twice
     // the size, copy the string contents into the new allocation, and update the
@@ -67,22 +66,22 @@ private:
     // A byte array containing the concatenation of all strings added to the
     // table, allocated in CUDA device memory. The hash value and length of each
     // string are stored in the 16 bytes preceding the raw characters.
-    char*          m_ptr;
+    char* m_ptr;
 
     // The size of the table in bytes.
-    size_t         m_size;
+    size_t m_size;
 
     // The offset in the char array at which the next string will be added.
-    int            m_offset;
+    int m_offset;
 
     // A handle on the OptiX Context to use when creating global variables.
     optix::Context m_optix_ctx;
 
     // The memory offsets associated with each canonical string.
-    std::map<OIIO::ustring,int>           m_offset_map;
+    std::map<OIIO::ustring, int> m_offset_map;
 
     // The variable names associated with each canonical string.
-    std::map<OIIO::ustring,OIIO::ustring> m_name_map;
+    std::map<OIIO::ustring, OIIO::ustring> m_name_map;
 
     StringTableMap m_addr_table;
 };

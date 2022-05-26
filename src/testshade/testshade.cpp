@@ -1098,9 +1098,8 @@ static void
 save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
              ShadingContext* ctx, int x, int y)
 {
-    using OIIO::Strutil::printf;
     if (print_outputs)
-        printf("Pixel (%d, %d):\n", x, y);
+        print("Pixel ({}, {}):\n", x, y);
     // For each output requested on the command line...
     for (size_t i = 0, e = rend->noutputs(); i < e; ++i) {
         // Skip if we couldn't open the image or didn't match a known output
@@ -1121,10 +1120,10 @@ save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
             // directly in the output buffer.
             outputimg->setpixel(x, y, (const float*)data);
             if (print_outputs) {
-                printf("  %s :", outputvarnames[i]);
+                print("  {} :", outputvarnames[i]);
                 for (int c = 0; c < nchans; ++c)
-                    printf(" %g", ((const float*)data)[c]);
-                printf("\n");
+                    print(" {:g}", ((const float*)data)[c]);
+                print("\n");
             }
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
@@ -1134,10 +1133,10 @@ save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
                                 TypeDesc::FLOAT, pixel, nchans);
             outputimg->setpixel(x, y, &pixel[0]);
             if (print_outputs) {
-                printf("  %s :", outputvarnames[i]);
+                print("  {} :", outputvarnames[i]);
                 for (int c = 0; c < nchans; ++c)
-                    printf(" %d", ((const int*)data)[c]);
-                printf("\n");
+                    print(" {}", ((const int*)data)[c]);
+                print("\n");
             }
         }
         // N.B. Drop any outputs that aren't float- or int-based
@@ -1784,8 +1783,8 @@ test_shade(int argc, const char* argv[])
     if (localename.size()) {
         std::locale::global(std::locale(localename.c_str()));
         if (debug1 || verbose)
-            printf("testshade: locale '%s', floats look like: %g\n",
-                   localename.c_str(), 3.5);
+            print("testshade: locale '{}', floats look like: {}\n", localename,
+                  3.5);
     }
 
     SimpleRenderer* rend = nullptr;

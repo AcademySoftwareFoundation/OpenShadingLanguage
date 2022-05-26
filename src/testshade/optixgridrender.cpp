@@ -43,7 +43,7 @@ OSL_NAMESPACE_ENTER
                 ss << "CUDA call (" << #call << " ) failed with error: '" \
                    << cudaGetErrorString(error) << "' (" __FILE__ << ":"  \
                    << __LINE__ << ")\n";                                  \
-                fprintf(stderr, "[CUDA ERROR]  %s", ss.str().c_str());    \
+                print(stderr, "[CUDA ERROR]  {}", ss.str());              \
                 exit(1);                                                  \
             }                                                             \
         }
@@ -56,21 +56,21 @@ OSL_NAMESPACE_ENTER
                 ss << "Optix call '" << #call                           \
                    << "' failed with error: " << optixGetErrorName(res) \
                    << " (" __FILE__ ":" << __LINE__ << ")\n";           \
-                fprintf(stderr, "[OPTIX ERROR]  %s", ss.str().c_str()); \
+                print(stderr, "[OPTIX ERROR]  {}", ss.str());           \
                 exit(1);                                                \
             }                                                           \
         }
 #endif
 
-#define CUDA_SYNC_CHECK()                                                    \
-    {                                                                        \
-        cudaDeviceSynchronize();                                             \
-        cudaError_t error = cudaGetLastError();                              \
-        if (error != cudaSuccess) {                                          \
-            fprintf(stderr, "error (%s: line %d): %s\n", __FILE__, __LINE__, \
-                    cudaGetErrorString(error));                              \
-            exit(1);                                                         \
-        }                                                                    \
+#define CUDA_SYNC_CHECK()                                                  \
+    {                                                                      \
+        cudaDeviceSynchronize();                                           \
+        cudaError_t error = cudaGetLastError();                            \
+        if (error != cudaSuccess) {                                        \
+            print(stderr, "error ({}: line {}): {}\n", __FILE__, __LINE__, \
+                  cudaGetErrorString(error));                              \
+            exit(1);                                                       \
+        }                                                                  \
     }
 
 #ifdef OSL_USE_OPTIX

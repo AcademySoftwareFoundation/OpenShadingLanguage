@@ -32,43 +32,42 @@ OSL_NAMESPACE_ENTER
 
 #if (OPTIX_VERSION >= 70000)
 
-#define CUDA_CHECK(call)                                                  \
-{                                                                         \
-    cudaError_t error = call;                                             \
-    if (error != cudaSuccess)                                             \
-    {                                                                     \
-        std::stringstream ss;                                             \
-        ss << "CUDA call (" << #call << " ) failed with error: '"         \
-           << cudaGetErrorString( error )                                 \
-           << "' (" __FILE__ << ":" << __LINE__ << ")\n";                 \
-           fprintf(stderr, "[CUDA ERROR]  %s", ss.str().c_str() );        \
-    }                                                                     \
-}
+#    define CUDA_CHECK(call)                                              \
+        {                                                                 \
+            cudaError_t error = call;                                     \
+            if (error != cudaSuccess) {                                   \
+                std::stringstream ss;                                     \
+                ss << "CUDA call (" << #call << " ) failed with error: '" \
+                   << cudaGetErrorString(error) << "' (" __FILE__ << ":"  \
+                   << __LINE__ << ")\n";                                  \
+                print(stderr, "[CUDA ERROR]  {}", ss.str());              \
+            }                                                             \
+        }
 
-#define OPTIX_CHECK(call)                                                 \
-{                                                                         \
-    OptixResult res = call;                                               \
-    if (res != OPTIX_SUCCESS)                                             \
-    {                                                                     \
-        std::stringstream ss;                                             \
-        ss  << "Optix call '" << #call << "' failed with error: "         \
-            << optixGetErrorName( res )                                   \
-            << " (" __FILE__ ":"   << __LINE__ << ")\n";                  \
-        fprintf(stderr,"[OPTIX ERROR]  %s", ss.str().c_str() );           \
-        exit(1);                                                          \
-    }                                                                     \
-}
+#    define OPTIX_CHECK(call)                                           \
+        {                                                               \
+            OptixResult res = call;                                     \
+            if (res != OPTIX_SUCCESS) {                                 \
+                std::stringstream ss;                                   \
+                ss << "Optix call '" << #call                           \
+                   << "' failed with error: " << optixGetErrorName(res) \
+                   << " (" __FILE__ ":" << __LINE__ << ")\n";           \
+                print(stderr, "[OPTIX ERROR]  {}", ss.str());           \
+                exit(1);                                                \
+            }                                                           \
+        }
 #endif
 
-#define CUDA_SYNC_CHECK()                                               \
-{                                                                       \
-    cudaDeviceSynchronize();                                            \
-    cudaError_t error = cudaGetLastError();                             \
-    if (error != cudaSuccess) {                                         \
-        fprintf( stderr, "error (%s: line %d): %s\n", __FILE__, __LINE__, cudaGetErrorString( error ) ); \
-        exit(1);                                                        \
-    }                                                                   \
-}
+#define CUDA_SYNC_CHECK()                                                  \
+    {                                                                      \
+        cudaDeviceSynchronize();                                           \
+        cudaError_t error = cudaGetLastError();                            \
+        if (error != cudaSuccess) {                                        \
+            print(stderr, "error ({}: line {}): {}\n", __FILE__, __LINE__, \
+                  cudaGetErrorString(error));                              \
+            exit(1);                                                       \
+        }                                                                  \
+    }
 
 #if defined(OSL_USE_OPTIX) && OPTIX_VERSION >= 70000
 static void

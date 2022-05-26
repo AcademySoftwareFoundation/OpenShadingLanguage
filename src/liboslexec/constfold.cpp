@@ -1340,12 +1340,24 @@ DECLFOLDER(constfold_format)
             formatted = Strutil::sprintf (mid.c_str(), Arg.get_int());
         else if (argtype.is_float())
             formatted = Strutil::sprintf (mid.c_str(), Arg.get_float());
-        else if (argtype.is_triple())
-            formatted = Strutil::sprintf (mid.c_str(), Arg.get_vec3());
-        else if (argtype.is_matrix())
-            formatted = Strutil::sprintf (mid.c_str(), *(Matrix44 *)Arg.dataptr());
+        else if (argtype.is_triple()) {
+            std::string format = fmtformat("{} {} {}", mid, mid, mid);
+            const Vec3& v      = Arg.get_vec3();
+            formatted = Strutil::sprintf (format.c_str(), v[0], v[1], v[2]);
+        }
+        else if (argtype.is_matrix()) {
+            std::string format
+                = fmtformat("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+                            mid, mid, mid, mid, mid, mid, mid, mid, mid, mid,
+                            mid, mid, mid, mid, mid, mid);
+            const float* m = (const float*)Arg.dataptr();
+            formatted = Strutil::sprintf(format.c_str(), m[0], m[1], m[2], m[3],
+                                         m[4], m[5], m[6], m[7], m[8], m[9],
+                                         m[10], m[11], m[12], m[13], m[14],
+                                         m[15]);
+        }
         else if (argtype.is_string())
-            formatted = Strutil::sprintf (mid.c_str(), Arg.get_string());
+            formatted = Strutil::sprintf (mid.c_str(), Arg.get_string().string());
         else
             break;   // something else we don't handle -- we're done
 

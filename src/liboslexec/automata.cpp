@@ -13,17 +13,18 @@ OSL_NAMESPACE_ENTER
 namespace Strutil = OIIO::Strutil;
 
 #ifdef _MSC_VER
-#define snprintf sprintf_s
+#    define snprintf sprintf_s
 #endif
 
 ustring lambda("__lambda__");
 
 void
-NdfAutomata::State::getTransitions(ustring symbol, IntSet &out_states)const
+NdfAutomata::State::getTransitions(ustring symbol, IntSet& out_states) const
 {
     SymbolToIntList::const_iterator s = m_symbol_trans.find(symbol);
     if (s != m_symbol_trans.end())
-        for (IntSet::const_iterator i = s->second.begin(); i != s->second.end(); ++i)
+        for (IntSet::const_iterator i = s->second.begin(); i != s->second.end();
+             ++i)
             out_states.insert(*i);
     if (m_wildcard && m_wildcard->matches(symbol))
         out_states.insert(m_wildcard_trans);
@@ -32,16 +33,15 @@ NdfAutomata::State::getTransitions(ustring symbol, IntSet &out_states)const
 
 static IntSet _emptyset;
 
-std::pair <IntSet::const_iterator, IntSet::const_iterator>
-NdfAutomata::State::getLambdaTransitions ()const
+std::pair<IntSet::const_iterator, IntSet::const_iterator>
+NdfAutomata::State::getLambdaTransitions() const
 {
-    std::pair <IntSet::const_iterator, IntSet::const_iterator> res;
+    std::pair<IntSet::const_iterator, IntSet::const_iterator> res;
     SymbolToIntList::const_iterator s = m_symbol_trans.find(lambda);
     if (s != m_symbol_trans.end()) {
-        res.first = s->second.begin();
+        res.first  = s->second.begin();
         res.second = s->second.end();
-    }
-    else
+    } else
         // We use a static empty list to return an empty range
         res.first = res.second = _emptyset.end();
     return res;
@@ -50,7 +50,7 @@ NdfAutomata::State::getLambdaTransitions ()const
 
 
 void
-NdfAutomata::State::addTransition(ustring symbol, NdfAutomata::State *state)
+NdfAutomata::State::addTransition(ustring symbol, NdfAutomata::State* state)
 {
     m_symbol_trans[symbol].insert(state->m_id);
 }
@@ -58,24 +58,26 @@ NdfAutomata::State::addTransition(ustring symbol, NdfAutomata::State *state)
 
 
 void
-NdfAutomata::State::addWildcardTransition(Wildcard *wildcard, NdfAutomata::State *state)
+NdfAutomata::State::addWildcardTransition(Wildcard* wildcard,
+                                          NdfAutomata::State* state)
 {
     if (m_wildcard)
         std::cerr << "[pathexp] redefining wildcard transition" << std::endl;
-    m_wildcard = wildcard;
+    m_wildcard       = wildcard;
     m_wildcard_trans = state->m_id;
 }
 
 
 
 std::string
-NdfAutomata::State::tostr()const
+NdfAutomata::State::tostr() const
 {
     std::string s = "";
     // output the transitions
-    for (SymbolToIntList::const_iterator i = m_symbol_trans.begin(); i != m_symbol_trans.end(); ++i) {
-        ustring sym = i->first;
-        const IntSet &dest = i->second;
+    for (SymbolToIntList::const_iterator i = m_symbol_trans.begin();
+         i != m_symbol_trans.end(); ++i) {
+        ustring sym        = i->first;
+        const IntSet& dest = i->second;
         if (s.size())
             s += " ";
         if (sym == lambda)
@@ -84,7 +86,7 @@ NdfAutomata::State::tostr()const
             s += sym.c_str();
         s += ":{";
         for (IntSet::const_iterator j = dest.begin(); j != dest.end(); ++j) {
-            if (s[s.size()-1] != '{')
+            if (s[s.size() - 1] != '{')
                 s += ", ";
             s += Strutil::to_string(*j);
         }
@@ -100,7 +102,8 @@ NdfAutomata::State::tostr()const
         else {
             // Standard regexp notation [^abcd]
             s += "[^";
-            for (SymbolSet::const_iterator i = m_wildcard->m_minus.begin(); i != m_wildcard->m_minus.end(); ++i) {
+            for (SymbolSet::const_iterator i = m_wildcard->m_minus.begin();
+                 i != m_wildcard->m_minus.end(); ++i) {
                 if (!i->c_str())
                     s += "_";
                 else
@@ -120,7 +123,7 @@ NdfAutomata::State::tostr()const
 
 
 
-NdfAutomata::State *
+NdfAutomata::State*
 NdfAutomata::newState()
 {
     m_states.push_back(new State(m_states.size()));
@@ -130,13 +133,15 @@ NdfAutomata::newState()
 
 
 void
-NdfAutomata::symbolsFrom(const IntSet &states, SymbolSet &out_symbols, Wildcard *&wildcard)const
+NdfAutomata::symbolsFrom(const IntSet& states, SymbolSet& out_symbols,
+                         Wildcard*& wildcard) const
 {
     for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i) {
-        const State *state = m_states[*i];
+        const State* state = m_states[*i];
         // For every state we have to go thorugh all the symbols in the transition table
         // m_symbol_trans and add them to the output
-        for (SymbolToIntList::const_iterator j = state->m_symbol_trans.begin(); j != state->m_symbol_trans.end(); ++j)
+        for (SymbolToIntList::const_iterator j = state->m_symbol_trans.begin();
+             j != state->m_symbol_trans.end(); ++j)
             if (j->first != lambda)
                 out_symbols.insert(j->first);
         if (state->m_wildcard) {
@@ -145,16 +150,19 @@ NdfAutomata::symbolsFrom(const IntSet &states, SymbolSet &out_symbols, Wildcard 
             // And if the state has a wildcard movement, we need to add its exclusion list
             // to our new computed exclusion list. So we guarantee that the returned wildcard
             // matches will be contained in all the wildcards out of this set
-            wildcard->m_minus.insert(state->m_wildcard->m_minus.begin(), state->m_wildcard->m_minus.end());
+            wildcard->m_minus.insert(state->m_wildcard->m_minus.begin(),
+                                     state->m_wildcard->m_minus.end());
         }
     }
     if (wildcard) {
         // We have to make sure that all the symbols covered by the wildcards
         // are either covered by our wildcard or in out_symbols set
-        for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i) {
-            const State *state = m_states[*i];
+        for (IntSet::const_iterator i = states.begin(); i != states.end();
+             ++i) {
+            const State* state = m_states[*i];
             if (state->m_wildcard)
-                for (SymbolSet::const_iterator j = wildcard->m_minus.begin(); j != wildcard->m_minus.end(); ++j)
+                for (SymbolSet::const_iterator j = wildcard->m_minus.begin();
+                     j != wildcard->m_minus.end(); ++j)
                     if (state->m_wildcard->matches(*j))
                         out_symbols.insert(*j);
         }
@@ -166,7 +174,8 @@ NdfAutomata::symbolsFrom(const IntSet &states, SymbolSet &out_symbols, Wildcard 
 
 
 void
-NdfAutomata::transitionsFrom(const IntSet &states, ustring symbol, IntSet &out_states)const
+NdfAutomata::transitionsFrom(const IntSet& states, ustring symbol,
+                             IntSet& out_states) const
 {
     for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i)
         // remember getTransitions is not destructive with out_states, it just adds stuff
@@ -178,10 +187,11 @@ NdfAutomata::transitionsFrom(const IntSet &states, ustring symbol, IntSet &out_s
 
 
 void
-NdfAutomata::wildcardTransitionsFrom(const IntSet &states, IntSet &out_states)const
+NdfAutomata::wildcardTransitionsFrom(const IntSet& states,
+                                     IntSet& out_states) const
 {
     for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i) {
-        const State *state = m_states[*i];
+        const State* state = m_states[*i];
         if (state->m_wildcard)
             out_states.insert(state->m_wildcard_trans);
     }
@@ -191,7 +201,7 @@ NdfAutomata::wildcardTransitionsFrom(const IntSet &states, IntSet &out_states)co
 
 
 void
-NdfAutomata::lambdaClosure(IntSet &states)const
+NdfAutomata::lambdaClosure(IntSet& states) const
 {
     // This algorithm basically keeps expanding the set until no new states appear
     // to avoid checking over and over the same states we keep a frontier pair of sets
@@ -200,40 +210,42 @@ NdfAutomata::lambdaClosure(IntSet &states)const
     // First iterate all the states in the given set
     // and see what lambda transitions are there
     for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i) {
-        const State *state = m_states[*i];
-        std::pair <IntSet::const_iterator, IntSet::const_iterator> lr;
+        const State* state = m_states[*i];
+        std::pair<IntSet::const_iterator, IntSet::const_iterator> lr;
         // iterate all lambda transitions for this state
-        for (lr = state->getLambdaTransitions(); lr.first != lr.second; lr.first++) {
+        for (lr = state->getLambdaTransitions(); lr.first != lr.second;
+             lr.first++) {
             // Add them to the set, and if they were not already there add to the
             // frontier
             std::pair<IntSet::iterator, bool> rec = states.insert(*(lr.first));
-            if (rec.second) // newly added
+            if (rec.second)  // newly added
                 frontier.push_back(*(lr.first));
         }
     }
     // frontier becomes last discovered
-    frontier.swap(discovered); // swap discovered and frontier
-    while (discovered.size()) { // as long as there are new found states
+    frontier.swap(discovered);   // swap discovered and frontier
+    while (discovered.size()) {  // as long as there are new found states
         frontier.clear();
         // we do the same as in the above loop but with discovered instead of states
         for (auto i : discovered) {
-            const State *state = m_states[i];
-            for (auto lr = state->getLambdaTransitions(); lr.first != lr.second; lr.first++) {
-                std::pair<IntSet::iterator, bool> rec = states.insert(*(lr.first));
+            const State* state = m_states[i];
+            for (auto lr = state->getLambdaTransitions(); lr.first != lr.second;
+                 lr.first++) {
+                std::pair<IntSet::iterator, bool> rec = states.insert(
+                    *(lr.first));
                 if (rec.second)
                     frontier.push_back(*(lr.first));
             }
-
         }
         // again frontier becomes last discovered
-        frontier.swap(discovered); // swap discovered and frontier
+        frontier.swap(discovered);  // swap discovered and frontier
     }
 }
 
 
 
 std::string
-NdfAutomata::tostr()const
+NdfAutomata::tostr() const
 {
     std::string s;
     for (size_t i = 0; i < m_states.size(); ++i) {
@@ -254,9 +266,10 @@ NdfAutomata::~NdfAutomata()
 
 
 
-void keyFromStateSet(const IntSet &states, StateSetKey &out_key)
+void
+keyFromStateSet(const IntSet& states, StateSetKey& out_key)
 {
-    out_key.clear(); // just in case
+    out_key.clear();  // just in case
     for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i)
         out_key.push_back(*i);
     // Sort the ids so we make sure the vector is unique for each set
@@ -266,7 +279,7 @@ void keyFromStateSet(const IntSet &states, StateSetKey &out_key)
 
 
 int
-DfAutomata::State::getTransition(ustring symbol)const
+DfAutomata::State::getTransition(ustring symbol) const
 {
     SymbolToInt::const_iterator i = m_symbol_trans.find(symbol);
     if (i == m_symbol_trans.end())
@@ -281,20 +294,23 @@ DfAutomata::State::getTransition(ustring symbol)const
 
 
 void
-DfAutomata::State::addTransition(ustring symbol, DfAutomata::State *state)
+DfAutomata::State::addTransition(ustring symbol, DfAutomata::State* state)
 {
     SymbolToInt::value_type value(symbol, state->m_id);
     std::pair<SymbolToInt::iterator, bool> place = m_symbol_trans.insert(value);
     if (!place.second)
-        std::cerr << "[pathexp] overwriting a transition in a DF automata" << std::endl;
+        std::cerr << "[pathexp] overwriting a transition in a DF automata"
+                  << std::endl;
 }
 
 
 
 void
-DfAutomata::State::addWildcardTransition(Wildcard *wildcard, DfAutomata::State *state)
+DfAutomata::State::addWildcardTransition(Wildcard* wildcard,
+                                         DfAutomata::State* state)
 {
-    for (SymbolSet::const_iterator i = wildcard->m_minus.begin(); i != wildcard->m_minus.end(); ++i)
+    for (SymbolSet::const_iterator i = wildcard->m_minus.begin();
+         i != wildcard->m_minus.end(); ++i)
         // optimized storage, if it is not already in the transition table, tag it with -1
         if (m_symbol_trans.find(*i) == m_symbol_trans.end())
             m_symbol_trans[*i] = -1;
@@ -309,7 +325,8 @@ DfAutomata::State::removeUselessTransitions()
 {
     if (m_wildcard_trans >= 0) {
         std::list<SymbolToInt::iterator> toremove;
-        for (SymbolToInt::iterator i = m_symbol_trans.begin(); i != m_symbol_trans.end(); ++i)
+        for (SymbolToInt::iterator i = m_symbol_trans.begin();
+             i != m_symbol_trans.end(); ++i)
             // If there is a transition to the same state as the wildcard, we better nuke it
             // and just add that symbol to the wildcard be removing it from the map itself
             if (i->second == m_wildcard_trans)
@@ -322,13 +339,14 @@ DfAutomata::State::removeUselessTransitions()
 
 
 std::string
-DfAutomata::State::tostr()const
+DfAutomata::State::tostr() const
 {
     std::string s = "";
     // normal transitions
-    for (SymbolToInt::const_iterator i = m_symbol_trans.begin(); i != m_symbol_trans.end(); ++i) {
+    for (SymbolToInt::const_iterator i = m_symbol_trans.begin();
+         i != m_symbol_trans.end(); ++i) {
         ustring sym = i->first;
-        int dest = i->second;
+        int dest    = i->second;
         if (s.size())
             s += " ";
         if (sym == lambda)
@@ -346,7 +364,8 @@ DfAutomata::State::tostr()const
             s += ".:";
         else {
             s += "[^";
-            for (SymbolToInt::const_iterator i = m_symbol_trans.begin(); i != m_symbol_trans.end(); ++i) {
+            for (SymbolToInt::const_iterator i = m_symbol_trans.begin();
+                 i != m_symbol_trans.end(); ++i) {
                 if (!i->first.c_str())
                     s += "_";
                 else
@@ -359,8 +378,9 @@ DfAutomata::State::tostr()const
     // and the rules
     if (m_rules.size()) {
         s += " | [";
-        for (RuleSet::const_iterator i = m_rules.begin(); i != m_rules.end(); ++i) {
-            if (s[s.size()-1] != '[')
+        for (RuleSet::const_iterator i = m_rules.begin(); i != m_rules.end();
+             ++i) {
+            if (s[s.size() - 1] != '[')
                 s += ", ";
             s += Strutil::fmt::format("{:p}", *i);
         }
@@ -371,7 +391,7 @@ DfAutomata::State::tostr()const
 
 
 
-DfAutomata::State *
+DfAutomata::State*
 DfAutomata::newState()
 {
     m_states.push_back(new State(m_states.size()));
@@ -381,7 +401,7 @@ DfAutomata::newState()
 
 
 std::string
-DfAutomata::tostr()const
+DfAutomata::tostr() const
 {
     std::string s;
     for (size_t i = 0; i < m_states.size(); ++i) {
@@ -395,26 +415,40 @@ DfAutomata::tostr()const
 
 
 bool
-DfAutomata::equivalent(const State *dfstateA, const State *dfstateB)
+DfAutomata::equivalent(const State* dfstateA, const State* dfstateB)
 {
     // early exit if the size of the tables is different
     if (dfstateA->m_symbol_trans.size() != dfstateB->m_symbol_trans.size())
         return false;
     // The pointed state by both transitions have to be the same or any of dfstateA and dfstateB
-    int destA = (dfstateA->m_wildcard_trans == dfstateA->getId() || dfstateA->m_wildcard_trans == dfstateB->getId()) ? -2 : dfstateA->m_wildcard_trans;
-    int destB = (dfstateB->m_wildcard_trans == dfstateA->getId() || dfstateB->m_wildcard_trans == dfstateB->getId()) ? -2 : dfstateB->m_wildcard_trans;
+    int destA = (dfstateA->m_wildcard_trans == dfstateA->getId()
+                 || dfstateA->m_wildcard_trans == dfstateB->getId())
+                    ? -2
+                    : dfstateA->m_wildcard_trans;
+    int destB = (dfstateB->m_wildcard_trans == dfstateA->getId()
+                 || dfstateB->m_wildcard_trans == dfstateB->getId())
+                    ? -2
+                    : dfstateB->m_wildcard_trans;
     if (destA != destB)
         return false;
     // Rules have to be the same
     if (dfstateA->m_rules != dfstateB->m_rules)
         return false;
-    for (SymbolToInt::const_iterator i = dfstateA->m_symbol_trans.begin(); i != dfstateA->m_symbol_trans.end(); ++i) {
-        SymbolToInt::const_iterator other = dfstateB->m_symbol_trans.find(i->first);
+    for (SymbolToInt::const_iterator i = dfstateA->m_symbol_trans.begin();
+         i != dfstateA->m_symbol_trans.end(); ++i) {
+        SymbolToInt::const_iterator other = dfstateB->m_symbol_trans.find(
+            i->first);
         if (other == dfstateB->m_symbol_trans.end())
             return false;
         // The pointed state by both transitions have to be the same or any of dfstateA and dfstateB
-        int destA = (i->second == dfstateA->getId() || i->second == dfstateB->getId()) ? -2 : i->second;
-        int destB = (other->second == dfstateA->getId() || other->second == dfstateB->getId()) ? -2 : other->second;
+        int destA = (i->second == dfstateA->getId()
+                     || i->second == dfstateB->getId())
+                        ? -2
+                        : i->second;
+        int destB = (other->second == dfstateA->getId()
+                     || other->second == dfstateB->getId())
+                        ? -2
+                        : other->second;
         // when they are -1 is because they are in the wildcard black list, anyway they have to match so ...
         if (destA != destB)
             return false;
@@ -428,13 +462,13 @@ DfAutomata::equivalent(const State *dfstateA, const State *dfstateB)
 void
 DfAutomata::removeEquivalentStates()
 {
-    std::vector<State *> newstatelist;
+    std::vector<State*> newstatelist;
     HashIntInt newfromold;
 
     // First go through all states and delete all those
     // that are equivalent with a previous one
     for (size_t i = 0; i < m_states.size(); ++i) {
-        if (!m_states[i]) // it has already been removed
+        if (!m_states[i])  // it has already been removed
             continue;
         // create a new state id from newstatelist.size()
         // move the pointer there and register the translation
@@ -452,24 +486,30 @@ DfAutomata::removeEquivalentStates()
     // Everything has been moved now, but we still have to fix the
     // transitions so they point to the right states!
     for (size_t i = 0; i < newstatelist.size(); ++i) {
-        State *state = newstatelist[i];
-        for (SymbolToInt::iterator j = state->m_symbol_trans.begin(); j != state->m_symbol_trans.end(); ++j) {
-            if (j->second != -1) { // if it is -1 it is just in the wildcards black list
+        State* state = newstatelist[i];
+        for (SymbolToInt::iterator j = state->m_symbol_trans.begin();
+             j != state->m_symbol_trans.end(); ++j) {
+            if (j->second
+                != -1) {  // if it is -1 it is just in the wildcards black list
                 // Get the new state that maps to the oldstate pointed by the transition
                 HashIntInt::const_iterator trans = newfromold.find(j->second);
                 if (trans != newfromold.end())
                     j->second = trans->second;
                 else
-                    std::cerr << "[pathexp] broken translation list between states" << std::endl;
+                    std::cerr
+                        << "[pathexp] broken translation list between states"
+                        << std::endl;
             }
         }
         // Do the same with the wildcard
-        if (state->m_wildcard_trans >=0) {
-            HashIntInt::const_iterator trans = newfromold.find(state->m_wildcard_trans);
+        if (state->m_wildcard_trans >= 0) {
+            HashIntInt::const_iterator trans = newfromold.find(
+                state->m_wildcard_trans);
             if (trans != newfromold.end())
                 state->m_wildcard_trans = trans->second;
             else
-                std::cerr << "[pathexp] broken translation list between states" << std::endl;
+                std::cerr << "[pathexp] broken translation list between states"
+                          << std::endl;
         }
     }
     // switch to the new hopefully reduced state vector
@@ -504,8 +544,9 @@ DfAutomata::~DfAutomata()
 
 
 
-DfAutomata::State *
-StateSetRecord::ensureState(const IntSet &newstates, std::list<StateSetRecord::Discovery> &discovered)
+DfAutomata::State*
+StateSetRecord::ensureState(const IntSet& newstates,
+                            std::list<StateSetRecord::Discovery>& discovered)
 {
     // create the key
     StateSetKey newkey;
@@ -516,7 +557,7 @@ StateSetRecord::ensureState(const IntSet &newstates, std::list<StateSetRecord::D
         return i->second;
     else {
         // if not in our records create a new DF state
-        DfAutomata::State *tstate = m_dfautomata.newState();
+        DfAutomata::State* tstate = m_dfautomata.newState();
         getRulesFromSet(tstate, m_ndfautomata, newstates);
         m_key_to_dfstate[newkey] = tstate;
         // Add the discovery to the list so it will be explored
@@ -528,10 +569,13 @@ StateSetRecord::ensureState(const IntSet &newstates, std::list<StateSetRecord::D
 
 
 void
-StateSetRecord::getRulesFromSet(DfAutomata::State *dfstate, const NdfAutomata &ndfautomata, const IntSet &ndfstates)
+StateSetRecord::getRulesFromSet(DfAutomata::State* dfstate,
+                                const NdfAutomata& ndfautomata,
+                                const IntSet& ndfstates)
 {
-    for (IntSet::const_iterator i = ndfstates.begin(); i != ndfstates.end(); ++i) {
-        const NdfAutomata::State *ndfstate = ndfautomata.getState(*i);
+    for (IntSet::const_iterator i = ndfstates.begin(); i != ndfstates.end();
+         ++i) {
+        const NdfAutomata::State* ndfstate = ndfautomata.getState(*i);
         if (ndfstate->getRule())
             dfstate->addRule(ndfstate->getRule());
     }
@@ -540,7 +584,7 @@ StateSetRecord::getRulesFromSet(DfAutomata::State *dfstate, const NdfAutomata &n
 
 
 void
-ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata)
+ndfautoToDfauto(const NdfAutomata& ndfautomata, DfAutomata& dfautomata)
 {
     std::list<StateSetRecord::Discovery> toexplore, discovered;
     // our initial state is the lambda closure
@@ -561,14 +605,16 @@ ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata)
             // a wildcard movement that is guaranteed to match all
             // the wildcard transitions in the set (if any)
             SymbolSet symbols;
-            Wildcard *wildcard = NULL;
+            Wildcard* wildcard = NULL;
             ndfautomata.symbolsFrom(i.second, symbols, wildcard);
-            for (SymbolSet::iterator j = symbols.begin(); j != symbols.end(); ++j) {
+            for (SymbolSet::iterator j = symbols.begin(); j != symbols.end();
+                 ++j) {
                 IntSet newstates;
                 // get all the states reachable with this symbol
                 ndfautomata.transitionsFrom(i.second, *j, newstates);
                 // build or recover the associated DF state
-                DfAutomata::State *next_state = record.ensureState(newstates, discovered);
+                DfAutomata::State* next_state = record.ensureState(newstates,
+                                                                   discovered);
                 // and store a transition
                 i.first->addTransition(*j, next_state);
             }
@@ -577,7 +623,8 @@ ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata)
                 // we know they all match whatever ours match
                 ndfautomata.wildcardTransitionsFrom(i.second, newstates);
                 // build or recover the associated DF state
-                DfAutomata::State *next_state = record.ensureState(newstates, discovered);
+                DfAutomata::State* next_state = record.ensureState(newstates,
+                                                                   discovered);
                 // and store a transition
                 i.first->addWildcardTransition(wildcard, next_state);
             }
@@ -593,7 +640,9 @@ ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata)
 
 
 bool
-DfOptimizedAutomata::Transition::trans_comp (const DfOptimizedAutomata::Transition &a, const DfOptimizedAutomata::Transition &b)
+DfOptimizedAutomata::Transition::trans_comp(
+    const DfOptimizedAutomata::Transition& a,
+    const DfOptimizedAutomata::Transition& b)
 {
     return a.symbol.data() < b.symbol.data();
 }
@@ -601,7 +650,7 @@ DfOptimizedAutomata::Transition::trans_comp (const DfOptimizedAutomata::Transiti
 
 
 void
-DfOptimizedAutomata::compileFrom(const DfAutomata &dfautomata)
+DfOptimizedAutomata::compileFrom(const DfAutomata& dfautomata)
 {
     m_states.resize(dfautomata.m_states.size());
     size_t totaltrans = 0;
@@ -617,18 +666,22 @@ DfOptimizedAutomata::compileFrom(const DfAutomata &dfautomata)
     for (size_t s = 0; s < m_states.size(); ++s) {
         m_states[s].begin_trans = trans_offset;
         m_states[s].begin_rules = rules_offset;
-        for (SymbolToInt::const_iterator i = dfautomata.m_states[s]->m_symbol_trans.begin();
-              i != dfautomata.m_states[s]->m_symbol_trans.end(); ++i, ++trans_offset) {
+        for (SymbolToInt::const_iterator i
+             = dfautomata.m_states[s]->m_symbol_trans.begin();
+             i != dfautomata.m_states[s]->m_symbol_trans.end();
+             ++i, ++trans_offset) {
             m_trans[trans_offset].symbol = i->first;
-            m_trans[trans_offset].state = i->second;
+            m_trans[trans_offset].state  = i->second;
         }
         for (RuleSet::const_iterator i = dfautomata.m_states[s]->m_rules.begin();
-              i != dfautomata.m_states[s]->m_rules.end(); ++i, ++rules_offset)
+             i != dfautomata.m_states[s]->m_rules.end(); ++i, ++rules_offset)
             m_rules[rules_offset] = *i;
         m_states[s].ntrans = dfautomata.m_states[s]->m_symbol_trans.size();
         m_states[s].nrules = dfautomata.m_states[s]->m_rules.size();
-        std::sort(m_trans.begin() + m_states[s].begin_trans, m_trans.begin() + m_states[s].begin_trans + m_states[s].ntrans,
-                     DfOptimizedAutomata::Transition::trans_comp);
+        std::sort(m_trans.begin() + m_states[s].begin_trans,
+                  m_trans.begin() + m_states[s].begin_trans
+                      + m_states[s].ntrans,
+                  DfOptimizedAutomata::Transition::trans_comp);
         m_states[s].wildcard_trans = dfautomata.m_states[s]->m_wildcard_trans;
     }
 }

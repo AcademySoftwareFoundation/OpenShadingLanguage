@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-#include <vector>
-#include <string>
 #include <cstdio>
+#include <string>
+#include <vector>
 
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/thread.h>
@@ -16,28 +16,26 @@
 
 OSL_NAMESPACE_ENTER
 
-namespace pvt {   // OSL::pvt
+namespace pvt {  // OSL::pvt
 
 
 string_view
-shadertypename (ShaderType s)
+shadertypename(ShaderType s)
 {
     switch (s) {
-    case ShaderType::Generic :      return ("shader");
-    case ShaderType::Surface :      return ("surface");
-    case ShaderType::Displacement : return ("displacement");
-    case ShaderType::Volume :       return ("volume");
-    case ShaderType::Light :        return ("light");
-    default:
-        OSL_DASSERT (0 && "Invalid shader type");
-        return "unknown";
+    case ShaderType::Generic: return ("shader");
+    case ShaderType::Surface: return ("surface");
+    case ShaderType::Displacement: return ("displacement");
+    case ShaderType::Volume: return ("volume");
+    case ShaderType::Light: return ("light");
+    default: OSL_DASSERT(0 && "Invalid shader type"); return "unknown";
     }
 }
 
 
 
 ShaderType
-shadertype_from_name (string_view name)
+shadertype_from_name(string_view name)
 {
     if (name == "shader" || name == "generic")
         return ShaderType::Generic;
@@ -53,5 +51,5 @@ shadertype_from_name (string_view name)
 }
 
 
-}; // namespace pvt
+};  // namespace pvt
 OSL_NAMESPACE_EXIT

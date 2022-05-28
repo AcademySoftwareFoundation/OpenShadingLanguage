@@ -2356,15 +2356,83 @@ DECLFOLDER(constfold_gettextureinfo)
     if (use_coords)
         return 0;
 
+    // This is the case where we're querying an arbitrary array and return
+    // its data and array-length
+    bool use_datalen  = (op.nargs() == 5);
+
     OSL_MAYBE_UNUSED Symbol& Result(*rop.inst()->argsymbol(op.firstarg() + 0));
     Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg() + (use_coords ? 4 : 2)));
-    Symbol &Data (*rop.inst()->argsymbol(op.firstarg() + (use_coords ? 5 : 3)));
+    Symbol *Datalen  (use_datalen ? rop.inst()->argsymbol(op.firstarg()+3) : nullptr);
+    Symbol &Data (*rop.inst()->argsymbol(op.firstarg() + (use_coords ? 5 : 3 + use_datalen)));
     OSL_DASSERT (Result.typespec().is_int() &&
                  Filename.typespec().is_string() &&
                  Dataname.typespec().is_string());
 
-    if (Filename.is_constant() && Dataname.is_constant()) {
+    if (Datalen && Filename.is_constant() && Dataname.is_constant()) {
+        // This is the constant folding version of osl_get_textureinfo_array.
+        // It is less strict than the regular osl_get_textureinfo: as long
+        // as "data" is of the right basetype and large enough to fit the data stored
+        // under "dataname", we fill up data.
+        //
+        // Here we don't recreate TypeDesc of data - we first fill it with the TypeDesc
+        // for the dataname we're interested in,  we then check that we have enough
+        // space (and the right type) to store it, and then we pretend our output
+        // "data" has the same datatype.
+        ustring filename = Filename.get_string();
+        ustring dataname = Dataname.get_string();
+        TypeDesc t = Data.typespec().simpletype();
+        void *mydata = OIIO_ALLOCA(char, t.size());
+
+        ustring errormessage;
+
+        TypeDesc typedesc;
+        int result = rop.renderer()->get_texture_info_type (filename, nullptr,
+                                                       rop.shadingcontext()->texture_thread_info(),
+                                                       rop.shadingcontext(),
+                                                       0 /* TODO: subimage? */,
+                                                       dataname, typedesc, &errormessage);
+
+        bool valid_destination = ((t.arraylen >= typedesc.arraylen) &&
+                                (t.basetype == typedesc.basetype) &&
+                                (t.aggregate == typedesc.aggregate));
+
+        if (result && valid_destination){
+            result = rop.renderer()->get_texture_info (filename, nullptr,
+                                                      rop.shadingcontext()->texture_thread_info(),
+                                                      rop.shadingcontext(),
+                                                      0 /* TODO: subimage? */,
+                                                      dataname, typedesc, mydata, &errormessage);
+
+            // If we failed to read the data, we should bail out here, and leave all
+            // the output variables untouched.
+            if (!result)
+                return 0;
+
+            int oldresultarg = rop.inst()->args()[op.firstarg()+0];
+            int datalenarg = rop.inst()->args()[op.firstarg()+3];
+            int dataarg = rop.inst()->args()[op.firstarg()+4];
+
+            // Make data the first argument
+            rop.inst()->args()[op.firstarg()+0] = dataarg;
+            // Now turn it into an assignment
+            int cind = rop.add_constant (Data.typespec(), mydata);
+            rop.turn_into_assign (op, cind, "const fold gettextureinfo");
+
+            // Now insert a new instruction that assigns 1 to the
+            // original return result of gettextureinfo.
+            int one = 1;
+            rop.insert_code (opnum, u_assign, {oldresultarg, rop.add_constant (TypeDesc::TypeInt, &one)},
+                             RuntimeOptimizer::RecomputeRWRanges,
+                             RuntimeOptimizer::GroupWithNext);
+
+            // We also insert an instruction that assigns the datalen value
+            rop.insert_code (opnum, u_assign, {datalenarg, rop.add_constant(typedesc.arraylen)},
+                             RuntimeOptimizer::RecomputeRWRanges,
+                             RuntimeOptimizer::GroupWithNext);
+            return 1;
+        }
+    }else if (Filename.is_constant() && Dataname.is_constant()) {
         ustring filename = Filename.get_string();
         ustring dataname = Dataname.get_string();
         TypeDesc t = Data.typespec().simpletype();

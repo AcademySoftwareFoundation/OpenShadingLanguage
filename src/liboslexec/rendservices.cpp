@@ -258,6 +258,35 @@ RendererServices::get_texture_info (ustring filename,
 }
 
 
+bool
+RendererServices::get_texture_info_type (ustring filename,
+                                    TextureHandle *texture_handle,
+                                    TexturePerthread *texture_thread_info,
+                                    ShadingContext *shading_context,
+                                    int subimage, ustring dataname,
+                                    TypeDesc &datatype, ustring *errormessage)
+{
+    if (! texture_thread_info)
+        texture_thread_info = shading_context->texture_thread_info();
+    if (! texture_handle)
+        texture_handle = texturesys()->get_texture_handle (filename, texture_thread_info);
+    bool status = texturesys()->get_texture_info_type (texture_handle, texture_thread_info, subimage,
+                                                  dataname, datatype);
+    if (!status) {
+        std::string err = texturesys()->geterror();
+        if (err.size()) {
+            if (errormessage) {
+                *errormessage = ustring(err);
+            } else {
+                shading_context->errorf("[RendererServices::get_texture_info] %s", err);
+            }
+        } else if (errormessage) {
+            // gettextureinfo failed but did not provide an error, so none should be emitted
+            *errormessage = ustring();
+        }
+    }
+    return status;
+}
 
 bool
 RendererServices::get_texture_info(ustring filename,

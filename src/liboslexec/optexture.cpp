@@ -400,6 +400,56 @@ osl_get_textureinfo (void *sg_, const char *name, void *handle,
                                            errormessage);
 }
 
+OSL_SHADEOP int
+osl_get_textureinfo_array (void *sg_, const char *name, void *handle,
+                     void *dataname,   void *datalen, int type,
+                     int arraylen, int aggregate, void *data,
+                     ustring *errormessage)
+{
+    // This function is less strict than the regular osl_get_textureinfo: as long
+    // as "data" is of the right basetype and large enough to fit the data stored
+    // under "dataname", we fill up data.
+    //
+    // Here we don't recreate TypeDesc of data - we first fill it with the TypeDesc
+    // for the dataname we're interested in,  we then check that we have enough
+    // space (and the right type) to store it, and then we pretend our output
+    // "data" has the same datatype.
+    TypeDesc typedesc;
+
+    ShaderGlobals *sg   = (ShaderGlobals *)sg_;
+
+    int result = sg->renderer->get_texture_info_type (USTR(name),
+                                       (RendererServices::TextureHandle *)handle,
+                                       sg->context->texture_thread_info(),
+                                       sg->context,
+                                       0 /*FIXME-ptex*/,
+                                       USTR(dataname), typedesc,
+                                       errormessage);
+
+    bool valid_destination = ((arraylen >= typedesc.arraylen) &&
+                              (type == typedesc.basetype) &&
+                              (aggregate == typedesc.aggregate));
+
+    if (result && valid_destination){
+
+        result = sg->renderer->get_texture_info (USTR(name),
+                                   (RendererServices::TextureHandle *)handle,
+                                   sg->context->texture_thread_info(),
+                                   sg->context,
+                                   0 /*FIXME-ptex*/,
+                                   USTR(dataname), typedesc, data,
+                                   errormessage);
+        // In the spirit of other get_texture_info/get_attribute calls, we try
+        // to leave any output variables untouched if we fail, so we have to
+        // check we could actually read the data before settign the length.
+        if (result) {
+            *(int*)datalen = typedesc.arraylen;
+            return true;
+        }
+    }
+    return false;
+}
+
 
 
 OSL_SHADEOP int

@@ -13,8 +13,8 @@
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
 
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
 #include "oslexec_pvt.h"
 #include <OSL/dual.h>
@@ -26,187 +26,187 @@ namespace pvt {
 
 // Utility: retrieve a pointer to the ShadingContext's texture options
 // struct, also re-initialize its contents.
-OSL_SHADEOP void *
-osl_get_texture_options (void *sg_)
+OSL_SHADEOP void*
+osl_get_texture_options(void* sg_)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    TextureOpt *opt = sg->context->texture_options_ptr ();
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    TextureOpt* opt   = sg->context->texture_options_ptr();
     new (opt) TextureOpt;
     return opt;
 }
 
 
 OSL_SHADEOP void
-osl_texture_set_firstchannel (void *opt, int x)
+osl_texture_set_firstchannel(void* opt, int x)
 {
-    ((TextureOpt *)opt)->firstchannel = x;
+    ((TextureOpt*)opt)->firstchannel = x;
 }
 
 OSL_SHADEOP int
-osl_texture_decode_wrapmode(void * name)
+osl_texture_decode_wrapmode(void* name)
 {
-    const ustring & uname = USTR(name);
+    const ustring& uname = USTR(name);
     return OIIO::TextureOpt::decode_wrapmode(uname);
 }
 
 OSL_SHADEOP void
-osl_texture_set_swrap (void *opt, const char *x)
+osl_texture_set_swrap(void* opt, const char* x)
 {
-    ((TextureOpt *)opt)->swrap = TextureOpt::decode_wrapmode(USTR(x));
+    ((TextureOpt*)opt)->swrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
-osl_texture_set_twrap (void *opt, const char *x)
+osl_texture_set_twrap(void* opt, const char* x)
 {
-    ((TextureOpt *)opt)->twrap = TextureOpt::decode_wrapmode(USTR(x));
+    ((TextureOpt*)opt)->twrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
-osl_texture_set_rwrap (void *opt, const char *x)
+osl_texture_set_rwrap(void* opt, const char* x)
 {
-    ((TextureOpt *)opt)->rwrap = TextureOpt::decode_wrapmode(USTR(x));
+    ((TextureOpt*)opt)->rwrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
-osl_texture_set_stwrap (void *opt, const char *x)
+osl_texture_set_stwrap(void* opt, const char* x)
 {
-    TextureOpt::Wrap code = TextureOpt::decode_wrapmode(USTR(x));
-    ((TextureOpt *)opt)->swrap = code;
-    ((TextureOpt *)opt)->twrap = code;
+    TextureOpt::Wrap code     = TextureOpt::decode_wrapmode(USTR(x));
+    ((TextureOpt*)opt)->swrap = code;
+    ((TextureOpt*)opt)->twrap = code;
 }
 
 OSL_SHADEOP void
-osl_texture_set_swrap_code (void *opt, int mode)
+osl_texture_set_swrap_code(void* opt, int mode)
 {
-    ((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt*)opt)->swrap = (TextureOpt::Wrap)mode;
 }
 
 OSL_SHADEOP void
-osl_texture_set_twrap_code (void *opt, int mode)
+osl_texture_set_twrap_code(void* opt, int mode)
 {
-    ((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt*)opt)->twrap = (TextureOpt::Wrap)mode;
 }
 
 OSL_SHADEOP void
-osl_texture_set_rwrap_code (void *opt, int mode)
+osl_texture_set_rwrap_code(void* opt, int mode)
 {
-    ((TextureOpt *)opt)->rwrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt*)opt)->rwrap = (TextureOpt::Wrap)mode;
 }
 
 OSL_SHADEOP void
-osl_texture_set_stwrap_code (void *opt, int mode)
+osl_texture_set_stwrap_code(void* opt, int mode)
 {
-    ((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
-    ((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt*)opt)->swrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt*)opt)->twrap = (TextureOpt::Wrap)mode;
 }
 
 OSL_SHADEOP void
-osl_texture_set_sblur (void *opt, float x)
+osl_texture_set_sblur(void* opt, float x)
 {
-    ((TextureOpt *)opt)->sblur = x;
+    ((TextureOpt*)opt)->sblur = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_tblur (void *opt, float x)
+osl_texture_set_tblur(void* opt, float x)
 {
-    ((TextureOpt *)opt)->tblur = x;
+    ((TextureOpt*)opt)->tblur = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_rblur (void *opt, float x)
+osl_texture_set_rblur(void* opt, float x)
 {
-    ((TextureOpt *)opt)->rblur = x;
+    ((TextureOpt*)opt)->rblur = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_stblur (void *opt, float x)
+osl_texture_set_stblur(void* opt, float x)
 {
-    ((TextureOpt *)opt)->sblur = x;
-    ((TextureOpt *)opt)->tblur = x;
+    ((TextureOpt*)opt)->sblur = x;
+    ((TextureOpt*)opt)->tblur = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_swidth (void *opt, float x)
+osl_texture_set_swidth(void* opt, float x)
 {
-    ((TextureOpt *)opt)->swidth = x;
+    ((TextureOpt*)opt)->swidth = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_twidth (void *opt, float x)
+osl_texture_set_twidth(void* opt, float x)
 {
-    ((TextureOpt *)opt)->twidth = x;
+    ((TextureOpt*)opt)->twidth = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_rwidth (void *opt, float x)
+osl_texture_set_rwidth(void* opt, float x)
 {
-    ((TextureOpt *)opt)->rwidth = x;
+    ((TextureOpt*)opt)->rwidth = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_stwidth (void *opt, float x)
+osl_texture_set_stwidth(void* opt, float x)
 {
-    ((TextureOpt *)opt)->swidth = x;
-    ((TextureOpt *)opt)->twidth = x;
+    ((TextureOpt*)opt)->swidth = x;
+    ((TextureOpt*)opt)->twidth = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_fill (void *opt, float x)
+osl_texture_set_fill(void* opt, float x)
 {
-    ((TextureOpt *)opt)->fill = x;
+    ((TextureOpt*)opt)->fill = x;
 }
 
 OSL_SHADEOP void
-osl_texture_set_time (void *opt, float x)
+osl_texture_set_time(void* opt, float x)
 {
-    ((TextureOpt *)opt)->time = x;
+    ((TextureOpt*)opt)->time = x;
 }
 
 OSL_SHADEOP int
-osl_texture_decode_interpmode(void * name)
+osl_texture_decode_interpmode(void* name)
 {
-    const ustring & uname = USTR(name);
+    const ustring& uname = USTR(name);
     return tex_interp_to_code(uname);
 }
 
 OSL_SHADEOP void
-osl_texture_set_interp (void *opt, const char *modename)
+osl_texture_set_interp(void* opt, const char* modename)
 {
-    int mode = tex_interp_to_code (USTR(modename));
+    int mode = tex_interp_to_code(USTR(modename));
     if (mode >= 0)
-        ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
+        ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
 }
 
 OSL_SHADEOP void
-osl_texture_set_interp_code (void *opt, int mode)
+osl_texture_set_interp_code(void* opt, int mode)
 {
-    ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
+    ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
 }
 
 OSL_SHADEOP void
-osl_texture_set_subimage (void *opt, int subimage)
+osl_texture_set_subimage(void* opt, int subimage)
 {
-    ((TextureOpt *)opt)->subimage = subimage;
+    ((TextureOpt*)opt)->subimage = subimage;
 }
 
 
 OSL_SHADEOP void
-osl_texture_set_subimagename (void *opt, const char *subimagename)
+osl_texture_set_subimagename(void* opt, const char* subimagename)
 {
-    ((TextureOpt *)opt)->subimagename = USTR(subimagename);
+    ((TextureOpt*)opt)->subimagename = USTR(subimagename);
 }
 
 OSL_SHADEOP void
-osl_texture_set_missingcolor_arena (void *opt, const void *missing)
+osl_texture_set_missingcolor_arena(void* opt, const void* missing)
 {
-    ((TextureOpt *)opt)->missingcolor = (const float *)missing;
+    ((TextureOpt*)opt)->missingcolor = (const float*)missing;
 }
 
 OSL_SHADEOP void
-osl_texture_set_missingcolor_alpha (void *opt, int alphaindex,
-                                    float missingalpha)
+osl_texture_set_missingcolor_alpha(void* opt, int alphaindex,
+                                   float missingalpha)
 {
-    float *m = (float *)((TextureOpt *)opt)->missingcolor;
+    float* m = (float*)((TextureOpt*)opt)->missingcolor;
     if (m)
         m[alphaindex] = missingalpha;
 }
@@ -214,47 +214,45 @@ osl_texture_set_missingcolor_alpha (void *opt, int alphaindex,
 
 
 OSL_SHADEOP int
-osl_texture (void *sg_, const char *name, void *handle,
-             void *opt_, float s, float t,
-             float dsdx, float dtdx, float dsdy, float dtdy,
-             int chans, void *result, void *dresultdx, void *dresultdy,
-             void *alpha, void *dalphadx, void *dalphady,
-             ustring *errormessage)
+osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
+            float t, float dsdx, float dtdx, float dsdy, float dtdy, int chans,
+            void* result, void* dresultdx, void* dresultdy, void* alpha,
+            void* dalphadx, void* dalphady, ustring* errormessage)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    TextureOpt *opt = (TextureOpt *)opt_;
-    bool derivs = (dresultdx || dalphadx);
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    TextureOpt* opt   = (TextureOpt*)opt_;
+    bool derivs       = (dresultdx || dalphadx);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
-    bool ok = sg->renderer->texture (USTR(name),
-                                     (TextureSystem::TextureHandle *)handle, sg->context->texture_thread_info(),
-                                     *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
-                                     (float *)&result_simd,
-                                     derivs ? (float *)&dresultds_simd : NULL,
-                                     derivs ? (float *)&dresultdt_simd : NULL,
-                                     errormessage);
+    bool ok = sg->renderer->texture(
+        USTR(name), (TextureSystem::TextureHandle*)handle,
+        sg->context->texture_thread_info(), *opt, sg, s, t, dsdx, dtdx, dsdy,
+        dtdy, 4, (float*)&result_simd, derivs ? (float*)&dresultds_simd : NULL,
+        derivs ? (float*)&dresultdt_simd : NULL, errormessage);
 
-    for (int i = 0;  i < chans;  ++i)
-        ((float *)result)[i] = result_simd[i];
+    for (int i = 0; i < chans; ++i)
+        ((float*)result)[i] = result_simd[i];
     if (alpha)
-        ((float *)alpha)[0] = result_simd[chans];
+        ((float*)alpha)[0] = result_simd[chans];
 
     // Correct our st texture space gradients into xy-space gradients
     if (derivs) {
         OSL_DASSERT((dresultdx == nullptr) == (dresultdy == nullptr));
         OSL_DASSERT((dalphadx == nullptr) == (dalphady == nullptr));
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx
+                                            + dresultdt_simd * dtdx;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy
+                                            + dresultdt_simd * dtdy;
         if (dresultdx) {
-            for (int i = 0;  i < chans;  ++i)
-                ((float *)dresultdx)[i] = dresultdx_simd[i];
-            for (int i = 0;  i < chans;  ++i)
-                ((float *)dresultdy)[i] = dresultdy_simd[i];
+            for (int i = 0; i < chans; ++i)
+                ((float*)dresultdx)[i] = dresultdx_simd[i];
+            for (int i = 0; i < chans; ++i)
+                ((float*)dresultdy)[i] = dresultdy_simd[i];
         }
         if (dalphadx) {
-            ((float *)dalphadx)[0] = dresultdx_simd[chans];
-            ((float *)dalphady)[0] = dresultdy_simd[chans];
+            ((float*)dalphadx)[0] = dresultdx_simd[chans];
+            ((float*)dalphady)[0] = dresultdy_simd[chans];
         }
     }
 
@@ -266,53 +264,54 @@ osl_texture (void *sg_, const char *name, void *handle,
 
 
 OSL_SHADEOP int
-osl_texture3d (void *sg_, const char *name, void *handle,
-               void *opt_, void *P_, void *dPdx_, void *dPdy_,
-               void *dPdz_, int chans,
-               void *result, void *dresultdx, void *dresultdy,
-               void *alpha , void *dalphadx , void *dalphady ,
-               ustring *errormessage)
+osl_texture3d(void* sg_, const char* name, void* handle, void* opt_, void* P_,
+              void* dPdx_, void* dPdy_, void* dPdz_, int chans, void* result,
+              void* dresultdx, void* dresultdy, void* alpha, void* dalphadx,
+              void* dalphady, ustring* errormessage)
 {
-    const Vec3 &P (*(Vec3 *)P_);
-    const Vec3 &dPdx (*(Vec3 *)dPdx_);
-    const Vec3 &dPdy (*(Vec3 *)dPdy_);
+    const Vec3& P(*(Vec3*)P_);
+    const Vec3& dPdx(*(Vec3*)dPdx_);
+    const Vec3& dPdy(*(Vec3*)dPdy_);
     Vec3 dPdz(0.0f);
     if (dPdz_ != nullptr) {
-        dPdz = (*(Vec3 *)dPdz_);
+        dPdz = (*(Vec3*)dPdz_);
     }
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    TextureOpt *opt = (TextureOpt *)opt_;
-    bool derivs = (dresultdx != NULL || dalphadx != NULL);
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    TextureOpt* opt   = (TextureOpt*)opt_;
+    bool derivs       = (dresultdx != NULL || dalphadx != NULL);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
-    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd, dresultdr_simd;
-    bool ok = sg->renderer->texture3d (USTR(name),
-                                       (TextureSystem::TextureHandle *)handle, sg->context->texture_thread_info(),
-                                       *opt, sg, P, dPdx, dPdy, dPdz,
-                                       4, (float *)&result_simd,
-                                       derivs ? (float *)&dresultds_simd : nullptr,
-                                       derivs ? (float *)&dresultdt_simd : nullptr,
-                                       derivs ? (float *)&dresultdr_simd : nullptr,
-                                       errormessage);
+    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd,
+        dresultdr_simd;
+    bool ok = sg->renderer->texture3d(
+        USTR(name), (TextureSystem::TextureHandle*)handle,
+        sg->context->texture_thread_info(), *opt, sg, P, dPdx, dPdy, dPdz, 4,
+        (float*)&result_simd, derivs ? (float*)&dresultds_simd : nullptr,
+        derivs ? (float*)&dresultdt_simd : nullptr,
+        derivs ? (float*)&dresultdr_simd : nullptr, errormessage);
 
-    for (int i = 0;  i < chans;  ++i)
-        ((float *)result)[i] = result_simd[i];
+    for (int i = 0; i < chans; ++i)
+        ((float*)result)[i] = result_simd[i];
     if (alpha)
-        ((float *)alpha)[0] = result_simd[chans];
+        ((float*)alpha)[0] = result_simd[chans];
 
     // Correct our str texture space gradients into xyz-space gradients
     if (derivs) {
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx.x + dresultdt_simd * dPdx.y + dresultdr_simd * dPdx.z;
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy.x + dresultdt_simd * dPdy.y + dresultdr_simd * dPdy.z;
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx.x
+                                            + dresultdt_simd * dPdx.y
+                                            + dresultdr_simd * dPdx.z;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy.x
+                                            + dresultdt_simd * dPdy.y
+                                            + dresultdr_simd * dPdy.z;
         if (dresultdx) {
-            for (int i = 0;  i < chans;  ++i)
-                ((float *)dresultdx)[i] = dresultdx_simd[i];
-            for (int i = 0;  i < chans;  ++i)
-                ((float *)dresultdy)[i] = dresultdy_simd[i];
+            for (int i = 0; i < chans; ++i)
+                ((float*)dresultdx)[i] = dresultdx_simd[i];
+            for (int i = 0; i < chans; ++i)
+                ((float*)dresultdy)[i] = dresultdy_simd[i];
         }
         if (dalphadx) {
-            ((float *)dalphadx)[0] = dresultdx_simd[chans];
-            ((float *)dalphady)[0] = dresultdy_simd[chans];
+            ((float*)dalphadx)[0] = dresultdx_simd[chans];
+            ((float*)dalphady)[0] = dresultdy_simd[chans];
         }
     }
 
@@ -324,29 +323,28 @@ osl_texture3d (void *sg_, const char *name, void *handle,
 
 
 OSL_SHADEOP int
-osl_environment (void *sg_, const char *name, void *handle,
-                 void *opt_, void *R_,
-                 void *dRdx_, void *dRdy_, int chans,
-                 void *result, void *dresultdx, void *dresultdy,
-                 void *alpha, void *dalphadx, void *dalphady,
-                 ustring *errormessage)
+osl_environment(void* sg_, const char* name, void* handle, void* opt_, void* R_,
+                void* dRdx_, void* dRdy_, int chans, void* result,
+                void* dresultdx, void* dresultdy, void* alpha, void* dalphadx,
+                void* dalphady, ustring* errormessage)
 {
-    const Vec3 &R (*(Vec3 *)R_);
-    const Vec3 &dRdx (*(Vec3 *)dRdx_);
-    const Vec3 &dRdy (*(Vec3 *)dRdy_);
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    TextureOpt *opt = (TextureOpt *)opt_;
+    const Vec3& R(*(Vec3*)R_);
+    const Vec3& dRdx(*(Vec3*)dRdx_);
+    const Vec3& dRdy(*(Vec3*)dRdy_);
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    TextureOpt* opt   = (TextureOpt*)opt_;
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 local_result;
-    bool ok = sg->renderer->environment (USTR(name),
-                                         (TextureSystem::TextureHandle *)handle,
-                                         sg->context->texture_thread_info(), *opt, sg, R, dRdx, dRdy, 4,
-                                         (float *)&local_result, NULL, NULL,
-                                         errormessage);
+    bool ok = sg->renderer->environment(USTR(name),
+                                        (TextureSystem::TextureHandle*)handle,
+                                        sg->context->texture_thread_info(),
+                                        *opt, sg, R, dRdx, dRdy, 4,
+                                        (float*)&local_result, NULL, NULL,
+                                        errormessage);
 
-    for (int i = 0;  i < chans;  ++i)
-        ((float *)result)[i] = local_result[i];
+    for (int i = 0; i < chans; ++i)
+        ((float*)result)[i] = local_result[i];
 
     // For now, just zero out the result derivatives.  If somebody needs
     // derivatives of environment lookups, we'll fix it.  The reason
@@ -356,18 +354,18 @@ osl_environment (void *sg_, const char *name, void *handle,
     // projection is used to generate st from R.  Ugh.  Sweep under the
     // rug for a day when somebody is really asking for it.
     if (dresultdx) {
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = 0.0f;
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = 0.0f;
+        for (int i = 0; i < chans; ++i)
+            ((float*)dresultdx)[i] = 0.0f;
+        for (int i = 0; i < chans; ++i)
+            ((float*)dresultdy)[i] = 0.0f;
     }
     if (alpha) {
-        ((float *)alpha)[0] = local_result[chans];
+        ((float*)alpha)[0] = local_result[chans];
         // Zero out the alpha derivatives, for the same reason as above.
         if (dalphadx)
-            ((float *)dalphadx)[0] = 0.0f;
+            ((float*)dalphadx)[0] = 0.0f;
         if (dalphady)
-            ((float *)dalphady)[0] = 0.0f;
+            ((float*)dalphady)[0] = 0.0f;
     }
 
     if (ok && errormessage)
@@ -378,10 +376,9 @@ osl_environment (void *sg_, const char *name, void *handle,
 
 
 OSL_SHADEOP int
-osl_get_textureinfo (void *sg_, const char *name, void *handle,
-                     void *dataname,  int type,
-                     int arraylen, int aggregate, void *data,
-                     ustring *errormessage)
+osl_get_textureinfo(void* sg_, const char* name, void* handle, void* dataname,
+                    int type, int arraylen, int aggregate, void* data,
+                    ustring* errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -389,15 +386,12 @@ osl_get_textureinfo (void *sg_, const char *name, void *handle,
     typedesc.arraylen  = arraylen;
     typedesc.aggregate = aggregate;
 
-    ShaderGlobals *sg   = (ShaderGlobals *)sg_;
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
 
-    return sg->renderer->get_texture_info (USTR(name),
-                                           (RendererServices::TextureHandle *)handle,
-                                           sg->context->texture_thread_info(),
-                                           sg->context,
-                                           0 /*FIXME-ptex*/,
-                                           USTR(dataname), typedesc, data,
-                                           errormessage);
+    return sg->renderer->get_texture_info(
+        USTR(name), (RendererServices::TextureHandle*)handle,
+        sg->context->texture_thread_info(), sg->context, 0 /*FIXME-ptex*/,
+        USTR(dataname), typedesc, data, errormessage);
 }
 
 
@@ -427,58 +421,58 @@ osl_get_textureinfo_st(void* sg_, const char* name, void* handle, float s,
 
 // Utility: retrieve a pointer to the ShadingContext's trace options
 // struct, also re-initialize its contents.
-OSL_SHADEOP void *
-osl_get_trace_options (void *sg_)
+OSL_SHADEOP void*
+osl_get_trace_options(void* sg_)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices::TraceOpt *opt = sg->context->trace_options_ptr ();
+    ShaderGlobals* sg               = (ShaderGlobals*)sg_;
+    RendererServices::TraceOpt* opt = sg->context->trace_options_ptr();
     new (opt) RendererServices::TraceOpt;
     return opt;
 }
 
 OSL_SHADEOP void
-osl_trace_set_mindist (void *opt, float x)
+osl_trace_set_mindist(void* opt, float x)
 {
-    ((RendererServices::TraceOpt *)opt)->mindist = x;
+    ((RendererServices::TraceOpt*)opt)->mindist = x;
 }
 
 OSL_SHADEOP void
-osl_trace_set_maxdist (void *opt, float x)
+osl_trace_set_maxdist(void* opt, float x)
 {
-    ((RendererServices::TraceOpt *)opt)->maxdist = x;
+    ((RendererServices::TraceOpt*)opt)->maxdist = x;
 }
 
 OSL_SHADEOP void
-osl_trace_set_shade (void *opt, int x)
+osl_trace_set_shade(void* opt, int x)
 {
-    ((RendererServices::TraceOpt *)opt)->shade = x;
+    ((RendererServices::TraceOpt*)opt)->shade = x;
 }
 
 
 OSL_SHADEOP void
-osl_trace_set_traceset (void *opt, const char *x)
+osl_trace_set_traceset(void* opt, const char* x)
 {
-    ((RendererServices::TraceOpt *)opt)->traceset = USTR(x);
+    ((RendererServices::TraceOpt*)opt)->traceset = USTR(x);
 }
 
 
 OSL_SHADEOP int
-osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
-           void *Dir_, void *dDirdx_, void *dDirdy_)
+osl_trace(void* sg_, void* opt_, void* Pos_, void* dPosdx_, void* dPosdy_,
+          void* Dir_, void* dDirdx_, void* dDirdy_)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices::TraceOpt *opt = (RendererServices::TraceOpt *)opt_;
-    static const Vec3 Zero (0.0f, 0.0f, 0.0f);
-    const Vec3 *Pos = (Vec3 *)Pos_;
-    const Vec3 *dPosdx = dPosdx_ ? (Vec3 *)dPosdx_ : &Zero;
-    const Vec3 *dPosdy = dPosdy_ ? (Vec3 *)dPosdy_ : &Zero;
-    const Vec3 *Dir = (Vec3 *)Dir_;
-    const Vec3 *dDirdx = dDirdx_ ? (Vec3 *)dDirdx_ : &Zero;
-    const Vec3 *dDirdy = dDirdy_ ? (Vec3 *)dDirdy_ : &Zero;
-    return sg->renderer->trace (*opt, sg, *Pos, *dPosdx, *dPosdy,
-                                *Dir, *dDirdx, *dDirdy);
+    ShaderGlobals* sg               = (ShaderGlobals*)sg_;
+    RendererServices::TraceOpt* opt = (RendererServices::TraceOpt*)opt_;
+    static const Vec3 Zero(0.0f, 0.0f, 0.0f);
+    const Vec3* Pos    = (Vec3*)Pos_;
+    const Vec3* dPosdx = dPosdx_ ? (Vec3*)dPosdx_ : &Zero;
+    const Vec3* dPosdy = dPosdy_ ? (Vec3*)dPosdy_ : &Zero;
+    const Vec3* Dir    = (Vec3*)Dir_;
+    const Vec3* dDirdx = dDirdx_ ? (Vec3*)dDirdx_ : &Zero;
+    const Vec3* dDirdy = dDirdy_ ? (Vec3*)dDirdy_ : &Zero;
+    return sg->renderer->trace(*opt, sg, *Pos, *dPosdx, *dPosdy, *Dir, *dDirdx,
+                               *dDirdy);
 }
 
 
-} // namespace pvt
+}  // namespace pvt
 OSL_NAMESPACE_EXIT

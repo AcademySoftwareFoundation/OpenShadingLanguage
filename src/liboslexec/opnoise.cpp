@@ -5,10 +5,10 @@
 #include <limits>
 
 #include "oslexec_pvt.h"
-#include <OSL/oslnoise.h>
-#include <OSL/dual_vec.h>
 #include <OSL/Imathx/Imathx.h>
 #include <OSL/device_string.h>
+#include <OSL/dual_vec.h>
+#include <OSL/oslnoise.h>
 
 #include <OpenImageIO/fmath.h>
 
@@ -16,9 +16,9 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-#if 0 // only when testing the statistics of perlin noise to normalize the range
+#if 0  // only when testing the statistics of perlin noise to normalize the range
 
-#include <random>
+#    include <random>
 
 void test_perlin(int d) {
     HashScalar h;
@@ -65,7 +65,7 @@ void test_perlin(int d) {
  */
 
 #if 1
-
+// clang-format off
 
 #define NOISE_IMPL(opname,implname)                                     \
 OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _ff (float x) {        \
@@ -455,6 +455,8 @@ PNOISE_IMPL_DERIV (pnoise, PeriodicNoise)
 PNOISE_IMPL (psnoise, PeriodicSNoise)
 PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
 
+// clang-format off
+
 
 
 // NB: We are excluding noise functions that require (u)string arguments
@@ -463,143 +465,159 @@ PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
 //     been improved.
 
 struct GaborNoise {
-    OSL_HOSTDEVICE GaborNoise () { }
+    OSL_HOSTDEVICE GaborNoise() {}
 
     // Gabor always uses derivatives, so dual versions only
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<float> &x,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = gabor (x, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<float>& x, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
+        result = gabor(x, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<float> &x, const Dual2<float> &y,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = gabor (x, y, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<float>& x, const Dual2<float>& y,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
+        result = gabor(x, y, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<Vec3> &p,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = gabor (p, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<Vec3>& p, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
+        result = gabor(p, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<Vec3>& p, const Dual2<float>& /*t*/,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
         // FIXME -- This is very broken, we are ignoring 4D!
-        result = gabor (p, opt);
+        result = gabor(p, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<float> &x,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = gabor3 (x, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<float>& x, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
+        result = gabor3(x, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<float> &x, const Dual2<float> &y,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = gabor3 (x, y, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<float>& x, const Dual2<float>& y,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
+        result = gabor3(x, y, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<Vec3> &p,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = gabor3 (p, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<Vec3>& p, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
+        result = gabor3(p, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<Vec3>& p, const Dual2<float>& /*t*/,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
         // FIXME -- This is very broken, we are ignoring 4D!
-        result = gabor3 (p, opt);
+        result = gabor3(p, opt);
     }
 };
 
 
 
 struct GaborPNoise {
-    OSL_HOSTDEVICE GaborPNoise () { }
+    OSL_HOSTDEVICE GaborPNoise() {}
 
     // Gabor always uses derivatives, so dual versions only
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<float> &x, float px,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = pgabor (x, px, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<float>& x, float px,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
+        result = pgabor(x, px, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<float> &x, const Dual2<float> &y,
-                            float px, float py,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = pgabor (x, y, px, py, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<float>& x, const Dual2<float>& y,
+                           float px, float py, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
+        result = pgabor(x, y, px, py, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<Vec3> &p, const Vec3 &pp,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = pgabor (p, pp, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<Vec3>& p, const Vec3& pp,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
+        result = pgabor(p, pp, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
-                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
-                            const Vec3 &pp, float /*tp*/,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
+    inline void operator()(StringParam /*noisename*/, Dual2<float>& result,
+                           const Dual2<Vec3>& p, const Dual2<float>& /*t*/,
+                           const Vec3& pp, float /*tp*/, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
         // FIXME -- This is very broken, we are ignoring 4D!
-        result = pgabor (p, pp, opt);
+        result = pgabor(p, pp, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<float> &x, float px,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = pgabor3 (x, px, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<float>& x, float px,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
+        result = pgabor3(x, px, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<float> &x, const Dual2<float> &y,
-                            float px, float py,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = pgabor3 (x, y, px, py, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<float>& x, const Dual2<float>& y,
+                           float px, float py, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
+        result = pgabor3(x, y, px, py, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<Vec3> &p, const Vec3 &pp,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
-        result = pgabor3 (p, pp, opt);
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<Vec3>& p, const Vec3& pp,
+                           ShaderGlobals* /*sg*/, const NoiseParams* opt) const
+    {
+        result = pgabor3(p, pp, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
-                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
-                            const Vec3 &pp, float /*tp*/,
-                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
+    inline void operator()(StringParam /*noisename*/, Dual2<Vec3>& result,
+                           const Dual2<Vec3>& p, const Dual2<float>& /*t*/,
+                           const Vec3& pp, float /*tp*/, ShaderGlobals* /*sg*/,
+                           const NoiseParams* opt) const
+    {
         // FIXME -- This is very broken, we are ignoring 4D!
-        result = pgabor3 (p, pp, opt);
+        result = pgabor3(p, pp, opt);
     }
 };
 
 
 
-NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
-PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
+NOISE_IMPL_DERIV_OPT(gabornoise, GaborNoise)
+PNOISE_IMPL_DERIV_OPT(gaborpnoise, GaborPNoise)
 
 
 // Turn off warnings about unused params, since the NullNoise methods are stubs.
@@ -657,35 +675,40 @@ struct UNullNoise {
     OSL_HOSTDEVICE inline Vec3 v () const { return Vec3(0.5f, 0.5f, 0.5f); };
 };
 
-NOISE_IMPL (nullnoise, NullNoise)
-NOISE_IMPL_DERIV (nullnoise, NullNoise)
-NOISE_IMPL (unullnoise, UNullNoise)
-NOISE_IMPL_DERIV (unullnoise, UNullNoise)
+NOISE_IMPL(nullnoise, NullNoise)
+NOISE_IMPL_DERIV(nullnoise, NullNoise)
+NOISE_IMPL(unullnoise, UNullNoise)
+NOISE_IMPL_DERIV(unullnoise, UNullNoise)
 
 OSL_PRAGMA_WARNING_POP
 
 
 
 struct GenericNoise {
-    OSL_HOSTDEVICE GenericNoise () { }
+    OSL_HOSTDEVICE GenericNoise() {}
 
     // Template on R, S, and T to be either float or Vec3
 
     // dual versions -- this is always called with derivs
 
-    template<class R, class S> OSL_HOSTDEVICE
-    inline void operator() (StringParam name, Dual2<R> &result, const Dual2<S> &s,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+    template<class R, class S>
+    OSL_HOSTDEVICE inline void operator()(StringParam name, Dual2<R>& result,
+                                          const Dual2<S>& s, ShaderGlobals* sg,
+                                          const NoiseParams* opt) const
+    {
         if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             Noise noise;
             noise(result, s);
-        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
+        } else if (name == STRING_PARAMS(perlin)
+                   || name == STRING_PARAMS(snoise)) {
             SNoise snoise;
             snoise(result, s);
-        } else if (name == STRING_PARAMS(simplexnoise) || name == STRING_PARAMS(simplex)) {
+        } else if (name == STRING_PARAMS(simplexnoise)
+                   || name == STRING_PARAMS(simplex)) {
             SimplexNoise simplexnoise;
             simplexnoise(result, s);
-        } else if (name == STRING_PARAMS(usimplexnoise) || name == STRING_PARAMS(usimplex)) {
+        } else if (name == STRING_PARAMS(usimplexnoise)
+                   || name == STRING_PARAMS(usimplex)) {
             USimplexNoise usimplexnoise;
             usimplexnoise(result, s);
         } else if (name == STRING_PARAMS(cell)) {
@@ -694,40 +717,47 @@ struct GenericNoise {
             result.clear_d();
         } else if (name == STRING_PARAMS(gabor)) {
             GaborNoise gnoise;
-            gnoise (name, result, s, sg, opt);
+            gnoise(name, result, s, sg, opt);
         } else if (name == STRING_PARAMS(null)) {
-            NullNoise noise; noise(result, s);
+            NullNoise noise;
+            noise(result, s);
         } else if (name == STRING_PARAMS(unull)) {
-            UNullNoise noise; noise(result, s);
+            UNullNoise noise;
+            noise(result, s);
         } else if (name == STRING_PARAMS(hash)) {
             HashNoise hashnoise;
             hashnoise(result.val(), s.val());
             result.clear_d();
         } else {
-#ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
-#else
+#    ifndef __CUDA_ARCH__
+            ((ShadingContext*)sg->context)
+                ->errorfmt("Unknown noise type \"{}\"", name);
+#    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
-#endif
+#    endif
         }
     }
 
-    template<class R, class S, class T> OSL_HOSTDEVICE
-    inline void operator() (StringParam name, Dual2<R> &result,
-                            const Dual2<S> &s, const Dual2<T> &t,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
-
+    template<class R, class S, class T>
+    OSL_HOSTDEVICE inline void operator()(StringParam name, Dual2<R>& result,
+                                          const Dual2<S>& s, const Dual2<T>& t,
+                                          ShaderGlobals* sg,
+                                          const NoiseParams* opt) const
+    {
         if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             Noise noise;
             noise(result, s, t);
-        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
+        } else if (name == STRING_PARAMS(perlin)
+                   || name == STRING_PARAMS(snoise)) {
             SNoise snoise;
             snoise(result, s, t);
-        } else if (name == STRING_PARAMS(simplexnoise) || name == STRING_PARAMS(simplex)) {
+        } else if (name == STRING_PARAMS(simplexnoise)
+                   || name == STRING_PARAMS(simplex)) {
             SimplexNoise simplexnoise;
             simplexnoise(result, s, t);
-        } else if (name == STRING_PARAMS(usimplexnoise) || name == STRING_PARAMS(usimplex)) {
+        } else if (name == STRING_PARAMS(usimplexnoise)
+                   || name == STRING_PARAMS(usimplex)) {
             USimplexNoise usimplexnoise;
             usimplexnoise(result, s, t);
         } else if (name == STRING_PARAMS(cell)) {
@@ -736,45 +766,50 @@ struct GenericNoise {
             result.clear_d();
         } else if (name == STRING_PARAMS(gabor)) {
             GaborNoise gnoise;
-            gnoise (name, result, s, t, sg, opt);
+            gnoise(name, result, s, t, sg, opt);
         } else if (name == STRING_PARAMS(null)) {
-            NullNoise noise; noise(result, s, t);
+            NullNoise noise;
+            noise(result, s, t);
         } else if (name == STRING_PARAMS(unull)) {
-            UNullNoise noise; noise(result, s, t);
+            UNullNoise noise;
+            noise(result, s, t);
         } else if (name == STRING_PARAMS(hash)) {
             HashNoise hashnoise;
             hashnoise(result.val(), s.val(), t.val());
             result.clear_d();
         } else {
-#ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
-#else
+#    ifndef __CUDA_ARCH__
+            ((ShadingContext*)sg->context)
+                ->errorfmt("Unknown noise type \"{}\"", name);
+#    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
-#endif
+#    endif
         }
     }
 };
 
 
-NOISE_IMPL_DERIV_OPT (genericnoise, GenericNoise)
+NOISE_IMPL_DERIV_OPT(genericnoise, GenericNoise)
 
 
 struct GenericPNoise {
-    OSL_HOSTDEVICE GenericPNoise () { }
+    OSL_HOSTDEVICE GenericPNoise() {}
 
     // Template on R, S, and T to be either float or Vec3
 
     // dual versions -- this is always called with derivs
 
-    template<class R, class S> OSL_HOSTDEVICE
-    inline void operator() (StringParam name, Dual2<R> &result, const Dual2<S> &s,
-                            const S &sp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+    template<class R, class S>
+    OSL_HOSTDEVICE inline void
+    operator()(StringParam name, Dual2<R>& result, const Dual2<S>& s,
+               const S& sp, ShaderGlobals* sg, const NoiseParams* opt) const
+    {
         if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             PeriodicNoise noise;
             noise(result, s, sp);
-        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
+        } else if (name == STRING_PARAMS(perlin)
+                   || name == STRING_PARAMS(snoise)) {
             PeriodicSNoise snoise;
             snoise(result, s, sp);
         } else if (name == STRING_PARAMS(cell)) {
@@ -783,30 +818,33 @@ struct GenericPNoise {
             result.clear_d();
         } else if (name == STRING_PARAMS(gabor)) {
             GaborPNoise gnoise;
-            gnoise (name, result, s, sp, sg, opt);
+            gnoise(name, result, s, sp, sg, opt);
         } else if (name == STRING_PARAMS(hash)) {
             PeriodicHashNoise hashnoise;
             hashnoise(result.val(), s.val(), sp);
             result.clear_d();
         } else {
-#ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
-#else
+#    ifndef __CUDA_ARCH__
+            ((ShadingContext*)sg->context)
+                ->errorfmt("Unknown noise type \"{}\"", name);
+#    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
-#endif
+#    endif
         }
     }
 
-    template<class R, class S, class T> OSL_HOSTDEVICE
-    inline void operator() (StringParam name, Dual2<R> &result,
-                            const Dual2<S> &s, const Dual2<T> &t,
-                            const S &sp, const T &tp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+    template<class R, class S, class T>
+    OSL_HOSTDEVICE inline void
+    operator()(StringParam name, Dual2<R>& result, const Dual2<S>& s,
+               const Dual2<T>& t, const S& sp, const T& tp, ShaderGlobals* sg,
+               const NoiseParams* opt) const
+    {
         if (name == STRING_PARAMS(uperlin) || name == STRING_PARAMS(noise)) {
             PeriodicNoise noise;
             noise(result, s, t, sp, tp);
-        } else if (name == STRING_PARAMS(perlin) || name == STRING_PARAMS(snoise)) {
+        } else if (name == STRING_PARAMS(perlin)
+                   || name == STRING_PARAMS(snoise)) {
             PeriodicSNoise snoise;
             snoise(result, s, t, sp, tp);
         } else if (name == STRING_PARAMS(cell)) {
@@ -815,33 +853,34 @@ struct GenericPNoise {
             result.clear_d();
         } else if (name == STRING_PARAMS(gabor)) {
             GaborPNoise gnoise;
-            gnoise (name, result, s, t, sp, tp, sg, opt);
+            gnoise(name, result, s, t, sp, tp, sg, opt);
         } else if (name == STRING_PARAMS(hash)) {
             PeriodicHashNoise hashnoise;
             hashnoise(result.val(), s.val(), t.val(), sp, tp);
             result.clear_d();
         } else {
-#ifndef __CUDA_ARCH__
-            ((ShadingContext *)sg->context)->errorfmt("Unknown noise type \"{}\"", name);
-#else
+#    ifndef __CUDA_ARCH__
+            ((ShadingContext*)sg->context)
+                ->errorfmt("Unknown noise type \"{}\"", name);
+#    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
-#endif
+#    endif
         }
     }
 };
 
 
-PNOISE_IMPL_DERIV_OPT (genericpnoise, GenericPNoise)
+PNOISE_IMPL_DERIV_OPT(genericpnoise, GenericPNoise)
 
 
 // Utility: retrieve a pointer to the ShadingContext's noise params
 // struct, also re-initialize its contents.
-OSL_SHADEOP void *
-osl_get_noise_options (void *sg_)
+OSL_SHADEOP void*
+osl_get_noise_options(void* sg_)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    RendererServices::NoiseOpt *opt = sg->context->noise_options_ptr ();
+    ShaderGlobals* sg               = (ShaderGlobals*)sg_;
+    RendererServices::NoiseOpt* opt = sg->context->noise_options_ptr();
     new (opt) RendererServices::NoiseOpt;
     return opt;
 }
@@ -849,88 +888,88 @@ osl_get_noise_options (void *sg_)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_noiseparams_set_anisotropic (void *opt, int a)
+osl_noiseparams_set_anisotropic(void* opt, int a)
 {
-    ((RendererServices::NoiseOpt *)opt)->anisotropic = a;
+    ((RendererServices::NoiseOpt*)opt)->anisotropic = a;
 }
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_noiseparams_set_do_filter (void *opt, int a)
+osl_noiseparams_set_do_filter(void* opt, int a)
 {
-    ((RendererServices::NoiseOpt *)opt)->do_filter = a;
+    ((RendererServices::NoiseOpt*)opt)->do_filter = a;
 }
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_noiseparams_set_direction (void *opt, void *dir)
+osl_noiseparams_set_direction(void* opt, void* dir)
 {
-    ((RendererServices::NoiseOpt *)opt)->direction = VEC(dir);
+    ((RendererServices::NoiseOpt*)opt)->direction = VEC(dir);
 }
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_noiseparams_set_bandwidth (void *opt, float b)
+osl_noiseparams_set_bandwidth(void* opt, float b)
 {
-    ((RendererServices::NoiseOpt *)opt)->bandwidth = b;
+    ((RendererServices::NoiseOpt*)opt)->bandwidth = b;
 }
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_noiseparams_set_impulses (void *opt, float i)
+osl_noiseparams_set_impulses(void* opt, float i)
 {
-    ((RendererServices::NoiseOpt *)opt)->impulses = i;
+    ((RendererServices::NoiseOpt*)opt)->impulses = i;
 }
 
 
 
 OSL_SHADEOP void
-osl_count_noise (void *sg_)
+osl_count_noise(void* sg_)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    sg->context->shadingsys().count_noise ();
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    sg->context->shadingsys().count_noise();
 }
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_hash_ii (int x)
+osl_hash_ii(int x)
 {
-    return inthashi (x);
+    return inthashi(x);
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_hash_if (float x)
+osl_hash_if(float x)
 {
-    return inthashf (x);
+    return inthashf(x);
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_hash_iff (float x, float y)
+osl_hash_iff(float x, float y)
 {
-    return inthashf (x, y);
-}
-
-
-OSL_SHADEOP OSL_HOSTDEVICE int
-osl_hash_iv (void *x)
-{
-    return inthashf (static_cast<float*>(x));
+    return inthashf(x, y);
 }
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_hash_ivf (void *x, float y)
+osl_hash_iv(void* x)
 {
-    return inthashf (static_cast<float*>(x), y);
+    return inthashf(static_cast<float*>(x));
 }
 
 
-} // namespace pvt
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_hash_ivf(void* x, float y)
+{
+    return inthashf(static_cast<float*>(x), y);
+}
+
+
+}  // namespace pvt
 OSL_NAMESPACE_EXIT
 
 #endif

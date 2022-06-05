@@ -256,7 +256,7 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=13.0.0
                             LLVM_DISTRO_NAME=ubuntu-20.04
-                            OPENCOLORIO_VERSION=v2.1.1
+                            OPENCOLORIO_VERSION=v2.1.2
                             PUGIXML_VERSION=v1.11.4
           - desc: bleeding edge gcc11/C++17 llvm14 oiio/ocio/exr/pybind-master boost1.71 py3.9 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
@@ -289,7 +289,7 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=14.0.0
                             LLVM_DISTRO_NAME=ubuntu-18.04
-                            OPENCOLORIO_VERSION=v2.1.1
+                            OPENCOLORIO_VERSION=v2.1.2
                             PUGIXML_VERSION=v1.11.4
 
     runs-on: ${{matrix.os}}

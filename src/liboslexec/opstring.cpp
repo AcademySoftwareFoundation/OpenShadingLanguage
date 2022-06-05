@@ -12,9 +12,9 @@
 
 #include <cstdarg>
 
-#include <OpenImageIO/strutil.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/fmath.h>
+#include <OpenImageIO/strutil.h>
 
 #include "oslexec_pvt.h"
 
@@ -24,11 +24,11 @@ namespace pvt {
 
 
 // Only define 2-arg version of concat, sort it out upstream
-OSL_SHADEOP const char *
-osl_concat_sss (const char *s, const char *t)
+OSL_SHADEOP const char*
+osl_concat_sss(const char* s, const char* t)
 {
-    size_t sl = USTR(s).length();
-    size_t tl = USTR(t).length();
+    size_t sl  = USTR(s).length();
+    size_t tl  = USTR(t).length();
     size_t len = sl + tl;
     std::unique_ptr<char[]> heap_buf;
     char local_buf[256];
@@ -37,105 +37,106 @@ osl_concat_sss (const char *s, const char *t)
         heap_buf.reset(new char[len]);
         buf = heap_buf.get();
     }
-    memcpy(buf     , s, sl);
+    memcpy(buf, s, sl);
     memcpy(buf + sl, t, tl);
     return ustring(buf, len).c_str();
 }
 
 OSL_SHADEOP int
-osl_strlen_is (const char *s)
+osl_strlen_is(const char* s)
 {
-    return (int) USTR(s).length();
+    return (int)USTR(s).length();
 }
 
 OSL_SHADEOP int
-osl_hash_is (const char *s)
+osl_hash_is(const char* s)
 {
-    return (int) USTR(s).hash();
+    return (int)USTR(s).hash();
 }
 
 OSL_SHADEOP int
-osl_getchar_isi (const char *str, int index)
+osl_getchar_isi(const char* str, int index)
 {
     return str && unsigned(index) < USTR(str).length() ? str[index] : 0;
 }
 
 
-    OSL_SHADEOP int
-osl_startswith_iss (const char *s_, const char *substr_)
+OSL_SHADEOP int
+osl_startswith_iss(const char* s_, const char* substr_)
 {
-    ustring substr (USTR(substr_));
+    ustring substr(USTR(substr_));
     size_t substr_len = substr.length();
-    if (substr_len == 0)         // empty substr always matches
+    if (substr_len == 0)  // empty substr always matches
         return 1;
-    ustring s (USTR(s_));
+    ustring s(USTR(s_));
     size_t s_len = s.length();
-    if (substr_len > s_len)      // longer needle than haystack can't
-        return 0;                // match (including empty s)
-    return strncmp (s.c_str(), substr.c_str(), substr_len) == 0;
+    if (substr_len > s_len)  // longer needle than haystack can't
+        return 0;            // match (including empty s)
+    return strncmp(s.c_str(), substr.c_str(), substr_len) == 0;
 }
 
 OSL_SHADEOP int
-osl_endswith_iss (const char *s_, const char *substr_)
+osl_endswith_iss(const char* s_, const char* substr_)
 {
-    ustring substr (USTR(substr_));
+    ustring substr(USTR(substr_));
     size_t substr_len = substr.length();
-    if (substr_len == 0)         // empty substr always matches
+    if (substr_len == 0)  // empty substr always matches
         return 1;
-    ustring s (USTR(s_));
+    ustring s(USTR(s_));
     size_t s_len = s.length();
-    if (substr_len > s_len)      // longer needle than haystack can't
-        return 0;                // match (including empty s)
-    return strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
+    if (substr_len > s_len)  // longer needle than haystack can't
+        return 0;            // match (including empty s)
+    return strncmp(s.c_str() + s_len - substr_len, substr.c_str(), substr_len)
+           == 0;
 }
 
 OSL_SHADEOP int
-osl_stoi_is (const char *str)
+osl_stoi_is(const char* str)
 {
     return str ? Strutil::from_string<int>(str) : 0;
 }
 
 OSL_SHADEOP float
-osl_stof_fs (const char *str)
+osl_stof_fs(const char* str)
 {
     return str ? Strutil::from_string<float>(str) : 0.0f;
 }
 
-OSL_SHADEOP const char *
-osl_substr_ssii (const char *s_, int start, int length)
+OSL_SHADEOP const char*
+osl_substr_ssii(const char* s_, int start, int length)
 {
-    ustring s (USTR(s_));
-    int slen = int (s.length());
+    ustring s(USTR(s_));
+    int slen = int(s.length());
     if (slen == 0)
         return NULL;  // No substring of empty string
     int b = start;
     if (b < 0)
         b += slen;
-    b = Imath::clamp (b, 0, slen);
-    return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
+    b = Imath::clamp(b, 0, slen);
+    return ustring(s, b, Imath::clamp(length, 0, slen)).c_str();
 }
 
 
 OSL_SHADEOP int
-osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
-                const char *pattern, int fullmatch)
+osl_regex_impl(void* sg_, const char* subject_, void* results, int nresults,
+               const char* pattern, int fullmatch)
 {
-    ShaderGlobals *sg = (ShaderGlobals *)sg_;
-    ShadingContext *ctx = sg->context;
-    const std::string &subject (ustring::from_unique(subject_).string());
+    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
+    ShadingContext* ctx = sg->context;
+    const std::string& subject(ustring::from_unique(subject_).string());
     std::match_results<std::string::const_iterator> mresults;
-    const std::regex &regex (ctx->find_regex (USTR(pattern)));
+    const std::regex& regex(ctx->find_regex(USTR(pattern)));
     if (nresults > 0) {
         std::string::const_iterator start = subject.begin();
         int res = fullmatch ? std::regex_match(subject, mresults, regex)
                             : std::regex_search(subject, mresults, regex);
-        int *m = (int *)results;
-        for (int r = 0;  r < nresults;  ++r) {
-            if (r/2 < (int)mresults.size()) {
+        int* m  = (int*)results;
+        for (int r = 0; r < nresults; ++r) {
+            if (r / 2 < (int)mresults.size()) {
                 if ((r & 1) == 0)
-                    m[r] = mresults[r/2].first - start;
+                    m[r] = mresults[r / 2].first - start;
                 else
-                    m[r] = mresults[r/2].second - start;
+                    m[r] = mresults[r / 2].second - start;
             } else {
                 m[r] = USTR(pattern).length();
             }
@@ -148,52 +149,52 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
 }
 
 
-OSL_SHADEOP const char *
-osl_format (const char* format_str, ...)
+OSL_SHADEOP const char*
+osl_format(const char* format_str, ...)
 {
     va_list args;
-    va_start (args, format_str);
-    std::string s = Strutil::vsprintf (format_str, args);
-    va_end (args);
+    va_start(args, format_str);
+    std::string s = Strutil::vsprintf(format_str, args);
+    va_end(args);
     return ustring(s).c_str();
 }
 
 
 OSL_SHADEOP void
-osl_printf (ShaderGlobals *sg, const char* format_str, ...)
+osl_printf(ShaderGlobals* sg, const char* format_str, ...)
 {
     va_list args;
-    va_start (args, format_str);
+    va_start(args, format_str);
 #if 0
     // Make super sure we know we are executing LLVM-generated code!
     std::string newfmt = std::string("llvm: ") + format_str;
     format_str = newfmt.c_str();
 #endif
-    std::string s = Strutil::vsprintf (format_str, args);
-    va_end (args);
+    std::string s = Strutil::vsprintf(format_str, args);
+    va_end(args);
     sg->context->messagefmt("{}", s);
 }
 
 
 OSL_SHADEOP void
-osl_error (ShaderGlobals *sg, const char* format_str, ...)
+osl_error(ShaderGlobals* sg, const char* format_str, ...)
 {
     va_list args;
-    va_start (args, format_str);
-    std::string s = Strutil::vsprintf (format_str, args);
-    va_end (args);
+    va_start(args, format_str);
+    std::string s = Strutil::vsprintf(format_str, args);
+    va_end(args);
     sg->context->errorfmt("{}", s);
 }
 
 
 OSL_SHADEOP void
-osl_warning (ShaderGlobals *sg, const char* format_str, ...)
+osl_warning(ShaderGlobals* sg, const char* format_str, ...)
 {
     if (sg->context->allow_warnings()) {
         va_list args;
-        va_start (args, format_str);
-        std::string s = Strutil::vsprintf (format_str, args);
-        va_end (args);
+        va_start(args, format_str);
+        std::string s = Strutil::vsprintf(format_str, args);
+        va_end(args);
         sg->context->warningfmt("{}", s);
     }
 }
@@ -201,36 +202,36 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 
 
 OSL_SHADEOP void
-osl_fprintf (ShaderGlobals* /*sg*/, const char *filename,
-             const char* format_str, ...)
+osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
+            ...)
 {
     va_list args;
-    va_start (args, format_str);
-    std::string s = Strutil::vsprintf (format_str, args);
-    va_end (args);
+    va_start(args, format_str);
+    std::string s = Strutil::vsprintf(format_str, args);
+    va_end(args);
 
     static OIIO::mutex fprintf_mutex;
-    OIIO::lock_guard lock (fprintf_mutex);
-    FILE *file = OIIO::Filesystem::fopen (filename, "a");
-    fputs (s.c_str(), file);
-    fclose (file);
+    OIIO::lock_guard lock(fprintf_mutex);
+    FILE* file = OIIO::Filesystem::fopen(filename, "a");
+    fputs(s.c_str(), file);
+    fclose(file);
 }
 
 
 
 OSL_SHADEOP int
-osl_split (const char *str, ustring *results, const char *sep,
-           int maxsplit, int resultslen)
+osl_split(const char* str, ustring* results, const char* sep, int maxsplit,
+          int resultslen)
 {
-    maxsplit = OIIO::clamp (maxsplit, 0, resultslen);
+    maxsplit = OIIO::clamp(maxsplit, 0, resultslen);
     std::vector<std::string> splits;
-    Strutil::split (USTR(str).string(), splits, USTR(sep).string(), maxsplit);
-    int n = std::min (maxsplit, (int)splits.size());
-    for (int i = 0;  i < n;  ++i)
+    Strutil::split(USTR(str).string(), splits, USTR(sep).string(), maxsplit);
+    int n = std::min(maxsplit, (int)splits.size());
+    for (int i = 0; i < n; ++i)
         results[i] = ustring(splits[i]);
     return n;
 }
 
 
-} // end namespace pvt
+}  // end namespace pvt
 OSL_NAMESPACE_EXIT

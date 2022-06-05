@@ -27,17 +27,19 @@ namespace pvt {
 
 
 OSL_SHADEOP void
-osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val, int layeridx, const char* sourcefile_, int sourceline)
+osl_setmessage(ShaderGlobals* sg, const char* name_, long long type_, void* val,
+               int layeridx, const char* sourcefile_, int sourceline)
 {
-    const ustring &name (USTR(name_));
-    const ustring &sourcefile (USTR(sourcefile_));
+    const ustring& name(USTR(name_));
+    const ustring& sourcefile(USTR(sourcefile_));
     // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type = TYPEDESC(type_);
-    bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
+    TypeDesc type   = TYPEDESC(type_);
+    bool is_closure = (type.basetype
+                       == TypeDesc::UNKNOWN);  // secret code for closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
 
-    MessageList &messages (sg->context->messages());
+    MessageList& messages(sg->context->messages());
     const Message* m = messages.find(name);
     if (m != NULL) {
         if (m->name == name) {
@@ -47,7 +49,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
                     "message \"{}\" already exists (created here: {}:{})"
                     " cannot set again from {}:{}",
                     name, m->sourcefile, m->sourceline, sourcefile, sourceline);
-            else // NOTE: this cannot be triggered when strict_messages=false because we won't record "failed" getmessage calls
+            else  // NOTE: this cannot be triggered when strict_messages=false because we won't record "failed" getmessage calls
                 sg->context->errorfmt(
                     "message \"{}\" was queried before being set (queried here: {}:{})"
                     " setting it now ({}:{}) would lead to inconsistent results",
@@ -62,27 +64,28 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
 
 
 OSL_SHADEOP int
-osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
-                long long type_, void *val, int derivs,
-                int layeridx, const char* sourcefile_, int sourceline)
+osl_getmessage(ShaderGlobals* sg, const char* source_, const char* name_,
+               long long type_, void* val, int derivs, int layeridx,
+               const char* sourcefile_, int sourceline)
 {
-    const ustring &source (USTR(source_));
-    const ustring &name (USTR(name_));
-    const ustring &sourcefile (USTR(sourcefile_));
+    const ustring& source(USTR(source_));
+    const ustring& name(USTR(name_));
+    const ustring& sourcefile(USTR(sourcefile_));
 
     // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type = TYPEDESC(type_);
-    bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
+    TypeDesc type   = TYPEDESC(type_);
+    bool is_closure = (type.basetype
+                       == TypeDesc::UNKNOWN);  // secret code for closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
 
-    static ustring ktrace ("trace");
+    static ustring ktrace("trace");
     if (source == ktrace) {
         // Source types where we need to ask the renderer
-        return sg->renderer->getmessage (sg, source, name, type, val, derivs);
+        return sg->renderer->getmessage(sg, source, name, type, val, derivs);
     }
 
-    MessageList &messages (sg->context->messages());
+    MessageList& messages(sg->context->messages());
     const Message* m = messages.find(name);
     if (m != NULL) {
         if (m->name == name) {
@@ -116,9 +119,9 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
             }
             // Message found!
             size_t size = type.size();
-            memcpy (val, m->data, size);
-            if (derivs) // TODO: move this to llvm code gen?
-                memset (((char *)val)+size, 0, 2*size);
+            memcpy(val, m->data, size);
+            if (derivs)  // TODO: move this to llvm code gen?
+                memset(((char*)val) + size, 0, 2 * size);
             return 1;
         }
     }
@@ -129,5 +132,5 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
 }
 
 
-} // namespace pvt
+}  // namespace pvt
 OSL_NAMESPACE_EXIT

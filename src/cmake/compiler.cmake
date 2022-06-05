@@ -475,7 +475,8 @@ endif ()
 # is being built as a subproject.
 if (PROJECT_IS_TOP_LEVEL)
     set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
-    set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
+    set (CLANG_FORMAT_INCLUDES  # "src/*.cpp"
+                                "src/*.h"
                                 "src/*.cu"
                                 "src/include/*.h"
                                 "src/liboslcomp/*.cpp"
@@ -505,6 +506,8 @@ if (PROJECT_IS_TOP_LEVEL)
             "src/include/OSL/matrix22.h"
             # Header files in testsuite are almost certainly osl headers, not C++
             "testsuite/*.h"
+            # Header files in shaders are OSL, not C++
+            "src/shaders/*.h"
             ""
          CACHE STRING "Glob patterns to exclude for clang-format")
     find_program (CLANG_FORMAT_EXE

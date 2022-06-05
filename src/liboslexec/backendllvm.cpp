@@ -7,7 +7,7 @@
 #include <OpenImageIO/strutil.h>
 
 #ifdef OSL_USE_OPTIX
-#include <optix.h>
+#    include <optix.h>
 #endif
 
 #include "oslexec_pvt.h"
@@ -23,17 +23,17 @@ namespace pvt {
 
 #ifdef OSL_SPI
 static void
-check_cwd (ShadingSystemImpl &shadingsys)
+check_cwd(ShadingSystemImpl& shadingsys)
 {
     std::string err;
     char pathname[1024] = { "" };
-    if (! getcwd (pathname, sizeof(pathname)-1)) {
+    if (!getcwd(pathname, sizeof(pathname) - 1)) {
         int e = errno;
         err += fmtformat("Failed getcwd(), errno is {}: {}\n", errno, pathname);
         if (e == EACCES || e == ENOENT) {
             err += "Read/search permission problem or dir does not exist.\n";
-            const char *pwdenv = getenv ("PWD");
-            if (! pwdenv) {
+            const char* pwdenv = getenv("PWD");
+            if (!pwdenv) {
                 err += "$PWD is not even found in the environment.\n";
             } else {
                 err += fmtformat("$PWD is \"{}\"\n", pwdenv);
@@ -45,10 +45,10 @@ check_cwd (ShadingSystemImpl &shadingsys)
                                      ? "is"
                                      : "is NOT");
                 std::vector<std::string> pieces;
-                Strutil::split (pwdenv, pieces, "/");
+                Strutil::split(pwdenv, pieces, "/");
                 std::string p;
-                for (size_t i = 0;  i < pieces.size();  ++i) {
-                    if (! pieces[i].size())
+                for (size_t i = 0; i < pieces.size(); ++i) {
+                    if (!pieces[i].size())
                         continue;
                     p += "/";
                     p += pieces[i];
@@ -64,26 +64,28 @@ check_cwd (ShadingSystemImpl &shadingsys)
         }
     }
     if (err.size())
-        shadingsys.error (err);
+        shadingsys.error(err);
 }
 #endif
 
 
 
-BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
-                          ShaderGroup &group, ShadingContext *ctx)
-    : OSOProcessorBase (shadingsys, group, ctx),
-      ll(ctx->llvm_thread_info(), llvm_debug(), shadingsys.m_vector_width),
-      m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
-      m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
-      m_stat_llvm_jit_time(0)
+BackendLLVM::BackendLLVM(ShadingSystemImpl& shadingsys, ShaderGroup& group,
+                         ShadingContext* ctx)
+    : OSOProcessorBase(shadingsys, group, ctx)
+    , ll(ctx->llvm_thread_info(), llvm_debug(), shadingsys.m_vector_width)
+    , m_stat_total_llvm_time(0)
+    , m_stat_llvm_setup_time(0)
+    , m_stat_llvm_irgen_time(0)
+    , m_stat_llvm_opt_time(0)
+    , m_stat_llvm_jit_time(0)
 {
 #ifdef OSL_SPI
     // Temporary (I hope) check to diagnose an intermittent failure of
     // getcwd inside LLVM. Oy.
-    check_cwd (shadingsys);
+    check_cwd(shadingsys);
 #endif
-    m_use_optix = shadingsys.renderer()->supports ("OptiX");
+    m_use_optix      = shadingsys.renderer()->supports("OptiX");
     m_use_rs_bitcode = !shadingsys.m_rs_bitcode.empty();
     ll.dumpasm(shadingsys.m_llvm_dumpasm);
     ll.jit_fma(shadingsys.m_llvm_jit_fma);
@@ -92,9 +94,7 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
 
 
 
-BackendLLVM::~BackendLLVM ()
-{
-}
+BackendLLVM::~BackendLLVM() {}
 
 
 
@@ -103,11 +103,11 @@ BackendLLVM::llvm_debug() const
 {
     if (shadingsys().llvm_debug() == 0)
         return 0;
-    if (!shadingsys().debug_groupname().empty() &&
-        shadingsys().debug_groupname() != group().name())
+    if (!shadingsys().debug_groupname().empty()
+        && shadingsys().debug_groupname() != group().name())
         return 0;
-    if (inst() && !shadingsys().debug_layername().empty() &&
-        shadingsys().debug_layername() != inst()->layername())
+    if (inst() && !shadingsys().debug_layername().empty()
+        && shadingsys().debug_layername() != inst()->layername())
         return 0;
     return shadingsys().llvm_debug();
 }
@@ -115,42 +115,42 @@ BackendLLVM::llvm_debug() const
 
 
 void
-BackendLLVM::set_inst (int layer)
+BackendLLVM::set_inst(int layer)
 {
-    OSOProcessorBase::set_inst (layer);  // parent does the heavy lifting
-    ll.debug (llvm_debug());
+    OSOProcessorBase::set_inst(layer);  // parent does the heavy lifting
+    ll.debug(llvm_debug());
 }
 
 
 
-llvm::Type *
-BackendLLVM::llvm_pass_type (const TypeSpec &typespec)
+llvm::Type*
+BackendLLVM::llvm_pass_type(const TypeSpec& typespec)
 {
     if (typespec.is_closure_based())
-        return (llvm::Type *) ll.type_void_ptr();
-    TypeDesc t = typespec.simpletype().elementtype();
-    llvm::Type *lt = NULL;
+        return (llvm::Type*)ll.type_void_ptr();
+    TypeDesc t     = typespec.simpletype().elementtype();
+    llvm::Type* lt = NULL;
     if (t == TypeDesc::FLOAT)
         lt = ll.type_float();
     else if (t == TypeDesc::INT)
         lt = ll.type_int();
     else if (t == TypeDesc::STRING)
-        lt = (llvm::Type *) ll.type_string();
+        lt = (llvm::Type*)ll.type_string();
     else if (t.aggregate == TypeDesc::VEC3)
-        lt = (llvm::Type *) ll.type_void_ptr(); //llvm_type_triple_ptr();
+        lt = (llvm::Type*)ll.type_void_ptr();  //llvm_type_triple_ptr();
     else if (t.aggregate == TypeDesc::MATRIX44)
-        lt = (llvm::Type *) ll.type_void_ptr(); //llvm_type_matrix_ptr();
+        lt = (llvm::Type*)ll.type_void_ptr();  //llvm_type_matrix_ptr();
     else if (t == TypeDesc::NONE)
         lt = ll.type_void();
     else if (t == TypeDesc::PTR)
-        lt = (llvm::Type *) ll.type_void_ptr();
+        lt = (llvm::Type*)ll.type_void_ptr();
     else if (t == TypeDesc::LONGLONG)
         lt = ll.type_longlong();
     else {
-        OSL_ASSERT_MSG (0, "not handling %s type yet", typespec.c_str());
+        OSL_ASSERT_MSG(0, "not handling %s type yet", typespec.c_str());
     }
     if (t.arraylen) {
-        OSL_ASSERT (0 && "should never pass an array directly as a parameter");
+        OSL_ASSERT(0 && "should never pass an array directly as a parameter");
     }
     return lt;
 }
@@ -158,79 +158,92 @@ BackendLLVM::llvm_pass_type (const TypeSpec &typespec)
 
 
 void
-BackendLLVM::llvm_assign_zero (const Symbol &sym)
+BackendLLVM::llvm_assign_zero(const Symbol& sym)
 {
     // Just memset the whole thing to zero, let LLVM sort it out.
     // This even works for closures.
     int len;
     if (sym.typespec().is_closure_based())
-        len = sizeof(void *) * sym.typespec().numelements();
+        len = sizeof(void*) * sym.typespec().numelements();
     else
         len = sym.derivsize();
     // N.B. derivsize() includes derivs, if there are any
-    size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
-                         sym.typespec().simpletype().basesize();
-    ll.op_memset (llvm_void_ptr(sym), 0, len, (int)align);
+    size_t align = sym.typespec().is_closure_based()
+                       ? sizeof(void*)
+                       : sym.typespec().simpletype().basesize();
+    ll.op_memset(llvm_void_ptr(sym), 0, len, (int)align);
 }
 
 
 
 void
-BackendLLVM::llvm_zero_derivs (const Symbol &sym)
+BackendLLVM::llvm_zero_derivs(const Symbol& sym)
 {
     if (sym.typespec().is_closure_based())
-        return; // Closures don't have derivs
+        return;  // Closures don't have derivs
     // Just memset the derivs to zero, let LLVM sort it out.
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_float_based()) {
-        int len = sym.size();
+        int len      = sym.size();
         size_t align = sym.typespec().simpletype().basesize();
-        ll.op_memset (llvm_void_ptr(sym,1), /* point to start of x deriv */
-                      0, 2*len /* size of both derivs */, (int)align);
+        ll.op_memset(llvm_void_ptr(sym, 1), /* point to start of x deriv */
+                     0, 2 * len /* size of both derivs */, (int)align);
     }
 }
 
 
 
 void
-BackendLLVM::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
+BackendLLVM::llvm_zero_derivs(const Symbol& sym, llvm::Value* count)
 {
     if (sym.typespec().is_closure_based())
-        return; // Closures don't have derivs
+        return;  // Closures don't have derivs
     // Same thing as the above version but with just the first count derivs
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_float_based()) {
         size_t esize = sym.typespec().simpletype().elementsize();
         size_t align = sym.typespec().simpletype().basesize();
-        count = ll.op_mul (count, ll.constant((int)esize));
-        ll.op_memset (llvm_void_ptr(sym,1), 0, count, (int)align); // X derivs
-        ll.op_memset (llvm_void_ptr(sym,2), 0, count, (int)align); // Y derivs
+        count        = ll.op_mul(count, ll.constant((int)esize));
+        ll.op_memset(llvm_void_ptr(sym, 1), 0, count, (int)align);  // X derivs
+        ll.op_memset(llvm_void_ptr(sym, 2), 0, count, (int)align);  // Y derivs
     }
 }
 
-namespace
-{
-    // N.B. The order of names in this table MUST exactly match the
-    // ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
-    // defined in llvm_type_sg().
-    static ustring fields[] = {
-        ustring("P"), ustring("_dPdz"), ustring("I"),
-        ustring("N"), ustring("Ng"),
-        ustring("u"), ustring("v"), ustring("dPdu"), ustring("dPdv"),
-        ustring("time"), ustring("dtime"), ustring("dPdtime"), ustring("Ps"),
-        ustring("renderstate"), ustring("tracedata"), ustring("objdata"),
-        ustring("shadingcontext"), ustring("renderer"),
-        ustring("object2common"), ustring("shader2common"),
-        ustring("Ci"),
-        ustring("surfacearea"), ustring("raytype"),
-        ustring("flipHandedness"), ustring("backfacing")
-    };
-}
+namespace {
+// N.B. The order of names in this table MUST exactly match the
+// ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
+// defined in llvm_type_sg().
+static ustring fields[] = { ustring("P"),
+                            ustring("_dPdz"),
+                            ustring("I"),
+                            ustring("N"),
+                            ustring("Ng"),
+                            ustring("u"),
+                            ustring("v"),
+                            ustring("dPdu"),
+                            ustring("dPdv"),
+                            ustring("time"),
+                            ustring("dtime"),
+                            ustring("dPdtime"),
+                            ustring("Ps"),
+                            ustring("renderstate"),
+                            ustring("tracedata"),
+                            ustring("objdata"),
+                            ustring("shadingcontext"),
+                            ustring("renderer"),
+                            ustring("object2common"),
+                            ustring("shader2common"),
+                            ustring("Ci"),
+                            ustring("surfacearea"),
+                            ustring("raytype"),
+                            ustring("flipHandedness"),
+                            ustring("backfacing") };
+}  // namespace
 
 int
-BackendLLVM::ShaderGlobalNameToIndex (ustring name)
+BackendLLVM::ShaderGlobalNameToIndex(ustring name)
 {
-    for (int i = 0;  i < int(sizeof(fields)/sizeof(fields[0]));  ++i)
+    for (int i = 0; i < int(sizeof(fields) / sizeof(fields[0])); ++i)
         if (name == fields[i])
             return i;
     return -1;
@@ -238,73 +251,78 @@ BackendLLVM::ShaderGlobalNameToIndex (ustring name)
 
 
 
-llvm::Value *
-BackendLLVM::llvm_global_symbol_ptr (ustring name)
+llvm::Value*
+BackendLLVM::llvm_global_symbol_ptr(ustring name)
 {
     // Special case for globals -- they live in the ShaderGlobals struct,
     // we use the name of the global to find the index of the field within
     // the ShaderGlobals struct.
-    int sg_index = ShaderGlobalNameToIndex (name);
-    OSL_ASSERT (sg_index >= 0);
-    return ll.void_ptr (ll.GEP (sg_ptr(), 0, sg_index));
+    int sg_index = ShaderGlobalNameToIndex(name);
+    OSL_ASSERT(sg_index >= 0);
+    return ll.void_ptr(ll.GEP(sg_ptr(), 0, sg_index));
 }
 
 
 
-llvm::Value *
-BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
+llvm::Value*
+BackendLLVM::getLLVMSymbolBase(const Symbol& sym)
 {
     Symbol* dealiased = sym.dealias();
 
     if (sym.symtype() == SymTypeGlobal) {
-        llvm::Value *result = llvm_global_symbol_ptr (sym.name());
-        OSL_ASSERT (result);
-        result = ll.ptr_to_cast (result, llvm_type(sym.typespec().elementtype()));
+        llvm::Value* result = llvm_global_symbol_ptr(sym.name());
+        OSL_ASSERT(result);
+        result = ll.ptr_to_cast(result,
+                                llvm_type(sym.typespec().elementtype()));
         return result;
     }
 
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         // Special case for params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];
-        return groupdata_field_ptr (fieldnum, sym.typespec().elementtype().simpletype());
+        return groupdata_field_ptr(fieldnum,
+                                   sym.typespec().elementtype().simpletype());
     }
 
-    std::string mangled_name = dealiased->mangled();
-    AllocationMap::iterator map_iter = named_values().find (mangled_name);
+    std::string mangled_name         = dealiased->mangled();
+    AllocationMap::iterator map_iter = named_values().find(mangled_name);
     if (map_iter == named_values().end()) {
-        shadingcontext()->errorfmt("Couldn't find symbol '{}' (unmangled = '{}'). Did you forget to allocate it?",
-                                   mangled_name, dealiased->unmangled());
+        shadingcontext()->errorfmt(
+            "Couldn't find symbol '{}' (unmangled = '{}'). Did you forget to allocate it?",
+            mangled_name, dealiased->unmangled());
         return 0;
     }
-    return (llvm::Value*) map_iter->second;
+    return (llvm::Value*)map_iter->second;
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_alloca (const TypeSpec &type, bool derivs,
-                          const std::string &name, int align)
+llvm::Value*
+BackendLLVM::llvm_alloca(const TypeSpec& type, bool derivs,
+                         const std::string& name, int align)
 {
-    TypeDesc t = llvm_typedesc (type);
-    int n = derivs ? 3 : 1;
+    TypeDesc t = llvm_typedesc(type);
+    int n      = derivs ? 3 : 1;
     m_llvm_local_mem += t.size() * n;
-    return ll.op_alloca (t, n, name, align);
+    return ll.op_alloca(t, n, name, align);
 }
 
 
 
-llvm::Value *
-BackendLLVM::getOrAllocateLLVMSymbol (const Symbol& sym)
+llvm::Value*
+BackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
 {
-    OSL_DASSERT((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp ||
-              sym.symtype() == SymTypeConst)
-             && "getOrAllocateLLVMSymbol should only be for local, tmp, const");
-    Symbol* dealiased = sym.dealias();
-    std::string mangled_name = dealiased->mangled();
+    OSL_DASSERT(
+        (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp
+         || sym.symtype() == SymTypeConst)
+        && "getOrAllocateLLVMSymbol should only be for local, tmp, const");
+    Symbol* dealiased                = sym.dealias();
+    std::string mangled_name         = dealiased->mangled();
     AllocationMap::iterator map_iter = named_values().find(mangled_name);
 
     if (map_iter == named_values().end()) {
-        llvm::Value* a = llvm_alloca (sym.typespec(), sym.has_derivs(), mangled_name);
+        llvm::Value* a = llvm_alloca(sym.typespec(), sym.has_derivs(),
+                                     mangled_name);
         named_values()[mangled_name] = a;
         return a;
     }
@@ -317,61 +335,65 @@ llvm::Value*
 BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
                              const void* data, TypeDesc type)
 {
-    OSL_ASSERT (use_optix() && "This function is only supposed to be used with OptiX!");
+    OSL_ASSERT(use_optix()
+               && "This function is only supposed to be used with OptiX!");
 
     llvm::Constant* constant = nullptr;
 
     if (type == TypeDesc::TypeFloat) {
-        constant = llvm::ConstantFP::get (
-            llvm::Type::getFloatTy (ll.module()->getContext()), *(float*) data);
-    }
-    else if (type == TypeDesc::TypeInt) {
-        constant = llvm::ConstantInt::get (
-            llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
-    }
-    else if (type == TypeDesc::TypeString) {
+        constant = llvm::ConstantFP::get(llvm::Type::getFloatTy(
+                                             ll.module()->getContext()),
+                                         *(float*)data);
+    } else if (type == TypeDesc::TypeInt) {
+        constant = llvm::ConstantInt::get(llvm::Type::getInt32Ty(
+                                              ll.module()->getContext()),
+                                          *(int*)data);
+    } else if (type == TypeDesc::TypeString) {
         // Register the string with the OptiX renderer. The renderer will add
         // the string to a global table and create an OptiX variable to hold the
         // char*.
-        shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
+        shadingsys().renderer()->register_string(((ustring*)data)->string(),
+                                                 name);
 
 #if OPTIX_VERSION < 70000
         // Leave the variable uninitialized to prevent raw pointers from
         // appearing in the generated code. The OptiX renderer will set the
         // variable to the string address before the kernel is launched.
-        constant = llvm::ConstantInt::get (
-            llvm::Type::getInt64Ty (ll.module()->getContext()), 0);
-        m_varname_map [name] = ((ustring*)data)->string();
+        constant            = llvm::ConstantInt::get(llvm::Type::getInt64Ty(
+                                                         ll.module()->getContext()),
+                                                     0);
+        m_varname_map[name] = ((ustring*)data)->string();
 #else
         // DeviceStrings use the ustring hash to identify themselves.  These hashes will
         // match on both the device and host side.
-        constant = llvm::ConstantInt::get (
-            llvm::Type::getInt64Ty (ll.module()->getContext()), ((ustring*)data)->hash());
-        m_varname_map [name] = ((ustring*)data)->string();
+        constant            = llvm::ConstantInt::get(llvm::Type::getInt64Ty(
+                                                         ll.module()->getContext()),
+                                                     ((ustring*)data)->hash());
+        m_varname_map[name] = ((ustring*)data)->string();
 #endif
 
-    }
-    else {
+    } else {
         // Handle unspecified types as generic byte arrays
-        llvm::ArrayRef<uint8_t> arr_ref ((uint8_t*)data, size);
-        constant = llvm::ConstantDataArray::get (ll.module()->getContext(), arr_ref);
+        llvm::ArrayRef<uint8_t> arr_ref((uint8_t*)data, size);
+        constant = llvm::ConstantDataArray::get(ll.module()->getContext(),
+                                                arr_ref);
     }
 
     llvm::GlobalVariable* g_var = reinterpret_cast<llvm::GlobalVariable*>(
-        ll.module()->getOrInsertGlobal (name, constant->getType()));
+        ll.module()->getOrInsertGlobal(name, constant->getType()));
 
-    OSL_DASSERT (g_var && "Unable to create GlobalVariable");
+    OSL_DASSERT(g_var && "Unable to create GlobalVariable");
 
 #if OSL_LLVM_VERSION >= 100
-    g_var->setAlignment  (llvm::MaybeAlign(alignment));
+    g_var->setAlignment(llvm::MaybeAlign(alignment));
 #else
-    g_var->setAlignment  (alignment);
+    g_var->setAlignment(alignment);
 #endif
 
 #if (OPTIX_VERSION < 70000)
-    g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
+    g_var->setLinkage(llvm::GlobalValue::ExternalLinkage);
 #endif
-    g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
+    g_var->setVisibility(llvm::GlobalValue::DefaultVisibility);
     g_var->setInitializer(constant);
     m_const_map[name] = g_var;
 
@@ -381,7 +403,7 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
 
 
 void
-BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
+BackendLLVM::createOptixMetadata(const std::string& name, const Symbol& sym)
 {
     // Create additional variables with the semantic information needed by OptiX
     // to access the global variable created above.
@@ -392,7 +414,8 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
     // Refer to the OptiX API documentation and optix_defines.h in the OptiX SDK
     // for more information.
 
-    OSL_ASSERT (use_optix() && "This function is only supported when using OptiX!");
+    OSL_ASSERT(use_optix()
+               && "This function is only supported when using OptiX!");
 
     auto mangle_name = [](const std::string& name, const std::string& prefix) {
         return fmtformat("_ZN{}rti_internal_{}{}{}E", prefix.size() + 13,
@@ -401,24 +424,25 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
 
     std::string optix_type;
     const TypeDesc type = sym.typespec().simpletype();
-    if (! sym.typespec().is_array()) {
+    if (!sym.typespec().is_array()) {
         optix_type =
             // Documented built-in types
-            (type == TypeDesc::TypeInt   ) ? "int"      :
-            (type == TypeDesc::TypeFloat ) ? "float"    :
-            (type == TypeDesc::TypePoint ) ? "float3"   :
-            (type == TypeDesc::TypeVector) ? "float3"   :
-            (type == TypeDesc::TypeNormal) ? "float3"   :
-            (type == TypeDesc::TypeColor ) ? "float3"   :
-            (type == TypeDesc::TypeMatrix) ? "matrix"   :
-            (type == TypeDesc::TypeString) ? "uint64_t" :
-            // Catch-all for types that fall through, if there are any.
-            type.c_str();
+            (type == TypeDesc::TypeInt)      ? "int"
+            : (type == TypeDesc::TypeFloat)  ? "float"
+            : (type == TypeDesc::TypePoint)  ? "float3"
+            : (type == TypeDesc::TypeVector) ? "float3"
+            : (type == TypeDesc::TypeNormal) ? "float3"
+            : (type == TypeDesc::TypeColor)  ? "float3"
+            : (type == TypeDesc::TypeMatrix) ? "matrix"
+            : (type == TypeDesc::TypeString)
+                ? "uint64_t"
+                :
+                // Catch-all for types that fall through, if there are any.
+                type.c_str();
 
         // NB: TypeMatrix is assumed to be 4x4 and will be treated by OptiX as a
         //     user datatype (i.e., a generic struct).
-    }
-    else {
+    } else {
         // OptiX should handle int and float vectors between 2 and 4 dimensions
         // with no problem. Larger arrays, or arrays of other element types,
         // will be treated as a user datatype and will not work natively with
@@ -428,30 +452,33 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
     }
 
     struct rti_typeinfo {
-        unsigned int kind = 0x796152; // _OPTIX_VARIABLE
+        unsigned int kind = 0x796152;  // _OPTIX_VARIABLE
         unsigned int size;
     } type_info;
     type_info.size = sym.size();
 
-    int  type_enum = 0x1337;          // _OPTIX_TYPE_ENUM_UNKNOWN
-    char zero      = 0;
+    int type_enum = 0x1337;  // _OPTIX_TYPE_ENUM_UNKNOWN
+    char zero     = 0;
 
-    addCUDAVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info);
-    addCUDAVariable (mangle_name (name, "typename"  ), optix_type.size() + 1, 16, optix_type.data());
-    addCUDAVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, TypeDesc::TypeInt);
-    addCUDAVariable (mangle_name (name, "semantic"  ), 1, 1, &zero);
-    addCUDAVariable (mangle_name (name, "annotation"), 1, 1, &zero);
+    addCUDAVariable(mangle_name(name, "typeinfo"), 8, 4, &type_info);
+    addCUDAVariable(mangle_name(name, "typename"), optix_type.size() + 1, 16,
+                    optix_type.data());
+    addCUDAVariable(mangle_name(name, "typeenum"), 4, 4, &type_enum,
+                    TypeDesc::TypeInt);
+    addCUDAVariable(mangle_name(name, "semantic"), 1, 1, &zero);
+    addCUDAVariable(mangle_name(name, "annotation"), 1, 1, &zero);
 }
 
 
 
-llvm::Value *
-BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
+llvm::Value*
+BackendLLVM::getOrAllocateCUDAVariable(const Symbol& sym, bool addMetadata)
 {
-    OSL_ASSERT (use_optix() && "This function is only supported when using OptiX!");
+    OSL_ASSERT(use_optix()
+               && "This function is only supported when using OptiX!");
 
     std::ostringstream ss;
-    ss.imbue (std::locale::classic());  // force C locale
+    ss.imbue(std::locale::classic());  // force C locale
     if (sym.typespec().is_string()) {
         // Use the ustring hash to create a name for the symbol that's based on
         // the string contents
@@ -466,28 +493,24 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
 
         ss << "ds_"
 #if OPTIX_VERSION >= 70000
-           << group().name() << "_"
-           << group().id() << "_"
+           << group().name() << "_" << group().id() << "_"
 #endif
-           << std::setbase (16) << std::setfill('0') << std::setw (16)
-           << sym.get_string().hash()
-           << "_"
-           << std::setbase (16) << std::setfill('0') << std::setw (4)
-           << sym.get_string().length();
+           << std::setbase(16) << std::setfill('0') << std::setw(16)
+           << sym.get_string().hash() << "_" << std::setbase(16)
+           << std::setfill('0') << std::setw(4) << sym.get_string().length();
 
-        auto it = m_varname_map.find(ss.str());
-        const std::string old_str = (it != m_varname_map.end())
-            ? it->second : "";
+        auto it                   = m_varname_map.find(ss.str());
+        const std::string old_str = (it != m_varname_map.end()) ? it->second
+                                                                : "";
 
         if (old_str != "" && old_str != sym.get_string().string()) {
             std::cerr << "Warning: variable name collision between " << old_str
                       << " and " << sym.get_string() << std::endl;
         }
-    }
-    else {
+    } else {
         // We need to sanitize the symbol name for PTX compatibility
         std::string sym_name = sym.name().c_str();
-        std::replace (sym_name.begin(), sym_name.end(), '.', '_');
+        std::replace(sym_name.begin(), sym_name.end(), '.', '_');
 
         std::string var_name = fmtformat("{}_{}_{}_{}_{}", sym_name,
                                          group().name(), group().id(),
@@ -505,8 +528,8 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
     const std::string name = ss.str();
 
     // Return the Value if it has already been allocated
-    std::map<std::string, llvm::GlobalVariable*>::iterator it =
-        get_const_map().find (name);
+    std::map<std::string, llvm::GlobalVariable*>::iterator it
+        = get_const_map().find(name);
 
     if (it != get_const_map().end()) {
         return it->second;
@@ -515,7 +538,7 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
 #if (OPTIX_VERSION < 70000)
     // Add the extra metadata needed to make the variable visible to OptiX.
     if (addMetadata || sym.typespec().is_string())
-        createOptixMetadata (name, sym);
+        createOptixMetadata(name, sym);
 #endif
 
     // TODO: Figure out the actual CUDA alignment requirements for the various
@@ -523,48 +546,50 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
     //       non-scalar types.
     int alignment = (sym.typespec().is_scalarnum()) ? 4 : 8;
 
-    llvm::Value* cuda_var = addCUDAVariable (name, sym.size(), alignment, sym.data(),
-                                             sym.typespec().simpletype());
+    llvm::Value* cuda_var = addCUDAVariable(name, sym.size(), alignment,
+                                            sym.data(),
+                                            sym.typespec().simpletype());
 
     return cuda_var;
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
-                               llvm::Value *arrayindex)
+llvm::Value*
+BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
+                              llvm::Value* arrayindex)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
         // Return NULL for request for pointer to derivs that don't exist
-        return ll.ptr_cast (ll.void_ptr_null(),
-                            ll.type_ptr (llvm_type(sym.typespec().elementtype())));
+        return ll.ptr_cast(ll.void_ptr_null(),
+                           ll.type_ptr(llvm_type(sym.typespec().elementtype())));
     }
 
-    llvm::Value *result = NULL;
+    llvm::Value* result = NULL;
     if (sym.symtype() == SymTypeConst) {
         if (use_optix()) {
             // Check the constant map for the named Symbol; if it's found, then
             // a GlobalVariable has been created for it
-            llvm::Value* ptr = getOrAllocateCUDAVariable (sym);
+            llvm::Value* ptr = getOrAllocateCUDAVariable(sym);
             if (ptr) {
-                llvm::Type *cast_type = (! sym.typespec().is_string())
-                    ? ll.type_ptr (llvm_type(sym.typespec().elementtype()))
-                    : ll.type_void_ptr();
+                llvm::Type* cast_type
+                    = (!sym.typespec().is_string())
+                          ? ll.type_ptr(llvm_type(sym.typespec().elementtype()))
+                          : ll.type_void_ptr();
 
-                result = ll.ptr_cast (ptr, cast_type);
+                result = ll.ptr_cast(ptr, cast_type);
             }
-        }
-        else {
+        } else {
             // For constants, start with *OUR* pointer to the constant values.
-            result = ll.ptr_cast (ll.constant_ptr (sym.data()),
-                                  ll.type_ptr (llvm_type(sym.typespec().elementtype())));
+            result = ll.ptr_cast(ll.constant_ptr(sym.data()),
+                                 ll.type_ptr(
+                                     llvm_type(sym.typespec().elementtype())));
         }
 
     } else {
         // Start with the initial pointer to the variable's memory location
-        result = getLLVMSymbolBase (sym);
+        result = getLLVMSymbolBase(sym);
     }
     if (!result)
         return NULL;  // Error
@@ -573,12 +598,12 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
     // right element.
     TypeDesc t = sym.typespec().simpletype();
     if (t.arraylen || has_derivs) {
-        int d = deriv * std::max(1,t.arraylen);
+        int d = deriv * std::max(1, t.arraylen);
         if (arrayindex)
-            arrayindex = ll.op_add (arrayindex, ll.constant(d));
+            arrayindex = ll.op_add(arrayindex, ll.constant(d));
         else
             arrayindex = ll.constant(d);
-        result = ll.GEP (result, arrayindex);
+        result = ll.GEP(result, arrayindex);
     }
 
     return result;
@@ -586,55 +611,55 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_value (const Symbol& sym, int deriv,
-                                   llvm::Value *arrayindex, int component,
-                                   TypeDesc cast)
+llvm::Value*
+BackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
+                             llvm::Value* arrayindex, int component,
+                             TypeDesc cast)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
         // Regardless of what object this is, if it doesn't have derivs but
         // we're asking for them, return 0.  Integers don't have derivs
         // so we don't need to worry about that case.
-        return ll.constant (0.0f);
+        return ll.constant(0.0f);
     }
 
     // arrayindex should be non-NULL if and only if sym is an array
-    OSL_DASSERT (sym.typespec().is_array() == (arrayindex != NULL));
+    OSL_DASSERT(sym.typespec().is_array() == (arrayindex != NULL));
 
     if (sym.is_constant() && !sym.typespec().is_array() && !arrayindex) {
         // Shortcut for simple constants
         if (sym.typespec().is_float()) {
             if (cast == TypeDesc::TypeInt)
-                return ll.constant ((int)sym.get_float());
+                return ll.constant((int)sym.get_float());
             else
-                return ll.constant (sym.get_float());
+                return ll.constant(sym.get_float());
         }
         if (sym.typespec().is_int()) {
             if (cast == TypeDesc::TypeFloat)
-                return ll.constant ((float)sym.get_int());
+                return ll.constant((float)sym.get_int());
             else
-                return ll.constant (sym.get_int());
+                return ll.constant(sym.get_int());
         }
         if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
-            return ll.constant (sym.get_float(component));
+            return ll.constant(sym.get_float(component));
         }
         if (sym.typespec().is_string()) {
-            return ll.constant (sym.get_string());
+            return ll.constant(sym.get_string());
         }
-        OSL_ASSERT (0 && "unhandled constant type");
+        OSL_ASSERT(0 && "unhandled constant type");
     }
 
-    return llvm_load_value (llvm_get_pointer (sym), sym.typespec(),
-                            deriv, arrayindex, component, cast);
+    return llvm_load_value(llvm_get_pointer(sym), sym.typespec(), deriv,
+                           arrayindex, component, cast);
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
-                                   int deriv, llvm::Value *arrayindex,
-                                   int component, TypeDesc cast)
+llvm::Value*
+BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
+                             llvm::Value* arrayindex, int component,
+                             TypeDesc cast)
 {
     if (!ptr)
         return NULL;  // Error
@@ -643,61 +668,59 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     // right element.
     TypeDesc t = type.simpletype();
     if (t.arraylen || deriv) {
-        int d = deriv * std::max(1,t.arraylen);
+        int d = deriv * std::max(1, t.arraylen);
         if (arrayindex)
-            arrayindex = ll.op_add (arrayindex, ll.constant(d));
+            arrayindex = ll.op_add(arrayindex, ll.constant(d));
         else
             arrayindex = ll.constant(d);
-        ptr = ll.GEP (ptr, arrayindex);
+        ptr = ll.GEP(ptr, arrayindex);
     }
 
     // If it's multi-component (triple or matrix), step to the right field
-    if (! type.is_closure_based() && t.aggregate > 1)
-        ptr = ll.GEP (ptr, 0, component);
+    if (!type.is_closure_based() && t.aggregate > 1)
+        ptr = ll.GEP(ptr, 0, component);
 
     // Now grab the value
-    llvm::Value *result = ll.op_load (ptr);
+    llvm::Value* result = ll.op_load(ptr);
 
     if (type.is_closure_based())
         return result;
 
     // Handle int<->float type casting
     if (type.is_float_based() && !type.is_array() && cast == TypeDesc::TypeInt)
-        result = ll.op_float_to_int (result);
+        result = ll.op_float_to_int(result);
     else if (type.is_int() && cast == TypeDesc::TypeFloat)
-        result = ll.op_int_to_float (result);
+        result = ll.op_int_to_float(result);
     else if (type.is_string() && cast == TypeDesc::LONGLONG)
-        result = ll.ptr_to_cast (result, ll.type_longlong());
+        result = ll.ptr_to_cast(result, ll.type_longlong());
 
     return result;
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
+llvm::Value*
+BackendLLVM::llvm_load_device_string(const Symbol& sym, bool follow)
 {
     // TODO: need to make this work with arrays of strings
-    OSL_ASSERT (use_optix() && "This is only intended to be used with CUDA");
+    OSL_ASSERT(use_optix() && "This is only intended to be used with CUDA");
 
     // Recover the userdata index for non-constant parameters
-    int userdata_index = find_userdata_index (sym);
+    int userdata_index = find_userdata_index(sym);
 
     llvm::Value* val = NULL;
     if (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp) {
         // Handle temporary and local variables
-        val = getOrAllocateLLVMSymbol (sym);
-        val = ll.ptr_cast (val, ll.type_longlong_ptr());
-    }
-    else if (userdata_index < 0) {
+        val = getOrAllocateLLVMSymbol(sym);
+        val = ll.ptr_cast(val, ll.type_longlong_ptr());
+    } else if (userdata_index < 0) {
         // Handle non-varying variables
-        OSL_DASSERT (sym.data() && "NULL data in non-varying string");
-        val = getOrAllocateCUDAVariable (sym);
-    }
-    else {
+        OSL_DASSERT(sym.data() && "NULL data in non-varying string");
+        val = getOrAllocateCUDAVariable(sym);
+    } else {
         // Handle potentially varying variables
-        val = ll.ptr_cast (groupdata_field_ptr (2 + userdata_index),
-                           ll.type_longlong_ptr());
+        val = ll.ptr_cast(groupdata_field_ptr(2 + userdata_index),
+                          ll.type_longlong_ptr());
     }
 
     // It's preferable to deal with device strings "symbolically" through the
@@ -705,26 +728,25 @@ BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
     // portable. But sometimes it's necessary to handle the underlying char*
     // directly, e.g. when printing or writing out a closure param.
     if (follow)
-        val = ll.int_to_ptr_cast (ll.op_load (val));
+        val = ll.int_to_ptr_cast(ll.op_load(val));
 
     return val;
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_constant_value (const Symbol& sym, 
-                                       int arrayindex, int component,
-                                       TypeDesc cast)
+llvm::Value*
+BackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
+                                      int component, TypeDesc cast)
 {
-    OSL_DASSERT (sym.is_constant() &&
-                 "Called llvm_load_constant_value for a non-constant symbol");
+    OSL_DASSERT(sym.is_constant()
+                && "Called llvm_load_constant_value for a non-constant symbol");
 
     // set array indexing to zero for non-arrays
-    if (! sym.typespec().is_array())
+    if (!sym.typespec().is_array())
         arrayindex = 0;
-    OSL_DASSERT (arrayindex >= 0 &&
-                 "Called llvm_load_constant_value with negative array index");
+    OSL_DASSERT(arrayindex >= 0
+                && "Called llvm_load_constant_value with negative array index");
 
     if (sym.typespec().is_float()) {
         if (cast == TypeDesc::TypeInt)
@@ -739,91 +761,90 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
             return ll.constant(sym.get_int(arrayindex));
     }
     if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
-        int ncomps = (int) sym.typespec().aggregate();
-        return ll.constant(sym.get_float(ncomps*arrayindex + component));
+        int ncomps = (int)sym.typespec().aggregate();
+        return ll.constant(sym.get_float(ncomps * arrayindex + component));
     }
     if (sym.typespec().is_string() && use_optix()) {
-        OSL_DASSERT ((arrayindex == 0) && "String arrays are not currently supported in OptiX");
-        return llvm_load_device_string (sym, /*follow*/ false);
+        OSL_DASSERT((arrayindex == 0)
+                    && "String arrays are not currently supported in OptiX");
+        return llvm_load_device_string(sym, /*follow*/ false);
     }
     if (sym.typespec().is_string()) {
         return ll.constant(sym.get_string(arrayindex));
     }
 
-    OSL_ASSERT (0 && "unhandled constant type");
+    OSL_ASSERT(0 && "unhandled constant type");
     return NULL;
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
-                                             llvm::Value *component)
+llvm::Value*
+BackendLLVM::llvm_load_component_value(const Symbol& sym, int deriv,
+                                       llvm::Value* component)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
         // Regardless of what object this is, if it doesn't have derivs but
         // we're asking for them, return 0.  Integers don't have derivs
         // so we don't need to worry about that case.
-        OSL_DASSERT (sym.typespec().is_float_based() &&
-                     "can't ask for derivs of an int");
-        return ll.constant (0.0f);
+        OSL_DASSERT(sym.typespec().is_float_based()
+                    && "can't ask for derivs of an int");
+        return ll.constant(0.0f);
     }
 
     // Start with the initial pointer to the value's memory location
-    llvm::Value* result = llvm_get_pointer (sym, deriv);
+    llvm::Value* result = llvm_get_pointer(sym, deriv);
     if (!result)
         return NULL;  // Error
 
-    OSL_DASSERT (sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
+    OSL_DASSERT(sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
-    result = ll.ptr_cast (result, ll.type_float_ptr());
-    result = ll.GEP (result, component);  // get the component
+    result = ll.ptr_cast(result, ll.type_float_ptr());
+    result = ll.GEP(result, component);  // get the component
 
     // Now grab the value
-    return ll.op_load (result);
+    return ll.op_load(result);
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_load_arg (const Symbol& sym, bool derivs)
+llvm::Value*
+BackendLLVM::llvm_load_arg(const Symbol& sym, bool derivs)
 {
-    OSL_DASSERT (sym.typespec().is_float_based());
-    if (sym.typespec().is_int() ||
-        (sym.typespec().is_float() && !derivs)) {
+    OSL_DASSERT(sym.typespec().is_float_based());
+    if (sym.typespec().is_int() || (sym.typespec().is_float() && !derivs)) {
         // Scalar case
-        return llvm_load_value (sym);
+        return llvm_load_value(sym);
     }
 
     if (derivs && !sym.has_derivs()) {
         // Manufacture-derivs case
-        const TypeSpec &t = sym.typespec();
+        const TypeSpec& t = sym.typespec();
         // Copy the non-deriv values component by component
-        llvm::Value *tmpptr = llvm_alloca (t, true);
-        for (int c = 0;  c < t.aggregate();  ++c) {
-            llvm::Value *v = llvm_load_value (sym, 0, c);
-            llvm_store_value (v, tmpptr, t, 0, NULL, c);
+        llvm::Value* tmpptr = llvm_alloca(t, true);
+        for (int c = 0; c < t.aggregate(); ++c) {
+            llvm::Value* v = llvm_load_value(sym, 0, c);
+            llvm_store_value(v, tmpptr, t, 0, NULL, c);
         }
         // Zero out the deriv values
-        llvm::Value *zero = ll.constant (0.0f);
-        for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, tmpptr, t, 1, NULL, c);
-        for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, tmpptr, t, 2, NULL, c);
-        return ll.void_ptr (tmpptr);
+        llvm::Value* zero = ll.constant(0.0f);
+        for (int c = 0; c < t.aggregate(); ++c)
+            llvm_store_value(zero, tmpptr, t, 1, NULL, c);
+        for (int c = 0; c < t.aggregate(); ++c)
+            llvm_store_value(zero, tmpptr, t, 2, NULL, c);
+        return ll.void_ptr(tmpptr);
     }
 
     // Regular pointer case
-    return llvm_void_ptr (sym);
+    return llvm_void_ptr(sym);
 }
 
 
 
 bool
-BackendLLVM::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
-                                    int deriv, llvm::Value* arrayindex,
-                                    int component)
+BackendLLVM::llvm_store_value(llvm::Value* new_val, const Symbol& sym,
+                              int deriv, llvm::Value* arrayindex, int component)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -831,17 +852,16 @@ BackendLLVM::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
         return true;
     }
 
-    return llvm_store_value (new_val, llvm_get_pointer (sym), sym.typespec(),
-                             deriv, arrayindex, component);
+    return llvm_store_value(new_val, llvm_get_pointer(sym), sym.typespec(),
+                            deriv, arrayindex, component);
 }
 
 
 
 bool
-BackendLLVM::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
-                                    const TypeSpec &type,
-                                    int deriv, llvm::Value* arrayindex,
-                                    int component)
+BackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
+                              const TypeSpec& type, int deriv,
+                              llvm::Value* arrayindex, int component)
 {
     if (!dst_ptr)
         return false;  // Error
@@ -850,29 +870,28 @@ BackendLLVM::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
     // right element.
     TypeDesc t = type.simpletype();
     if (t.arraylen || deriv) {
-        int d = deriv * std::max(1,t.arraylen);
+        int d = deriv * std::max(1, t.arraylen);
         if (arrayindex)
-            arrayindex = ll.op_add (arrayindex, ll.constant(d));
+            arrayindex = ll.op_add(arrayindex, ll.constant(d));
         else
             arrayindex = ll.constant(d);
-        dst_ptr = ll.GEP (dst_ptr, arrayindex);
+        dst_ptr = ll.GEP(dst_ptr, arrayindex);
     }
 
     // If it's multi-component (triple or matrix), step to the right field
-    if (! type.is_closure_based() && t.aggregate > 1)
-        dst_ptr = ll.GEP (dst_ptr, 0, component);
+    if (!type.is_closure_based() && t.aggregate > 1)
+        dst_ptr = ll.GEP(dst_ptr, 0, component);
 
     // Finally, store the value.
-    ll.op_store (new_val, dst_ptr);
+    ll.op_store(new_val, dst_ptr);
     return true;
 }
 
 
 
 bool
-BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
-                                              const Symbol& sym, int deriv,
-                                              llvm::Value* component)
+BackendLLVM::llvm_store_component_value(llvm::Value* new_val, const Symbol& sym,
+                                        int deriv, llvm::Value* component)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -882,110 +901,109 @@ BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
 
     // Let llvm_get_pointer do most of the heavy lifting to get us a
     // pointer to where our data lives.
-    llvm::Value *result = llvm_get_pointer (sym, deriv);
+    llvm::Value* result = llvm_get_pointer(sym, deriv);
     if (!result)
         return false;  // Error
 
-    OSL_DASSERT (sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
+    OSL_DASSERT(sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
-    result = ll.ptr_cast (result, ll.type_float_ptr());
-    result = ll.GEP (result, component);  // get the component
+    result = ll.ptr_cast(result, ll.type_float_ptr());
+    result = ll.GEP(result, component);  // get the component
 
     // Finally, store the value.
-    ll.op_store (new_val, result);
+    ll.op_store(new_val, result);
     return true;
 }
 
 
 
-llvm::Value *
-BackendLLVM::groupdata_field_ref (int fieldnum)
+llvm::Value*
+BackendLLVM::groupdata_field_ref(int fieldnum)
 {
-    return ll.GEP (groupdata_ptr(), 0, fieldnum);
+    return ll.GEP(groupdata_ptr(), 0, fieldnum);
 }
 
 
-llvm::Value *
-BackendLLVM::groupdata_field_ptr (int fieldnum, TypeDesc type)
+llvm::Value*
+BackendLLVM::groupdata_field_ptr(int fieldnum, TypeDesc type)
 {
-    llvm::Value *result = ll.void_ptr (groupdata_field_ref (fieldnum));
+    llvm::Value* result = ll.void_ptr(groupdata_field_ref(fieldnum));
     if (type != TypeDesc::UNKNOWN)
-        result = ll.ptr_to_cast (result, llvm_type(type));
+        result = ll.ptr_to_cast(result, llvm_type(type));
     return result;
 }
 
 
-llvm::Value *
-BackendLLVM::layer_run_ref (int layer)
+llvm::Value*
+BackendLLVM::layer_run_ref(int layer)
 {
-    int fieldnum = 0; // field 0 is the layer_run array
-    llvm::Value *layer_run = groupdata_field_ref (fieldnum);
-    return ll.GEP (layer_run, 0, layer);
+    int fieldnum           = 0;  // field 0 is the layer_run array
+    llvm::Value* layer_run = groupdata_field_ref(fieldnum);
+    return ll.GEP(layer_run, 0, layer);
 }
 
 
 
-llvm::Value *
-BackendLLVM::userdata_initialized_ref (int userdata_index)
+llvm::Value*
+BackendLLVM::userdata_initialized_ref(int userdata_index)
 {
-    int fieldnum = 1; // field 1 is the userdata_initialized array
-    llvm::Value *userdata_initialized = groupdata_field_ref (fieldnum);
-    return ll.GEP (userdata_initialized, 0, userdata_index);
+    int fieldnum = 1;  // field 1 is the userdata_initialized array
+    llvm::Value* userdata_initialized = groupdata_field_ref(fieldnum);
+    return ll.GEP(userdata_initialized, 0, userdata_index);
 }
 
 
 
-llvm::Value *
-BackendLLVM::llvm_call_function (const char *name, 
-                                 cspan<const Symbol *> args,
-                                 bool deriv_ptrs)
+llvm::Value*
+BackendLLVM::llvm_call_function(const char* name, cspan<const Symbol*> args,
+                                bool deriv_ptrs)
 {
     // most invocations of this function will only need a handful of args
     // so avoid dynamic allocation where possible
     constexpr int SHORT_NUM_ARGS = 16;
-    llvm::Value *short_valargs[SHORT_NUM_ARGS];
+    llvm::Value* short_valargs[SHORT_NUM_ARGS];
     std::vector<llvm::Value*> long_valargs;
-    llvm::Value **valargs = short_valargs;
+    llvm::Value** valargs = short_valargs;
     if (args.size() > SHORT_NUM_ARGS) {
         long_valargs.resize(args.size());
         valargs = long_valargs.data();
     }
-    for (int i = 0, nargs = args.size();  i < nargs; ++i) {
-        const Symbol &s = *(args[i]);
+    for (int i = 0, nargs = args.size(); i < nargs; ++i) {
+        const Symbol& s = *(args[i]);
         if (s.typespec().is_closure())
-            valargs[i] = llvm_load_value (s);
+            valargs[i] = llvm_load_value(s);
         else if (use_optix() && s.typespec().is_string())
-            valargs[i] = llvm_load_device_string (s, /*follow*/ true);
-        else if (s.typespec().simpletype().aggregate > 1 ||
-                 (deriv_ptrs && s.has_derivs()))
-            valargs[i] = llvm_void_ptr (s);
+            valargs[i] = llvm_load_device_string(s, /*follow*/ true);
+        else if (s.typespec().simpletype().aggregate > 1
+                 || (deriv_ptrs && s.has_derivs()))
+            valargs[i] = llvm_void_ptr(s);
         else
-            valargs[i] = llvm_load_value (s);
+            valargs[i] = llvm_load_value(s);
     }
-    return ll.call_function (name, cspan<llvm::Value*>(valargs, args.size()));
+    return ll.call_function(name, cspan<llvm::Value*>(valargs, args.size()));
 }
 
-llvm::Value *
-BackendLLVM::llvm_test_nonzero (Symbol &val, bool test_derivs)
+llvm::Value*
+BackendLLVM::llvm_test_nonzero(Symbol& val, bool test_derivs)
 {
-    const TypeSpec &ts (val.typespec());
-    OSL_DASSERT (! ts.is_array() && ! ts.is_closure() && ! ts.is_string());
+    const TypeSpec& ts(val.typespec());
+    OSL_DASSERT(!ts.is_array() && !ts.is_closure() && !ts.is_string());
     TypeDesc t = ts.simpletype();
 
     // Handle int case -- guaranteed no derivs, no multi-component
     if (t == TypeDesc::TypeInt)
-        return ll.op_ne (llvm_load_value(val), ll.constant(0));
+        return ll.op_ne(llvm_load_value(val), ll.constant(0));
 
     // float-based
-    int ncomps = t.aggregate;
-    int nderivs = (test_derivs && val.has_derivs()) ? 3 : 1;
-    llvm::Value *isnonzero = NULL;
-    for (int d = 0;  d < nderivs;  ++d) {
-        for (int c = 0;  c < ncomps;  ++c) {
-            llvm::Value *v = llvm_load_value (val, d, c);
-            llvm::Value *nz = ll.op_ne (v, ll.constant(0.0f), true);
+    int ncomps             = t.aggregate;
+    int nderivs            = (test_derivs && val.has_derivs()) ? 3 : 1;
+    llvm::Value* isnonzero = NULL;
+    for (int d = 0; d < nderivs; ++d) {
+        for (int c = 0; c < ncomps; ++c) {
+            llvm::Value* v  = llvm_load_value(val, d, c);
+            llvm::Value* nz = ll.op_ne(v, ll.constant(0.0f), true);
             if (isnonzero)  // multi-component/deriv: OR with running result
-                isnonzero = ll.op_or (nz, isnonzero);
+                isnonzero = ll.op_or(nz, isnonzero);
             else
                 isnonzero = nz;
         }
@@ -996,37 +1014,39 @@ BackendLLVM::llvm_test_nonzero (Symbol &val, bool test_derivs)
 
 
 bool
-BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
-                                    int arrayindex, int srccomp, int dstcomp)
+BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
+                              int srccomp, int dstcomp)
 {
-    OSL_DASSERT (! Result.typespec().is_structure());
-    OSL_DASSERT (! Src.typespec().is_structure());
+    OSL_DASSERT(!Result.typespec().is_structure());
+    OSL_DASSERT(!Src.typespec().is_structure());
 
-    const TypeSpec &result_t (Result.typespec());
-    const TypeSpec &src_t (Src.typespec());
+    const TypeSpec& result_t(Result.typespec());
+    const TypeSpec& src_t(Src.typespec());
 
-    llvm::Value *arrind = arrayindex >= 0 ? ll.constant (arrayindex) : NULL;
+    llvm::Value* arrind = arrayindex >= 0 ? ll.constant(arrayindex) : NULL;
 
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
         if (Src.typespec().is_closure()) {
-            llvm::Value *srcval = llvm_load_value (Src, 0, arrind, 0);
-            llvm_store_value (srcval, Result, 0, arrind, 0);
+            llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0);
+            llvm_store_value(srcval, Result, 0, arrind, 0);
         } else {
-            llvm::Value *null = ll.constant_ptr(NULL, ll.type_void_ptr());
-            llvm_store_value (null, Result, 0, arrind, 0);
+            llvm::Value* null = ll.constant_ptr(NULL, ll.type_void_ptr());
+            llvm_store_value(null, Result, 0, arrind, 0);
         }
         return true;
     }
 
     if (Result.typespec().is_matrix() && Src.typespec().is_int_or_float()) {
         // Handle m=f, m=i separately
-        llvm::Value *src = llvm_load_value (Src, 0, arrind, 0, TypeDesc::FLOAT /*cast*/);
+        llvm::Value* src = llvm_load_value(Src, 0, arrind, 0,
+                                           TypeDesc::FLOAT /*cast*/);
         // m=f sets the diagonal components to f, the others to zero
-        llvm::Value *zero = ll.constant (0.0f);
-        for (int i = 0;  i < 4;  ++i)
-            for (int j = 0;  j < 4;  ++j)
-                llvm_store_value (i==j ? src : zero, Result, 0, arrind, i*4+j);
-        llvm_zero_derivs (Result);  // matrices don't have derivs currently
+        llvm::Value* zero = ll.constant(0.0f);
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                llvm_store_value(i == j ? src : zero, Result, 0, arrind,
+                                 i * 4 + j);
+        llvm_zero_derivs(Result);  // matrices don't have derivs currently
         return true;
     }
 
@@ -1035,57 +1055,60 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     // will ensure they are the same size, except for certain cases where
     // the size difference is intended (by the optimizer).
     if (result_t.is_array() && src_t.is_array() && arrayindex == -1) {
-        OSL_DASSERT (assignable(result_t.elementtype(), src_t.elementtype()));
-        llvm::Value *resultptr = llvm_void_ptr (Result);
-        llvm::Value *srcptr = llvm_void_ptr (Src);
-        int len = std::min (Result.size(), Src.size());
-        int align = result_t.is_closure_based() ? (int)sizeof(void*) :
-                                       (int)result_t.simpletype().basesize();
+        OSL_DASSERT(assignable(result_t.elementtype(), src_t.elementtype()));
+        llvm::Value* resultptr = llvm_void_ptr(Result);
+        llvm::Value* srcptr    = llvm_void_ptr(Src);
+        int len                = std::min(Result.size(), Src.size());
+        int align              = result_t.is_closure_based()
+                                     ? (int)sizeof(void*)
+                                     : (int)result_t.simpletype().basesize();
         if (Result.has_derivs() && Src.has_derivs()) {
-            ll.op_memcpy (resultptr, srcptr, 3*len, align);
+            ll.op_memcpy(resultptr, srcptr, 3 * len, align);
         } else {
-            ll.op_memcpy (resultptr, srcptr, len, align);
+            ll.op_memcpy(resultptr, srcptr, len, align);
             if (Result.has_derivs())
-                llvm_zero_derivs (Result);
+                llvm_zero_derivs(Result);
         }
         return true;
     }
 
     // The following code handles f=f, f=i, v=v, v=f, v=i, m=m, s=s.
     // Remember that llvm_load_value will automatically convert scalar->triple.
-    TypeDesc rt = Result.typespec().simpletype();
-    TypeDesc basetype = TypeDesc::BASETYPE(rt.basetype);
+    TypeDesc rt              = Result.typespec().simpletype();
+    TypeDesc basetype        = TypeDesc::BASETYPE(rt.basetype);
     const int num_components = rt.aggregate;
-    const bool singlechan = (srccomp != -1) || (dstcomp != -1);
+    const bool singlechan    = (srccomp != -1) || (dstcomp != -1);
     if (use_optix() && Src.typespec().is_string()) {
-        llvm::Value* src = llvm_load_device_string (Src, /*follow*/ true);
-        llvm_store_value (ll.ptr_cast (src, ll.type_void_ptr()), Result);
-    }
-    else if (!singlechan) {
+        llvm::Value* src = llvm_load_device_string(Src, /*follow*/ true);
+        llvm_store_value(ll.ptr_cast(src, ll.type_void_ptr()), Result);
+    } else if (!singlechan) {
         for (int i = 0; i < num_components; ++i) {
-            llvm::Value* src_val = Src.is_constant()
-                ? llvm_load_constant_value (Src, arrayindex, i, basetype)
-                : llvm_load_value (Src, 0, arrind, i, basetype);
+            llvm::Value* src_val
+                = Src.is_constant()
+                      ? llvm_load_constant_value(Src, arrayindex, i, basetype)
+                      : llvm_load_value(Src, 0, arrind, i, basetype);
             if (!src_val)
                 return false;
-            llvm_store_value (src_val, Result, 0, arrind, i);
+            llvm_store_value(src_val, Result, 0, arrind, i);
         }
     } else {
         // connect individual component of an aggregate type
         // set srccomp to 0 for case when src is actually a float
-        if (srccomp == -1) srccomp = 0;
-        llvm::Value* src_val = Src.is_constant()
-            ? llvm_load_constant_value (Src, arrayindex, srccomp, basetype)
-            : llvm_load_value (Src, 0, arrind, srccomp, basetype);
+        if (srccomp == -1)
+            srccomp = 0;
+        llvm::Value* src_val
+            = Src.is_constant()
+                  ? llvm_load_constant_value(Src, arrayindex, srccomp, basetype)
+                  : llvm_load_value(Src, 0, arrind, srccomp, basetype);
         if (!src_val)
             return false;
         // write source float into all components when dstcomp == -1, otherwise
         // the single element requested.
         if (dstcomp == -1) {
             for (int i = 0; i < num_components; ++i)
-                llvm_store_value (src_val, Result, 0, arrind, i);
+                llvm_store_value(src_val, Result, 0, arrind, i);
         } else
-            llvm_store_value (src_val, Result, 0, arrind, dstcomp);
+            llvm_store_value(src_val, Result, 0, arrind, dstcomp);
     }
 
     // Handle derivatives
@@ -1093,35 +1116,37 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
         if (Src.has_derivs()) {
             // src and result both have derivs -- copy them
             if (!singlechan) {
-                for (int d = 1;  d <= 2;  ++d) {
+                for (int d = 1; d <= 2; ++d) {
                     for (int i = 0; i < num_components; ++i) {
-                        llvm::Value* val = llvm_load_value (Src, d, arrind, i);
-                        llvm_store_value (val, Result, d, arrind, i);
+                        llvm::Value* val = llvm_load_value(Src, d, arrind, i);
+                        llvm_store_value(val, Result, d, arrind, i);
                     }
                 }
             } else {
-                for (int d = 1;  d <= 2;  ++d) {
-                    llvm::Value* val = llvm_load_value (Src, d, arrind, srccomp);
+                for (int d = 1; d <= 2; ++d) {
+                    llvm::Value* val = llvm_load_value(Src, d, arrind, srccomp);
                     if (dstcomp == -1) {
                         for (int i = 0; i < num_components; ++i)
-                            llvm_store_value (val, Result, d, arrind, i);
-                    }
-                    else
-                        llvm_store_value (val, Result, d, arrind, dstcomp);
+                            llvm_store_value(val, Result, d, arrind, i);
+                    } else
+                        llvm_store_value(val, Result, d, arrind, dstcomp);
                 }
             }
         } else {
             // Result wants derivs but src didn't have them -- zero them
             if (dstcomp != -1) {
                 // memset the single deriv component's to zero
-                if (Result.has_derivs() && Result.typespec().elementtype().is_float_based()) {
+                if (Result.has_derivs()
+                    && Result.typespec().elementtype().is_float_based()) {
                     // dx
-                    ll.op_memset (ll.GEP(llvm_void_ptr(Result,1), dstcomp), 0, 1, rt.basesize());
+                    ll.op_memset(ll.GEP(llvm_void_ptr(Result, 1), dstcomp), 0,
+                                 1, rt.basesize());
                     // dy
-                    ll.op_memset (ll.GEP(llvm_void_ptr(Result,2), dstcomp), 0, 1, rt.basesize());
+                    ll.op_memset(ll.GEP(llvm_void_ptr(Result, 2), dstcomp), 0,
+                                 1, rt.basesize());
                 }
             } else
-                llvm_zero_derivs (Result);
+                llvm_zero_derivs(Result);
         }
     }
     return true;
@@ -1129,12 +1154,14 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
 
 
 
-int BackendLLVM::find_userdata_index (const Symbol& sym)
+int
+BackendLLVM::find_userdata_index(const Symbol& sym)
 {
     int userdata_index = -1;
     for (int i = 0, e = (int)group().m_userdata_names.size(); i < e; ++i) {
-        if (sym.name() == group().m_userdata_names[i] &&
-            equivalent (sym.typespec().simpletype(), group().m_userdata_types[i])) {
+        if (sym.name() == group().m_userdata_names[i]
+            && equivalent(sym.typespec().simpletype(),
+                          group().m_userdata_types[i])) {
             userdata_index = i;
             break;
         }
@@ -1144,5 +1171,5 @@ int BackendLLVM::find_userdata_index (const Symbol& sym)
 
 
 
-}; // namespace pvt
+};  // namespace pvt
 OSL_NAMESPACE_EXIT

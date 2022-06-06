@@ -55,12 +55,16 @@ getargs(int argc, char* argv[])
 {
     bool help = false;
     OIIO::ArgParse ap;
+    // clang-format off
     ap.options("osltoy -- interactive OSL plaything\n" OSL_INTRO_STRING "\n"
                "Usage:  osltoy [options] [filename...]",
-               "%*", parse_files, "", "--help", &help, "Print help message",
-               "-v", &verbose, "Verbose status messages", "--threads %d",
-               &threads, "Set thread count (0=cores)", "--res %d %d", &xres,
-               &yres, "Set resolution (x, y)", NULL);
+               "%*", parse_files, "",
+               "--help", &help, "Print help message",
+               "-v", &verbose, "Verbose status messages",
+               "--threads %d", &threads, "Set thread count (0=cores)",
+               "--res %d %d", &xres, &yres, "Set resolution (x, y)",
+               NULL);
+    // clang-format on
     if (ap.parse(argc, (const char**)argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage();

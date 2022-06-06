@@ -25,16 +25,19 @@ getargs(int argc, char* argv[])
 {
     bool help = false;
     OIIO::ArgParse ap;
-    ap.options(
-        "llvmutil_test\n" OIIO_INTRO_STRING "\n"
-        "Usage:  llvmutil_test [options]",
-        "--help", &help, "Print help message", "-v", &verbose, "Verbose mode",
-        "--debug", &debug, "Debug mode", "--memtest %d", &memtest,
-        "Memory test mode (arg: iterations)",
-        // "--iters %d", &iterations,
-        //     Strutil::fmt::format("Number of iterations (default: {})", iterations).c_str(),
-        // "--trials %d", &ntrials, "Number of trials",
-        NULL);
+    // clang-format off
+    ap.options("llvmutil_test\n"
+               OIIO_INTRO_STRING "\n"
+               "Usage:  llvmutil_test [options]",
+               "--help", &help, "Print help message",
+               "-v", &verbose, "Verbose mode",
+               "--debug", &debug, "Debug mode",
+               "--memtest %d", &memtest, "Memory test mode (arg: iterations)",
+               // "--iters %d", &iterations,
+               //     Strutil::fmt::format("Number of iterations (default: {})", iterations).c_str(),
+               // "--trials %d", &ntrials, "Number of trials",
+               NULL);
+    // clang-format on
     if (ap.parse(argc, (const char**)argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage();

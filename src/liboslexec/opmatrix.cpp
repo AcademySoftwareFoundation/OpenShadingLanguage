@@ -11,16 +11,16 @@
 /////////////////////////////////////////////////////////////////////////
 
 #include "oslexec_pvt.h"
+#include <OSL/device_string.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
-#include <OSL/device_string.h>
 #include <OSL/rs_free_function.h>
 
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
 
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
 
 

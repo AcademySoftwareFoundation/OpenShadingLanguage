@@ -135,77 +135,77 @@ static_assert(sizeof(OIIO::TextureOptBatch)
 static_assert(
     offsetof(OIIO::TextureOptBatch, sblur)
         == varying_offset + offsetof(VTO, sblur),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, tblur)
         == varying_offset + offsetof(VTO, tblur),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, rblur)
         == varying_offset + offsetof(VTO, rblur),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, swidth)
         == varying_offset + offsetof(VTO, swidth),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, twidth)
         == varying_offset + offsetof(VTO, twidth),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, rwidth)
         == varying_offset + offsetof(VTO, rwidth),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 
 static_assert(
     offsetof(OIIO::TextureOptBatch, firstchannel)
         == uniform_offset + offsetof(UniformTextureOptions, firstchannel),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, subimage)
         == uniform_offset + offsetof(UniformTextureOptions, subimage),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, subimagename)
         == uniform_offset + offsetof(UniformTextureOptions, subimagename),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, swrap)
         == uniform_offset + offsetof(UniformTextureOptions, swrap),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, twrap)
         == uniform_offset + offsetof(UniformTextureOptions, twrap),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, rwrap)
         == uniform_offset + offsetof(UniformTextureOptions, rwrap),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, mipmode)
         == uniform_offset + offsetof(UniformTextureOptions, mipmode),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, interpmode)
         == uniform_offset + offsetof(UniformTextureOptions, interpmode),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, anisotropic)
         == uniform_offset + offsetof(UniformTextureOptions, anisotropic),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, conservative_filter)
         == uniform_offset
                + offsetof(UniformTextureOptions, conservative_filter),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, fill)
         == uniform_offset + offsetof(UniformTextureOptions, fill),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 static_assert(
     offsetof(OIIO::TextureOptBatch, missingcolor)
         == uniform_offset + offsetof(UniformTextureOptions, missingcolor),
-    "BatchedTextureOptions members offset different that OIIO::TextureOptBatch");
+    "BatchedTextureOptions members offset different than OIIO::TextureOptBatch");
 
 OSL_PRAGMA_WARNING_POP
 }  // namespace validate_offsets

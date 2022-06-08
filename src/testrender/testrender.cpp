@@ -115,29 +115,33 @@ getargs(int argc, const char* argv[])
 {
     bool help = false;
     OIIO::ArgParse ap;
-    ap.options("Usage:  testrender [options] scene.xml outputfilename", "%*",
-               get_filenames, "", "--help", &help, "Print help message", "-v",
-               &verbose, "Verbose messages", "-t %d", &num_threads,
-               "Render using N threads (default: auto-detect)", "--optix",
-               &use_optix, "Use OptiX if available", "--debug", &debug1,
-               "Lots of debugging info", "--debug2", &debug2,
-               "Even more debugging info", "--runstats", &runstats,
-               "Print run statistics", "--stats", &runstats,
-               "",  // DEPRECATED 1.7
-               "--profile", &profile, "Print profile information", "--saveptx",
-               &saveptx, "Save the generated PTX (OptiX mode only)", "--warmup",
-               &warmup, "Perform a warmup launch", "--res %d %d", &xres, &yres,
-               "Make an W x H image", "-r %d %d", &xres, &yres,
-               "",  // synonym for -res
-               "-aa %d", &aa, "Trace NxN rays per pixel", "--iters %d", &iters,
-               "Number of iterations", "-O0", &O0,
-               "Do no runtime shader optimization", "-O1", &O1,
-               "Do a little runtime shader optimization", "-O2", &O2,
-               "Do lots of runtime shader optimization", "--debugnan",
-               &debugnan, "Turn on 'debugnan' mode", "--path %s", &shaderpath,
-               "Specify oso search path", "--options %s", &extraoptions,
-               "Set extra OSL options", "--texoptions %s", &texoptions,
-               "Set extra TextureSystem options", NULL);
+    // clang-format off
+    ap.options("Usage:  testrender [options] scene.xml outputfilename",
+               "%*", get_filenames, "",
+               "--help", &help, "Print help message",
+               "-v", &verbose, "Verbose messages",
+               "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
+               "--optix", &use_optix, "Use OptiX if available",
+               "--debug", &debug1, "Lots of debugging info",
+               "--debug2", &debug2, "Even more debugging info",
+               "--runstats", &runstats, "Print run statistics",
+               "--stats", &runstats, "", // DEPRECATED 1.7
+               "--profile", &profile, "Print profile information",
+               "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
+               "--warmup", &warmup, "Perform a warmup launch",
+               "--res %d %d", &xres, &yres, "Make an W x H image",
+               "-r %d %d", &xres, &yres, "", // synonym for -res
+               "-aa %d", &aa, "Trace NxN rays per pixel",
+               "--iters %d", &iters, "Number of iterations",
+               "-O0", &O0, "Do no runtime shader optimization",
+               "-O1", &O1, "Do a little runtime shader optimization",
+               "-O2", &O2, "Do lots of runtime shader optimization",
+               "--debugnan", &debugnan, "Turn on 'debugnan' mode",
+               "--path %s", &shaderpath, "Specify oso search path",
+               "--options %s", &extraoptions, "Set extra OSL options",
+               "--texoptions %s", &texoptions, "Set extra TextureSystem options",
+               NULL);
+    // clang-format on
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage();

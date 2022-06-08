@@ -246,15 +246,18 @@ main(int argc, char* argv[])
     OIIO::Filesystem::convert_native_arguments(argc, (const char**)argv);
 
     OIIO::ArgParse ap(argc, (const char**)argv);
-    ap.options(
-        "oslinfo -- list parameters of a compiled OSL shader\n" OSL_INTRO_STRING
-        "\n"
-        "Usage:  oslinfo [options] file0 [file1 ...]\n",
-        "%*", input_file, "", "-h", &help, "Print help message", "--help",
-        &help, "", "-v", &verbose, "Verbose", "--runstats", &runstats,
-        "Benchmark shader loading time for queries", "-p %s", &searchpath,
-        "Set searchpath for shaders", "--param %s", &oneparam,
-        "Output information in just this parameter", NULL);
+    // clang-format off
+    ap.options("oslinfo -- list parameters of a compiled OSL shader\n" OSL_INTRO_STRING "\n"
+               "Usage:  oslinfo [options] file0 [file1 ...]\n",
+               "%*", input_file, "",
+               "-h", &help, "Print help message",
+               "--help", &help, "",
+               "-v", &verbose, "Verbose",
+               "--runstats", &runstats, "Benchmark shader loading time for queries",
+               "-p %s", &searchpath, "Set searchpath for shaders",
+               "--param %s", &oneparam, "Output information in just this parameter",
+               NULL);
+    // clang-format on
 
     if (ap.parse(argc, (const char**)argv) < 0) {
         std::cerr << ap.geterror() << std::endl;

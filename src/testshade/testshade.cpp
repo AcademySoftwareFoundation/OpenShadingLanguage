@@ -641,86 +641,84 @@ getargs(int argc, const char* argv[])
     shader_setup_args.clear();
     shader_setup_args.push_back("testshade");  // seed with 'program'
 
+    // clang-format off
     OIIO::ArgParse ap;
-    ap.options(
-        "Usage:  testshade [options] shader...", "%*", stash_shader_arg, "",
-        "--help", &help, "Print help message", "-v", &verbose,
-        "Verbose messages", "-t %d", &num_threads,
-        "Render using N threads (default: auto-detect)", "--optix", &use_optix,
-        "Use OptiX if available", "--debug", &debug1, "Lots of debugging info",
-        "--debug2", &debug2, "Even more debugging info", "--llvm_debug",
-        &llvm_debug, "Turn on LLVM debugging info", "--runstats", &runstats,
-        "Print run statistics", "--stats", &runstats, "",  // DEPRECATED 1.7
-        "--batched", &batched, "Submit batches to ShadingSystem",
-        "--vary_pdxdy", &vary_Pdxdy,
-        "populate Dx(P) & Dy(P) with varying values (vs. uniform)",
-        "--vary_udxdy", &vary_udxdy,
-        "populate Dx(u) & Dy(u) with varying values (vs. uniform)",
-        "--vary_vdxdy", &vary_vdxdy,
-        "populate Dx(v) & Dy(v) with varying values (vs. uniform)", "--profile",
-        &profile, "Print profile information", "--saveptx", &saveptx,
-        "Save the generated PTX (OptiX mode only)", "--warmup", &warmup,
-        "Perform a warmup launch", "--res %d %d", &xres, &yres,
-        "Make an W x H image", "-g %d %d", &xres, &yres,
-        "",  // synonym for -res
-        "--options %s", &extraoptions, "Set extra OSL options",
-        "--texoptions %s", &texoptions, "Set extra TextureSystem options",
-        "--colorspace %s", &colorspace, "Set ShadingSysem colorspace",
-        "-o %L %L", &outputvars, &outputfiles,
-        "Output (variable, filename)   [filename='null' means don't save]",
-        "-d %s", &dataformatname,
-        "Set the output data format to one of: "
-        "uint8, half, float",
-        "-od %s", &dataformatname, "",  // old name
-        "--print", &print_outputs,
-        "Print values of all -o outputs to console instead of saving images",
-        "--groupname %s", &groupname, "Set shader group name", "--layer %@ %s",
-        stash_shader_arg, NULL, "Set next layer name", "--param %@ %s %s",
-        stash_shader_arg, NULL, NULL,
-        "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
-        "--shader %@ %s %s", stash_shader_arg, NULL, NULL,
-        "Declare a shader node (args: shader layername)",
-        "--connect %@ %s %s %s %s", stash_shader_arg, NULL, NULL, NULL, NULL,
-        "Connect fromlayer fromoutput tolayer toinput", "--reparam %@ %s %s %s",
-        stash_shader_arg, NULL, NULL, NULL,
-        "Change a parameter (args: layername paramname value) (options: type=%s)",
-        "--group %@ %s", stash_shader_arg, NULL, "Specify a full group command",
-        "--archivegroup %s", &archivegroup,
-        "Archive the group to a given filename", "--raytype %s", &raytype,
-        "Set the raytype", "--raytype_opt", &raytype_opt,
-        "Specify ray type mask for optimization", "--iters %d", &iters,
-        "Number of iterations", "-O0", &O0, "Do no runtime shader optimization",
-        "-O1", &O1, "Do a little runtime shader optimization", "-O2", &O2,
-        "Do lots of runtime shader optimization", "--llvm_opt %d", &llvm_opt,
-        "LLVM JIT optimization level", "--entry %L", &entrylayers,
-        "Add layer to the list of entry points", "--entryoutput %L",
-        &entryoutputs, "Add output symbol to the list of entry points",
-        "--center", &pixelcenters,
-        "Shade at output pixel 'centers' rather than corners", "--debugnan",
-        &debugnan, "Turn on 'debug_nan' mode", "--debuguninit", &debug_uninit,
-        "Turn on 'debug_uninit' mode", "--groupoutputs", &use_group_outputs,
-        "Specify group outputs, not global outputs", "--oslquery", &do_oslquery,
-        "Test OSLQuery at runtime", "--inbuffer", &inbuffer,
-        "Compile osl source from and to buffer", "--no-output-placement %!",
-        &output_placement,
-        "Turn off use of output placement, rely only on get_symbol",
-        "--shadeimage", &use_shade_image, "Use shade_image utility",
-        "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
-        "--expr %@ %s", stash_shader_arg, NULL,
-        "Specify an OSL expression to evaluate", "--offsetuv %f %f", &uoffset,
-        &voffset, "Offset s & t texture coordinates (default: 0 0)",
-        "--offsetst %f %f", &uoffset, &voffset, "",  // old name
-        "--scaleuv %f %f", &uscale, &vscale,
-        "Scale s & t texture lookups (default: 1, 1)", "--scalest %f %f",
-        &uscale, &vscale, "",  // old name
-        "--userdata %@ %s %s", stash_userdata, nullptr, nullptr,
-        "Add userdata (args: name value) (options: type=%s)",
-        "--userdata_isconnected", &userdata_isconnected,
-        "Consider lockgeom=0 to be isconnected()", "--locale %s", &localename,
-        "Set a different locale", "--use_rs_bitcode", &use_rs_bitcode,
-        "Use free function bitcode Renderer services", NULL);
-    if (ap.parse(argc, argv)
-        < 0 /*|| (shadernames.empty() && groupspec.empty())*/) {
+    ap.options("Usage:  testshade [options] shader...",
+               "%*", stash_shader_arg, "",
+               "--help", &help, "Print help message",
+               "-v", &verbose, "Verbose messages",
+               "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
+               "--optix", &use_optix, "Use OptiX if available",
+               "--debug", &debug1, "Lots of debugging info",
+               "--debug2", &debug2, "Even more debugging info",
+               "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
+               "--runstats", &runstats, "Print run statistics",
+               "--stats", &runstats, "",  // DEPRECATED 1.7
+               "--batched", &batched, "Submit batches to ShadingSystem",
+               "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",
+               "--vary_udxdy", &vary_udxdy, "populate Dx(u) & Dy(u) with varying values (vs. uniform)",
+               "--vary_vdxdy", &vary_vdxdy, "populate Dx(v) & Dy(v) with varying values (vs. uniform)",
+               "--profile", &profile, "Print profile information",
+               "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
+               "--warmup", &warmup, "Perform a warmup launch",
+               "--res %d %d", &xres, &yres, "Make an W x H image",
+               "-g %d %d", &xres, &yres, "", // synonym for -res
+               "--options %s", &extraoptions, "Set extra OSL options",
+               "--texoptions %s", &texoptions, "Set extra TextureSystem options",
+               "--colorspace %s", &colorspace, "Set ShadingSysem colorspace",
+               "-o %L %L", &outputvars, &outputfiles,
+                       "Output (variable, filename)   [filename='null' means don't save]",
+               "-d %s", &dataformatname, "Set the output data format to one of: "
+                       "uint8, half, float",
+               "-od %s", &dataformatname, "", // old name
+               "--print", &print_outputs, "Print values of all -o outputs to console instead of saving images",
+               "--groupname %s", &groupname, "Set shader group name",
+               "--layer %@ %s", stash_shader_arg, NULL, "Set next layer name",
+               "--param %@ %s %s", stash_shader_arg, NULL, NULL,
+                       "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
+               "--shader %@ %s %s", stash_shader_arg, NULL, NULL,
+                       "Declare a shader node (args: shader layername)",
+               "--connect %@ %s %s %s %s",
+                   stash_shader_arg, NULL, NULL, NULL, NULL,
+                   "Connect fromlayer fromoutput tolayer toinput",
+               "--reparam %@ %s %s %s", stash_shader_arg, NULL, NULL, NULL,
+                       "Change a parameter (args: layername paramname value) (options: type=%s)",
+               "--group %@ %s", stash_shader_arg, NULL,
+                       "Specify a full group command",
+               "--archivegroup %s", &archivegroup,
+                       "Archive the group to a given filename",
+               "--raytype %s", &raytype, "Set the raytype",
+               "--raytype_opt", &raytype_opt, "Specify ray type mask for optimization",
+               "--iters %d", &iters, "Number of iterations",
+               "-O0", &O0, "Do no runtime shader optimization",
+               "-O1", &O1, "Do a little runtime shader optimization",
+               "-O2", &O2, "Do lots of runtime shader optimization",
+               "--llvm_opt %d", &llvm_opt, "LLVM JIT optimization level",
+               "--entry %L", &entrylayers, "Add layer to the list of entry points",
+               "--entryoutput %L", &entryoutputs, "Add output symbol to the list of entry points",
+               "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
+               "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
+               "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
+               "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
+               "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
+               "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
+               "--no-output-placement %!", &output_placement,
+                       "Turn off use of output placement, rely only on get_symbol",
+               "--shadeimage", &use_shade_image, "Use shade_image utility",
+               "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
+               "--expr %@ %s", stash_shader_arg, NULL, "Specify an OSL expression to evaluate",
+               "--offsetuv %f %f", &uoffset, &voffset, "Offset s & t texture coordinates (default: 0 0)",
+               "--offsetst %f %f", &uoffset, &voffset, "", // old name
+               "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
+               "--scalest %f %f", &uscale, &vscale, "", // old name
+               "--userdata %@ %s %s", stash_userdata, nullptr, nullptr,
+                       "Add userdata (args: name value) (options: type=%s)",
+               "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
+               "--locale %s", &localename, "Set a different locale",
+               "--use_rs_bitcode", &use_rs_bitcode, "Use free function bitcode Renderer services",
+               NULL);
+    // clang-format on
+    if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage();
         exit(EXIT_FAILURE);
@@ -741,22 +739,25 @@ static void
 process_shader_setup_args(int argc, const char* argv[])
 {
     OIIO::ArgParse ap;
-    ap.options(
-        "Usage:  testshade [options] shader...", "%*", add_shader, "",
-        "--layer %s", &layername, "Set next layer name", "--param %@ %s %s",
-        &action_param, NULL, NULL,
-        "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
-        "--shader %@ %s %s", &action_shaderdecl, NULL, NULL,
-        "Declare a shader node (args: shader layername)",
-        "--connect %L %L %L %L", &connections, &connections, &connections,
-        &connections, "Connect fromlayer fromoutput tolayer toinput",
-        "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
-        "Change a parameter (args: layername paramname value) (options: type=%s)",
-        "--group %@ %s", &action_groupspec, &groupspec,
-        "Specify a full group command", "--expr %@ %s", &specify_expr, NULL,
-        "Specify an OSL expression to evaluate", NULL);
-    if (ap.parse(argc, argv) < 0
-        || (shadernames.empty() && groupspec.empty())) {
+    // clang-format off
+    ap.options("Usage:  testshade [options] shader...",
+               "%*", add_shader, "",
+               "--layer %s", &layername, "Set next layer name",
+               "--param %@ %s %s", &action_param, NULL, NULL,
+                       "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
+               "--shader %@ %s %s", &action_shaderdecl, NULL, NULL,
+                       "Declare a shader node (args: shader layername)",
+               "--connect %L %L %L %L",
+                   &connections, &connections, &connections, &connections,
+                   "Connect fromlayer fromoutput tolayer toinput",
+               "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
+                       "Change a parameter (args: layername paramname value) (options: type=%s)",
+               "--group %@ %s", &action_groupspec, &groupspec,
+                       "Specify a full group command",
+               "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
+               NULL);
+    // clang-format on
+    if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
         std::cerr << "ERROR: No shader or group was specified.\n";
         std::cerr << ap.geterror() << std::endl;
         std::cerr

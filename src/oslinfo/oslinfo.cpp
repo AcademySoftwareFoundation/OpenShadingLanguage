@@ -40,9 +40,9 @@ using namespace OSL;
 
 static std::string searchpath;
 static bool verbose  = false;
-static bool help     = false;
 static bool runstats = false;
 static std::string oneparam;
+static std::vector<std::string> filenames;
 
 
 
@@ -219,17 +219,6 @@ oslinfo(const std::string& name)
 
 
 
-static int
-input_file(int argc, const char* argv[])
-{
-    for (int i = 0; i < argc; i++) {
-        oslinfo(argv[i]);
-    }
-    return 0;
-}
-
-
-
 int
 main(int argc, char* argv[])
 {
@@ -245,25 +234,34 @@ main(int argc, char* argv[])
 
     OIIO::Filesystem::convert_native_arguments(argc, (const char**)argv);
 
-    OIIO::ArgParse ap(argc, (const char**)argv);
+    OIIO::ArgParse ap;
     // clang-format off
-    ap.options("oslinfo -- list parameters of a compiled OSL shader\n" OSL_INTRO_STRING "\n"
-               "Usage:  oslinfo [options] file0 [file1 ...]\n",
-               "%*", input_file, "",
-               "-h", &help, "Print help message",
-               "--help", &help, "",
-               "-v", &verbose, "Verbose",
-               "--runstats", &runstats, "Benchmark shader loading time for queries",
-               "-p %s", &searchpath, "Set searchpath for shaders",
-               "--param %s", &oneparam, "Output information in just this parameter",
-               NULL);
+    ap.intro("oslinfo -- list parameters of a compiled OSL shader\n" OSL_INTRO_STRING);
+    ap.usage("oslinfo [options] file0 [file1 ...]");
+    ap.arg("filename")
+      .hidden()
+      .action([&](cspan<const char*> argv){ filenames.emplace_back(argv[0]); });
+    ap.arg("-v", &verbose)
+      .help("Verbose output");
+    ap.arg("--runstats", &runstats)
+      .help("Benchmark shader loading time for queries");
+    ap.arg("-p %s:SEARCHPATH", &searchpath)
+      .help("Set searchpath for shaders");
+    ap.arg("--param %s:NAME", &oneparam)
+      .help("Output information about just this parameter");
     // clang-format on
 
     if (ap.parse(argc, (const char**)argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage();
-    } else if (help || argc <= 1) {
+        return EXIT_FAILURE;
+    } else if (filenames.empty()) {
         ap.usage();
+        return EXIT_SUCCESS;
+    }
+
+    for (auto filename : filenames) {
+        oslinfo(filename);
     }
     return EXIT_SUCCESS;
 }

@@ -98,69 +98,84 @@ set_shadingsys_options()
 
 
 
-int
-get_filenames(int argc, const char* argv[])
-{
-    for (int i = 0; i < argc; i++) {
-        if (scenefile.empty())
-            scenefile = argv[i];
-        else if (imagefile.empty())
-            imagefile = argv[i];
-    }
-    return 0;
-}
-
 void
 getargs(int argc, const char* argv[])
 {
-    bool help = false;
     OIIO::ArgParse ap;
     // clang-format off
-    ap.options("Usage:  testrender [options] scene.xml outputfilename",
-               "%*", get_filenames, "",
-               "--help", &help, "Print help message",
-               "-v", &verbose, "Verbose messages",
-               "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
-               "--optix", &use_optix, "Use OptiX if available",
-               "--debug", &debug1, "Lots of debugging info",
-               "--debug2", &debug2, "Even more debugging info",
-               "--runstats", &runstats, "Print run statistics",
-               "--stats", &runstats, "", // DEPRECATED 1.7
-               "--profile", &profile, "Print profile information",
-               "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
-               "--warmup", &warmup, "Perform a warmup launch",
-               "--res %d %d", &xres, &yres, "Make an W x H image",
-               "-r %d %d", &xres, &yres, "", // synonym for -res
-               "-aa %d", &aa, "Trace NxN rays per pixel",
-               "--iters %d", &iters, "Number of iterations",
-               "-O0", &O0, "Do no runtime shader optimization",
-               "-O1", &O1, "Do a little runtime shader optimization",
-               "-O2", &O2, "Do lots of runtime shader optimization",
-               "--debugnan", &debugnan, "Turn on 'debugnan' mode",
-               "--path %s", &shaderpath, "Specify oso search path",
-               "--options %s", &extraoptions, "Set extra OSL options",
-               "--texoptions %s", &texoptions, "Set extra TextureSystem options",
-               NULL);
+    ap.intro("testrender -- Test Renderer for Open Shading Language\n" OSL_COPYRIGHT_STRING);
+    ap.usage("testrender [options] scene.xml outputfilename");
+    ap.arg("filename")
+      .hidden()
+      .action([&](cspan<const char*> argv){
+          if (scenefile.empty())
+              scenefile = argv[0];
+          else if (imagefile.empty())
+              imagefile = argv[0];
+          });
+    ap.arg("-v", &verbose)
+      .help("Verbose output");
+    ap.arg("-t %d:NTHREADS", &num_threads)
+      .help("Set thread count (default = 0: auto-detect #cores)");
+    ap.arg("--res %d:XRES %d:YRES", &xres, &yres)
+      .help("Set resolution");
+    ap.arg("--optix", &use_optix)
+      .help("Use OptiX if available");
+    ap.arg("--debug", &debug1)
+      .help("Lots of debugging info");
+    ap.arg("--debug2", &debug2)
+      .help("Even more debugging info");
+    ap.arg("--runstats", &runstats)
+      .help("Print run statistics");
+    ap.arg("--stats", &runstats)
+      .hidden(); // DEPRECATED 1.7
+    ap.arg("--profile", &profile)
+      .help("Print profile information");
+    ap.arg("--saveptx", &saveptx)
+      .help("Save the generated PTX (OptiX mode only)");
+    ap.arg("--warmup", &warmup)
+      .help("Perform a warmup launch");
+    ap.arg("--res %d:W %d:H", &xres, &yres)
+      .help("Set resolution of output image to W x H");
+    ap.arg("-r %d:W %d:H", &xres, &yres)  // synonym for -res
+      .hidden();
+    ap.arg("-aa %d:N", &aa)
+      .help("Trace NxN rays per pixel");
+    ap.arg("--iters %d:N", &iters)
+      .help("Number of iterations");
+    ap.arg("-O0", &O0)
+      .help("Do no runtime shader optimization");
+    ap.arg("-O1", &O1)
+      .help("Do a little runtime shader optimization");
+    ap.arg("-O2", &O2)
+      .help("Do lots of runtime shader optimization");
+    ap.arg("--debugnan", &debugnan)
+      .help("Turn on 'debugnan' mode");
+    ap.arg("--path SEARCHPATH", &shaderpath)
+      .help("Specify oso search path");
+    ap.arg("--options %s:LIST", &extraoptions)
+      .help("Set extra OSL options");
+    ap.arg("--texoptions %s:LIST", &texoptions)
+      .help("Set extra TextureSystem options");
+
     // clang-format on
+    if (ap["help"].get<int>()) {
+        ap.print_help();
+        ap.abort();
+        exit(EXIT_SUCCESS);
+    }
     if (ap.parse(argc, argv) < 0) {
-        std::cerr << ap.geterror() << std::endl;
+        std::cerr << ap.geterror() << "\n\n";
         ap.usage();
         exit(EXIT_FAILURE);
     }
-    if (help) {
-        std::cout
-            << "testrender -- Test Renderer for Open Shading Language\n" OSL_COPYRIGHT_STRING
-               "\n";
-        ap.usage();
-        exit(EXIT_SUCCESS);
-    }
     if (scenefile.empty()) {
-        std::cerr << "testrender: Must specify an xml scene file to open\n";
+        std::cerr << "testrender: Must specify an xml scene file to open\n\n";
         ap.usage();
         exit(EXIT_FAILURE);
     }
     if (imagefile.empty()) {
-        std::cerr << "testrender: Must specify a filename for output render\n";
+        std::cerr << "testrender: Must specify a filename for output render\n\n";
         ap.usage();
         exit(EXIT_FAILURE);
     }

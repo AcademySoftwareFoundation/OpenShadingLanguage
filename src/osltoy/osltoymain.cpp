@@ -41,29 +41,23 @@ static int xres = 512, yres = 512;
 static std::vector<std::string> filenames;
 
 
-static int
-parse_files(int argc, const char* argv[])
-{
-    for (int i = 0; i < argc; i++)
-        filenames.emplace_back(argv[i]);
-    return 0;
-}
-
-
 static void
 getargs(int argc, char* argv[])
 {
     bool help = false;
     OIIO::ArgParse ap;
     // clang-format off
-    ap.options("osltoy -- interactive OSL plaything\n" OSL_INTRO_STRING "\n"
-               "Usage:  osltoy [options] [filename...]",
-               "%*", parse_files, "",
-               "--help", &help, "Print help message",
-               "-v", &verbose, "Verbose status messages",
-               "--threads %d", &threads, "Set thread count (0=cores)",
-               "--res %d %d", &xres, &yres, "Set resolution (x, y)",
-               NULL);
+    ap.intro("osltoy -- interactive OSL plaything\n" OSL_INTRO_STRING);
+    ap.usage("osltoy [options] [filename...]");
+    ap.arg("filename")
+      .hidden()
+      .action([&](cspan<const char*> argv){ filenames.emplace_back(argv[0]); });
+    ap.arg("-v", &verbose)
+      .help("Verbose output");
+    ap.arg("--threads %d:NTHREADS", &threads)
+      .help("Set thread count (0=cores)");
+    ap.arg("--res %d:XRES %d:YRES", &xres, &yres)
+      .help("Set resolution");
     // clang-format on
     if (ap.parse(argc, (const char**)argv) < 0) {
         std::cerr << ap.geterror() << std::endl;

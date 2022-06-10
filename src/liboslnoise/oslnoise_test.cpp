@@ -372,17 +372,18 @@ getargs(int argc, const char* argv[])
     bool help = false;
     OIIO::ArgParse ap;
     // clang-format off
-    ap.options("oslnoise_test  (" OSL_INTRO_STRING ")\n"
-               "Usage:  oslnoise_test [options]",
-               // "%*", parse_files, "",
-               "--help", &help, "Print help message",
-               "-v", &verbose, "Verbose mode",
-               "--img", &make_images, "Make test images",
-               "--iterations %d", &iterations,
-                   ustring::fmtformat("Number of iterations (default: {})", iterations).c_str(),
-               "--trials %d", &ntrials, "Number of trials",
-               NULL);
+    ap.intro("oslnoise_test  (" OSL_INTRO_STRING ")");
+    ap.usage("oslnoise_test [options]");
+    ap.arg("-v", &verbose)
+      .help("Verbose output");
+    ap.arg("--img", &make_images)
+      .help("Make test images");
+    ap.arg("--iterations %d:N", &iterations)
+      .help(ustring::fmtformat("Number of iterations (default: {})", iterations).c_str());
+    ap.arg("--trials %d:N", &ntrials)
+      .help("Number of trials");
     // clang-format on
+
     if (ap.parse(argc, (const char**)argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage();

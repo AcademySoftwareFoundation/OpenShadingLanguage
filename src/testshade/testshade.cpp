@@ -340,9 +340,9 @@ shader_from_buffers(std::string shadername)
 
 
 static int
-add_shader(int argc, const char* argv[])
+add_shader(cspan<const char*> argv)
 {
-    OSL_DASSERT(argc == 1);
+    OSL_DASSERT(argv.size() == 1);
     string_view shadername(argv[0]);
 
     set_shadingsys_options();
@@ -350,25 +350,23 @@ add_shader(int argc, const char* argv[])
     if (inbuffer)  // Request to exercise the buffer-based API calls
         shader_from_buffers(shadername);
 
-    for (int i = 0; i < argc; i++) {
-        inject_params();
-        shadernames.push_back(shadername);
-        shadingsys->Shader(*shadergroup, "surface", shadername, layername);
-        layername.clear();
-        params.clear();
-    }
+    inject_params();
+    shadernames.push_back(shadername);
+    shadingsys->Shader(*shadergroup, "surface", shadername, layername);
+    layername.clear();
+    params.clear();
     return 0;
 }
 
 
 
 static void
-action_shaderdecl(int /*argc*/, const char* argv[])
+action_shaderdecl(cspan<const char*> argv)
 {
     // `--shader shadername layername` is exactly equivalent to:
     // `--layer layername` followed by naming the shader.
     layername = argv[2];
-    add_shader(1, argv + 1);
+    add_shader(argv[1]);
 }
 
 
@@ -383,9 +381,9 @@ action_shaderdecl(int /*argc*/, const char* argv[])
 //   testshade -v -g 64 64 -o result out.exr -expr 'result=color(u,v,0);'
 //
 static void
-specify_expr(int argc OSL_MAYBE_UNUSED, const char* argv[])
+specify_expr(cspan<const char*> argv)
 {
-    OSL_DASSERT(argc == 2);
+    OSL_DASSERT(argv.size() == 2);
     std::string shadername = OSL::fmtformat("expr_{}", exprcount++);
     std::string sourcecode = "shader " + shadername
                              + " (\n"
@@ -544,7 +542,7 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
 
 
 static void
-action_param(int /*argc*/, const char* argv[])
+action_param(cspan<const char*> argv)
 {
     std::string command = argv[0];
     bool use_reparam    = false;
@@ -561,17 +559,17 @@ action_param(int /*argc*/, const char* argv[])
 // reparam -- just set reparam_layer and then let action_param do all the
 // hard work.
 static void
-action_reparam(int /*argc*/, const char* argv[])
+action_reparam(cspan<const char*> argv)
 {
     reparam_layer         = argv[1];
     const char* newargv[] = { argv[0], argv[2], argv[3] };
-    action_param(3, newargv);
+    action_param(newargv);
 }
 
 
 
 static void
-action_groupspec(int /*argc*/, const char* argv[])
+action_groupspec(cspan<const char*> argv)
 {
     shadingsys->ShaderGroupEnd(*shadergroup);
     std::string groupspec(argv[1]);
@@ -590,16 +588,16 @@ action_groupspec(int /*argc*/, const char* argv[])
 
 
 static void
-stash_shader_arg(int argc, const char* argv[])
+stash_shader_arg(cspan<const char*> argv)
 {
-    for (int i = 0; i < argc; ++i)
-        shader_setup_args.push_back(argv[i]);
+    for (auto a : argv)
+        shader_setup_args.push_back(a);
 }
 
 
 
 static void
-stash_userdata(int argc, const char* argv[])
+stash_userdata(cspan<const char*> argv)
 {
     add_param(userdata, argv[0], argv[1], argv[2]);
 }
@@ -632,8 +630,6 @@ print_info()
 static void
 getargs(int argc, const char* argv[])
 {
-    static bool help = false;
-
     // We have a bit of a chicken-and-egg problem here, where some arguments
     // set up the shader instances, but other args and housekeeping are
     // needed first. Untangle by just storing the shader setup args until
@@ -643,90 +639,147 @@ getargs(int argc, const char* argv[])
 
     // clang-format off
     OIIO::ArgParse ap;
-    ap.options("Usage:  testshade [options] shader...",
-               "%*", stash_shader_arg, "",
-               "--help", &help, "Print help message",
-               "-v", &verbose, "Verbose messages",
-               "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
-               "--optix", &use_optix, "Use OptiX if available",
-               "--debug", &debug1, "Lots of debugging info",
-               "--debug2", &debug2, "Even more debugging info",
-               "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
-               "--runstats", &runstats, "Print run statistics",
-               "--stats", &runstats, "",  // DEPRECATED 1.7
-               "--batched", &batched, "Submit batches to ShadingSystem",
-               "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",
-               "--vary_udxdy", &vary_udxdy, "populate Dx(u) & Dy(u) with varying values (vs. uniform)",
-               "--vary_vdxdy", &vary_vdxdy, "populate Dx(v) & Dy(v) with varying values (vs. uniform)",
-               "--profile", &profile, "Print profile information",
-               "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
-               "--warmup", &warmup, "Perform a warmup launch",
-               "--res %d %d", &xres, &yres, "Make an W x H image",
-               "-g %d %d", &xres, &yres, "", // synonym for -res
-               "--options %s", &extraoptions, "Set extra OSL options",
-               "--texoptions %s", &texoptions, "Set extra TextureSystem options",
-               "--colorspace %s", &colorspace, "Set ShadingSysem colorspace",
-               "-o %L %L", &outputvars, &outputfiles,
-                       "Output (variable, filename)   [filename='null' means don't save]",
-               "-d %s", &dataformatname, "Set the output data format to one of: "
-                       "uint8, half, float",
-               "-od %s", &dataformatname, "", // old name
-               "--print", &print_outputs, "Print values of all -o outputs to console instead of saving images",
-               "--groupname %s", &groupname, "Set shader group name",
-               "--layer %@ %s", stash_shader_arg, NULL, "Set next layer name",
-               "--param %@ %s %s", stash_shader_arg, NULL, NULL,
-                       "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
-               "--shader %@ %s %s", stash_shader_arg, NULL, NULL,
-                       "Declare a shader node (args: shader layername)",
-               "--connect %@ %s %s %s %s",
-                   stash_shader_arg, NULL, NULL, NULL, NULL,
-                   "Connect fromlayer fromoutput tolayer toinput",
-               "--reparam %@ %s %s %s", stash_shader_arg, NULL, NULL, NULL,
-                       "Change a parameter (args: layername paramname value) (options: type=%s)",
-               "--group %@ %s", stash_shader_arg, NULL,
-                       "Specify a full group command",
-               "--archivegroup %s", &archivegroup,
-                       "Archive the group to a given filename",
-               "--raytype %s", &raytype, "Set the raytype",
-               "--raytype_opt", &raytype_opt, "Specify ray type mask for optimization",
-               "--iters %d", &iters, "Number of iterations",
-               "-O0", &O0, "Do no runtime shader optimization",
-               "-O1", &O1, "Do a little runtime shader optimization",
-               "-O2", &O2, "Do lots of runtime shader optimization",
-               "--llvm_opt %d", &llvm_opt, "LLVM JIT optimization level",
-               "--entry %L", &entrylayers, "Add layer to the list of entry points",
-               "--entryoutput %L", &entryoutputs, "Add output symbol to the list of entry points",
-               "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
-               "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
-               "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
-               "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
-               "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
-               "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
-               "--no-output-placement %!", &output_placement,
-                       "Turn off use of output placement, rely only on get_symbol",
-               "--shadeimage", &use_shade_image, "Use shade_image utility",
-               "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
-               "--expr %@ %s", stash_shader_arg, NULL, "Specify an OSL expression to evaluate",
-               "--offsetuv %f %f", &uoffset, &voffset, "Offset s & t texture coordinates (default: 0 0)",
-               "--offsetst %f %f", &uoffset, &voffset, "", // old name
-               "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
-               "--scalest %f %f", &uscale, &vscale, "", // old name
-               "--userdata %@ %s %s", stash_userdata, nullptr, nullptr,
-                       "Add userdata (args: name value) (options: type=%s)",
-               "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
-               "--locale %s", &localename, "Set a different locale",
-               "--use_rs_bitcode", &use_rs_bitcode, "Use free function bitcode Renderer services",
-               NULL);
+    ap.intro("testshade -- Test Open Shading Language\n" OSL_COPYRIGHT_STRING);
+    ap.usage("testshade [options] shader...");
+    ap.arg("filename")
+      .hidden()
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); });
+    ap.arg("-v", &verbose)
+      .help("Verbose messages");
+    ap.arg("-t %d:NTHREADS", &num_threads)
+      .help("Set thread count (default = 0: auto-detect #cores)");
+    ap.arg("--optix", &use_optix)
+      .help("Use OptiX if available");
+    ap.arg("--debug", &debug1)
+      .help("Lots of debugging info");
+    ap.arg("--debug2", &debug2)
+      .help("Even more debugging info");
+    ap.arg("--llvm_debug", &llvm_debug)
+      .help("Turn on LLVM debugging info");
+    ap.arg("--runstats", &runstats)
+      .help("Print run statistics");
+    ap.arg("--stats", &runstats)
+      .hidden(); // DEPRECATED 1.7
+    ap.arg("--batched", &batched)
+      .help("Submit batches to ShadingSystem");
+    ap.arg("--vary_pdxdy", &vary_Pdxdy)
+      .help("populate Dx(P) & Dy(P) with varying values (vs. uniform)");
+    ap.arg("--vary_udxdy", &vary_udxdy)
+      .help("populate Dx(u) & Dy(u) with varying values (vs. uniform)");
+    ap.arg("--vary_vdxdy", &vary_vdxdy)
+      .help("populate Dx(v) & Dy(v) with varying values (vs. uniform)");
+    ap.arg("--profile", &profile)
+      .help("Print profile information");
+    ap.arg("--saveptx", &saveptx)
+      .help("Save the generated PTX (OptiX mode only)");
+    ap.arg("--warmup", &warmup)
+      .help("Perform a warmup launch");
+    ap.arg("--res %d:XRES %d:YRES", &xres, &yres)
+      .help("Set resolution");
+    ap.arg("-g %d:XRES %d:YRES", &xres, &yres)
+      .hidden();
+    ap.arg("--options %s:LIST", &extraoptions)
+      .help("Set extra OSL options");
+    ap.arg("--texoptions %s:LIST", &texoptions)
+      .help("Set extra TextureSystem options");
+    ap.arg("--colorspace %s:NAME", &colorspace)
+      .help("Set ShadingSysem colorspace");
+    ap.arg("-o %L:VARIABLE %L:FILENAME", &outputvars, &outputfiles)
+      .help("Specify an output (filename='null' means don't save)");
+    ap.arg("-d %s:NAME", &dataformatname)
+      .help("Set the output data format to one of: uint8, half, float");
+    ap.arg("-od %s", &dataformatname)
+      .hidden(); // old name
+    ap.arg("--print", &print_outputs)
+      .help("Print values of all -o outputs to console instead of saving images");
+    ap.arg("--groupname %s", &groupname)
+      .help("Set shader group name");
+    ap.arg("--layer %s:NAME")
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
+      .help("Set next layer name");
+    ap.arg("--param %s:NAME %s:VALUE")
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
+      .help("Add a parameter (options: type=%s, lockgeom=%d)");
+    ap.arg("--shader %s:SHADER %s:LAYERNAME")
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
+      .help("Declare a shader node");
+    ap.arg("--connect %s:FROMLAYER %s:FROMOUTPUT %s:TOLAYER %s:TOINPUT")
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
+      .help("Connect two shader layers");
+    ap.arg("--reparam %s:LAYERNAME %s:PARAMNAME %s:VALUE")
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
+      .help("Change a parameter (options: type=%s)");
+    ap.arg("--group %s:CMD")
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
+      .help("Specify a full group command");
+    ap.arg("--archivegroup %s:FILENAME", &archivegroup)
+      .help("Archive the group to a given filename");
+    ap.arg("--raytype %s", &raytype)
+      .help("Set the raytype");
+    ap.arg("--raytype_opt", &raytype_opt)
+      .help("Specify ray type mask for optimization");
+    ap.arg("--iters %d:ITERS", &iters)
+      .help("Number of iterations");
+    ap.arg("-O0", &O0)
+      .help("Do no runtime shader optimization");
+    ap.arg("-O1", &O1)
+      .help("Do a little runtime shader optimization");
+    ap.arg("-O2", &O2)
+      .help("Do lots of runtime shader optimization");
+    ap.arg("--llvm_opt %d:LEVEL", &llvm_opt)
+      .help("LLVM JIT optimization level");
+    ap.arg("--entry %L:LAYERNAME", &entrylayers)
+      .help("Add layer to the list of entry points");
+    ap.arg("--entryoutput %L:NAME", &entryoutputs)
+      .help("Add output symbol to the list of entry points");
+    ap.arg("--center", &pixelcenters)
+      .help("Shade at output pixel 'centers' rather than corners");
+    ap.arg("--debugnan", &debugnan)
+      .help("Turn on 'debug_nan' mode");
+    ap.arg("--debuguninit", &debug_uninit)
+      .help("Turn on 'debug_uninit' mode");
+    ap.arg("--groupoutputs", &use_group_outputs)
+      .help("Specify group outputs, not global outputs");
+    ap.arg("--oslquery", &do_oslquery)
+      .help("Test OSLQuery at runtime");
+    ap.arg("--inbuffer", &inbuffer)
+      .help("Compile osl source from and to buffer");
+    ap.arg("--no-output-placement")
+      .help("Turn off use of output placement, rely only on get_symbol")
+      .action(OIIO::ArgParse::store_false());
+    ap.arg("--shadeimage", &use_shade_image)
+      .help("Use shade_image utility");
+    ap.arg("--noshadeimage %!", &use_shade_image)
+      .help("Don't use shade_image utility")
+      .action(OIIO::ArgParse::store_false());
+    ap.arg("--expr %s:EXPR")
+      .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
+      .help("Specify an OSL expression to evaluate");
+    ap.arg("--offsetuv %f:UOFFSET %f:VOFFSET")
+      .help("Offset s & t texture coordinates (default: 0 0)");
+    ap.arg("--offsetst %f %f", &uoffset, &voffset)
+      .hidden();  // old name
+    ap.arg("--scaleuv %f:USCALE %f:VSCALE", &uscale, &vscale)
+      .help("Scale s & t texture lookups (default: 1, 1)");
+    ap.arg("--scalest %f %f", &uscale, &vscale)
+      .hidden();  // old name
+    ap.arg("--userdata %s:NAME %s:VALUE")
+      .action([&](cspan<const char*> argv){ stash_userdata(argv); })
+      .help("Add userdata (options: type=%s)");
+    ap.arg("--userdata_isconnected", &userdata_isconnected)
+      .help("Consider lockgeom=0 to be isconnected()");
+    ap.arg("--locale %s:NAME", &localename)
+      .help("Set a different locale");
+    ap.arg("--use_rs_bitcode", &use_rs_bitcode)
+      .help("Use free function bitcode Renderer services");
+
     // clang-format on
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage();
         exit(EXIT_FAILURE);
     }
-    if (help) {
-        std::cout
-            << "testshade -- Test Open Shading Language\n" OSL_COPYRIGHT_STRING
-               "\n";
+    if (ap["help"].get<int>()) {
         ap.usage();
         print_info();
         exit(EXIT_SUCCESS);
@@ -740,22 +793,32 @@ process_shader_setup_args(int argc, const char* argv[])
 {
     OIIO::ArgParse ap;
     // clang-format off
-    ap.options("Usage:  testshade [options] shader...",
-               "%*", add_shader, "",
-               "--layer %s", &layername, "Set next layer name",
-               "--param %@ %s %s", &action_param, NULL, NULL,
-                       "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
-               "--shader %@ %s %s", &action_shaderdecl, NULL, NULL,
-                       "Declare a shader node (args: shader layername)",
-               "--connect %L %L %L %L",
-                   &connections, &connections, &connections, &connections,
-                   "Connect fromlayer fromoutput tolayer toinput",
-               "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
-                       "Change a parameter (args: layername paramname value) (options: type=%s)",
-               "--group %@ %s", &action_groupspec, &groupspec,
-                       "Specify a full group command",
-               "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
-               NULL);
+    ap.intro("testshade -- Test Open Shading Language\n" OSL_COPYRIGHT_STRING);
+    ap.usage("testshade [options] shader...");
+    ap.arg("filename")
+      .hidden()
+      .action([&](cspan<const char*> argv){ add_shader(argv); });
+    ap.arg("--layer %s:NAME", &layername)
+      .help("Set next layer name");
+    ap.arg("--param %s:PARAMNAME %s:VALUE")
+      .help("Add a parameter (options: type=%s, lockgeom=%d)")
+      .action([&](cspan<const char*> argv){ action_param(argv); });
+    ap.arg("--shader %s:SHADER %s:LAYERNAME", &action_shaderdecl)
+      .help("Declare a shader node (args: shader layername)")
+      .action([&](cspan<const char*> argv){ action_shaderdecl(argv); });
+    ap.arg("--connect %L:FROMLAYER %L:FROMOUTPUT %L:TOLAYER %L:TOINPUT",
+           &connections, &connections, &connections, &connections)
+      .help("Connect fromlayer fromoutput tolayer toinput");
+    ap.arg("--reparam %s:LAYERNAME %s:PARAMNAME %s:VALUE")
+      .help("Change a parameter (options: type=%s)")
+      .action([&](cspan<const char*> argv){ action_reparam(argv); });
+    ap.arg("--group %s:GROUPSPEC", &groupspec)
+      .help("Specify a full group command")
+      .action([&](cspan<const char*> argv){ action_groupspec(argv); });
+    ap.arg("--expr %s:EXPR")
+      .help("Specify an OSL expression to evaluate")
+      .action([&](cspan<const char*> argv){ specify_expr(argv); });
+
     // clang-format on
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
         std::cerr << "ERROR: No shader or group was specified.\n";

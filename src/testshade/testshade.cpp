@@ -803,7 +803,7 @@ process_shader_setup_args(int argc, const char* argv[])
     ap.arg("--param %s:PARAMNAME %s:VALUE")
       .help("Add a parameter (options: type=%s, lockgeom=%d)")
       .action([&](cspan<const char*> argv){ action_param(argv); });
-    ap.arg("--shader %s:SHADER %s:LAYERNAME", &action_shaderdecl)
+    ap.arg("--shader %s:SHADER %s:LAYERNAME")
       .help("Declare a shader node (args: shader layername)")
       .action([&](cspan<const char*> argv){ action_shaderdecl(argv); });
     ap.arg("--connect %L:FROMLAYER %L:FROMOUTPUT %L:TOLAYER %L:TOINPUT",

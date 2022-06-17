@@ -198,7 +198,7 @@ if (USE_CUDA OR USE_OPTIX)
     # OptiX setup
     if (USE_OPTIX)
         checked_find_package (OptiX REQUIRED
-                              VERSION_MIN 5.1)
+                              VERSION_MIN 7.0)
         include_directories (BEFORE "${OPTIX_INCLUDES}")
         if (NOT USE_LLVM_BITCODE OR NOT USE_FAST_MATH)
             message (FATAL_ERROR "Enabling OptiX requires USE_LLVM_BITCODE=1 and USE_FAST_MATH=1")

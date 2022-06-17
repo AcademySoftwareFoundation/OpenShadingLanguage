@@ -231,17 +231,12 @@ rend_get_userdata(StringParam name, void* data, int data_size,
 OSL_HOSTDEVICE void
 ColorSystem::error(StringParam src, StringParam dst, Context sg) const
 {
-#    if !defined(__CUDA_ARCH__) || OPTIX_VERSION < 70000
+#    ifndef __CUDA_ARCH__
     const char* args[2] = { src.c_str(), dst.c_str() };
     osl_printf(sg,
                (char*)  // FIXME!
                "ERROR: Unknown color space transformation \"%s\" -> \"%s\"\n",
                args);
-#    else
-    uint64_t fmt_hash = UStringHash::Hash(
-        "ERROR: Unknown color space transformation \"%s\" -> \"%s\"\n");
-    uint64_t args[3] = { 2 * sizeof(uint64_t), dst, src };
-    osl_printf(sg, (char*)fmt_hash, args);
 #    endif
 }
 

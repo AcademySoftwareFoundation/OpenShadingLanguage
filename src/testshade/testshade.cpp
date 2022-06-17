@@ -2030,9 +2030,7 @@ test_shade(int argc, const char* argv[])
     if (use_optix) {
         reinterpret_cast<OptixGridRenderer*>(rend)->set_transforms(Mobj, Mshad);
         reinterpret_cast<OptixGridRenderer*>(rend)->register_named_transforms();
-#    if (OPTIX_VERSION >= 70000)
         reinterpret_cast<OptixGridRenderer*>(rend)->synch_attributes();
-#    endif
     }
 #endif
 

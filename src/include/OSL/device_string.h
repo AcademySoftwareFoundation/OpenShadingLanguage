@@ -36,20 +36,20 @@ OSL_NAMESPACE_ENTER
 // stored in the table, in the 16 bytes preceding the characters.
 
 struct DeviceString {
-#if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
+#ifdef __CUDA_ARCH__
     size_t m_chars;
 #else
     const char* m_chars;
 #endif
 
-#if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
+#ifdef __CUDA_ARCH__
     OSL_HOSTDEVICE DeviceString() {}
     OSL_HOSTDEVICE DeviceString(uint64_t i) : m_chars(i) {}
 #endif
 
     OSL_HOSTDEVICE uint64_t hash() const
     {
-#if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
+#ifdef __CUDA_ARCH__
         return m_chars;
 #else
         return *(uint64_t*)(m_chars - sizeof(uint64_t) - sizeof(uint64_t));
@@ -58,7 +58,7 @@ struct DeviceString {
 
     // In OptiX 7 we don't store the string's length. Make this a compile
     // time error.
-#if !(defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000)
+#ifndef __CUDA_ARCH__
     OSL_HOSTDEVICE uint64_t length() const
     {
         return *(uint64_t*)(m_chars - sizeof(uint64_t));
@@ -67,7 +67,7 @@ struct DeviceString {
 
     // In OptiX 7 we can't return the string's contents. Make this a compile
     // time error.
-#if !(defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000)
+#ifndef __CUDA_ARCH__
     OSL_HOSTDEVICE const char* c_str() const { return m_chars; }
 #endif
 
@@ -81,7 +81,7 @@ struct DeviceString {
         return m_chars != other.m_chars;
     }
 
-#if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
+#ifdef __CUDA_ARCH__
 
     OSL_HOSTDEVICE bool operator==(const size_t other) const
     {
@@ -123,9 +123,6 @@ typedef DeviceString StringParam;
 namespace DeviceStrings {
 #    define STRDECL(str, var_name) \
         extern __device__ OSL_NAMESPACE::DeviceString var_name;
-#    if OPTIX_VERSION < 70000
-#        include <OSL/strdecls.h>
-#    endif
 #    undef STRDECL
 }  // namespace DeviceStrings
 #else
@@ -140,10 +137,6 @@ namespace DeviceStrings {
 OSL_NAMESPACE_EXIT
 
 
-#ifdef __CUDA_ARCH__
-#    if OPTIX_VERSION < 70000
-namespace StringParams = OSL_NAMESPACE::DeviceStrings;
-#    endif
-#else
+#ifndef __CUDA_ARCH__
 namespace StringParams = OSL_NAMESPACE::Strings;
 #endif

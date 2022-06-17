@@ -12,7 +12,7 @@
 
 #include "optix_compat.h"
 #include "simpleraytracer.h"
-#if OPTIX_VERSION < 70000
+#ifndef OSL_USE_OPTIX
 #    include "optix_stringtable.h"
 #endif
 #include "render_params.h"
@@ -32,15 +32,7 @@ public:
                              const std::string& var_name)
     {
         ustring ustr = ustring(str);
-#if OPTIX_VERSION < 70000
-        uint64_t addr = m_str_table.addString(ustr, ustring(var_name));
-        if (!var_name.empty())
-            register_global(var_name, addr);
-        return addr;
-#else
-        m_hash_map[ustr.hash()] = ustr.c_str();
-        return 0;
-#endif
+        return ustr.hash();
     }
 
     uint64_t register_global(const std::string& str, uint64_t value);
@@ -80,14 +72,14 @@ public:
     optix::Context& context() { return m_optix_ctx; }
     optix::Context& operator->() { return context(); }
 
-#if (OPTIX_VERSION >= 70000)
+#ifdef OSL_USE_OPTIX
     void processPrintfBuffer(void* buffer_data, size_t buffer_size);
 #endif
 
 private:
     optix::Context m_optix_ctx = nullptr;
 
-#if (OPTIX_VERSION < 70000)
+#ifndef OSL_USE_OPTIX
     OptiXStringTable m_str_table;
     optix::Program m_program        = nullptr;
     optix::Program sphere_intersect = nullptr;
@@ -120,7 +112,6 @@ private:
     bool create_optix_pg(const OptixProgramGroupDesc* pg_desc, const int num_pg,
                          OptixProgramGroupOptions* program_options,
                          OptixProgramGroup* pg);
-
 #endif
 
     std::string m_materials_ptx;

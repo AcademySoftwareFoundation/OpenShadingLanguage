@@ -14,13 +14,11 @@
 #include "render_params.h"
 
 #ifdef OSL_USE_OPTIX
-#    if (OPTIX_VERSION >= 70000)
-#        include <cuda.h>
-#        include <nvrtc.h>
-#        include <optix_function_table_definition.h>
-#        include <optix_stack_size.h>
-#        include <optix_stubs.h>
-#    endif
+#    include <cuda.h>
+#    include <nvrtc.h>
+#    include <optix_function_table_definition.h>
+#    include <optix_stack_size.h>
+#    include <optix_stubs.h>
 #endif
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
@@ -33,7 +31,7 @@ extern unsigned char rend_llvm_compiled_ops_block[];
 OSL_NAMESPACE_ENTER
 
 
-#if (OPTIX_VERSION >= 70000)
+#ifdef OSL_USE_OPTIX
 
 #    define CUDA_CHECK(call)                                              \
         {                                                                 \
@@ -73,32 +71,21 @@ OSL_NAMESPACE_ENTER
         }                                                                  \
     }
 
+
 #ifdef OSL_USE_OPTIX
-#    if (OPTIX_VERSION >= 70000)
 static void
 context_log_cb(unsigned int level, const char* tag, const char* message,
                void* /*cbdata */)
 {
     //    std::cerr << "[" << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
-#    endif
 #endif
+
+
 
 OptixGridRenderer::OptixGridRenderer()
 {
 #ifdef OSL_USE_OPTIX
-
-#    if (OPTIX_VERSION < 70000)
-    // Set up the OptiX context
-    m_optix_ctx = optix::Context::create();
-    if (m_optix_ctx->getEnabledDeviceCount() != 1)
-        errhandler().warning("Only one CUDA device is currently supported");
-
-    // Set up the string table. This allocates a block of CUDA device memory to
-    // hold all of the static strings used by the OSL shaders. The strings can
-    // be accessed via OptiX variables that hold pointers to the table entries.
-    m_str_table.init(m_optix_ctx);
-#    else
     // Initialize CUDA
     cudaFree(0);
 
@@ -119,10 +106,10 @@ OptixGridRenderer::OptixGridRenderer()
                             "::DeviceStrings::" #var_name);
 #        include <OSL/strdecls.h>
 #        undef STRDECL
-#    endif  //#if (OPTIX_VERSION < 70000)
-
 #endif  //#ifdef OSL_USE_OPTIX
 }
+
+
 
 uint64_t
 OptixGridRenderer::register_global(const std::string& str, uint64_t value)
@@ -135,6 +122,8 @@ OptixGridRenderer::register_global(const std::string& str, uint64_t value)
     m_globals_map[ustring(str)] = value;
     return value;
 }
+
+
 
 bool
 OptixGridRenderer::fetch_global(const std::string& str, uint64_t* value)
@@ -174,16 +163,10 @@ OptixGridRenderer::load_ptx_file(string_view filename)
 OptixGridRenderer::~OptixGridRenderer()
 {
 #ifdef OSL_USE_OPTIX
-#    if (OPTIX_VERSION < 70000)
-    m_str_table.freetable();
-    if (m_optix_ctx)
-        m_optix_ctx->destroy();
-#    else
     for (void* p : m_ptrs_to_free)
         cudaFree(p);
     if (m_optix_ctx)
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
-#    endif
 #endif
 }
 
@@ -193,14 +176,6 @@ void
 OptixGridRenderer::init_shadingsys(ShadingSystem* ss)
 {
     shadingsys = ss;
-
-#if defined(OSL_USE_OPTIX) && OPTIX_VERSION < 70000
-    // NB: renderers using OptiX7+ are expected to link to rend_lib.cu manually
-    // to avoid duplicate 'rend_lib' symbols in each shader group.
-    shadingsys->attribute("lib_bitcode",
-                          { OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size },
-                          rend_llvm_compiled_ops_block);
-#endif
 }
 
 
@@ -209,26 +184,6 @@ bool
 OptixGridRenderer::init_optix_context(int xres OSL_MAYBE_UNUSED,
                                       int yres OSL_MAYBE_UNUSED)
 {
-#ifdef OSL_USE_OPTIX
-#    if (OPTIX_VERSION < 70000)
-    m_optix_ctx->setRayTypeCount(2);
-    m_optix_ctx->setEntryPointCount(1);
-    m_optix_ctx->setStackSize(2048);
-    m_optix_ctx->setPrintEnabled(true);
-
-    // Load the renderer CUDA source and generate PTX for it
-    std::string progName     = "optix_grid_renderer.ptx";
-    std::string renderer_ptx = load_ptx_file(progName);
-    if (renderer_ptx.empty()) {
-        errhandler().severefmt("Could not find PTX for the raygen program");
-        return false;
-    }
-
-    // Create the OptiX programs and set them on the optix::Context
-    m_program = m_optix_ctx->createProgramFromPTXString(renderer_ptx, "raygen");
-    m_optix_ctx->setRayGenerationProgram(0, m_program);
-#    endif  //#if (OPTIX_VERSION < 70000)
-#endif
     return true;
 }
 
@@ -238,85 +193,6 @@ bool
 OptixGridRenderer::synch_attributes()
 {
 #ifdef OSL_USE_OPTIX
-
-#    if (OPTIX_VERSION < 70000)
-    // FIXME -- this is for testing only
-    // Make some device strings to test userdata parameters
-    uint64_t addr1 = register_string("ud_str_1", "");
-    uint64_t addr2 = register_string("userdata string", "");
-    m_optix_ctx["test_str_1"]->setUserData(sizeof(char*), &addr1);
-    m_optix_ctx["test_str_2"]->setUserData(sizeof(char*), &addr2);
-
-    m_optix_ctx["object2common"]->setMatrix4x4fv(/*transpose*/ false,
-                                                 m_object2common.getValue());
-    m_optix_ctx["shader2common"]->setMatrix4x4fv(/*transpose*/ false,
-                                                 m_shader2common.getValue());
-
-    {
-        const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
-
-        char* colorSys            = nullptr;
-        long long cpuDataSizes[2] = { 0, 0 };
-        if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR,
-                                      (void*)&colorSys)
-            || !shadingsys->getattribute("colorsystem:sizes",
-                                         TypeDesc(TypeDesc::LONGLONG, 2),
-                                         (void*)&cpuDataSizes)
-            || !colorSys || !cpuDataSizes[0]) {
-            errhandler().errorfmt("No colorsystem available.");
-            return false;
-        }
-
-        auto cpuDataSize = cpuDataSizes[0];
-        auto numStrings  = cpuDataSizes[1];
-
-        // Get the size data-size, minus the ustring size
-        const size_t podDataSize = cpuDataSize
-                                   - sizeof(StringParam) * numStrings;
-
-        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT,
-                                                         RT_FORMAT_USER);
-        if (!buffer) {
-            errhandler().errorfmt("Could not create buffer for '{}'.", name);
-            return false;
-        }
-
-        // set the element size to char
-        buffer->setElementSize(sizeof(char));
-
-        // and number of elements to the actual size needed.
-        buffer->setSize(podDataSize + sizeof(DeviceString) * numStrings);
-
-        // copy the base data
-        char* gpuData = (char*)buffer->map();
-        if (!gpuData) {
-            errhandler().errorfmt("Could not map buffer for '{}' (size: {}).",
-                                  name,
-                                  podDataSize
-                                      + sizeof(DeviceString) * numStrings);
-            return false;
-        }
-        ::memcpy(gpuData, colorSys, podDataSize);
-        // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
-        // FIXME -- Should probably handle alignment better.
-        const ustring* cpuString
-            = (const ustring*)(colorSys
-                               + (cpuDataSize
-                                  - sizeof(StringParam) * numStrings));
-        char* gpuStrings = gpuData + podDataSize;
-        for (const ustring* end = cpuString + numStrings; cpuString < end;
-             ++cpuString) {
-            // convert the ustring to a device string
-            uint64_t devStr = register_string(cpuString->string(), "");
-            ::memcpy(gpuStrings, &devStr, sizeof(devStr));
-            gpuStrings += sizeof(DeviceString);
-        }
-
-        buffer->unmap();
-        m_optix_ctx[name]->setBuffer(buffer);
-
-#    else  // #if (OPTIX_VERSION < 70000)
-
     // FIXME -- this is for testing only
     // Make some device strings to test userdata parameters
     ustring userdata_str1("ud_str_1");
@@ -385,7 +261,6 @@ OptixGridRenderer::synch_attributes()
                                   sizeof(devStr), cudaMemcpyHostToDevice));
             gpuStrings += sizeof(DeviceString);
         }
-#    endif
     }
 #endif
     return true;
@@ -397,7 +272,6 @@ bool
 OptixGridRenderer::make_optix_materials()
 {
 #ifdef OSL_USE_OPTIX
-
     // Stand-in: names of shader outputs to preserve
     // FIXME
     std::vector<const char*> outputs { "Cout" };
@@ -406,63 +280,6 @@ OptixGridRenderer::make_optix_materials()
     // PTX to create OptiX Programs which can be called by the closest
     // hit program in the wrapper to execute the compiled OSL shader.
     int mtl_id = 0;
-
-#    if (OPTIX_VERSION < 70000)
-    for (const auto& groupref : shaders()) {
-        shadingsys->attribute(groupref.get(), "renderer_outputs",
-                              TypeDesc(TypeDesc::STRING, outputs.size()),
-                              outputs.data());
-
-        shadingsys->optimize_group(groupref.get(), nullptr);
-
-        if (!shadingsys->find_symbol(*groupref.get(), ustring(outputs[0]))) {
-            // FIXME: This is for cases where testshade is run with 1x1 resolution
-            //        Those tests may not have a Cout parameter to write to.
-            if (m_xres > 1 && m_yres > 1) {
-                errhandler().warning("Requested output '%s', which wasn't found",
-                                     outputs[0]);
-            }
-        }
-
-        std::string group_name, init_name, entry_name;
-        shadingsys->getattribute(groupref.get(), "groupname", group_name);
-        shadingsys->getattribute(groupref.get(), "group_init_name", init_name);
-        shadingsys->getattribute(groupref.get(), "group_entry_name",
-                                 entry_name);
-
-        // Retrieve the compiled ShaderGroup PTX
-        std::string osl_ptx;
-        shadingsys->getattribute(groupref.get(), "ptx_compiled_version",
-                                 OSL::TypeDesc::PTR, &osl_ptx);
-
-        if (osl_ptx.empty()) {
-            errhandler().errorfmt("Failed to generate PTX for ShaderGroup {}",
-                                  group_name);
-            return false;
-        }
-
-        if (options.get_int("saveptx")) {
-            std::string filename
-                = OIIO::Strutil::fmt::format("{}_{}.ptx", group_name, mtl_id++);
-            OIIO::ofstream out;
-            OIIO::Filesystem::open(out, filename);
-            out << osl_ptx;
-        }
-
-        // Create Programs from the init and group_entry functions,
-        // and set the OSL functions as Callable Programs so that they
-        // can be executed by the closest hit program in the wrapper
-        optix::Program osl_init
-            = m_optix_ctx->createProgramFromPTXString(osl_ptx, init_name);
-        optix::Program osl_group
-            = m_optix_ctx->createProgramFromPTXString(osl_ptx, entry_name);
-
-        // Grid shading
-        m_program["osl_init_func"]->setProgramId(osl_init);
-        m_program["osl_group_func"]->setProgramId(osl_group);
-    }
-
-#    else  //#if (OPTIX_VERSION < 70000)
 
     std::vector<OptixModule> modules;
 
@@ -720,7 +537,6 @@ OptixGridRenderer::make_optix_materials()
         //    printf ("Creating 'shader' group for group '%s':\n%s\n", group_name.c_str(), msg_log);
     }
 
-
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth = 1;
     pipeline_link_options.debugLevel    = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
@@ -855,9 +671,6 @@ OptixGridRenderer::make_optix_materials()
     m_setglobals_optix_sbt.missRecordBase          = d_setglobals_missRecord;
     m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(EmptyRecord);
     m_setglobals_optix_sbt.missRecordCount         = 1;
-
-#    endif  //#if (OPTIX_VERSION < 70000)
-
 #endif  //#ifdef OSL_USE_OPTIX
     return true;
 }
@@ -869,31 +682,6 @@ OptixGridRenderer::finalize_scene()
 {
 #ifdef OSL_USE_OPTIX
     make_optix_materials();
-
-#    if (OPTIX_VERSION < 70000)
-
-    m_optix_ctx["invw"]->setFloat(1.0f / m_xres);
-    m_optix_ctx["invh"]->setFloat(1.0f / m_yres);
-
-    // Create the output buffer
-    optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_OUTPUT,
-                                                     RT_FORMAT_FLOAT3, m_xres,
-                                                     m_yres);
-    m_optix_ctx["output_buffer"]->set(buffer);
-#    else
-
-#    endif  //#if (OPTIX_VERSION < 70000)
-
-#    if (OPTIX_VERSION < 70000)
-    if (!synch_attributes())
-        return false;
-#    endif
-
-#    if (OPTIX_VERSION < 70000)
-    m_optix_ctx->validate();
-#    else
-#    endif
-
 #endif
     return true;
 }
@@ -907,11 +695,7 @@ bool
 OptixGridRenderer::good(TextureHandle* handle OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
-#    if (OPTIX_VERSION < 70000)
-    return intptr_t(handle) != RT_TEXTURE_ID_NULL;
-#    else
     return handle != nullptr;
-#    endif
 #else
     return false;
 #endif
@@ -927,55 +711,6 @@ OptixGridRenderer::get_texture_handle(ustring filename OSL_MAYBE_UNUSED,
                                           OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
-
-#    if (OPTIX_VERSION < 70000)
-    auto itr = m_samplers.find(filename);
-    if (itr == m_samplers.end()) {
-        optix::TextureSampler sampler = context()->createTextureSampler();
-        sampler->setWrapMode(0, RT_WRAP_REPEAT);
-        sampler->setWrapMode(1, RT_WRAP_REPEAT);
-        sampler->setWrapMode(2, RT_WRAP_REPEAT);
-
-        sampler->setFilteringModes(RT_FILTER_LINEAR, RT_FILTER_LINEAR,
-                                   RT_FILTER_NONE);
-        sampler->setIndexingMode(false
-                                     ? RT_TEXTURE_INDEX_ARRAY_INDEX
-                                     : RT_TEXTURE_INDEX_NORMALIZED_COORDINATES);
-        sampler->setReadMode(RT_TEXTURE_READ_NORMALIZED_FLOAT);
-        sampler->setMaxAnisotropy(1.0f);
-
-
-        OIIO::ImageBuf image;
-        if (!image.init_spec(filename, 0, 0)) {
-            errhandler().errorfmt("Could not load: {}", filename);
-            return (TextureHandle*)(intptr_t(RT_TEXTURE_ID_NULL));
-        }
-        int nchan = image.spec().nchannels;
-
-        OIIO::ROI roi = OIIO::get_roi_full(image.spec());
-        int width = roi.width(), height = roi.height();
-        std::vector<float> pixels(width * height * nchan);
-        image.get_pixels(roi, OIIO::TypeDesc::FLOAT, pixels.data());
-
-        optix::Buffer buffer = context()->createBuffer(RT_BUFFER_INPUT,
-                                                       RT_FORMAT_FLOAT4, width,
-                                                       height);
-
-        float* device_ptr      = static_cast<float*>(buffer->map());
-        unsigned int pixel_idx = 0;
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                memcpy(device_ptr, &pixels[pixel_idx], sizeof(float) * nchan);
-                device_ptr += 4;
-                pixel_idx += nchan;
-            }
-        }
-        buffer->unmap();
-        sampler->setBuffer(buffer);
-        itr = m_samplers.emplace(std::move(filename), std::move(sampler)).first;
-    }
-    return (RendererServices::TextureHandle*)intptr_t(itr->second->getId());
-#    else  //#if (OPTIX_VERSION < 70000)
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
         // Open image
@@ -1034,9 +769,6 @@ OptixGridRenderer::get_texture_handle(ustring filename OSL_MAYBE_UNUSED,
         itr = m_samplers.emplace(std::move(filename), std::move(cuda_tex)).first;
     }
     return reinterpret_cast<RendererServices::TextureHandle*>(itr->second);
-
-#    endif  //#if (OPTIX_VERSION < 70000)
-
 #else
     return nullptr;
 #endif
@@ -1063,14 +795,9 @@ OptixGridRenderer::warmup()
 {
 #ifdef OSL_USE_OPTIX
     // Perform a tiny launch to warm up the OptiX context
-#    if (OPTIX_VERSION < 70000)
-    m_optix_ctx->launch(0, 1, 1);
-#    else
     OPTIX_CHECK(optixLaunch(m_optix_pipeline, m_cuda_stream, d_launch_params,
                             sizeof(RenderParams), &m_optix_sbt, 0, 0, 1));
     CUDA_SYNC_CHECK();
-#    endif
-
 #endif
 }
 
@@ -1081,9 +808,6 @@ void
 OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
-#    if (OPTIX_VERSION < 70000)
-    m_optix_ctx->launch(0, xres, yres);
-#    else
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_output_buffer),
                           xres * yres * 4 * sizeof(float)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_launch_params),
@@ -1135,12 +859,12 @@ OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
                           OSL_PRINTF_BUFFER_SIZE, cudaMemcpyDeviceToHost));
 
     processPrintfBuffer(printf_buffer.data(), OSL_PRINTF_BUFFER_SIZE);
-
-#    endif
 #endif
 }
 
-#if defined(OSL_USE_OPTIX) && OPTIX_VERSION >= 70000
+
+
+#ifdef OSL_USE_OPTIX
 void
 OptixGridRenderer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
 {
@@ -1245,20 +969,13 @@ OptixGridRenderer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
 }
 #endif
 
+
+
 void
 OptixGridRenderer::finalize_pixel_buffer()
 {
 #ifdef OSL_USE_OPTIX
-
     std::string buffer_name = "output_buffer";
-#    if (OPTIX_VERSION < 70000)
-    const void* buffer_ptr = m_optix_ctx[buffer_name]->getBuffer()->map();
-    if (!buffer_ptr)
-        errhandler().severefmt("Unable to map buffer {}", buffer_name);
-    OIIO::ImageBuf* buf = outputbuf(0);
-    if (buf)
-        buf->set_pixels(OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
-#    else
     std::vector<float> tmp_buff(m_xres * m_yres * 3);
     CUDA_CHECK(cudaMemcpy(tmp_buff.data(),
                           reinterpret_cast<void*>(d_output_buffer),
@@ -1267,7 +984,6 @@ OptixGridRenderer::finalize_pixel_buffer()
     OIIO::ImageBuf* buf = outputbuf(0);
     if (buf)
         buf->set_pixels(OIIO::ROI::All(), OIIO::TypeFloat, tmp_buff.data());
-#    endif
 #endif
 }
 
@@ -1278,20 +994,14 @@ OptixGridRenderer::clear()
 {
     shaders().clear();
 #ifdef OSL_USE_OPTIX
-#    if (OPTIX_VERSION < 70000)
-    if (m_optix_ctx) {
-        m_optix_ctx->destroy();
-        m_optix_ctx = nullptr;
-    }
-#    else
     if (m_optix_ctx) {
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
         m_optix_ctx = 0;
     }
-#    endif
-
 #endif
 }
+
+
 
 void
 OptixGridRenderer::set_transforms(const OSL::Matrix44& object2common,
@@ -1300,6 +1010,8 @@ OptixGridRenderer::set_transforms(const OSL::Matrix44& object2common,
     m_object2common = object2common;
     m_shader2common = shader2common;
 }
+
+
 
 void
 OptixGridRenderer::register_named_transforms()
@@ -1321,27 +1033,6 @@ OptixGridRenderer::register_named_transforms()
     }
 
     // Push the names and transforms to the device
-#    if (OPTIX_VERSION < 70000)
-    optix::Buffer name_buffer
-        = m_optix_ctx->createBuffer(RT_BUFFER_INPUT,
-                                    RT_FORMAT_UNSIGNED_LONG_LONG,
-                                    xform_name_buffer.size());
-    uint64_t* names = reinterpret_cast<uint64_t*>(name_buffer->map());
-    memcpy(names, xform_name_buffer.data(),
-           sizeof(uint64_t) * xform_name_buffer.size());
-    name_buffer->unmap();
-    m_optix_ctx["xform_name_buffer"]->setBuffer(name_buffer);
-
-    optix::Buffer transform_buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT);
-    transform_buffer->setFormat(RT_FORMAT_USER);
-    transform_buffer->setElementSize(sizeof(OSL::Matrix44));
-    transform_buffer->setSize(xform_buffer.size());
-    void* transforms = transform_buffer->map();
-    memcpy(transforms, xform_buffer.data(),
-           sizeof(OSL::Matrix44) * xform_buffer.size());
-    transform_buffer->unmap();
-    m_optix_ctx["xform_buffer"]->setBuffer(transform_buffer);
-#    else
     size_t sz = sizeof(uint64_t) * xform_name_buffer.size();
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_xform_name_buffer), sz));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_xform_name_buffer),
@@ -1356,7 +1047,6 @@ OptixGridRenderer::register_named_transforms()
     m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_buffer));
 
     m_num_named_xforms = xform_name_buffer.size();
-#    endif  // if (OPTIX_VERSION < 70000)
 #endif      // ifdef OSL_USE_OPTIX
 }
 

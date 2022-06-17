@@ -4,34 +4,24 @@
 
 #pragma once
 
-#if (OPTIX_VERSION < 70000)
-#    include <optix_math.h>
-#else
-#    include "../../liboslexec/string_hash.h"
-#    include <OSL/oslexec.h>
-#endif
+#include "../../liboslexec/string_hash.h"
+#include <OSL/oslexec.h>
+
 #include <OSL/device_string.h>
 
 OSL_NAMESPACE_ENTER
 // Create an OptiX variable for each of the 'standard' strings declared in
 // <OSL/strdecls.h>.
 namespace DeviceStrings {
-#if OPTIX_VERSION < 70000
-#    define STRDECL(str, var_name) \
-        rtDeclareVariable(OSL_NAMESPACE::DeviceString, var_name, , );
-#    define STRING_PARAMS(x) StringParams::x
-#else
-#    define STRING_PARAMS(x) UStringHash::Hash(__OSL_STRINGIFY(x))
+#define STRING_PARAMS(x) UStringHash::Hash(__OSL_STRINGIFY(x))
 // Don't declare anything
-#    define STRDECL(str, var_name)
-
-#endif
+#define STRDECL(str, var_name)
 
 #include <OSL/strdecls.h>
 #undef STRDECL
 }  // namespace DeviceStrings
 
-#if OPTIX_VERSION >= 70000
+
 namespace pvt {
 extern __device__ CUdeviceptr s_color_system;
 extern __device__ CUdeviceptr osl_printf_buffer_start;
@@ -42,16 +32,10 @@ extern __device__ uint64_t num_named_xforms;
 extern __device__ CUdeviceptr xform_name_buffer;
 extern __device__ CUdeviceptr xform_buffer;
 }  // namespace pvt
-#endif
+
 OSL_NAMESPACE_EXIT
 
 namespace {  // anonymous namespace
-
-#if (OPTIX_VERSION < 70000)
-#    ifdef __cplusplus
-typedef optix::float3 float3;
-#    endif
-#endif
 
 // These are CUDA variants of various OSL options structs. Their layouts and
 // default values are identical to the host versions, but they might differ in
@@ -159,7 +143,7 @@ enum ClosureIDs {
     HOLDOUT_ID,
 };
 
-#if (OPTIX_VERSION >= 70000)
+
 // ========================================
 //
 // Some helper vector functions
@@ -208,6 +192,5 @@ normalize(const float3& v)
 }
 //
 // ========================================
-#endif  //#if (OPTIX_VERSION >= 70000)
 
 }  // anonymous namespace

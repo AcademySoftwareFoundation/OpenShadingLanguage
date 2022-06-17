@@ -50,7 +50,7 @@ namespace pvt {
 class ShadingSystemImpl;
 }
 
-#if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
+#ifdef __CUDA_ARCH__
 #    define STRING_PARAMS(x) UStringHash::Hash(__OSL_STRINGIFY(x))
 #else
 #    define STRING_PARAMS(x) StringParams::x
@@ -58,11 +58,7 @@ class ShadingSystemImpl;
 
 namespace Strings {
 #ifdef __CUDA_ARCH__
-#    if OPTIX_VERSION >= 70000
-#        define STRDECL(str, var_name)
-#    else
-#        define STRDECL(str, var_name) extern __device__ ustring var_name;
-#    endif
+#    define STRDECL(str, var_name)
 #else
 // Any strings referenced inside of a libsoslexec/wide/*.cpp
 // or liboslnoise/wide/*.cpp will need OSLEXECPUBLIC

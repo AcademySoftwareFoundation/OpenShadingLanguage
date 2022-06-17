@@ -12,7 +12,7 @@
 
 #include "optix_compat.h"
 #include "simplerend.h"
-#if OPTIX_VERSION < 70000
+#ifndef OSL_USE_OPTIX
 #    include "../testrender/optix_stringtable.h"
 #endif
 
@@ -31,7 +31,7 @@ public:
                              const std::string& var_name)
     {
         ustring ustr = ustring(str);
-#if OPTIX_VERSION < 70000
+#ifndef OSL_USE_OPTIX
         uint64_t addr = m_str_table.addString(ustr, ustring(var_name));
         if (!var_name.empty()) {
             register_global(var_name, addr);
@@ -81,7 +81,7 @@ public:
     virtual TextureHandle* get_texture_handle(ustring filename,
                                               ShadingContext* shading_context);
 
-#if (OPTIX_VERSION < 70000)
+#ifndef OSL_USE_OPTIX
     // Easy way to do Optix calls
     optix::Context& optix_ctx() { return m_optix_ctx; }
     optix::Context& context() { return m_optix_ctx; }
@@ -97,7 +97,7 @@ public:
 private:
     optix::Context m_optix_ctx = nullptr;
 
-#if (OPTIX_VERSION < 70000)
+#ifndef OSL_USE_OPTIX
     OptiXStringTable m_str_table;
     optix::Program m_program = nullptr;
 #else
@@ -132,7 +132,9 @@ private:
     std::vector<void*> m_ptrs_to_free;
 };
 
-#if (OPTIX_VERSION >= 70000)
+
+
+#ifdef OSL_USE_OPTIX
 struct EmptyRecord {
     __align__(
         OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];

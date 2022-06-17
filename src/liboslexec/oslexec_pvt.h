@@ -23,9 +23,7 @@
 #endif
 
 #ifdef __CUDACC__
-#if OPTIX_VERSION >= 70000
 #include "string_hash.h"
-#endif
 #endif
 
 #include <OpenImageIO/ustring.h>
@@ -1267,7 +1265,7 @@ public:
     bool empty_instance () const {
         return (symbols().size() == 0 &&
                 (ops().size() == 0 ||
-#if defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000
+#ifdef __CUDA_ARCH__
                  (ops().size() == 1 && UStringHash::Hash(ops()[0].opname().c_str()) == STRING_PARAMS(end))
 #else
                  (ops().size() == 1 && ops()[0].opname() == Strings::end)

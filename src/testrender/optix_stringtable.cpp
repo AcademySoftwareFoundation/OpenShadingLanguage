@@ -4,9 +4,7 @@
 
 #ifdef OSL_USE_OPTIX
 #    include <optix.h>
-#endif
-
-#if OPTIX_VERSION < 70000
+#else
 
 #    include "optix_stringtable.h"
 

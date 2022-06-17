@@ -1,8 +1,46 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12 -- ?? (compared to 1.11)
+Release 1.13 -- ?? 2023 ?? (compared to 1.12)
 --------------------------------------------------
+Dependency and standards requirements changes:
+
+OSL Language and oslc compiler:
+
+OSL Standard library:
+
+API changes, new options, new ShadingSystem features (for renderer writers):
+
+SIMD batched shading mode:
+
+OptiX rendering:
+
+Performance improvements:
+
+Bug fixes and other improvements (internals):
+
+Internals/developer concerns:
+
+Build & test system improvements:
+* CMake build system and scripts:
+* Dependency version support:
+* Testing and Continuous integration (CI) systems:
+* Platform support:
+
+Documentation:
+
+
+
+Release 1.12 -- ?? 1 Aug 2022 ?? (compared to 1.11)
+--------------------------------------------------
+Big Deal Changes:
+
+* Batch shading: A fully operational "batch shading" support when using CPUs
+  supporting the AVX2 or AVX512 instruction set architectures, allows shading
+  8 or 16 points at a time, accelerated by using SIMD instructions.
+* A reasonable subset of the OSL language can run on NVIDIA GPUs for
+  Cuda or OptiX-based renderers.
+
 Dependency and standards requirements changes:
 * The minimum (and default) compilation mode is now C++14. C++17 and 20 are
   also supported. #1362 #1369 (1.12.2)
@@ -58,7 +96,7 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   triggered for those cases that cannot be resolved by the end of the "runtime
   optimization" phase. #1497 (1.12.4.6)
 
-Continued work on experimental SIMD batched shading mode:
+SIMD batched shading mode:
 * Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
 * Add interface to ShadingSystem for batched execution. #1272 (1.12.0.1)
 * Add interface to batched RendererServices. #1276 (1.12.0.1)
@@ -84,7 +122,7 @@ Continued work on experimental SIMD batched shading mode:
 * Batched userdata and output placement. #1455 (1.12.4.2)
 * Batched pointcloud functions. #1464 (1.12.4.4)
 
-Continued work on experimental OptiX rendering:
+OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
 * CI tests now at least compile and build with USE_OPTIX=1 (though not yet
   run the tests). #1281 (1.12.0.1)

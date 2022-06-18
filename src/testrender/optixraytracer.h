@@ -12,9 +12,6 @@
 
 #include "optix_compat.h"
 #include "simpleraytracer.h"
-#ifndef OSL_USE_OPTIX
-#    include "optix_stringtable.h"
-#endif
 #include "render_params.h"
 
 OSL_NAMESPACE_ENTER
@@ -32,7 +29,8 @@ public:
                              const std::string& var_name)
     {
         ustring ustr = ustring(str);
-        return ustr.hash();
+        m_hash_map[ustr.hash()] = ustr.c_str();
+        return 0;
     }
 
     uint64_t register_global(const std::string& str, uint64_t value);
@@ -72,21 +70,11 @@ public:
     optix::Context& context() { return m_optix_ctx; }
     optix::Context& operator->() { return context(); }
 
-#ifdef OSL_USE_OPTIX
     void processPrintfBuffer(void* buffer_data, size_t buffer_size);
-#endif
 
 private:
     optix::Context m_optix_ctx = nullptr;
 
-#ifndef OSL_USE_OPTIX
-    OptiXStringTable m_str_table;
-    optix::Program m_program        = nullptr;
-    optix::Program sphere_intersect = nullptr;
-    optix::Program sphere_bounds    = nullptr;
-    optix::Program quad_intersect   = nullptr;
-    optix::Program quad_bounds      = nullptr;
-#else
     CUstream m_cuda_stream;
     OptixTraversableHandle m_travHandle;
     OptixShaderBindingTable m_optix_sbt = {};
@@ -112,7 +100,6 @@ private:
     bool create_optix_pg(const OptixProgramGroupDesc* pg_desc, const int num_pg,
                          OptixProgramGroupOptions* program_options,
                          OptixProgramGroup* pg);
-#endif
 
     std::string m_materials_ptx;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash>

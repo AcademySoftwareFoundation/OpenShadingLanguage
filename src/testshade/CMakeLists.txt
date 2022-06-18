@@ -3,19 +3,17 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testshade' executable
-set ( testshade_srcs 
-    testshade.cpp 
-    simplerend.cpp 
-    optixgridrender.cpp
-    ../testrender/optix_stringtable.cpp )
+set ( testshade_srcs
+      testshade.cpp
+      simplerend.cpp )
 
 if (BUILD_BATCHED)
     list(APPEND testshade_srcs 
-        batched_simplerend.cpp 
-        )
+        batched_simplerend.cpp)
 endif()    
 
 if (USE_OPTIX)
+    list (APPEND testshade_srcs optixgridrender.cpp)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu
         ../testrender/cuda/wrapper.cu

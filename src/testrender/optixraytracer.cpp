@@ -13,12 +13,11 @@
 
 #include "render_params.h"
 
-#ifdef OSL_USE_OPTIX
-#    include <cuda.h>
-#    include <optix_function_table_definition.h>
-#    include <optix_stack_size.h>
-#    include <optix_stubs.h>
-#endif
+#include <cuda.h>
+#include <optix_function_table_definition.h>
+#include <optix_stack_size.h>
+#include <optix_stubs.h>
+
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
@@ -28,33 +27,31 @@ extern unsigned char rend_llvm_compiled_ops_block[];
 
 OSL_NAMESPACE_ENTER
 
-#ifdef OSL_USE_OPTIX
 
-#    define CUDA_CHECK(call)                                              \
-        {                                                                 \
-            cudaError_t error = call;                                     \
-            if (error != cudaSuccess) {                                   \
-                std::stringstream ss;                                     \
-                ss << "CUDA call (" << #call << " ) failed with error: '" \
-                   << cudaGetErrorString(error) << "' (" __FILE__ << ":"  \
-                   << __LINE__ << ")\n";                                  \
-                print(stderr, "[CUDA ERROR]  {}", ss.str());              \
-            }                                                             \
-        }
+#define CUDA_CHECK(call)                                              \
+    {                                                                 \
+        cudaError_t error = call;                                     \
+        if (error != cudaSuccess) {                                   \
+            std::stringstream ss;                                     \
+            ss << "CUDA call (" << #call << " ) failed with error: '" \
+               << cudaGetErrorString(error) << "' (" __FILE__ << ":"  \
+               << __LINE__ << ")\n";                                  \
+            print(stderr, "[CUDA ERROR]  {}", ss.str());              \
+        }                                                             \
+    }
 
-#    define OPTIX_CHECK(call)                                           \
-        {                                                               \
-            OptixResult res = call;                                     \
-            if (res != OPTIX_SUCCESS) {                                 \
-                std::stringstream ss;                                   \
-                ss << "Optix call '" << #call                           \
-                   << "' failed with error: " << optixGetErrorName(res) \
-                   << " (" __FILE__ ":" << __LINE__ << ")\n";           \
-                print(stderr, "[OPTIX ERROR]  {}", ss.str());           \
-                exit(1);                                                \
-            }                                                           \
-        }
-#endif
+#define OPTIX_CHECK(call)                                           \
+    {                                                               \
+        OptixResult res = call;                                     \
+        if (res != OPTIX_SUCCESS) {                                 \
+            std::stringstream ss;                                   \
+            ss << "Optix call '" << #call                           \
+               << "' failed with error: " << optixGetErrorName(res) \
+               << " (" __FILE__ ":" << __LINE__ << ")\n";           \
+            print(stderr, "[OPTIX ERROR]  {}", ss.str());           \
+            exit(1);                                                \
+        }                                                           \
+    }
 
 #define CUDA_SYNC_CHECK()                                                  \
     {                                                                      \
@@ -67,20 +64,17 @@ OSL_NAMESPACE_ENTER
         }                                                                  \
     }
 
-#ifdef OSL_USE_OPTIX
 static void
 context_log_cb(unsigned int level, const char* tag, const char* message,
                void* /*cbdata */)
 {
     //    std::cerr << "[ ** LOGCALLBACK** " << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
-#endif
 
 
 
 OptixRaytracer::OptixRaytracer()
 {
-#ifdef OSL_USE_OPTIX
     // Initialize CUDA
     cudaFree(0);
 
@@ -96,23 +90,18 @@ OptixRaytracer::OptixRaytracer()
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
 
-#    define STRDECL(str, var_name) \
-        register_string(str,       \
-                        OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name);
-#    include <OSL/strdecls.h>
-#    undef STRDECL
-
-#endif
+#define STRDECL(str, var_name) \
+    register_string(str, OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name);
+#include <OSL/strdecls.h>
+#undef STRDECL
 }
 
 
 
 OptixRaytracer::~OptixRaytracer()
 {
-#ifdef OSL_USE_OPTIX
     if (m_optix_ctx)
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
-#endif
 }
 
 
@@ -147,7 +136,6 @@ OptixRaytracer::fetch_global(const std::string& str, uint64_t* value)
 std::string
 OptixRaytracer::load_ptx_file(string_view filename)
 {
-#ifdef OSL_USE_OPTIX
     std::vector<std::string> paths
         = { OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path()),
             PTX_PATH };
@@ -158,7 +146,6 @@ OptixRaytracer::load_ptx_file(string_view filename)
         if (OIIO::Filesystem::read_text_file(filepath, ptx_string))
             return ptx_string;
     }
-#endif
     errhandler().severefmt("Unable to load {}", filename);
     return {};
 }
@@ -177,7 +164,6 @@ OptixRaytracer::init_optix_context(int xres OSL_MAYBE_UNUSED,
 bool
 OptixRaytracer::synch_attributes()
 {
-#ifdef OSL_USE_OPTIX
     // FIXME -- this is for testing only
     // Make some device strings to test userdata parameters
     ustring userdata_str1("ud_str_1");
@@ -236,13 +222,11 @@ OptixRaytracer::synch_attributes()
             gpuStrings += sizeof(DeviceString);
         }
     }
-#endif
     return true;
 }
 
 
 
-#ifdef OSL_USE_OPTIX
 bool
 OptixRaytracer::load_optix_module(
     const char* filename,
@@ -288,14 +272,12 @@ OptixRaytracer::create_optix_pg(const OptixProgramGroupDesc* pg_desc,
 
     return true;
 }
-#endif
 
 
 
 bool
 OptixRaytracer::make_optix_materials()
 {
-#ifdef OSL_USE_OPTIX
     // Stand-in: names of shader outputs to preserve
     std::vector<const char*> outputs { "Cout" };
 
@@ -702,7 +684,7 @@ OptixRaytracer::make_optix_materials()
         optixModuleDestroy(i);
     }
     modules.clear();
-#endif
+
     return true;
 }
 
@@ -711,7 +693,6 @@ OptixRaytracer::make_optix_materials()
 bool
 OptixRaytracer::finalize_scene()
 {
-#ifdef OSL_USE_OPTIX
     // Build acceleration structures
     OptixAccelBuildOptions accelOptions;
     OptixBuildInput buildInputs[2];
@@ -878,7 +859,6 @@ OptixRaytracer::finalize_scene()
     //         h_aabb.maxX, h_aabb.maxY, h_aabb.maxZ );
 
     make_optix_materials();
-#endif      //#ifdef OSL_USE_OPTIX
     return true;
 }
 
@@ -890,11 +870,7 @@ OptixRaytracer::finalize_scene()
 bool
 OptixRaytracer::good(TextureHandle* handle OSL_MAYBE_UNUSED)
 {
-#ifdef OSL_USE_OPTIX
     return handle != nullptr;
-#else
-    return false;
-#endif
 }
 
 
@@ -906,7 +882,6 @@ OptixRaytracer::get_texture_handle(ustring filename OSL_MAYBE_UNUSED,
                                    ShadingContext* shading_context
                                        OSL_MAYBE_UNUSED)
 {
-#ifdef OSL_USE_OPTIX
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
         // Open image
@@ -962,9 +937,6 @@ OptixRaytracer::get_texture_handle(ustring filename OSL_MAYBE_UNUSED,
         itr = m_samplers.emplace(std::move(filename), std::move(cuda_tex)).first;
     }
     return reinterpret_cast<RendererServices::TextureHandle*>(itr->second);
-#else
-    return nullptr;
-#endif
 }
 
 
@@ -972,13 +944,11 @@ OptixRaytracer::get_texture_handle(ustring filename OSL_MAYBE_UNUSED,
 void
 OptixRaytracer::prepare_render()
 {
-#ifdef OSL_USE_OPTIX
     // Set up the OptiX Context
     init_optix_context(camera.xres, camera.yres);
 
     // Set up the OptiX scene graph
     finalize_scene();
-#endif
 }
 
 
@@ -986,12 +956,10 @@ OptixRaytracer::prepare_render()
 void
 OptixRaytracer::warmup()
 {
-#ifdef OSL_USE_OPTIX
     // Perform a tiny launch to warm up the OptiX context
     OPTIX_CHECK(optixLaunch(m_optix_pipeline, m_cuda_stream, d_launch_params,
                             sizeof(RenderParams), &m_optix_sbt, 0, 0, 1));
     CUDA_SYNC_CHECK();
-#endif
 }
 
 
@@ -999,7 +967,6 @@ OptixRaytracer::warmup()
 void
 OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 {
-#ifdef OSL_USE_OPTIX
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_output_buffer),
                           xres * yres * 4 * sizeof(float)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_launch_params),
@@ -1055,12 +1022,10 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
                           OSL_PRINTF_BUFFER_SIZE, cudaMemcpyDeviceToHost));
 
     processPrintfBuffer(printf_buffer.data(), OSL_PRINTF_BUFFER_SIZE);
-#endif
 }
 
 
 
-#ifdef OSL_USE_OPTIX
 void
 OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
 {
@@ -1163,14 +1128,12 @@ OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
         printf("%s", buffer);
     }
 }
-#endif
 
 
 
 void
 OptixRaytracer::finalize_pixel_buffer()
 {
-#ifdef OSL_USE_OPTIX
     std::string buffer_name = "output_buffer";
     std::vector<float> tmp_buff(m_xres * m_yres * 3);
     CUDA_CHECK(cudaMemcpy(tmp_buff.data(),
@@ -1178,7 +1141,6 @@ OptixRaytracer::finalize_pixel_buffer()
                           m_xres * m_yres * 3 * sizeof(float),
                           cudaMemcpyDeviceToHost));
     pixelbuf.set_pixels(OIIO::ROI::All(), OIIO::TypeFloat, tmp_buff.data());
-#endif
 }
 
 
@@ -1187,10 +1149,8 @@ void
 OptixRaytracer::clear()
 {
     shaders().clear();
-#ifdef OSL_USE_OPTIX
     OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
     m_optix_ctx = 0;
-#endif
 }
 
 OSL_NAMESPACE_EXIT

@@ -3,9 +3,13 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testrender' executable
-file(GLOB testrender_srcs *.cpp)
+set (testrender_srcs
+     shading.cpp
+     simpleraytracer.cpp
+     testrender.cpp)
 
 if (USE_OPTIX)
+    list (APPEND testrender_srcs optixraytracer.cpp)
     set (testrender_cuda_srcs
         cuda/quad.cu
         cuda/optix_raytracer.cu

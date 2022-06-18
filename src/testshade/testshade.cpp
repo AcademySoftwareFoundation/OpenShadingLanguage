@@ -25,18 +25,15 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
-#ifdef OSL_USE_OPTIX
-// purely to get optix version -- once optix 7.0 is required this can go away
-#    include <optix.h>
-#endif
-
 #include <OSL/oslcomp.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
 #if OSL_USE_BATCHED
 #    include <OSL/batched_shaderglobals.h>
 #endif
-#include "optixgridrender.h"
+#ifdef OSL_USE_OPTIX
+#    include "optixgridrender.h"
+#endif
 
 #include "render_state.h"
 #include "simplerend.h"

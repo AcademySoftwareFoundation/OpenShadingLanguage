@@ -21,16 +21,13 @@
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/timer.h>
 
-#ifdef OSL_USE_OPTIX
-// purely to get optix version -- once optix 7.0 is required this can go away
-#    include <optix.h>
-#endif
-
 #include <OSL/oslexec.h>
-#include "optixraytracer.h"
 #include "shading.h"
 #include "simpleraytracer.h"
 
+#ifdef OSL_USE_OPTIX
+#    include "optixraytracer.h"
+#endif
 
 using namespace OSL;
 
@@ -210,9 +207,11 @@ main(int argc, const char* argv[])
     getargs(argc, argv);
 
     SimpleRaytracer* rend = nullptr;
+#ifdef OSL_USE_OPTIX
     if (use_optix)
         rend = new OptixRaytracer;
     else
+#endif
         rend = new SimpleRaytracer;
 
     // Other renderer and global options

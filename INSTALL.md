@@ -43,6 +43,10 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * **[LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, or 14**, including clang
   libraries.
 
+* (optional) For GPU rendering on NVIDIA GPUs:
+    * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.
+    * [Cuda](https://developer.nvidia.com/cuda-downloads) 8.0 or higher.
+
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.78)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/openexr) 2.3
    or newer (recommended: 2.4 or higher; tested through 3.1)

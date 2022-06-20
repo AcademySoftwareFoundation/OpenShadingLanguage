@@ -3,21 +3,19 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testrender' executable
-file(GLOB testrender_srcs *.cpp)
+set (testrender_srcs
+     shading.cpp
+     simpleraytracer.cpp
+     testrender.cpp)
 
 if (USE_OPTIX)
+    list (APPEND testrender_srcs optixraytracer.cpp)
     set (testrender_cuda_srcs
         cuda/quad.cu
         cuda/optix_raytracer.cu
         cuda/sphere.cu
-        cuda/wrapper.cu )
-
-    # We only need to generate the PTX for rend_lib.cu if we are using OptiX 7.0+.
-    # Some of OptiX 6 device functions defined in rend_lib.cu cannot be compiled
-    # with NVCC, they must be compiled with clang using the LLVM_COMPILE_CUDA macro.
-    if (OPTIX_VERSION VERSION_GREATER_EQUAL 7)
-        list (APPEND testshade_cuda_srcs cuda/rend_lib.cu)
-    endif ()
+        cuda/wrapper.cu
+        cuda/rend_lib.cu)
 
     # We need to make sure that the PTX files are regenerated whenever these
     # headers change.

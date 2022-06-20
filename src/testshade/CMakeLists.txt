@@ -3,29 +3,21 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testshade' executable
-set ( testshade_srcs 
-    testshade.cpp 
-    simplerend.cpp 
-    optixgridrender.cpp
-    ../testrender/optix_stringtable.cpp )
+set ( testshade_srcs
+      testshade.cpp
+      simplerend.cpp )
 
 if (BUILD_BATCHED)
     list(APPEND testshade_srcs 
-        batched_simplerend.cpp 
-        )
+        batched_simplerend.cpp)
 endif()    
 
 if (USE_OPTIX)
+    list (APPEND testshade_srcs optixgridrender.cpp)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu
-        ../testrender/cuda/wrapper.cu )
-
-    # We only need to generate the PTX for rend_lib.cu if we are using OptiX 7.0+.
-    # Some of OptiX 6 device functions defined in rend_lib.cu cannot be compiled
-    # with NVCC, they must be compiled with clang using the LLVM_COMPILE_CUDA macro.
-    if (OPTIX_VERSION VERSION_GREATER_EQUAL 7)
-        list (APPEND testshade_cuda_srcs ../testrender/cuda/rend_lib.cu)
-    endif ()
+        ../testrender/cuda/wrapper.cu
+        ../testrender/cuda/rend_lib.cu )
 
     set ( testshade_cuda_headers
         ../testrender/cuda/rend_lib.h )

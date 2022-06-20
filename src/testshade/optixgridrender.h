@@ -12,9 +12,7 @@
 
 #include "optix_compat.h"
 #include "simplerend.h"
-#if OPTIX_VERSION < 70000
-#    include "../testrender/optix_stringtable.h"
-#endif
+
 
 OSL_NAMESPACE_ENTER
 
@@ -31,16 +29,8 @@ public:
                              const std::string& var_name)
     {
         ustring ustr = ustring(str);
-#if OPTIX_VERSION < 70000
-        uint64_t addr = m_str_table.addString(ustr, ustring(var_name));
-        if (!var_name.empty()) {
-            register_global(var_name, addr);
-        }
-        return addr;
-#else
         m_hash_map[ustr.hash()] = ustr.c_str();
         return static_cast<uint64_t>(ustr.hash());
-#endif
     }
 
     uint64_t register_global(const std::string& str, uint64_t value);
@@ -81,26 +71,15 @@ public:
     virtual TextureHandle* get_texture_handle(ustring filename,
                                               ShadingContext* shading_context);
 
-#if (OPTIX_VERSION < 70000)
-    // Easy way to do Optix calls
-    optix::Context& optix_ctx() { return m_optix_ctx; }
-    optix::Context& context() { return m_optix_ctx; }
-    optix::Context& operator->() { return context(); }
-#else
     OptixDeviceContext optix_ctx() { return m_optix_ctx; }
     OptixDeviceContext context() { return m_optix_ctx; }
     OptixDeviceContext operator->() { return context(); }
 
     void processPrintfBuffer(void* buffer_data, size_t buffer_size);
-#endif
 
 private:
     optix::Context m_optix_ctx = nullptr;
 
-#if (OPTIX_VERSION < 70000)
-    OptiXStringTable m_str_table;
-    optix::Program m_program = nullptr;
-#else
     CUstream m_cuda_stream;
     OptixShaderBindingTable m_optix_sbt = {};
     OptixShaderBindingTable m_setglobals_optix_sbt = {};
@@ -119,7 +98,7 @@ private:
     const unsigned long OSL_PRINTF_BUFFER_SIZE = 8 * 1024 * 1024;
 
     std::unordered_map<uint64_t, const char*> m_hash_map;
-#endif
+
     std::string m_materials_ptx;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash>
         m_samplers;
@@ -132,12 +111,12 @@ private:
     std::vector<void*> m_ptrs_to_free;
 };
 
-#if (OPTIX_VERSION >= 70000)
+
+
 struct EmptyRecord {
     __align__(
         OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     void* data;
 };
-#endif
 
 OSL_NAMESPACE_EXIT

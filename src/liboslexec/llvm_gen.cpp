@@ -393,10 +393,8 @@ LLVMGEN (llvm_gen_printf)
     // is no argument.
     if (rop.use_optix() && arg == format_arg + 1) {
         call_args.push_back(rop.ll.void_ptr_null());
-#if OPTIX_VERSION >= 70000
         // we push the size of the arguments on the stack
         optix_size += sizeof(uint64_t);
-#endif
     }
 
     // Some ops prepend things
@@ -418,8 +416,7 @@ LLVMGEN (llvm_gen_printf)
         // void* args = { args_size, arg0, arg1, arg2 };
         // (where args_size is the size of arg0 + arg1 + arg2...)
         //
-#if !defined(OSL_USE_OPTIX) || OPTIX_VERSION < 70000
-
+#ifndef OSL_USE_OPTIX
         Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
         format_ustring = s;
         sym.set_dataptr(SymArena::Absolute, &format_ustring);
@@ -432,14 +429,14 @@ LLVMGEN (llvm_gen_printf)
 #endif
         size_t nargs = call_args.size() - (new_format_slot+1);
         // Allocate space to store the arguments to osl_printf().
-#if !defined(OSL_USE_OPTIX) || OPTIX_VERSION < 70000 
+#ifndef OSL_USE_OPTIX
         llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size, std::string(), 8);
 #else
         //  Don't forget to pad a little extra to hold the size of the arguments itself.
         llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size + sizeof(uint64_t), std::string(), 8);
 #endif
 
-#if defined(OSL_USE_OPTIX) && OPTIX_VERSION >= 70000 
+#ifdef OSL_USE_OPTIX
         // Size of the collection of arguments comes before all the arguments
         {
             llvm::Value* args_size = rop.ll.constant64(optix_size);

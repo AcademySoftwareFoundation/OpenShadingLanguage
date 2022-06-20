@@ -1576,22 +1576,7 @@ BackendLLVM::run ()
 
     if (use_optix()) {
         std::string name = fmtformat("{}_{}", group().name(), group().id());
-
-#if (OPTIX_VERSION < 70000)
-        // Create an llvm::Module from the renderer-supplied library bitcode
-        std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
-        OSL_ASSERT (bitcode.size() && "Library bitcode is empty");
-
-        // TODO: Is it really necessary to build this Module for every ShaderGroup
-        llvm::Module* lib_module =
-            ll.module_from_bitcode (static_cast<const char*>(bitcode.data()),
-                                    bitcode.size(), "cuda_lib");
-
-        ll.ptx_compile_group (lib_module, name, group().m_llvm_ptx_compiled_version);
-#else
         ll.ptx_compile_group (nullptr, name, group().m_llvm_ptx_compiled_version);
-#endif
-
         if (group().m_llvm_ptx_compiled_version.empty()) {
              OSL_ASSERT (0 && "Unable to generate PTX");
         }

@@ -1,6 +1,10 @@
 #pragma once
 
-#if (OPTIX_VERSION >= 70000)
+
+#include "optix_compat.h"
+
+#if defined(OSL_USE_OPTIX) || defined(__CUDA_ARCH__)
+
 struct RenderParams {
     float3 bad_color;
     float3 bg_color;
@@ -31,15 +35,21 @@ struct RenderParams {
     uint64_t test_str_2;
 };
 
+
+
 struct PrimitiveParams {
     float a;  // area
     unsigned int shaderID;
 };
 
+
+
 struct SphereParams : PrimitiveParams {
     float3 c;  // center
     float r2;  // radius ^2
 };
+
+
 
 struct QuadParams : PrimitiveParams {
     float3 p;
@@ -50,10 +60,14 @@ struct QuadParams : PrimitiveParams {
     float ev;
 };
 
+
+
 struct GenericData {
     void* data;
     unsigned int sbtGeoIndex;
 };
+
+
 
 struct GenericRecord {
     __align__(

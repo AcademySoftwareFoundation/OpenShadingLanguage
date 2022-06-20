@@ -214,9 +214,6 @@ public:
     llvm::Value *addCUDAVariable (const std::string& name, int size, int alignment,
                                   const void* data, TypeDesc type=TypeDesc::UNKNOWN);
 
-    /// Create the extra semantic information needed for OptiX variables
-    void createOptixMetadata (const std::string& name, const Symbol& sym );
-
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;
     /// for stack variables (locals/temps) is succeeds only if the symbol is

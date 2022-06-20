@@ -7,13 +7,6 @@
 
 #include <optix.h>
 
-#if (OPTIX_VERSION < 70000)
-#    include <optixu/optixu_math_namespace.h>
-#    include <optixu/optixu_vector_types.h>
-typedef optix::float3 float3;
-typedef optix::uchar4 uchar4;
-#endif
-
 #include <stdint.h>
 
 

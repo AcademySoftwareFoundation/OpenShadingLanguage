@@ -25,18 +25,15 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
-#ifdef OSL_USE_OPTIX
-// purely to get optix version -- once optix 7.0 is required this can go away
-#    include <optix.h>
-#endif
-
 #include <OSL/oslcomp.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
 #if OSL_USE_BATCHED
 #    include <OSL/batched_shaderglobals.h>
 #endif
-#include "optixgridrender.h"
+#ifdef OSL_USE_OPTIX
+#    include "optixgridrender.h"
+#endif
 
 #include "render_state.h"
 #include "simplerend.h"
@@ -2030,9 +2027,7 @@ test_shade(int argc, const char* argv[])
     if (use_optix) {
         reinterpret_cast<OptixGridRenderer*>(rend)->set_transforms(Mobj, Mshad);
         reinterpret_cast<OptixGridRenderer*>(rend)->register_named_transforms();
-#    if (OPTIX_VERSION >= 70000)
         reinterpret_cast<OptixGridRenderer*>(rend)->synch_attributes();
-#    endif
     }
 #endif
 

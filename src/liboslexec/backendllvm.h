@@ -99,7 +99,8 @@ public:
     /// (no conversion is performed if cast is the default of UNKNOWN).
     llvm::Value *llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
                               int deriv, llvm::Value *arrayindex,
-                              int component, TypeDesc cast=TypeDesc::UNKNOWN);
+                              int component, TypeDesc cast=TypeDesc::UNKNOWN,
+                              const std::string& llname = {});
 
     /// Just like llvm_load_value, but when both the symbol and the
     /// array index are known to be constants.  This can even handle

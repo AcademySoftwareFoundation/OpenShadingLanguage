@@ -3250,26 +3250,30 @@ LLVM_Util::void_ptr_null ()
 
 
 
-llvm::Value *
-LLVM_Util::ptr_to_cast (llvm::Value* val, llvm::Type *type)
+llvm::Value*
+LLVM_Util::ptr_to_cast(llvm::Value* val, llvm::Type* type,
+                       const std::string& llname)
 {
-    return builder().CreatePointerCast(val,llvm::PointerType::get(type, 0));
+    return builder().CreatePointerCast(val, llvm::PointerType::get(type, 0),
+                                       llname);
 }
 
 
 
-llvm::Value *
-LLVM_Util::ptr_cast (llvm::Value* val, llvm::Type *type)
+llvm::Value*
+LLVM_Util::ptr_cast(llvm::Value* val, llvm::Type* type,
+                    const std::string& llname)
 {
-    return builder().CreatePointerCast(val,type);
+    return builder().CreatePointerCast(val, type, llname);
 }
 
 
 
-llvm::Value *
-LLVM_Util::ptr_cast (llvm::Value* val, const TypeDesc &type)
+llvm::Value*
+LLVM_Util::ptr_cast(llvm::Value* val, const TypeDesc& type,
+                    const std::string& llname)
 {
-    return ptr_cast (val, llvm::PointerType::get (llvm_type(type), 0));
+    return ptr_cast(val, llvm::PointerType::get(llvm_type(type), 0), llname);
 }
 
 
@@ -3289,9 +3293,9 @@ LLVM_Util::int_to_ptr_cast (llvm::Value* val)
 
 
 llvm::Value *
-LLVM_Util::void_ptr (llvm::Value* val)
+LLVM_Util::void_ptr (llvm::Value* val, const std::string& llname)
 {
-    return builder().CreatePointerCast(val,type_void_ptr());
+    return builder().CreatePointerCast(val,type_void_ptr(), llname);
 }
 
 
@@ -3590,18 +3594,19 @@ LLVM_Util::op_memcpy (llvm::Value *dst, int dstalign,
 
 
 
-llvm::Value *
-LLVM_Util::op_load (llvm::Type* type, llvm::Value* ptr)
+llvm::Value*
+LLVM_Util::op_load(llvm::Type* type, llvm::Value* ptr,
+                   const std::string& llname)
 {
-    return builder().CreateLoad (type, ptr);
+    return builder().CreateLoad(type, ptr, llname);
 }
 
 
 
-llvm::Value *
-LLVM_Util::op_load (llvm::Value *ptr)
+llvm::Value*
+LLVM_Util::op_load(llvm::Value* ptr, const std::string& llname)
 {
-    return op_load(ptr->getType()->getPointerElementType(), ptr);
+    return op_load(ptr->getType()->getPointerElementType(), ptr, llname);
 }
 
 
@@ -5073,53 +5078,57 @@ LLVM_Util::op_store_mask (llvm::Value *llvm_mask, llvm::Value *native_mask_ptr)
 
 
 
-llvm::Value *
-LLVM_Util::GEP (llvm::Type* type, llvm::Value* ptr, llvm::Value* elem)
+llvm::Value*
+LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, llvm::Value* elem,
+               const std::string& llname)
 {
-    return builder().CreateGEP(type, ptr, elem);
+    return builder().CreateGEP(type, ptr, elem, llname);
 }
 
 
 
-llvm::Value *
-LLVM_Util::GEP (llvm::Value *ptr, llvm::Value *elem)
+llvm::Value*
+LLVM_Util::GEP(llvm::Value* ptr, llvm::Value* elem, const std::string& llname)
 {
     return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
-               elem);
+               elem, llname);
 }
 
 
 
-llvm::Value *
-LLVM_Util::GEP (llvm::Type* type, llvm::Value* ptr, int elem)
+llvm::Value*
+LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem,
+               const std::string& llname)
 {
-    return builder().CreateConstGEP1_32(type, ptr, elem);
+    return builder().CreateConstGEP1_32(type, ptr, elem, llname);
 }
 
 
 
-llvm::Value *
-LLVM_Util::GEP (llvm::Value *ptr, int elem)
-{
-    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
-               elem);
-}
-
-
-
-llvm::Value *
-LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2)
-{
-    return builder().CreateConstGEP2_32 (type, ptr, elem1, elem2);
-}
-
-
-
-llvm::Value *
-LLVM_Util::GEP (llvm::Value *ptr, int elem1, int elem2)
+llvm::Value*
+LLVM_Util::GEP(llvm::Value* ptr, int elem, const std::string& llname)
 {
     return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
-               elem1, elem2);
+               elem, llname);
+}
+
+
+
+llvm::Value*
+LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
+               const std::string& llname)
+{
+    return builder().CreateConstGEP2_32 (type, ptr, elem1, elem2, llname);
+}
+
+
+
+llvm::Value*
+LLVM_Util::GEP(llvm::Value* ptr, int elem1, int elem2,
+               const std::string& llname)
+{
+    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
+               elem1, elem2, llname);
 }
 
 

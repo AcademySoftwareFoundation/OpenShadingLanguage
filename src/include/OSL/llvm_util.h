@@ -660,26 +660,26 @@ public:
     /// Return the human-readable name of the type of the llvm value.
     std::string llvm_typenameof(llvm::Value* val) const;
 
-    /// Return an llvm::Value holding the given floating point constant.
+    /// Return an llvm::Constant holding the given floating point constant.
     llvm::Constant* constant(float f);
 
-    /// Return an llvm::Value holding the given integer constant.
+    /// Return an llvm::Constant holding the given integer constant.
     llvm::Constant* constant(int i);
 
-    /// Return an llvm::Value holding the given integer constant.
+    /// Return an llvm::Constant holding the given integer constant.
     llvm::Constant* constant8(int i);
     llvm::Constant* constant16(uint16_t i);
     llvm::Constant* constant64(uint64_t i);
     llvm::Constant* constant128(uint64_t i);
     llvm::Constant* constant128(uint64_t left, uint64_t right);
 
-    // Return an llvm::value holding an explicit signed int64_t constant.
+    // Return an llvm::Constant holding an explicit signed int64_t constant.
     llvm::Constant* constanti64(int64_t i);
 
-    /// Return an llvm::Value holding the given size_t constant.
+    /// Return an llvm::Constant holding the given size_t constant.
     llvm::Constant* constant(size_t i);
 
-    /// Return an llvm::Value holding the given bool constant.
+    /// Return an llvm::Constant holding the given bool constant.
     /// Change the name so it doesn't get mixed up with int.
     llvm::Constant* constant_bool(bool b);
 
@@ -735,19 +735,23 @@ public:
 
     /// Cast the pointer variable specified by val to the kind of pointer
     /// described by type (as an llvm pointer type).
-    llvm::Value* ptr_cast(llvm::Value* val, llvm::Type* type);
-    llvm::Value* ptr_cast(llvm::Value* val, llvm::PointerType* type)
+    llvm::Value* ptr_cast(llvm::Value* val, llvm::Type* type,
+                          const std::string& llname = {});
+    llvm::Value* ptr_cast(llvm::Value* val, llvm::PointerType* type,
+                          const std::string& llname = {})
     {
-        return ptr_cast(val, (llvm::Type*)type);
+        return ptr_cast(val, (llvm::Type*)type, llname);
     }
 
     /// Cast the pointer variable specified by val to a pointer to the type
     /// described by type (as an llvm data type).
-    llvm::Value* ptr_to_cast(llvm::Value* val, llvm::Type* type);
+    llvm::Value* ptr_to_cast(llvm::Value* val, llvm::Type* type,
+                             const std::string& llname = {});
 
     /// Cast the pointer variable specified by val to a pointer to the given
     /// data type, return the llvm::Value of the new pointer.
-    llvm::Value* ptr_cast(llvm::Value* val, const OIIO::TypeDesc& type);
+    llvm::Value* ptr_cast(llvm::Value* val, const OIIO::TypeDesc& type,
+                          const std::string& llname = {});
 
     llvm::Value* wide_ptr_cast(llvm::Value* val, const OIIO::TypeDesc& type);
 
@@ -757,7 +761,7 @@ public:
 
     /// Cast the pointer variable specified by val to a pointer of type
     /// void* return the llvm::Value of the new pointer.
-    llvm::Value* void_ptr(llvm::Value* val);
+    llvm::Value* void_ptr(llvm::Value* val, const std::string& llname = {});
 
     /// Generate a pointer that is (ptrtype)((char *)ptr + offset).
     /// If ptrtype is NULL, just return a void*.
@@ -865,9 +869,10 @@ public:
 
     /// Dereference a pointer:  return *ptr
     /// type is the type of the thing being pointed to.
-    llvm::Value* op_load(llvm::Type* type, llvm::Value* ptr);
+    llvm::Value* op_load(llvm::Type* type, llvm::Value* ptr,
+                         const std::string& llname = {});
     // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* op_load(llvm::Value* ptr);
+    llvm::Value* op_load(llvm::Value* ptr, const std::string& llname = {});
 
     llvm::Value* op_gather(llvm::Value* ptr, llvm::Value* index);
 
@@ -898,24 +903,29 @@ public:
     /// llvm::Value, which can be generated from either a constant or a
     /// runtime-computed integer element index. `type` is the type of the data
     /// we're retrieving.
-    llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, llvm::Value* elem);
+    llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, llvm::Value* elem,
+                     const std::string& llname = {});
     // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, llvm::Value* elem);
+    llvm::Value* GEP(llvm::Value* ptr, llvm::Value* elem,
+                     const std::string& llname = {});
 
     /// Generate a GEP (get element pointer) with an integer element
     /// offset. `type` is the type of the data we're retrieving.
-    llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem);
+    llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem,
+                     const std::string& llname = {});
     // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, int elem);
+    llvm::Value* GEP(llvm::Value* ptr, int elem, const std::string& llname = {});
 
     /// Generate a GEP (get element pointer) with two integer element
     /// offsets.  This is just a special (and common) case of GEP where
     /// we have a 2-level hierarchy and we have fixed element indices
     /// that are known at compile time.  `type` is the type of the data we're
     /// retrieving.
-    llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2);
+    llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
+                     const std::string& llname = {});
     // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, int elem1, int elem2);
+    llvm::Value* GEP(llvm::Value* ptr, int elem1, int elem2,
+                     const std::string& llname = {});
 
     // Arithmetic ops.  It auto-detects the type (int vs float).
     // ...

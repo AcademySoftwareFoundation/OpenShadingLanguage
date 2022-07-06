@@ -259,7 +259,8 @@ BackendLLVM::llvm_global_symbol_ptr(ustring name)
     // the ShaderGlobals struct.
     int sg_index = ShaderGlobalNameToIndex(name);
     OSL_ASSERT(sg_index >= 0);
-    return ll.void_ptr(ll.GEP(sg_ptr(), 0, sg_index));
+    return ll.void_ptr(ll.GEP(sg_ptr(), 0, sg_index),
+                       fmtformat("glob_{}_voidptr", name));
 }
 
 
@@ -560,7 +561,7 @@ BackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
     }
 
     return llvm_load_value(llvm_get_pointer(sym), sym.typespec(), deriv,
-                           arrayindex, component, cast);
+                           arrayindex, component, cast, sym.name().string());
 }
 
 
@@ -568,7 +569,7 @@ BackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
 llvm::Value*
 BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
                              llvm::Value* arrayindex, int component,
-                             TypeDesc cast)
+                             TypeDesc cast, const std::string& llname)
 {
     if (!ptr)
         return NULL;  // Error
@@ -590,7 +591,7 @@ BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
         ptr = ll.GEP(ptr, 0, component);
 
     // Now grab the value
-    llvm::Value* result = ll.op_load(ptr);
+    llvm::Value* result = ll.op_load(ptr, llname);
 
     if (type.is_closure_based())
         return result;

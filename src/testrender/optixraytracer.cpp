@@ -1050,10 +1050,9 @@ OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
         // have we reached the end?
         if (fmt_str_hash == 0)
             break;
-        const char* format = m_hash_map[fmt_str_hash];
-        OSL_ASSERT(
-            format != nullptr
-            && "The format string should have been registered with the renderer");
+        const char* format = ustring::from_hash(fmt_str_hash).c_str();
+        OSL_ASSERT(format != nullptr
+                   && "The string should have been a valid ustring");
         const size_t len = strlen(format);
 
         for (size_t j = 0; j < len; j++) {
@@ -1103,10 +1102,10 @@ OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
                               & ~(sizeof(double) - 1);
                         uint64_t str_hash = *reinterpret_cast<const uint64_t*>(
                             &ptr[src]);
-                        const char* str = m_hash_map[str_hash];
+                        const char* str = ustring::from_hash(str_hash).c_str();
                         OSL_ASSERT(
                             str != nullptr
-                            && "The string should have been regisgtered with the renderer");
+                            && "The string should have been a valid ustring");
                         dst += snprintf(&buffer[dst], BufferSize - dst,
                                         fmt_string.c_str(), str);
                         src += sizeof(uint64_t);

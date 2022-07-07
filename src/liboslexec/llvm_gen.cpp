@@ -282,7 +282,7 @@ LLVMGEN (llvm_gen_printf)
     const char* format = format_ustring.c_str();
     std::string s;
     int arg = format_arg + 1;
-    size_t optix_size = 0;
+    size_t optix_size = 0;  // how much buffer size does optix need?
     while (*format != '\0') {
         if (*format == '%') {
             if (format[1] == '%') {
@@ -346,37 +346,19 @@ LLVMGEN (llvm_gen_printf)
                         s += " ";
                     s += ourformat;
 
-                    llvm::Value* loaded = nullptr;
-                    if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
-                        // In the OptiX case, we register each string separately.
-                        if (simpletype.arraylen >= 1) {
-                            // Mangle the element's name in case llvm_load_device_string calls getOrAllocateLLVMSymbol
-                            ustring name
-                                = ustring::fmtformat("__symname__{}[{}]",
-                                                     sym.mangled(), a);
-                            Symbol lsym(name, TypeDesc::TypeString, sym.symtype());
-                            lsym.set_dataptr(SymArena::Absolute,
-                                             &((ustring*)sym.dataptr())[a]);
-                            loaded = rop.llvm_load_device_string (lsym, /*follow*/ true);
-                        } else {
-                            loaded = rop.llvm_load_device_string (sym, /*follow*/ true);
-                        }
+                    llvm::Value* loaded = rop.llvm_load_value(sym, 0, arrind,
+                                                              c);
+                    if (simpletype.basetype == TypeDesc::FLOAT) {
+                        // C varargs convention upconverts float->double.
+                        loaded = rop.ll.op_float_to_double(loaded);
+                        // Ensure that 64-bit values are aligned to 8-byte boundaries
+                        optix_size = (optix_size + sizeof(double) - 1)
+                                     & ~(sizeof(double) - 1);
+                        optix_size += sizeof(double);
+                    } else if (simpletype.basetype == TypeDesc::INT)
+                        optix_size += sizeof(int);
+                    else if (simpletype.basetype == TypeDesc::STRING)
                         optix_size += sizeof(uint64_t);
-                    }
-                    else {
-                        loaded = rop.llvm_load_value (sym, 0, arrind, c);
-
-                        if (simpletype.basetype == TypeDesc::FLOAT) {
-                            // C varargs convention upconverts float->double.
-                            loaded = rop.ll.op_float_to_double(loaded);
-                            // Ensure that 64-bit values are aligned to 8-byte boundaries
-                            optix_size = (optix_size + sizeof(double) - 1) & ~(sizeof(double) - 1);
-                            optix_size += sizeof(double);
-                        }
-                        else if (simpletype.basetype == TypeDesc::INT)
-                            optix_size += sizeof(int);
-                    }
-
                     call_args.push_back (loaded);
                 }
             }
@@ -405,49 +387,32 @@ LLVMGEN (llvm_gen_printf)
 
     // Now go back and put the new format string in its place
     if (! rop.use_optix()) {
-        call_args[new_format_slot] = rop.ll.constant (s.c_str());
+        call_args[new_format_slot] = rop.llvm_load_string(s);
     }
     else {
-        // In OptiX 6 we do this:
-        // void* args = { arg0, arg1, arg2 };
-        // osl_printf(sg, fmt, args);
-        //   vprintf(fmt, args);
-        // However, in the OptiX7+ case, we do this:
+        // In OptiX7+ case, we do this:
         // void* args = { args_size, arg0, arg1, arg2 };
         // (where args_size is the size of arg0 + arg1 + arg2...)
         //
-#ifndef OSL_USE_OPTIX
-        Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
-        format_ustring = s;
-        sym.set_dataptr(SymArena::Absolute, &format_ustring);
-        call_args[new_format_slot] = rop.ll.int_to_ptr_cast (rop.llvm_load_device_string (sym, /*follow*/ true));
-#else
         // Make sure host has the format string so it can print it
-        format_ustring = s;
-        rop.shadingsys().renderer()->register_string (format_ustring.string(), "");
-        call_args[new_format_slot] = rop.ll.int_to_ptr_cast (rop.ll.constant64 (format_ustring.hash()));
-#endif
+        call_args[new_format_slot] = rop.llvm_load_string(s);
         size_t nargs = call_args.size() - (new_format_slot+1);
         // Allocate space to store the arguments to osl_printf().
-#ifndef OSL_USE_OPTIX
-        llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size, std::string(), 8);
-#else
         //  Don't forget to pad a little extra to hold the size of the arguments itself.
-        llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size + sizeof(uint64_t), std::string(), 8);
-#endif
+        llvm::Value* voids = rop.ll.op_alloca(
+            rop.ll.type_char(), optix_size + sizeof(uint64_t),
+            fmtformat("printf_argbuf_L{}sz{}_", op.sourceline(), optix_size), 8);
 
-#ifdef OSL_USE_OPTIX
         // Size of the collection of arguments comes before all the arguments
         {
             llvm::Value* args_size = rop.ll.constant64(optix_size);
-            llvm::Value* memptr = rop.ll.offset_ptr (voids, 0);
-            llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_longlong_ptr());
+            llvm::Value* memptr    = rop.ll.offset_ptr(voids, 0);
+            llvm::Value* iptr      = rop.ll.ptr_cast(memptr,
+                                                     rop.ll.type_longlong_ptr(),
+                                                     "printf_argbuf_as_llptr");
             rop.ll.op_store (args_size, iptr);
         }
         optix_size = sizeof(uint64_t);  // first 'args' element is the size of the argument list
-#else
-        optix_size = 0;
-#endif
         for (size_t i = 0; i < nargs; ++i) {
             llvm::Value* arg = call_args[new_format_slot+1+i];
             if (arg->getType()->isFloatingPointTy() || arg->getType()->isIntegerTy(64) ) {
@@ -1560,22 +1525,8 @@ LLVMGEN (llvm_gen_construct_triple)
         else if (op.opname() == "normal")
             vectype = TypeDesc::NORMAL;
 
-        llvm::Value *from_arg = nullptr;
-        llvm::Value *to_arg   = nullptr;
-        if (! rop.use_optix()) {
-            from_arg = rop.llvm_load_value(Space);
-            to_arg   = rop.ll.constant(Strings::common);
-        } else {
-            // Create a Symbol for Strings::common. The symbol name isn't important,
-            // since a new name will be created based on the string hash.
-            //
-            // TODO: This pattern is used elsewhere (e.g., in llvm_assign_initial_value),
-            //       so it might make sense to refactor it.
-            Symbol to_sym(ustring("Strings__common"), TypeDesc::TypeString, SymTypeConst);
-            to_sym.set_dataptr(SymArena::Absolute, (void *)&Strings::common);
-            from_arg = rop.llvm_load_device_string(Space, /*follow*/ true);
-            to_arg   = rop.llvm_load_device_string(to_sym, /*follow*/ true);
-        }
+        llvm::Value* from_arg = rop.llvm_load_value(Space);
+        llvm::Value* to_arg   = rop.llvm_load_string(Strings::common);
 
         llvm::Value *args[] = { rop.sg_void_ptr(),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
@@ -1866,28 +1817,6 @@ LLVMGEN (llvm_gen_compare_op)
 
     llvm::Value* final_result = 0;
     ustring opname = op.opname();
-
-    if (rop.use_optix() && A.typespec().is_string()) {
-        OSL_DASSERT (B.typespec().is_string()
-                     && "Only string-to-string comparison is supported");
-
-        llvm::Value* a = rop.llvm_load_device_string (A, /*follow*/ true);
-        llvm::Value* b = rop.llvm_load_device_string (B, /*follow*/ true);
-
-        if (opname == op_eq) {
-            final_result = rop.ll.op_eq (a, b);
-        } else if (opname == op_neq) {
-            final_result = rop.ll.op_ne (a, b);
-        } else {
-            // Don't know how to handle this.
-            OSL_ASSERT (0 && "OptiX only supports equality testing for strings");
-        }
-        OSL_ASSERT (final_result);
-
-        final_result = rop.ll.op_bool_to_int (final_result);
-        rop.storeLLVMValue (final_result, Result, 0, 0);
-        return true;
-    }
 
     for (int i = 0; i < num_components; i++) {
         // Get A&B component i -- note that these correctly handle mixed
@@ -2997,19 +2926,9 @@ LLVMGEN (llvm_gen_getattribute)
     // necessary conversions from its internal format to OSL's.
     TypeDesc dest_type = Destination.typespec().simpletype();
 
-    llvm::Value* obj_name_arg = NULL;
-    llvm::Value* attr_name_arg = NULL;
-    if (rop.use_optix()) {
-        // We need to make a DeviceString for the parameter names
-        if (object_lookup)
-            obj_name_arg = rop.llvm_load_device_string(ObjectName, true);
-        else
-            obj_name_arg = rop.ll.constant(ustring());
-        attr_name_arg = rop.llvm_load_device_string (Attribute, true);
-    } else {
-        obj_name_arg = object_lookup ? rop.llvm_load_value (ObjectName) : rop.ll.constant (ustring());
-        attr_name_arg = rop.llvm_load_value (Attribute);
-    }
+    llvm::Value* obj_name_arg  = object_lookup ? rop.llvm_load_value(ObjectName)
+                                               : rop.llvm_load_string(ustring());
+    llvm::Value* attr_name_arg = rop.llvm_load_value(Attribute);
 
     llvm::Value * args[] = {
             rop.sg_void_ptr(),
@@ -3420,12 +3339,7 @@ LLVMGEN (llvm_gen_closure)
         Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
         TypeDesc t = sym.typespec().simpletype();
 
-        if (rop.use_optix() && sym.typespec().is_string()) {
-            llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
-            llvm::Value* src = rop.llvm_load_device_string (sym, /*follow*/ false);
-            rop.ll.op_memcpy (dst, src, 8, 8);
-        }
-        else if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
+        if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
                  && equivalent(t,p.type)) {
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
             llvm::Value* src = rop.llvm_void_ptr (sym);
@@ -3633,7 +3547,7 @@ LLVMGEN (llvm_gen_pointcloud_write)
     int nattrs = (op.nargs() - 3) / 2;
 
     // Generate local space for the names/types/values arrays
-    llvm::Value *names = rop.ll.op_alloca (rop.ll.type_string(), nattrs);
+    llvm::Value *names = rop.ll.op_alloca (rop.ll.type_ustring(), nattrs);
     llvm::Value *types = rop.ll.op_alloca (rop.ll.type_typedesc(), nattrs);
     llvm::Value *values = rop.ll.op_alloca (rop.ll.type_void_ptr(), nattrs);
 

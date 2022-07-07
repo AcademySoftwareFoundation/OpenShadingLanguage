@@ -763,8 +763,7 @@ BatchedBackendLLVM::llvm_type_batched_trace_options()
     sg_types.push_back(ll.type_float());  // mindist
     sg_types.push_back(ll.type_float());  // maxdist
     sg_types.push_back(ll.type_int());    // shade
-    sg_types.push_back(
-        reinterpret_cast<llvm::Type*>(ll.type_string()));  // traceset
+    sg_types.push_back(ll.type_ustring());  // traceset
 
     m_llvm_type_batched_trace_options = ll.type_struct(sg_types, "TraceOptions",
                                                        false /*is_packed*/);
@@ -1252,8 +1251,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                             data_type = ll.type_float();
                         } else if (elemtype.is_string()) {
                             ptr_type  = ll.type_ustring_ptr();
-                            data_type = static_cast<llvm::Type*>(
-                                ll.type_string());
+                            data_type = ll.type_ustring();
                         } else if (elemtype.is_int()) {
                             ptr_type  = ll.type_int_ptr();
                             data_type = ll.type_int();

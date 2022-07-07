@@ -411,7 +411,8 @@ public:
     virtual uint64_t register_string (const std::string& str,
                                       const std::string& var_name)
     {
-        return 0;
+        ustring ustr = ustring(str);
+        return ustr.hash();
     }
 
     virtual uint64_t register_global (const std::string& var_name,

@@ -404,7 +404,6 @@ LLVM_Util::LLVM_Util (const PerThreadInfo &per_thread_info,
     m_llvm_type_void = (llvm::Type *) llvm::Type::getVoidTy (*m_llvm_context);
     m_llvm_type_char_ptr = (llvm::PointerType *) llvm::Type::getInt8PtrTy (*m_llvm_context);
     m_llvm_type_float_ptr = (llvm::PointerType *) llvm::Type::getFloatPtrTy (*m_llvm_context);
-    m_llvm_type_ustring_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_char_ptr, 0);
     m_llvm_type_longlong_ptr = (llvm::PointerType *) llvm::Type::getInt64PtrTy (*m_llvm_context);
     m_llvm_type_void_ptr = m_llvm_type_char_ptr;
     m_llvm_type_double_ptr = llvm::Type::getDoublePtrTy (*m_llvm_context);
@@ -430,7 +429,6 @@ LLVM_Util::LLVM_Util (const PerThreadInfo &per_thread_info,
     m_llvm_type_wide_longlong = llvm_vector_type(m_llvm_type_longlong, m_vector_width);
     
     m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);
-    m_llvm_type_wide_ustring_ptr = llvm_vector_type(m_llvm_type_char_ptr, m_vector_width);
     m_llvm_type_wide_void_ptr = llvm_vector_type(m_llvm_type_void_ptr, m_vector_width);
     m_llvm_type_wide_int_ptr = llvm::PointerType::get(m_llvm_type_wide_int, 0);
     m_llvm_type_wide_bool_ptr = llvm::PointerType::get(m_llvm_type_wide_bool, 0);
@@ -443,6 +441,32 @@ LLVM_Util::LLVM_Util (const PerThreadInfo &per_thread_info,
     // A matrix is a struct composed 16 floats
     std::vector<llvm::Type*> matrix_wide_fields(16, m_llvm_type_wide_float);
     m_llvm_type_wide_matrix = type_struct (matrix_wide_fields, "WideMatrix4");
+
+    ustring_rep(m_ustring_rep);  // setup ustring-related types
+}
+
+
+
+void
+LLVM_Util::ustring_rep(UstringRep rep)
+{
+    m_ustring_rep = rep;
+    if (m_ustring_rep == UstringRep::charptr) {
+        m_llvm_type_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
+    } else {
+        m_llvm_type_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
+        // Ugh, we'd ideally want to make it a uint directly, but that
+        // is wreaking havoc with function signatures, so continue to
+        // disguise it as a pointer.
+        // m_llvm_type_ustring = (sizeof(size_t) == sizeof(uint64_t))
+        //                           ? llvm::Type::getInt64Ty(*m_llvm_context)
+        //                           : llvm::Type::getInt32Ty(*m_llvm_context);
+    }
+    m_llvm_type_ustring_ptr  = llvm::PointerType::get(m_llvm_type_ustring, 0);
+    m_llvm_type_wide_ustring = llvm_vector_type(m_llvm_type_ustring,
+                                                m_vector_width);
+    m_llvm_type_wide_ustring_ptr
+        = llvm::PointerType::get(m_llvm_type_wide_ustring, 0);
 }
 
 
@@ -2385,7 +2409,9 @@ LLVM_Util::current_function_arg (int a)
 llvm::BasicBlock *
 LLVM_Util::new_basic_block (const std::string &name)
 {
-    return llvm::BasicBlock::Create (context(), debug() ? name : llvm::Twine::createNull(), current_function());
+    std::string n = fmtformat("bb_{}{}{}", name, name.size() ? "_" : "",
+                              m_next_serial_bb++);
+    return llvm::BasicBlock::Create(context(), n, current_function());
 }
 
 
@@ -2540,8 +2566,8 @@ LLVM_Util::type_struct(cspan<llvm::Type*> types, const std::string &name,
 
 
 
-llvm::Type *
-LLVM_Util::type_ptr (llvm::Type *type)
+llvm::PointerType*
+LLVM_Util::type_ptr(llvm::Type* type)
 {
     return llvm::PointerType::get (type, 0);
 }
@@ -2727,30 +2753,31 @@ LLVM_Util::constant_ptr (void *p, llvm::PointerType *type)
 
 
 
-llvm::Value *
-LLVM_Util::constant (ustring s)
+llvm::Value*
+LLVM_Util::constant(ustring s)
 {
-    // Create a const size_t with the ustring contents
-    size_t bits = sizeof(size_t)*8;
-    llvm::Value *str = llvm::ConstantInt::get (context(),
-                               llvm::APInt(bits,size_t(s.c_str()), true));
-    // Then cast the int to a char*.
-    return builder().CreateIntToPtr (str, type_string(), "ustring constant");
+    const size_t size_t_bits = sizeof(size_t) * 8;
+    // Create a const size_t with the ustring character address, or hash,
+    // depending on the representation we're using.
+    size_t p = (ustring_rep() == UstringRep::charptr) ? size_t(s.c_str())
+                                                      : s.hash();
+    auto str = (size_t_bits == 64) ? constant64(p) : constant(int(p));
+    // Then cast the int to a char*. Ideally, we would only do that if the rep
+    // were a charptr, but we disguise the hashes as char*'s also to avoid
+    // ugliness with function signatures differing between CPU and GPU.
+    // Maybe some day we'll use the hash representation on both sides?
+    return builder().CreateIntToPtr(str, m_llvm_type_ustring,
+                                    "ustring constant");
 }
 
 
-llvm::Value *
-LLVM_Util::wide_constant (ustring s)
-{
-    // Create a const size_t with the ustring contents
-    size_t bits = sizeof(size_t)*8;
-    llvm::Value *str = llvm::ConstantInt::get (context(),
-                               llvm::APInt(bits,size_t(s.c_str()), true));
-    // Then cast the int to a char*.
-    llvm::Value * constant_value = builder().CreateIntToPtr (str, type_string(), "ustring constant");
 
-    return builder().CreateVectorSplat(m_vector_width, constant_value);
+llvm::Value*
+LLVM_Util::wide_constant(ustring s)
+{
+    return builder().CreateVectorSplat(m_vector_width, constant(s));
 }
+
 
 
 llvm::Value * LLVM_Util::llvm_mask_to_native(llvm::Value *llvm_mask) {
@@ -3310,7 +3337,7 @@ LLVM_Util::llvm_type (const TypeDesc &typedesc)
     else if (t == TypeDesc::INT)
         lt = type_int();
     else if (t == TypeDesc::STRING)
-        lt = type_string();
+        lt = type_ustring();
     else if (t.aggregate == TypeDesc::VEC3)
         lt = type_triple();
     else if (t.aggregate == TypeDesc::MATRIX44)
@@ -3319,6 +3346,8 @@ LLVM_Util::llvm_type (const TypeDesc &typedesc)
         lt = type_void();
     else if (t == TypeDesc::UINT8)
         lt = type_char();
+    else if (t == TypeDesc::UINT64)
+        lt = type_longlong();
     else if (t == TypeDesc::PTR)
         lt = type_void_ptr();
     else {
@@ -3354,7 +3383,7 @@ LLVM_Util::llvm_vector_type (const TypeDesc &typedesc)
     else if (t == TypeDesc::INT)
         lt = type_wide_int();
     else if (t == TypeDesc::STRING)
-        lt = type_wide_string();
+        lt = type_wide_ustring();
     else if (t.aggregate == TypeDesc::VEC3)
         lt = type_wide_triple();
     else if (t.aggregate == TypeDesc::MATRIX44)
@@ -3387,7 +3416,7 @@ LLVM_Util::offset_ptr (llvm::Value* ptr, llvm::Value* offset, llvm::Type* ptrtyp
     if (offset)
         i = op_add(i, offset);
     ptr = int_to_ptr_cast(i);
-    if (ptrtype)
+    if (ptrtype && ptrtype != type_void_ptr())
         ptr = ptr_cast(ptr, ptrtype);
     return ptr;
 }
@@ -3397,6 +3426,8 @@ LLVM_Util::offset_ptr (llvm::Value* ptr, llvm::Value* offset, llvm::Type* ptrtyp
 llvm::Value*
 LLVM_Util::offset_ptr (llvm::Value* ptr, int offset, llvm::Type* ptrtype)
 {
+    if (offset == 0)
+        return ptr;  // shortcut for 0 offset
     return offset_ptr(ptr, constant(size_t(offset)), ptrtype);
 }
 
@@ -3427,7 +3458,7 @@ LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name, int 
 
     llvm::ConstantInt* numalloc = (llvm::ConstantInt*)constant(n);
     llvm::AllocaInst* allocainst = builder().CreateAlloca (llvmtype, numalloc,
-                                    debug() ? name : llvm::Twine::createNull());
+                                    name);
     if (align > 0) {
 #if OSL_LLVM_VERSION >= 110
         using AlignmentType = llvm::Align;
@@ -3957,7 +3988,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                     args[3] = mask_as_int8(w8_bit_masks[1]);
                     llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
 
-                    return builder().CreateIntToPtr(op_combine_8x_vectors(gather1, gather2), type_wide_string());
+                    return builder().CreateIntToPtr(op_combine_8x_vectors(gather1, gather2), type_wide_ustring());
                 }
                 case 8:
                 {
@@ -3983,13 +4014,13 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                     args[3] = mask4_as_int8(w4_bit_masks[1]);
                     llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
 
-                    return builder().CreateIntToPtr(op_combine_4x_vectors(gather1, gather2), type_wide_string());
+                    return builder().CreateIntToPtr(op_combine_4x_vectors(gather1, gather2), type_wide_ustring());
                 }
                 default:
                     OSL_ASSERT(0 && "unsupported native bit mask width");
             }
         } else {
-            return clamped_gather_from_uniform(type_wide_string());
+            return clamped_gather_from_uniform(type_wide_ustring());
         }
     } else if (ptr->getType() == type_wide_float_ptr()) {
         if (m_supports_avx512f) {
@@ -4168,7 +4199,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
         } else {
             return clamped_gather_from_varying(type_wide_int());
         }
-    } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
+    } else if (ptr->getType() == type_wide_ustring_ptr()) {
         if (m_supports_avx512f) {
             // TODO:  Are we guaranteed a 64bit pointer?
             switch(m_vector_width) {
@@ -4198,7 +4229,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                 args[3] = mask_as_int8(w8_bit_masks[1]);
                 llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
 
-                return builder().CreateIntToPtr(op_combine_8x_vectors(gather1, gather2), type_wide_string());
+                return builder().CreateIntToPtr(op_combine_8x_vectors(gather1, gather2), type_wide_ustring());
             }
             case 8:
             {
@@ -4234,7 +4265,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
                 args[3] = mask4_as_int8(w4_bit_masks[1]);
                 llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
 
-                return builder().CreateIntToPtr(op_combine_4x_vectors(gather1, gather2), type_wide_string());
+                return builder().CreateIntToPtr(op_combine_4x_vectors(gather1, gather2), type_wide_ustring());
             }
             default:
                 OSL_ASSERT(0 && "unsupported native bit mask width");
@@ -4243,7 +4274,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
         } else {
             // AVX2 case falls through to here, choose not to specialize and use
             // generic code gen as 4 AVX2 gathers would be required
-            return clamped_gather_from_varying(type_wide_string());
+            return clamped_gather_from_varying(type_wide_ustring());
         }
 
     } else {
@@ -4285,7 +4316,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
 
         llvm::BasicBlock* test_scatter_per_lane[MaxSupportedSimdLaneCount+1];
         for(int l=0; l < m_vector_width; ++l) {
-            test_scatter_per_lane[l] = new_basic_block (std::string("test scatter lane=").append(std::to_string(l)));
+            test_scatter_per_lane[l] = new_basic_block(fmtformat("test scatter lane={}", l));
         }
         test_scatter_per_lane[m_vector_width] = new_basic_block ("after scatter");
 
@@ -4307,7 +4338,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
 
         op_branch(test_scatter_per_lane[0]);
         for(int l=0; l < m_vector_width; ++l) {
-            llvm::BasicBlock* scatter_block = new_basic_block (std::string("scatter lane=").append(std::to_string(l)));
+            llvm::BasicBlock* scatter_block = new_basic_block(fmtformat("scatter lane={}", l));
             op_branch(mask_per_lane[l], scatter_block, test_scatter_per_lane[l+1]);
 
             llvm::Value *address = GEP(cast_ptr, index_per_lane[l]);
@@ -4389,7 +4420,7 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
             return;
         }
     }  else if (ptr->getType() == type_ustring_ptr()) {
-        OSL_ASSERT(wide_val->getType() == type_wide_string());
+        OSL_ASSERT(wide_val->getType() == type_wide_ustring());
         if (m_supports_avx512f) {
 
             switch(m_vector_width) {
@@ -4547,8 +4578,8 @@ LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide
             scatter_using_conditional_block_per_lane(int_ptr, /*is_dest_wide*/true);
             return;
         }
-    } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
-        OSL_ASSERT(wide_val->getType() == type_wide_string());
+    } else if (ptr->getType() == type_wide_ustring_ptr()) {
+        OSL_ASSERT(wide_val->getType() == type_wide_ustring());
         if (m_supports_avx512f) {
 
             switch(m_vector_width) {

@@ -405,16 +405,6 @@ public:
     /// Return a pointer to the texture system (if available).
     virtual TextureSystem *texturesys () const;
 
-    /// Register a string with the renderer, so that the renderer can arrange
-    /// to make the string available in GPU memory as needed. Optionally specify
-    /// a variable name to associate with the string value.
-    virtual uint64_t register_string (const std::string& str,
-                                      const std::string& var_name)
-    {
-        ustring ustr = ustring(str);
-        return ustr.hash();
-    }
-
     virtual uint64_t register_global (const std::string& var_name,
                                       uint64_t           value)
     {

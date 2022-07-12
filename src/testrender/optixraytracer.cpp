@@ -89,11 +89,6 @@ OptixRaytracer::OptixRaytracer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
-
-#define STRDECL(str, var_name) \
-    register_string(str, OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name);
-#include <OSL/strdecls.h>
-#undef STRDECL
 }
 
 
@@ -169,9 +164,6 @@ OptixRaytracer::synch_attributes()
     ustring userdata_str1("ud_str_1");
     ustring userdata_str2("userdata string");
 
-    register_string(userdata_str1.string(), "");
-    register_string(userdata_str2.string(), "");
-
     // Store the user-data
     test_str_1 = userdata_str1.hash();
     test_str_2 = userdata_str2.hash();
@@ -216,7 +208,7 @@ OptixRaytracer::synch_attributes()
         for (const ustring* end = cpuString + numStrings; cpuString < end;
              ++cpuString) {
             // convert the ustring to a device string
-            uint64_t devStr = register_string(cpuString->string(), "");
+            uint64_t devStr = cpuString->hash();
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
                                   sizeof(devStr), cudaMemcpyHostToDevice));
             gpuStrings += sizeof(DeviceString);

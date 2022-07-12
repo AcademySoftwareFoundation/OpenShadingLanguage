@@ -25,12 +25,6 @@ public:
     OptixRaytracer();
     virtual ~OptixRaytracer();
 
-    uint64_t register_string(string_view str, string_view var_name)
-    {
-        ustring ustr = ustring(str);
-        return static_cast<uint64_t>(ustr.hash());
-    }
-
     uint64_t register_global(const std::string& str, uint64_t value);
     bool fetch_global(const std::string& str, uint64_t* value);
 

@@ -39,17 +39,6 @@ public:
     CudaGridRenderer();
     virtual ~CudaGridRenderer();
 
-    uint64_t register_string(const std::string& str,
-                             const std::string& var_name)
-    {
-        uint64_t addr = _string_table.addString(OIIO::ustring(str),
-                                                OIIO::ustring(var_name));
-        if (!var_name.empty()) {
-            register_global(var_name, addr);
-        }
-        return addr;
-    }
-
     uint64_t register_global(const std::string& str, uint64_t value);
     bool fetch_global(const std::string& str, uint64_t* value);
 

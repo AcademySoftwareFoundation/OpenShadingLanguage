@@ -92,11 +92,6 @@ OptixGridRenderer::OptixGridRenderer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
-
-#define STRDECL(str, var_name) \
-    register_string(str, OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name);
-#include <OSL/strdecls.h>
-#undef STRDECL
 }
 
 
@@ -241,7 +236,7 @@ OptixGridRenderer::synch_attributes()
         for (const ustring* end = cpuString + numStrings; cpuString < end;
              ++cpuString) {
             // convert the ustring to a device string
-            uint64_t devStr = register_string(cpuString->string(), "");
+            uint64_t devStr = cpuString->hash();
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
                                   sizeof(devStr), cudaMemcpyHostToDevice));
             gpuStrings += sizeof(DeviceString);
@@ -977,12 +972,10 @@ OptixGridRenderer::register_named_transforms()
 
     // Gather:
     //   1) All of the named transforms
-    //   2) The "string" value associated with the transform name:
-    //        for OptiX 6, this is the address of the string variable;
-    //        for OptiX 7+, this is the ustring hash of the transform name.
+    //   2) The "string" value associated with the transform name, which is
+    //      actually the ustring hash of the transform name.
     for (const auto& item : m_named_xforms) {
-        const uint64_t addr
-            = OptixGridRenderer::register_string(item.first.c_str(), "");
+        const uint64_t addr = item.first.hash();
         xform_name_buffer.push_back(addr);
         xform_buffer.push_back(*item.second);
     }

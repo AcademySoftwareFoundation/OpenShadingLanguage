@@ -459,7 +459,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 
     // Handle interpolated params by calling osl_bind_interpolated_param,
     // which will check if userdata is already retrieved, if not it will
-    // call RendererServices::get_userdata to retrive it. In either case,
+    // call RendererServices::get_userdata to retrieve it. In either case,
     // it will return 1 if it put the userdata in the right spot (either
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.

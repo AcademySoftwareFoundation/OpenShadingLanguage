@@ -7706,7 +7706,7 @@ LLVMGEN(llvm_gen_pointcloud_write)
                                          TypeDesc::NOSEMANTICS, nattrs } };
     TypeSpec valuesArrayType { TypeDesc { TypeDesc::PTR, TypeDesc::SCALAR,
                                           TypeDesc::NOSEMANTICS, nattrs } };
-    llvm::Value* names  = rop.ll.op_alloca(rop.ll.type_string(), nattrs);
+    llvm::Value* names  = rop.ll.op_alloca(rop.ll.type_ustring(), nattrs);
     llvm::Value* types  = rop.ll.op_alloca(rop.ll.type_typedesc(), nattrs);
     llvm::Value* values = rop.ll.op_alloca(rop.ll.type_void_ptr(), nattrs);
 

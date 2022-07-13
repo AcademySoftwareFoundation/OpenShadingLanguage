@@ -188,7 +188,7 @@ BatchedBackendLLVM::llvm_pass_type(const TypeSpec& typespec)
     else if (t == TypeDesc::INT)
         lt = ll.type_int();
     else if (t == TypeDesc::STRING)
-        lt = (llvm::Type*)ll.type_string();
+        lt = (llvm::Type*)ll.type_ustring();
     else if (t.aggregate == TypeDesc::VEC3)
         lt = (llvm::Type*)ll.type_void_ptr();  //llvm_type_triple_ptr();
     else if (t.aggregate == TypeDesc::MATRIX44)
@@ -867,7 +867,7 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
                 || (ll.llvm_typeof(result) == ll.type_float())
                 || (ll.llvm_typeof(result) == ll.type_triple())
                 || (ll.llvm_typeof(result) == ll.type_int())
-                || (ll.llvm_typeof(result) == (llvm::Type*)ll.type_string())
+                || (ll.llvm_typeof(result) == ll.type_ustring())
                 || (ll.llvm_typeof(result) == ll.type_matrix())
                 || (ll.llvm_typeof(result) == ll.type_longlong())) {
                 result = ll.widen_value(result);
@@ -888,7 +888,7 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
                     (ll.llvm_typeof(result) == ll.type_wide_float())
                     || (ll.llvm_typeof(result) == ll.type_wide_int())
                     || (ll.llvm_typeof(result) == ll.type_wide_triple())
-                    || (ll.llvm_typeof(result) == ll.type_wide_string())
+                    || (ll.llvm_typeof(result) == ll.type_wide_ustring())
                     || (ll.llvm_typeof(result) == ll.type_wide_bool())
                     || (ll.llvm_typeof(result) == ll.type_wide_matrix())
                     || (ll.llvm_typeof(result) == ll.type_wide_longlong()));
@@ -1218,7 +1218,8 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
         if (!type.is_closure_based() && t.aggregate > 1)
             dst_ptr = ll.GEP(dst_ptr, 0, component);
 
-        if (ll.type_ptr(ll.llvm_typeof(new_val)) != ll.llvm_typeof(dst_ptr)) {
+        if ((const llvm::Type*)ll.type_ptr(ll.llvm_typeof(new_val))
+            != ll.llvm_typeof(dst_ptr)) {
             std::cerr << " new_val type=";
             {
                 llvm::raw_os_ostream os_cerr(std::cerr);
@@ -1231,7 +1232,7 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
             }
             std::cerr << std::endl;
         }
-        OSL_ASSERT(ll.type_ptr(ll.llvm_typeof(new_val))
+        OSL_ASSERT((const llvm::Type*)ll.type_ptr(ll.llvm_typeof(new_val))
                    == ll.llvm_typeof(dst_ptr));
 
         // Finally, store the value.
@@ -1766,7 +1767,7 @@ BatchedBackendLLVM::llvm_test_nonzero(const Symbol& val, bool test_derivs)
         llvm::Value* llvmValue = llvm_get_pointer(val);
         //OSL_DEV_ONLY(std::cout << "llvmValue type=" << ll.llvm_typenameof(llvmValue) << std::endl);
 
-        if (ll.llvm_typeof(llvmValue) == ll.type_ptr(ll.type_bool())) {
+        if (ll.llvm_typeof(llvmValue) == (const llvm::Type*)ll.type_ptr(ll.type_bool())) {
             return ll.op_ne(llvm_load_value(val), ll.constant_bool(0));
         } else {
             return ll.op_ne(llvm_load_value(val), ll.constant(0));

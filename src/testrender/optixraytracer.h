@@ -25,14 +25,6 @@ public:
     OptixRaytracer();
     virtual ~OptixRaytracer();
 
-    uint64_t register_string(const std::string& str,
-                             const std::string& var_name)
-    {
-        ustring ustr = ustring(str);
-        m_hash_map[ustr.hash()] = ustr.c_str();
-        return 0;
-    }
-
     uint64_t register_global(const std::string& str, uint64_t value);
     bool fetch_global(const std::string& str, uint64_t* value);
 
@@ -90,7 +82,6 @@ private:
     uint64_t test_str_1;
     uint64_t test_str_2;
     const unsigned long OSL_PRINTF_BUFFER_SIZE = 8 * 1024 * 1024;
-    std::unordered_map<uint64_t, const char*> m_hash_map;
 
     bool load_optix_module(
         const char* filename,

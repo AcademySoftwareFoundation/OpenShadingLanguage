@@ -244,6 +244,7 @@ BackendLLVM::llvm_type_groupdata ()
     std::vector<llvm::Type*> fields;
     int offset = 0;
     int order = 0;
+    m_groupdata_field_names.clear();
 
     if (llvm_debug() >= 2)
         std::cout << "Group param struct:\n";
@@ -255,6 +256,7 @@ BackendLLVM::llvm_type_groupdata ()
                   << " at offset " << offset << "\n";
     int sz = (m_num_used_layers + 3) & (~3);  // Round up to 32 bit boundary
     fields.push_back (ll.type_array (ll.type_bool(), sz));
+    m_groupdata_field_names.emplace_back("layer_runflags");
     offset += sz * sizeof(bool);
     ++order;
 
@@ -270,6 +272,7 @@ BackendLLVM::llvm_type_groupdata ()
         int *offsets = & group().m_userdata_offsets[0];
         int sz = (nuserdata + 3) & (~3);
         fields.push_back (ll.type_array (ll.type_bool(), sz));
+        m_groupdata_field_names.emplace_back("userdata_init_flags");
         offset += nuserdata * sizeof(bool);
         ++order;
         for (int i = 0; i < nuserdata; ++i) {
@@ -283,6 +286,8 @@ BackendLLVM::llvm_type_groupdata ()
                 : type.numelements();
             type.arraylen = n;
             fields.push_back (llvm_type (type));
+            m_groupdata_field_names.emplace_back(
+                fmtformat("userdata{}_{}_", i, names[i]));
             // Alignment
             int align = type.basesize();
             offset = OIIO::round_to_multiple_of_pow2 (offset, align);
@@ -311,6 +316,8 @@ BackendLLVM::llvm_type_groupdata ()
             const int derivSize = (sym.has_derivs() ? 3 : 1);
             ts.make_array (arraylen * derivSize);
             fields.push_back (llvm_type (ts));
+            m_groupdata_field_names.emplace_back(
+                fmtformat("lay{}param_{}_", layer, sym.name()));
 
             // FIXME(arena) -- temporary debugging
             if (debug() && sym.symtype() == SymTypeOutputParam
@@ -343,9 +350,8 @@ BackendLLVM::llvm_type_groupdata ()
     if (llvm_debug() >= 2)
         print(" Group struct had {} fields, total size {}\n\n", order, offset);
 
-    std::string groupdataname = fmtformat("Groupdata_{}",
-                                          group().name().hash());
-    m_llvm_type_groupdata = ll.type_struct (fields, groupdataname);
+    m_llvm_type_groupdata = ll.type_struct (fields, "Groupdata");
+    OSL_ASSERT(fields.size() == m_groupdata_field_names.size());
 
     return m_llvm_type_groupdata;
 }
@@ -393,10 +399,9 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
     if (!force && sym.valuesource() == Symbol::ConnectedVal &&
           !sym.typespec().is_closure_based())
         return;
+    // For "globals" that are closures, there is nothing to initialize.
     if (sym.typespec().is_closure_based() && sym.symtype() == SymTypeGlobal)
         return;
-
-    int arraylen = std::max (1, sym.typespec().arraylength());
 
     // Closures need to get their storage before anything can be
     // assigned to them.  Unless they are params, in which case we took
@@ -407,9 +412,11 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         return;
     }
 
+    // For local variables (including temps), when "debug_uninit" is enabled,
+    // we store special values in the variable to make it easier to detect
+    // uninitialized use.
     if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp)
           && shadingsys().debug_uninit()) {
-        // Handle the "debug uninitialized values" case
         bool isarray = sym.typespec().is_array();
         int alen = isarray ? sym.typespec().arraylength() : 1;
         llvm::Value *u = NULL;
@@ -421,7 +428,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         else if (sym.typespec().is_int_based())
             u = ll.constant (std::numeric_limits<int>::min());
         else if (sym.typespec().is_string_based())
-            u = ll.constant (Strings::uninitialized_string);
+            u = llvm_load_string(Strings::uninitialized_string);
         if (u) {
             for (int a = 0;  a < alen;  ++a) {
                 llvm::Value *aval = isarray ? ll.constant(a) : NULL;
@@ -432,6 +439,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         return;
     }
 
+    // Local/temp strings are always initialzed to the empty string.
     if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp) &&
         sym.typespec().is_string_based()) {
         // Strings are pointers.  Can't take any chance on leaving
@@ -440,6 +448,10 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         return;  // we're done, the parts below are just for params
     }
 
+    // FIXME: Future work -- how expensive would it be to initialize all
+    // locals to 0? We should test this for performance hit, and if
+    // reasonable, it may be a good idea to do it by default.
+
     // From here on, everything we are dealing with is a shader parameter
     // (either ordinary or output).
     OSL_ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
@@ -447,7 +459,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 
     // Handle interpolated params by calling osl_bind_interpolated_param,
     // which will check if userdata is already retrieved, if not it will
-    // call RendererServices::get_userdata to retrived it. In either case,
+    // call RendererServices::get_userdata to retrieve it. In either case,
     // it will return 1 if it put the userdata in the right spot (either
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.
@@ -487,21 +499,9 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
                 ll.op_memset(ll.offset_ptr(dstptr, size), 0, 2*size);
         } else {
             // No pre-placement: fall back to call to the renderer callback.
-            llvm::Value* name_arg = NULL;
-            if (use_optix()) {
-                // We need to make a DeviceString for the parameter name
-                ustring arg_name = ustring::fmtformat("osl_paramname_{}_{}",
-                                                      symname, sym.layer());
-                Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
-                symname_const.set_dataptr(SymArena::Absolute, &symname);
-                name_arg = llvm_load_device_string (symname_const, /*follow*/ true);
-            } else {
-                name_arg = ll.constant (symname);
-            }
-
             llvm::Value* args[] = {
                 sg_void_ptr(),
-                name_arg,
+                llvm_load_string(symname),
                 ll.constant (type),
                 ll.constant ((int) group().m_userdata_derivs[userdata_index]),
                 groupdata_field_ptr (2 + userdata_index), // userdata data ptr
@@ -518,10 +518,10 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             int ncomps = type.numelements() * type.aggregate;
             llvm::Value *args[] = { ll.constant(ncomps), llvm_void_ptr(sym),
                                     ll.constant((int)sym.has_derivs()), sg_void_ptr(),
-                                    ll.constant(ustring(inst()->shadername())),
-                                    ll.constant(0), ll.constant(sym.unmangled()),
+                                    llvm_load_string(inst()->shadername()),
+                                    ll.constant(0), llvm_load_string(sym.unmangled()),
                                     ll.constant(0), ll.constant(ncomps),
-                                    ll.constant("<get_userdata>")
+                                    llvm_load_string("<get_userdata>")
             };
             ll.call_function ("osl_naninf_check", args);
         }
@@ -544,29 +544,15 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
             // Handle init ops.
             build_llvm_code (sym.initbegin(), sym.initend());
-        } else if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
+        } else if (use_optix() && ! sym.typespec().is_closure()) {
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
-            ustring var_name = ustring::fmtformat("{}_{}_{}_{}", sym.name(),
-                                                  inst()->layername(),
-                                                  group().name(), group().id());
-
-            // The "true" argument triggers the creation of the metadata needed to
-            // make the variable visible to OptiX.
-            llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym, true);
-
+            llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym);
             // memcpy the initial value from the CUDA variable
             llvm::Value* src = ll.ptr_cast (ll.GEP (cuda_var, 0), ll.type_void_ptr());
             llvm::Value* dst = llvm_void_ptr (sym);
             TypeDesc t = sym.typespec().simpletype();
             ll.op_memcpy (dst, src, t.size(), t.basesize());
-        } else if (use_optix() && ! sym.typespec().is_closure()) {
-            // For convenience, we always pack string addresses into the groupdata
-            // struct.
-            int userdata_index = find_userdata_index (sym);
-            llvm::Value* init_val = getOrAllocateCUDAVariable (sym);
-            init_val = ll.ptr_cast (init_val, ll.type_void_ptr());
-            ll.op_memcpy (groupdata_field_ptr (2 + userdata_index), init_val, 8, 4);
         } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
             // geometrically-varying param; memcpy its default value
             TypeDesc t = sym.typespec().simpletype();
@@ -578,6 +564,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             // Use default value
             int num_components = sym.typespec().simpletype().aggregate;
             TypeSpec elemtype = sym.typespec().elementtype();
+            int arraylen = std::max (1, sym.typespec().arraylength());
             for (int a = 0, c = 0; a < arraylen;  ++a) {
                 llvm::Value *arrind = sym.typespec().is_array() ? ll.constant(a) : NULL;
                 if (sym.typespec().is_closure_based())
@@ -588,7 +575,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
                     if (elemtype.is_float_based())
                         init_val = ll.constant(sym.get_float(c));
                     else if (elemtype.is_string())
-                        init_val = ll.constant(sym.get_string(c));
+                        init_val = llvm_load_string(sym.get_string(c));
                     else if (elemtype.is_int())
                         init_val = ll.constant(sym.get_int(c));
                     OSL_DASSERT (init_val);

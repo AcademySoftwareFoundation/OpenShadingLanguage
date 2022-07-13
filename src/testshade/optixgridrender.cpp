@@ -92,11 +92,6 @@ OptixGridRenderer::OptixGridRenderer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
-
-#define STRDECL(str, var_name) \
-    register_string(str, OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name);
-#include <OSL/strdecls.h>
-#undef STRDECL
 }
 
 
@@ -241,7 +236,7 @@ OptixGridRenderer::synch_attributes()
         for (const ustring* end = cpuString + numStrings; cpuString < end;
              ++cpuString) {
             // convert the ustring to a device string
-            uint64_t devStr = register_string(cpuString->string(), "");
+            uint64_t devStr = cpuString->hash();
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
                                   sizeof(devStr), cudaMemcpyHostToDevice));
             gpuStrings += sizeof(DeviceString);
@@ -854,14 +849,13 @@ OptixGridRenderer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
         // have we reached the end?
         if (fmt_str_hash == 0)
             break;
-        const char* format = m_hash_map[fmt_str_hash];
-        OSL_ASSERT(
-            format != nullptr
-            && "The format string should have been registered with the renderer");
+        const char* format = ustring::from_hash(fmt_str_hash).c_str();
+        OSL_ASSERT(format != nullptr
+                   && "The string should have been a valid ustring");
         const size_t len = strlen(format);
 
         for (size_t j = 0; j < len; j++) {
-            // If we encounter a '%', then we'l copy the format string to 'fmt_string'
+            // If we encounter a '%', then we'll copy the format string to 'fmt_string'
             // and provide that to printf() directly along with a pointer to the argument
             // we're interested in printing.
             if (format[j] == '%') {
@@ -903,16 +897,13 @@ OptixGridRenderer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
                         format_end_found = true;
                         break;
                     case 's':
-                        src = (src + sizeof(double) - 1)
-                              & ~(sizeof(double) - 1);
+                        src = (src + sizeof(uint64_t) - 1)
+                              & ~(sizeof(uint64_t) - 1);
                         uint64_t str_hash = *reinterpret_cast<const uint64_t*>(
                             &ptr[src]);
-                        const char* str = m_hash_map[str_hash];
-                        OSL_ASSERT(
-                            str != nullptr
-                            && "The string should have been regisgtered with the renderer");
+                        ustring str = ustring::from_hash(str_hash);
                         dst += snprintf(&buffer[dst], BufferSize - dst,
-                                        fmt_string.c_str(), str);
+                                        fmt_string.c_str(), str.c_str());
                         src += sizeof(uint64_t);
                         format_end_found = true;
                         break;
@@ -981,12 +972,10 @@ OptixGridRenderer::register_named_transforms()
 
     // Gather:
     //   1) All of the named transforms
-    //   2) The "string" value associated with the transform name:
-    //        for OptiX 6, this is the address of the string variable;
-    //        for OptiX 7+, this is the ustring hash of the transform name.
+    //   2) The "string" value associated with the transform name, which is
+    //      actually the ustring hash of the transform name.
     for (const auto& item : m_named_xforms) {
-        const uint64_t addr
-            = OptixGridRenderer::register_string(item.first.c_str(), "");
+        const uint64_t addr = item.first.hash();
         xform_name_buffer.push_back(addr);
         xform_buffer.push_back(*item.second);
     }

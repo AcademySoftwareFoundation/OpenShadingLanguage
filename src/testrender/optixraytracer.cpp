@@ -89,11 +89,6 @@ OptixRaytracer::OptixRaytracer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
-
-#define STRDECL(str, var_name) \
-    register_string(str, OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name);
-#include <OSL/strdecls.h>
-#undef STRDECL
 }
 
 
@@ -169,9 +164,6 @@ OptixRaytracer::synch_attributes()
     ustring userdata_str1("ud_str_1");
     ustring userdata_str2("userdata string");
 
-    register_string(userdata_str1.string(), "");
-    register_string(userdata_str2.string(), "");
-
     // Store the user-data
     test_str_1 = userdata_str1.hash();
     test_str_2 = userdata_str2.hash();
@@ -216,7 +208,7 @@ OptixRaytracer::synch_attributes()
         for (const ustring* end = cpuString + numStrings; cpuString < end;
              ++cpuString) {
             // convert the ustring to a device string
-            uint64_t devStr = register_string(cpuString->string(), "");
+            uint64_t devStr = cpuString->hash();
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
                                   sizeof(devStr), cudaMemcpyHostToDevice));
             gpuStrings += sizeof(DeviceString);
@@ -1050,10 +1042,9 @@ OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
         // have we reached the end?
         if (fmt_str_hash == 0)
             break;
-        const char* format = m_hash_map[fmt_str_hash];
-        OSL_ASSERT(
-            format != nullptr
-            && "The format string should have been registered with the renderer");
+        const char* format = ustring::from_hash(fmt_str_hash).c_str();
+        OSL_ASSERT(format != nullptr
+                   && "The string should have been a valid ustring");
         const size_t len = strlen(format);
 
         for (size_t j = 0; j < len; j++) {
@@ -1103,10 +1094,10 @@ OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
                               & ~(sizeof(double) - 1);
                         uint64_t str_hash = *reinterpret_cast<const uint64_t*>(
                             &ptr[src]);
-                        const char* str = m_hash_map[str_hash];
+                        const char* str = ustring::from_hash(str_hash).c_str();
                         OSL_ASSERT(
                             str != nullptr
-                            && "The string should have been regisgtered with the renderer");
+                            && "The string should have been a valid ustring");
                         dst += snprintf(&buffer[dst], BufferSize - dst,
                                         fmt_string.c_str(), str);
                         src += sizeof(uint64_t);

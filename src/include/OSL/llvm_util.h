@@ -108,6 +108,12 @@ public:
     void jit_aggressive(bool val) { m_jit_aggressive = val; }
     bool jit_aggressive() const { return m_jit_aggressive; }
 
+    // Select whether the representation of a ustring is going to be
+    // the character pointer, or the hash.
+    enum class UstringRep { charptr, hash };
+    UstringRep ustring_rep() const { return m_ustring_rep; }
+    void ustring_rep(UstringRep rep);
+
     /// Return a reference to the current context.
     llvm::LLVMContext& context() const { return *m_llvm_context; }
 
@@ -311,7 +317,7 @@ public:
 
     /// Create a new LLVM basic block (for the current function) and return
     /// its handle.
-    llvm::BasicBlock* new_basic_block(const std::string& name = std::string());
+    llvm::BasicBlock* new_basic_block(const std::string& name = {});
 
     /// Save the return block pointer when entering a function. If
     /// after==NULL, generate a new basic block for where to go after the
@@ -543,8 +549,8 @@ public:
     llvm::Type* type_triple() const { return m_llvm_type_triple; }
     llvm::Type* type_matrix() const { return m_llvm_type_matrix; }
     llvm::Type* type_typedesc() const { return m_llvm_type_longlong; }
+    llvm::Type* type_ustring() { return m_llvm_type_ustring; }
     llvm::PointerType* type_void_ptr() const { return m_llvm_type_void_ptr; }
-    llvm::PointerType* type_string() { return m_llvm_type_char_ptr; }
     llvm::PointerType* type_ustring_ptr() const
     {
         return m_llvm_type_ustring_ptr;
@@ -579,7 +585,11 @@ public:
     llvm::Type* type_wide_triple() const { return m_llvm_type_wide_triple; }
     llvm::Type* type_wide_matrix() const { return m_llvm_type_wide_matrix; }
     llvm::Type* type_wide_void_ptr() const { return m_llvm_type_wide_void_ptr; }
-    llvm::Type* type_wide_string() const
+    llvm::Type* type_wide_ustring() const
+    {
+        return m_llvm_type_wide_ustring;
+    }
+    llvm::PointerType* type_wide_ustring_ptr() const
     {
         return m_llvm_type_wide_ustring_ptr;
     }
@@ -629,7 +639,7 @@ public:
                             bool is_packed          = false);
 
     /// Return the llvm::Type that is a pointer to the given llvm type.
-    llvm::Type* type_ptr(llvm::Type* type);
+    llvm::PointerType* type_ptr(llvm::Type* type);
 
     /// Return the llvm::Type that is the wide version of the given llvm type
     llvm::Type* type_wide(llvm::Type* type);
@@ -687,7 +697,8 @@ public:
     /// If the type specified is NULL, it will make a 'void *'.
     llvm::Value* constant_ptr(void* p, llvm::PointerType* type = NULL);
 
-    /// Return an llvm::Value holding the given string constant.
+    /// Return an llvm::Value holding the given string constant (as
+    /// determined by the ustring_rep).
     llvm::Value* constant(ustring s);
     llvm::Value* constant(string_view s) { return constant(ustring(s)); }
 
@@ -1019,9 +1030,10 @@ private:
     IRBuilder& builder();
 
     int m_debug;
-    bool m_dumpasm        = false;
-    bool m_jit_fma        = false;
-    bool m_jit_aggressive = false;
+    bool m_dumpasm           = false;
+    bool m_jit_fma           = false;
+    bool m_jit_aggressive    = false;
+    UstringRep m_ustring_rep = UstringRep::charptr;
     PerThreadInfo::Impl* m_thread;
     llvm::LLVMContext* m_llvm_context;
     llvm::Module* m_llvm_module;
@@ -1037,6 +1049,9 @@ private:
     std::vector<llvm::BasicBlock*> m_loop_after_block;  // stack for break
     std::vector<llvm::BasicBlock*> m_loop_step_block;   // stack for continue
 
+    // Incrementing serial numbers
+    int m_next_serial_bb = 0;
+
     llvm::Type* m_llvm_type_float;
     llvm::Type* m_llvm_type_double;
     llvm::Type* m_llvm_type_int;
@@ -1049,8 +1064,8 @@ private:
     llvm::Type* m_llvm_type_void;
     llvm::Type* m_llvm_type_triple;
     llvm::Type* m_llvm_type_matrix;
+    llvm::Type* m_llvm_type_ustring;
     llvm::PointerType* m_llvm_type_void_ptr;
-    llvm::PointerType* m_llvm_type_ustring_ptr;
     llvm::PointerType* m_llvm_type_char_ptr;
     llvm::PointerType* m_llvm_type_bool_ptr;
     llvm::PointerType* m_llvm_type_int_ptr;
@@ -1059,6 +1074,7 @@ private:
     llvm::PointerType* m_llvm_type_triple_ptr;
     llvm::PointerType* m_llvm_type_matrix_ptr;
     llvm::PointerType* m_llvm_type_double_ptr;
+    llvm::PointerType* m_llvm_type_ustring_ptr;
 
     int m_vector_width;
     llvm::Type* m_llvm_type_wide_float;
@@ -1070,11 +1086,12 @@ private:
     llvm::Type* m_llvm_type_wide_triple;
     llvm::Type* m_llvm_type_wide_matrix;
     llvm::Type* m_llvm_type_wide_void_ptr;
-    llvm::Type* m_llvm_type_wide_ustring_ptr;
+    llvm::Type* m_llvm_type_wide_ustring;
     llvm::PointerType* m_llvm_type_wide_char_ptr;
     llvm::PointerType* m_llvm_type_wide_int_ptr;
     llvm::PointerType* m_llvm_type_wide_bool_ptr;
     llvm::PointerType* m_llvm_type_wide_float_ptr;
+    llvm::PointerType* m_llvm_type_wide_ustring_ptr;
     llvm::Type* m_llvm_type_native_mask;
 
     bool m_supports_masked_stores           = false;

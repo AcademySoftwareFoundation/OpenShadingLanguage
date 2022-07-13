@@ -117,24 +117,29 @@ public:
 
     /// Non-array version of llvm_load_value, with default deriv &
     /// component.
-    llvm::Value *llvm_load_value (const Symbol& sym, int deriv = 0,
-                                  int component = 0,
-                                  TypeDesc cast=TypeDesc::UNKNOWN) {
-        return (use_optix() && ! sym.typespec().is_closure() && sym.typespec().is_string())
-            ? llvm_load_device_string (sym, /*follow*/ true)
-            : llvm_load_value (sym, deriv, NULL, component, cast);
+    llvm::Value* llvm_load_value(const Symbol& sym, int deriv = 0,
+                                 int component = 0,
+                                 TypeDesc cast = TypeDesc::UNKNOWN)
+    {
+        return llvm_load_value (sym, deriv, NULL, component, cast);
     }
-
-    /// Load the address of a global device-side string pointer, which may
-    /// reside in a global variable, the groupdata struct, or a local value.
-    llvm::Value *llvm_load_device_string (const Symbol& sym, bool follow);
 
     /// Convenience function to load a string for CPU or GPU device
     llvm::Value *llvm_load_string (const Symbol& sym) {
         OSL_DASSERT(sym.typespec().is_string());
-        return use_optix()
-            ? llvm_load_device_string(sym, /*follow*/ true)
-            : llvm_load_value(sym);
+        return llvm_load_value(sym);
+    }
+
+    /// Convenience function to load a constant string for CPU or GPU device.
+    /// On the GPU, we use the ustring hash, not the character pointer.
+    llvm::Value* llvm_load_string(ustring str)
+    {
+        return ll.constant(str);
+    }
+
+    llvm::Value* llvm_load_string(string_view str)
+    {
+        return llvm_load_string(ustring(str));
     }
 
     /// Legacy version
@@ -144,10 +149,12 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast);
     }
 
-    /// Return an llvm::Value* that is either a scalar and derivs is
-    /// false, or a pointer to sym's values (if sym is an aggregate or
-    /// derivs == true).  Furthermore, if deriv == true and sym doesn't
-    /// have derivs, coerce it into a variable with zero derivs.
+    /// Return an llvm::Value* in the form that we will pass a float-based
+    /// symbol as a function argument to any "built-in" OSL function -- as a
+    /// simple value if the symbol is a scalar and no derivs are needed, or as
+    /// a pointer to the data in all other cases (aggregates, arrays, or
+    /// derivs needed). If deriv == true and sym doesn't have derivs, coerce
+    /// it into a variable having derivatives set to 0.0.
     llvm::Value *llvm_load_arg (const Symbol& sym, bool derivs);
 
     /// Just like llvm_load_arg(sym,deriv), except use use sym's derivs
@@ -209,11 +216,16 @@ public:
     /// Allocate a CUDA variable for the given OSL symbol and return a pointer
     /// to the corresponding LLVM GlobalVariable, or return the pointer if it
     /// has already been allocated.
-    llvm::Value *getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata=false);
+    llvm::Value *getOrAllocateCUDAVariable (const Symbol& sym);
 
-    /// Create a CUDA global variable and add it to the current Module
-    llvm::Value *addCUDAVariable (const std::string& name, int size, int alignment,
-                                  const void* data, TypeDesc type=TypeDesc::UNKNOWN);
+    /// Create a named CUDA global variable with the given type, size, and
+    /// alignment, and add it to the current Module. It will be initialized
+    /// with data pointed to by init_data. A record will be also added to
+    /// m_const_map, and will be retrieved by subsequent calls to
+    /// getOrAllocateCUDAVariable().
+    llvm::Value* addCUDAGlobalVariable(const std::string& name, int size,
+                                       int alignment, const void* init_data,
+                                       TypeDesc type = TypeDesc::UNKNOWN);
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;
@@ -262,12 +274,17 @@ public:
         return ll.void_ptr (m_llvm_shaderglobals_ptr);
     }
 
-    llvm::Value *llvm_ptr_cast (llvm::Value* val, const TypeSpec &type) {
-        return ll.ptr_cast (val, type.simpletype());
+    /// Cast the pointer variable specified by val to a pointer to the
+    /// basic type comprising `type`.
+    llvm::Value* llvm_ptr_cast(llvm::Value* val, const TypeSpec& type,
+                               const std::string& llname = {})
+    {
+        return ll.ptr_cast (val, type.simpletype(), llname);
     }
 
     llvm::Value *llvm_void_ptr (const Symbol &sym, int deriv=0) {
-        return ll.void_ptr (llvm_get_pointer(sym, deriv));
+        return ll.void_ptr(llvm_get_pointer(sym, deriv),
+                           llnamefmt("{}_voidptr", sym.mangled()));
     }
 
     /// Return the LLVM type handle for a structure of the common group
@@ -386,10 +403,15 @@ public:
         return llvm_call_function (name, { &A, &B, &C }, deriv_ptrs);
     }
 
-    TypeDesc llvm_typedesc (const TypeSpec &typespec) {
-        return typespec.is_closure_based()
-           ? TypeDesc(TypeDesc::PTR, typespec.arraylength())
-           : typespec.simpletype();
+    TypeDesc llvm_typedesc (const TypeSpec &typespec)
+    {
+        if (typespec.is_closure_based())
+            return TypeDesc(TypeDesc::PTR, typespec.arraylength());
+        else if (use_optix() && typespec.is_string_based()) {
+            // On the OptiX side, we use the uint64 hash to represent a string
+            return TypeDesc(TypeDesc::UINT64, typespec.arraylength());
+        } else
+            return typespec.simpletype();
     }
 
     /// Generate the appropriate llvm type definition for a TypeSpec
@@ -416,7 +438,7 @@ public:
     ///
     llvm::BasicBlock *llvm_exit_instance_block () {
         if (! m_exit_instance_block) {
-            std::string name = fmtformat("{}_{}_exit_", inst()->layername(),
+            std::string name = llnamefmt("{}_{}_exit_", inst()->layername(),
                                          inst()->id());
             m_exit_instance_block = ll.new_basic_block (name);
         }
@@ -455,6 +477,18 @@ public:
 
     LLVM_Util ll;
 
+    // Utility for constructing names for llvm symbols. It creates a formatted
+    // string if the shading system's "llvm_output_bitcode" option is set,
+    // otherwise it takes a shortcut and returns an empty string (since nobody
+    // is going to see the pretty bitcode anyway).
+    template<typename Str, typename... Args>
+    OSL_NODISCARD inline std::string llnamefmt(const Str& fmt,
+                                               Args&&... args) const
+    {
+        return m_name_llvm_syms ? fmtformat(fmt, std::forward<Args>(args)...)
+                                : std::string();
+    }
+
 private:
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     std::set<int> m_layers_already_run; ///< List of layers run
@@ -481,17 +515,15 @@ private:
     llvm::PointerType *m_llvm_type_prepare_closure_func;
     llvm::PointerType *m_llvm_type_setup_closure_func;
     int m_llvm_local_mem;             // Amount of memory we use for locals
+    bool m_name_llvm_syms;            // Whether to name LLVM symbols
 
     // A mapping from symbol names to llvm::GlobalVariables
-    std::map<std::string,llvm::GlobalVariable*> m_const_map;
+    std::map<std::string, llvm::GlobalVariable*> m_const_map;
 
-    // A mapping from canonical strings to string variable names, used to
-    // detect collisions that might occur due to using the string hash to
-    // create variable names.
-    std::map<std::string,std::string>           m_varname_map;
+    // Name of each indexed field in the groupdata, mostly for debugging.
+    std::vector<std::string> m_groupdata_field_names;
 
     bool m_use_optix;                   ///< Compile for OptiX?
-
     bool m_use_rs_bitcode;              /// To use free function versions of Renderer Service functions.
 
     friend class ShadingSystemImpl;

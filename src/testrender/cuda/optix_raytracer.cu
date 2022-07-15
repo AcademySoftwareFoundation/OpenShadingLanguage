@@ -15,6 +15,20 @@
 #include "render_params.h"
 
 
+OSL_NAMESPACE_ENTER
+namespace pvt {
+__device__ CUdeviceptr s_color_system          = 0;
+__device__ CUdeviceptr osl_printf_buffer_start = 0;
+__device__ CUdeviceptr osl_printf_buffer_end   = 0;
+__device__ uint64_t test_str_1                 = 0;
+__device__ uint64_t test_str_2                 = 0;
+__device__ uint64_t num_named_xforms           = 0;
+__device__ CUdeviceptr xform_name_buffer       = 0;
+__device__ CUdeviceptr xform_buffer            = 0;
+}
+OSL_NAMESPACE_EXIT
+
+
 extern "C" {
 __device__ __constant__ RenderParams render_params;
 }
@@ -34,10 +48,6 @@ __miss__()
 }
 
 
-extern __device__ char* test_str_1;
-extern __device__ char* test_str_2;
-
-
 extern "C" __global__ void
 __raygen__setglobals()
 {
@@ -50,12 +60,10 @@ __raygen__setglobals()
 }
 
 
-
 extern "C" __global__ void
 __miss__setglobals()
 {
 }
-
 
 
 extern "C" __global__ void

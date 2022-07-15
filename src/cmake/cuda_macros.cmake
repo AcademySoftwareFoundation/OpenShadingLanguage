@@ -94,6 +94,20 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
                 NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
     endif ()
 
+    if (NOT LLVM_LLC_TOOL)
+        find_program (LLVM_LLC_TOOL NAMES "llc"
+                PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+                NO_CMAKE_PATH NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH
+                NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
+    endif ()
+
+    if (NOT LLVM_OPT_TOOL)
+        find_program (LLVM_OPT_TOOL NAMES "opt"
+                PATHS "${LLVM_DIRECTORY}/bin" "${LLVM_DIRECTORY}/tools/llvm"
+                NO_CMAKE_PATH NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH
+                NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH)
+    endif ()
+
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         # fix compilation error when using MSVC
         set (CLANG_MSVC_FIX "-DBOOST_CONFIG_REQUIRES_THREADS_HPP")

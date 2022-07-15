@@ -416,43 +416,44 @@ OptixGridRenderer::make_optix_materials()
                                 msg_log, &sizeof_msg_log, &hitgroup_group),
         fmtformat("Creating 'hitgroup' program group: {}", msg_log));
 
-    // Load the renderer support library CUDA source and generate PTX for it
-    std::string rendlibName  = "rend_lib.ptx";
-    std::string rend_lib_ptx = load_ptx_file(rendlibName);
-    if (rend_lib_ptx.empty()) {
-        errhandler().severefmt("Could not find PTX for the raygen program");
+    // Load the PTX for the shadeops
+    std::string shadeopsName = "linked_shadeops.ptx";
+    std::string shadeops_ptx = load_ptx_file(shadeopsName);
+    if (shadeops_ptx.empty()) {
+        errhandler().severefmt("Could not find PTX for the renderer library");
         return false;
     }
 
-    // Create support library program group
+    // Create shadeops library program group
     sizeof_msg_log = sizeof(msg_log);
-    OptixModule rend_lib_module;
+    OptixModule shadeops_module;
     OPTIX_CHECK_MSG(optixModuleCreateFromPTX(m_optix_ctx,
                                              &module_compile_options,
                                              &pipeline_compile_options,
-                                             rend_lib_ptx.c_str(),
-                                             rend_lib_ptx.size(), msg_log,
-                                             &sizeof_msg_log, &rend_lib_module),
+                                             shadeops_ptx.c_str(),
+                                             shadeops_ptx.size(), msg_log,
+                                             &sizeof_msg_log, &shadeops_module),
                     fmtformat("Creating module from PTX-file: {}", msg_log));
 
     // Record it so we can destroy it later
-    modules.push_back(rend_lib_module);
+    modules.push_back(shadeops_module);
 
     // Direct-callable -- support functions for OSL on the device
-    OptixProgramGroupDesc rend_lib_desc = {};
-    rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    rend_lib_desc.callables.moduleDC    = rend_lib_module;
-    rend_lib_desc.callables.entryFunctionNameDC
-        = "__direct_callable__dummy_rend_lib";
-    rend_lib_desc.callables.moduleCC            = 0;
-    rend_lib_desc.callables.entryFunctionNameCC = nullptr;
-    OptixProgramGroup rend_lib_group;
+    OptixProgramGroupDesc shadeops_desc = {};
+    shadeops_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    shadeops_desc.callables.moduleDC    = shadeops_module;
+    shadeops_desc.callables.entryFunctionNameDC
+        = "__direct_callable__dummy_shadeops";
+    shadeops_desc.callables.moduleCC            = 0;
+    shadeops_desc.callables.entryFunctionNameCC = nullptr;
+
+    OptixProgramGroup shadeops_group;
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(
-        optixProgramGroupCreate(m_optix_ctx, &rend_lib_desc,
+        optixProgramGroupCreate(m_optix_ctx, &shadeops_desc,
                                 1,                 // number of program groups
                                 &program_options,  // program options
-                                msg_log, &sizeof_msg_log, &rend_lib_group),
+                                msg_log, &sizeof_msg_log, &shadeops_group),
         fmtformat("Creating 'hitgroup' program group: {}", msg_log));
 
     int callables = m_fused_callable ? 1 : 2;
@@ -565,9 +566,7 @@ OptixGridRenderer::make_optix_materials()
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
-        rend_lib_group,
-        raygen_group,
-        miss_group,
+        shadeops_group,          raygen_group,          miss_group,
         hitgroup_group,
         setglobals_raygen_group,
         setglobals_miss_group,
@@ -602,6 +601,12 @@ OptixGridRenderer::make_optix_materials()
         &stack_sizes, max_trace_depth, max_cc_depth, max_dc_depth,
         &direct_callable_stack_size_from_traversal,
         &direct_callable_stack_size_from_state, &continuation_stack_size));
+
+    // NB: Providing the shadeops as a large PTX module is a slight abuse of
+    //     the OptiX API. Older drivers may have a hard time computing the
+    //     stack requirements for non-entry functions, so we need to pad the
+    //     direct callable stack size to accommodate these functions.
+    direct_callable_stack_size_from_state += 512;
 
     const uint32_t max_traversal_depth = 1;
     OPTIX_CHECK(optixPipelineSetStackSize(

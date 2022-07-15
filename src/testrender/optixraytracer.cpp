@@ -345,13 +345,13 @@ OptixRaytracer::make_optix_materials()
     load_optix_module("sphere.ptx", &module_compile_options,
                       &pipeline_compile_options, &sphere_module);
 
-
     OptixModule wrapper_module;
     load_optix_module("wrapper.ptx", &module_compile_options,
                       &pipeline_compile_options, &wrapper_module);
-    OptixModule rend_lib_module;
-    load_optix_module("rend_lib.ptx", &module_compile_options,
-                      &pipeline_compile_options, &rend_lib_module);
+
+    OptixModule shadeops_module;
+    load_optix_module("linked_shadeops.ptx", &module_compile_options,
+                      &pipeline_compile_options, &shadeops_module);
 
 
     OptixProgramGroupOptions program_options = {};
@@ -415,15 +415,14 @@ OptixRaytracer::make_optix_materials()
     create_optix_pg(&quad_hitgroup_desc, 1, &program_options, &quad_hitgroup);
 
     // Direct-callable -- support functions for OSL on the device
-    OptixProgramGroupDesc rend_lib_desc = {};
-    rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    rend_lib_desc.callables.moduleDC    = rend_lib_module;
-    rend_lib_desc.callables.entryFunctionNameDC
-        = "__direct_callable__dummy_rend_lib";
-    rend_lib_desc.callables.moduleCC            = 0;
-    rend_lib_desc.callables.entryFunctionNameCC = nullptr;
-    OptixProgramGroup rend_lib_group;
-    create_optix_pg(&rend_lib_desc, 1, &program_options, &rend_lib_group);
+    OptixProgramGroupDesc shadeops_desc         = {};
+    shadeops_desc.kind                          = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    shadeops_desc.callables.moduleDC            = shadeops_module;
+    shadeops_desc.callables.entryFunctionNameDC = "__direct_callable__dummy_shadeops";
+    shadeops_desc.callables.moduleCC            = 0;
+    shadeops_desc.callables.entryFunctionNameCC = nullptr;
+    OptixProgramGroup shadeops_group;
+    create_optix_pg(&shadeops_desc, 1, &program_options, &shadeops_group);
 
     // Direct-callable -- fills in ShaderGlobals for Quads
     OptixProgramGroupDesc quad_fillSG_desc = {};
@@ -547,7 +546,7 @@ OptixRaytracer::make_optix_materials()
 #endif
 
     // Set up OptiX pipeline
-    std::vector<OptixProgramGroup> final_groups = { rend_lib_group,
+    std::vector<OptixProgramGroup> final_groups = { shadeops_group,
                                                     raygen_group, miss_group };
 
     if (scene.quads.size() > 0)
@@ -590,6 +589,12 @@ OptixRaytracer::make_optix_materials()
         &stack_sizes, max_trace_depth, max_cc_depth, max_dc_depth,
         &direct_callable_stack_size_from_traversal,
         &direct_callable_stack_size_from_state, &continuation_stack_size));
+
+    // NB: Providing the shadeops as a large PTX module is a slight abuse of
+    //     the OptiX API. Older drivers may have a hard time computing the
+    //     stack requirements for non-entry functions, so we need to pad the
+    //     direct callable stack size to accommodate these functions.
+    direct_callable_stack_size_from_state += 512;
 
     const uint32_t max_traversal_depth = 1;
     OPTIX_CHECK(optixPipelineSetStackSize(

@@ -194,10 +194,13 @@ macro ( CUDA_SHADEOPS_COMPILE srclist )
         opmatrix.cpp
         ../liboslnoise/gabornoise.cpp
         ../liboslnoise/simplexnoise.cpp
+        ../testrender/cuda/rend_lib.cu
         )
 
     set ( shadeops_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.bc.cpp" )
     set ( linked_shadeops_bc "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops.bc" )
+    set ( linked_shadeops_opt_bc "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops_opt.bc" )
+    set ( linked_shadeops_ptx "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops.ptx" )
 
     list ( APPEND ${srclist} ${shadeops_bc_cuda_cpp} )
 
@@ -206,19 +209,28 @@ macro ( CUDA_SHADEOPS_COMPILE srclist )
         list ( APPEND shadeops_bc_list ${shadeops_bc} )
     endforeach ()
 
-    # Link all of the individual LLVM bitcode files
-    add_custom_command ( OUTPUT ${linked_shadeops_bc}
-        COMMAND ${LLVM_LINK_TOOL} -internalize ${shadeops_bc_list} -o ${linked_shadeops_bc}
-        DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
+    # Link all of the individual LLVM bitcode files, and emit PTX for the linked bitcode
+    add_custom_command ( OUTPUT ${linked_shadeops_opt_bc} ${linked_shadeops_ptx}
+        COMMAND ${LLVM_LINK_TOOL} ${shadeops_bc_list} -o ${linked_shadeops_bc}
+        COMMAND ${LLVM_OPT_TOOL} -O2 ${linked_shadeops_bc} -o ${linked_shadeops_opt_bc}
+        COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=sm_60 -O2 ${linked_shadeops_opt_bc} -o ${linked_shadeops_ptx}
+        # This script converts all of the .weak functions defined in the PTX into .visible functions.
+        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
+            ${linked_shadeops_ptx} ${linked_shadeops_ptx}
+            DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
+                "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
     # Serialize the linked bitcode into a CPP file and add it to the list of liboslexec sources
     add_custom_command ( OUTPUT ${shadeops_bc_cuda_cpp}
         COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
-            ${linked_shadeops_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
-        DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_shadeops_bc}
+            ${linked_shadeops_opt_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
+        DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_shadeops_opt_bc}
         ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+
+    install (FILES ${linked_shadeops_ptx}
+        DESTINATION ${OSL_PTX_INSTALL_DIR})
 endmacro ( )
 
 if (USE_LLVM_BITCODE)

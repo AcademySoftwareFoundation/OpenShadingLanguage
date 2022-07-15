@@ -62,6 +62,7 @@ enum class TargetISA {
     AVX512,
     AVX512_noFMA,
     HOST,
+    NVPTX,
     COUNT
 };
 
@@ -202,6 +203,9 @@ public:
     /// make_jit_execengine() or to detect_cpu_features(). Don't call
     /// target_isa() unless one of those has previously been called.
     TargetISA target_isa() const { return m_target_isa; }
+
+    /// Set the TargetISA to be used during codegen.
+    void set_target_isa(TargetISA requestedISA) { m_target_isa = requestedISA; }
 
     // Check support for certain CPU ISA features. These are only valid
     // after detect_cpu_features() (or make_jit_execengine()) has been

@@ -14,19 +14,19 @@
 #include "rend_lib.h"
 
 
-
 OSL_NAMESPACE_ENTER
 namespace pvt {
-__device__ CUdeviceptr s_color_system          = 0;
-__device__ CUdeviceptr osl_printf_buffer_start = 0;
-__device__ CUdeviceptr osl_printf_buffer_end   = 0;
-__device__ uint64_t test_str_1                 = 0;
-__device__ uint64_t test_str_2                 = 0;
-__device__ uint64_t num_named_xforms           = 0;
-__device__ CUdeviceptr xform_name_buffer       = 0;
-__device__ CUdeviceptr xform_buffer            = 0;
+extern __device__ CUdeviceptr s_color_system;
+extern __device__ CUdeviceptr osl_printf_buffer_start;
+extern __device__ CUdeviceptr osl_printf_buffer_end;
+extern __device__ uint64_t test_str_1;
+extern __device__ uint64_t test_str_2;
+extern __device__ uint64_t num_named_xforms;
+extern __device__ CUdeviceptr xform_name_buffer;
+extern __device__ CUdeviceptr xform_buffer;
 }  // namespace pvt
 OSL_NAMESPACE_EXIT
+
 
 // Taken from the SimplePool class
 __device__ static inline size_t
@@ -136,11 +136,13 @@ osl_allocate_closure_component(void* sg_, int id, int size)
 
 __device__ void*
 osl_allocate_weighted_closure_component(void* sg_, int id, int size,
-                                        const OSL::Color3* w)
+                                        const void* w)
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
-    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
+    const OSL::Color3* wc = (const OSL::Color3*)w;
+
+    if (wc->x == 0.0f && wc->y == 0.0f && wc->z == 0.0f) {
         return NULL;
     }
 
@@ -150,7 +152,7 @@ osl_allocate_weighted_closure_component(void* sg_, int id, int size,
     void* ret = ((char*)sg_ptr->renderstate)
                 + alignment_offset_calc(sg_ptr->renderstate,
                                         alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_component_allot(ret, id, size, *w);
+    sg_ptr->renderstate = closure_component_allot(ret, id, size, *wc);
 
     return ret;
 }
@@ -158,19 +160,20 @@ osl_allocate_weighted_closure_component(void* sg_, int id, int size,
 
 
 __device__ void*
-osl_mul_closure_color(void* sg_, OSL::ClosureColor* a, const OSL::Color3* w)
+osl_mul_closure_color(void* sg_, void* a, const void* w)
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
+    const OSL::Color3* wc = (const OSL::Color3*)w;
 
     if (a == NULL) {
         return NULL;
     }
 
-    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
+    if (wc->x == 0.0f && wc->y == 0.0f && wc->z == 0.0f) {
         return NULL;
     }
 
-    if (w->x == 1.0f && w->y == 1.0f && w->z == 1.0f) {
+    if (wc->x == 1.0f && wc->y == 1.0f && wc->z == 1.0f) {
         return a;
     }
 
@@ -178,7 +181,7 @@ osl_mul_closure_color(void* sg_, OSL::ClosureColor* a, const OSL::Color3* w)
     void* ret = ((char*)sg_ptr->renderstate)
                 + alignment_offset_calc(sg_ptr->renderstate,
                                         alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_mul_allot(ret, *w, a);
+    sg_ptr->renderstate = closure_mul_allot(ret, *wc, (OSL::ClosureColor*)a);
 
     return ret;
 }
@@ -186,7 +189,7 @@ osl_mul_closure_color(void* sg_, OSL::ClosureColor* a, const OSL::Color3* w)
 
 
 __device__ void*
-osl_mul_closure_float(void* sg_, OSL::ClosureColor* a, float w)
+osl_mul_closure_float(void* sg_, void* a, float w)
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
@@ -202,7 +205,7 @@ osl_mul_closure_float(void* sg_, OSL::ClosureColor* a, float w)
     void* ret = ((char*)sg_ptr->renderstate)
                 + alignment_offset_calc(sg_ptr->renderstate,
                                         alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_mul_float_allot(ret, w, a);
+    sg_ptr->renderstate = closure_mul_float_allot(ret, w, (OSL::ClosureColor*)a);
 
     return ret;
 }
@@ -210,7 +213,7 @@ osl_mul_closure_float(void* sg_, OSL::ClosureColor* a, float w)
 
 
 __device__ void*
-osl_add_closure_closure(void* sg_, OSL::ClosureColor* a, OSL::ClosureColor* b)
+osl_add_closure_closure(void* sg_, void* a, void* b)
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
@@ -226,7 +229,7 @@ osl_add_closure_closure(void* sg_, OSL::ClosureColor* a, OSL::ClosureColor* b)
     void* ret = ((char*)sg_ptr->renderstate)
                 + alignment_offset_calc(sg_ptr->renderstate,
                                         alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_add_allot(ret, a, b);
+    sg_ptr->renderstate = closure_add_allot(ret, (OSL::ClosureColor*)a, (OSL::ClosureColor*)b);
 
     return ret;
 }

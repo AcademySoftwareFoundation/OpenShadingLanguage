@@ -18,6 +18,10 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
+#ifdef OSL_USE_OPTIX
+#include <llvm/Linker/Linker.h>
+#endif
+
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
@@ -1703,17 +1707,19 @@ BackendLLVM::run()
         OSL_ASSERT(ll.module());
 #endif
 
-        // Create the ExecutionEngine. We don't create an ExecutionEngine in the
-        // OptiX case, because we are using the NVPTX backend and not MCJIT
-        if (!use_optix()
-            && !ll.make_jit_execengine(
-                &err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
-                shadingsys().llvm_debugging_symbols(),
-                shadingsys().llvm_profiling_events())) {
-            shadingcontext()->errorfmt("Failed to create engine: {}\n", err);
-            OSL_ASSERT(0);
-            return;
-        }
+    // Create the ExecutionEngine. We don't create an ExecutionEngine in the
+    // OptiX case, because we are using the NVPTX backend and not MCJIT. However,
+    // it's still useful to set the target ISA to facilitate PTX-specific codegen.
+    if (use_optix()) {
+        ll.set_target_isa(TargetISA::NVPTX);
+    } else if (!ll.make_jit_execengine(
+                   &err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
+                   shadingsys().llvm_debugging_symbols(),
+                   shadingsys().llvm_profiling_events())) {
+        shadingcontext()->errorfmt("Failed to create engine: {}\n", err);
+        OSL_ASSERT(0);
+        return;
+    }
 
         // End of mutex lock, for the OSL_LLVM_NO_BITCODE case
     }
@@ -1850,8 +1856,36 @@ BackendLLVM::run()
     }
 
     // Optimize the LLVM IR unless it's a do-nothing group.
-    if (!group().does_nothing())
+    if (!group().does_nothing() && !use_optix()) {
         ll.do_optimize();
+    } else if (!group().does_nothing() && use_optix()) {
+        // If the renderer support library bitcode is being used, we can link
+        // the module before running the optimization passes to help generate
+        // better code. However, this tends to increase the optimization time.
+        if (!shadingsys().m_lib_bitcode.empty()) {
+            std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
+            OSL_ASSERT(bitcode.size() && "Library bitcode is empty");
+            llvm::Module* lib_module = ll.module_from_bitcode(
+                static_cast<const char*>(bitcode.data()), bitcode.size(),
+                "cuda_lib");
+            std::unique_ptr<llvm::Module> lib_ptr(lib_module);
+            llvm::Linker::linkModules(*ll.module(), std::move(lib_ptr),
+                                      llvm::Linker::Flags::LinkOnlyNeeded);
+        }
+
+        ll.do_optimize();
+
+        // Drop everything but the init and group entry functions. Everything
+        // they might call should be defined elsewhere (e.g., a shadeops PTX module).
+        for (llvm::Function& fn : *ll.module()) {
+            if (!fn.getName().startswith("__direct_callable__")
+                && !fn.getName().startswith("__direct_callable__dummy")
+                && !fn.getName().startswith("group_")) {
+                fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
+                fn.deleteBody();
+            }
+        }
+    }
 
     m_stat_llvm_opt_time += timer.lap();
 

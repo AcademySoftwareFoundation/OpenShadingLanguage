@@ -26,6 +26,19 @@ enum ClosureIDs {
     FRESNEL_REFLECTION_ID,
     REFRACTION_ID,
     TRANSPARENT_ID,
+    // See MATERIALX_CLOSURES in stdosl.h
+    MX_OREN_NAYAR_DIFFUSE_ID,
+    MX_BURLEY_DIFFUSE_ID,
+    MX_DIELECTRIC_ID,
+    MX_CONDUCTOR_ID,
+    MX_GENERALIZED_SCHLICK_ID,
+    MX_TRANSLUCENT_ID,
+    MX_TRANSPARENT_ID,
+    MX_SUBSURFACE_ID,
+    MX_SHEEN_ID,
+    MX_UNIFORM_EDF_ID,
+    MX_LAYER_ID,
+    // TODO: adding vdfs would require extending testrender with volume support ...
 };
 
 // these structures hold the parameters of each closure type
@@ -60,6 +73,102 @@ struct MicrofacetParams {
     Vec3 N, U;
     float xalpha, yalpha, eta;
     int refract;
+};
+
+// MATERIALX_CLOSURES
+
+struct MxOrenNayarDiffuseParams {
+    Vec3 N;
+    Color3 albedo;
+    float roughness;
+    // optional
+    ustring label;
+};
+
+struct MxBurleyDiffuseParams {
+    Vec3 N;
+    Color3 albedo;
+    float roughness;
+    // optional
+    ustring label;
+};
+
+struct MxDielectricParams {
+    Vec3 N, U;
+    Color3 reflection_tint;
+    Color3 transmission_tint;
+    float roughness_x;
+    float roughness_y;
+    float ior;
+    ustring distribution;
+    // optional
+    float thinfilm_thickness;
+    float thinfilm_ior;
+    ustring label;
+};
+
+struct MxConductorParams {
+    Vec3 N, U;
+    float roughness_x;
+    float roughness_y;
+    Color3 ior;
+    Color3 extinction;
+    ustring distribution;
+    // optional
+    float thinfilm_thickness;
+    float thinfilm_ior;
+    ustring label;
+};
+
+struct MxGeneralizedSchlickParams {
+    Vec3 N, U;
+    Color3 reflection_tint;
+    Color3 transmission_tint;
+    float roughness_x;
+    float roughness_y;
+    Color3 f0;
+    Color3 f90;
+    ustring distribution;
+    // optional
+    float thinfilm_thickness;
+    float thinfilm_ior;
+    ustring label;
+};
+
+struct MxTranslucentParams {
+    Vec3 N;
+    Color3 albedo;
+    // optional
+    ustring label;
+};
+
+struct MxSubsurfaceParams {
+    Vec3 N;
+    Color3 albedo;
+    float transmission_depth;
+    Color3 transmission_color;
+    float anisotropy;
+    // optional
+    ustring label;
+};
+
+struct MxSheenParams {
+    Vec3 N;
+    Color3 albedo;
+    float roughness;
+    // optional
+    ustring label;
+};
+
+struct MxUniformEdfParams {
+    Color3 emittance;
+    // optional
+    ustring label;
+};
+
+struct MxLayerParams {
+    OSL::ClosureColor* top;
+    OSL::ClosureColor* base;
 };
 
 }  // anonymous namespace
@@ -131,8 +240,100 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_FLOAT_PARAM(RefractionParams, eta),
             CLOSURE_FINISH_PARAM(RefractionParams) } },
         { "transparent", TRANSPARENT_ID, { CLOSURE_FINISH_PARAM(EmptyParams) } },
+    // See MATERIALX_CLOSURES in stdosl.h
+        { "oren_nayar_diffuse_bsdf",
+           MX_OREN_NAYAR_DIFFUSE_ID,
+           { CLOSURE_VECTOR_PARAM(MxOrenNayarDiffuseParams, N),
+             CLOSURE_COLOR_PARAM(MxOrenNayarDiffuseParams, albedo),
+             CLOSURE_FLOAT_PARAM(MxOrenNayarDiffuseParams, roughness),
+             CLOSURE_STRING_KEYPARAM(MxOrenNayarDiffuseParams, label, "label"),
+             CLOSURE_FINISH_PARAM(MxOrenNayarDiffuseParams) } },
+        { "burley_diffuse_bsdf",
+          MX_BURLEY_DIFFUSE_ID,
+          { CLOSURE_VECTOR_PARAM(MxBurleyDiffuseParams, N),
+            CLOSURE_COLOR_PARAM(MxBurleyDiffuseParams, albedo),
+            CLOSURE_FLOAT_PARAM(MxBurleyDiffuseParams, roughness),
+            CLOSURE_STRING_KEYPARAM(MxBurleyDiffuseParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxBurleyDiffuseParams) } },
+        { "dielectric_bsdf",
+          MX_DIELECTRIC_ID,
+          { CLOSURE_VECTOR_PARAM(MxDielectricParams, N),
+            CLOSURE_VECTOR_PARAM(MxDielectricParams, U),
+            CLOSURE_COLOR_PARAM(MxDielectricParams, reflection_tint),
+            CLOSURE_COLOR_PARAM(MxDielectricParams, transmission_tint),
+            CLOSURE_FLOAT_PARAM(MxDielectricParams, roughness_x),
+            CLOSURE_FLOAT_PARAM(MxDielectricParams, roughness_y),
+            CLOSURE_FLOAT_PARAM(MxDielectricParams, ior),
+            CLOSURE_STRING_PARAM(MxDielectricParams, distribution),
+            CLOSURE_FLOAT_KEYPARAM(MxDielectricParams, thinfilm_thickness, "thinfilm_thickness"),
+            CLOSURE_FLOAT_KEYPARAM(MxDielectricParams, thinfilm_ior, "thinfilm_ior"),
+            CLOSURE_STRING_KEYPARAM(MxDielectricParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxDielectricParams) } },
+        { "conductor_bsdf",
+          MX_CONDUCTOR_ID,
+          { CLOSURE_VECTOR_PARAM(MxConductorParams, N),
+            CLOSURE_VECTOR_PARAM(MxConductorParams, U),
+            CLOSURE_FLOAT_PARAM(MxConductorParams, roughness_x),
+            CLOSURE_FLOAT_PARAM(MxConductorParams, roughness_y),
+            CLOSURE_COLOR_PARAM(MxConductorParams, ior),
+            CLOSURE_COLOR_PARAM(MxConductorParams, extinction),
+            CLOSURE_STRING_PARAM(MxConductorParams, distribution),
+            CLOSURE_FLOAT_KEYPARAM(MxConductorParams, thinfilm_thickness, "thinfilm_thickness"),
+            CLOSURE_FLOAT_KEYPARAM(MxConductorParams, thinfilm_ior, "thinfilm_ior"),
+            CLOSURE_STRING_KEYPARAM(MxConductorParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxConductorParams) } },
+        { "generalized_schlick_bsdf",
+          MX_GENERALIZED_SCHLICK_ID,
+          { CLOSURE_VECTOR_PARAM(MxGeneralizedSchlickParams, N),
+            CLOSURE_VECTOR_PARAM(MxGeneralizedSchlickParams, U),
+            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, reflection_tint),
+            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, transmission_tint),
+            CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, roughness_x),
+            CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, roughness_y),
+            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f0),
+            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f90),
+            CLOSURE_STRING_PARAM(MxGeneralizedSchlickParams, distribution),
+            CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams, thinfilm_thickness, "thinfilm_thickness"),
+            CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams, thinfilm_ior, "thinfilm_ior"),
+            CLOSURE_STRING_KEYPARAM(MxGeneralizedSchlickParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxGeneralizedSchlickParams) } },
+        { "translucent_bsdf",
+          MX_TRANSLUCENT_ID,
+          { CLOSURE_VECTOR_PARAM(MxTranslucentParams, N),
+            CLOSURE_COLOR_PARAM(MxTranslucentParams, albedo),
+            CLOSURE_STRING_KEYPARAM(MxTranslucentParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxTranslucentParams) } },
+        { "transparent_bsdf",
+           MX_TRANSPARENT_ID,
+           { CLOSURE_FINISH_PARAM(EmptyParams) } },
+        { "subsurface_bssrdf",
+          MX_SUBSURFACE_ID,
+          { CLOSURE_VECTOR_PARAM(MxSubsurfaceParams, N),
+            CLOSURE_COLOR_PARAM(MxSubsurfaceParams, albedo),
+            CLOSURE_FLOAT_PARAM(MxSubsurfaceParams, transmission_depth),
+            CLOSURE_COLOR_PARAM(MxSubsurfaceParams, transmission_color),
+            CLOSURE_FLOAT_PARAM(MxSubsurfaceParams, anisotropy),
+            CLOSURE_STRING_KEYPARAM(MxSubsurfaceParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxSubsurfaceParams) } },
+        { "sheen_bsdf",
+          MX_SHEEN_ID,
+          { CLOSURE_VECTOR_PARAM(MxSheenParams, N),
+            CLOSURE_COLOR_PARAM(MxSheenParams, albedo),
+            CLOSURE_FLOAT_PARAM(MxSheenParams, roughness),
+            CLOSURE_STRING_KEYPARAM(MxSubsurfaceParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxSheenParams) } },
+        { "uniform_edf",
+          MX_UNIFORM_EDF_ID,
+          { CLOSURE_COLOR_PARAM(MxUniformEdfParams, emittance),
+            CLOSURE_STRING_KEYPARAM(MxUniformEdfParams, label, "label"),
+            CLOSURE_FINISH_PARAM(MxUniformEdfParams) } },
+        { "layer",
+          MX_LAYER_ID,
+          { CLOSURE_CLOSURE_PARAM(MxLayerParams, top),
+            CLOSURE_CLOSURE_PARAM(MxLayerParams, base),
+            CLOSURE_FINISH_PARAM(MxLayerParams) } },
         // mark end of the array
-        { NULL, 0, {} }
+        { nullptr, 0, {} }
     };
 
     for (int i = 0; builtins[i].name; i++) {
@@ -151,20 +352,20 @@ template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
         if (trans)
             N = -N;
     }
-    virtual float eval(const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& wi,
-                       float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& wi,
+                       float& pdf) const override
     {
         pdf = std::max(N.dot(wi), 0.0f) * float(M_1_PI);
-        return 1.0f;
+        return Color3(1.0f);
     }
-    virtual float sample(const OSL::ShaderGlobals& /*sg*/, float rx, float ry,
+    Color3 sample(const OSL::ShaderGlobals& /*sg*/, float rx, float ry,
                          float /*rz*/, OSL::Dual2<OSL::Vec3>& wi,
-                         float& pdf) const
+                         float& pdf) const override
     {
         Vec3 out_dir;
         Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
         wi = out_dir;  // FIXME: leave derivs 0?
-        return 1;
+        return Color3(1.0f);
     }
 };
 
@@ -176,8 +377,8 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
         A        = 1 - 0.50f * s2 / (s2 + 0.33f);
         B        = 0.45f * s2 / (s2 + 0.09f);
     }
-    virtual float eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
-                       float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
+                       float& pdf) const override
     {
         float NL = N.dot(wi);
         float NV = -N.dot(sg.I);
@@ -192,13 +393,13 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
             float LV    = -sg.I.dot(wi);
             float s     = LV - NL * NV;
             float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
-            return A + B * stinv;
+            return Color3(A + B * stinv);
         }
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry,
+    Color3 sample(const OSL::ShaderGlobals& sg, float rx, float ry,
                          float /*rz*/, OSL::Dual2<OSL::Vec3>& wi,
-                         float& pdf) const
+                         float& pdf) const override
     {
         Vec3 out_dir;
         Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
@@ -209,9 +410,9 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
             float LV    = -sg.I.dot(wi.val());
             float s     = LV - NL * NV;
             float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
-            return A + B * stinv;
+            return Color3(A + B * stinv);
         }
-        return 0;
+        return Color3(0.0f);
     }
 
 private:
@@ -220,8 +421,8 @@ private:
 
 struct Phong final : public BSDF, PhongParams {
     Phong(const PhongParams& params) : BSDF(), PhongParams(params) {}
-    virtual float eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
-                       float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
+                       float& pdf) const override
     {
         float cosNI = N.dot(wi);
         float cosNO = -N.dot(sg.I);
@@ -232,14 +433,14 @@ struct Phong final : public BSDF, PhongParams {
             if (cosRI > 0) {
                 pdf = (exponent + 1) * float(M_1_PI / 2)
                       * OIIO::fast_safe_pow(cosRI, exponent);
-                return cosNI * (exponent + 2) / (exponent + 1);
+                return Color3(cosNI * (exponent + 2) / (exponent + 1));
             }
         }
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry,
+    Color3 sample(const OSL::ShaderGlobals& sg, float rx, float ry,
                          float /*rz*/, OSL::Dual2<OSL::Vec3>& wi,
-                         float& pdf) const
+                         float& pdf) const override
     {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0) {
@@ -258,17 +459,17 @@ struct Phong final : public BSDF, PhongParams {
             if (cosNI > 0) {
                 pdf = (exponent + 1) * float(M_1_PI / 2)
                       * OIIO::fast_safe_pow(cosTheta, exponent);
-                return cosNI * (exponent + 2) / (exponent + 1);
+                return Color3(cosNI * (exponent + 2) / (exponent + 1));
             }
         }
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
 };
 
 struct Ward final : public BSDF, WardParams {
     Ward(const WardParams& params) : BSDF(), WardParams(params) {}
-    virtual float eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
-                       float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
+                       float& pdf) const override
     {
         float cosNO = -N.dot(sg.I);
         float cosNI = N.dot(wi);
@@ -287,13 +488,13 @@ struct Ward final : public BSDF, WardParams {
             float c    = float(4 * M_PI) * ax * ay;
             float k    = oh * dotn * dotn * dotn;
             pdf        = e / (c * k);
-            return k * sqrtf(cosNI / cosNO);
+            return Color3(k * sqrtf(cosNI / cosNO));
         }
-        return 0;
+        return Color3(0.0f);
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry,
+    Color3 sample(const OSL::ShaderGlobals& sg, float rx, float ry,
                          float /*rz*/, OSL::Dual2<OSL::Vec3>& wi,
-                         float& pdf) const
+                         float& pdf) const override
     {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0) {
@@ -340,11 +541,11 @@ struct Ward final : public BSDF, WardParams {
                     float c = float(4 * M_PI) * ax * ay;
                     float k = oh * dotn * dotn * dotn;
                     pdf     = e / (c * k);
-                    return k * sqrtf(cosNI / cosNO);
+                    return Color3(k * sqrtf(cosNI / cosNO));
                 }
             }
         }
-        return 0;
+        return Color3(0.0f);
     }
 };
 
@@ -476,17 +677,17 @@ struct Microfacet final : public BSDF, MicrofacetParams {
                                               : TangentFrame(N, U))
     {
     }
-    virtual float albedo(const ShaderGlobals& sg) const
+    Color3 get_albedo(const ShaderGlobals& sg) const override
     {
         if (Refract == 2)
-            return 1.0f;
+            return Color3(1.0f);
         // FIXME: this heuristic is not particularly good, and looses energy
         // compared to the reference solution
         float fr = fresnel_dielectric(-N.dot(sg.I), eta);
-        return Refract ? 1 - fr : fr;
+        return Color3(Refract ? 1 - fr : fr);
     }
-    virtual float eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
-                       float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
+                       float& pdf) const override
     {
         Vec3 wo         = -sg.I;
         const Vec3 wo_l = tf.tolocal(wo);
@@ -505,9 +706,9 @@ struct Microfacet final : public BSDF, MicrofacetParams {
                 float out      = G2 / G1;
                 if (Refract == 2) {
                     pdf *= Fr;
-                    return out;
+                    return Color3(out);
                 } else {
-                    return out * Fr;
+                    return Color3(out * Fr);
                 }
             }
         }
@@ -526,7 +727,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
                     // eq. 33: first we calculate D(m) with m=Ht:
                     const float cosThetaM = Ht.z;
                     if (cosThetaM <= 0.0f)
-                        return 0;
+                        return Color3(0.0f);
                     const float Dt       = evalD(Ht);
                     const float Lambda_o = evalLambda(wo_l);
                     const float Lambda_i = evalLambda(wi_l);
@@ -541,23 +742,23 @@ struct Microfacet final : public BSDF, MicrofacetParams {
                     float out = G2 / G1;
                     if (Refract == 2) {
                         pdf *= Ft;
-                        return out;
+                        return Color3(out);
                     } else {
-                        return out * Ft;
+                        return Color3(out * Ft);
                     }
                 }
             }
         }
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
 
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry,
-                         float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const
+    Color3 sample(const OSL::ShaderGlobals& sg, float rx, float ry,
+                         float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const override
     {
         const Vec3 wo_l   = tf.tolocal(-sg.I);
         const float cosNO = wo_l.z;
         if (!(cosNO > 0))
-            return pdf = 0;
+            return Color3(pdf = 0);
         const Vec3 m      = sampleMicronormal(wo_l, rx, ry);
         const float cosMO = m.dot(wo_l);
         const float F     = fresnel_dielectric(cosMO, eta);
@@ -577,9 +778,9 @@ struct Microfacet final : public BSDF, MicrofacetParams {
             float out = G2 / G1;
             if (Refract == 2) {
                 pdf *= F;
-                return out;
+                return Color3(out);
             } else
-                return F * out;
+                return Color3(F * out);
         } else {
             const Vec3 M         = tf.toworld(m);
             float Ft             = fresnel_refraction(sg.I, M, eta, wi);
@@ -601,11 +802,11 @@ struct Microfacet final : public BSDF, MicrofacetParams {
             float out = G2 / G1;
             if (Refract == 2) {
                 pdf *= Ft;
-                return out;
+                return Color3(out);
             } else
-                return Ft * out;
+                return Color3(Ft * out);
         }
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
 
 private:
@@ -693,21 +894,21 @@ struct Reflection final : public BSDF, ReflectionParams {
         : BSDF(), ReflectionParams(params)
     {
     }
-    virtual float albedo(const ShaderGlobals& sg) const
+    Color3 get_albedo(const ShaderGlobals& sg) const override
     {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0)
-            return fresnel_dielectric(cosNO, eta);
-        return 1;
+            return Color3(fresnel_dielectric(cosNO, eta));
+        return Color3(1);
     }
-    virtual float eval(const OSL::ShaderGlobals& /*sg*/,
-                       const OSL::Vec3& /*wi*/, float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& /*sg*/,
+                       const OSL::Vec3& /*wi*/, float& pdf) const override
     {
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float /*rx*/,
+    Color3 sample(const OSL::ShaderGlobals& sg, float /*rx*/,
                          float /*ry*/, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi,
-                         float& pdf) const
+                         float& pdf) const override
     {
         // only one direction is possible
         OSL::Dual2<OSL::Vec3> I = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
@@ -715,9 +916,9 @@ struct Reflection final : public BSDF, ReflectionParams {
         if (cosNO.val() > 0) {
             wi  = (2 * cosNO) * N + I;
             pdf = std::numeric_limits<float>::infinity();
-            return fresnel_dielectric(cosNO.val(), eta);
+            return Color3(fresnel_dielectric(cosNO.val(), eta));
         }
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
 };
 
@@ -726,40 +927,40 @@ struct Refraction final : public BSDF, RefractionParams {
         : BSDF(), RefractionParams(params)
     {
     }
-    virtual float albedo(const ShaderGlobals& sg) const
+    Color3 get_albedo(const ShaderGlobals& sg) const override
     {
         float cosNO = -N.dot(sg.I);
-        return 1 - fresnel_dielectric(cosNO, eta);
+        return Color3(1 - fresnel_dielectric(cosNO, eta));
     }
-    virtual float eval(const OSL::ShaderGlobals& /*sg*/,
-                       const OSL::Vec3& /*wi*/, float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& /*sg*/,
+                       const OSL::Vec3& /*wi*/, float& pdf) const override
     {
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float /*rx*/,
+    Color3 sample(const OSL::ShaderGlobals& sg, float /*rx*/,
                          float /*ry*/, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi,
-                         float& pdf) const
+                         float& pdf) const override
     {
         OSL::Dual2<OSL::Vec3> I = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
         pdf                     = std::numeric_limits<float>::infinity();
-        return fresnel_refraction(I, N, eta, wi);
+        return Color3(fresnel_refraction(I, N, eta, wi));
     }
 };
 
 struct Transparent final : public BSDF {
     Transparent(const int& /*dummy*/) : BSDF() {}
-    virtual float eval(const OSL::ShaderGlobals& /*sg*/,
-                       const OSL::Vec3& /*wi*/, float& pdf) const
+    Color3 eval(const OSL::ShaderGlobals& /*sg*/,
+                       const OSL::Vec3& /*wi*/, float& pdf) const override
     {
-        return pdf = 0;
+        return Color3(pdf = 0);
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float /*rx*/,
+    Color3 sample(const OSL::ShaderGlobals& sg, float /*rx*/,
                          float /*ry*/, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi,
-                         float& pdf) const
+                         float& pdf) const override
     {
         wi  = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
         pdf = std::numeric_limits<float>::infinity();
-        return 1;
+        return Color3(1.0f);
     }
 };
 
@@ -790,6 +991,8 @@ process_closure(ShadingResult& result, const ClosureColor* closure,
         Color3 cw                    = w * comp->w;
         if (comp->id == EMISSION_ID)
             result.Le += cw;
+        else if (comp->id == MX_UNIFORM_EDF_ID)
+            result.Le += cw * comp->as<MxUniformEdfParams>()->emittance;
         else if (!light_only) {
             bool ok = false;
             switch (comp->id) {
@@ -860,6 +1063,92 @@ process_closure(ShadingResult& result, const ClosureColor* closure,
             case TRANSPARENT_ID:
                 ok = result.bsdf.add_bsdf<Transparent, int>(cw, 0);
                 break;
+            case MX_OREN_NAYAR_DIFFUSE_ID: {
+                // translate MaterialX parameters into existing closure
+                const MxOrenNayarDiffuseParams* srcparams = comp->as<MxOrenNayarDiffuseParams>();
+                OrenNayarParams params = {};
+                params.N = srcparams->N;
+                params.sigma = srcparams->roughness;
+                ok = result.bsdf.add_bsdf<OrenNayar, OrenNayarParams>(cw * srcparams->albedo, params);
+                break;
+            }
+            case MX_BURLEY_DIFFUSE_ID: {
+                const MxBurleyDiffuseParams* srcparams = comp->as<MxBurleyDiffuseParams>();
+                DiffuseParams params = {};
+                params.N = srcparams->N;
+                ok = result.bsdf.add_bsdf<Diffuse<0>, DiffuseParams>(cw * srcparams->albedo, params);
+                break;
+            }
+            case MX_DIELECTRIC_ID: {
+                const MxDielectricParams* srcparams = comp->as<MxDielectricParams>();
+                // translate  parameters into old closure for now ...
+                MicrofacetParams params = {};
+                params.N = srcparams->N;
+                params.U = srcparams->U;
+                params.dist = srcparams->distribution;
+                params.xalpha = srcparams->roughness_x;
+                params.yalpha = srcparams->roughness_y;
+                params.eta = srcparams->ior;
+                // TODO: support tints as well
+                if (params.dist == u_ggx)
+                    ok = result.bsdf.add_bsdf<Microfacet<GGXDist, 2>, MicrofacetParams>(cw, params);
+                else if (params.dist == u_beckmann)
+                    ok = result.bsdf.add_bsdf<Microfacet<BeckmannDist, 2>, MicrofacetParams>(cw, params);
+                break;
+            }
+            case MX_CONDUCTOR_ID: {
+                const MxConductorParams* srcparams = comp->as<MxConductorParams>();
+                MicrofacetParams params = {};
+                params.N = srcparams->N;
+                params.U = srcparams->U;
+                params.dist = srcparams->distribution;
+                params.xalpha = srcparams->roughness_x;
+                params.yalpha = srcparams->roughness_y;
+                params.eta = 100.0f; // TODO: support conductor fresnel equation properly
+                if (params.dist == u_ggx)
+                    ok = result.bsdf.add_bsdf<Microfacet<GGXDist, 0>, MicrofacetParams>(cw, params);
+                else if (params.dist == u_beckmann)
+                    ok = result.bsdf.add_bsdf<Microfacet<BeckmannDist, 0>, MicrofacetParams>(cw, params);
+            };
+            case MX_GENERALIZED_SCHLICK_ID: {
+                const MxGeneralizedSchlickParams* srcparams = comp->as<MxGeneralizedSchlickParams>();
+                MicrofacetParams params = {};
+                params.N = srcparams->N;
+                params.U = srcparams->U;
+                params.dist = srcparams->distribution;
+                params.xalpha = srcparams->roughness_x;
+                params.yalpha = srcparams->roughness_y;
+                params.eta = 100.0f; // TODO: support generalized fresnel equation properly
+                // TODO: figure out when the material is meant to transmit light
+                if (params.dist == u_ggx)
+                    ok = result.bsdf.add_bsdf<Microfacet<GGXDist, 0>, MicrofacetParams>(cw, params);
+                else if (params.dist == u_beckmann)
+                    ok = result.bsdf.add_bsdf<Microfacet<BeckmannDist, 0>, MicrofacetParams>(cw, params);
+            };
+            case MX_TRANSLUCENT_ID: {
+                const MxTranslucentParams* srcparams = comp->as<MxTranslucentParams>();
+                DiffuseParams params = {};
+                params.N = srcparams->N;
+                ok = result.bsdf.add_bsdf<Diffuse<1>, DiffuseParams>(cw * srcparams->albedo, params);
+                break;
+            }
+            case MX_TRANSPARENT_ID: {
+                ok = result.bsdf.add_bsdf<Transparent, int>(cw, 0);
+                break;
+            }
+            case MX_SUBSURFACE_ID: {
+                // TODO: implement BSSRDF support?
+                const MxSubsurfaceParams* srcparams = comp->as<MxSubsurfaceParams>();
+                DiffuseParams params = {};
+                params.N = srcparams->N;
+                ok = result.bsdf.add_bsdf<Diffuse<0>, DiffuseParams>(cw * srcparams->albedo, params);
+                break;
+            }
+            case MX_SHEEN_ID:
+            case MX_LAYER_ID: {
+                OSL_ASSERT(false && "MaterialX closure not yet implemented");
+                break;
+            }
             }
             OSL_ASSERT(ok && "Invalid closure invoked in surface shader");
         }

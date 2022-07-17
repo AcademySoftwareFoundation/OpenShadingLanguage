@@ -15,12 +15,12 @@ shader glossy_glass (float Kr = 1, color Cs = 1, float xalpha = 0.01,
     float eta = 1.5;
     if (backfacing())
     {
-        Ci  = (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, 1.0 / eta, 1);
-        Ci += (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, 1.0 / eta, 0);
+        Ci  = (Kr * Cs) * microfacet("ggx", N, U, xalpha, yalpha, 1.0 / eta, 1);
+        Ci += (Kr * Cs) * microfacet("ggx", N, U, xalpha, yalpha, 1.0 / eta, 0);
     }
     else
     {
-        Ci  = (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, eta, 1);
-        Ci += (Kr * Cs) * microfacet("default", N, U, xalpha, yalpha, eta, 0);
+        Ci  = (Kr * Cs) * microfacet("ggx", N, U, xalpha, yalpha, eta, 1);
+        Ci += (Kr * Cs) * microfacet("ggx", N, U, xalpha, yalpha, eta, 0);
     }
 }

@@ -5,11 +5,29 @@
 shader envmap(float Kb = 1, string filename = "")
 {
    vector dir = normalize(I);
+#if 0
    float radial = atan2(-dir[2], dir[0]);
    float nradial = acos(dir[1]);
    float r = 0.5 * sin(nradial * 0.5);
    float tu = 0.5 + r * cos(radial);
    float tv = 0.5 - r * sin(radial);
    color c = texture(filename, tu, tv);
+#elif 1
+   // simple sun/sky
+   color sky_col = color(0.9,0.7,0.6);
+   color hor_col = color(0.6,0.7,0.9); // horizon
+   color c = 0.5 * mix(hor_col, sky_col, dir.y * dir.y);
+
+   c += dot(dir, normalize(vector(-0.15, 1, -0.1))) > 0.98 ? 32.0 * color(1.0,0.8,0.6) : 0.0;
+#else
+   // procedural area lights
+   color c = color(0.1,0.2,0.3);
+   if (dir.y > 0.0)
+   {
+      int d = int((dir.x + dir.z) * 10.0 / dir.y);
+      if (abs(d) < 20 && (d & 3) == 1)
+         c = 30.0 * dir.y * dir.y * dir.y * dir.y * color(0.9, 0.8, 0.6);
+   }
+#endif
    Ci = Kb * c * background();
 }

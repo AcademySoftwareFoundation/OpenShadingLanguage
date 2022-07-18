@@ -50,4 +50,4 @@ This is a checklist for TSC's to review as part of the intake process. The TSC s
   - [X]	License scan completed and no issues found
     - Minor issues were found but already fixed in PR https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1145
   - [X] Code repository imported to ASWF GitHub organization
-  - [ ] Developer Certificate of Origin past commit signoff done and DCO Probot enabled.
+  - [X] Developer Certificate of Origin post commit signoff done and DCO Probot enabled.

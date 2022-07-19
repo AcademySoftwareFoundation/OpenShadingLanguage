@@ -964,6 +964,42 @@ struct Transparent final : public BSDF {
     }
 };
 
+struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
+    MxBurleyDiffuse(const MxBurleyDiffuseParams& params)
+        : BSDF(), MxBurleyDiffuseParams(params)
+    {
+    }
+
+    Color3 get_albedo(const ShaderGlobals& sg) const override
+    {
+        return albedo;
+    }
+
+    Color3 eval(const ShaderGlobals& sg, const Vec3& wi, float& pdf) const override
+    {
+        const Vec3 L = wi, V = -sg.I;
+        const Vec3 H = (L + V).normalize();
+        float LdotH = Imath::clamp(dot(L, H), 0.0f, 1.0f);
+        float NdotV = Imath::clamp(dot(N, V), 0.0f, 1.0f);
+        float NdotL = Imath::clamp(dot(N, L), 0.0f, 1.0f);
+        float F90 = 0.5f + (2.0f * roughness * LdotH * LdotH);
+        float refL = fresnel_schlick(NdotL, 1.0f, F90);
+        float refV = fresnel_schlick(NdotV, 1.0f, F90);
+        pdf = NdotL * float(M_1_PI);
+        return albedo * refL * refV;
+    }
+
+    Color3 sample(const ShaderGlobals& sg, float rx,
+                         float ry, float rz, OSL::Dual2<OSL::Vec3>& wi,
+                         float& pdf) const override
+    {
+        Vec3 out_dir;
+        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
+        wi = out_dir;  // FIXME: leave derivs 0?
+        return eval(sg, out_dir, pdf);
+    }
+};
+
 
 // recursively walk through the closure tree, creating bsdfs as we go
 void
@@ -1073,10 +1109,8 @@ process_closure(ShadingResult& result, const ClosureColor* closure,
                 break;
             }
             case MX_BURLEY_DIFFUSE_ID: {
-                const MxBurleyDiffuseParams* srcparams = comp->as<MxBurleyDiffuseParams>();
-                DiffuseParams params = {};
-                params.N = srcparams->N;
-                ok = result.bsdf.add_bsdf<Diffuse<0>, DiffuseParams>(cw * srcparams->albedo, params);
+                const MxBurleyDiffuseParams& params = *comp->as<MxBurleyDiffuseParams>();
+                ok = result.bsdf.add_bsdf<MxBurleyDiffuse, MxBurleyDiffuseParams>(cw, params);
                 break;
             }
             case MX_DIELECTRIC_ID: {

@@ -18,10 +18,10 @@ OSL_NAMESPACE_ENTER
 /// Actual implementations of this class are private
 struct BSDF {
     BSDF() {}
-    virtual float albedo(const ShaderGlobals& /*sg*/) const { return 1; }
-    virtual float eval(const ShaderGlobals& sg, const Vec3& wi,
+    virtual Color3 get_albedo(const ShaderGlobals& /*sg*/) const { return Color3(1); }
+    virtual Color3 eval(const ShaderGlobals& sg, const Vec3& wi,
                        float& pdf) const                    = 0;
-    virtual float sample(const ShaderGlobals& sg, float rx, float ry, float rz,
+    virtual Color3 sample(const ShaderGlobals& sg, float rx, float ry, float rz,
                          Dual2<Vec3>& wi, float& pdf) const = 0;
 };
 
@@ -37,7 +37,7 @@ struct CompositeBSDF {
         float w     = 1 / (path_weight.x + path_weight.y + path_weight.z);
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
-            pdfs[i] = weights[i].dot(path_weight) * bsdfs[i]->albedo(sg) * w;
+            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(sg)) * w;
             total += pdfs[i];
         }
         if ((!absorb && total > 0) || total > 1) {

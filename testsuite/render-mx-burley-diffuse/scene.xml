@@ -1,0 +1,32 @@
+<World>
+   <Camera eye="0, 0, 10" look_at="0,0,0" fov="30" />
+
+   <ShaderGroup>
+      shader envmap layer1;
+   </ShaderGroup>
+   <Background resolution="1024" />
+
+   <ShaderGroup>
+      param float scale_s 20;
+      param float scale_t 20;
+      param color Ca 0.1 0.1 0.1;
+      param color Cb 0.5 0.5 0.5;
+      shader checkerboard tex;
+      param float roughness 0.0;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Sphere center="-0.8,0,0" radius="0.75" />   
+
+   <ShaderGroup>
+      param float scale_s 20;
+      param float scale_t 20;
+      param color Cb 0.1 0.1 0.1;
+      param color Ca 0.5 0.5 0.5;
+      shader checkerboard tex;
+      param float roughness 1.0;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Sphere center="0.8,0,0" radius="0.75" />   
+</World>

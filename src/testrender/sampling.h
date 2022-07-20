@@ -80,6 +80,16 @@ struct Sampling {
         out = f.get(rndx, rndy, cos_theta);
         pdf = cos_theta * float(M_1_PI);
     }
+
+    static void sample_uniform_hemisphere(const Vec3& N, float rndx, float rndy, Vec3& out, float& pdf)
+    {
+        float phi = float(2 * M_PI) * rndx;
+        float cos_theta = rndy;
+        float sin_theta = sqrtf(1 - cos_theta * cos_theta);
+        TangentFrame f(N);
+        out = f.get(sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta);
+        pdf = float(0.5 * M_1_PI);
+    }
 };
 
 // Multiple Importance Sampling helper functions

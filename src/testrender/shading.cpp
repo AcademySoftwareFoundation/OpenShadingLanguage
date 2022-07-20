@@ -1000,6 +1000,42 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
     }
 };
 
+struct MxSheen final : public BSDF, MxSheenParams {
+    MxSheen(const MxSheenParams& params) : BSDF(), MxSheenParams(params)
+    {
+    }
+
+    Color3 get_albedo(const ShaderGlobals& sg) const override
+    {
+        return albedo;
+    }
+
+    Color3 eval(const ShaderGlobals& sg, const Vec3& wi, float& pdf) const override
+    {
+        const Vec3 L = wi, V = -sg.I;
+        const Vec3 H = (L + V).normalize();
+        float NdotV = Imath::clamp(dot(N, V), 0.0f, 1.0f);
+        float NdotL = Imath::clamp(dot(N, L), 0.0f, 1.0f);
+        float NdotH = Imath::clamp(dot(N, H), 0.0f, 1.0f);
+        float invRoughness = 1.0f / std::max(roughness, 0.005f);
+        float D = (2.0f + invRoughness) * powf(1.0f - NdotH * NdotH, invRoughness * 0.5f) / float(2 * M_PI);
+        pdf = float(0.5 * M_1_PI);
+        // NOTE: sheen closure has no fresnel/masking
+        return float(2 * M_PI) * NdotL * albedo * D / (4.0f * (NdotL + NdotV - NdotL * NdotV));
+    }
+
+    Color3 sample(const ShaderGlobals& sg, float rx,
+                  float ry, float rz, OSL::Dual2<OSL::Vec3>& wi,
+                  float& pdf) const override
+    {
+        Vec3 out_dir;
+        Sampling::sample_uniform_hemisphere(N, rx, ry, out_dir, pdf);
+        wi = out_dir;  // FIXME: leave derivs 0?
+        return eval(sg, out_dir, pdf);
+    }
+
+};
+
 
 // recursively walk through the closure tree, creating bsdfs as we go
 void
@@ -1178,7 +1214,11 @@ process_closure(ShadingResult& result, const ClosureColor* closure,
                 ok = result.bsdf.add_bsdf<Diffuse<0>, DiffuseParams>(cw * srcparams->albedo, params);
                 break;
             }
-            case MX_SHEEN_ID:
+            case MX_SHEEN_ID: {
+                const MxSheenParams& params = *comp->as<MxSheenParams>();
+                ok = result.bsdf.add_bsdf<MxSheen, MxSheenParams>(cw, params);
+                break;
+            }
             case MX_LAYER_ID: {
                 OSL_ASSERT(false && "MaterialX closure not yet implemented");
                 break;

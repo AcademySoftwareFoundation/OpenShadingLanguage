@@ -291,6 +291,7 @@ macro (osl_add_all_tests)
                 raytype raytype-reg raytype-specialized regex-reg reparam
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
+                render-mx-burley-diffuse
                 render-microfacet render-oren-nayar
                 render-uv render-veachmis render-ward
                 select select-reg shaderglobals shortcircuit

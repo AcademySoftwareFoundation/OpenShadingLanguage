@@ -760,9 +760,9 @@ BatchedBackendLLVM::llvm_type_batched_trace_options()
     std::vector<llvm::Type*> sg_types;
 
     // Uniform values of the batch
-    sg_types.push_back(ll.type_float());  // mindist
-    sg_types.push_back(ll.type_float());  // maxdist
-    sg_types.push_back(ll.type_int());    // shade
+    sg_types.push_back(ll.type_float());    // mindist
+    sg_types.push_back(ll.type_float());    // maxdist
+    sg_types.push_back(ll.type_int());      // shade
     sg_types.push_back(ll.type_ustring());  // traceset
 
     m_llvm_type_batched_trace_options = ll.type_struct(sg_types, "TraceOptions",

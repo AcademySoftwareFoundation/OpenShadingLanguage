@@ -177,9 +177,9 @@ gabor_setup_filter(const Dual2<Vec3>& P, sfm::GaborParams& gp)
         do_filter = 0;
 #if OSL_GNUC_VERSION
         // Just to get rid of "may be used uninitialized in this function [-Werror=maybe-uninitialized]"
-        gp.filter = Matrix22{};
-        gp.local = sfm::Matrix33();
-        gp.N     = Vec3(0.0f);
+        gp.filter = Matrix22 {};
+        gp.local  = sfm::Matrix33();
+        gp.N      = Vec3(0.0f);
 #endif
     } else {
         make_orthonormals(n, t, b);
@@ -345,18 +345,17 @@ gabor_cell(const sfm::GaborUniformParams& gup, const sfm::GaborParams& gp,
                 float a_i_t_s_f;
                 Vec2 omega_i_t_s_f;
                 Dual2<float> phi_i_t_s_f;
-                filter_gabor_kernel_2d(gp.filter, w_i_t_s, gup.a,
-                                            omega_i_t_s, phi_i_t_s, w_i_t_s_f,
-                                            a_i_t_s_f, omega_i_t_s_f,
-                                            phi_i_t_s_f);
+                filter_gabor_kernel_2d(gp.filter, w_i_t_s, gup.a, omega_i_t_s,
+                                       phi_i_t_s, w_i_t_s_f, a_i_t_s_f,
+                                       omega_i_t_s_f, phi_i_t_s_f);
 
                 // Now evaluate the 2D filtered kernel
                 Dual2<Vec3> xkit;
                 multMatrix(gp.local, x_k_i, xkit);
                 Dual2<Vec2> x_k_i_t = make_Vec2(comp_x(xkit), comp_y(xkit));
                 Dual2<float> gk     = gabor_kernel(w_i_t_s_f, omega_i_t_s_f,
-                                               phi_i_t_s_f, a_i_t_s_f,
-                                               x_k_i_t);  // 2D
+                                                   phi_i_t_s_f, a_i_t_s_f,
+                                                   x_k_i_t);  // 2D
 #if defined(__AVX512F__) && defined(__INTEL_COMPILER) \
     && (__INTEL_COMPILER < 1800)
                 // icc17 with AVX512 had some incorrect results
@@ -541,9 +540,13 @@ scalar_gabor3(const Dual2<Vec3>& P, const sfm::GaborUniformParams& gup,
         // Normally we would choose compile time known values,
         // but this is a large amount of code to let be duplicated 3 times.
 #if OSL_GNUC_VERSION
-        Dual2<Vec3> result = make_Vec3 (sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(gup, gp, P, 0 /*seed*/),
-                                        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(gup, gp, P, 1 /*seed*/),
-                                        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(gup, gp, P, 2 /*seed*/));
+    Dual2<Vec3> result = make_Vec3(
+        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(
+            gup, gp, P, 0 /*seed*/),
+        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(
+            gup, gp, P, 1 /*seed*/),
+        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(
+            gup, gp, P, 2 /*seed*/));
 #else
     // Choose to reduce code gen size by using a loop and pragma to avoid unrolling
     Dual2<Vec3> result;
@@ -620,9 +623,13 @@ scalar_pgabor3(const Dual2<Vec3>& P, const Vec3& Pperiod,
         // Normally we would choose compile time known values,
         // but this is a large amount of code to let be duplicated 3 times.
 #if OSL_GNUC_VERSION
-        Dual2<Vec3> result = make_Vec3 (sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/, 0 /*seed*/>(gup, gp, P),
-                                        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/, 1 /*seed*/>(gup, gp, P),
-                                        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/, 2 /*seed*/>(gup, gp, P));
+    Dual2<Vec3> result = make_Vec3(
+        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/,
+                            0 /*seed*/>(gup, gp, P),
+        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/,
+                            1 /*seed*/>(gup, gp, P),
+        sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/,
+                            2 /*seed*/>(gup, gp, P));
 #else
     // Choose to reduce code gen size by using a loop and pragma to avoid unrolling
     Dual2<Vec3> result;

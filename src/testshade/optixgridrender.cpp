@@ -518,9 +518,9 @@ OptixGridRenderer::make_optix_materials()
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth = 1;
     pipeline_link_options.debugLevel    = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
-#        if (OPTIX_VERSION < 70100)
+#if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;
-#        endif
+#endif
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {

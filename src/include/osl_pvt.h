@@ -633,55 +633,133 @@ public:
     }
 
 
-    void dataoffset(int d) { m_dataoffset = d; }
-    int dataoffset() const { return m_dataoffset; }
+    void dataoffset(int d)
+    {
+        m_dataoffset = d;
+    }
+    int dataoffset() const
+    {
+        return m_dataoffset;
+    }
 
-    void wide_dataoffset(int d) { m_wide_dataoffset = d; }
-    int wide_dataoffset() const { return m_wide_dataoffset; }
+    void wide_dataoffset(int d)
+    {
+        m_wide_dataoffset = d;
+    }
+    int wide_dataoffset() const
+    {
+        return m_wide_dataoffset;
+    }
 
-    SymArena arena() const { return static_cast<SymArena>(m_arena); }
+    SymArena arena() const
+    {
+        return static_cast<SymArena>(m_arena);
+    }
 
-    void initializers(int d) { m_initializers = d; }
-    int initializers() const { return m_initializers; }
+    void initializers(int d)
+    {
+        m_initializers = d;
+    }
+    int initializers() const
+    {
+        return m_initializers;
+    }
 
-    bool has_derivs() const { return m_has_derivs; }
-    void has_derivs(bool new_derivs) { m_has_derivs = new_derivs; }
-    int size() const { return m_size; }
-    void size(size_t newsize) { m_size = (int)newsize; }
+    bool has_derivs() const
+    {
+        return m_has_derivs;
+    }
+    void has_derivs(bool new_derivs)
+    {
+        m_has_derivs = new_derivs;
+    }
+    int size() const
+    {
+        return m_size;
+    }
+    void size(size_t newsize)
+    {
+        m_size = (int)newsize;
+    }
 
     /// Return the size for each point, including derivs.
     ///
-    int derivsize() const { return m_has_derivs ? 3 * m_size : m_size; }
+    int derivsize() const
+    {
+        return m_has_derivs ? 3 * m_size : m_size;
+    }
 
-    bool connected() const { return valuesource() == ConnectedVal; }
-    bool connected_down() const { return m_connected_down; }
-    void connected_down(bool c) { m_connected_down = c; }
+    bool connected() const
+    {
+        return valuesource() == ConnectedVal;
+    }
+    bool connected_down() const
+    {
+        return m_connected_down;
+    }
+    void connected_down(bool c)
+    {
+        m_connected_down = c;
+    }
 
     /// Where did the symbol's value come from?
     ///
     enum ValueSource { DefaultVal, InstanceVal, GeomVal, ConnectedVal };
 
-    ValueSource valuesource() const { return (ValueSource)m_valuesource; }
-    void valuesource(ValueSource v) { m_valuesource = v; }
+    ValueSource valuesource() const
+    {
+        return (ValueSource)m_valuesource;
+    }
+    void valuesource(ValueSource v)
+    {
+        m_valuesource = v;
+    }
     const char* valuesourcename() const;
     static const char* valuesourcename(ValueSource v);
 
-    int fieldid() const { return m_fieldid; }
-    void fieldid(int id) { m_fieldid = id; }
+    int fieldid() const
+    {
+        return m_fieldid;
+    }
+    void fieldid(int id)
+    {
+        m_fieldid = id;
+    }
 
-    int layer() const { return m_layer; }
-    void layer(int id) { m_layer = id; }
+    int layer() const
+    {
+        return m_layer;
+    }
+    void layer(int id)
+    {
+        m_layer = id;
+    }
 
-    int initbegin() const { return m_initbegin; }
-    void initbegin(int i) { m_initbegin = i; }
-    int initend() const { return m_initend; }
-    void initend(int i) { m_initend = i; }
+    int initbegin() const
+    {
+        return m_initbegin;
+    }
+    void initbegin(int i)
+    {
+        m_initbegin = i;
+    }
+    int initend() const
+    {
+        return m_initend;
+    }
+    void initend(int i)
+    {
+        m_initend = i;
+    }
     void set_initrange(int b = 0, int e = 0)
     {
         m_initbegin = b;
         m_initend   = e;
     }
-    bool has_init_ops() const { return m_initbegin != m_initend; }
+    bool has_init_ops() const
+    {
+        return m_initbegin != m_initend;
+    }
 
     /// Clear read/write usage info.
     ///
@@ -725,15 +803,42 @@ public:
         }
     }
 
-    int firstread() const { return m_firstread; }
-    int lastread() const { return m_lastread; }
-    int firstwrite() const { return m_firstwrite; }
-    int lastwrite() const { return m_lastwrite; }
-    int firstuse() const { return std::min(firstread(), firstwrite()); }
-    int lastuse() const { return std::max(lastread(), lastwrite()); }
-    bool everread() const { return lastread() >= 0; }
-    bool everwritten() const { return lastwrite() >= 0; }
-    bool everused() const { return everread() || everwritten(); }
+    int firstread() const
+    {
+        return m_firstread;
+    }
+    int lastread() const
+    {
+        return m_lastread;
+    }
+    int firstwrite() const
+    {
+        return m_firstwrite;
+    }
+    int lastwrite() const
+    {
+        return m_lastwrite;
+    }
+    int firstuse() const
+    {
+        return std::min(firstread(), firstwrite());
+    }
+    int lastuse() const
+    {
+        return std::max(lastread(), lastwrite());
+    }
+    bool everread() const
+    {
+        return lastread() >= 0;
+    }
+    bool everwritten() const
+    {
+        return lastwrite() >= 0;
+    }
+    bool everused() const
+    {
+        return everread() || everwritten();
+    }
     // everused_in_group is an even more stringent test -- not only must
     // the symbol not be used within the shader but it also must not be
     // used elsewhere in the group, by being connected to something downstream
@@ -754,31 +859,67 @@ public:
         m_lastwrite  = last;
     }
 
-    bool initialized() const { return m_initialized; }
-    void initialized(bool init) { m_initialized = init; }
+    bool initialized() const
+    {
+        return m_initialized;
+    }
+    void initialized(bool init)
+    {
+        m_initialized = init;
+    }
 
-    bool lockgeom() const { return m_lockgeom; }
-    void lockgeom(bool lock) { m_lockgeom = lock; }
+    bool lockgeom() const
+    {
+        return m_lockgeom;
+    }
+    void lockgeom(bool lock)
+    {
+        m_lockgeom = lock;
+    }
 
-    bool allowconnect() const { return m_allowconnect; }
-    void allowconnect(bool val) { m_allowconnect = val; }
+    bool allowconnect() const
+    {
+        return m_allowconnect;
+    }
+    void allowconnect(bool val)
+    {
+        m_allowconnect = val;
+    }
 
-    int arraylen() const { return m_typespec.arraylength(); }
+    int arraylen() const
+    {
+        return m_typespec.arraylength();
+    }
     void arraylen(int len)
     {
         m_typespec.make_array(len);
         m_size = m_typespec.simpletype().size();
     }
 
-    bool renderer_output() const { return m_renderer_output; }
-    void renderer_output(bool v) { m_renderer_output = v; }
+    bool renderer_output() const
+    {
+        return m_renderer_output;
+    }
+    void renderer_output(bool v)
+    {
+        m_renderer_output = v;
+    }
 
     // When not uniform a symbol will have a varying value under batched
     // execution and must use a Wide data type to hold different values
     // for each data lane executing
-    bool is_uniform() const { return m_is_uniform; }
-    bool is_varying() const { return (m_is_uniform == 0); }
-    void make_varying() { m_is_uniform = false; }
+    bool is_uniform() const
+    {
+        return m_is_uniform;
+    }
+    bool is_varying() const
+    {
+        return (m_is_uniform == 0);
+    }
+    void make_varying()
+    {
+        m_is_uniform = false;
+    }
 
     // Results of a compare_op and other ops with logically boolean
     // results under certain conditions could be forced to be represented
@@ -792,14 +933,32 @@ public:
     // The value of forced_llvm_bool() is currently only respected during
     // batched execution.  Forced bools should not be coalesced with regular
     // ints, only other forced bools.
-    bool forced_llvm_bool() const { return m_forced_llvm_bool; }
-    void forced_llvm_bool(bool v) { m_forced_llvm_bool = v; }
+    bool forced_llvm_bool() const
+    {
+        return m_forced_llvm_bool;
+    }
+    void forced_llvm_bool(bool v)
+    {
+        m_forced_llvm_bool = v;
+    }
 
-    bool readonly() const { return m_readonly; }
-    void readonly(bool v) { m_readonly = v; }
+    bool readonly() const
+    {
+        return m_readonly;
+    }
+    void readonly(bool v)
+    {
+        m_readonly = v;
+    }
 
-    bool is_constant() const { return symtype() == SymTypeConst; }
-    bool is_temp() const { return symtype() == SymTypeTemp; }
+    bool is_constant() const
+    {
+        return symtype() == SymTypeConst;
+    }
+    bool is_temp() const
+    {
+        return symtype() == SymTypeTemp;
+    }
 
     // Retrieve the const float value (must be a const float!)
     float get_float(int index = 0) const

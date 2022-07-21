@@ -232,9 +232,9 @@ osl_add_closure_closure(void* sg_, OSL::ClosureColor* a, OSL::ClosureColor* b)
 }
 
 
-#    define IS_STRING(type) (type.basetype == OSL::TypeDesc::STRING)
-#    define IS_PTR(type)    (type.basetype == OSL::TypeDesc::PTR)
-#    define IS_COLOR(type)  (type.vecsemantics == OSL::TypeDesc::COLOR)
+#define IS_STRING(type) (type.basetype == OSL::TypeDesc::STRING)
+#define IS_PTR(type)    (type.basetype == OSL::TypeDesc::PTR)
+#define IS_COLOR(type)  (type.vecsemantics == OSL::TypeDesc::COLOR)
 
 
 __device__ bool

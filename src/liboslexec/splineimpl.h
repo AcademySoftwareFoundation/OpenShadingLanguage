@@ -89,7 +89,8 @@ OSL_CONSTANT_DATA const static SplineBasis gBasisSet[kNumSplineTypes] = {
 
 
 
-OSL_HOSTDEVICE static int basis_type_of(StringParam basis_name)
+OSL_HOSTDEVICE static int
+basis_type_of(StringParam basis_name)
 {
     if (basis_name == STRING_PARAMS(catmullrom))
         return kCatmullRom;

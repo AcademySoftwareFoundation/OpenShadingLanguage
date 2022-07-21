@@ -294,7 +294,7 @@ package_source: install
 # 'make clang-format' runs clang-format on all source files (if it's installed)
 clang-format: config
 	@ ( cd ${build_dir} ; \
-	    ${CMAKE} --build . --target run-clang-format --config ${CMAKE_BUILD_TYPE} \
+	    ${CMAKE} --build . --target clang-format --config ${CMAKE_BUILD_TYPE} \
 	  )
 
 

@@ -128,7 +128,10 @@ class MyBatchedRendererServices final
     {
         return false;
     }
-    bool is_overridden_get_matrix_WmWsWf() const override { return false; }
+    bool is_overridden_get_matrix_WmWsWf() const override
+    {
+        return false;
+    }
     bool is_overridden_get_inverse_matrix_WmsWf() const override
     {
         return false;
@@ -137,12 +140,30 @@ class MyBatchedRendererServices final
     {
         return false;
     }
-    bool is_overridden_texture() const override { return false; }
-    bool is_overridden_texture3d() const override { return false; }
-    bool is_overridden_environment() const override { return false; }
-    bool is_overridden_pointcloud_search() const override { return false; }
-    bool is_overridden_pointcloud_get() const override { return false; }
-    bool is_overridden_pointcloud_write() const override { return false; }
+    bool is_overridden_texture() const override
+    {
+        return false;
+    }
+    bool is_overridden_texture3d() const override
+    {
+        return false;
+    }
+    bool is_overridden_environment() const override
+    {
+        return false;
+    }
+    bool is_overridden_pointcloud_search() const override
+    {
+        return false;
+    }
+    bool is_overridden_pointcloud_get() const override
+    {
+        return false;
+    }
+    bool is_overridden_pointcloud_write() const override
+    {
+        return false;
+    }
 };
 
 // RendererServices is the interface through which OSL requests things back

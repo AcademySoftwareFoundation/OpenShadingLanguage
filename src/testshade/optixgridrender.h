@@ -73,9 +73,9 @@ private:
     optix::Context m_optix_ctx = nullptr;
 
     CUstream m_cuda_stream;
-    OptixShaderBindingTable m_optix_sbt = {};
+    OptixShaderBindingTable m_optix_sbt            = {};
     OptixShaderBindingTable m_setglobals_optix_sbt = {};
-    OptixPipeline m_optix_pipeline = {};
+    OptixPipeline m_optix_pipeline                 = {};
     CUdeviceptr d_output_buffer;
     CUdeviceptr d_launch_params = 0;
     CUdeviceptr d_osl_printf_buffer;

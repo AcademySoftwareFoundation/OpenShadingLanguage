@@ -27,8 +27,7 @@ main(int argc, const char* argv[])
     int result = EXIT_FAILURE;
     try {
         result = test_shade(argc, argv);
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         printf("Unknown Error: %s\n", e.what());
     }
     return result;

@@ -585,10 +585,7 @@ public:
     llvm::Type* type_wide_triple() const { return m_llvm_type_wide_triple; }
     llvm::Type* type_wide_matrix() const { return m_llvm_type_wide_matrix; }
     llvm::Type* type_wide_void_ptr() const { return m_llvm_type_wide_void_ptr; }
-    llvm::Type* type_wide_ustring() const
-    {
-        return m_llvm_type_wide_ustring;
-    }
+    llvm::Type* type_wide_ustring() const { return m_llvm_type_wide_ustring; }
     llvm::PointerType* type_wide_ustring_ptr() const
     {
         return m_llvm_type_wide_ustring_ptr;
@@ -925,7 +922,8 @@ public:
     llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem,
                      const std::string& llname = {});
     // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, int elem, const std::string& llname = {});
+    llvm::Value* GEP(llvm::Value* ptr, int elem,
+                     const std::string& llname = {});
 
     /// Generate a GEP (get element pointer) with two integer element
     /// offsets.  This is just a special (and common) case of GEP where

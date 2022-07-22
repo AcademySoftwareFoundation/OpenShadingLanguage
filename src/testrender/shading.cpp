@@ -1122,6 +1122,10 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg, const ClosureColor* closure
 		return w * mf.get_albedo(sg);
 	    }
 	}
+	case MX_SHEEN_ID: {
+	    MxSheen bsdf(*comp->as<MxSheenParams>());
+	    return w * bsdf.get_albedo(sg);
+	}
 	default : // Assume unhandled BSDFs are opaque
 	    return Color3(1);
 	}

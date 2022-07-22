@@ -12,5 +12,5 @@ layer
             float UImin = 0, float UImax = 1 ]],
   )
 {
-    Ci = layer(color(0, 1, 0) * reflection(N, 2.2), layer(layer(color(.8, 1, 1) * reflection(N, 1.5), oren_nayar_diffuse_bsdf(N, Cs, 1.0)), color(0, 1, 0) * diffuse(N)));
+    Ci = layer(color(0, 0.1, 0) * sheen_bsdf(N, 1, 0), layer(layer(color(.8, 1, 1) * reflection(N, 1.5), oren_nayar_diffuse_bsdf(N, Cs, 1.0)), color(0, 1, 0) * diffuse(N)));
 }

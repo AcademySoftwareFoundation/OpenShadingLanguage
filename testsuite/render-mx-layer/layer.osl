@@ -1,0 +1,16 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+layer
+    [[ string description = "Layered material" ]]
+(
+    color Cs = 1
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]],
+  )
+{
+    Ci = layer(color(0, 1, 0) * reflection(N, 2.2), layer(layer(color(.8, 1, 1) * reflection(N, 1.5), oren_nayar_diffuse_bsdf(N, Cs, 1.0)), color(0, 1, 0) * diffuse(N)));
+}

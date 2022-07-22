@@ -127,7 +127,7 @@ struct ShadingResult {
 void
 register_closures(ShadingSystem* shadingsys);
 void
-process_closure(ShadingResult& result, const ClosureColor* Ci, bool light_only);
+process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const ClosureColor* Ci, bool light_only);
 Vec3
 process_background_closure(const ClosureColor* Ci);
 

@@ -128,6 +128,7 @@ struct MxGeneralizedSchlickParams {
     float roughness_y;
     Color3 f0;
     Color3 f90;
+    float exponent;
     ustring distribution;
     // optional
     float thinfilm_thickness;
@@ -292,6 +293,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, roughness_y),
             CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f0),
             CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f90),
+            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, exponent),
             CLOSURE_STRING_PARAM(MxGeneralizedSchlickParams, distribution),
             CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams, thinfilm_thickness, "thinfilm_thickness"),
             CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams, thinfilm_ior, "thinfilm_ior"),

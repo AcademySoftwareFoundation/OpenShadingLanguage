@@ -91,7 +91,7 @@ filter_re = None
 cleanup_on_success = False
 if int(os.getenv('TESTSUITE_CLEANUP_ON_SUCCESS', '0')) :
     cleanup_on_success = True;
-oslcargs = "-Wall"
+oslcargs = "-Wall -DMATERIALX_CLOSURES"
 
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
                      ".dpx", ".iff", ".psd" ]

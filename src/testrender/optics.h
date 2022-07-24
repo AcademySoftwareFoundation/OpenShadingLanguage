@@ -64,4 +64,13 @@ fresnel_refraction(const Dual2<Vec3>& I, const Vec3& N, float eta,
     return 0;
 }
 
+inline float fresnel_schlick(float cos_theta, float F0, float F90)
+{
+    float x = Imath::clamp(1.0f - cos_theta, 0.0f, 1.0f);
+    float x2 = x * x;
+    float x4 = x2 * x2;
+    float x5 = x4 * x;
+    return Imath::lerp(F0, F90, x5);
+}
+
 OSL_NAMESPACE_EXIT

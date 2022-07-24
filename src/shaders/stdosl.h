@@ -558,6 +558,7 @@ closure color conductor_bsdf(normal N, vector U, float roughness_x, float roughn
 //  \param  roughness_y         Surface roughness in the V direction with a perceptually linear response over its range.
 //  \param  f0                  Reflectivity per color channel at facing angles.
 //  \param  f90                 Reflectivity per color channel at grazing angles.
+//  \param  exponent            Variable exponent for the Schlick Fresnel curve, the default value should be 5
 //  \param  distribution        Microfacet distribution. An implementation is expected to support the following distributions: { "ggx" }
 //  \param  thinfilm_thickness  Optional float parameter for thickness of an iridescent thin film layer on top of this BSDF. Given in nanometers.
 //  \param  thinfilm_ior        Optional float parameter for refraction index of the thin film layer.

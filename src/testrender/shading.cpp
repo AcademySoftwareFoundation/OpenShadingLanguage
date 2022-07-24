@@ -1039,9 +1039,107 @@ struct MxSheen final : public BSDF, MxSheenParams {
 };
 
 
+Color3 clamp(const Color3& c, float min, float max)
+{
+    return Color3(c.x < min ? min : max < c.x ? max : c.x,
+		  c.y < min ? min : max < c.y ? max : c.y,
+		  c.z < min ? min : max < c.z ? max : c.z);
+}
+
+bool is_black(const Color3& c)
+{
+    return c.x == 0 && c.y == 0 && c.z == 0;
+}
+
+Color3
+evaluate_layer_opacity(const OSL::ShaderGlobals& sg, const ClosureColor* closure)
+{
+    static const ustring u_ggx("ggx");
+
+    // Null closure, the layer is fully transparent
+    if (!closure)
+        return Color3(0);
+    
+    switch (closure->id) {
+    case ClosureColor::MUL:
+        return closure->as_mul()->weight * evaluate_layer_opacity(sg, closure->as_mul()->closure);
+    case ClosureColor::ADD:
+	return evaluate_layer_opacity(sg, closure->as_add()->closureA) +
+	    evaluate_layer_opacity(sg, closure->as_add()->closureB);
+    default: {
+        const ClosureComponent* comp = closure->as_comp();
+        Color3 w                     = comp->w;
+        switch (comp->id) {
+	case MX_LAYER_ID : {
+	    const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+	    return w * (evaluate_layer_opacity(sg, srcparams->top) +
+			evaluate_layer_opacity(sg, srcparams->base));
+	}
+	case REFLECTION_ID:
+	case FRESNEL_REFLECTION_ID: {
+	    Reflection bsdf(*comp->as<ReflectionParams>());
+	    return w * bsdf.get_albedo(sg);
+	}
+	case MX_GENERALIZED_SCHLICK_ID: {
+	    const MxGeneralizedSchlickParams* srcparams = comp->as<MxGeneralizedSchlickParams>();
+	    // Transmissive dielectrics are opaque
+	    if (!is_black(srcparams->transmission_tint))
+		return Color3(1);
+	    MicrofacetParams params = {};
+	    params.N = srcparams->N;
+	    params.U = srcparams->U;
+	    params.dist = srcparams->distribution;
+	    params.xalpha = srcparams->roughness_x;
+	    params.yalpha = srcparams->roughness_y;
+	    params.eta = 100.0f; // TODO: support generalized fresnel equation properly
+	    if (params.dist == u_ggx) {
+		Microfacet<GGXDist, 0> mf(params);
+		return w * mf.get_albedo(sg);
+	    }
+	    else // assume beckman
+	    {
+		Microfacet<BeckmannDist, 0> mf(params);
+		return w * mf.get_albedo(sg);
+	    }
+	}
+	case MX_DIELECTRIC_ID : {
+	    const MxDielectricParams* srcparams = comp->as<MxDielectricParams>();
+	    // Transmissive dielectrics are opaque
+	    if (is_black(srcparams->transmission_tint))
+		return Color3(1);
+	    MicrofacetParams params = {};
+	    params.N = srcparams->N;
+	    params.U = srcparams->U;
+	    params.dist = srcparams->distribution;
+	    params.xalpha = srcparams->roughness_x;
+	    params.yalpha = srcparams->roughness_y;
+	    params.eta = srcparams->ior;
+	    if (params.dist == u_ggx) {
+		Microfacet<GGXDist, 0> mf(params);
+		return w * mf.get_albedo(sg);
+	    }
+	    else // assume beckman
+	    {
+		Microfacet<BeckmannDist, 0> mf(params);
+		return w * mf.get_albedo(sg);
+	    }
+	}
+	case MX_SHEEN_ID: {
+	    MxSheen bsdf(*comp->as<MxSheenParams>());
+	    return w * bsdf.get_albedo(sg);
+	}
+	default : // Assume unhandled BSDFs are opaque
+	    return Color3(1);
+	}
+    }
+    }
+    OSL_ASSERT(false && "Layer opacity evaluation failed");
+    return Color3(0);
+}
+
 // recursively walk through the closure tree, creating bsdfs as we go
 void
-process_closure(ShadingResult& result, const ClosureColor* closure,
+process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const ClosureColor* closure,
                 const Color3& w, bool light_only)
 {
     static const ustring u_ggx("ggx");
@@ -1052,12 +1150,12 @@ process_closure(ShadingResult& result, const ClosureColor* closure,
     switch (closure->id) {
     case ClosureColor::MUL: {
         Color3 cw = w * closure->as_mul()->weight;
-        process_closure(result, closure->as_mul()->closure, cw, light_only);
+        process_closure(sg, result, closure->as_mul()->closure, cw, light_only);
         break;
     }
     case ClosureColor::ADD: {
-        process_closure(result, closure->as_add()->closureA, w, light_only);
-        process_closure(result, closure->as_add()->closureB, w, light_only);
+        process_closure(sg, result, closure->as_add()->closureA, w, light_only);
+        process_closure(sg, result, closure->as_add()->closureB, w, light_only);
         break;
     }
     default: {
@@ -1222,7 +1320,12 @@ process_closure(ShadingResult& result, const ClosureColor* closure,
                 break;
             }
             case MX_LAYER_ID: {
-                OSL_ASSERT(false && "MaterialX closure not yet implemented");
+                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                Color3 base_w = w * (Color3(1, 1, 1) - clamp(evaluate_layer_opacity(sg, srcparams->top), 0.f, 1.f));
+                process_closure(sg, result, srcparams->top, w, light_only);
+                if (!is_black(base_w))
+		    process_closure(sg, result, srcparams->base, base_w, light_only);
+                ok = true;
                 break;
             }
             }
@@ -1238,9 +1341,9 @@ process_closure(ShadingResult& result, const ClosureColor* closure,
 OSL_NAMESPACE_ENTER
 
 void
-process_closure(ShadingResult& result, const ClosureColor* Ci, bool light_only)
+process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const ClosureColor* Ci, bool light_only)
 {
-    ::process_closure(result, Ci, Color3(1, 1, 1), light_only);
+  ::process_closure(sg, result, Ci, Color3(1, 1, 1), light_only);
 }
 
 Vec3

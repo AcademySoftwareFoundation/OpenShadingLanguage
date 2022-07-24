@@ -1,0 +1,14 @@
+<World>
+   <Camera eye="0, 0, 10" look_at="0,0,0" fov="30" />
+
+   <ShaderGroup>
+      shader envmap layer1;
+   </ShaderGroup>
+   <Background resolution="1024" />
+
+   <ShaderGroup>
+      param color Cs 0.8 0.1 0.2;
+      shader layer layer1;
+   </ShaderGroup>
+   <Sphere center="0,0,0" radius="1.0" />   
+</World>

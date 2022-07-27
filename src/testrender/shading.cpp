@@ -93,47 +93,84 @@ struct MxBurleyDiffuseParams {
     ustring label;
 };
 
-struct MxDielectricParams {
+// common to all MaterialX microfacet closures
+struct MxMicrofacetBaseParams {
     Vec3 N, U;
-    Color3 reflection_tint;
-    Color3 transmission_tint;
     float roughness_x;
     float roughness_y;
-    float ior;
     ustring distribution;
     // optional
-    float thinfilm_thickness;
-    float thinfilm_ior;
     ustring label;
 };
 
-struct MxConductorParams {
-    Vec3 N, U;
-    float roughness_x;
-    float roughness_y;
+struct MxDielectricParams : public MxMicrofacetBaseParams {
+    Color3 reflection_tint;
+    Color3 transmission_tint;
+    float ior;
+    // optional
+    float thinfilm_thickness;
+    float thinfilm_ior;
+
+    Color3 evalR(float cos_theta) const {
+        return reflection_tint * fresnel_dielectric(cos_theta, ior);
+    }
+
+    Color3 evalT(float cos_theta) const {
+        return transmission_tint * (1.0f - fresnel_dielectric(cos_theta, ior));
+    }
+
+    float get_ior() const {
+        return ior;
+    }
+};
+
+struct MxConductorParams : public MxMicrofacetBaseParams {
     Color3 ior;
     Color3 extinction;
-    ustring distribution;
     // optional
     float thinfilm_thickness;
     float thinfilm_ior;
-    ustring label;
+
+    Color3 evalR(float cos_theta) const {
+        return fresnel_conductor(cos_theta, ior, extinction);
+    }
+
+    Color3 evalT(float cos_theta) const {
+        return Color3(0.0f);
+    }
+
+    float get_ior() const {
+        return 0; // no transmission possible
+    }
 };
 
-struct MxGeneralizedSchlickParams {
-    Vec3 N, U;
+struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {
     Color3 reflection_tint;
     Color3 transmission_tint;
-    float roughness_x;
-    float roughness_y;
     Color3 f0;
     Color3 f90;
     float exponent;
-    ustring distribution;
     // optional
     float thinfilm_thickness;
     float thinfilm_ior;
-    ustring label;
+
+    Color3 evalR(float cos_theta) const {
+        return reflection_tint * fresnel_generalized_schlick(cos_theta, f0, f90, exponent);
+    }
+
+    Color3 evalT(float cos_theta) const {
+        // NOTE: TIR is handled by the caller
+        return transmission_tint * fresnel_generalized_schlick(cos_theta, f0, f90, exponent);
+    }
+
+    float get_ior() const {
+        // follow the same approach as the MaterialX glsl code
+        // NOTE: this always returns a value > 1.0 so we rely on the caller
+        //       to handle the inversion for glass
+        float avgF0 = (f0.x + f0.y + f0.z) * (1.0f / 3);
+        float sqrtF0 = sqrtf(avgF0);
+        return (1 + sqrtF0) / (1 - sqrtF0);
+    }
 };
 
 struct MxTranslucentParams {
@@ -293,7 +330,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, roughness_y),
             CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f0),
             CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f90),
-            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, exponent),
+            CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, exponent),
             CLOSURE_STRING_PARAM(MxGeneralizedSchlickParams, distribution),
             CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams, thinfilm_thickness, "thinfilm_thickness"),
             CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams, thinfilm_ior, "thinfilm_ior"),
@@ -891,6 +928,157 @@ typedef Microfacet<BeckmannDist, 0> MicrofacetBeckmannRefl;
 typedef Microfacet<BeckmannDist, 1> MicrofacetBeckmannRefr;
 typedef Microfacet<BeckmannDist, 2> MicrofacetBeckmannBoth;
 
+
+// We use the CRTP to inherit the parameters because each MaterialX closure uses a different set of parameters
+template <typename MxMicrofacetParams, typename Distribution, bool EnableTransmissionLobe>
+struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
+    MxMicrofacet(const MxMicrofacetParams& params) :
+        BSDF(),
+        MxMicrofacetParams(params),
+        tf(MxMicrofacetParams::U == Vec3(0) ||
+            MxMicrofacetParams::roughness_x == MxMicrofacetParams::roughness_y
+            ? TangentFrame(MxMicrofacetParams::N)
+            : TangentFrame(MxMicrofacetParams::N, MxMicrofacetParams::U))
+ {}
+
+    Color3 get_albedo(const ShaderGlobals& sg) const override
+    {
+        // if transmission is enabled, punt on
+        if (EnableTransmissionLobe)
+            return Color3(1.0f);
+        // FIXME: this heuristic is not particularly good, and looses energy
+        // compared to the reference solution
+        return MxMicrofacetParams::evalR(-MxMicrofacetParams::N.dot(sg.I));
+    }
+
+    Color3 eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
+                       float& pdf) const override
+    {
+        Vec3 wo         = -sg.I;
+        const Vec3 wo_l = tf.tolocal(wo);
+        const Vec3 wi_l = tf.tolocal(wi);
+
+        // handle reflection lobe
+        if (wo_l.z > 0 && wi_l.z > 0)
+        {
+            const Vec3 m         = (wi_l + wo_l).normalize();
+            const float D        = evalD(m);
+            const float Lambda_o = evalLambda(wo_l);
+            const float Lambda_i = evalLambda(wi_l);
+            const float G2       = evalG2(Lambda_o, Lambda_i);
+            const float G1       = evalG1(Lambda_o);
+
+            const Color3 Fr = MxMicrofacetParams::evalR(m.dot(wo_l));
+            pdf            = (G1 * D * 0.25f) / wo_l.z;
+            float out      = G2 / G1;
+            return Fr * out;
+        }
+        return Color3(pdf = 0);
+    }
+
+
+    Color3 sample(const OSL::ShaderGlobals& sg, float rx, float ry,
+                         float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const override
+    {
+        const Vec3 wo_l   = tf.tolocal(-sg.I);
+        const float cosNO = wo_l.z;
+        if (!(cosNO > 0))
+            return Color3(pdf = 0);
+        const Vec3 m      = sampleMicronormal(wo_l, rx, ry);
+        const float cosMO = m.dot(wo_l);
+        {
+            // reflection lobe
+            const Vec3 wi_l      = (2.0f * cosMO) * m - wo_l;
+            const float D        = evalD(m);
+            const float Lambda_o = evalLambda(wo_l);
+            const float Lambda_i = evalLambda(wi_l);
+
+            const float G2 = evalG2(Lambda_o, Lambda_i);
+            const float G1 = evalG1(Lambda_o);
+
+            const Color3 Fr = MxMicrofacetParams::evalR(cosMO);
+
+            wi = tf.toworld(wi_l);
+
+            pdf       = (G1 * D * 0.25f) / cosNO;
+            float out = G2 / G1;
+            return Color3(Fr * out);
+        }
+    }
+
+private:
+    static float SQR(float x) { return x * x; }
+
+    float evalLambda(const Vec3 w) const
+    {
+        float cosTheta2 = SQR(w.z);
+        /* Have these two multiplied by sinTheta^2 for convenience */
+        float cosPhi2st2 = SQR(w.x * MxMicrofacetParams::roughness_x);
+        float sinPhi2st2 = SQR(w.y * MxMicrofacetParams::roughness_y);
+        return Distribution::Lambda(cosTheta2 / (cosPhi2st2 + sinPhi2st2));
+    }
+
+    static float evalG2(float Lambda_i, float Lambda_o)
+    {
+        // correlated masking-shadowing
+        return 1 / (Lambda_i + Lambda_o + 1);
+    }
+
+    static float evalG1(float Lambda_v) { return 1 / (Lambda_v + 1); }
+
+    float evalD(const Vec3 Hr) const
+    {
+        float cosThetaM = Hr.z;
+        if (cosThetaM > 0) {
+            /* Have these two multiplied by sinThetaM2 for convenience */
+            float cosPhi2st2 = SQR(Hr.x / MxMicrofacetParams::roughness_x);
+            float sinPhi2st2 = SQR(Hr.y / MxMicrofacetParams::roughness_y);
+            float cosThetaM2 = SQR(cosThetaM);
+            float cosThetaM4 = SQR(cosThetaM2);
+
+            float tanThetaM2 = (cosPhi2st2 + sinPhi2st2) / cosThetaM2;
+
+            return Distribution::F(tanThetaM2) / (MxMicrofacetParams::roughness_x * MxMicrofacetParams::roughness_y * cosThetaM4);
+        }
+        return 0;
+    }
+
+    Vec3 sampleMicronormal(const Vec3 wo, float randu, float randv) const
+    {
+        /* Project wo and stretch by alpha values */
+        Vec3 swo = wo;
+        swo.x *= MxMicrofacetParams::roughness_x;
+        swo.y *= MxMicrofacetParams::roughness_y;
+        swo = swo.normalize();
+
+        // figure out angles for the incoming vector
+        float cos_theta = std::max(swo.z, 0.0f);
+        float cos_phi   = 1;
+        float sin_phi   = 0;
+        /* Normal incidence special case gets phi 0 */
+        if (cos_theta < 0.99999f) {
+            float invnorm = 1 / sqrtf(SQR(swo.x) + SQR(swo.y));
+            cos_phi       = swo.x * invnorm;
+            sin_phi       = swo.y * invnorm;
+        }
+
+        Vec2 slope = Distribution::sampleSlope(cos_theta, randu, randv);
+
+        /* Rotate and unstretch slopes */
+        Vec2 s(cos_phi * slope.x - sin_phi * slope.y,
+               sin_phi * slope.x + cos_phi * slope.y);
+        s.x *= MxMicrofacetParams::roughness_x;
+        s.y *= MxMicrofacetParams::roughness_y;
+
+        float mlen = sqrtf(s.x * s.x + s.y * s.y + 1);
+        Vec3 m(fabsf(s.x) < mlen ? -s.x / mlen : 1.0f,
+               fabsf(s.y) < mlen ? -s.y / mlen : 1.0f, 1.0f / mlen);
+        return m;
+    }
+
+    TangentFrame tf;
+};
+
 struct Reflection final : public BSDF, ReflectionParams {
     Reflection(const ReflectionParams& params)
         : BSDF(), ReflectionParams(params)
@@ -1054,83 +1242,53 @@ bool is_black(const Color3& c)
 Color3
 evaluate_layer_opacity(const OSL::ShaderGlobals& sg, const ClosureColor* closure)
 {
-    static const ustring u_ggx("ggx");
-
     // Null closure, the layer is fully transparent
-    if (!closure)
+    if (closure == nullptr)
         return Color3(0);
-    
+
     switch (closure->id) {
     case ClosureColor::MUL:
         return closure->as_mul()->weight * evaluate_layer_opacity(sg, closure->as_mul()->closure);
     case ClosureColor::ADD:
-	return evaluate_layer_opacity(sg, closure->as_add()->closureA) +
-	    evaluate_layer_opacity(sg, closure->as_add()->closureB);
+	    return evaluate_layer_opacity(sg, closure->as_add()->closureA) +
+	           evaluate_layer_opacity(sg, closure->as_add()->closureB);
     default: {
         const ClosureComponent* comp = closure->as_comp();
         Color3 w                     = comp->w;
         switch (comp->id) {
-	case MX_LAYER_ID : {
-	    const MxLayerParams* srcparams = comp->as<MxLayerParams>();
-	    return w * (evaluate_layer_opacity(sg, srcparams->top) +
-			evaluate_layer_opacity(sg, srcparams->base));
-	}
-	case REFLECTION_ID:
-	case FRESNEL_REFLECTION_ID: {
-	    Reflection bsdf(*comp->as<ReflectionParams>());
-	    return w * bsdf.get_albedo(sg);
-	}
-	case MX_GENERALIZED_SCHLICK_ID: {
-	    const MxGeneralizedSchlickParams* srcparams = comp->as<MxGeneralizedSchlickParams>();
-	    // Transmissive dielectrics are opaque
-	    if (!is_black(srcparams->transmission_tint))
-		return Color3(1);
-	    MicrofacetParams params = {};
-	    params.N = srcparams->N;
-	    params.U = srcparams->U;
-	    params.dist = srcparams->distribution;
-	    params.xalpha = srcparams->roughness_x;
-	    params.yalpha = srcparams->roughness_y;
-	    params.eta = 100.0f; // TODO: support generalized fresnel equation properly
-	    if (params.dist == u_ggx) {
-		Microfacet<GGXDist, 0> mf(params);
-		return w * mf.get_albedo(sg);
-	    }
-	    else // assume beckman
-	    {
-		Microfacet<BeckmannDist, 0> mf(params);
-		return w * mf.get_albedo(sg);
-	    }
-	}
-	case MX_DIELECTRIC_ID : {
-	    const MxDielectricParams* srcparams = comp->as<MxDielectricParams>();
-	    // Transmissive dielectrics are opaque
-	    if (is_black(srcparams->transmission_tint))
-		return Color3(1);
-	    MicrofacetParams params = {};
-	    params.N = srcparams->N;
-	    params.U = srcparams->U;
-	    params.dist = srcparams->distribution;
-	    params.xalpha = srcparams->roughness_x;
-	    params.yalpha = srcparams->roughness_y;
-	    params.eta = srcparams->ior;
-	    if (params.dist == u_ggx) {
-		Microfacet<GGXDist, 0> mf(params);
-		return w * mf.get_albedo(sg);
-	    }
-	    else // assume beckman
-	    {
-		Microfacet<BeckmannDist, 0> mf(params);
-		return w * mf.get_albedo(sg);
-	    }
-	}
-	case MX_SHEEN_ID: {
-	    MxSheen bsdf(*comp->as<MxSheenParams>());
-	    return w * bsdf.get_albedo(sg);
-	}
-	default : // Assume unhandled BSDFs are opaque
-	    return Color3(1);
-	}
+        case MX_LAYER_ID : {
+            const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+            return w * (evaluate_layer_opacity(sg, srcparams->top) +
+                        evaluate_layer_opacity(sg, srcparams->base));
+        }
+        case REFLECTION_ID:
+        case FRESNEL_REFLECTION_ID: {
+            Reflection bsdf(*comp->as<ReflectionParams>());
+            return w * bsdf.get_albedo(sg);
+        }
+        case MX_DIELECTRIC_ID : {
+            const MxDielectricParams& params = *comp->as<MxDielectricParams>();
+            // Transmissive dielectrics are opaque
+            if (!is_black(params.transmission_tint))
+                return Color3(1);
+            MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params);
+            return w * mf.get_albedo(sg);
+        }
+        case MX_GENERALIZED_SCHLICK_ID: {
+            const MxGeneralizedSchlickParams& params = *comp->as<MxGeneralizedSchlickParams>();
+            // Transmissive dielectrics are opaque
+            if (!is_black(params.transmission_tint))
+                return Color3(1);
+            MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params);
+            return w * mf.get_albedo(sg);
+        }
+        case MX_SHEEN_ID: {
+            MxSheen bsdf(*comp->as<MxSheenParams>());
+            return w * bsdf.get_albedo(sg);
+        }
+        default : // Assume unhandled BSDFs are opaque
+            return Color3(1);
+        }
     }
     }
     OSL_ASSERT(false && "Layer opacity evaluation failed");
@@ -1250,50 +1408,21 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const Closu
                 break;
             }
             case MX_DIELECTRIC_ID: {
-                const MxDielectricParams* srcparams = comp->as<MxDielectricParams>();
-                // translate  parameters into old closure for now ...
-                MicrofacetParams params = {};
-                params.N = srcparams->N;
-                params.U = srcparams->U;
-                params.dist = srcparams->distribution;
-                params.xalpha = srcparams->roughness_x;
-                params.yalpha = srcparams->roughness_y;
-                params.eta = srcparams->ior;
-                // TODO: support tints as well
-                if (params.dist == u_ggx)
-                    ok = result.bsdf.add_bsdf<Microfacet<GGXDist, 2>, MicrofacetParams>(cw, params);
-                else if (params.dist == u_beckmann)
-                    ok = result.bsdf.add_bsdf<Microfacet<BeckmannDist, 2>, MicrofacetParams>(cw, params);
+                const MxDielectricParams& params = *comp->as<MxDielectricParams>();
+                // TODO: handle transmissive case as well
+                ok = result.bsdf.add_bsdf<MxMicrofacet<MxDielectricParams, GGXDist, false>>(cw, params);
                 break;
             }
             case MX_CONDUCTOR_ID: {
-                const MxConductorParams* srcparams = comp->as<MxConductorParams>();
-                MicrofacetParams params = {};
-                params.N = srcparams->N;
-                params.U = srcparams->U;
-                params.dist = srcparams->distribution;
-                params.xalpha = srcparams->roughness_x;
-                params.yalpha = srcparams->roughness_y;
-                params.eta = 100.0f; // TODO: support conductor fresnel equation properly
-                if (params.dist == u_ggx)
-                    ok = result.bsdf.add_bsdf<Microfacet<GGXDist, 0>, MicrofacetParams>(cw, params);
-                else if (params.dist == u_beckmann)
-                    ok = result.bsdf.add_bsdf<Microfacet<BeckmannDist, 0>, MicrofacetParams>(cw, params);
+                const MxConductorParams& params = *comp->as<MxConductorParams>();
+                ok = result.bsdf.add_bsdf<MxMicrofacet<MxConductorParams, GGXDist, false>>(cw, params);
+                break;
             };
             case MX_GENERALIZED_SCHLICK_ID: {
-                const MxGeneralizedSchlickParams* srcparams = comp->as<MxGeneralizedSchlickParams>();
-                MicrofacetParams params = {};
-                params.N = srcparams->N;
-                params.U = srcparams->U;
-                params.dist = srcparams->distribution;
-                params.xalpha = srcparams->roughness_x;
-                params.yalpha = srcparams->roughness_y;
-                params.eta = 100.0f; // TODO: support generalized fresnel equation properly
-                // TODO: figure out when the material is meant to transmit light
-                if (params.dist == u_ggx)
-                    ok = result.bsdf.add_bsdf<Microfacet<GGXDist, 0>, MicrofacetParams>(cw, params);
-                else if (params.dist == u_beckmann)
-                    ok = result.bsdf.add_bsdf<Microfacet<BeckmannDist, 0>, MicrofacetParams>(cw, params);
+                const MxGeneralizedSchlickParams& params = *comp->as<MxGeneralizedSchlickParams>();
+                // TODO: handle transmissive case as well
+                ok = result.bsdf.add_bsdf<MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>>(cw, params);
+                break;
             };
             case MX_TRANSLUCENT_ID: {
                 const MxTranslucentParams* srcparams = comp->as<MxTranslucentParams>();
@@ -1324,7 +1453,7 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const Closu
                 Color3 base_w = w * (Color3(1, 1, 1) - clamp(evaluate_layer_opacity(sg, srcparams->top), 0.f, 1.f));
                 process_closure(sg, result, srcparams->top, w, light_only);
                 if (!is_black(base_w))
-		    process_closure(sg, result, srcparams->base, base_w, light_only);
+		            process_closure(sg, result, srcparams->base, base_w, light_only);
                 ok = true;
                 break;
             }

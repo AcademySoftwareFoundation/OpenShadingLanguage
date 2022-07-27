@@ -107,7 +107,7 @@ macro ( TESTSUITE )
 
         # Run the test unoptimized, unless it matches a few patterns that
         # we don't test unoptimized (or has an OPTIMIZEONLY marker file).
-        if (NOT _testname MATCHES "optix" 
+        if (NOT _testname MATCHES "optix"
             AND NOT EXISTS "${_testsrcdir}/NOSCALAR"
             AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
             AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
@@ -142,7 +142,7 @@ macro ( TESTSUITE )
             add_one_testsuite ("${_testname}.optix.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 TESTSHADE_OPTIX=1 )
         endif ()
-        
+
         if (BUILD_BATCHED)
             # When building for Batched support, also run it in Batched mode
             # if there is an BATCHED marker file in the directory.
@@ -156,7 +156,7 @@ macro ( TESTSUITE )
                 add_one_testsuite ("${_testname}.batched" "${_testsrcdir}"
                                    ENV TESTSHADE_OPT=0 TESTSHADE_BATCHED=1 )
             endif ()
-            
+
             if ((EXISTS "${_testsrcdir}/BATCHED" OR test_all_batched OR _testname MATCHES "batched")
                 AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
                 AND NOT EXISTS "${_testsrcdir}/NOBATCHED"
@@ -165,7 +165,7 @@ macro ( TESTSUITE )
                 add_one_testsuite ("${_testname}.batched.opt" "${_testsrcdir}"
                                    ENV TESTSHADE_OPT=2 TESTSHADE_BATCHED=1 )
             endif ()
-            
+
             # When building for Batched support, optionally run a regression test
             # if there is an BATCHED_REGRESSION marker file in the directory.
             if ((EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
@@ -211,7 +211,7 @@ macro (osl_add_all_tests)
     # special installed tests.
     TESTSUITE ( aastep allowconnect-err andor-reg and-or-not-synonyms
                 arithmetic area-reg arithmetic-reg
-                array array-reg array-copy-reg array-derivs array-range 
+                array array-reg array-copy-reg array-derivs array-range
                 array-aassign array-assign-reg array-length-reg
                 bitwise-and-reg bitwise-or-reg bitwise-shl-reg  bitwise-shr-reg bitwise-xor-reg
                 blackbody blackbody-reg blendmath breakcont breakcont-reg
@@ -220,7 +220,7 @@ macro (osl_add_all_tests)
                 calculatenormal-reg
                 cellnoise closure closure-array color color-reg colorspace comparison
                 complement-reg compile-buffer compassign-reg
-                component-range 
+                component-range
                 control-flow-reg connect-components
                 const-array-params const-array-fill
                 debugnan debug-uninit
@@ -259,7 +259,7 @@ macro (osl_add_all_tests)
                 noise-perlin noise-simplex
                 noise-reg
                 normalize-reg
-                pnoise pnoise-cell pnoise-gabor 
+                pnoise pnoise-cell pnoise-gabor
                 pnoise-generic pnoise-perlin
                 pnoise-reg
                 operator-overloading
@@ -291,12 +291,15 @@ macro (osl_add_all_tests)
                 raytype raytype-reg raytype-specialized regex-reg reparam
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
-                render-mx-burley-diffuse render-mx-sheen
+                render-mx-burley-diffuse
+                render-mx-dielectric render-mx-conductor render-mx-generalized-schlick
+                render-mx-layer
+                render-mx-sheen
                 render-microfacet render-oren-nayar
                 render-uv render-veachmis render-ward
                 select select-reg shaderglobals shortcircuit
-                smoothstep-reg 
-                spline spline-reg splineinverse splineinverse-ident 
+                smoothstep-reg
+                spline spline-reg splineinverse splineinverse-ident
                 splineinverse-knots-ascend-reg splineinverse-knots-descend-reg
                 spline-boundarybug spline-derivbug
                 split-reg
@@ -320,7 +323,7 @@ macro (osl_add_all_tests)
                 trailing-commas
                 transcendental-reg
                 transitive-assign
-                transform transform-reg transformc transformc-reg trig trig-reg 
+                transform transform-reg transformc transformc-reg trig trig-reg
                 typecast
                 unknown-instruction
                 userdata userdata-passthrough
@@ -364,11 +367,11 @@ macro (osl_add_all_tests)
         TESTSUITE ( testoptix testoptix-noise example-cuda)
     endif ()
 
-    # Some regression tests have alot of combinations and may need more time to finish 
+    # Some regression tests have alot of combinations and may need more time to finish
     if (BUILD_BATCHED)
         set_tests_properties (arithmetic-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
         set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
     endif ()
     set_tests_properties (matrix-reg.regress.rsbitcode.opt PROPERTIES TIMEOUT 800)
-        
+
 endmacro()

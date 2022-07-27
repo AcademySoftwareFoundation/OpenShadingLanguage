@@ -1,0 +1,26 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+glossy
+    [[ string description = "Glossy material" ]]
+(
+    color F0 = 0.5
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]],
+    color F90 = 1.0
+        [[  string description = "Edge color",
+            float UImin = 0, float UImax = 1 ]],
+    float exponent = 5
+        [[ string description = "Fresnel Exponent",
+            float UImin = 1, float UImax = 20 ]],
+    float roughness = 0.5
+        [[  string description = "Roughness of the surface",
+            float UImin = 0, float UImax = 1 ]]
+  )
+{
+    float alpha = roughness * roughness;
+    Ci = generalized_schlick_bsdf(N, vector(0), color(1), color(0), alpha, alpha, F0, F90, exponent, "ggx");
+}

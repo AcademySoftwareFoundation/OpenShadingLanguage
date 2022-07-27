@@ -290,6 +290,9 @@ macro (osl_add_all_tests)
                 raytype raytype-reg raytype-specialized regex-reg reparam
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
+                render-mx-furnace-burley-diffuse
+                render-mx-furnace-oren-nayar
+                render-mx-furnace-sheen
                 render-mx-burley-diffuse
                 render-mx-dielectric render-mx-dielectric-glass
                 render-mx-conductor render-mx-generalized-schlick
@@ -377,5 +380,4 @@ macro (osl_add_all_tests)
     if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
         set_tests_properties (render-mx-dielectric-glass PROPERTIES TIMEOUT 600)
     endif ()
-
 endmacro()

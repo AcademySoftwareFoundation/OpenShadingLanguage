@@ -903,6 +903,15 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         // build internal pdf for sampling between bsdf closures
         result.bsdf.prepare(sg, path_weight, b >= rr_depth);
 
+        if (show_albedo_scale > 0)
+        {
+            // Instead of path tracing, just visualize the albedo
+            // of the bsdf. This can be used to validate the accuracy of
+            // the get_albedo method for a particular bsdf.
+            path_radiance += path_weight * result.bsdf.get_albedo(sg) * show_albedo_scale;
+            break;
+        }
+
         // get three random numbers
         Vec3 s   = sampler.get();
         float xi = s.x;
@@ -1010,6 +1019,7 @@ SimpleRaytracer::prepare_render()
     aa          = std::max(1, options.get_int("aa"));
     max_bounces = options.get_int("max_bounces");
     rr_depth    = options.get_int("rr_depth");
+    show_albedo_scale = options.get_float("show_albedo_scale");
 
     // prepare background importance table (if requested)
     if (backgroundResolution > 0 && backgroundShaderID >= 0) {

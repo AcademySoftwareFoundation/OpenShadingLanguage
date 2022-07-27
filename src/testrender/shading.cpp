@@ -1329,7 +1329,16 @@ struct MxSheen final : public BSDF, MxSheenParams {
 
     Color3 get_albedo(const ShaderGlobals& sg) const override
     {
-        return albedo;
+        const float NdotV = OIIO::clamp(-N.dot(sg.I), 0.0f, 1.0f);
+        // Rational fit from the Material X project
+        // Ref: https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_sheen.glsl
+        const Vec2 r = Vec2(13.67300f, 1.0f) +
+            Vec2(-68.78018f, 61.57746f) * NdotV +
+            Vec2(799.08825f, 442.78211f) * roughness +
+            Vec2(-905.00061f, 2597.49308f) * NdotV * roughness +
+            Vec2(60.28956f, 121.81241f) * NdotV * NdotV +
+            Vec2(1086.96473f, 3045.55075f) * roughness * roughness;
+        return clamp(albedo * (r.x / r.y), 0.0f, 1.0f);
     }
 
     Color3 eval(const ShaderGlobals& sg, const Vec3& wi, float& pdf) const override

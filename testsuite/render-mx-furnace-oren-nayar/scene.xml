@@ -1,0 +1,64 @@
+<World>
+   <Camera eye="0, 0, 10" look_at="0,0,0" fov="4.2" />
+
+   <ShaderGroup>
+      shader envmap layer1;
+   </ShaderGroup>
+   <Background resolution="1" />
+
+   <ShaderGroup>
+      param float roughness 0.0;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="-1.0,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.1;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="-0.8,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.2;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="-0.6,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.3;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="-0.4,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.4;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="-0.2,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.5;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="0,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.6;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="0.2,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.7;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="0.4,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.8;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="0.6,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 0.9;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="0.8,0,0" radius="0.08" />
+   <ShaderGroup>
+      param float roughness 1.0;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="1.0,0,0" radius="0.08" />
+</World>

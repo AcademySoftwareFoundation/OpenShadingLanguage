@@ -292,7 +292,8 @@ macro (osl_add_all_tests)
                 render-background render-bumptest
                 render-cornell render-furnace-diffuse
                 render-mx-burley-diffuse
-                render-mx-dielectric render-mx-conductor render-mx-generalized-schlick
+                render-mx-dielectric render-mx-dielectric-glass
+                render-mx-conductor render-mx-generalized-schlick
                 render-mx-layer
                 render-mx-sheen
                 render-microfacet render-oren-nayar

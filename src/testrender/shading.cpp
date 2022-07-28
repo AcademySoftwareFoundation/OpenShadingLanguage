@@ -12,6 +12,24 @@ using namespace OSL;
 
 namespace {  // anonymous namespace
 
+
+// define a few handy utility functions
+Color3 clamp(const Color3& c, float min, float max)
+{
+    return Color3(
+        c.x < min ? min : max < c.x ? max : c.x,
+		c.y < min ? min : max < c.y ? max : c.y,
+		c.z < min ? min : max < c.z ? max : c.z);
+}
+
+bool is_black(const Color3& c)
+{
+    return c.x == 0 && c.y == 0 && c.z == 0;
+}
+
+
+
+
 // unique identifier for each closure supported by testrender
 enum ClosureIDs {
     EMISSION_ID = 1,
@@ -111,12 +129,12 @@ struct MxDielectricParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    Color3 evalR(float cos_theta) const {
-        return reflection_tint * fresnel_dielectric(cos_theta, ior);
+    Color3 evalR(float cos_theta, float eta) const {
+        return reflection_tint * fresnel_dielectric(cos_theta, eta);
     }
 
-    Color3 evalT(float cos_theta) const {
-        return transmission_tint * (1.0f - fresnel_dielectric(cos_theta, ior));
+    Color3 evalT(float cos_theta, float eta) const {
+        return transmission_tint * (1.0f - fresnel_dielectric(cos_theta, eta));
     }
 
     float get_ior() const {
@@ -131,11 +149,11 @@ struct MxConductorParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    Color3 evalR(float cos_theta) const {
+    Color3 evalR(float cos_theta, float eta) const {
         return fresnel_conductor(cos_theta, ior, extinction);
     }
 
-    Color3 evalT(float cos_theta) const {
+    Color3 evalT(float cos_theta, float eta) const {
         return Color3(0.0f);
     }
 
@@ -154,22 +172,34 @@ struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    Color3 evalR(float cos_theta) const {
+    Color3 evalR(float cos_theta, float eta) const {
+        if (eta < 1) {
+            // handle TIR if we are on the backside
+            const float cos_theta_t2 = 1.0f - (1.0f - cos_theta * cos_theta) * eta * eta;
+            const float cos_theta_t = cos_theta_t2 > 0 ? sqrtf(cos_theta_t2) : 0.0f;
+            cos_theta = cos_theta_t;
+        }
         return reflection_tint * fresnel_generalized_schlick(cos_theta, f0, f90, exponent);
     }
 
-    Color3 evalT(float cos_theta) const {
-        // NOTE: TIR is handled by the caller
-        return transmission_tint * fresnel_generalized_schlick(cos_theta, f0, f90, exponent);
+    Color3 evalT(float cos_theta, float eta) const {
+        if (eta < 1) {
+            // handle TIR if we are on the backside
+            const float cos_theta_t2 = 1.0f - (1.0f - cos_theta * cos_theta) * eta * eta;
+            const float cos_theta_t = cos_theta_t2 > 0 ? sqrtf(cos_theta_t2) : 0.0f;
+            cos_theta = cos_theta_t;
+        }
+        return transmission_tint * (Color3(1.0f) - fresnel_generalized_schlick(cos_theta, f0, f90, exponent));
     }
 
     float get_ior() const {
         // follow the same approach as the MaterialX glsl code
         // NOTE: this always returns a value > 1.0 so we rely on the caller
         //       to handle the inversion for glass
-        float avgF0 = (f0.x + f0.y + f0.z) * (1.0f / 3);
-        float sqrtF0 = sqrtf(avgF0);
-        return (1 + sqrtF0) / (1 - sqrtF0);
+        const Color3 R = clamp(f0, 0.0f, 0.999f);
+        const float avgR = (R.x + R.y + R.z) * (1.0f / 3);
+        const float sqrtR = sqrtf(avgR);
+        return (1 + sqrtR) / (1 - sqrtR);
     }
 };
 
@@ -948,7 +978,11 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
             return Color3(1.0f);
         // FIXME: this heuristic is not particularly good, and looses energy
         // compared to the reference solution
-        return MxMicrofacetParams::evalR(-MxMicrofacetParams::N.dot(sg.I));
+
+        float eta = MxMicrofacetParams::get_ior();
+        if (sg.backfacing)
+            eta = 1 / eta;
+        return MxMicrofacetParams::evalR(-MxMicrofacetParams::N.dot(sg.I), eta);
     }
 
     Color3 eval(const OSL::ShaderGlobals& sg, const OSL::Vec3& wi,
@@ -957,6 +991,10 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
         Vec3 wo         = -sg.I;
         const Vec3 wo_l = tf.tolocal(wo);
         const Vec3 wi_l = tf.tolocal(wi);
+
+        float eta = MxMicrofacetParams::get_ior();
+        if (sg.backfacing)
+            eta = 1 / eta;
 
         // handle reflection lobe
         if (wo_l.z > 0 && wi_l.z > 0)
@@ -968,11 +1006,61 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
             const float G2       = evalG2(Lambda_o, Lambda_i);
             const float G1       = evalG1(Lambda_o);
 
-            const Color3 Fr = MxMicrofacetParams::evalR(m.dot(wo_l));
+            const float cosHO = m.dot(wo_l);
+            const Color3 Fr = MxMicrofacetParams::evalR(cosHO, eta);
             pdf            = (G1 * D * 0.25f) / wo_l.z;
             float out      = G2 / G1;
+            if (EnableTransmissionLobe)
+            {
+                const Color3 Ft = MxMicrofacetParams::evalT(cosHO, eta);
+                const float weight_t = Ft.x + Ft.y + Ft.z;
+                const float weight_r = Fr.x + Fr.y + Fr.z;
+                const float probT = weight_t / (weight_t + weight_r + 1e-6f);
+                const float probR = 1.0f - probT;
+                out /= probR;
+                pdf *= probR;
+            }
             return Fr * out;
         }
+
+        // handle refraction lobe
+        if (EnableTransmissionLobe && wi_l.z < 0 && wo_l.z > 0.0f) {
+            // compute half-vector of the refraction (eq. 16)
+            Vec3 ht = -(eta * wi_l + wo_l);
+            if (eta < 1.0f)
+                ht = -ht;
+            Vec3 Ht = ht.normalize();
+            // compute fresnel term
+            const float cosHO = Ht.dot(wo_l);
+            const Color3 Ft = MxMicrofacetParams::evalR(cosHO, eta);
+            if (Ft.x + Ft.y + Ft.z > 0) {  // skip work in case of TIR
+                const float cosHI = Ht.dot(wi_l);
+                // eq. 33: first we calculate D(m) with m=Ht:
+                const float cosThetaM = Ht.z;
+                if (cosThetaM <= 0.0f)
+                    return Color3(0.0f);
+                const float Dt       = evalD(Ht);
+                const float Lambda_o = evalLambda(wo_l);
+                const float Lambda_i = evalLambda(wi_l);
+                const float G2       = evalG2(Lambda_o, Lambda_i);
+                const float G1       = evalG1(Lambda_o);
+
+                // probability
+                float invHt2 = 1 / ht.dot(ht);
+                pdf = (fabsf(cosHI * cosHO) * (eta * eta) * (G1 * Dt)
+                        * invHt2)
+                        / wo_l.z;
+                float out = G2 / G1;
+                // figure out lobe probabilities
+                const Color3 Fr = MxMicrofacetParams::evalR(cosHO, eta);
+                const float weight_t = Ft.x + Ft.y + Ft.z;
+                const float weight_r = Fr.x + Fr.y + Fr.z;
+                const float probT = weight_t / (weight_t + weight_r + 1e-6f);
+                pdf *= probT;
+                return Ft * out / probT;
+            }
+        }
+
         return Color3(pdf = 0);
     }
 
@@ -984,6 +1072,9 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
         const float cosNO = wo_l.z;
         if (!(cosNO > 0))
             return Color3(pdf = 0);
+        float eta = MxMicrofacetParams::get_ior();
+        if (sg.backfacing)
+            eta = 1 / eta;
         const Vec3 m      = sampleMicronormal(wo_l, rx, ry);
         const float cosMO = m.dot(wo_l);
         {
@@ -996,13 +1087,54 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
             const float G2 = evalG2(Lambda_o, Lambda_i);
             const float G1 = evalG1(Lambda_o);
 
-            const Color3 Fr = MxMicrofacetParams::evalR(cosMO);
+            const Color3 Fr = MxMicrofacetParams::evalR(cosMO, eta);
 
             wi = tf.toworld(wi_l);
 
             pdf       = (G1 * D * 0.25f) / cosNO;
             float out = G2 / G1;
-            return Color3(Fr * out);
+
+            if (EnableTransmissionLobe)
+            {
+                const Color3 Ft = MxMicrofacetParams::evalT(cosMO, eta);
+                const float weight_t = Ft.x + Ft.y + Ft.z;
+                const float weight_r = Fr.x + Fr.y + Fr.z;
+                const float probT = weight_t / (weight_t + weight_r + 1e-6f);
+                if (rz < probT)
+                {
+                    // switch to transmitted vector instead
+                    const Vec3 M         = tf.toworld(m);
+                    fresnel_refraction(sg.I, M, eta, wi);
+                    const Vec3 wi_l      = tf.tolocal(wi.val());
+                    const float cosHO    = m.dot(wo_l);
+                    const float cosHI    = m.dot(wi_l);
+                    const float D        = evalD(m);
+                    const float Lambda_o = evalLambda(wo_l);
+                    const float Lambda_i = evalLambda(wi_l);
+
+                    const float G2 = evalG2(Lambda_o, Lambda_i);
+                    const float G1 = evalG1(Lambda_o);
+
+                    const Vec3 ht      = -(eta * wi_l + wo_l);
+                    const float invHt2 = 1.0f / ht.dot(ht);
+
+                    pdf = (fabsf(cosHI * cosHO) * (eta * eta) * (G1 * D) * invHt2)
+                        / fabsf(wo_l.z);
+
+                    float out = G2 / G1;
+
+                    pdf *= probT;
+                    return Ft * out / probT;
+                }
+                else
+                {
+                    pdf *= probT;
+                    return Fr * out / (1.0f - probT);
+                }
+            }
+
+            //
+            return Fr * out;
         }
     }
 
@@ -1226,19 +1358,6 @@ struct MxSheen final : public BSDF, MxSheenParams {
 
 };
 
-
-Color3 clamp(const Color3& c, float min, float max)
-{
-    return Color3(c.x < min ? min : max < c.x ? max : c.x,
-		  c.y < min ? min : max < c.y ? max : c.y,
-		  c.z < min ? min : max < c.z ? max : c.z);
-}
-
-bool is_black(const Color3& c)
-{
-    return c.x == 0 && c.y == 0 && c.z == 0;
-}
-
 Color3
 evaluate_layer_opacity(const OSL::ShaderGlobals& sg, const ClosureColor* closure)
 {
@@ -1409,8 +1528,10 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const Closu
             }
             case MX_DIELECTRIC_ID: {
                 const MxDielectricParams& params = *comp->as<MxDielectricParams>();
-                // TODO: handle transmissive case as well
-                ok = result.bsdf.add_bsdf<MxMicrofacet<MxDielectricParams, GGXDist, false>>(cw, params);
+                if (is_black(params.transmission_tint))
+                    ok = result.bsdf.add_bsdf<MxMicrofacet<MxDielectricParams, GGXDist, false>>(cw, params);
+                else
+                    ok = result.bsdf.add_bsdf<MxMicrofacet<MxDielectricParams, GGXDist, true>>(cw, params);
                 break;
             }
             case MX_CONDUCTOR_ID: {
@@ -1420,8 +1541,10 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const Closu
             };
             case MX_GENERALIZED_SCHLICK_ID: {
                 const MxGeneralizedSchlickParams& params = *comp->as<MxGeneralizedSchlickParams>();
-                // TODO: handle transmissive case as well
-                ok = result.bsdf.add_bsdf<MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>>(cw, params);
+                if (is_black(params.transmission_tint))
+                    ok = result.bsdf.add_bsdf<MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>>(cw, params);
+                else
+                    ok = result.bsdf.add_bsdf<MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true>>(cw, params);
                 break;
             };
             case MX_TRANSLUCENT_ID: {

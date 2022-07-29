@@ -13,6 +13,6 @@ test (output color Cout = 0)
     } else {
         Cout = color(1,0,0);
         if (err != "unknown")
-            printf ("err %0.03g %0.03g: %s\n", u, v, err);
+            printf ("err %s\n", err);
     }
 }

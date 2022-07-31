@@ -112,6 +112,7 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
           - desc: icc/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio-master avx2
+            nametag: linux-icc
             os: ubuntu-latest
             vfxyear: 2022
             vfxsuffix: -clang13
@@ -127,7 +128,8 @@ jobs:
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF -DEXTRA_CPP_ARGS=-fp-model=consistent"
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=7.1.3
                             USE_OPENVDB=0
-          - desc:  icx/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+          - desc: icx/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+            nametag: linux-icx
             os: ubuntu-latest
             vfxyear: 2022
             vfxsuffix: -clang13

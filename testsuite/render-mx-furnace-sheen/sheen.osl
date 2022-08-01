@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+sheen
+    [[ string description = "Sheen material" ]]
+(
+    color Cs = 1
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]],
+    float roughness = 0.5
+        [[  string description = "Roughness of the surface",
+            float UImin = 0, float UImax = 1 ]]
+  )
+{
+    Ci = sheen_bsdf (N, Cs, roughness);
+}

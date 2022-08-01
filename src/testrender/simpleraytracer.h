@@ -113,6 +113,7 @@ private:
     int aa                   = 1;
     int max_bounces          = 1000000;
     int rr_depth             = 5;
+    float show_albedo_scale  = 0.0f;
     std::vector<ShaderGroupRef> m_shaders;
 
     class ErrorHandler;  // subclass ErrorHandler for SimpleRaytracer

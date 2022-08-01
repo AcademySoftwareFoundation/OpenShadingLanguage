@@ -53,7 +53,6 @@ macro (add_one_testsuite testname testsrcdir)
     # from piling up together, allocate a few cores each.
     if (${testname} MATCHES "^render-")
         set_tests_properties (${testname} PROPERTIES LABELS render
-                              TIMEOUT 240
                               PROCESSORS 4 COST 10 TIMEOUT 240)
     endif ()
     # Some labeling for fun
@@ -374,5 +373,9 @@ macro (osl_add_all_tests)
         set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
     endif ()
     set_tests_properties (matrix-reg.regress.rsbitcode.opt PROPERTIES TIMEOUT 800)
+
+    if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
+        set_tests_properties (render-mx-dielectric-glass PROPERTIES TIMEOUT 600)
+    endif ()
 
 endmacro()

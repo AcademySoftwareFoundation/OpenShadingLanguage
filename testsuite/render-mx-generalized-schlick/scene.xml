@@ -1,0 +1,34 @@
+<World>
+   <Camera eye="0, 0, 10" look_at="0,0,0" fov="30" />
+
+   <ShaderGroup>
+      shader envmap layer1;
+   </ShaderGroup>
+   <Background resolution="1024" />
+
+   <ShaderGroup>
+      param color F0  0.2 0.4 0.6;
+      param color F90 0.9 0.7 0.3;
+      float roughness 0.2;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="-1.1,0,0" radius="0.5" />
+
+   <ShaderGroup>
+      param color F0  0.0 1.0 0.2;
+      param color F90 1.0 0.2 0.1;
+      param float exponent 3;
+      float roughness 0.5;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="0.0,0,0" radius="0.5" />
+
+   <ShaderGroup>
+      param color F0  1.0 0.5 0.25;
+      param color F90 0.25 0.5 1.0;
+      float roughness 1.0;
+      float exponent 1.0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="1.1,0,0" radius="0.5" />
+</World>

@@ -64,13 +64,49 @@ fresnel_refraction(const Dual2<Vec3>& I, const Vec3& N, float eta,
     return 0;
 }
 
+Color3 fresnel_conductor(float cos_theta, Color3 n, Color3 k)
+{
+    cos_theta = OIIO::clamp(cos_theta, 0.0f, 1.0f);
+    float cosTheta2 = cos_theta * cos_theta;
+    float sinTheta2 = 1.0f - cosTheta2;
+    Color3 n2 = n * n;
+    Color3 k2 = k * k;
+    Color3 t0 = n2 - k2 - Color3(sinTheta2);
+    Color3 a2plusb2(
+        sqrtf(t0.x * t0.x + 4.0f * n2.x * k2.x),
+        sqrtf(t0.y * t0.y + 4.0f * n2.y * k2.y),
+        sqrtf(t0.z * t0.z + 4.0f * n2.z * k2.z)
+    );
+    Color3 t1 = a2plusb2 + Color3(cosTheta2);
+    Color3 a(
+        sqrtf(std::max(0.5f * (a2plusb2.x + t0.x), 0.0f)),
+        sqrtf(std::max(0.5f * (a2plusb2.y + t0.y), 0.0f)),
+        sqrtf(std::max(0.5f * (a2plusb2.z + t0.z), 0.0f))
+    );
+    Color3 t2 = (2.0f * cos_theta) * a;
+    Color3 rs = (t1 - t2) / (t1 + t2);
+
+    Color3 t3 = cosTheta2 * a2plusb2 + Color3(sinTheta2 * sinTheta2);
+    Color3 t4 = t2 * sinTheta2;
+    Color3 rp = rs * (t3 - t4) / (t3 + t4);
+
+    return 0.5f * (rp + rs);
+}
+
 inline float fresnel_schlick(float cos_theta, float F0, float F90)
 {
-    float x = Imath::clamp(1.0f - cos_theta, 0.0f, 1.0f);
+    float x = OIIO::clamp(1.0f - cos_theta, 0.0f, 1.0f);
     float x2 = x * x;
     float x4 = x2 * x2;
     float x5 = x4 * x;
     return Imath::lerp(F0, F90, x5);
+}
+
+inline Color3 fresnel_generalized_schlick(float cos_theta, Color3 F0, Color3 F90, float exponent)
+{
+    float x = OIIO::clamp(1.0f - cos_theta, 0.0f, 1.0f);
+    float m = OIIO::fast_pow_pos(x, exponent);
+    return Imath::lerp(F0, F90, m);
 }
 
 OSL_NAMESPACE_EXIT

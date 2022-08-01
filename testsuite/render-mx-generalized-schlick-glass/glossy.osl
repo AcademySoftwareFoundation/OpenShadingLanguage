@@ -28,5 +28,6 @@ glossy
     float alpha_x = alpha * (1.0 - anisotropy);
     float alpha_y = alpha;
     vector U = normalize(cross(N, dPdv));
-    Ci = dielectric_bsdf(N, U, Cr, Ct, alpha_x, alpha_y, ior, "ggx") + medium_vdf(color(0), 1.0, color(0), 0.0, ior, 0);
+    float f0 = pow((ior - 1) / (ior + 1), 2);
+    Ci = generalized_schlick_bsdf(N, U, Cr, Ct, alpha_x, alpha_y, color(f0), color(1.0), 5.0, "ggx") + medium_vdf(color(0), 1.0, color(0), 0.0, ior, 0);
 }

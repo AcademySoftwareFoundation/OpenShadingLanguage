@@ -52,6 +52,7 @@ static std::string extraoptions;
 static std::string texoptions;
 static int xres = 640, yres = 480;
 static int aa = 1, max_bounces = 1000000, rr_depth = 5;
+static float show_albedo_scale = 0.0f;
 static int num_threads = 0;
 static int iters       = 1;
 static std::string scenefile, imagefile;
@@ -141,6 +142,8 @@ getargs(int argc, const char* argv[])
       .hidden();
     ap.arg("-aa %d:N", &aa)
       .help("Trace NxN rays per pixel");
+    ap.arg("-albedo %f:SCALE", &show_albedo_scale)
+      .help("Visualize the albedo of each pixel instead of path tracing");
     ap.arg("--iters %d:N", &iters)
       .help("Number of iterations");
     ap.arg("-O0", &O0)
@@ -225,6 +228,7 @@ main(int argc, const char* argv[])
         rend->attribute("max_bounces", max_bounces);
         rend->attribute("rr_depth", rr_depth);
         rend->attribute("aa", aa);
+        rend->attribute("show_albedo_scale", show_albedo_scale);
         OIIO::attribute("threads", num_threads);
 
         // Create a new shading system.  We pass it the RendererServices

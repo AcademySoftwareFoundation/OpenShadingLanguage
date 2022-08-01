@@ -34,16 +34,25 @@ struct CompositeBSDF {
     void prepare(const ShaderGlobals& sg, const Color3& path_weight,
                  bool absorb)
     {
-        float w     = 1 / (path_weight.x + path_weight.y + path_weight.z);
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
-            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(sg)) * w;
+            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(sg)) / (path_weight.x + path_weight.y + path_weight.z);
+            assert(pdfs[i] >= 0);
+            assert(pdfs[i] <= 1);
             total += pdfs[i];
         }
         if ((!absorb && total > 0) || total > 1) {
             for (int i = 0; i < num_bsdfs; i++)
                 pdfs[i] /= total;
         }
+    }
+
+    Color3 get_albedo(const ShaderGlobals& sg) const
+    {
+        Color3 result(0, 0, 0);
+        for (int i = 0; i < num_bsdfs; i++)
+            result += weights[i] * bsdfs[i]->get_albedo(sg);
+        return result;
     }
 
     Color3 eval(const ShaderGlobals& sg, const Vec3& wi, float& pdf) const

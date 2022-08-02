@@ -796,32 +796,34 @@ SimpleRaytracer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
 
 void
 SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
-                                  const Dual2<float>& t, int id, bool flip)
+                                  const Dual2<float>& t, int id)
 {
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
     Dual2<Vec3> P = r.point(t);
+    // We are missing the projection onto the surface here
     sg.P          = P.val();
     sg.dPdx       = P.dx();
     sg.dPdy       = P.dy();
     Dual2<Vec3> N = scene.normal(P, id);
-    sg.Ng = sg.N   = N.val();
-    Dual2<Vec2> uv = scene.uv(P, N, sg.dPdu, sg.dPdv, id);
-    sg.u           = uv.val().x;
-    sg.dudx        = uv.dx().x;
-    sg.dudy        = uv.dy().x;
-    sg.v           = uv.val().y;
-    sg.dvdx        = uv.dx().y;
-    sg.dvdy        = uv.dy().y;
-    sg.surfacearea = scene.surfacearea(id);
-    sg.I           = r.direction.val();
-    sg.dIdx        = r.direction.dx();
-    sg.dIdy        = r.direction.dy();
-    sg.backfacing  = sg.N.dot(sg.I) > 0;
+    sg.Ng = sg.N          = N.val();
+    Dual2<Vec2> uv        = scene.uv(P, N, sg.dPdu, sg.dPdv, id);
+    sg.u                  = uv.val().x;
+    sg.dudx               = uv.dx().x;
+    sg.dudy               = uv.dy().x;
+    sg.v                  = uv.val().y;
+    sg.dvdx               = uv.dx().y;
+    sg.dvdy               = uv.dy().y;
+    sg.surfacearea        = scene.surfacearea(id);
+    Dual2<Vec3> direction = r.dual_direction();
+    sg.I                  = direction.val();
+    sg.dIdx               = direction.dx();
+    sg.dIdy               = direction.dy();
+    sg.backfacing         = sg.N.dot(sg.I) > 0;
     if (sg.backfacing) {
         sg.N  = -sg.N;
         sg.Ng = -sg.Ng;
     }
-    sg.flipHandedness = flip;
+    sg.flipHandedness = sg.dPdx.cross(sg.dPdy).dot(sg.N) < 0;
 
     // In our SimpleRaytracer, the "renderstate" itself just a pointer to
     // the ShaderGlobals.
@@ -850,7 +852,6 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
     int prev_id    = -1;
     float bsdf_pdf = std::numeric_limits<
         float>::infinity();  // camera ray has only one possible direction
-    bool flip = false;
     for (int b = 0; b <= max_bounces; b++) {
         // trace the ray against the scene
         Dual2<float> t;
@@ -860,7 +861,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             if (backgroundShaderID >= 0) {
                 if (backgroundResolution > 0) {
                     float bg_pdf = 0;
-                    Vec3 bg      = background.eval(r.direction.val(), bg_pdf);
+                    Vec3 bg      = background.eval(r.direction, bg_pdf);
                     path_radiance
                         += path_weight * bg
                            * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bsdf_pdf,
@@ -876,8 +877,9 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 
         // construct a shader globals for the hit point
         ShaderGlobals sg;
-        globals_from_hit(sg, r, t, id, flip);
-        int shaderID = scene.shaderid(id);
+        globals_from_hit(sg, r, t, id);
+        const float radius = r.radius + r.spread * t.val();
+        int shaderID       = scene.shaderid(id);
         if (shaderID < 0 || !m_shaders[shaderID])
             break;  // no shader attached? done
 
@@ -891,7 +893,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         float k = 1;
         if (scene.islight(id)) {
             // figure out the probability of reaching this point
-            float light_pdf = scene.shapepdf(id, r.origin.val(), sg.P);
+            float light_pdf = scene.shapepdf(id, r.origin, sg.P);
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
@@ -901,14 +903,14 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             break;
 
         // build internal pdf for sampling between bsdf closures
-        result.bsdf.prepare(sg, path_weight, b >= rr_depth);
+        result.bsdf.prepare(-sg.I, path_weight, b >= rr_depth);
 
         if (show_albedo_scale > 0)
         {
             // Instead of path tracing, just visualize the albedo
             // of the bsdf. This can be used to validate the accuracy of
             // the get_albedo method for a particular bsdf.
-            path_radiance += path_weight * result.bsdf.get_albedo(sg) * show_albedo_scale;
+            path_radiance += path_weight * result.bsdf.get_albedo(-sg.I) * show_albedo_scale;
             break;
         }
 
@@ -921,15 +923,15 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         // trace one ray to the background
         if (backgroundResolution > 0) {
             Dual2<Vec3> bg_dir;
-            float bg_pdf = 0, bsdf_pdf = 0;
-            Vec3 bg            = background.sample(xi, yi, bg_dir, bg_pdf);
-            Color3 bsdf_weight = result.bsdf.eval(sg, bg_dir.val(), bsdf_pdf);
-            Color3 contrib
-                = path_weight * bsdf_weight * bg
-                  * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf, bsdf_pdf);
+            float bg_pdf   = 0;
+            Vec3 bg        = background.sample(xi, yi, bg_dir, bg_pdf);
+            BSDF::Sample b = result.bsdf.eval(-sg.I, bg_dir.val());
+            Color3 contrib = path_weight * b.weight * bg
+                             * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
+                                                                        b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
                 int shadow_id  = id;
-                Ray shadow_ray = Ray(sg.P, bg_dir);
+                Ray shadow_ray = Ray(sg.P, bg_dir.val(), radius, 0);
                 Dual2<float> shadow_dist;
                 if (!scene.intersect(shadow_ray, shadow_dist,
                                      shadow_id))  // ray reached the background?
@@ -948,14 +950,13 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 continue;  // no shader attached to this light
             // sample a random direction towards the object
             float light_pdf;
-            Vec3 ldir          = scene.sample(lid, sg.P, xi, yi, light_pdf);
-            float bsdf_pdf     = 0;
-            Color3 bsdf_weight = result.bsdf.eval(sg, ldir, bsdf_pdf);
-            Color3 contrib     = path_weight * bsdf_weight
+            Vec3 ldir      = scene.sample(lid, sg.P, xi, yi, light_pdf);
+            BSDF::Sample b = result.bsdf.eval(-sg.I, ldir);
+            Color3 contrib = path_weight * b.weight
                              * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
-                                                                      bsdf_pdf);
+                                                                      b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
-                Ray shadow_ray = Ray(sg.P, ldir);
+                Ray shadow_ray = Ray(sg.P, ldir, radius, 0);
                 // trace a shadow ray and see if we actually hit the target
                 // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
                 int shadow_id = id;  // ignore self hit
@@ -964,8 +965,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                     && shadow_id == lid) {
                     // setup a shader global for the point on the light
                     ShaderGlobals light_sg;
-                    globals_from_hit(light_sg, shadow_ray, shadow_dist, lid,
-                                     false);
+                    globals_from_hit(light_sg, shadow_ray, shadow_dist, lid);
                     // execute the light shader (for emissive closures only)
                     shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
                     ShadingResult light_result;
@@ -977,14 +977,18 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         }
 
         // trace indirect ray and continue
-        path_weight *= result.bsdf.sample(sg, xi, yi, zi, r.direction,
-                                          bsdf_pdf);
+        BSDF::Sample p = result.bsdf.sample(-sg.I, xi, yi, zi);
+        path_weight *= p.weight;
+        bsdf_pdf    = p.pdf;
+        r.direction = p.wi;
+        r.radius    = radius;
+        // Just simply use roughness as spread slope
+        r.spread = std::max(r.spread, p.roughness);
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs
         prev_id  = id;
-        r.origin = Dual2<Vec3>(sg.P, sg.dPdx, sg.dPdy);
-        flip ^= sg.Ng.dot(r.direction.val()) > 0;
+        r.origin = sg.P;
     }
     return path_radiance;
 }

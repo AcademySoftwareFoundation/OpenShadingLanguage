@@ -40,19 +40,6 @@ OSL_NAMESPACE_ENTER
 class OptixRenderer;  // FIXME -- should not be here
 
 
-// Note: not used in OptiX mode
-struct Ray {
-    Ray(const Dual2<Vec3>& o, const Dual2<Vec3>& d) : origin(o), direction(d) {}
-
-    Vec3 point(float t) const { return origin.val() + direction.val() * t; }
-
-    Dual2<Vec3> point(Dual2<float> t) const { return origin + direction * t; }
-
-    Dual2<Vec3> origin, direction;
-};
-
-
-
 // build two vectors orthogonal to the first, assumes n is normalized
 inline void
 ortho(const Vec3& n, Vec3& x, Vec3& y)
@@ -61,6 +48,40 @@ ortho(const Vec3& n, Vec3& x, Vec3& y)
             .normalize();
     y = n.cross(x);
 }
+
+
+// Note: not used in OptiX mode
+struct Ray {
+    Ray(const Vec3& o, const Vec3& d, float radius, float spread)
+        : origin(o), direction(d), radius(radius), spread(spread)
+    {
+    }
+
+    Vec3 point(float t) const { return origin + direction * t; }
+    Dual2<Vec3> dual_direction() const
+    {
+        Dual2<Vec3> v;
+        v.val() = direction;
+        ortho(direction, v.dx(), v.dy());
+        v.dx() *= spread;
+        v.dy() *= spread;
+        return v;
+    }
+
+    Dual2<Vec3> point(Dual2<float> t) const
+    {
+        const float r = radius + spread * t.val();
+        Dual2<Vec3> p;
+        p.val() = point(t.val());
+        ortho(direction, p.dx(), p.dy());
+        p.dx() *= r;
+        p.dy() *= r;
+        return p;
+    }
+
+    Vec3 origin, direction;
+    float radius, spread;
+};
 
 
 
@@ -99,9 +120,12 @@ struct Camera {
     // Get a ray for the given screen coordinates.
     Ray get(float x, float y) const
     {
-        Dual2<Vec3> v = cx * (Dual2<float>(x, 1, 0) * invw - 0.5f)
-                        + cy * (0.5f - Dual2<float>(y, 0, -1) * invh) + dir;
-        return Ray(eye, normalize(v));
+        const Vec3 v = (cx * (x * invw - 0.5f) + cy * (0.5f - y * invh) + dir)
+                           .normalize();
+        const float cos_a = dir.dot(v);
+        const float spread
+            = sqrtf(invw * invh * cx.length() * cy.length() * cos_a) * cos_a;
+        return Ray(eye, v, 0, spread);
     }
 
     // Specified by user:

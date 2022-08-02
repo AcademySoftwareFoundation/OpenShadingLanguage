@@ -81,9 +81,10 @@ struct Sampling {
         pdf = cos_theta * float(M_1_PI);
     }
 
-    static void sample_uniform_hemisphere(const Vec3& N, float rndx, float rndy, Vec3& out, float& pdf)
+    static void sample_uniform_hemisphere(const Vec3& N, float rndx, float rndy,
+                                          Vec3& out, float& pdf)
     {
-        float phi = float(2 * M_PI) * rndx;
+        float phi       = float(2 * M_PI) * rndx;
         float cos_theta = rndy;
         float sin_theta = sqrtf(1 - cos_theta * cos_theta);
         TangentFrame f(N);
@@ -182,7 +183,8 @@ struct MIS {
 //    https://jcgt.org/published/0009/04/01/
 struct Sampler {
     Sampler(int px, int py, int si)
-        : seed(((px & 2047) << 22) | ((py & 2047) << 11)), index(reversebits(si))
+        : seed(((px & 2047) << 22) | ((py & 2047) << 11))
+        , index(reversebits(si))
     {
         assert(si < (1 << 24));
     }
@@ -197,21 +199,25 @@ struct Sampler {
             0x060671u, 0x0909a3u, 0x171616u, 0x3a3939u, 0x717777u, 0xa3aaaau
         };
         seed += 4;  // advance depth for next call
-        uint32_t scrambled_index = owen_scramble(index, hash(seed - 4)) & 0xFFFFFF;
-        uint32_t result_x = scrambled_index; // already reversed
+        uint32_t scrambled_index = owen_scramble(index, hash(seed - 4))
+                                   & 0xFFFFFF;
+        uint32_t result_x = scrambled_index;  // already reversed
         uint32_t result_y = 0;
         uint32_t result_z = 0;
-        uint32_t ymatrix = 1;
+        uint32_t ymatrix  = 1;
         for (int c = 0; c < 24; c++) {
             uint32_t bit = (scrambled_index >> c) & 1;
             result_y ^= bit * ymatrix;
             result_z ^= bit * zmatrix[c];
-            ymatrix ^= ymatrix << 1; // generate procedurally instead of storing this
+            ymatrix ^= ymatrix
+                       << 1;  // generate procedurally instead of storing this
         }
         // scramble results and scale by 2^-24 to guarantee equally spaced values in [0,1)
-        return { (owen_scramble(result_x, hash(seed - 3)) >> 8) * 5.96046448e-8f,
-                 (owen_scramble(result_y, hash(seed - 2)) >> 8) * 5.96046448e-8f,
-                 (owen_scramble(result_z, hash(seed - 1)) >> 8) * 5.96046448e-8f };
+        return {
+            (owen_scramble(result_x, hash(seed - 3)) >> 8) * 5.96046448e-8f,
+            (owen_scramble(result_y, hash(seed - 2)) >> 8) * 5.96046448e-8f,
+            (owen_scramble(result_z, hash(seed - 1)) >> 8) * 5.96046448e-8f
+        };
     }
 
 private:
@@ -248,7 +254,7 @@ private:
         // assumes reversed input
         p ^= p * 0x3d20adea;
         p += s;
-        p *= (s>> 16) | 1;
+        p *= (s >> 16) | 1;
         p ^= p * 0x05526c56;
         p ^= p * 0x53a22864;
         return reversebits(p);

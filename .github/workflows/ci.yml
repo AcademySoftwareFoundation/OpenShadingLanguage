@@ -286,7 +286,7 @@ jobs:
                             OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master
           - desc: clang14/C++17 llvm14 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512
-            nametag: linux-latest-releases
+            nametag: linux-latest-releases-clang
             os: ubuntu-20.04
             cxx_compiler: clang++
             cc_compiler: clang

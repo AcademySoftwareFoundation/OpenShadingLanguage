@@ -1,0 +1,69 @@
+<World>
+   <Camera eye="0, 0, 10" look_at="0,0,0" fov="30" />
+
+   <ShaderGroup>
+      shader envmap layer1;
+   </ShaderGroup>
+   <Background resolution="1024" />
+
+   <ShaderGroup>
+      param float scale_s 20;
+      param float scale_t 20;
+      param color Ca 0.1 0.1 0.1;
+      param color Cb 0.5 0.5 0.5;
+      shader checkerboard tex;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Quad corner="-20,-20,-10" edge_x="40,0,0" edge_y="0,40,0" /> <!-- Back -->
+
+   <ShaderGroup>
+      param color Cr 0.8 0.4 0.2;
+      float roughness 0.2;
+      float anisotropy 0.0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="-1.1,-0.6,0" radius="0.5" />
+
+   <ShaderGroup>
+      float roughness 0.3;
+      float anisotropy 0.5;
+      float ior 1.8;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="0.0,-0.6,0" radius="0.5" />
+
+   <ShaderGroup>
+      float roughness 0.5;
+      float anisotropy 0.25;
+      float ior 3.0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="1.1,-0.6,0" radius="0.5" />
+
+   <ShaderGroup>
+      param color Cr 0.8 0.4 0.2;
+      float roughness 0.2;
+      float ior 1.01;
+      float anisotropy 0.0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="-1.1,0.6,0" radius="0.5" />
+
+   <ShaderGroup>
+      float roughness 0.3;
+      float anisotropy 0.5;
+      float ior 1.1;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="0.0,0.6,0" radius="0.5" />
+
+   <ShaderGroup>
+      float roughness 0.5;
+      float anisotropy 0.25;
+      float ior 1.2;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="1.1,0.6,0" radius="0.5" />
+
+</World>

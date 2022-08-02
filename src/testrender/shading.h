@@ -96,8 +96,8 @@ struct CompositeBSDF {
         return Color3(0, 0, 0);
     }
 
-    template<typename BSDF_Type, typename BSDF_Params>
-    bool add_bsdf(const Color3& w, const BSDF_Params& params)
+    template<typename BSDF_Type, typename... BSDF_Args>
+    bool add_bsdf(const Color3& w, BSDF_Args&&... args)
     {
         // make sure we have enough space
         if (num_bsdfs >= MaxEntries)
@@ -105,7 +105,7 @@ struct CompositeBSDF {
         if (num_bytes + sizeof(BSDF_Type) > MaxSize)
             return false;
         weights[num_bsdfs] = w;
-        bsdfs[num_bsdfs]   = new (pool + num_bytes) BSDF_Type(params);
+        bsdfs[num_bsdfs]   = new (pool + num_bytes) BSDF_Type(std::forward<BSDF_Args>(args)...);
         num_bsdfs++;
         num_bytes += sizeof(BSDF_Type);
         return true;
@@ -127,10 +127,14 @@ private:
 };
 
 struct ShadingResult {
-    Color3 Le;
-    CompositeBSDF bsdf;
-
-    ShadingResult() : Le(0, 0, 0), bsdf() {}
+    Color3 Le = Color3(0.0f);
+    CompositeBSDF bsdf = {};
+    // medium data
+    Color3 sigma_s = Color3(0.0f);
+    Color3 sigma_t = Color3(0.0f);
+    float medium_g = 0.0f; // volumetric anisotropy
+    float refraction_ior = 1.0f;
+    int priority = 0;
 };
 
 void

@@ -165,7 +165,7 @@ private:
 
     // CPU renderer helpers
     void globals_from_hit(ShaderGlobals& sg, const Ray& r,
-                          const Dual2<float>& t, int id, bool flip);
+                          const Dual2<float>& t, int id);
     Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx);
     Color3 subpixel_radiance(float x, float y, Sampler& sampler,
                              ShadingContext* ctx);

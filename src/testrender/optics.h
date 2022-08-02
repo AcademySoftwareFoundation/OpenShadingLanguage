@@ -31,19 +31,18 @@ fresnel_dielectric(float cosi, float eta)
 }
 
 inline float
-fresnel_refraction(const Dual2<Vec3>& I, const Vec3& N, float eta,
-                   Dual2<Vec3>& T)
+fresnel_refraction(const Vec3& I, const Vec3& N, float eta, Vec3& T)
 {
     // compute refracted direction and fresnel term
     // return value will be 0 if TIR occurs
     // NOTE: I is the incoming ray direction (points toward the surface, normalized)
     //       N is the surface normal (points toward the incoming ray origin, normalized)
     //       T is the outgoing refracted direction (points away from the surface)
-    Dual2<float> cosi = -dot(I, N);
+    float cosi = -dot(I, N);
     // check which side of the surface we are on
     Vec3 Nn;
     float neta;
-    if (cosi.val() > 0) {
+    if (cosi > 0) {
         // we are on the outside of the surface, going in
         neta = 1 / eta;
         Nn   = N;
@@ -53,12 +52,12 @@ fresnel_refraction(const Dual2<Vec3>& I, const Vec3& N, float eta,
         neta = eta;
         Nn   = -N;
     }
-    Dual2<float> arg = 1.0f - (neta * neta * (1.0f - cosi * cosi));
-    if (arg.val() >= 0) {
-        Dual2<float> dnp = sqrt(arg);
-        Dual2<float> nK  = (neta * cosi) - dnp;
-        T                = I * neta + Nn * nK;
-        return 1 - fresnel_dielectric(cosi.val(), eta);
+    float arg = 1.0f - (neta * neta * (1.0f - cosi * cosi));
+    if (arg >= 0) {
+        float dnp = sqrtf(arg);
+        float nK  = (neta * cosi) - dnp;
+        T         = I * neta + Nn * nK;
+        return 1 - fresnel_dielectric(cosi, eta);
     }
     T = make_Vec3(0, 0, 0);
     return 0;
@@ -93,9 +92,10 @@ Color3 fresnel_conductor(float cos_theta, Color3 n, Color3 k)
     return 0.5f * (rp + rs);
 }
 
-inline float fresnel_schlick(float cos_theta, float F0, float F90)
+inline float
+fresnel_schlick(float cos_theta, float F0, float F90)
 {
-    float x = OIIO::clamp(1.0f - cos_theta, 0.0f, 1.0f);
+    float x  = Imath::clamp(1.0f - cos_theta, 0.0f, 1.0f);
     float x2 = x * x;
     float x4 = x2 * x2;
     float x5 = x4 * x;

@@ -17,12 +17,26 @@ OSL_NAMESPACE_ENTER
 /// Individual BSDF (diffuse, phong, refraction, etc ...)
 /// Actual implementations of this class are private
 struct BSDF {
+    struct Sample {
+        Sample() : wi(0.0f), weight(0.0f), pdf(0.0f), roughness(0.0f) {}
+        Sample(const Sample& o)
+            : wi(o.wi), weight(o.weight), pdf(o.pdf), roughness(o.roughness)
+        {
+        }
+        Sample(Vec3 wi, Color3 w, float pdf, float r)
+            : wi(wi), weight(w), pdf(pdf), roughness(r)
+        {
+        }
+        Vec3 wi;
+        Color3 weight;
+        float pdf;
+        float roughness;
+    };
     BSDF() {}
-    virtual Color3 get_albedo(const ShaderGlobals& /*sg*/) const { return Color3(1); }
-    virtual Color3 eval(const ShaderGlobals& sg, const Vec3& wi,
-                       float& pdf) const                    = 0;
-    virtual Color3 sample(const ShaderGlobals& sg, float rx, float ry, float rz,
-                         Dual2<Vec3>& wi, float& pdf) const = 0;
+    virtual Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
+    virtual Sample eval(const Vec3& wo, const Vec3& wi) const = 0;
+    virtual Sample sample(const Vec3& wo, float rx, float ry,
+                          float rz) const                     = 0;
 };
 
 /// Represents a weighted sum of BSDFS
@@ -31,12 +45,11 @@ struct BSDF {
 struct CompositeBSDF {
     CompositeBSDF() : num_bsdfs(0), num_bytes(0) {}
 
-    void prepare(const ShaderGlobals& sg, const Color3& path_weight,
-                 bool absorb)
+    void prepare(const Vec3& wo, const Color3& path_weight, bool absorb)
     {
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
-            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(sg)) / (path_weight.x + path_weight.y + path_weight.z);
+            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(wo)) / (path_weight.x + path_weight.y + path_weight.z);
             assert(pdfs[i] >= 0);
             assert(pdfs[i] <= 1);
             total += pdfs[i];
@@ -47,53 +60,52 @@ struct CompositeBSDF {
         }
     }
 
-    Color3 get_albedo(const ShaderGlobals& sg) const
+    Color3 get_albedo(const Vec3& wo) const
     {
         Color3 result(0, 0, 0);
         for (int i = 0; i < num_bsdfs; i++)
-            result += weights[i] * bsdfs[i]->get_albedo(sg);
+            result += weights[i] * bsdfs[i]->get_albedo(wo);
         return result;
     }
 
-    Color3 eval(const ShaderGlobals& sg, const Vec3& wi, float& pdf) const
+    BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
     {
-        Color3 result(0, 0, 0);
-        pdf = 0;
+        BSDF::Sample s = {};
         for (int i = 0; i < num_bsdfs; i++) {
-            float bsdf_pdf     = 0;
-            Color3 bsdf_weight = weights[i] * bsdfs[i]->eval(sg, wi, bsdf_pdf);
-            MIS::update_eval(&result, &pdf, bsdf_weight, bsdf_pdf, pdfs[i]);
+            BSDF::Sample b = bsdfs[i]->eval(wo, wi);
+            b.weight *= weights[i];
+            MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf, pdfs[i]);
+            s.roughness += b.roughness * pdfs[i];
         }
-        return result;
+        return s;
     }
 
-    Color3 sample(const ShaderGlobals& sg, float rx, float ry, float rz,
-                  Dual2<Vec3>& wi, float& pdf) const
+    BSDF::Sample sample(const Vec3& wo, float rx, float ry, float rz) const
     {
         float accum = 0;
         for (int i = 0; i < num_bsdfs; i++) {
             if (rx < (pdfs[i] + accum)) {
                 rx = (rx - accum) / pdfs[i];
                 rx = std::min(rx, 0.99999994f);  // keep result in [0,1)
-                Color3 result = weights[i]
-                                * (bsdfs[i]->sample(sg, rx, ry, rz, wi, pdf)
-                                   / pdfs[i]);
-                pdf *= pdfs[i];
+                BSDF::Sample s = bsdfs[i]->sample(wo, rx, ry, rz);
+                s.weight *= weights[i] * (1 / pdfs[i]);
+                s.pdf *= pdfs[i];
+                if (s.pdf == 0.0f)
+                    return {};
                 // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
                 for (int j = 0; j < num_bsdfs; j++) {
-                    if (i == j)
-                        continue;
-                    float bsdf_pdf = 0;
-                    Color3 bsdf_weight
-                        = weights[j] * bsdfs[j]->eval(sg, wi.val(), bsdf_pdf);
-                    MIS::update_eval(&result, &pdf, bsdf_weight, bsdf_pdf,
-                                     pdfs[j]);
+                    if (i != j) {
+                        BSDF::Sample b = bsdfs[j]->eval(wo, s.wi);
+                        b.weight *= weights[j];
+                        MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf,
+                                         pdfs[j]);
+                    }
                 }
-                return result;
+                return s;
             }
             accum += pdfs[i];
         }
-        return Color3(0, 0, 0);
+        return {};
     }
 
     template<typename BSDF_Type, typename... BSDF_Args>
@@ -140,7 +152,8 @@ struct ShadingResult {
 void
 register_closures(ShadingSystem* shadingsys);
 void
-process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result, const ClosureColor* Ci, bool light_only);
+process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
+                const ClosureColor* Ci, bool light_only);
 Vec3
 process_background_closure(const ClosureColor* Ci);
 

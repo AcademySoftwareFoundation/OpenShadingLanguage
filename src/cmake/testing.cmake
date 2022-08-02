@@ -123,6 +123,9 @@ macro ( TESTSUITE )
             add_one_testsuite ("${_testname}.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 )
         endif ()
+        if (_testname MATCHES "render-" AND ${CMAKE_BUILD_TYPE} STREQUAL Debug)
+            set_tests_properties (${_testname} PROPERTIES TIMEOUT 600)
+        endif ()
         # When building for OptiX support, also run it in OptiX mode
         # if there is an OPTIX marker file in the directory.
         # If an environment variable $TESTSUITE_OPTIX is nonzero, then
@@ -295,7 +298,8 @@ macro (osl_add_all_tests)
                 render-mx-furnace-sheen
                 render-mx-burley-diffuse
                 render-mx-dielectric render-mx-dielectric-glass
-                render-mx-conductor render-mx-generalized-schlick
+                render-mx-conductor
+                render-mx-generalized-schlick render-mx-generalized-schlick-glass
                 render-mx-layer
                 render-mx-sheen
                 render-microfacet render-oren-nayar
@@ -376,8 +380,4 @@ macro (osl_add_all_tests)
         set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
     endif ()
     set_tests_properties (matrix-reg.regress.rsbitcode.opt PROPERTIES TIMEOUT 800)
-
-    if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
-        set_tests_properties (render-mx-dielectric-glass PROPERTIES TIMEOUT 600)
-    endif ()
 endmacro()

@@ -378,6 +378,12 @@ macro (osl_add_all_tests)
     set_tests_properties (matrix-reg.regress.rsbitcode.opt PROPERTIES TIMEOUT 800)
 
     if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
-        set_tests_properties (render-mx-dielectric-glass PROPERTIES TIMEOUT 600)
+        # For unoptimized builds, some tests just run too slowly on the GHA
+        # runners and we need to increase the timeout.
+        set_tests_properties (render-mx-dielectric-glass
+                              render-mx-furnace-burley-diffuse
+                              render-mx-furnace-oren-nayar
+                              render-mx-furnace-sheen
+                              PROPERTIES TIMEOUT 600)
     endif ()
 endmacro()

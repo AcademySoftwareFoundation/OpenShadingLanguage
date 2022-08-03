@@ -278,9 +278,9 @@ public:
 
     public:
         TempScope(BatchedBackendLLVM& backend);
-        TempScope(const TempScope& other)  = delete;
-        TempScope(const TempScope&& other) = delete;
-        TempScope& operator=(const TempScope& other) = delete;
+        TempScope(const TempScope& other)             = delete;
+        TempScope(const TempScope&& other)            = delete;
+        TempScope& operator=(const TempScope& other)  = delete;
         TempScope& operator=(const TempScope&& other) = delete;
         ~TempScope();
     };
@@ -533,7 +533,7 @@ public:
         ArgVector m_args;
 
     public:
-        FuncSpec(const FuncSpec&) = delete;
+        FuncSpec(const FuncSpec&)            = delete;
         FuncSpec& operator=(const FuncSpec&) = delete;
 
         FuncSpec(const llvm::Twine& name)

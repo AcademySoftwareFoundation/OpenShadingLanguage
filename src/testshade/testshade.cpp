@@ -820,7 +820,8 @@ process_shader_setup_args(int argc, const char* argv[])
       .action([&](cspan<const char*> argv){ specify_expr(argv); });
 
     // clang-format on
-    if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
+    if (ap.parse(argc, argv) < 0
+        || (shadernames.empty() && groupspec.empty())) {
         std::cerr << "ERROR: No shader or group was specified.\n";
         std::cerr << ap.geterror() << std::endl;
         std::cerr

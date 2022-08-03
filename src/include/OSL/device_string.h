@@ -68,7 +68,10 @@ struct DeviceString {
     // In OptiX 7 we can't return the string's contents. Make this a compile
     // time error.
 #if !(defined(__CUDA_ARCH__) && OPTIX_VERSION >= 70000)
-    OSL_HOSTDEVICE const char* c_str() const { return m_chars; }
+    OSL_HOSTDEVICE const char* c_str() const
+    {
+        return m_chars;
+    }
 #endif
 
     OSL_HOSTDEVICE bool operator==(const DeviceString& other) const
@@ -93,7 +96,10 @@ struct DeviceString {
         return hash() != other;
     }
 
-    OSL_HOSTDEVICE operator size_t() const { return hash(); }
+    OSL_HOSTDEVICE operator size_t() const
+    {
+        return hash();
+    }
 
 #endif
 };

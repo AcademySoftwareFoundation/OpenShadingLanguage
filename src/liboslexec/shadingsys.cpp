@@ -646,8 +646,8 @@ ShadingSystem::query_closure(const char** name, int* id,
 
 
 
-static cspan< std::pair<ustring,SGBits> >
-sgbit_table ()
+static cspan<std::pair<ustring, SGBits>>
+sgbit_table()
 {
     // clang-format off
     static const std::pair<ustring,SGBits> table[] = {
@@ -666,7 +666,7 @@ sgbit_table ()
         { ustring("Ci"),      SGBits::Ci }
     };
     // clang-format on
-    return cspan<std::pair<ustring,SGBits>>(table);
+    return cspan<std::pair<ustring, SGBits>>(table);
 }
 
 
@@ -1168,7 +1168,8 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
 
 
 static void
-shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
+shading_system_setup_op_descriptors(
+    ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
     // clang-format off
 #if OSL_USE_BATCHED

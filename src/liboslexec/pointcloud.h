@@ -3,9 +3,9 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 #ifdef USE_PARTIO
-#include <memory>
-#include <unordered_map>
-#include <Partio.h>
+#    include <Partio.h>
+#    include <memory>
+#    include <unordered_map>
 #endif
 
 #include <OSL/oslconfig.h>
@@ -17,41 +17,54 @@ namespace pvt {
 
 class PointCloud {
 public:
-    PointCloud (ustring filename, Partio::ParticlesDataMutable *partio_cloud, bool write);
-    ~PointCloud ();
-    static PointCloud *get (ustring filename, bool write = false);
+    PointCloud(ustring filename, Partio::ParticlesDataMutable* partio_cloud,
+               bool write);
+    ~PointCloud();
+    static PointCloud* get(ustring filename, bool write = false);
 
-    typedef std::unordered_map<ustring, std::unique_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
+    typedef std::unordered_map<
+        ustring, std::unique_ptr<Partio::ParticleAttribute>, ustringHash>
+        AttributeMap;
 
-    const Partio::ParticlesData* read_access() const { OSL_DASSERT(!m_write); return m_partio_cloud; }
-    Partio::ParticlesDataMutable* write_access() const { OSL_DASSERT(m_write); return m_partio_cloud; }
+    const Partio::ParticlesData* read_access() const
+    {
+        OSL_DASSERT(!m_write);
+        return m_partio_cloud;
+    }
+    Partio::ParticlesDataMutable* write_access() const
+    {
+        OSL_DASSERT(m_write);
+        return m_partio_cloud;
+    }
 
     ustring m_filename;
+
 private:
     // hide just this field, because we want to control how it is accessed
-    Partio::ParticlesDataMutable *m_partio_cloud;
-public:
+    Partio::ParticlesDataMutable* m_partio_cloud;
 
+public:
     AttributeMap m_attributes;
     bool m_write;
     Partio::ParticleAttribute m_position_attribute;
     OIIO::spin_mutex m_mutex;
 };
 
-namespace { // anon
+namespace {  // anon
 
-static ustring u_position ("position");
+static ustring u_position("position");
 
 // some helper classes to make the sort easy
-typedef std::pair<float,int> SortedPointRecord;  // dist,index
+typedef std::pair<float, int> SortedPointRecord;  // dist,index
 struct SortedPointCompare {
-    bool operator() (const SortedPointRecord &a, const SortedPointRecord &b) {
+    bool operator()(const SortedPointRecord& a, const SortedPointRecord& b)
+    {
         return a.first < b.first;
     }
 };
 
 inline Partio::ParticleAttributeType
-PartioType (TypeDesc t)
+PartioType(TypeDesc t)
 {
     if (t == TypeDesc::TypeFloat)
         return Partio::FLOAT;
@@ -68,7 +81,7 @@ PartioType (TypeDesc t)
 
 // Helper: number of base values
 inline int
-basevals (TypeDesc t)
+basevals(TypeDesc t)
 {
     return t.numelements() * int(t.aggregate);
 }
@@ -76,16 +89,16 @@ basevals (TypeDesc t)
 
 
 bool
-compatiblePartioType (TypeDesc partio_type, TypeDesc osl_element_type)
+compatiblePartioType(TypeDesc partio_type, TypeDesc osl_element_type)
 {
     // Matching types (treating all VEC3 aggregates as equivalent)...
-    if (equivalent (partio_type, osl_element_type))
+    if (equivalent(partio_type, osl_element_type))
         return true;
 
     // Consider arrays and aggregates as interchangeable, as long as the
     // totals are the same.
-    if (partio_type.basetype == osl_element_type.basetype &&
-        basevals(partio_type) == basevals(osl_element_type))
+    if (partio_type.basetype == osl_element_type.basetype
+        && basevals(partio_type) == basevals(osl_element_type))
         return true;
 
     // The Partio file may contain an array size that OSL can't exactly
@@ -102,7 +115,7 @@ compatiblePartioType (TypeDesc partio_type, TypeDesc osl_element_type)
 
 
 TypeDesc
-TypeDescOfPartioType (const Partio::ParticleAttribute *ptype)
+TypeDescOfPartioType(const Partio::ParticleAttribute* ptype)
 {
     TypeDesc type;  // default to UNKNOWN
     switch (ptype->type) {
@@ -117,25 +130,19 @@ TypeDescOfPartioType (const Partio::ParticleAttribute *ptype)
             type.arraylen = ptype->count;
         break;
     case Partio::VECTOR:
-        type = TypeDesc (TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::NOSEMANTICS);
+        type = TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::NOSEMANTICS);
         if (ptype->count != 3)
             type = TypeDesc::UNKNOWN;  // Must be 3: punt
         break;
-    case Partio::INDEXEDSTR:
-        type = TypeDesc::STRING;
-        break;
-    default:
-        break;   // Any other future types -- return UNKNOWN
+    case Partio::INDEXEDSTR: type = TypeDesc::STRING; break;
+    default: break;  // Any other future types -- return UNKNOWN
     }
     return type;
 }
 
-}  // anon namespace
+}  // namespace
 
 #endif
 
-} // namespace pvt
+}  // namespace pvt
 OSL_NAMESPACE_EXIT
-
-
-

@@ -76,9 +76,18 @@ public:
                                               ShadingContext* shading_context);
 
     // Easy way to do Optix calls
-    optix::Context& optix_ctx() { return m_optix_ctx; }
-    optix::Context& context() { return m_optix_ctx; }
-    optix::Context& operator->() { return context(); }
+    optix::Context& optix_ctx()
+    {
+        return m_optix_ctx;
+    }
+    optix::Context& context()
+    {
+        return m_optix_ctx;
+    }
+    optix::Context& operator->()
+    {
+        return context();
+    }
 
 #if (OPTIX_VERSION >= 70000)
     void processPrintfBuffer(void* buffer_data, size_t buffer_size);

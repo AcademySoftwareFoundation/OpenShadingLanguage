@@ -914,7 +914,8 @@ public:
     llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem,
                      const std::string& llname = {});
     // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, int elem, const std::string& llname = {});
+    llvm::Value* GEP(llvm::Value* ptr, int elem,
+                     const std::string& llname = {});
 
     /// Generate a GEP (get element pointer) with two integer element
     /// offsets.  This is just a special (and common) case of GEP where

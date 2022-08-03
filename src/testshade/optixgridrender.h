@@ -83,13 +83,31 @@ public:
 
 #if (OPTIX_VERSION < 70000)
     // Easy way to do Optix calls
-    optix::Context& optix_ctx() { return m_optix_ctx; }
-    optix::Context& context() { return m_optix_ctx; }
-    optix::Context& operator->() { return context(); }
+    optix::Context& optix_ctx()
+    {
+        return m_optix_ctx;
+    }
+    optix::Context& context()
+    {
+        return m_optix_ctx;
+    }
+    optix::Context& operator->()
+    {
+        return context();
+    }
 #else
-    OptixDeviceContext optix_ctx() { return m_optix_ctx; }
-    OptixDeviceContext context() { return m_optix_ctx; }
-    OptixDeviceContext operator->() { return context(); }
+    OptixDeviceContext optix_ctx()
+    {
+        return m_optix_ctx;
+    }
+    OptixDeviceContext context()
+    {
+        return m_optix_ctx;
+    }
+    OptixDeviceContext operator->()
+    {
+        return context();
+    }
 
     void processPrintfBuffer(void* buffer_data, size_t buffer_size);
 #endif

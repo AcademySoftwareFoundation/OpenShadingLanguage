@@ -75,13 +75,13 @@ private:
     ///
     LPexp* buildStop(LPexp* etype, LPexp* scatter,
                      const std::list<LPexp*>& custom);
-    /// Gicen that a symbol is ready in head() to parse, parse it
+    /// Given that a symbol is ready in head() to parse, parse it
     LPexp* parseSymbol();
-    /// Gicen that a symbol is ready in head() to parse, parse it as a ustring
+    /// Given that a symbol is ready in head() to parse, parse it as a ustring
     /// and report it was a custom symbol in the iscustom flag
     ustring parseRawSymbol(bool& iscustom);
-    /// Given that the begining of a concatenation of regexps is ready to parse, parse it
-    /// and it can be optionally be enclosed in parentheses ()
+    /// Given that the beginning of a concatenation of regexps is ready to
+    /// parse, parse it and it can be optionally be enclosed in parentheses ()
     LPexp* parseCat();
     /// Given that a fully qualified group like <.RD'custom'> is ready to parse, parse it
     LPexp* parseGroup();
@@ -104,9 +104,10 @@ private:
     // True if we are actually parsing a group <>, since otherwise everything gets
     // automatically converted to a group, this prevents that happening
     bool m_ingroup;
-    // maps each basic label to its expected possition in the appearance order, for instance
-    // the direction label can't be in the first pos of a group. This way we know where to put the
-    // expression when the user writes just S, which translates to <..S>
+    // maps each basic label to its expected position in the appearance order,
+    // for instance the direction label can't be in the first pos of a group.
+    // This way we know where to put the expression when the user writes just
+    // S, which translates to <..S>
     SymbolToInt m_label_position;
     // The set of the basic labels
     SymbolSet m_basic_labels;

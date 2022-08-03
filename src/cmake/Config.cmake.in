@@ -22,7 +22,7 @@ find_dependency(OpenImageIO @OpenImageIO_VERSION@ REQUIRED)
 # Compute the installation prefix relative to this file
 get_filename_component(_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../../" ABSOLUTE)
 
-# There's no guarantee that CMAKE_INSTALL_XXXDIR is a relative path so we extract the final component to handle asbolute paths
+# There's no guarantee that CMAKE_INSTALL_XXXDIR is a relative path so we extract the final component to handle absolute paths
 get_filename_component(_INCLUDE_DIR_NAME "@CMAKE_INSTALL_INCLUDEDIR@" NAME)
 get_filename_component(_LIB_DIR_NAME "@CMAKE_INSTALL_LIBDIR@" NAME)
 

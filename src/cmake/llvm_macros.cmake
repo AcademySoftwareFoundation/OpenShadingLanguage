@@ -103,8 +103,8 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
             -O3 -fno-math-errno -S -emit-llvm ${extra_clang_args}
             -o ${src_asm} ${src}
         COMMAND ${LLVM_AS_TOOL} -f -o ${src_bc} ${src_asm}
-        # Do NOT setup a MAIN_DEPENDENCY because only 1 may exist 
-        # and we may have the several outputs dependant on the same source 
+        # Do NOT setup a MAIN_DEPENDENCY because only 1 may exist
+        # and we may have the several outputs dependent on the same source
         DEPENDS ${src} ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
     endforeach ()
@@ -132,7 +132,7 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
-    # add generated .cpp with embedded bitcode to the list of soures
+    # add generated .cpp with embedded bitcode to the list of sources
     set ( ${list_to_append_cpp} ${${list_to_append_cpp}} ${src_bc_cpp} PARENT_SCOPE )
 
 endfunction ( )

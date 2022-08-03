@@ -1848,7 +1848,7 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
         return true;
     }
 
-    // memcpy complicated by promotion of uniform to wide during assignment, dissallow
+    // memcpy complicated by promotion of uniform to wide during assignment, disallow
 
     // The following code handles f=f, f=i, v=v, v=f, v=i, m=m, s=s.
     // Remember that llvm_load_value will automatically convert scalar->triple.
@@ -1906,7 +1906,7 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
             // The llvm_load_value above should have handled bool to int conversions
             // when the basetype == Typedesc::INT
 
-            // write source float into all compnents when dstcomp == -1, otherwise
+            // write source float into all components when dstcomp == -1, otherwise
             // the single element requested.
             if (dstcomp == -1) {
                 for (int i = 0; i < num_components; ++i)

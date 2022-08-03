@@ -2424,7 +2424,7 @@ DECLFOLDER(constfold_gettextureinfo)
         //       assign data [retrieved values]
         //       assign result 1
         // into this for failure:
-        //       error "%s" errormesage
+        //       error "%s" errormessage
         //       assign result 0
         if (result) {
             int oldresultarg = rop.inst()->args()[op.firstarg() + 0];

@@ -145,7 +145,7 @@ namespace sfm
         //return static_cast<int>(rintf(x));
         return rintf(x);
     #else
-        // emulate rounding by adding/substracting 0.5
+        // emulate rounding by adding/subtracting 0.5
         return static_cast<int>(x + copysignf(0.5f, x));
 
         // Other possible factorings
@@ -441,7 +441,7 @@ namespace sfm
 
     // Considering having functionally equivalent versions of Vec3, Color3, Matrix44
     // with slight modifications to inlining and implementation to avoid aliasing and
-    // improve likelyhood of proper privation of local variables within a SIMD loop
+    // improve likelihood of proper privation of local variables within a SIMD loop
 
 }  // namespace sfm
 

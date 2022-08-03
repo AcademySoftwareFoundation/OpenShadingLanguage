@@ -20,7 +20,7 @@
 // This update employs a simple material layering mechanism that allows
 // two ubersurface shaders to connect and composite in a consistent manner.
 // Connecting ubersurfaceB.Out_Ci to ubersurfaceA.Next_Layer results in 
-// the appearance of ubersurfaceA over ubersurfaceB.  
+// the appearance of ubersurfaceA over ubersurfaceB.
 //
 // In this logic, opacity of 0 will pass through the top layer and call the
 // Next_Layer.  Refractive materials will filter Next_Layer according to 
@@ -35,7 +35,7 @@
 
 
 // The TEXTURE_PARAMS macro defines a set of parameters common to all texture maps.  
-// The metadata provides paramater display hints to host applications. These metadata 
+// The metadata provides parameter display hints to host applications. These metadata
 // blocks are in The Foundry's Katana format.
 #define TEXTURE_PARAMS(MAPNAME) \
     string Texture_ ## MAPNAME ## _Name = ""\
@@ -286,7 +286,7 @@ ubersurface
     	// Emission 
 	if(Ke) {
             // Because emission() returns a radiance that, integrated over all
-            // angles, yields a power density of 1, we multipy by the desired
+            // angles, yields a power density of 1, we multiply by the desired
             // total power and divide by the total surface area.  In this
             // manner, the 'Ke' parameter gives the total power of the light
             // (e.g., in Watts) independently of its physical size or shape

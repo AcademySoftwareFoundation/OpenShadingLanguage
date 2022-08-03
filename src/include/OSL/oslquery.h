@@ -61,7 +61,7 @@ class OSOReaderQuery;  // Just so OSLQuery can friend OSLReaderQuery
 /// ~~~
 ///
 /// And the `Parameter` structure will hold all the information you need
-/// about that paramter. For example:
+/// about that parameter. For example:
 ///
 /// ~~~
 ///     std::cout << "Parameter " << p->name
@@ -123,7 +123,7 @@ public:
     }
     ///< Construct an OSLQuery and open a compiled shader from a disk file.
     /// The `shadername` may be either the name of the `.oso` file, or the
-    /// name of the shader. The optional `searchpath` paramter gives a
+    /// name of the shader. The optional `searchpath` parameter gives a
     /// colon-separated list of directories to search for compiled shaders.
 
     OSL_DEPRECATED("Use ShadingSystem::oslquery(group,layernum)")

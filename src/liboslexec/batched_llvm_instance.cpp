@@ -31,7 +31,7 @@
 #include "batched_backendllvm.h"
 #include "oslexec_pvt.h"
 
-// Create extrenal declarations for all built-in funcs we may call from LLVM
+// Create external declarations for all built-in funcs we may call from LLVM
 #define DECL(name, signature) extern "C" void name();
 #include "builtindecl.h"
 #undef DECL
@@ -893,7 +893,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
             fields.push_back(llvm_wide_type(ts));
 
             // Alignment
-            // TODO:  this isn't quite right, cant rely on batch size to == ISA SIMD requirements
+            // TODO:  this isn't quite right, can't rely on batch size to == ISA SIMD requirements
             size_t base_size = sym.typespec().is_closure_based()
                                    ? sizeof(void*)
                                    : sym.typespec().simpletype().basesize();
@@ -1125,7 +1125,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                         // For ISA without a native mask (AVX & AVX2), this gather op will
                         // clamp the indices of masked off lanes to 0.
                         // This means the user data base pointer + sym_offset
-                        // must be dereferencable with a shadeindex of 0.
+                        // must be dereferenceable with a shadeindex of 0.
                         llvm::Value* wide_val
                             = ll.op_gather(userdata_sym_base_ptr, wide_index);
 

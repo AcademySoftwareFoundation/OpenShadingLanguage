@@ -73,7 +73,7 @@ from __future__ import print_function, absolute_import
 ###
 ### Only one main doc region will be output by the `docdeep` program,
 ### specified with the `-d` command line argument. Any other doc-regions
-### will not be included in the documention output of that run.
+### will not be included in the documentation output of that run.
 ###
 ### However, one doc-region may *include* the text of another doc-region
 ### as follows:
@@ -114,7 +114,7 @@ from __future__ import print_function, absolute_import
 ### For pre-code comments, the contiguous comment region associated with
 ### a declaration immediately precedes the declaration. Such a comment
 ### set has its first line start with `///>`.  For post-code comments,
-### the documentaiton comments follows the code declaration, and this is
+### the documentation comments follows the code declaration, and this is
 ### designated by having its first line start with `///<`.  I like to
 ### just remember that the `<` or `>` points in the direction of the code
 ### declaration that the comment applies to.

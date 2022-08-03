@@ -262,7 +262,7 @@ public:
     /// assignment is considered simple if it completely overwrites the
     /// symbol in a single op and has no side effects.  When this
     /// happens, we mark the symbol as "stale", meaning it's got a value
-    /// that hasn't been read yet.  If it's wholy assigned again before
+    /// that hasn't been read yet.  If it's wholly assigned again before
     /// it's read, we can go back and remove the earlier assignment.
     void simple_sym_assign(int sym, int op);
 
@@ -298,7 +298,7 @@ public:
     /// take the new instruction into consideration.  Relation indicates
     /// its relation to surrounding instructions: GroupWithPrevious
     /// means it should have the same method, sourcefile, and sourceline
-    /// as the preceeding instruction; GroupWithNext means it should
+    /// as the preceding instruction; GroupWithNext means it should
     /// have the same method, sourcefile, and sourceline as the
     /// subsequent instruction; NoRelation means we have no information,
     /// so don't copy that info from anywhere.
@@ -514,7 +514,7 @@ private:
     int m_raytypes_on;                  ///< Ray types known to be on
     int m_raytypes_off;                 ///< Ray types known to be off
 
-    // Persistant data shared between layers
+    // Persistent data shared between layers
     bool m_unknown_message_sent;  ///< Somebody did a non-const setmessage
     std::vector<ustring> m_messages_sent;  ///< Names of messages set
 

@@ -106,7 +106,7 @@ default_get_matrix(BatchedRendererServices* bsr, BatchedShaderGlobals* bsg,
 
 // Avoid calling virtual functions and allow the default implementations
 // to exist in target specific libraries.  We use a dispatch helper
-// to call the virtual function ONLY if it is overriden, otherwise
+// to call the virtual function ONLY if it is overridden, otherwise
 // execute the ISA optimized default version built right here.
 OSL_FORCEINLINE Mask
 dispatch_get_matrix(BatchedRendererServices* bsr, BatchedShaderGlobals* bsg,
@@ -1414,7 +1414,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, const Matrix44& M,
 
     Matrix44 invM { Imath::UNINITIALIZED };
     if (OSL_UNLIKELY(!test_if_affine(M))) {
-        // Isolate expensive unlikley code
+        // Isolate expensive unlikely code
         // in its own function as to not influence
         // the optimization of the fast path
         invoke([&]() -> void { invM = OSL::nonAffineInverse(M); });

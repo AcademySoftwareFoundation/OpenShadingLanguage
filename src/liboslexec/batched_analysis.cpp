@@ -185,7 +185,7 @@ struct Symbols4ProtectedShaderGlobals {
 
     SymbolPtrVec varying_symbols;
 
-    void check_if_varing(Symbol& s)
+    void check_if_varying(Symbol& s)
     {
         if (!is_shader_global_uniform_by_name(s.name())) {
             s.make_varying();
@@ -202,13 +202,13 @@ struct Symbols4ProtectedShaderGlobals {
         , surfacearea(Strings::op_surfacearea, TypeSpec(), SymTypeGlobal)
         , time(Strings::time, TypeSpec(), SymTypeGlobal)
     {
-        check_if_varing(shader2common);
-        check_if_varing(object2common);
-        check_if_varing(flipHandedness);
-        check_if_varing(raytype);
-        check_if_varing(backfacing);
-        check_if_varing(surfacearea);
-        check_if_varing(time);
+        check_if_varying(shader2common);
+        check_if_varying(object2common);
+        check_if_varying(flipHandedness);
+        check_if_varying(raytype);
+        check_if_varying(backfacing);
+        check_if_varying(surfacearea);
+        check_if_varying(time);
     }
 };
 
@@ -1601,7 +1601,7 @@ struct Analyzer {
             // Process arguments written to to handle early outs, cyclical reads,
             // and record a WriteEvent to a potentially unmasked operations remembering
             // the exact stack of conditional dependencies at that point.
-            // When we processed reads (above), we ensured that any reads occuring at a higher  that on the stoCheck for
+            // When we processed reads (above), we ensured that any reads occurring at a higher  that on the stoCheck for
             for (int write_index = 0; write_index < write_count;
                  ++write_index) {
                 const Symbol* symbolWrittenTo
@@ -1648,7 +1648,7 @@ struct Analyzer {
                 }
             }
 
-            // Special case for op_getattribute which normaly would be
+            // Special case for op_getattribute which normally would be
             // implicitly varying unless BatchedRendererServices says it
             // is uniform.
             if (opcode.opname() == Strings::op_getattribute) {

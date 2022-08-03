@@ -138,7 +138,7 @@ NdfAutomata::symbolsFrom(const IntSet& states, SymbolSet& out_symbols,
 {
     for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i) {
         const State* state = m_states[*i];
-        // For every state we have to go thorugh all the symbols in the transition table
+        // For every state we have to go through all the symbols in the transition table
         // m_symbol_trans and add them to the output
         for (SymbolToIntList::const_iterator j = state->m_symbol_trans.begin();
              j != state->m_symbol_trans.end(); ++j)

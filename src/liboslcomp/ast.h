@@ -375,7 +375,7 @@ protected:
     void codegen_initlist(ref init, TypeSpec type, Symbol* sym);
 
     // Special code generation for structure initializers.
-    // It's in the ASTNode base class because it's used from mutiple
+    // It's in the ASTNode base class because it's used from multiple
     // subclasses.
     Symbol* codegen_struct_initializers(ref init, Symbol* sym,
                                         bool is_constructor = false,
@@ -949,7 +949,7 @@ private:
     /// return false and call an appropriate error().
     bool typecheck_printf_args(const char* format, ASTNode* arg);
 
-    /// Handle "funcion calls" that are really struct ctrs.
+    /// Handle "function calls" that are really struct ctrs.
     TypeSpec typecheck_struct_constructor();
 
     /// Is the argument number 'arg' read by the op?

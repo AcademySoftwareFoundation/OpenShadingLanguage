@@ -26,7 +26,7 @@
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
 
-// Create extrenal declarations for all built-in funcs we may call from LLVM
+// Create external declarations for all built-in funcs we may call from LLVM
 #define DECL(name, signature) extern "C" void name();
 #include "builtindecl.h"
 #undef DECL
@@ -112,8 +112,8 @@ extern unsigned char osl_llvm_compiled_ops_block[];
 extern int osl_llvm_compiled_ops_cuda_size;
 extern unsigned char osl_llvm_compiled_ops_cuda_block[];
 
-extern int osl_llvm_compiled_rs_dependant_ops_size;
-extern unsigned char osl_llvm_compiled_rs_dependant_ops_block[];
+extern int osl_llvm_compiled_rs_dependent_ops_size;
+extern unsigned char osl_llvm_compiled_rs_dependent_ops_block[];
 
 using namespace OSL::pvt;
 
@@ -447,7 +447,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
         return;
     }
 
-    // Local/temp strings are always initialzed to the empty string.
+    // Local/temp strings are always initialized to the empty string.
     if ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp)
         && sym.typespec().is_string_based()) {
         // Strings are pointers.  Can't take any chance on leaving
@@ -1367,12 +1367,12 @@ BackendLLVM::run()
         if (!use_optix()) {
             if (use_rs_bitcode()) {
                 ll.module(ll.module_from_bitcode(
-                    (char*)osl_llvm_compiled_rs_dependant_ops_block,
-                    osl_llvm_compiled_rs_dependant_ops_size,
-                    "llvm_rs_dependant_ops", &err));
+                    (char*)osl_llvm_compiled_rs_dependent_ops_block,
+                    osl_llvm_compiled_rs_dependent_ops_size,
+                    "llvm_rs_dependent_ops", &err));
                 if (err.length())
                     shadingcontext()->errorfmt(
-                        "llvm::parseBitcodeFile returned '{}' for llvm_rs_dependant_ops\n",
+                        "llvm::parseBitcodeFile returned '{}' for llvm_rs_dependent_ops\n",
                         err);
 
                 std::vector<char>& rs_free_function_bitcode

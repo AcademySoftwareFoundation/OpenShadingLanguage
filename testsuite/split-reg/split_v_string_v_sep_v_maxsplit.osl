@@ -9,14 +9,14 @@ shader test_split_v_str_v_sep_v_max (output vector res=0,
     string var_sep = format("%d", int(u)); //Varying sep
     int var_maxsplit = 4+int(u);//varying maxsplit
         
-    //Initialize result ouput array
+    //Initialize result output array
     string results[4] = {var_str,var_str,var_str,var_str}; 
     string results1[4] = {var_str,var_str,var_str,var_str};
     
     //Setup uniform string
     int accum1 = 0;
     int sc1 = 0;
-    sc1 = split(format("%f,%d,%f,%f", 2.0*u, int(u), 2.0*v, 3.0*u ),results, var_sep, var_maxsplit); //varying string amd varying seperator
+    sc1 = split(format("%f,%d,%f,%f", 2.0*u, int(u), 2.0*v, 3.0*u ),results, var_sep, var_maxsplit); //varying string amd varying separator
     
     for (int i = 0 ; i<sc1; ++i) {
         accum1 += stoi(results[i]);

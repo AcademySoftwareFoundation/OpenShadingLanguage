@@ -11,8 +11,8 @@
 #include <OSL/device_string.h>
 
 #include "optix_compat.h"
-#include "simpleraytracer.h"
 #include "render_params.h"
+#include "simpleraytracer.h"
 
 OSL_NAMESPACE_ENTER
 
@@ -69,13 +69,13 @@ private:
 
     CUstream m_cuda_stream;
     OptixTraversableHandle m_travHandle;
-    OptixShaderBindingTable m_optix_sbt = {};
+    OptixShaderBindingTable m_optix_sbt            = {};
     OptixShaderBindingTable m_setglobals_optix_sbt = {};
-    OptixPipeline m_optix_pipeline = {};
+    OptixPipeline m_optix_pipeline                 = {};
     CUdeviceptr d_output_buffer;
     CUdeviceptr d_launch_params = 0;
-    CUdeviceptr d_quads_list = 0;
-    CUdeviceptr d_spheres_list = 0;
+    CUdeviceptr d_quads_list    = 0;
+    CUdeviceptr d_spheres_list  = 0;
     int m_xres, m_yres;
     CUdeviceptr d_osl_printf_buffer;
     CUdeviceptr d_color_system;

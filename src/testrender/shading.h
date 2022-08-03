@@ -49,7 +49,8 @@ struct CompositeBSDF {
     {
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
-            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(wo)) / (path_weight.x + path_weight.y + path_weight.z);
+            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(wo))
+                      / (path_weight.x + path_weight.y + path_weight.z);
             assert(pdfs[i] >= 0);
             assert(pdfs[i] <= 1);
             total += pdfs[i];
@@ -117,7 +118,8 @@ struct CompositeBSDF {
         if (num_bytes + sizeof(BSDF_Type) > MaxSize)
             return false;
         weights[num_bsdfs] = w;
-        bsdfs[num_bsdfs]   = new (pool + num_bytes) BSDF_Type(std::forward<BSDF_Args>(args)...);
+        bsdfs[num_bsdfs]   = new (pool + num_bytes)
+            BSDF_Type(std::forward<BSDF_Args>(args)...);
         num_bsdfs++;
         num_bytes += sizeof(BSDF_Type);
         return true;
@@ -139,14 +141,14 @@ private:
 };
 
 struct ShadingResult {
-    Color3 Le = Color3(0.0f);
+    Color3 Le          = Color3(0.0f);
     CompositeBSDF bsdf = {};
     // medium data
-    Color3 sigma_s = Color3(0.0f);
-    Color3 sigma_t = Color3(0.0f);
-    float medium_g = 0.0f; // volumetric anisotropy
+    Color3 sigma_s       = Color3(0.0f);
+    Color3 sigma_t       = Color3(0.0f);
+    float medium_g       = 0.0f;  // volumetric anisotropy
     float refraction_ior = 1.0f;
-    int priority = 0;
+    int priority         = 0;
 };
 
 void

@@ -6,9 +6,9 @@
 
 
 #include "oslexec_pvt.h"
-#include <OSL/oslnoise.h>
-#include <OSL/dual_vec.h>
 #include <OSL/Imathx/Imathx.h>
+#include <OSL/dual_vec.h>
+#include <OSL/oslnoise.h>
 
 #include <OpenImageIO/fmath.h>
 
@@ -20,17 +20,39 @@ namespace pvt {
 //       all cases, but these templates should suffice until a more complete
 //       device-friendly version of Imath is available.
 namespace hostdevice {
-template <typename T> OSL_FORCEINLINE OSL_HOSTDEVICE T clamp (T x, T lo, T hi);
+template<typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T
+clamp(T x, T lo, T hi);
 #ifndef __CUDA_ARCH__
-template <> OSL_FORCEINLINE OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return Imath::clamp (x, lo, hi); }
-template <> OSL_FORCEINLINE OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return Imath::clamp (x, lo, hi); }
-#else
-template <> OSL_FORCEINLINE OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return (x < lo) ? lo : ((x > hi) ? hi : x); }
-template <> OSL_FORCEINLINE OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return (x < lo) ? lo : ((x > hi) ? hi : x); }
-#endif
+template<>
+OSL_FORCEINLINE OSL_HOSTDEVICE double
+clamp<double>(double x, double lo, double hi)
+{
+    return Imath::clamp(x, lo, hi);
 }
+template<>
+OSL_FORCEINLINE OSL_HOSTDEVICE float
+clamp<float>(float x, float lo, float hi)
+{
+    return Imath::clamp(x, lo, hi);
+}
+#else
+template<>
+OSL_FORCEINLINE OSL_HOSTDEVICE double
+clamp<double>(double x, double lo, double hi)
+{
+    return (x < lo) ? lo : ((x > hi) ? hi : x);
+}
+template<>
+OSL_FORCEINLINE OSL_HOSTDEVICE float
+clamp<float>(float x, float lo, float hi)
+{
+    return (x < lo) ? lo : ((x > hi) ? hi : x);
+}
+#endif
+}  // namespace hostdevice
 
-static OSL_DEVICE constexpr float Gabor_Frequency = 2.0;
+static OSL_DEVICE constexpr float Gabor_Frequency      = 2.0;
 static OSL_DEVICE constexpr float Gabor_Impulse_Weight = 1.0f;
 
 // The Gabor kernel in theory has infinite support (its envelope is
@@ -48,32 +70,32 @@ class fast_rng {
 public:
     // seed based on the cell containing P
     OSL_DEVICE
-    fast_rng (const Vec3 &p, int seed=0) {
+    fast_rng(const Vec3& p, int seed = 0)
+    {
         // Use guts of cellnoise
         m_seed = inthash(unsigned(OIIO::ifloor(p.x)),
                          unsigned(OIIO::ifloor(p.y)),
-                         unsigned(OIIO::ifloor(p.z)),
-                         unsigned(seed));
-        if (! m_seed)
+                         unsigned(OIIO::ifloor(p.z)), unsigned(seed));
+        if (!m_seed)
             m_seed = 1;
     }
     // Return uniform on [0,1)
     OSL_HOSTDEVICE
-    float operator() () {
-        return (m_seed *= 3039177861u) / float(UINT_MAX);
-    }
+    float operator()() { return (m_seed *= 3039177861u) / float(UINT_MAX); }
     // Return poisson distribution with the given mean
     OSL_HOSTDEVICE
-    int poisson (float mean) {
-        float g = expf (-mean);
+    int poisson(float mean)
+    {
+        float g         = expf(-mean);
         unsigned int em = 0;
-        float t = (*this)();
+        float t         = (*this)();
         while (t > g) {
             ++em;
             t *= (*this)();
         }
         return em;
     }
+
 private:
     unsigned int m_seed;
 };
@@ -86,26 +108,26 @@ private:
 //   \param  bandwidth   width of the gaussian envelope (called 'a'
 //                          in [Lagae09].
 //   \param  x           the position being sampled
-template <class VEC>   // VEC should be Vec3 or Vec2
+template<class VEC>  // VEC should be Vec3 or Vec2
 OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float>
-gabor_kernel (const Dual2<float> &weight, const VEC &omega,
-              const Dual2<float> &phi, float bandwidth, const Dual2<VEC> &x)
+gabor_kernel(const Dual2<float>& weight, const VEC& omega,
+             const Dual2<float>& phi, float bandwidth, const Dual2<VEC>& x)
 {
     // see Equation 1
-    Dual2<float> g = exp (float(-M_PI) * (bandwidth * bandwidth) * dot(x,x));
-    Dual2<float> h = cos (float(M_TWO_PI) * dot(omega,x) + phi);
+    Dual2<float> g = exp(float(-M_PI) * (bandwidth * bandwidth) * dot(x, x));
+    Dual2<float> h = cos(float(M_TWO_PI) * dot(omega, x) + phi);
     return weight * g * h;
 }
 
 
 
 OSL_FORCEINLINE OSL_HOSTDEVICE void
-slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
-                       const Vec3 &omega, float phi,
-                       Dual2<float> &w_s, Vec2 &omega_s, Dual2<float> &phi_s)
+slice_gabor_kernel_3d(const Dual2<float>& d, float w, float a,
+                      const Vec3& omega, float phi, Dual2<float>& w_s,
+                      Vec2& omega_s, Dual2<float>& phi_s)
 {
     // Equation 6
-    w_s = w * exp(float(-M_PI) * (a*a)*(d*d));
+    w_s = w * exp(float(-M_PI) * (a * a) * (d * d));
     //omega_s[0] = omega[0];
     //omega_s[1] = omega[1];
     //phi_s = phi - float(M_TWO_PI) * d * omega[2];
@@ -126,53 +148,54 @@ gabor_mul_m22_v2(const Matrix22& m, const Vec2& v)
     return Vec2(a, b);
 }
 
-}
+}  // namespace
 
 static OSL_FORCEINLINE OSL_HOSTDEVICE void
-filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
-                        const Vec2 &omega, const Dual2<float> &phi,
-                        Dual2<float> &w_f, float &a_f,
-                        Vec2 &omega_f, Dual2<float> &phi_f)
+filter_gabor_kernel_2d(const Matrix22& filter, const Dual2<float>& w, float a,
+                       const Vec2& omega, const Dual2<float>& phi,
+                       Dual2<float>& w_f, float& a_f, Vec2& omega_f,
+                       Dual2<float>& phi_f)
 {
     //  Equation 10
     Matrix22 Sigma_f = filter;
     Dual2<float> c_G = w;
-    Vec2 mu_G = omega;
+    Vec2 mu_G        = omega;
     Matrix22 Sigma_G = (a * a / float(M_TWO_PI)) * Matrix22();
-    float c_F = 1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_f)));
+    float c_F        = 1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_f)));
     Matrix22 Sigma_F = float(1.0 / (4.0 * M_PI * M_PI)) * Sigma_f.inverse();
     Matrix22 Sigma_G_Sigma_F = Sigma_G + Sigma_F;
-    Dual2<float> c_GF = c_F * c_G
-        * (1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_G_Sigma_F))))
-        * expf(-0.5f * dot(gabor_mul_m22_v2(Sigma_G_Sigma_F.inverse(),mu_G), mu_G));
-    Matrix22 Sigma_G_i = Sigma_G.inverse();
-    Matrix22 Sigma_GF = (Sigma_F.inverse() + Sigma_G_i).inverse();
+    Dual2<float> c_GF
+        = c_F * c_G
+          * (1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_G_Sigma_F))))
+          * expf(
+              -0.5f
+              * dot(gabor_mul_m22_v2(Sigma_G_Sigma_F.inverse(), mu_G), mu_G));
+    Matrix22 Sigma_G_i   = Sigma_G.inverse();
+    Matrix22 Sigma_GF    = (Sigma_F.inverse() + Sigma_G_i).inverse();
     Matrix22 Sigma_GF_Gi = Sigma_GF * Sigma_G_i;
-    Vec2 mu_GF = gabor_mul_m22_v2(Sigma_GF_Gi, mu_G);
-    w_f = c_GF;
-    a_f = sqrtf(M_TWO_PI * sqrtf(determinant(Sigma_GF)));
-    omega_f = mu_GF;
-    phi_f = phi;
+    Vec2 mu_GF           = gabor_mul_m22_v2(Sigma_GF_Gi, mu_G);
+    w_f                  = c_GF;
+    a_f                  = sqrtf(M_TWO_PI * sqrtf(determinant(Sigma_GF)));
+    omega_f              = mu_GF;
+    phi_f                = phi;
 }
 
 
 OSL_FORCEINLINE OSL_HOSTDEVICE float
-wrap (float s, float period)
+wrap(float s, float period)
 {
-    period = floorf (period);
+    period = floorf(period);
     if (period < 1.0f)
         period = 1.0f;
-    return s - period * floorf (s / period);
+    return s - period * floorf(s / period);
 }
 
 
 // avoid aliasing issues
 static OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
-wrap (const Vec3 &s, const Vec3 &period)
+wrap(const Vec3& s, const Vec3& period)
 {
-    return Vec3 (wrap (s.x, period.x),
-                 wrap (s.y, period.y),
-                 wrap (s.z, period.z));
+    return Vec3(wrap(s.x, period.x), wrap(s.y, period.y), wrap(s.z, period.z));
 }
 
 
@@ -183,30 +206,30 @@ wrap (const Vec3 &s, const Vec3 &period)
 // Either way, we get something orthogonal.  Then cross(v,a) is mutually
 // orthogonal to the other two.
 OSL_FORCEINLINE OSL_HOSTDEVICE void
-make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
+make_orthonormals(Vec3& v, Vec3& a, Vec3& b)
 {
     // avoid aliasing issues by not using the [] operator
     v.normalize();
     if (fabsf(v.x) < 0.9f)
-        a.setValue (0.0f, v.z, -v.y);   // v X (1,0,0)
+        a.setValue(0.0f, v.z, -v.y);  // v X (1,0,0)
     else
-        a.setValue (-v.z, 0.0f, v.x);   // v X (0,1,0)
-    a.normalize ();
-    b = v.cross (a);
-//    b.normalize ();  // note: not necessary since v is unit length
+        a.setValue(-v.z, 0.0f, v.x);  // v X (0,1,0)
+    a.normalize();
+    b = v.cross(a);
+    //    b.normalize ();  // note: not necessary since v is unit length
 }
 
 
 
 // Helper function: per-component 'floor' of a Dual2<Vec3>.
 OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
-floor (const Dual2<Vec3> &vd)
+floor(const Dual2<Vec3>& vd)
 {
     // avoid aliasing issues by not using the [] operator
-    const Vec3 &v (vd.val());
-    return Vec3 (floorf(v.x), floorf(v.y), floorf(v.z));
+    const Vec3& v(vd.val());
+    return Vec3(floorf(v.x), floorf(v.y), floorf(v.z));
 }
 
-} // namespace pvt
+}  // namespace pvt
 
 OSL_NAMESPACE_EXIT

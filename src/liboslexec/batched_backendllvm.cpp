@@ -1767,7 +1767,8 @@ BatchedBackendLLVM::llvm_test_nonzero(const Symbol& val, bool test_derivs)
         llvm::Value* llvmValue = llvm_get_pointer(val);
         //OSL_DEV_ONLY(std::cout << "llvmValue type=" << ll.llvm_typenameof(llvmValue) << std::endl);
 
-        if (ll.llvm_typeof(llvmValue) == (const llvm::Type*)ll.type_ptr(ll.type_bool())) {
+        if (ll.llvm_typeof(llvmValue)
+            == (const llvm::Type*)ll.type_ptr(ll.type_bool())) {
             return ll.op_ne(llvm_load_value(val), ll.constant_bool(0));
         } else {
             return ll.op_ne(llvm_load_value(val), ll.constant(0));

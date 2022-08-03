@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <OSL/oslversion.h>
 #include <OSL/oslconfig.h>
+#include <OSL/oslversion.h>
 
 #ifdef OSL_USE_OPTIX
 #    include <cuda_runtime_api.h>
@@ -21,7 +21,7 @@
 
 #if !defined(OSL_USE_OPTIX) && !defined(__CUDA_ARCH__)
 using CUdeviceptr = void*;
-using float3 = OSL::Vec3;
+using float3      = OSL::Vec3;
 #endif
 
 

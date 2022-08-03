@@ -12,23 +12,23 @@ OSL_NAMESPACE_ENTER
 
 static ustring udot(".");
 
-Parser::Parser(const std::vector<ustring> *user_events,
-               const std::vector<ustring> *user_scatterings)
+Parser::Parser(const std::vector<ustring>* user_events,
+               const std::vector<ustring>* user_scatterings)
 {
     m_ingroup = false;
-    m_error = "";
+    m_error   = "";
 
-    m_label_position[Labels::CAMERA]      = 0;
-    m_label_position[Labels::LIGHT]        = 0;
+    m_label_position[Labels::CAMERA]     = 0;
+    m_label_position[Labels::LIGHT]      = 0;
     m_label_position[Labels::BACKGROUND] = 0;
-    m_label_position[Labels::VOLUME]      = 0;
-    m_label_position[Labels::TRANSMIT]    = 0;
-    m_label_position[Labels::REFLECT]     = 0;
-    m_label_position[Labels::OBJECT]      = 0;
-    m_label_position[Labels::DIFFUSE]     = 1;
-    m_label_position[Labels::GLOSSY]      = 1;
-    m_label_position[Labels::SINGULAR]    = 1;
-    m_label_position[Labels::STRAIGHT]    = 1;
+    m_label_position[Labels::VOLUME]     = 0;
+    m_label_position[Labels::TRANSMIT]   = 0;
+    m_label_position[Labels::REFLECT]    = 0;
+    m_label_position[Labels::OBJECT]     = 0;
+    m_label_position[Labels::DIFFUSE]    = 1;
+    m_label_position[Labels::GLOSSY]     = 1;
+    m_label_position[Labels::SINGULAR]   = 1;
+    m_label_position[Labels::STRAIGHT]   = 1;
 
     m_basic_labels.insert(Labels::CAMERA);
     m_basic_labels.insert(Labels::LIGHT);
@@ -47,42 +47,41 @@ Parser::Parser(const std::vector<ustring> *user_events,
     m_minus_stop.insert(Labels::STOP);
 
     if (user_events)
-      for (size_t i = 0; i < user_events->size(); ++i)
-      {
-          m_label_position[(*user_events)[i]] = 0;
-          m_basic_labels.insert((*user_events)[i]);
-      }
-   if (user_scatterings)
-      for (size_t i = 0; i < user_scatterings->size(); ++i)
-      {
-          m_label_position[(*user_scatterings)[i]] = 1;
-          m_basic_labels.insert((*user_scatterings)[i]);
-      }
+        for (size_t i = 0; i < user_events->size(); ++i) {
+            m_label_position[(*user_events)[i]] = 0;
+            m_basic_labels.insert((*user_events)[i]);
+        }
+    if (user_scatterings)
+        for (size_t i = 0; i < user_scatterings->size(); ++i) {
+            m_label_position[(*user_scatterings)[i]] = 1;
+            m_basic_labels.insert((*user_scatterings)[i]);
+        }
 }
 
 
-LPexp *
-Parser::buildStop(LPexp *etype, LPexp *scatter, const std::list<LPexp*> &custom)
+LPexp*
+Parser::buildStop(LPexp* etype, LPexp* scatter, const std::list<LPexp*>& custom)
 {
-    lpexp::Cat *cat = new lpexp::Cat();
+    lpexp::Cat* cat = new lpexp::Cat();
     cat->append(etype);
     cat->append(scatter);
-    for (std::list<LPexp*>::const_iterator i = custom.begin(); i != custom.end(); ++i)
+    for (std::list<LPexp*>::const_iterator i = custom.begin();
+         i != custom.end(); ++i)
         cat->append(*i);
 
     if (custom.size() < 5)
-        cat->append (new lpexp::Repeat (new lpexp::Wildexp (m_basic_labels)));
+        cat->append(new lpexp::Repeat(new lpexp::Wildexp(m_basic_labels)));
     cat->append(new lpexp::Symbol(Labels::STOP));
     return cat;
 }
 
 
 
-LPexp *
+LPexp*
 Parser::parseSymbol()
 {
     bool iscustom = false;
-    ustring sym = parseRawSymbol(iscustom);
+    ustring sym   = parseRawSymbol(iscustom);
     if (m_ingroup) {
         if (sym == udot)
             return new lpexp::Wildexp(m_minus_stop);
@@ -90,25 +89,27 @@ Parser::parseSymbol()
             return new lpexp::Symbol(sym);
     } else {
         if (iscustom) {
-            std::list<LPexp *> custom;
+            std::list<LPexp*> custom;
             custom.push_back(new lpexp::Symbol(sym));
-            return buildStop(new lpexp::Wildexp(m_minus_stop), new lpexp::Wildexp(m_minus_stop), custom);
+            return buildStop(new lpexp::Wildexp(m_minus_stop),
+                             new lpexp::Wildexp(m_minus_stop), custom);
         } else {
-            LPexp *basics[2] = {NULL, NULL};
+            LPexp* basics[2] = { NULL, NULL };
             if (sym != ".") {
                 SymbolToInt::const_iterator i = m_label_position.find(sym);
                 if (i == m_label_position.end()) {
-                    m_error = std::string("Unrecognized basic label: ") + sym.c_str();
+                    m_error = std::string("Unrecognized basic label: ")
+                              + sym.c_str();
                     return NULL;
                 }
-                int pos = i->second;
+                int pos     = i->second;
                 basics[pos] = new lpexp::Symbol(sym);
             }
             for (int k = 0; k < 2; ++k)
                 if (!basics[k])
                     basics[k] = new lpexp::Wildexp(m_minus_stop);
-            std::list<LPexp *> empty;
-            return buildStop (basics[0], basics[1], empty);
+            std::list<LPexp*> empty;
+            return buildStop(basics[0], basics[1], empty);
         }
     }
 }
@@ -116,7 +117,7 @@ Parser::parseSymbol()
 
 
 ustring
-Parser::parseRawSymbol(bool &iscustom)
+Parser::parseRawSymbol(bool& iscustom)
 {
     std::string sym;
     if (head() == '\'') {
@@ -144,45 +145,45 @@ Parser::parseRawSymbol(bool &iscustom)
 
 
 
-LPexp *
+LPexp*
 Parser::parseCat()
 {
     //lpexp::Cat *cat = new lpexp::Cat();
-    std::vector<LPexp *> explist;
+    std::vector<LPexp*> explist;
     char endchar;
     if (head() == '(') {
         next();
         endchar = ')';
-    }
-    else endchar = 0;
+    } else
+        endchar = 0;
 
-    while (hasInput() &&  head() != endchar) {
+    while (hasInput() && head() != endchar) {
         if (head() == '|') {
             if (!explist.size()) {
                 m_error = "No left expression to or with |";
-                for (size_t i=0; i < explist.size(); ++i)
+                for (size_t i = 0; i < explist.size(); ++i)
                     delete explist[i];
                 return NULL;
             }
             next();
-            LPexp *e = _parse();
+            LPexp* e = _parse();
             if (error()) {
-                for (size_t i=0; i < explist.size(); ++i)
+                for (size_t i = 0; i < explist.size(); ++i)
                     delete explist[i];
                 return NULL;
             }
             if (explist.back()->getType() == lpexp::OR)
                 ((lpexp::Orlist*)explist.back())->append(e);
             else {
-                lpexp::Orlist *orexp = new lpexp::Orlist();
+                lpexp::Orlist* orexp = new lpexp::Orlist();
                 orexp->append(explist.back());
                 orexp->append(e);
                 explist[explist.size() - 1] = orexp;
             }
         } else {
-            LPexp *e = _parse();
+            LPexp* e = _parse();
             if (error()) {
-                for (size_t i=0; i < explist.size(); ++i)
+                for (size_t i = 0; i < explist.size(); ++i)
                     delete explist[i];
                 return NULL;
             }
@@ -193,19 +194,19 @@ Parser::parseCat()
         next();
     else if (endchar != 0) {
         m_error = "Reached end of line looking for )";
-        for (size_t i=0; i < explist.size(); ++i)
+        for (size_t i = 0; i < explist.size(); ++i)
             delete explist[i];
         return NULL;
     }
-    lpexp::Cat *cat = new lpexp::Cat();
-    for (size_t i=0; i < explist.size(); ++i)
+    lpexp::Cat* cat = new lpexp::Cat();
+    for (size_t i = 0; i < explist.size(); ++i)
         cat->append(explist[i]);
     return cat;
 }
 
 
 
-LPexp *
+LPexp*
 Parser::parseGroup()
 {
     OSL_DASSERT(head() == '<');
@@ -213,21 +214,27 @@ Parser::parseGroup()
         m_error = "No groups allowed inside of groups";
         return NULL;
     }
-    int basicpos = 0;
-    LPexp *basics[2] = {NULL, NULL};
-    std::list<LPexp *> custom;
-#define THROWAWAY() do{\
-    for (int i=0;i<2;++i) if(basics[i]) delete basics[i];\
-    for (std::list<LPexp *>::iterator i = custom.begin();i!=custom.end();++i) delete *i;\
-    m_ingroup = false;\
-    return NULL;\
-    }while(0)
+    int basicpos     = 0;
+    LPexp* basics[2] = { NULL, NULL };
+    std::list<LPexp*> custom;
+#define THROWAWAY()                                          \
+    do {                                                     \
+        for (int i = 0; i < 2; ++i)                          \
+            if (basics[i])                                   \
+                delete basics[i];                            \
+        for (std::list<LPexp*>::iterator i = custom.begin(); \
+             i != custom.end(); ++i)                         \
+            delete *i;                                       \
+        m_ingroup = false;                                   \
+        return NULL;                                         \
+    } while (0)
 
     m_ingroup = true;
     next();
     while (hasInput() && head() != '>') {
-        LPexp *e = _parse();
-        if (error()) THROWAWAY();
+        LPexp* e = _parse();
+        if (error())
+            THROWAWAY();
         if (basicpos < 2)
             basics[basicpos++] = e;
         else
@@ -247,22 +254,25 @@ Parser::parseGroup()
 
 
 
-LPexp *
+LPexp*
 Parser::parseNegor()
 {
-    OSL_DASSERT (head() == '^');
+    OSL_DASSERT(head() == '^');
     SymbolSet symlist;
-    symlist.insert(Labels::STOP); // never allowed
+    symlist.insert(Labels::STOP);  // never allowed
     int pos = -1;
     next();
     while (hasInput() && head() != ']') {
         bool iscustom = false;
-        ustring sym = parseRawSymbol(iscustom);
-        if (error()) return NULL;
+        ustring sym   = parseRawSymbol(iscustom);
+        if (error())
+            return NULL;
         symlist.insert(sym);
         if (iscustom) {
-            if (symlist.size() > 2  && pos != -1)
-                std::cerr << "[pathexp] you are mixing labels of different type in [...]" << std::endl;
+            if (symlist.size() > 2 && pos != -1)
+                std::cerr
+                    << "[pathexp] you are mixing labels of different type in [...]"
+                    << std::endl;
             pos = -1;
         } else {
             SymbolToInt::const_iterator found = m_label_position.find(sym);
@@ -270,13 +280,16 @@ Parser::parseNegor()
                 m_error = "Unrecognized basic label";
                 return NULL;
             }
-            if (symlist.size() > 2  && found->second != pos)
-                std::cerr << "[pathexp] you are mixing labels of different type in [...]" << std::endl;
+            if (symlist.size() > 2 && found->second != pos)
+                std::cerr
+                    << "[pathexp] you are mixing labels of different type in [...]"
+                    << std::endl;
             pos = found->second;
         }
     }
     if (!hasInput()) {
-        m_error = "Reached end of line looking for ] to end an negative or list'";
+        m_error
+            = "Reached end of line looking for ] to end an negative or list'";
         return NULL;
     }
     if (symlist.size() < 2) {
@@ -284,17 +297,18 @@ Parser::parseNegor()
         return NULL;
     }
     next();
-    lpexp::Wildexp *wildcard = new lpexp::Wildexp(symlist);
+    lpexp::Wildexp* wildcard = new lpexp::Wildexp(symlist);
     if (m_ingroup)
         return wildcard;
     else {
-        std::list<LPexp *> custom;
-        if (pos < 0) { // is a custom label
+        std::list<LPexp*> custom;
+        if (pos < 0) {  // is a custom label
             custom.push_back(wildcard);
-            return buildStop(new lpexp::Wildexp(m_minus_stop), new lpexp::Wildexp(m_minus_stop), custom);
+            return buildStop(new lpexp::Wildexp(m_minus_stop),
+                             new lpexp::Wildexp(m_minus_stop), custom);
         } else {
-            LPexp *basics[2] = {NULL, NULL};
-            basics[pos] = wildcard;
+            LPexp* basics[2] = { NULL, NULL };
+            basics[pos]      = wildcard;
             for (int i = 0; i < 2; ++i)
                 if (!basics[i])
                     basics[i] = new lpexp::Wildexp(m_minus_stop);
@@ -305,7 +319,7 @@ Parser::parseNegor()
 
 
 
-LPexp *
+LPexp*
 Parser::parseOrlist()
 {
     OSL_DASSERT(head() == '[');
@@ -313,9 +327,9 @@ Parser::parseOrlist()
     if (hasInput() && head() == '^')
         return parseNegor();
     else {
-        lpexp::Orlist *orlist = new lpexp::Orlist();
+        lpexp::Orlist* orlist = new lpexp::Orlist();
         while (hasInput() && head() != ']') {
-            LPexp *e = _parse();
+            LPexp* e = _parse();
             if (error()) {
                 delete orlist;
                 return NULL;
@@ -360,15 +374,17 @@ Parser::parseRange()
     }
     next();
     if (secondnum.size())
-        return std::pair<int, int>(atoi(firstnum.c_str()), atoi(secondnum.c_str()));
+        return std::pair<int, int>(atoi(firstnum.c_str()),
+                                   atoi(secondnum.c_str()));
     else
-        return std::pair<int, int>(atoi(firstnum.c_str()), atoi(firstnum.c_str()));
+        return std::pair<int, int>(atoi(firstnum.c_str()),
+                                   atoi(firstnum.c_str()));
 }
 
 
 
-LPexp *
-Parser::parseModifier(LPexp *e)
+LPexp*
+Parser::parseModifier(LPexp* e)
 {
     if (hasInput()) {
         if (m_ingroup && (head() == '*' || head() == '{' || head() == '+')) {
@@ -380,9 +396,10 @@ Parser::parseModifier(LPexp *e)
             return new lpexp::Repeat(e);
         } else if (head() == '{') {
             std::pair<int, int> range = parseRange();
-            if (error()) return NULL;
+            if (error())
+                return NULL;
             if (range.second < 0) {
-                lpexp::Cat *cat = new lpexp::Cat();
+                lpexp::Cat* cat = new lpexp::Cat();
                 cat->append(new lpexp::NRepeat(e, range.first, range.first));
                 cat->append(new lpexp::Repeat(e->clone()));
                 return cat;
@@ -390,23 +407,22 @@ Parser::parseModifier(LPexp *e)
                 return new lpexp::NRepeat(e, range.first, range.second);
         } else if (head() == '+') {
             next();
-            lpexp::Cat *cat = new lpexp::Cat();
+            lpexp::Cat* cat = new lpexp::Cat();
             cat->append(e);
             cat->append(new lpexp::Repeat(e->clone()));
             return cat;
         } else
             return e;
-    }
-    else
+    } else
         return e;
 }
 
 
 
-LPexp *
+LPexp*
 Parser::_parse()
 {
-    LPexp *e;
+    LPexp* e;
     if (head() == '(')
         e = parseCat();
     else if (head() == '[')
@@ -422,12 +438,12 @@ Parser::_parse()
 
 
 
-LPexp *
-Parser::parse(const char *text)
+LPexp*
+Parser::parse(const char* text)
 {
-    m_error = "";
-    m_text = text;
-    m_pos = 0;
+    m_error   = "";
+    m_text    = text;
+    m_pos     = 0;
     m_ingroup = false;
     if (hasInput())
         return parseCat();

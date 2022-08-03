@@ -515,9 +515,9 @@ OptixRaytracer::make_optix_materials()
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth = 1;
     pipeline_link_options.debugLevel    = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
-#        if (OPTIX_VERSION < 70100)
+#if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;
-#        endif
+#endif
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = { rend_lib_group,
@@ -737,13 +737,13 @@ OptixRaytracer::finalize_scene()
     unsigned int quadSbtRecord;
     quadSbtRecord = OPTIX_GEOMETRY_FLAG_NONE;
     if (scene.quads.size() > 0) {
-#        if (OPTIX_VERSION < 70100)
+#if (OPTIX_VERSION < 70100)
         OptixBuildInputCustomPrimitiveArray& quadsInput
             = buildInputs[numBuildInputs].aabbArray;
-#        else
+#else
         OptixBuildInputCustomPrimitiveArray& quadsInput
             = buildInputs[numBuildInputs].customPrimitiveArray;
-#        endif
+#endif
         buildInputs[numBuildInputs].type
             = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
         quadsInput.flags         = &quadSbtRecord;
@@ -797,13 +797,13 @@ OptixRaytracer::finalize_scene()
     unsigned int sphereSbtRecord;
     sphereSbtRecord = OPTIX_GEOMETRY_FLAG_NONE;
     if (scene.spheres.size() > 0) {
-#        if (OPTIX_VERSION < 70100)
+#if (OPTIX_VERSION < 70100)
         OptixBuildInputCustomPrimitiveArray& spheresInput
             = buildInputs[numBuildInputs].aabbArray;
-#        else
+#else
         OptixBuildInputCustomPrimitiveArray& spheresInput
             = buildInputs[numBuildInputs].customPrimitiveArray;
-#        endif
+#endif
         buildInputs[numBuildInputs].type
             = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
         spheresInput.flags       = &sphereSbtRecord;

@@ -164,7 +164,7 @@ public:
     llvm::Value* llvm_load_mask(const Symbol& cond);
 
     /// Return an llvm::Value* that is either a scalar and derivs is
-    /// false, or a pointer to sym's values (if sym is an aggreate or
+    /// false, or a pointer to sym's values (if sym is an aggregate or
     /// derivs == true).  Furthermore, if deriv == true and sym doesn't
     /// have derivs, coerce it into a variable with zero derivs.
     llvm::Value* llvm_load_arg(const Symbol& sym, bool derivs,
@@ -331,7 +331,7 @@ public:
     /// derivs are zero.
     llvm::Value* llvm_test_nonzero(const Symbol& val, bool test_derivs = false);
 
-    /// Implementaiton of Simple assignment.  If arrayindex >= 0, in
+    /// Implementation of Simple assignment.  If arrayindex >= 0, in
     /// designates a particular array index to assign.
     bool llvm_assign_impl(const Symbol& Result, const Symbol& Src,
                           int arrayindex = -1, int srccomp = -1,
@@ -489,7 +489,7 @@ public:
 
     // Encapsulate creation of function names that encode parameter types,
     // including if each is varying or uniform, and if a mask is required.
-    // Utilize llvm::Twine to efficently combine multiple strings
+    // Utilize llvm::Twine to efficiently combine multiple strings
     // Usage is to start with the function name then append arguments,
     // and at any point masking can be turned on/off as well as batching.
     // The effect of disabling batching would be the function name is

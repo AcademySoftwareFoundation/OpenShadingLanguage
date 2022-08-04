@@ -1305,7 +1305,7 @@ OSLCompilerImpl::track_variable_dependencies()
     // This naivite will never miss a dependency, but it may
     // overestimate dependencies.  (Hence we call this "conservative"
     // rather than "wrong.")  We deem this acceptable for now, since
-    // it's so much easer to implement the conservative dependency
+    // it's so much easier to implement the conservative dependency
     // analysis, and it's not yet clear that getting it closer to
     // optimal will have any performance impact on final shaders. Also
     // because this is probably no worse than the "dependency slop" that

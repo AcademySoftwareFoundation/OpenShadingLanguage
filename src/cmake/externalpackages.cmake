@@ -88,7 +88,7 @@ checked_find_package (OpenEXR REQUIRED
                      )
 # Force Imath includes to be before everything else to ensure that we have
 # the right Imath/OpenEXR version, not some older version in the system
-# library. This shoudn't be necessary, except for the common case of people
+# library. This shouldn't be necessary, except for the common case of people
 # building against Imath/OpenEXR 3.x when there is still a system-level
 # install version of 2.x.
 include_directories(BEFORE ${IMATH_INCLUDES})

@@ -223,7 +223,7 @@ public:
 
     // Look up the TargetISA enum by name. Special names: "host" means
     // figure out what this host is, "none" or "" mean to use the baseline
-    // or no special ops not availabe on all flavors of this family of CPUs.
+    // or no special ops not available on all flavors of this family of CPUs.
     static TargetISA lookup_isa_by_name(string_view target_name = "");
 
     // Name for this TargetISA enum.
@@ -383,13 +383,13 @@ public:
     // vs. relying on a conditional result already in a register.
     //
     // To handle 'continue', we allocate a 'continue mask' that is
-    // initially populated with a 0 representing the deactived lanes by
+    // initially populated with a 0 representing the deactivated lanes by
     // 'continue' operations. We require a location on the stack for each
     // 'continue mask' in order for a 'continue' statement to modify it and
     // cause a subset of the lanes to be deactivated.  If an continue was
     // processed, the 'continue mask' is where it will be stored and pulled
     // from when applying to the unwinding conditional mask stack. When a
-    // loop's scope is exited, the continue mask is popped so it would't be
+    // loop's scope is exited, the continue mask is popped so it wouldn't be
     // applied to an outer loop.
     //
     // The logic of when and how to actually apply these masks is handled

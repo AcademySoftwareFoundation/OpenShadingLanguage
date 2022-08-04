@@ -408,7 +408,7 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                                                    sp.value(), dl.value(),
                                                    dp.value());
                 } else {
-                    // unknow element?
+                    // unknown element?
                 }
             }
             shadingsys->ShaderGroupEnd(*group);

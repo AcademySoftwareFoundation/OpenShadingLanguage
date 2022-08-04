@@ -477,7 +477,7 @@ closure color subsurface(float eta, float g, color mfp, color albedo) BUILTIN;
 // -------------------------------------------------------------//
 // Constructs a diffuse reflection BSDF based on the Oren-Nayar reflectance model.
 //
-//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  N           Normal vector of the surface point being shaded.
 //  \param  albedo      Surface albedo.
 //  \param  roughness   Surface roughness [0,1]. A value of 0.0 gives Lambertian reflectance.
 //  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -487,7 +487,7 @@ closure color oren_nayar_diffuse_bsdf(normal N, color albedo, float roughness) B
 // Constructs a diffuse reflection BSDF based on the corresponding component of 
 // the Disney Principled shading model.
 //
-//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  N           Normal vector of the surface point being shaded.
 //  \param  albedo      Surface albedo.
 //  \param  roughness   Surface roughness [0,1].
 //  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -506,8 +506,8 @@ closure color burley_diffuse_bsdf(normal N, color albedo, float roughness) BUILT
 // a VDF closure describing the surface interior to handle absorption and scattering
 // inside the medium.
 //
-//  \param  N                   Normal vector of the surface point beeing shaded.
-//  \param  U                   Tangent vector of the surface point beeing shaded.
+//  \param  N                   Normal vector of the surface point being shaded.
+//  \param  U                   Tangent vector of the surface point being shaded.
 //  \param  reflection_tint     Weight per color channel for the reflection lobe. Should be (1,1,1) for a physically-correct dielectric surface, 
 //                              but can be tweaked for artistic control. Set to (0,0,0) to disable reflection.
 //  \param  transmission_tint   Weight per color channel for the transmission lobe. Should be (1,1,1) for a physically-correct dielectric surface, 
@@ -527,8 +527,8 @@ closure color dielectric_bsdf(normal N, vector U, color reflection_tint, color t
 // If an artistic parametrization is preferred the artistic_ior() utility function
 // can be used to convert from artistic to physical parameters.
 //
-//  \param  N                   Normal vector of the surface point beeing shaded.
-//  \param  U                   Tangent vector of the surface point beeing shaded.
+//  \param  N                   Normal vector of the surface point being shaded.
+//  \param  U                   Tangent vector of the surface point being shaded.
 //  \param  roughness_x         Surface roughness in the U direction with a perceptually linear response over its range.
 //  \param  roughness_y         Surface roughness in the V direction with a perceptually linear response over its range.
 //  \param  ior                 Refraction index.
@@ -550,8 +550,8 @@ closure color conductor_bsdf(normal N, vector U, float roughness_x, float roughn
 // a VDF closure describing the surface interior to handle absorption and scattering
 // inside the medium.
 //
-//  \param  N                   Normal vector of the surface point beeing shaded.
-//  \param  U                   Tangent vector of the surface point beeing shaded.
+//  \param  N                   Normal vector of the surface point being shaded.
+//  \param  U                   Tangent vector of the surface point being shaded.
 //  \param  reflection_tint     Weight per color channel for the reflection lobe. Set to (0,0,0) to disable reflection.
 //  \param  transmission_tint   Weight per color channel for the transmission lobe. Set to (0,0,0) to disable transmission.
 //  \param  roughness_x         Surface roughness in the U direction with a perceptually linear response over its range.
@@ -568,7 +568,7 @@ closure color generalized_schlick_bsdf(normal N, vector U, color reflection_tint
 
 // Constructs a translucent (diffuse transmission) BSDF based on the Lambert reflectance model.
 //
-//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  N           Normal vector of the surface point being shaded.
 //  \param  albedo      Surface albedo.
 //  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
 //
@@ -586,7 +586,7 @@ closure color transparent_bsdf() BUILTIN;
 
 // Constructs a BSSRDF for subsurface scattering within a homogeneous medium.
 //
-//  \param  N                   Normal vector of the surface point beeing shaded.
+//  \param  N                   Normal vector of the surface point being shaded.
 //  \param  albedo              Single-scattering albedo of the medium.
 //  \param  transmission_depth  Distance travelled inside the medium by white light before its color becomes transmission_color by Beer's law.
 //                              Given in scene length units, range [0,infinity). Together with transmission_color this determines the extinction
@@ -603,7 +603,7 @@ closure color subsurface_bssrdf(normal N, color albedo, float transmission_depth
 // This closure may be vertically layered over a base BSDF, where energy that is not reflected
 // will be transmitted to the base closure.
 //
-//  \param  N           Normal vector of the surface point beeing shaded.
+//  \param  N           Normal vector of the surface point being shaded.
 //  \param  albedo      Surface albedo.
 //  \param  roughness   Surface roughness [0,1].
 //  \param  label       Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -638,7 +638,7 @@ closure color uniform_edf(color emittance) BUILTIN;
 //
 closure color anisotropic_vdf(color albedo, color extinction, float anisotropy) BUILTIN;
 
-// Constructs a VDF for light passing through a dielectric homogenous medium, such as glass or liquids.
+// Constructs a VDF for light passing through a dielectric homogeneous medium, such as glass or liquids.
 // The parameters transmission_depth and transmission_color control the extinction coefficient of the medium
 // in and artist-friendly way. A priority can be set to determine the ordering of overlapping media.
 //

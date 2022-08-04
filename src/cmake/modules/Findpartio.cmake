@@ -10,7 +10,7 @@
 # PARTIO_LIBRARIES - library to link against
 # PARTIO_FOUND - true if Partio was found.
 
-# Hack! perfer a config if it can be found
+# Hack! prefer a config if it can be found
 find_package(partio CONFIG)
 if (PARTIO_FOUND OR partio_FOUND)
     if (VERBOSE)

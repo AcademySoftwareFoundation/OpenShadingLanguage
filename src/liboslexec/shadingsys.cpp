@@ -2111,7 +2111,7 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
         return true;
     }
 
-    // Additional atttributes useful to OptiX-based renderers
+    // Additional attributes useful to OptiX-based renderers
     if (name == "userdata_layers" && type.basetype == TypeDesc::PTR) {
         size_t n    = group->m_userdata_layers.size();
         *(int**)val = n ? &group->m_userdata_layers[0] : NULL;

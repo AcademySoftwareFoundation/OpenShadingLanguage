@@ -209,7 +209,7 @@ macro ( CUDA_SHADEOPS_COMPILE srclist )
         DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
-    # Serialize the linked bitcode into a CPP file and add it to the list of liboslexec soures
+    # Serialize the linked bitcode into a CPP file and add it to the list of liboslexec sources
     add_custom_command ( OUTPUT ${shadeops_bc_cuda_cpp}
         COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
             ${linked_shadeops_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
@@ -222,14 +222,14 @@ if (USE_LLVM_BITCODE)
     set (llvm_ops_srcs llvm_ops.cpp)
     EMBED_LLVM_BITCODE_IN_CPP ( "${llvm_ops_srcs}" "_host" "osl_llvm_compiled_ops" lib_src "")
 
-    set (rs_dependant_ops_srcs
+    set (rs_dependent_ops_srcs
          opmatrix.cpp
          )
     # Achieve the effect of absorbing osl_llvm_compiled_ops by adding its 
-    # sources to rs_dependant_ops_srcs which avoids having to do it at runtime.
-    list (APPEND rs_dependant_ops_srcs ${llvm_ops_srcs})
+    # sources to rs_dependent_ops_srcs which avoids having to do it at runtime.
+    list (APPEND rs_dependent_ops_srcs ${llvm_ops_srcs})
 
-    EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependant_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependant_ops" lib_src "")
+    EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependent_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependent_ops" lib_src "")
 
     # Optionally repeat the bitcode compilation with CUDA-specific options
     if (CUDA_FOUND)
@@ -352,7 +352,7 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
     endif ()
     
     if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
-        # REQUIRES CLANG 7+ to use sucessfully vectorize with OpenMP simd
+        # REQUIRES CLANG 7+ to use successfully vectorize with OpenMP simd
         
         if (${TARGET_OPT_ISA} STREQUAL "AVX512")
             list (APPEND TARGET_CXX_OPTS "-march=skylake-avx512")

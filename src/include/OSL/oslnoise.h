@@ -1881,7 +1881,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                             u, v, w);
     result = scale3 (result);
 #else
-    static_assert(std::is_same<Vec3i, decltype(hash(X, Y, Z))>::value, "This re-implementation was developed for Hashs returning a vector type only");
+    static_assert(std::is_same<Vec3i, decltype(hash(X, Y, Z))>::value, "This re-implementation was developed for hashes returning a vector type only");
     // Want to avoid repeating the same hash work 3 times in a row
     // so rather than executing the vector version, we will use HashScalar
     // and directly mask its results on a per component basis

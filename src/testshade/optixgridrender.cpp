@@ -466,7 +466,7 @@ OptixGridRenderer::make_optix_materials()
 
     std::vector<OptixModule> modules;
 
-    // Space for mesage logging
+    // Space for message logging
     char msg_log[8192];
     size_t sizeof_msg_log;
 

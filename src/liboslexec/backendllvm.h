@@ -243,7 +243,7 @@ public:
     /// derivs are zero.
     llvm::Value* llvm_test_nonzero(Symbol& val, bool test_derivs = false);
 
-    /// Implementaiton of Simple assignment.  If arrayindex >= 0, in
+    /// Implementation of Simple assignment.  If arrayindex >= 0, in
     /// designates a particular array index to assign.
     bool llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex = -1,
                           int srccomp = -1, int dstcomp = -1);

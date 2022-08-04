@@ -19,7 +19,7 @@ namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
-// Foward declaration, implementation is in liboslnoise/wide_gabornoise.h
+// Forward declaration, implementation is in liboslnoise/wide_gabornoise.h
 struct DisabledFilterPolicy {
     static constexpr bool active = false;
 };
@@ -34,7 +34,7 @@ OSL_NOINLINE void
 wide_gabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
            NoiseParams const* opt, Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_gabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
@@ -46,20 +46,20 @@ OSL_NOINLINE void
 wide_gabor(Masked<Dual2<float>> wResult, Wide<const Dual2<Vec3>> wP,
            NoiseParams const* opt, Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_gabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
             NoiseParams const* opt, Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_gabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
             Wide<const Dual2<float>> wY, NoiseParams const* opt,
             Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_gabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<Vec3>> wP,
@@ -71,14 +71,14 @@ wide_gabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<Vec3>> wP,
 // Periodic gabor(s)
 //////////////////////////////////////////////////////////////
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
             Wide<const float> wXp, NoiseParams const* opt,
             Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
@@ -86,7 +86,7 @@ wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<float>> wX,
             Wide<const float> wYp, NoiseParams const* opt,
             Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<Vec3>> wP,
@@ -95,14 +95,14 @@ wide_pgabor(Masked<Dual2<float>> wResult, Wide<const Dual2<Vec3>> wP,
 
 
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
              Wide<const float> wXp, NoiseParams const* opt,
              Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
@@ -110,7 +110,7 @@ wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<float>> wX,
              Wide<const float> wYp, NoiseParams const* opt,
              Block<Vec3>* opt_varying_direction);
 
-// Foward declaration, implementation is in wide_gabor.h
+// Forward declaration, implementation is in wide_gabor.h
 template<int AnisotropicT, typename FilterPolicyT>
 OSL_NOINLINE void
 wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<Vec3>> wP,

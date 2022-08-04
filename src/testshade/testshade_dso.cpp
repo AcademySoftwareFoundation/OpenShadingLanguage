@@ -39,7 +39,7 @@ main(int argc, const char* argv[])
 
     EntryPoint entry = (EntryPoint)Plugin::getsym(handle, "test_shade");
     if (!entry) {
-        std::cerr << "Cound not find test_shade symbol\n";
+        std::cerr << "Could not find test_shade symbol\n";
         exit(1);
     }
 

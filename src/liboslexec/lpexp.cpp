@@ -75,7 +75,7 @@ lpexp::Symbol::genAuto(NdfAutomata& automata) const
 lpexp::FirstLast
 lpexp::Wildexp::genAuto(NdfAutomata& automata) const
 {
-    // Same as the Symbol lpexp but with a wildcard insted of a symbol
+    // Same as the Symbol lpexp but with a wildcard instead of a symbol
     NdfAutomata::State* begin = automata.newState();
     NdfAutomata::State* end   = automata.newState();
     begin->addWildcardTransition(new Wildcard(m_wildcard), end);

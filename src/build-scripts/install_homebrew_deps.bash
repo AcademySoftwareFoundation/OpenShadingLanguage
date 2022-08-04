@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-# This script, which assumes it is runnign on a Mac OSX with Homebrew
+# This script, which assumes it is running on a Mac OSX with Homebrew
 # installed, does a "brew install" in all packages reasonably needed by
 # OSL and its dependencies.
 

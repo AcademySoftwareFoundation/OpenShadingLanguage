@@ -579,7 +579,7 @@ __OSL_MASKED_OP(texture)(void* bsg_, void* name, void* handle, const void* opt_,
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     auto& opt = *reinterpret_cast<const BatchedTextureOptions*>(opt_);
 
-    // NOTE:  If overriden, BatchedRendererServiced::texture is responsible
+    // NOTE:  If overridden, BatchedRendererServiced::texture is responsible
     // for correcting our st texture space gradients into xy-space gradients
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans, alpha,
                                   (bool)alphaHasDerivs, errormessage, mask);
@@ -630,7 +630,7 @@ __OSL_MASKED_OP(texture3d)(void* bsg_, void* name, void* handle,
         assign_all(blockPdz, Vec3(0.0f));
         wPdz = &blockPdz;
     }
-    // NOTE:  If overriden, BatchedRendererServiced::texture is responsible
+    // NOTE:  If overridden, BatchedRendererServiced::texture is responsible
     // for correcting our str texture space gradients into xyz-space gradients
     Mask retVal
         = dispatch_texture3d(bsg->uniform.renderer->batched(WidthTag()),
@@ -671,7 +671,7 @@ __OSL_MASKED_OP(environment)(void* bsg_, void* name, void* handle,
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans, alpha,
                                   (bool)alphaHasDerivs, errormessage, mask);
 
-    // NOTE:  If overriden, BatchedRendererServiced::texture is responsible
+    // NOTE:  If overridden, BatchedRendererServiced::texture is responsible
     // for correcting our str texture space gradients into xyz-space gradients
     Mask retVal = dispatch_environment(
         bsg->uniform.renderer->batched(WidthTag()), USTR(name),

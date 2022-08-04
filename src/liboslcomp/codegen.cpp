@@ -918,7 +918,7 @@ ASTNode::codegen_initlist(ref init, TypeSpec type, Symbol* sym)
     }
 
     if (paraminit) {
-        // Warn early about struct array paramters.
+        // Warn early about struct array parameters.
         // Handling this will likely need changes to oso format.
         if (type.is_structure_array()) {
             errorfmt("array of struct are not allowed as parameters");

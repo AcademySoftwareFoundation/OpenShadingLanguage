@@ -192,7 +192,7 @@ set_shadingsys_options()
 
     // build searchpath for ISA specific OSL shared libraries based on expected
     // location of library directories relative to the executables path.
-    // Users can overide using the "options" command line option
+    // Users can override using the "options" command line option
     // with "searchpath:library"
     static const char* relative_lib_dirs[] =
 #if (defined(_WIN32) || defined(_WIN64))
@@ -1120,7 +1120,7 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
             if (batch_size == 16) {
                 shadingsys->batched<16>().jit_group(shadergroup.get(), ctx);
             } else {
-                ASSERT((batch_size == 8) && "Unsupport batch size");
+                ASSERT((batch_size == 8) && "Unsupported batch size");
                 shadingsys->batched<8>().jit_group(shadergroup.get(), ctx);
             }
         } else
@@ -1241,7 +1241,7 @@ batched_save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
         }
     }
 
-    // In batched mode, a symbol's address can be passed to the contructor of the
+    // In batched mode, a symbol's address can be passed to the constructor of the
     // lightweight data adapter:
     // template <typename DataT, int WidthT> struct Wide
     // which provides the array subscript accessor to access DataT for each batchIndex
@@ -2095,7 +2095,7 @@ test_shade(int argc, const char* argv[])
                                                      sub_roi, save);
                         });
                 } else {
-                    ASSERT((batch_size == 8) && "Unsupport batch size");
+                    ASSERT((batch_size == 8) && "Unsupported batch size");
                     OIIO::ImageBufAlgo::parallel_image(
                         roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
                             batched_shade_region<8>(rend, shadergroup.get(),

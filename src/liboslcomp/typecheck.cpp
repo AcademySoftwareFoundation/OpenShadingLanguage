@@ -678,7 +678,7 @@ ASTtype_constructor::typecheck(TypeSpec expected, bool report, bool bind)
     if (expected.is_float()) {
         patterns    = float_patterns;
         argexpected = TypeDesc::FLOAT;
-        // ^^^ Since simetimes tht constructor `float(expr)` is used as a
+        // ^^^ Since sometimes the constructor `float(expr)` is used as a
         // synonym for a cast `(float)expr`, we know that ambiguously typed
         // expressions should favor disambiguating to a float.
     } else if (expected.is_triple()) {
@@ -762,7 +762,7 @@ public:
 
     ~TypeAdjuster()
     {
-        // Commit infered types of all ASTcompound_initializers scanned.
+        // Commit inferred types of all ASTcompound_initializers scanned.
         if (m_success) {
             for (auto&& initer : m_adjust) {
                 ASTcompound_initializer* ciptr = std::get<0>(initer);
@@ -992,9 +992,9 @@ private:
                    const StructSpec::FieldSpec* field = nullptr)
     {
         if (node->typecheck(expected) != expected &&
-            // Alllow assignment with comparable type
+            // Allow assignment with comparable type
             !assignable(expected, node->typespec()) &&
-            // Alllow closure assignments to '0'
+            // Allow closure assignments to '0'
             !(expected.is_closure() && !node->typespec().is_closure()
               && node->typespec().is_int_or_float()
               && node->nodetype() == literal_node
@@ -1619,7 +1619,7 @@ class CandidateFunctions {
 
         default:
             // TODO: Scoring default function arguments would go here
-            // Curently an unused formal argument, so no match at all.
+            // Currently an unused formal argument, so no match at all.
             return kNoMatch;
         }
         OSL_DASSERT(*formals == 0);
@@ -1994,7 +1994,7 @@ ASTfunction_call::typecheck(TypeSpec expected)
             any_args_are_compound_initializers = true;
     }
 
-    // Save the currently choosen symbol for error reporting later
+    // Save the currently chosen symbol for error reporting later
     FunctionSymbol* poly = func();
 
     CandidateFunctions candidates(m_compiler, expected, args(), poly);

@@ -91,7 +91,7 @@ public:
         std::pair<IntSet::const_iterator, IntSet::const_iterator>
         getLambdaTransitions() const;
 
-        /// Add a standar transition (also valid for lambda)
+        /// Add a standard transition (also valid for lambda)
         void addTransition(ustring symbol, State* state);
         /// Add a wildcard transition
         ///
@@ -107,7 +107,7 @@ public:
         void* getRule() const { return m_rule; };
         int getId() const { return m_id; };
 
-        /// For debuging purposes
+        /// For debugging purposes
         std::string tostr() const;
 
     protected:
@@ -132,7 +132,7 @@ public:
     const State* getInitial() const { return m_states[0]; };
     State* getInitial() { return m_states[0]; };
 
-    /// Creates a new state qith a valid id
+    /// Creates a new state with a valid id
     State* newState();
 
     const State* getState(int i) const { return m_states[i]; };
@@ -162,7 +162,7 @@ public:
     /// states that are reachable by the lambda symbol
     void lambdaClosure(IntSet& states) const;
 
-    /// for debuging purposes
+    /// for debugging purposes
     std::string tostr() const;
 
 protected:
@@ -256,7 +256,7 @@ public:
     /// method call on them
     void removeUselessTransitions();
 
-    /// For debuging purposes
+    /// For debugging purposes
     std::string tostr() const;
 
 protected:
@@ -306,7 +306,7 @@ private:
 
 
 
-/// NDF to DF automata convertion
+/// NDF to DF automata conversion
 ///
 /// This function is the most important pice of the whole process. It takes
 /// a non-deterministic finite automata and computes an equivalent deterministic

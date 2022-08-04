@@ -40,7 +40,7 @@ OSL_NAMESPACE_ENTER
 ///                        which will be embedded in the surrounding
 ///                        boilerplate.
 ///
-/// Speical options in the options list inclue:
+/// Special options in the options list include:
 ///    RES=%dx%d        Set the resolution of the image (default: 1024x1024)
 ///    TILE=%dx%d       Set the tile size
 ///    MIP=%d           Should it generate all MIP levels (default: 0)
@@ -103,7 +103,7 @@ private:
 
 
 
-// Obligatory material to make this a recognizeable imageio plugin:
+// Obligatory material to make this a recognizable imageio plugin:
 OIIO_PLUGIN_EXPORTS_BEGIN
 
 OIIO_EXPORT ImageInput*
@@ -583,7 +583,7 @@ OSLInput::seek_subimage(int subimage, int miplevel)
         return false;  // We only make one subimage
 
     if (miplevel > 0 && !m_mip)
-        return false;  // Asked for MIP levels but we aren't makign them
+        return false;  // Asked for MIP levels but we aren't making them
 
     m_spec = m_topspec;
     for (m_miplevel = 0; m_miplevel < miplevel; ++m_miplevel) {

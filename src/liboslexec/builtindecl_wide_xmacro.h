@@ -253,7 +253,7 @@ DECL(__OSL_MASKED_OP2(hash, Wi, Wv), "xXXi")
 DECL(__OSL_MASKED_OP3(hash, Wi, Wv, Wf), "xXXXi")
 
 // Need wide for combinations of the 3 parameters allowed to be uniform
-// caveat, some combos are unreachable/uneeded
+// caveat, some combos are unreachable/unneeded
 // When result has a derivative, there is
 // no "easy" have a input parameter be non-derivative based on code
 // analysis promoting all inputs to be derivative base.
@@ -381,7 +381,7 @@ DECL(__OSL_OP(get_attribute_uniform), "iXiXXiiXX")
 // TODO:  shouldn't bind_interpolated_param be MASKED?  change name to reflect
 DECL(__OSL_OP(bind_interpolated_param), "iXXLiXiXiXii")
 
-//DECL (osl_get_texture_options, "XX") // uneeded
+//DECL (osl_get_texture_options, "XX") // unneeded
 DECL(__OSL_OP(get_noise_options), "XX")
 
 // The following are defined inside llvm_ops.cpp. Only include these

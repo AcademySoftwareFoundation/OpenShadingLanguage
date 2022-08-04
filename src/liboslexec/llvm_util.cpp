@@ -1364,7 +1364,7 @@ LLVM_Util::make_jit_execengine (std::string *err,
     // Perhaps enable UnsafeFPMath, then modify creation of DIV instructions
     // to remove the arcp (allow reciprocal) flag on that instructions
     options.UnsafeFPMath = false;
-    // Since there are OSL langauge functions isinf and isnan,
+    // Since there are OSL language functions isinf and isnan,
     // we cannot assume there will not be infs and NANs
     options.NoInfsFPMath = false;
     options.NoNaNsFPMath = false;
@@ -1465,7 +1465,7 @@ LLVM_Util::make_jit_execengine (std::string *err,
         // of LLVM was build with -DLLVM_USE_INTEL_JITEVENTS=ON, otherwise
         // createIntelJITEventListener() is a stub that just returns nullptr.
 
-        // TODO:  Create better VTune listener that can handle inline fuctions
+        // TODO:  Create better VTune listener that can handle inline functions
         //        https://software.intel.com/en-us/node/544211
         mVTuneNotifier = llvm::JITEventListener::createIntelJITEventListener();
         if (mVTuneNotifier != NULL) {
@@ -2514,7 +2514,7 @@ LLVM_Util::type_union(cspan<llvm::Type*> types)
 
     llvm::Type * base_type = NULL;
     // to ensure the alignment when included in a struct use
-    // an appropiate type for the array
+    // an appropriate type for the array
     if (max_align == sizeof(void*))
         base_type = type_void_ptr();
     else if (max_align == 4)
@@ -5032,7 +5032,7 @@ LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
             // Transform the masted store to a load+blend+store.
             // Technically, the behavior is different than a masked store as
             // different thread could technically have modified the masked
-            // off data lane values inbetween the read+store. As this
+            // off data lane values in between the read+store. As this
             // language sits below the threading level that could never
             // happen and a read+.
             // TODO: Optimization, if we know this was the final store to

@@ -23,7 +23,7 @@ public:
     MyAov(const TestPath* test, int id)
     {
         // Init for the test case array. For each test case set a bool
-        // in m_expected marking wether this AOV should get some color
+        // in m_expected marking whether this AOV should get some color
         // from that test or not.
         for (int i = 0; test[i].path[0]; ++i) {  // iterate test cases
             m_expected.push_back(false);         // false by default
@@ -88,7 +88,7 @@ simulate(Accumulator& accum, const char** events, size_t testno)
 int
 main()
 {
-    // Some constants to avoid refering to AOV's by number
+    // Some constants to avoid referring to AOV's by number
     const int beauty       = 0;
     const int diffuse2_3   = 1;
     const int light3       = 2;

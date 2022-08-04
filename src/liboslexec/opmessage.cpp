@@ -111,7 +111,7 @@ osl_getmessage(ShaderGlobals* sg, const char* source_, const char* name_,
                 sg->context->errorfmt(
                     "message \"{}\" was set by layer #{} ({}:{})"
                     " but is being queried by layer #{} ({}:{})"
-                    " - messages may only be transfered from nodes "
+                    " - messages may only be transferred from nodes "
                     "that appear earlier in the shading network",
                     name, m->layeridx, m->sourcefile, m->sourceline, layeridx,
                     sourcefile, sourceline);

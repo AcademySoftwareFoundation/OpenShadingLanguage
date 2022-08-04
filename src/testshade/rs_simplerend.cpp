@@ -16,7 +16,7 @@
 // OSL::register_JIT_Global(name, addr) for host execution
 // NOTE:  the STRING_PARAMS macro adapts to OSL_HOST_RS_BITCODE
 // to utilize the RS_ prefix.  RS_ prefixed versions of all OSL::Strings
-// intances have been created by rs_free_function.h, so the same STRING_PARAMS
+// instances have been created by rs_free_function.h, so the same STRING_PARAMS
 // macro can be used for renderer service or OSL strings.
 #define RS_STRDECL(str, var_name) extern "C" OSL::ustring RS_##var_name;
 #include "rs_strdecls.h"

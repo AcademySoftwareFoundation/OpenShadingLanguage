@@ -72,7 +72,7 @@ public:
     AccumRule(int outidx, bool toalpha)
         : m_outidx(outidx), m_save_to_alpha(toalpha) {};
 
-    /// Called to accumulate from AccumAutomata. It will select the right ouput from
+    /// Called to accumulate from AccumAutomata. It will select the right output from
     /// the given vector based in the AOV index number (they are guaranteed to match)
     void accum(const Color3& color, std::vector<AovOutput>& outputs) const;
 

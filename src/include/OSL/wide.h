@@ -194,17 +194,17 @@ template<int WidthT> struct alignas(WidthT * sizeof(float)) VecReg {
 };
 
 static_assert(std::alignment_of<VecReg<16>>::value == 64,
-              "Unexepected alignment");
+              "Unexpected alignment");
 static_assert(std::alignment_of<VecReg<8>>::value == 32,
-              "Unexepected alignment");
+              "Unexpected alignment");
 static_assert(std::alignment_of<VecReg<4>>::value == 16,
-              "Unexepected alignment");
+              "Unexpected alignment");
 static_assert(std::alignment_of<VecReg<16>>::value == VecReg<16>::alignment,
-              "Unexepected alignment");
+              "Unexpected alignment");
 static_assert(std::alignment_of<VecReg<8>>::value == VecReg<8>::alignment,
-              "Unexepected alignment");
+              "Unexpected alignment");
 static_assert(std::alignment_of<VecReg<4>>::value == VecReg<4>::alignment,
-              "Unexepected alignment");
+              "Unexpected alignment");
 
 
 template<typename BuiltinT, int WidthT>
@@ -1535,7 +1535,7 @@ assume_aligned(Block<DataT, WidthT>* block_ptr)
 {
     static_assert(std::alignment_of<Block<DataT, WidthT>>::value
                       == std::alignment_of<VecReg<WidthT>>::value,
-                  "Unexepected alignment");
+                  "Unexpected alignment");
     return assume_aligned<VecReg<WidthT>::alignment>(block_ptr);
 }
 
@@ -1545,7 +1545,7 @@ assume_aligned(const Block<DataT, WidthT>* block_ptr)
 {
     static_assert(std::alignment_of<Block<DataT, WidthT>>::value
                       == std::alignment_of<VecReg<WidthT>>::value,
-                  "Unexepected alignment");
+                  "Unexpected alignment");
     return assume_aligned<VecReg<WidthT>::alignment>(block_ptr);
 }
 
@@ -2089,7 +2089,7 @@ struct UniformAsWide : public pvt::UniformAsWideImpl<DataT, WidthT> {
 template<typename DataT>
 struct WideTraits;  // undefined, all types used should be specialized
 //{
-//static bool mathes(const TypeDesc &) { return false; }
+//static bool matches(const TypeDesc &) { return false; }
 //};
 
 template<> struct WideTraits<float> {
@@ -2128,7 +2128,7 @@ template<> struct WideTraits<ustring> {
     }
 };
 
-// We let Vec3 match any vector semantics as we don't have a seperate Point or Normal classes
+// We let Vec3 match any vector semantics as we don't have a separate Point or Normal classes
 template<> struct WideTraits<Vec3> {
     static bool matches(const TypeDesc& type_desc)
     {

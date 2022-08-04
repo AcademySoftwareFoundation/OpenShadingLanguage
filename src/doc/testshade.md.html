@@ -11,7 +11,7 @@
 _testshade_ basics
 ==================================================
 
-The OSL software distribution inculdes `testshade`, a command-line utility
+The OSL software distribution includes `testshade`, a command-line utility
 that was written for OSL unit tests, and for a "test harness" in which we
 can execute shaders for debugging (the shaders or OSL itself) in isolation
 from any particular rendering system.
@@ -28,7 +28,7 @@ itself, it has a number of potential uses in a production studio, including:
 * Baking procedural patterns into textures.
 
 * Benchmarking shaders and evaluating their performance, including
-  comparitive tests such as "is it faster to code it this way or that way?"
+  comparative tests such as "is it faster to code it this way or that way?"
 
 * Exploring the inner workings of OSL's runtime optimizer, to answer
   questions like: "will this idiom optimize away at runtime when I use
@@ -176,7 +176,7 @@ Helpful command line arguments:
 
 For the sake of simplicity, this document presents almost all examples as if
 they consisted of just a single shader node. But `testshade` is able to
-specify and execut entire shader groups (networks of shader nodes). The
+specify and execute entire shader groups (networks of shader nodes). The
 remainder of this section will explain how this can be done.
 
 Let's make a simple shader network as an example.
@@ -582,7 +582,7 @@ single texture lookup.
 
 
 
-## Controling optimization
+## Controlling optimization
 
 You can control the optimization level overall:
 
@@ -638,7 +638,7 @@ that they are not optimized away so as to lead you to an inaccurate
 reflection of what optimizations would really happen at render time. At the
 same time, be careful not to inadvertently set `lockgeom=0` for parameters
 that will typically be set to default values, instance values, or
-connections from layers that are likely to be analized and found to emit
+connections from layers that are likely to be analyzed and found to emit
 constants for theor outputs -- you also don't want your benchmarks to
 incorrectly disable optimizations what would typically happen at render
 time.

@@ -301,7 +301,7 @@ ShaderInstance::parameters(const ParamValueList& params)
             if (paramtype.arraylen < 0) {
                 // An array of definite size was supplied to a parameter
                 // that was an array of indefinite size. Magic! The trick
-                // here is that we need to allocate paramter space at the
+                // here is that we need to allocate parameter space at the
                 // END of the ordinary param storage, since when we assigned
                 // data offsets to each parameter, we didn't know the length
                 // needed to allocate this param in its proper spot.

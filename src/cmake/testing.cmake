@@ -1,4 +1,4 @@
-# Copyright Contributors to the Open Shading Languge project.
+# Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/
 
@@ -374,7 +374,7 @@ macro (osl_add_all_tests)
         TESTSUITE ( testoptix testoptix-noise example-cuda)
     endif ()
 
-    # Some regression tests have alot of combinations and may need more time to finish
+    # Some regression tests have a lot of combinations and may need more time to finish
     if (BUILD_BATCHED)
         set_tests_properties (arithmetic-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
         set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)

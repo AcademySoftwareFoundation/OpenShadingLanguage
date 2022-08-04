@@ -1431,7 +1431,7 @@ least 32 bits.
 
 Integer constants are constructed the same way as in C.  The following
 are examples of {\cf int} constants: {\cf 1}, {\cf -32}, etc. Integer
-constants may be specified as hexidecimal, for example: {\cf 0x01cf}.
+constants may be specified as hexadecimal, for example: {\cf 0x01cf}.
 
 Unlike C, no unsigned, bool, char, short, or long types are supplied.
 This is to simplify the process of writing shaders (as well as
@@ -3778,7 +3778,7 @@ Computes the \emph{inverse} of the {\cf spline()} function, i.e., returns
 the value $x$ for which \\
    \spc {\cf spline (basis, x, y...)}\\ 
 would return value
-$v$.  Results are undefined if the knots do not specifiy a monotonic
+$v$.  Results are undefined if the knots do not specify a monotonic
 (only increasing or only decreasing) set of values.
 
 Note that the combination of {\cf spline} and {\cf splineinverse} makes
@@ -3905,7 +3905,7 @@ multi-component types such as \color, the format will be applied to each
 of the components).  The {\cf \%s} expects a {\cf string} or 
 {\cf closure} argument.
 
-All of the substition commands follow the usual C/C++ formatting rules,
+All of the substitution commands follow the usual C/C++ formatting rules,
 so format commands such as {\cf "\%6.2f"}, etc., should work as
 expected.
 \apiend
@@ -3930,7 +3930,7 @@ and other diagnostic information.
 \indexapi{fprintf()}
 The {\cf fprintf()} function works similarly to {\cf printf}, but rather
 than printing to the default text output stream, the results will be
-concatentated onto the end of the text file named by {\cf filename}.
+concatenated onto the end of the text file named by {\cf filename}.
 \apiend
 
 \apiitem{string {\ce concat} (string s1, ..., string sN)}
@@ -4404,7 +4404,7 @@ will not be modified and {\cf gettextureinfo} will return {\cf 0}.
 The version of {\cf gettextureinfo} that takes {\cf s} and {\cf t} parameters
 retrieves information about the texture file that will be used for those
 texture coordinates. This can be useful for UDIM textures that may use
-different texture files for different regions, based on the coodinates. For
+different texture files for different regions, based on the corodinates. For
 regular, non-UDIM textures, the coordinates, if supplied, will be ignored.
 When UDIM textures are queried without coordinates supplied, it will succeed
 and return the texture info only if that parameter is found and has the same
@@ -4620,7 +4620,7 @@ examine the numeric values of the \colorclosure.
 The intent of this specification is to give a minimal but useful set of
 material closures that you can expect any renderer implementation to
 provide.  Individual renderers may supply additional closures that are
-specific to the workings of that renderer.  Additionally, invidual
+specific to the workings of that renderer.  Additionally, individual
 renderers may allow additional parameters or controls on the standard
 closures, passed as token/value pairs following the required arguments
 (much like the optional arguments to the {\cf texture()} function).
@@ -5750,7 +5750,7 @@ programming language design)?
 
 This spec is written assuming that \color should explicitly be
 3-component RGB.  Alternately, we could add global \inttype\ {\cf ncomps} that gives the
-numer of components in a \color, and eliminate any built-in operations
+number of components in a \color, and eliminate any built-in operations
 and library functions that seem to require or imply a 3-component color
 model (including type casting between \color and the 3-component
 \point-like types).
@@ -5862,7 +5862,7 @@ anybody want to argue for any of the following to be included?
 
 We have defined structures as being allowed to consist only of basic
 types and arrays thereof --- not structures of structures.  This
-restriction makes for a simpler grammar and implementation, simplier
+restriction makes for a simpler grammar and implementation, simpler
 renderer-side APIs for passing data to shaders, and simpler APIs for
 libraries that query parameters of compiled shaders.  But if people
 strongly feel like structures-of-structures is an important feature, we
@@ -5948,7 +5948,7 @@ about it.
 
 \subsection{Nomenclature}
 
-Does anybody have a perference for \dPdu and \dPdv (borrowing the
+Does anybody have a preference for \dPdu and \dPdv (borrowing the
 RenderMan names, but awkward for primitives without a consistent $u,v$
 parameterization?), versus something more generic such as {\cf T} and
 {\cf B} (tangent and bitangent, without explicitly saying how they are
@@ -6144,7 +6144,7 @@ full control in the shader.
   at a later time to yield a final numeric value.
 
 \item[Connection.] A routing of the value of an \emph{output parameter}
-  of one \emph{shader layer} to an \emph{input paramter} of another
+  of one \emph{shader layer} to an \emph{input parameter} of another
   shader layer within the same \emph{shader group}.
 
 \item[Default parameter value.] The initial value of a \emph{shader
@@ -6190,7 +6190,7 @@ full control in the shader.
 
 \item[Primitive variable.] A named variable, and values, attached to an
   individual geometric primitive.  Primitive variables may have one of
-  serveral \emph{interpolation methods} --- such as a single value for
+  several \emph{interpolation methods} --- such as a single value for
   the whole primitive, a value for each piece or face of the primitive,
   or per-vertex values that are smoothly interpolated across the
   surface.
@@ -6199,7 +6199,7 @@ full control in the shader.
   that is visible and directly callable by the renderer, as opposed to
   merely being called from other code within the shader.  Public methods
   must be \emph{top-level} (not defined within other functions) and must
-  be preceeded by the {\cf public} keyword.
+  be preceded by the {\cf public} keyword.
 
 \item[Shader.] A small self-contained program written in \langname, used
   to extend the functionality of a renderer with custom behavior of

@@ -30,7 +30,7 @@ run_pnoise_tests ("u_c", "1d")
 run_pnoise_tests ("c_u", "1d")
 
 # Run 2d noise tests with permuations of varying, uniform, and constant arguments
-# but leaving 3rd and 4th arguments (the period parameters) as varing to
+# but leaving 3rd and 4th arguments (the period parameters) as varying to
 # limit the number of permutations we are testing 
 # Choose not to test variation of only constant arguments, as that should be constant folded 
 run_pnoise_tests ("v_v_v_v", "2d")
@@ -54,7 +54,7 @@ run_pnoise_tests ("u_c", "3d")
 run_pnoise_tests ("c_u", "3d")
 
 # Run 4d noise tests with permuations of varying, uniform, and constant arguments
-# but leaving 3rd and 4th arguments (the period parameters) as varing to
+# but leaving 3rd and 4th arguments (the period parameters) as varying to
 # limit the number of permutations we are testing 
 # Choose not to test variation of only constant arguments, as that should be constant folded 
 run_pnoise_tests ("v_v_v_v", "4d")

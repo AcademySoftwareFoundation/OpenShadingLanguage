@@ -11,7 +11,7 @@ shader test_split_u_str_v_sep_u_max (output vector res=0,
     //printf("%s\t", var_sep);
     int uniform_maxsplit = 3;//Uniform maxsplit
         
-    //Initialize result ouput array
+    //Initialize result output array
     string results[4] = {uniform_str,uniform_str,uniform_str,uniform_str}; 
     string results1[4] = {uniform_str,uniform_str,uniform_str,uniform_str};
     

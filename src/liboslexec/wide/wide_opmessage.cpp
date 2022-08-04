@@ -371,7 +371,7 @@ __OSL_MASKED_OP(getmessage)(void* bsg_, void* result, char* source_,
                 Mask(lane),
                 "message \"{}\" was set by layer #{} ({}:{})"
                 " but is being queried by layer #{} ({}:{})"
-                " - messages may only be transfered from nodes "
+                " - messages may only be transferred from nodes "
                 "that appear earlier in the shading network",
                 name, msg_layerid, msg_sourcefile, msg_sourceline, layeridx,
                 sourcefile, sourceline);

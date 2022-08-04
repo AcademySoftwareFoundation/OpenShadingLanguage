@@ -2,7 +2,7 @@
 
 The OSL Documentation Project is a work in progress.
 
-The plan is to adopt the OCIO Documentation Project's methodology for maintaining and building documention of various kinds as it becomes the blueprint for the ASWF.
+The plan is to adopt the OCIO Documentation Project's methodology for maintaining and building documentation of various kinds as it becomes the blueprint for the ASWF.
 
 There is much work to be done here. 
 

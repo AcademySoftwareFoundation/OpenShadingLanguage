@@ -226,7 +226,7 @@ endif ()
 
 
 
-# We wil use this for ccache and timing
+# We will use this for ccache and timing
 set (MY_RULE_LAUNCH "")
 
 

@@ -557,7 +557,7 @@ LLVMGEN(llvm_gen_arraylength)
     int len = A.typespec().is_unsized_array() ? A.initializers()
                                               : A.typespec().arraylength();
 
-    // Even thought the array's size should be uniform accross all lanes,
+    // Even thought the array's size should be uniform across all lanes,
     // the symbol its being stored in maybe varying
     llvm::Value* const_length = Result.is_uniform() ? rop.ll.constant(len)
                                                     : rop.ll.wide_constant(len);
@@ -605,7 +605,7 @@ LLVMGEN(llvm_gen_aref)
         } else {
             BatchedBackendLLVM::TempScope temp_scope(rop);
 
-            // We need a copy of the indices incase the range check clamps them
+            // We need a copy of the indices in case the range check clamps them
             llvm::Value* loc_clamped_wide_index = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/,
                 false /*forceBool*/,
@@ -687,7 +687,7 @@ LLVMGEN(llvm_gen_aassign)
             }
         } else {
             BatchedBackendLLVM::TempScope temp_scope(rop);
-            // We need a copy of the indices incase the range check clamps them
+            // We need a copy of the indices in case the range check clamps them
             llvm::Value* loc_clamped_wide_index = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/,
                 false /*forceBool*/,
@@ -1110,10 +1110,10 @@ LLVMGEN(llvm_gen_if)
         // contain a call to a lower level, those must not be executed
         // if the mask is all off
 //#define SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH 1
-// NOTE: if SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH is defineed then
+// NOTE: if SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH is defined then
 // library and layer functions may get called with an entirely empty mask
 #ifndef SKIP_TESTING_IF_ANY_LANES_ACTIVE_TO_AVOID_BRANCH
-        // We use the combined mask stack + the if condition's mask we aready pushed
+        // We use the combined mask stack + the if condition's mask we already pushed
         llvm::Value* anyThenLanesActive = rop.ll.test_if_mask_is_non_zero(
             rop.ll.current_mask());
 #endif
@@ -2302,7 +2302,7 @@ LLVMGEN(llvm_gen_compref)
         if (rop.inst()->master()->range_checking()) {
             BatchedBackendLLVM::TempScope temp_scope(rop);
 
-            // We need a copy of the indices incase the range check clamps them
+            // We need a copy of the indices in case the range check clamps them
             llvm::Value* loc_clamped_wide_index = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/,
                 false /*forceBool*/,
@@ -2418,7 +2418,7 @@ LLVMGEN(llvm_gen_compassign)
         if (rop.inst()->master()->range_checking()) {
             BatchedBackendLLVM::TempScope temp_scope(rop);
 
-            // We need a copy of the indices incase the range check clamps them
+            // We need a copy of the indices in case the range check clamps them
             llvm::Value* loc_clamped_wide_index = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/,
                 false /*forceBool*/,
@@ -2534,7 +2534,7 @@ LLVMGEN(llvm_gen_mxcompref)
             }
         } else {
             BatchedBackendLLVM::TempScope temp_scope(rop);
-            // We need a copy of the indices incase the range check clamps them
+            // We need a copy of the indices in case the range check clamps them
             llvm::Value* loc_clamped_wide_index = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/,
                 false /*forceBool*/,
@@ -2636,7 +2636,7 @@ LLVMGEN(llvm_gen_mxcompassign)
             }
         } else {
             BatchedBackendLLVM::TempScope temp_scope(rop);
-            // We need a copy of the indices incase the range check clamps them
+            // We need a copy of the indices in case the range check clamps them
             llvm::Value* loc_clamped_wide_index = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::INT), false /*derivs*/, false /*is_uniform*/,
                 false /*forceBool*/,
@@ -2955,7 +2955,7 @@ LLVMGEN(llvm_gen_compare_op)
             if ((typeOfA == rop.ll.type_bool() && typeOfB == rop.ll.type_int())
                 || (typeOfA == rop.ll.type_wide_bool()
                     && typeOfB == rop.ll.type_wide_int())) {
-                // TODO: could optimize for contant 0 and 1 and skip the comparison
+                // TODO: could optimize for constant 0 and 1 and skip the comparison
                 a = rop.ll.op_bool_to_int(a);
             }
             if ((typeOfB == rop.ll.type_bool() && typeOfA == rop.ll.type_int())
@@ -3547,7 +3547,7 @@ LLVMGEN(llvm_gen_transform)
 
             FuncSpec func_spec("build_transform_matrix");
             func_spec.arg_varying(TypeDesc::TypeMatrix44);
-            // Ignore derivatives if uneeded or unsupplied
+            // Ignore derivatives if unneeded or unsupplied
             func_spec.arg(*From, from_is_uniform);
             func_spec.arg(*To, to_is_uniform);
             func_spec.mask();
@@ -3570,7 +3570,7 @@ LLVMGEN(llvm_gen_transform)
             FuncSpec func_spec(op.opname().c_str());
             func_spec.unbatch();
             //std::string func_name = std::string("osl_") + op.opname().c_str() + "_";
-            // Ignore derivatives if uneeded or unsupplied
+            // Ignore derivatives if unneeded or unsupplied
             bool has_derivs = (Result->has_derivs() && P->has_derivs());
             func_spec.arg(*P, has_derivs, P_is_uniform);
             // The matrix is always varying if we looked it up,
@@ -5750,7 +5750,7 @@ llvm_batched_noise_options(BatchedBackendLLVM& rop, int opnum,
             rop.ll.call_function("osl_noiseparams_set_do_filter", opt,
                                  rop.llvm_load_value(Val));
         } else if (name == Strings::direction && Val.typespec().is_triple()) {
-            // We are not going to bin by varing direction
+            // We are not going to bin by varying direction
             // instead we will pass a pointer to its wide value
             // as an extra parameter.
             // If it is null, then the uniform value from noise options
@@ -7181,7 +7181,7 @@ LLVMGEN(llvm_gen_closure)
     llvm::Value* comp_wide_ptr = rop.ll.op_load(comp_wide_ptr_ptr);
 
     // This is an unrolled vector-width loop.  It was unrolled because it's
-    // was more expedient to write the for in C++ than IR, but if compiliation
+    // was more expedient to write the for in C++ than IR, but if compilation
     // of the extra ops becomes problematic, this choice can be revisited
     for (int lane_index = 0; lane_index < rop.vector_width(); ++lane_index) {
         llvm::Value* comp_ptr = rop.ll.op_extract(comp_wide_ptr, lane_index);
@@ -8191,7 +8191,7 @@ LLVMGEN(llvm_gen_split)
             llvm::Value* wide_sep      = rop.ll.wide_constant("");
             llvm::Value* temp_wide_sep = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::STRING), false /*derivs*/,
-                false /*op_is_uniform*/, false /*forceBool*/, "wide seperator");
+                false /*op_is_uniform*/, false /*forceBool*/, "wide separator");
             rop.ll.op_unmasked_store(wide_sep, temp_wide_sep);
             args.push_back(rop.ll.void_ptr(temp_wide_sep));
         }

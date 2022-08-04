@@ -223,7 +223,7 @@ public:
 // delegating access to element storage to the DualStorage base class
 template<
          class T,           // Base data type
-         int PARTIALS=1     // Number of dimentions of partial derivs
+         int PARTIALS=1     // Number of dimensions of partial derivs
         >
 class Dual : public DualStorage<T, PARTIALS> {
     static const int elements = PARTIALS+1;   // main value + partials

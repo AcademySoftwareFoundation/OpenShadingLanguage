@@ -998,7 +998,7 @@ private:
 
 
 
-/// Describe one end of a parameter connetion: the parameter number, and
+/// Describe one end of a parameter connection: the parameter number, and
 /// optionally an array index and/or channel number within that parameter.
 struct ConnectedParam {
     int param;            ///< Parameter number (in the symbol table)

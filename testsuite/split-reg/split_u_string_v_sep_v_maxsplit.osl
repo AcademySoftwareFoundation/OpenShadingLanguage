@@ -10,7 +10,7 @@ shader test_split_u_str_v_sep_v_max (output vector res=0,
     //printf("%s\t", var_sep);
     int var_maxsplit = int(u) + 3*int(u);//varying maxsplit
         
-    //Initialize result ouput array
+    //Initialize result output array
     string results[4] = {uniform_str,uniform_str,uniform_str,uniform_str}; 
     string results1[4] = {uniform_str,uniform_str,uniform_str,uniform_str};
     
@@ -19,7 +19,7 @@ shader test_split_u_str_v_sep_v_max (output vector res=0,
     int accum1 = 0;
     int sc1 = 0;
     
-    sc1 = split(format("%d,%d,%d,%d,%d", 2*uval, 2, 2*uval, 6*uval, 8*uval ),results, var_sep, var_maxsplit); //varying string amd varying seperator
+    sc1 = split(format("%d,%d,%d,%d,%d", 2*uval, 2, 2*uval, 6*uval, 8*uval ),results, var_sep, var_maxsplit); //varying string amd varying separator
     
     for (int i = 0 ; i<sc1; ++i){
         accum1 = stoi(results[i]);

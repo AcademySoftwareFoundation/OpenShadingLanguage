@@ -143,7 +143,7 @@ public:
                             ++use_iter;
                             auto* user = llvm::dyn_cast<llvm::Instruction>(
                                 use.getUser());
-                            // We need to skip the use wher the user is our conversion to a llvm_mask
+                            // We need to skip the use where the user is our conversion to a llvm_mask
                             if (user && user == llvm_mask)
                                 continue;
                             use.set(llvm_mask);

@@ -207,7 +207,7 @@ main(int argc, char* argv[])
 
     // build searchpath for ISA specific OSL shared libraries based on expected
     // location of library directories relative to the executables path.
-    // Users can overide using the "options" command line option
+    // Users can override using the "options" command line option
     // with "searchpath:library"
     static const char* relative_lib_dirs[] =
 #if (defined(_WIN32) || defined(_WIN64))

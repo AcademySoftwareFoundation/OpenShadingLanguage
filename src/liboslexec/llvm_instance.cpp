@@ -1705,6 +1705,14 @@ BackendLLVM::run()
             // See: https://llvm.org/docs/NVPTXUsage.html
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
             ll.module()->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+
+            // Mark all global variables extern and discard their initializers.
+            // Global variables are defined in the shadeops PTX file.
+            for (llvm::GlobalVariable& global : ll.module()->globals()) {
+                global.setLinkage(llvm::GlobalValue::ExternalLinkage);
+                global.setExternallyInitialized(true);
+                global.setInitializer(nullptr);
+            }
         }
         OSL_ASSERT(ll.module());
 #endif
@@ -1877,12 +1885,12 @@ BackendLLVM::run()
 
         ll.do_optimize();
 
-        // Drop everything but the init and group entry functions. Everything
-        // they might call should be defined elsewhere (e.g., a shadeops PTX module).
+        // Drop everything but the init and group entry functions and generated
+        // group functions. Everything else should be defined elsewhere (e.g., a
+        // shadeops PTX module).
         for (llvm::Function& fn : *ll.module()) {
             if (!fn.getName().startswith("__direct_callable__")
-                && !fn.getName().startswith("__direct_callable__dummy")
-                && !fn.getName().startswith("group_")) {
+                && !fn.getName().startswith(group().name().c_str())) {
                 fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
                 fn.deleteBody();
             }

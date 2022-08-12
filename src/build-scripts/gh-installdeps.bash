@@ -164,7 +164,7 @@ if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
     # Don't let warnings in OIIO break OSL's CI run
     export OPENIMAGEIO_CMAKE_FLAGS+=" -DSTOP_ON_WARNING=OFF"
     export OPENIMAGEIO_CMAKE_FLAGS+=" -DUSE_OPENGL=0"
-    if [[ $OPENIMAGEIO_VERSION == master ]] ; then
+    if [[ $OPENIMAGEIO_VERSION == master && "${OPENIMAGEIO_UNITY:-1}" != "0" ]] ; then
         # Speed up the OIIO build by doing a "unity" build. (Note: this is
         # only a savings in CI where there are only 1-2 cores available, and
         # is only supported for OIIO 2.3.14 and later)

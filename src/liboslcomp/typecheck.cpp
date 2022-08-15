@@ -618,7 +618,7 @@ ASTternary_expression::typecheck(TypeSpec expected)
         errorfmt("Cannot use an array as a condition");
 
     // No arrays
-    if (t.is_array() || t.is_array()) {
+    if (t.is_array() || f.is_array()) {
         errorfmt("Not allowed: '{} ? {} : {}'", c, t, f);
         return TypeSpec();
     }

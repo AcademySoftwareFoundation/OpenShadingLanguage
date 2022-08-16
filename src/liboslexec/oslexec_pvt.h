@@ -276,8 +276,6 @@ USTR(const void* s) noexcept
 #define DCOL(x)     (*(Dual2<Color3>*)x)
 #define TYPEDESC(x) OSL::bitcast<TypeDesc, long long>(x)
 
-
-
 /// Like an int (of type T), but also internally keeps track of the
 /// maximum value is has held, and the total "requested" deltas.
 /// You really shouldn't use an unsigned type for T, for two reasons:

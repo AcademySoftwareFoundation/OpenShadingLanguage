@@ -13,6 +13,9 @@
 
 #include "rend_lib.h"
 
+#define MEMCPY_ALIGNED(dst, src, size, alignment)    \
+    memcpy(__builtin_assume_aligned(dst, alignment), \
+           __builtin_assume_aligned(src, alignment), size);
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
@@ -140,7 +143,7 @@ osl_allocate_weighted_closure_component(void* sg_, int id, int size,
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
-    const OSL::Color3* wc = (const OSL::Color3*)w;
+    const OSL::Color3* wc = (const OSL::Color3*) __builtin_assume_aligned(w,alignof(float));
 
     if (wc->x == 0.0f && wc->y == 0.0f && wc->z == 0.0f) {
         return NULL;
@@ -163,7 +166,7 @@ __device__ void*
 osl_mul_closure_color(void* sg_, void* a, const void* w)
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
-    const OSL::Color3* wc = (const OSL::Color3*)w;
+    const OSL::Color3* wc = (const OSL::Color3*) __builtin_assume_aligned(w,alignof(float));
 
     if (a == NULL) {
         return NULL;
@@ -191,6 +194,8 @@ osl_mul_closure_color(void* sg_, void* a, const void* w)
 __device__ void*
 osl_mul_closure_float(void* sg_, void* a, float w)
 {
+    a = __builtin_assume_aligned(a,alignof(float));
+
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
     if (a == NULL || w == 0.0f) {
@@ -215,6 +220,9 @@ osl_mul_closure_float(void* sg_, void* a, float w)
 __device__ void*
 osl_add_closure_closure(void* sg_, void* a, void* b)
 {
+    a = __builtin_assume_aligned(a,alignof(float));
+    b = __builtin_assume_aligned(b,alignof(float));
+
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
     if (a == NULL) {
@@ -254,7 +262,7 @@ rend_get_userdata(OSL::StringParam name, void* data, int data_size,
     }
     // TODO: This is temporary code for initial testing and demonstration.
     if (IS_STRING(type) && name == HDSTR(OSL::pvt::test_str_1)) {
-        memcpy(data, &OSL::pvt::test_str_2, 8);
+        MEMCPY_ALIGNED(data, &OSL::pvt::test_str_2, 8, alignof(float));
         return true;
     }
 
@@ -281,7 +289,7 @@ osl_bind_interpolated_param(void* sg_, const char* name, long long type,
         *userdata_initialized = status = 1 + ok;
     }
     if (status == 2) {
-        memcpy(symbol_data, userdata_data, symbol_data_size);
+        MEMCPY_ALIGNED(symbol_data, userdata_data, symbol_data_size, alignof(float));
         return 1;
     }
     return 0;
@@ -442,11 +450,12 @@ osl_range_check(int indexvalue, int length, OSL::ustring_pod symname, void* sg,
 
 
 
-#define MAT(m) (*(OSL::Matrix44*)m)
+#define MAT(m) (*(OSL::Matrix44*)__builtin_assume_aligned(m,alignof(float)))
 
 __device__ int
 osl_get_matrix(void* sg_, void* r, const char* from)
 {
+    r = __builtin_assume_aligned(r,alignof(float));
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     if (HDSTR(from) == STRING_PARAMS(common)) {
         MAT(r).makeIdentity();
@@ -491,6 +500,7 @@ osl_get_matrix(void* sg_, void* r, const char* from)
 __device__ int
 osl_get_inverse_matrix(void* sg_, void* r, const char* to)
 {
+    r = __builtin_assume_aligned(r,alignof(float));
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     if (HDSTR(to) == STRING_PARAMS(common)) {
         MAT(r).makeIdentity();

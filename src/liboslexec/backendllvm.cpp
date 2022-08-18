@@ -555,6 +555,15 @@ BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
         // FIXME -- is this case ever used? Seems strange.
     }
 
+    // We still disguise hashed strings as char*. Ideally, we would only do
+    // that if the rep were a charptr, but we disguise the hashes as char*'s
+    // also to avoid ugliness with function signatures differing between CPU
+    // and GPU. Maybe some day we'll use the hash representation on both
+    // sides?
+    if (type.is_string()
+        && ll.ustring_rep() != LLVM_Util::UstringRep::charptr)
+        result = ll.int_to_ptr_cast(result);
+
     return result;
 }
 

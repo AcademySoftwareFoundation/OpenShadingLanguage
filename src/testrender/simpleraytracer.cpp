@@ -1067,9 +1067,9 @@ SimpleRaytracer::render(int xres, int yres)
                                               OIIO::ROI(0, xres, ybegin, yend));
             for (; !p.done(); ++p) {
                 Color3 c = antialias_pixel(p.x(), p.y(), ctx);
-                p[0]     = c[0];
-                p[1]     = c[1];
-                p[2]     = c[2];
+                p[0]     = c.x;
+                p[1]     = c.y;
+                p[2]     = c.z;
             }
 
             // We're done shading with this context.

@@ -478,7 +478,7 @@ ASTbinary_expression::typecheck(TypeSpec expected)
             TypeSpec returntype = m_compiler->type_from_code(code, &advance);
             code += advance;
             if (code[0] && check_simple_arg(l, code, true) && code[0]
-                && check_simple_arg(r, code, true) && !code[0]) {
+                && check_simple_arg(r, code, true) && !code[0]) {  // NOSONAR
                 return m_typespec = returntype;
             }
         }
@@ -1065,6 +1065,8 @@ bool
 ASTNode::check_arglist(const char* /*funcname*/, ASTNode::ref arg,
                        const char* formals, bool coerce, bool bind)
 {
+    if (!formals)
+        return false;
     // std::cerr << "ca " << funcname << " formals='" << formals << "\n";
     for (; arg; arg = arg->next()) {
         if (!*formals)  // More formal args, but no more actual args

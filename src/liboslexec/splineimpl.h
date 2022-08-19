@@ -48,7 +48,7 @@ OSL_CONSTANT_DATA const static SplineBasis gBasisSet[kNumSplineTypes] = {
    { 1, { {(-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f)},
           {( 2.0f/2.0f),  (-5.0f/2.0f), ( 4.0f/2.0f), (-1.0f/2.0f)},
           {(-1.0f/2.0f),  ( 0.0f/2.0f), ( 1.0f/2.0f), ( 0.0f/2.0f)},
-          {( 0.0f/2.0f),  ( 2.0f/2.0f), ( 0.0f/2.0f), ( 0.0f/2.0f)}  } },
+          {( 0.0f/2.0f),  ( 2.0f/2.0f), ( 0.0f/2.0f), ( 0.0f/2.0f)}  } },  // NOSONAR
 //
 // bezier
 //

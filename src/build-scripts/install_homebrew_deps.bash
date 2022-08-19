@@ -27,9 +27,11 @@ brew list --versions
 
 brew install --display-times -q gcc ccache cmake ninja boost || true
 brew link --overwrite gcc
+brew install --display-times -q python@${PYTHON_VERSION} || true
 brew unlink python@2.7 || true
-brew unlink python@3.9 || true
 brew unlink python@3.8 || true
+brew unlink python@3.9 || true
+brew unlink python@3.10 || true
 brew link --overwrite --force python@${PYTHON_VERSION} || true
 brew upgrade --display-times -q cmake || true
 brew install --display-times -q ilmbase openexr

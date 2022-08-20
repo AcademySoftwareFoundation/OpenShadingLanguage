@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12 -- ?? 1 Aug 2022 ?? (compared to 1.11)
+Release 1.12 -- ?? 1 Sep 2022 ?? (compared to 1.11)
 --------------------------------------------------
 Big Deal Changes:
 
@@ -10,6 +10,10 @@ Big Deal Changes:
   8 or 16 points at a time, accelerated by using SIMD instructions.
 * A reasonable subset of the OSL language can run on NVIDIA GPUs for
   Cuda or OptiX-based renderers.
+* Synchronize with MaterialX on a minimum standard set of material closures.
+  This is reflected in both the OSL spec as well as reference implementations
+  of those closures in testrender. #1533 #1536 #1537 #1538 #1539 #1541 #1542
+  #1547
 
 Dependency and standards requirements changes:
 * The minimum (and default) compilation mode is now C++14. C++17 and 20 are
@@ -151,7 +155,13 @@ Bug fixes and other improvements (internals):
 * Fix GPU code generation crash. #1479 (1.12.4.4)
 * Work to transition internals to use modern std::format notation for
   formatted output. #1487 #1490 (1.12.4.6)
-* Fix testrender memory error on teardown. #1499 (1.12.4.6)
+* testrender improvements:
+    * Fix testrender memory error on teardown. #1499 (1.12.4.6)
+    * Modernize the sampler in testrender, improving quality and performance.
+      #1529 (1.12.6.0)
+    * Switch to cone tracing for derivatives. #1543 (1.12.6.0)
+* Fix error that prevented correct typecheck of ternary operator. #1552
+  (1.12.6.0)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -175,6 +185,8 @@ Internals/developer concerns:
   to be used in OSL 1.12. #1494 (1.12.5.0)
 * Work on gradually converting printf-style formatted strings to fmt /
   std::format style. #1493 (1.12.5.0)
+* LLVM_Util: allow naming of llvm symbols to help with IR debugging. #1503
+  (1.12.6.0)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -270,6 +282,8 @@ Build & test system improvements:
       #1501 (1.12.5.0)
     - Overhaul of GHA ci.yml to use strategy matrix. #1474 (1.12.4.4)
     - Test against clang 14 and fix new warnings. #1498 (1.12.5.0)
+    - A scorecards workflow guards against a variety of security issues of
+      the CI system itself.  #1529 (1.12.6.0)
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)
@@ -289,6 +303,8 @@ Documentation:
   #1326 (1.12.1)
 * Fix missing explanation of the optional "errormessage" parameter to
   environment() and texture3d(). #1442 (1.12.3/1.11.17)
+* A SECURITY.md file explains how to confidentially report vulnerabillties.
+  #1529 (1.12.6)
 
 
 

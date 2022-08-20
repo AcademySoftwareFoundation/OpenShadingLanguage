@@ -393,6 +393,18 @@ Films using OSL (grouped by year of release date):
   Matrix Resurrections
 * **(2022 / upcoming)**
   Hotel Transylvania 4: Transformania,
+  Death on the Nile,
+  Uncharted,
+  Turning Red,
+  The Adam Project,
+  Doctor Strange in the Multiverse of Madness,
+  Love, Death, and Robots: In Vaulted Halls Entombed,
+  Jurassic World: Dominion,
+  Lightyear,
+  Thor: Love and Thunder,
+  The Sea Beast,
+  DC League of Super Pets,
+  Bullet Train,
   ...
 
 
@@ -427,9 +439,13 @@ certain is a legit problem in the code, and for which you can give clear
 instructions for how to reproduce, should be [reported as
 issues](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues).
 
-If confidentiality precludes a public question or issue, you may contact the
-project administrator privately at [lg@imageworks.com](lg@imageworks.com),
-including for security-related issues.
+If you think you've found a potential vulnerability in OSL, please
+confidentially report it by emailing the project administrators at
+[security@openshadinglanguage.org](security@openshadinglanguage.org).
+
+If any other issue requires confidentiality that precludes a public question
+or issue, you may contact the project administrator privately at
+[lg@larrygritz.com](lg@larrygritz.com).
 
 
 Contributing
@@ -453,7 +469,6 @@ Contacts, Links, and References
 
 [OSL home page](http://openshadinglanguage.org)
 
-[Sony Pictures Imageworks main open source page](http://opensource.imageworks.com)
 
 
 
@@ -466,19 +481,18 @@ The current project leadership is documented in the
 Many people have contributed features, bug fixes, and other changes to OSL
 over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
 Bidgolirad, Nicholas Bishop, Solomon Boulos, Stefan Bruens, Stefan Büttner,
-Matthaus G. Chajdas, Clark Chen, Alejandro Conty,
-Dieter De Baets, Thomas Dinges, Mads Drøschler,
-Luke Emrose, Louis Feng, Mark Final, Henri Fousse, Syoyo Fujita,
-Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase, Sven-Hendrik
-Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Thiago Ize, Matt
-Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Adam Martinez,
-John Mertic, Bastien Montagne, Steena Monteiro, Alexis Oblet, Erich Ocean,
-Mikko Ohtamaa, Jino Park, Alexei Pawlow, Jay Reynolds, Declan Russell, Benoit
-Ruiz, Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin,
-Sandip Shukla, Cliff Stein, Stephan Steinbach, Luya Tshimbalanga, Esteban
-Tovagliari, Brecht Van Lommel, Alexander von Knorring, Alex Wells, Roman
-Zulak. (Listed alphabetically; if we've left anybody out, it is inadvertent,
-please let us know.)
+Matthaus G. Chajdas, Clark Chen, Alejandro Conty, Dieter De Baets, Thomas
+Dinges, Mads Drøschler, Luke Emrose, Louis Feng, Mark Final, Henri Fousse,
+Stephen Friedman, Syoyo Fujita, Tim Grant, Larry Gritz, Nicolas Guiard, Euan
+Haahr, Derek Haase, Sven-Hendrik Haase, John Haddon, Niklas Harrysson, Daniel
+Heckenberg, Adrien Herubel, Thiago Ize, Matt Johnson, Ronan Keryell, Chris
+Kulla, Elvic Liang, Max Liani, Adam Martinez, John Mertic, Bastien Montagne,
+Steena Monteiro, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jino Park, Alexei
+Pawlow, Jay Reynolds, Declan Russell, Benoit Ruiz, Patrick Scheibe, Alex
+Schworer, Jonathan Scruggs, Sergey Sharybin, Sandip Shukla, Cliff Stein,
+Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel,
+Alexander von Knorring, Alex Wells, Roman Zulak. (Listed alphabetically; if
+we've left anybody out, it is inadvertent, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

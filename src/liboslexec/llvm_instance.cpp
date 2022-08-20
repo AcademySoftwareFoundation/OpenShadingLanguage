@@ -112,8 +112,8 @@ extern unsigned char osl_llvm_compiled_ops_block[];
 extern int osl_llvm_compiled_ops_cuda_size;
 extern unsigned char osl_llvm_compiled_ops_cuda_block[];
 
-extern int osl_llvm_compiled_rs_dependant_ops_size;
-extern unsigned char osl_llvm_compiled_rs_dependant_ops_block[];
+extern int osl_llvm_compiled_rs_dependent_ops_size;
+extern unsigned char osl_llvm_compiled_rs_dependent_ops_block[];
 
 using namespace OSL::pvt;
 
@@ -1337,12 +1337,12 @@ BackendLLVM::run ()
 #else
     if (! use_optix()) {
         if(use_rs_bitcode()){
-            ll.module (ll.module_from_bitcode ((char*)osl_llvm_compiled_rs_dependant_ops_block,
-                                               osl_llvm_compiled_rs_dependant_ops_size,
-                                               "llvm_rs_dependant_ops", &err));
+            ll.module (ll.module_from_bitcode ((char*)osl_llvm_compiled_rs_dependent_ops_block,
+                                               osl_llvm_compiled_rs_dependent_ops_size,
+                                               "llvm_rs_dependent_ops", &err));
             if (err.length())
                 shadingcontext()->errorfmt(
-                    "llvm::parseBitcodeFile returned '{}' for llvm_rs_dependant_ops\n",
+                    "llvm::parseBitcodeFile returned '{}' for llvm_rs_dependent_ops\n",
                     err);
 
             std::vector<char>& rs_free_function_bitcode = shadingsys().m_rs_bitcode;

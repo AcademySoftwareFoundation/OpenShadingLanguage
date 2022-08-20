@@ -4,6 +4,8 @@
 Release 1.13 -- ?? 2023 ?? (compared to 1.12)
 --------------------------------------------------
 Dependency and standards requirements changes:
+* OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
+  of OptiX 7.0 is required.
 
 OSL Language and oslc compiler:
 
@@ -14,6 +16,12 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 SIMD batched shading mode:
 
 OptiX rendering:
+* OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
+  of OptiX 7.0 is required.
+* Big overhaul/simplification of how strings are represented on the GPU: the
+  extra level of indirection to global variables is removed, and strings are
+  simply represented in ordinary variables as the hash of their characters.
+  #1531 (1.13.0.0) #1553 (1.13.0.1)
 
 Performance improvements:
 
@@ -31,15 +39,18 @@ Documentation:
 
 
 
-Release 1.12 -- ?? 1 Aug 2022 ?? (compared to 1.11)
+Release 1.12 -- ?? 1 Sep 2022 ?? (compared to 1.11)
 --------------------------------------------------
 Big Deal Changes:
-
 * Batch shading: A fully operational "batch shading" support when using CPUs
   supporting the AVX2 or AVX512 instruction set architectures, allows shading
   8 or 16 points at a time, accelerated by using SIMD instructions.
 * A reasonable subset of the OSL language can run on NVIDIA GPUs for
   Cuda or OptiX-based renderers.
+* Synchronize with MaterialX on a minimum standard set of material closures.
+  This is reflected in both the OSL spec as well as reference implementations
+  of those closures in testrender. #1533 #1536 #1537 #1538 #1539 #1541 #1542
+  #1547
 
 Dependency and standards requirements changes:
 * The minimum (and default) compilation mode is now C++14. C++17 and 20 are
@@ -71,6 +82,8 @@ OSL Standard library:
 * Fix previously-broken color conversions from RGB to xyY. #1410 (1.12.3)
 * Fully removed MaterialX shaders (get those from the MaterialX project).
   #1450 (1.12.3)
+* Fix incorrect implementation of `matrix4 * vector4` in vector4.h #1513
+  (1.12.5.0)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * Custom experimental llvm optimization levels 10, 11, 12, and 13. These
@@ -121,6 +134,7 @@ SIMD batched shading mode:
 * Batched isnan, isinf, isfinite. #1456 (1.12.4.2)
 * Batched userdata and output placement. #1455 (1.12.4.2)
 * Batched pointcloud functions. #1464 (1.12.4.4)
+* Batched closures (#1500)
 
 OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -143,6 +157,7 @@ OptiX rendering:
 Performance improvements:
 * Less mutex locking around use and retrieval of ColorSystem related to
   doing color transforms. #1405 (1.12.3)
+* Constant folding of `startswith()`. #1507 (1.12.5.0)
 
 Bug fixes and other improvements (internals):
 * Fix derivatives of texture calls when only derivatives of the "alpha"
@@ -180,8 +195,14 @@ Bug fixes and other improvements (internals):
 * Print all 4 levels of version numbers in help messages. #1477 (1.12.4.4)
 * Fix GPU code generation crash. #1479 (1.12.4.4)
 * Work to transition internals to use modern std::format notation for
-  formatted output. #1487 #1490 (1.12.4.6)
-* Fix testrender memory error on teardown. #1499 (1.12.4.6)
+  formatted output. #1487 #1490 (1.12.4.6) #1504 #1506 (1.12.5.0)
+* testrender improvements:
+    * Fix testrender memory error on teardown. #1499 (1.12.4.6)
+    * Modernize the sampler in testrender, improving quality and performance.
+      #1534 (1.12.6.0)
+    * Switch to cone tracing for derivatives. #1543 (1.12.6.0)
+* Fix error that prevented correct typecheck of ternary operator. #1552
+  (1.12.6.0)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -205,6 +226,12 @@ Internals/developer concerns:
   to be used in OSL 1.12. #1494 (1.12.5.0)
 * Work on gradually converting printf-style formatted strings to fmt /
   std::format style. #1493 (1.12.5.0)
+* LLVM_Util: allow naming of llvm symbols to help with IR debugging. #1530
+  (1.12.6.0)
+* clang-format the code base. #1508 #1509 #1511 #1512 #1515 #1518 #1540
+  (1.12.5.0)
+* A round of spell-checking all the comments in the code base. #1550
+  (1.12.5.0)
 
 Build & test system improvements:
 * CMake build system and scripts:
@@ -300,6 +327,9 @@ Build & test system improvements:
       #1501 (1.12.5.0)
     - Overhaul of GHA ci.yml to use strategy matrix. #1474 (1.12.4.4)
     - Test against clang 14 and fix new warnings. #1498 (1.12.5.0)
+    - A scorecards workflow guards against a variety of security issues of
+      the CI system itself.  #1529 (1.12.6.0)
+    - Enable SonarCloud static analysis. #1551 (1.12.6.0)
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)
@@ -319,6 +349,8 @@ Documentation:
   #1326 (1.12.1)
 * Fix missing explanation of the optional "errormessage" parameter to
   environment() and texture3d(). #1442 (1.12.3/1.11.17)
+* A SECURITY.md file explains how to confidentially report vulnerabillties.
+  #1529 (1.12.6)
 
 
 

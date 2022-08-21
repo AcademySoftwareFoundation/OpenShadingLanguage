@@ -360,19 +360,21 @@ jobs:
   macos:
     name: "${{matrix.os}} appleclang${{matrix.aclang}}/C++${{matrix.cxx_std}} py${{matrix.python_ver}} ${{matrix.desc}}"
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - desc: llvm11
-            os: macos-10.15
-            nametag: macos10-py39
-            cxx_std: 14
-            python_ver: 3.9
-            aclang: 12
-          - desc: llvm11
+          - desc: MacOS-11
             os: macos-11
             nametag: macos11-py39
             cxx_std: 17
             python_ver: 3.9
+            aclang: 13
+            openimageio_ver: release
+          - desc: MacOS-12
+            os: macos-12
+            nametag: macos11-p310
+            cxx_std: 17
+            python_ver: "3.10"
             aclang: 13
     runs-on: ${{matrix.os}}
     env:
@@ -380,6 +382,7 @@ jobs:
       CXX: clang++
       CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
       PYTHON_VERSION: ${{matrix.python_ver}}
+      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
     steps:
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
       - name: Prepare ccache timestamp
@@ -397,10 +400,14 @@ jobs:
       - name: Dependencies
         run: |
             source src/build-scripts/install_homebrew_deps.bash
-            # OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
-            # source src/build-scripts/build_openimageio.bash
-            brew install --display-times -q openimageio
-            PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages
+            if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then \
+                OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0" ; \
+                source src/build-scripts/build_openimageio.bash ; \
+            else \
+                brew install --display-times -q openimageio ; \
+                PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages ; \
+            fi
+            src/build-scripts/save-env.bash
       - name: Build
         run: |
             src/build-scripts/ci-build.bash

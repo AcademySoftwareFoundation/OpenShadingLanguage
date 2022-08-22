@@ -12,8 +12,15 @@ $OSL_ROOT/bin/testshade --help
 
 echo "Parallel test " ${CTEST_PARALLEL_LEVEL}
 pushd build
-time ctest -C ${CMAKE_BUILD_TYPE} -E broken --force-new-ctest-process \
+
+ctest -C ${CMAKE_BUILD_TYPE} -E broken --force-new-ctest-process \
+    --output-on-failure --timeout ${CTEST_TEST_TIMEOUT:=60} ${CTEST_ARGS} \
+  || \
+ctest -C ${CMAKE_BUILD_TYPE} -E broken --force-new-ctest-process \
+    --rerun-failed --repeat until-pass:5 -R render \
     --output-on-failure --timeout ${CTEST_TEST_TIMEOUT:=60} ${CTEST_ARGS}
+# The weird construct above allows the render-* tests to run multiple times
+
 popd
 
 

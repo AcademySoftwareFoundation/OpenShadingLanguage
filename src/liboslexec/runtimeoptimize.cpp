@@ -19,31 +19,31 @@ using namespace OSL::pvt;
 
 
 // names of ops we'll be using frequently
-static ustring u_nop    ("nop"),
-               u_exit   ("exit"),
-               u_assign ("assign"),
-               u_add    ("add"),
-               u_sub    ("sub"),
-               u_mul    ("mul"),
-               u_if     ("if"),
-               u_for    ("for"),
-               u_while  ("while"),
-               u_dowhile("dowhile"),
-               u_functioncall ("functioncall"),
-               u_functioncall_nr("functioncall_nr"),
-               u_break ("break"),
-               u_continue ("continue"),
-               u_return ("return"),
-               u_useparam ("useparam"),
-               u_closure ("closure"),
-               u_pointcloud_write ("pointcloud_write"),
-               u_isconnected ("isconnected"),
-               u_setmessage ("setmessage"),
-               u_getmessage ("getmessage"),
-               u_getattribute ("getattribute"),
-               u_backfacing ("backfacing"),
-               u_N ("N"),
-               u_I ("I");
+static ustring u_nop("nop");
+static ustring u_exit("exit");
+static ustring u_assign("assign");
+static ustring u_add("add");
+static ustring u_sub("sub");
+static ustring u_mul("mul");
+static ustring u_if("if");
+static ustring u_for("for");
+static ustring u_while("while");
+static ustring u_dowhile("dowhile");
+static ustring u_functioncall("functioncall");
+static ustring u_functioncall_nr("functioncall_nr");
+static ustring u_break("break");
+static ustring u_continue("continue");
+static ustring u_return("return");
+static ustring u_useparam("useparam");
+static ustring u_closure("closure");
+static ustring u_pointcloud_write("pointcloud_write");
+static ustring u_isconnected("isconnected");
+static ustring u_setmessage("setmessage");
+static ustring u_getmessage("getmessage");
+static ustring u_getattribute("getattribute");
+static ustring u_backfacing("backfacing");
+static ustring u_N("N");
+static ustring u_I("I");
 
 
 OSL_NAMESPACE_ENTER

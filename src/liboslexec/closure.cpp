@@ -8,9 +8,10 @@
 
 #include <OpenImageIO/sysutil.h>
 
-#include <OSL/oslconfig.h>
-#include <OSL/oslclosure.h>
 #include <OSL/genclosure.h>
+#include <OSL/oslclosure.h>
+#include <OSL/oslconfig.h>
+
 #include "oslexec_pvt.h"
 
 

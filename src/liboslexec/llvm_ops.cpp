@@ -501,6 +501,7 @@ osl_sincos_dvdvdv(void* x_, void* s_, void* c_)
 #endif
 }
 
+// clang-format off
 #if OSL_FAST_MATH
 MAKE_UNARY_PERCOMPONENT_OP     (log        , OIIO::fast_log       , fast_log)
 MAKE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::fast_log2      , fast_log2)
@@ -529,6 +530,8 @@ MAKE_UNARY_PERCOMPONENT_OP     (cbrt       , cbrtf                , cbrt)
 
 MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , OIIO::safe_sqrt      , sqrt)
 MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, OIIO::safe_inversesqrt, inversesqrt)
+// clang-format on
+
 
 OSL_SHADEOP float
 osl_logb_ff(float x)

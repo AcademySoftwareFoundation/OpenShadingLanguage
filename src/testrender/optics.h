@@ -92,11 +92,11 @@ fresnel_conductor(float cos_theta, Color3 n, Color3 k)
 inline float
 fresnel_schlick(float cos_theta, float F0, float F90)
 {
-    float x  = Imath::clamp(1.0f - cos_theta, 0.0f, 1.0f);
+    float x  = OIIO::clamp(1.0f - cos_theta, 0.0f, 1.0f);
     float x2 = x * x;
     float x4 = x2 * x2;
     float x5 = x4 * x;
-    return Imath::lerp(F0, F90, x5);
+    return OIIO::lerp(F0, F90, x5);
 }
 
 inline Color3
@@ -105,7 +105,7 @@ fresnel_generalized_schlick(float cos_theta, Color3 F0, Color3 F90,
 {
     float x = OIIO::clamp(1.0f - cos_theta, 0.0f, 1.0f);
     float m = OIIO::fast_pow_pos(x, exponent);
-    return Imath::lerp(F0, F90, m);
+    return OIIO::lerp(F0, F90, m);
 }
 
 OSL_NAMESPACE_EXIT

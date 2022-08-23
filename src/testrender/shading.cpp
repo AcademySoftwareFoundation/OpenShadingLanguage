@@ -12,13 +12,7 @@ using namespace OSL;
 
 namespace {  // anonymous namespace
 
-
-// define a few handy utility functions
-float
-clamp(float v, float min, float max)
-{
-    return v < min ? min : max < v ? max : v;
-}
+using OIIO::clamp;
 
 Color3
 clamp(const Color3& c, float min, float max)
@@ -26,7 +20,6 @@ clamp(const Color3& c, float min, float max)
     return Color3(clamp(c.x, min, max), clamp(c.y, min, max),
                   clamp(c.z, min, max));
 }
-
 
 bool
 is_black(const Color3& c)
@@ -1315,9 +1308,9 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
     {
         const Vec3 L = wi, V = wo;
         const Vec3 H = (L + V).normalize();
-        float LdotH  = Imath::clamp(dot(L, H), 0.0f, 1.0f);
-        float NdotV  = Imath::clamp(dot(N, V), 0.0f, 1.0f);
-        float NdotL  = Imath::clamp(dot(N, L), 0.0f, 1.0f);
+        float LdotH  = clamp(dot(L, H), 0.0f, 1.0f);
+        float NdotV  = clamp(dot(N, V), 0.0f, 1.0f);
+        float NdotL  = clamp(dot(N, L), 0.0f, 1.0f);
         float F90    = 0.5f + (2.0f * roughness * LdotH * LdotH);
         float refL   = fresnel_schlick(NdotL, 1.0f, F90);
         float refV   = fresnel_schlick(NdotV, 1.0f, F90);
@@ -1339,7 +1332,7 @@ struct MxSheen final : public BSDF, MxSheenParams {
 
     Color3 get_albedo(const Vec3& wo) const override
     {
-        const float NdotV = OIIO::clamp(N.dot(wo), 0.0f, 1.0f);
+        const float NdotV = clamp(N.dot(wo), 0.0f, 1.0f);
         // Rational fit from the Material X project
         // Ref: https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_sheen.glsl
         const Vec2 r = Vec2(13.67300f, 1.0f)
@@ -1355,9 +1348,9 @@ struct MxSheen final : public BSDF, MxSheenParams {
     {
         const Vec3 L = wi, V = wo;
         const Vec3 H       = (L + V).normalize();
-        float NdotV        = Imath::clamp(dot(N, V), 0.0f, 1.0f);
-        float NdotL        = Imath::clamp(dot(N, L), 0.0f, 1.0f);
-        float NdotH        = Imath::clamp(dot(N, H), 0.0f, 1.0f);
+        float NdotV        = clamp(dot(N, V), 0.0f, 1.0f);
+        float NdotL        = clamp(dot(N, L), 0.0f, 1.0f);
+        float NdotH        = clamp(dot(N, H), 0.0f, 1.0f);
         float invRoughness = 1.0f / std::max(roughness, 0.005f);
 
         float D = (2.0f + invRoughness)
@@ -1449,13 +1442,24 @@ process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
         return;
     switch (closure->id) {
     case ClosureColor::MUL: {
-        Color3 cw = w * closure->as_mul()->weight;
-        process_medium_closure(sg, result, closure->as_mul()->closure, cw);
+        process_medium_closure(sg, result, closure->as_mul()->closure,
+                               w * closure->as_mul()->weight);
         break;
     }
     case ClosureColor::ADD: {
         process_medium_closure(sg, result, closure->as_add()->closureA, w);
         process_medium_closure(sg, result, closure->as_add()->closureB, w);
+        break;
+    }
+    case MX_LAYER_ID: {
+        const ClosureComponent* comp = closure->as_comp();
+        const MxLayerParams* params  = comp->as<MxLayerParams>();
+        Color3 base_w
+            = w
+              * (Color3(1)
+                 - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
+        process_medium_closure(sg, result, params->top, w);
+        process_medium_closure(sg, result, params->base, base_w);
         break;
     }
     case MX_ANISOTROPIC_VDF_ID: {
@@ -1483,6 +1487,30 @@ process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
         // TODO: properly track a medium stack here ...
         result.refraction_ior = sg.backfacing ? 1.0f / params.ior : params.ior;
         result.priority       = params.priority;
+        break;
+    }
+    case MX_DIELECTRIC_ID: {
+        const ClosureComponent* comp = closure->as_comp();
+        const auto& params           = *comp->as<MxDielectricParams>();
+        if (!is_black(w * comp->w * params.transmission_tint)) {
+            // TODO: properly track a medium stack here ...
+            result.refraction_ior = sg.backfacing ? 1.0f / params.ior
+                                                  : params.ior;
+        }
+        break;
+    }
+    case MX_GENERALIZED_SCHLICK_ID: {
+        const ClosureComponent* comp = closure->as_comp();
+        const auto& params           = *comp->as<MxGeneralizedSchlickParams>();
+        if (!is_black(w * comp->w * params.transmission_tint)) {
+            // TODO: properly track a medium stack here ...
+            float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
+                                      / 3.0f,
+                                  0.0f, 0.99f);
+            float sqrt_F0 = sqrtf(avg_F0);
+            float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
+            result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+        }
         break;
     }
     }
@@ -1700,8 +1728,8 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 const ClosureColor* Ci, bool light_only)
 {
     if (!light_only)
-        process_medium_closure(sg, result, Ci, Color3(1, 1, 1));
-    process_bsdf_closure(sg, result, Ci, Color3(1, 1, 1), light_only);
+        process_medium_closure(sg, result, Ci, Color3(1));
+    process_bsdf_closure(sg, result, Ci, Color3(1), light_only);
 }
 
 Vec3

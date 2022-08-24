@@ -270,8 +270,12 @@ OptixGridRenderer::make_optix_materials()
 
     module_compile_options.maxRegisterCount
         = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
-    module_compile_options.optLevel   = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
+    module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
+#if OPTIX_VERSION >= 70400
+    module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
+#else
     module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+#endif
 
     OptixPipelineCompileOptions pipeline_compile_options = {};
 

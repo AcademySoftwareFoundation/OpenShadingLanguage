@@ -231,7 +231,7 @@ reference_inthash (const unsigned int k[N]) {
 	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	inthash (const unsigned int k0, const unsigned int k1) {
 		// now hash the data!
-		unsigned int start_val = 0xdeadbeef + (2 << 2) + 13;
+		unsigned int start_val = 0xdeadbeef + (2 << 2) + 13;  //NOSONAR
 
 		unsigned int a = start_val + k0;
 		unsigned int b = start_val + k1;
@@ -1154,16 +1154,16 @@ private:
     OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic () {}
 public:
     OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px) {
-        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;  //NOSONAR
     }
     OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
-        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;  //NOSONAR
     }
     OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
-        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
+        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;  //NOSONAR
     }
     OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz, float pw) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
@@ -1225,16 +1225,16 @@ public:
 
 struct HashVectorPeriodic {
 	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px) {
-        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;  //NOSONAR
     }
 	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
-        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;  //NOSONAR
     }
 	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
-        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
+        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;  //NOSONAR
     }
 	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz, float pw) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;

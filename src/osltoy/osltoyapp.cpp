@@ -97,7 +97,8 @@ setBackground(QWidget* widget, QColor bg, QColor fg)
 struct PixelInfo {
     // The image and where to magnify
     const OIIO::ImageBuf& full;
-    int x, y;
+    int x = 0;
+    int y = 0;
     Color3 Cd;
     Vec3 P;
     Vec2 uv;

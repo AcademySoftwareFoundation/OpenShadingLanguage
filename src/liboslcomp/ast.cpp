@@ -35,7 +35,7 @@ std::atomic<int> node_counts_peak[ASTNode::_last_node];
 class ScopeExit {
 public:
     typedef std::function<void()> Task;
-    explicit ScopeExit(Task&& task) : m_task(std::forward<Task>(task)) {}
+    explicit ScopeExit(Task&& task) : m_task(std::move(task)) {}
     ~ScopeExit() { m_task(); }
 
 private:

@@ -24,7 +24,7 @@ struct GaborParams {
     Vec3 N;
     Matrix22 filter;
     Matrix33 local;
-    float det_filter;
+    float det_filter = 0.0f;
     float bandwidth;
     bool periodic;
     Vec3 period;

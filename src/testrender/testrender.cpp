@@ -209,6 +209,14 @@ main(int argc, const char* argv[])
     // Read command line arguments
     getargs(argc, argv);
 
+    // Allow magic env variable TESTRENDER_AA to override the --aa option,
+    // this is helpful for certain CI tests in special debug modes that would
+    // be too slow to be practical.
+    int aaoverride = OIIO::Strutil::stoi(
+        OIIO::Sysutil::getenv("TESTRENDER_AA"));
+    if (aaoverride)
+        aa = aaoverride;
+
     SimpleRaytracer* rend = nullptr;
 #ifdef OSL_USE_OPTIX
     if (use_optix)

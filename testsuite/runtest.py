@@ -80,12 +80,13 @@ command = ""
 outputs = [ "out.txt" ]    # default
 
 # Control image differencing
-failureok = 0
+failureok = 1
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
 idiff_program = "oiiotool"
 idiff_postfilecmd = ""
+skip_diff = int(os.environ.get("OSL_TESTSUITE_SKIP_DIFF", "0"))
 
 filter_re = None
 cleanup_on_success = False
@@ -302,9 +303,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
         if test_environ == None :
             test_environ = os.environ
         test_environ["TESTSHADE_RS_BITCODE"] = "1"
-       
 
-         
     print ("command = ", command)
     for sub_command in command.split(splitsymbol):
         sub_command = sub_command.lstrip().rstrip()
@@ -318,6 +317,8 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
             print ("--------")
             return (1)
 
+    if skip_diff :
+        return 0
 
     err = 0
     if regression == "BASELINE" :

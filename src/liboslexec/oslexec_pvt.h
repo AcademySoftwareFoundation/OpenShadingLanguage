@@ -1508,7 +1508,8 @@ private:
     static inline size_t alignment_offset_calc(void* ptr, size_t alignment)
     {
         uintptr_t ptrbits = reinterpret_cast<uintptr_t>(ptr);
-        uintptr_t offset  = ((ptrbits + alignment - 1) & -alignment) - ptrbits;
+        uintptr_t offset  = OIIO::round_to_multiple(ptrbits, alignment)
+                           - ptrbits;
         OSL_DASSERT((ptrbits + offset) % alignment == 0);
         return offset;
     }

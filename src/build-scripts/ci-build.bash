@@ -13,7 +13,7 @@ if [[ "$USE_SIMD" != "" ]] ; then
 fi
 
 if [[ -n "$CODECOV" ]] ; then
-    MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DCODECOV=${CODECOV}"
+    OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DCODECOV=${CODECOV}"
 fi
 
 pushd build

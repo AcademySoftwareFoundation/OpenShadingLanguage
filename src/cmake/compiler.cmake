@@ -475,29 +475,7 @@ endif ()
 # is being built as a subproject.
 if (PROJECT_IS_TOP_LEVEL)
     set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
-    set (CLANG_FORMAT_INCLUDES  "src/*.cpp"
-                                "src/*.h"
-                                "src/*.cu"
-                                "src/include/*.h"
-                                "src/liboslcomp/*.cpp"
-                                "src/liboslcomp/*.h"
-                                "src/liboslexec/batch*.cpp"
-                                "src/liboslexec/wide/*.cpp"
-                                "src/liboslexec/wide/*.h"
-                                "src/liboslexec/rs_fallback.cpp"
-                                "src/liboslquery/*.cpp"
-                                "src/liboslnoise/*.cpp"
-                                "src/liboslquery/*.h"
-                                "src/oslinfo/*.cpp"
-                                "src/oslc/*.cpp"
-                                "src/osl.imageio/*.cpp"
-                                "src/osltoy/*.cpp"
-                                "src/osltoy/*.h"
-                                "src/testrender/*.h"
-                                "src/testrender/*.cpp"
-                                "src/testshade/*.h"
-                                # "src/testshade/*.cpp"
-                                "testsuite/*.cpp"
+    set (CLANG_FORMAT_INCLUDES  "src/*.cpp" "src/*.h" "src/*.cu"
         CACHE STRING "Glob patterns to include for clang-format")
     set (CLANG_FORMAT_EXCLUDES
             # Files "imported and modified" that we don't want to reformat, so
@@ -508,7 +486,6 @@ if (PROJECT_IS_TOP_LEVEL)
             "testsuite/*.h"
             # Header files in shaders are OSL, not C++
             "src/shaders/*.h"
-            ""
          CACHE STRING "Glob patterns to exclude for clang-format")
     find_program (CLANG_FORMAT_EXE
                   NAMES clang-format bin/clang-format

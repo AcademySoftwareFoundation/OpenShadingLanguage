@@ -28,29 +28,39 @@ extern unsigned char rend_llvm_compiled_ops_block[];
 OSL_NAMESPACE_ENTER
 
 
-#define CUDA_CHECK(call)                                              \
+#define CUDA_CHECK(call)                                               \
+    {                                                                  \
+        cudaError_t res = call;                                        \
+        if (res != cudaSuccess) {                                      \
+            print(stderr,                                              \
+                  "[CUDA ERROR] Cuda call '{}' failed with error:"     \
+                  " {} ({}:{})\n",                                     \
+                  #call, cudaGetErrorString(res), __FILE__, __LINE__); \
+        }                                                              \
+    }
+
+#define OPTIX_CHECK(call)                                             \
     {                                                                 \
-        cudaError_t error = call;                                     \
-        if (error != cudaSuccess) {                                   \
-            std::stringstream ss;                                     \
-            ss << "CUDA call (" << #call << " ) failed with error: '" \
-               << cudaGetErrorString(error) << "' (" __FILE__ << ":"  \
-               << __LINE__ << ")\n";                                  \
-            print(stderr, "[CUDA ERROR]  {}", ss.str());              \
+        OptixResult res = call;                                       \
+        if (res != OPTIX_SUCCESS) {                                   \
+            print(stderr,                                             \
+                  "[OPTIX ERROR] OptiX call '{}' failed with error:"  \
+                  " {} ({}:{})\n",                                    \
+                  #call, optixGetErrorName(res), __FILE__, __LINE__); \
+            exit(1);                                                  \
         }                                                             \
     }
 
-#define OPTIX_CHECK(call)                                           \
-    {                                                               \
-        OptixResult res = call;                                     \
-        if (res != OPTIX_SUCCESS) {                                 \
-            std::stringstream ss;                                   \
-            ss << "Optix call '" << #call                           \
-               << "' failed with error: " << optixGetErrorName(res) \
-               << " (" __FILE__ ":" << __LINE__ << ")\n";           \
-            print(stderr, "[OPTIX ERROR]  {}", ss.str());           \
-            exit(1);                                                \
-        }                                                           \
+#define OPTIX_CHECK_MSG(call, msg)                                         \
+    {                                                                      \
+        OptixResult res = call;                                            \
+        if (res != OPTIX_SUCCESS) {                                        \
+            print(stderr,                                                  \
+                  "[OPTIX ERROR] OptiX call '{}' failed with error:"       \
+                  " {} ({}:{})\nMessage: {}\n",                            \
+                  #call, optixGetErrorName(res), __FILE__, __LINE__, msg); \
+            exit(1);                                                       \
+        }                                                                  \
     }
 
 #define CUDA_SYNC_CHECK()                                                  \
@@ -236,13 +246,13 @@ OptixRaytracer::load_optix_module(
     }
 
     size_t sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK(optixModuleCreateFromPTX(m_optix_ctx, module_compile_options,
-                                         pipeline_compile_options,
-                                         program_ptx.c_str(),
-                                         program_ptx.size(), msg_log,
-                                         &sizeof_msg_log, program_module));
-    //if (sizeof_msg_log > 1)
-    //    printf ("Creating Module from PTX-file %s:\n%s\n", filename, msg_log);
+    OPTIX_CHECK_MSG(optixModuleCreateFromPTX(m_optix_ctx,
+                                             module_compile_options,
+                                             pipeline_compile_options,
+                                             program_ptx.c_str(),
+                                             program_ptx.size(), msg_log,
+                                             &sizeof_msg_log, program_module),
+                    fmtformat("Creating Module from PTX-file {}", msg_log));
     return true;
 }
 
@@ -256,11 +266,10 @@ OptixRaytracer::create_optix_pg(const OptixProgramGroupDesc* pg_desc,
 {
     char msg_log[8192];
     size_t sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK(optixProgramGroupCreate(m_optix_ctx, pg_desc, num_pg,
-                                        program_options, msg_log,
-                                        &sizeof_msg_log, pg));
-    //if (sizeof_msg_log > 1)
-    //    printf ("Creating program group:\n%s\n", msg_log);
+    OPTIX_CHECK_MSG(optixProgramGroupCreate(m_optix_ctx, pg_desc, num_pg,
+                                            program_options, msg_log,
+                                            &sizeof_msg_log, pg),
+                    fmtformat("Creating program group: {}", msg_log));
 
     return true;
 }
@@ -349,14 +358,13 @@ OptixRaytracer::make_optix_materials()
 
     OptixProgramGroup setglobals_raygen_group;
     sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK(optixProgramGroupCreate(m_optix_ctx, &setglobals_raygen_desc,
-                                        1,  // number of program groups
-                                        &program_options,  // program options
-                                        msg_log, &sizeof_msg_log,
-                                        &setglobals_raygen_group));
-
-    //if (sizeof_msg_log > 1)
-    //    printf ("Creating set-globals 'ray-gen' program group:\n%s\n", msg_log);
+    OPTIX_CHECK_MSG(
+        optixProgramGroupCreate(m_optix_ctx, &setglobals_raygen_desc,
+                                1,                 // number of program groups
+                                &program_options,  // program options
+                                msg_log, &sizeof_msg_log,
+                                &setglobals_raygen_group),
+        fmtformat("Creating set-globals 'ray-gen' program group: {}", msg_log));
 
     // Miss group
     OptixProgramGroupDesc miss_desc = {};
@@ -484,13 +492,13 @@ OptixRaytracer::make_optix_materials()
         // and set the OSL functions as Callable Programs so that they
         // can be executed by the closest hit program in the wrapper
         sizeof_msg_log = sizeof(msg_log);
-        OPTIX_CHECK(
+        OPTIX_CHECK_MSG(
             optixModuleCreateFromPTX(m_optix_ctx, &module_compile_options,
                                      &pipeline_compile_options, osl_ptx.c_str(),
                                      osl_ptx.size(), msg_log, &sizeof_msg_log,
-                                     &optix_module));
-        //if (sizeof_msg_log > 1)
-        //    printf ("Creating module for PTX group '%s':\n%s\n", group_name.c_str(), msg_log);
+                                     &optix_module),
+            fmtformat("Creating module for PTX group {}: {}", group_name,
+                      msg_log));
         modules.push_back(optix_module);
 
         // Create 2x program groups (for direct callables)
@@ -508,12 +516,12 @@ OptixRaytracer::make_optix_materials()
 
         shader_groups.resize(shader_groups.size() + 2);
         sizeof_msg_log = sizeof(msg_log);
-        OPTIX_CHECK(
+        OPTIX_CHECK_MSG(
             optixProgramGroupCreate(m_optix_ctx, &pgDesc[0], 2,
                                     &program_options, msg_log, &sizeof_msg_log,
-                                    &shader_groups[shader_groups.size() - 2]));
-        //if (sizeof_msg_log > 1)
-        //    printf ("Creating 'shader' group for group '%s':\n%s\n", group_name.c_str(), msg_log);
+                                    &shader_groups[shader_groups.size() - 2]),
+            fmtformat("Creating 'shader' group for group {}: {}", group_name,
+                      msg_log));
     }
 
     OptixPipelineLinkOptions pipeline_link_options;
@@ -544,12 +552,12 @@ OptixRaytracer::make_optix_materials()
     final_groups.push_back(setglobals_miss_group);
 
     sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK(optixPipelineCreate(m_optix_ctx, &pipeline_compile_options,
-                                    &pipeline_link_options, final_groups.data(),
-                                    int(final_groups.size()), msg_log,
-                                    &sizeof_msg_log, &m_optix_pipeline));
-    //if (sizeof_msg_log > 1)
-    //    printf ("Creating optix pipeline:\n%s\n", msg_log);
+    OPTIX_CHECK_MSG(optixPipelineCreate(m_optix_ctx, &pipeline_compile_options,
+                                        &pipeline_link_options,
+                                        final_groups.data(),
+                                        int(final_groups.size()), msg_log,
+                                        &sizeof_msg_log, &m_optix_pipeline),
+                    fmtformat("Creating optix pipeline: {}", msg_log));
 
     // Set the pipeline stack size
     OptixStackSizes stack_sizes = {};

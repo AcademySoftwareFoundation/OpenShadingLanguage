@@ -38,6 +38,7 @@ namespace pvt {
 #define IlluminantE    0.33333333, 0.33333333  /* CIE equal-energy illuminant */
 #define IlluminantACES 0.32168, 0.33767        /* For ACES, approximate D60 */
 
+namespace {  // anon namespace to avoid duplicate OptiX symbols
 OSL_CONSTANT_DATA const static ColorSystem::Chroma k_color_systems[13] = {
    // Index, Name        xRed    yRed   xGreen  yGreen   xBlue   yBlue    White point
    /* 0  Rec709     */ { 0.64,   0.33,   0.30,   0.60,   0.15,   0.06,   IlluminantD65 },
@@ -54,6 +55,7 @@ OSL_CONSTANT_DATA const static ColorSystem::Chroma k_color_systems[13] = {
    /* 11 ACES2065-1 */ { 0.7347, 0.2653, 0.0,    1.0,    0.0001, -0.077, IlluminantACES },
    /* 12 ACEScg     */ { 0.713,  0.293,  0.165,  0.83,   0.128,  0.044,  IlluminantACES },
 };
+}  // namespace
 
 // clang-format on
 

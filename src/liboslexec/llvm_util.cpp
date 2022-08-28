@@ -497,18 +497,14 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
 void
 LLVM_Util::ustring_rep(UstringRep rep)
 {
-    m_ustring_rep = rep;
-    if (m_ustring_rep == UstringRep::charptr) {
-        m_llvm_type_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
-    } else {
-        m_llvm_type_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
-        // Ugh, we'd ideally want to make it a uint directly, but that
-        // is wreaking havoc with function signatures, so continue to
-        // disguise it as a pointer.
-        // m_llvm_type_ustring = (sizeof(size_t) == sizeof(uint64_t))
-        //                           ? llvm::Type::getInt64Ty(*m_llvm_context)
-        //                           : llvm::Type::getInt32Ty(*m_llvm_context);
-    }
+    m_ustring_rep       = rep;
+    m_llvm_type_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
+    // ^^ When m_ustring_rep != UstringRep::charptr, we'd ideally want to make
+    // it a uint directly, but that is wreaking havoc with function
+    // signatures, so continue to disguise it as a pointer.
+    // m_llvm_type_ustring = (sizeof(size_t) == sizeof(uint64_t))
+    //                           ? llvm::Type::getInt64Ty(*m_llvm_context)
+    //                           : llvm::Type::getInt32Ty(*m_llvm_context);
     m_llvm_type_ustring_ptr  = llvm::PointerType::get(m_llvm_type_ustring, 0);
     m_llvm_type_wide_ustring = llvm_vector_type(m_llvm_type_ustring,
                                                 m_vector_width);

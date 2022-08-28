@@ -10,6 +10,10 @@ on:
     - cron: "0 8 * * *"
     # Run unconditionally once weekly
     # - cron: "0 0 * * 0"
+  push:
+    branches:
+      # - master
+      - '*analysis*'
   # Allow manual kicking off of the workflow from github.com
   workflow_dispatch:
 
@@ -46,6 +50,9 @@ jobs:
                             CMAKE_BUILD_TYPE=Debug
                             CMAKE_UNITY_BUILD=OFF
                             CODECOV=1
+                            CTEST_TEST_TIMEOUT=1200
+                            TESTRENDER_AA=1
+                            OSL_TESTSUITE_SKIP_DIFF=1
 
     runs-on: ${{ matrix.os }}
     container:

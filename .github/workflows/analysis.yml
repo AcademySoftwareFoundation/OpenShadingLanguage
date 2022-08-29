@@ -61,11 +61,12 @@ jobs:
       CXX: ${{matrix.cxx_compiler}}
       CC: ${{matrix.cc_compiler}}
       CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
-      USE_SIMD: ${{matrix.simd}}
       FMT_VERSION: ${{matrix.fmt_ver}}
       OPENEXR_VERSION: ${{matrix.openexr_ver}}
       PYBIND11_VERSION: ${{matrix.pybind11_ver}}
       PYTHON_VERSION: ${{matrix.python_ver}}
+      USE_BATCHED: ${{matrix.batched}}
+      USE_SIMD: ${{matrix.simd}}
       # DEBUG_CI: 1
     steps:
       # We would like to use harden-runner, but it flags too many false

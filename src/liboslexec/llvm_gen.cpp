@@ -959,6 +959,7 @@ LLVMGEN(llvm_gen_select)
                 && Result.typespec().is_float_based());
     int num_components = type.aggregate;
     int x_components   = X.typespec().aggregate();
+    OSL_DASSERT(x_components <= 3);
     bool derivs = (Result.has_derivs() && (A.has_derivs() || B.has_derivs()));
 
     llvm::Value* zero = X.typespec().is_int() ? rop.ll.constant(0)

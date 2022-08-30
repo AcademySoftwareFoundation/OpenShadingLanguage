@@ -2564,7 +2564,7 @@ public:
     std::string layer_function_name(const ShaderGroup& group,
                                     const ShaderInstance& inst)
     {
-        return fmtformat("{}_{}_{}", group.name(), inst.layername(), inst.id());
+        return fmtformat("{}_{}", group.name(), inst.layername());
     }
     std::string layer_function_name()
     {

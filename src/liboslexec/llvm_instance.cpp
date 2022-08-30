@@ -858,8 +858,8 @@ BackendLLVM::build_llvm_init()
 {
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_name = fmtformat("__direct_callable__group_{}_{}_init",
-                                        group().name(), group().id());
+    std::string unique_name = fmtformat("__direct_callable__group_{}_init",
+                                        group().name());
     ll.current_function(
         ll.make_function(unique_name, false,
                          ll.type_void(),  // return type
@@ -1620,8 +1620,7 @@ BackendLLVM::run()
     }
 
     if (use_optix()) {
-        std::string name = fmtformat("{}_{}", group().name(), group().id());
-        ll.ptx_compile_group(nullptr, name,
+        ll.ptx_compile_group(nullptr, group().name().string(),
                              group().m_llvm_ptx_compiled_version);
         if (group().m_llvm_ptx_compiled_version.empty()) {
             OSL_ASSERT(0 && "Unable to generate PTX");

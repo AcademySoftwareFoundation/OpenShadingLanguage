@@ -1620,7 +1620,7 @@ BackendLLVM::run()
     }
 
     if (use_optix()) {
-        ll.ptx_compile_group(nullptr, group().name().c_str(),
+        ll.ptx_compile_group(nullptr, group().name().string(),
                              group().m_llvm_ptx_compiled_version);
         if (group().m_llvm_ptx_compiled_version.empty()) {
             OSL_ASSERT(0 && "Unable to generate PTX");

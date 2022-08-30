@@ -1974,18 +1974,16 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
         return true;
     }
     if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
-        *(ustring*)val
-            = ustring::fmtformat("__direct_callable__group_{}_{}_init",
-                                 group->name(), group->id());
+        *(ustring*)val = ustring::fmtformat("__direct_callable__group_{}_init",
+                                            group->name());
         return true;
     }
     if (name == "group_entry_name" && type.basetype == TypeDesc::STRING) {
         int nlayers          = group->nlayers();
         ShaderInstance* inst = (*group)[nlayers - 1];
         // This formulation mirrors OSOProcessorBase::layer_function_name()
-        *(ustring*)val = ustring::fmtformat("__direct_callable__{}_{}_{}",
-                                            group->name(), inst->layername(),
-                                            inst->id());
+        *(ustring*)val = ustring::fmtformat("__direct_callable__{}_{}",
+                                            group->name(), inst->layername());
         return true;
     }
     if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {

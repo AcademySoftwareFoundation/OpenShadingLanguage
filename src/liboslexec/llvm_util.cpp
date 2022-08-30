@@ -5948,8 +5948,16 @@ LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
     // Run the optimization passes on the module to generate the PTX
     mod_pm.run(*linked_module);
 
-    // TODO: Minimize string copying
-    out = assembly_stream.str().str();
+    // In a multithreaded environment, llvm will return "callseq <ID>" comments
+    // with a non-deterministic ID, leading to OptiX JIT cache misses.
+    // Filter them out. TODO: Address upstream in llvm
+    std::istringstream raw_ptx(assembly_stream.str().str());
+    std::stringstream ptx_stream;
+    std::string line;
+    while (std::getline(raw_ptx, line)) {
+        ptx_stream << line.substr(0, line.find("// callseq")) << std::endl;
+    }
+    out = ptx_stream.str();
 
     delete linked_module;
 

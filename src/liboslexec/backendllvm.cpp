@@ -374,6 +374,7 @@ BackendLLVM::addCUDAGlobalVariable(const std::string& name, int size,
     g_var->setAlignment(alignment);
 #endif
 
+    g_var->setLinkage(llvm::GlobalValue::PrivateLinkage);
     g_var->setVisibility(llvm::GlobalValue::DefaultVisibility);
     g_var->setInitializer(constant);
     m_const_map[name] = g_var;
@@ -394,10 +395,9 @@ BackendLLVM::getOrAllocateCUDAVariable(const Symbol& sym)
     // variable names, then prepend another underscore.
     std::string sym_name = Strutil::replace(sym.name(), ".", "_", true);
 
-    std::string name = fmtformat("{}{}_{}_{}_{}_{}",
-                                 sym_name.front() == '$' ? "_" : "", sym_name,
-                                 group().name(), group().id(),
-                                 inst()->layername(), sym.layer());
+    std::string name
+        = fmtformat("{}{}_{}_{}_{}", sym_name.front() == '$' ? "_" : "",
+                    sym_name, group().name(), inst()->layername(), sym.layer());
 
     // Return the Value if it has already been allocated
     auto it = get_const_map().find(name);

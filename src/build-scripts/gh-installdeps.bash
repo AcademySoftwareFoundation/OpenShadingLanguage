@@ -64,14 +64,26 @@ else
         git cmake ninja-build ccache g++ \
         libboost-dev libboost-thread-dev libboost-filesystem-dev \
         libilmbase-dev libopenexr-dev \
-        python-dev python-numpy \
         libtiff-dev libgif-dev libpng-dev \
         flex bison libbison-dev \
         libpugixml-dev \
-        libopencolorio-dev \
-        qt5-default
+        libopencolorio-dev
+
+    time sudo apt-get -q install -y \
+        qt5-default || /bin/true
 
     export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
+
+    # Nonstandard python versions
+    if [[ "${PYTHON_VERSION}" == "3.9" ]] ; then
+        time sudo apt-get -q install -y python3.9-dev python3-numpy
+        pip3 --version
+        pip3 install numpy
+    elif [[ "$PYTHON_VERSION" == "2.7" ]] ; then
+        time sudo apt-get -q install -y python-dev python-numpy
+    else
+        pip3 install numpy
+    fi
 
     if [[ "$CXX" == "g++-6" ]] ; then
         time sudo apt-get install -y g++-6
@@ -85,6 +97,8 @@ else
         time sudo apt-get install -y g++-10
     elif [[ "$CXX" == "g++-11" ]] ; then
         time sudo apt-get install -y g++-11
+    elif [[ "$CXX" == "g++-12" ]] ; then
+        time sudo apt-get install -y g++-12
     fi
 
     if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" || "$CXX" == "icpx" || "$CC" == "icx" || "$USE_ICX" != "" ]] ; then
@@ -94,20 +108,6 @@ else
         time sudo apt-get update
         time sudo apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
         set +e; source /opt/intel/oneapi/setvars.sh; set -e
-        if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" ]] ; then
-            icpc --version
-        fi
-        if [[ "$CXX" == "icpx" || "$CC" == "icx" || "$USE_ICX" != "" ]] ; then
-            icpx --version
-        fi
-    fi
-
-    # Nonstandard python versions
-    if [[ "${PYTHON_VERSION}" == "3.8" ]] ; then
-        #time sudo apt-get -q install -y python3.8-dev python3-numpy
-        echo "skip?"
-    elif [[ "${PYTHON_VERSION}" == "3.9" ]] ; then
-        time sudo apt-get -q install -y python3.9-dev python3-numpy
     fi
 
     source src/build-scripts/build_llvm.bash

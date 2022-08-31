@@ -6,3 +6,40 @@ bdb473cbdb119f3d9060d48f75f965cbd45f6d7a
 
 # More clang-format: liboslquery, oslinfo, oslc, osl.imageio, osltoy (#1220)
 bf366d7a90c46599b82071dac6dbef7c5e3ca157
+
+# Turn on clang-format for cpp files in testsuite (#1269)
+00c895fc642eb89685797c292048bdff15d675e7
+5e848fb761261521a3ee7cd8a4f6814f32fe4a47
+
+# CI: Change our clang-format standard to clang11 (#1372)
+91d22ebe2f65d4ed0599e421172a15d99fe0e1b4
+
+# More clang-format (this time, testrender and liboslnoise) (#1511)
+08706b7cbac781b6a9389780428016be985d9d89
+
+# clang-format #1509
+b4026fd1695c08532557b3ba1c2142323087ccf9
+1f73b075c99861afa42fac44567b37f797bc72f2
+7f2e83794e6fa63d5180653cffb77be2cc38b32b
+28399fefc890442b5ac020e7a90cee0d5bf9f03c
+e56851056d33233b0bb8324faac251907099961a
+1c57fc61d8ab7c3f309be4335e4c71c26399edd4
+46d451ce74d00e904874df476ebeca19bb119ea9
+c1045f2c2845a98e661c7181932a031eb3c76063
+
+# More clang-format (#1512)
+8c6ffdd911b9eb7db4adf41ab88891360452d7c5
+
+# style: more clang-format (#1515)
+102430c83554fe7e328cd8c3317db00507bcfaba
+
+# Revert some formatting (#1518)
+21eac9d9215d071b0a7b9ce2c32f189ed0c62c4a
+
+# Another round of clang-format (#1540)
+38015b6be28643254aea530154b7860136cf5e15
+89d5db2b5c5fda79184d8245d903e580fc6a4e9c
+
+# clang-format: the very last piece of the puzzle (#1555)
+4ee62cd2ef05543f818f4d95a19efc1d684a7381
+5be7c6bd4e7bd2e560cb6be8c06f11985384a87a

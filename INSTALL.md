@@ -12,10 +12,10 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.23)
+* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.24)
 
 * A suitable **C++14 or C++17** compiler to build OSL itself, which may be any of:
-   - **GCC 6.1 or newer** (tested through gcc 11.2)
+   - **GCC 6.1 or newer** (tested through gcc 12.1)
    - Clang 3.4 or newer (tested through clang 14)
    - Microsoft Visual Studio **2017 or newer**
    - Intel C++ compiler icc **version 17 or newer** or LLVM-based icx compiler
@@ -48,7 +48,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 5.1 or higher
       (though 7.0+ is highly recommended).
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.78)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.80)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/openexr) 2.3
    or newer (recommended: 2.4 or higher; tested through 3.1)
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
@@ -62,8 +62,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9)
-    * pybind11 >= 2.4.2 (Tested through 2.9)
+    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10)
+    * pybind11 >= 2.4.2 (Tested through 2.10)
     * NumPy
 * (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
   the `osltoy` application will be disabled.

@@ -253,32 +253,32 @@ jobs:
             setenvs: export LLVM_VERSION=10.0.0
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc11/C++17 llvm13 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512
+          - desc: latest releases gcc11/C++17 llvm13 boost1.71 exr3.1 py3.9 avx2 batch-b16avx512
             nametag: linux-latest-releases
             os: ubuntu-20.04
             cxx_compiler: g++-11
             cxx_std: 17
-            fmt_ver: 8.1.1
+            fmt_ver: 9.1.0
             openexr_ver: v3.1.5
             openimageio_ver: master
-            pybind11_ver: v2.9.2
-            python_ver: 3.8
+            pybind11_ver: v2.10.0
+            python_ver: 3.9
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=13.0.0
                             LLVM_DISTRO_NAME=ubuntu-20.04
                             OPENCOLORIO_VERSION=v2.1.2
                             PUGIXML_VERSION=v1.11.4
-          - desc: bleeding edge gcc11/C++17 llvm14 oiio/ocio/exr/pybind-master boost1.71 py3.9 avx2 batch-b16avx512
+          - desc: bleeding edge gcc12/C++17 llvm14 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
-            os: ubuntu-20.04
-            cxx_compiler: g++-11
+            os: ubuntu-22.04
+            cxx_compiler: g++-12
             cxx_std: 17
             fmt_ver: master
             openexr_ver: main
             openimageio_ver: master
             pybind11_ver: master
-            python_ver: 3.9
+            python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=14.0.0

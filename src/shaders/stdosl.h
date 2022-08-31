@@ -470,7 +470,7 @@ closure color debug(string tag) BUILTIN;
 closure color holdout() BUILTIN;
 closure color subsurface(float eta, float g, color mfp, color albedo) BUILTIN;
 
-#ifdef MATERIALX_CLOSURES
+#ifndef NO_MATERIALX_CLOSURES
 
 // -------------------------------------------------------------//
 // BSDF closures                                                //
@@ -672,7 +672,7 @@ closure color medium_vdf(color albedo, float transmission_depth, color transmiss
 // - This could also be achieved by closure nesting where each layerable closure takes
 //   a closure color "base" input instead.
 // - One advantage having a dedicated layer() closure is that in the future we may want to
-//   introduce parameters to describe the sandwitched medium between the layer interfaces.
+//   introduce parameters to describe the sandwiched medium between the layer interfaces.
 //   Such parameterization could then be added on this layer() closure as extra arguments.
 // - Do we want/need parameters for the medium here now, or do we look at that later?
 //
@@ -685,9 +685,11 @@ closure color layer(closure color top, closure color base) BUILTIN;
 // Utility functions                                            //
 // -------------------------------------------------------------//
 
-// Converts the artistic parameterization reflectivity and edge_tint to complex IOR values.
-// To be used with the conductor_bsdf() closure.
-// [OG14] "Artist Friendly Metallic Fresnel", http://jcgt.org/published/0003/04/03/paper.pdf
+// Converts the artistic parameterization reflectivity and edge_tint to
+// complex IOR values. To be used with the conductor_bsdf() closure.
+//
+// [OG14] Ole Gulbrandsen, "Artist Friendly Metallic Fresnel", Journal of
+// Computer Graphics Tools 3(4), 2014. http://jcgt.org/published/0003/04/03/paper.pdf
 //
 //  \param  reflectivity  Reflectivity per color channel at facing angles ('r' parameter in [OG14]).
 //  \param  edge_tint     Color bias for grazing angles ('g' parameter in [OG14]).

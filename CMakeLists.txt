@@ -3,13 +3,13 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 cmake_minimum_required (VERSION 3.12)
-project (OSL VERSION 1.12.5.0
+project (OSL VERSION 1.12.6.0
          LANGUAGES CXX C
          HOMEPAGE_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")
 set (PROJ_NAME ${PROJECT_NAME})    # short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
-set (PROJECT_VERSION_RELEASE_TYPE "alpha1" CACHE STRING
+set (PROJECT_VERSION_RELEASE_TYPE "beta" CACHE STRING
     "Build type, for example: dev, beta2, RC1 (empty string for normal release)")
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 set (PROJECT_AUTHORS "Contributors to the Open Shading Language project")

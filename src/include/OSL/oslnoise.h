@@ -141,6 +141,19 @@ inline OSL_HOSTDEVICE float bits_to_01 (unsigned int bits) {
 }
 
 
+OSL_FORCEINLINE OSL_HOSTDEVICE int
+bitcast_to_uint (float x)
+{
+#if OPENIMAGEIO_VERSION >= 20500
+    return OIIO::bitcast<unsigned int, float>(x);
+#else
+    // obsolete call
+    return OIIO::bit_cast<float, unsigned int>(x);
+#endif
+}
+
+
+
 #ifndef __CUDA_ARCH__
 // Perform a bjmix (see OpenImageIO/hash.h) on 4 sets of values at once.
 OSL_FORCEINLINE void
@@ -467,7 +480,7 @@ struct HashNoise: public IntHashNoiseBase<HashNoise>  {
     static OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
     transformToUint(float val)
     {
-        return OIIO::bit_cast<float,unsigned int>(val);
+        return bitcast_to_uint(val);
     }
 };
 
@@ -544,7 +557,6 @@ using PeriodicHashNoise = PeriodicAdaptionOf<HashNoise>;
 
 
 
-
 inline OSL_HOSTDEVICE int
 inthashi (int x)
 {
@@ -557,7 +569,7 @@ inline OSL_HOSTDEVICE int
 inthashf (float x)
 {
     return static_cast<int>(
-		inthash(OIIO::bit_cast<float,unsigned int>(x))
+		inthash(bitcast_to_uint(x))
 	);
 }
 
@@ -566,8 +578,8 @@ inthashf (float x, float y)
 {
     return static_cast<int>(
 		inthash(
-			OIIO::bit_cast<float,unsigned int>(x),
-			OIIO::bit_cast<float,unsigned int>(y)
+			bitcast_to_uint(x),
+			bitcast_to_uint(y)
 		)
 	);
 }
@@ -578,9 +590,9 @@ inthashf (const float *x)
 {
     return static_cast<int>(
 		inthash(
-			OIIO::bit_cast<float,unsigned int>(x[0]),
-			OIIO::bit_cast<float,unsigned int>(x[1]),
-			OIIO::bit_cast<float,unsigned int>(x[2])
+			bitcast_to_uint(x[0]),
+			bitcast_to_uint(x[1]),
+			bitcast_to_uint(x[2])
 		)
 	);
 }
@@ -591,10 +603,10 @@ inthashf (const float *x, float y)
 {
     return static_cast<int>(
 		inthash(
-			OIIO::bit_cast<float,unsigned int>(x[0]),
-			OIIO::bit_cast<float,unsigned int>(x[1]),
-			OIIO::bit_cast<float,unsigned int>(x[2]),
-			OIIO::bit_cast<float,unsigned int>(y)
+			bitcast_to_uint(x[0]),
+			bitcast_to_uint(x[1]),
+			bitcast_to_uint(x[2]),
+			bitcast_to_uint(y)
 		)
 	);
 }

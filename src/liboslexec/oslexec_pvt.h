@@ -234,15 +234,18 @@ struct AttributeNeeded {
 
 
 // Handy re-casting macros
-#define USTR(cstr)  (*((ustring*)&cstr))
-#define MAT(m)      (*(Matrix44*)m)
-#define VEC(v)      (*(Vec3*)v)
-#define DFLOAT(x)   (*(Dual2<Float>*)x)
-#define DVEC(x)     (*(Dual2<Vec3>*)x)
-#define COL(x)      (*(Color3*)x)
-#define DCOL(x)     (*(Dual2<Color3>*)x)
-#define TYPEDESC(x) OIIO::bit_cast<long long, TypeDesc>(x)
-
+#define USTR(cstr) (*((ustring*)&cstr))
+#define MAT(m)     (*(Matrix44*)m)
+#define VEC(v)     (*(Vec3*)v)
+#define DFLOAT(x)  (*(Dual2<Float>*)x)
+#define DVEC(x)    (*(Dual2<Vec3>*)x)
+#define COL(x)     (*(Color3*)x)
+#define DCOL(x)    (*(Dual2<Color3>*)x)
+#if OPENIMAGEIO_VERSION >= 20500
+#    define TYPEDESC(x) OIIO::bitcast<TypeDesc, long long>(x)
+#else
+#    define TYPEDESC(x) OIIO::bit_cast<long long, TypeDesc>(x)
+#endif
 
 
 /// Like an int (of type T), but also internally keeps track of the

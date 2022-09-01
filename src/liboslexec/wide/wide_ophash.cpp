@@ -25,15 +25,26 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
 namespace {
 
+OSL_FORCEINLINE OSL_HOSTDEVICE int
+bitcast_to_uint(float x)
+{
+#if OPENIMAGEIO_VERSION >= 20500
+    return OIIO::bitcast<unsigned int, float>(x);
+#else
+    // obsolete call
+    return OIIO::bit_cast<float, unsigned int>(x);
+#endif
+}
+
+
 // TODO: to avoid ansi aliasing issues,
 // suggest replacing inthashf (const float *x) with inthashv
 inline OSL_HOSTDEVICE int
 inthashv(const Vec3& v)
 {
-    return static_cast<int>(
-        pvt::inthash(OIIO::bit_cast<float, unsigned int>(v.x),
-                     OIIO::bit_cast<float, unsigned int>(v.y),
-                     OIIO::bit_cast<float, unsigned int>(v.z)));
+    return static_cast<int>(pvt::inthash(bitcast_to_uint(v.x),
+                                         bitcast_to_uint(v.y),
+                                         bitcast_to_uint(v.z)));
 }
 
 
@@ -43,10 +54,8 @@ inline OSL_HOSTDEVICE int
 inthashvf(const Vec3& v, float y)
 {
     return static_cast<int>(
-        pvt::inthash(OIIO::bit_cast<float, unsigned int>(v.x),
-                     OIIO::bit_cast<float, unsigned int>(v.y),
-                     OIIO::bit_cast<float, unsigned int>(v.z),
-                     OIIO::bit_cast<float, unsigned int>(y)));
+        pvt::inthash(bitcast_to_uint(v.x), bitcast_to_uint(v.y),
+                     bitcast_to_uint(v.z), bitcast_to_uint(y)));
 }
 
 

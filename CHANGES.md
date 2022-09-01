@@ -22,6 +22,8 @@ OptiX rendering:
   extra level of indirection to global variables is removed, and strings are
   simply represented in ordinary variables as the hash of their characters.
   #1531 (1.13.0.0) #1553 (1.13.0.1)
+* Better PTX cache hit rate by eliminating several sources of not being
+  strictly deterministic in the PTX text we were generating. #1566 (1.13.0.1)
 
 Performance improvements:
 
@@ -39,18 +41,19 @@ Documentation:
 
 
 
-Release 1.12 -- ?? 1 Sep 2022 ?? (compared to 1.11)
+Release 1.12 -- beta 1 Sep 2022 (compared to 1.11)
 --------------------------------------------------
 Big Deal Changes:
-* Batch shading: A fully operational "batch shading" support when using CPUs
-  supporting the AVX2 or AVX512 instruction set architectures, allows shading
-  8 or 16 points at a time, accelerated by using SIMD instructions.
-* A reasonable subset of the OSL language can run on NVIDIA GPUs for
-  Cuda or OptiX-based renderers.
-* Synchronize with MaterialX on a minimum standard set of material closures.
-  This is reflected in both the OSL spec as well as reference implementations
-  of those closures in testrender. #1533 #1536 #1537 #1538 #1539 #1541 #1542
-  #1547
+* **Batch shading**: A fully operational "batch shading" support when using
+  CPUs supporting the Intel AVX2 or AVX512 instruction set architectures,
+  allows shading 8 or 16 points at a time, accelerated by using SIMD
+  instructions. (Changes contributed by Intel.)
+* **OptiX**: A reasonable subset of the OSL language can run on NVIDIA GPUs
+  for Cuda or OptiX-based renderers.
+* **Standardized material closures**: Synchronize with MaterialX on a minimum
+  standard set of material closures. This is reflected in both the OSL spec as
+  well as reference implementations of those closures in testrender. #1533
+  #1536 #1537 #1538 #1539 #1541 #1542 #1547 #1557
 
 Dependency and standards requirements changes:
 * The minimum (and default) compilation mode is now C++14. C++17 and 20 are
@@ -153,6 +156,7 @@ OptiX rendering:
 * Fix race conditions when compiling for OptiX 7. #1411 (1.12.3)
 * osl_get_attribute() uses device strings when compiling for OptiX.
   #1435 (1.12.3)
+* Fix issue with OptiX + clang 14 with duplicate symbols. #1561 (1.12.6.0)
 
 Performance improvements:
 * Less mutex locking around use and retrieval of ColorSystem related to
@@ -229,7 +233,7 @@ Internals/developer concerns:
 * LLVM_Util: allow naming of llvm symbols to help with IR debugging. #1530
   (1.12.6.0)
 * clang-format the code base. #1508 #1509 #1511 #1512 #1515 #1518 #1540
-  (1.12.5.0)
+  (1.12.5.0) #1555 #1562 #1568 (1.12.6.0)
 * A round of spell-checking all the comments in the code base. #1550
   (1.12.5.0)
 
@@ -273,6 +277,7 @@ Build & test system improvements:
       (1.12.4.4)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
+      and up to OptiX 7.4 #1559 (1.12.6.0)
     - PugiXML build fixes on some systems. #1262 (1.12.0.1/1.11.8)
     - Cuda/OptiX back end: Add `__CUDADEVRT_INTERNAL__` define to bitcode
       generation, needed to avoid duplicate cudaMalloc symbols with CUDA9+
@@ -297,6 +302,8 @@ Build & test system improvements:
       compilers. #1459 #1473 #1475. (1.12.4.4)
     - Fixes for recent OIIO TextureSystem changes that hide Imath types.
       #1476 (1.12.4.4)
+    - Changes to work correctly with OpenImageIO 2.4 and its master being
+      the start of 2.5. #1569 (1.12.6.0)
 * Testing and Continuous integration (CI) systems:
     - Eliminate the old Travis CI and Appveyor. #1334 #1338 (1.12.1)
     - Use ccache + GitHub 'cache' action to greatly speed up CI runs. #1335
@@ -305,14 +312,15 @@ Build & test system improvements:
       scripts for CentOS and Ubuntu ito a single script. #1338 (1.12.1)
     - CI tests clang11, also batched shading with clang. #1379 (1.12.2)
     - CI speeds up OIIO builds by not building its tests. #1380 (1.12.2)
-    - CI tests gcc11. #1381 (1.12.2)
+    - CI tests gcc11 #1381 (1.12.2) and gcc12 #1565 (1.12.6)
     - Deal with OpenColorIO changing its master branch to "main". #1429
       (1.12.3)
     - Fix tests for texture3d now that OIIO has dropped support for Field3D.
       #1437 (1.12.3)
     - Test against LLVM13/clang13 for the VFX Platform 2022 tests. #1434
       (1.12.3)
-    - Test against MacOS-11. #1434 (1.12.3)
+    - CI test against MacOS-11 #1434 (1.12.3) and MacOS-12 #1554 (1.12.6)
+      #1522 (1.12.5)
     - Add testsuite coverage of environment(). #1438 (1.12.3)
     - Use a project-specific environment variable `OSL_CI` instead of the more
       generic `CI` to avoid clashes with other systems. #1446 (1.12.3)
@@ -329,7 +337,7 @@ Build & test system improvements:
     - Test against clang 14 and fix new warnings. #1498 (1.12.5.0)
     - A scorecards workflow guards against a variety of security issues of
       the CI system itself.  #1529 (1.12.6.0)
-    - Enable SonarCloud static analysis. #1551 (1.12.6.0)
+    - Enable SonarCloud static analysis. #1551 #1556 #1563 (1.12.6.0)
 * Platform support:
     - Various Windows compile fixes. #1263 #1285 (1.12.0.1)
     - Windows+Cuda build fixes. #1292 (1.12.0.1)
@@ -349,8 +357,9 @@ Documentation:
   #1326 (1.12.1)
 * Fix missing explanation of the optional "errormessage" parameter to
   environment() and texture3d(). #1442 (1.12.3/1.11.17)
-* A SECURITY.md file explains how to confidentially report vulnerabillties.
+* A SECURITY.md file explains how to confidentially report vulnerabilities.
   #1529 (1.12.6)
+* Document all the new MaterialX closures. #1564
 
 
 

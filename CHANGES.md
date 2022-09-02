@@ -4,15 +4,16 @@
 Release 1.12 -- beta 1 Sep 2022 (compared to 1.11)
 --------------------------------------------------
 Big Deal Changes:
-* Batch shading: A fully operational "batch shading" support when using CPUs
-  supporting the AVX2 or AVX512 instruction set architectures, allows shading
-  8 or 16 points at a time, accelerated by using SIMD instructions.
-* A reasonable subset of the OSL language can run on NVIDIA GPUs for
-  Cuda or OptiX-based renderers.
-* Synchronize with MaterialX on a minimum standard set of material closures.
-  This is reflected in both the OSL spec as well as reference implementations
-  of those closures in testrender. #1533 #1536 #1537 #1538 #1539 #1541 #1542
-  #1547 #1557
+* **Batch shading**: A fully operational "batch shading" support when using
+  CPUs supporting the Intel AVX2 or AVX512 instruction set architectures,
+  allows shading 8 or 16 points at a time, accelerated by using SIMD
+  instructions. (Changes contributed by Intel.)
+* **OptiX**: A reasonable subset of the OSL language can run on NVIDIA GPUs
+  for Cuda or OptiX-based renderers.
+* **Standardized material closures**: Synchronize with MaterialX on a minimum
+  standard set of material closures. This is reflected in both the OSL spec as
+  well as reference implementations of those closures in testrender. #1533
+  #1536 #1537 #1538 #1539 #1541 #1542 #1547 #1557
 
 Dependency and standards requirements changes:
 * The minimum (and default) compilation mode is now C++14. C++17 and 20 are

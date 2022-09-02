@@ -237,8 +237,32 @@ RuntimeOptimizer::add_constant(const TypeSpec& type, const void* data,
         if (type.is_unsized_array())
             newtype.make_array(datatype.numelements());
 
-        Symbol newconst(ustring::fmtformat("$newconst{}", m_next_newconst++),
-                        newtype, SymTypeConst);
+        ustring symname;
+        if (newtype.is_int()) {
+            // If it's a constant integer, make the name $newconst_int42 and
+            // if it's negative, $newconst_int_42 (because we can't put a
+            // minus sign in a symbol name). This is easier to read than
+            // naming them sequentially (you know the value in the constant)
+            // and it means the name will be the same regardless of the order
+            // in which we made the constants (helpful for PTX cache
+            // behavior).
+            int val = *(const int*)data;
+            symname = ustring::fmtformat("$newconst_int{}{}",
+                                         val < 0 ? "_" : "", abs(val));
+        } else if (newtype.is_string()) {
+            // If it's a constant string, make the name $newconst_str_HASH
+            // where HASH is the hex value of the hash of that ustring. This
+            // ensures that the name will be the same regardless of the order
+            // in which we made the constants (helpful for PTX cache
+            // behavior).
+            ustring val(*(const char**)data);
+            symname = ustring::fmtformat("$newconst_str{:08x}", val.hash());
+        } else {
+            // All other cases, just name it sequentially as $newconst_1,
+            // $newconst_2, etc.
+            symname = ustring::fmtformat("$newconst{}", m_next_newconst++);
+        }
+        Symbol newconst(symname, newtype, SymTypeConst);
         void* newdata = nullptr;
         TypeDesc t(newtype.simpletype());
         size_t n = t.aggregate * t.numelements();

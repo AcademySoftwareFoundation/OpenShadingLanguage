@@ -16,6 +16,10 @@ add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
                     MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/testsuite/runtest.py")
 add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest.py" )
 
+
+set (OSL_TEST_BIG_TIMEOUT 800 CACHE STRING "Timeout for tests that take a long time")
+
+
 # add_one_testsuite() - set up one testsuite entry
 #
 # Usage:
@@ -26,6 +30,7 @@ add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest
 #                  [COMMAND cmd...] - optional override of launch command
 #                 )
 #
+
 macro (add_one_testsuite testname testsrcdir)
     cmake_parse_arguments (_tst "" "" "ENV;COMMAND" ${ARGN})
     set (testsuite "${CMAKE_SOURCE_DIR}/testsuite")
@@ -53,7 +58,7 @@ macro (add_one_testsuite testname testsrcdir)
     # from piling up together, allocate a few cores each.
     if (${testname} MATCHES "^render-")
         set_tests_properties (${testname} PROPERTIES LABELS render
-                              PROCESSORS 4 COST 10 TIMEOUT 240)
+                              PROCESSORS 4 COST 10 TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
     endif ()
     # Some labeling for fun
     if (${testname} MATCHES "^texture")
@@ -75,7 +80,7 @@ macro (add_one_testsuite testname testsrcdir)
         # These are batched shading regression tests. Some are quite
         # long, so give them a higher cost and timeout.
         set_tests_properties (${testname} PROPERTIES LABELS batchregression
-                              COST 15 TIMEOUT 300)
+                              COST 15 TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
     endif ()
 endmacro ()
 
@@ -124,7 +129,7 @@ macro ( TESTSUITE )
                                ENV TESTSHADE_OPT=2 )
         endif ()
         if (_testname MATCHES "render-" AND ${CMAKE_BUILD_TYPE} STREQUAL Debug)
-            set_tests_properties (${_testname} PROPERTIES TIMEOUT 600)
+            set_tests_properties (${_testname} PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
         endif ()
         # When building for OptiX support, also run it in OptiX mode
         # if there is an OPTIX marker file in the directory.
@@ -378,8 +383,11 @@ macro (osl_add_all_tests)
 
     # Some regression tests have a lot of combinations and may need more time to finish
     if (BUILD_BATCHED)
-        set_tests_properties (arithmetic-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
-        set_tests_properties (transform-reg.regress.batched.opt PROPERTIES TIMEOUT 800)
+        set_tests_properties (arithmetic-reg.regress.batched.opt
+                              PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
+        set_tests_properties (transform-reg.regress.batched.opt
+                              PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
     endif ()
-    set_tests_properties (matrix-reg.regress.rsbitcode.opt PROPERTIES TIMEOUT 800)
+    set_tests_properties (matrix-reg.regress.rsbitcode.opt
+                          PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
 endmacro()

@@ -482,6 +482,13 @@ public:
                             ustring name, ASTNode* init, bool isparam,
                             bool ismeta, bool isoutput, bool initlist,
                             int sourceline_start = -1);
+    ~ASTvariable_declaration()
+    {
+        // Metadata syms aren't added (and ownership transferred) to the
+        // symbol table. For metadata, we are the owner, so we have to delete.
+        if (m_ismetadata)
+            delete m_sym;
+    }
     const char* nodetypename() const;
     const char* childname(size_t i) const;
     void print(std::ostream& out, int indentlevel = 0) const;

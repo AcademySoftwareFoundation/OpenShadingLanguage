@@ -239,38 +239,27 @@ set_shadingsys_options()
     if (batched) {
 #if OSL_USE_BATCHED
         bool batch_size_requested = (batch_size != -1);
-        // Not really looping, just emulating goto behavior using break
-        for (;;) {
-            if (!batch_size_requested || batch_size == 16) {
-                if (shadingsys->configure_batch_execution_at(16)) {
-                    batch_size = 16;
-                    break;
-                }
-            }
-            if (!batch_size_requested || batch_size == 8) {
-                if (shadingsys->configure_batch_execution_at(8)) {
-                    batch_size = 8;
-                    break;
-                }
-            }
-            std::cout
-                << "WARNING:  Hardware or library requirements to utilize batched execution";
+        if ((!batch_size_requested || batch_size == 16)
+            && shadingsys->configure_batch_execution_at(16)) {
+            batch_size = 16;
+        } else if ((!batch_size_requested || batch_size == 8)
+                   && shadingsys->configure_batch_execution_at(8)) {
+            batch_size = 8;
+        } else {
+            OSL::print(
+                "WARNING:  Hardware or library requirements to utilize batched execution");
             ustring llvm_jit_target;
             shadingsys->getattribute("llvm_jit_target", llvm_jit_target);
             int llvm_jit_fma;
             shadingsys->getattribute("llvm_jit_fma", llvm_jit_fma);
-            if (!llvm_jit_target.empty()) {
-                std::cout << " for isa(" << llvm_jit_target.c_str() << ") and ";
-            }
-            std::cout << " llvm_jit_fma(" << llvm_jit_fma << ")";
-            if (batch_size_requested) {
-                std::cout << " and batch_size(" << batch_size << ")";
-            }
-            std::cout
-                << " are not met, ignoring batched and using single point interface to OSL"
-                << std::endl;
+            if (!llvm_jit_target.empty())
+                OSL::print(" for isa({}) and ", llvm_jit_target);
+            OSL::print(" llvm_jit_fma({})", llvm_jit_fma);
+            if (batch_size_requested)
+                OSL::print(" and batch_size({})", batch_size);
+            OSL::print(
+                " are not met, ignoring batched and using single point interface to OSL\n");
             batched = false;
-            break;
         }
 #else
         batched = false;

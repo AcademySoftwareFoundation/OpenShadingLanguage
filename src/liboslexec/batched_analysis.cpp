@@ -1091,8 +1091,10 @@ typedef std::vector<WriteEvent> WriteChronology;
 
 class ReadEvent {
     DependencyTreeTracker::Position m_pos_in_tree;
+#ifdef OSL_DEV
     int m_op_num;
     int m_loop_op_index;
+#endif
 
 public:
     ReadEvent(DependencyTreeTracker::Position pos_in_tree_

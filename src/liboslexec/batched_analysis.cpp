@@ -621,6 +621,20 @@ public:
 
     Position common_ancestor_between(Position read_pos, Position write_pos)
     {
+        // Early out when read and write are at the same position
+        if (read_pos == write_pos)
+            return read_pos;
+        // Early out if either position is the root of the dependency tree
+        if (read_pos == end_pos() || write_pos == end_pos())
+            return end_pos();
+        return search_for_common_ancestor_between(read_pos, write_pos);
+    }
+
+    // Because this function makes use of stack arrays, ensure is NOT inlined
+    // inside a loop to avoid repeatedly reserve stack space each iteration
+    OSL_NOINLINE Position search_for_common_ancestor_between(Position read_pos,
+                                                             Position write_pos)
+    {
         // To find common anscenstor
         // Walk up both paths building 2 stacks of positions
         // now iterate from tops of stack while the positions are the same.
@@ -657,28 +671,52 @@ public:
                 ++write_iter;
             }
         }
-        const int levelCount  = std::min(read_depth, write_depth);
-        const int read_level  = read_depth - 1;
-        const int write_level = write_depth - 1;
-        OSL_ASSERT(write_path[write_level] == end_pos());
-        OSL_ASSERT(read_path[read_level] == end_pos());
 
-        int level = 0;
-        OSL_ASSERT(read_path[read_level - level]
-                   == write_path[write_level - level]);
-        do {
-            ++level;
-            if (read_path[read_level - level]()
-                != write_path[write_level - level]())
+        const int walkCount = std::min(read_depth, write_depth);
+        const int read_top  = read_depth - 1;
+        const int write_top = write_depth - 1;
+        OSL_DASSERT(write_top < writeCount);
+        OSL_DASSERT(write_path[write_top] == end_pos());
+        OSL_DASSERT(read_top < read_count);
+        OSL_DASSERT(read_path[read_top] == end_pos());
+
+        int walkDepth = 0;
+        // Verify top of read and write stacks match positions
+        OSL_DASSERT((read_top - walkDepth) >= 0);
+        OSL_DASSERT((read_top - walkDepth) < read_count);
+        OSL_DASSERT((write_top - walkDepth) >= 0);
+        OSL_DASSERT((write_top - walkDepth) < writeCount);
+        OSL_DASSERT(read_path[read_top - walkDepth]
+                    == write_path[write_top - walkDepth]);
+        // That position should technically be the root (no conditions in the dependency tree)
+        OSL_DASSERT(read_path[read_top - walkDepth] == end_pos());
+        // Because we know walkDepth 0 never differs, we can start iterating
+        // at walkDepth 1
+
+        // Walk down the read and write paths until they differ
+        for (walkDepth = 1; walkDepth < walkCount; ++walkDepth) {
+            OSL_DASSERT((read_top - walkDepth) >= 0);
+            OSL_DASSERT((read_top - walkDepth) < read_count);
+            OSL_DASSERT((write_top - walkDepth) >= 0);
+            OSL_DASSERT((write_top - walkDepth) < writeCount);
+            if (read_path[read_top - walkDepth]()
+                != write_path[write_top - walkDepth]()) {
                 break;
-        } while (level < levelCount);
-        --level;
-        OSL_ASSERT(read_path[read_level - level]
-                   == write_path[write_level - level]);
-        OSL_ASSERT(read_level - level >= 0);
-        return read_path[read_level - level];
+            }
+        }
+        // The previous walk depth's position was the common ancestor
+        --walkDepth;
+        OSL_DASSERT((read_top - walkDepth) >= 0);
+        OSL_DASSERT((read_top - walkDepth) < read_count);
+        OSL_DASSERT((write_top - walkDepth) >= 0);
+        OSL_DASSERT((write_top - walkDepth) < writeCount);
+        OSL_DASSERT(read_path[read_top - walkDepth]
+                    == write_path[write_top - walkDepth]);
+        return read_path[read_top - walkDepth];
     }
 };
+
+
 
 // Historically tracks stack of functions
 // The Position returned by top_pos changes and function scopes are pushed and popped.

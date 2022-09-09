@@ -578,8 +578,14 @@ ASTvariable_declaration::ASTvariable_declaration(OSLCompilerImpl* comp,
     if (symtype == SymTypeLocal && Strutil::starts_with(name, "__debug_tmp__"))
         symtype = SymTypeTemp;
     m_sym = new Symbol(name, type, symtype, this);
-    if (!m_ismetadata)
+    if (m_ismetadata) {
+        // Metadata doesn't go in the symbol table, so we need to retain
+        // an owning pointer so it doesn't leak.
+        m_sym_owned.reset(m_sym);
+    } else {
+        // Put in the symbol table, after which symtab is the owner
         m_compiler->symtab().insert(m_sym);
+    }
 
     // A struct really makes several subvariables
     if (type.is_structure() || type.is_structure_array()) {

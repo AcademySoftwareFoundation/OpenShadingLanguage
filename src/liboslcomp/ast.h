@@ -482,13 +482,6 @@ public:
                             ustring name, ASTNode* init, bool isparam,
                             bool ismeta, bool isoutput, bool initlist,
                             int sourceline_start = -1);
-    ~ASTvariable_declaration()
-    {
-        // Metadata syms aren't added (and ownership transferred) to the
-        // symbol table. For metadata, we are the owner, so we have to delete.
-        if (m_ismetadata)
-            delete m_sym;
-    }
     const char* nodetypename() const;
     const char* childname(size_t i) const;
     void print(std::ostream& out, int indentlevel = 0) const;
@@ -527,7 +520,7 @@ public:
 
 private:
     ustring m_name;     ///< Name of the symbol (unmangled)
-    Symbol* m_sym;      ///< Ptr to the symbol this declares
+    Symbol* m_sym;      ///< Ptr to the symbol this declares (non-owning)
     bool m_isparam;     ///< Is this a parameter?
     bool m_isoutput;    ///< Is this an output parameter?
     bool m_ismetadata;  ///< Is this declaration a piece of metadata?
@@ -536,6 +529,7 @@ private:
     // specific initializers.
     typedef std::pair<ustring, ASTNode*> NamedInit;
     std::vector<NamedInit> m_struct_field_inits;
+    std::unique_ptr<Symbol> m_sym_owned;  // if we own the symbol
 };
 
 

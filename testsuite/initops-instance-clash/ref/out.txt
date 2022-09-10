@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+A = 0.5, B = 1
+

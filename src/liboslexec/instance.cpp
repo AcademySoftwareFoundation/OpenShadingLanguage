@@ -330,12 +330,19 @@ ShaderInstance::parameters(const ParamValueList& params)
                 // definite length in subsequent rerenders. Don't do that.
             } else {
                 // If the instance value is the same as the master's default,
-                // just skip the parameter, let it "keep" the default.
-                // Note that this can't/shouldn't happen for the indefinite-
-                // sized array case, which is why we have it in the 'else'
-                // clause of that test.
+                // just skip the parameter, let it "keep" the default by
+                // marking the source as DefaultVal.
+                //
+                // N.B. Beware the situation where it has init ops, and so the
+                // "default value" slot only coincidentally has the same value
+                // as the instance value.  We can't mark it as DefaultVal in
+                // that case, because the init ops need to be run.
+                //
+                // Note that this case also can't/shouldn't happen for the
+                // indefinite- sized array case, which is why we have it in
+                // the 'else' clause of that test.
                 void* defaultdata = m_master->param_default_storage(i);
-                if (lockgeom
+                if (lockgeom && !sm->has_init_ops()
                     && memcmp(defaultdata, data, valuetype.size()) == 0) {
                     // Must reset valuesource to default, in case the parameter
                     // was set already, and now is being changed back to default.

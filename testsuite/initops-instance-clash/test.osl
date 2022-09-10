@@ -1,0 +1,17 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+
+// This is a regression test for a weird case where we have a parameter (B)
+// that by default is initialized to the value of A (i.e. it has init ops),
+// but if it is given instance value 0.0, the bug was that it would revert to
+// thinking its true value was 0.0 and forget about the init ops entirely.
+
+
+shader test (float A = 0.5,
+             float B = A)
+{
+    printf("A = %g, B = %g\n", A, B);
+}

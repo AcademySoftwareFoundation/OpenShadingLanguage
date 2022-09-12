@@ -241,7 +241,9 @@ macro (osl_add_all_tests)
                 globals-needed
                 group-outputs groupstring
                 hash hashnoise hex hyperb
-                ieee_fp ieee_fp-reg if if-reg incdec initlist initops intbits isconnected
+                ieee_fp ieee_fp-reg if if-reg incdec initlist
+                initops initops-instance-clash
+                intbits isconnected
                 isconstant
                 layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
                 layers-nonlazycopy layers-repeatedoutputs

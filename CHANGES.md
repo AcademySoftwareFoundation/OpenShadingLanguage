@@ -8,12 +8,17 @@ Dependency and standards requirements changes:
   of OptiX 7.0 is required.
 
 OSL Language and oslc compiler:
+* Bug fix: shader params whose default values involve "init ops" could be
+  incorrectly initialized if their values came from instance parameters set to
+  zero. #1578 (1.13.0.1)
 
 OSL Standard library:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 
 SIMD batched shading mode:
+* Fix some array overruns (asymptomatic, but still potentially buggy) in
+  common_ancestor_between. #1577 (1.13.0.1)
 
 OptiX rendering:
 * OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
@@ -23,22 +28,28 @@ OptiX rendering:
   simply represented in ordinary variables as the hash of their characters.
   #1531 (1.13.0.0) #1553 (1.13.0.1)
 * Better PTX cache hit rate by eliminating several sources of not being
-  strictly deterministic in the PTX text we were generating. #1566 (1.13.0.1)
+  strictly deterministic in the PTX text we were generating. #1566 #1570
+  (1.13.0.1)
 
 Performance improvements:
 
 Bug fixes and other improvements (internals):
+* Fix memory leak in oslc ASTvariable_declaration. #1576 (1.13.0.1)
 
 Internals/developer concerns:
 
 Build & test system improvements:
 * CMake build system and scripts:
+    - The version number is now a cache variable, and so can be overridden at
+      build time using `-DOSL_VERSION=...`. Use with extreme caution! #1579
+      (1.13.0.1)
 * Dependency version support:
 * Testing and Continuous integration (CI) systems:
 * Platform support:
 
 Documentation:
-
+* `doc/RELEASING.md` documents our release process and versioning policies.
+  #1572 (1.13.0.1)
 
 
 Release 1.12 -- beta 1 Sep 2022 (compared to 1.11)

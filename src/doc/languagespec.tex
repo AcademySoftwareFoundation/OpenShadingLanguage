@@ -4611,7 +4611,7 @@ Example:
 \index{material closure functions}
 \index{functions!closures}
 
-For \closurecolor functions, the return ``value'' is symbolic and is may
+For \closurecolor functions, the return ``value'' is symbolic and may
 be passed to an output variable or assigned to \Ci, to be evaluated at a
 later time convenient to the renderer in order to compute the exitant
 radiance in the direction {\cf -I}.  But the shader itself cannot
@@ -4882,7 +4882,7 @@ parameters control the contribution of each reflection/transmission lobe.
 
 The closure may be vertically layered over a base BSDF for the surface beneath
 the dielectric layer. This is done using the layer() closure. By chaining
-multiple dielectric_bsdf closures you can describe a surface with multiple
+multiple {\cf dielectric_bsdf} closures you can describe a surface with multiple
 specular lobes. If transmission is enabled (transmission_tint $>$ 0.0) the
 closure may be layered over a VDF closure describing the surface interior to
 handle absorption and scattering inside the medium.
@@ -5131,7 +5131,7 @@ is supported and controlled by the anisotropy input.
   \apiitem{anisotropy}
   \vspace{12pt}
   Scattering anisotropy [-1,1]. Negative values give backwards scattering,
-  positive values give forward scatterixng, and 0.0 gives uniform scattering.
+  positive values give forward scattering, and 0.0 gives uniform scattering.
   \apiend
   
 %   \vspace{-16pt}
@@ -5149,7 +5149,7 @@ is supported and controlled by the anisotropy input.
 
 Constructs a VDF for light passing through a dielectric homogeneous medium,
 such as glass or liquids. The parameters {\cf transmission_depth} and
-{\cf transmission_color} control the extinction coefficient of the medium in and
+{\cf transmission_color} control the extinction coefficient of the medium in an
 artist-friendly way. A priority can be set to determine the ordering of
 overlapping media.
 
@@ -5223,7 +5223,7 @@ $\mathrm{W}\cdot\mathrm{sr}^{-1}\cdot\mathrm{m}^{-2}$). This means that a surfac
 directly seen by the camera will directly reproduce the closure weight in the
 final pixel, regardless of being a surface or a volume.
 
-For surface emission, If you divide {\cf emission} by 
+For surface emission, if you divide {\cf emittance} by
 {\cf surfacearea() * M_PI}, then you can easily specify the total emissive
 power of the light (e.g., $\mathrm{W}$), regardless of its physical size.
 \apiend
@@ -5344,7 +5344,7 @@ Nayar, ``Generalization of Lambert's Reflectance Model,'' Proceedings of
 SIGGRAPH 1994, pp.239-246 (July, 1994).
 
 \begin{comment}
-Like all \closurecolors, the return ``value'' is symbolic and is may be
+Like all \closurecolors, the return ``value'' is symbolic and may be
 evaluated at a later time convenient to the renderer in order to compute
 the exitant radiance in the direction {\cf -I}.  But aside from the
 fact that the shader cannot examine the numeric values of the
@@ -5532,7 +5532,7 @@ regardless of its original direction.
 \indexapi{henyey_greenstein}
 Returns a \colorclosure that represents the directional volumetric
 scattering by small suspended particles.  The {\cf g} parameter is the
-anisotropy factor, ranging from $-1$ to $1$), with positive values
+anisotropy factor, in the range $(-1, 1)$, with positive values
 indicating predominantly forward-scattering, negative values indicating
 predominantly back-scattering, and value of $g=0$ resulting in isotropic
 scattering.
@@ -5563,7 +5563,7 @@ $\mathrm{W}\cdot\mathrm{sr}^{-1}\cdot\mathrm{m}^{-2}$). This means that a surfac
 directly seen by the camera will directly reproduce the closure weight in the
 final pixel, regardless of being a surface or a volume.
 
-For surface emission, If you divide {\cf emission()} by 
+For surface emission, if you divide {\cf emission()} by
 {\cf surfacearea() * M_PI}, then you can easily specify the total emissive
 power of the light (e.g., $\mathrm{W}$), regardless of its physical size.
 \apiend
@@ -6834,7 +6834,7 @@ full control in the shader.
 \item[Shader.] A small self-contained program written in \langname, used
   to extend the functionality of a renderer with custom behavior of
   materials and lights.  A particular shader may have multiple
-  \emph{shader instances} within a scene, each of which has ts unique
+  \emph{shader instances} within a scene, each of which has its unique
   \emph{instance parameters}, transformation, etc.
 
 \item[Shader function.] A function written in \langname that may be

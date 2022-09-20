@@ -9,4 +9,5 @@ build
 *.pyc
 *.log
 .vscode
+.envrc
 

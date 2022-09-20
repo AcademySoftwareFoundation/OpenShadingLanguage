@@ -604,6 +604,7 @@ print_info()
     TextureSystem* texturesys = TextureSystem::create();
     shadingsys = new ShadingSystem(rend, texturesys, &errhandler);
     rend->init_shadingsys(shadingsys);
+    set_shadingsys_options();
 
     std::cout << "\n" << shadingsys->getstats(5) << "\n";
 
@@ -630,6 +631,8 @@ getargs(int argc, const char* argv[])
     ap.arg("filename")
       .hidden()
       .action([&](cspan<const char*> argv){ stash_shader_arg(argv); });
+    ap.arg("--help")
+      .help("Print help message");
     ap.arg("-v", &verbose)
       .help("Verbose messages");
     ap.arg("-t %d:NTHREADS", &num_threads)

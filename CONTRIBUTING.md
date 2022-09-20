@@ -173,9 +173,16 @@ it really only applies to the particular file in which it appears.
 
 #### Formatting
 
-NEVER alter somebody else's code to reformat just because you found
-something that violates the rules. Let the group/author/leader know, and
-resist the temptation to change it yourself.
+We use clang-format to enforce formatting rules for the vast majority of the
+code base. It is automatically run during CI and is a CI failure if the code
+does not conform. There are, however, parts of the code base that are not
+clang-formatted, either because we have not yet put them under the
+clang-format regime, or because individual modules were deemed to be less
+clear with clang-format than with hand formatting.
+
+For non-clang-format regions of code, NEVER alter somebody else's code to
+reformat just because you found something that violates the rules. Let the
+group/author/leader know, and resist the temptation to change it yourself.
 
 Each line of text in your code should be at most 80 characters long.
 Exceptions are allowed for those rare cases where letting a line be longer
@@ -217,13 +224,10 @@ Function calls should have a space between the function name and the opening
 parenthesis, NO space inside the parenthesis, except for a single blank
 space between each argument. For example:
 
-    x = foo (a, b);     // Yes, this is always ok
+    x = foo(a, b);      // Yes
     
     x = foo ( a, b );   // No
     x = foo (a,b);      // No
-    x = foo(a, b);      // No
-    x = foo(a);         // Occasionally, this just looks better, when the function name is short,
-                        //    and there's just one very short argument.  What can I say, I do it too.
 
 Function declarations: function names should begin at column 0 for a full
 function definition. (It's ok to violate this rule for very short inline
@@ -233,7 +237,7 @@ functions within class definitions.)
 Here is a short code fragment that shows some of these rules in action:
 
     static int
-    function (int a, int b)
+    function(int a, int b)
     {
         int x = a + b;
         if (a == 0 || b == 0) {
@@ -244,7 +248,7 @@ Here is a short code fragment that shows some of these rules in action:
         }
         for (int i = 0;  i < 3;  ++i) {
             x += a * i;
-            x *= foo (i);  // function call
+            x *= foo(i);  // function call
         }
         return x;
     }

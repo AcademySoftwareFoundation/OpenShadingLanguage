@@ -35,6 +35,7 @@ macro (add_one_testsuite testname testsrcdir)
     cmake_parse_arguments (_tst "" "" "ENV;COMMAND" ${ARGN})
     set (testsuite "${CMAKE_SOURCE_DIR}/testsuite")
     set (testdir "${CMAKE_BINARY_DIR}/testsuite/${testname}")
+    file (MAKE_DIRECTORY "${testdir}")
     if (NOT _tst_COMMAND)
         set (_tst_COMMAND ${Python_EXECUTABLE} "${testsuite}/runtest.py" ${testdir})
         if (MSVC_IDE)
@@ -50,7 +51,17 @@ macro (add_one_testsuite testname testsrcdir)
               OSL_TESTSUITE_SRC=${testsrcdir}
               OSL_TESTSUITE_CUR=${testdir}
          )
-    file (MAKE_DIRECTORY "${testdir}")
+
+    # We need to suppress the leak sanitizer for "texture" tests, because of a
+    # minor leak inside OIIO (140 bytes! -- inconsequential) but which we
+    # can't use the suppressions list becuase the leaks come from calls made
+    # inside JITed code for which there is not a good stack trace. Any real
+    # leaks from OIIO or its dependencies we assume will be caught by lsan on
+    # the OIIO side, where there is no JIT to complicate things.
+    if (${testname} MATCHES "^texture" OR ${testname} MATCHES "gettextureinfo")
+        list (APPEND _tst_ENV ASAN_OPTIONS=detect_leaks=0:$ENV{ASAN_OPTIONS})
+    endif ()
+
     add_test ( NAME ${testname} COMMAND ${_tst_COMMAND} )
     # message ("Test -- env ${_tst_ENV} cmd ${_tst_COMMAND}")
     set_tests_properties (${testname} PROPERTIES ENVIRONMENT "${_tst_ENV}" )
@@ -357,10 +368,10 @@ macro (osl_add_all_tests)
     endif ()
 
     # Add tests that require the Python bindings if we built them.
-    # We also exclude these tests if this is a sanitizer build on Linux,
-    # because the Python interpreter itself won't be linked with the right asan
+    # We also exclude these tests if this is a sanitizer build, because the
+    # Python interpreter itself won't be linked with the right asan
     # libraries to run correctly.
-    if (USE_PYTHON AND NOT SANITIZE_ON_LINUX)
+    if (USE_PYTHON AND NOT SANITIZE)
         TESTSUITE ( python-oslquery )
     endif ()
 

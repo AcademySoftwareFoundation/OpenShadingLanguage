@@ -23,7 +23,7 @@ export DYLD_LIBRARY_PATH=$OSL_ROOT/lib:$DYLD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$OSL_ROOT/lib:$LD_LIBRARY_PATH
 export OIIO_LIBRARY_PATH=$OSL_ROOT/lib:${OIIO_LIBRARY_PATH}
 export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
-export ASAN_OPTIONS=print_suppressions=0
+export ASAN_OPTIONS=print_suppressions=0:detect_odr_violation=1
 
 export USE_PYTHON=${USE_PYTHON:=1}
 export PYTHON_VERSION=${PYTHON_VERSION:="2.7"}

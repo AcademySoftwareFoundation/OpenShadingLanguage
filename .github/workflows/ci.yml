@@ -155,6 +155,47 @@ jobs:
             simd: 0
             setenvs: export PUGIXML_VERSION=v1.8
 
+          # Address and leak sanitizers
+          - desc: sanitizers
+            nametag: sanitizer
+            os: ubuntu-latest
+            vfxyear: 2022
+            vfxsuffix: -clang13
+            cc_compiler: clang
+            cxx_compiler: clang++
+            cxx_std: 17
+            openimageio_ver: master
+            python_ver: 3.9
+            pybind11_ver: v2.9.0
+            simd: avx2,f16c
+            batched: b8_AVX2
+            setenvs: export OSL_CMAKE_FLAGS="-DSANITIZE=address -DOSL_TEST_BIG_TIMEOUT=1200"
+                            CMAKE_BUILD_TYPE=Debug
+                            CTEST_TEST_TIMEOUT=1200
+                            CTEST_EXCLUSIONS="broken|noise-reg.regress|noise-gabor-reg.regress|example-.*deformer|spline-reg.regress.batched|osl-imageio"
+                            OSL_OPTIONS=llvm_debugging_symbols=1
+                            TESTRENDER_AA=1
+                            OSL_TESTSUITE_SKIP_DIFF=1
+            # Sanitizer notes:
+            # - There are a handful of tests we disable entirely with
+            #   CTEST_EXCLUSIONS because they are irrelevant or just cannot be
+            #   made to be clean (and that's ok).
+            # - Tests with sanitizers run slow, so we increase timeouts, and
+            #   also set AA to 1 for render tests to speed them up.
+            #   OSL_TESTSUITE_SKIP_DIFF prevents making the AA=1 image result
+            #   fail, but that's ok because every other CI test is checking
+            #   the results; here we have no reason to believe results will
+            #   differ from other tests, we just need to run with sanitizers
+            #   turned on.
+            # - In testing.cmake, we rig texture tests to disable the leak
+            #   sanitizer, because we can't eliminate some completely benign
+            #   leaks from the texture system, and because they are called
+            #   from JITed code, we don't get a clean stack trace of things
+            #   that happen in OIIO and therefore we just can't enumerate the
+            #   allowed exceptions. So we trust that OIIO itself tests the
+            #   texture system adequately and is able to ignore the benign
+            #   "leaks."
+
     runs-on: ${{matrix.os}}
     container:
       image: aswftesting/ci-osl:${{matrix.vfxyear}}${{matrix.vfxsuffix}}

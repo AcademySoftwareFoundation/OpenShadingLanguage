@@ -77,7 +77,7 @@ macro (setup_python_module)
                            PRIVATE
                                 pybind11::pybind11
                                 Python::Python
-                                ${lib_LIBS} ${SANITIZE_LIBRARIES})
+                                ${lib_LIBS})
     if (APPLE)
         set_target_properties (${target_name} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     endif ()

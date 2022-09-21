@@ -97,19 +97,14 @@ Here are the steps to check out, build, and test the OSL distribution:
    full errors, not warnings.
 
 4. After compilation, you'll end up with a full OSL distribution in
-   dist/ARCH, where ARCH is the architecture you are building on, one of
-   "linux", "linux64", "macosx", "windows", or "windows64".
+   dist/
 
-   Note: The default is to make an optimized "release" build.  If
-   instead type 'make debug' at the top level, you will end up with
-   a debug build (no optimization, full symbols) in "dist/ARCH.debug".
-
-5. Add the "dist/ARCH/bin" to your $PATH, and "dist/ARCH/lib" to your
-   $LD_LIBRAY_PATH (or $DYLD_LIBRARY_PATH on OS X), or copy the contents
+5. Add the "dist/bin" to your $PATH, and "dist/lib" to your
+   $LD_LIBRAY_PATH (or $DYLD_LIBRARY_PATH on MacOS), or copy the contents
    of those files to appropriate directories.  Public include files
    (those needed when building applications that incorporate OSL)
-   can be found in "dist/ARCH/include", and documentation can be found
-   in "dist/ARCH/share/doc".
+   can be found in "dist/include", and documentation can be found
+   in "dist/share/doc".
 
 6. After building (and setting your library path), you can run the
    test suite with:

@@ -210,7 +210,6 @@ OSL_SHADEOP OSL_HOSTDEVICE int
 osl_prepend_matrix_from(void* sg_, void* r, const char* from)
 {
     ShaderGlobals* sg   = (ShaderGlobals*)sg_;
-    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     Matrix44 m;
     bool ok = osl_get_matrix(sg, &m, from);
     if (ok)
@@ -218,6 +217,7 @@ osl_prepend_matrix_from(void* sg_, void* r, const char* from)
 #ifndef __CUDACC__
     // TODO: How do we manage this in OptiX?
     else {
+        ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
         if (ssu->m_unknown_coordsys_error) {
             ShadingContext* ctx = (ShadingContext*)(sg)->context;
             ctx->errorfmt("Unknown transformation \"{}\"", from);

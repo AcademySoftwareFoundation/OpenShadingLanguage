@@ -641,7 +641,7 @@ public:
     bool no_pointcloud() const { return m_no_pointcloud; }
     bool force_derivs() const { return m_force_derivs; }
     bool allow_shader_replacement() const { return m_allow_shader_replacement; }
-    ustring commonspace_synonym() const { return m_commonspace_synonym; }
+    ustring commonspace_synonym() const { return m_shading_state_uniform.m_commonspace_synonym; }
 
     bool llvm_jit_fma() const { return m_llvm_jit_fma; }
     ustring llvm_jit_target() const { return m_llvm_jit_target; }
@@ -885,7 +885,6 @@ private:
     std::string m_library_searchpath;            ///< Library search path
     std::vector<std::string>
         m_library_searchpath_dirs;            ///< All library searchpath dirs
-    ustring m_commonspace_synonym;            ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;          ///< Names of ray types
     std::vector<ustring> m_renderer_outputs;  ///< Names of renderer outputs
     std::vector<SymLocationDesc> m_symlocs;
@@ -902,7 +901,7 @@ private:
                                       ///<   away things that can't GPU.
 
     ustring m_colorspace;       ///< What RGB colors mean
-    
+
     ShadingStateUniform m_shading_state_uniform;
 
     std::shared_ptr<OIIO::ColorConfig>

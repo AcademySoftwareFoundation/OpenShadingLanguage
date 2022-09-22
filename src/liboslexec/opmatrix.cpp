@@ -139,9 +139,9 @@ OSL_SHADEOP int
 osl_get_matrix(void* sg_, void* r, const char* from)
 {
     ShaderGlobals* sg   = (ShaderGlobals*)sg_;
-    ShadingContext* ctx = (ShadingContext*)sg->context;
+    ShadingStateUniform *ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     if (HDSTR(from) == STRING_PARAMS(common)
-        || HDSTR(from) == ctx->shadingsys().commonspace_synonym()) {
+        || HDSTR(from) == ssu->m_commonspace_synonym) {
         MAT(r).makeIdentity();
         return true;
     }
@@ -157,7 +157,7 @@ osl_get_matrix(void* sg_, void* r, const char* from)
     if (!ok) {
         MAT(r).makeIdentity();
         ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
+        if (ssu->m_unknown_coordsys_error)
             ctx->errorfmt("Unknown transformation \"{}\"", from);
     }
     return ok;
@@ -169,9 +169,9 @@ OSL_SHADEOP int
 osl_get_inverse_matrix(void* sg_, void* r, const char* to)
 {
     ShaderGlobals* sg   = (ShaderGlobals*)sg_;
-    ShadingContext* ctx = (ShadingContext*)sg->context;
+    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     if (HDSTR(to) == STRING_PARAMS(common)
-        || HDSTR(to) == ctx->shadingsys().commonspace_synonym()) {
+        || HDSTR(to) == ssu->m_commonspace_synonym) {
         MAT(r).makeIdentity();
         return true;
     }
@@ -189,7 +189,7 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to)
     if (!ok) {
         MAT(r).makeIdentity();
         ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
+        if ( ssu->m_unknown_coordsys_error)
             ctx->errorfmt("Unknown transformation \"{}\"", to);
     }
     return ok;
@@ -207,18 +207,21 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to);
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_prepend_matrix_from(void* sg, void* r, const char* from)
+osl_prepend_matrix_from(void* sg_, void* r, const char* from)
 {
+    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
+    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     Matrix44 m;
-    bool ok = osl_get_matrix((ShaderGlobals*)sg, &m, from);
+    bool ok = osl_get_matrix(sg, &m, from);
     if (ok)
         MAT(r) = m * MAT(r);
 #ifndef __CUDACC__
     // TODO: How do we manage this in OptiX?
     else {
-        ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-        if (ctx->shadingsys().unknown_coordsys_error())
+        if (ssu->m_unknown_coordsys_error) {
+            ShadingContext* ctx = (ShadingContext*)(sg)->context;
             ctx->errorfmt("Unknown transformation \"{}\"", from);
+        }
     }
 #endif
     return ok;

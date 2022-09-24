@@ -144,7 +144,8 @@ branch, and henceforth, any big or compatibility-breaking changes will only be
 committed to main and not backported to the release branch. (Though we are
 loose about this rule during the alpha period and allow continued breaking
 changes in the alpha, but by the time we call it beta, we allow no more
-breaking changes.)
+breaking changes.) Also at this stage, the main branch's CHANGES.md should
+have a heading added at the top for the *next* version.
 
 
 ### Prior to a release
@@ -338,4 +339,8 @@ Odds and ends to do after the tag is pushed and the announcements are sent:
   Language" channel of the ASWF slack. It can be a one-line announcement and
   then just a link to the GitHub release page for this version.
 
-
+- Edit the top-level CMakeList.txt to update the version to the *next*
+  anticipated release on the branch, in order to ensure that anybody building
+  from subsequent patches won't get a release number that advertises itself
+  incorrectly as a prior tagged release. Also edit CHANGES.md to add a new
+  (blank) heading for the next patch or release.

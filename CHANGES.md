@@ -97,7 +97,9 @@ SIMD batched shading mode:
 * Batched isnan, isinf, isfinite. #1456 (1.12.4.2)
 * Batched userdata and output placement. #1455 (1.12.4.2)
 * Batched pointcloud functions. #1464 (1.12.4.4)
-* Batched closures (#1500)
+* Batched closures #1500
+* Fix overrunning allocation region in debug common_ancestor_between. #1577
+  (1.12.6.1)
 
 OptiX rendering:
 * Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
@@ -167,6 +169,8 @@ Bug fixes and other improvements (internals):
     * Switch to cone tracing for derivatives. #1543 (1.12.6.0)
 * Fix error that prevented correct typecheck of ternary operator. #1552
   (1.12.6.0)
+* Fix bug where assigning an init-op param its default value as an instance
+  value would get lost. #1578 (1.12.6.1)
 
 Internals/developer concerns:
 * Use the `final` keyword in certain internal classes where applicable.
@@ -235,6 +239,7 @@ Build & test system improvements:
       (1.12.4.1)
     - Make exported cmake configs relocatable by using relative paths. #1466
       (1.12.4.4)
+    - Make the version number be a cmake cache variable. #1579 (1.12.6.1)
 * Dependency version support:
     - Build properly against Cuda 11 and OptiX 7.1. #1232 (1.12.0.1)
       and up to OptiX 7.4 #1559 (1.12.6.0)

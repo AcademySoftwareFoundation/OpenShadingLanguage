@@ -128,10 +128,10 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int shadeindex,
         RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
         if (!run_func)
             return false;
-        ssg.context  = this;
+        ssg.context             = this;
         ssg.shadingStateUniform = &(shadingsys().m_shading_state_uniform);
-        ssg.renderer = renderer();
-        ssg.Ci       = NULL;
+        ssg.renderer            = renderer();
+        ssg.Ci                  = NULL;
         run_func(&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr,
                  shadeindex);
     }

@@ -675,7 +675,7 @@ public:
 
     /// Future execute signature that will be range based. Shader globals will be
     /// obtained from renderer services.
-#if 0 // TODO in future PR
+#if 0  // TODO in future PR
     bool execute(ShadingContext& ctx, ShaderGroup& group, OpaqueShadingStateUniformPtr ssu,
                  int shadeindex_begin_at, int shadeindex_end_before
                  void* userdata_base_ptr,

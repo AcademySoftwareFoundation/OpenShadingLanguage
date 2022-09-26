@@ -6,21 +6,21 @@
 
 OSL_NAMESPACE_ENTER
 
-namespace pvt{
+namespace pvt {
 
-// Intent is for a device to export or serialize the ShadingStateUniform from the 
-// ShadingSystem into a device side buffer that can be passed into 
+// Intent is for a device to export or serialize the ShadingStateUniform from the
+// ShadingSystem into a device side buffer that can be passed into
 // kernel launches.
 
 // Requires data to be self-contained and flat in memory to be device friendly.
 
 
 struct ShadingStateUniform {
-    ColorSystem m_colorsystem;        ///< Data for current colorspace
-    ustring m_commonspace_synonym;    ///< Synonym for "common" space
-    bool m_unknown_coordsys_error;    ///< Error to use unknown xform name?
+    ColorSystem m_colorsystem;      ///< Data for current colorspace
+    ustring m_commonspace_synonym;  ///< Synonym for "common" space
+    bool m_unknown_coordsys_error;  ///< Error to use unknown xform name?
 };
 
-} // namespace pvt
+}  // namespace pvt
 
 OSL_NAMESPACE_EXIT

@@ -138,8 +138,8 @@ osl_transformn_dvmdv(void* result, void* M_, void* v_)
 OSL_SHADEOP int
 osl_get_matrix(void* sg_, void* r, const char* from)
 {
-    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
-    ShadingStateUniform *ssu = (ShadingStateUniform*)sg->shadingStateUniform;
+    ShaderGlobals* sg        = (ShaderGlobals*)sg_;
+    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     if (HDSTR(from) == STRING_PARAMS(common)
         || HDSTR(from) == ssu->m_commonspace_synonym) {
         MAT(r).makeIdentity();
@@ -168,7 +168,7 @@ osl_get_matrix(void* sg_, void* r, const char* from)
 OSL_SHADEOP int
 osl_get_inverse_matrix(void* sg_, void* r, const char* to)
 {
-    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
+    ShaderGlobals* sg        = (ShaderGlobals*)sg_;
     ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     if (HDSTR(to) == STRING_PARAMS(common)
         || HDSTR(to) == ssu->m_commonspace_synonym) {
@@ -189,7 +189,7 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to)
     if (!ok) {
         MAT(r).makeIdentity();
         ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-        if ( ssu->m_unknown_coordsys_error)
+        if (ssu->m_unknown_coordsys_error)
             ctx->errorfmt("Unknown transformation \"{}\"", to);
     }
     return ok;
@@ -209,7 +209,7 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to);
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_prepend_matrix_from(void* sg_, void* r, const char* from)
 {
-    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
     Matrix44 m;
     bool ok = osl_get_matrix(sg, &m, from);
     if (ok)

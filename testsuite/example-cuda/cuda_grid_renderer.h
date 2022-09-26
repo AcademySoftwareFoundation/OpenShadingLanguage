@@ -10,10 +10,8 @@
 #include <OSL/rendererservices.h>
 
 
-using GlobalsMap
-    = std::unordered_map<OIIO::ustring, uint64_t, OIIO::ustringHash>;
-using TextureSamplerMap
-    = std::unordered_map<OIIO::ustring, cudaTextureObject_t, OIIO::ustringHash>;
+using GlobalsMap        = std::unordered_map<OIIO::ustring, uint64_t>;
+using TextureSamplerMap = std::unordered_map<OIIO::ustring, cudaTextureObject_t>;
 
 // Just use 4x4 matrix for transformations
 typedef OSL::Matrix44 Transformation;

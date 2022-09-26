@@ -93,9 +93,8 @@ private:
                          OptixProgramGroup* pg);
 
     std::string m_materials_ptx;
-    std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash>
-        m_samplers;
-    std::unordered_map<OIIO::ustring, uint64_t, OIIO::ustringHash> m_globals_map;
+    std::unordered_map<OIIO::ustring, optix::TextureSampler> m_samplers;
+    std::unordered_map<OIIO::ustring, uint64_t> m_globals_map;
 };
 
 

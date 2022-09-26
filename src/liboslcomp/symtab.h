@@ -186,7 +186,7 @@ private:
 ///
 class SymbolTable {
 public:
-    typedef std::unordered_map<ustring, Symbol*, ustringHash> ScopeTable;
+    typedef std::unordered_map<ustring, Symbol*> ScopeTable;
     typedef std::vector<ScopeTable> ScopeTableStack;
     typedef SymbolPtrVec::iterator iterator;
     typedef SymbolPtrVec::const_iterator const_iterator;

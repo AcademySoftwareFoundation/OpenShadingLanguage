@@ -490,7 +490,7 @@ private:
     int m_main_method_start;     ///< Instruction where 'main' starts
     bool m_declaring_shader_formals;  ///< Are we declaring shader formals?
     std::set<std::pair<ustring, int>> m_nowarn_lines;  ///< Lines for 'nowarn'
-    typedef std::unordered_map<ustring, std::string, ustringHash> FCMap;
+    typedef std::unordered_map<ustring, std::string> FCMap;
     FCMap m_filecontents_map;   ///< Contents of source files we've seen
     ustring m_last_sourcefile;  ///< Last filename for retrieve_source
     std::string* m_last_filecontents = nullptr;  //< Last file contents

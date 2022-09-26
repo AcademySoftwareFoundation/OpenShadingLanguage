@@ -60,7 +60,6 @@ using OIIO::ParamValueList;
 using OIIO::RefCnt;
 using OIIO::spin_lock;
 using OIIO::spin_mutex;
-using OIIO::ustringHash;
 namespace Strutil = OIIO::Strutil;
 
 
@@ -702,8 +701,7 @@ public:
     void optimize_all_groups(int nthreads = 0, int mythread = 0,
                              int totalthreads = 1, bool do_jit = true);
 
-    typedef std::unordered_map<ustring, OpDescriptor, ustringHash>
-        OpDescriptorMap;
+    typedef std::unordered_map<ustring, OpDescriptor> OpDescriptorMap;
 
     /// Look up OpDescriptor for the named op, return NULL for unknown op.
     ///
@@ -2361,8 +2359,7 @@ private:
         nullptr, &OIIO::aligned_free
     };
     size_t m_heapsize = 0;
-    using RegexMap
-        = std::unordered_map<ustring, std::unique_ptr<std::regex>, ustringHash>;
+    using RegexMap = std::unordered_map<ustring, std::unique_ptr<std::regex>>;
     RegexMap m_regex_map;    ///< Compiled regex's
     MessageList m_messages;  ///< Message blackboard
 #if OSL_USE_BATCHED

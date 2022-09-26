@@ -102,7 +102,7 @@ using OIIO::TextureOpt;
 // And some other things we borrow from OIIO...
 using OIIO::ErrorHandler;
 using OIIO::ustring;
-using OIIO::ustringHash;
+using OIIO::ustringhash;
 using OIIO::string_view;
 using OIIO::span;
 using OIIO::cspan;
@@ -225,3 +225,29 @@ using ConstIndex = std::integral_constant<int, N>;
 
 
 OSL_NAMESPACE_EXIT
+
+
+namespace std {  // not necessary in C++17, then we can just say std::hash
+#ifndef OIIO_USTRING_HAS_STDHASH
+// Not a new enough OIIO to define std::hash<ustring>, so we'll do it
+template<> struct hash<OSL::ustring> {
+    std::size_t operator()(OSL::ustring u) const noexcept { return u.hash(); }
+};
+
+template<> struct hash<OSL::ustringhash> {
+    std::size_t operator()(OSL::ustringhash u) const noexcept
+    {
+        return u.hash();
+    }
+};
+#endif
+
+// Not necessary once minimum OIIO defines operator< for ustringhash
+template<> struct less<OSL::ustringhash> {
+    constexpr bool operator()(OSL::ustringhash u,
+                              OSL::ustringhash v) const noexcept
+    {
+        return u.hash() < v.hash();
+    }
+};
+}  // namespace std

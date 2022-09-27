@@ -492,9 +492,9 @@
 /// things of bounded size, but not for anything that could be arbitrarily
 /// big, which should instead use heap allocation.
 #if defined(__GNUC__)
-#    define OSL_ALLOCA(type, size) (assert(size < (1<<20)), (size) != 0 ? ((type*)__builtin_alloca((size) * sizeof(type))) : nullptr)
+#    define OSL_ALLOCA(type, size) (assert(size < (1<<20)), (size) != 0 ? (reinterpret_cast<type*>(__builtin_alloca((size) * sizeof(type)))) : nullptr)
 #else
-#    define OSL_ALLOCA(type, size) (assert(size < (1<<20)), (size) != 0 ? ((type*)alloca((size) * sizeof(type))) : nullptr)
+#    define OSL_ALLOCA(type, size) (assert(size < (1<<20)), (size) != 0 ? (reinterpret_cast<type*>(alloca((size) * sizeof(type)))) : nullptr)
 #endif
 
 OSL_NAMESPACE_ENTER

@@ -1182,7 +1182,7 @@ save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
             // convert it to floating point.
-            float* pixel = OIIO_ALLOCA(float, nchans);
+            float* pixel = OSL_ALLOCA(float, nchans);
             OIIO::convert_types(TypeDesc::BASETYPE(t.basetype), data,
                                 TypeDesc::FLOAT, pixel, nchans);
             outputimg->setpixel(x, y, &pixel[0]);
@@ -1347,8 +1347,8 @@ batched_save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
                 Wide<const int[], WidthT> batchResults(
                     shadingsys->symbol_address(*ctx, out_symbol), nchans);
                 // TODO:  Try not to do alloca's inside a loop
-                int* intPixel     = OIIO_ALLOCA(int, nchans);
-                float* floatPixel = OIIO_ALLOCA(float, nchans);
+                int* intPixel     = OSL_ALLOCA(int, nchans);
+                float* floatPixel = OSL_ALLOCA(float, nchans);
                 for (int batchIndex = 0; batchIndex < batchSize; ++batchIndex) {
                     int x = bx[batchIndex];
                     int y = by[batchIndex];

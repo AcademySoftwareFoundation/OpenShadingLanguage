@@ -196,6 +196,25 @@ jobs:
             #   texture system adequately and is able to ignore the benign
             #   "leaks."
 
+            # Test formatting. This test entry doesn't do a full build, it
+            # just runs clang-format on everything, and passes if nothing is
+            # misformatted. Upon failure, the build artifact will be the full
+            # source code with the formatting fixed (diffs will also appear in
+            # the console output).
+          - desc: "clang-format"
+            nametag: clang-format
+            os: ubuntu-latest
+            vfxyear: 2022
+            vfxsuffix: -clang14
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: 3.9
+            simd: avx2,f16c
+            batched: b8_AVX2
+            skip_tests: 1
+            setenvs: export BUILDTARGET=clang-format
+                            OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
+
     runs-on: ${{matrix.os}}
     container:
       image: aswftesting/ci-osl:${{matrix.vfxyear}}${{matrix.vfxsuffix}}
@@ -462,41 +481,3 @@ jobs:
             build/*.cmake
             build/CMake*
             build/testsuite/*/*.*
-
-
-  clang-format:
-    # Test formatting. This test entry doesn't do a full build, it just runs
-    # clang-format on everything, and passes if nothing is misformatted.
-    # Upon failure, the build artifact will be the full source code with the
-    # formatting fixed (diffs will also appear in the console output).
-    name: "clang-format verification"
-    runs-on: ubuntu-20.04
-    container:
-      image: aswf/ci-osl:2022-clang14
-    env:
-      BUILDTARGET: clang-format
-      CMAKE_CXX_STANDARD: 17
-      PYTHON_VERSION: 3.9
-    steps:
-      # We would like to use harden-runner, but it flags too many false
-      # positives, every time we download a dependency. We should use it only
-      # on CI runs where we are producing artifacts that users might rely on.
-      # - name: Harden Runner
-      #   uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813 # v1.4.3
-      #   with:
-      #     egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
-      - name: Build setup
-        run: |
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3.1.0
-        if: failure()
-        with:
-          name: osl-${{github.job}}
-          path: src/*/*.{cpp,h}

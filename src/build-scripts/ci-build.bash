@@ -27,7 +27,16 @@ cmake .. -G "$CMAKE_GENERATOR" \
         -DCMAKE_INSTALL_LIBDIR="$OSL_ROOT/lib" \
         -DCMAKE_CXX_STANDARD="$CMAKE_CXX_STANDARD" \
         $OSL_CMAKE_FLAGS -DVERBOSE=1
-time cmake --build . --target ${BUILDTARGET:=install} --config ${CMAKE_BUILD_TYPE}
+
+# Save a copy of the generated files for debugging broken CI builds.
+mkdir cmake-save || /bin/true
+cp -r CMake* *.cmake cmake-save
+
+: ${BUILDTARGET:=install}
+if [[ "$BUILDTARGET" != "none" ]] ; then
+    echo "Parallel build ${CMAKE_BUILD_PARALLEL_LEVEL} of target ${BUILDTARGET}"
+    time ${OSL_CMAKE_BUILD_WRAPPER} cmake --build . --target ${BUILDTARGET} --config ${CMAKE_BUILD_TYPE}
+fi
 popd
 
 if [[ "${DEBUG_CI:=0}" != "0" ]] ; then

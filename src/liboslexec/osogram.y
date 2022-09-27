@@ -27,6 +27,10 @@
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
 
+#if OSL_CLANG_VERSION >= 150000
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC visibility push(hidden)
 #endif

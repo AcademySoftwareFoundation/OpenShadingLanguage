@@ -482,11 +482,19 @@
 #    define OSL_DASSERT_MSG(x, ...) ((void)sizeof(x)) /*NOLINT*/
 #endif
 
-#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-    #define OSL_STACK_ARRAY(TYPE, NAME, DYNAMIC_COUNT) TYPE * NAME = reinterpret_cast<TYPE *>(alloca(sizeof(TYPE)*(DYNAMIC_COUNT)))
+
+/// OSL_ALLOCA is used to allocate smallish amount of memory on the stack,
+/// equivalent of C99 type var_name[size].
+///
+/// NOTE: in a debug build, this will assert for allocations >= 1MB, which is
+/// much too big. Hopefully this will keep us from abusing alloca and having
+/// stack overflows. The rule of thumb is that it's ok to use alloca for small
+/// things of bounded size, but not for anything that could be arbitrarily
+/// big, which should instead use heap allocation.
+#if defined(__GNUC__)
+#    define OSL_ALLOCA(type, size) (assert(size < (1<<20)), (size) != 0 ? ((type*)__builtin_alloca((size) * sizeof(type))) : nullptr)
 #else
-    // Utilize variable length array compiler extension when available
-    #define OSL_STACK_ARRAY(TYPE, NAME, DYNAMIC_COUNT) TYPE NAME[DYNAMIC_COUNT]
+#    define OSL_ALLOCA(type, size) (assert(size < (1<<20)), (size) != 0 ? ((type*)alloca((size) * sizeof(type))) : nullptr)
 #endif
 
 OSL_NAMESPACE_ENTER

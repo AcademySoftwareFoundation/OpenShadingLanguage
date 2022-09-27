@@ -643,8 +643,8 @@ public:
         auto write_iter = begin_at(write_pos);
 
         const int read_count = read_iter.depth() + 1;
-        OSL_STACK_ARRAY(Position, read_path, read_count);
-        int read_depth = 0;
+        Position* read_path  = OSL_ALLOCA(Position, read_count);
+        int read_depth       = 0;
         {
             // Loop structure is to allow
             // writing the end position into the read path
@@ -658,8 +658,8 @@ public:
         }
 
         const int writeCount = write_iter.depth() + 1;
-        OSL_STACK_ARRAY(Position, write_path, writeCount);
-        int write_depth = 0;
+        Position* write_path = OSL_ALLOCA(Position, writeCount);
+        int write_depth      = 0;
         {
             // Loop structure is to allow
             // writing the end position into the write path

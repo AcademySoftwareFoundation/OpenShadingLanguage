@@ -2410,7 +2410,7 @@ DECLFOLDER(constfold_gettextureinfo)
         ustring filename = Filename.get_string();
         ustring dataname = Dataname.get_string();
         TypeDesc t       = Data.typespec().simpletype();
-        void* mydata     = OIIO_ALLOCA(char, t.size());
+        void* mydata     = OSL_ALLOCA(char, t.size());
         // FIXME(ptex) -- exclude folding of ptex, since these things
         // can vary per face.
         ustring errormessage;
@@ -2776,7 +2776,7 @@ DECLFOLDER(constfold_pointcloud_get)
         return 0;
 
     // Must transfer to size_t array
-    size_t* indices = OIIO_ALLOCA(size_t, count);
+    size_t* indices = OSL_ALLOCA(size_t, count);
     for (int i = 0; i < count; ++i)
         indices[i] = Indices.get_int(i);
 

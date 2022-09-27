@@ -66,10 +66,10 @@ shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
 
         // Gather some information about the outputs once, rather than for
         // each pixel.
-        const ShaderSymbol** output_sym = OIIO_ALLOCA(const ShaderSymbol*,
-                                                      outputs.size());
-        TypeDesc* output_type           = OIIO_ALLOCA(TypeDesc, outputs.size());
-        int* output_nchans              = OIIO_ALLOCA(int, outputs.size());
+        const ShaderSymbol** output_sym = OSL_ALLOCA(const ShaderSymbol*,
+                                                     outputs.size());
+        TypeDesc* output_type           = OSL_ALLOCA(TypeDesc, outputs.size());
+        int* output_nchans              = OSL_ALLOCA(int, outputs.size());
         for (int i = 0; i < int(outputs.size()); ++i) {
             output_sym[i]    = shadingsys.find_symbol(group, outputs[i]);
             output_type[i]   = shadingsys.symbol_typedesc(output_sym[i]);

@@ -255,7 +255,7 @@ RendererServices::pointcloud_get(ShaderGlobals* sg, ustring filename,
     // Actual data query
     if (partio_type == TypeString) {
         // strings are special cases because they are stored as int index
-        int* strindices = OIIO_ALLOCA(int, count);
+        int* strindices = OSL_ALLOCA(int, count);
         const_cast<Partio::ParticlesData*>(cloud)->data(
             *attr, count, (const Partio::ParticleIndex*)indices,
             /*sorted=*/false, (void*)strindices);
@@ -385,7 +385,7 @@ osl_pointcloud_search(ShaderGlobals* sg, const char* filename, void* center,
     if (sizeof(int) == sizeof(size_t) && out_indices)
         indices = (size_t*)out_indices;
     else
-        indices = OIIO_ALLOCA(size_t, max_points);
+        indices = OSL_ALLOCA(size_t, max_points);
 
     int count
         = sg->renderer->pointcloud_search(sg, USTR(filename), *((Vec3*)center),
@@ -425,7 +425,7 @@ osl_pointcloud_get(ShaderGlobals* sg, const char* filename, void* in_indices,
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
 
-    size_t* indices = OIIO_ALLOCA(size_t, count);
+    size_t* indices = OSL_ALLOCA(size_t, count);
     for (int i = 0; i < count; ++i)
         indices[i] = ((int*)in_indices)[i];
 

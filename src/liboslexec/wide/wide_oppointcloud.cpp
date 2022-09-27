@@ -94,7 +94,7 @@ default_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
     // indices array
     // TODO: evaluate if sg->context->alloc_scratch should be used instead?
     Partio::ParticleIndex* indices
-        = (Partio::ParticleIndex*)OIIO_ALLOCA(size_t, max_points);
+        = (Partio::ParticleIndex*)OSL_ALLOCA(size_t, max_points);
 
     Wide<const OSL::Vec3> wcenter(wcenter_);
 
@@ -102,8 +102,8 @@ default_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
     // and our batched representation is
     // structure of arrays (wide) so we need a scalar temporary
     // distances array
-    float* dist2              = OIIO_ALLOCA(float, max_points);
-    SortedPointRecord* sorted = OIIO_ALLOCA(SortedPointRecord, max_points);
+    float* dist2              = OSL_ALLOCA(float, max_points);
+    SortedPointRecord* sorted = OSL_ALLOCA(SortedPointRecord, max_points);
     auto windices             = results.windices();
     auto wnum_points          = results.wnum_points();
     results.mask().foreach ([=](ActiveLane lane) -> void {
@@ -118,7 +118,7 @@ default_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
         // indices at the same time.
         if (sort && count > 1) {
             //SortedPointRecord *sorted = (SortedPointRecord *) sg->context->alloc_scratch (count * sizeof(SortedPointRecord), sizeof(SortedPointRecord));
-            //SortedPointRecord *sorted = OIIO_ALLOCA(SortedPointRecord, count);
+            //SortedPointRecord *sorted = OSL_ALLOCA(SortedPointRecord, count);
             for (int i = 0; i < count; ++i)
                 sorted[i] = SortedPointRecord(dist2[i], indices[i]);
             std::sort(sorted, sorted + count, SortedPointCompare());
@@ -154,7 +154,7 @@ default_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
                 // We are going to need the positions if we need to compute
                 // distance derivs
                 //OSL::Vec3 *positions = (OSL::Vec3 *) sg->context->alloc_scratch (sizeof(OSL::Vec3) * count, sizeof(float));
-                OSL::Vec3* positions = OIIO_ALLOCA(OSL::Vec3, count);
+                OSL::Vec3* positions = OSL_ALLOCA(OSL::Vec3, count);
                 // FIXME(Partio): this function really should be marked as const because it is just a wrapper of a private const method
                 const_cast<Partio::ParticlesData*>(cloud)->data(
                     *pos_attr, count, indices, true, (void*)positions);
@@ -255,14 +255,14 @@ default_pointcloud_get(BatchedShaderGlobals* bsg, ustring filename,
         if (partio_type == OIIO::TypeString) {
             // strings are special cases because they are stored as int index
             // Ensure alloca's happen outside loops
-            strindices = OIIO_ALLOCA(int, attr_type.numelements());
+            strindices = OSL_ALLOCA(int, attr_type.numelements());
         } else {
-            aos_buffer = OIIO_ALLOCA(char, attr_type.size());
+            aos_buffer = OSL_ALLOCA(char, attr_type.size());
         }
     }
 
     Partio::ParticleIndex* indices
-        = (Partio::ParticleIndex*)OIIO_ALLOCA(size_t, windices.length());
+        = (Partio::ParticleIndex*)OSL_ALLOCA(size_t, windices.length());
 
     wout_data.mask().foreach ([=, &success](ActiveLane lane) -> void {
         int count = wnum_points[lane];

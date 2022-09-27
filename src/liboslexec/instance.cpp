@@ -466,11 +466,9 @@ ShaderInstance::evaluate_writes_globals_and_userdata_params()
     // userdata_params as accurately as we can based on what we know from
     // the symbol overrides. This is very important to get instance merging
     // working correctly.
-    int p = 0;
     for (auto&& s : m_instoverrides) {
         if (!s.lockgeom())
             userdata_params(true);
-        ++p;
     }
 }
 

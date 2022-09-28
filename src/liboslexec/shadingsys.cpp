@@ -3135,7 +3135,7 @@ ShadingSystemImpl::ShaderGroupBegin(string_view groupname, string_view usage,
                                          groupspec.find_last_of(',', offset));
             size_t end_stmt   = groupspec.find_first_of(';', begin_stmt + 1);
             errstatement      = groupspec.substr(begin_stmt + 1,
-                                            end_stmt - begin_stmt);
+                                                 end_stmt - begin_stmt);
         }
         if (errstatement.size())
             msg += fmtformat("\n        problem might be here: {}",
@@ -4158,7 +4158,7 @@ ShadingContext::ocio_transform(StringParam fromspace, StringParam tospace,
         // color values to convert.
         const float eps = 0.001f;
         Color3 CC[3]    = { C.val(), C.val() + eps * C.dx(),
-                         C.val() + eps * C.dy() };
+                            C.val() + eps * C.dy() };
         cp->apply((float*)&CC, 3, 1, 3, sizeof(float), sizeof(Color3), 0);
         Cout.set(CC[0], (CC[1] - CC[0]) * (1.0f / eps),
                  (CC[2] - CC[0]) * (1.0f / eps));

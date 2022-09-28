@@ -117,7 +117,6 @@ BatchedRendererServices<WidthT>::resolve_udim_uniform(
     if (!texture_handle)
         texture_handle = texturesys()->get_texture_handle(filename,
                                                           texture_thread_info);
-#if OPENIMAGEIO_VERSION >= 20307
     if (texturesys()->is_udim(texture_handle)) {
         // Newer versions of the TextureSystem interface are able to determine the
         // specific UDIM tile we're using.
@@ -131,9 +130,9 @@ BatchedRendererServices<WidthT>::resolve_udim_uniform(
             udim_handle = texture_handle;
         }
         return udim_handle;
-    } else
-#endif
+    } else {
         return texture_handle;
+    }
 }
 
 
@@ -151,7 +150,6 @@ BatchedRendererServices<WidthT>::resolve_udim(
     if (!texture_handle)
         texture_handle = texturesys()->get_texture_handle(filename,
                                                           texture_thread_info);
-#if OPENIMAGEIO_VERSION >= 20307
     if (texturesys()->is_udim(texture_handle)) {
         // Newer versions of the TextureSystem interface are able to determine the
         // specific UDIM tile we're using.
@@ -167,9 +165,9 @@ BatchedRendererServices<WidthT>::resolve_udim(
             }
             wresult[l] = udim_handle;
         });
-    } else
-#endif
+    } else {
         assign_all(wresult, texture_handle);
+    }
 }
 
 

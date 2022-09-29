@@ -20,7 +20,9 @@ if [[ `which brew` == "" ]] ; then
 fi
 
 
-#brew update >/dev/null
+if [[ "$DO_BREW_UPDATE" != "" ]] ; then
+    brew update >/dev/null
+fi
 echo ""
 echo "Before my brew installs:"
 brew list --versions

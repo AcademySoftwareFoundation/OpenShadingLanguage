@@ -47,14 +47,14 @@ Parser::Parser(const std::vector<ustring>* user_events,
     m_minus_stop.insert(Labels::STOP);
 
     if (user_events)
-        for (size_t i = 0; i < user_events->size(); ++i) {
-            m_label_position[(*user_events)[i]] = 0;
-            m_basic_labels.insert((*user_events)[i]);
+        for (auto&& e : *user_events) {
+            m_label_position[e] = 0;
+            m_basic_labels.insert(e);
         }
     if (user_scatterings)
-        for (size_t i = 0; i < user_scatterings->size(); ++i) {
-            m_label_position[(*user_scatterings)[i]] = 1;
-            m_basic_labels.insert((*user_scatterings)[i]);
+        for (auto&& s : *user_scatterings) {
+            m_label_position[s] = 1;
+            m_basic_labels.insert(s);
         }
 }
 
@@ -65,9 +65,8 @@ Parser::buildStop(LPexp* etype, LPexp* scatter, const std::list<LPexp*>& custom)
     lpexp::Cat* cat = new lpexp::Cat();
     cat->append(etype);
     cat->append(scatter);
-    for (std::list<LPexp*>::const_iterator i = custom.begin();
-         i != custom.end(); ++i)
-        cat->append(*i);
+    for (const auto& p : custom)
+        cat->append(p);
 
     if (custom.size() < 5)
         cat->append(new lpexp::Repeat(new lpexp::Wildexp(m_basic_labels)));
@@ -98,9 +97,8 @@ Parser::parseSymbol()
             if (sym != ".") {
                 SymbolToInt::const_iterator i = m_label_position.find(sym);
                 if (i == m_label_position.end()) {
-                    m_error = std::string("Unrecognized basic label: ")
-                              + sym.c_str();
-                    return NULL;
+                    m_error = fmtformat("Unrecognized basic label: {}", sym);
+                    return nullptr;
                 }
                 int pos     = i->second;
                 basics[pos] = new lpexp::Symbol(sym);
@@ -161,16 +159,17 @@ Parser::parseCat()
         if (head() == '|') {
             if (!explist.size()) {
                 m_error = "No left expression to or with |";
-                for (size_t i = 0; i < explist.size(); ++i)
-                    delete explist[i];
-                return NULL;
+                for (auto& exp : explist)
+                    delete exp;
+                return nullptr;
             }
             next();
             LPexp* e = _parse();
             if (error()) {
-                for (size_t i = 0; i < explist.size(); ++i)
-                    delete explist[i];
-                return NULL;
+                delete e;
+                for (auto& exp : explist)
+                    delete exp;
+                return nullptr;
             }
             if (explist.back()->getType() == lpexp::OR)
                 ((lpexp::Orlist*)explist.back())->append(e);
@@ -183,9 +182,10 @@ Parser::parseCat()
         } else {
             LPexp* e = _parse();
             if (error()) {
-                for (size_t i = 0; i < explist.size(); ++i)
-                    delete explist[i];
-                return NULL;
+                delete e;
+                for (auto& exp : explist)
+                    delete exp;
+                return nullptr;
             }
             explist.push_back(e);
         }
@@ -194,13 +194,13 @@ Parser::parseCat()
         next();
     else if (endchar != 0) {
         m_error = "Reached end of line looking for )";
-        for (size_t i = 0; i < explist.size(); ++i)
-            delete explist[i];
-        return NULL;
+        for (auto& exp : explist)
+            delete exp;
+        return nullptr;
     }
     lpexp::Cat* cat = new lpexp::Cat();
-    for (size_t i = 0; i < explist.size(); ++i)
-        cat->append(explist[i]);
+    for (auto& exp : explist)
+        cat->append(exp);
     return cat;
 }
 
@@ -212,29 +212,29 @@ Parser::parseGroup()
     OSL_DASSERT(head() == '<');
     if (m_ingroup) {
         m_error = "No groups allowed inside of groups";
-        return NULL;
+        return nullptr;
     }
     int basicpos     = 0;
-    LPexp* basics[2] = { NULL, NULL };
+    LPexp* basics[2] = { nullptr, nullptr };
     std::list<LPexp*> custom;
-#define THROWAWAY()                                          \
-    do {                                                     \
-        for (int i = 0; i < 2; ++i)                          \
-            if (basics[i])                                   \
-                delete basics[i];                            \
-        for (std::list<LPexp*>::iterator i = custom.begin(); \
-             i != custom.end(); ++i)                         \
-            delete *i;                                       \
-        m_ingroup = false;                                   \
-        return NULL;                                         \
+#define THROWAWAY()            \
+    do {                       \
+        delete basics[0];      \
+        delete basics[1];      \
+        for (auto& p : custom) \
+            delete p;          \
+        m_ingroup = false;     \
+        return nullptr;        \
     } while (0)
 
     m_ingroup = true;
     next();
     while (hasInput() && head() != '>') {
         LPexp* e = _parse();
-        if (error())
+        if (error()) {
+            delete e;
             THROWAWAY();
+        }
         if (basicpos < 2)
             basics[basicpos++] = e;
         else
@@ -266,7 +266,7 @@ Parser::parseNegor()
         bool iscustom = false;
         ustring sym   = parseRawSymbol(iscustom);
         if (error())
-            return NULL;
+            return nullptr;
         symlist.insert(sym);
         if (iscustom) {
             if (symlist.size() > 2 && pos != -1)
@@ -278,7 +278,7 @@ Parser::parseNegor()
             SymbolToInt::const_iterator found = m_label_position.find(sym);
             if (found == m_label_position.end()) {
                 m_error = "Unrecognized basic label";
-                return NULL;
+                return nullptr;
             }
             if (symlist.size() > 2 && found->second != pos)
                 std::cerr
@@ -290,11 +290,11 @@ Parser::parseNegor()
     if (!hasInput()) {
         m_error
             = "Reached end of line looking for ] to end an negative or list'";
-        return NULL;
+        return nullptr;
     }
     if (symlist.size() < 2) {
         m_error = "Empty or list [^] not allowed";
-        return NULL;
+        return nullptr;
     }
     next();
     lpexp::Wildexp* wildcard = new lpexp::Wildexp(symlist);
@@ -307,12 +307,9 @@ Parser::parseNegor()
             return buildStop(new lpexp::Wildexp(m_minus_stop),
                              new lpexp::Wildexp(m_minus_stop), custom);
         } else {
-            LPexp* basics[2] = { NULL, NULL };
-            basics[pos]      = wildcard;
-            for (int i = 0; i < 2; ++i)
-                if (!basics[i])
-                    basics[i] = new lpexp::Wildexp(m_minus_stop);
-            return buildStop(basics[0], basics[1], custom);
+            LPexp* w2 = new lpexp::Wildexp(m_minus_stop);
+            return buildStop(pos == 0 ? wildcard : w2, pos == 0 ? w2 : wildcard,
+                             custom);
         }
     }
 }
@@ -331,15 +328,16 @@ Parser::parseOrlist()
         while (hasInput() && head() != ']') {
             LPexp* e = _parse();
             if (error()) {
+                delete e;
                 delete orlist;
-                return NULL;
+                return nullptr;
             }
             orlist->append(e);
         }
         if (!hasInput()) {
             m_error = "Reached end of line looking for ] to end an or list";
             delete orlist;
-            return NULL;
+            return nullptr;
         }
         next();
         return orlist;
@@ -374,11 +372,11 @@ Parser::parseRange()
     }
     next();
     if (secondnum.size())
-        return std::pair<int, int>(atoi(firstnum.c_str()),
-                                   atoi(secondnum.c_str()));
+        return std::pair<int, int>(OIIO::Strutil::stoi(firstnum),
+                                   OIIO::Strutil::stoi(secondnum));
     else
-        return std::pair<int, int>(atoi(firstnum.c_str()),
-                                   atoi(firstnum.c_str()));
+        return std::pair<int, int>(OIIO::Strutil::stoi(firstnum),
+                                   OIIO::Strutil::stoi(firstnum));
 }
 
 
@@ -389,7 +387,7 @@ Parser::parseModifier(LPexp* e)
     if (hasInput()) {
         if (m_ingroup && (head() == '*' || head() == '{' || head() == '+')) {
             m_error = std::string("Repetitions not allowed inside '<...>'");
-            return NULL;
+            return nullptr;
         }
         if (head() == '*') {
             next();
@@ -397,7 +395,7 @@ Parser::parseModifier(LPexp* e)
         } else if (head() == '{') {
             std::pair<int, int> range = parseRange();
             if (error())
-                return NULL;
+                return nullptr;
             if (range.second < 0) {
                 lpexp::Cat* cat = new lpexp::Cat();
                 cat->append(new lpexp::NRepeat(e, range.first, range.first));
@@ -432,7 +430,7 @@ Parser::_parse()
     else
         e = parseSymbol();
     if (error())
-        return NULL;
+        return nullptr;
     return parseModifier(e);
 }
 
@@ -448,7 +446,7 @@ Parser::parse(const char* text)
     if (hasInput())
         return parseCat();
     else
-        return NULL;
+        return nullptr;
 }
 
 

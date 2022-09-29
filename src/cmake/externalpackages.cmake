@@ -136,6 +136,14 @@ if (APPLE AND LLVM_VERSION VERSION_EQUAL 10.0.1 AND EXISTS "/usr/local/Cellar/ll
              "    brew upgrade llvm \n"
              "${ColorReset}\n")
 endif ()
+if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0
+    AND (   (CMAKE_COMPILER_IS_APPLECLANG AND APPLECLANG_VERSION_STRING VERSION_LESS 15.0)
+         OR (CMAKE_COMPILER_IS_CLANG AND CLANG_VERSION_STRING VERSION_LESS 15.0)))
+    message (WARNING
+         "${ColorYellow}"
+         "If you are using LLVM 15 or higher, you should also use clang version "
+         "15 or higher, or you may get build errors.${ColorReset}\n")
+endif ()
 
 checked_find_package (partio)
 

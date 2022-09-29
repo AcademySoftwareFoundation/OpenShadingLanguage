@@ -366,20 +366,25 @@ jobs:
           - desc: MacOS-11
             os: macos-11
             nametag: macos11-py39
-            cxx_std: 17
-            python_ver: 3.9
-            aclang: 13
-            openimageio_ver: release
-          - desc: MacOS-12
-            os: macos-12
-            nametag: macos11-p310
+            cc_compiler: /usr/local/opt/llvm@14/bin/clang
+            cxx_compiler: /usr/local/opt/llvm@14/bin/clang++
             cxx_std: 17
             python_ver: "3.10"
             aclang: 13
+            setenvs: export LLVMBREWVER="@14" DO_BREW_UPDATE=1
+          - desc: MacOS-12
+            os: macos-12
+            nametag: macos11-p310
+            cc_compiler: /usr/local/opt/llvm@15/bin/clang
+            cxx_compiler: /usr/local/opt/llvm@15/bin/clang++
+            cxx_std: 17
+            python_ver: "3.10"
+            aclang: 13
+            setenvs: export LLVMBREWVER="@15" DO_BREW_UPDATE=1
     runs-on: ${{matrix.os}}
     env:
-      CC: clang
-      CXX: clang++
+      CXX: ${{matrix.cxx_compiler}}
+      CC: ${{matrix.cc_compiler}}
       CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
       PYTHON_VERSION: ${{matrix.python_ver}}
       OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
@@ -393,10 +398,12 @@ jobs:
         uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.4
         with:
           path: /Users/runner/.ccache
-          key: ${{github.job}}-${{matrix.os}}-${{steps.ccache_cache_keys.outputs.date}}
-          restore-keys: ${{github.job}}-${{matrix.os}}-
+          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
+          restore-keys: ${{github.job}}-${{matrix.nametag}}-
       - name: Build setup
-        run: src/build-scripts/ci-startup.bash
+        run: |
+            ${{matrix.setenvs}}
+            src/build-scripts/ci-startup.bash
       - name: Dependencies
         run: |
             source src/build-scripts/install_homebrew_deps.bash
@@ -416,7 +423,7 @@ jobs:
       - uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3.1.0
         if: failure()
         with:
-          name: osl-${{github.job}}
+          name: osl-${{github.job}}-${{matrix.nametag}}
           path: |
             build/*.cmake
             build/CMake*

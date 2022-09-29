@@ -399,6 +399,11 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
         OIIO::spin_lock lock(llvm_global_mutex);
         if (!m_thread->llvm_context) {
             m_thread->llvm_context = new llvm::LLVMContext();
+#if OSL_LLVM_VERSION >= 150
+            m_thread->llvm_context->setOpaquePointers(false);
+            // FIXME: For now, keep using typed pointers. We're going to have
+            // to fix this and switch to opaque pointers by llvm 16.
+#endif
             //static SetCommandLineOptionsForLLVM sSetCommandLineOptionsForLLVM;
         }
 
@@ -1866,7 +1871,9 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         // we might need to recreate that meta data in OSL's loop code to enable these passes
         mpm.add(llvm::createLoopRotatePass());
         mpm.add(llvm::createLICMPass());
+#    if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createLoopUnswitchPass(false));
+#    endif
         //        mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createIndVarSimplifyPass());
         // Don't think we emitted any idioms that should be converted to a loop
@@ -1953,7 +1960,9 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
+#if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createArgumentPromotionPass());
+#endif
         mpm.add(llvm::createAggressiveDCEPass());
         mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createJumpThreadingPass());
@@ -1974,7 +1983,9 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createCFGSimplificationPass());
 
         mpm.add(llvm::createFunctionInliningPass());
+#if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createArgumentPromotionPass());
+#endif
         mpm.add(llvm::createSROAPass());
 
         mpm.add(llvm::createInstructionCombiningPass());
@@ -1982,7 +1993,9 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createReassociatePass());
         mpm.add(llvm::createLoopRotatePass());
         mpm.add(llvm::createLICMPass());
+#if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createLoopUnswitchPass(false));
+#endif
         mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createIndVarSimplifyPass());
         mpm.add(llvm::createLoopIdiomPass());
@@ -3644,9 +3657,14 @@ LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
 #if OSL_LLVM_VERSION >= 110
+    OSL_PRAGMA_WARNING_PUSH
+    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+    // FIXME: This will need to be revisited for future LLVM 16+ that fully
+    // drops typed pointers.
     llvm::Value* r = builder().CreateCall(
         llvm::cast<llvm::FunctionType>(func->getType()->getPointerElementType()),
         func, llvm::ArrayRef<llvm::Value*>(args.data(), args.size()));
+    OSL_PRAGMA_WARNING_POP
 #else
     llvm::Value* r
         = builder().CreateCall(func, llvm::ArrayRef<llvm::Value*>(args.data(),
@@ -3783,7 +3801,12 @@ LLVM_Util::op_load(llvm::Type* type, llvm::Value* ptr,
 llvm::Value*
 LLVM_Util::op_load(llvm::Value* ptr, const std::string& llname)
 {
+    OSL_PRAGMA_WARNING_PUSH
+    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+    // FIXME: This will need to be revisited for future LLVM 16+ that fully
+    // drops typed pointers.
     return op_load(ptr->getType()->getPointerElementType(), ptr, llname);
+    OSL_PRAGMA_WARNING_POP
 }
 
 
@@ -5303,8 +5326,13 @@ LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, llvm::Value* elem,
 llvm::Value*
 LLVM_Util::GEP(llvm::Value* ptr, llvm::Value* elem, const std::string& llname)
 {
+    OSL_PRAGMA_WARNING_PUSH
+    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+    // FIXME: This will need to be revisited for future LLVM 16+ that fully
+    // drops typed pointers.
     return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
                elem, llname);
+    OSL_PRAGMA_WARNING_POP
 }
 
 
@@ -5321,8 +5349,13 @@ LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem,
 llvm::Value*
 LLVM_Util::GEP(llvm::Value* ptr, int elem, const std::string& llname)
 {
+    OSL_PRAGMA_WARNING_PUSH
+    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+    // FIXME: This will need to be revisited for future LLVM 16+ that fully
+    // drops typed pointers.
     return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
                elem, llname);
+    OSL_PRAGMA_WARNING_POP
 }
 
 
@@ -5340,8 +5373,13 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Value* ptr, int elem1, int elem2,
                const std::string& llname)
 {
+    OSL_PRAGMA_WARNING_PUSH
+    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+    // FIXME: This will need to be revisited for future LLVM 16+ that fully
+    // drops typed pointers.
     return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
                elem1, elem2, llname);
+    OSL_PRAGMA_WARNING_POP
 }
 
 

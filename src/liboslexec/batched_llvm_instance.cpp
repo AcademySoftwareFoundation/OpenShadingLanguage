@@ -636,13 +636,12 @@ BatchedBackendLLVM::llvm_type_sg()
     sg_types.push_back(vp);             // opaque tracedata*
     sg_types.push_back(vp);             // opaque objdata*
     sg_types.push_back(vp);             // ShadingContext*
+    sg_types.push_back(vp);             // ShadingStateUniform*
     sg_types.push_back(vp);             // RendererServices*
     sg_types.push_back(ll.type_int());  // raytype
     sg_types.push_back(ll.type_int());  // pad0
     sg_types.push_back(ll.type_int());  // pad1
     sg_types.push_back(ll.type_int());  // pad2
-    sg_types.push_back(ll.type_int());  // pad3
-    sg_types.push_back(ll.type_int());  // pad4
 
     // VaryingShaderGlobals of the batch
     sg_types.push_back(wide_triple_deriv);      // P, dPdx, dPdy
@@ -2424,6 +2423,8 @@ BatchedBackendLLVM::build_offsets_of_BatchedShaderGlobals(
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, context));
     offset_by_index.push_back(uniform_offset
+                              + offsetof(UniformShaderGlobals, shadingStateUniform));
+    offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, renderer));
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, raytype));
@@ -2433,11 +2434,6 @@ BatchedBackendLLVM::build_offsets_of_BatchedShaderGlobals(
                               + offsetof(UniformShaderGlobals, pad1));
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformShaderGlobals, pad2));
-    offset_by_index.push_back(uniform_offset
-                              + offsetof(UniformShaderGlobals, pad3));
-    offset_by_index.push_back(uniform_offset
-                              + offsetof(UniformShaderGlobals, pad4));
-
     offset_by_index.push_back(varying_offset
                               + offsetof(VaryingShaderGlobals<WidthT>, P));
     // Triple type in LLVM, so next 2 are included in it

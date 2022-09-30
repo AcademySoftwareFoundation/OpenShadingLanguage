@@ -553,7 +553,8 @@ impl_get_uniform_from_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
     if (failedResults.mask().any_on()) {
         makeIdentity(failedResults);
         ShadingContext* ctx = bsg->uniform.context;
-        if (ctx->shadingsys().unknown_coordsys_error()) {
+        ShadingStateUniform* ssu = (ShadingStateUniform*)bsg->uniform.shadingStateUniform;
+        if (ssu->m_unknown_coordsys_error) {
             ctx->errorfmt("Unknown transformation \"{}\"", from);
         }
     }
@@ -597,7 +598,8 @@ impl_get_uniform_to_inverse_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
     auto failedResults = wrm & succeeded.invert();
     if (failedResults.mask().any_on()) {
         makeIdentity(failedResults);
-        if (ctx->shadingsys().unknown_coordsys_error()) {
+        ShadingStateUniform* ssu = (ShadingStateUniform*)bsg->uniform.shadingStateUniform;
+        if (ssu->m_unknown_coordsys_error) {
             ctx->errorfmt("Unknown transformation \"{}\"", to);
         }
     }
@@ -700,7 +702,9 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
         if (failedLanes.any_on()) {
             Masked<Matrix44> mto_failed(wMfrom.data(), failedLanes);
             makeIdentity(mto_failed);
-            if (ctx->shadingsys().unknown_coordsys_error()) {
+            ShadingStateUniform* ssu
+                = (ShadingStateUniform*)bsg->uniform.shadingStateUniform;
+            if (ssu->m_unknown_coordsys_error) {
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustring from = wFrom[lane];
@@ -833,7 +837,9 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
         if (failedLanes.any_on()) {
             Masked<Matrix44> mto(wMto.data(), failedLanes);
             makeIdentity(mto);
-            if (ctx->shadingsys().unknown_coordsys_error()) {
+            ShadingStateUniform* ssu
+                = (ShadingStateUniform*)bsg->uniform.shadingStateUniform;
+            if (ssu->m_unknown_coordsys_error) {
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustring to = wTo[lane];

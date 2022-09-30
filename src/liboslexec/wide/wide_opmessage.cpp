@@ -352,7 +352,9 @@ __OSL_MASKED_OP(getmessage)(void* bsg_, void* result, char* source_,
         auto missing_lanes = mask & ~m->valid_mask & ~m->get_before_set_mask;
 
         Mask lanes_set_by_deeper_layer(false);
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        // Disable explicit SIMD for loop as experiment to verify 
+        // it is cause of icx failing testsuite
+        //OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             int msg_layerid = msg_wlayeridx[lane];
             // NOTE: using bitwise & to avoid branches

@@ -640,7 +640,9 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        // Disable explicit SIMD for loop as experiment to verify 
+        // it is cause of icx failing testsuite
+        //OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustring from = wFrom[lane];
             if (wMfrom.mask()[lane]) {
@@ -763,7 +765,9 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        // Disable explicit SIMD for loop as experiment to verify 
+        // it is cause of icx failing testsuite
+        //OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustring to = wTo[lane];
             if (wMto.mask()[lane]) {

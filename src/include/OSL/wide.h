@@ -2742,7 +2742,9 @@ foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f)
         Mask<WidthT> matching_lanes(false);
         OSL_FORCEINLINE_BLOCK
         {
-            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            // Disable explicit SIMD for loop as experiment to verify 
+            // it is cause of icx failing testsuite
+            //OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
             for (int lane = 0; lane < WidthT; ++lane) {
                 // NOTE: the comparison ignores the remaining_mask
                 bool lane_matches = (lead_data == wdata[lane]);

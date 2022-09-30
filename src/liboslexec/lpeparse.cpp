@@ -420,7 +420,7 @@ Parser::parseModifier(LPexp* e)
 LPexp*
 Parser::_parse()
 {
-    LPexp* e;
+    LPexp* e = nullptr;
     if (head() == '(')
         e = parseCat();
     else if (head() == '[')
@@ -429,8 +429,10 @@ Parser::_parse()
         e = parseGroup();
     else
         e = parseSymbol();
-    if (error())
+    if (error()) {
+        delete e;
         return nullptr;
+    }
     return parseModifier(e);
 }
 

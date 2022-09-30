@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.12.7.0 -- 1 Nov?? 2022 (compared to 1.12.6.2)
+-------------------------------------------------------
+
+
 Release 1.12 -- 1 Oct 2022 (compared to 1.11)
 ----------------------------------------------
 Big Deal Changes:

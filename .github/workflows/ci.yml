@@ -40,7 +40,7 @@ jobs:
             vfxyear: 2019
             vfxsuffix: -clang9
             cxx_std: 14
-            openimageio_ver: v2.2.17.0
+            openimageio_ver: v2.3.17.0
             python_ver: 2.7
             pybind11_ver: v2.4.2
           - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7
@@ -72,7 +72,7 @@ jobs:
             os: ubuntu-latest
             vfxyear: 2020
             cxx_std: 14
-            openimageio_ver: v2.2.17.0
+            openimageio_ver: v2.3.17.0
             python_ver: 3.7
             pybind11_ver: v2.5.0
             simd: sse4.2
@@ -83,7 +83,7 @@ jobs:
             vfxyear: 2021
             vfxsuffix: -clang11
             cxx_std: 17
-            openimageio_ver: dev-2.2
+            openimageio_ver: dev-2.3
             python_ver: 3.7
             pybind11_ver: v2.7.0
             simd: avx2,f16c
@@ -149,7 +149,7 @@ jobs:
             vfxyear: 2019
             vfxsuffix: -clang9
             cxx_std: 14
-            openimageio_ver: v2.2.17.0
+            openimageio_ver: v2.3.17.0
             python_ver: 2.7
             pybind11_ver: v2.6.2
             simd: 0

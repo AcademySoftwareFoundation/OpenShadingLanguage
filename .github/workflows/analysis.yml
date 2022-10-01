@@ -53,7 +53,7 @@ jobs:
                             TESTRENDER_AA=1
                             OSL_TESTSUITE_SKIP_DIFF=1
                             CTEST_TEST_TIMEOUT=1200
-                            OSL_CMAKE_FLAGS="-DOSL_TEST_BIG_TIMEOUT=1200"
+                            OSL_CMAKE_FLAGS="-DOSL_TEST_BIG_TIMEOUT=1200 -DUSE_QT=0"
                             CTEST_EXCLUSIONS="broken|noise-reg.regress|noise-gabor-reg.regress"
 
     runs-on: ${{ matrix.os }}

@@ -27,23 +27,6 @@ static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
 static ustring u_s("s"), u_t("t");
 
-CudaGridRenderer::CudaGridRenderer()
-{
-    // Set up the string table. This allocates a block of CUDA device memory to
-    // hold all of the static strings used by the OSL shaders. The strings can
-    // be accessed via OptiX variables that hold pointers to the table entries.
-    _string_table.init();
-
-    // Register all of our string table entries
-    for (auto&& gvar : _string_table.contents()) {
-        register_global(gvar.first.c_str(), gvar.second);
-    }
-}
-
-CudaGridRenderer::~CudaGridRenderer()
-{
-    _string_table.freetable();
-}
 
 uint64_t
 CudaGridRenderer::register_global(const std::string& str, uint64_t value)

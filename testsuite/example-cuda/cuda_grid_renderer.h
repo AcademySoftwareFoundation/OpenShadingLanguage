@@ -9,7 +9,6 @@
 #include <OSL/oslexec.h>
 #include <OSL/rendererservices.h>
 
-#include "cuda_string_table.h"
 
 using GlobalsMap
     = std::unordered_map<OIIO::ustring, uint64_t, OIIO::ustringHash>;
@@ -21,7 +20,6 @@ typedef OSL::Matrix44 Transformation;
 typedef std::map<OIIO::ustring, std::shared_ptr<Transformation>> TransformMap;
 
 class CudaGridRenderer final : public OSL::RendererServices {
-    CudaStringTable _string_table;
     TextureSamplerMap _samplers;
     GlobalsMap _globals_map;
 
@@ -36,8 +34,8 @@ class CudaGridRenderer final : public OSL::RendererServices {
     int _xres, _yres;
 
 public:
-    CudaGridRenderer();
-    virtual ~CudaGridRenderer();
+    CudaGridRenderer() {}
+    virtual ~CudaGridRenderer() {}
 
     uint64_t register_global(const std::string& str, uint64_t value);
     bool fetch_global(const std::string& str, uint64_t* value);

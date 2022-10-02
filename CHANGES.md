@@ -6,11 +6,13 @@ Release 1.13 -- ?? 2023 ?? (compared to 1.12)
 Dependency and standards requirements changes:
 * OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
   of OptiX 7.0 is required.
+* The minimum version OpenImageIO has been raised from 2.2 to 2.3. #1591
+  (1.13.0.3)
 
 OSL Language and oslc compiler:
 * Bug fix: shader params whose default values involve "init ops" could be
   incorrectly initialized if their values came from instance parameters set to
-  zero. #1578 (1.13.0.1)
+  zero. #1578 (1.13.0.2)
 
 OSL Standard library:
 
@@ -18,7 +20,7 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 
 SIMD batched shading mode:
 * Fix some array overruns (asymptomatic, but still potentially buggy) in
-  common_ancestor_between. #1577 (1.13.0.1)
+  common_ancestor_between. #1577 (1.13.0.2)
 
 OptiX rendering:
 * OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
@@ -34,26 +36,33 @@ OptiX rendering:
 Performance improvements:
 
 Bug fixes and other improvements (internals):
-* Fix memory leak in oslc ASTvariable_declaration. #1576 (1.13.0.1)
+* Fix memory leak in oslc ASTvariable_declaration. #1576 (1.13.0.2)
+* Fix memory leaks in LPE code in error conditions. #1593 #1594 (1.13.0.3)
 
 Internals/developer concerns:
+* platform.h:
+    - New `OSL_ALLOCA` macro to allocate on the stack. #1589 (1.13.0.3)
 
 Build & test system improvements:
 * CMake build system and scripts:
     - The version number is now a cache variable, and so can be overridden at
       build time using `-DOSL_VERSION=...`. Use with extreme caution! #1579
-      (1.13.0.1)
+      (1.13.0.2)
 * Dependency version support:
 * Testing and Continuous integration (CI) systems:
+    - Dynamic analysis using address and leak sanitizers. #1581 (1.13.0.3)
+    - `testshade --help` now prints TextureSystem options and all hardware
+      information. #1584 (1.13.0.3)
+    - Improvements to SonarCloud and coverage analysis. #1596 (1.13.0.3)
 * Platform support:
 
 Documentation:
 * `doc/RELEASING.md` documents our release process and versioning policies.
-  #1572 (1.13.0.1)
+  #1572 (1.13.0.2)
 
 
-Release 1.12 -- beta 1 Sep 2022 (compared to 1.11)
---------------------------------------------------
+Release 1.12 -- 1 Oct 2022 (compared to 1.11)
+----------------------------------------------
 Big Deal Changes:
 * **Batch shading**: A fully operational "batch shading" support when using
   CPUs supporting the Intel AVX2 or AVX512 instruction set architectures,
@@ -295,6 +304,7 @@ Build & test system improvements:
       #1271 (1.12.0.1)
     - Build against LLVM 11 #1274 (1.12.0.1), LLVM 12 #1351 (1.12.1.0)
       #1412 (1.12.3), LLVM 13 #1420 (1.12.3), LLVM 14 #1492 (1.12.4.6)
+      LLVM 15 #1592 (1.12.6.2)
     - Fix build break against recent OIIO master change where m_mutex field
       was removed from ImageInput. #1281 (1.12.0.1/1.11.9)
     - Work to ensure that OIIO will build correctly against the upcoming
@@ -346,6 +356,7 @@ Build & test system improvements:
       #1501 (1.12.5.0)
     - Overhaul of GHA ci.yml to use strategy matrix. #1474 (1.12.4.4)
     - Test against clang 14 and fix new warnings. #1498 (1.12.5.0)
+    - Test against clang 15 and fix new warnings. #1586 (1.12.6.2)
     - A scorecards workflow guards against a variety of security issues of
       the CI system itself.  #1529 (1.12.6.0)
     - Enable SonarCloud static analysis. #1551 #1556 #1563 (1.12.6.0)

@@ -60,7 +60,7 @@ invert_wide_matrix(Masked<Matrix44> wresult, Wide<const Matrix44> wmatrix)
                 bool is_affine = true;
                 if (wresult.mask()[lane]) {
                     is_affine = test_if_affine(m);
-                    if (is_affine) {
+                    if (OSL_UNLIKELY(is_affine)) {
                         Matrix44 r                = OSL::affineInverse(m);
                         wresult[ActiveLane(lane)] = r;
                     }
@@ -338,7 +338,7 @@ __OSL_MASKED_OP3(div, Wm, Wm, Wm)(void* wr_, void* wa_, void* wb_,
             bool is_affine = true;
             if (wresult.mask()[lane]) {
                 is_affine = test_if_affine(b);
-                if (is_affine) {
+                if (OSL_UNLIKELY(is_affine)) {
                     wresult[ActiveLane(lane)]
                         = multiplyMatrixByMatrix(a, OSL::affineInverse(b));
                 }
@@ -434,7 +434,7 @@ __OSL_MASKED_OP3(div, Wm, Wf, Wm)(void* wr_, void* wa_, void* wb_,
             bool is_affine   = true;
             if (wresult.mask()[lane]) {
                 is_affine = test_if_affine(b);
-                if (is_affine) {
+                if (OSL_UNLIKELY(is_affine)) {
                     Matrix44 r = a * OSL::affineInverse(b);
 
                     wresult[ActiveLane(lane)] = r;
@@ -633,44 +633,56 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
     // Deal with a varying 'from' space
     ustring commonspace_synonym = ctx->shadingsys().commonspace_synonym();
 
-    Mask commonSpaceMask(false);
-    Mask shaderSpaceMask(false);
-    Mask objectSpaceMask(false);
-    Mask namedSpaceMask(false);
+    // Use int instead of Mask<> to allow reduction clause in openmp simd declaration
+    int common_space_bits { 0 };
+    int shader_space_bits { 0 };
+    int object_space_bits { 0 };
+    int named_space_bits { 0 };
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
+                           reduction(|
+                                     : common_space_bits, shader_space_bits,
+                                       object_space_bits, named_space_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustring from = wFrom[lane];
             if (wMfrom.mask()[lane]) {
                 if (from == Strings::common || from == commonspace_synonym) {
-                    commonSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    common_space_bits |= 1 << lane;
                 } else if (from == Strings::shader) {
-                    shaderSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    shader_space_bits |= 1 << lane;
                 } else if (from == Strings::object) {
-                    objectSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    object_space_bits |= 1 << lane;
                 } else {
-                    namedSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    named_space_bits |= 1 << lane;
                 }
             }
         }
     }
+    Mask common_space_mask(common_space_bits);
+    Mask shader_space_mask(shader_space_bits);
+    Mask object_space_mask(object_space_bits);
+    Mask named_space_mask(named_space_bits);
 
-    if (commonSpaceMask.any_on()) {
-        Masked<Matrix44> mfrom(wMfrom.data(), commonSpaceMask);
+    if (common_space_mask.any_on()) {
+        Masked<Matrix44> mfrom(wMfrom.data(), common_space_mask);
         makeIdentity(mfrom);
     }
     const auto& sgbv = bsg->varying;
-    if (shaderSpaceMask.any_on()) {
-        Masked<Matrix44> mfrom(wMfrom.data(), shaderSpaceMask);
+    if (shader_space_mask.any_on()) {
+        Masked<Matrix44> mfrom(wMfrom.data(), shader_space_mask);
         ctx->batched<__OSL_WIDTH>().renderer()->get_matrix(bsg, mfrom,
                                                            sgbv.shader2common,
                                                            sgbv.time);
         // NOTE: matching scalar version of code which ignores the renderservices return value
     }
-    if (objectSpaceMask.any_on()) {
-        Masked<Matrix44> mfrom(wMfrom.data(), objectSpaceMask);
+    if (object_space_mask.any_on()) {
+        Masked<Matrix44> mfrom(wMfrom.data(), object_space_mask);
         ctx->batched<__OSL_WIDTH>().renderer()->get_matrix(bsg, mfrom,
                                                            sgbv.object2common,
                                                            sgbv.time);
@@ -678,13 +690,13 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
     }
     // Only named lookups can fail, so we can just subtract those lanes
     Mask succeeded(wMfrom.mask());
-    if (namedSpaceMask.any_on()) {
-        Masked<Matrix44> mfrom(wMfrom.data(), namedSpaceMask);
+    if (named_space_mask.any_on()) {
+        Masked<Matrix44> mfrom(wMfrom.data(), named_space_mask);
 
         Mask success = ctx->batched<__OSL_WIDTH>().renderer()->get_matrix(
             bsg, mfrom, wFrom, sgbv.time);
 
-        Mask failedLanes = success.invert() & namedSpaceMask;
+        Mask failedLanes = success.invert() & named_space_mask;
         if (failedLanes.any_on()) {
             Masked<Matrix44> mto_failed(wMfrom.data(), failedLanes);
             makeIdentity(mto_failed);
@@ -756,56 +768,68 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
     // Deal with a varying 'to' space
     ustring commonspace_synonym = ctx->shadingsys().commonspace_synonym();
 
-    Mask commonSpaceMask(false);
-    Mask shaderSpaceMask(false);
-    Mask objectSpaceMask(false);
-    Mask namedSpaceMask(false);
+    // Use int instead of Mask<> to allow reduction clause in openmp simd declaration
+    int common_space_bits { 0 };
+    int shader_space_bits { 0 };
+    int object_space_bits { 0 };
+    int named_space_bits { 0 };
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
+                           reduction(|
+                                     : common_space_bits, shader_space_bits,
+                                       object_space_bits, named_space_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustring to = wTo[lane];
             if (wMto.mask()[lane]) {
                 if (to == Strings::common || to == commonspace_synonym) {
-                    commonSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    common_space_bits |= 1 << lane;
                 } else if (to == Strings::shader) {
-                    shaderSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    shader_space_bits |= 1 << lane;
                 } else if (to == Strings::object) {
-                    objectSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    object_space_bits |= 1 << lane;
                 } else {
-                    namedSpaceMask.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    named_space_bits |= 1 << lane;
                 }
             }
         }
     }
+    Mask common_space_mask(common_space_bits);
+    Mask shader_space_mask(shader_space_bits);
+    Mask object_space_mask(object_space_bits);
+    Mask named_space_mask(named_space_bits);
 
-    if (commonSpaceMask.any_on()) {
-        Masked<Matrix44> mto(wMto.data(), commonSpaceMask);
+    if (common_space_mask.any_on()) {
+        Masked<Matrix44> mto(wMto.data(), common_space_mask);
         makeIdentity(mto);
     }
     const auto& sgbv = bsg->varying;
-    if (shaderSpaceMask.any_on()) {
-        Masked<Matrix44> mto(wMto.data(), shaderSpaceMask);
+    if (shader_space_mask.any_on()) {
+        Masked<Matrix44> mto(wMto.data(), shader_space_mask);
         dispatch_get_inverse_matrix(ctx->batched<__OSL_WIDTH>().renderer(), bsg,
                                     mto, sgbv.shader2common, sgbv.time);
         // NOTE: matching scalar version of code which ignores the renderservices return value
     }
-    if (objectSpaceMask.any_on()) {
-        Masked<Matrix44> mto(wMto.data(), objectSpaceMask);
+    if (object_space_mask.any_on()) {
+        Masked<Matrix44> mto(wMto.data(), object_space_mask);
         dispatch_get_inverse_matrix(ctx->batched<__OSL_WIDTH>().renderer(), bsg,
                                     mto, sgbv.object2common, sgbv.time);
         // NOTE: matching scalar version of code which ignores the renderservices return value
     }
     // Only named lookups can fail, so we can just subtract those lanes
     Mask succeeded(wMto.mask());
-    if (namedSpaceMask.any_on()) {
-        Masked<Matrix44> mto(wMto.data(), namedSpaceMask);
+    if (named_space_mask.any_on()) {
+        Masked<Matrix44> mto(wMto.data(), named_space_mask);
 
         Mask success = dispatch_get_inverse_matrix(
             ctx->batched<__OSL_WIDTH>().renderer(), bsg, mto, wTo, sgbv.time);
 
-        Mask failedLanes = success.invert() & namedSpaceMask;
+        Mask failedLanes = success.invert() & named_space_mask;
         if (failedLanes.any_on()) {
             Masked<Matrix44> mto(wMto.data(), failedLanes);
             makeIdentity(mto);
@@ -1362,7 +1386,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, Wide<const Matrix44> wM,
             bool is_affine = true;
             if (wresult.mask()[lane]) {
                 is_affine = test_if_affine(M);
-                if (is_affine) {
+                if (OSL_UNLIKELY(is_affine)) {
                     wresult[ActiveLane(lane)] = multiplyDirByMatrix(
                         inlinedTransposed(OSL::affineInverse(M)), v);
                 }

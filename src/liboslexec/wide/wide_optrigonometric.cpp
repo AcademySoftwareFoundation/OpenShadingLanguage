@@ -33,8 +33,6 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 #include "define_opname_macros.h"
 
 #if OSL_FAST_MATH
-// OIIO::fast_sin & OIIO::fast_cos are not vectorizing (presumably madd is interfering)
-// so use regular sin which compiler should replace with its own fast version
 #    define __OSL_XMACRO_ARGS (sin, OIIO::fast_sin, OSL::fast_sin)
 #    include "wide_opunary_per_component_xmacro.h"
 
@@ -67,7 +65,7 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
 
 #else
-// try it out and compare performance, maybe compile time flag
+// TODO: compare performance of fast_math vs. math library
 #    define __OSL_XMACRO_ARGS (sin, sinf, OSL::sin)
 #    include "wide_opunary_per_component_xmacro.h"
 
@@ -105,7 +103,50 @@ static OSL_FORCEINLINE void
 impl_sincos(float theta, float& rsine, float& rcosine)
 {
 #if OSL_FAST_MATH
+// Avoid regression in icx 2022.2.0 (should already be fixed in next release)
+// TODO: incorporate SSA code changes into OIIO and remove the workaround
+#    if !defined(__INTEL_LLVM_COMPILER) || (__INTEL_LLVM_COMPILER != 20220200)
     OIIO::fast_sincos(theta, &rsine, &rcosine);
+#    else
+    // Adopt Single Statement Assignment (SSA) coding style
+    // to create less work for optimizers and code generation
+    //
+    // Implementation is adapted from https://github.com/OpenImageIO/oiio
+    // under the same BSD-3-Clause license
+    const float x = theta;
+    using OIIO::clamp;
+    using OIIO::fast_rint;
+    using OIIO::madd;
+    const int q    = fast_rint(x * float(M_1_PI));
+    float qf       = float(q);
+    const float x2 = madd(qf, -0.78515625f * 4, x);
+    const float x3 = madd(qf, -0.00024187564849853515625f * 4, x2);
+    const float x4 = madd(qf, -3.7747668102383613586e-08f * 4, x3);
+    const float x5 = madd(qf, -1.2816720341285448015e-12f * 4, x4);
+    const float x6 = float(M_PI_2) - (float(M_PI_2) - x5);  // crush denormals
+    const float s  = x6 * x6;
+    // NOTE: same exact polynomials as fast_sin and fast_cos above
+    const bool q_is_odd = (q & 1) != 0;
+    float x7            = x6;
+    if (q_is_odd)
+        x7 = -x6;
+    const float su0 = 2.6083159809786593541503e-06f;
+    const float su2 = madd(su0, s, -0.0001981069071916863322258f);
+    const float su3 = madd(su2, s, +0.00833307858556509017944336f);
+    const float su4 = madd(su3, s, -0.166666597127914428710938f);
+    const float su5 = madd(s, su4 * x7, x7);
+    const float cu0 = -2.71811842367242206819355e-07f;
+    const float cu2 = madd(cu0, s, +2.47990446951007470488548e-05f);
+    const float cu3 = madd(cu2, s, -0.00138888787478208541870117f);
+    const float cu4 = madd(cu3, s, +0.0416666641831398010253906f);
+    const float cu5 = madd(cu4, s, -0.5f);
+    const float cu6 = madd(cu5, s, +1.0f);
+    float cu        = cu6;
+    if (q_is_odd)
+        cu = -cu6;
+    rsine   = clamp(su5, -1.0f, 1.0f);
+    rcosine = clamp(cu, -1.0f, 1.0f);
+#    endif
 #else
     OIIO::sincos(theta, &rsine, &rcosine);
 #endif

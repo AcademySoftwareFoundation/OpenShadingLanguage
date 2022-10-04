@@ -351,15 +351,20 @@ __OSL_MASKED_OP(getmessage)(void* bsg_, void* result, char* source_,
         auto found_lanes   = mask & m->valid_mask;
         auto missing_lanes = mask & ~m->valid_mask & ~m->get_before_set_mask;
 
-        Mask lanes_set_by_deeper_layer(false);
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        // Use int instead of Mask<> to allow reduction clause in openmp simd declaration
+        int lanes_set_by_deeper_layer_bits { 0 };
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
+                           reduction(|
+                                     : lanes_set_by_deeper_layer_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             int msg_layerid = msg_wlayeridx[lane];
             // NOTE: using bitwise & to avoid branches
             if (found_lanes[lane] & (msg_layerid > layeridx)) {
-                lanes_set_by_deeper_layer.set_on(lane);
+                // inline of Mask::set_on(lane)
+                lanes_set_by_deeper_layer_bits |= 1 << lane;
             }
         }
+        Mask lanes_set_by_deeper_layer(lanes_set_by_deeper_layer_bits);
 
         lanes_set_by_deeper_layer.foreach ([=](ActiveLane lane) -> void {
             int msg_layerid        = msg_wlayeridx[lane];

@@ -2739,19 +2739,24 @@ foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f)
     do {
         ActiveLane lead_lane(remaining_mask.first_on());
         DataT lead_data = wdata[lead_lane];
-        Mask<WidthT> matching_lanes(false);
+        // Use int instead of Mask<> to allow reduction clause in openmp simd declaration
+        int matching_lanes_bits { 0 };
         OSL_FORCEINLINE_BLOCK
         {
-            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT)
+                               reduction(|
+                                         : matching_lanes_bits))
             for (int lane = 0; lane < WidthT; ++lane) {
                 // NOTE: the comparison ignores the remaining_mask
                 bool lane_matches = (lead_data == wdata[lane]);
                 // NOTE: using bitwise & to avoid branches
                 if (lane_matches & remaining_mask[lane]) {
-                    matching_lanes.set_on(lane);
+                    // inline of Mask::set_on(lane)
+                    matching_lanes_bits |= 1 << lane;
                 }
             }
         }
+        Mask<WidthT> matching_lanes { matching_lanes_bits };
 
         f(lead_data, matching_lanes);
         remaining_mask &= ~matching_lanes;

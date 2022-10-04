@@ -150,6 +150,11 @@ file (GLOB compiler_headers "../liboslcomp/*.h")
 FLEX_BISON ( osolex.l osogram.y oso lib_src exec_headers )
 FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl lib_src compiler_headers )
 
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR CMAKE_COMPILER_IS_INTELCLANG)
+    # avoid flex_bison produced warning in osogram.cpp "variable 'osonerrs' set but not used"
+    add_compile_options ("-Wno-unused-but-set-variable")
+endif ()
+
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 
 
@@ -355,22 +360,40 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         # REQUIRES CLANG 7+ to use successfully vectorize with OpenMP simd
         
         if (${TARGET_OPT_ISA} STREQUAL "AVX512")
-            list (APPEND TARGET_CXX_OPTS "-march=skylake-avx512")
+            if (CMAKE_COMPILER_IS_INTELCLANG)
+                list (APPEND TARGET_CXX_OPTS "-xCORE-AVX512")
+            else ()
+                list (APPEND TARGET_CXX_OPTS "-march=skylake-avx512")
+            endif ()
             if (${TARGET_BATCH_SIZE} STREQUAL "16")
                 list (APPEND TARGET_CXX_OPTS "-mprefer-vector-width=512")
             else ()
                 list (APPEND TARGET_CXX_OPTS "-mprefer-vector-width=256")
             endif ()
         elseif (${TARGET_OPT_ISA} STREQUAL "AVX2")
-            list (APPEND TARGET_CXX_OPTS "-march=core-avx2")
+            if (CMAKE_COMPILER_IS_INTELCLANG)
+                list (APPEND TARGET_CXX_OPTS "-xCORE-AVX2")
+            else ()
+                list (APPEND TARGET_CXX_OPTS "-march=core-avx2")
+            endif ()
         elseif (${TARGET_OPT_ISA} STREQUAL "AVX")
-            list (APPEND TARGET_CXX_OPTS "-march=corei7-avx")
+            if (CMAKE_COMPILER_IS_INTELCLANG)
+                list (APPEND TARGET_CXX_OPTS "-xAVX")
+            else ()
+                list (APPEND TARGET_CXX_OPTS "-march=corei7-avx")
+            endif ()
         else ()
             message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
         endif ()
         
         if (${TARGET_OPT_FMA} STREQUAL "noFMA")
-            list (APPEND TARGET_CXX_OPTS "-mno-fma")
+            # Do NOT use "-mno-fma" as it may lower ISA to one without any FMA
+            # instructions (AVX512->AVX2).  Our intent is to not generate 
+            # FMA's but still use the available instructions and register 
+            # width. However math library calls may use still end up using 
+            # FMA's, but lets try turning of fused math ops because many OSL 
+            # math functions are from OIIO/IMath headers generate non FMA
+            list (APPEND TARGET_CXX_OPTS "-ffp-contract=off")
         endif ()
         
         # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
@@ -388,7 +411,8 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         list (APPEND TARGET_CXX_OPTS "-fno-unroll-loops")
 
         if (CMAKE_COMPILER_IS_INTELCLANG)
-            list (APPEND TARGET_CXX_OPTS "-qopenmp-simd")
+            # utilize Intel compiler's optimized openmp simd generation vs. open source "-qopenmp-simd"
+            list (APPEND TARGET_CXX_OPTS "-fiopenmp-simd")
         else ()
             list (APPEND TARGET_CXX_OPTS "-fopenmp")
         endif ()
@@ -434,7 +458,13 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         endif ()
         
         if (${TARGET_OPT_FMA} STREQUAL "noFMA")
-            list (APPEND TARGET_CXX_OPTS "-mno-fma")
+            # Do NOT use "-mno-fma" as it may lower ISA to one without any FMA
+            # instructions (AVX512->AVX2).  Our intent is to not generate 
+            # FMA's but still use the available instructions and register 
+            # width. However math library calls may use still end up using 
+            # FMA's, but lets try turning of fused math ops because many OSL 
+            # math functions are from OIIO/IMath headers generate non FMA
+            list (APPEND TARGET_CXX_OPTS "-ffp-contract=off")
         endif ()
         
         list (APPEND TARGET_CXX_OPTS "-fopenmp-simd")

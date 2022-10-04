@@ -18,8 +18,6 @@ namespace pvt {
 class BatchedBackendLLVM;
 }
 
-typedef const void* OpaqueShadingStateUniformPtr;
-
 struct UniformShaderGlobals {
     UniformShaderGlobals()                                  = default;
     UniformShaderGlobals(const UniformShaderGlobals& other) = delete;
@@ -40,7 +38,6 @@ struct UniformShaderGlobals {
     /// Back-pointer to the ShadingContext (set and used by OSL itself --
     /// renderers shouldn't mess with this at all).
     ShadingContext* context;
-    OpaqueShadingStateUniformPtr shadingStateUniform;
 
     /// Pointer to the RendererServices object. This is how OSL finds its
     /// way back to the renderer for callbacks.
@@ -55,7 +52,8 @@ struct UniformShaderGlobals {
     int pad0;
     int pad1;
     int pad2;
-
+    int pad3;
+    int pad4;
 
     void dump()
     {

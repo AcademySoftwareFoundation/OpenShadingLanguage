@@ -326,8 +326,8 @@ osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
 {
     if (!handle)
         return 0;
-    cudaTextureObject_t texID = cudaTextureObject_t(handle);
-    float4 fromTexture        = osl_tex2DLookup(handle, s, t);
+    // cudaTextureObject_t texID = cudaTextureObject_t(handle);
+    float4 fromTexture = osl_tex2DLookup(handle, s, t);
     // see note above
     // float4 fromTexture = tex2D<float4>(texID, s, t);
     *((float3*)result) = make_float3(fromTexture.x, fromTexture.y,

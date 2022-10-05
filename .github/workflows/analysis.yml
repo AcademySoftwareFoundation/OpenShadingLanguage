@@ -12,7 +12,7 @@ on:
     # - cron: "0 0 * * 0"
   push:
     branches:
-      # - master
+      - main
       - '*analysis*'
   # Allow manual kicking off of the workflow from github.com
   workflow_dispatch:

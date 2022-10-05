@@ -16,11 +16,6 @@ endif ()
 
 FLEX_BISON (osllex.l oslgram.y osl lib_src compiler_headers)
 
-if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR CMAKE_COMPILER_IS_INTELCLANG)
-    # avoid flex_bison produced warning in osogram.cpp "variable 'osonerrs' set but not used"
-    add_compile_options ("-Wno-unused-but-set-variable")
-endif ()
-
 add_library (${local_lib} ${lib_src})
 target_include_directories(${local_lib}
     PUBLIC

@@ -36,6 +36,7 @@ jobs:
             vfxyear: 2022
             vfxsuffix: -clang13
             cxx_std: 14
+            openimageio_ver: master
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: avx2,f16c
@@ -65,6 +66,7 @@ jobs:
       CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
       FMT_VERSION: ${{matrix.fmt_ver}}
       OPENEXR_VERSION: ${{matrix.openexr_ver}}
+      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
       PYBIND11_VERSION: ${{matrix.pybind11_ver}}
       PYTHON_VERSION: ${{matrix.python_ver}}
       USE_BATCHED: ${{matrix.batched}}
@@ -95,6 +97,13 @@ jobs:
         run: |
             ${{matrix.setenvs}}
             src/build-scripts/ci-startup.bash
+      - name: Remove existing OIIO
+        if: matrix.openimageio_ver != ''
+        run: |
+            sudo rm -rf /usr/local/include/OpenImageIO
+            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
+            sudo rm -rf /usr/local/lib*/libOpenImageIO*
+            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
       - name: Dependencies
         run: |
             ${{matrix.depcmds}}

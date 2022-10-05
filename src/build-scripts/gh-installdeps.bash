@@ -106,7 +106,7 @@ else
         sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
         echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
         time sudo apt-get update
-        time sudo apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
+        time sudo apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic=2022.1.0-3768
         set +e; source /opt/intel/oneapi/setvars.sh; set -e
     fi
 

@@ -1386,7 +1386,7 @@ impl_transform_normal_masked(void* Pin, void* Pout, Wide<const Matrix44> wM,
             bool is_affine = true;
             if (wresult.mask()[lane]) {
                 is_affine = test_if_affine(M);
-                if (OSL_UNLIKELY(is_affine)) {
+                if (is_affine) {
                     wresult[ActiveLane(lane)] = multiplyDirByMatrix(
                         inlinedTransposed(OSL::affineInverse(M)), v);
                 }

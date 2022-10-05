@@ -42,8 +42,12 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
 
     if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" || "$CXX" == "icpx" || "$CC" == "icx" || "$USE_ICX" != "" ]] ; then
         sudo cp src/build-scripts/oneAPI.repo /etc/yum.repos.d
-        sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
-        set +e; source /opt/intel/oneapi/setvars.sh; set -e
+        sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2022.1.0-3768
+        # Because multiple (possibly newer) versions of oneapi may be installed,
+        # use a config file to specific a specific compiler and tbb version
+        # NOTE: Individual oneapi components may independent version numbering.
+        set +e; source /opt/intel/oneapi/setvars.sh --config oneapi_2022.1.0.cfg; set -e
+
         if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" ]] ; then
             echo "Verifying installation of Intel(r) C++ Compiler:"
             icpc --version

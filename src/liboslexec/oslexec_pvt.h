@@ -33,7 +33,7 @@
 #include <OpenImageIO/ustring.h>
 
 #include "osl_pvt.h"
-#include "shading_state_uniform.h"
+
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/genclosure.h>
@@ -43,6 +43,8 @@
 #include <OSL/oslexec.h>
 #include <OSL/rendererservices.h>
 #include <OSL/shaderglobals.h>
+
+#include "shading_state_uniform.h"
 #include "constantpool.h"
 #include "opcolor.h"
 

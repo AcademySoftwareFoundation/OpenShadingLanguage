@@ -235,7 +235,8 @@ template<> struct hash<OSL::ustring> {
 };
 
 template<> struct hash<OSL::ustringhash> {
-    constexpr std::size_t operator()(OSL::ustringhash u) const noexcept
+    OSL_HOSTDEVICE constexpr std::size_t
+    operator()(OSL::ustringhash u) const noexcept
     {
         return u.hash();
     }
@@ -244,8 +245,8 @@ template<> struct hash<OSL::ustringhash> {
 
 // Not necessary once minimum OIIO defines operator< for ustringhash
 template<> struct less<OSL::ustringhash> {
-    constexpr bool operator()(OSL::ustringhash u,
-                              OSL::ustringhash v) const noexcept
+    OSL_HOSTDEVICE constexpr bool operator()(OSL::ustringhash u,
+                                             OSL::ustringhash v) const noexcept
     {
         return u.hash() < v.hash();
     }

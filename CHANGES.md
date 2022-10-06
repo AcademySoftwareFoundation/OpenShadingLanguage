@@ -17,6 +17,8 @@ OSL Language and oslc compiler:
 OSL Standard library:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
+* A new `shadingStateUniform` pointer field was added to ShaderGlobals for
+  planned future expansion and improved GPU support. #1585 (1.13.1.0)
 
 SIMD batched shading mode:
 * Fix some array overruns (asymptomatic, but still potentially buggy) in
@@ -49,6 +51,8 @@ Build & test system improvements:
       build time using `-DOSL_VERSION=...`. Use with extreme caution! #1579
       (1.13.0.2)
 * Dependency version support:
+    - Fix some issues that came up with the new icx 2022.0 compiler. #1601
+      (1.13.1.0)
 * Testing and Continuous integration (CI) systems:
     - Dynamic analysis using address and leak sanitizers. #1581 (1.13.0.3)
     - `testshade --help` now prints TextureSystem options and all hardware

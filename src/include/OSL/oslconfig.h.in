@@ -235,7 +235,7 @@ template<> struct hash<OSL::ustring> {
 };
 
 template<> struct hash<OSL::ustringhash> {
-    std::size_t operator()(OSL::ustringhash u) const noexcept
+    constexpr std::size_t operator()(OSL::ustringhash u) const noexcept
     {
         return u.hash();
     }

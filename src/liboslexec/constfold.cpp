@@ -2413,11 +2413,12 @@ DECLFOLDER(constfold_gettextureinfo)
         void* mydata     = OSL_ALLOCA(char, t.size());
         // FIXME(ptex) -- exclude folding of ptex, since these things
         // can vary per face.
-        ustring errormessage;
+        ustringhash em;
         int result = rop.renderer()->get_texture_info(
             filename, nullptr, rop.shadingcontext()->texture_thread_info(),
             rop.shadingcontext(), 0 /* TODO: subimage? */, dataname, t, mydata,
-            &errormessage);
+            &em);
+        ustring errormessage = ustring_from(em);
         // Now we turn
         //       gettextureinfo result filename dataname data
         // into this for success:

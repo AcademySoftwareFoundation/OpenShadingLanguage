@@ -133,6 +133,56 @@ fmtformat(const Str& fmt, Args&&... args)
 
 
 
+/// OSL_USTRINGREP_IS_HASH will be 1 if the build-time option was enabled to
+/// make the ustringrep be a ustringhash, rather than a ustring directly.
+#cmakedefine01 OSL_USTRINGREP_IS_HASH
+
+#if OSL_USTRINGREP_IS_HASH
+using ustringrep = ustringhash;
+#else
+using ustringrep = ustring;
+#endif
+
+
+/// Convenience function to convert to a ustring.
+inline ustring
+ustring_from(ustringhash h)
+{
+    return ustring::from_hash(h.hash());
+}
+
+/// Convenience function to convert to a ustring.
+inline ustring
+ustring_from(ustring u)
+{
+    return u;
+}
+
+
+/// Convenience function to convert to a ustringrep.
+inline ustringrep
+ustringrep_from(ustringhash h)
+{
+#if OSL_USTRINGREP_IS_HASH
+    return h;
+#else
+    return ustring::from_hash(h.hash());
+#endif
+}
+
+/// Convenience function to convert to a ustringrep.
+inline ustringrep
+ustringrep_from(ustring u)
+{
+#if OSL_USTRINGREP_IS_HASH
+    return u.hash();
+#else
+    return u;
+#endif
+}
+
+
+
 // N.B. SymArena is not really "configuration", but we cram it here for
 // lack of a better home.
 

@@ -310,7 +310,7 @@ SimpleRenderer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 
 bool
 SimpleRenderer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
-                           ustring from, float /*time*/)
+                           ustringhash from, float /*time*/)
 {
     TransformMap::const_iterator found = m_named_xforms.find(from);
     if (found != m_named_xforms.end()) {
@@ -337,7 +337,7 @@ SimpleRenderer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 
 bool
 SimpleRenderer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
-                           ustring from)
+                           ustringhash from)
 {
     // SimpleRenderer doesn't understand motion blur, so we never fail
     // on account of time-varying transformations.
@@ -354,7 +354,7 @@ SimpleRenderer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 
 bool
 SimpleRenderer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
-                                   ustring to, float /*time*/)
+                                   ustringhash to, float /*time*/)
 {
     if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
         Matrix44 M = m_world_to_camera;
@@ -408,15 +408,15 @@ void
 SimpleRenderer::name_transform(const char* name, const OSL::Matrix44& xform)
 {
     std::shared_ptr<Transformation> M(new OSL::Matrix44(xform));
-    m_named_xforms[ustring(name)] = M;
+    m_named_xforms[ustringhash(name)] = M;
 }
 
 
 
 bool
 SimpleRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
-                                    ustring object, TypeDesc type, ustring name,
-                                    int index, void* val)
+                                    ustringhash object, TypeDesc type,
+                                    ustringhash name, int index, void* val)
 {
     AttrGetterMap::const_iterator g = m_attr_getters.find(name);
     if (g != m_attr_getters.end()) {
@@ -444,8 +444,8 @@ SimpleRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
 
 bool
 SimpleRenderer::get_attribute(ShaderGlobals* sg, bool derivatives,
-                              ustring object, TypeDesc type, ustring name,
-                              void* val)
+                              ustringhash object, TypeDesc type,
+                              ustringhash name, void* val)
 {
     return get_array_attribute(sg, derivatives, object, type, name, -1, val);
 }
@@ -453,7 +453,7 @@ SimpleRenderer::get_attribute(ShaderGlobals* sg, bool derivatives,
 
 
 bool
-SimpleRenderer::get_userdata(bool derivatives, ustring name, TypeDesc type,
+SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                              ShaderGlobals* sg, void* val)
 {
     // Just to illustrate how this works, respect s and t userdata, filled
@@ -508,10 +508,14 @@ SimpleRenderer::trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,
     }
 }
 
+
 bool
-SimpleRenderer::getmessage(ShaderGlobals* sg, ustring source, ustring name,
-                           TypeDesc type, void* val, bool derivatives)
+SimpleRenderer::getmessage(ShaderGlobals* sg, ustringhash source_,
+                           ustringhash name_, TypeDesc type, void* val,
+                           bool derivatives)
 {
+    ustring source = ustring_from(source_);
+    ustring name   = ustring_from(name_);
     OSL_ASSERT(source == ustring("trace"));
     // Don't have any real ray tracing results
     // so just fill in some repeatable values for testsuite
@@ -552,10 +556,11 @@ SimpleRenderer::getmessage(ShaderGlobals* sg, ustring source, ustring name,
 }
 
 
+
 bool
 SimpleRenderer::get_osl_version(ShaderGlobals* /*sg*/, bool /*derivs*/,
-                                ustring /*object*/, TypeDesc type,
-                                ustring /*name*/, void* val)
+                                ustringhash /*object*/, TypeDesc type,
+                                ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeInt) {
         ((int*)val)[0] = OSL_VERSION;
@@ -567,8 +572,8 @@ SimpleRenderer::get_osl_version(ShaderGlobals* /*sg*/, bool /*derivs*/,
 
 bool
 SimpleRenderer::get_camera_resolution(ShaderGlobals* /*sg*/, bool /*derivs*/,
-                                      ustring /*object*/, TypeDesc type,
-                                      ustring /*name*/, void* val)
+                                      ustringhash /*object*/, TypeDesc type,
+                                      ustringhash /*name*/, void* val)
 {
     if (type == TypeIntArray2) {
         ((int*)val)[0] = m_xres;
@@ -581,8 +586,8 @@ SimpleRenderer::get_camera_resolution(ShaderGlobals* /*sg*/, bool /*derivs*/,
 
 bool
 SimpleRenderer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
-                                      ustring /*object*/, TypeDesc type,
-                                      ustring /*name*/, void* val)
+                                      ustringhash /*object*/, TypeDesc type,
+                                      ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeString) {
         ((ustring*)val)[0] = m_projection;
@@ -594,8 +599,8 @@ SimpleRenderer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
 
 bool
 SimpleRenderer::get_camera_fov(ShaderGlobals* /*sg*/, bool derivs,
-                               ustring /*object*/, TypeDesc type,
-                               ustring /*name*/, void* val)
+                               ustringhash /*object*/, TypeDesc type,
+                               ustringhash /*name*/, void* val)
 {
     // N.B. in a real renderer, this may be time-dependent
     if (type == TypeDesc::TypeFloat) {
@@ -610,8 +615,8 @@ SimpleRenderer::get_camera_fov(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_pixelaspect(ShaderGlobals* /*sg*/, bool derivs,
-                                       ustring /*object*/, TypeDesc type,
-                                       ustring /*name*/, void* val)
+                                       ustringhash /*object*/, TypeDesc type,
+                                       ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_pixelaspect;
@@ -625,8 +630,8 @@ SimpleRenderer::get_camera_pixelaspect(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_clip(ShaderGlobals* /*sg*/, bool derivs,
-                                ustring /*object*/, TypeDesc type,
-                                ustring /*name*/, void* val)
+                                ustringhash /*object*/, TypeDesc type,
+                                ustringhash /*name*/, void* val)
 {
     if (type == TypeFloatArray2) {
         ((float*)val)[0] = m_hither;
@@ -641,8 +646,8 @@ SimpleRenderer::get_camera_clip(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_clip_near(ShaderGlobals* /*sg*/, bool derivs,
-                                     ustring /*object*/, TypeDesc type,
-                                     ustring /*name*/, void* val)
+                                     ustringhash /*object*/, TypeDesc type,
+                                     ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_hither;
@@ -656,8 +661,8 @@ SimpleRenderer::get_camera_clip_near(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_clip_far(ShaderGlobals* /*sg*/, bool derivs,
-                                    ustring /*object*/, TypeDesc type,
-                                    ustring /*name*/, void* val)
+                                    ustringhash /*object*/, TypeDesc type,
+                                    ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_yon;
@@ -672,8 +677,8 @@ SimpleRenderer::get_camera_clip_far(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_shutter(ShaderGlobals* /*sg*/, bool derivs,
-                                   ustring /*object*/, TypeDesc type,
-                                   ustring /*name*/, void* val)
+                                   ustringhash /*object*/, TypeDesc type,
+                                   ustringhash /*name*/, void* val)
 {
     if (type == TypeFloatArray2) {
         ((float*)val)[0] = m_shutter[0];
@@ -688,8 +693,8 @@ SimpleRenderer::get_camera_shutter(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_shutter_open(ShaderGlobals* /*sg*/, bool derivs,
-                                        ustring /*object*/, TypeDesc type,
-                                        ustring /*name*/, void* val)
+                                        ustringhash /*object*/, TypeDesc type,
+                                        ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_shutter[0];
@@ -703,8 +708,8 @@ SimpleRenderer::get_camera_shutter_open(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_shutter_close(ShaderGlobals* /*sg*/, bool derivs,
-                                         ustring /*object*/, TypeDesc type,
-                                         ustring /*name*/, void* val)
+                                         ustringhash /*object*/, TypeDesc type,
+                                         ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_shutter[1];
@@ -718,8 +723,8 @@ SimpleRenderer::get_camera_shutter_close(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRenderer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
-                                         ustring /*object*/, TypeDesc type,
-                                         ustring /*name*/, void* val)
+                                         ustringhash /*object*/, TypeDesc type,
+                                         ustringhash /*name*/, void* val)
 {
     // N.B. in a real renderer, this may be time-dependent
     if (type == TypeFloatArray4) {

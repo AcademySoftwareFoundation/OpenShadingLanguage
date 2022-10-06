@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-// clang-format off
-
 #pragma once
 
 
@@ -13,14 +11,13 @@
 OSL_NAMESPACE_ENTER
 
 class RendererServices;
-template<int WidthT>
-class BatchedRendererServices;
+template<int WidthT> class BatchedRendererServices;
 class ShadingContext;
 struct ShaderGlobals;
 
 // Tags for polymorphic dispatch
-template <int SimdWidthT>
-class WidthOf {};
+template<int SimdWidthT> class WidthOf {
+};
 
 
 /// Opaque pointer to whatever the renderer uses to represent a
@@ -49,7 +46,7 @@ public:
 
 
     RendererServices(TextureSystem* texsys = NULL);
-    virtual ~RendererServices () { }
+    virtual ~RendererServices() {}
 
     /// Given the name of a 'feature', return whether this RendererServices
     /// supports it. Feature names include:
@@ -62,28 +59,34 @@ public:
     /// support it, as long as the OSL runtime only uses that feature if the
     /// supports("feature") says it's present, thus preserving source
     /// compatibility.
-    virtual int supports (string_view feature) const { return false; }
+    virtual int supports(string_view feature) const { return false; }
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return true if ok, false
     /// on error.
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform, float time) { return false; }
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            TransformationPtr xform, float time)
+    {
+        return false;
+    }
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return true if ok, false on
     /// error.  The default implementation is to use get_matrix and
     /// invert it, but a particular renderer may have a better technique
     /// and overload the implementation.
-    virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
-                                     TransformationPtr xform, float time);
+    virtual bool get_inverse_matrix(ShaderGlobals* sg, Matrix44& result,
+                                    TransformationPtr xform, float time);
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation.  Return true if ok, false on error.  Since no
     /// time value is given, also return false if the transformation may
     /// be time-varying.
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform) { return false; }
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            TransformationPtr xform)
+    {
+        return false;
+    }
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation.  Return true if ok, false on error.  Since no
@@ -91,29 +94,29 @@ public:
     /// be time-varying.  The default implementation is to use
     /// get_matrix and invert it, but a particular renderer may have a
     /// better technique and overload the implementation.
-    virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
-                                     TransformationPtr xform);
+    virtual bool get_inverse_matrix(ShaderGlobals* sg, Matrix44& result,
+                                    TransformationPtr xform);
 
     /// Get the 4x4 matrix that transforms points from the named
     /// 'from' coordinate system to "common" space at the given time.
     /// Returns true if ok, false if the named matrix is not known.
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from, float time) { return false; }
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            ustringhash from, float time);
 
     /// Get the 4x4 matrix that transforms points from "common" space to
     /// the named 'to' coordinate system to at the given time.  The
     /// default implementation is to use get_matrix and invert it, but a
     /// particular renderer may have a better technique and overload the
     /// implementation.
-    virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
-                                     ustring to, float time);
+    virtual bool get_inverse_matrix(ShaderGlobals* sg, Matrix44& result,
+                                    ustringhash to, float time);
 
     /// Get the 4x4 matrix that transforms 'from' to "common" space.
     /// Since there is no time value passed, return false if the
     /// transformation may be time-varying (as well as if it's not found
     /// at all).
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from) { return false; }
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            ustringhash from);
 
     /// Get the 4x4 matrix that transforms points from "common" space to
     /// the named 'to' coordinate system.  Since there is no time value
@@ -122,8 +125,8 @@ public:
     /// implementation is to use get_matrix and invert it, but a
     /// particular renderer may have a better technique and overload the
     /// implementation.
-    virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
-                                     ustring to);
+    virtual bool get_inverse_matrix(ShaderGlobals* sg, Matrix44& result,
+                                    ustringhash to);
 
     /// Transform points Pin[0..npoints-1] in named coordinate system
     /// 'from' into 'to' coordinates, storing the result in Pout[] using
@@ -148,11 +151,10 @@ public:
     /// Note to RendererServices implementations: just return 'false'
     /// if there isn't a special nonlinear transformation between the
     /// two spaces.
-    virtual bool transform_points (ShaderGlobals *sg,
-                                   ustring from, ustring to, float time,
-                                   const Vec3 *Pin, Vec3 *Pout, int npoints,
-                                   TypeDesc::VECSEMANTICS vectype)
-        { return false; }
+    virtual bool transform_points(ShaderGlobals* sg, ustringhash from,
+                                  ustringhash to, float time, const Vec3* Pin,
+                                  Vec3* Pout, int npoints,
+                                  TypeDesc::VECSEMANTICS vectype);
 
 
     /// Get the named attribute from the renderer and if found then
@@ -167,36 +169,36 @@ public:
     /// run on. Be robust to this situation, return 'true' (retrieve the
     /// attribute) if you can (known object and attribute name), but
     /// otherwise just fail by returning 'false'.
-    virtual bool get_attribute (ShaderGlobals *sg, bool derivatives,
-                                ustring object, TypeDesc type, ustring name,
-                                void *val) { return false; }
+    virtual bool get_attribute(ShaderGlobals* sg, bool derivatives,
+                               ustringhash object, TypeDesc type,
+                               ustringhash name, void* val);
 
     /// Similar to get_attribute();  this method will return the 'index'
     /// element of an attribute array.
-    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
-                                      ustring object, TypeDesc type,
-                                      ustring name, int index, void *val) { return false; }
+    virtual bool get_array_attribute(ShaderGlobals* sg, bool derivatives,
+                                     ustringhash object, TypeDesc type,
+                                     ustringhash name, int index, void* val);
 
     /// Get the named user-data from the current object and write it into
     /// 'val'. If derivatives is true, the derivatives should be written into val
     /// as well. Return false if no user-data with the given name and type was
     /// found.
-    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
-                               ShaderGlobals *sg, void *val) { return false; }
+    virtual bool get_userdata(bool derivatives, ustringhash name, TypeDesc type,
+                              ShaderGlobals* sg, void* val);
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
-    virtual TextureHandle * get_texture_handle (ustring filename,
-                                                ShadingContext *context);
+    virtual TextureHandle* get_texture_handle(ustringhash filename,
+                                              ShadingContext* context);
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
-    virtual bool good (TextureHandle *texture_handle);
+    virtual bool good(TextureHandle* texture_handle);
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is udim
-    virtual bool is_udim (TextureHandle *texture_handle);
+    virtual bool is_udim(TextureHandle* texture_handle);
 
     /// Filtered 2D texture lookup for a single point.
     ///
@@ -224,13 +226,13 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual bool texture (ustring filename, TextureHandle *texture_handle,
-                          TexturePerthread *texture_thread_info,
-                          TextureOpt &options, ShaderGlobals *sg,
-                          float s, float t, float dsdx, float dtdx,
-                          float dsdy, float dtdy, int nchannels,
-                          float *result, float *dresultds, float *dresultdt,
-                          ustring *errormessage);
+    virtual bool texture(ustringhash filename, TextureHandle* texture_handle,
+                         TexturePerthread* texture_thread_info,
+                         TextureOpt& options, ShaderGlobals* sg, float s,
+                         float t, float dsdx, float dtdx, float dsdy,
+                         float dtdy, int nchannels, float* result,
+                         float* dresultds, float* dresultdt,
+                         ustringhash* errormessage);
 
     /// Filtered 3D texture lookup for a single point.
     ///
@@ -257,14 +259,13 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
-                            TexturePerthread *texture_thread_info,
-                            TextureOpt &options, ShaderGlobals *sg,
-                            const Vec3 &P, const Vec3 &dPdx, const Vec3 &dPdy,
-                            const Vec3 &dPdz, int nchannels,
-                            float *result, float *dresultds,
-                            float *dresultdt, float *dresultdr,
-                            ustring *errormessage);
+    virtual bool texture3d(ustringhash filename, TextureHandle* texture_handle,
+                           TexturePerthread* texture_thread_info,
+                           TextureOpt& options, ShaderGlobals* sg,
+                           const Vec3& P, const Vec3& dPdx, const Vec3& dPdy,
+                           const Vec3& dPdz, int nchannels, float* result,
+                           float* dresultds, float* dresultdt, float* dresultdr,
+                           ustringhash* errormessage);
 
     /// Filtered environment lookup for a single point.
     ///
@@ -288,13 +289,13 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual bool environment (ustring filename, TextureHandle *texture_handle,
-                              TexturePerthread *texture_thread_info,
-                              TextureOpt &options, ShaderGlobals *sg,
-                              const Vec3 &R, const Vec3 &dRdx, const Vec3 &dRdy,
-                              int nchannels, float *result,
-                              float *dresultds, float *dresultdt,
-                              ustring *errormessage);
+    virtual bool environment(ustringhash filename,
+                             TextureHandle* texture_handle,
+                             TexturePerthread* texture_thread_info,
+                             TextureOpt& options, ShaderGlobals* sg,
+                             const Vec3& R, const Vec3& dRdx, const Vec3& dRdy,
+                             int nchannels, float* result, float* dresultds,
+                             float* dresultdt, ustringhash* errormessage);
 
     /// Get information about the given texture.  Return true if found
     /// and the data has been put in *data.  Return false if the texture
@@ -315,24 +316,20 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual bool get_texture_info (ustring filename,
-                                   TextureHandle *texture_handle,
-                                   TexturePerthread *texture_thread_info,
-                                   ShadingContext *shading_context,
-                                   int subimage,
-                                   ustring dataname, TypeDesc datatype,
-                                   void *data,
-                                   ustring *errormessage);
+    virtual bool get_texture_info(ustringhash filename,
+                                  TextureHandle* texture_handle,
+                                  TexturePerthread* texture_thread_info,
+                                  ShadingContext* shading_context, int subimage,
+                                  ustringhash dataname, TypeDesc datatype,
+                                  void* data, ustringhash* errormessage);
 
-    virtual bool get_texture_info (ustring filename,
-                                   TextureHandle *texture_handle,
-                                   float s, float t,
-                                   TexturePerthread *texture_thread_info,
-                                   ShadingContext *shading_context,
-                                   int subimage,
-                                   ustring dataname, TypeDesc datatype,
-                                   void *data,
-                                   ustring *errormessage);
+    virtual bool get_texture_info(ustringhash filename,
+                                  TextureHandle* texture_handle, float s,
+                                  float t,
+                                  TexturePerthread* texture_thread_info,
+                                  ShadingContext* shading_context, int subimage,
+                                  ustringhash dataname, TypeDesc datatype,
+                                  void* data, ustringhash* errormessage);
 
 
     /// Lookup nearest points in a point cloud. It will search for
@@ -343,40 +340,38 @@ public:
     /// derivatives will be computed for distances (when provided).
     ///
     /// Return the number of points found, always < max_points
-    virtual int pointcloud_search (ShaderGlobals *sg,
-                                   ustring filename, const OSL::Vec3 &center,
-                                   float radius, int max_points, bool sort,
-                                   size_t *out_indices,
-                                   float *out_distances, int derivs_offset);
+    virtual int pointcloud_search(ShaderGlobals* sg, ustringhash filename,
+                                  const OSL::Vec3& center, float radius,
+                                  int max_points, bool sort,
+                                  size_t* out_indices, float* out_distances,
+                                  int derivs_offset);
 
     /// Retrieve an attribute for an index list. The result is another array
     /// of the requested type stored in out_data.
     ///
     /// Return 1 if the attribute is found, 0 otherwise.
-    virtual int pointcloud_get (ShaderGlobals *sg,
-                                ustring filename, size_t *indices, int count,
-                                ustring attr_name, TypeDesc attr_type,
-                                void *out_data);
+    virtual int pointcloud_get(ShaderGlobals* sg, ustringhash filename,
+                               size_t* indices, int count,
+                               ustringhash attr_name, TypeDesc attr_type,
+                               void* out_data);
 
     /// Write a point to the named pointcloud, which will be saved
     /// at the end of the frame.  Return true if everything is ok,
     /// false if there was an error.
-    virtual bool pointcloud_write (ShaderGlobals *sg,
-                                   ustring filename, const OSL::Vec3 &pos,
-                                   int nattribs, const ustring *names,
-                                   const TypeDesc *types,
-                                   const void **data);
+    virtual bool pointcloud_write(ShaderGlobals* sg, ustringhash filename,
+                                  const OSL::Vec3& pos, int nattribs,
+                                  const ustringrep* names,
+                                  const TypeDesc* types, const void** data);
 
     /// Options for the trace call.
     struct TraceOpt {
-        float mindist;    ///< ignore hits closer than this
-        float maxdist;    ///< ignore hits farther than this
-        bool shade;       ///< whether to shade what is hit
-        ustring traceset; ///< named trace set
-        TraceOpt () : mindist(0.0f), maxdist(1.0e30), shade(false) { }
+        float mindist;        ///< ignore hits closer than this
+        float maxdist;        ///< ignore hits farther than this
+        bool shade;           ///< whether to shade what is hit
+        ustringrep traceset;  ///< named trace set
+        TraceOpt() : mindist(0.0f), maxdist(1.0e30), shade(false) {}
 
-        enum class LLVMMemberIndex
-        {
+        enum class LLVMMemberIndex {
             mindist = 0,
             maxdist,
             shade,
@@ -387,32 +382,28 @@ public:
 
     /// Immediately trace a ray from P in the direction R.  Return true
     /// if anything hit, otherwise false.
-    virtual bool trace (TraceOpt &options, ShaderGlobals *sg,
-                        const OSL::Vec3 &P, const OSL::Vec3 &dPdx,
-                        const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
-                        const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy) {
-        return false;
-    }
+    virtual bool trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,
+                       const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
+                       const OSL::Vec3& R, const OSL::Vec3& dRdx,
+                       const OSL::Vec3& dRdy);
 
     /// Get the named message from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  This is only
     /// called for "sourced" messages, not ordinary intra-group messages.
-    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name,
-                             TypeDesc type, void *val, bool derivatives) {
-        return false;
-    }
+    virtual bool getmessage(ShaderGlobals* sg, ustringhash source,
+                            ustringhash name, TypeDesc type, void* val,
+                            bool derivatives);
 
     /// Return a pointer to the texture system (if available).
-    virtual TextureSystem *texturesys () const;
+    virtual TextureSystem* texturesys() const;
 
-    virtual uint64_t register_global (const std::string& var_name,
-                                      uint64_t           value)
+    virtual uint64_t register_global(const std::string& var_name,
+                                     uint64_t value)
     {
         return 0;
     }
 
-    virtual bool fetch_global (const std::string& var_name,
-                               uint64_t*          value)
+    virtual bool fetch_global(const std::string& var_name, uint64_t* value)
     {
         return false;
     }
@@ -426,19 +417,25 @@ public:
         Vec3 direction;
         float bandwidth;
         float impulses;
-        NoiseOpt () : anisotropic(0), do_filter(true),
-            direction(1.0f,0.0f,0.0f), bandwidth(1.0f), impulses(16.0f) { }
+        NoiseOpt()
+            : anisotropic(0)
+            , do_filter(true)
+            , direction(1.0f, 0.0f, 0.0f)
+            , bandwidth(1.0f)
+            , impulses(16.0f)
+        {
+        }
     };
 
     /// A renderer may choose to support batched execution by providing pointers
     /// to objects satisfying the BatchedRendererServices<WidthOf<#>> interface
     /// for specific batch sizes.
     /// Unless overridden, a nullptr is returned.
-    virtual BatchedRendererServices<16> * batched(WidthOf<16>);
-    virtual BatchedRendererServices<8> * batched(WidthOf<8>);
+    virtual BatchedRendererServices<16>* batched(WidthOf<16>);
+    virtual BatchedRendererServices<8>* batched(WidthOf<8>);
 
 protected:
-    TextureSystem *m_texturesys;   // A place to hold a TextureSystem
+    TextureSystem* m_texturesys;  // A place to hold a TextureSystem
 };
 
 

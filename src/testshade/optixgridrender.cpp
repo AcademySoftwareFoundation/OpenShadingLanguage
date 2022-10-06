@@ -684,16 +684,16 @@ OptixGridRenderer::good(TextureHandle* handle OSL_MAYBE_UNUSED)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-OptixGridRenderer::get_texture_handle(ustring filename OSL_MAYBE_UNUSED,
-                                      ShadingContext* shading_context
-                                          OSL_MAYBE_UNUSED)
+OptixGridRenderer::get_texture_handle(ustringhash filename,
+                                      ShadingContext* /*shading_context*/)
 {
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
         // Open image
         OIIO::ImageBuf image;
-        if (!image.init_spec(filename, 0, 0)) {
-            errhandler().errorfmt("Could not load: {}", filename);
+        if (!image.init_spec(ustring_from(filename), 0, 0)) {
+            errhandler().errorfmt("Could not load: {} (hash {})",
+                                  ustring_from(filename), filename);
             return (TextureHandle*)nullptr;
         }
 

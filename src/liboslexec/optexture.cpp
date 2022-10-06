@@ -217,7 +217,7 @@ OSL_SHADEOP int
 osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
             float t, float dsdx, float dtdx, float dsdy, float dtdy, int chans,
             void* result, void* dresultdx, void* dresultdy, void* alpha,
-            void* dalphadx, void* dalphady, ustring* errormessage)
+            void* dalphadx, void* dalphady, ustringrep* errormessage)
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     TextureOpt* opt   = (TextureOpt*)opt_;
@@ -225,11 +225,12 @@ osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
+    ustringhash em;
     bool ok = sg->renderer->texture(
-        USTR(name), (TextureSystem::TextureHandle*)handle,
+        USTR(name).uhash(), (TextureSystem::TextureHandle*)handle,
         sg->context->texture_thread_info(), *opt, sg, s, t, dsdx, dtdx, dsdy,
         dtdy, 4, (float*)&result_simd, derivs ? (float*)&dresultds_simd : NULL,
-        derivs ? (float*)&dresultdt_simd : NULL, errormessage);
+        derivs ? (float*)&dresultdt_simd : NULL, errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = result_simd[i];
@@ -256,8 +257,9 @@ osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
         }
     }
 
-    if (ok && errormessage)
-        *errormessage = Strings::_emptystring_;
+    if (errormessage)
+        *errormessage = ok ? ustringrep_from(Strings::_emptystring_)
+                           : ustringrep_from(em);
     return ok;
 }
 
@@ -267,7 +269,7 @@ OSL_SHADEOP int
 osl_texture3d(void* sg_, const char* name, void* handle, void* opt_, void* P_,
               void* dPdx_, void* dPdy_, void* dPdz_, int chans, void* result,
               void* dresultdx, void* dresultdy, void* alpha, void* dalphadx,
-              void* dalphady, ustring* errormessage)
+              void* dalphady, ustringrep* errormessage)
 {
     const Vec3& P(*(Vec3*)P_);
     const Vec3& dPdx(*(Vec3*)dPdx_);
@@ -283,12 +285,14 @@ osl_texture3d(void* sg_, const char* name, void* handle, void* opt_, void* P_,
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd,
         dresultdr_simd;
+    ustringhash em;
     bool ok = sg->renderer->texture3d(
-        USTR(name), (TextureSystem::TextureHandle*)handle,
+        USTR(name).uhash(), (TextureSystem::TextureHandle*)handle,
         sg->context->texture_thread_info(), *opt, sg, P, dPdx, dPdy, dPdz, 4,
         (float*)&result_simd, derivs ? (float*)&dresultds_simd : nullptr,
         derivs ? (float*)&dresultdt_simd : nullptr,
-        derivs ? (float*)&dresultdr_simd : nullptr, errormessage);
+        derivs ? (float*)&dresultdr_simd : nullptr,
+        errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = result_simd[i];
@@ -315,8 +319,9 @@ osl_texture3d(void* sg_, const char* name, void* handle, void* opt_, void* P_,
         }
     }
 
-    if (ok && errormessage)
-        *errormessage = Strings::_emptystring_;
+    if (errormessage)
+        *errormessage = ok ? ustringrep_from(Strings::_emptystring_)
+                           : ustringrep_from(em);
     return ok;
 }
 
@@ -326,7 +331,7 @@ OSL_SHADEOP int
 osl_environment(void* sg_, const char* name, void* handle, void* opt_, void* R_,
                 void* dRdx_, void* dRdy_, int chans, void* result,
                 void* dresultdx, void* dresultdy, void* alpha, void* dalphadx,
-                void* dalphady, ustring* errormessage)
+                void* dalphady, ustringrep* errormessage)
 {
     const Vec3& R(*(Vec3*)R_);
     const Vec3& dRdx(*(Vec3*)dRdx_);
@@ -336,12 +341,13 @@ osl_environment(void* sg_, const char* name, void* handle, void* opt_, void* R_,
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 local_result;
-    bool ok = sg->renderer->environment(USTR(name),
+    ustringhash em;
+    bool ok = sg->renderer->environment(USTR(name).uhash(),
                                         (TextureSystem::TextureHandle*)handle,
                                         sg->context->texture_thread_info(),
                                         *opt, sg, R, dRdx, dRdy, 4,
                                         (float*)&local_result, NULL, NULL,
-                                        errormessage);
+                                        errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = local_result[i];
@@ -368,8 +374,9 @@ osl_environment(void* sg_, const char* name, void* handle, void* opt_, void* R_,
             ((float*)dalphady)[0] = 0.0f;
     }
 
-    if (ok && errormessage)
-        *errormessage = Strings::_emptystring_;
+    if (errormessage)
+        *errormessage = ok ? ustringrep_from(Strings::_emptystring_)
+                           : ustringrep_from(em);
     return ok;
 }
 
@@ -378,7 +385,7 @@ osl_environment(void* sg_, const char* name, void* handle, void* opt_, void* R_,
 OSL_SHADEOP int
 osl_get_textureinfo(void* sg_, const char* name, void* handle, void* dataname,
                     int type, int arraylen, int aggregate, void* data,
-                    ustring* errormessage)
+                    ustringrep* errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -388,10 +395,15 @@ osl_get_textureinfo(void* sg_, const char* name, void* handle, void* dataname,
 
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
 
-    return sg->renderer->get_texture_info(
-        USTR(name), (RendererServices::TextureHandle*)handle,
+    ustringhash em;
+    bool ok = sg->renderer->get_texture_info(
+        USTR(name).uhash(), (RendererServices::TextureHandle*)handle,
         sg->context->texture_thread_info(), sg->context, 0 /*FIXME-ptex*/,
-        USTR(dataname), typedesc, data, errormessage);
+        USTR(dataname).uhash(), typedesc, data, errormessage ? &em : nullptr);
+    if (errormessage)
+        *errormessage = ok ? ustringrep_from(Strings::_emptystring_)
+                           : ustringrep_from(em);
+    return ok;
 }
 
 
@@ -399,7 +411,7 @@ osl_get_textureinfo(void* sg_, const char* name, void* handle, void* dataname,
 OSL_SHADEOP int
 osl_get_textureinfo_st(void* sg_, const char* name, void* handle, float s,
                        float t, void* dataname, int type, int arraylen,
-                       int aggregate, void* data, ustring* errormessage)
+                       int aggregate, void* data, ustringrep* errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -409,10 +421,15 @@ osl_get_textureinfo_st(void* sg_, const char* name, void* handle, float s,
 
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
 
-    return sg->renderer->get_texture_info(
-        USTR(name), (RendererServices::TextureHandle*)handle, s, t,
+    ustringhash em;
+    bool ok = sg->renderer->get_texture_info(
+        USTR(name).uhash(), (RendererServices::TextureHandle*)handle, s, t,
         sg->context->texture_thread_info(), sg->context, 0 /*FIXME-ptex*/,
-        USTR(dataname), typedesc, data, errormessage);
+        USTR(dataname).uhash(), typedesc, data, errormessage ? &em : nullptr);
+    if (errormessage)
+        *errormessage = ok ? ustringrep_from(Strings::_emptystring_)
+                           : ustringrep_from(em);
+    return ok;
 }
 
 

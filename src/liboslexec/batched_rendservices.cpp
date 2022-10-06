@@ -41,7 +41,7 @@ template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::get_matrix(BatchedShaderGlobals* bsg,
                                             Masked<Matrix44> wresult,
-                                            Wide<const ustring> wfrom,
+                                            Wide<const ustringhash> wfrom,
                                             Wide<const float> wtime)
 {
     OSL_ASSERT(
@@ -70,7 +70,7 @@ template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
                                                     Masked<Matrix44> wresult,
-                                                    ustring to,
+                                                    ustringhash to,
                                                     Wide<const float> wtime)
 {
     OSL_ASSERT(
@@ -85,7 +85,7 @@ template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::get_inverse_matrix(BatchedShaderGlobals* bsg,
                                                     Masked<Matrix44> wresult,
-                                                    Wide<const ustring> wto,
+                                                    Wide<const ustringhash> wto,
                                                     Wide<const float> wtime)
 {
     OSL_ASSERT(
@@ -109,13 +109,13 @@ template<int WidthT>
 TextureSystem::TextureHandle*
 BatchedRendererServices<WidthT>::resolve_udim_uniform(
     BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-    ustring filename, TextureSystem::TextureHandle* texture_handle, float S,
+    ustringhash filename, TextureSystem::TextureHandle* texture_handle, float S,
     float T)
 {
     if (!texture_thread_info)
         texture_thread_info = bsg->uniform.context->texture_thread_info();
     if (!texture_handle)
-        texture_handle = texturesys()->get_texture_handle(filename,
+        texture_handle = texturesys()->get_texture_handle(ustring_from(filename),
                                                           texture_thread_info);
     if (texturesys()->is_udim(texture_handle)) {
         // Newer versions of the TextureSystem interface are able to determine the
@@ -141,14 +141,14 @@ template<int WidthT>
 void
 BatchedRendererServices<WidthT>::resolve_udim(
     BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-    ustring filename, TextureSystem::TextureHandle* texture_handle,
+    ustringhash filename, TextureSystem::TextureHandle* texture_handle,
     Wide<const float> wS, Wide<const float> wT,
     Masked<TextureSystem::TextureHandle*> wresult)
 {
     if (!texture_thread_info)
         texture_thread_info = bsg->uniform.context->texture_thread_info();
     if (!texture_handle)
-        texture_handle = texturesys()->get_texture_handle(filename,
+        texture_handle = texturesys()->get_texture_handle(ustring_from(filename),
                                                           texture_thread_info);
     if (texturesys()->is_udim(texture_handle)) {
         // Newer versions of the TextureSystem interface are able to determine the
@@ -176,17 +176,17 @@ template<int WidthT>
 bool
 BatchedRendererServices<WidthT>::get_texture_info_uniform(
     BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-    ustring filename, TextureSystem::TextureHandle* texture_handle,
-    int subimage, ustring dataname, RefData val)
+    ustringhash filename, TextureSystem::TextureHandle* texture_handle,
+    int subimage, ustringhash dataname, RefData val)
 {
     if (!texture_thread_info)
         texture_thread_info = bsg->uniform.context->texture_thread_info();
     if (!texture_handle)
-        texture_handle = texturesys()->get_texture_handle(filename,
+        texture_handle = texturesys()->get_texture_handle(ustring_from(filename),
                                                           texture_thread_info);
     bool status = texturesys()->get_texture_info(texture_handle, NULL, subimage,
-                                                 dataname, val.type(),
-                                                 val.ptr());
+                                                 ustring_from(dataname),
+                                                 val.type(), val.ptr());
 
     if (!status) {
         std::string err = texturesys()->geterror();
@@ -203,7 +203,7 @@ BatchedRendererServices<WidthT>::get_texture_info_uniform(
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::texture(
-    ustring filename, TextureSystem::TextureHandle* texture_handle,
+    ustringhash filename, TextureSystem::TextureHandle* texture_handle,
     TextureSystem::Perthread* texture_thread_info,
     const BatchedTextureOptions& options, BatchedShaderGlobals* bsg,
     Wide<const float> ws, Wide<const float> wt, Wide<const float> wdsdx,
@@ -221,7 +221,7 @@ BatchedRendererServices<WidthT>::texture(
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::texture3d(
-    ustring filename, TextureSystem::TextureHandle* texture_handle,
+    ustringhash filename, TextureSystem::TextureHandle* texture_handle,
     TextureSystem::Perthread* texture_thread_info,
     const BatchedTextureOptions& options, BatchedShaderGlobals* bsg,
     Wide<const Vec3> wP, Wide<const Vec3> wdPdx, Wide<const Vec3> wdPdy,
@@ -238,7 +238,7 @@ BatchedRendererServices<WidthT>::texture3d(
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::environment(
-    ustring filename, TextureSystem::TextureHandle* texture_handle,
+    ustringhash filename, TextureSystem::TextureHandle* texture_handle,
     TextureSystem::Perthread* texture_thread_info,
     const BatchedTextureOptions& options, BatchedShaderGlobals* bsg,
     Wide<const Vec3> wR, Wide<const Vec3> wdRdx, Wide<const Vec3> wdRdy,
@@ -255,7 +255,7 @@ BatchedRendererServices<WidthT>::environment(
 template<int WidthT>
 void
 BatchedRendererServices<WidthT>::pointcloud_search(
-    BatchedShaderGlobals* bsg, ustring filename, const void* wcenter,
+    BatchedShaderGlobals* bsg, ustringhash filename, const void* wcenter,
     Wide<const float> wradius, int max_points, bool sort,
     PointCloudSearchResults& results)
 {
@@ -269,8 +269,8 @@ BatchedRendererServices<WidthT>::pointcloud_search(
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::pointcloud_get(
-    BatchedShaderGlobals* bsg, ustring filename, Wide<const int[]> windices,
-    Wide<const int> wnum_points, ustring attr_name, MaskedData wout_data)
+    BatchedShaderGlobals* bsg, ustringhash filename, Wide<const int[]> windices,
+    Wide<const int> wnum_points, ustringhash attr_name, MaskedData wout_data)
 {
     OSL_ASSERT(
         0
@@ -283,7 +283,7 @@ BatchedRendererServices<WidthT>::pointcloud_get(
 template<int WidthT>
 Mask<WidthT>
 BatchedRendererServices<WidthT>::pointcloud_write(
-    BatchedShaderGlobals* bsg, ustring filename, Wide<const OSL::Vec3> wpos,
+    BatchedShaderGlobals* bsg, ustringhash filename, Wide<const OSL::Vec3> wpos,
     int nattribs, const ustring* attr_names, const TypeDesc* attr_types,
     const void** pointers_to_wide_attr_value, Mask mask)
 {
@@ -312,8 +312,9 @@ BatchedRendererServices<WidthT>::trace(
 template<int WidthT>
 void
 BatchedRendererServices<WidthT>::getmessage(BatchedShaderGlobals* bsg,
-                                            Masked<int> wresult, ustring source,
-                                            ustring name, MaskedData wval)
+                                            Masked<int> wresult,
+                                            ustringhash source,
+                                            ustringhash name, MaskedData wval)
 {
     // Currently this code path should only be followed when source == "trace"
     OSL_DASSERT(wresult.mask() == wval.mask());

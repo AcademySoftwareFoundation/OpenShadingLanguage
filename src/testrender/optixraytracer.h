@@ -28,7 +28,7 @@ public:
     uint64_t register_global(const std::string& str, uint64_t value);
     bool fetch_global(const std::string& str, uint64_t* value);
 
-    virtual int supports(string_view feature) const
+    int supports(string_view feature) const override
     {
         if (feature == "OptiX")
             return true;
@@ -38,24 +38,24 @@ public:
     std::string load_ptx_file(string_view filename);
     bool synch_attributes();
 
-    virtual bool init_optix_context(int xres, int yres);
-    virtual bool make_optix_materials();
-    virtual bool finalize_scene();
-    virtual void prepare_render();
-    virtual void warmup();
-    virtual void render(int xres, int yres);
-    virtual void finalize_pixel_buffer();
-    virtual void clear();
+    bool init_optix_context(int xres, int yres);
+    bool make_optix_materials();
+    bool finalize_scene();
+    void prepare_render() override;
+    void warmup() override;
+    void render(int xres, int yres) override;
+    void finalize_pixel_buffer() override;
+    void clear() override;
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
-    virtual bool good(TextureHandle* handle);
+    bool good(TextureHandle* handle) override;
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
-    virtual TextureHandle* get_texture_handle(ustring filename,
-                                              ShadingContext* shading_context);
+    TextureHandle* get_texture_handle(ustringhash filename,
+                                      ShadingContext* shading_context) override;
 
     // Easy way to do Optix calls
     optix::Context& optix_ctx() { return m_optix_ctx; }
@@ -93,8 +93,8 @@ private:
                          OptixProgramGroup* pg);
 
     std::string m_materials_ptx;
-    std::unordered_map<OIIO::ustring, optix::TextureSampler> m_samplers;
-    std::unordered_map<OIIO::ustring, uint64_t> m_globals_map;
+    std::unordered_map<ustringhash, optix::TextureSampler> m_samplers;
+    std::unordered_map<ustringhash, uint64_t> m_globals_map;
 };
 
 

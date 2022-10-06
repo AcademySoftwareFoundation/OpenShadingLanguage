@@ -37,25 +37,26 @@ public:
     }
 
     Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                    ustring from, Wide<const float> time) override;
+                    ustringhash from, Wide<const float> time) override;
     Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                    Wide<const ustring> from, Wide<const float> time) override;
+                    Wide<const ustringhash> from,
+                    Wide<const float> time) override;
     bool is_overridden_get_matrix_WmWsWf() const override { return true; }
 
 private:
     template<typename RAccessorT>
     OSL_FORCEINLINE bool impl_get_inverse_matrix(RAccessorT& result,
-                                                 ustring to) const;
+                                                 ustringhash to) const;
 
 public:
     Mask get_inverse_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                            ustring to, Wide<const float> time) override;
+                            ustringhash to, Wide<const float> time) override;
     bool is_overridden_get_inverse_matrix_WmsWf() const override
     {
         return true;
     }
     Mask get_inverse_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                            Wide<const ustring> to,
+                            Wide<const ustringhash> to,
                             Wide<const float> time) override;
     bool is_overridden_get_inverse_matrix_WmWsWf() const override
     {
@@ -65,21 +66,22 @@ public:
 
     bool is_attribute_uniform(ustring object, ustring name) override;
 
-    Mask get_array_attribute(BatchedShaderGlobals* bsg, ustring object,
-                             ustring name, int index, MaskedData amd) override;
+    Mask get_array_attribute(BatchedShaderGlobals* bsg, ustringhash object,
+                             ustringhash name, int index,
+                             MaskedData amd) override;
 
-    Mask get_attribute(BatchedShaderGlobals* bsg, ustring object, ustring name,
-                       MaskedData amd) override;
+    Mask get_attribute(BatchedShaderGlobals* bsg, ustringhash object,
+                       ustringhash name, MaskedData amd) override;
 
 
-    bool get_array_attribute_uniform(BatchedShaderGlobals* bsg, ustring object,
-                                     ustring name, int index,
-                                     RefData val) override;
+    bool get_array_attribute_uniform(BatchedShaderGlobals* bsg,
+                                     ustringhash object, ustringhash name,
+                                     int index, RefData val) override;
 
-    bool get_attribute_uniform(BatchedShaderGlobals* bsg, ustring object,
-                               ustring name, RefData val) override;
+    bool get_attribute_uniform(BatchedShaderGlobals* bsg, ustringhash object,
+                               ustringhash name, RefData val) override;
 
-    Mask get_userdata(ustring name, BatchedShaderGlobals* bsg,
+    Mask get_userdata(ustringhash name, BatchedShaderGlobals* bsg,
                       MaskedData val) override;
 
     bool is_overridden_texture() const override { return false; }
@@ -95,7 +97,8 @@ public:
                Wide<const Vec3> dRdy) override;
 
     void getmessage(BatchedShaderGlobals* bsg, Masked<int> result,
-                    ustring source, ustring name, MaskedData val) override;
+                    ustringhash source, ustringhash name,
+                    MaskedData val) override;
 
 private:
     SimpleRenderer& m_sr;
@@ -107,46 +110,56 @@ private:
     // imagine this to be fairly quick, but for a performance-critical
     // renderer, we would encourage benchmarking various methods and
     // alternate data structures.
-    typedef bool (BatchedSimpleRenderer::*VaryingAttrGetter)(ustring object,
-                                                             ustring name,
+    typedef bool (BatchedSimpleRenderer::*VaryingAttrGetter)(ustringhash object,
+                                                             ustringhash name,
                                                              MaskedData val);
-    typedef std::unordered_map<ustring, VaryingAttrGetter> VaryingAttrGetterMap;
+    typedef std::unordered_map<ustringhash, VaryingAttrGetter>
+        VaryingAttrGetterMap;
     VaryingAttrGetterMap m_varying_attr_getters;
 
-    typedef bool (BatchedSimpleRenderer::*UniformAttrGetter)(ustring object,
-                                                             ustring name,
+    typedef bool (BatchedSimpleRenderer::*UniformAttrGetter)(ustringhash object,
+                                                             ustringhash name,
                                                              RefData val);
-    typedef std::unordered_map<ustring, UniformAttrGetter> UniformAttrGetterMap;
+    typedef std::unordered_map<ustringhash, UniformAttrGetter>
+        UniformAttrGetterMap;
     UniformAttrGetterMap m_uniform_attr_getters;
 
     // Attribute getters
     template<typename RefOrMaskedT>
-    bool get_osl_version(ustring object, ustring name, RefOrMaskedT data);
+    bool get_osl_version(ustringhash object, ustringhash name,
+                         RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_resolution(ustring object, ustring name, RefOrMaskedT data);
+    bool get_camera_resolution(ustringhash object, ustringhash name,
+                               RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_projection(ustring object, ustring name, RefOrMaskedT data);
+    bool get_camera_projection(ustringhash object, ustringhash name,
+                               RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_fov(ustring object, ustring name, RefOrMaskedT data);
+    bool get_camera_fov(ustringhash object, ustringhash name,
+                        RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_pixelaspect(ustring object, ustring name,
+    bool get_camera_pixelaspect(ustringhash object, ustringhash name,
                                 RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_clip(ustring object, ustring name, RefOrMaskedT data);
+    bool get_camera_clip(ustringhash object, ustringhash name,
+                         RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_clip_near(ustring object, ustring name, RefOrMaskedT data);
+    bool get_camera_clip_near(ustringhash object, ustringhash name,
+                              RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_clip_far(ustring object, ustring name, RefOrMaskedT data);
+    bool get_camera_clip_far(ustringhash object, ustringhash name,
+                             RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_shutter(ustring object, ustring name, RefOrMaskedT data);
+    bool get_camera_shutter(ustringhash object, ustringhash name,
+                            RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_shutter_open(ustring object, ustring name,
+    bool get_camera_shutter_open(ustringhash object, ustringhash name,
                                  RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_shutter_close(ustring object, ustring name,
+    bool get_camera_shutter_close(ustringhash object, ustringhash name,
                                   RefOrMaskedT data);
     template<typename RefOrMaskedT>
-    bool get_camera_screen_window(ustring object, ustring name,
+    bool get_camera_screen_window(ustringhash object, ustringhash name,
                                   RefOrMaskedT data);
 };
 

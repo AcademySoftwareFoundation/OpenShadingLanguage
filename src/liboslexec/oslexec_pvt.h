@@ -33,6 +33,7 @@
 #include <OpenImageIO/ustring.h>
 
 #include "osl_pvt.h"
+
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/genclosure.h>
@@ -42,6 +43,8 @@
 #include <OSL/oslexec.h>
 #include <OSL/rendererservices.h>
 #include <OSL/shaderglobals.h>
+
+#include "shading_state_uniform.h"
 #include "constantpool.h"
 #include "opcolor.h"
 
@@ -615,7 +618,10 @@ public:
     bool lockgeom_default() const { return m_lockgeom_default; }
     bool strict_messages() const { return m_strict_messages; }
     bool range_checking() const { return m_range_checking; }
-    bool unknown_coordsys_error() const { return m_unknown_coordsys_error; }
+    bool unknown_coordsys_error() const
+    {
+        return m_shading_state_uniform.m_unknown_coordsys_error;
+    }
     bool connection_error() const { return m_connection_error; }
     bool relaxed_param_typecheck() const { return m_relaxed_param_typecheck; }
     int optimize() const { return m_optimize; }
@@ -640,7 +646,10 @@ public:
     bool no_pointcloud() const { return m_no_pointcloud; }
     bool force_derivs() const { return m_force_derivs; }
     bool allow_shader_replacement() const { return m_allow_shader_replacement; }
-    ustring commonspace_synonym() const { return m_commonspace_synonym; }
+    ustring commonspace_synonym() const
+    {
+        return m_shading_state_uniform.m_commonspace_synonym;
+    }
 
     bool llvm_jit_fma() const { return m_llvm_jit_fma; }
     ustring llvm_jit_target() const { return m_llvm_jit_target; }
@@ -719,7 +728,7 @@ public:
 
     void count_noise(int number = 1) { m_stat_noise_calls += number; }
 
-    ColorSystem& colorsystem() { return m_colorsystem; }
+    ColorSystem& colorsystem() { return m_shading_state_uniform.m_colorsystem; }
 
     std::shared_ptr<OIIO::ColorConfig> colorconfig();
 
@@ -833,10 +842,9 @@ private:
     bool m_strict_messages;       ///< Strict checking of message passing usage?
     bool m_error_repeats;         ///< Allow repeats of identical err/warn?
     bool m_range_checking;        ///< Range check arrays & components?
-    bool m_unknown_coordsys_error;  ///< Error to use unknown xform name?
-    bool m_connection_error;        ///< Error for ConnectShaders to fail?
-    bool m_greedyjit;               ///< JIT as much as we can?
-    bool m_countlayerexecs;         ///< Count number of layer execs?
+    bool m_connection_error;      ///< Error for ConnectShaders to fail?
+    bool m_greedyjit;             ///< JIT as much as we can?
+    bool m_countlayerexecs;       ///< Count number of layer execs?
     bool m_relaxed_param_typecheck;  ///< Allow parameters to be set from isomorphic types (same data layout)
     int m_max_warnings_per_thread;  ///< How many warnings to display per thread before giving up?
     int m_profile;                 ///< Level of profiling of shader execution
@@ -885,7 +893,6 @@ private:
     std::string m_library_searchpath;            ///< Library search path
     std::vector<std::string>
         m_library_searchpath_dirs;            ///< All library searchpath dirs
-    ustring m_commonspace_synonym;            ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;          ///< Names of ray types
     std::vector<ustring> m_renderer_outputs;  ///< Names of renderer outputs
     std::vector<SymLocationDesc> m_symlocs;
@@ -901,8 +908,10 @@ private:
     int m_gpu_opt_error;              ///< Error on inability to optimize
                                       ///<   away things that can't GPU.
 
-    ustring m_colorspace;       ///< What RGB colors mean
-    ColorSystem m_colorsystem;  ///< Data for current colorspace
+    ustring m_colorspace;  ///< What RGB colors mean
+
+    ShadingStateUniform m_shading_state_uniform;
+
     std::shared_ptr<OIIO::ColorConfig>
         m_colorconfig;  ///< OIIO/OCIO color configuration
 

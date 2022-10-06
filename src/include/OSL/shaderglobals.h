@@ -17,6 +17,9 @@ class RendererServices;
 /// coordinate transformation.
 typedef const void* TransformationPtr;
 
+/// Type for an opaque pointer to whatever the Shading System uses to represent
+/// Uniform State.
+typedef const void* OpaqueShadingStateUniformPtr;
 
 
 /// The ShaderGlobals structure represents the state describing a particular
@@ -83,6 +86,7 @@ struct ShaderGlobals {
     /// Back-pointer to the ShadingContext (set and used by OSL itself --
     /// renderers shouldn't mess with this at all).
     ShadingContext* context;
+    OpaqueShadingStateUniformPtr shadingStateUniform;
 
     /// Pointer to the RendererServices object. This is how OSL finds its
     /// way back to the renderer for callbacks.

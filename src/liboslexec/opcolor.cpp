@@ -265,9 +265,11 @@ ColorSystem::error(StringParam src, StringParam dst, Context context) const
 }
 
 static inline const ColorSystem&
-op_color_colorsystem(void* sg)
+op_color_colorsystem(void* sg_)
 {
-    return ((ShaderGlobals*)sg)->context->shadingsys().colorsystem();
+    ShaderGlobals* sg        = (ShaderGlobals*)sg_;
+    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
+    return ssu->m_colorsystem;
 }
 
 static inline OSL::ShadingContext*

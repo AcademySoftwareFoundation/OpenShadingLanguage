@@ -216,6 +216,7 @@ BackendLLVM::llvm_type_sg()
     sg_types.push_back(vp);  // opaque tracedata*
     sg_types.push_back(vp);  // opaque objdata*
     sg_types.push_back(vp);  // ShadingContext*
+    sg_types.push_back(vp);  // OpaqueShadingStateUniformPtr
     sg_types.push_back(vp);  // RendererServices*
     sg_types.push_back(vp);  // object2common
     sg_types.push_back(vp);  // shader2common

@@ -1002,7 +1002,6 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_strict_messages(true)
     , m_error_repeats(false)
     , m_range_checking(true)
-    , m_unknown_coordsys_error(true)
     , m_connection_error(true)
     , m_greedyjit(false)
     , m_countlayerexecs(false)
@@ -1049,7 +1048,6 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_llvm_profiling_events(0)
     , m_llvm_output_bitcode(0)
     , m_llvm_dumpasm(0)
-    , m_commonspace_synonym("world")
     , m_max_local_mem_KB(2048)
     , m_compile_report(false)
     , m_buffer_printf(true)
@@ -1071,6 +1069,9 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_stat_inst_merge_time(0)
     , m_stat_max_llvm_local_mem(0)
 {
+    m_shading_state_uniform.m_commonspace_synonym    = ustring("world");
+    m_shading_state_uniform.m_unknown_coordsys_error = true;
+
     m_stat_shaders_loaded                    = 0;
     m_stat_shaders_requested                 = 0;
     m_stat_groups                            = 0;
@@ -1551,7 +1552,8 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET_STRING("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
     ATTR_SET("strict_messages", int, m_strict_messages);
     ATTR_SET("range_checking", int, m_range_checking);
-    ATTR_SET("unknown_coordsys_error", int, m_unknown_coordsys_error);
+    ATTR_SET("unknown_coordsys_error", int,
+             m_shading_state_uniform.m_unknown_coordsys_error);
     ATTR_SET("connection_error", int, m_connection_error);
     ATTR_SET("greedyjit", int, m_greedyjit);
     ATTR_SET("relaxed_param_typecheck", int, m_relaxed_param_typecheck);
@@ -1567,7 +1569,8 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("exec_repeat", int, m_exec_repeat);
     ATTR_SET("opt_warnings", int, m_opt_warnings);
     ATTR_SET("gpu_opt_error", int, m_gpu_opt_error);
-    ATTR_SET_STRING("commonspace", m_commonspace_synonym);
+    ATTR_SET_STRING("commonspace",
+                    m_shading_state_uniform.m_commonspace_synonym);
     ATTR_SET_STRING("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING("debug_layername", m_debug_layername);
     ATTR_SET_STRING("opt_layername", m_opt_layername);
@@ -1718,13 +1721,15 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("strict_messages", int, m_strict_messages);
     ATTR_DECODE("error_repeats", int, m_error_repeats);
     ATTR_DECODE("range_checking", int, m_range_checking);
-    ATTR_DECODE("unknown_coordsys_error", int, m_unknown_coordsys_error);
+    ATTR_DECODE("unknown_coordsys_error", int,
+                m_shading_state_uniform.m_unknown_coordsys_error);
     ATTR_DECODE("connection_error", int, m_connection_error);
     ATTR_DECODE("greedyjit", int, m_greedyjit);
     ATTR_DECODE("countlayerexecs", int, m_countlayerexecs);
     ATTR_DECODE("relaxed_param_typecheck", int, m_relaxed_param_typecheck);
     ATTR_DECODE("max_warnings_per_thread", int, m_max_warnings_per_thread);
-    ATTR_DECODE_STRING("commonspace", m_commonspace_synonym);
+    ATTR_DECODE_STRING("commonspace",
+                       m_shading_state_uniform.m_commonspace_synonym);
     ATTR_DECODE_STRING("colorspace", m_colorspace);
     ATTR_DECODE_STRING("debug_groupname", m_debug_groupname);
     ATTR_DECODE_STRING("debug_layername", m_debug_layername);

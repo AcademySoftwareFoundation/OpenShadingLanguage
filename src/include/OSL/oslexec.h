@@ -673,6 +673,15 @@ public:
                  ShaderGlobals& globals, void* userdata_base_ptr,
                  void* output_base_ptr, bool run = true);
 
+    /// Future execute signature that will be range based. Shader globals will be
+    /// obtained from renderer services.
+#if 0  // TODO in future PR
+    bool execute(ShadingContext& ctx, ShaderGroup& group, OpaqueShadingStateUniformPtr ssu,
+                 int shadeindex_begin_at, int shadeindex_end_before
+                 void* userdata_base_ptr,
+                 void* output_base_ptr, bool run = true);
+#endif
+
     // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute(ShadingContext& ctx, ShaderGroup& group,
                  ShaderGlobals& globals, bool run = true)

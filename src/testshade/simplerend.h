@@ -183,7 +183,7 @@ protected:
     typedef bool (SimpleRenderer::*AttrGetter)(ShaderGlobals* sg, bool derivs,
                                                ustring object, TypeDesc type,
                                                ustring name, void* val);
-    typedef std::unordered_map<ustring, AttrGetter, ustringHash> AttrGetterMap;
+    typedef std::unordered_map<ustring, AttrGetter> AttrGetterMap;
     AttrGetterMap m_attr_getters;
 
     // Attribute getters

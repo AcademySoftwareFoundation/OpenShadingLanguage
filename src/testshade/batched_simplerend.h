@@ -99,8 +99,8 @@ public:
 
 private:
     SimpleRenderer& m_sr;
-    std::unordered_set<ustring, ustringHash> m_uniform_objects;
-    std::unordered_set<ustring, ustringHash> m_uniform_attributes;
+    std::unordered_set<ustring> m_uniform_objects;
+    std::unordered_set<ustring> m_uniform_attributes;
 
     // Attribute and userdata retrieval -- for fast dispatch, use a hash
     // table to map attribute names to functions that retrieve them. We
@@ -110,15 +110,13 @@ private:
     typedef bool (BatchedSimpleRenderer::*VaryingAttrGetter)(ustring object,
                                                              ustring name,
                                                              MaskedData val);
-    typedef std::unordered_map<ustring, VaryingAttrGetter, ustringHash>
-        VaryingAttrGetterMap;
+    typedef std::unordered_map<ustring, VaryingAttrGetter> VaryingAttrGetterMap;
     VaryingAttrGetterMap m_varying_attr_getters;
 
     typedef bool (BatchedSimpleRenderer::*UniformAttrGetter)(ustring object,
                                                              ustring name,
                                                              RefData val);
-    typedef std::unordered_map<ustring, UniformAttrGetter, ustringHash>
-        UniformAttrGetterMap;
+    typedef std::unordered_map<ustring, UniformAttrGetter> UniformAttrGetterMap;
     UniformAttrGetterMap m_uniform_attr_getters;
 
     // Attribute getters

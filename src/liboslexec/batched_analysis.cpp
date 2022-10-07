@@ -240,7 +240,7 @@ private:
     static constexpr OpcodeTest no_test = nullptr;
 
     // Map opcode names to a Dependency info
-    std::unordered_map<ustring, Dependency, ustringHash> m_lookup;
+    std::unordered_map<ustring, Dependency> m_lookup;
 
     /// Return the ptr to the symbol that is the argnum-th argument to the
     /// given op in the instance.

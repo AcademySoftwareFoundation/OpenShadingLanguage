@@ -115,7 +115,7 @@ private:
     };
 
     typedef std::unordered_map<Query, QueryResult, QueryHash> QueryMap;
-    typedef std::unordered_map<ustring, int, ustringHash> DocMap;
+    typedef std::unordered_map<ustring, int> DocMap;
 
     ShadingContext* m_context;  // back-pointer to shading context
 

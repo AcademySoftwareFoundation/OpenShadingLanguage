@@ -22,8 +22,8 @@ public:
     ~PointCloud();
     static PointCloud* get(ustring filename, bool write = false);
 
-    typedef std::unordered_map<
-        ustring, std::unique_ptr<Partio::ParticleAttribute>, ustringHash>
+    typedef std::unordered_map<ustring,
+                               std::unique_ptr<Partio::ParticleAttribute>>
         AttributeMap;
 
     const Partio::ParticlesData* read_access() const

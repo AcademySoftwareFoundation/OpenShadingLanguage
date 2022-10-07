@@ -23,12 +23,12 @@ OSL_NAMESPACE_ENTER
 typedef std::set<int>
     IntSet;  // probably faster to test for equality, unions and so
 
-typedef std::unordered_set<ustring, ustringHash> SymbolSet;
+typedef std::unordered_set<ustring> SymbolSet;
 // This is for the transition table used in DfAutomata::State
-typedef std::unordered_map<ustring, int, ustringHash> SymbolToInt;
+typedef std::unordered_map<ustring, int> SymbolToInt;
 // And this is for the transition table in NdfAutomata which
 // has several movements for each symbol
-typedef std::unordered_map<ustring, IntSet, ustringHash> SymbolToIntList;
+typedef std::unordered_map<ustring, IntSet> SymbolToIntList;
 typedef std::unordered_map<int, int> HashIntInt;
 
 // For the rules in the deterministic states, we don't need a real set

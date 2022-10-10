@@ -2691,21 +2691,9 @@ BatchedBackendLLVM::run()
     // entry points, as well as for all the external functions that are
     // just declarations (not definitions) in the module (which we have
     // conveniently stashed in external_function_names).
-#if 0
-    std::vector<std::string> entry_function_names;
-    entry_function_names.push_back (ll.func_name(init_func));
-    for (int layer = 0; layer < nlayers; ++layer) {
-        // set_inst (layer);
-        llvm::Function* f = funcs[layer];
-        if (f && group().is_entry_layer(layer))
-            entry_function_names.push_back (ll.func_name(f));
-    }
-    ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
-#else
     std::unordered_set<llvm::Function*> external_functions;
     external_functions.insert(init_func);
     for (int layer = 0; layer < nlayers; ++layer) {
-        // set_inst (layer);
         llvm::Function* f = funcs[layer];
         // If we plan to call bitcode_string of a layer's function after optimization
         // it may not exist after optimization unless we treat it as external.
@@ -2714,7 +2702,6 @@ BatchedBackendLLVM::run()
         }
     }
     ll.prune_and_internalize_module(external_functions);
-#endif
 
     // Debug code to dump the pre-optimized bitcode to a file
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {

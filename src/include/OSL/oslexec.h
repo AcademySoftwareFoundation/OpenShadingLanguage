@@ -231,8 +231,7 @@ public:
     ///                              for debugging. (0)
     ///    int llvm_dumpasm       Print the CPU assembly code from the JIT (0)
     ///    string llvm_prune_ir_strategy  Strategy for pruning unnecessary
-    ///                              IR (choices: "prune" [default],
-    ///                              "internalize", or "none").
+    ///                              IR (choices: "prune" [default], or "none").
     ///    int max_local_mem_KB   Error if shader group needs more than this
     ///                              much local storage to execute (1024K)
     ///    string debug_groupname Name of shader group -- debug only this one

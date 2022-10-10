@@ -62,33 +62,42 @@ target_link_libraries (testshade
                        PRIVATE
                            oslexec oslquery)
 
-
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
-# The 'libtestshade' library
-add_library ( "libtestshade" ${testshade_srcs} )
-
-set_target_properties (libtestshade
-                       PROPERTIES
-                       VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
-                       SOVERSION ${SOVERSION}
-                       OUTPUT_NAME libtestshade${OSL_LIBNAME_SUFFIX}
-                       )
-
-target_link_libraries (libtestshade
-                       PRIVATE
-                           oslexec oslquery)
-set_target_properties (libtestshade PROPERTIES PREFIX "")
-
-install_targets ( libtestshade )
-
-# The 'testshade_dso' executable
-add_executable ( testshade_dso testshade_dso.cpp )
-target_link_libraries (testshade_dso
-                       PRIVATE
-                           OpenImageIO::OpenImageIO
-                           ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
-install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
-
 osl_optix_target(testshade)
-osl_optix_target(libtestshade)
+
+
+# As explained in PR #39, problems were reported with calling OSL from a
+# Houdini plugin.  So this section sets up a version of testshade as a DSO, to
+# be sure we can link it into an executable properly.
+#
+# But the fact that we use testshade.cpp twice -- once for regular testshade,
+# once for the DSO version -- is throwing off the code coverage test, so at
+# least for now, disable the dso version entirely when CODECOV is on.
+if (NOT CODECOV)
+    # The 'libtestshade' library
+    add_library ( "libtestshade" ${testshade_srcs} )
+
+    set_target_properties (libtestshade
+                           PROPERTIES
+                           VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+                           SOVERSION ${SOVERSION}
+                           OUTPUT_NAME libtestshade${OSL_LIBNAME_SUFFIX}
+                           )
+
+    target_link_libraries (libtestshade
+                           PRIVATE
+                               oslexec oslquery)
+    set_target_properties (libtestshade PROPERTIES PREFIX "")
+
+    install_targets ( libtestshade )
+
+    # The 'testshade_dso' executable
+    add_executable ( testshade_dso testshade_dso.cpp )
+    target_link_libraries (testshade_dso
+                           PRIVATE
+                               OpenImageIO::OpenImageIO
+                               ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
+    install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+    osl_optix_target(libtestshade)
+endif ()

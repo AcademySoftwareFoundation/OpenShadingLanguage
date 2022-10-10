@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <immintrin.h>
 #include <type_traits>
 
 #include <OSL/oslconfig.h>
@@ -22,6 +21,8 @@ using std::popcount;
 using std::countr_zero;
 
 #elif OSL_INTEL_CLASSIC_COMPILER_VERSION
+
+#include <immintrin.h>
 
 OSL_FORCEINLINE int popcount(uint32_t x) noexcept { return _mm_popcnt_u32(x);}
 OSL_FORCEINLINE int popcount(uint64_t x) noexcept { return _mm_popcnt_u64(x); }

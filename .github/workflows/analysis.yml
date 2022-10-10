@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: sonary gcc9/C++14 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+          - desc: sonar gcc9/C++14 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
             nametag: static-analysis-sonar
             os: ubuntu-latest
             vfxyear: 2022
@@ -40,7 +40,7 @@ jobs:
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: avx2,f16c
-            batched: b8_AVX2
+            batched: b8_AVX2,b16_AVX512
             coverage: 1
             # skip_tests: 1
             sonar: 1

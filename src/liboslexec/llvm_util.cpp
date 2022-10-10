@@ -1589,29 +1589,26 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
 
 
 
-namespace /*anonymous*/ {
+#ifdef OSL_DEV
 // The return value of llvm::StructLayout::getAlignment()
 // changed from an int to llvm::Align, hide with accessor function
-#if OSL_LLVM_VERSION < 100
-uint64_t
+inline uint64_t
 get_alignment(const llvm::StructLayout* layout)
 {
+#    if OSL_LLVM_VERSION < 100
     return layout->getAlignment();
-}
-#else
-uint64_t
-get_alignment(const llvm::StructLayout* layout)
-{
+#    else
     return layout->getAlignment().value();
+#    endif
 }
 #endif
-}  // namespace
 
 
 
 void
-LLVM_Util::dump_struct_data_layout(llvm::Type* Ty)
+LLVM_Util::dump_struct_data_layout(llvm::Type* Ty OSL_MAYBE_UNUSED)
 {
+#ifdef OSL_DEV
     OSL_ASSERT(Ty);
     OSL_ASSERT(Ty->isStructTy());
 
@@ -1635,6 +1632,7 @@ LLVM_Util::dump_struct_data_layout(llvm::Type* Ty)
         }
         std::cout << std::endl;
     }
+#endif
 }
 
 
@@ -2445,25 +2443,6 @@ LLVM_Util::internalize_module_functions(
     const std::string& prefix, const std::vector<std::string>& exceptions,
     const std::vector<std::string>& moreexceptions)
 {
-}
-
-
-
-llvm::Function*
-LLVM_Util::make_function(const std::string& name, bool fastcall,
-                         llvm::Type* rettype, llvm::Type* arg1,
-                         llvm::Type* arg2, llvm::Type* arg3, llvm::Type* arg4)
-{
-    std::vector<llvm::Type*> argtypes;
-    if (arg1)
-        argtypes.emplace_back(arg1);
-    if (arg2)
-        argtypes.emplace_back(arg2);
-    if (arg3)
-        argtypes.emplace_back(arg3);
-    if (arg4)
-        argtypes.emplace_back(arg4);
-    return make_function(name, fastcall, rettype, argtypes, false);
 }
 
 
@@ -5831,6 +5810,7 @@ bool
 LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
                              std::string& out)
 {
+#ifdef OSL_USE_OPTIX
     std::string target_triple = module()->getTargetTriple();
 
     OSL_ASSERT(
@@ -5874,9 +5854,9 @@ LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
     options.AllowFPOpFusion                        = llvm::FPOpFusion::Fast;
     options.NoZerosInBSS                           = 0;
     options.GuaranteedTailCallOpt                  = 0;
-#if OSL_LLVM_VERSION < 120
+#    if OSL_LLVM_VERSION < 120
     options.StackAlignmentOverride = 0;
-#endif
+#    endif
     options.UseInitArray = 0;
 
     llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(
@@ -5908,15 +5888,15 @@ LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
     llvm::raw_svector_ostream assembly_stream(assembly);
 
     // TODO: Make sure rounding modes, etc., are set correctly
-#if OSL_LLVM_VERSION >= 100
+#    if OSL_LLVM_VERSION >= 100
     target_machine->addPassesToEmitFile(mod_pm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::CGFT_AssemblyFile);
-#else
+#    else
     target_machine->addPassesToEmitFile(mod_pm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::TargetMachine::CGFT_AssemblyFile);
-#endif
+#    endif
 
     // Run the optimization passes on the functions
     fn_pm.doInitialization();
@@ -5942,6 +5922,9 @@ LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
     delete linked_module;
 
     return true;
+#else
+    return false;
+#endif
 }
 
 

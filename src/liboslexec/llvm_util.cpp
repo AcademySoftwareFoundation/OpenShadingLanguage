@@ -1610,8 +1610,9 @@ get_alignment(const llvm::StructLayout* layout)
 
 
 void
-LLVM_Util::dump_struct_data_layout(llvm::Type* Ty)
+LLVM_Util::dump_struct_data_layout(llvm::Type* Ty OSL_MAYBE_UNUSED)
 {
+#ifdef OSL_DEV
     OSL_ASSERT(Ty);
     OSL_ASSERT(Ty->isStructTy());
 
@@ -1635,6 +1636,7 @@ LLVM_Util::dump_struct_data_layout(llvm::Type* Ty)
         }
         std::cout << std::endl;
     }
+#endif
 }
 
 

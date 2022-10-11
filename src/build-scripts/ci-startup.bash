@@ -61,6 +61,7 @@ echo "uname -a: " `uname -a`
 echo "uname -m: " `uname -m`
 echo "uname -s: " `uname -s`
 echo "uname -n: " `uname -n`
+echo "nproc " `nproc`
 pwd
 ls
 env | sort

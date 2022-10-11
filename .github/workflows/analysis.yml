@@ -40,7 +40,7 @@ jobs:
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: avx2,f16c
-            batched: b8_AVX2
+            batched: b8_AVX2,b16_AVX512
             coverage: 1
             # skip_tests: 1
             sonar: 1

@@ -26,6 +26,7 @@ jobs:
     name: "SonarCloud Analysis"
     if: |
       github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
+    runs-on: ubuntu-20.04-8c-32g-300h
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +72,7 @@ jobs:
       PYTHON_VERSION: ${{matrix.python_ver}}
       USE_BATCHED: ${{matrix.batched}}
       USE_SIMD: ${{matrix.simd}}
+      PARALLEL: 24
       # DEBUG_CI: 1
     steps:
       # We would like to use harden-runner, but it flags too many false

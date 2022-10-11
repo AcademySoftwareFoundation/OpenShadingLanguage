@@ -1502,21 +1502,6 @@ BackendLLVM::run()
     if (shadingsys().llvm_prune_ir_strategy() == "none") {
         // Do nothing! This is only useful for testing how much we reduce
         // optimization and JIT time with the other strategies.
-    } else if (shadingsys().llvm_prune_ir_strategy() == "internalize") {
-        // Mark as 'internal' all functions that start with "osl_" but are
-        // but are not among the known entry points. LLVM can then quickly
-        // realize that any 'internal' functions not called can be
-        // discarded. This was our original stab at this strategy.
-        std::vector<std::string> entry_function_names;
-        entry_function_names.push_back(ll.func_name(init_func));
-        for (int layer = 0; layer < nlayers; ++layer) {
-            // set_inst (layer);
-            llvm::Function* f = funcs[layer];
-            if (f && group().is_entry_layer(layer))
-                entry_function_names.push_back(ll.func_name(f));
-        }
-        ll.internalize_module_functions("osl_", external_function_names,
-                                        entry_function_names);
     } else /* if (shadingsys().llvm_prune_ir_strategy() == "prune") */ {
         // New (2020) and default behavior, from Alex Wells:
         // Full prune of uncalled functions, and marking as 'internal' to

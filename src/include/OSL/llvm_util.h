@@ -289,12 +289,7 @@ public:
         Linkage default_linkage = Linkage::Internal,
         std::string* out_err    = nullptr);
 
-    // OLD, might deprecate later
-    /// Change symbols in the module that are marked as having external
-    /// linkage to an alternate linkage that allows them to be discarded if
-    /// not used within the module. Only do this for functions that start
-    /// with prefix, and that DON'T match anything in the two exceptions
-    /// lists.
+    OSL_DEPRECATED("prune_and_internalize_module is better (1.13)")
     void internalize_module_functions(
         const std::string& prefix, const std::vector<std::string>& exceptions,
         const std::vector<std::string>& moreexceptions);

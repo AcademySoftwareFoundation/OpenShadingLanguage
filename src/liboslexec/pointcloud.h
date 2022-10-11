@@ -17,12 +17,12 @@ namespace pvt {
 
 class PointCloud {
 public:
-    PointCloud(ustring filename, Partio::ParticlesDataMutable* partio_cloud,
+    PointCloud(ustringhash filename, Partio::ParticlesDataMutable* partio_cloud,
                bool write);
     ~PointCloud();
-    static PointCloud* get(ustring filename, bool write = false);
+    static PointCloud* get(ustringhash filename, bool write = false);
 
-    typedef std::unordered_map<ustring,
+    typedef std::unordered_map<ustringhash,
                                std::unique_ptr<Partio::ParticleAttribute>>
         AttributeMap;
 
@@ -37,7 +37,7 @@ public:
         return m_partio_cloud;
     }
 
-    ustring m_filename;
+    ustringhash m_filename;
 
 private:
     // hide just this field, because we want to control how it is accessed

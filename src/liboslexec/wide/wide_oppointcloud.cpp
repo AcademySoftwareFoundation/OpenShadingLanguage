@@ -35,7 +35,7 @@ using PointCloudSearchResults = BatchedRendererServices::PointCloudSearchResults
 namespace {
 
 OSL_FORCEINLINE void
-default_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
+default_pointcloud_search(BatchedShaderGlobals* bsg, ustringhash filename,
                           const void* wcenter_, Wide<const float> wradius,
                           int max_points, bool sort,
                           PointCloudSearchResults& results)
@@ -199,7 +199,7 @@ default_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
 
 
 OSL_FORCEINLINE void
-dispatch_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
+dispatch_pointcloud_search(BatchedShaderGlobals* bsg, ustringhash filename,
                            const void* wcenter, Wide<const float> wradius,
                            int max_points, bool sort,
                            PointCloudSearchResults& results)
@@ -217,9 +217,9 @@ dispatch_pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
 
 
 OSL_FORCEINLINE Mask
-default_pointcloud_get(BatchedShaderGlobals* bsg, ustring filename,
+default_pointcloud_get(BatchedShaderGlobals* bsg, ustringhash filename,
                        Wide<const int[]> windices, Wide<const int> wnum_points,
-                       ustring attr_name, MaskedData wout_data)
+                       ustringhash attr_name, MaskedData wout_data)
 {
 #ifdef USE_PARTIO
     Mask success { false };
@@ -364,9 +364,9 @@ default_pointcloud_get(BatchedShaderGlobals* bsg, ustring filename,
 
 
 OSL_FORCEINLINE Mask
-dispatch_pointcloud_get(BatchedShaderGlobals* bsg, ustring filename,
+dispatch_pointcloud_get(BatchedShaderGlobals* bsg, ustringhash filename,
                         Wide<const int[]> windices, Wide<const int> wnum_points,
-                        ustring attr_name, MaskedData wout_data)
+                        ustringhash attr_name, MaskedData wout_data)
 {
     auto* bsr = bsg->uniform.renderer->batched(WidthTag());
     if (bsr->is_overridden_pointcloud_get()) {
@@ -381,7 +381,7 @@ dispatch_pointcloud_get(BatchedShaderGlobals* bsg, ustring filename,
 
 
 Mask
-default_pointcloud_write(BatchedShaderGlobals* bsg, ustring filename,
+default_pointcloud_write(BatchedShaderGlobals* bsg, ustringhash filename,
                          Wide<const OSL::Vec3> wpos, int nattribs,
                          const ustring* attr_names, const TypeDesc* attr_types,
                          const void** ptrs_to_wide_attr_value, Mask mask)
@@ -472,7 +472,7 @@ default_pointcloud_write(BatchedShaderGlobals* bsg, ustring filename,
 
 
 OSL_FORCEINLINE Mask
-dispatch_pointcloud_write(BatchedShaderGlobals* bsg, ustring filename,
+dispatch_pointcloud_write(BatchedShaderGlobals* bsg, ustringhash filename,
                           Wide<const OSL::Vec3> wpos, int nattribs,
                           const ustring* attr_names, const TypeDesc* attr_types,
                           const void** ptrs_to_wide_attr_value, Mask mask)
@@ -518,7 +518,7 @@ __OSL_MASKED_OP(pointcloud_search)(
 
     Wide<const float> wradius(wradius_);
 
-    dispatch_pointcloud_search(bsg, USTR(filename), wcenter_, wradius,
+    dispatch_pointcloud_search(bsg, USTR(filename).uhash(), wcenter_, wradius,
                                max_points, sort, pcsr);
 
     if (nattrs > 0) {
@@ -564,7 +564,8 @@ __OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, const char* filename,
     TypeDesc attr_type = TYPEDESC(attr_type_);
 
     Mask success = dispatch_pointcloud_get(
-        bsg, USTR(filename), windices, wnum_points, USTR(attr_name),
+        bsg, USTR(filename).uhash(), windices, wnum_points,
+        USTR(attr_name).uhash(),
         MaskedData { attr_type, false, Mask { mask_value }, wout_data_ });
     return success.value();
 }
@@ -574,19 +575,20 @@ __OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, const char* filename,
 OSL_BATCHOP int
 __OSL_MASKED_OP(pointcloud_write)(BatchedShaderGlobals* bsg,
                                   const char* filename, const void* wpos_,
-                                  int nattribs, const ustring* attr_names,
+                                  int nattribs, const ustringrep* attr_names,
                                   const TypeDesc* attr_types,
                                   const void** ptrs_to_wide_attr_value,
                                   int mask_value)
 {
     ShadingContext* ctx = bsg->uniform.context;
-    if (ctx->shadingsys()
-            .no_pointcloud())  // Debug mode to skip pointcloud expense
-        return 0;              // mask_value;
+
+    // Debug mode to skip pointcloud expense
+    if (ctx->shadingsys().no_pointcloud())
+        return 0;  // mask_value;
 
     Wide<const OSL::Vec3> wpos(wpos_);
 
-    Mask success = dispatch_pointcloud_write(bsg, USTR(filename), wpos,
+    Mask success = dispatch_pointcloud_write(bsg, USTR(filename).uhash(), wpos,
                                              nattribs, attr_names, attr_types,
                                              ptrs_to_wide_attr_value,
                                              Mask(mask_value));

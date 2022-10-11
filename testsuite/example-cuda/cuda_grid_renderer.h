@@ -10,12 +10,12 @@
 #include <OSL/rendererservices.h>
 
 
-using GlobalsMap        = std::unordered_map<OIIO::ustring, uint64_t>;
-using TextureSamplerMap = std::unordered_map<OIIO::ustring, cudaTextureObject_t>;
+using GlobalsMap        = std::unordered_map<OSL::ustringhash, uint64_t>;
+using TextureSamplerMap = std::unordered_map<OSL::ustringhash, cudaTextureObject_t>;
 
 // Just use 4x4 matrix for transformations
 typedef OSL::Matrix44 Transformation;
-typedef std::map<OIIO::ustring, std::shared_ptr<Transformation>> TransformMap;
+typedef std::map<OSL::ustringhash, std::shared_ptr<Transformation>> TransformMap;
 
 class CudaGridRenderer final : public OSL::RendererServices {
     TextureSamplerMap _samplers;
@@ -25,7 +25,7 @@ class CudaGridRenderer final : public OSL::RendererServices {
     TransformMap _named_xforms;
 
     OSL::Matrix44 _world_to_camera;
-    OIIO::ustring _projection;
+    OSL::ustring _projection;
     float _fov, _pixelaspect, _hither, _yon;
     float _shutter[2];
     float _screen_window[4];
@@ -56,21 +56,19 @@ public:
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
-    virtual TextureHandle*
-    get_texture_handle(OIIO::ustring filename,
-                       OSL::ShadingContext* shading_context);
+    virtual TextureHandle* get_texture_handle(ustringhash filename,
+                                              ShadingContext* shading_context);
 
-    virtual bool get_matrix(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
-                            OSL::TransformationPtr xform, float time);
-    virtual bool get_matrix(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
-                            OIIO::ustring from, float time);
-    virtual bool get_matrix(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
-                            OSL::TransformationPtr xform);
-    virtual bool get_matrix(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
-                            OIIO::ustring from);
-    virtual bool get_inverse_matrix(OSL::ShaderGlobals* sg,
-                                    OSL::Matrix44& result, OIIO::ustring to,
-                                    float time);
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            TransformationPtr xform, float time);
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            ustringhash from, float time);
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            TransformationPtr xform);
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            ustringhash from);
+    virtual bool get_inverse_matrix(ShaderGlobals* sg, Matrix44& result,
+                                    ustringhash to, float time);
 
     void name_transform(const char* name, const Transformation& xform);
 };

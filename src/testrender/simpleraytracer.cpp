@@ -441,7 +441,7 @@ SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 
 bool
 SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
-                            ustring from, float /*time*/)
+                            ustringhash from, float /*time*/)
 {
     TransformMap::const_iterator found = m_named_xforms.find(from);
     if (found != m_named_xforms.end()) {
@@ -468,7 +468,7 @@ SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 
 bool
 SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
-                            ustring from)
+                            ustringhash from)
 {
     // SimpleRaytracer doesn't understand motion blur, so we never fail
     // on account of time-varying transformations.
@@ -485,7 +485,7 @@ SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 
 bool
 SimpleRaytracer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
-                                    ustring to, float /*time*/)
+                                    ustringhash to, float /*time*/)
 {
     if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
         // clang-format off
@@ -544,15 +544,15 @@ void
 SimpleRaytracer::name_transform(const char* name, const OSL::Matrix44& xform)
 {
     std::shared_ptr<Transformation> M(new OSL::Matrix44(xform));
-    m_named_xforms[ustring(name)] = M;
+    m_named_xforms[ustringhash(name)] = M;
 }
 
 
 
 bool
 SimpleRaytracer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
-                                     ustring object, TypeDesc type,
-                                     ustring name, int index, void* val)
+                                     ustringhash object, TypeDesc type,
+                                     ustringhash name, int index, void* val)
 {
     AttrGetterMap::const_iterator g = m_attr_getters.find(name);
     if (g != m_attr_getters.end()) {
@@ -572,8 +572,8 @@ SimpleRaytracer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
 
 bool
 SimpleRaytracer::get_attribute(ShaderGlobals* sg, bool derivatives,
-                               ustring object, TypeDesc type, ustring name,
-                               void* val)
+                               ustringhash object, TypeDesc type,
+                               ustringhash name, void* val)
 {
     return get_array_attribute(sg, derivatives, object, type, name, -1, val);
 }
@@ -581,7 +581,7 @@ SimpleRaytracer::get_attribute(ShaderGlobals* sg, bool derivatives,
 
 
 bool
-SimpleRaytracer::get_userdata(bool derivatives, ustring name, TypeDesc type,
+SimpleRaytracer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                               ShaderGlobals* sg, void* val)
 {
     // Just to illustrate how this works, respect s and t userdata, filled
@@ -612,8 +612,8 @@ SimpleRaytracer::get_userdata(bool derivatives, ustring name, TypeDesc type,
 
 bool
 SimpleRaytracer::get_osl_version(ShaderGlobals* /*sg*/, bool /*derivs*/,
-                                 ustring /*object*/, TypeDesc type,
-                                 ustring /*name*/, void* val)
+                                 ustringhash /*object*/, TypeDesc type,
+                                 ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeInt) {
         ((int*)val)[0] = OSL_VERSION;
@@ -625,8 +625,8 @@ SimpleRaytracer::get_osl_version(ShaderGlobals* /*sg*/, bool /*derivs*/,
 
 bool
 SimpleRaytracer::get_camera_resolution(ShaderGlobals* /*sg*/, bool /*derivs*/,
-                                       ustring /*object*/, TypeDesc type,
-                                       ustring /*name*/, void* val)
+                                       ustringhash /*object*/, TypeDesc type,
+                                       ustringhash /*name*/, void* val)
 {
     if (type == TypeIntArray2) {
         ((int*)val)[0] = camera.xres;
@@ -639,8 +639,8 @@ SimpleRaytracer::get_camera_resolution(ShaderGlobals* /*sg*/, bool /*derivs*/,
 
 bool
 SimpleRaytracer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
-                                       ustring /*object*/, TypeDesc type,
-                                       ustring /*name*/, void* val)
+                                       ustringhash /*object*/, TypeDesc type,
+                                       ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeString) {
         ((ustring*)val)[0] = m_projection;
@@ -652,8 +652,8 @@ SimpleRaytracer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
 
 bool
 SimpleRaytracer::get_camera_fov(ShaderGlobals* /*sg*/, bool derivs,
-                                ustring /*object*/, TypeDesc type,
-                                ustring /*name*/, void* val)
+                                ustringhash /*object*/, TypeDesc type,
+                                ustringhash /*name*/, void* val)
 {
     // N.B. in a real renderer, this may be time-dependent
     if (type == TypeDesc::TypeFloat) {
@@ -668,8 +668,8 @@ SimpleRaytracer::get_camera_fov(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_pixelaspect(ShaderGlobals* /*sg*/, bool derivs,
-                                        ustring /*object*/, TypeDesc type,
-                                        ustring /*name*/, void* val)
+                                        ustringhash /*object*/, TypeDesc type,
+                                        ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_pixelaspect;
@@ -683,8 +683,8 @@ SimpleRaytracer::get_camera_pixelaspect(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_clip(ShaderGlobals* /*sg*/, bool derivs,
-                                 ustring /*object*/, TypeDesc type,
-                                 ustring /*name*/, void* val)
+                                 ustringhash /*object*/, TypeDesc type,
+                                 ustringhash /*name*/, void* val)
 {
     if (type == TypeFloatArray2) {
         ((float*)val)[0] = m_hither;
@@ -699,8 +699,8 @@ SimpleRaytracer::get_camera_clip(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_clip_near(ShaderGlobals* /*sg*/, bool derivs,
-                                      ustring /*object*/, TypeDesc type,
-                                      ustring /*name*/, void* val)
+                                      ustringhash /*object*/, TypeDesc type,
+                                      ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_hither;
@@ -714,8 +714,8 @@ SimpleRaytracer::get_camera_clip_near(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_clip_far(ShaderGlobals* /*sg*/, bool derivs,
-                                     ustring /*object*/, TypeDesc type,
-                                     ustring /*name*/, void* val)
+                                     ustringhash /*object*/, TypeDesc type,
+                                     ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_yon;
@@ -730,8 +730,8 @@ SimpleRaytracer::get_camera_clip_far(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_shutter(ShaderGlobals* /*sg*/, bool derivs,
-                                    ustring /*object*/, TypeDesc type,
-                                    ustring /*name*/, void* val)
+                                    ustringhash /*object*/, TypeDesc type,
+                                    ustringhash /*name*/, void* val)
 {
     if (type == TypeFloatArray2) {
         ((float*)val)[0] = m_shutter[0];
@@ -746,8 +746,8 @@ SimpleRaytracer::get_camera_shutter(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_shutter_open(ShaderGlobals* /*sg*/, bool derivs,
-                                         ustring /*object*/, TypeDesc type,
-                                         ustring /*name*/, void* val)
+                                         ustringhash /*object*/, TypeDesc type,
+                                         ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_shutter[0];
@@ -761,8 +761,8 @@ SimpleRaytracer::get_camera_shutter_open(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_shutter_close(ShaderGlobals* /*sg*/, bool derivs,
-                                          ustring /*object*/, TypeDesc type,
-                                          ustring /*name*/, void* val)
+                                          ustringhash /*object*/, TypeDesc type,
+                                          ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = m_shutter[1];
@@ -776,8 +776,8 @@ SimpleRaytracer::get_camera_shutter_close(ShaderGlobals* /*sg*/, bool derivs,
 
 bool
 SimpleRaytracer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
-                                          ustring /*object*/, TypeDesc type,
-                                          ustring /*name*/, void* val)
+                                          ustringhash /*object*/, TypeDesc type,
+                                          ustringhash /*name*/, void* val)
 {
     // N.B. in a real renderer, this may be time-dependent
     if (type == TypeFloatArray4) {

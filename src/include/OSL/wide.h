@@ -895,6 +895,8 @@ template<int WidthT> struct alignas(VecReg<WidthT>) Block<Matrix44, WidthT> {
     }
 };
 
+
+// Specialization of Block for ustring
 template<int WidthT> struct alignas(VecReg<WidthT>) Block<ustring, WidthT> {
     static constexpr int width = WidthT;
     typedef ustring ValueType;
@@ -928,6 +930,63 @@ template<int WidthT> struct alignas(VecReg<WidthT>) Block<ustring, WidthT> {
         // constructor and possibly further.
         auto unique_cstr = reinterpret_cast<const char*>(str[lane]);
         return ustring::from_unique(unique_cstr);
+    }
+
+    OSL_FORCEINLINE pvt::LaneProxy<ValueType, WidthT> operator[](int lane)
+    {
+        return pvt::LaneProxy<ValueType, WidthT>(*this, lane);
+    }
+
+    OSL_FORCEINLINE pvt::ConstLaneProxy<const ValueType, WidthT>
+    operator[](int lane) const
+    {
+        return pvt::ConstLaneProxy<const ValueType, WidthT>(*this, lane);
+    }
+};
+
+
+// Specialization of Block for ustringhash
+template<int WidthT> struct alignas(VecReg<WidthT>) Block<ustringhash, WidthT> {
+    static constexpr int width = WidthT;
+    typedef ustringhash ValueType;
+
+    // To enable vectorization, use uintptr_t to store the ustringhash (const char *)
+    size_t str[WidthT];
+    static_assert(sizeof(ustringhash) == sizeof(size_t),
+                  "ustringhash must be size_t");
+
+    OSL_FORCEINLINE Block() = default;
+    // We want to avoid accidentally copying these when the intent was to just pass a reference
+    Block(const Block& other) = delete;
+
+    OSL_FORCEINLINE void set(int lane, const ustringhash& value)
+    {
+        str[lane] = value.hash();
+    }
+
+    OSL_FORCEINLINE void set(int lane, ustring value)
+    {
+        str[lane] = value.hash();
+    }
+
+    OSL_FORCEINLINE void set(int lane, const ustringhash& value, bool laneMask)
+    {
+        if (laneMask)
+            str[lane] = value.hash();
+    }
+
+    OSL_FORCEINLINE ustringhash get(int lane) const
+    {
+#ifdef OIIO_USTRING_HAS_CTR_FROM_USTRINGHASH
+        return ustringhash::from_hash(str[lane]);
+#else
+        // Dumb workaround if we are on old OIIO
+#    if OPENIMAGEIO_VERSION >= 20500
+        return OIIO::bitcast<ustringhash>(str[lane]);
+#    else
+        return OIIO::bit_cast<size_t, ustringhash>(str[lane]);
+#    endif
+#endif
     }
 
     OSL_FORCEINLINE pvt::LaneProxy<ValueType, WidthT> operator[](int lane)

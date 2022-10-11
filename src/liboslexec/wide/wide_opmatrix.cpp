@@ -45,6 +45,18 @@ invoke(FunctorT f)
     f();
 }
 
+
+// helper to make a Block<ustringhash> from a pointer
+#if !OSL_USTRINGREP_IS_HASH
+inline void
+block_ustringhash_from_ptr(Block<ustringhash>& b, const void* w_ptr)
+{
+    for (int i = 0; i < __OSL_WIDTH; ++i)
+        b.set(i, reinterpret_cast<const ustring*>(w_ptr)[i]);
+}
+#endif
+
+
 OSL_FORCEINLINE void
 invert_wide_matrix(Masked<Matrix44> wresult, Wide<const Matrix44> wmatrix)
 {
@@ -88,12 +100,12 @@ invert_wide_matrix(Masked<Matrix44> wresult, Wide<const Matrix44> wmatrix)
 
 Mask
 default_get_matrix(BatchedRendererServices* bsr, BatchedShaderGlobals* bsg,
-                   Masked<Matrix44> wresult, Wide<const ustring> wfrom,
+                   Masked<Matrix44> wresult, Wide<const ustringhash> wfrom,
                    Wide<const float> wtime)
 {
     Mask ok(false);
     foreach_unique(wfrom, wresult.mask(),
-                   [=, &ok](const ustring& from, Mask from_mask) {
+                   [=, &ok](const ustringhash& from, Mask from_mask) {
                        // Reuse the uniform from implementation by restricting results to
                        // just the lanes with the same value of "from".
                        Masked<Matrix44> wsub_result(wresult.data(), from_mask);
@@ -110,7 +122,7 @@ default_get_matrix(BatchedRendererServices* bsr, BatchedShaderGlobals* bsg,
 // execute the ISA optimized default version built right here.
 OSL_FORCEINLINE Mask
 dispatch_get_matrix(BatchedRendererServices* bsr, BatchedShaderGlobals* bsg,
-                    Masked<Matrix44> result, Wide<const ustring> from,
+                    Masked<Matrix44> result, Wide<const ustringhash> from,
                     Wide<const float> time)
 {
     if (bsr->is_overridden_get_matrix_WmWsWf()) {
@@ -154,7 +166,7 @@ dispatch_get_inverse_matrix(BatchedRendererServices* bsr,
 Mask
 default_get_inverse_matrix(BatchedRendererServices* bsr,
                            BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                           ustring to, Wide<const float> time)
+                           ustringhash to, Wide<const float> time)
 {
     OSL_FORCEINLINE_BLOCK
     {
@@ -170,7 +182,7 @@ default_get_inverse_matrix(BatchedRendererServices* bsr,
 OSL_FORCEINLINE Mask
 dispatch_get_inverse_matrix(BatchedRendererServices* bsr,
                             BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                            ustring to, Wide<const float> time)
+                            ustringhash to, Wide<const float> time)
 {
     if (bsr->is_overridden_get_inverse_matrix_WmsWf()) {
         return bsr->get_inverse_matrix(bsg, result, to, time);
@@ -183,12 +195,12 @@ dispatch_get_inverse_matrix(BatchedRendererServices* bsr,
 Mask
 default_get_inverse_matrix(BatchedRendererServices* bsr,
                            BatchedShaderGlobals* bsg, Masked<Matrix44> wresult,
-                           Wide<const ustring> wto, Wide<const float> wtime)
+                           Wide<const ustringhash> wto, Wide<const float> wtime)
 {
     if (bsr->is_overridden_get_inverse_matrix_WmsWf()) {
         Mask ok(false);
         foreach_unique(wto, wresult.mask(),
-                       [=, &ok](const ustring& to, Mask from_mask) {
+                       [=, &ok](const ustringhash& to, Mask from_mask) {
                            // Reuse the uniform from implementation by restricting results to
                            // just the lanes with the same value of "from".
                            Masked<Matrix44> wsub_result(wresult.data(),
@@ -213,7 +225,7 @@ default_get_inverse_matrix(BatchedRendererServices* bsr,
 OSL_FORCEINLINE Mask
 dispatch_get_inverse_matrix(BatchedRendererServices* bsr,
                             BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                            Wide<const ustring> to, Wide<const float> time)
+                            Wide<const ustringhash> to, Wide<const float> time)
 {
     if (bsr->is_overridden_get_inverse_matrix_WmWsWf()) {
         return bsr->get_inverse_matrix(bsg, result, to, time);
@@ -627,7 +639,7 @@ impl_wide_mat_multiply(ResultAccessorT wresult, FromAccessorT wfrom,
 OSL_FORCEINLINE Mask
 impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
                                      ShadingContext* ctx,
-                                     Wide<const ustring> wFrom,
+                                     Wide<const ustringhash> wFrom,
                                      Masked<Matrix44> wMfrom)
 {
     // Deal with a varying 'from' space
@@ -646,7 +658,7 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
                                      : common_space_bits, shader_space_bits,
                                        object_space_bits, named_space_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-            ustring from = wFrom[lane];
+            ustringhash from = wFrom[lane];
             if (wMfrom.mask()[lane]) {
                 if (from == Strings::common || from == commonspace_synonym) {
                     // inline of Mask::set_on(lane)
@@ -703,10 +715,10 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
             if (ctx->shadingsys().unknown_coordsys_error()) {
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
-                        ustring from = wFrom[lane];
+                        ustringhash from = wFrom[lane];
                         ctx->batched<__OSL_WIDTH>().errorfmt(
                             Mask(Lane(lane)), "Unknown transformation \"{}\"",
-                            from);
+                            ustring(from));
                     }
                 }
             }
@@ -746,7 +758,13 @@ __OSL_MASKED_OP2(prepend_matrix_from, Wm, Ws)(void* bsg_, void* wr,
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
 
-    Wide<const ustring> wFromName(w_from_name);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wFromName(w_from_name);
+#else
+    Block<ustringhash> bwFromName;
+    block_ustringhash_from_ptr(bwFromName, w_from_name);
+    Wide<const ustringhash> wFromName(bwFromName);
+#endif
 
     Block<Matrix44> wMfrom;
     Masked<Matrix44> from_matrix(wMfrom, Mask(mask_value));
@@ -762,7 +780,8 @@ __OSL_MASKED_OP2(prepend_matrix_from, Wm, Ws)(void* bsg_, void* wr,
 namespace {
 OSL_FORCEINLINE Mask
 impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
-                                  ShadingContext* ctx, Wide<const ustring> wTo,
+                                  ShadingContext* ctx,
+                                  Wide<const ustringhash> wTo,
                                   Masked<Matrix44> wMto)
 {
     // Deal with a varying 'to' space
@@ -781,7 +800,7 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
                                      : common_space_bits, shader_space_bits,
                                        object_space_bits, named_space_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-            ustring to = wTo[lane];
+            ustringhash to = wTo[lane];
             if (wMto.mask()[lane]) {
                 if (to == Strings::common || to == commonspace_synonym) {
                     // inline of Mask::set_on(lane)
@@ -836,10 +855,10 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
             if (ctx->shadingsys().unknown_coordsys_error()) {
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
-                        ustring to = wTo[lane];
+                        ustringhash to = wTo[lane];
                         ctx->batched<__OSL_WIDTH>().errorfmt(
                             Mask(Lane(lane)), "Unknown transformation \"{}\"",
-                            to);
+                            ustring(to));
                     }
                 }
             }
@@ -895,7 +914,13 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
     Mask succeeded = impl_get_uniform_from_matrix_masked(bsg, from_matrix,
                                                          from);
 
-    Wide<const ustring> wToSpace(w_to_ptr);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wToSpace(w_to_ptr);
+#else
+    Block<ustringhash> bwToSpace;
+    block_ustringhash_from_ptr(bwToSpace, w_to_ptr);
+    Wide<const ustringhash> wToSpace(bwToSpace);
+#endif
     Block<Matrix44> wMto;
     // NOTE: even if we failed to get a from matrix, it should have been set to
     // identity, so we still need to try to get the to matrix for the original mask
@@ -917,7 +942,13 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
 
-    Wide<const ustring> wFromName(w_from_ptr);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wFromName(w_from_ptr);
+#else
+    Block<ustringhash> bwFromName;
+    block_ustringhash_from_ptr(bwFromName, w_from_ptr);
+    Wide<const ustringhash> wFromName(bwFromName);
+#endif
 
     Block<Matrix44> wMto;
     Masked<Matrix44> to_matrix(wMto, Mask(mask_value));
@@ -945,14 +976,26 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
 
-    Wide<const ustring> wFromName(w_from_ptr);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wFromName(w_from_ptr);
+#else
+    Block<ustringhash> bwFromName;
+    block_ustringhash_from_ptr(bwFromName, w_from_ptr);
+    Wide<const ustringhash> wFromName(bwFromName);
+#endif
 
     Block<Matrix44> wMfrom;
     Masked<Matrix44> from_matrix(wMfrom, Mask(mask_value));
     Mask succeeded = impl_get_varying_from_matrix_batched(bsg, ctx, wFromName,
                                                           from_matrix);
 
-    Wide<const ustring> wToSpace(w_to_ptr);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wToSpace(w_to_ptr);
+#else
+    Block<ustringhash> bwToSpace;
+    block_ustringhash_from_ptr(bwToSpace, w_to_ptr);
+    Wide<const ustringhash> wToSpace(bwToSpace);
+#endif
     Block<Matrix44> wMto;
     // NOTE: even if we failed to get a from matrix, it should have been set to
     // identity, so we still need to try to get the to matrix for the original mask
@@ -987,8 +1030,8 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, s, s)(void* bsg_, void* WM_,
     Masked<Matrix44> mm(WM_, mask);
     ShadingContext* ctx = bsg->uniform.context;
 
-    ustring from = USTR(from_);
-    ustring to   = USTR(to_);
+    ustringrep from = USTR(from_);
+    ustringrep to   = USTR(to_);
 
     Mask succeeded;
     // Avoid matrix concatenation if possible by detecting when the
@@ -1022,9 +1065,15 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s)(void* bsg_, void* WM_,
     Mask mask(mask_value);
     Masked<Matrix44> wrm(WM_, mask);
 
-    Wide<const ustring> wfrom_space(wfrom_);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wfrom_space(wfrom_);
+#else
+    Block<ustringhash> bwfrom_space;
+    block_ustringhash_from_ptr(bwfrom_space, wfrom_);
+    Wide<const ustringhash> wfrom_space(bwfrom_space);
+#endif
 
-    ustring to_space = USTR(to_);
+    ustringrep to_space = USTR(to_);
 
     Block<Matrix44> wMfrom, wMto;
     Masked<Matrix44> from_matrix(wMfrom, wrm.mask());
@@ -1052,8 +1101,14 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws)(void* bsg_, void* WM_,
     Mask mask(mask_value);
     Masked<Matrix44> wrm(WM_, mask);
 
-    ustring from = USTR(from_);
-    Wide<const ustring> wto_space(wto_);
+    ustringrep from = USTR(from_);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wto_space(wto_);
+#else
+    Block<ustringhash> bwto_space;
+    block_ustringhash_from_ptr(bwto_space, wto_);
+    Wide<const ustringhash> wto_space(bwto_space);
+#endif
 
     Block<Matrix44> wMfrom, wMto;
     Masked<Matrix44> from_matrix(wMfrom, wrm.mask());
@@ -1082,8 +1137,17 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, Ws)(void* bsg_, void* WM_,
     Mask mask(mask_value);
     Masked<Matrix44> wrm(WM_, mask);
 
-    Wide<const ustring> wfrom_space(wfrom_);
-    Wide<const ustring> wto_space(wto_);
+#if OSL_USTRINGREP_IS_HASH
+    Wide<const ustringhash> wfrom_space(wfrom_);
+    Wide<const ustringhash> wto_space(wto_);
+#else
+    Block<ustringhash> bwfrom_space;
+    block_ustringhash_from_ptr(bwfrom_space, wfrom_);
+    Wide<const ustringhash> wfrom_space(bwfrom_space);
+    Block<ustringhash> bwto_space;
+    block_ustringhash_from_ptr(bwto_space, wto_);
+    Wide<const ustringhash> wto_space(bwto_space);
+#endif
 
     Block<Matrix44> wMfrom, wMto;
     Masked<Matrix44> from_matrix(wMfrom, wrm.mask());

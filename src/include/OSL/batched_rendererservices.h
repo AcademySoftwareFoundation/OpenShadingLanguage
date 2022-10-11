@@ -82,12 +82,13 @@ public:
     /// Return a Mask with lanes set to  true if ok, false if the named matrix
     /// is not known.
     virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> wresult,
-                            ustring from, Wide<const float> wtime)
+                            ustringhash from, Wide<const float> wtime)
     {
         return Mask(false);
     }
     virtual Mask get_matrix(BatchedShaderGlobals* bsg, Masked<Matrix44> result,
-                            Wide<const ustring> wfrom, Wide<const float> wtime);
+                            Wide<const ustringhash> wfrom,
+                            Wide<const float> wtime);
     virtual bool is_overridden_get_matrix_WmWsWf() const = 0;
 
 
@@ -97,12 +98,12 @@ public:
     /// particular renderer may have a better technique and overload the
     /// implementation.
     virtual Mask get_inverse_matrix(BatchedShaderGlobals* bsg,
-                                    Masked<Matrix44> wresult, ustring to,
+                                    Masked<Matrix44> wresult, ustringhash to,
                                     Wide<const float> wtime);
     virtual bool is_overridden_get_inverse_matrix_WmsWf() const = 0;
     virtual Mask get_inverse_matrix(BatchedShaderGlobals* bsg,
                                     Masked<Matrix44> wresult,
-                                    Wide<const ustring> wto,
+                                    Wide<const ustringhash> wto,
                                     Wide<const float> wtime);
     virtual bool is_overridden_get_inverse_matrix_WmWsWf() const = 0;
 
@@ -124,22 +125,23 @@ public:
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
     /// unsuccessful, on the currently shaded "scene".
-    virtual Mask get_attribute(BatchedShaderGlobals* bsg, ustring object,
-                               ustring name, MaskedData wval)
+    virtual Mask get_attribute(BatchedShaderGlobals* bsg, ustringhash object,
+                               ustringhash name, MaskedData wval)
     {
         return Mask(false);
     }
 
     /// Similar to get_attribute();  this method will fetch the 'index'
     /// element of an attribute array.
-    virtual Mask get_array_attribute(BatchedShaderGlobals* bsg, ustring object,
-                                     ustring name, int index, MaskedData wval)
+    virtual Mask get_array_attribute(BatchedShaderGlobals* bsg,
+                                     ustringhash object, ustringhash name,
+                                     int index, MaskedData wval)
     {
         return Mask(false);
     }
 
     virtual bool get_attribute_uniform(BatchedShaderGlobals* bsg,
-                                       ustring object, ustring name,
+                                       ustringhash object, ustringhash name,
                                        RefData val)
     {
         return false;
@@ -148,8 +150,9 @@ public:
     /// Similar to get_attribute();  this method will fetch the 'index'
     /// element of an attribute array.
     virtual bool get_array_attribute_uniform(BatchedShaderGlobals* bsg,
-                                             ustring object, ustring name,
-                                             int index, RefData val)
+                                             ustringhash object,
+                                             ustringhash name, int index,
+                                             RefData val)
     {
         return false;
     }
@@ -159,7 +162,7 @@ public:
     /// as well. It is assumed the results are varying and returns Mask
     // with its bit set to off if no user-data with the given name and type was
     /// found.
-    virtual Mask get_userdata(ustring name, BatchedShaderGlobals* bsg,
+    virtual Mask get_userdata(ustringhash name, BatchedShaderGlobals* bsg,
                               MaskedData wval)
     {
         return Mask(false);
@@ -206,7 +209,7 @@ public:
     /// error.
     ///
     virtual Mask
-    texture(ustring filename, TextureSystem::TextureHandle* texture_handle,
+    texture(ustringhash filename, TextureSystem::TextureHandle* texture_handle,
             TextureSystem::Perthread* texture_thread_info,
             const BatchedTextureOptions& options, BatchedShaderGlobals* bsg,
             Wide<const float> ws, Wide<const float> wt, Wide<const float> wdsdx,
@@ -240,7 +243,7 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual Mask texture3d(ustring filename,
+    virtual Mask texture3d(ustringhash filename,
                            TextureSystem::TextureHandle* texture_handle,
                            TextureSystem::Perthread* texture_thread_info,
                            const BatchedTextureOptions& options,
@@ -273,7 +276,7 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual Mask environment(ustring filename,
+    virtual Mask environment(ustringhash filename,
                              TextureSystem::TextureHandle* texture_handle,
                              TextureSystem::Perthread* texture_thread_info,
                              const BatchedTextureOptions& options,
@@ -300,12 +303,12 @@ public:
 
     virtual TextureSystem::TextureHandle* resolve_udim_uniform(
         BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-        ustring filename, TextureSystem::TextureHandle* texture_handle, float S,
-        float T);
+        ustringhash filename, TextureSystem::TextureHandle* texture_handle,
+        float S, float T);
 
     virtual void resolve_udim(BatchedShaderGlobals* bsg,
                               TexturePerthread* texture_thread_info,
-                              ustring filename,
+                              ustringhash filename,
                               TextureSystem::TextureHandle* texture_handle,
                               Wide<const float> wS, Wide<const float> wT,
                               Masked<TextureSystem::TextureHandle*> wresult);
@@ -313,8 +316,8 @@ public:
     // Assumes any UDIM has been resolved already
     virtual bool get_texture_info_uniform(
         BatchedShaderGlobals* bsg, TexturePerthread* texture_thread_info,
-        ustring filename, TextureSystem::TextureHandle* texture_handle,
-        int subimage, ustring dataname, RefData val);
+        ustringhash filename, TextureSystem::TextureHandle* texture_handle,
+        int subimage, ustringhash dataname, RefData val);
 
 
     /// Lookup nearest points in a point cloud. It will search for
@@ -407,26 +410,25 @@ public:
     };
 
 
-    virtual void pointcloud_search(BatchedShaderGlobals* bsg, ustring filename,
-                                   const void* wcenter,
+    virtual void pointcloud_search(BatchedShaderGlobals* bsg,
+                                   ustringhash filename, const void* wcenter,
                                    Wide<const float> wradius, int max_points,
                                    bool sort, PointCloudSearchResults& results);
     virtual bool is_overridden_pointcloud_search() const = 0;
 
 
-    virtual Mask pointcloud_get(BatchedShaderGlobals* bsg, ustring filename,
+    virtual Mask pointcloud_get(BatchedShaderGlobals* bsg, ustringhash filename,
                                 Wide<const int[]> windices,
-                                Wide<const int> wnum_points, ustring attr_name,
-                                MaskedData wout_data);
+                                Wide<const int> wnum_points,
+                                ustringhash attr_name, MaskedData wout_data);
     virtual bool is_overridden_pointcloud_get() const = 0;
 
 
-    virtual Mask pointcloud_write(BatchedShaderGlobals* bsg, ustring filename,
-                                  Wide<const OSL::Vec3> wpos, int nattribs,
-                                  const ustring* attr_names,
-                                  const TypeDesc* attr_types,
-                                  const void** pointers_to_wide_attr_value,
-                                  Mask mask);
+    virtual Mask
+    pointcloud_write(BatchedShaderGlobals* bsg, ustringhash filename,
+                     Wide<const OSL::Vec3> wpos, int nattribs,
+                     const ustring* attr_names, const TypeDesc* attr_types,
+                     const void** pointers_to_wide_attr_value, Mask mask);
     virtual bool is_overridden_pointcloud_write() const = 0;
 
     /// Options for the trace call.
@@ -441,7 +443,8 @@ public:
                        Wide<const Vec3> wdRdy);
 
     virtual void getmessage(BatchedShaderGlobals* bsg, Masked<int> wresult,
-                            ustring source, ustring name, MaskedData wval);
+                            ustringhash source, ustringhash name,
+                            MaskedData wval);
 
     // pointcloud_search is T.B.D.
 

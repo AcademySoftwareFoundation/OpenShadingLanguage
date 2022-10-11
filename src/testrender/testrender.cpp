@@ -45,6 +45,7 @@ static bool saveptx              = false;
 static bool warmup               = false;
 static bool profile              = false;
 static bool O0 = false, O1 = false, O2 = false;
+static int llvm_opt              = 1;  // LLVM optimization level
 static bool debugnan             = false;
 static bool debug_uninit         = false;
 static bool userdata_isconnected = false;
@@ -79,6 +80,15 @@ set_shadingsys_options()
     if (const char* opt_env = getenv("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);
     shadingsys->attribute("optimize", opt);
+
+    // The cost of more optimization passes usually pays for itself by
+    // reducing the number of instructions JIT ultimately has to lower to
+    // the target ISA.
+    if (const char* llvm_opt_env = getenv(
+            "TESTSHADE_LLVM_OPT"))  // overrides llvm_opt
+        llvm_opt = atoi(llvm_opt_env);
+    shadingsys->attribute("llvm_optimize", llvm_opt);
+
     shadingsys->attribute("profile", int(profile));
     shadingsys->attribute("lockgeom", 1);
     shadingsys->attribute("debug_nan", debugnan);
@@ -152,6 +162,8 @@ getargs(int argc, const char* argv[])
       .help("Do a little runtime shader optimization");
     ap.arg("-O2", &O2)
       .help("Do lots of runtime shader optimization");
+    ap.arg("--llvm_opt %d:LEVEL", &llvm_opt)
+      .help("LLVM JIT optimization level");
     ap.arg("--debugnan", &debugnan)
       .help("Turn on 'debugnan' mode");
     ap.arg("--path SEARCHPATH", &shaderpath)

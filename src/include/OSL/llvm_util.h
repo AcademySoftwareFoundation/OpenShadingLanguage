@@ -155,15 +155,6 @@ public:
     void debug_set_location(OIIO::ustring sourcefile, int sourceline);
 
     /// Create a new function (that will later be populated with
-    /// instructions) with up to 4 args.
-    OSL_DEPRECATED("Use make_function flavor that takes a cspan (1.12)")
-    llvm::Function* make_function(const std::string& name, bool fastcall,
-                                  llvm::Type* rettype, llvm::Type* arg1 = NULL,
-                                  llvm::Type* arg2 = NULL,
-                                  llvm::Type* arg3 = NULL,
-                                  llvm::Type* arg4 = NULL);
-
-    /// Create a new function (that will later be populated with
     /// instructions) with a cspan of args.
     llvm::Function* make_function(const std::string& name, bool fastcall,
                                   llvm::Type* rettype,

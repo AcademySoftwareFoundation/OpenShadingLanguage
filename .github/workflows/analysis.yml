@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: sonary gcc9/C++14 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+          - desc: sonar gcc9/C++14 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
             nametag: static-analysis-sonar
             os: ubuntu-latest
             vfxyear: 2022

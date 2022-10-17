@@ -67,11 +67,11 @@ scramble(uint32_t v0, uint32_t v1 = 0, uint32_t v2 = 0)
 // clang-format off
 
 namespace {  // anon namespace to avoid duplicate OptiX symbols
-static OSL_CONSTANT_DATA float zero[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+OSL_CONSTANT_DATA float zero[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 // Gradient table for 2D. These could be programmed the Ken Perlin way with
 // some clever bit-twiddling, but this is more clear, and not really slower.
-static OSL_CONSTANT_DATA float grad2lut[8][2] = {
+OSL_CONSTANT_DATA float grad2lut[8][2] = {
     { -1.0f, -1.0f }, { 1.0f,  0.0f }, { -1.0f, 0.0f }, { 1.0f,  1.0f },
     { -1.0f,  1.0f }, { 0.0f, -1.0f }, {  0.0f, 1.0f }, { 1.0f, -1.0f }
 };
@@ -82,7 +82,7 @@ static OSL_CONSTANT_DATA float grad2lut[8][2] = {
 // but these 12 (including 4 repeats to make the array length a power
 // of two) work better. They are not random, they are carefully chosen
 // to represent a small, isotropic set of directions.
-static OSL_CONSTANT_DATA float grad3lut[16][3] = {
+OSL_CONSTANT_DATA float grad3lut[16][3] = {
     {  1.0f,  0.0f,  1.0f }, {  0.0f,  1.0f,  1.0f }, // 12 cube edges
     { -1.0f,  0.0f,  1.0f }, {  0.0f, -1.0f,  1.0f },
     {  1.0f,  0.0f, -1.0f }, {  0.0f,  1.0f, -1.0f },
@@ -94,7 +94,7 @@ static OSL_CONSTANT_DATA float grad3lut[16][3] = {
 };
 
 // Gradient directions for 4D
-static OSL_CONSTANT_DATA float grad4lut[32][4] = {
+OSL_CONSTANT_DATA float grad4lut[32][4] = {
   { 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, -1.0f }, { 0.0f, 1.0f, -1.0f, 1.0f }, { 0.0f, 1.0f, -1.0f, -1.0f }, // 32 tesseract edges
   { 0.0f, -1.0f, 1.0f, 1.0f }, { 0.0f, -1.0f, 1.0f, -1.0f }, { 0.0f, -1.0f, -1.0f, 1.0f }, { 0.0f, -1.0f, -1.0f, -1.0f },
   { 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, -1.0f }, { 1.0f, 0.0f, -1.0f, 1.0f }, { 1.0f, 0.0f, -1.0f, -1.0f },
@@ -108,7 +108,7 @@ static OSL_CONSTANT_DATA float grad4lut[32][4] = {
 // A lookup table to traverse the simplex around a given point in 4D.
 // Details can be found where this table is used, in the 4D noise method.
 /* TODO: This should not be required, backport it from Bill's GLSL code! */
-static OSL_CONSTANT_DATA unsigned char simplex[64][4] = {
+OSL_CONSTANT_DATA unsigned char simplex[64][4] = {
   {0,1,2,3},{0,1,3,2},{0,0,0,0},{0,2,3,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,2,3,0},
   {0,2,1,3},{0,0,0,0},{0,3,1,2},{0,3,2,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,3,2,0},
   {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},

@@ -42,7 +42,7 @@ enum {
 
 // clang-format off
 namespace {  // anon namespace to avoid duplicate OptiX symbols
-OSL_CONSTANT_DATA const static SplineBasis gBasisSet[kNumSplineTypes] = {
+OSL_CONSTANT_DATA const SplineBasis gBasisSet[kNumSplineTypes] = {
 //
 // catmullrom
 //

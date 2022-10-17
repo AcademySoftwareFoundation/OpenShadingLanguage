@@ -39,7 +39,7 @@ namespace pvt {
 #define IlluminantACES 0.32168, 0.33767        /* For ACES, approximate D60 */
 
 namespace {  // anon namespace to avoid duplicate OptiX symbols
-OSL_CONSTANT_DATA const static ColorSystem::Chroma k_color_systems[13] = {
+OSL_CONSTANT_DATA const ColorSystem::Chroma k_color_systems[13] = {
    // Index, Name        xRed    yRed   xGreen  yGreen   xBlue   yBlue    White point
    /* 0  Rec709     */ { 0.64,   0.33,   0.30,   0.60,   0.15,   0.06,   IlluminantD65 },
    /* 1  sRGB       */ { 0.64,   0.33,   0.30,   0.60,   0.15,   0.06,   IlluminantD65 },

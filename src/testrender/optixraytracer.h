@@ -25,8 +25,8 @@ public:
     OptixRaytracer();
     virtual ~OptixRaytracer();
 
-    uint64_t register_global(const std::string& str, uint64_t value);
-    bool fetch_global(const std::string& str, uint64_t* value);
+    uint64_t register_global(const std::string& str, uint64_t value) override;
+    bool fetch_global(const std::string& str, uint64_t* value) override;
 
     int supports(string_view feature) const override
     {

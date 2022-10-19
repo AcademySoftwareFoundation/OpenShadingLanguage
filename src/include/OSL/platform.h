@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <memory>
 
 #include <OSL/oslversion.h>
@@ -498,6 +499,24 @@
 #endif
 
 OSL_NAMESPACE_ENTER
+
+
+/// Standards-compliant bit cast of two equally sized types. This is used
+/// equivalently to C++20 std::bit_cast, but it works prior to C++20 and
+/// it has the right decorators to work with Cuda.
+/// @version 1.13.2
+template <typename To, typename From>
+OSL_FORCEINLINE OSL_HOSTDEVICE To bitcast(const From& src) noexcept {
+    // NOTE: this is the only standards compliant way of doing this type of casting,
+    // luckily the compilers we care about know how to optimize away this idiom.
+    static_assert(sizeof(From) == sizeof(To),
+                  "bit_cast must be between objects of the same size");
+    To dst;
+    memcpy((void*)&dst, &src, sizeof(From));
+    return dst;
+}
+
+
 
 #if OSL_CPLUSPLUS_VERSION >= 20
 using std::assume_aligned;

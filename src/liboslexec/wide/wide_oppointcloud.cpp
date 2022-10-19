@@ -494,7 +494,7 @@ dispatch_pointcloud_write(BatchedShaderGlobals* bsg, ustringhash filename,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP(pointcloud_search)(
-    BatchedShaderGlobals* bsg, void* wout_num_points_, const char* filename,
+    BatchedShaderGlobals* bsg, void* wout_num_points_, ustring_pod filename,
     const void* wcenter_, void* wradius_, int max_points, int sort,
     void* wout_indices_, int indices_array_length, void* wout_distances_,
     int distances_array_length, int distances_has_derivs, int mask_value,
@@ -509,9 +509,8 @@ __OSL_MASKED_OP(pointcloud_search)(
                                    mask_value };
 
     ShadingContext* ctx = bsg->uniform.context;
-    if (ctx->shadingsys()
-            .no_pointcloud())  // Debug mode to skip pointcloud expense
-    {
+    if (ctx->shadingsys().no_pointcloud()) {
+        // Debug mode to skip pointcloud expense
         assign_all(pcsr.wnum_points(), 0);
         return;  // mask_value;
     }
@@ -528,11 +527,9 @@ __OSL_MASKED_OP(pointcloud_search)(
         va_list args;
         va_start(args, nattrs);
         for (int i = 0; i < nattrs; i++) {
-            ustring attr_name = ustring::from_unique(
-                (const char*)va_arg(args, const char*));
-            long long lltype   = va_arg(args, long long);
-            TypeDesc attr_type = TYPEDESC(lltype);
-            void* out_data     = va_arg(args, void*);
+            ustringrep attr_name = USTREP(va_arg(args, ustring_pod));
+            TypeDesc attr_type   = TYPEDESC(va_arg(args, long long));
+            void* out_data       = va_arg(args, void*);
             dispatch_pointcloud_get(
                 bsg, USTR(filename), windices, wnum_points, attr_name,
                 MaskedData { attr_type, false, Mask { mask_value }, out_data });
@@ -547,9 +544,9 @@ __OSL_MASKED_OP(pointcloud_search)(
 
 
 OSL_BATCHOP int
-__OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, const char* filename,
+__OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, ustring_pod filename,
                                 void* windices_, int indices_array_length,
-                                void* wnum_points_, const char* attr_name,
+                                void* wnum_points_, ustring_pod attr_name,
                                 long long attr_type_, void* wout_data_,
                                 int mask_value)
 {
@@ -574,7 +571,7 @@ __OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, const char* filename,
 
 OSL_BATCHOP int
 __OSL_MASKED_OP(pointcloud_write)(BatchedShaderGlobals* bsg,
-                                  const char* filename, const void* wpos_,
+                                  ustring_pod filename, const void* wpos_,
                                   int nattribs, const ustringrep* attr_names,
                                   const TypeDesc* attr_types,
                                   const void** ptrs_to_wide_attr_value,

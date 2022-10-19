@@ -354,7 +354,7 @@ __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr, void* wsubject_ptr,
 
         const std::string& subject = usubject.string();
         std::match_results<std::string::const_iterator> mresults;
-        const std::regex& regex(ctx->find_regex(USTR(pattern)));
+        const std::regex& regex(ctx->find_regex(pattern));
         if (nresults > 0) {
             std::string::const_iterator start = subject.begin();
             int res = fullmatch ? std::regex_match(subject, mresults, regex)
@@ -366,7 +366,7 @@ __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr, void* wsubject_ptr,
                     else
                         results[r] = mresults[r / 2].second - start;
                 } else {
-                    results[r] = USTR(pattern).length();
+                    results[r] = pattern.length();
                 }
             }
             wsuccess[lane] = res;

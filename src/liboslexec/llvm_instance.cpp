@@ -1296,8 +1296,13 @@ BackendLLVM::initialize_llvm_group()
         TypeSpec rettype = OSLCompilerImpl::type_from_code(types, &advance);
         types += advance;
         std::vector<llvm::Type*> params;
+        // bool debug = OIIO::Strutil::contains(funcname, "range");
+        // if (debug)
+        //     print("defining func {}:\n", funcname);
         while (*types) {
             TypeSpec t = OSLCompilerImpl::type_from_code(types, &advance);
+            // if (debug)
+            //     print("\t{}\n", t);
             if (t.simpletype().basetype == TypeDesc::UNKNOWN) {
                 OSL_DASSERT(*types == '*');
                 if (*types == '*')

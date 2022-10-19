@@ -315,7 +315,7 @@ DECL(__OSL_MASKED_OP(pointcloud_get), "iXsXiXsLXi")
 DECL(__OSL_MASKED_OP(pointcloud_write), "iXsXiXXXi")
 
 DECL(__OSL_MASKED_OP(getmessage), "xXXssLXiisii")
-DECL(__OSL_MASKED_OP2(setmessage, s, WX), "xXXLXisii")
+DECL(__OSL_MASKED_OP2(setmessage, s, WX), "xXsLXisii")
 DECL(__OSL_MASKED_OP2(setmessage, Ws, WX), "xXXLXisii")
 
 DECL(__OSL_OP(blackbody_vf), "xXXf")
@@ -362,24 +362,24 @@ DECL(__OSL_OP(dict_value), "iXiXLX")
 DECL(__OSL_MASKED_OP(dict_value), "xXXXXLXi")
 
 
-DECL(__OSL_OP(raytype_name), "iXX")
+DECL(__OSL_OP(raytype_name), "iXs")
 DECL(__OSL_MASKED_OP(raytype_name), "xXXXi")
-DECL(__OSL_OP(naninf_check), "xiXiXXiXiiX")
-DECL(__OSL_MASKED_OP1(naninf_check_offset, i), "xiiXiXXiXiiX")
-DECL(__OSL_MASKED_OP1(naninf_check_offset, Wi), "xiiXiXXiXXiX")
-DECL(__OSL_OP(range_check), "iiiXXXiXiXX")
-DECL(__OSL_MASKED_OP(range_check), "xXiiXXXiXiXX")
-DECL(__OSL_OP2(uninit_check_values_offset, X, i), "xLXXXiXiXXiXiXii")
-DECL(__OSL_MASKED_OP2(uninit_check_values_offset, X, Wi), "xiLXXXiXiXXiXiXXi")
-DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, i), "xiLXXXiXiXXiXiXii")
-DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi), "xiLXXXiXiXXiXiXXi")
+DECL(__OSL_OP(naninf_check), "xiXiXsisiis")
+DECL(__OSL_MASKED_OP1(naninf_check_offset, i), "xiiXiXsisiis")
+DECL(__OSL_MASKED_OP1(naninf_check_offset, Wi), "xiiXiXsisXis")
+DECL(__OSL_OP(range_check), "iiisXsisiss")
+DECL(__OSL_MASKED_OP(range_check), "xXiisXsisiss")
+DECL(__OSL_OP2(uninit_check_values_offset, X, i), "xLXXsisissisisii")
+DECL(__OSL_MASKED_OP2(uninit_check_values_offset, X, Wi), "xiLXXsisissisisXi")
+DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, i), "xiLXXsisissisisii")
+DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi), "xiLXXsisissisisXi")
 
-DECL(__OSL_OP1(get_attribute, s), "iXiXXiiXXi")
-DECL(__OSL_MASKED_OP1(get_attribute, Ws), "iXiXXiiXXi")
-DECL(__OSL_OP(get_attribute_uniform), "iXiXXiiXX")
+DECL(__OSL_OP1(get_attribute, s), "iXissiiXXi")
+DECL(__OSL_MASKED_OP1(get_attribute, Ws), "iXisXiiXXi")
+DECL(__OSL_OP(get_attribute_uniform), "iXissiiXX")
 
 // TODO:  shouldn't bind_interpolated_param be MASKED?  change name to reflect
-DECL(__OSL_OP(bind_interpolated_param), "iXXLiXiXiXii")
+DECL(__OSL_OP(bind_interpolated_param), "iXsLiXiXiXii")
 
 //DECL (osl_get_texture_options, "XX") // unneeded
 DECL(__OSL_OP(get_noise_options), "XX")

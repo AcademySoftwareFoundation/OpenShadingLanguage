@@ -351,10 +351,11 @@ RendererServices::pointcloud_write(ShaderGlobals* /*sg*/, ustringhash filename,
                 *(int*)cloud->dataWrite<int>(*a, p) = *(int*)(data[i]);
                 break;
             case Partio::INDEXEDSTR: {
-                const char* s = *(const char**)(data[i]);
-                int index     = cloud->lookupIndexedStr(*a, s);
+                ustringrep s     = *(ustringrep*)(data[i]);
+                const char* sstr = s.c_str();
+                int index        = cloud->lookupIndexedStr(*a, sstr);
                 if (index == -1)
-                    index = cloud->registerIndexedStr(*a, s);
+                    index = cloud->registerIndexedStr(*a, sstr);
                 *(int*)cloud->dataWrite<int>(*a, p) = index;
             } break;
             case Partio::NONE: break;
@@ -371,7 +372,7 @@ RendererServices::pointcloud_write(ShaderGlobals* /*sg*/, ustringhash filename,
 namespace pvt {
 
 OSL_SHADEOP int
-osl_pointcloud_search(ShaderGlobals* sg, const char* filename, void* center,
+osl_pointcloud_search(ShaderGlobals* sg, ustring_pod filename, void* center,
                       float radius, int max_points, int sort, void* out_indices,
                       void* out_distances, int derivs_offset, int nattrs, ...)
 {
@@ -398,11 +399,11 @@ osl_pointcloud_search(ShaderGlobals* sg, const char* filename, void* center,
     va_list args;
     va_start(args, nattrs);
     for (int i = 0; i < nattrs; i++) {
-        ustring attr_name = ustring::from_unique(
-            (const char*)va_arg(args, const char*));
-        long long lltype   = va_arg(args, long long);
-        TypeDesc attr_type = TYPEDESC(lltype);
-        void* out_data     = va_arg(args, void*);
+        ustring_pod attr_name_rep = (ustring_pod)va_arg(args, ustring_pod);
+        ustringrep attr_name      = USTR(attr_name_rep);
+        long long lltype          = va_arg(args, long long);
+        TypeDesc attr_type        = TYPEDESC(lltype);
+        void* out_data            = va_arg(args, void*);
         sg->renderer->pointcloud_get(sg, USTR(filename), indices, count,
                                      attr_name, attr_type, out_data);
     }
@@ -421,8 +422,8 @@ osl_pointcloud_search(ShaderGlobals* sg, const char* filename, void* center,
 
 
 OSL_SHADEOP int
-osl_pointcloud_get(ShaderGlobals* sg, const char* filename, void* in_indices,
-                   int count, const char* attr_name, long long attr_type,
+osl_pointcloud_get(ShaderGlobals* sg, ustring_pod filename, void* in_indices,
+                   int count, ustring_pod attr_name, long long attr_type,
                    void* out_data)
 {
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
@@ -444,7 +445,7 @@ osl_pointcloud_get(ShaderGlobals* sg, const char* filename, void* in_indices,
 
 OSL_SHADEOP void
 osl_pointcloud_write_helper(ustringrep* names, TypeDesc* types, void** values,
-                            int index, const char* name, long long type,
+                            int index, ustring_pod name, long long type,
                             void* val)
 {
     names[index]  = USTR(name);
@@ -455,7 +456,7 @@ osl_pointcloud_write_helper(ustringrep* names, TypeDesc* types, void** values,
 
 
 OSL_SHADEOP int
-osl_pointcloud_write(ShaderGlobals* sg, const char* filename, const Vec3* pos,
+osl_pointcloud_write(ShaderGlobals* sg, ustring_pod filename, const Vec3* pos,
                      int nattribs, const ustringrep* names,
                      const TypeDesc* types, const void** values)
 {

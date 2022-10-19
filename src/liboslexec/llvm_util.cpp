@@ -2455,6 +2455,11 @@ LLVM_Util::make_function(const std::string& name, bool fastcall,
     llvm::FunctionType* functype = type_function(rettype, params, varargs);
     auto maybe_func = module()->getOrInsertFunction(name, functype).getCallee();
     OSL_ASSERT(maybe_func && "getOrInsertFunction returned NULL");
+    // if (!llvm::isa<llvm::Function>(maybe_func)) {
+    //     print("make_function: getOrInsertFunction returned non-function for {}\n", name);
+    //     for (auto p : params)
+    //         print("   param type: {}\n", llvm_typename(p));
+    // }
     OSL_ASSERT_MSG(llvm::isa<llvm::Function>(maybe_func),
                    "Declaration for %s is wrong, LLVM had to make a cast",
                    name.c_str());
@@ -2850,15 +2855,21 @@ LLVM_Util::constant(ustring s)
     const size_t size_t_bits = sizeof(size_t) * 8;
     // Create a const size_t with the ustring character address, or hash,
     // depending on the representation we're using.
-    size_t p = (ustring_rep() == UstringRep::charptr) ? size_t(s.c_str())
-                                                      : s.hash();
-    auto str = (size_t_bits == 64) ? constant64(p) : constant(int(p));
-    // Then cast the int to a char*. Ideally, we would only do that if the rep
-    // were a charptr, but we disguise the hashes as char*'s also to avoid
-    // ugliness with function signatures differing between CPU and GPU.
-    // Maybe some day we'll use the hash representation on both sides?
-    return builder().CreateIntToPtr(str, m_llvm_type_ustring,
-                                    "ustring constant");
+    if (ustring_rep() == UstringRep::charptr) {
+        return constant_ptr((void*)s.c_str(), type_char_ptr());
+    } else {
+        size_t p = s.hash();
+        auto str = (size_t_bits == 64) ? constant64(p) : constant(int(p));
+#if OSL_USTRINGREP_IS_HASH
+        return str;
+#else
+        // Then cast the int to a char*. Ideally, we would only do that if the rep
+        // were a charptr, but we disguise the hashes as char*'s also to avoid
+        // ugliness with function signatures differing between CPU and GPU.
+        return builder().CreateIntToPtr(str, m_llvm_type_ustring,
+                                        "ustring constant");
+#endif
+    }
 }
 
 
@@ -3591,9 +3602,9 @@ LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
     OSL_DASSERT(func);
 #if 0
     llvm::outs() << "llvm_call_function " << *func << "\n";
-    llvm::outs() << nargs << " args:\n";
-    for (int i = 0, nargs = args.size();  i < nargs;  ++i)
-        llvm::outs() << "\t" << *(args[i]) << "\n";
+    llvm::outs() << args.size() << " args:\n";
+    for (auto a : args)
+        llvm::outs() << "\t" << *a << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
 #if OSL_LLVM_VERSION >= 110

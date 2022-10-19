@@ -456,7 +456,7 @@ spline_evaluate_wide(RAccessorT wR, ustring spline_basis, XAccessorT wX,
                 true /*is_basis_u_constant */, 1 /* basis_step */,
                 ConstantWeights, RAccessorT, XAccessorT, KAccessor_T> };
 
-    unsigned int basis_type = Spline::basis_type_of(USTR(spline_basis));
+    unsigned int basis_type = Spline::basis_type_of(spline_basis);
 
     OSL_DASSERT(basis_type < Spline::kNumSplineTypes
                 && "unsupported spline basis");
@@ -539,7 +539,7 @@ splineinverse_evaluate_wide(RAccessorT wR, ustring spline_basis, XAccessorT wX,
                 true /*is_basis_u_constant */, 1 /* basis_step */,
                 ConstantWeights, RAccessorT, XAccessorT, KAccessor_T> };
 
-    unsigned int basis_type = Spline::basis_type_of(USTR(spline_basis));
+    unsigned int basis_type = Spline::basis_type_of(spline_basis);
 
     OSL_DASSERT(basis_type < Spline::kNumSplineTypes
                 && "unsupported spline basis");

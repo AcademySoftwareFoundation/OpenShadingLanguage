@@ -1020,9 +1020,9 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
 // Also zeroing of derivatives is left to the code generator.
 
 OSL_BATCHOP int
-__OSL_MASKED_OP3(build_transform_matrix, Wm, s, s)(void* bsg_, void* WM_,
-                                                   void* from_, void* to_,
-                                                   unsigned int mask_value)
+__OSL_MASKED_OP3(build_transform_matrix, Wm, s,
+                 s)(void* bsg_, void* WM_, ustring_pod from_, ustring_pod to_,
+                    unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -1056,9 +1056,9 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, s, s)(void* bsg_, void* WM_,
 
 
 OSL_BATCHOP int
-__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s)(void* bsg_, void* WM_,
-                                                    void* wfrom_, void* to_,
-                                                    unsigned int mask_value)
+__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
+                 s)(void* bsg_, void* WM_, void* wfrom_, ustring_pod to_,
+                    unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -1092,9 +1092,9 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s)(void* bsg_, void* WM_,
 
 
 OSL_BATCHOP int
-__OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws)(void* bsg_, void* WM_,
-                                                    void* from_, void* wto_,
-                                                    unsigned int mask_value)
+__OSL_MASKED_OP3(build_transform_matrix, Wm, s,
+                 Ws)(void* bsg_, void* WM_, ustring_pod from_, void* wto_,
+                     unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 

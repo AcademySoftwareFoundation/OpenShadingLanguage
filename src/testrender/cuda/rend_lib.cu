@@ -265,7 +265,7 @@ rend_get_userdata(OSL::StringParam name, void* data, int data_size,
 
 
 __device__ int
-osl_bind_interpolated_param(void* sg_, const void* name, long long type,
+osl_bind_interpolated_param(void* sg_, OSL::StringParam name, long long type,
                             int userdata_has_derivs, void* userdata_data,
                             int symbol_has_derivs, void* symbol_data,
                             int symbol_data_size, char* userdata_initialized,
@@ -411,10 +411,10 @@ osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
 
 
 __device__ int
-osl_range_check_err(int indexvalue, int length, const char* symname, void* sg,
-                    const void* sourcefile, int sourceline,
-                    const char* groupname, int layer, const char* layername,
-                    const char* shadername)
+osl_range_check_err(int indexvalue, int length, OSL::ustring_pod symname,
+                    void* sg, OSL::ustring_pod sourcefile, int sourceline,
+                    OSL::ustring_pod groupname, int layer,
+                    OSL::ustring_pod layername, OSL::ustring_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
         return indexvalue < 0 ? 0 : length - 1;
@@ -425,9 +425,10 @@ osl_range_check_err(int indexvalue, int length, const char* symname, void* sg,
 
 
 __device__ int
-osl_range_check(int indexvalue, int length, const char* symname, void* sg,
-                const void* sourcefile, int sourceline, const char* groupname,
-                int layer, const char* layername, const char* shadername)
+osl_range_check(int indexvalue, int length, OSL::ustring_pod symname, void* sg,
+                OSL::ustring_pod sourcefile, int sourceline,
+                OSL::ustring_pod groupname, int layer,
+                OSL::ustring_pod layername, OSL::ustring_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
         indexvalue = osl_range_check_err(indexvalue, length, symname, sg,

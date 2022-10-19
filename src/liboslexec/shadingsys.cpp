@@ -4313,8 +4313,8 @@ OSL::OSLQuery::init(const ShaderGroup* group, int layernum)
 // firstcheck,nchecks are used to check just one element of an array.
 OSL_SHADEOP void
 osl_naninf_check(int ncomps, const void* vals_, int has_derivs, void* sg,
-                 const void* sourcefile, int sourceline, void* symbolname,
-                 int firstcheck, int nchecks, const void* opname)
+                 ustring_pod sourcefile, int sourceline, ustring_pod symbolname,
+                 int firstcheck, int nchecks, ustring_pod opname)
 {
     ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     const float* vals   = (const float*)vals_;
@@ -4345,10 +4345,10 @@ osl_naninf_check(int ncomps, const void* vals_, int has_derivs, void* sg,
 // element of an array.
 OSL_SHADEOP void
 osl_uninit_check(long long typedesc_, void* vals_, void* sg,
-                 const void* sourcefile, int sourceline, const char* groupname,
-                 int layer, const char* layername, const char* shadername,
-                 int opnum, const char* opname, int argnum, void* symbolname,
-                 int firstcheck, int nchecks)
+                 ustring_pod sourcefile, int sourceline, ustring_pod groupname_,
+                 int layer, ustring_pod layername_, ustring_pod shadername,
+                 int opnum, ustring_pod opname, int argnum,
+                 ustring_pod symbolname, int firstcheck, int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
@@ -4378,30 +4378,34 @@ osl_uninit_check(long long typedesc_, void* vals_, void* sg,
             }
     }
     if (uninit) {
+        ustringrep groupname = USTR(groupname_);
+        ustringrep layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {})",
-            typedesc.c_str(), USTR(symbolname), USTR(sourcefile), sourceline,
-            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-            (layername && layername[0]) ? layername : "<unnamed layer>",
-            shadername, opnum, USTR(opname), argnum);
+            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
+            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
+            layername.empty() ? "<unnamed layer>" : layername.c_str(),
+            USTR(shadername), opnum, USTR(opname), argnum);
     }
 }
 
 
 
 OSL_SHADEOP int
-osl_range_check_err(int indexvalue, int length, const char* symname, void* sg,
-                    const void* sourcefile, int sourceline,
-                    const char* groupname, int layer, const char* layername,
-                    const char* shadername)
+osl_range_check_err(int indexvalue, int length, ustring_pod symname, void* sg,
+                    ustring_pod sourcefile, int sourceline,
+                    ustring_pod groupname_, int layer, ustring_pod layername_,
+                    ustring_pod shadername)
 {
+    ustringrep groupname = USTR(groupname_);
+    ustringrep layername = USTR(layername_);
     if (indexvalue < 0 || indexvalue >= length) {
         ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
         ctx->errorfmt(
             "Index [{}] out of range {}[0..{}]: {}:{} (group {}, layer {} {}, shader {})",
             indexvalue, USTR(symname), length - 1, USTR(sourcefile), sourceline,
-            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-            (layername && layername[0]) ? layername : "<unnamed layer>",
+            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
+            layername.empty() ? "<unnamed layer>" : layername.c_str(),
             USTR(shadername));
         if (indexvalue >= length)
             indexvalue = length - 1;
@@ -4415,7 +4419,7 @@ osl_range_check_err(int indexvalue, int length, const char* symname, void* sg,
 
 // Asked if the raytype is a name we can't know until mid-shader.
 OSL_SHADEOP int
-osl_raytype_name(void* sg_, const char* name)
+osl_raytype_name(void* sg_, ustring_pod name)
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     int bit           = sg->context->shadingsys().raytype_bit(USTR(name));
@@ -4424,24 +4428,21 @@ osl_raytype_name(void* sg_, const char* name)
 
 
 OSL_SHADEOP int
-osl_get_attribute(void* sg_, int dest_derivs, void* obj_name_, void* attr_name_,
-                  int array_lookup, int index, long long attr_type,
-                  void* attr_dest)
+osl_get_attribute(void* sg_, int dest_derivs, ustring_pod obj_name,
+                  ustring_pod attr_name, int array_lookup, int index,
+                  long long attr_type, void* attr_dest)
 {
-    ShaderGlobals* sg        = (ShaderGlobals*)sg_;
-    const ustring& obj_name  = USTR(obj_name_);
-    const ustring& attr_name = USTR(attr_name_);
-
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
     return sg->context->osl_get_attribute(sg, sg->objdata, dest_derivs,
-                                          obj_name, attr_name, array_lookup,
-                                          index, TYPEDESC(attr_type),
-                                          attr_dest);
+                                          USTR(obj_name), USTR(attr_name),
+                                          array_lookup, index,
+                                          TYPEDESC(attr_type), attr_dest);
 }
 
 
 
 OSL_SHADEOP int
-osl_bind_interpolated_param(void* sg_, const void* name, long long type,
+osl_bind_interpolated_param(void* sg_, ustring_pod name, long long type,
                             int userdata_has_derivs, void* userdata_data,
                             int /*symbol_has_derivs*/, void* symbol_data,
                             int symbol_data_size, char* userdata_initialized,

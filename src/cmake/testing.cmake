@@ -383,7 +383,7 @@ macro (osl_add_all_tests)
     endif()
 
     # Only run pointcloud tests if Partio is found
-    if (PARTIO_FOUND)
+    if (partio_FOUND)
         TESTSUITE ( pointcloud pointcloud-fold )
     endif ()
 

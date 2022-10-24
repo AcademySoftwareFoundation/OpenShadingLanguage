@@ -339,6 +339,7 @@ BackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
 
 
 
+#ifdef OSL_USE_OPTIX
 llvm::Value*
 BackendLLVM::addCUDAGlobalVariable(const std::string& name, int size,
                                    int alignment, const void* init_data,
@@ -369,11 +370,11 @@ BackendLLVM::addCUDAGlobalVariable(const std::string& name, int size,
 
     OSL_DASSERT(g_var && "Unable to create GlobalVariable");
 
-#if OSL_LLVM_VERSION >= 100
+#    if OSL_LLVM_VERSION >= 100
     g_var->setAlignment(llvm::MaybeAlign(alignment));
-#else
+#    else
     g_var->setAlignment(alignment);
-#endif
+#    endif
 
     g_var->setLinkage(llvm::GlobalValue::PrivateLinkage);
     g_var->setVisibility(llvm::GlobalValue::DefaultVisibility);
@@ -412,6 +413,7 @@ BackendLLVM::getOrAllocateCUDAVariable(const Symbol& sym)
     return addCUDAGlobalVariable(name, sym.size(), alignment, sym.data(),
                                  sym.typespec().simpletype());
 }
+#endif
 
 
 
@@ -429,6 +431,7 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
     llvm::Value* result = NULL;
     if (sym.symtype() == SymTypeConst) {
         TypeSpec elemtype = sym.typespec().elementtype();
+#ifdef OSL_USE_OPTIX
         if (use_optix()) {
             // Check the constant map for the named Symbol; if it's found, then
             // a GlobalVariable has been created for it
@@ -439,7 +442,9 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
                 // N.B. llvm_typedesc() for a string will know that on OptiX,
                 // strings are actually represented as just the hash.
             }
-        } else {
+        } else
+#endif
+        {
             // For constants on the CPU side, start with *OUR* pointer to the
             // constant values.
             result = ll.constant_ptr(sym.data(),

@@ -121,7 +121,7 @@ endif ()
 
 foreach (COMPONENT clangFrontend clangDriver clangSerialization
                    clangParse clangSema clangAnalysis clangAST clangBasic
-                   clangEdit clangLex)
+                   clangEdit clangLex clangSupport)
     find_library ( _CLANG_${COMPONENT}_LIBRARY
                   NAMES ${COMPONENT}
                   PATHS ${LLVM_LIB_DIR})

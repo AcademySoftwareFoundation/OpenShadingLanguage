@@ -1,9 +1,23 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.7.0 -- 1 Nov?? 2022 (compared to 1.12.6.2)
+Release 1.12.7.0 -- 1 Nov 2022 (compared to 1.12.6.2)
 -------------------------------------------------------
-
+* Optix: Change naming of certain compiler-generated constants in a way that
+  improves use of the PTX cache. #1570
+* Batch: Fix uninitialized members in ReadEvent internals. #1575
+* `testshade --help` now prints TextureSystem options and hardware info. #1584
+* oslc: Fix memory leak in ASTvariable_declaration. #1576
+* Fix memory leaks in light path expression code. #1593 #1594
+* Include the immintrin.h header only when needed. #1605
+* icx: Improvements to fix problems exposed by new icx 2022.2 compiler. #1601
+* Testing: CMake cache variables to control the testing timeout length. #1571
+* CI: Add a dynamic analysis test using address and leak sanitizers. #1581
+* CI: Now using SonarCloud static analysis. #1551
+* CI: Many improvements in testing code coverage #1607
+* CI: Make sure to run pointcloud tests when partio is found. #1611
+* Developers: platform.h now defines OSL_ALLOCA macro. #1589
+* Developers: platform.h now defines OSL::bitcast utility. #1610
 
 Release 1.12 -- 1 Oct 2022 (compared to 1.11)
 ----------------------------------------------

@@ -29,9 +29,9 @@ using WidthTag = OSL::WidthOf<__OSL_WIDTH>;
 // firstcheck,nchecks are used to check just one element of an array.
 OSL_BATCHOP void
 __OSL_OP(naninf_check)(int ncomps, const void* vals_, int has_derivs,
-                       void* bsg_, const void* sourcefile, int sourceline,
-                       void* symbolname, int firstcheck, int nchecks,
-                       const void* opname)
+                       void* bsg_, ustring_pod sourcefile, int sourceline,
+                       ustring_pod symbolname, int firstcheck, int nchecks,
+                       ustring_pod opname)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -56,9 +56,9 @@ __OSL_OP(naninf_check)(int ncomps, const void* vals_, int has_derivs,
 OSL_BATCHOP void
 __OSL_MASKED_OP1(naninf_check_offset,
                  i)(int mask_value, int ncomps, const void* vals_,
-                    int has_derivs, void* bsg_, const void* sourcefile,
-                    int sourceline, void* symbolname, int firstcheck,
-                    int nchecks, const void* opname)
+                    int has_derivs, void* bsg_, ustring_pod sourcefile,
+                    int sourceline, ustring_pod symbolname, int firstcheck,
+                    int nchecks, ustring_pod opname)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -88,12 +88,12 @@ __OSL_MASKED_OP1(naninf_check_offset,
 
 // Wide vals + mask + varying index
 OSL_BATCHOP void
-__OSL_MASKED_OP1(naninf_check_offset, Wi)(int mask_value, int ncomps,
-                                          const void* vals_, int has_derivs,
-                                          void* bsg_, const void* sourcefile,
-                                          int sourceline, void* symbolname,
-                                          const void* wide_offsets_ptr,
-                                          int nchecks, const void* opname)
+__OSL_MASKED_OP1(naninf_check_offset,
+                 Wi)(int mask_value, int ncomps, const void* vals_,
+                     int has_derivs, void* bsg_, ustring_pod sourcefile,
+                     int sourceline, ustring_pod symbolname,
+                     const void* wide_offsets_ptr, int nchecks,
+                     ustring_pod opname)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
@@ -129,9 +129,9 @@ __OSL_MASKED_OP1(naninf_check_offset, Wi)(int mask_value, int ncomps,
 OSL_BATCHOP void
 __OSL_OP2(uninit_check_values_offset, X,
           i)(long long typedesc_, void* vals_, void* bsg_,
-             const void* sourcefile, int sourceline, const char* groupname,
-             int layer, const char* layername, const char* shadername,
-             int opnum, const char* opname, int argnum, void* symbolname,
+             ustring_pod sourcefile, int sourceline, ustring_pod groupname_,
+             int layer, ustring_pod layername_, ustring_pod shadername,
+             int opnum, ustring_pod opname, int argnum, ustring_pod symbolname,
              int firstcheck, int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
@@ -163,12 +163,14 @@ __OSL_OP2(uninit_check_values_offset, X,
             }
     }
     if (uninit) {
+        ustringrep groupname = USTR(groupname_);
+        ustringrep layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {})",
-            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
-            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-            (layername && layername[0]) ? layername : "<unnamed layer>",
-            shadername, opnum, USTR(opname), argnum);
+            typedesc, symbolname, sourcefile, sourceline,
+            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
+            layername.empty() ? "<unnamed layer>" : layername.c_str(),
+            shadername, opnum, opname, argnum);
     }
 }
 
@@ -179,10 +181,11 @@ __OSL_OP2(uninit_check_values_offset, X,
 OSL_BATCHOP void
 __OSL_MASKED_OP2(uninit_check_values_offset, WX,
                  i)(int mask_value, long long typedesc_, void* vals_,
-                    void* bsg_, const void* sourcefile, int sourceline,
-                    const char* groupname, int layer, const char* layername,
-                    const char* shadername, int opnum, const char* opname,
-                    int argnum, void* symbolname, int firstcheck, int nchecks)
+                    void* bsg_, ustring_pod sourcefile, int sourceline,
+                    ustring_pod groupname_, int layer, ustring_pod layername_,
+                    ustring_pod shadername, int opnum, ustring_pod opname,
+                    int argnum, ustring_pod symbolname, int firstcheck,
+                    int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -224,12 +227,14 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
             });
     }
     if (lanes_uninit.any_on()) {
+        ustringrep groupname = USTR(groupname_);
+        ustringrep layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
-            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
-            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-            (layername && layername[0]) ? layername : "<unnamed layer>",
-            shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
+            typedesc, symbolname, sourcefile, sourceline,
+            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
+            layername.empty() ? "<unnamed layer>" : layername.c_str(),
+            shadername, opnum, opname, argnum, lanes_uninit.value());
     }
 }
 
@@ -240,11 +245,11 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
 OSL_BATCHOP void
 __OSL_MASKED_OP2(uninit_check_values_offset, X,
                  Wi)(int mask_value, long long typedesc_, void* vals_,
-                     void* bsg_, const void* sourcefile, int sourceline,
-                     const char* groupname, int layer, const char* layername,
-                     const char* shadername, int opnum, const char* opname,
-                     int argnum, void* symbolname, const void* wide_offsets_ptr,
-                     int nchecks)
+                     void* bsg_, ustring_pod sourcefile, int sourceline,
+                     ustring_pod groupname_, int layer, ustring_pod layername_,
+                     ustring_pod shadername, int opnum, ustring_pod opname,
+                     int argnum, ustring_pod symbolname,
+                     const void* wide_offsets_ptr, int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -288,12 +293,14 @@ __OSL_MASKED_OP2(uninit_check_values_offset, X,
     }
 
     if (lanes_uninit.any_on()) {
+        ustringrep groupname = USTR(groupname_);
+        ustringrep layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
-            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
-            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-            (layername && layername[0]) ? layername : "<unnamed layer>",
-            shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
+            typedesc, symbolname, sourcefile, sourceline,
+            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
+            layername.empty() ? "<unnamed layer>" : layername.c_str(),
+            shadername, opnum, opname, argnum, lanes_uninit.value());
     }
 }
 
@@ -304,11 +311,11 @@ __OSL_MASKED_OP2(uninit_check_values_offset, X,
 OSL_BATCHOP void
 __OSL_MASKED_OP2(uninit_check_values_offset, WX,
                  Wi)(int mask_value, long long typedesc_, void* vals_,
-                     void* bsg_, const void* sourcefile, int sourceline,
-                     const char* groupname, int layer, const char* layername,
-                     const char* shadername, int opnum, const char* opname,
-                     int argnum, void* symbolname, const void* wide_offsets_ptr,
-                     int nchecks)
+                     void* bsg_, ustring_pod sourcefile, int sourceline,
+                     ustring_pod groupname_, int layer, ustring_pod layername_,
+                     ustring_pod shadername, int opnum, ustring_pod opname,
+                     int argnum, ustring_pod symbolname,
+                     const void* wide_offsets_ptr, int nchecks)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -354,33 +361,38 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
     }
 
     if (lanes_uninit.any_on()) {
+        ustringrep groupname = USTR(groupname_);
+        ustringrep layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
-            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
-            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-            (layername && layername[0]) ? layername : "<unnamed layer>",
-            shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
+            typedesc, symbolname, sourcefile, sourceline,
+            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
+            layername.empty() ? "<unnamed layer>" : layername.c_str(),
+            shadername, opnum, opname, argnum, lanes_uninit.value());
     }
 }
 
 
 
 OSL_BATCHOP int
-__OSL_OP(range_check)(int indexvalue, int length, const char* symname,
-                      void* bsg_, const void* sourcefile, int sourceline,
-                      const char* groupname, int layer, const char* layername,
-                      const char* shadername)
+__OSL_OP(range_check)(int indexvalue, int length, ustring_pod symname,
+                      void* bsg_, ustring_pod sourcefile, int sourceline,
+                      ustring_pod groupname_, int layer, ustring_pod layername_,
+                      ustring_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
-        auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-        ShadingContext* ctx = bsg->uniform.context;
-        ctx->errorfmt(
-            "Index [{}] out of range {}[0..{}]: {}:{}"
-            " (group {}, layer {} {}, shader {})",
-            indexvalue, USTR(symname), length - 1, USTR(sourcefile), sourceline,
-            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
-            (layername && layername[0]) ? layername : "<unnamed layer>",
-            USTR(shadername));
+        ustringrep groupname = USTR(groupname_);
+        ustringrep layername = USTR(layername_);
+        auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+        ShadingContext* ctx  = bsg->uniform.context;
+        ctx->errorfmt("Index [{}] out of range {}[0..{}]: {}:{}"
+                      " (group {}, layer {} {}, shader {})",
+                      indexvalue, USTR(symname), length - 1, USTR(sourcefile),
+                      sourceline,
+                      groupname.empty() ? "<unnamed group>" : groupname.c_str(),
+                      layer,
+                      layername.empty() ? "<unnamed layer>" : layername.c_str(),
+                      USTR(shadername));
         if (indexvalue >= length)
             indexvalue = length - 1;
         else
@@ -393,12 +405,14 @@ __OSL_OP(range_check)(int indexvalue, int length, const char* symname,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP(range_check)(void* wide_indexvalue, unsigned int mask_value,
-                             int length, const char* symname, void* bsg_,
-                             const void* sourcefile, int sourceline,
-                             const char* groupname, int layer,
-                             const char* layername, const char* shadername)
+                             int length, ustring_pod symname, void* bsg_,
+                             ustring_pod sourcefile, int sourceline,
+                             ustring_pod groupname_, int layer,
+                             ustring_pod layername_, ustring_pod shadername)
 {
-    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustringrep groupname = USTR(groupname_);
+    ustringrep layername = USTR(layername_);
+    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Masked<int> wIndexValue(wide_indexvalue, Mask(mask_value));
     wIndexValue.mask().foreach ([=](ActiveLane lane) -> void {
         int indexvalue = wIndexValue[lane];
@@ -408,9 +422,9 @@ __OSL_MASKED_OP(range_check)(void* wide_indexvalue, unsigned int mask_value,
                 "Index [{}] out of range {}[0..{}]: {}:{} (group {}, layer {} {}, shader {})",
                 indexvalue, USTR(symname), length - 1, USTR(sourcefile),
                 sourceline,
-                (groupname && groupname[0]) ? groupname : "<unnamed group>",
+                groupname.empty() ? "<unnamed group>" : groupname.c_str(),
                 layer,
-                (layername && layername[0]) ? layername : "<unnamed layer>",
+                layername.empty() ? "<unnamed layer>" : layername.c_str(),
                 USTR(shadername));
             if (indexvalue >= length)
                 indexvalue = length - 1;
@@ -425,17 +439,17 @@ __OSL_MASKED_OP(range_check)(void* wide_indexvalue, unsigned int mask_value,
 
 
 OSL_BATCHOP int
-__OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs, void* obj_name_,
-                            void* attr_name_, int array_lookup, int index,
+__OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs, ustring_pod obj_name_,
+                            ustring_pod attr_name_, int array_lookup, int index,
                             const void* attr_type, void* wide_attr_dest,
                             int mask_)
 {
     Mask mask(mask_);
     ASSERT(mask.any_on());
 
-    auto* bsg                = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    const ustring& obj_name  = USTR(obj_name_);
-    const ustring& attr_name = USTR(attr_name_);
+    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustringrep obj_name  = USTR(obj_name_);
+    ustringrep attr_name = USTR(attr_name_);
 
     // Ignoring m_next_failed_attrib cache for now,
     // might be faster
@@ -457,16 +471,16 @@ __OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs, void* obj_name_,
 
 OSL_BATCHOP int
 __OSL_MASKED_OP1(get_attribute,
-                 Ws)(void* bsg_, int dest_derivs, void* obj_name_,
-                     void* wattr_name_, int array_lookup, int index,
+                 Ws)(void* bsg_, int dest_derivs, ustring_pod obj_name_,
+                     ustring_pod* wattr_name_, int array_lookup, int index,
                      const void* attr_type, void* wide_attr_dest, int mask_)
 {
     Mask mask(mask_);
     ASSERT(mask.any_on());
 
-    auto* bsg               = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    const ustring& obj_name = USTR(obj_name_);
-    Wide<const ustring> wAttrName(wattr_name_);
+    auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustringrep obj_name = USTR(obj_name_);
+    Wide<const ustringrep> wAttrName(wattr_name_);
     auto* renderer = bsg->uniform.context->batched<__OSL_WIDTH>().renderer();
 
     Mask retVal(false);
@@ -504,13 +518,14 @@ __OSL_MASKED_OP1(get_attribute,
 
 
 OSL_BATCHOP bool
-__OSL_OP(get_attribute_uniform)(void* bsg_, int dest_derivs, void* obj_name_,
-                                void* attr_name_, int array_lookup, int index,
+__OSL_OP(get_attribute_uniform)(void* bsg_, int dest_derivs,
+                                ustring_pod obj_name_, ustring_pod attr_name_,
+                                int array_lookup, int index,
                                 const void* attr_type, void* attr_dest)
 {
-    auto* bsg                = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    const ustring& obj_name  = USTR(obj_name_);
-    const ustring& attr_name = USTR(attr_name_);
+    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustringrep obj_name  = USTR(obj_name_);
+    ustringrep attr_name = USTR(attr_name_);
 
     auto* renderer = bsg->uniform.context->batched<__OSL_WIDTH>().renderer();
 
@@ -530,7 +545,7 @@ __OSL_OP(get_attribute_uniform)(void* bsg_, int dest_derivs, void* obj_name_,
 
 
 OSL_BATCHOP int
-__OSL_OP(bind_interpolated_param)(void* bsg_, const void* name, long long type,
+__OSL_OP(bind_interpolated_param)(void* bsg_, ustring_pod name, long long type,
                                   int userdata_has_derivs, void* userdata_data,
                                   int symbol_has_derivs, void* symbol_data,
                                   int symbol_data_size,
@@ -580,7 +595,7 @@ __OSL_OP(raytype_bit)(void* bsg_, int bit)
 
 // Asked if the raytype is a name we can't know until mid-shader.
 OSL_BATCHOP int
-__OSL_OP(raytype_name)(void* bsg_, void* name)
+__OSL_OP(raytype_name)(void* bsg_, ustring_pod name)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     int bit   = bsg->uniform.context->shadingsys().raytype_bit(USTR(name));
@@ -590,11 +605,11 @@ __OSL_OP(raytype_name)(void* bsg_, void* name)
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP(raytype_name)(void* bsg_, void* r_, void* name_,
+__OSL_MASKED_OP(raytype_name)(void* bsg_, void* r_, ustringrep* name_,
                               unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    Wide<const ustring> wname(name_);
+    Wide<const ustringrep> wname(name_);
     Mask mask(mask_value);
 
     foreach_unique(wname, mask, [=](ustring name, Mask matching_lanes) -> void {

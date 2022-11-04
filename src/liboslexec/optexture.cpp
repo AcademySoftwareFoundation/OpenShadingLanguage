@@ -43,32 +43,31 @@ osl_texture_set_firstchannel(void* opt, int x)
 }
 
 OSL_SHADEOP int
-osl_texture_decode_wrapmode(void* name)
+osl_texture_decode_wrapmode(ustring_pod name)
 {
-    const ustring& uname = USTR(name);
-    return OIIO::TextureOpt::decode_wrapmode(uname);
+    return OIIO::TextureOpt::decode_wrapmode(ustring_from(USTR(name)));
 }
 
 OSL_SHADEOP void
-osl_texture_set_swrap(void* opt, const char* x)
+osl_texture_set_swrap(void* opt, ustring_pod x)
 {
     ((TextureOpt*)opt)->swrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
-osl_texture_set_twrap(void* opt, const char* x)
+osl_texture_set_twrap(void* opt, ustring_pod x)
 {
     ((TextureOpt*)opt)->twrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
-osl_texture_set_rwrap(void* opt, const char* x)
+osl_texture_set_rwrap(void* opt, ustring_pod x)
 {
     ((TextureOpt*)opt)->rwrap = TextureOpt::decode_wrapmode(USTR(x));
 }
 
 OSL_SHADEOP void
-osl_texture_set_stwrap(void* opt, const char* x)
+osl_texture_set_stwrap(void* opt, ustring_pod x)
 {
     TextureOpt::Wrap code     = TextureOpt::decode_wrapmode(USTR(x));
     ((TextureOpt*)opt)->swrap = code;
@@ -163,16 +162,15 @@ osl_texture_set_time(void* opt, float x)
 }
 
 OSL_SHADEOP int
-osl_texture_decode_interpmode(void* name)
+osl_texture_decode_interpmode(ustring_pod name)
 {
-    const ustring& uname = USTR(name);
-    return tex_interp_to_code(uname);
+    return tex_interp_to_code(ustring_from(USTR(name)));
 }
 
 OSL_SHADEOP void
-osl_texture_set_interp(void* opt, const char* modename)
+osl_texture_set_interp(void* opt, ustring_pod modename)
 {
-    int mode = tex_interp_to_code(USTR(modename));
+    int mode = tex_interp_to_code(ustring_from(USTR(modename)));
     if (mode >= 0)
         ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
 }
@@ -191,9 +189,9 @@ osl_texture_set_subimage(void* opt, int subimage)
 
 
 OSL_SHADEOP void
-osl_texture_set_subimagename(void* opt, const char* subimagename)
+osl_texture_set_subimagename(void* opt, ustring_pod subimagename)
 {
-    ((TextureOpt*)opt)->subimagename = USTR(subimagename);
+    ((TextureOpt*)opt)->subimagename = ustring_from(USTR(subimagename));
 }
 
 OSL_SHADEOP void

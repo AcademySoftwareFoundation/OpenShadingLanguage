@@ -27,9 +27,8 @@ examples), as you are just coding in C++, but there are some rules:
   float.  Aggregates (color/point/vector/normal/matrix), arrays of any
   types, or floats with derivatives are passed as a void* and to their
   memory location you need to cast appropriately.  Strings are passed as
-  char*, but they are always the characters of 'ustring' objects, so are
-  unique.  See the handy USTR, MAT, VEC, DFLOAT, DVEC macros for
-  handy/cheap casting of those void*'s to references to ustring&,
+  ustringrep.  See the handy USTR, MAT, VEC, DFLOAT, DVEC macros for
+  handy/cheap casting of those void*'s to references to ustringrep&,
   Matrix44&, Vec3&, Dual2<float>&, and Dual2<Vec3>, respectively.
 
 * You must provide all allowable polymorphic and derivative combinations!
@@ -101,13 +100,23 @@ void* __dso_handle = 0;  // necessary to avoid linkage issues in bitcode
 
 
 // Handy re-casting macros
-#define USTR(cstr) (*((ustring*)&cstr))
-#define MAT(m)     (*(Matrix44*)m)
-#define VEC(v)     (*(Vec3*)v)
-#define DFLOAT(x)  (*(Dual2<Float>*)x)
-#define DVEC(x)    (*(Dual2<Vec3>*)x)
-#define COL(x)     (*(Color3*)x)
-#define DCOL(x)    (*(Dual2<Color3>*)x)
+#define USTR(s)   (*((ustringrep*)&s))
+#define USTREP(s) (*((ustringrep*)&s))
+#define MAT(m)    (*(Matrix44*)m)
+#define VEC(v)    (*(Vec3*)v)
+#define DFLOAT(x) (*(Dual2<Float>*)x)
+#define DVEC(x)   (*(Dual2<Vec3>*)x)
+#define COL(x)    (*(Color3*)x)
+#define DCOL(x)   (*(Dual2<Color3>*)x)
+
+#if OSL_USTRINGREP_IS_HASH
+/// ustring_pod is the type we use to pass string data in llvm function calls.
+using ustring_pod = size_t;
+#else
+/// ustring_pod is the type we use to pass string data in llvm function calls.
+using ustring_pod = const char*;
+#endif
+
 
 #ifndef OSL_SHADEOP
 #    ifdef __CUDACC__
@@ -975,17 +984,17 @@ osl_raytype_bit(void* sg_, int bit)
 
 // extern declaration
 OSL_SHADEOP_NOINLINE int
-osl_range_check_err(int indexvalue, int length, const char* symname, void* sg,
-                    const void* sourcefile, int sourceline,
-                    const char* groupname, int layer, const char* layername,
-                    const char* shadername);
+osl_range_check_err(int indexvalue, int length, ustring_pod symname, void* sg,
+                    ustring_pod sourcefile, int sourceline,
+                    ustring_pod groupname, int layer, ustring_pod layername,
+                    ustring_pod shadername);
 
 
 
 OSL_SHADEOP int
-osl_range_check(int indexvalue, int length, const char* symname, void* sg,
-                const void* sourcefile, int sourceline, const char* groupname,
-                int layer, const char* layername, const char* shadername)
+osl_range_check(int indexvalue, int length, ustring_pod symname, void* sg,
+                ustring_pod sourcefile, int sourceline, ustring_pod groupname,
+                int layer, ustring_pod layername, ustring_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
         indexvalue = osl_range_check_err(indexvalue, length, symname, sg,

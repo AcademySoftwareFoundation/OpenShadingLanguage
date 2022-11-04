@@ -625,8 +625,8 @@ ShadingContext::find_regex(ustring r)
 
 bool
 ShadingContext::osl_get_attribute(ShaderGlobals* sg, void* objdata,
-                                  int dest_derivs, ustring obj_name,
-                                  ustring attr_name, int array_lookup,
+                                  int dest_derivs, ustringhash obj_name,
+                                  ustringhash attr_name, int array_lookup,
                                   int index, TypeDesc attr_type,
                                   void* attr_dest)
 {

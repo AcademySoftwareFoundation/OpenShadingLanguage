@@ -234,18 +234,33 @@ struct AttributeNeeded {
 
 
 // Handy re-casting macros
-#define USTR(cstr) (*((ustring*)&cstr))
-#define MAT(m)     (*(Matrix44*)m)
-#define VEC(v)     (*(Vec3*)v)
-#define DFLOAT(x)  (*(Dual2<Float>*)x)
-#define DVEC(x)    (*(Dual2<Vec3>*)x)
-#define COL(x)     (*(Color3*)x)
-#define DCOL(x)    (*(Dual2<Color3>*)x)
-#if OPENIMAGEIO_VERSION >= 20500
-#    define TYPEDESC(x) OIIO::bitcast<TypeDesc, long long>(x)
-#else
-#    define TYPEDESC(x) OIIO::bit_cast<long long, TypeDesc>(x)
-#endif
+inline ustringrep
+USTR(ustring_pod s) noexcept
+{
+    return OSL::bitcast<ustringrep>(s);
+}
+inline ustringrep
+USTREP(ustring_pod s) noexcept
+{
+    return OSL::bitcast<ustringrep>(s);
+    // return *((ustringrep*)&s);
+}
+
+// Get rid of this one soon!
+inline ustringrep
+USTR(const void* s) noexcept
+{
+    return OSL::bitcast<ustringrep>(s);
+}
+
+#define MAT(m)      (*(Matrix44*)m)
+#define VEC(v)      (*(Vec3*)v)
+#define DFLOAT(x)   (*(Dual2<Float>*)x)
+#define DVEC(x)     (*(Dual2<Vec3>*)x)
+#define COL(x)      (*(Color3*)x)
+#define DCOL(x)     (*(Dual2<Color3>*)x)
+#define TYPEDESC(x) OSL::bitcast<TypeDesc, long long>(x)
+
 
 
 /// Like an int (of type T), but also internally keeps track of the
@@ -1533,8 +1548,8 @@ private:
 /// Represents a single message for use by getmessage and setmessage opcodes
 ///
 struct Message {
-    Message(ustring name, const TypeDesc& type, int layeridx,
-            ustring sourcefile, int sourceline, Message* next)
+    Message(ustringhash name, const TypeDesc& type, int layeridx,
+            ustringhash sourcefile, int sourceline, Message* next)
         : name(name)
         , data(nullptr)
         , type(type)
@@ -1545,43 +1560,42 @@ struct Message {
     {
     }
 
-    /// Some messages don't have data because getmessage() was called before setmessage
-    /// (which is flagged as an error to avoid ambiguities caused by execution order)
-    ///
+    /// Some messages don't have data because getmessage() was called before
+    /// setmessage (which is flagged as an error to avoid ambiguities caused
+    /// by execution order)
     bool has_data() const { return data != nullptr; }
 
-    ustring name;  ///< name of this message
+    ustringhash name;  ///< name of this message
     char* data;  ///< actual data of the message (will never change once the message is created)
-    TypeDesc
-        type;  ///< what kind of data is stored here? FIXME: should be TypeSpec
-    int layeridx;  ///< layer index where this was message was created
-    ustring
-        sourcefile;  ///< source code file that contains the call that created this message
-    int sourceline;  ///< source code line that contains the call that created this message
+    TypeDesc type;           ///< what kind of data is stored here?
+    int layeridx;            ///< layer index where this was message was created
+    ustringhash sourcefile;  ///< location of the call that created this message
+    int sourceline;          ///< location of the call that created this message
     Message* next;  ///< linked list of messages (managed by MessageList below)
 };
 
-/// Represents the list of messages set by a given shader using setmessage and getmessage
-///
+
+/// Represents the list of messages set by a given shader using setmessage and
+/// getmessage.
 struct MessageList {
     MessageList() : list_head(nullptr), message_data() {}
 
     void clear()
     {
-        list_head = NULL;
+        list_head = nullptr;
         message_data.clear();
     }
 
-    const Message* find(ustring name) const
+    const Message* find(ustringhash name) const
     {
-        for (const Message* m = list_head; m != NULL; m = m->next)
+        for (const Message* m = list_head; m; m = m->next)
             if (m->name == name)
                 return m;  // name matches
         return nullptr;    // not found
     }
 
-    void add(ustring name, void* data, const TypeDesc& type, int layeridx,
-             ustring sourcefile, int sourceline)
+    void add(ustringhash name, void* data, const TypeDesc& type, int layeridx,
+             ustringhash sourcefile, int sourceline)
     {
         list_head = new (message_data.alloc(sizeof(Message), alignof(Message)))
             Message(name, type, layeridx, sourcefile, sourceline, list_head);
@@ -2210,7 +2224,7 @@ public:
     int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data);
 
     bool osl_get_attribute(ShaderGlobals* sg, void* objdata, int dest_derivs,
-                           ustring obj_name, ustring attr_name,
+                           ustringhash obj_name, ustringhash attr_name,
                            int array_lookup, int index, TypeDesc attr_type,
                            void* attr_dest);
 

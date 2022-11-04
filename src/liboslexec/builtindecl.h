@@ -204,13 +204,13 @@ DECL(osl_dict_next, "iXi")
 DECL(osl_dict_value, "iXiXLX")
 DECL(osl_raytype_name, "iXs")
 #ifdef OSL_LLVM_NO_BITCODE
-DECL(osl_range_check, "iiiXXXiXiXX")
+DECL(osl_range_check, "iiisXsisiss")
 #endif
-DECL(osl_range_check_err, "iiiXXXiXiXX")
-DECL(osl_naninf_check, "xiXiXXiXiiX")
-DECL(osl_uninit_check, "xLXXXiXiXXiXiXii")
-DECL(osl_get_attribute, "iXiXXiiLX")
-DECL(osl_bind_interpolated_param, "iXXLiXiXiXi")
+DECL(osl_range_check_err, "iiisXsisiss")
+DECL(osl_naninf_check, "xiXiXsisiis")
+DECL(osl_uninit_check, "xLXXsisissisisii")
+DECL(osl_get_attribute, "iXissiiLX")
+DECL(osl_bind_interpolated_param, "iXsLiXiXiXi")
 DECL(osl_get_texture_options, "XX");
 DECL(osl_get_noise_options, "XX");
 DECL(osl_get_trace_options, "XX");
@@ -338,8 +338,8 @@ DECL(osl_substr_ssii, "ssii")
 DECL(osl_regex_impl, "iXsXisi")
 
 // Used by wide code generator, but are uniform calls
-DECL(osl_texture_decode_wrapmode, "iX");
-DECL(osl_texture_decode_interpmode, "iX");
+DECL(osl_texture_decode_wrapmode, "is");
+DECL(osl_texture_decode_interpmode, "is");
 
 DECL(osl_texture_set_firstchannel, "xXi")
 DECL(osl_texture_set_swrap, "xXs")

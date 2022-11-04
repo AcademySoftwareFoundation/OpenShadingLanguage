@@ -200,18 +200,19 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP2(setmessage, s, WX)(BatchedShaderGlobals* bsg_, void* wname,
-                                    long long type, void* wvalue, int layeridx,
-                                    const char* sourcefile_, int sourceline,
+__OSL_MASKED_OP2(setmessage, s, WX)(BatchedShaderGlobals* bsg_,
+                                    ustring_pod name_, long long type,
+                                    void* wvalue, int layeridx,
+                                    ustring_pod sourcefile_, int sourceline,
                                     unsigned int mask_value)
 {
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
 
-    ustring name = USTR(wname);
+    ustringrep name = USTR(name_);
     MaskedData wsrcval(TYPEDESC(type), false /*has_derivs*/, mask, wvalue);
 
-    const ustring& sourcefile(USTR(sourcefile_));
+    ustringrep sourcefile = USTR(sourcefile_);
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -237,16 +238,16 @@ __OSL_MASKED_OP2(setmessage, s, WX)(BatchedShaderGlobals* bsg_, void* wname,
 OSL_BATCHOP void
 __OSL_MASKED_OP2(setmessage, Ws, WX)(BatchedShaderGlobals* bsg_, void* wname,
                                      long long type, void* wvalue, int layeridx,
-                                     const char* sourcefile_, int sourceline,
+                                     ustring_pod sourcefile_, int sourceline,
                                      unsigned int mask_value)
 {
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
 
-    Wide<const ustring> wName(wname);
+    Wide<const ustringrep> wName(wname);
     MaskedData wsrcval(TYPEDESC(type), false /*has_derivs*/, mask, wvalue);
 
-    const ustring& sourcefile(USTR(sourcefile_));
+    ustringrep sourcefile = USTR(sourcefile_);
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -274,14 +275,14 @@ __OSL_MASKED_OP2(setmessage, Ws, WX)(BatchedShaderGlobals* bsg_, void* wname,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP(getmessage)(void* bsg_, void* result, char* source_,
-                            char* name_, long long type_, void* val, int derivs,
-                            int layeridx, const char* sourcefile_,
+__OSL_MASKED_OP(getmessage)(void* bsg_, void* result, ustring_pod source_,
+                            ustring_pod name_, long long type_, void* val,
+                            int derivs, int layeridx, ustring_pod sourcefile_,
                             int sourceline, unsigned int mask_value)
 {
-    const ustring& source(USTR(source_));
-    const ustring& name(USTR(name_));
-    const ustring& sourcefile(USTR(sourcefile_));
+    ustringrep source     = USTR(source_);
+    ustringrep name       = USTR(name_);
+    ustringrep sourcefile = USTR(sourcefile_);
 
     Mask mask(mask_value);
 

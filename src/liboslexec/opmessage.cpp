@@ -27,33 +27,34 @@ namespace pvt {
 
 
 OSL_SHADEOP void
-osl_setmessage(ShaderGlobals* sg, const char* name_, long long type_, void* val,
-               int layeridx, const char* sourcefile_, int sourceline)
+osl_setmessage(ShaderGlobals* sg, ustring_pod name_, long long type_, void* val,
+               int layeridx, ustring_pod sourcefile_, int sourceline)
 {
-    const ustring& name(USTR(name_));
-    const ustring& sourcefile(USTR(sourcefile_));
+    ustringhash name       = ustringhash_from(USTR(name_));
+    ustringhash sourcefile = ustringhash_from(USTR(sourcefile_));
     // recreate TypeDesc -- we just crammed it into an int!
     TypeDesc type   = TYPEDESC(type_);
-    bool is_closure = (type.basetype
-                       == TypeDesc::UNKNOWN);  // secret code for closure
+    bool is_closure = type.basetype == TypeDesc::UNKNOWN;  // indicates closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
 
     MessageList& messages(sg->context->messages());
     const Message* m = messages.find(name);
-    if (m != NULL) {
+    if (m) {
         if (m->name == name) {
             // message already exists?
             if (m->has_data())
                 sg->context->errorfmt(
                     "message \"{}\" already exists (created here: {}:{})"
                     " cannot set again from {}:{}",
-                    name, m->sourcefile, m->sourceline, sourcefile, sourceline);
+                    name.c_str(), m->sourcefile.c_str(), m->sourceline,
+                    sourcefile.c_str(), sourceline);
             else  // NOTE: this cannot be triggered when strict_messages=false because we won't record "failed" getmessage calls
                 sg->context->errorfmt(
                     "message \"{}\" was queried before being set (queried here: {}:{})"
                     " setting it now ({}:{}) would lead to inconsistent results",
-                    name, m->sourcefile, m->sourceline, sourcefile, sourceline);
+                    name.c_str(), m->sourcefile.c_str(), m->sourceline,
+                    sourcefile.c_str(), sourceline);
             return;
         }
     }
@@ -64,22 +65,21 @@ osl_setmessage(ShaderGlobals* sg, const char* name_, long long type_, void* val,
 
 
 OSL_SHADEOP int
-osl_getmessage(ShaderGlobals* sg, const char* source_, const char* name_,
+osl_getmessage(ShaderGlobals* sg, ustring_pod source_, ustring_pod name_,
                long long type_, void* val, int derivs, int layeridx,
-               const char* sourcefile_, int sourceline)
+               ustring_pod sourcefile_, int sourceline)
 {
-    const ustring& source(USTR(source_));
-    const ustring& name(USTR(name_));
-    const ustring& sourcefile(USTR(sourcefile_));
+    ustringhash source     = ustringhash_from(USTR(source_));
+    ustringhash name       = ustringhash_from(USTR(name_));
+    ustringhash sourcefile = ustringhash_from(USTR(sourcefile_));
 
     // recreate TypeDesc -- we just crammed it into an int!
     TypeDesc type   = TYPEDESC(type_);
-    bool is_closure = (type.basetype
-                       == TypeDesc::UNKNOWN);  // secret code for closure
+    bool is_closure = type.basetype == TypeDesc::UNKNOWN;  // indicates closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
 
-    static ustring ktrace("trace");
+    static ustringrep ktrace("trace");
     if (source == ktrace) {
         // Source types where we need to ask the renderer
         return sg->renderer->getmessage(sg, source, name, type, val, derivs);
@@ -87,19 +87,19 @@ osl_getmessage(ShaderGlobals* sg, const char* source_, const char* name_,
 
     MessageList& messages(sg->context->messages());
     const Message* m = messages.find(name);
-    if (m != NULL) {
+    if (m) {
         if (m->name == name) {
             if (m->type != type) {
                 // found message, but types don't match
                 sg->context->errorfmt(
                     "type mismatch for message \"{}\" ({} as {} here: {}:{})"
                     " cannot fetch as {} from {}:{}",
-                    name, m->has_data() ? "created" : "queried",
+                    name.c_str(), m->has_data() ? "created" : "queried",
                     m->type == TypeDesc::PTR ? "closure color"
                                              : m->type.c_str(),
-                    m->sourcefile, m->sourceline,
-                    is_closure ? "closure color" : type.c_str(), sourcefile,
-                    sourceline);
+                    m->sourcefile.c_str(), m->sourceline,
+                    is_closure ? "closure color" : type.c_str(),
+                    sourcefile.c_str(), sourceline);
                 return 0;
             }
             if (!m->has_data()) {
@@ -113,8 +113,8 @@ osl_getmessage(ShaderGlobals* sg, const char* source_, const char* name_,
                     " but is being queried by layer #{} ({}:{})"
                     " - messages may only be transferred from nodes "
                     "that appear earlier in the shading network",
-                    name, m->layeridx, m->sourcefile, m->sourceline, layeridx,
-                    sourcefile, sourceline);
+                    name.c_str(), m->layeridx, m->sourcefile.c_str(),
+                    m->sourceline, layeridx, sourcefile.c_str(), sourceline);
                 return 0;
             }
             // Message found!
@@ -127,7 +127,7 @@ osl_getmessage(ShaderGlobals* sg, const char* source_, const char* name_,
     }
     // Message not found -- we must record this event in case another layer tries to set the message again later on
     if (sg->context->shadingsys().strict_messages())
-        messages.add(name, NULL, type, layeridx, sourcefile, sourceline);
+        messages.add(name, nullptr, type, layeridx, sourcefile, sourceline);
     return 0;
 }
 

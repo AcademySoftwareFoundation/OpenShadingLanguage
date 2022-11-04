@@ -38,7 +38,8 @@ brew link --overwrite --force python@${PYTHON_VERSION} || true
 brew upgrade --display-times -q cmake || true
 brew install --display-times -q ilmbase openexr
 #brew install --display-times -q freetype
-brew install --display-times -q opencolorio partio pugixml
+brew install --display-times -q --overwrite opencolorio
+brew install --display-times -q partio pugixml
 brew install --display-times -q pybind11 numpy || true
 brew install --display-times -q tbb || true
 brew install --display-times -q flex bison

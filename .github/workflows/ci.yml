@@ -20,8 +20,10 @@ on:
       - '**.rst'
       - '**.tex'
   schedule:
-    # Full nightly build
+    # Full nightly build, for the main project repo (not for forks)
     - cron: "0 6 * * *"
+      if: github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
+
 
 permissions: read-all
 

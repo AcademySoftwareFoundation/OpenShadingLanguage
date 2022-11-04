@@ -10,18 +10,23 @@ on:
 # Declare default permissions as read only.
 permissions: read-all
 
+# Allow subsequent pushes to the same PR or REF to cancel any previous jobs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+
 jobs:
   analysis:
     name: Scorecards analysis
+    if: |
+      github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
     runs-on: ubuntu-latest
     permissions:
       # Needed to upload the results to code-scanning dashboard.
       security-events: write
       # Used to receive a badge. (Upcoming feature)
       id-token: write
-      # Needs for private repositories.
-      contents: read
-      actions: read
     
     steps:
       - name: "Checkout code"

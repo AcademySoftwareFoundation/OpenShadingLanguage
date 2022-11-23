@@ -45,6 +45,7 @@ enum ClosureIDs {
     TRANSPARENT_ID,
     DEBUG_ID,
     HOLDOUT_ID,
+    PARAMETER_TEST_ID,
 };
 
 // these structures hold the parameters of each closure type
@@ -83,6 +84,23 @@ struct MicrofacetParams {
 };
 struct DebugParams {
     ustring tag;
+};
+struct ParameterTestParams {
+    int int_param;
+    float float_param;
+    Color3 color_param;
+    Vec3 vector_param;
+    ustring string_param;
+    int int_array[5];
+    Vec3 vector_array[5];
+    Color3 color_array[5];
+    float float_array[5];
+    ustring string_array[5];
+    int int_key;
+    float float_key;
+    Color3 color_key;
+    Vec3 vector_key;
+    ustring string_key;
 };
 
 }  // anonymous namespace
@@ -170,7 +188,27 @@ register_closures(OSL::ShadingSystem* shadingsys)
           DEBUG_ID,
           { CLOSURE_STRING_PARAM(DebugParams, tag),
             CLOSURE_FINISH_PARAM(DebugParams) } },
-        { "holdout", HOLDOUT_ID, { CLOSURE_FINISH_PARAM(EmptyParams) } }
+        { "holdout", HOLDOUT_ID, { CLOSURE_FINISH_PARAM(EmptyParams) } },
+        { "parameter_test",
+          PARAMETER_TEST_ID,
+          { CLOSURE_INT_PARAM(ParameterTestParams, int_param),
+            CLOSURE_FLOAT_PARAM(ParameterTestParams, float_param),
+            CLOSURE_COLOR_PARAM(ParameterTestParams, color_param),
+            CLOSURE_VECTOR_PARAM(ParameterTestParams, vector_param),
+            CLOSURE_STRING_PARAM(ParameterTestParams, string_param),
+            CLOSURE_INT_ARRAY_PARAM(ParameterTestParams, int_array, 5),
+            CLOSURE_VECTOR_ARRAY_PARAM(ParameterTestParams, vector_array, 5),
+            CLOSURE_COLOR_ARRAY_PARAM(ParameterTestParams, color_array, 5),
+            CLOSURE_FLOAT_ARRAY_PARAM(ParameterTestParams, float_array, 5),
+            CLOSURE_STRING_ARRAY_PARAM(ParameterTestParams, string_array, 5),
+            CLOSURE_INT_KEYPARAM(ParameterTestParams, int_key, "int_key"),
+            CLOSURE_FLOAT_KEYPARAM(ParameterTestParams, float_key, "float_key"),
+            CLOSURE_COLOR_KEYPARAM(ParameterTestParams, color_key, "color_key"),
+            CLOSURE_VECTOR_KEYPARAM(ParameterTestParams, vector_key,
+                                    "vector_key"),
+            CLOSURE_STRING_KEYPARAM(ParameterTestParams, string_key,
+                                    "string_key"),
+            CLOSURE_FINISH_PARAM(ParameterTestParams) } }
     };
 
     for (const auto& b : builtins)

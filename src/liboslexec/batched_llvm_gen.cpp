@@ -7064,7 +7064,8 @@ LLVMGEN(llvm_gen_spline)
 static void
 llvm_gen_keyword_fill(BatchedBackendLLVM& rop, Opcode& op,
                       const ClosureRegistry::ClosureEntry* clentry,
-                      ustring clname, llvm::Value* mem_void_ptr, int argsoffset)
+                      ustring clname, llvm::Value* mem_void_ptr, int argsoffset,
+                      int lane_index)
 {
     OSL_DASSERT(((op.nargs() - argsoffset) % 2) == 0);
 
@@ -7088,10 +7089,45 @@ llvm_gen_keyword_fill(BatchedBackendLLVM& rop, Opcode& op,
             if (equivalent(p.type, ValueType) && !strcmp(key->c_str(), p.key)) {
                 // store data
                 OSL_DASSERT(p.offset + p.field_size <= clentry->struct_size);
-                llvm::Value* dst = rop.ll.offset_ptr(mem_void_ptr, p.offset);
-                llvm::Value* src = rop.llvm_void_ptr(Value);
-                rop.ll.op_memcpy(dst, src, (int)p.type.size(),
-                                 4 /* use 4 byte alignment for now */);
+
+                bool arg_is_uniform = Value.is_uniform();
+
+                TypeDesc simpletype(Value.typespec().simpletype());
+
+                // We don't currently offer a helper macro in genclosure.h for creating
+                // keyword array parameters, so perhaps we can assume we don't need to
+                // support them
+                OSL_DASSERT(simpletype.arraylen == 0);
+
+                int num_components = simpletype.aggregate;
+
+                llvm::Value* dest_base = rop.ll.offset_ptr(mem_void_ptr,
+                                                           p.offset);
+                dest_base              = rop.llvm_ptr_cast(dest_base, p.type);
+
+                for (int c = 0; c < num_components; c++) {
+                    llvm::Value* dest_elem;
+                    if (num_components > 1)
+                        dest_elem = rop.ll.GEP(dest_base, 0, c);
+                    else
+                        dest_elem = dest_base;
+
+                    // NOTE:  We don't want any uniform arguments to be
+                    // widened, so our typical op_is_uniform doesn't do what we
+                    // want for this when loading.  So just pass arg_is_uniform
+                    // which will avoid widening any uniform arguments.
+                    llvm::Value* loaded
+                        = rop.llvm_load_value(Value, 0, NULL, c,
+                                              TypeDesc::UNKNOWN,
+                                              /*op_is_uniform*/ arg_is_uniform,
+                                              /*index_is_uniform*/ true);
+
+                    if (!arg_is_uniform) {
+                        loaded = rop.ll.op_extract(loaded, lane_index);
+                    }
+                    rop.ll.op_unmasked_store(loaded, dest_elem);
+                }
+
                 legal = true;
                 break;
             }
@@ -7275,7 +7311,7 @@ LLVMGEN(llvm_gen_closure)
         }
 
         llvm_gen_keyword_fill(rop, op, clentry, closure_name, mem_void_ptr,
-                              2 + weighted + clentry->nformal);
+                              2 + weighted + clentry->nformal, lane_index);
 
         if (next_block)
             rop.ll.op_branch(next_block);

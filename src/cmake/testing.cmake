@@ -236,7 +236,7 @@ macro (osl_add_all_tests)
                 bug-array-heapoffsets bug-locallifetime bug-outputinit
                 bug-param-duplicate bug-peep bug-return
                 calculatenormal-reg
-                cellnoise closure closure-array color color-reg colorspace comparison
+                cellnoise closure closure-array closure-parameters color color-reg colorspace comparison
                 complement-reg compile-buffer compassign-reg
                 component-range
                 control-flow-reg connect-components

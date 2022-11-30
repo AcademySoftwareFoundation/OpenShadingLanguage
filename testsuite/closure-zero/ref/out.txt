@@ -1,0 +1,6 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Connect a.output_closure to b.in0
+ out =  (1, 1, 1) * debug ("test")
+ out =  (1, 1, 1) * debug ("test")
+

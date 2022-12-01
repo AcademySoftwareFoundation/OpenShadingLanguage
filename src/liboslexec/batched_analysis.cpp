@@ -2303,6 +2303,17 @@ struct Analyzer {
         }
     }
 
+    void make_closures_varying()
+    {
+        // We assume that closures are always stored as varying pointers
+        FOREACH_PARAM(Symbol & s, inst())
+        {
+            if (s.typespec().is_closure()) {
+                recursively_mark_varying(&s);
+            }
+        }
+    }
+
     void push_varying_of_upstream_connections()
     {
         OSL_DEV_ONLY(std::cout << "connections to layer begin" << std::endl);
@@ -2395,6 +2406,7 @@ BatchedAnalysis::analyze_layer(ShaderInstance* inst)
     analyzer.push_varying_of_shader_globals();
     analyzer.make_interpolated_parameters_varying();
     analyzer.make_renderer_outputs_varying();
+    analyzer.make_closures_varying();
     analyzer.push_varying_of_upstream_connections();
     analyzer.push_varying_of_implicitly_varying_ops();
 

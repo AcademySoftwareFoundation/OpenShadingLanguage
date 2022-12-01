@@ -1813,6 +1813,7 @@ BatchedBackendLLVM::build_llvm_init()
         FOREACH_PARAM(Symbol & sym, gi)
         {
             if (sym.typespec().is_closure_based()) {
+                OSL_ASSERT(sym.is_varying());
                 int arraylen     = std::max(1, sym.typespec().arraylength());
                 llvm::Value* val = ll.constant_ptr(NULL, ll.type_void_ptr());
                 if (!sym.is_uniform())

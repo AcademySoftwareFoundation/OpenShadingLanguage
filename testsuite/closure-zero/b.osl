@@ -1,0 +1,9 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader b (closure color in0 = 0, closure color in1 = 0)
+{
+    closure color out = in0 + in1;
+    printf( " out =  %s\n", out );
+}

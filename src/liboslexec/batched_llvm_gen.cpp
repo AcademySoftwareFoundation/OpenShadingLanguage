@@ -1263,6 +1263,7 @@ LLVMGEN(llvm_gen_add)
     OSL_ASSERT(!A.typespec().is_array() && !B.typespec().is_array());
     if (Result.typespec().is_closure()) {
         OSL_ASSERT(A.typespec().is_closure() && B.typespec().is_closure());
+        OSL_ASSERT(!A.is_uniform() && !B.is_uniform() && !result_is_uniform);
         llvm::Value* valargs[] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                                    rop.llvm_void_ptr(A), rop.llvm_void_ptr(B),
                                    rop.ll.mask_as_int(rop.ll.current_mask()) };

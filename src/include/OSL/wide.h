@@ -3423,9 +3423,9 @@ MaskedData<WidthT>::assign_all_from_scalar_type(const void* ptr_data,
     for (int array_index = 0; array_index < elem_count; ++array_index) {
         int array_offset = array_index * comp_count;
         for (int comp_index = 0; comp_index < comp_count; ++comp_index) {
-            int combined_index = deriv_offset + array_offset + comp_index;
+            int combined_index = array_offset + comp_index;
             auto& bsrc         = src_data[combined_index];
-            auto& bdst         = dst_blocks[combined_index];
+            auto& bdst         = dst_blocks[deriv_offset + combined_index];
 
             Masked<DataT, WidthT> wdest(bdst, mask());
 

@@ -686,7 +686,17 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
     }
 
     if (const OIIO::ParamValue* p = m_sr.userdata.find_pv(name, val.type())) {
-        val.assign_all_from_scalar(p->data());
+        if (!val.has_derivs()) {
+            val.assign_all_from_scalar(p->data());
+        } else {
+            size_t size = val.type().size();
+
+            char* buffer_with_zero_derivs = new char[size * 3];
+            memcpy(buffer_with_zero_derivs, p->data(), size);
+            memset(buffer_with_zero_derivs + size, 0, size * 2);
+            val.assign_all_from_scalar(buffer_with_zero_derivs);
+            delete[] buffer_with_zero_derivs;
+        }
         return val.mask();
     }
 

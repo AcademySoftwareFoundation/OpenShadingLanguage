@@ -4,7 +4,14 @@
 
 cmake_minimum_required (VERSION 3.12)
 
-set (OSL_VERSION "1.12.8.0" CACHE STRING "Version")
+set (OSL_VERSION "1.12.8.0")
+set (OSL_VERSION_OVERRIDE "" CACHE STRING
+     "Version override (use with caution)!")
+mark_as_advanced (OSL_VERSION_OVERRIDE)
+if (OSL_VERSION_OVERRIDE)
+    set (OSL_VERSION ${OSL_VERSION_OVERRIDE})
+endif ()
+
 project (OSL VERSION ${OSL_VERSION}
          LANGUAGES CXX C
          HOMEPAGE_URL "https://github.com/AcademySoftwareFoundation/OpenShadingLanguage")

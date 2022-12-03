@@ -1,9 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.8.0 -- 1 Dec? 2022 (compared to 1.12.7.0)
+Release 1.12.7.1 -- 1 Dec 2022 (compared to 1.12.7.0)
 -------------------------------------------------------
-
+* Add clangSupport library as dependency to fix linker error on some
+  platforms. #1613
+* Test against OpenColorIO 2.2. #1616
+* Build: Fix how version overrides work to reduce the chance of user mistakes.
+  #1617
 
 Release 1.12.7.0 -- 1 Nov 2022 (compared to 1.12.6.2)
 -------------------------------------------------------

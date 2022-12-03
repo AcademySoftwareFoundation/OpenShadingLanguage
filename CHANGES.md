@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.12.8.0 -- 1 Jan? 2023 (compared to 1.12.7.1)
+-------------------------------------------------------
+
+
 Release 1.12.7.1 -- 1 Dec 2022 (compared to 1.12.7.0)
 -------------------------------------------------------
 * Add clangSupport library as dependency to fix linker error on some

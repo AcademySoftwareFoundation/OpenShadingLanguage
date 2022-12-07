@@ -18,10 +18,6 @@
 
 #include <OpenImageIO/fmath.h>
 
-#ifdef __CUDACC__
-#    include <optix.h>
-#endif
-
 #include "opcolor.h"
 
 #include "opcolor_impl.h"

@@ -6,10 +6,6 @@
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 
-#ifdef OSL_USE_OPTIX
-#    include <optix.h>
-#endif
-
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
 

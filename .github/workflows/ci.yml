@@ -434,6 +434,7 @@ jobs:
             python_ver: "3.10"
             aclang: 13
             setenvs: export LLVMBREWVER="@14" DO_BREW_UPDATE=1
+                            OPENIMAGEIO_VERSION=release
           - desc: MacOS-12
             os: macos-12
             nametag: macos11-p310
@@ -443,6 +444,7 @@ jobs:
             python_ver: "3.10"
             aclang: 13
             setenvs: export LLVMBREWVER="@15" DO_BREW_UPDATE=1
+                            OPENIMAGEIO_VERSION=master
     runs-on: ${{matrix.os}}
     env:
       CXX: ${{matrix.cxx_compiler}}

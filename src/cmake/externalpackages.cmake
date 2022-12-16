@@ -167,44 +167,46 @@ endif ()
 
 # CUDA setup
 if (USE_CUDA OR USE_OPTIX)
-    if (NOT CUDA_TOOLKIT_ROOT_DIR AND NOT $ENV{CUDA_TOOLKIT_ROOT_DIR} STREQUAL "")
-        set (CUDA_TOOLKIT_ROOT_DIR $ENV{CUDA_TOOLKIT_ROOT_DIR})
-    endif ()
+    if (USE_LLVM_BITCODE)
+        if (NOT CUDA_TOOLKIT_ROOT_DIR AND NOT $ENV{CUDA_TOOLKIT_ROOT_DIR} STREQUAL "")
+            set (CUDA_TOOLKIT_ROOT_DIR $ENV{CUDA_TOOLKIT_ROOT_DIR})
+        endif ()
 
-    if (NOT CUDA_FIND_QUIETLY OR NOT OptiX_FIND_QUIETLY)
-        message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
-    endif ()
+        if (NOT CUDA_FIND_QUIETLY OR NOT OptiX_FIND_QUIETLY)
+            message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
+        endif ()
 
-    checked_find_package (CUDA REQUIRED
-                          VERSION_MIN 8.0
-                          PRINT CUDA_INCLUDES)
-    set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
-    include_directories (BEFORE "${CUDA_INCLUDES}")
+        checked_find_package (CUDA REQUIRED
+                            VERSION_MIN 8.0
+                            PRINT CUDA_INCLUDES)
+        set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
+        include_directories (BEFORE "${CUDA_INCLUDES}")
 
-    STRING (FIND ${LLVM_TARGETS} "NVPTX" nvptx_index)
-    if (NOT ${nvptx_index} GREATER -1)
-        message (FATAL_ERROR "NVPTX target is not available in the provided LLVM build")
-    endif()
+        STRING (FIND ${LLVM_TARGETS} "NVPTX" nvptx_index)
+        if (NOT ${nvptx_index} GREATER -1)
+            message (FATAL_ERROR "NVPTX target is not available in the provided LLVM build")
+        endif()
 
-    set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
+        set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
 
-    find_library(cuda_lib NAMES cudart
-                 PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
-                 REQUIRED)
-    set(CUDA_LIBRARIES ${cuda_lib})
+        find_library(cuda_lib NAMES cudart
+                    PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
+                    REQUIRED)
+        set(CUDA_LIBRARIES ${cuda_lib})
 
-    # testrender & testshade need libnvrtc
-    if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "10.0")
-        find_library(nvrtc_lib NAMES nvrtc
-                     PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
-                     REQUIRED)
-        set(CUDA_LIBRARIES ${CUDA_LIBRARIES} ${nvrtc_lib})
+        # testrender & testshade need libnvrtc
+        if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "10.0")
+            find_library(nvrtc_lib NAMES nvrtc
+                        PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
+                        REQUIRED)
+            set(CUDA_LIBRARIES ${CUDA_LIBRARIES} ${nvrtc_lib})
 
-        set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl)
+            set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl)
+        endif()
     endif()
 
     # OptiX setup
-    if (USE_OPTIX)
+    if (USE_OPTIX AND OSL_BUILD_TESTS)
         checked_find_package (OptiX REQUIRED
                               VERSION_MIN 5.1)
         include_directories (BEFORE "${OPTIX_INCLUDES}")
@@ -219,7 +221,6 @@ if (USE_CUDA OR USE_OPTIX)
         target_compile_definitions (${TARGET} PRIVATE "-DPTX_PATH=\"${OSL_PTX_INSTALL_DIR}\"")
         target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
     endfunction()
-
 else ()
     function (osl_optix_target TARGET)
     endfunction()

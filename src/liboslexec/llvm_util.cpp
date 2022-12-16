@@ -92,10 +92,6 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
 
-#ifdef OSL_USE_OPTIX
-#    include <optix.h>
-#endif
-
 OSL_NAMESPACE_ENTER
 
 

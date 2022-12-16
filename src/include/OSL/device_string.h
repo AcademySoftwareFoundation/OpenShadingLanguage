@@ -6,10 +6,6 @@
 
 #include <OSL/oslconfig.h>
 
-#ifdef __CUDA_ARCH__
-#    include <optix.h>
-#endif
-
 // USAGE NOTES:
 //
 // To define a "standard" DeviceString, add a STRDECL to <OSL/strdecls.h>

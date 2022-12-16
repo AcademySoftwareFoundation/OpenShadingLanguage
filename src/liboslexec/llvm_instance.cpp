@@ -18,10 +18,6 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
-#ifdef OSL_USE_OPTIX
-#    include <optix.h>
-#endif
-
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
@@ -1368,6 +1364,19 @@ BackendLLVM::run()
 #ifdef OSL_LLVM_NO_BITCODE
         OSL_ASSERT(!use_rs_bitcode());
         ll.module(ll.new_module("llvm_ops"));
+#    ifdef OSL_USE_OPTIX
+        if (use_optix()) {
+            // If the module is created from LLVM bitcode, the target and
+            // data layout is inherited from that, but if creating an empty
+            // module like here, have to manually set those, otherwise
+            // compiling will later fail because the NVPTX target is not found.
+            // The target triple and data layout used here are those specified
+            // for NVPTX (https://www.llvm.org/docs/NVPTXUsage.html#triples).
+            ll.module()->setDataLayout(
+                "e-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+            ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
+        }
+#    endif
 #else
         if (!use_optix()) {
             if (use_rs_bitcode()) {

@@ -19,6 +19,9 @@
 // Pull in the modified Imath headers and the OSL_HOSTDEVICE macro
 #ifdef __CUDACC__
 #    include <OSL/oslconfig.h>
+#endif
+
+#ifdef __CUDACC__
 #    include "string_hash.h"
 #endif
 

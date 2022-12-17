@@ -2678,12 +2678,14 @@ LLVM_Util::type_array(llvm::Type* type, int n)
     return llvm::ArrayType::get(type, n);
 }
 
-bool LLVM_Util::is_type_array(llvm::Type* type)
+bool
+LLVM_Util::is_type_array(llvm::Type* type)
 {
     return type->isArrayTy();
 }
 
-llvm::Type* LLVM_Util::element_type_of(llvm::Type* array_type)
+llvm::Type*
+LLVM_Util::element_type_of(llvm::Type* array_type)
 {
     OSL_DASSERT(is_type_array(array_type));
     return array_type->getArrayElementType();

@@ -2925,7 +2925,6 @@ private:
 
     template<typename DataT>
     OSL_NOINLINE void zero_all_type(int deriv_index) const;
-
 };
 
 
@@ -3462,7 +3461,7 @@ MaskedData<WidthT>::zero_all_type(int deriv_index) const
 
             OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
             for (int lane = 0; lane < WidthT; ++lane) {
-                wdest[lane] = DataT{};
+                wdest[lane] = DataT {};
             }
         }
     }

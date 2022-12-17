@@ -7270,28 +7270,29 @@ LLVMGEN(llvm_gen_closure)
             int num_components = simpletype.aggregate;
 
             llvm::Value* dest_base = rop.ll.offset_ptr(mem_void_ptr, p.offset);
-            llvm::Type* dest_type  = rop.ll.llvm_type(static_cast<const TypeSpec&>(p.type).simpletype());
-            dest_base              = rop.ll.ptr_to_cast(dest_base, dest_type);
+            llvm::Type* dest_type  = rop.ll.llvm_type(
+                static_cast<const TypeSpec&>(p.type).simpletype());
+            dest_base = rop.ll.ptr_to_cast(dest_base, dest_type);
 
             if (num_elements > 1) {
                 OSL_DASSERT(rop.ll.is_type_array(dest_type));
 
-                // The type is an array type, 
-                // which means our pointer is to an array type, 
+                // The type is an array type,
+                // which means our pointer is to an array type,
                 // not to &[0] (the address of the 1st element).
-                // IE:  typedef int Int5Array[5]; 
+                // IE:  typedef int Int5Array[5];
                 //      Int5Array *dest_base;
                 // in contrast to what most of use might consider an array pointer
                 //      int *dest_base;
                 // So if we dereference Int5Array* to with [4], the 5th element,
-                // we would be really be pointing to ((int *)dest_base)[5*4] which is 
+                // we would be really be pointing to ((int *)dest_base)[5*4] which is
                 // out of bounds of our 1 instance of Int5Array.
                 // Thus when dealing with arrays we will just dereference it and get the address to get
                 // the address of the 1st element.
 
                 dest_base = rop.ll.GEP(dest_type, dest_base, 0, 0);
                 llvm::Type* element_type = rop.ll.element_type_of(dest_type);
-                dest_type = element_type;
+                dest_type                = element_type;
             }
 
             for (int a = 0; a < num_elements; ++a) {

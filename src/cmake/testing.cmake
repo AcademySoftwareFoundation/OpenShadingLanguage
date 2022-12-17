@@ -352,7 +352,7 @@ macro (osl_add_all_tests)
                 transform transform-reg transformc transformc-reg trig trig-reg
                 typecast
                 unknown-instruction
-                userdata userdata-passthrough
+                userdata userdata-custom userdata-passthrough
                 vararray-connect vararray-default
                 vararray-deserialize vararray-param
                 vecctr vector vector-reg

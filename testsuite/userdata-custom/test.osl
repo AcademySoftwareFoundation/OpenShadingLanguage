@@ -1,0 +1,15 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test()
+{
+    float testFloat = -1;
+    getattribute("testFloat", testFloat);
+    color testColor = -1;
+    getattribute("testColor", testColor);
+    printf("testFloat: %f Dx: %f Dy: %f\n", testFloat, Dx(testFloat),
+           Dy(testFloat));
+    printf("testColor: %f Dx: %f Dy: %f\n", testColor, Dx(testColor),
+           Dy(testColor));
+}

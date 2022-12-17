@@ -7271,7 +7271,7 @@ LLVMGEN(llvm_gen_closure)
 
             llvm::Value* dest_base = rop.ll.offset_ptr(mem_void_ptr, p.offset);
             llvm::Type* dest_type  = rop.ll.llvm_type(
-                static_cast<const TypeSpec&>(p.type).simpletype());
+                 static_cast<const TypeSpec&>(p.type).simpletype());
             dest_base = rop.ll.ptr_to_cast(dest_base, dest_type);
 
             if (num_elements > 1) {

@@ -154,10 +154,11 @@ struct MxConductorParams : public MxMicrofacetBaseParams {
 
     Color3 evalT(float cos_theta) const { return Color3(0.0f); }
 
-    float get_ior() const
-    {
-        return 0;  // no transmission possible
-    }
+    // Avoid function was declared but never referenced
+    // float get_ior() const
+    // {
+    //     return 0;  // no transmission possible
+    // }
 };
 
 struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {

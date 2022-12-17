@@ -2904,7 +2904,7 @@ public:
     // Populate all data lanes of the MaskedData by broadcasting the
     // single instance of data pointed to.
     // Masked off lanes are not overwritten.
-    // Includes value, as well as Dx and Dy when has_derivs() is true
+    // when has_derivs() is true, Dx and Dy will be zeroed
     OSL_FORCEINLINE void assign_all_from_scalar(const void* ptr_data) const;
 
 
@@ -2922,6 +2922,9 @@ private:
     template<typename DataT>
     OSL_NOINLINE void assign_all_from_scalar_type(const void* ptr_data,
                                                   int deriv_index) const;
+
+    template<typename DataT>
+    OSL_NOINLINE void zero_all_type(int deriv_index) const;
 };
 
 
@@ -3438,6 +3441,33 @@ MaskedData<WidthT>::assign_all_from_scalar_type(const void* ptr_data,
 }
 
 template<int WidthT>
+template<typename DataT>
+OSL_NOINLINE void
+MaskedData<WidthT>::zero_all_type(int deriv_index) const
+{
+    // We can't just do a memset because some lanes may be masked off
+    // Use a SIMD loop to perform masked assignment.
+    auto* dst_blocks = pvt::block_cast<DataT, WidthT>(m_ptr);
+    int elem_count   = static_cast<int>(m_type.numelements());
+    int comp_count   = m_type.aggregate;
+    int deriv_offset = deriv_index * elem_count * comp_count;
+    for (int array_index = 0; array_index < elem_count; ++array_index) {
+        int array_offset = array_index * comp_count;
+        for (int comp_index = 0; comp_index < comp_count; ++comp_index) {
+            int combined_index = deriv_offset + array_offset + comp_index;
+            auto& bdst         = dst_blocks[combined_index];
+
+            Masked<DataT, WidthT> wdest(bdst, mask());
+
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            for (int lane = 0; lane < WidthT; ++lane) {
+                wdest[lane] = DataT {};
+            }
+        }
+    }
+}
+
+template<int WidthT>
 OSL_FORCEINLINE void
 MaskedData<WidthT>::assign_all_from_scalar(const void* ptr_data) const
 {
@@ -3452,16 +3482,12 @@ MaskedData<WidthT>::assign_all_from_scalar(const void* ptr_data) const
         assign_all_from_scalar_type<ustring>(ptr_data, /*deriv_index*/ 0);
     }
     if (has_derivs()) {
-        size_t src_size    = type().size();
-        const char* dx_src = reinterpret_cast<const char*>(ptr_data) + src_size;
-        const char* dy_src = dx_src + src_size;
-
         if (isBase32bit) {
-            assign_all_from_scalar_type<int>(dx_src, /*deriv_index*/ 1);
-            assign_all_from_scalar_type<int>(dy_src, /*deriv_index*/ 2);
+            zero_all_type<int>(/*deriv_index*/ 1);
+            zero_all_type<int>(/*deriv_index*/ 2);
         } else {
-            assign_all_from_scalar_type<ustring>(dx_src, /*deriv_index*/ 1);
-            assign_all_from_scalar_type<ustring>(dy_src, /*deriv_index*/ 2);
+            zero_all_type<ustring>(/*deriv_index*/ 1);
+            zero_all_type<ustring>(/*deriv_index*/ 2);
         }
     }
 }

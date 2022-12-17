@@ -520,7 +520,7 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         size_t size = p->type().size();
         memcpy(val, p->data(), size);
         if (derivatives)
-            memcpy(val, (char*)p->data() + size, 2 * size);
+            memset((char*)val + size, 0, 2 * size);
         return true;
     }
 

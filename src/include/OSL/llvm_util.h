@@ -631,6 +631,12 @@ public:
     /// llvm type.
     llvm::Type* type_array(llvm::Type* type, int n);
 
+    /// Return the true if the llvm::Type is an array
+    bool is_type_array(llvm::Type* type);
+
+    /// Return the llvm::Type of element that the array_type is made up of
+    llvm::Type* element_type_of(llvm::Type* array_type);
+
     /// Return an llvm::FunctionType that describes a function with the
     /// given return types, parameter types (in a cspan), and whether it
     /// uses varargs conventions.

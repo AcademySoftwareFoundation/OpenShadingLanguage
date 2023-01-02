@@ -68,7 +68,8 @@ jobs:
             # pybind11_ver: v2.9.0
             simd: avx2,f16c
             skip_tests: 1
-            setenvs: export OSL_CMAKE_FLAGS="-DUSE_OPTIX=1" OPTIX_VERSION=7.0 
+            setenvs: export OSL_CMAKE_FLAGS="-DUSE_OPTIX=1" OPTIX_VERSION=7.0
+                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=8.1.1
           - desc: gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4
             nametag: linux-vfx2020
             os: ubuntu-latest

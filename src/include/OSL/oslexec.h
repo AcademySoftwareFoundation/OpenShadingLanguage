@@ -61,7 +61,7 @@ namespace Strings {
 #    if OPTIX_VERSION >= 70000
 #        define STRDECL(str, var_name)
 #    else
-#        define STRDECL(str, var_name) extern __device__ ustring var_name;
+#        define STRDECL(str, var_name) extern __device__ const ustring var_name;
 #    endif
 #else
 // Any strings referenced inside of a libsoslexec/wide/*.cpp

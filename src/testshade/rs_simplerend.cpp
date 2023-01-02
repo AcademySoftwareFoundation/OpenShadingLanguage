@@ -18,7 +18,7 @@
 // to utilize the RS_ prefix.  RS_ prefixed versions of all OSL::Strings
 // instances have been created by rs_free_function.h, so the same STRING_PARAMS
 // macro can be used for renderer service or OSL strings.
-#define RS_STRDECL(str, var_name) extern "C" OSL::ustring RS_##var_name;
+#define RS_STRDECL(str, var_name) extern "C" const OSL::ustring RS_##var_name;
 #include "rs_strdecls.h"
 #undef RS_STRDECL
 

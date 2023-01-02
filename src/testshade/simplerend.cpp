@@ -16,7 +16,7 @@
 // non-colliding global symbol names, so its easier to pass them to
 // OSL::register_JIT_Global(name, addr) for host execution
 extern "C" {
-#define RS_STRDECL(str, var_name) OSL::ustring RS_##var_name { str };
+#define RS_STRDECL(str, var_name) const OSL::ustring RS_##var_name { str };
 #include "rs_strdecls.h"
 #undef RS_STRDECL
 }
@@ -265,8 +265,9 @@ SimpleRenderer::attribute(string_view name, TypeDesc type, const void* value)
 void
 SimpleRenderer::register_JIT_Global_Variables()  //callable from testshade
 {
-#define RS_STRDECL(str, var_name) \
-    OSL::register_JIT_Global(__OSL_STRINGIFY(RS_##var_name), &RS_##var_name);
+#define RS_STRDECL(str, var_name)                            \
+    OSL::register_JIT_Global(__OSL_STRINGIFY(RS_##var_name), \
+                             (void*)&RS_##var_name);
 #include "rs_strdecls.h"
 #undef RS_STRDECL
 }

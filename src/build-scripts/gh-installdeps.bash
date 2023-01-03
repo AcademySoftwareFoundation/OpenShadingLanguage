@@ -18,8 +18,8 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
 
     #ls /etc/yum.repos.d
 
-    sudo yum install -y giflib giflib-devel && true
-    # sudo yum install -y ffmpeg ffmpeg-devel && true
+    sudo /usr/bin/yum install -y giflib giflib-devel && true
+    # sudo /usr/bin/yum install -y ffmpeg ffmpeg-devel && true
 
     if [[ "${CONAN_LLVM_VERSION}" != "" ]] ; then
         mkdir conan
@@ -42,7 +42,7 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
 
     if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" || "$CXX" == "icpx" || "$CC" == "icx" || "$USE_ICX" != "" ]] ; then
         sudo cp src/build-scripts/oneAPI.repo /etc/yum.repos.d
-        sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2022.1.0-3768
+        sudo /usr/bin/yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2022.1.0-3768
         # Because multiple (possibly newer) versions of oneAPI may be installed,
         # use a config file to specify compiler and tbb versions
         # NOTE: oneAPI components have independent version numbering.

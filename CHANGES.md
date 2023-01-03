@@ -1,9 +1,17 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.8.0 -- 1 Jan? 2023 (compared to 1.12.7.1)
+Release 1.12.8.0 -- 3 Jan 2023 (compared to 1.12.7.1)
 -------------------------------------------------------
-
+* Remove dependency on OptiX SDK for building core OSL with OptiX support.
+  You can now build OSL with OptiX support enabled even if you don't have the
+  OptiX SDK headers present at build time. But you will still need them to
+  build your OptiX-based application that uses OSL for GPU rendering. #1627
+* Batch mode: fix issue with closure keyword parameters. #1620
+* Batch mode: fix crash when adding a default initialized closure. #1624
+* Batch mode: Fix support for closures with array types. #1630
+* testshade: better testing of all closure parameter types. #1621
+* Fix various CI breaks as dependencies shifted. #1629 #1631 #1633
 
 Release 1.12.7.1 -- 1 Dec 2022 (compared to 1.12.7.0)
 -------------------------------------------------------

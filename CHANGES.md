@@ -23,6 +23,10 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 SIMD batched shading mode:
 * Fix some array overruns (asymptomatic, but still potentially buggy) in
   common_ancestor_between. #1577 (1.13.0.2)
+* Fix issue with closure keyword parameters. #1620 (1.13.2.0/1.12.8.0)
+* Fix crash when adding a default initialized closure. #1624
+  (1.13.2.0/1.12.8.0)
+* Fix support for closures with array types. #1630 (1.13.2.0/1.12.8.0)
 
 OptiX rendering:
 * OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
@@ -34,6 +38,14 @@ OptiX rendering:
 * Better PTX cache hit rate by eliminating several sources of not being
   strictly deterministic in the PTX text we were generating. #1566 #1570
   (1.13.0.1)
+* Fix PTX symbol visibility issues. #1609 (1.13.2.0)
+* Hide more code that is only used for OptiX mode, when OptiX is disabled.
+  #1608 (1.13.2.0)
+* Remove dependency on OptiX SDK for building core OSL with OptiX support. You
+  can now build OSL with OptiX support enabled even if you don't have the
+  OptiX SDK headers present at build time. But you will still need them to
+  build your OptiX-based application that uses OSL for GPU rendering. #1627
+  (1.13.2.0/1.12.8.0)
 
 Performance improvements:
 
@@ -44,26 +56,81 @@ Bug fixes and other improvements (internals):
 Internals/developer concerns:
 * platform.h:
     - New `OSL_ALLOCA` macro to allocate on the stack. #1589 (1.13.0.3)
+    - Define OSL::bitcast utility. #1610 (1.13.2.0)
+* Make sure that std::hash is defined for ustring and ustringhash. #1599
+  (1.13.1.1)
+* Deprecate LLVMUtil::internalize_module_functions. #1606 (1.13.1.0)
+* Work toward always representing strings in shaders as ustringhash rather
+  than ustring: phase 1 #1603 phase2 #1612 (1.13.2.0)
 
 Build & test system improvements:
 * CMake build system and scripts:
     - The version number is now a cache variable, and so can be overridden at
       build time using `-DOSL_VERSION=...`. Use with extreme caution! #1579
-      (1.13.0.2)
+      (1.13.0.2)  Revised again to reduce changes of user error in #1617
+      (1.13.2.0/1.12.7.1)
+    - Add clangSupport library as dependency to fix linker error on some
+      platforms. #1613 (1.13.2.0/1.12.7.1)
 * Dependency version support:
     - Fix some issues that came up with the new icx 2022.0 compiler. #1601
       (1.13.1.0)
+    - Test against OpenColorIO 2.2. #1616 (1.13.2.0/1.12.7.1)
 * Testing and Continuous integration (CI) systems:
     - Dynamic analysis using address and leak sanitizers. #1581 (1.13.0.3)
     - `testshade --help` now prints TextureSystem options and all hardware
       information. #1584 (1.13.0.3)
     - Improvements to SonarCloud and coverage analysis. #1596 (1.13.0.3)
+      #1607 (1.13.1.0)
+    - Disabling the dso version of testshade for the coverage analysis test.
+      #1604 (1.13.1.0)
+    - Be sure to run pointcloud tests when partio is found. #1611 (1.13.2.0)
+    - testshade: better testing of all closure parameter types. #1621
+      (1.13.2.0/1.12.8.0)
 * Platform support:
+    - Include `immintrin.h` only when needed. #1605 (1.13.1.0)
 
 Documentation:
 * `doc/RELEASING.md` documents our release process and versioning policies.
   #1572 (1.13.0.2)
 
+
+Release 1.12.8.0 -- 3 Jan 2023 (compared to 1.12.7.1)
+-------------------------------------------------------
+* Remove dependency on OptiX SDK for building core OSL with OptiX support.
+  You can now build OSL with OptiX support enabled even if you don't have the
+  OptiX SDK headers present at build time. But you will still need them to
+  build your OptiX-based application that uses OSL for GPU rendering. #1627
+* Batch mode: fix issue with closure keyword parameters. #1620
+* Batch mode: fix crash when adding a default initialized closure. #1624
+* Batch mode: Fix support for closures with array types. #1630
+* testshade: better testing of all closure parameter types. #1621
+* Fix various CI breaks as dependencies shifted. #1629 #1631 #1633
+
+Release 1.12.7.1 -- 1 Dec 2022 (compared to 1.12.7.0)
+-------------------------------------------------------
+* Add clangSupport library as dependency to fix linker error on some
+  platforms. #1613
+* Test against OpenColorIO 2.2. #1616
+* Build: Fix how version overrides work to reduce the chance of user mistakes.
+  #1617
+
+Release 1.12.7.0 -- 1 Nov 2022 (compared to 1.12.6.2)
+-------------------------------------------------------
+* Optix: Change naming of certain compiler-generated constants in a way that
+  improves use of the PTX cache. #1570
+* Batch: Fix uninitialized members in ReadEvent internals. #1575
+* `testshade --help` now prints TextureSystem options and hardware info. #1584
+* oslc: Fix memory leak in ASTvariable_declaration. #1576
+* Fix memory leaks in light path expression code. #1593 #1594
+* Include the immintrin.h header only when needed. #1605
+* icx: Improvements to fix problems exposed by new icx 2022.2 compiler. #1601
+* Testing: CMake cache variables to control the testing timeout length. #1571
+* CI: Add a dynamic analysis test using address and leak sanitizers. #1581
+* CI: Now using SonarCloud static analysis. #1551
+* CI: Many improvements in testing code coverage #1607
+* CI: Make sure to run pointcloud tests when partio is found. #1611
+* Developers: platform.h now defines OSL_ALLOCA macro. #1589
+* Developers: platform.h now defines OSL::bitcast utility. #1610
 
 Release 1.12 -- 1 Oct 2022 (compared to 1.11)
 ----------------------------------------------

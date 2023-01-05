@@ -23,6 +23,9 @@
 
 #include <OSL/oslversion.h>
 
+#if defined(__x86_64__) && !defined(__CUDA_ARCH__)
+#   include <x86intrin.h>
+#endif
 
 /////////////////////////////////////////////////////////////////////////
 // Detect which compiler and version we're using
@@ -515,6 +518,42 @@ OSL_FORCEINLINE OSL_HOSTDEVICE To bitcast(const From& src) noexcept {
     memcpy((void*)&dst, &src, sizeof(From));
     return dst;
 }
+
+#if defined(__x86_64__) && !defined(__CUDA_ARCH__) && \
+    (defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) \
+     || OSL_CLANG_VERSION >= 100000 || OSL_APPLE_CLANG_VERSION >= 130000)
+// On x86/x86_64 for certain compilers we can use Intel CPU intrinsics for
+// some common bitcast cases that might be even more understandable to the
+// compiler and generate better code without its getting confused about the
+// memcpy in the general case. We're a bit conservative with the compiler
+// version checks here, it may be that some earlier versions support these
+// intrinsics.
+
+template<> OSL_FORCEINLINE uint32_t bitcast<uint32_t, float>(const float& val) noexcept {
+    return static_cast<uint32_t>(_castf32_u32(val));
+}
+template<> OSL_FORCEINLINE int32_t bitcast<int32_t, float>(const float& val) noexcept {
+    return static_cast<int32_t>(_castf32_u32(val));
+}
+template<> OSL_FORCEINLINE float bitcast<float, uint32_t>(const uint32_t& val) noexcept {
+    return _castu32_f32(val);
+}
+template<> OSL_FORCEINLINE float bitcast<float, int32_t>(const int32_t& val) noexcept {
+    return _castu32_f32(val);
+}
+template<> OSL_FORCEINLINE uint64_t bitcast<uint64_t, double>(const double& val) noexcept {
+    return static_cast<uint64_t>(_castf64_u64(val));
+}
+template<> OSL_FORCEINLINE int64_t bitcast<int64_t, double>(const double& val) noexcept {
+    return static_cast<int64_t>(_castf64_u64(val));
+}
+template<> OSL_FORCEINLINE double bitcast<double, uint64_t>(const uint64_t& val) noexcept {
+    return _castu64_f64(val);
+}
+template<> OSL_FORCEINLINE double bitcast<double, int64_t>(const int64_t& val) noexcept {
+    return _castu64_f64(val);
+}
+#endif
 
 
 

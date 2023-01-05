@@ -28,12 +28,7 @@ namespace {
 OSL_FORCEINLINE OSL_HOSTDEVICE int
 bitcast_to_uint(float x)
 {
-#if OPENIMAGEIO_VERSION >= 20500
-    return OIIO::bitcast<unsigned int, float>(x);
-#else
-    // obsolete call
-    return OIIO::bit_cast<float, unsigned int>(x);
-#endif
+    return OSL::bitcast<unsigned int>(x);
 }
 
 

@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.12.9.0 -- ? Feb? 2023 (compared to 1.12.8.0)
+-------------------------------------------------------
+
+
 Release 1.12.8.0 -- 3 Jan 2023 (compared to 1.12.7.1)
 -------------------------------------------------------
 * Remove dependency on OptiX SDK for building core OSL with OptiX support.

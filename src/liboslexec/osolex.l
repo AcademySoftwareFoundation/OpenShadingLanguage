@@ -288,7 +288,8 @@ public:
     }
 
     // TODO: This is really the only part of parsing that needs the lock still.
-    //       But the calling code setting locale complicates this.
+    //       The calling code no longer sets the global locale, so it would
+    //       likely be simple to clean this up.
     //
     bool parse(OSOReader* reader, const char* what) {
         yy_switch_to_buffer(m_buffer, m_scanner);
@@ -310,12 +311,6 @@ OSOReader::parse_file (const std::string &filename)
     // can actually be reading a .oso file at a time.
     std::lock_guard<std::mutex> guard (osoread_mutex);
 
-    // Force classic "C" locale for correct '.' decimal parsing.
-    // N.B. This is not safe in a multi-threaded program where another
-    // application thread is expecting the native locale to work properly.
-    std::locale oldlocale;   // save the previous native locale
-    std::locale::global (std::locale::classic());
-
     FILE* osoin = OIIO::Filesystem::fopen (filename, "r");
     if (! osoin) {
         m_err.errorfmt("File {} not found", filename);
@@ -326,7 +321,6 @@ OSOReader::parse_file (const std::string &filename)
     bool ok = scope.parse(this, filename.c_str());
 
     fclose (osoin);
-    std::locale::global (oldlocale);  // Restore the original locale.
 
     return ok;
 }
@@ -339,21 +333,8 @@ OSOReader::parse_memory (const std::string &buffer)
     // can actually be reading a .oso file at a time.
     std::lock_guard<std::mutex> guard (osoread_mutex);
 
-#ifndef OIIO_STRUTIL_HAS_STOF
-    // Force classic "C" locale for correct '.' decimal parsing.
-    // N.B. This is not safe in a multi-threaded program where another
-    // application thread is expecting the native locale to work properly.
-    // This is not necessary for versions of OIIO that have Strutil::stof,
-    // and we can remove it entirely when OIIO 1.9 is the minimum.
-    std::locale oldlocale = std::locale::global (std::locale::classic());
-#endif
-
     Scope scope(buffer);
     bool ok = scope.parse(this, "preloaded OSO code");
-
-#ifndef OIIO_STRUTIL_HAS_STOF
-    std::locale::global (oldlocale);  // Restore the original locale.
-#endif
 
     return ok;
 }

@@ -980,12 +980,7 @@ template<int WidthT> struct alignas(VecReg<WidthT>) Block<ustringhash, WidthT> {
 #ifdef OIIO_USTRING_HAS_CTR_FROM_USTRINGHASH
         return ustringhash::from_hash(str[lane]);
 #else
-        // Dumb workaround if we are on old OIIO
-#    if OPENIMAGEIO_VERSION >= 20500
-        return OIIO::bitcast<ustringhash>(str[lane]);
-#    else
-        return OIIO::bit_cast<size_t, ustringhash>(str[lane]);
-#    endif
+        return OSL::bitcast<ustringhash>(str[lane]);
 #endif
     }
 

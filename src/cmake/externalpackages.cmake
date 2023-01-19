@@ -190,14 +190,14 @@ if (USE_CUDA OR USE_OPTIX)
         set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
 
         find_library(cuda_lib NAMES cudart
-                    PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
+                    PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"
                     REQUIRED)
         set(CUDA_LIBRARIES ${cuda_lib})
 
         # testrender & testshade need libnvrtc
         if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "10.0")
             find_library(nvrtc_lib NAMES nvrtc
-                        PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64"
+                        PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"
                         REQUIRED)
             set(CUDA_LIBRARIES ${CUDA_LIBRARIES} ${nvrtc_lib})
 

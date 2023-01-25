@@ -386,6 +386,7 @@ public:
     /// vector-like (and match their array-ness and closure-ness), or
     /// if both are structures with matching fields.
     friend bool equivalent(const TypeSpec& a, const TypeSpec& b);
+    friend bool relaxed_equivalent(const TypeSpec& a, const TypeSpec& b);
 
     /// Is type src is assignable to dst?  It is if they are the equivalent(),
     /// or if dst is a float or float-aggregate and src is a float or int.

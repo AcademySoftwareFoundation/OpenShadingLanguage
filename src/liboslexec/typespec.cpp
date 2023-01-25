@@ -149,6 +149,27 @@ equivalent(const TypeSpec& a, const TypeSpec& b)
                || a.is_unsized_array() != b.is_unsized_array());
 }
 
+// Relaxed rules just look to see that the types are isomorphic to each other (ie: same number of base values)
+// Note that:
+//   * basetypes must match exactly (int vs float vs string)
+//   * valuetype cannot be unsized (we must know the concrete number of values)
+//   * if paramtype is sized (or not an array) just check for the total number of entries
+//   * if paramtype is unsized (shader writer is flexible about how many values come in) -- make sure we are a multiple of the target type
+//   * allow a single float setting a vec3 (or equivalent)
+bool
+relaxed_equivalent(const TypeSpec& a, const TypeSpec& b)
+{
+    const TypeDesc paramtype = a.simpletype();
+    const TypeDesc valuetype = b.simpletype();
+
+    return valuetype.basetype == paramtype.basetype
+           && !valuetype.is_unsized_array()
+           && ((!paramtype.is_unsized_array()
+                && valuetype.basevalues() == paramtype.basevalues())
+               || (paramtype.is_unsized_array()
+                   && valuetype.basevalues() % paramtype.aggregate == 0)
+               || (paramtype.is_vec3() && valuetype == TypeDesc::FLOAT));
+}
 
 
 };  // namespace pvt

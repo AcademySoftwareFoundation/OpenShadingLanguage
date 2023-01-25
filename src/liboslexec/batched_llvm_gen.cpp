@@ -7217,6 +7217,7 @@ LLVMGEN(llvm_gen_closure)
         rop.ll.type_ptr(rop.llvm_type_closure_component_wide_ptr()));
     llvm::Value* comp_wide_ptr = rop.ll.op_load(comp_wide_ptr_ptr);
 
+    llvm::Value* mask = rop.ll.current_mask();
     // This is an unrolled vector-width loop.  It was unrolled because it's
     // was more expedient to write the for in C++ than IR, but if compilation
     // of the extra ops becomes problematic, this choice can be revisited
@@ -7230,14 +7231,16 @@ LLVMGEN(llvm_gen_closure)
         // For the weighted closures, we need a surrounding "if" so that it's safe
         // for osl_allocate_weighted_closure_component to return NULL (unless we
         // know for sure that it's constant weighted and that the weight is
-        // not zero).
+        // not zero).  We also need the surrounding "if" to reject writing
+        // to closures that aren't masked.
         llvm::BasicBlock* next_block    = NULL;
         llvm::BasicBlock* notnull_block = rop.ll.new_basic_block(
-            "non_null_closure");
-        next_block = rop.ll.new_basic_block("");
-        llvm::Value* cond
-            = rop.ll.op_ne(rop.ll.ptr_cast(comp_ptr, rop.ll.type_void_ptr()),
-                           rop.ll.void_ptr_null());
+            "non_null_and_masked_closure");
+        next_block        = rop.ll.new_basic_block("");
+        llvm::Value* cond = rop.ll.op_and(
+            rop.ll.op_ne(rop.ll.ptr_cast(comp_ptr, rop.ll.type_void_ptr()),
+                         rop.ll.void_ptr_null()),
+            rop.ll.test_mask_lane(mask, lane_index));
         rop.ll.op_branch(cond, notnull_block, next_block);
 
         // If the closure has a "prepare" method, call

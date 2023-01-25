@@ -1,0 +1,15 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test()
+{
+    if (u > 0.5) {
+        Ci = u * emission();
+    } else {
+        Ci = color(1, 0, 0) * emission();
+    }
+
+    printf("  Ci = %s\n", Ci);
+}

@@ -1,0 +1,7 @@
+Compiled test.osl -> test.oso
+  Ci = (1, 0, 0) * emission ()
+  Ci = (1, 0, 0) * emission ()
+  Ci = (1, 0, 0) * emission ()
+  Ci = (0.75, 0.75, 0.75) * emission ()
+  Ci = (1, 1, 1) * emission ()
+

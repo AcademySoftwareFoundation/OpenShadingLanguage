@@ -3179,7 +3179,9 @@ ShadingSystemImpl::ReParameter(ShaderGroup& group, string_view layername_,
     }
 
     // Check for mismatch versus previously-declared type
-    if (!equivalent(sym->typespec(), type))
+    if ((relaxed_param_typecheck() && !relaxed_equivalent(sym->typespec(), type))
+        || (!relaxed_param_typecheck()
+            && !relaxed_equivalent(sym->typespec(), type)))
         return false;
 
     // Can't change param value if the group has already been optimized,

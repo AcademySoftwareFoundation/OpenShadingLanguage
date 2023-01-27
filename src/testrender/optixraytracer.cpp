@@ -1072,7 +1072,7 @@ OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
                     switch (format[j]) {
                     case '%':
                         // seems like a silly to print a '%', but it keeps the logic parallel with the other cases
-                        dst += snprintf(&buffer[dst], BufferSize - dst,
+                        dst += snprintf(&buffer[dst], BufferSize - dst, "%s",
                                         fmt_string.c_str());
                         format_end_found = true;
                         break;

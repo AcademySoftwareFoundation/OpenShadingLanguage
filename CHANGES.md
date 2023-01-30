@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.12.10.0 -- 1? Mar? 2023 (compared to 1.12.9.0)
+--------------------------------------------------------
+
+
 Release 1.12.9.0 -- 1 Feb 2023 (compared to 1.12.8.0)
 -------------------------------------------------------
 * Remove unnecessary setting of locale::global. #1630

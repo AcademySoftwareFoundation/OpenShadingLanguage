@@ -685,7 +685,8 @@ OptixGridRenderer::good(TextureHandle* handle OSL_MAYBE_UNUSED)
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
 OptixGridRenderer::get_texture_handle(ustringhash filename,
-                                      ShadingContext* /*shading_context*/)
+                                      ShadingContext* /*shading_context*/,
+                                      const TextureOpt* /*options*/)
 {
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {

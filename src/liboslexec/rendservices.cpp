@@ -158,10 +158,17 @@ RendererServices::get_userdata(bool derivatives, ustringhash name,
 
 RendererServices::TextureHandle*
 RendererServices::get_texture_handle(ustringhash filename,
-                                     ShadingContext* context)
+                                     ShadingContext* context,
+                                     const TextureOpt* options)
 {
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+    return texturesys()->get_texture_handle(ustring_from(filename),
+                                            context->texture_thread_info(),
+                                            options);
+#else
     return texturesys()->get_texture_handle(ustring_from(filename),
                                             context->texture_thread_info());
+#endif
 }
 
 
@@ -194,8 +201,14 @@ RendererServices::texture(ustringhash filename, TextureHandle* texture_handle,
     if (!texture_thread_info)
         texture_thread_info = context->texture_thread_info();
     if (!texture_handle)
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+        texture_handle
+            = texturesys()->get_texture_handle(ustring_from(filename),
+                                               texture_thread_info, &options);
+#else
         texture_handle = texturesys()->get_texture_handle(ustring_from(filename),
                                                           texture_thread_info);
+#endif
     bool status = texturesys()->texture(texture_handle, texture_thread_info,
                                         options, s, t, dsdx, dtdx, dsdy, dtdy,
                                         nchannels, result, dresultds,
@@ -230,8 +243,14 @@ RendererServices::texture3d(ustringhash filename, TextureHandle* texture_handle,
     if (!texture_thread_info)
         texture_thread_info = context->texture_thread_info();
     if (!texture_handle)
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+        texture_handle
+            = texturesys()->get_texture_handle(ustring_from(filename),
+                                               texture_thread_info, &options);
+#else
         texture_handle = texturesys()->get_texture_handle(ustring_from(filename),
                                                           texture_thread_info);
+#endif
 
     bool status = texturesys()->texture3d(texture_handle, texture_thread_info,
                                           options, P, dPdx, dPdy, dPdz,
@@ -267,8 +286,14 @@ RendererServices::environment(ustringhash filename,
     if (!texture_thread_info)
         texture_thread_info = context->texture_thread_info();
     if (!texture_handle)
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+        texture_handle
+            = texturesys()->get_texture_handle(ustring_from(filename),
+                                               texture_thread_info, &options);
+#else
         texture_handle = texturesys()->get_texture_handle(ustring_from(filename),
                                                           texture_thread_info);
+#endif
     bool status = texturesys()->environment(texture_handle, texture_thread_info,
                                             options, R, dRdx, dRdy, nchannels,
                                             result, dresultds, dresultdt);

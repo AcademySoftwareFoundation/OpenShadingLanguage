@@ -66,7 +66,8 @@ CudaGridRenderer::good(TextureHandle* handle)
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
 CudaGridRenderer::get_texture_handle(OSL::ustringhash filename,
-                                     ShadingContext* shading_context)
+                                     ShadingContext* shading_context,
+                                     const TextureOpt* options)
 {
     auto itr = _samplers.find(filename);
     if (itr == _samplers.end()) {

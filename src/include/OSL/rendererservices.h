@@ -186,10 +186,13 @@ public:
     virtual bool get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                               ShaderGlobals* sg, void* val);
 
-    /// Given the name of a texture, return an opaque handle that can be
-    /// used with texture calls to avoid the name lookups.
-    virtual TextureHandle* get_texture_handle(ustringhash filename,
-                                              ShadingContext* context);
+    /// Given the name of a texture, return an opaque handle that can be used
+    /// with texture calls to avoid the name lookups. The `options`, if not
+    /// null, may be used in renderer-specific ways to specialize a handle
+    /// based on certain texture option choices.
+    virtual TextureHandle*
+    get_texture_handle(ustringhash filename, ShadingContext* context,
+                       const TextureOpt* options = nullptr);
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently

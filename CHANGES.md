@@ -1,9 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.9.0 -- ? Feb? 2023 (compared to 1.12.8.0)
+Release 1.12.9.0 -- 1 Feb 2023 (compared to 1.12.8.0)
 -------------------------------------------------------
-
+* Remove unnecessary setting of locale::global. #1630
+* Batch shading: Fix bug with masked wide glosure generation. #1637
+* Make sure ReParameter() has the same relaxed type checking rules as
+  Parameter(). Before, it was stricter about type conversion. #1639
+* Windows: Fix some GPU build errors. #1638
 
 Release 1.12.8.0 -- 3 Jan 2023 (compared to 1.12.7.1)
 -------------------------------------------------------

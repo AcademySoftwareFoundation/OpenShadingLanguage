@@ -2122,6 +2122,10 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
         *(void**)val = n ? &group->m_userdata_init_vals[0] : NULL;
         return true;
     }
+    if (name == "llvm_groupdata_size" && type == TypeDesc::TypeInt) {
+        *(int*)val = (int)group->llvm_groupdata_size();
+        return true;
+    }
 
     return false;
 }

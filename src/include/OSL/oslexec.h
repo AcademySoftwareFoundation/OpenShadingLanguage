@@ -448,6 +448,7 @@ public:
     ///   string entry_layers[]      List of entry point layers.
     ///   string pickle              Retrieves a serialized representation
     ///                                 of the shader group declaration.
+    ///   int llvm_groupdata_size    Size of the GroupData struct.
     /// Note: the attributes referred to as "string" are actually on the app
     /// side as ustring or const char* (they have the same data layout), NOT
     /// std::string!

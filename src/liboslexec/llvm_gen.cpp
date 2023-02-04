@@ -2461,7 +2461,9 @@ LLVMGEN(llvm_gen_texture)
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle
             = rop.renderer()->get_texture_handle(Filename.get_string(),
-                                                 rop.shadingcontext());
+                                                 rop.shadingcontext(), nullptr);
+        // FIXME(colorspace): that nullptr should be replaced by a TextureOpt*
+        // that has the colorspace set.
     }
 
     // Now call the osl_texture function, passing the options and all the
@@ -2526,7 +2528,9 @@ LLVMGEN(llvm_gen_texture3d)
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle
             = rop.renderer()->get_texture_handle(Filename.get_string(),
-                                                 rop.shadingcontext());
+                                                 rop.shadingcontext(), nullptr);
+        // FIXME(colorspace): that nullptr should be replaced by a TextureOpt*
+        // that has the colorspace set.
     }
 
     // Now call the osl_texture3d function, passing the options and all the
@@ -2589,7 +2593,9 @@ LLVMGEN(llvm_gen_environment)
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle
             = rop.renderer()->get_texture_handle(Filename.get_string(),
-                                                 rop.shadingcontext());
+                                                 rop.shadingcontext(), nullptr);
+        // FIXME(colorspace): that nullptr should be replaced by a TextureOpt*
+        // that has the colorspace set.
     }
 
     // Now call the osl_environment function, passing the options and all the
@@ -3040,7 +3046,7 @@ LLVMGEN(llvm_gen_gettextureinfo)
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle
             = rop.renderer()->get_texture_handle(Filename.get_string(),
-                                                 rop.shadingcontext());
+                                                 rop.shadingcontext(), nullptr);
     }
 
     std::vector<llvm::Value*> args;

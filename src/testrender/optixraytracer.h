@@ -55,7 +55,8 @@ public:
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
     TextureHandle* get_texture_handle(ustringhash filename,
-                                      ShadingContext* shading_context) override;
+                                      ShadingContext* shading_context,
+                                      const TextureOpt* options) override;
 
     // Easy way to do Optix calls
     optix::Context& optix_ctx() { return m_optix_ctx; }

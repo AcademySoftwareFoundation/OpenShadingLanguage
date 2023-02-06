@@ -26,7 +26,7 @@ def run_ternary_tests (opname) :
     return
 
 # Run ternary tests with mixing combinations of varying(v), uniform(u), and constant(c) parameters.
-# Test with constants to pass non-deriviative parameters to functions
+# Test with constants to pass non-derivative parameters to functions
 # Choose not to test variation of 3 constant argument2, as that should be constant folded
 # Choose not to test variation of constant and uniform arguments, assuming 
 # testing of varying and uniform arguments provided enough coverage.

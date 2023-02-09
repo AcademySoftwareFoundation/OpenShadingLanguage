@@ -75,7 +75,7 @@ def run_binary_tests (opname) :
     return
 
 # Run binary tests with mixing combinations of varying(v), uniform(u), and constant(c) parameters.
-# Test with constants to pass non-deriviative parameters to functions
+# Test with constants to pass non-derivative parameters to functions
 # Choose not to test variation of 2 constant argument, as that should be constant folded 
 run_binary_tests ("pow")
 run_binary_tests ("pow_u_u")

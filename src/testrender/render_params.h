@@ -3,7 +3,7 @@
 
 #include "optix_compat.h"
 
-#if defined(OSL_USE_OPTIX) || defined(__CUDA_ARCH__)
+#if OSL_USE_OPTIX || defined(__CUDA_ARCH__)
 
 struct RenderParams {
     float3 bad_color;

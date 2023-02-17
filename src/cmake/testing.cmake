@@ -147,7 +147,7 @@ macro ( TESTSUITE )
         # if there is an OPTIX marker file in the directory.
         # If an environment variable $TESTSUITE_OPTIX is nonzero, then
         # run all tests with OptiX, even if there's no OPTIX marker.
-        if (USE_OPTIX
+        if (OSL_USE_OPTIX
             AND (EXISTS "${_testsrcdir}/OPTIX" OR test_all_optix OR _testname MATCHES "optix")
             AND NOT EXISTS "${_testsrcdir}/NOOPTIX"
             AND NOT EXISTS "${_testsrcdir}/NOOPTIX-FIXME"

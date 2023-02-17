@@ -5828,7 +5828,7 @@ bool
 LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
                              std::string& out)
 {
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     std::string target_triple = module()->getTargetTriple();
 
     OSL_ASSERT(

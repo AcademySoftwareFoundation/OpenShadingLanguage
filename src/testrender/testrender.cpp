@@ -25,7 +25,7 @@
 #include "shading.h"
 #include "simpleraytracer.h"
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
 #    include "optixraytracer.h"
 #endif
 
@@ -234,7 +234,7 @@ main(int argc, const char* argv[])
         aa = aaoverride;
 
     SimpleRaytracer* rend = nullptr;
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     if (use_optix)
         rend = new OptixRaytracer;
     else
@@ -267,7 +267,7 @@ main(int argc, const char* argv[])
     // Setup common attributes
     set_shadingsys_options();
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     if (use_optix)
         reinterpret_cast<OptixRaytracer*>(rend)->synch_attributes();
 #endif

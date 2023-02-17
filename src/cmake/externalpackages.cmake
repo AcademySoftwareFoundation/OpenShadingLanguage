@@ -181,7 +181,7 @@ endif ()
 
 
 # CUDA setup
-if (USE_CUDA OR USE_OPTIX)
+if (OSL_USE_OPTIX)
     if (USE_LLVM_BITCODE)
         if (NOT CUDA_TOOLKIT_ROOT_DIR AND NOT $ENV{CUDA_TOOLKIT_ROOT_DIR} STREQUAL "")
             set (CUDA_TOOLKIT_ROOT_DIR $ENV{CUDA_TOOLKIT_ROOT_DIR})
@@ -221,7 +221,7 @@ if (USE_CUDA OR USE_OPTIX)
     endif()
 
     # OptiX setup
-    if (USE_OPTIX AND OSL_BUILD_TESTS)
+    if (OSL_USE_OPTIX AND OSL_BUILD_TESTS)
         checked_find_package (OptiX REQUIRED
                               VERSION_MIN 7.0)
         include_directories (BEFORE "${OPTIX_INCLUDES}")

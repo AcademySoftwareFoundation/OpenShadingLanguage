@@ -8,7 +8,7 @@
 #include <OSL/oslconfig.h>
 #include <OSL/oslversion.h>
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
 #    include <cuda_runtime_api.h>
 #    include <optix.h>
 #    ifdef _WIN32
@@ -19,7 +19,7 @@
 #endif
 
 
-#if !defined(OSL_USE_OPTIX) && !defined(__CUDA_ARCH__)
+#if !OSL_USE_OPTIX && !defined(__CUDA_ARCH__)
 using CUdeviceptr = void*;
 using float3      = OSL::Vec3;
 #endif
@@ -28,7 +28,7 @@ using float3      = OSL::Vec3;
 
 OSL_NAMESPACE_ENTER
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
 
 ////////////////////////////////////////////////////////////////////////
 // If OptiX is available, alias everything in optix:: namespace into

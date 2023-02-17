@@ -15,7 +15,7 @@
 #include <OSL/oslconfig.h>
 
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
 #    include <optix.h>
 #    include <vector_functions.h>  // from CUDA
 #endif
@@ -167,7 +167,7 @@ struct Primitive {
     void getBounds(float& minx, float& miny, float& minz, float& maxx,
                    float& maxy, float& maxz) const;
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     virtual void setOptixVariables(void* data) const = 0;
 #endif
 
@@ -278,7 +278,7 @@ struct Sphere final : public Primitive {
         return 1 / (TWOPI * (1 - cmax));
     }
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     virtual void setOptixVariables(void* data) const
     {
         SphereParams* sphere_data = reinterpret_cast<SphereParams*>(data);
@@ -377,7 +377,7 @@ struct Quad final : public Primitive {
         return d2 / (a * fabsf(dir.dot(n)));
     }
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     virtual void setOptixVariables(void* data) const
     {
         QuadParams* quad_data = reinterpret_cast<QuadParams*>(data);

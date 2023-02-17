@@ -209,7 +209,10 @@ ifneq (${BUILD_MISSING_DEPS},)
 endif
 
 ifneq (${USE_OPTIX},)
-  MY_CMAKE_FLAGS += -DUSE_OPTIX:BOOL=${USE_OPTIX}
+  MY_CMAKE_FLAGS += -DOSL_USE_OPTIX:BOOL=${USE_OPTIX}
+endif
+ifneq (${OSL_USE_OPTIX},)
+  MY_CMAKE_FLAGS += -DOSL_USE_OPTIX:BOOL=${OSL_USE_OPTIX}
 endif
 
 ifneq (${USE_PYTHON},)
@@ -397,7 +400,7 @@ help:
 	@echo "      USE_SIMD=arch            Build with SIMD support (comma-separated choices:"
 	@echo "                                  0, sse2, sse3, ssse3, sse4.1, sse4.2, f16c,"
 	@echo "                                  avx, avx2, avx512f)"
-	@echo "      USE_OPTIX=1              Build the OptiX test renderer"
+	@echo "      OSL_USE_OPTIX=1          Build the OptiX test renderer"
 	@echo "      USE_BATCHED=targets      Build batched SIMD execution of shaders for (comma-separated choices:"
 	@echo "                                  0, b8_AVX, b8_AVX2, b8_AVX2_noFMA,"
 	@echo "                                  b8_AVX512, b8_AVX512_noFMA,"

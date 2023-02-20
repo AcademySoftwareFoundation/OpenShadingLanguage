@@ -1,0 +1,31 @@
+<World>
+   <Camera eye="0, 0, 10" look_at="0,0,0" fov="20" />
+
+   <ShaderGroup>
+     string filename "../common/textures/kitchen_probe.hdr";
+     shader envmap layer1;
+   </ShaderGroup>
+   <Background resolution="1024" />
+
+   <ShaderGroup>
+      param color Cs 0.2 0.4 0.6;
+      param color Ce 0.9 0.7 0.3;
+      float roughness 0.2;
+      float anisotropy 0.0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="-0.6,0,0" radius="0.5" />
+
+   <ShaderGroup>
+      shader magic layer1;
+   </ShaderGroup>
+   <Sphere center="0.6,0,0" radius="0.5" />
+
+   <!-- <ShaderGroup>
+      param color Cs 1.0 0.5 0.25;
+      param color Ce 1.0 1.0 1.0;
+      float roughness 0.6;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="1.1,0,0" radius="0.5" /> -->
+</World>

@@ -43,8 +43,24 @@ ortho(const Vec3& n, Vec3& x, Vec3& y)
 
 // Note: not used in OptiX mode
 struct Ray {
-    Ray(const Vec3& o, const Vec3& d, float radius, float spread)
-        : origin(o), direction(d), radius(radius), spread(spread)
+    enum RayType {
+        CAMERA       = 1,
+        SHADOW       = 2,
+        REFLECTION   = 4,
+        REFRACTION   = 8,
+        DIFFUSE      = 16,
+        GLOSSY       = 32,
+        SUBSURFACE   = 64,
+        DISPLACEMENT = 128
+    };
+
+    Ray(const Vec3& o, const Vec3& d, float radius, float spread,
+        RayType raytype)
+        : origin(o)
+        , direction(d)
+        , radius(radius)
+        , spread(spread)
+        , raytype(static_cast<int>(raytype))
     {
     }
 
@@ -72,6 +88,7 @@ struct Ray {
 
     Vec3 origin, direction;
     float radius, spread;
+    int raytype;
 };
 
 
@@ -116,7 +133,7 @@ struct Camera {
         const float cos_a = dir.dot(v);
         const float spread
             = sqrtf(invw * invh * cx.length() * cy.length() * cos_a) * cos_a;
-        return Ray(eye, v, 0, spread);
+        return Ray(eye, v, 0, spread, Ray::CAMERA);
     }
 
     // Specified by user:

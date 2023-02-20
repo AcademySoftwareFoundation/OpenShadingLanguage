@@ -101,6 +101,11 @@ set_shadingsys_options()
     shadingsys->attribute("llvm_debugging_symbols", 1);
     shadingsys->attribute("llvm_profiling_events", 1);
 
+    // We rely on the default set of "raytypes" tags. To use a custom set,
+    // this is where we would do:
+    //      shadingsys->attribute("raytypes", TypeDesc(TypeDesc::STRING, num_raytypes),
+    //                           raytype_names);
+
     shadingsys_options_set = true;
 }
 

@@ -72,7 +72,7 @@ macro (add_one_testsuite testname testsrcdir)
                               PROCESSORS 4 COST 10 TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
     endif ()
     # For debug builds, render tests are very slow, so give them a longer timeout
-    if (_testname MATCHES "render-" AND ${CMAKE_BUILD_TYPE} STREQUAL Debug)
+    if (${testname} MATCHES "render-" AND ${CMAKE_BUILD_TYPE} STREQUAL Debug)
         set_tests_properties (${testname} PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
     endif ()
     # Some labeling for fun

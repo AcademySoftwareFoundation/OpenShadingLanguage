@@ -832,13 +832,16 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
 }
 
 Vec3
-SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx)
+SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
+                                 int bounce)
 {
     ShaderGlobals sg;
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
     sg.I    = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();
+    if (bounce >= 0)
+        sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
     shadingsys->execute(*ctx, *m_shaders[backgroundShaderID], sg);
     return process_background_closure(sg.Ci);
 }
@@ -870,7 +873,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 } else {
                     // we aren't importance sampling the background - so just run it directly
                     path_radiance += path_weight
-                                     * eval_background(r.direction, ctx);
+                                     * eval_background(r.direction, ctx, b);
                 }
             }
             break;

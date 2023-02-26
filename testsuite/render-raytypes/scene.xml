@@ -3,13 +3,13 @@
 
    <ShaderGroup>
      string filename "../common/textures/kitchen_probe.hdr";
-     shader envmap layer1;
+     shader raytype_envmap layer1;
    </ShaderGroup>
-   <Background resolution="1024" />
+   <!-- <Background resolution="1024" /> -->
+   <Background />
 
    <ShaderGroup>
-      param color Cs 0.2 0.4 0.6;
-      param color Ce 0.9 0.7 0.3;
+      param color Cs 0.6 0.6 0.6;
       float roughness 0.2;
       float anisotropy 0.0;
       shader glossy layer1;

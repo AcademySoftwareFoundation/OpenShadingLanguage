@@ -823,6 +823,7 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
         sg.N  = -sg.N;
         sg.Ng = -sg.Ng;
     }
+    sg.raytype        = r.raytype;
     sg.flipHandedness = sg.dPdx.cross(sg.dPdy).dot(sg.N) < 0;
 
     // In our SimpleRaytracer, the "renderstate" itself just a pointer to
@@ -831,13 +832,16 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
 }
 
 Vec3
-SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx)
+SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
+                                 int bounce)
 {
     ShaderGlobals sg;
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
     sg.I    = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();
+    if (bounce >= 0)
+        sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
     shadingsys->execute(*ctx, *m_shaders[backgroundShaderID], sg);
     return process_background_closure(sg.Ci);
 }
@@ -869,7 +873,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 } else {
                     // we aren't importance sampling the background - so just run it directly
                     path_radiance += path_weight
-                                     * eval_background(r.direction, ctx);
+                                     * eval_background(r.direction, ctx, b);
                 }
             }
             break;
@@ -931,7 +935,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                                                         b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
                 int shadow_id  = id;
-                Ray shadow_ray = Ray(sg.P, bg_dir.val(), radius, 0);
+                Ray shadow_ray = Ray(sg.P, bg_dir.val(), radius, 0,
+                                     Ray::SHADOW);
                 Dual2<float> shadow_dist;
                 if (!scene.intersect(shadow_ray, shadow_dist,
                                      shadow_id))  // ray reached the background?
@@ -956,7 +961,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                              * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
                                                                       b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
-                Ray shadow_ray = Ray(sg.P, ldir, radius, 0);
+                Ray shadow_ray = Ray(sg.P, ldir, radius, 0, Ray::SHADOW);
                 // trace a shadow ray and see if we actually hit the target
                 // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
                 int shadow_id = id;  // ignore self hit
@@ -979,7 +984,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         // trace indirect ray and continue
         BSDF::Sample p = result.bsdf.sample(-sg.I, xi, yi, zi);
         path_weight *= p.weight;
-        bsdf_pdf    = p.pdf;
+        bsdf_pdf  = p.pdf;
+        r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
         r.direction = p.wi;
         r.radius    = radius;
         // Just simply use roughness as spread slope

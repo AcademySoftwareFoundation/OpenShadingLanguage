@@ -1,0 +1,28 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+magic
+    [[ string help = "Magic shader that varies by ray type" ]]
+(
+    float scale_s = 4
+        [[  string description = "scale factor for s coordinate" ]],
+    float scale_t = 4
+        [[  string description = "scale factor for t coordinate" ]],
+  )
+{
+    float cs = fmod(u * scale_s, 2);
+    float ct = fmod(v * scale_t, 2);
+    int check = ((int(cs) ^ int(ct)) == 0);
+    color Cs = 0;
+    if (raytype("camera")) {
+        // Looks like a grey and white checkerboard to camera rays
+        Cs = check ? 1 : 0.125;
+    } else {
+        // Looks like a red and green checkerboard to secondary rays
+        Cs = check ? color(1,0,0) : color(0,0.25,0);
+    }
+    Ci = Cs * diffuse(N);
+}

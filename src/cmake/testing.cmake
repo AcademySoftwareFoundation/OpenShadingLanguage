@@ -71,6 +71,10 @@ macro (add_one_testsuite testname testsrcdir)
         set_tests_properties (${testname} PROPERTIES LABELS render
                               PROCESSORS 4 COST 10 TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
     endif ()
+    # For debug builds, render tests are very slow, so give them a longer timeout
+    if (${testname} MATCHES "render-" AND ${CMAKE_BUILD_TYPE} STREQUAL Debug)
+        set_tests_properties (${testname} PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
+    endif ()
     # Some labeling for fun
     if (${testname} MATCHES "^texture")
         set_tests_properties (${testname} PROPERTIES LABELS texture
@@ -138,9 +142,6 @@ macro ( TESTSUITE )
             AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
             add_one_testsuite ("${_testname}.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 )
-        endif ()
-        if (_testname MATCHES "render-" AND ${CMAKE_BUILD_TYPE} STREQUAL Debug)
-            set_tests_properties (${_testname} PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
         endif ()
         # When building for OptiX support, also run it in OptiX mode
         # if there is an OPTIX marker file in the directory.
@@ -323,6 +324,7 @@ macro (osl_add_all_tests)
                 render-mx-sheen
                 render-microfacet render-oren-nayar
                 render-uv render-veachmis render-ward
+                render-raytypes
                 select select-reg shaderglobals shortcircuit
                 smoothstep-reg
                 spline spline-reg splineinverse splineinverse-ident

@@ -1,0 +1,31 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+glossy
+    [[ string description = "Glossy material" ]]
+(
+    color Cs = 0.5
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]],
+    color Ce = 1.0
+        [[  string description = "Edge color",
+            float UImin = 0, float UImax = 1 ]],
+    float roughness = 0.5
+        [[  string description = "Roughness of the surface",
+            float UImin = 0, float UImax = 1 ]],
+    float anisotropy = 0.0
+        [[  string description = "Anisotropy of the surface",
+            float UImin = 0, float UImax = 1 ]]
+  )
+{
+    float alpha = roughness * roughness;
+    float alpha_x = alpha * (1.0 - anisotropy);
+    float alpha_y = alpha;
+    vector U = normalize(cross(N, dPdv));
+    color ior, extinction;
+    artistic_ior(Cs, Ce, ior, extinction);
+    Ci = conductor_bsdf(N, U, alpha_x, alpha_y, ior, extinction, "ggx");
+}

@@ -95,9 +95,10 @@ static ParamValueList params;
 static ParamValueList reparams;
 static std::string reparam_layer;
 static ErrorHandler errhandler;
-static int iters           = 1;
-static std::string raytype = "camera";
-static bool raytype_opt    = false;
+static int iters                = 1;
+static std::string raytype_name = "camera";
+static int raytype_bit          = 0;
+static bool raytype_opt         = false;
 static std::string extraoptions;
 static std::string texoptions;
 static std::string colorspace;
@@ -703,7 +704,7 @@ getargs(int argc, const char* argv[])
       .help("Specify a full group command");
     ap.arg("--archivegroup %s:FILENAME", &archivegroup)
       .help("Archive the group to a given filename");
-    ap.arg("--raytype %s", &raytype)
+    ap.arg("--raytype %s", &raytype_name)
       .help("Set the raytype");
     ap.arg("--raytype_opt", &raytype_opt)
       .help("Specify ray type mask for optimization");
@@ -889,7 +890,7 @@ setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys, int x, int y)
     sg.object2common = OSL::TransformationPtr(&Mobj);
 
     // Just make it look like all shades are the result of 'raytype' rays.
-    sg.raytype = shadingsys->raytype_bit(ustring(raytype));
+    sg.raytype = raytype_bit;
 
     // Set up u,v to vary across the "patch", and also their derivatives.
     // Note that since u & x, and v & y are aligned, we only need to set
@@ -1099,10 +1100,10 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
         // not to actually run the shader.
         OSL::PerThreadInfo* thread_info = shadingsys->create_thread_info();
         ShadingContext* ctx             = shadingsys->get_context(thread_info);
+        raytype_bit = shadingsys->raytype_bit(ustring(raytype_name));
         ShaderGlobals sg;
         setup_shaderglobals(sg, shadingsys, 0, 0);
 
-        int raytype_bit = shadingsys->raytype_bit(ustring(raytype));
 #if OSL_USE_BATCHED
         if (batched) {
             // jit_group will optimize the group if necesssary
@@ -1500,6 +1501,8 @@ shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
 
+    raytype_bit = shadingsys->raytype_bit(ustring(raytype_name));
+
     // Loop over all pixels in the image (in x and y)...
     for (int y = roi.ybegin; y < roi.yend; ++y) {
         int shadeindex = y * xres + roi.xbegin;
@@ -1583,7 +1586,7 @@ setup_uniform_shaderglobals(BatchedShaderGlobals<WidthT>& bsg,
     usg.renderstate = &bsg;
 
     // Just make it look like all shades are the result of 'raytype' rays.
-    usg.raytype = shadingsys->raytype_bit(ustring(raytype));
+    usg.raytype = shadingsys->raytype_bit(ustring(raytype_name));
     ;
 
 

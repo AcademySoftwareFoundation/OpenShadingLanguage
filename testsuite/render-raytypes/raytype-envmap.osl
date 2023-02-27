@@ -1,0 +1,24 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+// This special env map shader tints blue for camera rays, green for
+// diffuse, glossy, or reflection rays.
+shader raytype_envmap(float Kb = 1, string filename = "")
+{
+    vector dir = normalize(I);
+    float radial = atan2(-dir[2], dir[0]);
+    float nradial = acos(dir[1]);
+    float r = 0.5 * sin(nradial * 0.5);
+    float tu = 0.5 + r * cos(radial);
+    float tv = 0.5 - r * sin(radial);
+    color c = texture(filename, tu, tv);
+    if (raytype("diffuse") || raytype("glossy") || raytype("reflection")
+        || raytype("refraction")) {
+        c *= color(0.25, 1.0, 0.25);
+    } else if (raytype("camera")) {
+        c *= color(0.125, 0.125, 1.0);
+    }
+    Ci = Kb * c * background();
+}

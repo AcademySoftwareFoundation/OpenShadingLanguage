@@ -113,4 +113,12 @@ test ()
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
+
+    {
+        // Special regression test: fmod with derivs
+        vector vec = u;
+        float f = 0.75;
+        vector r = fmod(vec, f);
+        printf ("  fmod (%g, %g) = %g, derivs %g,  %g\n", vec, f, r, Dx(r), Dy(r));
+    }
 }

@@ -71,6 +71,7 @@ Compiled test.osl -> test.oso
   cbrt (0 0 0) = 0 0 0
   fmod (0 0 0, 0 0 0) = 0 0 0
   mod (0 0 0, 0 0 0) = 0 0 0
+  fmod (0 0 0, 0.75) = 0 0 0, derivs 1 1 1,  0 0 0
   abs (137) = 137
   fabs (137) = 137
   abs (-137) = 137
@@ -143,6 +144,7 @@ Compiled test.osl -> test.oso
   cbrt (1 1 1) = 1 1 1
   fmod (1 1 1, 1.5 1.5 1.5) = 1 1 1
   mod (1 1 1, 1.5 1.5 1.5) = 1 1 1
+  fmod (1 1 1, 0.75) = 0.25 0.25 0.25, derivs 1 1 1,  0 0 0
   abs (137) = 137
   fabs (137) = 137
   abs (-137) = 137
@@ -215,6 +217,7 @@ Compiled test.osl -> test.oso
   cbrt (0 0 0) = 0 0 0
   fmod (0 0 0, 0 0 0) = 0 0 0
   mod (0 0 0, 0 0 0) = 0 0 0
+  fmod (0 0 0, 0.75) = 0 0 0, derivs 1 1 1,  0 0 0
   abs (137) = 137
   fabs (137) = 137
   abs (-137) = 137
@@ -287,4 +290,5 @@ Compiled test.osl -> test.oso
   cbrt (1 1 1) = 1 1 1
   fmod (1 1 1, 1.5 1.5 1.5) = 1 1 1
   mod (1 1 1, 1.5 1.5 1.5) = 1 1 1
+  fmod (1 1 1, 0.75) = 0.25 0.25 0.25, derivs 1 1 1,  0 0 0
 

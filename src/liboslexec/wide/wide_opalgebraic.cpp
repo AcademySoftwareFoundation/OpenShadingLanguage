@@ -90,8 +90,10 @@ abs(const Dual2<float>& x)
 #define __OSL_XMACRO_ARGS (fabs, std::abs)
 #include "wide_opunary_int_xmacro.h"
 
-#define __OSL_XMACRO_ARGS (fmod, OIIO::safe_fmod)
-#include "wide_opbinary_per_component_float_or_vector_xmacro.h"
+#define __OSL_XMACRO_ARGS (fmod, OIIO::safe_fmod, safe_fmod)
+#include "wide_opbinary_per_component_xmacro.h"
+#define __OSL_XMACRO_ARGS (fmod, OIIO::safe_fmod, safe_fmod)
+#include "wide_opbinary_per_component_mixed_vector_float_xmacro.h"
 
 
 static OSL_FORCEINLINE float

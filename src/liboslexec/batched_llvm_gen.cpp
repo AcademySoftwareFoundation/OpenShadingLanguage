@@ -1677,6 +1677,7 @@ LLVMGEN(llvm_gen_modulus)
 
     int num_components = type.aggregate;
 
+#if 0
     if (is_float && !op_is_uniform) {
         // llvm 5.0.1 did not do a good job with op_mod when its
         // parameters were <16xf32>.  So we will go ahead
@@ -1703,7 +1704,9 @@ LLVMGEN(llvm_gen_modulus)
         }
 
         rop.ll.call_function(rop.build_name(func_spec), call_args);
-    } else {
+    } else
+#endif
+    {
         for (int i = 0; i < num_components; i++) {
             llvm::Value* a = rop.loadLLVMValue(A, i, 0, type, op_is_uniform);
             llvm::Value* b = rop.loadLLVMValue(B, i, 0, type, op_is_uniform);

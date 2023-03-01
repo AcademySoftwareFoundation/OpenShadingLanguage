@@ -109,7 +109,7 @@ private:
     float m_screen_window[4];
 
     int backgroundShaderID   = -1;
-    int backgroundResolution = 0;
+    int backgroundResolution = 1024;
     int aa                   = 1;
     int max_bounces          = 1000000;
     int rr_depth             = 5;

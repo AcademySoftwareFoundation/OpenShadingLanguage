@@ -863,7 +863,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         if (!scene.intersect(r, t, id)) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
-                if (backgroundResolution > 0) {
+                if (b > 0 && backgroundResolution > 0) {
                     float bg_pdf = 0;
                     Vec3 bg      = background.eval(r.direction, bg_pdf);
                     path_radiance

@@ -1,14 +1,27 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.10.0 -- 1? Mar? 2023 (compared to 1.12.9.0)
+Release 1.12.10.0 -- 1 Mar 2023 (compared to 1.12.9.0)
 --------------------------------------------------------
-
+* feat(testrender): Modify testrender so that it correctly sets raytype to
+  "camera" for camera rays, "shadow" for shadow rays, and "diffuse" for all
+  secondary rays. Also rerun the shades for background shader group on the
+  camera rays rather than use the cached map. This helps the MaterialX project
+  use testrender for certain unit tests and verification. #1648 #1649
+* feat: Expose llvm groupdata size as a shadergroup attribute
+  "llvm_groupdata_size". #1642
+* fix: Crash could result from uncaught exception in OpenColorIO when calling
+  transformc with derivatives for color spaces that require OCIO. #1646
+* fix: certain uses of fmod() in shaders could fail to generate LLVM code
+  correctly, due to a missing implementation for the fmod(triple,float)
+  varieties. #1643
+* build: Change snprintf formatting to satisfy some compilers. #1640
+* CI: Fix broken Mac ci. #1647
 
 Release 1.12.9.0 -- 1 Feb 2023 (compared to 1.12.8.0)
 -------------------------------------------------------
 * Remove unnecessary setting of locale::global. #1630
-* Batch shading: Fix bug with masked wide glosure generation. #1637
+* Batch shading: Fix bug with masked wide closure generation. #1637
 * Make sure ReParameter() has the same relaxed type checking rules as
   Parameter(). Before, it was stricter about type conversion. #1639
 * Windows: Fix some GPU build errors. #1638

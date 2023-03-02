@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.12.11.0 -- 1 Apr? 2023 (compared to 1.12.10.0)
+--------------------------------------------------------
+
+
 Release 1.12.10.0 -- 1 Mar 2023 (compared to 1.12.9.0)
 --------------------------------------------------------
 * feat(testrender): Modify testrender so that it correctly sets raytype to

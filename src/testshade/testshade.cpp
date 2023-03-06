@@ -1465,13 +1465,16 @@ test_group_attributes(ShaderGroup* group)
         std::cout << "Need " << nattr << " attributes:\n";
         ustring* names  = NULL;
         ustring* scopes = NULL;
+        TypeDesc* types = NULL;
         shadingsys->getattribute(group, "attributes_needed", TypeDesc::PTR,
                                  &names);
         shadingsys->getattribute(group, "attribute_scopes", TypeDesc::PTR,
                                  &scopes);
-        OSL_DASSERT(names && scopes);
+        shadingsys->getattribute(group, "attribute_types", TypeDesc::PTR,
+                                 &types);
+        OSL_DASSERT(names && scopes && types);
         for (int i = 0; i < nattr; ++i)
-            std::cout << "    " << names[i] << ' ' << scopes[i] << "\n";
+            std::cout << "    " << names[i] << ' ' << scopes[i] << ' ' << types[i] << "\n";
 
         int unk = 0;
         shadingsys->getattribute(group, "unknown_attributes_needed", unk);

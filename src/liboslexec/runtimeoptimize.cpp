@@ -3331,27 +3331,48 @@ RuntimeOptimizer::run()
                 OSL_DASSERT(sym1 && sym1->typespec().is_string());
                 if (sym1->is_constant()) {
                     if (op.nargs() == 3) {
+                        Symbol* sym2 = opargsym(op, 2);
                         // getattribute( attributename, result )
                         m_attributes_needed.insert(
-                            AttributeNeeded(sym1->get_string()));
-                    } else {
-                        OSL_DASSERT(op.nargs() == 4 || op.nargs() == 5);
+                            AttributeNeeded(sym1->get_string(),
+                                            ustring(),
+                                            sym2->typespec().simpletype()));
+                    } else if (op.nargs() == 4) {
                         Symbol* sym2 = opargsym(op, 2);
+                        Symbol* sym3 = opargsym(op, 3);
                         if (sym2->typespec().is_string()) {
-                            // getattribute( scopename, attributename, result ) or
-                            // getattribute( scopename, attributename, arrayindex, result )
+                            // getattribute( scopename, attributename, result )
                             if (sym2->is_constant()) {
                                 m_attributes_needed.insert(
                                     AttributeNeeded(sym2->get_string(),
-                                                    sym1->get_string()));
+                                                    sym1->get_string(),
+                                                    sym3->typespec().simpletype()));
                             } else {
                                 m_unknown_attributes_needed = true;
                             }
                         } else {
                             // getattribute( attributename, arrayindex, result )
                             m_attributes_needed.insert(
-                                AttributeNeeded(sym1->get_string()));
+                                AttributeNeeded(sym1->get_string(),
+                                                ustring(),
+                                                sym3->typespec().simpletype()));
                         }
+                    } else if (op.nargs() == 5) {
+                        Symbol* sym2 = opargsym(op, 2);
+                        Symbol* sym4 = opargsym(op, 4);
+                        if (sym2->typespec().is_string()) {
+                            // getattribute( scopename, attributename, arrayindex, result )
+                            if (sym2->is_constant()) {
+                                m_attributes_needed.insert(
+                                    AttributeNeeded(sym2->get_string(),
+                                                    sym1->get_string(),
+                                                    sym4->typespec().simpletype()));
+                            } else {
+                                m_unknown_attributes_needed = true;
+                            }
+                        }
+                    } else {
+                        OSL_DASSERT(false);
                     }
                 } else {  // sym1 not constant
                     m_unknown_attributes_needed = true;
@@ -3403,7 +3424,7 @@ RuntimeOptimizer::run()
         if (m_attributes_needed.size()) {
             shadingcontext()->infofmt("Group needs attributes:");
             for (auto&& f : m_attributes_needed)
-                shadingcontext()->infofmt("    {} {}", f.name, f.scope);
+                shadingcontext()->infofmt("    {} {} {}", f.name, f.scope, f.type);
             if (m_unknown_attributes_needed)
                 shadingcontext()->infofmt(
                     "    Also may construct attribute names on the fly.");

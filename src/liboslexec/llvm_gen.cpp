@@ -252,9 +252,8 @@ LLVMGEN(llvm_gen_useparam)
 }
 
 
-
 // Used for printf, error, warning, format, fprintf
-LLVMGEN(llvm_gen_printf)
+LLVMGEN(llvm_gen_printf_legacy)
 {
     Opcode& op(rop.inst()->ops()[opnum]);
 
@@ -276,7 +275,7 @@ LLVMGEN(llvm_gen_printf)
     // For some ops, we push the shader globals pointer
     if (op.opname() == op_printf || op.opname() == op_error
         || op.opname() == op_warning || op.opname() == op_fprintf)
-        call_args.push_back(rop.sg_void_ptr());
+        call_args.push_back(rop.sg_void_ptr()); //arg0: sg
 
     // fprintf also needs the filename
     if (op.opname() == op_fprintf) {
@@ -293,6 +292,7 @@ LLVMGEN(llvm_gen_printf)
     ustring format_ustring = format_sym.get_string();
     const char* format     = format_ustring.c_str();
     std::string s;
+    //ustring s;
     int arg           = format_arg + 1;
     size_t optix_size = 0;  // how much buffer size does optix need?
     while (*format != '\0') {
@@ -476,6 +476,230 @@ LLVMGEN(llvm_gen_printf)
         rop.llvm_store_value(ret, *rop.opargsym(op, 0));
     return true;
 }
+
+// Used for printf, error, warning, format, fprintf
+LLVMGEN(llvm_gen_print_fmt)
+{
+    Opcode& op(rop.inst()->ops()[opnum]);
+
+    // The format op is currently handled by llvm_gen_printf_legacy,
+    // but could be moved here in future 
+    // NOTE: format would not a callthrough to renderservices, 
+    // but should be handled in opstring.cpp
+    OSL_ASSERT(op.opname() != op_format);
+
+    // Prepare the args for the call
+
+    // Which argument is the format string?  Usually 0, but for op
+    // format() and fprintf(), the formatting string is argument #1.
+    int format_arg = (op.opname() == op_format || op.opname() == op_fprintf) ? 1
+                                                                           : 0;
+    Symbol& format_sym = *rop.opargsym(op, format_arg);
+
+    std::vector<llvm::Value*> call_args;
+    if (!format_sym.is_constant()) {
+        rop.shadingcontext()->warningfmt(
+            "{} must currently have constant format\n", op.opname());
+        return false;
+    }
+
+    call_args.push_back(rop.sg_void_ptr()); //arg0: sg
+    //call_args.push_back(rop.ll.constant_ptr(NULL)); //arg0: sg
+
+    // fprintf also needs the filename
+    if (op.opname() == op_fprintf) {
+        Symbol& Filename = *rop.opargsym(op, 0);
+        llvm::Value* fn  = rop.llvm_load_value(Filename);
+        call_args.push_back(fn); //arg1: filename only for frintf
+    }
+
+    ustring format_ustring = format_sym.get_string();
+    const char* format     = format_ustring.c_str();
+    std::string s;
+    int arg           = format_arg + 1;
+    size_t optix_size = 0;  // how much buffer size does optix need?
+    //SM: Example call: printf("The values at %s is %d, %f, %6.2f", "marble", 5, 6.4, 123.456);
+    std::vector<EncodedType> encodedTypes;
+    // uint32_t argValuesSize = 0u;
+    int argValuesSize = 0u;
+
+    std::vector<llvm::Value *> loadedArgValues;
+
+    while (*format != '\0') {
+        if (*format == '%') {
+            if (format[1] == '%') {
+                // '%%' is a literal '%'
+                s += "%%";
+                format += 2;  // skip both percentages
+                continue;
+            }
+            const char* oldfmt = format;  // mark beginning of format
+            while (*format && *format != 'c' && *format != 'd' && *format != 'e'
+                   && *format != 'f' && *format != 'g' && *format != 'i'
+                   && *format != 'm' && *format != 'n' && *format != 'o'
+                   && *format != 'p' && *format != 's' && *format != 'u'
+                   && *format != 'v' && *format != 'x' && *format != 'X')
+                ++format;
+            char formatchar = *format++;  // Also eat the format char
+            if (arg >= op.nargs()) {
+                rop.shadingcontext()->errorfmt(
+                    "Mismatch between format string and arguments ({}:{})",
+                    op.sourcefile(), op.sourceline());
+                return false;
+            }
+
+            std::string ourformat(oldfmt, format);  // straddle the format
+            // Doctor it to fix mismatches between format and data
+            Symbol& sym(*rop.opargsym(op, arg));
+            OSL_ASSERT(!sym.typespec().is_structure_based());
+
+            TypeDesc simpletype(sym.typespec().simpletype());
+            int num_elements   = simpletype.numelements();
+            int num_components = simpletype.aggregate;
+            if ((sym.typespec().is_closure_based()
+                 || simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                ourformat[ourformat.length() - 1] = 's';
+            }
+            if (simpletype.basetype == TypeDesc::INT && formatchar != 'd'
+                && formatchar != 'i' && formatchar != 'o' && formatchar != 'u'
+                && formatchar != 'x' && formatchar != 'X') {
+                ourformat[ourformat.length() - 1] = 'd';
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f'
+                && formatchar != 'g' && formatchar != 'c' && formatchar != 'e'
+                && formatchar != 'm' && formatchar != 'n' && formatchar != 'p'
+                && formatchar != 'v') {
+                ourformat[ourformat.length() - 1] = 'f';
+            }
+            
+            EncodedType et = EncodedType::kUstringHash;
+
+            if (simpletype.basetype == TypeDesc::INT) et = EncodedType::kInt32;
+            if (simpletype.basetype == TypeDesc::FLOAT) et = EncodedType::kFloat;
+            // TODO: translate contents of ourformat to fmtspec [flags][width][.precision][length]specifier
+            std::string fmtspec = "{}";
+
+            // NOTE(boulos): Only for debug mode do the derivatives get printed...
+            for (int a = 0; a < num_elements; ++a) {
+                llvm::Value* arrind = simpletype.arraylen ? rop.ll.constant(a)
+                                                          : NULL;
+                if (sym.typespec().is_closure_based()) {
+                    s += ourformat;
+                    llvm::Value* v = rop.llvm_load_value(sym, 0, arrind, 0);
+                    v = rop.ll.call_function("osl_closure_to_string",
+                                             rop.sg_void_ptr(), v);
+                    encodedTypes.push_back(et);
+                    argValuesSize += SizeByEncodedType[static_cast<int>(et)];
+                    loadedArgValues.push_back(v);
+                    continue;
+                }
+
+                for (int c = 0; c < num_components; c++) {
+                    if (c != 0 || a != 0)
+                        s += " ";
+                    s += ourformat;
+
+                    llvm::Value* loaded = rop.llvm_load_value(sym, 0, arrind,
+                                                              c);
+                    encodedTypes.push_back(et);
+                    argValuesSize += SizeByEncodedType[static_cast<int>(et)];
+                    loadedArgValues.push_back(loaded);
+                }
+            }
+            ++arg;
+        } else {
+            // Everything else -- just copy the character and advance
+            s += *format++;
+        }
+    }
+
+
+    // Some ops prepend things
+    if (op.opname() == op_error || op.opname() == op_warning) {
+        s = fmtformat("Shader {} [{}]: {}", op.opname(),
+                      rop.inst()->shadername(), s);
+    }
+
+    // Add remainig rs_*fmt call arguments
+    ustring s_ustring (s.c_str());
+    call_args.push_back(rop.llvm_load_stringhash(s_ustring)); //arg1: fmt_specification
+    //call_args.push_back(rop.ll.constant64(10)); 
+    OSL_ASSERT(encodedTypes.size() == loadedArgValues.size());
+    int arg_count = static_cast<int>(encodedTypes.size());
+    call_args.push_back(rop.ll.constant(arg_count)); //arg2: int32_t arg count
+
+    llvm::Value* encodedTypes_on_stack = rop.ll.op_alloca(rop.ll.type_int8(), arg_count,
+                           std::string("encodedTypes"));
+    llvm::Value* loadedArgValues_on_stack = rop.ll.op_alloca(rop.ll.type_int8(), argValuesSize,
+                           std::string("argValues"));
+
+    for(int argindex=0; argindex < arg_count; ++argindex) {
+
+        EncodedType et = encodedTypes[argindex];
+        rop.ll.op_store(rop.ll.constant8(static_cast<int>(et)), rop.ll.GEP(rop.ll.type_int8(),encodedTypes_on_stack, argindex));
+
+        llvm::Value* loadedArgValue = loadedArgValues[argindex];
+
+        llvm::Type* type = nullptr;
+        switch(et) {
+            case EncodedType::kUstringHash:{
+                type = rop.ll.type_int64() ;
+            }
+            break;
+            case EncodedType::kInt32: {
+                type = rop.ll.type_int();
+            }
+            break;
+    
+           case EncodedType::kFloat: {
+                type = rop.ll.type_float();
+           }
+            break;
+
+            
+
+
+       }
+        rop.ll.op_store(loadedArgValue, rop.ll.GEP(type /*,rop.ll.type_int8()*/,loadedArgValues_on_stack, argindex));
+    }
+
+
+    call_args.push_back(encodedTypes_on_stack); //arg3: argTypes
+    call_args.push_back(rop.ll.constant(argValuesSize)); //arg4: 
+    call_args.push_back(loadedArgValues_on_stack); //argValues
+
+
+    // Construct the function name and call it.
+    const char * rs_func_name = nullptr;
+    if (op.opname() == op_printf)
+        rs_func_name = "osl_gen_printfmt";
+    if (op.opname() == op_error)
+        rs_func_name = "osl_gen_errorfmt";//"rs_errorfmt_dummy";
+    if (op.opname() == op_warning)
+        rs_func_name = "osl_gen_warningfmt";
+    if (op.opname() == op_fprintf)
+        rs_func_name = "osl_gen_filefmt";
+
+    std::cout<<"RS Function Name: "<<rs_func_name<<std::endl;
+
+    llvm::Value* ret   = rop.ll.call_function(rs_func_name, call_args);
+    
+
+    return true;
+}
+
+LLVMGEN(llvm_gen_printf)
+{
+    Opcode& op(rop.inst()->ops()[opnum]);
+
+    // Prepare the args for the call
+    if ((op.opname() == "format" || rop.use_optix())) //{}
+        return llvm_gen_printf_legacy(rop, opnum);
+    else
+        return llvm_gen_print_fmt(rop, opnum);
+}
+
 
 
 

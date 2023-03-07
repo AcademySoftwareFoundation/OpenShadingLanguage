@@ -15,6 +15,7 @@
 #include <OSL/device_string.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/rs_free_function.h>
 
 #include <OpenImageIO/fmath.h>
 
@@ -252,12 +253,20 @@ op_color_context(void* sg)
 {
     return sg;
 }
+
 #else
+
 void
-ColorSystem::error(StringParam src, StringParam dst, Context context) const
+ColorSystem::error(StringParam src, StringParam dst, Context ctx) const
 {
+#if defined(__OSL_WIDTH) // batched version     
     context->errorfmt("Unknown color space transformation \"{}\" -> \"{}\"",
                       src, dst);
+#else
+    ShaderGlobals *sg = ctx; // ctx should already be a ShaderGlobals, but improve readability
+    osl_printfmt(sg, ustringhash("Unknown color space transformation \"{}\" -> \"{}\""), 
+                  src, dst);
+#endif
 }
 
 static inline const ColorSystem&
@@ -268,13 +277,21 @@ op_color_colorsystem(void* sg_)
     return ssu->m_colorsystem;
 }
 
+#if defined(__OSL_WIDTH) // batched version     
 static inline OSL::ShadingContext*
 op_color_context(void* sg)
 {
     return (ShadingContext*)((ShaderGlobals*)sg)->context;
 }
+#else
+static inline ShaderGlobals*
+op_color_context(/*ShaderGlobals**/void* sg)
+{
+    return (ShaderGlobals*)sg;
+}
 #endif
 
+#endif
 
 
 template<typename Color>
@@ -283,9 +300,16 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
                             const Color& C, Context ctx) const
 {
 #ifndef __CUDA_ARCH__
+    #if defined(__OSL_WIDTH) // batched version 
     Color Cout;
-    if (ctx->ocio_transform(fromspace, tospace, C, Cout))
+    if (ctx->ocio_transform(fromspace, tospace, C, Cout))//SM: Can this not be part of ShadingContext?
         return Cout;
+    #else
+    error(fromspace, tospace, ctx);
+    return C;
+    #endif
+
+        
 #endif
 
     error(fromspace, tospace, ctx);

@@ -88,6 +88,12 @@ struct ShaderGlobals {
     ShadingContext* context;
     OpaqueShadingStateUniformPtr shadingStateUniform;
 
+    ///Required by free function renderer services to process fmt specification calls
+    int shade_index;
+
+    ///Required for memory allocation on a per thread basis for journaling fmt specification calls
+    int thread_index;
+
     /// Pointer to the RendererServices object. This is how OSL finds its
     /// way back to the renderer for callbacks.
     RendererServices* renderer;

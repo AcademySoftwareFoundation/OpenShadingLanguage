@@ -8,8 +8,12 @@
 #include <OpenImageIO/timer.h>
 
 #include <OSL/oslexec.h>
+#include <OSL/encodedtypes.h>
+#include <OSL/journal.h>
+
 
 #include "osltoyrenderer.h"
+#include "render_state.h"
 
 using namespace OSL;
 
@@ -534,6 +538,23 @@ OSLToyRenderer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
         return true;
     }
     return false;
+}
+
+void
+OSLToyRenderer::errorfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues)
+{
+
+ RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+
+ journal::Writer jw{rs->journal_buffer};
+ jw.record_errorfmt(sg->thread_index, sg->shade_index, fmt_specification, arg_count, argTypes, argValuesSize, argValues);
+
+
 }
 
 

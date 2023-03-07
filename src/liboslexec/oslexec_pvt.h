@@ -100,7 +100,9 @@ print_closure(std::ostream& out, const ClosureColor* closure,
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* shaderglobals, void* heap_arena_ptr,
                                  void* userdata_base_pointer,
-                                 void* output_base_pointer, int shadeindex,
+                                 void* output_base_pointer, 
+                                 int threadindex,
+                                 int shadeindex,
                                  void* interactive_params_ptr);
 #if OSL_USE_BATCHED
 typedef void (*RunLLVMGroupFuncWide)(void* batchedshaderglobals,
@@ -621,7 +623,7 @@ public:
 
     void release_context(ShadingContext* ctx);
 
-    bool execute(ShadingContext& ctx, ShaderGroup& group, int shadeindex,
+    bool execute(ShadingContext& ctx, ShaderGroup& group, int thread_index, int shadeindex,
                  ShaderGlobals& ssg, void* userdata_base_ptr,
                  void* output_base_ptr, bool run = true);
 
@@ -838,6 +840,7 @@ private:
     ErrorHandler* m_err;  ///< Error handler
     mutable std::list<std::string> m_errseen, m_warnseen;
     static const int m_errseenmax = 32;
+   
     mutable mutex m_errmutex;
 
     typedef std::map<ustring, ShaderMaster::ref> ShaderNameMap;
@@ -870,6 +873,7 @@ private:
     bool m_lockgeom_default;      ///< Default value of lockgeom
     bool m_strict_messages;       ///< Strict checking of message passing usage?
     bool m_error_repeats;         ///< Allow repeats of identical err/warn?
+    //int m_errseenmax;            ///<Part of ShadingSystem Attributes, like m_err_repeats
     bool m_range_checking;        ///< Range check arrays & components?
     bool m_connection_error;      ///< Error for ConnectShaders to fail?
     bool m_greedyjit;             ///< JIT as much as we can?
@@ -2071,13 +2075,13 @@ public:
 
     /// Bind a shader group and globals to this context and prepare to
     /// execute. (See similarly named method of ShadingSystem.)
-    bool execute_init(ShaderGroup& group, int shadeindex,
+    bool execute_init(ShaderGroup& group, int threadindex, int shadeindex,
                       ShaderGlobals& globals, void* userdata_base_ptr,
                       void* output_base_ptr, bool run);
 
     /// Execute the layer whose index is specified. (See similarly named
     /// method of ShadingSystem.)
-    bool execute_layer(int shadeindex, ShaderGlobals& globals,
+    bool execute_layer(int threadindex, int shadeindex, ShaderGlobals& globals,
                        void* userdata_base_ptr, void* output_base_ptr,
                        int layer);
 
@@ -2087,7 +2091,7 @@ public:
 
     /// Execute the shader group, including init, run of single entry point
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
-    bool execute(ShaderGroup& group, int shadeindex, ShaderGlobals& globals,
+    bool execute(ShaderGroup& group, int threadindex, int shadeindex, ShaderGlobals& globals,
                  void* userdata_base_ptr, void* output_base_ptr, bool run);
 
 #if OSL_USE_BATCHED
@@ -2392,14 +2396,17 @@ public:
 
     bool allow_warnings()
     {
-        if (m_max_warnings > 0) {
-            // at least one more to go
-            m_max_warnings--;
-            return true;
-        } else {
-            // we've processed enough with this context
-            return false;
-        }
+        // if (m_max_warnings > 0) {
+        //     // at least one more to go
+        //     m_max_warnings--;
+        //     //m_shading_state_uniform.allow_warning = true;
+        //     return true;
+        // } else {
+        //     // we've processed enough with this context
+        //     return false;
+        // }
+
+        return shadingsys().m_shading_state_uniform.m_allow_warnings;
     }
 
     // Record an error (or warning, printf, etc.)
@@ -2470,7 +2477,11 @@ private:
     BatchedMessageBuffer
         m_batched_messages_buffer;  ///< Buffer for Batched Message blackboard
 #endif
-    int m_max_warnings;             ///< To avoid processing too many warnings
+    int m_max_warnings;              ///< To avoid processing too many warnings
+    // {
+    //     return shadingsys().m_shading_state_uniform.m_max_warnings;
+    // }
+
     int m_stat_get_userdata_calls;  ///< Number of calls to get_userdata
     int m_stat_layers_executed;     ///< Number of layers executed
     long long m_ticks;              ///< Time executing the shader

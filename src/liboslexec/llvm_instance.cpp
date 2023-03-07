@@ -252,6 +252,8 @@ BackendLLVM::llvm_type_sg()
     sg_types.push_back(vp);  // opaque objdata*
     sg_types.push_back(vp);  // ShadingContext*
     sg_types.push_back(vp);  // OpaqueShadingStateUniformPtr
+    sg_types.push_back(ll.type_int()); //shade_index
+    sg_types.push_back(ll.type_int()); //thread_index
     sg_types.push_back(vp);  // RendererServices*
     sg_types.push_back(vp);  // object2common
     sg_types.push_back(vp);  // shader2common
@@ -262,7 +264,7 @@ BackendLLVM::llvm_type_sg()
     sg_types.push_back(ll.type_int());    // flipHandedness
     sg_types.push_back(ll.type_int());    // backfacing
 
-    return m_llvm_type_sg = ll.type_struct(sg_types, "ShaderGlobals");
+    return m_llvm_type_sg = ll.type_struct(sg_types, "struct.OSL_v1_13_2::ShaderGlobals");
 }
 
 
@@ -429,6 +431,51 @@ BackendLLVM::llvm_type_closure_component_ptr()
     return ll.type_ptr(llvm_type_closure_component());
 }
 
+void BackendLLVM::build_offsets_of_ShaderGlobals(
+    std::vector<unsigned int>& offset_by_index)
+{
+    typedef OSL::ShaderGlobals sgBatch;
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, P));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdz));
+    offset_by_index.push_back(offsetof(ShaderGlobals, I));
+    offset_by_index.push_back(offsetof(ShaderGlobals, N));
+    offset_by_index.push_back(offsetof(ShaderGlobals, Ng));
+    offset_by_index.push_back(offsetof(ShaderGlobals, u));
+    offset_by_index.push_back(offsetof(ShaderGlobals, v));
+
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdu));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdv));
+    offset_by_index.push_back(offsetof(ShaderGlobals, time));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dtime));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdtime));
+    offset_by_index.push_back(offsetof(ShaderGlobals, Ps));
+
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, renderstate));
+    offset_by_index.push_back(offsetof(ShaderGlobals, tracedata));
+    offset_by_index.push_back(offsetof(ShaderGlobals, objdata));
+    offset_by_index.push_back(offsetof(ShaderGlobals, context));
+    offset_by_index.push_back(offsetof(ShaderGlobals, shadingStateUniform));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, shade_index));
+    offset_by_index.push_back(offsetof(ShaderGlobals, thread_index));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, renderer));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, object2common));
+    offset_by_index.push_back(offsetof(ShaderGlobals, shader2common));
+    offset_by_index.push_back(offsetof(ShaderGlobals, Ci));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, surfacearea));
+    offset_by_index.push_back(offsetof(ShaderGlobals, raytype));
+    offset_by_index.push_back(offsetof(ShaderGlobals, flipHandedness));
+    offset_by_index.push_back(offsetof(ShaderGlobals, backfacing));
+
+
+
+}
 
 
 void
@@ -1551,6 +1598,9 @@ empty_group_func(void*, void*)
 void
 BackendLLVM::run()
 {
+    
+           
+
     if (group().does_nothing()) {
         group().llvm_compiled_init((RunLLVMGroupFunc)empty_group_func);
         group().llvm_compiled_version((RunLLVMGroupFunc)empty_group_func);
@@ -1599,6 +1649,10 @@ BackendLLVM::run()
                     shadingcontext()->errorfmt(
                         "llvm::parseBitcodeFile returned '{}' for llvm_rs_dependent_ops\n",
                         err);
+
+                //  std::vector<unsigned int> offset_by_index;
+                // build_offsets_of_ShaderGlobals(offset_by_index);
+                // ll.validate_struct_data_layout(m_llvm_type_sg, offset_by_index);
 
                 std::vector<char>& rs_free_function_bitcode
                     = shadingsys().m_rs_bitcode;
@@ -1719,6 +1773,18 @@ BackendLLVM::run()
             group().name(), m_llvm_local_mem / 1024);
     }
 
+        //const char *prune_filename_ir = "MOD.B4.PRUNE.ll";
+        
+
+         std::ofstream prune_bir("MOD.B4.PRUNE.ll");
+         prune_bir<<ll.module_string();
+         prune_bir<<std::flush;
+         prune_bir.close();
+
+        //ll.prune_and_internalize_module(external_functions); //SM: turn on; turned off for debugging
+
+
+
     // The module contains tons of "library" functions that our generated IR
     // might call. But probably not. We don't want to incur the overhead of
     // fully compiling those, so we want to get rid of all functions not
@@ -1754,9 +1820,14 @@ BackendLLVM::run()
                 }
             }
         }
+        std::cout<<"Before Prune_and_internalize"<<std::endl;
         ll.prune_and_internalize_module(external_functions);
     }
 
+         std::ofstream prune_air("MOD.AFTER.PRUNE.ll");
+         prune_air<<ll.module_string();
+         prune_air<<std::flush;
+         prune_air.close();
     // Debug code to dump the pre-optimized bitcode to a file
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
         // Make a safe group name that doesn't have "/" in it! Also beware

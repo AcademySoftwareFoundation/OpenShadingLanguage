@@ -28,6 +28,8 @@
 #include <OSL/oslcomp.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
+#include <OSL/encodedtypes.h>
+#include <OSL/journal.h>
 #if OSL_USE_BATCHED
 #    include <OSL/batched_shaderglobals.h>
 #endif
@@ -119,8 +121,49 @@ static char* output_base_ptr   = nullptr;
 static bool use_rs_bitcode
     = false;  // use free function bitcode version of renderer services
 
+//Testshade thread tracking and assignment.
+//Not recommended for production renderer but fine for testshade
+std::atomic<uint32_t> next_index { 0 };
+constexpr uint32_t uninitialized_thread_index = -1;
+thread_local uint32_t this_threads_index = uninitialized_thread_index;
 
 
+
+// class Report2Console : public OSL::journal::Reporter
+// {
+// public:
+   
+   
+//     void report_error(int thread_index, int shade_index, const OSL::string_view & message) 
+//     { 
+//         //std::cout<<"DANGER!!!"<<std::endl;
+//         std::cout<<message<<std::endl; 
+//     }
+//     void report_warning(int thread_index, int shade_index, const OSL::string_view & message) override
+//     { 
+//        std::cout<<message<<std::endl;  
+//     }
+//     void report_info(int thread_index, int shade_index, const OSL::string_view & message) override 
+//     { 
+//        std::cout<<message<<std::endl; 
+//     }
+//     void report_printf(int thread_index, int shade_index, const OSL::string_view & message) override
+//     { 
+//         //std::cout<<message<<std::endl; 
+//         //printf(message.c_str());
+//         std::cout<<"testsjade report_prtinf"<<std::endl;
+//     }
+//     void report_fprintf(int thread_index, int shade_index, const OSL::string_view & filename, const OSL::string_view & message) override 
+//     {
+//         // NOTE: behavior change for OSL runtime, we will no longer open files by default
+//         // but instead just prefix the fprintf message with the filename and pass it along 
+//         // as a regular message.
+//         // A renderer is free to override report_fprintf and open files under its own purview
+        
+//         std::cout<<message<<std::endl; 
+
+//     }
+// };
 static void
 inject_params()
 {
@@ -876,17 +919,9 @@ setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys, int x, int y)
     // Just zero the whole thing out to start
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
 
-    if (use_rs_bitcode) {
-        // When using free function bitcode to implement renderer services,
-        // any state data they need will need to be passed here
-        // the ShaderGlobals.
-        sg.renderstate = &theRenderState;
-
-    } else {
-        // In our SimpleRenderer, the "renderstate" itself just a pointer to
-        // the ShaderGlobals.
-        sg.renderstate = &sg;
-    }
+    // Any state data needed by SimpleRenderer or its free function equivalent
+    // will need to be passed here the ShaderGlobals.
+    sg.renderstate = &theRenderState;
 
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.
@@ -1497,7 +1532,7 @@ test_group_attributes(ShaderGroup* group)
 
 
 void
-shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
+shade_region(SimpleRenderer* rend, int num_threads, ShaderGroup* shadergroup, OIIO::ROI roi,
              bool save)
 {
     // Request an OSL::PerThreadInfo for this thread.
@@ -1532,29 +1567,40 @@ shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
             // quadrilateral that exactly fills the viewport, and that
             // setup is done in the following function call:
             setup_shaderglobals(shaderglobals, shadingsys, x, y);
+            //std::cout<<"testshade.cpp:: shaderglobals check. Surfacearea value:: "<<shaderglobals.surfacearea<<std::endl;
+            //std::cout<<"testshade.cpp:: shadeindex value:: "<<shadeindex<<std::endl;
+            //int thread_id = shaderglobals.thread_id;
+
+            if(this_threads_index == uninitialized_thread_index)
+            {
+                this_threads_index = next_index.fetch_add(1u);
+            }
+            int thread_index = this_threads_index;
+
+            //std::cout<<"testshade.cpp:: threadindex value:: "<<thread_index<<std::endl;
 
             // Actually run the shader for this point
             if (entrylayer_index.empty()) {
                 // Sole entry point for whole group, default behavior
-                shadingsys->execute(*ctx, *shadergroup, shadeindex,
+                shadingsys->execute(*ctx, *shadergroup, thread_index, shadeindex,
                                     shaderglobals, userdata_base_ptr,
-                                    output_base_ptr);
+                                    output_base_ptr); //this is called
             } else {
                 // Explicit list of entries to call in order
-                shadingsys->execute_init(*ctx, *shadergroup, shadeindex,
+                shadingsys->execute_init(*ctx, *shadergroup, thread_index, shadeindex,
                                          shaderglobals, userdata_base_ptr,
                                          output_base_ptr);
                 if (entrylayer_symbols.size()) {
                     for (size_t i = 0, e = entrylayer_symbols.size(); i < e;
                          ++i)
-                        shadingsys->execute_layer(*ctx, shadeindex,
+                        shadingsys->execute_layer(*ctx, thread_index, shadeindex,
                                                   shaderglobals,
                                                   userdata_base_ptr,
                                                   output_base_ptr,
                                                   entrylayer_symbols[i]);
                 } else {
                     for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
-                        shadingsys->execute_layer(*ctx, shadeindex,
+                        shadingsys->execute_layer(*ctx, thread_index, shadeindex,
                                                   shaderglobals,
                                                   userdata_base_ptr,
                                                   output_base_ptr,
@@ -2049,11 +2095,22 @@ test_shade(int argc, const char* argv[])
         rend->export_state(theRenderState);
     }
 
+    
     double setuptime = timer.lap();
 
     if (warmup)
         rend->warmup();
     double warmuptime = timer.lap();
+
+   ///Initialize a Journal Buffer for all threads to use for journaling fmt specification calls.
+
+    uint8_t *buffer = (uint8_t*) malloc(16* 1024 * 1024); 
+    OSL::journal::initialize_buffer(buffer, 16*1024*1024, 1024, num_threads);
+
+    //Send the populated Journal Buffer to the renderer
+    theRenderState.journal_buffer = buffer;
+   //std::cout<<"Testshade.cpp theRenderState.journalBuffer: "<<(void *) theRenderState.journal_buffer <<std::endl;
+
 
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
@@ -2072,7 +2129,7 @@ test_shade(int argc, const char* argv[])
         } else {
             bool save = (iter == (iters - 1));  // save on last iteration
 #if 0
-            shade_region (rend, shadergroup.get(), roi, save);
+            shade_region (rend, num_threads, shadergroup.get(), roi, save);
 #else
 #    if OSL_USE_BATCHED
             if (batched) {
@@ -2095,7 +2152,7 @@ test_shade(int argc, const char* argv[])
             {
                 OIIO::ImageBufAlgo::parallel_image(
                     roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
-                        shade_region(rend, shadergroup.get(), sub_roi, save);
+                        shade_region(rend, num_threads, shadergroup.get(), sub_roi, save);
                     });
             }
 #endif
@@ -2105,11 +2162,75 @@ test_shade(int argc, const char* argv[])
         if (reparams.size() && reparam_layer.size() && (iter + 1 < iters)) {
             for (size_t p = 0; p < reparams.size(); ++p) {
                 const ParamValue& pv(reparams[p]);
-                shadingsys->ReParameter(*shadergroup, reparam_layer, pv.name(),
-                                        pv.type(), pv.data());
+                shadingsys->ReParameter(*shadergroup, reparam_layer.c_str(),
+                                        pv.name().c_str(), pv.type(),
+                                        pv.data());
             }
         }
+    } //Iters end
+
+
+    int error_repeats; //if set to non-zero, turns off suppression of multiple identical errors and warnings
+    shadingsys->getattribute("error_repeats", error_repeats);
+
+    int errseenmax; //Add from testshade as a constant
+    shadingsys->getattribute("errseenmax", errseenmax);
+
+    bool limit_errors = false;
+
+    if(error_repeats==1) 
+
+    {
+        limit_errors = false;
     }
+    else
+    {
+        limit_errors = true;
+    }
+
+    //journal::TrackRecentlyReported tracker_error_warnings (true, errseenmax, true, errseenmax);
+    //journal::Report2ErrorHandler report2ErrHandler(&errhandler, tracker_error_warnings);
+    
+     //if(error_repeats != 0)/*==false*/ //Do not limit errors; show all repeats
+     //{
+    //      std::cout<<"Inside testshade: do not limit errors: "<<std::endl;
+    // std::cout<<"Inside testshade: Value of repeats: "<<error_repeats<<std::endl;
+  
+      journal::TrackRecentlyReported tracker_error_warnings (limit_errors, errseenmax, limit_errors, errseenmax);
+      journal::Report2ErrorHandler report2ErrHandler(&errhandler, tracker_error_warnings);
+      #if 1
+      OSL::journal::Reader jreader(buffer,report2ErrHandler);
+      jreader.process();
+      #else
+      OSL::journal::Process(buffer,report2ErrHandler);
+      #endif
+     //}
+    
+    // else //Limit errors
+    // {
+    // std::cout<<"Inside testshade: limit errors: "<<std::endl;
+    // std::cout<<"Inside testshade: Value of repeats: "<<error_repeats<<std::endl;
+    // journal::TrackRecentlyReported tracker_error_warnings (false, errseenmax, false, errseenmax);
+    // journal::Report2ErrorHandler report2ErrHandler(&errhandler, tracker_error_warnings);
+    // OSL::journal::Reader jreader(buffer,report2ErrHandler);
+    // jreader.process();
+    // }
+    
+
+
+
+    //Report2Console report2Console; //used for debug; switch to report2ErrorHandeler
+
+
+    //OSL::journal::Reader jreader(buffer, report2Console); //Console was for error debug
+    
+    //OSL::journal::Reader jreader(buffer,report2ErrHandler);
+
+    //Process the buffer here
+    //jreader.process();
+
+    //Process fmt specification journal here
+
     double runtime = timer.lap();
 
     // This awkward condition preserves an output oddity from long ago,

@@ -6,6 +6,7 @@
 
 
 #include <OSL/oslconfig.h>
+#include <OSL/encodedtypes.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -155,6 +156,35 @@ public:
                                   ustringhash to, float time, const Vec3* Pin,
                                   Vec3* Pout, int npoints,
                                   TypeDesc::VECSEMANTICS vectype);
+
+    virtual void errorfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues);
+    
+    virtual void warningfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues);
+
+    virtual void printfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues);
+  
+    virtual void filefmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash filename_hash, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues);
 
 
     /// Get the named attribute from the renderer and if found then

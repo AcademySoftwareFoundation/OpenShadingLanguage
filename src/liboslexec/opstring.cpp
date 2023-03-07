@@ -10,11 +10,13 @@
 ///
 /////////////////////////////////////////////////////////////////////////
 
+#include <OSL/rs_free_function.h>
 #include <cstdarg>
 
-#include <OpenImageIO/filesystem.h>
+
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/strutil.h>
+
 
 #include "oslexec_pvt.h"
 
@@ -148,6 +150,26 @@ osl_regex_impl(void* sg_, const char* subject_, void* results, int nresults,
     }
 }
 
+// Shims to convert llvm gen to rs free function C++ parameter types
+// and forward on calls to re free functions.
+// TODO: moveto opgen.cpp
+OSL_RSOP void
+osl_gen_errorfmt(/*OSL::ShaderGlobals* sg*/ OpaqueExecContextPtr exec_ctx, 
+            OSL::ustringhash_pod fmt_specification, 
+            int32_t arg_count, 
+            const EncodedType *argTypes, 
+            uint32_t argValuesSize, 
+            uint8_t *argValues)
+{
+
+     OSL::ustringhash rs_fmt_specification = OSL::ustringhash_from(fmt_specification);
+     rs_errorfmt(exec_ctx, rs_fmt_specification, 
+           arg_count, 
+             argTypes, 
+             argValuesSize, 
+             argValues);
+ }
+
 
 OSL_SHADEOP const char*
 osl_format(const char* format_str, ...)
@@ -159,63 +181,69 @@ osl_format(const char* format_str, ...)
     return ustring(s).c_str();
 }
 
-
+//#if 0
+//Intent is to remove this and call the renderer service function directly in future PR
 OSL_SHADEOP void
 osl_printf(ShaderGlobals* sg, const char* format_str, ...)
 {
+    // Until llvm_gen directly calls rs_printfmt, 
+    // we will need to perform the formating here 
+    // as renderer only accepts the fmt specification
     va_list args;
     va_start(args, format_str);
-#if 0
-    // Make super sure we know we are executing LLVM-generated code!
-    std::string newfmt = std::string("llvm: ") + format_str;
-    format_str = newfmt.c_str();
-#endif
     std::string s = Strutil::vsprintf(format_str, args);
     va_end(args);
-    sg->context->messagefmt("{}", s);
+    osl_printfmt(sg, OSL::ustringhash(s));
 }
 
-
+//Intent is to remove this and call the renderer service function directly in future PR
 OSL_SHADEOP void
 osl_error(ShaderGlobals* sg, const char* format_str, ...)
 {
+    // Until llvm_gen directly calls rs_errorfmt, 
+    // we will need to perform the formating here 
+    // as renderer only accepts the fmt specification
     va_list args;
     va_start(args, format_str);
     std::string s = Strutil::vsprintf(format_str, args);
     va_end(args);
-    sg->context->errorfmt("{}", s);
+    osl_errorfmt(sg, OSL::ustringhash(s));
+
 }
 
-
+//Intent is to remove this and call the renderer service function directly in future PR
 OSL_SHADEOP void
 osl_warning(ShaderGlobals* sg, const char* format_str, ...)
 {
-    if (sg->context->allow_warnings()) {
+    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
+    if(ssu->m_allow_warnings){
+        // Until llvm_gen directly calls rs_warningfmt, 
+        // we will need to perform the formating here 
+        // as renderer only accepts the fmt specification
         va_list args;
         va_start(args, format_str);
         std::string s = Strutil::vsprintf(format_str, args);
         va_end(args);
-        sg->context->warningfmt("{}", s);
+        osl_warningfmt(sg, OSL::ustringhash(s));
     }
 }
 
 
-
+//Intent is to remove this and call the renderer service function directly in future PR
 OSL_SHADEOP void
-osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
+osl_fprintf(ShaderGlobals* sg, const char* filename, const char* format_str,
             ...)
 {
+    // Until llvm_gen directly calls rs_filefmt, 
+    // we will need to perform the formating here 
+    // as renderer only accepts the fmt specification
     va_list args;
     va_start(args, format_str);
     std::string s = Strutil::vsprintf(format_str, args);
     va_end(args);
-
-    static OIIO::mutex fprintf_mutex;
-    OIIO::lock_guard lock(fprintf_mutex);
-    FILE* file = OIIO::Filesystem::fopen(filename, "a");
-    fputs(s.c_str(), file);
-    fclose(file);
+    osl_filefmt(sg,OSL::ustringhash(filename), OSL::ustringhash(s));
 }
+//#endif
 
 
 

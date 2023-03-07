@@ -145,6 +145,14 @@ public:
         return llvm_load_string(ustring(str));
     }
 
+    llvm::Value* llvm_load_stringhash(ustring str)
+    {
+        const size_t size_t_bits = sizeof(size_t) * 8;
+        size_t p = str.hash();
+        auto str_ = (size_t_bits == 64) ? ll.constant64(p) : ll.constant(int(p));
+        return str_;
+    }
+
     /// Legacy version
     ///
     llvm::Value* loadLLVMValue(const Symbol& sym, int component = 0,
@@ -553,6 +561,9 @@ public:
     /// is not an input parameter or is constant and therefore doesn't have an
     /// entry in the groupdata struct.
     int find_userdata_index(const Symbol& sym);
+
+    void build_offsets_of_ShaderGlobals(
+    std::vector<unsigned int>& offset_by_index);
 
     LLVM_Util ll;
 

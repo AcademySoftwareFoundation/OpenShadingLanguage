@@ -7,6 +7,9 @@
 
 #include <OSL/genclosure.h>
 #include <OSL/oslexec.h>
+#include <OSL/encodedtypes.h>
+#include <OSL/journal.h>
+
 #include "simplerend.h"
 
 
@@ -809,6 +812,77 @@ SimpleRenderer::export_state(RenderState& state) const
     state.projection = u_perspective;
 }
 
+void
+SimpleRenderer::errorfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues)
+{
+
+ RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+
+ //std::cout<<"Inside simplerender::errorfmt"<<std::endl;
+ OSL::journal::Writer jw{rs->journal_buffer};
+ jw.record_errorfmt(sg->thread_index, sg->shade_index, fmt_specification, arg_count, argTypes, argValuesSize, argValues);
+
+
+}
+
+void
+SimpleRenderer::warningfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues)
+{
+
+ RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+
+
+ OSL::journal::Writer jw{rs->journal_buffer};
+ jw.record_warningfmt(sg->thread_index, sg->shade_index, fmt_specification, arg_count, argTypes, argValuesSize, argValues);
+
+
+}
+
+
+
+
+void
+SimpleRenderer::printfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues)
+{
+
+ RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+
+ 
+ OSL::journal::Writer jw{rs->journal_buffer};
+ jw.record_printfmt(sg->thread_index, sg->shade_index, fmt_specification, arg_count, argTypes, argValuesSize, argValues);
+
+
+}
+
+void
+SimpleRenderer::filefmt(OSL::ShaderGlobals* sg, 
+            OSL::ustringhash filename_hash, 
+            OSL::ustringhash fmt_specification, 
+            int32_t arg_count, 
+            const EncodedType *argTypes, 
+            uint32_t argValuesSize, 
+            uint8_t *argValues)
+{
+    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+
+    OSL::journal::Writer jw{rs->journal_buffer};
+    jw.record_filefmt(sg->thread_index, sg->shade_index, filename_hash, fmt_specification, arg_count, argTypes, argValuesSize, argValues);
+}
 
 
 OSL_NAMESPACE_EXIT

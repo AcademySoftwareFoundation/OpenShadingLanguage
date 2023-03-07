@@ -22,8 +22,6 @@
 #include <cmath>
 #include <iostream>
 
-
-
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
@@ -146,19 +144,23 @@ osl_get_matrix(void* sg_, void* r, const char* from)
         return true;
     }
     if (HDSTR(from) == STRING_PARAMS(shader)) {
-        rs_get_matrix_xform_time(sg, MAT(r), sg->shader2common, sg->time);
+        rs_get_matrix_xform_time(sg_, MAT(r), sg->shader2common, sg->time);
         return true;
     }
     if (HDSTR(from) == STRING_PARAMS(object)) {
-        rs_get_matrix_xform_time(sg, MAT(r), sg->object2common, sg->time);
+        rs_get_matrix_xform_time(sg_, MAT(r), sg->object2common, sg->time);
         return true;
     }
-    int ok = rs_get_matrix_space_time(sg, MAT(r), HDSTR(from), sg->time);
+    int ok = rs_get_matrix_space_time(sg_, MAT(r), HDSTR(from), sg->time);
     if (!ok) {
         MAT(r).makeIdentity();
-        ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
+   
         if (ssu->m_unknown_coordsys_error)
-            ctx->errorfmt("Unknown transformation \"{}\"", from);
+            
+            {
+           osl_errorfmt(sg,OSL::ustringhash("Unknown transformation \"{}\""), HDSTR(from)); //SM: Real Entry
+
+            }
     }
     return ok;
 }
@@ -168,6 +170,7 @@ osl_get_matrix(void* sg_, void* r, const char* from)
 OSL_SHADEOP int
 osl_get_inverse_matrix(void* sg_, void* r, const char* to)
 {
+
     ShaderGlobals* sg        = (ShaderGlobals*)sg_;
     ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     if (HDSTR(to) == STRING_PARAMS(common)
@@ -175,22 +178,26 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to)
         MAT(r).makeIdentity();
         return true;
     }
+       
     if (HDSTR(to) == STRING_PARAMS(shader)) {
-        rs_get_inverse_matrix_xform_time(sg, MAT(r), sg->shader2common,
+        rs_get_inverse_matrix_xform_time(sg_, MAT(r), sg->shader2common,
                                          sg->time);
         return true;
     }
     if (HDSTR(to) == STRING_PARAMS(object)) {
-        rs_get_inverse_matrix_xform_time(sg, MAT(r), sg->object2common,
+        rs_get_inverse_matrix_xform_time(sg_, MAT(r), sg->object2common,
                                          sg->time);
         return true;
     }
-    int ok = rs_get_inverse_matrix_space_time(sg, MAT(r), HDSTR(to), sg->time);
+    int ok = rs_get_inverse_matrix_space_time(sg_, MAT(r), HDSTR(to), sg->time);
     if (!ok) {
         MAT(r).makeIdentity();
-        ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
+
         if (ssu->m_unknown_coordsys_error)
-            ctx->errorfmt("Unknown transformation \"{}\"", to);
+            
+            {
+             osl_errorfmt(sg, OSL::ustringhash("Unknown transformation \"{}\""), HDSTR(to));   
+            }
     }
     return ok;
 }
@@ -304,14 +311,14 @@ osl_transform_triple_nonlinear(void* sg_, void* Pin, int Pin_derivs, void* Pout,
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
 #ifndef __CUDACC__
 
-    if (rs_transform_points(sg, HDSTR(from), HDSTR(to), sg->time,
+    if (rs_transform_points(sg_, HDSTR(from), HDSTR(to), sg->time,
                             (const Vec3*)Pin, (Vec3*)Pout, 1,
                             (TypeDesc::VECSEMANTICS)vectype)) {
         // Renderer had a direct way to transform the points between the
         // two spaces.
         if (Pout_derivs) {
             if (Pin_derivs) {
-                rs_transform_points(sg, HDSTR(from), HDSTR(to), sg->time,
+                rs_transform_points(sg_, HDSTR(from), HDSTR(to), sg->time,
                                     (const Vec3*)Pin + 1, (Vec3*)Pout + 1, 2,
                                     TypeDesc::VECTOR);
             } else {

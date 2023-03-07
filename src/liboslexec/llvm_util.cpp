@@ -424,6 +424,7 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
     m_llvm_type_int    = (llvm::Type*)llvm::Type::getInt32Ty(*m_llvm_context);
     m_llvm_type_int8   = (llvm::Type*)llvm::Type::getInt8Ty(*m_llvm_context);
     m_llvm_type_int16  = (llvm::Type*)llvm::Type::getInt16Ty(*m_llvm_context);
+    m_llvm_type_int64  = (llvm::Type*)llvm::Type::getInt64Ty(*m_llvm_context);
     if (sizeof(char*) == 4)
         m_llvm_type_addrint = (llvm::Type*)llvm::Type::getInt32Ty(
             *m_llvm_context);
@@ -431,6 +432,8 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
         m_llvm_type_addrint = (llvm::Type*)llvm::Type::getInt64Ty(
             *m_llvm_context);
     m_llvm_type_int_ptr = (llvm::PointerType*)llvm::Type::getInt32PtrTy(
+        *m_llvm_context);
+    m_llvm_type_int8_ptr = (llvm::PointerType*)llvm::Type::getInt8PtrTy(
         *m_llvm_context);
     m_llvm_type_bool     = (llvm::Type*)llvm::Type::getInt1Ty(*m_llvm_context);
     m_llvm_type_bool_ptr = (llvm::PointerType*)llvm::Type::getInt1PtrTy(
@@ -3623,6 +3626,7 @@ LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
     OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
     // FIXME: This will need to be revisited for future LLVM 16+ that fully
     // drops typed pointers.
+    std::cout<<"Args data: "<<args.data()<<std::endl;
     llvm::Value* r = builder().CreateCall(
         llvm::cast<llvm::FunctionType>(func->getType()->getPointerElementType()),
         func, llvm::ArrayRef<llvm::Value*>(args.data(), args.size()));

@@ -59,7 +59,11 @@ static bool shadingsys_options_set = false;
 static bool use_optix              = OIIO::Strutil::stoi(
                  OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
 
-
+//Testshade thread tracking and assignment.
+//Not recommended for production renderer but fine for testshade
+std::atomic<uint32_t> next_index { 0 };
+constexpr uint32_t uninitialized_thread_index = -1;
+thread_local uint32_t this_threads_index = uninitialized_thread_index;
 
 // Set shading system global attributes based on command line options.
 static void
@@ -239,7 +243,7 @@ main(int argc, const char* argv[])
         rend = new OptixRaytracer;
     else
 #endif
-        rend = new SimpleRaytracer;
+        rend = new SimpleRaytracer(num_threads);
 
     // Other renderer and global options
     if (debug1 || verbose)

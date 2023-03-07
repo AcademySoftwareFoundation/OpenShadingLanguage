@@ -14,6 +14,8 @@ namespace pugi = OIIO::pugi;
 #include "raytracer.h"
 #include "shading.h"
 #include "simpleraytracer.h"
+
+#include <OSL/journal.h>
 using namespace OSL;
 
 OSL_NAMESPACE_ENTER
@@ -25,6 +27,9 @@ static ustring u_s("s"), u_t("t");
 static TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2(TypeDesc::INT, 2);
+
+static bool use_rs_bitcode
+    = false;  // use free function bitcode version of renderer services
 
 
 
@@ -49,7 +54,7 @@ private:
 
 
 
-SimpleRaytracer::SimpleRaytracer()
+SimpleRaytracer::SimpleRaytracer(int num_threads)
 {
     m_errhandler.reset(new SimpleRaytracer::ErrorHandler(*this));
 
@@ -79,8 +84,30 @@ SimpleRaytracer::SimpleRaytracer()
         = &SimpleRaytracer::get_camera_shutter_open;
     m_attr_getters[ustring("camera:shutter_close")]
         = &SimpleRaytracer::get_camera_shutter_close;
+
+
+    ///Initialize a Journal Buffer for all threads to use for journaling fmt specification calls.
+
+    uint8_t *buffer = (uint8_t*) malloc(16* 1024 * 1024); 
+    OSL::journal::initialize_buffer(buffer, 16*1024*1024, 1024, num_threads);
 }
 
+void
+SimpleRaytracer::errorfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues)
+{
+
+ RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+
+ OSL::journal::Writer jw{rs->journal_buffer};
+ jw.record_errorfmt(sg->thread_index, sg->shade_index, fmt_specification, arg_count, argTypes, argValuesSize, argValues);
+
+
+}
 
 
 OIIO::ParamValue*
@@ -826,9 +853,16 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.raytype        = r.raytype;
     sg.flipHandedness = sg.dPdx.cross(sg.dPdy).dot(sg.N) < 0;
 
+    if (use_rs_bitcode)
+    {
+        sg.renderstate = &testrender_renderstate;
+    }
+    else
+    {
     // In our SimpleRaytracer, the "renderstate" itself just a pointer to
     // the ShaderGlobals.
     sg.renderstate = &sg;
+    }
 }
 
 Vec3

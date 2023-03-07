@@ -23,6 +23,7 @@
 OSL_NAMESPACE_ENTER
 
 class ShadingContext;
+struct ShaderGlobals;
 
 namespace pvt {
 
@@ -30,8 +31,10 @@ namespace pvt {
 class OSLEXECPUBLIC ColorSystem {
 #ifdef __CUDACC__
     using Context = void*;
-#else
+#elif defined(__OSL_WIDTH) // batched version 
     using Context = ShadingContext*;
+#else
+    using Context = ShaderGlobals*;
 #endif
 public:
     // A colour system is defined by the CIE x and y coordinates of its

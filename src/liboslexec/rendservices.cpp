@@ -13,6 +13,8 @@ using namespace OSL::pvt;
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 
+#include <OSL/journal.h>
+
 
 OSL_NAMESPACE_ENTER
 
@@ -154,6 +156,108 @@ RendererServices::get_userdata(bool derivatives, ustringhash name,
     // return get_userdata(derivatives, ustring_from(name), type, sg, val);
 }
 
+//Default impl that will go away eventually when we solidify a compile-time sturdy solution
+void
+RendererServices::errorfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *arg_types, 
+                            uint32_t arg_values_size, 
+                            uint8_t *arg_values) 
+
+{
+    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
+    std::string message;
+    //uint64_t fmt_specification_hash = fmt_specification;
+    OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
+
+    journal::construct_message(fmt_specification_hash, arg_count, 
+                    arg_types, arg_values_size, 
+                    arg_values, message);
+
+
+    //Gets us existing default behavior of checking for duplicate messages
+    //and reusing ShadingContext's ErrorHandler
+    ctx->errorfmt(message.c_str());
+}
+
+void
+RendererServices::warningfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *arg_types, 
+                            uint32_t arg_values_size, 
+                            uint8_t *arg_values) 
+
+{
+    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
+    std::string message;
+    //uint64_t fmt_specification_hash = fmt_specification;
+     OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
+
+
+    journal::construct_message(fmt_specification_hash, arg_count, 
+                    arg_types, arg_values_size, 
+                    arg_values, message);
+
+
+    //Gets us existing default behavior of checking for duplicate messages
+    //and reusing ShadingContext's ErrorHandler
+    ctx->warningfmt(message.c_str());
+}
+
+
+
+void
+RendererServices::printfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *arg_types, 
+                            uint32_t arg_values_size, 
+                            uint8_t *arg_values) 
+
+{
+    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
+    std::string message;
+    // uint64_t fmt_specification_hash = fmt_specification;
+    //uint64_t fmt_specification_hash = ustringrep_from(fmt_specification);
+     OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
+
+
+    journal::construct_message(fmt_specification_hash, arg_count, 
+                    arg_types, arg_values_size, 
+                    arg_values, message);
+
+    ctx->messagefmt(message.c_str());
+}
+
+void
+RendererServices::filefmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash filename_hash, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t arg_count, 
+                            const EncodedType *arg_types, 
+                            uint32_t arg_values_size, 
+                            uint8_t *arg_values) 
+
+{
+    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
+    std::string message;
+    //uint64_t fmt_specification_hash = fmt_specification;
+     OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
+
+
+    journal::construct_message(fmt_specification_hash, arg_count, 
+                    arg_types, arg_values_size, 
+                    arg_values, message);
+
+    //auto filename = OSL::ustring::from_hash(filname_hash)
+    OSL::ustringhash filename_ = OSL::ustringhash_from(filename_hash);
+    std::string filename (filename_hash.c_str());
+    auto file_message = OSL::fmtformat("{}:{}", filename,  message);
+
+    ctx->messagefmt(file_message.c_str());
+}
 
 
 RendererServices::TextureHandle*

@@ -70,6 +70,37 @@ public:
                     TypeDesc type, void* val, bool derivatives) override;
 
 
+    void errorfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues);
+
+    void warningfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues);
+                           
+    
+    void printfmt(OSL::ShaderGlobals* sg, 
+                            OSL::ustringhash fmt_specification, 
+                            int32_t count, 
+                            const EncodedType *argTypes, 
+                            uint32_t argValuesSize, 
+                            uint8_t *argValues);
+    
+    void filefmt(OSL::ShaderGlobals* sg, 
+            OSL::ustringhash filename_hash, 
+            OSL::ustringhash fmt_specification, 
+            int32_t arg_count, 
+            const EncodedType *argTypes, 
+            uint32_t argValuesSize, 
+            uint8_t *argValues);
+    
+
     // Set and get renderer attributes/options
     void attribute(string_view name, TypeDesc type, const void* value);
     void attribute(string_view name, int value)

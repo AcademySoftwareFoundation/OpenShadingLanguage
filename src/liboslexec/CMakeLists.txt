@@ -122,6 +122,7 @@ set (lib_src
           backendllvm.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
           rs_fallback.cpp
+          journal.cpp
     )
 if (OSL_BUILD_BATCHED)
     list(APPEND lib_src 
@@ -225,7 +226,7 @@ if (USE_LLVM_BITCODE)
     EMBED_LLVM_BITCODE_IN_CPP ( "${llvm_ops_srcs}" "_host" "osl_llvm_compiled_ops" lib_src "")
 
     set (rs_dependent_ops_srcs
-         opmatrix.cpp
+         opmatrix.cpp opfmt.cpp
          )
     # Achieve the effect of absorbing osl_llvm_compiled_ops by adding its 
     # sources to rs_dependent_ops_srcs which avoids having to do it at runtime.

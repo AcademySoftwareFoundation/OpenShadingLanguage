@@ -12,15 +12,8 @@
 // NOTE:  Additional data is here that will be used by rs_simplerend.cpp in future PR's
 //        procedurally generating ShaderGlobals.
 struct RenderState {
-    int xres;
-    int yres;
-    OSL::Matrix44 world_to_camera;
-    OSL::StringParam projection;
-    float fov;
-    float hither;
-    float yon;
-    int dummy = 10;
     void *journal_buffer; 
+    
 };
 
 

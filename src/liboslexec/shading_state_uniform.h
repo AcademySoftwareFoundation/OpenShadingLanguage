@@ -19,6 +19,8 @@ struct ShadingStateUniform {
     ColorSystem m_colorsystem;      ///< Data for current colorspace
     ustring m_commonspace_synonym;  ///< Synonym for "common" space
     bool m_unknown_coordsys_error;  ///< Error to use unknown xform name?
+    int m_max_warnings;             ///< To avoid processing too many warnings
+    bool m_allow_warnings;
 };
 
 }  // namespace pvt

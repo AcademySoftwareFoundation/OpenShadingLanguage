@@ -832,6 +832,10 @@ public:
     ASTbinary_expression(OSLCompilerImpl* comp, Operator op, ASTNode* left,
                          ASTNode* right);
 
+    // Special consructor wrapper that can collapse ops between literals
+    static ASTNode* make(OSLCompilerImpl* comp, Operator op, ASTNode* left,
+                         ASTNode* right);
+
     const char* nodetypename() const { return "binary_expression"; }
     const char* childname(size_t i) const;
     const char* opname() const;

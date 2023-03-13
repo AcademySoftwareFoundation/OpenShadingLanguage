@@ -1116,90 +1116,88 @@ ASTassign_expression::opword() const
         OSL_ASSERT (0 && "unknown assignment expression");
         return "assign"; // punt
     }
+    // clang-format on
 }
 
 
 
-ASTunary_expression::ASTunary_expression (OSLCompilerImpl *comp, int op,
-                                          ASTNode *expr)
-    : ASTNode (unary_expression_node, comp, op, expr)
+ASTunary_expression::ASTunary_expression(OSLCompilerImpl* comp, int op,
+                                         ASTNode* expr)
+    : ASTNode(unary_expression_node, comp, op, expr)
 {
     // Check for a user-overloaded function for this operator
-    Symbol *sym = comp->symtab().find(ustring::fmtformat("__operator__{}__", opword()));
+    Symbol* sym = comp->symtab().find(
+        ustring::fmtformat("__operator__{}__", opword()));
     if (sym && sym->symtype() == SymTypeFunction)
-        m_function_overload = (FunctionSymbol *)sym;
+        m_function_overload = (FunctionSymbol*)sym;
 }
 
 
 
-const char *
-ASTunary_expression::childname (size_t i) const
+const char*
+ASTunary_expression::childname(size_t i) const
 {
-    static const char *name[] = { "expression" };
+    static const char* name[] = { "expression" };
     return name[i];
 }
 
 
 
-const char *
-ASTunary_expression::opname () const
+const char*
+ASTunary_expression::opname() const
 {
     switch (m_op) {
-    case Add   : return "+";
-    case Sub   : return "-";
-    case Not   : return "!";
-    case Compl : return "~";
-    default:
-        OSL_ASSERT (0 && "unknown unary expression");
-        return "unknown";
+    case Add: return "+";
+    case Sub: return "-";
+    case Not: return "!";
+    case Compl: return "~";
+    default: OSL_ASSERT(0 && "unknown unary expression"); return "unknown";
     }
 }
 
 
 
-const char *
-ASTunary_expression::opword () const
+const char*
+ASTunary_expression::opword() const
 {
     switch (m_op) {
-    case Add   : return "add";
-    case Sub   : return "neg";
-    case Not   : return "not";
-    case Compl : return "compl";
-    default:
-        OSL_ASSERT (0 && "unknown unary expression");
-        return "unknown";
+    case Add: return "add";
+    case Sub: return "neg";
+    case Not: return "not";
+    case Compl: return "compl";
+    default: OSL_ASSERT(0 && "unknown unary expression"); return "unknown";
     }
 }
 
 
 
-ASTbinary_expression::ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
-                                            ASTNode *left, ASTNode *right)
-    : ASTNode (binary_expression_node, comp, op, left, right)
+ASTbinary_expression::ASTbinary_expression(OSLCompilerImpl* comp, Operator op,
+                                           ASTNode* left, ASTNode* right)
+    : ASTNode(binary_expression_node, comp, op, left, right)
 {
     // Check for a user-overloaded function for this operator.
     // Disallow a few ops from overloading.
     if (op != And && op != Or) {
         ustring funcname = ustring::fmtformat("__operator__{}__", opword());
-        Symbol *sym = comp->symtab().find (funcname);
+        Symbol* sym      = comp->symtab().find(funcname);
         if (sym && sym->symtype() == SymTypeFunction)
-            m_function_overload = (FunctionSymbol *)sym;
+            m_function_overload = (FunctionSymbol*)sym;
     }
 }
 
 
 
-const char *
-ASTbinary_expression::childname (size_t i) const
+const char*
+ASTbinary_expression::childname(size_t i) const
 {
-    static const char *name[] = { "left", "right" };
+    static const char* name[] = { "left", "right" };
     return name[i];
 }
 
 
 
-const char *
-ASTbinary_expression::opname () const
+const char*
+ASTbinary_expression::opname() const
 {
     // clang-format off
     switch (m_op) {

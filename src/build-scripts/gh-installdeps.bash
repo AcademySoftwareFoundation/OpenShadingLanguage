@@ -73,8 +73,13 @@ else
         libpugixml-dev \
         libopencolorio-dev
 
-    time sudo apt-get -q install -y \
-        qt5-default || /bin/true
+    if [[ "${QT_VERSION:-5}" == "5" ]] ; then
+        time sudo apt-get -q install -y \
+            qt5-default || /bin/true
+    elif [[ "${QT_VERSION}" == "6" ]] ; then
+        time sudo apt-get -q install -y \
+            qt6-base-dev || /bin/true
+    fi
 
     export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
 

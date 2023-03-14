@@ -45,7 +45,7 @@ brew install --display-times -q pybind11 numpy || true
 brew install --display-times -q tbb || true
 brew install --display-times -q flex bison
 brew install --display-times -q llvm${LLVMBREWVER}
-brew install --display-times -q qt
+brew install --display-times -q qt${QT_BREW_VERSION}
 
 echo ""
 echo "After brew installs:"

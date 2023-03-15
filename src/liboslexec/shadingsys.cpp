@@ -1049,7 +1049,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_llvm_output_bitcode(0)
     , m_llvm_dumpasm(0)
     , m_max_local_mem_KB(2048)
-    , m_compile_report(false)
+    , m_compile_report(0)
     , m_buffer_printf(true)
     , m_no_noise(false)
     , m_no_pointcloud(false)

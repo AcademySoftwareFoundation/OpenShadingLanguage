@@ -1187,6 +1187,69 @@ ASTbinary_expression::ASTbinary_expression(OSLCompilerImpl* comp, Operator op,
 
 
 
+ASTNode*
+ASTbinary_expression::make(OSLCompilerImpl* comp, Operator op, ASTNode* left,
+                           ASTNode* right)
+{
+    // If the left and right are both literal constants, fold the expression
+    if (left->nodetype() == literal_node && right->nodetype() == literal_node) {
+        ASTNode* cf = nullptr;  // constant-folded result
+        if (left->typespec().is_int() && right->typespec().is_int()) {
+            int lv = dynamic_cast<ASTliteral*>(left)->intval();
+            int rv = dynamic_cast<ASTliteral*>(right)->intval();
+            switch (op) {
+            case Mul: cf = new ASTliteral(comp, lv * rv); break;
+            case Div: cf = new ASTliteral(comp, rv ? lv / rv : 0); break;
+            case Add: cf = new ASTliteral(comp, lv + rv); break;
+            case Sub: cf = new ASTliteral(comp, lv - rv); break;
+            case Mod: cf = new ASTliteral(comp, rv ? lv % rv : 0); break;
+            case Equal: cf = new ASTliteral(comp, lv == rv ? 1 : 0); break;
+            case NotEqual: cf = new ASTliteral(comp, lv != rv ? 1 : 0); break;
+            case Greater: cf = new ASTliteral(comp, lv > rv ? 1 : 0); break;
+            case Less: cf = new ASTliteral(comp, lv < rv ? 1 : 0); break;
+            case GreaterEqual:
+                cf = new ASTliteral(comp, lv >= rv ? 1 : 0);
+                break;
+            case LessEqual: cf = new ASTliteral(comp, lv <= rv ? 1 : 0); break;
+            case BitAnd: cf = new ASTliteral(comp, lv & rv); break;
+            case BitOr: cf = new ASTliteral(comp, lv | rv); break;
+            case Xor: cf = new ASTliteral(comp, lv ^ rv); break;
+            case ShiftLeft: cf = new ASTliteral(comp, lv << rv); break;
+            case ShiftRight: cf = new ASTliteral(comp, lv >> rv); break;
+            default: break;
+            }
+        } else if (left->typespec().is_float()
+                   && right->typespec().is_float()) {
+            float lv = dynamic_cast<ASTliteral*>(left)->floatval();
+            float rv = dynamic_cast<ASTliteral*>(right)->floatval();
+            switch (op) {
+            case Mul: cf = new ASTliteral(comp, lv * rv); break;
+            case Div: cf = new ASTliteral(comp, rv ? lv / rv : 0.0f); break;
+            case Add: cf = new ASTliteral(comp, lv + rv); break;
+            case Sub: cf = new ASTliteral(comp, lv - rv); break;
+            case Equal: cf = new ASTliteral(comp, lv == rv ? 1 : 0); break;
+            case NotEqual: cf = new ASTliteral(comp, lv != rv ? 1 : 0); break;
+            case Greater: cf = new ASTliteral(comp, lv > rv ? 1 : 0); break;
+            case Less: cf = new ASTliteral(comp, lv < rv ? 1 : 0); break;
+            case GreaterEqual:
+                cf = new ASTliteral(comp, lv >= rv ? 1 : 0);
+                break;
+            case LessEqual: cf = new ASTliteral(comp, lv <= rv ? 1 : 0); break;
+            default: break;
+            }
+        }
+        if (cf) {
+            delete left;
+            delete right;
+            return cf;
+        }
+    }
+
+    return new ASTbinary_expression(comp, op, left, right);
+}
+
+
+
 const char*
 ASTbinary_expression::childname(size_t i) const
 {

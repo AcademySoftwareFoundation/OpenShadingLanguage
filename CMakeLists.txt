@@ -221,7 +221,7 @@ if (OSL_BUILD_PLUGINS)
     add_subdirectory (src/osl.imageio)
 endif ()
 
-if (USE_QT AND Qt5_FOUND)
+if (USE_QT AND (Qt5_FOUND OR Qt6_FOUND))
     add_subdirectory (src/osltoy)
 endif ()
 

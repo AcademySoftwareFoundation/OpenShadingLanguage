@@ -16,6 +16,10 @@
 #include <OSL/oslquery.h>
 #include <OSL/rendererservices.h>
 
+#ifndef OSL_QT_MAJOR
+#    error "Build problem? OSL_QT_MAJOR not defined."
+#endif
+
 #include <QAction>
 #include <QMainWindow>
 #include <QTimer>

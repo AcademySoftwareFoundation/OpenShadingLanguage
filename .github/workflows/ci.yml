@@ -318,14 +318,14 @@ jobs:
                             PUGIXML_VERSION=v1.10
           - desc: latest releases gcc11/C++17 llvm13 boost1.71 exr3.1 py3.9 avx2 batch-b16avx512
             nametag: linux-latest-releases
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             cxx_compiler: g++-11
             cxx_std: 17
             fmt_ver: 9.1.0
             openexr_ver: v3.1.6
             openimageio_ver: master
             pybind11_ver: v2.10.0
-            python_ver: 3.9
+            python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=13.0.0
@@ -436,6 +436,7 @@ jobs:
             aclang: 13
             setenvs: export LLVMBREWVER="@14" DO_BREW_UPDATE=1
                             OPENIMAGEIO_VERSION=release
+                            QT_BREW_VERSION="@5"
           - desc: MacOS-12
             os: macos-12
             nametag: macos11-p310

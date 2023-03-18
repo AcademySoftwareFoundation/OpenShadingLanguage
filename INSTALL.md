@@ -65,8 +65,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10)
     * pybind11 >= 2.4.2 (Tested through 2.10)
     * NumPy
-* (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
-  the `osltoy` application will be disabled.
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.4).
+  If not found at build time, the `osltoy` application will be disabled.
 
 
 

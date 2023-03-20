@@ -279,14 +279,10 @@ BackendLLVM::llvm_type_groupdata()
         ++order;
         for (int i = 0; i < nuserdata; ++i) {
             TypeDesc type = types[i];
-            // NB: Userdata derivs are not currently supported in OptiX, since
-            //     making room for them in the GroupData struct can result in a
-            //     large per-thread memory allocation, which could negatively
-            //     impact performance.
-            int n         = (!use_optix()) ? type.numelements()
-                                         * 3  // make room for derivs by default
-                                           : type.numelements();
-            type.arraylen = n;
+            // make room for float derivs only
+            type.arraylen = type.basetype == TypeDesc::FLOAT
+                                ? type.numelements() * 3
+                                : type.numelements();
             fields.push_back(llvm_type(type));
             m_groupdata_field_names.emplace_back(
                 fmtformat("userdata{}_{}_", i, names[i]));

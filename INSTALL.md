@@ -12,7 +12,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.25)
+* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.26)
 
 * A suitable **C++14 or C++17** compiler to build OSL itself, which may be any of:
    - **GCC 6.1 or newer** (tested through gcc 12.1)
@@ -41,7 +41,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X).
 
 * **[LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, or 15**, including
-  clang libraries.
+  clang libraries. LLVM 16 probably doesn't work yet, we need to make changes
+  on the OSL side to be compatible.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 8.0 or higher.

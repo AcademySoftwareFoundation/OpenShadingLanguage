@@ -182,7 +182,8 @@ compatible_param(const TypeDesc& a, const TypeDesc& b)
 
 
 void
-ShaderInstance::parameters(const ParamValueList& params)
+ShaderInstance::parameters(const ParamValueList& params,
+                           cspan<ParamHints> hints)
 {
     // Seed the params with the master's defaults
     m_iparams = m_master->m_idefaults;
@@ -195,11 +196,13 @@ ShaderInstance::parameters(const ParamValueList& params)
     // on the master.
     for (int i = 0, e = (int)m_instoverrides.size(); i < e; ++i) {
         Symbol* sym = master()->symbol(i);
-        m_instoverrides[i].lockgeom(sym->lockgeom());
+        m_instoverrides[i].interpolated(sym->interpolated());
+        m_instoverrides[i].interactive(sym->interactive());
         m_instoverrides[i].dataoffset(sym->dataoffset());
     }
 
-    for (auto&& p : params) {
+    for (size_t pi = 0; pi < params.size(); ++pi) {
+        const ParamValue& p(params[pi]);
         if (p.name().size() == 0)
             continue;  // skip empty names
         int i = findparam(p.name());
@@ -262,13 +265,14 @@ ShaderInstance::parameters(const ParamValueList& params)
             // Mark that the override as an instance value
             so->valuesource(Symbol::InstanceVal);
 
-            // Lock the param against geometric primitive overrides if the
-            // master thinks it was so locked, AND the Parameter() call
-            // didn't specify lockgeom=false (which would be indicated by
-            // the parameter's interpolation being non-CONSTANT).
-            bool lockgeom = (sm->lockgeom()
-                             && p.interp() == ParamValue::INTERP_CONSTANT);
-            so->lockgeom(lockgeom);
+            // Pass on any interpolated or interactive hints.
+            auto hint = hints[pi];
+            so->interpolated(sm->interpolated()
+                             || (hint & ParamHints::interpolated)
+                                    == ParamHints::interpolated);
+            so->interactive((hint & ParamHints::interactive)
+                            == ParamHints::interactive);
+            bool lockgeom = !so->interpolated() && !so->interactive();
 
             OSL_DASSERT(so->dataoffset() == sm->dataoffset());
             so->dataoffset(sm->dataoffset());
@@ -452,7 +456,7 @@ ShaderInstance::evaluate_writes_globals_and_userdata_params()
     // the symbol overrides. This is very important to get instance merging
     // working correctly.
     for (auto&& s : m_instoverrides) {
-        if (!s.lockgeom())
+        if (s.interpolated())
             userdata_params(true);
     }
 }
@@ -491,7 +495,8 @@ ShaderInstance::copy_code_from_master(ShaderGroup& group)
                     si->arraylen(m_instoverrides[i].arraylen());
                 si->valuesource(m_instoverrides[i].valuesource());
                 si->connected_down(m_instoverrides[i].connected_down());
-                si->lockgeom(m_instoverrides[i].lockgeom());
+                si->interpolated(m_instoverrides[i].interpolated());
+                si->interactive(m_instoverrides[i].interactive());
                 si->dataoffset(m_instoverrides[i].dataoffset());
                 si->set_dataptr(SymArena::Absolute, param_storage(i));
             }
@@ -634,10 +639,12 @@ ShaderInstance::mergeable(const ShaderInstance& b,
                     continue;
                 return false;
             }
-            // But still, if they differ in their lockgeom'edness, we can't
-            // merge the instances.
-            if (m_instoverrides[i].lockgeom()
-                != b.m_instoverrides[i].lockgeom()) {
+            // But still, if they differ in whether they are interpolated or
+            // interactive, we can't merge the instances.
+            if (m_instoverrides[i].interpolated()
+                    != b.m_instoverrides[i].interpolated()
+                || m_instoverrides[i].interactive()
+                       != b.m_instoverrides[i].interactive()) {
                 return false;
             }
         }
@@ -861,11 +868,12 @@ ShaderGroup::serialize() const
                     OSL_ASSERT_MSG(0, "unknown type for serialization: %s (%s)",
                                    type.c_str(), s->typespec().c_str());
                 }
-                bool lockgeom = dstsyms_exist
-                                    ? s->lockgeom()
-                                    : inst->instoverride(p)->lockgeom();
-                if (!lockgeom)
-                    print(out, " [[int lockgeom={}]]", lockgeom);
+                if (dstsyms_exist ? s->interpolated()
+                                  : inst->instoverride(p)->interpolated())
+                    print(out, " [[int interpolated=1]]");
+                if (dstsyms_exist ? s->interactive()
+                                  : inst->instoverride(p)->interactive())
+                    print(out, " [[int interactive=1]]");
                 out << " ;\n";
             }
         }

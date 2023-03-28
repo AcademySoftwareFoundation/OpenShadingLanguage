@@ -92,6 +92,7 @@ static std::string groupspec;
 static std::string layername;
 static std::vector<std::string> connections;
 static ParamValueList params;
+static std::vector<ParamHints> param_hints;
 static ParamValueList reparams;
 static std::string reparam_layer;
 static ErrorHandler errhandler;
@@ -123,9 +124,12 @@ static bool use_rs_bitcode
 static void
 inject_params()
 {
-    for (auto&& pv : params)
+    int pi = 0;
+    for (auto&& pv : params) {
         shadingsys->Parameter(*shadergroup, pv.name(), pv.type(), pv.data(),
-                              pv.interp() == ParamValue::INTERP_CONSTANT);
+                              param_hints[pi]);
+        ++pi;
+    }
 }
 
 
@@ -183,7 +187,6 @@ set_shadingsys_options()
     }
 
     shadingsys->attribute("profile", int(profile));
-    shadingsys->attribute("lockgeom", 1);
     shadingsys->attribute("debug_nan", debugnan);
     shadingsys->attribute("debug_uninit", debug_uninit);
     shadingsys->attribute("userdata_isconnected", userdata_isconnected);
@@ -374,8 +377,8 @@ specify_expr(cspan<const char*> argv)
     std::string shadername = OSL::fmtformat("expr_{}", exprcount++);
     std::string sourcecode = "shader " + shadername
                              + " (\n"
-                               "    float s = u [[ int lockgeom=0 ]],\n"
-                               "    float t = v [[ int lockgeom=0 ]],\n"
+                               "    float s = u [[ int interpolated=1 ]],\n"
+                               "    float t = v [[ int interpolated=1 ]],\n"
                                "    output color result = 0,\n"
                                "    output float alpha = 1,\n"
                                "  )\n"
@@ -423,27 +426,30 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
           string_view stringval)
 {
     TypeDesc type   = TypeDesc::UNKNOWN;
-    bool unlockgeom = false;
+    ParamHints hint = ParamHints::none;
     float f[16];
 
     size_t pos;
     while ((pos = command.find_first_of(":")) != std::string::npos) {
-        command = command.substr(pos + 1, std::string::npos);
-        std::vector<std::string> splits;
-        OIIO::Strutil::split(command, splits, ":", 1);
+        using namespace OIIO;
+        command     = command.substr(pos + 1, std::string::npos);
+        auto splits = Strutil::splitsv(command, ":", 1);
         if (splits.size() < 1) {
-        } else if (OIIO::Strutil::istarts_with(splits[0], "type="))
+        } else if (Strutil::istarts_with(splits[0], "type="))
             type.fromstring(splits[0].c_str() + 5);
-        else if (OIIO::Strutil::istarts_with(splits[0], "lockgeom="))
-            unlockgeom = (OIIO::Strutil::from_string<int>(splits[0]) == 0);
+        else if (Strutil::istarts_with(splits[0], "lockgeom="))
+            set(hint, ParamHints::interpolated, !Strutil::stoi(splits[0]));
+        else if (Strutil::istarts_with(splits[0], "interpolated="))
+            set(hint, ParamHints::interpolated, Strutil::stoi(splits[0]));
+        else if (Strutil::istarts_with(splits[0], "interactive="))
+            set(hint, ParamHints::interactive, Strutil::stoi(splits[0]));
     }
 
     // If it is or might be a matrix, look for 16 comma-separated floats
     if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeMatrix)
         && parse_float_list(stringval, f, 16)) {
         params.emplace_back(paramname, TypeDesc::TypeMatrix, 1, f);
-        if (unlockgeom)
-            params.back().interp(ParamValue::INTERP_VERTEX);
+        param_hints.push_back(hint);
         return;
     }
     // If it is or might be a vector type, look for 3 comma-separated floats
@@ -452,28 +458,23 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
         if (type == TypeDesc::UNKNOWN)
             type = TypeDesc::TypeVector;
         params.emplace_back(paramname, type, 1, f);
-        if (unlockgeom)
-            params.back().interp(ParamValue::INTERP_VERTEX);
+        param_hints.push_back(hint);
         return;
     }
     // If it is or might be an int, look for an int that takes up the whole
     // string.
     if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeInt)
         && OIIO::Strutil::string_is<int>(stringval)) {
-        params.emplace_back(paramname,
-                            OIIO::Strutil::from_string<int>(stringval));
-        if (unlockgeom)
-            params.back().interp(ParamValue::INTERP_VERTEX);
+        params.emplace_back(paramname, OIIO::Strutil::stoi(stringval));
+        param_hints.push_back(hint);
         return;
     }
     // If it is or might be an float, look for a float that takes up the
     // whole string.
     if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeFloat)
         && OIIO::Strutil::string_is<float>(stringval)) {
-        params.emplace_back(paramname,
-                            OIIO::Strutil::from_string<float>(stringval));
-        if (unlockgeom)
-            params.back().interp(ParamValue::INTERP_VERTEX);
+        params.emplace_back(paramname, OIIO::Strutil::stof(stringval));
+        param_hints.push_back(hint);
         return;
     }
 
@@ -486,8 +487,7 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
             OIIO::Strutil::parse_char(stringval, ',');
         }
         params.emplace_back(paramname, type, 1, &vals[0]);
-        if (unlockgeom)
-            params.back().interp(ParamValue::INTERP_VERTEX);
+        param_hints.push_back(hint);
         return;
     }
 
@@ -500,8 +500,7 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
             OIIO::Strutil::parse_char(stringval, ',');
         }
         params.emplace_back(paramname, type, 1, &vals[0]);
-        if (unlockgeom)
-            params.back().interp(ParamValue::INTERP_VERTEX);
+        param_hints.push_back(hint);
         return;
     }
 
@@ -514,16 +513,14 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
         for (auto&& s : splitelements)
             strelements.push_back(ustring(s));
         params.emplace_back(paramname, type, 1, &strelements[0]);
-        if (unlockgeom)
-            params.back().interp(ParamValue::INTERP_VERTEX);
+        param_hints.push_back(hint);
         return;
     }
 
     // All remaining cases -- it's a string
     const char* s = ustring(stringval).c_str();
     params.emplace_back(paramname, TypeDesc::TypeString, 1, &s);
-    if (unlockgeom)
-        params.back().interp(ParamValue::INTERP_VERTEX);
+    param_hints.push_back(hint);
 }
 
 
@@ -689,7 +686,7 @@ getargs(int argc, const char* argv[])
       .help("Set next layer name");
     ap.arg("--param %s:NAME %s:VALUE")
       .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
-      .help("Add a parameter (options: type=%s, lockgeom=%d)");
+      .help("Add a parameter (options: type=%s, interpolated=%d)");
     ap.arg("--shader %s:SHADER %s:LAYERNAME")
       .action([&](cspan<const char*> argv){ stash_shader_arg(argv); })
       .help("Declare a shader node");
@@ -757,7 +754,7 @@ getargs(int argc, const char* argv[])
       .action([&](cspan<const char*> argv){ stash_userdata(argv); })
       .help("Add userdata (options: type=%s)");
     ap.arg("--userdata_isconnected", &userdata_isconnected)
-      .help("Consider lockgeom=0 to be isconnected()");
+      .help("Consider interpolated=1 to be isconnected()");
     ap.arg("--locale %s:NAME", &localename)
       .help("Set a different locale");
     ap.arg("--use_rs_bitcode", &use_rs_bitcode)
@@ -791,7 +788,7 @@ process_shader_setup_args(int argc, const char* argv[])
     ap.arg("--layer %s:NAME", &layername)
       .help("Set next layer name");
     ap.arg("--param %s:PARAMNAME %s:VALUE")
-      .help("Add a parameter (options: type=%s, lockgeom=%d)")
+      .help("Add a parameter (options: type=%s, interpolated=%d, interactive=%d)")
       .action([&](cspan<const char*> argv){ action_param(argv); });
     ap.arg("--shader %s:SHADER %s:LAYERNAME")
       .help("Declare a shader node (args: shader layername)")
@@ -1877,19 +1874,6 @@ test_shade(int argc, const char* argv[])
     // registered with a different number of arguments will lead
     // to a runtime error.
     register_closures(shadingsys);
-
-    // Remember that each shader parameter may optionally have a
-    // metadata hint [[int lockgeom=...]], where 0 indicates that the
-    // parameter may be overridden by the geometry itself, for example
-    // with data interpolated from the mesh vertices, and a value of 1
-    // means that it is "locked" with respect to the geometry (i.e. it
-    // will not be overridden with interpolated or
-    // per-geometric-primitive data).
-    //
-    // In order to most fully optimize the shader, we typically want any
-    // shader parameter not explicitly specified to default to being
-    // locked (i.e. no per-geometry override):
-    shadingsys->attribute("lockgeom", 1);
 
     // Now we declare our shader.
     //

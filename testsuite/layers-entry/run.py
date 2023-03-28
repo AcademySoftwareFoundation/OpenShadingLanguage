@@ -34,17 +34,17 @@
 #
 #
 # So by the default execution rules, the execution sequence will be:
-#   A   (because it sets a global) [presuming lazyglobls == 0]
+#   A   (because it sets a global) [presuming lazyglobals == 0]
 #   D   (because it sets a renderer output)
 #   G   (because it's the last layer -- presumed group entry point)
-#   E   (because F pulls its output)
+#   E   (because G pulls its output)
 #   B   (because E pulls its output)
 #
 # But if we give explicit entry points and ask to execute layers B, F, E,
 # then the call sequence will be:
 #   B   (because we ask for it)
 #   F   (because we ask for it)
-#         (note: then B does NOT get called gain, because it already ran)
+#         (note: then B does NOT get called again, because it already ran)
 #   E   (because F asks for it)
 #   (then we should see F end)
 #   (then E does NOT get called again, because it already ran)

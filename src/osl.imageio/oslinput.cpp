@@ -521,8 +521,8 @@ OSLInput::open(const std::string& name, ImageSpec& newspec,
                                                             exprcount++);
         std::string sourcecode = OIIO::Strutil::fmt::format(
             "shader {} (\n"
-            "    float s = u [[ int lockgeom=0 ]],\n"
-            "    float t = v [[ int lockgeom=0 ]],\n"
+            "    float s = u [[ int interpolated=1 ]],\n"
+            "    float t = v [[ int interpolated=1 ]],\n"
             "    output color result = 0,\n"
             "    output float alpha = 1,\n"
             "  )\n"

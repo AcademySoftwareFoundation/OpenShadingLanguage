@@ -178,7 +178,8 @@ public:
         layout->addWidget(m_image);
 
         m_info = new QLabel(this);
-        m_info->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        m_info->setAlignment(
+            static_cast<Qt::Alignment>(Qt::AlignTop | Qt::AlignLeft));
         m_info->setMinimumSize(textSize, m_res);
         layout->addWidget(m_info);
 

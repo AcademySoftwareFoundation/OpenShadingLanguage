@@ -198,7 +198,11 @@ public:
         QWidget::hideEvent(e);
     }
 
+#if OSL_QT_MAJOR < 6
     void enterEvent(QEvent* event) override;
+#else
+    void enterEvent(QEnterEvent* event) override;
+#endif
     void mouseMoveEvent(QMouseEvent* event) override;
 };
 
@@ -293,7 +297,11 @@ public:
 
     void mouseMoveEvent(QMouseEvent* /*event*/) override { magnifierEvent(); }
 
+#if OSL_QT_MAJOR < 6
     void enterEvent(QEvent* /*event*/) override
+#else
+    void enterEvent(QEnterEvent* /*event*/) override
+#endif
     {
         if (shouldShowMagnifier())
             showMagnifier();
@@ -343,7 +351,11 @@ public:
 };
 
 void
+#if OSL_QT_MAJOR < 6
 Magnifier::enterEvent(QEvent* event)
+#else
+Magnifier::enterEvent(QEnterEvent* event)
+#endif
 {
     if (m_renderview)
         m_renderview->magnifierEvent();

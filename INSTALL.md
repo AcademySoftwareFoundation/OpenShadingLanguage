@@ -12,7 +12,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.24)
+* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.26)
 
 * A suitable C++14 or C++17 compiler to build OSL itself, which may be any of:
    - GCC 6.1 or newer (tested through gcc 12.1)
@@ -41,13 +41,14 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X).
 
 * [LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, or 15, including
-  clang libraries.
+  clang libraries. LLVM 16 probably doesn't work yet, we need to make changes
+  on the OSL side to be compatible.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 8.0 or higher.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.80)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.81)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/openexr) 2.3
    or newer (recommended: 2.4 or higher; tested through 3.1)
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
@@ -55,7 +56,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
   old, and it's better to install a newer Bison (via Homebrew is one way to
   do this easily).
-* [PugiXML](http://pugixml.org/)
+* [PugiXML](http://pugixml.org/) >= 1.8 (we have tested through 1.13).
 * (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
   If it is not found at build time, the OSL `pointcloud` functions will not
   be operative.
@@ -64,8 +65,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10)
     * pybind11 >= 2.4.2 (Tested through 2.10)
     * NumPy
-* (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
-  the `osltoy` application will be disabled.
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.4).
+  If not found at build time, the `osltoy` application will be disabled.
 
 
 

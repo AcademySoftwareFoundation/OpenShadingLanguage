@@ -919,7 +919,7 @@ private:
     std::vector<ustring> m_renderer_outputs;  ///< Names of renderer outputs
     std::vector<SymLocationDesc> m_symlocs;
     int m_max_local_mem_KB;           ///< Local storage can a shader use
-    bool m_compile_report;            ///< Print compilation report?
+    int m_compile_report;             ///< Print compilation report?
     bool m_buffer_printf;             ///< Buffer/batch printf output?
     bool m_no_noise;                  ///< Substitute trivial noise calls
     bool m_no_pointcloud;             ///< Substitute trivial pointcloud calls

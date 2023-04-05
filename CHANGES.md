@@ -1,9 +1,16 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.11.0 -- 1 Apr? 2023 (compared to 1.12.10.0)
+Release 1.12.11.0 -- 5 Apr 2023 (compared to 1.12.10.0)
 --------------------------------------------------------
-
+* Build: Add Qt 6.x compatibility (Qt is only used for `osltoy`). #1655
+* Build: more careful about paths to look for LLVM. #1656
+* Build: Fix Cuda compilation flags for LLVM 15. #1659
+* Notice: OSL does not yet build properly against the newly release LLVM 16.
+  You must use LLVM 9-15. For Mac users who get their llvm from Homebrew,
+  please be aware that Homebrew has changed its default llvm to 16, so you'll
+  need to `brew install llvm@14` and make your OSL CMake define:
+  `-DLLVM_ROOT=/usr/local/opt/llvm@14`
 
 Release 1.12.10.0 -- 1 Mar 2023 (compared to 1.12.9.0)
 --------------------------------------------------------

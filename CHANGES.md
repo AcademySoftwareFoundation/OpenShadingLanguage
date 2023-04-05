@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.12.12.0 -- 1 May? 2023 (compared to 1.12.11.0)
+--------------------------------------------------------
+
+
 Release 1.12.11.0 -- 5 Apr 2023 (compared to 1.12.10.0)
 --------------------------------------------------------
 * Build: Add Qt 6.x compatibility (Qt is only used for `osltoy`). #1655

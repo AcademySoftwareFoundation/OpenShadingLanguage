@@ -16,7 +16,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * A suitable **C++14 or C++17** compiler to build OSL itself, which may be any of:
    - **GCC 6.1 or newer** (tested through gcc 12.1)
-   - Clang 3.4 or newer (tested through clang 15)
+   - Clang 3.4 or newer (tested through clang 16)
    - Microsoft Visual Studio **2017 or newer**
    - Intel C++ compiler icc **version 17 or newer** or LLVM-based icx compiler
      **version 2022 or newer**.
@@ -41,7 +41,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X).
 
 * **[LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, or 15**, including
-  clang libraries. LLVM 16 probably doesn't work yet, we need to make changes
+  clang libraries. LLVM 16 doesn't work yet, we need to make changes
   on the OSL side to be compatible.
 
 * (optional) For GPU rendering on NVIDIA GPUs:

@@ -189,6 +189,10 @@ else ifeq (${platform}, macosx)
         MY_CMAKE_FLAGS += \
             -DCMAKE_C_COMPILER=/usr/local/opt/llvm@15/bin/clang \
             -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@15/bin/clang++
+    else ifeq (${COMPILER},clang16)
+        MY_CMAKE_FLAGS += \
+                -DCMAKE_C_COMPILER=/usr/local/opt/llvm@16/bin/clang \
+                -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@16/bin/clang++
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     else ifeq (${COMPILER},gcc)
@@ -196,13 +200,13 @@ else ifeq (${platform}, macosx)
     else ifeq (${COMPILER},)
         # default compiler is clang, taken from the LLVM directory
         MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
-           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+           -DCMAKE_C_COMPILER=${LLVM_ROOT}/bin/clang \
+           -DCMAKE_CXX_COMPILER=${LLVM_ROOT}/bin/clang++
     else ifeq (${COMPILER},llvm)
         # "llvm" means "use the clang from our llvm"
         MY_CMAKE_FLAGS += \
-            -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
-            -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+            -DCMAKE_C_COMPILER=${LLVM_ROOT}/bin/clang \
+            -DCMAKE_CXX_COMPILER=${LLVM_ROOT}/bin/clang++
     endif
 
     # end generic OSX

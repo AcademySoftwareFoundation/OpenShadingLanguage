@@ -1098,6 +1098,7 @@ BackendLLVM::build_llvm_instance(bool groupentry)
     // records for each.
     find_basic_blocks();
     find_conditionals();
+    m_call_layers_inserted.clear();
 
     build_llvm_code(inst()->maincodebegin(), inst()->maincodeend());
 

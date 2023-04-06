@@ -142,13 +142,14 @@ BackendLLVM::llvm_call_layer(int layer, bool unconditional)
 
     if (!unconditional)
         ll.op_branch(after_block);  // also moves insert point
+
+    shadingsys().m_stat_call_layers_inserted++;
 }
 
 
 
 void
-BackendLLVM::llvm_run_connected_layers(Symbol& sym, int symindex, int opnum,
-                                       std::set<int>* already_run)
+BackendLLVM::llvm_run_connected_layers(Symbol& sym, int symindex, int opnum)
 {
     if (sym.valuesource() != Symbol::ConnectedVal)
         return;  // Nothing to do
@@ -160,16 +161,6 @@ BackendLLVM::llvm_run_connected_layers(Symbol& sym, int symindex, int opnum,
         const Connection& con(inst()->connection(c));
         // If the connection gives a value to this param
         if (con.dst.param == symindex) {
-            // already_run is a set of layers run for this particular op.
-            // Just so we don't stupidly do several consecutive checks on
-            // whether we ran this same layer. It's JUST for this op.
-            if (already_run) {
-                if (already_run->count(con.srclayer))
-                    continue;  // already ran that one on this op
-                else
-                    already_run->insert(con.srclayer);  // mark it
-            }
-
             if (inmain) {
                 // There is an instance-wide m_layers_already_run that tries
                 // to remember which earlier layers have unconditionally
@@ -187,6 +178,17 @@ BackendLLVM::llvm_run_connected_layers(Symbol& sym, int symindex, int opnum,
                     m_layers_already_run.insert(con.srclayer);
                 }
             }
+
+            // m_call_layers_inserted tracks if we've already run this layer either:
+            //   * inside the current basic block (opnum >= 0)
+            //   * while writing output parameters (opnum == -1)
+            const auto key = std::make_pair(opnum >= 0 ? m_bblockids[opnum]
+                                                       : opnum,
+                                            con.srclayer);
+            if (m_call_layers_inserted.count(key)) {
+                continue;
+            }
+            m_call_layers_inserted.insert(key);
 
             // If the earlier layer it comes from has not yet been
             // executed, do so now.
@@ -214,15 +216,11 @@ LLVMGEN(llvm_gen_useparam)
     OSL_DASSERT(!rop.inst()->unused()
                 && "oops, thought this layer was unused, why do we call it?");
 
-    // If we have multiple params needed on this statement, don't waste
-    // time checking the same upstream layer more than once.
-    std::set<int> already_run;
-
     Opcode& op(rop.inst()->ops()[opnum]);
     for (int i = 0; i < op.nargs(); ++i) {
         Symbol& sym  = *rop.opargsym(op, i);
         int symindex = rop.inst()->arg(op.firstarg() + i);
-        rop.llvm_run_connected_layers(sym, symindex, opnum, &already_run);
+        rop.llvm_run_connected_layers(sym, symindex, opnum);
         // If it's an interpolated (userdata) parameter and we're
         // initializing them lazily, now we have to do it.
         if ((sym.symtype() == SymTypeParam
@@ -233,6 +231,9 @@ LLVMGEN(llvm_gen_useparam)
             rop.llvm_assign_initial_value(sym);
         }
     }
+
+    rop.increment_useparam_ops();
+
     return true;
 }
 

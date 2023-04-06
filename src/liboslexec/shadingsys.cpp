@@ -1093,6 +1093,8 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     m_stat_global_connections                = 0;
     m_stat_tex_calls_codegened               = 0;
     m_stat_tex_calls_as_handles              = 0;
+    m_stat_useparam_ops                      = 0;
+    m_stat_call_layers_inserted              = 0;
     m_stat_master_load_time                  = 0;
     m_stat_optimization_time                 = 0;
     m_stat_getattribute_time                 = 0;
@@ -1768,6 +1770,8 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("stat:global_connections", int, m_stat_global_connections);
     ATTR_DECODE("stat:tex_calls_codegened", int, m_stat_tex_calls_codegened);
     ATTR_DECODE("stat:tex_calls_as_handles", int, m_stat_tex_calls_as_handles);
+    ATTR_DECODE("stat:useparam_ops", int, m_stat_useparam_ops);
+    ATTR_DECODE("stat:call_layers_inserted", int, m_stat_call_layers_inserted);
     ATTR_DECODE("stat:master_load_time", float, m_stat_master_load_time);
     ATTR_DECODE("stat:optimization_time", float, m_stat_optimization_time);
     ATTR_DECODE("stat:opt_locking_time", float, m_stat_opt_locking_time);
@@ -2402,6 +2406,8 @@ ShadingSystemImpl::getstats(int level) const
                   * (double(m_stat_postopt_syms)
                          / (std::max(1, (int)m_stat_preopt_syms))
                      - 1.0));
+        print(out, "  Optimized {} useparam ops into {} llvm run layer calls\n",
+              m_stat_useparam_ops, m_stat_call_layers_inserted);
     }
     print(out, "  Constant connections eliminated: {}\n",
           (int)m_stat_const_connections);

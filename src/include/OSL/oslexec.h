@@ -111,7 +111,8 @@ public:
 
 
 
-/// Parameter property hint bitfield values
+/// Parameter property hint bitflag values. The enum values must be powers of
+/// two so they can be combined with bitwise operators.
 enum class ParamHints : uint32_t {
     /// `none`: No special properties
     none = 0,

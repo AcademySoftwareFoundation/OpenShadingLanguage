@@ -266,7 +266,6 @@ rend_get_userdata(OSL::StringParam name, void* data, int data_size,
 #undef IS_PTR
 
 
-
 __device__ int
 osl_bind_interpolated_param(void* sg_, const char* name, long long type,
                             int userdata_has_derivs, void* userdata_data,

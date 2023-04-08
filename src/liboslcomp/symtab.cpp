@@ -143,6 +143,10 @@ Symbol::print(std::ostream& out, int maxvals) const
             out << " renderer-output";
         if (symtype() == SymTypeParam && !lockgeom())
             out << " lockgeom=0";
+        if (symtype() == SymTypeParam && interactive())
+            out << " interactive=1";
+        if (symtype() == SymTypeParam && noninteractive())
+            out << " interactive=0";
     }
     out << "\n";
     if (symtype() == SymTypeConst) {

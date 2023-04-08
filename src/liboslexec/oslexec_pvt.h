@@ -539,9 +539,9 @@ public:
                       void* val);
     bool LoadMemoryCompiledShader(string_view shadername, string_view buffer);
     bool Parameter(ShaderGroup& group, string_view name, TypeDesc t,
-                   const void* val, bool lockgeom);
+                   const void* val, ParamHints props);
     bool Parameter(string_view name, TypeDesc t, const void* val,
-                   bool lockgeom);
+                   ParamHints props);
     bool Shader(ShaderGroup& group, string_view shaderusage,
                 string_view shadername, string_view layername);
     bool Shader(string_view shaderusage, string_view shadername,
@@ -1131,8 +1131,7 @@ public:
     ShadingSystemImpl& shadingsys() const { return m_master->shadingsys(); }
 
     /// Apply pending parameters
-    ///
-    void parameters(const ParamValueList& params);
+    void parameters(const ParamValueList& params, cspan<ParamHints> hints);
 
     /// Find the named symbol, return its index in the symbol array, or
     /// -1 if not found.
@@ -1392,14 +1391,16 @@ public:
         // Using bit fields to keep the data in 8 bytes in total.
         unsigned char m_valuesource : 3;
         bool m_connected_down : 1;
-        bool m_lockgeom : 1;
-        int m_arraylen : 27;
+        bool m_interpolated : 1;
+        bool m_interactive : 1;
+        int m_arraylen : 26;
         int m_data_offset;
 
         SymOverrideInfo()
             : m_valuesource(Symbol::DefaultVal)
             , m_connected_down(false)
-            , m_lockgeom(true)
+            , m_interpolated(false)
+            , m_interactive(false)
             , m_arraylen(0)
             , m_data_offset(0)
         {
@@ -1416,8 +1417,10 @@ public:
         bool connected_down() const { return m_connected_down; }
         void connected_down(bool c) { m_connected_down = c; }
         bool connected() const { return valuesource() == Symbol::ConnectedVal; }
-        bool lockgeom() const { return m_lockgeom; }
-        void lockgeom(bool l) { m_lockgeom = l; }
+        bool interpolated() const { return m_interpolated; }
+        void interpolated(bool val) { m_interpolated = val; }
+        bool interactive() const { return m_interactive; }
+        void interactive(bool val) { m_interactive = val; }
         int arraylen() const { return m_arraylen; }
         void arraylen(int s) { m_arraylen = s; }
         int dataoffset() const { return m_data_offset; }
@@ -1426,11 +1429,13 @@ public:
                                const SymOverrideInfo& b)
         {
             return a.valuesource() == b.valuesource()
-                   && a.lockgeom() == b.lockgeom()
+                   && a.interpolated() == b.interpolated()
+                   && a.interactive() == b.interactive()
                    && a.arraylen() == b.arraylen();
         }
     };
     typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;
+    static_assert(sizeof(SymOverrideInfo) == 8, "SymOverrideInfo size");
 
     SymOverrideInfo* instoverride(int i)
     {
@@ -1951,9 +1956,10 @@ private:
     // PTX assembly for compiled ShaderGroup
     std::string m_llvm_ptx_compiled_version;
 
-    ParamValueList m_pending_params;  ///< Pending Parameter() values
-    ustring m_group_use;              ///< "Usage" of group
-    bool m_complete = false;          ///< Successfully ShaderGroupEnd?
+    ParamValueList m_pending_params;          // Pending Parameter() values
+    std::vector<ParamHints> m_pending_hints;  // ParamHints of pending params
+    ustring m_group_use;                      // "Usage" of group
+    bool m_complete = false;                  // Successfully ShaderGroupEnd?
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

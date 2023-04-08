@@ -1,8 +1,8 @@
 Expression-based shader text is:
 ---
 shader expr_0 (
-    float s = u [[ int lockgeom=0 ]],
-    float t = v [[ int lockgeom=0 ]],
+    float s = u [[ int interpolated=1 ]],
+    float t = v [[ int interpolated=1 ]],
     output color result = 0,
     output float alpha = 1,
   )

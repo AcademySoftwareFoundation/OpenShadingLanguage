@@ -151,18 +151,18 @@ ShadingSystem::ShaderGroupEnd(void)
 
 bool
 ShadingSystem::Parameter(ShaderGroup& group, string_view name, TypeDesc t,
-                         const void* val, bool lockgeom)
+                         const void* val, ParamHints hints)
 {
-    return m_impl->Parameter(group, name, t, val, lockgeom);
+    return m_impl->Parameter(group, name, t, val, hints);
 }
 
 
 
 bool
 ShadingSystem::Parameter(string_view name, TypeDesc t, const void* val,
-                         bool lockgeom)
+                         ParamHints hints)
 {
-    return m_impl->Parameter(name, t, val, lockgeom);
+    return m_impl->Parameter(name, t, val, hints);
 }
 
 
@@ -2556,26 +2556,19 @@ ShadingSystemImpl::printstats() const
 
 bool
 ShadingSystemImpl::Parameter(string_view name, TypeDesc t, const void* val,
-                             bool lockgeom)
+                             ParamHints hints)
 {
-    return Parameter(*m_curgroup, name, t, val, lockgeom);
+    return Parameter(*m_curgroup, name, t, val, hints);
 }
 
 
 
 bool
 ShadingSystemImpl::Parameter(ShaderGroup& group, string_view name, TypeDesc t,
-                             const void* val, bool lockgeom)
+                             const void* val, ParamHints hints)
 {
-    // We work very hard not to do extra copies of the data.  First,
-    // grow the pending list by one (empty) slot...
-    group.m_pending_params.grow();
-    // ...then initialize it in place
-    group.m_pending_params.back().init(name, t, 1, val);
-    // If we have a possible geometric override (lockgeom=false), set the
-    // param's interpolation to VERTEX rather than the default CONSTANT.
-    if (lockgeom == false)
-        group.m_pending_params.back().interp(OIIO::ParamValue::INTERP_VERTEX);
+    group.m_pending_params.emplace_back(name, t, 1, val);
+    group.m_pending_hints.push_back(hints);
     return true;
 }
 
@@ -2712,9 +2705,11 @@ ShadingSystemImpl::Shader(ShaderGroup& group, string_view shaderusage,
     }
 
     ShaderInstanceRef instance(new ShaderInstance(master, layername));
-    instance->parameters(group.m_pending_params);
+    instance->parameters(group.m_pending_params, group.m_pending_hints);
     group.m_pending_params.clear();
     group.m_pending_params.shrink_to_fit();
+    group.m_pending_hints.clear();
+    group.m_pending_hints.shrink_to_fit();
 
     if (group.m_group_use.empty()) {
         // First in a group
@@ -2986,7 +2981,8 @@ ShadingSystemImpl::ShaderGroupBegin(string_view groupname, string_view usage,
             }
         }
         string_view paramname(paramname_string);
-        int lockgeom = m_lockgeom_default;
+        int lockgeom     = m_lockgeom_default;
+        ParamHints hints = ParamHints::none;
         // For speed, reserve space. Note that for "unsized" arrays, we only
         // preallocate 1 slot and let it grow as needed. That's ok. For
         // everything else, we will reserve the right amount up front.
@@ -3090,6 +3086,26 @@ ShadingSystemImpl::ShaderGroupBegin(string_view groupname, string_view usage,
                                             hint_name);
                         break;
                     }
+                    set(hints, ParamHints::interpolated, lockgeom == 0);
+                } else if (hint_name == "interpolated"
+                           && hint_type == TypeInt) {
+                    int v = 0;
+                    if (!Strutil::parse_int(p, v)) {
+                        err     = true;
+                        errdesc = fmtformat("hint {} expected int value",
+                                            hint_name);
+                        break;
+                    }
+                    set(hints, ParamHints::interpolated, v);
+                } else if (hint_name == "interactive" && hint_type == TypeInt) {
+                    int v = 0;
+                    if (!Strutil::parse_int(p, v)) {
+                        err     = true;
+                        errdesc = fmtformat("hint {} expected int value",
+                                            hint_name);
+                        break;
+                    }
+                    set(hints, ParamHints::interactive, v);
                 } else {
                     err     = true;
                     errdesc = fmtformat("unknown hint '{} {}'", hint_type,
@@ -3108,11 +3124,11 @@ ShadingSystemImpl::ShaderGroupBegin(string_view groupname, string_view usage,
 
         bool ok = true;
         if (type.basetype == TypeDesc::INT) {
-            ok = Parameter(*g, paramname, type, &intvals[0], lockgeom);
+            ok = Parameter(*g, paramname, type, &intvals[0], hints);
         } else if (type.basetype == TypeDesc::FLOAT) {
-            ok = Parameter(*g, paramname, type, &floatvals[0], lockgeom);
+            ok = Parameter(*g, paramname, type, &floatvals[0], hints);
         } else if (type.basetype == TypeDesc::STRING) {
-            ok = Parameter(*g, paramname, type, &stringvals[0], lockgeom);
+            ok = Parameter(*g, paramname, type, &stringvals[0], hints);
         }
         if (!ok) {
             errstatement = pstart;

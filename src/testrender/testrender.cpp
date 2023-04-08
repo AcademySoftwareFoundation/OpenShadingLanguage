@@ -87,7 +87,6 @@ set_shadingsys_options()
     shadingsys->attribute("llvm_optimize", llvm_opt);
 
     shadingsys->attribute("profile", int(profile));
-    shadingsys->attribute("lockgeom", 1);
     shadingsys->attribute("debug_nan", debugnan);
     shadingsys->attribute("debug_uninit", debug_uninit);
     shadingsys->attribute("userdata_isconnected", userdata_isconnected);

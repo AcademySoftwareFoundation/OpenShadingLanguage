@@ -111,6 +111,67 @@ public:
 
 
 
+/// Parameter property hint bitflag values. The enum values must be powers of
+/// two so they can be combined with bitwise operators.
+enum class ParamHints : uint32_t {
+    /// `none`: No special properties
+    none = 0,
+    /// `interpolated`: This parameter may be an interpolated "user data" or
+    /// "geometric primitive" variable, and so may take on different values at
+    /// different points on the surface or on different objects that share the
+    /// same material. Any optimization of the shader should take this into
+    /// account.
+    interpolated = 1,
+    /// `interactive`: Parameter may have its value interactively modified by
+    /// subsequent ReParameter calls. Any optimization of the shader should
+    /// take this into account.
+    interactive = 2
+};
+
+inline constexpr ParamHints
+operator|(ParamHints a, ParamHints b)
+{
+    return static_cast<ParamHints>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline constexpr ParamHints
+operator&(ParamHints a, ParamHints b)
+{
+    return static_cast<ParamHints>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+inline ParamHints&
+operator|=(ParamHints& a, ParamHints b)
+{
+    a = a | b;
+    return a;
+}
+
+inline ParamHints&
+operator&=(ParamHints& a, ParamHints b)
+{
+    a = a & b;
+    return a;
+}
+
+inline constexpr ParamHints
+operator~(ParamHints a)
+{
+    return static_cast<ParamHints>(~static_cast<int>(a));
+}
+
+inline ParamHints&
+set(ParamHints& a, ParamHints b, bool on = true)
+{
+    if (on)
+        a |= b;
+    else
+        a &= ~b;
+    return a;
+}
+
+
+
 class OSLEXECPUBLIC ShadingSystem {
 public:
     ShadingSystem(RendererServices* renderer   = NULL,
@@ -173,7 +234,7 @@ public:
     ///    int lazyerror          Run layers lazily even if they have error
     ///                              ops after optimization (1).
     ///    int lazy_userdata      Retrieve userdata lazily (0).
-    ///    int userdata_isconnected  Should lockgeom=0 params (that may
+    ///    int userdata_isconnected  Should interpolated=1 params (that may
     ///                              receive userdata) return true from
     ///                              isconnected()? (0)
     ///    int greedyjit          Optimize and compile all shaders up front,
@@ -200,6 +261,7 @@ public:
     ///                              that don't specify it (1).  Lockgeom
     ///                              means a param CANNOT be overridden by
     ///                              interpolated geometric parameters.
+    ///                              This option is slated for deprecation.
     ///    int countlayerexecs    Add extra code to count total layers run.
     ///    int allow_shader_replacement Allow shader to be specified more than
     ///                              once, replacing former definition.
@@ -531,15 +593,50 @@ public:
     bool ShaderGroupEnd(ShaderGroup& group);
 
     /// Set a parameter of the next shader that will be added to the group,
-    /// optionally setting the 'lockgeom' metadata for that parameter
-    /// (despite how it may have been set in the shader).  If lockgeom is
-    /// false, it means that this parameter should NOT be considered locked
-    /// against changes by the geometry, and therefore the shader should not
-    /// optimize assuming that the instance value (the 'val' specified by
-    /// this call) is a constant.
+    /// optionally setting or overriding properties with the `hints` argument.
+    /// Individual `hints` bits are defined and documented by the ParamHints
+    /// enum class.
     bool Parameter(ShaderGroup& group, string_view name, TypeDesc t,
-                   const void* val, bool lockgeom = true);
+                   const void* val, ParamHints hints = ParamHints::none);
+
+    /// DEPRECATED(1.13) Parameter() call: instead of a full ParamHints
+    /// argument, there is just a bool `lockgeom` that default to true, and
+    /// when set to false is the same thing as setting
+    /// `ParamHints::interpolated`.
+    bool Parameter(ShaderGroup& group, string_view name, TypeDesc t,
+                   const void* val, bool lockgeom)
+    {
+        return Parameter(group, name, t, val,
+                         lockgeom ? ParamHints::none
+                                  : ParamHints::interpolated);
+    }
+
     // Shortcuts for param passing a single int, float, or string.
+    bool Parameter(ShaderGroup& group, string_view name, int val,
+                   ParamHints hints = ParamHints::none)
+    {
+        return Parameter(group, name, TypeDesc::INT, &val, hints);
+    }
+    bool Parameter(ShaderGroup& group, string_view name, float val,
+                   ParamHints hints = ParamHints::none)
+    {
+        return Parameter(group, name, TypeDesc::FLOAT, &val, hints);
+    }
+    bool Parameter(ShaderGroup& group, string_view name, const std::string& val,
+                   ParamHints hints = ParamHints::none)
+    {
+        const char* s = val.c_str();
+        return Parameter(group, name, TypeDesc::STRING, &s, hints);
+    }
+    bool Parameter(ShaderGroup& group, string_view name, ustring val,
+                   ParamHints hints = ParamHints::none)
+    {
+        return Parameter(group, name, TypeDesc::STRING, (const char**)&val,
+                         hints);
+    }
+
+    // DEPRECATED(1.13): use the version above that takes ParamHints.
+    // This is the old version that takes `bool lockgeom`.
     bool Parameter(ShaderGroup& group, string_view name, int val,
                    bool lockgeom = true)
     {
@@ -590,10 +687,8 @@ public:
     /// Replace a parameter value in a previously-declared shader group.
     /// This is meant to called after the ShaderGroupBegin/End, but will
     /// fail if the shader has already been irrevocably optimized/compiled,
-    /// unless the particular parameter is marked as lockgeom=0 (which
-    /// indicates that it's a parameter that may be overridden by the
-    /// geometric primitive).  This call gives you a way of changing the
-    /// instance value, even if it's not a geometric override.
+    /// unless the particular parameter is marked as either interpolated=1
+    /// or interactive=1.
     bool ReParameter(ShaderGroup& group, string_view layername,
                      string_view paramname, TypeDesc type, const void* val);
     // Shortcuts for param passing a single int, float, or string.
@@ -629,12 +724,21 @@ public:
     // above that take an explicit `ShaderGroup&`, which are thread-safe
     // and re-entrant.
     bool Parameter(string_view name, TypeDesc t, const void* val,
-                   bool lockgeom = true);
+                   ParamHints hints = ParamHints::none);
     bool Shader(string_view shaderusage, string_view shadername,
                 string_view layername);
     bool ConnectShaders(string_view srclayer, string_view srcparam,
                         string_view dstlayer, string_view dstparam);
     bool ShaderGroupEnd(void);
+
+    // DEPRECATED(1.13): use the version above that takes ParamHints.
+    // This is the old version that takes `bool lockgeom`.
+    bool Parameter(string_view name, TypeDesc t, const void* val, bool lockgeom)
+    {
+        return Parameter(name, t, val,
+                         lockgeom ? ParamHints::none
+                                  : ParamHints::interpolated);
+    }
 
     /// Create a per-thread data needed for shader execution.  It's very
     /// important for the app to never use a PerThreadInfo from more than

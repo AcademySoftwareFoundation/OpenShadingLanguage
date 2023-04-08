@@ -171,7 +171,7 @@ OSOReaderToMaster::symbol(SymType symtype, TypeSpec typespec, const char* name_)
         sym.dataoffset (m_shadingsys.global_heap_offset (sym.name()));
     }
 #endif
-    sym.lockgeom(m_shadingsys.lockgeom_default());
+    sym.interpolated(!m_shadingsys.lockgeom_default());
     m_master->m_symbols.push_back(sym);
     m_symmap[name] = int(m_master->m_symbols.size()) - 1;
     // Start the index at which we add specified defaults
@@ -419,7 +419,13 @@ OSOReaderToMaster::hint(string_view hintstring)
             Symbol& sym(m_master->m_symbols.back());
             if (type == TypeDesc::TypeInt && ident == "lockgeom"
                 && Strutil::parse_int(h, ival) && ival >= 0)
-                sym.lockgeom(ival);
+                sym.interpolated(!ival);  // soft deprecated
+            else if (type == TypeDesc::TypeInt && ident == "interpolated"
+                     && Strutil::parse_int(h, ival) && ival >= 0)
+                sym.interpolated(ival);
+            else if (type == TypeDesc::TypeInt && ident == "interactive"
+                     && Strutil::parse_int(h, ival) && ival >= 0)
+                sym.interactive(ival);
             else if (type == TypeDesc::TypeInt && ident == "allowconnect"
                      && Strutil::parse_int(h, ival) && ival >= 0)
                 sym.allowconnect(ival);

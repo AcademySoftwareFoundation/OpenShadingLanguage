@@ -955,6 +955,8 @@ private:
     atomic_int m_stat_global_connections;   ///< Stat: global connections elim'd
     atomic_int m_stat_tex_calls_codegened;  ///< Stat: total texture calls
     atomic_int m_stat_tex_calls_as_handles;  ///< Stat: texture calls with handles
+    atomic_int m_stat_useparam_ops;  ///< Stat: pre-optimization useparam ops
+    atomic_int m_stat_call_layers_inserted;  ///< Stat: post-opt layer calls
     double m_stat_master_load_time;          ///< Stat: time loading masters
     double m_stat_optimization_time;         ///< Stat: time spent optimizing
     double m_stat_opt_locking_time;          ///<   locking time
@@ -2606,6 +2608,8 @@ protected:
     std::vector<char> m_in_conditional;  ///< Whether each op is in a cond
     std::vector<char> m_in_loop;         ///< Whether each op is in a loop
     int m_first_return;                  ///< Op number of first return or exit
+    std::set<std::pair<int, int>>
+        m_call_layers_inserted;  ///< Lookup for (bblockid, layerid)
 };
 
 };  // namespace pvt

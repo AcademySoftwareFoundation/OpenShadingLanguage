@@ -1474,7 +1474,8 @@ test_group_attributes(ShaderGroup* group)
                                  &types);
         OSL_DASSERT(names && scopes && types);
         for (int i = 0; i < nattr; ++i)
-            std::cout << "    " << names[i] << ' ' << scopes[i] << ' ' << types[i] << "\n";
+            std::cout << "    " << names[i] << ' ' << scopes[i] << ' '
+                      << types[i] << "\n";
 
         int unk = 0;
         shadingsys->getattribute(group, "unknown_attributes_needed", unk);

@@ -213,7 +213,8 @@ struct AttributeNeeded {
     ustring scope;
     TypeDesc type;
 
-    AttributeNeeded(ustring name, ustring scope = ustring(), TypeDesc type = TypeUnknown)
+    AttributeNeeded(ustring name, ustring scope = ustring(),
+                    TypeDesc type = TypeUnknown)
         : name(name), scope(scope), type(type)
     {
     }

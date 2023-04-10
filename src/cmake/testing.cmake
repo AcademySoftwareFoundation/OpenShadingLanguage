@@ -299,6 +299,7 @@ macro (osl_add_all_tests)
                 oslc-err-struct-dup oslc-err-struct-print
                 oslc-err-type-as-variable
                 oslc-err-unknown-ctr
+                oslc-literalfold
                 oslc-pragma-warnerr
                 oslc-warn-commainit
                 oslc-variadic-macro

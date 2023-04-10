@@ -1,0 +1,69 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Test oslc-side constant folding of simple binary operators on literal
+// values
+
+#define three 3
+#define five 5
+
+
+shader test(
+    int add_i = five + three,
+    int sub_i = five - three,
+    int mul_i = five * three,
+    int div_i = five / three,
+    int mod_i = five % three,
+    int eq_i = five == three,
+    int ne_i = five != three,
+    int gt_i = five > three,
+    int ge_i = five >= three,
+    int lt_i = five < three,
+    int le_i = five <= three,
+    int and_i = five & three,
+    int or_i = five | three,
+    int xor_i = five ^ three,
+    int shl_i = five << three,
+    int shr_i = five >> three,
+
+    float add_f = float(five) + float(three),
+    float sub_f = float(five) - float(three),
+    float mul_f = float(five) * float(three),
+    float div_f = float(five) / float(three),
+    int eq_f = float(five) == float(three),
+    int ne_f = float(five) != float(three),
+    int gt_f = float(five) > float(three),
+    int ge_f = float(five) >= float(three),
+    int lt_f = float(five) < float(three),
+    int le_f = float(five) <= float(three),
+)
+{
+    printf("int add_i = %d\n", add_i);
+    printf("int sub_i = %d\n", sub_i);
+    printf("int mul_i = %d\n", mul_i);
+    printf("int div_i = %d\n", div_i);
+    printf("int mod_i = %d\n", mod_i);
+    printf("int eq_i = %d\n", eq_i);
+    printf("int ne_i = %d\n", ne_i);
+    printf("int gt_i = %d\n", gt_i);
+    printf("int ge_i = %d\n", ge_i);
+    printf("int lt_i = %d\n", lt_i);
+    printf("int le_i = %d\n", le_i);
+    printf("int and_i = %d\n", and_i);
+    printf("int or_i = %d\n", or_i);
+    printf("int xor_i = %d\n", xor_i);
+    printf("int shl_i = %d\n", shl_i);
+    printf("int shr_i = %d\n", shr_i);
+
+    printf("float add_f = %f\n", add_f);
+    printf("float sub_f = %f\n", sub_f);
+    printf("float mul_f = %f\n", mul_f);
+    printf("float div_f = %f\n", div_f);
+    printf("float eq_f = %d\n", eq_f);
+    printf("float ne_f = %d\n", ne_f);
+    printf("float gt_f = %d\n", gt_f);
+    printf("float ge_f = %d\n", ge_f);
+    printf("float lt_f = %d\n", lt_f);
+    printf("float le_f = %d\n", le_f);
+}

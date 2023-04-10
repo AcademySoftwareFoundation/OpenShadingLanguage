@@ -1116,90 +1116,151 @@ ASTassign_expression::opword() const
         OSL_ASSERT (0 && "unknown assignment expression");
         return "assign"; // punt
     }
+    // clang-format on
 }
 
 
 
-ASTunary_expression::ASTunary_expression (OSLCompilerImpl *comp, int op,
-                                          ASTNode *expr)
-    : ASTNode (unary_expression_node, comp, op, expr)
+ASTunary_expression::ASTunary_expression(OSLCompilerImpl* comp, int op,
+                                         ASTNode* expr)
+    : ASTNode(unary_expression_node, comp, op, expr)
 {
     // Check for a user-overloaded function for this operator
-    Symbol *sym = comp->symtab().find(ustring::fmtformat("__operator__{}__", opword()));
+    Symbol* sym = comp->symtab().find(
+        ustring::fmtformat("__operator__{}__", opword()));
     if (sym && sym->symtype() == SymTypeFunction)
-        m_function_overload = (FunctionSymbol *)sym;
+        m_function_overload = (FunctionSymbol*)sym;
 }
 
 
 
-const char *
-ASTunary_expression::childname (size_t i) const
+const char*
+ASTunary_expression::childname(size_t i) const
 {
-    static const char *name[] = { "expression" };
+    static const char* name[] = { "expression" };
     return name[i];
 }
 
 
 
-const char *
-ASTunary_expression::opname () const
+const char*
+ASTunary_expression::opname() const
 {
     switch (m_op) {
-    case Add   : return "+";
-    case Sub   : return "-";
-    case Not   : return "!";
-    case Compl : return "~";
-    default:
-        OSL_ASSERT (0 && "unknown unary expression");
-        return "unknown";
+    case Add: return "+";
+    case Sub: return "-";
+    case Not: return "!";
+    case Compl: return "~";
+    default: OSL_ASSERT(0 && "unknown unary expression"); return "unknown";
     }
 }
 
 
 
-const char *
-ASTunary_expression::opword () const
+const char*
+ASTunary_expression::opword() const
 {
     switch (m_op) {
-    case Add   : return "add";
-    case Sub   : return "neg";
-    case Not   : return "not";
-    case Compl : return "compl";
-    default:
-        OSL_ASSERT (0 && "unknown unary expression");
-        return "unknown";
+    case Add: return "add";
+    case Sub: return "neg";
+    case Not: return "not";
+    case Compl: return "compl";
+    default: OSL_ASSERT(0 && "unknown unary expression"); return "unknown";
     }
 }
 
 
 
-ASTbinary_expression::ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
-                                            ASTNode *left, ASTNode *right)
-    : ASTNode (binary_expression_node, comp, op, left, right)
+ASTbinary_expression::ASTbinary_expression(OSLCompilerImpl* comp, Operator op,
+                                           ASTNode* left, ASTNode* right)
+    : ASTNode(binary_expression_node, comp, op, left, right)
 {
     // Check for a user-overloaded function for this operator.
     // Disallow a few ops from overloading.
     if (op != And && op != Or) {
         ustring funcname = ustring::fmtformat("__operator__{}__", opword());
-        Symbol *sym = comp->symtab().find (funcname);
+        Symbol* sym      = comp->symtab().find(funcname);
         if (sym && sym->symtype() == SymTypeFunction)
-            m_function_overload = (FunctionSymbol *)sym;
+            m_function_overload = (FunctionSymbol*)sym;
     }
 }
 
 
 
-const char *
-ASTbinary_expression::childname (size_t i) const
+ASTNode*
+ASTbinary_expression::make(OSLCompilerImpl* comp, Operator op, ASTNode* left,
+                           ASTNode* right)
 {
-    static const char *name[] = { "left", "right" };
+    // If the left and right are both literal constants, fold the expression
+    if (left->nodetype() == literal_node && right->nodetype() == literal_node) {
+        ASTNode* cf = nullptr;  // constant-folded result
+        if (left->typespec().is_int() && right->typespec().is_int()) {
+            int lv = dynamic_cast<ASTliteral*>(left)->intval();
+            int rv = dynamic_cast<ASTliteral*>(right)->intval();
+            switch (op) {
+            case Mul: cf = new ASTliteral(comp, lv * rv); break;
+            case Div: cf = new ASTliteral(comp, rv ? lv / rv : 0); break;
+            case Add: cf = new ASTliteral(comp, lv + rv); break;
+            case Sub: cf = new ASTliteral(comp, lv - rv); break;
+            case Mod: cf = new ASTliteral(comp, rv ? lv % rv : 0); break;
+            case Equal: cf = new ASTliteral(comp, lv == rv ? 1 : 0); break;
+            case NotEqual: cf = new ASTliteral(comp, lv != rv ? 1 : 0); break;
+            case Greater: cf = new ASTliteral(comp, lv > rv ? 1 : 0); break;
+            case Less: cf = new ASTliteral(comp, lv < rv ? 1 : 0); break;
+            case GreaterEqual:
+                cf = new ASTliteral(comp, lv >= rv ? 1 : 0);
+                break;
+            case LessEqual: cf = new ASTliteral(comp, lv <= rv ? 1 : 0); break;
+            case BitAnd: cf = new ASTliteral(comp, lv & rv); break;
+            case BitOr: cf = new ASTliteral(comp, lv | rv); break;
+            case Xor: cf = new ASTliteral(comp, lv ^ rv); break;
+            case ShiftLeft: cf = new ASTliteral(comp, lv << rv); break;
+            case ShiftRight: cf = new ASTliteral(comp, lv >> rv); break;
+            default: break;
+            }
+        } else if (left->typespec().is_float()
+                   && right->typespec().is_float()) {
+            float lv = dynamic_cast<ASTliteral*>(left)->floatval();
+            float rv = dynamic_cast<ASTliteral*>(right)->floatval();
+            switch (op) {
+            case Mul: cf = new ASTliteral(comp, lv * rv); break;
+            case Div: cf = new ASTliteral(comp, rv ? lv / rv : 0.0f); break;
+            case Add: cf = new ASTliteral(comp, lv + rv); break;
+            case Sub: cf = new ASTliteral(comp, lv - rv); break;
+            case Equal: cf = new ASTliteral(comp, lv == rv ? 1 : 0); break;
+            case NotEqual: cf = new ASTliteral(comp, lv != rv ? 1 : 0); break;
+            case Greater: cf = new ASTliteral(comp, lv > rv ? 1 : 0); break;
+            case Less: cf = new ASTliteral(comp, lv < rv ? 1 : 0); break;
+            case GreaterEqual:
+                cf = new ASTliteral(comp, lv >= rv ? 1 : 0);
+                break;
+            case LessEqual: cf = new ASTliteral(comp, lv <= rv ? 1 : 0); break;
+            default: break;
+            }
+        }
+        if (cf) {
+            delete left;
+            delete right;
+            return cf;
+        }
+    }
+
+    return new ASTbinary_expression(comp, op, left, right);
+}
+
+
+
+const char*
+ASTbinary_expression::childname(size_t i) const
+{
+    static const char* name[] = { "left", "right" };
     return name[i];
 }
 
 
 
-const char *
-ASTbinary_expression::opname () const
+const char*
+ASTbinary_expression::opname() const
 {
     // clang-format off
     switch (m_op) {

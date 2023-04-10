@@ -47,7 +47,7 @@ jobs:
             pybind11_ver: v2.4.2
           - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7
             nametag: linux-clang9-llvm9
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             vfxyear: 2019
             vfxsuffix: -clang9
             cc_compiler: clang
@@ -290,7 +290,7 @@ jobs:
         include:
           - desc: Debug gcc7/C++14 llvm9 py2.7 oiio2.3 exr2.4 sse4 boost1.65 exr2.4
             nametag: linux-debug-gcc7-llvm9
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             cxx_compiler: g++-7
             cxx_std: 14
             openexr_ver: v2.4.3
@@ -304,7 +304,7 @@ jobs:
                             CTEST_TEST_TIMEOUT=240
           - desc: gcc10/C++17 llvm10 oiio-release boost1.65 exr2.5 avx2
             nametag: linux-2021ish-gcc10-llvm10
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             cxx_compiler: g++-10
             cxx_std: 17
             fmt_ver: 7.0.1
@@ -318,20 +318,20 @@ jobs:
                             PUGIXML_VERSION=v1.10
           - desc: latest releases gcc11/C++17 llvm13 boost1.71 exr3.1 py3.9 avx2 batch-b16avx512
             nametag: linux-latest-releases
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             cxx_compiler: g++-11
             cxx_std: 17
             fmt_ver: 9.1.0
-            openexr_ver: v3.1.5
+            openexr_ver: v3.1.6
             openimageio_ver: master
             pybind11_ver: v2.10.0
-            python_ver: 3.9
+            python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=13.0.0
                             LLVM_DISTRO_NAME=ubuntu-20.04
                             OPENCOLORIO_VERSION=v2.2.0
-                            PUGIXML_VERSION=v1.11.4
+                            PUGIXML_VERSION=v1.13
           - desc: bleeding edge gcc12/C++17 llvm14 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             os: ubuntu-22.04
@@ -436,6 +436,7 @@ jobs:
             aclang: 13
             setenvs: export LLVMBREWVER="@14" DO_BREW_UPDATE=1
                             OPENIMAGEIO_VERSION=release
+                            QT_BREW_VERSION="@5"
           - desc: MacOS-12
             os: macos-12
             nametag: macos11-p310

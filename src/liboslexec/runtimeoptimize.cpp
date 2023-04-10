@@ -3401,6 +3401,8 @@ RuntimeOptimizer::run()
             new_nops, old_nops,
             100.0 * double((long long)new_nops - (long long)old_nops)
                 / double(old_nops));
+    }
+    if (shadingsys().m_compile_report > 1) {
         if (does_nothing)
             shadingcontext()->infofmt("Group does nothing");
         if (m_textures_needed.size()) {

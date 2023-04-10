@@ -23,11 +23,15 @@
 
 # try to find llvm-config, with a specific version if specified
 if (LLVM_DIRECTORY)
-    set (LLVM_CONFIG_PATH_HINTS "${LLVM_DIRECTORY}/bin")
+    list (APPEND LLVM_CONFIG_PATH_HINTS "${LLVM_DIRECTORY}/bin")
+endif ()
+if (LLVM_ROOT)
+    list (APPEND LLVM_CONFIG_PATH_HINTS "${LLVM_ROOT}/bin")
+endif ()
+if (DEFINED ENV{LLVM_ROOT})
+    list (APPEND LLVM_CONFIG_PATH_HINTS "$ENV{LLVM_ROOT}/bin")
 endif ()
 list (APPEND LLVM_CONFIG_PATH_HINTS
-        "${LLVM_ROOT}/bin"
-        "$ENV{LLVM_ROOT}/bin"
         "/usr/local/opt/llvm/${LLVM_VERSION}/bin/"
         "/usr/local/opt/llvm/bin/")
 find_program (LLVM_CONFIG

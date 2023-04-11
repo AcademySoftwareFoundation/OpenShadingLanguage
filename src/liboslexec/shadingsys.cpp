@@ -2102,6 +2102,11 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
         *(ustring**)val = n ? &group->m_attribute_scopes[0] : NULL;
         return true;
     }
+    if (name == "attribute_types" && type.basetype == TypeDesc::PTR) {
+        size_t n         = group->m_attribute_types.size();
+        *(TypeDesc**)val = n ? &group->m_attribute_types[0] : NULL;
+        return true;
+    }
     if (name == "unknown_attributes_needed" && type == TypeDesc::TypeInt) {
         *(int*)val = (int)group->m_unknown_attributes_needed;
         return true;
@@ -3560,6 +3565,7 @@ ShadingSystemImpl::optimize_group(ShaderGroup& group, ShadingContext* ctx,
         for (auto&& f : rop.m_attributes_needed) {
             group.m_attributes_needed.push_back(f.name);
             group.m_attribute_scopes.push_back(f.scope);
+            group.m_attribute_types.push_back(f.type);
         }
         group.m_optimized = true;
 

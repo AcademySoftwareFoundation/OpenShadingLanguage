@@ -211,9 +211,11 @@ struct UserDataNeeded {
 struct AttributeNeeded {
     ustring name;
     ustring scope;
+    TypeDesc type;
 
-    AttributeNeeded(ustring name, ustring scope = ustring())
-        : name(name), scope(scope)
+    AttributeNeeded(ustring name, ustring scope = ustring(),
+                    TypeDesc type = TypeUnknown)
+        : name(name), scope(scope), type(type)
     {
     }
 
@@ -223,6 +225,15 @@ struct AttributeNeeded {
             return a.name < b.name;
         if (a.scope != b.scope)
             return a.scope < b.scope;
+        if (a.type.basetype != b.type.basetype)
+            return a.type.basetype < b.type.basetype;
+        if (a.type.aggregate != b.type.aggregate)
+            return a.type.aggregate < b.type.aggregate;
+        if (a.type.arraylen != b.type.arraylen)
+            return a.type.arraylen < b.type.arraylen;
+        // Ignore vector semantics
+        // if (a.type.vecsemantics != b.type.vecsemantics)
+        //     return a.type.vecsemantics < b.type.vecsemantics;
         return false;  // they are equal
     }
 };
@@ -1919,6 +1930,7 @@ private:
     std::vector<void*> m_userdata_init_vals;
     std::vector<ustring> m_attributes_needed;
     std::vector<ustring> m_attribute_scopes;
+    std::vector<TypeDesc> m_attribute_types;
     std::vector<ustring> m_renderer_outputs;  ///< Names of renderer outputs
     std::vector<SymLocationDesc> m_symlocs;   ///< SORTED!!
     bool m_unknown_textures_needed;

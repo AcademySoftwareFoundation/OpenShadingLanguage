@@ -1869,6 +1869,15 @@ BackendLLVM::run()
     if (!group().does_nothing() && !use_optix()) {
         ll.do_optimize();
     } else if (!group().does_nothing() && use_optix()) {
+        // Set external linkage for the library functions to prevent the
+        // function signatures from being changed by subsequent dead arg
+        // elimination passes. The signatures need to match the
+        // corresponding PTX.
+        for (llvm::Function& fn : *ll.module()) {
+            if (fn.getName().startswith("osl"))
+                fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
+        }
+
         // If the renderer support library bitcode is being used, we can link
         // the module before running the optimization passes to help generate
         // better code. However, this tends to increase the optimization time.

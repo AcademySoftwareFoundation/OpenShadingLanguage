@@ -351,7 +351,7 @@ BackendLLVM::addCUDAGlobalVariable(const std::string& name, int size,
     } else if (type == TypeDesc::TypeInt) {
         constant = ll.constant(*(const int*)init_data);
     } else if (type == TypeDesc::TypeString) {
-        constant = ll.constant(((const ustring*)init_data)->hash());
+        constant = ll.constant64(((const ustring*)init_data)->hash());
         // N.B. Since this is the OptiX side specifically, we will represent
         // strings as the ustringhash, so we know it as a constant.
     } else {

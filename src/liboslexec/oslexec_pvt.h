@@ -2626,8 +2626,19 @@ protected:
     std::vector<char> m_in_conditional;  ///< Whether each op is in a cond
     std::vector<char> m_in_loop;         ///< Whether each op is in a loop
     int m_first_return;                  ///< Op number of first return or exit
-    std::set<std::pair<int, int>>
-        m_call_layers_inserted;  ///< Lookup for (bblockid, layerid)
+
+    struct CallLayerKey {
+        int bblockid;
+        int layerid;
+
+        bool operator<(const CallLayerKey& other) const
+        {
+            return bblockid < other.bblockid
+                   || (bblockid == other.bblockid && layerid < other.layerid);
+        }
+    };
+    std::set<CallLayerKey>
+        m_call_layers_inserted;  ///< Lookup used during llvm gen
 };
 
 };  // namespace pvt

@@ -15,21 +15,10 @@
 OSL_NAMESPACE_ENTER
 
 
-// Strings are handled differently in OptiX 6 vs OptiX 7.
-//
 // In OptiX 7+:
 // Strings are not stored on the GPU at all.  Strings are represented by
 // their hash values which are computed at compile-time.  Because of this,
 // we have no access to either the strings' contents or their lengths.
-//
-// In OptiX 6:
-// Strings are stored in a block of CUDA device memory. String variables hold a
-// pointer to the start of the char array for each string. Each canonical string
-// has a unique entry in the table, so two strings can be tested for equality by
-// comparing their addresses.
-//
-// As a convenience, the ustring hash and the length of the string are also
-// stored in the table, in the 16 bytes preceding the characters.
 
 struct DeviceString {
 #ifdef __CUDA_ARCH__

@@ -489,12 +489,15 @@ public:
     ///   ptr attributes_needed      Retrieves a pointer to the ustring array
     ///                                containing the names of the needed attributes.
     ///	                               Note that if the same attribute
-    ///                                is requested in multiple scopes, it will
+    ///                                is requested in multiple scopes, or with
+    ///                                multiple different types, it will
     ///                                appear in the array multiple times - once for
-    ///                                each scope in which is is queried.
+    ///                                each scope/type in which is is queried.
     ///   ptr attribute_scopes       Retrieves a pointer to a ustring array containing
     ///                                the scopes associated with each attribute query
     ///                                in the attributes_needed array.
+    ///   ptr attribute_types        Retrieves a pointer to the array of
+    ///                                 TypeDesc describing the attributes.
     ///   int unknown_attributes_needed  Nonzero if additional attributes may be
     ///                                  needed, whose names will not be known
     ///                                  until the shader actually runs.

@@ -182,9 +182,8 @@ BackendLLVM::llvm_run_connected_layers(Symbol& sym, int symindex, int opnum)
             // m_call_layers_inserted tracks if we've already run this layer either:
             //   * inside the current basic block (opnum >= 0)
             //   * while writing output parameters (opnum == -1)
-            const auto key = std::make_pair(opnum >= 0 ? m_bblockids[opnum]
-                                                       : opnum,
-                                            con.srclayer);
+            const CallLayerKey key = { opnum >= 0 ? m_bblockids[opnum] : opnum,
+                                       con.srclayer };
             if (m_call_layers_inserted.count(key)) {
                 continue;
             }

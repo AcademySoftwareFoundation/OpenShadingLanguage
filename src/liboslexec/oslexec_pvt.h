@@ -727,6 +727,12 @@ public:
         return m_closure_registry.get_entry(id);
     }
 
+    /// Attributes to control GPU optimization
+    bool gpu_no_inline() const { return m_gpu_no_inline; }
+    bool gpu_no_inline_layer_funcs() const { return m_gpu_no_inline_layer_funcs; }
+    int gpu_no_inline_thresh() const { return m_gpu_no_inline_thresh; }
+    int gpu_force_inline_thresh() const { return m_gpu_force_inline_thresh; }
+
     /// Set the current color space.
     bool set_colorspace(ustring colorspace);
 
@@ -955,6 +961,12 @@ private:
     int m_opt_warnings;               ///< Warn on inability to optimize
     int m_gpu_opt_error;              ///< Error on inability to optimize
                                       ///<   away things that can't GPU.
+
+    /// Attributes to control GPU optimization
+    bool m_gpu_no_inline;  ///< Disable function inlining
+    bool m_gpu_no_inline_layer_funcs;  ///< Disable inlining for group layer funcs
+    int m_gpu_no_inline_thresh;  ///< Disable inlining for functions larger than the threshold
+    int m_gpu_force_inline_thresh;  ///< Force inling for functions smaller than the threshold
 
     ustring m_colorspace;  ///< What RGB colors mean
 

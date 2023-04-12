@@ -1878,6 +1878,36 @@ BackendLLVM::run()
                 fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
         }
 
+        // Set the inlining behavior for each function in the module, based on
+        // the shadingsys attributes. The inlining attributes are not modified
+        // by default.
+        for (llvm::Function& fn : *ll.module()) {
+            // Don't modify the inlining attribute for:
+            //  * group entry functions
+            //  * llvm library functions
+            if (fn.getName().startswith("__direct_callable__")
+                || fn.getName().startswith("llvm."))
+                continue;
+
+            if (shadingsys().gpu_no_inline()) {
+                fn.addFnAttr(llvm::Attribute::NoInline);
+                continue;
+            }
+
+            if (shadingsys().gpu_no_inline_layer_funcs()
+                && fn.getName().startswith(group().name().c_str())) {
+                fn.addFnAttr(llvm::Attribute::NoInline);
+                continue;
+            }
+
+            const int inst_count = fn.getInstructionCount();
+            if (inst_count >= shadingsys().gpu_no_inline_thresh()) {
+                fn.addFnAttr(llvm::Attribute::NoInline);
+            } else if (inst_count <= shadingsys().gpu_force_inline_thresh()) {
+                fn.addFnAttr(llvm::Attribute::AlwaysInline);
+            }
+        }
+
         ll.do_optimize();
 
         // Drop everything but the init and group entry functions and generated

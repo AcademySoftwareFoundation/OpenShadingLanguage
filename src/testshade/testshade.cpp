@@ -87,6 +87,10 @@ static bool print_outputs        = false;
 static bool output_placement     = true;
 static bool use_optix            = OIIO::Strutil::stoi(
                OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
+static bool gpu_no_inline             = false;
+static bool gpu_no_inline_layer_funcs = false;
+static int gpu_no_inline_thresh       = 100000;
+static int gpu_force_inline_thresh    = 0;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -217,6 +221,12 @@ set_shadingsys_options()
             "TESTSHADE_LLVM_OPT"))  // overrides llvm_opt
         llvm_opt = atoi(llvm_opt_env);
     shadingsys->attribute("llvm_optimize", llvm_opt);
+
+    // Control the inlining behavior when optimizing for the GPU
+    shadingsys->attribute("gpu_no_inline", gpu_no_inline);
+    shadingsys->attribute("gpu_no_inline_layer_funcs", gpu_no_inline_layer_funcs);
+    shadingsys->attribute("gpu_no_inline_thresh", gpu_no_inline_thresh);
+    shadingsys->attribute("gpu_force_inline_thresh", gpu_force_inline_thresh);
 
     if (const char* use_rs_bitcode_env = getenv("TESTSHADE_RS_BITCODE")) {
         use_rs_bitcode = atoi(use_rs_bitcode_env);
@@ -768,6 +778,14 @@ getargs(int argc, const char* argv[])
       .help("Do lots of runtime shader optimization");
     ap.arg("--llvm_opt %d:LEVEL", &llvm_opt)
       .help("LLVM JIT optimization level");
+    ap.arg("--gpu_no_inline", &gpu_no_inline)
+      .help("Disable function inlining in GPU code");
+    ap.arg("--gpu_no_inline_layer_funcs", &gpu_no_inline_layer_funcs)
+      .help("Disable inlining the group layer functions in GPU code");
+    ap.arg("--gpu_no_inline_thresh %d:THRESH", &gpu_no_inline_thresh)
+      .help("Don't inline functions larger than the threshold in GPU code");
+    ap.arg("--gpu_force_inline_thresh %d:THRESH", &gpu_force_inline_thresh)
+      .help("Force inline functions smaller than the threshold in GPU code");
     ap.arg("--entry %L:LAYERNAME", &entrylayers)
       .help("Add layer to the list of entry points");
     ap.arg("--entryoutput %L:NAME", &entryoutputs)

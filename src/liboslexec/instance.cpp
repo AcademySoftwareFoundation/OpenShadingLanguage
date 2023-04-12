@@ -660,10 +660,14 @@ ShaderInstance::mergeable(const ShaderInstance& b,
             continue;
         if (sym->typespec().is_closure())
             continue;  // Closures can't have instance override values
+        // Even if the symbols' values match now, they might not in the
+        // future with 'interactive' parameters.
+        const Symbol* b_sym = optimized ? b.symbol(i) : b.mastersymbol(i);
         if ((sym->valuesource() == Symbol::InstanceVal
              || sym->valuesource() == Symbol::DefaultVal)
-            && memcmp(param_storage(i), b.param_storage(i),
-                      sym->typespec().simpletype().size())) {
+            && (memcmp(param_storage(i), b.param_storage(i),
+                       sym->typespec().simpletype().size())
+                || b_sym->interactive())) {
             return false;
         }
     }

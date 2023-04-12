@@ -1878,20 +1878,6 @@ BackendLLVM::run()
                 fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
         }
 
-        // If the renderer support library bitcode is being used, we can link
-        // the module before running the optimization passes to help generate
-        // better code. However, this tends to increase the optimization time.
-        if (!shadingsys().m_lib_bitcode.empty()) {
-            std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
-            OSL_ASSERT(bitcode.size() && "Library bitcode is empty");
-            llvm::Module* lib_module = ll.module_from_bitcode(
-                static_cast<const char*>(bitcode.data()), bitcode.size(),
-                "cuda_lib");
-            std::unique_ptr<llvm::Module> lib_ptr(lib_module);
-            llvm::Linker::linkModules(*ll.module(), std::move(lib_ptr),
-                                      llvm::Linker::Flags::LinkOnlyNeeded);
-        }
-
         ll.do_optimize();
 
         // Drop everything but the init and group entry functions and generated

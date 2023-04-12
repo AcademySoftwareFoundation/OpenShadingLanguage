@@ -190,6 +190,8 @@ bool
 OptixGridRenderer::init_optix_context(int xres OSL_MAYBE_UNUSED,
                                       int yres OSL_MAYBE_UNUSED)
 {
+    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
+                           rend_llvm_compiled_ops_block);
     return true;
 }
 

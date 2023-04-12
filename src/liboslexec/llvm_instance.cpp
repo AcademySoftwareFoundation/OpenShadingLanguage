@@ -119,9 +119,6 @@ Schematically, we want to create code that resembles the following:
 extern int osl_llvm_compiled_ops_size;
 extern unsigned char osl_llvm_compiled_ops_block[];
 
-extern int osl_llvm_compiled_ops_cuda_size;
-extern unsigned char osl_llvm_compiled_ops_cuda_block[];
-
 extern int osl_llvm_compiled_rs_dependent_ops_size;
 extern unsigned char osl_llvm_compiled_rs_dependent_ops_block[];
 
@@ -1686,10 +1683,15 @@ BackendLLVM::run()
 
         } else {
 #    ifdef OSL_LLVM_CUDA_BITCODE
-            ll.module(
-                ll.module_from_bitcode((char*)osl_llvm_compiled_ops_cuda_block,
-                                       osl_llvm_compiled_ops_cuda_size,
-                                       "llvm_ops", &err));
+            std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
+            if (bitcode.size()) {
+                llvm::Module* shadeops_module = ll.module_from_bitcode(
+                    static_cast<const char*>(bitcode.data()), bitcode.size(),
+                    "llvm_ops", &err);
+                ll.module(shadeops_module);
+            } else {
+                OSL_ASSERT(0 && "The renderer must provide shadeops bitcode for OptiX");
+            }
             if (err.length())
                 shadingcontext()->errorfmt(
                     "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",

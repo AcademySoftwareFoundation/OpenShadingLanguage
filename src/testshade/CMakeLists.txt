@@ -17,7 +17,10 @@ if (OSL_USE_OPTIX)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu
         ../testrender/cuda/wrapper.cu
-        ../testrender/cuda/rend_lib.cu )
+        )
+
+    set (testshade_shadeops_srcs
+        ../testrender/cuda/rend_lib.cu)
 
     set ( testshade_cuda_headers
         ../testrender/cuda/rend_lib.h )
@@ -27,14 +30,9 @@ if (OSL_USE_OPTIX)
     set ( extra_cuda_headers
         render_params.h )
 
-    LLVM_COMPILE_CUDA (
-        ${CMAKE_CURRENT_SOURCE_DIR}/../testrender/cuda/rend_lib.cu
-        ${testshade_cuda_headers}
-        "rend_llvm_compiled_ops"
-        rend_lib_bc_cpp
-        "-I../testrender/cuda" )
-
-    list (APPEND testshade_srcs ${rend_lib_bc_cpp})
+    add_definitions (-DOSL_LLVM_CUDA_BITCODE)
+    CUDA_SHADEOPS_COMPILE ( testshade_srcs
+        ${testshade_shadeops_srcs} ${testshade_cuda_headers} )
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testshade_cuda_srcs})

@@ -15,21 +15,19 @@ if (OSL_USE_OPTIX)
         cuda/optix_raytracer.cu
         cuda/sphere.cu
         cuda/wrapper.cu
+        )
+
+    set (testrender_shadeops_srcs
         cuda/rend_lib.cu)
 
     # We need to make sure that the PTX files are regenerated whenever these
     # headers change.
     set (testrender_cuda_headers
-         cuda/rend_lib.h )
+        cuda/rend_lib.h)
 
-    LLVM_COMPILE_CUDA (
-        ${CMAKE_CURRENT_SOURCE_DIR}/cuda/rend_lib.cu
-        ${testrender_cuda_headers}
-        "rend_llvm_compiled_ops"
-        rend_lib_bc_cpp
-        "" )
-
-    list (APPEND testrender_srcs ${rend_lib_bc_cpp})
+    add_definitions (-DOSL_LLVM_CUDA_BITCODE)
+    CUDA_SHADEOPS_COMPILE ( testrender_srcs
+        ${testrender_shadeops_srcs} ${testrender_cuda_headers} )
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testrender_cuda_srcs})

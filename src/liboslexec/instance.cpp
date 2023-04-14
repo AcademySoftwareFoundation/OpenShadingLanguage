@@ -660,7 +660,9 @@ ShaderInstance::mergeable(const ShaderInstance& b,
              || sym->valuesource() == Symbol::DefaultVal)
             && (memcmp(param_storage(i), b.param_storage(i),
                        sym->typespec().simpletype().size())
-                || b_sym->interactive())) {
+                // || b_sym->interactive())
+                || !b_sym->lockgeom())
+                ) {
             return false;
         }
     }

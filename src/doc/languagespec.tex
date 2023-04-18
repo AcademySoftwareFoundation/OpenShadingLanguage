@@ -5913,6 +5913,19 @@ Optional parameters include:
                                 character, it means to exclude that set).
 \end{tabular}
 
+Optional parameters are passed by passing the parameter string as an 
+argument, then the corresponding value as the subsequent argument.  
+For example, setting the \qkw{mindist} as 0.5 and \qkw{maxdist} 
+as 1.0 is done like so:
+
+\begin{code}
+    trace (pos, dir, "mindist", 0.5, "maxdist", 1.0);
+\end{code}
+
+Furthermore, \qkw{mindist} and \qkw{maxdist} should be viewed as scalars,
+which multiplied by the magnitude of the direction vector is the length of the
+traced rays.
+
 Information about the closest object hit by the ray may be retrieved
 using \\ {\cf getmessage("trace",...)} (see Section~\ref{sec:getmessage}).
 

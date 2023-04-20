@@ -1717,6 +1717,49 @@ LLVM_Util::execengine(llvm::ExecutionEngine* exec)
 
 
 
+llvm::TargetMachine*
+LLVM_Util::nvptx_target_machine()
+{
+    if (m_nvptx_target_machine == nullptr) {
+        llvm::Triple ModuleTriple(module()->getTargetTriple());
+        llvm::TargetOptions options;
+        options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
+        // N.B. 'Standard' only allow fusion of 'blessed' ops (currently just
+        // fmuladd). To truly disable FMA and never fuse FP-ops, we need to
+        // instead use llvm::FPOpFusion::Strict.
+        options.UnsafeFPMath                           = 1;
+        options.NoInfsFPMath                           = 1;
+        options.NoNaNsFPMath                           = 1;
+        options.HonorSignDependentRoundingFPMathOption = 0;
+        options.FloatABIType          = llvm::FloatABI::Default;
+        options.AllowFPOpFusion       = llvm::FPOpFusion::Fast;
+        options.NoZerosInBSS          = 0;
+        options.GuaranteedTailCallOpt = 0;
+#if OSL_LLVM_VERSION < 120
+        options.StackAlignmentOverride = 0;
+#endif
+        options.UseInitArray = 0;
+
+        // Verify that the NVPTX target has been initialized
+        std::string error;
+        const llvm::Target* llvm_target
+            = llvm::TargetRegistry::lookupTarget(ModuleTriple.str(), error);
+        OSL_ASSERT(llvm_target
+                   && "PTX compile error: LLVM Target is not initialized");
+
+        m_nvptx_target_machine = llvm_target->createTargetMachine(
+            ModuleTriple.str(), CUDA_TARGET_ARCH, "+ptx50", options,
+            llvm::Reloc::Static, llvm::CodeModel::Small,
+            llvm::CodeGenOpt::Default);
+
+        OSL_ASSERT(m_nvptx_target_machine
+                   && "Unable to create TargetMachine for NVPTX");
+    }
+    return m_nvptx_target_machine;
+}
+
+
+
 void*
 LLVM_Util::getPointerToFunction(llvm::Function* func)
 {
@@ -1786,37 +1829,8 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         fpm.add(createTargetTransformInfoWrapperPass(
           target_machine  ? target_machine->getTargetIRAnalysis() : llvm::TargetIRAnalysis()));
     } else if (target_isa() == TargetISA::NVPTX) {
+        target_machine = nvptx_target_machine();
         llvm::Triple ModuleTriple(module()->getTargetTriple());
-        llvm::TargetOptions options;
-        options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
-        // N.B. 'Standard' only allow fusion of 'blessed' ops (currently just
-        // fmuladd). To truly disable FMA and never fuse FP-ops, we need to
-        // instead use llvm::FPOpFusion::Strict.
-        options.UnsafeFPMath                           = 1;
-        options.NoInfsFPMath                           = 1;
-        options.NoNaNsFPMath                           = 1;
-        options.HonorSignDependentRoundingFPMathOption = 0;
-        options.FloatABIType          = llvm::FloatABI::Default;
-        options.AllowFPOpFusion       = llvm::FPOpFusion::Fast;
-        options.NoZerosInBSS          = 0;
-        options.GuaranteedTailCallOpt = 0;
-#if OSL_LLVM_VERSION < 120
-        options.StackAlignmentOverride = 0;
-#endif
-        options.UseInitArray = 0;
-
-        // Verify that the NVPTX target has been initialized
-        std::string error;
-        const llvm::Target* llvm_target
-            = llvm::TargetRegistry::lookupTarget(ModuleTriple.str(), error);
-        OSL_ASSERT(llvm_target
-                   && "PTX compile error: LLVM Target is not initialized");
-
-        target_machine = llvm_target->createTargetMachine(
-            ModuleTriple.str(), CUDA_TARGET_ARCH, "+ptx50", options,
-            llvm::Reloc::Static, llvm::CodeModel::Small,
-            llvm::CodeGenOpt::Default);
-
         llvm::TargetLibraryInfoImpl TLII(ModuleTriple);
         mpm.add(new llvm::TargetLibraryInfoWrapperPass(TLII));
         mpm.add(createTargetTransformInfoWrapperPass(
@@ -5922,41 +5936,8 @@ bool
 LLVM_Util::ptx_compile_group(llvm::Module*, const std::string& name,
                              std::string& out)
 {
-#if OSL_USE_OPTIX
-    std::string target_triple = module()->getTargetTriple();
-
-    // Verify that the NVPTX target has been initialized
-    std::string error;
-    const llvm::Target* llvm_target
-        = llvm::TargetRegistry::lookupTarget(target_triple, error);
-    OSL_ASSERT(llvm_target
-               && "PTX compile error: LLVM Target is not initialized");
-
-    llvm::TargetOptions options;
-    options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
-    // N.B. 'Standard' only allow fusion of 'blessed' ops (currently just
-    // fmuladd). To truly disable FMA and never fuse FP-ops, we need to
-    // instead use llvm::FPOpFusion::Strict.
-    options.UnsafeFPMath                           = 1;
-    options.NoInfsFPMath                           = 1;
-    options.NoNaNsFPMath                           = 1;
-    options.HonorSignDependentRoundingFPMathOption = 0;
-    options.FloatABIType                           = llvm::FloatABI::Default;
-    options.AllowFPOpFusion                        = llvm::FPOpFusion::Fast;
-    options.NoZerosInBSS                           = 0;
-    options.GuaranteedTailCallOpt                  = 0;
-#    if OSL_LLVM_VERSION < 120
-    options.StackAlignmentOverride = 0;
-#    endif
-    options.UseInitArray = 0;
-
-    llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(
-        target_triple, CUDA_TARGET_ARCH, "+ptx50", options, llvm::Reloc::Static,
-        llvm::CodeModel::Small, llvm::CodeGenOpt::Default);
-    OSL_ASSERT(
-        target_machine
-        && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
-
+#ifdef OSL_USE_OPTIX
+    llvm::TargetMachine* target_machine = nvptx_target_machine();
     llvm::legacy::PassManager mpm;
     llvm::SmallString<4096> assembly;
     llvm::raw_svector_ostream assembly_stream(assembly);

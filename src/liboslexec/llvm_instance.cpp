@@ -1707,19 +1707,19 @@ BackendLLVM::run()
         OSL_ASSERT(ll.module());
 #endif
 
-    // Create the ExecutionEngine. We don't create an ExecutionEngine in the
-    // OptiX case, because we are using the NVPTX backend and not MCJIT. However,
-    // it's still useful to set the target ISA to facilitate PTX-specific codegen.
-    if (use_optix()) {
-        ll.set_target_isa(TargetISA::NVPTX);
-    } else if (!ll.make_jit_execengine(
-                   &err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
-                   shadingsys().llvm_debugging_symbols(),
-                   shadingsys().llvm_profiling_events())) {
-        shadingcontext()->errorfmt("Failed to create engine: {}\n", err);
-        OSL_ASSERT(0);
-        return;
-    }
+        // Create the ExecutionEngine. We don't create an ExecutionEngine in the
+        // OptiX case, because we are using the NVPTX backend and not MCJIT. However,
+        // it's still useful to set the target ISA to facilitate PTX-specific codegen.
+        if (use_optix()) {
+            ll.set_target_isa(TargetISA::NVPTX);
+        } else if (!ll.make_jit_execengine(
+                       &err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
+                       shadingsys().llvm_debugging_symbols(),
+                       shadingsys().llvm_profiling_events())) {
+            shadingcontext()->errorfmt("Failed to create engine: {}\n", err);
+            OSL_ASSERT(0);
+            return;
+        }
 
         // End of mutex lock, for the OSL_LLVM_NO_BITCODE case
     }

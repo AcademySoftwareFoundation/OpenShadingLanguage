@@ -34,6 +34,7 @@ class LLVMContext;
 class Module;
 class PointerType;
 class StringRef;
+class TargetMachine;
 class Type;
 class Value;
 class VectorType;
@@ -266,6 +267,10 @@ public:
     /// Replace the ExecutionEngine (pass NULL to simply delete the
     /// current one).
     void execengine(llvm::ExecutionEngine* exec);
+
+    /// Return a pointer to the TargetMachine for NVPTX.  Create the TargetMachine
+    /// if it has not yet been created.
+    llvm::TargetMachine* nvptx_target_machine();
 
     enum class Linkage {
         External,  // Externally visible
@@ -1051,6 +1056,7 @@ private:
     llvm::legacy::FunctionPassManager* m_llvm_func_passes;
     llvm::ExecutionEngine* m_llvm_exec;
     TargetISA m_target_isa = TargetISA::UNKNOWN;
+    llvm::TargetMachine* m_nvptx_target_machine;
 
     std::vector<llvm::BasicBlock*> m_return_block;      // stack for func call
     std::vector<llvm::BasicBlock*> m_loop_after_block;  // stack for break

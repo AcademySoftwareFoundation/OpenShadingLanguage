@@ -477,9 +477,13 @@ public:
 
     /// Execute the upstream connection (if any, and if not yet run) that
     /// establishes the value of symbol sym, which has index 'symindex'
-    /// within the current layer rop.inst().
+    /// within the current layer rop.inst().  If already_run is not NULL,
+    /// it points to a vector of layer indices that are known to have been
+    /// run -- those can be skipped without dynamically checking their
+    /// execution status.
     void llvm_run_connected_layers(const Symbol& sym, int symindex,
-                                   int opnum = -1);
+                                   int opnum                  = -1,
+                                   std::set<int>* already_run = NULL);
 
 
 

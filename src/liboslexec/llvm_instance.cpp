@@ -1706,6 +1706,12 @@ BackendLLVM::run()
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
             ll.module()->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
 
+            // Tag each function as an OSL library function to help with
+            // inlining and optimization after codegen.
+            for (llvm::Function& fn : *ll.module()) {
+                fn.addFnAttr("osl-lib-function", "true");
+            }
+
             // Mark all global variables extern and discard their initializers.
             // Global variables are defined in the shadeops PTX file.
             for (llvm::GlobalVariable& global : ll.module()->globals()) {
@@ -1869,13 +1875,19 @@ BackendLLVM::run()
     if (!group().does_nothing() && !use_optix()) {
         ll.do_optimize();
     } else if (!group().does_nothing() && use_optix()) {
-        // Set external linkage for the library functions to prevent the
-        // function signatures from being changed by subsequent dead arg
-        // elimination passes. The signatures need to match the
-        // corresponding PTX.
+        // Adjust the linkage for the library and group functions:
+        //  * Set external linkage for the library functions to prevent the
+        //    function signatures from being changed by dead arg elimination
+        //    passes. The signatures need to match the shadeops PTX module.
+        //
+        //  * Set private linkage for the layer functions to help avoid
+        //    collisions between layer functions from different ShaderGroups.
         for (llvm::Function& fn : *ll.module()) {
-            if (fn.getName().startswith("osl"))
+            if (fn.hasFnAttribute("osl-lib-function")) {
                 fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
+            } else if (fn.getName().startswith(group().name().c_str())) {
+                fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
+            }
         }
 
         // Set the inlining behavior for each function in the module, based on
@@ -1895,7 +1907,7 @@ BackendLLVM::run()
             }
 
             if (shadingsys().gpu_no_inline_layer_funcs()
-                && fn.getName().startswith(group().name().c_str())) {
+                && !fn.hasFnAttribute("osl-lib-function")) {
                 fn.addFnAttr(llvm::Attribute::NoInline);
                 continue;
             }
@@ -1911,11 +1923,10 @@ BackendLLVM::run()
         ll.do_optimize();
 
         // Drop everything but the init and group entry functions and generated
-        // group functions. Everything else should be defined elsewhere (e.g., a
-        // shadeops PTX module).
+        // group functions. The definitions for the non-inlined library
+        // functions are supplied via a separate shadeops PTX module.
         for (llvm::Function& fn : *ll.module()) {
-            if (!fn.getName().startswith("__direct_callable__")
-                && !fn.getName().startswith(group().name().c_str())) {
+            if (fn.hasFnAttribute("osl-lib-function")) {
                 fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
                 fn.deleteBody();
             }

@@ -191,8 +191,10 @@ struct UserDataNeeded {
     {
         if (a.name != b.name)
             return a.name < b.name;
-        if (a.layer_num != b.layer_num)
-            return a.layer_num < b.layer_num;
+        // Checking for layer_num means that if derivs differ find_userdata_index
+        // may find the wrong layer symbol with the wrong derivs setting.
+        //if (a.layer_num != b.layer_num)
+        //    return a.layer_num < b.layer_num;
         if (a.type.basetype != b.type.basetype)
             return a.type.basetype < b.type.basetype;
         if (a.type.aggregate != b.type.aggregate)

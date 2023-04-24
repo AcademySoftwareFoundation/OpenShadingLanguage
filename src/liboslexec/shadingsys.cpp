@@ -4469,8 +4469,13 @@ osl_bind_interpolated_param(void* sg_, const void* name, long long type,
         sg->context->incr_get_userdata_calls();
     }
     if (status == 2) {
+        int udata_size = (userdata_has_derivs ? 3 : 1) * TYPEDESC(type).size();
         // If userdata was present, copy it to the shader variable
-        memcpy(symbol_data, userdata_data, symbol_data_size);
+        memcpy(symbol_data, userdata_data,
+               std::min(symbol_data_size, udata_size));
+        if (symbol_data_size > udata_size)
+            memset((char*)symbol_data + udata_size, 0,
+                   symbol_data_size - udata_size);
         return 1;
     }
     return 0;  // no such user data

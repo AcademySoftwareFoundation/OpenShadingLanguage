@@ -7,7 +7,7 @@ set ( testshade_srcs
       testshade.cpp
       simplerend.cpp )
 
-if (BUILD_BATCHED)
+if (OSL_BUILD_BATCHED)
     list(APPEND testshade_srcs 
         batched_simplerend.cpp)
 endif()    

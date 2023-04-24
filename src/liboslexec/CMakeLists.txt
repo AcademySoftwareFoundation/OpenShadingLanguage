@@ -123,7 +123,7 @@ set (lib_src
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
           rs_fallback.cpp
     )
-if (BUILD_BATCHED)
+if (OSL_BUILD_BATCHED)
     list(APPEND lib_src 
           batched_analysis.cpp
           batched_backendllvm.cpp

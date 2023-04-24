@@ -162,7 +162,7 @@ macro ( TESTSUITE )
                                ENV TESTSHADE_OPT=2 TESTSHADE_OPTIX=1 )
         endif ()
 
-        if (BUILD_BATCHED)
+        if (OSL_BUILD_BATCHED)
             # When building for Batched support, also run it in Batched mode
             # if there is an BATCHED marker file in the directory.
             # If an environment variable $TESTSUITE_BATCHED is nonzero, then
@@ -397,7 +397,7 @@ macro (osl_add_all_tests)
     endif ()
 
     # Some regression tests have a lot of combinations and may need more time to finish
-    if (BUILD_BATCHED)
+    if (OSL_BUILD_BATCHED)
         set_tests_properties (arithmetic-reg.regress.batched.opt
                               PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
         set_tests_properties (transform-reg.regress.batched.opt

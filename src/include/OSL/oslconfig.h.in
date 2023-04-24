@@ -4,8 +4,9 @@
 
 #pragma once
 
-#define OSL_USE_BATCHED @BUILD_BATCHED@
-#define OSL_USE_OPTIX @OSL_USE_OPTIX@
+#cmakedefine01 OSL_USE_OPTIX
+#cmakedefine01 OSL_BUILD_BATCHED
+#define OSL_USE_BATCHED OSL_BUILD_BATCHED
 
 
 #include <OSL/export.h>

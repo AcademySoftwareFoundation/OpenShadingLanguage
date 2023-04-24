@@ -2631,27 +2631,6 @@ and proceeds to the next iteration of the loop.
 \section{Functions}
 \label{sec:functions}
 
-\subsection{Function calls}
-\label{sec:syntax:functioncalls}
-\index{function calls}
-
-Function calls are very similar to C and related programming languages:
-
-\begin{tabbing}
-\hspace{0.5in} \= \hspace{0.3in} \= \kill
-\> \emph{functionname} {\cf (} \emph{arg1} {\cf ,} ... {\cf ,} \emph{argn} {\cf )} \\
-\end{tabbing}
-
-If the function returns a value (not \void), you may use its value as
-an expression.  It is fine to completely ignore the value of even
-a non-\void function.
-
-In \langname, all arguments are passed by reference.  This generally
-will not be noticeably different from C-style ``pass by value''
-semantics, except if you pass the same variable as two separate
-arguments to a function that modifies an argument's value.
-
-
 \subsection{Function definitions}
 \label{sec:syntax:functiondefinitions}
 \index{functions!definitions}
@@ -2698,6 +2677,35 @@ favored, followed by those that match with type coercion (for example,
 passing an {\cf int} when the function expects a {\cf float}, or passing a
 {\cf float} when the function expects a \color), and finally by trying to
 match the return value to the type of variable the result is assigned to.
+
+\subsection{Function calls}
+\label{sec:syntax:functioncalls}
+\index{function calls}
+
+Function calls are very similar to C and related programming languages:
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> \emph{functionname} {\cf (} \emph{arg1} {\cf ,} ... {\cf ,} \emph{argn} {\cf )} \\
+\end{tabbing}
+
+If the function returns a value (not \void), you may use its value as
+an expression.  It is fine to completely ignore the value of even
+a non-\void function.
+
+In \langname, all arguments are passed by reference.  This generally
+will not be noticeably different from C-style ``pass by value''
+semantics, except if you pass the same variable as two separate
+arguments to a function that modifies an argument's value.
+
+Certain functions allow optional arguments to be passed.  
+Optional arguments are key-value pairs with the key passed as an 
+argument and the associated value passed as the subsequent argument:
+
+\begin{tabbing}
+\hspace{0.5in} \= \hspace{0.3in} \= \kill
+\> \emph{functionname} {\cf (} \emph{arg1} {\cf ,} ... {\cf ,} \emph{argn}  {\cf ,} \emph{"optionalkey"}  {\cf ,} \emph{optionalvalue} {\cf ,} ... {\cf )} \\
+\end{tabbing}
 
 \subsection{Operator overloading}
 \label{sec:syntax:operatoroverloading}
@@ -4083,8 +4091,8 @@ are assigned to a \float or a \color (or type cast to one of those)
 determines whether the texture lookup is a single channel or three
 channels.
 
-The 2D lookup coordinate(s) may be followed by optional token/value
-arguments that control the behavior of {\cf texture()}:
+The 2D lookup coordinate(s) may be followed by optional key-value
+arguments (see Section~\ref{sec:syntax:functioncalls}) that control the behavior of {\cf texture()}:
 
 \apiitem{"blur", <float>}
 \vspace{12pt}
@@ -5901,30 +5909,38 @@ view-dependence into shaders.
 The return value is 0 if the ray missed all geometry, 1 if it hit
 anything within the distance range.
 
-Optional parameters include:
+The following optional key-value arguments 
+(see Section~\ref{sec:syntax:functioncalls}) can be passed:
 
-\begin{tabular}{p{1.2in} p{0.5in} p{3.2in}}
-\qkw{mindist} & {\cf float} & Minimum hit distance (default: zero) \\
-\qkw{maxdist} & {\cf float} & Maximum hit distance (default: infinite) \\
-\qkw{shade}   & {\cf int}   & Whether objects hit will be shaded
-                              (default: 0) \\
-\qkw{traceset} & {\cf string} & An optional named set of objects to
-                                ray trace (if preceded by a `{\cf -}'
-                                character, it means to exclude that set).
-\end{tabular}
+\apiitem{"mindist", <float>}
+\vspace{12pt}
+The minimum hit distance (default: 0).
 
-Optional parameters are passed by passing the parameter string as an 
-argument, then the corresponding value as the subsequent argument.  
-For example, setting the \qkw{mindist} as 0.5 and \qkw{maxdist} 
-as 1.0 is done like so:
+The units of the {\cf "mindist"} and {\cf "maxdist"} are determined by the renderer 
+and are sometimes defined by the dir vector, which can lead to unexpected 
+behavior.  So, generally, clearly written and portable shaders should pass 
+a unit length (see Section~\ref{sec:stdlib:geom}) dir vector.
+\apiend
+\vspace{-16pt}
 
-\begin{code}
-    trace (pos, dir, "mindist", 0.5, "maxdist", 1.0);
-\end{code}
+\apiitem{"mindist", <float>}
+\vspace{12pt}
+The maximum hit distance (default: infinite).
+\apiend
+\vspace{-16pt}
 
-Furthermore, \qkw{mindist} and \qkw{maxdist} should be viewed as scalars,
-which multiplied by the magnitude of the direction vector is the length of the
-traced rays.
+\apiitem{"shade", <int>}
+\vspace{12pt}
+Defines whether objects hit will be shaded (default: 0).  
+\apiend
+\vspace{-16pt}
+
+\apiitem{"traceset", <string>}
+\vspace{12pt}
+An optional named set of objects to ray trace (if preceded by a `{\cf -}'
+character, it means to exclude that set).
+\apiend
+\vspace{-16pt}
 
 Information about the closest object hit by the ray may be retrieved
 using \\ {\cf getmessage("trace",...)} (see Section~\ref{sec:getmessage}).

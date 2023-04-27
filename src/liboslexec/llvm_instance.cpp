@@ -1693,6 +1693,12 @@ BackendLLVM::run()
 #    else
             OSL_ASSERT(0 && "Must generate LLVM CUDA bitcode for OptiX");
 #    endif
+            // Ensure that the correct target triple and data layout are set when targeting NVPTX.
+            // The triple is empty with recent versions of LLVM (e.g., 15) for reasons that aren't
+            // clear. So we must set them to the expected values.
+            // See: https://llvm.org/docs/NVPTXUsage.html
+            ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
+            ll.module()->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
         }
         OSL_ASSERT(ll.module());
 #endif

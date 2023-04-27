@@ -21,12 +21,6 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
     list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
 
-    if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
-        # Until we fully support opaque pointers, we need to disable
-        # them when using LLVM 15.
-        list (APPEND LLVM_COMPILE_FLAGS -Xclang -no-opaque-pointers)
-    endif ()
-
     add_custom_command ( OUTPUT ${cuda_ptx}
         COMMAND ${CUDA_NVCC_EXECUTABLE}
             "-I${OPTIX_INCLUDES}"
@@ -108,6 +102,12 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         # compiling for Cuda. When all 3rd parties have their export macro fixed these warnings
         # can be restored.
         set (CLANG_MSVC_FIX "${CLANG_MSVC_FIX} -Wno-ignored-attributes -Wno-unknown-attributes")
+    endif ()
+
+    if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
+        # Until we fully support opaque pointers, we need to disable
+        # them when using LLVM 15.
+        list (APPEND LLVM_COMPILE_FLAGS -Xclang -no-opaque-pointers)
     endif ()
 
     list (TRANSFORM IMATH_INCLUDES PREPEND -I

@@ -3,6 +3,8 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 set ($OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compiling CUDA code")
+set (CUDA_OPT_FLAG_NVCC "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with nvcc")
+set (CUDA_OPT_FLAG_CLANG "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with clang")
 
 # Compile a CUDA file to PTX using NVCC
 function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
@@ -37,7 +39,7 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx
-            --std=c++14 -dc -O3 --use_fast_math --expt-relaxed-constexpr
+            --std=c++14 -dc --use_fast_math ${CUDA_OPT_FLAG_NVCC} --expt-relaxed-constexpr
             ${extra_nvcc_args}
             ${OSL_EXTRA_NVCC_ARGS}
             ${cuda_src} -o ${cuda_ptx}
@@ -148,7 +150,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security
-            -O3 -fno-math-errno -ffast-math -S -emit-llvm ${extra_clang_args}
+            -fno-math-errno -ffast-math ${CUDA_OPT_FLAG_CLANG} -S -emit-llvm ${extra_clang_args}
             ${src} -o ${asm_cuda}
         COMMAND ${LLVM_AS_TOOL} -f -o ${bc_cuda} ${asm_cuda}
         DEPENDS ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src}
@@ -199,8 +201,8 @@ macro ( CUDA_SHADEOPS_COMPILE srclist rend_lib_src headers )
     # Link all of the individual LLVM bitcode files, and emit PTX for the linked bitcode
     add_custom_command ( OUTPUT ${linked_shadeops_opt_bc} ${linked_shadeops_ptx}
         COMMAND ${LLVM_LINK_TOOL} ${shadeops_bc_list} -o ${linked_shadeops_bc}
-        COMMAND ${LLVM_OPT_TOOL} -O2 ${linked_shadeops_bc} -o ${linked_shadeops_opt_bc}
-        COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH} -O2 ${linked_shadeops_opt_bc} -o ${linked_shadeops_ptx}
+        COMMAND ${LLVM_OPT_TOOL} ${CUDA_OPT_FLAG_CLANG} ${linked_shadeops_bc} -o ${linked_shadeops_opt_bc}
+        COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH} ${linked_shadeops_opt_bc} -o ${linked_shadeops_ptx}
         # This script converts all of the .weak functions defined in the PTX into .visible functions.
         COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
             ${linked_shadeops_ptx} ${linked_shadeops_ptx}

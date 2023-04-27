@@ -1920,6 +1920,15 @@ BackendLLVM::run()
             }
         }
 
+#ifndef OSL_CUDA_NO_FTZ
+        for (llvm::Function& fn : *ll.module()) {
+            fn.addFnAttr("nvptx-f32ftz", "true");
+            fn.addFnAttr("denormal-fp-math", "preserve-sign,preserve-sign");
+            fn.addFnAttr("denormal-fp-math-f32",
+                         "preserve-sign,preserve-sign");
+        }
+#endif
+
         ll.do_optimize();
 
         // Drop everything but the init and group entry functions and generated

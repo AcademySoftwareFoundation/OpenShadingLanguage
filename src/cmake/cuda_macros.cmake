@@ -6,6 +6,14 @@ set ($OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compi
 set (CUDA_OPT_FLAG_NVCC "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with nvcc")
 set (CUDA_OPT_FLAG_CLANG "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with clang")
 
+# FTZ is enabled by default since it offers the best performance,
+# but it may be disabled to debug numerical issues, to better match
+# host behavior, etc.
+set (CUDA_NO_FTZ OFF CACHE BOOL "Do not enable force-to-zero when compiling for CUDA")
+if (CUDA_NO_FTZ)
+    add_definitions ("-DOSL_CUDA_NO_FTZ=1")
+endif ()
+
 # Compile a CUDA file to PTX using NVCC
 function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
     get_filename_component ( cuda_src_we ${cuda_src} NAME_WE )
@@ -23,6 +31,10 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
     list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
 
+    if (NOT CUDA_NO_FTZ)
+        set (NVCC_FTZ_FLAG "--ftz=true")
+    endif ()
+
     add_custom_command ( OUTPUT ${cuda_ptx}
         COMMAND ${CUDA_NVCC_EXECUTABLE}
             "-I${OPTIX_INCLUDES}"
@@ -39,7 +51,7 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx
-            --std=c++14 -dc --use_fast_math ${CUDA_OPT_FLAG_NVCC} --expt-relaxed-constexpr
+            --std=c++14 -dc --use_fast_math ${CUDA_OPT_FLAG_NVCC} ${NVCC_FTZ_FLAG} --expt-relaxed-constexpr
             ${extra_nvcc_args}
             ${OSL_EXTRA_NVCC_ARGS}
             ${cuda_src} -o ${cuda_ptx}
@@ -126,6 +138,10 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         list (APPEND LLVM_COMPILE_FLAGS -Xclang -no-opaque-pointers)
     endif ()
 
+    if (NOT CUDA_NO_FTZ)
+        set (CLANG_FTZ_FLAG "-fcuda-flush-denormals-to-zero")
+    endif ()
+
     list (TRANSFORM IMATH_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
     list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
@@ -150,7 +166,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security
-            -fno-math-errno -ffast-math ${CUDA_OPT_FLAG_CLANG} -S -emit-llvm ${extra_clang_args}
+            -fno-math-errno -ffast-math ${CUDA_OPT_FLAG_CLANG} ${CLANG_FTZ_FLAG} -S -emit-llvm ${extra_clang_args}
             ${src} -o ${asm_cuda}
         COMMAND ${LLVM_AS_TOOL} -f -o ${bc_cuda} ${asm_cuda}
         DEPENDS ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src}

@@ -705,7 +705,8 @@ OSLCompilerImpl::write_oso_const_value(const ConstantSymbol* sym) const
     else if (equivalent(elemtype, TypeDesc::TypeVector))
         for (int i = 0; i < nelements; ++i) {
             Vec3 v = sym->get_vec3(i);
-            osofmt("{:.9g} {:.9g} {:.9g}{}", v.x, v.y, v.z, nelements > 1 ? " " : "");
+            osofmt("{:.9g} {:.9g} {:.9g}{}", v.x, v.y, v.z,
+                   nelements > 1 ? " " : "");
         }
     else {
         OSL_ASSERT(0 && "Don't know how to output this constant type");

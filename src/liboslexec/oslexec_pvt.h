@@ -962,7 +962,7 @@ private:
     int m_gpu_opt_error;              ///< Error on inability to optimize
                                       ///<   away things that can't GPU.
 
-    /// Attributes to control GPU optimization
+    /// Experimental attributes to help tuning GPU optimization passes
     bool m_gpu_no_inline;  ///< Disable function inlining
     bool m_gpu_no_inline_layer_funcs;  ///< Disable inlining for group layer funcs
     int m_gpu_no_inline_thresh;  ///< Disable inlining for functions larger than the threshold

@@ -89,7 +89,9 @@ set_shadingsys_options()
         llvm_opt = atoi(llvm_opt_env);
     shadingsys->attribute("llvm_optimize", llvm_opt);
 
-    // Control the inlining behavior when optimizing for the GPU
+    // Experimental: Control the inlining behavior when compiling for the GPU.
+    // These attributes have been added to aid tuning the GPU optimization
+    // passes and may be removed or changed in the future.
     shadingsys->attribute("gpu_no_inline", gpu_no_inline);
     shadingsys->attribute("gpu_no_inline_layer_funcs", gpu_no_inline_layer_funcs);
     shadingsys->attribute("gpu_no_inline_thresh", gpu_no_inline_thresh);

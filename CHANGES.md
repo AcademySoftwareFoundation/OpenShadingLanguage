@@ -1,9 +1,15 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.12.0 -- 1 May? 2023 (compared to 1.12.11.0)
+Release 1.12.12.0 -- 1 May 2023 (compared to 1.12.11.0)
 --------------------------------------------------------
-
+* New ShadingSystem getattribute query for shader groups: "attribute_types"
+  retrieves a pointer to the array of TypeDesc values describing the
+  attributes retrieved by existing "attributes_needed" and "attribute_scopes".
+  #1650
+* Fix a bug with binding userdata when it's used by more than one shader
+  within the group and they disagree about whether derivatives are needed when
+  retrieving the attribute. #1673
 
 Release 1.12.11.0 -- 5 Apr 2023 (compared to 1.12.10.0)
 --------------------------------------------------------

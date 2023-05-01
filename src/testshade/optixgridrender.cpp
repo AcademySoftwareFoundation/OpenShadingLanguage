@@ -25,6 +25,13 @@ extern int rend_llvm_compiled_ops_size;
 extern unsigned char rend_llvm_compiled_ops_block[];
 
 
+// The entry point for OptiX Module creation changed in OptiX 7.7
+#if OPTIX_VERSION < 70700
+const auto optixModuleCreateFn = optixModuleCreateFromPTX;
+#else
+const auto optixModuleCreateFn = optixModuleCreate;
+#endif
+
 
 OSL_NAMESPACE_ENTER
 
@@ -327,12 +334,11 @@ OptixGridRenderer::make_optix_materials()
 
     sizeof_msg_log = sizeof(msg_log);
     OptixModule program_module;
-    OPTIX_CHECK_MSG(optixModuleCreateFromPTX(m_optix_ctx,
-                                             &module_compile_options,
-                                             &pipeline_compile_options,
-                                             program_ptx.c_str(),
-                                             program_ptx.size(), msg_log,
-                                             &sizeof_msg_log, &program_module),
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options,
+                                        program_ptx.c_str(), program_ptx.size(),
+                                        msg_log, &sizeof_msg_log,
+                                        &program_module),
                     fmtformat("Creating Module from PTX-file {}", msg_log));
 
     // Record it so we can destroy it later
@@ -429,12 +435,11 @@ OptixGridRenderer::make_optix_materials()
     // Create shadeops library program group
     sizeof_msg_log = sizeof(msg_log);
     OptixModule shadeops_module;
-    OPTIX_CHECK_MSG(optixModuleCreateFromPTX(m_optix_ctx,
-                                             &module_compile_options,
-                                             &pipeline_compile_options,
-                                             shadeops_ptx.c_str(),
-                                             shadeops_ptx.size(), msg_log,
-                                             &sizeof_msg_log, &shadeops_module),
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options,
+                                        shadeops_ptx.c_str(),
+                                        shadeops_ptx.size(), msg_log,
+                                        &sizeof_msg_log, &shadeops_module),
                     fmtformat("Creating module from PTX-file: {}", msg_log));
 
     // Record it so we can destroy it later
@@ -510,12 +515,13 @@ OptixGridRenderer::make_optix_materials()
         // and set the OSL functions as Callable Programs so that they
         // can be executed by the closest hit program in the wrapper
         sizeof_msg_log = sizeof(msg_log);
-        OPTIX_CHECK_MSG(
-            optixModuleCreateFromPTX(m_optix_ctx, &module_compile_options,
-                                     &pipeline_compile_options, osl_ptx.c_str(),
-                                     osl_ptx.size(), msg_log, &sizeof_msg_log,
-                                     &optix_module),
-            fmtformat("Creating Module from PTX-file {}", msg_log));
+        OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx,
+                                            &module_compile_options,
+                                            &pipeline_compile_options,
+                                            osl_ptx.c_str(), osl_ptx.size(),
+                                            msg_log, &sizeof_msg_log,
+                                            &optix_module),
+                        fmtformat("Creating Module from PTX-file {}", msg_log));
 
         modules.push_back(optix_module);
 
@@ -561,7 +567,9 @@ OptixGridRenderer::make_optix_materials()
 
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth = 1;
-    pipeline_link_options.debugLevel    = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#if (OPTIX_VERSION < 70700)
+    pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#endif
 #if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;
 #endif
@@ -590,8 +598,16 @@ OptixGridRenderer::make_optix_materials()
 
     // Set the pipeline stack size
     OptixStackSizes stack_sizes = {};
-    for (OptixProgramGroup& program_group : final_groups)
+    for (OptixProgramGroup& program_group : final_groups) {
+#if (OPTIX_VERSION < 70700)
         OPTIX_CHECK(optixUtilAccumulateStackSizes(program_group, &stack_sizes));
+#else
+        // OptiX 7.7+ is able to take the whole pipeline into account
+        // when calculating the stack requirements.
+        OPTIX_CHECK(optixUtilAccumulateStackSizes(program_group, &stack_sizes,
+                                                  m_optix_pipeline));
+#endif
+    }
 
     uint32_t max_trace_depth = 1;
     uint32_t max_cc_depth    = 1;
@@ -604,11 +620,12 @@ OptixGridRenderer::make_optix_materials()
         &direct_callable_stack_size_from_traversal,
         &direct_callable_stack_size_from_state, &continuation_stack_size));
 
-    // NB: Providing the shadeops as a large PTX module is a slight abuse of
-    //     the OptiX API. Older drivers may have a hard time computing the
-    //     stack requirements for non-entry functions, so we need to pad the
-    //     direct callable stack size to accommodate these functions.
+#if (OPTIX_VERSION < 70700)
+    // NB: Older versions of OptiX are unable to compute the stack requirements
+    //     for extern functions (e.g., the shadeops functions), so we need to
+    //     pad the direct callable stack size to accommodate these functions.
     direct_callable_stack_size_from_state += 512;
+#endif
 
     const uint32_t max_traversal_depth = 1;
     OPTIX_CHECK(optixPipelineSetStackSize(

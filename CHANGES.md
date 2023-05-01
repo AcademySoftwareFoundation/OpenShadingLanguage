@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.12.13.0 -- 1 Jun? 2023 (compared to 1.12.12.0)
+--------------------------------------------------------
+
+
 Release 1.12.12.0 -- 1 May 2023 (compared to 1.12.11.0)
 --------------------------------------------------------
 * New ShadingSystem getattribute query for shader groups: "attribute_types"

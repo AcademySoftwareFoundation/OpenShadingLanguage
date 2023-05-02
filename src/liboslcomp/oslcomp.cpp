@@ -701,11 +701,12 @@ OSLCompilerImpl::write_oso_const_value(const ConstantSymbol* sym) const
             osofmt("{}{}", sym->get_int(i), nelements > 1 ? " " : "");
     else if (elemtype == TypeDesc::FLOAT)
         for (int i = 0; i < nelements; ++i)
-            osofmt("{}{}", sym->floatval(i), nelements > 1 ? " " : "");
+            osofmt("{:.9g}{}", sym->floatval(i), nelements > 1 ? " " : "");
     else if (equivalent(elemtype, TypeDesc::TypeVector))
         for (int i = 0; i < nelements; ++i) {
             Vec3 v = sym->get_vec3(i);
-            osofmt("{} {} {}{}", v.x, v.y, v.z, nelements > 1 ? " " : "");
+            osofmt("{:.9g} {:.9g} {:.9g}{}", v.x, v.y, v.z,
+                   nelements > 1 ? " " : "");
         }
     else {
         OSL_ASSERT(0 && "Don't know how to output this constant type");

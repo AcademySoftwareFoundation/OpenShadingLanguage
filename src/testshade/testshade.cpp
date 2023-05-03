@@ -31,7 +31,7 @@
 #if OSL_USE_BATCHED
 #    include <OSL/batched_shaderglobals.h>
 #endif
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
 #    include "optixgridrender.h"
 #endif
 
@@ -593,7 +593,7 @@ print_info()
 {
     ErrorHandler errhandler;
     SimpleRenderer* rend = nullptr;
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     if (use_optix)
         rend = new OptixGridRenderer;
     else
@@ -1846,7 +1846,7 @@ test_shade(int argc, const char* argv[])
     }
 
     SimpleRenderer* rend = nullptr;
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     if (use_optix)
         rend = new OptixGridRenderer;
     else
@@ -2007,7 +2007,7 @@ test_shade(int argc, const char* argv[])
     // object.
     setup_transformations(*rend, Mshad, Mobj);
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     if (use_optix) {
         reinterpret_cast<OptixGridRenderer*>(rend)->set_transforms(Mobj, Mshad);
         reinterpret_cast<OptixGridRenderer*>(rend)->register_named_transforms();

@@ -4,6 +4,11 @@
 
 #pragma once
 
+#cmakedefine01 OSL_USE_OPTIX
+#cmakedefine01 OSL_BUILD_BATCHED
+#define OSL_USE_BATCHED OSL_BUILD_BATCHED
+
+
 #include <OSL/export.h>
 #include <OSL/oslversion.h>
 #include <OSL/platform.h>
@@ -61,8 +66,6 @@
 
 
 OSL_NAMESPACE_ENTER
-
-#define OSL_USE_BATCHED @BUILD_BATCHED@
 
 /// Various compile-time defaults are defined here that could, in
 /// principle, be redefined if you are using OSL in some particular

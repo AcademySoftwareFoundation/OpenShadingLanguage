@@ -383,7 +383,7 @@ LLVMGEN(llvm_gen_printf)
     }
 
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     // In OptiX, printf currently supports 0 or 1 arguments, and the signature
     // requires 1 argument, so push a null pointer onto the call args if there
     // is no argument.
@@ -401,7 +401,7 @@ LLVMGEN(llvm_gen_printf)
     }
 
     // Now go back and put the new format string in its place
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     if (rop.use_optix()) {
         // In OptiX7+ case, we do this:
         // void* args = { args_size, arg0, arg1, arg2 };

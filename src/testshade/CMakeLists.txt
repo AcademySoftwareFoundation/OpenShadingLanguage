@@ -7,12 +7,12 @@ set ( testshade_srcs
       testshade.cpp
       simplerend.cpp )
 
-if (BUILD_BATCHED)
+if (OSL_BUILD_BATCHED)
     list(APPEND testshade_srcs 
         batched_simplerend.cpp)
 endif()    
 
-if (USE_OPTIX)
+if (OSL_USE_OPTIX)
     list (APPEND testshade_srcs optixgridrender.cpp)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu

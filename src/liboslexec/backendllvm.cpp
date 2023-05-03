@@ -335,7 +335,7 @@ BackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
 
 
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
 llvm::Value*
 BackendLLVM::addCUDAGlobalVariable(const std::string& name, int size,
                                    int alignment, const void* init_data,
@@ -427,7 +427,7 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
     llvm::Value* result = NULL;
     if (sym.symtype() == SymTypeConst) {
         TypeSpec elemtype = sym.typespec().elementtype();
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
         if (use_optix()) {
             // Check the constant map for the named Symbol; if it's found, then
             // a GlobalVariable has been created for it

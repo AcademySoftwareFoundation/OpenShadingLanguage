@@ -8,7 +8,7 @@ set (testrender_srcs
      simpleraytracer.cpp
      testrender.cpp)
 
-if (USE_OPTIX)
+if (OSL_USE_OPTIX)
     list (APPEND testrender_srcs optixraytracer.cpp)
     set (testrender_cuda_srcs
         cuda/quad.cu

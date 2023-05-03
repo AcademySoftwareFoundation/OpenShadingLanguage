@@ -216,7 +216,7 @@ public:
     /// map, the symbol is alloca'd and placed in the map.
     llvm::Value* getOrAllocateLLVMSymbol(const Symbol& sym);
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     /// Allocate a CUDA variable for the given OSL symbol and return a pointer
     /// to the corresponding LLVM GlobalVariable, or return the pointer if it
     /// has already been allocated.

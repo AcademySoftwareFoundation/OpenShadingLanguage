@@ -552,7 +552,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
         if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
             // Handle init ops.
             build_llvm_code(sym.initbegin(), sym.initend());
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
         } else if (use_optix() && !sym.typespec().is_closure()) {
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
@@ -1300,7 +1300,7 @@ BackendLLVM::initialize_llvm_group()
             }
             types += advance;
         }
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
         if (varargs && use_optix()) {
             varargs = false;
             params.push_back(ll.type_void_ptr());
@@ -1361,7 +1361,7 @@ BackendLLVM::run()
 #ifdef OSL_LLVM_NO_BITCODE
         OSL_ASSERT(!use_rs_bitcode());
         ll.module(ll.new_module("llvm_ops"));
-#    ifdef OSL_USE_OPTIX
+#    if OSL_USE_OPTIX
         if (use_optix()) {
             // If the module is created from LLVM bitcode, the target and
             // data layout is inherited from that, but if creating an empty
@@ -1615,7 +1615,7 @@ BackendLLVM::run()
         }
     }
 
-#ifdef OSL_USE_OPTIX
+#if OSL_USE_OPTIX
     if (use_optix()) {
         ll.ptx_compile_group(nullptr, group().name().string(),
                              group().m_llvm_ptx_compiled_version);

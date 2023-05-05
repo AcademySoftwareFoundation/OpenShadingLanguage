@@ -198,20 +198,24 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to)
 // Implemented by the renderer
 #    define OSL_SHADEOP_EXPORT extern "C" OSL_DLL_EXPORT
 OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int
-osl_get_matrix(void* sg_, void* r, const char* from);
+__optix_enabled__osl_get_matrix(void* sg_, void* r, const char* from);
 OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int
-osl_get_inverse_matrix(void* sg_, void* r, const char* to);
+__optix_enabled__osl_get_inverse_matrix(void* sg_, void* r, const char* to);
 #    undef OSL_SHADEOP_EXPORT
 #endif  // __CUDACC__
 
-
+#ifdef __CUDACC__
+#define OPTIX_ENABLED_CALL(call) __optix_enabled__##call
+#else
+#define OPTIX_ENABLED_CALL(call) call
+#endif
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_prepend_matrix_from(void* sg_, void* r, const char* from)
+OPTIX_ENABLED_CALL(osl_prepend_matrix_from(void* sg_, void* r, const char* from))
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     Matrix44 m;
-    bool ok = osl_get_matrix(sg, &m, from);
+    bool ok = OPTIX_ENABLED_CALL(osl_get_matrix(sg, &m, from));
     if (ok)
         MAT(r) = m * MAT(r);
 #ifndef __CUDACC__
@@ -230,11 +234,11 @@ osl_prepend_matrix_from(void* sg_, void* r, const char* from)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_get_from_to_matrix(void* sg, void* r, const char* from, const char* to)
+OPTIX_ENABLED_CALL(osl_get_from_to_matrix(void* sg, void* r, const char* from, const char* to))
 {
     Matrix44 Mfrom, Mto;
-    int ok = osl_get_matrix((ShaderGlobals*)sg, &Mfrom, from);
-    ok &= osl_get_inverse_matrix((ShaderGlobals*)sg, &Mto, to);
+    int ok = OPTIX_ENABLED_CALL(osl_get_matrix((ShaderGlobals*)sg, &Mfrom, from));
+    ok &= OPTIX_ENABLED_CALL(osl_get_inverse_matrix((ShaderGlobals*)sg, &Mto, to));
     MAT(r) = Mfrom * Mto;
     return ok;
 }
@@ -242,19 +246,19 @@ osl_get_from_to_matrix(void* sg, void* r, const char* from, const char* to)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_transform_triple(void* sg_, void* Pin, int Pin_derivs, void* Pout,
-                     int Pout_derivs, void* from, void* to, int vectype)
+OPTIX_ENABLED_CALL(osl_transform_triple(void* sg_, void* Pin, int Pin_derivs, void* Pout,
+                     int Pout_derivs, void* from, void* to, int vectype))
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     Matrix44 M;
     int ok;
     Pin_derivs &= Pout_derivs;  // ignore derivs if output doesn't need it
     if (HDSTR(from) == STRING_PARAMS(common))
-        ok = osl_get_inverse_matrix(sg, &M, (const char*)to);
+        ok = OPTIX_ENABLED_CALL(osl_get_inverse_matrix(sg, &M, (const char*)to));
     else if (HDSTR(to) == STRING_PARAMS(common))
-        ok = osl_get_matrix(sg, &M, (const char*)from);
+        ok = OPTIX_ENABLED_CALL(osl_get_matrix(sg, &M, (const char*)from));
     else
-        ok = osl_get_from_to_matrix(sg, &M, (const char*)from, (const char*)to);
+        ok = OPTIX_ENABLED_CALL(osl_get_from_to_matrix(sg, &M, (const char*)from, (const char*)to));
     if (ok) {
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs)
@@ -297,9 +301,9 @@ osl_transform_triple(void* sg_, void* Pin, int Pin_derivs, void* Pout,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_transform_triple_nonlinear(void* sg_, void* Pin, int Pin_derivs, void* Pout,
+OPTIX_ENABLED_CALL(osl_transform_triple_nonlinear(void* sg_, void* Pin, int Pin_derivs, void* Pout,
                                int Pout_derivs, void* from, void* to,
-                               int vectype)
+                               int vectype))
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
 #ifndef __CUDACC__
@@ -326,8 +330,8 @@ osl_transform_triple_nonlinear(void* sg_, void* Pin, int Pin_derivs, void* Pout,
     // Renderer couldn't or wouldn't transform directly
     // Except in OptiX we're the renderer will directly implement
     // the transform in osl_transform_triple.
-    return osl_transform_triple(sg, Pin, Pin_derivs, Pout, Pout_derivs, from,
-                                to, vectype);
+    return OPTIX_ENABLED_CALL(osl_transform_triple(sg, Pin, Pin_derivs, Pout, Pout_derivs, from,
+                                to, vectype));
 }
 
 

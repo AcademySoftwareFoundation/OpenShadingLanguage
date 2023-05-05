@@ -2448,8 +2448,16 @@ LLVM_Util::make_function(const std::string& name, bool fastcall,
                          llvm::Type* rettype, cspan<llvm::Type*> params,
                          bool varargs)
 {
+    ustring function_prefix;
+    if (m_function_prefixes.size())
+    {
+        auto it = m_function_prefixes.find(ustring(name.c_str()));
+        if (it != m_function_prefixes.end())
+            function_prefix = it->second;
+    }
     llvm::FunctionType* functype = type_function(rettype, params, varargs);
-    auto maybe_func = module()->getOrInsertFunction(name, functype).getCallee();
+    auto maybe_func = module()->getOrInsertFunction(function_prefix.c_str() ? std::string(function_prefix.c_str()) + name : name,
+                                                    functype).getCallee();
     OSL_ASSERT(maybe_func && "getOrInsertFunction returned NULL");
     // if (!llvm::isa<llvm::Function>(maybe_func)) {
     //     print("make_function: getOrInsertFunction returned non-function for {}\n", name);
@@ -2457,8 +2465,9 @@ LLVM_Util::make_function(const std::string& name, bool fastcall,
     //         print("   param type: {}\n", llvm_typename(p));
     // }
     OSL_ASSERT_MSG(llvm::isa<llvm::Function>(maybe_func),
-                   "Declaration for %s is wrong, LLVM had to make a cast",
-                   name.c_str());
+                   "Declaration for %s%s is wrong, LLVM had to make a cast",
+                    function_prefix.c_str() ? function_prefix.c_str() : "",
+                    name);
     llvm::Function* func = llvm::cast<llvm::Function>(maybe_func);
 
     int vectorRegisterBitWidth = 8 * sizeof(float) * m_vector_width;
@@ -3637,12 +3646,18 @@ LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
 llvm::Value*
 LLVM_Util::call_function(const char* name, cspan<llvm::Value*> args)
 {
-    llvm::Function* func = module()->getFunction(name);
+    ustring function_prefix;
+    if (m_function_prefixes.size())
+    {
+        auto it = m_function_prefixes.find(ustring(name));
+        if (it != m_function_prefixes.end())
+            function_prefix = it->second;
+    }
+    llvm::Function* func = module()->getFunction(function_prefix.c_str() ? std::string(function_prefix.c_str()) + name : name);
     if (func == nullptr) {
-        std::cerr
-            << "LLVM_Util::call_function(" << name
-            << ", args), requested function name doesn't exist in the current module!"
-            << std::endl;
+        std::cerr << "LLVM_Util::call_function(" << (function_prefix.c_str() ? function_prefix.c_str() : "")
+                  << name << ", args), requested function name doesn't exist in the current module!"
+                  << std::endl;
         OSL_ASSERT(func);
     }
     return call_function(func, args);

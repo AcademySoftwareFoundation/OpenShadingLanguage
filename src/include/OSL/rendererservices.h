@@ -411,6 +411,9 @@ public:
         return false;
     }
 
+    virtual void register_optix_enabled_functions (std::vector<ustring>& function_names)
+    {
+    }
 
 
     /// Options we use for noise calls.

@@ -1994,7 +1994,7 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
         int nlayers          = group->nlayers();
         ShaderInstance* inst = (*group)[nlayers - 1];
         // This formulation mirrors OSOProcessorBase::layer_function_name()
-        *(ustring*)val = ustring::fmtformat("__direct_callable__{}_{}",
+        *(ustring*)val = ustring::fmtformat("__direct_callable____optix_enabled__{}_{}",
                                             group->name(), inst->layername());
         return true;
     }

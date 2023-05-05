@@ -85,6 +85,20 @@ BackendLLVM::BackendLLVM(ShadingSystemImpl& shadingsys, ShaderGroup& group,
     m_use_rs_bitcode = !shadingsys.m_rs_bitcode.empty();
     m_name_llvm_syms = shadingsys.m_llvm_output_bitcode;
 
+    if (m_use_optix)
+    {
+        // These internal ops we hardcode to be OptiX enabled
+        ustring __optix_enabled__("__optix_enabled__");
+        ll.m_function_prefixes[ustring("osl_prepend_matrix_from")]        = __optix_enabled__;
+        ll.m_function_prefixes[ustring("osl_get_from_to_matrix")]         = __optix_enabled__;
+        ll.m_function_prefixes[ustring("osl_transform_triple_nonlinear")] = __optix_enabled__;
+        ll.m_function_prefixes[ustring("osl_transform_triple")]           = __optix_enabled__;
+        std::vector<ustring> extra_optix_enabled_functions;
+        shadingsys.renderer()->register_optix_enabled_functions(extra_optix_enabled_functions);
+        for (auto f : extra_optix_enabled_functions)
+            ll.m_function_prefixes[f] = __optix_enabled__;
+    }
+
     // Select the appropriate ustring representation
     ll.ustring_rep(m_use_optix ? LLVM_Util::UstringRep::hash
                                : LLVM_Util::UstringRep::charptr);

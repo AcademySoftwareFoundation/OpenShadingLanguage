@@ -2609,7 +2609,7 @@ public:
     std::string layer_function_name(const ShaderGroup& group,
                                     const ShaderInstance& inst)
     {
-        return fmtformat("{}_{}", group.name(), inst.layername());
+        return fmtformat("__optix_enabled__{}_{}", group.name(), inst.layername());
     }
     std::string layer_function_name()
     {

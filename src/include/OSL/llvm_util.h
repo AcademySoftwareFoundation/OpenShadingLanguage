@@ -7,6 +7,7 @@
 #include <OSL/oslconfig.h>
 
 #include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 #ifdef LLVM_NAMESPACE
@@ -87,6 +88,9 @@ public:
     LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel = 0,
               int vector_width = 4);
     ~LLVM_Util();
+
+    // map of function names and prefixes that we would like prepended to these functions
+    std::unordered_map<ustring, ustring, ustringHash> m_function_prefixes;
 
     // JIT'd code needs to exist with a longer lifetime than the LLVM_Util object.
     // To enable better cleanup at shutdown, the lifetime of all JIT'd code is

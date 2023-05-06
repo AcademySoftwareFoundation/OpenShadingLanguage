@@ -639,6 +639,7 @@ public:
     ///
     TextureSystem* texturesys() const { return m_texturesys; }
 
+    bool use_optix() const { return m_use_optix; }
     bool debug_nan() const { return m_debugnan; }
     bool debug_uninit() const { return m_debug_uninit; }
     bool lockgeom_default() const { return m_lockgeom_default; }
@@ -924,6 +925,7 @@ private:
     std::vector<SymLocationDesc> m_symlocs;
     int m_max_local_mem_KB;           ///< Local storage can a shader use
     int m_compile_report;             ///< Print compilation report?
+    bool m_use_optix;                 ///< This is an OptiX-based renderer
     bool m_buffer_printf;             ///< Buffer/batch printf output?
     bool m_no_noise;                  ///< Substitute trivial noise calls
     bool m_no_pointcloud;             ///< Substitute trivial pointcloud calls

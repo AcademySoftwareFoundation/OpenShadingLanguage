@@ -5,13 +5,14 @@ This is a checklist for TSC's to review as part of the intake process. The TSC s
 - Existing Project Governance
   - [X] Project License exists ( [LICENSE.md](../LICENSE.md) ) and is OSI-approved
   - [X] Any third-party components/dependencies included are listed along with their licenses ( [THIRD_PARTY.md](../THIRD_PARTY.md) )
-  - [X] Governance defined, outlining community roles and how decsions are made ( [GOVERNANCE.md](../GOVERNANCE.md] )
+  - [X] Governance defined, outlining community roles and how decisions are made ( [GOVERNANCE.md](../GOVERNANCE.md) )
     - Closed by https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1137
   - [X] Contribution Policy defined ( [CONTRIBUTING.md](../CONTRIBUTING.md) )
     - Closed by https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1137
   - [X] Code of Conduct defined ( existing or pull from [ASWF Sample Project](https://github.com/AcademySoftwareFoundation/aswf-sample-project/blob/master/CODE_OF_CONDUCT.md) )
     - Closed by https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1137
-  - [ ] Release methodology defined	( [release.md](process/release.md) )
+  - [X] Release methodology defined	( [RELEASING.md](../docs/RELEASING.md) )
+    - Closed by https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1572
 - New Project Governance
   - [X] TSC members identified
   - [X] First TSC meeting held
@@ -41,7 +42,7 @@ This is a checklist for TSC's to review as part of the intake process. The TSC s
   - [X] New project announcement done ( https://www.aswf.io/osl-joins-aswf/ )
   - [X] Project added to ASWF website and ASWF landscape
 - Graduation
-  - [ ] CII Badge	achieved
+  - [X] OpenSSF Best Practices Badge achieved
   - [ ] Committer Diversity	established
 	- [ ] Commit/Contribution growth during incubation
 	- [ ] Committers defined in the project	( [COMMITTERS.csv](COMMITTERS.csv) or [COMMITTERS.yml](COMMITTERS.yml) )

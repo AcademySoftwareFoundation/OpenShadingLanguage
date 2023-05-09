@@ -1104,10 +1104,10 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_exec_repeat(1)
     , m_opt_warnings(0)
     , m_gpu_opt_error(0)
-    , m_gpu_no_inline(false)
-    , m_gpu_no_inline_layer_funcs(false)
-    , m_gpu_no_inline_thresh(100000)
-    , m_gpu_force_inline_thresh(0)
+    , m_optix_no_inline(false)
+    , m_optix_no_inline_layer_funcs(false)
+    , m_optix_no_inline_thresh(100000)
+    , m_optix_force_inline_thresh(0)
     , m_colorspace("Rec709")
     , m_stat_opt_locking_time(0)
     , m_stat_specialization_time(0)
@@ -1629,10 +1629,10 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("exec_repeat", int, m_exec_repeat);
     ATTR_SET("opt_warnings", int, m_opt_warnings);
     ATTR_SET("gpu_opt_error", int, m_gpu_opt_error);
-    ATTR_SET("gpu_no_inline", int, m_gpu_no_inline);
-    ATTR_SET("gpu_no_inline_layer_funcs", int, m_gpu_no_inline_layer_funcs);
-    ATTR_SET("gpu_no_inline_thresh", int, m_gpu_no_inline_thresh);
-    ATTR_SET("gpu_force_inline_thresh", int, m_gpu_force_inline_thresh);
+    ATTR_SET("optix_no_inline", int, m_optix_no_inline);
+    ATTR_SET("optix_no_inline_layer_funcs", int, m_optix_no_inline_layer_funcs);
+    ATTR_SET("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
+    ATTR_SET("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
     ATTR_SET_STRING("commonspace",
                     m_shading_state_uniform.m_commonspace_synonym);
     ATTR_SET_STRING("debug_groupname", m_debug_groupname);
@@ -1814,10 +1814,10 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("exec_repeat", int, m_exec_repeat);
     ATTR_DECODE("opt_warnings", int, m_opt_warnings);
     ATTR_DECODE("gpu_opt_error", int, m_gpu_opt_error);
-    ATTR_DECODE("gpu_no_inline", int, m_gpu_no_inline);
-    ATTR_DECODE("gpu_no_inline_layer_funcs", int, m_gpu_no_inline_layer_funcs);
-    ATTR_DECODE("gpu_no_inline_thresh", int, m_gpu_no_inline_thresh);
-    ATTR_DECODE("gpu_force_inline_thresh", int, m_gpu_force_inline_thresh);
+    ATTR_DECODE("optix_no_inline", int, m_optix_no_inline);
+    ATTR_DECODE("optix_no_inline_layer_funcs", int, m_optix_no_inline_layer_funcs);
+    ATTR_DECODE("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
+    ATTR_DECODE("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
 
     ATTR_DECODE("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE("stat:groups", int, m_stat_groups);
@@ -2393,6 +2393,10 @@ ShadingSystemImpl::getstats(int level) const
     INTOPT(exec_repeat);
     INTOPT(opt_warnings);
     INTOPT(gpu_opt_error);
+    BOOLOPT(optix_no_inline);
+    BOOLOPT(optix_no_inline_layer_funcs);
+    INTOPT(optix_no_inline_thresh);
+    INTOPT(optix_force_inline_thresh);
     STROPT(debug_groupname);
     STROPT(debug_layername);
     STROPT(archive_groupname);

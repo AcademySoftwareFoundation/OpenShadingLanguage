@@ -725,11 +725,11 @@ public:
         return m_closure_registry.get_entry(id);
     }
 
-    /// Attributes to control GPU optimization
-    bool gpu_no_inline() const { return m_gpu_no_inline; }
-    bool gpu_no_inline_layer_funcs() const { return m_gpu_no_inline_layer_funcs; }
-    int gpu_no_inline_thresh() const { return m_gpu_no_inline_thresh; }
-    int gpu_force_inline_thresh() const { return m_gpu_force_inline_thresh; }
+    /// Attributes to control optimization for OptiX/CUDA
+    bool optix_no_inline() const { return m_optix_no_inline; }
+    bool optix_no_inline_layer_funcs() const { return m_optix_no_inline_layer_funcs; }
+    int optix_no_inline_thresh() const { return m_optix_no_inline_thresh; }
+    int optix_force_inline_thresh() const { return m_optix_force_inline_thresh; }
 
     /// Set the current color space.
     bool set_colorspace(ustring colorspace);
@@ -960,11 +960,11 @@ private:
     int m_gpu_opt_error;              ///< Error on inability to optimize
                                       ///<   away things that can't GPU.
 
-    /// Experimental attributes to help tuning GPU optimization passes
-    bool m_gpu_no_inline;  ///< Disable function inlining
-    bool m_gpu_no_inline_layer_funcs;  ///< Disable inlining for group layer funcs
-    int m_gpu_no_inline_thresh;  ///< Disable inlining for functions larger than the threshold
-    int m_gpu_force_inline_thresh;  ///< Force inling for functions smaller than the threshold
+    /// Experimental attributes to help tuning OptiX optimization passes
+    bool m_optix_no_inline;  ///< Disable function inlining
+    bool m_optix_no_inline_layer_funcs;  ///< Disable inlining for group layer funcs
+    int m_optix_no_inline_thresh;  ///< Disable inlining for functions larger than the threshold
+    int m_optix_force_inline_thresh;  ///< Force inling for functions smaller than the threshold
 
     ustring m_colorspace;  ///< What RGB colors mean
 

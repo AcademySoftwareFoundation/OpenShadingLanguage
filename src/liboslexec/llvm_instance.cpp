@@ -1901,21 +1901,21 @@ BackendLLVM::run()
                 || fn.getName().startswith("llvm."))
                 continue;
 
-            if (shadingsys().gpu_no_inline()) {
+            if (shadingsys().optix_no_inline()) {
                 fn.addFnAttr(llvm::Attribute::NoInline);
                 continue;
             }
 
-            if (shadingsys().gpu_no_inline_layer_funcs()
+            if (shadingsys().optix_no_inline_layer_funcs()
                 && !fn.hasFnAttribute("osl-lib-function")) {
                 fn.addFnAttr(llvm::Attribute::NoInline);
                 continue;
             }
 
             const int inst_count = fn.getInstructionCount();
-            if (inst_count >= shadingsys().gpu_no_inline_thresh()) {
+            if (inst_count >= shadingsys().optix_no_inline_thresh()) {
                 fn.addFnAttr(llvm::Attribute::NoInline);
-            } else if (inst_count <= shadingsys().gpu_force_inline_thresh()) {
+            } else if (inst_count <= shadingsys().optix_force_inline_thresh()) {
                 fn.addFnAttr(llvm::Attribute::AlwaysInline);
             }
         }

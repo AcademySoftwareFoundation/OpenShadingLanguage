@@ -105,8 +105,8 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
         // It's actually faster to ask for 4 channels (even if we need fewer)
         // and ensure that they're being put in aligned memory.
         // TODO:  investigate if the above statement is true when nchannels==1
-        // NOTE: using simd::float4 to speedup texture transformation below
-        OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
+        // NOTE: using simd::vfloat4 to speedup texture transformation below
+        OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd;
 
         bool retVal = false;
 
@@ -120,8 +120,8 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
             has_derivs ? (float*)&dresultds_simd : NULL,
             has_derivs ? (float*)&dresultdt_simd : NULL);
 
-        OIIO::simd::float4 dresultdx_simd;
-        OIIO::simd::float4 dresultdy_simd;
+        OIIO::simd::vfloat4 dresultdx_simd;
+        OIIO::simd::vfloat4 dresultdy_simd;
         if (has_derivs) {
             // Correct our st texture space gradients into xy-space gradients
             dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
@@ -297,8 +297,8 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
         // and ensure that they're being put in aligned memory.
         // TODO:  investigate if the above statement is true when nchannels==1
 
-        // NOTE: using simd::float4 to speedup texture transformation below
-        OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd,
+        // NOTE: using simd::vfloat4 to speedup texture transformation below
+        OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd,
             dresultdr_simd;
 
         bool retVal = false;
@@ -314,8 +314,8 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
             has_derivs ? (float*)&dresultdt_simd : nullptr,
             has_derivs ? (float*)&dresultdr_simd : nullptr);
 
-        OIIO::simd::float4 dresultdx_simd;
-        OIIO::simd::float4 dresultdy_simd;
+        OIIO::simd::vfloat4 dresultdx_simd;
+        OIIO::simd::vfloat4 dresultdy_simd;
         if (has_derivs) {
             // Correct our str texture space gradients into xyz-space gradients
             dresultdx_simd = dresultds_simd * dPdx.x + dresultdt_simd * dPdx.y
@@ -480,8 +480,8 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
         // and ensure that they're being put in aligned memory.
         // TODO:  investigate if the above statement is true when nchannels==1
 
-        // NOTE: using simd::float4 to speedup texture transformation below
-        OIIO::simd::float4 result_simd;
+        // NOTE: using simd::vfloat4 to speedup texture transformation below
+        OIIO::simd::vfloat4 result_simd;
 
         bool retVal = false;
 

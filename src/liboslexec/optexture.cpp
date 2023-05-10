@@ -224,7 +224,7 @@ osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
     bool derivs       = (dresultdx || dalphadx);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
-    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
+    OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd;
     bool ok = sg->renderer->texture(
         USTR(name), (TextureSystem::TextureHandle*)handle,
         sg->context->texture_thread_info(), *opt, sg, s, t, dsdx, dtdx, dsdy,
@@ -240,10 +240,10 @@ osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
     if (derivs) {
         OSL_DASSERT((dresultdx == nullptr) == (dresultdy == nullptr));
         OSL_DASSERT((dalphadx == nullptr) == (dalphady == nullptr));
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx
-                                            + dresultdt_simd * dtdx;
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy
-                                            + dresultdt_simd * dtdy;
+        OIIO::simd::vfloat4 dresultdx_simd = dresultds_simd * dsdx
+                                             + dresultdt_simd * dtdx;
+        OIIO::simd::vfloat4 dresultdy_simd = dresultds_simd * dsdy
+                                             + dresultdt_simd * dtdy;
         if (dresultdx) {
             for (int i = 0; i < chans; ++i)
                 ((float*)dresultdx)[i] = dresultdx_simd[i];
@@ -281,7 +281,7 @@ osl_texture3d(void* sg_, const char* name, void* handle, void* opt_, void* P_,
     bool derivs       = (dresultdx != NULL || dalphadx != NULL);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
-    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd,
+    OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd,
         dresultdr_simd;
     bool ok = sg->renderer->texture3d(
         USTR(name), (TextureSystem::TextureHandle*)handle,
@@ -297,12 +297,12 @@ osl_texture3d(void* sg_, const char* name, void* handle, void* opt_, void* P_,
 
     // Correct our str texture space gradients into xyz-space gradients
     if (derivs) {
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx.x
-                                            + dresultdt_simd * dPdx.y
-                                            + dresultdr_simd * dPdx.z;
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy.x
-                                            + dresultdt_simd * dPdy.y
-                                            + dresultdr_simd * dPdy.z;
+        OIIO::simd::vfloat4 dresultdx_simd = dresultds_simd * dPdx.x
+                                             + dresultdt_simd * dPdx.y
+                                             + dresultdr_simd * dPdx.z;
+        OIIO::simd::vfloat4 dresultdy_simd = dresultds_simd * dPdy.x
+                                             + dresultdt_simd * dPdy.y
+                                             + dresultdr_simd * dPdy.z;
         if (dresultdx) {
             for (int i = 0; i < chans; ++i)
                 ((float*)dresultdx)[i] = dresultdx_simd[i];
@@ -335,7 +335,7 @@ osl_environment(void* sg_, const char* name, void* handle, void* opt_, void* R_,
     TextureOpt* opt   = (TextureOpt*)opt_;
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
-    OIIO::simd::float4 local_result;
+    OIIO::simd::vfloat4 local_result;
     bool ok = sg->renderer->environment(USTR(name),
                                         (TextureSystem::TextureHandle*)handle,
                                         sg->context->texture_thread_info(),

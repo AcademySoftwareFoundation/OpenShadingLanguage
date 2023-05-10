@@ -15,7 +15,7 @@ namespace pvt {
 
 #ifdef USE_PARTIO
 
-class PointCloud {
+class OSLEXECPUBLIC PointCloud {
 public:
     PointCloud(ustringhash filename, Partio::ParticlesDataMutable* partio_cloud,
                bool write);

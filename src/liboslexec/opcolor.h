@@ -27,7 +27,7 @@ class ShadingContext;
 namespace pvt {
 
 
-class ColorSystem {
+class OSLEXECPUBLIC ColorSystem {
 #ifdef __CUDACC__
     using Context = void*;
 #else

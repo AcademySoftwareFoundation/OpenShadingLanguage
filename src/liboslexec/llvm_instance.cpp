@@ -563,6 +563,8 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             llvm::Value* dst = llvm_void_ptr(sym);
             TypeDesc t       = sym.typespec().simpletype();
             ll.op_memcpy(dst, src, t.size(), t.basesize());
+            if (sym.has_derivs())
+                llvm_zero_derivs(sym);
 #endif
         } else if (!sym.lockgeom() && !sym.typespec().is_closure()) {
             // geometrically-varying param; memcpy its default value

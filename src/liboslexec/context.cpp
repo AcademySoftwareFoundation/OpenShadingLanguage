@@ -133,7 +133,7 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int shadeindex,
         ssg.renderer            = renderer();
         ssg.Ci                  = NULL;
         run_func(&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr,
-                 shadeindex);
+                 shadeindex, sgroup.interactive_arena_ptr());
     }
 
     if (profile)
@@ -160,8 +160,8 @@ ShadingContext::execute_layer(int shadeindex, ShaderGlobals& ssg,
     if (!run_func)
         return false;
 
-    run_func(&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr,
-             shadeindex);
+    run_func(&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr, shadeindex,
+             group()->interactive_arena_ptr());
 
     if (profile)
         m_ticks += timer.ticks();
@@ -321,7 +321,8 @@ ShadingContext::Batched<WidthT>::execute_init(
             run_mask.set_count_on(batch_size);
 
             run_func(&bsg, context().m_heap.get(), &wide_shadeindex.data(),
-                     userdata_base_ptr, output_base_ptr, run_mask.value());
+                     userdata_base_ptr, output_base_ptr, run_mask.value(),
+                     sgroup.interactive_arena_ptr());
         }
     }
 
@@ -360,7 +361,8 @@ ShadingContext::Batched<WidthT>::execute_layer(
         run_mask.set_count_on(batch_size);
 
         run_func(&bsg, context().m_heap.get(), &wide_shadeindex.data(),
-                 userdata_base_ptr, output_base_ptr, run_mask.value());
+                 userdata_base_ptr, output_base_ptr, run_mask.value(),
+                 group()->interactive_arena_ptr());
     }
 
     if (profile)

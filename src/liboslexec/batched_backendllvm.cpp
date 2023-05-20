@@ -448,6 +448,16 @@ BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
         return result;
     }
 
+    if (sym.symtype() == SymTypeParam && sym.interactive()) {
+        // Special case for interactively-edited parameters -- they live in
+        // the interactive data block for the group.
+        // Generate the pointer to this symbol by offsetting into the
+        // interactive data block.
+        int offset = group().interactive_param_offset(layer(), sym.name());
+        return ll.offset_ptr(m_llvm_interactive_params_ptr, offset,
+                             llvm_ptr_type(sym.typespec().elementtype()));
+    }
+
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         // Special case for params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];

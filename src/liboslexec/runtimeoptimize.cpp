@@ -889,8 +889,10 @@ RuntimeOptimizer::simplify_params()
         Symbol* s(inst()->symbol(i));
         if (s->symtype() != SymTypeParam)
             continue;  // Skip non-params
-        if (!s->lockgeom())
-            continue;  // Don't mess with params that can change with the geom
+        // Don't simplify params that are interpolated or interactively
+        // editable
+        if (s->interpolated() || s->interactive())
+            continue;
         if (s->typespec().is_structure() || s->typespec().is_closure_based())
             continue;  // We don't mess with struct placeholders or closures
 
@@ -967,7 +969,7 @@ RuntimeOptimizer::simplify_params()
                     // examining.
                     ShaderInstance* uplayer = group()[c.srclayer];
                     Symbol* srcsym          = uplayer->symbol(c.src.param);
-                    if (!srcsym->lockgeom())
+                    if (srcsym->interpolated())
                         continue;  // Not if it can be overridden by geometry
 
                     // Is the source symbol known to be a global, from
@@ -2184,7 +2186,7 @@ RuntimeOptimizer::optimize_ops(int beginop, int endop,
         if (opnum == inst()->m_maincodebegin) {
             for (int i = inst()->firstparam(); i < inst()->lastparam(); ++i) {
                 Symbol* s(inst()->symbol(i));
-                if (s->symtype() == SymTypeOutputParam && s->lockgeom()
+                if (s->symtype() == SymTypeOutputParam && !s->interpolated()
                     && (s->valuesource() == Symbol::DefaultVal
                         || s->valuesource() == Symbol::InstanceVal)
                     && !s->has_init_ops() && !s->typespec().is_closure_based()
@@ -2491,7 +2493,7 @@ RuntimeOptimizer::resolve_isconnected()
                 s = inst()->symbol(fieldsymid);
             }
             bool upconnected = s->connected();
-            if (!s->lockgeom() && shadingsys().userdata_isconnected())
+            if (s->interpolated() && shadingsys().userdata_isconnected())
                 upconnected = true;
             int val = (upconnected ? 1 : 0) + (s->connected_down() ? 2 : 0);
             turn_into_assign(op, add_constant(TypeDesc::TypeInt, &val),
@@ -3251,6 +3253,7 @@ RuntimeOptimizer::run()
     m_userdata_needed.clear();
     m_attributes_needed.clear();
     bool does_nothing = true;
+    std::vector<uint8_t> interactive_data;
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst(layer);
         if (inst()->unused())
@@ -3262,7 +3265,7 @@ RuntimeOptimizer::run()
             // Find interpolated parameters
             if ((s.symtype() == SymTypeParam
                  || s.symtype() == SymTypeOutputParam)
-                && !s.lockgeom()) {
+                && s.interpolated()) {
                 UserDataNeeded udn(s.name(), layer, s.typespec().simpletype(),
                                    s.data(), s.has_derivs());
                 std::set<UserDataNeeded>::iterator found;
@@ -3273,6 +3276,21 @@ RuntimeOptimizer::run()
                     m_userdata_needed.erase(found);
                     m_userdata_needed.insert(udn);
                 }
+            }
+            // Find interactive parameters
+            if (s.symtype() == SymTypeParam && s.interactive()) {
+                // Make enough room in interactive_data to accommodate this
+                // interactive parameter, including correct alignment.
+                size_t offset    = interactive_data.size();
+                size_t typesize  = s.typespec().simpletype().size();
+                size_t alignment = typesize > 4 ? 8 : 4;
+                offset = OIIO::round_to_multiple_of_pow2(offset, alignment);
+                interactive_data.resize(offset + typesize);
+                // Copy from the instance value to the interactive block
+                memcpy(&interactive_data[offset], s.data(), typesize);
+                // Make sure the symbol remembers it's stored in the interactive
+                // arena with the right offset.
+                group().add_interactive_param(layer, s.name(), offset);
             }
             // Track which globals the group needs
             if (s.symtype() == SymTypeGlobal) {
@@ -3377,6 +3395,7 @@ RuntimeOptimizer::run()
         }
     }
     group().does_nothing(does_nothing);
+    group().setup_interactive_arena(interactive_data);
 
     m_stat_specialization_time = rop_timer();
     {

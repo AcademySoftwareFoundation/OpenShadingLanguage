@@ -241,6 +241,7 @@ enum class SymArena {
     Heap,               // Belongs to context heap
     Outputs,            // Belongs to output arena
     UserData,           // UserData arena
+    Interactive,        // Interactively edited variables
     // ShaderGlobals,   // RESERVED
 };
 

@@ -57,10 +57,18 @@ Schematically, we want to create code that resembles the following:
         float param_1_bar;
     };
 
+    // Data for the interactively adjusted parameters of this group -- these
+    // can't be turned into constants because the app may want to modify them
+    // as it runs (such as for user interaction). This block of memory has
+    // one global copy specific each the shader group, managed by OSL.
+    struct InteractiveParams {
+        float iparam_0_baz;
+    };
+
     // Name of layer entry is $layer_ID
     void $layer_0(ShaderGlobals* sg, GroupData* group,
                   void* userdatda_base_ptr, void* output_base_ptr,
-                  int shadeindex)
+                  int shadeindex, InteractiveParams* interactive_params)
     {
         // Declare locals, temps, constants, params with known values.
         // Make them all look like stack memory locations:
@@ -70,25 +78,27 @@ Schematically, we want to create code that resembles the following:
         // then run the shader body:
         *x = sg->u * group->param_0_bar;
         group->param_1_foo = *x;
+        *x += interactive_params->iparam_0_baz;
+        // ...
     }
 
     void $layer_1(ShaderGlobals* sg, GroupData* group,
                   void* userdatda_base_ptr, void* output_base_ptr,
-                  int shadeindex)
+                  int shadeindex, InteractiveParams* interactive_params)
     {
         // Because we need the outputs of layer 0 now, we call it if it
         // hasn't already run:
         if (! group->layer_run[0]) {
             group->layer_run[0] = 1;
             $layer_0 (sg, group, userdata_base_ptr, output_base_ptr,
-                     shadeindex); // because we need its outputs
+                     shadeindex, interactive_params); // because we need its outputs
         }
         *y = sg->u * group->$param_1_bar;
     }
 
     void $group_1(ShaderGlobals* sg, GroupData* group,
                   void* userdatda_base_ptr, void* output_base_ptr,
-                  int shadeindex)
+                  int shadeindex, InteractiveParams* interactive_params)
     {
         group->layer_run[...] = 0;
         // Run just the unconditional layers
@@ -96,7 +106,7 @@ Schematically, we want to create code that resembles the following:
         if (! group->layer_run[1]) {
             group->layer_run[1] = 1;
             $layer_1(sg, group, userdata_base_ptr, output_base_ptr,
-                     shadeindex);
+                     shadeindex, interactive_params);
         }
     }
 
@@ -324,8 +334,8 @@ BackendLLVM::llvm_type_groupdata()
                 && !sym.connected_down()) {
                 auto found = group().find_symloc(sym.name());
                 if (found)
-                    OIIO::Strutil::print("layer {} \"{}\" : OUTPUT {}\n", layer,
-                                         inst->layername(), found->name);
+                    print("layer {} \"{}\" : OUTPUT {}\n", layer,
+                          inst->layername(), found->name);
             }
 
             // Alignment
@@ -335,11 +345,11 @@ BackendLLVM::llvm_type_groupdata()
             if (offset & (align - 1))
                 offset += align - (offset & (align - 1));
             if (llvm_debug() >= 2)
-                std::cout << "  " << inst->layername() << " (" << inst->id()
-                          << ") " << sym.mangled() << " " << ts.c_str()
-                          << ", field " << order << ", size "
-                          << derivSize * int(sym.size()) << ", offset "
-                          << offset << std::endl;
+                print("  {} ({}) {} {}, field {}, size {}, offset {}{}{}\n",
+                      inst->layername(), inst->id(), sym.mangled(), ts.c_str(),
+                      order, derivSize * int(sym.size()), offset,
+                      sym.interpolated() ? " (interpolated)" : "",
+                      sym.interactive() ? " (interactive)" : "");
             sym.dataoffset((int)offset);
             // TODO(arenas): sym.set_dataoffset(SymArena::Heap, offset);
             offset += derivSize * sym.size();
@@ -468,7 +478,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
     // such userdata was available.
     llvm::BasicBlock* after_userdata_block = nullptr;
     const SymLocationDesc* symloc          = nullptr;
-    if (!sym.lockgeom() && !sym.typespec().is_closure()) {
+    if (sym.interpolated() && !sym.typespec().is_closure()) {
         ustring symname = sym.name();
         TypeDesc type   = sym.typespec().simpletype();
 
@@ -566,7 +576,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             if (sym.has_derivs())
                 llvm_zero_derivs(sym);
 #endif
-        } else if (!sym.lockgeom() && !sym.typespec().is_closure()) {
+        } else if (sym.interpolated() && !sym.typespec().is_closure()) {
             // geometrically-varying param; memcpy its default value
             TypeDesc t = sym.typespec().simpletype();
             ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
@@ -860,10 +870,13 @@ BackendLLVM::build_llvm_init()
     ll.current_function(
         ll.make_function(unique_name, false,
                          ll.type_void(),  // return type
-                         { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                           ll.type_void_ptr(),  // userdata_base_ptr
-                           ll.type_void_ptr(),  // output_base_ptr
-                           ll.type_int() }));
+                         {
+                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                             ll.type_void_ptr(),  // userdata_base_ptr
+                             ll.type_void_ptr(),  // output_base_ptr
+                             ll.type_int(),
+                             ll.type_void_ptr(),  // FIXME: interactive params
+                         }));
 
     if (ll.debug_is_enabled()) {
         ustring sourcefile
@@ -873,10 +886,17 @@ BackendLLVM::build_llvm_init()
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0);  //arg_it++;
-    m_llvm_groupdata_ptr     = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_shaderglobals_ptr->setName("shaderglobals_ptr");
+    m_llvm_groupdata_ptr = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_groupdata_ptr->setName("groupdata_ptr");
     m_llvm_userdata_base_ptr = ll.current_function_arg(2);  //arg_it++;
-    m_llvm_output_base_ptr   = ll.current_function_arg(3);  //arg_it++;
-    m_llvm_shadeindex        = ll.current_function_arg(4);  //arg_it++;
+    m_llvm_userdata_base_ptr->setName("userdata_base_ptr");
+    m_llvm_output_base_ptr = ll.current_function_arg(3);  //arg_it++;
+    m_llvm_output_base_ptr->setName("output_base_ptr");
+    m_llvm_shadeindex = ll.current_function_arg(4);  //arg_it++;
+    m_llvm_shadeindex->setName("shadeindex");
+    m_llvm_interactive_params_ptr = ll.current_function_arg(5);  //arg_it++;
+    m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
 
     // Set up a new IR builder
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_name);
@@ -956,10 +976,13 @@ BackendLLVM::build_llvm_instance(bool groupentry)
         unique_layer_name,
         !is_entry_layer,  // fastcall for non-entry layer functions
         ll.type_void(),   // return type
-        { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-          ll.type_void_ptr(),  // userdata_base_ptr
-          ll.type_void_ptr(),  // output_base_ptr
-          ll.type_int() }));
+        {
+            llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+            ll.type_void_ptr(),  // userdata_base_ptr
+            ll.type_void_ptr(),  // output_base_ptr
+            ll.type_int(),
+            ll.type_void_ptr(),  // FIXME: interactive_params
+        }));
 
     if (ll.debug_is_enabled()) {
         const Opcode& mainbegin(inst()->op(inst()->maincodebegin()));
@@ -969,10 +992,17 @@ BackendLLVM::build_llvm_instance(bool groupentry)
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0);  //arg_it++;
-    m_llvm_groupdata_ptr     = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_shaderglobals_ptr->setName("shaderglobals_ptr");
+    m_llvm_groupdata_ptr = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_groupdata_ptr->setName("groupdata_ptr");
     m_llvm_userdata_base_ptr = ll.current_function_arg(2);  //arg_it++;
-    m_llvm_output_base_ptr   = ll.current_function_arg(3);  //arg_it++;
-    m_llvm_shadeindex        = ll.current_function_arg(4);  //arg_it++;
+    m_llvm_userdata_base_ptr->setName("userdata_base_ptr");
+    m_llvm_output_base_ptr = ll.current_function_arg(3);  //arg_it++;
+    m_llvm_output_base_ptr->setName("output_base_ptr");
+    m_llvm_shadeindex = ll.current_function_arg(4);  //arg_it++;
+    m_llvm_shadeindex->setName("shadeindex");
+    m_llvm_interactive_params_ptr = ll.current_function_arg(5);  //arg_it++;
+    m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
 
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_layer_name);
     m_exit_instance_block      = NULL;
@@ -1074,10 +1104,12 @@ BackendLLVM::build_llvm_instance(bool groupentry)
             && !s.renderer_output())
             continue;
         // Skip if it's an interpolated (userdata) parameter and we're
-        // initializing them lazily.
-        if (s.symtype() == SymTypeParam && !s.lockgeom()
-            && !s.typespec().is_closure() && !s.connected()
-            && !s.connected_down() && shadingsys().lazy_userdata())
+        // initializing them lazily, or if it's an interactively-adjusted
+        // parameter.
+        if (s.symtype() == SymTypeParam && !s.typespec().is_closure()
+            && !s.connected() && !s.connected_down()
+            && (s.interactive()
+                || (s.interpolated() && shadingsys().lazy_userdata())))
             continue;
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value(s);

@@ -105,30 +105,42 @@ OptixGridRenderer::OptixGridRenderer()
 
 
 
-uint64_t
-OptixGridRenderer::register_global(const std::string& str, uint64_t value)
+void*
+OptixGridRenderer::device_alloc(size_t size)
 {
-    auto it = m_globals_map.find(ustring(str));
-
-    if (it != m_globals_map.end()) {
-        return it->second;
+    void* ptr       = nullptr;
+    cudaError_t res = cudaMalloc(reinterpret_cast<void**>(&ptr), size);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt("cudaMalloc({}) failed with error: {}\n", size,
+                              cudaGetErrorString(res));
     }
-    m_globals_map[ustring(str)] = value;
-    return value;
+    return ptr;
 }
 
 
-
-bool
-OptixGridRenderer::fetch_global(const std::string& str, uint64_t* value)
+void
+OptixGridRenderer::device_free(void* ptr)
 {
-    auto it = m_globals_map.find(ustring(str));
-
-    if (it != m_globals_map.end()) {
-        *value = it->second;
-        return true;
+    cudaError_t res = cudaFree(ptr);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt("cudaFree() failed with error: {}\n",
+                              cudaGetErrorString(res));
     }
-    return false;
+}
+
+
+void*
+OptixGridRenderer::copy_to_device(void* dst_device, const void* src_host,
+                                  size_t size)
+{
+    cudaError_t res = cudaMemcpy(dst_device, src_host, size,
+                                 cudaMemcpyHostToDevice);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt(
+            "cudaMemcpy host->device of size {} failed with error: {}\n", size,
+            cudaGetErrorString(res));
+    }
+    return dst_device;
 }
 
 
@@ -322,6 +334,7 @@ OptixGridRenderer::make_optix_materials()
 
     OptixProgramGroupOptions program_options = {};
     std::vector<OptixProgramGroup> program_groups;
+    std::vector<void*> material_interactive_params;
 
     // Raygen group
     OptixProgramGroupDesc raygen_desc    = {};
@@ -510,6 +523,10 @@ OptixGridRenderer::make_optix_materials()
         pgDesc[1].callables.entryFunctionNameCC = nullptr;
 
         program_groups.resize(program_groups.size() + 2);
+        void* interactive_params = nullptr;
+        shadingsys->getattribute(groupref.get(), "device_interactive_params",
+                                 TypeDesc::PTR, &interactive_params);
+        material_interactive_params.push_back(interactive_params);
 
         sizeof_msg_log = sizeof(msg_log);
         OPTIX_CHECK_MSG(
@@ -576,8 +593,8 @@ OptixGridRenderer::make_optix_materials()
     CUdeviceptr d_setglobals_raygenRecord;
     CUdeviceptr d_setglobals_missRecord;
 
-    EmptyRecord raygenRecord, missRecord, hitgroupRecord, callablesRecord[2];
-    EmptyRecord setglobals_raygenRecord, setglobals_missRecord;
+    GenericRecord raygenRecord, missRecord, hitgroupRecord, callablesRecord[2];
+    GenericRecord setglobals_raygenRecord, setglobals_missRecord;
 
     OPTIX_CHECK(optixSbtRecordPackHeader(raygen_group, &raygenRecord));
     OPTIX_CHECK(optixSbtRecordPackHeader(miss_group, &missRecord));
@@ -591,26 +608,26 @@ OptixGridRenderer::make_optix_materials()
     OPTIX_CHECK(optixSbtRecordPackHeader(setglobals_miss_group,
                                          &setglobals_missRecord));
 
-    raygenRecord.data            = reinterpret_cast<void*>(5);
+    raygenRecord.data            = material_interactive_params[0];
     missRecord.data              = nullptr;
     hitgroupRecord.data          = nullptr;
-    callablesRecord[0].data      = reinterpret_cast<void*>(1);
-    callablesRecord[1].data      = reinterpret_cast<void*>(2);
+    callablesRecord[0].data      = material_interactive_params[0];
+    callablesRecord[1].data      = material_interactive_params[0];
     setglobals_raygenRecord.data = nullptr;
     setglobals_missRecord.data   = nullptr;
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygenRecord),
-                          sizeof(EmptyRecord)));
+                          sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_missRecord),
-                          sizeof(EmptyRecord)));
+                          sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroupRecord),
-                          sizeof(EmptyRecord)));
+                          sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_callablesRecord),
-                          2 * sizeof(EmptyRecord)));
+                          2 * sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_raygenRecord),
-                          sizeof(EmptyRecord)));
+                          sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_missRecord),
-                          sizeof(EmptyRecord)));
+                          sizeof(GenericRecord)));
 
     m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_raygenRecord));
     m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_missRecord));
@@ -621,40 +638,40 @@ OptixGridRenderer::make_optix_materials()
     m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_setglobals_missRecord));
 
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_raygenRecord),
-                          &raygenRecord, sizeof(EmptyRecord),
+                          &raygenRecord, sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_missRecord), &missRecord,
-                          sizeof(EmptyRecord), cudaMemcpyHostToDevice));
+                          sizeof(GenericRecord), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_hitgroupRecord),
-                          &hitgroupRecord, sizeof(EmptyRecord),
+                          &hitgroupRecord, sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_callablesRecord),
-                          &callablesRecord[0], 2 * sizeof(EmptyRecord),
+                          &callablesRecord[0], 2 * sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_raygenRecord),
-                          &setglobals_raygenRecord, sizeof(EmptyRecord),
+                          &setglobals_raygenRecord, sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_missRecord),
-                          &setglobals_missRecord, sizeof(EmptyRecord),
+                          &setglobals_missRecord, sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
 
     // Looks like OptixShadingTable needs to be filled out completely
     m_optix_sbt.raygenRecord                 = d_raygenRecord;
     m_optix_sbt.missRecordBase               = d_missRecord;
-    m_optix_sbt.missRecordStrideInBytes      = sizeof(EmptyRecord);
+    m_optix_sbt.missRecordStrideInBytes      = sizeof(GenericRecord);
     m_optix_sbt.missRecordCount              = 1;
     m_optix_sbt.hitgroupRecordBase           = d_hitgroupRecord;
-    m_optix_sbt.hitgroupRecordStrideInBytes  = sizeof(EmptyRecord);
+    m_optix_sbt.hitgroupRecordStrideInBytes  = sizeof(GenericRecord);
     m_optix_sbt.hitgroupRecordCount          = 1;
     m_optix_sbt.callablesRecordBase          = d_callablesRecord;
-    m_optix_sbt.callablesRecordStrideInBytes = sizeof(EmptyRecord);
+    m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
     m_optix_sbt.callablesRecordCount         = 2;
 
     // Shader binding table for SetGlobals stage
     m_setglobals_optix_sbt                         = {};
     m_setglobals_optix_sbt.raygenRecord            = d_setglobals_raygenRecord;
     m_setglobals_optix_sbt.missRecordBase          = d_setglobals_missRecord;
-    m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(EmptyRecord);
+    m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
     m_setglobals_optix_sbt.missRecordCount         = 1;
     return true;
 }

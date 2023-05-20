@@ -111,15 +111,16 @@ BackendLLVM::llvm_call_layer(int layer, bool unconditional)
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer])
     //         parent_layer (sg, groupdata, userdata_base_ptr,
-    //                       output_base_ptr, shadeindex);
+    //                       output_base_ptr, shadeindex, interactive_params);
     // if it's a conditional call, or
     //     parent_layer (sg, groupdata, userdata_base_ptr,
-    //                   output_base_ptr, shadeindex);
+    //                   output_base_ptr, shadeindex, interactive_params);
     // if it's run unconditionally.
     // The code in the parent layer itself will set its 'executed' flag.
 
-    llvm::Value* args[] = { sg_ptr(), groupdata_ptr(), userdata_base_ptr(),
-                            output_base_ptr(), shadeindex() };
+    llvm::Value* args[]
+        = { sg_ptr(),          groupdata_ptr(), userdata_base_ptr(),
+            output_base_ptr(), shadeindex(),    m_llvm_interactive_params_ptr };
 
     ShaderInstance* parent       = group()[layer];
     llvm::Value* trueval         = ll.constant_bool(true);
@@ -238,7 +239,7 @@ LLVMGEN(llvm_gen_useparam)
         // initializing them lazily, now we have to do it.
         if ((sym.symtype() == SymTypeParam
              || sym.symtype() == SymTypeOutputParam)
-            && !sym.lockgeom() && !sym.typespec().is_closure()
+            && sym.interpolated() && !sym.typespec().is_closure()
             && !sym.connected() && !sym.connected_down()
             && rop.shadingsys().lazy_userdata()) {
             rop.llvm_assign_initial_value(sym);

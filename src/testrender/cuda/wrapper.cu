@@ -183,14 +183,19 @@ __closesthit__closest_hit_osl()
     sg.context = &shading_context;
 
     // Run the OSL group and init functions
+    auto sbtdata = reinterpret_cast<GenericData*>(optixGetSbtDataPointer());
     const unsigned int shaderInitOpIdx = 2u + 2u * sg.shaderID + 0u;
     const unsigned int shaderGroupIdx  = 2u + 2u * sg.shaderID + 1u;
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int>(
-        shaderInitOpIdx, &sg, params, nullptr, nullptr,
-        0);  // call osl_init_func
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int>(
-        shaderGroupIdx, &sg, params, nullptr, nullptr,
-        0);  // call osl_group_func
+    // call osl_init_func
+    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+        shaderInitOpIdx, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+        0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
+    // call osl_group_func
+    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+        shaderGroupIdx, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+        0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
 
     float3 result      = process_closure((OSL::ClosureColor*)sg.Ci);
     uint3 launch_dims  = optixGetLaunchDimensions();

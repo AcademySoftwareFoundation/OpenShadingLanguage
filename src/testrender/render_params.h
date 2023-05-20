@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
 #pragma once
 
 
@@ -63,6 +67,12 @@ struct QuadParams : PrimitiveParams {
 
 
 struct GenericData {
+    // For geometry hit callables, data is the pointer to the array of
+    // primitive params for that primitive type, and sbtGeoIndex is the index
+    // for this primitive.
+    //
+    // For shader/material callables, data points to the interactive parameter
+    // data arena for that material.
     void* data;
     unsigned int sbtGeoIndex;
 };
@@ -72,7 +82,7 @@ struct GenericData {
 struct GenericRecord {
     __align__(
         OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-
+    // What follows should duplicate GenericData
     void* data;
     unsigned int sbtGeoIndex;
 };

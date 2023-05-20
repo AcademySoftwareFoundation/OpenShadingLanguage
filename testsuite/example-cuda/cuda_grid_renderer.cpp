@@ -29,29 +29,45 @@ static ustring u_perspective("perspective");
 static ustring u_s("s"), u_t("t");
 
 
-uint64_t
-CudaGridRenderer::register_global(const std::string& str, uint64_t value)
+void*
+CudaGridRenderer::device_alloc(size_t size)
 {
-    auto it = _globals_map.find(ustring(str));
-
-    if (it != _globals_map.end()) {
-        return it->second;
+    void* ptr       = nullptr;
+    cudaError_t res = cudaMalloc(reinterpret_cast<void**>(&ptr), size);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt("cudaMalloc({}) failed with error: {}\n", size,
+                              cudaGetErrorString(res));
     }
-    _globals_map[ustring(str)] = value;
-    return value;
+    return ptr;
 }
 
-bool
-CudaGridRenderer::fetch_global(const std::string& str, uint64_t* value)
-{
-    auto it = _globals_map.find(ustring(str));
 
-    if (it != _globals_map.end()) {
-        *value = it->second;
-        return true;
+void
+CudaGridRenderer::device_free(void* ptr)
+{
+    cudaError_t res = cudaFree(ptr);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt("cudaFree() failed with error: {}\n",
+                              cudaGetErrorString(res));
     }
-    return false;
 }
+
+
+void*
+CudaGridRenderer::copy_to_device(void* dst_device, const void* src_host,
+                                 size_t size)
+{
+    cudaError_t res = cudaMemcpy(dst_device, src_host, size,
+                                 cudaMemcpyHostToDevice);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt(
+            "cudaMemcpy host->device of size {} failed with error: {}\n", size,
+            cudaGetErrorString(res));
+    }
+    return dst_device;
+}
+
+
 
 /// Return true if the texture handle (previously returned by
 /// get_texture_handle()) is a valid texture that can be subsequently

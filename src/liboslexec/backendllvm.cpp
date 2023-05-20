@@ -226,6 +226,15 @@ BackendLLVM::getLLVMSymbolBase(const Symbol& sym)
                                 llvm_type(sym.typespec().elementtype()));
         return result;
     }
+    if (sym.symtype() == SymTypeParam && sym.interactive()) {
+        // Special case for interactively-edited parameters -- they live in
+        // the interactive data block for the group.
+        // Generate the pointer to this symbol by offsetting into the
+        // interactive data block.
+        int offset = group().interactive_param_offset(layer(), sym.name());
+        return ll.offset_ptr(m_llvm_interactive_params_ptr, offset,
+                             llvm_ptr_type(sym.typespec().elementtype()));
+    }
 
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         // Special case for params -- they live in the group data
@@ -334,14 +343,7 @@ BackendLLVM::getOrAllocateCUDAVariable(const Symbol& sym)
     OSL_ASSERT(use_optix()
                && "This function is only supported when using OptiX!");
 
-    // We need to sanitize the symbol name for PTX compatibility. Also, if the
-    // sym name starts with a dollar sign, which are not allowed in PTX
-    // variable names, then prepend another underscore.
-    std::string sym_name = Strutil::replace(sym.name(), ".", "_", true);
-
-    std::string name
-        = fmtformat("{}{}_{}_{}_{}", sym_name.front() == '$' ? "_" : "",
-                    sym_name, group().name(), inst()->layername(), sym.layer());
+    std::string name = global_unique_symname(sym);
 
     // Return the Value if it has already been allocated
     auto it = get_const_map().find(name);

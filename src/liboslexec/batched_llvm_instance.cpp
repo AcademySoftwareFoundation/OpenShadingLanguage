@@ -63,8 +63,19 @@ Schematically, we want to create code that resembles the following:
         float param_1_bar;
     };
 
+    // Data for the interactively adjusted parameters of this group -- these
+    // can't be turned into constants because the app may want to modify them
+    // as it runs (such as for user interaction). This block of memory has
+    // one global copy specific each the shader group, managed by OSL.
+    struct InteractiveParams {
+        float iparam_0_baz;
+    };
+
     // Name of layer entry is $layer_ID
-    void $layer_0 (ShaderGlobals *sg, GroupData_1 *group)
+    void $layer_0(ShaderGlobals *sg, GroupData_1 *group,
+                  wide_int* wide_shadeindex_ptr,
+                  void* userdatda_base_ptr, void* output_base_ptr,
+                  int mask, InteractiveParams* interactive_params)
     {
         // Declare locals, temps, constants, params with known values.
         // Make them all look like stack memory locations:
@@ -74,9 +85,14 @@ Schematically, we want to create code that resembles the following:
         // then run the shader body:
         *x = sg->u * group->param_0_bar;
         group->param_1_foo = *x;
+        *x += interactive_params->iparam_0_baz;
+        // ...
     }
 
-    void $layer_1 (ShaderGlobals *sg, GroupData_1 *group)
+    void $layer_1(ShaderGlobals *sg, GroupData_1 *group,
+                  wide_int* wide_shadeindex_ptr,
+                  void* userdatda_base_ptr, void* output_base_ptr,
+                  int mask, InteractiveParams* interactive_params)
     {
         // Because we need the outputs of layer 0 now, we call it if it
         // hasn't already run:
@@ -87,7 +103,10 @@ Schematically, we want to create code that resembles the following:
         *y = sg->u * group->$param_1_bar;
     }
 
-    void $group_1 (ShaderGlobals *sg, GroupData_1 *group)
+    void $group_1(ShaderGlobals *sg, GroupData_1 *group,
+                  wide_int* wide_shadeindex_ptr,
+                  void* userdatda_base_ptr, void* output_base_ptr,
+                  int mask, InteractiveParams* interactive_params)
     {
         group->layer_run[...] = 0;
         // Run just the unconditional layers
@@ -901,14 +920,13 @@ BatchedBackendLLVM::llvm_type_groupdata()
             if (offset & (align - 1))
                 offset += align - (offset & (align - 1));
             if (llvm_debug() >= 2)
-                std::cout << "  " << inst->layername() << " (" << inst->id()
-                          << ") " << sym.mangled() << " " << ts.c_str()
-                          << ", field " << order << ", size "
-                          << derivSize * int(sym.size()) << ", offset "
-                          << offset << std::endl;
+                print("  {} ({}) {} {}, field {}, size {}, offset {}{}{}\n",
+                      inst->layername(), inst->id(), sym.mangled(), ts.c_str(),
+                      order, derivSize * int(sym.size()), offset,
+                      sym.interpolated() ? " (interpolated)" : "",
+                      sym.interactive() ? " (interactive)" : "");
             sym.wide_dataoffset((int)offset);
             offset += derivSize * int(sym.size()) * m_width;
-
             m_param_order_map[&sym] = order;
             ++order;
         }
@@ -1041,10 +1059,10 @@ BatchedBackendLLVM::llvm_assign_initial_value(
         llvm_assign_zero(sym);
         return;  // we're done, the parts below are just for params
     }
-    ASSERT_MSG(sym.symtype() == SymTypeParam
-                   || sym.symtype() == SymTypeOutputParam,
-               "symtype was %d, data type was %s", (int)sym.symtype(),
-               sym.typespec().c_str());
+    OSL_ASSERT_MSG(sym.symtype() == SymTypeParam
+                       || sym.symtype() == SymTypeOutputParam,
+                   "symtype was %d, data type was %s", (int)sym.symtype(),
+                   sym.typespec().c_str());
 
     // Handle interpolated params by calling osl_bind_interpolated_param,
     // which will check if userdata is already retrieved, if not it will
@@ -1059,7 +1077,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
     bool partial_userdata_mask_was_pushed  = false;
     const SymLocationDesc* symloc          = nullptr;
     LLVM_Util::ScopedMasking partial_data_masking_scope;
-    if (!sym.lockgeom() && !sym.typespec().is_closure()) {
+    if (sym.interpolated() && !sym.typespec().is_closure()) {
         ustring symname = sym.name();
         TypeDesc type   = sym.typespec().simpletype();
 
@@ -1217,6 +1235,15 @@ BatchedBackendLLVM::llvm_assign_initial_value(
 
             // Handle init ops.
             build_llvm_code(sym.initbegin(), sym.initend());
+#if 0 /* Is this needed? */
+        } else if (sym.interpolated() && !sym.typespec().is_closure()) {
+            // geometrically-varying param; memcpy its default value
+            TypeDesc t = sym.typespec().simpletype();
+            ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
+                         t.size(), t.basesize() /*align*/);
+            if (sym.has_derivs())
+                llvm_zero_derivs(sym);
+#endif
         } else {
             // We think the non-memcpy route is preferable as it give the compiler
             // a chance to optimize constant values Also memcpy would ignoring the
@@ -1738,16 +1765,17 @@ BatchedBackendLLVM::build_llvm_init()
     OSL_ASSERT(m_library_selector);
     std::string unique_name = fmtformat("{}_group_{}_init", m_library_selector,
                                         group().id());
-    ll.current_function(ll.make_function(
-        unique_name, false,
-        ll.type_void(),  // return type
-        {
-            llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-            static_cast<llvm::Type*>(ll.type_void_ptr()),  // wide_shader_index
-            static_cast<llvm::Type*>(ll.type_void_ptr()),  // userdata_base_ptr
-            static_cast<llvm::Type*>(ll.type_void_ptr()),  // output_base_ptr
-            ll.type_int()                                  // mask
-        }));
+    ll.current_function(
+        ll.make_function(unique_name, false,
+                         ll.type_void(),  // return type
+                         {
+                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                             ll.type_void_ptr(),  // wide_shader_index
+                             ll.type_void_ptr(),  // userdata_base_ptr
+                             ll.type_void_ptr(),  // output_base_ptr
+                             ll.type_int(),       // mask
+                             ll.type_void_ptr(),  // FIXME: interactive params
+                         }));
 
     if (ll.debug_is_enabled()) {
         ustring file_name
@@ -1757,14 +1785,20 @@ BatchedBackendLLVM::build_llvm_init()
     }
 
     // Get shader globals and groupdata pointers
-    m_llvm_shaderglobals_ptr   = ll.current_function_arg(0);  //arg_it++;
-    m_llvm_groupdata_ptr       = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_shaderglobals_ptr = ll.current_function_arg(0);  //arg_it++;
+    m_llvm_shaderglobals_ptr->setName("shaderglobals_ptr");
+    m_llvm_groupdata_ptr = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_groupdata_ptr->setName("groupdata_ptr");
     m_llvm_wide_shadeindex_ptr = ll.current_function_arg(2);  //arg_it++;
-    m_llvm_userdata_base_ptr   = ll.current_function_arg(3);  //arg_it++;
-    m_llvm_output_base_ptr     = ll.current_function_arg(4);  //arg_it++;
-
-    // TODO: do we need to utilize the shader mask in the init function?
-    //llvm::Value * llvm_initial_shader_mask_value = ll.current_function_arg(5); //arg_it++;
+    m_llvm_wide_shadeindex_ptr->setName("shadeindex");
+    m_llvm_userdata_base_ptr = ll.current_function_arg(3);  //arg_it++;
+    m_llvm_userdata_base_ptr->setName("userdata_base_ptr");
+    m_llvm_output_base_ptr = ll.current_function_arg(4);  //arg_it++;
+    m_llvm_output_base_ptr->setName("output_base_ptr");
+    llvm::Value* llvm_initial_shader_mask_value = ll.current_function_arg(5);
+    llvm_initial_shader_mask_value->setName("initial_shader_mask");
+    m_llvm_interactive_params_ptr = ll.current_function_arg(6);  //arg_it++;
+    m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr             = nullptr;
@@ -1875,10 +1909,11 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         ll.type_void(),   // return type
         {
             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-            static_cast<llvm::Type*>(ll.type_void_ptr()),  // wide_shader_index
-            static_cast<llvm::Type*>(ll.type_void_ptr()),  // userdata_base_ptr
-            static_cast<llvm::Type*>(ll.type_void_ptr()),  // output_base_ptr
-            ll.type_int()                                  // mask
+            ll.type_void_ptr(),  // wide_shader_index
+            ll.type_void_ptr(),  // userdata_base_ptr
+            ll.type_void_ptr(),  // output_base_ptr
+            ll.type_int(),       // mask
+            ll.type_void_ptr(),  // FIXME: interactive params
         }));
 
     if (ll.debug_is_enabled()) {
@@ -1888,14 +1923,20 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     }
 
     // Get shader globals and groupdata pointers
-    m_llvm_shaderglobals_ptr   = ll.current_function_arg(0);  //arg_it++;
-    m_llvm_groupdata_ptr       = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_shaderglobals_ptr = ll.current_function_arg(0);  //arg_it++;
+    m_llvm_shaderglobals_ptr->setName("shaderglobals_ptr");
+    m_llvm_groupdata_ptr = ll.current_function_arg(1);  //arg_it++;
+    m_llvm_groupdata_ptr->setName("groupdata_ptr");
     m_llvm_wide_shadeindex_ptr = ll.current_function_arg(2);  //arg_it++;
-    m_llvm_userdata_base_ptr   = ll.current_function_arg(3);  //arg_it++;
-    m_llvm_output_base_ptr     = ll.current_function_arg(4);  //arg_it++;
-
-    llvm::Value* llvm_initial_shader_mask_value = ll.current_function_arg(
-        5);  //arg_it++;
+    m_llvm_wide_shadeindex_ptr->setName("shadeindex");
+    m_llvm_userdata_base_ptr = ll.current_function_arg(3);  //arg_it++;
+    m_llvm_userdata_base_ptr->setName("userdata_base_ptr");
+    m_llvm_output_base_ptr = ll.current_function_arg(4);  //arg_it++;
+    m_llvm_output_base_ptr->setName("output_base_ptr");
+    llvm::Value* llvm_initial_shader_mask_value = ll.current_function_arg(5);
+    llvm_initial_shader_mask_value->setName("initial_shader_mask");
+    m_llvm_interactive_params_ptr = ll.current_function_arg(6);  //arg_it++;
+    m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr             = nullptr;
@@ -2070,10 +2111,12 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
             && !s.renderer_output())
             continue;
         // Skip if it's an interpolated (userdata) parameter and we're
-        // initializing them lazily.
-        if (s.symtype() == SymTypeParam && !s.lockgeom()
-            && !s.typespec().is_closure() && !s.connected()
-            && !s.connected_down() && shadingsys().lazy_userdata())
+        // initializing them lazily, or if it's an interactively-adjusted
+        // parameter.
+        if (s.symtype() == SymTypeParam && !s.typespec().is_closure()
+            && !s.connected() && !s.connected_down()
+            && (s.interactive()
+                || (s.interpolated() && shadingsys().lazy_userdata())))
             continue;
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value(s, llvm_initial_shader_mask_value);

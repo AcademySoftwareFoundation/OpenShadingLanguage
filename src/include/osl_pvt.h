@@ -632,7 +632,18 @@ public:
         OSL_ASSERT(arena == SymArena::Absolute);
         m_arena = static_cast<unsigned int>(arena);
         m_data  = ptr;
-        // m_dataoffset = static_cast<int64_t>((char*)ptr - (char*)0);
+    }
+
+    /// Specify the location of the symbol's data, relative to an arena
+    /// (which for now must be Absolute).
+    void set_dataptr(SymArena arena, void* ptr, int offset)
+    {
+        // OSL_ASSERT(arena == SymArena::Absolute);
+        m_arena      = static_cast<unsigned int>(arena);
+        m_data       = ptr;
+        m_dataoffset = offset;
+        OSL::print("setting sym {} arena {} offset {}\n", name(), int(m_arena),
+                   m_dataoffset);
     }
 
 

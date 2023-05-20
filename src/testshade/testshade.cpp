@@ -429,20 +429,30 @@ add_param(ParamValueList& params, string_view command, string_view paramname,
     ParamHints hint = ParamHints::none;
     float f[16];
 
-    size_t pos;
-    while ((pos = command.find_first_of(":")) != std::string::npos) {
+    // Dissect optional modifiers from a command that might look like
+    // "--param:type=float:interactive=1"
+    size_t colonpos = command.find(':');
+    if (colonpos != std::string::npos) {
         using namespace OIIO;
-        command     = command.substr(pos + 1, std::string::npos);
-        auto splits = Strutil::splitsv(command, ":", 1);
-        if (splits.size() < 1) {
-        } else if (Strutil::istarts_with(splits[0], "type="))
-            type.fromstring(splits[0].c_str() + 5);
-        else if (Strutil::istarts_with(splits[0], "lockgeom="))
-            set(hint, ParamHints::interpolated, !Strutil::stoi(splits[0]));
-        else if (Strutil::istarts_with(splits[0], "interpolated="))
-            set(hint, ParamHints::interpolated, Strutil::stoi(splits[0]));
-        else if (Strutil::istarts_with(splits[0], "interactive="))
-            set(hint, ParamHints::interactive, Strutil::stoi(splits[0]));
+        // lob off the command and colon
+        command      = command.substr(colonpos + 1);
+        auto options = Strutil::splitsv(command, ":");
+        for (auto&& opt : options) {
+            // Each option should look like "foo=bar", split at the '='
+            auto parts = Strutil::splitsv(opt, "=");
+            if (parts.size() == 2) {
+                if (parts[0] == "type")
+                    type.fromstring(parts[1]);
+                else if (parts[0] == "lockgeom")
+                    set(hint, ParamHints::interpolated,
+                        !Strutil::stoi(parts[1]));
+                else if (parts[0] == "interpolated")
+                    set(hint, ParamHints::interpolated,
+                        Strutil::stoi(parts[1]));
+                else if (parts[0] == "interactive")
+                    set(hint, ParamHints::interactive, Strutil::stoi(parts[1]));
+            }
+        }
     }
 
     // If it is or might be a matrix, look for 16 comma-separated floats
@@ -2095,9 +2105,8 @@ test_shade(int argc, const char* argv[])
         if (reparams.size() && reparam_layer.size() && (iter + 1 < iters)) {
             for (size_t p = 0; p < reparams.size(); ++p) {
                 const ParamValue& pv(reparams[p]);
-                shadingsys->ReParameter(*shadergroup, reparam_layer.c_str(),
-                                        pv.name().c_str(), pv.type(),
-                                        pv.data());
+                shadingsys->ReParameter(*shadergroup, reparam_layer, pv.name(),
+                                        pv.type(), pv.data());
             }
         }
     }

@@ -400,18 +400,44 @@ public:
     /// Return a pointer to the texture system (if available).
     virtual TextureSystem* texturesys() const;
 
-    virtual uint64_t register_global(const std::string& var_name,
-                                     uint64_t value)
+    /// Allocate `size` bytes of memory on the device that will execute the
+    /// shaders. (Equivalent to malloc() on the CPU.)
+    virtual void* device_alloc(size_t size)
     {
-        return 0;
+        return nullptr;
+        // Note: for an OptiX-based renderer, this method should be overriden
+        // with something like:
+        //
+        //     void* dptr;
+        //     auto r = cudaMalloc(&dptr, size);
+        //     return r == cudaSuccess ? dptr : nullptr;
     }
 
-    virtual bool fetch_global(const std::string& var_name, uint64_t* value)
+    /// Free a previous allocation (by `device_alloc()`) on the device that
+    /// will execute the shaders. (Equivalent to free() on the CPU.)
+    virtual void device_free(void* ptr)
     {
-        return false;
+        // Note: for an OptiX-based renderer, this method should be overriden
+        // with something like:
+        //
+        //     cudaFree(ptr);
     }
 
-
+    /// Copy `size` bytes from location `src_host` on the host/CPU (the
+    /// machine making this call) into location `dst_device` on the device
+    /// executing shaders. (Equivalent to `memcpy(dst, src, size)` on the
+    /// CPU.)
+    virtual void* copy_to_device(void* dst_device, const void* src_host,
+                                 size_t size)
+    {
+        return nullptr;
+        // Note: for an OptiX-based renderer, this method should be overriden
+        // with something like:
+        //
+        //     auto r = cudaMemcpy(dst_device, src_host, size,
+        //                         cudaMemcpyHostToDevice);
+        //     return dst_device;
+    }
 
     /// Options we use for noise calls.
     struct NoiseOpt {

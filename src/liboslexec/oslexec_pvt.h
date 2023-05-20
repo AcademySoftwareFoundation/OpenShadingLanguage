@@ -33,6 +33,7 @@
 
 #include "osl_pvt.h"
 
+#include <OSL/device_ptr.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/genclosure.h>
@@ -99,14 +100,16 @@ print_closure(std::ostream& out, const ClosureColor* closure,
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* shaderglobals, void* heap_arena_ptr,
                                  void* userdata_base_pointer,
-                                 void* output_base_pointer, int shadeindex);
+                                 void* output_base_pointer, int shadeindex,
+                                 void* interactive_params_ptr);
 #if OSL_USE_BATCHED
 typedef void (*RunLLVMGroupFuncWide)(void* batchedshaderglobals,
                                      void* heap_arena_ptr,
                                      const void* wide_shade_index,
                                      void* userdata_base_pointer,
                                      void* output_base_pointer,
-                                     int run_mask_value);
+                                     int run_mask_value,
+                                     void* interactive_params_ptr);
 #endif
 
 /// Signature of a constant-folding method
@@ -1661,8 +1664,7 @@ struct BatchedMessageBuffer {
 /// ShaderInstance), and the connections among them.
 class ShaderGroup {
 public:
-    ShaderGroup(string_view name);
-    ShaderGroup(const ShaderGroup& g, string_view name);
+    ShaderGroup(string_view name, ShadingSystemImpl& shadingsys);
     ~ShaderGroup();
 
     /// Clear the layers
@@ -1691,6 +1693,9 @@ public:
 
     /// Array indexing returns the i-th layer of the group
     ShaderInstance* operator[](int i) const { return layer(i); }
+
+    /// Return a reference to the shading system for this group.
+    ShadingSystemImpl& shadingsys() const { return m_shadingsys; }
 
     int optimized() const { return m_optimized; }
     void optimized(int opt) { m_optimized = opt; }
@@ -1918,6 +1923,54 @@ public:
             return nullptr;
     }
 
+    // Given a data block for interactive params, allocate space for it to
+    // live with the group and copy the initial data.
+    void setup_interactive_arena(cspan<uint8_t> paramblock);
+
+    uint8_t* interactive_arena_ptr()
+    {
+        return m_interactive_arena.get();
+    }
+
+    device_ptr<uint8_t>& device_interactive_arena()
+    {
+        return m_device_interactive_arena;
+    }
+
+    struct InteractiveParamData {
+        int layer;
+        ustring name;
+        int offset;
+
+        InteractiveParamData(int layer, ustring name, int offset)
+            : layer(layer), name(name), offset(offset)
+        {
+        }
+        bool operator==(const InteractiveParamData& other) const
+        {
+            return layer == other.layer && name == other.name;
+        }
+        bool operator<(const InteractiveParamData& other) const
+        {
+            return layer < other.layer
+                   || (layer == other.layer && name < other.name);
+        }
+    };
+
+    void add_interactive_param(int layer, ustring name, size_t offset)
+    {
+        m_interactive_params.emplace_back(layer, name,
+                                          static_cast<int>(offset));
+    }
+
+    int interactive_param_offset(int layer, ustring name)
+    {
+        for (auto& f : m_interactive_params)
+            if (f.layer == layer && f.name == name)
+                return f.offset;
+        return -1;
+    }
+
 private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
@@ -1977,6 +2030,14 @@ private:
     std::vector<ParamHints> m_pending_hints;  // ParamHints of pending params
     ustring m_group_use;                      // "Usage" of group
     bool m_complete = false;                  // Successfully ShaderGroupEnd?
+
+    ShadingSystemImpl& m_shadingsys;  // Back-ptr to the shading system
+
+    // Per-group home for interactively editable parameters
+    std::vector<InteractiveParamData> m_interactive_params;
+    std::unique_ptr<uint8_t[]> m_interactive_arena;
+    size_t m_interactive_arena_size = 0;
+    device_ptr<uint8_t> m_device_interactive_arena;
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

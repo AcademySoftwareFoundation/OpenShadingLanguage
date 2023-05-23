@@ -10,7 +10,6 @@
 #include <OSL/rendererservices.h>
 
 
-using GlobalsMap        = std::unordered_map<OSL::ustringhash, uint64_t>;
 using TextureSamplerMap = std::unordered_map<OSL::ustringhash, cudaTextureObject_t>;
 
 // Just use 4x4 matrix for transformations
@@ -19,7 +18,6 @@ typedef std::map<OSL::ustringhash, std::shared_ptr<Transformation>> TransformMap
 
 class CudaGridRenderer final : public OSL::RendererServices {
     TextureSamplerMap _samplers;
-    GlobalsMap _globals_map;
 
     // Named transforms
     TransformMap _named_xforms;
@@ -34,11 +32,6 @@ class CudaGridRenderer final : public OSL::RendererServices {
 public:
     CudaGridRenderer() {}
     virtual ~CudaGridRenderer() {}
-
-    uint64_t register_global(const std::string& str, uint64_t value);
-    bool fetch_global(const std::string& str, uint64_t* value);
-
-    const GlobalsMap& globals_map() const { return _globals_map; }
 
     virtual int supports(OIIO::string_view feature) const
     {
@@ -72,4 +65,9 @@ public:
                                     ustringhash to, float time);
 
     void name_transform(const char* name, const Transformation& xform);
+
+    virtual void* device_alloc(size_t size) override;
+    virtual void device_free(void* ptr) override;
+    virtual void* copy_to_device(void* dst_device, const void* src_host,
+                                 size_t size) override;
 };

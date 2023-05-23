@@ -3532,8 +3532,12 @@ LLVM_Util::offset_ptr(llvm::Value* ptr, llvm::Value* offset,
 llvm::Value*
 LLVM_Util::offset_ptr(llvm::Value* ptr, int offset, llvm::Type* ptrtype)
 {
-    if (offset == 0)
-        return ptr;  // shortcut for 0 offset
+    if (offset == 0) {
+        // shortcut for 0 offset
+        if (ptrtype && ptrtype != type_void_ptr())
+            ptr = ptr_cast(ptr, ptrtype);
+        return ptr;
+    }
     return offset_ptr(ptr, constant(size_t(offset)), ptrtype);
 }
 

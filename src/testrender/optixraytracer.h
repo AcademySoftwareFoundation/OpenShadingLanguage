@@ -25,9 +25,6 @@ public:
     OptixRaytracer();
     virtual ~OptixRaytracer();
 
-    uint64_t register_global(const std::string& str, uint64_t value) override;
-    bool fetch_global(const std::string& str, uint64_t* value) override;
-
     int supports(string_view feature) const override
     {
         if (feature == "OptiX")
@@ -65,6 +62,11 @@ public:
 
     void processPrintfBuffer(void* buffer_data, size_t buffer_size);
 
+    virtual void* device_alloc(size_t size) override;
+    virtual void device_free(void* ptr) override;
+    virtual void* copy_to_device(void* dst_device, const void* src_host,
+                                 size_t size) override;
+
 private:
     optix::Context m_optix_ctx = nullptr;
 
@@ -95,7 +97,6 @@ private:
 
     std::string m_materials_ptx;
     std::unordered_map<ustringhash, optix::TextureSampler> m_samplers;
-    std::unordered_map<ustringhash, uint64_t> m_globals_map;
 };
 
 

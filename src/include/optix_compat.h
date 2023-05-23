@@ -18,6 +18,7 @@
 #    include <stdlib.h>
 #endif
 
+#include <OSL/device_ptr.h>
 
 #if !OSL_USE_OPTIX && !defined(__CUDA_ARCH__)
 using CUdeviceptr = void*;

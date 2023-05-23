@@ -217,6 +217,20 @@ public:
     llvm::Value* getOrAllocateLLVMSymbol(const Symbol& sym);
 
 #if OSL_USE_OPTIX
+    /// Return a globally unique (to the JIT module) name for symbol `sym`,
+    /// assuming it's part of the currently examined layer of the group.
+    std::string global_unique_symname(const Symbol& sym)
+    {
+        // We need to sanitize the symbol name for PTX compatibility. Also, if
+        // the sym name starts with a dollar sign, which are not allowed in
+        // PTX variable names, then prepend another underscore.
+        auto sym_name = Strutil::replace(sym.name(), ".", "_", true);
+        int layer     = sym.layer();
+        const ShaderInstance* inst_ = group()[layer];
+        return fmtformat("{}{}_{}_{}_{}", sym_name.front() == '$' ? "_" : "",
+                         sym_name, group().name(), inst_->layername(), layer);
+    }
+
     /// Allocate a CUDA variable for the given OSL symbol and return a pointer
     /// to the corresponding LLVM GlobalVariable, or return the pointer if it
     /// has already been allocated.
@@ -449,6 +463,13 @@ public:
         return ll.llvm_type(llvm_typedesc(typespec));
     }
 
+    /// Generate the appropriate llvm type definition for a pointer to
+    /// the type specified by the TypeSpec.
+    llvm::Type* llvm_ptr_type(const TypeSpec& typespec)
+    {
+        return ll.type_ptr(ll.llvm_type(llvm_typedesc(typespec)));
+    }
+
     /// Generate the parameter-passing llvm type definition for an OSL
     /// TypeSpec.
     llvm::Type* llvm_pass_type(const TypeSpec& typespec);
@@ -559,6 +580,7 @@ private:
     std::map<const Symbol*, int> m_param_order_map;
     llvm::Value* m_llvm_shaderglobals_ptr;
     llvm::Value* m_llvm_groupdata_ptr;
+    llvm::Value* m_llvm_interactive_params_ptr;
     llvm::Value* m_llvm_userdata_base_ptr;
     llvm::Value* m_llvm_output_base_ptr;
     llvm::Value* m_llvm_shadeindex;

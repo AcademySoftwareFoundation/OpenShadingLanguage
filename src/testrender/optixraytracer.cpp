@@ -111,29 +111,42 @@ OptixRaytracer::~OptixRaytracer()
 
 
 
-uint64_t
-OptixRaytracer::register_global(const std::string& str, uint64_t value)
+void*
+OptixRaytracer::device_alloc(size_t size)
 {
-    auto it = m_globals_map.find(ustring(str));
-    if (it != m_globals_map.end()) {
-        return it->second;
+    void* ptr       = nullptr;
+    cudaError_t res = cudaMalloc(reinterpret_cast<void**>(&ptr), size);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt("cudaMalloc({}) failed with error: {}\n", size,
+                              cudaGetErrorString(res));
     }
-    m_globals_map[ustring(str)] = value;
-    return value;
+    return ptr;
 }
 
 
-
-bool
-OptixRaytracer::fetch_global(const std::string& str, uint64_t* value)
+void
+OptixRaytracer::device_free(void* ptr)
 {
-    auto it = m_globals_map.find(ustring(str));
-
-    if (it != m_globals_map.end()) {
-        *value = it->second;
-        return true;
+    cudaError_t res = cudaFree(ptr);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt("cudaFree() failed with error: {}\n",
+                              cudaGetErrorString(res));
     }
-    return false;
+}
+
+
+void*
+OptixRaytracer::copy_to_device(void* dst_device, const void* src_host,
+                               size_t size)
+{
+    cudaError_t res = cudaMemcpy(dst_device, src_host, size,
+                                 cudaMemcpyHostToDevice);
+    if (res != cudaSuccess) {
+        errhandler().errorfmt(
+            "cudaMemcpy host->device of size {} failed with error: {}\n", size,
+            cudaGetErrorString(res));
+    }
+    return dst_device;
 }
 
 
@@ -449,6 +462,7 @@ OptixRaytracer::make_optix_materials()
 
     // Create materials
     int mtl_id = 0;
+    std::vector<void*> material_interactive_params;
     for (const auto& groupref : shaders()) {
         std::string group_name, init_name, entry_name;
         shadingsys->getattribute(groupref.get(), "groupname", group_name);
@@ -474,7 +488,6 @@ OptixRaytracer::make_optix_materials()
         std::string osl_ptx;
         shadingsys->getattribute(groupref.get(), "ptx_compiled_version",
                                  OSL::TypeDesc::PTR, &osl_ptx);
-
         if (osl_ptx.empty()) {
             errhandler().errorfmt("Failed to generate PTX for ShaderGroup {}",
                                   group_name);
@@ -485,6 +498,11 @@ OptixRaytracer::make_optix_materials()
             std::string filename = fmtformat("{}_{}.ptx", group_name, mtl_id++);
             OIIO::Filesystem::write_text_file(filename, osl_ptx);
         }
+
+        void* interactive_params = nullptr;
+        shadingsys->getattribute(groupref.get(), "device_interactive_params",
+                                 TypeDesc::PTR, &interactive_params);
+        material_interactive_params.push_back(interactive_params);
 
         OptixModule optix_module;
 
@@ -544,6 +562,7 @@ OptixRaytracer::make_optix_materials()
     final_groups.push_back(sphere_fillSG_dc);
 
     // append the shader groups to our "official" list of program groups
+    // size_t shader_groups_start_index = final_groups.size();
     final_groups.insert(final_groups.end(), shader_groups.begin(),
                         shader_groups.end());
 
@@ -622,6 +641,13 @@ OptixRaytracer::make_optix_materials()
     // Copy geometry data to our DC (direct-callable) funcs that fill ShaderGlobals
     sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_quads_list);
     sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_spheres_list);
+
+    // Fill in the data pointer for all the osl callables, starting at
+    // sbtIndex and 2 for each of the materials.
+    for (size_t i = 0, e = material_interactive_params.size(); i < e; ++i) {
+        sbt_records[sbtIndex + 2 * i].data     = material_interactive_params[i];
+        sbt_records[sbtIndex + 2 * i + 1].data = material_interactive_params[i];
+    }
 
     const int nshaders   = int(shader_groups.size());
     const int nhitgroups = (scene.quads.size() > 0)

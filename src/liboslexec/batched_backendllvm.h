@@ -6,8 +6,6 @@
 #pragma once
 
 #include <map>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "oslexec_pvt.h"
@@ -15,7 +13,7 @@
 using namespace OSL;
 using namespace OSL::pvt;
 
-#include "OSL/llvm_util.h"
+#include <OSL/llvm_util.h>
 #include "runtimeoptimize.h"
 
 #include <llvm/ADT/SmallString.h>
@@ -658,6 +656,14 @@ public:
         return ll.llvm_vector_type(llvm_typedesc(typespec));
     }
 
+    /// Generate the appropriate llvm type definition for a pointer to
+    /// the type specified by the TypeSpec.
+    llvm::Type* llvm_ptr_type(const TypeSpec& typespec)
+    {
+        return reinterpret_cast<llvm::Type*>(
+            ll.type_ptr(ll.llvm_type(llvm_typedesc(typespec))));
+    }
+
     /// Generate the parameter-passing llvm type definition for an OSL
     /// TypeSpec.
     llvm::Type* llvm_pass_type(const TypeSpec& typespec);
@@ -783,7 +789,7 @@ private:
     std::map<const Symbol*, int> m_param_order_map;
     llvm::Value* m_llvm_shaderglobals_ptr;
     llvm::Value* m_llvm_groupdata_ptr;
-
+    llvm::Value* m_llvm_interactive_params_ptr;
     llvm::Value* m_llvm_wide_shadeindex_ptr;
     llvm::Value* m_llvm_userdata_base_ptr;
     llvm::Value* m_llvm_output_base_ptr;

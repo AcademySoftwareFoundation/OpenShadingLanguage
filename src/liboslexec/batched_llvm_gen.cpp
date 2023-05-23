@@ -92,13 +92,17 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
                            << " unconditional=" << unconditional << std::endl);
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer])
-    //         parent_layer (sg, groupdata);
+    //         parent_layer (sg, groupdata, wide_shadeindex_ptr,
+    //                       userdata_base_ptr, output_base_ptr,
+    //                       execution_mask, interactive_params_ptr);
     // if it's a conditional call, or
-    //     parent_layer (sg, groupdata);
+    //     parent_layer (sg, groupdata, wide_shadeindex_ptr,
+    //                   userdata_base_ptr, output_base_ptr,
+    //                   execution_mask, interactive_params_ptr);
     // if it's run unconditionally.
     // The code in the parent layer itself will set its 'executed' flag.
 
-    llvm::Value* args[6];
+    llvm::Value* args[7];
     args[0] = sg_ptr();
     args[1] = groupdata_ptr();
     args[2] = ll.void_ptr(wide_shadeindex_ptr());
@@ -120,13 +124,11 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
         llvm::Value* execution_required
             = ll.op_ne(lanes_requiring_execution_value, ll.constant(0));
         then_block = ll.new_basic_block(
-            llvm_debug()
-                ? std::string("then layer ").append(std::to_string(layer))
-                : std::string());
+            llvm_debug() ? Strutil::fmt::format("then layer {}", layer)
+                         : std::string());
         after_block = ll.new_basic_block(
-            llvm_debug()
-                ? std::string("after layer ").append(std::to_string(layer))
-                : std::string());
+            llvm_debug() ? Strutil::fmt::format("after layer {}", layer)
+                         : std::string());
         ll.op_branch(execution_required, then_block, after_block);
         // insert point is now then_block
     } else {
@@ -134,6 +136,7 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
     }
 
     args[5] = lanes_requiring_execution_value;
+    args[6] = m_llvm_interactive_params_ptr;
 
     // Before the merge, keeping in case we broke it
     //std::string name = fmtformat("{}_{}_{}", m_library_selector,  parent->layername().c_str(),
@@ -247,7 +250,7 @@ LLVMGEN(llvm_gen_useparam)
         // initializing them lazily, now we have to do it.
         if ((sym.symtype() == SymTypeParam
              || sym.symtype() == SymTypeOutputParam)
-            && !sym.lockgeom() && !sym.typespec().is_closure()
+            && sym.interpolated() && !sym.typespec().is_closure()
             && !sym.connected() && !sym.connected_down()
             && rop.shadingsys().lazy_userdata()) {
             rop.llvm_assign_initial_value(sym, rop.ll.mask_as_int(

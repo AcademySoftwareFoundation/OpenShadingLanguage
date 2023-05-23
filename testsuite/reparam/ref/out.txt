@@ -1,13 +1,8 @@
 Compiled test.osl -> test.oso
-Compiled test_array.osl -> test_array.oso
-Compiled test_colors.osl -> test_colors.oso
+test: f = 1
+test: user = 2
+test: third = 3
+test: f = 10
+test: user = 2
+test: third = 30
 
-Output Cout to out.tif
-
-Output Cout to out_array_iter0.tif
-
-Output Cout to out_array_iter1.tif
-
-Output Cout to out_colors_iter0.tif
-
-Output Cout to out_colors_iter1.tif

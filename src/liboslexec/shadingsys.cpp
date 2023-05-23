@@ -943,6 +943,8 @@ ShadingSystem::convert_value(void* dst, TypeDesc dsttype, const void* src,
     return false;  // Unsupported conversion
 }
 
+
+
 void
 register_JIT_Global(const char* global_var_name, void* global_var_addr)
 {
@@ -1025,16 +1027,13 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_opt_texture_handle(true)
     , m_opt_seed_bblock_aliases(true)
     , m_opt_useparam(false)
-    ,
 #if OSL_USE_BATCHED
-    m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr)
-                           || (renderer->batched(WidthOf<8>()) != nullptr))
-    ,
+    , m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr)
+                             || (renderer->batched(WidthOf<8>()) != nullptr))
 #else
-    m_opt_batched_analysis(false)
-    ,
+    , m_opt_batched_analysis(false)
 #endif
-    m_llvm_jit_fma(false)
+    , m_llvm_jit_fma(false)
     , m_llvm_jit_aggressive(false)
     , m_optimize_nondebug(false)
     , m_vector_width(4)
@@ -2018,6 +2017,14 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
         *(std::string*)val = exists ? group->m_llvm_ptx_compiled_version : "";
         return true;
     }
+    if (name == "interactive_params" && type.basetype == TypeDesc::PTR) {
+        *(void**)val = group->m_interactive_arena.get();
+        return true;
+    }
+    if (name == "device_interactive_params" && type.basetype == TypeDesc::PTR) {
+        *(void**)val = group->m_device_interactive_arena.d_get();
+        return true;
+    }
 
     // All the remaining attributes require the group to already be
     // optimized.
@@ -2586,7 +2593,7 @@ ShadingSystemImpl::Parameter(ShaderGroup& group, string_view name, TypeDesc t,
 ShaderGroupRef
 ShadingSystemImpl::ShaderGroupBegin(string_view groupname)
 {
-    ShaderGroupRef group(new ShaderGroup(groupname));
+    ShaderGroupRef group(new ShaderGroup(groupname, *this));
     group->m_exec_repeat = m_exec_repeat;
     {
         // Record the group in the SS's census of all extant groups
@@ -3193,10 +3200,12 @@ ShadingSystemImpl::ReParameter(ShaderGroup& group, string_view layername_,
 {
     // Find the named layer
     ustring layername(layername_);
-    ShaderInstance* layer = NULL;
+    ShaderInstance* layer = nullptr;
+    int layerindex        = -1;
     for (int i = 0, e = group.nlayers(); i < e; ++i) {
         if (group[i]->layername() == layername) {
-            layer = group[i];
+            layer      = group[i];
+            layerindex = i;
             break;
         }
     }
@@ -3216,6 +3225,14 @@ ShadingSystemImpl::ReParameter(ShaderGroup& group, string_view layername_,
         return false;
     }
 
+    // Check that it's declared to be an interactive parameter
+    if (!sym->interactive()) {
+        errorfmt(
+            "ReParameter cannot adjust {}.{}, which was not declared interactive",
+            layername, paramname);
+        return false;
+    }
+
     // Check for mismatch versus previously-declared type
     if ((relaxed_param_typecheck() && !relaxed_equivalent(sym->typespec(), type))
         || (!relaxed_param_typecheck()
@@ -3228,7 +3245,13 @@ ShadingSystemImpl::ReParameter(ShaderGroup& group, string_view layername_,
         return false;
 
     // Do the deed
-    memcpy(sym->data(), val, type.size());
+    int offset = group.interactive_param_offset(layerindex, sym->name());
+    memcpy(group.interactive_arena_ptr() + offset, val, type.size());
+    if (use_optix()) {
+        renderer()->copy_to_device(group.device_interactive_arena().d_get()
+                                       + offset,
+                                   val, type.size());
+    }
     return true;
 }
 

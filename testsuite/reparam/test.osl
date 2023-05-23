@@ -1,10 +1,13 @@
-// Copyright Contributors to the Open Shading Language project.
-// SPDX-License-Identifier: BSD-3-Clause
-// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-shader
-test (float scale = 20,
-      output color Cout = 0)
+shader test(float g = 0,
+            float f = 1 [[ int interactive = 1 ]],
+            float user = 2 [[ int interpolated = 1 ]],
+            float third = 3 [[ int interpolated = 1 ]],
+            output color Cout = 0
+            )
 {
-   Cout = (float) noise(u*scale, v*scale);
+    printf("test: f = %g\n", f);
+    printf("test: user = %g\n", user);
+    printf("test: third = %g\n", third);
+    Cout = f + user + third;
 }

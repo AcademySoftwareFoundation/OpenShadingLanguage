@@ -66,7 +66,7 @@ __raygen__()
     uint3 launch_dims  = optixGetLaunchDimensions();
     uint3 launch_index = optixGetLaunchIndex();
 
-    void* p = reinterpret_cast<void*>(optixGetSbtDataPointer());
+    auto sbtdata = reinterpret_cast<GenericData*>(optixGetSbtDataPointer());
 
     // Compute the pixel coordinates
     float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
@@ -126,10 +126,17 @@ __raygen__()
     sg.renderstate          = &closure_pool[0];
 
     // Run the OSL group and init functions
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int>(
-        0u, &sg, params, nullptr, nullptr, 0);  // call osl_init_func
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int>(
-        1u, &sg, params, nullptr, nullptr, 0);  // call osl_group_func
+
+    // call osl_init_func
+    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+        0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+        0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
+    // call osl_group_func
+    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+        1u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+        0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
 
     float* f_output      = (float*)params;
     int pixel            = launch_index.y * launch_dims.x + launch_index.x;

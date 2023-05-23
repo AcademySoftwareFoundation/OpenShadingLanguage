@@ -732,7 +732,8 @@ ShaderInstance::mergeable(const ShaderInstance& b,
 
 
 
-ShaderGroup::ShaderGroup(string_view name)
+ShaderGroup::ShaderGroup(string_view name, ShadingSystemImpl& shadingsys)
+    : m_shadingsys(shadingsys)
 {
     m_id = ++(*(atomic_int*)&next_id);
     if (name.size()) {
@@ -741,15 +742,6 @@ ShaderGroup::ShaderGroup(string_view name)
         // No name -- make one up using the unique
         m_name = ustring::fmtformat("unnamed_group_{}", m_id);
     }
-}
-
-
-
-ShaderGroup::ShaderGroup(const ShaderGroup& g, string_view name)
-    : ShaderGroup(name)  // delegate most of the work
-{
-    m_num_entry_layers = g.m_num_entry_layers;
-    m_layers           = g.m_layers;
 }
 
 
@@ -768,6 +760,11 @@ ShaderGroup::~ShaderGroup()
                   << "executed on " << executions() << " points\n";
     }
 #endif
+
+    // Free any GPU memory associated with this group
+    if (m_device_interactive_arena)
+        shadingsys().renderer()->device_free(
+            m_device_interactive_arena.d_get());
 }
 
 
@@ -815,6 +812,34 @@ ShaderGroup::mark_entry_layer(int layer)
     if (layer >= 0 && layer < nlayers() && !m_layers[layer]->entry_layer()) {
         m_layers[layer]->entry_layer(true);
         ++m_num_entry_layers;
+    }
+}
+
+
+
+void
+ShaderGroup::setup_interactive_arena(cspan<uint8_t> paramblock)
+{
+    if (paramblock.size()) {
+        // CPU side
+        m_interactive_arena_size = paramblock.size();
+        m_interactive_arena.reset(new uint8_t[m_interactive_arena_size]);
+        memcpy(m_interactive_arena.get(), paramblock.data(),
+               m_interactive_arena_size);
+        if (shadingsys().use_optix()) {
+            // GPU side
+            RendererServices* rs = shadingsys().renderer();
+            m_device_interactive_arena.reset(reinterpret_cast<uint8_t*>(
+                rs->device_alloc(m_interactive_arena_size)));
+            rs->copy_to_device(m_device_interactive_arena.d_get(),
+                               paramblock.data(), m_interactive_arena_size);
+            // print("group {} has device interactive_params set to {:p}\n",
+            //       name(), m_device_interactive_arena.d_get());
+        }
+    } else {
+        m_interactive_arena_size = 0;
+        m_interactive_arena.reset();
+        m_device_interactive_arena.reset();
     }
 }
 

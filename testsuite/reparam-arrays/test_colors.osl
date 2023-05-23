@@ -3,8 +3,9 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 shader
-test_array (float scale[2] = {0,0} [[ int lockgeom = 0 ]],
+test_colors (color colors[2] = {{0,0,0},{0,0,0}} [[ int interactive = 1 ]],
       output color Cout = 0)
 {
-   Cout = (float) noise(u*scale[0], v*scale[1]);
+    point in = P*colors[0];
+    Cout = colors[1]*(color)noise(in);
 }

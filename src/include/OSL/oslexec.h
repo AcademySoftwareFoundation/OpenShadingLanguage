@@ -509,6 +509,14 @@ public:
     ///   string pickle              Retrieves a serialized representation
     ///                                 of the shader group declaration.
     ///   int llvm_groupdata_size    Size of the GroupData struct.
+    ///   ptr interactive_params     Pointer to the memory block containing
+    ///                                 host-side interactive parameter values
+    ///                                 for this shader group.
+    ///   ptr device_interactive_params
+    ///                              Pointer to the memory block containing
+    ///                                 device-side interactive parameter values
+    ///                                 for this shader group.
+    ///
     /// Note: the attributes referred to as "string" are actually on the app
     /// side as ustring or const char* (they have the same data layout), NOT
     /// std::string!

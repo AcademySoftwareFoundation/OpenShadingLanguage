@@ -611,8 +611,8 @@ OptixGridRenderer::make_optix_materials()
     raygenRecord.data            = material_interactive_params[0];
     missRecord.data              = nullptr;
     hitgroupRecord.data          = nullptr;
-    callablesRecord[0].data      = material_interactive_params[0];
-    callablesRecord[1].data      = material_interactive_params[0];
+    callablesRecord[0].data      = nullptr;
+    callablesRecord[1].data      = nullptr;
     setglobals_raygenRecord.data = nullptr;
     setglobals_missRecord.data   = nullptr;
 

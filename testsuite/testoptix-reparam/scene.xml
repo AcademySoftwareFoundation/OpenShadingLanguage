@@ -1,0 +1,18 @@
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+
+   <ShaderGroup>
+      param float Kd 0.5 [[ int interactive=1 ]];
+      param color Cs 0.8 0.2 0.7;
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center="-60,30,120"        radius="30" />
+   <Sphere center="  0,30,120"        radius="30" />
+   <ShaderGroup>
+      param float Kd 1;
+      param color Cs 0.1 0.9 0.4 [[ int interactive=1 ]];
+      shader matte layer1;
+   </ShaderGroup>
+   <Sphere center=" 60,30,120"        radius="30" />
+
+</World>

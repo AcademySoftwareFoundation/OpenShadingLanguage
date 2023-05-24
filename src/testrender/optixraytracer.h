@@ -76,9 +76,10 @@ private:
     OptixShaderBindingTable m_setglobals_optix_sbt = {};
     OptixPipeline m_optix_pipeline                 = {};
     CUdeviceptr d_output_buffer;
-    CUdeviceptr d_launch_params = 0;
-    CUdeviceptr d_quads_list    = 0;
-    CUdeviceptr d_spheres_list  = 0;
+    CUdeviceptr d_launch_params      = 0;
+    CUdeviceptr d_quads_list         = 0;
+    CUdeviceptr d_spheres_list       = 0;
+    CUdeviceptr d_interactive_params = 0;
     int m_xres, m_yres;
     CUdeviceptr d_osl_printf_buffer;
     CUdeviceptr d_color_system;

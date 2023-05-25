@@ -55,13 +55,13 @@ Contributor License Agreement (CLA) and Intellectual Property
 To protect the project -- and the contributors! -- we do require a
 Contributor License Agreement (CLA) for anybody submitting changes.
 
-* [Corporate CLA](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/ASWF/OSL-CLA-corporate.md)
+* [Corporate CLA](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/ASWF/CLA-corporate.md)
   If you are writing the code as part of your job, or if there is any
   possibility that your employers might think they own any intellectual
   property you create. This needs to be executed by someone who has
   signatory power for the company.
 
-* [Individual]((https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/ASWF/OSL-CLA-individual.md)).
+* [Individual CLA](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/ASWF/CLA-individual.md).
   If you are an individual writing the code on your own time and you're SURE
   you are the sole owner of any intellectual property you contribute.
 

@@ -642,13 +642,6 @@ OptixRaytracer::make_optix_materials()
     sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_quads_list);
     sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_spheres_list);
 
-    // Fill in the data pointer for all the osl callables, starting at
-    // sbtIndex and 2 for each of the materials.
-    for (size_t i = 0, e = material_interactive_params.size(); i < e; ++i) {
-        sbt_records[sbtIndex + 2 * i].data     = material_interactive_params[i];
-        sbt_records[sbtIndex + 2 * i + 1].data = material_interactive_params[i];
-    }
-
     const int nshaders   = int(shader_groups.size());
     const int nhitgroups = (scene.quads.size() > 0)
                            + (scene.spheres.size() > 0);
@@ -705,6 +698,14 @@ OptixRaytracer::make_optix_materials()
     m_setglobals_optix_sbt.missRecordBase          = d_setglobals_miss_record;
     m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
     m_setglobals_optix_sbt.missRecordCount         = 1;
+
+    // Upload per-material interactive buffer table
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_interactive_params),
+                          sizeof(void*) * material_interactive_params.size()));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_interactive_params),
+                          material_interactive_params.data(),
+                          sizeof(void*) * material_interactive_params.size(),
+                          cudaMemcpyHostToDevice));
 
     // Pipeline has been created so we can clean some things up
     for (auto&& i : final_groups) {
@@ -1021,6 +1022,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.cy.z                    = camera.cy.z;
     params.invw                    = 1.0f / m_xres;
     params.invh                    = 1.0f / m_yres;
+    params.interactive_params      = d_interactive_params;
     params.output_buffer           = d_output_buffer;
     params.traversal_handle        = m_travHandle;
     params.osl_printf_buffer_start = d_osl_printf_buffer;

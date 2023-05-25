@@ -26,6 +26,7 @@ struct RenderParams {
     CUdeviceptr osl_printf_buffer_start;
     CUdeviceptr osl_printf_buffer_end;
     CUdeviceptr color_system;
+    CUdeviceptr interactive_params;
 
     // for transforms
     CUdeviceptr object2common;
@@ -70,9 +71,6 @@ struct GenericData {
     // For geometry hit callables, data is the pointer to the array of
     // primitive params for that primitive type, and sbtGeoIndex is the index
     // for this primitive.
-    //
-    // For shader/material callables, data points to the interactive parameter
-    // data arena for that material.
     void* data;
     unsigned int sbtGeoIndex;
 };

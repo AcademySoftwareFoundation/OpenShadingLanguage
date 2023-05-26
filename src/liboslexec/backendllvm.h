@@ -58,6 +58,10 @@ public:
     /// Create an llvm function for group initialization code.
     llvm::Function* build_llvm_init();
 
+    // Create llvm functions for OptiX callables
+    std::vector<llvm::Function*> build_llvm_optix_callables();
+    llvm::Function* build_llvm_fused_callable();
+
     /// Build up LLVM IR code for the given range [begin,end) or
     /// opcodes, putting them (initially) into basic block bb (or the
     /// current basic block if bb==NULL).

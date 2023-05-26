@@ -101,6 +101,10 @@ OptixGridRenderer::OptixGridRenderer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
+
+    m_fused_callable = false;
+    if (const char* fused_env = getenv("TESTSHADE_FUSED"))
+        m_fused_callable = atoi(fused_env);
 }
 
 
@@ -451,6 +455,8 @@ OptixGridRenderer::make_optix_materials()
                                 msg_log, &sizeof_msg_log, &rend_lib_group),
         fmtformat("Creating 'hitgroup' program group: {}", msg_log));
 
+    int callables = m_fused_callable ? 1 : 2;
+
     // Create materials
     for (const auto& groupref : shaders()) {
         shadingsys->attribute(groupref.get(), "renderer_outputs",
@@ -468,11 +474,13 @@ OptixGridRenderer::make_optix_materials()
             }
         }
 
-        std::string group_name, init_name, entry_name;
+        std::string group_name, init_name, entry_name, fused_name;
         shadingsys->getattribute(groupref.get(), "groupname", group_name);
         shadingsys->getattribute(groupref.get(), "group_init_name", init_name);
         shadingsys->getattribute(groupref.get(), "group_entry_name",
                                  entry_name);
+        shadingsys->getattribute(groupref.get(), "group_fused_name",
+                                 fused_name);
 
         // Retrieve the compiled ShaderGroup PTX
         std::string osl_ptx;
@@ -508,35 +516,44 @@ OptixGridRenderer::make_optix_materials()
 
         modules.push_back(optix_module);
 
-        // Create 2x program groups (for direct callables)
-        OptixProgramGroupOptions program_options = {};
-        OptixProgramGroupDesc pgDesc[3]          = {};
-        pgDesc[0].kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-        pgDesc[0].callables.moduleDC = optix_module;
-        pgDesc[0].callables.entryFunctionNameDC = init_name.c_str();
-        pgDesc[0].callables.moduleCC            = 0;
-        pgDesc[0].callables.entryFunctionNameCC = nullptr;
-        pgDesc[1].kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-        pgDesc[1].callables.moduleDC = optix_module;
-        pgDesc[1].callables.entryFunctionNameDC = entry_name.c_str();
-        pgDesc[1].callables.moduleCC            = 0;
-        pgDesc[1].callables.entryFunctionNameCC = nullptr;
 
-        program_groups.resize(program_groups.size() + 2);
+        // Create shader program groups (for direct callables)
+        OptixProgramGroupOptions program_options = {};
+        OptixProgramGroupDesc pgDesc[2]          = {};
+
+        if (m_fused_callable) {
+            pgDesc[0].kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+            pgDesc[0].callables.moduleDC = optix_module;
+            pgDesc[0].callables.entryFunctionNameDC = fused_name.c_str();
+            pgDesc[0].callables.moduleCC            = 0;
+            pgDesc[0].callables.entryFunctionNameCC = nullptr;
+        } else {
+            pgDesc[0].kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+            pgDesc[0].callables.moduleDC = optix_module;
+            pgDesc[0].callables.entryFunctionNameDC = init_name.c_str();
+            pgDesc[0].callables.moduleCC            = 0;
+            pgDesc[0].callables.entryFunctionNameCC = nullptr;
+            pgDesc[1].kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+            pgDesc[1].callables.moduleDC = optix_module;
+            pgDesc[1].callables.entryFunctionNameDC = entry_name.c_str();
+            pgDesc[1].callables.moduleCC            = 0;
+            pgDesc[1].callables.entryFunctionNameCC = nullptr;
+        }
+        program_groups.resize(program_groups.size() + callables);
         void* interactive_params = nullptr;
         shadingsys->getattribute(groupref.get(), "device_interactive_params",
                                  TypeDesc::PTR, &interactive_params);
         material_interactive_params.push_back(interactive_params);
 
         sizeof_msg_log = sizeof(msg_log);
-        OPTIX_CHECK_MSG(
-            optixProgramGroupCreate(m_optix_ctx, &pgDesc[0],
-                                    2,  // number of program groups
-                                    &program_options,  // program options
-                                    msg_log, &sizeof_msg_log,
-                                    &program_groups[program_groups.size() - 2]),
-            fmtformat("Creating 'shader' group for group {}: {}", group_name,
-                      msg_log));
+        OPTIX_CHECK_MSG(optixProgramGroupCreate(
+                            m_optix_ctx, &pgDesc[0],
+                            callables,         // number of program groups
+                            &program_options,  // program options
+                            msg_log, &sizeof_msg_log,
+                            &program_groups[program_groups.size() - callables]),
+                        fmtformat("Creating 'shader' group for group {}: {}",
+                                  group_name, msg_log));
     }
 
     OptixPipelineLinkOptions pipeline_link_options;
@@ -548,12 +565,19 @@ OptixGridRenderer::make_optix_materials()
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
-        rend_lib_group,          raygen_group,          miss_group,
+        rend_lib_group,
+        raygen_group,
+        miss_group,
         hitgroup_group,
-        program_groups[0],  // init
-        program_groups[1],  // entry
-        setglobals_raygen_group, setglobals_miss_group,
+        setglobals_raygen_group,
+        setglobals_miss_group,
     };
+    if (m_fused_callable) {
+        final_groups.push_back(program_groups[0]);  // fused
+    } else {
+        final_groups.push_back(program_groups[0]);  // init
+        final_groups.push_back(program_groups[1]);  // entry
+    }
 
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(optixPipelineCreate(m_optix_ctx, &pipeline_compile_options,
@@ -599,10 +623,15 @@ OptixGridRenderer::make_optix_materials()
     OPTIX_CHECK(optixSbtRecordPackHeader(raygen_group, &raygenRecord));
     OPTIX_CHECK(optixSbtRecordPackHeader(miss_group, &missRecord));
     OPTIX_CHECK(optixSbtRecordPackHeader(hitgroup_group, &hitgroupRecord));
-    OPTIX_CHECK(
-        optixSbtRecordPackHeader(program_groups[0], &callablesRecord[0]));
-    OPTIX_CHECK(
-        optixSbtRecordPackHeader(program_groups[1], &callablesRecord[1]));
+    if (m_fused_callable) {
+        OPTIX_CHECK(
+            optixSbtRecordPackHeader(program_groups[0], &callablesRecord[0]));
+    } else {
+        OPTIX_CHECK(
+            optixSbtRecordPackHeader(program_groups[0], &callablesRecord[0]));
+        OPTIX_CHECK(
+            optixSbtRecordPackHeader(program_groups[1], &callablesRecord[1]));
+    }
     OPTIX_CHECK(optixSbtRecordPackHeader(setglobals_raygen_group,
                                          &setglobals_raygenRecord));
     OPTIX_CHECK(optixSbtRecordPackHeader(setglobals_miss_group,
@@ -623,7 +652,7 @@ OptixGridRenderer::make_optix_materials()
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroupRecord),
                           sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_callablesRecord),
-                          2 * sizeof(GenericRecord)));
+                          callables * sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_raygenRecord),
                           sizeof(GenericRecord)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_missRecord),
@@ -646,7 +675,7 @@ OptixGridRenderer::make_optix_materials()
                           &hitgroupRecord, sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_callablesRecord),
-                          &callablesRecord[0], 2 * sizeof(GenericRecord),
+                          &callablesRecord[0], callables * sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_raygenRecord),
                           &setglobals_raygenRecord, sizeof(GenericRecord),
@@ -665,7 +694,7 @@ OptixGridRenderer::make_optix_materials()
     m_optix_sbt.hitgroupRecordCount          = 1;
     m_optix_sbt.callablesRecordBase          = d_callablesRecord;
     m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
-    m_optix_sbt.callablesRecordCount         = 2;
+    m_optix_sbt.callablesRecordCount         = callables;
 
     // Shader binding table for SetGlobals stage
     m_setglobals_optix_sbt                         = {};
@@ -822,6 +851,7 @@ OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.num_named_xforms      = m_num_named_xforms;
     params.xform_name_buffer     = d_xform_name_buffer;
     params.xform_buffer          = d_xform_buffer;
+    params.fused_callable        = m_fused_callable;
 
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_launch_params), &params,
                           sizeof(RenderParams), cudaMemcpyHostToDevice));

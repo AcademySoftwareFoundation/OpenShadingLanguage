@@ -929,6 +929,7 @@ private:
     int m_max_local_mem_KB;           ///< Local storage can a shader use
     int m_compile_report;             ///< Print compilation report?
     bool m_use_optix;                 ///< This is an OptiX-based renderer
+    int m_max_optix_groupdata_alloc;  ///< Maximum OptiX groupdata buffer allocation
     bool m_buffer_printf;             ///< Buffer/batch printf output?
     bool m_no_noise;                  ///< Substitute trivial noise calls
     bool m_no_pointcloud;             ///< Substitute trivial pointcloud calls
@@ -2566,6 +2567,18 @@ struct NoiseParams {
 
 namespace pvt {
 
+// Mangle the group and layer into a unique function name
+std::string
+layer_function_name(const ShaderGroup& group, const ShaderInstance& inst,
+                    bool api = false);
+
+std::string
+init_function_name(const ShadingSystemImpl& shadingsys,
+                   const ShaderGroup& group, bool api = false);
+
+std::string
+fused_function_name(const ShaderGroup& group);
+
 /// Base class for objects that examine compiled shader groups (oso).
 /// This includes optimization passes, "back end" code generators, etc.
 /// The base class holds common data structures and methods that all
@@ -2667,17 +2680,6 @@ public:
 
     /// Return the basic block ID for the given instruction.
     int bblockid(int opnum) const { return m_bblockids[opnum]; }
-
-    // Mangle the group and layer into a unique function name
-    std::string layer_function_name(const ShaderGroup& group,
-                                    const ShaderInstance& inst)
-    {
-        return fmtformat("{}_{}", group.name(), inst.layername());
-    }
-    std::string layer_function_name()
-    {
-        return layer_function_name(group(), *inst());
-    }
 
 protected:
     ShadingSystemImpl& m_shadingsys;  ///< Backpointer to shading system

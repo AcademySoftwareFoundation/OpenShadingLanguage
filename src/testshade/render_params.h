@@ -9,6 +9,7 @@ struct RenderParams {
     float invh;
     CUdeviceptr output_buffer;
     bool flipv;
+    int fused_callable;
     CUdeviceptr osl_printf_buffer_start;
     CUdeviceptr osl_printf_buffer_end;
     CUdeviceptr color_system;

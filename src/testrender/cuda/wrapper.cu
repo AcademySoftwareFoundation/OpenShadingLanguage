@@ -161,7 +161,6 @@ __closesthit__closest_hit_osl()
     //       warning or error if the closure or param storage can possibly be
     //       exceeded.
     alignas(8) char closure_pool[256];
-    alignas(8) char params[256];
 
     ShaderGlobals sg;
     globals_from_hit(sg);
@@ -182,19 +181,12 @@ __closesthit__closest_hit_osl()
 
     sg.context = &shading_context;
 
-    // Run the OSL group and init functions
+    // Run the OSL callable
     void* interactive_ptr = reinterpret_cast<void**>(
         render_params.interactive_params)[sg.shaderID];
-    const unsigned int shaderInitOpIdx = 2u + 2u * sg.shaderID + 0u;
-    const unsigned int shaderGroupIdx  = 2u + 2u * sg.shaderID + 1u;
-    // call osl_init_func
+    const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
     optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
-        shaderInitOpIdx, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
-        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-        0 /*shadeindex - unused*/, interactive_ptr /*interactive_params_ptr*/);
-    // call osl_group_func
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
-        shaderGroupIdx, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+        shaderIdx, &sg /*shaderglobals_ptr*/, nullptr /*groupdata_ptr*/,
         nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
         0 /*shadeindex - unused*/, interactive_ptr /*interactive_params_ptr*/);
 

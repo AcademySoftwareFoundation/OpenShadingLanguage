@@ -131,18 +131,21 @@ __raygen__()
         optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
             0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
             nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-            0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
+            0 /*shadeindex - unused*/,
+            sbtdata->data /*interactive_params_ptr*/);
     else {
         // call osl_init_func
         optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
             0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
             nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-            0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
+            0 /*shadeindex - unused*/,
+            sbtdata->data /*interactive_params_ptr*/);
         // call osl_group_func
         optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
             1u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
             nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-            0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
+            0 /*shadeindex - unused*/,
+            sbtdata->data /*interactive_params_ptr*/);
     }
 
     float* f_output      = (float*)params;

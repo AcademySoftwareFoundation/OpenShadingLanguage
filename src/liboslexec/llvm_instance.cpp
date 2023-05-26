@@ -1014,11 +1014,12 @@ BackendLLVM::build_llvm_optix_callables()
         ll.current_function(
             ll.make_function(dc_entry_name, false,
                              ll.type_void(),  // return type
-                             { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                               ll.type_void_ptr(),  // userdata_base_ptr
-                               ll.type_void_ptr(),  // output_base_ptr
-                               ll.type_int(),
-                               ll.type_void_ptr(),  // interactive params
+                             {
+                                 llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                                 ll.type_void_ptr(),  // userdata_base_ptr
+                                 ll.type_void_ptr(),  // output_base_ptr
+                                 ll.type_int(),
+                                 ll.type_void_ptr(),  // interactive params
                              }));
 
         llvm::BasicBlock* entry_bb = ll.new_basic_block(dc_entry_name);
@@ -1048,11 +1049,12 @@ BackendLLVM::build_llvm_optix_callables()
         ll.current_function(
             ll.make_function(dc_init_name, false,
                              ll.type_void(),  // return type
-                             { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                               ll.type_void_ptr(),  // userdata_base_ptr
-                               ll.type_void_ptr(),  // output_base_ptr
-                               ll.type_int(),
-                               ll.type_void_ptr(),  // interactive params
+                             {
+                                 llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                                 ll.type_void_ptr(),  // userdata_base_ptr
+                                 ll.type_void_ptr(),  // output_base_ptr
+                                 ll.type_int(),
+                                 ll.type_void_ptr(),  // interactive params
                              }));
 
         llvm::BasicBlock* init_bb = ll.new_basic_block(dc_init_name);
@@ -1099,11 +1101,12 @@ BackendLLVM::build_llvm_fused_callable(void)
     ll.current_function(
         ll.make_function(fused_name, false,
                          ll.type_void(),  // return type
-                         { llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
-                           ll.type_void_ptr(),  // userdata_base_ptr
-                           ll.type_void_ptr(),  // output_base_ptr
-                           ll.type_int(),
-                           ll.type_void_ptr(),  // interactive params
+                         {
+                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                             ll.type_void_ptr(),  // userdata_base_ptr
+                             ll.type_void_ptr(),  // output_base_ptr
+                             ll.type_int(),
+                             ll.type_void_ptr(),  // interactive params
                          }));
 
     llvm::BasicBlock* entry_bb = ll.new_basic_block(fused_name);

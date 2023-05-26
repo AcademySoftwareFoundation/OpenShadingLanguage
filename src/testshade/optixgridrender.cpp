@@ -675,7 +675,8 @@ OptixGridRenderer::make_optix_materials()
                           &hitgroupRecord, sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_callablesRecord),
-                          &callablesRecord[0], callables * sizeof(GenericRecord),
+                          &callablesRecord[0],
+                          callables * sizeof(GenericRecord),
                           cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_raygenRecord),
                           &setglobals_raygenRecord, sizeof(GenericRecord),

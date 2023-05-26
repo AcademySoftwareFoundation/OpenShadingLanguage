@@ -469,7 +469,8 @@ OptixRaytracer::make_optix_materials()
     for (const auto& groupref : shaders()) {
         std::string group_name, fused_name;
         shadingsys->getattribute(groupref.get(), "groupname", group_name);
-        shadingsys->getattribute(groupref.get(), "group_fused_name", fused_name);
+        shadingsys->getattribute(groupref.get(), "group_fused_name",
+                                 fused_name);
 
         shadingsys->attribute(groupref.get(), "renderer_outputs",
                               TypeDesc(TypeDesc::STRING, outputs.size()),

@@ -1113,7 +1113,7 @@ BackendLLVM::build_llvm_fused_callable(void)
     // renderer-supplied pointer
     llvm::Value* llvm_groupdata_ptr = ll.current_function_arg(1);
 
-    if (group().llvm_groupdata_size()
+    if ((int)group().llvm_groupdata_size()
         <= shadingsys().m_max_optix_groupdata_alloc)
         llvm_groupdata_ptr = ll.op_alloca(m_llvm_type_groupdata, 1,
                                           "groupdata_buffer", 8);

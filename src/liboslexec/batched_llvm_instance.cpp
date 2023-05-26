@@ -1898,9 +1898,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     // Note that the GroupData* is passed as a void*.
     OSL_ASSERT(m_library_selector);
     std::string unique_layer_name
-        = fmtformat("{}_{}{}", m_library_selector,
-                    (groupentry ? "__direct_callable__" : ""),
-                    layer_function_name());
+        = fmtformat("{}_{}", m_library_selector,
+                    layer_function_name(group(), *inst()));
 
     bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function(ll.make_function(

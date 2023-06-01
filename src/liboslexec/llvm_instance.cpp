@@ -18,13 +18,13 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
-#ifdef OSL_USE_OPTIX
-#include <llvm/Linker/Linker.h>
-#endif
-
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
+
+#if OSL_USE_OPTIX
+#include <llvm/Linker/Linker.h>
+#endif
 
 // Create external declarations for all built-in funcs we may call from LLVM
 #define DECL(name, signature) extern "C" void name();
@@ -121,6 +121,9 @@ extern unsigned char osl_llvm_compiled_ops_block[];
 
 extern int osl_llvm_compiled_rs_dependent_ops_size;
 extern unsigned char osl_llvm_compiled_rs_dependent_ops_block[];
+
+extern int shadeops_cuda_llvm_compiled_ops_size;
+extern unsigned char shadeops_cuda_llvm_compiled_ops_block[];
 
 using namespace OSL::pvt;
 
@@ -1683,19 +1686,33 @@ BackendLLVM::run()
 
         } else {
 #    ifdef OSL_LLVM_CUDA_BITCODE
-            std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
-            if (bitcode.size()) {
-                llvm::Module* shadeops_module = ll.module_from_bitcode(
-                    static_cast<const char*>(bitcode.data()), bitcode.size(),
-                    "llvm_ops", &err);
-                ll.module(shadeops_module);
-            } else {
-                OSL_ASSERT(0 && "The renderer must provide shadeops bitcode for OptiX");
-            }
+            ll.module(
+                ll.module_from_bitcode((char*)shadeops_cuda_llvm_compiled_ops_block,
+                                       shadeops_cuda_llvm_compiled_ops_size,
+                                       "llvm_ops", &err));
             if (err.length())
                 shadingcontext()->errorfmt(
                     "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
                     err);
+
+            // The renderer may provide additional shadeops bitcode for renderer-specific
+            // functionality ("rend_lib" fuctions). Like the built-in shadeops, the rend_lib
+            // functions may or may not be inlined, depending on the optimization options.
+            std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
+            if (bitcode.size()) {
+                llvm::Module* rend_lib_module = ll.module_from_bitcode(
+                    static_cast<const char*>(bitcode.data()), bitcode.size(),
+                    "cuda_rend_lib", &err);
+
+                if (err.length())
+                    shadingcontext()->errorfmt(
+                        "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
+                        err);
+
+                std::unique_ptr<llvm::Module> rend_lib_ptr(rend_lib_module);
+                llvm::Linker::linkModules(*ll.module(), std::move(rend_lib_ptr),
+                                          llvm::Linker::Flags::OverrideFromSrc);
+            }
 #    else
             OSL_ASSERT(0 && "Must generate LLVM CUDA bitcode for OptiX");
 #    endif

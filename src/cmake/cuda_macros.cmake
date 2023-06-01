@@ -189,53 +189,36 @@ function ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated extra
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 endfunction ()
 
-macro ( CUDA_SHADEOPS_COMPILE srclist rend_lib_src headers )
-    # Add all of the "shadeops" sources that need to be compiled to LLVM bitcode for CUDA
-    set ( shadeops_srcs
-        ${CMAKE_SOURCE_DIR}/src/liboslexec/llvm_ops.cpp
-        ${CMAKE_SOURCE_DIR}/src/liboslexec/opnoise.cpp
-        ${CMAKE_SOURCE_DIR}/src/liboslexec/opspline.cpp
-        ${CMAKE_SOURCE_DIR}/src/liboslexec/opcolor.cpp
-        ${CMAKE_SOURCE_DIR}/src/liboslexec/opmatrix.cpp
-        ${CMAKE_SOURCE_DIR}/src/liboslnoise/gabornoise.cpp
-        ${CMAKE_SOURCE_DIR}/src/liboslnoise/simplexnoise.cpp
-        ${rend_lib_src}
-        )
+function ( MAKE_EMBEDDED_CPP symbol_name output_cpp input_file )
+    add_custom_command ( OUTPUT ${output_cpp}
+        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
+            ${input_file} ${output_cpp} "${symbol_name}"
 
-    set (shadeops_bc_cuda_cpp   "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.bc.cpp")
-    set (linked_shadeops_bc     "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops.bc")
-    set (linked_shadeops_opt_bc "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops_opt.bc")
-    set (linked_shadeops_ptx    "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops.ptx")
+        DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_bc}
+            ${input_file} ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+endfunction ()
 
-    list (APPEND ${srclist} ${shadeops_bc_cuda_cpp})
+function ( CUDA_SHADEOPS_COMPILE prefix output_bc output_ptx input_srcs headers )
+    set (linked_bc "${CMAKE_CURRENT_BINARY_DIR}/linked_${prefix}.bc")
+    set (linked_ptx "${CMAKE_CURRENT_BINARY_DIR}/${prefix}.ptx")
+    set (${output_bc} ${linked_bc} PARENT_SCOPE )
+    set (${output_ptx} ${linked_ptx} PARENT_SCOPE )
 
-    foreach ( shadeops_src ${shadeops_srcs} )
+    foreach ( shadeops_src ${input_srcs} )
         MAKE_CUDA_BITCODE ( ${shadeops_src} "_cuda" shadeops_bc "" )
         list ( APPEND shadeops_bc_list ${shadeops_bc} )
     endforeach ()
 
     # Link all of the individual LLVM bitcode files, and emit PTX for the linked bitcode
-    add_custom_command ( OUTPUT ${linked_shadeops_opt_bc} ${linked_shadeops_ptx}
-        COMMAND ${LLVM_LINK_TOOL} ${shadeops_bc_list} -o ${linked_shadeops_bc}
-        COMMAND ${LLVM_OPT_TOOL} ${CUDA_OPT_FLAG_CLANG} ${linked_shadeops_bc} -o ${linked_shadeops_opt_bc}
-        COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH} ${linked_shadeops_opt_bc} -o ${linked_shadeops_ptx}
+    add_custom_command ( OUTPUT ${linked_bc} ${linked_ptx}
+        COMMAND ${LLVM_LINK_TOOL} ${shadeops_bc_list} -o ${linked_bc}
+        COMMAND ${LLVM_OPT_TOOL} ${CUDA_OPT_FLAG_CLANG} ${linked_bc} -o ${linked_bc}
+        COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH} ${linked_bc} -o ${linked_ptx}
         # This script converts all of the .weak functions defined in the PTX into .visible functions.
         COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
-            ${linked_shadeops_ptx} ${linked_shadeops_ptx}
-            DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs} ${headers}
+            ${linked_ptx} ${linked_ptx}
+            DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${input_srcs} ${headers}
                 "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-
-    # Serialize the linked bitcode into a CPP file that can be embedded
-    # in the current target binary
-    add_custom_command ( OUTPUT ${shadeops_bc_cuda_cpp}
-        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
-            ${linked_shadeops_opt_bc} ${shadeops_bc_cuda_cpp} "rend_llvm_compiled_ops"
-
-        DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_shadeops_opt_bc}
-            ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-
-    install (FILES ${linked_shadeops_ptx}
-        DESTINATION ${OSL_PTX_INSTALL_DIR})
-endmacro ()
+endfunction ()

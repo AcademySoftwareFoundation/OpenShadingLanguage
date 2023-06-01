@@ -21,8 +21,8 @@
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
-extern int rend_llvm_compiled_ops_size;
-extern unsigned char rend_llvm_compiled_ops_block[];
+extern int rend_lib_llvm_compiled_ops_size;
+extern unsigned char rend_lib_llvm_compiled_ops_block[];
 
 
 // The entry point for OptiX Module creation changed in OptiX 7.7
@@ -182,8 +182,8 @@ bool
 OptixRaytracer::init_optix_context(int xres OSL_MAYBE_UNUSED,
                                    int yres OSL_MAYBE_UNUSED)
 {
-    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
-                           rend_llvm_compiled_ops_block);
+    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_lib_llvm_compiled_ops_size},
+                           rend_lib_llvm_compiled_ops_block);
     return true;
 }
 
@@ -358,10 +358,34 @@ OptixRaytracer::make_optix_materials()
     load_optix_module("wrapper.ptx", &module_compile_options,
                       &pipeline_compile_options, &wrapper_module);
 
-    OptixModule shadeops_module;
-    load_optix_module("linked_shadeops.ptx", &module_compile_options,
-                      &pipeline_compile_options, &shadeops_module);
+    OptixModule rend_lib_module;
+    load_optix_module("rend_lib_testrender.ptx", &module_compile_options,
+                      &pipeline_compile_options, &rend_lib_module);
 
+    // Retrieve the compiled shadeops PTX
+    const char* shadeops_ptx = nullptr;
+    shadingsys->getattribute("shadeops_cuda_ptx", OSL::TypeDesc::PTR,
+                             &shadeops_ptx);
+
+    int shadeops_ptx_size = 0;
+    shadingsys->getattribute("shadeops_cuda_ptx_size", OSL::TypeDesc::INT,
+                             &shadeops_ptx_size);
+
+    if (shadeops_ptx == nullptr || shadeops_ptx_size == 0) {
+        errhandler().severefmt("Could not retrieve PTX for the shadeops library");
+        return false;
+    }
+
+    // Create the shadeops library program group
+    OptixModule shadeops_module;
+    sizeof_msg_log = sizeof(msg_log);
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options,
+                                        shadeops_ptx, shadeops_ptx_size,
+                                        msg_log, &sizeof_msg_log,
+                                        &shadeops_module),
+                    fmtformat("Creating module for shadeops library: {}", msg_log));
+    modules.push_back(shadeops_module);
 
     OptixProgramGroupOptions program_options = {};
     std::vector<OptixProgramGroup> shader_groups;
@@ -423,7 +447,17 @@ OptixRaytracer::make_optix_materials()
     OptixProgramGroup quad_hitgroup;
     create_optix_pg(&quad_hitgroup_desc, 1, &program_options, &quad_hitgroup);
 
-    // Direct-callable -- support functions for OSL on the device
+    // Direct-callable -- renderer-specific support functions for OSL on the device
+    OptixProgramGroupDesc rend_lib_desc         = {};
+    rend_lib_desc.kind                          = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    rend_lib_desc.callables.moduleDC            = rend_lib_module;
+    rend_lib_desc.callables.entryFunctionNameDC = "__direct_callable__dummy_rend_lib";
+    rend_lib_desc.callables.moduleCC            = 0;
+    rend_lib_desc.callables.entryFunctionNameCC = nullptr;
+    OptixProgramGroup rend_lib_group;
+    create_optix_pg(&rend_lib_desc, 1, &program_options, &rend_lib_group);
+
+    // Direct-callable -- built-in support functions for OSL on the device
     OptixProgramGroupDesc shadeops_desc         = {};
     shadeops_desc.kind                          = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
     shadeops_desc.callables.moduleDC            = shadeops_module;
@@ -558,7 +592,7 @@ OptixRaytracer::make_optix_materials()
 #endif
 
     // Set up OptiX pipeline
-    std::vector<OptixProgramGroup> final_groups = { shadeops_group,
+    std::vector<OptixProgramGroup> final_groups = { rend_lib_group,
                                                     raygen_group, miss_group };
 
     if (scene.quads.size() > 0)
@@ -573,6 +607,9 @@ OptixRaytracer::make_optix_materials()
     // size_t shader_groups_start_index = final_groups.size();
     final_groups.insert(final_groups.end(), shader_groups.begin(),
                         shader_groups.end());
+
+    // append the program group for the built-in shadeops module
+    final_groups.push_back(shadeops_group);
 
     // append set-globals groups
     final_groups.push_back(setglobals_raygen_group);

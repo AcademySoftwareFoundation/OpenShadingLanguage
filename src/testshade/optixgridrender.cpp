@@ -21,8 +21,8 @@
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
-extern int rend_llvm_compiled_ops_size;
-extern unsigned char rend_llvm_compiled_ops_block[];
+extern int rend_lib_llvm_compiled_ops_size;
+extern unsigned char rend_lib_llvm_compiled_ops_block[];
 
 
 // The entry point for OptiX Module creation changed in OptiX 7.7
@@ -197,8 +197,10 @@ bool
 OptixGridRenderer::init_optix_context(int xres OSL_MAYBE_UNUSED,
                                       int yres OSL_MAYBE_UNUSED)
 {
-    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
-                           rend_llvm_compiled_ops_block);
+    shadingsys->attribute("lib_bitcode",
+                          { OSL::TypeDesc::UINT8,
+                            rend_lib_llvm_compiled_ops_size },
+                          rend_lib_llvm_compiled_ops_block);
     return true;
 }
 
@@ -424,28 +426,55 @@ OptixGridRenderer::make_optix_materials()
                                 msg_log, &sizeof_msg_log, &hitgroup_group),
         fmtformat("Creating 'hitgroup' program group: {}", msg_log));
 
-    // Load the PTX for the shadeops
-    std::string shadeopsName = "linked_shadeops.ptx";
-    std::string shadeops_ptx = load_ptx_file(shadeopsName);
-    if (shadeops_ptx.empty()) {
-        errhandler().severefmt("Could not find PTX for the renderer library");
+    // Retrieve the compiled shadeops PTX
+    const char* shadeops_ptx = nullptr;
+    shadingsys->getattribute("shadeops_cuda_ptx", OSL::TypeDesc::PTR,
+                             &shadeops_ptx);
+
+    int shadeops_ptx_size = 0;
+    shadingsys->getattribute("shadeops_cuda_ptx_size", OSL::TypeDesc::INT,
+                             &shadeops_ptx_size);
+
+    if (shadeops_ptx == nullptr || shadeops_ptx_size == 0) {
+        errhandler().severefmt("Could not retrieve PTX for the shadeops library");
         return false;
     }
 
-    // Create shadeops library program group
-    sizeof_msg_log = sizeof(msg_log);
+    // Create the shadeops library program group
     OptixModule shadeops_module;
+    sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
                                         &pipeline_compile_options,
-                                        shadeops_ptx.c_str(),
-                                        shadeops_ptx.size(), msg_log,
-                                        &sizeof_msg_log, &shadeops_module),
-                    fmtformat("Creating module from PTX-file: {}", msg_log));
+                                        shadeops_ptx, shadeops_ptx_size,
+                                        msg_log, &sizeof_msg_log,
+                                        &shadeops_module),
+                    fmtformat("Creating module for shadeops library{}", msg_log));
 
     // Record it so we can destroy it later
     modules.push_back(shadeops_module);
 
-    // Direct-callable -- support functions for OSL on the device
+    // Load the PTX for the rend_lib
+    std::string rend_libName = "rend_lib_testshade.ptx";
+    std::string rend_lib_ptx = load_ptx_file(rend_libName);
+    if (rend_lib_ptx.empty()) {
+        errhandler().severefmt("Could not find PTX for the renderer library");
+        return false;
+    }
+
+    // Create rend_lib program group
+    sizeof_msg_log = sizeof(msg_log);
+    OptixModule rend_lib_module;
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options,
+                                        rend_lib_ptx.c_str(),
+                                        rend_lib_ptx.size(), msg_log,
+                                        &sizeof_msg_log, &rend_lib_module),
+                    fmtformat("Creating module from PTX-file: {}", msg_log));
+
+    // Record it so we can destroy it later
+    modules.push_back(rend_lib_module);
+
+    // Direct-callable -- built-in support functions for OSL on the device
     OptixProgramGroupDesc shadeops_desc = {};
     shadeops_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
     shadeops_desc.callables.moduleDC    = shadeops_module;
@@ -461,7 +490,25 @@ OptixGridRenderer::make_optix_materials()
                                 1,                 // number of program groups
                                 &program_options,  // program options
                                 msg_log, &sizeof_msg_log, &shadeops_group),
-        fmtformat("Creating 'hitgroup' program group: {}", msg_log));
+        fmtformat("Creating 'shadeops' program group: {}", msg_log));
+
+    // Direct-callable -- renderer-specific support functions for OSL on the device
+    OptixProgramGroupDesc rend_lib_desc = {};
+    rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    rend_lib_desc.callables.moduleDC    = rend_lib_module;
+    rend_lib_desc.callables.entryFunctionNameDC
+        = "__direct_callable__dummy_rend_lib";
+    rend_lib_desc.callables.moduleCC            = 0;
+    rend_lib_desc.callables.entryFunctionNameCC = nullptr;
+
+    OptixProgramGroup rend_lib_group;
+    sizeof_msg_log = sizeof(msg_log);
+    OPTIX_CHECK_MSG(
+        optixProgramGroupCreate(m_optix_ctx, &rend_lib_desc,
+                                1,                 // number of program groups
+                                &program_options,  // program options
+                                msg_log, &sizeof_msg_log, &rend_lib_group),
+        fmtformat("Creating 'rend_lib' program group: {}", msg_log));
 
     int callables = m_fused_callable ? 1 : 2;
 
@@ -576,7 +623,10 @@ OptixGridRenderer::make_optix_materials()
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
-        shadeops_group,          raygen_group,          miss_group,
+        shadeops_group,
+        rend_lib_group,
+        raygen_group,
+        miss_group,
         hitgroup_group,
         setglobals_raygen_group,
         setglobals_miss_group,

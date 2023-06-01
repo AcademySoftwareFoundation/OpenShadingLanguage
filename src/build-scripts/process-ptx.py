@@ -17,7 +17,6 @@ out_name = sys.argv[2]
 ptx = ""
 with open(in_name, 'r') as ptx_in:
     ptx = ptx_in.read()
-ptx = ptx.replace(".weak .func", ".visible .func")
 ptx = re.sub(r'(?m)^(\.const .align)', ".visible .const .align", ptx)
 ptx = re.sub(r'(?m)^(\.func)', ".visible .func", ptx)
 with open(out_name, 'w') as ptx_out:

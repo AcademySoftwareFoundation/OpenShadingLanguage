@@ -49,6 +49,11 @@ using namespace OSL::pvt;
 #    undef bitor
 #endif
 
+
+extern int shadeops_cuda_ptx_compiled_ops_size;
+extern unsigned char shadeops_cuda_ptx_compiled_ops_block[];
+
+
 OSL_NAMESPACE_ENTER
 
 
@@ -1961,6 +1966,15 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
         else
             deps += ",OptiX-" OSL_OPTIX_VERSION;
         *(const char**)val = ustring(deps).c_str();
+        return true;
+    }
+    if (name == "shadeops_cuda_ptx" && type.basetype == TypeDesc::PTR) {
+        *(const char**)val = reinterpret_cast<const char*>(
+            shadeops_cuda_ptx_compiled_ops_block);
+        return true;
+    }
+    if (name == "shadeops_cuda_ptx_size" && type.basetype == TypeDesc::INT) {
+        *(int*)val = shadeops_cuda_ptx_compiled_ops_size;
         return true;
     }
 

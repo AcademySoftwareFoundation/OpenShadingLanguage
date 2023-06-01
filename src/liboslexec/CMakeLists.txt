@@ -206,10 +206,46 @@ if (USE_LLVM_BITCODE)
 
     EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependent_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependent_ops" lib_src "" "${include_dirs}")
 
-    # The shadeops are provided as bitcode by the renderer, so we need to
-    # enable bitcode support in liboslexec.
     if (CUDA_FOUND)
         add_definitions (-DOSL_LLVM_CUDA_BITCODE)
+
+        # The shadeops are compiled to both LLVM bitcode and PTX, and embedded
+        # in liboslexec in binary format. The bitcode is used to seed the LLVM
+        # module for each shader, and the PTX can be retrieved by the renderer
+        # through the shading system.
+        set (liboslexec_shadeops_srcs
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/llvm_ops.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opnoise.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opspline.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opcolor.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opmatrix.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslnoise/gabornoise.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslnoise/simplexnoise.cpp
+        )
+
+        CUDA_SHADEOPS_COMPILE ( "shadeops_cuda"
+            shadeops_cuda_bc
+            shadeops_cuda_ptx
+            "${liboslexec_shadeops_srcs}"
+            ""
+        )
+
+        # Serialize the linked bitcode into a CPP file to be embedded in the current target binary
+        set (shadeops_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.bc.cpp")
+        MAKE_EMBEDDED_CPP( "shadeops_cuda_llvm_compiled_ops" ${shadeops_bc_cuda_cpp} ${shadeops_cuda_bc} )
+        list (APPEND lib_src ${shadeops_bc_cuda_cpp})
+
+        # Serialize the linked PTX into a CPP file to be embedded in the current target binary
+        set (shadeops_ptx_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.ptx.cpp")
+        MAKE_EMBEDDED_CPP( "shadeops_cuda_ptx_compiled_ops" ${shadeops_ptx_cuda_cpp} ${shadeops_cuda_ptx} )
+        list (APPEND lib_src ${shadeops_ptx_cuda_cpp})
+
+        # Installing the shadeops PTX isn't necessary since the renderer can
+        # retrieve it through the shading system. But for testing purposes it is
+        # handy to make the PTX available offline.
+        install (FILES ${shadeops_cuda_ptx}
+            DESTINATION ${OSL_PTX_INSTALL_DIR})
+
     endif ()
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due

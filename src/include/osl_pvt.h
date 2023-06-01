@@ -1326,3 +1326,13 @@ typedef std::vector<Opcode> OpcodeVec;
 
 };  // namespace pvt
 OSL_NAMESPACE_EXIT
+
+
+
+// Supply a fmtlib compatible custom formatter for TypeSpec.
+#if FMT_VERSION >= 100000
+FMT_BEGIN_NAMESPACE
+template<> struct formatter<OSL::pvt::TypeSpec> : ostream_formatter {
+};
+FMT_END_NAMESPACE
+#endif

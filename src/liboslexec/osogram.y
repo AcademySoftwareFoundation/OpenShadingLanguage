@@ -27,7 +27,8 @@
 #pragma clang diagnostic ignored "-Wparentheses-equality"
 #endif
 
-#if (OSL_CLANG_VERSION >= 150000) || (OSL_INTEL_CLANG_VERSION >= 140000)
+#if (OSL_CLANG_VERSION >= 150000) || (OSL_APPLE_CLANG_VERSION >= 140000) \
+    || (OSL_INTEL_CLANG_VERSION >= 140000)
 #pragma clang diagnostic ignored "-Wunused-but-set-variable"
 #endif
 

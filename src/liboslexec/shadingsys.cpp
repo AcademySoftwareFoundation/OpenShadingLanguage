@@ -2410,20 +2410,20 @@ ShadingSystemImpl::getstats(int level) const
             << (int)(100.0f * m_stat_empty_groups / m_stat_groups_compiled)
             << "%)\n";
     if (m_stat_instances_compiled > 0 || m_stat_groups_compiled > 0) {
-        print(out, "  Optimized {} ops to {} ({:.1f}%)\n", m_stat_preopt_ops,
-              m_stat_postopt_ops,
+        print(out, "  Optimized {} ops to {} ({:.1f}%)\n",
+              (int)m_stat_preopt_ops, (int)m_stat_postopt_ops,
               100.0
                   * (double(m_stat_postopt_ops)
                          / (std::max(1, (int)m_stat_preopt_ops))
                      - 1.0));
         print(out, "  Optimized {} symbols to {} ({:.1f}%)\n",
-              m_stat_preopt_syms, m_stat_postopt_syms,
+              (int)m_stat_preopt_syms, (int)m_stat_postopt_syms,
               100.0
                   * (double(m_stat_postopt_syms)
                          / (std::max(1, (int)m_stat_preopt_syms))
                      - 1.0));
         print(out, "  Optimized {} useparam ops into {} llvm run layer calls\n",
-              m_stat_useparam_ops, m_stat_call_layers_inserted);
+              (int)m_stat_useparam_ops, (int)m_stat_call_layers_inserted);
     }
     print(out, "  Constant connections eliminated: {}\n",
           (int)m_stat_const_connections);

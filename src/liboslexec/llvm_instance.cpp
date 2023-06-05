@@ -122,8 +122,10 @@ extern unsigned char osl_llvm_compiled_ops_block[];
 extern int osl_llvm_compiled_rs_dependent_ops_size;
 extern unsigned char osl_llvm_compiled_rs_dependent_ops_block[];
 
+#ifdef OSL_LLVM_CUDA_BITCODE
 extern int shadeops_cuda_llvm_compiled_ops_size;
 extern unsigned char shadeops_cuda_llvm_compiled_ops_block[];
+#endif
 
 using namespace OSL::pvt;
 

@@ -50,8 +50,10 @@ using namespace OSL::pvt;
 #endif
 
 
+#ifdef OSL_LLVM_CUDA_BITCODE
 extern int shadeops_cuda_ptx_compiled_ops_size;
 extern unsigned char shadeops_cuda_ptx_compiled_ops_block[];
+#endif
 
 
 OSL_NAMESPACE_ENTER
@@ -1968,6 +1970,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
         *(const char**)val = ustring(deps).c_str();
         return true;
     }
+#ifdef OSL_LLVM_CUDA_BITCODE
     if (name == "shadeops_cuda_ptx" && type.basetype == TypeDesc::PTR) {
         *(const char**)val = reinterpret_cast<const char*>(
             shadeops_cuda_ptx_compiled_ops_block);
@@ -1977,6 +1980,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
         *(int*)val = shadeops_cuda_ptx_compiled_ops_size;
         return true;
     }
+#endif
 
     return false;
 #undef ATTR_DECODE

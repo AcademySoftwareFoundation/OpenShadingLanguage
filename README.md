@@ -275,8 +275,7 @@ Films using OSL (grouped by year of release date):
   Storks,
   Miss Peregrine's Home for Peculiar Children,
   Fantastic Beasts and Where to Find Them,
-  Assassin's Creed,
-  Kubo and the Two Strings
+  Assassin's Creed
 * **(2017)**
   Lego Batman,
   The Great Wall,
@@ -431,8 +430,8 @@ distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
 installed binary distribution.
 
 For those interested in learning to program in OSL, there is the
-[Siggraph 2022](https://dl.acm.org/doi/proceedings/10.1145/3532720) course
-[OSL Shaders for RenderMan](https://dl.acm.org/doi/abs/10.1145/3532724.3535604),
+[Siggraph 2022 Educator's Forum](https://dl.acm.org/doi/proceedings/10.1145/3532724)
+[OSL Shaders for RenderMan](https://dl.acm.org/doi/abs/10.1145/3532724.3535604) course,
 which uses RenderMan in the examples and
 [Supplementary Materials](https://github.com/LaikaStudios/OSLShadersForRenderMan),
 but which is primarily about shader writing in OSL.

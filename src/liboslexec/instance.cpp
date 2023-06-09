@@ -109,7 +109,7 @@ ShaderInstance::findsymbol(ustring name) const
 
 
 int
-ShaderInstance::findparam(ustring name) const
+ShaderInstance::findparam(ustring name, bool search_master) const
 {
     if (m_instsymbols.size())
         for (int i = m_firstparam, e = m_lastparam; i < e; ++i)
@@ -117,9 +117,11 @@ ShaderInstance::findparam(ustring name) const
                 return i;
 
     // Not found? Try the master.
-    for (int i = m_firstparam, e = m_lastparam; i < e; ++i)
-        if (master()->symbol(i)->name() == name)
-            return i;
+    if (search_master) {
+        for (int i = m_firstparam, e = m_lastparam; i < e; ++i)
+            if (master()->symbol(i)->name() == name)
+                return i;
+    }
 
     return -1;
 }

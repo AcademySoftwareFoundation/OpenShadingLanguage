@@ -3213,7 +3213,14 @@ ShadingSystemImpl::ReParameter(ShaderGroup& group, string_view layername_,
         return false;  // could not find the named layer
 
     // Find the named parameter within the layer
-    int paramindex = layer->findparam(ustring(paramname));
+    int paramindex = layer->findparam(ustring(paramname),
+                                      false /* don't go to master */);
+    if (paramindex < 0) {
+        paramindex = layer->findparam(ustring(paramname), true);
+        if (paramindex >= 0)
+            // This param exists, but it got optimized away, no failure
+            return true;
+    }
     if (paramindex < 0)
         return false;  // could not find the named parameter
 

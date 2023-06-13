@@ -36,11 +36,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc6/C++14 llvm9 py2.7 boost1.66 exr2.3 oiio2.2 sse2
+          - desc: gcc6/C++14 llvm9 py2.7 boost1.66 exr2.3 oiio2.3 sse2
             nametag: linux-vfx2019
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2019-clang9
             vfxyear: 2019
-            vfxsuffix: -clang9
             cxx_std: 14
             openimageio_ver: v2.2.17.0
             python_ver: 2.7
@@ -48,8 +48,8 @@ jobs:
           - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7
             nametag: linux-clang9-llvm9
             os: ubuntu-20.04
+            container: aswftesting/ci-osl:2019-clang9
             vfxyear: 2019
-            vfxsuffix: -clang9
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 14
@@ -60,8 +60,8 @@ jobs:
           - desc: GPU Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.3 OIIO-master avx2
             nametag: linux-optix7-2019
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2019-clang10
             vfxyear: 2019
-            vfxsuffix: -clang10
             cxx_std: 14
             openimageio_ver: master
             python_ver: 2.7
@@ -73,6 +73,7 @@ jobs:
           - desc: gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4
             nametag: linux-vfx2020
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2020
             vfxyear: 2020
             cxx_std: 14
             openimageio_ver: v2.2.17.0
@@ -80,22 +81,22 @@ jobs:
             pybind11_ver: v2.5.0
             simd: sse4.2
             setenvs: export CONAN_LLVM_VERSION=10.0.1
-          - desc: gcc9/C++17 llvm11 py3.7 boost1.73 exr2.5 oiio2.2 avx2 batch-b8avx2
+          - desc: gcc9/C++17 llvm11 py3.7 boost1.73 exr2.5 oiio2.3 avx2 batch-b8avx2
             nametag: linux-vfx2021
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2021-clang11
             vfxyear: 2021
-            vfxsuffix: -clang11
             cxx_std: 17
             openimageio_ver: dev-2.2
             python_ver: 3.7
             pybind11_ver: v2.7.0
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
-          - desc: gcc9/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+          - desc: gcc9/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio-rel avx2
             nametag: linux-vfx2022
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang13
             vfxyear: 2022
-            vfxsuffix: -clang13
             cxx_std: 17
             openimageio_ver: release
             python_ver: 3.9
@@ -105,8 +106,8 @@ jobs:
           - desc: clang12/C++17 llvm12 oiio-master boost1.73 exr3.1 py3.9 avx2 batch-avx512
             nametag: linux-clang12-llvm12-batch
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang12
             vfxyear: 2022
-            vfxsuffix: -clang12
             cxx_std: 17
             openimageio_ver: master
             python_ver: 3.9
@@ -117,8 +118,8 @@ jobs:
           - desc: icc/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio-master avx2
             nametag: linux-icc
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
-            vfxsuffix: -clang14
             cc_compiler: icc
             cxx_compiler: icpc
             cxx_std: 17
@@ -134,8 +135,8 @@ jobs:
           - desc: icx/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio2.3 avx2
             nametag: linux-icx
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
-            vfxsuffix: -clang14
             cc_compiler: icx
             cxx_compiler: icpx
             cxx_std: 17
@@ -146,11 +147,22 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
-          - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.2 no-simd exr2.3
+          - desc: gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 oiio-rel avx2
+            nametag: linux-vfx2023
+            os: ubuntu-latest
+            container: aswftesting/ci-osl:2023-clang15
+            vfxyear: 2023
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: "3.10"
+            pybind11_ver: v2.9.0
+            simd: avx2,f16c
+            batched: b8_AVX2
+          - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.3 no-simd exr2.3
             nametag: linux-oldest
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2019-clang9
             vfxyear: 2019
-            vfxsuffix: -clang9
             cxx_std: 14
             openimageio_ver: v2.2.17.0
             python_ver: 2.7
@@ -162,8 +174,8 @@ jobs:
           - desc: sanitizers
             nametag: sanitizer
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang13
             vfxyear: 2022
-            vfxsuffix: -clang13
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
@@ -207,8 +219,8 @@ jobs:
           - desc: "clang-format"
             nametag: clang-format
             os: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
-            vfxsuffix: -clang14
             cxx_std: 17
             openimageio_ver: release
             python_ver: 3.9
@@ -220,7 +232,7 @@ jobs:
 
     runs-on: ${{matrix.os}}
     container:
-      image: aswftesting/ci-osl:${{matrix.vfxyear}}${{matrix.vfxsuffix}}
+        image: ${{ matrix.container }}
     env:
       CXX: ${{matrix.cxx_compiler}}
       CC: ${{matrix.cc_compiler}}

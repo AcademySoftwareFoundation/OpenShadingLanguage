@@ -160,6 +160,11 @@ macro ( TESTSUITE )
             # and optimized
             add_one_testsuite ("${_testname}.optix.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 TESTSHADE_OPTIX=1 )
+            if (NOT EXISTS "${_testsrcdir}/NOFUSED")
+              # and fused
+              add_one_testsuite ("${_testname}.optix.fused" "${_testsrcdir}"
+                                 ENV TESTSHADE_OPT=2 TESTSHADE_OPTIX=1 TESTSHADE_FUSED=1 )
+            endif()
         endif ()
 
         if (OSL_BUILD_BATCHED)

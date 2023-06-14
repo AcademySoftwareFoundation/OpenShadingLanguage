@@ -1051,6 +1051,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_max_local_mem_KB(2048)
     , m_compile_report(0)
     , m_use_optix(renderer->supports("OptiX"))
+    , m_max_optix_groupdata_alloc(0)
     , m_buffer_printf(true)
     , m_no_noise(false)
     , m_no_pointcloud(false)
@@ -1569,6 +1570,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_SET("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET("compile_report", int, m_compile_report);
+    ATTR_SET("max_optix_groupdata_alloc", int, m_max_optix_groupdata_alloc);
     ATTR_SET("buffer_printf", int, m_buffer_printf);
     ATTR_SET("no_noise", int, m_no_noise);
     ATTR_SET("no_pointcloud", int, m_no_pointcloud);
@@ -1748,6 +1750,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE_STRING("archive_filename", m_archive_filename);
     ATTR_DECODE("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_DECODE("compile_report", int, m_compile_report);
+    ATTR_DECODE("max_optix_groupdata_alloc", int, m_max_optix_groupdata_alloc);
     ATTR_DECODE("buffer_printf", int, m_buffer_printf);
     ATTR_DECODE("no_noise", int, m_no_noise);
     ATTR_DECODE("no_pointcloud", int, m_no_pointcloud);
@@ -1998,16 +2001,17 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
         return true;
     }
     if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
-        *(ustring*)val = ustring::fmtformat("__direct_callable__group_{}_init",
-                                            group->name());
+        *(ustring*)val = init_function_name(*this, *group, true);
         return true;
     }
     if (name == "group_entry_name" && type.basetype == TypeDesc::STRING) {
         int nlayers          = group->nlayers();
         ShaderInstance* inst = (*group)[nlayers - 1];
-        // This formulation mirrors OSOProcessorBase::layer_function_name()
-        *(ustring*)val = ustring::fmtformat("__direct_callable__{}_{}",
-                                            group->name(), inst->layername());
+        *(ustring*)val       = layer_function_name(*group, *inst, true);
+        return true;
+    }
+    if (name == "group_fused_name" && type.basetype == TypeDesc::STRING) {
+        *(ustring*)val = fused_function_name(*group);
         return true;
     }
     if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {

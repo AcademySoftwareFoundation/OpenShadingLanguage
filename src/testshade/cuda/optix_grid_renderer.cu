@@ -126,17 +126,27 @@ __raygen__()
     sg.renderstate          = &closure_pool[0];
 
     // Run the OSL group and init functions
-
-    // call osl_init_func
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
-        0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
-        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-        0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
-    // call osl_group_func
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
-        1u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
-        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-        0 /*shadeindex - unused*/, sbtdata->data /*interactive_params_ptr*/);
+    if (render_params.fused_callable)
+        // call osl_init_func
+        optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+            0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+            nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+            0 /*shadeindex - unused*/,
+            sbtdata->data /*interactive_params_ptr*/);
+    else {
+        // call osl_init_func
+        optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+            0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+            nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+            0 /*shadeindex - unused*/,
+            sbtdata->data /*interactive_params_ptr*/);
+        // call osl_group_func
+        optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+            1u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
+            nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+            0 /*shadeindex - unused*/,
+            sbtdata->data /*interactive_params_ptr*/);
+    }
 
     float* f_output      = (float*)params;
     int pixel            = launch_index.y * launch_dims.x + launch_index.x;

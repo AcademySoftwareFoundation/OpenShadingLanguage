@@ -191,6 +191,9 @@ OptixRaytracer::synch_attributes()
     test_str_1 = userdata_str1.hash();
     test_str_2 = userdata_str2.hash();
 
+    // Set the maximum groupdata buffer allocation size
+    shadingsys->attribute("max_optix_groupdata_alloc", 1024);
+
     {
         char* colorSys            = nullptr;
         long long cpuDataSizes[2] = { 0, 0 };
@@ -464,11 +467,10 @@ OptixRaytracer::make_optix_materials()
     int mtl_id = 0;
     std::vector<void*> material_interactive_params;
     for (const auto& groupref : shaders()) {
-        std::string group_name, init_name, entry_name;
+        std::string group_name, fused_name;
         shadingsys->getattribute(groupref.get(), "groupname", group_name);
-        shadingsys->getattribute(groupref.get(), "group_init_name", init_name);
-        shadingsys->getattribute(groupref.get(), "group_entry_name",
-                                 entry_name);
+        shadingsys->getattribute(groupref.get(), "group_fused_name",
+                                 fused_name);
 
         shadingsys->attribute(groupref.get(), "renderer_outputs",
                               TypeDesc(TypeDesc::STRING, outputs.size()),
@@ -519,25 +521,20 @@ OptixRaytracer::make_optix_materials()
                       msg_log));
         modules.push_back(optix_module);
 
-        // Create 2x program groups (for direct callables)
-        OptixProgramGroupDesc pgDesc[2] = {};
+        // Create program groups (for direct callables)
+        OptixProgramGroupDesc pgDesc[1] = {};
         pgDesc[0].kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
         pgDesc[0].callables.moduleDC    = optix_module;
-        pgDesc[0].callables.entryFunctionNameDC = init_name.c_str();
+        pgDesc[0].callables.entryFunctionNameDC = fused_name.c_str();
         pgDesc[0].callables.moduleCC            = 0;
         pgDesc[0].callables.entryFunctionNameCC = nullptr;
-        pgDesc[1].kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-        pgDesc[1].callables.moduleDC = optix_module;
-        pgDesc[1].callables.entryFunctionNameDC = entry_name.c_str();
-        pgDesc[1].callables.moduleCC            = 0;
-        pgDesc[1].callables.entryFunctionNameCC = nullptr;
 
-        shader_groups.resize(shader_groups.size() + 2);
+        shader_groups.resize(shader_groups.size() + 1);
         sizeof_msg_log = sizeof(msg_log);
         OPTIX_CHECK_MSG(
-            optixProgramGroupCreate(m_optix_ctx, &pgDesc[0], 2,
+            optixProgramGroupCreate(m_optix_ctx, &pgDesc[0], 1,
                                     &program_options, msg_log, &sizeof_msg_log,
-                                    &shader_groups[shader_groups.size() - 2]),
+                                    &shader_groups[shader_groups.size() - 1]),
             fmtformat("Creating 'shader' group for group {}: {}", group_name,
                       msg_log));
     }

@@ -188,6 +188,35 @@ helper_function_lookup(const std::string& name)
 }
 
 
+std::string
+layer_function_name(const ShaderGroup& group, const ShaderInstance& inst,
+                    bool api)
+{
+    bool use_optix     = inst.shadingsys().use_optix();
+    const char* prefix = use_optix && api ? "__direct_callable__" : "";
+    return fmtformat("{}osl_layer_group_{}_name_{}", prefix, group.name(),
+                     inst.layername());
+}
+
+std::string
+init_function_name(const ShadingSystemImpl& shadingsys,
+                   const ShaderGroup& group, bool api)
+{
+    bool use_optix     = shadingsys.use_optix();
+    const char* prefix = use_optix && api ? "__direct_callable__" : "";
+
+    return fmtformat("{}osl_init_group_{}", prefix, group.name());
+}
+
+std::string
+fused_function_name(const ShaderGroup& group)
+{
+    int nlayers          = group.nlayers();
+    ShaderInstance* inst = group[nlayers - 1];
+
+    return fmtformat("__direct_callable__fused_{}_name_{}", group.name(),
+                     inst->layername());
+}
 
 llvm::Type*
 BackendLLVM::llvm_type_sg()
@@ -865,8 +894,7 @@ BackendLLVM::build_llvm_init()
 {
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_name = fmtformat("__direct_callable__group_{}_init",
-                                        group().name());
+    std::string unique_name = init_function_name(shadingsys(), group());
     ll.current_function(
         ll.make_function(unique_name, false,
                          ll.type_void(),  // return type
@@ -962,15 +990,167 @@ BackendLLVM::build_llvm_init()
     return ll.current_function();
 }
 
+// OptiX Callables:
+//  Builds three OptiX callables: an init wrapper, an entry layer wrapper,
+//  and a "fused" callable that wraps both and owns the groupdata params buffer.
+//
+//  Clients can either call both init + entry, or use the fused callable.
+//
+//  The init and entry layer wrappers exist instead of keeping the underlying
+//  functions as direct callables because the fused callable can't call other
+//  direct callables.
+//
+std::vector<llvm::Function*>
+BackendLLVM::build_llvm_optix_callables()
+{
+    std::vector<llvm::Function*> funcs;
 
+    // Build a callable for the entry layer function
+    {
+        int nlayers               = group().nlayers();
+        ShaderInstance* inst      = group()[nlayers - 1];
+        std::string dc_entry_name = layer_function_name(group(), *inst, true);
+
+        ll.current_function(
+            ll.make_function(dc_entry_name, false,
+                             ll.type_void(),  // return type
+                             {
+                                 llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                                 ll.type_void_ptr(),  // userdata_base_ptr
+                                 ll.type_void_ptr(),  // output_base_ptr
+                                 ll.type_int(),
+                                 ll.type_void_ptr(),  // interactive params
+                             }));
+
+        llvm::BasicBlock* entry_bb = ll.new_basic_block(dc_entry_name);
+        ll.new_builder(entry_bb);
+
+        llvm::Value* args[] = {
+            ll.current_function_arg(0), ll.current_function_arg(1),
+            ll.current_function_arg(2), ll.current_function_arg(3),
+            ll.current_function_arg(4), ll.current_function_arg(5),
+        };
+
+        // Call layer
+        std::string layer_name = layer_function_name(group(), *inst);
+        ll.call_function(layer_name.c_str(), args);
+
+        ll.op_return();
+        ll.end_builder();
+
+        funcs.push_back(ll.current_function());
+    }
+
+    // Build a callable for the init function
+    {
+        std::string dc_init_name = init_function_name(shadingsys(), group(),
+                                                      true);
+
+        ll.current_function(
+            ll.make_function(dc_init_name, false,
+                             ll.type_void(),  // return type
+                             {
+                                 llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                                 ll.type_void_ptr(),  // userdata_base_ptr
+                                 ll.type_void_ptr(),  // output_base_ptr
+                                 ll.type_int(),
+                                 ll.type_void_ptr(),  // interactive params
+                             }));
+
+        llvm::BasicBlock* init_bb = ll.new_basic_block(dc_init_name);
+        ll.new_builder(init_bb);
+
+        llvm::Value* args[] = {
+            ll.current_function_arg(0), ll.current_function_arg(1),
+            ll.current_function_arg(2), ll.current_function_arg(3),
+            ll.current_function_arg(4), ll.current_function_arg(5),
+        };
+
+        // Call init
+        std::string init_name = init_function_name(shadingsys(), group());
+        ll.call_function(init_name.c_str(), args);
+
+        ll.op_return();
+        ll.end_builder();
+
+        funcs.push_back(ll.current_function());
+    }
+
+    funcs.push_back(build_llvm_fused_callable());
+    return funcs;
+}
+
+//
+// Fused callable:
+//  Alternative OptiX API to the init + entry callables.
+//
+//  Calls init and the entry layer functions itself, so that OSL can own
+//  the groupdata params buffer.
+//
+//  With max_optix_groupdata_alloc > 0, the callable will try to allocate
+//  a buffer for groupdata params on the stack. If the buffer requirement
+//  exceeds max_optix_groupdata_alloc, it will skip allocation and instead
+//  forward the pointer passed in by the renderer.
+//
+llvm::Function*
+BackendLLVM::build_llvm_fused_callable(void)
+{
+    std::string fused_name = fused_function_name(group());
+
+    // Start building the fused function
+    ll.current_function(
+        ll.make_function(fused_name, false,
+                         ll.type_void(),  // return type
+                         {
+                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                             ll.type_void_ptr(),  // userdata_base_ptr
+                             ll.type_void_ptr(),  // output_base_ptr
+                             ll.type_int(),
+                             ll.type_void_ptr(),  // interactive params
+                         }));
+
+    llvm::BasicBlock* entry_bb = ll.new_basic_block(fused_name);
+    ll.new_builder(entry_bb);
+
+    // If it fits, allocate a groupdata params buffer and overwrite the
+    // renderer-supplied pointer
+    llvm::Value* llvm_groupdata_ptr = ll.current_function_arg(1);
+
+    if ((int)group().llvm_groupdata_size()
+        <= shadingsys().m_max_optix_groupdata_alloc)
+        llvm_groupdata_ptr = ll.op_alloca(m_llvm_type_groupdata, 1,
+                                          "groupdata_buffer", 8);
+
+    llvm::Value* args[] = {
+        ll.current_function_arg(0), llvm_groupdata_ptr,
+        ll.current_function_arg(2), ll.current_function_arg(3),
+        ll.current_function_arg(4), ll.current_function_arg(5),
+    };
+
+    // Call init
+    std::string init_name = init_function_name(shadingsys(), group());
+    ll.call_function(init_name.c_str(), args);
+
+    int nlayers          = group().nlayers();
+    ShaderInstance* inst = group()[nlayers - 1];
+
+    // Call entry
+    std::string layer_name = layer_function_name(group(), *inst);
+    ll.call_function(layer_name.c_str(), args);
+
+    ll.op_return();
+    ll.end_builder();
+
+    return ll.current_function();
+}
 
 llvm::Function*
 BackendLLVM::build_llvm_instance(bool groupentry)
 {
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_layer_name = (groupentry ? "__direct_callable__" : "")
-                                    + layer_function_name();
+    std::string unique_layer_name = layer_function_name(group(), *inst());
+
     bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function(ll.make_function(
         unique_layer_name,
@@ -1524,6 +1704,11 @@ BackendLLVM::run()
             funcs[layer]         = build_llvm_instance(is_single_entry);
         }
     }
+
+    std::vector<llvm::Function*> optix_externals;
+    if (use_optix())
+        optix_externals = build_llvm_optix_callables();
+
     // llvm::Function* entry_func = group().num_entry_layers() ? NULL : funcs[m_num_used_layers-1];
     m_stat_llvm_irgen_time += timer.lap();
 
@@ -1553,14 +1738,20 @@ BackendLLVM::run()
         // seems to yield about another 5-10% opt+JIT speed gain versus
         // merely internalizing.
         std::unordered_set<llvm::Function*> external_functions;
-        external_functions.insert(init_func);
-        for (int layer = 0; layer < nlayers; ++layer) {
-            llvm::Function* f = funcs[layer];
-            // If we plan to call bitcode_string of a layer's function after
-            // optimization it may not exist after optimization unless we
-            // treat it as external.
-            if (f && (group().is_entry_layer(layer) || llvm_debug())) {
-                external_functions.insert(f);
+        if (use_optix()) {
+            for (llvm::Function* func : optix_externals)
+                external_functions.insert(func);
+        } else {
+            external_functions.insert(init_func);
+
+            for (int layer = 0; layer < nlayers; ++layer) {
+                llvm::Function* f = funcs[layer];
+                // If we plan to call bitcode_string of a layer's function after
+                // optimization it may not exist after optimization unless we
+                // treat it as external.
+                if (f && (group().is_entry_layer(layer) || llvm_debug())) {
+                    external_functions.insert(f);
+                }
             }
         }
         ll.prune_and_internalize_module(external_functions);

@@ -79,6 +79,7 @@ private:
     OptixShaderBindingTable m_optix_sbt            = {};
     OptixShaderBindingTable m_setglobals_optix_sbt = {};
     OptixPipeline m_optix_pipeline                 = {};
+    bool m_fused_callable                          = false;
     CUdeviceptr d_output_buffer;
     CUdeviceptr d_launch_params = 0;
     CUdeviceptr d_osl_printf_buffer;

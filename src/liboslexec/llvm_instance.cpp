@@ -193,7 +193,7 @@ layer_function_name(const ShaderGroup& group, const ShaderInstance& inst,
                     bool api)
 {
     bool use_optix     = inst.shadingsys().use_optix();
-    std::string prefix = use_optix && api ? "__direct_callable__" : "";
+    const char* prefix = use_optix && api ? "__direct_callable__" : "";
     return fmtformat("{}osl_layer_group_{}_name_{}", prefix, group.name(),
                      inst.layername());
 }
@@ -203,7 +203,7 @@ init_function_name(const ShadingSystemImpl& shadingsys,
                    const ShaderGroup& group, bool api)
 {
     bool use_optix     = shadingsys.use_optix();
-    std::string prefix = use_optix && api ? "__direct_callable__" : "";
+    const char* prefix = use_optix && api ? "__direct_callable__" : "";
 
     return fmtformat("{}osl_init_group_{}", prefix, group.name());
 }

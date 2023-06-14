@@ -165,6 +165,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     # Suppress warnings about our strategic use of bitwise operations in place
     # of logical operators to produce branchless code in some places.
     if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 14.0
+        OR APPLECLANG_VERSION_STRING VERSION_GREATER_EQUAL 14.0
         OR INTELCLANG_VERSION_STRING VERSION_GREATER_EQUAL 14.0)
         add_compile_options ("-Wno-bitwise-instead-of-logical")
     endif ()

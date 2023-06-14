@@ -1159,7 +1159,7 @@ public:
 
     /// Find the named parameter, return its index in the symbol array, or
     /// -1 if not found.
-    int findparam(ustring name) const;
+    int findparam(ustring name, bool search_master = true) const;
 
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').

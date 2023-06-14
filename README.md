@@ -353,7 +353,8 @@ Films using OSL (grouped by year of release date):
   Richard Jewell,
   Game of Thrones (S8),
   Lost in Space (S1),
-  Togo
+  Togo,
+  Missing Link
 * **(2020)**
   Underwater,
   Birds of Prey,
@@ -427,6 +428,13 @@ The OSL language specification can be found at
 [src/doc/osl-languagespec.pdf](src/doc/osl-languagespec.pdf) (in a source
 distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
 installed binary distribution.
+
+For those interested in learning to program in OSL, there is the
+[Siggraph 2022 Educator's Forum](https://dl.acm.org/doi/proceedings/10.1145/3532724)
+[OSL Shaders for RenderMan](https://dl.acm.org/doi/abs/10.1145/3532724.3535604) course,
+which uses RenderMan in the examples and
+[Supplementary Materials](https://github.com/LaikaStudios/OSLShadersForRenderMan),
+but which is primarily about shader writing in OSL.
 
 
 Contact & reporting problems

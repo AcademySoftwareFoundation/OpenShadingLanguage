@@ -219,9 +219,11 @@ inferred from public sources, or that we've been told is ok to list here. If
 an OSL-using project is missing and it's not a secret, just email the OSL
 project leader or submit a PR with edits to this file.*
 
-Renderers and other tools with OSL support (in approximate order of
-adding OSL support):
-* Sony Pictures Imageworks: in-house "Arnold" renderer
+### Renderers and other production tools with OSL support
+
+(In approximate order of adding OSL support)
+
+* [Sony Pictures Imageworks: in-house "Arnold" renderer](https://dl.acm.org/doi/10.1145/3180495)
 * [Blender/Cycles](https://docs.blender.org/manual/en/dev/render/shader_nodes/osl.html)
 * [Chaos Group: V-Ray](https://www.chaosgroup.com/)
 * [Pixar: PhotoRealistic RenderMan RIS](https://renderman.pixar.com)
@@ -236,7 +238,13 @@ adding OSL support):
 * [Autodesk: 3DS Max 2019](https://help.autodesk.com/view/3DSMAX/2019/ENU/?guid=__developer_3ds_max_sdk_features_rendering_osl_html)
 * [Maxon: Redshift](https://www.maxon.net/en/redshift)
 
-Films using OSL (grouped by year of release date):
+### Significant work using OSL, grouped by year of release date:
+
+(Here we are considering "significant work" to mean a feature film released
+theatrically or on a major streaming platform, TV/streaming series heavily
+featuring visual effects or animation, or short films that have won or been
+nominated for major awards.)
+
 * **(2012)**
   Men in Black 3, The Amazing Spider-Man, Hotel Transylvania
 * **(2013)**
@@ -271,6 +279,7 @@ Films using OSL (grouped by year of release date):
   Ghostbusters,
   Star Trek Beyond,
   Suicide Squad,
+  Kubo and the Two Strings,
   Kingsglaive: Final Fantasy XV,
   Storks,
   Miss Peregrine's Home for Peculiar Children,
@@ -305,7 +314,7 @@ Films using OSL (grouped by year of release date):
 * **(2018)**
   Peter Rabbit,
   Black Panther,
-  Annnihilation,
+  Annihilation,
   Red Sparrow,
   Pacific Rim Uprising,
   Avengers Infinity War,
@@ -370,7 +379,9 @@ Films using OSL (grouped by year of release date):
   Over the Moon,
   Wonder Woman 1984,
   Soul,
-  The Mandalorian (S2)
+  The Mandalorian (S2),
+  The Boys (S2),
+  Umbrella Academy (S2)
 * **(2021)**
   Chaos Walking,
   Peter Rabbit 2: The Runaway,
@@ -383,6 +394,7 @@ Films using OSL (grouped by year of release date):
   F9,
   Vivo,
   Jungle Cruise,
+  Cinderella,
   Dune,
   No Time To Die,
   Ron's Gone Wrong,
@@ -408,9 +420,20 @@ Films using OSL (grouped by year of release date):
   Minions: Rise of Gru,
   Bullet Train,
   Slumberland,
-  Glass Onion
+  Glass Onion,
+  Archive 81 (series),
+  Moon Night (series),
+  Obi-Wan Kenobi (series),
+  The Boys (S3),
+  Andor (S1)
 * **(2023 / upcoming)**
   Ant-Man and the Wasp: Quantumania,
+  The Mandalorian S3,
+  The Magician's Elephant,
+  Super Mario Bros Film,
+  Guardians of the Galaxy 3,
+  Spider-Man: Across the Spider-Verse,
+  Elemental,
   ...
 
 

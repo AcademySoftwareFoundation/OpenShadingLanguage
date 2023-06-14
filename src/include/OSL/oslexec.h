@@ -267,6 +267,10 @@ public:
     ///                              once, replacing former definition.
     ///    string archive_groupname  Name of a group to pickle and archive.
     ///    string archive_filename   Name of file to save the group archive.
+    ///    int max_optix_groupdata_alloc Maximum stack size for an OSL-managed
+    ///                              groupdata buffer when targeting OptiX (0).
+    ///                              OSL expects a pointer to a buffer when
+    ///                              requirements exceed max allocation.
     /// 3. Attributes that that are intended for developers debugging
     /// liboslexec itself:
     /// These attributes may be helpful for liboslexec developers or

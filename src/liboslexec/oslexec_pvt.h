@@ -1000,6 +1000,10 @@ private:
     long long m_stat_pointcloud_writes;
     atomic_ll m_stat_layers_executed;           ///< Total layers executed
     atomic_ll m_stat_total_shading_time_ticks;  ///< Total shading time (ticks)
+    atomic_ll m_stat_reparam_calls_total;
+    atomic_ll m_stat_reparam_bytes_total;
+    atomic_ll m_stat_reparam_calls_changed;
+    atomic_ll m_stat_reparam_bytes_changed;
 
     int m_stat_max_llvm_local_mem;     ///< Stat: max LLVM local mem
     PeakCounter<off_t> m_stat_memory;  ///< Stat: all shading system memory

@@ -1112,6 +1112,10 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     m_stat_pointcloud_writes                 = 0;
     m_stat_layers_executed                   = 0;
     m_stat_total_shading_time_ticks          = 0;
+    m_stat_reparam_calls_total               = 0;
+    m_stat_reparam_bytes_total               = 0;
+    m_stat_reparam_calls_changed             = 0;
+    m_stat_reparam_bytes_changed             = 0;
 
     m_groups_to_compile_count     = 0;
     m_threads_currently_compiling = 0;
@@ -1802,6 +1806,14 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("stat:pointcloud_max_results", int,
                 m_stat_pointcloud_max_results);
     ATTR_DECODE("stat:pointcloud_failures", int, m_stat_pointcloud_failures);
+    ATTR_DECODE("stat:reparam_calls_total", long long,
+                m_stat_reparam_calls_total);
+    ATTR_DECODE("stat:reparam_bytes_total", long long,
+                m_stat_reparam_bytes_total);
+    ATTR_DECODE("stat:reparam_calls_changed", long long,
+                m_stat_reparam_calls_changed);
+    ATTR_DECODE("stat:reparam_bytes_changed", long long,
+                m_stat_reparam_bytes_changed);
     ATTR_DECODE("stat:memory_current", long long, m_stat_memory.current());
     ATTR_DECODE("stat:memory_peak", long long, m_stat_memory.peak());
     ATTR_DECODE("stat:mem_master_current", long long,
@@ -2489,6 +2501,14 @@ ShadingSystemImpl::getstats(int level) const
         out << "    pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
         out << "    pointcloud_write calls: " << m_stat_pointcloud_writes
             << "\n";
+    }
+    if (m_stat_reparam_calls_total) {
+        print(out,
+              "  ReParameter: {} calls ({}) total, changed {} calls ({})\n",
+              (long long)m_stat_reparam_calls_total,
+              OIIO::Strutil::memformat(m_stat_reparam_bytes_total),
+              (long long)m_stat_reparam_calls_changed,
+              OIIO::Strutil::memformat(m_stat_reparam_bytes_changed));
     }
     out << "  Memory total: " << m_stat_memory.memstat() << '\n';
     out << "    Master memory: " << m_stat_mem_master.memstat() << '\n';
@@ -3256,12 +3276,18 @@ ShadingSystemImpl::ReParameter(ShaderGroup& group, string_view layername_,
         return false;
 
     // Do the deed
-    int offset = group.interactive_param_offset(layerindex, sym->name());
-    memcpy(group.interactive_arena_ptr() + offset, val, type.size());
-    if (use_optix()) {
-        renderer()->copy_to_device(group.device_interactive_arena().d_get()
-                                       + offset,
-                                   val, type.size());
+    int offset  = group.interactive_param_offset(layerindex, sym->name());
+    size_t size = type.size();
+    m_stat_reparam_calls_total += 1;
+    m_stat_reparam_bytes_total += size;
+    if (memcmp(group.interactive_arena_ptr() + offset, val, size)) {
+        memcpy(group.interactive_arena_ptr() + offset, val, type.size());
+        if (use_optix())
+            renderer()->copy_to_device(group.device_interactive_arena().d_get()
+                                           + offset,
+                                       val, type.size());
+        m_stat_reparam_calls_changed += 1;
+        m_stat_reparam_bytes_changed += size;
     }
     return true;
 }

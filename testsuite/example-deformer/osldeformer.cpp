@@ -195,7 +195,8 @@ main(int argc, char* argv[])
         int numlayers = 1;
         shadsys->getattribute(mygroup.get(), "num_layers", numlayers);
         std::vector<OSL::ustring> output_names;
-        OSL::OSLQuery oslquery(mygroup.get(), numlayers - 1);
+        OSL::OSLQuery oslquery = shadsys->oslquery(*mygroup.get(),
+                                                   numlayers - 1);
         for (size_t i = 0; i < oslquery.nparams(); ++i) {
             auto p = oslquery.getparam(i);
             if (p && p->isoutput)

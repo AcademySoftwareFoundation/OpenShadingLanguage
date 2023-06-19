@@ -3283,11 +3283,15 @@ RuntimeOptimizer::run()
                 // interactive parameter, including correct alignment.
                 size_t offset    = interactive_data.size();
                 size_t typesize  = s.typespec().simpletype().size();
+                size_t totalsize = typesize * (s.has_derivs() ? 3 : 1);
                 size_t alignment = typesize > 4 ? 8 : 4;
                 offset = OIIO::round_to_multiple_of_pow2(offset, alignment);
-                interactive_data.resize(offset + typesize);
+                interactive_data.resize(offset + totalsize);
                 // Copy from the instance value to the interactive block
                 memcpy(&interactive_data[offset], s.data(), typesize);
+                if (totalsize > typesize)
+                    memset(&interactive_data[offset] + typesize, 0,
+                           totalsize - typesize);
                 // Make sure the symbol remembers it's stored in the interactive
                 // arena with the right offset.
                 group().add_interactive_param(layer, s.name(), offset);

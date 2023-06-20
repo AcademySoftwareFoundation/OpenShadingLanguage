@@ -87,7 +87,7 @@ jobs:
             container: aswftesting/ci-osl:2021-clang11
             vfxyear: 2021
             cxx_std: 17
-            openimageio_ver: dev-2.2
+            openimageio_ver: v2.2.21.0
             python_ver: 3.7
             pybind11_ver: v2.7.0
             simd: avx2,f16c
@@ -306,7 +306,7 @@ jobs:
             cxx_compiler: g++-7
             cxx_std: 14
             openexr_ver: v2.4.3
-            openimageio_ver: dev-2.3
+            openimageio_ver: v2.3.21.0
             pybind11_ver: v2.6.2
             python_ver: 2.7
             simd: sse4.2

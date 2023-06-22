@@ -2215,11 +2215,8 @@ DECLFOLDER(constfold_transformc)
         }
         if (C.is_constant()) {
             Color3 Cin(C.get_float(0), C.get_float(1), C.get_float(2));
-            // Color3 result = rop.shadingsys().colorsystem().transformc(
-            //     from, to, Cin, rop.shadingcontext());
             Color3 result = rop.shadingsys().colorsystem().transformc(
                 from, to, Cin, rop.shaderglobals());
-
             rop.turn_into_assign(op, rop.add_constantc(result),
                                  "transformc => constant");
             return 1;
@@ -2419,7 +2416,7 @@ DECLFOLDER(constfold_gettextureinfo)
         ustringhash em;
         int result = rop.renderer()->get_texture_info(
             filename, nullptr, rop.shadingcontext()->texture_thread_info(),
-            rop.shadingcontext(), 0 /* TODO: subimage? */, dataname, t, mydata,
+            rop.shaderglobals(), 0 /* TODO: subimage? */, dataname, t, mydata,
             &em);
         ustring errormessage = ustring_from(em);
         // Now we turn

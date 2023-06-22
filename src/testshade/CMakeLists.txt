@@ -6,12 +6,6 @@
 set ( testshade_srcs
       testshade.cpp
       simplerend.cpp )
-if (CMAKE_COMPILER_IS_GNUCC)      
-    #add_definitions("-Wno-error=sign-compare")
-    #add_definitions("-Wno-error=class-memaccess")
-    #add_definitions("-Wno-error=unused-variable")
-    #add_definitions("-Wno-error=switch")
-endif()
 
 if (OSL_BUILD_BATCHED)
     list(APPEND testshade_srcs 

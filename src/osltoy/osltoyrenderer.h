@@ -145,12 +145,6 @@ private:
     bool get_camera_screen_window(ShaderGlobals* sg, bool derivs,
                                   ustring object, TypeDesc type, ustring name,
                                   void* val);
-    void errorfmt(OSL::ShaderGlobals* sg, 
-                            OSL::ustringhash fmt_specification, 
-                            int32_t count, 
-                            const EncodedType *argTypes, 
-                            uint32_t argValuesSize, 
-                            uint8_t *argValues); //override;
 };
 
 OSL_NAMESPACE_EXIT

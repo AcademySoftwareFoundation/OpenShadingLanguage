@@ -143,6 +143,17 @@ macro ( TESTSUITE )
             add_one_testsuite ("${_testname}.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 )
         endif ()
+        # Run the same test again with aggressive -O2 runtime
+        # optimization, triggered by setting TESTSHADE_OPT env variable.
+        # Skip OptiX-only tests and those with a NOOPTIMIZE marker file.
+        if (NOT _testname MATCHES "optix"
+            AND NOT EXISTS "${_testsrcdir}/NOSCALAR"
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE"
+            AND NOT EXISTS "${_testsrcdir}/NORSBITCODE")
+            add_one_testsuite ("${_testname}.opt.rs_bitcode" "${_testsrcdir}"
+                               ENV TESTSHADE_OPT=2 TESTSHADE_RS_BITCODE=1)
+        endif ()
         # When building for OptiX support, also run it in OptiX mode
         # if there is an OPTIX marker file in the directory.
         # If an environment variable $TESTSUITE_OPTIX is nonzero, then
@@ -346,6 +357,9 @@ macro (osl_add_all_tests)
                 struct-nested struct-nested-assign struct-nested-deep
                 ternary
                 testshade-expr
+		test-fmt-arrays test-fmt-fileprint
+		test-fmt-cxpf  test-fmt-noise test-fmt-matrixcolor 
+                test-fmt-stpf test-fmt-errorwarning test-fmt-errorwarning-repeats
                 texture-alpha texture-alpha-derivs
                 texture-blur texture-connected-options
                 texture-derivs texture-environment texture-errormsg

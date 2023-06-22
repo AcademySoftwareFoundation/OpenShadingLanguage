@@ -114,6 +114,10 @@ RuntimeOptimizer::RuntimeOptimizer(ShadingSystemImpl& shadingsys,
 {
     memset((char*)&m_shaderglobals, 0, sizeof(ShaderGlobals));
     m_shaderglobals.context = shadingcontext();
+    // To handle error/warning/print that might be reported through
+    // the renderer services, we will need to provide the default one
+    // which will just report through the ShadingContext
+    m_shaderglobals.renderer = &m_rendererservices;
 
     // Disable no_function_return_calls for OptiX renderers, because we
     // aren't yet set up to support use of debugging symbols for PTX.

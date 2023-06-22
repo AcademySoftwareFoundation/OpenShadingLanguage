@@ -10,13 +10,12 @@
 ///
 /////////////////////////////////////////////////////////////////////////
 
-#include <OSL/rs_free_function.h>
 #include <cstdarg>
-
 
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/strutil.h>
 
+#include <OSL/fmt_util.h>
 
 #include "oslexec_pvt.h"
 
@@ -150,27 +149,8 @@ osl_regex_impl(void* sg_, const char* subject_, void* results, int nresults,
     }
 }
 
-// Shims to convert llvm gen to rs free function C++ parameter types
-// and forward on calls to re free functions.
-// TODO: moveto opgen.cpp
-OSL_RSOP void
-osl_gen_errorfmt(/*OSL::ShaderGlobals* sg*/ OpaqueExecContextPtr exec_ctx, 
-            OSL::ustringhash_pod fmt_specification, 
-            int32_t arg_count, 
-            const EncodedType *argTypes, 
-            uint32_t argValuesSize, 
-            uint8_t *argValues)
-{
-
-     OSL::ustringhash rs_fmt_specification = OSL::ustringhash_from(fmt_specification);
-     rs_errorfmt(exec_ctx, rs_fmt_specification, 
-           arg_count, 
-             argTypes, 
-             argValuesSize, 
-             argValues);
- }
-
-
+// TODO: transition format to from llvm_gen_printf_legacy
+//       to llvm_gen_print_fmt by providing an osl_gen_formatfmt here
 OSL_SHADEOP const char*
 osl_format(const char* format_str, ...)
 {
@@ -180,72 +160,6 @@ osl_format(const char* format_str, ...)
     va_end(args);
     return ustring(s).c_str();
 }
-
-//#if 0
-//Intent is to remove this and call the renderer service function directly in future PR
-OSL_SHADEOP void
-osl_printf(ShaderGlobals* sg, const char* format_str, ...)
-{
-    // Until llvm_gen directly calls rs_printfmt, 
-    // we will need to perform the formating here 
-    // as renderer only accepts the fmt specification
-    va_list args;
-    va_start(args, format_str);
-    std::string s = Strutil::vsprintf(format_str, args);
-    va_end(args);
-    osl_printfmt(sg, OSL::ustringhash(s));
-}
-
-//Intent is to remove this and call the renderer service function directly in future PR
-OSL_SHADEOP void
-osl_error(ShaderGlobals* sg, const char* format_str, ...)
-{
-    // Until llvm_gen directly calls rs_errorfmt, 
-    // we will need to perform the formating here 
-    // as renderer only accepts the fmt specification
-    va_list args;
-    va_start(args, format_str);
-    std::string s = Strutil::vsprintf(format_str, args);
-    va_end(args);
-    osl_errorfmt(sg, OSL::ustringhash(s));
-
-}
-
-//Intent is to remove this and call the renderer service function directly in future PR
-OSL_SHADEOP void
-osl_warning(ShaderGlobals* sg, const char* format_str, ...)
-{
-    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
-    if(ssu->m_allow_warnings){
-        // Until llvm_gen directly calls rs_warningfmt, 
-        // we will need to perform the formating here 
-        // as renderer only accepts the fmt specification
-        va_list args;
-        va_start(args, format_str);
-        std::string s = Strutil::vsprintf(format_str, args);
-        va_end(args);
-        osl_warningfmt(sg, OSL::ustringhash(s));
-    }
-}
-
-
-//Intent is to remove this and call the renderer service function directly in future PR
-OSL_SHADEOP void
-osl_fprintf(ShaderGlobals* sg, const char* filename, const char* format_str,
-            ...)
-{
-    // Until llvm_gen directly calls rs_filefmt, 
-    // we will need to perform the formating here 
-    // as renderer only accepts the fmt specification
-    va_list args;
-    va_start(args, format_str);
-    std::string s = Strutil::vsprintf(format_str, args);
-    va_end(args);
-    osl_filefmt(sg,OSL::ustringhash(filename), OSL::ustringhash(s));
-}
-//#endif
-
-
 
 OSL_SHADEOP int
 osl_split(const char* str, ustring* results, const char* sep, int maxsplit,

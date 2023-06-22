@@ -25,11 +25,11 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
+#include <OSL/encodedtypes.h>
+#include <OSL/journal.h>
 #include <OSL/oslcomp.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
-#include <OSL/encodedtypes.h>
-#include <OSL/journal.h>
 #if OSL_USE_BATCHED
 #    include <OSL/batched_shaderglobals.h>
 #endif
@@ -121,49 +121,49 @@ static char* output_base_ptr   = nullptr;
 static bool use_rs_bitcode
     = false;  // use free function bitcode version of renderer services
 
-//Testshade thread tracking and assignment.
-//Not recommended for production renderer but fine for testshade
-std::atomic<uint32_t> next_index { 0 };
+static int jbufferMB = 16;
+
+// Testshade thread tracking and assignment.
+// Not recommended for production renderer but fine for testshade
+
+std::atomic<uint32_t> next_thread_index { 0 };
 constexpr uint32_t uninitialized_thread_index = -1;
-thread_local uint32_t this_threads_index = uninitialized_thread_index;
+thread_local uint32_t this_threads_index      = uninitialized_thread_index;
 
 
+// Example of how to customize error reporting when processing journaled entries
+// This one customizes file_printf to actually open files
+class TestshadeReporter : public journal::Report2ErrorHandler {
+public:
+    TestshadeReporter(OSL::ErrorHandler* eh,
+                      journal::TrackRecentlyReported& tracker);
+    void report_file_print(int thread_index, int shade_index,
+                           const OSL::string_view& filename,
+                           const OSL::string_view& message) override;
+};
 
-// class Report2Console : public OSL::journal::Reporter
-// {
-// public:
-   
-   
-//     void report_error(int thread_index, int shade_index, const OSL::string_view & message) 
-//     { 
-//         //std::cout<<"DANGER!!!"<<std::endl;
-//         std::cout<<message<<std::endl; 
-//     }
-//     void report_warning(int thread_index, int shade_index, const OSL::string_view & message) override
-//     { 
-//        std::cout<<message<<std::endl;  
-//     }
-//     void report_info(int thread_index, int shade_index, const OSL::string_view & message) override 
-//     { 
-//        std::cout<<message<<std::endl; 
-//     }
-//     void report_printf(int thread_index, int shade_index, const OSL::string_view & message) override
-//     { 
-//         //std::cout<<message<<std::endl; 
-//         //printf(message.c_str());
-//         std::cout<<"testsjade report_prtinf"<<std::endl;
-//     }
-//     void report_fprintf(int thread_index, int shade_index, const OSL::string_view & filename, const OSL::string_view & message) override 
-//     {
-//         // NOTE: behavior change for OSL runtime, we will no longer open files by default
-//         // but instead just prefix the fprintf message with the filename and pass it along 
-//         // as a regular message.
-//         // A renderer is free to override report_fprintf and open files under its own purview
-        
-//         std::cout<<message<<std::endl; 
+TestshadeReporter::TestshadeReporter(OSL::ErrorHandler* eh,
+                                     journal::TrackRecentlyReported& tracker)
+    : journal::Report2ErrorHandler(eh, tracker)
+{
+}
 
-//     }
-// };
+void
+TestshadeReporter::report_file_print(int thread_index, int shade_index,
+                                     const OSL::string_view& filename,
+                                     const OSL::string_view& message)
+{
+    // NOTE: behavior change for OSL runtime, we will no longer open files by default
+    // but instead just prefix the fprintf message with the filename and pass it along
+    // as a regular message.
+    // A renderer is free to override report_fprintf and open files under its own purview
+
+    std::ofstream filehandle;
+    filehandle.open(filename, std::ofstream::out | std::ofstream::app);
+    filehandle << message;
+    filehandle.close();
+}
+
 static void
 inject_params()
 {
@@ -812,6 +812,8 @@ getargs(int argc, const char* argv[])
       .help("Set a different locale");
     ap.arg("--use_rs_bitcode", &use_rs_bitcode)
       .help("Use free function bitcode Renderer services");
+    ap.arg("--jbufferMB %d:JBUFFER",  &jbufferMB)
+      .help("journal buffer size in MB");
 
     // clang-format on
     if (ap.parse(argc, argv) < 0) {
@@ -1532,7 +1534,7 @@ test_group_attributes(ShaderGroup* group)
 
 
 void
-shade_region(SimpleRenderer* rend, int num_threads, ShaderGroup* shadergroup, OIIO::ROI roi,
+shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
              bool save)
 {
     // Request an OSL::PerThreadInfo for this thread.
@@ -1567,41 +1569,35 @@ shade_region(SimpleRenderer* rend, int num_threads, ShaderGroup* shadergroup, OI
             // quadrilateral that exactly fills the viewport, and that
             // setup is done in the following function call:
             setup_shaderglobals(shaderglobals, shadingsys, x, y);
-            //std::cout<<"testshade.cpp:: shaderglobals check. Surfacearea value:: "<<shaderglobals.surfacearea<<std::endl;
-            //std::cout<<"testshade.cpp:: shadeindex value:: "<<shadeindex<<std::endl;
-            //int thread_id = shaderglobals.thread_id;
 
-            if(this_threads_index == uninitialized_thread_index)
-            {
-                this_threads_index = next_index.fetch_add(1u);
+            if (this_threads_index == uninitialized_thread_index) {
+                this_threads_index = next_thread_index.fetch_add(1u);
             }
             int thread_index = this_threads_index;
-
-            //std::cout<<"testshade.cpp:: threadindex value:: "<<thread_index<<std::endl;
 
             // Actually run the shader for this point
             if (entrylayer_index.empty()) {
                 // Sole entry point for whole group, default behavior
-                shadingsys->execute(*ctx, *shadergroup, thread_index, shadeindex,
-                                    shaderglobals, userdata_base_ptr,
-                                    output_base_ptr); //this is called
+                shadingsys->execute(*ctx, *shadergroup, thread_index,
+                                    shadeindex, shaderglobals,
+                                    userdata_base_ptr, output_base_ptr);
             } else {
                 // Explicit list of entries to call in order
-                shadingsys->execute_init(*ctx, *shadergroup, thread_index, shadeindex,
-                                         shaderglobals, userdata_base_ptr,
-                                         output_base_ptr);
+                shadingsys->execute_init(*ctx, *shadergroup, thread_index,
+                                         shadeindex, shaderglobals,
+                                         userdata_base_ptr, output_base_ptr);
                 if (entrylayer_symbols.size()) {
                     for (size_t i = 0, e = entrylayer_symbols.size(); i < e;
                          ++i)
-                        shadingsys->execute_layer(*ctx, thread_index, shadeindex,
-                                                  shaderglobals,
+                        shadingsys->execute_layer(*ctx, thread_index,
+                                                  shadeindex, shaderglobals,
                                                   userdata_base_ptr,
                                                   output_base_ptr,
                                                   entrylayer_symbols[i]);
                 } else {
                     for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
-                        shadingsys->execute_layer(*ctx, thread_index, shadeindex,
-                                                  shaderglobals,
+                        shadingsys->execute_layer(*ctx, thread_index,
+                                                  shadeindex, shaderglobals,
                                                   userdata_base_ptr,
                                                   output_base_ptr,
                                                   entrylayer_index[i]);
@@ -2095,21 +2091,32 @@ test_shade(int argc, const char* argv[])
         rend->export_state(theRenderState);
     }
 
-    
     double setuptime = timer.lap();
 
     if (warmup)
         rend->warmup();
     double warmuptime = timer.lap();
 
-   ///Initialize a Journal Buffer for all threads to use for journaling fmt specification calls.
+    //Check jbuffer value from user
+    if (jbufferMB <= 0) {
+        jbufferMB = 1;  //default value for sufficient recording space.
+    }
 
-    uint8_t *buffer = (uint8_t*) malloc(16* 1024 * 1024); 
-    OSL::journal::initialize_buffer(buffer, 16*1024*1024, 1024, num_threads);
+    //Initialize a Journal Buffer for all threads to use for journaling fmt specification calls.
+    const size_t jbuffer_bytes = jbufferMB * 1024 * 1024;
+    std::unique_ptr<uint8_t> buffer((uint8_t*)malloc(jbuffer_bytes));
+    constexpr int jbuffer_pagesize = 1024;
+    bool init_buffer_success
+        = OSL::journal::initialize_buffer(buffer.get(), jbuffer_bytes,
+                                          jbuffer_pagesize, num_threads);
+
+    if (!init_buffer_success) {
+        std::cout << "Buffer allocation failed" << std::endl;
+    }
+
 
     //Send the populated Journal Buffer to the renderer
-    theRenderState.journal_buffer = buffer;
-   //std::cout<<"Testshade.cpp theRenderState.journalBuffer: "<<(void *) theRenderState.journal_buffer <<std::endl;
+    theRenderState.journal_buffer = buffer.get();
 
 
     // Allow a settable number of iterations to "render" the whole image,
@@ -2129,7 +2136,7 @@ test_shade(int argc, const char* argv[])
         } else {
             bool save = (iter == (iters - 1));  // save on last iteration
 #if 0
-            shade_region (rend, num_threads, shadergroup.get(), roi, save);
+            shade_region (rend, shadergroup.get(), roi, save);
 #else
 #    if OSL_USE_BATCHED
             if (batched) {
@@ -2152,7 +2159,7 @@ test_shade(int argc, const char* argv[])
             {
                 OIIO::ImageBufAlgo::parallel_image(
                     roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
-                        shade_region(rend, num_threads, shadergroup.get(), sub_roi, save);
+                        shade_region(rend, shadergroup.get(), sub_roi, save);
                     });
             }
 #endif
@@ -2167,69 +2174,24 @@ test_shade(int argc, const char* argv[])
                                         pv.data());
             }
         }
-    } //Iters end
+    }
 
-
-    int error_repeats; //if set to non-zero, turns off suppression of multiple identical errors and warnings
+    //Just to match existing behavior we extract the current error_repeats attribute but intent is for renderers to make
+    //their own decision about this.
+    int error_repeats;
     shadingsys->getattribute("error_repeats", error_repeats);
+    bool limit_errors   = !error_repeats;
+    bool limit_warnings = !error_repeats;
+    const int error_history_capacity   = 25;
+    const int warning_history_capacity = 25;
 
-    int errseenmax; //Add from testshade as a constant
-    shadingsys->getattribute("errseenmax", errseenmax);
-
-    bool limit_errors = false;
-
-    if(error_repeats==1) 
-
-    {
-        limit_errors = false;
-    }
-    else
-    {
-        limit_errors = true;
-    }
-
-    //journal::TrackRecentlyReported tracker_error_warnings (true, errseenmax, true, errseenmax);
-    //journal::Report2ErrorHandler report2ErrHandler(&errhandler, tracker_error_warnings);
-    
-     //if(error_repeats != 0)/*==false*/ //Do not limit errors; show all repeats
-     //{
-    //      std::cout<<"Inside testshade: do not limit errors: "<<std::endl;
-    // std::cout<<"Inside testshade: Value of repeats: "<<error_repeats<<std::endl;
-  
-      journal::TrackRecentlyReported tracker_error_warnings (limit_errors, errseenmax, limit_errors, errseenmax);
-      journal::Report2ErrorHandler report2ErrHandler(&errhandler, tracker_error_warnings);
-      #if 1
-      OSL::journal::Reader jreader(buffer,report2ErrHandler);
-      jreader.process();
-      #else
-      OSL::journal::Process(buffer,report2ErrHandler);
-      #endif
-     //}
-    
-    // else //Limit errors
-    // {
-    // std::cout<<"Inside testshade: limit errors: "<<std::endl;
-    // std::cout<<"Inside testshade: Value of repeats: "<<error_repeats<<std::endl;
-    // journal::TrackRecentlyReported tracker_error_warnings (false, errseenmax, false, errseenmax);
-    // journal::Report2ErrorHandler report2ErrHandler(&errhandler, tracker_error_warnings);
-    // OSL::journal::Reader jreader(buffer,report2ErrHandler);
-    // jreader.process();
-    // }
-    
-
-
-
-    //Report2Console report2Console; //used for debug; switch to report2ErrorHandeler
-
-
-    //OSL::journal::Reader jreader(buffer, report2Console); //Console was for error debug
-    
-    //OSL::journal::Reader jreader(buffer,report2ErrHandler);
-
-    //Process the buffer here
-    //jreader.process();
-
-    //Process fmt specification journal here
+    journal::TrackRecentlyReported tracker_error_warnings(
+        limit_errors, error_history_capacity, limit_warnings,
+        warning_history_capacity);
+    TestshadeReporter reporter(&errhandler, tracker_error_warnings);
+    OSL::journal::Reader jreader(buffer.get(), reporter);
+    jreader.process();
+    // Need to call journal::initialize_buffer before re-using the buffer
 
     double runtime = timer.lap();
 

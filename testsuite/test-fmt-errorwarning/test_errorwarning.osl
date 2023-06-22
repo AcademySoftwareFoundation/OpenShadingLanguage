@@ -1,0 +1,22 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader test_errorwarning (output float Cout = 0.0)
+{
+
+
+//Duplicate errors
+error("The weather is warm and rainy\n");
+error("The weather is warm and rainy\n"); 
+
+warning("Tsunami expected today\n");
+error("Volcano expected to erupt at 1300 hrs\n");
+
+warning("Flooding today\n");
+warning("Flooding today\n");
+
+Cout = P[0] + P[1];
+
+}

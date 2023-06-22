@@ -396,8 +396,9 @@ osl_get_textureinfo(void* sg_, const char* name, void* handle, void* dataname,
     ustringhash em;
     bool ok = sg->renderer->get_texture_info(
         USTR(name).uhash(), (RendererServices::TextureHandle*)handle,
-        sg->context->texture_thread_info(), sg->context, 0 /*FIXME-ptex*/,
-        USTR(dataname).uhash(), typedesc, data, errormessage ? &em : nullptr);
+        sg->context->texture_thread_info(), sg,
+        0 /*FIXME-ptex*/, USTR(dataname).uhash(), typedesc, data,
+        errormessage ? &em : nullptr);
     if (errormessage)
         *errormessage = ok ? ustringrep_from(Strings::_emptystring_)
                            : ustringrep_from(em);
@@ -422,8 +423,9 @@ osl_get_textureinfo_st(void* sg_, const char* name, void* handle, float s,
     ustringhash em;
     bool ok = sg->renderer->get_texture_info(
         USTR(name).uhash(), (RendererServices::TextureHandle*)handle, s, t,
-        sg->context->texture_thread_info(), sg->context, 0 /*FIXME-ptex*/,
-        USTR(dataname).uhash(), typedesc, data, errormessage ? &em : nullptr);
+        sg->context->texture_thread_info(), sg,
+        0 /*FIXME-ptex*/, USTR(dataname).uhash(), typedesc, data,
+        errormessage ? &em : nullptr);
     if (errormessage)
         *errormessage = ok ? ustringrep_from(Strings::_emptystring_)
                            : ustringrep_from(em);

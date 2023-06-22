@@ -110,7 +110,7 @@ set (lib_src
           dictionary.cpp
           context.cpp instance.cpp
           loadshader.cpp master.cpp
-          opcolor.cpp opmatrix.cpp opmessage.cpp
+          opcolor.cpp opfmt.cpp opmatrix.cpp opmessage.cpp
           opnoise.cpp
           opspline.cpp opstring.cpp optexture.cpp
           oslexec.cpp

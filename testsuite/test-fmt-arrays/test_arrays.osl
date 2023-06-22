@@ -1,0 +1,33 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+struct shelf{
+
+float w;
+float h;
+float d;
+
+};
+
+shader test_arrays(output float Cout = 0.0)
+{
+
+int int_array[4] = {5,6,7,8};
+float float_array[5] = {6.6, 7.7,8.43343,8.94545344};
+
+shelf shelf_array[4];
+
+for(int i = 0; i<4;i++)
+{
+   shelf_array[i].w = P[0]/i+1;
+   shelf_array[i].h = P[0]/i+2;
+   shelf_array[i].d = P[0]/i+8;
+
+} 
+
+printf("Int array values %d\n ", int_array);
+printf("Float array values %f\n ", float_array);
+printf("One shelf array element's width %f \n", shelf_array[1].w);
+
+}

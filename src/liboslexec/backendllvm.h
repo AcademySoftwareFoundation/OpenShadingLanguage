@@ -145,12 +145,14 @@ public:
         return llvm_load_string(ustring(str));
     }
 
+    llvm::Value* llvm_load_stringhash(string_view str)
+    {
+        return llvm_load_stringhash(ustring(str));
+    }
+
     llvm::Value* llvm_load_stringhash(ustring str)
     {
-        const size_t size_t_bits = sizeof(size_t) * 8;
-        size_t p = str.hash();
-        auto str_ = (size_t_bits == 64) ? ll.constant64(p) : ll.constant(int(p));
-        return str_;
+        return ll.constant64(str.hash());
     }
 
     /// Legacy version
@@ -562,8 +564,10 @@ public:
     /// entry in the groupdata struct.
     int find_userdata_index(const Symbol& sym);
 
-    void build_offsets_of_ShaderGlobals(
-    std::vector<unsigned int>& offset_by_index);
+    // Helpers to export the actual data member offsets from LLVM's point of view
+    // of data structures that exist in C++ so we can validate the offsets match
+    void
+    build_offsets_of_ShaderGlobals(std::vector<unsigned int>& offset_by_index);
 
     LLVM_Util ll;
 

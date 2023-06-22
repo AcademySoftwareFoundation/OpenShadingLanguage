@@ -10,7 +10,6 @@
 #include <OSL/shaderglobals.h>
 
 #include <OpenImageIO/refcnt.h>
-#include <OpenImageIO/sysutil.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -789,9 +788,10 @@ public:
     /// execute_layer of the last (presumably group entry) layer, and
     /// execute_cleanup. If run==false, just do the binding and setup, don't
     /// actually run the shader.
-    bool execute(ShadingContext& ctx, ShaderGroup& group, int thread_index, int shadeindex,
-                 ShaderGlobals& globals, void* userdata_base_ptr,
-                 void* output_base_ptr, bool run = true);
+    bool execute(ShadingContext& ctx, ShaderGroup& group, int thread_index,
+                 int shadeindex, ShaderGlobals& globals,
+                 void* userdata_base_ptr, void* output_base_ptr,
+                 bool run = true);
 
     /// Future execute signature that will be range based. Shader globals will be
     /// obtained from renderer services.
@@ -824,9 +824,10 @@ public:
     /// preparation, but don't actually run the shader.  Return true if the
     /// shader executed, false if it did not (including if the shader itself
     /// was empty).
-    bool execute_init(ShadingContext& ctx, ShaderGroup& group, int threadindex, int shadeindex,
-                      ShaderGlobals& globals, void* userdata_base_ptr,
-                      void* output_base_ptr, bool run = true);
+    bool execute_init(ShadingContext& ctx, ShaderGroup& group, int threadindex,
+                      int shadeindex, ShaderGlobals& globals,
+                      void* userdata_base_ptr, void* output_base_ptr,
+                      bool run = true);
     // DEPRECATED(2.0): no shadeindex or base pointers
     bool execute_init(ShadingContext& ctx, ShaderGroup& group,
                       ShaderGlobals& globals, bool run = true)
@@ -839,7 +840,7 @@ public:
     /// run==true, and that the call to execute_init() returned true. (One
     /// reason why it might have returned false is if the shader group
     /// turned out, after optimization, to do nothing.)
-    bool execute_layer(ShadingContext& ctx, int threadindex,  int shadeindex,
+    bool execute_layer(ShadingContext& ctx, int threadindex, int shadeindex,
                        ShaderGlobals& globals, void* userdata_base_ptr,
                        void* output_base_ptr, int layernumber);
     /// Execute the layer by name.

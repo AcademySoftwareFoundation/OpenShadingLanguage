@@ -22,20 +22,15 @@
 
 OSL_NAMESPACE_ENTER
 
-class ShadingContext;
+//Forward declare
 struct ShaderGlobals;
+typedef ShaderGlobals ExecContext;
+typedef ExecContext* ExecContextPtr;
 
 namespace pvt {
 
 
 class OSLEXECPUBLIC ColorSystem {
-#ifdef __CUDACC__
-    using Context = void*;
-#elif defined(__OSL_WIDTH) // batched version 
-    using Context = ShadingContext*;
-#else
-    using Context = ShaderGlobals*;
-#endif
 public:
     // A colour system is defined by the CIE x and y coordinates of its
     // three primary illuminants and its white point.
@@ -89,27 +84,27 @@ public:
     OSL_HOSTDEVICE bool set_colorspace(StringParam colorspace);
 
     OSL_HOSTDEVICE Color3 to_rgb(StringParam fromspace, const Color3& C,
-                                 Context) const;
+                                 ExecContextPtr) const;
 
     OSL_HOSTDEVICE Color3 from_rgb(StringParam fromspace, const Color3& C,
-                                   Context) const;
+                                   ExecContextPtr) const;
 
     OSL_HOSTDEVICE Dual2<Color3> transformc(StringParam fromspace,
                                             StringParam tospace,
                                             const Dual2<Color3>& color,
-                                            Context ctx) const;
+                                            ExecContextPtr) const;
 
     OSL_HOSTDEVICE Color3 transformc(StringParam fromspace, StringParam tospace,
-                                     const Color3& color, Context ctx) const;
+                                     const Color3& color, ExecContextPtr) const;
 
     OSL_HOSTDEVICE Dual2<Color3> ocio_transform(StringParam fromspace,
                                                 StringParam tospace,
                                                 const Dual2<Color3>& C,
-                                                Context) const;
+                                                ExecContextPtr) const;
 
     OSL_HOSTDEVICE Color3 ocio_transform(StringParam fromspace,
                                          StringParam tospace, const Color3& C,
-                                         Context) const;
+                                         ExecContextPtr) const;
 
 
     OSL_HOSTDEVICE const StringParam& colorspace() const
@@ -117,18 +112,19 @@ public:
         return m_colorspace;
     }
 
-    OSL_HOSTDEVICE void error(StringParam src, StringParam dst, Context) const;
+    OSL_HOSTDEVICE void error(StringParam src, StringParam dst,
+                              ExecContextPtr) const;
 
 private:
     template<typename Color>
     OSL_HOSTDEVICE inline Color transformc(StringParam fromspace,
                                            StringParam tospace, const Color& C,
-                                           Context) const;
+                                           ExecContextPtr) const;
 
     template<typename Color>
-    OSL_HOSTDEVICE inline Color ocio_transform(StringParam fromspace,
-                                               StringParam tospace,
-                                               const Color& C, Context) const;
+    OSL_HOSTDEVICE inline Color
+    ocio_transform(StringParam fromspace, StringParam tospace, const Color& C,
+                   ExecContextPtr) const;
 
 
     // Derived/cached calculations from options:

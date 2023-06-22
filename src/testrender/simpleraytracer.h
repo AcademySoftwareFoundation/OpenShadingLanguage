@@ -16,21 +16,17 @@
 #include "background.h"
 #include "raytracer.h"
 #include "sampling.h"
-#include "render_state.h"
 
 
 OSL_NAMESPACE_ENTER
 
 
 class SimpleRaytracer : public RendererServices {
-   
 public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;
 
-    RenderState testrender_renderstate;
-
-    SimpleRaytracer(int num_threads);
+    SimpleRaytracer();
     virtual ~SimpleRaytracer() {}
 
     // RendererServices support:
@@ -92,17 +88,10 @@ public:
     // After render, get the pixels into pixelbuf, if they aren't already.
     virtual void finalize_pixel_buffer() {}
 
-    void errorfmt(OSL::ShaderGlobals* sg, 
-                            OSL::ustringhash fmt_specification, 
-                            int32_t count, 
-                            const EncodedType *argTypes, 
-                            uint32_t argValuesSize, 
-                            uint8_t *argValues); //override;
     // ShaderGroupRef storage
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
 
     OIIO::ErrorHandler& errhandler() const { return *m_errhandler; }
-
 
     Camera camera;
     Scene scene;

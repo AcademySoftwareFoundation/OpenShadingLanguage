@@ -623,8 +623,8 @@ public:
 
     void release_context(ShadingContext* ctx);
 
-    bool execute(ShadingContext& ctx, ShaderGroup& group, int thread_index, int shadeindex,
-                 ShaderGlobals& ssg, void* userdata_base_ptr,
+    bool execute(ShadingContext& ctx, ShaderGroup& group, int thread_index,
+                 int shadeindex, ShaderGlobals& ssg, void* userdata_base_ptr,
                  void* output_base_ptr, bool run = true);
 
     const void* get_symbol(ShadingContext& ctx, ustring layername,
@@ -669,7 +669,10 @@ public:
     bool fold_getattribute() const { return m_opt_fold_getattribute; }
     bool opt_texture_handle() const { return m_opt_texture_handle; }
     int opt_passes() const { return m_opt_passes; }
-    int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
+    int max_warnings_per_thread() const
+    {
+        return m_shading_state_uniform.m_max_warnings_per_thread;
+    }
     bool countlayerexecs() const { return m_countlayerexecs; }
     bool lazy_userdata() const { return m_lazy_userdata; }
     bool userdata_isconnected() const { return m_userdata_isconnected; }
@@ -840,7 +843,6 @@ private:
     ErrorHandler* m_err;  ///< Error handler
     mutable std::list<std::string> m_errseen, m_warnseen;
     static const int m_errseenmax = 32;
-   
     mutable mutex m_errmutex;
 
     typedef std::map<ustring, ShaderMaster::ref> ShaderNameMap;
@@ -873,13 +875,11 @@ private:
     bool m_lockgeom_default;      ///< Default value of lockgeom
     bool m_strict_messages;       ///< Strict checking of message passing usage?
     bool m_error_repeats;         ///< Allow repeats of identical err/warn?
-    //int m_errseenmax;            ///<Part of ShadingSystem Attributes, like m_err_repeats
     bool m_range_checking;        ///< Range check arrays & components?
     bool m_connection_error;      ///< Error for ConnectShaders to fail?
     bool m_greedyjit;             ///< JIT as much as we can?
     bool m_countlayerexecs;       ///< Count number of layer execs?
     bool m_relaxed_param_typecheck;  ///< Allow parameters to be set from isomorphic types (same data layout)
-    int m_max_warnings_per_thread;  ///< How many warnings to display per thread before giving up?
     int m_profile;                 ///< Level of profiling of shader execution
     int m_optimize;                ///< Runtime optimization level
     bool m_opt_simplify_param;     ///< Turn instance params into const?
@@ -2091,8 +2091,9 @@ public:
 
     /// Execute the shader group, including init, run of single entry point
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
-    bool execute(ShaderGroup& group, int threadindex, int shadeindex, ShaderGlobals& globals,
-                 void* userdata_base_ptr, void* output_base_ptr, bool run);
+    bool execute(ShaderGroup& group, int threadindex, int shadeindex,
+                 ShaderGlobals& globals, void* userdata_base_ptr,
+                 void* output_base_ptr, bool run);
 
 #if OSL_USE_BATCHED
     // Group all batched methods behind a templated interface
@@ -2306,11 +2307,11 @@ public:
     /// Look up a query from a dictionary (typically XML), staring the
     /// search from the root of the dictionary, and returning ID of the
     /// first matching node.
-    int dict_find(ustring dictionaryname, ustring query);
+    int dict_find(ExecContextPtr ec, ustring dictionaryname, ustring query);
     /// Look up a query from a dictionary (typically XML), staring the
     /// search from the given nodeID within the dictionary, and
     /// returning ID of the first matching node.
-    int dict_find(int nodeID, ustring query);
+    int dict_find(ExecContextPtr ec, int nodeID, ustring query);
     /// Return the next match of the same query that gave the nodeID.
     int dict_next(int nodeID);
     /// Look up an attribute of the given dictionary node.  If
@@ -2396,17 +2397,14 @@ public:
 
     bool allow_warnings()
     {
-        // if (m_max_warnings > 0) {
-        //     // at least one more to go
-        //     m_max_warnings--;
-        //     //m_shading_state_uniform.allow_warning = true;
-        //     return true;
-        // } else {
-        //     // we've processed enough with this context
-        //     return false;
-        // }
-
-        return shadingsys().m_shading_state_uniform.m_allow_warnings;
+        if (m_max_warnings > 0) {
+            // at least one more to go
+            m_max_warnings--;
+            return true;
+        } else {
+            // we've processed enough with this context
+            return false;
+        }
     }
 
     // Record an error (or warning, printf, etc.)
@@ -2477,11 +2475,7 @@ private:
     BatchedMessageBuffer
         m_batched_messages_buffer;  ///< Buffer for Batched Message blackboard
 #endif
-    int m_max_warnings;              ///< To avoid processing too many warnings
-    // {
-    //     return shadingsys().m_shading_state_uniform.m_max_warnings;
-    // }
-
+    int m_max_warnings;             ///< To avoid processing too many warnings
     int m_stat_get_userdata_calls;  ///< Number of calls to get_userdata
     int m_stat_layers_executed;     ///< Number of layers executed
     long long m_ticks;              ///< Time executing the shader

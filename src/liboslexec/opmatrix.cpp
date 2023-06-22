@@ -14,13 +14,15 @@
 #include <OSL/device_string.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
-#include <OSL/rs_free_function.h>
+#include <OSL/fmt_util.h>
 
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
 
 #include <cmath>
 #include <iostream>
+
+
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
@@ -134,33 +136,28 @@ osl_transformn_dvmdv(void* result, void* M_, void* v_)
 
 #ifndef __CUDACC__
 OSL_SHADEOP int
-osl_get_matrix(void* sg_, void* r, const char* from)
+osl_get_matrix(OpaqueExecContextPtr oec, void* r, const char* from)
 {
-    ShaderGlobals* sg        = (ShaderGlobals*)sg_;
-    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     if (HDSTR(from) == STRING_PARAMS(common)
-        || HDSTR(from) == ssu->m_commonspace_synonym) {
+        || HDSTR(from) == get_commonspace_synonym(oec)) {
         MAT(r).makeIdentity();
         return true;
     }
     if (HDSTR(from) == STRING_PARAMS(shader)) {
-        rs_get_matrix_xform_time(sg_, MAT(r), sg->shader2common, sg->time);
+        rs_get_matrix_xform_time(oec, MAT(r), get_shader2common(oec), get_time(oec));
         return true;
     }
     if (HDSTR(from) == STRING_PARAMS(object)) {
-        rs_get_matrix_xform_time(sg_, MAT(r), sg->object2common, sg->time);
+        rs_get_matrix_xform_time(oec, MAT(r), get_object2common(oec), get_time(oec));
         return true;
     }
-    int ok = rs_get_matrix_space_time(sg_, MAT(r), HDSTR(from), sg->time);
+    int ok = rs_get_matrix_space_time(oec, MAT(r), HDSTR(from), get_time(oec));
     if (!ok) {
         MAT(r).makeIdentity();
-   
-        if (ssu->m_unknown_coordsys_error)
-            
-            {
-           osl_errorfmt(sg,OSL::ustringhash("Unknown transformation \"{}\""), HDSTR(from)); //SM: Real Entry
-
-            }
+        if (get_unknown_coordsys_error(oec)) {
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"",
+                          HDSTR(from));
+        }
     }
     return ok;
 }
@@ -168,36 +165,31 @@ osl_get_matrix(void* sg_, void* r, const char* from)
 
 
 OSL_SHADEOP int
-osl_get_inverse_matrix(void* sg_, void* r, const char* to)
+osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to)
 {
 
-    ShaderGlobals* sg        = (ShaderGlobals*)sg_;
-    ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
     if (HDSTR(to) == STRING_PARAMS(common)
-        || HDSTR(to) == ssu->m_commonspace_synonym) {
+        || HDSTR(to) == get_commonspace_synonym(oec)) {
         MAT(r).makeIdentity();
         return true;
     }
-       
     if (HDSTR(to) == STRING_PARAMS(shader)) {
-        rs_get_inverse_matrix_xform_time(sg_, MAT(r), sg->shader2common,
-                                         sg->time);
+        rs_get_inverse_matrix_xform_time(oec, MAT(r), get_shader2common(oec),
+                                         get_time(oec));
         return true;
     }
     if (HDSTR(to) == STRING_PARAMS(object)) {
-        rs_get_inverse_matrix_xform_time(sg_, MAT(r), sg->object2common,
-                                         sg->time);
+        rs_get_inverse_matrix_xform_time(oec, MAT(r), get_object2common(oec),
+                                         get_time(oec));
         return true;
     }
-    int ok = rs_get_inverse_matrix_space_time(sg_, MAT(r), HDSTR(to), sg->time);
+    int ok = rs_get_inverse_matrix_space_time(oec, MAT(r), HDSTR(to), get_time(oec));
     if (!ok) {
         MAT(r).makeIdentity();
-
-        if (ssu->m_unknown_coordsys_error)
-            
-            {
-             osl_errorfmt(sg, OSL::ustringhash("Unknown transformation \"{}\""), HDSTR(to));   
-            }
+        if (get_unknown_coordsys_error(oec)) {
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"",
+                          HDSTR(to));
+        }
     }
     return ok;
 }
@@ -205,29 +197,27 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to)
 // Implemented by the renderer
 #    define OSL_SHADEOP_EXPORT extern "C" OSL_DLL_EXPORT
 OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int
-osl_get_matrix(void* sg_, void* r, const char* from);
+osl_get_matrix(OpaqueExecContextPtr oec, void* r, const char* from);
 OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int
-osl_get_inverse_matrix(void* sg_, void* r, const char* to);
+osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to);
 #    undef OSL_SHADEOP_EXPORT
 #endif  // __CUDACC__
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_prepend_matrix_from(void* sg_, void* r, const char* from)
-{
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, const char* from)
+{ 
     Matrix44 m;
-    bool ok = osl_get_matrix(sg, &m, from);
+    bool ok = osl_get_matrix(oec, &m, from);
     if (ok)
         MAT(r) = m * MAT(r);
 #ifndef __CUDACC__
     // TODO: How do we manage this in OptiX?
     else {
-        ShadingStateUniform* ssu = (ShadingStateUniform*)sg->shadingStateUniform;
-        if (ssu->m_unknown_coordsys_error) {
-            ShadingContext* ctx = (ShadingContext*)(sg)->context;
-            ctx->errorfmt("Unknown transformation \"{}\"", from);
+        if (get_unknown_coordsys_error(oec)) {
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"",
+                          HDSTR(from));
         }
     }
 #endif
@@ -237,11 +227,11 @@ osl_prepend_matrix_from(void* sg_, void* r, const char* from)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_get_from_to_matrix(void* sg, void* r, const char* from, const char* to)
+osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, const char* from, const char* to)
 {
     Matrix44 Mfrom, Mto;
-    int ok = osl_get_matrix((ShaderGlobals*)sg, &Mfrom, from);
-    ok &= osl_get_inverse_matrix((ShaderGlobals*)sg, &Mto, to);
+    int ok = osl_get_matrix(oec, &Mfrom, from);
+    ok &= osl_get_inverse_matrix(oec, &Mto, to);
     MAT(r) = Mfrom * Mto;
     return ok;
 }
@@ -249,19 +239,18 @@ osl_get_from_to_matrix(void* sg, void* r, const char* from, const char* to)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_transform_triple(void* sg_, void* Pin, int Pin_derivs, void* Pout,
+osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs, void* Pout,
                      int Pout_derivs, void* from, void* to, int vectype)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
     Matrix44 M;
     int ok;
     Pin_derivs &= Pout_derivs;  // ignore derivs if output doesn't need it
     if (HDSTR(from) == STRING_PARAMS(common))
-        ok = osl_get_inverse_matrix(sg, &M, (const char*)to);
+        ok = osl_get_inverse_matrix(oec, &M, (const char*)to);
     else if (HDSTR(to) == STRING_PARAMS(common))
-        ok = osl_get_matrix(sg, &M, (const char*)from);
+        ok = osl_get_matrix(oec, &M, (const char*)from);
     else
-        ok = osl_get_from_to_matrix(sg, &M, (const char*)from, (const char*)to);
+        ok = osl_get_from_to_matrix(oec, &M, (const char*)from, (const char*)to);
     if (ok) {
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs)
@@ -304,21 +293,20 @@ osl_transform_triple(void* sg_, void* Pin, int Pin_derivs, void* Pout,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_transform_triple_nonlinear(void* sg_, void* Pin, int Pin_derivs, void* Pout,
+osl_transform_triple_nonlinear(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs, void* Pout,
                                int Pout_derivs, void* from, void* to,
                                int vectype)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
 #ifndef __CUDACC__
 
-    if (rs_transform_points(sg_, HDSTR(from), HDSTR(to), sg->time,
+    if (rs_transform_points(oec, HDSTR(from), HDSTR(to), get_time(oec),
                             (const Vec3*)Pin, (Vec3*)Pout, 1,
                             (TypeDesc::VECSEMANTICS)vectype)) {
         // Renderer had a direct way to transform the points between the
         // two spaces.
         if (Pout_derivs) {
             if (Pin_derivs) {
-                rs_transform_points(sg_, HDSTR(from), HDSTR(to), sg->time,
+                rs_transform_points(oec, HDSTR(from), HDSTR(to), get_time(oec),
                                     (const Vec3*)Pin + 1, (Vec3*)Pout + 1, 2,
                                     TypeDesc::VECTOR);
             } else {
@@ -333,7 +321,7 @@ osl_transform_triple_nonlinear(void* sg_, void* Pin, int Pin_derivs, void* Pout,
     // Renderer couldn't or wouldn't transform directly
     // Except in OptiX we're the renderer will directly implement
     // the transform in osl_transform_triple.
-    return osl_transform_triple(sg, Pin, Pin_derivs, Pout, Pout_derivs, from,
+    return osl_transform_triple(oec, Pin, Pin_derivs, Pout, Pout_derivs, from,
                                 to, vectype);
 }
 

@@ -1,0 +1,52 @@
+Compiled test_errorwarning.osl -> test_errorwarning.oso
+errors and warnings with repeats:
+
+Output Cout to test_errorwarning.tif
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+WARNING: Shader warning [test_errorwarning]: Tsunami expected today
+
+ERROR: Shader error [test_errorwarning]: Volcano expected to erupt at 1300 hrs
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+WARNING: Shader warning [test_errorwarning]: Tsunami expected today
+
+ERROR: Shader error [test_errorwarning]: Volcano expected to erupt at 1300 hrs
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+WARNING: Shader warning [test_errorwarning]: Tsunami expected today
+
+ERROR: Shader error [test_errorwarning]: Volcano expected to erupt at 1300 hrs
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+ERROR: Shader error [test_errorwarning]: The weather is warm and rainy
+
+WARNING: Shader warning [test_errorwarning]: Tsunami expected today
+
+ERROR: Shader error [test_errorwarning]: Volcano expected to erupt at 1300 hrs
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+
+WARNING: Shader warning [test_errorwarning]: Flooding today
+

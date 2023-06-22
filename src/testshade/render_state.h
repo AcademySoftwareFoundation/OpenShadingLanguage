@@ -19,9 +19,5 @@ struct RenderState {
     float fov;
     float hither;
     float yon;
-    int dummy = 10;
-    void *journal_buffer; 
+    void* journal_buffer;
 };
-
-
-

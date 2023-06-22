@@ -124,6 +124,7 @@ using OIIO::TypeInt;
 using OIIO::TypeFloat2;
 using OIIO::TypeVector2;
 using OIIO::TypeVector4;
+using OIIO::TypeUInt64;
 
 using OIIO::Strutil::print;
 
@@ -148,7 +149,6 @@ fmtformat_to_n(OutIt &out, size_t n, const string_view& fmt, Args&&... args)
     // TODO:  Add format_to_n as a public API in OIIO
     return ::fmt::format_to_n(out, n, ::fmt::string_view{fmt.begin(), fmt.length()}, std::forward<Args>(args)...);
 }
-
 
 
 /// OSL_USTRINGREP_IS_HASH will be 1 if the build-time option was enabled to
@@ -209,22 +209,24 @@ ustringhash_from(ustringhash u)
 inline ustringhash
 ustringhash_from(ustringhash_pod u) 
 {
-    return *reinterpret_cast<ustringhash*>(&u);
+#if OIIO_VERSION_GREATER_EQUAL(2, 4, 10)
+    return ustringhash{u};
+#else
+    // No constructor taking the pod type existed previously
+    // so bitcast it.
+    return OSL::bitcast<ustringhash>(u);
+#endif
 }
-
-// /// Convenience function to convert ustringhash to a USTRINGHASH_PO.
-// inline ustringhash
-// ustringpod_from(ustringhash u) 
-// {
-//     return *reinterpret_cast<ustringhash_pod*>(&u);
-// }
-
 
 /// Convenience function to convert to a ustringhash.
 inline ustringhash
 ustringhash_from(ustring u)
 {
-    return u.uhash();
+    ustringhash ret;
+    // Not legal to call uhash on an empty ustring
+    if(!u.empty())
+        ret = u.uhash();
+    return ret;
 }
 
 

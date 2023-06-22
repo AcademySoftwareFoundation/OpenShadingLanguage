@@ -13,8 +13,8 @@ using namespace OSL::pvt;
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 
-#include <OSL/journal.h>
-
+#include <OSL/encodedtypes.h>
+#include <OSL/fmt_util.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -156,106 +156,66 @@ RendererServices::get_userdata(bool derivatives, ustringhash name,
     // return get_userdata(derivatives, ustring_from(name), type, sg, val);
 }
 
-//Default impl that will go away eventually when we solidify a compile-time sturdy solution
+
 void
-RendererServices::errorfmt(OSL::ShaderGlobals* sg, 
-                            OSL::ustringhash fmt_specification, 
-                            int32_t arg_count, 
-                            const EncodedType *arg_types, 
-                            uint32_t arg_values_size, 
-                            uint8_t *arg_values) 
+RendererServices::errorfmt(OSL::ShaderGlobals* sg,
+                           OSL::ustringhash fmt_specification,
+                           int32_t arg_count, const EncodedType* arg_types,
+                           uint32_t /*arg_values_size*/, uint8_t* arg_values)
 
 {
-    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     std::string message;
-    //uint64_t fmt_specification_hash = fmt_specification;
-    OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
-
-    journal::construct_message(fmt_specification_hash, arg_count, 
-                    arg_types, arg_values_size, 
-                    arg_values, message);
-
-
-    //Gets us existing default behavior of checking for duplicate messages
-    //and reusing ShadingContext's ErrorHandler
+    OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
+                        arg_values, message);
+    ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     ctx->errorfmt(message.c_str());
 }
 
+
 void
-RendererServices::warningfmt(OSL::ShaderGlobals* sg, 
-                            OSL::ustringhash fmt_specification, 
-                            int32_t arg_count, 
-                            const EncodedType *arg_types, 
-                            uint32_t arg_values_size, 
-                            uint8_t *arg_values) 
-
+RendererServices::warningfmt(OSL::ShaderGlobals* sg,
+                             OSL::ustringhash fmt_specification,
+                             int32_t arg_count, const EncodedType* arg_types,
+                             uint32_t /*arg_values_size*/, uint8_t* arg_values)
 {
-    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-    std::string message;
-    //uint64_t fmt_specification_hash = fmt_specification;
-     OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
-
-
-    journal::construct_message(fmt_specification_hash, arg_count, 
-                    arg_types, arg_values_size, 
-                    arg_values, message);
-
-
-    //Gets us existing default behavior of checking for duplicate messages
-    //and reusing ShadingContext's ErrorHandler
-    ctx->warningfmt(message.c_str());
+    ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
+    if (ctx->allow_warnings()) {
+        std::string message;
+        OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
+                            arg_values, message);
+        ctx->warningfmt(message.c_str());
+    }
 }
 
 
-
 void
-RendererServices::printfmt(OSL::ShaderGlobals* sg, 
-                            OSL::ustringhash fmt_specification, 
-                            int32_t arg_count, 
-                            const EncodedType *arg_types, 
-                            uint32_t arg_values_size, 
-                            uint8_t *arg_values) 
-
+RendererServices::printfmt(OSL::ShaderGlobals* sg,
+                           OSL::ustringhash fmt_specification,
+                           int32_t arg_count, const EncodedType* arg_types,
+                           uint32_t /*arg_values_size*/, uint8_t* arg_values)
 {
-    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     std::string message;
-    // uint64_t fmt_specification_hash = fmt_specification;
-    //uint64_t fmt_specification_hash = ustringrep_from(fmt_specification);
-     OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
-
-
-    journal::construct_message(fmt_specification_hash, arg_count, 
-                    arg_types, arg_values_size, 
-                    arg_values, message);
-
+    OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
+                        arg_values, message);
+    ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     ctx->messagefmt(message.c_str());
 }
 
+
 void
-RendererServices::filefmt(OSL::ShaderGlobals* sg, 
-                            OSL::ustringhash filename_hash, 
-                            OSL::ustringhash fmt_specification, 
-                            int32_t arg_count, 
-                            const EncodedType *arg_types, 
-                            uint32_t arg_values_size, 
-                            uint8_t *arg_values) 
-
+RendererServices::filefmt(OSL::ShaderGlobals* sg,
+                          OSL::ustringhash filename_hash,
+                          OSL::ustringhash fmt_specification, int32_t arg_count,
+                          const EncodedType* arg_types,
+                          uint32_t /*arg_values_size*/, uint8_t* arg_values)
 {
-    ShadingContext *ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     std::string message;
-    //uint64_t fmt_specification_hash = fmt_specification;
-     OSL::ustringhash_pod fmt_specification_hash = reinterpret_cast<OSL::ustringhash_pod>(&fmt_specification);
-
-
-    journal::construct_message(fmt_specification_hash, arg_count, 
-                    arg_types, arg_values_size, 
-                    arg_values, message);
-
-    //auto filename = OSL::ustring::from_hash(filname_hash)
+    OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
+                        arg_values, message);
     OSL::ustringhash filename_ = OSL::ustringhash_from(filename_hash);
-    std::string filename (filename_hash.c_str());
-    auto file_message = OSL::fmtformat("{}:{}", filename,  message);
-
+    std::string filename(filename_hash.c_str());
+    auto file_message = OSL::fmtformat("{}:{}", filename, message);
+    ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     ctx->messagefmt(file_message.c_str());
 }
 
@@ -323,7 +283,7 @@ RendererServices::texture(ustringhash filename, TextureHandle* texture_handle,
             if (errormessage) {
                 *errormessage = ustringhash(err);
             } else {
-                context->errorfmt("[RendererServices::texture] {}", err);
+                OSL::errorfmt(sg, "[RendererServices::texture] {}", err);
             }
         } else if (errormessage) {
             *errormessage = ustringhash(Strings::unknown);
@@ -366,7 +326,7 @@ RendererServices::texture3d(ustringhash filename, TextureHandle* texture_handle,
             if (errormessage) {
                 *errormessage = ustringhash(err);
             } else {
-                sg->context->errorfmt("[RendererServices::texture3d] {}", err);
+                OSL::errorfmt(sg, "[RendererServices::texture3d] {}", err);
             }
         } else if (errormessage) {
             *errormessage = Strings::unknown.uhash();
@@ -407,8 +367,7 @@ RendererServices::environment(ustringhash filename,
             if (errormessage) {
                 *errormessage = ustringhash(err);
             } else {
-                sg->context->errorfmt("[RendererServices::environment] {}",
-                                      err);
+                OSL::errorfmt(sg, "[RendererServices::environment] {}", err);
             }
         } else if (errormessage) {
             *errormessage = Strings::unknown.uhash();
@@ -420,14 +379,15 @@ RendererServices::environment(ustringhash filename,
 
 
 bool
-RendererServices::get_texture_info(ustringhash filename,
-                                   TextureHandle* texture_handle,
-                                   TexturePerthread* texture_thread_info,
-                                   ShadingContext* shading_context,
-                                   int subimage, ustringhash dataname,
-                                   TypeDesc datatype, void* data,
-                                   ustringhash* errormessage)
+RendererServices::get_texture_info(
+    ustringhash filename, TextureHandle* texture_handle,
+    TexturePerthread* texture_thread_info,
+    ShaderGlobals* sg, int subimage,
+    ustringhash dataname, TypeDesc datatype, void* data,
+    ustringhash* errormessage)
 {
+    ShadingContext* shading_context
+        = (ShadingContext*)((ShaderGlobals*)sg)->context;
     if (!texture_thread_info)
         texture_thread_info = shading_context->texture_thread_info();
     if (!texture_handle)
@@ -443,8 +403,7 @@ RendererServices::get_texture_info(ustringhash filename,
             if (errormessage) {
                 *errormessage = ustringhash(err);
             } else {
-                shading_context->errorfmt(
-                    "[RendererServices::get_texture_info] {}", err);
+                OSL::errorfmt(sg, "[RendererServices::get_texture_info] {}", err);
             }
         } else if (errormessage) {
             // gettextureinfo failed but did not provide an error, so none should be emitted
@@ -459,10 +418,13 @@ RendererServices::get_texture_info(ustringhash filename,
 bool
 RendererServices::get_texture_info(
     ustringhash filename, TextureHandle* texture_handle, float s, float t,
-    TexturePerthread* texture_thread_info, ShadingContext* shading_context,
-    int subimage, ustringhash dataname, TypeDesc datatype, void* data,
+    TexturePerthread* texture_thread_info,
+    ShaderGlobals* sg, int subimage,
+    ustringhash dataname, TypeDesc datatype, void* data,
     ustringhash* errormessage)
 {
+    ShadingContext* shading_context
+        = (ShadingContext*)((ShaderGlobals*)sg)->context;
 #if OIIO_VERSION >= 20307
     // Newer versions of the TextureSystem interface are able to determine the
     // specific UDIM tile we're using.
@@ -484,8 +446,8 @@ RendererServices::get_texture_info(
     }
 #endif
     return get_texture_info(filename, texture_handle, texture_thread_info,
-                            shading_context, subimage, dataname, datatype, data,
-                            errormessage);
+                            sg, subimage, dataname,
+                            datatype, data, errormessage);
 }
 
 

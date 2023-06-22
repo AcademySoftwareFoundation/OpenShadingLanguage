@@ -1,0 +1,180 @@
+Compiled test_cxpf.osl -> test_cxpf.oso
+printf:
+
+Output Cout to test_cxpf.tif
+The values at 2.34 and 7.800000 are 5, 6.400000, 123.456001, 8.323200, 7.999990
+
+The value is spam
+The value is fish 	 	 and	 12 
+Give me unmatched braces {{{
+The value is 3 and {{67}}
+TEA time is 4.093330 PM
+Int arr_col[3]: 0 0 1
+Float color(): 0.450000 0.370000 0.800000
+Int color() only printable as floats: 0.000000 0.000000 1.000000
+Varying float color(): 0.000000 0.000000 0.000000
+Int struct: a.int1: 12
+Int struct: a.int2: 42
+The value is 4.5700 and 23.4
+The value is 12 and 19.450001 at ranges 3.400000 and 5.400000
+
+printf():The value is 1.23231995 and 19.453
+
+The value is 2.345500
+
+The value is 23 and 45
+
+The value is 27 and 55
+
+The value is %0.8
+Simple printf
+0xa
+a
+11
+011
+00000123
+56678
+00000000678123
+00012
+1.300000
+05.666600
++678
++0012
+{****678 ****}
+****678 ****
+The value is 17 and 2d
+
+The value is 2.300000e+00,6.780000,3.4
+4.53e+01
+The values at 2.34 and 7.800000 are 5, 6.400000, 123.456001, 8.323200, 7.999990
+
+The value is spam
+The value is fish 	 	 and	 12 
+Give me unmatched braces {{{
+The value is 3 and {{67}}
+TEA time is 4.093330 PM
+Int arr_col[3]: 0 0 1
+Float color(): 0.450000 0.370000 0.800000
+Int color() only printable as floats: 0.000000 0.000000 1.000000
+Varying float color(): 0.294118 0.000000 0.454545
+Int struct: a.int1: 12
+Int struct: a.int2: 42
+The value is 4.5700 and 23.4
+The value is 12 and 19.450001 at ranges 3.400000 and 5.400000
+
+printf():The value is 1.23231995 and 19.453
+
+The value is 2.345500
+
+The value is 23 and 45
+
+The value is 27 and 55
+
+The value is %0.8
+Simple printf
+0xa
+a
+11
+011
+00000123
+56678
+00000000678123
+00012
+1.300000
+05.666600
++678
++0012
+{****678 ****}
+****678 ****
+The value is 17 and 2d
+
+The value is 2.300000e+00,6.780000,3.4
+4.53e+01
+The values at 2.34 and 7.800000 are 5, 6.400000, 123.456001, 8.323200, 7.999990
+
+The value is spam
+The value is fish 	 	 and	 12 
+Give me unmatched braces {{{
+The value is 3 and {{67}}
+TEA time is 4.093330 PM
+Int arr_col[3]: 0 0 1
+Float color(): 0.450000 0.370000 0.800000
+Int color() only printable as floats: 0.000000 0.000000 1.000000
+Varying float color(): 0.000000 0.161290 0.000000
+Int struct: a.int1: 12
+Int struct: a.int2: 42
+The value is 4.5700 and 23.4
+The value is 12 and 19.450001 at ranges 3.400000 and 5.400000
+
+printf():The value is 1.23231995 and 19.453
+
+The value is 2.345500
+
+The value is 23 and 45
+
+The value is 27 and 55
+
+The value is %0.8
+Simple printf
+0xa
+a
+11
+011
+00000123
+56678
+00000000678123
+00012
+1.300000
+05.666600
++678
++0012
+{****678 ****}
+****678 ****
+The value is 17 and 2d
+
+The value is 2.300000e+00,6.780000,3.4
+4.53e+01
+The values at 2.34 and 7.800000 are 5, 6.400000, 123.456001, 8.323200, 7.999990
+
+The value is spam
+The value is fish 	 	 and	 12 
+Give me unmatched braces {{{
+The value is 3 and {{67}}
+TEA time is 4.093330 PM
+Int arr_col[3]: 0 0 1
+Float color(): 0.450000 0.370000 0.800000
+Int color() only printable as floats: 0.000000 0.000000 1.000000
+Varying float color(): 0.294118 0.161290 0.454545
+Int struct: a.int1: 12
+Int struct: a.int2: 42
+The value is 4.5700 and 23.4
+The value is 12 and 19.450001 at ranges 3.400000 and 5.400000
+
+printf():The value is 1.23231995 and 19.453
+
+The value is 2.345500
+
+The value is 23 and 45
+
+The value is 27 and 55
+
+The value is %0.8
+Simple printf
+0xa
+a
+11
+011
+00000123
+56678
+00000000678123
+00012
+1.300000
+05.666600
++678
++0012
+{****678 ****}
+****678 ****
+The value is 17 and 2d
+
+The value is 2.300000e+00,6.780000,3.4
+4.53e+01

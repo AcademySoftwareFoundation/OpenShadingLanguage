@@ -2180,8 +2180,8 @@ test_shade(int argc, const char* argv[])
     //their own decision about this.
     int error_repeats;
     shadingsys->getattribute("error_repeats", error_repeats);
-    bool limit_errors   = !error_repeats;
-    bool limit_warnings = !error_repeats;
+    bool limit_errors                  = !error_repeats;
+    bool limit_warnings                = !error_repeats;
     const int error_history_capacity   = 25;
     const int warning_history_capacity = 25;
 

@@ -62,10 +62,7 @@ public:
     }
 
     /// Return the luminance scale  of the current color space.
-    const Color3& luminance_scale() const
-    {
-        return m_luminance_scale;
-    }
+    const Color3& luminance_scale() const { return m_luminance_scale; }
 
     /// Return the RGB in the current color space for blackbody radiation
     /// at temperature T (in Kelvin).
@@ -87,27 +84,32 @@ public:
     OSL_HOSTDEVICE bool set_colorspace(StringParam colorspace);
 
     OSL_HOSTDEVICE Color3 to_rgb(StringParam fromspace, const Color3& C,
-                                 ShadingContext *, ExecContextPtr ec=nullptr) const;
+                                 ShadingContext*,
+                                 ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Color3 from_rgb(StringParam fromspace, const Color3& C,
-                                   ShadingContext *, ExecContextPtr ec=nullptr) const;
+                                   ShadingContext*,
+                                   ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Dual2<Color3> transformc(StringParam fromspace,
                                             StringParam tospace,
                                             const Dual2<Color3>& color,
-                                            ShadingContext *, ExecContextPtr ec=nullptr) const;
+                                            ShadingContext*,
+                                            ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Color3 transformc(StringParam fromspace, StringParam tospace,
-                                     const Color3& color, ShadingContext *, ExecContextPtr ec=nullptr) const;
+                                     const Color3& color, ShadingContext*,
+                                     ExecContextPtr ec = nullptr) const;
 
-    OSL_HOSTDEVICE Dual2<Color3> ocio_transform(StringParam fromspace,
-                                                StringParam tospace,
-                                                const Dual2<Color3>& C,
-                                                ShadingContext *, ExecContextPtr ec=nullptr) const;
+    OSL_HOSTDEVICE Dual2<Color3>
+    ocio_transform(StringParam fromspace, StringParam tospace,
+                   const Dual2<Color3>& C, ShadingContext*,
+                   ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Color3 ocio_transform(StringParam fromspace,
                                          StringParam tospace, const Color3& C,
-                                         ShadingContext *, ExecContextPtr ec=nullptr) const;
+                                         ShadingContext*,
+                                         ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE const StringParam& colorspace() const
     {
@@ -116,14 +118,14 @@ public:
 
 private:
     template<typename Color>
-    OSL_HOSTDEVICE inline Color transformc(StringParam fromspace,
-                                           StringParam tospace, const Color& C,
-                                           ShadingContext *, ExecContextPtr ec=nullptr) const;
+    OSL_HOSTDEVICE inline Color
+    transformc(StringParam fromspace, StringParam tospace, const Color& C,
+               ShadingContext*, ExecContextPtr ec = nullptr) const;
 
     template<typename Color>
     OSL_HOSTDEVICE inline Color
     ocio_transform(StringParam fromspace, StringParam tospace, const Color& C,
-                   ShadingContext *, ExecContextPtr ec=nullptr) const;
+                   ShadingContext*, ExecContextPtr ec = nullptr) const;
 
 
     // Derived/cached calculations from options:

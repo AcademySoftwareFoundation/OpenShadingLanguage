@@ -27,18 +27,17 @@ struct ShadingStateUniform {
 inline bool
 get_unknown_coordsys_error(const OpaqueExecContextPtr oec)
 {
-    auto ec = pvt::get_ec(oec);
+    auto ec                  = pvt::get_ec(oec);
     ShadingStateUniform* ssu = (ShadingStateUniform*)(ec->shadingStateUniform);
-    return ssu->m_unknown_coordsys_error;    
+    return ssu->m_unknown_coordsys_error;
 }
 
 inline ustring
 get_commonspace_synonym(const OpaqueExecContextPtr oec)
 {
-    auto ec = pvt::get_ec(oec);
+    auto ec                  = pvt::get_ec(oec);
     ShadingStateUniform* ssu = (ShadingStateUniform*)(ec->shadingStateUniform);
     return ssu->m_commonspace_synonym;
-    
 }
 
 }  // namespace pvt

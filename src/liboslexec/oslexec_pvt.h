@@ -100,8 +100,7 @@ print_closure(std::ostream& out, const ClosureColor* closure,
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* shaderglobals, void* heap_arena_ptr,
                                  void* userdata_base_pointer,
-                                 void* output_base_pointer, 
-                                 int shadeindex,
+                                 void* output_base_pointer, int shadeindex,
                                  void* interactive_params_ptr);
 #if OSL_USE_BATCHED
 typedef void (*RunLLVMGroupFuncWide)(void* batchedshaderglobals,

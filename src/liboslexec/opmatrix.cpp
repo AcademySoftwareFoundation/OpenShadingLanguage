@@ -144,19 +144,20 @@ osl_get_matrix(OpaqueExecContextPtr oec, void* r, const char* from)
         return true;
     }
     if (HDSTR(from) == STRING_PARAMS(shader)) {
-        rs_get_matrix_xform_time(oec, MAT(r), get_shader2common(oec), get_time(oec));
+        rs_get_matrix_xform_time(oec, MAT(r), get_shader2common(oec),
+                                 get_time(oec));
         return true;
     }
     if (HDSTR(from) == STRING_PARAMS(object)) {
-        rs_get_matrix_xform_time(oec, MAT(r), get_object2common(oec), get_time(oec));
+        rs_get_matrix_xform_time(oec, MAT(r), get_object2common(oec),
+                                 get_time(oec));
         return true;
     }
     int ok = rs_get_matrix_space_time(oec, MAT(r), HDSTR(from), get_time(oec));
     if (!ok) {
         MAT(r).makeIdentity();
         if (get_unknown_coordsys_error(oec)) {
-            OSL::errorfmt(oec, "Unknown transformation \"{}\"",
-                          HDSTR(from));
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"", HDSTR(from));
         }
     }
     return ok;
@@ -167,7 +168,6 @@ osl_get_matrix(OpaqueExecContextPtr oec, void* r, const char* from)
 OSL_SHADEOP int
 osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to)
 {
-
     if (HDSTR(to) == STRING_PARAMS(common)
         || HDSTR(to) == get_commonspace_synonym(oec)) {
         MAT(r).makeIdentity();
@@ -183,12 +183,12 @@ osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to)
                                          get_time(oec));
         return true;
     }
-    int ok = rs_get_inverse_matrix_space_time(oec, MAT(r), HDSTR(to), get_time(oec));
+    int ok = rs_get_inverse_matrix_space_time(oec, MAT(r), HDSTR(to),
+                                              get_time(oec));
     if (!ok) {
         MAT(r).makeIdentity();
         if (get_unknown_coordsys_error(oec)) {
-            OSL::errorfmt(oec, "Unknown transformation \"{}\"",
-                          HDSTR(to));
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"", HDSTR(to));
         }
     }
     return ok;
@@ -207,7 +207,7 @@ osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to);
 
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, const char* from)
-{ 
+{
     Matrix44 m;
     bool ok = osl_get_matrix(oec, &m, from);
     if (ok)
@@ -216,8 +216,7 @@ osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, const char* from)
     // TODO: How do we manage this in OptiX?
     else {
         if (get_unknown_coordsys_error(oec)) {
-            OSL::errorfmt(oec, "Unknown transformation \"{}\"",
-                          HDSTR(from));
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"", HDSTR(from));
         }
     }
 #endif
@@ -227,7 +226,8 @@ osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, const char* from)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, const char* from, const char* to)
+osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, const char* from,
+                       const char* to)
 {
     Matrix44 Mfrom, Mto;
     int ok = osl_get_matrix(oec, &Mfrom, from);
@@ -239,8 +239,9 @@ osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, const char* from, cons
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs, void* Pout,
-                     int Pout_derivs, void* from, void* to, int vectype)
+osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs,
+                     void* Pout, int Pout_derivs, void* from, void* to,
+                     int vectype)
 {
     Matrix44 M;
     int ok;
@@ -250,7 +251,8 @@ osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs, void* 
     else if (HDSTR(to) == STRING_PARAMS(common))
         ok = osl_get_matrix(oec, &M, (const char*)from);
     else
-        ok = osl_get_from_to_matrix(oec, &M, (const char*)from, (const char*)to);
+        ok = osl_get_from_to_matrix(oec, &M, (const char*)from,
+                                    (const char*)to);
     if (ok) {
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs)
@@ -293,9 +295,9 @@ osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs, void* 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_transform_triple_nonlinear(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs, void* Pout,
-                               int Pout_derivs, void* from, void* to,
-                               int vectype)
+osl_transform_triple_nonlinear(OpaqueExecContextPtr oec, void* Pin,
+                               int Pin_derivs, void* Pout, int Pout_derivs,
+                               void* from, void* to, int vectype)
 {
 #ifndef __CUDACC__
 

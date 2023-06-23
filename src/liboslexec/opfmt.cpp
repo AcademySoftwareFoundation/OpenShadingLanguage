@@ -55,7 +55,8 @@ osl_gen_errorfmt(OpaqueExecContextPtr exec_ctx,
 OSL_RSOP void
 osl_gen_warningfmt(OpaqueExecContextPtr exec_ctx,
                    OSL::ustringhash_pod fmt_specification, int32_t arg_count,
-                   void* arg_types, uint32_t arg_values_size, uint8_t* arg_values)
+                   void* arg_types, uint32_t arg_values_size,
+                   uint8_t* arg_values)
 {
     OSL::ustringhash rs_fmt_specification = OSL::ustringhash_from(
         fmt_specification);

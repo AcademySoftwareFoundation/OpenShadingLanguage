@@ -84,7 +84,10 @@ template<> struct TypeEncoder<std::string> {
     static constexpr EncodedType value = EncodedType::kUstringHash;
     static_assert(size_of_encoded_type(value) == sizeof(DataType),
                   "unexpected");
-    static DataType Encode(const std::string &val) { return ustring(val).hash(); }
+    static DataType Encode(const std::string& val)
+    {
+        return ustring(val).hash();
+    }
 };
 
 template<> struct TypeEncoder<int32_t> {

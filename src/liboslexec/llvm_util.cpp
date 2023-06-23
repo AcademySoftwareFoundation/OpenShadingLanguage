@@ -5209,10 +5209,11 @@ LLVM_Util::op_store(llvm::Value* val, llvm::Value* ptr)
 {
     // Something bad might happen, and we think it is worth leaving checks
     if (ptr->getType() != type_ptr(val->getType())) {
-        std::cerr << "We have a type mismatch! op_store ptr->getType()=" <<std::flush;
+        std::cerr << "We have a type mismatch! op_store ptr->getType()="
+                  << std::flush;
         ptr->getType()->print(llvm::errs());
         std::cerr << std::endl;
-        std::cerr << "op_store val->getType()="<<std::flush;
+        std::cerr << "op_store val->getType()=" << std::flush;
         val->getType()->print(llvm::errs());
         std::cerr << std::endl;
     }

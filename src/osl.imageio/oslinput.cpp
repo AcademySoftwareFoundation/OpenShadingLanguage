@@ -182,12 +182,10 @@ public:
         return false;  // FIXME?
     }
 
-    void errorfmt(OSL::ShaderGlobals* sg, 
-                            OSL::ustringhash fmt_specification, 
-                            int32_t count, 
-                            const EncodedType *argTypes, 
-                            uint32_t argValuesSize, 
-                            uint8_t *argValues); //override;
+    void errorfmt(OSL::ShaderGlobals* sg, OSL::ustringhash fmt_specification,
+                  int32_t count, const EncodedType* argTypes,
+                  uint32_t argValuesSize,
+                  uint8_t* argValues);  //override;
 };
 
 

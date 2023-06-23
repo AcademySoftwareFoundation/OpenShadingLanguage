@@ -50,7 +50,7 @@ osl_setmessage(ShaderGlobals* sg, ustring_pod name_, long long type_, void* val,
                     "message \"{}\" already exists (created here: {}:{})"
                     " cannot set again from {}:{}",
                     name, m->sourcefile, m->sourceline, sourcefile, sourceline);
-            } else { // NOTE: this cannot be triggered when strict_messages=false because we won't record "failed" getmessage calls
+            } else {  // NOTE: this cannot be triggered when strict_messages=false because we won't record "failed" getmessage calls
                 OSL::errorfmt(
                     sg,
                     "message \"{}\" was queried before being set (queried here: {}:{})"
@@ -95,19 +95,13 @@ osl_getmessage(ShaderGlobals* sg, ustring_pod source_, ustring_pod name_,
                 // found message, but types don't match
                 OSL::errorfmt(
                     sg,
-                        "type mismatch for message \"{}\" ({} as {} here: {}:{})"
-                        " cannot fetch as {} from {}:{}",
-                    name,
-                    m->has_data() ? "created"
-                                  : "queried",
-                    m->type == TypeDesc::PTR
-                        ? "closure color"
-                        : m->type.c_str(),
-                    m->sourcefile,
-                    m->sourceline,
-                    is_closure ? "closure color"
-                               : type.c_str(),
-                    sourcefile,
+                    "type mismatch for message \"{}\" ({} as {} here: {}:{})"
+                    " cannot fetch as {} from {}:{}",
+                    name, m->has_data() ? "created" : "queried",
+                    m->type == TypeDesc::PTR ? "closure color"
+                                             : m->type.c_str(),
+                    m->sourcefile, m->sourceline,
+                    is_closure ? "closure color" : type.c_str(), sourcefile,
                     sourceline);
                 return 0;
             }
@@ -117,14 +111,13 @@ osl_getmessage(ShaderGlobals* sg, ustring_pod source_, ustring_pod name_,
             }
             if (m->layeridx > layeridx) {
                 // found message, but was set by a layer deeper than the one querying the message
-                OSL::errorfmt(
-                    sg,
-                   "message \"{}\" was set by layer #{} ({}:{})"
-                   " but is being queried by layer #{} ({}:{})"
-                   " - messages may only be transferred from nodes "
-                   "that appear earlier in the shading network",
-                    name, m->layeridx, m->sourcefile, m->sourceline, layeridx,
-                    sourcefile, sourceline);
+                OSL::errorfmt(sg,
+                              "message \"{}\" was set by layer #{} ({}:{})"
+                              " but is being queried by layer #{} ({}:{})"
+                              " - messages may only be transferred from nodes "
+                              "that appear earlier in the shading network",
+                              name, m->layeridx, m->sourcefile, m->sourceline,
+                              layeridx, sourcefile, sourceline);
                 return 0;
             }
             // Message found!

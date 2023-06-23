@@ -835,8 +835,8 @@ SimpleRenderer::warningfmt(OSL::ShaderGlobals* sg,
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_warningfmt(OSL::get_max_warnings_per_thread(sg),
                          OSL::get_thread_index(sg), OSL::get_shade_index(sg),
-                         fmt_specification, arg_count, arg_types, arg_values_size,
-                         argValues);
+                         fmt_specification, arg_count, arg_types,
+                         arg_values_size, argValues);
 }
 
 

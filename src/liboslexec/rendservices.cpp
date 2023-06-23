@@ -379,12 +379,12 @@ RendererServices::environment(ustringhash filename,
 
 
 bool
-RendererServices::get_texture_info(
-    ustringhash filename, TextureHandle* texture_handle,
-    TexturePerthread* texture_thread_info,
-    ShaderGlobals* sg, int subimage,
-    ustringhash dataname, TypeDesc datatype, void* data,
-    ustringhash* errormessage)
+RendererServices::get_texture_info(ustringhash filename,
+                                   TextureHandle* texture_handle,
+                                   TexturePerthread* texture_thread_info,
+                                   ShaderGlobals* sg, int subimage,
+                                   ustringhash dataname, TypeDesc datatype,
+                                   void* data, ustringhash* errormessage)
 {
     ShadingContext* shading_context
         = (ShadingContext*)((ShaderGlobals*)sg)->context;
@@ -403,7 +403,8 @@ RendererServices::get_texture_info(
             if (errormessage) {
                 *errormessage = ustringhash(err);
             } else {
-                OSL::errorfmt(sg, "[RendererServices::get_texture_info] {}", err);
+                OSL::errorfmt(sg, "[RendererServices::get_texture_info] {}",
+                              err);
             }
         } else if (errormessage) {
             // gettextureinfo failed but did not provide an error, so none should be emitted
@@ -416,12 +417,13 @@ RendererServices::get_texture_info(
 
 
 bool
-RendererServices::get_texture_info(
-    ustringhash filename, TextureHandle* texture_handle, float s, float t,
-    TexturePerthread* texture_thread_info,
-    ShaderGlobals* sg, int subimage,
-    ustringhash dataname, TypeDesc datatype, void* data,
-    ustringhash* errormessage)
+RendererServices::get_texture_info(ustringhash filename,
+                                   TextureHandle* texture_handle, float s,
+                                   float t,
+                                   TexturePerthread* texture_thread_info,
+                                   ShaderGlobals* sg, int subimage,
+                                   ustringhash dataname, TypeDesc datatype,
+                                   void* data, ustringhash* errormessage)
 {
     ShadingContext* shading_context
         = (ShadingContext*)((ShaderGlobals*)sg)->context;
@@ -445,9 +447,8 @@ RendererServices::get_texture_info(
         }
     }
 #endif
-    return get_texture_info(filename, texture_handle, texture_thread_info,
-                            sg, subimage, dataname,
-                            datatype, data, errormessage);
+    return get_texture_info(filename, texture_handle, texture_thread_info, sg,
+                            subimage, dataname, datatype, data, errormessage);
 }
 
 

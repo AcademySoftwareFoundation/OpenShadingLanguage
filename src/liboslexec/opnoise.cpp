@@ -8,8 +8,8 @@
 #include <OSL/Imathx/Imathx.h>
 #include <OSL/device_string.h>
 #include <OSL/dual_vec.h>
-#include <OSL/oslnoise.h>
 #include <OSL/fmt_util.h>
+#include <OSL/oslnoise.h>
 
 #include <OpenImageIO/fmath.h>
 

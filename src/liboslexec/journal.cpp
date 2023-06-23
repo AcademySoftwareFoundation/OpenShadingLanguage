@@ -24,11 +24,11 @@ decode_message(uint64_t format_hash, int32_t arg_count,
 
     const char* format = OSL::ustring::from_hash(format_hash).c_str();
     OSL_ASSERT(format != nullptr
-               && "The string should have been a valid ustring");               
+               && "The string should have been a valid ustring");
     const int len = static_cast<int>(strlen(format));
 
-    int arg_index  = 0;
-    int arg_offset = 0;
+    int arg_index                  = 0;
+    int arg_offset                 = 0;
     constexpr size_t rs_max_length = 1024;
     char replacement_str[rs_max_length];
     for (int j = 0; j < len;) {
@@ -38,8 +38,8 @@ decode_message(uint64_t format_hash, int32_t arg_count,
         char cur_char = format[j++];
         if (cur_char == '{') {
             bool is_rr_complete = false;
-            rr_buf[0]                        = cur_char;
-            int rr_len                       = 1;
+            rr_buf[0]           = cur_char;
+            int rr_len          = 1;
             do {
                 char next_char = format[j++];
 
@@ -68,12 +68,12 @@ decode_message(uint64_t format_hash, int32_t arg_count,
 
 
 #if OSL_GNUC_VERSION >= 90000
-// ignore -Wclass-memaccess to avoid "error: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘class OpenImageIO_v2_3::ustringhash’ 
+// ignore -Wclass-memaccess to avoid "error: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘class OpenImageIO_v2_3::ustringhash’
 //                                    with no trivial copy-assignment; use copy-assignment or copy-initialization instead"
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Wclass-memaccess"
-    // TODO: remove diagnostic workaround once OIIO::ustringhash is changed such that
-    //       static_assert(std::is_trivially_copyable<OSL::ustringhash>::value, "Make ustringhash::ustringhash(const ustringhash&) = default;");
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wclass-memaccess"
+                    // TODO: remove diagnostic workaround once OIIO::ustringhash is changed such that
+                    //       static_assert(std::is_trivially_copyable<OSL::ustringhash>::value, "Make ustringhash::ustringhash(const ustringhash&) = default;");
 #endif
                     switch (arg_type) {
                     case EncodedType::kUstringHash: {
@@ -173,7 +173,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                     };
 
 #if OSL_GNUC_VERSION >= 90000
-#   pragma GCC diagnostic pop
+#    pragma GCC diagnostic pop
 #endif
 
                     arg_offset += pvt::size_of_encoded_type(arg_type);
@@ -195,25 +195,24 @@ decode_message(uint64_t format_hash, int32_t arg_count,
     return arg_offset;
 }
 
-namespace journal
-{
+namespace journal {
 
 bool
-initialize_buffer(uint8_t* const buffer, uint32_t buf_size,
-                  uint32_t page_size, int thread_count)
+initialize_buffer(uint8_t* const buffer, uint32_t buf_size, uint32_t page_size,
+                  int thread_count)
 
 {
     using namespace journal::pvt;
-    auto& org             = *(reinterpret_cast<Organization*>(buffer));
-    org.thread_count              = thread_count;
-    org.buf_size                  = buf_size;
-    org.page_size                 = page_size;
+    auto& org        = *(reinterpret_cast<Organization*>(buffer));
+    org.thread_count = thread_count;
+    org.buf_size     = buf_size;
+    org.page_size    = page_size;
 
     org.additional_bytes_required = 0;
-    org.exceeded_page_size = 0;
-    org.free_pos = org.calc_end_of_page_infos()
-                // Pre-allocate 1 page per thread
-                + org.page_size * org.thread_count;
+    org.exceeded_page_size        = 0;
+    org.free_pos                  = org.calc_end_of_page_infos()
+                   // Pre-allocate 1 page per thread
+                   + org.page_size * org.thread_count;
 
     if (org.free_pos > org.buf_size) {
         return false;
@@ -221,11 +220,11 @@ initialize_buffer(uint8_t* const buffer, uint32_t buf_size,
 
     // Populate each thread's initial PageInfo
     for (int thread_index = 0; thread_index < org.thread_count;
-        ++thread_index) {
+         ++thread_index) {
         PageInfo& info = org.get_pageinfo(thread_index);
 
-        info.pos       = org.calc_head_pos(thread_index);
-        info.remaining = org.page_size;
+        info.pos           = org.calc_head_pos(thread_index);
+        info.remaining     = org.page_size;
         info.warning_count = 0;
     }
     return true;
@@ -323,8 +322,8 @@ Report2ErrorHandler::report_file_print(int thread_index, int shade_index,
 Reader::Reader(const uint8_t* buffer_, Reporter& reporter)
     : m_buffer(buffer_)
     , m_org(*(reinterpret_cast<const pvt::Organization*>(buffer_)))
-    , m_pageinfo_by_thread_index(
-          reinterpret_cast<const pvt::PageInfo*>(buffer_ + sizeof(pvt::Organization)))
+    , m_pageinfo_by_thread_index(reinterpret_cast<const pvt::PageInfo*>(
+          buffer_ + sizeof(pvt::Organization)))
     , m_reporter(reporter)
 {
 }
@@ -353,8 +352,8 @@ Reader::process()
 void
 Reader::process_entries_for_thread(int thread_index)
 {
-    uint32_t read_pos    = m_org.calc_head_pos(thread_index);
-    const auto& info = m_pageinfo_by_thread_index[thread_index];
+    uint32_t read_pos = m_org.calc_head_pos(thread_index);
+    const auto& info  = m_pageinfo_by_thread_index[thread_index];
     // We are done processing entries when our read_pos reaches the end_pos;
     uint32_t end_pos = info.pos;
 
@@ -374,18 +373,19 @@ Reader::process_entries_for_thread(int thread_index)
                    + sizeof(format_hash),
                sizeof(arg_count));
 
-        auto arg_types = reinterpret_cast<const EncodedType *>(src_ptr + sizeof(Content) + sizeof(shade_index)
-                   + sizeof(format_hash) + sizeof(arg_count));
+        auto arg_types = reinterpret_cast<const EncodedType*>(
+            src_ptr + sizeof(Content) + sizeof(shade_index)
+            + sizeof(format_hash) + sizeof(arg_count));
 
-        const uint8_t *arg_values = src_ptr + sizeof(Content) + sizeof(shade_index)
-                   + sizeof(format_hash) + sizeof(arg_count)
-                   + sizeof(EncodedType) * arg_count;
+        const uint8_t* arg_values = src_ptr + sizeof(Content)
+                                    + sizeof(shade_index) + sizeof(format_hash)
+                                    + sizeof(arg_count)
+                                    + sizeof(EncodedType) * arg_count;
         int arg_values_size = decode_message(format_hash, arg_count, arg_types,
                                              arg_values, message);
         read_pos += sizeof(Content) + sizeof(shade_index) + sizeof(format_hash)
                     + sizeof(arg_count) + sizeof(EncodedType) * arg_count
                     + arg_values_size;
-
     };
 
     while (read_pos != end_pos) {

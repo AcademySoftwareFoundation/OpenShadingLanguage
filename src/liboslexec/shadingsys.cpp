@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "oslexec_pvt.h"
-#include <OSL/genclosure.h>
 #include <OSL/fmt_util.h>
+#include <OSL/genclosure.h>
 #include "backendllvm.h"
 #if OSL_USE_BATCHED
 #    include "batched_backendllvm.h"
@@ -4432,9 +4432,7 @@ osl_naninf_check(int ncomps, const void* vals_, int has_derivs, void* sg,
             int i = d * ncomps + c;
             if (!OIIO::isfinite(vals[i])) {
                 OSL::errorfmt(ec, "Detected {} value in {}{} at {}:{} (op {})",
-                              vals[i],
-                              d > 0 ? "the derivatives of "
-                                    : "",
+                              vals[i], d > 0 ? "the derivatives of " : "",
                               OSL::ustringhash_from(symbolname_),
                               OSL::ustringhash_from(sourcefile_), sourceline,
                               OSL::ustringhash_from(opname_));
@@ -4463,8 +4461,8 @@ osl_uninit_check(long long typedesc_, void* vals_, void* sg,
                  int opnum, ustringhash_pod opname_, int argnum,
                  ustringhash_pod symbolname_, int firstcheck, int nchecks)
 {
-    TypeDesc typedesc   = TYPEDESC(typedesc_);
-    bool uninit         = false;
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    bool uninit       = false;
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float* vals = (float*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)

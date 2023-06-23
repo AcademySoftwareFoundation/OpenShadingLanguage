@@ -164,8 +164,8 @@ ShadingContext::execute_layer(int threadindex, int shadeindex,
     if (!run_func)
         return false;
 
-    run_func(&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr,
-             shadeindex, group()->interactive_arena_ptr());
+    run_func(&ssg, m_heap.get(), userdata_base_ptr, output_base_ptr, shadeindex,
+             group()->interactive_arena_ptr());
 
     if (profile)
         m_ticks += timer.ticks();

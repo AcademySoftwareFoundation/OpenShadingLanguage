@@ -221,7 +221,8 @@ ColorSystem::set_colorspace(StringParam colorspace)
 template<typename Color>
 OSL_HOSTDEVICE Color
 ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
-                            const Color& C, ShadingContext *ctx, ExecContextPtr ec) const
+                            const Color& C, ShadingContext* ctx,
+                            ExecContextPtr ec) const
 {
 // Currently CPU only supports ocio by going through ShadingContext
 #if !defined(__CUDA_ARCH__)
@@ -236,13 +237,12 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
         // Batched isn't using the new error reporting interface,
         // so continue to go through CPU only ShadingContext
         ctx->errorfmt("Unknown color space transformation \"{}\" -> \"{}\"",
-                            fromspace, tospace);
+                      fromspace, tospace);
     } else {
-        OSL::errorfmt(ec,
-                    "Unknown color space transformation \"{}\" -> \"{}\"",
-                    fromspace, tospace);
+        OSL::errorfmt(ec, "Unknown color space transformation \"{}\" -> \"{}\"",
+                      fromspace, tospace);
     }
-#endif // !define(__CUDA_ARCH__)
+#endif  // !define(__CUDA_ARCH__)
 
     return C;
 }
@@ -251,7 +251,8 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
 
 OSL_HOSTDEVICE Dual2<Color3>
 ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
-                            const Dual2<Color3>& C, ShadingContext *ctx, ExecContextPtr ec) const
+                            const Dual2<Color3>& C, ShadingContext* ctx,
+                            ExecContextPtr ec) const
 {
     return ocio_transform<Dual2<Color3>>(fromspace, tospace, C, ctx, ec);
 }
@@ -260,7 +261,8 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
 
 OSL_HOSTDEVICE Color3
 ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
-                            const Color3& C, ShadingContext *ctx, ExecContextPtr ec) const
+                            const Color3& C, ShadingContext* ctx,
+                            ExecContextPtr ec) const
 {
     return ocio_transform<Color3>(fromspace, tospace, C, ctx, ec);
 }
@@ -268,8 +270,8 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
 
 
 OSL_HOSTDEVICE Color3
-ColorSystem::to_rgb(StringParam fromspace, const Color3& C,
-                    ShadingContext *ctx, ExecContextPtr ec) const
+ColorSystem::to_rgb(StringParam fromspace, const Color3& C, ShadingContext* ctx,
+                    ExecContextPtr ec) const
 {
     // NOTE: any changes here should be mirrored
     // in wide_prepend_color_from in wide_opcolor.cpp
@@ -293,8 +295,8 @@ ColorSystem::to_rgb(StringParam fromspace, const Color3& C,
 
 
 OSL_HOSTDEVICE Color3
-ColorSystem::from_rgb(StringParam tospace, const Color3& C,
-                      ShadingContext *ctx, ExecContextPtr ec) const
+ColorSystem::from_rgb(StringParam tospace, const Color3& C, ShadingContext* ctx,
+                      ExecContextPtr ec) const
 {
     if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
         || tospace == m_colorspace)
@@ -318,7 +320,8 @@ ColorSystem::from_rgb(StringParam tospace, const Color3& C,
 template<typename COLOR>
 OSL_HOSTDEVICE COLOR
 ColorSystem::transformc(StringParam fromspace, StringParam tospace,
-                        const COLOR& C, ShadingContext *ctx, ExecContextPtr ec) const
+                        const COLOR& C, ShadingContext* ctx,
+                        ExecContextPtr ec) const
 {
     // NOTE: any changes here should be mirrored
     // in wide_transformc in wide_opcolor.cpp
@@ -376,7 +379,8 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
 
 OSL_HOSTDEVICE Dual2<Color3>
 ColorSystem::transformc(StringParam fromspace, StringParam tospace,
-                        const Dual2<Color3>& color, ShadingContext *ctx, ExecContextPtr ec) const
+                        const Dual2<Color3>& color, ShadingContext* ctx,
+                        ExecContextPtr ec) const
 {
     return transformc<Dual2<Color3>>(fromspace, tospace, color, ctx, ec);
 }
@@ -385,7 +389,8 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
 
 OSL_HOSTDEVICE Color3
 ColorSystem::transformc(StringParam fromspace, StringParam tospace,
-                        const Color3& color, ShadingContext *ctx, ExecContextPtr ec) const
+                        const Color3& color, ShadingContext* ctx,
+                        ExecContextPtr ec) const
 {
     return transformc<Color3>(fromspace, tospace, color, ctx, ec);
 }
@@ -397,7 +402,7 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
 #ifdef __CUDACC__
 extern "C" __device__ int
 rend_get_userdata(StringParam name, void* data, int data_size,
-                    const OSL::TypeDesc& type, int index);
+                  const OSL::TypeDesc& type, int index);
 
 namespace {
 
@@ -475,7 +480,7 @@ OSL_SHADEOP OSL_HOSTDEVICE void
 osl_prepend_color_from(OpaqueExecContextPtr oec, void* c_, const char* from)
 {
     const ColorSystem& cs = get_colorsystem(oec);
-    auto ec = pvt::get_ec(oec);
+    auto ec               = pvt::get_ec(oec);
     COL(c_)               = cs.to_rgb(HDSTR(from), COL(c_), ec->context, ec);
 }
 

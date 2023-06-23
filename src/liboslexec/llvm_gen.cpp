@@ -79,15 +79,17 @@ LLVMGEN(llvm_gen_generic);
 void
 BackendLLVM::llvm_gen_debug_printf(string_view message)
 {
-    // Bake everything into the format specifier string instead of 
+    // Bake everything into the format specifier string instead of
     // passing arguments.
     ustring s = ustring::fmtformat("({} {}) {}\n", inst()->shadername(),
                                    inst()->layername(), message);
 
-    llvm::Value* valargs[]
-        = { sg_void_ptr(),  llvm_load_stringhash(s),
-            ll.constant(0) /*arg_count*/, ll.void_ptr_null() /*arg_types*/,
-            ll.constant(0) /*arg_values_size*/, ll.void_ptr_null() /*arg_values*/ };
+    llvm::Value* valargs[] = { sg_void_ptr(),
+                               llvm_load_stringhash(s),
+                               ll.constant(0) /*arg_count*/,
+                               ll.void_ptr_null() /*arg_types*/,
+                               ll.constant(0) /*arg_values_size*/,
+                               ll.void_ptr_null() /*arg_values*/ };
 
     ll.call_function("osl_gen_printfmt", valargs);
 }
@@ -97,13 +99,15 @@ BackendLLVM::llvm_gen_debug_printf(string_view message)
 void
 BackendLLVM::llvm_gen_warning(string_view message)
 {
-    // Bake everything into the format specifier string instead of 
+    // Bake everything into the format specifier string instead of
     // passing arguments.
-    ustring s = ustring::fmtformat("{}\n", message);
-    llvm::Value* valargs[]
-        = { sg_void_ptr(),  llvm_load_stringhash(s),
-            ll.constant(0) /*arg_count*/, ll.void_ptr_null() /*arg_types*/,
-            ll.constant(0) /*arg_values_size*/, ll.void_ptr_null() /*arg_values*/ };
+    ustring s              = ustring::fmtformat("{}\n", message);
+    llvm::Value* valargs[] = { sg_void_ptr(),
+                               llvm_load_stringhash(s),
+                               ll.constant(0) /*arg_count*/,
+                               ll.void_ptr_null() /*arg_types*/,
+                               ll.constant(0) /*arg_values_size*/,
+                               ll.void_ptr_null() /*arg_values*/ };
     ll.call_function("osl_gen_warningfmt", valargs);
 }
 
@@ -112,13 +116,15 @@ BackendLLVM::llvm_gen_warning(string_view message)
 void
 BackendLLVM::llvm_gen_error(string_view message)
 {
-    // Bake everything into the format specifier string instead of 
+    // Bake everything into the format specifier string instead of
     // passing arguments.
-    ustring s = ustring::fmtformat("{}\n", message);
-    llvm::Value* valargs[]
-        = { sg_void_ptr(),  llvm_load_stringhash(s),
-            ll.constant(0) /*arg_count*/, ll.void_ptr_null() /*arg_types*/,
-            ll.constant(0) /*arg_values_size*/, ll.void_ptr_null() /*arg_values*/ };
+    ustring s              = ustring::fmtformat("{}\n", message);
+    llvm::Value* valargs[] = { sg_void_ptr(),
+                               llvm_load_stringhash(s),
+                               ll.constant(0) /*arg_count*/,
+                               ll.void_ptr_null() /*arg_types*/,
+                               ll.constant(0) /*arg_values_size*/,
+                               ll.void_ptr_null() /*arg_values*/ };
     ll.call_function("osl_gen_errorfmt", valargs);
 }
 
@@ -789,8 +795,7 @@ LLVMGEN(llvm_gen_print_fmt)
 LLVMGEN(llvm_gen_printf)
 {
     Opcode& op(rop.inst()->ops()[opnum]);
-    if ((op.opname() == "format"
-         || rop.use_optix() ))
+    if ((op.opname() == "format" || rop.use_optix()))
         return llvm_gen_printf_legacy(rop, opnum);
     else
         return llvm_gen_print_fmt(rop, opnum);

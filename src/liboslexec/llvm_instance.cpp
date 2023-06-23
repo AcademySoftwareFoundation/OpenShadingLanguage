@@ -749,13 +749,16 @@ BackendLLVM::llvm_generate_debugnan(const Opcode& op)
             ncheck               = ll.constant(1);
         }
 
-        llvm::Value* args[] = {
-            ncomps, llvm_void_ptr(sym), ll.constant((int)sym.has_derivs()),
-            sg_void_ptr(),
-            llvm_load_stringhash(op.sourcefile()), ll.constant(op.sourceline()),
-            llvm_load_stringhash(sym.unmangled()), offset, ncheck,
-            llvm_load_stringhash(op.opname())
-        };
+        llvm::Value* args[] = { ncomps,
+                                llvm_void_ptr(sym),
+                                ll.constant((int)sym.has_derivs()),
+                                sg_void_ptr(),
+                                llvm_load_stringhash(op.sourcefile()),
+                                ll.constant(op.sourceline()),
+                                llvm_load_stringhash(sym.unmangled()),
+                                offset,
+                                ncheck,
+                                llvm_load_stringhash(op.opname()) };
         ll.call_function("osl_naninf_check", args);
     }
 }

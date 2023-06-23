@@ -163,14 +163,15 @@ Dictionary::get_document_index(ExecContextPtr ec, ustring dictionaryname)
             parse_result = doc->load_string(dictionaryname.c_str());
         }
         if (!parse_result) {
-            // Batched case doesn't support error customization yet, 
+            // Batched case doesn't support error customization yet,
             // so continue to report through the context when ec is null
             if (ec == nullptr) {
                 m_context->errorfmt("XML parsed with errors: {}, at offset {}",
-                            parse_result.description(), parse_result.offset);
+                                    parse_result.description(),
+                                    parse_result.offset);
             } else {
                 OSL::errorfmt(ec, "XML parsed with errors: {}, at offset {}",
-                            parse_result.description(), parse_result.offset);
+                              parse_result.description(), parse_result.offset);
             }
             m_document_map[dictionaryname] = -1;
             return -1;
@@ -206,12 +207,14 @@ Dictionary::dict_find(ExecContextPtr ec, ustring dictionaryname, ustring query)
     try {
         matches = doc->select_nodes(query.c_str());
     } catch (const pugi::xpath_exception& e) {
-        // Batched case doesn't support error customization yet, 
+        // Batched case doesn't support error customization yet,
         // so continue to report through the context when ec is null
         if (ec == nullptr) {
-            m_context->errorfmt("Invalid dict_find query '{}': {}", query, e.what());
+            m_context->errorfmt("Invalid dict_find query '{}': {}", query,
+                                e.what());
         } else {
-            OSL::errorfmt(ec, "Invalid dict_find query '{}': {}", query, e.what());
+            OSL::errorfmt(ec, "Invalid dict_find query '{}': {}", query,
+                          e.what());
         }
         return 0;
     }
@@ -257,12 +260,14 @@ Dictionary::dict_find(ExecContextPtr ec, int nodeID, ustring query)
     try {
         matches = m_nodes[nodeID].node.select_nodes(query.c_str());
     } catch (const pugi::xpath_exception& e) {
-        // Batched case doesn't support error customization yet, 
+        // Batched case doesn't support error customization yet,
         // so continue to report through the context when ec is null
         if (ec == nullptr) {
-            m_context->errorfmt("Invalid dict_find query '{}': {}", query, e.what());
+            m_context->errorfmt("Invalid dict_find query '{}': {}", query,
+                                e.what());
         } else {
-            OSL::errorfmt(ec, "Invalid dict_find query '{}': {}", query, e.what());
+            OSL::errorfmt(ec, "Invalid dict_find query '{}': {}", query,
+                          e.what());
         }
         return 0;
     }

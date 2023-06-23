@@ -117,7 +117,7 @@ template<> struct TypeEncoder<int64_t> {
 
 // On macOS 10.+ ptrdiff_t is a long, but on linux this
 // specialization would conflict with int64_t
-#if OSL_APPLE_CLANG_VERSION
+#if defined(__APPLE__) && defined(__MACH__)
 template<> struct TypeEncoder<ptrdiff_t> {
     using DataType                     = int64_t;
     static constexpr EncodedType value = EncodedType::kInt64;
@@ -126,14 +126,6 @@ template<> struct TypeEncoder<ptrdiff_t> {
     static DataType Encode(const ptrdiff_t val) { return val; }
 };
 #endif
-
-// template<> struct TypeEncoder<std::ptrdiff_t> {
-//     using DataType                     = int64_t;
-//     static constexpr EncodedType value = EncodedType::kInt64;
-//     static_assert(size_of_encoded_type(value) == sizeof(DataType),
-//                   "unexpected");
-//     static DataType Encode(const std::ptrdiff_t val) { return val; }
-// };
 
 template<> struct TypeEncoder<double> {
     using DataType                     = double;

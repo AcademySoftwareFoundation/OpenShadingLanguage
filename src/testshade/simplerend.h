@@ -71,17 +71,17 @@ public:
 
     void errorfmt(OSL::ShaderGlobals* sg, OSL::ustringhash fmt_specification,
                   int32_t count, const EncodedType* argTypes,
-                  uint32_t argValuesSize, uint8_t* argValues);
+                  uint32_t argValuesSize, uint8_t* argValues) override;
     void warningfmt(OSL::ShaderGlobals* sg, OSL::ustringhash fmt_specification,
                     int32_t count, const EncodedType* argTypes,
-                    uint32_t argValuesSize, uint8_t* argValues);
+                    uint32_t argValuesSize, uint8_t* argValues) override;
     void printfmt(OSL::ShaderGlobals* sg, OSL::ustringhash fmt_specification,
                   int32_t count, const EncodedType* argTypes,
-                  uint32_t argValuesSize, uint8_t* argValues);
+                  uint32_t argValuesSize, uint8_t* argValues) override;
     void filefmt(OSL::ShaderGlobals* sg, OSL::ustringhash filename_hash,
                  OSL::ustringhash fmt_specification, int32_t arg_count,
                  const EncodedType* argTypes, uint32_t argValuesSize,
-                 uint8_t* argValues);
+                 uint8_t* argValues) override;
 
     // Set and get renderer attributes/options
     void attribute(string_view name, TypeDesc type, const void* value);

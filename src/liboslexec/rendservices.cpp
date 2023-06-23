@@ -212,9 +212,9 @@ RendererServices::filefmt(OSL::ShaderGlobals* sg,
     std::string message;
     OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
                         arg_values, message);
-    OSL::ustringhash filename_ = OSL::ustringhash_from(filename_hash);
-    std::string filename(filename_hash.c_str());
-    auto file_message = OSL::fmtformat("{}:{}", filename, message);
+    // By default, do not write to file for security reasons. Instead prefix the
+    // the message with the filename and hand it to the current error handler.
+    auto file_message = OSL::fmtformat("{}:{}", filename_hash.c_str(), message);
     ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
     ctx->messagefmt(file_message.c_str());
 }

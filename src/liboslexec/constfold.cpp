@@ -2216,7 +2216,7 @@ DECLFOLDER(constfold_transformc)
         if (C.is_constant()) {
             Color3 Cin(C.get_float(0), C.get_float(1), C.get_float(2));
             Color3 result = rop.shadingsys().colorsystem().transformc(
-                from, to, Cin, rop.shaderglobals());
+                from, to, Cin, rop.shaderglobals()->context, nullptr);
             rop.turn_into_assign(op, rop.add_constantc(result),
                                  "transformc => constant");
             return 1;

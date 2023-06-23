@@ -14,6 +14,7 @@ class RendererServices;
 template<int WidthT> class BatchedRendererServices;
 class ShadingContext;
 struct ShaderGlobals;
+class ShaderGroup;
 
 // Tags for polymorphic dispatch
 template<int SimdWidthT> class WidthOf {
@@ -28,6 +29,125 @@ typedef const void* TransformationPtr;
 // Callbacks for closure creation
 typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
 typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
+
+enum class AttributeSpecBuiltinArg {
+    ShaderGlobalsPointer,  // void* (ideally ShaderGlobals*)
+    ShadeIndex,            // int
+    Derivatives,           // int (ideally bool)
+    Type,                  // long long (ideally TypeDesc)
+    ArrayIndex,            // int, Always zero for non-indexed array lookups.
+    ArrayLookup,           // int (ideally bool)
+    ObjectName,            // const char* (ideally ustring)
+    AttributeName,         // const char* (ideally ustring)
+};
+
+// TODO: replace with std::variant
+class AttributeSpecArg {
+    union {
+        AttributeSpecBuiltinArg m_builtin;
+        int32_t m_int32;
+        float m_float;
+        uint64_t m_uint64;
+        void* m_ptr;
+    };
+    uint32_t m_type;
+
+public:
+    AttributeSpecArg() : m_type(0) {}
+    AttributeSpecArg(AttributeSpecBuiltinArg arg) : m_builtin(arg), m_type(1) {}
+    AttributeSpecArg(int32_t arg) : m_int32(arg), m_type(2) {}
+    AttributeSpecArg(float arg) : m_float(arg), m_type(3) {}
+    AttributeSpecArg(uint64_t arg) : m_uint64(arg), m_type(4) {}
+    AttributeSpecArg(void* arg) : m_ptr(arg), m_type(5) {}
+
+    template<typename T> bool is_holding() const
+    {
+        if (std::is_same<T, AttributeSpecBuiltinArg>::value)
+            return m_type == 1;
+        if (std::is_same<T, int32_t>::value)
+            return m_type == 2;
+        if (std::is_same<T, float>::value)
+            return m_type == 3;
+        if (std::is_same<T, uint64_t>::value)
+            return m_type == 4;
+        if (std::is_same<T, void*>::value)
+            return m_type == 5;
+        return false;
+    }
+
+    template<typename T> T get() const
+    {
+        assert(false);
+        return T();
+    }
+};
+
+template<>
+inline AttributeSpecBuiltinArg
+AttributeSpecArg::get() const
+{
+    assert(is_holding<AttributeSpecBuiltinArg>());
+    return m_builtin;
+}
+
+template<>
+inline int32_t
+AttributeSpecArg::get() const
+{
+    assert(is_holding<int32_t>());
+    return m_int32;
+}
+
+template<>
+inline float
+AttributeSpecArg::get() const
+{
+    assert(is_holding<float>());
+    return m_float;
+}
+
+template<>
+inline uint64_t
+AttributeSpecArg::get() const
+{
+    assert(is_holding<uint64_t>());
+    return m_uint64;
+}
+
+template<>
+inline void*
+AttributeSpecArg::get() const
+{
+    assert(is_holding<void*>());
+    return m_ptr;
+}
+
+// The AttributeGetterSpec is never in device code, so it can be a bit more
+// complex and have dynamic allocations.  Although we do want to
+// use an interface and not allow direct data member access
+class AttributeGetterSpec {
+    ustring m_function_name;
+    std::vector<AttributeSpecArg> m_args;
+
+public:
+    template<typename... ArgListT>
+    void set(ustring function_name, ArgListT... args)
+    {
+        m_function_name = function_name;
+        m_args.clear();
+        m_args.insert(m_args.end(), std::initializer_list<AttributeSpecArg> {
+                                        AttributeSpecArg { args }... });
+    }
+
+    const ustring& function_name() const { return m_function_name; }
+    size_t arg_count() const { return m_args.size(); }
+    const AttributeSpecArg& arg(size_t i) const
+    {
+        assert(i < m_args.size());
+        return m_args[i];
+    }
+};
+
 
 // Turn off warnings about unused params for this file, since we have lots
 // of declarations with stub function bodies.
@@ -156,6 +276,26 @@ public:
                                   Vec3* Pout, int npoints,
                                   TypeDesc::VECSEMANTICS vectype);
 
+    /// @brief Builds a free function to provide a value for a given attribute.
+    /// @param group The shader group currently requesting the attribute.
+    /// @param object_name The object name. An empty string will be provided if
+    /// the value is not specified or it is not known at compile time.
+    /// @param attribute_name The attribute name. An empty string will be
+    /// provided if the value is not known at compile time.
+    /// @param type The type of the value being requested.
+    /// @param derivatives True if derivatives are also being requested.
+    /// @param object_lookup True if an object name was specified, even if the
+    /// value is not known at compile time.
+    /// @param array_lookup True if the attribute lookup provides an index.
+    /// @param spec The built attribute getter.
+    /// @return True if an attribute builder was provided. If false, the
+    /// existing get_attribute or get_array_attribute functions will be
+    /// used as the fallback.
+    virtual bool build_attribute_getter(ShaderGroup& group, ustring object_name,
+                                        ustring attribute_name, TypeDesc type,
+                                        bool derivatives, bool object_lookup,
+                                        bool array_lookup,
+                                        AttributeGetterSpec& spec);
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is

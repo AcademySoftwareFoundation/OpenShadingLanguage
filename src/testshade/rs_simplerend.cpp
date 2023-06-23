@@ -7,6 +7,7 @@
 #endif
 
 #include <OSL/rs_free_function.h>
+#include <OSL/rendererservices.h>
 
 #include "render_state.h"
 
@@ -183,4 +184,27 @@ rs_transform_points(OSL::ShaderGlobals* /*sg*/, OSL::StringParam /*from*/,
                     int /*npoints*/, OSL::TypeDesc::VECSEMANTICS /*vectype*/)
 {
     return false;
+}
+
+OSL_RSOP bool
+rs_get_attribute_fallback(void* _sg, const char* _object, const char* _name, long long _type, int derivatives, int index, void* result)
+{
+    OSL::ShaderGlobals* sg = reinterpret_cast<OSL::ShaderGlobals*>(_sg);
+    const OSL::StringParam object = OSL::bitcast<OSL::ustringrep>(_object);
+    const OSL::StringParam name = OSL::bitcast<OSL::ustringrep>(_name);
+    const OSL::TypeDesc type = OSL::bitcast<OSL::TypeDesc>(_type);
+
+    return sg->renderer->get_array_attribute(sg, derivatives, object, type, name, index, result);
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_float(float value, int derivatives, void* result)
+{
+    reinterpret_cast<float*>(result)[0] = value;
+    if (derivatives)
+    {
+      reinterpret_cast<float*>(result)[1] = 0.f;
+      reinterpret_cast<float*>(result)[2] = 0.f;
+    }
+    return true;
 }

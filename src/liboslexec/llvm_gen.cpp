@@ -3019,6 +3019,69 @@ LLVMGEN(llvm_gen_getattribute)
                                                : rop.llvm_load_string(ustring());
     llvm::Value* attr_name_arg = rop.llvm_load_value(Attribute);
 
+    ustring object_name    = (object_lookup && ObjectName.is_constant())
+                                 ? ObjectName.get_string()
+                                 : ustring();
+    ustring attribute_name = Attribute.is_constant() ? Attribute.get_string()
+                                                     : ustring();
+
+    AttributeGetterSpec spec;
+    if (rop.renderer()->build_attribute_getter(
+            rop.group(), object_name, attribute_name, dest_type,
+            Destination.has_derivs(), object_lookup, array_lookup, spec)
+        && !spec.function_name().empty()) {
+        std::vector<llvm::Value*> args;
+        for (int arg_index = 0; arg_index < spec.arg_count(); ++arg_index) {
+            const auto& arg = spec.arg(arg_index);
+            if (arg.is_holding<AttributeSpecBuiltinArg>()) {
+                switch (arg.get<AttributeSpecBuiltinArg>()) {
+                case AttributeSpecBuiltinArg::ShaderGlobalsPointer:
+                    args.push_back(rop.sg_void_ptr());
+                    break;
+                case AttributeSpecBuiltinArg::ShadeIndex:
+                    args.push_back(rop.shadeindex());
+                    break;
+                case AttributeSpecBuiltinArg::Derivatives:
+                    args.push_back(
+                        rop.ll.constant((int)Destination.has_derivs()));
+                    break;
+                case AttributeSpecBuiltinArg::Type:
+                    args.push_back(rop.ll.constant(dest_type));
+                    break;
+                case AttributeSpecBuiltinArg::ArrayIndex:
+                    if (array_lookup)
+                        args.push_back(rop.llvm_load_value(Index));
+                    else
+                        args.push_back(rop.ll.constant((int)0));
+                    break;
+                case AttributeSpecBuiltinArg::ArrayLookup:
+                    args.push_back(rop.ll.constant((int)array_lookup));
+                    break;
+                case AttributeSpecBuiltinArg::ObjectName:
+                    args.push_back(obj_name_arg);
+                    break;
+                case AttributeSpecBuiltinArg::AttributeName:
+                    args.push_back(attr_name_arg);
+                    break;
+                default: assert(false); break;
+                }
+            } else if (arg.is_holding<int32_t>()) {
+                args.push_back(rop.ll.constant(arg.get<int32_t>()));
+            } else if (arg.is_holding<float>()) {
+                args.push_back(rop.ll.constant(arg.get<float>()));
+            } else if (arg.is_holding<uint64_t>()) {
+                args.push_back(rop.ll.constant64(arg.get<uint64_t>()));
+            } else if (arg.is_holding<void*>()) {
+                args.push_back(rop.ll.constant_ptr(arg.get<void*>()));
+            } else {
+                assert(false);
+            }
+        }
+        args.push_back(rop.llvm_void_ptr(Destination));
+        llvm::Value* r = rop.ll.call_function(spec.function_name().c_str(),
+                                              args);
+        rop.llvm_store_value(r, Result);
+    } else {
     llvm::Value* args[] = {
         rop.sg_void_ptr(),
         rop.ll.constant((int)Destination.has_derivs()),
@@ -3031,6 +3094,7 @@ LLVMGEN(llvm_gen_getattribute)
     };
     llvm::Value* r = rop.ll.call_function("osl_get_attribute", args);
     rop.llvm_store_value(r, Result);
+    }
 
     return true;
 }

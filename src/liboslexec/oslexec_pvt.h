@@ -793,6 +793,20 @@ public:
         for (auto& s : symlocs)
             m_symlocs.push_back(s);
     }
+    const SymLocationDesc* find_symloc(ustring name) const
+    {
+        auto f = std::lower_bound(m_symlocs.begin(), m_symlocs.end(), name);
+        return (f == m_symlocs.end() || f->name != name) ? nullptr : &(*f);
+    }
+    const SymLocationDesc* find_symloc(ustring name, SymArena arena) const
+    {
+        auto f = std::lower_bound(m_symlocs.begin(), m_symlocs.end(), name);
+        if (f != m_symlocs.end() && f->name == name && f->arena == arena
+            && f->offset != -1)
+            return &(*f);
+        else
+            return nullptr;
+    }
 
 private:
     void printstats() const;

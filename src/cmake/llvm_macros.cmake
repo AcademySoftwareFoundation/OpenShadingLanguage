@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+# TODO: Use CMAKE_CURRENT_FUNCTION_LIST_DIR in cmake-3.17
+set(_THIS_MODULE_BASE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
-function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_cpp extra_clang_args)
+function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_cpp extra_clang_args include_dirs)
 
     if (VERBOSE)
         message (STATUS "EMBED_LLVM_BITCODE_IN_CPP src_list=${src_list}")
@@ -75,12 +77,8 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         #    endif ()
         #endif ()
 
-        list (TRANSFORM IMATH_INCLUDES PREPEND -I
-            OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
-        list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
-            OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
-        list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
-            OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
+        list (TRANSFORM include_dirs PREPEND -I
+            OUTPUT_VARIABLE ALL_INCLUDE_DIRS)
 
         if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
             # Until we fully support opaque pointers, we need to disable
@@ -93,13 +91,7 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         add_custom_command ( OUTPUT ${src_bc}
         COMMAND ${LLVM_BC_GENERATOR}
             ${LLVM_COMPILE_FLAGS}
-            "-I${CMAKE_CURRENT_SOURCE_DIR}"
-            "-I${CMAKE_SOURCE_DIR}/src/include"
-            "-I${CMAKE_BINARY_DIR}/include"
-            ${ALL_OpenImageIO_INCLUDES}
-            ${ALL_IMATH_INCLUDES}
-            #"-isystem ${Boost_INCLUDE_DIRS}" #Does not pick up usr installed boost/thread/tss.hpp for oslexec_pvt.h
-            "-I${Boost_INCLUDE_DIRS}"
+            ${ALL_INCLUDE_DIRS}
             -DOSL_COMPILING_TO_BITCODE=1
             -Wno-deprecated-register
             # the following 2 warnings can be restored when all 3rd parties have fixed their export macros
@@ -131,9 +123,9 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
      # Serialize the linked bitcode into a CPP file 
     set ( src_bc_cpp "${CMAKE_CURRENT_BINARY_DIR}/${output_name}.bc.cpp" )
     add_custom_command ( OUTPUT ${src_bc_cpp}
-        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
+        COMMAND ${Python_EXECUTABLE} "${_THIS_MODULE_BASE_DIR}/../build-scripts/serialize-bc.py"
             ${linked_src_bc} ${src_bc_cpp} ${output_name}
-        DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_src_bc}
+        DEPENDS "${_THIS_MODULE_BASE_DIR}/../build-scripts/serialize-bc.py" ${linked_src_bc}
         ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 

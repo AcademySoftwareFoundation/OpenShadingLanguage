@@ -127,6 +127,19 @@ RendererServices::transform_points(ShaderGlobals* sg, ustringhash from,
 
 
 bool
+RendererServices::build_attribute_getter(ShaderGroup& group,
+                                         ustring object_name,
+                                         ustring attribute_name, TypeDesc type,
+                                         bool derivatives, bool object_lookup,
+                                         bool array_lookup,
+                                         AttributeGetterSpec& spec)
+{
+    return false;
+}
+
+
+
+bool
 RendererServices::get_attribute(ShaderGlobals* sg, bool derivatives,
                                 ustringhash object, TypeDesc type,
                                 ustringhash name, void* val)

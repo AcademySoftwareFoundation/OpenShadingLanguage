@@ -62,6 +62,12 @@ public:
     bool get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                       ShaderGlobals* sg, void* val) override;
 
+    bool build_attribute_getter(ShaderGroup& group, ustring object_name,
+                                ustring attribute_name, TypeDesc type,
+                                bool derivatives, bool object_lookup,
+                                bool array_lookup,
+                                AttributeGetterSpec& spec) override;
+
     bool trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,
                const OSL::Vec3& dPdx, const OSL::Vec3& dPdy, const OSL::Vec3& R,
                const OSL::Vec3& dRdx, const OSL::Vec3& dRdy) override;
@@ -130,6 +136,8 @@ public:
     // they aren't already.
     virtual void finalize_pixel_buffer() {}
 
+    void use_rs_bitcode(bool enabled) { m_use_rs_bitcode = enabled; }
+
     static void register_JIT_Global_Variables();
 
     // ShaderGroupRef storage
@@ -169,6 +177,7 @@ protected:
     std::vector<ustring> m_outputvars;
     std::vector<std::shared_ptr<OIIO::ImageBuf>> m_outputbufs;
     std::unique_ptr<OIIO::ErrorHandler> m_errhandler { new OIIO::ErrorHandler };
+    bool m_use_rs_bitcode = false;
 
     // Named transforms
     typedef std::map<ustringhash, std::shared_ptr<Transformation>> TransformMap;

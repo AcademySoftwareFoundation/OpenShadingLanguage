@@ -529,6 +529,37 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
 
 
 bool
+SimpleRenderer::build_attribute_getter(ShaderGroup& group, ustring object_name,
+                                       ustring attribute_name, TypeDesc type,
+                                       bool derivatives, bool object_lookup,
+                                       bool array_lookup,
+                                       AttributeGetterSpec& spec)
+{
+    if (m_use_rs_bitcode) {
+        // For demonstration purposes we show how to build functions taking
+        // advantage of known compile time information. Here we simply select
+        // which function to call based on what we know at this point.
+        if (object_name == ustring("options")
+            && attribute_name == ustring("blahblah")
+            && type == OSL::TypeFloat) {
+            spec.set(ustring("rs_get_attribute_constant_float"), 3.14159f,
+                     AttributeSpecBuiltinArg::Derivatives);
+        } else {
+            spec.set(ustring("rs_get_attribute_fallback"),
+                     AttributeSpecBuiltinArg::ShaderGlobalsPointer,
+                     AttributeSpecBuiltinArg::ObjectName,
+                     AttributeSpecBuiltinArg::AttributeName,
+                     AttributeSpecBuiltinArg::Type,
+                     AttributeSpecBuiltinArg::Derivatives,
+                     AttributeSpecBuiltinArg::ArrayIndex);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool
 SimpleRenderer::trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,
                       const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
                       const OSL::Vec3& R, const OSL::Vec3& dRdx,

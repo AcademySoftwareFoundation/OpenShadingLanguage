@@ -346,7 +346,7 @@ compile_buffer(const std::string& sourcecode, const std::string& shadername)
     // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
 
     if (!shadingsys->LoadMemoryCompiledShader(shadername, osobuffer)) {
-        std::cerr << "Could not load compiled jBuffer from \"" << shadername
+        std::cerr << "Could not load compiled jbuffer from \"" << shadername
                   << "\"\n";
         exit(EXIT_FAILURE);
     }
@@ -380,7 +380,7 @@ add_shader(cspan<const char*> argv)
 
     set_shadingsys_options();
 
-    if (inbuffer)  // Request to exercise the jBuffer-based API calls
+    if (inbuffer)  // Request to exercise the jbuffer-based API calls
         shader_from_buffers(shadername);
 
     inject_params();
@@ -783,7 +783,7 @@ getargs(int argc, const char* argv[])
     ap.arg("--oslquery", &do_oslquery)
       .help("Test OSLQuery at runtime");
     ap.arg("--inbuffer", &inbuffer)
-      .help("Compile osl source from and to jBuffer");
+      .help("Compile osl source from and to jbuffer");
     ap.arg("--no-output-placement")
       .help("Turn off use of output placement, rely only on get_symbol")
       .action(OIIO::ArgParse::store_false());
@@ -813,7 +813,7 @@ getargs(int argc, const char* argv[])
     ap.arg("--use_rs_bitcode", &use_rs_bitcode)
       .help("Use free function bitcode Renderer services");
     ap.arg("--jbufferMB %d:JBUFFER",  &jbufferMB)
-      .help("journal jBuffer size in MB");
+      .help("journal jbuffer size in MB");
 
     // clang-format on
     if (ap.parse(argc, argv) < 0) {
@@ -1097,7 +1097,7 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
             OIIO::ImageBuf* ib = rend->outputbuf(i);
             char* outptr       = static_cast<char*>(ib->pixeladdr(0, 0));
             if (i == 0) {
-                // The output arena is the start of the first output jBuffer
+                // The output arena is the start of the first output jbuffer
                 output_base_ptr = outptr;
             }
             ptrdiff_t offset = outptr - output_base_ptr;
@@ -1216,7 +1216,7 @@ save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
         int nchans = outputimg->nchannels();
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
-            // directly in the output jBuffer.
+            // directly in the output jbuffer.
             outputimg->setpixel(x, y, (const float*)data);
             if (print_outputs) {
                 print("  {} :", outputvarnames[i]);
@@ -1298,7 +1298,7 @@ batched_save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
         // Used Wide access on the symbol's data t access per lane results
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
-            // directly in the output jBuffer.
+            // directly in the output jbuffer.
             if (t.aggregate == TypeDesc::MATRIX44) {
                 OSL_DASSERT(nchans == 16);
                 Wide<const Matrix44, WidthT> batchResults(
@@ -2104,10 +2104,10 @@ test_shade(int argc, const char* argv[])
 
     //Initialize a Journal Buffer for all threads to use for journaling fmt specification calls.
     const size_t jbuffer_bytes     = jbufferMB * 1024 * 1024;
-    uint8_t* jBuffer               = (uint8_t*)malloc(jbuffer_bytes);
+    std::unique_ptr<uint8_t[]> jbuffer (new uint8_t[jbuffer_bytes]);
     constexpr int jbuffer_pagesize = 1024;
     bool init_buffer_success
-        = OSL::journal::initialize_buffer(jBuffer, jbuffer_bytes,
+        = OSL::journal::initialize_buffer(jbuffer.get(), jbuffer_bytes,
                                           jbuffer_pagesize, num_threads);
 
     if (!init_buffer_success) {
@@ -2116,7 +2116,7 @@ test_shade(int argc, const char* argv[])
 
 
     //Send the populated Journal Buffer to the renderer
-    theRenderState.journal_buffer = jBuffer;
+    theRenderState.journal_buffer = jbuffer.get();
 
 
     // Allow a settable number of iterations to "render" the whole image,
@@ -2189,9 +2189,9 @@ test_shade(int argc, const char* argv[])
         limit_errors, error_history_capacity, limit_warnings,
         warning_history_capacity);
     TestshadeReporter reporter(&errhandler, tracker_error_warnings);
-    OSL::journal::Reader jreader(jBuffer, reporter);
+    OSL::journal::Reader jreader(jbuffer.get(), reporter);
     jreader.process();
-    // Need to call journal::initialize_buffer before re-using the jBuffer
+    // Need to call journal::initialize_buffer before re-using the jbuffer
 
     double runtime = timer.lap();
 
@@ -2258,7 +2258,6 @@ test_shade(int argc, const char* argv[])
     // We're done with the shading system now, destroy it
     shadergroup.reset();  // Must release this before destroying shadingsys
 
-    delete jBuffer;
     delete shadingsys;
     int retcode = EXIT_SUCCESS;
 

@@ -2103,8 +2103,8 @@ test_shade(int argc, const char* argv[])
     }
 
     //Initialize a Journal Buffer for all threads to use for journaling fmt specification calls.
-    const size_t jbuffer_bytes     = jbufferMB * 1024 * 1024;
-    std::unique_ptr<uint8_t[]> jbuffer (new uint8_t[jbuffer_bytes]);
+    const size_t jbuffer_bytes = jbufferMB * 1024 * 1024;
+    std::unique_ptr<uint8_t[]> jbuffer(new uint8_t[jbuffer_bytes]);
     constexpr int jbuffer_pagesize = 1024;
     bool init_buffer_success
         = OSL::journal::initialize_buffer(jbuffer.get(), jbuffer_bytes,

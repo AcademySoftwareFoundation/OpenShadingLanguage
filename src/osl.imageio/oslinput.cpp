@@ -136,56 +136,51 @@ public:
         : RendererServices(texsys)
     {
     }
-    virtual ~OIIO_RendererServices() {}
+    ~OIIO_RendererServices() {}
 
-    virtual int supports(string_view /*feature*/) const { return false; }
+    int supports(string_view /*feature*/) const override { return false; }
 
-    virtual bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
-                            TransformationPtr /*xform*/, float /*time*/)
+    bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
+                    TransformationPtr /*xform*/, float /*time*/) override
     {
         return false;  // FIXME?
     }
-    virtual bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
-                            TransformationPtr /*xform*/)
+    bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
+                    TransformationPtr /*xform*/) override
     {
         return false;  // FIXME?
     }
-    virtual bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
-                            ustring /*from*/, float /*time*/)
+    bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
+                    ustringhash /*from*/, float /*time*/) override
     {
         return false;  // FIXME?
     }
-    virtual bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
-                            ustring /*from*/)
-    {
-        return false;  // FIXME?
-    }
-
-    virtual bool get_attribute(ShaderGlobals* /*sg*/, bool /*derivatives*/,
-                               ustring /*object*/, TypeDesc /*type*/,
-                               ustring /*name*/, void* /*val*/)
-    {
-        return false;  // FIXME?
-    }
-    virtual bool get_array_attribute(ShaderGlobals* /*sg*/,
-                                     bool /*derivatives*/, ustring /*object*/,
-                                     TypeDesc /*type*/, ustring /*name*/,
-                                     int /*index*/, void* /*val*/)
+    bool get_matrix(ShaderGlobals* /*sg*/, Matrix44& /*result*/,
+                    ustringhash /*from*/) override
     {
         return false;  // FIXME?
     }
 
-    virtual bool get_userdata(bool /*derivatives*/, ustring /*name*/,
-                              TypeDesc /*type*/, ShaderGlobals* /*sg*/,
-                              void* /*val*/)
+    bool get_attribute(ShaderGlobals* /*sg*/, bool /*derivatives*/,
+                       ustringhash /*object*/, TypeDesc /*type*/,
+                       ustringhash /*name*/, void* /*val*/) override
+    {
+        return false;  // FIXME?
+    }
+    bool get_array_attribute(ShaderGlobals* /*sg*/, bool /*derivatives*/,
+                             ustringhash /*object*/, TypeDesc /*type*/,
+                             ustringhash /*name*/, int /*index*/,
+                             void* /*val*/) override
     {
         return false;  // FIXME?
     }
 
-    void errorfmt(OSL::ShaderGlobals* sg, OSL::ustringhash fmt_specification,
-                  int32_t count, const EncodedType* argTypes,
-                  uint32_t argValuesSize,
-                  uint8_t* argValues);  //override;
+    bool get_userdata(bool /*derivatives*/, ustringhash /*name*/,
+                      TypeDesc /*type*/, ShaderGlobals* /*sg*/,
+                      void* /*val*/) override
+    {
+        return false;  // FIXME?
+    }
 };
 
 

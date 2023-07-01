@@ -1,8 +1,33 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.13.0 -- 1 Jun? 2023 (compared to 1.12.12.0)
+Release 1.12.13.0 -- 1 July 2023 (compared to 1.12.12.0)
 --------------------------------------------------------
+- *fix*: Fix constant float values being converted to ints
+  [#1674](https://github.com/OpenImageIO/oiio/pull/1674)  (by Declan Russell)
+- *build* Fix builds when USE_PYTHON=OFF
+  [#1675](https://github.com/OpenImageIO/oiio/pull/1675)  (by Declan Russell)
+- *build* Changes to support fmt 10.0
+  [#1691](https://github.com/OpenImageIO/oiio/pull/1691)
+- *cleanup* Switch deprecated oiio simd names to modern
+  [#1679](https://github.com/OpenImageIO/oiio/pull/1679)
+- *testing*: Avoid deprecated OSLQuery ctr in test example
+  [#1699](https://github.com/OpenImageIO/oiio/pull/1699)
+- *ci*: Fix package name for icc
+  [#1690](https://github.com/OpenImageIO/oiio/pull/1690)
+- *ci*: Add VFX Platform 2023 tests using new ASWF containers
+  [#1696](https://github.com/OpenImageIO/oiio/pull/1696)
+- *ci*: Switch oiio obsolete branch names to immutable tags
+  [#1701](https://github.com/OpenImageIO/oiio/pull/1701)
+- *docs* Improve documentation of `trace` function
+  [#1671](https://github.com/OpenImageIO/oiio/pull/1671)  (by AidanWelch)
+- *docs* README.md: added filmography and Siggraph OSL course info.
+  [#1692](https://github.com/OpenImageIO/oiio/pull/1692)
+  [#1694](https://github.com/OpenImageIO/oiio/pull/1694) (by Mitch Prater)
+- *docs* Amend the filmography
+  [#1695](https://github.com/OpenImageIO/oiio/pull/1695)
+- *docs* Fix incorrect links in CONTRIBUTING
+  [#1688](https://github.com/OpenImageIO/oiio/pull/1688)
 
 
 Release 1.12.12.0 -- 1 May 2023 (compared to 1.12.11.0)

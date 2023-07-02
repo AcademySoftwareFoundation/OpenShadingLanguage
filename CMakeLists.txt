@@ -4,7 +4,7 @@
 
 cmake_minimum_required (VERSION 3.12)
 
-set (OSL_VERSION "1.12.13.0")
+set (OSL_VERSION "1.12.14.0")
 set (OSL_VERSION_OVERRIDE "" CACHE STRING
      "Version override (use with caution)!")
 mark_as_advanced (OSL_VERSION_OVERRIDE)

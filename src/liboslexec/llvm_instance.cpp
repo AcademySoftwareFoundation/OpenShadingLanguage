@@ -641,7 +641,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             // Handle init ops.
             build_llvm_code(sym.initbegin(), sym.initend());
 #if OSL_USE_OPTIX
-        } else if (use_optix() && !sym.typespec().is_closure()) {
+        } else if (use_optix() && !sym.typespec().is_closure() && !sym.lockgeom()) {
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
             llvm::Value* cuda_var = getOrAllocateCUDAVariable(sym);

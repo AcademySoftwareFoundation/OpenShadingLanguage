@@ -1589,6 +1589,114 @@ BackendLLVM::initialize_llvm_group()
 }
 
 
+void
+BackendLLVM::prepare_module_for_cuda_jit()
+{
+    auto is_inline_fn = [&](const std::string& name) {
+        return shadingsys().m_inline_functions.find(ustring(name))
+               != shadingsys().m_inline_functions.end();
+    };
+
+    auto is_noinline_fn = [&](const std::string& name) {
+        return shadingsys().m_noinline_functions.find(ustring(name))
+               != shadingsys().m_noinline_functions.end();
+    };
+
+    const bool no_inline = shadingsys().optix_no_inline();
+    const bool no_inline_layer_funcs
+        = shadingsys().optix_no_inline_layer_funcs();
+    const bool merge_layer_funcs  = shadingsys().optix_merge_layer_funcs();
+    const bool no_inline_rendlib  = shadingsys().optix_no_inline_rendlib();
+    const int no_inline_thresh    = shadingsys().optix_no_inline_thresh();
+    const int force_inline_thresh = shadingsys().optix_force_inline_thresh();
+
+    // Adjust the linkage for the library and group functions:
+    //  * Set external linkage for the library functions to prevent the
+    //    function signatures from being changed by dead arg elimination
+    //    passes. The signatures need to match the shadeops PTX module.
+    //
+    //  * Set private linkage for the layer functions to help avoid
+    //    collisions between layer functions from different ShaderGroups.
+    for (llvm::Function& fn : *ll.module()) {
+        if (fn.hasFnAttribute("osl-lib-function")) {
+            fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
+        } else if (fn.getName().startswith(group().name().c_str())) {
+            fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
+        }
+    }
+
+    // Set the inlining behavior for each function in the module, based on
+    // the shadingsys attributes. The inlining attributes are not modified
+    // by default.
+    for (llvm::Function& fn : *ll.module()) {
+        // Don't modify the inlining attribute for:
+        //  * group entry functions
+        //  * llvm library functions
+        if (fn.getName().startswith("__direct_callable__")
+            || fn.getName().startswith("llvm."))
+            continue;
+
+        // Merge layer functions which have one caller
+        if (merge_layer_funcs && !fn.hasFnAttribute("osl-lib-function")
+            && fn.hasOneUser()) {
+            fn.addFnAttr(llvm::Attribute::AlwaysInline);
+            continue;
+        }
+
+        if (no_inline) {
+            fn.addFnAttr(llvm::Attribute::NoInline);
+
+            // Delete the bodies of library functions which will never be inlined.
+            // This reduces the size of the module prior to opt/JIT.
+            if (fn.hasFnAttribute("osl-lib-function")) {
+                fn.deleteBody();
+            }
+            continue;
+        }
+
+        if (no_inline_rendlib && fn.hasFnAttribute("osl-rendlib-function")) {
+            fn.deleteBody();
+            continue;
+        }
+
+        if (no_inline_layer_funcs && !fn.hasFnAttribute("osl-lib-function")) {
+            fn.addFnAttr(llvm::Attribute::NoInline);
+            continue;
+        }
+
+        // Only apply the inline thresholds to library functions.
+        if (!fn.hasFnAttribute("osl-lib-function")) {
+            continue;
+        }
+
+        if (is_inline_fn(fn.getName().str())) {
+            fn.addFnAttr(llvm::Attribute::AlwaysInline);
+            continue;
+        }
+
+        if (is_noinline_fn(fn.getName().str())) {
+            fn.deleteBody();
+            continue;
+        }
+
+        const int inst_count = fn.getInstructionCount();
+        if (inst_count >= no_inline_thresh) {
+            fn.deleteBody();
+        } else if (inst_count > 0 && inst_count <= force_inline_thresh) {
+            fn.addFnAttr(llvm::Attribute::AlwaysInline);
+        }
+    }
+
+#ifndef OSL_CUDA_NO_FTZ
+    for (llvm::Function& fn : *ll.module()) {
+        fn.addFnAttr("nvptx-f32ftz", "true");
+        fn.addFnAttr("denormal-fp-math", "preserve-sign,preserve-sign");
+        fn.addFnAttr("denormal-fp-math-f32", "preserve-sign,preserve-sign");
+    }
+#endif
+}
+
+
 
 static void
 empty_group_func(void*, void*)
@@ -1915,97 +2023,20 @@ BackendLLVM::run()
         }
     }
 
-    // Optimize the LLVM IR unless it's a do-nothing group.
-    if (!group().does_nothing() && !use_optix()) {
-        ll.do_optimize();
-    } else if (!group().does_nothing() && use_optix()) {
-        // Adjust the linkage for the library and group functions:
-        //  * Set external linkage for the library functions to prevent the
-        //    function signatures from being changed by dead arg elimination
-        //    passes. The signatures need to match the shadeops PTX module.
-        //
-        //  * Set private linkage for the layer functions to help avoid
-        //    collisions between layer functions from different ShaderGroups.
-        for (llvm::Function& fn : *ll.module()) {
-            if (fn.hasFnAttribute("osl-lib-function")) {
-                fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
-            } else if (fn.getName().startswith(group().name().c_str())) {
-                fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
-            }
-        }
-
-        auto is_inline_fn = [&](const std::string& name) {
-            return shadingsys().m_inline_functions.find(ustring(name))
-                != shadingsys().m_inline_functions.end();
-        };
-
-        auto is_noinline_fn = [&](const std::string& name) {
-            return shadingsys().m_noinline_functions.find(ustring(name))
-                != shadingsys().m_noinline_functions.end();
-        };
-
-        // Set the inlining behavior for each function in the module, based on
-        // the shadingsys attributes. The inlining attributes are not modified
-        // by default.
-        for (llvm::Function& fn : *ll.module()) {
-            // Don't modify the inlining attribute for:
-            //  * group entry functions
-            //  * llvm library functions
-            if (fn.getName().startswith("__direct_callable__")
-                || fn.getName().startswith("llvm."))
-                continue;
-
-            if (shadingsys().optix_no_inline()) {
-                fn.addFnAttr(llvm::Attribute::NoInline);
-
-                // Delete the bodies of library functions which will never be inlined.
-                // This reduces the size of the module prior to opt/JIT.
-                if (fn.hasFnAttribute("osl-lib-function")) {
-                    fn.deleteBody();
-                }
-                continue;
-            }
-
-            if (shadingsys().optix_no_inline_layer_funcs()
-                && !fn.hasFnAttribute("osl-lib-function")) {
-                fn.deleteBody();
-                continue;
-            }
-
-            // Only apply the inline thresholds to library functions.
-            if (!fn.hasFnAttribute("osl-lib-function")) {
-                continue;
-            }
-
-            if (is_inline_fn(fn.getName().str())) {
-                fn.addFnAttr(llvm::Attribute::AlwaysInline);
-                continue;
-            }
-
-            if (is_noinline_fn(fn.getName().str())) {
-                fn.deleteBody();
-                continue;
-            }
-
-            const int inst_count = fn.getInstructionCount();
-            if (inst_count >= shadingsys().optix_no_inline_thresh()) {
-                fn.deleteBody();
-            } else if (inst_count <= shadingsys().optix_force_inline_thresh()) {
-                fn.addFnAttr(llvm::Attribute::AlwaysInline);
-            }
-        }
-
-#ifndef OSL_CUDA_NO_FTZ
-        for (llvm::Function& fn : *ll.module()) {
-            fn.addFnAttr("nvptx-f32ftz", "true");
-            fn.addFnAttr("denormal-fp-math", "preserve-sign,preserve-sign");
-            fn.addFnAttr("denormal-fp-math-f32",
-                         "preserve-sign,preserve-sign");
-        }
+#if OSL_USE_OPTIX
+    if (use_optix()) {
+        // Set some extra LLVM Function attributes before optimizing the Module.
+        prepare_module_for_cuda_jit();
+    }
 #endif
 
+    // Optimize the LLVM IR unless it's a do-nothing group.
+    if (!group().does_nothing()) {
         ll.do_optimize();
+    }
 
+#if OSL_USE_OPTIX
+    if (use_optix()) {
         // Drop everything but the init and group entry functions and generated
         // group functions. The definitions for the non-inlined library
         // functions are supplied via a separate shadeops PTX module.
@@ -2015,6 +2046,7 @@ BackendLLVM::run()
             }
         }
     }
+#endif
 
     m_stat_llvm_opt_time += timer.lap();
 

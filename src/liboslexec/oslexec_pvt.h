@@ -734,6 +734,8 @@ public:
     /// Attributes to control optimization for OptiX/CUDA
     bool optix_no_inline() const { return m_optix_no_inline; }
     bool optix_no_inline_layer_funcs() const { return m_optix_no_inline_layer_funcs; }
+    bool optix_merge_layer_funcs() const { return m_optix_merge_layer_funcs; }
+    bool optix_no_inline_rendlib() const { return m_optix_no_inline_rendlib; }
     int optix_no_inline_thresh() const { return m_optix_no_inline_thresh; }
     int optix_force_inline_thresh() const { return m_optix_force_inline_thresh; }
 
@@ -975,6 +977,8 @@ private:
     /// Experimental attributes to help tuning OptiX optimization passes
     bool m_optix_no_inline;  ///< Disable function inlining
     bool m_optix_no_inline_layer_funcs;  ///< Disable inlining for group layer funcs
+    bool m_optix_merge_layer_funcs;  ///< Merge layer functions that have only one caller
+    bool m_optix_no_inline_rendlib;  ///< Disable inlining the rendlib functions
     int m_optix_no_inline_thresh;  ///< Disable inlining for functions larger than the threshold
     int m_optix_force_inline_thresh;  ///< Force inling for functions smaller than the threshold
 

@@ -1828,17 +1828,6 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
                            : llvm::TargetIRAnalysis()));
         fpm.add(createTargetTransformInfoWrapperPass(
           target_machine  ? target_machine->getTargetIRAnalysis() : llvm::TargetIRAnalysis()));
-    } else if (target_isa() == TargetISA::NVPTX) {
-        target_machine = nvptx_target_machine();
-        llvm::Triple ModuleTriple(module()->getTargetTriple());
-        llvm::TargetLibraryInfoImpl TLII(ModuleTriple);
-        mpm.add(new llvm::TargetLibraryInfoWrapperPass(TLII));
-        mpm.add(createTargetTransformInfoWrapperPass(
-            target_machine ? target_machine->getTargetIRAnalysis()
-                           : llvm::TargetIRAnalysis()));
-        fpm.add(createTargetTransformInfoWrapperPass(
-            target_machine ? target_machine->getTargetIRAnalysis()
-                           : llvm::TargetIRAnalysis()));
     }
 
     // llvm_optimize 0-3 corresponds to the same set of optimizations

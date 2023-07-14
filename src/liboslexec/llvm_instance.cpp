@@ -1688,13 +1688,29 @@ BackendLLVM::run()
 
         } else {
 #    ifdef OSL_LLVM_CUDA_BITCODE
-            ll.module(
-                ll.module_from_bitcode((char*)shadeops_cuda_llvm_compiled_ops_block,
-                                       shadeops_cuda_llvm_compiled_ops_size,
-                                       "llvm_ops", &err));
+            // Create a new module, and then link in the shadeops and rendlib modules.
+            ll.module(ll.new_module("llvm_ops"));
+
+            llvm::Module* shadeops_module = ll.module_from_bitcode(
+                (char*)shadeops_cuda_llvm_compiled_ops_block,
+                shadeops_cuda_llvm_compiled_ops_size, "llvm_ops", &err);
+
             if (err.length())
                 shadingcontext()->errorfmt(
                     "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
+                    err);
+
+            shadeops_module->setTargetTriple("nvptx64-nvidia-cuda");
+            shadeops_module->setDataLayout(
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+
+            std::unique_ptr<llvm::Module> shadeops_ptr(shadeops_module);
+            llvm::Linker::linkModules(*ll.module(), std::move(shadeops_ptr),
+                                      llvm::Linker::Flags::None);
+
+            if (err.length())
+                shadingcontext()->errorfmt(
+                    "llvm::parseBitcodeFile returned '{}' for cuda rend_lib\n",
                     err);
 
             // The renderer may provide additional shadeops bitcode for renderer-specific
@@ -1711,6 +1727,14 @@ BackendLLVM::run()
                         "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
                         err);
 
+                rend_lib_module->setTargetTriple("nvptx64-nvidia-cuda");
+                rend_lib_module->setDataLayout(
+                    "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+
+                for (llvm::Function& fn : *rend_lib_module) {
+                    fn.addFnAttr("osl-rendlib-function", "true");
+                }
+
                 std::unique_ptr<llvm::Module> rend_lib_ptr(rend_lib_module);
                 llvm::Linker::linkModules(*ll.module(), std::move(rend_lib_ptr),
                                           llvm::Linker::Flags::OverrideFromSrc);
@@ -1723,7 +1747,8 @@ BackendLLVM::run()
             // clear. So we must set them to the expected values.
             // See: https://llvm.org/docs/NVPTXUsage.html
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
-            ll.module()->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+            ll.module()->setDataLayout(
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
 
             // Tag each function as an OSL library function to help with
             // inlining and optimization after codegen.
@@ -1922,18 +1947,29 @@ BackendLLVM::run()
 
             if (shadingsys().optix_no_inline()) {
                 fn.addFnAttr(llvm::Attribute::NoInline);
+
+                // Delete the bodies of library functions which will never be inlined.
+                // This reduces the size of the module prior to opt/JIT.
+                if (fn.hasFnAttribute("osl-lib-function")) {
+                    fn.deleteBody();
+                }
                 continue;
             }
 
             if (shadingsys().optix_no_inline_layer_funcs()
                 && !fn.hasFnAttribute("osl-lib-function")) {
-                fn.addFnAttr(llvm::Attribute::NoInline);
+                fn.deleteBody();
+                continue;
+            }
+
+            // Only apply the inline thresholds to library functions.
+            if (!fn.hasFnAttribute("osl-lib-function")) {
                 continue;
             }
 
             const int inst_count = fn.getInstructionCount();
             if (inst_count >= shadingsys().optix_no_inline_thresh()) {
-                fn.addFnAttr(llvm::Attribute::NoInline);
+                fn.deleteBody();
             } else if (inst_count <= shadingsys().optix_force_inline_thresh()) {
                 fn.addFnAttr(llvm::Attribute::AlwaysInline);
             }
@@ -1955,7 +1991,6 @@ BackendLLVM::run()
         // functions are supplied via a separate shadeops PTX module.
         for (llvm::Function& fn : *ll.module()) {
             if (fn.hasFnAttribute("osl-lib-function")) {
-                fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
                 fn.deleteBody();
             }
         }

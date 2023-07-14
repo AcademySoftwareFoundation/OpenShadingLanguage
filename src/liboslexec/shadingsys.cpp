@@ -4254,6 +4254,38 @@ ShadingSystemImpl::archive_shadergroup(ShaderGroup& group, string_view filename)
 
 
 void
+ShadingSystemImpl::register_inline_function(ustring name)
+{
+    m_inline_functions.insert(name);
+}
+
+
+
+void
+ShadingSystemImpl::unregister_inline_function(ustring name)
+{
+    m_inline_functions.erase(name);
+}
+
+
+
+void
+ShadingSystemImpl::register_noinline_function(ustring name)
+{
+    m_noinline_functions.insert(name);
+}
+
+
+
+void
+ShadingSystemImpl::unregister_noinline_function(ustring name)
+{
+    m_noinline_functions.erase(name);
+}
+
+
+
+void
 ClosureRegistry::register_closure(string_view name, int id,
                                   const ClosureParam* params,
                                   PrepareClosureFunc prepare,
@@ -4416,6 +4448,38 @@ OSL::ShadingSystem::oslquery(const ShaderGroup& group, int layernum)
 OSL::OSLQuery::OSLQuery(const ShaderGroup* group, int layernum)
 {
     init(group, layernum);
+}
+
+
+
+void
+ShadingSystem::register_inline_function(ustring name)
+{
+    return m_impl->register_inline_function(name);
+}
+
+
+
+void
+ShadingSystem::unregister_inline_function(ustring name)
+{
+    return m_impl->unregister_inline_function(name);
+}
+
+
+
+void
+ShadingSystem::register_noinline_function(ustring name)
+{
+    return m_impl->register_noinline_function(name);
+}
+
+
+
+void
+ShadingSystem::unregister_noinline_function(ustring name)
+{
+    return m_impl->unregister_noinline_function(name);
 }
 
 

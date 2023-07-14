@@ -821,6 +821,12 @@ public:
             return nullptr;
     }
 
+    void register_inline_function(ustring name);
+    void unregister_inline_function(ustring name);
+    void register_noinline_function(ustring name);
+    void unregister_noinline_function(ustring name);
+
+
 private:
     void printstats() const;
 
@@ -1067,6 +1073,9 @@ private:
     // N.B. group_profile_times is protected by m_stat_mutex.
 
     LLVM_Util::ScopedJitMemoryUser m_llvm_jit_memory_user;
+
+    std::unordered_set<ustring> m_inline_functions;
+    std::unordered_set<ustring> m_noinline_functions;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;

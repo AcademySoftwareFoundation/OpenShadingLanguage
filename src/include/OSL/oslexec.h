@@ -1110,6 +1110,15 @@ public:
     static bool convert_value(void* dst, TypeDesc dsttype, const void* src,
                               TypeDesc srctype);
 
+    /// Tell the ShadingSystem if there are functions that should or should not
+    /// be inlined during LLVM optimization.  Functions that are not registered
+    /// will not receive any special treatment, and may or may not be inlined.
+    void register_inline_function(ustring name);
+    void unregister_inline_function(ustring name);
+    void register_noinline_function(ustring name);
+    void unregister_noinline_function(ustring name);
+
+
 private:
     pvt::ShadingSystemImpl* m_impl;
 };

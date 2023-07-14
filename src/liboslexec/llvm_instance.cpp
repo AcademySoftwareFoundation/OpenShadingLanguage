@@ -1934,6 +1934,16 @@ BackendLLVM::run()
             }
         }
 
+        auto is_inline_fn = [&](const std::string& name) {
+            return shadingsys().m_inline_functions.find(ustring(name))
+                != shadingsys().m_inline_functions.end();
+        };
+
+        auto is_noinline_fn = [&](const std::string& name) {
+            return shadingsys().m_noinline_functions.find(ustring(name))
+                != shadingsys().m_noinline_functions.end();
+        };
+
         // Set the inlining behavior for each function in the module, based on
         // the shadingsys attributes. The inlining attributes are not modified
         // by default.
@@ -1964,6 +1974,16 @@ BackendLLVM::run()
 
             // Only apply the inline thresholds to library functions.
             if (!fn.hasFnAttribute("osl-lib-function")) {
+                continue;
+            }
+
+            if (is_inline_fn(fn.getName().str())) {
+                fn.addFnAttr(llvm::Attribute::AlwaysInline);
+                continue;
+            }
+
+            if (is_noinline_fn(fn.getName().str())) {
+                fn.deleteBody();
                 continue;
             }
 

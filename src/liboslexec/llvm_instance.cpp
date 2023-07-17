@@ -1636,9 +1636,9 @@ BackendLLVM::prepare_module_for_cuda_jit()
             || fn.getName().startswith("llvm."))
             continue;
 
-        // Merge layer functions which have one caller
+        // Merge layer functions which are only called from one place
         if (merge_layer_funcs && !fn.hasFnAttribute("osl-lib-function")
-            && fn.hasOneUser()) {
+            && fn.hasOneUse()) {
             fn.addFnAttr(llvm::Attribute::AlwaysInline);
             continue;
         }

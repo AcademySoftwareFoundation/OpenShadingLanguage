@@ -60,6 +60,8 @@ static bool use_optix              = OIIO::Strutil::stoi(
                  OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
 static bool optix_no_inline             = false;
 static bool optix_no_inline_layer_funcs = false;
+static bool optix_no_merge_layer_funcs  = false;
+static bool optix_no_inline_rendlib     = false;
 static int optix_no_inline_thresh       = 100000;
 static int optix_force_inline_thresh    = 0;
 
@@ -94,6 +96,8 @@ set_shadingsys_options()
     // passes and may be removed or changed in the future.
     shadingsys->attribute("optix_no_inline", optix_no_inline);
     shadingsys->attribute("optix_no_inline_layer_funcs", optix_no_inline_layer_funcs);
+    shadingsys->attribute("optix_merge_layer_funcs", !optix_no_merge_layer_funcs);
+    shadingsys->attribute("optix_no_inline_rendlib", optix_no_inline_rendlib);
     shadingsys->attribute("optix_no_inline_thresh", optix_no_inline_thresh);
     shadingsys->attribute("optix_force_inline_thresh", optix_force_inline_thresh);
 
@@ -180,6 +184,10 @@ getargs(int argc, const char* argv[])
       .help("Disable function inlining when compiling for OptiX");
     ap.arg("--optix_no_inline_layer_funcs", &optix_no_inline_layer_funcs)
       .help("Disable inlining the group layer functions when compiling for OptiX");
+    ap.arg("--optix_no_merge_layer_funcs", &optix_no_merge_layer_funcs)
+      .help("Disable merging group layer functions with only one caller when compiling for OptiX");
+    ap.arg("--optix_no_inline_rendlib", &optix_no_inline_rendlib)
+      .help("Disable inlining the rendlib functions when compiling for OptiX");
     ap.arg("--optix_no_inline_thresh %d:THRESH", &optix_no_inline_thresh)
       .help("Don't inline functions larger than the threshold when compiling for OptiX");
     ap.arg("--optix_force_inline_thresh %d:THRESH", &optix_force_inline_thresh)

@@ -62,6 +62,7 @@ static bool optix_no_inline             = false;
 static bool optix_no_inline_layer_funcs = false;
 static bool optix_no_merge_layer_funcs  = false;
 static bool optix_no_inline_rend_lib    = false;
+static bool optix_no_rend_lib_bitcode   = false;
 static int optix_no_inline_thresh       = 100000;
 static int optix_force_inline_thresh    = 0;
 
@@ -188,6 +189,8 @@ getargs(int argc, const char* argv[])
       .help("Disable merging group layer functions with only one caller when compiling for OptiX");
     ap.arg("--optix_no_inline_rend_lib", &optix_no_inline_rend_lib)
       .help("Disable inlining the rend_lib functions when compiling for OptiX");
+    ap.arg("--optix_no_rend_lib_bitcode", &optix_no_rend_lib_bitcode)
+      .help("Don't pass LLVM bitcode for the rend_lib functions to the ShadingSystem");
     ap.arg("--optix_no_inline_thresh %d:THRESH", &optix_no_inline_thresh)
       .help("Don't inline functions larger than the threshold when compiling for OptiX");
     ap.arg("--optix_force_inline_thresh %d:THRESH", &optix_force_inline_thresh)
@@ -271,12 +274,16 @@ main(int argc, const char* argv[])
     // Other renderer and global options
     if (debug1 || verbose)
         rend->errhandler().verbosity(ErrorHandler::VERBOSE);
-    rend->attribute("saveptx", (int)saveptx);
     rend->attribute("max_bounces", max_bounces);
     rend->attribute("rr_depth", rr_depth);
     rend->attribute("aa", aa);
     rend->attribute("show_albedo_scale", show_albedo_scale);
     OIIO::attribute("threads", num_threads);
+
+#if OSL_USE_OPTIX
+    rend->attribute("saveptx", (int)saveptx);
+    rend->attribute("no_rend_lib_bitcode", (int)optix_no_rend_lib_bitcode);
+#endif
 
     // Create a new shading system.  We pass it the RendererServices
     // object that services callbacks from the shading system, the

@@ -1114,7 +1114,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_optix_no_inline(false)
     , m_optix_no_inline_layer_funcs(false)
     , m_optix_merge_layer_funcs(true)
-    , m_optix_no_inline_rendlib(false)
+    , m_optix_no_inline_rend_lib(false)
     , m_optix_no_inline_thresh(100000)
     , m_optix_force_inline_thresh(0)
     , m_colorspace("Rec709")
@@ -1641,7 +1641,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("optix_no_inline", int, m_optix_no_inline);
     ATTR_SET("optix_no_inline_layer_funcs", int, m_optix_no_inline_layer_funcs);
     ATTR_SET("optix_merge_layer_funcs", int, m_optix_merge_layer_funcs);
-    ATTR_SET("optix_no_inline_rendlib", int, m_optix_no_inline_rendlib);
+    ATTR_SET("optix_no_inline_rend_lib", int, m_optix_no_inline_rend_lib);
     ATTR_SET("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
     ATTR_SET("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
     ATTR_SET_STRING("commonspace",
@@ -1828,7 +1828,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("optix_no_inline", int, m_optix_no_inline);
     ATTR_DECODE("optix_no_inline_layer_funcs", int, m_optix_no_inline_layer_funcs);
     ATTR_DECODE("optix_merge_layer_funcs", int, m_optix_merge_layer_funcs);
-    ATTR_DECODE("optix_no_inline_rendlib", int, m_optix_no_inline_rendlib);
+    ATTR_DECODE("optix_no_inline_rend_lib", int, m_optix_no_inline_rend_lib);
     ATTR_DECODE("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
     ATTR_DECODE("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
 
@@ -2420,7 +2420,7 @@ ShadingSystemImpl::getstats(int level) const
     BOOLOPT(optix_no_inline);
     BOOLOPT(optix_no_inline_layer_funcs);
     BOOLOPT(optix_merge_layer_funcs);
-    BOOLOPT(optix_no_inline_rendlib);
+    BOOLOPT(optix_no_inline_rend_lib);
     INTOPT(optix_no_inline_thresh);
     INTOPT(optix_force_inline_thresh);
     STROPT(debug_groupname);

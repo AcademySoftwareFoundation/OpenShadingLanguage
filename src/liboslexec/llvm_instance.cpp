@@ -1606,7 +1606,7 @@ BackendLLVM::prepare_module_for_cuda_jit()
     const bool no_inline_layer_funcs
         = shadingsys().optix_no_inline_layer_funcs();
     const bool merge_layer_funcs  = shadingsys().optix_merge_layer_funcs();
-    const bool no_inline_rendlib  = shadingsys().optix_no_inline_rendlib();
+    const bool no_inline_rend_lib = shadingsys().optix_no_inline_rend_lib();
     const int no_inline_thresh    = shadingsys().optix_no_inline_thresh();
     const int force_inline_thresh = shadingsys().optix_force_inline_thresh();
 
@@ -1654,7 +1654,7 @@ BackendLLVM::prepare_module_for_cuda_jit()
             continue;
         }
 
-        if (no_inline_rendlib && fn.hasFnAttribute("osl-rendlib-function")) {
+        if (no_inline_rend_lib && fn.hasFnAttribute("osl-rend_lib-function")) {
             fn.deleteBody();
             continue;
         }
@@ -1796,7 +1796,7 @@ BackendLLVM::run()
 
         } else {
 #    ifdef OSL_LLVM_CUDA_BITCODE
-            // Create a new module, and then link in the shadeops and rendlib modules.
+            // Create a new module, and then link in the shadeops and rend_lib modules.
             ll.module(ll.new_module("llvm_ops"));
 
             llvm::Module* shadeops_module = ll.module_from_bitcode(
@@ -1840,7 +1840,7 @@ BackendLLVM::run()
                     "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
 
                 for (llvm::Function& fn : *rend_lib_module) {
-                    fn.addFnAttr("osl-rendlib-function", "true");
+                    fn.addFnAttr("osl-rend_lib-function", "true");
                 }
 
                 std::unique_ptr<llvm::Module> rend_lib_ptr(rend_lib_module);

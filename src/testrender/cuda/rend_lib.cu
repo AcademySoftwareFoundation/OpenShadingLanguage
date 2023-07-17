@@ -434,22 +434,6 @@ osl_range_check_err(int indexvalue, int length, OSL::ustring_pod symname,
 
 
 
-__device__ int
-osl_range_check(int indexvalue, int length, OSL::ustring_pod symname, void* sg,
-                OSL::ustring_pod sourcefile, int sourceline,
-                OSL::ustring_pod groupname, int layer,
-                OSL::ustring_pod layername, OSL::ustring_pod shadername)
-{
-    if (indexvalue < 0 || indexvalue >= length) {
-        indexvalue = osl_range_check_err(indexvalue, length, symname, sg,
-                                         sourcefile, sourceline, groupname,
-                                         layer, layername, shadername);
-    }
-    return indexvalue;
-}
-
-
-
 #define MAT(m) (*(OSL::Matrix44*)__builtin_assume_aligned(m,alignof(float)))
 
 __device__ int

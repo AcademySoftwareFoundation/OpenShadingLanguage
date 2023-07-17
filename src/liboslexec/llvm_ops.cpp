@@ -980,7 +980,6 @@ osl_raytype_bit(OpaqueExecContextPtr ec, int bit)
 }
 
 
-#ifndef __CUDA_ARCH__
 // extern declaration
 OSL_SHADEOP_NOINLINE int
 osl_range_check_err(int indexvalue, int length, ustringhash_pod symname,
@@ -1003,7 +1002,6 @@ osl_range_check(int indexvalue, int length, ustringhash_pod symname,
     }
     return indexvalue;
 }
-#endif
 
 
 #ifdef __CUDA_ARCH__

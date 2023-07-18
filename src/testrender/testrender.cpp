@@ -96,11 +96,14 @@ set_shadingsys_options()
     // These attributes have been added to aid tuning the GPU optimization
     // passes and may be removed or changed in the future.
     shadingsys->attribute("optix_no_inline", optix_no_inline);
-    shadingsys->attribute("optix_no_inline_layer_funcs", optix_no_inline_layer_funcs);
-    shadingsys->attribute("optix_merge_layer_funcs", !optix_no_merge_layer_funcs);
-    shadingsys->attribute("optix_no_inline_rend_lib",optix_no_inline_rend_lib);
+    shadingsys->attribute("optix_no_inline_layer_funcs",
+                          optix_no_inline_layer_funcs);
+    shadingsys->attribute("optix_merge_layer_funcs",
+                          !optix_no_merge_layer_funcs);
+    shadingsys->attribute("optix_no_inline_rend_lib", optix_no_inline_rend_lib);
     shadingsys->attribute("optix_no_inline_thresh", optix_no_inline_thresh);
-    shadingsys->attribute("optix_force_inline_thresh", optix_force_inline_thresh);
+    shadingsys->attribute("optix_force_inline_thresh",
+                          optix_force_inline_thresh);
 
     shadingsys->attribute("profile", int(profile));
     shadingsys->attribute("debug_nan", debugnan);

@@ -25,7 +25,7 @@ __device__ uint64_t test_str_2                 = 0;
 __device__ uint64_t num_named_xforms           = 0;
 __device__ CUdeviceptr xform_name_buffer       = 0;
 __device__ CUdeviceptr xform_buffer            = 0;
-}
+}  // namespace pvt
 OSL_NAMESPACE_EXIT
 
 

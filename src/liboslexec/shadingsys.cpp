@@ -1826,7 +1826,8 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("opt_warnings", int, m_opt_warnings);
     ATTR_DECODE("gpu_opt_error", int, m_gpu_opt_error);
     ATTR_DECODE("optix_no_inline", int, m_optix_no_inline);
-    ATTR_DECODE("optix_no_inline_layer_funcs", int, m_optix_no_inline_layer_funcs);
+    ATTR_DECODE("optix_no_inline_layer_funcs", int,
+                m_optix_no_inline_layer_funcs);
     ATTR_DECODE("optix_merge_layer_funcs", int, m_optix_merge_layer_funcs);
     ATTR_DECODE("optix_no_inline_rend_lib", int, m_optix_no_inline_rend_lib);
     ATTR_DECODE("optix_no_inline_thresh", int, m_optix_no_inline_thresh);

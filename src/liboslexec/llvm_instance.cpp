@@ -23,7 +23,7 @@
 #include "backendllvm.h"
 
 #if OSL_USE_OPTIX
-#include <llvm/Linker/Linker.h>
+#    include <llvm/Linker/Linker.h>
 #endif
 
 // Create external declarations for all built-in funcs we may call from LLVM
@@ -641,7 +641,8 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             // Handle init ops.
             build_llvm_code(sym.initbegin(), sym.initend());
 #if OSL_USE_OPTIX
-        } else if (use_optix() && !sym.typespec().is_closure() && !sym.lockgeom()) {
+        } else if (use_optix() && !sym.typespec().is_closure()
+                   && !sym.lockgeom()) {
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
             llvm::Value* cuda_var = getOrAllocateCUDAVariable(sym);
@@ -1881,7 +1882,8 @@ BackendLLVM::run()
         if (use_optix()) {
             ll.set_target_isa(TargetISA::NVPTX);
         } else if (!ll.make_jit_execengine(
-                       &err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
+                       &err,
+                       ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
                        shadingsys().llvm_debugging_symbols(),
                        shadingsys().llvm_profiling_events())) {
             shadingcontext()->errorfmt("Failed to create engine: {}\n", err);

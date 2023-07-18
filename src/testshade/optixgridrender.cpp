@@ -438,7 +438,8 @@ OptixGridRenderer::make_optix_materials()
                              &shadeops_ptx_size);
 
     if (shadeops_ptx == nullptr || shadeops_ptx_size == 0) {
-        errhandler().severefmt("Could not retrieve PTX for the shadeops library");
+        errhandler().severefmt(
+            "Could not retrieve PTX for the shadeops library");
         return false;
     }
 
@@ -446,11 +447,11 @@ OptixGridRenderer::make_optix_materials()
     OptixModule shadeops_module;
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
-                                        &pipeline_compile_options,
-                                        shadeops_ptx, shadeops_ptx_size,
-                                        msg_log, &sizeof_msg_log,
-                                        &shadeops_module),
-                    fmtformat("Creating module for shadeops library{}", msg_log));
+                                        &pipeline_compile_options, shadeops_ptx,
+                                        shadeops_ptx_size, msg_log,
+                                        &sizeof_msg_log, &shadeops_module),
+                    fmtformat("Creating module for shadeops library{}",
+                              msg_log));
 
     // Record it so we can destroy it later
     modules.push_back(shadeops_module);
@@ -625,12 +626,9 @@ OptixGridRenderer::make_optix_materials()
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
-        shadeops_group,
-        rend_lib_group,
-        raygen_group,
-        miss_group,
-        hitgroup_group,
-        setglobals_raygen_group,
+        shadeops_group,        rend_lib_group,
+        raygen_group,          miss_group,
+        hitgroup_group,        setglobals_raygen_group,
         setglobals_miss_group,
     };
     if (m_fused_callable) {

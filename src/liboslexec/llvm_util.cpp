@@ -1827,7 +1827,8 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
             target_machine ? target_machine->getTargetIRAnalysis()
                            : llvm::TargetIRAnalysis()));
         fpm.add(createTargetTransformInfoWrapperPass(
-          target_machine  ? target_machine->getTargetIRAnalysis() : llvm::TargetIRAnalysis()));
+            target_machine ? target_machine->getTargetIRAnalysis()
+                           : llvm::TargetIRAnalysis()));
     }
 
     // llvm_optimize 0-3 corresponds to the same set of optimizations
@@ -5932,11 +5933,11 @@ LLVM_Util::ptx_compile_group(llvm::Module*, const std::string& name,
     llvm::raw_svector_ostream assembly_stream(assembly);
 
     // TODO: Make sure rounding modes, etc., are set correctly
-#if OSL_LLVM_VERSION >= 100
+#    if OSL_LLVM_VERSION >= 100
     target_machine->addPassesToEmitFile(mpm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::CGFT_AssemblyFile);
-#else
+#    else
     target_machine->addPassesToEmitFile(mpm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::TargetMachine::CGFT_AssemblyFile);

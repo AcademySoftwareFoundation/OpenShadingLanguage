@@ -143,7 +143,8 @@ osl_allocate_weighted_closure_component(void* sg_, int id, int size,
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
-    const OSL::Color3* wc = (const OSL::Color3*) __builtin_assume_aligned(w,alignof(float));
+    const OSL::Color3* wc
+        = (const OSL::Color3*)__builtin_assume_aligned(w, alignof(float));
 
     if (wc->x == 0.0f && wc->y == 0.0f && wc->z == 0.0f) {
         return NULL;
@@ -166,7 +167,8 @@ __device__ void*
 osl_mul_closure_color(void* sg_, void* a, const void* w)
 {
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
-    const OSL::Color3* wc = (const OSL::Color3*) __builtin_assume_aligned(w,alignof(float));
+    const OSL::Color3* wc
+        = (const OSL::Color3*)__builtin_assume_aligned(w, alignof(float));
 
     if (a == NULL) {
         return NULL;
@@ -194,7 +196,7 @@ osl_mul_closure_color(void* sg_, void* a, const void* w)
 __device__ void*
 osl_mul_closure_float(void* sg_, void* a, float w)
 {
-    a = __builtin_assume_aligned(a,alignof(float));
+    a = __builtin_assume_aligned(a, alignof(float));
 
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
@@ -210,7 +212,8 @@ osl_mul_closure_float(void* sg_, void* a, float w)
     void* ret = ((char*)sg_ptr->renderstate)
                 + alignment_offset_calc(sg_ptr->renderstate,
                                         alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_mul_float_allot(ret, w, (OSL::ClosureColor*)a);
+    sg_ptr->renderstate = closure_mul_float_allot(ret, w,
+                                                  (OSL::ClosureColor*)a);
 
     return ret;
 }
@@ -220,8 +223,8 @@ osl_mul_closure_float(void* sg_, void* a, float w)
 __device__ void*
 osl_add_closure_closure(void* sg_, void* a, void* b)
 {
-    a = __builtin_assume_aligned(a,alignof(float));
-    b = __builtin_assume_aligned(b,alignof(float));
+    a = __builtin_assume_aligned(a, alignof(float));
+    b = __builtin_assume_aligned(b, alignof(float));
 
     ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
 
@@ -237,7 +240,8 @@ osl_add_closure_closure(void* sg_, void* a, void* b)
     void* ret = ((char*)sg_ptr->renderstate)
                 + alignment_offset_calc(sg_ptr->renderstate,
                                         alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_add_allot(ret, (OSL::ClosureColor*)a, (OSL::ClosureColor*)b);
+    sg_ptr->renderstate = closure_add_allot(ret, (OSL::ClosureColor*)a,
+                                            (OSL::ClosureColor*)b);
 
     return ret;
 }
@@ -289,7 +293,8 @@ osl_bind_interpolated_param(void* sg_, const char* name, long long type,
         *userdata_initialized = status = 1 + ok;
     }
     if (status == 2) {
-        MEMCPY_ALIGNED(symbol_data, userdata_data, symbol_data_size, alignof(float));
+        MEMCPY_ALIGNED(symbol_data, userdata_data, symbol_data_size,
+                       alignof(float));
         return 1;
     }
     return 0;
@@ -434,12 +439,12 @@ osl_range_check_err(int indexvalue, int length, OSL::ustring_pod symname,
 
 
 
-#define MAT(m) (*(OSL::Matrix44*)__builtin_assume_aligned(m,alignof(float)))
+#define MAT(m) (*(OSL::Matrix44*)__builtin_assume_aligned(m, alignof(float)))
 
 __device__ int
 osl_get_matrix(void* sg_, void* r, const char* from)
 {
-    r = __builtin_assume_aligned(r,alignof(float));
+    r                 = __builtin_assume_aligned(r, alignof(float));
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     if (HDSTR(from) == STRING_PARAMS(common)) {
         MAT(r).makeIdentity();
@@ -484,7 +489,7 @@ osl_get_matrix(void* sg_, void* r, const char* from)
 __device__ int
 osl_get_inverse_matrix(void* sg_, void* r, const char* to)
 {
-    r = __builtin_assume_aligned(r,alignof(float));
+    r                 = __builtin_assume_aligned(r, alignof(float));
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     if (HDSTR(to) == STRING_PARAMS(common)) {
         MAT(r).makeIdentity();

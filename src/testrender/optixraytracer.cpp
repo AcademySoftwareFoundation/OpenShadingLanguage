@@ -376,7 +376,8 @@ OptixRaytracer::make_optix_materials()
                              &shadeops_ptx_size);
 
     if (shadeops_ptx == nullptr || shadeops_ptx_size == 0) {
-        errhandler().severefmt("Could not retrieve PTX for the shadeops library");
+        errhandler().severefmt(
+            "Could not retrieve PTX for the shadeops library");
         return false;
     }
 
@@ -384,11 +385,11 @@ OptixRaytracer::make_optix_materials()
     OptixModule shadeops_module;
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
-                                        &pipeline_compile_options,
-                                        shadeops_ptx, shadeops_ptx_size,
-                                        msg_log, &sizeof_msg_log,
-                                        &shadeops_module),
-                    fmtformat("Creating module for shadeops library: {}", msg_log));
+                                        &pipeline_compile_options, shadeops_ptx,
+                                        shadeops_ptx_size, msg_log,
+                                        &sizeof_msg_log, &shadeops_module),
+                    fmtformat("Creating module for shadeops library: {}",
+                              msg_log));
     modules.push_back(shadeops_module);
 
     OptixProgramGroupOptions program_options = {};
@@ -452,20 +453,22 @@ OptixRaytracer::make_optix_materials()
     create_optix_pg(&quad_hitgroup_desc, 1, &program_options, &quad_hitgroup);
 
     // Direct-callable -- renderer-specific support functions for OSL on the device
-    OptixProgramGroupDesc rend_lib_desc         = {};
-    rend_lib_desc.kind                          = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    rend_lib_desc.callables.moduleDC            = rend_lib_module;
-    rend_lib_desc.callables.entryFunctionNameDC = "__direct_callable__dummy_rend_lib";
+    OptixProgramGroupDesc rend_lib_desc = {};
+    rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    rend_lib_desc.callables.moduleDC    = rend_lib_module;
+    rend_lib_desc.callables.entryFunctionNameDC
+        = "__direct_callable__dummy_rend_lib";
     rend_lib_desc.callables.moduleCC            = 0;
     rend_lib_desc.callables.entryFunctionNameCC = nullptr;
     OptixProgramGroup rend_lib_group;
     create_optix_pg(&rend_lib_desc, 1, &program_options, &rend_lib_group);
 
     // Direct-callable -- built-in support functions for OSL on the device
-    OptixProgramGroupDesc shadeops_desc         = {};
-    shadeops_desc.kind                          = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    shadeops_desc.callables.moduleDC            = shadeops_module;
-    shadeops_desc.callables.entryFunctionNameDC = "__direct_callable__dummy_shadeops";
+    OptixProgramGroupDesc shadeops_desc = {};
+    shadeops_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    shadeops_desc.callables.moduleDC    = shadeops_module;
+    shadeops_desc.callables.entryFunctionNameDC
+        = "__direct_callable__dummy_shadeops";
     shadeops_desc.callables.moduleCC            = 0;
     shadeops_desc.callables.entryFunctionNameCC = nullptr;
     OptixProgramGroup shadeops_group;
@@ -589,7 +592,7 @@ OptixRaytracer::make_optix_materials()
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth = 1;
 #if (OPTIX_VERSION < 70700)
-    pipeline_link_options.debugLevel    = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+    pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
 #endif
 #if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;

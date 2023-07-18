@@ -243,15 +243,9 @@ struct AttributeNeeded {
     }
 };
 
-// Prefix for OSL shade op declarations.
-// For non-CUDA, make them local visibility, but "C" linkage (no C++ name mangling).
-// For CUDA, just set "C" linkage.
-#ifndef __CUDA_ARCH__
-#    define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
-#else
-#    define OSL_SHADEOP extern "C"
-#endif
-
+// Prefix for OSL shade op declarations. Make them local visibility, but
+// "C" linkage (no C++ name mangling).
+#define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
 
 
 // Handy re-casting macros

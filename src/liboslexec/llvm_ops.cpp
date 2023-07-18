@@ -122,7 +122,7 @@ using ustring_pod = const char*;
 #ifndef OSL_SHADEOP
 #    ifdef __CUDACC__
 #        define OSL_SHADEOP \
-            extern "C" __device__
+            extern "C" __device__ OSL_LLVM_EXPORT __attribute__((always_inline))
 #    elif defined(OSL_COMPILING_TO_BITCODE)
 #        define OSL_SHADEOP \
             extern "C" OSL_LLVM_EXPORT __attribute__((always_inline))

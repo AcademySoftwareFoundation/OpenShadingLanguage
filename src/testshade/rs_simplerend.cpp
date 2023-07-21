@@ -6,8 +6,8 @@
 #    error OSL_HOST_RS_BITCODE must be defined by your build system.
 #endif
 
-#include <OSL/rs_free_function.h>
 #include <OSL/rendererservices.h>
+#include <OSL/rs_free_function.h>
 
 #include "render_state.h"
 
@@ -187,24 +187,122 @@ rs_transform_points(OSL::ShaderGlobals* /*sg*/, OSL::StringParam /*from*/,
 }
 
 OSL_RSOP bool
-rs_get_attribute_fallback(void* _sg, const char* _object, const char* _name, long long _type, int derivatives, int index, void* result)
+rs_get_attribute_constant_int(int value, void* result)
 {
-    OSL::ShaderGlobals* sg = reinterpret_cast<OSL::ShaderGlobals*>(_sg);
-    const OSL::StringParam object = OSL::bitcast<OSL::ustringrep>(_object);
-    const OSL::StringParam name = OSL::bitcast<OSL::ustringrep>(_name);
-    const OSL::TypeDesc type = OSL::bitcast<OSL::TypeDesc>(_type);
-
-    return sg->renderer->get_array_attribute(sg, derivatives, object, type, name, index, result);
+    reinterpret_cast<int*>(result)[0] = value;
+    return true;
 }
 
 OSL_RSOP bool
-rs_get_attribute_constant_float(float value, int derivatives, void* result)
+rs_get_attribute_constant_string(OSL::StringParam value, void* result)
+{
+    reinterpret_cast<OSL::StringParam*>(result)[0] = value;
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_float(float value, bool derivatives, void* result)
 {
     reinterpret_cast<float*>(result)[0] = value;
-    if (derivatives)
-    {
-      reinterpret_cast<float*>(result)[1] = 0.f;
-      reinterpret_cast<float*>(result)[2] = 0.f;
+    if (derivatives) {
+        reinterpret_cast<float*>(result)[1] = 0.f;
+        reinterpret_cast<float*>(result)[2] = 0.f;
     }
     return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_int2(int value1, int value2, void* result)
+{
+    reinterpret_cast<int*>(result)[0] = value1;
+    reinterpret_cast<int*>(result)[1] = value2;
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_float2(float value1, float value2, bool derivatives,
+                                 void* result)
+{
+    reinterpret_cast<float*>(result)[0] = value1;
+    reinterpret_cast<float*>(result)[1] = value2;
+    if (derivatives) {
+        reinterpret_cast<float*>(result)[3] = 0.f;
+        reinterpret_cast<float*>(result)[4] = 0.f;
+        reinterpret_cast<float*>(result)[5] = 0.f;
+        reinterpret_cast<float*>(result)[6] = 0.f;
+    }
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_float4(float value1, float value2, float value3,
+                                 float value4, bool derivatives, void* result)
+{
+    reinterpret_cast<float*>(result)[0] = value1;
+    reinterpret_cast<float*>(result)[1] = value2;
+    reinterpret_cast<float*>(result)[2] = value3;
+    reinterpret_cast<float*>(result)[3] = value4;
+    if (derivatives) {
+        reinterpret_cast<float*>(result)[4]  = 0.f;
+        reinterpret_cast<float*>(result)[5]  = 0.f;
+        reinterpret_cast<float*>(result)[6]  = 0.f;
+        reinterpret_cast<float*>(result)[7]  = 0.f;
+        reinterpret_cast<float*>(result)[8]  = 0.f;
+        reinterpret_cast<float*>(result)[9]  = 0.f;
+        reinterpret_cast<float*>(result)[10] = 0.f;
+        reinterpret_cast<float*>(result)[11] = 0.f;
+    }
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute(void* _sg, const char* _object, const char* _name,
+                 long long _type, bool derivatives, int index, void* result)
+{
+    OSL::ShaderGlobals* sg        = reinterpret_cast<OSL::ShaderGlobals*>(_sg);
+    const OSL::StringParam object = OSL::bitcast<OSL::ustringrep>(_object);
+    const OSL::StringParam name   = OSL::bitcast<OSL::ustringrep>(_name);
+    const OSL::TypeDesc type      = OSL::bitcast<OSL::TypeDesc>(_type);
+
+    const RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+
+    if (name == "osl:version" && type == OSL::TypeInt)
+        return rs_get_attribute_constant_int(OSL_VERSION, result);
+    if (name == "camera:resolution"
+        && type == OSL::TypeDesc(OSL::TypeDesc::INT, OSL::TypeDesc::VEC2))
+        return rs_get_attribute_constant_int2(rs->xres, rs->yres, result);
+    if (name == "camera:projection" && type == OSL::TypeString)
+        return rs_get_attribute_constant_string(rs->projection, result);
+    if (name == "camera:pixelaspect" && type == OSL::TypeFloat)
+        return rs_get_attribute_constant_float(rs->pixelaspect, derivatives,
+                                               result);
+    if (name == "camera:screen_window" && type == OSL::TypeFloat4)
+        return rs_get_attribute_constant_float4(rs->screen_window[0],
+                                                rs->screen_window[1],
+                                                rs->screen_window[2],
+                                                rs->screen_window[3],
+                                                derivatives, result);
+    if (name == "camera:fov" && type == OSL::TypeFloat)
+        return rs_get_attribute_constant_float(rs->fov, derivatives, result);
+    if (name == "camera:clip" && type == OSL::TypeFloat2)
+        return rs_get_attribute_constant_float2(rs->hither, rs->yon,
+                                                derivatives, result);
+    if (name == "camera:clip_near" && type == OSL::TypeFloat)
+        return rs_get_attribute_constant_float(rs->hither, derivatives, result);
+    if (name == "camera:clip_far" && type == OSL::TypeFloat)
+        return rs_get_attribute_constant_float(rs->yon, derivatives, result);
+    if (name == "camera:shutter" && type == OSL::TypeFloat2)
+        return rs_get_attribute_constant_float2(rs->shutter[0], rs->shutter[1],
+                                                derivatives, result);
+    if (name == "camera:shutter_open" && type == OSL::TypeFloat)
+        return rs_get_attribute_constant_float(rs->shutter[0], derivatives,
+                                               result);
+    if (name == "camera:shutter_close" && type == OSL::TypeFloat)
+        return rs_get_attribute_constant_float(rs->shutter[1], derivatives,
+                                               result);
+
+    if (object == "options" && name == "blahblah" && type == OSL::TypeFloat)
+        return rs_get_attribute_constant_float(3.14159f, derivatives, result);
+
+    return false;
 }

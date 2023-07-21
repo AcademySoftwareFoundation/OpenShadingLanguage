@@ -31,95 +31,264 @@ typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
 typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
 
 enum class AttributeSpecBuiltinArg {
-    ShaderGlobalsPointer,  // void* (ideally ShaderGlobals*)
+    ShaderGlobalsPointer,  // void* (TODO: ideally ShaderGlobals*)
     ShadeIndex,            // int
-    Derivatives,           // int (ideally bool)
-    Type,                  // long long (ideally TypeDesc)
+    Derivatives,           // bool
+    Type,                  // long long (TODO: ideally TypeDesc)
     ArrayIndex,            // int, Always zero for non-indexed array lookups.
-    ArrayLookup,           // int (ideally bool)
-    ObjectName,            // const char* (ideally ustring)
-    AttributeName,         // const char* (ideally ustring)
+    ArrayLookup,           //bool
+    ObjectName,            // const char* (TODO: change to ustringhash)
+    AttributeName,         // const char* (TODO: change to ustringhash)
 };
 
-// TODO: replace with std::variant
+// TODO: When minimum required C++ reaches C++17, replace with std::variant.
 class AttributeSpecArg {
+public:
+    enum class Type {
+        Unspecified = 0,
+        Builtin,
+        Bool,
+        Int8,
+        Int16,
+        Int32,
+        Int64,
+        UInt8,
+        UInt16,
+        UInt32,
+        UInt64,
+        Float,
+        Double,
+        Pointer,
+        UString,
+        UStringHash,
+    };
+
+private:
     union {
         AttributeSpecBuiltinArg m_builtin;
+        bool m_bool;
+        int8_t m_int8;
+        int16_t m_int16;
         int32_t m_int32;
-        float m_float;
+        int64_t m_int64;
+        uint8_t m_uint8;
+        uint16_t m_uint16;
+        uint32_t m_uint32;
         uint64_t m_uint64;
+        float m_float;
+        double m_double;
         void* m_ptr;
+        ustring m_ustring;
+        ustringhash m_ustringhash;
     };
-    uint32_t m_type;
+    Type m_type;
 
 public:
-    AttributeSpecArg() : m_type(0) {}
-    AttributeSpecArg(AttributeSpecBuiltinArg arg) : m_builtin(arg), m_type(1) {}
-    AttributeSpecArg(int32_t arg) : m_int32(arg), m_type(2) {}
-    AttributeSpecArg(float arg) : m_float(arg), m_type(3) {}
-    AttributeSpecArg(uint64_t arg) : m_uint64(arg), m_type(4) {}
-    AttributeSpecArg(void* arg) : m_ptr(arg), m_type(5) {}
+    AttributeSpecArg() : m_type(Type::Unspecified) {}
+    AttributeSpecArg(AttributeSpecBuiltinArg arg)
+        : m_builtin(arg), m_type(Type::Builtin)
+    {
+    }
+    AttributeSpecArg(bool arg) : m_bool(arg), m_type(Type::Bool) {}
+    AttributeSpecArg(int8_t arg) : m_int8(arg), m_type(Type::Int8) {}
+    AttributeSpecArg(int16_t arg) : m_int16(arg), m_type(Type::Int16) {}
+    AttributeSpecArg(int32_t arg) : m_int32(arg), m_type(Type::Int32) {}
+    AttributeSpecArg(int64_t arg) : m_int64(arg), m_type(Type::Int64) {}
+    AttributeSpecArg(uint8_t arg) : m_uint8(arg), m_type(Type::UInt8) {}
+    AttributeSpecArg(uint16_t arg) : m_uint16(arg), m_type(Type::UInt16) {}
+    AttributeSpecArg(uint32_t arg) : m_uint32(arg), m_type(Type::UInt32) {}
+    AttributeSpecArg(uint64_t arg) : m_uint64(arg), m_type(Type::UInt64) {}
+    AttributeSpecArg(float arg) : m_float(arg), m_type(Type::Float) {}
+    AttributeSpecArg(double arg) : m_double(arg), m_type(Type::Double) {}
+    AttributeSpecArg(void* arg) : m_ptr(arg), m_type(Type::Pointer) {}
+    AttributeSpecArg(ustring arg) : m_ustring(arg), m_type(Type::UString) {}
+    AttributeSpecArg(ustringhash arg)
+        : m_ustringhash(arg), m_type(Type::UStringHash)
+    {
+    }
+
+    AttributeSpecArg(const AttributeSpecArg& other) {
+        memcpy(this, &other, sizeof(AttributeSpecArg));
+    }
+    AttributeSpecArg(AttributeSpecArg&& other) {
+        memcpy(this, &other, sizeof(AttributeSpecArg));
+    }
+
+    ~AttributeSpecArg() { }
+
+    AttributeSpecArg& operator=(const AttributeSpecArg& other) {
+        memcpy(this, &other, sizeof(AttributeSpecArg));
+        return *this;
+    }
+    AttributeSpecArg& operator=(AttributeSpecArg&& other) {
+        memcpy(this, &other, sizeof(AttributeSpecArg));
+        return *this;
+    }
+
+    Type type() const { return m_type; }
 
     template<typename T> bool is_holding() const
     {
         if (std::is_same<T, AttributeSpecBuiltinArg>::value)
-            return m_type == 1;
+            return m_type == Type::Builtin;
+        if (std::is_same<T, bool>::value)
+            return m_type == Type::Bool;
+        if (std::is_same<T, int8_t>::value)
+            return m_type == Type::Int8;
+        if (std::is_same<T, int16_t>::value)
+            return m_type == Type::Int16;
         if (std::is_same<T, int32_t>::value)
-            return m_type == 2;
-        if (std::is_same<T, float>::value)
-            return m_type == 3;
+            return m_type == Type::Int32;
+        if (std::is_same<T, int64_t>::value)
+            return m_type == Type::Int64;
+        if (std::is_same<T, uint8_t>::value)
+            return m_type == Type::UInt8;
+        if (std::is_same<T, uint16_t>::value)
+            return m_type == Type::UInt16;
+        if (std::is_same<T, uint32_t>::value)
+            return m_type == Type::UInt32;
         if (std::is_same<T, uint64_t>::value)
-            return m_type == 4;
+            return m_type == Type::UInt64;
+        if (std::is_same<T, float>::value)
+            return m_type == Type::Float;
+        if (std::is_same<T, double>::value)
+            return m_type == Type::Double;
         if (std::is_same<T, void*>::value)
-            return m_type == 5;
+            return m_type == Type::Pointer;
+        if (std::is_same<T, ustring>::value)
+            return m_type == Type::UString;
+        if (std::is_same<T, ustringhash>::value)
+            return m_type == Type::UStringHash;
+
         return false;
     }
 
     template<typename T> T get() const
     {
-        assert(false);
+        OSL_DASSERT(false);
         return T();
     }
 };
+
 
 template<>
 inline AttributeSpecBuiltinArg
 AttributeSpecArg::get() const
 {
-    assert(is_holding<AttributeSpecBuiltinArg>());
+    OSL_DASSERT(is_holding<AttributeSpecBuiltinArg>());
     return m_builtin;
+}
+
+template<>
+inline bool
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<bool>());
+    return m_bool;
+}
+
+template<>
+inline int8_t
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<int8_t>());
+    return m_int8;
+}
+
+template<>
+inline int16_t
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<int16_t>());
+    return m_int16;
 }
 
 template<>
 inline int32_t
 AttributeSpecArg::get() const
 {
-    assert(is_holding<int32_t>());
+    OSL_DASSERT(is_holding<int32_t>());
     return m_int32;
 }
 
 template<>
-inline float
+inline int64_t
 AttributeSpecArg::get() const
 {
-    assert(is_holding<float>());
-    return m_float;
+    OSL_DASSERT(is_holding<int64_t>());
+    return m_int64;
+}
+
+template<>
+inline uint8_t
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<uint8_t>());
+    return m_uint8;
+}
+
+template<>
+inline uint16_t
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<uint16_t>());
+    return m_uint16;
+}
+
+template<>
+inline uint32_t
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<uint32_t>());
+    return m_uint32;
 }
 
 template<>
 inline uint64_t
 AttributeSpecArg::get() const
 {
-    assert(is_holding<uint64_t>());
+    OSL_DASSERT(is_holding<uint64_t>());
     return m_uint64;
+}
+
+template<>
+inline float
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<float>());
+    return m_float;
+}
+
+template<>
+inline double
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<double>());
+    return m_double;
 }
 
 template<>
 inline void*
 AttributeSpecArg::get() const
 {
-    assert(is_holding<void*>());
+    OSL_DASSERT(is_holding<void*>());
     return m_ptr;
+}
+
+template<>
+inline ustring
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<ustring>());
+    return m_ustring;
+}
+
+template<>
+inline ustringhash
+AttributeSpecArg::get() const
+{
+    OSL_DASSERT(is_holding<ustringhash>());
+    return m_ustringhash;
 }
 
 // The AttributeGetterSpec is never in device code, so it can be a bit more
@@ -143,7 +312,7 @@ public:
     size_t arg_count() const { return m_args.size(); }
     const AttributeSpecArg& arg(size_t i) const
     {
-        assert(i < m_args.size());
+        OSL_DASSERT(i < m_args.size());
         return m_args[i];
     }
 };
@@ -170,7 +339,8 @@ public:
 
     /// Given the name of a 'feature', return whether this RendererServices
     /// supports it. Feature names include:
-    ///    <none>
+    ///    "OptiX"
+    ///    "build_attribute_getter"
     ///
     /// This allows some customization of JIT generated code based on the
     /// facilities and features of a particular renderer. It also allows
@@ -278,23 +448,24 @@ public:
 
     /// @brief Builds a free function to provide a value for a given attribute.
     /// @param group The shader group currently requesting the attribute.
-    /// @param object_name The object name. An empty string will be provided if
-    /// the value is not specified or it is not known at compile time.
-    /// @param attribute_name The attribute name. An empty string will be
-    /// provided if the value is not known at compile time.
-    /// @param type The type of the value being requested.
-    /// @param derivatives True if derivatives are also being requested.
     /// @param object_lookup True if an object name was specified, even if the
     /// value is not known at compile time.
+    /// @param object_name The object name. A null pointer will be provided if
+    /// the value is not specified or it is not known at compile time.
+    /// @param attribute_name The attribute name. A null pointer will be
+    /// provided if the value is not known at compile time.
     /// @param array_lookup True if the attribute lookup provides an index.
-    /// @param spec The built attribute getter.
-    /// @return True if an attribute builder was provided. If false, the
-    /// existing get_attribute or get_array_attribute functions will be
-    /// used as the fallback.
-    virtual bool build_attribute_getter(ShaderGroup& group, ustring object_name,
-                                        ustring attribute_name, TypeDesc type,
-                                        bool derivatives, bool object_lookup,
-                                        bool array_lookup,
+    /// @param array_index. The array index. A null pointer will be provided if
+    /// the value is not specified or it is not known at compile time.
+    /// @param type The type of the value being requested.
+    /// @param derivatives True if derivatives are also being requested.
+    /// @param spec The built attribute getter. An empty function name is
+    /// interpreted as a missing attribute.
+    virtual void build_attribute_getter(ShaderGroup& group, bool object_lookup,
+                                        ustring* object_name,
+                                        ustring* attribute_name,
+                                        bool array_lookup, int* array_index,
+                                        TypeDesc type, bool derivatives,
                                         AttributeGetterSpec& spec);
 
     /// Get the named attribute from the renderer and if found then

@@ -662,11 +662,17 @@ public:
     /// Return an llvm::Constant holding the given floating point constant.
     llvm::Constant* constant(float f);
 
-    /// Return an llvm::Constant holding the given integer constant.
-    llvm::Constant* constant(int i);
+    /// Return an llvm::Constant holding the given floating point constant.
+    llvm::Constant* constant64(double f);
 
     /// Return an llvm::Constant holding the given integer constant.
-    llvm::Constant* constant8(int i);
+    llvm::Constant* constant(int32_t i);
+    llvm::Constant* constant(uint32_t i);
+
+    /// Return an llvm::Constant holding the given integer constant.
+    llvm::Constant* constant8(int8_t i);
+    llvm::Constant* constant8(uint8_t i);
+    llvm::Constant* constant16(int16_t i);
     llvm::Constant* constant16(uint16_t i);
     llvm::Constant* constant64(uint64_t i);
     llvm::Constant* constant128(uint64_t i);

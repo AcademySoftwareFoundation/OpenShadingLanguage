@@ -255,8 +255,10 @@ SimpleRenderer::SimpleRenderer()
 SimpleRenderer::~SimpleRenderer() {}
 
 int
-SimpleRenderer::supports(string_view /*feature*/) const
+SimpleRenderer::supports(string_view feature) const
 {
+    if (m_use_rs_bitcode && feature == "build_attribute_getter")
+        return true;
     return false;
 }
 
@@ -528,24 +530,25 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
 }
 
 
-bool
-SimpleRenderer::build_attribute_getter(ShaderGroup& group, ustring object_name,
-                                       ustring attribute_name, TypeDesc type,
-                                       bool derivatives, bool object_lookup,
-                                       bool array_lookup,
+void
+SimpleRenderer::build_attribute_getter(ShaderGroup& group, bool object_lookup,
+                                       ustring* object_name,
+                                       ustring* attribute_name,
+                                       bool array_lookup, int* array_index,
+                                       TypeDesc type, bool derivatives,
                                        AttributeGetterSpec& spec)
 {
     if (m_use_rs_bitcode) {
         // For demonstration purposes we show how to build functions taking
         // advantage of known compile time information. Here we simply select
         // which function to call based on what we know at this point.
-        if (object_name == ustring("options")
-            && attribute_name == ustring("blahblah")
+        if (object_name && *object_name == ustring("options") && attribute_name
+            && *attribute_name == ustring("blahblah")
             && type == OSL::TypeFloat) {
             spec.set(ustring("rs_get_attribute_constant_float"), 3.14159f,
                      AttributeSpecBuiltinArg::Derivatives);
         } else {
-            spec.set(ustring("rs_get_attribute_fallback"),
+            spec.set(ustring("rs_get_attribute"),
                      AttributeSpecBuiltinArg::ShaderGlobalsPointer,
                      AttributeSpecBuiltinArg::ObjectName,
                      AttributeSpecBuiltinArg::AttributeName,
@@ -553,10 +556,7 @@ SimpleRenderer::build_attribute_getter(ShaderGroup& group, ustring object_name,
                      AttributeSpecBuiltinArg::Derivatives,
                      AttributeSpecBuiltinArg::ArrayIndex);
         }
-        return true;
     }
-
-    return false;
 }
 
 bool
@@ -837,7 +837,10 @@ SimpleRenderer::export_state(RenderState& state) const
                                           0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
                                           0.0, 1.0);
     //perspective is not  a member of StringParams (i.e not in strdecls.h)
-    state.projection = u_perspective;
+    state.projection  = u_perspective;
+    state.pixelaspect = m_pixelaspect;
+    std::copy_n(m_screen_window, 4, state.screen_window);
+    std::copy_n(m_shutter, 4, state.shutter);
 }
 
 

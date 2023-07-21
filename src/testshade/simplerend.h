@@ -62,10 +62,10 @@ public:
     bool get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                       ShaderGlobals* sg, void* val) override;
 
-    bool build_attribute_getter(ShaderGroup& group, ustring object_name,
-                                ustring attribute_name, TypeDesc type,
-                                bool derivatives, bool object_lookup,
-                                bool array_lookup,
+    void build_attribute_getter(ShaderGroup& group, bool object_lookup,
+                                ustring* object_name, ustring* attribute_name,
+                                bool array_lookup, int* array_index,
+                                TypeDesc type, bool derivatives,
                                 AttributeGetterSpec& spec) override;
 
     bool trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,

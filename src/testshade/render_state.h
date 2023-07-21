@@ -16,6 +16,9 @@ struct RenderState {
     int yres;
     OSL::Matrix44 world_to_camera;
     OSL::StringParam projection;
+    float pixelaspect;
+    float screen_window[4];
+    float shutter[2];
     float fov;
     float hither;
     float yon;

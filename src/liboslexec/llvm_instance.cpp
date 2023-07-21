@@ -1644,6 +1644,18 @@ BackendLLVM::prepare_module_for_cuda_jit()
             continue;
         }
 
+        // Inline the functions registered with the ShadingSystem
+        if (is_inline_fn(fn.getName().str())) {
+            fn.addFnAttr(llvm::Attribute::AlwaysInline);
+            continue;
+        }
+
+        // No-inline the functions registered with the ShadingSystem
+        if (is_noinline_fn(fn.getName().str())) {
+            fn.deleteBody();
+            continue;
+        }
+
         if (no_inline) {
             fn.addFnAttr(llvm::Attribute::NoInline);
 
@@ -1667,16 +1679,6 @@ BackendLLVM::prepare_module_for_cuda_jit()
 
         // Only apply the inline thresholds to library functions.
         if (!fn.hasFnAttribute("osl-lib-function")) {
-            continue;
-        }
-
-        if (is_inline_fn(fn.getName().str())) {
-            fn.addFnAttr(llvm::Attribute::AlwaysInline);
-            continue;
-        }
-
-        if (is_noinline_fn(fn.getName().str())) {
-            fn.deleteBody();
             continue;
         }
 

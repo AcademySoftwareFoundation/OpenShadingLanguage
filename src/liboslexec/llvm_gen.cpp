@@ -3046,8 +3046,8 @@ LLVMGEN(llvm_gen_getattribute)
         if (!spec.function_name().empty()) {
             std::vector<llvm::Value*> args;
             args.reserve(spec.arg_count() + 1);
-            for (int arg_index = 0; arg_index < spec.arg_count(); ++arg_index) {
-                const auto& arg = spec.arg(arg_index);
+            for (size_t index = 0; index < spec.arg_count(); ++index) {
+                const auto& arg = spec.arg(index);
                 switch (arg.type()) {
                 default:
                 case AttributeSpecArg::Type::Unspecified:

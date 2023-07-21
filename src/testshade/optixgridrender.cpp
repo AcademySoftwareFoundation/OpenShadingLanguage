@@ -203,6 +203,9 @@ OptixGridRenderer::init_optix_context(int xres OSL_MAYBE_UNUSED,
                                 rend_lib_llvm_compiled_ops_size },
                               rend_lib_llvm_compiled_ops_block);
     }
+    if (options.get_int("optix_register_inline_funcs")) {
+        register_inline_functions();
+    }
     return true;
 }
 
@@ -1125,6 +1128,118 @@ OptixGridRenderer::register_named_transforms()
     m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_buffer));
 
     m_num_named_xforms = xform_name_buffer.size();
+}
+
+void
+OptixGridRenderer::register_inline_functions()
+{
+    // clang-format off
+
+    // Depending on the inlining options and optimization level, some functions
+    // might not be inlined even when it would be beneficial to do so. We can
+    // register such functions with the ShadingSystem to ensure that they are
+    // inlined regardless of the other inlining options or the optimization
+    // level.
+    //
+    // Conversely, there are some functions which should rarely be inlined. If that
+    // is known in advance, we can register those functions with the ShadingSystem
+    // so they can be excluded before running the ShaderGroup optimization, which
+    // can help speed up the optimization and JIT stages.
+    //
+    // The default behavior of the optimizer should be sufficient for most
+    // cases, and the inline/noinline thresholds available through the
+    // ShadingSystem attributes enable some degree of fine tuning. This
+    // mechanism has been added to offer a finer degree of control
+    //
+    // Please refer to doc/app_integration/OptiX-Inlining-Options.md for more
+    // details about the inlining options.
+
+    // These functions are all 5 instructions or less in the PTX, with most of
+    // those instructions related to reading the parameters and writing out the
+    // return value. It would be beneficial to inline them in all cases. We can
+    // register them to ensure that they are inlined regardless of the other
+    // compile options.
+    shadingsys->register_inline_function(ustring("osl_abs_ff"));
+    shadingsys->register_inline_function(ustring("osl_abs_ii"));
+    shadingsys->register_inline_function(ustring("osl_ceil_ff"));
+    shadingsys->register_inline_function(ustring("osl_cos_ff"));
+    shadingsys->register_inline_function(ustring("osl_exp2_ff"));
+    shadingsys->register_inline_function(ustring("osl_exp_ff"));
+    shadingsys->register_inline_function(ustring("osl_fabs_ff"));
+    shadingsys->register_inline_function(ustring("osl_fabs_ii"));
+    shadingsys->register_inline_function(ustring("osl_floor_ff"));
+    shadingsys->register_inline_function(ustring("osl_get_texture_options"));
+    shadingsys->register_inline_function(ustring("osl_getchar_isi"));
+    shadingsys->register_inline_function(ustring("osl_hash_is"));
+    shadingsys->register_inline_function(ustring("osl_log10_ff"));
+    shadingsys->register_inline_function(ustring("osl_log2_ff"));
+    shadingsys->register_inline_function(ustring("osl_log_ff"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_anisotropic"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_bandwidth"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_do_filter"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_impulses"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_ff"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_fff"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_fv"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_fvf"));
+    shadingsys->register_inline_function(ustring("osl_sin_ff"));
+    shadingsys->register_inline_function(ustring("osl_strlen_is"));
+    shadingsys->register_inline_function(ustring("osl_texture_set_interp_code"));
+    shadingsys->register_inline_function(ustring("osl_texture_set_stwrap_code"));
+    shadingsys->register_inline_function(ustring("osl_trunc_ff"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_ff"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_fff"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_fv"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_fvf"));
+
+    // These large functions are unlikely to ever been inlined. In such cases,
+    // we may be able to speed up ShaderGroup compilation by registering these
+    // functions as "noinline" so they can be excluded from the ShaderGroup
+    // module prior to optimization/JIT.
+    shadingsys->register_noinline_function(ustring("osl_gabornoise_dfdfdf"));
+    shadingsys->register_noinline_function(ustring("osl_gabornoise_dfdv"));
+    shadingsys->register_noinline_function(ustring("osl_gabornoise_dfdvdf"));
+    shadingsys->register_noinline_function(ustring("osl_gaborpnoise_dfdfdfff"));
+    shadingsys->register_noinline_function(ustring("osl_gaborpnoise_dfdvdfvf"));
+    shadingsys->register_noinline_function(ustring("osl_gaborpnoise_dfdvv"));
+    shadingsys->register_noinline_function(ustring("osl_genericnoise_dfdvdf"));
+    shadingsys->register_noinline_function(ustring("osl_genericpnoise_dfdvv"));
+    shadingsys->register_noinline_function(ustring("osl_get_inverse_matrix"));
+    shadingsys->register_noinline_function(ustring("osl_noise_dfdfdf"));
+    shadingsys->register_noinline_function(ustring("osl_noise_dfdff"));
+    shadingsys->register_noinline_function(ustring("osl_noise_dffdf"));
+    shadingsys->register_noinline_function(ustring("osl_noise_fv"));
+    shadingsys->register_noinline_function(ustring("osl_noise_vff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_dfdfdfff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_dfdffff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_dffdfff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_fffff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_vffff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_dfdfdfff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_dfdffff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_dffdfff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_fffff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_vffff"));
+    shadingsys->register_noinline_function(ustring("osl_simplexnoise_dvdf"));
+    shadingsys->register_noinline_function(ustring("osl_simplexnoise_vf"));
+    shadingsys->register_noinline_function(ustring("osl_simplexnoise_vff"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_dfdfdf"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_dfdff"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_dffdf"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_fv"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_vff"));
+    shadingsys->register_noinline_function(ustring("osl_transform_triple"));
+    shadingsys->register_noinline_function(ustring("osl_transformn_dvmdv"));
+    shadingsys->register_noinline_function(ustring("osl_usimplexnoise_dvdf"));
+    shadingsys->register_noinline_function(ustring("osl_usimplexnoise_vf"));
+    shadingsys->register_noinline_function(ustring("osl_usimplexnoise_vff"));
+
+    // It's also possible to unregister functions to restore the default
+    // inlining behavior when needed.
+    shadingsys->unregister_inline_function(ustring("osl_get_texture_options"));
+    shadingsys->unregister_noinline_function(ustring("osl_get_inverse_matrix"));
+
+    // clang-format on
 }
 
 OSL_NAMESPACE_EXIT

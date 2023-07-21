@@ -94,6 +94,7 @@ static bool optix_no_inline_rend_lib    = false;
 static bool optix_no_rend_lib_bitcode   = false;
 static int optix_no_inline_thresh       = 100000;
 static int optix_force_inline_thresh    = 0;
+static bool optix_register_inline_funcs = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -802,6 +803,8 @@ getargs(int argc, const char* argv[])
       .help("Don't inline functions larger than the threshold when compiling for OptiX");
     ap.arg("--optix_force_inline_thresh %d:THRESH", &optix_force_inline_thresh)
       .help("Force inline functions smaller than the threshold when compiling for OptiX");
+    ap.arg("--optix_register_inline_funcs", &optix_register_inline_funcs)
+      .help("Register functions that should or should not be inlined during LLVM optimization");
     ap.arg("--entry %L:LAYERNAME", &entrylayers)
       .help("Add layer to the list of entry points");
     ap.arg("--entryoutput %L:NAME", &entryoutputs)
@@ -1946,6 +1949,7 @@ test_shade(int argc, const char* argv[])
 #if OSL_USE_OPTIX
     rend->attribute("saveptx", (int)saveptx);
     rend->attribute("no_rend_lib_bitcode", (int)optix_no_rend_lib_bitcode);
+    rend->attribute("optix_register_inline_funcs", (int)optix_register_inline_funcs);
 #endif
 
     // Hand the userdata options from the command line over to the renderer

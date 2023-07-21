@@ -108,20 +108,20 @@ public:
     }
 
     AttributeSpecArg(const AttributeSpecArg& other) {
-        memcpy(this, &other, sizeof(AttributeSpecArg));
+        memcpy((void*)this, &other, sizeof(AttributeSpecArg));
     }
     AttributeSpecArg(AttributeSpecArg&& other) {
-        memcpy(this, &other, sizeof(AttributeSpecArg));
+        memcpy((void*)this, &other, sizeof(AttributeSpecArg));
     }
 
     ~AttributeSpecArg() { }
 
     AttributeSpecArg& operator=(const AttributeSpecArg& other) {
-        memcpy(this, &other, sizeof(AttributeSpecArg));
+        memcpy((void*)this, &other, sizeof(AttributeSpecArg));
         return *this;
     }
     AttributeSpecArg& operator=(AttributeSpecArg&& other) {
-        memcpy(this, &other, sizeof(AttributeSpecArg));
+        memcpy((void*)this, &other, sizeof(AttributeSpecArg));
         return *this;
     }
 

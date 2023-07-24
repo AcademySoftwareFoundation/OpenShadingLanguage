@@ -17,8 +17,7 @@ struct ShaderGlobals;
 class ShaderGroup;
 
 // Tags for polymorphic dispatch
-template<int SimdWidthT> class WidthOf {
-};
+template<int SimdWidthT> class WidthOf {};
 
 
 /// Opaque pointer to whatever the renderer uses to represent a
@@ -107,20 +106,24 @@ public:
     {
     }
 
-    AttributeSpecArg(const AttributeSpecArg& other) {
+    AttributeSpecArg(const AttributeSpecArg& other)
+    {
         memcpy((void*)this, &other, sizeof(AttributeSpecArg));
     }
-    AttributeSpecArg(AttributeSpecArg&& other) {
+    AttributeSpecArg(AttributeSpecArg&& other)
+    {
         memcpy((void*)this, &other, sizeof(AttributeSpecArg));
     }
 
-    ~AttributeSpecArg() { }
+    ~AttributeSpecArg() {}
 
-    AttributeSpecArg& operator=(const AttributeSpecArg& other) {
+    AttributeSpecArg& operator=(const AttributeSpecArg& other)
+    {
         memcpy((void*)this, &other, sizeof(AttributeSpecArg));
         return *this;
     }
-    AttributeSpecArg& operator=(AttributeSpecArg&& other) {
+    AttributeSpecArg& operator=(AttributeSpecArg&& other)
+    {
         memcpy((void*)this, &other, sizeof(AttributeSpecArg));
         return *this;
     }

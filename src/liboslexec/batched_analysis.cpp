@@ -1680,6 +1680,9 @@ struct Analyzer {
 
                 OSL_DEV_ONLY(std::cout << " discovery " << sym->unmangled()
                                        << std::endl);
+                if (sym->typespec().is_closure()) {
+                    recursively_mark_varying(sym);
+                }
             }
             OSL_DEV_ONLY(std::cout << std::endl);
 

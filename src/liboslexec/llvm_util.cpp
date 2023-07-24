@@ -2892,7 +2892,7 @@ LLVM_Util::constant(ustring s)
         return constant_ptr((void*)s.c_str(), type_char_ptr());
     } else {
         size_t p = s.hash();
-        auto str = (size_t_bits == 64) ? constant64(p) : constant(int(p));
+        auto str = (size_t_bits == 64) ? constant64(uint64_t(p)) : constant(int(p));
 #if OSL_USTRINGREP_IS_HASH
         return str;
 #else

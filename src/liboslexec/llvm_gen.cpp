@@ -1920,7 +1920,7 @@ LLVMGEN(llvm_gen_compare_op)
             // Combine the component bool based on the op
             if (opname != op_neq)  // final_result &= result
                 final_result = rop.ll.op_and(final_result, result);
-            else                   // final_result |= result
+            else  // final_result |= result
                 final_result = rop.ll.op_or(final_result, result);
         } else {
             final_result = result;
@@ -2254,7 +2254,7 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
         OSL_DASSERT(a + 1 < op.nargs()
                     && "malformed argument list for texture");
         ustring name = Name.get_string();
-        ++a;               // advance to next argument
+        ++a;  // advance to next argument
 
         if (name.empty())  // skip empty string param name
             continue;
@@ -3635,19 +3635,19 @@ LLVMGEN(llvm_gen_pointcloud_search)
     args.push_back(rop.llvm_void_ptr(Center));      // 2 center
     args.push_back(rop.llvm_load_value(Radius));    // 3 radius
 
-    constexpr int maxPointsArgumentIndex = 4;       // 4 max_points
+    constexpr int maxPointsArgumentIndex = 4;  // 4 max_points
     OSL_ASSERT(args.size() == maxPointsArgumentIndex);
     llvm::Value* maxPointsVal = rop.llvm_load_value(Max_points);
-    args.push_back(maxPointsVal);                     // 4 max_points
+    args.push_back(maxPointsVal);  // 4 max_points
 
     args.push_back(Sort ? rop.llvm_load_value(*Sort)  // 5 sort
                         : rop.ll.constant(0));
-    args.push_back(rop.ll.constant_ptr(NULL));        // 6 indices
-    args.push_back(rop.ll.constant_ptr(NULL));        // 7 distances
-    args.push_back(rop.ll.constant(0));               // 8 derivs_offset
-    args.push_back(NULL);                             // 9 nattrs
-    int capacity    = 0x7FFFFFFF;                     // Lets put a 32 bit limit
-    int extra_attrs = 0;  // Extra query attrs to search
+    args.push_back(rop.ll.constant_ptr(NULL));  // 6 indices
+    args.push_back(rop.ll.constant_ptr(NULL));  // 7 distances
+    args.push_back(rop.ll.constant(0));         // 8 derivs_offset
+    args.push_back(NULL);                       // 9 nattrs
+    int capacity    = 0x7FFFFFFF;               // Lets put a 32 bit limit
+    int extra_attrs = 0;                        // Extra query attrs to search
     // This loop does three things. 1) Look for the special attributes
     // "distance", "index" and grab the pointer. 2) Compute the minimmum
     // size of the provided output arrays to check against max_points
@@ -3868,9 +3868,9 @@ LLVMGEN(llvm_gen_dict_value)
     OSL_DASSERT(Result.typespec().is_int() && NodeID.typespec().is_int()
                 && Name.typespec().is_string());
     llvm::Value* args[] = {
-        rop.sg_void_ptr(),                   // arg 0: shaderglobals ptr
-        rop.llvm_load_value(NodeID),         // arg 1: nodeID
-        rop.llvm_load_value(Name),           // arg 2: attribute name
+        rop.sg_void_ptr(),            // arg 0: shaderglobals ptr
+        rop.llvm_load_value(NodeID),  // arg 1: nodeID
+        rop.llvm_load_value(Name),    // arg 2: attribute name
         rop.ll.constant(
             Value.typespec().simpletype()),  // arg 3: encoded type of Value
         rop.llvm_void_ptr(Value),            // arg 4: pointer to Value

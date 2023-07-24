@@ -17,7 +17,8 @@ struct ShaderGlobals;
 class ShaderGroup;
 
 // Tags for polymorphic dispatch
-template<int SimdWidthT> class WidthOf {};
+template<int SimdWidthT> class WidthOf {
+};
 
 
 /// Opaque pointer to whatever the renderer uses to represent a

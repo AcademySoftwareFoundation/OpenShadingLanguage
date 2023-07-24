@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/src/doc/Figures/osl-short.png" width=256 height=128>
+  <img src="ASWF/images/openshadinglanguage-stacked-Shaded.png">
 
-  <H1>Open Shading Language</H1>
+  <!-- <H1>Open Shading Language</H1> -->
 </div>
 
 [![Open Shading Language Reel 2020](http://img.youtube.com/vi/nmwMz1YnGPA/0.jpg)](https://www.youtube.com/watch?v=nmwMz1YnGPA "Open Shading Language Reel 2020")

@@ -6,8 +6,8 @@ Release 1.13 -- ?? 2023 ?? (compared to 1.12)
 Dependency and standards requirements changes:
 * OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
   of OptiX 7.0 is required.
-* The minimum version OpenImageIO has been raised from 2.2 to 2.3. #1591
-  (1.13.0.3)
+* The minimum version OpenImageIO has been raised from 2.2 to 2.4. #1591
+  (to 2.3 in 1.13.0.3, to 2.4 in 1.13.4.0)
 
 OSL Language and oslc compiler:
 * Bug fix: shader params whose default values involve "init ops" could be

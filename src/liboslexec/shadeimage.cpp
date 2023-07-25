@@ -33,15 +33,9 @@ shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
     if (!roi.defined())
         roi = buf.roi();
     if (buf.spec().format != TypeDesc::FLOAT) {
-#if OIIO_VERSION >= 20300
         buf.errorfmt(
             "Cannot OSL::shade_image() into a {} buffer, float is required",
             buf.spec().format);
-#else
-        buf.error(
-            "Cannot OSL::shade_image() into a %s buffer, float is required",
-            buf.spec().format);
-#endif
         return false;
     }
 

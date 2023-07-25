@@ -41,9 +41,7 @@ template<int WidthT> struct VaryingTextureOptions {
     Block<float, WidthT> swidth;  ///< Multiplier for derivatives
     Block<float, WidthT> twidth;
     Block<float, WidthT> rwidth;  // For 3D volume texture lookups only:
-#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
-    Block<float, WidthT> rnd;  // For stochastic sampling
-#endif
+    Block<float, WidthT> rnd;     // For stochastic sampling
 };
 static_assert(std::alignment_of<VaryingTextureOptions<16>>::value
                   == VecReg<16>::alignment,
@@ -69,9 +67,7 @@ template<int WidthT> struct BatchedTextureOptions {
         swidth,
         twidth,
         rwidth,
-#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
         rnd,
-#endif
         firstchannel,
         subimage,
         subimagename,
@@ -123,10 +119,8 @@ static_assert(offsetof(OIIO::TextureOptBatch, twidth) % 64 == 0,
               "oops unaligned wide variable");
 static_assert(offsetof(OIIO::TextureOptBatch, rwidth) % 64 == 0,
               "oops unaligned wide variable");
-#    if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
 static_assert(offsetof(OIIO::TextureOptBatch, rnd) % 64 == 0,
               "oops unaligned wide variable");
-#    endif
 
 static_assert(sizeof(OIIO::TextureOptBatch)
                   == sizeof(BatchedTextureOptions<16>),

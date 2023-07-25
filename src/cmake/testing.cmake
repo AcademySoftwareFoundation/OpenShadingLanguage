@@ -272,6 +272,7 @@ macro (osl_add_all_tests)
                 function-overloads function-redef
                 geomath getattribute-camera getattribute-shader
                 getsymbol-nonheap gettextureinfo gettextureinfo-reg
+                gettextureinfo-udim gettextureinfo-udim-reg
                 globals-needed
                 group-outputs groupstring
                 hash hashnoise hex hyperb
@@ -380,11 +381,6 @@ macro (osl_add_all_tests)
                 vararray-deserialize vararray-param
                 vecctr vector vector-reg
                 wavelength_color wavelength_color-reg Werror xml xml-reg )
-
-    # Coordinate-aware gettextureinfo only works for TextureSystem >= 2.3.7
-    if (OpenImageIO_VERSION VERSION_GREATER_EQUAL 2.3.7)
-        TESTSUITE ( gettextureinfo-udim gettextureinfo-udim-reg )
-    endif ()
 
     # Only run the ocio test if the OIIO we are using has OCIO support
     if (OpenImageIO_HAS_OpenColorIO)

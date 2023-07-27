@@ -61,7 +61,7 @@ In addition to the `ShadingSystem` attributes, individual functions can be
 registered with the `ShadingSystem` as `inline` or `noinline`. Functions can
 be unregistered to restore the default inlining behavior. This registration
 takes precedence over the `ShadingSystem` inlining attributes, which allows
-very fine-grained control when needed
+very fine-grained control when needed.
 
 ```C++
 // Register
@@ -108,5 +108,5 @@ An example tuning workflow might include the following steps:
    
    In particular, be on the lookout for trivial functions (e.g., `osl_floor_ff`)
    which have not been inlined. If such functions appear, that might be a sign
-   that the inline threshold need to be adjusted, or that it might be beneficial
-   to register specific functions.
+   that the inline thresholds need to be adjusted, or that it might be
+   beneficial to register specific functions.

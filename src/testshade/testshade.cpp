@@ -1949,7 +1949,8 @@ test_shade(int argc, const char* argv[])
 #if OSL_USE_OPTIX
     rend->attribute("saveptx", (int)saveptx);
     rend->attribute("no_rend_lib_bitcode", (int)optix_no_rend_lib_bitcode);
-    rend->attribute("optix_register_inline_funcs", (int)optix_register_inline_funcs);
+    rend->attribute("optix_register_inline_funcs",
+                    (int)optix_register_inline_funcs);
 #endif
 
     // Hand the userdata options from the command line over to the renderer

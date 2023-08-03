@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 // pretty(x) rounds very small values to zero and turns -0 values into +0.
 // This is useful for testsuite to eliminate some pesky LSB errors that
 // cause reference output to differ between platforms.

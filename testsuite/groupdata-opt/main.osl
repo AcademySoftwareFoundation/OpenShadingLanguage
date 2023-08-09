@@ -1,0 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader main_shader(float Val_In = -3.)
+{
+    printf("Val_in = %f\n", Val_In);
+}

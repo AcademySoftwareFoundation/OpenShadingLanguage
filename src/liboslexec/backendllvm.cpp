@@ -282,8 +282,7 @@ BackendLLVM::is_stack_parameter(const Symbol& sym)
     // after layer execution can be relocated from GroupData
     // onto the stack.
     return sym.symtype() == SymTypeOutputParam && !sym.renderer_output()
-           && !sym.typespec().is_closure_based()
-           && !sym.connected();
+           && !sym.typespec().is_closure_based() && !sym.connected();
 }
 
 llvm::Value*

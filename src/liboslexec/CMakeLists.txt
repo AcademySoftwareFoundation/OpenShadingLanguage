@@ -148,7 +148,9 @@ file (GLOB exec_headers "*.h")
 file (GLOB compiler_headers "../liboslcomp/*.h")
 
 FLEX_BISON ( osolex.l osogram.y oso lib_src exec_headers )
-FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl lib_src compiler_headers )
+if (BUILD_SHARED_LIBS)
+    FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl lib_src compiler_headers )
+endif()
 
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 

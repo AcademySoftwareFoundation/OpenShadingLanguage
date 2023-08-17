@@ -257,15 +257,19 @@ rs_get_attribute_constant_float4(float value1, float value2, float value3,
 
 OSL_RSOP bool
 rs_get_attribute(void* _sg, const char* _object, const char* _name,
-                 long long _type, bool derivatives, int index, void* result)
+                 OSL::TypeDesc_pod _type, bool derivatives, int index,
+                 void* result)
 {
     OSL::ShaderGlobals* sg        = reinterpret_cast<OSL::ShaderGlobals*>(_sg);
     const OSL::StringParam object = OSL::bitcast<OSL::ustringrep>(_object);
     const OSL::StringParam name   = OSL::bitcast<OSL::ustringrep>(_name);
-    const OSL::TypeDesc type      = OSL::bitcast<OSL::TypeDesc>(_type);
+    const OSL::TypeDesc type      = OSL::TypeDesc_from(_type);
 
     const RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
 
+    // The many branches in the code below handle the case where we don't know
+    // the attribute name at compile time. In the case it is known, dead-code
+    // elimination should optimize this to only the relevant branch.
     if (name == "osl:version" && type == OSL::TypeInt)
         return rs_get_attribute_constant_int(OSL_VERSION, result);
     if (name == "camera:resolution"

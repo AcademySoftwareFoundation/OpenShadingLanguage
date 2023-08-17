@@ -34,9 +34,9 @@ enum class AttributeSpecBuiltinArg {
     ShaderGlobalsPointer,  // void* (TODO: ideally ShaderGlobals*)
     ShadeIndex,            // int
     Derivatives,           // bool
-    Type,                  // long long (TODO: ideally TypeDesc)
+    Type,                  // TypeDesc_pod
     ArrayIndex,            // int, Always zero for non-indexed array lookups.
-    ArrayLookup,           //bool
+    ArrayLookup,           // bool
     ObjectName,            // const char* (TODO: change to ustringhash)
     AttributeName,         // const char* (TODO: change to ustringhash)
 };
@@ -451,6 +451,7 @@ public:
                                   TypeDesc::VECSEMANTICS vectype);
 
     /// @brief Builds a free function to provide a value for a given attribute.
+    /// This occurs at shader compile time, not at execution time.
     /// @param group The shader group currently requesting the attribute.
     /// @param object_lookup True if an object name was specified, even if the
     /// value is not known at compile time.

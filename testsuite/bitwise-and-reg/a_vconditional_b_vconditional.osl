@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 shader a_vconditional_b_vconditional (output vector cout = 0, output vector mcout = 0) 
 {
     int a = (P[0] < 0.5);

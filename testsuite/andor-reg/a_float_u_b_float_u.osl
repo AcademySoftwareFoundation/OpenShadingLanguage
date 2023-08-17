@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 shader a_float_u_b_float_u (output vector cout = 0, output vector mcout = 0)
 {
     float a = 1/raytype("camera")*5 ;

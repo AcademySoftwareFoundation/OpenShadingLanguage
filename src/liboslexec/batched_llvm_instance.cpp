@@ -904,6 +904,10 @@ BatchedBackendLLVM::llvm_type_groupdata()
             TypeSpec ts = sym.typespec();
             if (ts.is_structure())  // skip the struct symbol itself
                 continue;
+
+            if (can_treat_param_as_local(sym))
+                continue;
+
             const int arraylen  = std::max(1, sym.typespec().arraylength());
             const int derivSize = (sym.has_derivs() ? 3 : 1);
             ts.make_array(arraylen * derivSize);
@@ -2040,9 +2044,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         // Skip structure placeholders
         if (s.typespec().is_structure())
             continue;
-        // Allocate space for locals, temps, aggregate constants
+        // Allocate space for locals, temps, aggregate constants, and some output params
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp
-            || s.symtype() == SymTypeConst) {
+            || s.symtype() == SymTypeConst || can_treat_param_as_local(s)) {
             getOrAllocateLLVMSymbol(s);
         }
         // Set initial value for constants, closures, and strings that are

@@ -460,8 +460,10 @@ BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
                              llvm_ptr_type(sym.typespec().elementtype()));
     }
 
-    if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
-        // Special case for params -- they live in the group data
+    if (sym.symtype() == SymTypeParam
+        || sym.symtype() == SymTypeOutputParam
+               && !can_treat_param_as_local(sym)) {
+        // Special case for most params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];
         return groupdata_field_ptr(fieldnum,
                                    sym.typespec().elementtype().simpletype(),
@@ -507,7 +509,6 @@ BatchedBackendLLVM::llvm_alloca(const TypeSpec& type, bool derivs,
         }
     }
 }
-
 
 
 BatchedBackendLLVM::TempScope::TempScope(BatchedBackendLLVM& backend)
@@ -575,6 +576,18 @@ BatchedBackendLLVM::getOrAllocateTemp(const TypeSpec& type, bool derivs,
     return allocation;
 }
 
+bool
+BatchedBackendLLVM::can_treat_param_as_local(const Symbol& sym)
+{
+    if (!shadingsys().m_opt_groupdata)
+        return false;
+
+    // Some output parameters that are never needed before or
+    // after layer execution can be relocated from GroupData
+    // onto the stack.
+    return sym.symtype() == SymTypeOutputParam && !sym.renderer_output()
+           && !sym.typespec().is_closure_based() && !sym.connected();
+}
 
 
 llvm::Value*
@@ -582,7 +595,7 @@ BatchedBackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
 {
     OSL_DASSERT(
         (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp
-         || sym.symtype() == SymTypeConst)
+         || sym.symtype() == SymTypeConst || can_treat_param_as_local(sym))
         && "getOrAllocateLLVMSymbol should only be for local, tmp, const");
     Symbol* dealiased                = sym.dealias();
     std::string mangled_name         = dealiased->mangled();

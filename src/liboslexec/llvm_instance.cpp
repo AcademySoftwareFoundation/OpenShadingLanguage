@@ -1292,7 +1292,7 @@ BackendLLVM::build_llvm_instance(bool groupentry)
         // Skip structure placeholders
         if (s.typespec().is_structure())
             continue;
-        // Allocate space for locals, temps, aggregate constants and some output params
+        // Allocate space for locals, temps, aggregate constants, and some output params
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp
             || s.symtype() == SymTypeConst || can_treat_param_as_local(s))
             getOrAllocateLLVMSymbol(s);

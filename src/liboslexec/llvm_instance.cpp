@@ -360,7 +360,7 @@ BackendLLVM::llvm_type_groupdata()
             if (ts.is_structure())  // skip the struct symbol itself
                 continue;
 
-            if (is_stack_parameter(sym))
+            if (can_treat_param_as_local(sym))
                 continue;
 
             const int arraylen  = std::max(1, sym.typespec().arraylength());
@@ -1294,7 +1294,7 @@ BackendLLVM::build_llvm_instance(bool groupentry)
             continue;
         // Allocate space for locals, temps, aggregate constants and some output params
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp
-            || s.symtype() == SymTypeConst || is_stack_parameter(s))
+            || s.symtype() == SymTypeConst || can_treat_param_as_local(s))
             getOrAllocateLLVMSymbol(s);
         // Set initial value for constants, closures, and strings that are
         // not parameters.

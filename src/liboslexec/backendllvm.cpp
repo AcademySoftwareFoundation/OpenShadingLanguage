@@ -241,7 +241,8 @@ BackendLLVM::getLLVMSymbolBase(const Symbol& sym)
     }
 
     if (sym.symtype() == SymTypeParam
-        || (sym.symtype() == SymTypeOutputParam && !is_stack_parameter(sym))) {
+        || (sym.symtype() == SymTypeOutputParam
+            && !can_treat_param_as_local(sym))) {
         // Special case for most params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];
         return groupdata_field_ptr(fieldnum,
@@ -273,7 +274,7 @@ BackendLLVM::llvm_alloca(const TypeSpec& type, bool derivs,
 
 
 bool
-BackendLLVM::is_stack_parameter(const Symbol& sym)
+BackendLLVM::can_treat_param_as_local(const Symbol& sym)
 {
     if (!shadingsys().m_opt_groupdata)
         return false;
@@ -290,7 +291,7 @@ BackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
 {
     OSL_DASSERT(
         (sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp
-         || sym.symtype() == SymTypeConst || is_stack_parameter(sym))
+         || sym.symtype() == SymTypeConst || can_treat_param_as_local(sym))
         && "getOrAllocateLLVMSymbol should only be for local, tmp, const");
     Symbol* dealiased                = sym.dealias();
     std::string mangled_name         = dealiased->mangled();

@@ -229,7 +229,7 @@ public:
 
     /// Checks if a symbol represents a parameter that can be stored on the
     /// stack instead of in GroupData
-    bool is_stack_parameter(const Symbol& sym);
+    bool can_treat_param_as_local(const Symbol& sym);
 
     /// Given the OSL symbol, return the llvm::Value* corresponding to the
     /// address of the start of that symbol (first element, first component,

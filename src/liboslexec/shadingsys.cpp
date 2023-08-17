@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "oslexec_pvt.h"
+#include <OSL/fmt_util.h>
 #include <OSL/genclosure.h>
 #include "backendllvm.h"
 #if OSL_USE_BATCHED
@@ -249,65 +250,70 @@ ShadingSystem::release_context(ShadingContext* ctx)
 
 
 bool
-ShadingSystem::execute(ShadingContext& ctx, ShaderGroup& group, int index,
+ShadingSystem::execute(ShadingContext& ctx, ShaderGroup& group,
+                       int thread_index, int shade_index,
                        ShaderGlobals& globals, void* userdata_base_ptr,
                        void* output_base_ptr, bool run)
 {
-    return m_impl->execute(ctx, group, index, globals, userdata_base_ptr,
-                           output_base_ptr, run);
+    return m_impl->execute(ctx, group, thread_index, shade_index, globals,
+                           userdata_base_ptr, output_base_ptr, run);
 }
 
 
 
 bool
-ShadingSystem::execute_init(ShadingContext& ctx, ShaderGroup& group, int index,
+ShadingSystem::execute_init(ShadingContext& ctx, ShaderGroup& group,
+                            int thread_index, int shade_index,
                             ShaderGlobals& globals, void* userdata_base_ptr,
                             void* output_base_ptr, bool run)
 {
-    return ctx.execute_init(group, index, globals, userdata_base_ptr,
-                            output_base_ptr, run);
+    return ctx.execute_init(group, thread_index, shade_index, globals,
+                            userdata_base_ptr, output_base_ptr, run);
 }
 
 
 
 bool
-ShadingSystem::execute_layer(ShadingContext& ctx, int index,
-                             ShaderGlobals& globals, void* userdata_base_ptr,
-                             void* output_base_ptr, int layernumber)
+ShadingSystem::execute_layer(ShadingContext& ctx, int thread_index,
+                             int shade_index, ShaderGlobals& globals,
+                             void* userdata_base_ptr, void* output_base_ptr,
+                             int layernumber)
 {
-    return ctx.execute_layer(index, globals, userdata_base_ptr, output_base_ptr,
-                             layernumber);
+    return ctx.execute_layer(thread_index, shade_index, globals,
+                             userdata_base_ptr, output_base_ptr, layernumber);
 }
 
 
 
 bool
-ShadingSystem::execute_layer(ShadingContext& ctx, int index,
-                             ShaderGlobals& globals, void* userdata_base_ptr,
-                             void* output_base_ptr, ustring layername)
+ShadingSystem::execute_layer(ShadingContext& ctx, int thread_index,
+                             int shade_index, ShaderGlobals& globals,
+                             void* userdata_base_ptr, void* output_base_ptr,
+                             ustring layername)
 {
     int layernumber = find_layer(*ctx.group(), layername);
-    return layernumber >= 0
-               ? ctx.execute_layer(index, globals, userdata_base_ptr,
-                                   output_base_ptr, layernumber)
-               : false;
+    return layernumber >= 0 ? ctx.execute_layer(thread_index, shade_index,
+                                                globals, userdata_base_ptr,
+                                                output_base_ptr, layernumber)
+                            : false;
 }
 
 
 
 bool
-ShadingSystem::execute_layer(ShadingContext& ctx, int index,
-                             ShaderGlobals& globals, void* userdata_base_ptr,
-                             void* output_base_ptr, const ShaderSymbol* symbol)
+ShadingSystem::execute_layer(ShadingContext& ctx, int thread_index,
+                             int shade_index, ShaderGlobals& globals,
+                             void* userdata_base_ptr, void* output_base_ptr,
+                             const ShaderSymbol* symbol)
 {
     if (!symbol)
         return false;
     const Symbol* sym = reinterpret_cast<const Symbol*>(symbol);
     int layernumber   = sym->layer();
-    return layernumber >= 0
-               ? ctx.execute_layer(index, globals, userdata_base_ptr,
-                                   output_base_ptr, layernumber)
-               : false;
+    return layernumber >= 0 ? ctx.execute_layer(thread_index, shade_index,
+                                                globals, userdata_base_ptr,
+                                                output_base_ptr, layernumber)
+                            : false;
 }
 
 #if OSL_USE_BATCHED
@@ -1008,7 +1014,6 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_greedyjit(false)
     , m_countlayerexecs(false)
     , m_relaxed_param_typecheck(false)
-    , m_max_warnings_per_thread(100)
     , m_profile(0)
     , m_optimize(2)
     , m_opt_simplify_param(true)
@@ -1071,8 +1076,9 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_stat_inst_merge_time(0)
     , m_stat_max_llvm_local_mem(0)
 {
-    m_shading_state_uniform.m_commonspace_synonym    = ustring("world");
-    m_shading_state_uniform.m_unknown_coordsys_error = true;
+    m_shading_state_uniform.m_commonspace_synonym     = ustring("world");
+    m_shading_state_uniform.m_unknown_coordsys_error  = true;
+    m_shading_state_uniform.m_max_warnings_per_thread = 100;
 
     m_stat_shaders_loaded                    = 0;
     m_stat_shaders_requested                 = 0;
@@ -1567,7 +1573,8 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("greedyjit", int, m_greedyjit);
     ATTR_SET("relaxed_param_typecheck", int, m_relaxed_param_typecheck);
     ATTR_SET("countlayerexecs", int, m_countlayerexecs);
-    ATTR_SET("max_warnings_per_thread", int, m_max_warnings_per_thread);
+    ATTR_SET("max_warnings_per_thread", int,
+             m_shading_state_uniform.m_max_warnings_per_thread);
     ATTR_SET("max_local_mem_KB", int, m_max_local_mem_KB);
     ATTR_SET("compile_report", int, m_compile_report);
     ATTR_SET("max_optix_groupdata_alloc", int, m_max_optix_groupdata_alloc);
@@ -1738,7 +1745,8 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("greedyjit", int, m_greedyjit);
     ATTR_DECODE("countlayerexecs", int, m_countlayerexecs);
     ATTR_DECODE("relaxed_param_typecheck", int, m_relaxed_param_typecheck);
-    ATTR_DECODE("max_warnings_per_thread", int, m_max_warnings_per_thread);
+    ATTR_DECODE("max_warnings_per_thread", int,
+                m_shading_state_uniform.m_max_warnings_per_thread);
     ATTR_DECODE_STRING("commonspace",
                        m_shading_state_uniform.m_commonspace_synonym);
     ATTR_DECODE_STRING("colorspace", m_colorspace);
@@ -3344,12 +3352,13 @@ ShadingSystemImpl::release_context(ShadingContext* ctx)
 
 
 bool
-ShadingSystemImpl::execute(ShadingContext& ctx, ShaderGroup& group, int index,
+ShadingSystemImpl::execute(ShadingContext& ctx, ShaderGroup& group,
+                           int thread_index, int shade_index,
                            ShaderGlobals& ssg, void* userdata_base_ptr,
                            void* output_base_ptr, bool run)
 {
-    return ctx.execute(group, index, ssg, userdata_base_ptr, output_base_ptr,
-                       run);
+    return ctx.execute(group, thread_index, shade_index, ssg, userdata_base_ptr,
+                       output_base_ptr, run);
 }
 
 
@@ -4412,19 +4421,21 @@ OSL::OSLQuery::init(const ShaderGroup* group, int layernum)
 // firstcheck,nchecks are used to check just one element of an array.
 OSL_SHADEOP void
 osl_naninf_check(int ncomps, const void* vals_, int has_derivs, void* sg,
-                 ustring_pod sourcefile, int sourceline, ustring_pod symbolname,
-                 int firstcheck, int nchecks, ustring_pod opname)
+                 ustringhash_pod sourcefile_, int sourceline,
+                 ustringhash_pod symbolname_, int firstcheck, int nchecks,
+                 ustringhash_pod opname_)
 {
-    ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-    const float* vals   = (const float*)vals_;
+    auto ec           = pvt::get_ec(sg);
+    const float* vals = (const float*)vals_;
     for (int d = 0; d < (has_derivs ? 3 : 1); ++d) {
         for (int c = firstcheck, e = c + nchecks; c < e; ++c) {
             int i = d * ncomps + c;
             if (!OIIO::isfinite(vals[i])) {
-                ctx->errorfmt("Detected {} value in {}{} at {}:{} (op {})",
+                OSL::errorfmt(ec, "Detected {} value in {}{} at {}:{} (op {})",
                               vals[i], d > 0 ? "the derivatives of " : "",
-                              USTR(symbolname), USTR(sourcefile), sourceline,
-                              USTR(opname));
+                              OSL::ustringhash_from(symbolname_),
+                              OSL::ustringhash_from(sourcefile_), sourceline,
+                              OSL::ustringhash_from(opname_));
                 return;
             }
         }
@@ -4444,14 +4455,14 @@ osl_naninf_check(int ncomps, const void* vals_, int has_derivs, void* sg,
 // element of an array.
 OSL_SHADEOP void
 osl_uninit_check(long long typedesc_, void* vals_, void* sg,
-                 ustring_pod sourcefile, int sourceline, ustring_pod groupname_,
-                 int layer, ustring_pod layername_, ustring_pod shadername,
-                 int opnum, ustring_pod opname, int argnum,
-                 ustring_pod symbolname, int firstcheck, int nchecks)
+                 ustringhash_pod sourcefile_, int sourceline,
+                 ustringhash_pod groupname_, int layer,
+                 ustringhash_pod layername_, ustringhash_pod shadername_,
+                 int opnum, ustringhash_pod opname_, int argnum,
+                 ustringhash_pod symbolname_, int firstcheck, int nchecks)
 {
-    TypeDesc typedesc   = TYPEDESC(typedesc_);
-    ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-    bool uninit         = false;
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    bool uninit       = false;
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float* vals = (float*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
@@ -4477,35 +4488,43 @@ osl_uninit_check(long long typedesc_, void* vals_, void* sg,
             }
     }
     if (uninit) {
-        ustringrep groupname = USTR(groupname_);
-        ustringrep layername = USTR(layername_);
-        ctx->errorfmt(
+        auto groupname         = OSL::ustringhash_from(groupname_);
+        auto layername         = OSL::ustringhash_from(layername_);
+        OSL::ExecContextPtr ec = pvt::get_ec(sg);
+        OSL::errorfmt(
+            ec,
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {})",
-            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
-            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
-            layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            USTR(shadername), opnum, USTR(opname), argnum);
+            typedesc, OSL::ustringhash_from(symbolname_),
+            OSL::ustringhash_from(sourcefile_), sourceline,
+            groupname.empty() ? OSL::ustringhash("<unnamed group>") : groupname,
+            layer,
+            layername.empty() ? OSL::ustringhash("<unnamed layer>") : layername,
+            OSL::ustringhash_from(shadername_), opnum,
+            OSL::ustringhash_from(opname_), argnum);
     }
 }
 
 
 
 OSL_SHADEOP int
-osl_range_check_err(int indexvalue, int length, ustring_pod symname, void* sg,
-                    ustring_pod sourcefile, int sourceline,
-                    ustring_pod groupname_, int layer, ustring_pod layername_,
-                    ustring_pod shadername)
+osl_range_check_err(int indexvalue, int length, ustringhash_pod symname_,
+                    void* sg, ustringhash_pod sourcefile_, int sourceline,
+                    ustringhash_pod groupname_, int layer,
+                    ustringhash_pod layername_, ustringhash_pod shadername_)
 {
-    ustringrep groupname = USTR(groupname_);
-    ustringrep layername = USTR(layername_);
+    auto ec = pvt::get_ec(sg);
     if (indexvalue < 0 || indexvalue >= length) {
-        ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-        ctx->errorfmt(
+        auto groupname = OSL::ustringhash_from(groupname_);
+        auto layername = OSL::ustringhash_from(layername_);
+        OSL::errorfmt(
+            ec,
             "Index [{}] out of range {}[0..{}]: {}:{} (group {}, layer {} {}, shader {})",
-            indexvalue, USTR(symname), length - 1, USTR(sourcefile), sourceline,
-            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
-            layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            USTR(shadername));
+            indexvalue, OSL::ustringhash_from(symname_), length - 1,
+            OSL::ustringhash_from(sourcefile_), sourceline,
+            groupname.empty() ? OSL::ustringhash("<unnamed group>") : groupname,
+            layer,
+            layername.empty() ? OSL::ustringhash("<unnamed layer>") : layername,
+            OSL::ustringhash_from(shadername_));
         if (indexvalue >= length)
             indexvalue = length - 1;
         else

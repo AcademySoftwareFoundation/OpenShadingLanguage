@@ -69,6 +69,7 @@ osl_allocate_weighted_closure_component(ShaderGlobals* sg, int id, int size,
     return sg->context->closure_component_allot(id, size, *w);
 }
 
+// Deprecated, remove when conversion from ustring to ustringhash is finished
 OSL_SHADEOP const char*
 osl_closure_to_string(ShaderGlobals* sg, ClosureColor* c)
 {
@@ -78,6 +79,17 @@ osl_closure_to_string(ShaderGlobals* sg, ClosureColor* c)
     print_closure(stream, c, &sg->context->shadingsys());
     return ustring(stream.str()).c_str();
 }
+
+OSL_SHADEOP ustringhash_pod
+osl_closure_to_ustringhash(ShaderGlobals* sg, ClosureColor* c)
+{
+    // Special case for printing closures
+    std::ostringstream stream;
+    stream.imbue(std::locale::classic());  // force C locale
+    print_closure(stream, c, &sg->context->shadingsys());
+    return ustring(stream.str()).hash();
+}
+
 
 
 }  // namespace pvt

@@ -1,0 +1,101 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+struct Astruct {
+    int int1;
+    int int2;
+};
+
+shader test_cxpf (output float Cout = 0.0)
+{
+
+
+printf("The values at %1.2f and %f are %d, %f, %f, %f, %f\n\n", 2.3434, 7.8, 5, 6.4, 123.456, 8.3232, 7.99999);
+
+printf("The value is %s\n", "spam"); //crashes for %s
+printf("The value is %s \t \t and\t %d \n","fish", 12 ); //Produces a new line
+
+
+//Print unmatched braces
+printf("Give me unmatched braces {{{\n");
+
+//Even number of braces with arguments
+printf("The value is %d and {{%d}}\n", 3,67);
+
+// /NNN for unicode
+printf("\124\105\101 time is %f PM\n", 4.09333);
+
+
+color const_color = color(0.45, 0.37, .8);
+color int_color = color(0,0,1);
+color v_color = color(P[0]/3.4, P[1]/6.2, P[0]/2.2);
+
+int arr_col[3] = {0, 0, 1};
+
+printf("Int arr_col[3]: %d\n", arr_col);
+printf("Float color(): %f\n", const_color);
+printf("Int color() only printable as floats: %f\n", int_color);
+printf("Varying float color(): %f\n", v_color);
+ 
+
+
+Astruct a;
+a.int1 = 12;
+a.int2 = 42;
+
+printf("Int struct: a.int1: %d\n", a.int1);
+printf("Int struct: a.int2: %d\n", a.int2);
+
+printf("The value is %3.4f and %g\n",4.569999945, 23.4);
+printf("The value is %d and %f at ranges %f and %f\n\n", 12, 19.45, 3.4, 5.4);
+printf("printf():The value is %0.8f and %0.3f\n\n", 1.23232, 19.45333);
+printf("The value is %f\n\n", 2.3455); 
+printf("The value is %i and %i\n\n", 23, 45);
+printf("The value is %o and %o\n\n", 23, 45);
+printf("The value is %%0.8\n");
+
+printf("Simple printf\n");
+
+//flags: #, 0, +, -
+//Hex
+printf("%#x\n", 10); 
+printf("%x\n",10); 
+
+//Octal
+printf("%o\n",9);
+printf("%#o\n", 9);
+
+//==============================
+//Flag: 0
+//===============================
+printf("%08d\n",123); 
+printf("%01d\n",56678); 
+
+printf("%014d\n",678123); 
+printf("%05d\n", 12);
+printf("%02f\n",1.3);
+printf("%09f\n", 5.6666);
+
+//============================
+//Flag: +
+//===========================
+
+printf("%+d\n",678);
+printf("%+05d\n",12);
+
+//=========================
+//Flag: -
+//========================
+printf("{****%------4d****}\n",678);
+printf("****%------4d****\n", 678);
+printf("The value is %X and %x\n\n", 23, 45);
+printf("The value is %e,%f,%g\n", 2.3, 6.78, 3.4);
+
+printf("%0.2e\n", 45.3232);
+
+
+Cout = P[0] + P[1];
+
+}

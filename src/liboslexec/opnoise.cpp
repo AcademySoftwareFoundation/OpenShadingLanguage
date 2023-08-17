@@ -8,6 +8,7 @@
 #include <OSL/Imathx/Imathx.h>
 #include <OSL/device_string.h>
 #include <OSL/dual_vec.h>
+#include <OSL/fmt_util.h>
 #include <OSL/oslnoise.h>
 
 #include <OpenImageIO/fmath.h>
@@ -730,8 +731,7 @@ struct GenericNoise {
             result.clear_d();
         } else {
 #    ifndef __CUDA_ARCH__
-            ((ShadingContext*)sg->context)
-                ->errorfmt("Unknown noise type \"{}\"", name);
+            OSL::errorfmt(sg, "Unknown noise type \"{}\"", name);
 #    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
@@ -779,8 +779,7 @@ struct GenericNoise {
             result.clear_d();
         } else {
 #    ifndef __CUDA_ARCH__
-            ((ShadingContext*)sg->context)
-                ->errorfmt("Unknown noise type \"{}\"", name);
+            OSL::errorfmt(sg, "Unknown noise type \"{}\"", name);
 #    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
@@ -825,8 +824,7 @@ struct GenericPNoise {
             result.clear_d();
         } else {
 #    ifndef __CUDA_ARCH__
-            ((ShadingContext*)sg->context)
-                ->errorfmt("Unknown noise type \"{}\"", name);
+            OSL::errorfmt(sg, "Unknown noise type \"{}\"", name);
 #    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();
@@ -860,8 +858,7 @@ struct GenericPNoise {
             result.clear_d();
         } else {
 #    ifndef __CUDA_ARCH__
-            ((ShadingContext*)sg->context)
-                ->errorfmt("Unknown noise type \"{}\"", name);
+            OSL::errorfmt(sg, "Unknown noise type \"{}\"", name);
 #    else
             // TODO: find a way to signal this error on the GPU
             result.clear_d();

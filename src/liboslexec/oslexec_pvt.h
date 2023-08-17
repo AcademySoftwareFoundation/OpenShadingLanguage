@@ -621,8 +621,8 @@ public:
 
     void release_context(ShadingContext* ctx);
 
-    bool execute(ShadingContext& ctx, ShaderGroup& group, int shadeindex,
-                 ShaderGlobals& ssg, void* userdata_base_ptr,
+    bool execute(ShadingContext& ctx, ShaderGroup& group, int thread_index,
+                 int shadeindex, ShaderGlobals& ssg, void* userdata_base_ptr,
                  void* output_base_ptr, bool run = true);
 
     const void* get_symbol(ShadingContext& ctx, ustring layername,
@@ -667,7 +667,10 @@ public:
     bool fold_getattribute() const { return m_opt_fold_getattribute; }
     bool opt_texture_handle() const { return m_opt_texture_handle; }
     int opt_passes() const { return m_opt_passes; }
-    int max_warnings_per_thread() const { return m_max_warnings_per_thread; }
+    int max_warnings_per_thread() const
+    {
+        return m_shading_state_uniform.m_max_warnings_per_thread;
+    }
     bool countlayerexecs() const { return m_countlayerexecs; }
     bool lazy_userdata() const { return m_lazy_userdata; }
     bool userdata_isconnected() const { return m_userdata_isconnected; }
@@ -875,7 +878,6 @@ private:
     bool m_greedyjit;             ///< JIT as much as we can?
     bool m_countlayerexecs;       ///< Count number of layer execs?
     bool m_relaxed_param_typecheck;  ///< Allow parameters to be set from isomorphic types (same data layout)
-    int m_max_warnings_per_thread;  ///< How many warnings to display per thread before giving up?
     int m_profile;                 ///< Level of profiling of shader execution
     int m_optimize;                ///< Runtime optimization level
     bool m_opt_simplify_param;     ///< Turn instance params into const?
@@ -2071,13 +2073,13 @@ public:
 
     /// Bind a shader group and globals to this context and prepare to
     /// execute. (See similarly named method of ShadingSystem.)
-    bool execute_init(ShaderGroup& group, int shadeindex,
+    bool execute_init(ShaderGroup& group, int threadindex, int shadeindex,
                       ShaderGlobals& globals, void* userdata_base_ptr,
                       void* output_base_ptr, bool run);
 
     /// Execute the layer whose index is specified. (See similarly named
     /// method of ShadingSystem.)
-    bool execute_layer(int shadeindex, ShaderGlobals& globals,
+    bool execute_layer(int threadindex, int shadeindex, ShaderGlobals& globals,
                        void* userdata_base_ptr, void* output_base_ptr,
                        int layer);
 
@@ -2087,8 +2089,9 @@ public:
 
     /// Execute the shader group, including init, run of single entry point
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
-    bool execute(ShaderGroup& group, int shadeindex, ShaderGlobals& globals,
-                 void* userdata_base_ptr, void* output_base_ptr, bool run);
+    bool execute(ShaderGroup& group, int threadindex, int shadeindex,
+                 ShaderGlobals& globals, void* userdata_base_ptr,
+                 void* output_base_ptr, bool run);
 
 #if OSL_USE_BATCHED
     // Group all batched methods behind a templated interface
@@ -2302,11 +2305,11 @@ public:
     /// Look up a query from a dictionary (typically XML), staring the
     /// search from the root of the dictionary, and returning ID of the
     /// first matching node.
-    int dict_find(ustring dictionaryname, ustring query);
+    int dict_find(ExecContextPtr ec, ustring dictionaryname, ustring query);
     /// Look up a query from a dictionary (typically XML), staring the
     /// search from the given nodeID within the dictionary, and
     /// returning ID of the first matching node.
-    int dict_find(int nodeID, ustring query);
+    int dict_find(ExecContextPtr ec, int nodeID, ustring query);
     /// Return the next match of the same query that gave the nodeID.
     int dict_next(int nodeID);
     /// Look up an attribute of the given dictionary node.  If

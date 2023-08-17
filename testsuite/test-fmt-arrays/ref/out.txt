@@ -1,0 +1,16 @@
+Compiled test_arrays.osl -> test_arrays.oso
+printf arrays:
+
+Output Cout to test_arrays.tif
+Int array values 5 6 7 8
+ Float array values 6.600000 7.700000 8.433430 8.945454 0.000000
+ One shelf array element's width 1.000000 
+Int array values 5 6 7 8
+ Float array values 6.600000 7.700000 8.433430 8.945454 0.000000
+ One shelf array element's width 2.000000 
+Int array values 5 6 7 8
+ Float array values 6.600000 7.700000 8.433430 8.945454 0.000000
+ One shelf array element's width 1.000000 
+Int array values 5 6 7 8
+ Float array values 6.600000 7.700000 8.433430 8.945454 0.000000
+ One shelf array element's width 2.000000 

@@ -2246,6 +2246,7 @@ OSLCompilerImpl::type_from_code(const char* code, int* advance)
     case 'n': t = TypeDesc::TypeNormal; break;
     case 'm': t = TypeDesc::TypeMatrix; break;
     case 's': t = TypeDesc::TypeString; break;
+    case 'h': t = OSL::TypeUInt64; break;  // ustringhash_pod
     case 'x': t = TypeDesc(TypeDesc::NONE); break;
     case 'X': t = TypeDesc(TypeDesc::PTR); break;
     case 'L': t = TypeDesc(TypeDesc::LONGLONG); break;

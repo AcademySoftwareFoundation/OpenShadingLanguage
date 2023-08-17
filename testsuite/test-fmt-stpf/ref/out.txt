@@ -1,0 +1,28 @@
+Compiled test_stpf.osl -> test_stpf.oso
+printf:
+
+Output Cout to test_stpf.tif
+kitten weekly toys count: 3 4 6 8 3 4 6 
+kitten street address: 389 vine 
+kitten coloring: 0.400000 0.400000 0.600000
+kitten struct coloring: (R) = 0.400000
+kitten struct coloring: (G) = 0.400000
+kitten struct coloring: (B) = 0.600000
+kitten weekly toys count: 3 4 6 8 3 4 6 
+kitten street address: 389 vine 
+kitten coloring: 0.400000 0.400000 0.600000
+kitten struct coloring: (R) = 0.400000
+kitten struct coloring: (G) = 0.400000
+kitten struct coloring: (B) = 0.600000
+kitten weekly toys count: 3 4 6 8 3 4 6 
+kitten street address: 389 vine 
+kitten coloring: 0.400000 0.400000 0.600000
+kitten struct coloring: (R) = 0.400000
+kitten struct coloring: (G) = 0.400000
+kitten struct coloring: (B) = 0.600000
+kitten weekly toys count: 3 4 6 8 3 4 6 
+kitten street address: 389 vine 
+kitten coloring: 0.400000 0.400000 0.600000
+kitten struct coloring: (R) = 0.400000
+kitten struct coloring: (G) = 0.400000
+kitten struct coloring: (B) = 0.600000

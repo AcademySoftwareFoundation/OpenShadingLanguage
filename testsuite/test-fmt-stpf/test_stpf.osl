@@ -1,0 +1,73 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+struct address
+{
+string street;  
+int number;
+};
+
+struct coloring {
+        float r;
+        float g;
+        float b;
+};
+
+
+struct kittens {
+    
+    string name;
+    int age;
+    color col;
+    coloring k_col; 
+    address k_add;
+    float weight;
+    int weekly_toys_count [7];
+};
+
+
+
+shader test_stpf (output color Cout = 0)
+{
+
+
+// Construct a struct instance
+   kittens k1;
+
+// Structure assignment
+    k1.name = "chamomile";
+    k1.age = 1;
+
+// Kitten coloring assignment
+    k1.k_col.r = 0.4;
+    k1.k_col.g = 0.4;
+    k1.k_col.b = 0.6;
+
+    k1.col = color(.4,.4,0.6);
+
+//Kitten address assignment
+
+    k1.k_add.street = "vine";
+    k1.k_add.number = 389;
+    k1.weight = 7.8;
+    k1.weekly_toys_count[0] = 3;
+    k1.weekly_toys_count[1] = 4;
+    k1.weekly_toys_count[2] = 6;
+    k1.weekly_toys_count[3] = 8;
+    k1.weekly_toys_count[4] = 3;
+    k1.weekly_toys_count[5] = 4;
+    k1.weekly_toys_count[6] = 6;
+    
+    
+
+printf("kitten weekly toys count: %d \n", k1.weekly_toys_count);
+printf("kitten street address: %d %s \n", k1.k_add.number, k1.k_add.street);
+printf("kitten coloring: %f\n", k1.col);
+printf("kitten struct coloring: (R) = %f\n", k1.k_col.r);
+printf("kitten struct coloring: (G) = %f\n", k1.k_col.g);
+printf("kitten struct coloring: (B) = %f\n", k1.k_col.b);
+
+
+}

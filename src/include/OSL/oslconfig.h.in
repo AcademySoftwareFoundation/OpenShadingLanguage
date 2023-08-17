@@ -124,6 +124,7 @@ using OIIO::TypeInt;
 using OIIO::TypeFloat2;
 using OIIO::TypeVector2;
 using OIIO::TypeVector4;
+using OIIO::TypeUInt64;
 
 using OIIO::Strutil::print;
 
@@ -134,6 +135,20 @@ fmtformat(const Str& fmt, Args&&... args)
     return OIIO::Strutil::fmt::format(fmt, std::forward<Args>(args)...);
 }
 
+// TODO: notice the fmt argument is not templatised, this is because
+// no implicit conversion exists betwen OSL::string_view and ::fmt::string_view
+// so we choose to only accept OSL::string_view and explicitly convert to ::fmt::string_view
+// OIIO should fix this if possible.
+template<typename OutIt, typename... Args>
+OSL_NODISCARD inline auto
+fmtformat_to_n(OutIt &out, size_t n, const string_view& fmt, Args&&... args)
+{
+    // DOES NOT EXIST AS PUBLIC API
+    //return OIIO::Strutil::fmt::format_to_n(out, n, fmt, std::forward<Args>(args)...);
+    // So call directly into underlying fmt library OIIO is using
+    // TODO:  Add format_to_n as a public API in OIIO
+    return ::fmt::format_to_n(out, n, ::fmt::string_view{fmt.begin(), fmt.length()}, std::forward<Args>(args)...);
+}
 
 
 /// OSL_USTRINGREP_IS_HASH will be 1 if the build-time option was enabled to
@@ -148,9 +163,12 @@ using ustringrep = ustringhash;
 using ustringrep = ustring;
 #endif
 
+/// ustringhash_pod is the type we use to pass hash data in llvm function calls.
+using ustringhash_pod = size_t;
+
 #if OSL_USTRINGREP_IS_HASH
 /// ustring_pod is the type we use to pass string data in llvm function calls.
-using ustring_pod = size_t;
+using ustring_pod = ustringhash_pod;
 #else
 /// ustring_pod is the type we use to pass string data in llvm function calls.
 using ustring_pod = const char*;
@@ -187,11 +205,28 @@ ustringhash_from(ustringhash u)
     return u;
 }
 
+/// Convenience function to convert USTRINGHASH_POD to a ustringhash.
+inline ustringhash
+ustringhash_from(ustringhash_pod u) 
+{
+#if OIIO_VERSION_GREATER_EQUAL(2, 4, 10)
+    return ustringhash{u};
+#else
+    // No constructor taking the pod type existed previously
+    // so bitcast it.
+    return OSL::bitcast<ustringhash>(u);
+#endif
+}
+
 /// Convenience function to convert to a ustringhash.
 inline ustringhash
 ustringhash_from(ustring u)
 {
-    return u.uhash();
+    ustringhash ret;
+    // Not legal to call uhash on an empty ustring
+    if(!u.empty())
+        ret = u.uhash();
+    return ret;
 }
 
 

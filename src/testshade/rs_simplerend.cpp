@@ -6,6 +6,8 @@
 #    error OSL_HOST_RS_BITCODE must be defined by your build system.
 #endif
 
+#include <OSL/fmt_util.h>
+#include <OSL/journal.h>
 #include <OSL/rs_free_function.h>
 
 #include "render_state.h"
@@ -26,8 +28,9 @@
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
 OSL_RSOP bool
-rs_get_matrix_xform_time(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& result,
-                         OSL::TransformationPtr xform, float /*time*/)
+rs_get_matrix_xform_time(OSL::OpaqueExecContextPtr /*ec*/,
+                         OSL::Matrix44& result, OSL::TransformationPtr xform,
+                         float /*time*/)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
@@ -37,10 +40,11 @@ rs_get_matrix_xform_time(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_get_inverse_matrix_xform_time(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
+rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr ec,
+                                 OSL::Matrix44& result,
                                  OSL::TransformationPtr xform, float time)
 {
-    bool ok = rs_get_matrix_xform_time(sg, result, xform, time);
+    bool ok = rs_get_matrix_xform_time(ec, result, xform, time);
     if (ok) {
         result.invert();
     }
@@ -48,8 +52,9 @@ rs_get_inverse_matrix_xform_time(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_get_matrix_space_time(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& result,
-                         OSL::StringParam from, float /*time*/)
+rs_get_matrix_space_time(OSL::OpaqueExecContextPtr /*ec*/,
+                         OSL::Matrix44& result, OSL::StringParam from,
+                         float /*time*/)
 {
     if (from == STRING_PARAMS(myspace)) {
         OSL::Matrix44 Mmyspace;
@@ -62,12 +67,13 @@ rs_get_matrix_space_time(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_get_inverse_matrix_space_time(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
-                                 OSL::StringParam to, float time)
+rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
+                                 OSL::Matrix44& result, OSL::StringParam to,
+                                 float time)
 {
     using OSL::Matrix44;
 
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+    auto rs = OSL::get_rs<RenderState>(ec);
     if (to == STRING_PARAMS(camera) || to == STRING_PARAMS(screen)
         || to == STRING_PARAMS(NDC) || to == STRING_PARAMS(raster)) {
         Matrix44 M { rs->world_to_camera };
@@ -75,7 +81,6 @@ rs_get_inverse_matrix_space_time(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
         if (to == STRING_PARAMS(screen) || to == STRING_PARAMS(NDC)
             || to == STRING_PARAMS(raster)) {
             float depthrange = (double)rs->yon - (double)rs->hither;
-            //OSL::StringParam proj{rs->projection.m_chars};
             const auto& proj = rs->projection;
 
             if (proj == STRING_PARAMS(perspective)) {
@@ -122,7 +127,7 @@ rs_get_inverse_matrix_space_time(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
         result = M;
         return true;
     } else {
-        bool ok = rs_get_matrix_space_time(sg, result, to, time);
+        bool ok = rs_get_matrix_space_time(ec, result, to, time);
         if (ok) {
             result.invert();
         }
@@ -132,7 +137,7 @@ rs_get_inverse_matrix_space_time(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_get_matrix_xform(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& result,
+rs_get_matrix_xform(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& result,
                     OSL::TransformationPtr xform)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
@@ -143,10 +148,10 @@ rs_get_matrix_xform(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_get_inverse_matrix_xform(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
+rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
                             OSL::TransformationPtr xform)
 {
-    bool ok = rs_get_matrix_xform(sg, result, xform);
+    bool ok = rs_get_matrix_xform(ec, result, xform);
     if (ok) {
         result.invert();
     }
@@ -155,7 +160,7 @@ rs_get_inverse_matrix_xform(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_get_matrix_space(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& /*result*/,
+rs_get_matrix_space(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& /*result*/,
                     OSL::StringParam from)
 {
     if (from == STRING_PARAMS(myspace)) {
@@ -166,10 +171,10 @@ rs_get_matrix_space(OSL::ShaderGlobals* /*sg*/, OSL::Matrix44& /*result*/,
 }
 
 OSL_RSOP bool
-rs_get_inverse_matrix_space(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
+rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
                             OSL::StringParam to)
 {
-    bool ok = rs_get_matrix_space(sg, result, to);
+    bool ok = rs_get_matrix_space(ec, result, to);
     if (ok) {
         result.invert();
     }
@@ -177,10 +182,68 @@ rs_get_inverse_matrix_space(OSL::ShaderGlobals* sg, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_transform_points(OSL::ShaderGlobals* /*sg*/, OSL::StringParam /*from*/,
+rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::StringParam /*from*/,
                     OSL::StringParam /*to*/, float /*time*/,
                     const OSL::Vec3* /*Pin*/, OSL::Vec3* /*Pout*/,
                     int /*npoints*/, OSL::TypeDesc::VECSEMANTICS /*vectype*/)
 {
     return false;
+}
+
+
+
+OSL_RSOP void
+rs_errorfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
+            int32_t arg_count, const OSL::EncodedType* argTypes,
+            uint32_t argValuesSize, uint8_t* argValues)
+{
+    auto rs = OSL::get_rs<RenderState>(ec);
+
+    OSL::journal::Writer jw { rs->journal_buffer };
+    jw.record_errorfmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
+                       fmt_specification, arg_count, argTypes, argValuesSize,
+                       argValues);
+}
+
+OSL_RSOP void
+rs_warningfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
+              int32_t arg_count, const OSL::EncodedType* argTypes,
+              uint32_t argValuesSize, uint8_t* argValues)
+{
+    auto rs = OSL::get_rs<RenderState>(ec);
+
+    OSL::journal::Writer jw { rs->journal_buffer };
+    jw.record_warningfmt(OSL::get_max_warnings_per_thread(ec),
+                         OSL::get_thread_index(ec), OSL::get_shade_index(ec),
+                         fmt_specification, arg_count, argTypes, argValuesSize,
+                         argValues);
+}
+
+
+OSL_RSOP void
+rs_printfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
+            int32_t arg_count, const OSL::EncodedType* argTypes,
+            uint32_t argValuesSize, uint8_t* argValues)
+{
+    auto rs = OSL::get_rs<RenderState>(ec);
+
+    OSL::journal::Writer jw { rs->journal_buffer };
+    jw.record_printfmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
+                       fmt_specification, arg_count, argTypes, argValuesSize,
+                       argValues);
+}
+
+
+OSL_RSOP void
+rs_filefmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename_hash,
+           OSL::ustringhash fmt_specification, int32_t arg_count,
+           const OSL::EncodedType* argTypes, uint32_t argValuesSize,
+           uint8_t* argValues)
+{
+    auto rs = OSL::get_rs<RenderState>(ec);
+
+    OSL::journal::Writer jw { rs->journal_buffer };
+    jw.record_filefmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
+                      filename_hash, fmt_specification, arg_count, argTypes,
+                      argValuesSize, argValues);
 }

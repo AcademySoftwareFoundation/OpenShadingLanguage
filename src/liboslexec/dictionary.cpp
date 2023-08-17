@@ -19,6 +19,7 @@ namespace pugi = OIIO::pugi;
 
 
 #include "oslexec_pvt.h"
+#include <OSL/fmt_util.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -58,8 +59,8 @@ public:
             delete doc;
     }
 
-    int dict_find(ustring dictionaryname, ustring query);
-    int dict_find(int nodeID, ustring query);
+    int dict_find(ExecContextPtr ec, ustring dictionaryname, ustring query);
+    int dict_find(ExecContextPtr ec, int nodeID, ustring query);
     int dict_next(int nodeID);
     int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data);
 
@@ -138,13 +139,13 @@ private:
     std::vector<ustring> m_stringdata;
 
     // Helper function: return the document index given dictionary name.
-    int get_document_index(ustring dictionaryname);
+    int get_document_index(ExecContextPtr ec, ustring dictionaryname);
 };
 
 
 
 int
-Dictionary::get_document_index(ustring dictionaryname)
+Dictionary::get_document_index(ExecContextPtr ec, ustring dictionaryname)
 {
     DocMap::iterator dm = m_document_map.find(dictionaryname);
     int dindex;
@@ -162,9 +163,16 @@ Dictionary::get_document_index(ustring dictionaryname)
             parse_result = doc->load_string(dictionaryname.c_str());
         }
         if (!parse_result) {
-            m_context->errorfmt("XML parsed with errors: {}, at offset {}",
-                                parse_result.description(),
-                                parse_result.offset);
+            // Batched case doesn't support error customization yet,
+            // so continue to report through the context when ec is null
+            if (ec == nullptr) {
+                m_context->errorfmt("XML parsed with errors: {}, at offset {}",
+                                    parse_result.description(),
+                                    parse_result.offset);
+            } else {
+                OSL::errorfmt(ec, "XML parsed with errors: {}, at offset {}",
+                              parse_result.description(), parse_result.offset);
+            }
             m_document_map[dictionaryname] = -1;
             return -1;
         }
@@ -179,9 +187,9 @@ Dictionary::get_document_index(ustring dictionaryname)
 
 
 int
-Dictionary::dict_find(ustring dictionaryname, ustring query)
+Dictionary::dict_find(ExecContextPtr ec, ustring dictionaryname, ustring query)
 {
-    int dindex = get_document_index(dictionaryname);
+    int dindex = get_document_index(ec, dictionaryname);
     if (dindex < 0)
         return dindex;
 
@@ -199,8 +207,15 @@ Dictionary::dict_find(ustring dictionaryname, ustring query)
     try {
         matches = doc->select_nodes(query.c_str());
     } catch (const pugi::xpath_exception& e) {
-        m_context->errorfmt("Invalid dict_find query '{}': {}", query,
-                            e.what());
+        // Batched case doesn't support error customization yet,
+        // so continue to report through the context when ec is null
+        if (ec == nullptr) {
+            m_context->errorfmt("Invalid dict_find query '{}': {}", query,
+                                e.what());
+        } else {
+            OSL::errorfmt(ec, "Invalid dict_find query '{}': {}", query,
+                          e.what());
+        }
         return 0;
     }
 
@@ -228,7 +243,7 @@ Dictionary::dict_find(ustring dictionaryname, ustring query)
 
 
 int
-Dictionary::dict_find(int nodeID, ustring query)
+Dictionary::dict_find(ExecContextPtr ec, int nodeID, ustring query)
 {
     if (nodeID <= 0 || nodeID >= (int)m_nodes.size())
         return 0;  // invalid node ID
@@ -245,8 +260,15 @@ Dictionary::dict_find(int nodeID, ustring query)
     try {
         matches = m_nodes[nodeID].node.select_nodes(query.c_str());
     } catch (const pugi::xpath_exception& e) {
-        m_context->errorfmt("Invalid dict_find query '{}': {}", query,
-                            e.what());
+        // Batched case doesn't support error customization yet,
+        // so continue to report through the context when ec is null
+        if (ec == nullptr) {
+            m_context->errorfmt("Invalid dict_find query '{}': {}", query,
+                                e.what());
+        } else {
+            OSL::errorfmt(ec, "Invalid dict_find query '{}': {}", query,
+                          e.what());
+        }
         return 0;
     }
 
@@ -379,23 +401,24 @@ Dictionary::dict_value(int nodeID, ustring attribname, TypeDesc type,
 
 
 int
-ShadingContext::dict_find(ustring dictionaryname, ustring query)
+ShadingContext::dict_find(ExecContextPtr ec, ustring dictionaryname,
+                          ustring query)
 {
     if (!m_dictionary) {
         m_dictionary = new Dictionary(this);
     }
-    return m_dictionary->dict_find(dictionaryname, query);
+    return m_dictionary->dict_find(ec, dictionaryname, query);
 }
 
 
 
 int
-ShadingContext::dict_find(int nodeID, ustring query)
+ShadingContext::dict_find(ExecContextPtr ec, int nodeID, ustring query)
 {
     if (!m_dictionary) {
         m_dictionary = new Dictionary(this);
     }
-    return m_dictionary->dict_find(nodeID, query);
+    return m_dictionary->dict_find(ec, nodeID, query);
 }
 
 
@@ -430,38 +453,38 @@ ShadingContext::free_dict_resources()
 
 
 OSL_SHADEOP int
-osl_dict_find_iis(void* sg_, int nodeID, void* query)
+osl_dict_find_iis(OpaqueExecContextPtr oec, int nodeID, void* query)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    return sg->context->dict_find(nodeID, USTR(query));
+    auto ec = pvt::get_ec(oec);
+    return ec->context->dict_find(ec, nodeID, USTR(query));
 }
 
 
 
 OSL_SHADEOP int
-osl_dict_find_iss(void* sg_, void* dictionary, void* query)
+osl_dict_find_iss(OpaqueExecContextPtr oec, void* dictionary, void* query)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    return sg->context->dict_find(USTR(dictionary), USTR(query));
+    auto ec = pvt::get_ec(oec);
+    return ec->context->dict_find(ec, USTR(dictionary), USTR(query));
 }
 
 
 
 OSL_SHADEOP int
-osl_dict_next(void* sg_, int nodeID)
+osl_dict_next(OpaqueExecContextPtr oec, int nodeID)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    return sg->context->dict_next(nodeID);
+    auto ec = pvt::get_ec(oec);
+    return ec->context->dict_next(nodeID);
 }
 
 
 
 OSL_SHADEOP int
-osl_dict_value(void* sg_, int nodeID, void* attribname, long long type,
-               void* data)
+osl_dict_value(OpaqueExecContextPtr oec, int nodeID, void* attribname,
+               long long type, void* data)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    return sg->context->dict_value(nodeID, USTR(attribname), TYPEDESC(type),
+    auto ec = pvt::get_ec(oec);
+    return ec->context->dict_value(nodeID, USTR(attribname), TYPEDESC(type),
                                    data);
 }
 

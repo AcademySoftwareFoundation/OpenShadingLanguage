@@ -22,17 +22,18 @@
 
 OSL_NAMESPACE_ENTER
 
+//Forward declare
 class ShadingContext;
+struct ShaderGlobals;
+typedef ShaderGlobals ExecContext;
+typedef ExecContext* ExecContextPtr;
 
 namespace pvt {
 
-
+// By default, color transformation errors are reported through ShadingContext,
+// unless the optional ExecutionContextPtr was provided which causes errors
+// to be reported through the renderer services
 class OSLEXECPUBLIC ColorSystem {
-#ifdef __CUDACC__
-    using Context = void*;
-#else
-    using Context = ShadingContext*;
-#endif
 public:
     // A colour system is defined by the CIE x and y coordinates of its
     // three primary illuminants and its white point.
@@ -61,10 +62,7 @@ public:
     }
 
     /// Return the luminance scale  of the current color space.
-    const Color3& luminance_scale() const
-    {
-        return m_luminance_scale;
-    }
+    const Color3& luminance_scale() const { return m_luminance_scale; }
 
     /// Return the RGB in the current color space for blackbody radiation
     /// at temperature T (in Kelvin).
@@ -86,46 +84,48 @@ public:
     OSL_HOSTDEVICE bool set_colorspace(StringParam colorspace);
 
     OSL_HOSTDEVICE Color3 to_rgb(StringParam fromspace, const Color3& C,
-                                 Context) const;
+                                 ShadingContext*,
+                                 ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Color3 from_rgb(StringParam fromspace, const Color3& C,
-                                   Context) const;
+                                   ShadingContext*,
+                                   ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Dual2<Color3> transformc(StringParam fromspace,
                                             StringParam tospace,
                                             const Dual2<Color3>& color,
-                                            Context ctx) const;
+                                            ShadingContext*,
+                                            ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Color3 transformc(StringParam fromspace, StringParam tospace,
-                                     const Color3& color, Context ctx) const;
+                                     const Color3& color, ShadingContext*,
+                                     ExecContextPtr ec = nullptr) const;
 
-    OSL_HOSTDEVICE Dual2<Color3> ocio_transform(StringParam fromspace,
-                                                StringParam tospace,
-                                                const Dual2<Color3>& C,
-                                                Context) const;
+    OSL_HOSTDEVICE Dual2<Color3>
+    ocio_transform(StringParam fromspace, StringParam tospace,
+                   const Dual2<Color3>& C, ShadingContext*,
+                   ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Color3 ocio_transform(StringParam fromspace,
                                          StringParam tospace, const Color3& C,
-                                         Context) const;
-
+                                         ShadingContext*,
+                                         ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE const StringParam& colorspace() const
     {
         return m_colorspace;
     }
 
-    OSL_HOSTDEVICE void error(StringParam src, StringParam dst, Context) const;
-
 private:
     template<typename Color>
-    OSL_HOSTDEVICE inline Color transformc(StringParam fromspace,
-                                           StringParam tospace, const Color& C,
-                                           Context) const;
+    OSL_HOSTDEVICE inline Color
+    transformc(StringParam fromspace, StringParam tospace, const Color& C,
+               ShadingContext*, ExecContextPtr ec = nullptr) const;
 
     template<typename Color>
-    OSL_HOSTDEVICE inline Color ocio_transform(StringParam fromspace,
-                                               StringParam tospace,
-                                               const Color& C, Context) const;
+    OSL_HOSTDEVICE inline Color
+    ocio_transform(StringParam fromspace, StringParam tospace, const Color& C,
+                   ShadingContext*, ExecContextPtr ec = nullptr) const;
 
 
     // Derived/cached calculations from options:

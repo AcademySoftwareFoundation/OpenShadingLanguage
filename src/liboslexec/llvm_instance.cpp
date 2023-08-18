@@ -990,6 +990,42 @@ BackendLLVM::build_llvm_init()
     return ll.current_function();
 }
 
+llvm::Function* BackendLLVM::build_check_layer_skip_stub()
+{
+    // This just creates a function that returns false
+
+    llvm::Function* stub = ll.make_function(
+        "osl_check_layer_skip_stub",
+        false,
+        ll.type_bool(),
+        {
+            ll.type_int(),
+            llvm_type_sg_ptr(),
+        },
+        false);
+
+    ll.current_function(stub);
+
+    if (ll.debug_is_enabled()) {
+        ustring sourcefile
+            = group()[0]->op(group()[0]->maincodebegin()).sourcefile();
+        ll.debug_push_function("osl_check_layer_skip_stub", sourcefile, 1);
+    }
+
+    llvm::BasicBlock* entry_bb = ll.new_basic_block("check_layer_skip_stub-bb");
+    ll.new_builder(entry_bb);
+
+    ll.op_return(ll.constant_bool(false));
+
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+    }
+
+    ll.end_builder();
+    return stub;
+
+}
+
 // OptiX Callables:
 //  Builds three OptiX callables: an init wrapper, an entry layer wrapper,
 //  and a "fused" callable that wraps both and owns the groupdata params buffer.
@@ -1575,6 +1611,7 @@ BackendLLVM::run()
 #ifdef OSL_LLVM_NO_BITCODE
         OSL_ASSERT(!use_rs_bitcode());
         ll.module(ll.new_module("llvm_ops"));
+
 #    if OSL_USE_OPTIX
         if (use_optix()) {
             // If the module is created from LLVM bitcode, the target and
@@ -1689,6 +1726,7 @@ BackendLLVM::run()
     shadingsys().m_stat_empty_instances += nlayers - m_num_used_layers;
 
     initialize_llvm_group();
+    build_check_layer_skip_stub();
 
     // Generate the LLVM IR for each layer.  Skip unused layers.
     m_llvm_local_mem          = 0;

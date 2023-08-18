@@ -175,7 +175,6 @@ osl_printf(ShaderGlobals* sg, const char* format_str, ...)
     sg->context->messagefmt("{}", s);
 }
 
-
 OSL_SHADEOP void
 osl_error(ShaderGlobals* sg, const char* format_str, ...)
 {

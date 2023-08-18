@@ -118,6 +118,40 @@ BackendLLVM::llvm_call_layer(int layer, bool unconditional)
     // if it's run unconditionally.
     // The code in the parent layer itself will set its 'executed' flag.
 
+    //
+    // WIP COMMENT:
+    // Do something a little more complicated in the conditional case.
+    //
+    // We set up a stub function osl_check_layer_skip_stub(parentlayer) { return false; }
+    //
+    // In addition to checking groupdata->run[parentlayer],
+    // we also call the stub "bool skip = osl_check_layer_skip_stub(parentlayer)".
+    // The conditional becomes if (!skip && !groupdata->run[parentlayer]).
+    //
+    // During optimization, we analyze each call to that stub function.
+    // For a given call, we can walk up llvm's dominator tree and search
+    // for prior calls to the stub function. Finding one guarantees that for
+    // the current call, the layer is guaranteed to have already run.
+    //
+    // So if we find a hit, we replace the call with the constant true:
+    // bool skip = osl_check_layer_skip_stub(parentlayer) -> bool skip = true;
+    // Then (!skip && !groupdata->run[parentlayer]) is known false and llvm can
+    // constant-fold the entire if-statement away.
+    //
+    // If we don't find a hit, llvm can still inline the stub and we codegen the
+    // original if-statement.
+    //
+    // Similarly, if we skip the optimization, we still generate the correct code,
+    // we just won't remove any unnecessary checks.
+    //
+
+    llvm::Value* skip = ll.constant_bool(false);
+    if (!unconditional) {
+        llvm::Value* args[]
+            = { ll.constant(layer), sg_ptr() };
+        skip = ll.call_function("osl_check_layer_skip_stub", args);
+    }
+
     llvm::Value* args[]
         = { sg_ptr(),          groupdata_ptr(), userdata_base_ptr(),
             output_base_ptr(), shadeindex(),    m_llvm_interactive_params_ptr };
@@ -129,6 +163,7 @@ BackendLLVM::llvm_call_layer(int layer, bool unconditional)
     if (!unconditional) {
         llvm::Value* executed = ll.op_load(layerfield);
         executed              = ll.op_ne(executed, trueval);
+        executed = ll.op_and(ll.op_not(skip), executed);
         then_block            = ll.new_basic_block("");
         after_block           = ll.new_basic_block("");
         ll.op_branch(executed, then_block, after_block);

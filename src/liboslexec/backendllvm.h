@@ -61,6 +61,7 @@ public:
     // Create llvm functions for OptiX callables
     std::vector<llvm::Function*> build_llvm_optix_callables();
     llvm::Function* build_llvm_fused_callable();
+    llvm::Function* build_check_layer_skip_stub();
 
     /// Build up LLVM IR code for the given range [begin,end) or
     /// opcodes, putting them (initially) into basic block bb (or the

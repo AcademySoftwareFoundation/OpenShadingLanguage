@@ -79,6 +79,7 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 #include <llvm/Support/DynamicLibrary.h>
 
@@ -91,6 +92,7 @@
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
+
 
 OSL_NAMESPACE_ENTER
 
@@ -1751,7 +1753,98 @@ LLVM_Util::InstallLazyFunctionCreator(void* (*P)(const std::string&))
     exec->InstallLazyFunctionCreator(P);
 }
 
+namespace {
 
+struct CheckLayerRemovalPass : public llvm::FunctionPass {
+    int m_calls_checked;
+    int m_calls_removed;
+
+    static char ID;
+    CheckLayerRemovalPass() : FunctionPass(ID) {}
+
+    bool doInitialization(llvm::Module &M) override {
+        m_calls_checked = 0;
+        m_calls_removed = 0;
+        return true;
+    }
+
+    bool runOnFunction(llvm::Function &F) override {
+        llvm::DominatorTree &dt = getAnalysis<llvm::DominatorTreeWrapperPass>().getDomTree();
+
+        llvm::ValueMap<llvm::BasicBlock*, llvm::DenseSet<int>> bblock_layer_lookup;
+
+        const std::string target_fn = "osl_check_layer_skip_stub";
+
+        // Find all of the stub calls and associate them with their basic block
+        for(auto I = llvm::inst_begin(F), E = llvm::inst_end(F); I != E; ++I) {
+            auto* call_inst = llvm::dyn_cast<llvm::CallInst>(&*I);
+            if (call_inst) {
+                llvm::Function* called = call_inst->getCalledFunction();
+                if (called && called->getName() == target_fn) {
+                    llvm::Value *arg = call_inst->getArgOperand(0);
+                    int layer = llvm::cast<llvm::ConstantInt>(arg)->getSExtValue();
+
+                    llvm::BasicBlock* bblock = I->getParent();
+                    bblock_layer_lookup[bblock].insert(layer);
+                    m_calls_checked++;
+                }
+            }
+        }
+
+        if (bblock_layer_lookup.size() == 0)
+            return false;
+
+        // For each stub call, walk the dominator tree and look for a previous
+        // matching call.
+        std::unordered_set<llvm::CallInst*> delete_queue;
+        for(auto I = llvm::inst_begin(F), E = llvm::inst_end(F); I != E; ++I) {
+            auto* call_inst = llvm::dyn_cast<llvm::CallInst>(&*I);
+            if (call_inst) {
+                llvm::Function* called = call_inst->getCalledFunction();
+                if (called && called->getName() == target_fn) {
+                    llvm::Value *arg = call_inst->getArgOperand(0);
+                    int layer = llvm::cast<llvm::ConstantInt>(arg)->getSExtValue();
+
+                    llvm::BasicBlock* bblock = I->getParent();
+                    auto bbnode = dt.getNode(bblock)->getIDom();
+                    while (bbnode) {
+                        llvm::BasicBlock* candidate_bblock = bbnode->getBlock();
+                        if (bblock_layer_lookup[candidate_bblock].count(layer) > 0) {
+                            delete_queue.insert(call_inst);
+                            break;
+                        }
+                        bbnode = bbnode->getIDom();
+                    }
+                }
+            }
+        }
+
+        int count = delete_queue.size();
+        if (count == 0)
+            return false;
+
+        // Delete all the unnecessary stubs identified above
+
+        // WIP: This appears to be the cause of the performance regression
+        // (Not the dominator tree analysis above)
+        llvm::Value* fake = llvm::ConstantInt::get(F.getContext(), llvm::APInt(32, 1));
+        for (llvm::CallInst* inst : delete_queue) {
+            llvm::BasicBlock::iterator iterator(inst);
+            llvm::ReplaceInstWithValue(inst->getParent()->getInstList(), iterator, fake);
+            m_calls_removed++;
+        }
+
+        return true;
+    }
+
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+        AU.addRequired<llvm::DominatorTreeWrapperPass>();
+    }
+
+};
+}
+
+char CheckLayerRemovalPass::ID = 0;
 
 void
 LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
@@ -1767,6 +1860,8 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
 
     m_llvm_module_passes           = new llvm::legacy::PassManager;
     llvm::legacy::PassManager& mpm = (*m_llvm_module_passes);
+    // TODO: Add based on optlevel
+    mpm.add(new CheckLayerRemovalPass());
 
     llvm::TargetMachine* target_machine = nullptr;
     if (target_host) {
@@ -5968,8 +6063,10 @@ LLVM_Util::bitcode_string(llvm::Module* module)
     std::string s;
     llvm::raw_string_ostream stream(s);
 
-    for (auto&& func : module->getFunctionList())
-        stream << func << '\n';
+    module->print(stream, nullptr);
+
+    // for (auto&& func : module->getFunctionList())
+    //     stream << func << '\n';
 
     return stream.str();
 }

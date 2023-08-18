@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 shader wavelength_u_lambda_masked (output color Cout = 0)
 {
     float lambda = 1.0/(2*raytype("camera"));

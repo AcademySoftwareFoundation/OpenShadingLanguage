@@ -5,6 +5,7 @@
 #pragma once
 
 
+#include <OSL/encodedtypes.h>
 #include <OSL/oslconfig.h>
 
 
@@ -450,6 +451,38 @@ public:
                                   Vec3* Pout, int npoints,
                                   TypeDesc::VECSEMANTICS vectype);
 
+    /// Report errors, warnings, printf, and fprintf.
+    /// Fmtlib style format specifier is used (vs. printf style)
+    /// Arguments are represented as EncodedTypes (encodedtypes.h) and
+    /// packed into an arg_values buffer.  OSL::decode_message converts these
+    /// arguments into a std::string for renderer's handle to use as they please.
+    /// For device compatibility, the format specifier and any string arguments
+    /// are passed as ustringhash's.
+    /// Default implementation decodes the messages and fowards them to the
+    /// ShadingContext onto the ShadyingSystem's ErrorHandler.
+    /// It is recomended to override and make use of the
+    /// journal buffer to record everything to a buffer than can be post
+    /// processed as needed vs. going through the ShadingSystem ErrorHandler.
+    virtual void errorfmt(OSL::ShaderGlobals* sg,
+                          OSL::ustringhash fmt_specification, int32_t arg_count,
+                          const EncodedType* arg_types,
+                          uint32_t arg_values_size, uint8_t* arg_values);
+
+    virtual void warningfmt(OSL::ShaderGlobals* sg,
+                            OSL::ustringhash fmt_specification,
+                            int32_t arg_count, const EncodedType* arg_types,
+                            uint32_t arg_values_size, uint8_t* arg_values);
+
+    virtual void printfmt(OSL::ShaderGlobals* sg,
+                          OSL::ustringhash fmt_specification, int32_t arg_count,
+                          const EncodedType* arg_types,
+                          uint32_t arg_values_size, uint8_t* arg_values);
+
+    virtual void filefmt(OSL::ShaderGlobals* sg, OSL::ustringhash filename_hash,
+                         OSL::ustringhash fmt_specification, int32_t arg_count,
+                         const EncodedType* arg_types, uint32_t arg_values_size,
+                         uint8_t* arg_values);
+
     /// @brief Builds a free function to provide a value for a given attribute.
     /// This occurs at shader compile time, not at execution time.
     /// @param group The shader group currently requesting the attribute.
@@ -638,17 +671,15 @@ public:
     virtual bool get_texture_info(ustringhash filename,
                                   TextureHandle* texture_handle,
                                   TexturePerthread* texture_thread_info,
-                                  ShadingContext* shading_context, int subimage,
+                                  ShaderGlobals* sg, int subimage,
                                   ustringhash dataname, TypeDesc datatype,
                                   void* data, ustringhash* errormessage);
 
-    virtual bool get_texture_info(ustringhash filename,
-                                  TextureHandle* texture_handle, float s,
-                                  float t,
-                                  TexturePerthread* texture_thread_info,
-                                  ShadingContext* shading_context, int subimage,
-                                  ustringhash dataname, TypeDesc datatype,
-                                  void* data, ustringhash* errormessage);
+    virtual bool
+    get_texture_info(ustringhash filename, TextureHandle* texture_handle,
+                     float s, float t, TexturePerthread* texture_thread_info,
+                     ShaderGlobals* sg, int subimage, ustringhash dataname,
+                     TypeDesc datatype, void* data, ustringhash* errormessage);
 
 
     /// Lookup nearest points in a point cloud. It will search for

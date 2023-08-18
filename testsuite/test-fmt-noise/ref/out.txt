@@ -1,0 +1,5 @@
+Compiled test_noise.osl -> test_noise.oso
+incorrect noisetype:
+
+Output Cout to test_noise.tif
+ERROR: noise type "spam" is unknown, called from (test_noise.osl:8)

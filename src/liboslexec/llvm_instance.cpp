@@ -247,15 +247,17 @@ BackendLLVM::llvm_type_sg()
     sg_types.push_back(triple_deriv);      // Ps
 
     llvm::Type* vp = (llvm::Type*)ll.type_void_ptr();
-    sg_types.push_back(vp);  // opaque renderstate*
-    sg_types.push_back(vp);  // opaque tracedata*
-    sg_types.push_back(vp);  // opaque objdata*
-    sg_types.push_back(vp);  // ShadingContext*
-    sg_types.push_back(vp);  // OpaqueShadingStateUniformPtr
-    sg_types.push_back(vp);  // RendererServices*
-    sg_types.push_back(vp);  // object2common
-    sg_types.push_back(vp);  // shader2common
-    sg_types.push_back(vp);  // Ci
+    sg_types.push_back(vp);             // opaque renderstate*
+    sg_types.push_back(vp);             // opaque tracedata*
+    sg_types.push_back(vp);             // opaque objdata*
+    sg_types.push_back(vp);             // ShadingContext*
+    sg_types.push_back(vp);             // OpaqueShadingStateUniformPtr
+    sg_types.push_back(ll.type_int());  //thread_index
+    sg_types.push_back(ll.type_int());  //shade_index
+    sg_types.push_back(vp);             // RendererServices*
+    sg_types.push_back(vp);             // object2common
+    sg_types.push_back(vp);             // shader2common
+    sg_types.push_back(vp);             // Ci
 
     sg_types.push_back(ll.type_float());  // surfacearea
     sg_types.push_back(ll.type_int());    // raytype
@@ -429,8 +431,49 @@ BackendLLVM::llvm_type_closure_component_ptr()
     return ll.type_ptr(llvm_type_closure_component());
 }
 
+void
+BackendLLVM::build_offsets_of_ShaderGlobals(
+    std::vector<unsigned int>& offset_by_index)
+{
+    typedef OSL::ShaderGlobals sgBatch;
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, P));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdz));
+    offset_by_index.push_back(offsetof(ShaderGlobals, I));
+    offset_by_index.push_back(offsetof(ShaderGlobals, N));
+    offset_by_index.push_back(offsetof(ShaderGlobals, Ng));
+    offset_by_index.push_back(offsetof(ShaderGlobals, u));
+    offset_by_index.push_back(offsetof(ShaderGlobals, v));
 
 
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdu));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdv));
+    offset_by_index.push_back(offsetof(ShaderGlobals, time));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dtime));
+    offset_by_index.push_back(offsetof(ShaderGlobals, dPdtime));
+    offset_by_index.push_back(offsetof(ShaderGlobals, Ps));
+
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, renderstate));
+    offset_by_index.push_back(offsetof(ShaderGlobals, tracedata));
+    offset_by_index.push_back(offsetof(ShaderGlobals, objdata));
+    offset_by_index.push_back(offsetof(ShaderGlobals, context));
+    offset_by_index.push_back(offsetof(ShaderGlobals, shadingStateUniform));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, thread_index));
+    offset_by_index.push_back(offsetof(ShaderGlobals, shade_index));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, renderer));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, object2common));
+    offset_by_index.push_back(offsetof(ShaderGlobals, shader2common));
+    offset_by_index.push_back(offsetof(ShaderGlobals, Ci));
+
+    offset_by_index.push_back(offsetof(ShaderGlobals, surfacearea));
+    offset_by_index.push_back(offsetof(ShaderGlobals, raytype));
+    offset_by_index.push_back(offsetof(ShaderGlobals, flipHandedness));
+    offset_by_index.push_back(offsetof(ShaderGlobals, backfacing));
+}
 void
 BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
 {
@@ -563,12 +606,12 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                                     llvm_void_ptr(sym),
                                     ll.constant((int)sym.has_derivs()),
                                     sg_void_ptr(),
-                                    llvm_load_string(inst()->shadername()),
+                                    llvm_load_stringhash(inst()->shadername()),
                                     ll.constant(0),
-                                    llvm_load_string(sym.unmangled()),
+                                    llvm_load_stringhash(sym.unmangled()),
                                     ll.constant(0),
                                     ll.constant(ncomps),
-                                    llvm_load_string("<get_userdata>") };
+                                    llvm_load_stringhash("<get_userdata>") };
             ll.call_function("osl_naninf_check", args);
         }
         // userdata pre-placement always succeeds, we don't need to bother
@@ -710,12 +753,12 @@ BackendLLVM::llvm_generate_debugnan(const Opcode& op)
                                 llvm_void_ptr(sym),
                                 ll.constant((int)sym.has_derivs()),
                                 sg_void_ptr(),
-                                ll.constant(op.sourcefile()),
+                                llvm_load_stringhash(op.sourcefile()),
                                 ll.constant(op.sourceline()),
-                                ll.constant(sym.unmangled()),
+                                llvm_load_stringhash(sym.unmangled()),
                                 offset,
                                 ncheck,
-                                ll.constant(op.opname()) };
+                                llvm_load_stringhash(op.opname()) };
         ll.call_function("osl_naninf_check", args);
     }
 }
@@ -814,16 +857,16 @@ BackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
         llvm::Value* args[] = { ll.constant(t),
                                 llvm_void_ptr(sym),
                                 sg_void_ptr(),
-                                ll.constant(op.sourcefile()),
+                                llvm_load_stringhash(op.sourcefile()),
                                 ll.constant(op.sourceline()),
-                                ll.constant(group().name()),
+                                llvm_load_stringhash(group().name()),
                                 ll.constant(layer()),
-                                ll.constant(inst()->layername()),
-                                ll.constant(inst()->shadername().c_str()),
+                                llvm_load_stringhash(inst()->layername()),
+                                llvm_load_stringhash(inst()->shadername()),
                                 ll.constant(int(&op - &inst()->ops()[0])),
-                                ll.constant(op.opname()),
+                                llvm_load_stringhash(op.opname()),
                                 ll.constant(i),
-                                ll.constant(sym.unmangled()),
+                                llvm_load_stringhash(sym.unmangled()),
                                 offset,
                                 ncheck };
         ll.call_function("osl_uninit_check", args);
@@ -1262,12 +1305,12 @@ BackendLLVM::build_llvm_instance(bool groupentry)
                         llvm_void_ptr(s),
                         ll.constant((int)s.has_derivs()),
                         sg_void_ptr(),
-                        ll.constant(ustring(inst()->shadername())),
+                        llvm_load_stringhash(inst()->shadername()),
                         ll.constant(0),
-                        ll.constant(s.unmangled()),
+                        llvm_load_stringhash(s.unmangled()),
                         ll.constant(0),
                         ll.constant(ncomps),
-                        ll.constant("<none>") };
+                        llvm_load_stringhash("<none>") };
                 ll.call_function("osl_naninf_check", args);
             }
         }
@@ -1600,6 +1643,13 @@ BackendLLVM::run()
                         "llvm::parseBitcodeFile returned '{}' for llvm_rs_dependent_ops\n",
                         err);
 
+//Leaving this around for developers to make sure LLVM's shaderglobals and C++'s are binary compatible
+#    if 0
+                std::vector<unsigned int> offset_by_index;
+                build_offsets_of_ShaderGlobals(offset_by_index);
+                ll.validate_struct_data_layout(m_llvm_type_sg, offset_by_index);
+#    endif
+
                 std::vector<char>& rs_free_function_bitcode
                     = shadingsys().m_rs_bitcode;
                 OSL_ASSERT(rs_free_function_bitcode.size()
@@ -1784,7 +1834,7 @@ BackendLLVM::run()
         ll.validate_global_mappings(names_of_unmapped_globals);
         if (!names_of_unmapped_globals.empty()) {
             shadingsys().errorfmt(
-                "Renderers should call osl::register_JIT_Global(const char* global_var_name, void* global_var_addr) for each global variable used by its free function renderer services bitcode");
+                "Renderers should call OSL::register_JIT_Global(const char* global_var_name, void* global_var_addr) for each global variable used by its free function renderer services bitcode");
             for (const auto& unmapped_name : names_of_unmapped_globals) {
                 shadingsys().errorfmt(
                     ">>>>External global variable {} was not mapped to an address!",

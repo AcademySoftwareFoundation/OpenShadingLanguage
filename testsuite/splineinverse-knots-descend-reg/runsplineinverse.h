@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 void init_knots (output float fltknots[16], float scale)
 {
    // splineinverse requires only increasing or decreasing values

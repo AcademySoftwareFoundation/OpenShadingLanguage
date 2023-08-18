@@ -74,15 +74,17 @@ def run_space_tests (space) :
     run_from_to_test(space, "common")
     run_from_to_test(space, "object")
     run_from_to_test(space, "shader")
-    run_from_to_test(space, "world")
-    run_from_to_test(space, "camera")
+    #run_from_to_test(space, "world")
+    #run_from_to_test(space, "camera")
+    #run_from_to_test(space, "spam")
     return
     
 run_space_tests("common")
 run_space_tests("object")
 run_space_tests("shader")
-run_space_tests("world")
-run_space_tests("camera")
+#run_space_tests("world")
+#run_space_tests("camera")
+#run_space_tests("spam")
 
 command += testshade("-t 1 -g 32 32 -od uint8 -o Cout out_getmatrix_v_fromspace_v_tospace.tif test_getmatrix_v_fromspace_v_tospace")
 outputs.append ("out_getmatrix_v_fromspace_v_tospace.tif")

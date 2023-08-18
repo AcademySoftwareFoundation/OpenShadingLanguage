@@ -94,6 +94,8 @@ BackendLLVM::llvm_pass_type(const TypeSpec& typespec)
         lt = (llvm::Type*)ll.type_void_ptr();
     else if (t == TypeDesc::LONGLONG)
         lt = ll.type_longlong();
+    else if (t == OSL::TypeUInt64)
+        lt = ll.type_int64();  //LLVM does not recognize signed bits
     else {
         OSL_ASSERT_MSG(0, "not handling %s type yet", typespec.c_str());
     }
@@ -179,6 +181,8 @@ static ustring fields[] = { ustring("P"),
                             ustring("objdata"),
                             ustring("shadingcontext"),
                             ustring("shadingStateUniform"),
+                            ustring("thread_index"),
+                            ustring("shade_index"),
                             ustring("renderer"),
                             ustring("object2common"),
                             ustring("shader2common"),

@@ -79,10 +79,19 @@ LLVMGEN(llvm_gen_generic);
 void
 BackendLLVM::llvm_gen_debug_printf(string_view message)
 {
-    ustring s = ustring::fmtformat("({} {}) {}", inst()->shadername(),
+    // Bake everything into the format specifier string instead of
+    // passing arguments.
+    ustring s = ustring::fmtformat("({} {}) {}\n", inst()->shadername(),
                                    inst()->layername(), message);
-    ll.call_function("osl_printf", sg_void_ptr(), ll.constant("%s\n"),
-                     ll.constant(s));
+
+    llvm::Value* valargs[] = { sg_void_ptr(),
+                               llvm_load_stringhash(s),
+                               ll.constant(0) /*arg_count*/,
+                               ll.void_ptr_null() /*arg_types*/,
+                               ll.constant(0) /*arg_values_size*/,
+                               ll.void_ptr_null() /*arg_values*/ };
+
+    ll.call_function("osl_gen_printfmt", valargs);
 }
 
 
@@ -90,8 +99,16 @@ BackendLLVM::llvm_gen_debug_printf(string_view message)
 void
 BackendLLVM::llvm_gen_warning(string_view message)
 {
-    ll.call_function("osl_warning", sg_void_ptr(), ll.constant("%s\n"),
-                     ll.constant(message));
+    // Bake everything into the format specifier string instead of
+    // passing arguments.
+    ustring s              = ustring::fmtformat("{}\n", message);
+    llvm::Value* valargs[] = { sg_void_ptr(),
+                               llvm_load_stringhash(s),
+                               ll.constant(0) /*arg_count*/,
+                               ll.void_ptr_null() /*arg_types*/,
+                               ll.constant(0) /*arg_values_size*/,
+                               ll.void_ptr_null() /*arg_values*/ };
+    ll.call_function("osl_gen_warningfmt", valargs);
 }
 
 
@@ -99,8 +116,16 @@ BackendLLVM::llvm_gen_warning(string_view message)
 void
 BackendLLVM::llvm_gen_error(string_view message)
 {
-    ll.call_function("osl_error", sg_void_ptr(), ll.constant("%s\n"),
-                     ll.constant(message));
+    // Bake everything into the format specifier string instead of
+    // passing arguments.
+    ustring s              = ustring::fmtformat("{}\n", message);
+    llvm::Value* valargs[] = { sg_void_ptr(),
+                               llvm_load_stringhash(s),
+                               ll.constant(0) /*arg_count*/,
+                               ll.void_ptr_null() /*arg_types*/,
+                               ll.constant(0) /*arg_values_size*/,
+                               ll.void_ptr_null() /*arg_values*/ };
+    ll.call_function("osl_gen_errorfmt", valargs);
 }
 
 
@@ -254,7 +279,7 @@ LLVMGEN(llvm_gen_useparam)
 
 
 // Used for printf, error, warning, format, fprintf
-LLVMGEN(llvm_gen_printf)
+LLVMGEN(llvm_gen_printf_legacy)
 {
     Opcode& op(rop.inst()->ops()[opnum]);
 
@@ -477,6 +502,304 @@ LLVMGEN(llvm_gen_printf)
     return true;
 }
 
+// Used for printf, error, warning, format, fprintf
+LLVMGEN(llvm_gen_print_fmt)
+{
+    Opcode& op(rop.inst()->ops()[opnum]);
+
+    // The format op is currently handled by llvm_gen_printf_legacy,
+    // but could be moved here in future
+    // NOTE: format would not a callthrough to renderservices,
+    // but should be handled in opstring.cpp
+    OSL_ASSERT(op.opname() != op_format);
+
+    // Prepare the args for the call
+
+    // Which argument is the format string?  Usually 0, but for op
+    // format() and fprintf(), the formatting string is argument #1.
+    int format_arg     = (op.opname() == op_format || op.opname() == op_fprintf)
+                             ? 1
+                             : 0;
+    Symbol& format_sym = *rop.opargsym(op, format_arg);
+
+    std::vector<llvm::Value*> call_args;
+    if (!format_sym.is_constant()) {
+        rop.shadingcontext()->warningfmt(
+            "{} must currently have constant format\n", op.opname());
+        return false;
+    }
+
+    call_args.push_back(rop.sg_void_ptr());
+
+    // fprintf also needs the filename
+    if (op.opname() == op_fprintf) {
+        Symbol& Filename         = *rop.opargsym(op, 0);
+        ustring filename_ustring = Filename.get_string();
+        call_args.push_back(
+            rop.llvm_load_stringhash(filename_ustring));  //filename
+    }
+
+    // We're going to need to adjust the format string as we go, but I'd
+    // like to reserve a spot for the char*.
+    // size_t new_format_slot = call_args.size();
+    // call_args.push_back(NULL);
+
+    ustring format_ustring = format_sym.get_string();
+    const char* format
+        = format_ustring.c_str();  //contains all the printf formating characters
+    std::string s;
+    int arg = format_arg + 1;
+    // Example call: printf("The values at %s is %d, %f, %6.2f", "marble", 5, 6.4, 123.456);
+    std::vector<EncodedType> encodedtypes;
+    int arg_values_size = 0u;
+    std::vector<llvm::Value*> loaded_arg_values;
+    while (*format != '\0') {
+        if (*format == '%') {
+            if (format[1] == '%') {
+                // '%%' is a literal '%'
+                // The fmtlib expects just a single %
+                s += "%";
+                format += 2;  // skip both percentages
+                continue;
+            }
+            const char* oldfmt = format;  // mark beginning of format
+            while (*format && *format != 'c' && *format != 'd' && *format != 'e'
+                   && *format != 'f' && *format != 'g' && *format != 'i'
+                   && *format != 'm' && *format != 'n' && *format != 'o'
+                   && *format != 'p' && *format != 's' && *format != 'u'
+                   && *format != 'v' && *format != 'x' && *format != 'X') {
+                ++format;
+            }
+
+            char formatchar = *format++;  // Also eat the format char
+            if (arg >= op.nargs()) {
+                rop.shadingcontext()->errorfmt(
+                    "Mismatch between format string and arguments ({}:{})",
+                    op.sourcefile(), op.sourceline());
+                return false;
+            }
+
+            std::string ourformat(oldfmt, format);  // straddle the format
+
+            // printf specifier uses - to indicate left justified alignment and ignores extra - chars present
+            // libfmt specifier uses < to indicate left justified alignment and does not ignore extra chars
+            // so change - to < and erase any extraneous -
+            auto pos_of_minus = ourformat.find_first_of('-');
+            if (pos_of_minus != std::string::npos) {
+                ourformat.replace(pos_of_minus, 1 /*num chars to replace*/,
+                                  1 /*num times to repeat char*/, '<');
+                pos_of_minus = ourformat.find_first_of('-');
+                while (pos_of_minus != std::string::npos) {
+                    ourformat.erase(pos_of_minus, 1);
+                    pos_of_minus = ourformat.find_first_of('-');
+                }
+            }
+
+            // Doctor it to fix mismatches between format and data
+            Symbol& sym(*rop.opargsym(op, arg));
+            OSL_ASSERT(!sym.typespec().is_structure_based());
+            TypeDesc simpletype(sym.typespec().simpletype());
+            int num_elements   = simpletype.numelements();
+            int num_components = simpletype.aggregate;
+            if ((sym.typespec().is_closure_based()
+                 || simpletype.basetype == TypeDesc::STRING)
+                && formatchar != 's') {
+                ourformat[ourformat.length() - 1] = 's';
+            }
+
+            //%i is not legal in fmtlib and it will be converted to a d
+            if (simpletype.basetype == TypeDesc::INT
+                && formatchar != 'd'
+                /* && formatchar != 'i'*/
+                && formatchar != 'o' && formatchar != 'u' && formatchar != 'x'
+                && formatchar != 'X') {
+                ourformat[ourformat.length() - 1] = 'd';
+            }
+
+            // //fmtlib does not use a fmt specifier for unsigned ints
+            // if (simpletype.basetype == TypeDesc::INT && formatchar == 'u'{
+            //     ourformat[ourformat.length() - 1] = '';
+            // }
+
+
+            //%m,%n,%v,%p, and %c are not legal in C-style printf and end up getting filtered by oslc
+            if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f'
+                && formatchar != 'g' /*&& formatchar != 'c'*/ && formatchar != 'e'
+                /*&& formatchar != 'm' && formatchar != 'n' && formatchar != 'p' */
+                /*&& formatchar != 'v'*/) {
+                ourformat[ourformat.length() - 1] = 'f';
+            }
+
+            EncodedType et = EncodedType::kUstringHash;
+            if (simpletype.basetype == TypeDesc::INT) {
+                //to mimic printf behavior when a hex specifier is used we are promoting the int to uint32_t
+                if (formatchar == 'x' || formatchar == 'X') {
+                    et = EncodedType::kUInt32;
+                } else {
+                    et = EncodedType::kInt32;
+                }
+            }
+            if (simpletype.basetype == TypeDesc::FLOAT)
+                et = EncodedType::kFloat;
+
+            std::string myformat("{:");
+            ourformat.replace(0, 1, "");
+            myformat += ourformat;
+            myformat += "}";
+
+            // NOTE(boulos): Only for debug mode do the derivatives get printed...
+            for (int a = 0; a < num_elements; ++a) {
+                llvm::Value* arrind = simpletype.arraylen ? rop.ll.constant(a)
+                                                          : NULL;
+                if (sym.typespec().is_closure_based()) {
+                    s += myformat;
+
+                    llvm::Value* v = rop.llvm_load_value(sym, 0, arrind, 0);
+                    v = rop.ll.call_function("osl_closure_to_ustringhash",
+                                             rop.sg_void_ptr(), v);
+                    encodedtypes.push_back(et);
+                    arg_values_size += pvt::size_of_encoded_type(et);
+                    loaded_arg_values.push_back(v);
+                    continue;
+                }
+
+                for (int c = 0; c < num_components; c++) {
+                    if (c != 0 || a != 0)
+                        s += " ";
+                    s += myformat;
+
+                    llvm::Value* loaded;
+                    if (sym.typespec().is_string_based()) {
+                        if (rop.ll.ustring_rep()
+                            == LLVM_Util::UstringRep::hash) {
+                            loaded = rop.llvm_load_value(sym, 0, arrind, c);
+                            // The value loaded is already a hash, but masquarading as a const char *
+                            // Just need to cast it to the correct type.
+                            loaded = rop.ll.ptr_cast(loaded,
+                                                     rop.ll.type_int64());
+                        } else {
+                            if (sym.is_constant()
+                                && !sym.typespec().is_array()) {
+                                loaded = rop.llvm_load_stringhash(
+                                    sym.get_string());
+                            } else {
+                                loaded = rop.llvm_load_value(sym, 0, arrind, c);
+                                loaded = rop.ll.call_function(
+                                    "osl_gen_ustringhash_pod", loaded);
+                            }
+                        }
+                    } else {
+                        loaded = rop.llvm_load_value(sym, 0, arrind, c);
+                    }
+
+                    encodedtypes.push_back(et);
+                    arg_values_size += pvt::size_of_encoded_type(et);
+                    loaded_arg_values.push_back(loaded);
+                }
+            }
+            ++arg;
+
+        } else {
+            // Everything else -- just copy the character and advance
+            char current_char = *format++;
+            s += current_char;
+            if (current_char == '{' || current_char == '}') {
+                // fmtlib expects { to be {{
+                //            and } to be }}
+                // so just duplicate the character
+                s += current_char;
+            }
+        }
+    }
+    // Some ops prepend things
+    if (op.opname() == op_error || op.opname() == op_warning) {
+        s = fmtformat("Shader {} [{}]: {}", op.opname(),
+                      rop.inst()->shadername(), s);
+    }
+    ustring s_ustring(s.c_str());
+    call_args.push_back(rop.llvm_load_stringhash(s_ustring));
+
+    OSL_ASSERT(encodedtypes.size() == loaded_arg_values.size());
+    int arg_count = static_cast<int>(encodedtypes.size());
+    call_args.push_back(rop.ll.constant(arg_count));
+
+    llvm::Value* encodedtypes_on_stack
+        = rop.ll.op_alloca(rop.ll.type_int8(), arg_count,
+                           std::string("encodedtypes"));
+    llvm::Value* loaded_arg_values_on_stack
+        = rop.ll.op_alloca(rop.ll.type_int8(), arg_values_size,
+                           std::string("argValues"));
+
+    int bytesToArg = 0;
+    for (int argindex = 0; argindex < arg_count; ++argindex) {
+        EncodedType et = encodedtypes[argindex];
+        rop.ll.op_store(rop.ll.constant8(static_cast<int>(et)),
+                        rop.ll.GEP(rop.ll.type_int8(), encodedtypes_on_stack,
+                                   argindex));
+
+        llvm::Value* loadedArgValue = loaded_arg_values[argindex];
+
+        llvm::Type* type_ptr = nullptr;
+        switch (et) {
+        case EncodedType::kUstringHash: {
+            type_ptr = rop.ll.type_ptr(rop.ll.type_int64());
+
+        } break;
+        case EncodedType::kUInt32:
+            // fallthrough
+        case EncodedType::kInt32: {
+            type_ptr = rop.ll.type_int_ptr();
+        } break;
+
+        case EncodedType::kFloat: {
+            type_ptr = rop.ll.type_float_ptr();
+
+        } break;
+        default:
+            // Although more encoded types exist, the 3 above are the only
+            // ones we expect to be produced by OSL language itself.
+            OSL_ASSERT(0 && "Unhandled EncodeType");
+            break;
+        }
+
+        rop.ll.op_store(loadedArgValue,
+                        rop.ll.ptr_cast(rop.ll.GEP(rop.ll.type_int8(),
+                                                   loaded_arg_values_on_stack,
+                                                   bytesToArg),
+                                        type_ptr));
+        bytesToArg += pvt::size_of_encoded_type(et);
+    }
+
+    call_args.push_back(rop.ll.void_ptr(encodedtypes_on_stack));
+    call_args.push_back(rop.ll.constant(arg_values_size));
+    call_args.push_back(rop.ll.void_ptr(loaded_arg_values_on_stack));
+
+    // Construct the function name and call it.
+    const char* rs_func_name = nullptr;
+
+    if (op.opname() == op_printf)
+        rs_func_name = "osl_gen_printfmt";
+    if (op.opname() == op_error)
+        rs_func_name = "osl_gen_errorfmt";
+    if (op.opname() == op_warning)
+        rs_func_name = "osl_gen_warningfmt";
+    if (op.opname() == op_fprintf)
+        rs_func_name = "osl_gen_filefmt";
+
+    rop.ll.call_function(rs_func_name, call_args);
+
+    return true;
+}
+
+
+LLVMGEN(llvm_gen_printf)
+{
+    Opcode& op(rop.inst()->ops()[opnum]);
+    if ((op.opname() == "format" || rop.use_optix()))
+        return llvm_gen_printf_legacy(rop, opnum);
+    else
+        return llvm_gen_print_fmt(rop, opnum);
+}
 
 
 LLVMGEN(llvm_gen_add)
@@ -1176,17 +1499,18 @@ LLVMGEN(llvm_gen_compref)
     if (rop.inst()->master()->range_checking()) {
         if (!(Index.is_constant() && Index.get_int() >= 0
               && Index.get_int() < 3)) {
-            llvm::Value* args[] = { c,
-                                    rop.ll.constant(3),
-                                    rop.ll.constant(Val.unmangled()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
-            c                   = rop.ll.call_function("osl_range_check", args);
+            llvm::Value* args[]
+                = { c,
+                    rop.ll.constant(3),
+                    rop.llvm_load_stringhash(Val.unmangled()),
+                    rop.sg_void_ptr(),
+                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.ll.constant(op.sourceline()),
+                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.ll.constant(rop.layer()),
+                    rop.llvm_load_stringhash(rop.inst()->layername()),
+                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+            c = rop.ll.call_function("osl_range_check", args);
         }
     }
 
@@ -1220,17 +1544,18 @@ LLVMGEN(llvm_gen_compassign)
     if (rop.inst()->master()->range_checking()) {
         if (!(Index.is_constant() && Index.get_int() >= 0
               && Index.get_int() < 3)) {
-            llvm::Value* args[] = { c,
-                                    rop.ll.constant(3),
-                                    rop.ll.constant(Result.unmangled()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
-            c                   = rop.ll.call_function("osl_range_check", args);
+            llvm::Value* args[]
+                = { c,
+                    rop.ll.constant(3),
+                    rop.llvm_load_stringhash(Result.unmangled()),
+                    rop.sg_void_ptr(),
+                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.ll.constant(op.sourceline()),
+                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.ll.constant(rop.layer()),
+                    rop.llvm_load_stringhash(rop.inst()->layername()),
+                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+            c = rop.ll.call_function("osl_range_check", args);
         }
     }
 
@@ -1266,16 +1591,17 @@ LLVMGEN(llvm_gen_mxcompref)
         if (!(Row.is_constant() && Col.is_constant() && Row.get_int() >= 0
               && Row.get_int() < 4 && Col.get_int() >= 0
               && Col.get_int() < 4)) {
-            llvm::Value* args[] = { row,
-                                    rop.ll.constant(4),
-                                    rop.ll.constant(M.name()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
+            llvm::Value* args[]
+                = { row,
+                    rop.ll.constant(4),
+                    rop.llvm_load_stringhash(M.name()),
+                    rop.sg_void_ptr(),
+                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.ll.constant(op.sourceline()),
+                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.ll.constant(rop.layer()),
+                    rop.llvm_load_stringhash(rop.inst()->layername()),
+                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
             if (!(Row.is_constant() && Row.get_int() >= 0
                   && Row.get_int() < 4)) {
                 row = rop.ll.call_function("osl_range_check", args);
@@ -1322,16 +1648,17 @@ LLVMGEN(llvm_gen_mxcompassign)
         if (!(Row.is_constant() && Col.is_constant() && Row.get_int() >= 0
               && Row.get_int() < 4 && Col.get_int() >= 0
               && Col.get_int() < 4)) {
-            llvm::Value* args[] = { row,
-                                    rop.ll.constant(4),
-                                    rop.ll.constant(Result.name()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
+            llvm::Value* args[]
+                = { row,
+                    rop.ll.constant(4),
+                    rop.llvm_load_stringhash(Result.name()),
+                    rop.sg_void_ptr(),
+                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.ll.constant(op.sourceline()),
+                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.ll.constant(rop.layer()),
+                    rop.llvm_load_stringhash(rop.inst()->layername()),
+                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
             if (!(Row.is_constant() && Row.get_int() >= 0
                   && Row.get_int() < 4)) {
                 row = rop.ll.call_function("osl_range_check", args);
@@ -1395,14 +1722,14 @@ LLVMGEN(llvm_gen_aref)
             llvm::Value* args[]
                 = { index,
                     rop.ll.constant(Src.typespec().arraylength()),
-                    rop.ll.constant(Src.unmangled()),
+                    rop.llvm_load_stringhash(Src.unmangled()),
                     rop.sg_void_ptr(),
-                    rop.ll.constant(op.sourcefile()),
+                    rop.llvm_load_stringhash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.ll.constant(rop.group().name()),
+                    rop.llvm_load_stringhash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.ll.constant(rop.inst()->layername()),
-                    rop.ll.constant(rop.inst()->shadername()) };
+                    rop.llvm_load_stringhash(rop.inst()->layername()),
+                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
             index = rop.ll.call_function("osl_range_check", args);
         }
     }
@@ -1440,14 +1767,14 @@ LLVMGEN(llvm_gen_aassign)
             llvm::Value* args[]
                 = { index,
                     rop.ll.constant(Result.typespec().arraylength()),
-                    rop.ll.constant(Result.unmangled()),
+                    rop.llvm_load_stringhash(Result.unmangled()),
                     rop.sg_void_ptr(),
-                    rop.ll.constant(op.sourcefile()),
+                    rop.llvm_load_stringhash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.ll.constant(rop.group().name()),
+                    rop.llvm_load_stringhash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.ll.constant(rop.inst()->layername()),
-                    rop.ll.constant(rop.inst()->shadername()) };
+                    rop.llvm_load_stringhash(rop.inst()->layername()),
+                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
             index = rop.ll.call_function("osl_range_check", args);
         }
     }

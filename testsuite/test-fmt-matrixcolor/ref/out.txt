@@ -1,0 +1,30 @@
+Compiled test_2wrongspaces.osl -> test_2wrongspaces.oso
+Compiled test_const_matrixcolor.osl -> test_const_matrixcolor.oso
+Compiled test_matrixcolor.osl -> test_matrixcolor.oso
+incorrect color space and matrix transform names:
+
+Output Cout_color to matrixcolor1.tif
+Output Cout_color1 to matrixcolor2.tif
+Output Cout_matrix to matrixcolor3.tif
+Output Cout_matrix1 to matrixcolor4.tif
+ERROR: Unknown color space transformation "spam" -> "hsv"
+ERROR: Unknown color space transformation "hsv" -> "spam"
+ERROR: Unknown transformation "spam"
+ERROR: Unknown transformation "water"
+const-foldable version of incorrect color space and matrix transform names:
+
+Output Cout_color to const_matrixcolor1.tif
+Output Cout_color1 to const_matrixcolor2.tif
+Output Cout_matrix to const_matrixcolor3.tif
+Output Cout_matrix1 to matrixcolor4.tif
+ERROR: Unknown color space transformation "spam" -> "hsv"
+ERROR: Unknown color space transformation "hsv" -> "spam"
+ERROR: Unknown transformation "spam"
+ERROR: Unknown transformation "water"
+test_2wrongspaces.osl:
+
+Output Cout_color to matrixcolor1wrong.tif
+Output Cout_matrix to matrixcolor2wrong.tif
+ERROR: Unknown color space transformation "spam" -> "eggs"
+ERROR: Unknown transformation "eggs"
+ERROR: Unknown transformation "spam"

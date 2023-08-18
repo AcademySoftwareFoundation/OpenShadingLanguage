@@ -22,4 +22,5 @@ struct RenderState {
     float fov;
     float hither;
     float yon;
+    void* journal_buffer;
 };

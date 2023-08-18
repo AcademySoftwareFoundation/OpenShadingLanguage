@@ -145,6 +145,16 @@ public:
         return llvm_load_string(ustring(str));
     }
 
+    llvm::Value* llvm_load_stringhash(string_view str)
+    {
+        return llvm_load_stringhash(ustring(str));
+    }
+
+    llvm::Value* llvm_load_stringhash(ustring str)
+    {
+        return ll.constant64(str.hash());
+    }
+
     /// Legacy version
     ///
     llvm::Value* loadLLVMValue(const Symbol& sym, int component = 0,
@@ -553,6 +563,11 @@ public:
     /// is not an input parameter or is constant and therefore doesn't have an
     /// entry in the groupdata struct.
     int find_userdata_index(const Symbol& sym);
+
+    // Helpers to export the actual data member offsets from LLVM's point of view
+    // of data structures that exist in C++ so we can validate the offsets match
+    void
+    build_offsets_of_ShaderGlobals(std::vector<unsigned int>& offset_by_index);
 
     LLVM_Util ll;
 

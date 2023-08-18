@@ -51,7 +51,9 @@ OSL_BATCHOP int
 __OSL_OP(dict_find_iis)(void* bsg_, int nodeID, void* query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return bsg->uniform.context->dict_find(nodeID, USTR(query));
+    return bsg->uniform.context->dict_find(
+        nullptr /*causes errors be reported through ShadingContext*/, nodeID,
+        USTR(query));
 }
 
 
@@ -71,7 +73,9 @@ __OSL_MASKED_OP3(dict_find, Wi, Wi, Ws)(void* bsg_, void* wout, void* wnodeID,
     mask.foreach ([=](ActiveLane lane) -> void {
         int nodeID    = wNID[lane];
         ustring query = wQ[lane];
-        wOut[lane]    = bsg->uniform.context->dict_find(nodeID, query);
+        wOut[lane]    = bsg->uniform.context->dict_find(
+               nullptr /*causes errors be reported through ShadingContext*/,
+               nodeID, query);
     });
 }
 
@@ -81,7 +85,9 @@ OSL_BATCHOP int
 __OSL_OP(dict_find_iss)(void* bsg_, void* dictionary, void* query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return bsg->uniform.context->dict_find(USTR(dictionary), USTR(query));
+    return bsg->uniform.context->dict_find(
+        nullptr /*causes errors be reported through ShadingContext*/,
+        USTR(dictionary), USTR(query));
 }
 
 
@@ -102,7 +108,9 @@ __OSL_MASKED_OP3(dict_find, Wi, Ws, Ws)(void* bsg_, void* wout,
     mask.foreach ([=](ActiveLane lane) -> void {
         ustring dictionary = wD[lane];
         ustring query      = wQ[lane];
-        wOut[lane]         = bsg->uniform.context->dict_find(dictionary, query);
+        wOut[lane]         = bsg->uniform.context->dict_find(
+                    nullptr /*causes errors be reported through ShadingContext*/,
+                    dictionary, query);
     });
 }
 

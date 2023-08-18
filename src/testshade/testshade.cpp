@@ -25,6 +25,8 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
+#include <OSL/encodedtypes.h>
+#include <OSL/journal.h>
 #include <OSL/oslcomp.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
@@ -119,7 +121,48 @@ static char* output_base_ptr   = nullptr;
 static bool use_rs_bitcode
     = false;  // use free function bitcode version of renderer services
 
+static int jbufferMB = 16;
 
+// Testshade thread tracking and assignment.
+// Not recommended for production renderer but fine for testshade
+
+std::atomic<uint32_t> next_thread_index { 0 };
+constexpr uint32_t uninitialized_thread_index = -1;
+thread_local uint32_t this_threads_index      = uninitialized_thread_index;
+
+
+// Example of how to customize error reporting when processing journaled entries
+// This one customizes file_printf to actually open files
+class TestshadeReporter : public journal::Report2ErrorHandler {
+public:
+    TestshadeReporter(OSL::ErrorHandler* eh,
+                      journal::TrackRecentlyReported& tracker);
+    void report_file_print(int thread_index, int shade_index,
+                           const OSL::string_view& filename,
+                           const OSL::string_view& message) override;
+};
+
+TestshadeReporter::TestshadeReporter(OSL::ErrorHandler* eh,
+                                     journal::TrackRecentlyReported& tracker)
+    : journal::Report2ErrorHandler(eh, tracker)
+{
+}
+
+void
+TestshadeReporter::report_file_print(int thread_index, int shade_index,
+                                     const OSL::string_view& filename,
+                                     const OSL::string_view& message)
+{
+    // NOTE: behavior change for OSL runtime, we will no longer open files by default
+    // but instead just prefix the fprintf message with the filename and pass it along
+    // as a regular message.
+    // A renderer is free to override report_fprintf and open files under its own purview
+
+    std::ofstream filehandle;
+    filehandle.open(filename, std::ofstream::out | std::ofstream::app);
+    filehandle << message;
+    filehandle.close();
+}
 
 static void
 inject_params()
@@ -303,7 +346,7 @@ compile_buffer(const std::string& sourcecode, const std::string& shadername)
     // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
 
     if (!shadingsys->LoadMemoryCompiledShader(shadername, osobuffer)) {
-        std::cerr << "Could not load compiled buffer from \"" << shadername
+        std::cerr << "Could not load compiled jbuffer from \"" << shadername
                   << "\"\n";
         exit(EXIT_FAILURE);
     }
@@ -337,7 +380,7 @@ add_shader(cspan<const char*> argv)
 
     set_shadingsys_options();
 
-    if (inbuffer)  // Request to exercise the buffer-based API calls
+    if (inbuffer)  // Request to exercise the jbuffer-based API calls
         shader_from_buffers(shadername);
 
     inject_params();
@@ -740,7 +783,7 @@ getargs(int argc, const char* argv[])
     ap.arg("--oslquery", &do_oslquery)
       .help("Test OSLQuery at runtime");
     ap.arg("--inbuffer", &inbuffer)
-      .help("Compile osl source from and to buffer");
+      .help("Compile osl source from and to jbuffer");
     ap.arg("--no-output-placement")
       .help("Turn off use of output placement, rely only on get_symbol")
       .action(OIIO::ArgParse::store_false());
@@ -769,6 +812,8 @@ getargs(int argc, const char* argv[])
       .help("Set a different locale");
     ap.arg("--use_rs_bitcode", &use_rs_bitcode)
       .help("Use free function bitcode Renderer services");
+    ap.arg("--jbufferMB %d:JBUFFER",  &jbufferMB)
+      .help("journal jbuffer size in MB");
 
     // clang-format on
     if (ap.parse(argc, argv) < 0) {
@@ -876,17 +921,9 @@ setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys, int x, int y)
     // Just zero the whole thing out to start
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
 
-    if (use_rs_bitcode) {
-        // When using free function bitcode to implement renderer services,
-        // any state data they need will need to be passed here
-        // the ShaderGlobals.
-        sg.renderstate = &theRenderState;
-
-    } else {
-        // In our SimpleRenderer, the "renderstate" itself just a pointer to
-        // the ShaderGlobals.
-        sg.renderstate = &sg;
-    }
+    // Any state data needed by SimpleRenderer or its free function equivalent
+    // will need to be passed here the ShaderGlobals.
+    sg.renderstate = &theRenderState;
 
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.
@@ -1060,7 +1097,7 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
             OIIO::ImageBuf* ib = rend->outputbuf(i);
             char* outptr       = static_cast<char*>(ib->pixeladdr(0, 0));
             if (i == 0) {
-                // The output arena is the start of the first output buffer
+                // The output arena is the start of the first output jbuffer
                 output_base_ptr = outptr;
             }
             ptrdiff_t offset = outptr - output_base_ptr;
@@ -1179,7 +1216,7 @@ save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
         int nchans = outputimg->nchannels();
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
-            // directly in the output buffer.
+            // directly in the output jbuffer.
             outputimg->setpixel(x, y, (const float*)data);
             if (print_outputs) {
                 print("  {} :", outputvarnames[i]);
@@ -1261,7 +1298,7 @@ batched_save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
         // Used Wide access on the symbol's data t access per lane results
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
-            // directly in the output buffer.
+            // directly in the output jbuffer.
             if (t.aggregate == TypeDesc::MATRIX44) {
                 OSL_DASSERT(nchans == 16);
                 Wide<const Matrix44, WidthT> batchResults(
@@ -1533,29 +1570,34 @@ shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
             // setup is done in the following function call:
             setup_shaderglobals(shaderglobals, shadingsys, x, y);
 
+            if (this_threads_index == uninitialized_thread_index) {
+                this_threads_index = next_thread_index.fetch_add(1u);
+            }
+            int thread_index = this_threads_index;
+
             // Actually run the shader for this point
             if (entrylayer_index.empty()) {
                 // Sole entry point for whole group, default behavior
-                shadingsys->execute(*ctx, *shadergroup, shadeindex,
-                                    shaderglobals, userdata_base_ptr,
-                                    output_base_ptr);
+                shadingsys->execute(*ctx, *shadergroup, thread_index,
+                                    shadeindex, shaderglobals,
+                                    userdata_base_ptr, output_base_ptr);
             } else {
                 // Explicit list of entries to call in order
-                shadingsys->execute_init(*ctx, *shadergroup, shadeindex,
-                                         shaderglobals, userdata_base_ptr,
-                                         output_base_ptr);
+                shadingsys->execute_init(*ctx, *shadergroup, thread_index,
+                                         shadeindex, shaderglobals,
+                                         userdata_base_ptr, output_base_ptr);
                 if (entrylayer_symbols.size()) {
                     for (size_t i = 0, e = entrylayer_symbols.size(); i < e;
                          ++i)
-                        shadingsys->execute_layer(*ctx, shadeindex,
-                                                  shaderglobals,
+                        shadingsys->execute_layer(*ctx, thread_index,
+                                                  shadeindex, shaderglobals,
                                                   userdata_base_ptr,
                                                   output_base_ptr,
                                                   entrylayer_symbols[i]);
                 } else {
                     for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
-                        shadingsys->execute_layer(*ctx, shadeindex,
-                                                  shaderglobals,
+                        shadingsys->execute_layer(*ctx, thread_index,
+                                                  shadeindex, shaderglobals,
                                                   userdata_base_ptr,
                                                   output_base_ptr,
                                                   entrylayer_index[i]);
@@ -2057,6 +2099,28 @@ test_shade(int argc, const char* argv[])
         rend->warmup();
     double warmuptime = timer.lap();
 
+    //Check jbuffer value from user
+    if (jbufferMB <= 0) {
+        jbufferMB = 1;  //default value for sufficient recording space.
+    }
+
+    //Initialize a Journal Buffer for all threads to use for journaling fmt specification calls.
+    const size_t jbuffer_bytes = jbufferMB * 1024 * 1024;
+    std::unique_ptr<uint8_t[]> jbuffer(new uint8_t[jbuffer_bytes]);
+    constexpr int jbuffer_pagesize = 1024;
+    bool init_buffer_success
+        = OSL::journal::initialize_buffer(jbuffer.get(), jbuffer_bytes,
+                                          jbuffer_pagesize, num_threads);
+
+    if (!init_buffer_success) {
+        std::cout << "Buffer allocation failed" << std::endl;
+    }
+
+
+    //Send the populated Journal Buffer to the renderer
+    theRenderState.journal_buffer = jbuffer.get();
+
+
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
     // to accurately time for a single iteration
@@ -2107,11 +2171,30 @@ test_shade(int argc, const char* argv[])
         if (reparams.size() && reparam_layer.size() && (iter + 1 < iters)) {
             for (size_t p = 0; p < reparams.size(); ++p) {
                 const ParamValue& pv(reparams[p]);
-                shadingsys->ReParameter(*shadergroup, reparam_layer, pv.name(),
-                                        pv.type(), pv.data());
+                shadingsys->ReParameter(*shadergroup, reparam_layer.c_str(),
+                                        pv.name().c_str(), pv.type(),
+                                        pv.data());
             }
         }
     }
+
+    //Just to match existing behavior we extract the current error_repeats attribute but intent is for renderers to make
+    //their own decision about this.
+    int error_repeats;
+    shadingsys->getattribute("error_repeats", error_repeats);
+    bool limit_errors                  = !error_repeats;
+    bool limit_warnings                = !error_repeats;
+    const int error_history_capacity   = 25;
+    const int warning_history_capacity = 25;
+
+    journal::TrackRecentlyReported tracker_error_warnings(
+        limit_errors, error_history_capacity, limit_warnings,
+        warning_history_capacity);
+    TestshadeReporter reporter(&errhandler, tracker_error_warnings);
+    OSL::journal::Reader jreader(jbuffer.get(), reporter);
+    jreader.process();
+    // Need to call journal::initialize_buffer before re-using the jbuffer
+
     double runtime = timer.lap();
 
     // This awkward condition preserves an output oddity from long ago,

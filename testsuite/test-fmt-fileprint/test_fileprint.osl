@@ -1,0 +1,13 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+shader test_fileprint(output float Cout = 0.0)
+{
+
+
+fprintf("out_fileprint.txt", "pancakes{{{{{{}} and oatmeal\n");
+
+
+}

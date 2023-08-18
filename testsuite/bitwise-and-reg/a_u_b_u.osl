@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 shader a_u_b_u (output vector cout = 0, output vector mcout = 0) 
 {
     int a = raytype("camera")*10;

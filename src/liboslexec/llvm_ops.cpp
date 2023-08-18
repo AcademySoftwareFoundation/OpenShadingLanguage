@@ -59,9 +59,10 @@ examples), as you are just coding in C++, but there are some rules:
   OSL_SHADEOP, since they don't need to be runtime-discoverable by LLVM.
 
 * If you need to access non-passed globals (P, N, etc.) or make renderer
-  callbacks, just make the first argument to the function a void* that
-  you cast to a ShaderGlobals* and access the globals, shading
-  context (sg->context), opaque renderer state (sg->renderstate), etc.
+  callbacks, just make the first argument to the function is an
+  OpaqueExecContextPtr (void* ec) that is passed to get_*() functions to
+  the globals get_P(ec), get_N(ec), typed renderer state 
+  get_rs<T>(ec), etc.
 
 */
 
@@ -930,10 +931,9 @@ calculatenormal(void* P_, bool flipHandedness)
 }
 
 OSL_SHADEOP void
-osl_calculatenormal(void* out, void* sg_, void* P_)
+osl_calculatenormal(void* out, OpaqueExecContextPtr ec, void* P_)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    Vec3 N            = calculatenormal(P_, sg->flipHandedness);
+    Vec3 N = calculatenormal(P_, OSL::get_flipHandedness(ec));
     // Don't normalize N
     VEC(out) = N;
 }
@@ -974,30 +974,30 @@ osl_filterwidth_vdv(void* out, void* x_)
 
 // Asked if the raytype includes a bit pattern.
 OSL_SHADEOP int
-osl_raytype_bit(void* sg_, int bit)
+osl_raytype_bit(OpaqueExecContextPtr ec, int bit)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    return (sg->raytype & bit) != 0;
+    return (OSL::get_raytype(ec) & bit) != 0;
 }
 
 
 
 // extern declaration
 OSL_SHADEOP_NOINLINE int
-osl_range_check_err(int indexvalue, int length, ustring_pod symname, void* sg,
-                    ustring_pod sourcefile, int sourceline,
-                    ustring_pod groupname, int layer, ustring_pod layername,
-                    ustring_pod shadername);
+osl_range_check_err(int indexvalue, int length, ustringhash_pod symname,
+                    OpaqueExecContextPtr ec, ustringhash_pod sourcefile,
+                    int sourceline, ustringhash_pod groupname, int layer,
+                    ustringhash_pod layername, ustringhash_pod shadername);
 
 
 
 OSL_SHADEOP int
-osl_range_check(int indexvalue, int length, ustring_pod symname, void* sg,
-                ustring_pod sourcefile, int sourceline, ustring_pod groupname,
-                int layer, ustring_pod layername, ustring_pod shadername)
+osl_range_check(int indexvalue, int length, ustringhash_pod symname,
+                OpaqueExecContextPtr ec, ustringhash_pod sourcefile,
+                int sourceline, ustringhash_pod groupname, int layer,
+                ustringhash_pod layername, ustringhash_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
-        indexvalue = osl_range_check_err(indexvalue, length, symname, sg,
+        indexvalue = osl_range_check_err(indexvalue, length, symname, ec,
                                          sourcefile, sourceline, groupname,
                                          layer, layername, shadername);
     }

@@ -16,6 +16,8 @@
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/strutil.h>
 
+#include <OSL/fmt_util.h>
+
 #include "oslexec_pvt.h"
 
 
@@ -148,7 +150,8 @@ osl_regex_impl(void* sg_, const char* subject_, void* results, int nresults,
     }
 }
 
-
+// TODO: transition format to from llvm_gen_printf_legacy
+//       to llvm_gen_print_fmt by providing an osl_gen_formatfmt here
 OSL_SHADEOP const char*
 osl_format(const char* format_str, ...)
 {
@@ -157,64 +160,6 @@ osl_format(const char* format_str, ...)
     std::string s = Strutil::vsprintf(format_str, args);
     va_end(args);
     return ustring(s).c_str();
-}
-
-
-OSL_SHADEOP void
-osl_printf(ShaderGlobals* sg, const char* format_str, ...)
-{
-    va_list args;
-    va_start(args, format_str);
-#if 0
-    // Make super sure we know we are executing LLVM-generated code!
-    std::string newfmt = std::string("llvm: ") + format_str;
-    format_str = newfmt.c_str();
-#endif
-    std::string s = Strutil::vsprintf(format_str, args);
-    va_end(args);
-    sg->context->messagefmt("{}", s);
-}
-
-
-OSL_SHADEOP void
-osl_error(ShaderGlobals* sg, const char* format_str, ...)
-{
-    va_list args;
-    va_start(args, format_str);
-    std::string s = Strutil::vsprintf(format_str, args);
-    va_end(args);
-    sg->context->errorfmt("{}", s);
-}
-
-
-OSL_SHADEOP void
-osl_warning(ShaderGlobals* sg, const char* format_str, ...)
-{
-    if (sg->context->allow_warnings()) {
-        va_list args;
-        va_start(args, format_str);
-        std::string s = Strutil::vsprintf(format_str, args);
-        va_end(args);
-        sg->context->warningfmt("{}", s);
-    }
-}
-
-
-
-OSL_SHADEOP void
-osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
-            ...)
-{
-    va_list args;
-    va_start(args, format_str);
-    std::string s = Strutil::vsprintf(format_str, args);
-    va_end(args);
-
-    static OIIO::mutex fprintf_mutex;
-    OIIO::lock_guard lock(fprintf_mutex);
-    FILE* file = OIIO::Filesystem::fopen(filename, "a");
-    fputs(s.c_str(), file);
-    fclose(file);
 }
 
 
@@ -231,6 +176,38 @@ osl_split(const char* str, ustring* results, const char* sep, int maxsplit,
         results[i] = ustring(splits[i]);
     return n;
 }
+
+
+
+////////
+// The osl_printf, osl_error, osl_warning, and osl_fprintf are deprecated but
+// the stubs are needed for now to prevent breaking OptiX-based renderers who
+// aren't quite ready to refactor around the journaling print family of
+// functions. They eventually can be removed when we're happy that all the
+// compliant renderers have adapted.
+
+OSL_SHADEOP void
+osl_printf(ShaderGlobals* sg, const char* format_str, ...)
+{
+}
+
+OSL_SHADEOP void
+osl_error(ShaderGlobals* sg, const char* format_str, ...)
+{
+}
+
+OSL_SHADEOP void
+osl_warning(ShaderGlobals* sg, const char* format_str, ...)
+{
+}
+
+OSL_SHADEOP void
+osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
+            ...)
+{
+}
+
+////////
 
 
 }  // end namespace pvt

@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 shader blackbody_u_temperature (output color Cout = 0, output color mCout = 0)
 {
     float T = 10000.0*(1.0/(2*raytype("camera")));   // map u range from 0K to 10,000K

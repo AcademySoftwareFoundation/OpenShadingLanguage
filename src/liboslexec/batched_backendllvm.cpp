@@ -199,6 +199,8 @@ BatchedBackendLLVM::llvm_pass_type(const TypeSpec& typespec)
         lt = (llvm::Type*)ll.type_void_ptr();
     else if (t == TypeDesc::LONGLONG)
         lt = ll.type_longlong();
+    else if (t == OSL::TypeUInt64)
+        lt = ll.type_int64();  //LLVM does not recognize signed bits
     else {
         std::cerr << "Bad llvm_pass_type(" << typespec.c_str() << ")\n";
         OSL_ASSERT(0 && "not handling this type yet");

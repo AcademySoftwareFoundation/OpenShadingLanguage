@@ -340,8 +340,8 @@ jobs:
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=13.0.0
-                            LLVM_DISTRO_NAME=ubuntu-20.04
+            setenvs: export LLVM_VERSION=14.0.0
+                            LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENCOLORIO_VERSION=v2.2.0
                             PUGIXML_VERSION=v1.13
           - desc: bleeding edge gcc12/C++17 llvm14 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
@@ -356,7 +356,7 @@ jobs:
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=14.0.0
+            setenvs: export LLVM_VERSION=15.0.6
                             LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="ASWF/images/openshadinglanguage-stacked-Shaded.png">
+  <img src="ASWF/logos/openshadinglanguage-stacked-Shaded.png">
 
   <!-- <H1>Open Shading Language</H1> -->
 </div>

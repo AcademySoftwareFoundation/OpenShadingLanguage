@@ -12,6 +12,7 @@
 
 #include <cstdarg>
 
+#include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/strutil.h>
 
@@ -161,6 +162,8 @@ osl_format(const char* format_str, ...)
     return ustring(s).c_str();
 }
 
+
+
 OSL_SHADEOP int
 osl_split(const char* str, ustring* results, const char* sep, int maxsplit,
           int resultslen)
@@ -173,6 +176,38 @@ osl_split(const char* str, ustring* results, const char* sep, int maxsplit,
         results[i] = ustring(splits[i]);
     return n;
 }
+
+
+
+////////
+// The osl_printf, osl_error, osl_warning, and osl_fprintf are deprecated but
+// the stubs are needed for now to prevent breaking OptiX-based renderers who
+// aren't quite ready to refactor around the journaling print family of
+// functions. They eventually can be removed when we're happy that all the
+// compliant renderers have adapted.
+
+OSL_SHADEOP void
+osl_printf(ShaderGlobals* sg, const char* format_str, ...)
+{
+}
+
+OSL_SHADEOP void
+osl_error(ShaderGlobals* sg, const char* format_str, ...)
+{
+}
+
+OSL_SHADEOP void
+osl_warning(ShaderGlobals* sg, const char* format_str, ...)
+{
+}
+
+OSL_SHADEOP void
+osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
+            ...)
+{
+}
+
+////////
 
 
 }  // end namespace pvt

@@ -126,6 +126,12 @@ DECL(osl_gen_warningfmt, "xXhiXiX")
 DECL(osl_split, "isXsii")
 DECL(osl_incr_layers_executed, "xX")
 
+// For legacy printf support
+DECL(osl_printf, "xXs*")
+DECL(osl_fprintf, "xXss*")
+DECL(osl_error, "xXs*")
+DECL(osl_warning, "xXs*")
+
 NOISE_IMPL(cellnoise)
 //NOISE_DERIV_IMPL(cellnoise)
 NOISE_IMPL(hashnoise)

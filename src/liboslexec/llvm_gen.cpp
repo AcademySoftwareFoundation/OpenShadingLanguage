@@ -733,7 +733,7 @@ LLVMGEN(llvm_gen_print_fmt)
     int bytesToArg = 0;
     for (int argindex = 0; argindex < arg_count; ++argindex) {
         EncodedType et = encodedtypes[argindex];
-        rop.ll.op_store(rop.ll.constant8(static_cast<int>(et)),
+        rop.ll.op_store(rop.ll.constant8(static_cast<uint8_t>(et)),
                         rop.ll.GEP(rop.ll.type_int8(), encodedtypes_on_stack,
                                    argindex));
 

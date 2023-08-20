@@ -3461,7 +3461,7 @@ LLVMGEN(llvm_gen_getattribute)
             args.push_back(rop.llvm_void_ptr(Destination));
             llvm::Value* r = rop.ll.call_function(spec.function_name().c_str(),
                                                   args);
-            rop.llvm_store_value(r, Result);
+            rop.llvm_store_value(rop.ll.op_bool_to_int(r), Result);
         } else {
             rop.llvm_store_value(rop.ll.constant(0), Result);
         }

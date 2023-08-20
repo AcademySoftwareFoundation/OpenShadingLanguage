@@ -6,9 +6,9 @@
 #    error OSL_HOST_RS_BITCODE must be defined by your build system.
 #endif
 
-#include <OSL/rendererservices.h>
 #include <OSL/fmt_util.h>
 #include <OSL/journal.h>
+#include <OSL/rendererservices.h>
 #include <OSL/rs_free_function.h>
 
 #include "render_state.h"

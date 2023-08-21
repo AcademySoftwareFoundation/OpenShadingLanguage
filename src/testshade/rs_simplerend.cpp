@@ -192,6 +192,13 @@ rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::StringParam /*from*/,
 }
 
 OSL_RSOP bool
+rs_get_attribute_constant_string(OSL::StringParam value, void* result)
+{
+    reinterpret_cast<OSL::StringParam*>(result)[0] = value;
+    return true;
+}
+
+OSL_RSOP bool
 rs_get_attribute_constant_int(int value, void* result)
 {
     reinterpret_cast<int*>(result)[0] = value;
@@ -199,9 +206,30 @@ rs_get_attribute_constant_int(int value, void* result)
 }
 
 OSL_RSOP bool
-rs_get_attribute_constant_string(OSL::StringParam value, void* result)
+rs_get_attribute_constant_int2(int value1, int value2, void* result)
 {
-    reinterpret_cast<OSL::StringParam*>(result)[0] = value;
+    reinterpret_cast<int*>(result)[0] = value1;
+    reinterpret_cast<int*>(result)[1] = value2;
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_int3(int value1, int value2, int value3, void* result)
+{
+    reinterpret_cast<int*>(result)[0] = value1;
+    reinterpret_cast<int*>(result)[1] = value2;
+    reinterpret_cast<int*>(result)[2] = value3;
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_int4(int value1, int value2, int value3, int value4,
+                               void* result)
+{
+    reinterpret_cast<int*>(result)[0] = value1;
+    reinterpret_cast<int*>(result)[1] = value2;
+    reinterpret_cast<int*>(result)[2] = value3;
+    reinterpret_cast<int*>(result)[3] = value4;
     return true;
 }
 
@@ -217,14 +245,6 @@ rs_get_attribute_constant_float(float value, bool derivatives, void* result)
 }
 
 OSL_RSOP bool
-rs_get_attribute_constant_int2(int value1, int value2, void* result)
-{
-    reinterpret_cast<int*>(result)[0] = value1;
-    reinterpret_cast<int*>(result)[1] = value2;
-    return true;
-}
-
-OSL_RSOP bool
 rs_get_attribute_constant_float2(float value1, float value2, bool derivatives,
                                  void* result)
 {
@@ -235,6 +255,24 @@ rs_get_attribute_constant_float2(float value1, float value2, bool derivatives,
         reinterpret_cast<float*>(result)[3] = 0.f;
         reinterpret_cast<float*>(result)[4] = 0.f;
         reinterpret_cast<float*>(result)[5] = 0.f;
+    }
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_attribute_constant_float3(float value1, float value2, float value3,
+                                 bool derivatives, void* result)
+{
+    reinterpret_cast<float*>(result)[0] = value1;
+    reinterpret_cast<float*>(result)[1] = value2;
+    reinterpret_cast<float*>(result)[2] = value3;
+    if (derivatives) {
+        reinterpret_cast<float*>(result)[3]  = 0.f;
+        reinterpret_cast<float*>(result)[4]  = 0.f;
+        reinterpret_cast<float*>(result)[5]  = 0.f;
+        reinterpret_cast<float*>(result)[6]  = 0.f;
+        reinterpret_cast<float*>(result)[7]  = 0.f;
+        reinterpret_cast<float*>(result)[8]  = 0.f;
     }
     return true;
 }
@@ -313,6 +351,9 @@ rs_get_attribute(void* _sg, const char* _object, const char* _name,
     if (object == STRING_PARAMS(options) && name == STRING_PARAMS(blahblah)
         && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(3.14159f, derivatives, result);
+
+    if (object.empty())
+        return sg->renderer->get_userdata(derivatives, name, type, sg, result);
 
     return false;
 }

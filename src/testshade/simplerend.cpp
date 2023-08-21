@@ -915,7 +915,7 @@ SimpleRenderer::export_state(RenderState& state) const
     state.projection  = u_perspective;
     state.pixelaspect = m_pixelaspect;
     std::copy_n(m_screen_window, 4, state.screen_window);
-    std::copy_n(m_shutter, 4, state.shutter);
+    std::copy_n(m_shutter, 2, state.shutter);
 }
 
 void

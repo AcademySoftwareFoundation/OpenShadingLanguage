@@ -587,7 +587,7 @@ SimpleRenderer::build_attribute_getter(ShaderGroup& group, bool object_lookup,
                                      ((int*)p->data())[2]);
                             return;
                         } else if (p->type().aggregate == 4) {
-                            spec.set(rs_get_attribute_constant_int3,
+                            spec.set(rs_get_attribute_constant_int4,
                                      ((int*)p->data())[0], ((int*)p->data())[1],
                                      ((int*)p->data())[2],
                                      ((int*)p->data())[3]);
@@ -613,7 +613,7 @@ SimpleRenderer::build_attribute_getter(ShaderGroup& group, bool object_lookup,
                                      AttributeSpecBuiltinArg::Derivatives);
                             return;
                         } else if (p->type().aggregate == 4) {
-                            spec.set(rs_get_attribute_constant_float3,
+                            spec.set(rs_get_attribute_constant_float4,
                                      ((float*)p->data())[0],
                                      ((float*)p->data())[1],
                                      ((float*)p->data())[2],

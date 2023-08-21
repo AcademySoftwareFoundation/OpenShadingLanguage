@@ -338,13 +338,13 @@ Reader::process()
     if (m_org.additional_bytes_required != 0) {
         std::string overfill_message = OSL::fmtformat(
             "Journal sized {} bytes couldn't capture all prints, warnings, and errors.  Additional {} bytes would be required",
-            m_org.buf_size, m_org.additional_bytes_required);
+            m_org.buf_size, m_org.additional_bytes_required.load());
         m_reporter.report_warning(-1, -1, overfill_message);
     }
     if (m_org.exceeded_page_size != 0) {
         std::string exceeded_message = OSL::fmtformat(
             "Journal page size {} exceeded, largest individual message sized {} bytes.  Consider increasing your page size.",
-            m_org.page_size, m_org.exceeded_page_size);
+            m_org.page_size, m_org.exceeded_page_size.load());
         m_reporter.report_warning(-1, -1, exceeded_message);
     }
 }

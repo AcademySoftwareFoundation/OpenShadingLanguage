@@ -596,25 +596,29 @@ SimpleRenderer::build_attribute_getter(ShaderGroup& group, bool object_lookup,
                     } else if (p->type().basetype == OIIO::TypeDesc::FLOAT) {
                         if (p->type().aggregate == 1) {
                             spec.set(rs_get_attribute_constant_float,
-                                     ((float*)p->data())[0]);
+                                     ((float*)p->data())[0],
+                                     AttributeSpecBuiltinArg::Derivatives);
                             return;
                         } else if (p->type().aggregate == 2) {
                             spec.set(rs_get_attribute_constant_float2,
                                      ((float*)p->data())[0],
-                                     ((float*)p->data())[1]);
+                                     ((float*)p->data())[1],
+                                     AttributeSpecBuiltinArg::Derivatives);
                             return;
                         } else if (p->type().aggregate == 3) {
                             spec.set(rs_get_attribute_constant_float3,
                                      ((float*)p->data())[0],
-                                     ((int*)p->data())[1],
-                                     ((float*)p->data())[2]);
+                                     ((float*)p->data())[1],
+                                     ((float*)p->data())[2],
+                                     AttributeSpecBuiltinArg::Derivatives);
                             return;
                         } else if (p->type().aggregate == 4) {
                             spec.set(rs_get_attribute_constant_float3,
                                      ((float*)p->data())[0],
                                      ((float*)p->data())[1],
                                      ((float*)p->data())[2],
-                                     ((float*)p->data())[3]);
+                                     ((float*)p->data())[3],
+                                     AttributeSpecBuiltinArg::Derivatives);
                             return;
                         }
                     }

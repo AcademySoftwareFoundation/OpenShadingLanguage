@@ -267,12 +267,12 @@ rs_get_attribute_constant_float3(float value1, float value2, float value3,
     reinterpret_cast<float*>(result)[1] = value2;
     reinterpret_cast<float*>(result)[2] = value3;
     if (derivatives) {
-        reinterpret_cast<float*>(result)[3]  = 0.f;
-        reinterpret_cast<float*>(result)[4]  = 0.f;
-        reinterpret_cast<float*>(result)[5]  = 0.f;
-        reinterpret_cast<float*>(result)[6]  = 0.f;
-        reinterpret_cast<float*>(result)[7]  = 0.f;
-        reinterpret_cast<float*>(result)[8]  = 0.f;
+        reinterpret_cast<float*>(result)[3] = 0.f;
+        reinterpret_cast<float*>(result)[4] = 0.f;
+        reinterpret_cast<float*>(result)[5] = 0.f;
+        reinterpret_cast<float*>(result)[6] = 0.f;
+        reinterpret_cast<float*>(result)[7] = 0.f;
+        reinterpret_cast<float*>(result)[8] = 0.f;
     }
     return true;
 }

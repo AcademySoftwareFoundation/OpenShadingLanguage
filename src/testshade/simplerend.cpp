@@ -569,58 +569,50 @@ SimpleRenderer::build_attribute_getter(ShaderGroup& group, bool object_lookup,
         if (object_name && object_name->empty() && attribute_name) {
             OIIO::TypeDesc userdata_type;
             if (const OIIO::ParamValue* p = userdata.find_pv(*attribute_name,
-                                                             userdata_type)) {
-                if (userdata_type == type) {
-                    if (p->type().basetype == OIIO::TypeDesc::INT) {
-                        if (p->type().aggregate == 1) {
-                            spec.set(rs_get_attribute_constant_int,
-                                     ((int*)p->data())[0]);
-                            return;
-                        } else if (p->type().aggregate == 2) {
-                            spec.set(rs_get_attribute_constant_int2,
-                                     ((int*)p->data())[0],
-                                     ((int*)p->data())[1]);
-                            return;
-                        } else if (p->type().aggregate == 3) {
-                            spec.set(rs_get_attribute_constant_int3,
-                                     ((int*)p->data())[0], ((int*)p->data())[1],
-                                     ((int*)p->data())[2]);
-                            return;
-                        } else if (p->type().aggregate == 4) {
-                            spec.set(rs_get_attribute_constant_int4,
-                                     ((int*)p->data())[0], ((int*)p->data())[1],
-                                     ((int*)p->data())[2],
-                                     ((int*)p->data())[3]);
-                            return;
-                        }
-                    } else if (p->type().basetype == OIIO::TypeDesc::FLOAT) {
-                        if (p->type().aggregate == 1) {
-                            spec.set(rs_get_attribute_constant_float,
-                                     ((float*)p->data())[0],
-                                     AttributeSpecBuiltinArg::Derivatives);
-                            return;
-                        } else if (p->type().aggregate == 2) {
-                            spec.set(rs_get_attribute_constant_float2,
-                                     ((float*)p->data())[0],
-                                     ((float*)p->data())[1],
-                                     AttributeSpecBuiltinArg::Derivatives);
-                            return;
-                        } else if (p->type().aggregate == 3) {
-                            spec.set(rs_get_attribute_constant_float3,
-                                     ((float*)p->data())[0],
-                                     ((float*)p->data())[1],
-                                     ((float*)p->data())[2],
-                                     AttributeSpecBuiltinArg::Derivatives);
-                            return;
-                        } else if (p->type().aggregate == 4) {
-                            spec.set(rs_get_attribute_constant_float4,
-                                     ((float*)p->data())[0],
-                                     ((float*)p->data())[1],
-                                     ((float*)p->data())[2],
-                                     ((float*)p->data())[3],
-                                     AttributeSpecBuiltinArg::Derivatives);
-                            return;
-                        }
+                                                             type)) {
+                if (p->type().basetype == OIIO::TypeDesc::INT) {
+                    if (p->type().aggregate == 1) {
+                        spec.set(rs_get_attribute_constant_int,
+                                 ((int*)p->data())[0]);
+                        return;
+                    } else if (p->type().aggregate == 2) {
+                        spec.set(rs_get_attribute_constant_int2,
+                                 ((int*)p->data())[0], ((int*)p->data())[1]);
+                        return;
+                    } else if (p->type().aggregate == 3) {
+                        spec.set(rs_get_attribute_constant_int3,
+                                 ((int*)p->data())[0], ((int*)p->data())[1],
+                                 ((int*)p->data())[2]);
+                        return;
+                    } else if (p->type().aggregate == 4) {
+                        spec.set(rs_get_attribute_constant_int4,
+                                 ((int*)p->data())[0], ((int*)p->data())[1],
+                                 ((int*)p->data())[2], ((int*)p->data())[3]);
+                        return;
+                    }
+                } else if (p->type().basetype == OIIO::TypeDesc::FLOAT) {
+                    if (p->type().aggregate == 1) {
+                        spec.set(rs_get_attribute_constant_float,
+                                 ((float*)p->data())[0],
+                                 AttributeSpecBuiltinArg::Derivatives);
+                        return;
+                    } else if (p->type().aggregate == 2) {
+                        spec.set(rs_get_attribute_constant_float2,
+                                 ((float*)p->data())[0], ((float*)p->data())[1],
+                                 AttributeSpecBuiltinArg::Derivatives);
+                        return;
+                    } else if (p->type().aggregate == 3) {
+                        spec.set(rs_get_attribute_constant_float3,
+                                 ((float*)p->data())[0], ((float*)p->data())[1],
+                                 ((float*)p->data())[2],
+                                 AttributeSpecBuiltinArg::Derivatives);
+                        return;
+                    } else if (p->type().aggregate == 4) {
+                        spec.set(rs_get_attribute_constant_float4,
+                                 ((float*)p->data())[0], ((float*)p->data())[1],
+                                 ((float*)p->data())[2], ((float*)p->data())[3],
+                                 AttributeSpecBuiltinArg::Derivatives);
+                        return;
                     }
                 }
             }

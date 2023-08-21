@@ -231,10 +231,10 @@ rs_get_attribute_constant_float2(float value1, float value2, bool derivatives,
     reinterpret_cast<float*>(result)[0] = value1;
     reinterpret_cast<float*>(result)[1] = value2;
     if (derivatives) {
+        reinterpret_cast<float*>(result)[2] = 0.f;
         reinterpret_cast<float*>(result)[3] = 0.f;
         reinterpret_cast<float*>(result)[4] = 0.f;
         reinterpret_cast<float*>(result)[5] = 0.f;
-        reinterpret_cast<float*>(result)[6] = 0.f;
     }
     return true;
 }

@@ -567,7 +567,6 @@ SimpleRenderer::build_attribute_getter(ShaderGroup& group, bool object_lookup,
         // which function to call based on what we know at this point.
 
         if (object_name && object_name->empty() && attribute_name) {
-            OIIO::TypeDesc userdata_type;
             if (const OIIO::ParamValue* p = userdata.find_pv(*attribute_name,
                                                              type)) {
                 if (p->type().basetype == OIIO::TypeDesc::INT) {

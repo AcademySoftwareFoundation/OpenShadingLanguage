@@ -316,14 +316,15 @@ rs_get_attribute(void* _sg, const char* _object, const char* _name,
     if (name == STRING_PARAMS(osl_version) && type == OSL::TypeInt)
         return rs_get_attribute_constant_int(OSL_VERSION, result);
     if (name == STRING_PARAMS(camera_resolution)
-        && type == OSL::TypeDesc(OSL::TypeDesc::INT, OSL::TypeDesc::VEC2))
+        && type == OSL::TypeDesc(OSL::TypeDesc::INT, 2))
         return rs_get_attribute_constant_int2(rs->xres, rs->yres, result);
     if (name == STRING_PARAMS(camera_projection) && type == OSL::TypeString)
         return rs_get_attribute_constant_string(rs->projection, result);
     if (name == STRING_PARAMS(camera_pixelaspect) && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->pixelaspect, derivatives,
                                                result);
-    if (name == STRING_PARAMS(camera_screen_window) && type == OSL::TypeFloat4)
+    if (name == STRING_PARAMS(camera_screen_window)
+        && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 4))
         return rs_get_attribute_constant_float4(rs->screen_window[0],
                                                 rs->screen_window[1],
                                                 rs->screen_window[2],
@@ -331,14 +332,16 @@ rs_get_attribute(void* _sg, const char* _object, const char* _name,
                                                 derivatives, result);
     if (name == STRING_PARAMS(camera_fov) && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->fov, derivatives, result);
-    if (name == STRING_PARAMS(camera_clip) && type == OSL::TypeFloat2)
+    if (name == STRING_PARAMS(camera_clip)
+        && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 2))
         return rs_get_attribute_constant_float2(rs->hither, rs->yon,
                                                 derivatives, result);
     if (name == STRING_PARAMS(camera_clip_near) && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->hither, derivatives, result);
     if (name == STRING_PARAMS(camera_clip_far) && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->yon, derivatives, result);
-    if (name == STRING_PARAMS(camera_shutter) && type == OSL::TypeFloat2)
+    if (name == STRING_PARAMS(camera_shutter)
+        && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 2))
         return rs_get_attribute_constant_float2(rs->shutter[0], rs->shutter[1],
                                                 derivatives, result);
     if (name == STRING_PARAMS(camera_shutter_open) && type == OSL::TypeFloat)

@@ -2104,6 +2104,14 @@ struct Analyzer {
         for (Symbol* logical_bool_sym : m_symbols_logically_bool) {
             if (m_symbols_disqualified_from_bool.find(logical_bool_sym)
                 == m_symbols_disqualified_from_bool.end()) {
+                // Do not allow outputs that will be pulled by the renderer to 
+                // be forced to boolean as it would complicate accessing or 
+                // copying them out.  This could be relaxed if only OSL 
+                // controlled copy placement were allowed as it "could" handle 
+                // the required bool->int expanson.
+                if ((logical_bool_sym->symtype() == SymTypeOutputParam) && 
+                    logical_bool_sym->renderer_output())
+                    continue;
                 logical_bool_sym->forced_llvm_bool(true);
             }
         }

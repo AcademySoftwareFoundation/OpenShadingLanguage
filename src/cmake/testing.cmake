@@ -253,7 +253,7 @@ macro (osl_add_all_tests)
                 calculatenormal-reg
                 cellnoise closure closure-array closure-parameters closure-zero closure-conditional
                 color color-reg colorspace comparison
-                complement-reg compile-buffer compassign-reg
+                complement-reg compile-buffer compassign-bool compassign-reg
                 component-range
                 control-flow-reg connect-components
                 const-array-params const-array-fill

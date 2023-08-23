@@ -426,17 +426,17 @@ osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
 
 
 __device__ int
-osl_range_check_err(int indexvalue, int length, OSL::ustring_pod symname,
-                    void* sg, OSL::ustring_pod sourcefile, int sourceline,
-                    OSL::ustring_pod groupname, int layer,
-                    OSL::ustring_pod layername, OSL::ustring_pod shadername)
+osl_range_check_err(int indexvalue, int length, OSL::ustringhash_pod symname,
+                    void* sg, OSL::ustringhash_pod sourcefile, int sourceline,
+                    OSL::ustringhash_pod groupname, int layer,
+                    OSL::ustringhash_pod layername,
+                    OSL::ustringhash_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
         return indexvalue < 0 ? 0 : length - 1;
     }
     return indexvalue;
 }
-
 
 
 #define MAT(m) (*(OSL::Matrix44*)__builtin_assume_aligned(m, alignof(float)))

@@ -5224,7 +5224,7 @@ LLVM_Util::op_store(llvm::Value* val, llvm::Value* ptr)
         std::cerr << "op_store val->getType()=" << std::flush;
         val->getType()->print(llvm::errs());
         std::cerr << std::endl;
-        // OSL_ASSERT(0);
+        OSL_DASSERT(0 && "We should not have a pointer type mismatch here");
     }
     if (m_mask_stack.empty() || val->getType()->isVectorTy() == false
         || (!is_masking_required())) {

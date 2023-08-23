@@ -147,6 +147,12 @@ if [[ "$OPTIX_VERSION" != "" ]] ; then
 fi
 
 
+if [[ "$CMAKE_VERSION" != "" ]] ; then
+    source src/build-scripts/build_cmake.bash
+fi
+cmake --version
+
+
 source src/build-scripts/build_pybind11.bash
 
 if [[ "$OPENEXR_VERSION" != "" ]] ; then

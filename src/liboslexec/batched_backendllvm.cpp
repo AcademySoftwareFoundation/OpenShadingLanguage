@@ -461,8 +461,8 @@ BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
     }
 
     if (sym.symtype() == SymTypeParam
-        || sym.symtype() == SymTypeOutputParam
-               && !can_treat_param_as_local(sym)) {
+        || (sym.symtype() == SymTypeOutputParam
+            && !can_treat_param_as_local(sym))) {
         // Special case for most params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];
         return groupdata_field_ptr(fieldnum,

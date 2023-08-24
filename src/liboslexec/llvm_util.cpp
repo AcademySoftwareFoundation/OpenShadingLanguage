@@ -3430,6 +3430,14 @@ LLVM_Util::int_to_ptr_cast(llvm::Value* val)
 
 
 llvm::Value*
+LLVM_Util::ptr_to_int64_cast(llvm::Value* ptr)
+{
+    return builder().CreatePtrToInt(ptr, type_int64());
+}
+
+
+
+llvm::Value*
 LLVM_Util::void_ptr(llvm::Value* val, const std::string& llname)
 {
     return builder().CreatePointerCast(val, type_void_ptr(), llname);
@@ -5216,6 +5224,7 @@ LLVM_Util::op_store(llvm::Value* val, llvm::Value* ptr)
         std::cerr << "op_store val->getType()=" << std::flush;
         val->getType()->print(llvm::errs());
         std::cerr << std::endl;
+        OSL_DASSERT(0 && "We should not have a pointer type mismatch here");
     }
     if (m_mask_stack.empty() || val->getType()->isVectorTy() == false
         || (!is_masking_required())) {

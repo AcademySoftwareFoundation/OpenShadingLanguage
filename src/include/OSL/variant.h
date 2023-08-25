@@ -132,99 +132,93 @@ public:
         return false;
     }
 
-    template<typename T> T get() const
-    {
-        OSL_DASSERT(false);
-        return T();
-    }
-
-    template<> inline TBuiltinArg get() const
+    TBuiltinArg get_builtin() const
     {
         OSL_DASSERT(is_holding<TBuiltinArg>());
         return m_builtin;
     }
 
-    template<> inline bool get() const
+    bool get_bool() const
     {
-        OSL_DASSERT(is_holding<bool>());
+        return OSL_DASSERT(is_holding<bool>());
         return m_bool;
     }
 
-    template<> inline int8_t get() const
+    int8_t get_int8() const
     {
-        OSL_DASSERT(is_holding<int8_t>());
+        return OSL_DASSERT(is_holding<int8_t>());
         return m_int8;
     }
 
-    template<> inline int16_t get() const
+    int16_t get_int16() const
     {
-        OSL_DASSERT(is_holding<int16_t>());
+        return OSL_DASSERT(is_holding<int16_t>());
         return m_int16;
     }
 
-    template<> inline int32_t get() const
+    int32_t get_int32() const
     {
-        OSL_DASSERT(is_holding<int32_t>());
+        return OSL_DASSERT(is_holding<int32_t>());
         return m_int32;
     }
 
-    template<> inline int64_t get() const
+    int64_t get_int64() const
     {
-        OSL_DASSERT(is_holding<int64_t>());
+        return OSL_DASSERT(is_holding<int64_t>());
         return m_int64;
     }
 
-    template<> inline uint8_t get() const
+    uint8_t get_uint8() const
     {
-        OSL_DASSERT(is_holding<uint8_t>());
+        return OSL_DASSERT(is_holding<uint8_t>());
         return m_uint8;
     }
 
-    template<> inline uint16_t get() const
+    uint16_t get_uint16() const
     {
-        OSL_DASSERT(is_holding<uint16_t>());
+        return OSL_DASSERT(is_holding<uint16_t>());
         return m_uint16;
     }
 
-    template<> inline uint32_t get() const
+    uint32_t get_uint32() const
     {
-        OSL_DASSERT(is_holding<uint32_t>());
+        return OSL_DASSERT(is_holding<uint32_t>());
         return m_uint32;
     }
 
-    template<> inline uint64_t get() const
+    uint64_t get_uint64() const
     {
-        OSL_DASSERT(is_holding<uint64_t>());
+        return OSL_DASSERT(is_holding<uint64_t>());
         return m_uint64;
     }
 
-    template<> inline float get() const
+    float get_float() const
     {
-        OSL_DASSERT(is_holding<float>());
+        return OSL_DASSERT(is_holding<float>());
         return m_float;
     }
 
-    template<> inline double get() const
+    double get_double() const
     {
-        OSL_DASSERT(is_holding<double>());
+        return OSL_DASSERT(is_holding<double>());
         return m_double;
     }
 
-    template<> inline void* get() const
+    void* get_ptr() const
     {
-        OSL_DASSERT(is_holding<void*>());
+        return OSL_DASSERT(is_holding<void*>());
         return m_ptr;
     }
 
-    template<> inline ustring get() const
+    ustring get_ustring() const
     {
-        OSL_DASSERT(is_holding<ustring>());
+        return OSL_DASSERT(is_holding<ustring>());
         return m_ustring;
     }
 
-    template<> inline ustringhash get() const
+    ustringhash get_ustringhash() const
     {
-        OSL_DASSERT(is_holding<ustringhash>());
+        return OSL_DASSERT(is_holding<ustringhash>());
         return m_ustringhash;
     }
 };

@@ -3310,46 +3310,46 @@ append_constant_arg(BackendLLVM& rop, const TArgVariant& arg,
     case TArgVariant::Type::Unspecified:
     case TArgVariant::Type::Builtin: OSL_DASSERT(false); break;
     case TArgVariant::Type::Bool:
-        args.push_back(rop.ll.constant_bool(arg.get<bool>()));
+        args.push_back(rop.ll.constant_bool(arg.get_bool()));
         break;
     case TArgVariant::Type::Int8:
-        args.push_back(rop.ll.constant8(arg.get<int8_t>()));
+        args.push_back(rop.ll.constant8(arg.get_int8()));
         break;
     case TArgVariant::Type::Int16:
-        args.push_back(rop.ll.constant16(arg.get<int16_t>()));
+        args.push_back(rop.ll.constant16(arg.get_int16()));
         break;
     case TArgVariant::Type::Int32:
-        args.push_back(rop.ll.constant(arg.get<int32_t>()));
+        args.push_back(rop.ll.constant(arg.get_int32()));
         break;
     case TArgVariant::Type::Int64:
-        args.push_back(rop.ll.constanti64(arg.get<int64_t>()));
+        args.push_back(rop.ll.constanti64(arg.get_int64()));
         break;
     case TArgVariant::Type::UInt8:
-        args.push_back(rop.ll.constant8(arg.get<uint8_t>()));
+        args.push_back(rop.ll.constant8(arg.get_uint8()));
         break;
     case TArgVariant::Type::UInt16:
-        args.push_back(rop.ll.constant16(arg.get<uint16_t>()));
+        args.push_back(rop.ll.constant16(arg.get_uint16()));
         break;
     case TArgVariant::Type::UInt32:
-        args.push_back(rop.ll.constant(arg.get<uint32_t>()));
+        args.push_back(rop.ll.constant(arg.get_uint32()));
         break;
     case TArgVariant::Type::UInt64:
-        args.push_back(rop.ll.constant64(arg.get<uint64_t>()));
+        args.push_back(rop.ll.constant64(arg.get_uint64()));
         break;
     case TArgVariant::Type::Float:
-        args.push_back(rop.ll.constant(arg.get<float>()));
+        args.push_back(rop.ll.constant(arg.get_float()));
         break;
     case TArgVariant::Type::Double:
-        args.push_back(rop.ll.constant64(arg.get<double>()));
+        args.push_back(rop.ll.constant64(arg.get_double()));
         break;
     case TArgVariant::Type::Pointer:
-        args.push_back(rop.ll.constant_ptr(arg.get<void*>()));
+        args.push_back(rop.ll.constant_ptr(arg.get_ptr()));
         break;
     case TArgVariant::Type::UString:
-        args.push_back(rop.ll.constant(arg.get<ustring>()));
+        args.push_back(rop.ll.constant(arg.get_ustring()));
         break;
     case TArgVariant::Type::UStringHash:
-        args.push_back(rop.ll.constant(ustring(arg.get<ustringhash>())));
+        args.push_back(rop.ll.constant(ustring(arg.get_ustringhash())));
         break;
     }
 }
@@ -3428,7 +3428,7 @@ LLVMGEN(llvm_gen_getattribute)
             for (size_t index = 0; index < spec.arg_count(); ++index) {
                 const auto& arg = spec.arg(index);
                 if (arg.is_holding<AttributeSpecArg::Type::Builtin>()) {
-                    switch (arg.get<AttributeSpecBuiltinArg>()) {
+                    switch (arg.get_builtin()) {
                     default: OSL_DASSERT(false); break;
                     case AttributeSpecBuiltinArg::ShaderGlobalsPointer:
                         args.push_back(rop.sg_void_ptr());

@@ -2299,6 +2299,8 @@ test_shade(int argc, const char* argv[])
             std::cout << texturesys->getstats(5) << "\n";
         std::cout << ustring::getstats() << "\n";
     }
+
+    // TODO: Include batched support
     if ((debug1 || print_groupdata) && !batched) {
         int groupdata_size;
         shadingsys->getattribute(shadergroup.get(), "llvm_groupdata_size",

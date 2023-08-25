@@ -3427,7 +3427,7 @@ LLVMGEN(llvm_gen_getattribute)
             args.reserve(spec.arg_count() + 1);
             for (size_t index = 0; index < spec.arg_count(); ++index) {
                 const auto& arg = spec.arg(index);
-                if (arg.is_holding<AttributeSpecArg::Type::Builtin>()) {
+                if (arg.is_holding<AttributeSpecBuiltinArg>()) {
                     switch (arg.get_builtin()) {
                     default: OSL_DASSERT(false); break;
                     case AttributeSpecBuiltinArg::ShaderGlobalsPointer:

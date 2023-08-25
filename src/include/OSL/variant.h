@@ -140,85 +140,85 @@ public:
 
     bool get_bool() const
     {
-        return OSL_DASSERT(is_holding<bool>());
+        OSL_DASSERT(is_holding<bool>());
         return m_bool;
     }
 
     int8_t get_int8() const
     {
-        return OSL_DASSERT(is_holding<int8_t>());
+        OSL_DASSERT(is_holding<int8_t>());
         return m_int8;
     }
 
     int16_t get_int16() const
     {
-        return OSL_DASSERT(is_holding<int16_t>());
+        OSL_DASSERT(is_holding<int16_t>());
         return m_int16;
     }
 
     int32_t get_int32() const
     {
-        return OSL_DASSERT(is_holding<int32_t>());
+        OSL_DASSERT(is_holding<int32_t>());
         return m_int32;
     }
 
     int64_t get_int64() const
     {
-        return OSL_DASSERT(is_holding<int64_t>());
+        OSL_DASSERT(is_holding<int64_t>());
         return m_int64;
     }
 
     uint8_t get_uint8() const
     {
-        return OSL_DASSERT(is_holding<uint8_t>());
+        OSL_DASSERT(is_holding<uint8_t>());
         return m_uint8;
     }
 
     uint16_t get_uint16() const
     {
-        return OSL_DASSERT(is_holding<uint16_t>());
+        OSL_DASSERT(is_holding<uint16_t>());
         return m_uint16;
     }
 
     uint32_t get_uint32() const
     {
-        return OSL_DASSERT(is_holding<uint32_t>());
+        OSL_DASSERT(is_holding<uint32_t>());
         return m_uint32;
     }
 
     uint64_t get_uint64() const
     {
-        return OSL_DASSERT(is_holding<uint64_t>());
+        OSL_DASSERT(is_holding<uint64_t>());
         return m_uint64;
     }
 
     float get_float() const
     {
-        return OSL_DASSERT(is_holding<float>());
+        OSL_DASSERT(is_holding<float>());
         return m_float;
     }
 
     double get_double() const
     {
-        return OSL_DASSERT(is_holding<double>());
+        OSL_DASSERT(is_holding<double>());
         return m_double;
     }
 
     void* get_ptr() const
     {
-        return OSL_DASSERT(is_holding<void*>());
+        OSL_DASSERT(is_holding<void*>());
         return m_ptr;
     }
 
     ustring get_ustring() const
     {
-        return OSL_DASSERT(is_holding<ustring>());
+        OSL_DASSERT(is_holding<ustring>());
         return m_ustring;
     }
 
     ustringhash get_ustringhash() const
     {
-        return OSL_DASSERT(is_holding<ustringhash>());
+        OSL_DASSERT(is_holding<ustringhash>());
         return m_ustringhash;
     }
 };

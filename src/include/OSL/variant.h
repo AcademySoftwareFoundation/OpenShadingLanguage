@@ -132,133 +132,133 @@ public:
         return false;
     }
 
-    template<typename T> T get() const
+    template<typename T>
+    T get() const
     {
         OSL_DASSERT(false);
         return T();
     }
+
+    template<>
+    inline TBuiltinArg
+    get() const
+    {
+        OSL_DASSERT(is_holding<TBuiltinArg>());
+        return m_builtin;
+    }
+
+    template<>
+    inline bool
+    get() const
+    {
+        OSL_DASSERT(is_holding<bool>());
+        return m_bool;
+    }
+
+    template<>
+    inline int8_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<int8_t>());
+        return m_int8;
+    }
+
+    template<>
+    inline int16_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<int16_t>());
+        return m_int16;
+    }
+
+    template<>
+    inline int32_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<int32_t>());
+        return m_int32;
+    }
+
+    template<>
+    inline int64_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<int64_t>());
+        return m_int64;
+    }
+
+    template<>
+    inline uint8_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<uint8_t>());
+        return m_uint8;
+    }
+
+    template<>
+    inline uint16_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<uint16_t>());
+        return m_uint16;
+    }
+
+    template<>
+    inline uint32_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<uint32_t>());
+        return m_uint32;
+    }
+
+    template<>
+    inline uint64_t
+    get() const
+    {
+        OSL_DASSERT(is_holding<uint64_t>());
+        return m_uint64;
+    }
+
+    template<>
+    inline float
+    get() const
+    {
+        OSL_DASSERT(is_holding<float>());
+        return m_float;
+    }
+
+    template<>
+    inline double
+    get() const
+    {
+        OSL_DASSERT(is_holding<double>());
+        return m_double;
+    }
+
+    template<>
+    inline void*
+    get() const
+    {
+        OSL_DASSERT(is_holding<void*>());
+        return m_ptr;
+    }
+
+    template<>
+    inline ustring
+    get() const
+    {
+        OSL_DASSERT(is_holding<ustring>());
+        return m_ustring;
+    }
+
+    template<>
+    inline ustringhash
+    get() const
+    {
+        OSL_DASSERT(is_holding<ustringhash>());
+        return m_ustringhash;
+    }
 };
-
-
-template<>
-inline TBuiltinArg
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<TBuiltinArg>());
-    return m_builtin;
-}
-
-template<>
-inline bool
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<bool>());
-    return m_bool;
-}
-
-template<>
-inline int8_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<int8_t>());
-    return m_int8;
-}
-
-template<>
-inline int16_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<int16_t>());
-    return m_int16;
-}
-
-template<>
-inline int32_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<int32_t>());
-    return m_int32;
-}
-
-template<>
-inline int64_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<int64_t>());
-    return m_int64;
-}
-
-template<>
-inline uint8_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<uint8_t>());
-    return m_uint8;
-}
-
-template<>
-inline uint16_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<uint16_t>());
-    return m_uint16;
-}
-
-template<>
-inline uint32_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<uint32_t>());
-    return m_uint32;
-}
-
-template<>
-inline uint64_t
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<uint64_t>());
-    return m_uint64;
-}
-
-template<>
-inline float
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<float>());
-    return m_float;
-}
-
-template<>
-inline double
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<double>());
-    return m_double;
-}
-
-template<>
-inline void*
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<void*>());
-    return m_ptr;
-}
-
-template<>
-inline ustring
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<ustring>());
-    return m_ustring;
-}
-
-template<>
-inline ustringhash
-ArgVariant::get() const
-{
-    OSL_DASSERT(is_holding<ustringhash>());
-    return m_ustringhash;
-}
 
 
 // The FunctionSpec is never in device code, so it can be a bit more

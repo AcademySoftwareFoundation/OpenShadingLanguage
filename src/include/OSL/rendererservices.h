@@ -38,7 +38,7 @@ enum class AttributeSpecBuiltinArg {
     Derivatives,           // bool
     Type,                  // TypeDesc_pod
     ArrayIndex,            // int, Always zero for non-indexed array lookups.
-    IsArrayLookup,           // bool
+    IsArrayLookup,         // bool
     ObjectName,            // const char* (TODO: change to ustringhash)
     AttributeName,         // const char* (TODO: change to ustringhash)
 };

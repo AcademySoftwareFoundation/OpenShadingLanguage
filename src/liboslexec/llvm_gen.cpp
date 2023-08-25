@@ -3300,7 +3300,59 @@ LLVMGEN(llvm_gen_noise)
     return true;
 }
 
-
+template<typename TArgVariant>
+void
+append_constant_arg(BackendLLVM& rop, const TArgVariant& arg,
+                    std::vector<llvm::Value*>& args)
+{
+    switch (arg.type()) {
+    default:
+    case TArgVariant::Type::Unspecified:
+    case TArgVariant::Type::Builtin: OSL_DASSERT(false); break;
+    case TArgVariant::Type::Bool:
+        args.push_back(rop.ll.constant_bool(arg.get<bool>()));
+        break;
+    case TArgVariant::Type::Int8:
+        args.push_back(rop.ll.constant8(arg.get<int8_t>()));
+        break;
+    case TArgVariant::Type::Int16:
+        args.push_back(rop.ll.constant16(arg.get<int16_t>()));
+        break;
+    case TArgVariant::Type::Int32:
+        args.push_back(rop.ll.constant(arg.get<int32_t>()));
+        break;
+    case TArgVariant::Type::Int64:
+        args.push_back(rop.ll.constanti64(arg.get<int64_t>()));
+        break;
+    case TArgVariant::Type::UInt8:
+        args.push_back(rop.ll.constant8(arg.get<uint8_t>()));
+        break;
+    case TArgVariant::Type::UInt16:
+        args.push_back(rop.ll.constant16(arg.get<uint16_t>()));
+        break;
+    case TArgVariant::Type::UInt32:
+        args.push_back(rop.ll.constant(arg.get<uint32_t>()));
+        break;
+    case TArgVariant::Type::UInt64:
+        args.push_back(rop.ll.constant64(arg.get<uint64_t>()));
+        break;
+    case TArgVariant::Type::Float:
+        args.push_back(rop.ll.constant(arg.get<float>()));
+        break;
+    case TArgVariant::Type::Double:
+        args.push_back(rop.ll.constant64(arg.get<double>()));
+        break;
+    case TArgVariant::Type::Pointer:
+        args.push_back(rop.ll.constant_ptr(arg.get<void*>()));
+        break;
+    case TArgVariant::Type::UString:
+        args.push_back(rop.ll.constant(arg.get<ustring>()));
+        break;
+    case TArgVariant::Type::UStringHash:
+        args.push_back(rop.ll.constant(ustring(arg.get<ustringhash>())));
+        break;
+    }
+}
 
 LLVMGEN(llvm_gen_getattribute)
 {
@@ -3375,12 +3427,7 @@ LLVMGEN(llvm_gen_getattribute)
             args.reserve(spec.arg_count() + 1);
             for (size_t index = 0; index < spec.arg_count(); ++index) {
                 const auto& arg = spec.arg(index);
-                switch (arg.type()) {
-                default:
-                case AttributeSpecArg::Type::Unspecified:
-                    OSL_DASSERT(false);
-                    break;
-                case AttributeSpecArg::Type::Builtin:
+                if (arg.is_holding<AttributeSpecArg::Type::Builtin>()) {
                     switch (arg.get<AttributeSpecBuiltinArg>()) {
                     default: OSL_DASSERT(false); break;
                     case AttributeSpecBuiltinArg::ShaderGlobalsPointer:
@@ -3402,7 +3449,7 @@ LLVMGEN(llvm_gen_getattribute)
                         else
                             args.push_back(rop.ll.constant((int)0));
                         break;
-                    case AttributeSpecBuiltinArg::ArrayLookup:
+                    case AttributeSpecBuiltinArg::IsArrayLookup:
                         args.push_back(rop.ll.constant_bool(array_lookup));
                         break;
                     case AttributeSpecBuiltinArg::ObjectName:
@@ -3412,50 +3459,8 @@ LLVMGEN(llvm_gen_getattribute)
                         args.push_back(attr_name_arg);
                         break;
                     }
-                    break;
-                case AttributeSpecArg::Type::Bool:
-                    args.push_back(rop.ll.constant_bool(arg.get<bool>()));
-                    break;
-                case AttributeSpecArg::Type::Int8:
-                    args.push_back(rop.ll.constant8(arg.get<int8_t>()));
-                    break;
-                case AttributeSpecArg::Type::Int16:
-                    args.push_back(rop.ll.constant16(arg.get<int16_t>()));
-                    break;
-                case AttributeSpecArg::Type::Int32:
-                    args.push_back(rop.ll.constant(arg.get<int32_t>()));
-                    break;
-                case AttributeSpecArg::Type::Int64:
-                    args.push_back(rop.ll.constanti64(arg.get<int64_t>()));
-                    break;
-                case AttributeSpecArg::Type::UInt8:
-                    args.push_back(rop.ll.constant8(arg.get<uint8_t>()));
-                    break;
-                case AttributeSpecArg::Type::UInt16:
-                    args.push_back(rop.ll.constant16(arg.get<uint16_t>()));
-                    break;
-                case AttributeSpecArg::Type::UInt32:
-                    args.push_back(rop.ll.constant(arg.get<uint32_t>()));
-                    break;
-                case AttributeSpecArg::Type::UInt64:
-                    args.push_back(rop.ll.constant64(arg.get<uint64_t>()));
-                    break;
-                case AttributeSpecArg::Type::Float:
-                    args.push_back(rop.ll.constant(arg.get<float>()));
-                    break;
-                case AttributeSpecArg::Type::Double:
-                    args.push_back(rop.ll.constant64(arg.get<double>()));
-                    break;
-                case AttributeSpecArg::Type::Pointer:
-                    args.push_back(rop.ll.constant_ptr(arg.get<void*>()));
-                    break;
-                case AttributeSpecArg::Type::UString:
-                    args.push_back(rop.ll.constant(arg.get<ustring>()));
-                    break;
-                case AttributeSpecArg::Type::UStringHash:
-                    args.push_back(
-                        rop.ll.constant(ustring(arg.get<ustringhash>())));
-                    break;
+                } else {
+                    append_constant_arg(rop, arg, args);
                 }
             }
             args.push_back(rop.llvm_void_ptr(Destination));

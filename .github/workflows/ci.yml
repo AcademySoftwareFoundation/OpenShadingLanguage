@@ -57,19 +57,6 @@ jobs:
             python_ver: 2.7
             # pybind11_ver: v2.9.0
             simd: avx
-          - desc: GPU Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.3 OIIO-master avx2
-            nametag: linux-optix7-2019
-            os: ubuntu-latest
-            container: aswftesting/ci-osl:2019-clang10
-            vfxyear: 2019
-            cxx_std: 14
-            openimageio_ver: master
-            python_ver: 2.7
-            # pybind11_ver: v2.9.0
-            simd: avx2,f16c
-            skip_tests: 1
-            setenvs: export OSL_CMAKE_FLAGS="-DUSE_OPTIX=1" OPTIX_VERSION=7.0
-                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=8.1.1
           - desc: gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4
             nametag: linux-vfx2020
             os: ubuntu-latest
@@ -158,6 +145,19 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
+          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 boost-1.80 exr-3.1 OIIO-master avx2
+            nametag: linux-optix7-2023
+            os: ubuntu-latest
+            container: aswftesting/ci-osl:2023-clang15
+            vfxyear: 2023
+            cxx_std: 17
+            openimageio_ver: master
+            python_ver: "3.10"
+            pybind11_ver: v2.10.0
+            simd: avx2,f16c
+            skip_tests: 1
+            setenvs: export OSL_CMAKE_FLAGS="-DUSE_OPTIX=1" OPTIX_VERSION=7.0
+                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
           - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.3 no-simd exr2.3
             nametag: linux-oldest
             os: ubuntu-latest

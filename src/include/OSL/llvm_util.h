@@ -768,6 +768,10 @@ public:
     /// return the llvm::Value of the new pointer.
     llvm::Value* int_to_ptr_cast(llvm::Value* val);
 
+    /// Cast the pointer specified by ptr to an int64, return the llvm::Value
+    /// of the new value.
+    llvm::Value* ptr_to_int64_cast(llvm::Value* ptr);
+
     /// Cast the pointer variable specified by val to a pointer of type
     /// void* return the llvm::Value of the new pointer.
     llvm::Value* void_ptr(llvm::Value* val, const std::string& llname = {});

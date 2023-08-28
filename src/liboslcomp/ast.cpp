@@ -46,7 +46,7 @@ ScopeExit print_node_counts([]() {
     for (int i = 0; i < ASTNode::_last_node; ++i)
         if (node_counts[i] > 0)
             Strutil::print("ASTNode type {:2}: {:5}   (peak {:5})\n", i,
-                           node_counts[i], node_counts_peak[i]);
+                           node_counts[i].load(), node_counts_peak[i].load());
 });
 }  // namespace
 #endif

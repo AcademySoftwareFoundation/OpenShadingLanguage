@@ -98,10 +98,12 @@ struct ShaderGlobals {
     float3 dPdtime;
     float3 Ps, dPsdx, dPsdy;
     void* renderstate;
-    void* shadingStateUniform;
     void* tracedata;
     void* objdata;
     void* context;
+    void* shadingStateUniform;
+    int thread_index;
+    int shade_index;
     void* renderer;
     void* object2common;
     void* shader2common;

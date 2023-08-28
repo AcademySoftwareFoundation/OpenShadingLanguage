@@ -665,6 +665,13 @@ BackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
         dst_ptr = ll.GEP(dst_ptr, 0, component);
 
     // Finally, store the value.
+    if (t == TypeString && dst_ptr->getType() == ll.type_int64_ptr()
+        && new_val->getType() == ll.type_char_ptr()) {
+        // Special case: we are still ickily storing strings sometimes as a
+        // char* and sometimes as a uint64. Do a little sneaky conversion
+        // here.
+        new_val = ll.ptr_to_int64_cast(new_val);
+    }
     ll.op_store(new_val, dst_ptr);
     return true;
 }

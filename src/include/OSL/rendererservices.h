@@ -206,22 +206,41 @@ public:
                          const EncodedType* arg_types, uint32_t arg_values_size,
                          uint8_t* arg_values);
 
-    /// @brief Builds a free function to provide a value for a given attribute.
+    /// Builds a free function to provide a value for a given attribute.
     /// This occurs at shader compile time, not at execution time.
-    /// @param group The shader group currently requesting the attribute.
-    /// @param object_lookup True if an object name was specified, even if the
-    /// value is not known at compile time.
-    /// @param object_name The object name. A null pointer will be provided if
-    /// the value is not specified or it is not known at compile time.
-    /// @param attribute_name The attribute name. A null pointer will be
-    /// provided if the value is not known at compile time.
-    /// @param array_lookup True if the attribute lookup provides an index.
-    /// @param array_index. The array index. A null pointer will be provided if
-    /// the value is not specified or it is not known at compile time.
-    /// @param type The type of the value being requested.
-    /// @param derivatives True if derivatives are also being requested.
-    /// @param spec The built attribute getter. An empty function name is
-    /// interpreted as a missing attribute.
+    ///
+    /// @param group
+    ///     The shader group currently requesting the attribute.
+    ///
+    /// @param object_lookup
+    ///     True if an object name was specified, even if the value is not
+    ///     known at compile time.
+    ///
+    /// @param object_name
+    ///     The object name, or nullptr if the value is not specified or it
+    ///     is not known at compile time.
+    ///
+    /// @param attribute_name
+    ///     The attribute name, or nullptr if the value is not known at
+    ///     compile time.
+    ///
+    /// @param array_lookup
+    ///     True if the attribute lookup provides an index.
+    ///
+    /// @param array_index
+    ///     The array index, or nullptr if the value is not specified or it
+    ///     is not known at compile time.
+    ///
+    /// @param type
+    ///     The type of the value being requested.
+    ///
+    /// @param derivatives
+    ///     True if derivatives are also being requested.
+    ///
+    /// @param spec
+    ///     The built attribute getter. An empty function name is interpreted
+    ///     as a missing attribute.
+    ///
     virtual void build_attribute_getter(ShaderGroup& group, bool object_lookup,
                                         ustring* object_name,
                                         ustring* attribute_name,

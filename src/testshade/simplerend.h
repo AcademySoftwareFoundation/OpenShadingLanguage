@@ -62,7 +62,7 @@ public:
     bool get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                       ShaderGlobals* sg, void* val) override;
 
-    void build_attribute_getter(ShaderGroup& group, bool is_object_lookup,
+    void build_attribute_getter(const ShaderGroup& group, bool is_object_lookup,
                                 const ustring* object_name,
                                 const ustring* attribute_name,
                                 bool is_array_lookup, const int* array_index,

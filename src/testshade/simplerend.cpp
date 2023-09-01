@@ -535,7 +535,7 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
 
 void
 SimpleRenderer::build_attribute_getter(
-    ShaderGroup& group, bool is_object_lookup, const ustring* object_name,
+    const ShaderGroup& group, bool is_object_lookup, const ustring* object_name,
     const ustring* attribute_name, bool is_array_lookup, const int* array_index,
     TypeDesc type, bool derivatives, AttributeGetterSpec& spec)
 {

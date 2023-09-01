@@ -242,7 +242,7 @@ public:
     ///     as a missing attribute.
     ///
     virtual void
-    build_attribute_getter(ShaderGroup& group, bool is_object_lookup,
+    build_attribute_getter(const ShaderGroup& group, bool is_object_lookup,
                            const ustring* object_name,
                            const ustring* attribute_name, bool is_array_lookup,
                            const int* array_index, TypeDesc type,

@@ -733,7 +733,7 @@ LLVMGEN(llvm_gen_print_fmt)
     int bytesToArg = 0;
     for (int argindex = 0; argindex < arg_count; ++argindex) {
         EncodedType et = encodedtypes[argindex];
-        rop.ll.op_store(rop.ll.constant8(static_cast<int>(et)),
+        rop.ll.op_store(rop.ll.constant8(static_cast<uint8_t>(et)),
                         rop.ll.GEP(rop.ll.type_int8(), encodedtypes_on_stack,
                                    argindex));
 
@@ -3300,7 +3300,59 @@ LLVMGEN(llvm_gen_noise)
     return true;
 }
 
-
+template<typename TArgVariant>
+void
+append_constant_arg(BackendLLVM& rop, const TArgVariant& arg,
+                    std::vector<llvm::Value*>& args)
+{
+    switch (arg.type()) {
+    default:
+    case TArgVariant::Type::Unspecified:
+    case TArgVariant::Type::Builtin: OSL_DASSERT(false); break;
+    case TArgVariant::Type::Bool:
+        args.push_back(rop.ll.constant_bool(arg.get_bool()));
+        break;
+    case TArgVariant::Type::Int8:
+        args.push_back(rop.ll.constant8(arg.get_int8()));
+        break;
+    case TArgVariant::Type::Int16:
+        args.push_back(rop.ll.constant16(arg.get_int16()));
+        break;
+    case TArgVariant::Type::Int32:
+        args.push_back(rop.ll.constant(arg.get_int32()));
+        break;
+    case TArgVariant::Type::Int64:
+        args.push_back(rop.ll.constanti64(arg.get_int64()));
+        break;
+    case TArgVariant::Type::UInt8:
+        args.push_back(rop.ll.constant8(arg.get_uint8()));
+        break;
+    case TArgVariant::Type::UInt16:
+        args.push_back(rop.ll.constant16(arg.get_uint16()));
+        break;
+    case TArgVariant::Type::UInt32:
+        args.push_back(rop.ll.constant(arg.get_uint32()));
+        break;
+    case TArgVariant::Type::UInt64:
+        args.push_back(rop.ll.constant64(arg.get_uint64()));
+        break;
+    case TArgVariant::Type::Float:
+        args.push_back(rop.ll.constant(arg.get_float()));
+        break;
+    case TArgVariant::Type::Double:
+        args.push_back(rop.ll.constant64(arg.get_double()));
+        break;
+    case TArgVariant::Type::Pointer:
+        args.push_back(rop.ll.constant_ptr(arg.get_ptr()));
+        break;
+    case TArgVariant::Type::UString:
+        args.push_back(rop.ll.constant(arg.get_ustring()));
+        break;
+    case TArgVariant::Type::UStringHash:
+        args.push_back(rop.ll.constant(ustring(arg.get_ustringhash())));
+        break;
+    }
+}
 
 LLVMGEN(llvm_gen_getattribute)
 {
@@ -3346,18 +3398,92 @@ LLVMGEN(llvm_gen_getattribute)
                                                : rop.llvm_load_string(ustring());
     llvm::Value* attr_name_arg = rop.llvm_load_value(Attribute);
 
-    llvm::Value* args[] = {
-        rop.sg_void_ptr(),
-        rop.ll.constant((int)Destination.has_derivs()),
-        obj_name_arg,
-        attr_name_arg,
-        rop.ll.constant((int)array_lookup),
-        rop.llvm_load_value(Index),
-        rop.ll.constant(dest_type),
-        rop.llvm_void_ptr(Destination),
-    };
-    llvm::Value* r = rop.ll.call_function("osl_get_attribute", args);
-    rop.llvm_store_value(r, Result);
+    ustring object_name      = (object_lookup && ObjectName.is_constant())
+                                   ? ObjectName.get_string()
+                                   : ustring();
+    ustring* object_name_ptr = (object_lookup && ObjectName.is_constant())
+                                   ? &object_name
+                                   : nullptr;
+
+    ustring attribute_name = Attribute.is_constant() ? Attribute.get_string()
+                                                     : ustring();
+    ustring* attribute_name_ptr = Attribute.is_constant() ? &attribute_name
+                                                          : nullptr;
+
+    int array_index = (array_lookup && Index.is_constant()) ? Index.get_int()
+                                                            : 0;
+    int* array_index_ptr = (array_lookup && Index.is_constant()) ? &array_index
+                                                                 : nullptr;
+
+    if (rop.renderer()->supports("build_attribute_getter")) {
+        AttributeGetterSpec spec;
+        rop.renderer()->build_attribute_getter(rop.group(), object_lookup,
+                                               object_name_ptr,
+                                               attribute_name_ptr, array_lookup,
+                                               array_index_ptr, dest_type,
+                                               Destination.has_derivs(), spec);
+        if (!spec.function_name().empty()) {
+            std::vector<llvm::Value*> args;
+            args.reserve(spec.arg_count() + 1);
+            for (size_t index = 0; index < spec.arg_count(); ++index) {
+                const auto& arg = spec.arg(index);
+                if (arg.is_holding<AttributeSpecBuiltinArg>()) {
+                    switch (arg.get_builtin()) {
+                    default: OSL_DASSERT(false); break;
+                    case AttributeSpecBuiltinArg::ShaderGlobalsPointer:
+                        args.push_back(rop.sg_void_ptr());
+                        break;
+                    case AttributeSpecBuiltinArg::ShadeIndex:
+                        args.push_back(rop.shadeindex());
+                        break;
+                    case AttributeSpecBuiltinArg::Derivatives:
+                        args.push_back(
+                            rop.ll.constant_bool(Destination.has_derivs()));
+                        break;
+                    case AttributeSpecBuiltinArg::Type:
+                        args.push_back(rop.ll.constant(dest_type));
+                        break;
+                    case AttributeSpecBuiltinArg::ArrayIndex:
+                        if (array_lookup)
+                            args.push_back(rop.llvm_load_value(Index));
+                        else
+                            args.push_back(rop.ll.constant((int)0));
+                        break;
+                    case AttributeSpecBuiltinArg::IsArrayLookup:
+                        args.push_back(rop.ll.constant_bool(array_lookup));
+                        break;
+                    case AttributeSpecBuiltinArg::ObjectName:
+                        args.push_back(obj_name_arg);
+                        break;
+                    case AttributeSpecBuiltinArg::AttributeName:
+                        args.push_back(attr_name_arg);
+                        break;
+                    }
+                } else {
+                    append_constant_arg(rop, arg, args);
+                }
+            }
+            args.push_back(rop.llvm_void_ptr(Destination));
+            llvm::Value* r = rop.ll.call_function(spec.function_name().c_str(),
+                                                  args);
+            rop.llvm_store_value(rop.ll.op_bool_to_int(r), Result);
+        } else {
+            rop.llvm_store_value(rop.ll.constant(0), Result);
+        }
+    } else {
+        llvm::Value* args[] = {
+            rop.sg_void_ptr(),
+            rop.ll.constant((int)Destination.has_derivs()),
+            obj_name_arg,
+            attr_name_arg,
+            rop.ll.constant((int)array_lookup),
+            rop.llvm_load_value(Index),
+            rop.ll.constant(dest_type),
+            rop.llvm_void_ptr(Destination),
+        };
+        llvm::Value* r = rop.ll.call_function("osl_get_attribute", args);
+        rop.llvm_store_value(r, Result);
+    }
 
     return true;
 }

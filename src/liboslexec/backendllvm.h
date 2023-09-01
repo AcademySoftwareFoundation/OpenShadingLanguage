@@ -152,7 +152,7 @@ public:
 
     llvm::Value* llvm_load_stringhash(ustring str)
     {
-        return ll.constant64(str.hash());
+        return ll.constant64((uint64_t)str.hash());
     }
 
     /// Legacy version

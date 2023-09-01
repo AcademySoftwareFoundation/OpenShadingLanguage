@@ -799,6 +799,45 @@ ShadingSystem::add_symlocs(ShaderGroup* group, cspan<SymLocationDesc> symlocs)
 
 
 
+const SymLocationDesc*
+ShadingSystem::find_symloc(ustring name) const
+{
+    return m_impl->find_symloc(name);
+}
+
+
+
+const SymLocationDesc*
+ShadingSystem::find_symloc(ShaderGroup* group, ustring name) const
+{
+    if (group)
+        return group->find_symloc(name);
+    else
+        return m_impl->find_symloc(name);
+}
+
+
+
+const SymLocationDesc*
+ShadingSystem::find_symloc(ustring name, SymArena arena) const
+{
+    return m_impl->find_symloc(name, arena);
+}
+
+
+
+const SymLocationDesc*
+ShadingSystem::find_symloc(ShaderGroup* group, ustring name,
+                           SymArena arena) const
+{
+    if (group)
+        return group->find_symloc(name, arena);
+    else
+        return m_impl->find_symloc(name, arena);
+}
+
+
+
 void
 ShadingSystem::optimize_group(ShaderGroup* group, ShadingContext* ctx,
                               bool do_jit)

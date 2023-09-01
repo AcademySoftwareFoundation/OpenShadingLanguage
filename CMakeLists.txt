@@ -289,6 +289,15 @@ configure_package_config_file ("${PROJECT_SOURCE_DIR}/src/cmake/Config.cmake.in"
 install (FILES "${OSL_PROJECT_CONFIG}" "${OSL_VERSION_CONFIG}"
         DESTINATION "${OSL_CONFIG_INSTALL_DIR}")
 
+install (FILES src/cmake/llvm_macros.cmake DESTINATION cmake)
+
+set (PERMISSION_FLAGS OWNER_EXECUTE OWNER_READ OWNER_WRITE
+                      GROUP_EXECUTE GROUP_READ
+                      WORLD_EXECUTE WORLD_READ)
+install (FILES src/build-scripts/serialize-bc.py
+         DESTINATION build-scripts
+         PERMISSIONS ${PERMISSION_FLAGS})
+
 # install targets files
 install (EXPORT OSL_EXPORTED_TARGETS
         DESTINATION ${OSL_CONFIG_INSTALL_DIR}

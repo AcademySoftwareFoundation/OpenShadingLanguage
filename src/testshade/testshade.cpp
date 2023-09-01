@@ -1991,6 +1991,8 @@ test_shade(int argc, const char* argv[])
         SimpleRenderer::register_JIT_Global_Variables();
     }
 
+    rend->use_rs_bitcode(use_rs_bitcode);
+
     if (groupname.size())
         shadingsys->attribute(shadergroup.get(), "groupname", groupname);
 

@@ -1033,6 +1033,18 @@ public:
     void add_symlocs(cspan<SymLocationDesc> symlocs);
     void add_symlocs(ShaderGroup* group, cspan<SymLocationDesc> symlocs);
 
+    // Find the SymLocationDesc for this named param, returning its pointer
+    // or nullptr if that name is not found.
+    const SymLocationDesc* find_symloc(ustring name) const;
+    const SymLocationDesc* find_symloc(ShaderGroup* group, ustring name) const;
+
+    // Find the SymLocationDesc for this named param but only if it matches
+    // the arena type, returning its pointer or nullptr if that name is not
+    // found.
+    const SymLocationDesc* find_symloc(ustring name, SymArena arena) const;
+    const SymLocationDesc* find_symloc(ShaderGroup* group, ustring name,
+                                       SymArena arena) const;
+
     /// Ensure that the group has been optimized and optionally JITed. The ctx pointer
     /// supplies a ShadingContext to use.
     void optimize_group(ShaderGroup* group, ShadingContext* ctx,

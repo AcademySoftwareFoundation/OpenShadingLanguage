@@ -266,6 +266,20 @@ ustringrep_from(string_view s)
 
 
 
+using TypeDesc_pod = int64_t;
+
+static_assert(sizeof(TypeDesc_pod) == sizeof(TypeDesc),
+              "TypeDesc size differs from its POD counterpart");
+
+/// Convenience function to convert to a TypeDesc.
+inline TypeDesc
+TypeDesc_from(TypeDesc_pod type)
+{
+    return OSL::bitcast<OSL::TypeDesc>(type);
+}
+
+
+
 // N.B. SymArena is not really "configuration", but we cram it here for
 // lack of a better home.
 

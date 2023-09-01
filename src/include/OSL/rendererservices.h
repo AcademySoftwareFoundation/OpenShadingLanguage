@@ -7,6 +7,7 @@
 
 #include <OSL/encodedtypes.h>
 #include <OSL/oslconfig.h>
+#include <OSL/variant.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -15,6 +16,7 @@ class RendererServices;
 template<int WidthT> class BatchedRendererServices;
 class ShadingContext;
 struct ShaderGlobals;
+class ShaderGroup;
 
 // Tags for polymorphic dispatch
 template<int SimdWidthT> class WidthOf {
@@ -29,6 +31,20 @@ typedef const void* TransformationPtr;
 // Callbacks for closure creation
 typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
 typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
+
+enum class AttributeSpecBuiltinArg {
+    ShaderGlobalsPointer,  // void* (TODO: ideally ShaderGlobals*)
+    ShadeIndex,            // int
+    Derivatives,           // bool
+    Type,                  // TypeDesc_pod
+    ArrayIndex,            // int, Always zero for non-indexed array lookups.
+    IsArrayLookup,         // bool
+    ObjectName,            // const char* (TODO: change to ustringhash)
+    AttributeName,         // const char* (TODO: change to ustringhash)
+};
+
+using AttributeSpecArg    = ArgVariant<AttributeSpecBuiltinArg>;
+using AttributeGetterSpec = FunctionSpec<AttributeSpecArg>;
 
 // Turn off warnings about unused params for this file, since we have lots
 // of declarations with stub function bodies.
@@ -51,7 +67,8 @@ public:
 
     /// Given the name of a 'feature', return whether this RendererServices
     /// supports it. Feature names include:
-    ///    <none>
+    ///    "OptiX"
+    ///    "build_attribute_getter"
     ///
     /// This allows some customization of JIT generated code based on the
     /// facilities and features of a particular renderer. It also allows
@@ -189,6 +206,47 @@ public:
                          const EncodedType* arg_types, uint32_t arg_values_size,
                          uint8_t* arg_values);
 
+    /// Builds a free function to provide a value for a given attribute.
+    /// This occurs at shader compile time, not at execution time.
+    ///
+    /// @param group
+    ///     The shader group currently requesting the attribute.
+    ///
+    /// @param is_object_lookup
+    ///     True if an object name was specified, even if the value is not
+    ///     known at compile time.
+    ///
+    /// @param object_name
+    ///     The object name, or nullptr if the value is not specified or it
+    ///     is not known at compile time.
+    ///
+    /// @param attribute_name
+    ///     The attribute name, or nullptr if the value is not known at
+    ///     compile time.
+    ///
+    /// @param is_array_lookup
+    ///     True if the attribute lookup provides an index.
+    ///
+    /// @param array_index
+    ///     The array index, or nullptr if the value is not specified or it
+    ///     is not known at compile time.
+    ///
+    /// @param type
+    ///     The type of the value being requested.
+    ///
+    /// @param derivatives
+    ///     True if derivatives are also being requested.
+    ///
+    /// @param spec
+    ///     The built attribute getter. An empty function name is interpreted
+    ///     as a missing attribute.
+    ///
+    virtual void
+    build_attribute_getter(const ShaderGroup& group, bool is_object_lookup,
+                           const ustring* object_name,
+                           const ustring* attribute_name, bool is_array_lookup,
+                           const int* array_index, TypeDesc type,
+                           bool derivatives, AttributeGetterSpec& spec);
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is

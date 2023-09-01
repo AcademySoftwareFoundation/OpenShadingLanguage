@@ -223,7 +223,16 @@ endmacro ( )
 
 if (USE_LLVM_BITCODE)
     set (llvm_ops_srcs llvm_ops.cpp)
-    EMBED_LLVM_BITCODE_IN_CPP ( "${llvm_ops_srcs}" "_host" "osl_llvm_compiled_ops" lib_src "")
+
+    set(include_dirs ${CMAKE_CURRENT_SOURCE_DIR})
+    list(APPEND include_dirs ${CMAKE_SOURCE_DIR}/src/include)
+    list(APPEND include_dirs ${CMAKE_BINARY_DIR}/include)
+    list(APPEND include_dirs ${IMATH_INCLUDES})
+    list(APPEND include_dirs ${OPENEXR_INCLUDES})
+    list(APPEND include_dirs ${OpenImageIO_INCLUDES})
+    list(APPEND include_dirs ${Boost_INCLUDE_DIRS})
+
+    EMBED_LLVM_BITCODE_IN_CPP ( "${llvm_ops_srcs}" "_host" "osl_llvm_compiled_ops" lib_src "" "${include_dirs}")
 
     set (rs_dependent_ops_srcs
          opmatrix.cpp opfmt.cpp
@@ -232,7 +241,7 @@ if (USE_LLVM_BITCODE)
     # sources to rs_dependent_ops_srcs which avoids having to do it at runtime.
     list (APPEND rs_dependent_ops_srcs ${llvm_ops_srcs})
 
-    EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependent_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependent_ops" lib_src "")
+    EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependent_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependent_ops" lib_src "" "${include_dirs}")
 
     # Optionally repeat the bitcode compilation with CUDA-specific options
     if (CUDA_FOUND)

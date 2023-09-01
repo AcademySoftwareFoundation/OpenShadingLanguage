@@ -2750,6 +2750,12 @@ LLVM_Util::constant(float f)
 }
 
 llvm::Constant*
+LLVM_Util::constant64(double f)
+{
+    return llvm::ConstantFP::get(context(), llvm::APFloat(f));
+}
+
+llvm::Constant*
 LLVM_Util::wide_constant(int width, float value)
 {
     return llvm::ConstantDataVector::getSplat(width, constant(value));
@@ -2763,16 +2769,36 @@ LLVM_Util::wide_constant(float f)
 
 
 llvm::Constant*
-LLVM_Util::constant(int i)
+LLVM_Util::constant(int32_t i)
 {
-    return llvm::ConstantInt::get(context(), llvm::APInt(32, i, true));
+    return llvm::ConstantInt::get(context(),
+                                  llvm::APInt(32, i, true /*signed*/));
 }
 
+llvm::Constant*
+LLVM_Util::constant(uint32_t i)
+{
+    return llvm::ConstantInt::get(context(), llvm::APInt(32, i));
+}
 
 llvm::Constant*
-LLVM_Util::constant8(int i)
+LLVM_Util::constant8(int8_t i)
+{
+    return llvm::ConstantInt::get(context(),
+                                  llvm::APInt(8, i, true /*signed*/));
+}
+
+llvm::Constant*
+LLVM_Util::constant8(uint8_t i)
 {
     return llvm::ConstantInt::get(context(), llvm::APInt(8, i));
+}
+
+llvm::Constant*
+LLVM_Util::constant16(int16_t i)
+{
+    return llvm::ConstantInt::get(context(),
+                                  llvm::APInt(16, i, true /*signed*/));
 }
 
 llvm::Constant*
@@ -2871,7 +2897,8 @@ LLVM_Util::constant(ustring s)
         return constant_ptr((void*)s.c_str(), type_char_ptr());
     } else {
         size_t p = s.hash();
-        auto str = (size_t_bits == 64) ? constant64(p) : constant(int(p));
+        auto str = (size_t_bits == 64) ? constant64(uint64_t(p))
+                                       : constant(int(p));
 #if OSL_USTRINGREP_IS_HASH
         return str;
 #else
@@ -4001,7 +4028,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                 auto w8_int_indices  = op_split_16x(wide_index);
                 llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(ptr),
                                          w8_int_indices[0], w8_int_masks[0],
-                                         constant8(4) };
+                                         constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
                                                             makeArrayRef(args));
                 args[2]              = w8_int_indices[1];
@@ -4013,7 +4040,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
             case 8: {
                 llvm::Value* args[] = { avx2_unmasked_value, void_ptr(ptr),
                                         wide_index, wide_int_mask,
-                                        constant8(4) };
+                                        constant8((uint8_t)4) };
                 llvm::Value* gather_result
                     = builder().CreateCall(func_avx2_gather_pi,
                                            makeArrayRef(args));
@@ -4072,7 +4099,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                     avx2_unmasked_value, void_ptr(ptr), w8_int_indices[0],
                     builder().CreateBitCast(w8_int_masks[0],
                                             llvm_vector_type(type_float(), 8)),
-                    constant8(4)
+                    constant8((uint8_t)4)
                 };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_ps,
                                                             makeArrayRef(args));
@@ -4089,7 +4116,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                     avx2_unmasked_value, void_ptr(ptr), wide_index,
                     builder().CreateBitCast(wide_int_mask,
                                             llvm_vector_type(type_float(), 8)),
-                    constant8(4)
+                    constant8((uint8_t)4)
                 };
                 llvm::Value* gather = builder().CreateCall(func_avx2_gather_ps,
                                                            makeArrayRef(args));
@@ -4115,7 +4142,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                 auto w8_int_indices = op_split_16x(wide_index);
 
                 llvm::Value* unmasked_value
-                    = builder().CreateVectorSplat(8, constant64(0));
+                    = builder().CreateVectorSplat(8, constant64((uint64_t)0));
                 llvm::Value* args[]
                     = { unmasked_value, void_ptr(ptr), w8_int_indices[0],
                         mask_as_int8(w8_bit_masks[0]), constant(8) };
@@ -4144,7 +4171,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                 auto w4_int_indices = op_split_8x(wide_index);
 
                 llvm::Value* unmasked_value
-                    = builder().CreateVectorSplat(4, constant64(0));
+                    = builder().CreateVectorSplat(4, constant64((uint64_t)0));
                 llvm::Value* args[]
                     = { unmasked_value, void_ptr(ptr), w4_int_indices[0],
                         mask4_as_int8(w4_bit_masks[0]), constant(8) };
@@ -4220,7 +4247,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                     avx2_unmasked_value, void_ptr(ptr), w8_int_indices[0],
                     builder().CreateBitCast(w8_int_masks[0],
                                             llvm_vector_type(type_float(), 8)),
-                    constant8(4)
+                    constant8((uint8_t)4)
                 };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_ps,
                                                             makeArrayRef(args));
@@ -4238,7 +4265,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                     avx2_unmasked_value, void_ptr(ptr), int_indices,
                     builder().CreateBitCast(wide_int_mask,
                                             llvm_vector_type(type_float(), 8)),
-                    constant8(4)
+                    constant8((uint8_t)4)
                 };
                 llvm::Value* gather_result
                     = builder().CreateCall(func_avx2_gather_ps,
@@ -4302,7 +4329,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                     op_linearize_16x_indices(wide_index));
                 llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(ptr),
                                          w8_int_indices[0], w8_int_masks[0],
-                                         constant8(4) };
+                                         constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
                                                             makeArrayRef(args));
                 args[2]              = w8_int_indices[1];
@@ -4325,7 +4352,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                 auto int_indices    = op_linearize_8x_indices(wide_index);
                 llvm::Value* args[] = { avx2_unmasked_value, void_ptr(ptr),
                                         int_indices, wide_int_mask,
-                                        constant8(4) };
+                                        constant8((uint8_t)4) };
                 llvm::Value* gather_result
                     = builder().CreateCall(func_avx2_gather_pi,
                                            makeArrayRef(args));
@@ -4356,7 +4383,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                     op_linearize_16x_indices(wide_index));
 
                 llvm::Value* unmasked_value
-                    = builder().CreateVectorSplat(8, constant64(0));
+                    = builder().CreateVectorSplat(8, constant64((uint64_t)0));
                 llvm::Value* args[]
                     = { unmasked_value, void_ptr(ptr), w8_int_indices[0],
                         mask_as_int8(w8_bit_masks[0]), constant(8) };
@@ -4396,7 +4423,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
                     op_linearize_8x_indices(wide_index));
 
                 llvm::Value* unmasked_value
-                    = builder().CreateVectorSplat(4, constant64(0));
+                    = builder().CreateVectorSplat(4, constant64((uint64_t)0));
                 llvm::Value* args[]
                     = { unmasked_value, void_ptr(ptr), w4_int_indices[0],
                         mask4_as_int8(w4_bit_masks[0]), constant(8) };

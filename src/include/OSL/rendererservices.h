@@ -241,14 +241,12 @@ public:
     ///     The built attribute getter. An empty function name is interpreted
     ///     as a missing attribute.
     ///
-    virtual void build_attribute_getter(ShaderGroup& group,
-                                        bool is_object_lookup,
+    virtual void
+    build_attribute_getter(ShaderGroup& group, bool is_object_lookup,
                                         const ustring* object_name,
-                                        const ustring* attribute_name,
-                                        bool is_array_lookup,
-                                        const int* array_index,
-                                        TypeDesc type, bool derivatives,
-                                        AttributeGetterSpec& spec);
+                           const ustring* attribute_name, bool is_array_lookup,
+                           const int* array_index, TypeDesc type,
+                           bool derivatives, AttributeGetterSpec& spec);
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is

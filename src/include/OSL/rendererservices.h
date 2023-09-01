@@ -212,7 +212,7 @@ public:
     /// @param group
     ///     The shader group currently requesting the attribute.
     ///
-    /// @param object_lookup
+    /// @param is_object_lookup
     ///     True if an object name was specified, even if the value is not
     ///     known at compile time.
     ///
@@ -224,7 +224,7 @@ public:
     ///     The attribute name, or nullptr if the value is not known at
     ///     compile time.
     ///
-    /// @param array_lookup
+    /// @param is_array_lookup
     ///     True if the attribute lookup provides an index.
     ///
     /// @param array_index
@@ -241,10 +241,12 @@ public:
     ///     The built attribute getter. An empty function name is interpreted
     ///     as a missing attribute.
     ///
-    virtual void build_attribute_getter(ShaderGroup& group, bool object_lookup,
-                                        ustring* object_name,
-                                        ustring* attribute_name,
-                                        bool array_lookup, int* array_index,
+    virtual void build_attribute_getter(ShaderGroup& group,
+                                        bool is_object_lookup,
+                                        const ustring* object_name,
+                                        const ustring* attribute_name,
+                                        bool is_array_lookup,
+                                        const int* array_index,
                                         TypeDesc type, bool derivatives,
                                         AttributeGetterSpec& spec);
 

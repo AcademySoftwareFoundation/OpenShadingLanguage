@@ -129,10 +129,12 @@ RendererServices::transform_points(ShaderGlobals* sg, ustringhash from,
 
 
 void
-RendererServices::build_attribute_getter(ShaderGroup& group, bool object_lookup,
-                                         ustring* object_name,
-                                         ustring* attribute_name,
-                                         bool array_lookup, int* array_index,
+RendererServices::build_attribute_getter(ShaderGroup& group,
+                                         bool is_object_lookup,
+                                         const ustring* object_name,
+                                         const ustring* attribute_name,
+                                         bool is_array_lookup,
+                                         const int* array_index,
                                          TypeDesc type, bool derivatives,
                                          AttributeGetterSpec& spec)
 {

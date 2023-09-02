@@ -1036,13 +1036,14 @@ public:
     // Find the SymLocationDesc for this named param, returning its pointer
     // or nullptr if that name is not found.
     const SymLocationDesc* find_symloc(ustring name) const;
-    const SymLocationDesc* find_symloc(ShaderGroup* group, ustring name) const;
+    const SymLocationDesc* find_symloc(const ShaderGroup* group,
+                                       ustring name) const;
 
     // Find the SymLocationDesc for this named param but only if it matches
     // the arena type, returning its pointer or nullptr if that name is not
     // found.
     const SymLocationDesc* find_symloc(ustring name, SymArena arena) const;
-    const SymLocationDesc* find_symloc(ShaderGroup* group, ustring name,
+    const SymLocationDesc* find_symloc(const ShaderGroup* group, ustring name,
                                        SymArena arena) const;
 
     /// Ensure that the group has been optimized and optionally JITed. The ctx pointer

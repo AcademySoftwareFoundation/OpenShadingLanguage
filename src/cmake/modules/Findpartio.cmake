@@ -13,13 +13,9 @@
 # Hack! prefer a config if it can be found
 find_package(partio CONFIG)
 if (PARTIO_FOUND OR partio_FOUND)
-    if (VERBOSE)
-        message (STATUS "partio found via config")
-    endif ()
+    message (VERBOSE "partio found via config")
 else ()
-    if (VERBOSE)
-        message (STATUS "partio falling back to FindPartio.cmake")
-    endif ()
+    message (VERBOSE "partio falling back to FindPartio.cmake")
 
 
 find_path (PARTIO_INCLUDE_DIR NAMES Partio.h)

@@ -236,9 +236,7 @@ macro ( TESTSUITE )
         endif ()
 
     endforeach ()
-    if (VERBOSE)
-        message (STATUS "Added tests: ${ALL_TEST_LIST}")
-    endif ()
+    message (VERBOSE "Added tests: ${ALL_TEST_LIST}")
 endmacro ()
 
 macro (osl_add_all_tests)

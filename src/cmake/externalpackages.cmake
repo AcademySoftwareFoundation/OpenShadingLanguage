@@ -105,7 +105,7 @@ endif ()
 
 # OpenImageIO
 checked_find_package (OpenImageIO REQUIRED
-                      VERSION_MIN 2.3.17
+                      VERSION_MIN 2.4
                       DEFINITIONS -DOIIO_HIDE_FORMAT=1)
 
 checked_find_package (pugixml REQUIRED

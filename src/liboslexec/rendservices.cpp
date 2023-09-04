@@ -437,7 +437,6 @@ RendererServices::get_texture_info(ustringhash filename,
 {
     ShadingContext* shading_context
         = (ShadingContext*)((ShaderGlobals*)sg)->context;
-#if OIIO_VERSION >= 20307
     // Newer versions of the TextureSystem interface are able to determine the
     // specific UDIM tile we're using.
     if (!texture_thread_info)
@@ -456,7 +455,6 @@ RendererServices::get_texture_info(ustringhash filename,
             texture_handle = udim_handle;
         }
     }
-#endif
     return get_texture_info(filename, texture_handle, texture_thread_info, sg,
                             subimage, dataname, datatype, data, errormessage);
 }

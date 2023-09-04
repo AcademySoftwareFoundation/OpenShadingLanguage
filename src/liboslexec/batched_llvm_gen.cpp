@@ -4262,11 +4262,9 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* swidth = wide_const_fone_value;
     llvm::Value* twidth = wide_const_fone_value;
     llvm::Value* rwidth = wide_const_fone_value;
-#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
     // TODO: llvm_gen is not yet populating rnd, so neither will the batched
     //       version.  But below is where we would do so
     llvm::Value* rnd = wide_const_fzero_value;
-#endif
 
     llvm::Value* firstchannel = const_zero_value;
     llvm::Value* subimage     = const_zero_value;
@@ -4628,10 +4626,8 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             rwidth,
             rop.ll.GEP(bto, 0, static_cast<int>(LLVMMemberIndex::rwidth)));
     }
-#if OIIO_VERSION_GREATER_EQUAL(2, 4, 0)
     rop.ll.op_unmasked_store(
         rnd, rop.ll.GEP(bto, 0, static_cast<float>(LLVMMemberIndex::rnd)));
-#endif
 
     return rop.ll.void_ptr(bto);
 }

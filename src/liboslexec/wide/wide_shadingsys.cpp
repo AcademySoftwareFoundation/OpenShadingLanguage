@@ -73,7 +73,8 @@ __OSL_MASKED_OP1(naninf_check_offset,
                         "Detected {} value in {}{} at {}:{} (op {}) batch lane:{}",
                         vals[i * __OSL_WIDTH + lane],
                         d > 0 ? "the derivatives of " : "", USTR(symbolname),
-                        USTR(sourcefile), sourceline, USTR(opname), lane);
+                        USTR(sourcefile), sourceline, USTR(opname),
+                        lane.value());
                     // continue checking all data lanes, and all components
                     // for that matter, we want to find all issues, not just
                     // the 1st, right?
@@ -111,7 +112,8 @@ __OSL_MASKED_OP1(naninf_check_offset,
                         "Detected {} value in {}{} at {}:{} (op {}) batch lane:{}",
                         vals[i * __OSL_WIDTH + lane],
                         d > 0 ? "the derivatives of " : "", USTR(symbolname),
-                        USTR(sourcefile), sourceline, USTR(opname), lane);
+                        USTR(sourcefile), sourceline, USTR(opname),
+                        lane.value());
                     // continue checking all data lanes, and all components
                     // for that matter, we want to find all issues, not just
                     // the 1st, right?

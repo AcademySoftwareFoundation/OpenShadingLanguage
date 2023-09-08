@@ -1717,6 +1717,49 @@ LLVM_Util::execengine(llvm::ExecutionEngine* exec)
 
 
 
+llvm::TargetMachine*
+LLVM_Util::nvptx_target_machine()
+{
+    if (m_nvptx_target_machine == nullptr) {
+        llvm::Triple ModuleTriple(module()->getTargetTriple());
+        llvm::TargetOptions options;
+        options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
+        // N.B. 'Standard' only allow fusion of 'blessed' ops (currently just
+        // fmuladd). To truly disable FMA and never fuse FP-ops, we need to
+        // instead use llvm::FPOpFusion::Strict.
+        options.UnsafeFPMath                           = 1;
+        options.NoInfsFPMath                           = 1;
+        options.NoNaNsFPMath                           = 1;
+        options.HonorSignDependentRoundingFPMathOption = 0;
+        options.FloatABIType          = llvm::FloatABI::Default;
+        options.AllowFPOpFusion       = llvm::FPOpFusion::Fast;
+        options.NoZerosInBSS          = 0;
+        options.GuaranteedTailCallOpt = 0;
+#if OSL_LLVM_VERSION < 120
+        options.StackAlignmentOverride = 0;
+#endif
+        options.UseInitArray = 0;
+
+        // Verify that the NVPTX target has been initialized
+        std::string error;
+        const llvm::Target* llvm_target
+            = llvm::TargetRegistry::lookupTarget(ModuleTriple.str(), error);
+        OSL_ASSERT(llvm_target
+                   && "PTX compile error: LLVM Target is not initialized");
+
+        m_nvptx_target_machine = llvm_target->createTargetMachine(
+            ModuleTriple.str(), CUDA_TARGET_ARCH, "+ptx50", options,
+            llvm::Reloc::Static, llvm::CodeModel::Small,
+            llvm::CodeGenOpt::Default);
+
+        OSL_ASSERT(m_nvptx_target_machine
+                   && "Unable to create TargetMachine for NVPTX");
+    }
+    return m_nvptx_target_machine;
+}
+
+
+
 void*
 LLVM_Util::getPointerToFunction(llvm::Function* func)
 {
@@ -5880,106 +5923,28 @@ LLVM_Util::absorb_module(
 }
 
 bool
-LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
+LLVM_Util::ptx_compile_group(llvm::Module*, const std::string& name,
                              std::string& out)
 {
-#if OSL_USE_OPTIX
-    std::string target_triple = module()->getTargetTriple();
-
-    OSL_ASSERT(
-        lib_module == nullptr
-        || (lib_module->getTargetTriple() == target_triple
-            && "PTX compile error: Shader and renderer bitcode library targets do not match"));
-
-    // Create a new empty module to hold the linked shadeops and compiled
-    // ShaderGroup
-    llvm::Module* linked_module = new_module(name.c_str());
-
-    // First, link in the cloned ShaderGroup module
-    std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule(*module());
-    bool failed = llvm::Linker::linkModules(*linked_module, std::move(mod_ptr));
-    OSL_ASSERT(!failed && "PTX compile error: Unable to link group module");
-
-    // Second, link in the shadeops library, keeping only the functions that are needed
-
-    if (lib_module) {
-        std::unique_ptr<llvm::Module> lib_ptr(lib_module);
-        failed = llvm::Linker::linkModules(*linked_module, std::move(lib_ptr));
-    }
-
-    // Verify that the NVPTX target has been initialized
-    std::string error;
-    const llvm::Target* llvm_target
-        = llvm::TargetRegistry::lookupTarget(target_triple, error);
-    OSL_ASSERT(llvm_target
-               && "PTX compile error: LLVM Target is not initialized");
-
-    llvm::TargetOptions options;
-    options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
-    // N.B. 'Standard' only allow fusion of 'blessed' ops (currently just
-    // fmuladd). To truly disable FMA and never fuse FP-ops, we need to
-    // instead use llvm::FPOpFusion::Strict.
-    options.UnsafeFPMath                           = 1;
-    options.NoInfsFPMath                           = 1;
-    options.NoNaNsFPMath                           = 1;
-    options.HonorSignDependentRoundingFPMathOption = 0;
-    options.FloatABIType                           = llvm::FloatABI::Default;
-    options.AllowFPOpFusion                        = llvm::FPOpFusion::Fast;
-    options.NoZerosInBSS                           = 0;
-    options.GuaranteedTailCallOpt                  = 0;
-#    if OSL_LLVM_VERSION < 120
-    options.StackAlignmentOverride = 0;
-#    endif
-    options.UseInitArray = 0;
-
-    llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(
-        target_triple, CUDA_TARGET_ARCH, "+ptx50", options, llvm::Reloc::Static,
-        llvm::CodeModel::Small, llvm::CodeGenOpt::Aggressive);
-    OSL_ASSERT(
-        target_machine
-        && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
-
-    // Setup the optimization passes
-    llvm::legacy::FunctionPassManager fn_pm(linked_module);
-    fn_pm.add(llvm::createTargetTransformInfoWrapperPass(
-        target_machine->getTargetIRAnalysis()));
-
-    llvm::legacy::PassManager mod_pm;
-    mod_pm.add(
-        new llvm::TargetLibraryInfoWrapperPass(llvm::Triple(target_triple)));
-    mod_pm.add(llvm::createTargetTransformInfoWrapperPass(
-        target_machine->getTargetIRAnalysis()));
-    mod_pm.add(llvm::createRewriteSymbolsPass());
-
-    // Make sure the 'flush-to-zero' instruction variants are used when possible
-    linked_module->addModuleFlag(llvm::Module::Override, "nvvm-reflect-ftz", 1);
-    for (llvm::Function& fn : *linked_module) {
-        fn.addFnAttr("nvptx-f32ftz", "true");
-    }
-
+#ifdef OSL_USE_OPTIX
+    llvm::TargetMachine* target_machine = nvptx_target_machine();
+    llvm::legacy::PassManager mpm;
     llvm::SmallString<4096> assembly;
     llvm::raw_svector_ostream assembly_stream(assembly);
 
     // TODO: Make sure rounding modes, etc., are set correctly
 #    if OSL_LLVM_VERSION >= 100
-    target_machine->addPassesToEmitFile(mod_pm, assembly_stream,
+    target_machine->addPassesToEmitFile(mpm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::CGFT_AssemblyFile);
 #    else
-    target_machine->addPassesToEmitFile(mod_pm, assembly_stream,
+    target_machine->addPassesToEmitFile(mpm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::TargetMachine::CGFT_AssemblyFile);
 #    endif
 
-    // Run the optimization passes on the functions
-    fn_pm.doInitialization();
-    for (llvm::Module::iterator i = linked_module->begin();
-         i != linked_module->end(); i++) {
-        fn_pm.run(*i);
-    }
-
     // Run the optimization passes on the module to generate the PTX
-    mod_pm.run(*linked_module);
+    mpm.run(*module());
 
     // In a multithreaded environment, llvm will return "callseq <ID>" comments
     // with a non-deterministic ID, leading to OptiX JIT cache misses.
@@ -5991,8 +5956,6 @@ LLVM_Util::ptx_compile_group(llvm::Module* lib_module, const std::string& name,
         ptx_stream << line.substr(0, line.find("// callseq")) << std::endl;
     }
     out = ptx_stream.str();
-
-    delete linked_module;
 
     return true;
 #else

@@ -22,6 +22,10 @@
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
 
+#if OSL_USE_OPTIX
+#    include <llvm/Linker/Linker.h>
+#endif
+
 // Create external declarations for all built-in funcs we may call from LLVM
 #define DECL(name, signature) extern "C" void name();
 #include "builtindecl.h"
@@ -115,11 +119,13 @@ Schematically, we want to create code that resembles the following:
 extern int osl_llvm_compiled_ops_size;
 extern unsigned char osl_llvm_compiled_ops_block[];
 
-extern int osl_llvm_compiled_ops_cuda_size;
-extern unsigned char osl_llvm_compiled_ops_cuda_block[];
-
 extern int osl_llvm_compiled_rs_dependent_ops_size;
 extern unsigned char osl_llvm_compiled_rs_dependent_ops_block[];
+
+#ifdef OSL_LLVM_CUDA_BITCODE
+extern int shadeops_cuda_llvm_compiled_ops_size;
+extern unsigned char shadeops_cuda_llvm_compiled_ops_block[];
+#endif
 
 using namespace OSL::pvt;
 
@@ -635,7 +641,8 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             // Handle init ops.
             build_llvm_code(sym.initbegin(), sym.initend());
 #if OSL_USE_OPTIX
-        } else if (use_optix() && !sym.typespec().is_closure()) {
+        } else if (use_optix() && !sym.typespec().is_closure()
+                   && !sym.lockgeom()) {
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
             llvm::Value* cuda_var = getOrAllocateCUDAVariable(sym);
@@ -1583,6 +1590,116 @@ BackendLLVM::initialize_llvm_group()
 }
 
 
+void
+BackendLLVM::prepare_module_for_cuda_jit()
+{
+    auto is_inline_fn = [&](const std::string& name) {
+        return shadingsys().m_inline_functions.find(ustring(name))
+               != shadingsys().m_inline_functions.end();
+    };
+
+    auto is_noinline_fn = [&](const std::string& name) {
+        return shadingsys().m_noinline_functions.find(ustring(name))
+               != shadingsys().m_noinline_functions.end();
+    };
+
+    const bool no_inline = shadingsys().optix_no_inline();
+    const bool no_inline_layer_funcs
+        = shadingsys().optix_no_inline_layer_funcs();
+    const bool merge_layer_funcs  = shadingsys().optix_merge_layer_funcs();
+    const bool no_inline_rend_lib = shadingsys().optix_no_inline_rend_lib();
+    const int no_inline_thresh    = shadingsys().optix_no_inline_thresh();
+    const int force_inline_thresh = shadingsys().optix_force_inline_thresh();
+
+    // Adjust the linkage for the library and group functions:
+    //  * Set external linkage for the library functions to prevent the
+    //    function signatures from being changed by dead arg elimination
+    //    passes. The signatures need to match the shadeops PTX module.
+    //
+    //  * Set private linkage for the layer functions to help avoid
+    //    collisions between layer functions from different ShaderGroups.
+    for (llvm::Function& fn : *ll.module()) {
+        if (fn.hasFnAttribute("osl-lib-function")) {
+            fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
+        } else if (fn.getName().startswith(group().name().c_str())) {
+            fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
+        }
+    }
+
+    // Set the inlining behavior for each function in the module, based on
+    // the shadingsys attributes. The inlining attributes are not modified
+    // by default.
+    for (llvm::Function& fn : *ll.module()) {
+        // Don't modify the inlining attribute for:
+        //  * group entry functions
+        //  * llvm library functions
+        if (fn.getName().startswith("__direct_callable__")
+            || fn.getName().startswith("llvm."))
+            continue;
+
+        // Merge layer functions which are only called from one place
+        if (merge_layer_funcs && !fn.hasFnAttribute("osl-lib-function")
+            && fn.hasOneUse()) {
+            fn.addFnAttr(llvm::Attribute::AlwaysInline);
+            continue;
+        }
+
+        // Inline the functions registered with the ShadingSystem
+        if (is_inline_fn(fn.getName().str())) {
+            fn.addFnAttr(llvm::Attribute::AlwaysInline);
+            continue;
+        }
+
+        // No-inline the functions registered with the ShadingSystem
+        if (is_noinline_fn(fn.getName().str())) {
+            fn.deleteBody();
+            continue;
+        }
+
+        if (no_inline) {
+            fn.addFnAttr(llvm::Attribute::NoInline);
+
+            // Delete the bodies of library functions which will never be inlined.
+            // This reduces the size of the module prior to opt/JIT.
+            if (fn.hasFnAttribute("osl-lib-function")) {
+                fn.deleteBody();
+            }
+            continue;
+        }
+
+        if (no_inline_rend_lib && fn.hasFnAttribute("osl-rend_lib-function")) {
+            fn.deleteBody();
+            continue;
+        }
+
+        if (no_inline_layer_funcs && !fn.hasFnAttribute("osl-lib-function")) {
+            fn.addFnAttr(llvm::Attribute::NoInline);
+            continue;
+        }
+
+        // Only apply the inline thresholds to library functions.
+        if (!fn.hasFnAttribute("osl-lib-function")) {
+            continue;
+        }
+
+        const int inst_count = fn.getInstructionCount();
+        if (inst_count >= no_inline_thresh) {
+            fn.deleteBody();
+        } else if (inst_count > 0 && inst_count <= force_inline_thresh) {
+            fn.addFnAttr(llvm::Attribute::AlwaysInline);
+        }
+    }
+
+#ifndef OSL_CUDA_NO_FTZ
+    for (llvm::Function& fn : *ll.module()) {
+        fn.addFnAttr("nvptx-f32ftz", "true");
+        fn.addFnAttr("denormal-fp-math", "preserve-sign,preserve-sign");
+        fn.addFnAttr("denormal-fp-math-f32", "preserve-sign,preserve-sign");
+    }
+#endif
+}
+
+
 
 static void
 empty_group_func(void*, void*)
@@ -1627,7 +1744,7 @@ BackendLLVM::run()
             // The target triple and data layout used here are those specified
             // for NVPTX (https://www.llvm.org/docs/NVPTXUsage.html#triples).
             ll.module()->setDataLayout(
-                "e-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
         }
 #    endif
@@ -1682,28 +1799,92 @@ BackendLLVM::run()
 
         } else {
 #    ifdef OSL_LLVM_CUDA_BITCODE
-            ll.module(
-                ll.module_from_bitcode((char*)osl_llvm_compiled_ops_cuda_block,
-                                       osl_llvm_compiled_ops_cuda_size,
-                                       "llvm_ops", &err));
+            llvm::Module* shadeops_module = ll.module_from_bitcode(
+                (char*)shadeops_cuda_llvm_compiled_ops_block,
+                shadeops_cuda_llvm_compiled_ops_size, "llvm_ops", &err);
+
             if (err.length())
                 shadingcontext()->errorfmt(
                     "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
                     err);
+
+            shadeops_module->setDataLayout(
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+            shadeops_module->setTargetTriple("nvptx64-nvidia-cuda");
+
+            std::unique_ptr<llvm::Module> shadeops_ptr(shadeops_module);
+            llvm::Linker::linkModules(*ll.module(), std::move(shadeops_ptr),
+                                      llvm::Linker::Flags::None);
+
+            if (err.length())
+                shadingcontext()->errorfmt(
+                    "llvm::parseBitcodeFile returned '{}' for cuda rend_lib\n",
+                    err);
+
+            // The renderer may provide additional shadeops bitcode for renderer-specific
+            // functionality ("rend_lib" fuctions). Like the built-in shadeops, the rend_lib
+            // functions may or may not be inlined, depending on the optimization options.
+            std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
+            if (bitcode.size()) {
+                llvm::Module* rend_lib_module = ll.module_from_bitcode(
+                    static_cast<const char*>(bitcode.data()), bitcode.size(),
+                    "cuda_rend_lib", &err);
+
+                if (err.length())
+                    shadingcontext()->errorfmt(
+                        "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
+                        err);
+
+                rend_lib_module->setDataLayout(
+                    "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+                rend_lib_module->setTargetTriple("nvptx64-nvidia-cuda");
+
+                for (llvm::Function& fn : *rend_lib_module) {
+                    fn.addFnAttr("osl-rend_lib-function", "true");
+                }
+
+                std::unique_ptr<llvm::Module> rend_lib_ptr(rend_lib_module);
+                llvm::Linker::linkModules(*ll.module(), std::move(rend_lib_ptr),
+                                          llvm::Linker::Flags::OverrideFromSrc);
+            }
 #    else
             OSL_ASSERT(0 && "Must generate LLVM CUDA bitcode for OptiX");
 #    endif
+            // Ensure that the correct target triple and data layout are set when targeting NVPTX.
+            // The triple is empty with recent versions of LLVM (e.g., 15) for reasons that aren't
+            // clear. So we must set them to the expected values.
+            // See: https://llvm.org/docs/NVPTXUsage.html
+            ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
+            ll.module()->setDataLayout(
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+
+            // Tag each function as an OSL library function to help with
+            // inlining and optimization after codegen.
+            for (llvm::Function& fn : *ll.module()) {
+                fn.addFnAttr("osl-lib-function", "true");
+            }
+
+            // Mark all global variables extern and discard their initializers.
+            // Global variables are defined in the shadeops PTX file.
+            for (llvm::GlobalVariable& global : ll.module()->globals()) {
+                global.setLinkage(llvm::GlobalValue::ExternalLinkage);
+                global.setExternallyInitialized(true);
+                global.setInitializer(nullptr);
+            }
         }
         OSL_ASSERT(ll.module());
 #endif
 
         // Create the ExecutionEngine. We don't create an ExecutionEngine in the
-        // OptiX case, because we are using the NVPTX backend and not MCJIT
-        if (!use_optix()
-            && !ll.make_jit_execengine(
-                &err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
-                shadingsys().llvm_debugging_symbols(),
-                shadingsys().llvm_profiling_events())) {
+        // OptiX case, because we are using the NVPTX backend and not MCJIT. However,
+        // it's still useful to set the target ISA to facilitate PTX-specific codegen.
+        if (use_optix()) {
+            ll.set_target_isa(TargetISA::NVPTX);
+        } else if (!ll.make_jit_execengine(
+                       &err,
+                       ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
+                       shadingsys().llvm_debugging_symbols(),
+                       shadingsys().llvm_profiling_events())) {
             shadingcontext()->errorfmt("Failed to create engine: {}\n", err);
             OSL_ASSERT(0);
             return;
@@ -1843,9 +2024,30 @@ BackendLLVM::run()
         }
     }
 
+#if OSL_USE_OPTIX
+    if (use_optix()) {
+        // Set some extra LLVM Function attributes before optimizing the Module.
+        prepare_module_for_cuda_jit();
+    }
+#endif
+
     // Optimize the LLVM IR unless it's a do-nothing group.
-    if (!group().does_nothing())
+    if (!group().does_nothing()) {
         ll.do_optimize();
+    }
+
+#if OSL_USE_OPTIX
+    if (use_optix()) {
+        // Drop everything but the init and group entry functions and generated
+        // group functions. The definitions for the non-inlined library
+        // functions are supplied via a separate shadeops PTX module.
+        for (llvm::Function& fn : *ll.module()) {
+            if (fn.hasFnAttribute("osl-lib-function")) {
+                fn.deleteBody();
+            }
+        }
+    }
+#endif
 
     m_stat_llvm_opt_time += timer.lap();
 

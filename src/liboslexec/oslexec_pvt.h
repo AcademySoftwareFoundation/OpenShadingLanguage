@@ -276,8 +276,6 @@ USTR(const void* s) noexcept
 #define DCOL(x)     (*(Dual2<Color3>*)x)
 #define TYPEDESC(x) OSL::bitcast<TypeDesc, long long>(x)
 
-
-
 /// Like an int (of type T), but also internally keeps track of the
 /// maximum value is has held, and the total "requested" deltas.
 /// You really shouldn't use an unsigned type for T, for two reasons:
@@ -727,6 +725,20 @@ public:
         return m_closure_registry.get_entry(id);
     }
 
+    /// Attributes to control optimization for OptiX/CUDA
+    bool optix_no_inline() const { return m_optix_no_inline; }
+    bool optix_no_inline_layer_funcs() const
+    {
+        return m_optix_no_inline_layer_funcs;
+    }
+    bool optix_merge_layer_funcs() const { return m_optix_merge_layer_funcs; }
+    bool optix_no_inline_rend_lib() const { return m_optix_no_inline_rend_lib; }
+    int optix_no_inline_thresh() const { return m_optix_no_inline_thresh; }
+    int optix_force_inline_thresh() const
+    {
+        return m_optix_force_inline_thresh;
+    }
+
     /// Set the current color space.
     bool set_colorspace(ustring colorspace);
 
@@ -810,6 +822,12 @@ public:
         else
             return nullptr;
     }
+
+    void register_inline_function(ustring name);
+    void unregister_inline_function(ustring name);
+    void register_noinline_function(ustring name);
+    void unregister_noinline_function(ustring name);
+
 
 private:
     void printstats() const;
@@ -956,6 +974,14 @@ private:
     int m_gpu_opt_error;              ///< Error on inability to optimize
                                       ///<   away things that can't GPU.
 
+    /// Experimental attributes to help tuning OptiX optimization passes
+    bool m_optix_no_inline;              ///< Disable function inlining
+    bool m_optix_no_inline_layer_funcs;  ///< Disable inlining for group layer funcs
+    bool m_optix_merge_layer_funcs;  ///< Merge layer functions that have only one caller
+    bool m_optix_no_inline_rend_lib;  ///< Disable inlining the rend_lib functions
+    int m_optix_no_inline_thresh;  ///< Disable inlining for functions larger than the threshold
+    int m_optix_force_inline_thresh;  ///< Force inling for functions smaller than the threshold
+
     ustring m_colorspace;  ///< What RGB colors mean
 
     ShadingStateUniform m_shading_state_uniform;
@@ -1051,6 +1077,9 @@ private:
     // N.B. group_profile_times is protected by m_stat_mutex.
 
     LLVM_Util::ScopedJitMemoryUser m_llvm_jit_memory_user;
+
+    std::unordered_set<ustring> m_inline_functions;
+    std::unordered_set<ustring> m_noinline_functions;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;

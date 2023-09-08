@@ -21,8 +21,16 @@
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
-extern int rend_llvm_compiled_ops_size;
-extern unsigned char rend_llvm_compiled_ops_block[];
+extern int rend_lib_llvm_compiled_ops_size;
+extern unsigned char rend_lib_llvm_compiled_ops_block[];
+
+
+// The entry point for OptiX Module creation changed in OptiX 7.7
+#if OPTIX_VERSION < 70700
+const auto optixModuleCreateFn = optixModuleCreateFromPTX;
+#else
+const auto optixModuleCreateFn = optixModuleCreate;
+#endif
 
 
 OSL_NAMESPACE_ENTER
@@ -174,6 +182,12 @@ bool
 OptixRaytracer::init_optix_context(int xres OSL_MAYBE_UNUSED,
                                    int yres OSL_MAYBE_UNUSED)
 {
+    if (!options.get_int("no_rend_lib_bitcode")) {
+        shadingsys->attribute("lib_bitcode",
+                              { OSL::TypeDesc::UINT8,
+                                rend_lib_llvm_compiled_ops_size },
+                              rend_lib_llvm_compiled_ops_block);
+    }
     return true;
 }
 
@@ -262,12 +276,11 @@ OptixRaytracer::load_optix_module(
     }
 
     size_t sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK_MSG(optixModuleCreateFromPTX(m_optix_ctx,
-                                             module_compile_options,
-                                             pipeline_compile_options,
-                                             program_ptx.c_str(),
-                                             program_ptx.size(), msg_log,
-                                             &sizeof_msg_log, program_module),
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, module_compile_options,
+                                        pipeline_compile_options,
+                                        program_ptx.c_str(), program_ptx.size(),
+                                        msg_log, &sizeof_msg_log,
+                                        program_module),
                     fmtformat("Creating Module from PTX-file {}", msg_log));
     return true;
 }
@@ -345,14 +358,39 @@ OptixRaytracer::make_optix_materials()
     load_optix_module("sphere.ptx", &module_compile_options,
                       &pipeline_compile_options, &sphere_module);
 
-
     OptixModule wrapper_module;
     load_optix_module("wrapper.ptx", &module_compile_options,
                       &pipeline_compile_options, &wrapper_module);
+
     OptixModule rend_lib_module;
-    load_optix_module("rend_lib.ptx", &module_compile_options,
+    load_optix_module("rend_lib_testrender.ptx", &module_compile_options,
                       &pipeline_compile_options, &rend_lib_module);
 
+    // Retrieve the compiled shadeops PTX
+    const char* shadeops_ptx = nullptr;
+    shadingsys->getattribute("shadeops_cuda_ptx", OSL::TypeDesc::PTR,
+                             &shadeops_ptx);
+
+    int shadeops_ptx_size = 0;
+    shadingsys->getattribute("shadeops_cuda_ptx_size", OSL::TypeDesc::INT,
+                             &shadeops_ptx_size);
+
+    if (shadeops_ptx == nullptr || shadeops_ptx_size == 0) {
+        errhandler().severefmt(
+            "Could not retrieve PTX for the shadeops library");
+        return false;
+    }
+
+    // Create the shadeops library program group
+    OptixModule shadeops_module;
+    sizeof_msg_log = sizeof(msg_log);
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options, shadeops_ptx,
+                                        shadeops_ptx_size, msg_log,
+                                        &sizeof_msg_log, &shadeops_module),
+                    fmtformat("Creating module for shadeops library: {}",
+                              msg_log));
+    modules.push_back(shadeops_module);
 
     OptixProgramGroupOptions program_options = {};
     std::vector<OptixProgramGroup> shader_groups;
@@ -414,7 +452,7 @@ OptixRaytracer::make_optix_materials()
     OptixProgramGroup quad_hitgroup;
     create_optix_pg(&quad_hitgroup_desc, 1, &program_options, &quad_hitgroup);
 
-    // Direct-callable -- support functions for OSL on the device
+    // Direct-callable -- renderer-specific support functions for OSL on the device
     OptixProgramGroupDesc rend_lib_desc = {};
     rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
     rend_lib_desc.callables.moduleDC    = rend_lib_module;
@@ -424,6 +462,17 @@ OptixRaytracer::make_optix_materials()
     rend_lib_desc.callables.entryFunctionNameCC = nullptr;
     OptixProgramGroup rend_lib_group;
     create_optix_pg(&rend_lib_desc, 1, &program_options, &rend_lib_group);
+
+    // Direct-callable -- built-in support functions for OSL on the device
+    OptixProgramGroupDesc shadeops_desc = {};
+    shadeops_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    shadeops_desc.callables.moduleDC    = shadeops_module;
+    shadeops_desc.callables.entryFunctionNameDC
+        = "__direct_callable__dummy_shadeops";
+    shadeops_desc.callables.moduleCC            = 0;
+    shadeops_desc.callables.entryFunctionNameCC = nullptr;
+    OptixProgramGroup shadeops_group;
+    create_optix_pg(&shadeops_desc, 1, &program_options, &shadeops_group);
 
     // Direct-callable -- fills in ShaderGlobals for Quads
     OptixProgramGroupDesc quad_fillSG_desc = {};
@@ -512,13 +561,14 @@ OptixRaytracer::make_optix_materials()
         // and set the OSL functions as Callable Programs so that they
         // can be executed by the closest hit program in the wrapper
         sizeof_msg_log = sizeof(msg_log);
-        OPTIX_CHECK_MSG(
-            optixModuleCreateFromPTX(m_optix_ctx, &module_compile_options,
-                                     &pipeline_compile_options, osl_ptx.c_str(),
-                                     osl_ptx.size(), msg_log, &sizeof_msg_log,
-                                     &optix_module),
-            fmtformat("Creating module for PTX group {}: {}", group_name,
-                      msg_log));
+        OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx,
+                                            &module_compile_options,
+                                            &pipeline_compile_options,
+                                            osl_ptx.c_str(), osl_ptx.size(),
+                                            msg_log, &sizeof_msg_log,
+                                            &optix_module),
+                        fmtformat("Creating module for PTX group {}: {}",
+                                  group_name, msg_log));
         modules.push_back(optix_module);
 
         // Create program groups (for direct callables)
@@ -541,7 +591,9 @@ OptixRaytracer::make_optix_materials()
 
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth = 1;
-    pipeline_link_options.debugLevel    = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#if (OPTIX_VERSION < 70700)
+    pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#endif
 #if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;
 #endif
@@ -563,6 +615,9 @@ OptixRaytracer::make_optix_materials()
     final_groups.insert(final_groups.end(), shader_groups.begin(),
                         shader_groups.end());
 
+    // append the program group for the built-in shadeops module
+    final_groups.push_back(shadeops_group);
+
     // append set-globals groups
     final_groups.push_back(setglobals_raygen_group);
     final_groups.push_back(setglobals_miss_group);
@@ -577,8 +632,16 @@ OptixRaytracer::make_optix_materials()
 
     // Set the pipeline stack size
     OptixStackSizes stack_sizes = {};
-    for (OptixProgramGroup& program_group : final_groups)
+    for (OptixProgramGroup& program_group : final_groups) {
+#if (OPTIX_VERSION < 70700)
         OPTIX_CHECK(optixUtilAccumulateStackSizes(program_group, &stack_sizes));
+#else
+        // OptiX 7.7+ is able to take the whole pipeline into account
+        // when calculating the stack requirements.
+        OPTIX_CHECK(optixUtilAccumulateStackSizes(program_group, &stack_sizes,
+                                                  m_optix_pipeline));
+#endif
+    }
 
     uint32_t max_trace_depth = 1;
     uint32_t max_cc_depth    = 1;
@@ -590,6 +653,13 @@ OptixRaytracer::make_optix_materials()
         &stack_sizes, max_trace_depth, max_cc_depth, max_dc_depth,
         &direct_callable_stack_size_from_traversal,
         &direct_callable_stack_size_from_state, &continuation_stack_size));
+
+#if (OPTIX_VERSION < 70700)
+    // NB: Older versions of OptiX are unable to compute the stack requirements
+    //     for extern functions (e.g., the shadeops functions), so we need to
+    //     pad the direct callable stack size to accommodate these functions.
+    direct_callable_stack_size_from_state += 512;
+#endif
 
     const uint32_t max_traversal_depth = 1;
     OPTIX_CHECK(optixPipelineSetStackSize(

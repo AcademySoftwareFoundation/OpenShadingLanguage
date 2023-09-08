@@ -41,6 +41,10 @@ public:
     /// and store the llvm::Function* handle to it with the ShaderGroup.
     virtual void run();
 
+    /// Set additional Module/Function options for the CUDA/OptiX target.
+    void prepare_module_for_cuda_jit();
+
+
 
     /// What LLVM debug level are we at?
     int llvm_debug() const;

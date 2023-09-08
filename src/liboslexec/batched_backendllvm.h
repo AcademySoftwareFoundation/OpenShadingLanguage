@@ -114,7 +114,7 @@ public:
     /// (no conversion is performed if cast is the default of UNKNOWN).
     llvm::Value* llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
                                  int deriv, llvm::Value* arrayindex,
-                                 int component,
+                                 int component, bool ptr_is_uniform,
                                  TypeDesc cast              = TypeDesc::UNKNOWN,
                                  bool op_is_uniform         = true,
                                  bool index_is_uniform      = true,
@@ -194,7 +194,7 @@ public:
     bool llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
                           const TypeSpec& type, int deriv,
                           llvm::Value* arrayindex, int component,
-                          bool index_is_uniform = true);
+                          bool dst_is_uniform, bool index_is_uniform = true);
 
     /// Non-array version of llvm_store_value, with default deriv &
     /// component.

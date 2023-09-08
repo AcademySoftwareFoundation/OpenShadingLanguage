@@ -152,7 +152,7 @@ BackendLLVM::llvm_call_layer(int layer, bool unconditional)
     llvm::Value* layerfield      = layer_run_ref(layer_remap(layer));
     llvm::BasicBlock *then_block = NULL, *after_block = NULL;
     if (!unconditional) {
-        llvm::Value* executed = ll.op_load(layerfield);
+        llvm::Value* executed = ll.op_load(ll.type_bool(), layerfield);
         executed              = ll.op_ne(executed, trueval);
         then_block            = ll.new_basic_block("");
         after_block           = ll.new_basic_block("");
@@ -3638,8 +3638,11 @@ LLVMGEN(llvm_gen_get_simple_SG_field)
     Symbol& Result = *rop.opargsym(op, 0);
     int sg_index   = rop.ShaderGlobalNameToIndex(op.opname());
     OSL_DASSERT(sg_index >= 0);
-    llvm::Value* sg_field = rop.ll.GEP(rop.sg_ptr(), 0, sg_index);
-    llvm::Value* r        = rop.ll.op_load(sg_field);
+    llvm::Value* sg_field = rop.ll.GEP(rop.llvm_type_sg(), rop.sg_ptr(), 0,
+                                       sg_index);
+    llvm::Type* sg_field_type
+        = rop.ll.type_struct_field_at_index(rop.llvm_type_sg(), sg_index);
+    llvm::Value* r = rop.ll.op_load(sg_field_type, sg_field);
     rop.llvm_store_value(r, Result);
 
     return true;
@@ -3871,7 +3874,8 @@ LLVMGEN(llvm_gen_closure)
     llvm::Value* comp_ptr
         = rop.ll.ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());
     // Get the address of the primitive buffer, which is the 2nd field
-    llvm::Value* mem_void_ptr = rop.ll.GEP(comp_ptr, 0, 2);
+    llvm::Value* mem_void_ptr = rop.ll.GEP(rop.llvm_type_closure_component(),
+                                           comp_ptr, 0, 2);
     mem_void_ptr = rop.ll.ptr_cast(mem_void_ptr, rop.ll.type_void_ptr());
 
     // If the closure has a "prepare" method, call

@@ -395,7 +395,7 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
         OIIO::spin_lock lock(llvm_global_mutex);
         if (!m_thread->llvm_context) {
             m_thread->llvm_context = new llvm::LLVMContext();
-#if OSL_LLVM_VERSION >= 150
+#if OSL_LLVM_VERSION >= 150 && !defined(OSL_LLVM_OPAQUE_POINTERS)
             m_thread->llvm_context->setOpaquePointers(false);
             // FIXME: For now, keep using typed pointers. We're going to have
             // to fix this and switch to opaque pointers by llvm 16.
@@ -2702,6 +2702,13 @@ LLVM_Util::type_struct(cspan<llvm::Type*> types, const std::string& name,
 }
 
 
+llvm::Type*
+LLVM_Util::type_struct_field_at_index(llvm::Type* type, int index)
+{
+    OSL_DASSERT(type->isStructTy());
+    return static_cast<llvm::StructType*>(type)->getTypeAtIndex(index);
+}
+
 
 llvm::PointerType*
 LLVM_Util::type_ptr(llvm::Type* type)
@@ -2712,7 +2719,13 @@ LLVM_Util::type_ptr(llvm::Type* type)
 llvm::Type*
 LLVM_Util::type_wide(llvm::Type* type)
 {
-    return llvm_vector_type(type, m_vector_width);
+    if (type == m_llvm_type_triple) {
+        return m_llvm_type_wide_triple;
+    } else if (type == m_llvm_type_matrix) {
+        return m_llvm_type_wide_matrix;
+    } else {
+        return llvm_vector_type(type, m_vector_width);
+    }
 }
 
 
@@ -3714,14 +3727,9 @@ LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
 #if OSL_LLVM_VERSION >= 110
-    OSL_PRAGMA_WARNING_PUSH
-    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    // FIXME: This will need to be revisited for future LLVM 16+ that fully
-    // drops typed pointers.
     llvm::Value* r = builder().CreateCall(
-        llvm::cast<llvm::FunctionType>(func->getType()->getPointerElementType()),
-        func, llvm::ArrayRef<llvm::Value*>(args.data(), args.size()));
-    OSL_PRAGMA_WARNING_POP
+        static_cast<llvm::Function*>(func)->getFunctionType(), func,
+        llvm::ArrayRef<llvm::Value*>(args.data(), args.size()));
 #else
     llvm::Value* r
         = builder().CreateCall(func, llvm::ArrayRef<llvm::Value*>(args.data(),
@@ -3850,20 +3858,14 @@ llvm::Value*
 LLVM_Util::op_load(llvm::Type* type, llvm::Value* ptr,
                    const std::string& llname)
 {
-    return builder().CreateLoad(type, ptr, llname);
-}
-
-
-
-llvm::Value*
-LLVM_Util::op_load(llvm::Value* ptr, const std::string& llname)
-{
+#ifndef OSL_LLVM_OPAQUE_POINTERS
     OSL_PRAGMA_WARNING_PUSH
     OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    // FIXME: This will need to be revisited for future LLVM 16+ that fully
-    // drops typed pointers.
-    return op_load(ptr->getType()->getPointerElementType(), ptr, llname);
+    OSL_ASSERT(type
+               == ptr->getType()->getScalarType()->getPointerElementType());
     OSL_PRAGMA_WARNING_POP
+#endif
+    return builder().CreateLoad(type, ptr, llname);
 }
 
 
@@ -4001,7 +4003,8 @@ LLVM_Util::op_combine_4x_vectors(llvm::Value* half_vec_1,
 
 
 llvm::Value*
-LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
+LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
+                     llvm::Value* wide_index)
 {
     OSL_ASSERT(wide_index->getType() == type_wide_int());
 
@@ -4012,35 +4015,37 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
     // assumption.  array[0] exists, is valid, and no indices will be
     // negative
     auto clamped_gather_from_uniform =
-        [this, ptr, wide_index](llvm::Type* result_type) -> llvm::Value* {
+        [this, ptr_type, ptr,
+         wide_index](llvm::Type* result_type) -> llvm::Value* {
         llvm::Value* result         = llvm::UndefValue::get(result_type);
         llvm::Value* clampedIndices = op_select(current_mask(), wide_index,
                                                 wide_constant(0));
         for (int l = 0; l < m_vector_width; ++l) {
             llvm::Value* index_for_lane = op_extract(clampedIndices, l);
-            llvm::Value* address        = GEP(ptr, index_for_lane);
-            llvm::Value* val            = op_load(address);
+            llvm::Value* address        = GEP(ptr_type, ptr, index_for_lane);
+            llvm::Value* val            = op_load(ptr_type, address);
             result                      = op_insert(result, val, l);
         }
         return result;
     };
 
     auto clamped_gather_from_varying =
-        [this, ptr, wide_index](llvm::Type* result_type) -> llvm::Value* {
+        [this, ptr_type, ptr,
+         wide_index](llvm::Type* result_type) -> llvm::Value* {
         llvm::Value* clampedIndices = op_select(current_mask(), wide_index,
                                                 wide_constant(0));
         llvm::Value* result         = llvm::UndefValue::get(result_type);
         for (int l = 0; l < m_vector_width; ++l) {
             llvm::Value* index_for_lane = op_extract(clampedIndices, l);
-            llvm::Value* wide_address   = GEP(ptr, index_for_lane);
-            llvm::Value* wide_val       = op_load(wide_address);
+            llvm::Value* wide_address   = GEP(ptr_type, ptr, index_for_lane);
+            llvm::Value* wide_val       = op_load(ptr_type, wide_address);
             llvm::Value* val            = op_extract(wide_val, l);
             result                      = op_insert(result, val, l);
         }
         return result;
     };
 
-    if (ptr->getType() == type_int_ptr()) {
+    if (ptr_type == type_int()) {
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_gather_pi = nullptr;
             llvm::Value* int_mask                 = nullptr;
@@ -4107,7 +4112,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
             return clamped_gather_from_uniform(type_wide_int());
         }
 
-    } else if (ptr->getType() == type_float_ptr()) {
+    } else if (ptr_type == type_float()) {
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_gather_ps = nullptr;
             llvm::Value* int_mask                 = nullptr;
@@ -4181,7 +4186,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
         } else {
             return clamped_gather_from_uniform(type_wide_float());
         }
-    } else if (ptr->getType() == type_ustring_ptr()) {
+    } else if (ptr_type == type_ustring()) {
         if (m_supports_avx512f) {
             // TODO:  Are we guaranteed a 64bit pointer?
             switch (m_vector_width) {
@@ -4248,7 +4253,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
         } else {
             return clamped_gather_from_uniform(type_wide_ustring());
         }
-    } else if (ptr->getType() == type_wide_float_ptr()) {
+    } else if (ptr_type == type_wide_float()) {
         if (m_supports_avx512f) {
             switch (m_vector_width) {
             case 16: {
@@ -4333,7 +4338,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
         } else {
             return clamped_gather_from_varying(type_wide_float());
         }
-    } else if (ptr->getType() == type_wide_int_ptr()) {
+    } else if (ptr_type == type_wide_int()) {
         if (m_supports_avx512f) {
             switch (m_vector_width) {
             case 16: {
@@ -4419,7 +4424,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
         } else {
             return clamped_gather_from_varying(type_wide_int());
         }
-    } else if (ptr->getType() == type_wide_ustring_ptr()) {
+    } else if (ptr_type == type_wide_ustring()) {
         if (m_supports_avx512f) {
             // TODO:  Are we guaranteed a 64bit pointer?
             switch (m_vector_width) {
@@ -4505,7 +4510,7 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
         }
 
     } else {
-        std::cout << "ptr->getType() = " << llvm_typenameof(ptr) << std::endl;
+        std::cout << "ptr_type = " << llvm_typename(ptr_type) << std::endl;
 
         OSL_ASSERT(0 && "unsupported ptr type");
     }
@@ -4515,13 +4520,14 @@ LLVM_Util::op_gather(llvm::Value* ptr, llvm::Value* wide_index)
 
 
 void
-LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
-                      llvm::Value* wide_index)
+LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
+                      llvm::Value* ptr, llvm::Value* wide_index)
 {
     OSL_ASSERT(wide_index->getType() == type_wide_int());
 
     auto scatter_using_conditional_block_per_lane =
-        [this, wide_val, wide_index](llvm::Value* cast_ptr,
+        [this, wide_val, wide_index](llvm::Type* cast_ptr_type,
+                                     llvm::Value* cast_ptr,
                                      bool is_dest_wide = true) -> void {
         llvm::Value* linear_indices = nullptr;
         if (is_dest_wide) {
@@ -4567,14 +4573,15 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
             op_branch(mask_per_lane[l], scatter_block,
                       test_scatter_per_lane[l + 1]);
 
-            llvm::Value* address = GEP(cast_ptr, index_per_lane[l]);
+            llvm::Value* address = GEP(cast_ptr_type, cast_ptr,
+                                       index_per_lane[l]);
             // uniform store, no need to mess with masking
             op_store(val_per_lane[l], address);
             op_branch(test_scatter_per_lane[l + 1]);
         }
     };
 
-    if (ptr->getType() == type_float_ptr()) {
+    if (ptr_type == type_float()) {
         OSL_ASSERT(wide_val->getType() == type_wide_float());
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_scatter_ps = nullptr;
@@ -4602,11 +4609,11 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
             return;
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
-            scatter_using_conditional_block_per_lane(ptr,
+            scatter_using_conditional_block_per_lane(type_float(), ptr,
                                                      /*is_dest_wide*/ false);
             return;
         }
-    } else if (ptr->getType() == type_int_ptr()) {
+    } else if (ptr_type == type_int()) {
         OSL_ASSERT(wide_val->getType() == type_wide_int());
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_scatter_pi = nullptr;
@@ -4633,11 +4640,11 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
             return;
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
-            scatter_using_conditional_block_per_lane(ptr,
+            scatter_using_conditional_block_per_lane(type_int(), ptr,
                                                      /*is_dest_wide*/ false);
             return;
         }
-    } else if (ptr->getType() == type_ustring_ptr()) {
+    } else if (ptr_type == type_ustring()) {
         OSL_ASSERT(wide_val->getType() == type_wide_ustring());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4700,11 +4707,11 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
             }
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
-            scatter_using_conditional_block_per_lane(ptr,
+            scatter_using_conditional_block_per_lane(type_ustring(), ptr,
                                                      /*is_dest_wide*/ false);
             return;
         }
-    } else if (ptr->getType() == type_wide_float_ptr()) {
+    } else if (ptr_type == type_wide_float()) {
         OSL_ASSERT(wide_val->getType() == type_wide_float());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4744,12 +4751,12 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
             llvm::Value* float_ptr
                 = builder().CreatePointerBitCastOrAddrSpaceCast(
                     ptr, type_float_ptr());
-            scatter_using_conditional_block_per_lane(float_ptr,
+            scatter_using_conditional_block_per_lane(type_float(), float_ptr,
                                                      /*is_dest_wide*/ true);
             return;
         }
     }
-    if (ptr->getType() == type_wide_int_ptr()) {
+    if (ptr_type == type_wide_int()) {
         OSL_ASSERT(wide_val->getType() == type_wide_int());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4789,11 +4796,11 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
             llvm::Value* int_ptr
                 = builder().CreatePointerBitCastOrAddrSpaceCast(ptr,
                                                                 type_int_ptr());
-            scatter_using_conditional_block_per_lane(int_ptr,
+            scatter_using_conditional_block_per_lane(type_int(), int_ptr,
                                                      /*is_dest_wide*/ true);
             return;
         }
-    } else if (ptr->getType() == type_wide_ustring_ptr()) {
+    } else if (ptr_type == type_wide_ustring()) {
         OSL_ASSERT(wide_val->getType() == type_wide_ustring());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4861,13 +4868,14 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
             llvm::Value* ustring_ptr
                 = builder().CreatePointerBitCastOrAddrSpaceCast(
                     ptr, type_ustring_ptr());
-            scatter_using_conditional_block_per_lane(ustring_ptr,
+            scatter_using_conditional_block_per_lane(type_ustring(),
+                                                     ustring_ptr,
                                                      /*is_dest_wide*/ true);
             return;
         }
     }
 
-    std::cout << "ptr->getType() = " << llvm_typenameof(ptr) << std::endl;
+    std::cout << "ptr_type = " << llvm_typename(ptr_type) << std::endl;
 
     OSL_ASSERT(0 && "unsupported ptr type");
 }
@@ -5297,7 +5305,9 @@ LLVM_Util::op_masked_return()
 void
 LLVM_Util::op_store(llvm::Value* val, llvm::Value* ptr)
 {
-    // Something bad might happen, and we think it is worth leaving checks
+    // Something bad might happen, and we think it is worth leaving checks.
+    // NOTE: this is no longer as useful with opaque pointers, we can only
+    // check that ptr is a pointer.
     if (ptr->getType() != type_ptr(val->getType())) {
         std::cerr << "We have a type mismatch! op_store ptr->getType()="
                   << std::flush;
@@ -5337,7 +5347,7 @@ LLVM_Util::op_store(llvm::Value* val, llvm::Value* ptr)
             // happen and a read+.
             // TODO: Optimization, if we know this was the final store to
             // the ptr, we could force a masked store vs. load/blend
-            llvm::Value* previous_value = op_load(ptr);
+            llvm::Value* previous_value = op_load(val->getType(), ptr);
             if (false == mi.negate) {
                 llvm::Value* blended_value
                     = builder().CreateSelect(mi.mask, val, previous_value);
@@ -5366,7 +5376,7 @@ LLVM_Util::op_load_mask(llvm::Value* native_mask_ptr)
 {
     OSL_ASSERT(native_mask_ptr->getType() == type_ptr(type_native_mask()));
 
-    return native_to_llvm_mask(op_load(native_mask_ptr));
+    return native_to_llvm_mask(op_load(type_native_mask(), native_mask_ptr));
 }
 
 
@@ -5385,21 +5395,14 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, llvm::Value* elem,
                const std::string& llname)
 {
-    return builder().CreateGEP(type, ptr, elem, llname);
-}
-
-
-
-llvm::Value*
-LLVM_Util::GEP(llvm::Value* ptr, llvm::Value* elem, const std::string& llname)
-{
+#ifndef OSL_LLVM_OPAQUE_POINTERS
     OSL_PRAGMA_WARNING_PUSH
     OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    // FIXME: This will need to be revisited for future LLVM 16+ that fully
-    // drops typed pointers.
-    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
-               elem, llname);
+    OSL_ASSERT(type
+               == ptr->getType()->getScalarType()->getPointerElementType());
     OSL_PRAGMA_WARNING_POP
+#endif
+    return builder().CreateGEP(type, ptr, elem, llname);
 }
 
 
@@ -5408,21 +5411,14 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem,
                const std::string& llname)
 {
-    return builder().CreateConstGEP1_32(type, ptr, elem, llname);
-}
-
-
-
-llvm::Value*
-LLVM_Util::GEP(llvm::Value* ptr, int elem, const std::string& llname)
-{
+#ifndef OSL_LLVM_OPAQUE_POINTERS
     OSL_PRAGMA_WARNING_PUSH
     OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    // FIXME: This will need to be revisited for future LLVM 16+ that fully
-    // drops typed pointers.
-    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
-               elem, llname);
+    OSL_ASSERT(type
+               == ptr->getType()->getScalarType()->getPointerElementType());
     OSL_PRAGMA_WARNING_POP
+#endif
+    return builder().CreateConstGEP1_32(type, ptr, elem, llname);
 }
 
 
@@ -5431,22 +5427,31 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
                const std::string& llname)
 {
+#ifndef OSL_LLVM_OPAQUE_POINTERS
+    OSL_PRAGMA_WARNING_PUSH
+    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
+    OSL_ASSERT(type
+               == ptr->getType()->getScalarType()->getPointerElementType());
+    OSL_PRAGMA_WARNING_POP
+#endif
     return builder().CreateConstGEP2_32(type, ptr, elem1, elem2, llname);
 }
 
 
-
 llvm::Value*
-LLVM_Util::GEP(llvm::Value* ptr, int elem1, int elem2,
-               const std::string& llname)
+LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
+               int elem3, const std::string& llname)
 {
+#ifndef OSL_LLVM_OPAQUE_POINTERS
     OSL_PRAGMA_WARNING_PUSH
     OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    // FIXME: This will need to be revisited for future LLVM 16+ that fully
-    // drops typed pointers.
-    return GEP(ptr->getType()->getScalarType()->getPointerElementType(), ptr,
-               elem1, elem2, llname);
+    OSL_ASSERT(type
+               == ptr->getType()->getScalarType()->getPointerElementType());
     OSL_PRAGMA_WARNING_POP
+#endif
+    llvm::Value* elements[3] = { constant(elem1), constant(elem2),
+                                 constant(elem3) };
+    return builder().CreateGEP(type, ptr, makeArrayRef(elements), llname);
 }
 
 

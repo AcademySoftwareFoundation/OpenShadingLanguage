@@ -2097,7 +2097,13 @@ struct Analyzer {
     {
         bool previously_was_uniform = symbol_to_be_varying->is_uniform();
         if (previously_was_uniform | force) {
-            symbol_to_be_varying->make_varying();
+            // Interactive params are never varying, following getLLVMSymbolBase()
+            const bool force_uniform = symbol_to_be_varying->symtype()
+                                           == SymTypeParam
+                                       && symbol_to_be_varying->interactive();
+            if (!force_uniform) {
+                symbol_to_be_varying->make_varying();
+            }
             auto range = m_symbols_dependent_upon.equal_range(
                 symbol_to_be_varying);
             auto iter = range.first;

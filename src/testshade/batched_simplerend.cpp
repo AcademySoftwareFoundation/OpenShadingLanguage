@@ -18,6 +18,9 @@ struct UniqueStringCache {
         , perspective("perspective")
         , s("s")
         , t("t")
+        , red("red")
+        , green("green")
+        , blue("blue")
         , lookupTable("lookupTable")
         , blahblah("blahblah")
         , options("options")
@@ -44,6 +47,9 @@ struct UniqueStringCache {
     ustring perspective;
     ustring s;
     ustring t;
+    ustring red;
+    ustring green;
+    ustring blue;
     ustring lookupTable;
     ustring blahblah;
     ustring options;
@@ -663,7 +669,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
             }
         }
 
-        return val.mask();
+        return out.mask();
     }
     if (name == ucache().t && Masked<float>::is(val)) {
         Masked<float> out(val);
@@ -682,7 +688,91 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
             }
         }
 
-        return val.mask();
+        return out.mask();
+    }
+    if (name == ucache().red && Masked<float>::is(val)) {
+        // For testing, only partially populate user data 
+        Mask partial_mask(false);
+        for (int i = 0; i < WidthT; ++i) {
+            Vec3 pos = bsg->varying.P[i];
+            if (pos.x > 0.5f) {
+                partial_mask.set_on(i);
+            }
+        }
+
+        Masked<float> out(Masked<float>(val),val.mask() & partial_mask);
+        for (int i = 0; i < WidthT; ++i) {
+            out[i] = bsg->varying.u[i];
+        }
+        if (val.has_derivs()) {
+            MaskedDx<float> out_dx(val);
+            for (int i = 0; i < WidthT; ++i) {
+                out_dx[i] = bsg->varying.dudx[i];
+            }
+
+            MaskedDy<float> out_dy(val);
+            for (int i = 0; i < WidthT; ++i) {
+                out_dy[i] = bsg->varying.dudy[i];
+            }
+        }
+
+        return out.mask();
+    }
+    if (name == ucache().green && Masked<float>::is(val)) {
+        // For testing, only partially populate user data 
+        Mask partial_mask(false);
+        for (int i = 0; i < WidthT; ++i) {
+            Vec3 pos = bsg->varying.P[i];
+            if (pos.x < 0.5f) {
+                partial_mask.set_on(i);
+            }
+        }
+
+        Masked<float> out(Masked<float>(val),val.mask() & partial_mask);
+        for (int i = 0; i < WidthT; ++i) {
+            out[i] = bsg->varying.v[i];
+        }
+        if (val.has_derivs()) {
+            MaskedDx<float> out_dx(val);
+            for (int i = 0; i < WidthT; ++i) {
+                out_dx[i] = bsg->varying.dvdx[i];
+            }
+
+            MaskedDy<float> out_dy(val);
+            for (int i = 0; i < WidthT; ++i) {
+                out_dy[i] = bsg->varying.dvdy[i];
+            }
+        }
+
+        return out.mask();
+    }
+    if (name == ucache().blue && Masked<float>::is(val)) {
+        // For testing, only partially populate user data 
+        Mask partial_mask(false);
+        for (int i = 0; i < WidthT; ++i) {
+            Vec3 pos = bsg->varying.P[i];
+            if ((static_cast<int>(pos.y*12)%2) == 0) {
+                partial_mask.set_on(i);
+            }
+        }
+
+        Masked<float> out(Masked<float>(val),val.mask() & partial_mask);
+        for (int i = 0; i < WidthT; ++i) {
+            out[i] = 1.0f - bsg->varying.u[i];
+        }
+        if (val.has_derivs()) {
+            MaskedDx<float> out_dx(val);
+            for (int i = 0; i < WidthT; ++i) {
+                out_dx[i] = -bsg->varying.dudx[i];
+            }
+
+            MaskedDy<float> out_dy(val);
+            for (int i = 0; i < WidthT; ++i) {
+                out_dy[i] = -bsg->varying.dudy[i];
+            }
+        }
+
+        return out.mask();
     }
 
     if (const OIIO::ParamValue* p = m_sr.userdata.find_pv(name, val.type())) {

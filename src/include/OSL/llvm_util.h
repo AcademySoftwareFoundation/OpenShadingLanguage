@@ -668,6 +668,12 @@ public:
     /// Return the llvm::Type of the llvm value.
     llvm::Type* llvm_typeof(llvm::Value* val) const;
 
+    /// Return number of bytes used to store the type
+    size_t llvm_sizeof(llvm::Type* type) const;
+
+    /// Return preferred byte alignment for a type
+    size_t llvm_alignmentof(llvm::Type* type) const;
+
     /// Return the human-readable name of the type of the llvm value.
     std::string llvm_typenameof(llvm::Value* val) const;
 

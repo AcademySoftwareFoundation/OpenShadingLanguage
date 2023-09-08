@@ -1,0 +1,5 @@
+shader varying_ge (
+    output int val = 0)
+{
+    val = (v >= u);
+}

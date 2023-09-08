@@ -1,0 +1,5 @@
+Compiled test.osl -> test.oso
+
+Output Cout to out.lazy_userdata_OFF.tif
+
+Output Cout to out.lazy_userdata_ON.tif

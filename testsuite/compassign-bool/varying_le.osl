@@ -1,0 +1,5 @@
+shader varying_lt (
+    output int val = 0)
+{
+    val = (v < u);
+}

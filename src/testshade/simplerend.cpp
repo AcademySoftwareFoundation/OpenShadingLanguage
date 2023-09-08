@@ -115,6 +115,7 @@ static ustring u_camera("camera"), u_screen("screen");
 static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
 static ustring u_s("s"), u_t("t");
+static ustring u_red("red"), u_green("green"), u_blue("blue");
 static TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2(TypeDesc::INT, 2);
@@ -517,6 +518,30 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         if (derivatives) {
             ((float*)val)[1] = sg->dvdx;
             ((float*)val)[2] = sg->dvdy;
+        }
+        return true;
+    }
+    if (name == u_red && type == TypeDesc::TypeFloat && sg->P.x > 0.5f) {
+        ((float*)val)[0] = sg->u;
+        if (derivatives) {
+            ((float*)val)[1] = sg->dudx;
+            ((float*)val)[2] = sg->dudy;
+        }
+        return true;
+    }
+    if (name == u_green && type == TypeDesc::TypeFloat && sg->P.x < 0.5f) {
+        ((float*)val)[0] = sg->v;
+        if (derivatives) {
+            ((float*)val)[1] = sg->dvdx;
+            ((float*)val)[2] = sg->dvdy;
+        }
+        return true;
+    }
+    if (name == u_blue && type == TypeDesc::TypeFloat && ((static_cast<int>(sg->P.y*12)%2) == 0)) {
+        ((float*)val)[0] = 1.0f - sg->u;
+        if (derivatives) {
+            ((float*)val)[1] = -sg->dudx;
+            ((float*)val)[2] = -sg->dudy;
         }
         return true;
     }

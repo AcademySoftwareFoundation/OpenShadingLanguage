@@ -467,7 +467,7 @@ BatchedBackendLLVM::getLLVMSymbolBase(const Symbol& sym)
             && !can_treat_param_as_local(sym))) {
         // Special case for most params -- they live in the group data
         int fieldnum = m_param_order_map[&sym];
-                
+
         return groupdata_field_ptr(fieldnum,
                                    sym.typespec().elementtype().simpletype(),
                                    is_uniform, sym.forced_llvm_bool());
@@ -1218,12 +1218,12 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, const Symbol& sym,
         if (sym.is_uniform()) {
             if (ll.llvm_typeof(new_val) == ll.type_int()) {
                 new_val = ll.op_int_to_bool(new_val);
-            } 
+            }
             OSL_ASSERT(ll.llvm_typeof(new_val) == ll.type_bool());
         } else {
             if (ll.llvm_typeof(new_val) == ll.type_wide_int()) {
                 new_val = ll.op_int_to_bool(new_val);
-            } 
+            }
             if (ll.llvm_typeof(new_val) == ll.type_wide_bool()) {
                 new_val = ll.llvm_mask_to_native(new_val);
             }
@@ -1513,9 +1513,11 @@ BatchedBackendLLVM::groupdata_field_ptr(int fieldnum, TypeDesc type,
     llvm::Value* result = ll.void_ptr(groupdata_field_ref(fieldnum));
     if (type != TypeDesc::UNKNOWN) {
         if (is_uniform) {
-            result = ll.ptr_to_cast(result, forceBool ? ll.type_bool() : llvm_type(type));
+            result = ll.ptr_to_cast(result, forceBool ? ll.type_bool()
+                                                      : llvm_type(type));
         } else {
-            result = ll.ptr_to_cast(result, forceBool ? ll.type_native_mask() : llvm_wide_type(type));
+            result = ll.ptr_to_cast(result, forceBool ? ll.type_native_mask()
+                                                      : llvm_wide_type(type));
         }
     }
     return result;
@@ -1844,8 +1846,8 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
                                      int arrayindex, int srccomp, int dstcomp)
 {
     OSL_DEV_ONLY(std::cout << "llvm_assign_impl arrayindex=" << arrayindex
-                           << " Result(" << Result.name() << ") is_uniform="
-                           << Result.is_uniform() 
+                           << " Result(" << Result.name()
+                           << ") is_uniform=" << Result.is_uniform()
                            << " forced_llvm_bool=" << Result.forced_llvm_bool()
                            << std::endl);
     OSL_DEV_ONLY(std::cout << "                              Src(" << Src.name()
@@ -1934,7 +1936,9 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
                 if (!src_val)
                     return false;
 
-                OSL_DEV_ONLY(std::cout << "src_val about to be stored to Result:" << ll.llvm_typenameof(src_val) << std::endl);
+                OSL_DEV_ONLY(std::cout
+                             << "src_val about to be stored to Result:"
+                             << ll.llvm_typenameof(src_val) << std::endl);
                 // The llvm_load_value above should have handled bool to int conversions
                 // when the basetype == Typedesc::INT
                 llvm_store_value(src_val, Result, 0, arrind, i);

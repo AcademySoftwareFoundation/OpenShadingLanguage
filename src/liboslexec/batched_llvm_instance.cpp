@@ -915,9 +915,11 @@ BatchedBackendLLVM::llvm_type_groupdata()
             ts.make_array(arraylen * derivSize);
             llvm::Type* fieldType;
             if (sym.is_uniform()) {
-                fieldType = sym.forced_llvm_bool() ? ll.type_bool() : llvm_type(ts);
+                fieldType = sym.forced_llvm_bool() ? ll.type_bool()
+                                                   : llvm_type(ts);
             } else {
-                fieldType = sym.forced_llvm_bool() ? ll.type_native_mask() : llvm_wide_type(ts);
+                fieldType = sym.forced_llvm_bool() ? ll.type_native_mask()
+                                                   : llvm_wide_type(ts);
             }
             fields.push_back(fieldType);
 
@@ -932,7 +934,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
                       sym.interpolated() ? " (interpolated)" : "",
                       sym.interactive() ? " (interactive)" : "");
             sym.wide_dataoffset((int)offset);
-            offset += ll.llvm_sizeof(fields.back());;
+            offset += ll.llvm_sizeof(fields.back());
             m_param_order_map[&sym] = order;
             ++order;
         }
@@ -1308,7 +1310,8 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                             init_val = ll.constant(sym.get_string(c));
                         else if (elemtype.is_int()) {
                             if (sym.forced_llvm_bool()) {
-                                init_val = ll.constant_bool(static_cast<bool>(sym.get_int(c)));
+                                init_val = ll.constant_bool(
+                                    static_cast<bool>(sym.get_int(c)));
                             } else {
                                 init_val = ll.constant(sym.get_int(c));
                             }
@@ -1317,7 +1320,8 @@ BatchedBackendLLVM::llvm_assign_initial_value(
 
                         if (sym.is_varying()) {
                             if (sym.forced_llvm_bool()) {
-                                init_val = ll.llvm_mask_to_native(ll.widen_value(init_val));
+                                init_val = ll.llvm_mask_to_native(
+                                    ll.widen_value(init_val));
                             } else {
                                 init_val = ll.wide_constant(
                                     static_cast<llvm::Constant*>(init_val));
@@ -2129,8 +2133,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         // initializing them lazily, or if it's an interactively-adjusted
         // parameter.
         if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
-            && !s.typespec().is_closure()
-            && !s.connected() && !s.connected_down()
+            && !s.typespec().is_closure() && !s.connected()
+            && !s.connected_down()
             && (s.interactive()
                 || (s.interpolated() && shadingsys().lazy_userdata())))
             continue;
@@ -2244,7 +2248,7 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                         // so no need to do it here as well
                         llvm_run_connected_layers(*srcsym, con.src.param);
 
-                        // Perform actual copy assignment from src to dest sym 
+                        // Perform actual copy assignment from src to dest sym
                         llvm_assign_impl(*dstsym, *srcsym, -1, con.src.channel,
                                          con.dst.channel);
                     }

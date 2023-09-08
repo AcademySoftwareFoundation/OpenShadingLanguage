@@ -537,7 +537,8 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_blue && type == TypeDesc::TypeFloat && ((static_cast<int>(sg->P.y*12)%2) == 0)) {
+    if (name == u_blue && type == TypeDesc::TypeFloat
+        && ((static_cast<int>(sg->P.y * 12) % 2) == 0)) {
         ((float*)val)[0] = 1.0f - sg->u;
         if (derivatives) {
             ((float*)val)[1] = -sg->dudx;

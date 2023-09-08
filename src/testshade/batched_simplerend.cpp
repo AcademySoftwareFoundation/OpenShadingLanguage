@@ -691,7 +691,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
         return out.mask();
     }
     if (name == ucache().red && Masked<float>::is(val)) {
-        // For testing, only partially populate user data 
+        // For testing, only partially populate user data
         Mask partial_mask(false);
         for (int i = 0; i < WidthT; ++i) {
             Vec3 pos = bsg->varying.P[i];
@@ -700,7 +700,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
             }
         }
 
-        Masked<float> out(Masked<float>(val),val.mask() & partial_mask);
+        Masked<float> out(Masked<float>(val), val.mask() & partial_mask);
         for (int i = 0; i < WidthT; ++i) {
             out[i] = bsg->varying.u[i];
         }
@@ -719,7 +719,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
         return out.mask();
     }
     if (name == ucache().green && Masked<float>::is(val)) {
-        // For testing, only partially populate user data 
+        // For testing, only partially populate user data
         Mask partial_mask(false);
         for (int i = 0; i < WidthT; ++i) {
             Vec3 pos = bsg->varying.P[i];
@@ -728,7 +728,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
             }
         }
 
-        Masked<float> out(Masked<float>(val),val.mask() & partial_mask);
+        Masked<float> out(Masked<float>(val), val.mask() & partial_mask);
         for (int i = 0; i < WidthT; ++i) {
             out[i] = bsg->varying.v[i];
         }
@@ -747,16 +747,16 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
         return out.mask();
     }
     if (name == ucache().blue && Masked<float>::is(val)) {
-        // For testing, only partially populate user data 
+        // For testing, only partially populate user data
         Mask partial_mask(false);
         for (int i = 0; i < WidthT; ++i) {
             Vec3 pos = bsg->varying.P[i];
-            if ((static_cast<int>(pos.y*12)%2) == 0) {
+            if ((static_cast<int>(pos.y * 12) % 2) == 0) {                
                 partial_mask.set_on(i);
             }
         }
 
-        Masked<float> out(Masked<float>(val),val.mask() & partial_mask);
+        Masked<float> out(Masked<float>(val), val.mask() & partial_mask);
         for (int i = 0; i < WidthT; ++i) {
             out[i] = 1.0f - bsg->varying.u[i];
         }

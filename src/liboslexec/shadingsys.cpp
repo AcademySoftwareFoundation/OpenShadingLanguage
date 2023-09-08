@@ -1621,7 +1621,8 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_SET("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_SET("llvm_dumpasm", int, m_llvm_dumpasm);
-    ATTR_SET("dump_forced_llvm_bool_symbols", int, m_dump_forced_llvm_bool_symbols);
+    ATTR_SET("dump_forced_llvm_bool_symbols", int,
+             m_dump_forced_llvm_bool_symbols);    
     ATTR_SET("dump_uniform_symbols", int, m_dump_uniform_symbols);
     ATTR_SET("dump_varying_symbols", int, m_dump_varying_symbols);
     ATTR_SET_STRING("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
@@ -1804,7 +1805,8 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_DECODE("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_DECODE("llvm_dumpasm", int, m_llvm_dumpasm);
-    ATTR_DECODE("dump_forced_llvm_bool_symbols", int, m_dump_forced_llvm_bool_symbols);
+    ATTR_DECODE("dump_forced_llvm_bool_symbols", int,
+                m_dump_forced_llvm_bool_symbols);
     ATTR_DECODE("dump_uniform_symbols", int, m_dump_uniform_symbols);
     ATTR_DECODE("dump_varying_symbols", int, m_dump_varying_symbols);
     ATTR_DECODE("strict_messages", int, m_strict_messages);

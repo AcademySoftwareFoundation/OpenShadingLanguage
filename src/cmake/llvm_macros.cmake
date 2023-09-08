@@ -80,12 +80,6 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         list (TRANSFORM include_dirs PREPEND -I
             OUTPUT_VARIABLE ALL_INCLUDE_DIRS)
 
-        if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
-            # Until we fully support opaque pointers, we need to disable
-            # them when using LLVM 15.
-            list (APPEND LLVM_COMPILE_FLAGS -Xclang -no-opaque-pointers)
-        endif ()
-
         # Command to turn the .cpp file into LLVM assembly language .s, into
         # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
         add_custom_command ( OUTPUT ${src_bc}

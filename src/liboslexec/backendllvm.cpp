@@ -212,7 +212,7 @@ BackendLLVM::llvm_global_symbol_ptr(ustring name)
     // the ShaderGlobals struct.
     int sg_index = ShaderGlobalNameToIndex(name);
     OSL_ASSERT(sg_index >= 0);
-    return ll.void_ptr(ll.GEP(sg_ptr(), 0, sg_index),
+    return ll.void_ptr(ll.GEP(llvm_type_sg(), sg_ptr(), 0, sg_index),
                        llnamefmt("glob_{}_voidptr", name));
 }
 
@@ -415,7 +415,7 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
             arrayindex = ll.op_add(arrayindex, ll.constant(d));
         else
             arrayindex = ll.constant(d);
-        result = ll.GEP(result, arrayindex);
+        result = ll.GEP(llvm_type(t.elementtype()), result, arrayindex);
     }
 
     return result;
@@ -479,22 +479,24 @@ BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
 
     // If it's an array or we're dealing with derivatives, step to the
     // right element.
-    TypeDesc t = type.simpletype();
+    TypeDesc t               = type.simpletype();
+    llvm::Type* element_type = llvm_type(t.elementtype());
     if (t.arraylen || deriv) {
         int d = deriv * std::max(1, t.arraylen);
         if (arrayindex)
             arrayindex = ll.op_add(arrayindex, ll.constant(d));
         else
             arrayindex = ll.constant(d);
-        ptr = ll.GEP(ptr, arrayindex);
+        ptr = ll.GEP(element_type, ptr, arrayindex);
     }
 
     // If it's multi-component (triple or matrix), step to the right field
     if (!type.is_closure_based() && t.aggregate > 1)
-        ptr = ll.GEP(ptr, 0, component);
+        ptr = ll.GEP(element_type, ptr, 0, component);
 
     // Now grab the value
-    llvm::Value* result = ll.op_load(ptr, llname);
+    llvm::Type* scalar_type = llvm_type(t.scalartype());
+    llvm::Value* result     = ll.op_load(scalar_type, ptr, llname);
 
     if (type.is_closure_based())
         return result;
@@ -583,10 +585,10 @@ BackendLLVM::llvm_load_component_value(const Symbol& sym, int deriv,
     OSL_DASSERT(sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast(result, ll.type_float_ptr());
-    result = ll.GEP(result, component);  // get the component
+    result = ll.GEP(ll.type_float(), result, component);  // get the component
 
     // Now grab the value
-    return ll.op_load(result);
+    return ll.op_load(ll.type_float(), result);
 }
 
 
@@ -650,21 +652,23 @@ BackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
 
     // If it's an array or we're dealing with derivatives, step to the
     // right element.
-    TypeDesc t = type.simpletype();
+    TypeDesc t               = type.simpletype();
+    llvm::Type* element_type = llvm_type(t.elementtype());
     if (t.arraylen || deriv) {
         int d = deriv * std::max(1, t.arraylen);
         if (arrayindex)
             arrayindex = ll.op_add(arrayindex, ll.constant(d));
         else
             arrayindex = ll.constant(d);
-        dst_ptr = ll.GEP(dst_ptr, arrayindex);
+        dst_ptr = ll.GEP(element_type, dst_ptr, arrayindex);
     }
 
     // If it's multi-component (triple or matrix), step to the right field
     if (!type.is_closure_based() && t.aggregate > 1)
-        dst_ptr = ll.GEP(dst_ptr, 0, component);
+        dst_ptr = ll.GEP(element_type, dst_ptr, 0, component);
 
     // Finally, store the value.
+    // TODO: broken, pointer type comparison no longer works with opaque pointers.
     if (t == TypeString && dst_ptr->getType() == ll.type_int64_ptr()
         && new_val->getType() == ll.type_char_ptr()) {
         // Special case: we are still ickily storing strings sometimes as a
@@ -697,7 +701,7 @@ BackendLLVM::llvm_store_component_value(llvm::Value* new_val, const Symbol& sym,
     OSL_DASSERT(sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast(result, ll.type_float_ptr());
-    result = ll.GEP(result, component);  // get the component
+    result = ll.GEP(ll.type_float(), result, component);  // get the component
 
     // Finally, store the value.
     ll.op_store(new_val, result);
@@ -709,7 +713,7 @@ BackendLLVM::llvm_store_component_value(llvm::Value* new_val, const Symbol& sym,
 llvm::Value*
 BackendLLVM::groupdata_field_ref(int fieldnum)
 {
-    return ll.GEP(groupdata_ptr(), 0, fieldnum,
+    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum,
                   llnamefmt("{}_ref", m_groupdata_field_names[fieldnum]));
 }
 
@@ -730,9 +734,8 @@ BackendLLVM::groupdata_field_ptr(int fieldnum, TypeDesc type)
 llvm::Value*
 BackendLLVM::layer_run_ref(int layer)
 {
-    int fieldnum           = 0;  // field 0 is the layer_run array
-    llvm::Value* layer_run = groupdata_field_ref(fieldnum);
-    return ll.GEP(layer_run, 0, layer);
+    int fieldnum = 0;  // field 0 is the layer_run array
+    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum, layer);
 }
 
 
@@ -741,8 +744,8 @@ llvm::Value*
 BackendLLVM::userdata_initialized_ref(int userdata_index)
 {
     int fieldnum = 1;  // field 1 is the userdata_initialized array
-    llvm::Value* userdata_initialized = groupdata_field_ref(fieldnum);
-    return ll.GEP(userdata_initialized, 0, userdata_index);
+    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum,
+                  userdata_index);
 }
 
 
@@ -929,11 +932,13 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
                 if (Result.has_derivs()
                     && Result.typespec().elementtype().is_float_based()) {
                     // dx
-                    ll.op_memset(ll.GEP(llvm_void_ptr(Result, 1), dstcomp), 0,
-                                 1, rt.basesize());
+                    ll.op_memset(ll.GEP(ll.type_void_ptr(),
+                                        llvm_void_ptr(Result, 1), dstcomp),
+                                 0, 1, rt.basesize());
                     // dy
-                    ll.op_memset(ll.GEP(llvm_void_ptr(Result, 2), dstcomp), 0,
-                                 1, rt.basesize());
+                    ll.op_memset(ll.GEP(ll.type_void_ptr(),
+                                        llvm_void_ptr(Result, 2), dstcomp),
+                                 0, 1, rt.basesize());
                 }
             } else
                 llvm_zero_derivs(Result);

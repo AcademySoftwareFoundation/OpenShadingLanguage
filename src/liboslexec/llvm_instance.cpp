@@ -638,9 +638,11 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
         } else if (use_optix() && !sym.typespec().is_closure()) {
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
-            llvm::Value* cuda_var = getOrAllocateCUDAVariable(sym);
+            llvm::Value* cuda_var     = getOrAllocateCUDAVariable(sym);
+            llvm::Type* cuda_var_type = llvm_typedesc(
+                sym.typespec().elementtype());
             // memcpy the initial value from the CUDA variable
-            llvm::Value* src = ll.ptr_cast(ll.GEP(cuda_var, 0),
+            llvm::Value* src = ll.ptr_cast(ll.GEP(cuda_var_type, cuda_var, 0),
                                            ll.type_void_ptr());
             llvm::Value* dst = llvm_void_ptr(sym);
             TypeDesc t       = sym.typespec().simpletype();
@@ -1243,8 +1245,8 @@ BackendLLVM::build_llvm_instance(bool groupentry)
                 fmtformat("checking for already-run layer {} {} {}",
                           this->layer(), inst()->layername(),
                           inst()->shadername()));
-        llvm::Value* executed         = ll.op_eq(ll.op_load(layerfield),
-                                                 ll.constant_bool(true));
+        llvm::Value* executed = ll.op_eq(ll.op_load(ll.type_bool(), layerfield),
+                                         ll.constant_bool(true));
         llvm::BasicBlock* then_block  = ll.new_basic_block();
         llvm::BasicBlock* after_block = ll.new_basic_block();
         ll.op_branch(executed, then_block, after_block);

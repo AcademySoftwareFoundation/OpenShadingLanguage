@@ -664,7 +664,7 @@ public:
     bool dump_forced_llvm_bool_symbols() const
     {
         return m_dump_forced_llvm_bool_symbols;
-    }    
+    }
     bool dump_uniform_symbols() const { return m_dump_uniform_symbols; }
     bool dump_varying_symbols() const { return m_dump_varying_symbols; }
     ustring llvm_prune_ir_strategy() const { return m_llvm_prune_ir_strategy; }

@@ -751,7 +751,7 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
         Mask partial_mask(false);
         for (int i = 0; i < WidthT; ++i) {
             Vec3 pos = bsg->varying.P[i];
-            if ((static_cast<int>(pos.y * 12) % 2) == 0) {                
+            if ((static_cast<int>(pos.y * 12) % 2) == 0) {
                 partial_mask.set_on(i);
             }
         }

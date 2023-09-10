@@ -282,6 +282,9 @@ public:
     /// null, may be used in renderer-specific ways to specialize a handle
     /// based on certain texture option choices.
     virtual TextureHandle*
+    get_texture_handle(ustring filename, ShadingContext* context,
+                       const TextureOpt* options = nullptr);
+    virtual TextureHandle*
     get_texture_handle(ustringhash filename, ShadingContext* context,
                        const TextureOpt* options = nullptr);
 

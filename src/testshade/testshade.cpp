@@ -80,6 +80,7 @@ static bool debugnan             = false;
 static bool debug_uninit         = false;
 static bool use_group_outputs    = false;
 static bool do_oslquery          = false;
+static bool print_groupdata      = false;
 static bool inbuffer             = false;
 static bool use_shade_image      = false;
 static bool userdata_isconnected = false;
@@ -819,6 +820,8 @@ getargs(int argc, const char* argv[])
       .help("Specify group outputs, not global outputs");
     ap.arg("--oslquery", &do_oslquery)
       .help("Test OSLQuery at runtime");
+    ap.arg("--print-groupdata", &print_groupdata)
+        .help("Print groupdata size to stdout");
     ap.arg("--inbuffer", &inbuffer)
       .help("Compile osl source from and to jbuffer");
     ap.arg("--no-output-placement")
@@ -2296,6 +2299,16 @@ test_shade(int argc, const char* argv[])
             std::cout << texturesys->getstats(5) << "\n";
         std::cout << ustring::getstats() << "\n";
     }
+
+    // TODO: Include batched support
+    if ((debug1 || print_groupdata) && !batched) {
+        int groupdata_size;
+        shadingsys->getattribute(shadergroup.get(), "llvm_groupdata_size",
+                                 TypeDesc::INT, &groupdata_size);
+
+        std::cout << "Groupdata size: " << groupdata_size << "\n";
+    }
+
 
     // Give the renderer a chance to do initial cleanup while everything is still alive
     rend->clear();

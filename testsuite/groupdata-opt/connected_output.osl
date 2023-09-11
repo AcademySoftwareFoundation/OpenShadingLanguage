@@ -1,0 +1,10 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// upstream shader connects directly to output parameter;
+// make sure we don't optimize it onto stack
+shader connected_output_shader(output float Val_Out = -2.)
+{
+    printf("side-effect\n");
+}

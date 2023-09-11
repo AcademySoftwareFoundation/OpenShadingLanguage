@@ -13,18 +13,18 @@
 
 #include "render_state.h"
 
-// Extern all global string variables used by free function renderer services.
-// NOTE:  C linkage with a "RS_" prefix is used to allow for unmangled
-// non-colliding global symbol names, so its easier to pass them to
-// OSL::register_JIT_Global(name, addr) for host execution
-// NOTE:  the STRING_PARAMS macro adapts to OSL_HOST_RS_BITCODE
-// to utilize the RS_ prefix.  RS_ prefixed versions of all OSL::Strings
-// instances have been created by rs_free_function.h, so the same STRING_PARAMS
-// macro can be used for renderer service or OSL strings.
-#define RS_STRDECL(str, var_name) extern "C" OSL::ustring RS_##var_name;
+// Create constexpr hashes for all strings used by the free function renderer services.
+// NOTE:  Actually ustring's should also be instantiated in host code someplace as well
+// to allow the reverse mapping of hash->string to work when processing messages
+namespace RS {
+namespace {
+namespace Hashes{
+#define RS_STRDECL(str, var_name) constexpr OSL::ustringhash var_name(OSL::strhash(str));
 #include "rs_strdecls.h"
 #undef RS_STRDECL
-
+}; //namespace Hashes
+} // unnamed namespace
+}; //namespace RS
 
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
@@ -54,10 +54,10 @@ rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr ec,
 
 OSL_RSOP bool
 rs_get_matrix_space_time(OSL::OpaqueExecContextPtr /*ec*/,
-                         OSL::Matrix44& result, OSL::StringParam from,
+                         OSL::Matrix44& result, OSL::ustringhash from,
                          float /*time*/)
 {
-    if (from == STRING_PARAMS(myspace)) {
+    if (from == RS::Hashes::myspace) {
         OSL::Matrix44 Mmyspace;
         Mmyspace.scale(OSL::Vec3(1.0, 2.0, 1.0));
         result = Mmyspace;
@@ -69,22 +69,23 @@ rs_get_matrix_space_time(OSL::OpaqueExecContextPtr /*ec*/,
 
 OSL_RSOP bool
 rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
-                                 OSL::Matrix44& result, OSL::StringParam to,
+                                 OSL::Matrix44& result, OSL::ustringhash to,
                                  float time)
 {
     using OSL::Matrix44;
 
+
     auto rs = OSL::get_rs<RenderState>(ec);
-    if (to == STRING_PARAMS(camera) || to == STRING_PARAMS(screen)
-        || to == STRING_PARAMS(NDC) || to == STRING_PARAMS(raster)) {
+    if (to == OSL::Hashes::camera || to == OSL::Hashes::screen
+        || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
         Matrix44 M { rs->world_to_camera };
 
-        if (to == STRING_PARAMS(screen) || to == STRING_PARAMS(NDC)
-            || to == STRING_PARAMS(raster)) {
+        if (to == OSL::Hashes::screen || to == OSL::Hashes::NDC
+            || to == RS::Hashes::raster) {
             float depthrange = (double)rs->yon - (double)rs->hither;
-            const auto& proj = rs->projection;
+            OSL::ustringhash proj = rs->projection;
 
-            if (proj == STRING_PARAMS(perspective)) {
+            if (proj == RS::Hashes::perspective) {
                 float tanhalffov = OIIO::fast_tan(0.5f * rs->fov * M_PI
                                                   / 180.0);
                 // clang-format off
@@ -103,7 +104,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
                 // clang-format on
                 M = M * camera_to_screen;
             }
-            if (to == STRING_PARAMS(NDC) || to == STRING_PARAMS(raster)) {
+            if (to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
                 float screenleft = -1.0, screenwidth = 2.0;
                 float screenbottom = -1.0, screenheight = 2.0;
                 // clang-format off
@@ -113,7 +114,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
                                         -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
                 // clang-format on
                 M = M * screen_to_ndc;
-                if (to == STRING_PARAMS(raster)) {
+                if (to == RS::Hashes::raster) {
                     // clang-format off
                     Matrix44 ndc_to_raster (rs->xres, 0, 0, 0,
                                             0, rs->yres, 0, 0,
@@ -162,9 +163,9 @@ rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
 
 OSL_RSOP bool
 rs_get_matrix_space(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& /*result*/,
-                    OSL::StringParam from)
+                    OSL::ustringhash from)
 {
-    if (from == STRING_PARAMS(myspace)) {
+    if (from == RS::Hashes::myspace) {
         return true;
     } else {
         return false;
@@ -173,7 +174,7 @@ rs_get_matrix_space(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& /*result*/,
 
 OSL_RSOP bool
 rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
-                            OSL::StringParam to)
+                            OSL::ustringhash to)
 {
     bool ok = rs_get_matrix_space(ec, result, to);
     if (ok) {
@@ -183,8 +184,8 @@ rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::StringParam /*from*/,
-                    OSL::StringParam /*to*/, float /*time*/,
+rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash/*from*/,
+                    OSL::ustringhash /*to*/, float /*time*/,
                     const OSL::Vec3* /*Pin*/, OSL::Vec3* /*Pout*/,
                     int /*npoints*/, OSL::TypeDesc::VECSEMANTICS /*vectype*/)
 {

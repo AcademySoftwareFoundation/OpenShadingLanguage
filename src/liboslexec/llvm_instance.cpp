@@ -485,6 +485,50 @@ BackendLLVM::build_offsets_of_ShaderGlobals(
     offset_by_index.push_back(offsetof(ShaderGlobals, backfacing));
 }
 void
+BackendLLVM::llvm_create_constant(const Symbol& sym)
+{
+    OSL_ASSERT((sym.symtype() == SymTypeConst));
+
+    TypeDesc t = sym.typespec().simpletype();
+    const int num_components = t.aggregate;
+
+    // Initialize entire array
+    const int num_elements   = t.numelements();
+
+    const int array_len = num_elements*num_components;
+    std::vector<llvm::Constant*> elements;
+    elements.reserve(array_len);
+    for (int a = 0; a < num_elements; ++a) {
+        for (int i = 0; i < num_components; ++i) {
+            int linear_index = num_components * a + i;
+            llvm::Constant *const_element = nullptr;
+            if (sym.typespec().is_float_based()) {
+                const_element = ll.constant(sym.get_float(linear_index));
+            }
+            if (sym.typespec().is_int_based()) {
+                const_element = ll.constant(sym.get_int(linear_index));
+            }
+            if (sym.typespec().is_string_based()) {
+                // TODO:  right now stored as char *, but change to int64 when we can
+                const_element = reinterpret_cast<llvm::Constant *>(ll.constant_ptr(OSL::bitcast<char *>(ustring(sym.get_string(linear_index)).hash()), ll.type_char_ptr()));
+            }
+            OSL_ASSERT(const_element && "unhandled type");
+            elements.push_back(const_element);
+        }
+    }
+
+    // NOTE: even if type is not an array, it could be aggregate 3 or 16
+    // we always just linearize it all for constants.
+    auto const_array = ll.constant_array(elements);
+    std::string unique_symname = global_unique_symname(sym);
+
+    auto global_var = ll.create_global_constant(const_array, unique_symname);
+
+    // TODO: consider changing m_const_map to unordered_map
+    m_const_map[unique_symname] = global_var;
+}
+
+void
 BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
 {
     // Don't write over connections!  Connection values are written into
@@ -521,7 +565,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
         else if (sym.typespec().is_int_based())
             u = ll.constant(std::numeric_limits<int>::min());
         else if (sym.typespec().is_string_based())
-            u = llvm_load_string(Strings::uninitialized_string);
+            u = llvm_load_stringhash(Strings::uninitialized_string);
         if (u) {
             for (int a = 0; a < alen; ++a) {
                 llvm::Value* aval = isarray ? ll.constant(a) : NULL;
@@ -596,7 +640,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             // No pre-placement: fall back to call to the renderer callback.
             llvm::Value* args[] = {
                 sg_void_ptr(),
-                llvm_load_string(symname),
+                llvm_load_stringhash(symname),
                 ll.constant(type),
                 ll.constant((int)group().m_userdata_derivs[userdata_index]),
                 groupdata_field_ptr(2 + userdata_index),  // userdata data ptr
@@ -662,10 +706,21 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                 llvm_zero_derivs(sym);
 #endif
         } else if (sym.interpolated() && !sym.typespec().is_closure()) {
+           #if 1
             // geometrically-varying param; memcpy its default value
             TypeDesc t = sym.typespec().simpletype();
-            ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
-                         t.size(), t.basesize() /*align*/);
+            if(sym.typespec().is_string()){
+                //llvm_create_constant(sym);
+                auto default_str = ll.constant64(sym.get_string().hash());
+
+                OSL_ASSERT(llvm_store_value(default_str,sym,0, nullptr, 0));
+            } else{
+               // std::cout<<"llvm_instance.cpp: symbol name: "<<sym.name()<<std::endl;
+                ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
+                            t.size(), t.basesize() /*align*/);
+           }
+           #endif
+
             if (sym.has_derivs())
                 llvm_zero_derivs(sym);
         } else {
@@ -681,12 +736,13 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                 for (int i = 0; i < num_components; ++i, ++c) {
                     // Fill in the constant val
                     llvm::Value* init_val = 0;
-                    if (elemtype.is_float_based())
+                    if (elemtype.is_float_based()) {
                         init_val = ll.constant(sym.get_float(c));
-                    else if (elemtype.is_string())
-                        init_val = llvm_load_string(sym.get_string(c));
-                    else if (elemtype.is_int())
+                    } else if (elemtype.is_string()) {
+                         init_val = llvm_load_stringhash(sym.get_string(c));
+                    } else if (elemtype.is_int()) {
                         init_val = ll.constant(sym.get_int(c));
+                    }
                     OSL_DASSERT(init_val);
                     llvm_store_value(init_val, sym, 0, arrind, i);
                 }
@@ -1289,8 +1345,14 @@ BackendLLVM::build_llvm_instance(bool groupentry)
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
         // the constant that belongs to the instance.
-        if (s.symtype() == SymTypeConst)
+        if (s.symtype() == SymTypeConst) {
+            // For array constants we will always need an llvm constant array
+            // and for scalar/aggregate constants that are passed by address
+            // we will need a constant as well.  If not used, we expect
+            // the pruning pass to remove unreferenced variables
+            llvm_create_constant(s);
             continue;
+        }
         // Skip structure placeholders
         if (s.typespec().is_structure())
             continue;
@@ -1578,7 +1640,7 @@ BackendLLVM::initialize_llvm_group()
         }
 #endif
         llvm::Function* f = ll.make_function(funcname, false,
-                                             llvm_type(rettype), params,
+                                             llvm_pass_type(rettype), params,
                                              varargs);
 
         // Skipping this in the non-JIT OptiX case suppresses an LLVM warning

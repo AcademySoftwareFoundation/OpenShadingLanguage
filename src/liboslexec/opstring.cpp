@@ -26,11 +26,17 @@ namespace pvt {
 
 
 // Only define 2-arg version of concat, sort it out upstream
-OSL_SHADEOP const char*
-osl_concat_sss(const char* s, const char* t)
+OSL_SHADEOP ustringhash_pod
+osl_concat_sss(ustringhash_pod s_, ustringhash_pod t_)
 {
-    size_t sl  = USTR(s).length();
-    size_t tl  = USTR(t).length();
+    ustringhash s_uh = ustringhash_from(s_);
+    ustringhash t_uh = ustringhash_from(t_);
+
+    ustring s = ustring_from(s_uh);
+    ustring t = ustring_from(t_uh);
+
+    size_t sl  = s.size();
+    size_t tl  = t.size();
     size_t len = sl + tl;
     std::unique_ptr<char[]> heap_buf;
     char local_buf[256];
@@ -39,38 +45,43 @@ osl_concat_sss(const char* s, const char* t)
         heap_buf.reset(new char[len]);
         buf = heap_buf.get();
     }
-    memcpy(buf, s, sl);
-    memcpy(buf + sl, t, tl);
-    return ustring(buf, len).c_str();
+    memcpy(buf, s.c_str(), sl);
+    memcpy(buf + sl, t.c_str(), tl);
+    ustring result(buf, len);
+
+    return result.uhash().hash();
 }
 
 OSL_SHADEOP int
-osl_strlen_is(const char* s)
+osl_strlen_is(ustringhash_pod s_)
 {
-    return (int)USTR(s).length();
+    auto s = ustring_from(s_);
+    return (int)s.length();
 }
 
 OSL_SHADEOP int
-osl_hash_is(const char* s)
+osl_hash_is(ustringhash_pod s_)
 {
-    return (int)USTR(s).hash();
+    auto s = ustring_from(s_);
+    return (int)s.hash();
 }
 
 OSL_SHADEOP int
-osl_getchar_isi(const char* str, int index)
+osl_getchar_isi(ustringhash_pod str_, int index)
 {
-    return str && unsigned(index) < USTR(str).length() ? str[index] : 0;
+    auto str = ustring_from(str_);
+    return str.data() && unsigned(index) < str.length() ? str[index] : 0;
 }
 
 
 OSL_SHADEOP int
-osl_startswith_iss(const char* s_, const char* substr_)
+osl_startswith_iss(ustringhash_pod s_, ustringhash_pod substr_)
 {
-    ustring substr(USTR(substr_));
+    auto substr = ustring_from(substr_);
     size_t substr_len = substr.length();
     if (substr_len == 0)  // empty substr always matches
         return 1;
-    ustring s(USTR(s_));
+    auto s = ustring_from(s_);
     size_t s_len = s.length();
     if (substr_len > s_len)  // longer needle than haystack can't
         return 0;            // match (including empty s)
@@ -78,13 +89,13 @@ osl_startswith_iss(const char* s_, const char* substr_)
 }
 
 OSL_SHADEOP int
-osl_endswith_iss(const char* s_, const char* substr_)
+osl_endswith_iss(ustringhash_pod s_, ustringhash_pod substr_)
 {
-    ustring substr(USTR(substr_));
+    auto substr = ustring_from(substr_);
     size_t substr_len = substr.length();
     if (substr_len == 0)  // empty substr always matches
         return 1;
-    ustring s(USTR(s_));
+    auto s = ustring_from(s_);
     size_t s_len = s.length();
     if (substr_len > s_len)  // longer needle than haystack can't
         return 0;            // match (including empty s)
@@ -93,41 +104,47 @@ osl_endswith_iss(const char* s_, const char* substr_)
 }
 
 OSL_SHADEOP int
-osl_stoi_is(const char* str)
+osl_stoi_is(ustringhash_pod str_)
 {
-    return str ? Strutil::from_string<int>(str) : 0;
+    auto str = ustring_from(str_);
+    return str.data() ? Strutil::from_string<int>(str) : 0;
 }
 
 OSL_SHADEOP float
-osl_stof_fs(const char* str)
+osl_stof_fs(ustringhash_pod str_)
 {
-    return str ? Strutil::from_string<float>(str) : 0.0f;
+    auto str = ustring_from(str_);
+    return str.data() ? Strutil::from_string<float>(str) : 0.0f;
 }
 
-OSL_SHADEOP const char*
-osl_substr_ssii(const char* s_, int start, int length)
+OSL_SHADEOP ustringhash_pod
+osl_substr_ssii(ustringhash_pod s_, int start, int length)
 {
-    ustring s(USTR(s_));
+    auto s = ustring_from(s_);
     int slen = int(s.length());
     if (slen == 0)
-        return NULL;  // No substring of empty string
+        return ustringhash_pod();  // No substring of empty string
     int b = start;
     if (b < 0)
         b += slen;
     b = Imath::clamp(b, 0, slen);
-    return ustring(s, b, Imath::clamp(length, 0, slen)).c_str();
+    return ustringhash_from(ustring(s, b, Imath::clamp(length, 0, slen))).hash();
 }
 
 
 OSL_SHADEOP int
-osl_regex_impl(void* sg_, const char* subject_, void* results, int nresults,
-               const char* pattern, int fullmatch)
+osl_regex_impl(void* sg_, ustringhash_pod subject_, void* results, int nresults,
+               ustringhash_pod pattern_, int fullmatch)
 {
     ShaderGlobals* sg   = (ShaderGlobals*)sg_;
     ShadingContext* ctx = sg->context;
-    const std::string& subject(ustring::from_unique(subject_).string());
+    ustringhash subject_hash = ustringhash_from(subject_);
+    ustring subject_ustr = ustring_from(subject_hash);
+    const std::string& subject(subject_ustr.string());
+    ustringhash pattern_hash = ustringhash_from(pattern_);
+    ustring pattern = ustring_from(pattern_hash);
     std::match_results<std::string::const_iterator> mresults;
-    const std::regex& regex(ctx->find_regex(USTR(pattern)));
+    const std::regex& regex(ctx->find_regex(pattern));
     if (nresults > 0) {
         std::string::const_iterator start = subject.begin();
         int res = fullmatch ? std::regex_match(subject, mresults, regex)
@@ -140,7 +157,7 @@ osl_regex_impl(void* sg_, const char* subject_, void* results, int nresults,
                 else
                     m[r] = mresults[r / 2].second - start;
             } else {
-                m[r] = USTR(pattern).length();
+                m[r] = pattern.length();
             }
         }
         return res;
@@ -152,28 +169,31 @@ osl_regex_impl(void* sg_, const char* subject_, void* results, int nresults,
 
 // TODO: transition format to from llvm_gen_printf_legacy
 //       to llvm_gen_print_fmt by providing an osl_gen_formatfmt here
-OSL_SHADEOP const char*
-osl_format(const char* format_str, ...)
+OSL_SHADEOP ustringhash_pod
+osl_format(ustringhash_pod format_str_, ...)
 {
+    auto format_str = ustring_from(format_str_);
     va_list args;
-    va_start(args, format_str);
-    std::string s = Strutil::vsprintf(format_str, args);
+    va_start(args, format_str_);
+    std::string s = Strutil::vsprintf(format_str.c_str(), args);
     va_end(args);
-    return ustring(s).c_str();
+    return ustring(s).hash();
 }
 
 
 
 OSL_SHADEOP int
-osl_split(const char* str, ustring* results, const char* sep, int maxsplit,
+osl_split(ustringhash_pod str_, ustringhash_pod* results, ustringhash_pod sep_, int maxsplit,
           int resultslen)
 {
+    auto str = ustring_from(str_);
+    auto sep = ustring_from(sep_);
     maxsplit = OIIO::clamp(maxsplit, 0, resultslen);
     std::vector<std::string> splits;
-    Strutil::split(USTR(str).string(), splits, USTR(sep).string(), maxsplit);
+    Strutil::split(str.string(), splits, sep.string(), maxsplit);
     int n = std::min(maxsplit, (int)splits.size());
     for (int i = 0; i < n; ++i)
-        results[i] = ustring(splits[i]);
+        results[i] = ustring(splits[i]).uhash().hash();
     return n;
 }
 
@@ -208,6 +228,20 @@ osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
 }
 
 ////////
+
+
+OSL_RSOP OSL::ustringhash_pod
+osl_formatfmt(OpaqueExecContextPtr exec_ctx,
+                 OSL::ustringhash_pod fmt_specification, int32_t arg_count,
+                 void* arg_types, uint32_t arg_values_size, uint8_t* arg_values)
+{
+    auto encoded_types = reinterpret_cast<const EncodedType*>(arg_types);
+
+    std::string decoded_str;
+    OSL::decode_message(fmt_specification, arg_count,
+                        encoded_types, arg_values, decoded_str);
+    return ustring(decoded_str).hash();
+}
 
 
 }  // end namespace pvt

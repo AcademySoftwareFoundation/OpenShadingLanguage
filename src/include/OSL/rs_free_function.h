@@ -26,7 +26,7 @@ extern "C" {
 }
 #endif
 
-#include <OSL/device_string.h>
+#include <OSL/hashes.h>
 #include <OSL/shaderglobals.h>
 
 // Prefix for OSL shade op declarations.
@@ -60,7 +60,7 @@ rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr oec,
 /// Returns true if ok, false if the named matrix is not known.
 OSL_RSOP bool
 rs_get_matrix_space_time(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
-                         OSL::StringParam from, float time);
+                         OSL::ustringhash from, float time);
 
 /// Get the 4x4 matrix that transforms points from "common" space to
 /// the named 'to' coordinate system to at the given time.  Suggested
@@ -68,7 +68,7 @@ rs_get_matrix_space_time(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
 /// particular renderer may have a better technique.
 OSL_RSOP bool
 rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr oec,
-                                 OSL::Matrix44& result, OSL::StringParam to,
+                                 OSL::Matrix44& result, OSL::ustringhash to,
                                  float time);
 
 /// Get the 4x4 matrix that transforms by the specified
@@ -96,7 +96,7 @@ rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr oec,
 /// at all).
 OSL_RSOP bool
 rs_get_matrix_space(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
-                    OSL::StringParam from);
+                    OSL::ustringhash from);
 
 /// Get the 4x4 matrix that transforms points from "common" space to
 /// the named 'to' coordinate system.  Since there is no time value
@@ -106,7 +106,7 @@ rs_get_matrix_space(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
 /// particular renderer may have a better technique.
 OSL_RSOP bool
 rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr oec,
-                            OSL::Matrix44& result, OSL::StringParam to);
+                            OSL::Matrix44& result, OSL::ustringhash to);
 
 /// Transform points Pin[0..npoints-1] in named coordinate system
 /// 'from' into 'to' coordinates, storing the result in Pout[] using
@@ -129,8 +129,8 @@ rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr oec,
 /// if there isn't a special nonlinear transformation between the
 /// two spaces.
 OSL_RSOP bool
-rs_transform_points(OSL::OpaqueExecContextPtr oec, OSL::StringParam from,
-                    OSL::StringParam to, float time, const OSL::Vec3* Pin,
+rs_transform_points(OSL::OpaqueExecContextPtr oec, OSL::ustringhash from,
+                    OSL::ustringhash to, float time, const OSL::Vec3* Pin,
                     OSL::Vec3* Pout, int npoints,
                     OSL::TypeDesc::VECSEMANTICS vectype);
 

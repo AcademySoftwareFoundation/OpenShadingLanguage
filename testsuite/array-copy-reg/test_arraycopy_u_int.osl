@@ -18,6 +18,8 @@ test_arraycopy_u_int (output color Cout = color(0,0,0))
     if (int(P[0]*64)%2==0) {
         farray3 = negfarray;
     }
+    printf("farray3=[%d,%d,%d]\n",farray3[0],farray3[1],farray3[2]);
     
     Cout = color(farray3[0]/10.0, farray3[1]/10.0, farray3[2]/10.0); 
+    printf("Cout=%g\n",Cout);
 }

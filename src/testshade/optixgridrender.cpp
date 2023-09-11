@@ -241,7 +241,7 @@ OptixGridRenderer::synch_attributes()
 
         // Get the size data-size, minus the ustring size
         const size_t podDataSize = cpuDataSize
-                                   - sizeof(StringParam) * numStrings;
+                                   - sizeof(ustringhash) * numStrings;
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_color_system),
                               podDataSize + sizeof(uint64_t) * numStrings));
@@ -272,7 +272,7 @@ OptixGridRenderer::synch_attributes()
         const ustring* cpuString
             = (const ustring*)(colorSys
                                + (cpuDataSize
-                                  - sizeof(StringParam) * numStrings));
+                                  - sizeof(ustringhash) * numStrings));
         CUdeviceptr gpuStrings = d_color_system + podDataSize;
         for (const ustring* end = cpuString + numStrings; cpuString < end;
              ++cpuString) {
@@ -280,7 +280,7 @@ OptixGridRenderer::synch_attributes()
             uint64_t devStr = cpuString->hash();
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
                                   sizeof(devStr), cudaMemcpyHostToDevice));
-            gpuStrings += sizeof(DeviceString);
+            gpuStrings += sizeof(ustringhash_pod);
         }
     }
     return true;

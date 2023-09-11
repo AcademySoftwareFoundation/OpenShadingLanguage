@@ -28,11 +28,11 @@ namespace pvt {
 
 
 OSL_SHADEOP void
-osl_setmessage(ShaderGlobals* sg, ustring_pod name_, long long type_, void* val,
-               int layeridx, ustring_pod sourcefile_, int sourceline)
+osl_setmessage(ShaderGlobals* sg, ustringhash_pod name_, long long type_, void* val,
+               int layeridx, ustringhash_pod sourcefile_, int sourceline)
 {
-    ustringhash name       = ustringhash_from(USTR(name_));
-    ustringhash sourcefile = ustringhash_from(USTR(sourcefile_));
+    auto name       = ustringhash_from(name_);
+    auto sourcefile = ustringhash_from(sourcefile_);
     // recreate TypeDesc -- we just crammed it into an int!
     TypeDesc type   = TYPEDESC(type_);
     bool is_closure = type.basetype == TypeDesc::UNKNOWN;  // indicates closure
@@ -67,13 +67,13 @@ osl_setmessage(ShaderGlobals* sg, ustring_pod name_, long long type_, void* val,
 
 
 OSL_SHADEOP int
-osl_getmessage(ShaderGlobals* sg, ustring_pod source_, ustring_pod name_,
+osl_getmessage(ShaderGlobals* sg, ustringhash_pod source_, ustringhash_pod name_,
                long long type_, void* val, int derivs, int layeridx,
-               ustring_pod sourcefile_, int sourceline)
+               ustringhash_pod sourcefile_, int sourceline)
 {
-    ustringhash source     = ustringhash_from(USTR(source_));
-    ustringhash name       = ustringhash_from(USTR(name_));
-    ustringhash sourcefile = ustringhash_from(USTR(sourcefile_));
+    auto source     = ustringhash_from(source_);
+    auto name       = ustringhash_from(name_);
+    auto sourcefile = ustringhash_from(sourcefile_);
 
     // recreate TypeDesc -- we just crammed it into an int!
     TypeDesc type   = TYPEDESC(type_);
@@ -81,8 +81,9 @@ osl_getmessage(ShaderGlobals* sg, ustring_pod source_, ustring_pod name_,
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
 
-    static ustringrep ktrace("trace");
-    if (source == ktrace) {
+    static ustring ktrace("trace");
+
+    if (source == ustringhash_from(ktrace)) {
         // Source types where we need to ask the renderer
         return sg->renderer->getmessage(sg, source, name, type, val, derivs);
     }

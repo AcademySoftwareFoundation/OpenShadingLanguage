@@ -27,6 +27,7 @@ class DISubroutineType;
 class ExecutionEngine;
 class Function;
 class FunctionType;
+class GlobalVariable;
 class SectionMemoryManager;
 class JITEventListener;
 class Linker;
@@ -546,6 +547,7 @@ public:
     llvm::Type* type_matrix() const { return m_llvm_type_matrix; }
     llvm::Type* type_typedesc() const { return m_llvm_type_longlong; }
     llvm::Type* type_ustring() { return m_llvm_type_ustring; }
+    llvm::Type* type_real_ustring() { return m_llvm_type_real_ustring; }
     llvm::PointerType* type_void_ptr() const { return m_llvm_type_void_ptr; }
     llvm::PointerType* type_ustring_ptr() const
     {
@@ -717,6 +719,9 @@ public:
     /// determined by the ustring_rep).
     llvm::Value* constant(ustring s);
     llvm::Value* constant(string_view s) { return constant(ustring(s)); }
+
+    llvm::Constant* constant_array(cspan<llvm::Constant*> constants);
+    llvm::GlobalVariable * create_global_constant(llvm::Constant* initializer, const std::string& llname = {});
 
     llvm::Value* llvm_mask_to_native(llvm::Value* llvm_mask);
     llvm::Value* native_to_llvm_mask(llvm::Value* native_mask);
@@ -1087,7 +1092,8 @@ private:
     llvm::Type* m_llvm_type_void;
     llvm::Type* m_llvm_type_triple;
     llvm::Type* m_llvm_type_matrix;
-    llvm::Type* m_llvm_type_ustring;
+    llvm::Type* m_llvm_type_real_ustring; // True const char *
+    llvm::Type* m_llvm_type_ustring; // UStringRep can change between int64(hash) and a const char *
     llvm::PointerType* m_llvm_type_void_ptr;
     llvm::PointerType* m_llvm_type_char_ptr;
     llvm::PointerType* m_llvm_type_bool_ptr;

@@ -176,12 +176,12 @@ namespace {
 // NOTE: keep implementation as mirror of ColorSystem::to_rgb
 void
 wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
-                        Masked<Color3> wR, StringParam fromspace)
+                        Masked<Color3> wR, ustring fromspace)
 {
     // Rather than attempt outer loop vectorization of ColorSystem::to_rgb
     // we will pull it's implementation up and insert SIMD loops inside
     // the uniform branches
-    if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
+    if (fromspace == Strings::RGB || fromspace == Strings::rgb
         || fromspace == cs.colorspace()) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -190,7 +190,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == STRING_PARAMS(hsv)) {
+    if (fromspace == Strings::hsv) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -201,7 +201,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == STRING_PARAMS(hsl)) {
+    if (fromspace == Strings::hsl) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -212,7 +212,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == STRING_PARAMS(YIQ)) {
+    if (fromspace == Strings::YIQ) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -223,7 +223,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == STRING_PARAMS(XYZ)) {
+    if (fromspace == Strings::XYZ) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -234,7 +234,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == STRING_PARAMS(xyY)) {
+    if (fromspace == Strings::xyY) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -249,7 +249,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
     // Serialize calls to ocio
     wR.mask().foreach ([=, &cs](ActiveLane lane) -> void {
         Color3 C = wR[lane];
-        Color3 R = cs.ocio_transform(fromspace, STRING_PARAMS(RGB), C, ctx);
+        Color3 R = cs.ocio_transform(fromspace, Strings::RGB, C, ctx);
         wR[lane] = R;
     });
 }
@@ -267,7 +267,7 @@ __OSL_MASKED_OP2(prepend_color_from, Wv, s)(void* bsg_, void* c_,
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
     Masked<Color3> wR(c_, Mask(mask_value));
-    StringParam fromspace = USTR(from);
+    ustring fromspace = USTR(from);
 
     wide_prepend_color_from(ctx, cs, wR, fromspace);
 }
@@ -305,15 +305,15 @@ namespace {
 
 template<typename COLOR>
 OSL_NOINLINE void
-wide_transformc(const ColorSystem cs, StringParam fromspace,
-                StringParam tospace, Masked<COLOR> wOutput,
+wide_transformc(const ColorSystem cs, ustring fromspace,
+                ustring tospace, Masked<COLOR> wOutput,
                 Wide<const COLOR> wInput, ShadingContext* context);
 
 // NOTE: keep implementation as mirror of ColorSystem::transformc
 template<typename COLOR>
 void
-wide_transformc(const ColorSystem cs, StringParam fromspace,
-                StringParam tospace, Masked<COLOR> wOutput,
+wide_transformc(const ColorSystem cs, ustring fromspace,
+                ustring tospace, Masked<COLOR> wOutput,
                 Wide<const COLOR> wInput, ShadingContext* context)
 {
     // Rather than attempt outer loop vectorization of ColorSystem::transformc
@@ -322,14 +322,14 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
     bool use_colorconfig = false;
     Block<COLOR> bCrgb;
     Wide<COLOR> wCrgb(bCrgb);
-    if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
-        || fromspace == STRING_PARAMS(linear) || fromspace == cs.colorspace()) {
+    if (fromspace == Strings::RGB || fromspace == Strings::rgb
+        || fromspace == Strings::linear || fromspace == cs.colorspace()) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C     = wInput[lane];
             wCrgb[lane] = C;
         }
-    } else if (fromspace == STRING_PARAMS(hsv)) {
+    } else if (fromspace == Strings::hsv) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -338,7 +338,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == STRING_PARAMS(hsl)) {
+    } else if (fromspace == Strings::hsl) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -347,7 +347,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == STRING_PARAMS(YIQ)) {
+    } else if (fromspace == Strings::YIQ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -356,7 +356,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == STRING_PARAMS(XYZ)) {
+    } else if (fromspace == Strings::XYZ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -365,7 +365,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == STRING_PARAMS(xyY)) {
+    } else if (fromspace == Strings::xyY) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -374,7 +374,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == STRING_PARAMS(sRGB)) {
+    } else if (fromspace == Strings::sRGB) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -389,15 +389,15 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
 
     if (use_colorconfig) {
         // do things the ColorConfig way, so skip all these other clauses...
-    } else if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
-               || tospace == STRING_PARAMS(linear)
+    } else if (tospace == Strings::RGB || tospace == Strings::rgb
+               || tospace == Strings::linear
                || tospace == cs.colorspace()) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C       = wCrgb[lane];
             wOutput[lane] = C;
         }
-    } else if (tospace == STRING_PARAMS(hsv)) {
+    } else if (tospace == Strings::hsv) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -406,7 +406,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == STRING_PARAMS(hsl)) {
+    } else if (tospace == Strings::hsl) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -415,7 +415,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == STRING_PARAMS(YIQ)) {
+    } else if (tospace == Strings::YIQ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -424,7 +424,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == STRING_PARAMS(XYZ)) {
+    } else if (tospace == Strings::XYZ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -433,7 +433,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == STRING_PARAMS(xyY)) {
+    } else if (tospace == Strings::xyY) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -442,7 +442,7 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == STRING_PARAMS(sRGB)) {
+    } else if (tospace == Strings::sRGB) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -474,8 +474,8 @@ wide_transformc(const ColorSystem cs, StringParam fromspace,
 OSL_BATCHOP void
 __OSL_MASKED_OP3(transform_color, Wv, s, s)(void* bsg_, void* Cin,
                                             int Cin_derivs, void* Cout,
-                                            int Cout_derivs, void* from_,
-                                            void* to_, unsigned int mask_value)
+                                            int Cout_derivs, ustring_pod from_,
+                                            ustring_pod to_, unsigned int mask_value)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
@@ -512,8 +512,8 @@ __OSL_MASKED_OP3(transform_color, Wv, s, s)(void* bsg_, void* Cin,
 
 OSL_BATCHOP void
 __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
-                                    void* Cout, int Cout_derivs, void* from_,
-                                    void* to_)
+                                    void* Cout, int Cout_derivs, ustring_pod from_,
+                                    ustring_pod to_)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);

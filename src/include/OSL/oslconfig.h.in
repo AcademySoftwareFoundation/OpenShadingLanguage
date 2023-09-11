@@ -151,30 +151,20 @@ fmtformat_to_n(OutIt &out, size_t n, const string_view& fmt, Args&&... args)
 }
 
 
-/// OSL_USTRINGREP_IS_HASH will be 1 if the build-time option was enabled to
-/// make the ustringrep be a ustringhash, rather than a ustring directly.
-#cmakedefine01 OSL_USTRINGREP_IS_HASH
-
-#if OSL_USTRINGREP_IS_HASH
-/// ustringrep is the class we use to represent strings in the shader.
-using ustringrep = ustringhash;
-#else
-/// ustringrep is the class we use to represent strings in the shader.
-using ustringrep = ustring;
-#endif
-
 /// ustringhash_pod is the type we use to pass hash data in llvm function calls.
 using ustringhash_pod = size_t;
 
-#if OSL_USTRINGREP_IS_HASH
-/// ustring_pod is the type we use to pass string data in llvm function calls.
-using ustring_pod = ustringhash_pod;
-#else
 /// ustring_pod is the type we use to pass string data in llvm function calls.
 using ustring_pod = const char*;
-#endif
 
 
+
+/// Convenience function to convert to a ustring.
+inline ustring
+ustring_from(ustringhash_pod h)
+{
+    return ustring::from_hash(h);
+}
 
 /// Convenience function to convert to a ustring.
 inline ustring
@@ -190,23 +180,16 @@ ustring_from(ustring u)
     return u;
 }
 
-/// Convenience function to convert to a ustring.
-inline ustring
-ustring_from(string_view s)
-{
-    return ustring(s);
-}
-
 
 /// Convenience function to convert to a ustringhash.
-inline ustringhash
+OSL_HOSTDEVICE inline ustringhash
 ustringhash_from(ustringhash u)
 {
     return u;
 }
 
 /// Convenience function to convert USTRINGHASH_POD to a ustringhash.
-inline ustringhash
+OSL_HOSTDEVICE inline ustringhash
 ustringhash_from(ustringhash_pod u) 
 {
 #if OIIO_VERSION_GREATER_EQUAL(2, 4, 10)
@@ -228,42 +211,6 @@ ustringhash_from(ustring u)
         ret = u.uhash();
     return ret;
 }
-
-
-/// Convenience function to convert to a ustringrep.
-inline ustringrep
-ustringrep_from(ustringhash h)
-{
-#if OSL_USTRINGREP_IS_HASH
-    return h;
-#else
-    return ustring::from_hash(h.hash());
-#endif
-}
-
-/// Convenience function to convert to a ustringrep.
-inline ustringrep
-ustringrep_from(ustring u)
-{
-#if OSL_USTRINGREP_IS_HASH
-    return u.hash();
-#else
-    return u;
-#endif
-}
-
-/// Convenience function to convert to a ustringrep.
-inline ustringrep
-ustringrep_from(string_view s)
-{
-    ustring u(s);
-#if OSL_USTRINGREP_IS_HASH
-    return u.hash();
-#else
-    return u;
-#endif
-}
-
 
 
 using TypeDesc_pod = int64_t;

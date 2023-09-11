@@ -49,7 +49,7 @@ rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr exec_ctx,
 
 OSL_RSOP bool
 rs_get_matrix_space_time(OSL::OpaqueExecContextPtr exec_ctx,
-                         OSL::Matrix44& result, OSL::StringParam from,
+                         OSL::Matrix44& result, OSL::ustringhash from,
                          float time)
 {
     auto sg = get_sg(exec_ctx);
@@ -58,7 +58,7 @@ rs_get_matrix_space_time(OSL::OpaqueExecContextPtr exec_ctx,
 
 OSL_RSOP bool
 rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr exec_ctx,
-                                 OSL::Matrix44& result, OSL::StringParam to,
+                                 OSL::Matrix44& result, OSL::ustringhash to,
                                  float time)
 {
     auto sg = get_sg(exec_ctx);
@@ -83,7 +83,7 @@ rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr exec_ctx,
 
 OSL_RSOP bool
 rs_get_matrix_space(OSL::OpaqueExecContextPtr exec_ctx, OSL::Matrix44& result,
-                    OSL::StringParam from)
+                    OSL::ustringhash from)
 {
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_matrix(sg, result, from);
@@ -91,15 +91,15 @@ rs_get_matrix_space(OSL::OpaqueExecContextPtr exec_ctx, OSL::Matrix44& result,
 
 OSL_RSOP bool
 rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr exec_ctx,
-                            OSL::Matrix44& result, OSL::StringParam to)
+                            OSL::Matrix44& result, OSL::ustringhash to)
 {
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_inverse_matrix(sg, result, to);
 }
 
 OSL_RSOP bool
-rs_transform_points(OSL::OpaqueExecContextPtr exec_ctx, OSL::StringParam from,
-                    OSL::StringParam to, float time, const OSL::Vec3* Pin,
+rs_transform_points(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash from,
+                    OSL::ustringhash to, float time, const OSL::Vec3* Pin,
                     OSL::Vec3* Pout, int npoints,
                     OSL::TypeDesc::VECSEMANTICS vectype)
 {

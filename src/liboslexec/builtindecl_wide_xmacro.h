@@ -176,6 +176,7 @@ DECL(__OSL_MASKED_OP(mul_closure_color), "xXXXXi")
 DECL(__OSL_OP(closure_to_string), "sXX")
 
 DECL(__OSL_OP(format), "xXis*")
+DECL(__OSL_OP(format_uniform), "ss*")
 DECL(__OSL_OP(printf), "xXis*")
 DECL(__OSL_OP(error), "xXis*")
 DECL(__OSL_OP(warning), "xXis*")
@@ -349,16 +350,16 @@ DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s), "iXXXXi")
 DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws), "iXXXXi")
 DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, Ws), "iXXXXi")
 
-DECL(__OSL_OP(dict_find_iis), "iXiX")
+DECL(__OSL_OP(dict_find_iis), "iXis")
 DECL(__OSL_MASKED_OP3(dict_find, Wi, Wi, Ws), "xXXXXi")
 
-DECL(__OSL_OP(dict_find_iss), "iXXX")
+DECL(__OSL_OP(dict_find_iss), "iXss")
 DECL(__OSL_MASKED_OP3(dict_find, Wi, Ws, Ws), "xXXXXi")
 
 DECL(__OSL_OP(dict_next), "iXi")
 DECL(__OSL_MASKED_OP(dict_next), "xXXXi")
 
-DECL(__OSL_OP(dict_value), "iXiXLX")
+DECL(__OSL_OP(dict_value), "iXisLX")
 DECL(__OSL_MASKED_OP(dict_value), "xXXXXLXi")
 
 
@@ -519,8 +520,8 @@ DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, Wm), "xXXXii")
 DECL(__OSL_MASKED_OP3(transform_normal, Wv, Wv, m), "xXXXii")
 DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, m), "xXXXii")
 
-DECL(__OSL_MASKED_OP3(transform_color, Wv, s, s), "xXXiXiXXi")
-DECL(__OSL_OP3(transform_color, v, s, s), "xXXiXiXX")
+DECL(__OSL_MASKED_OP3(transform_color, Wv, s, s), "xXXiXissi")
+DECL(__OSL_OP3(transform_color, v, s, s), "xXXiXiss")
 
 DECL(__OSL_OP3(dot, Wf, Wv, Wv), "xXXX")
 DECL(__OSL_MASKED_OP3(dot, Wf, Wv, Wv), "xXXXi")
@@ -616,12 +617,12 @@ DECL(__OSL_OP(regex_impl), "iXsXisi")
 // BATCH texturing manages the BatchedTextureOptions
 // directly in LLVM ir, and has no need for wide versions
 // of osl_texture_set_XXX functions
-DECL(__OSL_MASKED_OP(texture), "iXXXXXXXXXXiXiXiXi")
-DECL(__OSL_MASKED_OP(texture3d), "iXXXXXXXXiXiXiXi")
-DECL(__OSL_MASKED_OP(environment), "iXXXXXXXiXiXiXi")
+DECL(__OSL_MASKED_OP(texture), "iXsXXXXXXXXiXiXiXi")
+DECL(__OSL_MASKED_OP(texture3d), "iXsXXXXXXiXiXiXi")
+DECL(__OSL_MASKED_OP(environment), "iXsXXXXXiXiXiXi")
 DECL(__OSL_OP(resolve_udim_uniform), "XXXXff")
 DECL(__OSL_MASKED_OP(resolve_udim), "xXXXXXXi")
-DECL(__OSL_OP(get_textureinfo_uniform), "iXXXXXX")
+DECL(__OSL_OP(get_textureinfo_uniform), "iXsXsXX")
 
 // Wide Code generator will set trace options directly in LLVM IR
 // without calling helper functions

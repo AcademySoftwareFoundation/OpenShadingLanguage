@@ -73,6 +73,8 @@ public:
 
     typedef std::map<std::string, llvm::Value*> AllocationMap;
 
+    void llvm_create_constant(const Symbol& sym);
+
     void llvm_assign_initial_value(const Symbol& sym, bool force = false);
     llvm::LLVMContext& llvm_context() const { return ll.context(); }
     AllocationMap& named_values() { return m_named_values; }
@@ -238,7 +240,6 @@ public:
     /// map, the symbol is alloca'd and placed in the map.
     llvm::Value* getOrAllocateLLVMSymbol(const Symbol& sym);
 
-#if OSL_USE_OPTIX
     /// Return a globally unique (to the JIT module) name for symbol `sym`,
     /// assuming it's part of the currently examined layer of the group.
     std::string global_unique_symname(const Symbol& sym)
@@ -253,6 +254,7 @@ public:
                          sym_name, group().name(), inst_->layername(), layer);
     }
 
+#if OSL_USE_OPTIX
     /// Allocate a CUDA variable for the given OSL symbol and return a pointer
     /// to the corresponding LLVM GlobalVariable, or return the pointer if it
     /// has already been allocated.

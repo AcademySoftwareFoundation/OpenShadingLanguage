@@ -48,7 +48,7 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 #include "define_opname_macros.h"
 
 OSL_BATCHOP int
-__OSL_OP(dict_find_iis)(void* bsg_, int nodeID, void* query)
+__OSL_OP(dict_find_iis)(void* bsg_, int nodeID, ustring_pod query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return bsg->uniform.context->dict_find(
@@ -82,7 +82,7 @@ __OSL_MASKED_OP3(dict_find, Wi, Wi, Ws)(void* bsg_, void* wout, void* wnodeID,
 
 
 OSL_BATCHOP int
-__OSL_OP(dict_find_iss)(void* bsg_, void* dictionary, void* query)
+__OSL_OP(dict_find_iss)(void* bsg_, ustring_pod dictionary, ustring_pod query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return bsg->uniform.context->dict_find(
@@ -145,12 +145,12 @@ __OSL_MASKED_OP(dict_next)(void* bsg_, void* wout, void* wNodeID,
 
 
 OSL_BATCHOP int
-__OSL_OP(dict_value)(void* bsg_, int nodeID, void* attribname, long long type,
+__OSL_OP(dict_value)(void* bsg_, int nodeID, ustring_pod attribname, long long type,
                      void* data)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return bsg->uniform.context->dict_value(nodeID, USTR(attribname),
-                                            TYPEDESC(type), data);
+                                            TYPEDESC(type), data, false);
 }
 
 namespace {  // anonymous
@@ -169,7 +169,7 @@ template<typename ValueT> struct DictValueGetter<ValueT, false> {
 
             ValueT value;
             int result = context->dict_value(nodeID, attribname, wdest.type(),
-                                             &value);
+                                             &value, false);
             wout[lane] = result;
             if (result) {
                 dest[lane] = value;
@@ -191,7 +191,7 @@ template<typename ValueT> struct DictValueGetter<ValueT, true> {
             ustring attribname = wAttribName[lane];
             ElementType value[dest_array.length()];
             int result = context->dict_value(nodeID, attribname, wdest.type(),
-                                             &value[0]);
+                                             &value[0], false);
             auto dest  = dest_array[lane];
             for (int element = 0; element < dest.length(); ++element) {
                 dest[element] = value[element];

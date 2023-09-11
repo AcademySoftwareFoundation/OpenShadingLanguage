@@ -561,15 +561,18 @@ void
 LLVM_Util::ustring_rep(UstringRep rep)
 {
     m_ustring_rep       = rep;
-    m_llvm_type_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
-    // ^^ When m_ustring_rep != UstringRep::charptr, we'd ideally want to make
-    // it a uint directly, but that is wreaking havoc with function
-    // signatures, so continue to disguise it as a pointer.
-    // m_llvm_type_ustring = (sizeof(size_t) == sizeof(uint64_t))
-    //                           ? llvm::Type::getInt64Ty(*m_llvm_context)
-    //                           : llvm::Type::getInt32Ty(*m_llvm_context);
+    m_llvm_type_real_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
+    if (m_ustring_rep == UstringRep::charptr) {
+        m_llvm_type_ustring = m_llvm_type_real_ustring;
+    } else {
+        OSL_ASSERT(m_ustring_rep == UstringRep::hash);
+        m_llvm_type_ustring = llvm::Type::getInt64Ty(*m_llvm_context);
+    }
     m_llvm_type_ustring_ptr  = llvm::PointerType::get(m_llvm_type_ustring, 0);
-    m_llvm_type_wide_ustring = llvm_vector_type(m_llvm_type_ustring,
+
+    // Batched versions haven't been updated to handle hash yet.
+    // For now leave them using the real ustring regardless of UstringRep
+    m_llvm_type_wide_ustring = llvm_vector_type(m_llvm_type_real_ustring,
                                                 m_vector_width);
     m_llvm_type_wide_ustring_ptr
         = llvm::PointerType::get(m_llvm_type_wide_ustring, 0);
@@ -3022,6 +3025,7 @@ LLVM_Util::make_function(const std::string& name, bool fastcall,
     OSL_ASSERT(maybe_func && "getOrInsertFunction returned NULL");
     // if (!llvm::isa<llvm::Function>(maybe_func)) {
     //     print("make_function: getOrInsertFunction returned non-function for {}\n", name);
+    //     print("    return type: {}\n", llvm_typename(rettype));
     //     for (auto p : params)
     //         print("   param type: {}\n", llvm_typename(p));
     // }
@@ -3433,6 +3437,27 @@ LLVM_Util::constant128(uint64_t left, uint64_t right)
     return llvm::ConstantInt::get(context(), llvm::APInt(128, refBigNum));
 }
 
+llvm::Constant* 
+LLVM_Util::constant_array(cspan<llvm::Constant*> constants)
+{
+    OSL_ASSERT(constants.size() > 0);
+    auto element_type = constants[0]->getType();
+    auto array_type = llvm::ArrayType::get(element_type, constants.size());
+    return llvm::ConstantArray::get(array_type, makeArrayRef(constants));
+}
+
+llvm::GlobalVariable *
+LLVM_Util::create_global_constant(llvm::Constant* initializer, const std::string& llname)
+{
+    return new llvm::GlobalVariable(
+        *m_llvm_module, 
+        initializer->getType(), 
+        true /*is_constant*/,
+        llvm::GlobalVariable::PrivateLinkage,
+        initializer,
+        llname
+        );
+}
 
 llvm::Constant*
 LLVM_Util::wide_constant(int width, int value)
@@ -3496,15 +3521,7 @@ LLVM_Util::constant(ustring s)
         size_t p = s.hash();
         auto str = (size_t_bits == 64) ? constant64(uint64_t(p))
                                        : constant(int(p));
-#if OSL_USTRINGREP_IS_HASH
         return str;
-#else
-        // Then cast the int to a char*. Ideally, we would only do that if the rep
-        // were a charptr, but we disguise the hashes as char*'s also to avoid
-        // ugliness with function signatures differing between CPU and GPU.
-        return builder().CreateIntToPtr(str, m_llvm_type_ustring,
-                                        "ustring constant");
-#endif
     }
 }
 

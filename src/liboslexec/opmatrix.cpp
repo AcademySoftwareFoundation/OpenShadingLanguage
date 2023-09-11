@@ -11,7 +11,7 @@
 /////////////////////////////////////////////////////////////////////////
 
 #include "oslexec_pvt.h"
-#include <OSL/device_string.h>
+#include <OSL/hashes.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/fmt_util.h>
@@ -136,28 +136,29 @@ osl_transformn_dvmdv(void* result, void* M_, void* v_)
 
 #ifndef __CUDACC__
 OSL_SHADEOP int
-osl_get_matrix(OpaqueExecContextPtr oec, void* r, const char* from)
+osl_get_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod from_)
 {
-    if (HDSTR(from) == STRING_PARAMS(common)
-        || HDSTR(from) == get_commonspace_synonym(oec)) {
+    ustringhash from = ustringhash_from(from_);
+    if (from == Hashes::common
+        || from == get_commonspace_synonym(oec)) {
         MAT(r).makeIdentity();
         return true;
     }
-    if (HDSTR(from) == STRING_PARAMS(shader)) {
+    if (from == Hashes::shader) {
         rs_get_matrix_xform_time(oec, MAT(r), get_shader2common(oec),
                                  get_time(oec));
         return true;
     }
-    if (HDSTR(from) == STRING_PARAMS(object)) {
+    if (from == Hashes::object) {
         rs_get_matrix_xform_time(oec, MAT(r), get_object2common(oec),
                                  get_time(oec));
         return true;
     }
-    int ok = rs_get_matrix_space_time(oec, MAT(r), HDSTR(from), get_time(oec));
+    int ok = rs_get_matrix_space_time(oec, MAT(r), from, get_time(oec));
     if (!ok) {
         MAT(r).makeIdentity();
         if (get_unknown_coordsys_error(oec)) {
-            OSL::errorfmt(oec, "Unknown transformation \"{}\"", HDSTR(from));
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"", from);
         }
     }
     return ok;
@@ -166,29 +167,30 @@ osl_get_matrix(OpaqueExecContextPtr oec, void* r, const char* from)
 
 
 OSL_SHADEOP int
-osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to)
+osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod to_)
 {
-    if (HDSTR(to) == STRING_PARAMS(common)
-        || HDSTR(to) == get_commonspace_synonym(oec)) {
+    ustringhash to = ustringhash_from(to_);
+    if (to == Hashes::common
+    || to == get_commonspace_synonym(oec)) {
         MAT(r).makeIdentity();
         return true;
     }
-    if (HDSTR(to) == STRING_PARAMS(shader)) {
+    if (to == Hashes::shader) {
         rs_get_inverse_matrix_xform_time(oec, MAT(r), get_shader2common(oec),
                                          get_time(oec));
         return true;
     }
-    if (HDSTR(to) == STRING_PARAMS(object)) {
+    if (to == Hashes::object) {
         rs_get_inverse_matrix_xform_time(oec, MAT(r), get_object2common(oec),
                                          get_time(oec));
         return true;
     }
-    int ok = rs_get_inverse_matrix_space_time(oec, MAT(r), HDSTR(to),
+    int ok = rs_get_inverse_matrix_space_time(oec, MAT(r), to,
                                               get_time(oec));
     if (!ok) {
         MAT(r).makeIdentity();
         if (get_unknown_coordsys_error(oec)) {
-            OSL::errorfmt(oec, "Unknown transformation \"{}\"", HDSTR(to));
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"", to);
         }
     }
     return ok;
@@ -197,26 +199,26 @@ osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to)
 // Implemented by the renderer
 #    define OSL_SHADEOP_EXPORT extern "C" OSL_DLL_EXPORT
 OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int
-osl_get_matrix(OpaqueExecContextPtr oec, void* r, const char* from);
+osl_get_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod from);
 OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int
-osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, const char* to);
+osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod to);
 #    undef OSL_SHADEOP_EXPORT
 #endif  // __CUDACC__
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, const char* from)
+osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, ustringhash_pod from_)
 {
     Matrix44 m;
-    bool ok = osl_get_matrix(oec, &m, from);
+    bool ok = osl_get_matrix(oec, &m, from_);
     if (ok)
         MAT(r) = m * MAT(r);
 #ifndef __CUDACC__
     // TODO: How do we manage this in OptiX?
     else {
         if (get_unknown_coordsys_error(oec)) {
-            OSL::errorfmt(oec, "Unknown transformation \"{}\"", HDSTR(from));
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"", ustringhash_from(from_));
         }
     }
 #endif
@@ -226,12 +228,12 @@ osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, const char* from)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, const char* from,
-                       const char* to)
+osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod from_,
+                       ustringhash_pod to_)
 {
     Matrix44 Mfrom, Mto;
-    int ok = osl_get_matrix(oec, &Mfrom, from);
-    ok &= osl_get_inverse_matrix(oec, &Mto, to);
+    int ok = osl_get_matrix(oec, &Mfrom, from_);
+    ok &= osl_get_inverse_matrix(oec, &Mto, to_);
     MAT(r) = Mfrom * Mto;
     return ok;
 }
@@ -240,19 +242,22 @@ osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, const char* from,
 
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs,
-                     void* Pout, int Pout_derivs, void* from, void* to,
+                     void* Pout, int Pout_derivs, ustringhash_pod from_, ustringhash_pod to_,
                      int vectype)
 {
     Matrix44 M;
     int ok;
     Pin_derivs &= Pout_derivs;  // ignore derivs if output doesn't need it
-    if (HDSTR(from) == STRING_PARAMS(common))
-        ok = osl_get_inverse_matrix(oec, &M, (const char*)to);
-    else if (HDSTR(to) == STRING_PARAMS(common))
-        ok = osl_get_matrix(oec, &M, (const char*)from);
+    ustringhash from = ustringhash_from(from_);
+    ustringhash to = ustringhash_from(to_);
+
+    if (from == Hashes::common)
+        ok = osl_get_inverse_matrix(oec, &M, to_);
+    else if (to == Hashes::common)
+        ok = osl_get_matrix(oec, &M, from_);
     else
-        ok = osl_get_from_to_matrix(oec, &M, (const char*)from,
-                                    (const char*)to);
+        ok = osl_get_from_to_matrix(oec, &M, from_,
+                                    to_);
     if (ok) {
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs)
@@ -297,18 +302,20 @@ osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_transform_triple_nonlinear(OpaqueExecContextPtr oec, void* Pin,
                                int Pin_derivs, void* Pout, int Pout_derivs,
-                               void* from, void* to, int vectype)
+                               ustringhash_pod from_, ustringhash_pod to_, int vectype)
 {
 #ifndef __CUDACC__
+    ustringhash from = ustringhash_from(from_);
+    ustringhash to = ustringhash_from(to_);
 
-    if (rs_transform_points(oec, HDSTR(from), HDSTR(to), get_time(oec),
+    if (rs_transform_points(oec, from, to, get_time(oec),
                             (const Vec3*)Pin, (Vec3*)Pout, 1,
                             (TypeDesc::VECSEMANTICS)vectype)) {
         // Renderer had a direct way to transform the points between the
         // two spaces.
         if (Pout_derivs) {
             if (Pin_derivs) {
-                rs_transform_points(oec, HDSTR(from), HDSTR(to), get_time(oec),
+                rs_transform_points(oec, from, to, get_time(oec),
                                     (const Vec3*)Pin + 1, (Vec3*)Pout + 1, 2,
                                     TypeDesc::VECTOR);
             } else {
@@ -323,8 +330,8 @@ osl_transform_triple_nonlinear(OpaqueExecContextPtr oec, void* Pin,
     // Renderer couldn't or wouldn't transform directly
     // Except in OptiX we're the renderer will directly implement
     // the transform in osl_transform_triple.
-    return osl_transform_triple(oec, Pin, Pin_derivs, Pout, Pout_derivs, from,
-                                to, vectype);
+    return osl_transform_triple(oec, Pin, Pin_derivs, Pout, Pout_derivs, from_,
+                                to_, vectype);
 }
 
 

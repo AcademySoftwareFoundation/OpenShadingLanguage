@@ -6,8 +6,6 @@
 
 #include <OSL/oslconfig.h>
 
-#include <OSL/device_string.h>  // for StringParam
-
 // All the the state free functions in rs_simplerend.cpp will need to do their job
 // NOTE:  Additional data is here that will be used by rs_simplerend.cpp in future PR's
 //        procedurally generating ShaderGlobals.
@@ -15,7 +13,7 @@ struct RenderState {
     int xres;
     int yres;
     OSL::Matrix44 world_to_camera;
-    OSL::StringParam projection;
+    OSL::ustringhash projection;
     float pixelaspect;
     float screen_window[4];
     float shutter[2];

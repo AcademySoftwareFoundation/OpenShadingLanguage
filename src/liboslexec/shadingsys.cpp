@@ -1132,7 +1132,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_stat_inst_merge_time(0)
     , m_stat_max_llvm_local_mem(0)
 {
-    m_shading_state_uniform.m_commonspace_synonym     = ustring("world");
+    m_shading_state_uniform.m_commonspace_synonym     = ustringhash("world");
     m_shading_state_uniform.m_unknown_coordsys_error  = true;
     m_shading_state_uniform.m_max_warnings_per_thread = 100;
 
@@ -1233,7 +1233,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
 
     setup_op_descriptors();
 
-    colorsystem().set_colorspace(m_colorspace);
+    colorsystem().set_colorspace(ustringhash_from(m_colorspace));
 }
 
 
@@ -1566,6 +1566,12 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
         return true;                                 \
     }
 
+#define ATTR_SET_STRINGHASH(_name, _dst)                 \
+    if (name == _name && type == TypeDesc::STRING) { \
+        _dst = ustringhash(*(const char**)val);          \
+        return true;                                 \
+    }
+
     if (name == "options" && type == TypeDesc::STRING) {
         return OIIO::optparser(*this, *(const char**)val);
     }
@@ -1653,7 +1659,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("optix_no_inline_rend_lib", int, m_optix_no_inline_rend_lib);
     ATTR_SET("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
     ATTR_SET("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
-    ATTR_SET_STRING("commonspace",
+    ATTR_SET_STRINGHASH("commonspace",
                     m_shading_state_uniform.m_commonspace_synonym);
     ATTR_SET_STRING("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING("debug_layername", m_debug_layername);
@@ -1676,7 +1682,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     }
     if (name == "colorspace" && type == TypeDesc::STRING) {
         ustring c = ustring(*(const char**)val);
-        if (colorsystem().set_colorspace(c))
+        if (colorsystem().set_colorspace(ustringhash_from(c)))
             m_colorspace = c;
         else
             errorfmt("Unknown color space \"{}\"", c);
@@ -1752,6 +1758,12 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
         return true;                                 \
     }
 
+#define ATTR_DECODE_STRINGHASH(_name, _src)              \
+    if (name == _name && type == TypeDesc::STRING) { \
+        *(const char**)(val) = ustring_from(_src).c_str();         \
+        return true;                                 \
+    }
+
     lock_guard guard(m_mutex);  // Thread safety
 
     ATTR_DECODE_STRING("searchpath:shader", m_searchpath);
@@ -1820,7 +1832,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("relaxed_param_typecheck", int, m_relaxed_param_typecheck);
     ATTR_DECODE("max_warnings_per_thread", int,
                 m_shading_state_uniform.m_max_warnings_per_thread);
-    ATTR_DECODE_STRING("commonspace",
+    ATTR_DECODE_STRINGHASH("commonspace",
                        m_shading_state_uniform.m_commonspace_synonym);
     ATTR_DECODE_STRING("colorspace", m_colorspace);
     ATTR_DECODE_STRING("debug_groupname", m_debug_groupname);
@@ -4135,7 +4147,7 @@ ShadingSystemImpl::merge_instances(ShaderGroup& group, bool post_opt)
 #ifndef __CUDACC__
 
 OIIO::ColorProcessorHandle
-OCIOColorSystem::load_transform(StringParam fromspace, StringParam tospace,
+OCIOColorSystem::load_transform(ustring fromspace, ustring tospace,
                                 ShadingSystemImpl* ss)
 {
     if (fromspace != m_last_colorproc_fromspace
@@ -4367,7 +4379,7 @@ ClosureRegistry::get_entry(ustring name) const
 
 template<>
 bool
-ShadingContext::ocio_transform(StringParam fromspace, StringParam tospace,
+ShadingContext::ocio_transform(ustring fromspace, ustring tospace,
                                const Color3& C, Color3& Cout)
 {
 #ifndef __CUDA_ARCH__
@@ -4384,7 +4396,7 @@ ShadingContext::ocio_transform(StringParam fromspace, StringParam tospace,
 
 template<>
 bool
-ShadingContext::ocio_transform(StringParam fromspace, StringParam tospace,
+ShadingContext::ocio_transform(ustring fromspace, ustring tospace,
                                const Dual2<Color3>& C, Dual2<Color3>& Cout)
 {
 #ifndef __CUDA_ARCH__
@@ -4641,11 +4653,11 @@ osl_uninit_check(long long typedesc_, void* vals_, void* sg,
             }
     }
     if (typedesc.basetype == TypeDesc::STRING) {
-        ustring* vals = (ustring*)vals_;
+        OSL::ustringhash* vals = (OSL::ustringhash*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
-            if (vals[c] == Strings::uninitialized_string) {
+            if (vals[c] == Hashes::uninitialized_string) {
                 uninit  = true;
-                vals[c] = ustring();
+                vals[c] = OSL::ustringhash();
             }
     }
     if (uninit) {
@@ -4698,22 +4710,26 @@ osl_range_check_err(int indexvalue, int length, ustringhash_pod symname_,
 
 // Asked if the raytype is a name we can't know until mid-shader.
 OSL_SHADEOP int
-osl_raytype_name(void* sg_, ustring_pod name)
+osl_raytype_name(void* sg_, ustringhash_pod name_)
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    int bit           = sg->context->shadingsys().raytype_bit(USTR(name));
+    auto name = ustring_from(name_);
+    // TODO: add 2nd version of raytype_bit that takes ustringhash
+    int bit           = sg->context->shadingsys().raytype_bit(name);
     return (sg->raytype & bit) != 0;
 }
 
 
 OSL_SHADEOP int
-osl_get_attribute(void* sg_, int dest_derivs, ustring_pod obj_name,
-                  ustring_pod attr_name, int array_lookup, int index,
+osl_get_attribute(void* sg_, int dest_derivs, ustringhash_pod obj_name_,
+                  ustringhash_pod attr_name_, int array_lookup, int index,
                   long long attr_type, void* attr_dest)
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    ustringhash obj_name = ustringhash_from(obj_name_);
+    ustringhash attr_name = ustringhash_from(attr_name_);
     return sg->context->osl_get_attribute(sg, sg->objdata, dest_derivs,
-                                          USTR(obj_name), USTR(attr_name),
+                                          obj_name, attr_name,
                                           array_lookup, index,
                                           TYPEDESC(attr_type), attr_dest);
 }
@@ -4721,28 +4737,33 @@ osl_get_attribute(void* sg_, int dest_derivs, ustring_pod obj_name,
 
 
 OSL_SHADEOP int
-osl_bind_interpolated_param(void* sg_, ustring_pod name, long long type,
+osl_bind_interpolated_param(void* sg_, ustringhash_pod name_, long long type,
                             int userdata_has_derivs, void* userdata_data,
                             int /*symbol_has_derivs*/, void* symbol_data,
                             int symbol_data_size, char* userdata_initialized,
                             int /*userdata_index*/)
 {
     char status = *userdata_initialized;
+    ustringhash name = ustringhash_from(name_);
     if (status == 0) {
         // First time retrieving this userdata
         ShaderGlobals* sg = (ShaderGlobals*)sg_;
-        bool ok = sg->renderer->get_userdata(userdata_has_derivs, USTR(name),
-                                             TYPEDESC(type), sg, userdata_data);
-        // printf ("Binding %s %s : index %d, ok = %d\n", name,
-        //         TYPEDESC(type).c_str(),userdata_index, ok);
+        bool ok = sg->renderer->get_userdata(userdata_has_derivs, name,
+                                             TYPEDESC(type), sg, userdata_data);   
         *userdata_initialized = status = 1 + ok;  // 1 = not found, 2 = found
         sg->context->incr_get_userdata_calls();
     }
     if (status == 2) {
         int udata_size = (userdata_has_derivs ? 3 : 1) * TYPEDESC(type).size();
         // If userdata was present, copy it to the shader variable
+        if (TYPEDESC(type) == TypeDesc::STRING) {
+        const ustringhash* uh_userdata = reinterpret_cast<const ustringhash *>(userdata_data);
+        memcpy(symbol_data, uh_userdata, std::min(symbol_data_size, udata_size));
+        } 
+        else{//not string
         memcpy(symbol_data, userdata_data,
                std::min(symbol_data_size, udata_size));
+        }
         if (symbol_data_size > udata_size)
             memset((char*)symbol_data + udata_size, 0,
                    symbol_data_size - udata_size);

@@ -507,12 +507,6 @@ LLVMGEN(llvm_gen_print_fmt)
 {
     Opcode& op(rop.inst()->ops()[opnum]);
 
-    // The format op is currently handled by llvm_gen_printf_legacy,
-    // but could be moved here in future
-    // NOTE: format would not a callthrough to renderservices,
-    // but should be handled in opstring.cpp
-    OSL_ASSERT(op.opname() != op_format);
-
     // Prepare the args for the call
 
     // Which argument is the format string?  Usually 0, but for op
@@ -647,14 +641,16 @@ LLVMGEN(llvm_gen_print_fmt)
             myformat += ourformat;
             myformat += "}";
 
+            TypeDesc symty              = sym.typespec().simpletype();
+            TypeDesc basetype        = TypeDesc::BASETYPE(symty.basetype);
             // NOTE(boulos): Only for debug mode do the derivatives get printed...
             for (int a = 0; a < num_elements; ++a) {
-                llvm::Value* arrind = simpletype.arraylen ? rop.ll.constant(a)
+                llvm::Value* const_arrind = simpletype.arraylen ? rop.ll.constant(a)
                                                           : NULL;
                 if (sym.typespec().is_closure_based()) {
                     s += myformat;
 
-                    llvm::Value* v = rop.llvm_load_value(sym, 0, arrind, 0);
+                    llvm::Value* v = rop.llvm_load_value(sym, 0, const_arrind, 0);
                     v = rop.ll.call_function("osl_closure_to_ustringhash",
                                              rop.sg_void_ptr(), v);
                     encodedtypes.push_back(et);
@@ -668,28 +664,17 @@ LLVMGEN(llvm_gen_print_fmt)
                         s += " ";
                     s += myformat;
 
-                    llvm::Value* loaded;
-                    if (sym.typespec().is_string_based()) {
-                        if (rop.ll.ustring_rep()
-                            == LLVM_Util::UstringRep::hash) {
-                            loaded = rop.llvm_load_value(sym, 0, arrind, c);
-                            // The value loaded is already a hash, but masquarading as a const char *
-                            // Just need to cast it to the correct type.
-                            loaded = rop.ll.ptr_cast(loaded,
-                                                     rop.ll.type_int64());
-                        } else {
-                            if (sym.is_constant()
-                                && !sym.typespec().is_array()) {
-                                loaded = rop.llvm_load_stringhash(
-                                    sym.get_string());
-                            } else {
-                                loaded = rop.llvm_load_value(sym, 0, arrind, c);
+                    // TODO: Add llvm_load_value that does this check
+                    // internally to reduce bloat and chance of missing it
+                    llvm::Value* loaded = sym.is_constant()
+                        ? rop.llvm_load_constant_value(sym, a, c, basetype) 
+                        : rop.llvm_load_value(sym, 0, const_arrind, c, basetype);
+
+                    if (sym.typespec().is_string_based() && 
+                        (rop.ll.ustring_rep() == LLVM_Util::UstringRep::charptr)) {
+                            // Don't think this will need to be here soon
                                 loaded = rop.ll.call_function(
                                     "osl_gen_ustringhash_pod", loaded);
-                            }
-                        }
-                    } else {
-                        loaded = rop.llvm_load_value(sym, 0, arrind, c);
                     }
 
                     encodedtypes.push_back(et);
@@ -786,7 +771,15 @@ LLVMGEN(llvm_gen_print_fmt)
     if (op.opname() == op_fprintf)
         rs_func_name = "osl_gen_filefmt";
 
-    rop.ll.call_function(rs_func_name, call_args);
+    // NOTE: format creates a new ustring, so only works on host
+    if (op.opname() == op_format)
+        rs_func_name = "osl_formatfmt";
+
+    llvm::Value* ret   = rop.ll.call_function(rs_func_name, call_args);
+
+    // The format op returns a string value, put in in the right spot
+    if (op.opname() == op_format)
+        rop.llvm_store_value(ret, *rop.opargsym(op, 0));
 
     return true;
 }
@@ -794,8 +787,7 @@ LLVMGEN(llvm_gen_print_fmt)
 
 LLVMGEN(llvm_gen_printf)
 {
-    Opcode& op(rop.inst()->ops()[opnum]);
-    if ((op.opname() == "format" || rop.use_optix()))
+    if (rop.use_optix())
         return llvm_gen_printf_legacy(rop, opnum);
     else
         return llvm_gen_print_fmt(rop, opnum);
@@ -1842,7 +1834,7 @@ LLVMGEN(llvm_gen_construct_color)
         llvm::Value* args[] = {
             rop.sg_void_ptr(),             // shader globals
             rop.llvm_void_ptr(Result, 0),  // color
-            rop.llvm_load_string(Space),   // from
+            rop.llvm_load_value(Space),   // from
         };
         rop.ll.call_function("osl_prepend_color_from", args);
         // FIXME(deriv): Punt on derivs for color ctrs with space names.
@@ -1899,7 +1891,7 @@ LLVMGEN(llvm_gen_construct_triple)
             vectype = TypeDesc::NORMAL;
 
         llvm::Value* from_arg = rop.llvm_load_value(Space);
-        llvm::Value* to_arg   = rop.llvm_load_string(Strings::common);
+        llvm::Value* to_arg   = rop.llvm_load_stringhash(Strings::common);
 
         llvm::Value* args[] = { rop.sg_void_ptr(),
                                 rop.llvm_void_ptr(Result),
@@ -2082,8 +2074,8 @@ LLVMGEN(llvm_gen_transformc)
     Opcode& op(rop.inst()->ops()[opnum]);
     OSL_DASSERT(op.nargs() == 4);
     Symbol* Result = rop.opargsym(op, 0);
-    Symbol* From   = rop.opargsym(op, 1);
-    Symbol* To     = rop.opargsym(op, 2);
+    Symbol& From   = *rop.opargsym(op, 1);
+    Symbol& To     = *rop.opargsym(op, 2);
     Symbol* C      = rop.opargsym(op, 3);
 
     llvm::Value* args[] = { rop.sg_void_ptr(),
@@ -2091,8 +2083,8 @@ LLVMGEN(llvm_gen_transformc)
                             rop.ll.constant(C->has_derivs()),
                             rop.llvm_void_ptr(*Result),
                             rop.ll.constant(Result->has_derivs()),
-                            rop.llvm_load_string(*From),
-                            rop.llvm_load_string(*To) };
+                            rop.llvm_load_value(From),
+                            rop.llvm_load_value(To) };
 
     rop.ll.call_function("osl_transformc", args);
     return true;
@@ -3233,7 +3225,7 @@ LLVMGEN(llvm_gen_noise)
     llvm::Value* args[10];
     int nargs = 0;
     if (pass_name) {
-        args[nargs++] = rop.llvm_load_string(*Name);
+        args[nargs++] = rop.llvm_load_value(*Name);
     }
     llvm::Value* tmpresult = NULL;
     // triple return, or float return with derivs, passes result pointer
@@ -3395,7 +3387,7 @@ LLVMGEN(llvm_gen_getattribute)
     TypeDesc dest_type = Destination.typespec().simpletype();
 
     llvm::Value* obj_name_arg  = object_lookup ? rop.llvm_load_value(ObjectName)
-                                               : rop.llvm_load_string(ustring());
+                                               : rop.llvm_load_stringhash(ustring());
     llvm::Value* attr_name_arg = rop.llvm_load_value(Attribute);
 
     ustring object_name      = (object_lookup && ObjectName.is_constant())
@@ -3570,7 +3562,7 @@ LLVMGEN(llvm_gen_getmessage)
     llvm::Value* args[9];
     args[0] = rop.sg_void_ptr();
     args[1] = has_source ? rop.llvm_load_value(Source)
-                         : rop.ll.constant(ustring());
+                        : rop.ll.constant64(sizeof(uint64_t));
     args[2] = rop.llvm_load_value(Name);
 
     if (Data.typespec().is_closure_based()) {
@@ -3586,7 +3578,7 @@ LLVMGEN(llvm_gen_getmessage)
     args[5] = rop.ll.constant((int)Data.has_derivs());
 
     args[6] = rop.ll.constant(rop.inst()->id());
-    args[7] = rop.ll.constant(op.sourcefile());
+    args[7] = rop.llvm_load_stringhash(op.sourcefile());
     args[8] = rop.ll.constant(op.sourceline());
 
     llvm::Value* r = rop.ll.call_function("osl_getmessage", args);
@@ -3607,7 +3599,7 @@ LLVMGEN(llvm_gen_setmessage)
 
     llvm::Value* args[7];
     args[0] = rop.sg_void_ptr();
-    args[1] = rop.llvm_load_value(Name);
+    args[1] = rop.llvm_load_string(Name);
     if (Data.typespec().is_closure_based()) {
         // FIXME: secret handshake for closures ...
         args[2] = rop.ll.constant(
@@ -3620,7 +3612,7 @@ LLVMGEN(llvm_gen_setmessage)
     }
 
     args[4] = rop.ll.constant(rop.inst()->id());
-    args[5] = rop.ll.constant(op.sourcefile());
+    args[5] = rop.llvm_load_stringhash(op.sourcefile());
     args[6] = rop.ll.constant(op.sourceline());
 
     rop.ll.call_function("osl_setmessage", args);
@@ -3753,7 +3745,7 @@ LLVMGEN(llvm_gen_spline)
 
     llvm::Value* args[] = {
         rop.llvm_void_ptr(Result),
-        rop.llvm_load_string(Spline),
+        rop.llvm_load_value(Spline),
         rop.llvm_void_ptr(Value),  // make things easy
         rop.llvm_void_ptr(Knots),
         has_knot_count ? rop.llvm_load_value(Knot_count)
@@ -4114,7 +4106,7 @@ LLVMGEN(llvm_gen_pointcloud_write)
     int nattrs = (op.nargs() - 3) / 2;
 
     // Generate local space for the names/types/values arrays
-    llvm::Value* names  = rop.ll.op_alloca(rop.ll.type_ustring(), nattrs);
+    llvm::Value* names  = rop.ll.op_alloca(rop.ll.type_int64(), nattrs);
     llvm::Value* types  = rop.ll.op_alloca(rop.ll.type_typedesc(), nattrs);
     llvm::Value* values = rop.ll.op_alloca(rop.ll.type_void_ptr(), nattrs);
 
@@ -4149,7 +4141,6 @@ LLVMGEN(llvm_gen_pointcloud_write)
 
     return true;
 }
-
 
 
 LLVMGEN(llvm_gen_dict_find)

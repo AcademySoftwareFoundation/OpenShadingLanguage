@@ -209,10 +209,10 @@ __OSL_MASKED_OP2(setmessage, s, WX)(BatchedShaderGlobals* bsg_,
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
 
-    ustringrep name = USTR(name_);
+    ustring name = USTR(name_);
     MaskedData wsrcval(TYPEDESC(type), false /*has_derivs*/, mask, wvalue);
 
-    ustringrep sourcefile = USTR(sourcefile_);
+    ustring sourcefile = USTR(sourcefile_);
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -244,10 +244,10 @@ __OSL_MASKED_OP2(setmessage, Ws, WX)(BatchedShaderGlobals* bsg_, void* wname,
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
 
-    Wide<const ustringrep> wName(wname);
+    Wide<const ustring> wName(wname);
     MaskedData wsrcval(TYPEDESC(type), false /*has_derivs*/, mask, wvalue);
 
-    ustringrep sourcefile = USTR(sourcefile_);
+    ustring sourcefile = USTR(sourcefile_);
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -280,9 +280,9 @@ __OSL_MASKED_OP(getmessage)(void* bsg_, void* result, ustring_pod source_,
                             int derivs, int layeridx, ustring_pod sourcefile_,
                             int sourceline, unsigned int mask_value)
 {
-    ustringrep source     = USTR(source_);
-    ustringrep name       = USTR(name_);
-    ustringrep sourcefile = USTR(sourcefile_);
+    ustring source     = USTR(source_);
+    ustring name       = USTR(name_);
+    ustring sourcefile = USTR(sourcefile_);
 
     Mask mask(mask_value);
 

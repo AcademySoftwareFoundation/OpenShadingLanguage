@@ -527,7 +527,7 @@ __OSL_MASKED_OP(pointcloud_search)(
         va_list args;
         va_start(args, nattrs);
         for (int i = 0; i < nattrs; i++) {
-            ustringrep attr_name = USTREP(va_arg(args, ustring_pod));
+            ustring attr_name = USTR(va_arg(args, ustring_pod));
             TypeDesc attr_type   = TYPEDESC(va_arg(args, long long));
             void* out_data       = va_arg(args, void*);
             dispatch_pointcloud_get(
@@ -572,7 +572,7 @@ __OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, ustring_pod filename,
 OSL_BATCHOP int
 __OSL_MASKED_OP(pointcloud_write)(BatchedShaderGlobals* bsg,
                                   ustring_pod filename, const void* wpos_,
-                                  int nattribs, const ustringrep* attr_names,
+                                  int nattribs, const ustring* attr_names,
                                   const TypeDesc* attr_types,
                                   const void** ptrs_to_wide_attr_value,
                                   int mask_value)

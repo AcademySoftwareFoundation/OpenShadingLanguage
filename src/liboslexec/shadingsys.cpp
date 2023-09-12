@@ -815,7 +815,7 @@ ShadingSystem::find_symloc(ustring name) const
 
 
 const SymLocationDesc*
-ShadingSystem::find_symloc(ShaderGroup* group, ustring name) const
+ShadingSystem::find_symloc(const ShaderGroup* group, ustring name) const
 {
     if (group)
         return group->find_symloc(name);
@@ -834,7 +834,7 @@ ShadingSystem::find_symloc(ustring name, SymArena arena) const
 
 
 const SymLocationDesc*
-ShadingSystem::find_symloc(ShaderGroup* group, ustring name,
+ShadingSystem::find_symloc(const ShaderGroup* group, ustring name,
                            SymArena arena) const
 {
     if (group)

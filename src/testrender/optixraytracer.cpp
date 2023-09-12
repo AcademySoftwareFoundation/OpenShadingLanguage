@@ -976,7 +976,7 @@ OptixRaytracer::good(TextureHandle* handle OSL_MAYBE_UNUSED)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-OptixRaytracer::get_texture_handle(ustringhash filename,
+OptixRaytracer::get_texture_handle(ustring filename,
                                    ShadingContext* /*shading_context*/,
                                    const TextureOpt* options)
 {
@@ -984,9 +984,9 @@ OptixRaytracer::get_texture_handle(ustringhash filename,
     if (itr == m_samplers.end()) {
         // Open image
         OIIO::ImageBuf image;
-        if (!image.init_spec(ustring_from(filename), 0, 0)) {
-            errhandler().errorfmt("Could not load: {} (hash {})",
-                                  ustring_from(filename), filename);
+        if (!image.init_spec(filename, 0, 0)) {
+            errhandler().errorfmt("Could not load: {} (hash {})", filename,
+                                  filename);
             return (TextureHandle*)nullptr;
         }
 
@@ -1033,7 +1033,9 @@ OptixRaytracer::get_texture_handle(ustringhash filename,
         cudaTextureObject_t cuda_tex = 0;
         CUDA_CHECK(
             cudaCreateTextureObject(&cuda_tex, &res_desc, &tex_desc, nullptr));
-        itr = m_samplers.emplace(std::move(filename), std::move(cuda_tex)).first;
+        itr = m_samplers
+                  .emplace(std::move(filename.hash()), std::move(cuda_tex))
+                  .first;
     }
     return reinterpret_cast<RendererServices::TextureHandle*>(itr->second);
 }

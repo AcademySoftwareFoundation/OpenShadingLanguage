@@ -1117,15 +1117,9 @@ public:
     }
 
 #ifdef OSL_DEV
-    OSL_FORCEINLINE int op_num() const
-    {
-        return m_op_num;
-    }
+    OSL_FORCEINLINE int op_num() const { return m_op_num; }
 
-    OSL_FORCEINLINE int loop_op_index() const
-    {
-        return m_loop_op_index;
-    }
+    OSL_FORCEINLINE int loop_op_index() const { return m_loop_op_index; }
 #endif
 };
 
@@ -2008,7 +2002,13 @@ struct Analyzer {
     {
         bool previously_was_uniform = symbol_to_be_varying->is_uniform();
         if (previously_was_uniform | force) {
-            symbol_to_be_varying->make_varying();
+            // Interactive params are never varying, following getLLVMSymbolBase()
+            const bool force_uniform = symbol_to_be_varying->symtype()
+                                           == SymTypeParam
+                                       && symbol_to_be_varying->interactive();
+            if (!force_uniform) {
+                symbol_to_be_varying->make_varying();
+            }
             auto range = m_symbols_dependent_upon.equal_range(
                 symbol_to_be_varying);
             auto iter = range.first;
@@ -2201,7 +2201,7 @@ struct Analyzer {
 #endif
                     const auto& early_out = *earlyOutIter;
                     auto begin_dep_iter   = m_conditional_symbol_stack.begin_at(
-                          early_out.dtt_pos);
+                        early_out.dtt_pos);
                     auto end_dep_iter = m_conditional_symbol_stack.end();
 
                     const Opcode& opcode = m_opcodes[op_index];

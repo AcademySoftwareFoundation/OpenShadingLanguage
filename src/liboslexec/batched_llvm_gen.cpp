@@ -115,7 +115,7 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
     llvm::Value* lanes_requiring_execution_value = nullptr;
     if (!unconditional) {
         llvm::Value* previously_executed = ll.int_as_mask(
-            ll.op_load(ll.type_wide_bool(), layerfield));
+            ll.op_load(ll.type_int(), layerfield));
         llvm::Value* lanes_requiring_execution
             = ll.op_select(previously_executed, ll.wide_constant_bool(false),
                            ll.current_mask());
@@ -511,7 +511,7 @@ LLVMGEN(llvm_gen_printf)
         rop.ll.op_branch(cond_block);
         {
             // Condition
-            llvm::Value* lane_index = rop.ll.op_load(rop.ll.type_wide_int(),
+            llvm::Value* lane_index = rop.ll.op_load(rop.ll.type_int(),
                                                      loc_of_lane_index);
             llvm::Value* more_lanes_to_process
                 = rop.ll.op_lt(lane_index, rop.ll.constant(rop.vector_width()));
@@ -548,7 +548,7 @@ LLVMGEN(llvm_gen_printf)
             rop.ll.op_branch(step_block);
 
             // Step
-            //lane_index = rop.ll.op_load(rop.ll.type_wide_int(), loc_of_lane_index);
+            //lane_index = rop.ll.op_load(rop.ll.type_int(), loc_of_lane_index);
             llvm::Value* next_lane_index = rop.ll.op_add(lane_index,
                                                          rop.ll.constant(1));
             rop.ll.op_unmasked_store(next_lane_index, loc_of_lane_index);
@@ -1049,6 +1049,7 @@ LLVMGEN(llvm_gen_andor)
     if (!result.forced_llvm_bool()) {
         llvm::Type* resultType = rop.ll.llvm_typeof(
             rop.llvm_get_pointer(result));
+        // NOTE: this assert does nothing useful with opaque pointers
         OSL_ASSERT(
             (resultType
              == reinterpret_cast<llvm::Type*>(rop.ll.type_wide_int_ptr()))
@@ -2161,6 +2162,7 @@ LLVMGEN(llvm_gen_bitwise_binary_op)
     if (!Result.forced_llvm_bool()) {
         llvm::Type* resultType = rop.ll.llvm_typeof(
             rop.llvm_get_pointer(Result));
+        // NOTE: this assert does nothing useful with opaque pointers
         OSL_ASSERT(
             (resultType
              == reinterpret_cast<llvm::Type*>(rop.ll.type_wide_int_ptr()))
@@ -3067,6 +3069,7 @@ LLVMGEN(llvm_gen_compare_op)
     } else {
         llvm::Type* resultType = rop.ll.llvm_typeof(
             rop.llvm_get_pointer(Result));
+        // NOTE: this assert does nothing useful with opaque pointers
         OSL_ASSERT(
             (resultType
              == reinterpret_cast<llvm::Type*>(rop.ll.type_wide_int_ptr()))
@@ -3170,7 +3173,6 @@ LLVMGEN(llvm_gen_regex)
         rop.llvm_store_value(ret, Result);
         if (!match_is_uniform) {
             OSL_ASSERT(temp_match_array);
-            // TODO: may be the wrong type
             llvm::Type* elem_type = rop.ll.llvm_type(
                 Match.typespec().elementtype().simpletype());
             for (int ai = 0; ai < Match.typespec().arraylength(); ++ai) {
@@ -4535,7 +4537,7 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             llvm::Value* val = rop.llvm_load_value(Val);
             // Depending on how render services handles channels, might need to be 3 period.
             rop.ll.op_unmasked_store(val,
-                                     rop.ll.GEP(rop.ll.type_triple(),
+                                     rop.ll.GEP(rop.ll.type_float(),
                                                 missingcolor_buffer, nchans));
             continue;
         }
@@ -4833,7 +4835,7 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM& rop, int opnum,
                     = rop.ll.op_extract(wide_component, leadLane);
                 // The missingcolor_buffer is a local alloca, so no need to mask off non-active lanes
                 rop.ll.op_unmasked_store(scalar_component,
-                                         rop.ll.GEP(rop.ll.type_triple(),
+                                         rop.ll.GEP(rop.ll.type_float(),
                                                     missingcolor_buffer, i));
 
                 remainingMask = rop.ll.op_lanes_that_match_masked(
@@ -4853,7 +4855,7 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM& rop, int opnum,
                 = rop.ll.op_extract(wide_missingalpha, leadLane);
             // Depending on how render services handles channels, might need to be 3 period.
             rop.ll.op_unmasked_store(scalar_missingalpha,
-                                     rop.ll.GEP(rop.ll.type_triple(),
+                                     rop.ll.GEP(rop.ll.type_float(),
                                                 missingcolor_buffer, nchans));
 
             remainingMask = rop.ll.op_lanes_that_match_masked(
@@ -6250,7 +6252,8 @@ LLVMGEN(llvm_gen_noise)
 
         for (int c = 0; c < Result.typespec().aggregate(); ++c) {
             llvm::Value* v = rop.llvm_load_value(tmpresult, Result.typespec(),
-                                                 0, NULL, c, TypeDesc::UNKNOWN,
+                                                 0, NULL, c, op_is_uniform,
+                                                 TypeDesc::UNKNOWN,
                                                  op_is_uniform);
             rop.llvm_store_value(v, Result, 0, c);
         }
@@ -7853,21 +7856,23 @@ LLVMGEN(llvm_gen_pointcloud_write)
         // name[i]
         llvm::Value* name_value = rop.llvm_load_value(*namesym);
         rop.llvm_store_value(name_value, names, namesArrayType, /*deriv*/ 0,
-                             arrayindex, /*component*/ 0);
+                             arrayindex, /*component*/ 0,
+                             namesym->is_uniform());
 
         // type[i]
         Symbol* valsym          = rop.opargsym(op, 3 + 2 * i + 1);
         llvm::Value* type_value = rop.ll.constant(
             valsym->typespec().simpletype());
         rop.llvm_store_value(type_value, types, typesArrayType, /*deriv*/ 0,
-                             arrayindex, /*component*/ 0);
+                             arrayindex, /*component*/ 0, valsym->is_uniform());
 
         // value[i]
         llvm::Value* attr_value_ptr = rop.llvm_load_arg(*valsym,
                                                         false /*derivs*/,
                                                         false /*is_uniform*/);
         rop.llvm_store_value(attr_value_ptr, values, valuesArrayType,
-                             /*deriv*/ 0, arrayindex, /*component*/ 0);
+                             /*deriv*/ 0, arrayindex, /*component*/ 0,
+                             valsym->is_uniform());
     }
 
     constexpr int fileNameArgumentIndex = 1;
@@ -8360,7 +8365,6 @@ LLVMGEN(llvm_gen_split)
         ret = rop.ll.widen_value(ret);
 
         OSL_ASSERT(temp_results_array);
-        // TODO: may be the wrong type
         llvm::Type* elem_type = rop.ll.llvm_type(
             Results.typespec().elementtype().simpletype());
         for (int ai = 0; ai < Results.typespec().arraylength(); ++ai) {

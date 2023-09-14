@@ -668,7 +668,7 @@ BackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
         dst_ptr = ll.GEP(element_type, dst_ptr, 0, component);
 
     // Finally, store the value.
-    // TODO: broken, pointer type comparison no longer works with opaque pointers.
+    // TODO: this breaks OptiX, pointer type comparison no longer works with opaque pointers.
     if (t == TypeString && dst_ptr->getType() == ll.type_int64_ptr()
         && new_val->getType() == ll.type_char_ptr()) {
         // Special case: we are still ickily storing strings sometimes as a

@@ -1024,7 +1024,6 @@ BatchedBackendLLVM::llvm_assign_initial_value(
             // Because we allow temporaries and local results of comparison operations
             // to use the native bool type of i1, we can just skip initializing these
             // as they should always be assigned a value.
-            // TODO: is this equivalent to the old pointer type check? probably not
             if (!sym.forced_llvm_bool()) {
                 u = sym.is_uniform()
                         ? ll.constant(std::numeric_limits<int>::min())
@@ -1103,7 +1102,6 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                 = ll.ptr_cast(ll.offset_ptr(m_llvm_userdata_base_ptr,
                                             sym_offset),
                               type.scalartype());
-            // TODO: may be the wrong type
             llvm::Type* userdata_type = ll.llvm_type(type.scalartype());
             bool isBase32bit          = (symloc->type != TypeDesc::STRING);
             int bytesPerElem          = isBase32bit ? 4 : 8;
@@ -1974,7 +1972,7 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
 
     llvm::Value* previously_executed_value = nullptr;
     if (!group().is_last_layer(layer())) {
-        previously_executed_value = ll.op_load(ll.type_wide_bool(), layerfield);
+        previously_executed_value = ll.op_load(ll.type_int(), layerfield);
     }
 
     if (is_entry_layer && !group().is_last_layer(layer())) {
@@ -2266,8 +2264,6 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
             continue;  // types didn't match
         }
         auto type = s.typespec().simpletype();
-        // TODO: may be the wrong type
-        auto scalar_type = ll.llvm_type(s.typespec().simpletype().scalartype());
 
         //const int deriv_count = (symloc->derivs && s.has_derivs()) ? 3 : 1;
         const int output_deriv_count = symloc->derivs ? 3 : 1;
@@ -2277,8 +2273,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         llvm::Value* output_sym_base_ptr
             = ll.ptr_cast(ll.offset_ptr(m_llvm_output_base_ptr, sym_offset),
                           type.scalartype());
-        bool isBase32bit = (symloc->type != TypeDesc::STRING);
-        int bytesPerElem = isBase32bit ? 4 : 8;
+        auto sym_base_ptr_type = ll.llvm_type(type.scalartype());
+        bool isBase32bit       = (symloc->type != TypeDesc::STRING);
+        int bytesPerElem       = isBase32bit ? 4 : 8;
         // TODO:  could move assert inside SymLocation
         OSL_ASSERT((symloc->stride % bytesPerElem) == 0);
 
@@ -2318,8 +2315,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                         wide_index = ll.op_add(wide_index_to_output,
                                                ll.wide_constant(c));
                     }
-                    ll.op_scatter(scalar_type, wide_val, output_sym_base_ptr,
-                                  wide_index);
+                    ll.op_scatter(wide_val, sym_base_ptr_type,
+                                  output_sym_base_ptr, wide_index);
                 }
             }
         }

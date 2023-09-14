@@ -159,6 +159,12 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 17.0)
     endif ()
 endif ()
 
+# TODO: temporary for testing
+set(LLVM_OPAQUE_POINTERS OFF)
+if (LLVM_OPAQUE_POINTERS)
+  add_definitions (-DOSL_LLVM_OPAQUE_POINTERS)
+endif()
+
 checked_find_package (partio)
 
 

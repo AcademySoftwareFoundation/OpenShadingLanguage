@@ -888,7 +888,7 @@ public:
     llvm::Value* op_load(llvm::Type* type, llvm::Value* ptr,
                          const std::string& llname = {});
 
-    llvm::Value* op_gather(llvm::Type* ptr_element_type, llvm::Value* ptr,
+    llvm::Value* op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                            llvm::Value* wide_index);
 
     /// Store to a dereferenced pointer
@@ -906,7 +906,7 @@ public:
     /// converting it to the native mask type for storage:   *ptr = llvm_mask_to_native(val);
     void op_store_mask(llvm::Value* llvm_mask, llvm::Value* native_mask_ptr);
 
-    void op_scatter(llvm::Type* ptr_element_type, llvm::Value* wide_val,
+    void op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                     llvm::Value* ptr, llvm::Value* wide_index);
 
     // N.B. "GEP" -- GetElementPointer -- is a particular LLVM-ism that is

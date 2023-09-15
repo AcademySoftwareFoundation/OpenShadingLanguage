@@ -1,34 +1,54 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.13 -- ?? 2023 ?? (compared to 1.12)
+Release 1.13 -- October?? 2023 ?? (compared to 1.12)
 --------------------------------------------------
-Dependency and standards requirements changes:
+### Dependency and standards requirements changes:
 * OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
   of OptiX 7.0 is required.
-* The minimum version OpenImageIO has been raised from 2.2 to 2.4. #1591
+* The minimum version OpenImageIO has been raised from 2.2 to 2.4. [#1591](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1591)  [#1722](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1722)
   (to 2.3 in 1.13.0.3, to 2.4 in 1.13.4.0)
+* Raise minimum CMake dependency from 3.12 to 3.15 [#1724](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1724) (1.13.5.0)
 
-OSL Language and oslc compiler:
-* Bug fix: shader params whose default values involve "init ops" could be
-  incorrectly initialized if their values came from instance parameters set to
-  zero. #1578 (1.13.0.2)
+### OSL Language and oslc compiler:
+* There have been no substantive changes to the OSL language in this release.
 
-OSL Standard library:
-
-API changes, new options, new ShadingSystem features (for renderer writers):
+### API changes, new options, new ShadingSystem features (for renderer writers):
 * A new `shadingStateUniform` pointer field was added to ShaderGlobals for
   planned future expansion and improved GPU support. #1585 (1.13.1.0)
+* Adding relaxed type-equivalency to ReParameter() [#1639](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1639) (by cmstein) (1.13.2.1)
+* Expose llvm groupdata size as a shadergroup attribute
+  [#1642](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1642) (by Chris Hellmuth) (1.13.4.0)
+* RendererServices API for letting get_texture_handle consider colorspace
+  [#1641](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1641) (1.13.4.0)
+* Make "compile_report" attribute an int instead of just 0/1. Passing 1 makes
+  a brief report, values >1 are more verbose. (Zero still prints no report.)
+  [#1654](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1654) (1.13.4.0)
+* Switch `lockgeom` to `interpolated` and `interactive`. The `lockgeom=0`
+  was confusing. Now we use `interpolated=1` to mean "don't optimize it away
+  because it might be interpolated across the geometry and thus won't have
+  the same value at all points being shaded," and the subtly different
+  `interactive=1` to mean "don't optimize it away because although it will
+  always take on the same value at all points at the same time, the user
+  might want to interactively adjust the value and we don't want to have
+  to recompile the shader group if that happens."
+  [#1662](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1662) (1.13.4.0)
+* Add type information for needed attributes. [#1650](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1650) (by Curtis Black) (1.13.4.0)
+* Add API for building attribute getter free functions.
+  [#1704](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1704) (by Curtis Black) (1.13.5.0)
+* Rs fmt specification - Journaling Algorithm for error, warning, fprintf
+  [#1702](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1702) (by Steena Monteiro) [#1711](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1711) [#1715](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1715) (1.13.5.0)
 
-SIMD batched shading mode:
+### SIMD batched shading mode
 * Fix some array overruns (asymptomatic, but still potentially buggy) in
   common_ancestor_between. #1577 (1.13.0.2)
 * Fix issue with closure keyword parameters. #1620 (1.13.2.0/1.12.8.0)
 * Fix crash when adding a default initialized closure. #1624
   (1.13.2.0/1.12.8.0)
 * Fix support for closures with array types. #1630 (1.13.2.0/1.12.8.0)
+* Fix bug with masked wide llvm_gen_closure() [#1637](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1637) (by danieldresser-ie) (1.13.2.1)
 
-OptiX rendering:
+### OptiX GPU rendering
 * OptiX 6.0 support has been removed. For GPU rendering with OptiX, a minimum
   of OptiX 7.0 is required.
 * Big overhaul/simplification of how strings are represented on the GPU: the
@@ -46,53 +66,190 @@ OptiX rendering:
   OptiX SDK headers present at build time. But you will still need them to
   build your OptiX-based application that uses OSL for GPU rendering. #1627
   (1.13.2.0/1.12.8.0)
+* GPU/OptiX support of ReParameter [#1686](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1686) (1.13.4.0)
+* Fix userdata derivatives for interpolated params on GPU [#1685](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1685) (by Pascal Lecocq) (1.13.4.0)
+* Enable userdata derivatives for interpolated params on GPU
+  [#1657](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1657) (by Chris Hellmuth) (1.13.4.0)
+* Move qualifying GroupData params onto stack for higher performance.
+  [#1710](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1710) (by Chris Hellmuth) (1.13.5.0)
+* Handle mixed string casting that plagues optix codegen [#1718](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1718) (1.13.5.0)
+* Add missing members to ShaderGlobals in rend_lib.h [#1721](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1721) (by Tim Grant) (1.13.5.0)
+* OptiX direct callable API that owns groupdata buffer
+  [#1683](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1683) (by Chris Hellmuth) (1.13.5.0)
+* OptiX PTX pipeline overhaul [#1680](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1680) (by Tim Grant) (1.13.5.0)
+* Perf: Don't insert redundant run layer calls inside a basic block
+  [#1665](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1665) [#1669](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1669) [#1672](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1672) (by Chris Hellmuth) (1.13.4.0)
 
-Performance improvements:
-
-Bug fixes and other improvements (internals):
+### 🐛  Fixes and other improvements (internals)
 * Fix memory leak in oslc ASTvariable_declaration. #1576 (1.13.0.2)
 * Fix memory leaks in LPE code in error conditions. #1593 #1594 (1.13.0.3)
+* Fix mismatched strides when calling OCIO for transformc with derivs [#1646](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1646) (1.13.4.0)
+* Set up ray types for testrender [#1648](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1648) (1.13.4.0)
+* Fix userdata binding corner case [#1673](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1673) (by Alejandro Conty) (1.13.4.0)
+* Fix constant float values being converted to ints [#1674](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1674) (by Declan Russell) (1.13.4.0)
+* Don't try to ReParameter symbols not in the group [#1693](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1693) (by Alejandro Conty) (1.13.5.0)
+* Have ReParameter only copy data when it changes [#1698](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1698) (1.13.5.0)
+* Avoid deprecated OSLQuery ctr in test example [#1699](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1699) (1.13.5.0)
+* Zero derivs for interactive params when needed [#1700](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1700) (by Alejandro Conty) (1.13.5.0)
+* oslc bug fix: shader params whose default values involve "init ops" could be
+  incorrectly initialized if their values came from instance parameters set to
+  zero. #1578 (1.13.0.2)
+* oslc: Add missing `fmod()` variants [#1643](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1643) (1.13.4.0)
+* Simple constant folding of binary expressions now happen on the oslc side
+  [#1653](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1653) (1.13.4.0)
 
-Internals/developer concerns:
+### 🔧  Internals and developer concerns
 * platform.h:
-    - New `OSL_ALLOCA` macro to allocate on the stack. #1589 (1.13.0.3)
-    - Define OSL::bitcast utility. #1610 (1.13.2.0)
+    * New `OSL_ALLOCA` macro to allocate on the stack. #1589 (1.13.0.3)
+    * Define OSL::bitcast utility. #1610 (1.13.2.0)
 * Make sure that std::hash is defined for ustring and ustringhash. #1599
   (1.13.1.1)
 * Deprecate LLVMUtil::internalize_module_functions. #1606 (1.13.1.0)
 * Work toward always representing strings in shaders as ustringhash rather
-  than ustring: phase 1 #1603 phase2 #1612 (1.13.2.0)
+  than ustring: phase 1 #1603 phase2 #1612 (1.13.2.0) [#1726](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1726) (1.13.5.0)
+* Remove unnecessary setting of locale::global [#1636](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1636) (by danieldresser-ie) (1.13.2.1)
+* Fully define bitcast template [#1635](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1635) (1.13.2.1)
+* Fix for ReParameter corner case [#1670](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1670) (by cmstein) (1.13.4.0)
+* Switch deprecated oiio simd names to modern [#1679](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1679) (1.13.4.0)
+* Give ShadingSystemImpl a handy use_optix() method [#1682](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1682) (1.13.4.0)
+* Fix default fmt logic changing in latest openimageio release [#1725](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1725) (1.13.5.0)
+* The recently added SS::find_symloc can have const args [#1723](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1723) (1.13.5.0)
 
-Build & test system improvements:
+### 🏗  Build/test/CI and platform ports
 * CMake build system and scripts:
-    - The version number is now a cache variable, and so can be overridden at
+    * The version number is now a cache variable, and so can be overridden at
       build time using `-DOSL_VERSION=...`. Use with extreme caution! #1579
       (1.13.0.2)  Revised again to reduce changes of user error in #1617
       (1.13.2.0/1.12.7.1)
-    - Add clangSupport library as dependency to fix linker error on some
+    * Add clangSupport library as dependency to fix linker error on some
       platforms. #1613 (1.13.2.0/1.12.7.1)
+    * Fix incorrect CMake variable name to control symbol visibility
+      [#1681](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1681) (1.13.4.0)
+    * Change cmake option `USE_OPTIX` -> `OSL_USE_OPTIX` [#1668](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1668) (1.13.4.0)
+  * Fix duplicate osl lexing symbols when building as static libraries
+    [#1709](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1709) (by Brecht Van Lommel) (1.13.5.0)
 * Dependency version support:
-    - Fix some issues that came up with the new icx 2022.0 compiler. #1601
+    * Fix some issues that came up with the new icx 2022.0 compiler. #1601
       (1.13.1.0)
-    - Test against OpenColorIO 2.2. #1616 (1.13.2.0/1.12.7.1)
+    * Test against OpenColorIO 2.2. #1616 (1.13.2.0/1.12.7.1)
+    * Proper warnings about LLVM 16 [#1658](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1658) (1.13.4.0)
+    * Fix cuda compilation flags for LLVM 15 [#1659](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1659) (1.13.4.0)
+    * Verify that OSL can build with clang16 [#1664](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1664) (1.13.4.0)
+    * Be more careful about paths to look for llvm [#1656](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1656) (1.13.4.0)
+    * Qt6 compatibility [#1655](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1655) (1.13.4.0)
+    * Fix warnings about Qt compilation and enums [#1661](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1661) (1.13.4.0)
+    * Changes to support fmt 10.0 [#1691](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1691) (1.13.5.0)
 * Testing and Continuous integration (CI) systems:
-    - Dynamic analysis using address and leak sanitizers. #1581 (1.13.0.3)
-    - `testshade --help` now prints TextureSystem options and all hardware
+    * Dynamic analysis using address and leak sanitizers. #1581 (1.13.0.3)
+    * `testshade --help` now prints TextureSystem options and all hardware
       information. #1584 (1.13.0.3)
-    - Improvements to SonarCloud and coverage analysis. #1596 (1.13.0.3)
+    * Improvements to SonarCloud and coverage analysis. #1596 (1.13.0.3)
       #1607 (1.13.1.0)
-    - Disabling the dso version of testshade for the coverage analysis test.
+    * Disabling the dso version of testshade for the coverage analysis test.
       #1604 (1.13.1.0)
-    - Be sure to run pointcloud tests when partio is found. #1611 (1.13.2.0)
-    - testshade: better testing of all closure parameter types. #1621
+    * Be sure to run pointcloud tests when partio is found. #1611 (1.13.2.0)
+    * testshade: better testing of all closure parameter types. #1621
       (1.13.2.0/1.12.8.0)
+    * Don't use the cached background map on the first bounce
+      [#1649](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1649) (by Christopher Kulla) (1.13.4.0)
+    * Fix builds when USE_PYTHON=OFF [#1675](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1675) (by Declan Russell) (1.13.4.0)
+    * Remove SonarCloud cache setup as it is now offered by default
+      [#1660](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1660) (by Massimo Paladin) (1.13.4.0)
+    * *ci*: Simplify build_llvm.bash script [#1703](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1703) (1.13.5.0)
+    * Test interactive parameter initialization in optix testrender [#1687](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1687) (by Chris Hellmuth) (1.13.5.0)
 * Platform support:
-    - Include `immintrin.h` only when needed. #1605 (1.13.1.0)
+    * Include `immintrin.h` only when needed. #1605 (1.13.1.0)
+    * Changed snprintf formatting to satisfy some compilers.
+      [#1640](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1640) (by pellerington) (1.13.4.0)
+    * Fix some windows GPU build errors [#1638](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1638) (by Declan Russell) (1.13.4.0)
+    * Fix for Apple clang 14+ warnings [#1697](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1697) (1.13.5.0)
 
-Documentation:
+### 📚  Documentation
 * `doc/RELEASING.md` documents our release process and versioning policies.
   #1572 (1.13.0.2)
+* Improve documentation of `trace` function [#1671](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1671) (by AidanWelch) (1.13.4.0)
+* Update CONTRIBUTING [#1689](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1689) (1.13.5.0)
+* Update logos [#1705](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1705), Move logos and add an icon-only logo [#1707](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1707) (1.13.5.0)
 
+
+---
+---
+---
+
+
+Release 1.12.13.0 -- 1 July 2023 (compared to 1.12.12.0)
+--------------------------------------------------------
+- *fix*: Fix constant float values being converted to ints
+  [#1674](https://github.com/OpenImageIO/oiio/pull/1674)  (by Declan Russell)
+- *build*: Fix builds when USE_PYTHON=OFF
+  [#1675](https://github.com/OpenImageIO/oiio/pull/1675)  (by Declan Russell)
+- *build*: Changes to support fmt 10.0
+  [#1691](https://github.com/OpenImageIO/oiio/pull/1691)
+- *cleanup*: Switch deprecated oiio simd names to modern
+  [#1679](https://github.com/OpenImageIO/oiio/pull/1679)
+- *testing*: Avoid deprecated OSLQuery ctr in test example
+  [#1699](https://github.com/OpenImageIO/oiio/pull/1699)
+- *ci*: Fix package name for icc
+  [#1690](https://github.com/OpenImageIO/oiio/pull/1690)
+- *ci*: Add VFX Platform 2023 tests using new ASWF containers
+  [#1696](https://github.com/OpenImageIO/oiio/pull/1696)
+- *ci*: Switch oiio obsolete branch names to immutable tags
+  [#1701](https://github.com/OpenImageIO/oiio/pull/1701)
+- *docs*: Improve documentation of `trace` function
+  [#1671](https://github.com/OpenImageIO/oiio/pull/1671)  (by AidanWelch)
+- *docs*: README.md: added filmography and Siggraph OSL course info.
+  [#1692](https://github.com/OpenImageIO/oiio/pull/1692)
+  [#1694](https://github.com/OpenImageIO/oiio/pull/1694) (by Mitch Prater)
+- *docs*: Amend the filmography
+  [#1695](https://github.com/OpenImageIO/oiio/pull/1695)
+- *docs*: Fix incorrect links in CONTRIBUTING
+  [#1688](https://github.com/OpenImageIO/oiio/pull/1688)
+
+Release 1.12.12.0 -- 1 May 2023 (compared to 1.12.11.0)
+--------------------------------------------------------
+* New ShadingSystem getattribute query for shader groups: "attribute_types"
+  retrieves a pointer to the array of TypeDesc values describing the
+  attributes retrieved by existing "attributes_needed" and "attribute_scopes".
+  #1650
+* Fix a bug with binding userdata when it's used by more than one shader
+  within the group and they disagree about whether derivatives are needed when
+  retrieving the attribute. #1673
+
+Release 1.12.11.0 -- 5 Apr 2023 (compared to 1.12.10.0)
+--------------------------------------------------------
+* Build: Add Qt 6.x compatibility (Qt is only used for `osltoy`). #1655
+* Build: more careful about paths to look for LLVM. #1656
+* Build: Fix Cuda compilation flags for LLVM 15. #1659
+* Notice: OSL does not yet build properly against the newly release LLVM 16.
+  You must use LLVM 9-15. For Mac users who get their llvm from Homebrew,
+  please be aware that Homebrew has changed its default llvm to 16, so you'll
+  need to `brew install llvm@14` and make your OSL CMake define:
+  `-DLLVM_ROOT=/usr/local/opt/llvm@14`
+
+Release 1.12.10.0 -- 1 Mar 2023 (compared to 1.12.9.0)
+--------------------------------------------------------
+* feat(testrender): Modify testrender so that it correctly sets raytype to
+  "camera" for camera rays, "shadow" for shadow rays, and "diffuse" for all
+  secondary rays. Also rerun the shades for background shader group on the
+  camera rays rather than use the cached map. This helps the MaterialX project
+  use testrender for certain unit tests and verification. #1648 #1649
+* feat: Expose llvm groupdata size as a shadergroup attribute
+  "llvm_groupdata_size". #1642
+* fix: Crash could result from uncaught exception in OpenColorIO when calling
+  transformc with derivatives for color spaces that require OCIO. #1646
+* fix: certain uses of fmod() in shaders could fail to generate LLVM code
+  correctly, due to a missing implementation for the fmod(triple,float)
+  varieties. #1643
+* build: Change snprintf formatting to satisfy some compilers. #1640
+* CI: Fix broken Mac ci. #1647
+
+Release 1.12.9.0 -- 1 Feb 2023 (compared to 1.12.8.0)
+-------------------------------------------------------
+* Remove unnecessary setting of locale::global. #1630
+* Batch shading: Fix bug with masked wide closure generation. #1637
+* Make sure ReParameter() has the same relaxed type checking rules as
+  Parameter(). Before, it was stricter about type conversion. #1639
+* Windows: Fix some GPU build errors. #1638
 
 Release 1.12.8.0 -- 3 Jan 2023 (compared to 1.12.7.1)
 -------------------------------------------------------

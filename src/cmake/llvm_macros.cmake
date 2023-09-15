@@ -7,25 +7,19 @@ set(_THIS_MODULE_BASE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_cpp extra_clang_args include_dirs)
 
-    if (VERBOSE)
-        message (STATUS "EMBED_LLVM_BITCODE_IN_CPP src_list=${src_list}")
-    endif ()
+    message (VERBOSE "EMBED_LLVM_BITCODE_IN_CPP src_list=${src_list}")
 
     foreach ( src ${src_list} )
         get_filename_component ( src_we ${src} NAME_WE )
         set ( src_asm "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.s" )
         set ( src_bc "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.bc" )
-        if (VERBOSE)
-            message (STATUS "EMBED_LLVM_BITCODE_IN_CPP in=${src}")
-            message (STATUS "EMBED_LLVM_BITCODE_IN_CPP asm=${src_asm}")
-            message (STATUS "EMBED_LLVM_BITCODE_IN_CPP bc=${src_bc}")
-        endif ()
+        message (VERBOSE "EMBED_LLVM_BITCODE_IN_CPP in=${src}")
+        message (VERBOSE "EMBED_LLVM_BITCODE_IN_CPP asm=${src_asm}")
+        message (VERBOSE "EMBED_LLVM_BITCODE_IN_CPP bc=${src_bc}")
         list ( APPEND src_bc_list ${src_bc} )
 
         get_property (CURRENT_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
-        if (VERBOSE)
-            message (STATUS "Current #defines are ${CURRENT_DEFINITIONS}")
-        endif ()
+        message (VERBOSE "Current #defines are ${CURRENT_DEFINITIONS}")
         foreach (def ${CURRENT_DEFINITIONS})
             set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
         endforeach()
@@ -44,9 +38,7 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         if (NOT LLVM_BC_GENERATOR)
             message (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
         endif ()
-        if (VERBOSE)
-            message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
-        endif()
+        message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
 
         if (NOT LLVM_AS_TOOL)
             find_program (LLVM_AS_TOOL NAMES "llvm-as"
@@ -106,12 +98,9 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
     endforeach ()
 
-
-    if (VERBOSE)
-        message ( STATUS "^^^^^^^^^^^^^^^^^^^^^^^^^^" )
-        message ( STATUS "src_bc_list: ${src_bc_list} ")
-        message ( STATUS "^^^^^^^^^^^^^^^^^^^^^^^^^^" )
-    endif()
+    message (VERBOSE "^^^^^^^^^^^^^^^^^^^^^^^^^^" )
+    message (VERBOSE "src_bc_list: ${src_bc_list} ")
+    message (VERBOSE "^^^^^^^^^^^^^^^^^^^^^^^^^^" )
 
     # Link all of the individual LLVM bitcode files
     set ( linked_src_bc "${CMAKE_CURRENT_BINARY_DIR}/${output_name}.bc" )

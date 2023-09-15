@@ -69,9 +69,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
 
     # Setup the compile flags
     get_property (CURRENT_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
-    if (VERBOSE)
-        message (STATUS "Current #defines are ${CURRENT_DEFINITIONS}")
-    endif ()
+    message (VERBOSE "Current #defines are ${CURRENT_DEFINITIONS}")
     foreach (def ${CURRENT_DEFINITIONS})
         set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
     endforeach()
@@ -90,9 +88,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
     if (NOT LLVM_BC_GENERATOR)
         message (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
     endif ()
-    if (VERBOSE)
-        message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
-    endif()
+    message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
 
     if (NOT LLVM_AS_TOOL)
       find_program (LLVM_AS_TOOL NAMES "llvm-as"

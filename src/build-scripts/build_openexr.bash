@@ -44,8 +44,8 @@ git checkout ${OPENEXR_VERSION} --force
 
 if [[ ${OPENEXR_VERSION} == "v2.3.0" ]] ; then
     # Simplified setup for 2.3+
-    cd ${OPENEXR_BUILD_DIR}
-    cmake -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} \
+    cmake   -S . -B ${OPENEXR_BUILD_DIR} \
+            -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} \
             -DCMAKE_INSTALL_PREFIX="${OPENEXR_INSTALL_DIR}" \
             -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
             -DILMBASE_PACKAGE_PREFIX="${OPENEXR_INSTALL_DIR}" \
@@ -54,11 +54,11 @@ if [[ ${OPENEXR_VERSION} == "v2.3.0" ]] ; then
             -DOPENEXR_BUILD_PYTHON_LIBS=0 \
             -DCMAKE_CXX_FLAGS="${OPENEXR_CXX_FLAGS}" \
             ${OPENEXR_CMAKE_FLAGS} ${OPENEXR_SOURCE_DIR}
-    time cmake --build . --target install --config ${OPENEXR_BUILD_TYPE}
+    time cmake --build ${OPENEXR_BUILD_DIR} --target install --config ${OPENEXR_BUILD_TYPE}
 else
     # Simplified setup for 2.4+
-    cd ${OPENEXR_BUILD_DIR}
-    cmake -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} \
+    cmake   -S . -B ${OPENEXR_BUILD_DIR} \
+            -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} \
             -DCMAKE_INSTALL_PREFIX="${OPENEXR_INSTALL_DIR}" \
             -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
             -DILMBASE_PACKAGE_PREFIX="${OPENEXR_INSTALL_DIR}" \
@@ -71,7 +71,7 @@ else
             -DCMAKE_INSTALL_LIBDIR=lib \
             -DCMAKE_CXX_FLAGS="${OPENEXR_CXX_FLAGS}" \
             ${OPENEXR_CMAKE_FLAGS} ${OPENEXR_SOURCE_DIR}
-    time cmake --build . --target install --config ${OPENEXR_BUILD_TYPE}
+    time cmake --build ${OPENEXR_BUILD_DIR} --target install --config ${OPENEXR_BUILD_TYPE}
 fi
 
 popd

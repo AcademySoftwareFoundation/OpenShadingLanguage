@@ -12,7 +12,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.26)
+* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.27)
 
 * A suitable C++14 or C++17 compiler to build OSL itself, which may be any of:
    - GCC 6.1 or newer (tested through gcc 12.1)
@@ -92,9 +92,16 @@ Here are the steps to check out, build, and test the OSL distribution:
    options, and note that 'make nuke' will blow everything away for the
    freshest possible compile.
 
-   NOTE: If the build breaks due to compiler warnings which have been
-   elevated to errors, you can try "make clean" followed by
-   "make STOP_ON_WARNING=0", that create a build that will only stop for
+   You can also ignore the top level Makefile wrapper, and instead use
+   CMake directly:
+
+       cmake -B build -S .
+       cmake --build build --target install
+
+   NOTE: If the build breaks due to compiler warnings which have been elevated
+   to errors, you can try "make clean" followed by "make STOP_ON_WARNING=0",
+   or if using cmake directly, add `-DSTOP_ON_WARNING=0` to the cmake
+   configuration command. That will create a build that will only stop for
    full errors, not warnings.
 
 4. After compilation, you'll end up with a full OSL distribution in

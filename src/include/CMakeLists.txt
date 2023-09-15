@@ -28,16 +28,12 @@ endif()
 
 
 set (versionfile oslversion.h)
-if (VERBOSE)
-    message (STATUS "Create ${versionfile} from ${versionfile}.in")
-endif ()
+message (VERBOSE "Create ${versionfile} from ${versionfile}.in")
 configure_file (${PROJECT_NAME}/${versionfile}.in "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${versionfile}" @ONLY)
 list (APPEND public_headers "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${versionfile}")
 
 set (oslconfighfile oslconfig.h)
-if (VERBOSE)
-    message (STATUS "Create ${oslconfighfile} from ${oslconfighfile}.in")
-endif ()
+message (VERBOSE "Create ${oslconfighfile} from ${oslconfighfile}.in")
 configure_file (${PROJECT_NAME}/${oslconfighfile}.in "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${oslconfighfile}" @ONLY)
 list (APPEND public_headers "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${oslconfighfile}")
 

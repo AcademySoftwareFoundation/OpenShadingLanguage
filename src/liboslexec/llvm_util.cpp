@@ -65,8 +65,6 @@
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Verifier.h>
-#include <llvm/Passes/OptimizationLevel.h>
-#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/PrettyStackTrace.h>
@@ -87,6 +85,10 @@
 
 #if OSL_LLVM_VERSION >= 120
 #    include <llvm/CodeGen/Passes.h>
+#endif
+
+#ifdef OSL_LLVM_NEW_PASS_MANAGER
+#    include <llvm/Passes/PassBuilder.h>
 #endif
 
 // additional includes for PTX generation
@@ -359,12 +361,14 @@ public:
 // New pass manager state, mainly here because these are template classes
 // for which forward declarations in a public header are tricky.
 struct LLVM_Util::NewPassManager {
+#ifdef OSL_LLVM_NEW_PASS_MANAGER
     llvm::LoopAnalysisManager loop_analysis_manager;
     llvm::FunctionAnalysisManager function_analysis_manager;
     llvm::CGSCCAnalysisManager cgscc_analysis_manager;
     llvm::ModuleAnalysisManager module_analysis_manager;
 
     llvm::ModulePassManager module_pass_manager;
+#endif
 };
 
 
@@ -1790,20 +1794,20 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
 {
 #ifdef OSL_LLVM_NEW_PASS_MANAGER
     // TODO: support optimization level 10-13 in new pass manager
-    const bool use_new_pass_manager = (optlevel < 10);
-#else
-    const bool use_new_pass_manager = false;
-#endif
-    if (use_new_pass_manager) {
+    if (optlevel < 10) {
         setup_new_optimization_passes(optlevel, target_host);
     } else {
         setup_legacy_optimization_passes(optlevel, target_host);
     }
+#else
+    setup_legacy_optimization_passes(optlevel, target_host);
+#endif
 }
 
 void
 LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 {
+#ifdef OSL_LLVM_NEW_PASS_MANAGER
     OSL_DEV_ONLY(std::cout << "setup_new_optimization_passes " << optlevel);
     OSL_ASSERT(m_new_pass_manager == nullptr);
 
@@ -1876,6 +1880,7 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             };
         }
     }
+#endif
 }
 
 void
@@ -2209,11 +2214,14 @@ LLVM_Util::do_optimize(std::string* out_err)
         return;
 #endif
 
+#ifdef OSL_LLVM_NEW_PASS_MANAGER
     if (m_new_pass_manager) {
         // New pass manager
         m_new_pass_manager->module_pass_manager.run(
             *m_llvm_module, m_new_pass_manager->module_analysis_manager);
-    } else {
+    } else
+#endif
+    {
         // Legacy pass manager
         m_llvm_func_passes->doInitialization();
         for (auto&& I : m_llvm_module->functions())

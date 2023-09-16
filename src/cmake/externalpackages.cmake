@@ -159,14 +159,19 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 17.0)
     endif ()
 endif ()
 
-# TODO: temporary for testing
-set(LLVM_OPAQUE_POINTERS ON)
+# TODO: decide on appropriate versions. Conservative choice would be to only
+# use these for LLVM 16+.
+if (${LLVM_VERSION} VERSION_GREATER_EQUAL 14.0)
+  set(LLVM_OPAQUE_POINTERS ON)
+  set(LLVM_NEW_PASS_MANAGER ON)
+else()
+  set(LLVM_OPAQUE_POINTERS OFF)
+  set(LLVM_NEW_PASS_MANAGER OFF)
+endif()
+
 if (LLVM_OPAQUE_POINTERS)
   add_definitions (-DOSL_LLVM_OPAQUE_POINTERS)
 endif()
-
-# TODO: temporary for testing
-set(LLVM_NEW_PASS_MANAGER ON)
 if (LLVM_NEW_PASS_MANAGER)
   add_definitions (-DOSL_LLVM_NEW_PASS_MANAGER)
 endif()

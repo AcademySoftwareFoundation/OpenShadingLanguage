@@ -1028,6 +1028,7 @@ public:
 private:
     class MemoryManager;
     class IRBuilder;
+    struct NewPassManager;
 
     void SetupLLVM();
     IRBuilder& builder();
@@ -1045,6 +1046,7 @@ private:
     llvm::Function* m_current_function;
     llvm::legacy::PassManager* m_llvm_module_passes;
     llvm::legacy::FunctionPassManager* m_llvm_func_passes;
+    NewPassManager* m_new_pass_manager;
     llvm::ExecutionEngine* m_llvm_exec;
     TargetISA m_target_isa = TargetISA::UNKNOWN;
 
@@ -1207,6 +1209,9 @@ private:
                                        llvm::Value* half_vec_2);
     llvm::Value* op_combine_4x_vectors(llvm::Value* half_vec_1,
                                        llvm::Value* half_vec_2);
+
+    void setup_legacy_optimization_passes(int optlevel, bool target_host);
+    void setup_new_optimization_passes(int optlevel, bool target_host);
 };
 
 

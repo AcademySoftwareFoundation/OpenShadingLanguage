@@ -159,6 +159,12 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     endif ()
 endif ()
 
+# Enable new pass manager for LLVM 15+
+if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
+  add_definitions (-DOSL_LLVM_NEW_PASS_MANAGER)
+endif()
+
+
 checked_find_package (partio)
 
 

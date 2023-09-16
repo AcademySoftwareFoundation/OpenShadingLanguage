@@ -12,6 +12,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/PassManager.h>
 #include <llvm/IR/Type.h>
 #include <llvm/Pass.h>
 #include <llvm/Support/Casting.h>
@@ -37,9 +38,8 @@ namespace {
 // how instruction lowering happens then this pass may not be necessary.
 // Also if future LLVM version takes on the work of this optimization pass,
 // then it may be removed.
-template<int WidthT>
-class PreventBitMasksFromBeingLiveinsToBasicBlocks final
-    : public llvm::FunctionPass {
+
+template<int WidthT> class PreventBitMasksFromBeingLiveinsToBasicBlocks {
     typedef llvm::IRBuilder<llvm::ConstantFolder, llvm::IRBuilderDefaultInserter>
         IRBuilder;
     llvm::Type* m_llvm_mask_type;
@@ -52,17 +52,14 @@ class PreventBitMasksFromBeingLiveinsToBasicBlocks final
     std::vector<llvm::Instruction*> m_phiNodesWithNativeMasks;
 
 public:
-    static char ID;
-
     PreventBitMasksFromBeingLiveinsToBasicBlocks()
-        : FunctionPass(ID)
-        , m_llvm_mask_type(nullptr)
+        : m_llvm_mask_type(nullptr)
         , m_native_mask_type(nullptr)
         , m_wide_zero_initializer(nullptr)
     {
     }
 
-    bool doInitialization(llvm::Module& M) override
+    bool doInitialization(llvm::Module& M)
     {
         llvm::Type* llvm_type_bool  = llvm::Type::getInt1Ty(M.getContext());
         llvm::Type* llvm_type_int32 = llvm::Type::getInt32Ty(M.getContext());
@@ -95,7 +92,7 @@ public:
         return false;  // I don't think we modified the module
     }
 
-    bool runOnFunction(llvm::Function& F) override
+    bool runOnFunction(llvm::Function& F)
     {
         OSL_DEV_ONLY(
             llvm::errs()
@@ -390,16 +387,53 @@ public:
     }
 };
 
+// New pass manager adapter
+template<int WidthT>
+class NewPreventBitMasksFromBeingLiveinsToBasicBlocks final
+    : public llvm::PassInfoMixin<
+          NewPreventBitMasksFromBeingLiveinsToBasicBlocks<WidthT>> {
+public:
+    llvm::PreservedAnalyses run(llvm::Function& F,
+                                llvm::FunctionAnalysisManager& AM)
+    {
+        PreventBitMasksFromBeingLiveinsToBasicBlocks<WidthT> pass;
+        pass.doInitialization(*(
+            F.getParent()));  // TODO: initialize only once for better performance?
+        pass.runOnFunction(F);
+        return llvm::PreservedAnalyses::all();
+    }
+};
 
+// Legacy pass manager adapter
+template<int WidthT>
+class LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks final
+    : public llvm::FunctionPass {
+    PreventBitMasksFromBeingLiveinsToBasicBlocks<WidthT> m_pass;
+
+public:
+    static char ID;
+
+    LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks() : FunctionPass(ID) {}
+
+    bool doInitialization(llvm::Module& M) override
+    {
+        return m_pass.doInitialization(M);
+    }
+
+    bool runOnFunction(llvm::Function& F) override
+    {
+        return m_pass.runOnFunction(F);
+    }
+};
 
 // No need to worry about static variable collisions if included multiple
 // places because of the anonymous namespace, each translation unit
 // including this file will need its own static members defined. LLVM will
 // assign IDs when they get registered, so this initialization value is not
 // important.
-template<> char PreventBitMasksFromBeingLiveinsToBasicBlocks<8>::ID = 0;
+template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>::ID = 0;
 
-template<> char PreventBitMasksFromBeingLiveinsToBasicBlocks<16>::ID = 0;
+template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>::ID = 0;
 
 }  // end of anonymous namespace
 

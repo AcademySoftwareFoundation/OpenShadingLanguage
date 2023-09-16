@@ -160,9 +160,15 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 17.0)
 endif ()
 
 # TODO: temporary for testing
-set(LLVM_OPAQUE_POINTERS OFF)
+set(LLVM_OPAQUE_POINTERS ON)
 if (LLVM_OPAQUE_POINTERS)
   add_definitions (-DOSL_LLVM_OPAQUE_POINTERS)
+endif()
+
+# TODO: temporary for testing
+set(LLVM_NEW_PASS_MANAGER ON)
+if (LLVM_NEW_PASS_MANAGER)
+  add_definitions (-DOSL_LLVM_NEW_PASS_MANAGER)
 endif()
 
 checked_find_package (partio)

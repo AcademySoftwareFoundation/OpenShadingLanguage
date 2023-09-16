@@ -54,6 +54,7 @@
 #endif
 
 #include <llvm/Analysis/BasicAliasAnalysis.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Analysis/TypeBasedAliasAnalysis.h>
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -64,6 +65,8 @@
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Passes/OptimizationLevel.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/PrettyStackTrace.h>
@@ -350,6 +353,19 @@ public:
 
 
 
+// New pass manager state, mainly here because these are template classes
+// for which forward declarations in a public header are tricky.
+struct LLVM_Util::NewPassManager {
+    llvm::LoopAnalysisManager loop_analysis_manager;
+    llvm::FunctionAnalysisManager function_analysis_manager;
+    llvm::CGSCCAnalysisManager cgscc_analysis_manager;
+    llvm::ModuleAnalysisManager module_analysis_manager;
+
+    llvm::ModulePassManager module_pass_manager;
+};
+
+
+
 struct SetCommandLineOptionsForLLVM {
     SetCommandLineOptionsForLLVM()
     {
@@ -375,6 +391,7 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
     , m_current_function(NULL)
     , m_llvm_module_passes(NULL)
     , m_llvm_func_passes(NULL)
+    , m_new_pass_manager(NULL)
     , m_llvm_exec(NULL)
     , m_vector_width(vector_width)
     , m_llvm_type_native_mask(nullptr)
@@ -527,6 +544,7 @@ LLVM_Util::~LLVM_Util()
     execengine(NULL);
     delete m_llvm_module_passes;
     delete m_llvm_func_passes;
+    delete m_new_pass_manager;
     delete m_builder;
     delete m_llvm_debug_builder;
     module(NULL);
@@ -563,13 +581,15 @@ LLVM_Util::SetupLLVM()
     llvm::initializeTarget(registry);
     llvm::initializeCodeGen(registry);
 
-    // PreventBitMasksFromBeingLiveinsToBasicBlocks
-    static llvm::RegisterPass<PreventBitMasksFromBeingLiveinsToBasicBlocks<8>>
+    // LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks
+    static llvm::RegisterPass<
+        LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>>
         sRegCustomPass0(
             "PreventBitMasksFromBeingLiveinsToBasicBlocks<8>",
             "Prevent Bit Masks <8xi1> From Being Liveins To Basic Blocks Pass",
             false /* Only looks at CFG */, false /* Analysis Pass */);
-    static llvm::RegisterPass<PreventBitMasksFromBeingLiveinsToBasicBlocks<16>>
+    static llvm::RegisterPass<
+        LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>>
         sRegCustomPass1(
             "PreventBitMasksFromBeingLiveinsToBasicBlocks<16>",
             "Prevent Bit Masks <16xi1> From Being Liveins To Basic Blocks Pass",
@@ -1765,7 +1785,100 @@ LLVM_Util::InstallLazyFunctionCreator(void* (*P)(const std::string&))
 void
 LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
 {
-    OSL_DEV_ONLY(std::cout << "setup_optimization_passes " << optlevel);
+#ifdef OSL_LLVM_NEW_PASS_MANAGER
+    // TODO: support optimization level 10-13 in new pass manager
+    const bool use_new_pass_manager = (optlevel < 10);
+#else
+    const bool use_new_pass_manager = false;
+#endif
+    if (use_new_pass_manager) {
+        setup_new_optimization_passes(optlevel, target_host);
+    } else {
+        setup_legacy_optimization_passes(optlevel, target_host);
+    }
+}
+
+void
+LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
+{
+    OSL_DEV_ONLY(std::cout << "setup_new_optimization_passes " << optlevel);
+    OSL_ASSERT(m_new_pass_manager == nullptr);
+
+    // Create analysis managers
+    m_new_pass_manager = new NewPassManager();
+
+    // Create pass builder
+    llvm::TargetMachine* target_machine = (target_host)
+                                              ? execengine()->getTargetMachine()
+                                              : nullptr;
+    llvm::PassBuilder pass_builder(target_machine);
+
+    pass_builder.registerModuleAnalyses(
+        m_new_pass_manager->module_analysis_manager);
+    pass_builder.registerCGSCCAnalyses(
+        m_new_pass_manager->cgscc_analysis_manager);
+    pass_builder.registerFunctionAnalyses(
+        m_new_pass_manager->function_analysis_manager);
+    pass_builder.registerLoopAnalyses(
+        m_new_pass_manager->loop_analysis_manager);
+    pass_builder.crossRegisterProxies(
+        m_new_pass_manager->loop_analysis_manager,
+        m_new_pass_manager->function_analysis_manager,
+        m_new_pass_manager->cgscc_analysis_manager,
+        m_new_pass_manager->module_analysis_manager);
+
+    // Translate to optimization level to LLVM
+    llvm::OptimizationLevel llvm_optlevel = (optlevel == 0)
+                                                ? llvm::OptimizationLevel::O0
+                                            : (optlevel == 1)
+                                                ? llvm::OptimizationLevel::O1
+                                            : (optlevel == 2)
+                                                ? llvm::OptimizationLevel::O2
+                                                : llvm::OptimizationLevel::O3;
+
+    // Create pass manager
+    m_new_pass_manager->module_pass_manager
+        = pass_builder.buildPerModuleDefaultPipeline(llvm_optlevel);
+
+    // Add some extra passes if they are needed
+    if (target_host) {
+        if (!m_supports_llvm_bit_masks_natively) {
+            switch (m_vector_width) {
+            case 16: {
+                // MUST BE THE FINAL PASS!
+                llvm::FunctionPassManager final_function_pass_manager;
+                final_function_pass_manager.addPass(
+                    NewPreventBitMasksFromBeingLiveinsToBasicBlocks<16>());
+                m_new_pass_manager->module_pass_manager.addPass(
+                    createModuleToFunctionPassAdaptor(
+                        std::move(final_function_pass_manager)));
+                break;
+            }
+            case 8: {
+                // MUST BE THE FINAL PASS!
+                llvm::FunctionPassManager final_function_pass_manager;
+                final_function_pass_manager.addPass(
+                    NewPreventBitMasksFromBeingLiveinsToBasicBlocks<8>());
+                m_new_pass_manager->module_pass_manager.addPass(
+                    createModuleToFunctionPassAdaptor(
+                        std::move(final_function_pass_manager)));
+                break;
+            }
+            case 4:
+                // We don't use masking or SIMD shading for 4-wide
+                break;
+            default:
+                std::cout << "m_vector_width = " << m_vector_width << "\n";
+                OSL_ASSERT(0 && "unsupported bit mask width");
+            };
+        }
+    }
+}
+
+void
+LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
+{
+    OSL_DEV_ONLY(std::cout << "setup_legacy_optimization_passes " << optlevel);
     OSL_DASSERT(m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
 
     // Construct the per-function passes and module-wide (interprocedural
@@ -1803,8 +1916,10 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
     // some expensive passes that were repeated many times and omitting
     // other passes that are not applicable or not profitable. Useful for
     // debugging, optlevel 10 adds next to no additional passes.
+
     switch (optlevel) {
     default: {
+#if OSL_LLVM_VERSION < 160
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
         // same set of optimizations as clang -O1, -O2, -O3
         llvm::PassManagerBuilder builder;
@@ -1814,15 +1929,16 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         builder.DisableUnrollLoops = false;
         builder.SLPVectorize       = false;
         builder.LoopVectorize      = false;
-        // TODO: is it ok to just skip this removed function?
-        // https://llvm.org/docs/NewPassManager.html
-#if OSL_LLVM_VERSION < 160
         if (target_machine)
             target_machine->adjustPassManager(builder);
-#endif
 
         builder.populateFunctionPassManager(fpm);
         builder.populateModulePassManager(mpm);
+#else
+        OSL_ASSERT(
+            0
+            && "legacy pass manager does not support default optimizations levels in LLVM 16+");
+#endif
         break;
     }
     case 10:
@@ -1975,8 +2091,9 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createDeadArgEliminationPass());
         mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createCFGSimplificationPass());
-        // TODO: is it ok to just skip this removed function?
 #if OSL_LLVM_VERSION < 160
+        // Replaced by CFGSimplification + PostOrderFunctionAttrs since LLVM 7.
+        // https://reviews.llvm.org/D44415
         mpm.add(llvm::createPruneEHPass());
 #endif
         mpm.add(llvm::createPostOrderFunctionAttrsLegacyPass());
@@ -2057,11 +2174,13 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
             switch (m_vector_width) {
             case 16:
                 // MUST BE THE FINAL PASS!
-                mpm.add(new PreventBitMasksFromBeingLiveinsToBasicBlocks<16>());
+                mpm.add(
+                    new LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>());
                 break;
             case 8:
                 // MUST BE THE FINAL PASS!
-                mpm.add(new PreventBitMasksFromBeingLiveinsToBasicBlocks<8>());
+                mpm.add(
+                    new LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>());
                 break;
             case 4:
                 // We don't use masking or SIMD shading for 4-wide
@@ -2075,6 +2194,7 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
 }
 
 
+
 void
 LLVM_Util::do_optimize(std::string* out_err)
 {
@@ -2086,12 +2206,19 @@ LLVM_Util::do_optimize(std::string* out_err)
         return;
 #endif
 
-    m_llvm_func_passes->doInitialization();
-    for (auto&& I : m_llvm_module->functions())
-        if (!I.isDeclaration())
-            m_llvm_func_passes->run(I);
-    m_llvm_func_passes->doFinalization();
-    m_llvm_module_passes->run(*m_llvm_module);
+    if (m_new_pass_manager) {
+        // New pass manager
+        m_new_pass_manager->module_pass_manager.run(
+            *m_llvm_module, m_new_pass_manager->module_analysis_manager);
+    } else {
+        // Legacy pass manager
+        m_llvm_func_passes->doInitialization();
+        for (auto&& I : m_llvm_module->functions())
+            if (!I.isDeclaration())
+                m_llvm_func_passes->run(I);
+        m_llvm_func_passes->doFinalization();
+        m_llvm_module_passes->run(*m_llvm_module);
+    }
 }
 
 

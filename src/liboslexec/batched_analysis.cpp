@@ -1117,9 +1117,15 @@ public:
     }
 
 #ifdef OSL_DEV
-    OSL_FORCEINLINE int op_num() const { return m_op_num; }
+    OSL_FORCEINLINE int op_num() const
+    {
+        return m_op_num;
+    }
 
-    OSL_FORCEINLINE int loop_op_index() const { return m_loop_op_index; }
+    OSL_FORCEINLINE int loop_op_index() const
+    {
+        return m_loop_op_index;
+    }
 #endif
 };
 
@@ -2201,7 +2207,7 @@ struct Analyzer {
 #endif
                     const auto& early_out = *earlyOutIter;
                     auto begin_dep_iter   = m_conditional_symbol_stack.begin_at(
-                        early_out.dtt_pos);
+                          early_out.dtt_pos);
                     auto end_dep_iter = m_conditional_symbol_stack.end();
 
                     const Opcode& opcode = m_opcodes[op_index];

@@ -378,7 +378,7 @@ BatchedBackendLLVM::llvm_zero_derivs(const Symbol& sym, llvm::Value* count)
         llvm::Value* post_condition_mask = ll.op_and(condition_mask,
                                                      pre_condition_mask);
         llvm::Value* cond_val            = ll.test_if_mask_is_non_zero(
-            post_condition_mask);
+                       post_condition_mask);
 
         // Jump to either LoopBody or AfterLoop
         ll.op_branch(cond_val, body_block, after_block);
@@ -599,6 +599,8 @@ BatchedBackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
     }
     return map_iter->second;
 }
+
+
 
 llvm::Value*
 BatchedBackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,

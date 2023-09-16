@@ -89,6 +89,34 @@
 
 #ifdef OSL_LLVM_NEW_PASS_MANAGER
 #    include <llvm/Passes/PassBuilder.h>
+#    include <llvm/Transforms/IPO/ArgumentPromotion.h>
+#    include <llvm/Transforms/IPO/ConstantMerge.h>
+#    include <llvm/Transforms/IPO/DeadArgumentElimination.h>
+#    include <llvm/Transforms/IPO/GlobalDCE.h>
+#    include <llvm/Transforms/IPO/GlobalOpt.h>
+#    include <llvm/Transforms/IPO/SCCP.h>
+#    include <llvm/Transforms/IPO/StripDeadPrototypes.h>
+#    include <llvm/Transforms/Scalar/ADCE.h>
+#    include <llvm/Transforms/Scalar/CorrelatedValuePropagation.h>
+#    include <llvm/Transforms/Scalar/DCE.h>
+#    include <llvm/Transforms/Scalar/DeadStoreElimination.h>
+#    include <llvm/Transforms/Scalar/EarlyCSE.h>
+#    include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#    include <llvm/Transforms/Scalar/JumpThreading.h>
+#    include <llvm/Transforms/Scalar/LICM.h>
+#    include <llvm/Transforms/Scalar/LoopDeletion.h>
+#    include <llvm/Transforms/Scalar/LoopIdiomRecognize.h>
+#    include <llvm/Transforms/Scalar/LoopRotation.h>
+#    include <llvm/Transforms/Scalar/LoopUnrollPass.h>
+#    include <llvm/Transforms/Scalar/LowerExpectIntrinsic.h>
+#    include <llvm/Transforms/Scalar/MemCpyOptimizer.h>
+#    include <llvm/Transforms/Scalar/Reassociate.h>
+#    include <llvm/Transforms/Scalar/SCCP.h>
+#    include <llvm/Transforms/Scalar/SROA.h>
+#    include <llvm/Transforms/Scalar/SimpleLoopUnswitch.h>
+#    include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#    include <llvm/Transforms/Scalar/TailRecursionElimination.h>
+#    include <llvm/Transforms/Utils/Mem2Reg.h>
 #endif
 
 // additional includes for PTX generation
@@ -1834,18 +1862,334 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         m_new_pass_manager->cgscc_analysis_manager,
         m_new_pass_manager->module_analysis_manager);
 
-    // Translate to optimization level to LLVM
-    llvm::OptimizationLevel llvm_optlevel = (optlevel == 0)
-                                                ? llvm::OptimizationLevel::O0
-                                            : (optlevel == 1)
-                                                ? llvm::OptimizationLevel::O1
-                                            : (optlevel == 2)
-                                                ? llvm::OptimizationLevel::O2
-                                                : llvm::OptimizationLevel::O3;
-
     // Create pass manager
-    m_new_pass_manager->module_pass_manager
-        = pass_builder.buildPerModuleDefaultPipeline(llvm_optlevel);
+    llvm::ModulePassManager& mpm = m_new_pass_manager->module_pass_manager;
+
+    // llvm_optimize 0-3 corresponds to the same set of optimizations
+    // as clang: -O0, -O1, -O2, -O3
+    // Tests on production shaders suggest the sweet spot between JIT time
+    // and runtime performance is O1.
+    //
+    // Optlevels 10, 11, 12, 13 explicitly create optimization passes. They
+    // are stripped down versions of clang's -O0, -O1, -O2, -O3. They try to
+    // provide similar results with improved optimization time by removing
+    // some expensive passes that were repeated many times and omitting
+    // other passes that are not applicable or not profitable. Useful for
+    // debugging, optlevel 10 adds next to no additional passes.
+
+    switch (optlevel) {
+    default: {
+        // Default optimization levels
+        llvm::OptimizationLevel llvm_optlevel
+            = (optlevel == 1)   ? llvm::OptimizationLevel::O1
+              : (optlevel == 2) ? llvm::OptimizationLevel::O2
+                                : llvm::OptimizationLevel::O3;
+        mpm = pass_builder.buildPerModuleDefaultPipeline(llvm_optlevel);
+        break;
+    }
+    case 0: {
+        mpm = pass_builder.buildO0DefaultPipeline(llvm::OptimizationLevel::O0);
+        break;
+    }
+
+    // Custom optimization levels
+    // TODO: many tests are failing currently
+    // TODO: not obvious that adding our passes after buildO0DefaultPipeline is correct
+    // TODO: LLVM_VERSION < 120 passes were removed, is this ok?
+    // TODO: how do BasicAA and TypeBasedAA work now?
+#    if 0
+    case 10: {
+        // No optimizations
+        mpm = pass_builder.buildO0DefaultPipeline(llvm::OptimizationLevel::O0);
+        break;
+    }
+    case 11: {
+        mpm = pass_builder.buildO0DefaultPipeline(llvm::OptimizationLevel::O0);
+
+        // The least we would want to do
+        mpm.addPass(llvm::ModuleInlinerWrapperPass());
+        mpm.addPass(
+            llvm::createModuleToFunctionPassAdaptor(llvm::SimplifyCFGPass()));
+        mpm.addPass(llvm::GlobalDCEPass());
+        break;
+    }
+    case 12: {
+        mpm = pass_builder.buildO0DefaultPipeline(llvm::OptimizationLevel::O0);
+
+#        if 0  // PRETTY_GOOD_KEEP_AS_REF
+        mpm.addPass(llvm::ModuleInlinerWrapperPass());
+        mpm.addPass(
+            llvm::createModuleToFunctionPassAdaptor(llvm::SimplifyCFGPass()));
+        mpm.addPass(llvm::GlobalDCEPass());
+
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::TypeBasedAA());
+            fpm.addPass(llvm::BasicAA());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::SROAPass());
+            fpm.addPass(llvm::EarlyCSEPass());
+
+            fpm.addPass(llvm::ReassociatePass());
+            fpm.addPass(llvm::DCEPass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+
+            fpm.addPass(llvm::PromotePass());
+            fpm.addPass(llvm::ADCEPass());
+
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::DCEPass());
+
+            fpm.addPass(llvm::JumpThreadingPass());
+            fpm.addPass(llvm::SROAPass());
+            fpm.addPass(llvm::InstCombinePass());
+
+            // Added
+            fpm.addPass(llvm::DSEPass());
+            mpm.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+        mpm.addPass(llvm::GlobalDCEPass());
+        mpm.addPass(llvm::ConstantMergePass());
+#        else
+        mpm.addPass(llvm::ModuleInlinerWrapperPass());
+        mpm.addPass(
+            llvm::createModuleToFunctionPassAdaptor(llvm::SimplifyCFGPass()));
+        mpm.addPass(llvm::GlobalDCEPass());
+
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::TypeBasedAA());
+            fpm.addPass(llvm::BasicAA());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::SROAPass());
+            fpm.addPass(llvm::EarlyCSEPass());
+
+            // Eliminate and remove as much as possible up front
+            fpm.addPass(llvm::ReassociatePass());
+            fpm.addPass(llvm::DCEPass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+
+            fpm.addPass(llvm::PromotePass());
+            fpm.addPass(llvm::ADCEPass());
+
+            //        fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::ReassociatePass());
+
+            {
+                // TODO: investigate if the loop optimization passes rely on metadata from clang
+                // we might need to recreate that meta data in OSL's loop code to enable these passes
+                llvm::LoopPassManager lpm;
+                lpm.addPass(llvm::LoopRotatePass());
+                lpm.addPass(llvm::LICMPass());
+#            if OSL_LLVM_VERSION < 150
+                lpm.addPass(llvm::SimpleLoopUnswitchPass(false));
+#            endif
+                fpm.addPass(createFunctionToLoopPassAdaptor(std::move(lpm)));
+            }
+            // fpm.addPass(llvm::InstCombinePass());
+            {
+                llvm::LoopPassManager lpm;
+                lpm.addPass(llvm::IndVarSimplifyPass());
+                // Don't think we emitted any idioms that should be converted to a loop
+                // lpm.addPass(llvm::LoopIdiomRecognizePass());
+                lpm.addPass(llvm::LoopDeletionPass());
+                fpm.addPass(createFunctionToLoopPassAdaptor(std::move(lpm)));
+            }
+
+            fpm.addPass(llvm::LoopUnrollPass());
+            // GVN is expensive but should pay for itself in reducing JIT time
+            fpm.addPass(llvm::GVNPass());
+
+            fpm.addPass(llvm::SCCPPass());
+            //        fpm.addPass(llvm::InstCombinePass());
+            // JumpThreading combo had a good improvement on JIT time
+            fpm.addPass(llvm::JumpThreadingPass());
+            // optional, didn't  seem to help more than it cost
+            // fpm.addPass(llvm::CorrelatedValuePropagationPass());
+            fpm.addPass(llvm::DSEPass());
+            fpm.addPass(llvm::ADCEPass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            // Place late as possible to minimize #instrs it has to process
+            fpm.addPass(llvm::InstCombinePass());
+
+            fpm.addPass(llvm::PromotePass());
+            fpm.addPass(llvm::DCEPass());
+            mpm.addPass(
+                llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+        mpm.addPass(llvm::GlobalDCEPass());
+        mpm.addPass(llvm::ConstantMergePass());
+        break;
+    }
+    case 13: {
+        mpm = pass_builder.buildO0DefaultPipeline(llvm::OptimizationLevel::O0);
+
+        mpm.addPass(llvm::GlobalDCEPass());
+
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::TypeBasedAA());
+            fpm.addPass(llvm::BasicAA());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::SROAPass());
+            fpm.addPass(llvm::EarlyCSEPass());
+            fpm.addPass(llvm::LowerExpectIntrinsicPass());
+
+            fpm.addPass(llvm::ReassociatePass());
+            fpm.addPass(llvm::DCEPass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+
+            fpm.addPass(llvm::PromotePass());
+            fpm.addPass(llvm::ADCEPass());
+
+            // The InstructionCombining is much more expensive that all the other
+            // optimizations, should attempt to reduce the number of times it is
+            // executed, if at all
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::DCEPass());
+
+            fpm.addPass(llvm::SROAPass());
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::PromotePass());
+            mpm.addPass(
+                llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+        mpm.addPass(llvm::GlobalOptPass());
+        mpm.addPass(
+            llvm::createModuleToFunctionPassAdaptor(llvm::ReassociatePass()));
+        // createIPConstantPropagationPass disappeared with LLVM 12.
+        // Comments in their PR indicate that IPSCCP is better, but I don't
+        // know if that means such a pass should be *right here*. I leave it
+        // to others who use opt==13 to continue to curate this particular
+        // list of passes.
+        mpm.addPass(llvm::IPSCCPPass());
+#        endif
+
+        mpm.addPass(llvm::DeadArgumentEliminationPass());
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            mpm.addPass(
+                llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+#        if OSL_LLVM_VERSION < 160
+        // Replaced by SimplifyCFGPass + PostOrderFunctionAttrs since LLVM 7.
+        // https://reviews.llvm.org/D44415
+        // mpm.addPass(llvm::PruneEHPass());
+#        endif
+        mpm.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
+            llvm::PostOrderFunctionAttrsPass()));
+        mpm.addPass(llvm::ReversePostOrderFunctionAttrsPass());
+        mpm.addPass(llvm::ModuleInlinerWrapperPass());
+
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::DCEPass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            mpm.addPass(
+                llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+#        if OSL_LLVM_VERSION < 150
+        mpm.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
+            llvm::ArgumentPromotionPass()));
+#        endif
+
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::ADCEPass());
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::JumpThreadingPass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::SROAPass());
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::TailCallElimPass());
+            mpm.addPass(
+                llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+        mpm.addPass(llvm::ModuleInlinerWrapperPass());
+
+        mpm.addPass(llvm::IPSCCPPass());
+        mpm.addPass(llvm::DeadArgumentEliminationPass());
+
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::ADCEPass());
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            mpm.addPass(
+                llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+        mpm.addPass(llvm::ModuleInlinerWrapperPass());
+
+#        if OSL_LLVM_VERSION < 150
+        mpm.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
+            llvm::ArgumentPromotionPass()));
+#        endif
+
+        {
+            llvm::FunctionPassManager fpm;
+            fpm.addPass(llvm::SROAPass());
+
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::ReassociatePass());
+
+            {
+                llvm::LoopPassManager lpm;
+                lpm.addPass(llvm::LoopRotatePass());
+                lpm.addPass(llvm::LICMPass());
+#        if OSL_LLVM_VERSION < 150
+                lpm.addPass(llvm::SimpleLoopUnswitchPass(false));
+#        endif
+                fpm.addPass(createFunctionToLoopPassAdaptor(std::move(lpm)));
+            }
+
+            fpm.addPass(llvm::InstCombinePass());
+
+            {
+                llvm::LoopPassManager lpm;
+                lpm.addPass(llvm::IndVarSimplifyPass());
+                lpm.addPass(llvm::LoopIdiomRecognizePass());
+                lpm.addPass(llvm::LoopDeletionPass());
+                fpm.addPass(createFunctionToLoopPassAdaptor(std::move(lpm)));
+            }
+
+            fpm.addPass(llvm::LoopUnrollPass());
+            fpm.addPass(llvm::GVNPass());
+
+            fpm.addPass(llvm::MemCpyOptPass());
+            fpm.addPass(llvm::SCCPPass());
+            fpm.addPass(llvm::InstCombinePass());
+            fpm.addPass(llvm::JumpThreadingPass());
+            fpm.addPass(llvm::CorrelatedValuePropagationPass());
+            fpm.addPass(llvm::DSEPass());
+            fpm.addPass(llvm::ADCEPass());
+            fpm.addPass(llvm::SimplifyCFGPass());
+            fpm.addPass(llvm::InstCombinePass());
+            mpm.addPass(
+                llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
+        }
+
+        mpm.addPass(llvm::ModuleInlinerWrapperPass());
+        mpm.addPass(llvm::createModuleToFunctionPassAdaptor(llvm::ADCEPass()));
+        mpm.addPass(llvm::StripDeadPrototypesPass());
+        mpm.addPass(llvm::GlobalDCEPass());
+        mpm.addPass(llvm::ConstantMergePass());
+        mpm.addPass(llvm::VerifierPass());
+        break;
+    }
+#    endif
+    }
 
     // Add some extra passes if they are needed
     if (target_host) {
@@ -1853,22 +2197,16 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             switch (m_vector_width) {
             case 16: {
                 // MUST BE THE FINAL PASS!
-                llvm::FunctionPassManager final_function_pass_manager;
-                final_function_pass_manager.addPass(
-                    NewPreventBitMasksFromBeingLiveinsToBasicBlocks<16>());
                 m_new_pass_manager->module_pass_manager.addPass(
                     createModuleToFunctionPassAdaptor(
-                        std::move(final_function_pass_manager)));
+                        NewPreventBitMasksFromBeingLiveinsToBasicBlocks<16>()));
                 break;
             }
             case 8: {
                 // MUST BE THE FINAL PASS!
-                llvm::FunctionPassManager final_function_pass_manager;
-                final_function_pass_manager.addPass(
-                    NewPreventBitMasksFromBeingLiveinsToBasicBlocks<8>());
                 m_new_pass_manager->module_pass_manager.addPass(
                     createModuleToFunctionPassAdaptor(
-                        std::move(final_function_pass_manager)));
+                        NewPreventBitMasksFromBeingLiveinsToBasicBlocks<8>()));
                 break;
             }
             case 4:

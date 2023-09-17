@@ -81,7 +81,7 @@ CudaGridRenderer::good(TextureHandle* handle)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-CudaGridRenderer::get_texture_handle(OSL::ustringhash filename,
+CudaGridRenderer::get_texture_handle(OSL::ustring filename,
                                      ShadingContext* shading_context,
                                      const TextureOpt* options)
 {
@@ -139,7 +139,7 @@ CudaGridRenderer::get_texture_handle(OSL::ustringhash filename,
         cudaTextureObject_t cuda_tex = 0;
         CUDA_CHECK(
             cudaCreateTextureObject(&cuda_tex, &res_desc, &tex_desc, nullptr));
-        itr = _samplers.emplace(filename, std::move(cuda_tex)).first;
+        itr = _samplers.emplace(filename.hash(), std::move(cuda_tex)).first;
     }
     return reinterpret_cast<RendererServices::TextureHandle*>(itr->second);
 }

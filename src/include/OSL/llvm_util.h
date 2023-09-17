@@ -34,6 +34,7 @@ class LLVMContext;
 class Module;
 class PointerType;
 class StringRef;
+class TargetMachine;
 class Type;
 class Value;
 class VectorType;
@@ -62,6 +63,7 @@ enum class TargetISA {
     AVX512,
     AVX512_noFMA,
     HOST,
+    NVPTX,
     COUNT
 };
 
@@ -203,6 +205,9 @@ public:
     /// target_isa() unless one of those has previously been called.
     TargetISA target_isa() const { return m_target_isa; }
 
+    /// Set the TargetISA to be used during codegen.
+    void set_target_isa(TargetISA requestedISA) { m_target_isa = requestedISA; }
+
     // Check support for certain CPU ISA features. These are only valid
     // after detect_cpu_features() (or make_jit_execengine()) has been
     // called.
@@ -262,6 +267,10 @@ public:
     /// Replace the ExecutionEngine (pass NULL to simply delete the
     /// current one).
     void execengine(llvm::ExecutionEngine* exec);
+
+    /// Return a pointer to the TargetMachine for NVPTX.  Create the TargetMachine
+    /// if it has not yet been created.
+    llvm::TargetMachine* nvptx_target_machine();
 
     enum class Linkage {
         External,  // Externally visible
@@ -1049,6 +1058,7 @@ private:
     NewPassManager* m_new_pass_manager;
     llvm::ExecutionEngine* m_llvm_exec;
     TargetISA m_target_isa = TargetISA::UNKNOWN;
+    llvm::TargetMachine* m_nvptx_target_machine;
 
     std::vector<llvm::BasicBlock*> m_return_block;      // stack for func call
     std::vector<llvm::BasicBlock*> m_loop_after_block;  // stack for break

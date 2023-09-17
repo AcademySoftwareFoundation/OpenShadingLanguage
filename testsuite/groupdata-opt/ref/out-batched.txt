@@ -1,0 +1,14 @@
+Compiled connected_output.osl -> connected_output_shader.oso
+Compiled input.osl -> input_shader.oso
+Compiled main.osl -> main_shader.oso
+Connect input_layer.Val_Out to main_layer.Val_In
+Val_in = 0.860313
+
+Connect input_layer.Val_Out to main_layer.Val_In
+Val_in = 0.860313
+
+Connect input_layer.Val_Out to test_layer.Val_Out
+Connect test_layer.Val_Out to main_layer.Val_In
+side-effect
+Val_in = 0.860313
+

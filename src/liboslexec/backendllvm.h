@@ -41,6 +41,10 @@ public:
     /// and store the llvm::Function* handle to it with the ShaderGroup.
     virtual void run();
 
+    /// Set additional Module/Function options for the CUDA/OptiX target.
+    void prepare_module_for_cuda_jit();
+
+
 
     /// What LLVM debug level are we at?
     int llvm_debug() const;
@@ -222,6 +226,10 @@ public:
     /// type, with derivs if derivs==true, and return the its pointer.
     llvm::Value* llvm_alloca(const TypeSpec& type, bool derivs,
                              const std::string& name = "", int align = 0);
+
+    /// Checks if a symbol represents a parameter that can be stored on the
+    /// stack instead of in GroupData
+    bool can_treat_param_as_local(const Symbol& sym);
 
     /// Given the OSL symbol, return the llvm::Value* corresponding to the
     /// address of the start of that symbol (first element, first component,

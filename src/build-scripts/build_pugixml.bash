@@ -11,7 +11,7 @@ set -ex
 
 # Repo and branch/tag/commit of pugixml to download if we don't have it yet
 PUGIXML_REPO=${PUGIXML_REPO:=https://github.com/zeux/pugixml.git}
-PUGIXML_VERSION=${PUGIXML_VERSION:=v1.10}
+PUGIXML_VERSION=${PUGIXML_VERSION:=v1.11.4}
 
 # Where to put pugixml repo source (default to the ext area)
 PUGIXML_SRC_DIR=${PUGIXML_SRC_DIR:=${PWD}/ext/pugixml}
@@ -34,17 +34,18 @@ if [[ ! -e ${PUGIXML_SRC_DIR} ]] ; then
     git clone ${PUGIXML_REPO} ${PUGIXML_SRC_DIR}
 fi
 cd ${PUGIXML_SRC_DIR}
+
 echo "git checkout ${PUGIXML_VERSION} --force"
 git checkout ${PUGIXML_VERSION} --force
 
-mkdir -p ${PUGIXML_BUILD_DIR}
-cd ${PUGIXML_BUILD_DIR}
-time cmake -DCMAKE_BUILD_TYPE=Release \
-           -DCMAKE_INSTALL_PREFIX=${PUGIXML_INSTALL_DIR} \
-           -DBUILD_SHARED_LIBS=ON \
-           -DBUILD_TESTS=OFF \
-           ${PUGIXML_BUILD_OPTS} ..
-time cmake --build . --config Release --target install
+if [[ -z $DEP_DOWNLOAD_ONLY ]]; then
+    time cmake -S . -B ${PUGIXML_BUILD_DIR} -DCMAKE_BUILD_TYPE=Release \
+               -DCMAKE_INSTALL_PREFIX=${PUGIXML_INSTALL_DIR} \
+               -DBUILD_SHARED_LIBS=ON \
+               -DBUILD_TESTS=OFF \
+               ${PUGIXML_BUILD_OPTS} ..
+    time cmake --build ${PUGIXML_BUILD_DIR} --config Release --target install
+fi
 
 # ls -R ${PUGIXML_INSTALL_DIR}
 popd

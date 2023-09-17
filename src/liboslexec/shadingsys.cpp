@@ -49,6 +49,13 @@ using namespace OSL::pvt;
 #    undef bitor
 #endif
 
+
+#ifdef OSL_LLVM_CUDA_BITCODE
+extern int shadeops_cuda_ptx_compiled_ops_size;
+extern unsigned char shadeops_cuda_ptx_compiled_ops_block[];
+#endif
+
+
 OSL_NAMESPACE_ENTER
 
 
@@ -808,7 +815,7 @@ ShadingSystem::find_symloc(ustring name) const
 
 
 const SymLocationDesc*
-ShadingSystem::find_symloc(ShaderGroup* group, ustring name) const
+ShadingSystem::find_symloc(const ShaderGroup* group, ustring name) const
 {
     if (group)
         return group->find_symloc(name);
@@ -827,7 +834,7 @@ ShadingSystem::find_symloc(ustring name, SymArena arena) const
 
 
 const SymLocationDesc*
-ShadingSystem::find_symloc(ShaderGroup* group, ustring name,
+ShadingSystem::find_symloc(const ShaderGroup* group, ustring name,
                            SymArena arena) const
 {
     if (group)
@@ -1071,6 +1078,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_opt_texture_handle(true)
     , m_opt_seed_bblock_aliases(true)
     , m_opt_useparam(false)
+    , m_opt_groupdata(true)
 #if OSL_USE_BATCHED
     , m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr)
                              || (renderer->batched(WidthOf<8>()) != nullptr))
@@ -1104,6 +1112,12 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_exec_repeat(1)
     , m_opt_warnings(0)
     , m_gpu_opt_error(0)
+    , m_optix_no_inline(false)
+    , m_optix_no_inline_layer_funcs(false)
+    , m_optix_merge_layer_funcs(true)
+    , m_optix_no_inline_rend_lib(false)
+    , m_optix_no_inline_thresh(100000)
+    , m_optix_force_inline_thresh(0)
     , m_colorspace("Rec709")
     , m_stat_opt_locking_time(0)
     , m_stat_specialization_time(0)
@@ -1587,6 +1601,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("opt_texture_handle", int, m_opt_texture_handle);
     ATTR_SET("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
     ATTR_SET("opt_useparam", int, m_opt_useparam);
+    ATTR_SET("opt_groupdata", int, m_opt_groupdata);
     ATTR_SET("opt_batched_analysis", int, m_opt_batched_analysis);
     ATTR_SET("llvm_jit_fma", int, m_llvm_jit_fma);
     ATTR_SET("llvm_jit_aggressive", int, m_llvm_jit_aggressive);
@@ -1625,6 +1640,12 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("exec_repeat", int, m_exec_repeat);
     ATTR_SET("opt_warnings", int, m_opt_warnings);
     ATTR_SET("gpu_opt_error", int, m_gpu_opt_error);
+    ATTR_SET("optix_no_inline", int, m_optix_no_inline);
+    ATTR_SET("optix_no_inline_layer_funcs", int, m_optix_no_inline_layer_funcs);
+    ATTR_SET("optix_merge_layer_funcs", int, m_optix_merge_layer_funcs);
+    ATTR_SET("optix_no_inline_rend_lib", int, m_optix_no_inline_rend_lib);
+    ATTR_SET("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
+    ATTR_SET("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
     ATTR_SET_STRING("commonspace",
                     m_shading_state_uniform.m_commonspace_synonym);
     ATTR_SET_STRING("debug_groupname", m_debug_groupname);
@@ -1759,6 +1780,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("opt_texture_handle", int, m_opt_texture_handle);
     ATTR_DECODE("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
     ATTR_DECODE("opt_useparam", int, m_opt_useparam);
+    ATTR_DECODE("opt_groupdata", int, m_opt_groupdata);
     ATTR_DECODE("llvm_jit_fma", int, m_llvm_jit_fma);
     ATTR_DECODE("llvm_jit_aggressive", int, m_llvm_jit_aggressive);
     ATTR_DECODE_STRING("llvm_jit_target", m_llvm_jit_target);
@@ -1806,6 +1828,13 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("exec_repeat", int, m_exec_repeat);
     ATTR_DECODE("opt_warnings", int, m_opt_warnings);
     ATTR_DECODE("gpu_opt_error", int, m_gpu_opt_error);
+    ATTR_DECODE("optix_no_inline", int, m_optix_no_inline);
+    ATTR_DECODE("optix_no_inline_layer_funcs", int,
+                m_optix_no_inline_layer_funcs);
+    ATTR_DECODE("optix_merge_layer_funcs", int, m_optix_merge_layer_funcs);
+    ATTR_DECODE("optix_no_inline_rend_lib", int, m_optix_no_inline_rend_lib);
+    ATTR_DECODE("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
+    ATTR_DECODE("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
 
     ATTR_DECODE("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE("stat:groups", int, m_stat_groups);
@@ -1951,6 +1980,17 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
         *(const char**)val = ustring(deps).c_str();
         return true;
     }
+#ifdef OSL_LLVM_CUDA_BITCODE
+    if (name == "shadeops_cuda_ptx" && type.basetype == TypeDesc::PTR) {
+        *(const char**)val = reinterpret_cast<const char*>(
+            shadeops_cuda_ptx_compiled_ops_block);
+        return true;
+    }
+    if (name == "shadeops_cuda_ptx_size" && type.basetype == TypeDesc::INT) {
+        *(int*)val = shadeops_cuda_ptx_compiled_ops_size;
+        return true;
+    }
+#endif
 
     return false;
 #undef ATTR_DECODE
@@ -2381,6 +2421,12 @@ ShadingSystemImpl::getstats(int level) const
     INTOPT(exec_repeat);
     INTOPT(opt_warnings);
     INTOPT(gpu_opt_error);
+    BOOLOPT(optix_no_inline);
+    BOOLOPT(optix_no_inline_layer_funcs);
+    BOOLOPT(optix_merge_layer_funcs);
+    BOOLOPT(optix_no_inline_rend_lib);
+    INTOPT(optix_no_inline_thresh);
+    INTOPT(optix_force_inline_thresh);
     STROPT(debug_groupname);
     STROPT(debug_layername);
     STROPT(archive_groupname);
@@ -4220,6 +4266,38 @@ ShadingSystemImpl::archive_shadergroup(ShaderGroup& group, string_view filename)
 
 
 void
+ShadingSystemImpl::register_inline_function(ustring name)
+{
+    m_inline_functions.insert(name);
+}
+
+
+
+void
+ShadingSystemImpl::unregister_inline_function(ustring name)
+{
+    m_inline_functions.erase(name);
+}
+
+
+
+void
+ShadingSystemImpl::register_noinline_function(ustring name)
+{
+    m_noinline_functions.insert(name);
+}
+
+
+
+void
+ShadingSystemImpl::unregister_noinline_function(ustring name)
+{
+    m_noinline_functions.erase(name);
+}
+
+
+
+void
 ClosureRegistry::register_closure(string_view name, int id,
                                   const ClosureParam* params,
                                   PrepareClosureFunc prepare,
@@ -4382,6 +4460,38 @@ OSL::ShadingSystem::oslquery(const ShaderGroup& group, int layernum)
 OSL::OSLQuery::OSLQuery(const ShaderGroup* group, int layernum)
 {
     init(group, layernum);
+}
+
+
+
+void
+ShadingSystem::register_inline_function(ustring name)
+{
+    return m_impl->register_inline_function(name);
+}
+
+
+
+void
+ShadingSystem::unregister_inline_function(ustring name)
+{
+    return m_impl->unregister_inline_function(name);
+}
+
+
+
+void
+ShadingSystem::register_noinline_function(ustring name)
+{
+    return m_impl->register_noinline_function(name);
+}
+
+
+
+void
+ShadingSystem::unregister_noinline_function(ustring name)
+{
+    return m_impl->unregister_noinline_function(name);
 }
 
 

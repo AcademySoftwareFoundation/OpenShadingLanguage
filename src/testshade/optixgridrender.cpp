@@ -21,9 +21,16 @@
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
-extern int rend_llvm_compiled_ops_size;
-extern unsigned char rend_llvm_compiled_ops_block[];
+extern int rend_lib_llvm_compiled_ops_size;
+extern unsigned char rend_lib_llvm_compiled_ops_block[];
 
+
+// The entry point for OptiX Module creation changed in OptiX 7.7
+#if OPTIX_VERSION < 70700
+const auto optixModuleCreateFn = optixModuleCreateFromPTX;
+#else
+const auto optixModuleCreateFn = optixModuleCreate;
+#endif
 
 
 OSL_NAMESPACE_ENTER
@@ -190,6 +197,15 @@ bool
 OptixGridRenderer::init_optix_context(int xres OSL_MAYBE_UNUSED,
                                       int yres OSL_MAYBE_UNUSED)
 {
+    if (!options.get_int("no_rend_lib_bitcode")) {
+        shadingsys->attribute("lib_bitcode",
+                              { OSL::TypeDesc::UINT8,
+                                rend_lib_llvm_compiled_ops_size },
+                              rend_lib_llvm_compiled_ops_block);
+    }
+    if (options.get_int("optix_register_inline_funcs")) {
+        register_inline_functions();
+    }
     return true;
 }
 
@@ -325,12 +341,11 @@ OptixGridRenderer::make_optix_materials()
 
     sizeof_msg_log = sizeof(msg_log);
     OptixModule program_module;
-    OPTIX_CHECK_MSG(optixModuleCreateFromPTX(m_optix_ctx,
-                                             &module_compile_options,
-                                             &pipeline_compile_options,
-                                             program_ptx.c_str(),
-                                             program_ptx.size(), msg_log,
-                                             &sizeof_msg_log, &program_module),
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options,
+                                        program_ptx.c_str(), program_ptx.size(),
+                                        msg_log, &sizeof_msg_log,
+                                        &program_module),
                     fmtformat("Creating Module from PTX-file {}", msg_log));
 
     // Record it so we can destroy it later
@@ -416,29 +431,74 @@ OptixGridRenderer::make_optix_materials()
                                 msg_log, &sizeof_msg_log, &hitgroup_group),
         fmtformat("Creating 'hitgroup' program group: {}", msg_log));
 
-    // Load the renderer support library CUDA source and generate PTX for it
-    std::string rendlibName  = "rend_lib.ptx";
-    std::string rend_lib_ptx = load_ptx_file(rendlibName);
-    if (rend_lib_ptx.empty()) {
-        errhandler().severefmt("Could not find PTX for the raygen program");
+    // Retrieve the compiled shadeops PTX
+    const char* shadeops_ptx = nullptr;
+    shadingsys->getattribute("shadeops_cuda_ptx", OSL::TypeDesc::PTR,
+                             &shadeops_ptx);
+
+    int shadeops_ptx_size = 0;
+    shadingsys->getattribute("shadeops_cuda_ptx_size", OSL::TypeDesc::INT,
+                             &shadeops_ptx_size);
+
+    if (shadeops_ptx == nullptr || shadeops_ptx_size == 0) {
+        errhandler().severefmt(
+            "Could not retrieve PTX for the shadeops library");
         return false;
     }
 
-    // Create support library program group
+    // Create the shadeops library program group
+    OptixModule shadeops_module;
+    sizeof_msg_log = sizeof(msg_log);
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options, shadeops_ptx,
+                                        shadeops_ptx_size, msg_log,
+                                        &sizeof_msg_log, &shadeops_module),
+                    fmtformat("Creating module for shadeops library{}",
+                              msg_log));
+
+    // Record it so we can destroy it later
+    modules.push_back(shadeops_module);
+
+    // Load the PTX for the rend_lib
+    std::string rend_libName = "rend_lib_testshade.ptx";
+    std::string rend_lib_ptx = load_ptx_file(rend_libName);
+    if (rend_lib_ptx.empty()) {
+        errhandler().severefmt("Could not find PTX for the renderer library");
+        return false;
+    }
+
+    // Create rend_lib program group
     sizeof_msg_log = sizeof(msg_log);
     OptixModule rend_lib_module;
-    OPTIX_CHECK_MSG(optixModuleCreateFromPTX(m_optix_ctx,
-                                             &module_compile_options,
-                                             &pipeline_compile_options,
-                                             rend_lib_ptx.c_str(),
-                                             rend_lib_ptx.size(), msg_log,
-                                             &sizeof_msg_log, &rend_lib_module),
+    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
+                                        &pipeline_compile_options,
+                                        rend_lib_ptx.c_str(),
+                                        rend_lib_ptx.size(), msg_log,
+                                        &sizeof_msg_log, &rend_lib_module),
                     fmtformat("Creating module from PTX-file: {}", msg_log));
 
     // Record it so we can destroy it later
     modules.push_back(rend_lib_module);
 
-    // Direct-callable -- support functions for OSL on the device
+    // Direct-callable -- built-in support functions for OSL on the device
+    OptixProgramGroupDesc shadeops_desc = {};
+    shadeops_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+    shadeops_desc.callables.moduleDC    = shadeops_module;
+    shadeops_desc.callables.entryFunctionNameDC
+        = "__direct_callable__dummy_shadeops";
+    shadeops_desc.callables.moduleCC            = 0;
+    shadeops_desc.callables.entryFunctionNameCC = nullptr;
+
+    OptixProgramGroup shadeops_group;
+    sizeof_msg_log = sizeof(msg_log);
+    OPTIX_CHECK_MSG(
+        optixProgramGroupCreate(m_optix_ctx, &shadeops_desc,
+                                1,                 // number of program groups
+                                &program_options,  // program options
+                                msg_log, &sizeof_msg_log, &shadeops_group),
+        fmtformat("Creating 'shadeops' program group: {}", msg_log));
+
+    // Direct-callable -- renderer-specific support functions for OSL on the device
     OptixProgramGroupDesc rend_lib_desc = {};
     rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
     rend_lib_desc.callables.moduleDC    = rend_lib_module;
@@ -446,6 +506,7 @@ OptixGridRenderer::make_optix_materials()
         = "__direct_callable__dummy_rend_lib";
     rend_lib_desc.callables.moduleCC            = 0;
     rend_lib_desc.callables.entryFunctionNameCC = nullptr;
+
     OptixProgramGroup rend_lib_group;
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(
@@ -453,7 +514,7 @@ OptixGridRenderer::make_optix_materials()
                                 1,                 // number of program groups
                                 &program_options,  // program options
                                 msg_log, &sizeof_msg_log, &rend_lib_group),
-        fmtformat("Creating 'hitgroup' program group: {}", msg_log));
+        fmtformat("Creating 'rend_lib' program group: {}", msg_log));
 
     int callables = m_fused_callable ? 1 : 2;
 
@@ -507,12 +568,13 @@ OptixGridRenderer::make_optix_materials()
         // and set the OSL functions as Callable Programs so that they
         // can be executed by the closest hit program in the wrapper
         sizeof_msg_log = sizeof(msg_log);
-        OPTIX_CHECK_MSG(
-            optixModuleCreateFromPTX(m_optix_ctx, &module_compile_options,
-                                     &pipeline_compile_options, osl_ptx.c_str(),
-                                     osl_ptx.size(), msg_log, &sizeof_msg_log,
-                                     &optix_module),
-            fmtformat("Creating Module from PTX-file {}", msg_log));
+        OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx,
+                                            &module_compile_options,
+                                            &pipeline_compile_options,
+                                            osl_ptx.c_str(), osl_ptx.size(),
+                                            msg_log, &sizeof_msg_log,
+                                            &optix_module),
+                        fmtformat("Creating Module from PTX-file {}", msg_log));
 
         modules.push_back(optix_module);
 
@@ -558,18 +620,18 @@ OptixGridRenderer::make_optix_materials()
 
     OptixPipelineLinkOptions pipeline_link_options;
     pipeline_link_options.maxTraceDepth = 1;
-    pipeline_link_options.debugLevel    = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#if (OPTIX_VERSION < 70700)
+    pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+#endif
 #if (OPTIX_VERSION < 70100)
     pipeline_link_options.overrideUsesMotionBlur = false;
 #endif
 
     // Set up OptiX pipeline
     std::vector<OptixProgramGroup> final_groups = {
-        rend_lib_group,
-        raygen_group,
-        miss_group,
-        hitgroup_group,
-        setglobals_raygen_group,
+        shadeops_group,        rend_lib_group,
+        raygen_group,          miss_group,
+        hitgroup_group,        setglobals_raygen_group,
         setglobals_miss_group,
     };
     if (m_fused_callable) {
@@ -589,8 +651,16 @@ OptixGridRenderer::make_optix_materials()
 
     // Set the pipeline stack size
     OptixStackSizes stack_sizes = {};
-    for (OptixProgramGroup& program_group : final_groups)
+    for (OptixProgramGroup& program_group : final_groups) {
+#if (OPTIX_VERSION < 70700)
         OPTIX_CHECK(optixUtilAccumulateStackSizes(program_group, &stack_sizes));
+#else
+        // OptiX 7.7+ is able to take the whole pipeline into account
+        // when calculating the stack requirements.
+        OPTIX_CHECK(optixUtilAccumulateStackSizes(program_group, &stack_sizes,
+                                                  m_optix_pipeline));
+#endif
+    }
 
     uint32_t max_trace_depth = 1;
     uint32_t max_cc_depth    = 1;
@@ -602,6 +672,13 @@ OptixGridRenderer::make_optix_materials()
         &stack_sizes, max_trace_depth, max_cc_depth, max_dc_depth,
         &direct_callable_stack_size_from_traversal,
         &direct_callable_stack_size_from_state, &continuation_stack_size));
+
+#if (OPTIX_VERSION < 70700)
+    // NB: Older versions of OptiX are unable to compute the stack requirements
+    //     for extern functions (e.g., the shadeops functions), so we need to
+    //     pad the direct callable stack size to accommodate these functions.
+    direct_callable_stack_size_from_state += 512;
+#endif
 
     const uint32_t max_traversal_depth = 1;
     OPTIX_CHECK(optixPipelineSetStackSize(
@@ -731,7 +808,7 @@ OptixGridRenderer::good(TextureHandle* handle OSL_MAYBE_UNUSED)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-OptixGridRenderer::get_texture_handle(ustringhash filename,
+OptixGridRenderer::get_texture_handle(ustring filename,
                                       ShadingContext* /*shading_context*/,
                                       const TextureOpt* /*options*/)
 {
@@ -739,9 +816,9 @@ OptixGridRenderer::get_texture_handle(ustringhash filename,
     if (itr == m_samplers.end()) {
         // Open image
         OIIO::ImageBuf image;
-        if (!image.init_spec(ustring_from(filename), 0, 0)) {
-            errhandler().errorfmt("Could not load: {} (hash {})",
-                                  ustring_from(filename), filename);
+        if (!image.init_spec(filename, 0, 0)) {
+            errhandler().errorfmt("Could not load: {} (hash {})", filename,
+                                  filename);
             return (TextureHandle*)nullptr;
         }
 
@@ -791,7 +868,9 @@ OptixGridRenderer::get_texture_handle(ustringhash filename,
         cudaTextureObject_t cuda_tex = 0;
         CUDA_CHECK(
             cudaCreateTextureObject(&cuda_tex, &res_desc, &tex_desc, nullptr));
-        itr = m_samplers.emplace(std::move(filename), std::move(cuda_tex)).first;
+        itr = m_samplers
+                  .emplace(std::move(filename.hash()), std::move(cuda_tex))
+                  .first;
     }
     return reinterpret_cast<RendererServices::TextureHandle*>(itr->second);
 }
@@ -1051,6 +1130,118 @@ OptixGridRenderer::register_named_transforms()
     m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_buffer));
 
     m_num_named_xforms = xform_name_buffer.size();
+}
+
+void
+OptixGridRenderer::register_inline_functions()
+{
+    // clang-format off
+
+    // Depending on the inlining options and optimization level, some functions
+    // might not be inlined even when it would be beneficial to do so. We can
+    // register such functions with the ShadingSystem to ensure that they are
+    // inlined regardless of the other inlining options or the optimization
+    // level.
+    //
+    // Conversely, there are some functions which should rarely be inlined. If that
+    // is known in advance, we can register those functions with the ShadingSystem
+    // so they can be excluded before running the ShaderGroup optimization, which
+    // can help speed up the optimization and JIT stages.
+    //
+    // The default behavior of the optimizer should be sufficient for most
+    // cases, and the inline/noinline thresholds available through the
+    // ShadingSystem attributes enable some degree of fine tuning. This
+    // mechanism has been added to offer a finer degree of control
+    //
+    // Please refer to doc/app_integration/OptiX-Inlining-Options.md for more
+    // details about the inlining options.
+
+    // These functions are all 5 instructions or less in the PTX, with most of
+    // those instructions related to reading the parameters and writing out the
+    // return value. It would be beneficial to inline them in all cases. We can
+    // register them to ensure that they are inlined regardless of the other
+    // compile options.
+    shadingsys->register_inline_function(ustring("osl_abs_ff"));
+    shadingsys->register_inline_function(ustring("osl_abs_ii"));
+    shadingsys->register_inline_function(ustring("osl_ceil_ff"));
+    shadingsys->register_inline_function(ustring("osl_cos_ff"));
+    shadingsys->register_inline_function(ustring("osl_exp2_ff"));
+    shadingsys->register_inline_function(ustring("osl_exp_ff"));
+    shadingsys->register_inline_function(ustring("osl_fabs_ff"));
+    shadingsys->register_inline_function(ustring("osl_fabs_ii"));
+    shadingsys->register_inline_function(ustring("osl_floor_ff"));
+    shadingsys->register_inline_function(ustring("osl_get_texture_options"));
+    shadingsys->register_inline_function(ustring("osl_getchar_isi"));
+    shadingsys->register_inline_function(ustring("osl_hash_is"));
+    shadingsys->register_inline_function(ustring("osl_log10_ff"));
+    shadingsys->register_inline_function(ustring("osl_log2_ff"));
+    shadingsys->register_inline_function(ustring("osl_log_ff"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_anisotropic"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_bandwidth"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_do_filter"));
+    shadingsys->register_inline_function(ustring("osl_noiseparams_set_impulses"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_ff"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_fff"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_fv"));
+    shadingsys->register_inline_function(ustring("osl_nullnoise_fvf"));
+    shadingsys->register_inline_function(ustring("osl_sin_ff"));
+    shadingsys->register_inline_function(ustring("osl_strlen_is"));
+    shadingsys->register_inline_function(ustring("osl_texture_set_interp_code"));
+    shadingsys->register_inline_function(ustring("osl_texture_set_stwrap_code"));
+    shadingsys->register_inline_function(ustring("osl_trunc_ff"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_ff"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_fff"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_fv"));
+    shadingsys->register_inline_function(ustring("osl_unullnoise_fvf"));
+
+    // These large functions are unlikely to ever been inlined. In such cases,
+    // we may be able to speed up ShaderGroup compilation by registering these
+    // functions as "noinline" so they can be excluded from the ShaderGroup
+    // module prior to optimization/JIT.
+    shadingsys->register_noinline_function(ustring("osl_gabornoise_dfdfdf"));
+    shadingsys->register_noinline_function(ustring("osl_gabornoise_dfdv"));
+    shadingsys->register_noinline_function(ustring("osl_gabornoise_dfdvdf"));
+    shadingsys->register_noinline_function(ustring("osl_gaborpnoise_dfdfdfff"));
+    shadingsys->register_noinline_function(ustring("osl_gaborpnoise_dfdvdfvf"));
+    shadingsys->register_noinline_function(ustring("osl_gaborpnoise_dfdvv"));
+    shadingsys->register_noinline_function(ustring("osl_genericnoise_dfdvdf"));
+    shadingsys->register_noinline_function(ustring("osl_genericpnoise_dfdvv"));
+    shadingsys->register_noinline_function(ustring("osl_get_inverse_matrix"));
+    shadingsys->register_noinline_function(ustring("osl_noise_dfdfdf"));
+    shadingsys->register_noinline_function(ustring("osl_noise_dfdff"));
+    shadingsys->register_noinline_function(ustring("osl_noise_dffdf"));
+    shadingsys->register_noinline_function(ustring("osl_noise_fv"));
+    shadingsys->register_noinline_function(ustring("osl_noise_vff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_dfdfdfff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_dfdffff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_dffdfff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_fffff"));
+    shadingsys->register_noinline_function(ustring("osl_pnoise_vffff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_dfdfdfff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_dfdffff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_dffdfff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_fffff"));
+    shadingsys->register_noinline_function(ustring("osl_psnoise_vffff"));
+    shadingsys->register_noinline_function(ustring("osl_simplexnoise_dvdf"));
+    shadingsys->register_noinline_function(ustring("osl_simplexnoise_vf"));
+    shadingsys->register_noinline_function(ustring("osl_simplexnoise_vff"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_dfdfdf"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_dfdff"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_dffdf"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_fv"));
+    shadingsys->register_noinline_function(ustring("osl_snoise_vff"));
+    shadingsys->register_noinline_function(ustring("osl_transform_triple"));
+    shadingsys->register_noinline_function(ustring("osl_transformn_dvmdv"));
+    shadingsys->register_noinline_function(ustring("osl_usimplexnoise_dvdf"));
+    shadingsys->register_noinline_function(ustring("osl_usimplexnoise_vf"));
+    shadingsys->register_noinline_function(ustring("osl_usimplexnoise_vff"));
+
+    // It's also possible to unregister functions to restore the default
+    // inlining behavior when needed.
+    shadingsys->unregister_inline_function(ustring("osl_get_texture_options"));
+    shadingsys->unregister_noinline_function(ustring("osl_get_inverse_matrix"));
+
+    // clang-format on
 }
 
 OSL_NAMESPACE_EXIT

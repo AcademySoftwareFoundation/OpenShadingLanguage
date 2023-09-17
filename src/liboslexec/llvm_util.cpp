@@ -3559,7 +3559,7 @@ LLVM_Util::llvm_type(const TypeDesc& typedesc)
         lt = type_void();
     else if (t == TypeDesc::UINT8)
         lt = type_char();
-    else if (t == TypeDesc::UINT64)
+    else if (t == TypeDesc::UINT64 || t == TypeDesc::INT64)
         lt = type_longlong();
     else if (t == TypeDesc::PTR)
         lt = type_void_ptr();

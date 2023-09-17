@@ -1521,11 +1521,7 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
         // Because we allow temporaries and local results of comparison operations
         // to use the native bool type of i1, we can just skip checking these
         // as they should always be assigned a value.
-        // We can just interrogate the underlying llvm symbol to see if
-        // it is a bool
-        llvm::Value* llvmValue = llvm_get_pointer(sym);
-        if (ll.llvm_typeof(llvmValue) == ll.type_ptr(ll.type_bool())
-            || ll.llvm_typeof(llvmValue) == ll.type_ptr(ll.type_wide_bool())) {
+        if (sym.typespec().is_int_based() && sym.forced_llvm_bool()) {
             continue;
         }
 

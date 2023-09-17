@@ -7867,7 +7867,8 @@ LLVMGEN(llvm_gen_pointcloud_write)
         llvm::Value* type_value = rop.ll.constant(
             valsym->typespec().simpletype());
         rop.llvm_store_value(type_value, types, typesArrayType, /*deriv*/ 0,
-                             arrayindex, /*component*/ 0, valsym->is_uniform());
+                             arrayindex, /*component*/ 0,
+                             /*dst_is_uniform*/ true);
 
         // value[i]
         llvm::Value* attr_value_ptr = rop.llvm_load_arg(*valsym,
@@ -7875,7 +7876,7 @@ LLVMGEN(llvm_gen_pointcloud_write)
                                                         false /*is_uniform*/);
         rop.llvm_store_value(attr_value_ptr, values, valuesArrayType,
                              /*deriv*/ 0, arrayindex, /*component*/ 0,
-                             valsym->is_uniform());
+                             /*dst_is_uniform*/ true);
     }
 
     constexpr int fileNameArgumentIndex = 1;

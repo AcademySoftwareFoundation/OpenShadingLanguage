@@ -1891,7 +1891,7 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             [&] { return llvm::TargetLibraryAnalysis(TLII); });
     }
 
-    if (optlevel > 10) {
+    if (optlevel > 11) {
         // Enable alias analysis for custom optimization levels
         llvm::AAManager aam;
         aam.registerFunctionAnalysis<llvm::BasicAA>();
@@ -2066,6 +2066,7 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 
         mpm.addPass(llvm::GlobalDCEPass());
         mpm.addPass(llvm::ConstantMergePass());
+#    endif
         break;
     }
     case 13: {
@@ -2110,7 +2111,6 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         // to others who use opt==13 to continue to curate this particular
         // list of passes.
         mpm.addPass(llvm::IPSCCPPass());
-#    endif
 
         mpm.addPass(llvm::DeadArgumentEliminationPass());
         {

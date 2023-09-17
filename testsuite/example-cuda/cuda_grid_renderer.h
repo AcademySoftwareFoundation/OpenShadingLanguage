@@ -49,7 +49,7 @@ public:
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
-    virtual TextureHandle* get_texture_handle(ustringhash filename,
+    virtual TextureHandle* get_texture_handle(ustring filename,
                                               ShadingContext* shading_context,
                                               const TextureOpt* options);
 

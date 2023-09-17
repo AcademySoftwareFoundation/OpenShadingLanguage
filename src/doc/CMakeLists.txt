@@ -38,9 +38,7 @@ macro (docdeep_generate)
     # ^^ syntax: prefix options one-arg-keywords multi-arg-keywords args
     set (oslfile ${_docdeep_SOURCE})
     set (mdfile "${_docdeep_NAME}.md.html")
-    if (VERBOSE)
-        message (STATUS "docdeep will make '${mdfile}'")
-    endif ()
+    message (VERBOSE "docdeep will make '${mdfile}'")
     set (docdeep_program ${CMAKE_SOURCE_DIR}/src/build-scripts/docdeep.py)
     add_custom_command (OUTPUT ${mdfile}
         COMMAND ${Python_EXECUTABLE} ${docdeep_program} -d ${_docdeep_NAME} -s docs.css

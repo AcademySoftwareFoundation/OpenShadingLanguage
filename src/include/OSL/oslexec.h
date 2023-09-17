@@ -285,7 +285,7 @@ public:
     ///         opt_peephole, opt_coalesce_temps, opt_assign, opt_mix
     ///         opt_merge_instances, opt_merge_instance_with_userdata,
     ///         opt_fold_getattribute, opt_middleman, opt_texture_handle
-    ///         opt_seed_bblock_aliases
+    ///         opt_seed_bblock_aliases, opt_groupdata
     ///    int opt_passes         Number of optimization passes per layer (10)
     ///    int llvm_optimize      Which of several LLVM optimize strategies (1)
     ///    int llvm_debug         Set LLVM extra debug level (0)
@@ -1036,13 +1036,14 @@ public:
     // Find the SymLocationDesc for this named param, returning its pointer
     // or nullptr if that name is not found.
     const SymLocationDesc* find_symloc(ustring name) const;
-    const SymLocationDesc* find_symloc(ShaderGroup* group, ustring name) const;
+    const SymLocationDesc* find_symloc(const ShaderGroup* group,
+                                       ustring name) const;
 
     // Find the SymLocationDesc for this named param but only if it matches
     // the arena type, returning its pointer or nullptr if that name is not
     // found.
     const SymLocationDesc* find_symloc(ustring name, SymArena arena) const;
-    const SymLocationDesc* find_symloc(ShaderGroup* group, ustring name,
+    const SymLocationDesc* find_symloc(const ShaderGroup* group, ustring name,
                                        SymArena arena) const;
 
     /// Ensure that the group has been optimized and optionally JITed. The ctx pointer
@@ -1109,6 +1110,15 @@ public:
     /// storage for src than for dst.
     static bool convert_value(void* dst, TypeDesc dsttype, const void* src,
                               TypeDesc srctype);
+
+    /// Tell the ShadingSystem if there are functions that should or should not
+    /// be inlined during LLVM optimization.  Functions that are not registered
+    /// will not receive any special treatment, and may or may not be inlined.
+    void register_inline_function(ustring name);
+    void unregister_inline_function(ustring name);
+    void register_noinline_function(ustring name);
+    void unregister_noinline_function(ustring name);
+
 
 private:
     pvt::ShadingSystemImpl* m_impl;

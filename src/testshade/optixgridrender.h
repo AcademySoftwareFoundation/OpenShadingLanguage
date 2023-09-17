@@ -50,6 +50,10 @@ public:
 
     virtual void register_named_transforms();
 
+    /// Register "shadeops" functions that should or should not be inlined
+    /// during ShaderGroup optimization.
+    void register_inline_functions();
+
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
@@ -57,7 +61,7 @@ public:
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
-    TextureHandle* get_texture_handle(ustringhash filename,
+    TextureHandle* get_texture_handle(ustring filename,
                                       ShadingContext* shading_context,
                                       const TextureOpt* options) override;
 

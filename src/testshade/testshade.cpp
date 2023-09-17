@@ -80,6 +80,7 @@ static bool debugnan             = false;
 static bool debug_uninit         = false;
 static bool use_group_outputs    = false;
 static bool do_oslquery          = false;
+static bool print_groupdata      = false;
 static bool inbuffer             = false;
 static bool use_shade_image      = false;
 static bool userdata_isconnected = false;
@@ -87,6 +88,14 @@ static bool print_outputs        = false;
 static bool output_placement     = true;
 static bool use_optix            = OIIO::Strutil::stoi(
                OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
+static bool optix_no_inline             = false;
+static bool optix_no_inline_layer_funcs = false;
+static bool optix_no_merge_layer_funcs  = false;
+static bool optix_no_inline_rend_lib    = false;
+static bool optix_no_rend_lib_bitcode   = false;
+static int optix_no_inline_thresh       = 100000;
+static int optix_force_inline_thresh    = 0;
+static bool optix_register_inline_funcs = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -217,6 +226,19 @@ set_shadingsys_options()
             "TESTSHADE_LLVM_OPT"))  // overrides llvm_opt
         llvm_opt = atoi(llvm_opt_env);
     shadingsys->attribute("llvm_optimize", llvm_opt);
+
+    // Experimental: Control the inlining behavior when compiling for OptiX.
+    // These attributes have been added to aid tuning the GPU optimization
+    // passes and may be removed or changed in the future.
+    shadingsys->attribute("optix_no_inline", optix_no_inline);
+    shadingsys->attribute("optix_no_inline_layer_funcs",
+                          optix_no_inline_layer_funcs);
+    shadingsys->attribute("optix_merge_layer_funcs",
+                          !optix_no_merge_layer_funcs);
+    shadingsys->attribute("optix_no_inline_rend_lib", optix_no_inline_rend_lib);
+    shadingsys->attribute("optix_no_inline_thresh", optix_no_inline_thresh);
+    shadingsys->attribute("optix_force_inline_thresh",
+                          optix_force_inline_thresh);
 
     if (const char* use_rs_bitcode_env = getenv("TESTSHADE_RS_BITCODE")) {
         use_rs_bitcode = atoi(use_rs_bitcode_env);
@@ -768,6 +790,22 @@ getargs(int argc, const char* argv[])
       .help("Do lots of runtime shader optimization");
     ap.arg("--llvm_opt %d:LEVEL", &llvm_opt)
       .help("LLVM JIT optimization level");
+    ap.arg("--optix_no_inline", &optix_no_inline)
+      .help("Disable function inlining when compiling for OptiX");
+    ap.arg("--optix_no_inline_layer_funcs", &optix_no_inline_layer_funcs)
+      .help("Disable inlining the group layer functions when compiling for OptiX");
+    ap.arg("--optix_no_merge_layer_funcs", &optix_no_merge_layer_funcs)
+      .help("Disable merging group layer functions with only one caller when compiling for OptiX");
+    ap.arg("--optix_no_inline_rend_lib", &optix_no_inline_rend_lib)
+      .help("Disable inlining the rend_lib functions when compiling for OptiX");
+    ap.arg("--optix_no_rend_lib_bitcode", &optix_no_rend_lib_bitcode)
+      .help("Don't pass LLVM bitcode for the rend_lib functions to the ShadingSystem");
+    ap.arg("--optix_no_inline_thresh %d:THRESH", &optix_no_inline_thresh)
+      .help("Don't inline functions larger than the threshold when compiling for OptiX");
+    ap.arg("--optix_force_inline_thresh %d:THRESH", &optix_force_inline_thresh)
+      .help("Force inline functions smaller than the threshold when compiling for OptiX");
+    ap.arg("--optix_register_inline_funcs", &optix_register_inline_funcs)
+      .help("Register functions that should or should not be inlined during LLVM optimization");
     ap.arg("--entry %L:LAYERNAME", &entrylayers)
       .help("Add layer to the list of entry points");
     ap.arg("--entryoutput %L:NAME", &entryoutputs)
@@ -782,6 +820,8 @@ getargs(int argc, const char* argv[])
       .help("Specify group outputs, not global outputs");
     ap.arg("--oslquery", &do_oslquery)
       .help("Test OSLQuery at runtime");
+    ap.arg("--print-groupdata", &print_groupdata)
+        .help("Print groupdata size to stdout");
     ap.arg("--inbuffer", &inbuffer)
       .help("Compile osl source from and to jbuffer");
     ap.arg("--no-output-placement")
@@ -1908,7 +1948,13 @@ test_shade(int argc, const char* argv[])
     // Other renderer and global options
     if (debug1 || verbose)
         rend->errhandler().verbosity(ErrorHandler::VERBOSE);
+
+#if OSL_USE_OPTIX
     rend->attribute("saveptx", (int)saveptx);
+    rend->attribute("no_rend_lib_bitcode", (int)optix_no_rend_lib_bitcode);
+    rend->attribute("optix_register_inline_funcs",
+                    (int)optix_register_inline_funcs);
+#endif
 
     // Hand the userdata options from the command line over to the renderer
     rend->userdata.merge(userdata);
@@ -2253,6 +2299,16 @@ test_shade(int argc, const char* argv[])
             std::cout << texturesys->getstats(5) << "\n";
         std::cout << ustring::getstats() << "\n";
     }
+
+    // TODO: Include batched support
+    if ((debug1 || print_groupdata) && !batched) {
+        int groupdata_size;
+        shadingsys->getattribute(shadergroup.get(), "llvm_groupdata_size",
+                                 TypeDesc::INT, &groupdata_size);
+
+        std::cout << "Groupdata size: " << groupdata_size << "\n";
+    }
+
 
     // Give the renderer a chance to do initial cleanup while everything is still alive
     rend->clear();

@@ -184,43 +184,6 @@ foreach(src ${lib_src})
     endif()
 endforeach(src)
 
-macro ( CUDA_SHADEOPS_COMPILE srclist )
-    # Add all of the "shadeops" sources that need to be compiled to LLVM bitcode for CUDA
-    set ( shadeops_srcs
-        llvm_ops.cpp
-        opnoise.cpp
-        opspline.cpp
-        opcolor.cpp
-        opmatrix.cpp
-        ../liboslnoise/gabornoise.cpp
-        ../liboslnoise/simplexnoise.cpp
-        )
-
-    set ( shadeops_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.bc.cpp" )
-    set ( linked_shadeops_bc "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops.bc" )
-
-    list ( APPEND ${srclist} ${shadeops_bc_cuda_cpp} )
-
-    foreach ( shadeops_src ${shadeops_srcs} )
-        MAKE_CUDA_BITCODE ( ${shadeops_src} "_cuda" shadeops_bc "" )
-        list ( APPEND shadeops_bc_list ${shadeops_bc} )
-    endforeach ()
-
-    # Link all of the individual LLVM bitcode files
-    add_custom_command ( OUTPUT ${linked_shadeops_bc}
-        COMMAND ${LLVM_LINK_TOOL} -internalize ${shadeops_bc_list} -o ${linked_shadeops_bc}
-        DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-
-    # Serialize the linked bitcode into a CPP file and add it to the list of liboslexec sources
-    add_custom_command ( OUTPUT ${shadeops_bc_cuda_cpp}
-        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
-            ${linked_shadeops_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
-        DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_shadeops_bc}
-        ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-endmacro ( )
-
 if (USE_LLVM_BITCODE)
     set (llvm_ops_srcs llvm_ops.cpp)
 
@@ -243,10 +206,46 @@ if (USE_LLVM_BITCODE)
 
     EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependent_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependent_ops" lib_src "" "${include_dirs}")
 
-    # Optionally repeat the bitcode compilation with CUDA-specific options
     if (CUDA_FOUND)
         add_definitions (-DOSL_LLVM_CUDA_BITCODE)
-        CUDA_SHADEOPS_COMPILE ( lib_src )
+
+        # The shadeops are compiled to both LLVM bitcode and PTX, and embedded
+        # in liboslexec in binary format. The bitcode is used to seed the LLVM
+        # module for each shader, and the PTX can be retrieved by the renderer
+        # through the shading system.
+        set (liboslexec_shadeops_srcs
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/llvm_ops.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opnoise.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opspline.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opcolor.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opmatrix.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslnoise/gabornoise.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslnoise/simplexnoise.cpp
+        )
+
+        CUDA_SHADEOPS_COMPILE ( "shadeops_cuda"
+            shadeops_cuda_bc
+            shadeops_cuda_ptx
+            "${liboslexec_shadeops_srcs}"
+            ""
+        )
+
+        # Serialize the linked bitcode into a CPP file to be embedded in the current target binary
+        set (shadeops_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.bc.cpp")
+        MAKE_EMBEDDED_CPP( "shadeops_cuda_llvm_compiled_ops" ${shadeops_bc_cuda_cpp} ${shadeops_cuda_bc} )
+        list (APPEND lib_src ${shadeops_bc_cuda_cpp})
+
+        # Serialize the linked PTX into a CPP file to be embedded in the current target binary
+        set (shadeops_ptx_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.ptx.cpp")
+        MAKE_EMBEDDED_CPP( "shadeops_cuda_ptx_compiled_ops" ${shadeops_ptx_cuda_cpp} ${shadeops_cuda_ptx} )
+        list (APPEND lib_src ${shadeops_ptx_cuda_cpp})
+
+        # Installing the shadeops PTX isn't necessary since the renderer can
+        # retrieve it through the shading system. But for testing purposes it is
+        # handy to make the PTX available offline.
+        install (FILES ${shadeops_cuda_ptx}
+            DESTINATION ${OSL_PTX_INSTALL_DIR})
+
     endif ()
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due

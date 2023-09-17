@@ -236,9 +236,7 @@ macro ( TESTSUITE )
         endif ()
 
     endforeach ()
-    if (VERBOSE)
-        message (STATUS "Added tests: ${ALL_TEST_LIST}")
-    endif ()
+    message (VERBOSE "Added tests: ${ALL_TEST_LIST}")
 endmacro ()
 
 macro (osl_add_all_tests)
@@ -274,7 +272,7 @@ macro (osl_add_all_tests)
                 getsymbol-nonheap gettextureinfo gettextureinfo-reg
                 gettextureinfo-udim gettextureinfo-udim-reg
                 globals-needed
-                group-outputs groupstring
+                group-outputs groupdata-opt groupstring
                 hash hashnoise hex hyperb
                 ieee_fp ieee_fp-reg if if-reg incdec initlist
                 initops initops-instance-clash

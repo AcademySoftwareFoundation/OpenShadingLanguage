@@ -231,18 +231,27 @@ RendererServices::filefmt(OSL::ShaderGlobals* sg,
 
 
 RendererServices::TextureHandle*
+RendererServices::get_texture_handle(ustring filename, ShadingContext* context,
+                                     const TextureOpt* options)
+{
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+    return texturesys()->get_texture_handle(filename,
+                                            context->texture_thread_info(),
+                                            options);
+#else
+    return texturesys()->get_texture_handle(filename,
+                                            context->texture_thread_info());
+#endif
+}
+
+
+
+RendererServices::TextureHandle*
 RendererServices::get_texture_handle(ustringhash filename,
                                      ShadingContext* context,
                                      const TextureOpt* options)
 {
-#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
-    return texturesys()->get_texture_handle(ustring_from(filename),
-                                            context->texture_thread_info(),
-                                            options);
-#else
-    return texturesys()->get_texture_handle(ustring_from(filename),
-                                            context->texture_thread_info());
-#endif
+    return get_texture_handle(ustring_from(filename), context, options);
 }
 
 

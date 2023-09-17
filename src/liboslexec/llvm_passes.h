@@ -45,11 +45,6 @@ template<int WidthT> class PreventBitMasksFromBeingLiveinsToBasicBlocks {
     llvm::Type* m_llvm_mask_type;
     llvm::Type* m_native_mask_type;
     llvm::Constant* m_wide_zero_initializer;
-    std::unordered_map<llvm::Instruction*, llvm::Value*>
-        m_native_mask_by_producing_inst;
-    std::unordered_map<llvm::Value*, llvm::Value*>
-        m_llvm_mask_from_livein_by_native_mask;
-    std::vector<llvm::Instruction*> m_phiNodesWithNativeMasks;
 
 public:
     PreventBitMasksFromBeingLiveinsToBasicBlocks()
@@ -59,10 +54,10 @@ public:
     {
     }
 
-    bool doInitialization(llvm::Module& M)
+    void initialize(llvm::LLVMContext& context)
     {
-        llvm::Type* llvm_type_bool  = llvm::Type::getInt1Ty(M.getContext());
-        llvm::Type* llvm_type_int32 = llvm::Type::getInt32Ty(M.getContext());
+        llvm::Type* llvm_type_bool  = llvm::Type::getInt1Ty(context);
+        llvm::Type* llvm_type_int32 = llvm::Type::getInt32Ty(context);
 
 #if OSL_LLVM_VERSION >= 110
         m_llvm_mask_type = llvm::FixedVectorType::get(llvm_type_bool, WidthT);
@@ -77,22 +72,21 @@ public:
                                                         WidthT);
 #    if OSL_LLVM_VERSION >= 112
         m_wide_zero_initializer = llvm::ConstantDataVector::getSplat(
-            WidthT, llvm::ConstantInt::get(M.getContext(), llvm::APInt(32, 0)));
+            WidthT, llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
 #    else
         m_wide_zero_initializer = llvm::ConstantVector::getSplat(
             llvm::ElementCount(WidthT, false),
-            llvm::ConstantInt::get(M.getContext(), llvm::APInt(32, 0)));
+            llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
 #    endif
 #else
         m_llvm_mask_type   = llvm::VectorType::get(llvm_type_bool, WidthT);
         m_native_mask_type = llvm::VectorType::get(llvm_type_int32, WidthT);
         m_wide_zero_initializer = llvm::ConstantVector::getSplat(
-            WidthT, llvm::ConstantInt::get(M.getContext(), llvm::APInt(32, 0)));
+            WidthT, llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
 #endif
-        return false;  // I don't think we modified the module
     }
 
-    bool runOnFunction(llvm::Function& F)
+    bool run(llvm::Function& F) const
     {
         OSL_DEV_ONLY(
             llvm::errs()
@@ -100,7 +94,11 @@ public:
             << WidthT << ">:");
         OSL_DEV_ONLY(llvm::errs().write_escaped(F.getName()) << '\n');
 
-        m_native_mask_by_producing_inst.clear();
+        std::unordered_map<llvm::Instruction*, llvm::Value*>
+            native_mask_by_producing_inst;
+        std::unordered_map<llvm::Value*, llvm::Value*>
+            llvm_mask_from_livein_by_native_mask;
+        std::vector<llvm::Instruction*> phiNodesWithNativeMasks;
 
         bool changed = false;
 
@@ -108,8 +106,8 @@ public:
             OSL_DEV_ONLY(llvm::errs() << ">>>>>>>>>Basic Block: ");
             OSL_DEV_ONLY(llvm::errs().write_escaped(bb.getName()) << '\n');
 
-            m_phiNodesWithNativeMasks.clear();
-            m_llvm_mask_from_livein_by_native_mask.clear();
+            phiNodesWithNativeMasks.clear();
+            llvm_mask_from_livein_by_native_mask.clear();
 
             for (llvm::Instruction& inst : bb) {
                 // We could possibly identify all the instruction types that
@@ -119,7 +117,7 @@ public:
                 // Although we do have special case phi nodes
                 bool isPhi = llvm::dyn_cast<llvm::PHINode>(&inst) != nullptr;
 
-                if (!isPhi && !m_phiNodesWithNativeMasks.empty()) {
+                if (!isPhi && !phiNodesWithNativeMasks.empty()) {
                     // As all phi nodes have to appear at the top of a basic
                     // block, if an instruction is not a phi, then we are
                     // past the block of phi nodes and this is a good
@@ -128,7 +126,7 @@ public:
                     IRBuilder builder(&bb);
                     builder.SetInsertPoint(&inst);
                     for (llvm::Instruction* phiNodeWithNativeMask :
-                         m_phiNodesWithNativeMasks) {
+                         phiNodesWithNativeMasks) {
                         llvm::Value* llvm_mask
                             = builder.CreateICmpSLT(phiNodeWithNativeMask,
                                                     m_wide_zero_initializer);
@@ -147,7 +145,7 @@ public:
                         }
                     }
 
-                    m_phiNodesWithNativeMasks.clear();
+                    phiNodesWithNativeMasks.clear();
 
                     // NOTE: we did add instructions to this bb, but the
                     // should be inserted before the current inst. Assume
@@ -214,10 +212,10 @@ public:
                                         {
                                             // We may have already created a native mask for this instruction
                                             auto search_result
-                                                = m_native_mask_by_producing_inst
+                                                = native_mask_by_producing_inst
                                                       .find(producing_instr);
                                             if (search_result
-                                                == m_native_mask_by_producing_inst
+                                                == native_mask_by_producing_inst
                                                        .end()) {
                                                 // Scan producing basic block for an existing sign extend instruction
                                                 // for the producing_instr.  As the existence of a basic block means
@@ -268,7 +266,7 @@ public:
                                                     // NOTE: we did add instructions, but not to the BB we are currently
                                                     // iterating over instructions
                                                 }
-                                                m_native_mask_by_producing_inst
+                                                native_mask_by_producing_inst
                                                     .insert(std::make_pair(
                                                         producing_instr,
                                                         native_mask));
@@ -289,10 +287,10 @@ public:
                                             {
                                                 // We may have already created a llvm mask in this basic block for the native mask
                                                 auto search_result
-                                                    = m_llvm_mask_from_livein_by_native_mask
+                                                    = llvm_mask_from_livein_by_native_mask
                                                           .find(native_mask);
                                                 if (search_result
-                                                    == m_llvm_mask_from_livein_by_native_mask
+                                                    == llvm_mask_from_livein_by_native_mask
                                                            .end()) {
                                                     // Insert the conversion from native to llvm mask
                                                     // somewhere before the 1st instruction that needs to use it in this basic block
@@ -304,7 +302,7 @@ public:
                                                         native_mask,
                                                         m_wide_zero_initializer);
 
-                                                    m_llvm_mask_from_livein_by_native_mask
+                                                    llvm_mask_from_livein_by_native_mask
                                                         .insert(std::make_pair(
                                                             native_mask,
                                                             llvm_mask));
@@ -378,7 +376,7 @@ public:
                     // instructions.
                     inst.mutateType(m_native_mask_type);
 
-                    m_phiNodesWithNativeMasks.push_back(&inst);
+                    phiNodesWithNativeMasks.push_back(&inst);
                 }
             }
         }
@@ -392,14 +390,18 @@ template<int WidthT>
 class NewPreventBitMasksFromBeingLiveinsToBasicBlocks final
     : public llvm::PassInfoMixin<
           NewPreventBitMasksFromBeingLiveinsToBasicBlocks<WidthT>> {
+    PreventBitMasksFromBeingLiveinsToBasicBlocks<WidthT> m_pass;
+
 public:
+    NewPreventBitMasksFromBeingLiveinsToBasicBlocks(llvm::LLVMContext& context)
+    {
+        m_pass.initialize(context);
+    }
+
     llvm::PreservedAnalyses run(llvm::Function& F,
                                 llvm::FunctionAnalysisManager& AM)
     {
-        PreventBitMasksFromBeingLiveinsToBasicBlocks<WidthT> pass;
-        // TODO: initialize only once for better performance?
-        pass.doInitialization(*(F.getParent()));
-        pass.runOnFunction(F);
+        m_pass.run(F);
         return llvm::PreservedAnalyses::all();
     }
 };
@@ -417,13 +419,11 @@ public:
 
     bool doInitialization(llvm::Module& M) override
     {
-        return m_pass.doInitialization(M);
+        m_pass.initialize(M.getContext());
+        return false;  // Module was not changed
     }
 
-    bool runOnFunction(llvm::Function& F) override
-    {
-        return m_pass.runOnFunction(F);
-    }
+    bool runOnFunction(llvm::Function& F) override { return m_pass.run(F); }
 };
 
 // No need to worry about static variable collisions if included multiple

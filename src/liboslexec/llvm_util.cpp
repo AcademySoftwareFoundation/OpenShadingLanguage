@@ -2268,14 +2268,16 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
                 // MUST BE THE FINAL PASS!
                 m_new_pass_manager->module_pass_manager.addPass(
                     createModuleToFunctionPassAdaptor(
-                        NewPreventBitMasksFromBeingLiveinsToBasicBlocks<16>()));
+                        NewPreventBitMasksFromBeingLiveinsToBasicBlocks<16>(
+                            context())));
                 break;
             }
             case 8: {
                 // MUST BE THE FINAL PASS!
                 m_new_pass_manager->module_pass_manager.addPass(
                     createModuleToFunctionPassAdaptor(
-                        NewPreventBitMasksFromBeingLiveinsToBasicBlocks<8>()));
+                        NewPreventBitMasksFromBeingLiveinsToBasicBlocks<8>(
+                            context())));
                 break;
             }
             case 4:

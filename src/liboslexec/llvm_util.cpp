@@ -1973,7 +1973,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         {
             llvm::FunctionPassManager fpm;
             fpm.addPass(llvm::SimplifyCFGPass());
+#        if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
+#        else
+            fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#        endif
             fpm.addPass(llvm::EarlyCSEPass());
 
             fpm.addPass(llvm::ReassociatePass());
@@ -1987,7 +1991,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             fpm.addPass(llvm::DCEPass());
 
             fpm.addPass(llvm::JumpThreadingPass());
+#        if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
+#        else
+            fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#        endif
             fpm.addPass(llvm::InstCombinePass());
 
             // Added
@@ -2006,7 +2014,14 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         {
             llvm::FunctionPassManager fpm;
             fpm.addPass(llvm::SimplifyCFGPass());
+#        if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
+#        else
+            // PreserveCFG is the same behavior as earlier versions, but changing
+            // to ModifyCFG here and other places may improve performance.
+            // https://reviews.llvm.org/D138238
+            fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#        endif
             fpm.addPass(llvm::EarlyCSEPass());
 
             // Eliminate and remove as much as possible up front
@@ -2047,7 +2062,7 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             fpm.addPass(llvm::GVNPass());
 
             fpm.addPass(llvm::SCCPPass());
-            //        fpm.addPass(llvm::InstCombinePass());
+            // fpm.addPass(llvm::InstCombinePass());
             // JumpThreading combo had a good improvement on JIT time
             fpm.addPass(llvm::JumpThreadingPass());
             // optional, didn't  seem to help more than it cost
@@ -2077,7 +2092,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         {
             llvm::FunctionPassManager fpm;
             fpm.addPass(llvm::SimplifyCFGPass());
+#    if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
+#    else
+            fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#    endif
             fpm.addPass(llvm::EarlyCSEPass());
             fpm.addPass(llvm::LowerExpectIntrinsicPass());
 
@@ -2094,7 +2113,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::DCEPass());
 
+#    if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
+#    else
+            fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#    endif
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::SimplifyCFGPass());
             fpm.addPass(llvm::PromotePass());
@@ -2111,8 +2134,8 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         // to others who use opt==13 to continue to curate this particular
         // list of passes.
         mpm.addPass(llvm::IPSCCPPass());
-
         mpm.addPass(llvm::DeadArgumentEliminationPass());
+
         {
             llvm::FunctionPassManager fpm;
             fpm.addPass(llvm::InstCombinePass());
@@ -2150,7 +2173,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::JumpThreadingPass());
             fpm.addPass(llvm::SimplifyCFGPass());
+#    if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
+#    else
+            fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#    endif
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::TailCallElimPass());
             mpm.addPass(
@@ -2158,7 +2185,6 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         }
 
         mpm.addPass(llvm::ModuleInlinerWrapperPass());
-
         mpm.addPass(llvm::IPSCCPPass());
         mpm.addPass(llvm::DeadArgumentEliminationPass());
 
@@ -2180,8 +2206,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 
         {
             llvm::FunctionPassManager fpm;
+#    if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-
+#    else
+            fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#    endif
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::SimplifyCFGPass());
             fpm.addPass(llvm::ReassociatePass());
@@ -2208,7 +2237,6 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 
             fpm.addPass(llvm::LoopUnrollPass());
             fpm.addPass(llvm::GVNPass());
-
             fpm.addPass(llvm::MemCpyOptPass());
             fpm.addPass(llvm::SCCPPass());
             fpm.addPass(llvm::InstCombinePass());

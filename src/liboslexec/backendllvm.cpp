@@ -509,8 +509,8 @@ BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
         ptr = ll.GEP(element_type, ptr, 0, component);
 
     // Now grab the value
-    llvm::Type* scalar_type = llvm_type(t.scalartype());
-    llvm::Value* result     = ll.op_load(scalar_type, ptr, llname);
+    llvm::Type* component_type = llvm_type(t.scalartype());
+    llvm::Value* result        = ll.op_load(component_type, ptr, llname);
 
     if (type.is_closure_based())
         return result;

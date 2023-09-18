@@ -833,22 +833,22 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* src_ptr, const TypeSpec& type,
         return NULL;  // Error
 
     TypeDesc t = type.simpletype();
-    llvm::Type *src_type, *src_scalar_type;
+    llvm::Type *src_type, *src_component_type;
 
     if (symbol_forced_boolean) {
         if (src_is_uniform) {
-            src_type        = ll.type_bool();
-            src_scalar_type = ll.type_bool();
+            src_type           = ll.type_bool();
+            src_component_type = ll.type_bool();
         } else {
-            src_type        = ll.type_native_mask();
-            src_scalar_type = ll.type_native_mask();
+            src_type           = ll.type_native_mask();
+            src_component_type = ll.type_native_mask();
         }
     } else {
-        src_type        = llvm_type(t.elementtype());
-        src_scalar_type = llvm_type(t.scalartype());
+        src_type           = llvm_type(t.elementtype());
+        src_component_type = llvm_type(t.scalartype());
         if (!src_is_uniform) {
-            src_type        = ll.type_wide(src_type);
-            src_scalar_type = ll.type_wide(src_scalar_type);
+            src_type           = ll.type_wide(src_type);
+            src_component_type = ll.type_wide(src_component_type);
         }
     }
 
@@ -873,7 +873,7 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* src_ptr, const TypeSpec& type,
         }
 
         // Now grab the value
-        llvm::Value* result = ll.op_load(src_scalar_type, src_ptr);
+        llvm::Value* result = ll.op_load(src_component_type, src_ptr);
 
         if (type.is_closure_based())
             return result;
@@ -977,7 +977,7 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* src_ptr, const TypeSpec& type,
         }
 
         // Now grab the value
-        llvm::Value* result = ll.op_gather(src_scalar_type, src_ptr,
+        llvm::Value* result = ll.op_gather(src_component_type, src_ptr,
                                            arrayindex);
         // TODO:  possible optimization when we know the array size is small (<= 4)
         // instead of performing a gather, we could load each value of the the array,
@@ -1280,12 +1280,12 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
     if (!dst_ptr)
         return false;  // Error
 
-    TypeDesc t                  = type.simpletype();
-    llvm::Type* dst_type        = llvm_type(t.elementtype());
-    llvm::Type* dst_scalar_type = llvm_type(t.scalartype());
+    TypeDesc t                     = type.simpletype();
+    llvm::Type* dst_type           = llvm_type(t.elementtype());
+    llvm::Type* dst_component_type = llvm_type(t.scalartype());
     if (!dst_is_uniform) {
-        dst_type        = ll.type_wide(dst_type);
-        dst_scalar_type = ll.type_wide(dst_scalar_type);
+        dst_type           = ll.type_wide(dst_type);
+        dst_component_type = ll.type_wide(dst_component_type);
     }
 
     if (index_is_uniform) {
@@ -1353,7 +1353,7 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
         }
 
         // Finally, store the value.
-        ll.op_scatter(new_val, dst_scalar_type, dst_ptr, arrayindex);
+        ll.op_scatter(new_val, dst_component_type, dst_ptr, arrayindex);
         // TODO:  possible optimization when we know the array size is small (<= 4)
         // instead of performing a scatter, we could load each value of the the array,
         // compare the index array against that value's index and select/blend

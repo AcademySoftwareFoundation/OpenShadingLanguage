@@ -73,7 +73,6 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/FunctionAttrs.h>
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
@@ -87,6 +86,7 @@
 #endif
 
 #ifdef OSL_LLVM_NEW_PASS_MANAGER
+// New pass manager
 #    include <llvm/Analysis/LoopAnalysisManager.h>
 #    include <llvm/Passes/PassBuilder.h>
 #    include <llvm/Transforms/IPO/ArgumentPromotion.h>
@@ -117,6 +117,9 @@
 #    include <llvm/Transforms/Scalar/SimplifyCFG.h>
 #    include <llvm/Transforms/Scalar/TailRecursionElimination.h>
 #    include <llvm/Transforms/Utils/Mem2Reg.h>
+#else
+// Legacy pass manager
+#    include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #endif
 
 // additional includes for PTX generation
@@ -609,6 +612,7 @@ LLVM_Util::SetupLLVM()
     llvm::initializeTarget(registry);
     llvm::initializeCodeGen(registry);
 
+#ifndef OSL_LLVM_NEW_PASS_MANAGER
     // LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks
     static llvm::RegisterPass<
         LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>>
@@ -622,6 +626,7 @@ LLVM_Util::SetupLLVM()
             "PreventBitMasksFromBeingLiveinsToBasicBlocks<16>",
             "Prevent Bit Masks <16xi1> From Being Liveins To Basic Blocks Pass",
             false /* Only looks at CFG */, false /* Analysis Pass */);
+#endif
 
     if (debug()) {
         for (auto t : llvm::TargetRegistry::targets())
@@ -1867,6 +1872,10 @@ void
 LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 {
 #ifdef OSL_LLVM_NEW_PASS_MANAGER
+#    if OSL_LLVM_VERSION <= 110
+#        error "New pass manager not supported in LLVM 11 and earlier"
+#    endif
+
     OSL_DEV_ONLY(std::cout << "setup_new_optimization_passes " << optlevel);
     OSL_ASSERT(m_new_pass_manager == nullptr);
 
@@ -2144,11 +2153,10 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
                 llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
         }
 
-#    if OSL_LLVM_VERSION < 160
         // Replaced by SimplifyCFGPass + PostOrderFunctionAttrs since LLVM 7.
         // https://reviews.llvm.org/D44415
         // mpm.addPass(llvm::PruneEHPass());
-#    endif
+
         mpm.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
             llvm::PostOrderFunctionAttrsPass()));
         mpm.addPass(llvm::ReversePostOrderFunctionAttrsPass());
@@ -2295,6 +2303,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 void
 LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
 {
+#ifndef OSL_LLVM_NEW_PASS_MANAGER
+#    if OSL_LLVM_VERSION >= 160
+#        error "Legacy pass manager not supported in LLVM 16 and newer"
+#    endif
+
     OSL_DEV_ONLY(std::cout << "setup_legacy_optimization_passes " << optlevel);
     OSL_DASSERT(m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
 
@@ -2362,7 +2375,7 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         break;
     }
     case 12: {
-#if 0  // PRETTY_GOOD_KEEP_AS_REF
+#    if 0  // PRETTY_GOOD_KEEP_AS_REF
         mpm.add(llvm::createFunctionInliningPass());
         mpm.add(llvm::createCFGSimplificationPass());
         mpm.add(llvm::createGlobalDCEPass());
@@ -2393,7 +2406,7 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
 
         mpm.add(llvm::createGlobalDCEPass());
         mpm.add(llvm::createConstantMergePass());
-#else
+#    else
         mpm.add(llvm::createFunctionInliningPass());
         mpm.add(llvm::createCFGSimplificationPass());
         mpm.add(llvm::createGlobalDCEPass());
@@ -2406,9 +2419,9 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
 
         // Eliminate and remove as much as possible up front
         mpm.add(llvm::createReassociatePass());
-#    if OSL_LLVM_VERSION < 120
+#        if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-#    endif
+#        endif
         mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
@@ -2422,9 +2435,9 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         // we might need to recreate that meta data in OSL's loop code to enable these passes
         mpm.add(llvm::createLoopRotatePass());
         mpm.add(llvm::createLICMPass());
-#    if OSL_LLVM_VERSION < 150
+#        if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createLoopUnswitchPass(false));
-#    endif
+#        endif
         //        mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createIndVarSimplifyPass());
         // Don't think we emitted any idioms that should be converted to a loop
@@ -2452,7 +2465,7 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
 
         mpm.add(llvm::createGlobalDCEPass());
         mpm.add(llvm::createConstantMergePass());
-#endif
+#    endif
         break;
     }
     case 13: {
@@ -2466,9 +2479,9 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createLowerExpectIntrinsicPass());
 
         mpm.add(llvm::createReassociatePass());
-#if OSL_LLVM_VERSION < 120
+#    if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-#endif
+#    endif
         mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
@@ -2487,16 +2500,16 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createPromoteMemoryToRegisterPass());
         mpm.add(llvm::createGlobalOptimizerPass());
         mpm.add(llvm::createReassociatePass());
-#if OSL_LLVM_VERSION < 120
+#    if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createIPConstantPropagationPass());
-#else
+#    else
         // createIPConstantPropagationPass disappeared with LLVM 12.
         // Comments in their PR indicate that IPSCCP is better, but I don't
         // know if that means such a pass should be *right here*. I leave it
         // to others who use opt==13 to continue to curate this particular
         // list of passes.
         mpm.add(llvm::createIPSCCPPass());
-#endif
+#    endif
 
         mpm.add(llvm::createDeadArgEliminationPass());
         mpm.add(llvm::createInstructionCombiningPass());
@@ -2505,15 +2518,15 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         mpm.add(llvm::createReversePostOrderFunctionAttrsPass());
         mpm.add(llvm::createFunctionInliningPass());
-#if OSL_LLVM_VERSION < 120
+#    if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-#endif
+#    endif
         mpm.add(llvm::createDeadCodeEliminationPass());
         mpm.add(llvm::createCFGSimplificationPass());
 
-#if OSL_LLVM_VERSION < 150
+#    if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createArgumentPromotionPass());
-#endif
+#    endif
         mpm.add(llvm::createAggressiveDCEPass());
         mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createJumpThreadingPass());
@@ -2523,9 +2536,9 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createTailCallEliminationPass());
 
         mpm.add(llvm::createFunctionInliningPass());
-#if OSL_LLVM_VERSION < 120
+#    if OSL_LLVM_VERSION < 120
         mpm.add(llvm::createConstantPropagationPass());
-#endif
+#    endif
 
         mpm.add(llvm::createIPSCCPPass());
         mpm.add(llvm::createDeadArgEliminationPass());
@@ -2534,9 +2547,9 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createCFGSimplificationPass());
 
         mpm.add(llvm::createFunctionInliningPass());
-#if OSL_LLVM_VERSION < 150
+#    if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createArgumentPromotionPass());
-#endif
+#    endif
         mpm.add(llvm::createSROAPass());
 
         mpm.add(llvm::createInstructionCombiningPass());
@@ -2544,9 +2557,9 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createReassociatePass());
         mpm.add(llvm::createLoopRotatePass());
         mpm.add(llvm::createLICMPass());
-#if OSL_LLVM_VERSION < 150
+#    if OSL_LLVM_VERSION < 150
         mpm.add(llvm::createLoopUnswitchPass(false));
-#endif
+#    endif
         mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createIndVarSimplifyPass());
         mpm.add(llvm::createLoopIdiomPass());
@@ -2597,6 +2610,7 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
             };
         }
     }
+#endif
 }
 
 
@@ -2612,21 +2626,18 @@ LLVM_Util::do_optimize(std::string* out_err)
 #endif
 
 #ifdef OSL_LLVM_NEW_PASS_MANAGER
-    if (m_new_pass_manager) {
-        // New pass manager
-        m_new_pass_manager->module_pass_manager.run(
-            *m_llvm_module, m_new_pass_manager->module_analysis_manager);
-    } else
+    // New pass manager
+    m_new_pass_manager->module_pass_manager.run(
+        *m_llvm_module, m_new_pass_manager->module_analysis_manager);
+#else
+    // Legacy pass manager
+    m_llvm_func_passes->doInitialization();
+    for (auto&& I : m_llvm_module->functions())
+        if (!I.isDeclaration())
+            m_llvm_func_passes->run(I);
+    m_llvm_func_passes->doFinalization();
+    m_llvm_module_passes->run(*m_llvm_module);
 #endif
-    {
-        // Legacy pass manager
-        m_llvm_func_passes->doInitialization();
-        for (auto&& I : m_llvm_module->functions())
-            if (!I.isDeclaration())
-                m_llvm_func_passes->run(I);
-        m_llvm_func_passes->doFinalization();
-        m_llvm_module_passes->run(*m_llvm_module);
-    }
 }
 
 

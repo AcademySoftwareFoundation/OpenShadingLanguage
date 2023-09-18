@@ -405,13 +405,15 @@ RendererServices::get_texture_info(ustringhash filename,
                                    ustringhash dataname, TypeDesc datatype,
                                    void* data, ustringhash* errormessage)
 {
-    ShadingContext* shading_context
-        = (ShadingContext*)((ShaderGlobals*)sg)->context;
-    if (!texture_thread_info)
-        texture_thread_info = shading_context->texture_thread_info();
-    if (!texture_handle)
+    if (!texture_handle) {
+        if (!texture_thread_info && sg) {
+            ShadingContext* shading_context
+                = (ShadingContext*)((ShaderGlobals*)sg)->context;
+            texture_thread_info = shading_context->texture_thread_info();
+        }
         texture_handle = texturesys()->get_texture_handle(ustring_from(filename),
                                                           texture_thread_info);
+    }
     bool status = texturesys()->get_texture_info(texture_handle,
                                                  texture_thread_info, subimage,
                                                  ustring_from(dataname),

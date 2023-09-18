@@ -136,6 +136,7 @@ BatchedBackendLLVM::BatchedBackendLLVM(ShadingSystemImpl& shadingsys,
     , m_stat_llvm_opt_time(0)
     , m_stat_llvm_jit_time(0)
 {
+    m_name_llvm_syms  = shadingsys.m_llvm_output_bitcode;
     m_wide_arg_prefix = "W";
     switch (vector_width()) {
     case 16: m_true_mask_value = Mask<16>(true).value(); break;
@@ -1544,7 +1545,8 @@ BatchedBackendLLVM::llvm_conversion_store_uniform_status(llvm::Value* val,
 llvm::Value*
 BatchedBackendLLVM::groupdata_field_ref(int fieldnum)
 {
-    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum);
+    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum,
+                  llnamefmt("{}_ref", m_groupdata_field_names[fieldnum]));
 }
 
 
@@ -1616,7 +1618,8 @@ llvm::Value*
 BatchedBackendLLVM::layer_run_ref(int layer)
 {
     int fieldnum = 0;  // field 0 is the layer_run array
-    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum, layer);
+    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum, layer,
+                  llnamefmt("layer_runflags_ref"));
 }
 
 
@@ -1626,7 +1629,7 @@ BatchedBackendLLVM::userdata_initialized_ref(int userdata_index)
 {
     int fieldnum = 1;  // field 1 is the userdata_initialized array
     return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum,
-                  userdata_index);
+                  userdata_index, llnamefmt("userdata_init_flags_ref"));
 }
 
 

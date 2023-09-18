@@ -831,6 +831,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
     std::vector<llvm::Type*> fields;
     int offset = 0;
     int order  = 0;
+    m_groupdata_field_names.clear();
 
     if (llvm_debug() >= 2)
         std::cout << "Group param struct:\n";
@@ -845,6 +846,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
     int sz = 16 * ((m_num_used_layers + 15) / 16);
     OSL_ASSERT(sz * sizeof(int) % 16 == 0);
     fields.push_back(ll.type_array(ll.type_int(), sz));
+    m_groupdata_field_names.emplace_back("layer_runflags");
     offset += sz * sizeof(int);
     ++order;
 
@@ -861,6 +863,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
         int* offsets    = &group().m_userdata_offsets[0];
         int sz          = nuserdata;
         fields.push_back(ll.type_array(ll.type_int(), sz));
+        m_groupdata_field_names.emplace_back("userdata_init_flags");
         offset += nuserdata * sizeof(int);
         ++order;
         for (int i = 0; i < nuserdata; ++i) {
@@ -869,6 +872,8 @@ BatchedBackendLLVM::llvm_type_groupdata()
             int n         = type.numelements() * 3;  // always make deriv room
             type.arraylen = n;
             fields.push_back(llvm_wide_type(type));
+            m_groupdata_field_names.emplace_back(
+                fmtformat("userdata{}_{}_", i, names[i]));
             // Alignment
             int align = type.basesize() * m_width;
             offset    = OIIO::round_to_multiple_of_pow2(offset, align);
@@ -922,6 +927,8 @@ BatchedBackendLLVM::llvm_type_groupdata()
                                                    : llvm_wide_type(ts);
             }
             fields.push_back(fieldType);
+            m_groupdata_field_names.emplace_back(
+                fmtformat("lay{}param_{}_", layer, sym.name()));
 
             // Alignment
             size_t align = ll.llvm_alignmentof(fields.back());
@@ -948,6 +955,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
                                           group().name().hash());
     m_llvm_type_groupdata     = ll.type_struct(fields, groupdataname,
                                                false /*is_packed*/);
+    OSL_ASSERT(fields.size() == m_groupdata_field_names.size());
 
     return m_llvm_type_groupdata;
 }

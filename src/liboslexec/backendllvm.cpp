@@ -749,7 +749,8 @@ llvm::Value*
 BackendLLVM::layer_run_ref(int layer)
 {
     int fieldnum = 0;  // field 0 is the layer_run array
-    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum, layer);
+    return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum, layer,
+                  llnamefmt("layer_runflags_ref"));
 }
 
 
@@ -759,7 +760,7 @@ BackendLLVM::userdata_initialized_ref(int userdata_index)
 {
     int fieldnum = 1;  // field 1 is the userdata_initialized array
     return ll.GEP(llvm_type_groupdata(), groupdata_ptr(), 0, fieldnum,
-                  userdata_index);
+                  userdata_index, llnamefmt("userdata_init_flags_ref"));
 }
 
 

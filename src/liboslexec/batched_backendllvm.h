@@ -730,6 +730,18 @@ public:
     int vector_width() const { return m_width; }
     int true_mask_value() const { return m_true_mask_value; }
 
+    // Utility for constructing names for llvm symbols. It creates a formatted
+    // string if the shading system's "llvm_output_bitcode" option is set,
+    // otherwise it takes a shortcut and returns an empty string (since nobody
+    // is going to see the pretty bitcode anyway).
+    template<typename Str, typename... Args>
+    OSL_NODISCARD inline std::string llnamefmt(const Str& fmt,
+                                               Args&&... args) const
+    {
+        return m_name_llvm_syms ? fmtformat(fmt, std::forward<Args>(args)...)
+                                : std::string();
+    }
+
 private:
     void append_arg_to(llvm::raw_svector_ostream& OS, const FuncSpec::Arg& arg);
 
@@ -811,7 +823,11 @@ private:
     llvm::Type* m_llvm_type_batched_trace_options;
     llvm::PointerType* m_llvm_type_prepare_closure_func;
     llvm::PointerType* m_llvm_type_setup_closure_func;
-    int m_llvm_local_mem;  // Amount of memory we use for locals
+    int m_llvm_local_mem;   // Amount of memory we use for locals
+    bool m_name_llvm_syms;  // Whether to name LLVM symbols
+
+    // Name of each indexed field in the groupdata, mostly for debugging.
+    std::vector<std::string> m_groupdata_field_names;
 
     friend class ShadingSystemImpl;
 };

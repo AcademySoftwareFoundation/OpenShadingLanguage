@@ -4003,7 +4003,7 @@ LLVM_Util::op_combine_4x_vectors(llvm::Value* half_vec_1,
 
 
 llvm::Value*
-LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
+LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                      llvm::Value* wide_index)
 {
     OSL_ASSERT(wide_index->getType() == type_wide_int());
@@ -4015,37 +4015,37 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
     // assumption.  array[0] exists, is valid, and no indices will be
     // negative
     auto clamped_gather_from_uniform =
-        [this, ptr_type, ptr,
+        [this, src_type, src_ptr,
          wide_index](llvm::Type* result_type) -> llvm::Value* {
         llvm::Value* result         = llvm::UndefValue::get(result_type);
         llvm::Value* clampedIndices = op_select(current_mask(), wide_index,
                                                 wide_constant(0));
         for (int l = 0; l < m_vector_width; ++l) {
             llvm::Value* index_for_lane = op_extract(clampedIndices, l);
-            llvm::Value* address        = GEP(ptr_type, ptr, index_for_lane);
-            llvm::Value* val            = op_load(ptr_type, address);
-            result                      = op_insert(result, val, l);
+            llvm::Value* address = GEP(src_type, src_ptr, index_for_lane);
+            llvm::Value* val     = op_load(src_type, address);
+            result               = op_insert(result, val, l);
         }
         return result;
     };
 
     auto clamped_gather_from_varying =
-        [this, ptr_type, ptr,
+        [this, src_type, src_ptr,
          wide_index](llvm::Type* result_type) -> llvm::Value* {
         llvm::Value* clampedIndices = op_select(current_mask(), wide_index,
                                                 wide_constant(0));
         llvm::Value* result         = llvm::UndefValue::get(result_type);
         for (int l = 0; l < m_vector_width; ++l) {
             llvm::Value* index_for_lane = op_extract(clampedIndices, l);
-            llvm::Value* wide_address   = GEP(ptr_type, ptr, index_for_lane);
-            llvm::Value* wide_val       = op_load(ptr_type, wide_address);
-            llvm::Value* val            = op_extract(wide_val, l);
-            result                      = op_insert(result, val, l);
+            llvm::Value* wide_address = GEP(src_type, src_ptr, index_for_lane);
+            llvm::Value* wide_val     = op_load(src_type, wide_address);
+            llvm::Value* val          = op_extract(wide_val, l);
+            result                    = op_insert(result, val, l);
         }
         return result;
     };
 
-    if (ptr_type == type_int()) {
+    if (src_type == type_int()) {
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_gather_pi = nullptr;
             llvm::Value* int_mask                 = nullptr;
@@ -4066,8 +4066,8 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
             OSL_ASSERT(func_avx512_gather_pi);
 
             llvm::Value* unmasked_value = wide_constant(0);
-            llvm::Value* args[] = { unmasked_value, void_ptr(ptr), wide_index,
-                                    int_mask, constant(4) };
+            llvm::Value* args[]         = { unmasked_value, void_ptr(src_ptr),
+                                            wide_index, int_mask, constant(4) };
             return builder().CreateCall(func_avx512_gather_pi,
                                         makeArrayRef(args));
         } else if (m_supports_avx2) {
@@ -4086,7 +4086,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 // Convert <16 x i32> -> to <2 x< 8 x i32>>
                 auto w8_int_masks    = op_split_16x(wide_int_mask);
                 auto w8_int_indices  = op_split_16x(wide_index);
-                llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(ptr),
+                llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(src_ptr),
                                          w8_int_indices[0], w8_int_masks[0],
                                          constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
@@ -4098,7 +4098,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 return op_combine_8x_vectors(gather1, gather2);
             }
             case 8: {
-                llvm::Value* args[] = { avx2_unmasked_value, void_ptr(ptr),
+                llvm::Value* args[] = { avx2_unmasked_value, void_ptr(src_ptr),
                                         wide_index, wide_int_mask,
                                         constant8((uint8_t)4) };
                 llvm::Value* gather_result
@@ -4112,7 +4112,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
             return clamped_gather_from_uniform(type_wide_int());
         }
 
-    } else if (ptr_type == type_float()) {
+    } else if (src_type == type_float()) {
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_gather_ps = nullptr;
             llvm::Value* int_mask                 = nullptr;
@@ -4134,7 +4134,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
 
             llvm::Value* unmasked_value = wide_constant(0.0f);
             llvm::Value* args[]         = {
-                        unmasked_value, void_ptr(ptr), wide_index, int_mask,
+                        unmasked_value, void_ptr(src_ptr), wide_index, int_mask,
                         constant(4)  // not sure why the scale
             };
             return builder().CreateCall(func_avx512_gather_ps,
@@ -4156,7 +4156,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 auto w8_int_masks   = op_split_16x(wide_int_mask);
                 auto w8_int_indices = op_split_16x(wide_index);
                 llvm::Value* args[] = {
-                    avx2_unmasked_value, void_ptr(ptr), w8_int_indices[0],
+                    avx2_unmasked_value, void_ptr(src_ptr), w8_int_indices[0],
                     builder().CreateBitCast(w8_int_masks[0],
                                             llvm_vector_type(type_float(), 8)),
                     constant8((uint8_t)4)
@@ -4173,7 +4173,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
             }
             case 8: {
                 llvm::Value* args[] = {
-                    avx2_unmasked_value, void_ptr(ptr), wide_index,
+                    avx2_unmasked_value, void_ptr(src_ptr), wide_index,
                     builder().CreateBitCast(wide_int_mask,
                                             llvm_vector_type(type_float(), 8)),
                     constant8((uint8_t)4)
@@ -4186,7 +4186,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
         } else {
             return clamped_gather_from_uniform(type_wide_float());
         }
-    } else if (ptr_type == type_ustring()) {
+    } else if (src_type == type_ustring()) {
         if (m_supports_avx512f) {
             // TODO:  Are we guaranteed a 64bit pointer?
             switch (m_vector_width) {
@@ -4204,7 +4204,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 llvm::Value* unmasked_value
                     = builder().CreateVectorSplat(8, constant64((uint64_t)0));
                 llvm::Value* args[]
-                    = { unmasked_value, void_ptr(ptr), w8_int_indices[0],
+                    = { unmasked_value, void_ptr(src_ptr), w8_int_indices[0],
                         mask_as_int8(w8_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
@@ -4233,7 +4233,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 llvm::Value* unmasked_value
                     = builder().CreateVectorSplat(4, constant64((uint64_t)0));
                 llvm::Value* args[]
-                    = { unmasked_value, void_ptr(ptr), w4_int_indices[0],
+                    = { unmasked_value, void_ptr(src_ptr), w4_int_indices[0],
                         mask4_as_int8(w4_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
@@ -4253,7 +4253,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
         } else {
             return clamped_gather_from_uniform(type_wide_ustring());
         }
-    } else if (ptr_type == type_wide_float()) {
+    } else if (src_type == type_wide_float()) {
         if (m_supports_avx512f) {
             switch (m_vector_width) {
             case 16: {
@@ -4263,10 +4263,10 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 OSL_ASSERT(func_avx512_gather_ps);
 
                 llvm::Value* unmasked_value = wide_constant(0.0f);
-                llvm::Value* args[]         = { unmasked_value, void_ptr(ptr),
-                                                op_linearize_16x_indices(wide_index),
-                                                mask_as_int16(current_mask()),
-                                                constant(4) };
+                llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
+                                        op_linearize_16x_indices(wide_index),
+                                        mask_as_int16(current_mask()),
+                                        constant(4) };
                 return builder().CreateCall(func_avx512_gather_ps,
                                             makeArrayRef(args));
             }
@@ -4277,10 +4277,10 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 OSL_ASSERT(func_avx512_gather_ps);
 
                 llvm::Value* unmasked_value = wide_constant(0.0f);
-                llvm::Value* args[]         = { unmasked_value, void_ptr(ptr),
-                                                op_linearize_8x_indices(wide_index),
-                                                mask_as_int8(current_mask()),
-                                                constant(4) };
+                llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
+                                        op_linearize_8x_indices(wide_index),
+                                        mask_as_int8(current_mask()),
+                                        constant(4) };
                 return builder().CreateCall(func_avx512_gather_ps,
                                             makeArrayRef(args));
             }
@@ -4304,7 +4304,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 auto w8_int_indices = op_split_16x(
                     op_linearize_16x_indices(wide_index));
                 llvm::Value* args[] = {
-                    avx2_unmasked_value, void_ptr(ptr), w8_int_indices[0],
+                    avx2_unmasked_value, void_ptr(src_ptr), w8_int_indices[0],
                     builder().CreateBitCast(w8_int_masks[0],
                                             llvm_vector_type(type_float(), 8)),
                     constant8((uint8_t)4)
@@ -4322,7 +4322,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
             case 8: {
                 auto int_indices    = op_linearize_8x_indices(wide_index);
                 llvm::Value* args[] = {
-                    avx2_unmasked_value, void_ptr(ptr), int_indices,
+                    avx2_unmasked_value, void_ptr(src_ptr), int_indices,
                     builder().CreateBitCast(wide_int_mask,
                                             llvm_vector_type(type_float(), 8)),
                     constant8((uint8_t)4)
@@ -4338,7 +4338,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
         } else {
             return clamped_gather_from_varying(type_wide_float());
         }
-    } else if (ptr_type == type_wide_int()) {
+    } else if (src_type == type_wide_int()) {
         if (m_supports_avx512f) {
             switch (m_vector_width) {
             case 16: {
@@ -4348,10 +4348,10 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 OSL_ASSERT(func_avx512_gather_pi);
 
                 llvm::Value* unmasked_value = wide_constant(0);
-                llvm::Value* args[]         = { unmasked_value, void_ptr(ptr),
-                                                op_linearize_16x_indices(wide_index),
-                                                mask_as_int16(current_mask()),
-                                                constant(4) };
+                llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
+                                        op_linearize_16x_indices(wide_index),
+                                        mask_as_int16(current_mask()),
+                                        constant(4) };
                 return builder().CreateCall(func_avx512_gather_pi,
                                             makeArrayRef(args));
             }
@@ -4362,10 +4362,10 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 OSL_ASSERT(func_avx512_gather_pi);
 
                 llvm::Value* unmasked_value = wide_constant(0);
-                llvm::Value* args[]         = { unmasked_value, void_ptr(ptr),
-                                                op_linearize_8x_indices(wide_index),
-                                                mask_as_int8(current_mask()),
-                                                constant(4) };
+                llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
+                                        op_linearize_8x_indices(wide_index),
+                                        mask_as_int8(current_mask()),
+                                        constant(4) };
                 return builder().CreateCall(func_avx512_gather_pi,
                                             makeArrayRef(args));
             }
@@ -4387,7 +4387,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 auto w8_int_masks   = op_split_16x(wide_int_mask);
                 auto w8_int_indices = op_split_16x(
                     op_linearize_16x_indices(wide_index));
-                llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(ptr),
+                llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(src_ptr),
                                          w8_int_indices[0], w8_int_masks[0],
                                          constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
@@ -4410,7 +4410,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 llvm::Value* wide_int_mask
                     = builder().CreateSExt(current_mask(), type_wide_int());
                 auto int_indices    = op_linearize_8x_indices(wide_index);
-                llvm::Value* args[] = { avx2_unmasked_value, void_ptr(ptr),
+                llvm::Value* args[] = { avx2_unmasked_value, void_ptr(src_ptr),
                                         int_indices, wide_int_mask,
                                         constant8((uint8_t)4) };
                 llvm::Value* gather_result
@@ -4424,7 +4424,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
         } else {
             return clamped_gather_from_varying(type_wide_int());
         }
-    } else if (ptr_type == type_wide_ustring()) {
+    } else if (src_type == type_wide_ustring()) {
         if (m_supports_avx512f) {
             // TODO:  Are we guaranteed a 64bit pointer?
             switch (m_vector_width) {
@@ -4445,7 +4445,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 llvm::Value* unmasked_value
                     = builder().CreateVectorSplat(8, constant64((uint64_t)0));
                 llvm::Value* args[]
-                    = { unmasked_value, void_ptr(ptr), w8_int_indices[0],
+                    = { unmasked_value, void_ptr(src_ptr), w8_int_indices[0],
                         mask_as_int8(w8_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
@@ -4485,7 +4485,7 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
                 llvm::Value* unmasked_value
                     = builder().CreateVectorSplat(4, constant64((uint64_t)0));
                 llvm::Value* args[]
-                    = { unmasked_value, void_ptr(ptr), w4_int_indices[0],
+                    = { unmasked_value, void_ptr(src_ptr), w4_int_indices[0],
                         mask4_as_int8(w4_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
@@ -4510,9 +4510,9 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
         }
 
     } else {
-        std::cout << "ptr_type = " << llvm_typename(ptr_type) << std::endl;
+        std::cout << "src_type = " << llvm_typename(src_type) << std::endl;
 
-        OSL_ASSERT(0 && "unsupported ptr type");
+        OSL_ASSERT(0 && "unsupported source type");
     }
     return nullptr;
 }
@@ -4520,13 +4520,13 @@ LLVM_Util::op_gather(llvm::Type* ptr_type, llvm::Value* ptr,
 
 
 void
-LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
-                      llvm::Value* ptr, llvm::Value* wide_index)
+LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
+                      llvm::Value* src_ptr, llvm::Value* wide_index)
 {
     OSL_ASSERT(wide_index->getType() == type_wide_int());
 
     auto scatter_using_conditional_block_per_lane =
-        [this, wide_val, wide_index](llvm::Type* cast_ptr_type,
+        [this, wide_val, wide_index](llvm::Type* cast_src_type,
                                      llvm::Value* cast_ptr,
                                      bool is_dest_wide = true) -> void {
         llvm::Value* linear_indices = nullptr;
@@ -4573,7 +4573,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
             op_branch(mask_per_lane[l], scatter_block,
                       test_scatter_per_lane[l + 1]);
 
-            llvm::Value* address = GEP(cast_ptr_type, cast_ptr,
+            llvm::Value* address = GEP(cast_src_type, cast_ptr,
                                        index_per_lane[l]);
             // uniform store, no need to mess with masking
             op_store(val_per_lane[l], address);
@@ -4581,7 +4581,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
         }
     };
 
-    if (ptr_type == type_float()) {
+    if (src_type == type_float()) {
         OSL_ASSERT(wide_val->getType() == type_wide_float());
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_scatter_ps = nullptr;
@@ -4603,17 +4603,17 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
             OSL_ASSERT(int_mask);
             OSL_ASSERT(func_avx512_scatter_ps);
 
-            llvm::Value* args[] = { void_ptr(ptr), int_mask, wide_index,
+            llvm::Value* args[] = { void_ptr(src_ptr), int_mask, wide_index,
                                     wide_val, constant(4) };
             builder().CreateCall(func_avx512_scatter_ps, makeArrayRef(args));
             return;
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
-            scatter_using_conditional_block_per_lane(type_float(), ptr,
+            scatter_using_conditional_block_per_lane(type_float(), src_ptr,
                                                      /*is_dest_wide*/ false);
             return;
         }
-    } else if (ptr_type == type_int()) {
+    } else if (src_type == type_int()) {
         OSL_ASSERT(wide_val->getType() == type_wide_int());
         if (m_supports_avx512f) {
             llvm::Function* func_avx512_scatter_pi = nullptr;
@@ -4634,17 +4634,17 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
             };
             OSL_ASSERT(int_mask);
             OSL_ASSERT(func_avx512_scatter_pi);
-            llvm::Value* args[] = { void_ptr(ptr), int_mask, wide_index,
+            llvm::Value* args[] = { void_ptr(src_ptr), int_mask, wide_index,
                                     wide_val, constant(4) };
             builder().CreateCall(func_avx512_scatter_pi, makeArrayRef(args));
             return;
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
-            scatter_using_conditional_block_per_lane(type_int(), ptr,
+            scatter_using_conditional_block_per_lane(type_int(), src_ptr,
                                                      /*is_dest_wide*/ false);
             return;
         }
-    } else if (ptr_type == type_ustring()) {
+    } else if (src_type == type_ustring()) {
         OSL_ASSERT(wide_val->getType() == type_wide_ustring());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4671,7 +4671,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                                                    w8_address_int) } };
 
                 llvm::Value* args[]
-                    = { void_ptr(ptr), mask_as_int8(w8_bit_masks[0]),
+                    = { void_ptr(src_ptr), mask_as_int8(w8_bit_masks[0]),
                         w8_int_indices[0], w8_address_int_val[0], constant(8) };
                 builder().CreateCall(func_avx512_scatter_dpq,
                                      makeArrayRef(args));
@@ -4696,7 +4696,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                     = builder().CreatePtrToInt(wide_val, wide_address_int_type);
 
                 llvm::Value* args[]
-                    = { void_ptr(ptr), mask_as_int8(current_mask()),
+                    = { void_ptr(src_ptr), mask_as_int8(current_mask()),
                         linear_indices, address_int_val, constant(8) };
                 builder().CreateCall(func_avx512_scatter_dpq,
                                      makeArrayRef(args));
@@ -4707,11 +4707,11 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
             }
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
-            scatter_using_conditional_block_per_lane(type_ustring(), ptr,
+            scatter_using_conditional_block_per_lane(type_ustring(), src_ptr,
                                                      /*is_dest_wide*/ false);
             return;
         }
-    } else if (ptr_type == type_wide_float()) {
+    } else if (src_type == type_wide_float()) {
         OSL_ASSERT(wide_val->getType() == type_wide_float());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4721,7 +4721,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                         module(), llvm::Intrinsic::x86_avx512_scatter_dps_512);
                 OSL_ASSERT(func_avx512_scatter_ps);
 
-                llvm::Value* args[] = { void_ptr(ptr),
+                llvm::Value* args[] = { void_ptr(src_ptr),
                                         mask_as_int16(current_mask()),
                                         op_linearize_16x_indices(wide_index),
                                         wide_val, constant(4) };
@@ -4735,7 +4735,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                         module(), llvm::Intrinsic::x86_avx512_scattersiv8_sf);
                 OSL_ASSERT(func_avx512_scatter_ps);
 
-                llvm::Value* args[] = { void_ptr(ptr),
+                llvm::Value* args[] = { void_ptr(src_ptr),
                                         mask_as_int8(current_mask()),
                                         op_linearize_8x_indices(wide_index),
                                         wide_val, constant(4) };
@@ -4750,13 +4750,13 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
             // AVX2, AVX, SSE4.2 fall through to here
             llvm::Value* float_ptr
                 = builder().CreatePointerBitCastOrAddrSpaceCast(
-                    ptr, type_float_ptr());
+                    src_ptr, type_float_ptr());
             scatter_using_conditional_block_per_lane(type_float(), float_ptr,
                                                      /*is_dest_wide*/ true);
             return;
         }
     }
-    if (ptr_type == type_wide_int()) {
+    if (src_type == type_wide_int()) {
         OSL_ASSERT(wide_val->getType() == type_wide_int());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4766,7 +4766,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                         module(), llvm::Intrinsic::x86_avx512_scatter_dpi_512);
                 OSL_ASSERT(func_avx512_scatter_pi);
 
-                llvm::Value* args[] = { void_ptr(ptr),
+                llvm::Value* args[] = { void_ptr(src_ptr),
                                         mask_as_int16(current_mask()),
                                         op_linearize_16x_indices(wide_index),
                                         wide_val, constant(4) };
@@ -4780,7 +4780,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                         module(), llvm::Intrinsic::x86_avx512_scattersiv8_si);
                 OSL_ASSERT(func_avx512_scatter_pi);
 
-                llvm::Value* args[] = { void_ptr(ptr),
+                llvm::Value* args[] = { void_ptr(src_ptr),
                                         mask_as_int8(current_mask()),
                                         op_linearize_8x_indices(wide_index),
                                         wide_val, constant(4) };
@@ -4794,13 +4794,13 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
             llvm::Value* int_ptr
-                = builder().CreatePointerBitCastOrAddrSpaceCast(ptr,
+                = builder().CreatePointerBitCastOrAddrSpaceCast(src_ptr,
                                                                 type_int_ptr());
             scatter_using_conditional_block_per_lane(type_int(), int_ptr,
                                                      /*is_dest_wide*/ true);
             return;
         }
-    } else if (ptr_type == type_wide_ustring()) {
+    } else if (src_type == type_wide_ustring()) {
         OSL_ASSERT(wide_val->getType() == type_wide_ustring());
         if (m_supports_avx512f) {
             switch (m_vector_width) {
@@ -4828,7 +4828,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                                                    w8_address_int) } };
 
                 llvm::Value* args[]
-                    = { void_ptr(ptr), mask_as_int8(w8_bit_masks[0]),
+                    = { void_ptr(src_ptr), mask_as_int8(w8_bit_masks[0]),
                         w8_int_indices[0], w8_address_int_val[0], constant(8) };
                 builder().CreateCall(func_avx512_scatter_dpq,
                                      makeArrayRef(args));
@@ -4854,7 +4854,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
                     = builder().CreatePtrToInt(wide_val, wide_address_int_type);
 
                 llvm::Value* args[]
-                    = { void_ptr(ptr), mask_as_int8(current_mask()),
+                    = { void_ptr(src_ptr), mask_as_int8(current_mask()),
                         linear_indices, address_int_val, constant(8) };
                 builder().CreateCall(func_avx512_scatter_dpq,
                                      makeArrayRef(args));
@@ -4867,7 +4867,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
             // AVX2, AVX, SSE4.2 fall through to here
             llvm::Value* ustring_ptr
                 = builder().CreatePointerBitCastOrAddrSpaceCast(
-                    ptr, type_ustring_ptr());
+                    src_ptr, type_ustring_ptr());
             scatter_using_conditional_block_per_lane(type_ustring(),
                                                      ustring_ptr,
                                                      /*is_dest_wide*/ true);
@@ -4875,9 +4875,9 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* ptr_type,
         }
     }
 
-    std::cout << "ptr_type = " << llvm_typename(ptr_type) << std::endl;
+    std::cout << "src_type = " << llvm_typename(src_type) << std::endl;
 
-    OSL_ASSERT(0 && "unsupported ptr type");
+    OSL_ASSERT(0 && "unsupported source type");
 }
 
 

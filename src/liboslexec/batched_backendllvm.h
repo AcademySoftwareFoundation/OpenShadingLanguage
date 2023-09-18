@@ -112,9 +112,9 @@ public:
     /// and it's a scalar, return the scalar -- this allows automatic
     /// casting to triples.  Finally, auto-cast int<->float if requested
     /// (no conversion is performed if cast is the default of UNKNOWN).
-    llvm::Value* llvm_load_value(llvm::Value* ptr, const TypeSpec& type,
+    llvm::Value* llvm_load_value(llvm::Value* src_ptr, const TypeSpec& type,
                                  int deriv, llvm::Value* arrayindex,
-                                 int component, bool ptr_is_uniform,
+                                 int component, bool src_is_uniform,
                                  TypeDesc cast              = TypeDesc::UNKNOWN,
                                  bool op_is_uniform         = true,
                                  bool index_is_uniform      = true,

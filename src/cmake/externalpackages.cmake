@@ -149,6 +149,8 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0
 endif ()
 if (LLVM_VERSION VERSION_GREATER_EQUAL 17.0)
     message (ERROR "${ColorYellow}OSL is not yet compatible with LLVM 17.${ColorReset}\n")
+endif ()
+if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     if (CMAKE_CXX_STANDARD VERSION_LESS 17)
         message (WARNING "${ColorYellow}LLVM 16+ requires C++17 or higher. "
             "Please set CMAKE_CXX_STANDARD to 17 or higher.${ColorReset}\n")

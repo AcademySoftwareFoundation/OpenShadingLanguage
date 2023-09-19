@@ -489,19 +489,19 @@ BackendLLVM::llvm_create_constant(const Symbol& sym)
 {
     OSL_ASSERT((sym.symtype() == SymTypeConst));
 
-    TypeDesc t = sym.typespec().simpletype();
+    TypeDesc t               = sym.typespec().simpletype();
     const int num_components = t.aggregate;
 
     // Initialize entire array
-    const int num_elements   = t.numelements();
+    const int num_elements = t.numelements();
 
-    const int array_len = num_elements*num_components;
+    const int array_len = num_elements * num_components;
     std::vector<llvm::Constant*> elements;
     elements.reserve(array_len);
     for (int a = 0; a < num_elements; ++a) {
         for (int i = 0; i < num_components; ++i) {
-            int linear_index = num_components * a + i;
-            llvm::Constant *const_element = nullptr;
+            int linear_index              = num_components * a + i;
+            llvm::Constant* const_element = nullptr;
             if (sym.typespec().is_float_based()) {
                 const_element = ll.constant(sym.get_float(linear_index));
             }
@@ -510,7 +510,11 @@ BackendLLVM::llvm_create_constant(const Symbol& sym)
             }
             if (sym.typespec().is_string_based()) {
                 // TODO:  right now stored as char *, but change to int64 when we can
-                const_element = reinterpret_cast<llvm::Constant *>(ll.constant_ptr(OSL::bitcast<char *>(ustring(sym.get_string(linear_index)).hash()), ll.type_char_ptr()));
+                const_element = reinterpret_cast<llvm::Constant*>(
+                    ll.constant_ptr(
+                        OSL::bitcast<char*>(
+                            ustring(sym.get_string(linear_index)).hash()),
+                        ll.type_char_ptr()));
             }
             OSL_ASSERT(const_element && "unhandled type");
             elements.push_back(const_element);
@@ -519,7 +523,7 @@ BackendLLVM::llvm_create_constant(const Symbol& sym)
 
     // NOTE: even if type is not an array, it could be aggregate 3 or 16
     // we always just linearize it all for constants.
-    auto const_array = ll.constant_array(elements);
+    auto const_array           = ll.constant_array(elements);
     std::string unique_symname = global_unique_symname(sym);
 
     auto global_var = ll.create_global_constant(const_array, unique_symname);
@@ -706,20 +710,20 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                 llvm_zero_derivs(sym);
 #endif
         } else if (sym.interpolated() && !sym.typespec().is_closure()) {
-           #if 1
+#if 1
             // geometrically-varying param; memcpy its default value
             TypeDesc t = sym.typespec().simpletype();
-            if(sym.typespec().is_string()){
+            if (sym.typespec().is_string()) {
                 //llvm_create_constant(sym);
                 auto default_str = ll.constant64(sym.get_string().hash());
 
-                OSL_ASSERT(llvm_store_value(default_str,sym,0, nullptr, 0));
-            } else{
-               // std::cout<<"llvm_instance.cpp: symbol name: "<<sym.name()<<std::endl;
+                OSL_ASSERT(llvm_store_value(default_str, sym, 0, nullptr, 0));
+            } else {
+                // std::cout<<"llvm_instance.cpp: symbol name: "<<sym.name()<<std::endl;
                 ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
-                            t.size(), t.basesize() /*align*/);
-           }
-           #endif
+                             t.size(), t.basesize() /*align*/);
+            }
+#endif
 
             if (sym.has_derivs())
                 llvm_zero_derivs(sym);
@@ -739,7 +743,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                     if (elemtype.is_float_based()) {
                         init_val = ll.constant(sym.get_float(c));
                     } else if (elemtype.is_string()) {
-                         init_val = llvm_load_stringhash(sym.get_string(c));
+                        init_val = llvm_load_stringhash(sym.get_string(c));
                     } else if (elemtype.is_int()) {
                         init_val = ll.constant(sym.get_int(c));
                     }

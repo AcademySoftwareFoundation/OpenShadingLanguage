@@ -30,7 +30,7 @@ struct MessageBlock {
     {
     }
 
-    MessageBlock(const MessageBlock&)            = delete;
+    MessageBlock(const MessageBlock&) = delete;
     MessageBlock& operator=(const MessageBlock&) = delete;
 
     /// Some messages don't have data because getmessage() was called before setmessage
@@ -94,7 +94,7 @@ private:
 public:
     BatchedMessageList(BatchedMessageBuffer& buffer) : m_buffer(buffer) {}
 
-    BatchedMessageList(const BatchedMessageList&)            = delete;
+    BatchedMessageList(const BatchedMessageList&) = delete;
     BatchedMessageList& operator=(const BatchedMessageList&) = delete;
 
     MessageBlock* list_head() const

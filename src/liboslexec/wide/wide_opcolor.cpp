@@ -305,16 +305,16 @@ namespace {
 
 template<typename COLOR>
 OSL_NOINLINE void
-wide_transformc(const ColorSystem cs, ustring fromspace,
-                ustring tospace, Masked<COLOR> wOutput,
-                Wide<const COLOR> wInput, ShadingContext* context);
+wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
+                Masked<COLOR> wOutput, Wide<const COLOR> wInput,
+                ShadingContext* context);
 
 // NOTE: keep implementation as mirror of ColorSystem::transformc
 template<typename COLOR>
 void
-wide_transformc(const ColorSystem cs, ustring fromspace,
-                ustring tospace, Masked<COLOR> wOutput,
-                Wide<const COLOR> wInput, ShadingContext* context)
+wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
+                Masked<COLOR> wOutput, Wide<const COLOR> wInput,
+                ShadingContext* context)
 {
     // Rather than attempt outer loop vectorization of ColorSystem::transformc
     // we will pull it's implementation up and insert SIMD loops inside
@@ -390,8 +390,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace,
     if (use_colorconfig) {
         // do things the ColorConfig way, so skip all these other clauses...
     } else if (tospace == Strings::RGB || tospace == Strings::rgb
-               || tospace == Strings::linear
-               || tospace == cs.colorspace()) {
+               || tospace == Strings::linear || tospace == cs.colorspace()) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C       = wCrgb[lane];
@@ -472,10 +471,10 @@ wide_transformc(const ColorSystem cs, ustring fromspace,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(transform_color, Wv, s, s)(void* bsg_, void* Cin,
-                                            int Cin_derivs, void* Cout,
-                                            int Cout_derivs, ustring_pod from_,
-                                            ustring_pod to_, unsigned int mask_value)
+__OSL_MASKED_OP3(transform_color, Wv, s,
+                 s)(void* bsg_, void* Cin, int Cin_derivs, void* Cout,
+                    int Cout_derivs, ustring_pod from_, ustring_pod to_,
+                    unsigned int mask_value)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
@@ -512,8 +511,8 @@ __OSL_MASKED_OP3(transform_color, Wv, s, s)(void* bsg_, void* Cin,
 
 OSL_BATCHOP void
 __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
-                                    void* Cout, int Cout_derivs, ustring_pod from_,
-                                    ustring_pod to_)
+                                    void* Cout, int Cout_derivs,
+                                    ustring_pod from_, ustring_pod to_)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);

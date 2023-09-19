@@ -19,8 +19,8 @@
 
 #include "oslexec_pvt.h"
 #include <OSL/Imathx/Imathx.h>
-#include <OSL/hashes.h>
 #include <OSL/dual_vec.h>
+#include <OSL/hashes.h>
 
 #include <OpenImageIO/fmath.h>
 #include "splineimpl.h"
@@ -118,25 +118,23 @@ osl_splineinverse_fff(void* out, ustringhash_pod spline_, void* x, void* knots,
 {
     // Version with no derivs
     ustringhash spline = ustringhash_from(spline_);
-    Spline::SplineInterp::create(spline)
-        .inverse<float>(*(float*)out, *(float*)x, (float*)knots, knot_count,
-                        knot_arraylen);
+    Spline::SplineInterp::create(spline).inverse<float>(
+        *(float*)out, *(float*)x, (float*)knots, knot_count, knot_arraylen);
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_splineinverse_dfdff(void* out, ustringhash_pod spline_, void* x, void* knots,
-                        int knot_count, int knot_arraylen)
+osl_splineinverse_dfdff(void* out, ustringhash_pod spline_, void* x,
+                        void* knots, int knot_count, int knot_arraylen)
 {
     // x has derivs, so return derivs as well
     ustringhash spline = ustringhash_from(spline_);
-    Spline::SplineInterp::create(spline)
-        .inverse<Dual2<float>>(DFLOAT(out), DFLOAT(x), (float*)knots,
-                               knot_count, knot_arraylen);
+    Spline::SplineInterp::create(spline).inverse<Dual2<float>>(
+        DFLOAT(out), DFLOAT(x), (float*)knots, knot_count, knot_arraylen);
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_splineinverse_dfdfdf(void* out, ustringhash_pod spline_, void* x, void* knots,
-                         int knot_count, int knot_arraylen)
+osl_splineinverse_dfdfdf(void* out, ustringhash_pod spline_, void* x,
+                         void* knots, int knot_count, int knot_arraylen)
 {
     // Ignore knot derivatives
     osl_splineinverse_dfdff(out, spline_, x, (float*)knots, knot_count,
@@ -144,8 +142,8 @@ osl_splineinverse_dfdfdf(void* out, ustringhash_pod spline_, void* x, void* knot
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_splineinverse_dffdf(void* out, ustringhash_pod spline_, void* x, void* knots,
-                        int knot_count, int knot_arraylen)
+osl_splineinverse_dffdf(void* out, ustringhash_pod spline_, void* x,
+                        void* knots, int knot_count, int knot_arraylen)
 {
     // Ignore knot derivs
     float outtmp = 0;

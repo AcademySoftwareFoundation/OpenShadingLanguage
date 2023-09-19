@@ -145,8 +145,8 @@ __OSL_MASKED_OP(dict_next)(void* bsg_, void* wout, void* wNodeID,
 
 
 OSL_BATCHOP int
-__OSL_OP(dict_value)(void* bsg_, int nodeID, ustring_pod attribname, long long type,
-                     void* data)
+__OSL_OP(dict_value)(void* bsg_, int nodeID, ustring_pod attribname,
+                     long long type, void* data)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return bsg->uniform.context->dict_value(nodeID, USTR(attribname),

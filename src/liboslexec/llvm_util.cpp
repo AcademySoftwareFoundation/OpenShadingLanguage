@@ -560,7 +560,7 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
 void
 LLVM_Util::ustring_rep(UstringRep rep)
 {
-    m_ustring_rep       = rep;
+    m_ustring_rep            = rep;
     m_llvm_type_real_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
     if (m_ustring_rep == UstringRep::charptr) {
         m_llvm_type_ustring = m_llvm_type_real_ustring;
@@ -568,7 +568,7 @@ LLVM_Util::ustring_rep(UstringRep rep)
         OSL_ASSERT(m_ustring_rep == UstringRep::hash);
         m_llvm_type_ustring = llvm::Type::getInt64Ty(*m_llvm_context);
     }
-    m_llvm_type_ustring_ptr  = llvm::PointerType::get(m_llvm_type_ustring, 0);
+    m_llvm_type_ustring_ptr = llvm::PointerType::get(m_llvm_type_ustring, 0);
 
     // Batched versions haven't been updated to handle hash yet.
     // For now leave them using the real ustring regardless of UstringRep
@@ -3437,26 +3437,23 @@ LLVM_Util::constant128(uint64_t left, uint64_t right)
     return llvm::ConstantInt::get(context(), llvm::APInt(128, refBigNum));
 }
 
-llvm::Constant* 
+llvm::Constant*
 LLVM_Util::constant_array(cspan<llvm::Constant*> constants)
 {
     OSL_ASSERT(constants.size() > 0);
     auto element_type = constants[0]->getType();
-    auto array_type = llvm::ArrayType::get(element_type, constants.size());
+    auto array_type   = llvm::ArrayType::get(element_type, constants.size());
     return llvm::ConstantArray::get(array_type, makeArrayRef(constants));
 }
 
-llvm::GlobalVariable *
-LLVM_Util::create_global_constant(llvm::Constant* initializer, const std::string& llname)
+llvm::GlobalVariable*
+LLVM_Util::create_global_constant(llvm::Constant* initializer,
+                                  const std::string& llname)
 {
-    return new llvm::GlobalVariable(
-        *m_llvm_module, 
-        initializer->getType(), 
-        true /*is_constant*/,
-        llvm::GlobalVariable::PrivateLinkage,
-        initializer,
-        llname
-        );
+    return new llvm::GlobalVariable(*m_llvm_module, initializer->getType(),
+                                    true /*is_constant*/,
+                                    llvm::GlobalVariable::PrivateLinkage,
+                                    initializer, llname);
 }
 
 llvm::Constant*
@@ -4636,8 +4633,8 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                 auto w8_int_masks    = op_split_16x(wide_int_mask);
                 auto w8_int_indices  = op_split_16x(wide_index);
                 llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(src_ptr),
-                                         w8_int_indices[0], w8_int_masks[0],
-                                         constant8((uint8_t)4) };
+                                        w8_int_indices[0], w8_int_masks[0],
+                                        constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
                                                             toArrayRef(args));
                 args[2]              = w8_int_indices[1];
@@ -4937,8 +4934,8 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                 auto w8_int_indices = op_split_16x(
                     op_linearize_16x_indices(wide_index));
                 llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(src_ptr),
-                                         w8_int_indices[0], w8_int_masks[0],
-                                         constant8((uint8_t)4) };
+                                        w8_int_indices[0], w8_int_masks[0],
+                                        constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
                                                             toArrayRef(args));
                 args[2]              = w8_int_indices[1];

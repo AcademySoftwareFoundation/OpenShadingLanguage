@@ -55,20 +55,21 @@ print_component_value(std::ostream& out, ShadingSystemImpl* ss, TypeDesc type,
             << ((Vec3*)data)->z << ")";
     else if (type == TypeDesc::TypeString) {
         if (treat_ustrings_as_hash == true) {
-        out << "\"" << *((ustringhash*)data) << "\"";\
+            out << "\"" << *((ustringhash*)data) << "\"";
         } else {
-        out << "\"" << *((ustring*)data) << "\"";
-        }     
-    }
-    else if (type == TypeDesc::PTR)  // this only happens for closures
-        print_closure(out, *(const ClosureColor**)data, ss, treat_ustrings_as_hash);
+            out << "\"" << *((ustring*)data) << "\"";
+        }
+    } else if (type == TypeDesc::PTR)  // this only happens for closures
+        print_closure(out, *(const ClosureColor**)data, ss,
+                      treat_ustrings_as_hash);
 }
 
 
 
 static void
 print_component(std::ostream& out, const ClosureComponent* comp,
-                ShadingSystemImpl* ss, const Color3& weight, bool& treat_ustrings_as_hash)
+                ShadingSystemImpl* ss, const Color3& weight,
+                bool& treat_ustrings_as_hash)
 {
     const ClosureRegistry::ClosureEntry* clentry = ss->find_closure(comp->id);
     OSL_ASSERT(clentry);
@@ -88,7 +89,8 @@ print_component(std::ostream& out, const ClosureComponent* comp,
                 out << ", ";
             print_component_value(out, ss, param.type.elementtype(),
                                   (const char*)comp->data() + param.offset
-                                      + param.type.elementsize() * j, treat_ustrings_as_hash);
+                                      + param.type.elementsize() * j,
+                                  treat_ustrings_as_hash);
         }
         if (clentry->params[i].type.numelements() > 1)
             out << "]";
@@ -100,7 +102,8 @@ print_component(std::ostream& out, const ClosureComponent* comp,
 
 static void
 print_closure(std::ostream& out, const ClosureColor* closure,
-              ShadingSystemImpl* ss, const Color3& w, bool& first, bool& treat_ustrings_as_hash)
+              ShadingSystemImpl* ss, const Color3& w, bool& first,
+              bool& treat_ustrings_as_hash)
 {
     if (closure == NULL)
         return;
@@ -108,11 +111,14 @@ print_closure(std::ostream& out, const ClosureColor* closure,
     switch (closure->id) {
     case ClosureColor::MUL:
         print_closure(out, closure->as_mul()->closure, ss,
-                      closure->as_mul()->weight * w, first, treat_ustrings_as_hash);
+                      closure->as_mul()->weight * w, first,
+                      treat_ustrings_as_hash);
         break;
     case ClosureColor::ADD:
-        print_closure(out, closure->as_add()->closureA, ss, w, first, treat_ustrings_as_hash);
-        print_closure(out, closure->as_add()->closureB, ss, w, first, treat_ustrings_as_hash);
+        print_closure(out, closure->as_add()->closureA, ss, w, first,
+                      treat_ustrings_as_hash);
+        print_closure(out, closure->as_add()->closureB, ss, w, first,
+                      treat_ustrings_as_hash);
         break;
     default:
         if (!first)
@@ -130,7 +136,8 @@ print_closure(std::ostream& out, const ClosureColor* closure,
               ShadingSystemImpl* ss, bool treat_ustrings_as_hash)
 {
     bool first = true;
-    print_closure(out, closure, ss, Color3(1, 1, 1), first, treat_ustrings_as_hash);
+    print_closure(out, closure, ss, Color3(1, 1, 1), first,
+                  treat_ustrings_as_hash);
 }
 
 

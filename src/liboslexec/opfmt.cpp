@@ -83,8 +83,7 @@ osl_gen_printfmt(OpaqueExecContextPtr exec_ctx,
     auto encoded_types = reinterpret_cast<const EncodedType*>(arg_types);
 
     rs_printfmt(exec_ctx, rs_fmt_specification, arg_count, encoded_types,
-                arg_values_size,
-                arg_values);
+                arg_values_size, arg_values);
 }
 
 

@@ -9,7 +9,6 @@
 #include <unordered_map>
 
 #include <OpenImageIO/imagebuf.h>
-#include <OpenImageIO/ustring.h>
 
 #include <OSL/oslexec.h>
 #include <OSL/rendererservices.h>
@@ -76,7 +75,7 @@ public:
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.
     virtual void camera_params(const Matrix44& world_to_camera,
-                               ustring projection, float hfov, float hither,
+                               ustringhash projection, float hfov, float hither,
                                float yon, int xres, int yres);
 
     virtual void parse_scene_xml(const std::string& scenefile);
@@ -103,7 +102,7 @@ public:
 private:
     // Camera parameters
     Matrix44 m_world_to_camera;
-    ustring m_projection;
+    ustringhash m_projection;
     float m_fov, m_pixelaspect, m_hither, m_yon;
     float m_shutter[2];
     float m_screen_window[4];

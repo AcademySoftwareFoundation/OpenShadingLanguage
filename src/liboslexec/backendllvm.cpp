@@ -414,13 +414,13 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
             auto sym_name = sym.name().string();
 
             std::string unique_symname = global_unique_symname(sym);
-            auto it = get_const_map().find(unique_symname);
+            auto it                    = get_const_map().find(unique_symname);
             OSL_ASSERT(it != get_const_map().end());
             result = it->second;
             if (result) {
-                 TypeSpec elemtype = sym.typespec().elementtype();
-                 result = llvm_ptr_cast(result, llvm_typedesc(elemtype),
-                                         llnamefmt("cast_to_{}_", sym.typespec()));
+                TypeSpec elemtype = sym.typespec().elementtype();
+                result = llvm_ptr_cast(result, llvm_typedesc(elemtype),
+                                       llnamefmt("cast_to_{}_", sym.typespec()));
             }
             return result;
         }
@@ -555,7 +555,7 @@ BackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
     // Handle expanding single value to multiple.
     // Caller's responsiblity to keep component index in bounds otherwise
     if (ncomps == 1)
-        component = 0;  
+        component = 0;
     OSL_ASSERT(component < ncomps);
     int linear_index = ncomps * arrayindex + component;
 
@@ -868,14 +868,15 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
         return true;
     }
 
-    // Copying of entire arrays.  But only for non-const source symbols 
+    // Copying of entire arrays.  But only for non-const source symbols
     // as we don't want to generate memcpy to host memory or to ustrings
     // when we are really using ustringhash for llvm gen.
     // It's ok if the array lengths don't match,
     // it will only copy up to the length of the smaller one.  The compiler
     // will ensure they are the same size, except for certain cases where
     // the size difference is intended (by the optimizer).
-    if (result_t.is_array() && !Src.is_constant() && src_t.is_array() && arrayindex == -1) {
+    if (result_t.is_array() && !Src.is_constant() && src_t.is_array()
+        && arrayindex == -1) {
         OSL_DASSERT(assignable(result_t.elementtype(), src_t.elementtype()));
         llvm::Value* resultptr = llvm_get_pointer(Result);
         llvm::Value* srcptr    = llvm_get_pointer(Src);
@@ -902,14 +903,16 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
     if (!singlechan) {
         if (rt.is_array() && arrayindex == -1) {
             // Initialize entire array
-            const int num_elements   = std::min(rt.numelements(),src_t.simpletype().numelements());
+            const int num_elements = std::min(rt.numelements(),
+                                              src_t.simpletype().numelements());
             for (int a = 0; a < num_elements; ++a) {
                 llvm::Value* const_arrind = ll.constant(a);
                 for (int i = 0; i < num_components; ++i) {
                     llvm::Value* src_val
                         = Src.is_constant()
-                            ? llvm_load_constant_value(Src, a, i, basetype)
-                            : llvm_load_value(Src, 0, const_arrind, i, basetype);
+                              ? llvm_load_constant_value(Src, a, i, basetype)
+                              : llvm_load_value(Src, 0, const_arrind, i,
+                                                basetype);
                     if (!src_val)
                         return false;
                     llvm_store_value(src_val, Result, 0, const_arrind, i);
@@ -919,8 +922,9 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
             for (int i = 0; i < num_components; ++i) {
                 llvm::Value* src_val
                     = Src.is_constant()
-                        ? llvm_load_constant_value(Src, arrayindex, i, basetype)
-                        : llvm_load_value(Src, 0, arrind, i, basetype);
+                          ? llvm_load_constant_value(Src, arrayindex, i,
+                                                     basetype)
+                          : llvm_load_value(Src, 0, arrind, i, basetype);
                 if (!src_val)
                     return false;
                 llvm_store_value(src_val, Result, 0, arrind, i);

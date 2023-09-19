@@ -11,7 +11,7 @@
 OSL_NAMESPACE_ENTER
 
 
-// TODO: update types from char * to ustringhash or ustringhash_pod 
+// TODO: update types from char * to ustringhash or ustringhash_pod
 //       and remove uses of HDSTR
 #define HDSTR(cstr) (*((OSL::ustringhash*)&cstr))
 

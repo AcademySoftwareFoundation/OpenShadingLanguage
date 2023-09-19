@@ -911,7 +911,7 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
     Block<ustringhash> bwToSpace;
     block_ustringhash_from_ptr(bwToSpace, w_to_ptr);
     Wide<const ustringhash> wToSpace(bwToSpace);
-    
+
     Block<Matrix44> wMto;
     // NOTE: even if we failed to get a from matrix, it should have been set to
     // identity, so we still need to try to get the to matrix for the original mask

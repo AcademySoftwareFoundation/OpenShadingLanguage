@@ -33,14 +33,14 @@ typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
 typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
 
 enum class AttributeSpecBuiltinArg {
-    ShaderGlobalsPointer,  // void* (TODO: ideally ShaderGlobals*)
-    ShadeIndex,            // int
-    Derivatives,           // bool
-    Type,                  // TypeDesc_pod
-    ArrayIndex,            // int, Always zero for non-indexed array lookups.
-    IsArrayLookup,         // bool
-    ObjectName,            // const char* (TODO: change to ustringhash)
-    AttributeName,         // const char* (TODO: change to ustringhash)
+    OpaqueExecutionContext,  //OpaqueExecContextPtr
+    ShadeIndex,              // int
+    Derivatives,             // bool
+    Type,                    // TypeDesc_pod
+    ArrayIndex,              // int, Always zero for non-indexed array lookups.
+    IsArrayLookup,           // bool
+    ObjectName,              // ustringhash_pod
+    AttributeName,           // ustringhash_pod
 };
 
 using AttributeSpecArg    = ArgVariant<AttributeSpecBuiltinArg>;
@@ -470,9 +470,9 @@ public:
 
     /// Options for the trace call.
     struct TraceOpt {
-        float mindist;        ///< ignore hits closer than this
-        float maxdist;        ///< ignore hits farther than this
-        bool shade;           ///< whether to shade what is hit
+        float mindist;         ///< ignore hits closer than this
+        float maxdist;         ///< ignore hits farther than this
+        bool shade;            ///< whether to shade what is hit
         ustringhash traceset;  ///< named trace set
         TraceOpt() : mindist(0.0f), maxdist(1.0e30), shade(false) {}
 

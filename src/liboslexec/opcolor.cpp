@@ -12,10 +12,10 @@
 
 #include "oslexec_pvt.h"
 #include <OSL/Imathx/Imathx.h>
-#include <OSL/hashes.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/fmt_util.h>
+#include <OSL/hashes.h>
 
 #include <OpenImageIO/fmath.h>
 
@@ -231,7 +231,7 @@ ColorSystem::ocio_transform(ustringhash fromspace, ustringhash tospace,
     assert(ctx);
     //Reverse lookup only possible on host
     ustring fromspace_str = ustring_from(fromspace);
-    ustring tospace_str = ustring_from(tospace);
+    ustring tospace_str   = ustring_from(tospace);
     if (ctx->ocio_transform(fromspace_str, tospace_str, C, Cout))
         return Cout;
 
@@ -412,8 +412,7 @@ __device__ static inline const ColorSystem&
 get_colorsystem(OSL::OpaqueExecContextPtr /*oec*/)
 {
     void* ptr;
-    rend_get_userdata(Hashes::colorsystem, &ptr, 8, OSL::TypeDesc::PTR,
-                      0);
+    rend_get_userdata(Hashes::colorsystem, &ptr, 8, OSL::TypeDesc::PTR, 0);
     return *((ColorSystem*)ptr);
 }
 
@@ -479,9 +478,10 @@ osl_luminance_dfdv(OpaqueExecContextPtr oec, void* out, void* c)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_prepend_color_from(OpaqueExecContextPtr oec, void* c_, ustringhash_pod from_)
+osl_prepend_color_from(OpaqueExecContextPtr oec, void* c_,
+                       ustringhash_pod from_)
 {
-    auto from = ustringhash_from(from_); 
+    auto from             = ustringhash_from(from_);
     const ColorSystem& cs = get_colorsystem(oec);
     auto ec               = pvt::get_ec(oec);
     COL(c_)               = cs.to_rgb(from, COL(c_), ec->context, ec);
@@ -495,8 +495,8 @@ osl_transformc(OpaqueExecContextPtr oec, void* Cin, int Cin_derivs, void* Cout,
 {
     const ColorSystem& cs = get_colorsystem(oec);
 
-    auto from     = ustringhash_from(from_);
-    auto to       = ustringhash_from(to_);
+    auto from = ustringhash_from(from_);
+    auto to   = ustringhash_from(to_);
 
     auto ec = pvt::get_ec(oec);
 

@@ -563,12 +563,12 @@ dispatch_environment(BatchedRendererServices* bsr, ustring filename,
 
 
 OSL_BATCHOP int
-__OSL_MASKED_OP(texture)(void* bsg_, ustring_pod name_, void* handle, const void* opt_,
-                         const void* s, const void* t, const void* dsdx,
-                         const void* dtdx, const void* dsdy, const void* dtdy,
-                         int chans, void* result, int resultHasDerivs,
-                         void* alpha, int alphaHasDerivs, void* errormessage,
-                         int mask_)
+__OSL_MASKED_OP(texture)(void* bsg_, ustring_pod name_, void* handle,
+                         const void* opt_, const void* s, const void* t,
+                         const void* dsdx, const void* dtdx, const void* dsdy,
+                         const void* dtdy, int chans, void* result,
+                         int resultHasDerivs, void* alpha, int alphaHasDerivs,
+                         void* errormessage, int mask_)
 {
     Mask mask(mask_);
     OSL_ASSERT(!mask.all_off());

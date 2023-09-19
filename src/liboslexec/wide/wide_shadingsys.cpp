@@ -383,10 +383,10 @@ __OSL_OP(range_check)(int indexvalue, int length, ustring_pod symname,
                       ustring_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
-        ustring groupname = USTR(groupname_);
-        ustring layername = USTR(layername_);
-        auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-        ShadingContext* ctx  = bsg->uniform.context;
+        ustring groupname   = USTR(groupname_);
+        ustring layername   = USTR(layername_);
+        auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+        ShadingContext* ctx = bsg->uniform.context;
         ctx->errorfmt("Index [{}] out of range {}[0..{}]: {}:{}"
                       " (group {}, layer {} {}, shader {})",
                       indexvalue, USTR(symname), length - 1, USTR(sourcefile),
@@ -414,7 +414,7 @@ __OSL_MASKED_OP(range_check)(void* wide_indexvalue, unsigned int mask_value,
 {
     ustring groupname = USTR(groupname_);
     ustring layername = USTR(layername_);
-    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    auto* bsg         = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Masked<int> wIndexValue(wide_indexvalue, Mask(mask_value));
     wIndexValue.mask().foreach ([=](ActiveLane lane) -> void {
         int indexvalue = wIndexValue[lane];
@@ -449,7 +449,7 @@ __OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs, ustring_pod obj_name_,
     Mask mask(mask_);
     ASSERT(mask.any_on());
 
-    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    auto* bsg         = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ustring obj_name  = USTR(obj_name_);
     ustring attr_name = USTR(attr_name_);
 
@@ -480,7 +480,7 @@ __OSL_MASKED_OP1(get_attribute,
     Mask mask(mask_);
     ASSERT(mask.any_on());
 
-    auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    auto* bsg        = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ustring obj_name = USTR(obj_name_);
     Wide<const ustring> wAttrName(wattr_name_);
     auto* renderer = bsg->uniform.context->batched<__OSL_WIDTH>().renderer();
@@ -525,7 +525,7 @@ __OSL_OP(get_attribute_uniform)(void* bsg_, int dest_derivs,
                                 int array_lookup, int index,
                                 const void* attr_type, void* attr_dest)
 {
-    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    auto* bsg         = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ustring obj_name  = USTR(obj_name_);
     ustring attr_name = USTR(attr_name_);
 

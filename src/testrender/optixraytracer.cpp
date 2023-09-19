@@ -228,8 +228,9 @@ OptixRaytracer::synch_attributes()
         const size_t podDataSize = cpuDataSize
                                    - sizeof(ustringhash) * numStrings;
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_color_system),
-                              podDataSize + sizeof(ustringhash_pod) * numStrings));
+        CUDA_CHECK(
+            cudaMalloc(reinterpret_cast<void**>(&d_color_system),
+                       podDataSize + sizeof(ustringhash_pod) * numStrings));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_color_system), colorSys,
                               podDataSize, cudaMemcpyHostToDevice));
 

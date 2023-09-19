@@ -11,10 +11,10 @@
 /////////////////////////////////////////////////////////////////////////
 
 #include "oslexec_pvt.h"
-#include <OSL/hashes.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/fmt_util.h>
+#include <OSL/hashes.h>
 
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
@@ -139,8 +139,7 @@ OSL_SHADEOP int
 osl_get_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod from_)
 {
     ustringhash from = ustringhash_from(from_);
-    if (from == Hashes::common
-        || from == get_commonspace_synonym(oec)) {
+    if (from == Hashes::common || from == get_commonspace_synonym(oec)) {
         MAT(r).makeIdentity();
         return true;
     }
@@ -170,8 +169,7 @@ OSL_SHADEOP int
 osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod to_)
 {
     ustringhash to = ustringhash_from(to_);
-    if (to == Hashes::common
-    || to == get_commonspace_synonym(oec)) {
+    if (to == Hashes::common || to == get_commonspace_synonym(oec)) {
         MAT(r).makeIdentity();
         return true;
     }
@@ -185,8 +183,7 @@ osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod to_)
                                          get_time(oec));
         return true;
     }
-    int ok = rs_get_inverse_matrix_space_time(oec, MAT(r), to,
-                                              get_time(oec));
+    int ok = rs_get_inverse_matrix_space_time(oec, MAT(r), to, get_time(oec));
     if (!ok) {
         MAT(r).makeIdentity();
         if (get_unknown_coordsys_error(oec)) {
@@ -208,7 +205,8 @@ osl_get_inverse_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod to);
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, ustringhash_pod from_)
+osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r,
+                        ustringhash_pod from_)
 {
     Matrix44 m;
     bool ok = osl_get_matrix(oec, &m, from_);
@@ -218,7 +216,8 @@ osl_prepend_matrix_from(OpaqueExecContextPtr oec, void* r, ustringhash_pod from_
     // TODO: How do we manage this in OptiX?
     else {
         if (get_unknown_coordsys_error(oec)) {
-            OSL::errorfmt(oec, "Unknown transformation \"{}\"", ustringhash_from(from_));
+            OSL::errorfmt(oec, "Unknown transformation \"{}\"",
+                          ustringhash_from(from_));
         }
     }
 #endif
@@ -242,22 +241,21 @@ osl_get_from_to_matrix(OpaqueExecContextPtr oec, void* r, ustringhash_pod from_,
 
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs,
-                     void* Pout, int Pout_derivs, ustringhash_pod from_, ustringhash_pod to_,
-                     int vectype)
+                     void* Pout, int Pout_derivs, ustringhash_pod from_,
+                     ustringhash_pod to_, int vectype)
 {
     Matrix44 M;
     int ok;
     Pin_derivs &= Pout_derivs;  // ignore derivs if output doesn't need it
     ustringhash from = ustringhash_from(from_);
-    ustringhash to = ustringhash_from(to_);
+    ustringhash to   = ustringhash_from(to_);
 
     if (from == Hashes::common)
         ok = osl_get_inverse_matrix(oec, &M, to_);
     else if (to == Hashes::common)
         ok = osl_get_matrix(oec, &M, from_);
     else
-        ok = osl_get_from_to_matrix(oec, &M, from_,
-                                    to_);
+        ok = osl_get_from_to_matrix(oec, &M, from_, to_);
     if (ok) {
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs)
@@ -302,15 +300,15 @@ osl_transform_triple(OpaqueExecContextPtr oec, void* Pin, int Pin_derivs,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_transform_triple_nonlinear(OpaqueExecContextPtr oec, void* Pin,
                                int Pin_derivs, void* Pout, int Pout_derivs,
-                               ustringhash_pod from_, ustringhash_pod to_, int vectype)
+                               ustringhash_pod from_, ustringhash_pod to_,
+                               int vectype)
 {
 #ifndef __CUDACC__
     ustringhash from = ustringhash_from(from_);
-    ustringhash to = ustringhash_from(to_);
+    ustringhash to   = ustringhash_from(to_);
 
-    if (rs_transform_points(oec, from, to, get_time(oec),
-                            (const Vec3*)Pin, (Vec3*)Pout, 1,
-                            (TypeDesc::VECSEMANTICS)vectype)) {
+    if (rs_transform_points(oec, from, to, get_time(oec), (const Vec3*)Pin,
+                            (Vec3*)Pout, 1, (TypeDesc::VECSEMANTICS)vectype)) {
         // Renderer had a direct way to transform the points between the
         // two spaces.
         if (Pout_derivs) {

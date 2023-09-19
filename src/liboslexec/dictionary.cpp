@@ -62,7 +62,8 @@ public:
     int dict_find(ExecContextPtr ec, ustring dictionaryname, ustring query);
     int dict_find(ExecContextPtr ec, int nodeID, ustring query);
     int dict_next(int nodeID);
-    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data, bool treat_ustrings_as_hash);
+    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data,
+                   bool treat_ustrings_as_hash);
 
 private:
     // We cache individual queries with a key that is a tuple of the
@@ -322,9 +323,9 @@ Dictionary::dict_value(int nodeID, ustring attribname, TypeDesc type,
         if (type.basetype == TypeDesc::STRING) {
             OSL_DASSERT(n == 1 && "no string arrays in XML");
             if (treat_ustrings_as_hash == true) {
-            ((ustringhash_pod*)data)[0] = m_stringdata[offset].hash();
+                ((ustringhash_pod*)data)[0] = m_stringdata[offset].hash();
             } else {
-             ((ustring*)data)[0] = m_stringdata[offset];
+                ((ustring*)data)[0] = m_stringdata[offset];
             }
             return 1;
         }
@@ -365,11 +366,11 @@ Dictionary::dict_value(int nodeID, ustring attribname, TypeDesc type,
         ustring s(val);
         m_stringdata.push_back(s);
         if (treat_ustrings_as_hash == true) {
-        ((ustringhash_pod*)data)[0] = s.hash(); 
+            ((ustringhash_pod*)data)[0] = s.hash();
         } else {
             ((ustring*)data)[0] = s;
         }
-        m_cache[q]          = r;
+        m_cache[q] = r;
         return 1;
     }
     if (type.basetype == TypeDesc::INT) {
@@ -447,7 +448,8 @@ ShadingContext::dict_value(int nodeID, ustring attribname, TypeDesc type,
 {
     if (!m_dictionary)
         return 0;
-    return m_dictionary->dict_value(nodeID, attribname, type, data, treat_ustrings_as_hash);
+    return m_dictionary->dict_value(nodeID, attribname, type, data,
+                                    treat_ustrings_as_hash);
 }
 
 
@@ -463,7 +465,7 @@ ShadingContext::free_dict_resources()
 OSL_SHADEOP int
 osl_dict_find_iis(OpaqueExecContextPtr oec, int nodeID, ustringhash_pod query_)
 {
-    auto ec = pvt::get_ec(oec);
+    auto ec    = pvt::get_ec(oec);
     auto query = ustringhash_from(query_);
     return ec->context->dict_find(ec, nodeID, ustring_from(query));
 }
@@ -471,12 +473,14 @@ osl_dict_find_iis(OpaqueExecContextPtr oec, int nodeID, ustringhash_pod query_)
 
 
 OSL_SHADEOP int
-osl_dict_find_iss(OpaqueExecContextPtr oec, ustringhash_pod dictionary_, ustringhash_pod query_)
+osl_dict_find_iss(OpaqueExecContextPtr oec, ustringhash_pod dictionary_,
+                  ustringhash_pod query_)
 {
     auto dictionary = ustringhash_from(dictionary_);
-    auto query = ustringhash_from(query_);
-    auto ec = pvt::get_ec(oec);
-    return ec->context->dict_find(ec, ustring_from(dictionary), ustring_from(query));
+    auto query      = ustringhash_from(query_);
+    auto ec         = pvt::get_ec(oec);
+    return ec->context->dict_find(ec, ustring_from(dictionary),
+                                  ustring_from(query));
 }
 
 
@@ -491,13 +495,13 @@ osl_dict_next(OpaqueExecContextPtr oec, int nodeID)
 
 
 OSL_SHADEOP int
-osl_dict_value(OpaqueExecContextPtr oec, int nodeID, ustringhash_pod attribname_,
-               long long type, void* data)
+osl_dict_value(OpaqueExecContextPtr oec, int nodeID,
+               ustringhash_pod attribname_, long long type, void* data)
 {
-    auto ec = pvt::get_ec(oec);
+    auto ec         = pvt::get_ec(oec);
     auto attribname = ustringhash_from(attribname_);
-    return ec->context->dict_value(nodeID, ustring_from(attribname), TYPEDESC(type),
-                                   data, true);
+    return ec->context->dict_value(nodeID, ustring_from(attribname),
+                                   TYPEDESC(type), data, true);
 }
 
 

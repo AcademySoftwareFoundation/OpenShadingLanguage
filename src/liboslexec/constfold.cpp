@@ -2422,8 +2422,8 @@ DECLFOLDER(constfold_gettextureinfo)
         // as that is what we expect during execution.  We will need to convert it back to
         // a regular ustring before continuing since this is the compile/optimization phase.
         if (result && t == TypeDesc::STRING) {
-            auto uh_mydata = reinterpret_cast<ustringhash *>(mydata)[0];
-            reinterpret_cast<ustring *>(mydata)[0] = ustring_from(uh_mydata);
+            auto uh_mydata = reinterpret_cast<ustringhash*>(mydata)[0];
+            reinterpret_cast<ustring*>(mydata)[0] = ustring_from(uh_mydata);
         }
         ustring errormessage = ustring_from(em);
         // Now we turn
@@ -2801,10 +2801,10 @@ DECLFOLDER(constfold_pointcloud_get)
 
     // Now make a constant array for those results we just retrieved...
     if (valtype == TypeDesc::STRING) {
-        // Renderer services treat strings as ustringhash, 
+        // Renderer services treat strings as ustringhash,
         // so we need to convert it back to ustring before continuing
-        auto uh_data = reinterpret_cast<ustringhash *>(data.data())[0];
-        reinterpret_cast<ustring *>(data.data())[0] = ustring_from(uh_data);
+        auto uh_data = reinterpret_cast<ustringhash*>(data.data())[0];
+        reinterpret_cast<ustring*>(data.data())[0] = ustring_from(uh_data);
     }
     int const_array_sym = rop.add_constant(valtype, &data[0]);
     // ... and add an instruction to copy the constant into the

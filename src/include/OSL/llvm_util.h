@@ -721,7 +721,8 @@ public:
     llvm::Value* constant(string_view s) { return constant(ustring(s)); }
 
     llvm::Constant* constant_array(cspan<llvm::Constant*> constants);
-    llvm::GlobalVariable * create_global_constant(llvm::Constant* initializer, const std::string& llname = {});
+    llvm::GlobalVariable* create_global_constant(llvm::Constant* initializer,
+                                                 const std::string& llname = {});
 
     llvm::Value* llvm_mask_to_native(llvm::Value* llvm_mask);
     llvm::Value* native_to_llvm_mask(llvm::Value* native_mask);
@@ -1092,8 +1093,9 @@ private:
     llvm::Type* m_llvm_type_void;
     llvm::Type* m_llvm_type_triple;
     llvm::Type* m_llvm_type_matrix;
-    llvm::Type* m_llvm_type_real_ustring; // True const char *
-    llvm::Type* m_llvm_type_ustring; // UStringRep can change between int64(hash) and a const char *
+    llvm::Type* m_llvm_type_real_ustring;  // True const char *
+    llvm::Type*
+        m_llvm_type_ustring;  // UStringRep can change between int64(hash) and a const char *
     llvm::PointerType* m_llvm_type_void_ptr;
     llvm::PointerType* m_llvm_type_char_ptr;
     llvm::PointerType* m_llvm_type_bool_ptr;

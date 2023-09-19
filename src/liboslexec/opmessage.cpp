@@ -28,8 +28,9 @@ namespace pvt {
 
 
 OSL_SHADEOP void
-osl_setmessage(ShaderGlobals* sg, ustringhash_pod name_, long long type_, void* val,
-               int layeridx, ustringhash_pod sourcefile_, int sourceline)
+osl_setmessage(ShaderGlobals* sg, ustringhash_pod name_, long long type_,
+               void* val, int layeridx, ustringhash_pod sourcefile_,
+               int sourceline)
 {
     auto name       = ustringhash_from(name_);
     auto sourcefile = ustringhash_from(sourcefile_);
@@ -67,9 +68,9 @@ osl_setmessage(ShaderGlobals* sg, ustringhash_pod name_, long long type_, void* 
 
 
 OSL_SHADEOP int
-osl_getmessage(ShaderGlobals* sg, ustringhash_pod source_, ustringhash_pod name_,
-               long long type_, void* val, int derivs, int layeridx,
-               ustringhash_pod sourcefile_, int sourceline)
+osl_getmessage(ShaderGlobals* sg, ustringhash_pod source_,
+               ustringhash_pod name_, long long type_, void* val, int derivs,
+               int layeridx, ustringhash_pod sourcefile_, int sourceline)
 {
     auto source     = ustringhash_from(source_);
     auto name       = ustringhash_from(name_);

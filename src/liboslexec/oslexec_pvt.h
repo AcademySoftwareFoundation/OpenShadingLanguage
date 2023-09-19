@@ -791,10 +791,7 @@ public:
     }
 #endif
 
-    void clear_symlocs()
-    {
-        m_symlocs.clear();
-    }
+    void clear_symlocs() { m_symlocs.clear(); }
     void add_symlocs(cspan<SymLocationDesc> symlocs)
     {
         for (auto& s : symlocs)
@@ -1431,17 +1428,18 @@ public:
     /// symbols?
     bool empty_instance() const
     {
-        return (symbols().size() == 0
-                && (ops().size() == 0 ||
+        return (
+            symbols().size() == 0
+            && (ops().size() == 0 ||
 #ifdef __CUDA_ARCH__
-                    // TODO: is this ever run on a device, why special case it?
-                    (ops().size() == 1
-                     && ustringhash_from(OSL::strhash(ops()[0].opname().c_str()))
-                            == Hashes::end)
+                // TODO: is this ever run on a device, why special case it?
+                (ops().size() == 1
+                 && ustringhash_from(OSL::strhash(ops()[0].opname().c_str()))
+                        == Hashes::end)
 #else
-                    (ops().size() == 1 && ops()[0].opname() == Strings::end)
+                (ops().size() == 1 && ops()[0].opname() == Strings::end)
 #endif
-                        ));
+                    ));
     }
 
     /// Make our own version of the code and args from the master.
@@ -1503,10 +1501,7 @@ public:
     typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;
     static_assert(sizeof(SymOverrideInfo) == 8, "SymOverrideInfo size");
 
-    SymOverrideInfo* instoverride(int i)
-    {
-        return &m_instoverrides[i];
-    }
+    SymOverrideInfo* instoverride(int i) { return &m_instoverrides[i]; }
     const SymOverrideInfo* instoverride(int i) const
     {
         return &m_instoverrides[i];
@@ -1559,10 +1554,10 @@ public:
 
     // avoid 'attempting to reference a deleted function' of std::unique_ptr<char>s
     // in reference to those member variables of ShadingContext
-    SimplePool(const SimplePool&)            = delete;
-    SimplePool(SimplePool&&)                 = delete;
+    SimplePool(const SimplePool&) = delete;
+    SimplePool(SimplePool&&)      = delete;
     SimplePool& operator=(const SimplePool&) = delete;
-    SimplePool&& operator=(SimplePool&&)     = delete;
+    SimplePool&& operator=(SimplePool&&) = delete;
 
     ~SimplePool() {}
 
@@ -1687,7 +1682,7 @@ private:
 
 struct BatchedMessageBuffer {
     BatchedMessageBuffer() : list_head(nullptr), message_data() {}
-    BatchedMessageBuffer(const BatchedMessageBuffer&)            = delete;
+    BatchedMessageBuffer(const BatchedMessageBuffer&) = delete;
     BatchedMessageBuffer& operator=(const BatchedMessageBuffer&) = delete;
 
     void clear()
@@ -1823,19 +1818,10 @@ public:
     }
 #endif
     // Is this shader group equivalent to ret void?
-    bool does_nothing() const
-    {
-        return m_does_nothing;
-    }
-    void does_nothing(bool new_val)
-    {
-        m_does_nothing = new_val;
-    }
+    bool does_nothing() const { return m_does_nothing; }
+    void does_nothing(bool new_val) { m_does_nothing = new_val; }
 
-    long long int executions() const
-    {
-        return m_executions;
-    }
+    long long int executions() const { return m_executions; }
 
     void start_running()
     {
@@ -1844,25 +1830,13 @@ public:
 #endif
     }
 
-    void name(ustring name)
-    {
-        m_name = name;
-    }
-    ustring name() const
-    {
-        return m_name;
-    }
+    void name(ustring name) { m_name = name; }
+    ustring name() const { return m_name; }
 
     std::string serialize() const;
 
-    void lock() const
-    {
-        m_mutex.lock();
-    }
-    void unlock() const
-    {
-        m_mutex.unlock();
-    }
+    void lock() const { m_mutex.lock(); }
+    void unlock() const { m_mutex.unlock(); }
 
     // Find which layer index corresponds to the layer name. Return -1 if
     // not found.
@@ -1874,10 +1848,7 @@ public:
 
     /// Return a unique ID of this group.
     ///
-    int id() const
-    {
-        return m_id;
-    }
+    int id() const { return m_id; }
 
     /// Mark all layers as not entry points and set m_num_entry_layers to 0.
     void clear_entry_layers();
@@ -1891,15 +1862,9 @@ public:
         mark_entry_layer(find_layer(layername));
     }
 
-    int num_entry_layers() const
-    {
-        return m_num_entry_layers;
-    }
+    int num_entry_layers() const { return m_num_entry_layers; }
 
-    bool is_last_layer(int layer) const
-    {
-        return layer == nlayers() - 1;
-    }
+    bool is_last_layer(int layer) const { return layer == nlayers() - 1; }
 
     /// Is the given layer an entry point? It is if explicitly tagged as
     /// such, or if no layers are so tagged then the last layer is the one
@@ -1910,10 +1875,7 @@ public:
                                   : is_last_layer(layer);
     }
 
-    int raytype_queries() const
-    {
-        return m_raytype_queries;
-    }
+    int raytype_queries() const { return m_raytype_queries; }
 
     /// Optionally set which ray types are known to be on or off (0 means
     /// not known at optimize time).
@@ -1922,19 +1884,10 @@ public:
         m_raytypes_on  = raytypes_on;
         m_raytypes_off = raytypes_off;
     }
-    int raytypes_on() const
-    {
-        return m_raytypes_on;
-    }
-    int raytypes_off() const
-    {
-        return m_raytypes_off;
-    }
+    int raytypes_on() const { return m_raytypes_on; }
+    int raytypes_off() const { return m_raytypes_off; }
 
-    void clear_symlocs()
-    {
-        m_symlocs.clear();
-    }
+    void clear_symlocs() { m_symlocs.clear(); }
     void add_symlocs(cspan<SymLocationDesc> symlocs)
     {
         for (auto& s : symlocs) {
@@ -1974,10 +1927,7 @@ public:
     // live with the group and copy the initial data.
     void setup_interactive_arena(cspan<uint8_t> paramblock);
 
-    uint8_t* interactive_arena_ptr()
-    {
-        return m_interactive_arena.get();
-    }
+    uint8_t* interactive_arena_ptr() { return m_interactive_arena.get(); }
 
     device_ptr<uint8_t>& device_interactive_arena()
     {
@@ -2316,25 +2266,13 @@ public:
 
     /// Return a pointer to the shading group for this context.
     ///
-    ShaderGroup* group()
-    {
-        return m_group;
-    }
-    const ShaderGroup* group() const
-    {
-        return m_group;
-    }
-    void group(ShaderGroup* grp)
-    {
-        m_group = grp;
-    }
+    ShaderGroup* group() { return m_group; }
+    const ShaderGroup* group() const { return m_group; }
+    void group(ShaderGroup* grp) { m_group = grp; }
 
     /// Return a reference to the MessageList containing messages.
     ///
-    MessageList& messages()
-    {
-        return m_messages;
-    }
+    MessageList& messages() { return m_messages; }
 #if OSL_USE_BATCHED
     BatchedMessageBuffer& batched_messages_buffer()
     {
@@ -2354,17 +2292,15 @@ public:
     int dict_next(int nodeID);
     /// Look up an attribute of the given dictionary node.  If
     /// attribname is "", return the value of the node itself.
-    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data, bool treat_ustrings_as_hash);
+    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data,
+                   bool treat_ustrings_as_hash);
 
     bool osl_get_attribute(ShaderGlobals* sg, void* objdata, int dest_derivs,
                            ustringhash obj_name, ustringhash attr_name,
                            int array_lookup, int index, TypeDesc attr_type,
                            void* attr_dest);
 
-    PerThreadInfo* thread_info() const
-    {
-        return m_threadinfo;
-    }
+    PerThreadInfo* thread_info() const { return m_threadinfo; }
 
     TextureSystem::Perthread* texture_thread_info() const
     {
@@ -2384,20 +2320,11 @@ public:
         return thread_info()->llvm_thread_info;
     }
 
-    TextureOpt* texture_options_ptr()
-    {
-        return &m_textureopt;
-    }
+    TextureOpt* texture_options_ptr() { return &m_textureopt; }
 
-    RendererServices::NoiseOpt* noise_options_ptr()
-    {
-        return &m_noiseopt;
-    }
+    RendererServices::NoiseOpt* noise_options_ptr() { return &m_noiseopt; }
 
-    RendererServices::TraceOpt* trace_options_ptr()
-    {
-        return &m_traceopt;
-    }
+    RendererServices::TraceOpt* trace_options_ptr() { return &m_traceopt; }
 
     void* alloc_scratch(size_t size, size_t align = 1)
     {
@@ -2405,18 +2332,12 @@ public:
     }
 
     template<typename Color>
-    bool ocio_transform(ustring fromspace, ustring tospace,
-                        const Color& C, Color& Cout);
+    bool ocio_transform(ustring fromspace, ustring tospace, const Color& C,
+                        Color& Cout);
 
-    void incr_layers_executed()
-    {
-        ++m_stat_layers_executed;
-    }
+    void incr_layers_executed() { ++m_stat_layers_executed; }
 
-    void incr_get_userdata_calls()
-    {
-        ++m_stat_get_userdata_calls;
-    }
+    void incr_get_userdata_calls() { ++m_stat_get_userdata_calls; }
 
     // Clear the stats we record per-execution in this context (unlocked)
     void clear_runtime_stats()
@@ -2566,10 +2487,7 @@ private:
     // When interpreting symbol addresses we need to know if the
     // wide data offsets should be used
     int batch_size_executed;
-    bool execution_is_batched() const
-    {
-        return batch_size_executed != 0;
-    }
+    bool execution_is_batched() const { return batch_size_executed != 0; }
 };
 
 

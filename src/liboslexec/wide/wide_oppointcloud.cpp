@@ -527,9 +527,9 @@ __OSL_MASKED_OP(pointcloud_search)(
         va_list args;
         va_start(args, nattrs);
         for (int i = 0; i < nattrs; i++) {
-            ustring attr_name = USTR(va_arg(args, ustring_pod));
-            TypeDesc attr_type   = TYPEDESC(va_arg(args, long long));
-            void* out_data       = va_arg(args, void*);
+            ustring attr_name  = USTR(va_arg(args, ustring_pod));
+            TypeDesc attr_type = TYPEDESC(va_arg(args, long long));
+            void* out_data     = va_arg(args, void*);
             dispatch_pointcloud_get(
                 bsg, USTR(filename), windices, wnum_points, attr_name,
                 MaskedData { attr_type, false, Mask { mask_value }, out_data });

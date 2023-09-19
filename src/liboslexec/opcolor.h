@@ -12,9 +12,9 @@
 /////////////////////////////////////////////////////////////////////////
 
 #include <OSL/Imathx/Imathx.h>
-#include <OSL/hashes.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/hashes.h>
 
 #include <OpenImageIO/color.h>
 

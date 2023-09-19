@@ -6,9 +6,9 @@
 
 #include "oslexec_pvt.h"
 #include <OSL/Imathx/Imathx.h>
-#include <OSL/hashes.h>
 #include <OSL/dual_vec.h>
 #include <OSL/fmt_util.h>
+#include <OSL/hashes.h>
 #include <OSL/oslnoise.h>
 
 #include <OpenImageIO/fmath.h>

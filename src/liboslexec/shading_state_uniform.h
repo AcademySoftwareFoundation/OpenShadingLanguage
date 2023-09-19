@@ -18,9 +18,9 @@ namespace pvt {
 
 
 struct ShadingStateUniform {
-    ColorSystem m_colorsystem;      ///< Data for current colorspace
+    ColorSystem m_colorsystem;          ///< Data for current colorspace
     ustringhash m_commonspace_synonym;  ///< Synonym for "common" space
-    bool m_unknown_coordsys_error;  ///< Error to use unknown xform name?
+    bool m_unknown_coordsys_error;      ///< Error to use unknown xform name?
     int m_max_warnings_per_thread;  ///< How many warnings to display per thread before giving up?
 };
 

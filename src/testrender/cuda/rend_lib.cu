@@ -279,18 +279,17 @@ rend_get_userdata(OSL::ustringhash name, void* data, int data_size,
 
 
 __device__ int
-osl_bind_interpolated_param(void* sg_, OSL::ustringhash_pod name_, long long type,
-                            int userdata_has_derivs, void* userdata_data,
-                            int symbol_has_derivs, void* symbol_data,
-                            int symbol_data_size, char* userdata_initialized,
-                            int userdata_index)
+osl_bind_interpolated_param(void* sg_, OSL::ustringhash_pod name_,
+                            long long type, int userdata_has_derivs,
+                            void* userdata_data, int symbol_has_derivs,
+                            void* symbol_data, int symbol_data_size,
+                            char* userdata_initialized, int userdata_index)
 {
     char status = *userdata_initialized;
     if (status == 0) {
         OSL::ustringhash name = OSL::ustringhash_from(name_);
-        bool ok               = rend_get_userdata(name, userdata_data,
-                                                  symbol_data_size, (*(OSL::TypeDesc*)&type),
-                                                  userdata_index);
+        bool ok = rend_get_userdata(name, userdata_data, symbol_data_size,
+                                    (*(OSL::TypeDesc*)&type), userdata_index);
         *userdata_initialized = status = 1 + ok;
     }
     if (status == 2) {
@@ -408,10 +407,11 @@ extern __device__ float4
 osl_tex2DLookup(void* handle, float s, float t);
 
 __device__ int
-osl_texture(void* sg_, OSL::ustringhash_pod name, void* handle, void* opt_, float s,
-            float t, float dsdx, float dtdx, float dsdy, float dtdy, int chans,
-            void* result, void* dresultdx, void* dresultdy, void* alpha,
-            void* dalphadx, void* dalphady, OSL::ustringhash_pod* ustring_errormessage)
+osl_texture(void* sg_, OSL::ustringhash_pod name, void* handle, void* opt_,
+            float s, float t, float dsdx, float dtdx, float dsdy, float dtdy,
+            int chans, void* result, void* dresultdx, void* dresultdy,
+            void* alpha, void* dalphadx, void* dalphady,
+            OSL::ustringhash_pod* ustring_errormessage)
 {
     if (!handle)
         return 0;
@@ -445,9 +445,9 @@ osl_range_check_err(int indexvalue, int length, OSL::ustringhash_pod symname,
 __device__ int
 osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 {
-    r                 = __builtin_assume_aligned(r, alignof(float));
+    r                     = __builtin_assume_aligned(r, alignof(float));
     OSL::ustringhash from = OSL::ustringhash_from(from_);
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    ShaderGlobals* sg     = (ShaderGlobals*)sg_;
     if (from == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;
@@ -464,8 +464,7 @@ osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
     // Find the index of the named transform in the transform list
     int match_idx = -1;
     for (size_t idx = 0; idx < OSL::pvt::num_named_xforms; ++idx) {
-        if (from
-            == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
+        if (from == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
             match_idx = static_cast<int>(idx);
             break;
         }
@@ -491,9 +490,9 @@ osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 __device__ int
 osl_get_inverse_matrix(void* sg_, void* r, OSL::ustringhash_pod to_)
 {
-    r                 = __builtin_assume_aligned(r, alignof(float));
+    r                   = __builtin_assume_aligned(r, alignof(float));
     OSL::ustringhash to = OSL::ustringhash_from(to_);
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
     if (to == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;

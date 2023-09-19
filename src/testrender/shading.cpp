@@ -62,7 +62,8 @@ enum ClosureIDs {
 
 // these structures hold the parameters of each closure type
 // they will be contained inside ClosureComponent
-struct EmptyParams {};
+struct EmptyParams {
+};
 struct DiffuseParams {
     Vec3 N;
 };

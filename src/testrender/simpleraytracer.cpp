@@ -11,17 +11,36 @@
 namespace pugi = OIIO::pugi;
 #endif
 
+#include <OSL/hashes.h>
 #include "raytracer.h"
 #include "shading.h"
 #include "simpleraytracer.h"
+
+// Create ustrings for all strings used by the free function renderer services.
+// Required to allow the reverse mapping of hash->string to work when processing messages
+namespace RS {
+namespace Strings {
+#define RS_STRDECL(str, var_name) const OSL::ustring var_name { str };
+#include "rs_strdecls.h"
+#undef RS_STRDECL
+}  // namespace Strings
+}  // namespace RS
+
+namespace RS {
+namespace {
+namespace Hashes {
+#define RS_STRDECL(str, var_name) \
+    constexpr OSL::ustringhash var_name(OSL::strhash(str));
+#include "rs_strdecls.h"
+#undef RS_STRDECL
+};  //namespace Hashes
+}  // unnamed namespace
+};  //namespace RS
+
 using namespace OSL;
 
 OSL_NAMESPACE_ENTER
 
-static ustring u_camera("camera"), u_screen("screen");
-static ustring u_NDC("NDC"), u_raster("raster");
-static ustring u_perspective("perspective");
-static ustring u_s("s"), u_t("t");
 static TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2(TypeDesc::INT, 2);
@@ -55,29 +74,29 @@ SimpleRaytracer::SimpleRaytracer()
 
     Matrix44 M;
     M.makeIdentity();
-    camera_params(M, u_perspective, 90.0f, 0.1f, 1000.0f, 256, 256);
+    camera_params(M, RS::Hashes::perspective, 90.0f, 0.1f, 1000.0f, 256, 256);
 
     // Set up getters
-    m_attr_getters[ustring("osl:version")] = &SimpleRaytracer::get_osl_version;
-    m_attr_getters[ustring("camera:resolution")]
+    m_attr_getters[RS::Hashes::osl_version] = &SimpleRaytracer::get_osl_version;
+    m_attr_getters[RS::Hashes::camera_resolution]
         = &SimpleRaytracer::get_camera_resolution;
-    m_attr_getters[ustring("camera:projection")]
+    m_attr_getters[RS::Hashes::camera_projection]
         = &SimpleRaytracer::get_camera_projection;
-    m_attr_getters[ustring("camera:pixelaspect")]
+    m_attr_getters[RS::Hashes::camera_pixelaspect]
         = &SimpleRaytracer::get_camera_pixelaspect;
-    m_attr_getters[ustring("camera:screen_window")]
+    m_attr_getters[RS::Hashes::camera_screen_window]
         = &SimpleRaytracer::get_camera_screen_window;
-    m_attr_getters[ustring("camera:fov")]  = &SimpleRaytracer::get_camera_fov;
-    m_attr_getters[ustring("camera:clip")] = &SimpleRaytracer::get_camera_clip;
-    m_attr_getters[ustring("camera:clip_near")]
+    m_attr_getters[RS::Hashes::camera_fov]  = &SimpleRaytracer::get_camera_fov;
+    m_attr_getters[RS::Hashes::camera_clip] = &SimpleRaytracer::get_camera_clip;
+    m_attr_getters[RS::Hashes::camera_clip_near]
         = &SimpleRaytracer::get_camera_clip_near;
-    m_attr_getters[ustring("camera:clip_far")]
+    m_attr_getters[RS::Hashes::camera_clip_far]
         = &SimpleRaytracer::get_camera_clip_far;
-    m_attr_getters[ustring("camera:shutter")]
+    m_attr_getters[RS::Hashes::camera_shutter]
         = &SimpleRaytracer::get_camera_shutter;
-    m_attr_getters[ustring("camera:shutter_open")]
+    m_attr_getters[RS::Hashes::camera_shutter_open]
         = &SimpleRaytracer::get_camera_shutter_open;
-    m_attr_getters[ustring("camera:shutter_close")]
+    m_attr_getters[RS::Hashes::camera_shutter_close]
         = &SimpleRaytracer::get_camera_shutter_close;
 }
 
@@ -125,7 +144,7 @@ SimpleRaytracer::attribute(string_view name, TypeDesc type, const void* value)
 
 void
 SimpleRaytracer::camera_params(const Matrix44& world_to_camera,
-                               ustring projection, float hfov, float hither,
+                               ustringhash projection, float hfov, float hither,
                                float yon, int xres, int yres)
 {
     m_world_to_camera  = world_to_camera;
@@ -487,12 +506,13 @@ bool
 SimpleRaytracer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
                                     ustringhash to, float /*time*/)
 {
-    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
+    if (to == OSL::Hashes::camera || to == OSL::Hashes::screen
+        || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
         // clang-format off
         Matrix44 M = m_world_to_camera;
-        if (to == u_screen || to == u_NDC || to == u_raster) {
+        if (to == OSL::Hashes::screen || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
             float depthrange = (double)m_yon-(double)m_hither;
-            if (m_projection == u_perspective) {
+            if (m_projection == RS::Hashes::perspective) {
                 float tanhalffov = tanf (0.5f * m_fov * M_PI/180.0);
                 Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
                                            0, 1/tanhalffov, 0, 0,
@@ -506,7 +526,7 @@ SimpleRaytracer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
                                            0, 0, -m_hither/depthrange, 1);
                 M = M * camera_to_screen;
             }
-            if (to == u_NDC || to == u_raster) {
+            if (to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
                 float screenleft = -1.0, screenwidth = 2.0;
                 float screenbottom = -1.0, screenheight = 2.0;
                 Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
@@ -514,7 +534,7 @@ SimpleRaytracer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
                                         0, 0, 1, 0,
                                         -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
                 M = M * screen_to_ndc;
-                if (to == u_raster) {
+                if (to == RS::Hashes::raster) {
                     Matrix44 ndc_to_raster (camera.xres, 0, 0, 0,
                                             0, camera.yres, 0, 0,
                                             0, 0, 1, 0,
@@ -589,7 +609,7 @@ SimpleRaytracer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
     // look up something specific to the primitive, rather than have hard-
     // coded names.
 
-    if (name == u_s && type == TypeDesc::TypeFloat) {
+    if (name == RS::Hashes::s && type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = sg->u;
         if (derivatives) {
             ((float*)val)[1] = sg->dudx;
@@ -597,7 +617,7 @@ SimpleRaytracer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_t && type == TypeDesc::TypeFloat) {
+    if (name == RS::Hashes::t && type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = sg->v;
         if (derivatives) {
             ((float*)val)[1] = sg->dvdx;
@@ -643,7 +663,7 @@ SimpleRaytracer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
                                        ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeString) {
-        ((ustring*)val)[0] = m_projection;
+        ((ustringhash*)val)[0] = m_projection;
         return true;
     }
     return false;

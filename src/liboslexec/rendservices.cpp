@@ -422,8 +422,8 @@ RendererServices::get_texture_info(ustringhash filename,
         // The TextureSubsystem still writes out ustrings, not ustringhashes!
         // So we will need to go and convert that ustring to a hash
         // for the rest of OSL to understand
-        auto ustr_data = reinterpret_cast<ustring *>(data);
-        (reinterpret_cast<ustringhash_pod *>(data))[0] = ustr_data->hash();
+        auto ustr_data = reinterpret_cast<ustring*>(data);
+        (reinterpret_cast<ustringhash_pod*>(data))[0] = ustr_data->hash();
     }
     if (!status) {
         std::string err = texturesys()->geterror();

@@ -77,11 +77,11 @@ osl_getchar_isi(ustringhash_pod str_, int index)
 OSL_SHADEOP int
 osl_startswith_iss(ustringhash_pod s_, ustringhash_pod substr_)
 {
-    auto substr = ustring_from(substr_);
+    auto substr       = ustring_from(substr_);
     size_t substr_len = substr.length();
     if (substr_len == 0)  // empty substr always matches
         return 1;
-    auto s = ustring_from(s_);
+    auto s       = ustring_from(s_);
     size_t s_len = s.length();
     if (substr_len > s_len)  // longer needle than haystack can't
         return 0;            // match (including empty s)
@@ -91,11 +91,11 @@ osl_startswith_iss(ustringhash_pod s_, ustringhash_pod substr_)
 OSL_SHADEOP int
 osl_endswith_iss(ustringhash_pod s_, ustringhash_pod substr_)
 {
-    auto substr = ustring_from(substr_);
+    auto substr       = ustring_from(substr_);
     size_t substr_len = substr.length();
     if (substr_len == 0)  // empty substr always matches
         return 1;
-    auto s = ustring_from(s_);
+    auto s       = ustring_from(s_);
     size_t s_len = s.length();
     if (substr_len > s_len)  // longer needle than haystack can't
         return 0;            // match (including empty s)
@@ -120,7 +120,7 @@ osl_stof_fs(ustringhash_pod str_)
 OSL_SHADEOP ustringhash_pod
 osl_substr_ssii(ustringhash_pod s_, int start, int length)
 {
-    auto s = ustring_from(s_);
+    auto s   = ustring_from(s_);
     int slen = int(s.length());
     if (slen == 0)
         return ustringhash_pod();  // No substring of empty string
@@ -136,13 +136,13 @@ OSL_SHADEOP int
 osl_regex_impl(void* sg_, ustringhash_pod subject_, void* results, int nresults,
                ustringhash_pod pattern_, int fullmatch)
 {
-    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
-    ShadingContext* ctx = sg->context;
+    ShaderGlobals* sg        = (ShaderGlobals*)sg_;
+    ShadingContext* ctx      = sg->context;
     ustringhash subject_hash = ustringhash_from(subject_);
-    ustring subject_ustr = ustring_from(subject_hash);
+    ustring subject_ustr     = ustring_from(subject_hash);
     const std::string& subject(subject_ustr.string());
     ustringhash pattern_hash = ustringhash_from(pattern_);
-    ustring pattern = ustring_from(pattern_hash);
+    ustring pattern          = ustring_from(pattern_hash);
     std::match_results<std::string::const_iterator> mresults;
     const std::regex& regex(ctx->find_regex(pattern));
     if (nresults > 0) {
@@ -183,8 +183,8 @@ osl_format(ustringhash_pod format_str_, ...)
 
 
 OSL_SHADEOP int
-osl_split(ustringhash_pod str_, ustringhash_pod* results, ustringhash_pod sep_, int maxsplit,
-          int resultslen)
+osl_split(ustringhash_pod str_, ustringhash_pod* results, ustringhash_pod sep_,
+          int maxsplit, int resultslen)
 {
     auto str = ustring_from(str_);
     auto sep = ustring_from(sep_);
@@ -232,14 +232,14 @@ osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
 
 OSL_RSOP OSL::ustringhash_pod
 osl_formatfmt(OpaqueExecContextPtr exec_ctx,
-                 OSL::ustringhash_pod fmt_specification, int32_t arg_count,
-                 void* arg_types, uint32_t arg_values_size, uint8_t* arg_values)
+              OSL::ustringhash_pod fmt_specification, int32_t arg_count,
+              void* arg_types, uint32_t arg_values_size, uint8_t* arg_values)
 {
     auto encoded_types = reinterpret_cast<const EncodedType*>(arg_types);
 
     std::string decoded_str;
-    OSL::decode_message(fmt_specification, arg_count,
-                        encoded_types, arg_values, decoded_str);
+    OSL::decode_message(fmt_specification, arg_count, encoded_types, arg_values,
+                        decoded_str);
     return ustring(decoded_str).hash();
 }
 

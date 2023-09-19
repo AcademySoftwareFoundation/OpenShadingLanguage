@@ -126,39 +126,36 @@ void* __dso_handle = 0;  // necessary to avoid linkage issues in bitcode
 
 
 
-#define MAKE_UNARY_PERCOMPONENT_OP(name, floatfunc, dualfunc)       \
-    OSL_SHADEOP float osl_##name##_ff(float a)                      \
-    {                                                               \
-        return floatfunc(a);                                        \
-    }                                                               \
-                                                                    \
-    OSL_SHADEOP void osl_##name##_dfdf(void* r, void* a)            \
-    {                                                               \
-        DFLOAT(r) = dualfunc(DFLOAT(a));                            \
-    }                                                               \
-                                                                    \
-    OSL_SHADEOP void osl_##name##_vv(void* r_, void* a_)            \
-    {                                                               \
-        Vec3& r(VEC(r_));                                           \
-        Vec3& a(VEC(a_));                                           \
-        r.x = floatfunc(a.x);                                       \
-        r.y = floatfunc(a.y);                                       \
-        r.z = floatfunc(a.z);                                       \
-    }                                                               \
-                                                                    \
-    OSL_SHADEOP void osl_##name##_dvdv(void* r_, void* a_)          \
-    {                                                               \
-        Dual2<Vec3>& r(DVEC(r_));                                   \
-        Dual2<Vec3>& a(DVEC(a_));                                   \
-        /* Swizzle the Dual2<Vec3>'s into 3 Dual2<float>'s */       \
-        Dual2<float> ax, ay, az;                                    \
-        ax = dualfunc(Dual2<float>(a.val().x, a.dx().x, a.dy().x)); \
-        ay = dualfunc(Dual2<float>(a.val().y, a.dx().y, a.dy().y)); \
-        az = dualfunc(Dual2<float>(a.val().z, a.dx().z, a.dy().z)); \
-        /* Now swizzle back */                                      \
-        r.set(Vec3(ax.val(), ay.val(), az.val()),                   \
-              Vec3(ax.dx(), ay.dx(), az.dx()),                      \
-              Vec3(ax.dy(), ay.dy(), az.dy()));                     \
+#define MAKE_UNARY_PERCOMPONENT_OP(name, floatfunc, dualfunc)           \
+    OSL_SHADEOP float osl_##name##_ff(float a) { return floatfunc(a); } \
+                                                                        \
+    OSL_SHADEOP void osl_##name##_dfdf(void* r, void* a)                \
+    {                                                                   \
+        DFLOAT(r) = dualfunc(DFLOAT(a));                                \
+    }                                                                   \
+                                                                        \
+    OSL_SHADEOP void osl_##name##_vv(void* r_, void* a_)                \
+    {                                                                   \
+        Vec3& r(VEC(r_));                                               \
+        Vec3& a(VEC(a_));                                               \
+        r.x = floatfunc(a.x);                                           \
+        r.y = floatfunc(a.y);                                           \
+        r.z = floatfunc(a.z);                                           \
+    }                                                                   \
+                                                                        \
+    OSL_SHADEOP void osl_##name##_dvdv(void* r_, void* a_)              \
+    {                                                                   \
+        Dual2<Vec3>& r(DVEC(r_));                                       \
+        Dual2<Vec3>& a(DVEC(a_));                                       \
+        /* Swizzle the Dual2<Vec3>'s into 3 Dual2<float>'s */           \
+        Dual2<float> ax, ay, az;                                        \
+        ax = dualfunc(Dual2<float>(a.val().x, a.dx().x, a.dy().x));     \
+        ay = dualfunc(Dual2<float>(a.val().y, a.dx().y, a.dy().y));     \
+        az = dualfunc(Dual2<float>(a.val().z, a.dx().z, a.dy().z));     \
+        /* Now swizzle back */                                          \
+        r.set(Vec3(ax.val(), ay.val(), az.val()),                       \
+              Vec3(ax.dx(), ay.dx(), az.dx()),                          \
+              Vec3(ax.dy(), ay.dy(), az.dy()));                         \
     }
 
 

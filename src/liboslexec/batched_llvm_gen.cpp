@@ -471,7 +471,7 @@ LLVMGEN(llvm_gen_printf)
     call_args[new_format_slot]  = llvm_new_format_string;
 
     // Construct the function name and call it.
-    const char * func_name = op.opname().c_str();
+    const char* func_name = op.opname().c_str();
 
     if ((op.opname() == op_format) && op_is_uniform) {
         func_name = "format_uniform";
@@ -484,7 +484,7 @@ LLVMGEN(llvm_gen_printf)
 
         // The format op returns a string value, put in in the right spot
         if (op.opname() == op_format)
-             rop.llvm_store_value(ret, *rop.opargsym(op, 0));
+            rop.llvm_store_value(ret, *rop.opargsym(op, 0));
     } else {
         // Loop over each lane, if mask is active for the lane,
         // extract values and call printf
@@ -866,7 +866,8 @@ LLVMGEN(llvm_gen_generic)
                 /*deriv_ptrs*/ false, uniformFormOfFunction,
                 functionIsLlvmInlined, false /*ptrToReturnStructIs1stArg*/);
 
-            if (uniformFormOfFunction && Result.typespec().simpletype() == TypeDesc::STRING) {
+            if (uniformFormOfFunction
+                && Result.typespec().simpletype() == TypeDesc::STRING) {
                 // We did call a function from the scalar version
                 // of the OSL library.  The scalar version has
                 // changed to use ustringhash_pod, but the wide version hasn't yet
@@ -2580,16 +2581,16 @@ LLVMGEN(llvm_gen_mxcompref)
             // copy the indices into our temporary
             rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
             llvm::Value* args[]   = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                      rop.ll.mask_as_int(rop.ll.current_mask()),
-                                      rop.ll.constant(4),
-                                      rop.ll.constant(M.name()),
-                                      rop.sg_void_ptr(),
-                                      rop.ll.constant(op.sourcefile()),
-                                      rop.ll.constant(op.sourceline()),
-                                      rop.ll.constant(rop.group().name()),
-                                      rop.ll.constant(rop.layer()),
-                                      rop.ll.constant(rop.inst()->layername()),
-                                      rop.ll.constant(rop.inst()->shadername()) };
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(4),
+                                    rop.ll.constant(M.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
             const char* func_name = rop.build_name(
                 FuncSpec("range_check").mask());
             rop.ll.call_function(func_name, args);
@@ -2684,16 +2685,16 @@ LLVMGEN(llvm_gen_mxcompassign)
             // copy the indices into our temporary
             rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
             llvm::Value* args[]   = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                      rop.ll.mask_as_int(rop.ll.current_mask()),
-                                      rop.ll.constant(4),
-                                      rop.ll.constant(Result.name()),
-                                      rop.sg_void_ptr(),
-                                      rop.ll.constant(op.sourcefile()),
-                                      rop.ll.constant(op.sourceline()),
-                                      rop.ll.constant(rop.group().name()),
-                                      rop.ll.constant(rop.layer()),
-                                      rop.ll.constant(rop.inst()->layername()),
-                                      rop.ll.constant(rop.inst()->shadername()) };
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(4),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
             const char* func_name = rop.build_name(
                 FuncSpec("range_check").mask());
             rop.ll.call_function(func_name, args);
@@ -4421,8 +4422,9 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             val      = rop.ll.constant(mode);                                  \
         } else {                                                               \
             val = rop.llvm_load_value(Val);                                    \
-            llvm::Value* scalar_value_uh = rop.ll.call_function("osl_gen_ustringhash_pod", val);  \
-            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh);                    \
+            llvm::Value* scalar_value_uh                                       \
+                = rop.ll.call_function("osl_gen_ustringhash_pod", val);        \
+            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh);        \
         }                                                                      \
         fieldname = val;                                                       \
         continue;                                                              \
@@ -4443,8 +4445,10 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
                 val      = rop.ll.constant(mode);
             } else {
                 val = rop.llvm_load_value(Val);
-                llvm::Value* scalar_value_uh = rop.ll.call_function("osl_gen_ustringhash_pod", val);
-                val = rop.ll.call_function("osl_texture_decode_wrapmode", scalar_value_uh);
+                llvm::Value* scalar_value_uh
+                    = rop.ll.call_function("osl_gen_ustringhash_pod", val);
+                val = rop.ll.call_function("osl_texture_decode_wrapmode",
+                                           scalar_value_uh);
             }
             swrap = val;
             twrap = val;
@@ -4746,8 +4750,11 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM& rop, int opnum,
                 = rop.llvm_load_value(Val, /*deriv=*/0, /*component=*/0,
                                       TypeDesc::UNKNOWN,
                                       /*op_is_uniform=*/false);
-            llvm::Value* scalar_value_wrap = rop.ll.op_extract(wide_wrap, leadLane);
-            llvm::Value* scalar_value_wrap_uh = rop.ll.call_function("osl_gen_ustringhash_pod", scalar_value_wrap); 
+            llvm::Value* scalar_value_wrap = rop.ll.op_extract(wide_wrap,
+                                                               leadLane);
+            llvm::Value* scalar_value_wrap_uh
+                = rop.ll.call_function("osl_gen_ustringhash_pod",
+                                       scalar_value_wrap);
             llvm::Value* wrap_code
                 = rop.ll.call_function("osl_texture_decode_wrapmode",
                                        scalar_value_wrap_uh);
@@ -4782,9 +4789,10 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM& rop, int opnum,
             = rop.llvm_load_value(Val, /*deriv=*/0, /*component=*/0,           \
                                   TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
         llvm::Value* scalar_value = rop.ll.op_extract(wide_value, leadLane);   \
-        llvm::Value* scalar_value_uh = rop.ll.call_function("osl_gen_ustringhash_pod", scalar_value);  \
-        llvm::Value* scalar_code  = rop.ll.call_function(#llvm_decoder,        \
-                                                         scalar_value_uh);      \
+        llvm::Value* scalar_value_uh                                           \
+            = rop.ll.call_function("osl_gen_ustringhash_pod", scalar_value);   \
+        llvm::Value* scalar_code = rop.ll.call_function(#llvm_decoder,         \
+                                                        scalar_value_uh);      \
         rop.ll.op_unmasked_store(scalar_code,                                  \
                                  rop.ll.GEP(bto_type, bto, 0,                  \
                                             static_cast<int>(                  \
@@ -7079,7 +7087,8 @@ LLVMGEN(llvm_gen_spline)
         // of the OSL library in opspline.cpp.  The scalar version has
         // changed to use ustringhash_pod, but the wide version hasn't yet
         // So we will need to extract the hash from the spline here.
-        splineNameVal = rop.ll.call_function("osl_gen_ustringhash_pod", splineNameVal);
+        splineNameVal = rop.ll.call_function("osl_gen_ustringhash_pod",
+                                             splineNameVal);
     }
     args.push_back(Spline.is_uniform() ? splineNameVal : nullptr);
 
@@ -8346,7 +8355,8 @@ LLVMGEN(llvm_gen_split)
         // of the OSL library.  The scalar version has
         // changed to use ustringhash_pod, but the wide version hasn't yet
         // So we will need to extract the hash from the ustring here.
-        args.back() = rop.ll.call_function("osl_gen_ustringhash_pod", args.back());
+        args.back() = rop.ll.call_function("osl_gen_ustringhash_pod",
+                                           args.back());
     }
 
     llvm::Value* temp_results_array = nullptr;
@@ -8380,7 +8390,8 @@ LLVMGEN(llvm_gen_split)
         // of the OSL library.  The scalar version has
         // changed to use ustringhash_pod, but the wide version hasn't yet
         // So we will need to extract the hash from the ustring here.
-        args.back() = rop.ll.call_function("osl_gen_ustringhash_pod", args.back());
+        args.back() = rop.ll.call_function("osl_gen_ustringhash_pod",
+                                           args.back());
     }
 
     if (optMaxsplit) {
@@ -8424,8 +8435,10 @@ LLVMGEN(llvm_gen_split)
             llvm::Value* elem;
             llvm::Value* array_index = rop.ll.constant(ai);
             if (result_is_uniform) {
-                elem = rop.llvm_load_value(Results, 0/*deriv*/, array_index, 0/* component*/);
-                elem = rop.ll.call_function("osl_gen_ustring", rop.ll.ptr_to_int64_cast(elem));
+                elem = rop.llvm_load_value(Results, 0 /*deriv*/, array_index,
+                                           0 /* component*/);
+                elem = rop.ll.call_function("osl_gen_ustring",
+                                            rop.ll.ptr_to_int64_cast(elem));
             } else {
                 llvm::Value* elem_ptr  = rop.ll.GEP(elem_type, temp_results_array, ai);
                 elem      = rop.ll.op_load(elem_type, elem_ptr);
@@ -8433,8 +8446,7 @@ LLVMGEN(llvm_gen_split)
                 elem = rop.ll.widen_value(elem);
             }
             rop.llvm_store_value(elem, Results, 0 /*deriv*/,
-                                array_index /*arrayindex*/,
-                                0 /* component*/);
+                                 array_index /*arrayindex*/, 0 /* component*/);
         }
         if (!result_is_uniform) {
             ret = rop.ll.widen_value(ret);

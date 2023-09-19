@@ -1132,7 +1132,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_stat_inst_merge_time(0)
     , m_stat_max_llvm_local_mem(0)
 {
-    m_shading_state_uniform.m_commonspace_synonym     = ustringhash("world");
+    m_shading_state_uniform.m_commonspace_synonym     = Strings::world;
     m_shading_state_uniform.m_unknown_coordsys_error  = true;
     m_shading_state_uniform.m_max_warnings_per_thread = 100;
 
@@ -1566,9 +1566,9 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
         return true;                                 \
     }
 
-#define ATTR_SET_STRINGHASH(_name, _dst)                 \
+#define ATTR_SET_STRINGHASH(_name, _dst)             \
     if (name == _name && type == TypeDesc::STRING) { \
-        _dst = ustringhash(*(const char**)val);          \
+        _dst = ustringhash(*(const char**)val);      \
         return true;                                 \
     }
 
@@ -1660,7 +1660,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("optix_no_inline_thresh", int, m_optix_no_inline_thresh);
     ATTR_SET("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
     ATTR_SET_STRINGHASH("commonspace",
-                    m_shading_state_uniform.m_commonspace_synonym);
+                        m_shading_state_uniform.m_commonspace_synonym);
     ATTR_SET_STRING("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING("debug_layername", m_debug_layername);
     ATTR_SET_STRING("opt_layername", m_opt_layername);
@@ -1758,10 +1758,10 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
         return true;                                 \
     }
 
-#define ATTR_DECODE_STRINGHASH(_name, _src)              \
-    if (name == _name && type == TypeDesc::STRING) { \
-        *(const char**)(val) = ustring_from(_src).c_str();         \
-        return true;                                 \
+#define ATTR_DECODE_STRINGHASH(_name, _src)                \
+    if (name == _name && type == TypeDesc::STRING) {       \
+        *(const char**)(val) = ustring_from(_src).c_str(); \
+        return true;                                       \
     }
 
     lock_guard guard(m_mutex);  // Thread safety
@@ -1833,7 +1833,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("max_warnings_per_thread", int,
                 m_shading_state_uniform.m_max_warnings_per_thread);
     ATTR_DECODE_STRINGHASH("commonspace",
-                       m_shading_state_uniform.m_commonspace_synonym);
+                           m_shading_state_uniform.m_commonspace_synonym);
     ATTR_DECODE_STRING("colorspace", m_colorspace);
     ATTR_DECODE_STRING("debug_groupname", m_debug_groupname);
     ATTR_DECODE_STRING("debug_layername", m_debug_layername);
@@ -4406,7 +4406,7 @@ ShadingContext::ocio_transform(ustring fromspace, ustring tospace,
         // color values to convert.
         const float eps = 0.001f;
         Color3 CC[3]    = { C.val(), C.val() + eps * C.dx(),
-                            C.val() + eps * C.dy() };
+                         C.val() + eps * C.dy() };
         cp->apply((float*)&CC, 3, 1, 3, sizeof(float), sizeof(Color3),
                   3 * sizeof(Color3));
         Cout.set(CC[0], (CC[1] - CC[0]) * (1.0f / eps),
@@ -4713,9 +4713,9 @@ OSL_SHADEOP int
 osl_raytype_name(void* sg_, ustringhash_pod name_)
 {
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    auto name = ustring_from(name_);
+    auto name         = ustring_from(name_);
     // TODO: add 2nd version of raytype_bit that takes ustringhash
-    int bit           = sg->context->shadingsys().raytype_bit(name);
+    int bit = sg->context->shadingsys().raytype_bit(name);
     return (sg->raytype & bit) != 0;
 }
 
@@ -4725,13 +4725,13 @@ osl_get_attribute(void* sg_, int dest_derivs, ustringhash_pod obj_name_,
                   ustringhash_pod attr_name_, int array_lookup, int index,
                   long long attr_type, void* attr_dest)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    ustringhash obj_name = ustringhash_from(obj_name_);
+    ShaderGlobals* sg     = (ShaderGlobals*)sg_;
+    ustringhash obj_name  = ustringhash_from(obj_name_);
     ustringhash attr_name = ustringhash_from(attr_name_);
     return sg->context->osl_get_attribute(sg, sg->objdata, dest_derivs,
-                                          obj_name, attr_name,
-                                          array_lookup, index,
-                                          TYPEDESC(attr_type), attr_dest);
+                                          obj_name, attr_name, array_lookup,
+                                          index, TYPEDESC(attr_type),
+                                          attr_dest);
 }
 
 
@@ -4743,13 +4743,13 @@ osl_bind_interpolated_param(void* sg_, ustringhash_pod name_, long long type,
                             int symbol_data_size, char* userdata_initialized,
                             int /*userdata_index*/)
 {
-    char status = *userdata_initialized;
+    char status      = *userdata_initialized;
     ustringhash name = ustringhash_from(name_);
     if (status == 0) {
         // First time retrieving this userdata
         ShaderGlobals* sg = (ShaderGlobals*)sg_;
         bool ok = sg->renderer->get_userdata(userdata_has_derivs, name,
-                                             TYPEDESC(type), sg, userdata_data);   
+                                             TYPEDESC(type), sg, userdata_data);
         *userdata_initialized = status = 1 + ok;  // 1 = not found, 2 = found
         sg->context->incr_get_userdata_calls();
     }
@@ -4757,12 +4757,13 @@ osl_bind_interpolated_param(void* sg_, ustringhash_pod name_, long long type,
         int udata_size = (userdata_has_derivs ? 3 : 1) * TYPEDESC(type).size();
         // If userdata was present, copy it to the shader variable
         if (TYPEDESC(type) == TypeDesc::STRING) {
-        const ustringhash* uh_userdata = reinterpret_cast<const ustringhash *>(userdata_data);
-        memcpy(symbol_data, uh_userdata, std::min(symbol_data_size, udata_size));
-        } 
-        else{//not string
-        memcpy(symbol_data, userdata_data,
-               std::min(symbol_data_size, udata_size));
+            const ustringhash* uh_userdata
+                = reinterpret_cast<const ustringhash*>(userdata_data);
+            memcpy(symbol_data, uh_userdata,
+                   std::min(symbol_data_size, udata_size));
+        } else {  //not string
+            memcpy(symbol_data, userdata_data,
+                   std::min(symbol_data_size, udata_size));
         }
         if (symbol_data_size > udata_size)
             memset((char*)symbol_data + udata_size, 0,

@@ -641,16 +641,18 @@ LLVMGEN(llvm_gen_print_fmt)
             myformat += ourformat;
             myformat += "}";
 
-            TypeDesc symty              = sym.typespec().simpletype();
-            TypeDesc basetype        = TypeDesc::BASETYPE(symty.basetype);
+            TypeDesc symty    = sym.typespec().simpletype();
+            TypeDesc basetype = TypeDesc::BASETYPE(symty.basetype);
             // NOTE(boulos): Only for debug mode do the derivatives get printed...
             for (int a = 0; a < num_elements; ++a) {
-                llvm::Value* const_arrind = simpletype.arraylen ? rop.ll.constant(a)
-                                                          : NULL;
+                llvm::Value* const_arrind = simpletype.arraylen
+                                                ? rop.ll.constant(a)
+                                                : NULL;
                 if (sym.typespec().is_closure_based()) {
                     s += myformat;
 
-                    llvm::Value* v = rop.llvm_load_value(sym, 0, const_arrind, 0);
+                    llvm::Value* v = rop.llvm_load_value(sym, 0, const_arrind,
+                                                         0);
                     v = rop.ll.call_function("osl_closure_to_ustringhash",
                                              rop.sg_void_ptr(), v);
                     encodedtypes.push_back(et);
@@ -666,15 +668,19 @@ LLVMGEN(llvm_gen_print_fmt)
 
                     // TODO: Add llvm_load_value that does this check
                     // internally to reduce bloat and chance of missing it
-                    llvm::Value* loaded = sym.is_constant()
-                        ? rop.llvm_load_constant_value(sym, a, c, basetype) 
-                        : rop.llvm_load_value(sym, 0, const_arrind, c, basetype);
+                    llvm::Value* loaded
+                        = sym.is_constant()
+                              ? rop.llvm_load_constant_value(sym, a, c,
+                                                             basetype)
+                              : rop.llvm_load_value(sym, 0, const_arrind, c,
+                                                    basetype);
 
-                    if (sym.typespec().is_string_based() && 
-                        (rop.ll.ustring_rep() == LLVM_Util::UstringRep::charptr)) {
-                            // Don't think this will need to be here soon
-                                loaded = rop.ll.call_function(
-                                    "osl_gen_ustringhash_pod", loaded);
+                    if (sym.typespec().is_string_based()
+                        && (rop.ll.ustring_rep()
+                            == LLVM_Util::UstringRep::charptr)) {
+                        // Don't think this will need to be here soon
+                        loaded = rop.ll.call_function("osl_gen_ustringhash_pod",
+                                                      loaded);
                     }
 
                     encodedtypes.push_back(et);
@@ -775,7 +781,7 @@ LLVMGEN(llvm_gen_print_fmt)
     if (op.opname() == op_format)
         rs_func_name = "osl_formatfmt";
 
-    llvm::Value* ret   = rop.ll.call_function(rs_func_name, call_args);
+    llvm::Value* ret = rop.ll.call_function(rs_func_name, call_args);
 
     // The format op returns a string value, put in in the right spot
     if (op.opname() == op_format)
@@ -1834,7 +1840,7 @@ LLVMGEN(llvm_gen_construct_color)
         llvm::Value* args[] = {
             rop.sg_void_ptr(),             // shader globals
             rop.llvm_void_ptr(Result, 0),  // color
-            rop.llvm_load_value(Space),   // from
+            rop.llvm_load_value(Space),    // from
         };
         rop.ll.call_function("osl_prepend_color_from", args);
         // FIXME(deriv): Punt on derivs for color ctrs with space names.
@@ -3386,8 +3392,9 @@ LLVMGEN(llvm_gen_getattribute)
     // necessary conversions from its internal format to OSL's.
     TypeDesc dest_type = Destination.typespec().simpletype();
 
-    llvm::Value* obj_name_arg  = object_lookup ? rop.llvm_load_value(ObjectName)
-                                               : rop.llvm_load_stringhash(ustring());
+    llvm::Value* obj_name_arg  = object_lookup
+                                     ? rop.llvm_load_value(ObjectName)
+                                     : rop.llvm_load_stringhash(ustring());
     llvm::Value* attr_name_arg = rop.llvm_load_value(Attribute);
 
     ustring object_name      = (object_lookup && ObjectName.is_constant())
@@ -3422,7 +3429,7 @@ LLVMGEN(llvm_gen_getattribute)
                 if (arg.is_holding<AttributeSpecBuiltinArg>()) {
                     switch (arg.get_builtin()) {
                     default: OSL_DASSERT(false); break;
-                    case AttributeSpecBuiltinArg::ShaderGlobalsPointer:
+                    case AttributeSpecBuiltinArg::OpaqueExecutionContext:
                         args.push_back(rop.sg_void_ptr());
                         break;
                     case AttributeSpecBuiltinArg::ShadeIndex:
@@ -3562,7 +3569,7 @@ LLVMGEN(llvm_gen_getmessage)
     llvm::Value* args[9];
     args[0] = rop.sg_void_ptr();
     args[1] = has_source ? rop.llvm_load_value(Source)
-                        : rop.ll.constant64(sizeof(uint64_t));
+                         : rop.ll.constant64(sizeof(uint64_t));
     args[2] = rop.llvm_load_value(Name);
 
     if (Data.typespec().is_closure_based()) {

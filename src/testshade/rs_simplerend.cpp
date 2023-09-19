@@ -13,19 +13,6 @@
 
 #include "render_state.h"
 
-// Create constexpr hashes for all strings used by the free function renderer services.
-// NOTE:  Actually ustring's should also be instantiated in host code someplace as well
-// to allow the reverse mapping of hash->string to work when processing messages
-namespace RS {
-namespace {
-namespace Hashes{
-#define RS_STRDECL(str, var_name) constexpr OSL::ustringhash var_name(OSL::strhash(str));
-#include "rs_strdecls.h"
-#undef RS_STRDECL
-}; //namespace Hashes
-} // unnamed namespace
-}; //namespace RS
-
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
 OSL_RSOP bool
@@ -82,7 +69,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
 
         if (to == OSL::Hashes::screen || to == OSL::Hashes::NDC
             || to == RS::Hashes::raster) {
-            float depthrange = (double)rs->yon - (double)rs->hither;
+            float depthrange      = (double)rs->yon - (double)rs->hither;
             OSL::ustringhash proj = rs->projection;
 
             if (proj == RS::Hashes::perspective) {
@@ -184,7 +171,7 @@ rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
 }
 
 OSL_RSOP bool
-rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash/*from*/,
+rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash /*from*/,
                     OSL::ustringhash /*to*/, float /*time*/,
                     const OSL::Vec3* /*Pin*/, OSL::Vec3* /*Pout*/,
                     int /*npoints*/, OSL::TypeDesc::VECSEMANTICS /*vectype*/)
@@ -193,9 +180,9 @@ rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash/*from*/,
 }
 
 OSL_RSOP bool
-rs_get_attribute_constant_string(OSL::StringParam value, void* result)
+rs_get_attribute_constant_string(OSL::ustringhash value, void* result)
 {
-    reinterpret_cast<OSL::StringParam*>(result)[0] = value;
+    reinterpret_cast<OSL::ustringhash*>(result)[0] = value;
     return true;
 }
 
@@ -300,74 +287,81 @@ rs_get_attribute_constant_float4(float value1, float value2, float value3,
 }
 
 OSL_RSOP bool
-rs_get_shade_index(void* _sg, void* result)
+rs_get_shade_index(OSL::OpaqueExecContextPtr oec, void* result)
+
 {
-    reinterpret_cast<int*>(result)[0] = OSL::get_shade_index(_sg);
+    reinterpret_cast<int*>(result)[0] = OSL::get_shade_index(oec);
     return true;
 }
 
 OSL_RSOP bool
-rs_get_attribute(void* _sg, const char* _object, const char* _name,
-                 OSL::TypeDesc_pod _type, bool derivatives, int index,
-                 void* result)
+rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
+                 OSL::ustringhash_pod name_, OSL::TypeDesc_pod _type,
+                 bool derivatives, int index, void* result)
 {
-    OSL::ShaderGlobals* sg        = reinterpret_cast<OSL::ShaderGlobals*>(_sg);
-    const OSL::StringParam object = OSL::bitcast<OSL::ustringrep>(_object);
-    const OSL::StringParam name   = OSL::bitcast<OSL::ustringrep>(_name);
-    const OSL::TypeDesc type      = OSL::TypeDesc_from(_type);
-
-    const RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+    auto object              = OSL::ustringhash_from(object_);
+    auto name                = OSL::ustringhash_from(name_);
+    const OSL::TypeDesc type = OSL::TypeDesc_from(_type);
+    auto rs                  = OSL::get_rs<RenderState>(oec);
 
     // The many branches in the code below handle the case where we don't know
     // the attribute name at compile time. In the case it is known, dead-code
     // elimination should optimize this to only the relevant branch.
-    if (name == STRING_PARAMS(osl_version) && type == OSL::TypeInt)
+    if (name == RS::Hashes::osl_version && type == OSL::TypeInt)
         return rs_get_attribute_constant_int(OSL_VERSION, result);
-    if (name == STRING_PARAMS(camera_resolution)
+    if (name == RS::Hashes::camera_resolution
         && type == OSL::TypeDesc(OSL::TypeDesc::INT, 2))
         return rs_get_attribute_constant_int2(rs->xres, rs->yres, result);
-    if (name == STRING_PARAMS(camera_projection) && type == OSL::TypeString)
+    if (name == RS::Hashes::camera_projection && type == OSL::TypeString)
         return rs_get_attribute_constant_string(rs->projection, result);
-    if (name == STRING_PARAMS(camera_pixelaspect) && type == OSL::TypeFloat)
+    if (name == RS::Hashes::camera_pixelaspect && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->pixelaspect, derivatives,
                                                result);
-    if (name == STRING_PARAMS(camera_screen_window)
+    if (name == RS::Hashes::camera_screen_window
         && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 4))
         return rs_get_attribute_constant_float4(rs->screen_window[0],
                                                 rs->screen_window[1],
                                                 rs->screen_window[2],
                                                 rs->screen_window[3],
                                                 derivatives, result);
-    if (name == STRING_PARAMS(camera_fov) && type == OSL::TypeFloat)
+    if (name == RS::Hashes::camera_fov && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->fov, derivatives, result);
-    if (name == STRING_PARAMS(camera_clip)
+    if (name == RS::Hashes::camera_clip
         && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 2))
         return rs_get_attribute_constant_float2(rs->hither, rs->yon,
                                                 derivatives, result);
-    if (name == STRING_PARAMS(camera_clip_near) && type == OSL::TypeFloat)
+    if (name == RS::Hashes::camera_clip_near && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->hither, derivatives, result);
-    if (name == STRING_PARAMS(camera_clip_far) && type == OSL::TypeFloat)
+    if (name == RS::Hashes::camera_clip_far && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->yon, derivatives, result);
-    if (name == STRING_PARAMS(camera_shutter)
+    if (name == RS::Hashes::camera_shutter
         && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 2))
         return rs_get_attribute_constant_float2(rs->shutter[0], rs->shutter[1],
                                                 derivatives, result);
-    if (name == STRING_PARAMS(camera_shutter_open) && type == OSL::TypeFloat)
+    if (name == RS::Hashes::camera_shutter_open && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->shutter[0], derivatives,
                                                result);
-    if (name == STRING_PARAMS(camera_shutter_close) && type == OSL::TypeFloat)
+    if (name == RS::Hashes::camera_shutter_close && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->shutter[1], derivatives,
                                                result);
 
-    if (name == STRING_PARAMS(shading_index) && type == OSL::TypeInt)
-        return rs_get_shade_index(sg, result);
+    if (name == RS::Hashes::shading_index && type == OSL::TypeInt)
+        return rs_get_shade_index(oec, result);
 
-    if (object == STRING_PARAMS(options) && name == STRING_PARAMS(blahblah)
+    if (object == RS::Hashes::options && name == RS::Hashes::blahblah
         && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(3.14159f, derivatives, result);
 
-    if (object.empty())
+#ifndef __CUDA_ARCH__
+    if (object.empty()) {
+        // TODO: implement a true free function version of rs_get_userdata
+        // that only uses data from RenderState.  Because that isn't done
+        // yet, for host only compilation we break encapsulation and cast
+        // to gain access to the virtual RendererServices.
+        auto sg = reinterpret_cast<OSL::ShaderGlobals*>(oec);
         return sg->renderer->get_userdata(derivatives, name, type, sg, result);
+    }
+#endif
 
     return false;
 }

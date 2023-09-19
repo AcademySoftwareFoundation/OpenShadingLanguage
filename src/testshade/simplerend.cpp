@@ -476,6 +476,11 @@ SimpleRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
         return true;
     }
 
+    if (object.empty() && name == "shading:index" && type == TypeDesc::TypeInt) {
+        *(int*)val = OSL::get_shade_index(sg);
+        return true;
+    }
+    
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
@@ -583,6 +588,9 @@ SimpleRenderer::build_attribute_getter(
     static const OIIO::ustring rs_get_attribute_constant_float4(
         "rs_get_attribute_constant_float4");
 
+    static const OIIO::ustring rs_get_shade_index(
+        "rs_get_shade_index");
+
     static const OIIO::ustring rs_get_attribute("rs_get_attribute");
 
     if (m_use_rs_bitcode) {
@@ -646,6 +654,10 @@ SimpleRenderer::build_attribute_getter(
             && type == OSL::TypeFloat) {
             spec.set(rs_get_attribute_constant_float, 3.14159f,
                      AttributeSpecBuiltinArg::Derivatives);
+        } else if (!is_object_lookup && attribute_name
+            && *attribute_name == ustring("shading:index")
+            && type == OSL::TypeInt) {
+            spec.set(rs_get_shade_index, AttributeSpecBuiltinArg::ShaderGlobalsPointer);
         } else {
             spec.set(rs_get_attribute,
                      AttributeSpecBuiltinArg::ShaderGlobalsPointer,

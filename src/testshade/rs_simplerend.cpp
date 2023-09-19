@@ -299,6 +299,12 @@ rs_get_attribute_constant_float4(float value1, float value2, float value3,
 }
 
 OSL_RSOP bool
+rs_get_shade_index(void* _sg, void* result) {
+    reinterpret_cast<int *>(result)[0] = OSL::get_shade_index(_sg);
+    return true;
+}
+
+OSL_RSOP bool
 rs_get_attribute(void* _sg, const char* _object, const char* _name,
                  OSL::TypeDesc_pod _type, bool derivatives, int index,
                  void* result)
@@ -350,6 +356,9 @@ rs_get_attribute(void* _sg, const char* _object, const char* _name,
     if (name == STRING_PARAMS(camera_shutter_close) && type == OSL::TypeFloat)
         return rs_get_attribute_constant_float(rs->shutter[1], derivatives,
                                                result);
+
+    if (name == STRING_PARAMS(shading_index) && type == OSL::TypeInt)
+        return rs_get_shade_index(sg, result);
 
     if (object == STRING_PARAMS(options) && name == STRING_PARAMS(blahblah)
         && type == OSL::TypeFloat)

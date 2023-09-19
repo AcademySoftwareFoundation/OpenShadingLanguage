@@ -268,7 +268,7 @@ macro (osl_add_all_tests)
                 for-reg format-reg fprintf
                 function-earlyreturn function-simple function-outputelem
                 function-overloads function-redef
-                geomath getattribute-camera getattribute-shader
+                geomath getattribute-camera getattribute-shader getattribute-shading
                 getsymbol-nonheap gettextureinfo gettextureinfo-reg
                 gettextureinfo-udim gettextureinfo-udim-reg
                 globals-needed

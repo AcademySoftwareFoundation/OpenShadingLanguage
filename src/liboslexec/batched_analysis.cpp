@@ -382,7 +382,7 @@ protected_shader_globals_op_implicitly_depends_on(ShaderInstance& inst,
 
 
 bool
-is_op_result_always_logically_boolean(ustring opname)
+is_op_return_always_logically_boolean(ustring opname)
 {
     // Test if explicit comparison is faster or not
     static boost::container::flat_set<ustring> lazy_lookup(
@@ -395,7 +395,7 @@ is_op_result_always_logically_boolean(ustring opname)
 // If all inputs (read arguments) to an op were logically boolean
 // would the result be logically boolean?
 bool
-could_op_result_be_logically_boolean(ustring opname)
+could_op_return_be_logically_boolean(ustring opname)
 {
     // NOTE: compl doesn't qualify
     static_assert((~uint32_t(1) != uint32_t(0))
@@ -2377,13 +2377,20 @@ struct Analyzer {
                         } else {
                             int op_index   = write_iter->op_num();
                             Opcode& opcode = m_opcodes[op_index];
-                            if (is_op_result_always_logically_boolean(
-                                    opcode.opname())) {
+
+                            // Return values are the 0th argument.
+                            bool is_return_val = (sym == opargsym(opcode, 0));
+                            // need to ensure write came from return value
+                            // and not result argument of getattribute;
+                            if (is_return_val && 
+                                is_op_return_always_logically_boolean(
+                                    opcode.opname()) ) {
                                 if (b_status == BoolStatus::Unknown) {
                                     b_status = BoolStatus::Yes;
                                 }
                             } else {
-                                if (could_op_result_be_logically_boolean(
+                                if (is_return_val && 
+                                    could_op_return_be_logically_boolean(
                                         opcode.opname())) {
                                     Opcode& opcode = m_opcodes[op_index];
                                     int arg_count  = opcode.nargs();

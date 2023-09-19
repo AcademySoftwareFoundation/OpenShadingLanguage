@@ -37,6 +37,7 @@ struct UniqueStringCache {
         , camera_shutter("camera:shutter")
         , camera_shutter_open("camera:shutter_open")
         , camera_shutter_close("camera:shutter_close")
+        , shading_index("shading:index")
     {
     }
 
@@ -66,6 +67,7 @@ struct UniqueStringCache {
     ustring camera_shutter;
     ustring camera_shutter_open;
     ustring camera_shutter_close;
+    ustring shading_index;
 };
 
 
@@ -468,7 +470,7 @@ BatchedSimpleRenderer<WidthT>::get_array_attribute(BatchedShaderGlobals* bsg,
 
 
 
-    if (object == nullptr && name == ucache().blahblah) {
+    if (object.empty() && name == ucache().blahblah) {
         if (Masked<float>::is(val)) {
             Masked<float> out(val);
             for (int i = 0; i < WidthT; ++i) {
@@ -495,7 +497,21 @@ BatchedSimpleRenderer<WidthT>::get_array_attribute(BatchedShaderGlobals* bsg,
         }
     }
 
-    if (object == nullptr && name == ucache().lookupTable) {
+    if (object.empty() && name == ucache().shading_index) {
+        if (Masked<int>::is(val)) {
+            Masked<int> out(val);
+            for (int i = 0; i < WidthT; ++i) {
+                // Masking is silently handled by the assignment operator
+                // of the proxy out[i]
+                // NOTE: just assigning the SIMD lane for testing purposes
+                // real renderer would dig into its context to answer this
+                out[i] = i;
+            }
+            return val.mask();
+        } 
+    }
+
+    if (object.empty() && name == ucache().lookupTable) {
         if (Masked<float[]>::is(val)) {
             Masked<float[]> out(val);
             for (int lane_index = 0; lane_index < WidthT; ++lane_index) {
@@ -509,7 +525,7 @@ BatchedSimpleRenderer<WidthT>::get_array_attribute(BatchedShaderGlobals* bsg,
     }
 
 
-    if (object == nullptr && name == "not_a_color") {
+    if (object.empty() && name == "not_a_color") {
         if (Masked<float[3]>::is(val)) {
             Masked<float[3]> out(val);
 

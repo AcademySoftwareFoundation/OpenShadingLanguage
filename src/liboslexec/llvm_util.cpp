@@ -1851,7 +1851,6 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
     // debugging, optlevel 10 adds next to no additional passes.
     switch (optlevel) {
     default: {
-#if OSL_LLVM_VERSION < 160
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
         // same set of optimizations as clang -O1, -O2, -O3
         llvm::PassManagerBuilder builder;
@@ -1866,11 +1865,6 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
 
         builder.populateFunctionPassManager(fpm);
         builder.populateModulePassManager(mpm);
-#else
-        OSL_ASSERT(
-            0
-            && "legacy pass manager does not support default optimizations levels in LLVM 16+");
-#endif
         break;
     }
     case 10:
@@ -2023,11 +2017,7 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         mpm.add(llvm::createDeadArgEliminationPass());
         mpm.add(llvm::createInstructionCombiningPass());
         mpm.add(llvm::createCFGSimplificationPass());
-#if OSL_LLVM_VERSION < 160
-        // Replaced by CFGSimplification + PostOrderFunctionAttrs since LLVM 7.
-        // https://reviews.llvm.org/D44415
         mpm.add(llvm::createPruneEHPass());
-#endif
         mpm.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         mpm.add(llvm::createReversePostOrderFunctionAttrsPass());
         mpm.add(llvm::createFunctionInliningPass());
@@ -2122,7 +2112,6 @@ LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
         }
     }
 }
-
 
 
 void

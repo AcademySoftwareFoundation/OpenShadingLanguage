@@ -234,9 +234,11 @@ bool
 OSLToyRenderer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
                                    ustringhash to, float /*time*/)
 {
-    if (to == OSL::Hashes::camera || to == OSL::Hashes::screen || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
+    if (to == OSL::Hashes::camera || to == OSL::Hashes::screen
+        || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
         Matrix44 M = m_world_to_camera;
-        if (to == OSL::Hashes::screen || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
+        if (to == OSL::Hashes::screen || to == OSL::Hashes::NDC
+            || to == RS::Hashes::raster) {
             float depthrange = (double)m_yon - (double)m_hither;
             if (m_projection == RS::Hashes::perspective) {
                 float tanhalffov = tanf(0.5f * m_fov * M_PI / 180.0);
@@ -293,8 +295,8 @@ OSLToyRenderer::name_transform(const char* name, const OSL::Matrix44& xform)
 
 bool
 OSLToyRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
-                                    ustringhash object, TypeDesc type, ustringhash name,
-                                    int index, void* val)
+                                    ustringhash object, TypeDesc type,
+                                    ustringhash name, int index, void* val)
 {
     AttrGetterMap::const_iterator g = m_attr_getters.find(name);
     if (g != m_attr_getters.end()) {
@@ -303,11 +305,13 @@ OSLToyRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
     }
 
     if (object == RS::Hashes::mouse) {
-        if (name == RS::Hashes::s && type == TypeDesc::FLOAT && m_mouse_x >= 0) {
+        if (name == RS::Hashes::s && type == TypeDesc::FLOAT
+            && m_mouse_x >= 0) {
             *(float*)val = (m_mouse_x + 0.5f) / float(m_xres);
             return true;
         }
-        if (name == RS::Hashes::t && type == TypeDesc::FLOAT && m_mouse_y >= 0) {
+        if (name == RS::Hashes::t && type == TypeDesc::FLOAT
+            && m_mouse_y >= 0) {
             *(float*)val = (m_mouse_y + 0.5f) / float(m_yres);
             return true;
         }
@@ -333,8 +337,8 @@ OSLToyRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
 
 bool
 OSLToyRenderer::get_attribute(ShaderGlobals* sg, bool derivatives,
-                              ustringhash object, TypeDesc type, ustringhash name,
-                              void* val)
+                              ustringhash object, TypeDesc type,
+                              ustringhash name, void* val)
 {
     return get_array_attribute(sg, derivatives, object, type, name, -1, val);
 }

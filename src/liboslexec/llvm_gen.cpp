@@ -3569,7 +3569,7 @@ LLVMGEN(llvm_gen_getmessage)
     llvm::Value* args[9];
     args[0] = rop.sg_void_ptr();
     args[1] = has_source ? rop.llvm_load_value(Source)
-                         : rop.ll.constant64(sizeof(uint64_t));
+                         : rop.ll.constant64(uint64_t(ustring().hash()));
     args[2] = rop.llvm_load_value(Name);
 
     if (Data.typespec().is_closure_based()) {

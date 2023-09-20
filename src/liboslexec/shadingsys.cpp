@@ -4406,7 +4406,7 @@ ShadingContext::ocio_transform(ustring fromspace, ustring tospace,
         // color values to convert.
         const float eps = 0.001f;
         Color3 CC[3]    = { C.val(), C.val() + eps * C.dx(),
-                         C.val() + eps * C.dy() };
+                            C.val() + eps * C.dy() };
         cp->apply((float*)&CC, 3, 1, 3, sizeof(float), sizeof(Color3),
                   3 * sizeof(Color3));
         Cout.set(CC[0], (CC[1] - CC[0]) * (1.0f / eps),

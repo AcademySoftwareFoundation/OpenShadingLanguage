@@ -4633,8 +4633,8 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                 auto w8_int_masks    = op_split_16x(wide_int_mask);
                 auto w8_int_indices  = op_split_16x(wide_index);
                 llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(src_ptr),
-                                        w8_int_indices[0], w8_int_masks[0],
-                                        constant8((uint8_t)4) };
+                                         w8_int_indices[0], w8_int_masks[0],
+                                         constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
                                                             toArrayRef(args));
                 args[2]              = w8_int_indices[1];
@@ -4810,9 +4810,9 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
 
                 llvm::Value* unmasked_value = wide_constant(0.0f);
                 llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
-                                        op_linearize_16x_indices(wide_index),
-                                        mask_as_int16(current_mask()),
-                                        constant(4) };
+                                                op_linearize_16x_indices(wide_index),
+                                                mask_as_int16(current_mask()),
+                                                constant(4) };
                 return builder().CreateCall(func_avx512_gather_ps,
                                             toArrayRef(args));
             }
@@ -4824,9 +4824,9 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
 
                 llvm::Value* unmasked_value = wide_constant(0.0f);
                 llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
-                                        op_linearize_8x_indices(wide_index),
-                                        mask_as_int8(current_mask()),
-                                        constant(4) };
+                                                op_linearize_8x_indices(wide_index),
+                                                mask_as_int8(current_mask()),
+                                                constant(4) };
                 return builder().CreateCall(func_avx512_gather_ps,
                                             toArrayRef(args));
             }
@@ -4895,9 +4895,9 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
 
                 llvm::Value* unmasked_value = wide_constant(0);
                 llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
-                                        op_linearize_16x_indices(wide_index),
-                                        mask_as_int16(current_mask()),
-                                        constant(4) };
+                                                op_linearize_16x_indices(wide_index),
+                                                mask_as_int16(current_mask()),
+                                                constant(4) };
                 return builder().CreateCall(func_avx512_gather_pi,
                                             toArrayRef(args));
             }
@@ -4909,9 +4909,9 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
 
                 llvm::Value* unmasked_value = wide_constant(0);
                 llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
-                                        op_linearize_8x_indices(wide_index),
-                                        mask_as_int8(current_mask()),
-                                        constant(4) };
+                                                op_linearize_8x_indices(wide_index),
+                                                mask_as_int8(current_mask()),
+                                                constant(4) };
                 return builder().CreateCall(func_avx512_gather_pi,
                                             toArrayRef(args));
             }
@@ -4934,8 +4934,8 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                 auto w8_int_indices = op_split_16x(
                     op_linearize_16x_indices(wide_index));
                 llvm::Value* args[]  = { avx2_unmasked_value, void_ptr(src_ptr),
-                                        w8_int_indices[0], w8_int_masks[0],
-                                        constant8((uint8_t)4) };
+                                         w8_int_indices[0], w8_int_masks[0],
+                                         constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
                                                             toArrayRef(args));
                 args[2]              = w8_int_indices[1];

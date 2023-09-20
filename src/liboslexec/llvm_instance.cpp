@@ -715,11 +715,10 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             TypeDesc t = sym.typespec().simpletype();
             if (sym.typespec().is_string()) {
                 //llvm_create_constant(sym);
-                auto default_str = ll.constant64(sym.get_string().hash());
+                auto default_str = ll.constant64(uint64_t(sym.get_string().hash()));
 
                 OSL_ASSERT(llvm_store_value(default_str, sym, 0, nullptr, 0));
             } else {
-                // std::cout<<"llvm_instance.cpp: symbol name: "<<sym.name()<<std::endl;
                 ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
                              t.size(), t.basesize() /*align*/);
             }

@@ -2581,16 +2581,16 @@ LLVMGEN(llvm_gen_mxcompref)
             // copy the indices into our temporary
             rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
             llvm::Value* args[]   = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                    rop.ll.mask_as_int(rop.ll.current_mask()),
-                                    rop.ll.constant(4),
-                                    rop.ll.constant(M.name()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
+                                      rop.ll.mask_as_int(rop.ll.current_mask()),
+                                      rop.ll.constant(4),
+                                      rop.ll.constant(M.name()),
+                                      rop.sg_void_ptr(),
+                                      rop.ll.constant(op.sourcefile()),
+                                      rop.ll.constant(op.sourceline()),
+                                      rop.ll.constant(rop.group().name()),
+                                      rop.ll.constant(rop.layer()),
+                                      rop.ll.constant(rop.inst()->layername()),
+                                      rop.ll.constant(rop.inst()->shadername()) };
             const char* func_name = rop.build_name(
                 FuncSpec("range_check").mask());
             rop.ll.call_function(func_name, args);
@@ -2685,16 +2685,16 @@ LLVMGEN(llvm_gen_mxcompassign)
             // copy the indices into our temporary
             rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
             llvm::Value* args[]   = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                    rop.ll.mask_as_int(rop.ll.current_mask()),
-                                    rop.ll.constant(4),
-                                    rop.ll.constant(Result.name()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
+                                      rop.ll.mask_as_int(rop.ll.current_mask()),
+                                      rop.ll.constant(4),
+                                      rop.ll.constant(Result.name()),
+                                      rop.sg_void_ptr(),
+                                      rop.ll.constant(op.sourcefile()),
+                                      rop.ll.constant(op.sourceline()),
+                                      rop.ll.constant(rop.group().name()),
+                                      rop.ll.constant(rop.layer()),
+                                      rop.ll.constant(rop.inst()->layername()),
+                                      rop.ll.constant(rop.inst()->shadername()) };
             const char* func_name = rop.build_name(
                 FuncSpec("range_check").mask());
             rop.ll.call_function(func_name, args);

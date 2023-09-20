@@ -68,11 +68,12 @@ public:
     virtual int supports(string_view feature) const;
     virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
                             TransformationPtr xform, float time);
-    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result, ustringhash from,
-                            float time);
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            ustringhash from, float time);
     virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
                             TransformationPtr xform);
-    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result, ustringhash from);
+    virtual bool get_matrix(ShaderGlobals* sg, Matrix44& result,
+                            ustringhash from);
     virtual bool get_inverse_matrix(ShaderGlobals* sg, Matrix44& result,
                                     ustringhash to, float time);
 
@@ -82,8 +83,8 @@ public:
                                      ustringhash object, TypeDesc type,
                                      ustringhash name, int index, void* val);
     virtual bool get_attribute(ShaderGlobals* sg, bool derivatives,
-                               ustringhash object, TypeDesc type, ustringhash name,
-                               void* val);
+                               ustringhash object, TypeDesc type,
+                               ustringhash name, void* val);
     virtual bool get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                               ShaderGlobals* sg, void* val);
 
@@ -113,38 +114,44 @@ private:
     // renderer, we would encourage benchmarking various methods and
     // alternate data structures.
     typedef bool (OSLToyRenderer::*AttrGetter)(ShaderGlobals* sg, bool derivs,
-                                               ustringhash object, TypeDesc type,
-                                               ustringhash name, void* val);
+                                               ustringhash object,
+                                               TypeDesc type, ustringhash name,
+                                               void* val);
     typedef std::unordered_map<ustringhash, AttrGetter> AttrGetterMap;
     AttrGetterMap m_attr_getters;
 
     // Attribute getters
     bool get_osl_version(ShaderGlobals* sg, bool derivs, ustringhash object,
                          TypeDesc type, ustringhash name, void* val);
-    bool get_camera_resolution(ShaderGlobals* sg, bool derivs, ustringhash object,
-                               TypeDesc type, ustringhash name, void* val);
-    bool get_camera_projection(ShaderGlobals* sg, bool derivs, ustringhash object,
-                               TypeDesc type, ustringhash name, void* val);
+    bool get_camera_resolution(ShaderGlobals* sg, bool derivs,
+                               ustringhash object, TypeDesc type,
+                               ustringhash name, void* val);
+    bool get_camera_projection(ShaderGlobals* sg, bool derivs,
+                               ustringhash object, TypeDesc type,
+                               ustringhash name, void* val);
     bool get_camera_fov(ShaderGlobals* sg, bool derivs, ustringhash object,
                         TypeDesc type, ustringhash name, void* val);
-    bool get_camera_pixelaspect(ShaderGlobals* sg, bool derivs, ustringhash object,
-                                TypeDesc type, ustringhash name, void* val);
+    bool get_camera_pixelaspect(ShaderGlobals* sg, bool derivs,
+                                ustringhash object, TypeDesc type,
+                                ustringhash name, void* val);
     bool get_camera_clip(ShaderGlobals* sg, bool derivs, ustringhash object,
                          TypeDesc type, ustringhash name, void* val);
-    bool get_camera_clip_near(ShaderGlobals* sg, bool derivs, ustringhash object,
-                              TypeDesc type, ustringhash name, void* val);
+    bool get_camera_clip_near(ShaderGlobals* sg, bool derivs,
+                              ustringhash object, TypeDesc type,
+                              ustringhash name, void* val);
     bool get_camera_clip_far(ShaderGlobals* sg, bool derivs, ustringhash object,
                              TypeDesc type, ustringhash name, void* val);
     bool get_camera_shutter(ShaderGlobals* sg, bool derivs, ustringhash object,
                             TypeDesc type, ustringhash name, void* val);
-    bool get_camera_shutter_open(ShaderGlobals* sg, bool derivs, ustringhash object,
-                                 TypeDesc type, ustringhash name, void* val);
+    bool get_camera_shutter_open(ShaderGlobals* sg, bool derivs,
+                                 ustringhash object, TypeDesc type,
+                                 ustringhash name, void* val);
     bool get_camera_shutter_close(ShaderGlobals* sg, bool derivs,
-                                  ustringhash object, TypeDesc type, ustringhash name,
-                                  void* val);
+                                  ustringhash object, TypeDesc type,
+                                  ustringhash name, void* val);
     bool get_camera_screen_window(ShaderGlobals* sg, bool derivs,
-                                  ustringhash object, TypeDesc type, ustringhash name,
-                                  void* val);
+                                  ustringhash object, TypeDesc type,
+                                  ustringhash name, void* val);
 };
 
 OSL_NAMESPACE_EXIT

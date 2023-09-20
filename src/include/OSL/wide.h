@@ -2292,9 +2292,15 @@ template<typename DataT, int WidthT> struct MaskedLaneProxy {
     // visibility to end user whose IDE
     // might display these methods vs. free
     // functions
-    OSL_FORCEINLINE bool is_on() const { return m_mask.is_on(m_lane); }
+    OSL_FORCEINLINE bool is_on() const
+    {
+        return m_mask.is_on(m_lane);
+    }
 
-    OSL_FORCEINLINE bool is_off() const { return m_mask.is_off(m_lane); }
+    OSL_FORCEINLINE bool is_off() const
+    {
+        return m_mask.is_off(m_lane);
+    }
 
 private:
     Block<DataT, WidthT>& m_ref_wide_data;
@@ -2356,9 +2362,15 @@ struct MaskedArrayLaneProxy {
     // visibility to end user whose IDE
     // might display these methods vs. free
     // functions
-    OSL_FORCEINLINE bool is_on() const { return m_mask.is_on(m_lane); }
+    OSL_FORCEINLINE bool is_on() const
+    {
+        return m_mask.is_on(m_lane);
+    }
 
-    OSL_FORCEINLINE bool is_off() const { return m_mask.is_off(m_lane); }
+    OSL_FORCEINLINE bool is_off() const
+    {
+        return m_mask.is_off(m_lane);
+    }
 
     OSL_FORCEINLINE MaskedLaneProxy<DataT, WidthT>
     operator[](int array_index) const

@@ -53,8 +53,7 @@ enum ClosureIDs {
 
 // these structures hold the parameters of each closure type
 // they will be contained inside ClosureComponent
-struct EmptyParams {
-};
+struct EmptyParams {};
 struct DiffuseParams {
     Vec3 N;
     ustring label;
@@ -929,7 +928,6 @@ SimpleRenderer::add_output(string_view varname_, string_view filename,
 {
     // FIXME: use name to figure out
     ustring varname_us(varname_);
-    ustringhash varname = ustringhash_from(varname_us);
     OIIO::ImageSpec spec(m_xres, m_yres, nchannels, datatype);
     m_outputvars.emplace_back(varname_us);
     m_outputbufs.emplace_back(

@@ -2382,15 +2382,15 @@ struct Analyzer {
                             bool is_return_val = (sym == opargsym(opcode, 0));
                             // need to ensure write came from return value
                             // and not result argument of getattribute;
-                            if (is_return_val && 
-                                is_op_return_always_logically_boolean(
-                                    opcode.opname()) ) {
+                            if (is_return_val
+                                && is_op_return_always_logically_boolean(
+                                    opcode.opname())) {
                                 if (b_status == BoolStatus::Unknown) {
                                     b_status = BoolStatus::Yes;
                                 }
                             } else {
-                                if (is_return_val && 
-                                    could_op_return_be_logically_boolean(
+                                if (is_return_val
+                                    && could_op_return_be_logically_boolean(
                                         opcode.opname())) {
                                     Opcode& opcode = m_opcodes[op_index];
                                     int arg_count  = opcode.nargs();

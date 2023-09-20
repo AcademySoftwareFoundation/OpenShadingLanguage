@@ -508,7 +508,7 @@ BatchedSimpleRenderer<WidthT>::get_array_attribute(BatchedShaderGlobals* bsg,
                 out[i] = i;
             }
             return val.mask();
-        } 
+        }
     }
 
     if (object.empty() && name == ucache().lookupTable) {

@@ -299,8 +299,9 @@ rs_get_attribute_constant_float4(float value1, float value2, float value3,
 }
 
 OSL_RSOP bool
-rs_get_shade_index(void* _sg, void* result) {
-    reinterpret_cast<int *>(result)[0] = OSL::get_shade_index(_sg);
+rs_get_shade_index(void* _sg, void* result)
+{
+    reinterpret_cast<int*>(result)[0] = OSL::get_shade_index(_sg);
     return true;
 }
 

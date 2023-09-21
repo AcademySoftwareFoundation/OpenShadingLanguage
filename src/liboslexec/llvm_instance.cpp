@@ -1340,8 +1340,9 @@ BackendLLVM::build_llvm_instance(bool groupentry)
         // Skip if it's an interpolated (userdata) parameter and we're
         // initializing them lazily, or if it's an interactively-adjusted
         // parameter.
-        if (s.symtype() == SymTypeParam && !s.typespec().is_closure()
-            && !s.connected() && !s.connected_down()
+        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+            && !s.typespec().is_closure() && !s.connected()
+            && !s.connected_down()
             && (s.interactive()
                 || (s.interpolated() && shadingsys().lazy_userdata())))
             continue;

@@ -1,0 +1,8 @@
+shader test(
+        float a1 = u,
+        float a2 = v,
+        output int result = 0
+)
+{
+        result = a1 == a2;
+}

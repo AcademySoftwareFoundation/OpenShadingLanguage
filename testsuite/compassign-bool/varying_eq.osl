@@ -1,0 +1,5 @@
+shader varying_eq (
+    output int val = 0)
+{
+    val = (int(u*12) == int((1.0-u)*12));
+}

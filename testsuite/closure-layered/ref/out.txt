@@ -1,0 +1,4 @@
+Compiled constant.osl -> constant.oso
+Compiled test.osl -> test.oso
+Connect testLayer.result to constantLayer.x
+

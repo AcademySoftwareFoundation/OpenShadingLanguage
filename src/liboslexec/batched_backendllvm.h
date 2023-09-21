@@ -413,7 +413,8 @@ public:
     /// optionally cast to pointer to a particular data type.
     llvm::Value* groupdata_field_ptr(int fieldnum,
                                      TypeDesc type   = TypeDesc::UNKNOWN,
-                                     bool is_uniform = true);
+                                     bool is_uniform = true,
+                                     bool forceBool  = false);
 
 
     /// Return the pointer to the block of shadeindices.

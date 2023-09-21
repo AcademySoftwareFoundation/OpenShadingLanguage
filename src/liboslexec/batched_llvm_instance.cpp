@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+//#define OSL_DEV 1
+
 #include <bitset>
 #include <cmath>
 #include <cstddef>
@@ -911,14 +913,18 @@ BatchedBackendLLVM::llvm_type_groupdata()
             const int arraylen  = std::max(1, sym.typespec().arraylength());
             const int derivSize = (sym.has_derivs() ? 3 : 1);
             ts.make_array(arraylen * derivSize);
-            fields.push_back(llvm_wide_type(ts));
+            llvm::Type* fieldType;
+            if (sym.is_uniform()) {
+                fieldType = sym.forced_llvm_bool() ? ll.type_bool()
+                                                   : llvm_type(ts);
+            } else {
+                fieldType = sym.forced_llvm_bool() ? ll.type_native_mask()
+                                                   : llvm_wide_type(ts);
+            }
+            fields.push_back(fieldType);
 
             // Alignment
-            // TODO:  this isn't quite right, can't rely on batch size to == ISA SIMD requirements
-            size_t base_size = sym.typespec().is_closure_based()
-                                   ? sizeof(void*)
-                                   : sym.typespec().simpletype().basesize();
-            size_t align     = base_size * m_width;
+            size_t align = ll.llvm_alignmentof(fields.back());
             if (offset & (align - 1))
                 offset += align - (offset & (align - 1));
             if (llvm_debug() >= 2)
@@ -928,7 +934,7 @@ BatchedBackendLLVM::llvm_type_groupdata()
                       sym.interpolated() ? " (interpolated)" : "",
                       sym.interactive() ? " (interactive)" : "");
             sym.wide_dataoffset((int)offset);
-            offset += derivSize * int(sym.size()) * m_width;
+            offset += ll.llvm_sizeof(fields.back());
             m_param_order_map[&sym] = order;
             ++order;
         }
@@ -1302,13 +1308,24 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                             init_val = ll.constant(sym.get_float(c));
                         else if (elemtype.is_string())
                             init_val = ll.constant(sym.get_string(c));
-                        else if (elemtype.is_int())
-                            init_val = ll.constant(sym.get_int(c));
+                        else if (elemtype.is_int()) {
+                            if (sym.forced_llvm_bool()) {
+                                init_val = ll.constant_bool(
+                                    static_cast<bool>(sym.get_int(c)));
+                            } else {
+                                init_val = ll.constant(sym.get_int(c));
+                            }
+                        }
                         OSL_ASSERT(init_val);
 
                         if (sym.is_varying()) {
-                            init_val = ll.wide_constant(
-                                static_cast<llvm::Constant*>(init_val));
+                            if (sym.forced_llvm_bool()) {
+                                init_val = ll.llvm_mask_to_native(
+                                    ll.widen_value(init_val));
+                            } else {
+                                init_val = ll.wide_constant(
+                                    static_cast<llvm::Constant*>(init_val));
+                            }
                         }
                     }
 
@@ -1844,8 +1861,9 @@ BatchedBackendLLVM::build_llvm_init()
     // that are closures (to avoid weird order of layer eval problems).
     for (int i = 0; i < group().nlayers(); ++i) {
         ShaderInstance* gi = group()[i];
-        if (gi->unused() || gi->empty_instance())
+        if (gi->unused() || gi->empty_instance()) {
             continue;
+        }
         FOREACH_PARAM(Symbol & sym, gi)
         {
             if (sym.typespec().is_closure_based()) {
@@ -2114,8 +2132,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         // Skip if it's an interpolated (userdata) parameter and we're
         // initializing them lazily, or if it's an interactively-adjusted
         // parameter.
-        if (s.symtype() == SymTypeParam && !s.typespec().is_closure()
-            && !s.connected() && !s.connected_down()
+        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+            && !s.typespec().is_closure() && !s.connected()
+            && !s.connected_down()
             && (s.interactive()
                 || (s.interpolated() && shadingsys().lazy_userdata())))
             continue;
@@ -2229,8 +2248,7 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                         // so no need to do it here as well
                         llvm_run_connected_layers(*srcsym, con.src.param);
 
-                        // FIXME -- I'm not sure I understand this.  Isn't this
-                        // unnecessary if we wrote to the parameter ourself?
+                        // Perform actual copy assignment from src to dest sym
                         llvm_assign_impl(*dstsym, *srcsym, -1, con.src.channel,
                                          con.dst.channel);
                     }

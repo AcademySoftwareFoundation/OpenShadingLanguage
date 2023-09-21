@@ -1,0 +1,5 @@
+shader varying_compl_bool (
+    output int val = 0)
+{
+    val = ~(P[0] < 0.5);
+}

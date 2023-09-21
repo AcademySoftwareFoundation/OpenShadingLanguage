@@ -1,0 +1,120 @@
+Compiled test.osl -> test.oso
+Compiled test2.osl -> test2.oso
+Compiled test4.osl -> test4.oso
+Compiled varying_bitand_bool_bool.osl -> varying_bitand_bool_bool.oso
+Compiled varying_bitand_bool_int.osl -> varying_bitand_bool_int.oso
+Compiled varying_bitand_int_bool.osl -> varying_bitand_int_bool.oso
+Compiled varying_bitand_int_int.osl -> varying_bitand_int_int.oso
+Compiled varying_bitor_bool_bool.osl -> varying_bitor_bool_bool.oso
+Compiled varying_bitor_bool_int.osl -> varying_bitor_bool_int.oso
+Compiled varying_bitor_int_bool.osl -> varying_bitor_int_bool.oso
+Compiled varying_bitor_int_int.osl -> varying_bitor_int_int.oso
+Compiled varying_compl_bool.osl -> varying_compl_bool.oso
+Compiled varying_compl_int.osl -> varying_compl_int.oso
+Compiled varying_eq.osl -> varying_eq.oso
+Compiled varying_ge.osl -> varying_ge.oso
+Compiled varying_gt.osl -> varying_gt.oso
+Compiled varying_int.osl -> varying_int.oso
+Compiled varying_le.osl -> varying_lt.oso
+Compiled varying_lt.osl -> varying_le.oso
+Compiled varying_ne.osl -> varying_ne.oso
+Compiled varying_not_bool.osl -> varying_not_bool.oso
+Compiled varying_not_int.osl -> varying_not_int.oso
+Compiled varying_xor_bool_bool.osl -> varying_xor_bool_bool.oso
+Compiled varying_xor_bool_int.osl -> varying_xor_bool_int.oso
+Compiled varying_xor_int_bool.osl -> varying_xor_int_bool.oso
+Compiled varying_xor_int_int.osl -> varying_xor_int_int.oso
+
+Output result to out.tif
+
+Output Cout to out2.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.eq.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.ge.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.gt.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.le.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.lt.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.ne.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.not_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.not_int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.xor_bool_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.xor_bool_int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.xor_int_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.xor_int_int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitand_bool_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitand_bool_int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitand_int_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitand_int_int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitor_bool_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitor_bool_int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitor_int_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.bitor_int_int.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.compl_bool.tif
+Connect srcLayer.val to testLayer.blue
+
+Output testLayer.Cout to out2.compl_int.tif
+Connect srcLayer.val to testLayer.blue_param
+
+Output testLayer.Cout to out4A.gt.tif
+Connect srcLayer.val to testLayer.blue_param
+
+Output testLayer.Cout to out4A.compl_bool.tif
+Connect srcLayer.val to testLayer.blue_param
+
+Output testLayer.Cout to out4A.bitand_bool_bool.tif
+Connect srcLayer.val to testLayer.blue_param
+
+Output testLayer.Cout to out4B.gt.tif
+Output testLayer.blue_param to out4_blue_param.gt.tif
+Connect srcLayer.val to testLayer.blue_param
+
+Output testLayer.Cout to out4B.compl_bool.tif
+Output testLayer.blue_param to out4_blue_param.compl_bool.tif
+Connect srcLayer.val to testLayer.blue_param
+
+Output testLayer.Cout to out4B.bitand_bool_bool.tif
+Output testLayer.blue_param to out4_blue_param.bitand_bool_bool.tif

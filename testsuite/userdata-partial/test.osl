@@ -1,0 +1,23 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+float init_red() {
+    return 0.5;
+}
+
+float init_green() {
+    return 0.5;
+}
+
+float init_blue() {
+    return 0.5;
+}
+
+shader test (float red = init_red() [[ int lockgeom=0 ]],
+             float green = init_green() [[ int lockgeom=0 ]],
+             float blue = init_blue() [[ int lockgeom=0 ]],
+             output color Cout = color(0) [[ int lockgeom=0 ]])
+{
+    Cout = color(red, green, blue);
+}

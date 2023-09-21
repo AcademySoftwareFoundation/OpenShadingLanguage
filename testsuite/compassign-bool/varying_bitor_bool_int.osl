@@ -1,0 +1,5 @@
+shader varying_bitor_bool_int (
+    output int val = 0)
+{
+    val = (P[0] < 0.5) | int(P[1]*12);
+}

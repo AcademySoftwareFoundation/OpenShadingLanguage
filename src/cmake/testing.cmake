@@ -251,9 +251,9 @@ macro (osl_add_all_tests)
                 bug-array-heapoffsets bug-locallifetime bug-outputinit
                 bug-param-duplicate bug-peep bug-return
                 calculatenormal-reg
-                cellnoise closure closure-array closure-parameters closure-zero closure-conditional
+                cellnoise closure closure-array closure-layered closure-parameters closure-zero closure-conditional
                 color color-reg colorspace comparison
-                complement-reg compile-buffer compassign-reg
+                complement-reg compile-buffer compassign-bool compassign-reg
                 component-range
                 control-flow-reg connect-components
                 const-array-params const-array-fill
@@ -268,7 +268,7 @@ macro (osl_add_all_tests)
                 for-reg format-reg fprintf
                 function-earlyreturn function-simple function-outputelem
                 function-overloads function-redef
-                geomath getattribute-camera getattribute-shader
+                geomath getattribute-camera getattribute-shader getattribute-shading
                 getsymbol-nonheap gettextureinfo gettextureinfo-reg
                 gettextureinfo-udim gettextureinfo-udim-reg
                 globals-needed
@@ -374,7 +374,7 @@ macro (osl_add_all_tests)
                 transform transform-reg transformc transformc-reg trig trig-reg
                 typecast
                 unknown-instruction
-                userdata userdata-custom userdata-passthrough
+                userdata userdata-partial userdata-custom userdata-passthrough
                 vararray-connect vararray-default
                 vararray-deserialize vararray-param
                 vecctr vector vector-reg

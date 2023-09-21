@@ -2771,7 +2771,19 @@ LLVM_Util::llvm_typeof(llvm::Value* val) const
     return val->getType();
 }
 
+size_t
+LLVM_Util::llvm_sizeof(llvm::Type* type) const
+{
+    const llvm::DataLayout& data_layout = m_llvm_exec->getDataLayout();
+    return data_layout.getTypeStoreSize(type);
+}
 
+size_t
+LLVM_Util::llvm_alignmentof(llvm::Type* type) const
+{
+    const llvm::DataLayout& data_layout = m_llvm_exec->getDataLayout();
+    return data_layout.getPrefTypeAlignment(type);
+}
 
 std::string
 LLVM_Util::llvm_typenameof(llvm::Value* val) const
@@ -5312,6 +5324,7 @@ LLVM_Util::op_store(llvm::Value* val, llvm::Value* ptr)
         // TODO: add assert for ptr alignment in debug builds
 #if 0
         if (m_supports_masked_stores) {
+            // TODO:  Deal with mi.negate if creating a masked store)
             builder().CreateMaskedStore(val, ptr, 64, mi.mask);
         } else
 #endif

@@ -277,11 +277,6 @@ set_shadingsys_options()
     }
     shadingsys->attribute("searchpath:library", librarypath);
 
-    if (extraoptions.size())
-        shadingsys->attribute("options", extraoptions);
-    if (texoptions.size())
-        shadingsys->texturesys()->attribute("options", texoptions);
-
     if (colorspace.size())
         shadingsys->attribute("colorspace", colorspace);
 
@@ -342,6 +337,12 @@ set_shadingsys_options()
         // performing batched execution
         shadingsys->attribute("opt_batched_analysis", 0);
     }
+
+    // Allow user provided extraoptions to override the values set above
+    if (extraoptions.size())
+        shadingsys->attribute("options", extraoptions);
+    if (texoptions.size())
+        shadingsys->texturesys()->attribute("options", texoptions);
 
     if (use_optix) {
         // FIXME: For now, output placement is disabled for OptiX mode

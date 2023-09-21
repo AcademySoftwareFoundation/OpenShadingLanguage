@@ -715,7 +715,8 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             TypeDesc t = sym.typespec().simpletype();
             if (sym.typespec().is_string()) {
                 //llvm_create_constant(sym);
-                auto default_str = ll.constant64(uint64_t(sym.get_string().hash()));
+                auto default_str = ll.constant64(
+                    uint64_t(sym.get_string().hash()));
 
                 OSL_ASSERT(llvm_store_value(default_str, sym, 0, nullptr, 0));
             } else {

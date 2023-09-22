@@ -911,8 +911,12 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
                     llvm::Value* src_val
                         = Src.is_constant()
                               ? llvm_load_constant_value(Src, a, i, basetype)
-                              : llvm_load_value(Src, 0, const_arrind, i,
-                                                basetype);
+                              : llvm_load_value(
+                                  Src, 0,
+                                  Src.typespec().is_array() ? const_arrind
+                                                            : nullptr,
+                                  (Src.typespec().aggregate() == 1) ? 0 : i,
+                                  basetype);
                     if (!src_val)
                         return false;
                     llvm_store_value(src_val, Result, 0, const_arrind, i);

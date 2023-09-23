@@ -520,7 +520,8 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == RS::Hashes::red && type == TypeDesc::TypeFloat && sg->P.x > 0.5f) {
+    if (name == RS::Hashes::red && type == TypeDesc::TypeFloat
+        && sg->P.x > 0.5f) {
         ((float*)val)[0] = sg->u;
         if (derivatives) {
             ((float*)val)[1] = sg->dudx;
@@ -528,7 +529,8 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == RS::Hashes::green && type == TypeDesc::TypeFloat && sg->P.x < 0.5f) {
+    if (name == RS::Hashes::green && type == TypeDesc::TypeFloat
+        && sg->P.x < 0.5f) {
         ((float*)val)[0] = sg->v;
         if (derivatives) {
             ((float*)val)[1] = sg->dvdx;

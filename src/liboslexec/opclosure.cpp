@@ -76,7 +76,8 @@ osl_closure_to_string(ShaderGlobals* sg, ClosureColor* c)
     // Special case for printing closures
     std::ostringstream stream;
     stream.imbue(std::locale::classic());  // force C locale
-    print_closure(stream, c, &sg->context->shadingsys(), false);
+    print_closure(stream, c, &sg->context->shadingsys(),
+                  /*treat_ustrings_as_hash*/ false);
     return ustring(stream.str()).c_str();
 }
 
@@ -86,7 +87,8 @@ osl_closure_to_ustringhash(ShaderGlobals* sg, ClosureColor* c)
     // Special case for printing closures
     std::ostringstream stream;
     stream.imbue(std::locale::classic());  // force C locale
-    print_closure(stream, c, &sg->context->shadingsys(), true);
+    print_closure(stream, c, &sg->context->shadingsys(),
+                  /*treat_ustrings_as_hash*/ true);
     return ustring(stream.str()).hash();
 }
 

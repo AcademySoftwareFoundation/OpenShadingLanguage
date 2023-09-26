@@ -150,7 +150,8 @@ __OSL_OP(dict_value)(void* bsg_, int nodeID, ustring_pod attribname,
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return bsg->uniform.context->dict_value(nodeID, USTR(attribname),
-                                            TYPEDESC(type), data, false);
+                                            TYPEDESC(type), data,
+                                            /*treat_ustrings_as_hash*/ false);
 }
 
 namespace {  // anonymous
@@ -169,7 +170,8 @@ template<typename ValueT> struct DictValueGetter<ValueT, false> {
 
             ValueT value;
             int result = context->dict_value(nodeID, attribname, wdest.type(),
-                                             &value, false);
+                                             &value,
+                                             /*treat_ustrings_as_hash*/ false);
             wout[lane] = result;
             if (result) {
                 dest[lane] = value;
@@ -191,7 +193,8 @@ template<typename ValueT> struct DictValueGetter<ValueT, true> {
             ustring attribname = wAttribName[lane];
             ElementType value[dest_array.length()];
             int result = context->dict_value(nodeID, attribname, wdest.type(),
-                                             &value[0], false);
+                                             &value[0],
+                                             /*treat_ustrings_as_hash*/ false);
             auto dest  = dest_array[lane];
             for (int element = 0; element < dest.length(); ++element) {
                 dest[element] = value[element];

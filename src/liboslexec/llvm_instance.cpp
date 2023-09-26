@@ -710,7 +710,6 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                 llvm_zero_derivs(sym);
 #endif
         } else if (sym.interpolated() && !sym.typespec().is_closure()) {
-#if 1
             // geometrically-varying param; memcpy its default value
             TypeDesc t = sym.typespec().simpletype();
             if (sym.typespec().is_string()) {
@@ -723,7 +722,6 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                 ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
                              t.size(), t.basesize() /*align*/);
             }
-#endif
 
             if (sym.has_derivs())
                 llvm_zero_derivs(sym);

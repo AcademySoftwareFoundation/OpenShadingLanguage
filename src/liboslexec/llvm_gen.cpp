@@ -4236,7 +4236,7 @@ LLVMGEN(llvm_gen_split)
         OSL_DASSERT(Sep.typespec().is_string());
         args[2] = rop.llvm_load_value(Sep);
     } else {
-        args[2] = rop.ll.constant("");
+        args[2] = rop.ll.constant(ustring("").c_str());
     }
     if (op.nargs() >= 5) {
         Symbol& Maxsplit = *rop.opargsym(op, 4);

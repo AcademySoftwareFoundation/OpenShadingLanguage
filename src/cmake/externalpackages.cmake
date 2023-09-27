@@ -163,7 +163,7 @@ endif ()
 
 # Use opaque pointers starting with LLVM 15
 # Except when using OptiX, due to issue noted in BackendLLVM::llvm_store_value
-if (NOT OSL_USE_OPTIX AND ${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
+if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
   set(LLVM_OPAQUE_POINTERS ON)
   add_definitions (-DOSL_LLVM_OPAQUE_POINTERS)
 else()

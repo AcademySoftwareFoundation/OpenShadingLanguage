@@ -650,8 +650,8 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             // If the call to osl_bind_interpolated_param returns 0, the default
             // value needs to be loaded from a CUDA variable.
             llvm::Value* cuda_var     = getOrAllocateCUDAVariable(sym);
-            llvm::Type* cuda_var_type = llvm_typedesc(
-                sym.typespec().elementtype());
+            TypeSpec elemtype         = sym.typespec().elementtype();
+            llvm::Type* cuda_var_type = llvm_type(elemtype);
             // memcpy the initial value from the CUDA variable
             llvm::Value* src = ll.ptr_cast(ll.GEP(cuda_var_type, cuda_var, 0),
                                            ll.type_void_ptr());

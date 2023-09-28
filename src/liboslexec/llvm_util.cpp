@@ -3320,7 +3320,11 @@ size_t
 LLVM_Util::llvm_alignmentof(llvm::Type* type) const
 {
     const llvm::DataLayout& data_layout = m_llvm_exec->getDataLayout();
+#if OSL_LLVM_VERSION >= 160
+    return data_layout.getPrefTypeAlign(type).value();
+#else
     return data_layout.getPrefTypeAlignment(type);
+#endif
 }
 
 std::string

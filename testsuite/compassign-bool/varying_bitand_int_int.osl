@@ -1,0 +1,5 @@
+shader varying_bitand_int_int (
+    output int val = 0)
+{
+    val = int(P[0]*12) & int(P[1]*12);
+}

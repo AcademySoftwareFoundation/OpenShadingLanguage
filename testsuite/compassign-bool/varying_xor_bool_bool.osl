@@ -1,0 +1,5 @@
+shader varying_xor_bool_bool (
+    output int val = 0)
+{
+    val = (P[0] < 0.5) ^ (P[1] > 0.5);
+}

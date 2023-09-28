@@ -128,7 +128,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         set (CLANG_MSVC_FIX "${CLANG_MSVC_FIX} -Wno-ignored-attributes -Wno-unknown-attributes")
     endif ()
 
-    if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
+    if (NOT LLVM_OPAQUE_POINTERS AND ${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
         # Until we fully support opaque pointers, we need to disable
         # them when using LLVM 15.
         list (APPEND LLVM_COMPILE_FLAGS -Xclang -no-opaque-pointers)

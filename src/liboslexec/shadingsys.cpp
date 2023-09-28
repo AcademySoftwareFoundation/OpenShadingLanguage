@@ -1100,6 +1100,9 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_llvm_profiling_events(0)
     , m_llvm_output_bitcode(0)
     , m_llvm_dumpasm(0)
+    , m_dump_forced_llvm_bool_symbols(0)
+    , m_dump_uniform_symbols(0)
+    , m_dump_varying_symbols(0)
     , m_max_local_mem_KB(2048)
     , m_compile_report(0)
     , m_use_optix(renderer->supports("OptiX"))
@@ -1618,6 +1621,10 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_SET("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_SET("llvm_dumpasm", int, m_llvm_dumpasm);
+    ATTR_SET("dump_forced_llvm_bool_symbols", int,
+             m_dump_forced_llvm_bool_symbols);
+    ATTR_SET("dump_uniform_symbols", int, m_dump_uniform_symbols);
+    ATTR_SET("dump_varying_symbols", int, m_dump_varying_symbols);
     ATTR_SET_STRING("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
     ATTR_SET("strict_messages", int, m_strict_messages);
     ATTR_SET("range_checking", int, m_range_checking);
@@ -1781,6 +1788,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
     ATTR_DECODE("opt_useparam", int, m_opt_useparam);
     ATTR_DECODE("opt_groupdata", int, m_opt_groupdata);
+    ATTR_DECODE("opt_batched_analysis", int, m_opt_batched_analysis);
     ATTR_DECODE("llvm_jit_fma", int, m_llvm_jit_fma);
     ATTR_DECODE("llvm_jit_aggressive", int, m_llvm_jit_aggressive);
     ATTR_DECODE_STRING("llvm_jit_target", m_llvm_jit_target);
@@ -1797,6 +1805,10 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_DECODE("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_DECODE("llvm_dumpasm", int, m_llvm_dumpasm);
+    ATTR_DECODE("dump_forced_llvm_bool_symbols", int,
+                m_dump_forced_llvm_bool_symbols);
+    ATTR_DECODE("dump_uniform_symbols", int, m_dump_uniform_symbols);
+    ATTR_DECODE("dump_varying_symbols", int, m_dump_varying_symbols);
     ATTR_DECODE("strict_messages", int, m_strict_messages);
     ATTR_DECODE("error_repeats", int, m_error_repeats);
     ATTR_DECODE("range_checking", int, m_range_checking);

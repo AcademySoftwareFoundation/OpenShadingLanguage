@@ -161,6 +161,14 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     endif ()
 endif ()
 
+# Use opaque pointers starting with LLVM 16
+if (${LLVM_VERSION} VERSION_GREATER_EQUAL 16.0)
+  set(LLVM_OPAQUE_POINTERS ON)
+  add_definitions (-DOSL_LLVM_OPAQUE_POINTERS)
+else()
+  set(LLVM_OPAQUE_POINTERS OFF)
+endif()
+
 # Enable new pass manager for LLVM 15+
 if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
   set(LLVM_NEW_PASS_MANAGER ON)

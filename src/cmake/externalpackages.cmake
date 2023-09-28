@@ -169,8 +169,8 @@ else()
   set(LLVM_OPAQUE_POINTERS OFF)
 endif()
 
-# Enable new pass manager for LLVM 15+
-if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
+# Enable new pass manager for LLVM 16+
+if (${LLVM_VERSION} VERSION_GREATER_EQUAL 16.0)
   set(LLVM_NEW_PASS_MANAGER ON)
   add_definitions (-DOSL_LLVM_NEW_PASS_MANAGER)
 else()

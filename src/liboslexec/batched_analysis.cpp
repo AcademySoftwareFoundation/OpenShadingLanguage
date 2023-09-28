@@ -2097,6 +2097,10 @@ struct Analyzer {
     {
         bool previously_was_uniform = symbol_to_be_varying->is_uniform();
         if (previously_was_uniform | force) {
+            OSL_ASSERT(!symbol_to_be_varying->interactive()
+                       || symbol_to_be_varying->typespec().is_closure()
+                       || symbol_to_be_varying->connected()
+                       || symbol_to_be_varying->connected_down());
             symbol_to_be_varying->make_varying();
             auto range = m_symbols_dependent_upon.equal_range(
                 symbol_to_be_varying);
@@ -2691,7 +2695,8 @@ struct Analyzer {
         // our symbols appropriately!
         FOREACH_PARAM(Symbol & s, inst())
         {
-            if (s.everread() && !s.lockgeom() && !s.typespec().is_closure()) {
+            if (s.everread() && s.interpolated() && !s.interactive()
+                && !s.typespec().is_closure()) {
                 recursively_mark_varying(&s);
             }
         }

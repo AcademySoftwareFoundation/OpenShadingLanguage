@@ -109,7 +109,7 @@ test_triple_func()
     OSL::pvt::LLVM_Util::PerThreadInfo pti;
     OSL::pvt::LLVM_Util ll(pti);
 
-    // Make a function with prototype:   int myadd (int arg1, int arg2)
+    // Make a function with prototype:   Vec3 myadd (Vec3 *arg1, float arg2)
     // and make it the current function.
     auto func = ll.make_function("myaddv",        // name
                                  false,           // fastcall
@@ -124,9 +124,12 @@ test_triple_func()
     llvm::Value* aptr = ll.current_function_arg(1);
     llvm::Value* b    = ll.current_function_arg(2);
     for (int i = 0; i < 3; ++i) {
-        llvm::Value* r_elptr = ll.GEP(rptr, 0, i);
-        llvm::Value* a_elptr = ll.GEP(aptr, 0, i);
-        llvm::Value* product = ll.op_mul(ll.op_load(a_elptr), b);
+        llvm::Value* r_elptr = ll.GEP((llvm::Type*)ll.type_triple(), rptr, 0,
+                                      i);
+        llvm::Value* a_elptr = ll.GEP((llvm::Type*)ll.type_triple(), aptr, 0,
+                                      i);
+        llvm::Value* product = ll.op_mul(ll.op_load(ll.type_float(), a_elptr),
+                                         b);
         ll.op_store(product, r_elptr);
     }
     ll.op_return();

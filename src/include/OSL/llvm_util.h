@@ -633,6 +633,9 @@ public:
                             const std::string& name = "",
                             bool is_packed          = false);
 
+    // Return type of field at given index in a struct type.
+    llvm::Type* type_struct_field_at_index(llvm::Type* type, int index);
+
     /// Return the llvm::Type that is a pointer to the given llvm type.
     llvm::PointerType* type_ptr(llvm::Type* type);
 
@@ -899,10 +902,9 @@ public:
     /// type is the type of the thing being pointed to.
     llvm::Value* op_load(llvm::Type* type, llvm::Value* ptr,
                          const std::string& llname = {});
-    // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* op_load(llvm::Value* ptr, const std::string& llname = {});
 
-    llvm::Value* op_gather(llvm::Value* ptr, llvm::Value* index);
+    llvm::Value* op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
+                           llvm::Value* wide_index);
 
     /// Store to a dereferenced pointer
     /// respecting the current mask & masking_enabled flag:   *ptr = val
@@ -919,8 +921,8 @@ public:
     /// converting it to the native mask type for storage:   *ptr = llvm_mask_to_native(val);
     void op_store_mask(llvm::Value* llvm_mask, llvm::Value* native_mask_ptr);
 
-    void op_scatter(llvm::Value* wide_val, llvm::Value* ptr,
-                    llvm::Value* wide_index);
+    void op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
+                    llvm::Value* src_ptr, llvm::Value* wide_index);
 
     // N.B. "GEP" -- GetElementPointer -- is a particular LLVM-ism that is
     // the means for retrieving elements from some kind of aggregate: the
@@ -933,16 +935,10 @@ public:
     /// we're retrieving.
     llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, llvm::Value* elem,
                      const std::string& llname = {});
-    // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, llvm::Value* elem,
-                     const std::string& llname = {});
 
     /// Generate a GEP (get element pointer) with an integer element
     /// offset. `type` is the type of the data we're retrieving.
     llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem,
-                     const std::string& llname = {});
-    // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, int elem,
                      const std::string& llname = {});
 
     /// Generate a GEP (get element pointer) with two integer element
@@ -952,9 +948,14 @@ public:
     /// retrieving.
     llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
                      const std::string& llname = {});
-    // Blind pointer version that's deprecated as of LLVM13:
-    llvm::Value* GEP(llvm::Value* ptr, int elem1, int elem2,
-                     const std::string& llname = {});
+
+    /// Generate a GEP (get element pointer) with three integer element
+    /// offsets.  This is just a special (and common) case of GEP where
+    /// we have a 3-level hierarchy and we have fixed element indices
+    /// that are known at compile time.  `type` is the type of the data we're
+    /// retrieving.
+    llvm::Value* GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
+                     int elem3, const std::string& llname = {});
 
     // Arithmetic ops.  It auto-detects the type (int vs float).
     // ...

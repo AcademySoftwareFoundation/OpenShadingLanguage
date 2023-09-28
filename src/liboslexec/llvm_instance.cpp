@@ -1748,7 +1748,7 @@ BackendLLVM::run()
             // The target triple and data layout used here are those specified
             // for NVPTX (https://www.llvm.org/docs/NVPTXUsage.html#triples).
             ll.module()->setDataLayout(
-                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
         }
 #    endif
@@ -1813,7 +1813,7 @@ BackendLLVM::run()
                     err);
 
             shadeops_module->setDataLayout(
-                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
             shadeops_module->setTargetTriple("nvptx64-nvidia-cuda");
 
             std::unique_ptr<llvm::Module> shadeops_ptr(shadeops_module);
@@ -1840,7 +1840,7 @@ BackendLLVM::run()
                         err);
 
                 rend_lib_module->setDataLayout(
-                    "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+                    "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
                 rend_lib_module->setTargetTriple("nvptx64-nvidia-cuda");
 
                 for (llvm::Function& fn : *rend_lib_module) {
@@ -1860,7 +1860,7 @@ BackendLLVM::run()
             // See: https://llvm.org/docs/NVPTXUsage.html
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
             ll.module()->setDataLayout(
-                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
 
             // Tag each function as an OSL library function to help with
             // inlining and optimization after codegen.

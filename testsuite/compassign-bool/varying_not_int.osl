@@ -1,0 +1,5 @@
+shader varying_not_int (
+    output int val = 0)
+{
+    val = !(int(1024*(1.0 + sin(4*P[0]*M_2PI))));
+}

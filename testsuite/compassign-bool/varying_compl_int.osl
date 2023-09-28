@@ -1,0 +1,5 @@
+shader varying_compl_int (
+    output int val = 0)
+{
+    val = ~(int(P[0]*12));
+}

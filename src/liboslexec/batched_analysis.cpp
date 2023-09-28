@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-//#define OSL_DEV
+// #define OSL_DEV 1
 
 #include <boost/container/flat_set.hpp>
 #include <iterator>
@@ -33,6 +33,8 @@ namespace Strings {
 // Operation strings
 static ustring op_and("and");
 static ustring op_backfacing("backfacing");
+static ustring op_bitand("bitand");
+static ustring op_bitor("bitor");
 static ustring op_break("break");
 static ustring op_calculatenormal("calculatenormal");
 static ustring op_closure("closure");
@@ -72,11 +74,17 @@ static ustring op_texture3d("texture3d");
 static ustring op_pointcloud_search("pointcloud_search");
 static ustring op_pointcloud_get("pointcloud_get");
 static ustring op_pointcloud_write("pointcloud_write");
+static ustring op_useparam("useparam");
+static ustring op_xor("xor");
 
 // Shader global strings
 static ustring object2common("object2common");
 static ustring shader2common("shader2common");
 static ustring flipHandedness("flipHandedness");
+
+// Temp symbol strings
+static ustring tempUserDataExists("tempUserDataExists");
+
 }  // namespace Strings
 
 namespace pvt {
@@ -374,7 +382,7 @@ protected_shader_globals_op_implicitly_depends_on(ShaderInstance& inst,
 
 
 bool
-is_op_result_always_logically_boolean(ustring opname)
+is_op_return_always_logically_boolean(ustring opname)
 {
     // Test if explicit comparison is faster or not
     static boost::container::flat_set<ustring> lazy_lookup(
@@ -382,6 +390,52 @@ is_op_result_always_logically_boolean(ustring opname)
           Strings::op_gt, Strings::op_le, Strings::op_lt, Strings::op_neq,
           Strings::op_and, Strings::op_or });
     return lazy_lookup.find(opname) != lazy_lookup.end();
+}
+
+// If all inputs (read arguments) to an op were logically boolean
+// would the result be logically boolean?
+bool
+could_op_return_be_logically_boolean(ustring opname)
+{
+    // NOTE: compl doesn't qualify
+    static_assert((~uint32_t(1) != uint32_t(0))
+                      && (~uint32_t(1) != uint32_t(1)),
+                  "complement of bool int is not a bool");
+    static_assert((~uint32_t(0) != uint32_t(1))
+                      && (~uint32_t(0) != uint32_t(0)),
+                  "complement of bool int is not a bool");
+
+    // Bitwise AND does qualify
+    static_assert((uint32_t(1) & uint32_t(1)) == uint32_t(1),
+                  "bitwise or of bool ints is still a bool");
+    static_assert((uint32_t(0) & uint32_t(0)) == uint32_t(0),
+                  "bitwise or of bool ints is still a bool");
+    static_assert((uint32_t(1) & uint32_t(0)) == uint32_t(0),
+                  "bitwise or of bool ints is still a bool");
+    static_assert((uint32_t(0) & uint32_t(1)) == uint32_t(0),
+                  "bitwise or of bool ints is still a bool");
+
+    // Bitwise OR does qualify
+    static_assert((uint32_t(1) | uint32_t(1)) == uint32_t(1),
+                  "bitwise or of bool ints is still a bool");
+    static_assert((uint32_t(0) | uint32_t(0)) == uint32_t(0),
+                  "bitwise or of bool ints is still a bool");
+    static_assert((uint32_t(1) | uint32_t(0)) == uint32_t(1),
+                  "bitwise or of bool ints is still a bool");
+    static_assert((uint32_t(0) | uint32_t(1)) == uint32_t(1),
+                  "bitwise or of bool ints is still a bool");
+
+    // Bitwise XOR does qualify
+    static_assert((uint32_t(1) ^ uint32_t(1)) == uint32_t(0),
+                  "xor of bool ints is still a bool");
+    static_assert((uint32_t(0) ^ uint32_t(0)) == uint32_t(0),
+                  "xor of bool ints is still a bool");
+    static_assert((uint32_t(1) ^ uint32_t(0)) == uint32_t(1),
+                  "xor of bool ints is still a bool");
+    static_assert((uint32_t(0) ^ uint32_t(1)) == uint32_t(1),
+                  "xor of bool ints is still a bool");
+    return (opname == Strings::op_bitand || opname == Strings::op_bitor
+            || opname == Strings::op_xor);
 }
 
 
@@ -1045,10 +1099,12 @@ class WriteEvent {
     DependencyTreeTracker::Position m_pos_in_tree;
     int m_op_num;
     int m_loop_op_index;
-    static constexpr int InitialAssignmentOp() { return -1; }
     static constexpr int NoLoopIndex() { return -1; }
 
 public:
+    static constexpr int InitialAssignmentOp() { return -1; }
+    static constexpr int UserDataPreplacementCopyOp() { return -2; }
+
     WriteEvent(DependencyTreeTracker::Position pos_in_tree_, int op_num_,
                int loop_op_index)
         : m_pos_in_tree(pos_in_tree_)
@@ -1057,11 +1113,13 @@ public:
     {
     }
 
-    explicit WriteEvent(DependencyTreeTracker::Position pos_in_tree_)
+    explicit WriteEvent(DependencyTreeTracker::Position pos_in_tree_,
+                        int op_num_)
         : m_pos_in_tree(pos_in_tree_)
-        , m_op_num(InitialAssignmentOp())
+        , m_op_num(op_num_)
         , m_loop_op_index(NoLoopIndex())
     {
+        OSL_ASSERT(is_initial_assignment() || is_user_data_preplacement_copy());
     }
 
     OSL_FORCEINLINE DependencyTreeTracker::Position pos_in_tree() const
@@ -1074,9 +1132,16 @@ public:
         return m_op_num == InitialAssignmentOp();
     }
 
+    OSL_FORCEINLINE bool is_user_data_preplacement_copy() const
+    {
+        return m_op_num == UserDataPreplacementCopyOp();
+    }
+
+
     OSL_FORCEINLINE int op_num() const
     {
-        OSL_ASSERT(!is_initial_assignment());
+        OSL_ASSERT(!is_initial_assignment()
+                   && !is_user_data_preplacement_copy());
         return m_op_num;
     }
 
@@ -1265,10 +1330,8 @@ struct Analyzer {
 
     std::unordered_set<Symbol*> m_symbols_written_to_by_implicitly_varying_ops;
 
-    // Remember which symbols we've force to be boolean so we can
-    // reverse that decision if we see them used by any boolean operations
-    std::unordered_set<Symbol*> m_symbols_logically_bool;
-    std::unordered_set<Symbol*> m_symbols_disqualified_from_bool;
+    // NOTE: requires stable element pointers
+    std::deque<Symbol> m_temp_user_data_exists_symbols;
 
     ShaderInstance* inst() const { return m_inst; }
     Opcode& op(int opnum) { return m_opcodes[opnum]; }
@@ -1280,7 +1343,8 @@ struct Analyzer {
                                      : nullptr;
     };
 
-    Analyzer(BatchedAnalysis& batched_analysis, ShaderInstance* inst)
+    OSL_NOINLINE Analyzer(BatchedAnalysis& batched_analysis,
+                          ShaderInstance* inst)
         : m_ba(batched_analysis)
         , m_inst(inst)
         , m_opcodes(inst->ops())
@@ -1296,7 +1360,9 @@ struct Analyzer {
         // when we feed forward from varying shader globals, output parameters, and connected parameters
     }
 
-    void ensure_writes_with_more_conditions_are_masked(
+    OSL_NOINLINE ~Analyzer() {}
+
+    OSL_NOINLINE void ensure_writes_with_more_conditions_are_masked(
         const Symbol* symbol_to_check, DependencyTreeTracker::Position read_pos)
     {
         // Check if reading a Symbol that was written to from a different
@@ -1317,6 +1383,12 @@ struct Analyzer {
                 // if generation of ca is older than current oldest ca for write instruction, record it
                 for (auto write_iter = write_chronology.begin();
                      write_iter != write_end; ++write_iter) {
+                    // We don't bother masking initial assignment
+                    if (write_iter->is_initial_assignment()
+                        || write_iter->is_user_data_preplacement_copy()) {
+                        continue;
+                    }
+
                     auto common_ancestor
                         = m_conditional_symbol_stack.common_ancestor_between(
                             read_pos, write_iter->pos_in_tree());
@@ -1351,7 +1423,7 @@ struct Analyzer {
         }
     }
 
-    bool
+    OSL_NOINLINE bool
     did_last_write_happen_in_different_loop_cycle(const Symbol* symbol_to_check)
     {
         int loop_op_index = m_loop_stack.current_loop_op_index();
@@ -1393,9 +1465,10 @@ struct Analyzer {
         return false;
     };
 
-    void mask_if_cyclic_reads_exist(const Symbol* symbol_to_check,
-                                    DependencyTreeTracker::Position write_pos,
-                                    int write_op_num)
+    OSL_NOINLINE void
+    mask_if_cyclic_reads_exist(const Symbol* symbol_to_check,
+                               DependencyTreeTracker::Position write_pos,
+                               int write_op_num)
     {
         // Check if writing a Symbol that was read from a different
         // dependency lineage than we are writing
@@ -1457,7 +1530,7 @@ struct Analyzer {
         }
     }
 
-    void ensure_writes_with_different_early_out_paths_are_masked(
+    OSL_NOINLINE void ensure_writes_with_different_early_out_paths_are_masked(
         const Symbol* symbol_to_check, int op_index,
         FunctionTreeTracker::Position write_scope_pos)
     {
@@ -1534,7 +1607,7 @@ struct Analyzer {
         }
     }
 
-    void make_loops_control_flow_depend_on_early_out_conditions()
+    OSL_NOINLINE void make_loops_control_flow_depend_on_early_out_conditions()
     {
         // Need change the loop control flow which is dependent upon
         // a conditional.  By making a circular dependency between the this
@@ -1564,7 +1637,7 @@ struct Analyzer {
         }
     }
 
-    void discover_symbols_between(int beginop, int endop)
+    OSL_NOINLINE void discover_symbols_between(int beginop, int endop)
     {
         OSL_DEV_ONLY(std::cout << "discover_symbols_between [" << beginop << "-"
                                << endop << "]" << std::endl);
@@ -1641,7 +1714,10 @@ struct Analyzer {
             // Process arguments written to to handle early outs, cyclical reads,
             // and record a WriteEvent to a potentially unmasked operations remembering
             // the exact stack of conditional dependencies at that point.
-            // When we processed reads (above), we ensured that any reads occurring at a higher  that on the stoCheck for
+            // When we processed reads (above), we ensured that any reads
+            // occurring at a higher point on the conditional symbol stack or
+            // entirely different branch of the conditional symbol stack
+            // are masked.
             for (int write_index = 0; write_index < write_count;
                  ++write_index) {
                 const Symbol* symbolWrittenTo
@@ -1659,23 +1735,6 @@ struct Analyzer {
                                m_loop_stack.current_loop_op_index()));
             }
 
-            if (is_op_result_always_logically_boolean(opcode.opname())) {
-                // Expect bool result as the 0th argument
-                auto boolSymbolWrittenTo = symbols_written_by_op[0];
-                m_symbols_logically_bool.insert(boolSymbolWrittenTo);
-            } else {
-                // To handle a symbol written to by a logical boolean,
-                // but later is modified to be an integer, we will
-                // remember all symbols that are can NOT be logically boolean
-                // we will exclude these from m_symbols_logically_bool
-                // at when setting symbol's forced_llvm_bool the end
-                for (int write_index = 0; write_index < write_count;
-                     ++write_index) {
-                    auto symbolWrittenTo = symbols_written_by_op[write_index];
-                    m_symbols_disqualified_from_bool.insert(symbolWrittenTo);
-                }
-            }
-
             // Add dependencies for operations that implicitly read global variables
             // Those global variables might be varying, and would need their results
             // to be varying
@@ -1685,6 +1744,36 @@ struct Analyzer {
                     auto symbolWrittenTo = symbols_written_by_op[write_index];
                     m_symbols_written_to_by_implicitly_varying_ops.insert(
                         symbolWrittenTo);
+                }
+            }
+
+            // Special case for op_useparam which can execute initops
+            // lazily assign initial values
+            if (opcode.opname() == Strings::op_useparam) {
+                OSL_ASSERT(write_count == 0);
+                // Even though useparam "appears" to only read symbols, it can
+                // cause execution of upstream connected shader layers as well
+                // as calls to osl_bind_interpolated_param along with
+                // execution of any initops for the parameter for lanes that
+                // have any userdata for.
+
+                // Mimic the flow of llvm_gen_useparam
+                for (int read_index = 0; read_index < read_count;
+                     ++read_index) {
+                    const Symbol& s = *symbols_read_by_op[read_index];
+
+                    // Don't need to do any extra tracking for llvm_call_layer,
+                    // the connected parameters are marked varying elsewhere.
+
+                    // If it's an interpolated (userdata) parameter and we're
+                    // initializing them lazily, now we have to do it.
+                    if ((s.symtype() == SymTypeParam
+                         || s.symtype() == SymTypeOutputParam)
+                        && s.interpolated() && !s.typespec().is_closure()
+                        && !s.connected() && !s.connected_down()
+                        && m_ba.shadingsys().lazy_userdata()) {
+                        mimic_llvm_assign_initial_value(s);
+                    }
                 }
             }
 
@@ -2003,11 +2092,15 @@ struct Analyzer {
         }
     };
 
-    void recursively_mark_varying(Symbol* symbol_to_be_varying,
-                                  bool force = false)
+    OSL_NOINLINE void recursively_mark_varying(Symbol* symbol_to_be_varying,
+                                               bool force = false)
     {
         bool previously_was_uniform = symbol_to_be_varying->is_uniform();
         if (previously_was_uniform | force) {
+            OSL_ASSERT(!symbol_to_be_varying->interactive()
+                       || symbol_to_be_varying->typespec().is_closure()
+                       || symbol_to_be_varying->connected()
+                       || symbol_to_be_varying->connected_down());
             symbol_to_be_varying->make_varying();
             auto range = m_symbols_dependent_upon.equal_range(
                 symbol_to_be_varying);
@@ -2023,7 +2116,123 @@ struct Analyzer {
         }
     };
 
-    void discover_init_symbols()
+    OSL_NOINLINE void mimic_llvm_assign_initial_value(const Symbol& s)
+    {
+        // Don't write over connections!  Connection values are written into
+        // our layer when the earlier layer is run, as part of its code.  So
+        // we just don't need to analyze it here at all.
+        if (s.valuesource() == Symbol::ConnectedVal
+            && !s.typespec().is_closure_based())
+            return;
+        // Closures will be forced to be varying so no need to analyze them further
+        if (s.typespec().is_closure_based())
+            return;
+
+        // interpolated params code flow can go 2 ways here:
+        // 1. userdata pre-placement where the renderer has provided all the
+        //    userdata in a strided buffere where we can just copy it from
+        // 2. call to RendererServices get_userdata to populate the data,
+        //    which can choose not to by returning false, in which case
+        //    the shader's default value or initops must be processed.
+        bool interpolate_param = s.interpolated() && !s.typespec().is_closure();
+        const SymLocationDesc* symloc = nullptr;
+        if (interpolate_param) {
+            // See if userdata input placement has been used for this symbol
+            ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
+                                                  s.name());
+            symloc = m_ba.group().find_symloc(layersym, SymArena::UserData);
+            if (!symloc)
+                symloc = m_ba.group().find_symloc(s.name(), SymArena::UserData);
+            if (symloc != nullptr) {
+                // We copy values from userdata pre-placement which always succeeds
+                // We must track this write, not because it will need to be masked
+                // itself.  But because future writes might happen with a different
+                // set of early out which will cause them to masked.  This detection
+                // can only happen if we tracked the set of early outs during this
+                // initial copy
+
+                // NOTE: as this is the initial assignment to a parameter
+                // there could be no other reads/write to deal with to the symbol
+                OSL_ASSERT(m_write_chronology_by_symbol.find(&s)
+                           == m_write_chronology_by_symbol.end());
+
+                m_write_chronology_by_symbol[&s].push_back(
+                    WriteEvent(m_conditional_symbol_stack.top_pos(),
+                               WriteEvent::UserDataPreplacementCopyOp()));
+            }
+        }
+        // No userdata pre-placement case
+        if (symloc == nullptr) {
+            if (interpolate_param) {
+                OSL_DEV_ONLY(std::cout
+                             << " bind_interpolated_param called for symbol: "
+                             << s.name() << std::endl);
+                // Interpolated params are handled by calling batched version of
+                // osl_bind_interpolated_param.  It will return a mask indicating which
+                // lanes had such userdata was available.
+                // A negation of this mask is then pushed onto the mask stack and used
+                // to initialize any lanes not populated by the
+                // osl_bind_interpolated_param call.
+                // Problem is there is no symbol representing the mask returned by
+                // osl_bind_interpolated_param.  The algorithm to detect if masking
+                // is required works by comparing the chain of Symbols (that are
+                // conditional results) reads and writes are dependent upon.
+                // So we must introduce a temporary symbol to represent this mask
+                // into our dependency tree tracking.
+                m_temp_user_data_exists_symbols.emplace_back(
+                    Strings::tempUserDataExists, TypeSpec(), SymTypeTemp);
+
+                OSL_DEV_ONLY(std::cout
+                             << " m_conditional_symbol_stack.push: "
+                             << &(m_temp_user_data_exists_symbols.back())
+                             << std::endl);
+                m_conditional_symbol_stack.push(
+                    &(m_temp_user_data_exists_symbols.back()));
+            }
+
+            // Set initial value for params (may contain init ops)
+            if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
+                // Handle init ops.
+                discover_symbols_between(s.initbegin(), s.initend());
+            } else {
+                // If no init ops exist, must be assigned an constant initial value
+                // we must track this write, not because it will need to be masked
+                // itself.  But because future writes might happen with a different
+                // set of early out which will cause them to masked.  This detection
+                // can only happen if we tracked the set of early outs during this
+                // initial assignment
+
+                // NOTE: as this is the initial assignment to a parameter
+                // there could be no other reads/write to deal with to the symbol
+                if (m_write_chronology_by_symbol.find(&s)
+                    != m_write_chronology_by_symbol.end()) {
+                    __builtin_trap();
+                }
+                OSL_ASSERT(m_write_chronology_by_symbol.find(&s)
+                           == m_write_chronology_by_symbol.end());
+
+                m_write_chronology_by_symbol[&s].push_back(
+                    WriteEvent(m_conditional_symbol_stack.top_pos(),
+                               WriteEvent::InitialAssignmentOp()));
+
+                // We would check for render outputs and mark it to be masked,
+                // but that requires an opindex, and we have no opindex for parameter assignments
+                // So we will explicitly check for render outputs at code generation
+                // and make their initial assignments masked
+            }
+            if (interpolate_param) {
+                OSL_ASSERT(m_conditional_symbol_stack.top()
+                           == &(m_temp_user_data_exists_symbols.back()));
+                OSL_DEV_ONLY(std::cout
+                             << " m_conditional_symbol_stack.pop: "
+                             << &(m_temp_user_data_exists_symbols.back())
+                             << std::endl);
+                m_conditional_symbol_stack.pop();
+            }
+        }
+    }
+
+    OSL_NOINLINE void discover_init_symbols()
     {
         // NOTE:  The order symbols are discovered should match the flow
         // of build_llvm_code calls coming from build_llvm_instance
@@ -2068,48 +2277,237 @@ struct Analyzer {
             // initializing them lazily.
             if ((s.symtype() == SymTypeParam
                  || s.symtype() == SymTypeOutputParam)
-                && !s.lockgeom() && !s.typespec().is_closure() && !s.connected()
-                && !s.connected_down() && m_ba.shadingsys().lazy_userdata())
+                && !s.typespec().is_closure() && !s.connected()
+                && !s.connected_down()
+                && (s.interactive()
+                    || (s.interpolated() && m_ba.shadingsys().lazy_userdata())))
                 continue;
-            // Set initial value for params (may contain init ops)
-            if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
-                // Handle init ops.
-                discover_symbols_between(s.initbegin(), s.initend());
-            } else {
-                // If no init ops exist, must be assigned an constant initial value
-                // we must track this write, not because it will need to be masked
-                // itself.  But because future writes might happen with a different
-                // set of early out which will cause them to masked.  This detection
-                // can only happen if we tracked the set of early outs during this
-                // initial assignment
 
-                // NOTE: as this is the initial assignment to a parameter
-                // there could be no other reads/write to deal with to the symbol
-                OSL_ASSERT(m_write_chronology_by_symbol.find(&s)
-                           == m_write_chronology_by_symbol.end());
-
-                m_write_chronology_by_symbol[&s].push_back(
-                    WriteEvent(m_conditional_symbol_stack.top_pos()));
-
-                // We would check for render outputs and mark it to be masked,
-                // but that requires an opindex, and we have no opindex for parameter assignments
-                // So we will explicitly check for render outputs at code generation
-                // and make their initial assignments masked
-            }
+            mimic_llvm_assign_initial_value(s);
         }
     }
 
-    void establish_symbols_forced_llvm_bool()
+    OSL_NOINLINE void establish_symbols_forced_llvm_bool()
     {
-        for (Symbol* logical_bool_sym : m_symbols_logically_bool) {
-            if (m_symbols_disqualified_from_bool.find(logical_bool_sym)
-                == m_symbols_disqualified_from_bool.end()) {
-                logical_bool_sym->forced_llvm_bool(true);
+        enum class BoolStatus : int { Unknown = 0, Maybe, No, Yes };
+
+        std::unordered_map<Symbol*, BoolStatus> bool_status_by_symbol;
+        // Check if any upstream connections are to forced_llvm_bool symbols
+        // and mark the destination parameters to BoolStatus::Yes to start.
+        // Discovery goes in order of layers, any upstream symbols
+        // should already be discovered and forced_llvm_bool marked correctly
+        {
+            ShaderInstance* child = inst();
+            int connection_count  = child->nconnections();
+            for (int c = 0; c < connection_count; ++c) {
+                const Connection& con(child->connection(c));
+
+                ShaderInstance* parent = m_ba.group()[con.srclayer];
+
+                Symbol* srcsym(parent->symbol(con.src.param));
+                Symbol* dstsym(child->symbol(con.dst.param));
+                if (!dstsym->typespec().is_int()) {
+                    // only ints can be forced to llvm bool
+                    continue;
+                }
+                // Earlier layers should already be discovered and uniformity mapped to
+                // all symbols.  If source symbol is varying,
+                // then the dest must be made varying as well
+                if (srcsym->forced_llvm_bool()) {
+                    OSL_ASSERT(srcsym->typespec().is_int());
+                    OSL_DEV_ONLY(
+                        std::cout
+                        << "symbol " << srcsym->unmangled().c_str()
+                        << " from layer " << con.srclayer
+                        << " is forced_llvm_bool and connected to symbol "
+                        << dstsym->unmangled().c_str() << std::endl);
+                    bool_status_by_symbol[dstsym] = BoolStatus::Yes;
+                }
+            }
+        }
+
+        // Evalaulate writes to all symbols to see if all writes are from ops
+        // whose result is always or maybe bool depending on the BoolStatus
+        // of its inputs.
+        std::unordered_multimap<Symbol*, Symbol*> dependencies_by_symbol;
+        FOREACH_SYM(Symbol & s, inst())
+        {
+            Symbol* sym = &s;
+            if (!sym->typespec().is_int()) {
+                // only ints can be forced to llvm bool
+                continue;
+            }
+
+            BoolStatus& b_status = bool_status_by_symbol[sym];
+            if ((sym->symtype() == SymTypeOutputParam)
+                && sym->renderer_output()) {
+                // Renderer output should NOT be force to bool
+                // NOTE: In future with output placement or render service bitcode
+                // handling copying results out and the ability to directly
+                // access symbol data from the heap is removed, then we could
+                // allow these to be force to bool
+                b_status = BoolStatus::No;
+                // Once proven it can't be boolean,
+                // no need for any futhre checkings
+                continue;
+            }
+
+            auto lookup = m_write_chronology_by_symbol.find(sym);
+            if (lookup != m_write_chronology_by_symbol.end()) {
+                auto& write_chronology = lookup->second;
+                if (!write_chronology.empty()) {
+                    auto write_end = write_chronology.end();
+                    for (auto write_iter = write_chronology.begin();
+                         write_iter != write_end; ++write_iter) {
+                        // We don't bother masking initial assignment
+                        if (write_iter->is_initial_assignment()) {
+                            // the initial assignment should be the 1st write entry,
+                            // so bool status should be unknown
+                            OSL_ASSERT(b_status == BoolStatus::Unknown);
+                            // Must be
+                            int initial_value = sym->get_int();
+                            // When initial_value is 0 or 1 we could
+                            // treat symbol as boolean
+                            if ((initial_value == 0 || initial_value == 1)) {
+                                if (b_status == BoolStatus::Unknown) {
+                                    b_status = BoolStatus::Yes;
+                                }
+                            } else {
+                                b_status = BoolStatus::No;
+                                // Once proven it can't be boolean,
+                                // no need to continue checking additional writes
+                                break;
+                            }
+                        } else {
+                            int op_index   = write_iter->op_num();
+                            Opcode& opcode = m_opcodes[op_index];
+
+                            // Return values are the 0th argument.
+                            bool is_return_val = (sym == opargsym(opcode, 0));
+                            // need to ensure write came from return value
+                            // and not result argument of getattribute;
+                            if (is_return_val
+                                && is_op_return_always_logically_boolean(
+                                    opcode.opname())) {
+                                if (b_status == BoolStatus::Unknown) {
+                                    b_status = BoolStatus::Yes;
+                                }
+                            } else {
+                                if (is_return_val
+                                    && could_op_return_be_logically_boolean(
+                                        opcode.opname())) {
+                                    Opcode& opcode = m_opcodes[op_index];
+                                    int arg_count  = opcode.nargs();
+                                    for (int arg_index = 0;
+                                         arg_index < arg_count; ++arg_index) {
+                                        auto arg_sym = opargsym(opcode,
+                                                                arg_index);
+                                        if (opcode.argread(arg_index)) {
+                                            // track what symbols are read by the op as they
+                                            // all must be logically bool for the symbol to be as well
+                                            // We defer checking these dependencies until after
+                                            // we have finished 1st pass over symbols
+                                            dependencies_by_symbol.insert(
+                                                std::make_pair(sym, arg_sym));
+                                        }
+                                    }
+                                    b_status = BoolStatus::Maybe;
+                                } else {
+                                    if (b_status == BoolStatus::Maybe) {
+                                        dependencies_by_symbol.erase(sym);
+                                    }
+                                    b_status = BoolStatus::No;
+                                    // Once proven it can't be boolean,
+                                    // no need to continue checking additional writes
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (b_status == BoolStatus::Unknown) {
+                // If there are no writes to a symbol,
+                // we can't prove its bool
+                b_status = BoolStatus::No;
+            }
+        }
+
+        // Resolve any BoolStatus::Maybe symbols by repeatedly checking bool
+        // status of their dependencies until they all are Yes or No.
+        std::unordered_multimap<Symbol*, Symbol*> next_dependencies_by_symbol;
+        while (!dependencies_by_symbol.empty()) {
+            auto it                 = dependencies_by_symbol.begin();
+            auto end_it             = dependencies_by_symbol.end();
+            Symbol* check_sym       = nullptr;
+            BoolStatus check_status = BoolStatus::Yes;
+            for (;; ++it) {
+                Symbol* maybe_bool_sym = (it != end_it) ? it->first : nullptr;
+                if (check_sym && (check_sym != maybe_bool_sym)) {
+                    // we moved onto the next symbol which means we must have
+                    // run out of dependencies to check, record the status
+                    OSL_ASSERT(
+                        check_status != BoolStatus::Maybe
+                        || (next_dependencies_by_symbol.count(check_sym) > 0));
+                    OSL_ASSERT(bool_status_by_symbol[check_sym]
+                               == BoolStatus::Maybe);
+                    bool_status_by_symbol[check_sym] = check_status;
+
+                    // For the next symbol assume its bool
+                    // until we find a dependency that is not.
+                    check_status = BoolStatus::Yes;
+                }
+                if (maybe_bool_sym == nullptr) {
+                    break;
+                }
+                if (check_status == BoolStatus::No) {
+                    // We previously proved it to not be bool,
+                    // so can skip to next symbol
+                    continue;
+                }
+                check_sym                  = maybe_bool_sym;
+                Symbol* arg_sym            = it->second;
+                BoolStatus arg_bool_status = bool_status_by_symbol[arg_sym];
+                OSL_DEV_ONLY(
+                    std::cout << "check_sym[" << check_sym->name().c_str()
+                              << "] depends on arg_sym["
+                              << arg_sym->name().c_str() << "] with BoolStatus["
+                              << int(arg_bool_status) << "]" << std::endl;)
+                OSL_ASSERT(arg_bool_status != BoolStatus::Unknown);
+                if (arg_bool_status == BoolStatus::Maybe) {
+                    check_status = BoolStatus::Maybe;
+                    // Defer to later pass
+                    next_dependencies_by_symbol.insert(*it);
+                } else if (arg_bool_status == BoolStatus::No) {
+                    if (check_status == BoolStatus::Maybe) {
+                        next_dependencies_by_symbol.erase(check_sym);
+                    }
+                    check_status = BoolStatus::No;
+                } else {
+                    OSL_ASSERT(arg_bool_status == BoolStatus::Yes);
+                    OSL_ASSERT(check_status == BoolStatus::Yes);
+                    // Continue checking dependencies until we are out
+                }
+            }
+            dependencies_by_symbol.clear();
+            std::swap(next_dependencies_by_symbol, dependencies_by_symbol);
+        };
+
+        // BoolStatus for all symbols should be determined.
+        // Update the symbol's flag for forced_llvm_bool
+        for (auto& val : bool_status_by_symbol) {
+            Symbol* sym = val.first;
+            OSL_ASSERT(sym->typespec().is_int());
+            BoolStatus status = val.second;
+            if (status == BoolStatus::Yes) {
+                sym->forced_llvm_bool(true);
+            } else {
+                OSL_ASSERT(status == BoolStatus::No);
             }
         }
     }
 
-    void simulate_reading_output_params()
+    OSL_NOINLINE void simulate_reading_output_params()
     {
         // Now that all of the instructions have been discovered, we need to
         // make sure any writes to the output parameters that happened at
@@ -2134,7 +2532,7 @@ struct Analyzer {
         }
     }
 
-    void establish_dependencies_for_masked_ops()
+    OSL_NOINLINE void establish_dependencies_for_masked_ops()
     {
         // At this point we should be done figuring out which instructions require masking
         // So those instructions will be dependent on the mask and that mask was
@@ -2245,7 +2643,7 @@ struct Analyzer {
                      << std::endl);
     }
 
-    void push_varying_of_shader_globals()
+    OSL_NOINLINE void push_varying_of_shader_globals()
     {
         for (auto&& s : inst()->symbols()) {
             if (s.symtype() == SymTypeGlobal) {
@@ -2269,7 +2667,7 @@ struct Analyzer {
         }
     }
 
-    void make_renderer_outputs_varying()
+    OSL_NOINLINE void make_renderer_outputs_varying()
     {
         // Mark all output parameters as varying to catch
         // output parameters written to by uniform variables,
@@ -2289,7 +2687,7 @@ struct Analyzer {
         }
     }
 
-    void make_interpolated_parameters_varying()
+    OSL_NOINLINE void make_interpolated_parameters_varying()
     {
         // Mark all interpolated parameters as varying,
         // As we expect interpolated data,  get_userdata will
@@ -2297,24 +2695,27 @@ struct Analyzer {
         // our symbols appropriately!
         FOREACH_PARAM(Symbol & s, inst())
         {
-            if (s.everread() && !s.lockgeom() && !s.typespec().is_closure()) {
+            if (s.everread() && s.interpolated() && !s.interactive()
+                && !s.typespec().is_closure()) {
                 recursively_mark_varying(&s);
             }
         }
     }
 
-    void make_closures_varying()
+    OSL_NOINLINE void make_closures_varying()
     {
         // We assume that closures are always stored as varying pointers
-        FOREACH_PARAM(Symbol & s, inst())
+        FOREACH_SYM(Symbol & s, inst())
         {
-            if (s.typespec().is_closure()) {
+            if (s.typespec().is_closure_based()) {
+                OSL_DEV_ONLY(std::cout << "closure symbol " << s.name().c_str()
+                                       << " marked varying." << std::endl);
                 recursively_mark_varying(&s);
             }
         }
     }
 
-    void push_varying_of_upstream_connections()
+    OSL_NOINLINE void push_varying_of_upstream_connections()
     {
         OSL_DEV_ONLY(std::cout << "connections to layer begin" << std::endl);
         // Check if any upstream connections are to varying symbols
@@ -2347,7 +2748,7 @@ struct Analyzer {
         OSL_DEV_ONLY(std::cout << "connections to layer end" << std::endl);
     }
 
-    void push_varying_of_implicitly_varying_ops()
+    OSL_NOINLINE void push_varying_of_implicitly_varying_ops()
     {
         OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps begin"
                                << std::endl);
@@ -2359,7 +2760,7 @@ struct Analyzer {
                                << std::endl);
     }
 
-    void process_deferred_masking()
+    OSL_NOINLINE void process_deferred_masking()
     {
         // Should only be called after establish_dependencies_for_masked_ops has been called
         for (int op_index : m_deferred_op_indices_to_be_masked) {
@@ -2396,6 +2797,11 @@ BatchedAnalysis::analyze_layer(ShaderInstance* inst)
     analyzer.discover_symbols_between(inst->maincodebegin(),
                                       inst->maincodeend());
 
+    // build_llvm_code generates code to copy connected symbol values
+    // possibly llvm_assign_initial_value for unitialized values.
+    // As that is data moving downstream, we don't think that would affect
+    // the varying or masking requirements of the code generated above.
+
     analyzer.establish_symbols_forced_llvm_bool();
 
     analyzer.simulate_reading_output_params();
@@ -2415,6 +2821,31 @@ BatchedAnalysis::analyze_layer(ShaderInstance* inst)
     dump_symbol_uniformity(inst);
     dump_layer(inst);
 #endif
+    if (shadingsys().dump_forced_llvm_bool_symbols()) {
+        FOREACH_SYM(Symbol & s, inst)
+        {
+            if (s.forced_llvm_bool()) {
+                std::cout << s.unmangled() << " is forced llvm bool."
+                          << std::endl;
+            }
+        }
+    }
+    if (shadingsys().dump_uniform_symbols()) {
+        FOREACH_SYM(Symbol & s, inst)
+        {
+            if (s.is_uniform()) {
+                std::cout << s.unmangled() << " is uniform." << std::endl;
+            }
+        }
+    }
+    if (shadingsys().dump_varying_symbols()) {
+        FOREACH_SYM(Symbol & s, inst)
+        {
+            if (s.is_varying()) {
+                std::cout << s.unmangled() << " is varying." << std::endl;
+            }
+        }
+    }
 }
 
 

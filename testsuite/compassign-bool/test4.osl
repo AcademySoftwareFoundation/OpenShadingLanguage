@@ -1,0 +1,30 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+int init_green() {
+    return (int(u*16) != int(v*16));
+}
+
+shader test4 (
+             int green_param = init_green(),
+             output int blue_param = (u > v),
+             output color Cout = color(0))
+{
+    int red = 255;
+    if (P[0] > 0.5) 
+    {
+        // If this forces the symbol red to be boolean
+        // we would loose its initialization value of 255 when it gets clamped to 0-1
+        red = (u == v);
+    }
+
+    int green = green_param;
+    if (int(P[0]*16)%2 == 0) {
+        green = (P[1] > 0.5);
+    }
+    //printf("blue=%d\n", blue);
+    int blue = blue_param & (u < 0.5);
+
+    Cout = color(red/255.0, green/2.0, float(blue)/2);
+}

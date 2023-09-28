@@ -1,0 +1,10 @@
+Compiled test.osl -> test.oso
+get attribute succeeded with SHADING INDEX 0
+SHADING INDEX is even
+get attribute succeeded with SHADING INDEX 1
+SHADING INDEX is odd
+get attribute succeeded with SHADING INDEX 2
+SHADING INDEX is even
+get attribute succeeded with SHADING INDEX 3
+SHADING INDEX is odd
+

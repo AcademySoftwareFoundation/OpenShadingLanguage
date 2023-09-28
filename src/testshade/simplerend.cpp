@@ -115,6 +115,7 @@ static ustring u_camera("camera"), u_screen("screen");
 static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
 static ustring u_s("s"), u_t("t");
+static ustring u_red("red"), u_green("green"), u_blue("blue");
 static TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2(TypeDesc::INT, 2);
@@ -475,6 +476,12 @@ SimpleRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
         return true;
     }
 
+    if (object.empty() && name == "shading:index"
+        && type == TypeDesc::TypeInt) {
+        *(int*)val = OSL::get_shade_index(sg);
+        return true;
+    }
+
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
@@ -520,6 +527,31 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
+    if (name == u_red && type == TypeDesc::TypeFloat && sg->P.x > 0.5f) {
+        ((float*)val)[0] = sg->u;
+        if (derivatives) {
+            ((float*)val)[1] = sg->dudx;
+            ((float*)val)[2] = sg->dudy;
+        }
+        return true;
+    }
+    if (name == u_green && type == TypeDesc::TypeFloat && sg->P.x < 0.5f) {
+        ((float*)val)[0] = sg->v;
+        if (derivatives) {
+            ((float*)val)[1] = sg->dvdx;
+            ((float*)val)[2] = sg->dvdy;
+        }
+        return true;
+    }
+    if (name == u_blue && type == TypeDesc::TypeFloat
+        && ((static_cast<int>(sg->P.y * 12) % 2) == 0)) {
+        ((float*)val)[0] = 1.0f - sg->u;
+        if (derivatives) {
+            ((float*)val)[1] = -sg->dudx;
+            ((float*)val)[2] = -sg->dudy;
+        }
+        return true;
+    }
 
     if (const OIIO::ParamValue* p = userdata.find_pv(name, type)) {
         size_t size = p->type().size();
@@ -556,6 +588,8 @@ SimpleRenderer::build_attribute_getter(
         "rs_get_attribute_constant_float3");
     static const OIIO::ustring rs_get_attribute_constant_float4(
         "rs_get_attribute_constant_float4");
+
+    static const OIIO::ustring rs_get_shade_index("rs_get_shade_index");
 
     static const OIIO::ustring rs_get_attribute("rs_get_attribute");
 
@@ -620,6 +654,11 @@ SimpleRenderer::build_attribute_getter(
             && type == OSL::TypeFloat) {
             spec.set(rs_get_attribute_constant_float, 3.14159f,
                      AttributeSpecBuiltinArg::Derivatives);
+        } else if (!is_object_lookup && attribute_name
+                   && *attribute_name == ustring("shading:index")
+                   && type == OSL::TypeInt) {
+            spec.set(rs_get_shade_index,
+                     AttributeSpecBuiltinArg::ShaderGlobalsPointer);
         } else {
             spec.set(rs_get_attribute,
                      AttributeSpecBuiltinArg::ShaderGlobalsPointer,

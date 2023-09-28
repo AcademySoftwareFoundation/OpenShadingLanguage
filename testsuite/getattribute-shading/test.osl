@@ -1,0 +1,21 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+
+shader
+test ()
+{
+    int shadingIndex;
+    if( getattribute( "shading:index", shadingIndex ) )
+    {
+        printf( "get attribute succeeded with SHADING INDEX %d\n", shadingIndex );
+        if (shadingIndex % 2 == 0)
+        {
+            printf( "SHADING INDEX is even\n" );
+        } else {
+            printf( "SHADING INDEX is odd\n" );
+        }
+    }
+}

@@ -1,0 +1,7 @@
+surface constant
+(
+    float x = 1
+)
+{
+    Ci = x * emission();
+}

@@ -206,10 +206,19 @@ function ( CUDA_SHADEOPS_COMPILE prefix output_bc output_ptx input_srcs headers 
         list ( APPEND shadeops_bc_list ${shadeops_bc} )
     endforeach ()
 
+    if (LLVM_NEW_PASS_MANAGER)
+      # --nvptx-assign-valid-global-names does not appaer to be supported
+      # by either opt or llc with the new pass manager.
+      string(REPLACE "-O" "O" opt_tool_flags ${CUDA_OPT_FLAG_CLANG})
+      set (opt_tool_flags -passes="default<${opt_tool_flags}>")
+    else()
+      set (opt_tool_flags ${CUDA_OPT_FLAG_CLANG} --nvptx-assign-valid-global-names)
+    endif ()
+
     # Link all of the individual LLVM bitcode files, and emit PTX for the linked bitcode
     add_custom_command ( OUTPUT ${linked_bc} ${linked_ptx}
         COMMAND ${LLVM_LINK_TOOL} ${shadeops_bc_list} -o ${linked_bc}
-        COMMAND ${LLVM_OPT_TOOL} ${CUDA_OPT_FLAG_CLANG} --nvptx-assign-valid-global-names ${linked_bc} -o ${linked_bc}
+        COMMAND ${LLVM_OPT_TOOL} ${opt_tool_flags} ${linked_bc} -o ${linked_bc}
         COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH} ${linked_bc} -o ${linked_ptx}
         # This script converts all of the .weak functions defined in the PTX into .visible functions.
         COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"

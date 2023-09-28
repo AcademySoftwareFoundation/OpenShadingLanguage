@@ -5527,8 +5527,18 @@ LLVM_Util::op_mod(llvm::Value* a, llvm::Value* b)
 {
     if ((a->getType() == type_float() && b->getType() == type_float())
         || (a->getType() == type_wide_float()
-            && b->getType() == type_wide_float()))
+            && b->getType() == type_wide_float())) {
+#if OSL_LLVM_VERSION >= 160
+        if (m_target_isa == TargetISA::NVPTX) {
+            // Since llvm/llvm-project@2c3f82b, FRem generates an
+            // optix.ptx.testp.infinite.f32 intrinsic that OptiX does not
+            // currently implement. Work around with custom code.
+            llvm::Value* N = op_float_to_int(op_div(a, b));
+            return op_sub(a, op_mul(op_int_to_float(N), b));
+        }
+#endif
         return builder().CreateFRem(a, b);
+    }
     if ((a->getType() == type_int() && b->getType() == type_int())
         || (a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateSRem(a, b);

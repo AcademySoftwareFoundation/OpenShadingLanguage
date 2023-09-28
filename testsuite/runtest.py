@@ -80,7 +80,7 @@ command = ""
 outputs = [ "out.txt" ]    # default
 
 # Control image differencing
-failureok = 1
+failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02

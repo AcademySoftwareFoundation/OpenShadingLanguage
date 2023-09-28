@@ -161,9 +161,8 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     endif ()
 endif ()
 
-# Use opaque pointers starting with LLVM 15
-# Except when using OptiX, due to issue noted in BackendLLVM::llvm_store_value
-if (${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
+# Use opaque pointers starting with LLVM 16
+if (${LLVM_VERSION} VERSION_GREATER_EQUAL 16.0)
   set(LLVM_OPAQUE_POINTERS ON)
   add_definitions (-DOSL_LLVM_OPAQUE_POINTERS)
 else()

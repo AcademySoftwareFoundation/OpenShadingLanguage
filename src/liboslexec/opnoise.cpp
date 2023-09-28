@@ -704,6 +704,13 @@ struct GenericNoise {
                    || name == STRING_PARAMS(snoise)) {
             SNoise snoise;
             snoise(result, s);
+        } else if (name == STRING_PARAMS(cell)) {
+            CellNoise cellnoise;
+            cellnoise(result.val(), s.val());
+            result.clear_d();
+        } else if (name == STRING_PARAMS(gabor)) {
+            GaborNoise gnoise;
+            gnoise(name, result, s, sg, opt);
         } else if (name == STRING_PARAMS(simplexnoise)
                    || name == STRING_PARAMS(simplex)) {
             SimplexNoise simplexnoise;
@@ -712,13 +719,6 @@ struct GenericNoise {
                    || name == STRING_PARAMS(usimplex)) {
             USimplexNoise usimplexnoise;
             usimplexnoise(result, s);
-        } else if (name == STRING_PARAMS(cell)) {
-            CellNoise cellnoise;
-            cellnoise(result.val(), s.val());
-            result.clear_d();
-        } else if (name == STRING_PARAMS(gabor)) {
-            GaborNoise gnoise;
-            gnoise(name, result, s, sg, opt);
         } else if (name == STRING_PARAMS(null)) {
             NullNoise noise;
             noise(result, s);
@@ -752,6 +752,13 @@ struct GenericNoise {
                    || name == STRING_PARAMS(snoise)) {
             SNoise snoise;
             snoise(result, s, t);
+        } else if (name == STRING_PARAMS(cell)) {
+            CellNoise cellnoise;
+            cellnoise(result.val(), s.val(), t.val());
+            result.clear_d();
+        } else if (name == STRING_PARAMS(gabor)) {
+            GaborNoise gnoise;
+            gnoise(name, result, s, t, sg, opt);
         } else if (name == STRING_PARAMS(simplexnoise)
                    || name == STRING_PARAMS(simplex)) {
             SimplexNoise simplexnoise;
@@ -760,13 +767,6 @@ struct GenericNoise {
                    || name == STRING_PARAMS(usimplex)) {
             USimplexNoise usimplexnoise;
             usimplexnoise(result, s, t);
-        } else if (name == STRING_PARAMS(cell)) {
-            CellNoise cellnoise;
-            cellnoise(result.val(), s.val(), t.val());
-            result.clear_d();
-        } else if (name == STRING_PARAMS(gabor)) {
-            GaborNoise gnoise;
-            gnoise(name, result, s, t, sg, opt);
         } else if (name == STRING_PARAMS(null)) {
             NullNoise noise;
             noise(result, s, t);

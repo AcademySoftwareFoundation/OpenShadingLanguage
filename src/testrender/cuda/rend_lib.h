@@ -13,7 +13,8 @@ OSL_NAMESPACE_ENTER
 // Create an OptiX variable for each of the 'standard' strings declared in
 // <OSL/strdecls.h>.
 namespace DeviceStrings {
-#define STRING_PARAMS(x) UStringHash::Hash(__OSL_STRINGIFY(x))
+#define STRING_PARAMS(x) \
+    UStringHash::HashConstEval<UStringHash::Hash(__OSL_STRINGIFY(x))>
 // Don't declare anything
 #define STRDECL(str, var_name)
 

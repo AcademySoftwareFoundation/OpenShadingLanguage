@@ -51,7 +51,8 @@ class ShadingSystemImpl;
 }
 
 #ifdef __CUDA_ARCH__
-#    define STRING_PARAMS(x) UStringHash::Hash(__OSL_STRINGIFY(x))
+#    define STRING_PARAMS(x) \
+        UStringHash::HashConstEval<UStringHash::Hash(__OSL_STRINGIFY(x))>
 #else
 #    define STRING_PARAMS(x) StringParams::x
 #endif

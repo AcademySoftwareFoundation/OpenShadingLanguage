@@ -147,9 +147,6 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0
          "If you are using LLVM 15 or higher, you should also use clang version "
          "15 or higher, or you may get build errors.${ColorReset}\n")
 endif ()
-if (LLVM_VERSION VERSION_GREATER_EQUAL 18.0)
-    message (ERROR "${ColorYellow}OSL is not yet compatible with LLVM 18.${ColorReset}\n")
-endif ()
 if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     if (CMAKE_CXX_STANDARD VERSION_LESS 17)
         message (WARNING "${ColorYellow}LLVM 16+ requires C++17 or higher. "

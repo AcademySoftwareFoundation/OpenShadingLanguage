@@ -1871,12 +1871,30 @@ BackendLLVM::run()
                 fn.addFnAttr("osl-lib-function", "true");
             }
 
+            // Replace characters not supported in ptx, matching the LLVM
+            // NVPTXAssignValidGlobalNames pass.
+            auto cleanup_name = [&](llvm::StringRef name) {
+                std::string valid_name;
+                llvm::raw_string_ostream valid_name_stream(valid_name);
+                for (char c : name) {
+                    if (c == '.' || c == '@') {
+                        valid_name_stream << "_$_";
+                    } else {
+                        valid_name_stream << c;
+                    }
+                }
+                return valid_name_stream.str();
+            };
+
             // Mark all global variables extern and discard their initializers.
             // Global variables are defined in the shadeops PTX file.
             for (llvm::GlobalVariable& global : ll.module()->globals()) {
                 global.setLinkage(llvm::GlobalValue::ExternalLinkage);
                 global.setExternallyInitialized(true);
                 global.setInitializer(nullptr);
+                std::string valid_name = cleanup_name(global.getName());
+                if (valid_name != global.getName())
+                    global.setName(valid_name);
             }
         }
         OSL_ASSERT(ll.module());

@@ -212,9 +212,9 @@ if (OSL_USE_OPTIX)
 
         checked_find_package (CUDA REQUIRED
                              VERSION_MIN 9.0
-                             RECOMMENDED_MIN 11.0
-                             RECOMMENDED_MIN_REASON
-                                "We don't actively test Cuda older than 11"
+                             RECOMMEND_MIN 11.0
+                             RECOMMEND_MIN_REASON
+                                "We don't actively test CUDA older than 11"
                              PRINT CUDA_INCLUDES)
         set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
         include_directories (BEFORE "${CUDA_INCLUDES}")

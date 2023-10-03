@@ -9,6 +9,7 @@ Release 1.13 -- October?? 2023 ?? (compared to 1.12)
 * The minimum version OpenImageIO has been raised from 2.2 to 2.4. [#1591](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1591)  [#1722](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1722)
   (to 2.3 in 1.13.0.3, to 2.4 in 1.13.4.0)
 * Raise minimum CMake dependency from 3.12 to 3.15 [#1724](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1724) (1.13.5.0)
+* Raise minimum Imath/OpenEXR from 2.3 to 2.4.
 
 ### OSL Language and oslc compiler:
 * There have been no substantive changes to the OSL language in this release.

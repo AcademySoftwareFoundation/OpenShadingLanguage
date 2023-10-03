@@ -82,10 +82,10 @@ checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 # IlmBase & OpenEXR
 checked_find_package (OpenEXR REQUIRED
-                      VERSION_MIN 2.3
-                      RECOMMEND_MIN 2.4
+                      VERSION_MIN 2.4
+                      RECOMMEND_MIN 2.5
                       RECOMMEND_MIN_REASON
-                        "Even extremely critical patches are no longer supplied to < 2.4"
+                        "Even extremely critical patches are no longer supplied to < 2.5"
                       PRINT IMATH_INCLUDES
                      )
 # Force Imath includes to be before everything else to ensure that we have

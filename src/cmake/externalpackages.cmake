@@ -192,8 +192,11 @@ if (USE_CUDA OR USE_OPTIX)
         endif ()
 
         checked_find_package (CUDA REQUIRED
-                            VERSION_MIN 8.0
-                            PRINT CUDA_INCLUDES)
+                             VERSION_MIN 9.0
+                             RECOMMEND_MIN 11.0
+                             RECOMMEND_MIN_REASON
+                                "We don't actively test CUDA older than 11"
+                             PRINT CUDA_INCLUDES)
         set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
         include_directories (BEFORE "${CUDA_INCLUDES}")
 

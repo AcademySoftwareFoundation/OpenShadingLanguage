@@ -45,7 +45,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   on the OSL side to be compatible.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
-    * [Cuda](https://developer.nvidia.com/cuda-downloads) 8.0 or higher.
+    * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher.
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 5.1 or higher
       (though 7.0+ is highly recommended).
 

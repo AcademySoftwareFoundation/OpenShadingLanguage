@@ -158,7 +158,7 @@ jobs:
             pybind11_ver: v2.10.0
             simd: avx2,f16c
             skip_tests: 1
-            setenvs: export OSL_CMAKE_FLAGS="-DUSE_OPTIX=1" OPTIX_VERSION=7.0
+            setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
           - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.3 no-simd exr2.3
             nametag: linux-oldest

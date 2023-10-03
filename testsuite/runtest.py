@@ -80,7 +80,7 @@ command = ""
 outputs = [ "out.txt" ]    # default
 
 # Control image differencing
-failureok = 1
+failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
@@ -125,9 +125,7 @@ else :
     if not os.path.exists("./data") :
         os.symlink (test_source_dir, "./data")
 
-pythonbin = 'python'
-if os.getenv("PYTHON_VERSION") :
-    pythonbin += os.getenv("PYTHON_VERSION")
+pythonbin = sys.executable
 #print ("pythonbin = ", pythonbin)
 
 ###########################################################################

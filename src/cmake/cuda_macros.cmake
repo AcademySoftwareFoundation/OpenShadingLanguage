@@ -73,7 +73,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
     foreach (def ${CURRENT_DEFINITIONS})
         set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
     endforeach()
-    set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${SIMD_COMPILE_FLAGS} ${CSTD_FLAGS})
+    set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${CSTD_FLAGS})
 
     # Setup the bitcode generator
     if (NOT LLVM_BC_GENERATOR)

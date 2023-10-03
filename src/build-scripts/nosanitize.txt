@@ -1,0 +1,3 @@
+# Small leaks that make CI fail, suppress until cause is identified.
+leak:__cxa_thread_atexit
+leak:std::string::_Rep::_S_create

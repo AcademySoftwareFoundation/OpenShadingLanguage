@@ -82,10 +82,10 @@ checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 # IlmBase & OpenEXR
 checked_find_package (OpenEXR REQUIRED
-                      VERSION_MIN 2.3
-                      RECOMMEND_MIN 2.4
+                      VERSION_MIN 2.4
+                      RECOMMEND_MIN 2.5
                       RECOMMEND_MIN_REASON
-                        "Even extremely critical patches are no longer supplied to < 2.4"
+                        "Even extremely critical patches are no longer supplied to < 2.5"
                       PRINT IMATH_INCLUDES
                      )
 # Force Imath includes to be before everything else to ensure that we have
@@ -210,8 +210,11 @@ if (OSL_USE_OPTIX)
         endif ()
 
         checked_find_package (CUDA REQUIRED
-                            VERSION_MIN 8.0
-                            PRINT CUDA_INCLUDES)
+                             VERSION_MIN 9.0
+                             RECOMMEND_MIN 11.0
+                             RECOMMEND_MIN_REASON
+                                "We don't actively test CUDA older than 11"
+                             PRINT CUDA_INCLUDES)
         set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
         include_directories (BEFORE "${CUDA_INCLUDES}")
 

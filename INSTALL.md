@@ -46,7 +46,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.
-    * [Cuda](https://developer.nvidia.com/cuda-downloads) 8.0 or higher.
+    * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
+      recommended that you use 11.0 or higher.
 
 * [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.81)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/openexr) 2.3

@@ -117,7 +117,7 @@ checked_find_package (pugixml REQUIRED
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
                       VERSION_MIN 9.0
-                      VERSION_MAX 15.9
+                      VERSION_MAX 17.9
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
@@ -148,7 +148,6 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0
          "15 or higher, or you may get build errors.${ColorReset}\n")
 endif ()
 if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
-    message (ERROR "${ColorYellow}OSL is not yet compatible with LLVM 16.${ColorReset}\n")
     if (CMAKE_CXX_STANDARD VERSION_LESS 17)
         message (WARNING "${ColorYellow}LLVM 16+ requires C++17 or higher. "
             "Please set CMAKE_CXX_STANDARD to 17 or higher.${ColorReset}\n")

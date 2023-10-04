@@ -30,4 +30,7 @@ Hash(const char* s)
 
     return len ? OIIO::farmhash::inlined::Hash(s, len) : 0;
 }
+
+// Template to ensure the hash is evaluated at compile time.
+template<size_t V> static constexpr size_t HashConstEval = V;
 }  // namespace UStringHash

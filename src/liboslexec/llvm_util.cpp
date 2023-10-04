@@ -134,20 +134,17 @@ OSL_NAMESPACE_ENTER
 // Convert our cspan<> to llvm's ArrayRef.
 template<class T>
 inline llvm::ArrayRef<T>
-makeArrayRef(cspan<T> A)
+toArrayRef(cspan<T> A)
 {
     return { A.data(), size_t(A.size()) };
 }
 
-
-// Convert our span<> to llvm's MutableArrayRef.
-template<typename T>
-inline llvm::MutableArrayRef<T>
-makeMutableArrayRef(span<T> A)
+template<typename T, size_t N>
+llvm::ArrayRef<T>
+toArrayRef(const T (&Arr)[N])
 {
-    return { A.data(), size_t(A.size()) };
+    return llvm::ArrayRef<T>(Arr);
 }
-
 
 
 namespace pvt {
@@ -296,10 +293,15 @@ public:
         mm->notifyObjectLoaded(RTDyld, Obj);
     }
 
-    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                                uintptr_t RODataSize, uint32_t RODataAlign,
-                                uintptr_t RWDataSize,
-                                uint32_t RWDataAlign) override
+    void reserveAllocationSpace(
+#if OSL_LLVM_VERSION >= 160
+        uintptr_t CodeSize, llvm::Align CodeAlign, uintptr_t RODataSize,
+        llvm::Align RODataAlign, uintptr_t RWDataSize, llvm::Align RWDataAlign
+#else
+        uintptr_t CodeSize, uint32_t CodeAlign, uintptr_t RODataSize,
+        uint32_t RODataAlign, uintptr_t RWDataSize, uint32_t RWDataAlign
+#endif
+        ) override
     {
         return mm->reserveAllocationSpace(CodeSize, CodeAlign, RODataSize,
                                           RODataAlign, RWDataSize, RWDataAlign);
@@ -357,7 +359,10 @@ public:
     {
         mm->registerEHFrames(Addr, LoadAddr, Size);
     }
-    void deregisterEHFrames() override { mm->deregisterEHFrames(); }
+    void deregisterEHFrames() override
+    {
+        mm->deregisterEHFrames();
+    }
 
     uint64_t getSymbolAddress(const std::string& Name) override
     {
@@ -607,7 +612,9 @@ LLVM_Util::SetupLLVM()
     llvm::initializeAnalysis(registry);
     llvm::initializeTransformUtils(registry);
     llvm::initializeInstCombine(registry);
+#if OSL_LLVM_VERSION < 160
     llvm::initializeInstrumentation(registry);
+#endif
     llvm::initializeGlobalISel(registry);
     llvm::initializeTarget(registry);
     llvm::initializeCodeGen(registry);
@@ -3180,10 +3187,14 @@ LLVM_Util::type_union(cspan<llvm::Type*> types)
     size_t max_size  = 0;
     size_t max_align = 1;
     for (auto t : types) {
-        size_t size  = target.getTypeStoreSize(t);
+        size_t size = target.getTypeStoreSize(t);
+#if OSL_LLVM_VERSION >= 160
+        size_t align = target.getABITypeAlign(t).value();
+#else
         size_t align = target.getABITypeAlignment(t);
-        max_size     = size > max_size ? size : max_size;
-        max_align    = align > max_align ? align : max_align;
+#endif
+        max_size  = size > max_size ? size : max_size;
+        max_align = align > max_align ? align : max_align;
     }
     size_t padding = (max_size % max_align) ? max_align - (max_size % max_align)
                                             : 0;
@@ -3211,7 +3222,7 @@ llvm::Type*
 LLVM_Util::type_struct(cspan<llvm::Type*> types, const std::string& name,
                        bool is_packed)
 {
-    return llvm::StructType::create(context(), makeArrayRef(types), name,
+    return llvm::StructType::create(context(), toArrayRef(types), name,
                                     is_packed);
 }
 
@@ -3266,7 +3277,7 @@ llvm::FunctionType*
 LLVM_Util::type_function(llvm::Type* rettype, cspan<llvm::Type*> params,
                          bool varargs)
 {
-    return llvm::FunctionType::get(rettype, makeArrayRef(params), varargs);
+    return llvm::FunctionType::get(rettype, toArrayRef(params), varargs);
 }
 
 
@@ -3309,7 +3320,11 @@ size_t
 LLVM_Util::llvm_alignmentof(llvm::Type* type) const
 {
     const llvm::DataLayout& data_layout = m_llvm_exec->getDataLayout();
+#if OSL_LLVM_VERSION >= 160
+    return data_layout.getPrefTypeAlign(type).value();
+#else
     return data_layout.getPrefTypeAlignment(type);
+#endif
 }
 
 std::string
@@ -3585,9 +3600,9 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
 
             llvm::Value* args[1] = { w8_float_masks[0] };
             std::array<llvm::Value*, 2> int8_masks;
-            int8_masks[0] = builder().CreateCall(func, makeArrayRef(args));
+            int8_masks[0] = builder().CreateCall(func, toArrayRef(args));
             args[0]       = w8_float_masks[1];
-            int8_masks[1] = builder().CreateCall(func, makeArrayRef(args));
+            int8_masks[1] = builder().CreateCall(func, toArrayRef(args));
 
             llvm::Value* upper_mask = op_shl(int8_masks[1], constant(8));
             return op_or(upper_mask, int8_masks[0]);
@@ -3616,7 +3631,7 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
 
             llvm::Value* args[1] = { w8_float_mask };
             llvm::Value* int8_mask;
-            int8_mask = builder().CreateCall(func, makeArrayRef(args));
+            int8_mask = builder().CreateCall(func, toArrayRef(args));
             return int8_mask;
         }
         default: {
@@ -3654,13 +3669,13 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
 
             llvm::Value* args[1] = { w4_float_masks[0] };
             std::array<llvm::Value*, 4> int4_masks;
-            int4_masks[0] = builder().CreateCall(func, makeArrayRef(args));
+            int4_masks[0] = builder().CreateCall(func, toArrayRef(args));
             args[0]       = w4_float_masks[1];
-            int4_masks[1] = builder().CreateCall(func, makeArrayRef(args));
+            int4_masks[1] = builder().CreateCall(func, toArrayRef(args));
             args[0]       = w4_float_masks[2];
-            int4_masks[2] = builder().CreateCall(func, makeArrayRef(args));
+            int4_masks[2] = builder().CreateCall(func, toArrayRef(args));
             args[0]       = w4_float_masks[3];
-            int4_masks[3] = builder().CreateCall(func, makeArrayRef(args));
+            int4_masks[3] = builder().CreateCall(func, toArrayRef(args));
 
             llvm::Value* bits12_15 = op_shl(int4_masks[3], constant(12));
             llvm::Value* bits8_11  = op_shl(int4_masks[2], constant(8));
@@ -3694,9 +3709,9 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
 
             llvm::Value* args[1] = { w4_float_masks[0] };
             std::array<llvm::Value*, 2> int4_masks;
-            int4_masks[0] = builder().CreateCall(func, makeArrayRef(args));
+            int4_masks[0] = builder().CreateCall(func, toArrayRef(args));
             args[0]       = w4_float_masks[1];
-            int4_masks[1] = builder().CreateCall(func, makeArrayRef(args));
+            int4_masks[1] = builder().CreateCall(func, toArrayRef(args));
 
             llvm::Value* bits4_7 = op_shl(int4_masks[1], constant(4));
             return op_or(bits4_7, int4_masks[0]);
@@ -3724,7 +3739,7 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
 
             llvm::Value* args[1]   = { w4_float_mask };
             llvm::Value* int4_mask = builder().CreateCall(func,
-                                                          makeArrayRef(args));
+                                                          toArrayRef(args));
 
             return int4_mask;
         }
@@ -3934,13 +3949,13 @@ LLVM_Util::op_1st_active_lane_of(llvm::Value* mask)
     llvm::Type* types[] = { intMaskType };
     llvm::Function* func_cttz
         = llvm::Intrinsic::getDeclaration(module(), llvm::Intrinsic::cttz,
-                                          makeArrayRef(types));
+                                          toArrayRef(types));
 
     llvm::Value* int_mask = builder().CreateBitCast(mask, intMaskType);
     llvm::Value* args[2]  = { int_mask, constant_bool(true) };
 
     llvm::Value* firstNonZeroIndex = builder().CreateCall(func_cttz,
-                                                          makeArrayRef(args));
+                                                          toArrayRef(args));
     return firstNonZeroIndex;
 }
 
@@ -4428,9 +4443,10 @@ LLVM_Util::op_split_16x(llvm::Value* vector_val)
 
     llvm::Value* half_vec_0
         = builder().CreateShuffleVector(vector_val, vector_val,
-                                        llvm::makeArrayRef(extractLanes0_to_7));
-    llvm::Value* half_vec_1 = builder().CreateShuffleVector(
-        vector_val, vector_val, llvm::makeArrayRef(extractLanes8_to_15));
+                                        toArrayRef(extractLanes0_to_7));
+    llvm::Value* half_vec_1
+        = builder().CreateShuffleVector(vector_val, vector_val,
+                                        toArrayRef(extractLanes8_to_15));
     return { { half_vec_0, half_vec_1 } };
 }
 
@@ -4448,10 +4464,10 @@ LLVM_Util::op_split_8x(llvm::Value* vector_val)
 
     llvm::Value* half_vec_0
         = builder().CreateShuffleVector(vector_val, vector_val,
-                                        llvm::makeArrayRef(extractLanes0_to_3));
+                                        toArrayRef(extractLanes0_to_3));
     llvm::Value* half_vec_1
         = builder().CreateShuffleVector(vector_val, vector_val,
-                                        llvm::makeArrayRef(extractLanes4_to_7));
+                                        toArrayRef(extractLanes4_to_7));
     return { { half_vec_0, half_vec_1 } };
 }
 
@@ -4473,14 +4489,16 @@ LLVM_Util::op_quarter_16x(llvm::Value* vector_val)
 
     llvm::Value* quarter_vec_0
         = builder().CreateShuffleVector(vector_val, vector_val,
-                                        llvm::makeArrayRef(extractLanes0_to_3));
+                                        toArrayRef(extractLanes0_to_3));
     llvm::Value* quarter_vec_1
         = builder().CreateShuffleVector(vector_val, vector_val,
-                                        llvm::makeArrayRef(extractLanes4_to_7));
-    llvm::Value* quarter_vec_2 = builder().CreateShuffleVector(
-        vector_val, vector_val, llvm::makeArrayRef(extractLanes8_to_11));
-    llvm::Value* quarter_vec_3 = builder().CreateShuffleVector(
-        vector_val, vector_val, llvm::makeArrayRef(extractLanes12_to_15));
+                                        toArrayRef(extractLanes4_to_7));
+    llvm::Value* quarter_vec_2
+        = builder().CreateShuffleVector(vector_val, vector_val,
+                                        toArrayRef(extractLanes8_to_11));
+    llvm::Value* quarter_vec_3
+        = builder().CreateShuffleVector(vector_val, vector_val,
+                                        toArrayRef(extractLanes12_to_15));
     return { { quarter_vec_0, quarter_vec_1, quarter_vec_2, quarter_vec_3 } };
 }
 
@@ -4497,7 +4515,7 @@ LLVM_Util::op_combine_8x_vectors(llvm::Value* half_vec_1,
     static constexpr index_t combineIndices[]
         = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     return builder().CreateShuffleVector(half_vec_1, half_vec_2,
-                                         llvm::makeArrayRef(combineIndices));
+                                         toArrayRef(combineIndices));
 }
 
 llvm::Value*
@@ -4511,7 +4529,7 @@ LLVM_Util::op_combine_4x_vectors(llvm::Value* half_vec_1,
 #endif
     static constexpr index_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
     return builder().CreateShuffleVector(half_vec_1, half_vec_2,
-                                         llvm::makeArrayRef(combineIndices));
+                                         toArrayRef(combineIndices));
 }
 
 
@@ -4583,7 +4601,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
             llvm::Value* args[]         = { unmasked_value, void_ptr(src_ptr),
                                             wide_index, int_mask, constant(4) };
             return builder().CreateCall(func_avx512_gather_pi,
-                                        makeArrayRef(args));
+                                        toArrayRef(args));
         } else if (m_supports_avx2) {
             llvm::Function* func_avx2_gather_pi
                 = llvm::Intrinsic::getDeclaration(
@@ -4604,11 +4622,11 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                          w8_int_indices[0], w8_int_masks[0],
                                          constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 args[2]              = w8_int_indices[1];
                 args[3]              = w8_int_masks[1];
                 llvm::Value* gather2 = builder().CreateCall(func_avx2_gather_pi,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 return op_combine_8x_vectors(gather1, gather2);
             }
             case 8: {
@@ -4617,7 +4635,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                         constant8((uint8_t)4) };
                 llvm::Value* gather_result
                     = builder().CreateCall(func_avx2_gather_pi,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
                 return gather_result;
             }
             default: OSL_ASSERT(0 && "unsupported width");
@@ -4652,7 +4670,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                         constant(4)  // not sure why the scale
             };
             return builder().CreateCall(func_avx512_gather_ps,
-                                        makeArrayRef(args));
+                                        toArrayRef(args));
         } else if (m_supports_avx2) {
             llvm::Function* func_avx2_gather_ps
                 = llvm::Intrinsic::getDeclaration(
@@ -4676,13 +4694,13 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                     constant8((uint8_t)4)
                 };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_ps,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 args[2]              = w8_int_indices[1];
                 args[3]              = builder().CreateBitCast(w8_int_masks[1],
                                                                llvm_vector_type(type_float(),
                                                                                 8));
                 llvm::Value* gather2 = builder().CreateCall(func_avx2_gather_ps,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 return op_combine_8x_vectors(gather1, gather2);
             }
             case 8: {
@@ -4693,7 +4711,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                     constant8((uint8_t)4)
                 };
                 llvm::Value* gather = builder().CreateCall(func_avx2_gather_ps,
-                                                           makeArrayRef(args));
+                                                           toArrayRef(args));
                 return gather;
             }
             }
@@ -4722,12 +4740,12 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                         mask_as_int8(w8_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
                 args[2] = w8_int_indices[1];
                 args[3] = mask_as_int8(w8_bit_masks[1]);
                 llvm::Value* gather2
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
 
                 return builder().CreateIntToPtr(op_combine_8x_vectors(gather1,
                                                                       gather2),
@@ -4751,12 +4769,12 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                         mask4_as_int8(w4_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
                 args[2] = w4_int_indices[1];
                 args[3] = mask4_as_int8(w4_bit_masks[1]);
                 llvm::Value* gather2
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
 
                 return builder().CreateIntToPtr(op_combine_4x_vectors(gather1,
                                                                       gather2),
@@ -4782,7 +4800,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                         mask_as_int16(current_mask()),
                                         constant(4) };
                 return builder().CreateCall(func_avx512_gather_ps,
-                                            makeArrayRef(args));
+                                            toArrayRef(args));
             }
             case 8: {
                 llvm::Function* func_avx512_gather_ps
@@ -4796,7 +4814,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                         mask_as_int8(current_mask()),
                                         constant(4) };
                 return builder().CreateCall(func_avx512_gather_ps,
-                                            makeArrayRef(args));
+                                            toArrayRef(args));
             }
             default: OSL_ASSERT(0 && "unsupported native bit mask width");
             };
@@ -4824,13 +4842,13 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                     constant8((uint8_t)4)
                 };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_ps,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 args[2]              = w8_int_indices[1];
                 args[3]              = builder().CreateBitCast(w8_int_masks[1],
                                                                llvm_vector_type(type_float(),
                                                                                 8));
                 llvm::Value* gather2 = builder().CreateCall(func_avx2_gather_ps,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 return op_combine_8x_vectors(gather1, gather2);
             }
             case 8: {
@@ -4843,7 +4861,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                 };
                 llvm::Value* gather_result
                     = builder().CreateCall(func_avx2_gather_ps,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
                 return gather_result;
             }
             default:
@@ -4867,7 +4885,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                         mask_as_int16(current_mask()),
                                         constant(4) };
                 return builder().CreateCall(func_avx512_gather_pi,
-                                            makeArrayRef(args));
+                                            toArrayRef(args));
             }
             case 8: {
                 llvm::Function* func_avx512_gather_pi
@@ -4881,7 +4899,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                         mask_as_int8(current_mask()),
                                         constant(4) };
                 return builder().CreateCall(func_avx512_gather_pi,
-                                            makeArrayRef(args));
+                                            toArrayRef(args));
             }
             default: OSL_ASSERT(0 && "unsupported native bit mask width");
             }
@@ -4905,11 +4923,11 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                          w8_int_indices[0], w8_int_masks[0],
                                          constant8((uint8_t)4) };
                 llvm::Value* gather1 = builder().CreateCall(func_avx2_gather_pi,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 args[2]              = w8_int_indices[1];
                 args[3]              = w8_int_masks[1];
                 llvm::Value* gather2 = builder().CreateCall(func_avx2_gather_pi,
-                                                            makeArrayRef(args));
+                                                            toArrayRef(args));
                 return op_combine_8x_vectors(gather1, gather2);
             }
             case 8: {
@@ -4929,7 +4947,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                         constant8((uint8_t)4) };
                 llvm::Value* gather_result
                     = builder().CreateCall(func_avx2_gather_pi,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
                 return gather_result;
             }
             default:
@@ -4963,12 +4981,12 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                         mask_as_int8(w8_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
                 args[2] = w8_int_indices[1];
                 args[3] = mask_as_int8(w8_bit_masks[1]);
                 llvm::Value* gather2
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
 
                 return builder().CreateIntToPtr(op_combine_8x_vectors(gather1,
                                                                       gather2),
@@ -5003,12 +5021,12 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                         mask4_as_int8(w4_bit_masks[0]), constant(8) };
                 llvm::Value* gather1
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
                 args[2] = w4_int_indices[1];
                 args[3] = mask4_as_int8(w4_bit_masks[1]);
                 llvm::Value* gather2
                     = builder().CreateCall(func_avx512_gather_dpq,
-                                           makeArrayRef(args));
+                                           toArrayRef(args));
 
                 return builder().CreateIntToPtr(op_combine_4x_vectors(gather1,
                                                                       gather2),
@@ -5119,7 +5137,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
 
             llvm::Value* args[] = { void_ptr(src_ptr), int_mask, wide_index,
                                     wide_val, constant(4) };
-            builder().CreateCall(func_avx512_scatter_ps, makeArrayRef(args));
+            builder().CreateCall(func_avx512_scatter_ps, toArrayRef(args));
             return;
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
@@ -5150,7 +5168,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
             OSL_ASSERT(func_avx512_scatter_pi);
             llvm::Value* args[] = { void_ptr(src_ptr), int_mask, wide_index,
                                     wide_val, constant(4) };
-            builder().CreateCall(func_avx512_scatter_pi, makeArrayRef(args));
+            builder().CreateCall(func_avx512_scatter_pi, toArrayRef(args));
             return;
         } else {
             // AVX2, AVX, SSE4.2 fall through to here
@@ -5187,13 +5205,11 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 llvm::Value* args[]
                     = { void_ptr(src_ptr), mask_as_int8(w8_bit_masks[0]),
                         w8_int_indices[0], w8_address_int_val[0], constant(8) };
-                builder().CreateCall(func_avx512_scatter_dpq,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 args[1] = mask_as_int8(w8_bit_masks[1]);
                 args[2] = w8_int_indices[1];
                 args[3] = w8_address_int_val[1];
-                builder().CreateCall(func_avx512_scatter_dpq,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 return;
             }
             case 8: {
@@ -5212,8 +5228,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 llvm::Value* args[]
                     = { void_ptr(src_ptr), mask_as_int8(current_mask()),
                         linear_indices, address_int_val, constant(8) };
-                builder().CreateCall(func_avx512_scatter_dpq,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 return;
             }
             default:
@@ -5239,8 +5254,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                                         mask_as_int16(current_mask()),
                                         op_linearize_16x_indices(wide_index),
                                         wide_val, constant(4) };
-                builder().CreateCall(func_avx512_scatter_ps,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_ps, toArrayRef(args));
                 return;
             }
             case 8: {
@@ -5253,8 +5267,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                                         mask_as_int8(current_mask()),
                                         op_linearize_8x_indices(wide_index),
                                         wide_val, constant(4) };
-                builder().CreateCall(func_avx512_scatter_ps,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_ps, toArrayRef(args));
                 return;
             }
             default:
@@ -5284,8 +5297,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                                         mask_as_int16(current_mask()),
                                         op_linearize_16x_indices(wide_index),
                                         wide_val, constant(4) };
-                builder().CreateCall(func_avx512_scatter_pi,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_pi, toArrayRef(args));
                 return;
             }
             case 8: {
@@ -5298,8 +5310,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                                         mask_as_int8(current_mask()),
                                         op_linearize_8x_indices(wide_index),
                                         wide_val, constant(4) };
-                builder().CreateCall(func_avx512_scatter_pi,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_pi, toArrayRef(args));
                 return;
             }
             default:
@@ -5344,13 +5355,11 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 llvm::Value* args[]
                     = { void_ptr(src_ptr), mask_as_int8(w8_bit_masks[0]),
                         w8_int_indices[0], w8_address_int_val[0], constant(8) };
-                builder().CreateCall(func_avx512_scatter_dpq,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 args[1] = mask_as_int8(w8_bit_masks[1]);
                 args[2] = w8_int_indices[1];
                 args[3] = w8_address_int_val[1];
-                builder().CreateCall(func_avx512_scatter_dpq,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 return;
             }
             case 8: {
@@ -5370,8 +5379,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 llvm::Value* args[]
                     = { void_ptr(src_ptr), mask_as_int8(current_mask()),
                         linear_indices, address_int_val, constant(8) };
-                builder().CreateCall(func_avx512_scatter_dpq,
-                                     makeArrayRef(args));
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 return;
             }
             default:
@@ -5965,7 +5973,7 @@ LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
 #endif
     llvm::Value* elements[3] = { constant(elem1), constant(elem2),
                                  constant(elem3) };
-    return builder().CreateGEP(type, ptr, makeArrayRef(elements), llname);
+    return builder().CreateGEP(type, ptr, toArrayRef(elements), llname);
 }
 
 
@@ -6055,8 +6063,18 @@ LLVM_Util::op_mod(llvm::Value* a, llvm::Value* b)
 {
     if ((a->getType() == type_float() && b->getType() == type_float())
         || (a->getType() == type_wide_float()
-            && b->getType() == type_wide_float()))
+            && b->getType() == type_wide_float())) {
+#if OSL_LLVM_VERSION >= 160
+        if (m_target_isa == TargetISA::NVPTX) {
+            // Since llvm/llvm-project@2c3f82b, FRem generates an
+            // optix.ptx.testp.infinite.f32 intrinsic that OptiX does not
+            // currently implement. Work around with custom code.
+            llvm::Value* N = op_float_to_int(op_div(a, b));
+            return op_sub(a, op_mul(op_int_to_float(N), b));
+        }
+#endif
         return builder().CreateFRem(a, b);
+    }
     if ((a->getType() == type_int() && b->getType() == type_int())
         || (a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateSRem(a, b);
@@ -6260,11 +6278,11 @@ LLVM_Util::op_zero_if(llvm::Value* cond, llvm::Value* v)
             llvm::Value* int_v
                 = is_float ? builder().CreateBitCast(v, type_wide_int()) : v;
             llvm::Value* args[] = { int_v, int_v, int_v, a_identity_mask };
-            llvm::Value* identity_call
-                = builder().CreateCall(func, makeArrayRef(args));
-            v = is_float
-                    ? builder().CreateBitCast(identity_call, type_wide_float())
-                    : identity_call;
+            llvm::Value* identity_call = builder().CreateCall(func,
+                                                              toArrayRef(args));
+            v                          = is_float
+                                             ? builder().CreateBitCast(identity_call, type_wide_float())
+                                             : identity_call;
         }
     }
     return op_select(cond, c_zero, v);

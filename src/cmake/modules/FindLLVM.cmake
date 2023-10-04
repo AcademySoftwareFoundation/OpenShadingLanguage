@@ -126,8 +126,9 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 9.0 AND (LLVM_SHARED_MODE STREQUAL "share
 endif ()
 
 foreach (COMPONENT clangFrontend clangDriver clangSerialization
-                   clangParse clangSema clangAnalysis clangAST clangBasic
-                   clangEdit clangLex clangSupport)
+                   clangParse clangSema clangAnalysis clangAST
+                   clangASTMatchers clangBasic clangEdit clangLex
+                   clangSupport)
     find_library ( _CLANG_${COMPONENT}_LIBRARY
                   NAMES ${COMPONENT}
                   PATHS ${LLVM_LIB_DIR})

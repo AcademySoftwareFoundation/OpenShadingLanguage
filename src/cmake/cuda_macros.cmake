@@ -207,8 +207,8 @@ function ( CUDA_SHADEOPS_COMPILE prefix output_bc output_ptx input_srcs headers 
     endforeach ()
 
     if (LLVM_NEW_PASS_MANAGER)
-      # --nvptx-assign-valid-global-names does not appaer to be supported
-      # by either opt or llc with the new pass manager.
+      # There is no --nvptx-assign-valid-global-names flag for the new
+      # pass manager, but it appears to run this pass by default.
       string(REPLACE "-O" "O" opt_tool_flags ${CUDA_OPT_FLAG_CLANG})
       set (opt_tool_flags -passes="default<${opt_tool_flags}>")
     else()

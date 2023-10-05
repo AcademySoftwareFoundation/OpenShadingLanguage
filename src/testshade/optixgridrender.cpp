@@ -271,8 +271,7 @@ OptixGridRenderer::synch_attributes()
         // FIXME -- Should probably handle alignment better.
         const ustring* cpuString
             = (const ustring*)(colorSys
-                               + (cpuDataSize
-                                  - sizeof(ustringhash) * numStrings));
+                               + (cpuDataSize - sizeof(ustring) * numStrings));
         CUdeviceptr gpuStrings = d_color_system + podDataSize;
         for (const ustring* end = cpuString + numStrings; cpuString < end;
              ++cpuString) {

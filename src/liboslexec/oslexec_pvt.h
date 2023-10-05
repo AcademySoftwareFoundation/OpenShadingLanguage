@@ -22,7 +22,7 @@
 #endif
 
 #ifdef __CUDACC__
-#    include "string_hash.h"
+#    include <OSL/hashes.h>
 #endif
 
 #include <OpenImageIO/color.h>

@@ -128,10 +128,7 @@ process_closure(const OSL::ClosureColor* closure_tree)
 
         case MICROFACET_ID: {
             const char* mem = (const char*)((OSL::ClosureComponent*)cur)->data();
-            const char* dist_str = *(const char**)&mem[0];
-
-            OSL::ustring dist_u(dist_str);
-            OSL::ustringhash dist_uh = OSL::ustringhash_from(dist_u);
+            OSL::ustringhash dist_uh = *(OSL::ustringhash*)&mem[0];
 
             if (dist_uh == OSL::Hashes::default_)
                 return make_float3(0.0f, 1.0f, 1.0f);

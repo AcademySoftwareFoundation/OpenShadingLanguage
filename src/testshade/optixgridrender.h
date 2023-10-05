@@ -139,9 +139,9 @@ private:
     std::unordered_map<uint64_t, const char*> m_hash_map;
 #endif
     std::string m_materials_ptx;
-    std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash>
+    std::unordered_map<OIIO::ustring, optix::TextureSampler, ustringHash>
         m_samplers;
-    std::unordered_map<OIIO::ustring, uint64_t, OIIO::ustringHash> m_globals_map;
+    std::unordered_map<OIIO::ustring, uint64_t, ustringHash> m_globals_map;
 
     OSL::Matrix44 m_shader2common;  // "shader" space to "common" space matrix
     OSL::Matrix44 m_object2common;  // "object" space to "common" space matrix

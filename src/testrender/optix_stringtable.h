@@ -14,8 +14,7 @@
 
 OSL_NAMESPACE_ENTER
 
-typedef std::unordered_map<OIIO::ustring, int64_t, OIIO::ustringHash>
-    StringTableMap;
+typedef std::unordered_map<OIIO::ustring, int64_t, ustringHash> StringTableMap;
 
 
 // The OptiXStringTable manages a block of CUDA device memory designated

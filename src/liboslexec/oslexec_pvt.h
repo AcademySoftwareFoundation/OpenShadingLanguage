@@ -58,7 +58,6 @@ using OIIO::ParamValueList;
 using OIIO::RefCnt;
 using OIIO::spin_lock;
 using OIIO::spin_mutex;
-using OIIO::ustringHash;
 namespace Strutil = OIIO::Strutil;
 
 

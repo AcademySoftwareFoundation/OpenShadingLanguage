@@ -13,8 +13,7 @@
 #include <OSL/oslexec.h>
 #include <OpenImageIO/ustring.h>
 
-typedef std::unordered_map<OIIO::ustring, int64_t, OIIO::ustringHash>
-    StringTableMap;
+typedef std::unordered_map<OIIO::ustring, int64_t, ustringHash> StringTableMap;
 
 // The CudaStringTable manages a block of CUDA device memory designated
 // to hold all of the string constants that a shader might access during

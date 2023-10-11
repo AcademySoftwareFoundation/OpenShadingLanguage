@@ -3443,7 +3443,7 @@ LLVM_Util::constant_array(cspan<llvm::Constant*> constants)
     OSL_ASSERT(constants.size() > 0);
     auto element_type = constants[0]->getType();
     auto array_type   = llvm::ArrayType::get(element_type, constants.size());
-    return llvm::ConstantArray::get(array_type, makeArrayRef(constants));
+    return llvm::ConstantArray::get(array_type, toArrayRef(constants));
 }
 
 llvm::GlobalVariable*

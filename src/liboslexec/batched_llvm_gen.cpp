@@ -8440,10 +8440,12 @@ LLVMGEN(llvm_gen_split)
                 elem = rop.ll.call_function("osl_gen_ustring",
                                             rop.ll.ptr_to_int64_cast(elem));
             } else {
-                llvm::Value* elem_ptr  = rop.ll.GEP(elem_type, temp_results_array, ai);
-                elem      = rop.ll.op_load(elem_type, elem_ptr);
-                elem = rop.ll.call_function("osl_gen_ustring", rop.ll.ptr_to_int64_cast(elem));
-                elem = rop.ll.widen_value(elem);
+                llvm::Value* elem_ptr = rop.ll.GEP(elem_type,
+                                                   temp_results_array, ai);
+                elem                  = rop.ll.op_load(elem_type, elem_ptr);
+                elem                  = rop.ll.call_function("osl_gen_ustring",
+                                                             rop.ll.ptr_to_int64_cast(elem));
+                elem                  = rop.ll.widen_value(elem);
             }
             rop.llvm_store_value(elem, Results, 0 /*deriv*/,
                                  array_index /*arrayindex*/, 0 /* component*/);

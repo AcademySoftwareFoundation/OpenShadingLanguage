@@ -8377,7 +8377,7 @@ LLVMGEN(llvm_gen_split)
         if (op_is_uniform) {
             args.push_back(rop.ll.constant(ustring("").c_str()));
         } else {
-            llvm::Value* wide_sep      = rop.ll.constant(ustring("").c_str());
+            llvm::Value* wide_sep = rop.ll.wide_constant(ustring("").c_str());
             llvm::Value* temp_wide_sep = rop.getOrAllocateTemp(
                 TypeSpec(TypeDesc::STRING), false /*derivs*/,
                 false /*op_is_uniform*/, false /*forceBool*/, "wide separator");

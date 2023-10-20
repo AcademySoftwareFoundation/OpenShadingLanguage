@@ -330,10 +330,9 @@ osl_getchar_isi(OSL::ustringhash_pod str, int index)
 // all the arguments to our print buffer.
 // Note:  the first element of 'args' is the size of the argument list
 __device__ void
-osl_printf(void* sg_, char* fmt_str, void* args)
+osl_printf(void* sg_, OSL::ustringhash_pod fmt_str_hash, void* args)
 {
-    uint64_t fmt_str_hash = HDSTR(fmt_str).hash();
-    uint64_t args_size    = reinterpret_cast<uint64_t*>(args)[0];
+    uint64_t args_size = reinterpret_cast<uint64_t*>(args)[0];
 
     // This can be used to limit printing to one Cuda thread for debugging
     // if (launch_index.x == 0 && launch_index.y == 0)
@@ -411,7 +410,7 @@ osl_texture(void* sg_, OSL::ustringhash_pod name, void* handle, void* opt_,
             float s, float t, float dsdx, float dtdx, float dsdy, float dtdy,
             int chans, void* result, void* dresultdx, void* dresultdy,
             void* alpha, void* dalphadx, void* dalphady,
-            OSL::ustringhash_pod* ustring_errormessage)
+            void* ustringhash_errormessage)
 {
     if (!handle)
         return 0;

@@ -144,10 +144,10 @@ DECL(osl_split, "ihXhii")
 DECL(osl_incr_layers_executed, "xX")
 
 // For legacy printf support
-DECL(osl_printf, "xXs*")
-DECL(osl_fprintf, "xXss*")
-DECL(osl_error, "xXs*")
-DECL(osl_warning, "xXs*")
+DECL(osl_printf, "xXh*")
+DECL(osl_fprintf, "xXhh*")
+DECL(osl_error, "xXh*")
+DECL(osl_warning, "xXh*")
 
 NOISE_IMPL(cellnoise)
 //NOISE_DERIV_IMPL(cellnoise)

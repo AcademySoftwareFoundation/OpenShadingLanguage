@@ -309,78 +309,6 @@ BackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
 }
 
 
-
-#if OSL_USE_OPTIX
-llvm::Value*
-BackendLLVM::addCUDAGlobalVariable(const std::string& name, int size,
-                                   int alignment, const void* init_data,
-                                   TypeDesc type)
-{
-    OSL_ASSERT(use_optix()
-               && "This function is only supposed to be used with OptiX!");
-
-    llvm::Constant* constant = nullptr;
-
-    if (type == TypeDesc::TypeFloat) {
-        constant = ll.constant(*(const float*)init_data);
-    } else if (type == TypeDesc::TypeInt) {
-        constant = ll.constant(*(const int*)init_data);
-    } else if (type == TypeDesc::TypeString) {
-        constant = ll.constant64(((const ustring*)init_data)->hash());
-        // N.B. Since this is the OptiX side specifically, we will represent
-        // strings as the ustringhash, so we know it as a constant.
-    } else {
-        // Handle unspecified types as generic byte arrays
-        llvm::ArrayRef<uint8_t> arr_ref((uint8_t*)init_data, size);
-        constant = llvm::ConstantDataArray::get(ll.module()->getContext(),
-                                                arr_ref);
-    }
-
-    llvm::GlobalVariable* g_var = reinterpret_cast<llvm::GlobalVariable*>(
-        ll.module()->getOrInsertGlobal(name, constant->getType()));
-
-    OSL_DASSERT(g_var && "Unable to create GlobalVariable");
-
-#    if OSL_LLVM_VERSION >= 100
-    g_var->setAlignment(llvm::MaybeAlign(alignment));
-#    else
-    g_var->setAlignment(alignment);
-#    endif
-
-    g_var->setLinkage(llvm::GlobalValue::PrivateLinkage);
-    g_var->setVisibility(llvm::GlobalValue::DefaultVisibility);
-    g_var->setInitializer(constant);
-    m_const_map[name] = g_var;
-
-    return g_var;
-}
-
-
-
-llvm::Value*
-BackendLLVM::getOrAllocateCUDAVariable(const Symbol& sym)
-{
-    OSL_ASSERT(use_optix()
-               && "This function is only supported when using OptiX!");
-
-    std::string name = global_unique_symname(sym);
-
-    // Return the Value if it has already been allocated
-    auto it = get_const_map().find(name);
-    if (it != get_const_map().end())
-        return it->second;
-
-    // TODO: Figure out the actual CUDA alignment requirements for the various
-    //       OSL types. For now, be somewhat conservative and assume 8 for
-    //       non-scalar types.
-    int alignment = (sym.typespec().is_scalarnum()) ? 4 : 8;
-    return addCUDAGlobalVariable(name, sym.size(), alignment, sym.data(),
-                                 sym.typespec().simpletype());
-}
-#endif
-
-
-
 llvm::Value*
 BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
                               llvm::Value* arrayindex)
@@ -394,36 +322,18 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
 
     llvm::Value* result = NULL;
     if (sym.symtype() == SymTypeConst) {
-#if OSL_USE_OPTIX
-        // TODO:  can we remove the optix specific code and just use the
-        // cpu side which behaves similarily?
-        if (use_optix()) {
-            TypeSpec elemtype = sym.typespec().elementtype();
-            // Check the constant map for the named Symbol; if it's found, then
-            // a GlobalVariable has been created for it
-            llvm::Value* ptr = getOrAllocateCUDAVariable(sym);
-            if (ptr) {
-                result = llvm_ptr_cast(ptr, llvm_typedesc(elemtype),
-                                       llnamefmt("cast_to_{}_", sym.typespec()));
-                // N.B. llvm_typedesc() for a string will know that on OptiX,
-                // strings are actually represented as just the hash.
-            }
-        } else
-#endif
-        {
-            auto sym_name = sym.name().string();
+        auto sym_name = sym.name().string();
 
-            std::string unique_symname = global_unique_symname(sym);
-            auto it                    = get_const_map().find(unique_symname);
-            OSL_ASSERT(it != get_const_map().end());
-            result = it->second;
-            if (result) {
-                TypeSpec elemtype = sym.typespec().elementtype();
-                result = llvm_ptr_cast(result, llvm_typedesc(elemtype),
-                                       llnamefmt("cast_to_{}_", sym.typespec()));
-            }
-            return result;
+        std::string unique_symname = global_unique_symname(sym);
+        auto it                    = get_const_map().find(unique_symname);
+        OSL_ASSERT(it != get_const_map().end());
+        result = it->second;
+        if (result) {
+            TypeSpec elemtype = sym.typespec().elementtype();
+            result            = llvm_ptr_cast(result, llvm_typedesc(elemtype),
+                                              llnamefmt("cast_to_{}_", sym.typespec()));
         }
+        return result;
     } else {
         // If the symbol is not a SymTypeConst, then start with the initial
         // pointer to the variable's memory location.
@@ -483,7 +393,7 @@ BackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
             return ll.constant(sym.get_float(component));
         }
         if (sym.typespec().is_string()) {
-            return llvm_load_stringhash(sym.get_string());
+            return llvm_const_hash(sym.get_string());
         }
         OSL_ASSERT(0 && "unhandled constant type");
     }
@@ -575,7 +485,7 @@ BackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
             return ll.constant(sym.get_int(linear_index));
     }
     if (sym.typespec().is_string_based()) {
-        return llvm_load_stringhash(sym.get_string(linear_index));
+        return llvm_const_hash(sym.get_string(linear_index));
     }
 
     OSL_ASSERT(0 && "unhandled constant type");

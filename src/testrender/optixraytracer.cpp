@@ -209,6 +209,10 @@ OptixRaytracer::synch_attributes()
     shadingsys->attribute("max_optix_groupdata_alloc", 1024);
 
     {
+        // TODO: utilize opaque shading state uniform data structure
+        // which has a device friendly representation this data
+        // and is already accessed directly by opcolor and opmatrix for
+        // the cpu (just remove optix special casing)
         char* colorSys            = nullptr;
         long long cpuDataSizes[2] = { 0, 0 };
         if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR,
@@ -241,15 +245,14 @@ OptixRaytracer::synch_attributes()
 
         // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
         // FIXME -- Should probably handle alignment better.
-        const ustring* cpuString
-            = (const ustring*)(colorSys
-                               + (cpuDataSize
-                                  - sizeof(ustringhash) * numStrings));
+        const ustringhash* cpuStringHash
+            = (const ustringhash*)(colorSys
+                                   + (cpuDataSize
+                                      - sizeof(ustringhash) * numStrings));
         CUdeviceptr gpuStrings = d_color_system + podDataSize;
-        for (const ustring* end = cpuString + numStrings; cpuString < end;
-             ++cpuString) {
-            // convert the ustring to a device string
-            uint64_t devStr = cpuString->hash();
+        for (const ustringhash* end = cpuStringHash + numStrings;
+             cpuStringHash < end; ++cpuStringHash) {
+            ustringhash_pod devStr = cpuStringHash->hash();
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
                                   sizeof(devStr), cudaMemcpyHostToDevice));
             gpuStrings += sizeof(ustringhash_pod);

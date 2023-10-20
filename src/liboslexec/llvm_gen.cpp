@@ -85,7 +85,7 @@ BackendLLVM::llvm_gen_debug_printf(string_view message)
                                    inst()->layername(), message);
 
     llvm::Value* valargs[] = { sg_void_ptr(),
-                               llvm_load_stringhash(s),
+                               llvm_const_hash(s),
                                ll.constant(0) /*arg_count*/,
                                ll.void_ptr_null() /*arg_types*/,
                                ll.constant(0) /*arg_values_size*/,
@@ -103,7 +103,7 @@ BackendLLVM::llvm_gen_warning(string_view message)
     // passing arguments.
     ustring s              = ustring::fmtformat("{}\n", message);
     llvm::Value* valargs[] = { sg_void_ptr(),
-                               llvm_load_stringhash(s),
+                               llvm_const_hash(s),
                                ll.constant(0) /*arg_count*/,
                                ll.void_ptr_null() /*arg_types*/,
                                ll.constant(0) /*arg_values_size*/,
@@ -120,7 +120,7 @@ BackendLLVM::llvm_gen_error(string_view message)
     // passing arguments.
     ustring s              = ustring::fmtformat("{}\n", message);
     llvm::Value* valargs[] = { sg_void_ptr(),
-                               llvm_load_stringhash(s),
+                               llvm_const_hash(s),
                                ll.constant(0) /*arg_count*/,
                                ll.void_ptr_null() /*arg_types*/,
                                ll.constant(0) /*arg_values_size*/,
@@ -434,7 +434,7 @@ LLVMGEN(llvm_gen_printf_legacy)
         // (where args_size is the size of arg0 + arg1 + arg2...)
         //
         // Make sure host has the format string so it can print it
-        call_args[new_format_slot] = rop.llvm_load_string(s);
+        call_args[new_format_slot] = rop.llvm_const_hash(s);
         size_t nargs               = call_args.size() - (new_format_slot + 1);
         // Allocate space to store the arguments to osl_printf().
         //  Don't forget to pad a little extra to hold the size of the arguments itself.
@@ -464,14 +464,16 @@ LLVMGEN(llvm_gen_printf_legacy)
             }
             llvm::Value* memptr = rop.ll.offset_ptr(voids, optix_size);
             if (arg->getType()->isIntegerTy()) {
-                llvm::Value* iptr = rop.ll.ptr_cast(memptr,
-                                                    rop.ll.type_int_ptr());
-                rop.ll.op_store(arg, iptr);
+                llvm::Type* ptr_type = nullptr;
                 if (arg->getType()->isIntegerTy(64)) {
                     optix_size += sizeof(uint64_t);
+                    ptr_type = rop.ll.type_int64_ptr();
                 } else {
                     optix_size += sizeof(int);
+                    ptr_type = rop.ll.type_int_ptr();
                 }
+                llvm::Value* iptr = rop.ll.ptr_cast(memptr, ptr_type);
+                rop.ll.op_store(arg, iptr);
             } else if (arg->getType()->isFloatingPointTy()) {
                 llvm::Value* fptr = rop.ll.ptr_cast(memptr,
                                                     rop.ll.type_double_ptr());
@@ -489,7 +491,7 @@ LLVMGEN(llvm_gen_printf_legacy)
     } else
 #endif
     {
-        call_args[new_format_slot] = rop.llvm_load_string(s);
+        call_args[new_format_slot] = rop.llvm_const_hash(s);
     }
 
     // Construct the function name and call it.
@@ -529,8 +531,7 @@ LLVMGEN(llvm_gen_print_fmt)
     if (op.opname() == op_fprintf) {
         Symbol& Filename         = *rop.opargsym(op, 0);
         ustring filename_ustring = Filename.get_string();
-        call_args.push_back(
-            rop.llvm_load_stringhash(filename_ustring));  //filename
+        call_args.push_back(rop.llvm_const_hash(filename_ustring));  //filename
     }
 
     // We're going to need to adjust the format string as we go, but I'd
@@ -708,7 +709,7 @@ LLVMGEN(llvm_gen_print_fmt)
                       rop.inst()->shadername(), s);
     }
     ustring s_ustring(s.c_str());
-    call_args.push_back(rop.llvm_load_stringhash(s_ustring));
+    call_args.push_back(rop.llvm_const_hash(s_ustring));
 
     OSL_ASSERT(encodedtypes.size() == loaded_arg_values.size());
     int arg_count = static_cast<int>(encodedtypes.size());
@@ -1105,7 +1106,7 @@ LLVMGEN(llvm_gen_modulus)
         if (!a || !b)
             return false;
         llvm::Value* r;
-        if (B.is_constant() && !rop.is_zero(B))
+        if (!rop.use_optix() && B.is_constant() && !rop.is_zero(B))
             r = rop.ll.op_mod(a, b);
         else
             r = rop.ll.call_function(safe_mod, a, b);
@@ -1500,14 +1501,14 @@ LLVMGEN(llvm_gen_compref)
             llvm::Value* args[]
                 = { c,
                     rop.ll.constant(3),
-                    rop.llvm_load_stringhash(Val.unmangled()),
+                    rop.llvm_const_hash(Val.unmangled()),
                     rop.sg_void_ptr(),
-                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.llvm_const_hash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.llvm_const_hash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.llvm_load_stringhash(rop.inst()->layername()),
-                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+                    rop.llvm_const_hash(rop.inst()->layername()),
+                    rop.llvm_const_hash(rop.inst()->shadername()) };
             c = rop.ll.call_function("osl_range_check", args);
         }
     }
@@ -1545,14 +1546,14 @@ LLVMGEN(llvm_gen_compassign)
             llvm::Value* args[]
                 = { c,
                     rop.ll.constant(3),
-                    rop.llvm_load_stringhash(Result.unmangled()),
+                    rop.llvm_const_hash(Result.unmangled()),
                     rop.sg_void_ptr(),
-                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.llvm_const_hash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.llvm_const_hash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.llvm_load_stringhash(rop.inst()->layername()),
-                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+                    rop.llvm_const_hash(rop.inst()->layername()),
+                    rop.llvm_const_hash(rop.inst()->shadername()) };
             c = rop.ll.call_function("osl_range_check", args);
         }
     }
@@ -1592,14 +1593,14 @@ LLVMGEN(llvm_gen_mxcompref)
             llvm::Value* args[]
                 = { row,
                     rop.ll.constant(4),
-                    rop.llvm_load_stringhash(M.name()),
+                    rop.llvm_const_hash(M.name()),
                     rop.sg_void_ptr(),
-                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.llvm_const_hash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.llvm_const_hash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.llvm_load_stringhash(rop.inst()->layername()),
-                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+                    rop.llvm_const_hash(rop.inst()->layername()),
+                    rop.llvm_const_hash(rop.inst()->shadername()) };
             if (!(Row.is_constant() && Row.get_int() >= 0
                   && Row.get_int() < 4)) {
                 row = rop.ll.call_function("osl_range_check", args);
@@ -1649,14 +1650,14 @@ LLVMGEN(llvm_gen_mxcompassign)
             llvm::Value* args[]
                 = { row,
                     rop.ll.constant(4),
-                    rop.llvm_load_stringhash(Result.name()),
+                    rop.llvm_const_hash(Result.name()),
                     rop.sg_void_ptr(),
-                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.llvm_const_hash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.llvm_const_hash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.llvm_load_stringhash(rop.inst()->layername()),
-                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+                    rop.llvm_const_hash(rop.inst()->layername()),
+                    rop.llvm_const_hash(rop.inst()->shadername()) };
             if (!(Row.is_constant() && Row.get_int() >= 0
                   && Row.get_int() < 4)) {
                 row = rop.ll.call_function("osl_range_check", args);
@@ -1720,14 +1721,14 @@ LLVMGEN(llvm_gen_aref)
             llvm::Value* args[]
                 = { index,
                     rop.ll.constant(Src.typespec().arraylength()),
-                    rop.llvm_load_stringhash(Src.unmangled()),
+                    rop.llvm_const_hash(Src.unmangled()),
                     rop.sg_void_ptr(),
-                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.llvm_const_hash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.llvm_const_hash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.llvm_load_stringhash(rop.inst()->layername()),
-                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+                    rop.llvm_const_hash(rop.inst()->layername()),
+                    rop.llvm_const_hash(rop.inst()->shadername()) };
             index = rop.ll.call_function("osl_range_check", args);
         }
     }
@@ -1765,14 +1766,14 @@ LLVMGEN(llvm_gen_aassign)
             llvm::Value* args[]
                 = { index,
                     rop.ll.constant(Result.typespec().arraylength()),
-                    rop.llvm_load_stringhash(Result.unmangled()),
+                    rop.llvm_const_hash(Result.unmangled()),
                     rop.sg_void_ptr(),
-                    rop.llvm_load_stringhash(op.sourcefile()),
+                    rop.llvm_const_hash(op.sourcefile()),
                     rop.ll.constant(op.sourceline()),
-                    rop.llvm_load_stringhash(rop.group().name()),
+                    rop.llvm_const_hash(rop.group().name()),
                     rop.ll.constant(rop.layer()),
-                    rop.llvm_load_stringhash(rop.inst()->layername()),
-                    rop.llvm_load_stringhash(rop.inst()->shadername()) };
+                    rop.llvm_const_hash(rop.inst()->layername()),
+                    rop.llvm_const_hash(rop.inst()->shadername()) };
             index = rop.ll.call_function("osl_range_check", args);
         }
     }
@@ -1897,7 +1898,7 @@ LLVMGEN(llvm_gen_construct_triple)
             vectype = TypeDesc::NORMAL;
 
         llvm::Value* from_arg = rop.llvm_load_value(Space);
-        llvm::Value* to_arg   = rop.llvm_load_stringhash(Strings::common);
+        llvm::Value* to_arg   = rop.llvm_const_hash(Strings::common);
 
         llvm::Value* args[] = { rop.sg_void_ptr(),
                                 rop.llvm_void_ptr(Result),
@@ -3392,9 +3393,8 @@ LLVMGEN(llvm_gen_getattribute)
     // necessary conversions from its internal format to OSL's.
     TypeDesc dest_type = Destination.typespec().simpletype();
 
-    llvm::Value* obj_name_arg  = object_lookup
-                                     ? rop.llvm_load_value(ObjectName)
-                                     : rop.llvm_load_stringhash(ustring());
+    llvm::Value* obj_name_arg  = object_lookup ? rop.llvm_load_value(ObjectName)
+                                               : rop.llvm_const_hash(ustring());
     llvm::Value* attr_name_arg = rop.llvm_load_value(Attribute);
 
     ustring object_name      = (object_lookup && ObjectName.is_constant())
@@ -3585,7 +3585,7 @@ LLVMGEN(llvm_gen_getmessage)
     args[5] = rop.ll.constant((int)Data.has_derivs());
 
     args[6] = rop.ll.constant(rop.inst()->id());
-    args[7] = rop.llvm_load_stringhash(op.sourcefile());
+    args[7] = rop.llvm_const_hash(op.sourcefile());
     args[8] = rop.ll.constant(op.sourceline());
 
     llvm::Value* r = rop.ll.call_function("osl_getmessage", args);
@@ -3606,7 +3606,7 @@ LLVMGEN(llvm_gen_setmessage)
 
     llvm::Value* args[7];
     args[0] = rop.sg_void_ptr();
-    args[1] = rop.llvm_load_string(Name);
+    args[1] = rop.llvm_load_value(Name);
     if (Data.typespec().is_closure_based()) {
         // FIXME: secret handshake for closures ...
         args[2] = rop.ll.constant(
@@ -3619,7 +3619,7 @@ LLVMGEN(llvm_gen_setmessage)
     }
 
     args[4] = rop.ll.constant(rop.inst()->id());
-    args[5] = rop.llvm_load_stringhash(op.sourcefile());
+    args[5] = rop.llvm_const_hash(op.sourcefile());
     args[6] = rop.ll.constant(op.sourceline());
 
     rop.ll.call_function("osl_setmessage", args);
@@ -4269,7 +4269,7 @@ LLVMGEN(llvm_gen_raytype)
         func         = "osl_raytype_bit";
     } else {
         // No way to know which name is being asked for
-        args[1] = rop.llvm_load_string(Name);
+        args[1] = rop.llvm_load_value(Name);
         func    = "osl_raytype_name";
     }
     llvm::Value* ret = rop.ll.call_function(func, args);

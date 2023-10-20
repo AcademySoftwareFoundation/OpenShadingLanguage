@@ -207,23 +207,23 @@ osl_split(ustringhash_pod str_, ustringhash_pod* results, ustringhash_pod sep_,
 // compliant renderers have adapted.
 
 OSL_SHADEOP void
-osl_printf(ShaderGlobals* sg, const char* format_str, ...)
+osl_printf(ShaderGlobals* sg, OSL::ustringhash_pod format_str, ...)
 {
 }
 
 OSL_SHADEOP void
-osl_error(ShaderGlobals* sg, const char* format_str, ...)
+osl_error(ShaderGlobals* sg, OSL::ustringhash_pod format_str, ...)
 {
 }
 
 OSL_SHADEOP void
-osl_warning(ShaderGlobals* sg, const char* format_str, ...)
+osl_warning(ShaderGlobals* sg, OSL::ustringhash_pod format_str, ...)
 {
 }
 
 OSL_SHADEOP void
-osl_fprintf(ShaderGlobals* /*sg*/, const char* filename, const char* format_str,
-            ...)
+osl_fprintf(ShaderGlobals* /*sg*/, OSL::ustringhash_pod filename,
+            OSL::ustringhash_pod format_str, ...)
 {
 }
 

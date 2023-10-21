@@ -1,4 +1,4 @@
-# Copyright 2008-present Contributors to the Open Shading Language project.
+# Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
@@ -14,6 +14,10 @@ on:
     branches:
       - main
       - '*analysis*'
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+      - '**.tex'
   # Allow manual kicking off of the workflow from github.com
   workflow_dispatch:
 

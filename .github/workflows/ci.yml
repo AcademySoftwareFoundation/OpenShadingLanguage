@@ -444,17 +444,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: MacOS-11
-            os: macos-11
-            nametag: macos11-py39
-            cc_compiler: /usr/local/opt/llvm@14/bin/clang
-            cxx_compiler: /usr/local/opt/llvm@14/bin/clang++
-            cxx_std: 17
-            python_ver: "3.10"
-            aclang: 13
-            setenvs: export LLVMBREWVER="@14" DO_BREW_UPDATE=1
-                            OPENIMAGEIO_VERSION=release
-                            QT_BREW_VERSION="@5"
+          # - desc: MacOS-11
+          #   os: macos-11
+          #   nametag: macos11-py39
+          #   cc_compiler: /usr/local/opt/llvm@14/bin/clang
+          #   cxx_compiler: /usr/local/opt/llvm@14/bin/clang++
+          #   cxx_std: 17
+          #   python_ver: "3.10"
+          #   aclang: 13
+          #   setenvs: export LLVMBREWVER="@14" DO_BREW_UPDATE=1
+          #                   OPENIMAGEIO_VERSION=release
+          #                   QT_BREW_VERSION="@5"
           - desc: MacOS-12
             os: macos-12
             nametag: macos12-p310

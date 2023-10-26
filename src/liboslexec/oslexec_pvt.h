@@ -1468,6 +1468,8 @@ public:
     /// instance overrides from the master copy.
     struct SymOverrideInfo {
         // Using bit fields to keep the data in 8 bytes in total.
+        // Note: it's important that all the bitfields are the same type
+        // (unsigned int), or MSVS won't merge them properly into one int.
         unsigned int m_valuesource : 3;
         unsigned int m_connected_down : 1;
         unsigned int m_interpolated : 1;

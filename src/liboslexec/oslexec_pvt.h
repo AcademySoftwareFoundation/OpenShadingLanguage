@@ -1468,11 +1468,11 @@ public:
     /// instance overrides from the master copy.
     struct SymOverrideInfo {
         // Using bit fields to keep the data in 8 bytes in total.
-        unsigned char m_valuesource : 3;
-        bool m_connected_down : 1;
-        bool m_interpolated : 1;
-        bool m_interactive : 1;
-        int m_arraylen : 26;
+        unsigned int m_valuesource : 3;
+        unsigned int m_connected_down : 1;
+        unsigned int m_interpolated : 1;
+        unsigned int m_interactive : 1;
+        unsigned int m_arraylen : 26;
         int m_data_offset;
 
         SymOverrideInfo()

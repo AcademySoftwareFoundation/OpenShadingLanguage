@@ -125,6 +125,10 @@ else
     source src/build-scripts/build_llvm.bash
 fi
 
+if [[ "$CMAKE_VERSION" != "" ]] ; then
+    source src/build-scripts/build_cmake.bash
+fi
+cmake --version
 
 
 if [[ "$OPTIX_VERSION" != "" ]] ; then

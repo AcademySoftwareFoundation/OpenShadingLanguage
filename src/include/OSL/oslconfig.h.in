@@ -102,7 +102,11 @@ using OIIO::TextureOpt;
 // And some other things we borrow from OIIO...
 using OIIO::ErrorHandler;
 using OIIO::ustring;
+#ifdef OIIO_USTRING_HAS_STDHASH
+using ustringHash = std::hash<ustring>;
+#else
 using OIIO::ustringHash;
+#endif
 using OIIO::string_view;
 using OIIO::span;
 using OIIO::cspan;

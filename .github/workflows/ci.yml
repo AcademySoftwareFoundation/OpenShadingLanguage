@@ -45,7 +45,7 @@ jobs:
             openimageio_ver: v2.2.17.0
             python_ver: 2.7
             pybind11_ver: v2.4.2
-          - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.3 py2.7
+          - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.4 py2.7
             nametag: linux-clang9-llvm9
             os: ubuntu-20.04
             container: aswftesting/ci-osl:2019-clang9
@@ -53,16 +53,19 @@ jobs:
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 14
+            openexr_ver: v2.4.3
             openimageio_ver: release
             python_ver: 2.7
             # pybind11_ver: v2.9.0
             simd: avx
-          - desc: GPU Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.3 OIIO-master avx2
+            setenvs: export CMAKE_VERSION=3.15.5
+          - desc: GPU Cuda10 gcc6/C++14 llvm10 py2.7 boost-1.70 exr-2.4 OIIO-master avx2
             nametag: linux-optix7-2019
             os: ubuntu-latest
             container: aswftesting/ci-osl:2019-clang10
             vfxyear: 2019
             cxx_std: 14
+            openexr_ver: v2.4.3
             openimageio_ver: master
             python_ver: 2.7
             # pybind11_ver: v2.9.0
@@ -70,6 +73,7 @@ jobs:
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DUSE_OPTIX=1" OPTIX_VERSION=7.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=8.1.1
+                            CMAKE_VERSION=3.15.5
           - desc: gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4
             nametag: linux-vfx2020
             os: ubuntu-latest
@@ -191,6 +195,7 @@ jobs:
                             OSL_OPTIONS=llvm_debugging_symbols=1
                             TESTRENDER_AA=1
                             OSL_TESTSUITE_SKIP_DIFF=1
+                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
             # Sanitizer notes:
             # - There are a handful of tests we disable entirely with
             #   CTEST_EXCLUSIONS because they are irrelevant or just cannot be

@@ -12,9 +12,9 @@
 #include "cuda_string_table.h"
 
 using GlobalsMap
-    = std::unordered_map<OIIO::ustring, uint64_t, OIIO::ustringHash>;
+    = std::unordered_map<OIIO::ustring, uint64_t, ustringHash>;
 using TextureSamplerMap
-    = std::unordered_map<OIIO::ustring, cudaTextureObject_t, OIIO::ustringHash>;
+    = std::unordered_map<OIIO::ustring, cudaTextureObject_t, ustringHash>;
 
 // Just use 4x4 matrix for transformations
 typedef OSL::Matrix44 Transformation;

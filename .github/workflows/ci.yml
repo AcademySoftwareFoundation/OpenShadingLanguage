@@ -38,7 +38,7 @@ jobs:
         include:
           - desc: gcc6/C++14 llvm9 py2.7 boost1.66 exr2.4 oiio2.3 sse2
             nametag: linux-vfx2020
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2019-clang9
             vfxyear: 2019
             cxx_std: 14
@@ -49,7 +49,7 @@ jobs:
             setenvs: export CMAKE_VERSION=3.15.5
           - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.4 py2.7
             nametag: linux-clang9-llvm9
-            os: ubuntu-20.04
+            runner: ubuntu-20.04
             container: aswftesting/ci-osl:2019-clang9
             vfxyear: 2019
             cc_compiler: clang
@@ -63,7 +63,7 @@ jobs:
             setenvs: export CMAKE_VERSION=3.15.5
           - desc: gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4
             nametag: linux-vfx2020
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2020
             vfxyear: 2020
             cxx_std: 14
@@ -74,7 +74,7 @@ jobs:
             setenvs: export CONAN_LLVM_VERSION=10.0.1
           - desc: gcc9/C++17 llvm11 py3.7 boost1.73 exr2.5 oiio2.3 avx2 batch-b8avx2
             nametag: linux-vfx2021
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2021-clang11
             vfxyear: 2021
             cxx_std: 17
@@ -85,7 +85,7 @@ jobs:
             batched: b8_AVX2_noFMA
           - desc: gcc9/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio-rel avx2
             nametag: linux-vfx2022
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang13
             vfxyear: 2022
             cxx_std: 17
@@ -96,7 +96,7 @@ jobs:
             batched: b8_AVX2
           - desc: clang12/C++17 llvm12 oiio-master boost1.73 exr3.1 py3.9 avx2 batch-avx512
             nametag: linux-clang12-llvm12-batch
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang12
             vfxyear: 2022
             cxx_std: 17
@@ -108,7 +108,7 @@ jobs:
             setenvs: USE_OPENVDB=0
           - desc: icc/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio-master avx2
             nametag: linux-icc
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
             cc_compiler: icc
@@ -125,7 +125,7 @@ jobs:
                             USE_OPENVDB=0
           - desc: icx/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio2.3 avx2
             nametag: linux-icx
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
             cc_compiler: icx
@@ -140,7 +140,7 @@ jobs:
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
           - desc: gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 oiio-rel avx2
             nametag: linux-vfx2023
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
             vfxyear: 2023
             cxx_std: 17
@@ -151,7 +151,7 @@ jobs:
             batched: b8_AVX2
           - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 OIIO-master avx2
             nametag: linux-optix7-2023
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
             vfxyear: 2023
             cxx_std: 17
@@ -164,7 +164,7 @@ jobs:
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
           - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.3 no-simd exr2.4
             nametag: linux-oldest
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2019-clang9
             vfxyear: 2019
             cxx_std: 14
@@ -179,7 +179,7 @@ jobs:
           # Address and leak sanitizers
           - desc: sanitizers
             nametag: sanitizer
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang13
             vfxyear: 2022
             cc_compiler: clang
@@ -224,7 +224,7 @@ jobs:
             # the console output).
           - desc: "clang-format"
             nametag: clang-format
-            os: ubuntu-latest
+            runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
             cxx_std: 17
@@ -236,7 +236,7 @@ jobs:
             setenvs: export BUILDTARGET=clang-format
                             OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
 
-    runs-on: ${{matrix.os}}
+    runs-on: ${{matrix.runner}}
     container:
         image: ${{ matrix.container }}
     env:
@@ -308,7 +308,7 @@ jobs:
         include:
           - desc: Debug gcc7/C++14 llvm9 py2.7 oiio2.3 exr2.4 sse4 boost1.65 exr2.4
             nametag: linux-debug-gcc7-llvm9
-            os: ubuntu-20.04
+            runner: ubuntu-20.04
             cxx_compiler: g++-7
             cxx_std: 14
             openexr_ver: v2.4.3
@@ -322,7 +322,7 @@ jobs:
                             CTEST_TEST_TIMEOUT=240
           - desc: gcc10/C++17 llvm10 oiio-release boost1.65 exr2.5 avx2
             nametag: linux-2021ish-gcc10-llvm10
-            os: ubuntu-20.04
+            runner: ubuntu-20.04
             cxx_compiler: g++-10
             cxx_std: 17
             fmt_ver: 7.0.1
@@ -336,7 +336,7 @@ jobs:
                             PUGIXML_VERSION=v1.10
           - desc: latest releases gcc11/C++17 llvm15 boost1.71 exr3.2 py3.9 avx2 batch-b16avx512
             nametag: linux-latest-releases
-            os: ubuntu-22.04
+            runner: ubuntu-22.04
             cxx_compiler: g++-11
             cxx_std: 17
             fmt_ver: 10.1.0
@@ -352,7 +352,7 @@ jobs:
                             PUGIXML_VERSION=v1.13
           - desc: bleeding edge gcc12/C++17 llvm16 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
-            os: ubuntu-22.04
+            runner: ubuntu-22.04
             cxx_compiler: g++-12
             cxx_std: 17
             fmt_ver: master
@@ -368,7 +368,7 @@ jobs:
                             PUGIXML_VERSION=master
           - desc: clang14/C++17 llvm14 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
-            os: ubuntu-20.04
+            runner: ubuntu-20.04
             cxx_compiler: clang++
             cc_compiler: clang
             cxx_std: 17
@@ -384,7 +384,7 @@ jobs:
                             OPENCOLORIO_VERSION=v2.1.2
                             PUGIXML_VERSION=v1.11.4
 
-    runs-on: ${{matrix.os}}
+    runs-on: ${{matrix.runner}}
     env:
       CXX: ${{matrix.cxx_compiler}}
       CC: ${{matrix.cc_compiler}}
@@ -439,14 +439,14 @@ jobs:
 
 
   macos:
-    name: "${{matrix.os}} appleclang${{matrix.aclang}}/C++${{matrix.cxx_std}} py${{matrix.python_ver}} ${{matrix.desc}}"
+    name: "${{matrix.runner}} appleclang${{matrix.aclang}}/C++${{matrix.cxx_std}} py${{matrix.python_ver}} ${{matrix.desc}}"
     strategy:
       fail-fast: false
       matrix:
         include:
           # - desc: MacOS-11
-          #   os: macos-11
-          #   nametag: macos11-py39
+          #   runner: macos-11
+          #   nametag: macos11-py310
           #   cc_compiler: /usr/local/opt/llvm@14/bin/clang
           #   cxx_compiler: /usr/local/opt/llvm@14/bin/clang++
           #   cxx_std: 17
@@ -456,7 +456,7 @@ jobs:
           #                   OPENIMAGEIO_VERSION=release
           #                   QT_BREW_VERSION="@5"
           - desc: MacOS-12
-            os: macos-12
+            runner: macos-12
             nametag: macos12-p310
             cc_compiler: /usr/local/opt/llvm@15/bin/clang
             cxx_compiler: /usr/local/opt/llvm@15/bin/clang++
@@ -466,7 +466,7 @@ jobs:
             setenvs: export LLVMBREWVER="@15" DO_BREW_UPDATE=1
                             OPENIMAGEIO_VERSION=master
           - desc: MacOS-13
-            os: macos-13
+            runner: macos-13
             nametag: macos13-p311
             cc_compiler: /usr/local/opt/llvm@15/bin/clang
             cxx_compiler: /usr/local/opt/llvm@15/bin/clang++
@@ -476,7 +476,7 @@ jobs:
             setenvs: export LLVMBREWVER="@15" DO_BREW_UPDATE=1
                             OPENIMAGEIO_VERSION=master
 
-    runs-on: ${{matrix.os}}
+    runs-on: ${{matrix.runner}}
     env:
       CXX: ${{matrix.cxx_compiler}}
       CC: ${{matrix.cc_compiler}}

@@ -1,9 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.12.14.0 -- 1 Aug? 2023 (compared to 1.12.13.0)
+Release 1.12.14.0 -- 1 Nov 2023 (compared to 1.12.13.0)
 --------------------------------------------------------
-
+- Correctly document that our Cuda minimum is 9.0. [#1737](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1737)
+- Fixes to build and test against OpenImageIO 2.5 [#1742](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1742)
+- Fix default fmt logic changing in latest openimageio release [#1725](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1725)
 
 
 Release 1.12.13.0 -- 1 July 2023 (compared to 1.12.12.0)

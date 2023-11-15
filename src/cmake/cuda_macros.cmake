@@ -138,6 +138,16 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         set (CLANG_FTZ_FLAG "-fcuda-flush-denormals-to-zero")
     endif ()
 
+    if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "12.0")
+        # The textureReference API was removed in CUDA 12.0, but it's still referenced
+        # in the clang headers, so compilation will fail with 12.0 and newer toolkits
+        # due to the missing definitions.
+        #
+        # We don't actually require any of the clang CUDA texture intrinsics, so we can
+        # side-step the issue by preventing them from being included by the preprocessor.
+        set (CUDA_TEXREF_FIX "-D__CLANG_CUDA_TEXTURE_INTRINSICS_H__")
+    endif()
+
     list (TRANSFORM IMATH_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
     list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
@@ -158,7 +168,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             ${ALL_IMATH_INCLUDES}
             ${ALL_OPENEXR_INCLUDES}
             "-I${Boost_INCLUDE_DIRS}"
-            ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX}
+            ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX} ${CUDA_TEXREF_FIX}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security

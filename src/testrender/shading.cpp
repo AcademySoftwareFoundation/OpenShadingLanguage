@@ -396,7 +396,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
           { CLOSURE_VECTOR_PARAM(MxSheenParams, N),
             CLOSURE_COLOR_PARAM(MxSheenParams, albedo),
             CLOSURE_FLOAT_PARAM(MxSheenParams, roughness),
-            CLOSURE_STRING_KEYPARAM(MxSubsurfaceParams, label, "label"),
+            CLOSURE_STRING_KEYPARAM(MxSheenParams, label, "label"),
             CLOSURE_FINISH_PARAM(MxSheenParams) } },
         { "uniform_edf",
           MX_UNIFORM_EDF_ID,

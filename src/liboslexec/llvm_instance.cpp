@@ -445,8 +445,6 @@ void
 BackendLLVM::build_offsets_of_ShaderGlobals(
     std::vector<unsigned int>& offset_by_index)
 {
-    typedef OSL::ShaderGlobals sgBatch;
-
     offset_by_index.push_back(offsetof(ShaderGlobals, P));
     offset_by_index.push_back(offsetof(ShaderGlobals, dPdz));
     offset_by_index.push_back(offsetof(ShaderGlobals, I));

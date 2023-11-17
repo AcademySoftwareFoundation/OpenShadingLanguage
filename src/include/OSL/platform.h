@@ -556,6 +556,28 @@ template<> OSL_FORCEINLINE double bitcast<double, int64_t>(const int64_t& val) n
 #endif
 
 
+/// OSL_PACKED_ALIGN* is used to pack a struct or class tightly and align it
+/// to 1 byte. Use it like the following example to ensure portability across
+/// GCC and MSVC. Other placement of OSL_PACKED_ALIGN might work on GCC but
+/// fail on MSVC. Failure to add begin and end macros will work on GCC but
+/// fail to pack the struct on MSVC.
+///
+/// OSL_PACKED_ALIGN_BEGIN
+/// struct OSL_PACKED_ALIGN Foo {
+///     char x, y, z;
+/// };
+/// OSL_PACKED_ALIGN_END
+#if defined(_MSC_VER)
+#    define OSL_PACKED_ALIGN __declspec(align(1))
+#    define OSL_PACKED_ALIGN_BEGIN __pragma(pack(push, 1))
+#    define OSL_PACKED_ALIGN_END __pragma(pack(pop))
+#else
+#    define OSL_PACKED_ALIGN __attribute__((packed, aligned(1)))
+#    define OSL_PACKED_ALIGN_BEGIN
+#    define OSL_PACKED_ALIGN_END
+#endif
+
+
 
 #if OSL_CPLUSPLUS_VERSION >= 20
 using std::assume_aligned;

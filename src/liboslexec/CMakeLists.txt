@@ -592,7 +592,7 @@ endforeach(batched_target_lib)
 install_targets (${local_lib})
 
 # Unit tests
-if (OSL_BUILD_TESTS)
+if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_executable (accum_test accum_test.cpp)
     target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     set_target_properties (accum_test PROPERTIES FOLDER "Unit Tests")

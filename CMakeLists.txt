@@ -214,7 +214,7 @@ add_subdirectory (src/liboslnoise)
 add_subdirectory (src/oslc)
 add_subdirectory (src/oslinfo)
 
-if (OSL_BUILD_TESTS)
+if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_subdirectory (src/testshade)
     add_subdirectory (src/testrender)
 endif ()
@@ -223,7 +223,7 @@ if (OSL_BUILD_PLUGINS)
     add_subdirectory (src/osl.imageio)
 endif ()
 
-if (USE_QT AND (Qt5_FOUND OR Qt6_FOUND))
+if (USE_QT AND (Qt5_FOUND OR Qt6_FOUND) AND NOT DISABLE_OSLTOY)
     add_subdirectory (src/osltoy)
 endif ()
 
@@ -304,7 +304,7 @@ install (EXPORT OSL_EXPORTED_TARGETS
         FILE ${OSL_TARGETS_EXPORT_NAME}
         NAMESPACE ${PROJECT_NAME}::)
 
-if (${PROJECT_NAME}_BUILD_TESTS AND PROJECT_IS_TOP_LEVEL)
+if (PROJECT_IS_TOP_LEVEL AND BUILD_TESTING AND ${PROJECT_NAME}_BUILD_TESTS)
 	osl_add_all_tests()
 endif ()
 

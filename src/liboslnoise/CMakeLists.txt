@@ -51,7 +51,7 @@ set_target_properties (${local_lib}
 install_targets (${local_lib})
 
 
-if (OSL_BUILD_TESTS)
+if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_executable (oslnoise_test oslnoise_test.cpp)
     set_target_properties (oslnoise_test PROPERTIES FOLDER "Unit Tests")
     target_link_libraries (oslnoise_test PRIVATE oslnoise)

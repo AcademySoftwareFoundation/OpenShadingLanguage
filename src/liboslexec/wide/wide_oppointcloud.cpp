@@ -500,6 +500,10 @@ __OSL_MASKED_OP(pointcloud_search)(
     int distances_array_length, int distances_has_derivs, int mask_value,
     int nattrs, ...)
 {
+    if (wout_indices_ == nullptr) {
+        wout_indices_ = OSL_ALLOCA(Block<int>, max_points);
+        indices_array_length = max_points;
+    }
     PointCloudSearchResults pcsr { wout_num_points_,
                                    wout_indices_,
                                    indices_array_length,

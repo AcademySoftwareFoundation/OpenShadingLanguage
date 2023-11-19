@@ -556,27 +556,17 @@ template<> OSL_FORCEINLINE double bitcast<double, int64_t>(const int64_t& val) n
 #endif
 
 
-/// OSL_PACKED_ALIGN* is used to pack a struct or class tightly and align it
-/// to 1 byte. Use it like the following example to ensure portability across
-/// GCC and MSVC. Other placement of OSL_PACKED_ALIGN might work on GCC but
-/// fail on MSVC. Failure to add begin and end macros will work on GCC but
-/// fail to pack the struct on MSVC.
+/// OSL_PACK_STRUCTS_* is used to pack a struct or class tightly. Use it like
+/// the following example. To set the alignment of the struct use the
+/// alignas(x) directive.
 ///
-/// OSL_PACKED_ALIGN_BEGIN
-/// struct OSL_PACKED_ALIGN Foo {
+/// OSL_PACK_STRUCTS_BEGIN
+/// struct alignas(1) Foo {
 ///     char x, y, z;
 /// };
-/// OSL_PACKED_ALIGN_END
-#if defined(_MSC_VER)
-#    define OSL_PACKED_ALIGN __declspec(align(1))
-#    define OSL_PACKED_ALIGN_BEGIN __pragma(pack(push, 1))
-#    define OSL_PACKED_ALIGN_END __pragma(pack(pop))
-#else
-#    define OSL_PACKED_ALIGN __attribute__((packed, aligned(1)))
-#    define OSL_PACKED_ALIGN_BEGIN
-#    define OSL_PACKED_ALIGN_END
-#endif
-
+/// OSL_PACK_STRUCTS_END
+#define OSL_PACK_STRUCTS_BEGIN _Pragma("pack(push, 1)")
+#define OSL_PACK_STRUCTS_END _Pragma("pack(pop)")
 
 
 #if OSL_CPLUSPLUS_VERSION >= 20

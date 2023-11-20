@@ -387,7 +387,7 @@ OptixRaytracer::create_programs(State& state)
     OptixProgramGroupDesc raygen_desc    = {};
     raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
     raygen_desc.raygen.module            = state.program_module;
-    raygen_desc.raygen.entryFunctionName = "__raygen__";
+    raygen_desc.raygen.entryFunctionName = "__raygen__deferred";
     create_optix_pg(&raygen_desc, 1, &state.program_options, &state.raygen_group);
 
     // Set Globals Raygen group
@@ -424,9 +424,9 @@ OptixRaytracer::create_programs(State& state)
     // Hitgroup -- quads
     OptixProgramGroupDesc quad_hitgroup_desc = {};
     quad_hitgroup_desc.kind              = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    quad_hitgroup_desc.hitgroup.moduleCH = state.wrapper_module;
+    quad_hitgroup_desc.hitgroup.moduleCH = state.program_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameCH
-        = "__closesthit__closest_hit_osl";
+        = "__closesthit__deferred";
     quad_hitgroup_desc.hitgroup.moduleAH            = state.wrapper_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameAH = "__anyhit__any_hit_shadow";
     quad_hitgroup_desc.hitgroup.moduleIS            = state.quad_module;
@@ -466,9 +466,9 @@ OptixRaytracer::create_programs(State& state)
     // Hitgroup -- sphere
     OptixProgramGroupDesc sphere_hitgroup_desc = {};
     sphere_hitgroup_desc.kind              = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    sphere_hitgroup_desc.hitgroup.moduleCH = state.wrapper_module;
+    sphere_hitgroup_desc.hitgroup.moduleCH = state.program_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameCH
-        = "__closesthit__closest_hit_osl";
+        = "__closesthit__deferred";
     sphere_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameAH
         = "__anyhit__any_hit_shadow";
@@ -1166,6 +1166,10 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.color_system          = d_color_system;
     params.test_str_1            = test_str_1;
     params.test_str_2            = test_str_2;
+    params.num_quads             = scene.quads.size();
+    params.quads_buffer          = d_quads_list;
+    params.num_spheres           = scene.spheres.size();
+    params.spheres_buffer        = d_spheres_list;
 
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_launch_params), &params,
                           sizeof(RenderParams), cudaMemcpyHostToDevice));

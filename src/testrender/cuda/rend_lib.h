@@ -86,7 +86,7 @@ struct ShadingContextCUDA {
     __device__ void* trace_options_ptr() { return m_traceopt; }
 };
 
-
+namespace OSL_CUDA {
 struct ShaderGlobals {
     float3 P, dPdx, dPdy;
     float3 dPdz;
@@ -117,6 +117,7 @@ struct ShaderGlobals {
     int backfacing;
     int shaderID;
 };
+}
 
 
 enum RayType {
@@ -131,8 +132,10 @@ enum RayType {
 };
 
 
+#if 1
 // Closures supported by the OSL sample renderer.  This list is mostly aspirational.
-enum ClosureIDs {
+enum class ClosureIDs : int32_t {
+    COMPONENT_BASE_ID = 0, MUL = -1, ADD = -2,
     EMISSION_ID = 1,
     BACKGROUND_ID,
     DIFFUSE_ID,
@@ -148,6 +151,25 @@ enum ClosureIDs {
     DEBUG_ID,
     HOLDOUT_ID,
 };
+
+enum class MyClosureIDs : int32_t {
+    COMPONENT_BASE_ID = 0, MUL = -1, ADD = -2,
+    EMISSION_ID = 1,
+    BACKGROUND_ID,
+    DIFFUSE_ID,
+    OREN_NAYAR_ID,
+    TRANSLUCENT_ID,
+    PHONG_ID,
+    WARD_ID,
+    MICROFACET_ID,
+    REFLECTION_ID,
+    FRESNEL_REFLECTION_ID,
+    REFRACTION_ID,
+    TRANSPARENT_ID,
+    DEBUG_ID,
+    HOLDOUT_ID,
+};
+#endif
 
 
 // ========================================

@@ -120,7 +120,7 @@ closure_add_allot(void* pool, OSL::ClosureColor* a, OSL::ClosureColor* b)
 __device__ void*
 osl_allocate_closure_component(void* sg_, int id, int size)
 {
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)sg_;
 
     OSL::Color3 w = OSL::Color3(1, 1, 1);
     // Fix up the alignment
@@ -141,7 +141,7 @@ __device__ void*
 osl_allocate_weighted_closure_component(void* sg_, int id, int size,
                                         const void* w)
 {
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)sg_;
 
     const OSL::Color3* wc
         = (const OSL::Color3*)__builtin_assume_aligned(w, alignof(float));
@@ -166,7 +166,7 @@ osl_allocate_weighted_closure_component(void* sg_, int id, int size,
 __device__ void*
 osl_mul_closure_color(void* sg_, void* a, const void* w)
 {
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)sg_;
     const OSL::Color3* wc
         = (const OSL::Color3*)__builtin_assume_aligned(w, alignof(float));
 
@@ -198,7 +198,7 @@ osl_mul_closure_float(void* sg_, void* a, float w)
 {
     a = __builtin_assume_aligned(a, alignof(float));
 
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)sg_;
 
     if (a == NULL || w == 0.0f) {
         return NULL;
@@ -226,7 +226,7 @@ osl_add_closure_closure(void* sg_, void* a, void* b)
     a = __builtin_assume_aligned(a, alignof(float));
     b = __builtin_assume_aligned(b, alignof(float));
 
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)sg_;
 
     if (a == NULL) {
         return b;
@@ -359,7 +359,7 @@ osl_printf(void* sg_, OSL::ustringhash_pod fmt_str_hash, void* args)
 __device__ void*
 osl_get_noise_options(void* sg_)
 {
-    ShaderGlobals* sg = ((ShaderGlobals*)sg_);
+    OSL_CUDA::ShaderGlobals* sg = ((OSL_CUDA::ShaderGlobals*)sg_);
     NoiseOptCUDA* opt
         = (NoiseOptCUDA*)((ShadingContextCUDA*)sg->context)->noise_options_ptr();
     new (opt) NoiseOptCUDA;
@@ -446,7 +446,7 @@ osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 {
     r                     = __builtin_assume_aligned(r, alignof(float));
     OSL::ustringhash from = OSL::ustringhash_from(from_);
-    ShaderGlobals* sg     = (ShaderGlobals*)sg_;
+    ShaderGlobals* sg     = (OSL_CUDA::ShaderGlobals*)sg_;
     if (from == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;
@@ -491,7 +491,7 @@ osl_get_inverse_matrix(void* sg_, void* r, OSL::ustringhash_pod to_)
 {
     r                   = __builtin_assume_aligned(r, alignof(float));
     OSL::ustringhash to = OSL::ustringhash_from(to_);
-    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
+    ShaderGlobals* sg   = (OSL_CUDA::ShaderGlobals*)sg_;
     if (to == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;

@@ -286,6 +286,7 @@ struct Sphere final : public Primitive {
         sphere_data->r2           = r2;
         sphere_data->a            = M_PI * (r2 * r2);
         sphere_data->shaderID     = shaderid();
+        sphere_data->isLight      = islight();
     }
 #endif
 
@@ -389,6 +390,7 @@ struct Quad final : public Primitive {
         quad_data->ev         = ev;
         quad_data->a          = a;
         quad_data->shaderID   = shaderid();
+        quad_data->isLight    = islight();
     }
 #endif
 

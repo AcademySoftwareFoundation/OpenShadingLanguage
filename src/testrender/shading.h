@@ -151,6 +151,42 @@ struct ShadingResult {
     int priority         = 0;
 };
 
+namespace {  // anonymous namespace
+
+// unique identifier for each closure supported by testrender
+enum ClosureIDs {
+    EMISSION_ID = 1,
+    BACKGROUND_ID,
+    DIFFUSE_ID,
+    OREN_NAYAR_ID,
+    TRANSLUCENT_ID,
+    PHONG_ID,
+    WARD_ID,
+    MICROFACET_ID,
+    REFLECTION_ID,
+    FRESNEL_REFLECTION_ID,
+    REFRACTION_ID,
+    TRANSPARENT_ID,
+    // See MATERIALX_CLOSURES in stdosl.h
+    MX_OREN_NAYAR_DIFFUSE_ID,
+    MX_BURLEY_DIFFUSE_ID,
+    MX_DIELECTRIC_ID,
+    MX_CONDUCTOR_ID,
+    MX_GENERALIZED_SCHLICK_ID,
+    MX_TRANSLUCENT_ID,
+    MX_TRANSPARENT_ID,
+    MX_SUBSURFACE_ID,
+    MX_SHEEN_ID,
+    MX_UNIFORM_EDF_ID,
+    MX_ANISOTROPIC_VDF_ID,
+    MX_MEDIUM_VDF_ID,
+    MX_LAYER_ID,
+    // TODO: adding vdfs would require extending testrender with volume support ...
+};
+
+}  // anonymous namespace
+
+#if !defined(__CUDACC__)
 void
 register_closures(ShadingSystem* shadingsys);
 void
@@ -158,5 +194,6 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 const ClosureColor* Ci, bool light_only);
 Vec3
 process_background_closure(const ClosureColor* Ci);
+#endif // !defined(__CUDACC__)
 
 OSL_NAMESPACE_EXIT

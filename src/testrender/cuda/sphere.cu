@@ -49,7 +49,7 @@ __direct_callable__sphere_shaderglobals(const unsigned int idx,
                                         const float t_hit,
                                         const float3 ray_origin,
                                         const float3 ray_direction,
-                                        ShaderGlobals* sg)
+                                        OSL_CUDA::ShaderGlobals* sg)
 {
     const GenericData* g_data = reinterpret_cast<const GenericData*>(
         optixGetSbtDataPointer());

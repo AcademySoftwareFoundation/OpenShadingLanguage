@@ -101,7 +101,13 @@ __raygen__()
     alignas(8) char closure_pool[256];
     alignas(8) char params[256];
 
-    ShaderGlobals sg;
+    const float invw      = render_params.invw;
+    const float invh      = render_params.invh;
+    bool flipv            = render_params.flipv;
+    float3* output_buffer = reinterpret_cast<float3*>(
+        render_params.output_buffer);
+
+    OSL_CUDA::ShaderGlobals sg;
     // Setup the ShaderGlobals
     sg.I  = make_float3(0, 0, 1);
     sg.N  = make_float3(0, 0, 1);
@@ -143,20 +149,20 @@ __raygen__()
     // Run the OSL group and init functions
     if (render_params.fused_callable)
         // call osl_init_func
-        optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
             0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
             nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
             0 /*shadeindex - unused*/,
             sbtdata->data /*interactive_params_ptr*/);
     else {
         // call osl_init_func
-        optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
             0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
             nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
             0 /*shadeindex - unused*/,
             sbtdata->data /*interactive_params_ptr*/);
         // call osl_group_func
-        optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
             1u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
             nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
             0 /*shadeindex - unused*/,

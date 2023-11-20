@@ -24,11 +24,14 @@ if (OSL_USE_OPTIX)
     # We need to make sure that the PTX files are regenerated whenever these
     # headers change.
     set (testrender_cuda_headers
-        cuda/rend_lib.h)
+        cuda/rend_lib.h
+        render_params.h
+        sampling.h
+        )
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testrender_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} "" ptx_generated "" )
+        NVCC_COMPILE ( ${cudasrc} "${testrender_cuda_headers}" ptx_generated "" )
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 

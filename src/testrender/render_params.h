@@ -38,6 +38,12 @@ struct RenderParams {
     // for used-data tests
     uint64_t test_str_1;
     uint64_t test_str_2;
+
+    uint64_t    num_quads;
+    CUdeviceptr quads_buffer;
+
+    uint64_t    num_spheres;
+    CUdeviceptr spheres_buffer;
 };
 
 
@@ -45,6 +51,7 @@ struct RenderParams {
 struct PrimitiveParams {
     float a;  // area
     unsigned int shaderID;
+    bool isLight;
 };
 
 

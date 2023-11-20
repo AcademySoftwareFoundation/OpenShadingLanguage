@@ -179,9 +179,18 @@ struct MIS {
     }
 };
 
+#ifndef OSL_HOSTDEVICE
+#  ifdef __CUDACC__
+#    define OSL_HOSTDEVICE __host__ __device__
+#  else
+#    define OSL_HOSTDEVICE
+#  endif
+#endif
+
 // "Practical Hash-based Owen Scrambling" - Brent Burley - JCGT 2020
 //    https://jcgt.org/published/0009/04/01/
 struct Sampler {
+    OSL_HOSTDEVICE
     Sampler(int px, int py, int si)
         : seed(((px & 2047) << 22) | ((py & 2047) << 11))
         , index(reversebits(si))
@@ -189,6 +198,7 @@ struct Sampler {
         assert(si < (1 << 24));
     }
 
+    OSL_HOSTDEVICE
     Vec3 get()
     {
         static const uint32_t zmatrix[24] = {
@@ -223,7 +233,7 @@ struct Sampler {
 private:
     uint32_t seed, index;
 
-    static uint32_t hash(uint32_t s)
+    static OSL_HOSTDEVICE uint32_t hash(uint32_t s)
     {
         // https://github.com/skeeto/hash-prospector
         s ^= s >> 16;
@@ -234,7 +244,7 @@ private:
         return s;
     }
 
-    static uint32_t reversebits(uint32_t x)
+    static OSL_HOSTDEVICE uint32_t reversebits(uint32_t x)
     {
 #if defined(__clang__)
         return __builtin_bitreverse32(x);
@@ -248,7 +258,7 @@ private:
 #endif
     }
 
-    static uint32_t owen_scramble(uint32_t p, uint32_t s)
+    static OSL_HOSTDEVICE uint32_t owen_scramble(uint32_t p, uint32_t s)
     {
         // https://psychopath.io/post/2021_01_30_building_a_better_lk_hash
         // assumes reversed input

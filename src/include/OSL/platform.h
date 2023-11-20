@@ -488,7 +488,7 @@
 /// to use regular assert() for this purpose if you need to eliminate the
 /// dependency on this header from a particular place (and don't mind that
 /// assert won't format identically on all platforms).
-#ifndef NDEBUG
+#if !defined(NDEBUG) || !defined(__CUDACC__)
 #    define OSL_DASSERT OSL_ASSERT
 #    define OSL_DASSERT_MSG OSL_ASSERT_MSG
 #else

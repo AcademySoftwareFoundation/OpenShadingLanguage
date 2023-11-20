@@ -10,9 +10,16 @@
 
 using namespace OSL;
 
+#if defined(__CUDACC__)
+using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
+#else
+using ShaderGlobalsType = OSL::ShaderGlobals;
+#endif
+
 namespace {  // anonymous namespace
 
 using OIIO::clamp;
+using OSL::dot;
 
 Color3
 clamp(const Color3& c, float min, float max)
@@ -28,7 +35,7 @@ is_black(const Color3& c)
 }
 
 
-
+#if !defined(__CUDACC__)
 // unique identifier for each closure supported by testrender
 enum ClosureIDs {
     EMISSION_ID = 1,
@@ -59,6 +66,7 @@ enum ClosureIDs {
     MX_LAYER_ID,
     // TODO: adding vdfs would require extending testrender with volume support ...
 };
+#endif // !defined(__CUDACC__)
 
 // these structures hold the parameters of each closure type
 // they will be contained inside ClosureComponent
@@ -247,6 +255,7 @@ struct MxMediumVdfParams {
 OSL_NAMESPACE_ENTER
 
 
+#if !defined(__CUDACC__)
 void
 register_closures(OSL::ShadingSystem* shadingsys)
 {
@@ -433,6 +442,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
     for (const BuiltinClosures& b : builtins)
         shadingsys->register_closure(b.name, b.id, b.params, nullptr, nullptr);
 }
+#endif // !defined(__CUDACC__)
 
 OSL_NAMESPACE_EXIT
 
@@ -1447,7 +1457,7 @@ struct MxSheen final : public BSDF, MxSheenParams {
 };
 
 Color3
-evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
+evaluate_layer_opacity(const ShaderGlobalsType& sg,
                        const ClosureColor* closure)
 {
     // Null closure, the layer is fully transparent
@@ -1474,7 +1484,8 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
         case REFLECTION_ID:
         case FRESNEL_REFLECTION_ID: {
             Reflection bsdf(*comp->as<ReflectionParams>());
-            return w * bsdf.get_albedo(-sg.I);
+            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+            return w * bsdf.get_albedo(-I);
         }
         case MX_DIELECTRIC_ID: {
             const MxDielectricParams& params = *comp->as<MxDielectricParams>();
@@ -1482,7 +1493,8 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
             if (!is_black(params.transmission_tint))
                 return Color3(1);
             MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params, 1.0f);
-            return w * mf.get_albedo(-sg.I);
+            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+            return w * mf.get_albedo(-I);
         }
         case MX_GENERALIZED_SCHLICK_ID: {
             const MxGeneralizedSchlickParams& params
@@ -1492,11 +1504,13 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
                 return Color3(1);
             MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params,
                                                                         1.0f);
-            return w * mf.get_albedo(-sg.I);
+            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+            return w * mf.get_albedo(-I);
         }
         case MX_SHEEN_ID: {
             MxSheen bsdf(*comp->as<MxSheenParams>());
-            return w * bsdf.get_albedo(-sg.I);
+            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+            return w * bsdf.get_albedo(-I);
         }
         default:  // Assume unhandled BSDFs are opaque
             return Color3(1);
@@ -1507,8 +1521,9 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
     return Color3(0);
 }
 
+#if !defined(__CUDACC__)
 void
-process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
+process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                        const ClosureColor* closure, const Color3& w)
 {
     if (!closure)
@@ -1591,7 +1606,7 @@ process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
 
 // recursively walk through the closure tree, creating bsdfs as we go
 void
-process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
+process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                      const ClosureColor* closure, const Color3& w,
                      bool light_only)
 {
@@ -1797,13 +1812,15 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
     }
     }
 }
+#endif // !defined(__CUDACC__)
 
 }  // anonymous namespace
 
 OSL_NAMESPACE_ENTER
 
+#if !defined(__CUDACC__)
 void
-process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
+process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 const ClosureColor* Ci, bool light_only)
 {
     if (!light_only)
@@ -1833,6 +1850,7 @@ process_background_closure(const ClosureColor* closure)
     OSL_ASSERT(false && "Invalid closure invoked in background shader");
     return Vec3(0, 0, 0);
 }
+#endif // !defined(__CUDACC__)
 
 
 OSL_NAMESPACE_EXIT

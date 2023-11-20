@@ -103,7 +103,11 @@ set ( liboslexec_require_INF_NaN
     wide/wide_shadingsys
     wide/wide_optest_float
     )
-    
+
+set ( liboslexec_exceeds_INTELCLANG_inlining_limits
+    wide/wide_opspline
+    )
+
 set (local_lib oslexec)
 set (lib_src
           shadingsys.cpp closure.cpp
@@ -390,11 +394,15 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             list (APPEND TARGET_CXX_OPTS "-ffp-contract=off")
         endif ()
         
-        # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
-        # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]     
-        # choose to increase that limit via compiler flags vs. 
-        # workaround with __attribute__((flatten))     
-        list (APPEND TARGET_CXX_OPTS "-mllvm" "-inline-threshold=100000")
+        if (NOT CMAKE_COMPILER_IS_INTELCLANG)
+            # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
+            # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]     
+            # choose to increase that limit via compiler flags vs. 
+            # workaround with __attribute__((flatten))     
+            list (APPEND TARGET_CXX_OPTS "-mllvm" "-inline-threshold=100000")
+            # NOTE: INTELCLANG we use icx/icc specific "#pragma force inline recursive"
+            #       to only inline the SIMD loops contents vs. everything.
+        endif ()
             
         # For loops with small loop bodies, clang was unrolling the loop before
         # #pragma omp simd
@@ -489,7 +497,18 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         if (${target_src} IN_LIST liboslexec_require_INF_NaN)
             REQUIRE_INF_NAN ( ${TARGET_SRC} ) 
         endif()
-        
+
+        if (CMAKE_COMPILER_IS_INTELCLANG)
+            if (${target_src} IN_LIST liboslexec_exceeds_INTELCLANG_inlining_limits)
+                # NOTE: Some files still require increasing
+                #       inlining threshold to successfully vectorize.
+                #       Retest with future compiler versions
+                set_property(SOURCE ${TARGET_SRC} APPEND PROPERTY COMPILE_OPTIONS 
+                    "-mllvm" "-inline-threshold=100000")
+            endif()
+        endif()
+
+
     endforeach(target_src)
     
     add_library ( ${batched_target_lib} MODULE ${TARGET_LIB_SOURCES} )

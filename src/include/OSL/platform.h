@@ -206,9 +206,14 @@
 #        define OSL_CLANG_PRAGMA(UnQuotedPragma)
 #    endif
 #    if defined(__INTEL_COMPILER)
-#        define OSL_INTEL_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
+#        define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
 #    else
-#        define OSL_INTEL_PRAGMA(UnQuotedPragma)
+#        define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma)
+#    endif
+#    if defined(__INTEL_LLVM_COMPILER)
+#        define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
+#    else
+#        define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
 #    endif
 #    define OSL_MSVS_PRAGMA(UnQuotedPragma)
 #elif defined(_MSC_VER)
@@ -218,7 +223,8 @@
 #    define OSL_PRAGMA_VISIBILITY_POP  /* N/A on MSVS */
 #    define OSL_GCC_PRAGMA(UnQuotedPragma)
 #    define OSL_CLANG_PRAGMA(UnQuotedPragma)
-#    define OSL_INTEL_PRAGMA(UnQuotedPragma)
+#    define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma)
+#    define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
 #    define OSL_MSVS_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
 #else
 #    define OSL_PRAGMA_WARNING_PUSH
@@ -227,9 +233,13 @@
 #    define OSL_PRAGMA_VISIBILITY_POP
 #    define OSL_GCC_PRAGMA(UnQuotedPragma)
 #    define OSL_CLANG_PRAGMA(UnQuotedPragma)
-#    define OSL_INTEL_PRAGMA(UnQuotedPragma)
+#    define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma)
+#    define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
 #    define OSL_MSVS_PRAGMA(UnQuotedPragma)
 #endif
+
+// A pragma that applies to both icc and icx
+#define OSL_INTEL_PRAGMA(UnQuotedPragma) OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma) OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
 
 #ifdef __clang__
     #define OSL_CLANG_ATTRIBUTE(value) __attribute__((value))

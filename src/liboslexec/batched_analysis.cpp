@@ -448,7 +448,7 @@ could_op_return_be_logically_boolean(ustring opname)
 // comparison operators even if the are not "currently"
 // being referenced.  May need to disable some warnings
 // error #177: function "..." was declared but never referenced
-OSL_INTEL_PRAGMA(warning(disable : 177))
+OSL_INTEL_CLASSIC_PRAGMA(warning(disable : 177))
 
 
 // The Position returned by top_pos changes and symbols are pushed and popped.

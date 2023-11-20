@@ -21,10 +21,10 @@ public:
                bool write);
     ~PointCloud();
 
-    PointCloud(const PointCloud&) = delete;
-    PointCloud(const PointCloud&&) = delete;
-    PointCloud & operator=(const PointCloud&) = delete;
-    PointCloud & operator=(const PointCloud&&) = delete;
+    PointCloud(const PointCloud&)             = delete;
+    PointCloud(const PointCloud&&)            = delete;
+    PointCloud& operator=(const PointCloud&)  = delete;
+    PointCloud& operator=(const PointCloud&&) = delete;
 
     static PointCloud* get(ustringhash filename, bool write = false);
 
@@ -60,9 +60,8 @@ namespace {  // anon
 
 static ustring u_position("position");
 
-// some helper classes to make the sort easy, 
-// assume that indices of point cloud < 2^32
-typedef std::pair<float, uint32_t> SortedPointRecord;  // dist,index
+// some helper classes to make the sort easy
+typedef std::pair<float, Partio::ParticleIndex> SortedPointRecord;  // dist,index
 struct SortedPointCompare {
     bool operator()(const SortedPointRecord& a, const SortedPointRecord& b)
     {

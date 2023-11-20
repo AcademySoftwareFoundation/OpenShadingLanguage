@@ -139,7 +139,7 @@ RendererServices::pointcloud_search(ShaderGlobals* sg, ustringhash filename,
             = (SortedPointRecord*)sg->context->alloc_scratch(
                 count * sizeof(SortedPointRecord), sizeof(SortedPointRecord));
         for (int i = 0; i < count; ++i)
-            sorted[i] = SortedPointRecord(dist2[i], static_cast<uint32_t>(indices[i]));
+            sorted[i] = SortedPointRecord(dist2[i], indices[i]);
         std::sort(sorted, sorted + count, SortedPointCompare());
         for (int i = 0; i < count; ++i) {
             dist2[i]   = sorted[i].first;

@@ -21,16 +21,20 @@ namespace pvt {
 // PackedArgs is similar to tuple but packs its data back to back
 // in memory layout, which is what we need to build up payload
 // to the fmt reporting system
-template<int IndexT, typename TypeT> struct PackedArg {
+OSL_PACK_STRUCTS_BEGIN
+template<int IndexT, typename TypeT> struct alignas(1) PackedArg {
     explicit PackedArg(const TypeT& a_value) : m_value(a_value) {}
     TypeT m_value;
-} __attribute__((packed, aligned(1)));
+};
+OSL_PACK_STRUCTS_END
 
 template<typename IntSequenceT, typename... TypeListT> struct PackedArgsBase;
 // Specialize to extract a parameter pack of the IntegerSquence
 // so it can be expanded alongside the TypeListT parameter pack
+OSL_PACK_STRUCTS_BEGIN
 template<int... IntegerListT, typename... TypeListT>
-struct PackedArgsBase<std::integer_sequence<int, IntegerListT...>, TypeListT...>
+struct alignas(1)
+    PackedArgsBase<std::integer_sequence<int, IntegerListT...>, TypeListT...>
     : public PackedArg<IntegerListT, TypeListT>... {
     explicit PackedArgsBase(const TypeListT&... a_values)
         // multiple inheritance of individual components
@@ -38,7 +42,8 @@ struct PackedArgsBase<std::integer_sequence<int, IntegerListT...>, TypeListT...>
         : PackedArg<IntegerListT, TypeListT>(a_values)...
     {
     }
-} __attribute__((packed, aligned(1)));
+};
+OSL_PACK_STRUCTS_END
 
 template<typename... TypeListT> struct PackedArgs {
     typedef std::make_integer_sequence<int, sizeof...(TypeListT)>
@@ -50,6 +55,13 @@ template<typename... TypeListT> struct PackedArgs {
     {
     }
 };
+
+static_assert(sizeof(PackedArgs<int, char, int>)
+                  == sizeof(int) + sizeof(char) + sizeof(int),
+              "PackedArgs<> type is not packed");
+static_assert(alignof(PackedArgs<int, char, int>) == 1,
+              "PackedArgs<> type is not aligned to 1");
+
 }  // namespace pvt
 
 

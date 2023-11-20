@@ -566,6 +566,18 @@ template<> OSL_FORCEINLINE double bitcast<double, int64_t>(const int64_t& val) n
 #endif
 
 
+/// OSL_PACK_STRUCTS_* is used to pack a struct or class tightly. Use it like
+/// the following example. To set the alignment of the struct use the
+/// alignas(x) directive.
+///
+/// OSL_PACK_STRUCTS_BEGIN
+/// struct alignas(1) Foo {
+///     char x, y, z;
+/// };
+/// OSL_PACK_STRUCTS_END
+#define OSL_PACK_STRUCTS_BEGIN OSL_PRAGMA(pack(push, 1))
+#define OSL_PACK_STRUCTS_END OSL_PRAGMA(pack(pop))
+
 
 #if OSL_CPLUSPLUS_VERSION >= 20
 using std::assume_aligned;

@@ -565,8 +565,8 @@ template<> OSL_FORCEINLINE double bitcast<double, int64_t>(const int64_t& val) n
 ///     char x, y, z;
 /// };
 /// OSL_PACK_STRUCTS_END
-#define OSL_PACK_STRUCTS_BEGIN _Pragma("pack(push, 1)")
-#define OSL_PACK_STRUCTS_END _Pragma("pack(pop)")
+#define OSL_PACK_STRUCTS_BEGIN OSL_PRAGMA(pack(push, 1))
+#define OSL_PACK_STRUCTS_END OSL_PRAGMA(pack(pop))
 
 
 #if OSL_CPLUSPLUS_VERSION >= 20

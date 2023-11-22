@@ -308,67 +308,60 @@ OptixRaytracer::create_optix_pg(const OptixProgramGroupDesc* pg_desc,
 }
 
 
-
 bool
-OptixRaytracer::make_optix_materials()
+OptixRaytracer::createModules(State& state)
 {
-    // Stand-in: names of shader outputs to preserve
-    std::vector<const char*> outputs { "Cout" };
-
-    std::vector<OptixModule> modules;
-
-    // Space for message logging
     char msg_log[8192];
     size_t sizeof_msg_log;
 
-    // Make module that contains programs we'll use in this scene
-    OptixModuleCompileOptions module_compile_options = {};
-
-    module_compile_options.maxRegisterCount
-        = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
-    module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-#if OPTIX_VERSION >= 70400
-    module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
-#else
-    module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
-#endif
-
-    OptixPipelineCompileOptions pipeline_compile_options = {};
-
-    pipeline_compile_options.traversableGraphFlags
+    // OptixPipelineCompileOptions pipeline_compile_options = {};
+    state.pipeline_compile_options.traversableGraphFlags
         = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY;
-    pipeline_compile_options.usesMotionBlur     = false;
-    pipeline_compile_options.numPayloadValues   = 3;
-    pipeline_compile_options.numAttributeValues = 3;
-    pipeline_compile_options.exceptionFlags
+    state.pipeline_compile_options.usesMotionBlur     = false;
+    state.pipeline_compile_options.numPayloadValues   = 3;
+    state.pipeline_compile_options.numAttributeValues = 3;
+    state.pipeline_compile_options.exceptionFlags
         = OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
-    pipeline_compile_options.pipelineLaunchParamsVariableName = "render_params";
+    state.pipeline_compile_options.pipelineLaunchParamsVariableName
+        = "render_params";
+
+    // Make module that contains programs we'll use in this scene
+    // OptixModuleCompileOptions module_compile_options = {};
+
+    state.module_compile_options.maxRegisterCount
+        = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
+    state.module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
+#if OPTIX_VERSION >= 70400
+    state.module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
+#else
+    state.module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+#endif
 
     // Create 'raygen' program
 
     // Load the renderer CUDA source and generate PTX for it
-    OptixModule program_module;
-    load_optix_module("optix_raytracer.ptx", &module_compile_options,
-                      &pipeline_compile_options, &program_module);
+    // OptixModule program_module;
+    load_optix_module("optix_raytracer.ptx", &state.module_compile_options,
+                      &state.pipeline_compile_options, &state.program_module);
 
     // Record it so we can destroy it later
-    modules.push_back(program_module);
+    state.modules.push_back(state.program_module);
 
-    OptixModule quad_module;
-    load_optix_module("quad.ptx", &module_compile_options,
-                      &pipeline_compile_options, &quad_module);
+    // OptixModule quad_module;
+    load_optix_module("quad.ptx", &state.module_compile_options,
+                      &state.pipeline_compile_options, &state.quad_module);
 
-    OptixModule sphere_module;
-    load_optix_module("sphere.ptx", &module_compile_options,
-                      &pipeline_compile_options, &sphere_module);
+    // OptixModule sphere_module;
+    load_optix_module("sphere.ptx", &state.module_compile_options,
+                      &state.pipeline_compile_options, &state.sphere_module);
 
-    OptixModule wrapper_module;
-    load_optix_module("wrapper.ptx", &module_compile_options,
-                      &pipeline_compile_options, &wrapper_module);
+    // OptixModule wrapper_module;
+    load_optix_module("wrapper.ptx", &state.module_compile_options,
+                      &state.pipeline_compile_options, &state.wrapper_module);
 
-    OptixModule rend_lib_module;
-    load_optix_module("rend_lib_testrender.ptx", &module_compile_options,
-                      &pipeline_compile_options, &rend_lib_module);
+    // OptixModule rend_lib_module;
+    load_optix_module("rend_lib_testrender.ptx", &state.module_compile_options,
+                      &state.pipeline_compile_options, &state.rend_lib_module);
 
     // Retrieve the compiled shadeops PTX
     const char* shadeops_ptx = nullptr;
@@ -386,139 +379,158 @@ OptixRaytracer::make_optix_materials()
     }
 
     // Create the shadeops library program group
-    OptixModule shadeops_module;
+    // OptixModule shadeops_module;
     sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx, &module_compile_options,
-                                        &pipeline_compile_options, shadeops_ptx,
-                                        shadeops_ptx_size, msg_log,
-                                        &sizeof_msg_log, &shadeops_module),
-                    fmtformat("Creating module for shadeops library: {}",
-                              msg_log));
-    modules.push_back(shadeops_module);
+    OPTIX_CHECK_MSG(
+        optixModuleCreateFn(m_optix_ctx, &state.module_compile_options,
+                            &state.pipeline_compile_options, shadeops_ptx,
+                            shadeops_ptx_size, msg_log, &sizeof_msg_log,
+                            &state.shadeops_module),
+        fmtformat("Creating module for shadeops library: {}", msg_log));
+    state.modules.push_back(state.shadeops_module);
 
-    OptixProgramGroupOptions program_options = {};
-    std::vector<OptixProgramGroup> shader_groups;
+    return true;
+}
+
+
+bool
+OptixRaytracer::createPrograms(State& state)
+{
+    char msg_log[8192];
+    size_t sizeof_msg_log;
 
     // Raygen group
     OptixProgramGroupDesc raygen_desc    = {};
     raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
-    raygen_desc.raygen.module            = program_module;
+    raygen_desc.raygen.module            = state.program_module;
     raygen_desc.raygen.entryFunctionName = "__raygen__";
 
-    OptixProgramGroup raygen_group;
-    create_optix_pg(&raygen_desc, 1, &program_options, &raygen_group);
+    // OptixProgramGroup raygen_group;
+    create_optix_pg(&raygen_desc, 1, &state.program_options, &state.raygen_group);
 
     // Set Globals Raygen group
     OptixProgramGroupDesc setglobals_raygen_desc = {};
     setglobals_raygen_desc.kind          = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
-    setglobals_raygen_desc.raygen.module = program_module;
+    setglobals_raygen_desc.raygen.module = state.program_module;
     setglobals_raygen_desc.raygen.entryFunctionName = "__raygen__setglobals";
 
-    OptixProgramGroup setglobals_raygen_group;
+    // OptixProgramGroup setglobals_raygen_group;
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(
         optixProgramGroupCreate(m_optix_ctx, &setglobals_raygen_desc,
-                                1,                 // number of program groups
-                                &program_options,  // program options
+                                1,                       // number of program groups
+                                &state.program_options,  // program options
                                 msg_log, &sizeof_msg_log,
-                                &setglobals_raygen_group),
+                                &state.setglobals_raygen_group),
         fmtformat("Creating set-globals 'ray-gen' program group: {}", msg_log));
 
     // Miss group
     OptixProgramGroupDesc miss_desc = {};
     miss_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_MISS;
     miss_desc.miss.module
-        = program_module;  // raygen file/module contains miss program
+        = state.program_module;  // raygen file/module contains miss program
     miss_desc.miss.entryFunctionName = "__miss__";
 
-    OptixProgramGroup miss_group;
-    create_optix_pg(&miss_desc, 1, &program_options, &miss_group);
+    // OptixProgramGroup miss_group;
+    create_optix_pg(&miss_desc, 1, &state.program_options, &state.miss_group);
 
     // Set Globals Miss group
     OptixProgramGroupDesc setglobals_miss_desc  = {};
     setglobals_miss_desc.kind                   = OPTIX_PROGRAM_GROUP_KIND_MISS;
-    setglobals_miss_desc.miss.module            = program_module;
+    setglobals_miss_desc.miss.module            = state.program_module;
     setglobals_miss_desc.miss.entryFunctionName = "__miss__setglobals";
-    OptixProgramGroup setglobals_miss_group;
-    create_optix_pg(&setglobals_miss_desc, 1, &program_options,
-                    &setglobals_miss_group);
+    // OptixProgramGroup setglobals_miss_group;
+    create_optix_pg(&setglobals_miss_desc, 1, &state.program_options,
+                    &state.setglobals_miss_group);
 
     // Hitgroup -- quads
     OptixProgramGroupDesc quad_hitgroup_desc = {};
     quad_hitgroup_desc.kind              = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    quad_hitgroup_desc.hitgroup.moduleCH = wrapper_module;
+    quad_hitgroup_desc.hitgroup.moduleCH = state.wrapper_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameCH
         = "__closesthit__closest_hit_osl";
-    quad_hitgroup_desc.hitgroup.moduleAH = wrapper_module;
+    quad_hitgroup_desc.hitgroup.moduleAH            = state.wrapper_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameAH = "__anyhit__any_hit_shadow";
-    quad_hitgroup_desc.hitgroup.moduleIS            = quad_module;
+    quad_hitgroup_desc.hitgroup.moduleIS            = state.quad_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
-    OptixProgramGroup quad_hitgroup;
-    create_optix_pg(&quad_hitgroup_desc, 1, &program_options, &quad_hitgroup);
+    // OptixProgramGroup quad_hitgroup;
+    create_optix_pg(&quad_hitgroup_desc, 1, &state.program_options, &state.quad_hitgroup);
 
     // Direct-callable -- renderer-specific support functions for OSL on the device
     OptixProgramGroupDesc rend_lib_desc = {};
     rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    rend_lib_desc.callables.moduleDC    = rend_lib_module;
+    rend_lib_desc.callables.moduleDC    = state.rend_lib_module;
     rend_lib_desc.callables.entryFunctionNameDC
         = "__direct_callable__dummy_rend_lib";
     rend_lib_desc.callables.moduleCC            = 0;
     rend_lib_desc.callables.entryFunctionNameCC = nullptr;
-    OptixProgramGroup rend_lib_group;
-    create_optix_pg(&rend_lib_desc, 1, &program_options, &rend_lib_group);
+    // OptixProgramGroup rend_lib_group;
+    create_optix_pg(&rend_lib_desc, 1, &state.program_options, &state.rend_lib_group);
 
     // Direct-callable -- built-in support functions for OSL on the device
     OptixProgramGroupDesc shadeops_desc = {};
     shadeops_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    shadeops_desc.callables.moduleDC    = shadeops_module;
+    shadeops_desc.callables.moduleDC    = state.shadeops_module;
     shadeops_desc.callables.entryFunctionNameDC
         = "__direct_callable__dummy_shadeops";
     shadeops_desc.callables.moduleCC            = 0;
     shadeops_desc.callables.entryFunctionNameCC = nullptr;
-    OptixProgramGroup shadeops_group;
-    create_optix_pg(&shadeops_desc, 1, &program_options, &shadeops_group);
+    // OptixProgramGroup shadeops_group;
+    create_optix_pg(&shadeops_desc, 1, &state.program_options, &state.shadeops_group);
 
     // Direct-callable -- fills in ShaderGlobals for Quads
     OptixProgramGroupDesc quad_fillSG_desc = {};
     quad_fillSG_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    quad_fillSG_desc.callables.moduleDC    = quad_module;
+    quad_fillSG_desc.callables.moduleDC    = state.quad_module;
     quad_fillSG_desc.callables.entryFunctionNameDC
         = "__direct_callable__quad_shaderglobals";
     quad_fillSG_desc.callables.moduleCC            = 0;
     quad_fillSG_desc.callables.entryFunctionNameCC = nullptr;
-    OptixProgramGroup quad_fillSG_dc;
-    create_optix_pg(&quad_fillSG_desc, 1, &program_options, &quad_fillSG_dc);
+    // OptixProgramGroup quad_fillSG_dc;
+    create_optix_pg(&quad_fillSG_desc, 1, &state.program_options, &state.quad_fillSG_dc);
 
     // Hitgroup -- sphere
     OptixProgramGroupDesc sphere_hitgroup_desc = {};
     sphere_hitgroup_desc.kind              = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    sphere_hitgroup_desc.hitgroup.moduleCH = wrapper_module;
+    sphere_hitgroup_desc.hitgroup.moduleCH = state.wrapper_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameCH
         = "__closesthit__closest_hit_osl";
-    sphere_hitgroup_desc.hitgroup.moduleAH = wrapper_module;
+    sphere_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameAH
         = "__anyhit__any_hit_shadow";
-    sphere_hitgroup_desc.hitgroup.moduleIS = sphere_module;
+    sphere_hitgroup_desc.hitgroup.moduleIS            = state.sphere_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__sphere";
-    OptixProgramGroup sphere_hitgroup;
-    create_optix_pg(&sphere_hitgroup_desc, 1, &program_options,
-                    &sphere_hitgroup);
+    // OptixProgramGroup sphere_hitgroup;
+    create_optix_pg(&sphere_hitgroup_desc, 1, &state.program_options,
+                    &state.sphere_hitgroup);
 
     // Direct-callable -- fills in ShaderGlobals for Sphere
     OptixProgramGroupDesc sphere_fillSG_desc = {};
     sphere_fillSG_desc.kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    sphere_fillSG_desc.callables.moduleDC = sphere_module;
+    sphere_fillSG_desc.callables.moduleDC = state.sphere_module;
     sphere_fillSG_desc.callables.entryFunctionNameDC
         = "__direct_callable__sphere_shaderglobals";
     sphere_fillSG_desc.callables.moduleCC            = 0;
     sphere_fillSG_desc.callables.entryFunctionNameCC = nullptr;
-    OptixProgramGroup sphere_fillSG_dc;
-    create_optix_pg(&sphere_fillSG_desc, 1, &program_options,
-                    &sphere_fillSG_dc);
+    // OptixProgramGroup sphere_fillSG_dc;
+    create_optix_pg(&sphere_fillSG_desc, 1, &state.program_options,
+                    &state.sphere_fillSG_dc);
 
-    // Create materials
+    return true;
+}
+
+
+bool
+OptixRaytracer::createMaterials(State& state)
+{
+    // Space for message logging
+    char msg_log[8192];
+    size_t sizeof_msg_log;
+
+    // Stand-in: names of shader outputs to preserve
+    std::vector<const char*> outputs { "Cout" };
     int mtl_id = 0;
-    std::vector<void*> material_interactive_params;
+
     for (const auto& groupref : shaders()) {
         std::string group_name, fused_name;
         shadingsys->getattribute(groupref.get(), "groupname", group_name);
@@ -557,7 +569,7 @@ OptixRaytracer::make_optix_materials()
         void* interactive_params = nullptr;
         shadingsys->getattribute(groupref.get(), "device_interactive_params",
                                  TypeDesc::PTR, &interactive_params);
-        material_interactive_params.push_back(interactive_params);
+        state.material_interactive_params.push_back(interactive_params);
 
         OptixModule optix_module;
 
@@ -566,14 +578,14 @@ OptixRaytracer::make_optix_materials()
         // can be executed by the closest hit program in the wrapper
         sizeof_msg_log = sizeof(msg_log);
         OPTIX_CHECK_MSG(optixModuleCreateFn(m_optix_ctx,
-                                            &module_compile_options,
-                                            &pipeline_compile_options,
+                                            &state.module_compile_options,
+                                            &state.pipeline_compile_options,
                                             osl_ptx.c_str(), osl_ptx.size(),
                                             msg_log, &sizeof_msg_log,
                                             &optix_module),
                         fmtformat("Creating module for PTX group {}: {}",
                                   group_name, msg_log));
-        modules.push_back(optix_module);
+        state.modules.push_back(optix_module);
 
         // Create program groups (for direct callables)
         OptixProgramGroupDesc pgDesc[1] = {};
@@ -583,60 +595,71 @@ OptixRaytracer::make_optix_materials()
         pgDesc[0].callables.moduleCC            = 0;
         pgDesc[0].callables.entryFunctionNameCC = nullptr;
 
-        shader_groups.resize(shader_groups.size() + 1);
+        state.shader_groups.resize(state.shader_groups.size() + 1);
         sizeof_msg_log = sizeof(msg_log);
         OPTIX_CHECK_MSG(
             optixProgramGroupCreate(m_optix_ctx, &pgDesc[0], 1,
-                                    &program_options, msg_log, &sizeof_msg_log,
-                                    &shader_groups[shader_groups.size() - 1]),
+                                    &state.program_options, msg_log, &sizeof_msg_log,
+                                    &state.shader_groups[state.shader_groups.size() - 1]),
             fmtformat("Creating 'shader' group for group {}: {}", group_name,
                       msg_log));
     }
+    return true;
+}
 
-    OptixPipelineLinkOptions pipeline_link_options;
-    pipeline_link_options.maxTraceDepth = 1;
+
+bool
+OptixRaytracer::createPipeline(State& state)
+{
+    char msg_log[8192];
+    size_t sizeof_msg_log;
+    
+    // OptixPipelineLinkOptions pipeline_link_options;
+    state.pipeline_link_options.maxTraceDepth = 1;
 #if (OPTIX_VERSION < 70700)
-    pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+    state.pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
 #endif
 #if (OPTIX_VERSION < 70100)
-    pipeline_link_options.overrideUsesMotionBlur = false;
+    state.pipeline_link_options.overrideUsesMotionBlur = false;
 #endif
 
     // Set up OptiX pipeline
-    std::vector<OptixProgramGroup> final_groups = { rend_lib_group,
-                                                    raygen_group, miss_group };
+    state.final_groups = { state.rend_lib_group, state.raygen_group,
+                           state.miss_group };
 
     if (scene.quads.size() > 0)
-        final_groups.push_back(quad_hitgroup);
+        state.final_groups.push_back(state.quad_hitgroup);
     if (scene.spheres.size() > 0)
-        final_groups.push_back(sphere_hitgroup);
+        state.final_groups.push_back(state.sphere_hitgroup);
 
-    final_groups.push_back(quad_fillSG_dc);
-    final_groups.push_back(sphere_fillSG_dc);
+    state.final_groups.push_back(state.quad_fillSG_dc);
+    state.final_groups.push_back(state.sphere_fillSG_dc);
 
     // append the shader groups to our "official" list of program groups
     // size_t shader_groups_start_index = final_groups.size();
-    final_groups.insert(final_groups.end(), shader_groups.begin(),
-                        shader_groups.end());
+    state.final_groups.insert(state.final_groups.end(),
+                              state.shader_groups.begin(),
+                              state.shader_groups.end());
 
     // append the program group for the built-in shadeops module
-    final_groups.push_back(shadeops_group);
+    state.final_groups.push_back(state.shadeops_group);
 
     // append set-globals groups
-    final_groups.push_back(setglobals_raygen_group);
-    final_groups.push_back(setglobals_miss_group);
+    state.final_groups.push_back(state.setglobals_raygen_group);
+    state.final_groups.push_back(state.setglobals_miss_group);
 
     sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK_MSG(optixPipelineCreate(m_optix_ctx, &pipeline_compile_options,
-                                        &pipeline_link_options,
-                                        final_groups.data(),
-                                        int(final_groups.size()), msg_log,
+    OPTIX_CHECK_MSG(optixPipelineCreate(m_optix_ctx,
+                                        &state.pipeline_compile_options,
+                                        &state.pipeline_link_options,
+                                        state.final_groups.data(),
+                                        int(state.final_groups.size()), msg_log,
                                         &sizeof_msg_log, &m_optix_pipeline),
                     fmtformat("Creating optix pipeline: {}", msg_log));
 
     // Set the pipeline stack size
     OptixStackSizes stack_sizes = {};
-    for (OptixProgramGroup& program_group : final_groups) {
+    for (OptixProgramGroup& program_group : state.final_groups) {
 #if (OPTIX_VERSION < 70700)
         OPTIX_CHECK(optixUtilAccumulateStackSizes(program_group, &stack_sizes));
 #else
@@ -671,9 +694,14 @@ OptixRaytracer::make_optix_materials()
         direct_callable_stack_size_from_state, continuation_stack_size,
         max_traversal_depth));
 
-    // Build OptiX Shader Binding Table (SBT)
+    return true;
+}
 
-    std::vector<GenericRecord> sbt_records(final_groups.size());
+
+bool
+OptixRaytracer::createSBT(State& state)
+{
+    std::vector<GenericRecord> sbt_records(state.final_groups.size());
 
     CUdeviceptr d_raygen_record;
     CUdeviceptr d_miss_record;
@@ -682,15 +710,15 @@ OptixRaytracer::make_optix_materials()
     CUdeviceptr d_setglobals_raygen_record;
     CUdeviceptr d_setglobals_miss_record;
 
-    std::vector<CUdeviceptr> d_sbt_records(final_groups.size());
+    std::vector<CUdeviceptr> d_sbt_records(state.final_groups.size());
 
-    for (size_t i = 0; i < final_groups.size(); i++) {
-        OPTIX_CHECK(optixSbtRecordPackHeader(final_groups[i], &sbt_records[i]));
+    for (size_t i = 0; i < state.final_groups.size(); i++) {
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.final_groups[i], &sbt_records[i]));
     }
 
     int sbtIndex             = 3;
     const int hitRecordStart = sbtIndex;
-    size_t setglobals_start  = final_groups.size() - 2;
+    size_t setglobals_start  = state.final_groups.size() - 2;
 
     // Copy geometry data to appropriate SBT records
     if (scene.quads.size() > 0) {
@@ -713,7 +741,7 @@ OptixRaytracer::make_optix_materials()
     sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_quads_list);
     sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_spheres_list);
 
-    const int nshaders   = int(shader_groups.size());
+    const int nshaders   = int(state.shader_groups.size());
     const int nhitgroups = (scene.quads.size() > 0)
                            + (scene.spheres.size() > 0);
 
@@ -770,22 +798,37 @@ OptixRaytracer::make_optix_materials()
     m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
     m_setglobals_optix_sbt.missRecordCount         = 1;
 
+    return true;
+}
+
+
+bool
+OptixRaytracer::make_optix_materials()
+{
+    State state;
+
+    createModules(state);
+    createPrograms(state);
+    createMaterials(state);
+    createPipeline(state);
+    createSBT(state);
+
     // Upload per-material interactive buffer table
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_interactive_params),
-                          sizeof(void*) * material_interactive_params.size()));
+                          sizeof(void*) * state.material_interactive_params.size()));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_interactive_params),
-                          material_interactive_params.data(),
-                          sizeof(void*) * material_interactive_params.size(),
+                          state.material_interactive_params.data(),
+                          sizeof(void*) * state.material_interactive_params.size(),
                           cudaMemcpyHostToDevice));
 
     // Pipeline has been created so we can clean some things up
-    for (auto&& i : final_groups) {
+    for (auto&& i : state.final_groups) {
         optixProgramGroupDestroy(i);
     }
-    for (auto&& i : modules) {
+    for (auto&& i : state.modules) {
         optixModuleDestroy(i);
     }
-    modules.clear();
+    state.modules.clear();
 
     return true;
 }

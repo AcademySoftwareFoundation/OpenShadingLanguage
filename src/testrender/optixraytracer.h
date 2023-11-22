@@ -16,6 +16,36 @@
 
 OSL_NAMESPACE_ENTER
 
+struct State {
+    OptixModuleCompileOptions module_compile_options     = {};
+    OptixPipelineCompileOptions pipeline_compile_options = {};
+    OptixPipelineLinkOptions pipeline_link_options       = {};
+    OptixProgramGroupOptions program_options             = {};
+
+    OptixModule program_module;
+    OptixModule quad_module;
+    OptixModule sphere_module;
+    OptixModule wrapper_module;
+    OptixModule rend_lib_module;
+    OptixModule shadeops_module;
+
+    OptixProgramGroup raygen_group;
+    OptixProgramGroup setglobals_raygen_group;
+    OptixProgramGroup miss_group;
+    OptixProgramGroup setglobals_miss_group;
+    OptixProgramGroup quad_hitgroup;
+    OptixProgramGroup rend_lib_group;
+    OptixProgramGroup shadeops_group;
+    OptixProgramGroup quad_fillSG_dc;
+    OptixProgramGroup sphere_hitgroup;
+    OptixProgramGroup sphere_fillSG_dc;
+
+    std::vector<OptixProgramGroup> shader_groups;
+    std::vector<OptixModule> modules;
+    std::vector<OptixProgramGroup> final_groups;
+
+    std::vector<void*> material_interactive_params;
+};
 
 class OptixRaytracer final : public SimpleRaytracer {
 public:
@@ -43,6 +73,12 @@ public:
     void render(int xres, int yres) override;
     void finalize_pixel_buffer() override;
     void clear() override;
+
+    bool createModules(State& state);
+    bool createPrograms(State& state);
+    bool createMaterials(State& state);
+    bool createPipeline(State& state);
+    bool createSBT(State& state);
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently

@@ -115,6 +115,8 @@ OptixRaytracer::~OptixRaytracer()
 {
     if (m_optix_ctx)
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
+    for (void* ptr : device_ptrs)
+        cudaFree(ptr);
 }
 
 
@@ -237,11 +239,13 @@ OptixRaytracer::synch_attributes()
                        podDataSize + sizeof(ustringhash_pod) * numStrings));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_color_system), colorSys,
                               podDataSize, cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_color_system));
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_osl_printf_buffer),
                               OSL_PRINTF_BUFFER_SIZE));
         CUDA_CHECK(cudaMemset(reinterpret_cast<void*>(d_osl_printf_buffer), 0,
                               OSL_PRINTF_BUFFER_SIZE));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_osl_printf_buffer));
 
         // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
         // FIXME -- Should probably handle alignment better.
@@ -308,13 +312,14 @@ OptixRaytracer::create_optix_pg(const OptixProgramGroupDesc* pg_desc,
 }
 
 
-bool
-OptixRaytracer::createModules(State& state)
+
+void
+OptixRaytracer::create_modules(State& state)
 {
     char msg_log[8192];
     size_t sizeof_msg_log;
 
-    // OptixPipelineCompileOptions pipeline_compile_options = {};
+    // Set the pipeline compile options
     state.pipeline_compile_options.traversableGraphFlags
         = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY;
     state.pipeline_compile_options.usesMotionBlur     = false;
@@ -325,9 +330,7 @@ OptixRaytracer::createModules(State& state)
     state.pipeline_compile_options.pipelineLaunchParamsVariableName
         = "render_params";
 
-    // Make module that contains programs we'll use in this scene
-    // OptixModuleCompileOptions module_compile_options = {};
-
+    // Set the module compile options
     state.module_compile_options.maxRegisterCount
         = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
     state.module_compile_options.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
@@ -337,29 +340,14 @@ OptixRaytracer::createModules(State& state)
     state.module_compile_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
 #endif
 
-    // Create 'raygen' program
-
-    // Load the renderer CUDA source and generate PTX for it
-    // OptixModule program_module;
     load_optix_module("optix_raytracer.ptx", &state.module_compile_options,
                       &state.pipeline_compile_options, &state.program_module);
-
-    // Record it so we can destroy it later
-    state.modules.push_back(state.program_module);
-
-    // OptixModule quad_module;
     load_optix_module("quad.ptx", &state.module_compile_options,
                       &state.pipeline_compile_options, &state.quad_module);
-
-    // OptixModule sphere_module;
     load_optix_module("sphere.ptx", &state.module_compile_options,
                       &state.pipeline_compile_options, &state.sphere_module);
-
-    // OptixModule wrapper_module;
     load_optix_module("wrapper.ptx", &state.module_compile_options,
                       &state.pipeline_compile_options, &state.wrapper_module);
-
-    // OptixModule rend_lib_module;
     load_optix_module("rend_lib_testrender.ptx", &state.module_compile_options,
                       &state.pipeline_compile_options, &state.rend_lib_module);
 
@@ -367,7 +355,6 @@ OptixRaytracer::createModules(State& state)
     const char* shadeops_ptx = nullptr;
     shadingsys->getattribute("shadeops_cuda_ptx", OSL::TypeDesc::PTR,
                              &shadeops_ptx);
-
     int shadeops_ptx_size = 0;
     shadingsys->getattribute("shadeops_cuda_ptx_size", OSL::TypeDesc::INT,
                              &shadeops_ptx_size);
@@ -375,11 +362,10 @@ OptixRaytracer::createModules(State& state)
     if (shadeops_ptx == nullptr || shadeops_ptx_size == 0) {
         errhandler().severefmt(
             "Could not retrieve PTX for the shadeops library");
-        return false;
+        exit(EXIT_FAILURE);
     }
 
-    // Create the shadeops library program group
-    // OptixModule shadeops_module;
+    // Create the shadeops module
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(
         optixModuleCreateFn(m_optix_ctx, &state.module_compile_options,
@@ -387,14 +373,12 @@ OptixRaytracer::createModules(State& state)
                             shadeops_ptx_size, msg_log, &sizeof_msg_log,
                             &state.shadeops_module),
         fmtformat("Creating module for shadeops library: {}", msg_log));
-    state.modules.push_back(state.shadeops_module);
-
-    return true;
 }
 
 
-bool
-OptixRaytracer::createPrograms(State& state)
+
+void
+OptixRaytracer::create_programs(State& state)
 {
     char msg_log[8192];
     size_t sizeof_msg_log;
@@ -404,8 +388,6 @@ OptixRaytracer::createPrograms(State& state)
     raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
     raygen_desc.raygen.module            = state.program_module;
     raygen_desc.raygen.entryFunctionName = "__raygen__";
-
-    // OptixProgramGroup raygen_group;
     create_optix_pg(&raygen_desc, 1, &state.program_options, &state.raygen_group);
 
     // Set Globals Raygen group
@@ -414,7 +396,6 @@ OptixRaytracer::createPrograms(State& state)
     setglobals_raygen_desc.raygen.module = state.program_module;
     setglobals_raygen_desc.raygen.entryFunctionName = "__raygen__setglobals";
 
-    // OptixProgramGroup setglobals_raygen_group;
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(
         optixProgramGroupCreate(m_optix_ctx, &setglobals_raygen_desc,
@@ -430,8 +411,6 @@ OptixRaytracer::createPrograms(State& state)
     miss_desc.miss.module
         = state.program_module;  // raygen file/module contains miss program
     miss_desc.miss.entryFunctionName = "__miss__";
-
-    // OptixProgramGroup miss_group;
     create_optix_pg(&miss_desc, 1, &state.program_options, &state.miss_group);
 
     // Set Globals Miss group
@@ -439,7 +418,6 @@ OptixRaytracer::createPrograms(State& state)
     setglobals_miss_desc.kind                   = OPTIX_PROGRAM_GROUP_KIND_MISS;
     setglobals_miss_desc.miss.module            = state.program_module;
     setglobals_miss_desc.miss.entryFunctionName = "__miss__setglobals";
-    // OptixProgramGroup setglobals_miss_group;
     create_optix_pg(&setglobals_miss_desc, 1, &state.program_options,
                     &state.setglobals_miss_group);
 
@@ -453,8 +431,7 @@ OptixRaytracer::createPrograms(State& state)
     quad_hitgroup_desc.hitgroup.entryFunctionNameAH = "__anyhit__any_hit_shadow";
     quad_hitgroup_desc.hitgroup.moduleIS            = state.quad_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
-    // OptixProgramGroup quad_hitgroup;
-    create_optix_pg(&quad_hitgroup_desc, 1, &state.program_options, &state.quad_hitgroup);
+    create_optix_pg(&quad_hitgroup_desc, 1, &state.program_options, &state.quad_hit_group);
 
     // Direct-callable -- renderer-specific support functions for OSL on the device
     OptixProgramGroupDesc rend_lib_desc = {};
@@ -464,7 +441,6 @@ OptixRaytracer::createPrograms(State& state)
         = "__direct_callable__dummy_rend_lib";
     rend_lib_desc.callables.moduleCC            = 0;
     rend_lib_desc.callables.entryFunctionNameCC = nullptr;
-    // OptixProgramGroup rend_lib_group;
     create_optix_pg(&rend_lib_desc, 1, &state.program_options, &state.rend_lib_group);
 
     // Direct-callable -- built-in support functions for OSL on the device
@@ -475,7 +451,6 @@ OptixRaytracer::createPrograms(State& state)
         = "__direct_callable__dummy_shadeops";
     shadeops_desc.callables.moduleCC            = 0;
     shadeops_desc.callables.entryFunctionNameCC = nullptr;
-    // OptixProgramGroup shadeops_group;
     create_optix_pg(&shadeops_desc, 1, &state.program_options, &state.shadeops_group);
 
     // Direct-callable -- fills in ShaderGlobals for Quads
@@ -486,8 +461,7 @@ OptixRaytracer::createPrograms(State& state)
         = "__direct_callable__quad_shaderglobals";
     quad_fillSG_desc.callables.moduleCC            = 0;
     quad_fillSG_desc.callables.entryFunctionNameCC = nullptr;
-    // OptixProgramGroup quad_fillSG_dc;
-    create_optix_pg(&quad_fillSG_desc, 1, &state.program_options, &state.quad_fillSG_dc);
+    create_optix_pg(&quad_fillSG_desc, 1, &state.program_options, &state.quad_fillSG_dc_group);
 
     // Hitgroup -- sphere
     OptixProgramGroupDesc sphere_hitgroup_desc = {};
@@ -500,9 +474,8 @@ OptixRaytracer::createPrograms(State& state)
         = "__anyhit__any_hit_shadow";
     sphere_hitgroup_desc.hitgroup.moduleIS            = state.sphere_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__sphere";
-    // OptixProgramGroup sphere_hitgroup;
     create_optix_pg(&sphere_hitgroup_desc, 1, &state.program_options,
-                    &state.sphere_hitgroup);
+                    &state.sphere_hit_group);
 
     // Direct-callable -- fills in ShaderGlobals for Sphere
     OptixProgramGroupDesc sphere_fillSG_desc = {};
@@ -512,16 +485,14 @@ OptixRaytracer::createPrograms(State& state)
         = "__direct_callable__sphere_shaderglobals";
     sphere_fillSG_desc.callables.moduleCC            = 0;
     sphere_fillSG_desc.callables.entryFunctionNameCC = nullptr;
-    // OptixProgramGroup sphere_fillSG_dc;
     create_optix_pg(&sphere_fillSG_desc, 1, &state.program_options,
-                    &state.sphere_fillSG_dc);
-
-    return true;
+                    &state.sphere_fillSG_dc_group);
 }
 
 
-bool
-OptixRaytracer::createMaterials(State& state)
+
+void
+OptixRaytracer::create_shaders(State& state)
 {
     // Space for message logging
     char msg_log[8192];
@@ -530,6 +501,8 @@ OptixRaytracer::createMaterials(State& state)
     // Stand-in: names of shader outputs to preserve
     std::vector<const char*> outputs { "Cout" };
     int mtl_id = 0;
+
+    std::vector<void*> material_interactive_params;
 
     for (const auto& groupref : shaders()) {
         std::string group_name, fused_name;
@@ -558,7 +531,7 @@ OptixRaytracer::createMaterials(State& state)
         if (osl_ptx.empty()) {
             errhandler().errorfmt("Failed to generate PTX for ShaderGroup {}",
                                   group_name);
-            return false;
+            exit(EXIT_FAILURE);
         }
 
         if (options.get_int("saveptx")) {
@@ -569,7 +542,7 @@ OptixRaytracer::createMaterials(State& state)
         void* interactive_params = nullptr;
         shadingsys->getattribute(groupref.get(), "device_interactive_params",
                                  TypeDesc::PTR, &interactive_params);
-        state.material_interactive_params.push_back(interactive_params);
+        material_interactive_params.push_back(interactive_params);
 
         OptixModule optix_module;
 
@@ -585,7 +558,7 @@ OptixRaytracer::createMaterials(State& state)
                                             &optix_module),
                         fmtformat("Creating module for PTX group {}: {}",
                                   group_name, msg_log));
-        state.modules.push_back(optix_module);
+        state.shader_modules.push_back(optix_module);
 
         // Create program groups (for direct callables)
         OptixProgramGroupDesc pgDesc[1] = {};
@@ -604,17 +577,26 @@ OptixRaytracer::createMaterials(State& state)
             fmtformat("Creating 'shader' group for group {}: {}", group_name,
                       msg_log));
     }
-    return true;
+
+    // Upload per-material interactive buffer table
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_interactive_params),
+                          sizeof(void*) * material_interactive_params.size()));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_interactive_params),
+                          material_interactive_params.data(),
+                          sizeof(void*) * material_interactive_params.size(),
+                          cudaMemcpyHostToDevice));
+    device_ptrs.push_back(reinterpret_cast<void*>(d_interactive_params));
 }
 
 
-bool
-OptixRaytracer::createPipeline(State& state)
+
+void
+OptixRaytracer::create_pipeline(State& state)
 {
     char msg_log[8192];
     size_t sizeof_msg_log;
-    
-    // OptixPipelineLinkOptions pipeline_link_options;
+
+    // Set the pipeline link options
     state.pipeline_link_options.maxTraceDepth = 1;
 #if (OPTIX_VERSION < 70700)
     state.pipeline_link_options.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
@@ -623,30 +605,20 @@ OptixRaytracer::createPipeline(State& state)
     state.pipeline_link_options.overrideUsesMotionBlur = false;
 #endif
 
-    // Set up OptiX pipeline
-    state.final_groups = { state.rend_lib_group, state.raygen_group,
-                           state.miss_group };
-
-    if (scene.quads.size() > 0)
-        state.final_groups.push_back(state.quad_hitgroup);
-    if (scene.spheres.size() > 0)
-        state.final_groups.push_back(state.sphere_hitgroup);
-
-    state.final_groups.push_back(state.quad_fillSG_dc);
-    state.final_groups.push_back(state.sphere_fillSG_dc);
-
-    // append the shader groups to our "official" list of program groups
-    // size_t shader_groups_start_index = final_groups.size();
+    // Gather all of the program groups
+    state.final_groups.push_back(state.raygen_group);
+    state.final_groups.push_back(state.miss_group);
+    state.final_groups.push_back(state.quad_hit_group);
+    state.final_groups.push_back(state.sphere_hit_group);
+    state.final_groups.push_back(state.quad_fillSG_dc_group);
+    state.final_groups.push_back(state.sphere_fillSG_dc_group);
+    state.final_groups.push_back(state.rend_lib_group);
+    state.final_groups.push_back(state.shadeops_group);
+    state.final_groups.push_back(state.setglobals_raygen_group);
+    state.final_groups.push_back(state.setglobals_miss_group);
     state.final_groups.insert(state.final_groups.end(),
                               state.shader_groups.begin(),
                               state.shader_groups.end());
-
-    // append the program group for the built-in shadeops module
-    state.final_groups.push_back(state.shadeops_group);
-
-    // append set-globals groups
-    state.final_groups.push_back(state.setglobals_raygen_group);
-    state.final_groups.push_back(state.setglobals_miss_group);
 
     sizeof_msg_log = sizeof(msg_log);
     OPTIX_CHECK_MSG(optixPipelineCreate(m_optix_ctx,
@@ -694,149 +666,187 @@ OptixRaytracer::createPipeline(State& state)
         direct_callable_stack_size_from_state, continuation_stack_size,
         max_traversal_depth));
 
-    return true;
 }
 
 
-bool
-OptixRaytracer::createSBT(State& state)
+
+void
+OptixRaytracer::create_sbt(State& state)
 {
-    std::vector<GenericRecord> sbt_records(state.final_groups.size());
+    // Raygen
+    {
+        GenericRecord raygen_record;
+        CUdeviceptr d_raygen_record;
+        OPTIX_CHECK(
+            optixSbtRecordPackHeader(state.raygen_group, &raygen_record));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygen_record),
+                              sizeof(GenericRecord)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_raygen_record),
+                              &raygen_record, sizeof(GenericRecord),
+                              cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_raygen_record));
 
-    CUdeviceptr d_raygen_record;
-    CUdeviceptr d_miss_record;
-    CUdeviceptr d_hitgroup_records;
-    CUdeviceptr d_callable_records;
-    CUdeviceptr d_setglobals_raygen_record;
-    CUdeviceptr d_setglobals_miss_record;
-
-    std::vector<CUdeviceptr> d_sbt_records(state.final_groups.size());
-
-    for (size_t i = 0; i < state.final_groups.size(); i++) {
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.final_groups[i], &sbt_records[i]));
+        m_optix_sbt.raygenRecord = d_raygen_record;
     }
 
-    int sbtIndex             = 3;
-    const int hitRecordStart = sbtIndex;
-    size_t setglobals_start  = state.final_groups.size() - 2;
+    // Miss
+    {
+        GenericRecord miss_record;
+        CUdeviceptr d_miss_record;
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_group, &miss_record));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_miss_record),
+                              sizeof(GenericRecord)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_miss_record),
+                              &miss_record, sizeof(GenericRecord),
+                              cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_miss_record));
 
-    // Copy geometry data to appropriate SBT records
-    if (scene.quads.size() > 0) {
-        sbt_records[sbtIndex].data = reinterpret_cast<void*>(d_quads_list);
-        sbt_records[sbtIndex].sbtGeoIndex
-            = 0;  // DC index for filling in Quad ShaderGlobals
-        ++sbtIndex;
+        m_optix_sbt.missRecordBase          = d_miss_record;
+        m_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
+        m_optix_sbt.missRecordCount         = 1;
     }
 
-    if (scene.spheres.size() > 0) {
-        sbt_records[sbtIndex].data = reinterpret_cast<void*>(d_spheres_list);
-        sbt_records[sbtIndex].sbtGeoIndex
-            = 1;  // DC index for filling in Sphere ShaderGlobals
-        ++sbtIndex;
+    // Hitgroups
+    {
+        const int nhitgroups = 2;
+        GenericRecord hitgroup_records[nhitgroups];
+        CUdeviceptr d_hitgroup_records;
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_hit_group,
+                                             &hitgroup_records[0]));
+        hitgroup_records[0].data        = reinterpret_cast<void*>(d_quads_list);
+        hitgroup_records[0].sbtGeoIndex = 0;
+
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_hit_group,
+                                             &hitgroup_records[1]));
+        hitgroup_records[1].data = reinterpret_cast<void*>(d_spheres_list);
+        hitgroup_records[1].sbtGeoIndex = 1;
+
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroup_records),
+                              nhitgroups * sizeof(GenericRecord)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_hitgroup_records),
+                              &hitgroup_records[0],
+                              nhitgroups * sizeof(GenericRecord),
+                              cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_hitgroup_records));
+
+        m_optix_sbt.hitgroupRecordBase          = d_hitgroup_records;
+        m_optix_sbt.hitgroupRecordStrideInBytes = sizeof(GenericRecord);
+        m_optix_sbt.hitgroupRecordCount         = nhitgroups;
     }
 
-    const int callableRecordStart = sbtIndex;
+    // Callable programs
+    {
+        const int ncallables = 2;  // ShaderGlobals setup for quad & sphere
+        const int nshaders   = int(state.shader_groups.size());
 
-    // Copy geometry data to our DC (direct-callable) funcs that fill ShaderGlobals
-    sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_quads_list);
-    sbt_records[sbtIndex++].data = reinterpret_cast<void*>(d_spheres_list);
+        std::vector<GenericRecord> callable_records(ncallables + nshaders);
+        CUdeviceptr d_callable_records;
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_fillSG_dc_group,
+                                             &callable_records[0]));
+        callable_records[0].data        = reinterpret_cast<void*>(d_quads_list);
+        callable_records[0].sbtGeoIndex = 0;
 
-    const int nshaders   = int(state.shader_groups.size());
-    const int nhitgroups = (scene.quads.size() > 0)
-                           + (scene.spheres.size() > 0);
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_fillSG_dc_group,
+                                             &callable_records[1]));
+        callable_records[1].data = reinterpret_cast<void*>(d_spheres_list);
+        callable_records[1].sbtGeoIndex = 1;
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygen_record),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_miss_record),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroup_records),
-                          nhitgroups * sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_callable_records),
-                          (2 + nshaders) * sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_raygen_record),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_miss_record),
-                          sizeof(GenericRecord)));
+        for (size_t idx = 0; idx < state.shader_groups.size(); ++idx) {
+            OPTIX_CHECK(
+                optixSbtRecordPackHeader(state.shader_groups[idx],
+                                         &callable_records[ncallables + idx]));
+        }
 
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_raygen_record),
-                          &sbt_records[1], sizeof(GenericRecord),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_miss_record),
-                          &sbt_records[2], sizeof(GenericRecord),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_hitgroup_records),
-                          &sbt_records[hitRecordStart],
-                          nhitgroups * sizeof(GenericRecord),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_callable_records),
-                          &sbt_records[callableRecordStart],
-                          (2 + nshaders) * sizeof(GenericRecord),
-                          cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_raygen_record),
-                          &sbt_records[setglobals_start + 0],
-                          sizeof(GenericRecord), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_miss_record),
-                          &sbt_records[setglobals_start + 1],
-                          sizeof(GenericRecord), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_callable_records),
+                              (ncallables + nshaders) * sizeof(GenericRecord)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_callable_records),
+                              callable_records.data(),
+                              (ncallables + nshaders) * sizeof(GenericRecord),
+                              cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_callable_records));
 
-    // Looks like OptixShadingTable needs to be filled out completely
-    m_optix_sbt.raygenRecord                 = d_raygen_record;
-    m_optix_sbt.missRecordBase               = d_miss_record;
-    m_optix_sbt.missRecordStrideInBytes      = sizeof(GenericRecord);
-    m_optix_sbt.missRecordCount              = 1;
-    m_optix_sbt.hitgroupRecordBase           = d_hitgroup_records;
-    m_optix_sbt.hitgroupRecordStrideInBytes  = sizeof(GenericRecord);
-    m_optix_sbt.hitgroupRecordCount          = nhitgroups;
-    m_optix_sbt.callablesRecordBase          = d_callable_records;
-    m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
-    m_optix_sbt.callablesRecordCount         = 2 + nshaders;
+        m_optix_sbt.callablesRecordBase          = d_callable_records;
+        m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
+        m_optix_sbt.callablesRecordCount         = ncallables + nshaders;
+    }
 
-    // Shader binding table for SetGlobals stage
-    m_setglobals_optix_sbt                         = {};
-    m_setglobals_optix_sbt.raygenRecord            = d_setglobals_raygen_record;
-    m_setglobals_optix_sbt.missRecordBase          = d_setglobals_miss_record;
-    m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
-    m_setglobals_optix_sbt.missRecordCount         = 1;
+    // SetGlobals raygen
+    {
+        GenericRecord record;
+        CUdeviceptr d_setglobals_raygen_record;
+        OPTIX_CHECK(
+            optixSbtRecordPackHeader(state.setglobals_raygen_group, &record));
+        CUDA_CHECK(
+            cudaMalloc(reinterpret_cast<void**>(&d_setglobals_raygen_record),
+                       sizeof(GenericRecord)));
+        CUDA_CHECK(
+            cudaMemcpy(reinterpret_cast<void*>(d_setglobals_raygen_record),
+                       &record, sizeof(GenericRecord), cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_setglobals_raygen_record));
 
-    return true;
+        m_setglobals_optix_sbt.raygenRecord = d_setglobals_raygen_record;
+    }
+
+    // SetGlobals miss
+    {
+        GenericRecord record;
+        CUdeviceptr d_setglobals_miss_record;
+        OPTIX_CHECK(
+            optixSbtRecordPackHeader(state.setglobals_miss_group, &record));
+        CUDA_CHECK(
+            cudaMalloc(reinterpret_cast<void**>(&d_setglobals_miss_record),
+                       sizeof(GenericRecord)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_miss_record),
+                              &record, sizeof(GenericRecord),
+                              cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_setglobals_miss_record));
+
+        m_setglobals_optix_sbt.missRecordBase = d_setglobals_miss_record;
+        m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
+        m_setglobals_optix_sbt.missRecordCount         = 1;
+    }
 }
+
+
+
+void
+OptixRaytracer::cleanup_programs(State& state)
+{
+    for (auto&& i : state.final_groups) {
+        optixProgramGroupDestroy(i);
+    }
+    for (auto&& i : state.shader_modules) {
+        optixModuleDestroy(i);
+    }
+    state.shader_modules.clear();
+
+    optixModuleDestroy(state.program_module);
+    optixModuleDestroy(state.quad_module);
+    optixModuleDestroy(state.sphere_module);
+    optixModuleDestroy(state.wrapper_module);
+    optixModuleDestroy(state.rend_lib_module);
+    optixModuleDestroy(state.shadeops_module);
+}
+
 
 
 bool
 OptixRaytracer::make_optix_materials()
 {
     State state;
-
-    createModules(state);
-    createPrograms(state);
-    createMaterials(state);
-    createPipeline(state);
-    createSBT(state);
-
-    // Upload per-material interactive buffer table
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_interactive_params),
-                          sizeof(void*) * state.material_interactive_params.size()));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_interactive_params),
-                          state.material_interactive_params.data(),
-                          sizeof(void*) * state.material_interactive_params.size(),
-                          cudaMemcpyHostToDevice));
-
-    // Pipeline has been created so we can clean some things up
-    for (auto&& i : state.final_groups) {
-        optixProgramGroupDestroy(i);
-    }
-    for (auto&& i : state.modules) {
-        optixModuleDestroy(i);
-    }
-    state.modules.clear();
-
+    create_modules(state);
+    create_programs(state);
+    create_shaders(state);
+    create_pipeline(state);
+    create_sbt(state);
+    cleanup_programs(state);
     return true;
 }
 
 
 
-bool
-OptixRaytracer::finalize_scene()
+void
+OptixRaytracer::build_accel()
 {
     // Build acceleration structures
     OptixAccelBuildOptions accelOptions;
@@ -871,6 +881,7 @@ OptixRaytracer::finalize_scene()
     CUDA_CHECK(cudaMemcpy(d_quadsAabb, quadsAabb.data(),
                           sizeof(OptixAabb) * scene.quads.size(),
                           cudaMemcpyHostToDevice));
+    device_ptrs.push_back(reinterpret_cast<void*>(d_quadsAabb));
 
     // Copy Quads to cuda device
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_quads_list),
@@ -879,12 +890,9 @@ OptixRaytracer::finalize_scene()
                           quadsParams.data(),
                           sizeof(QuadParams) * scene.quads.size(),
                           cudaMemcpyHostToDevice));
+    device_ptrs.push_back(reinterpret_cast<void*>(d_quads_list));
 
     // Fill in Quad shaders
-    CUdeviceptr d_quadsIndexOffsetBuffer;
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_quadsIndexOffsetBuffer),
-                          scene.quads.size() * sizeof(int)));
-
     int numBuildInputs = 0;
 
     unsigned int quadSbtRecord;
@@ -905,7 +913,7 @@ OptixRaytracer::finalize_scene()
         quadsInput.numSbtRecords = 1;
         quadsInput.sbtIndexOffsetSizeInBytes   = sizeof(int);
         quadsInput.sbtIndexOffsetStrideInBytes = sizeof(int);
-        quadsInput.sbtIndexOffsetBuffer = 0;  // d_quadsIndexOffsetBuffer;
+        quadsInput.sbtIndexOffsetBuffer = 0;
         ++numBuildInputs;
     }
 
@@ -933,6 +941,7 @@ OptixRaytracer::finalize_scene()
     CUDA_CHECK(cudaMemcpy(d_spheresAabb, spheresAabb.data(),
                           sizeof(OptixAabb) * scene.spheres.size(),
                           cudaMemcpyHostToDevice));
+    device_ptrs.push_back(reinterpret_cast<void*>(d_spheresAabb));
 
     // Copy Spheres to cuda device
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_spheres_list),
@@ -941,12 +950,9 @@ OptixRaytracer::finalize_scene()
                           spheresParams.data(),
                           sizeof(SphereParams) * scene.spheres.size(),
                           cudaMemcpyHostToDevice));
+    device_ptrs.push_back(reinterpret_cast<void*>(d_spheres_list));
 
     // Fill in Sphere shaders
-    CUdeviceptr d_spheresIndexOffsetBuffer;
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_spheresIndexOffsetBuffer),
-                          scene.spheres.size() * sizeof(int)));
-
     unsigned int sphereSbtRecord;
     sphereSbtRecord = OPTIX_GEOMETRY_FLAG_NONE;
     if (scene.spheres.size() > 0) {
@@ -966,7 +972,7 @@ OptixRaytracer::finalize_scene()
         spheresInput.numSbtRecords               = 1;
         spheresInput.sbtIndexOffsetSizeInBytes   = sizeof(int);
         spheresInput.sbtIndexOffsetStrideInBytes = sizeof(int);
-        spheresInput.sbtIndexOffsetBuffer = 0;  // d_spheresIndexOffsetBuffer;
+        spheresInput.sbtIndexOffsetBuffer = 0;
         ++numBuildInputs;
     }
 
@@ -997,12 +1003,23 @@ OptixRaytracer::finalize_scene()
     CUDA_CHECK(cudaMemcpy((void*)&h_aabb, reinterpret_cast<void*>(d_aabb),
                           sizeof(OptixAabb), cudaMemcpyDeviceToHost));
     cudaFree(d_aabb);
+    cudaFree(d_temp);
+
+    // We need to free the output buffer after rendering
+    device_ptrs.push_back(d_output);
 
     // Sanity check the AS bounds
     // printf ("AABB min: [%0.6f, %0.6f, %0.6f], max: [%0.6f, %0.6f, %0.6f]\n",
     //         h_aabb.minX, h_aabb.minY, h_aabb.minZ,
     //         h_aabb.maxX, h_aabb.maxY, h_aabb.maxZ );
+}
 
+
+
+bool
+OptixRaytracer::finalize_scene()
+{
+    build_accel();
     make_optix_materials();
     return true;
 }
@@ -1053,9 +1070,9 @@ OptixRaytracer::get_texture_handle(ustring filename,
         cudaChannelFormatDesc channel_desc
             = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
 
+        // TODO: Free this memory
         cudaArray_t pixelArray;
         CUDA_CHECK(cudaMallocArray(&pixelArray, &channel_desc, width, height));
-
         CUDA_CHECK(cudaMemcpy2DToArray(pixelArray, 0, 0, pixels.data(), pitch,
                                        pitch, height, cudaMemcpyHostToDevice));
 
@@ -1119,6 +1136,8 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
                           xres * yres * 4 * sizeof(float)));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_launch_params),
                           sizeof(RenderParams)));
+    device_ptrs.push_back(reinterpret_cast<void*>(d_output_buffer));
+    device_ptrs.push_back(reinterpret_cast<void*>(d_launch_params));
 
     m_xres = xres;
     m_yres = yres;
@@ -1297,8 +1316,14 @@ void
 OptixRaytracer::clear()
 {
     SimpleRaytracer::clear();
-    OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
-    m_optix_ctx = 0;
+    if (m_optix_pipeline) {
+        OPTIX_CHECK(optixPipelineDestroy(m_optix_pipeline));
+        m_optix_pipeline = 0;
+    }
+    if (m_optix_ctx) {
+        OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
+        m_optix_ctx = 0;
+    }
 }
 
 OSL_NAMESPACE_EXIT

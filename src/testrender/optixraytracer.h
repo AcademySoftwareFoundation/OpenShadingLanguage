@@ -14,7 +14,8 @@
 #include "render_params.h"
 #include "simpleraytracer.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_ENTER;
+
 
 struct State {
     OptixModuleCompileOptions module_compile_options     = {};
@@ -30,22 +31,21 @@ struct State {
     OptixModule shadeops_module;
 
     OptixProgramGroup raygen_group;
-    OptixProgramGroup setglobals_raygen_group;
     OptixProgramGroup miss_group;
-    OptixProgramGroup setglobals_miss_group;
-    OptixProgramGroup quad_hitgroup;
     OptixProgramGroup rend_lib_group;
     OptixProgramGroup shadeops_group;
-    OptixProgramGroup quad_fillSG_dc;
-    OptixProgramGroup sphere_hitgroup;
-    OptixProgramGroup sphere_fillSG_dc;
+    OptixProgramGroup setglobals_raygen_group;
+    OptixProgramGroup setglobals_miss_group;
+    OptixProgramGroup quad_hit_group;
+    OptixProgramGroup quad_fillSG_dc_group;
+    OptixProgramGroup sphere_hit_group;
+    OptixProgramGroup sphere_fillSG_dc_group;
 
+    std::vector<OptixModule> shader_modules;
     std::vector<OptixProgramGroup> shader_groups;
-    std::vector<OptixModule> modules;
     std::vector<OptixProgramGroup> final_groups;
-
-    std::vector<void*> material_interactive_params;
 };
+
 
 class OptixRaytracer final : public SimpleRaytracer {
 public:
@@ -67,6 +67,7 @@ public:
 
     bool init_optix_context(int xres, int yres);
     bool make_optix_materials();
+    void build_accel();
     bool finalize_scene();
     void prepare_render() override;
     void warmup() override;
@@ -74,11 +75,12 @@ public:
     void finalize_pixel_buffer() override;
     void clear() override;
 
-    bool createModules(State& state);
-    bool createPrograms(State& state);
-    bool createMaterials(State& state);
-    bool createPipeline(State& state);
-    bool createSBT(State& state);
+    void create_modules(State& state);
+    void create_programs(State& state);
+    void create_shaders(State& state);
+    void create_pipeline(State& state);
+    void create_sbt(State& state);
+    void cleanup_programs(State& state);
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
@@ -116,7 +118,8 @@ private:
     CUdeviceptr d_quads_list         = 0;
     CUdeviceptr d_spheres_list       = 0;
     CUdeviceptr d_interactive_params = 0;
-    int m_xres, m_yres;
+    int m_xres = 0;
+    int m_yres = 0;
     CUdeviceptr d_osl_printf_buffer;
     CUdeviceptr d_color_system;
     uint64_t test_str_1;
@@ -134,6 +137,8 @@ private:
 
     std::string m_materials_ptx;
     std::unordered_map<ustringhash, optix::TextureSampler> m_samplers;
+
+    std::vector<void*> device_ptrs;
 };
 
 

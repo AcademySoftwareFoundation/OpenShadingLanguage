@@ -585,6 +585,9 @@ LLVM_Util::~LLVM_Util()
     delete m_new_pass_manager;
     delete m_builder;
     delete m_llvm_debug_builder;
+    if (m_nvptx_target_machine != nullptr) {
+        delete m_nvptx_target_machine;
+    }
     module(NULL);
     // DO NOT delete m_llvm_jitmm;  // just the dummy wrapper around the real MM
 }

@@ -47,7 +47,7 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
     // Setup the ShaderGlobals
     const float3 ray_direction = optixGetWorldRayDirection();
     const float3 ray_origin    = optixGetWorldRayOrigin();
-    const float t_hit          = optixGetRayTmin();
+    const float t_hit          = optixGetRayTmax();
 
     sg.I  = ray_direction;
     sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));

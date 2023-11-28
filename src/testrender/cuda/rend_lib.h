@@ -4,6 +4,16 @@
 
 #pragma once
 
+#include <OSL/oslconfig.h>
+
+#if defined(__has_include) && __has_include(<Imath/half.h>)
+#    include <Imath/half.h>
+#elif OSL_USING_IMATH >= 3
+#    include <Imath/half.h>
+#else
+#    include <OpenEXR/half.h>
+#endif
+
 #include "../../liboslexec/string_hash.h"
 #include <OSL/oslexec.h>
 

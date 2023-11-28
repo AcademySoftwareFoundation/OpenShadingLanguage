@@ -20,6 +20,12 @@ public:
     PointCloud(ustringhash filename, Partio::ParticlesDataMutable* partio_cloud,
                bool write);
     ~PointCloud();
+
+    PointCloud(const PointCloud&)             = delete;
+    PointCloud(const PointCloud&&)            = delete;
+    PointCloud& operator=(const PointCloud&)  = delete;
+    PointCloud& operator=(const PointCloud&&) = delete;
+
     static PointCloud* get(ustringhash filename, bool write = false);
 
     typedef std::unordered_map<ustringhash,
@@ -55,7 +61,7 @@ namespace {  // anon
 static ustring u_position("position");
 
 // some helper classes to make the sort easy
-typedef std::pair<float, int> SortedPointRecord;  // dist,index
+typedef std::pair<float, Partio::ParticleIndex> SortedPointRecord;  // dist,index
 struct SortedPointCompare {
     bool operator()(const SortedPointRecord& a, const SortedPointRecord& b)
     {

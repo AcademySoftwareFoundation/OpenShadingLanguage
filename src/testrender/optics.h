@@ -9,7 +9,15 @@
 
 OSL_NAMESPACE_ENTER
 
-inline float
+#ifndef OSL_HOSTDEVICE
+#  ifdef __CUDACC__
+#    define OSL_HOSTDEVICE __host__ __device__
+#  else
+#    define OSL_HOSTDEVICE
+#  endif
+#endif
+
+inline OSL_HOSTDEVICE float
 fresnel_dielectric(float cosi, float eta)
 {
     // special case: ignore fresnel
@@ -30,7 +38,7 @@ fresnel_dielectric(float cosi, float eta)
     return 1.0f;  // TIR (no refracted component)
 }
 
-inline float
+inline OSL_HOSTDEVICE float
 fresnel_refraction(const Vec3& I, const Vec3& N, float eta, Vec3& T)
 {
     // compute refracted direction and fresnel term
@@ -63,7 +71,7 @@ fresnel_refraction(const Vec3& I, const Vec3& N, float eta, Vec3& T)
     return 0;
 }
 
-Color3
+OSL_HOSTDEVICE Color3
 fresnel_conductor(float cos_theta, Color3 n, Color3 k)
 {
     cos_theta       = OIIO::clamp(cos_theta, 0.0f, 1.0f);
@@ -89,7 +97,7 @@ fresnel_conductor(float cos_theta, Color3 n, Color3 k)
     return 0.5f * (rp + rs);
 }
 
-inline float
+inline OSL_HOSTDEVICE float
 fresnel_schlick(float cos_theta, float F0, float F90)
 {
     float x  = OIIO::clamp(1.0f - cos_theta, 0.0f, 1.0f);
@@ -99,7 +107,7 @@ fresnel_schlick(float cos_theta, float F0, float F90)
     return OIIO::lerp(F0, F90, x5);
 }
 
-inline Color3
+inline OSL_HOSTDEVICE Color3
 fresnel_generalized_schlick(float cos_theta, Color3 F0, Color3 F90,
                             float exponent)
 {

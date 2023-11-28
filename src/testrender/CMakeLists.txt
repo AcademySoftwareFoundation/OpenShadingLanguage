@@ -27,6 +27,8 @@ if (OSL_USE_OPTIX)
         cuda/rend_lib.h
         render_params.h
         sampling.h
+        shading.h
+        shading.cpp
         )
 
     # Generate PTX for all of the CUDA files
@@ -51,7 +53,7 @@ if (OSL_USE_OPTIX)
     list (APPEND ptx_list ${rend_lib_ptx})
 
     add_custom_target (testrender_ptx ALL
-        DEPENDS ${ptx_list}
+        DEPENDS ${ptx_list} ${testrender_cuda_headers}
         SOURCES ${testrender_cuda_srcs} )
 
     # Install the PTX files in a fixed location so that they can be

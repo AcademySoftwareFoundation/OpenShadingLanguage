@@ -32,13 +32,16 @@ struct State {
 
     OptixProgramGroup raygen_group;
     OptixProgramGroup miss_group;
+    OptixProgramGroup miss_occlusion_group;
     OptixProgramGroup rend_lib_group;
     OptixProgramGroup shadeops_group;
     OptixProgramGroup setglobals_raygen_group;
     OptixProgramGroup setglobals_miss_group;
     OptixProgramGroup quad_hit_group;
-    OptixProgramGroup quad_fillSG_dc_group;
     OptixProgramGroup sphere_hit_group;
+    OptixProgramGroup quad_occlusion_hit_group;
+    OptixProgramGroup sphere_occlusion_hit_group;
+    OptixProgramGroup quad_fillSG_dc_group;
     OptixProgramGroup sphere_fillSG_dc_group;
 
     std::vector<OptixModule> shader_modules;

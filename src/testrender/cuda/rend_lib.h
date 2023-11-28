@@ -132,7 +132,7 @@ enum RayType {
 };
 
 
-#if 1
+#if 0
 // Closures supported by the OSL sample renderer.  This list is mostly aspirational.
 enum class ClosureIDs : int32_t {
     COMPONENT_BASE_ID = 0, MUL = -1, ADD = -2,
@@ -170,6 +170,7 @@ enum class MyClosureIDs : int32_t {
     HOLDOUT_ID,
 };
 #endif
+
 
 
 // ========================================

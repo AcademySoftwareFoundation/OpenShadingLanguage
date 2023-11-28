@@ -11,6 +11,7 @@
 
 #include <OSL/hashes.h>
 
+#include "optix_raytracer.h"
 #include "rend_lib.h"
 #include "render_params.h"
 
@@ -52,6 +53,13 @@ __miss__()
 
     int pixel            = launch_index.y * launch_dims.x + launch_index.x;
     output_buffer[pixel] = make_float3(0, 0, 1);
+}
+
+
+extern "C" __global__ void
+__miss__occlusion()
+{
+    // printf("__miss__occlusion\n");
 }
 
 
@@ -131,13 +139,13 @@ struct Payload {
         t_ptr ptr;
     };
 
-    __forceinline__ __device__ void setPtr()
+    __forceinline__ __device__ void set()
     {
         optixSetPayload_0( ab.a );
         optixSetPayload_1( ab.b );
     }
 
-    __forceinline__ __device__ void getPtr()
+    __forceinline__ __device__ void get()
     {
         ab.a = optixGetPayload_0();
         ab.b = optixGetPayload_1();
@@ -194,8 +202,8 @@ float3 sample_quad(const float3& x, const QuadParams& quad,
 static __device__ void
 globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
 {
-    const GenericRecord* record = reinterpret_cast<GenericRecord*>(
-        optixGetSbtDataPointer());
+    // const GenericRecord* record = reinterpret_cast<GenericRecord*>(
+    //     optixGetSbtDataPointer());
 
     OSL_CUDA::ShaderGlobals local_sg;
     // hit-kind 0: quad hit
@@ -255,39 +263,39 @@ process_closure(const OSL::ClosureColor* closure_tree)
     OSL::Color3 weight = OSL::Color3(1.0f);
     const void* cur = closure_tree;
     while (cur) {
-        MyClosureIDs id = static_cast<MyClosureIDs>(((OSL::ClosureColor*)cur)->id);
+        ClosureIDs id = static_cast<ClosureIDs>(((OSL::ClosureColor*)cur)->id);
         switch (id) {
-        case MyClosureIDs::ADD: {
+        case ClosureIDs::ADD: {
             ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)cur)->closureB;
             weight_stack[stack_idx++] = weight;
             cur                       = ((OSL::ClosureAdd*)cur)->closureA;
             break;
         }
 
-        case MyClosureIDs::MUL: {
+        case ClosureIDs::MUL: {
             weight *= ((OSL::ClosureMul*)cur)->weight;
             cur = ((OSL::ClosureMul*)cur)->closure;
             break;
         }
 
-        case MyClosureIDs::EMISSION_ID: {
+        case ClosureIDs::EMISSION_ID: {
             cur = NULL;
             break;
         }
 
-        case MyClosureIDs::DIFFUSE_ID:
-        case MyClosureIDs::OREN_NAYAR_ID:
-        case MyClosureIDs::PHONG_ID:
-        case MyClosureIDs::WARD_ID:
-        case MyClosureIDs::REFLECTION_ID:
-        case MyClosureIDs::REFRACTION_ID:
-        case MyClosureIDs::FRESNEL_REFLECTION_ID: {
+        case ClosureIDs::DIFFUSE_ID:
+        case ClosureIDs::OREN_NAYAR_ID:
+        case ClosureIDs::PHONG_ID:
+        case ClosureIDs::WARD_ID:
+        case ClosureIDs::REFLECTION_ID:
+        case ClosureIDs::REFRACTION_ID:
+        case ClosureIDs::FRESNEL_REFLECTION_ID: {
             result += ((OSL::ClosureComponent*)cur)->w * weight;
             cur = NULL;
             break;
         }
 
-        case MyClosureIDs::MICROFACET_ID: {
+        case ClosureIDs::MICROFACET_ID: {
             const char* mem = (const char*)((OSL::ClosureComponent*)cur)->data();
             const char* dist_str = *(const char**)&mem[0];
 
@@ -310,14 +318,135 @@ process_closure(const OSL::ClosureColor* closure_tree)
     return make_float3(result.x, result.y, result.z);
 }
 
+static __device__ float3
+process_closure_too(const OSL::ClosureColor* closure_tree, ShadingResult& result)
+{
+    OSL::Color3 color_result = OSL::Color3(0.0f);
+
+    if (!closure_tree) {
+        return make_float3(color_result.x, color_result.y, color_result.z);
+    }
+
+    // ShadingResult result;
+
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
+    OSL::Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    OSL::Color3 weight = OSL::Color3(1.0f);
+    const void* cur    = closure_tree;
+    while (cur) {
+        ClosureIDs id = static_cast<ClosureIDs>(
+            ((OSL::ClosureColor*)cur)->id);
+
+        switch (id) {
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)cur)->closureB;
+            weight_stack[stack_idx++] = weight;
+            cur                       = ((OSL::ClosureAdd*)cur)->closureA;
+            break;
+        }
+        case ClosureIDs::MUL: {
+            weight *= ((OSL::ClosureMul*)cur)->weight;
+            cur = ((OSL::ClosureMul*)cur)->closure;
+            break;
+        }
+        default: {
+            const ClosureComponent* comp = reinterpret_cast<const ClosureColor*>(cur)->as_comp();
+            Color3 cw                    = weight * comp->w;
+            switch (id) {
+            case ClosureIDs::EMISSION_ID: {
+                result.Le += ((OSL::ClosureComponent*)cur)->w * weight;;
+                cur = NULL;
+                break;
+            }
+            case ClosureIDs::MICROFACET_ID:
+            case ClosureIDs::DIFFUSE_ID:
+            case ClosureIDs::OREN_NAYAR_ID:
+            case ClosureIDs::PHONG_ID:
+            case ClosureIDs::WARD_ID:
+            case ClosureIDs::REFLECTION_ID:
+            case ClosureIDs::REFRACTION_ID:
+            case ClosureIDs::FRESNEL_REFLECTION_ID: {
+#if 0
+                color_result += ((OSL::ClosureComponent*)cur)->w * weight;
+                cur = NULL;
+                break;
+#else
+                if (!result.bsdf.add_bsdf_gpu(cw, comp))
+                    printf("unable to add BSDF\n");
+                cur = nullptr;
+                break;
+#endif
+            }
+#if 0
+            case ClosureIDs::MICROFACET_ID: {
+                const char* mem
+                    = (const char*)((OSL::ClosureComponent*)cur)->data();
+                const char* dist_str = *(const char**)&mem[0];
+
+                if (HDSTR(dist_str) == STRING_PARAMS(default))
+                    return make_float3(0.0f, 1.0f, 1.0f);
+                else
+                    return make_float3(1.0f, 0.0f, 1.0f);
+
+                break;
+            }
+#endif
+            default: cur = NULL; break;
+            }
+        }
+        }
+        if (cur == NULL && stack_idx > 0) {
+            cur    = ptr_stack[--stack_idx];
+            weight = weight_stack[stack_idx];
+        }
+    }
+    //printf("process_closure_too() exit\n");
+    return make_float3(color_result.x, color_result.y, color_result.z);
+}
+
+
+static __device__ void
+process_closure_gpu(const ShaderGlobalsType& sg, ShadingResult& result,
+                    const void* Ci, bool light_only)
+{
+    // if (!light_only)
+    //     process_medium_closure(sg, result, Ci, Color3(1));
+    // process_bsdf_closure_gpu(sg, result, (const ClosureColor*) Ci, Color3(1), light_only);
+    process_closure_too((const ClosureColor*)Ci, result);
+}
+
 
 extern "C" __global__ void
 __closesthit__deferred()
 {
     Payload payload;
-    payload.getPtr();
+    payload.get();
     OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*) payload.ptr.ptr;
     globals_from_hit(*sg_ptr);
+    uint32_t* trace_data = (uint32_t*) sg_ptr->tracedata;
+    trace_data[0] = optixGetPrimitiveIndex();
+    trace_data[1] = optixGetHitKind();
+}
+
+
+extern "C" __global__ void
+__closesthit__occlusion()
+{
+    Payload payload;
+    payload.get();
+    uint32_t* vals_ptr = (uint32_t*) payload.ptr.ptr;
+
+    vals_ptr[0] = optixGetPrimitiveIndex();
+    vals_ptr[1] = optixGetHitKind();
 }
 
 
@@ -337,102 +466,273 @@ __raygen__deferred()
     const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
                                  static_cast<float>(launch_index.y) + 0.5f);
 
+    //--------------------------------------
+    //
+    // Generate camera ray
+    //
+    //--------------------------------------
+
     // Make the ray for the current pixel
     RayGeometry r;
     r.origin    = eye;
     r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
                             + dir);
 
-    OSL_CUDA::ShaderGlobals sg;
-    // globals_from_hit(sg);
+    Color3 path_weight(1, 1, 1);
+    Color3 path_radiance(0, 0, 0);
+    float bsdf_pdf = std::numeric_limits<
+        float>::infinity();  // camera ray has only one possible direction
 
-    Payload payload;
-    payload.ptr.ptr = (uint64_t)&sg;
+    int si = 0;
+    Sampler sampler(launch_index.x, launch_index.y, si);
 
-    optixTrace(render_params.traversal_handle, // handle
-               r.origin,                       // origin
-               r.direction,                    // direction
-               1e-3f,                          // tmin
-               1e13f,                          // tmax
-               0,                              // ray time
-               OptixVisibilityMask(1),         // visibility mask
-               OPTIX_RAY_FLAG_DISABLE_ANYHIT,  // ray flags
-               0,                              // SBT offset
-               1,                              // SBT stride
-               0,                              // miss SBT offset
-               payload.ab.a,
-               payload.ab.b
-        );
+    int max_bounces = 10;
+    for (int bounce = 0; bounce <= max_bounces; bounce++) {
+        const bool last_bounce = bounce == max_bounces;
 
-    {
-        alignas(8) char closure_pool[256];
+        //--------------------------------------
+        //
+        // Trace camera/bounce ray
+        //
+        //--------------------------------------
 
-        // OSL_CUDA::ShaderGlobals sg;
-        // globals_from_hit(sg);
+        ShaderGlobalsType sg;
+        sg.shaderID = -1;
 
-        // Pack the "closure pool" into one of the ShaderGlobals pointers
-        *(int*)&closure_pool[0] = 0;
-        sg.renderstate          = &closure_pool[0];
+        Payload payload;
+        payload.ptr.ptr = (uint64_t)&sg;
 
-        // Create some run-time options structs. The OSL shader fills in the structs
-        // as it executes, based on the options specified in the shader source.
-        NoiseOptCUDA noiseopt;
-        TextureOptCUDA textureopt;
-        TraceOptCUDA traceopt;
+        uint32_t trace_data[2] = { 65536, 65536 };
+        sg.tracedata           = (void*)&trace_data[0];
 
-        // Pack the pointers to the options structs in a faux "context",
-        // which is a rough stand-in for the host ShadingContext.
-        ShadingContextCUDA shading_context = { &noiseopt, &textureopt, &traceopt };
+        // Trace the camera ray against the scene
+        optixTrace(render_params.traversal_handle, // handle
+                   r.origin,                       // origin
+                   r.direction,                    // direction
+                   1e-3f,                          // tmin
+                   1e13f,                          // tmax
+                   0,                              // ray time
+                   OptixVisibilityMask(1),         // visibility mask
+                   OPTIX_RAY_FLAG_DISABLE_ANYHIT,  // ray flags
+                   RAY_TYPE_RADIANCE,              // SBT offset
+                   RAY_TYPE_COUNT,                 // SBT stride
+                   RAY_TYPE_RADIANCE,              // miss SBT offset
+                   payload.ab.a,
+                   payload.ab.b
+            );
 
-        sg.context = &shading_context;
+        //--------------------------------------
+        //
+        // Execute the shader
+        //
+        //--------------------------------------
 
-        // Run the OSL callable
-        void* interactive_ptr = reinterpret_cast<void**>(
-            render_params.interactive_params)[sg.shaderID];
-        const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
-        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
-            shaderIdx, &sg /*shaderglobals_ptr*/, nullptr /*groupdata_ptr*/,
-            nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-            0 /*shadeindex - unused*/, interactive_ptr /*interactive_params_ptr*/);
+        auto execute_shader = [](OSL_CUDA::ShaderGlobals& sg) {
+            if(sg.shaderID < 0) {
+                // TODO: should probably never get here ...
+                return;
+            }
 
-        float3 result         = process_closure((OSL::ClosureColor*)sg.Ci);
-        float3* output_buffer = reinterpret_cast<float3*>(
-            render_params.output_buffer);
-        int pixel            = launch_index.y * launch_dims.x + launch_index.x;
-        output_buffer[pixel] = make_float3(result.x, result.y, result.z);
-    }
+            alignas(8) char closure_pool[256];
 
-    if (launch_index.x == launch_dims.x / 2 && launch_index.y == launch_dims.y / 2)
-    {
-        printf("num_quads: %zu, quads_buffer: %p\n", render_params.num_quads, render_params.quads_buffer);
-        printf("num_spheres: %zu, spheres_buffer: %p\n", render_params.num_spheres, render_params.spheres_buffer);
+            // Pack the "closure pool" into one of the ShaderGlobals pointers
+            *(int*)&closure_pool[0] = 0;
+            sg.renderstate          = &closure_pool[0];
+
+            // Create some run-time options structs. The OSL shader fills in the structs
+            // as it executes, based on the options specified in the shader source.
+            NoiseOptCUDA noiseopt;
+            TextureOptCUDA textureopt;
+            TraceOptCUDA traceopt;
+
+            // Pack the pointers to the options structs in a faux "context",
+            // which is a rough stand-in for the host ShadingContext.
+            ShadingContextCUDA shading_context = { &noiseopt, &textureopt, &traceopt };
+            sg.context = &shading_context;
+
+            // Run the OSL callable
+            void* interactive_ptr = reinterpret_cast<void**>(
+                render_params.interactive_params)[sg.shaderID];
+            const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
+            optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
+                shaderIdx,
+                &sg /*shaderglobals_ptr*/,
+                nullptr /*groupdata_ptr*/,
+                nullptr /*userdata_base_ptr*/,
+                nullptr /*output_base_ptr*/,
+                0 /*shadeindex - unused*/,
+                interactive_ptr /*interactive_params_ptr*/
+                );
+        };
+
+        // Execute the shader
+        ShadingResult result;
+        if(sg.shaderID >= 0) {
+            execute_shader(sg);
+
+            //--------------------------------------
+            //
+            // Process the output closure
+            //
+            //--------------------------------------
+
+            const Vec3 I = *(Vec3*)&sg.I;
+            process_closure_gpu(sg, result, (void*) sg.Ci, last_bounce);
+        }
+        else {
+            // Ray missed
+            break;
+        }
+
+        //--------------------------------------
+        //
+        // TODO: Add self-emission
+        //
+        //--------------------------------------
+
+        {
+            float k = 1;
+            // if (scene.islight(id)) {
+            //     // figure out the probability of reaching this point
+            //     float light_pdf = scene.shapepdf(id, r.origin, sg.P);
+            //     k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
+            // }
+            path_radiance += path_weight * k * result.Le;
+
+        }
+
+        if (last_bounce)
+            break;
+
+        //--------------------------------------
+        //
+        // Build PDF
+        //
+        //--------------------------------------
+
+        {
+            const Vec3 I = *(Vec3*)&sg.I;
+            result.bsdf.prepare_gpu(-I, path_weight, last_bounce);
+        }
+
+        // get three random numbers
+        Vec3 s   = sampler.get();
+        float xi = s.x;
+        float yi = s.y;
+        float zi = s.z;
+
+        //--------------------------------------
+        //
+        // TODO: Trace background ray
+        //
+        //--------------------------------------
+
+        //--------------------------------------
+        //
+        // Trace light rays
+        //
+        //--------------------------------------
+
+        // Trace one ray to each light
 
         for( size_t idx = 0; idx < render_params.num_spheres; ++idx )
         {
             SphereParams* spheres = (SphereParams*) render_params.spheres_buffer;
-            if( spheres[idx].isLight ) {
-                printf("let there be light!\n");
-
+            if (spheres[idx].isLight) {
                 int sx = launch_index.x;
                 int sy = launch_index.y;
                 int si = 0;
 
-                Sampler sampler(sx, sy, si);
+                // Sampler sampler(sx, sy, si);
                 Vec3 s   = sampler.get();
                 float xi = s.x;
                 float yi = s.y;
                 // float zi = s.z;
 
-                printf("xi: %6.3f, yi: %6.3f\n", xi, yi);
+                float light_pdf        = 0.0f;
+                const float3 light_dir = sample_sphere(sg.P, spheres[idx], xi, yi, light_pdf);
+                const float3 origin    = sg.P + sg.N * 0.001f;  // offset the ray origin
 
-                float3 x  = sg.P; // hit point
-                // float xi  = 0.0f;
-                // float yi  = 0.0f;
-                float pdf = 0.0f;
-                float3 light_dir = sample_sphere(x, spheres[idx], xi, yi, pdf);
-                printf("light_dir: %6.3f, %6.3f, %6.3f\n", light_dir.x, light_dir.y, light_dir.z );
+                const Vec3 I    = *(Vec3*)&sg.I;
+                const Vec3 ldir = *(Vec3*)&light_dir;
+
+                BSDF::Sample b = result.bsdf.eval_gpu(-I, ldir);
+                Color3 contrib = path_weight * b.weight
+                    * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
+                                                             b.pdf);
+
+                if ((contrib.x + contrib.y + contrib.z) > 0)
+                {
+                    ShaderGlobalsType light_sg;
+                    uint32_t trace_data[2] = { 65536, 65536 };
+                    light_sg.shaderID      = -1;
+                    light_sg.tracedata     = (void*)&trace_data[0];
+
+                    Payload payload;
+                    payload.ptr.ptr = (uint64_t)&light_sg;
+
+                    // Trace the camera ray against the scene
+                    optixTrace(render_params.traversal_handle, // handle
+                               origin,                         // origin
+                               light_dir,                      // direction
+                               1e-3f,                          // tmin
+                               1e13f,                          // tmax
+                               0,                              // ray time
+                               OptixVisibilityMask(1),         // visibility mask
+                               OPTIX_RAY_FLAG_DISABLE_ANYHIT,  // ray flags
+                               RAY_TYPE_RADIANCE,              // SBT offset
+                               RAY_TYPE_COUNT,                 // SBT stride
+                               RAY_TYPE_RADIANCE,              // miss SBT offset
+                               payload.ab.a,
+                               payload.ab.b
+                        );
+
+                    const uint32_t primIdx = trace_data[0];
+                    const uint32_t hitKind = trace_data[1];
+                    if(hitKind == 1 && primIdx == idx)
+                    {
+                        // execute the light shader (for emissive closures only)
+                        if(light_sg.shaderID >= 0) {
+                            execute_shader(light_sg);
+
+                            ShadingResult light_result;
+                            process_closure_gpu(light_sg, light_result, (void*) light_sg.Ci, true);
+
+                            // accumulate contribution
+                            path_radiance += contrib * light_result.Le;
+                        }
+                    }
+                }
             }
         }
+
+        //--------------------------------------
+        //
+        // TODO: Setup bounce ray
+        //
+        //--------------------------------------
+
+        {
+            const Vec3 I   = *(Vec3*)&sg.I;
+            BSDF::Sample p = result.bsdf.sample_gpu(-I, xi, yi, zi);
+            path_weight *= p.weight;
+            bsdf_pdf = p.pdf;
+            // r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
+            r.direction = make_float3(p.wi.x, p.wi.y, p.wi.z);
+            // r.radius    = radius;
+            // Just simply use roughness as spread slope
+            // r.spread = std::max(r.spread, p.roughness);
+            if (!(path_weight.x > 0) && !(path_weight.y > 0)
+                && !(path_weight.z > 0))
+                break;  // filter out all 0's or NaNs
+            // prev_id  = id;
+            r.origin = make_float3(sg.P.x, sg.P.y, sg.P.z);
+        }
     }
+
+    float3* output_buffer = reinterpret_cast<float3*>(
+        render_params.output_buffer);
+    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
+    output_buffer[pixel] = make_float3(path_radiance.x, path_radiance.y, path_radiance.z);
 }
 #endif

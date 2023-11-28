@@ -11,6 +11,7 @@
 
 #include "optixraytracer.h"
 
+#include "cuda/optix_raytracer.h"
 #include "render_params.h"
 
 #include <cuda.h>
@@ -406,12 +407,25 @@ OptixRaytracer::create_programs(State& state)
         fmtformat("Creating set-globals 'ray-gen' program group: {}", msg_log));
 
     // Miss group
-    OptixProgramGroupDesc miss_desc = {};
-    miss_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_MISS;
-    miss_desc.miss.module
-        = state.program_module;  // raygen file/module contains miss program
-    miss_desc.miss.entryFunctionName = "__miss__";
-    create_optix_pg(&miss_desc, 1, &state.program_options, &state.miss_group);
+    {
+        OptixProgramGroupDesc miss_desc = {};
+        miss_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_MISS;
+        miss_desc.miss.module
+            = state.program_module;  // raygen file/module contains miss program
+        miss_desc.miss.entryFunctionName = "__miss__";
+        create_optix_pg(&miss_desc, 1, &state.program_options, &state.miss_group);
+    }
+
+    // Miss group (occlusion)
+    {
+        OptixProgramGroupDesc miss_desc = {};
+        miss_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_MISS;
+        miss_desc.miss.module
+            = state.program_module;  // raygen file/module contains miss program
+        miss_desc.miss.entryFunctionName = "__miss__occlusion";
+        create_optix_pg(&miss_desc, 1, &state.program_options, &state.miss_occlusion_group);
+    }
+
 
     // Set Globals Miss group
     OptixProgramGroupDesc setglobals_miss_desc  = {};
@@ -422,16 +436,36 @@ OptixRaytracer::create_programs(State& state)
                     &state.setglobals_miss_group);
 
     // Hitgroup -- quads
-    OptixProgramGroupDesc quad_hitgroup_desc = {};
-    quad_hitgroup_desc.kind              = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    quad_hitgroup_desc.hitgroup.moduleCH = state.program_module;
-    quad_hitgroup_desc.hitgroup.entryFunctionNameCH
-        = "__closesthit__deferred";
-    quad_hitgroup_desc.hitgroup.moduleAH            = state.wrapper_module;
-    quad_hitgroup_desc.hitgroup.entryFunctionNameAH = "__anyhit__any_hit_shadow";
-    quad_hitgroup_desc.hitgroup.moduleIS            = state.quad_module;
-    quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
-    create_optix_pg(&quad_hitgroup_desc, 1, &state.program_options, &state.quad_hit_group);
+    {
+        OptixProgramGroupDesc quad_hitgroup_desc = {};
+        quad_hitgroup_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+        quad_hitgroup_desc.hitgroup.moduleCH = state.program_module;
+        quad_hitgroup_desc.hitgroup.entryFunctionNameCH
+            = "__closesthit__deferred";
+        quad_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
+        quad_hitgroup_desc.hitgroup.entryFunctionNameAH
+            = "__anyhit__any_hit_shadow";
+        quad_hitgroup_desc.hitgroup.moduleIS            = state.quad_module;
+        quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
+        create_optix_pg(&quad_hitgroup_desc, 1, &state.program_options,
+                        &state.quad_hit_group);
+    }
+
+    // Hitgroup -- quads (occlusion)
+    {
+        OptixProgramGroupDesc quad_hitgroup_desc = {};
+        quad_hitgroup_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+        quad_hitgroup_desc.hitgroup.moduleCH = state.program_module;
+        quad_hitgroup_desc.hitgroup.entryFunctionNameCH
+            = "__closesthit__occlusion";
+        quad_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
+        quad_hitgroup_desc.hitgroup.entryFunctionNameAH
+            = "__anyhit__any_hit_shadow";
+        quad_hitgroup_desc.hitgroup.moduleIS            = state.quad_module;
+        quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
+        create_optix_pg(&quad_hitgroup_desc, 1, &state.program_options,
+                        &state.quad_occlusion_hit_group);
+    }
 
     // Direct-callable -- renderer-specific support functions for OSL on the device
     OptixProgramGroupDesc rend_lib_desc = {};
@@ -464,18 +498,38 @@ OptixRaytracer::create_programs(State& state)
     create_optix_pg(&quad_fillSG_desc, 1, &state.program_options, &state.quad_fillSG_dc_group);
 
     // Hitgroup -- sphere
-    OptixProgramGroupDesc sphere_hitgroup_desc = {};
-    sphere_hitgroup_desc.kind              = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-    sphere_hitgroup_desc.hitgroup.moduleCH = state.program_module;
-    sphere_hitgroup_desc.hitgroup.entryFunctionNameCH
-        = "__closesthit__deferred";
-    sphere_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
-    sphere_hitgroup_desc.hitgroup.entryFunctionNameAH
-        = "__anyhit__any_hit_shadow";
-    sphere_hitgroup_desc.hitgroup.moduleIS            = state.sphere_module;
-    sphere_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__sphere";
-    create_optix_pg(&sphere_hitgroup_desc, 1, &state.program_options,
-                    &state.sphere_hit_group);
+    {
+        OptixProgramGroupDesc sphere_hitgroup_desc = {};
+        sphere_hitgroup_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+        sphere_hitgroup_desc.hitgroup.moduleCH = state.program_module;
+        sphere_hitgroup_desc.hitgroup.entryFunctionNameCH
+            = "__closesthit__deferred";
+        sphere_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
+        sphere_hitgroup_desc.hitgroup.entryFunctionNameAH
+            = "__anyhit__any_hit_shadow";
+        sphere_hitgroup_desc.hitgroup.moduleIS = state.sphere_module;
+        sphere_hitgroup_desc.hitgroup.entryFunctionNameIS
+            = "__intersection__sphere";
+        create_optix_pg(&sphere_hitgroup_desc, 1, &state.program_options,
+                        &state.sphere_hit_group);
+    }
+
+    // Hitgroup -- sphere (occlusion)
+    {
+        OptixProgramGroupDesc sphere_hitgroup_desc = {};
+        sphere_hitgroup_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+        sphere_hitgroup_desc.hitgroup.moduleCH = state.program_module;
+        sphere_hitgroup_desc.hitgroup.entryFunctionNameCH
+            = "__closesthit__occlusion";
+        sphere_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
+        sphere_hitgroup_desc.hitgroup.entryFunctionNameAH
+            = "__anyhit__any_hit_shadow";
+        sphere_hitgroup_desc.hitgroup.moduleIS = state.sphere_module;
+        sphere_hitgroup_desc.hitgroup.entryFunctionNameIS
+            = "__intersection__sphere";
+        create_optix_pg(&sphere_hitgroup_desc, 1, &state.program_options,
+                        &state.sphere_occlusion_hit_group);
+    }
 
     // Direct-callable -- fills in ShaderGlobals for Sphere
     OptixProgramGroupDesc sphere_fillSG_desc = {};
@@ -608,8 +662,11 @@ OptixRaytracer::create_pipeline(State& state)
     // Gather all of the program groups
     state.final_groups.push_back(state.raygen_group);
     state.final_groups.push_back(state.miss_group);
+    state.final_groups.push_back(state.miss_occlusion_group);
     state.final_groups.push_back(state.quad_hit_group);
+    state.final_groups.push_back(state.quad_occlusion_hit_group);
     state.final_groups.push_back(state.sphere_hit_group);
+    state.final_groups.push_back(state.sphere_occlusion_hit_group);
     state.final_groups.push_back(state.quad_fillSG_dc_group);
     state.final_groups.push_back(state.sphere_fillSG_dc_group);
     state.final_groups.push_back(state.rend_lib_group);
@@ -691,21 +748,25 @@ OptixRaytracer::create_sbt(State& state)
 
     // Miss
     {
-        GenericRecord miss_record;
+        GenericRecord miss_records[RAY_TYPE_COUNT];
         CUdeviceptr d_miss_record;
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_group, &miss_record));
+
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_group, &miss_records[0]));
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_occlusion_group, &miss_records[1]));
+
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_miss_record),
-                              sizeof(GenericRecord)));
+                              RAY_TYPE_COUNT * sizeof(GenericRecord)));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_miss_record),
-                              &miss_record, sizeof(GenericRecord),
+                              &miss_records[0], RAY_TYPE_COUNT * sizeof(GenericRecord),
                               cudaMemcpyHostToDevice));
         device_ptrs.push_back(reinterpret_cast<void*>(d_miss_record));
 
         m_optix_sbt.missRecordBase          = d_miss_record;
         m_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
-        m_optix_sbt.missRecordCount         = 1;
+        m_optix_sbt.missRecordCount         = RAY_TYPE_COUNT;
     }
 
+#if 0
     // Hitgroups
     {
         const int nhitgroups = 2;
@@ -733,6 +794,50 @@ OptixRaytracer::create_sbt(State& state)
         m_optix_sbt.hitgroupRecordStrideInBytes = sizeof(GenericRecord);
         m_optix_sbt.hitgroupRecordCount         = nhitgroups;
     }
+#else
+    // Hitgroups
+    {
+        const int num_geom_types = 2;  // quads, spheres
+        const int num_hit_groups = RAY_TYPE_COUNT * num_geom_types;
+        GenericRecord hitgroup_records[num_hit_groups];
+        CUdeviceptr d_hitgroup_records;
+
+        // quad
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_hit_group,
+                                             &hitgroup_records[0]));
+        hitgroup_records[0].data        = reinterpret_cast<void*>(d_quads_list);
+        hitgroup_records[0].sbtGeoIndex = 0;
+
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_occlusion_hit_group,
+                                             &hitgroup_records[1]));
+        hitgroup_records[1].data        = reinterpret_cast<void*>(d_quads_list);
+        hitgroup_records[1].sbtGeoIndex = 0;
+
+        // sphere
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_hit_group,
+                                             &hitgroup_records[2]));
+        hitgroup_records[2].data = reinterpret_cast<void*>(d_spheres_list);
+        hitgroup_records[2].sbtGeoIndex = 1;
+
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_occlusion_hit_group,
+                                             &hitgroup_records[3]));
+        hitgroup_records[3].data = reinterpret_cast<void*>(d_spheres_list);
+        hitgroup_records[3].sbtGeoIndex = 1;
+
+        // copy to device
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroup_records),
+                              num_hit_groups * sizeof(GenericRecord)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_hitgroup_records),
+                              &hitgroup_records[0],
+                              num_hit_groups * sizeof(GenericRecord),
+                              cudaMemcpyHostToDevice));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_hitgroup_records));
+
+        m_optix_sbt.hitgroupRecordBase          = d_hitgroup_records;
+        m_optix_sbt.hitgroupRecordStrideInBytes = sizeof(GenericRecord);
+        m_optix_sbt.hitgroupRecordCount         = num_hit_groups;
+    }
+#endif
 
     // Callable programs
     {

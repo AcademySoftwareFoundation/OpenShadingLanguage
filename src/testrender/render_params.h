@@ -59,6 +59,15 @@ struct PrimitiveParams {
 struct SphereParams : PrimitiveParams {
     float3 c;  // center
     float r2;  // radius ^2
+
+    OSL_HOSTDEVICE float shapepdf(const OSL::Vec3& x, const OSL::Vec3& /*p*/) const
+    {
+        const float TWOPI = float(2 * M_PI);
+        OSL::Vec3 C(c.x, c.y, c.z);
+        float cmax2       = 1 - r2 / (C - x).length2();
+        float cmax        = cmax2 > 0 ? sqrtf(cmax2) : 0;
+        return 1 / (TWOPI * (1 - cmax));
+    }
 };
 
 
@@ -70,6 +79,15 @@ struct QuadParams : PrimitiveParams {
     float3 n;
     float eu;
     float ev;
+
+    OSL_HOSTDEVICE float shapepdf(const OSL::Vec3& x, const OSL::Vec3& p) const
+    {
+        OSL::Vec3 l = OSL::Vec3(p.x, p.y, p.z) - OSL::Vec3(x.x, x.y, x.z);
+        float d2    = l.length2();
+        OSL::Vec3 dir = l.normalize();
+        OSL::Vec3 N   = OSL::Vec3(n.x, n.y, n.z);
+        return d2 / (a * fabsf(dir.dot(N)));
+    }
 };
 
 

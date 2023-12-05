@@ -20,6 +20,8 @@
 #include "../shading.h"
 #include "../shading.cpp"
 
+#include <cstdint>
+
 using OSL_CUDA::ShaderGlobals;
 
 
@@ -502,7 +504,7 @@ __raygen__deferred()
         Payload payload;
         payload.ptr.ptr = (uint64_t)&sg;
 
-        uint32_t trace_data[2] = { 65536, 65536 };
+        uint32_t trace_data[2] = { UINT32_MAX, UINT32_MAX };
         sg.tracedata           = (void*)&trace_data[0];
 
         // Trace the camera ray against the scene
@@ -520,6 +522,9 @@ __raygen__deferred()
                    payload.ab.a,
                    payload.ab.b
             );
+
+        const uint32_t hit_idx  = trace_data[0];
+        const uint32_t hit_kind = trace_data[1];
 
         //--------------------------------------
         //
@@ -586,20 +591,42 @@ __raygen__deferred()
 
         //--------------------------------------
         //
+        // Helpers
+        //
+        //--------------------------------------
+
+        auto is_light = [&](unsigned int idx, unsigned int hit_kind) {
+            QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
+            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
+            return (hit_kind == 0)
+                       ? quads[idx - render_params.num_spheres].isLight
+                       : spheres[idx].isLight;
+        };
+
+        auto shape_pdf = [&](unsigned int idx, unsigned int hit_kind, const Vec3& x,
+                             const Vec3& p) {
+            QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
+            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
+            return (hit_kind == 0)
+                       ? quads[idx - render_params.num_spheres].shapepdf(x, p)
+                       : spheres[idx].shapepdf(x, p);
+        };
+
+        //--------------------------------------
+        //
         // TODO: Add self-emission
         //
         //--------------------------------------
 
-        {
-            float k = 1;
-            // if (scene.islight(id)) {
-            //     // figure out the probability of reaching this point
-            //     float light_pdf = scene.shapepdf(id, r.origin, sg.P);
-            //     k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
-            // }
-            path_radiance += path_weight * k * result.Le;
-
+        float k = 1;
+        if (is_light(hit_idx, hit_kind)) {
+            // figure out the probability of reaching this point
+            const Vec3 origin     = *(Vec3*)&r.origin;
+            const Vec3 P          = *(Vec3*)&sg.P;
+            float light_pdf = shape_pdf(hit_idx, hit_kind, origin, P);
+            k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
+        path_radiance += path_weight * k * result.Le;
 
         if (last_bounce)
             break;
@@ -634,11 +661,9 @@ __raygen__deferred()
         //--------------------------------------
 
         // Trace one ray to each light
-
-        for( size_t idx = 0; idx < render_params.num_spheres; ++idx )
-        {
-            SphereParams* spheres = (SphereParams*) render_params.spheres_buffer;
-            if (spheres[idx].isLight) {
+        for (size_t idx = 0; idx < render_params.num_spheres; ++idx) {
+            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
+            if (is_light(idx, 1 /*hit_kind=sphere*/)) {
                 int sx = launch_index.x;
                 int sy = launch_index.y;
                 int si = 0;
@@ -664,7 +689,7 @@ __raygen__deferred()
                 if ((contrib.x + contrib.y + contrib.z) > 0)
                 {
                     ShaderGlobalsType light_sg;
-                    uint32_t trace_data[2] = { 65536, 65536 };
+                    uint32_t trace_data[2] = { UINT32_MAX, UINT32_MAX };
                     light_sg.shaderID      = -1;
                     light_sg.tracedata     = (void*)&trace_data[0];
 

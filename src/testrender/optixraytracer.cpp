@@ -766,35 +766,6 @@ OptixRaytracer::create_sbt(State& state)
         m_optix_sbt.missRecordCount         = RAY_TYPE_COUNT;
     }
 
-#if 0
-    // Hitgroups
-    {
-        const int nhitgroups = 2;
-        GenericRecord hitgroup_records[nhitgroups];
-        CUdeviceptr d_hitgroup_records;
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_hit_group,
-                                             &hitgroup_records[0]));
-        hitgroup_records[0].data        = reinterpret_cast<void*>(d_quads_list);
-        hitgroup_records[0].sbtGeoIndex = 0;
-
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_hit_group,
-                                             &hitgroup_records[1]));
-        hitgroup_records[1].data = reinterpret_cast<void*>(d_spheres_list);
-        hitgroup_records[1].sbtGeoIndex = 1;
-
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroup_records),
-                              nhitgroups * sizeof(GenericRecord)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_hitgroup_records),
-                              &hitgroup_records[0],
-                              nhitgroups * sizeof(GenericRecord),
-                              cudaMemcpyHostToDevice));
-        device_ptrs.push_back(reinterpret_cast<void*>(d_hitgroup_records));
-
-        m_optix_sbt.hitgroupRecordBase          = d_hitgroup_records;
-        m_optix_sbt.hitgroupRecordStrideInBytes = sizeof(GenericRecord);
-        m_optix_sbt.hitgroupRecordCount         = nhitgroups;
-    }
-#else
     // Hitgroups
     {
         const int num_geom_types = 2;  // quads, spheres
@@ -837,7 +808,6 @@ OptixRaytracer::create_sbt(State& state)
         m_optix_sbt.hitgroupRecordStrideInBytes = sizeof(GenericRecord);
         m_optix_sbt.hitgroupRecordCount         = num_hit_groups;
     }
-#endif
 
     // Callable programs
     {
@@ -1247,8 +1217,8 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     m_xres = xres;
     m_yres = yres;
 
-    const int aa = options.get_int("aa");
-    OSL_ASSERT(aa > 0 && "AA must be > 0");
+    const int aa                  = std::max(1, options.get_int("aa"));
+    const float show_albedo_scale = options.get_float("show_albedo_scale");
 
     RenderParams params;
     params.eye.x                   = camera.eye.x;
@@ -1264,6 +1234,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.cy.y                    = camera.cy.y;
     params.cy.z                    = camera.cy.z;
     params.aa                      = aa;
+    params.show_albedo_scale       = show_albedo_scale;
     params.invw                    = 1.0f / m_xres;
     params.invh                    = 1.0f / m_yres;
     params.interactive_params      = d_interactive_params;

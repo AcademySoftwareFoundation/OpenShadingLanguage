@@ -126,21 +126,21 @@ osl_tex2DLookup(void* handle, float s, float t)
     return tex2D<float4>(texID, s, t);
 }
 
-//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 //
-// EXPERIMENTAL
+// Pathtracing
 //
-//------------------------------------------------------------------------------
-
-#if 1
+//--------------------------------------------------------------------------------
 
 struct t_ab {
     uint32_t a, b;
 };
 
+
 struct t_ptr {
     uint64_t ptr;
 };
+
 
 struct Payload {
     union {
@@ -161,11 +161,13 @@ struct Payload {
     }
 };
 
+
 inline __device__
 float3 cross(const float3& a, const float3& b)
 {
   return make_float3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
 }
+
 
 inline __device__
 void ortho(const float3& n, float3& x, float3& y)
@@ -173,6 +175,7 @@ void ortho(const float3& n, float3& x, float3& y)
     x = normalize(fabsf(n.x) > .01f ? make_float3(n.z, 0, -n.x) : make_float3(0, -n.z, n.y));
     y = cross(n, x);
 }
+
 
 // return a direction towards a point on the sphere
 static __device__
@@ -205,7 +208,6 @@ float3 sample_quad(const float3& x, const QuadParams& quad,
     pdf        = d2 / (quad.a * fabsf(dot(dir, quad.n)));
     return dir;
 }
-
 
 
 static __device__ void
@@ -249,97 +251,14 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
 }
 
 
-#if 0
 static __device__ float3
-process_closure(const OSL::ClosureColor* closure_tree)
-{
-    OSL::Color3 result = OSL::Color3(0.0f);
-
-    if (!closure_tree) {
-        return C3_TO_F3(result);
-    }
-
-    // The depth of the closure tree must not exceed the stack size.
-    // A stack size of 8 is probably quite generous for relatively
-    // balanced trees.
-    const int STACK_SIZE = 8;
-
-    // Non-recursive traversal stack
-    int stack_idx = 0;
-    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
-    OSL::Color3 weight_stack[STACK_SIZE];
-
-    // Shading accumulator
-    OSL::Color3 weight = OSL::Color3(1.0f);
-    const void* cur = closure_tree;
-    while (cur) {
-        ClosureIDs id = static_cast<ClosureIDs>(((OSL::ClosureColor*)cur)->id);
-        switch (id) {
-        case ClosureIDs::ADD: {
-            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)cur)->closureB;
-            weight_stack[stack_idx++] = weight;
-            cur                       = ((OSL::ClosureAdd*)cur)->closureA;
-            break;
-        }
-
-        case ClosureIDs::MUL: {
-            weight *= ((OSL::ClosureMul*)cur)->weight;
-            cur = ((OSL::ClosureMul*)cur)->closure;
-            break;
-        }
-
-        case ClosureIDs::EMISSION_ID: {
-            cur = NULL;
-            break;
-        }
-
-        case ClosureIDs::DIFFUSE_ID:
-        case ClosureIDs::OREN_NAYAR_ID:
-        case ClosureIDs::PHONG_ID:
-        case ClosureIDs::WARD_ID:
-        case ClosureIDs::REFLECTION_ID:
-        case ClosureIDs::REFRACTION_ID:
-        case ClosureIDs::FRESNEL_REFLECTION_ID: {
-            result += ((OSL::ClosureComponent*)cur)->w * weight;
-            cur = NULL;
-            break;
-        }
-
-        case ClosureIDs::MICROFACET_ID: {
-            const char* mem = (const char*)((OSL::ClosureComponent*)cur)->data();
-            const char* dist_str = *(const char**)&mem[0];
-
-            if (HDSTR(dist_str) == STRING_PARAMS(default))
-                return make_float3(0.0f, 1.0f, 1.0f);
-            else
-                return make_float3(1.0f, 0.0f, 1.0f);
-
-            break;
-        }
-
-        default: cur = NULL; break;
-        }
-
-        if (cur == NULL && stack_idx > 0) {
-            cur    = ptr_stack[--stack_idx];
-            weight = weight_stack[stack_idx];
-        }
-    }
-    return C3_TO_F3(result);
-}
-#endif
-
-
-static __device__ float3
-process_closure_too(const OSL::ClosureColor* closure_tree, ShadingResult& result)
+process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
 {
     OSL::Color3 color_result = OSL::Color3(0.0f);
 
     if (!closure_tree) {
         return C3_TO_F3(color_result);
     }
-
-    // ShadingResult result;
 
     // The depth of the closure tree must not exceed the stack size.
     // A stack size of 8 is probably quite generous for relatively
@@ -387,31 +306,12 @@ process_closure_too(const OSL::ClosureColor* closure_tree, ShadingResult& result
             case ClosureIDs::REFLECTION_ID:
             case ClosureIDs::REFRACTION_ID:
             case ClosureIDs::FRESNEL_REFLECTION_ID: {
-#if 0
-                color_result += ((OSL::ClosureComponent*)cur)->w * weight;
-                cur = NULL;
-                break;
-#else
                 if (!result.bsdf.add_bsdf_gpu(cw, comp))
                     printf("unable to add BSDF\n");
                 cur = nullptr;
                 break;
-#endif
             }
-#if 0
-            case ClosureIDs::MICROFACET_ID: {
-                const char* mem
-                    = (const char*)((OSL::ClosureComponent*)cur)->data();
-                const char* dist_str = *(const char**)&mem[0];
 
-                if (HDSTR(dist_str) == STRING_PARAMS(default))
-                    return make_float3(0.0f, 1.0f, 1.0f);
-                else
-                    return make_float3(1.0f, 0.0f, 1.0f);
-
-                break;
-            }
-#endif
             default: cur = NULL; break;
             }
         }
@@ -421,19 +321,19 @@ process_closure_too(const OSL::ClosureColor* closure_tree, ShadingResult& result
             weight = weight_stack[stack_idx];
         }
     }
-    //printf("process_closure_too() exit\n");
+
     return C3_TO_F3(color_result);
 }
 
 
 static __device__ void
-process_closure_gpu(const ShaderGlobalsType& sg, ShadingResult& result,
-                    const void* Ci, bool light_only)
+process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
+                const void* Ci, bool light_only)
 {
+    // TODO: GPU media?
     // if (!light_only)
     //     process_medium_closure(sg, result, Ci, Color3(1));
-    // process_bsdf_closure_gpu(sg, result, (const ClosureColor*) Ci, Color3(1), light_only);
-    process_closure_too((const ClosureColor*)Ci, result);
+    process_closure((const ClosureColor*)Ci, result);
 }
 
 
@@ -461,8 +361,9 @@ __closesthit__occlusion()
     vals_ptr[1] = optixGetHitKind();
 }
 
-// Forward decl
+
 static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler);
+
 
 extern "C" __global__ void
 __raygen__deferred()
@@ -511,11 +412,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
     const float invw   = render_params.invw;
     const float invh   = render_params.invh;
 
-    //--------------------------------------
     //
     // Generate camera ray
     //
-    //--------------------------------------
 
     // Make the ray for the current pixel
     RayGeometry r;
@@ -528,15 +427,14 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
     float bsdf_pdf = std::numeric_limits<
         float>::infinity();  // camera ray has only one possible direction
 
+    // TODO: How many bounces is reasonable?
     int max_bounces = 10;
     for (int bounce = 0; bounce <= max_bounces; bounce++) {
         const bool last_bounce = bounce == max_bounces;
 
-        //--------------------------------------
         //
         // Trace camera/bounce ray
         //
-        //--------------------------------------
 
         ShaderGlobalsType sg;
         sg.shaderID = -1;
@@ -566,11 +464,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         const uint32_t hit_idx  = trace_data[0];
         const uint32_t hit_kind = trace_data[1];
 
-        //--------------------------------------
         //
         // Execute the shader
         //
-        //--------------------------------------
 
         auto execute_shader = [](OSL_CUDA::ShaderGlobals& sg) {
             if(sg.shaderID < 0) {
@@ -610,29 +506,24 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                 );
         };
 
-        // Execute the shader
         ShadingResult result;
         if(sg.shaderID >= 0) {
             execute_shader(sg);
-
-            //--------------------------------------
-            //
-            // Process the output closure
-            //
-            //--------------------------------------
-
-            process_closure_gpu(sg, result, (void*) sg.Ci, last_bounce);
         }
         else {
             // Ray missed
             break;
         }
 
-        //--------------------------------------
+        //
+        // Process the output closure
+        //
+
+        process_closure(sg, result, (void*) sg.Ci, last_bounce);
+
         //
         // Helpers
         //
-        //--------------------------------------
 
         auto is_light = [&](unsigned int idx, unsigned int hit_kind) {
             QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
@@ -642,8 +533,8 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                        : spheres[idx].isLight;
         };
 
-        auto shape_pdf = [&](unsigned int idx, unsigned int hit_kind, const Vec3& x,
-                             const Vec3& p) {
+        auto shape_pdf = [&](unsigned int idx, unsigned int hit_kind,
+                             const Vec3& x, const Vec3& p) {
             QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
             SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
             return (hit_kind == 0)
@@ -651,11 +542,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                        : spheres[idx].shapepdf(x, p);
         };
 
-        //--------------------------------------
         //
         // Add self-emission
         //
-        //--------------------------------------
 
         float k = 1;
         if (is_light(hit_idx, hit_kind)) {
@@ -668,13 +557,21 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         if (last_bounce)
             break;
 
-        //--------------------------------------
         //
         // Build PDF
         //
-        //--------------------------------------
 
         result.bsdf.prepare_gpu(-F3_TO_C3(sg.I), path_weight, last_bounce);
+
+        if (render_params.show_albedo_scale > 0) {
+            // Instead of path tracing, just visualize the albedo
+            // of the bsdf. This can be used to validate the accuracy of
+            // the get_albedo method for a particular bsdf.
+            path_radiance = path_weight
+                             * result.bsdf.get_albedo_gpu(-F3_TO_V3(sg.I))
+                             * render_params.show_albedo_scale;
+            break;
+        }
 
         // get three random numbers
         Vec3 s   = sampler.get();
@@ -682,17 +579,13 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         float yi = s.y;
         float zi = s.z;
 
-        //--------------------------------------
         //
         // TODO: Trace background ray
         //
-        //--------------------------------------
 
-        //--------------------------------------
         //
         // Trace light rays
         //
-        //--------------------------------------
 
         // Trace one ray to each light
         const size_t num_prims = render_params.num_quads + render_params.num_spheres;
@@ -744,9 +637,11 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                     if (prim_idx == idx && light_sg.shaderID >= 0) {
                         // execute the light shader (for emissive closures only)
                         execute_shader(light_sg);
+
                         ShadingResult light_result;
-                        process_closure_gpu(light_sg, light_result,
-                                            (void*)light_sg.Ci, true);
+                        process_closure(light_sg, light_result,
+                                        (void*)light_sg.Ci, true);
+
                         // accumulate contribution
                         path_radiance += contrib * light_result.Le;
                     }
@@ -754,11 +649,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
             }
         }
 
-        //--------------------------------------
         //
-        // TODO: Setup bounce ray
+        // Setup bounce ray
         //
-        //--------------------------------------
 
         BSDF::Sample p = result.bsdf.sample_gpu(-F3_TO_V3(sg.I), xi, yi, zi);
         path_weight *= p.weight;
@@ -777,5 +670,3 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
 
     return path_radiance;
 }
-
-#endif

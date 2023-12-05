@@ -24,6 +24,11 @@
 
 using OSL_CUDA::ShaderGlobals;
 
+// Conversion macros for casting between vector types
+#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
+#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
+#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
+#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
@@ -248,7 +253,7 @@ process_closure(const OSL::ClosureColor* closure_tree)
     OSL::Color3 result = OSL::Color3(0.0f);
 
     if (!closure_tree) {
-        return make_float3(result.x, result.y, result.z);
+        return C3_TO_F3(result);
     }
 
     // The depth of the closure tree must not exceed the stack size.
@@ -317,7 +322,7 @@ process_closure(const OSL::ClosureColor* closure_tree)
             weight = weight_stack[stack_idx];
         }
     }
-    return make_float3(result.x, result.y, result.z);
+    return C3_TO_F3(result);
 }
 
 static __device__ float3
@@ -326,7 +331,7 @@ process_closure_too(const OSL::ClosureColor* closure_tree, ShadingResult& result
     OSL::Color3 color_result = OSL::Color3(0.0f);
 
     if (!closure_tree) {
-        return make_float3(color_result.x, color_result.y, color_result.z);
+        return C3_TO_F3(color_result);
     }
 
     // ShadingResult result;
@@ -412,7 +417,7 @@ process_closure_too(const OSL::ClosureColor* closure_tree, ShadingResult& result
         }
     }
     //printf("process_closure_too() exit\n");
-    return make_float3(color_result.x, color_result.y, color_result.z);
+    return C3_TO_F3(color_result);
 }
 
 
@@ -588,7 +593,6 @@ __raygen__deferred()
             //
             //--------------------------------------
 
-            const Vec3 I = *(Vec3*)&sg.I;
             process_closure_gpu(sg, result, (void*) sg.Ci, last_bounce);
         }
         else {
@@ -621,16 +625,14 @@ __raygen__deferred()
 
         //--------------------------------------
         //
-        // TODO: Add self-emission
+        // Add self-emission
         //
         //--------------------------------------
 
         float k = 1;
         if (is_light(hit_idx, hit_kind)) {
             // figure out the probability of reaching this point
-            const Vec3 origin     = *(Vec3*)&r.origin;
-            const Vec3 P          = *(Vec3*)&sg.P;
-            float light_pdf = shape_pdf(hit_idx, hit_kind, origin, P);
+            float light_pdf = shape_pdf(hit_idx, hit_kind, F3_TO_C3(r.origin), F3_TO_C3(sg.P));
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
@@ -644,10 +646,7 @@ __raygen__deferred()
         //
         //--------------------------------------
 
-        {
-            const Vec3 I = *(Vec3*)&sg.I;
-            result.bsdf.prepare_gpu(-I, path_weight, last_bounce);
-        }
+        result.bsdf.prepare_gpu(-F3_TO_C3(sg.I), path_weight, last_bounce);
 
         // get three random numbers
         Vec3 s   = sampler.get();
@@ -671,24 +670,16 @@ __raygen__deferred()
         for (size_t idx = 0; idx < render_params.num_spheres; ++idx) {
             SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
             if (is_light(idx, 1 /*hit_kind=sphere*/)) {
-                int sx = launch_index.x;
-                int sy = launch_index.y;
-                int si = 0;
-
                 float light_pdf        = 0.0f;
                 const float3 light_dir = sample_sphere(sg.P, spheres[idx], xi, yi, light_pdf);
                 const float3 origin    = sg.P + sg.N * 1e-6f;  // offset the ray origin
-                const Vec3 I           = *(Vec3*)&sg.I;
-                const Vec3 ldir        = *(Vec3*)&light_dir;
-
-                BSDF::Sample b  = result.bsdf.eval_gpu(-I, ldir);
+                BSDF::Sample b  = result.bsdf.eval_gpu(-F3_TO_V3(sg.I), F3_TO_V3(light_dir));
                 Color3 contrib
                     = path_weight * b.weight
                       * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
                                                                b.pdf);
 
-                if ((contrib.x + contrib.y + contrib.z) > 0)
-                {
+                if ((contrib.x + contrib.y + contrib.z) > 0) {
                     ShaderGlobalsType light_sg;
                     uint32_t trace_data[2] = { UINT32_MAX, UINT32_MAX };
                     light_sg.shaderID      = -1;
@@ -715,15 +706,13 @@ __raygen__deferred()
 
                     const uint32_t primIdx = trace_data[0];
                     const uint32_t hitKind = trace_data[1];
-                    if(hitKind == 1 && primIdx == idx)
-                    {
+                    if (hitKind == 1 && primIdx == idx) {
                         // execute the light shader (for emissive closures only)
-                        if(light_sg.shaderID >= 0) {
+                        if (light_sg.shaderID >= 0) {
                             execute_shader(light_sg);
-
                             ShadingResult light_result;
-                            process_closure_gpu(light_sg, light_result, (void*) light_sg.Ci, true);
-
+                            process_closure_gpu(light_sg, light_result,
+                                                (void*)light_sg.Ci, true);
                             // accumulate contribution
                             path_radiance += contrib * light_result.Le;
                         }
@@ -739,12 +728,11 @@ __raygen__deferred()
         //--------------------------------------
 
         {
-            const Vec3 I   = *(Vec3*)&sg.I;
-            BSDF::Sample p = result.bsdf.sample_gpu(-I, xi, yi, zi);
+            BSDF::Sample p = result.bsdf.sample_gpu(-F3_TO_V3(sg.I), xi, yi, zi);
             path_weight *= p.weight;
             bsdf_pdf = p.pdf;
             // r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
-            r.direction = make_float3(p.wi.x, p.wi.y, p.wi.z);
+            r.direction = C3_TO_F3(p.wi);
             // r.radius    = radius;
             // Just simply use roughness as spread slope
             // r.spread = std::max(r.spread, p.roughness);
@@ -752,14 +740,13 @@ __raygen__deferred()
                 && !(path_weight.z > 0))
                 break;  // filter out all 0's or NaNs
             // prev_id  = id;
-            r.origin = make_float3(sg.P.x, sg.P.y, sg.P.z);
-            r.origin = r.origin + sg.N * 1e-6f;
+            r.origin = V3_TO_F3(sg.P) + sg.N * 1e-6f;
         }
     }
 
     float3* output_buffer = reinterpret_cast<float3*>(
         render_params.output_buffer);
     int pixel            = launch_index.y * launch_dims.x + launch_index.x;
-    output_buffer[pixel] = make_float3(path_radiance.x, path_radiance.y, path_radiance.z);
+    output_buffer[pixel] = C3_TO_F3(path_radiance);
 }
 #endif

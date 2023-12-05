@@ -1467,7 +1467,7 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
             s.pdf *= pdfs[i];
             if (s.pdf == 0.0f)
                 return {};
-#if 0
+
             // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
             for (int j = 0; j < num_bsdfs; j++) {
                 if (i != j) {
@@ -1477,7 +1477,6 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
                                      pdfs[j]);
                 }
             }
-#endif
             return s;
         }
         accum += pdfs[i];

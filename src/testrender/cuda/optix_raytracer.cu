@@ -24,11 +24,13 @@
 
 using OSL_CUDA::ShaderGlobals;
 
+
 // Conversion macros for casting between vector types
 #define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
 #define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
 #define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
 #define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
+
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
@@ -667,13 +669,20 @@ __raygen__deferred()
         //--------------------------------------
 
         // Trace one ray to each light
+        const size_t num_prims = render_params.num_quads + render_params.num_spheres;
         for (size_t idx = 0; idx < render_params.num_spheres; ++idx) {
+            QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
             SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
-            if (is_light(idx, 1 /*hit_kind=sphere*/)) {
+            const int prim_kind   = idx >= render_params.num_quads;
+
+            if (is_light(idx, prim_kind)) {
                 float light_pdf        = 0.0f;
-                const float3 light_dir = sample_sphere(sg.P, spheres[idx], xi, yi, light_pdf);
-                const float3 origin    = sg.P + sg.N * 1e-6f;  // offset the ray origin
-                BSDF::Sample b  = result.bsdf.eval_gpu(-F3_TO_V3(sg.I), F3_TO_V3(light_dir));
+                const float3 light_dir = (prim_kind == 0)
+                    ? sample_quad(sg.P, quads[idx], xi, yi, light_pdf)
+                    : sample_sphere(sg.P, spheres[idx], xi, yi, light_pdf);
+
+                const float3 origin = sg.P + sg.N * 1e-6f;  // offset the ray origin
+                BSDF::Sample b      = result.bsdf.eval_gpu(-F3_TO_V3(sg.I), F3_TO_V3(light_dir));
                 Color3 contrib
                     = path_weight * b.weight
                       * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
@@ -704,18 +713,15 @@ __raygen__deferred()
                                payload.ab.b
                         );
 
-                    const uint32_t primIdx = trace_data[0];
-                    const uint32_t hitKind = trace_data[1];
-                    if (hitKind == 1 && primIdx == idx) {
+                    const uint32_t prim_idx = trace_data[0];
+                    if (prim_idx == idx && light_sg.shaderID >= 0) {
                         // execute the light shader (for emissive closures only)
-                        if (light_sg.shaderID >= 0) {
-                            execute_shader(light_sg);
-                            ShadingResult light_result;
-                            process_closure_gpu(light_sg, light_result,
-                                                (void*)light_sg.Ci, true);
-                            // accumulate contribution
-                            path_radiance += contrib * light_result.Le;
-                        }
+                        execute_shader(light_sg);
+                        ShadingResult light_result;
+                        process_closure_gpu(light_sg, light_result,
+                                            (void*)light_sg.Ci, true);
+                        // accumulate contribution
+                        path_radiance += contrib * light_result.Le;
                     }
                 }
             }

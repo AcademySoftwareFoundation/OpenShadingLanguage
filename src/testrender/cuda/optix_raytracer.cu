@@ -464,9 +464,19 @@ __raygen__deferred()
     const float invw   = render_params.invw;
     const float invh   = render_params.invh;
 
+    int si = 0;
+    Sampler sampler(launch_index.x, launch_index.y, si);
+
+    Vec3 j = sampler.get();
+    // warp distribution to approximate a tent filter [-1,+1)^2
+    j.x *= 2;
+    j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
+    j.y *= 2;
+    j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
+
     // Compute the pixel coordinates
-    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
-                                 static_cast<float>(launch_index.y) + 0.5f);
+    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
+                                 static_cast<float>(launch_index.y) + 0.5f + j.y);
 
     //--------------------------------------
     //
@@ -484,9 +494,6 @@ __raygen__deferred()
     Color3 path_radiance(0, 0, 0);
     float bsdf_pdf = std::numeric_limits<
         float>::infinity();  // camera ray has only one possible direction
-
-    int si = 0;
-    Sampler sampler(launch_index.x, launch_index.y, si);
 
     int max_bounces = 10;
     for (int bounce = 0; bounce <= max_bounces; bounce++) {
@@ -668,23 +675,17 @@ __raygen__deferred()
                 int sy = launch_index.y;
                 int si = 0;
 
-                // Sampler sampler(sx, sy, si);
-                Vec3 s   = sampler.get();
-                float xi = s.x;
-                float yi = s.y;
-                // float zi = s.z;
-
                 float light_pdf        = 0.0f;
                 const float3 light_dir = sample_sphere(sg.P, spheres[idx], xi, yi, light_pdf);
-                const float3 origin    = sg.P + sg.N * 0.001f;  // offset the ray origin
+                const float3 origin    = sg.P + sg.N * 1e-6f;  // offset the ray origin
+                const Vec3 I           = *(Vec3*)&sg.I;
+                const Vec3 ldir        = *(Vec3*)&light_dir;
 
-                const Vec3 I    = *(Vec3*)&sg.I;
-                const Vec3 ldir = *(Vec3*)&light_dir;
-
-                BSDF::Sample b = result.bsdf.eval_gpu(-I, ldir);
-                Color3 contrib = path_weight * b.weight
-                    * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
-                                                             b.pdf);
+                BSDF::Sample b  = result.bsdf.eval_gpu(-I, ldir);
+                Color3 contrib
+                    = path_weight * b.weight
+                      * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
+                                                               b.pdf);
 
                 if ((contrib.x + contrib.y + contrib.z) > 0)
                 {
@@ -752,6 +753,7 @@ __raygen__deferred()
                 break;  // filter out all 0's or NaNs
             // prev_id  = id;
             r.origin = make_float3(sg.P.x, sg.P.y, sg.P.z);
+            r.origin = r.origin + sg.N * 1e-6f;
         }
     }
 

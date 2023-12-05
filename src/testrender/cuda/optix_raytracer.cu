@@ -249,6 +249,7 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
 }
 
 
+#if 0
 static __device__ float3
 process_closure(const OSL::ClosureColor* closure_tree)
 {
@@ -326,6 +327,8 @@ process_closure(const OSL::ClosureColor* closure_tree)
     }
     return C3_TO_F3(result);
 }
+#endif
+
 
 static __device__ float3
 process_closure_too(const OSL::ClosureColor* closure_tree, ShadingResult& result)
@@ -458,18 +461,14 @@ __closesthit__occlusion()
     vals_ptr[1] = optixGetHitKind();
 }
 
+// Forward decl
+static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler);
 
 extern "C" __global__ void
 __raygen__deferred()
 {
     uint3 launch_dims  = optixGetLaunchDimensions();
     uint3 launch_index = optixGetLaunchIndex();
-    const float3 eye   = render_params.eye;
-    const float3 dir   = render_params.dir;
-    const float3 cx    = render_params.cx;
-    const float3 cy    = render_params.cy;
-    const float invw   = render_params.invw;
-    const float invh   = render_params.invh;
 
     int si = 0;
     Sampler sampler(launch_index.x, launch_index.y, si);
@@ -484,6 +483,26 @@ __raygen__deferred()
     // Compute the pixel coordinates
     const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
                                  static_cast<float>(launch_index.y) + 0.5f + j.y);
+
+    Color3 path_radiance = subpixel_radiance(d, sampler);
+
+    float3* output_buffer = reinterpret_cast<float3*>(
+        render_params.output_buffer);
+    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
+    output_buffer[pixel] = C3_TO_F3(path_radiance);
+}
+
+
+static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
+{
+    uint3 launch_dims  = optixGetLaunchDimensions();
+    uint3 launch_index = optixGetLaunchIndex();
+    const float3 eye   = render_params.eye;
+    const float3 dir   = render_params.dir;
+    const float3 cx    = render_params.cx;
+    const float3 cy    = render_params.cy;
+    const float invw   = render_params.invw;
+    const float invh   = render_params.invh;
 
     //--------------------------------------
     //
@@ -670,7 +689,7 @@ __raygen__deferred()
 
         // Trace one ray to each light
         const size_t num_prims = render_params.num_quads + render_params.num_spheres;
-        for (size_t idx = 0; idx < render_params.num_spheres; ++idx) {
+        for (size_t idx = 0; idx < num_prims; ++idx) {
             QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
             SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
             const int prim_kind   = idx >= render_params.num_quads;
@@ -713,6 +732,7 @@ __raygen__deferred()
                                payload.ab.b
                         );
 
+                    // TODO: Make sure that the primitive indexing is correct
                     const uint32_t prim_idx = trace_data[0];
                     if (prim_idx == idx && light_sg.shaderID >= 0) {
                         // execute the light shader (for emissive closures only)
@@ -733,26 +753,22 @@ __raygen__deferred()
         //
         //--------------------------------------
 
-        {
-            BSDF::Sample p = result.bsdf.sample_gpu(-F3_TO_V3(sg.I), xi, yi, zi);
-            path_weight *= p.weight;
-            bsdf_pdf = p.pdf;
-            // r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
-            r.direction = C3_TO_F3(p.wi);
-            // r.radius    = radius;
-            // Just simply use roughness as spread slope
-            // r.spread = std::max(r.spread, p.roughness);
-            if (!(path_weight.x > 0) && !(path_weight.y > 0)
-                && !(path_weight.z > 0))
-                break;  // filter out all 0's or NaNs
-            // prev_id  = id;
-            r.origin = V3_TO_F3(sg.P) + sg.N * 1e-6f;
-        }
+        BSDF::Sample p = result.bsdf.sample_gpu(-F3_TO_V3(sg.I), xi, yi, zi);
+        path_weight *= p.weight;
+        bsdf_pdf = p.pdf;
+        // r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
+        r.direction = C3_TO_F3(p.wi);
+        // r.radius    = radius;
+        // Just simply use roughness as spread slope
+        // r.spread = std::max(r.spread, p.roughness);
+        if (!(path_weight.x > 0) && !(path_weight.y > 0)
+            && !(path_weight.z > 0))
+            break;  // filter out all 0's or NaNs
+        // prev_id  = id;
+        r.origin = V3_TO_F3(sg.P) + sg.N * 1e-6f;
     }
 
-    float3* output_buffer = reinterpret_cast<float3*>(
-        render_params.output_buffer);
-    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
-    output_buffer[pixel] = C3_TO_F3(path_radiance);
+    return path_radiance;
 }
+
 #endif

@@ -1247,6 +1247,9 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     m_xres = xres;
     m_yres = yres;
 
+    const int aa = options.get_int("aa");
+    OSL_ASSERT(aa > 0 && "AA must be > 0");
+
     RenderParams params;
     params.eye.x                   = camera.eye.x;
     params.eye.y                   = camera.eye.y;
@@ -1260,6 +1263,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.cy.x                    = camera.cy.x;
     params.cy.y                    = camera.cy.y;
     params.cy.z                    = camera.cy.z;
+    params.aa                      = aa;
     params.invw                    = 1.0f / m_xres;
     params.invh                    = 1.0f / m_yres;
     params.interactive_params      = d_interactive_params;

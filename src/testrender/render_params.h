@@ -17,6 +17,7 @@ struct RenderParams {
     float3 dir;
     float3 cx;
     float3 cy;
+    int    aa;
 
     float invw;
     float invh;
@@ -40,9 +41,8 @@ struct RenderParams {
     uint64_t test_str_2;
 
     uint64_t    num_quads;
-    CUdeviceptr quads_buffer;
-
     uint64_t    num_spheres;
+    CUdeviceptr quads_buffer;
     CUdeviceptr spheres_buffer;
 };
 

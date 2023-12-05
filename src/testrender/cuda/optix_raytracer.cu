@@ -467,29 +467,36 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler);
 extern "C" __global__ void
 __raygen__deferred()
 {
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
+    Color3 result(0, 0, 0);
+    const int aa = render_params.aa;
+    for (int si = 0, n = aa * aa; si < n; si++) {
+        // uint3 launch_dims  = optixGetLaunchDimensions();
+        uint3 launch_index = optixGetLaunchIndex();
 
-    int si = 0;
-    Sampler sampler(launch_index.x, launch_index.y, si);
+        Sampler sampler(launch_index.x, launch_index.y, si);
 
-    Vec3 j = sampler.get();
-    // warp distribution to approximate a tent filter [-1,+1)^2
-    j.x *= 2;
-    j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
-    j.y *= 2;
-    j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
+        Vec3 j = sampler.get();
+        // warp distribution to approximate a tent filter [-1,+1)^2
+        j.x *= 2;
+        j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
+        j.y *= 2;
+        j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
 
-    // Compute the pixel coordinates
-    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
-                                 static_cast<float>(launch_index.y) + 0.5f + j.y);
+        // Compute the pixel coordinates
+        const float2 d
+            = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
+                          static_cast<float>(launch_index.y) + 0.5f + j.y);
 
-    Color3 path_radiance = subpixel_radiance(d, sampler);
+        Color3 r = subpixel_radiance(d, sampler);
+        result   = OIIO::lerp(result, r, 1.0f / (si + 1));
+    }
 
+    uint3 launch_dims     = optixGetLaunchDimensions();
+    uint3 launch_index    = optixGetLaunchIndex();
     float3* output_buffer = reinterpret_cast<float3*>(
         render_params.output_buffer);
     int pixel            = launch_index.y * launch_dims.x + launch_index.x;
-    output_buffer[pixel] = C3_TO_F3(path_radiance);
+    output_buffer[pixel] = C3_TO_F3(result);
 }
 
 

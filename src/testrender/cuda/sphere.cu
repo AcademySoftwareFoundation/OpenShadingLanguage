@@ -13,8 +13,9 @@
 
 
 static __device__ __inline__ void
-calc_uv(float3 shading_normal, float& u, float& v, float3& dPdu, float3& dPdv)
+calc_uv(float3 shading_normal, float& u, float& v, float3& dPdu, float3& dPdv, float r)
 {
+#if 0
     const float3 n = shading_normal;
 
     const float nx = n.x;
@@ -42,6 +43,25 @@ calc_uv(float3 shading_normal, float& u, float& v, float3& dPdu, float3& dPdv)
             dPdv = make_float3(-1.0f, 0.0f, 0.0f);
         }
     }
+#else
+    const float3 n = shading_normal;
+    u = (atan2(n.x, n.z) + float(M_PI)) * 0.5f
+        * float(M_1_PI);
+    v = acos(n.y) * float(M_1_PI);
+    const float pi = float(M_PI);
+    float twopiu   = 2.0f * pi * u;
+    float sin2piu, cos2piu;
+    OIIO::sincos(twopiu, &sin2piu, &cos2piu);
+    float sinpiv, cospiv;
+    OIIO::sincos(pi * v, &sinpiv, &cospiv);
+    float pir = pi * r;
+    dPdu.x    = -2.0f * pir * sinpiv * cos2piu;
+    dPdu.y    = 0.0f;
+    dPdu.z    = 2.0f * pir * sinpiv * sin2piu;
+    dPdv.x    = -pir * cospiv * sin2piu;
+    dPdv.y    = -pir * sinpiv;
+    dPdv.z    = -pir * cospiv * cos2piu;
+#endif
 }
 
 
@@ -63,7 +83,7 @@ __direct_callable__sphere_shaderglobals(const unsigned int idx,
     sg->surfacearea = sphere.a;
     sg->shaderID    = sphere.shaderID;
 
-    calc_uv(sg->N, sg->u, sg->v, sg->dPdu, sg->dPdv);
+    calc_uv(sg->N, sg->u, sg->v, sg->dPdu, sg->dPdv, sphere.r);
 }
 
 

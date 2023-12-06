@@ -59,6 +59,7 @@ struct PrimitiveParams {
 
 struct SphereParams : PrimitiveParams {
     float3 c;  // center
+    float r;   // radius
     float r2;  // radius ^2
 
     OSL_HOSTDEVICE float shapepdf(const OSL::Vec3& x, const OSL::Vec3& /*p*/) const

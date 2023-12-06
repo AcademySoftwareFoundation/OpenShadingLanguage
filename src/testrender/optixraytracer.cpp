@@ -768,38 +768,50 @@ OptixRaytracer::create_sbt(State& state)
 
     // Hitgroups
     {
-        const int num_geom_types = 2;  // quads, spheres
+        const bool have_quads    = scene.quads.size() > 0;
+        const bool have_spheres  = scene.spheres.size() > 0;
+        const int num_geom_types = have_quads + have_spheres;
         const int num_hit_groups = RAY_TYPE_COUNT * num_geom_types;
-        GenericRecord hitgroup_records[num_hit_groups];
+
+        std::vector<GenericRecord> hitgroup_records;
         CUdeviceptr d_hitgroup_records;
+        hitgroup_records.reserve(num_hit_groups);
 
-        // quad
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_hit_group,
-                                             &hitgroup_records[0]));
-        hitgroup_records[0].data        = reinterpret_cast<void*>(d_quads_list);
-        hitgroup_records[0].sbtGeoIndex = 0;
+        size_t hg_idx = 0;
+        if (have_quads) {
+            OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_hit_group,
+                                                 &hitgroup_records[hg_idx]));
+            hitgroup_records[hg_idx].data = reinterpret_cast<void*>(
+                d_quads_list);
+            hitgroup_records[hg_idx].sbtGeoIndex = 0;
+            ++hg_idx;
 
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_occlusion_hit_group,
-                                             &hitgroup_records[1]));
-        hitgroup_records[1].data        = reinterpret_cast<void*>(d_quads_list);
-        hitgroup_records[1].sbtGeoIndex = 0;
+            OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_occlusion_hit_group,
+                                                 &hitgroup_records[hg_idx]));
+            hitgroup_records[hg_idx].data = reinterpret_cast<void*>(
+                d_quads_list);
+            hitgroup_records[hg_idx].sbtGeoIndex = 0;
+            ++hg_idx;
+        }
 
-        // sphere
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_hit_group,
-                                             &hitgroup_records[2]));
-        hitgroup_records[2].data = reinterpret_cast<void*>(d_spheres_list);
-        hitgroup_records[2].sbtGeoIndex = 1;
+        if (have_spheres) {
+            OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_hit_group,
+                                                 &hitgroup_records[hg_idx]));
+            hitgroup_records[hg_idx].data = reinterpret_cast<void*>(d_spheres_list);
+            hitgroup_records[hg_idx].sbtGeoIndex = 1;
+            ++hg_idx;
 
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_occlusion_hit_group,
-                                             &hitgroup_records[3]));
-        hitgroup_records[3].data = reinterpret_cast<void*>(d_spheres_list);
-        hitgroup_records[3].sbtGeoIndex = 1;
+            OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_occlusion_hit_group,
+                                                 &hitgroup_records[hg_idx]));
+            hitgroup_records[hg_idx].data = reinterpret_cast<void*>(d_spheres_list);
+            hitgroup_records[hg_idx].sbtGeoIndex = 1;
+        }
 
         // copy to device
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroup_records),
                               num_hit_groups * sizeof(GenericRecord)));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_hitgroup_records),
-                              &hitgroup_records[0],
+                              hitgroup_records.data(),
                               num_hit_groups * sizeof(GenericRecord),
                               cudaMemcpyHostToDevice));
         device_ptrs.push_back(reinterpret_cast<void*>(d_hitgroup_records));

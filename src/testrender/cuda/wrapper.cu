@@ -12,6 +12,7 @@
 
 #include "rend_lib.h"
 #include "util.h"
+#include "vec_math.h"
 
 #include "../render_params.h"
 #include "../shading.h"

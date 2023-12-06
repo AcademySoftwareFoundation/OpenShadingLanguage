@@ -14,6 +14,7 @@
 #include "optix_raytracer.h"
 #include "rend_lib.h"
 #include "render_params.h"
+#include "vec_math.h"
 
 #include "../render_params.h"
 #include "../sampling.h"

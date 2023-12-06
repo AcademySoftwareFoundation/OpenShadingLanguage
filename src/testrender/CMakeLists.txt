@@ -29,6 +29,7 @@ if (OSL_USE_OPTIX)
         sampling.h
         shading.h
         shading.cpp
+        cuda/vec_math.h
         )
 
     # Generate PTX for all of the CUDA files

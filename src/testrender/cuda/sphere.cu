@@ -8,6 +8,7 @@
 
 #include "rend_lib.h"
 #include "render_params.h"
+#include "vec_math.h"
 #include "wrapper.h"
 
 
@@ -90,6 +91,39 @@ __intersection__sphere()
         // the testrender sphere intersection
         float t = (x > 0) ? x : ((y > 0) ? y : 0);
 
+        if (t < optixGetRayTmax())
+            optixReportIntersection(t, RAYTRACER_HIT_SPHERE);
+    }
+}
+
+
+extern "C" __global__ void
+__intersection__sphere_precise()
+{
+    const GenericData* g_data = reinterpret_cast<const GenericData*>(
+        optixGetSbtDataPointer());
+    const SphereParams* g_spheres = reinterpret_cast<const SphereParams*>(
+        g_data->data);
+    const unsigned int idx     = optixGetPrimitiveIndex();
+    const SphereParams& sphere = g_spheres[idx];
+    const float3 ray_origin    = optixGetObjectRayOrigin();
+    const float3 ray_direction = optixGetObjectRayDirection();
+
+    // Using the "round up" single-precision intrinsics helps match the results
+    // from the CPU path more closely when fast-math is enabled.
+    float3 oc = sub_ru(sphere.c, ray_origin);
+    float b   = dot_ru(oc, ray_direction);
+    float det = __fmul_ru(b, b);
+    det       = __fsub_ru(det, dot_ru(oc, oc));
+    det       = __fadd_ru(det, sphere.r2);
+    if (det > 0.0f) {
+        det     = __fsqrt_ru(det);
+        float x = __fsub_ru(b, det);
+        float y = __fadd_ru(b, det);
+
+        // NB: this does not included the 'self' check from
+        // the testrender sphere intersection
+        float t = (x > 0) ? x : ((y > 0) ? y : 0);
         if (t < optixGetRayTmax())
             optixReportIntersection(t, RAYTRACER_HIT_SPHERE);
     }

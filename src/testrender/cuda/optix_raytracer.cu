@@ -305,8 +305,8 @@ process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
             case ClosureIDs::PHONG_ID:
             case ClosureIDs::WARD_ID:
             case ClosureIDs::REFLECTION_ID:
-            case ClosureIDs::REFRACTION_ID:
-            case ClosureIDs::FRESNEL_REFLECTION_ID: {
+            case ClosureIDs::FRESNEL_REFLECTION_ID:
+            case ClosureIDs::REFRACTION_ID: {
                 if (!result.bsdf.add_bsdf_gpu(cw, comp))
                     printf("unable to add BSDF\n");
                 cur = nullptr;
@@ -357,7 +357,6 @@ __closesthit__occlusion()
     Payload payload;
     payload.get();
     uint32_t* vals_ptr = (uint32_t*) payload.ptr.ptr;
-
     vals_ptr[0] = optixGetPrimitiveIndex();
     vals_ptr[1] = optixGetHitKind();
 }

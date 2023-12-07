@@ -285,7 +285,7 @@ struct Sphere final : public Primitive {
         sphere_data->c            = make_float3(c.x, c.y, c.z);
         sphere_data->r            = r;
         sphere_data->r2           = r2;
-        sphere_data->a            = M_PI * (r2 * r2);
+        sphere_data->a            = M_PI * r2;
         sphere_data->shaderID     = shaderid();
         sphere_data->isLight      = islight();
     }

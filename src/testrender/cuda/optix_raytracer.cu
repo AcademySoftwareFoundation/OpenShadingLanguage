@@ -295,7 +295,7 @@ process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
             Color3 cw                    = weight * comp->w;
             switch (id) {
             case ClosureIDs::EMISSION_ID: {
-                result.Le += ((OSL::ClosureComponent*)cur)->w * weight;;
+                result.Le += cw;
                 cur = NULL;
                 break;
             }
@@ -430,6 +430,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
 
     // TODO: How many bounces is reasonable?
     int max_bounces = 10;
+    int rr_depth    = 5;
     for (int bounce = 0; bounce <= max_bounces; bounce++) {
         const bool last_bounce = bounce == max_bounces;
 
@@ -507,11 +508,14 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                 );
         };
 
+        // TODO: Do we need to do something different for backface hits?
+        // if (sg.backfacing)
+        //     break;
+
         ShadingResult result;
-        if(sg.shaderID >= 0) {
+        if (sg.shaderID >= 0) {
             execute_shader(sg);
-        }
-        else {
+        } else {
             // Ray missed
             break;
         }
@@ -531,7 +535,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
             SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
 
             return (hit_kind == 0)
-                       ? quads[idx - render_params.num_spheres].isLight
+                       ? quads[idx].isLight
                        : spheres[idx].isLight;
         };
 
@@ -540,7 +544,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
             QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
             SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
             return (hit_kind == 0)
-                       ? quads[idx - render_params.num_spheres].shapepdf(x, p)
+                       ? quads[idx].shapepdf(x, p)
                        : spheres[idx].shapepdf(x, p);
         };
 
@@ -563,7 +567,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         // Build PDF
         //
 
-        result.bsdf.prepare_gpu(-F3_TO_C3(sg.I), path_weight, last_bounce);
+        result.bsdf.prepare_gpu(-F3_TO_C3(sg.I), path_weight, bounce >= rr_depth);
 
         if (render_params.show_albedo_scale > 0) {
             // Instead of path tracing, just visualize the albedo
@@ -589,65 +593,76 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         // Trace light rays
         //
 
-        // Trace one ray to each light
-        const size_t num_prims = render_params.num_quads + render_params.num_spheres;
-        for (size_t idx = 0; idx < num_prims; ++idx) {
-            QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
-            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
-            const int prim_kind   = idx >= render_params.num_quads;
+        auto sample_light = [&](const float3& light_dir, float light_pdf, int idx) {
+            const float3 origin = sg.P + sg.N * 1e-6f;  // offset the ray origin
+            BSDF::Sample b      = result.bsdf.eval_gpu(-F3_TO_V3(sg.I),
+                                                       F3_TO_V3(light_dir));
+            Color3 contrib      = path_weight * b.weight
+                             * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
+                                                                      b.pdf);
 
-            if (is_light(idx, prim_kind)) {
-                float light_pdf        = 0.0f;
-                const float3 light_dir = (prim_kind == 0)
-                    ? sample_quad(sg.P, quads[idx], xi, yi, light_pdf)
-                    : sample_sphere(sg.P, spheres[idx], xi, yi, light_pdf);
+            if ((contrib.x + contrib.y + contrib.z) > 0) {
+                ShaderGlobalsType light_sg;
+                uint32_t trace_data[2] = { UINT32_MAX, UINT32_MAX };
+                light_sg.shaderID      = -1;
+                light_sg.tracedata     = (void*)&trace_data[0];
 
-                const float3 origin = sg.P + sg.N * 1e-6f;  // offset the ray origin
-                BSDF::Sample b      = result.bsdf.eval_gpu(-F3_TO_V3(sg.I), F3_TO_V3(light_dir));
-                Color3 contrib
-                    = path_weight * b.weight
-                      * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
-                                                               b.pdf);
+                Payload payload;
+                payload.ptr.ptr = (uint64_t)&light_sg;
 
-                if ((contrib.x + contrib.y + contrib.z) > 0) {
-                    ShaderGlobalsType light_sg;
-                    uint32_t trace_data[2] = { UINT32_MAX, UINT32_MAX };
-                    light_sg.shaderID      = -1;
-                    light_sg.tracedata     = (void*)&trace_data[0];
+                // Trace the camera ray against the scene
+                optixTrace(render_params.traversal_handle,  // handle
+                           origin,                          // origin
+                           light_dir,                       // direction
+                           1e-3f,                           // tmin
+                           1e13f,                           // tmax
+                           0,                               // ray time
+                           OptixVisibilityMask(1),          // visibility mask
+                           OPTIX_RAY_FLAG_DISABLE_ANYHIT,   // ray flags
+                           RAY_TYPE_RADIANCE,               // SBT offset
+                           RAY_TYPE_COUNT,                  // SBT stride
+                           RAY_TYPE_RADIANCE,               // miss SBT offset
+                           payload.ab.a, payload.ab.b);
 
-                    Payload payload;
-                    payload.ptr.ptr = (uint64_t)&light_sg;
+                // TODO: Make sure that the primitive indexing is correct
+                const uint32_t prim_idx = trace_data[0];
+                if (prim_idx == idx && light_sg.shaderID >= 0) {
+                    // execute the light shader (for emissive closures only)
+                    execute_shader(light_sg);
 
-                    // Trace the camera ray against the scene
-                    optixTrace(render_params.traversal_handle, // handle
-                               origin,                         // origin
-                               light_dir,                      // direction
-                               1e-3f,                          // tmin
-                               1e13f,                          // tmax
-                               0,                              // ray time
-                               OptixVisibilityMask(1),         // visibility mask
-                               OPTIX_RAY_FLAG_DISABLE_ANYHIT,  // ray flags
-                               RAY_TYPE_RADIANCE,              // SBT offset
-                               RAY_TYPE_COUNT,                 // SBT stride
-                               RAY_TYPE_RADIANCE,              // miss SBT offset
-                               payload.ab.a,
-                               payload.ab.b
-                        );
+                    ShadingResult light_result;
+                    process_closure(light_sg, light_result, (void*)light_sg.Ci,
+                                    true);
 
-                    // TODO: Make sure that the primitive indexing is correct
-                    const uint32_t prim_idx = trace_data[0];
-                    if (prim_idx == idx && light_sg.shaderID >= 0) {
-                        // execute the light shader (for emissive closures only)
-                        execute_shader(light_sg);
-
-                        ShadingResult light_result;
-                        process_closure(light_sg, light_result,
-                                        (void*)light_sg.Ci, true);
-
-                        // accumulate contribution
-                        path_radiance += contrib * light_result.Le;
-                    }
+                    // accumulate contribution
+                    path_radiance += contrib * light_result.Le;
                 }
+            }
+        };
+
+        // Trace one ray to each quad light
+        for (size_t idx = 0; idx < render_params.num_quads; ++idx) {
+            QuadParams* quads = (QuadParams*)render_params.quads_buffer;
+            if (hit_kind == 0 && hit_idx == idx)
+                continue;  // skip self
+            if (is_light(idx, 0)) {
+                float light_pdf        = 0.0f;
+                const float3 light_dir = sample_quad(sg.P, quads[idx], xi, yi,
+                                                     light_pdf);
+                sample_light(light_dir, light_pdf, idx);
+            }
+        }
+
+        // Trace one ray to each sphere light
+        for (size_t idx = 0; idx < render_params.num_spheres; ++idx) {
+            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
+            if (hit_kind == 1 && hit_idx == idx)
+                continue;  // skip self
+            if (is_light(idx, 1)) {
+                float light_pdf        = 0.0f;
+                const float3 light_dir = sample_sphere(sg.P, spheres[idx], xi,
+                                                       yi, light_pdf);
+                sample_light(light_dir, light_pdf, idx);
             }
         }
 
@@ -666,7 +681,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs
-        // prev_id  = id;
+        // TODO: Keep track of object IDs for self-intersection avoidance, etc.
+        // prev_id   = id;
+        // prev_kind = kind;
         r.origin = V3_TO_F3(sg.P) + sg.N * 1e-6f;
     }
 

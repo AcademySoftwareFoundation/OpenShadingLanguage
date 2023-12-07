@@ -1305,6 +1305,10 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
         switch (id) {
         case DIFFUSE_ID: sz = sizeof(Diffuse<0>); break;
         case OREN_NAYAR_ID: sz = sizeof(OrenNayar); break;
+        case PHONG_ID: sz = sizeof(Phong); break;
+        case WARD_ID: sz = sizeof(Ward); break;
+        case REFLECTION_ID: sz = sizeof(Reflection); break;
+        case REFRACTION: sz = sizeof(Refraction); break;
         default: break;
         }
         return sz;
@@ -1318,11 +1322,12 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
     if (num_bytes + sz > MaxSize)
         return false;
 
+    // OptiX doesn't support virtual function calls, so we need to manually
+    // construct each of the BSDF sub-types.
     switch (id) {
     case DIFFUSE_ID: {
+        // TODO: Do we need to handle trans=1?
         const DiffuseParams* params = comp->as<DiffuseParams>();
-        // TODO: Why doesn't memcpying the params work?
-        // memcpy(pool + num_bytes, params, sz);
         bsdfs[num_bsdfs]                   = (OSL::BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
         ((Diffuse<0>*)bsdfs[num_bsdfs])->N = params->N;
@@ -1330,12 +1335,45 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
     }
     case OREN_NAYAR_ID: {
         const OrenNayarParams* params = comp->as<OrenNayarParams>();
-        // memcpy(pool + num_bytes, params, sz);
         bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                  = OREN_NAYAR_ID;
         ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
         ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->sigma;
         ((OrenNayar*)bsdfs[num_bsdfs])->calcAB();
+        break;
+    }
+    case PHONG_ID: {
+        const PhongParams* params            = comp->as<PhongParams>();
+        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                 = PHONG_ID;
+        ((Phong*)bsdfs[num_bsdfs])->N        = params->N;
+        ((Phong*)bsdfs[num_bsdfs])->exponent = params->exponent;
+        break;
+    }
+    case WARD_ID: {
+        const WardParams* params      = comp->as<WardParams>();
+        bsdfs[num_bsdfs]              = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id          = WARD_ID;
+        ((Ward*)bsdfs[num_bsdfs])->N  = params->N;
+        ((Ward*)bsdfs[num_bsdfs])->T  = params->T;
+        ((Ward*)bsdfs[num_bsdfs])->ax = params->ax;
+        ((Ward*)bsdfs[num_bsdfs])->ay = params->ay;
+        break;
+    }
+    case REFLECTION_ID: {
+        const ReflectionParams* params       = comp->as<ReflectionParams>();
+        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                 = REFLECTION_ID;
+        ((Reflection*)bsdfs[num_bsdfs])->N   = params->N;
+        ((Reflection*)bsdfs[num_bsdfs])->eta = params->eta;
+        break;
+    }
+    case REFRACTION_ID: {
+        const RefractionParams* params       = comp->as<RefractionParams>();
+        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                 = REFRACTION_ID;
+        ((Refraction*)bsdfs[num_bsdfs])->N   = params->N;
+        ((Refraction*)bsdfs[num_bsdfs])->eta = params->eta;
         break;
     }
     default: printf("add unknown\n"); break;
@@ -1359,6 +1397,18 @@ CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
             break;
         case OREN_NAYAR_ID:
             albedo = ((OrenNayar*)bsdf)->BSDF::get_albedo(wo);
+            break;
+        case PHONG_ID:
+            albedo = ((Phong*)bsdf)->BSDF::get_albedo(wo);
+            break;
+        case WARD_ID:
+            albedo = ((Ward*)bsdf)->BSDF::get_albedo(wo);
+            break;
+        case REFLECTION_ID:
+            albedo = ((Reflection*)bsdf)->BSDF::get_albedo(wo);
+            break;
+        case REFRACTION_ID:
+            albedo = ((Refraction*)bsdf)->BSDF::get_albedo(wo);
             break;
         default: break;
         }
@@ -1390,6 +1440,18 @@ CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
         case OREN_NAYAR_ID:
             albedo = ((OrenNayar*)bsdf)->BSDF::get_albedo(wo);
             break;
+        case PHONG_ID:
+            albedo = ((Phong*)bsdf)->BSDF::get_albedo(wo);
+            break;
+        case WARD_ID:
+            albedo = ((Ward*)bsdf)->BSDF::get_albedo(wo);
+            break;
+        case REFLECTION_ID:
+            albedo = ((Reflection*)bsdf)->BSDF::get_albedo(wo);
+            break;
+        case REFRACTION_ID:
+            albedo = ((Refraction*)bsdf)->BSDF::get_albedo(wo);
+            break;
         default: break;
         }
         return albedo;
@@ -1403,13 +1465,6 @@ CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
 }
 
 
-OSL_HOSTDEVICE Color3
-BSDF::get_albedo_gpu(const Vec3& wo, ClosureIDs id) const
-{
-    return Color3(1);
-}
-
-
 OSL_HOSTDEVICE BSDF::Sample
 CompositeBSDF::eval_gpu(const Vec3& wo, const Vec3& wi) const
 {
@@ -1418,6 +1473,10 @@ CompositeBSDF::eval_gpu(const Vec3& wo, const Vec3& wi) const
         switch (bsdf->id) {
         case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
         case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
+        case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
+        case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
+        case REFLECTION_ID: sample = ((Reflection*)bsdf)->eval(wo, wi); break;
+        case REFRACTION: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
         default: break;
         }
         return sample;
@@ -1440,8 +1499,12 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
     auto sample_bsdf = [](OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) {
         BSDF::Sample sample = {};
         switch (bsdf->id) {
-            case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz); break;
-            case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz); break;
+        case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz); break;
+        case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz); break;
+        case PHONG_ID: sample = ((Phong*)bsdf)->sample(wo, rx, ry, rz); break;
+        case WARD_ID: sample = ((Ward*)bsdf)->sample(wo, rx, ry, rz); break;
+        case REFLECTION_ID: sample = ((Reflection*)bsdf)->sample(wo, rx, ry, rz); break;
+        case REFRACTION: sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz); break;
         default: break;
         }
         return sample;
@@ -1452,6 +1515,10 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
         switch (bsdf->id) {
         case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
         case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
+        case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
+        case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
+        case REFLECTION_ID: sample = ((Reflection*)bsdf)->eval(wo, wi); break;
+        case REFRACTION: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
         default: break;
         }
         return sample;

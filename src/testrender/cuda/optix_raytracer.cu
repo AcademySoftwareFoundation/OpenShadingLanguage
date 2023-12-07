@@ -529,6 +529,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         auto is_light = [&](unsigned int idx, unsigned int hit_kind) {
             QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
             SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
+
             return (hit_kind == 0)
                        ? quads[idx - render_params.num_spheres].isLight
                        : spheres[idx].isLight;

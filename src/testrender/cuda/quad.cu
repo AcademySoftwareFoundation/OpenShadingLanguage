@@ -26,6 +26,7 @@ __direct_callable__quad_shaderglobals(const unsigned int idx, const float t_hit,
 
     float3 h = P - quad.p;
 
+    sg->I = ray_direction;
     sg->N = sg->Ng  = quad.n;
     sg->u           = dot(h, quad.ex) * quad.eu;
     sg->v           = dot(h, quad.ey) * quad.ev;
@@ -33,6 +34,12 @@ __direct_callable__quad_shaderglobals(const unsigned int idx, const float t_hit,
     sg->dPdv        = quad.ex;
     sg->surfacearea = quad.a;
     sg->shaderID    = quad.shaderID;
+    sg->backfacing   = dot(sg->N, sg->I) > 0.0f;
+
+    if (sg->backfacing) {
+        sg->N  = -sg->N;
+        sg->Ng = -sg->Ng;
+    }
 }
 
 

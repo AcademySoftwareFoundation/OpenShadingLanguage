@@ -18,6 +18,7 @@ struct RenderParams {
     float3 cx;
     float3 cy;
     int    aa;
+    int    max_bounces;
     float  show_albedo_scale;
 
     float invw;

@@ -428,8 +428,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
     float bsdf_pdf = std::numeric_limits<
         float>::infinity();  // camera ray has only one possible direction
 
-    // TODO: How many bounces is reasonable?
-    int max_bounces = 10;
+    int max_bounces = render_params.max_bounces;
     int rr_depth    = 5;
     for (int bounce = 0; bounce <= max_bounces; bounce++) {
         const bool last_bounce = bounce == max_bounces;

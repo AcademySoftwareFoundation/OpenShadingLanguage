@@ -58,7 +58,7 @@ closure_component_allot(void* pool, int id, size_t prim_size,
     ((OSL::ClosureComponent*)pool)->id = id;
     ((OSL::ClosureComponent*)pool)->w  = w;
 
-    size_t needed = (sizeof(OSL::ClosureComponent) - sizeof(void*) + prim_size
+    size_t needed = (sizeof(OSL::ClosureComponent) + prim_size
                      + (alignof(OSL::ClosureComponent) - 1))
                     & ~(alignof(OSL::ClosureComponent) - 1);
     char* char_ptr = (char*)pool;

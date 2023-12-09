@@ -9,13 +9,6 @@
 
 OSL_NAMESPACE_ENTER
 
-#ifndef OSL_HOSTDEVICE
-#  ifdef __CUDACC__
-#    define OSL_HOSTDEVICE __host__ __device__
-#  else
-#    define OSL_HOSTDEVICE
-#  endif
-#endif
 
 inline OSL_HOSTDEVICE float
 fresnel_dielectric(float cosi, float eta)

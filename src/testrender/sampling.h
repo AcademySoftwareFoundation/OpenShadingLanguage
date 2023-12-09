@@ -12,14 +12,6 @@
 
 OSL_NAMESPACE_ENTER
 
-#ifndef OSL_HOSTDEVICE
-#  ifdef __CUDACC__
-#    define OSL_HOSTDEVICE __host__ __device__
-#  else
-#    define OSL_HOSTDEVICE
-#  endif
-#endif
-
 struct TangentFrame {
     // build frame from unit normal
     OSL_HOSTDEVICE TangentFrame(const Vec3& n) : w(n)

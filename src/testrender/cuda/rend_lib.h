@@ -132,6 +132,36 @@ enum RayType {
 };
 
 
+struct t_ab {
+    uint32_t a, b;
+};
+
+
+struct t_ptr {
+    uint64_t ptr;
+};
+
+
+struct Payload {
+    union {
+        t_ab  ab;
+        t_ptr ptr;
+    };
+
+    __forceinline__ __device__ void set()
+    {
+        optixSetPayload_0( ab.a );
+        optixSetPayload_1( ab.b );
+    }
+
+    __forceinline__ __device__ void get()
+    {
+        ab.a = optixGetPayload_0();
+        ab.b = optixGetPayload_1();
+    }
+};
+
+
 #if 0
 // Closures supported by the OSL sample renderer.  This list is mostly aspirational.
 enum class ClosureIDs : int32_t {

@@ -99,17 +99,26 @@ __intersection__sphere()
     const float3 ray_origin    = optixGetObjectRayOrigin();
     const float3 ray_direction = optixGetObjectRayDirection();
 
+    Payload payload;
+    payload.get();
+
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.ptr.ptr;
+    uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
+    const int hit_idx               = ((int*)trace_data)[2];
+    const int hit_kind              = ((int*)trace_data)[3];
+    const bool self                 = hit_idx == idx && hit_kind == 1;
+
     float3 oc = sphere.c - ray_origin;
     float b   = dot(oc, ray_direction);
     float det = b * b - dot(oc, oc) + sphere.r2;
+
     if (det >= 0.0f) {
         det     = sqrtf(det);
         float x = b - det;
         float y = b + det;
-
-        // NB: this does not included the 'self' check from
-        // the testrender sphere intersection
-        float t = (x > 0) ? x : ((y > 0) ? y : 0);
+        float t = self ? (fabsf(x) > fabsf(y) ? (x > 0 ? x : 0)
+                                              : (y > 0 ? y : 0))
+                       : (x > 0 ? x : (y > 0 ? y : 0));
 
         if (t < optixGetRayTmax())
             optixReportIntersection(t, RAYTRACER_HIT_SPHERE);
@@ -129,6 +138,15 @@ __intersection__sphere_precise()
     const float3 ray_origin    = optixGetObjectRayOrigin();
     const float3 ray_direction = optixGetObjectRayDirection();
 
+    Payload payload;
+    payload.get();
+
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.ptr.ptr;
+    uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
+    const int hit_idx               = ((int*)trace_data)[2];
+    const int hit_kind              = ((int*)trace_data)[3];
+    const bool self                 = hit_idx == idx && hit_kind == 1;
+
     // Using the "round up" single-precision intrinsics helps match the results
     // from the CPU path more closely when fast-math is enabled.
     float3 oc = sub_ru(sphere.c, ray_origin);
@@ -136,14 +154,15 @@ __intersection__sphere_precise()
     float det = __fmul_ru(b, b);
     det       = __fsub_ru(det, dot_ru(oc, oc));
     det       = __fadd_ru(det, sphere.r2);
+
     if (det > 0.0f) {
         det     = __fsqrt_ru(det);
         float x = __fsub_ru(b, det);
         float y = __fadd_ru(b, det);
+        float t = self ? (fabsf(x) > fabsf(y) ? (x > 0 ? x : 0)
+                                              : (y > 0 ? y : 0))
+                       : (x > 0 ? x : (y > 0 ? y : 0));
 
-        // NB: this does not included the 'self' check from
-        // the testrender sphere intersection
-        float t = (x > 0) ? x : ((y > 0) ? y : 0);
         if (t < optixGetRayTmax())
             optixReportIntersection(t, RAYTRACER_HIT_SPHERE);
     }

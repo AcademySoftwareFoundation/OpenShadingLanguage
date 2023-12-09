@@ -133,36 +133,6 @@ osl_tex2DLookup(void* handle, float s, float t)
 //
 //--------------------------------------------------------------------------------
 
-struct t_ab {
-    uint32_t a, b;
-};
-
-
-struct t_ptr {
-    uint64_t ptr;
-};
-
-
-struct Payload {
-    union {
-        t_ab  ab;
-        t_ptr ptr;
-    };
-
-    __forceinline__ __device__ void set()
-    {
-        optixSetPayload_0( ab.a );
-        optixSetPayload_1( ab.b );
-    }
-
-    __forceinline__ __device__ void get()
-    {
-        ab.a = optixGetPayload_0();
-        ab.b = optixGetPayload_1();
-    }
-};
-
-
 inline __device__
 float3 cross(const float3& a, const float3& b)
 {
@@ -249,6 +219,8 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
     // NB: These variables are not used in the current iteration of the sample
     sg.raytype        = CAMERA;
     sg.flipHandedness = 0;
+    // TODO: Implement the correct derivatives to enable this calculation.
+    // sg.flipHandedness = sg.flipHandedness = dot(sg.N, cross(sg.dPdx, sg.dPdy)) < 0;
 }
 
 
@@ -427,10 +399,21 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
     float bsdf_pdf = std::numeric_limits<
         float>::infinity();  // camera ray has only one possible direction
 
+    // TODO: Should these be separate?
+    alignas(8) char closure_pool[256];
+    alignas(8) char light_closure_pool[256];
+
     int max_bounces = render_params.max_bounces;
     int rr_depth    = 5;
+
+    int prev_hit_idx  = -1;
+    int prev_hit_kind = -1;
+
     for (int bounce = 0; bounce <= max_bounces; bounce++) {
         const bool last_bounce = bounce == max_bounces;
+
+        int hit_idx  = prev_hit_idx;
+        int hit_kind = prev_hit_kind;
 
         //
         // Trace camera/bounce ray
@@ -442,7 +425,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         Payload payload;
         payload.ptr.ptr = (uint64_t)&sg;
 
-        uint32_t trace_data[2] = { UINT32_MAX, UINT32_MAX };
+        uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
+                                   *(unsigned int*)&hit_idx,
+                                   *(unsigned int*)&hit_kind };
         sg.tracedata           = (void*)&trace_data[0];
 
         // Trace the camera ray against the scene
@@ -461,20 +446,15 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                    payload.ab.b
             );
 
-        const uint32_t hit_idx  = trace_data[0];
-        const uint32_t hit_kind = trace_data[1];
-
         //
         // Execute the shader
         //
 
-        auto execute_shader = [](OSL_CUDA::ShaderGlobals& sg) {
+        auto execute_shader = [](OSL_CUDA::ShaderGlobals& sg, char* closure_pool) {
             if(sg.shaderID < 0) {
                 // TODO: should probably never get here ...
                 return;
             }
-
-            alignas(8) char closure_pool[256];
 
             // Pack the "closure pool" into one of the ShaderGlobals pointers
             *(int*)&closure_pool[0] = 0;
@@ -512,7 +492,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
 
         ShadingResult result;
         if (sg.shaderID >= 0) {
-            execute_shader(sg);
+            hit_idx  = trace_data[0];
+            hit_kind = trace_data[1];
+            execute_shader(sg, closure_pool);
         } else {
             // Ray missed
             break;
@@ -626,7 +608,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                 const uint32_t prim_idx = trace_data[0];
                 if (prim_idx == idx && light_sg.shaderID >= 0) {
                     // execute the light shader (for emissive closures only)
-                    execute_shader(light_sg);
+                    execute_shader(light_sg, light_closure_pool);
 
                     ShadingResult light_result;
                     process_closure(light_sg, light_result, (void*)light_sg.Ci,
@@ -679,9 +661,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs
-        // TODO: Keep track of object IDs for self-intersection avoidance, etc.
-        // prev_id   = id;
-        // prev_kind = kind;
+          // TODO: Keep track of object IDs for self-intersection avoidance, etc.
+        prev_hit_idx  = hit_idx;
+        prev_hit_kind = hit_kind;
         r.origin = V3_TO_F3(sg.P) + sg.N * 1e-6f;
     }
 

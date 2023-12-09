@@ -1309,7 +1309,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
         case WARD_ID: sz = sizeof(Ward); break;
         case REFLECTION_ID: sz = sizeof(Reflection); break;
         case FRESNEL_REFLECTION_ID: sz = sizeof(Reflection); break;
-        case REFRACTION: sz = sizeof(Refraction); break;
+        case REFRACTION_ID: sz = sizeof(Refraction); break;
         default: break;
         }
         return sz;
@@ -1395,23 +1395,23 @@ CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
         Color3 albedo(0);
         switch (id) {
         case DIFFUSE_ID:
-            albedo = ((Diffuse<0>*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
             break;
         case OREN_NAYAR_ID:
-            albedo = ((OrenNayar*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
             break;
         case PHONG_ID:
-            albedo = ((Phong*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Phong*)bsdf)->Phong::get_albedo(wo);
             break;
         case WARD_ID:
-            albedo = ((Ward*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Ward*)bsdf)->Ward::get_albedo(wo);
             break;
         case REFLECTION_ID:
         case FRESNEL_REFLECTION_ID:
-            albedo = ((Reflection*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Reflection*)bsdf)->Reflection::get_albedo(wo);
             break;
         case REFRACTION_ID:
-            albedo = ((Refraction*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
             break;
         default: break;
         }
@@ -1438,23 +1438,23 @@ CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
         Color3 albedo(0);
         switch (id) {
         case DIFFUSE_ID:
-            albedo = ((Diffuse<0>*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
             break;
         case OREN_NAYAR_ID:
-            albedo = ((OrenNayar*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
             break;
         case PHONG_ID:
-            albedo = ((Phong*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Phong*)bsdf)->Phong::get_albedo(wo);
             break;
         case WARD_ID:
-            albedo = ((Ward*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Ward*)bsdf)->Ward::get_albedo(wo);
             break;
         case REFLECTION_ID:
         case FRESNEL_REFLECTION_ID:
-            albedo = ((Reflection*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Reflection*)bsdf)->Reflection::get_albedo(wo);
             break;
         case REFRACTION_ID:
-            albedo = ((Refraction*)bsdf)->BSDF::get_albedo(wo);
+            albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
             break;
         default: break;
         }
@@ -1483,7 +1483,7 @@ CompositeBSDF::eval_gpu(const Vec3& wo, const Vec3& wi) const
         case FRESNEL_REFLECTION_ID:
             sample = ((Reflection*)bsdf)->eval(wo, wi);
             break;
-        case REFRACTION: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
+        case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
         default: break;
         }
         return sample;
@@ -1512,7 +1512,7 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
         case WARD_ID: sample = ((Ward*)bsdf)->sample(wo, rx, ry, rz); break;
         case REFLECTION_ID:
         case FRESNEL_REFLECTION_ID: sample = ((Reflection*)bsdf)->sample(wo, rx, ry, rz); break;
-        case REFRACTION: sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz); break;
+        case REFRACTION_ID: sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz); break;
         default: break;
         }
         return sample;
@@ -1527,7 +1527,7 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
         case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
         case REFLECTION_ID:
         case FRESNEL_REFLECTION_ID: sample = ((Reflection*)bsdf)->eval(wo, wi); break;
-        case REFRACTION: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
+        case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
         default: break;
         }
         return sample;

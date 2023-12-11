@@ -26,6 +26,7 @@ if (OSL_USE_OPTIX)
     set (testrender_cuda_headers
         cuda/rend_lib.h
         render_params.h
+        raytracer.h
         sampling.h
         shading.h
         shading.cpp

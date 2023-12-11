@@ -144,20 +144,27 @@ struct t_ptr {
 
 struct Payload {
     union {
-        t_ab  ab;
+        t_ab ab;
         t_ptr ptr;
     };
 
+    float radius;
+    float spread;
+
     __forceinline__ __device__ void set()
     {
-        optixSetPayload_0( ab.a );
-        optixSetPayload_1( ab.b );
+        optixSetPayload_0(ab.a);
+        optixSetPayload_1(ab.b);
+        optixSetPayload_2(__float_as_uint(radius));
+        optixSetPayload_3(__float_as_uint(spread));
     }
 
     __forceinline__ __device__ void get()
     {
-        ab.a = optixGetPayload_0();
-        ab.b = optixGetPayload_1();
+        ab.a   = optixGetPayload_0();
+        ab.b   = optixGetPayload_1();
+        radius = __uint_as_float(optixGetPayload_2());
+        spread = __uint_as_float(optixGetPayload_3());
     }
 };
 

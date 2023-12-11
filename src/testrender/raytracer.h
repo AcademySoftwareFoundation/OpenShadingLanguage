@@ -32,7 +32,7 @@ class OptixRenderer;  // FIXME -- should not be here
 
 
 // build two vectors orthogonal to the first, assumes n is normalized
-inline void
+inline OSL_HOSTDEVICE void
 ortho(const Vec3& n, Vec3& x, Vec3& y)
 {
     x = (fabsf(n.x) > .01f ? Vec3(n.z, 0, -n.x) : Vec3(0, -n.z, n.y))

@@ -16,6 +16,7 @@
 #include "render_params.h"
 #include "vec_math.h"
 
+#include "../raytracer.h"
 #include "../render_params.h"
 #include "../sampling.h"
 #include "../shading.h"
@@ -182,11 +183,8 @@ float3 sample_quad(const float3& x, const QuadParams& quad,
 
 
 static __device__ void
-globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
+globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.0f)
 {
-    // const GenericRecord* record = reinterpret_cast<GenericRecord*>(
-    //     optixGetSbtDataPointer());
-
     OSL_CUDA::ShaderGlobals local_sg;
     // hit-kind 0: quad hit
     //          1: sphere hit
@@ -198,10 +196,20 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
     const float3 ray_origin    = optixGetWorldRayOrigin();
     const float t_hit          = optixGetRayTmax();
 
+    // Calculate the hit point and its derivatives, based on Ray::point(Dual2<float> t)
+    Dual2<Vec3> P;
+    const float r = radius + spread * t_hit;
+    P.val()       = F3_TO_C3(ray_origin) + t_hit * F3_TO_C3(ray_direction);
+    ortho(F3_TO_C3(ray_direction), P.dx(), P.dy());
+    P.dx() *= r;
+    P.dy() *= r;
+
     sg.I  = ray_direction;
     sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
     sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.Ng));
-    sg.P  = ray_origin + t_hit * ray_direction;
+    sg.P  = V3_TO_F3(P.val());
+    sg.dPdx        = V3_TO_F3(P.dx());
+    sg.dPdy        = V3_TO_F3(P.dy());
     sg.dPdu        = local_sg.dPdu;
     sg.dPdv        = local_sg.dPdv;
     sg.u           = local_sg.u;
@@ -216,11 +224,8 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
         sg.Ng = -sg.Ng;
     }
 
-    // NB: These variables are not used in the current iteration of the sample
     sg.raytype        = CAMERA;
-    sg.flipHandedness = 0;
-    // TODO: Implement the correct derivatives to enable this calculation.
-    // sg.flipHandedness = sg.flipHandedness = dot(sg.N, cross(sg.dPdx, sg.dPdy)) < 0;
+    sg.flipHandedness = dot(sg.N, cross(sg.dPdx, sg.dPdy)) < 0.0f;
 }
 
 
@@ -315,11 +320,13 @@ __closesthit__deferred()
 {
     Payload payload;
     payload.get();
-    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*) payload.ptr.ptr;
-    globals_from_hit(*sg_ptr);
-    uint32_t* trace_data = (uint32_t*) sg_ptr->tracedata;
-    trace_data[0] = optixGetPrimitiveIndex();
-    trace_data[1] = optixGetHitKind();
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.ptr.ptr;
+    uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
+    const float t_hit               = optixGetRayTmax();
+    trace_data[0]                   = optixGetPrimitiveIndex();
+    trace_data[1]                   = optixGetHitKind();
+    trace_data[2]                   = *(uint32_t*)&t_hit;
+    globals_from_hit(*sg_ptr, payload.radius, payload.spread);
 }
 
 
@@ -391,8 +398,18 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
     // Make the ray for the current pixel
     RayGeometry r;
     r.origin    = eye;
-    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
-                            + dir);
+    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh) + dir);
+
+    // We aren't using the Ray type, so track the spread/radius manually
+    float ray_spread = 0.0f;
+    float ray_radius = 0.0f;
+    {
+        const Vec3 v = (F3_TO_V3(cx) * (d.x * invw - 0.5f) + F3_TO_V3(cy) * (0.5f - d.y * invh) + F3_TO_V3(dir))
+            .normalize();
+        const float cos_a = F3_TO_V3(dir).dot(v);
+        ray_spread
+            = sqrtf(invw * invh * F3_TO_V3(cx).length() * F3_TO_V3(cy).length() * cos_a) * cos_a;
+    }
 
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
@@ -430,6 +447,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                                    *(unsigned int*)&hit_kind };
         sg.tracedata           = (void*)&trace_data[0];
 
+        uint32_t p2 = __float_as_uint(ray_radius);
+        uint32_t p3 = __float_as_uint(ray_spread);
+
         // Trace the camera ray against the scene
         optixTrace(render_params.traversal_handle, // handle
                    r.origin,                       // origin
@@ -443,7 +463,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                    RAY_TYPE_COUNT,                 // SBT stride
                    RAY_TYPE_RADIANCE,              // miss SBT offset
                    payload.ab.a,
-                   payload.ab.b
+                   payload.ab.b,
+                   p2,
+                   p3
             );
 
         //
@@ -499,6 +521,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
             // Ray missed
             break;
         }
+
+        const float t = ((float*)trace_data)[2];
+        const float radius = ray_radius + ray_spread * t;
 
         //
         // Process the output closure
@@ -602,7 +627,8 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
                            RAY_TYPE_RADIANCE,               // SBT offset
                            RAY_TYPE_COUNT,                  // SBT stride
                            RAY_TYPE_RADIANCE,               // miss SBT offset
-                           payload.ab.a, payload.ab.b);
+                           payload.ab.a,
+                           payload.ab.b);
 
                 // TODO: Make sure that the primitive indexing is correct
                 const uint32_t prim_idx = trace_data[0];
@@ -655,9 +681,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         bsdf_pdf = p.pdf;
         // r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
         r.direction = C3_TO_F3(p.wi);
-        // r.radius    = radius;
+        ray_radius    = radius;
         // Just simply use roughness as spread slope
-        // r.spread = std::max(r.spread, p.roughness);
+        ray_spread = std::max(ray_spread, p.roughness);
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs

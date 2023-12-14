@@ -54,6 +54,7 @@ struct Ray {
         DISPLACEMENT = 128
     };
 
+    OSL_HOSTDEVICE
     Ray(const Vec3& o, const Vec3& d, float radius, float spread,
         RayType raytype)
         : origin(o)
@@ -64,7 +65,9 @@ struct Ray {
     {
     }
 
+    OSL_HOSTDEVICE
     Vec3 point(float t) const { return origin + direction * t; }
+
     Dual2<Vec3> dual_direction() const
     {
         Dual2<Vec3> v;
@@ -75,6 +78,7 @@ struct Ray {
         return v;
     }
 
+    OSL_HOSTDEVICE
     Dual2<Vec3> point(Dual2<float> t) const
     {
         const float r = radius + spread * t.val();

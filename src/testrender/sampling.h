@@ -156,12 +156,22 @@ struct MIS {
     update_eval(Color3* w, float* pdf, Color3 ow, float opdf,
                 float b)
     {
+        // TODO: Need to handle these cases for CUDA. Clamping might be okay if the
+        // values are only slightly out of range
+
+// #ifdef __CUDACC__
+//         // Check for those pesky NaNs
+//         assert(*pdf == *pdf);
+//         assert(b == b);
+//         assert(opdf == opdf);
+// #endif
+
 #ifndef __CUDACC__
         // NOTE: inf is ok!
-        assert(*pdf >= 0);
-        assert(opdf >= 0);
-        assert(b >= 0);
-        assert(b <= 1);
+        assert(*pdf >= 0.0f);
+        assert(opdf >= 0.0f);
+        assert(b >= 0.0f);
+        assert(b <= 1.0f);
 #endif
 
         // make sure 1 / b is not inf
@@ -182,7 +192,9 @@ struct MIS {
             *pdf += opdf;
         }
 
+#ifndef __CUDACC__
         assert(*pdf >= 0);
+#endif
     }
 };
 

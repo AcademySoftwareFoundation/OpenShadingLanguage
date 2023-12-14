@@ -47,6 +47,14 @@ enum ClosureIDs {
     EMPTY_ID
 };
 
+
+// Conversion macros for casting between vector types
+#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
+#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
+#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
+#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
+
+
 namespace {  // anonymous namespace
 
 #ifdef __CUDACC__
@@ -110,7 +118,11 @@ struct RefractionParams {
     float eta;
 };
 struct MicrofacetParams {
+#ifndef __CUDACC__
     OIIO::ustring dist;
+#else
+    const char* dist;
+#endif
     OSL::Vec3 N, U;
     float xalpha, yalpha, eta;
     int refract;
@@ -357,7 +369,6 @@ struct CompositeBSDF {
     OSL_HOSTDEVICE
     bool add_bsdf(const Color3& w, BSDF_Args&&... args)
     {
-        // make sure we have enough space
         if (num_bsdfs >= MaxEntries)
             return false;
         if (num_bytes + sizeof(BSDF_Type) > MaxSize)
@@ -371,11 +382,16 @@ struct CompositeBSDF {
     }
 
 #ifdef __CUDACC__
+    OSL_HOSTDEVICE bool add_bsdf_gpu(const Color3& w, const ClosureComponent* comp);
     OSL_HOSTDEVICE void prepare_gpu(const Vec3& wo, const Color3& path_weight, bool absorb);
     OSL_HOSTDEVICE Color3 get_albedo_gpu(const Vec3& wo) const;
     OSL_HOSTDEVICE BSDF::Sample eval_gpu(const Vec3& wo, const Vec3& wi) const;
     OSL_HOSTDEVICE BSDF::Sample sample_gpu(const Vec3& wo, float rx, float ry, float rz) const;
-    OSL_HOSTDEVICE bool add_bsdf_gpu(const Color3& w, const ClosureComponent* comp);
+
+    // Helper functions to avoid virtual function calls
+    OSL_HOSTDEVICE Color3 get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const;
+    OSL_HOSTDEVICE BSDF::Sample sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) const;
+    OSL_HOSTDEVICE BSDF::Sample eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const;
 #endif
 
 private:

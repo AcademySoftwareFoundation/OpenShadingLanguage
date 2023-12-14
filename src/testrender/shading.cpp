@@ -8,6 +8,10 @@
 #include "optics.h"
 #include "sampling.h"
 
+#ifdef __CUDACC__
+#include "cuda/vec_math.h"
+#endif
+
 using namespace OSL;
 
 #if defined(__CUDACC__)
@@ -762,8 +766,9 @@ struct Microfacet final : public BSDF, MicrofacetParams {
             if (Refract == 2) {
                 pdf *= F;
                 return { wi, Color3(out), pdf, std::max(xalpha, yalpha) };
-            } else
+            } else {
                 return { wi, Color3(F * out), pdf, std::max(xalpha, yalpha) };
+            }
         } else {
             const Vec3 M = tf.toworld(m);
             Vec3 wi;
@@ -783,6 +788,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
 
             float pdf = (fabsf(cosHI * cosHO) * (eta * eta) * (G1 * D) * invHt2)
                         / fabsf(wo_l.z);
+
             float out = G2 / G1;
             if (Refract == 2) {
                 pdf *= Ft;
@@ -792,6 +798,14 @@ struct Microfacet final : public BSDF, MicrofacetParams {
         }
         return {};
     }
+
+#ifdef __CUDACC__
+    OSL_HOSTDEVICE void calcTangentFrame()
+    {
+        tf = (U == Vec3(0) || xalpha == yalpha ? TangentFrame(N)
+                                               : TangentFrame(N, U));
+    }
+#endif
 
 private:
     static OSL_HOSTDEVICE float SQR(float x) { return x * x; }
@@ -838,8 +852,24 @@ private:
         swo.y *= yalpha;
         swo = swo.normalize();
 
+#ifdef __CUDACC__
+        // TODO: For some reason, after being normalized, swo can end up with components
+        // with magnitudes slightly greater than 1.0, which makes subsequent operations
+        // start producing NaNs. Normalizing this vector again fixes the issue, but it's
+        // a pretty ugly hack...
+        {
+            const float3 tmp_swo = normalize(V3_TO_F3(swo));
+            swo = F3_TO_V3(tmp_swo);
+        }
+        // swo = swo.normalize();
+#endif
+
         // figure out angles for the incoming vector
+#ifndef __CUDACC__
         float cos_theta = std::max(swo.z, 0.0f);
+#else
+        float cos_theta = std::min(1.0f, std::max(swo.z, 0.0f));
+#endif
         float cos_phi   = 1;
         float sin_phi   = 0;
         /* Normal incidence special case gets phi 0 */
@@ -860,6 +890,7 @@ private:
         float mlen = sqrtf(s.x * s.x + s.y * s.y + 1);
         Vec3 m(fabsf(s.x) < mlen ? -s.x / mlen : 1.0f,
                fabsf(s.y) < mlen ? -s.y / mlen : 1.0f, 1.0f / mlen);
+
         return m;
     }
 
@@ -1310,6 +1341,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
         case REFLECTION_ID: sz = sizeof(Reflection); break;
         case FRESNEL_REFLECTION_ID: sz = sizeof(Reflection); break;
         case REFRACTION_ID: sz = sizeof(Refraction); break;
+        case MICROFACET_ID: sz = sizeof(MicrofacetBeckmannRefl);
         default: break;
         }
         return sz;
@@ -1378,6 +1410,27 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
         ((Refraction*)bsdfs[num_bsdfs])->eta = params->eta;
         break;
     }
+    case MICROFACET_ID: {
+        const MicrofacetParams* params        = comp->as<MicrofacetParams>();
+        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                  = MICROFACET_ID;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->dist    = params->dist;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->N       = params->N;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->U       = params->U;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->xalpha  = params->xalpha;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->yalpha  = params->yalpha;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->eta     = params->eta;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->refract = params->refract;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->calcTangentFrame();
+
+#if 0
+        const char* mem  = (const char*)((OSL::ClosureComponent*)comp)->data();
+        const char* dist = *(const char**)&mem[0];
+        if (HDSTR(dist) == STRING_PARAMS(default))
+            printf("default\n");
+#endif
+        break;
+    }
     default: printf("add unknown: %d\n", (int)id); break;
     }
     weights[num_bsdfs] = w;
@@ -1390,38 +1443,19 @@ OSL_HOSTDEVICE void
 CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
                            bool absorb)
 {
-    auto get_albedo = [](OSL::BSDF* bsdf, const Vec3& wo) {
-        ClosureIDs id = bsdf->id;
-        Color3 albedo(0);
-        switch (id) {
-        case DIFFUSE_ID:
-            albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
-            break;
-        case OREN_NAYAR_ID:
-            albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
-            break;
-        case PHONG_ID:
-            albedo = ((Phong*)bsdf)->Phong::get_albedo(wo);
-            break;
-        case WARD_ID:
-            albedo = ((Ward*)bsdf)->Ward::get_albedo(wo);
-            break;
-        case REFLECTION_ID:
-        case FRESNEL_REFLECTION_ID:
-            albedo = ((Reflection*)bsdf)->Reflection::get_albedo(wo);
-            break;
-        case REFRACTION_ID:
-            albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
-            break;
-        default: break;
-        }
-        return albedo;
-    };
-
     float total = 0;
     for (int i = 0; i < num_bsdfs; i++) {
-        pdfs[i] = weights[i].dot(path_weight * get_albedo(bsdfs[i], wo))
+        pdfs[i] = weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo))
                   / (path_weight.x + path_weight.y + path_weight.z);
+
+        // TODO: What is an acceptable range?
+        assert(pdfs[i] >= (0.0f - 1e-6f));
+        assert(pdfs[i] <= (1.0f + 1e-6f));
+
+        // Clamp the PDF to [0,1]. The PDF can fall outside of this range due to
+        // floating-point precision issues.
+        pdfs[i] = (pdfs[i] < 0.0f) ? 0.0f : (pdfs[i] > 1.0f) ? 1.0f : pdfs[i];
+
         total += pdfs[i];
     }
     if ((!absorb && total > 0) || total > 1) {
@@ -1430,65 +1464,10 @@ CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
     }
 }
 
-OSL_HOSTDEVICE Color3
-CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
-{
-    auto get_albedo = [](OSL::BSDF* bsdf, const Vec3& wo) {
-        ClosureIDs id = bsdf->id;
-        Color3 albedo(0);
-        switch (id) {
-        case DIFFUSE_ID:
-            albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
-            break;
-        case OREN_NAYAR_ID:
-            albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
-            break;
-        case PHONG_ID:
-            albedo = ((Phong*)bsdf)->Phong::get_albedo(wo);
-            break;
-        case WARD_ID:
-            albedo = ((Ward*)bsdf)->Ward::get_albedo(wo);
-            break;
-        case REFLECTION_ID:
-        case FRESNEL_REFLECTION_ID:
-            albedo = ((Reflection*)bsdf)->Reflection::get_albedo(wo);
-            break;
-        case REFRACTION_ID:
-            albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
-            break;
-        default: break;
-        }
-        return albedo;
-    };
-
-    Color3 result(0, 0, 0);
-    for (int i = 0; i < num_bsdfs; i++) {
-        result += weights[i] * get_albedo(bsdfs[i], wo);
-    }
-    return result;
-}
-
 
 OSL_HOSTDEVICE BSDF::Sample
 CompositeBSDF::eval_gpu(const Vec3& wo, const Vec3& wi) const
 {
-    auto eval_bsdf = [](OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) {
-        BSDF::Sample sample = {};
-        switch (bsdf->id) {
-        case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
-        case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
-        case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
-        case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
-        case REFLECTION_ID:
-        case FRESNEL_REFLECTION_ID:
-            sample = ((Reflection*)bsdf)->eval(wo, wi);
-            break;
-        case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
-        default: break;
-        }
-        return sample;
-    };
-
     BSDF::Sample s = {};
     for (int i = 0; i < num_bsdfs; i++) {
         BSDF::Sample b = eval_bsdf(bsdfs[i],wo, wi);
@@ -1503,36 +1482,6 @@ CompositeBSDF::eval_gpu(const Vec3& wo, const Vec3& wi) const
 OSL_HOSTDEVICE BSDF::Sample
 CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
 {
-    auto sample_bsdf = [](OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) {
-        BSDF::Sample sample = {};
-        switch (bsdf->id) {
-        case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz); break;
-        case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz); break;
-        case PHONG_ID: sample = ((Phong*)bsdf)->sample(wo, rx, ry, rz); break;
-        case WARD_ID: sample = ((Ward*)bsdf)->sample(wo, rx, ry, rz); break;
-        case REFLECTION_ID:
-        case FRESNEL_REFLECTION_ID: sample = ((Reflection*)bsdf)->sample(wo, rx, ry, rz); break;
-        case REFRACTION_ID: sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz); break;
-        default: break;
-        }
-        return sample;
-    };
-
-    auto eval_bsdf = [](OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) {
-        BSDF::Sample sample = {};
-        switch (bsdf->id) {
-        case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
-        case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
-        case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
-        case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
-        case REFLECTION_ID:
-        case FRESNEL_REFLECTION_ID: sample = ((Reflection*)bsdf)->eval(wo, wi); break;
-        case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
-        default: break;
-        }
-        return sample;
-    };
-
     float accum = 0;
     for (int i = 0; i < num_bsdfs; i++) {
         if (rx < (pdfs[i] + accum)) {
@@ -1558,6 +1507,153 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
         accum += pdfs[i];
     }
     return {};
+}
+
+
+OSL_HOSTDEVICE Color3
+CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
+{
+    Color3 result(0, 0, 0);
+    for (int i = 0; i < num_bsdfs; i++) {
+        result += weights[i] * get_bsdf_albedo(bsdfs[i], wo);
+    }
+    return result;
+}
+
+//
+// Helper functions to avoid virtual function calls
+//
+
+OSL_HOSTDEVICE Color3
+CompositeBSDF::get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const
+{
+    Color3 albedo(0);
+    switch (bsdf->id) {
+    case DIFFUSE_ID:
+        albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
+        break;
+    case OREN_NAYAR_ID:
+        albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
+        break;
+    case PHONG_ID: albedo = ((Phong*)bsdf)->Phong::get_albedo(wo); break;
+    case WARD_ID: albedo = ((Ward*)bsdf)->Ward::get_albedo(wo); break;
+    case REFLECTION_ID:
+    case FRESNEL_REFLECTION_ID:
+        albedo = ((Reflection*)bsdf)->Reflection::get_albedo(wo);
+        break;
+    case REFRACTION_ID:
+        albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
+        break;
+    case MICROFACET_ID: {
+        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        switch (refract) {
+        case 0:
+            albedo = ((MicrofacetBeckmannRefl*)bsdf)
+                         ->MicrofacetBeckmannRefl::get_albedo(wo);
+            break;
+        case 1:
+            albedo = ((MicrofacetBeckmannRefr*)bsdf)
+                         ->MicrofacetBeckmannRefr::get_albedo(wo);
+            break;
+        case 2:
+            albedo = ((MicrofacetBeckmannBoth*)bsdf)
+                         ->MicrofacetBeckmannBoth::get_albedo(wo);
+            break;
+        }
+        break;
+    }
+    default: break;
+    }
+    return albedo;
+}
+
+
+OSL_HOSTDEVICE BSDF::Sample
+CompositeBSDF::sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry,
+                           float rz) const
+{
+    BSDF::Sample sample = {};
+    switch (bsdf->id) {
+    case DIFFUSE_ID:
+        sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case OREN_NAYAR_ID:
+        sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case PHONG_ID: sample = ((Phong*)bsdf)->sample(wo, rx, ry, rz); break;
+    case WARD_ID: sample = ((Ward*)bsdf)->sample(wo, rx, ry, rz); break;
+    case REFLECTION_ID:
+    case FRESNEL_REFLECTION_ID:
+        sample = ((Reflection*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case REFRACTION_ID:
+        sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case MICROFACET_ID: {
+        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        switch (refract) {
+        case 0:
+            sample = ((MicrofacetBeckmannRefl*)bsdf)
+                         ->MicrofacetBeckmannRefl::sample(wo, rx, ry, rz);
+            break;
+        case 1:
+            sample = ((MicrofacetBeckmannRefr*)bsdf)
+                         ->MicrofacetBeckmannRefr::sample(wo, rx, ry, rz);
+            break;
+        case 2:
+            sample = ((MicrofacetBeckmannBoth*)bsdf)
+                         ->MicrofacetBeckmannBoth::sample(wo, rx, ry, rz);
+            break;
+        }
+        break;
+    }
+    default: break;
+    }
+    if (sample.pdf != sample.pdf)
+    {
+        uint3 launch_index = optixGetLaunchIndex();
+        printf("sample_bsdf( %s ), PDF is NaN [%d, %d]\n",
+               id_to_string(bsdf->id), launch_index.x, launch_index.y);
+    }
+    return sample;
+}
+
+
+OSL_HOSTDEVICE BSDF::Sample
+CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
+{
+    BSDF::Sample sample = {};
+    switch (bsdf->id) {
+    case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
+    case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
+    case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
+    case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
+    case REFLECTION_ID:
+    case FRESNEL_REFLECTION_ID:
+        sample = ((Reflection*)bsdf)->eval(wo, wi);
+        break;
+    case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
+    case MICROFACET_ID: {
+        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        switch (refract) {
+        case 0:
+            sample = ((MicrofacetBeckmannRefl*)bsdf)
+                         ->MicrofacetBeckmannRefl::eval(wo, wi);
+            break;
+        case 1:
+            sample = ((MicrofacetBeckmannRefr*)bsdf)
+                         ->MicrofacetBeckmannRefr::eval(wo, wi);
+            break;
+        case 2:
+            sample = ((MicrofacetBeckmannBoth*)bsdf)
+                         ->MicrofacetBeckmannBoth::eval(wo, wi);
+            break;
+        }
+        break;
+    }
+    default: break;
+    }
+    return sample;
 }
 #endif
 

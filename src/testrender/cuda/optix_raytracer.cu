@@ -27,13 +27,6 @@
 using OSL_CUDA::ShaderGlobals;
 
 
-// Conversion macros for casting between vector types
-#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
-#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
-#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
-#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
-
-
 OSL_NAMESPACE_ENTER
 namespace pvt {
 __device__ CUdeviceptr s_color_system          = 0;
@@ -196,6 +189,7 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.
     const float3 ray_origin    = optixGetWorldRayOrigin();
     const float t_hit          = optixGetRayTmax();
 
+#if 0
     // Calculate the hit point and its derivatives, based on Ray::point(Dual2<float> t)
     Dual2<Vec3> P;
     const float r = radius + spread * t_hit;
@@ -203,6 +197,11 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.
     ortho(F3_TO_C3(ray_direction), P.dx(), P.dy());
     P.dx() *= r;
     P.dy() *= r;
+#else
+    Ray ray(F3_TO_V3(ray_origin), F3_TO_V3(ray_direction), radius, spread, Ray::RayType::CAMERA);
+    Dual2<float> t(t_hit);
+    Dual2<Vec3> P = ray.point(t);
+#endif
 
     sg.I  = ray_direction;
     sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
@@ -350,11 +349,8 @@ __raygen__deferred()
     Color3 result(0, 0, 0);
     const int aa = render_params.aa;
     for (int si = 0, n = aa * aa; si < n; si++) {
-        // uint3 launch_dims  = optixGetLaunchDimensions();
         uint3 launch_index = optixGetLaunchIndex();
-
         Sampler sampler(launch_index.x, launch_index.y, si);
-
         Vec3 j = sampler.get();
         // warp distribution to approximate a tent filter [-1,+1)^2
         j.x *= 2;
@@ -395,20 +391,17 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
     // Generate camera ray
     //
 
-    // Make the ray for the current pixel
     RayGeometry r;
-    r.origin    = eye;
-    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh) + dir);
-
-    // We aren't using the Ray type, so track the spread/radius manually
     float ray_spread = 0.0f;
     float ray_radius = 0.0f;
+    r.origin         = eye;
     {
         const Vec3 v = (F3_TO_V3(cx) * (d.x * invw - 0.5f) + F3_TO_V3(cy) * (0.5f - d.y * invh) + F3_TO_V3(dir))
             .normalize();
         const float cos_a = F3_TO_V3(dir).dot(v);
         ray_spread
             = sqrtf(invw * invh * F3_TO_V3(cx).length() * F3_TO_V3(cy).length() * cos_a) * cos_a;
+        r.direction = V3_TO_F3(v);
     }
 
     Color3 path_weight(1, 1, 1);
@@ -431,6 +424,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
 
         int hit_idx  = prev_hit_idx;
         int hit_kind = prev_hit_kind;
+
+        // Offset the ray origin for secondary rays
+        constexpr float offset = 0.0f; // 1e-6f;
 
         //
         // Trace camera/bounce ray
@@ -565,8 +561,9 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         }
         path_radiance += path_weight * k * result.Le;
 
-        if (last_bounce)
+        if (last_bounce) {
             break;
+        }
 
         //
         // Build PDF
@@ -599,7 +596,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         //
 
         auto sample_light = [&](const float3& light_dir, float light_pdf, int idx) {
-            const float3 origin = sg.P + sg.N * 1e-6f;  // offset the ray origin
+            const float3 origin = sg.P + sg.N * offset;  // offset the ray origin
             BSDF::Sample b      = result.bsdf.eval_gpu(-F3_TO_V3(sg.I),
                                                        F3_TO_V3(light_dir));
             Color3 contrib      = path_weight * b.weight
@@ -608,12 +605,18 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
 
             if ((contrib.x + contrib.y + contrib.z) > 0) {
                 ShaderGlobalsType light_sg;
-                uint32_t trace_data[2] = { UINT32_MAX, UINT32_MAX };
-                light_sg.shaderID      = -1;
-                light_sg.tracedata     = (void*)&trace_data[0];
+                light_sg.shaderID = -1;
 
                 Payload payload;
                 payload.ptr.ptr = (uint64_t)&light_sg;
+
+                uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
+                    *(unsigned int*)&hit_idx,
+                    *(unsigned int*)&hit_kind };
+                light_sg.tracedata           = (void*)&trace_data[0];
+
+                uint32_t p2 = __float_as_uint(ray_radius);
+                uint32_t p3 = __float_as_uint(ray_spread);
 
                 // Trace the camera ray against the scene
                 optixTrace(render_params.traversal_handle,  // handle
@@ -687,10 +690,11 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs
-          // TODO: Keep track of object IDs for self-intersection avoidance, etc.
+
+        // TODO: Keep track of object IDs for self-intersection avoidance, etc.
         prev_hit_idx  = hit_idx;
         prev_hit_kind = hit_kind;
-        r.origin = V3_TO_F3(sg.P) + sg.N * 1e-6f;
+        r.origin = V3_TO_F3(sg.P) + sg.N * offset;
     }
 
     return path_radiance;

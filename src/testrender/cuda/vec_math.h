@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+
+#pragma once
+
 #include <vector_functions.h>
 #include <vector_types.h>
 

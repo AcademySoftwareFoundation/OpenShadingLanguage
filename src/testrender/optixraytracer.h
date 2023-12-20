@@ -71,6 +71,7 @@ public:
     bool init_optix_context(int xres, int yres);
     bool make_optix_materials();
     void build_accel();
+    void prepare_background();
     bool finalize_scene();
     void prepare_render() override;
     void warmup() override;
@@ -121,6 +122,9 @@ private:
     CUdeviceptr d_quads_list         = 0;
     CUdeviceptr d_spheres_list       = 0;
     CUdeviceptr d_interactive_params = 0;
+    CUdeviceptr d_bg_values          = 0;
+    CUdeviceptr d_bg_rows            = 0;
+    CUdeviceptr d_bg_cols            = 0;
     int m_xres = 0;
     int m_yres = 0;
     CUdeviceptr d_osl_printf_buffer;

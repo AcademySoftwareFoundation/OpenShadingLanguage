@@ -61,6 +61,21 @@ normalize(const float3& v)
     float invLen = 1.0f / sqrtf(dot(v, v));
     return invLen * v;
 }
+
+static __forceinline__ __device__
+float3 cross(const float3& a, const float3& b)
+{
+  return make_float3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
+}
+
+
+static __forceinline__ __device__
+void ortho(const float3& n, float3& x, float3& y)
+{
+    x = normalize(fabsf(n.x) > .01f ? make_float3(n.z, 0, -n.x) : make_float3(0, -n.z, n.y));
+    y = cross(n, x);
+}
+
 //
 // ========================================
 

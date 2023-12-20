@@ -179,8 +179,9 @@ __raygen__()
 // Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
 // let's do the texture look-ups in this file.
 extern "C" __device__ float4
-osl_tex2DLookup(void* handle, float s, float t)
+osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy)
 {
+    // TODO: Change the call to tex2DGrad, to make use of the derivatives
     cudaTextureObject_t texID = cudaTextureObject_t(handle);
     return tex2D<float4>(texID, s, t);
 }

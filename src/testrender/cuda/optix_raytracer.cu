@@ -21,6 +21,7 @@
 #include "../sampling.h"
 #include "../shading.h"
 #include "../shading.cpp"
+#include "../background.h"
 
 #include <cstdint>
 
@@ -46,79 +47,45 @@ __device__ __constant__ RenderParams render_params;
 }
 
 
-extern "C" __global__ void
-__miss__()
+//
+//
+//
+
+static inline __device__ void
+execute_shader(OSL_CUDA::ShaderGlobals& sg, char* closure_pool)
 {
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
+    if (sg.shaderID < 0) {
+        // TODO: should probably never get here ...
+        return;
+    }
 
-    float3* output_buffer = reinterpret_cast<float3*>(
-        render_params.output_buffer);
+    // Pack the "closure pool" into one of the ShaderGlobals pointers
+    *(int*)&closure_pool[0] = 0;
+    sg.renderstate          = &closure_pool[0];
 
-    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
-    output_buffer[pixel] = make_float3(0, 0, 1);
-}
+    // Create some run-time options structs. The OSL shader fills in the structs
+    // as it executes, based on the options specified in the shader source.
+    NoiseOptCUDA noiseopt;
+    TextureOptCUDA textureopt;
+    TraceOptCUDA traceopt;
 
+    // Pack the pointers to the options structs in a faux "context",
+    // which is a rough stand-in for the host ShadingContext.
+    ShadingContextCUDA shading_context = { &noiseopt, &textureopt, &traceopt };
+    sg.context                         = &shading_context;
 
-extern "C" __global__ void
-__miss__occlusion()
-{
-    // printf("__miss__occlusion\n");
-}
-
-
-extern "C" __global__ void
-__raygen__setglobals()
-{
-    // Set global variables
-    OSL::pvt::osl_printf_buffer_start = render_params.osl_printf_buffer_start;
-    OSL::pvt::osl_printf_buffer_end   = render_params.osl_printf_buffer_end;
-    OSL::pvt::s_color_system          = render_params.color_system;
-    OSL::pvt::test_str_1              = render_params.test_str_1;
-    OSL::pvt::test_str_2              = render_params.test_str_2;
-}
-
-
-extern "C" __global__ void
-__miss__setglobals()
-{
-}
-
-
-extern "C" __global__ void
-__raygen__()
-{
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
-    const float3 eye   = render_params.eye;
-    const float3 dir   = render_params.dir;
-    const float3 cx    = render_params.cx;
-    const float3 cy    = render_params.cy;
-    const float invw   = render_params.invw;
-    const float invh   = render_params.invh;
-
-    // Compute the pixel coordinates
-    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
-                                 static_cast<float>(launch_index.y) + 0.5f);
-
-    // Make the ray for the current pixel
-    RayGeometry r;
-    r.origin    = eye;
-    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
-                            + dir);
-    optixTrace(render_params.traversal_handle, r.origin, r.direction, 1e-3f,
-               1e13f, 0, OptixVisibilityMask(1), OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-               0, 1, 0);
-}
-
-
-// Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
-// let's do the texture look-ups in this file.
-extern "C" __device__ float4
-osl_tex2DLookup(void* handle, float s, float t)
-{
-    cudaTextureObject_t texID = cudaTextureObject_t(handle);
-    return tex2D<float4>(texID, s, t);
+    // Run the OSL callable
+    void* interactive_ptr = reinterpret_cast<void**>(
+        render_params.interactive_params)[sg.shaderID];
+    const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
+    optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
+        shaderIdx, &sg /*shaderglobals_ptr*/,
+        nullptr /*groupdata_ptr*/,
+        nullptr /*userdata_base_ptr*/,
+        nullptr /*output_base_ptr*/,
+        0 /*shadeindex - unused*/,
+        interactive_ptr /*interactive_params_ptr*/
+    );
 }
 
 //--------------------------------------------------------------------------------
@@ -126,21 +93,6 @@ osl_tex2DLookup(void* handle, float s, float t)
 // Pathtracing
 //
 //--------------------------------------------------------------------------------
-
-inline __device__
-float3 cross(const float3& a, const float3& b)
-{
-  return make_float3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
-}
-
-
-inline __device__
-void ortho(const float3& n, float3& x, float3& y)
-{
-    x = normalize(fabsf(n.x) > .01f ? make_float3(n.z, 0, -n.x) : make_float3(0, -n.z, n.y));
-    y = cross(n, x);
-}
-
 
 // return a direction towards a point on the sphere
 static __device__
@@ -189,19 +141,9 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.
     const float3 ray_origin    = optixGetWorldRayOrigin();
     const float t_hit          = optixGetRayTmax();
 
-#if 0
-    // Calculate the hit point and its derivatives, based on Ray::point(Dual2<float> t)
-    Dual2<Vec3> P;
-    const float r = radius + spread * t_hit;
-    P.val()       = F3_TO_C3(ray_origin) + t_hit * F3_TO_C3(ray_direction);
-    ortho(F3_TO_C3(ray_direction), P.dx(), P.dy());
-    P.dx() *= r;
-    P.dy() *= r;
-#else
     Ray ray(F3_TO_V3(ray_origin), F3_TO_V3(ray_direction), radius, spread, Ray::RayType::CAMERA);
     Dual2<float> t(t_hit);
     Dual2<Vec3> P = ray.point(t);
-#endif
 
     sg.I  = ray_direction;
     sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
@@ -303,6 +245,63 @@ process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
 }
 
 
+static __device__ float3
+process_background_closure(const OSL::ClosureColor* closure_tree)
+{
+    OSL::Color3 color_result = OSL::Color3(0.0f);
+    if (!closure_tree) {
+        return C3_TO_F3(color_result);
+    }
+
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
+    OSL::Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    OSL::Color3 weight = OSL::Color3(1.0f);
+    const void* cur    = closure_tree;
+    while (cur) {
+        ClosureIDs id = static_cast<ClosureIDs>(
+            ((OSL::ClosureColor*)cur)->id);
+
+        switch (id) {
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)cur)->closureB;
+            weight_stack[stack_idx++] = weight;
+            cur                       = ((OSL::ClosureAdd*)cur)->closureA;
+            break;
+        }
+        case ClosureIDs::MUL: {
+            weight *= ((OSL::ClosureMul*)cur)->weight;
+            cur = ((OSL::ClosureMul*)cur)->closure;
+            break;
+        }
+        case ClosureIDs::BACKGROUND_ID: {
+            const ClosureComponent* comp = reinterpret_cast<const ClosureColor*>(cur)->as_comp();
+            weight *= comp->w;
+            cur = nullptr;
+            break;
+        }
+        default:
+            // Should never get here
+            assert(false);
+        }
+        if (cur == NULL && stack_idx > 0) {
+            cur    = ptr_stack[--stack_idx];
+            weight = weight_stack[stack_idx];
+        }
+    }
+
+    return C3_TO_F3(weight);
+}
+
+
 static __device__ void
 process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 const void* Ci, bool light_only)
@@ -311,6 +310,121 @@ process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
     // if (!light_only)
     //     process_medium_closure(sg, result, Ci, Color3(1));
     process_closure((const ClosureColor*)Ci, result);
+}
+
+
+static __device__ Color3
+eval_background(const Dual2<Vec3>& dir, int bounce = -1)
+{
+    ShaderGlobalsType sg;
+    memset((char*)&sg, 0, sizeof(ShaderGlobalsType));
+    sg.I    = V3_TO_F3(dir.val());
+    sg.dIdx = V3_TO_F3(dir.dx());
+    sg.dIdy = V3_TO_F3(dir.dy());
+    if (bounce >= 0)
+        sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
+    sg.shaderID = render_params.bg_id;
+
+    alignas(8) char closure_pool[256];
+    execute_shader(sg, closure_pool);
+    float3 ret = process_background_closure((const OSL::ClosureColor*)sg.Ci);
+    return F3_TO_C3(ret);
+}
+
+
+//
+//
+//
+
+
+extern "C" __global__ void
+__miss__()
+{
+    uint3 launch_dims  = optixGetLaunchDimensions();
+    uint3 launch_index = optixGetLaunchIndex();
+
+    float3* output_buffer = reinterpret_cast<float3*>(
+        render_params.output_buffer);
+
+    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
+    output_buffer[pixel] = make_float3(0, 0, 1);
+}
+
+
+extern "C" __global__ void
+__miss__occlusion()
+{
+    // printf("__miss__occlusion\n");
+}
+
+
+extern "C" __global__ void
+__raygen__setglobals()
+{
+    // Set global variables
+    OSL::pvt::osl_printf_buffer_start = render_params.osl_printf_buffer_start;
+    OSL::pvt::osl_printf_buffer_end   = render_params.osl_printf_buffer_end;
+    OSL::pvt::s_color_system          = render_params.color_system;
+    OSL::pvt::test_str_1              = render_params.test_str_1;
+    OSL::pvt::test_str_2              = render_params.test_str_2;
+
+    Background background;
+    background.set_variables((Vec3*)render_params.bg_values,
+                             (float*)render_params.bg_rows,
+                             (float*)render_params.bg_cols,
+                             render_params.bg_res);
+
+    // TODO: Paralellize Background::prepare()
+    auto evaler = [](const Dual2<Vec3>& dir, ShadingContext* ctx) {
+        return eval_background(dir);
+    };
+
+    background.prepare(render_params.bg_res, evaler, (OSL::ShadingContext*) nullptr);
+}
+
+
+extern "C" __global__ void
+__miss__setglobals()
+{
+}
+
+
+extern "C" __global__ void
+__raygen__()
+{
+    uint3 launch_dims  = optixGetLaunchDimensions();
+    uint3 launch_index = optixGetLaunchIndex();
+    const float3 eye   = render_params.eye;
+    const float3 dir   = render_params.dir;
+    const float3 cx    = render_params.cx;
+    const float3 cy    = render_params.cy;
+    const float invw   = render_params.invw;
+    const float invh   = render_params.invh;
+
+    // Compute the pixel coordinates
+    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
+                                 static_cast<float>(launch_index.y) + 0.5f);
+
+    // Make the ray for the current pixel
+    RayGeometry r;
+    r.origin    = eye;
+    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
+                            + dir);
+    optixTrace(render_params.traversal_handle, r.origin, r.direction, 1e-3f,
+               1e13f, 0, OptixVisibilityMask(1), OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+               0, 1, 0);
+}
+
+
+// Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
+// let's do the texture look-ups in this file.
+extern "C" __device__ float4
+osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy)
+{
+    const float2 dx = {dsdx, dtdx};
+    const float2 dy = {dsdy, dtdy};
+    cudaTextureObject_t texID = cudaTextureObject_t(handle);
+    return tex2DGrad<float4>(texID, s, t, dx, dy);
 }
 
 
@@ -340,12 +454,18 @@ __closesthit__occlusion()
 }
 
 
-static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler);
+static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Background& background);
 
 
 extern "C" __global__ void
 __raygen__deferred()
 {
+    Background background;
+    background.set_variables((Vec3*)render_params.bg_values,
+                             (float*)render_params.bg_rows,
+                             (float*)render_params.bg_cols,
+                             render_params.bg_res);
+
     Color3 result(0, 0, 0);
     const int aa = render_params.aa;
     for (int si = 0, n = aa * aa; si < n; si++) {
@@ -363,7 +483,7 @@ __raygen__deferred()
             = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
                           static_cast<float>(launch_index.y) + 0.5f + j.y);
 
-        Color3 r = subpixel_radiance(d, sampler);
+        Color3 r = subpixel_radiance(d, sampler, background);
         result   = OIIO::lerp(result, r, 1.0f / (si + 1));
     }
 
@@ -376,7 +496,7 @@ __raygen__deferred()
 }
 
 
-static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
+static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Background& background)
 {
     uint3 launch_dims  = optixGetLaunchDimensions();
     uint3 launch_index = optixGetLaunchIndex();
@@ -468,57 +588,30 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
         // Execute the shader
         //
 
-        auto execute_shader = [](OSL_CUDA::ShaderGlobals& sg, char* closure_pool) {
-            if(sg.shaderID < 0) {
-                // TODO: should probably never get here ...
-                return;
-            }
-
-            // Pack the "closure pool" into one of the ShaderGlobals pointers
-            *(int*)&closure_pool[0] = 0;
-            sg.renderstate          = &closure_pool[0];
-
-            // Create some run-time options structs. The OSL shader fills in the structs
-            // as it executes, based on the options specified in the shader source.
-            NoiseOptCUDA noiseopt;
-            TextureOptCUDA textureopt;
-            TraceOptCUDA traceopt;
-
-            // Pack the pointers to the options structs in a faux "context",
-            // which is a rough stand-in for the host ShadingContext.
-            ShadingContextCUDA shading_context = { &noiseopt, &textureopt, &traceopt };
-            sg.context = &shading_context;
-
-            // Run the OSL callable
-            void* interactive_ptr = reinterpret_cast<void**>(
-                render_params.interactive_params)[sg.shaderID];
-            const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
-            optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
-                shaderIdx,
-                &sg /*shaderglobals_ptr*/,
-                nullptr /*groupdata_ptr*/,
-                nullptr /*userdata_base_ptr*/,
-                nullptr /*output_base_ptr*/,
-                0 /*shadeindex - unused*/,
-                interactive_ptr /*interactive_params_ptr*/
-                );
-        };
-
-        // TODO: Do we need to do something different for backface hits?
-        // if (sg.backfacing)
-        //     break;
-
         ShadingResult result;
         if (sg.shaderID >= 0) {
             hit_idx  = trace_data[0];
             hit_kind = trace_data[1];
             execute_shader(sg, closure_pool);
         } else {
-            // Ray missed
+            // ray missed
+            if (render_params.bg_id >= 0) {
+                if (bounce > 0 && render_params.bg_res > 0) {
+                    float bg_pdf = 0;
+                    Vec3 bg      = background.eval(F3_TO_V3(r.direction), bg_pdf);
+                    path_radiance
+                        += path_weight * bg
+                           * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bsdf_pdf,
+                                                                      bg_pdf);
+                } else {
+                    // we aren't importance sampling the background - so just run it directly
+                    path_radiance += path_weight * eval_background(F3_TO_V3(r.direction), bounce);
+                }
+            }
             break;
         }
 
-        const float t = ((float*)trace_data)[2];
+        const float t      = ((float*)trace_data)[2];
         const float radius = ray_radius + ray_spread * t;
 
         //
@@ -583,13 +676,60 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler)
 
         // get three random numbers
         Vec3 s   = sampler.get();
-        float xi = s.x;
-        float yi = s.y;
-        float zi = s.z;
+        float xi = std::max(0.0f, std::min(1.0f, s.x));
+        float yi = std::max(0.0f, std::min(1.0f, s.y));
+        float zi = std::max(0.0f, std::min(1.0f, s.z));
 
         //
-        // TODO: Trace background ray
+        // Trace background ray
         //
+
+        // trace one ray to the background
+        if (render_params.bg_res > 0) {
+            const float3 origin = sg.P + sg.N * offset;  // offset the ray origin
+            Dual2<Vec3> bg_dir;
+            float bg_pdf   = 0;
+            Vec3 bg        = background.sample(xi, yi, bg_dir, bg_pdf);
+            BSDF::Sample b = result.bsdf.eval_gpu(-F3_TO_V3(sg.I), bg_dir.val());
+            Color3 contrib = path_weight * b.weight * bg
+                * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
+                                                           b.pdf);
+
+            if ((contrib.x + contrib.y + contrib.z) > 0) {
+                ShaderGlobalsType light_sg;
+                light_sg.shaderID = -1;
+
+                Payload payload;
+                payload.ptr.ptr = (uint64_t)&light_sg;
+
+                uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
+                    *(unsigned int*)&hit_idx,
+                    *(unsigned int*)&hit_kind };
+                light_sg.tracedata           = (void*)&trace_data[0];
+
+                const float3 dir = V3_TO_F3(bg_dir.val());
+
+                // Trace the camera ray against the scene
+                optixTrace(render_params.traversal_handle,  // handle
+                           origin,                          // origin
+                           dir,                             // direction
+                           1e-3f,                           // tmin
+                           1e13f,                           // tmax
+                           0,                               // ray time
+                           OptixVisibilityMask(1),          // visibility mask
+                           OPTIX_RAY_FLAG_DISABLE_ANYHIT,   // ray flags
+                           RAY_TYPE_RADIANCE,               // SBT offset
+                           RAY_TYPE_COUNT,                  // SBT stride
+                           RAY_TYPE_RADIANCE,               // miss SBT offset
+                           payload.ab.a,
+                           payload.ab.b);
+
+                const uint32_t prim_idx = trace_data[0];
+                if (prim_idx == UINT32_MAX) {
+                    path_radiance += contrib;
+                }
+            }
+        }
 
         //
         // Trace light rays

@@ -857,19 +857,11 @@ private:
         // with magnitudes slightly greater than 1.0, which makes subsequent operations
         // start producing NaNs. Normalizing this vector again fixes the issue, but it's
         // a pretty ugly hack...
-        {
-            const float3 tmp_swo = normalize(V3_TO_F3(swo));
-            swo = F3_TO_V3(tmp_swo);
-        }
-        // swo = swo.normalize();
+        swo = swo.normalize(); // F3_TO_V3(normalize(V3_TO_F3(swo)));
 #endif
 
         // figure out angles for the incoming vector
-#ifndef __CUDACC__
         float cos_theta = std::max(swo.z, 0.0f);
-#else
-        float cos_theta = std::min(1.0f, std::max(swo.z, 0.0f));
-#endif
         float cos_phi   = 1;
         float sin_phi   = 0;
         /* Normal incidence special case gets phi 0 */
@@ -1652,6 +1644,12 @@ CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
         break;
     }
     default: break;
+    }
+    if (sample.pdf != sample.pdf)
+    {
+        uint3 launch_index = optixGetLaunchIndex();
+        printf("eval_bsdf( %s ), PDF is NaN [%d, %d]\n",
+               id_to_string(bsdf->id), launch_index.x, launch_index.y);
     }
     return sample;
 }

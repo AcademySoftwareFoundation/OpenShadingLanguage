@@ -46,6 +46,13 @@ struct RenderParams {
     uint64_t    num_spheres;
     CUdeviceptr quads_buffer;
     CUdeviceptr spheres_buffer;
+
+    // for the background
+    int bg_res;
+    int bg_id;
+    CUdeviceptr bg_values;
+    CUdeviceptr bg_rows;
+    CUdeviceptr bg_cols;
 };
 
 

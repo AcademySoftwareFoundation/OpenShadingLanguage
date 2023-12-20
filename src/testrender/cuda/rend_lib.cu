@@ -403,7 +403,7 @@ make_float3(const float4& a)
 // optix_raytrace.cu).
 // (clang++ 9.0 error 'undefined __nv_tex_surf_handler')
 extern __device__ float4
-osl_tex2DLookup(void* handle, float s, float t);
+osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy);
 
 __device__ int
 osl_texture(void* sg_, OSL::ustringhash_pod name, void* handle, void* opt_,
@@ -415,7 +415,7 @@ osl_texture(void* sg_, OSL::ustringhash_pod name, void* handle, void* opt_,
     if (!handle)
         return 0;
     // cudaTextureObject_t texID = cudaTextureObject_t(handle);
-    float4 fromTexture = osl_tex2DLookup(handle, s, t);
+    float4 fromTexture = osl_tex2DLookup(handle, s, t, dsdx, dtdx, dsdy, dtdy);
     // see note above
     // float4 fromTexture = tex2D<float4>(texID, s, t);
     *((float3*)result) = make_float3(fromTexture.x, fromTexture.y,

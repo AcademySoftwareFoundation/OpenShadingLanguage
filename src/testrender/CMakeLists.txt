@@ -25,6 +25,7 @@ if (OSL_USE_OPTIX)
     # headers change.
     set (testrender_cuda_headers
         cuda/rend_lib.h
+        background.h
         render_params.h
         raytracer.h
         sampling.h

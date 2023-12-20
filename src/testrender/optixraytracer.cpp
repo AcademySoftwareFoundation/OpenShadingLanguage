@@ -15,6 +15,7 @@
 #include "render_params.h"
 
 #include <cuda.h>
+#include <cuda_runtime.h>
 #include <optix_function_table_definition.h>
 #include <optix_stack_size.h>
 #include <optix_stubs.h>
@@ -381,16 +382,28 @@ OptixRaytracer::create_modules(State& state)
 void
 OptixRaytracer::create_programs(State& state)
 {
-    char msg_log[8192];
-    size_t sizeof_msg_log;
+    // char msg_log[8192];
+    // size_t sizeof_msg_log;
 
     // Raygen group
-    OptixProgramGroupDesc raygen_desc    = {};
-    raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
-    raygen_desc.raygen.module            = state.program_module;
-    raygen_desc.raygen.entryFunctionName = "__raygen__deferred";
-    create_optix_pg(&raygen_desc, 1, &state.program_options, &state.raygen_group);
+    {
+        OptixProgramGroupDesc raygen_desc    = {};
+        raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+        raygen_desc.raygen.module            = state.program_module;
+        raygen_desc.raygen.entryFunctionName = "__raygen__deferred";
+        create_optix_pg(&raygen_desc, 1, &state.program_options, &state.raygen_group);
+    }
 
+#if 1
+    // Set Globals Raygen group
+    {
+        OptixProgramGroupDesc raygen_desc    = {};
+        raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+        raygen_desc.raygen.module            = state.program_module;
+        raygen_desc.raygen.entryFunctionName = "__raygen__setglobals";
+        create_optix_pg(&raygen_desc, 1, &state.program_options, &state.setglobals_raygen_group);
+    }
+#else
     // Set Globals Raygen group
     OptixProgramGroupDesc setglobals_raygen_desc = {};
     setglobals_raygen_desc.kind          = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
@@ -405,6 +418,7 @@ OptixRaytracer::create_programs(State& state)
                                 msg_log, &sizeof_msg_log,
                                 &state.setglobals_raygen_group),
         fmtformat("Creating set-globals 'ray-gen' program group: {}", msg_log));
+#endif
 
     // Miss group
     {
@@ -855,6 +869,10 @@ OptixRaytracer::create_sbt(State& state)
         m_optix_sbt.callablesRecordBase          = d_callable_records;
         m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
         m_optix_sbt.callablesRecordCount         = ncallables + nshaders;
+
+        m_setglobals_optix_sbt.callablesRecordBase          = d_callable_records;
+        m_setglobals_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
+        m_setglobals_optix_sbt.callablesRecordCount         = ncallables + nshaders;
     }
 
     // SetGlobals raygen
@@ -1103,11 +1121,29 @@ OptixRaytracer::build_accel()
 
 
 
+void
+OptixRaytracer::prepare_background()
+{
+    if (getBackgroundShaderID() >= 0) {
+        const int bg_res = getBackgroundResolution();
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_values), 3 * sizeof(float) * bg_res * bg_res));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_rows), sizeof(float) * bg_res));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_cols), sizeof(float) * bg_res * bg_res));
+
+        device_ptrs.push_back(reinterpret_cast<void*>(d_bg_values));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_bg_rows));
+        device_ptrs.push_back(reinterpret_cast<void*>(d_bg_cols));
+    }
+}
+
+
+
 bool
 OptixRaytracer::finalize_scene()
 {
     build_accel();
     make_optix_materials();
+    prepare_background();
     return true;
 }
 
@@ -1133,50 +1169,80 @@ OptixRaytracer::get_texture_handle(ustring filename,
 {
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
-        // Open image
-        OIIO::ImageBuf image;
-        if (!image.init_spec(filename, 0, 0)) {
-            errhandler().errorfmt("Could not load: {} (hash {})", filename,
-                                  filename);
-            return (TextureHandle*)nullptr;
-        }
-
-        OIIO::ROI roi = OIIO::get_roi_full(image.spec());
-        int32_t width = roi.width(), height = roi.height();
-        std::vector<float> pixels(width * height * 4);
-
-        for (int j = 0; j < height; j++) {
-            for (int i = 0; i < width; i++) {
-                image.getpixel(i, j, 0, &pixels[((j * width) + i) * 4 + 0]);
+        // Open image to check the number of mip levels
+        int32_t nmiplevels = -1;
+        int32_t img_width  = -1;
+        int32_t img_height = -1;
+        {
+            OIIO::ImageBuf image;
+            if (!image.init_spec(filename, 0, 0)) {
+                errhandler().errorfmt("Could not load: {} (hash {})", filename,
+                                      filename);
+                return (TextureHandle*)nullptr;
             }
+            nmiplevels = image.nmiplevels();
+            img_width  = image.xmax() + 1;
+            img_height = image.ymax() + 1;
         }
-        cudaResourceDesc res_desc = {};
 
         // hard-code textures to 4 channels
-        int32_t pitch = width * 4 * sizeof(float);
         cudaChannelFormatDesc channel_desc
             = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
 
+        cudaMipmappedArray_t mipmapArray;
+        cudaExtent extent = make_cudaExtent(img_width, img_height, 0);
+        CUDA_CHECK(cudaMallocMipmappedArray(&mipmapArray, &channel_desc, extent, nmiplevels));
+
+        std::vector<std::vector<float>> level_pixels(nmiplevels);
+
+        // Copy the pixel data for each mip level
+        for (int32_t level = 0; level < nmiplevels; ++level) {
+            OIIO::ImageBuf image;
+            if (!image.init_spec(filename, 0, level)) {
+                errhandler().errorfmt("Could not load: {} (hash {})", filename,
+                                      filename);
+                return (TextureHandle*)nullptr;
+            }
+
+            OIIO::ROI roi = OIIO::get_roi_full(image.spec());
+            int32_t width = roi.width(), height = roi.height();
+            level_pixels[level].resize(width * height * 4);
+            for (int j = 0; j < height; j++) {
+                for (int i = 0; i < width; i++) {
+                    image.getpixel(i, j, 0, &level_pixels[level][((j * width) + i) * 4 + 0]);
+                }
+            }
+
+            cudaArray_t miplevelArray;
+            CUDA_CHECK(cudaGetMipmappedArrayLevel(&miplevelArray, mipmapArray, level));
+
+            // Copy the texel data into the miplevel array
+            int32_t pitch = width * 4 * sizeof(float);
+            CUDA_CHECK(cudaMemcpy2DToArray(miplevelArray, 0, 0, level_pixels[level].data(),
+                                           pitch, pitch, height, cudaMemcpyHostToDevice));
+        }
+
         // TODO: Free this memory
+        int32_t pitch = img_width * 4 * sizeof(float);
         cudaArray_t pixelArray;
-        CUDA_CHECK(cudaMallocArray(&pixelArray, &channel_desc, width, height));
-        CUDA_CHECK(cudaMemcpy2DToArray(pixelArray, 0, 0, pixels.data(), pitch,
-                                       pitch, height, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMallocArray(&pixelArray, &channel_desc, img_width, img_height));
+        CUDA_CHECK(cudaMemcpy2DToArray(pixelArray, 0, 0, level_pixels[0].data(), pitch,
+                                       pitch, img_height, cudaMemcpyHostToDevice));
 
-        res_desc.resType         = cudaResourceTypeArray;
-        res_desc.res.array.array = pixelArray;
+        cudaResourceDesc res_desc  = {};
+        res_desc.resType           = cudaResourceTypeMipmappedArray;
+        res_desc.res.mipmap.mipmap = mipmapArray;
 
-        cudaTextureDesc tex_desc = {};
-        tex_desc.addressMode[0]  = cudaAddressModeWrap;
-        tex_desc.addressMode[1]  = cudaAddressModeWrap;
-        tex_desc.filterMode      = cudaFilterModeLinear;
-        tex_desc.readMode
-            = cudaReadModeElementType;  //cudaReadModeNormalizedFloat;
+        cudaTextureDesc tex_desc     = {};
+        tex_desc.addressMode[0]      = cudaAddressModeWrap;
+        tex_desc.addressMode[1]      = cudaAddressModeWrap;
+        tex_desc.filterMode          = cudaFilterModeLinear;
+        tex_desc.readMode            = cudaReadModeElementType;
         tex_desc.normalizedCoords    = 1;
         tex_desc.maxAnisotropy       = 1;
-        tex_desc.maxMipmapLevelClamp = 99;
+        tex_desc.maxMipmapLevelClamp = float(nmiplevels - 1);
         tex_desc.minMipmapLevelClamp = 0;
-        tex_desc.mipmapFilterMode    = cudaFilterModePoint;
+        tex_desc.mipmapFilterMode    = cudaFilterModeLinear;
         tex_desc.borderColor[0]      = 1.0f;
         tex_desc.sRGB                = 0;
 
@@ -1264,6 +1330,13 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.quads_buffer          = d_quads_list;
     params.num_spheres           = scene.spheres.size();
     params.spheres_buffer        = d_spheres_list;
+
+    // For the background shader
+    params.bg_res    = getBackgroundResolution();
+    params.bg_id     = getBackgroundShaderID();
+    params.bg_values = d_bg_values;
+    params.bg_rows   = d_bg_rows;
+    params.bg_cols   = d_bg_cols;
 
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_launch_params), &params,
                           sizeof(RenderParams), cudaMemcpyHostToDevice));

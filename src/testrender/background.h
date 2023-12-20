@@ -10,17 +10,49 @@
 
 OSL_NAMESPACE_ENTER
 
+#ifdef __CUDACC__
+// std::upper_bound is not supported in device code, so define a version of it here.
+// Adapted from /usr/local/cuda-12.3/targets/x86_64-linux/include/cuda/std/detail/libcxx/include/algorithm
+inline OSL_HOSTDEVICE const float*
+upper_bound_cuda(const float* data, int count, const float value)
+{
+    const float* __first = data;
+    const float __value_ = value;
+    int __len            = count;
+    while (__len != 0) {
+        int __l2         = __len / 2;
+        const float* __m = __first;
+        __m += __l2; // TODO: This is possibly unsafe, should be something like std::advance
+        if (__value_ < *__m)
+            __len = __l2;
+        else {
+            __first = ++__m;
+            __len -= __l2 + 1;
+        }
+    }
+    return __first;
+}
+#endif
+
 struct Background {
+    OSL_HOSTDEVICE
     Background() : values(0), rows(0), cols(0) {}
+
+    OSL_HOSTDEVICE
     ~Background()
     {
+#ifndef __CUDACC__
         delete[] values;
         delete[] rows;
         delete[] cols;
+#endif
     }
 
-    template<typename F, typename T> void prepare(int resolution, F cb, T* data)
+    template<typename F, typename T> OSL_HOSTDEVICE
+    void prepare(int resolution, F cb, T* data)
     {
+#ifndef __CUDACC__
+        // These values are set via set_variables() in CUDA
         res = resolution;
         if (res < 32)
             res = 32;  // validate
@@ -29,6 +61,7 @@ struct Background {
         values      = new Vec3[res * res];
         rows        = new float[res];
         cols        = new float[res * res];
+#endif
         for (int y = 0, i = 0; y < res; y++) {
             for (int x = 0; x < res; x++, i++) {
                 values[i] = cb(map(x + 0.5f, y + 0.5f), data);
@@ -65,6 +98,7 @@ struct Background {
 #endif
     }
 
+    OSL_HOSTDEVICE
     Vec3 eval(const Vec3& dir, float& pdf) const
     {
         // map from sphere to unit-square
@@ -90,6 +124,7 @@ struct Background {
         return values[i];
     }
 
+    OSL_HOSTDEVICE
     Vec3 sample(float rx, float ry, Dual2<Vec3>& dir, float& pdf) const
     {
         float row_pdf, col_pdf;
@@ -101,8 +136,23 @@ struct Background {
         return values[y * res + x];
     }
 
+#ifdef __CUDACC__
+    OSL_HOSTDEVICE
+    void set_variables(Vec3* values_in, float* rows_in, float* cols_in,
+                       int res_in)
+    {
+        values      = values_in;
+        rows        = rows_in;
+        cols        = cols_in;
+        res         = res_in;
+        invres      = 1.0f / res;
+        invjacobian = res * res / float(4 * M_PI);
+        assert(res >= 32);
+    }
+#endif
+
 private:
-    Dual2<Vec3> map(float x, float y) const
+    OSL_HOSTDEVICE Dual2<Vec3> map(float x, float y) const
     {
         // pixel coordinates of entry (x,y)
         Dual2<float> u     = Dual2<float>(x, 1, 0) * invres;
@@ -115,14 +165,17 @@ private:
         return make_Vec3(sin_phi * ct, sin_phi * st, cos_phi);
     }
 
+
+#ifndef __CUDACC__
     static float sample_cdf(const float* data, unsigned int n, float x,
                             unsigned int* idx, float* pdf)
     {
-        OSL_DASSERT(x >= 0);
-        OSL_DASSERT(x < 1);
+        OSL_DASSERT(x >= 0.0f);
+        OSL_DASSERT(x < 1.0f);
         *idx = std::upper_bound(data, data + n, x) - data;
         OSL_DASSERT(*idx < n);
         OSL_DASSERT(x < data[*idx]);
+
         float scaled_sample;
         if (*idx == 0) {
             *pdf          = data[0];
@@ -136,13 +189,41 @@ private:
         // keep result in [0,1)
         return std::min(scaled_sample, 0.99999994f);
     }
+#else
+    static OSL_HOSTDEVICE float sample_cdf(const float* data, unsigned int n,
+                                           float x, unsigned int* idx,
+                                           float* pdf)
+    {
+        assert(x >= 0.0f);
+        assert(x < 1.0f);
+        *idx = upper_bound_cuda(data, n, x) - data;
+        // TODO: Figure out why these asserts are failing
+        if (*idx >= n)
+            *idx = std::max<unsigned int>(0, n-1);
+        // assert(*idx < n);
+        // assert(x < data[*idx]);
 
-    Vec3* values;  // actual map
-    float* rows;   // probability of choosing a given row 'y'
-    float* cols;  // probability of choosing a given column 'x', given that we've chosen row 'y'
-    int res;       // resolution in pixels of the precomputed table
-    float invres;  // 1 / resolution
-    float invjacobian;
+        float scaled_sample;
+        if (*idx == 0) {
+            *pdf          = data[0];
+            scaled_sample = x / data[0];
+        } else {
+            assert(x >= data[*idx - 1]);
+            *pdf          = data[*idx] - data[*idx - 1];
+            scaled_sample = (x - data[*idx - 1])
+                / (data[*idx] - data[*idx - 1]);
+        }
+        // keep result in [0,1)
+        return std::min(scaled_sample, 0.99999994f);
+    }
+#endif
+
+    Vec3* values = nullptr;    // actual map
+    float* rows  = nullptr;    // probability of choosing a given row 'y'
+    float* cols  = nullptr;    // probability of choosing a given column 'x', given that we've chosen row 'y'
+    int res      = -1;         // resolution in pixels of the precomputed table
+    float invres = 0.0f;       // 1 / resolution
+    float invjacobian = 0.0f;
 };
 
 OSL_NAMESPACE_EXIT

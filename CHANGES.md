@@ -1,6 +1,45 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14 -- in progress (compared to 1.13)
+-------------------------------------------------------------
+### New minimum dependencies and compatibility changes:
+
+* Note: it is likely that by the time it is released, OSL 1.14 will require
+  Imath >= 3.1.
+
+
+### OSL Language and oslc compiler (for shader writers):
+
+
+### ⛰️  API changes and new ShadingSystem features (for renderer writers):
+
+
+### 🚀  SIMD batched shading mode
+
+
+### 🚀  OptiX GPU rendering
+
+
+### 🐛/🔧  Internals: fixes, improvements, and developer concerns
+
+
+### 🏗  Build/test/CI and platform ports
+
+* CMake build system and scripts:
+* Dependency version support:
+* Testing and Continuous integration (CI) systems:
+* Platform support:
+
+### 📚  Documentation
+
+
+### 🏢  Project Administration
+
+
+
+
+
 Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
 -------------------------------------------------------------
 

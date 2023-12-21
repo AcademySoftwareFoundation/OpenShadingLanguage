@@ -884,7 +884,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_projection(ustringhash /*object*/,
                                                      ustringhash /*name*/,
                                                      RefOrMaskedT data)
 {
-    return assign_and_zero_derivs(data, m_sr.m_projection);
+    return assign_and_zero_derivs(data, OSL::ustring_from(m_sr.m_projection));
 }
 
 

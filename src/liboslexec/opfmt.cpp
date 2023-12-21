@@ -32,9 +32,15 @@ namespace pvt {
 // and forward on calls to re free functions.
 
 OSL_RSOP OSL::ustringhash_pod
-osl_gen_ustringhash_pod(const char* s)
+osl_gen_ustringhash_pod(ustring_pod s)
 {
     return USTR(s).hash();
+}
+
+OSL_RSOP const char*
+osl_gen_ustring(OSL::ustringhash_pod hash)
+{
+    return ustring_from(hash).c_str();
 }
 
 OSL_RSOP void
@@ -75,12 +81,9 @@ osl_gen_printfmt(OpaqueExecContextPtr exec_ctx,
     OSL::ustringhash rs_fmt_specification = OSL::ustringhash_from(
         fmt_specification);
     auto encoded_types = reinterpret_cast<const EncodedType*>(arg_types);
-    //auto argValues2 = reinterpret_cast<uint8_t *> (arg_values);
-
 
     rs_printfmt(exec_ctx, rs_fmt_specification, arg_count, encoded_types,
-                arg_values_size,
-                arg_values);  //not argValues2
+                arg_values_size, arg_values);
 }
 
 

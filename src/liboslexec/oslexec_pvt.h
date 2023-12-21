@@ -22,7 +22,7 @@
 #endif
 
 #ifdef __CUDACC__
-#    include "string_hash.h"
+#    include <OSL/hashes.h>
 #endif
 
 #include <OpenImageIO/color.h>
@@ -94,7 +94,7 @@ struct ConnectedParam;
 
 OSL_DLL_EXPORT void
 print_closure(std::ostream& out, const ClosureColor* closure,
-              ShadingSystemImpl* ss);
+              ShadingSystemImpl* ss, bool treat_ustrings_as_hash);
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
@@ -249,24 +249,12 @@ struct AttributeNeeded {
 
 
 // Handy re-casting macros
-inline ustringrep
+inline ustring
 USTR(ustring_pod s) noexcept
 {
-    return OSL::bitcast<ustringrep>(s);
-}
-inline ustringrep
-USTREP(ustring_pod s) noexcept
-{
-    return OSL::bitcast<ustringrep>(s);
-    // return *((ustringrep*)&s);
+    return OSL::bitcast<ustring>(s);
 }
 
-// Get rid of this one soon!
-inline ustringrep
-USTR(const void* s) noexcept
-{
-    return OSL::bitcast<ustringrep>(s);
-}
 
 #define MAT(m)      (*(Matrix44*)m)
 #define VEC(v)      (*(Vec3*)v)
@@ -685,7 +673,7 @@ public:
     bool allow_shader_replacement() const { return m_allow_shader_replacement; }
     ustring commonspace_synonym() const
     {
-        return m_shading_state_uniform.m_commonspace_synonym;
+        return ustring_from(m_shading_state_uniform.m_commonspace_synonym);
     }
 
     bool llvm_jit_fma() const { return m_llvm_jit_fma; }
@@ -745,8 +733,6 @@ public:
         return m_optix_force_inline_thresh;
     }
 
-    /// Set the current color space.
-    bool set_colorspace(ustring colorspace);
 
     OSLEXECPUBLIC int raytype_bit(ustring name);
 
@@ -1445,16 +1431,18 @@ public:
     /// symbols?
     bool empty_instance() const
     {
-        return (symbols().size() == 0
-                && (ops().size() == 0 ||
+        return (
+            symbols().size() == 0
+            && (ops().size() == 0 ||
 #ifdef __CUDA_ARCH__
-                    (ops().size() == 1
-                     && UStringHash::Hash(ops()[0].opname().c_str())
-                            == STRING_PARAMS(end))
+                // TODO: is this ever run on a device, why special case it?
+                (ops().size() == 1
+                 && ustringhash_from(OSL::strhash(ops()[0].opname().c_str()))
+                        == Hashes::end)
 #else
-                    (ops().size() == 1 && ops()[0].opname() == Strings::end)
+                (ops().size() == 1 && ops()[0].opname() == Strings::end)
 #endif
-                        ));
+                    ));
     }
 
     /// Make our own version of the code and args from the master.
@@ -2369,7 +2357,8 @@ public:
     int dict_next(int nodeID);
     /// Look up an attribute of the given dictionary node.  If
     /// attribname is "", return the value of the node itself.
-    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data);
+    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data,
+                   bool treat_ustrings_as_hash);
 
     bool osl_get_attribute(ShaderGlobals* sg, void* objdata, int dest_derivs,
                            ustringhash obj_name, ustringhash attr_name,
@@ -2420,8 +2409,8 @@ public:
     }
 
     template<typename Color>
-    bool ocio_transform(StringParam fromspace, StringParam tospace,
-                        const Color& C, Color& Cout);
+    bool ocio_transform(ustring fromspace, ustring tospace, const Color& C,
+                        Color& Cout);
 
     void incr_layers_executed()
     {
@@ -2588,22 +2577,22 @@ private:
 };
 
 
-
-OSL_HOSTDEVICE
+#ifndef __CUDACC__
 inline int
-tex_interp_to_code(StringParam modename)
+tex_interp_to_code(ustring modename)
 {
     int mode = -1;
-    if (modename == STRING_PARAMS(smartcubic))
+    if (modename == Strings::smartcubic)
         mode = TextureOpt::InterpSmartBicubic;
-    else if (modename == STRING_PARAMS(linear))
+    else if (modename == Strings::linear)
         mode = TextureOpt::InterpBilinear;
-    else if (modename == STRING_PARAMS(cubic))
+    else if (modename == Strings::cubic)
         mode = TextureOpt::InterpBicubic;
-    else if (modename == STRING_PARAMS(closest))
+    else if (modename == Strings::closest)
         mode = TextureOpt::InterpClosest;
     return mode;
 }
+#endif
 
 
 

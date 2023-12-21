@@ -2182,6 +2182,15 @@ template<> struct WideTraits<ustring> {
     }
 };
 
+template<> struct WideTraits<ustringhash> {
+    static bool matches(const TypeDesc& type_desc)
+    {
+        // NOTE: using bitwise & to avoid branches
+        return (type_desc.basetype == TypeDesc::STRING)
+               & (type_desc.aggregate == TypeDesc::SCALAR);
+    }
+};
+
 // We let Vec3 match any vector semantics as we don't have a separate Point or Normal classes
 template<> struct WideTraits<Vec3> {
     static bool matches(const TypeDesc& type_desc)

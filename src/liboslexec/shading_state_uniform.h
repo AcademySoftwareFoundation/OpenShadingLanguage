@@ -18,9 +18,9 @@ namespace pvt {
 
 
 struct ShadingStateUniform {
-    ColorSystem m_colorsystem;      ///< Data for current colorspace
-    ustring m_commonspace_synonym;  ///< Synonym for "common" space
-    bool m_unknown_coordsys_error;  ///< Error to use unknown xform name?
+    ColorSystem m_colorsystem;          ///< Data for current colorspace
+    ustringhash m_commonspace_synonym;  ///< Synonym for "common" space
+    bool m_unknown_coordsys_error;      ///< Error to use unknown xform name?
     int m_max_warnings_per_thread;  ///< How many warnings to display per thread before giving up?
 };
 
@@ -32,7 +32,7 @@ get_unknown_coordsys_error(const OpaqueExecContextPtr oec)
     return ssu->m_unknown_coordsys_error;
 }
 
-inline ustring
+inline ustringhash
 get_commonspace_synonym(const OpaqueExecContextPtr oec)
 {
     auto ec                  = pvt::get_ec(oec);

@@ -253,14 +253,14 @@ osl_add_closure_closure(void* sg_, void* a, void* b)
 
 
 __device__ bool
-rend_get_userdata(OSL::StringParam name, void* data, int data_size,
+rend_get_userdata(OSL::ustringhash name, void* data, int data_size,
                   const OSL::TypeDesc& type, int index)
 {
     // Perform a userdata lookup using the parameter name, type, and
     // userdata index. If there is a match, memcpy the value into data and
     // return 1.
 
-    if (IS_PTR(type) && name.hash() == STRING_PARAMS(colorsystem)) {
+    if (IS_PTR(type) && name == OSL::Hashes::colorsystem) {
         *(void**)data = *reinterpret_cast<void**>(&OSL::pvt::s_color_system);
         return true;
     }
@@ -279,17 +279,17 @@ rend_get_userdata(OSL::StringParam name, void* data, int data_size,
 
 
 __device__ int
-osl_bind_interpolated_param(void* sg_, const char* name, long long type,
-                            int userdata_has_derivs, void* userdata_data,
-                            int symbol_has_derivs, void* symbol_data,
-                            int symbol_data_size, char* userdata_initialized,
-                            int userdata_index)
+osl_bind_interpolated_param(void* sg_, OSL::ustringhash_pod name_,
+                            long long type, int userdata_has_derivs,
+                            void* userdata_data, int symbol_has_derivs,
+                            void* symbol_data, int symbol_data_size,
+                            char* userdata_initialized, int userdata_index)
 {
     char status = *userdata_initialized;
     if (status == 0) {
-        bool ok               = rend_get_userdata(HDSTR(name), userdata_data,
-                                                  symbol_data_size, (*(OSL::TypeDesc*)&type),
-                                                  userdata_index);
+        OSL::ustringhash name = OSL::ustringhash_from(name_);
+        bool ok = rend_get_userdata(name, userdata_data, symbol_data_size,
+                                    (*(OSL::TypeDesc*)&type), userdata_index);
         *userdata_initialized = status = 1 + ok;
     }
     if (status == 2) {
@@ -302,7 +302,7 @@ osl_bind_interpolated_param(void* sg_, const char* name, long long type,
 
 
 __device__ int
-osl_strlen_is(const char* str)
+osl_strlen_is(OSL::ustringhash_pod str)
 {
     //return HDSTR(str).length();
     return 0;
@@ -310,14 +310,14 @@ osl_strlen_is(const char* str)
 
 
 __device__ int
-osl_hash_is(const char* str)
+osl_hash_is(OSL::ustringhash_pod str)
 {
-    return HDSTR(str);
+    return static_cast<int>(str);
 }
 
 
 __device__ int
-osl_getchar_isi(const char* str, int index)
+osl_getchar_isi(OSL::ustringhash_pod str, int index)
 {
     //        return (str && unsigned(index) < HDSTR(str).length())
     //            ? str[index] : 0;
@@ -330,10 +330,9 @@ osl_getchar_isi(const char* str, int index)
 // all the arguments to our print buffer.
 // Note:  the first element of 'args' is the size of the argument list
 __device__ void
-osl_printf(void* sg_, char* fmt_str, void* args)
+osl_printf(void* sg_, OSL::ustringhash_pod fmt_str_hash, void* args)
 {
-    uint64_t fmt_str_hash = HDSTR(fmt_str).hash();
-    uint64_t args_size    = reinterpret_cast<uint64_t*>(args)[0];
+    uint64_t args_size = reinterpret_cast<uint64_t*>(args)[0];
 
     // This can be used to limit printing to one Cuda thread for debugging
     // if (launch_index.x == 0 && launch_index.y == 0)
@@ -407,10 +406,11 @@ extern __device__ float4
 osl_tex2DLookup(void* handle, float s, float t);
 
 __device__ int
-osl_texture(void* sg_, const char* name, void* handle, void* opt_, float s,
-            float t, float dsdx, float dtdx, float dsdy, float dtdy, int chans,
-            void* result, void* dresultdx, void* dresultdy, void* alpha,
-            void* dalphadx, void* dalphady, void* ustring_errormessage)
+osl_texture(void* sg_, OSL::ustringhash_pod name, void* handle, void* opt_,
+            float s, float t, float dsdx, float dtdx, float dsdy, float dtdy,
+            int chans, void* result, void* dresultdx, void* dresultdy,
+            void* alpha, void* dalphadx, void* dalphady,
+            void* ustringhash_errormessage)
 {
     if (!handle)
         return 0;
@@ -442,19 +442,20 @@ osl_range_check_err(int indexvalue, int length, OSL::ustringhash_pod symname,
 #define MAT(m) (*(OSL::Matrix44*)__builtin_assume_aligned(m, alignof(float)))
 
 __device__ int
-osl_get_matrix(void* sg_, void* r, const char* from)
+osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 {
-    r                 = __builtin_assume_aligned(r, alignof(float));
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    if (HDSTR(from) == STRING_PARAMS(common)) {
+    r                     = __builtin_assume_aligned(r, alignof(float));
+    OSL::ustringhash from = OSL::ustringhash_from(from_);
+    ShaderGlobals* sg     = (ShaderGlobals*)sg_;
+    if (from == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;
     }
-    if (HDSTR(from) == STRING_PARAMS(object)) {
+    if (from == OSL::Hashes::object) {
         MAT(r) = MAT(sg->object2common);
         return true;
     }
-    if (HDSTR(from) == STRING_PARAMS(shader)) {
+    if (from == OSL::Hashes::shader) {
         MAT(r) = MAT(sg->shader2common);
         return true;
     }
@@ -462,8 +463,7 @@ osl_get_matrix(void* sg_, void* r, const char* from)
     // Find the index of the named transform in the transform list
     int match_idx = -1;
     for (size_t idx = 0; idx < OSL::pvt::num_named_xforms; ++idx) {
-        if (HDSTR(from)
-            == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
+        if (from == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
             match_idx = static_cast<int>(idx);
             break;
         }
@@ -487,20 +487,21 @@ osl_get_matrix(void* sg_, void* r, const char* from)
 
 
 __device__ int
-osl_get_inverse_matrix(void* sg_, void* r, const char* to)
+osl_get_inverse_matrix(void* sg_, void* r, OSL::ustringhash_pod to_)
 {
-    r                 = __builtin_assume_aligned(r, alignof(float));
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    if (HDSTR(to) == STRING_PARAMS(common)) {
+    r                   = __builtin_assume_aligned(r, alignof(float));
+    OSL::ustringhash to = OSL::ustringhash_from(to_);
+    ShaderGlobals* sg   = (ShaderGlobals*)sg_;
+    if (to == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;
     }
-    if (HDSTR(to) == STRING_PARAMS(object)) {
+    if (to == OSL::Hashes::object) {
         MAT(r) = MAT(sg->object2common);
         MAT(r).invert();
         return true;
     }
-    if (HDSTR(to) == STRING_PARAMS(shader)) {
+    if (to == OSL::Hashes::shader) {
         MAT(r) = MAT(sg->shader2common);
         MAT(r).invert();
         return true;
@@ -509,7 +510,7 @@ osl_get_inverse_matrix(void* sg_, void* r, const char* to)
     // Find the index of the named transform in the transform list
     int match_idx = -1;
     for (size_t idx = 0; idx < OSL::pvt::num_named_xforms; ++idx) {
-        if (HDSTR(to) == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
+        if (to == HDSTR(((uint64_t*)OSL::pvt::xform_name_buffer)[idx])) {
             match_idx = static_cast<int>(idx);
             break;
         }

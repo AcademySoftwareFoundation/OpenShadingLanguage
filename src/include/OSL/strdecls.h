@@ -146,3 +146,4 @@ STRDECL("arraylength", arraylength)
 STRDECL("unknown", unknown)
 STRDECL("ERROR: Unknown color space transformation \"%s\" -> \"%s\"\n",
         ErrorColorTransform)
+STRDECL("world", world)

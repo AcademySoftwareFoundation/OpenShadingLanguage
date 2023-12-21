@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-
+#include <OSL/hashes.h>
 #include <optix.h>
 
 #include <cuda_runtime.h>
 #include <optix.h>
 
-#include <OSL/device_string.h>
 #include <OSL/oslclosure.h>
 
 #include "rend_lib.h"
@@ -129,9 +128,9 @@ process_closure(const OSL::ClosureColor* closure_tree)
 
         case MICROFACET_ID: {
             const char* mem = (const char*)((OSL::ClosureComponent*)cur)->data();
-            const char* dist_str = *(const char**)&mem[0];
+            OSL::ustringhash dist_uh = *(OSL::ustringhash*)&mem[0];
 
-            if (HDSTR(dist_str) == STRING_PARAMS(default))
+            if (dist_uh == OSL::Hashes::default_)
                 return make_float3(0.0f, 1.0f, 1.0f);
             else
                 return make_float3(1.0f, 0.0f, 1.0f);

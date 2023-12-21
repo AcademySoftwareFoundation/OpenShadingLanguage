@@ -226,6 +226,10 @@ OptixGridRenderer::synch_attributes()
     {
         char* colorSys            = nullptr;
         long long cpuDataSizes[2] = { 0, 0 };
+        // TODO: utilize opaque shading state uniform data structure
+        // which has a device friendly representation this data
+        // and is already accessed directly by opcolor and opmatrix for
+        // the cpu (just remove optix special casing)
         if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR,
                                       (void*)&colorSys)
             || !shadingsys->getattribute("colorsystem:sizes",
@@ -241,7 +245,7 @@ OptixGridRenderer::synch_attributes()
 
         // Get the size data-size, minus the ustring size
         const size_t podDataSize = cpuDataSize
-                                   - sizeof(StringParam) * numStrings;
+                                   - sizeof(ustringhash) * numStrings;
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_color_system),
                               podDataSize + sizeof(uint64_t) * numStrings));
@@ -269,18 +273,17 @@ OptixGridRenderer::synch_attributes()
 
         // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
         // FIXME -- Should probably handle alignment better.
-        const ustring* cpuString
-            = (const ustring*)(colorSys
-                               + (cpuDataSize
-                                  - sizeof(StringParam) * numStrings));
+        const ustringhash* cpuStringHash
+            = (const ustringhash*)(colorSys
+                                   + (cpuDataSize
+                                      - sizeof(ustringhash) * numStrings));
         CUdeviceptr gpuStrings = d_color_system + podDataSize;
-        for (const ustring* end = cpuString + numStrings; cpuString < end;
-             ++cpuString) {
-            // convert the ustring to a device string
-            uint64_t devStr = cpuString->hash();
+        for (const ustringhash* end = cpuStringHash + numStrings;
+             cpuStringHash < end; ++cpuStringHash) {
+            ustringhash_pod devStr = cpuStringHash->hash();
             CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
                                   sizeof(devStr), cudaMemcpyHostToDevice));
-            gpuStrings += sizeof(DeviceString);
+            gpuStrings += sizeof(ustringhash_pod);
         }
     }
     return true;
@@ -916,8 +919,8 @@ OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     m_yres = yres;
 
     RenderParams params;
-    params.invw  = 1.0f / m_xres;
-    params.invh  = 1.0f / m_yres;
+    params.invw  = 1.0f / std::max(1, m_xres - 1);
+    params.invh  = 1.0f / std::max(1, m_yres - 1);
     params.flipv = false; /* I don't see flipv being initialized anywhere */
     params.output_buffer           = d_output_buffer;
     params.osl_printf_buffer_start = d_osl_printf_buffer;

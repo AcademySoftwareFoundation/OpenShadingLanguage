@@ -1767,6 +1767,14 @@ BatchedBackendLLVM::llvm_call_function(const FuncSpec& name,
             valargs[i] = llvm_load_value(s, /*deriv*/ 0, /*component*/ 0,
                                          TypeDesc::UNKNOWN,
                                          function_is_uniform);
+            if (function_is_uniform && t.simpletype() == TypeDesc::STRING) {
+                // We are going to be calling a function from the scalar version
+                // of the OSL library.  The scalar version has
+                // changed to use ustringhash_pod, but the wide version hasn't yet
+                // So we will need to extract the hash from the ustring here.
+                valargs[i] = ll.call_function("osl_gen_ustringhash_pod",
+                                              valargs[i]);
+            }
         }
     }
 

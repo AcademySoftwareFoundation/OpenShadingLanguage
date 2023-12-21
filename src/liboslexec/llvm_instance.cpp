@@ -483,6 +483,54 @@ BackendLLVM::build_offsets_of_ShaderGlobals(
     offset_by_index.push_back(offsetof(ShaderGlobals, backfacing));
 }
 void
+BackendLLVM::llvm_create_constant(const Symbol& sym)
+{
+    OSL_ASSERT((sym.symtype() == SymTypeConst));
+
+    TypeDesc t               = sym.typespec().simpletype();
+    const int num_components = t.aggregate;
+
+    // Initialize entire array
+    const int num_elements = t.numelements();
+
+    const int array_len = num_elements * num_components;
+    std::vector<llvm::Constant*> elements;
+    elements.reserve(array_len);
+    for (int a = 0; a < num_elements; ++a) {
+        for (int i = 0; i < num_components; ++i) {
+            int linear_index              = num_components * a + i;
+            llvm::Constant* const_element = nullptr;
+            if (sym.typespec().is_float_based()) {
+                const_element = ll.constant(sym.get_float(linear_index));
+            }
+            if (sym.typespec().is_int_based()) {
+                const_element = ll.constant(sym.get_int(linear_index));
+            }
+            if (sym.typespec().is_string_based()) {
+                // TODO:  right now stored as char *, but change to int64 when we can
+                const_element = reinterpret_cast<llvm::Constant*>(
+                    ll.constant_ptr(
+                        OSL::bitcast<char*>(
+                            ustring(sym.get_string(linear_index)).hash()),
+                        ll.type_char_ptr()));
+            }
+            OSL_ASSERT(const_element && "unhandled type");
+            elements.push_back(const_element);
+        }
+    }
+
+    // NOTE: even if type is not an array, it could be aggregate 3 or 16
+    // we always just linearize it all for constants.
+    auto const_array           = ll.constant_array(elements);
+    std::string unique_symname = global_unique_symname(sym);
+
+    auto global_var = ll.create_global_constant(const_array, unique_symname);
+
+    // TODO: consider changing m_const_map to unordered_map
+    m_const_map[unique_symname] = global_var;
+}
+
+void
 BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
 {
     // Don't write over connections!  Connection values are written into
@@ -519,7 +567,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
         else if (sym.typespec().is_int_based())
             u = ll.constant(std::numeric_limits<int>::min());
         else if (sym.typespec().is_string_based())
-            u = llvm_load_string(Strings::uninitialized_string);
+            u = llvm_const_hash(Strings::uninitialized_string);
         if (u) {
             for (int a = 0; a < alen; ++a) {
                 llvm::Value* aval = isarray ? ll.constant(a) : NULL;
@@ -594,7 +642,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             // No pre-placement: fall back to call to the renderer callback.
             llvm::Value* args[] = {
                 sg_void_ptr(),
-                llvm_load_string(symname),
+                llvm_const_hash(symname),
                 ll.constant(type),
                 ll.constant((int)group().m_userdata_derivs[userdata_index]),
                 groupdata_field_ptr(2 + userdata_index),  // userdata data ptr
@@ -614,12 +662,12 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                                     llvm_void_ptr(sym),
                                     ll.constant((int)sym.has_derivs()),
                                     sg_void_ptr(),
-                                    llvm_load_stringhash(inst()->shadername()),
+                                    llvm_const_hash(inst()->shadername()),
                                     ll.constant(0),
-                                    llvm_load_stringhash(sym.unmangled()),
+                                    llvm_const_hash(sym.unmangled()),
                                     ll.constant(0),
                                     ll.constant(ncomps),
-                                    llvm_load_stringhash("<get_userdata>") };
+                                    llvm_const_hash("<get_userdata>") };
             ll.call_function("osl_naninf_check", args);
         }
         // userdata pre-placement always succeeds, we don't need to bother
@@ -642,28 +690,20 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
         if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
             // Handle init ops.
             build_llvm_code(sym.initbegin(), sym.initend());
-#if OSL_USE_OPTIX
-        } else if (use_optix() && !sym.typespec().is_closure()
-                   && !sym.lockgeom()) {
-            // If the call to osl_bind_interpolated_param returns 0, the default
-            // value needs to be loaded from a CUDA variable.
-            llvm::Value* cuda_var     = getOrAllocateCUDAVariable(sym);
-            TypeSpec elemtype         = sym.typespec().elementtype();
-            llvm::Type* cuda_var_type = llvm_type(elemtype);
-            // memcpy the initial value from the CUDA variable
-            llvm::Value* src = ll.ptr_cast(ll.GEP(cuda_var_type, cuda_var, 0),
-                                           ll.type_void_ptr());
-            llvm::Value* dst = llvm_void_ptr(sym);
-            TypeDesc t       = sym.typespec().simpletype();
-            ll.op_memcpy(dst, src, t.size(), t.basesize());
-            if (sym.has_derivs())
-                llvm_zero_derivs(sym);
-#endif
         } else if (sym.interpolated() && !sym.typespec().is_closure()) {
             // geometrically-varying param; memcpy its default value
             TypeDesc t = sym.typespec().simpletype();
-            ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
-                         t.size(), t.basesize() /*align*/);
+            if (sym.typespec().is_string()) {
+                //llvm_create_constant(sym);
+                auto default_str = ll.constant64(
+                    uint64_t(sym.get_string().hash()));
+
+                OSL_ASSERT(llvm_store_value(default_str, sym, 0, nullptr, 0));
+            } else {
+                ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
+                             t.size(), t.basesize() /*align*/);
+            }
+
             if (sym.has_derivs())
                 llvm_zero_derivs(sym);
         } else {
@@ -679,12 +719,13 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                 for (int i = 0; i < num_components; ++i, ++c) {
                     // Fill in the constant val
                     llvm::Value* init_val = 0;
-                    if (elemtype.is_float_based())
+                    if (elemtype.is_float_based()) {
                         init_val = ll.constant(sym.get_float(c));
-                    else if (elemtype.is_string())
-                        init_val = llvm_load_string(sym.get_string(c));
-                    else if (elemtype.is_int())
+                    } else if (elemtype.is_string()) {
+                        init_val = llvm_const_hash(sym.get_string(c));
+                    } else if (elemtype.is_int()) {
                         init_val = ll.constant(sym.get_int(c));
+                    }
                     OSL_DASSERT(init_val);
                     llvm_store_value(init_val, sym, 0, arrind, i);
                 }
@@ -764,12 +805,12 @@ BackendLLVM::llvm_generate_debugnan(const Opcode& op)
                                 llvm_void_ptr(sym),
                                 ll.constant((int)sym.has_derivs()),
                                 sg_void_ptr(),
-                                llvm_load_stringhash(op.sourcefile()),
+                                llvm_const_hash(op.sourcefile()),
                                 ll.constant(op.sourceline()),
-                                llvm_load_stringhash(sym.unmangled()),
+                                llvm_const_hash(sym.unmangled()),
                                 offset,
                                 ncheck,
-                                llvm_load_stringhash(op.opname()) };
+                                llvm_const_hash(op.opname()) };
         ll.call_function("osl_naninf_check", args);
     }
 }
@@ -868,16 +909,16 @@ BackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
         llvm::Value* args[] = { ll.constant(t),
                                 llvm_void_ptr(sym),
                                 sg_void_ptr(),
-                                llvm_load_stringhash(op.sourcefile()),
+                                llvm_const_hash(op.sourcefile()),
                                 ll.constant(op.sourceline()),
-                                llvm_load_stringhash(group().name()),
+                                llvm_const_hash(group().name()),
                                 ll.constant(layer()),
-                                llvm_load_stringhash(inst()->layername()),
-                                llvm_load_stringhash(inst()->shadername()),
+                                llvm_const_hash(inst()->layername()),
+                                llvm_const_hash(inst()->shadername()),
                                 ll.constant(int(&op - &inst()->ops()[0])),
-                                llvm_load_stringhash(op.opname()),
+                                llvm_const_hash(op.opname()),
                                 ll.constant(i),
-                                llvm_load_stringhash(sym.unmangled()),
+                                llvm_const_hash(sym.unmangled()),
                                 offset,
                                 ncheck };
         ll.call_function("osl_uninit_check", args);
@@ -1287,8 +1328,14 @@ BackendLLVM::build_llvm_instance(bool groupentry)
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
         // the constant that belongs to the instance.
-        if (s.symtype() == SymTypeConst)
+        if (s.symtype() == SymTypeConst) {
+            // For array constants we will always need an llvm constant array
+            // and for scalar/aggregate constants that are passed by address
+            // we will need a constant as well.  If not used, we expect
+            // the pruning pass to remove unreferenced variables
+            llvm_create_constant(s);
             continue;
+        }
         // Skip structure placeholders
         if (s.typespec().is_structure())
             continue;
@@ -1310,18 +1357,17 @@ BackendLLVM::build_llvm_instance(bool groupentry)
             TypeDesc t = s.typespec().simpletype();
             if (t.basetype
                 == TypeDesc::FLOAT) {  // just check float-based types
-                int ncomps = t.numelements() * t.aggregate;
-                llvm::Value* args[]
-                    = { ll.constant(ncomps),
-                        llvm_void_ptr(s),
-                        ll.constant((int)s.has_derivs()),
-                        sg_void_ptr(),
-                        llvm_load_stringhash(inst()->shadername()),
-                        ll.constant(0),
-                        llvm_load_stringhash(s.unmangled()),
-                        ll.constant(0),
-                        ll.constant(ncomps),
-                        llvm_load_stringhash("<none>") };
+                int ncomps          = t.numelements() * t.aggregate;
+                llvm::Value* args[] = { ll.constant(ncomps),
+                                        llvm_void_ptr(s),
+                                        ll.constant((int)s.has_derivs()),
+                                        sg_void_ptr(),
+                                        llvm_const_hash(inst()->shadername()),
+                                        ll.constant(0),
+                                        llvm_const_hash(s.unmangled()),
+                                        ll.constant(0),
+                                        ll.constant(ncomps),
+                                        llvm_const_hash("<none>") };
                 ll.call_function("osl_naninf_check", args);
             }
         }
@@ -1576,7 +1622,7 @@ BackendLLVM::initialize_llvm_group()
         }
 #endif
         llvm::Function* f = ll.make_function(funcname, false,
-                                             llvm_type(rettype), params,
+                                             llvm_pass_type(rettype), params,
                                              varargs);
 
         // Skipping this in the non-JIT OptiX case suppresses an LLVM warning

@@ -73,6 +73,8 @@ public:
 
     typedef std::map<std::string, llvm::Value*> AllocationMap;
 
+    void llvm_create_constant(const Symbol& sym);
+
     void llvm_assign_initial_value(const Symbol& sym, bool force = false);
     llvm::LLVMContext& llvm_context() const { return ll.context(); }
     AllocationMap& named_values() { return m_named_values; }
@@ -133,28 +135,12 @@ public:
         return llvm_load_value(sym, deriv, NULL, component, cast);
     }
 
-    /// Convenience function to load a string for CPU or GPU device
-    llvm::Value* llvm_load_string(const Symbol& sym)
+    llvm::Value* llvm_const_hash(string_view str)
     {
-        OSL_DASSERT(sym.typespec().is_string());
-        return llvm_load_value(sym);
+        return llvm_const_hash(ustring(str));
     }
 
-    /// Convenience function to load a constant string for CPU or GPU device.
-    /// On the GPU, we use the ustring hash, not the character pointer.
-    llvm::Value* llvm_load_string(ustring str) { return ll.constant(str); }
-
-    llvm::Value* llvm_load_string(string_view str)
-    {
-        return llvm_load_string(ustring(str));
-    }
-
-    llvm::Value* llvm_load_stringhash(string_view str)
-    {
-        return llvm_load_stringhash(ustring(str));
-    }
-
-    llvm::Value* llvm_load_stringhash(ustring str)
+    llvm::Value* llvm_const_hash(ustring str)
     {
         return ll.constant64((uint64_t)str.hash());
     }
@@ -238,7 +224,6 @@ public:
     /// map, the symbol is alloca'd and placed in the map.
     llvm::Value* getOrAllocateLLVMSymbol(const Symbol& sym);
 
-#if OSL_USE_OPTIX
     /// Return a globally unique (to the JIT module) name for symbol `sym`,
     /// assuming it's part of the currently examined layer of the group.
     std::string global_unique_symname(const Symbol& sym)
@@ -252,21 +237,6 @@ public:
         return fmtformat("{}{}_{}_{}_{}", sym_name.front() == '$' ? "_" : "",
                          sym_name, group().name(), inst_->layername(), layer);
     }
-
-    /// Allocate a CUDA variable for the given OSL symbol and return a pointer
-    /// to the corresponding LLVM GlobalVariable, or return the pointer if it
-    /// has already been allocated.
-    llvm::Value* getOrAllocateCUDAVariable(const Symbol& sym);
-
-    /// Create a named CUDA global variable with the given type, size, and
-    /// alignment, and add it to the current Module. It will be initialized
-    /// with data pointed to by init_data. A record will be also added to
-    /// m_const_map, and will be retrieved by subsequent calls to
-    /// getOrAllocateCUDAVariable().
-    llvm::Value* addCUDAGlobalVariable(const std::string& name, int size,
-                                       int alignment, const void* init_data,
-                                       TypeDesc type = TypeDesc::UNKNOWN);
-#endif
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;
@@ -304,20 +274,14 @@ public:
 
     /// Return the ShaderGlobals pointer.
     ///
-    llvm::Value* sg_ptr() const
-    {
-        return m_llvm_shaderglobals_ptr;
-    }
+    llvm::Value* sg_ptr() const { return m_llvm_shaderglobals_ptr; }
 
     llvm::Type* llvm_type_closure_component();
     llvm::Type* llvm_type_closure_component_ptr();
 
     /// Return the ShaderGlobals pointer cast as a void*.
     ///
-    llvm::Value* sg_void_ptr()
-    {
-        return ll.void_ptr(m_llvm_shaderglobals_ptr);
-    }
+    llvm::Value* sg_void_ptr() { return ll.void_ptr(m_llvm_shaderglobals_ptr); }
 
     /// Cast the pointer variable specified by val to a pointer to the
     /// basic type comprising `type`.
@@ -343,10 +307,7 @@ public:
 
     /// Return the group data pointer.
     ///
-    llvm::Value* groupdata_ptr() const
-    {
-        return m_llvm_groupdata_ptr;
-    }
+    llvm::Value* groupdata_ptr() const { return m_llvm_groupdata_ptr; }
 
     /// Return the group data pointer cast as a void*.
     ///
@@ -364,22 +325,13 @@ public:
                                      TypeDesc type = TypeDesc::UNKNOWN);
 
     /// Return the userdata base pointer.
-    llvm::Value* userdata_base_ptr() const
-    {
-        return m_llvm_userdata_base_ptr;
-    }
+    llvm::Value* userdata_base_ptr() const { return m_llvm_userdata_base_ptr; }
 
     /// Return the output base pointer.
-    llvm::Value* output_base_ptr() const
-    {
-        return m_llvm_output_base_ptr;
-    }
+    llvm::Value* output_base_ptr() const { return m_llvm_output_base_ptr; }
 
     /// Return the shade index
-    llvm::Value* shadeindex() const
-    {
-        return m_llvm_shadeindex;
-    }
+    llvm::Value* shadeindex() const { return m_llvm_shadeindex; }
 
     // For a symloc, compute the llvm::Value of the pointer to its true,
     // offset location from the base pointer for shade index `sindex`
@@ -507,10 +459,7 @@ public:
 
     /// Return the basic block of the exit for the whole instance.
     ///
-    bool llvm_has_exit_instance_block() const
-    {
-        return m_exit_instance_block;
-    }
+    bool llvm_has_exit_instance_block() const { return m_exit_instance_block; }
 
     /// Return the basic block of the exit for the whole instance.
     ///
@@ -531,10 +480,7 @@ public:
     /// Print debugging line for the op
     void llvm_generate_debug_op_printf(const Opcode& op);
 
-    llvm::Function* layer_func() const
-    {
-        return ll.current_function();
-    }
+    llvm::Function* layer_func() const { return ll.current_function(); }
 
     /// Call this when JITing a texture-like call, to track how many.
     void generated_texture_call(bool handle)
@@ -544,10 +490,7 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
-    void increment_useparam_ops()
-    {
-        shadingsys().m_stat_useparam_ops++;
-    }
+    void increment_useparam_ops() { shadingsys().m_stat_useparam_ops++; }
 
     /// Return the mapping from symbol names to GlobalVariables.
     std::map<std::string, llvm::GlobalVariable*>& get_const_map()
@@ -556,16 +499,10 @@ public:
     }
 
     /// Return whether or not we are compiling for an OptiX-based renderer.
-    bool use_optix()
-    {
-        return m_use_optix;
-    }
+    bool use_optix() { return m_use_optix; }
 
     /// Return if we should compile against free function versions of Renderer Service.
-    bool use_rs_bitcode()
-    {
-        return m_use_rs_bitcode;
-    }
+    bool use_rs_bitcode() { return m_use_rs_bitcode; }
 
     /// Return the userdata index for the given Symbol.  Return -1 if the Symbol
     /// is not an input parameter or is constant and therefore doesn't have an

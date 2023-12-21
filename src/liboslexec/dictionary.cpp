@@ -62,7 +62,8 @@ public:
     int dict_find(ExecContextPtr ec, ustring dictionaryname, ustring query);
     int dict_find(ExecContextPtr ec, int nodeID, ustring query);
     int dict_next(int nodeID);
-    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data);
+    int dict_value(int nodeID, ustring attribname, TypeDesc type, void* data,
+                   bool treat_ustrings_as_hash);
 
 private:
     // We cache individual queries with a key that is a tuple of the
@@ -307,7 +308,7 @@ Dictionary::dict_next(int nodeID)
 
 int
 Dictionary::dict_value(int nodeID, ustring attribname, TypeDesc type,
-                       void* data)
+                       void* data, bool treat_ustrings_as_hash)
 {
     if (nodeID <= 0 || nodeID >= (int)m_nodes.size())
         return 0;  // invalid node ID
@@ -321,7 +322,11 @@ Dictionary::dict_value(int nodeID, ustring attribname, TypeDesc type,
         int n      = type.numelements() * type.aggregate;
         if (type.basetype == TypeDesc::STRING) {
             OSL_DASSERT(n == 1 && "no string arrays in XML");
-            ((ustring*)data)[0] = m_stringdata[offset];
+            if (treat_ustrings_as_hash == true) {
+                ((ustringhash_pod*)data)[0] = m_stringdata[offset].hash();
+            } else {
+                ((ustring*)data)[0] = m_stringdata[offset];
+            }
             return 1;
         }
         if (type.basetype == TypeDesc::INT) {
@@ -360,8 +365,12 @@ Dictionary::dict_value(int nodeID, ustring attribname, TypeDesc type,
         r.valueoffset = (int)m_stringdata.size();
         ustring s(val);
         m_stringdata.push_back(s);
-        ((ustring*)data)[0] = s;
-        m_cache[q]          = r;
+        if (treat_ustrings_as_hash == true) {
+            ((ustringhash_pod*)data)[0] = s.hash();
+        } else {
+            ((ustring*)data)[0] = s;
+        }
+        m_cache[q] = r;
         return 1;
     }
     if (type.basetype == TypeDesc::INT) {
@@ -435,11 +444,12 @@ ShadingContext::dict_next(int nodeID)
 
 int
 ShadingContext::dict_value(int nodeID, ustring attribname, TypeDesc type,
-                           void* data)
+                           void* data, bool treat_ustrings_as_hash)
 {
     if (!m_dictionary)
         return 0;
-    return m_dictionary->dict_value(nodeID, attribname, type, data);
+    return m_dictionary->dict_value(nodeID, attribname, type, data,
+                                    treat_ustrings_as_hash);
 }
 
 
@@ -453,19 +463,24 @@ ShadingContext::free_dict_resources()
 
 
 OSL_SHADEOP int
-osl_dict_find_iis(OpaqueExecContextPtr oec, int nodeID, void* query)
+osl_dict_find_iis(OpaqueExecContextPtr oec, int nodeID, ustringhash_pod query_)
 {
-    auto ec = pvt::get_ec(oec);
-    return ec->context->dict_find(ec, nodeID, USTR(query));
+    auto ec    = pvt::get_ec(oec);
+    auto query = ustringhash_from(query_);
+    return ec->context->dict_find(ec, nodeID, ustring_from(query));
 }
 
 
 
 OSL_SHADEOP int
-osl_dict_find_iss(OpaqueExecContextPtr oec, void* dictionary, void* query)
+osl_dict_find_iss(OpaqueExecContextPtr oec, ustringhash_pod dictionary_,
+                  ustringhash_pod query_)
 {
-    auto ec = pvt::get_ec(oec);
-    return ec->context->dict_find(ec, USTR(dictionary), USTR(query));
+    auto dictionary = ustringhash_from(dictionary_);
+    auto query      = ustringhash_from(query_);
+    auto ec         = pvt::get_ec(oec);
+    return ec->context->dict_find(ec, ustring_from(dictionary),
+                                  ustring_from(query));
 }
 
 
@@ -480,12 +495,13 @@ osl_dict_next(OpaqueExecContextPtr oec, int nodeID)
 
 
 OSL_SHADEOP int
-osl_dict_value(OpaqueExecContextPtr oec, int nodeID, void* attribname,
-               long long type, void* data)
+osl_dict_value(OpaqueExecContextPtr oec, int nodeID,
+               ustringhash_pod attribname_, long long type, void* data)
 {
-    auto ec = pvt::get_ec(oec);
-    return ec->context->dict_value(nodeID, USTR(attribname), TYPEDESC(type),
-                                   data);
+    auto ec         = pvt::get_ec(oec);
+    auto attribname = ustringhash_from(attribname_);
+    return ec->context->dict_value(nodeID, ustring_from(attribname),
+                                   TYPEDESC(type), data, true);
 }
 
 

@@ -45,14 +45,14 @@
     DECL(osl_##name##_dvdvdf, "xvvX")
 
 #define GENERIC_NOISE_DERIV_IMPL(name)   \
-    DECL(osl_##name##_dfdf, "xsXXXX")    \
-    DECL(osl_##name##_dfdfdf, "xsXXXXX") \
-    DECL(osl_##name##_dfdv, "xsXXXX")    \
-    DECL(osl_##name##_dfdvdf, "xsXXXXX") \
-    DECL(osl_##name##_dvdf, "xsXXXX")    \
-    DECL(osl_##name##_dvdfdf, "xsXXXXX") \
-    DECL(osl_##name##_dvdv, "xsXXXX")    \
-    DECL(osl_##name##_dvdvdf, "xsXXXXX")
+    DECL(osl_##name##_dfdf, "xhXXXX")    \
+    DECL(osl_##name##_dfdfdf, "xhXXXXX") \
+    DECL(osl_##name##_dfdv, "xhXXXX")    \
+    DECL(osl_##name##_dfdvdf, "xhXXXXX") \
+    DECL(osl_##name##_dvdf, "xhXXXX")    \
+    DECL(osl_##name##_dvdfdf, "xhXXXXX") \
+    DECL(osl_##name##_dvdv, "xhXXXX")    \
+    DECL(osl_##name##_dvdvdf, "xhXXXXX")
 
 #define PNOISE_IMPL(name)              \
     DECL(osl_##name##_fff, "fff")      \
@@ -83,14 +83,14 @@
     DECL(osl_##name##_dvdvdfvf, "xvvXvf")
 
 #define GENERIC_PNOISE_DERIV_IMPL(name)      \
-    DECL(osl_##name##_dfdff, "xsXXfXX")      \
-    DECL(osl_##name##_dfdfdfff, "xsXXXffXX") \
-    DECL(osl_##name##_dfdvv, "xsXXvXX")      \
-    DECL(osl_##name##_dfdvdfvf, "xsXvXvfXX") \
-    DECL(osl_##name##_dvdff, "xsvXfXX")      \
-    DECL(osl_##name##_dvdfdfff, "xsvXXffXX") \
-    DECL(osl_##name##_dvdvv, "xsvvvXX")      \
-    DECL(osl_##name##_dvdvdfvf, "xsvvXvfXX")
+    DECL(osl_##name##_dfdff, "xhXXfXX")      \
+    DECL(osl_##name##_dfdfdfff, "xhXXXffXX") \
+    DECL(osl_##name##_dfdvv, "xhXXvXX")      \
+    DECL(osl_##name##_dfdvdfvf, "xhXvXvfXX") \
+    DECL(osl_##name##_dvdff, "xhvXfXX")      \
+    DECL(osl_##name##_dvdfdfff, "xhvXXffXX") \
+    DECL(osl_##name##_dvdvv, "xhvvvXX")      \
+    DECL(osl_##name##_dvdvdfvf, "xhvvXvfXX")
 
 #define UNARY_OP_IMPL(name)        \
     DECL(osl_##name##_ff, "ff")    \
@@ -132,20 +132,22 @@ DECL(osl_allocate_weighted_closure_component, "XXiiX")
 DECL(osl_closure_to_string, "sXX")
 DECL(osl_closure_to_ustringhash, "hXX")
 #endif
-DECL(osl_format, "ss*")
+DECL(osl_format, "hh*")
 DECL(osl_gen_ustringhash_pod, "hs")
+DECL(osl_gen_ustring, "sh")
 DECL(osl_gen_printfmt, "xXhiXiX")
 DECL(osl_gen_filefmt, "xXhhiXiX")
 DECL(osl_gen_errorfmt, "xXhiXiX")
 DECL(osl_gen_warningfmt, "xXhiXiX")
-DECL(osl_split, "isXsii")
+DECL(osl_formatfmt, "hXhiXiX")
+DECL(osl_split, "ihXhii")
 DECL(osl_incr_layers_executed, "xX")
 
 // For legacy printf support
-DECL(osl_printf, "xXs*")
-DECL(osl_fprintf, "xXss*")
-DECL(osl_error, "xXs*")
-DECL(osl_warning, "xXs*")
+DECL(osl_printf, "xXh*")
+DECL(osl_fprintf, "xXhh*")
+DECL(osl_error, "xXh*")
+DECL(osl_warning, "xXh*")
 
 NOISE_IMPL(cellnoise)
 //NOISE_DERIV_IMPL(cellnoise)
@@ -185,55 +187,55 @@ DECL(osl_hash_iff, "iff")
 DECL(osl_hash_iv, "iX")
 DECL(osl_hash_ivf, "iXf")
 
-DECL(osl_spline_fff, "xXXXXii")
-DECL(osl_spline_dfdfdf, "xXXXXii")
-DECL(osl_spline_dfdff, "xXXXXii")
-DECL(osl_spline_dffdf, "xXXXXii")
-DECL(osl_spline_vfv, "xXXXXii")
-DECL(osl_spline_dvdfdv, "xXXXXii")
-DECL(osl_spline_dvdfv, "xXXXXii")
-DECL(osl_spline_dvfdv, "xXXXXii")
-DECL(osl_splineinverse_fff, "xXXXXii")
-DECL(osl_splineinverse_dfdfdf, "xXXXXii")
-DECL(osl_splineinverse_dfdff, "xXXXXii")
-DECL(osl_splineinverse_dffdf, "xXXXXii")
-DECL(osl_setmessage, "xXsLXisi")
-DECL(osl_getmessage, "iXssLXiisi")
-DECL(osl_pointcloud_search, "iXsXfiiXXii*")
-DECL(osl_pointcloud_get, "iXsXisLX")
-DECL(osl_pointcloud_write, "iXsXiXXX")
-DECL(osl_pointcloud_write_helper, "xXXXisLX")
+DECL(osl_spline_fff, "xXhXXii")
+DECL(osl_spline_dfdfdf, "xXhXXii")
+DECL(osl_spline_dfdff, "xXhXXii")
+DECL(osl_spline_dffdf, "xXhXXii")
+DECL(osl_spline_vfv, "xXhXXii")
+DECL(osl_spline_dvdfdv, "xXhXXii")
+DECL(osl_spline_dvdfv, "xXhXXii")
+DECL(osl_spline_dvfdv, "xXhXXii")
+DECL(osl_splineinverse_fff, "xXhXXii")
+DECL(osl_splineinverse_dfdfdf, "xXhXXii")
+DECL(osl_splineinverse_dfdff, "xXhXXii")
+DECL(osl_splineinverse_dffdf, "xXhXXii")
+DECL(osl_setmessage, "xXhLXihi")
+DECL(osl_getmessage, "iXhhLXiihi")
+DECL(osl_pointcloud_search, "iXhXfiiXXii*")
+DECL(osl_pointcloud_get, "iXhXihLX")
+DECL(osl_pointcloud_write, "iXhXiXXX")
+DECL(osl_pointcloud_write_helper, "xXXXihLX")
 DECL(osl_blackbody_vf, "xXXf")
 DECL(osl_wavelength_color_vf, "xXXf")
 DECL(osl_luminance_fv, "xXXX")
 DECL(osl_luminance_dfdv, "xXXX")
-DECL(osl_prepend_color_from, "xXXs")
-DECL(osl_prepend_matrix_from, "iXXs")
-DECL(osl_get_matrix, "iXXs")
-DECL(osl_get_inverse_matrix, "iXXs")
-DECL(osl_transform_triple, "iXXiXiXXi")
-DECL(osl_transform_triple_nonlinear, "iXXiXiXXi")
+DECL(osl_prepend_color_from, "xXXh")
+DECL(osl_prepend_matrix_from, "iXXh")
+DECL(osl_get_matrix, "iXXh")
+DECL(osl_get_inverse_matrix, "iXXh")
+DECL(osl_transform_triple, "iXXiXihhi")
+DECL(osl_transform_triple_nonlinear, "iXXiXihhi")
 DECL(osl_transform_vmv, "xXXX")
 DECL(osl_transform_dvmdv, "xXXX")
 DECL(osl_transformv_vmv, "xXXX")
 DECL(osl_transformv_dvmdv, "xXXX")
 DECL(osl_transformn_vmv, "xXXX")
 DECL(osl_transformn_dvmdv, "xXXX")
-DECL(osl_transformc, "iXXiXiXX")
+DECL(osl_transformc, "iXXiXihh")
 
-DECL(osl_dict_find_iis, "iXiX")
-DECL(osl_dict_find_iss, "iXXX")
+DECL(osl_dict_find_iis, "iXih")
+DECL(osl_dict_find_iss, "iXhh")
 DECL(osl_dict_next, "iXi")
-DECL(osl_dict_value, "iXiXLX")
-DECL(osl_raytype_name, "iXs")
+DECL(osl_dict_value, "iXihLX")
+DECL(osl_raytype_name, "iXh")
 #ifdef OSL_LLVM_NO_BITCODE
 DECL(osl_range_check, "iiihXhihihh")
 #endif
 DECL(osl_range_check_err, "iiihXhihihh")
 DECL(osl_naninf_check, "xiXiXhihiih")
 DECL(osl_uninit_check, "xLXXhihihhihihii")
-DECL(osl_get_attribute, "iXissiiLX")
-DECL(osl_bind_interpolated_param, "iXsLiXiXiXi")
+DECL(osl_get_attribute, "iXihhiiLX")
+DECL(osl_bind_interpolated_param, "iXhLiXiXiXi")
 DECL(osl_get_texture_options, "XX");
 DECL(osl_get_noise_options, "XX");
 DECL(osl_get_trace_options, "XX");
@@ -350,30 +352,30 @@ DECL(osl_div_mmm, "xXXX")
 DECL(osl_div_mmf, "xXXf")
 DECL(osl_div_mfm, "xXfX")
 
-DECL(osl_get_from_to_matrix, "iXXss")
+DECL(osl_get_from_to_matrix, "iXXhh")
 DECL(osl_transpose_mm, "xXX")
 DECL(osl_determinant_fm, "fX")
 
-DECL(osl_concat_sss, "sss")
-DECL(osl_strlen_is, "is")
-DECL(osl_hash_is, "is")
-DECL(osl_getchar_isi, "isi");
-DECL(osl_startswith_iss, "iss")
-DECL(osl_endswith_iss, "iss")
-DECL(osl_stoi_is, "is")
-DECL(osl_stof_fs, "fs")
-DECL(osl_substr_ssii, "ssii")
-DECL(osl_regex_impl, "iXsXisi")
+DECL(osl_concat_sss, "hhh")
+DECL(osl_strlen_is, "ih")
+DECL(osl_hash_is, "ih")
+DECL(osl_getchar_isi, "ihi");
+DECL(osl_startswith_iss, "ihh")
+DECL(osl_endswith_iss, "ihh")
+DECL(osl_stoi_is, "ih")
+DECL(osl_stof_fs, "fh")
+DECL(osl_substr_ssii, "hhii")
+DECL(osl_regex_impl, "iXhXihi")
 
 // Used by wide code generator, but are uniform calls
-DECL(osl_texture_decode_wrapmode, "is");
-DECL(osl_texture_decode_interpmode, "is");
+DECL(osl_texture_decode_wrapmode, "ih");
+DECL(osl_texture_decode_interpmode, "ih");
 
 DECL(osl_texture_set_firstchannel, "xXi")
-DECL(osl_texture_set_swrap, "xXs")
-DECL(osl_texture_set_twrap, "xXs")
-DECL(osl_texture_set_rwrap, "xXs")
-DECL(osl_texture_set_stwrap, "xXs")
+DECL(osl_texture_set_swrap, "xXh")
+DECL(osl_texture_set_twrap, "xXh")
+DECL(osl_texture_set_rwrap, "xXh")
+DECL(osl_texture_set_stwrap, "xXh")
 DECL(osl_texture_set_swrap_code, "xXi")
 DECL(osl_texture_set_twrap_code, "xXi")
 DECL(osl_texture_set_rwrap_code, "xXi")
@@ -388,22 +390,22 @@ DECL(osl_texture_set_rwidth, "xXf")
 DECL(osl_texture_set_stwidth, "xXf")
 DECL(osl_texture_set_fill, "xXf")
 DECL(osl_texture_set_time, "xXf")
-DECL(osl_texture_set_interp, "xXs")
+DECL(osl_texture_set_interp, "xXh")
 DECL(osl_texture_set_interp_code, "xXi")
 DECL(osl_texture_set_subimage, "xXi")
-DECL(osl_texture_set_subimagename, "xXs")
+DECL(osl_texture_set_subimagename, "xXh")
 DECL(osl_texture_set_missingcolor_arena, "xXX")
 DECL(osl_texture_set_missingcolor_alpha, "xXif")
-DECL(osl_texture, "iXXXXffffffiXXXXXXX")
-DECL(osl_texture3d, "iXXXXXXXXiXXXXXXX")
-DECL(osl_environment, "iXXXXXXXiXXXXXXX")
-DECL(osl_get_textureinfo, "iXXXXiiiXX")
-DECL(osl_get_textureinfo_st, "iXXXffXiiiXX")
+DECL(osl_texture, "iXhXXffffffiXXXXXXX")
+DECL(osl_texture3d, "iXhXXXXXXiXXXXXXX")
+DECL(osl_environment, "iXhXXXXXiXXXXXXX")
+DECL(osl_get_textureinfo, "iXhXhiiiXX")
+DECL(osl_get_textureinfo_st, "iXhXffhiiiXX")
 
 DECL(osl_trace_set_mindist, "xXf")
 DECL(osl_trace_set_maxdist, "xXf")
 DECL(osl_trace_set_shade, "xXi")
-DECL(osl_trace_set_traceset, "xXs")
+DECL(osl_trace_set_traceset, "xXh")
 DECL(osl_trace, "iXXXXXXXX")
 
 #ifdef OSL_LLVM_NO_BITCODE

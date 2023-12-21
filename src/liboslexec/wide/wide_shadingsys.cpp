@@ -165,8 +165,8 @@ __OSL_OP2(uninit_check_values_offset, X,
             }
     }
     if (uninit) {
-        ustringrep groupname = USTR(groupname_);
-        ustringrep layername = USTR(layername_);
+        ustring groupname = USTR(groupname_);
+        ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {})",
             typedesc, symbolname, sourcefile, sourceline,
@@ -229,8 +229,8 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
             });
     }
     if (lanes_uninit.any_on()) {
-        ustringrep groupname = USTR(groupname_);
-        ustringrep layername = USTR(layername_);
+        ustring groupname = USTR(groupname_);
+        ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
             typedesc, symbolname, sourcefile, sourceline,
@@ -295,8 +295,8 @@ __OSL_MASKED_OP2(uninit_check_values_offset, X,
     }
 
     if (lanes_uninit.any_on()) {
-        ustringrep groupname = USTR(groupname_);
-        ustringrep layername = USTR(layername_);
+        ustring groupname = USTR(groupname_);
+        ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
             typedesc, symbolname, sourcefile, sourceline,
@@ -363,8 +363,8 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
     }
 
     if (lanes_uninit.any_on()) {
-        ustringrep groupname = USTR(groupname_);
-        ustringrep layername = USTR(layername_);
+        ustring groupname = USTR(groupname_);
+        ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
             typedesc, symbolname, sourcefile, sourceline,
@@ -383,10 +383,10 @@ __OSL_OP(range_check)(int indexvalue, int length, ustring_pod symname,
                       ustring_pod shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
-        ustringrep groupname = USTR(groupname_);
-        ustringrep layername = USTR(layername_);
-        auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-        ShadingContext* ctx  = bsg->uniform.context;
+        ustring groupname   = USTR(groupname_);
+        ustring layername   = USTR(layername_);
+        auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+        ShadingContext* ctx = bsg->uniform.context;
         ctx->errorfmt("Index [{}] out of range {}[0..{}]: {}:{}"
                       " (group {}, layer {} {}, shader {})",
                       indexvalue, USTR(symname), length - 1, USTR(sourcefile),
@@ -412,9 +412,9 @@ __OSL_MASKED_OP(range_check)(void* wide_indexvalue, unsigned int mask_value,
                              ustring_pod groupname_, int layer,
                              ustring_pod layername_, ustring_pod shadername)
 {
-    ustringrep groupname = USTR(groupname_);
-    ustringrep layername = USTR(layername_);
-    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustring groupname = USTR(groupname_);
+    ustring layername = USTR(layername_);
+    auto* bsg         = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Masked<int> wIndexValue(wide_indexvalue, Mask(mask_value));
     wIndexValue.mask().foreach ([=](ActiveLane lane) -> void {
         int indexvalue = wIndexValue[lane];
@@ -449,9 +449,9 @@ __OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs, ustring_pod obj_name_,
     Mask mask(mask_);
     ASSERT(mask.any_on());
 
-    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    ustringrep obj_name  = USTR(obj_name_);
-    ustringrep attr_name = USTR(attr_name_);
+    auto* bsg         = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustring obj_name  = USTR(obj_name_);
+    ustring attr_name = USTR(attr_name_);
 
     // Ignoring m_next_failed_attrib cache for now,
     // might be faster
@@ -480,9 +480,9 @@ __OSL_MASKED_OP1(get_attribute,
     Mask mask(mask_);
     ASSERT(mask.any_on());
 
-    auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    ustringrep obj_name = USTR(obj_name_);
-    Wide<const ustringrep> wAttrName(wattr_name_);
+    auto* bsg        = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustring obj_name = USTR(obj_name_);
+    Wide<const ustring> wAttrName(wattr_name_);
     auto* renderer = bsg->uniform.context->batched<__OSL_WIDTH>().renderer();
 
     Mask retVal(false);
@@ -525,9 +525,9 @@ __OSL_OP(get_attribute_uniform)(void* bsg_, int dest_derivs,
                                 int array_lookup, int index,
                                 const void* attr_type, void* attr_dest)
 {
-    auto* bsg            = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    ustringrep obj_name  = USTR(obj_name_);
-    ustringrep attr_name = USTR(attr_name_);
+    auto* bsg         = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustring obj_name  = USTR(obj_name_);
+    ustring attr_name = USTR(attr_name_);
 
     auto* renderer = bsg->uniform.context->batched<__OSL_WIDTH>().renderer();
 
@@ -607,11 +607,11 @@ __OSL_OP(raytype_name)(void* bsg_, ustring_pod name)
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP(raytype_name)(void* bsg_, void* r_, ustringrep* name_,
+__OSL_MASKED_OP(raytype_name)(void* bsg_, void* r_, ustring* name_,
                               unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    Wide<const ustringrep> wname(name_);
+    Wide<const ustring> wname(name_);
     Mask mask(mask_value);
 
     foreach_unique(wname, mask, [=](ustring name, Mask matching_lanes) -> void {

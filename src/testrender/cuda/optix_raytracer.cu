@@ -9,7 +9,7 @@
 
 #include <optix_device.h>
 
-#include <OSL/device_string.h>
+#include <OSL/hashes.h>
 
 #include "rend_lib.h"
 #include "render_params.h"

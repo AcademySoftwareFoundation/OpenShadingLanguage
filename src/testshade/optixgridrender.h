@@ -8,7 +8,7 @@
 
 #include <OSL/oslexec.h>
 
-#include <OSL/device_string.h>
+#include <OSL/hashes.h>
 
 #include "optix_compat.h"
 #include "simplerend.h"

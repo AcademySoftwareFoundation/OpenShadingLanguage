@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+// Test copying arrays with fewer elements works
+
 shader
-test_arraycopy_u_int (output color Cout = color(0,0,0))
+test()
 {
     // Test array referencing with varying index
     int farray[3] = { 7, 9, 5};
@@ -18,8 +20,25 @@ test_arraycopy_u_int (output color Cout = color(0,0,0))
     if (int(P[0]*64)%2==0) {
         farray3 = negfarray;
     }
+
+    int negfarray2[2];
+    negfarray2 = negfarray;
+    negfarray2[1] = -3; // ensure array is non-const
+
+    if (u > 0.75) {
+        farray3 = negfarray2;
+    }
+
+    int farray_nonconst[3];
+    farray_nonconst = farray;
+    farray_nonconst[0]+=1;
+    farray_nonconst[1]+=1;
+    farray_nonconst[2]+=1;
+    if (u > 0.95) {
+        farray3 = farray_nonconst;
+    }
+
     printf("farray3=[%d,%d,%d]\n",farray3[0],farray3[1],farray3[2]);
-    
-    Cout = color(farray3[0]/10.0, farray3[1]/10.0, farray3[2]/10.0); 
-    printf("Cout=%g\n",Cout);
 }
+
+

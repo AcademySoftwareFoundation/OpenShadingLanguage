@@ -1,0 +1,18 @@
+Compiled test.osl -> test.oso
+farray3=[-5,-6,5]
+farray3=[-5,-6,5]
+farray3=[-5,-6,5]
+farray3=[-5,-6,5]
+farray3=[7,9,5]
+farray3=[7,9,5]
+farray3=[7,9,5]
+farray3=[7,9,5]
+farray3=[-5,-6,5]
+farray3=[-5,-6,5]
+farray3=[-5,-6,5]
+farray3=[-5,-6,5]
+farray3=[-5,-3,5]
+farray3=[-5,-3,5]
+farray3=[-5,-3,5]
+farray3=[8,10,6]
+

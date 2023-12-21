@@ -79,6 +79,8 @@ public:
     /// Search for a constant whose type and value match type and data[...],
     /// returning its index if one exists, or else creating a new constant
     /// and returning its index.
+    /// NOTE:  When datatype == TypeDesc::STRING,
+    ///        the datatype is expected to be ustring, not ustringhash
     int add_constant(const TypeSpec& type, const void* data,
                      TypeDesc datatype = TypeDesc::UNKNOWN);
     int add_constant(float c) { return add_constant(TypeDesc::TypeFloat, &c); }

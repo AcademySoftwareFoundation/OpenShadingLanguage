@@ -133,6 +133,17 @@ macro ( TESTSUITE )
             add_one_testsuite ("${_testname}" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=0 )
         endif ()
+        # Run the same test again using bitcode based free function renderer 
+        # services keeping unoptimized, unless it matches a few patterns that
+        # we don't test unoptimized (or has an OPTIMIZEONLY marker file).
+        if (NOT _testname MATCHES "optix"
+            AND NOT EXISTS "${_testsrcdir}/NOSCALAR"
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY"
+            AND NOT EXISTS "${_testsrcdir}/NORSBITCODE")
+            add_one_testsuite ("${_testname}.rs_bitcode" "${_testsrcdir}"
+                               ENV TESTSHADE_OPT=0 TESTSHADE_RS_BITCODE=1)
+        endif ()
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable.
         # Skip OptiX-only tests and those with a NOOPTIMIZE marker file.
@@ -143,7 +154,8 @@ macro ( TESTSUITE )
             add_one_testsuite ("${_testname}.opt" "${_testsrcdir}"
                                ENV TESTSHADE_OPT=2 )
         endif ()
-        # Run the same test again with aggressive -O2 runtime
+        # Run the same test again using bitcode based free function renderer 
+        # services keeping aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable.
         # Skip OptiX-only tests and those with a NOOPTIMIZE marker file.
         if (NOT _testname MATCHES "optix"
@@ -221,6 +233,13 @@ macro ( TESTSUITE )
         if ((EXISTS "${_testsrcdir}/RS_BITCODE" OR test_all_rs_bitcode)
             AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
             AND NOT EXISTS "${_testsrcdir}/RS_BITCODE_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+            add_one_testsuite ("${_testname}.rsbitcode" "${_testsrcdir}"
+                                ENV TESTSHADE_OPT=0 TESTSHADE_RS_BITCODE=1 )
+        endif ()
+        if ((EXISTS "${_testsrcdir}/RS_BITCODE" OR test_all_rs_bitcode)
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/RS_BITCODE_REGRESSION"
             AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
             add_one_testsuite ("${_testname}.rsbitcode.opt" "${_testsrcdir}"
                                 ENV TESTSHADE_OPT=2 TESTSHADE_RS_BITCODE=1 )
@@ -244,7 +263,7 @@ macro (osl_add_all_tests)
     # special installed tests.
     TESTSUITE ( aastep allowconnect-err andor-reg and-or-not-synonyms
                 arithmetic area-reg arithmetic-reg
-                array array-reg array-copy-reg array-derivs array-range
+                array array-reg array-copy array-copy-reg array-derivs array-range
                 array-aassign array-assign-reg array-length-reg
                 bitwise-and-reg bitwise-or-reg bitwise-shl-reg  bitwise-shr-reg bitwise-xor-reg
                 blackbody blackbody-reg blendmath breakcont breakcont-reg
@@ -356,8 +375,8 @@ macro (osl_add_all_tests)
                 struct-nested struct-nested-assign struct-nested-deep
                 ternary
                 testshade-expr
-		test-fmt-arrays test-fmt-fileprint
-		test-fmt-cxpf  test-fmt-noise test-fmt-matrixcolor 
+                test-fmt-arrays test-fmt-fileprint
+                test-fmt-cxpf  test-fmt-noise test-fmt-matrixcolor 
                 test-fmt-stpf test-fmt-errorwarning test-fmt-errorwarning-repeats
                 texture-alpha texture-alpha-derivs
                 texture-blur texture-connected-options

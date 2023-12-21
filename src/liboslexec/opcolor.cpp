@@ -12,10 +12,10 @@
 
 #include "oslexec_pvt.h"
 #include <OSL/Imathx/Imathx.h>
-#include <OSL/device_string.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/fmt_util.h>
+#include <OSL/hashes.h>
 
 #include <OpenImageIO/fmath.h>
 
@@ -59,33 +59,33 @@ OSL_CONSTANT_DATA const ColorSystem::Chroma k_color_systems[13] = {
 
 
 OSL_HOSTDEVICE const ColorSystem::Chroma*
-ColorSystem::fromString(StringParam colorspace)
+ColorSystem::fromString(ustringhash colorspace)
 {
-    if (colorspace == STRING_PARAMS(Rec709))
+    if (colorspace == Hashes::Rec709)
         return &k_color_systems[0];
-    if (colorspace == STRING_PARAMS(sRGB))
+    if (colorspace == Hashes::sRGB)
         return &k_color_systems[1];
-    if (colorspace == STRING_PARAMS(NTSC))
+    if (colorspace == Hashes::NTSC)
         return &k_color_systems[2];
-    if (colorspace == STRING_PARAMS(EBU))
+    if (colorspace == Hashes::EBU)
         return &k_color_systems[3];
-    if (colorspace == STRING_PARAMS(PAL))
+    if (colorspace == Hashes::PAL)
         return &k_color_systems[4];
-    if (colorspace == STRING_PARAMS(SECAM))
+    if (colorspace == Hashes::SECAM)
         return &k_color_systems[5];
-    if (colorspace == STRING_PARAMS(SMPTE))
+    if (colorspace == Hashes::SMPTE)
         return &k_color_systems[6];
-    if (colorspace == STRING_PARAMS(HDTV))
+    if (colorspace == Hashes::HDTV)
         return &k_color_systems[7];
-    if (colorspace == STRING_PARAMS(CIE))
+    if (colorspace == Hashes::CIE)
         return &k_color_systems[8];
-    if (colorspace == STRING_PARAMS(AdobeRGB))
+    if (colorspace == Hashes::AdobeRGB)
         return &k_color_systems[9];
-    if (colorspace == STRING_PARAMS(XYZ))
+    if (colorspace == Hashes::XYZ)
         return &k_color_systems[10];
-    if (colorspace == STRING_PARAMS(ACES2065_1))
+    if (colorspace == Hashes::ACES2065_1)
         return &k_color_systems[11];
-    if (colorspace == STRING_PARAMS(ACEScg))
+    if (colorspace == Hashes::ACEScg)
         return &k_color_systems[12];
     return nullptr;
 }
@@ -139,7 +139,7 @@ norm_rgb (Color3 &rgb)
 
 
 OSL_HOSTDEVICE bool
-ColorSystem::set_colorspace(StringParam colorspace)
+ColorSystem::set_colorspace(ustringhash colorspace)
 {
     if (colorspace == m_colorspace)
         return true;
@@ -220,17 +220,19 @@ ColorSystem::set_colorspace(StringParam colorspace)
 
 template<typename Color>
 OSL_HOSTDEVICE Color
-ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
+ColorSystem::ocio_transform(ustringhash fromspace, ustringhash tospace,
                             const Color& C, ShadingContext* ctx,
                             ExecContextPtr ec) const
 {
 // Currently CPU only supports ocio by going through ShadingContext
-#if !defined(__CUDA_ARCH__)
+#if !defined(__CUDA_ARCH__) && !defined(OSL_COMPILING_TO_BITCODE)
     Color Cout;
 
     assert(ctx);
-
-    if (ctx->ocio_transform(fromspace, tospace, C, Cout))
+    //Reverse lookup only possible on host
+    ustring fromspace_str = ustring_from(fromspace);
+    ustring tospace_str   = ustring_from(tospace);
+    if (ctx->ocio_transform(fromspace_str, tospace_str, C, Cout))
         return Cout;
 
     if (ec == nullptr) {
@@ -242,7 +244,7 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
         OSL::errorfmt(ec, "Unknown color space transformation \"{}\" -> \"{}\"",
                       fromspace, tospace);
     }
-#endif  // !define(__CUDA_ARCH__)
+#endif  // !define(__CUDA_ARCH__) && !defined(OSL_COMPILING_TO_BITCODE)
 
     return C;
 }
@@ -250,7 +252,7 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
 
 
 OSL_HOSTDEVICE Dual2<Color3>
-ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
+ColorSystem::ocio_transform(ustringhash fromspace, ustringhash tospace,
                             const Dual2<Color3>& C, ShadingContext* ctx,
                             ExecContextPtr ec) const
 {
@@ -260,7 +262,7 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
 
 
 OSL_HOSTDEVICE Color3
-ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
+ColorSystem::ocio_transform(ustringhash fromspace, ustringhash tospace,
                             const Color3& C, ShadingContext* ctx,
                             ExecContextPtr ec) const
 {
@@ -270,56 +272,56 @@ ColorSystem::ocio_transform(StringParam fromspace, StringParam tospace,
 
 
 OSL_HOSTDEVICE Color3
-ColorSystem::to_rgb(StringParam fromspace, const Color3& C, ShadingContext* ctx,
+ColorSystem::to_rgb(ustringhash fromspace, const Color3& C, ShadingContext* ctx,
                     ExecContextPtr ec) const
 {
     // NOTE: any changes here should be mirrored
     // in wide_prepend_color_from in wide_opcolor.cpp
-    if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
+    if (fromspace == Hashes::RGB || fromspace == Hashes::rgb
         || fromspace == m_colorspace)
         return C;
-    if (fromspace == STRING_PARAMS(hsv))
+    if (fromspace == Hashes::hsv)
         return hsv_to_rgb(C);
-    if (fromspace == STRING_PARAMS(hsl))
+    if (fromspace == Hashes::hsl)
         return hsl_to_rgb(C);
-    if (fromspace == STRING_PARAMS(YIQ))
+    if (fromspace == Hashes::YIQ)
         return YIQ_to_rgb(C);
-    if (fromspace == STRING_PARAMS(XYZ))
+    if (fromspace == Hashes::XYZ)
         return XYZ_to_RGB(C);
-    if (fromspace == STRING_PARAMS(xyY))
+    if (fromspace == Hashes::xyY)
         return XYZ_to_RGB(xyY_to_XYZ(C));
     else
-        return ocio_transform(fromspace, STRING_PARAMS(RGB), C, ctx, ec);
+        return ocio_transform(fromspace, Hashes::RGB, C, ctx, ec);
 }
 
 
 
 OSL_HOSTDEVICE Color3
-ColorSystem::from_rgb(StringParam tospace, const Color3& C, ShadingContext* ctx,
+ColorSystem::from_rgb(ustringhash tospace, const Color3& C, ShadingContext* ctx,
                       ExecContextPtr ec) const
 {
-    if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
+    if (tospace == Hashes::RGB || tospace == Hashes::rgb
         || tospace == m_colorspace)
         return C;
-    if (tospace == STRING_PARAMS(hsv))
+    if (tospace == Hashes::hsv)
         return rgb_to_hsv(C);
-    if (tospace == STRING_PARAMS(hsl))
+    if (tospace == Hashes::hsl)
         return rgb_to_hsl(C);
-    if (tospace == STRING_PARAMS(YIQ))
+    if (tospace == Hashes::YIQ)
         return rgb_to_YIQ(C);
-    if (tospace == STRING_PARAMS(XYZ))
+    if (tospace == Hashes::XYZ)
         return RGB_to_XYZ(C);
-    if (tospace == STRING_PARAMS(xyY))
+    if (tospace == Hashes::xyY)
         return XYZ_to_xyY(RGB_to_XYZ(C));
     else
-        return ocio_transform(STRING_PARAMS(RGB), tospace, C, ctx, ec);
+        return ocio_transform(Hashes::RGB, tospace, C, ctx, ec);
 }
 
 
 
 template<typename COLOR>
 OSL_HOSTDEVICE COLOR
-ColorSystem::transformc(StringParam fromspace, StringParam tospace,
+ColorSystem::transformc(ustringhash fromspace, ustringhash tospace,
                         const COLOR& C, ShadingContext* ctx,
                         ExecContextPtr ec) const
 {
@@ -327,20 +329,20 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
     // in wide_transformc in wide_opcolor.cpp
     bool use_colorconfig = false;
     COLOR Crgb;
-    if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
-        || fromspace == STRING_PARAMS(linear) || fromspace == m_colorspace)
+    if (fromspace == Hashes::RGB || fromspace == Hashes::rgb
+        || fromspace == Hashes::linear || fromspace == m_colorspace)
         Crgb = C;
-    else if (fromspace == STRING_PARAMS(hsv))
+    else if (fromspace == Hashes::hsv)
         Crgb = hsv_to_rgb(C);
-    else if (fromspace == STRING_PARAMS(hsl))
+    else if (fromspace == Hashes::hsl)
         Crgb = hsl_to_rgb(C);
-    else if (fromspace == STRING_PARAMS(YIQ))
+    else if (fromspace == Hashes::YIQ)
         Crgb = YIQ_to_rgb(C);
-    else if (fromspace == STRING_PARAMS(XYZ))
+    else if (fromspace == Hashes::XYZ)
         Crgb = XYZ_to_RGB(C);
-    else if (fromspace == STRING_PARAMS(xyY))
+    else if (fromspace == Hashes::xyY)
         Crgb = XYZ_to_RGB(xyY_to_XYZ(C));
-    else if (fromspace == STRING_PARAMS(sRGB))
+    else if (fromspace == Hashes::sRGB)
         Crgb = sRGB_to_linear(C);
     else {
         use_colorconfig = true;
@@ -349,20 +351,20 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
     COLOR Cto;
     if (use_colorconfig) {
         // do things the ColorConfig way, so skip all these other clauses...
-    } else if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
-               || tospace == STRING_PARAMS(linear) || tospace == m_colorspace)
+    } else if (tospace == Hashes::RGB || tospace == Hashes::rgb
+               || tospace == Hashes::linear || tospace == m_colorspace)
         Cto = Crgb;
-    else if (tospace == STRING_PARAMS(hsv))
+    else if (tospace == Hashes::hsv)
         Cto = rgb_to_hsv(Crgb);
-    else if (tospace == STRING_PARAMS(hsl))
+    else if (tospace == Hashes::hsl)
         Cto = rgb_to_hsl(Crgb);
-    else if (tospace == STRING_PARAMS(YIQ))
+    else if (tospace == Hashes::YIQ)
         Cto = rgb_to_YIQ(Crgb);
-    else if (tospace == STRING_PARAMS(XYZ))
+    else if (tospace == Hashes::XYZ)
         Cto = RGB_to_XYZ(Crgb);
-    else if (tospace == STRING_PARAMS(xyY))
+    else if (tospace == Hashes::xyY)
         Cto = XYZ_to_xyY(RGB_to_XYZ(Crgb));
-    else if (tospace == STRING_PARAMS(sRGB))
+    else if (tospace == Hashes::sRGB)
         Cto = linear_to_sRGB(Crgb);
     else {
         use_colorconfig = true;
@@ -378,7 +380,7 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
 
 
 OSL_HOSTDEVICE Dual2<Color3>
-ColorSystem::transformc(StringParam fromspace, StringParam tospace,
+ColorSystem::transformc(ustringhash fromspace, ustringhash tospace,
                         const Dual2<Color3>& color, ShadingContext* ctx,
                         ExecContextPtr ec) const
 {
@@ -388,7 +390,7 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
 
 
 OSL_HOSTDEVICE Color3
-ColorSystem::transformc(StringParam fromspace, StringParam tospace,
+ColorSystem::transformc(ustringhash fromspace, ustringhash tospace,
                         const Color3& color, ShadingContext* ctx,
                         ExecContextPtr ec) const
 {
@@ -401,7 +403,7 @@ ColorSystem::transformc(StringParam fromspace, StringParam tospace,
 // For Optix, this will be defined by the renderer. Otherwise inline a getter.
 #ifdef __CUDACC__
 extern "C" __device__ int
-rend_get_userdata(StringParam name, void* data, int data_size,
+rend_get_userdata(ustringhash name, void* data, int data_size,
                   const OSL::TypeDesc& type, int index);
 
 namespace {
@@ -410,8 +412,7 @@ __device__ static inline const ColorSystem&
 get_colorsystem(OSL::OpaqueExecContextPtr /*oec*/)
 {
     void* ptr;
-    rend_get_userdata(STRING_PARAMS(colorsystem), &ptr, 8, OSL::TypeDesc::PTR,
-                      0);
+    rend_get_userdata(Hashes::colorsystem, &ptr, 8, OSL::TypeDesc::PTR, 0);
     return *((ColorSystem*)ptr);
 }
 
@@ -477,22 +478,25 @@ osl_luminance_dfdv(OpaqueExecContextPtr oec, void* out, void* c)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_prepend_color_from(OpaqueExecContextPtr oec, void* c_, const char* from)
+osl_prepend_color_from(OpaqueExecContextPtr oec, void* c_,
+                       ustringhash_pod from_)
 {
+    auto from             = ustringhash_from(from_);
     const ColorSystem& cs = get_colorsystem(oec);
     auto ec               = pvt::get_ec(oec);
-    COL(c_)               = cs.to_rgb(HDSTR(from), COL(c_), ec->context, ec);
+    COL(c_)               = cs.to_rgb(from, COL(c_), ec->context, ec);
 }
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_transformc(OpaqueExecContextPtr oec, void* Cin, int Cin_derivs, void* Cout,
-               int Cout_derivs, void* from_, void* to_)
+               int Cout_derivs, ustringhash_pod from_, ustringhash_pod to_)
 {
     const ColorSystem& cs = get_colorsystem(oec);
-    StringParam from      = HDSTR(from_);
-    StringParam to        = HDSTR(to_);
+
+    auto from = ustringhash_from(from_);
+    auto to   = ustringhash_from(to_);
 
     auto ec = pvt::get_ec(oec);
 

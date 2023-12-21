@@ -12,9 +12,9 @@
 /////////////////////////////////////////////////////////////////////////
 
 #include <OSL/Imathx/Imathx.h>
-#include <OSL/device_string.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/hashes.h>
 
 #include <OpenImageIO/color.h>
 
@@ -41,7 +41,7 @@ public:
         float xRed, yRed, xGreen, yGreen, xBlue, yBlue, xWhite, yWhite;
     };
 
-    OSL_HOSTDEVICE static const Chroma* fromString(StringParam colorspace);
+    OSL_HOSTDEVICE static const Chroma* fromString(ustringhash colorspace);
 
     /// Convert an XYZ color to RGB in our preferred color space.
     template<typename T> OSL_HOSTDEVICE T XYZ_to_RGB(const T& XYZ) const
@@ -81,37 +81,37 @@ public:
 
 
     /// Set the current color space.
-    OSL_HOSTDEVICE bool set_colorspace(StringParam colorspace);
+    OSL_HOSTDEVICE bool set_colorspace(ustringhash colorspace);
 
-    OSL_HOSTDEVICE Color3 to_rgb(StringParam fromspace, const Color3& C,
+    OSL_HOSTDEVICE Color3 to_rgb(ustringhash fromspace, const Color3& C,
                                  ShadingContext*,
                                  ExecContextPtr ec = nullptr) const;
 
-    OSL_HOSTDEVICE Color3 from_rgb(StringParam fromspace, const Color3& C,
+    OSL_HOSTDEVICE Color3 from_rgb(ustringhash fromspace, const Color3& C,
                                    ShadingContext*,
                                    ExecContextPtr ec = nullptr) const;
 
-    OSL_HOSTDEVICE Dual2<Color3> transformc(StringParam fromspace,
-                                            StringParam tospace,
+    OSL_HOSTDEVICE Dual2<Color3> transformc(ustringhash fromspace,
+                                            ustringhash tospace,
                                             const Dual2<Color3>& color,
                                             ShadingContext*,
                                             ExecContextPtr ec = nullptr) const;
 
-    OSL_HOSTDEVICE Color3 transformc(StringParam fromspace, StringParam tospace,
+    OSL_HOSTDEVICE Color3 transformc(ustringhash fromspace, ustringhash tospace,
                                      const Color3& color, ShadingContext*,
                                      ExecContextPtr ec = nullptr) const;
 
     OSL_HOSTDEVICE Dual2<Color3>
-    ocio_transform(StringParam fromspace, StringParam tospace,
+    ocio_transform(ustringhash fromspace, ustringhash tospace,
                    const Dual2<Color3>& C, ShadingContext*,
                    ExecContextPtr ec = nullptr) const;
 
-    OSL_HOSTDEVICE Color3 ocio_transform(StringParam fromspace,
-                                         StringParam tospace, const Color3& C,
+    OSL_HOSTDEVICE Color3 ocio_transform(ustringhash fromspace,
+                                         ustringhash tospace, const Color3& C,
                                          ShadingContext*,
                                          ExecContextPtr ec = nullptr) const;
 
-    OSL_HOSTDEVICE const StringParam& colorspace() const
+    OSL_HOSTDEVICE const ustringhash& colorspace() const
     {
         return m_colorspace;
     }
@@ -119,12 +119,12 @@ public:
 private:
     template<typename Color>
     OSL_HOSTDEVICE inline Color
-    transformc(StringParam fromspace, StringParam tospace, const Color& C,
+    transformc(ustringhash fromspace, ustringhash tospace, const Color& C,
                ShadingContext*, ExecContextPtr ec = nullptr) const;
 
     template<typename Color>
     OSL_HOSTDEVICE inline Color
-    ocio_transform(StringParam fromspace, StringParam tospace, const Color& C,
+    ocio_transform(ustringhash fromspace, ustringhash tospace, const Color& C,
                    ShadingContext*, ExecContextPtr ec = nullptr) const;
 
 
@@ -137,15 +137,15 @@ private:
     Color3 m_blackbody_table[317];  ///< Precomputed blackbody table
 
     // Keep this last so the CUDA device string can be easily set
-    StringParam m_colorspace;  ///< What RGB colors mean
+    ustringhash m_colorspace;  ///< What RGB colors mean
 };
 
 
 class OCIOColorSystem {
 #ifndef __CUDACC__
 public:
-    OIIO::ColorProcessorHandle load_transform(StringParam fromspace,
-                                              StringParam tospace,
+    OIIO::ColorProcessorHandle load_transform(ustring fromspace,
+                                              ustring tospace,
                                               ShadingSystemImpl* shadingsys);
 
 private:

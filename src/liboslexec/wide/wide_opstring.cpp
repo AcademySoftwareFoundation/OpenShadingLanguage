@@ -394,6 +394,15 @@ __OSL_OP(format)(void* wide_output, unsigned int mask_value,
     OSL::assign_all(wOut, result);
 }
 
+OSL_BATCHOP const char*
+__OSL_OP(format_uniform)(const char* format_str, ...)
+{
+    va_list args;
+    va_start(args, format_str);
+    std::string s = Strutil::vsprintf(format_str, args);
+    va_end(args);
+    return ustring(s).c_str();
+}
 
 
 OSL_BATCHOP void

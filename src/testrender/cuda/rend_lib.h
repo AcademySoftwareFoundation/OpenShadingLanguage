@@ -14,24 +14,16 @@
 #    include <OpenEXR/half.h>
 #endif
 
-#include "../../liboslexec/string_hash.h"
+#include <OSL/hashes.h>
 #include <OSL/oslexec.h>
 
-#include <OSL/device_string.h>
 
 OSL_NAMESPACE_ENTER
-// Create an OptiX variable for each of the 'standard' strings declared in
-// <OSL/strdecls.h>.
-namespace DeviceStrings {
-#define STRING_PARAMS(x) \
-    UStringHash::HashConstEval<UStringHash::Hash(__OSL_STRINGIFY(x))>
-// Don't declare anything
-#define STRDECL(str, var_name)
 
-#include <OSL/strdecls.h>
-#undef STRDECL
-}  // namespace DeviceStrings
 
+// TODO: update types from char * to ustringhash or ustringhash_pod
+//       and remove uses of HDSTR
+#define HDSTR(cstr) (*((OSL::ustringhash*)&cstr))
 
 namespace pvt {
 extern __device__ CUdeviceptr s_color_system;

@@ -115,7 +115,7 @@ public:
 
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.
-    void camera_params(const Matrix44& world_to_camera, ustring projection,
+    void camera_params(const Matrix44& world_to_camera, ustringhash projection,
                        float hfov, float hither, float yon, int xres, int yres);
 
     virtual bool add_output(string_view varname, string_view filename,
@@ -182,7 +182,7 @@ protected:
 
     // Camera parameters
     Matrix44 m_world_to_camera;
-    ustring m_projection;
+    ustringhash m_projection;
     float m_fov, m_pixelaspect, m_hither, m_yon;
     float m_shutter[2];
     float m_screen_window[4];

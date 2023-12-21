@@ -2418,6 +2418,13 @@ DECLFOLDER(constfold_gettextureinfo)
             filename, nullptr, rop.shadingcontext()->texture_thread_info(),
             rop.shaderglobals(), 0 /* TODO: subimage? */, dataname, t, mydata,
             &em);
+        // Results from RendererServices for TypeDesc::STRING will actaully be a ustringhash
+        // as that is what we expect during execution.  We will need to convert it back to
+        // a regular ustring before continuing since this is the compile/optimization phase.
+        if (result && t == TypeDesc::STRING) {
+            auto uh_mydata = reinterpret_cast<ustringhash*>(mydata)[0];
+            reinterpret_cast<ustring*>(mydata)[0] = ustring_from(uh_mydata);
+        }
         ustring errormessage = ustring_from(em);
         // Now we turn
         //       gettextureinfo result filename dataname data
@@ -2793,6 +2800,12 @@ DECLFOLDER(constfold_pointcloud_get)
                          "Folded constant pointcloud_get");
 
     // Now make a constant array for those results we just retrieved...
+    if (valtype == TypeDesc::STRING) {
+        // Renderer services treat strings as ustringhash,
+        // so we need to convert it back to ustring before continuing
+        auto uh_data = reinterpret_cast<ustringhash*>(data.data())[0];
+        reinterpret_cast<ustring*>(data.data())[0] = ustring_from(uh_data);
+    }
     int const_array_sym = rop.add_constant(valtype, &data[0]);
     // ... and add an instruction to copy the constant into the
     // original destination for the query.

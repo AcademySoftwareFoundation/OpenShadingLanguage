@@ -32,8 +32,7 @@ BackendLLVM::BackendLLVM(ShadingSystemImpl& shadingsys, ShaderGroup& group,
     m_name_llvm_syms = shadingsys.m_llvm_output_bitcode;
 
     // Select the appropriate ustring representation
-    ll.ustring_rep(m_use_optix ? LLVM_Util::UstringRep::hash
-                               : LLVM_Util::UstringRep::charptr);
+    ll.ustring_rep(LLVM_Util::UstringRep::hash);
 
     ll.dumpasm(shadingsys.m_llvm_dumpasm);
     ll.jit_fma(shadingsys.m_llvm_jit_fma);
@@ -83,7 +82,10 @@ BackendLLVM::llvm_pass_type(const TypeSpec& typespec)
     else if (t == TypeDesc::INT)
         lt = ll.type_int();
     else if (t == TypeDesc::STRING)
-        lt = (llvm::Type*)ll.type_ustring();
+        // When interpretting parameters, "s" is a real string
+        // regardless of LLVM_Util::UStringRep
+        // And "h" is used for hashes which maps to OSL::TypeUint64
+        lt = (llvm::Type*)ll.type_real_ustring();
     else if (t.aggregate == TypeDesc::VEC3)
         lt = (llvm::Type*)ll.type_void_ptr();  //llvm_type_triple_ptr();
     else if (t.aggregate == TypeDesc::MATRIX44)
@@ -307,78 +309,6 @@ BackendLLVM::getOrAllocateLLVMSymbol(const Symbol& sym)
 }
 
 
-
-#if OSL_USE_OPTIX
-llvm::Value*
-BackendLLVM::addCUDAGlobalVariable(const std::string& name, int size,
-                                   int alignment, const void* init_data,
-                                   TypeDesc type)
-{
-    OSL_ASSERT(use_optix()
-               && "This function is only supposed to be used with OptiX!");
-
-    llvm::Constant* constant = nullptr;
-
-    if (type == TypeDesc::TypeFloat) {
-        constant = ll.constant(*(const float*)init_data);
-    } else if (type == TypeDesc::TypeInt) {
-        constant = ll.constant(*(const int*)init_data);
-    } else if (type == TypeDesc::TypeString) {
-        constant = ll.constant64(((const ustring*)init_data)->hash());
-        // N.B. Since this is the OptiX side specifically, we will represent
-        // strings as the ustringhash, so we know it as a constant.
-    } else {
-        // Handle unspecified types as generic byte arrays
-        llvm::ArrayRef<uint8_t> arr_ref((uint8_t*)init_data, size);
-        constant = llvm::ConstantDataArray::get(ll.module()->getContext(),
-                                                arr_ref);
-    }
-
-    llvm::GlobalVariable* g_var = reinterpret_cast<llvm::GlobalVariable*>(
-        ll.module()->getOrInsertGlobal(name, constant->getType()));
-
-    OSL_DASSERT(g_var && "Unable to create GlobalVariable");
-
-#    if OSL_LLVM_VERSION >= 100
-    g_var->setAlignment(llvm::MaybeAlign(alignment));
-#    else
-    g_var->setAlignment(alignment);
-#    endif
-
-    g_var->setLinkage(llvm::GlobalValue::PrivateLinkage);
-    g_var->setVisibility(llvm::GlobalValue::DefaultVisibility);
-    g_var->setInitializer(constant);
-    m_const_map[name] = g_var;
-
-    return g_var;
-}
-
-
-
-llvm::Value*
-BackendLLVM::getOrAllocateCUDAVariable(const Symbol& sym)
-{
-    OSL_ASSERT(use_optix()
-               && "This function is only supported when using OptiX!");
-
-    std::string name = global_unique_symname(sym);
-
-    // Return the Value if it has already been allocated
-    auto it = get_const_map().find(name);
-    if (it != get_const_map().end())
-        return it->second;
-
-    // TODO: Figure out the actual CUDA alignment requirements for the various
-    //       OSL types. For now, be somewhat conservative and assume 8 for
-    //       non-scalar types.
-    int alignment = (sym.typespec().is_scalarnum()) ? 4 : 8;
-    return addCUDAGlobalVariable(name, sym.size(), alignment, sym.data(),
-                                 sym.typespec().simpletype());
-}
-#endif
-
-
-
 llvm::Value*
 BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
                               llvm::Value* arrayindex)
@@ -392,26 +322,18 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
 
     llvm::Value* result = NULL;
     if (sym.symtype() == SymTypeConst) {
-        TypeSpec elemtype = sym.typespec().elementtype();
-#if OSL_USE_OPTIX
-        if (use_optix()) {
-            // Check the constant map for the named Symbol; if it's found, then
-            // a GlobalVariable has been created for it
-            llvm::Value* ptr = getOrAllocateCUDAVariable(sym);
-            if (ptr) {
-                result = llvm_ptr_cast(ptr, llvm_typedesc(elemtype),
-                                       llnamefmt("cast_to_{}_", sym.typespec()));
-                // N.B. llvm_typedesc() for a string will know that on OptiX,
-                // strings are actually represented as just the hash.
-            }
-        } else
-#endif
-        {
-            // For constants on the CPU side, start with *OUR* pointer to the
-            // constant values.
-            result = ll.constant_ptr(sym.data(),
-                                     ll.type_ptr(llvm_type(elemtype)));
+        auto sym_name = sym.name().string();
+
+        std::string unique_symname = global_unique_symname(sym);
+        auto it                    = get_const_map().find(unique_symname);
+        OSL_ASSERT(it != get_const_map().end());
+        result = it->second;
+        if (result) {
+            TypeSpec elemtype = sym.typespec().elementtype();
+            result            = llvm_ptr_cast(result, llvm_typedesc(elemtype),
+                                              llnamefmt("cast_to_{}_", sym.typespec()));
         }
+        return result;
     } else {
         // If the symbol is not a SymTypeConst, then start with the initial
         // pointer to the variable's memory location.
@@ -471,7 +393,7 @@ BackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
             return ll.constant(sym.get_float(component));
         }
         if (sym.typespec().is_string()) {
-            return llvm_load_string(sym.get_string());
+            return llvm_const_hash(sym.get_string());
         }
         OSL_ASSERT(0 && "unhandled constant type");
     }
@@ -520,18 +442,6 @@ BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
         result = ll.op_float_to_int(result);
     else if (type.is_int() && cast == TypeDesc::TypeFloat)
         result = ll.op_int_to_float(result);
-    else if (type.is_string() && cast == TypeDesc::LONGLONG) {
-        result = ll.ptr_to_cast(result, ll.type_longlong());
-        // FIXME -- is this case ever used? Seems strange.
-    }
-
-    // We still disguise hashed strings as char*. Ideally, we would only do
-    // that if the rep were a charptr, but we disguise the hashes as char*'s
-    // also to avoid ugliness with function signatures differing between CPU
-    // and GPU. Maybe some day we'll use the hash representation on both
-    // sides?
-    if (type.is_string() && ll.ustring_rep() != LLVM_Util::UstringRep::charptr)
-        result = ll.int_to_ptr_cast(result);
 
     return result;
 }
@@ -551,24 +461,31 @@ BackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
     OSL_DASSERT(arrayindex >= 0
                 && "Called llvm_load_constant_value with negative array index");
 
-    if (sym.typespec().is_float()) {
-        if (cast == TypeDesc::TypeInt)
-            return ll.constant((int)sym.get_float(arrayindex));
-        else
-            return ll.constant(sym.get_float(arrayindex));
-    }
-    if (sym.typespec().is_int()) {
-        if (cast == TypeDesc::TypeFloat)
-            return ll.constant((float)sym.get_int(arrayindex));
-        else
-            return ll.constant(sym.get_int(arrayindex));
-    }
+    int ncomps = (int)sym.typespec().aggregate();
+    // Handle expanding single value to multiple.
+    // Caller's responsiblity to keep component index in bounds otherwise
+    if (ncomps == 1)
+        component = 0;
+    OSL_ASSERT(component < ncomps);
+    int linear_index = ncomps * arrayindex + component;
+
     if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
-        int ncomps = (int)sym.typespec().aggregate();
-        return ll.constant(sym.get_float(ncomps * arrayindex + component));
+        return ll.constant(sym.get_float(linear_index));
     }
-    if (sym.typespec().is_string()) {
-        return llvm_load_string(sym.get_string(arrayindex));
+    if (sym.typespec().is_float_based()) {
+        if (cast == TypeDesc::TypeInt)
+            return ll.constant((int)sym.get_float(linear_index));
+        else
+            return ll.constant(sym.get_float(linear_index));
+    }
+    if (sym.typespec().is_int_based()) {
+        if (cast == TypeDesc::TypeFloat)
+            return ll.constant((float)sym.get_int(linear_index));
+        else
+            return ll.constant(sym.get_int(linear_index));
+    }
+    if (sym.typespec().is_string_based()) {
+        return llvm_const_hash(sym.get_string(linear_index));
     }
 
     OSL_ASSERT(0 && "unhandled constant type");
@@ -861,11 +778,15 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
         return true;
     }
 
-    // Copying of entire arrays.  It's ok if the array lengths don't match,
+    // Copying of entire arrays.  But only for non-const source symbols
+    // as we don't want to generate memcpy to host memory or to ustrings
+    // when we are really using ustringhash for llvm gen.
+    // It's ok if the array lengths don't match,
     // it will only copy up to the length of the smaller one.  The compiler
     // will ensure they are the same size, except for certain cases where
     // the size difference is intended (by the optimizer).
-    if (result_t.is_array() && src_t.is_array() && arrayindex == -1) {
+    if (result_t.is_array() && !Src.is_constant() && src_t.is_array()
+        && arrayindex == -1) {
         OSL_DASSERT(assignable(result_t.elementtype(), src_t.elementtype()));
         llvm::Value* resultptr = llvm_get_pointer(Result);
         llvm::Value* srcptr    = llvm_get_pointer(Src);
@@ -890,14 +811,38 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
     const int num_components = rt.aggregate;
     const bool singlechan    = (srccomp != -1) || (dstcomp != -1);
     if (!singlechan) {
-        for (int i = 0; i < num_components; ++i) {
-            llvm::Value* src_val
-                = Src.is_constant()
-                      ? llvm_load_constant_value(Src, arrayindex, i, basetype)
-                      : llvm_load_value(Src, 0, arrind, i, basetype);
-            if (!src_val)
-                return false;
-            llvm_store_value(src_val, Result, 0, arrind, i);
+        if (rt.is_array() && arrayindex == -1) {
+            // Initialize entire array
+            const int num_elements = std::min(rt.numelements(),
+                                              src_t.simpletype().numelements());
+            for (int a = 0; a < num_elements; ++a) {
+                llvm::Value* const_arrind = ll.constant(a);
+                for (int i = 0; i < num_components; ++i) {
+                    llvm::Value* src_val
+                        = Src.is_constant()
+                              ? llvm_load_constant_value(Src, a, i, basetype)
+                              : llvm_load_value(
+                                  Src, 0,
+                                  Src.typespec().is_array() ? const_arrind
+                                                            : nullptr,
+                                  (Src.typespec().aggregate() == 1) ? 0 : i,
+                                  basetype);
+                    if (!src_val)
+                        return false;
+                    llvm_store_value(src_val, Result, 0, const_arrind, i);
+                }
+            }
+        } else {
+            for (int i = 0; i < num_components; ++i) {
+                llvm::Value* src_val
+                    = Src.is_constant()
+                          ? llvm_load_constant_value(Src, arrayindex, i,
+                                                     basetype)
+                          : llvm_load_value(Src, 0, arrind, i, basetype);
+                if (!src_val)
+                    return false;
+                llvm_store_value(src_val, Result, 0, arrind, i);
+            }
         }
     } else {
         // connect individual component of an aggregate type

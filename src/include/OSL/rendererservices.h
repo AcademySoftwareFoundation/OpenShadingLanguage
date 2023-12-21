@@ -33,14 +33,14 @@ typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
 typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
 
 enum class AttributeSpecBuiltinArg {
-    ShaderGlobalsPointer,  // void* (TODO: ideally ShaderGlobals*)
-    ShadeIndex,            // int
-    Derivatives,           // bool
-    Type,                  // TypeDesc_pod
-    ArrayIndex,            // int, Always zero for non-indexed array lookups.
-    IsArrayLookup,         // bool
-    ObjectName,            // const char* (TODO: change to ustringhash)
-    AttributeName,         // const char* (TODO: change to ustringhash)
+    OpaqueExecutionContext,  //OpaqueExecContextPtr
+    ShadeIndex,              // int
+    Derivatives,             // bool
+    Type,                    // TypeDesc_pod
+    ArrayIndex,              // int, Always zero for non-indexed array lookups.
+    IsArrayLookup,           // bool
+    ObjectName,              // ustringhash_pod
+    AttributeName,           // ustringhash_pod
 };
 
 using AttributeSpecArg    = ArgVariant<AttributeSpecBuiltinArg>;
@@ -253,6 +253,8 @@ public:
     /// specified (object == ustring()), then the renderer should search *first*
     /// for the attribute on the currently shaded object, and next, if
     /// unsuccessful, on the currently shaded "scene".
+    /// NOTE: During shader execution when type==TypeDesc::STRING,
+    ///       val should be populated with a ustringhash
     ///
     /// Note to renderers: if sg is NULL, that means
     /// get_attribute is being called speculatively by the runtime
@@ -260,6 +262,8 @@ public:
     /// run on. Be robust to this situation, return 'true' (retrieve the
     /// attribute) if you can (known object and attribute name), but
     /// otherwise just fail by returning 'false'.
+    /// NOTE: During shader compilation/optimization when type==TypeDesc::STRING,
+    ///       val should be populated with a ustring
     virtual bool get_attribute(ShaderGlobals* sg, bool derivatives,
                                ustringhash object, TypeDesc type,
                                ustringhash name, void* val);
@@ -274,6 +278,8 @@ public:
     /// 'val'. If derivatives is true, the derivatives should be written into val
     /// as well. Return false if no user-data with the given name and type was
     /// found.
+    /// NOTE: During shader execution when type==TypeDesc::STRING,
+    ///       val should be populated with a ustringhash
     virtual bool get_userdata(bool derivatives, ustringhash name, TypeDesc type,
                               ShaderGlobals* sg, void* val);
 
@@ -445,6 +451,8 @@ public:
     /// of the requested type stored in out_data.
     ///
     /// Return 1 if the attribute is found, 0 otherwise.
+    /// NOTE: During shader execution when attr_type==TypeDesc::STRING,
+    ///       out_data should be populated with a ustringhash
     virtual int pointcloud_get(ShaderGlobals* sg, ustringhash filename,
                                size_t* indices, int count,
                                ustringhash attr_name, TypeDesc attr_type,
@@ -453,17 +461,19 @@ public:
     /// Write a point to the named pointcloud, which will be saved
     /// at the end of the frame.  Return true if everything is ok,
     /// false if there was an error.
+    /// NOTE: During shader execution when attribute types[i] == TypeDesc::STRING,
+    ///       data[i] will point to a a ustringhash
     virtual bool pointcloud_write(ShaderGlobals* sg, ustringhash filename,
                                   const OSL::Vec3& pos, int nattribs,
-                                  const ustringrep* names,
+                                  const ustringhash* names,
                                   const TypeDesc* types, const void** data);
 
     /// Options for the trace call.
     struct TraceOpt {
-        float mindist;        ///< ignore hits closer than this
-        float maxdist;        ///< ignore hits farther than this
-        bool shade;           ///< whether to shade what is hit
-        ustringrep traceset;  ///< named trace set
+        float mindist;         ///< ignore hits closer than this
+        float maxdist;         ///< ignore hits farther than this
+        bool shade;            ///< whether to shade what is hit
+        ustringhash traceset;  ///< named trace set
         TraceOpt() : mindist(0.0f), maxdist(1.0e30), shade(false) {}
 
         enum class LLVMMemberIndex {
@@ -485,6 +495,8 @@ public:
     /// Get the named message from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  This is only
     /// called for "sourced" messages, not ordinary intra-group messages.
+    /// NOTE: During shader execution when type==TypeDesc::STRING,
+    ///       val should be populated with a ustringhash
     virtual bool getmessage(ShaderGlobals* sg, ustringhash source,
                             ustringhash name, TypeDesc type, void* val,
                             bool derivatives);

@@ -82,9 +82,17 @@ __raygen__()
 
     auto sbtdata = reinterpret_cast<GenericData*>(optixGetSbtDataPointer());
 
+    const float invw      = render_params.invw;
+    const float invh      = render_params.invh;
+    bool flipv            = render_params.flipv;
+    float3* output_buffer = reinterpret_cast<float3*>(
+        render_params.output_buffer);
+
+
     // Compute the pixel coordinates
-    float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
-                           static_cast<float>(launch_index.y) + 0.5f);
+    // Matching testshade's setup_shaderglobals for !pixelcenters
+    float2 d = make_float2((launch_dims.x == 1) ? 0.5f : invw * launch_index.x,
+                           (launch_dims.y == 1) ? 0.5f : invh * launch_index.y);
 
     // TODO: Fixed-sized allocations can easily be exceeded by arbitrary shader
     //       networks, so there should be (at least) some mechanism to issue a
@@ -93,20 +101,14 @@ __raygen__()
     alignas(8) char closure_pool[256];
     alignas(8) char params[256];
 
-    const float invw      = render_params.invw;
-    const float invh      = render_params.invh;
-    bool flipv            = render_params.flipv;
-    float3* output_buffer = reinterpret_cast<float3*>(
-        render_params.output_buffer);
-
     ShaderGlobals sg;
     // Setup the ShaderGlobals
     sg.I  = make_float3(0, 0, 1);
     sg.N  = make_float3(0, 0, 1);
     sg.Ng = make_float3(0, 0, 1);
     sg.P  = make_float3(d.x, d.y, 0);
-    sg.u  = d.x * invw;
-    sg.v  = d.y * invh;
+    sg.u  = d.x;
+    sg.v  = d.y;
     if (flipv)
         sg.v = 1.f - sg.v;
 
@@ -114,11 +116,10 @@ __raygen__()
     sg.dudy = 0;
     sg.dvdx = 0;
     sg.dvdy = invh;
-    sg.dPdu = make_float3(d.x, 0, 0);
-    sg.dPdv = make_float3(0, d.y, 0);
 
-    sg.dPdu = make_float3(1.f / invw, 0.f, 0.f);
-    sg.dPdv = make_float3(0.0f, 1.f / invh, 0.f);
+    // Matching testshade's setup_shaderglobals
+    sg.dPdu = make_float3(1.f, 0.f, 0.f);
+    sg.dPdv = make_float3(0.f, 1.f, 0.f);
 
     sg.dPdx = make_float3(1.f, 0.f, 0.f);
     sg.dPdy = make_float3(0.f, 1.f, 0.f);

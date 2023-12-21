@@ -7,22 +7,22 @@
 
 #include <OSL/encodedtypes.h>
 #include <OSL/genclosure.h>
+#include <OSL/hashes.h>
 #include <OSL/journal.h>
 #include <OSL/oslexec.h>
 
 #include "simplerend.h"
 
 
-// Instance all global string variables used by SimpleRend.cpp or
-// rs_simplerend.cpp (free functions).
-// NOTE:  C linkage with a "RS_" prefix is used to allow for unmangled
-// non-colliding global symbol names, so its easier to pass them to
-// OSL::register_JIT_Global(name, addr) for host execution
-extern "C" {
-#define RS_STRDECL(str, var_name) OSL::ustring RS_##var_name { str };
+// Create ustrings for all strings used by the free function renderer services.
+// Required to allow the reverse mapping of hash->string to work when processing messages
+namespace RS {
+namespace Strings {
+#define RS_STRDECL(str, var_name) const OSL::ustring var_name { str };
 #include "rs_strdecls.h"
 #undef RS_STRDECL
-}
+}  // namespace Strings
+}  // namespace RS
 
 
 using namespace OSL;
@@ -111,11 +111,6 @@ struct ParameterTestParams {
 
 OSL_NAMESPACE_ENTER
 
-static ustring u_camera("camera"), u_screen("screen");
-static ustring u_NDC("NDC"), u_raster("raster");
-static ustring u_perspective("perspective");
-static ustring u_s("s"), u_t("t");
-static ustring u_red("red"), u_green("green"), u_blue("blue");
 static TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2(TypeDesc::INT, 2);
@@ -228,29 +223,29 @@ SimpleRenderer::SimpleRenderer()
 {
     Matrix44 M;
     M.makeIdentity();
-    camera_params(M, u_perspective, 90.0f, 0.1f, 1000.0f, 256, 256);
+    camera_params(M, RS::Hashes::perspective, 90.0f, 0.1f, 1000.0f, 256, 256);
 
     // Set up getters
-    m_attr_getters[ustring("osl:version")] = &SimpleRenderer::get_osl_version;
-    m_attr_getters[ustring("camera:resolution")]
+    m_attr_getters[RS::Hashes::osl_version] = &SimpleRenderer::get_osl_version;
+    m_attr_getters[RS::Hashes::camera_resolution]
         = &SimpleRenderer::get_camera_resolution;
-    m_attr_getters[ustring("camera:projection")]
+    m_attr_getters[RS::Hashes::camera_projection]
         = &SimpleRenderer::get_camera_projection;
-    m_attr_getters[ustring("camera:pixelaspect")]
+    m_attr_getters[RS::Hashes::camera_pixelaspect]
         = &SimpleRenderer::get_camera_pixelaspect;
-    m_attr_getters[ustring("camera:screen_window")]
+    m_attr_getters[RS::Hashes::camera_screen_window]
         = &SimpleRenderer::get_camera_screen_window;
-    m_attr_getters[ustring("camera:fov")]  = &SimpleRenderer::get_camera_fov;
-    m_attr_getters[ustring("camera:clip")] = &SimpleRenderer::get_camera_clip;
-    m_attr_getters[ustring("camera:clip_near")]
+    m_attr_getters[RS::Hashes::camera_fov]  = &SimpleRenderer::get_camera_fov;
+    m_attr_getters[RS::Hashes::camera_clip] = &SimpleRenderer::get_camera_clip;
+    m_attr_getters[RS::Hashes::camera_clip_near]
         = &SimpleRenderer::get_camera_clip_near;
-    m_attr_getters[ustring("camera:clip_far")]
+    m_attr_getters[RS::Hashes::camera_clip_far]
         = &SimpleRenderer::get_camera_clip_far;
-    m_attr_getters[ustring("camera:shutter")]
+    m_attr_getters[RS::Hashes::camera_shutter]
         = &SimpleRenderer::get_camera_shutter;
-    m_attr_getters[ustring("camera:shutter_open")]
+    m_attr_getters[RS::Hashes::camera_shutter_open]
         = &SimpleRenderer::get_camera_shutter_open;
-    m_attr_getters[ustring("camera:shutter_close")]
+    m_attr_getters[RS::Hashes::camera_shutter_close]
         = &SimpleRenderer::get_camera_shutter_close;
 }
 
@@ -309,16 +304,12 @@ SimpleRenderer::attribute(string_view name, TypeDesc type, const void* value)
 void
 SimpleRenderer::register_JIT_Global_Variables()  //callable from testshade
 {
-#define RS_STRDECL(str, var_name) \
-    OSL::register_JIT_Global(__OSL_STRINGIFY(RS_##var_name), &RS_##var_name);
-#include "rs_strdecls.h"
-#undef RS_STRDECL
 }
 
 
 void
 SimpleRenderer::camera_params(const Matrix44& world_to_camera,
-                              ustring projection, float hfov, float hither,
+                              ustringhash projection, float hfov, float hither,
                               float yon, int xres, int yres)
 {
     m_world_to_camera  = world_to_camera;
@@ -400,11 +391,13 @@ bool
 SimpleRenderer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
                                    ustringhash to, float /*time*/)
 {
-    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
+    if (to == OSL::Hashes::camera || to == OSL::Hashes::screen
+        || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
         Matrix44 M = m_world_to_camera;
-        if (to == u_screen || to == u_NDC || to == u_raster) {
+        if (to == OSL::Hashes::screen || to == OSL::Hashes::NDC
+            || to == RS::Hashes::raster) {
             float depthrange = (double)m_yon - (double)m_hither;
-            if (m_projection == u_perspective) {
+            if (m_projection == RS::Hashes::perspective) {
                 float tanhalffov = tanf(0.5f * m_fov * M_PI / 180.0);
                 Matrix44 camera_to_screen(1 / tanhalffov, 0, 0, 0, 0,
                                           1 / tanhalffov, 0, 0, 0, 0,
@@ -417,7 +410,7 @@ SimpleRenderer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
                                           -m_hither / depthrange, 1);
                 M = M * camera_to_screen;
             }
-            if (to == u_NDC || to == u_raster) {
+            if (to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
                 float screenleft = -1.0, screenwidth = 2.0;
                 float screenbottom = -1.0, screenheight = 2.0;
                 Matrix44 screen_to_ndc(1 / screenwidth, 0, 0, 0, 0,
@@ -425,7 +418,7 @@ SimpleRenderer::get_inverse_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
                                        -screenleft / screenwidth,
                                        -screenbottom / screenheight, 0, 1);
                 M = M * screen_to_ndc;
-                if (to == u_raster) {
+                if (to == RS::Hashes::raster) {
                     Matrix44 ndc_to_raster(m_xres, 0, 0, 0, 0, m_yres, 0, 0, 0,
                                            0, 1, 0, 0, 0, 0, 1);
                     M = M * ndc_to_raster;
@@ -470,13 +463,13 @@ SimpleRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
 
     // In order to test getattribute(), respond positively to
     // "options"/"blahblah"
-    if (object == "options" && name == "blahblah"
+    if (object == RS::Hashes::options && name == RS::Hashes::blahblah
         && type == TypeDesc::TypeFloat) {
         *(float*)val = 3.14159;
         return true;
     }
 
-    if (object.empty() && name == "shading:index"
+    if (object.empty() && name == RS::Hashes::shading_index
         && type == TypeDesc::TypeInt) {
         *(int*)val = OSL::get_shade_index(sg);
         return true;
@@ -511,7 +504,7 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
     // look up something specific to the primitive, rather than have hard-
     // coded names.
 
-    if (name == u_s && type == TypeDesc::TypeFloat) {
+    if (name == RS::Hashes::s && type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = sg->u;
         if (derivatives) {
             ((float*)val)[1] = sg->dudx;
@@ -519,7 +512,7 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_t && type == TypeDesc::TypeFloat) {
+    if (name == RS::Hashes::t && type == TypeDesc::TypeFloat) {
         ((float*)val)[0] = sg->v;
         if (derivatives) {
             ((float*)val)[1] = sg->dvdx;
@@ -527,7 +520,8 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_red && type == TypeDesc::TypeFloat && sg->P.x > 0.5f) {
+    if (name == RS::Hashes::red && type == TypeDesc::TypeFloat
+        && sg->P.x > 0.5f) {
         ((float*)val)[0] = sg->u;
         if (derivatives) {
             ((float*)val)[1] = sg->dudx;
@@ -535,7 +529,8 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_green && type == TypeDesc::TypeFloat && sg->P.x < 0.5f) {
+    if (name == RS::Hashes::green && type == TypeDesc::TypeFloat
+        && sg->P.x < 0.5f) {
         ((float*)val)[0] = sg->v;
         if (derivatives) {
             ((float*)val)[1] = sg->dvdx;
@@ -543,7 +538,7 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_blue && type == TypeDesc::TypeFloat
+    if (name == RS::Hashes::blue && type == TypeDesc::TypeFloat
         && ((static_cast<int>(sg->P.y * 12) % 2) == 0)) {
         ((float*)val)[0] = 1.0f - sg->u;
         if (derivatives) {
@@ -553,9 +548,16 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         return true;
     }
 
-    if (const OIIO::ParamValue* p = userdata.find_pv(name, type)) {
+    if (const OIIO::ParamValue* p = userdata.find_pv(ustring_from(name), type)) {
         size_t size = p->type().size();
-        memcpy(val, p->data(), size);
+
+        if (p->type() == TypeDesc::STRING) {
+            const ustringhash* uh_data = reinterpret_cast<const ustringhash*>(
+                p->data());
+            memcpy(val, uh_data, size);
+        } else {
+            memcpy(val, p->data(), size);
+        }
         if (derivatives)
             memset((char*)val + size, 0, 2 * size);
         return true;
@@ -658,10 +660,10 @@ SimpleRenderer::build_attribute_getter(
                    && *attribute_name == ustring("shading:index")
                    && type == OSL::TypeInt) {
             spec.set(rs_get_shade_index,
-                     AttributeSpecBuiltinArg::ShaderGlobalsPointer);
+                     AttributeSpecBuiltinArg::OpaqueExecutionContext);
         } else {
             spec.set(rs_get_attribute,
-                     AttributeSpecBuiltinArg::ShaderGlobalsPointer,
+                     AttributeSpecBuiltinArg::OpaqueExecutionContext,
                      AttributeSpecBuiltinArg::ObjectName,
                      AttributeSpecBuiltinArg::AttributeName,
                      AttributeSpecBuiltinArg::Type,
@@ -713,7 +715,7 @@ SimpleRenderer::getmessage(ShaderGlobals* sg, ustringhash source_,
         }
         if (name == ustring("geom:name")) {
             if (type == TypeString) {
-                *reinterpret_cast<ustring*>(val) = ustring("teapot");
+                *reinterpret_cast<ustring*>(val) = ustringhash("teapot");
             }
         }
         if (name == ustring("N")) {
@@ -771,7 +773,7 @@ SimpleRenderer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
                                       ustringhash /*name*/, void* val)
 {
     if (type == TypeDesc::TypeString) {
-        ((ustring*)val)[0] = m_projection;
+        ((ustringhash*)val)[0] = m_projection;
         return true;
     }
     return false;
@@ -923,12 +925,13 @@ SimpleRenderer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
 
 
 bool
-SimpleRenderer::add_output(string_view varname, string_view filename,
+SimpleRenderer::add_output(string_view varname_, string_view filename,
                            TypeDesc datatype, int nchannels)
 {
     // FIXME: use name to figure out
+    ustring varname_us(varname_);
     OIIO::ImageSpec spec(m_xres, m_yres, nchannels, datatype);
-    m_outputvars.emplace_back(varname);
+    m_outputvars.emplace_back(varname_us);
     m_outputbufs.emplace_back(
         new OIIO::ImageBuf(filename, spec, OIIO::InitializePixels::Yes));
     // OIIO::ImageBufAlgo::zero (*m_outputbufs.back());
@@ -949,7 +952,7 @@ SimpleRenderer::export_state(RenderState& state) const
                                           0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
                                           0.0, 1.0);
     //perspective is not  a member of StringParams (i.e not in strdecls.h)
-    state.projection  = u_perspective;
+    state.projection  = RS::Hashes::perspective;
     state.pixelaspect = m_pixelaspect;
     std::copy_n(m_screen_window, 4, state.screen_window);
     std::copy_n(m_shutter, 2, state.shutter);

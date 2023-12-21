@@ -87,7 +87,7 @@ struct RefractionParams {
     float eta;
 };
 struct MicrofacetParams {
-    ustring dist;
+    ustringhash dist;
     Vec3 N, U;
     float xalpha, yalpha, eta;
     int refract;
@@ -100,7 +100,7 @@ struct MxOrenNayarDiffuseParams {
     Color3 albedo;
     float roughness;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 struct MxBurleyDiffuseParams {
@@ -108,7 +108,7 @@ struct MxBurleyDiffuseParams {
     Color3 albedo;
     float roughness;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 // common to all MaterialX microfacet closures
@@ -116,9 +116,9 @@ struct MxMicrofacetBaseParams {
     Vec3 N, U;
     float roughness_x;
     float roughness_y;
-    ustring distribution;
+    ustringhash distribution;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 struct MxDielectricParams : public MxMicrofacetBaseParams {
@@ -189,7 +189,7 @@ struct MxTranslucentParams {
     Vec3 N;
     Color3 albedo;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 struct MxSubsurfaceParams {
@@ -199,7 +199,7 @@ struct MxSubsurfaceParams {
     Color3 transmission_color;
     float anisotropy;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 struct MxSheenParams {
@@ -207,13 +207,13 @@ struct MxSheenParams {
     Color3 albedo;
     float roughness;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 struct MxUniformEdfParams {
     Color3 emittance;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 struct MxLayerParams {
@@ -226,7 +226,7 @@ struct MxAnisotropicVdfParams {
     Color3 extinction;
     float anisotropy;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 struct MxMediumVdfParams {
@@ -237,7 +237,7 @@ struct MxMediumVdfParams {
     float ior;
     int priority;
     // optional
-    ustring label;
+    ustringhash label;
 };
 
 }  // anonymous namespace
@@ -1523,9 +1523,9 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                      const ClosureColor* closure, const Color3& w,
                      bool light_only)
 {
-    static const ustring u_ggx("ggx");
-    static const ustring u_beckmann("beckmann");
-    static const ustring u_default("default");
+    static const ustringhash uh_ggx("ggx");
+    static const ustringhash uh_beckmann("beckmann");
+    static const ustringhash uh_default("default");
     if (!closure)
         return;
     switch (closure->id) {
@@ -1572,7 +1572,7 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 break;
             case MICROFACET_ID: {
                 const MicrofacetParams* mp = comp->as<MicrofacetParams>();
-                if (mp->dist == u_ggx) {
+                if (mp->dist == uh_ggx) {
                     switch (mp->refract) {
                     case 0:
                         ok = result.bsdf.add_bsdf<MicrofacetGGXRefl>(cw, *mp);
@@ -1584,7 +1584,7 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                         ok = result.bsdf.add_bsdf<MicrofacetGGXBoth>(cw, *mp);
                         break;
                     }
-                } else if (mp->dist == u_beckmann || mp->dist == u_default) {
+                } else if (mp->dist == uh_beckmann || mp->dist == uh_default) {
                     switch (mp->refract) {
                     case 0:
                         ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl>(cw,

@@ -265,7 +265,7 @@ nonAffineInverse(const Matrix44 &source);
 
 Matrix44 OSL_HOSTDEVICE nonAffineInverse(const Matrix44 &source)
 {
-    OSL_INTEL_PRAGMA(float_control(strict,on,push))
+    OSL_INTEL_CLASSIC_PRAGMA(float_control(strict,on,push))
     OSL_CLANG_PRAGMA(clang fp contract(off))
 
 	using ScalarT = typename Matrix44::BaseType;

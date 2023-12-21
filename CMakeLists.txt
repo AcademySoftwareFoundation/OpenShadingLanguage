@@ -4,7 +4,7 @@
 
 cmake_minimum_required (VERSION 3.15)
 
-set (OSL_VERSION "1.13.5.0")
+set (OSL_VERSION "1.14.0.0")
 set (OSL_VERSION_OVERRIDE "" CACHE STRING
      "Version override (use with caution)!")
 mark_as_advanced (OSL_VERSION_OVERRIDE)
@@ -88,6 +88,11 @@ include (GNUInstallDirs)
 
 
 option (VERBOSE "Print lots of messages while compiling" OFF)
+if (VERBOSE)
+    set (CMAKE_MESSAGE_LOG_LEVEL "VERBOSE" CACHE STRING "CMake log level to display")
+else ()
+    set (CMAKE_MESSAGE_LOG_LEVEL "STATUS" CACHE STRING "CMake log level to display")
+endif ()
 set (OSL_LIBNAME_SUFFIX "" CACHE STRING
      "Optional name appended to ${PROJECT_NAME} libraries that are built")
 option (OSL_BUILD_TESTS "Build the unit tests, testshade, testrender" ON)
@@ -214,7 +219,7 @@ add_subdirectory (src/liboslnoise)
 add_subdirectory (src/oslc)
 add_subdirectory (src/oslinfo)
 
-if (OSL_BUILD_TESTS)
+if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_subdirectory (src/testshade)
     add_subdirectory (src/testrender)
 endif ()
@@ -223,7 +228,7 @@ if (OSL_BUILD_PLUGINS)
     add_subdirectory (src/osl.imageio)
 endif ()
 
-if (USE_QT AND (Qt5_FOUND OR Qt6_FOUND))
+if (USE_QT AND (Qt5_FOUND OR Qt6_FOUND) AND NOT DISABLE_OSLTOY)
     add_subdirectory (src/osltoy)
 endif ()
 
@@ -304,7 +309,7 @@ install (EXPORT OSL_EXPORTED_TARGETS
         FILE ${OSL_TARGETS_EXPORT_NAME}
         NAMESPACE ${PROJECT_NAME}::)
 
-if (${PROJECT_NAME}_BUILD_TESTS AND PROJECT_IS_TOP_LEVEL)
+if (PROJECT_IS_TOP_LEVEL AND BUILD_TESTING AND ${PROJECT_NAME}_BUILD_TESTS)
 	osl_add_all_tests()
 endif ()
 

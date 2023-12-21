@@ -40,16 +40,15 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* [LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, or 15, including
-  clang libraries. LLVM 16 doesn't work yet, we need to make changes
-  on the OSL side to be compatible.
+* [LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, 15, or 16, including
+  clang libraries.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
       recommended that you use 11.0 or higher.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.82)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.83)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/Imath) 2.4
    or newer (recommended: 3.1 or higher; tested through 3.2)
    NOTE: It is likely that 1.13 is the last release that will support
@@ -68,9 +67,10 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10)
       NOTE: It is likely that 1.13 is the last release that will support
       Python 2.7.
-    * pybind11 >= 2.4.2 (Tested through 2.10)
+    * pybind11 >= 2.4.2 (Tested through 2.11. Note that pybind11 v2.10+ does
+      not support Python < 3.6.)
     * NumPy
-* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.4).
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.6).
   If not found at build time, the `osltoy` application will be disabled.
 
 

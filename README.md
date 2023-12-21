@@ -452,7 +452,18 @@ The OSL language specification can be found at
 distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
 installed binary distribution.
 
-For those interested in learning to program in OSL, there is the
+[Experimental OSL Documentation on ReadTheDocs](https://openshadinglanguage.readthedocs.io/)
+This will be the future documentation. It's probably as complete as the PDF,
+but it needs some proofreading, so the PDF is still considered the
+authoritative source for now. But some time soon, the old PDF specification
+will be deprecated in favor of
+this online documentation.
+<!-- is the best place to start if you are interested in how to use OSL,
+its APIs. -->
+There is also a [PDF
+version](https://readthedocs.org/projects/openshadinglanguage/downloads/pdf/latest/).
+
+For those interested in learning to program shaders in OSL, there is the
 [Siggraph 2022 Educator's Forum](https://dl.acm.org/doi/proceedings/10.1145/3532724)
 [OSL Shaders for RenderMan](https://dl.acm.org/doi/abs/10.1145/3532724.3535604) course,
 which uses RenderMan in the examples and
@@ -515,19 +526,20 @@ The current project leadership is documented in the
 
 Many people have contributed features, bug fixes, and other changes to OSL
 over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
-Bidgolirad, Nicholas Bishop, Solomon Boulos, Stefan Bruens, Stefan Büttner,
-Matthaus G. Chajdas, Clark Chen, Alejandro Conty, Damien Courtois, Dieter De
-Baets, Thomas Dinges, Daniel Dresser, Mads Drøschler, Peter Ellerington, Luke
-Emrose, Louis Feng, Mark Final, Henri Fousse, Stephen Friedman, Syoyo Fujita,
-Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase, Sven-Hendrik
-Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Chris Hellmuth,
-Adrien Herubel, Dan Horák, Thiago Ize, Matt Johnson, Ronan Keryell, Chris
-Kulla, Elvic Liang, Max Liani, Adam Martinez, John Mertic, Bastien Montagne,
-Steena Monteiro, Patrick Mours, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jino
-Park, Alexei Pawlow, Jay Reynolds, Declan Russell, Benoit Ruiz, Patrick
-Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark Sisson, Sandip
-Shukla, Cliff Stein, Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari,
-Brecht Van Lommel, Alexander von Knorring, Alex Wells, Roman Zulak. (Listed
+Bidgolirad, Nicholas Bishop, Curtis Black, Rasmus Bonnedal, Solomon Boulos,
+Stefan Bruens, Stefan Büttner, Matthaus G. Chajdas, Clark Chen, Alejandro
+Conty, Damien Courtois, Dieter De Baets, Thomas Dinges, Daniel Dresser, Mads
+Drøschler, Peter Ellerington, Luke Emrose, Louis Feng, Mark Final, Henri
+Fousse, Stephen Friedman, Syoyo Fujita, Tim Grant, Larry Gritz, Nicolas
+Guiard, Euan Haahr, Derek Haase, Sven-Hendrik Haase, John Haddon, Niklas
+Harrysson, Daniel Heckenberg, Chris Hellmuth, Adrien Herubel, Dan Horák,
+Thiago Ize, Matt Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani,
+Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, Patrick Mours,
+Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jino Park, Alexei Pawlow, Jay
+Reynolds, Declan Russell, Benoit Ruiz, Patrick Scheibe, Alex Schworer,
+Jonathan Scruggs, Sergey Sharybin, Mark Sisson, Sandip Shukla, Cliff Stein,
+Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel,
+Alexander von Knorring, Aidan Welch, Alex Wells, Roman Zulak. (Listed
 alphabetically; if we've left anybody out, it is inadvertent, please let us
 know.)
 

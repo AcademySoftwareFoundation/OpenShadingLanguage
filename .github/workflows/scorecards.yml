@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
 name: Scorecards supply-chain security
 on:
   # Only the default branch is supported.
@@ -6,6 +10,10 @@ on:
     - cron: '44 20 * * 6'
   push:
     branches: [ "main", "scorecard" ]
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+      - '**.tex'
 
 # Declare default permissions as read only.
 permissions: read-all

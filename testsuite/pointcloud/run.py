@@ -27,6 +27,8 @@ command += testshade("--center --vary_pdxdy -g 256 256 -t 1 -param radius 0.1 -o
 command += testshade("--vary_pdxdy -g 256 256 -t 1 -param radius 0.01 -od uint8 -o Cout out_rdcloud_get_varying_filename.tif rdcloud_get_varying_filename")
 
 command += testshade("--center --vary_pdxdy -g 256 256 -t 1 -param radius 0.1 -od uint8 -o Cout out_rdcloud_varying.tif rdcloud_varying")
+command += testshade("--center --vary_pdxdy -g 256 256 -t 1 -param radius 0.1 -od uint8 -o Cout out_rdcloud_varying_no_index.tif rdcloud_varying_no_index")
+command += testshade("--center --vary_pdxdy -g 256 256 -t 1 -param radius 0.1 -od uint8 -o Cout out_rdcloud_varying_mismatch.tif rdcloud_varying_mismatch")
 
 outputs = [ "out0.tif" ]
 outputs += [ "out0_transpose.tif" ]
@@ -45,6 +47,8 @@ outputs += [ "out_rdcloud_varying_filename.tif" ]
 outputs += [ "out_rdcloud_varying_maxpoint.tif" ]
 outputs += [ "out_rdcloud_varying_sort.tif" ]
 outputs += [ "out_rdcloud_varying.tif" ]
+outputs += [ "out_rdcloud_varying_no_index.tif" ]
+outputs += [ "out_rdcloud_varying_mismatch.tif" ]
 
 outputs += [ "out_rdcloud_get_varying_filename.tif" ]
 

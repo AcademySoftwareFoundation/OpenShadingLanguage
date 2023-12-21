@@ -72,12 +72,22 @@ struct Background {
             rows[y] = cols[i - 1] + ((y > 0) ? rows[y - 1] : 0.0f);
             // normalize the pdf for this scanline (if it was non-zero)
             if (cols[i - 1] > 0)
-                for (int x = 0; x < res; x++)
+                for (int x = 0; x < res; x++) {
+#ifndef __CUDACC__
                     cols[i - res + x] /= cols[i - 1];
+#else
+                    cols[i - res + x] = __fdiv_rn(cols[i - res + x], cols[i - 1]);
+#endif
+                }
         }
         // normalize the pdf across all scanlines
-        for (int y = 0; y < res; y++)
+        for (int y = 0; y < res; y++) {
+#ifndef __CUDACC__
             rows[y] /= rows[res - 1];
+#else
+            rows[y] = __fdiv_rn(rows[y], rows[res - 1]);
+#endif
+        }
 
         // both eval and sample below return a "weight" that is
         // value[i] / row*col_pdf, so might as well bake it into the table
@@ -85,7 +95,14 @@ struct Background {
             float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
             for (int x = 0; x < res; x++, i++) {
                 float col_pdf = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
+#ifndef __CUDACC__
                 values[i] /= row_pdf * col_pdf * invjacobian;
+#else
+                const float divisor = __fmul_rn(__fmul_rn(row_pdf, col_pdf), invjacobian);
+                values[i].x = __fdiv_rn(values[i].x, divisor);
+                values[i].y = __fdiv_rn(values[i].y, divisor);
+                values[i].z = __fdiv_rn(values[i].z, divisor);
+#endif
             }
         }
 #if 0  // DEBUG: visualize importance table
@@ -145,8 +162,8 @@ struct Background {
         rows        = rows_in;
         cols        = cols_in;
         res         = res_in;
-        invres      = 1.0f / res;
-        invjacobian = res * res / float(4 * M_PI);
+        invres      = __frcp_rn(res);
+        invjacobian = __fdiv_rn(res * res, float(4 * M_PI));
         assert(res >= 32);
     }
 #endif
@@ -197,11 +214,8 @@ private:
         assert(x >= 0.0f);
         assert(x < 1.0f);
         *idx = upper_bound_cuda(data, n, x) - data;
-        // TODO: Figure out why these asserts are failing
-        if (*idx >= n)
-            *idx = std::max<unsigned int>(0, n-1);
-        // assert(*idx < n);
-        // assert(x < data[*idx]);
+        assert(*idx < n);
+        assert(x < data[*idx]);
 
         float scaled_sample;
         if (*idx == 0) {

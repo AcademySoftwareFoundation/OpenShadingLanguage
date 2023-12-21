@@ -1452,7 +1452,7 @@ CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
     }
     if ((!absorb && total > 0) || total > 1) {
         for (int i = 0; i < num_bsdfs; i++)
-            pdfs[i] /= total;
+            pdfs[i] = __fdiv_rn(pdfs[i], total);
     }
 }
 

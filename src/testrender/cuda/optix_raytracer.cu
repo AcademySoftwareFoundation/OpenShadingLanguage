@@ -374,6 +374,9 @@ __raygen__setglobals()
                              (float*)render_params.bg_cols,
                              render_params.bg_res);
 
+    if (render_params.bg_id < 0)
+        return;
+
     // TODO: Paralellize Background::prepare()
     auto evaler = [](const Dual2<Vec3>& dir, ShadingContext* ctx) {
         return eval_background(dir);
@@ -685,7 +688,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
         //
 
         // trace one ray to the background
-        if (render_params.bg_res > 0) {
+        if (render_params.bg_id >= 0) {
             const float3 origin = sg.P + sg.N * offset;  // offset the ray origin
             Dual2<Vec3> bg_dir;
             float bg_pdf   = 0;

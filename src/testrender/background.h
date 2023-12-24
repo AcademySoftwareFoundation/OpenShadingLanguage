@@ -112,8 +112,13 @@ struct Background {
     template<typename F>
     OSL_HOSTDEVICE void prepare_gpu_01(int stride, int idx, F cb)
     {
-        for (int y = 0, i = idx; y < res; y++) {
+        for (int y = 0; y < res; y++) {
+            const int row_start = y * res;
+            const int row_end   = row_start + res;
+            int i               = row_start + idx;
             for (int x = idx; x < res; x += stride, i += stride) {
+                if (i >= row_end)
+                    continue;
                 values[i] = cb(map(x + 0.5f, y + 0.5f));
             }
         }
@@ -149,9 +154,14 @@ struct Background {
 
         // both eval and sample below return a "weight" that is
         // value[i] / row*col_pdf, so might as well bake it into the table
-        for (int y = 0, i = idx; y < res; y++) {
-            float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
+        for (int y = 0; y < res; y++) {
+            float row_pdf       = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
+            const int row_start = y * res;
+            const int row_end   = row_start + res;
+            int i               = row_start + idx;
             for (int x = idx; x < res; x += stride, i += stride) {
+                if (i >= row_end)
+                    continue;
                 float col_pdf       = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
                 const float divisor = __fmul_rn(__fmul_rn(row_pdf, col_pdf),
                                                 invjacobian);

@@ -115,6 +115,73 @@ struct Background {
 #endif
     }
 
+#ifdef __CUDACC__
+
+    template<typename F>
+    OSL_HOSTDEVICE void prepare_gpu(int stride, int idx, F cb)
+    {
+        prepare_gpu_01(stride, idx, cb);
+        if (idx == 0)
+            prepare_gpu_02();
+        prepare_gpu_03(stride, idx);
+    }
+
+    // Pre-compute the 'values' table in parallel
+    template<typename F>
+    OSL_HOSTDEVICE void prepare_gpu_01(int stride, int idx, F cb)
+    {
+        for (int y = 0, i = idx; y < res; y++) {
+            for (int x = idx; x < res; x += stride, i += stride) {
+                values[i] = cb(map(x + 0.5f, y + 0.5f), (OSL::ShadingContext*) nullptr);
+            }
+        }
+    }
+
+    // Compute 'cols' and 'rows' using a single thread
+    OSL_HOSTDEVICE void prepare_gpu_02()
+    {
+        for (int y = 0, i = 0; y < res; y++) {
+            for (int x = 0; x < res; x++, i++) {
+                cols[i] = std::max(std::max(values[i].x, values[i].y),
+                                   values[i].z)
+                          + ((x > 0) ? cols[i - 1] : 0.0f);
+            }
+            rows[y] = cols[i - 1] + ((y > 0) ? rows[y - 1] : 0.0f);
+            // normalize the pdf for this scanline (if it was non-zero)
+            if (cols[i - 1] > 0) {
+                for (int x = 0; x < res; x++) {
+                    cols[i - res + x] = __fdiv_rn(cols[i - res + x],
+                                                  cols[i - 1]);
+                }
+            }
+        }
+    }
+
+    // Normalize the row PDFs and finalize the 'values' table
+    OSL_HOSTDEVICE void prepare_gpu_03(int stride, int idx)
+    {
+        // normalize the pdf across all scanlines
+        for (int y = idx; y < res; y += stride) {
+            rows[y] = __fdiv_rn(rows[y], rows[res - 1]);
+        }
+
+        // both eval and sample below return a "weight" that is
+        // value[i] / row*col_pdf, so might as well bake it into the table
+        for (int y = 0, i = idx; y < res; y++) {
+            float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
+            for (int x = idx; x < res; x += stride, i += stride) {
+                float col_pdf       = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
+                const float divisor = __fmul_rn(__fmul_rn(row_pdf, col_pdf),
+                                                invjacobian);
+                values[i].x         = __fdiv_rn(values[i].x, divisor);
+                values[i].y         = __fdiv_rn(values[i].y, divisor);
+                values[i].z         = __fdiv_rn(values[i].z, divisor);
+            }
+        }
+    }
+
+#endif
+
     OSL_HOSTDEVICE
     Vec3 eval(const Vec3& dir, float& pdf) const
     {

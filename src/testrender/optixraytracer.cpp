@@ -1343,7 +1343,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 
     // Set up global variables
     OPTIX_CHECK(optixLaunch(m_optix_pipeline, m_cuda_stream, d_launch_params,
-                            sizeof(RenderParams), &m_setglobals_optix_sbt, 1, 1,
+                            sizeof(RenderParams), &m_setglobals_optix_sbt, 32, 1,
                             1));
     CUDA_SYNC_CHECK();
 

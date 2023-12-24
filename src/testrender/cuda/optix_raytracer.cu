@@ -361,12 +361,18 @@ __miss__occlusion()
 extern "C" __global__ void
 __raygen__setglobals()
 {
+    uint3 launch_dims  = optixGetLaunchDimensions();
+    uint3 launch_index = optixGetLaunchIndex();
+
     // Set global variables
-    OSL::pvt::osl_printf_buffer_start = render_params.osl_printf_buffer_start;
-    OSL::pvt::osl_printf_buffer_end   = render_params.osl_printf_buffer_end;
-    OSL::pvt::s_color_system          = render_params.color_system;
-    OSL::pvt::test_str_1              = render_params.test_str_1;
-    OSL::pvt::test_str_2              = render_params.test_str_2;
+    if (launch_index.x == 0 && launch_index.y == 0) {
+        OSL::pvt::osl_printf_buffer_start
+            = render_params.osl_printf_buffer_start;
+        OSL::pvt::osl_printf_buffer_end = render_params.osl_printf_buffer_end;
+        OSL::pvt::s_color_system        = render_params.color_system;
+        OSL::pvt::test_str_1            = render_params.test_str_1;
+        OSL::pvt::test_str_2            = render_params.test_str_2;
+    }
 
     Background background;
     background.set_variables((Vec3*)render_params.bg_values,
@@ -382,7 +388,14 @@ __raygen__setglobals()
         return eval_background(dir);
     };
 
-    background.prepare(render_params.bg_res, evaler, (OSL::ShadingContext*) nullptr);
+#if 0
+    if (launch_index.x == 0 && launch_index.y == 0)
+        background.prepare(render_params.bg_res, evaler, (OSL::ShadingContext*) nullptr);
+#else
+    // Background::prepare_gpu() must run on a single warp
+    assert(launch_index.x < 32 && launch_index.y == 0);
+    background.prepare_gpu(launch_dims.x, launch_index.x, evaler);
+#endif
 }
 
 

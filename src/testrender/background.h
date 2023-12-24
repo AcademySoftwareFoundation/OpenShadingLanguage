@@ -48,10 +48,9 @@ struct Background {
 #endif
     }
 
-    template<typename F, typename T> OSL_HOSTDEVICE
+    template<typename F, typename T>
     void prepare(int resolution, F cb, T* data)
     {
-#ifndef __CUDACC__
         // These values are set via set_variables() in CUDA
         res = resolution;
         if (res < 32)
@@ -61,7 +60,7 @@ struct Background {
         values      = new Vec3[res * res];
         rows        = new float[res];
         cols        = new float[res * res];
-#endif
+
         for (int y = 0, i = 0; y < res; y++) {
             for (int x = 0; x < res; x++, i++) {
                 values[i] = cb(map(x + 0.5f, y + 0.5f), data);
@@ -72,21 +71,12 @@ struct Background {
             rows[y] = cols[i - 1] + ((y > 0) ? rows[y - 1] : 0.0f);
             // normalize the pdf for this scanline (if it was non-zero)
             if (cols[i - 1] > 0)
-                for (int x = 0; x < res; x++) {
-#ifndef __CUDACC__
+                for (int x = 0; x < res; x++)
                     cols[i - res + x] /= cols[i - 1];
-#else
-                    cols[i - res + x] = __fdiv_rn(cols[i - res + x], cols[i - 1]);
-#endif
-                }
         }
         // normalize the pdf across all scanlines
         for (int y = 0; y < res; y++) {
-#ifndef __CUDACC__
             rows[y] /= rows[res - 1];
-#else
-            rows[y] = __fdiv_rn(rows[y], rows[res - 1]);
-#endif
         }
 
         // both eval and sample below return a "weight" that is
@@ -95,14 +85,7 @@ struct Background {
             float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
             for (int x = 0; x < res; x++, i++) {
                 float col_pdf = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
-#ifndef __CUDACC__
                 values[i] /= row_pdf * col_pdf * invjacobian;
-#else
-                const float divisor = __fmul_rn(__fmul_rn(row_pdf, col_pdf), invjacobian);
-                values[i].x = __fdiv_rn(values[i].x, divisor);
-                values[i].y = __fdiv_rn(values[i].y, divisor);
-                values[i].z = __fdiv_rn(values[i].z, divisor);
-#endif
             }
         }
 #if 0  // DEBUG: visualize importance table
@@ -116,7 +99,6 @@ struct Background {
     }
 
 #ifdef __CUDACC__
-
     template<typename F>
     OSL_HOSTDEVICE void prepare_gpu(int stride, int idx, F cb)
     {
@@ -132,7 +114,7 @@ struct Background {
     {
         for (int y = 0, i = idx; y < res; y++) {
             for (int x = idx; x < res; x += stride, i += stride) {
-                values[i] = cb(map(x + 0.5f, y + 0.5f), (OSL::ShadingContext*) nullptr);
+                values[i] = cb(map(x + 0.5f, y + 0.5f));
             }
         }
     }
@@ -179,7 +161,6 @@ struct Background {
             }
         }
     }
-
 #endif
 
     OSL_HOSTDEVICE

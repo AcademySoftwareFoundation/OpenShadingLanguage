@@ -384,18 +384,13 @@ __raygen__setglobals()
         return;
 
     // TODO: Paralellize Background::prepare()
-    auto evaler = [](const Dual2<Vec3>& dir, ShadingContext* ctx) {
+    auto evaler = [](const Dual2<Vec3>& dir) {
         return eval_background(dir);
     };
 
-#if 0
-    if (launch_index.x == 0 && launch_index.y == 0)
-        background.prepare(render_params.bg_res, evaler, (OSL::ShadingContext*) nullptr);
-#else
-    // Background::prepare_gpu() must run on a single warp
+    // Background::prepare_gpu must run on a single warp
     assert(launch_index.x < 32 && launch_index.y == 0);
     background.prepare_gpu(launch_dims.x, launch_index.x, evaler);
-#endif
 }
 
 

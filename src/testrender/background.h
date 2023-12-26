@@ -13,16 +13,17 @@ OSL_NAMESPACE_ENTER
 #ifdef __CUDACC__
 // std::upper_bound is not supported in device code, so define a version of it here.
 // Adapted from the LLVM Project, see https://llvm.org/LICENSE.txt for license information.
-inline OSL_HOSTDEVICE const float*
-upper_bound_cuda(const float* data, int count, const float value)
+template<typename T>
+inline OSL_HOSTDEVICE const T*
+upper_bound_cuda(const T* data, int count, const T value)
 {
-    const float* __first = data;
-    const float __value_ = value;
-    int __len            = count;
+    const T* __first = data;
+    const T __value_ = value;
+    int __len        = count;
     while (__len != 0) {
-        int __l2         = __len / 2;
-        const float* __m = __first;
-        __m += __l2; // TODO: This is possibly unsafe, should be something like std::advance
+        int __l2     = __len / 2;
+        const T* __m = __first;
+        __m += __l2;  // TODO: This is possibly unsafe, should be something like std::advance
         if (__value_ < *__m)
             __len = __l2;
         else {
@@ -98,7 +99,58 @@ struct Background {
 #endif
     }
 
+    OSL_HOSTDEVICE
+    Vec3 eval(const Vec3& dir, float& pdf) const
+    {
+        // map from sphere to unit-square
+        float u = OIIO::fast_atan2(dir.y, dir.x) * float(M_1_PI * 0.5f);
+        if (u < 0)
+            u++;
+        float v = (1 - dir.z) * 0.5f;
+        // retrieve nearest neighbor
+        int x = (int)(u * res);
+        if (x < 0)
+            x = 0;
+        else if (x >= res)
+            x = res - 1;
+        int y = (int)(v * res);
+        if (y < 0)
+            y = 0;
+        else if (y >= res)
+            y = res - 1;
+        int i         = y * res + x;
+        float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
+        float col_pdf = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
+        pdf           = row_pdf * col_pdf * invjacobian;
+        return values[i];
+    }
+
+    OSL_HOSTDEVICE
+    Vec3 sample(float rx, float ry, Dual2<Vec3>& dir, float& pdf) const
+    {
+        float row_pdf, col_pdf;
+        unsigned x, y;
+        ry  = sample_cdf(rows, res, ry, &y, &row_pdf);
+        rx  = sample_cdf(cols + y * res, res, rx, &x, &col_pdf);
+        dir = map(x + rx, y + ry);
+        pdf = row_pdf * col_pdf * invjacobian;
+        return values[y * res + x];
+    }
+
 #ifdef __CUDACC__
+    OSL_HOSTDEVICE
+    void set_variables(Vec3* values_in, float* rows_in, float* cols_in,
+                       int res_in)
+    {
+        values      = values_in;
+        rows        = rows_in;
+        cols        = cols_in;
+        res         = res_in;
+        invres      = __frcp_rn(res);
+        invjacobian = __fdiv_rn(res * res, float(4 * M_PI));
+        assert(res >= 32);
+    }
+
     template<typename F>
     OSL_HOSTDEVICE void prepare_gpu(int stride, int idx, F cb)
     {
@@ -173,59 +225,6 @@ struct Background {
     }
 #endif
 
-    OSL_HOSTDEVICE
-    Vec3 eval(const Vec3& dir, float& pdf) const
-    {
-        // map from sphere to unit-square
-        float u = OIIO::fast_atan2(dir.y, dir.x) * float(M_1_PI * 0.5f);
-        if (u < 0)
-            u++;
-        float v = (1 - dir.z) * 0.5f;
-        // retrieve nearest neighbor
-        int x = (int)(u * res);
-        if (x < 0)
-            x = 0;
-        else if (x >= res)
-            x = res - 1;
-        int y = (int)(v * res);
-        if (y < 0)
-            y = 0;
-        else if (y >= res)
-            y = res - 1;
-        int i         = y * res + x;
-        float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
-        float col_pdf = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
-        pdf           = row_pdf * col_pdf * invjacobian;
-        return values[i];
-    }
-
-    OSL_HOSTDEVICE
-    Vec3 sample(float rx, float ry, Dual2<Vec3>& dir, float& pdf) const
-    {
-        float row_pdf, col_pdf;
-        unsigned x, y;
-        ry  = sample_cdf(rows, res, ry, &y, &row_pdf);
-        rx  = sample_cdf(cols + y * res, res, rx, &x, &col_pdf);
-        dir = map(x + rx, y + ry);
-        pdf = row_pdf * col_pdf * invjacobian;
-        return values[y * res + x];
-    }
-
-#ifdef __CUDACC__
-    OSL_HOSTDEVICE
-    void set_variables(Vec3* values_in, float* rows_in, float* cols_in,
-                       int res_in)
-    {
-        values      = values_in;
-        rows        = rows_in;
-        cols        = cols_in;
-        res         = res_in;
-        invres      = __frcp_rn(res);
-        invjacobian = __fdiv_rn(res * res, float(4 * M_PI));
-        assert(res >= 32);
-    }
-#endif
-
 private:
     OSL_HOSTDEVICE Dual2<Vec3> map(float x, float y) const
     {
@@ -240,14 +239,17 @@ private:
         return make_Vec3(sin_phi * ct, sin_phi * st, cos_phi);
     }
 
-
-#ifndef __CUDACC__
-    static float sample_cdf(const float* data, unsigned int n, float x,
-                            unsigned int* idx, float* pdf)
+    static OSL_HOSTDEVICE float sample_cdf(const float* data, unsigned int n,
+                                           float x, unsigned int* idx,
+                                           float* pdf)
     {
         OSL_DASSERT(x >= 0.0f);
         OSL_DASSERT(x < 1.0f);
+#ifndef __CUDACC__
         *idx = std::upper_bound(data, data + n, x) - data;
+#else
+        *idx = upper_bound_cuda(data, n, x) - data;
+#endif
         OSL_DASSERT(*idx < n);
         OSL_DASSERT(x < data[*idx]);
 
@@ -264,31 +266,6 @@ private:
         // keep result in [0,1)
         return std::min(scaled_sample, 0.99999994f);
     }
-#else
-    static OSL_HOSTDEVICE float sample_cdf(const float* data, unsigned int n,
-                                           float x, unsigned int* idx,
-                                           float* pdf)
-    {
-        assert(x >= 0.0f);
-        assert(x < 1.0f);
-        *idx = upper_bound_cuda(data, n, x) - data;
-        assert(*idx < n);
-        assert(x < data[*idx]);
-
-        float scaled_sample;
-        if (*idx == 0) {
-            *pdf          = data[0];
-            scaled_sample = x / data[0];
-        } else {
-            assert(x >= data[*idx - 1]);
-            *pdf          = data[*idx] - data[*idx - 1];
-            scaled_sample = (x - data[*idx - 1])
-                / (data[*idx] - data[*idx - 1]);
-        }
-        // keep result in [0,1)
-        return std::min(scaled_sample, 0.99999994f);
-    }
-#endif
 
     Vec3* values = nullptr;    // actual map
     float* rows  = nullptr;    // probability of choosing a given row 'y'

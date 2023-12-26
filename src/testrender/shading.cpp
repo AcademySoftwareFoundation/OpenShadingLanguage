@@ -14,10 +14,12 @@
 
 using namespace OSL;
 
-#if defined(__CUDACC__)
-using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
-#else
+
+// TODO: This is a little clumsy. Is it necessary?
+#ifndef __CUDACC__
 using ShaderGlobalsType = OSL::ShaderGlobals;
+#else
+using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
 #endif
 
 
@@ -1318,343 +1320,6 @@ struct MxSheen final : public BSDF, MxSheenParams {
 };
 
 
-#ifdef __CUDACC__
-OSL_HOSTDEVICE
-bool
-CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
-{
-    auto sizeof_params = [](ClosureIDs id) {
-        size_t sz = 0;
-        switch (id) {
-        case DIFFUSE_ID: sz = sizeof(Diffuse<0>); break;
-        case OREN_NAYAR_ID: sz = sizeof(OrenNayar); break;
-        case PHONG_ID: sz = sizeof(Phong); break;
-        case WARD_ID: sz = sizeof(Ward); break;
-        case REFLECTION_ID: sz = sizeof(Reflection); break;
-        case FRESNEL_REFLECTION_ID: sz = sizeof(Reflection); break;
-        case REFRACTION_ID: sz = sizeof(Refraction); break;
-        case MICROFACET_ID: sz = sizeof(MicrofacetBeckmannRefl);
-        default: break;
-        }
-        return sz;
-    };
-
-    ClosureIDs id = static_cast<ClosureIDs>(comp->id);
-    size_t sz     = sizeof_params(id);
-
-    if (num_bsdfs >= MaxEntries)
-        return false;
-    if (num_bytes + sz > MaxSize)
-        return false;
-
-    // OptiX doesn't support virtual function calls, so we need to manually
-    // construct each of the BSDF sub-types.
-    switch (id) {
-    case DIFFUSE_ID: {
-        // TODO: Do we need to handle trans=1?
-        const DiffuseParams* params = comp->as<DiffuseParams>();
-        bsdfs[num_bsdfs]                   = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
-        ((Diffuse<0>*)bsdfs[num_bsdfs])->N = params->N;
-        break;
-    }
-    case OREN_NAYAR_ID: {
-        const OrenNayarParams* params = comp->as<OrenNayarParams>();
-        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                  = OREN_NAYAR_ID;
-        ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
-        ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->sigma;
-        ((OrenNayar*)bsdfs[num_bsdfs])->calcAB();
-        break;
-    }
-    case PHONG_ID: {
-        const PhongParams* params            = comp->as<PhongParams>();
-        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                 = PHONG_ID;
-        ((Phong*)bsdfs[num_bsdfs])->N        = params->N;
-        ((Phong*)bsdfs[num_bsdfs])->exponent = params->exponent;
-        break;
-    }
-    case WARD_ID: {
-        const WardParams* params      = comp->as<WardParams>();
-        bsdfs[num_bsdfs]              = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id          = WARD_ID;
-        ((Ward*)bsdfs[num_bsdfs])->N  = params->N;
-        ((Ward*)bsdfs[num_bsdfs])->T  = params->T;
-        ((Ward*)bsdfs[num_bsdfs])->ax = params->ax;
-        ((Ward*)bsdfs[num_bsdfs])->ay = params->ay;
-        break;
-    }
-    case REFLECTION_ID:
-    case FRESNEL_REFLECTION_ID: {
-        const ReflectionParams* params       = comp->as<ReflectionParams>();
-        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                 = REFLECTION_ID;
-        ((Reflection*)bsdfs[num_bsdfs])->N   = params->N;
-        ((Reflection*)bsdfs[num_bsdfs])->eta = params->eta;
-        break;
-    }
-    case REFRACTION_ID: {
-        const RefractionParams* params       = comp->as<RefractionParams>();
-        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                 = REFRACTION_ID;
-        ((Refraction*)bsdfs[num_bsdfs])->N   = params->N;
-        ((Refraction*)bsdfs[num_bsdfs])->eta = params->eta;
-        break;
-    }
-    case MICROFACET_ID: {
-        const MicrofacetParams* params        = comp->as<MicrofacetParams>();
-        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                  = MICROFACET_ID;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->dist    = params->dist;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->N       = params->N;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->U       = params->U;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->xalpha  = params->xalpha;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->yalpha  = params->yalpha;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->eta     = params->eta;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->refract = params->refract;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->calcTangentFrame();
-
-#if 0
-        const char* mem  = (const char*)((OSL::ClosureComponent*)comp)->data();
-        const char* dist = *(const char**)&mem[0];
-        if (HDSTR(dist) == STRING_PARAMS(default))
-            printf("default\n");
-#endif
-        break;
-    }
-    default: printf("add unknown: %d\n", (int)id); break;
-    }
-    weights[num_bsdfs] = w;
-    num_bsdfs++;
-    num_bytes += sz;
-    return true;
-}
-
-OSL_HOSTDEVICE void
-CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
-                           bool absorb)
-{
-    float total = 0;
-    for (int i = 0; i < num_bsdfs; i++) {
-        pdfs[i] = weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo))
-                  / (path_weight.x + path_weight.y + path_weight.z);
-
-        // TODO: What is an acceptable range?
-        assert(pdfs[i] >= (0.0f - 1e-6f));
-        assert(pdfs[i] <= (1.0f + 1e-6f));
-
-        // Clamp the PDF to [0,1]. The PDF can fall outside of this range due to
-        // floating-point precision issues.
-        pdfs[i] = (pdfs[i] < 0.0f) ? 0.0f : (pdfs[i] > 1.0f) ? 1.0f : pdfs[i];
-
-        total += pdfs[i];
-    }
-    if ((!absorb && total > 0) || total > 1) {
-        for (int i = 0; i < num_bsdfs; i++)
-            pdfs[i] = __fdiv_rn(pdfs[i], total);
-    }
-}
-
-
-OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::eval_gpu(const Vec3& wo, const Vec3& wi) const
-{
-    BSDF::Sample s = {};
-    for (int i = 0; i < num_bsdfs; i++) {
-        BSDF::Sample b = eval_bsdf(bsdfs[i],wo, wi);
-        b.weight *= weights[i];
-        MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf, pdfs[i]);
-        s.roughness += b.roughness * pdfs[i];
-    }
-    return s;
-}
-
-
-OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
-{
-    float accum = 0;
-    for (int i = 0; i < num_bsdfs; i++) {
-        if (rx < (pdfs[i] + accum)) {
-            rx             = (rx - accum) / pdfs[i];
-            rx             = std::min(rx, 0.99999994f);  // keep result in [0,1)
-            BSDF::Sample s = sample_bsdf(bsdfs[i], wo, rx, ry, rz);
-            s.weight *= weights[i] * (1 / pdfs[i]);
-            s.pdf *= pdfs[i];
-            if (s.pdf == 0.0f)
-                return {};
-
-            // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
-            for (int j = 0; j < num_bsdfs; j++) {
-                if (i != j) {
-                    BSDF::Sample b = eval_bsdf(bsdfs[j], wo, s.wi);
-                    b.weight *= weights[j];
-                    MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf,
-                                     pdfs[j]);
-                }
-            }
-            return s;
-        }
-        accum += pdfs[i];
-    }
-    return {};
-}
-
-
-OSL_HOSTDEVICE Color3
-CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
-{
-    Color3 result(0, 0, 0);
-    for (int i = 0; i < num_bsdfs; i++) {
-        result += weights[i] * get_bsdf_albedo(bsdfs[i], wo);
-    }
-    return result;
-}
-
-//
-// Helper functions to avoid virtual function calls
-//
-
-OSL_HOSTDEVICE Color3
-CompositeBSDF::get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const
-{
-    Color3 albedo(0);
-    switch (bsdf->id) {
-    case DIFFUSE_ID:
-        albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
-        break;
-    case OREN_NAYAR_ID:
-        albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
-        break;
-    case PHONG_ID: albedo = ((Phong*)bsdf)->Phong::get_albedo(wo); break;
-    case WARD_ID: albedo = ((Ward*)bsdf)->Ward::get_albedo(wo); break;
-    case REFLECTION_ID:
-    case FRESNEL_REFLECTION_ID:
-        albedo = ((Reflection*)bsdf)->Reflection::get_albedo(wo);
-        break;
-    case REFRACTION_ID:
-        albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
-        break;
-    case MICROFACET_ID: {
-        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        switch (refract) {
-        case 0:
-            albedo = ((MicrofacetBeckmannRefl*)bsdf)
-                         ->MicrofacetBeckmannRefl::get_albedo(wo);
-            break;
-        case 1:
-            albedo = ((MicrofacetBeckmannRefr*)bsdf)
-                         ->MicrofacetBeckmannRefr::get_albedo(wo);
-            break;
-        case 2:
-            albedo = ((MicrofacetBeckmannBoth*)bsdf)
-                         ->MicrofacetBeckmannBoth::get_albedo(wo);
-            break;
-        }
-        break;
-    }
-    default: break;
-    }
-    return albedo;
-}
-
-
-OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry,
-                           float rz) const
-{
-    BSDF::Sample sample = {};
-    switch (bsdf->id) {
-    case DIFFUSE_ID:
-        sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case OREN_NAYAR_ID:
-        sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case PHONG_ID: sample = ((Phong*)bsdf)->sample(wo, rx, ry, rz); break;
-    case WARD_ID: sample = ((Ward*)bsdf)->sample(wo, rx, ry, rz); break;
-    case REFLECTION_ID:
-    case FRESNEL_REFLECTION_ID:
-        sample = ((Reflection*)bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case REFRACTION_ID:
-        sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case MICROFACET_ID: {
-        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        switch (refract) {
-        case 0:
-            sample = ((MicrofacetBeckmannRefl*)bsdf)
-                         ->MicrofacetBeckmannRefl::sample(wo, rx, ry, rz);
-            break;
-        case 1:
-            sample = ((MicrofacetBeckmannRefr*)bsdf)
-                         ->MicrofacetBeckmannRefr::sample(wo, rx, ry, rz);
-            break;
-        case 2:
-            sample = ((MicrofacetBeckmannBoth*)bsdf)
-                         ->MicrofacetBeckmannBoth::sample(wo, rx, ry, rz);
-            break;
-        }
-        break;
-    }
-    default: break;
-    }
-    if (sample.pdf != sample.pdf)
-    {
-        uint3 launch_index = optixGetLaunchIndex();
-        printf("sample_bsdf( %s ), PDF is NaN [%d, %d]\n",
-               id_to_string(bsdf->id), launch_index.x, launch_index.y);
-    }
-    return sample;
-}
-
-
-OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
-{
-    BSDF::Sample sample = {};
-    switch (bsdf->id) {
-    case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
-    case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
-    case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
-    case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
-    case REFLECTION_ID:
-    case FRESNEL_REFLECTION_ID:
-        sample = ((Reflection*)bsdf)->eval(wo, wi);
-        break;
-    case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
-    case MICROFACET_ID: {
-        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        switch (refract) {
-        case 0:
-            sample = ((MicrofacetBeckmannRefl*)bsdf)
-                         ->MicrofacetBeckmannRefl::eval(wo, wi);
-            break;
-        case 1:
-            sample = ((MicrofacetBeckmannRefr*)bsdf)
-                         ->MicrofacetBeckmannRefr::eval(wo, wi);
-            break;
-        case 2:
-            sample = ((MicrofacetBeckmannBoth*)bsdf)
-                         ->MicrofacetBeckmannBoth::eval(wo, wi);
-            break;
-        }
-        break;
-    }
-    default: break;
-    }
-    if (sample.pdf != sample.pdf)
-    {
-        uint3 launch_index = optixGetLaunchIndex();
-        printf("eval_bsdf( %s ), PDF is NaN [%d, %d]\n",
-               id_to_string(bsdf->id), launch_index.x, launch_index.y);
-    }
-    return sample;
-}
-#endif
-
 #if !defined(__CUDACC__)
 Color3
 evaluate_layer_opacity(const ShaderGlobalsType& sg,
@@ -2051,6 +1716,346 @@ process_background_closure(const ClosureColor* closure)
     return Vec3(0, 0, 0);
 }
 #endif // !defined(__CUDACC__)
+
+
+#ifdef __CUDACC__
+OSL_HOSTDEVICE
+bool
+CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp)
+{
+    auto sizeof_params = [](ClosureIDs id) {
+        size_t sz = 0;
+        switch (id) {
+        case DIFFUSE_ID: sz = sizeof(Diffuse<0>); break;
+        case OREN_NAYAR_ID: sz = sizeof(OrenNayar); break;
+        case PHONG_ID: sz = sizeof(Phong); break;
+        case WARD_ID: sz = sizeof(Ward); break;
+        case REFLECTION_ID: sz = sizeof(Reflection); break;
+        case FRESNEL_REFLECTION_ID: sz = sizeof(Reflection); break;
+        case REFRACTION_ID: sz = sizeof(Refraction); break;
+        case MICROFACET_ID: sz = sizeof(MicrofacetBeckmannRefl);
+        default: break;
+        }
+        return sz;
+    };
+
+    ClosureIDs id = static_cast<ClosureIDs>(comp->id);
+    size_t sz     = sizeof_params(id);
+
+    if (num_bsdfs >= MaxEntries)
+        return false;
+    if (num_bytes + sz > MaxSize)
+        return false;
+
+    // OptiX doesn't support virtual function calls, so we need to manually
+    // construct each of the BSDF sub-types.
+    switch (id) {
+    case DIFFUSE_ID: {
+        // TODO: Do we need to handle trans=1?
+        const DiffuseParams* params = comp->as<DiffuseParams>();
+        bsdfs[num_bsdfs]                   = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
+        ((Diffuse<0>*)bsdfs[num_bsdfs])->N = params->N;
+        break;
+    }
+    case OREN_NAYAR_ID: {
+        const OrenNayarParams* params = comp->as<OrenNayarParams>();
+        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                  = OREN_NAYAR_ID;
+        ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
+        ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->sigma;
+        ((OrenNayar*)bsdfs[num_bsdfs])->calcAB();
+        break;
+    }
+    case PHONG_ID: {
+        const PhongParams* params            = comp->as<PhongParams>();
+        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                 = PHONG_ID;
+        ((Phong*)bsdfs[num_bsdfs])->N        = params->N;
+        ((Phong*)bsdfs[num_bsdfs])->exponent = params->exponent;
+        break;
+    }
+    case WARD_ID: {
+        const WardParams* params      = comp->as<WardParams>();
+        bsdfs[num_bsdfs]              = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id          = WARD_ID;
+        ((Ward*)bsdfs[num_bsdfs])->N  = params->N;
+        ((Ward*)bsdfs[num_bsdfs])->T  = params->T;
+        ((Ward*)bsdfs[num_bsdfs])->ax = params->ax;
+        ((Ward*)bsdfs[num_bsdfs])->ay = params->ay;
+        break;
+    }
+    case REFLECTION_ID:
+    case FRESNEL_REFLECTION_ID: {
+        const ReflectionParams* params       = comp->as<ReflectionParams>();
+        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                 = REFLECTION_ID;
+        ((Reflection*)bsdfs[num_bsdfs])->N   = params->N;
+        ((Reflection*)bsdfs[num_bsdfs])->eta = params->eta;
+        break;
+    }
+    case REFRACTION_ID: {
+        const RefractionParams* params       = comp->as<RefractionParams>();
+        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                 = REFRACTION_ID;
+        ((Refraction*)bsdfs[num_bsdfs])->N   = params->N;
+        ((Refraction*)bsdfs[num_bsdfs])->eta = params->eta;
+        break;
+    }
+    case MICROFACET_ID: {
+        const MicrofacetParams* params        = comp->as<MicrofacetParams>();
+        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]->id                  = MICROFACET_ID;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->dist    = params->dist;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->N       = params->N;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->U       = params->U;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->xalpha  = params->xalpha;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->yalpha  = params->yalpha;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->eta     = params->eta;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->refract = params->refract;
+        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->calcTangentFrame();
+
+#if 0
+        const char* mem  = (const char*)((OSL::ClosureComponent*)comp)->data();
+        const char* dist = *(const char**)&mem[0];
+        if (HDSTR(dist) == STRING_PARAMS(default))
+            printf("default\n");
+#endif
+        break;
+    }
+    default: printf("add unknown: %d\n", (int)id); break;
+    }
+    weights[num_bsdfs] = w;
+    num_bsdfs++;
+    num_bytes += sz;
+    return true;
+}
+
+OSL_HOSTDEVICE void
+CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
+                           bool absorb)
+{
+    float total = 0;
+    for (int i = 0; i < num_bsdfs; i++) {
+        pdfs[i] = weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo))
+                  / (path_weight.x + path_weight.y + path_weight.z);
+
+        // TODO: What is an acceptable range?
+        assert(pdfs[i] >= (0.0f - 1e-6f));
+        assert(pdfs[i] <= (1.0f + 1e-6f));
+
+        // Clamp the PDF to [0,1]. The PDF can fall outside of this range due to
+        // floating-point precision issues.
+        pdfs[i] = (pdfs[i] < 0.0f) ? 0.0f : (pdfs[i] > 1.0f) ? 1.0f : pdfs[i];
+
+        total += pdfs[i];
+    }
+    if ((!absorb && total > 0) || total > 1) {
+        for (int i = 0; i < num_bsdfs; i++)
+            pdfs[i] = __fdiv_rn(pdfs[i], total);
+    }
+}
+
+
+OSL_HOSTDEVICE BSDF::Sample
+CompositeBSDF::eval_gpu(const Vec3& wo, const Vec3& wi) const
+{
+    BSDF::Sample s = {};
+    for (int i = 0; i < num_bsdfs; i++) {
+        BSDF::Sample b = eval_bsdf(bsdfs[i],wo, wi);
+        b.weight *= weights[i];
+        MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf, pdfs[i]);
+        s.roughness += b.roughness * pdfs[i];
+    }
+    return s;
+}
+
+
+OSL_HOSTDEVICE BSDF::Sample
+CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
+{
+    float accum = 0;
+    for (int i = 0; i < num_bsdfs; i++) {
+        if (rx < (pdfs[i] + accum)) {
+            rx             = (rx - accum) / pdfs[i];
+            rx             = std::min(rx, 0.99999994f);  // keep result in [0,1)
+            BSDF::Sample s = sample_bsdf(bsdfs[i], wo, rx, ry, rz);
+            s.weight *= weights[i] * (1 / pdfs[i]);
+            s.pdf *= pdfs[i];
+            if (s.pdf == 0.0f)
+                return {};
+
+            // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
+            for (int j = 0; j < num_bsdfs; j++) {
+                if (i != j) {
+                    BSDF::Sample b = eval_bsdf(bsdfs[j], wo, s.wi);
+                    b.weight *= weights[j];
+                    MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf,
+                                     pdfs[j]);
+                }
+            }
+            return s;
+        }
+        accum += pdfs[i];
+    }
+    return {};
+}
+
+
+OSL_HOSTDEVICE Color3
+CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
+{
+    Color3 result(0, 0, 0);
+    for (int i = 0; i < num_bsdfs; i++) {
+        result += weights[i] * get_bsdf_albedo(bsdfs[i], wo);
+    }
+    return result;
+}
+
+
+//
+// Helper functions to avoid virtual function calls
+//
+
+
+OSL_HOSTDEVICE Color3
+CompositeBSDF::get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const
+{
+    Color3 albedo(0);
+    switch (bsdf->id) {
+    case DIFFUSE_ID:
+        albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
+        break;
+    case OREN_NAYAR_ID:
+        albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
+        break;
+    case PHONG_ID: albedo = ((Phong*)bsdf)->Phong::get_albedo(wo); break;
+    case WARD_ID: albedo = ((Ward*)bsdf)->Ward::get_albedo(wo); break;
+    case REFLECTION_ID:
+    case FRESNEL_REFLECTION_ID:
+        albedo = ((Reflection*)bsdf)->Reflection::get_albedo(wo);
+        break;
+    case REFRACTION_ID:
+        albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
+        break;
+    case MICROFACET_ID: {
+        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        switch (refract) {
+        case 0:
+            albedo = ((MicrofacetBeckmannRefl*)bsdf)
+                         ->MicrofacetBeckmannRefl::get_albedo(wo);
+            break;
+        case 1:
+            albedo = ((MicrofacetBeckmannRefr*)bsdf)
+                         ->MicrofacetBeckmannRefr::get_albedo(wo);
+            break;
+        case 2:
+            albedo = ((MicrofacetBeckmannBoth*)bsdf)
+                         ->MicrofacetBeckmannBoth::get_albedo(wo);
+            break;
+        }
+        break;
+    }
+    default: break;
+    }
+    return albedo;
+}
+
+
+OSL_HOSTDEVICE BSDF::Sample
+CompositeBSDF::sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry,
+                           float rz) const
+{
+    BSDF::Sample sample = {};
+    switch (bsdf->id) {
+    case DIFFUSE_ID:
+        sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case OREN_NAYAR_ID:
+        sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case PHONG_ID: sample = ((Phong*)bsdf)->sample(wo, rx, ry, rz); break;
+    case WARD_ID: sample = ((Ward*)bsdf)->sample(wo, rx, ry, rz); break;
+    case REFLECTION_ID:
+    case FRESNEL_REFLECTION_ID:
+        sample = ((Reflection*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case REFRACTION_ID:
+        sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz);
+        break;
+    case MICROFACET_ID: {
+        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        switch (refract) {
+        case 0:
+            sample = ((MicrofacetBeckmannRefl*)bsdf)
+                         ->MicrofacetBeckmannRefl::sample(wo, rx, ry, rz);
+            break;
+        case 1:
+            sample = ((MicrofacetBeckmannRefr*)bsdf)
+                         ->MicrofacetBeckmannRefr::sample(wo, rx, ry, rz);
+            break;
+        case 2:
+            sample = ((MicrofacetBeckmannBoth*)bsdf)
+                         ->MicrofacetBeckmannBoth::sample(wo, rx, ry, rz);
+            break;
+        }
+        break;
+    }
+    default: break;
+    }
+    if (sample.pdf != sample.pdf)
+    {
+        uint3 launch_index = optixGetLaunchIndex();
+        printf("sample_bsdf( %s ), PDF is NaN [%d, %d]\n",
+               id_to_string(bsdf->id), launch_index.x, launch_index.y);
+    }
+    return sample;
+}
+
+
+OSL_HOSTDEVICE BSDF::Sample
+CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
+{
+    BSDF::Sample sample = {};
+    switch (bsdf->id) {
+    case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
+    case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
+    case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
+    case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
+    case REFLECTION_ID:
+    case FRESNEL_REFLECTION_ID:
+        sample = ((Reflection*)bsdf)->eval(wo, wi);
+        break;
+    case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
+    case MICROFACET_ID: {
+        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        switch (refract) {
+        case 0:
+            sample = ((MicrofacetBeckmannRefl*)bsdf)
+                         ->MicrofacetBeckmannRefl::eval(wo, wi);
+            break;
+        case 1:
+            sample = ((MicrofacetBeckmannRefr*)bsdf)
+                         ->MicrofacetBeckmannRefr::eval(wo, wi);
+            break;
+        case 2:
+            sample = ((MicrofacetBeckmannBoth*)bsdf)
+                         ->MicrofacetBeckmannBoth::eval(wo, wi);
+            break;
+        }
+        break;
+    }
+    default: break;
+    }
+    if (sample.pdf != sample.pdf)
+    {
+        uint3 launch_index = optixGetLaunchIndex();
+        printf("eval_bsdf( %s ), PDF is NaN [%d, %d]\n",
+               id_to_string(bsdf->id), launch_index.x, launch_index.y);
+    }
+    return sample;
+}
+#endif  // #ifdef __CUDACC__
 
 
 OSL_NAMESPACE_EXIT

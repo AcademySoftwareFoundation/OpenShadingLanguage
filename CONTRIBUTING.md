@@ -115,7 +115,8 @@ own repository on GitHub, and then clone it to get a repository on your
 local machine.
 
 2. Edit, compile, and test your changes.  Run clang-format (see the
-instructions on coding style below).
+instructions on coding style below). Our current formatting standard,
+as checked by our CI, uses clang-format 17.0.
 
 3. Push your changes to your fork (each unrelated pull request to a separate
 "topic branch", please).
@@ -170,14 +171,14 @@ file in which it appears.
 
 #### Formatting
 
-We use [clang-format](https://clang.llvm.org/docs/ClangFormat.html)
+We use [clang-format](https://clang.llvm.org/docs/ClangFormat.html) v17
 to uniformly format our source code prior to PR submission. Make sure that
 clang-format is installed on your local machine, and just run
 
     make clang-format
 
 and it will automatically reformat your code according to the configuration
-file found in the `.clang-format` file at the root directory of the OIIO
+file found in the `.clang-format` file at the root directory of the OSL
 source code checkout.
 
 One of the CI test matrix entries runs clang-format and fails if any

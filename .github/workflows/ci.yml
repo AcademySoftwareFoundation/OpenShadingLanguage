@@ -217,25 +217,6 @@ jobs:
             #   texture system adequately and is able to ignore the benign
             #   "leaks."
 
-            # Test formatting. This test entry doesn't do a full build, it
-            # just runs clang-format on everything, and passes if nothing is
-            # misformatted. Upon failure, the build artifact will be the full
-            # source code with the formatting fixed (diffs will also appear in
-            # the console output).
-          - desc: "clang-format"
-            nametag: clang-format
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang14
-            vfxyear: 2022
-            cxx_std: 17
-            openimageio_ver: release
-            python_ver: 3.9
-            simd: avx2,f16c
-            batched: b8_AVX2
-            skip_tests: 1
-            setenvs: export BUILDTARGET=clang-format
-                            OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
-
           # Test ABI stability. `abi_check` is the version or commit that we
           # believe is the current standard against which we don't want to
           # break the ABI. Basically, we will build that version as well as
@@ -429,6 +410,27 @@ jobs:
                             LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENCOLORIO_VERSION=v2.1.2
                             PUGIXML_VERSION=v1.11.4
+            # Test formatting. This test entry doesn't do a full build, it
+            # just runs clang-format on everything, and passes if nothing is
+            # misformatted. Upon failure, the build artifact will be the full
+            # source code with the formatting fixed (diffs will also appear in
+            # the console output).
+          - desc: "clang-format"
+            nametag: clang-format
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang14
+            cxx_std: 17
+            extra_artifacts: "src/*.*"
+            openimageio_ver: release
+            python_ver: "3.10"
+            simd: avx2,f16c
+            batched: b8_AVX2
+            skip_tests: 1
+            setenvs: export BUILDTARGET=clang-format
+                            LLVM_VERSION=17.0.6
+                            LLVM_DISTRO_NAME=ubuntu-22.04
+                            OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
+                            QT_VERSION=0
 
     runs-on: ${{matrix.runner}}
     env:
@@ -483,6 +485,7 @@ jobs:
             build/*.cmake
             build/CMake*
             build/testsuite/*/*.*
+            ${{ matrix.extra_artifacts }}
 
 
   macos:

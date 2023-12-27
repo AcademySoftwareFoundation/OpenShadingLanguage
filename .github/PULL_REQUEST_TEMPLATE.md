@@ -18,6 +18,6 @@
 - [ ] I have updated the documentation, if applicable.
 - [ ] I have ensured that the change is tested somewhere in the testsuite (adding new test cases if necessary).
 - [ ] My code follows the prevailing code style of this project. If I haven't
-  already run clang-format before submitting, I definitely will look at the CI
-  test that runs clang-format and fix anything that it highlights as being
-  nonconforming.
+  already run clang-format v17 before submitting, I definitely will look at
+  the CI test that runs clang-format and fix anything that it highlights as
+  being nonconforming.

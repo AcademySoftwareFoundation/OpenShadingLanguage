@@ -33,6 +33,9 @@ const auto optixModuleCreateFn = optixModuleCreate;
 #endif
 
 
+using namespace testshade;
+
+
 OSL_NAMESPACE_ENTER
 
 

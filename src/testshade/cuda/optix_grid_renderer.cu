@@ -29,7 +29,7 @@ OSL_NAMESPACE_EXIT
 
 
 extern "C" {
-__device__ __constant__ RenderParams render_params;
+__device__ __constant__ testshade::RenderParams render_params;
 }
 
 extern "C" __global__ void

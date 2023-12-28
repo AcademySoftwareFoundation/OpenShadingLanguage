@@ -18,6 +18,8 @@
 #include <OSL/oslexec.h>
 
 
+#include "../raytracer.h"
+
 OSL_NAMESPACE_ENTER
 
 
@@ -150,6 +152,7 @@ struct Payload {
 
     float radius;
     float spread;
+    OSL::Ray::RayType raytype;
 
     __forceinline__ __device__ void set()
     {
@@ -161,10 +164,11 @@ struct Payload {
 
     __forceinline__ __device__ void get()
     {
-        ab.a   = optixGetPayload_0();
-        ab.b   = optixGetPayload_1();
-        radius = __uint_as_float(optixGetPayload_2());
-        spread = __uint_as_float(optixGetPayload_3());
+        ab.a    = optixGetPayload_0();
+        ab.b    = optixGetPayload_1();
+        radius  = __uint_as_float(optixGetPayload_2());
+        spread  = __uint_as_float(optixGetPayload_3());
+        raytype = (OSL::Ray::RayType) optixGetPayload_4();
     }
 };
 

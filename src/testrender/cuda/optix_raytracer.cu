@@ -128,7 +128,7 @@ float3 sample_quad(const float3& x, const QuadParams& quad,
 
 
 static __device__ void
-globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.0f)
+globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.0f, Ray::RayType raytype=Ray::RayType::CAMERA)
 {
     OSL_CUDA::ShaderGlobals local_sg;
     // hit-kind 0: quad hit
@@ -165,7 +165,7 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.
         sg.Ng = -sg.Ng;
     }
 
-    sg.raytype        = CAMERA;
+    sg.raytype        = raytype;
     sg.flipHandedness = dot(sg.N, cross(sg.dPdx, sg.dPdy)) < 0.0f;
 }
 
@@ -224,14 +224,20 @@ process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
             case ClosureIDs::WARD_ID:
             case ClosureIDs::REFLECTION_ID:
             case ClosureIDs::FRESNEL_REFLECTION_ID:
-            case ClosureIDs::REFRACTION_ID: {
-                if (!result.bsdf.add_bsdf_gpu(cw, comp))
+            case ClosureIDs::REFRACTION_ID:
+            case ClosureIDs::MX_CONDUCTOR_ID:
+            case ClosureIDs::MX_DIELECTRIC_ID:
+            case ClosureIDs::MX_BURLEY_DIFFUSE_ID:
+            case ClosureIDs::MX_OREN_NAYAR_DIFFUSE_ID:
+            case ClosureIDs::MX_SHEEN_ID:
+            case ClosureIDs::MX_GENERALIZED_SCHLICK_ID: {
+                if (!result.bsdf.add_bsdf_gpu(cw, comp, result))
                     printf("unable to add BSDF\n");
                 cur = nullptr;
                 break;
             }
 
-            default: cur = NULL; break;
+            default: printf("unhandled ID? %s (%d)\n", id_to_string(id), int(id)); cur = NULL; break;
             }
         }
         }
@@ -450,7 +456,7 @@ __closesthit__deferred()
     trace_data[0]                   = optixGetPrimitiveIndex();
     trace_data[1]                   = optixGetHitKind();
     trace_data[2]                   = *(uint32_t*)&t_hit;
-    globals_from_hit(*sg_ptr, payload.radius, payload.spread);
+    globals_from_hit(*sg_ptr, payload.radius, payload.spread, payload.raytype);
 }
 
 
@@ -522,18 +528,12 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
     // Generate camera ray
     //
 
-    RayGeometry r;
-    float ray_spread = 0.0f;
-    float ray_radius = 0.0f;
-    r.origin         = eye;
-    {
-        const Vec3 v = (F3_TO_V3(cx) * (d.x * invw - 0.5f) + F3_TO_V3(cy) * (0.5f - d.y * invh) + F3_TO_V3(dir))
-            .normalize();
-        const float cos_a = F3_TO_V3(dir).dot(v);
-        ray_spread
-            = sqrtf(invw * invh * F3_TO_V3(cx).length() * F3_TO_V3(cy).length() * cos_a) * cos_a;
-        r.direction = V3_TO_F3(v);
-    }
+    const Vec3 v = (F3_TO_V3(cx) * (d.x * invw - 0.5f) + F3_TO_V3(cy) * (0.5f - d.y * invh) + F3_TO_V3(dir))
+        .normalize();
+    const float cos_a = F3_TO_V3(dir).dot(v);
+    float spread
+        = sqrtf(invw * invh * F3_TO_V3(cx).length() * F3_TO_V3(cy).length() * cos_a) * cos_a;
+    Ray r(F3_TO_V3(eye), v, 0.0f, spread, Ray::RayType::CAMERA);
 
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
@@ -574,13 +574,14 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
                                    *(unsigned int*)&hit_kind };
         sg.tracedata           = (void*)&trace_data[0];
 
-        uint32_t p2 = __float_as_uint(ray_radius);
-        uint32_t p3 = __float_as_uint(ray_spread);
+        uint32_t p2 = __float_as_uint(r.radius);
+        uint32_t p3 = __float_as_uint(r.spread);
+        uint32_t p4 = r.raytype;
 
         // Trace the camera ray against the scene
         optixTrace(render_params.traversal_handle, // handle
-                   r.origin,                       // origin
-                   r.direction,                    // direction
+                   V3_TO_F3(r.origin),             // origin
+                   V3_TO_F3(r.direction),          // direction
                    1e-3f,                          // tmin
                    1e13f,                          // tmax
                    0,                              // ray time
@@ -592,7 +593,8 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
                    payload.ab.a,
                    payload.ab.b,
                    p2,
-                   p3
+                   p3,
+                   p4
             );
 
         //
@@ -609,21 +611,21 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
             if (render_params.bg_id >= 0) {
                 if (bounce > 0 && render_params.bg_res > 0) {
                     float bg_pdf = 0;
-                    Vec3 bg      = background.eval(F3_TO_V3(r.direction), bg_pdf);
+                    Vec3 bg      = background.eval(r.direction, bg_pdf);
                     path_radiance
                         += path_weight * bg
                            * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bsdf_pdf,
                                                                       bg_pdf);
                 } else {
                     // we aren't importance sampling the background - so just run it directly
-                    path_radiance += path_weight * eval_background(F3_TO_V3(r.direction), bounce);
+                    path_radiance += path_weight * eval_background(r.direction, bounce);
                 }
             }
             break;
         }
 
         const float t      = ((float*)trace_data)[2];
-        const float radius = ray_radius + ray_spread * t;
+        const float radius = r.radius + r.spread * t;
 
         //
         // Process the output closure
@@ -660,7 +662,7 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
         float k = 1;
         if (is_light(hit_idx, hit_kind)) {
             // figure out the probability of reaching this point
-            float light_pdf = shape_pdf(hit_idx, hit_kind, F3_TO_C3(r.origin), F3_TO_C3(sg.P));
+            float light_pdf = shape_pdf(hit_idx, hit_kind, r.origin, F3_TO_C3(sg.P));
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
@@ -766,8 +768,8 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
                     *(unsigned int*)&hit_kind };
                 light_sg.tracedata           = (void*)&trace_data[0];
 
-                uint32_t p2 = __float_as_uint(ray_radius);
-                uint32_t p3 = __float_as_uint(ray_spread);
+                uint32_t p2 = __float_as_uint(r.radius);
+                uint32_t p3 = __float_as_uint(r.spread);
 
                 // Trace the camera ray against the scene
                 optixTrace(render_params.traversal_handle,  // handle
@@ -832,20 +834,21 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
 
         BSDF::Sample p = result.bsdf.sample_gpu(-F3_TO_V3(sg.I), xi, yi, zi);
         path_weight *= p.weight;
-        bsdf_pdf = p.pdf;
-        // r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
-        r.direction = C3_TO_F3(p.wi);
-        ray_radius    = radius;
+        bsdf_pdf  = p.pdf;
+        r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
+        r.direction = p.wi;
+        r.radius    = radius;
         // Just simply use roughness as spread slope
-        ray_spread = std::max(ray_spread, p.roughness);
+        r.spread = std::max(r.spread, p.roughness);
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
-            && !(path_weight.z > 0))
+            && !(path_weight.z > 0)) {
             break;  // filter out all 0's or NaNs
+        }
 
         // TODO: Keep track of object IDs for self-intersection avoidance, etc.
         prev_hit_idx  = hit_idx;
         prev_hit_kind = hit_kind;
-        r.origin = V3_TO_F3(sg.P) + sg.N * offset;
+        r.origin = sg.P + sg.N * offset;
     }
 
     return path_radiance;

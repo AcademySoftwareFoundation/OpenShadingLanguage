@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "../raytracer.h"
+
 #include <optix.h>
 
 #include <stdint.h>

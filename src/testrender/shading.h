@@ -78,6 +78,20 @@ static OSL_HOSTDEVICE const char* id_to_string(ClosureIDs id)
         case ClosureIDs::TRANSPARENT_ID: return "TRANSPARENT_ID"; break;
         case ClosureIDs::DEBUG_ID: return "DEBUG_ID"; break;
         case ClosureIDs::HOLDOUT_ID: return "HOLDOUT_ID"; break;
+        case ClosureIDs::MX_OREN_NAYAR_DIFFUSE_ID: return "MX_OREN_NAYAR_DIFFUSE_ID"; break;
+        case ClosureIDs::MX_BURLEY_DIFFUSE_ID: return "MX_BURLEY_DIFFUSE_ID"; break;
+        case ClosureIDs::MX_DIELECTRIC_ID: return "MX_DIELECTRIC_ID"; break;
+        case ClosureIDs::MX_CONDUCTOR_ID: return "MX_CONDUCTOR_ID"; break;
+        case ClosureIDs::MX_GENERALIZED_SCHLICK_ID: return "MX_GENERALIZED_SCHLICK_ID"; break;
+        case ClosureIDs::MX_TRANSLUCENT_ID: return "MX_TRANSLUCENT_ID"; break;
+        case ClosureIDs::MX_TRANSPARENT_ID: return "MX_TRANSPARENT_ID"; break;
+        case ClosureIDs::MX_SUBSURFACE_ID: return "MX_SUBSURFACE_ID"; break;
+        case ClosureIDs::MX_SHEEN_ID: return "MX_SHEEN_ID"; break;
+        case ClosureIDs::MX_UNIFORM_EDF_ID: return "MX_UNIFORM_EDF_ID"; break;
+        case ClosureIDs::MX_ANISOTROPIC_VDF_ID: return "MX_ANISOTROPIC_VDF_ID"; break;
+        case ClosureIDs::MX_MEDIUM_VDF_ID: return "MX_MEDIUM_VDF_ID"; break;
+        case ClosureIDs::MX_LAYER_ID: return "MX_LAYER_ID"; break;
+        case ClosureIDs::EMPTY_ID: return "EMPTY_ID"; break;
         default: break;
     };
     return "UNKNOWN_ID";
@@ -135,7 +149,11 @@ struct MxOrenNayarDiffuseParams {
     OSL::Color3 albedo;
     float roughness;
     // optional
+#ifndef __CUDACC__
     OIIO::ustring label;
+#else
+    const char* label;
+#endif
 };
 
 struct MxBurleyDiffuseParams {
@@ -143,7 +161,11 @@ struct MxBurleyDiffuseParams {
     OSL::Color3 albedo;
     float roughness;
     // optional
+#ifndef __CUDACC__
     OIIO::ustring label;
+#else
+    const char* label;
+#endif
 };
 
 // common to all MaterialX microfacet closures
@@ -151,9 +173,14 @@ struct MxMicrofacetBaseParams {
     OSL::Vec3 N, U;
     float roughness_x;
     float roughness_y;
+#ifndef __CUDACC__
     OIIO::ustring distribution;
     // optional
     OIIO::ustring label;
+#else
+    const char* distribution;
+    const char* label;
+#endif
 };
 
 struct MxDielectricParams : public MxMicrofacetBaseParams {
@@ -164,8 +191,8 @@ struct MxDielectricParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    OSL::Color3 evalR(float cos_theta) const;
-    OSL::Color3 evalT(float cos_theta) const;
+    OSL_HOSTDEVICE OSL::Color3 evalR(float cos_theta) const;
+    OSL_HOSTDEVICE OSL::Color3 evalT(float cos_theta) const;
 };
 
 struct MxConductorParams : public MxMicrofacetBaseParams {
@@ -175,8 +202,8 @@ struct MxConductorParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    OSL::Color3 evalR(float cos_theta) const;
-    OSL::Color3 evalT(float cos_theta) const;
+    OSL_HOSTDEVICE OSL::Color3 evalR(float cos_theta) const;
+    OSL_HOSTDEVICE OSL::Color3 evalT(float cos_theta) const;
 
     // Avoid function was declared but never referenced
     // float get_ior() const
@@ -195,15 +222,19 @@ struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    OSL::Color3 evalR(float cos_theta) const;
-    OSL::Color3 evalT(float cos_theta) const;
+    OSL_HOSTDEVICE OSL::Color3 evalR(float cos_theta) const;
+    OSL_HOSTDEVICE OSL::Color3 evalT(float cos_theta) const;
 };
 
 struct MxTranslucentParams {
     OSL::Vec3 N;
     OSL::Color3 albedo;
     // optional
+#ifndef __CUDACC__
     OIIO::ustring label;
+#else
+    const char* label;
+#endif
 };
 
 struct MxSubsurfaceParams {
@@ -213,7 +244,11 @@ struct MxSubsurfaceParams {
     OSL::Color3 transmission_color;
     float anisotropy;
     // optional
+#ifndef __CUDACC__
     OIIO::ustring label;
+#else
+    const char* label;
+#endif
 };
 
 struct MxSheenParams {
@@ -221,7 +256,11 @@ struct MxSheenParams {
     OSL::Color3 albedo;
     float roughness;
     // optional
+#ifndef __CUDACC__
     OIIO::ustring label;
+#else
+    const char* label;
+#endif
 };
 
 struct MxUniformEdfParams {
@@ -259,6 +298,9 @@ struct MxMediumVdfParams {
 
 
 OSL_NAMESPACE_ENTER
+
+
+struct ShadingResult;
 
 
 /// Individual BSDF (diffuse, phong, refraction, etc ...)
@@ -382,7 +424,7 @@ struct CompositeBSDF {
     }
 
 #ifdef __CUDACC__
-    OSL_HOSTDEVICE bool add_bsdf_gpu(const Color3& w, const ClosureComponent* comp);
+    OSL_HOSTDEVICE bool add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, ShadingResult& result);
     OSL_HOSTDEVICE void prepare_gpu(const Vec3& wo, const Color3& path_weight, bool absorb);
     OSL_HOSTDEVICE Color3 get_albedo_gpu(const Vec3& wo) const;
     OSL_HOSTDEVICE BSDF::Sample eval_gpu(const Vec3& wo, const Vec3& wi) const;

@@ -299,16 +299,13 @@ public:
 
 // Specializations
 template<int WidthT>
-struct Block<float, WidthT> : public BlockOfBuiltin<float, WidthT> {
-};
+struct Block<float, WidthT> : public BlockOfBuiltin<float, WidthT> {};
 
 template<int WidthT>
-struct Block<int, WidthT> : public BlockOfBuiltin<int, WidthT> {
-};
+struct Block<int, WidthT> : public BlockOfBuiltin<int, WidthT> {};
 
 template<typename DataT, int WidthT>
-struct Block<DataT*, WidthT> : public BlockOfBuiltin<DataT*, WidthT> {
-};
+struct Block<DataT*, WidthT> : public BlockOfBuiltin<DataT*, WidthT> {};
 
 
 // Vec4 isn't used by external interfaces, but some internal
@@ -2292,15 +2289,9 @@ template<typename DataT, int WidthT> struct MaskedLaneProxy {
     // visibility to end user whose IDE
     // might display these methods vs. free
     // functions
-    OSL_FORCEINLINE bool is_on() const
-    {
-        return m_mask.is_on(m_lane);
-    }
+    OSL_FORCEINLINE bool is_on() const { return m_mask.is_on(m_lane); }
 
-    OSL_FORCEINLINE bool is_off() const
-    {
-        return m_mask.is_off(m_lane);
-    }
+    OSL_FORCEINLINE bool is_off() const { return m_mask.is_off(m_lane); }
 
 private:
     Block<DataT, WidthT>& m_ref_wide_data;
@@ -2362,15 +2353,9 @@ struct MaskedArrayLaneProxy {
     // visibility to end user whose IDE
     // might display these methods vs. free
     // functions
-    OSL_FORCEINLINE bool is_on() const
-    {
-        return m_mask.is_on(m_lane);
-    }
+    OSL_FORCEINLINE bool is_on() const { return m_mask.is_on(m_lane); }
 
-    OSL_FORCEINLINE bool is_off() const
-    {
-        return m_mask.is_off(m_lane);
-    }
+    OSL_FORCEINLINE bool is_off() const { return m_mask.is_off(m_lane); }
 
     OSL_FORCEINLINE MaskedLaneProxy<DataT, WidthT>
     operator[](int array_index) const
@@ -2735,7 +2720,8 @@ struct MaskedDeriv : public Masked<DataT, WidthT> {
     template<typename FirstT, typename... ListT,
              std::enable_if_t<std::is_same<typename std::decay<FirstT>::type,
                                            MaskedDeriv>::value,
-                              bool> = true>
+                              bool>
+             = true>
     OSL_FORCEINLINE MaskedDeriv(FirstT&& first, ListT&&... argList)
         : Masked<DataT, WidthT>(std::forward<FirstT>(first),
                                 std::forward<ListT>(argList)...)
@@ -2746,7 +2732,8 @@ struct MaskedDeriv : public Masked<DataT, WidthT> {
     template<typename FirstT, typename... ListT,
              std::enable_if_t<!std::is_same<typename std::decay<FirstT>::type,
                                             MaskedDeriv>::value,
-                              bool> = true>
+                              bool>
+             = true>
     OSL_FORCEINLINE MaskedDeriv(FirstT&& first, ListT&&... argList)
         : Masked<DataT, WidthT>(std::forward<FirstT>(first),
                                 std::forward<ListT>(argList)...,
@@ -3197,7 +3184,8 @@ template<typename DataT, int DerivIndexT> struct RefDeriv : public Ref<DataT> {
     template<typename FirstT, typename... ListT,
              std::enable_if_t<!std::is_same<typename std::decay<FirstT>::type,
                                             RefDeriv>::value,
-                              bool> = true>
+                              bool>
+             = true>
     explicit OSL_FORCEINLINE RefDeriv(FirstT&& first, ListT&&... argList)
         : Ref<DataT>(std::forward<FirstT>(first),
                      std::forward<ListT>(argList)...,

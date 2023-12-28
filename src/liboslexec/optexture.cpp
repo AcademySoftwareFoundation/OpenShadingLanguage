@@ -415,9 +415,9 @@ osl_get_textureinfo(void* sg_, ustringhash_pod name_, void* handle,
     ustringhash name     = ustringhash_from(name_);
     ustringhash dataname = ustringhash_from(dataname_);
     bool ok              = sg->renderer->get_texture_info(
-                     name, (RendererServices::TextureHandle*)handle,
-                     sg->context->texture_thread_info(), sg, 0 /*FIXME-ptex*/, dataname,
-                     typedesc, data, errormessage ? &em : nullptr);
+        name, (RendererServices::TextureHandle*)handle,
+        sg->context->texture_thread_info(), sg, 0 /*FIXME-ptex*/, dataname,
+        typedesc, data, errormessage ? &em : nullptr);
     if (errormessage)
         *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
@@ -443,9 +443,9 @@ osl_get_textureinfo_st(void* sg_, ustringhash_pod name_, void* handle, float s,
     ustringhash name     = ustringhash_from(name_);
     ustringhash dataname = ustringhash_from(dataname_);
     bool ok              = sg->renderer->get_texture_info(
-                     name, (RendererServices::TextureHandle*)handle, s, t,
-                     sg->context->texture_thread_info(), sg, 0 /*FIXME-ptex*/, dataname,
-                     typedesc, data, errormessage ? &em : nullptr);
+        name, (RendererServices::TextureHandle*)handle, s, t,
+        sg->context->texture_thread_info(), sg, 0 /*FIXME-ptex*/, dataname,
+        typedesc, data, errormessage ? &em : nullptr);
     if (errormessage)
         *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;

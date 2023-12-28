@@ -449,7 +449,7 @@ OptixRaytracer::make_optix_materials()
     quad_hitgroup_desc.hitgroup.moduleCH = wrapper_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameCH
         = "__closesthit__closest_hit_osl";
-    quad_hitgroup_desc.hitgroup.moduleAH            = wrapper_module;
+    quad_hitgroup_desc.hitgroup.moduleAH = wrapper_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameAH = "__anyhit__any_hit_shadow";
     quad_hitgroup_desc.hitgroup.moduleIS            = quad_module;
     quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
@@ -498,7 +498,7 @@ OptixRaytracer::make_optix_materials()
     sphere_hitgroup_desc.hitgroup.moduleAH = wrapper_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameAH
         = "__anyhit__any_hit_shadow";
-    sphere_hitgroup_desc.hitgroup.moduleIS            = sphere_module;
+    sphere_hitgroup_desc.hitgroup.moduleIS = sphere_module;
     sphere_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__sphere";
     OptixProgramGroup sphere_hitgroup;
     create_optix_pg(&sphere_hitgroup_desc, 1, &program_options,

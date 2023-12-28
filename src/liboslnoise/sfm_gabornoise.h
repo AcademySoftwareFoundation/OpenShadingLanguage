@@ -563,16 +563,16 @@ scalar_gabor3(const Dual2<Vec3>& P, const sfm::GaborUniformParams& gup,
         // to better enable SROA (Scalar Replacement of Aggregates) optimizations
         if (seed == 0) {
             result.val().x = resultPart.val();
-            result.dx().x = resultPart.dx();
-            result.dy().x = resultPart.dy();
+            result.dx().x  = resultPart.dx();
+            result.dy().x  = resultPart.dy();
         } else if (seed == 1) {
             result.val().y = resultPart.val();
-            result.dx().y = resultPart.dx();
-            result.dy().y = resultPart.dy();
+            result.dx().y  = resultPart.dx();
+            result.dy().y  = resultPart.dy();
         } else {
             result.val().z = resultPart.val();
-            result.dx().z = resultPart.dx();
-            result.dy().z = resultPart.dy();
+            result.dx().z  = resultPart.dx();
+            result.dy().z  = resultPart.dy();
         }
     }
 #endif
@@ -646,16 +646,16 @@ scalar_pgabor3(const Dual2<Vec3>& P, const Vec3& Pperiod,
         // to better enable SROA (Scalar Replacement of Aggregates) optimizations
         if (seed == 0) {
             result.val().x = resultPart.val();
-            result.dx().x = resultPart.dx();
-            result.dy().x = resultPart.dy();
+            result.dx().x  = resultPart.dx();
+            result.dy().x  = resultPart.dy();
         } else if (seed == 1) {
             result.val().y = resultPart.val();
-            result.dx().y = resultPart.dx();
-            result.dy().y = resultPart.dy();
+            result.dx().y  = resultPart.dx();
+            result.dy().y  = resultPart.dy();
         } else {
             result.val().z = resultPart.val();
-            result.dx().z = resultPart.dx();
-            result.dy().z = resultPart.dy();
+            result.dx().z  = resultPart.dx();
+            result.dy().z  = resultPart.dy();
         }
     }
 #endif

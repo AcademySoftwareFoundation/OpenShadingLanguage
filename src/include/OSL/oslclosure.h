@@ -109,14 +109,8 @@ OSL_ALIGNAS(16) ClosureComponent : public ClosureColor
     Vec3 w;  ///< Weight of this component
 
     /// Handy method for getting the parameter memory as a void*.
-    OSL_HOSTDEVICE void* data()
-    {
-        return (char*)(this + 1);
-    }
-    OSL_HOSTDEVICE const void* data() const
-    {
-        return (const char*)(this + 1);
-    }
+    OSL_HOSTDEVICE void* data() { return (char*)(this + 1); }
+    OSL_HOSTDEVICE const void* data() const { return (const char*)(this + 1); }
 
     /// Handy methods for extracting the underlying parameters as a struct
     template<typename T> OSL_HOSTDEVICE const T* as() const

@@ -1646,7 +1646,7 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
             }
             case MX_CONDUCTOR_ID: {
                 const MxConductorParams& params = *comp->as<MxConductorParams>();
-                ok                              = result.bsdf.add_bsdf<
+                ok = result.bsdf.add_bsdf<
                     MxMicrofacet<MxConductorParams, GGXDist, false>>(cw, params,
                                                                      1.0f);
                 break;

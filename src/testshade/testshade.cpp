@@ -87,7 +87,7 @@ static bool userdata_isconnected = false;
 static bool print_outputs        = false;
 static bool output_placement     = true;
 static bool use_optix            = OIIO::Strutil::stoi(
-               OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
+    OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
 static bool optix_no_inline             = false;
 static bool optix_no_inline_layer_funcs = false;
 static bool optix_no_merge_layer_funcs  = false;

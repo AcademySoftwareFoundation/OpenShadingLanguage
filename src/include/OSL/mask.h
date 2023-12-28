@@ -171,22 +171,13 @@ public:
     }
 
 
-    OSL_FORCEINLINE ValueType value() const
-    {
-        return m_value;
-    }
+    OSL_FORCEINLINE ValueType value() const { return m_value; }
 
     // count number of active bits
-    OSL_FORCEINLINE int count() const
-    {
-        return OSL::popcount(m_value);
-    }
+    OSL_FORCEINLINE int count() const { return OSL::popcount(m_value); }
 
     // NOTE: undefined result if no bits are on
-    OSL_FORCEINLINE int first_on() const
-    {
-        return OSL::countr_zero(m_value);
-    }
+    OSL_FORCEINLINE int first_on() const { return OSL::countr_zero(m_value); }
 
     OSL_FORCEINLINE Mask invert() const
     {
@@ -239,10 +230,7 @@ public:
         return (m_value != static_cast<ValueType>(0));
     }
 
-    OSL_FORCEINLINE bool any_off() const
-    {
-        return (m_value < valid_bits);
-    }
+    OSL_FORCEINLINE bool any_off() const { return (m_value < valid_bits); }
 
     OSL_FORCEINLINE bool any_off(const Mask& mask) const
     {
@@ -257,39 +245,27 @@ public:
     // So really only set_on or set_off is required
     // Choose to not provide a generic set(int lane, bool flag)
 
-    OSL_FORCEINLINE void set_on(int lane)
-    {
-        m_value |= (1 << lane);
-    }
+    OSL_FORCEINLINE void set_on(int lane) { m_value |= (1 << lane); }
 
     OSL_FORCEINLINE void set_on_if(int lane, bool cond)
     {
         m_value |= (cond << lane);
     }
 
-    OSL_FORCEINLINE void set_all_on()
-    {
-        m_value = valid_bits;
-    }
+    OSL_FORCEINLINE void set_all_on() { m_value = valid_bits; }
     OSL_FORCEINLINE void set_count_on(int count)
     {
         m_value = valid_bits >> (width - count);
     }
 
-    OSL_FORCEINLINE void set_off(int lane)
-    {
-        m_value &= (~(1 << lane));
-    }
+    OSL_FORCEINLINE void set_off(int lane) { m_value &= (~(1 << lane)); }
 
     OSL_FORCEINLINE void set_off_if(int lane, bool cond)
     {
         m_value &= (~(cond << lane));
     }
 
-    OSL_FORCEINLINE void set_all_off()
-    {
-        m_value = static_cast<ValueType>(0);
-    }
+    OSL_FORCEINLINE void set_all_off() { m_value = static_cast<ValueType>(0); }
 
     OSL_FORCEINLINE bool operator==(const Mask& other) const
     {
@@ -323,10 +299,7 @@ public:
         return Mask(m_value | other.m_value);
     }
 
-    OSL_FORCEINLINE Mask operator~() const
-    {
-        return invert();
-    }
+    OSL_FORCEINLINE Mask operator~() const { return invert(); }
 
 
     template<int MinOccupancyT, int MaxOccupancyT = width, typename FunctorT>

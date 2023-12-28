@@ -300,8 +300,8 @@ splineinverse_search(const MatrixT& M, R_T& result, X_T& xval, KArrayT knots,
         // We can NOT use the low and high knot values,
         // so will need to extract 2 more knot values
         // to detect if we are increasing
-        K_T k1 = knots[1];  // knots is proxy, must export to local
-        K_T k2 = knots[knot_count - 2];
+        K_T k1     = knots[1];  // knots is proxy, must export to local
+        K_T k2     = knots[knot_count - 2];
         increasing = k1 < k2;
     }
 

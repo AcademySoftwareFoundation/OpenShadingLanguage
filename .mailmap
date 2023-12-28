@@ -1,0 +1,47 @@
+# This file establishes email equivalences so we can resolve what look like
+# multiple authors, but actually are the same author who has used multiple
+# emails over the course of their involvement with the project.
+#
+# The format is any of the following:
+#     <CANONICAL-EMAIL> <alternate-email>
+#     CANONICAL-NAME <CANONICAL-EMAIL> <alternate-email>
+#     CANONICAL-NAME <CANONICAL-EMAIL> alternate-name <alternate-email>
+#
+# You can check for duplicates with this command:
+#     git shortlog -sne --all
+# That command (and others) will use this file to collapse the duplicates.
+#
+# If you see any duplicates we don't account for here, or if you look at your
+# own entry here and want a different name or email to be your canonical one
+# (we may not have guessed correctly and matched your preferences), please
+# file a PR with the edits to this file.
+
+Adam Martinez <amartinez.cg@gmail.com> amartinez-cg <amartinez.cg@gmail.com>
+Alejandro Conty <aconty@imageworks.com> aconty <aconty@gmail.com>
+Alejandro Conty <aconty@imageworks.com> Alejandro Conty <aconty@gmail.com>
+Alex M. Wells <alex.m.wells@intel.com> <alex.m.wells@intel.com>
+Alex M. Wells <alex.m.wells@intel.com> <AlexMWells@users.noreply.github.com>
+Alex M. Wells <alex.m.wells@intel.com> <awells-np@argon.sea.pixar.com>
+Alexis Oblet <alob@mikrosimage.eu> Alexis Oblet <aoblet@users.noreply.github.com>
+Brecht Van Lommel <brecht@blender.org> <brecht@solidangle.com>
+Brecht Van Lommel <brecht@blender.org> Brecht Van Lommel <brechtvanlommel@gmail.com>
+Chris Kulla <ckulla@gmail.com> <ckulla@imageworks.com>
+Chris Kulla <ckulla@gmail.com> <fpsunflower@users.noreply.github.com>
+Chris Kulla <ckulla@gmail.com> Christopher Kulla <ckulla@gmail.com>
+Chris Kulla <ckulla@gmail.com> fpsunflower <ckulla@gmail.com>
+Clifford Stein <cstein@imageworks.com> Cliff Stein <clifford.stein@gmail.com> 
+Clifford Stein <cstein@imageworks.com> cmstein <cstein@imageworks.com> 
+Declan Russell <declan.russell@autodesk.com> Declan Russell <i7709212@bournemouth.ac.uk>
+Derek Haase <derekhaase@gmail.com> Derek Haase <dhaase@imageworks.com>
+Esteban Tovagliari <ramenhdr@gmail.com> est77 <ramenhdr@gmail.com>
+Henri Fousse <henri.fousse@free.fr> darkhorse64 <henri.fousse@free.fr>
+Larry Gritz <lg@imageworks.com> <larrygritz@gmail.com>
+Larry Gritz <lg@imageworks.com> <lg@larrygritz.com>
+Roman Zulak <marsupial@users.noreply.github.com> <rzulak@imageworks.com>
+Roman Zulak <marsupial@users.noreply.github.com> Frederich Munch <marsupial@users.noreply.github.com>
+Roman Zulak <marsupial@users.noreply.github.com> marsupial <marsupial@users.noreply.github.com>
+Ronan Keryell <Ronan.Keryell@amd.com> Ronan Keryell <Ronan.Keryell@silkan.com>
+Steena Monteiro <steena.monteiro@intel.com> steena.monteiro <smonteir@ortce-sklaw.jf.intel.com>
+Sven-Hendrik Haase <sh@lutzhaase.com> Sven-Hendrik Haase <svenstaro@gmail.com>
+Tim Grant <tgrant@nvidia.com> Tim Grant <87798327+tgrant-nv@users.noreply.github.com>
+Tim Grant <tgrant@nvidia.com> timgrant <timgrant@users.noreply.github.com>

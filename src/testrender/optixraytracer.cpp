@@ -1125,7 +1125,7 @@ void
 OptixRaytracer::prepare_background()
 {
     if (getBackgroundShaderID() >= 0) {
-        const int bg_res = getBackgroundResolution();
+        const int bg_res = std::max<int>(32, getBackgroundResolution());
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_values), 3 * sizeof(float) * bg_res * bg_res));
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_rows), sizeof(float) * bg_res));
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_cols), sizeof(float) * bg_res * bg_res));
@@ -1332,7 +1332,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.spheres_buffer        = d_spheres_list;
 
     // For the background shader
-    params.bg_res    = getBackgroundResolution();
+    params.bg_res    = std::max<int>(32, getBackgroundResolution());
     params.bg_id     = getBackgroundShaderID();
     params.bg_values = d_bg_values;
     params.bg_rows   = d_bg_rows;

@@ -31,6 +31,7 @@ if (OSL_USE_OPTIX)
         sampling.h
         shading.h
         shading.cpp
+        shading_cuda.cpp
         cuda/vec_math.h
         )
 

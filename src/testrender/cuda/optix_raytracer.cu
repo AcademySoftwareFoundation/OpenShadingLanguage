@@ -21,11 +21,20 @@
 #include "../sampling.h"
 #include "../shading.h"
 #include "../shading.cpp"
+#include "../shading_cuda.cpp"
 #include "../background.h"
 
 #include <cstdint>
 
+
 using OSL_CUDA::ShaderGlobals;
+
+
+// Conversion macros for casting between vector types
+#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
+#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
+#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
+#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
 
 
 OSL_NAMESPACE_ENTER
@@ -46,10 +55,6 @@ extern "C" {
 __device__ __constant__ RenderParams render_params;
 }
 
-
-//
-//
-//
 
 static inline __device__ void
 execute_shader(OSL_CUDA::ShaderGlobals& sg, char* closure_pool)

@@ -48,60 +48,7 @@ enum ClosureIDs {
 };
 
 
-// Conversion macros for casting between vector types
-#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
-#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
-#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
-#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
-
-
-namespace {  // anonymous namespace
-
-#ifdef __CUDACC__
-static OSL_HOSTDEVICE const char* id_to_string(ClosureIDs id)
-{
-    switch(id) {
-        case ClosureIDs::COMPONENT_BASE_ID: return "COMPONENT_BASE_ID"; break;
-        case ClosureIDs::MUL: return "MUL"; break;
-        case ClosureIDs::ADD: return "ADD"; break;
-        case ClosureIDs::EMISSION_ID: return "EMISSION_ID"; break;
-        case ClosureIDs::BACKGROUND_ID: return "BACKGROUND_ID"; break;
-        case ClosureIDs::DIFFUSE_ID: return "DIFFUSE_ID"; break;
-        case ClosureIDs::OREN_NAYAR_ID: return "OREN_NAYAR_ID"; break;
-        case ClosureIDs::TRANSLUCENT_ID: return "TRANSLUCENT_ID"; break;
-        case ClosureIDs::PHONG_ID: return "PHONG_ID"; break;
-        case ClosureIDs::WARD_ID: return "WARD_ID"; break;
-        case ClosureIDs::MICROFACET_ID: return "MICROFACET_ID"; break;
-        case ClosureIDs::REFLECTION_ID: return "REFLECTION_ID"; break;
-        case ClosureIDs::FRESNEL_REFLECTION_ID: return "FRESNEL_REFLECTION_ID"; break;
-        case ClosureIDs::REFRACTION_ID: return "REFRACTION_ID"; break;
-        case ClosureIDs::TRANSPARENT_ID: return "TRANSPARENT_ID"; break;
-        case ClosureIDs::DEBUG_ID: return "DEBUG_ID"; break;
-        case ClosureIDs::HOLDOUT_ID: return "HOLDOUT_ID"; break;
-        case ClosureIDs::MX_OREN_NAYAR_DIFFUSE_ID: return "MX_OREN_NAYAR_DIFFUSE_ID"; break;
-        case ClosureIDs::MX_BURLEY_DIFFUSE_ID: return "MX_BURLEY_DIFFUSE_ID"; break;
-        case ClosureIDs::MX_DIELECTRIC_ID: return "MX_DIELECTRIC_ID"; break;
-        case ClosureIDs::MX_CONDUCTOR_ID: return "MX_CONDUCTOR_ID"; break;
-        case ClosureIDs::MX_GENERALIZED_SCHLICK_ID: return "MX_GENERALIZED_SCHLICK_ID"; break;
-        case ClosureIDs::MX_TRANSLUCENT_ID: return "MX_TRANSLUCENT_ID"; break;
-        case ClosureIDs::MX_TRANSPARENT_ID: return "MX_TRANSPARENT_ID"; break;
-        case ClosureIDs::MX_SUBSURFACE_ID: return "MX_SUBSURFACE_ID"; break;
-        case ClosureIDs::MX_SHEEN_ID: return "MX_SHEEN_ID"; break;
-        case ClosureIDs::MX_UNIFORM_EDF_ID: return "MX_UNIFORM_EDF_ID"; break;
-        case ClosureIDs::MX_ANISOTROPIC_VDF_ID: return "MX_ANISOTROPIC_VDF_ID"; break;
-        case ClosureIDs::MX_MEDIUM_VDF_ID: return "MX_MEDIUM_VDF_ID"; break;
-        case ClosureIDs::MX_LAYER_ID: return "MX_LAYER_ID"; break;
-        case ClosureIDs::EMPTY_ID: return "EMPTY_ID"; break;
-        default: break;
-    };
-    return "UNKNOWN_ID";
-}
-#endif
-
-}  // anonymous namespace
-
-
-#if 1 // Closure params
+// Closure params
 namespace {
 
 // these structures hold the parameters of each closure type
@@ -294,7 +241,6 @@ struct MxMediumVdfParams {
 };
 
 }
-#endif // Closure params
 
 
 OSL_NAMESPACE_ENTER

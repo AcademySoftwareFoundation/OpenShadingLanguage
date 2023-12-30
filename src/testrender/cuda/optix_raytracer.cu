@@ -160,7 +160,7 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.
     sg.dPdv        = local_sg.dPdv;
     sg.u           = local_sg.u;
     sg.v           = local_sg.v;
-    sg.Ci          = NULL;
+    sg.Ci          = nullptr;
     sg.surfacearea = local_sg.surfacearea;
     sg.backfacing  = dot(sg.N, sg.I) > 0.0f;
     sg.shaderID    = local_sg.shaderID;
@@ -195,30 +195,27 @@ process_closure(const OSL::ClosureColor* closure, ShadingResult& result)
 
     // Shading accumulator
     OSL::Color3 weight = OSL::Color3(1.0f);
-    const void* cur    = closure;
-    while (cur) {
-        ClosureIDs id = static_cast<ClosureIDs>(
-            ((OSL::ClosureColor*)cur)->id);
-
+    while (closure) {
+        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
         switch (id) {
         case ClosureIDs::ADD: {
-            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)cur)->closureB;
+            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
             weight_stack[stack_idx++] = weight;
-            cur                       = ((OSL::ClosureAdd*)cur)->closureA;
+            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
             break;
         }
         case ClosureIDs::MUL: {
-            weight *= ((OSL::ClosureMul*)cur)->weight;
-            cur = ((OSL::ClosureMul*)cur)->closure;
+            weight *= ((OSL::ClosureMul*)closure)->weight;
+            closure = ((OSL::ClosureMul*)closure)->closure;
             break;
         }
         default: {
-            const ClosureComponent* comp = reinterpret_cast<const ClosureColor*>(cur)->as_comp();
+            const ClosureComponent* comp = closure->as_comp();
             Color3 cw                    = weight * comp->w;
             switch (id) {
             case ClosureIDs::EMISSION_ID: {
                 result.Le += cw;
-                cur = NULL;
+                closure = nullptr;
                 break;
             }
             case ClosureIDs::MICROFACET_ID:
@@ -237,24 +234,26 @@ process_closure(const OSL::ClosureColor* closure, ShadingResult& result)
             case ClosureIDs::MX_GENERALIZED_SCHLICK_ID: {
                 if (!result.bsdf.add_bsdf_gpu(cw, comp, result))
                     printf("unable to add BSDF\n");
-                cur = nullptr;
+                closure = nullptr;
                 break;
             }
             case ClosureIDs::MX_ANISOTROPIC_VDF_ID:
             case ClosureIDs::MX_MEDIUM_VDF_ID: {
-                cur = nullptr;
+                closure = nullptr;
                 break;
             }
-            default: printf("unhandled ID? %s (%d)\n", id_to_string(id), int(id)); cur = NULL; break;
+            default:
+                printf("unhandled ID? %s (%d)\n", id_to_string(id), int(id));
+                closure = nullptr;
+                break;
             }
         }
         }
-        if (cur == NULL && stack_idx > 0) {
-            cur    = ptr_stack[--stack_idx];
-            weight = weight_stack[stack_idx];
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
         }
     }
-
     return C3_TO_F3(color_result);
 }
 
@@ -280,7 +279,6 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
 
     // Shading accumulator
     OSL::Color3 weight = OSL::Color3(1.0f);
-    // const ClosureColor* cur    = closure;
     while (closure) {
         ClosureIDs id = static_cast<ClosureIDs>(closure->id);
         switch (id) {
@@ -371,7 +369,6 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
             weight  = weight_stack[stack_idx];
         }
     }
-
     return C3_TO_F3(weight);
 }
 
@@ -396,39 +393,35 @@ process_background_closure(const OSL::ClosureColor* closure)
 
     // Shading accumulator
     OSL::Color3 weight = OSL::Color3(1.0f);
-    const void* cur    = closure;
-    while (cur) {
-        ClosureIDs id = static_cast<ClosureIDs>(
-            ((OSL::ClosureColor*)cur)->id);
-
+    while (closure) {
+        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
         switch (id) {
         case ClosureIDs::ADD: {
-            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)cur)->closureB;
+            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
             weight_stack[stack_idx++] = weight;
-            cur                       = ((OSL::ClosureAdd*)cur)->closureA;
+            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
             break;
         }
         case ClosureIDs::MUL: {
-            weight *= ((OSL::ClosureMul*)cur)->weight;
-            cur = ((OSL::ClosureMul*)cur)->closure;
+            weight *= ((OSL::ClosureMul*)closure)->weight;
+            closure = ((OSL::ClosureMul*)closure)->closure;
             break;
         }
         case ClosureIDs::BACKGROUND_ID: {
-            const ClosureComponent* comp = reinterpret_cast<const ClosureColor*>(cur)->as_comp();
+            const ClosureComponent* comp = closure->as_comp();
             weight *= comp->w;
-            cur = nullptr;
+            closure = nullptr;
             break;
         }
         default:
             // Should never get here
             assert(false);
         }
-        if (cur == NULL && stack_idx > 0) {
-            cur    = ptr_stack[--stack_idx];
-            weight = weight_stack[stack_idx];
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
         }
     }
-
     return C3_TO_F3(weight);
 }
 
@@ -437,7 +430,6 @@ static __device__ void
 process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 const void* Ci, bool light_only)
 {
-    // TODO: GPU media?
     if (!light_only) {
         process_medium_closure(sg, result, (const ClosureColor*) Ci, Color3(1));
     }

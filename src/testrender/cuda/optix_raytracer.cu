@@ -176,11 +176,10 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.
 
 
 static __device__ float3
-process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
+process_closure(const OSL::ClosureColor* closure, ShadingResult& result)
 {
     OSL::Color3 color_result = OSL::Color3(0.0f);
-
-    if (!closure_tree) {
+    if (!closure) {
         return C3_TO_F3(color_result);
     }
 
@@ -196,7 +195,7 @@ process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
 
     // Shading accumulator
     OSL::Color3 weight = OSL::Color3(1.0f);
-    const void* cur    = closure_tree;
+    const void* cur    = closure;
     while (cur) {
         ClosureIDs id = static_cast<ClosureIDs>(
             ((OSL::ClosureColor*)cur)->id);
@@ -241,7 +240,11 @@ process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
                 cur = nullptr;
                 break;
             }
-
+            case ClosureIDs::MX_ANISOTROPIC_VDF_ID:
+            case ClosureIDs::MX_MEDIUM_VDF_ID: {
+                cur = nullptr;
+                break;
+            }
             default: printf("unhandled ID? %s (%d)\n", id_to_string(id), int(id)); cur = NULL; break;
             }
         }
@@ -257,10 +260,11 @@ process_closure(const OSL::ClosureColor* closure_tree, ShadingResult& result)
 
 
 static __device__ float3
-process_background_closure(const OSL::ClosureColor* closure_tree)
+process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
+                       const OSL::ClosureColor* closure, const Color3& w)
 {
     OSL::Color3 color_result = OSL::Color3(0.0f);
-    if (!closure_tree) {
+    if (!closure) {
         return C3_TO_F3(color_result);
     }
 
@@ -276,7 +280,123 @@ process_background_closure(const OSL::ClosureColor* closure_tree)
 
     // Shading accumulator
     OSL::Color3 weight = OSL::Color3(1.0f);
-    const void* cur    = closure_tree;
+    // const ClosureColor* cur    = closure;
+    while (closure) {
+        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
+        switch (id) {
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
+            break;
+        }
+        case ClosureIDs::MUL: {
+            weight *= ((OSL::ClosureMul*)closure)->weight;
+            closure = ((OSL::ClosureMul*)closure)->closure;
+            break;
+        }
+        // case MX_LAYER_ID: {
+        //     const ClosureComponent* comp = closure->as_comp();
+        //     const MxLayerParams* params  = comp->as<MxLayerParams>();
+        //     Color3 base_w
+        //         = w
+        //           * (Color3(1)
+        //              - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
+        //     process_medium_closure(sg, result, params->top, w);
+        //     process_medium_closure(sg, result, params->base, base_w);
+        //     cur = nullptr;
+        //     break;
+        // }
+        case MX_ANISOTROPIC_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = w * comp->w;
+            const auto& params           = *comp->as<MxAnisotropicVdfParams>();
+            result.sigma_t               = cw * params.extinction;
+            result.sigma_s               = params.albedo * result.sigma_t;
+            result.medium_g              = params.anisotropy;
+            result.refraction_ior        = 1.0f;
+            result.priority = 0;  // TODO: should this closure have a priority?
+            closure = nullptr;
+            break;
+        }
+        case MX_MEDIUM_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = w * comp->w;
+            const auto& params           = *comp->as<MxMediumVdfParams>();
+            result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
+                               -OIIO::fast_log(params.transmission_color.y),
+                               -OIIO::fast_log(params.transmission_color.z) };
+            // NOTE: closure weight scales the extinction parameter
+            result.sigma_t *= cw / params.transmission_depth;
+            result.sigma_s  = params.albedo * result.sigma_t;
+            result.medium_g = params.anisotropy;
+            // TODO: properly track a medium stack here ...
+            result.refraction_ior = sg.backfacing ? 1.0f / params.ior : params.ior;
+            result.priority       = params.priority;
+            closure = nullptr;
+            break;
+        }
+        case MX_DIELECTRIC_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params           = *comp->as<MxDielectricParams>();
+            if (!is_black(w * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                result.refraction_ior = sg.backfacing ? 1.0f / params.ior
+                                                      : params.ior;
+            }
+            closure = nullptr;
+            break;
+        }
+        case MX_GENERALIZED_SCHLICK_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params           = *comp->as<MxGeneralizedSchlickParams>();
+            if (!is_black(w * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
+                                          / 3.0f,
+                                      0.0f, 0.99f);
+                float sqrt_F0 = sqrtf(avg_F0);
+                float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
+                result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+            }
+            closure = nullptr;
+            break;
+        }
+        default:
+            closure = nullptr;
+            break;
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
+    }
+
+    return C3_TO_F3(weight);
+}
+
+
+static __device__ float3
+process_background_closure(const OSL::ClosureColor* closure)
+{
+    OSL::Color3 color_result = OSL::Color3(0.0f);
+    if (!closure) {
+        return C3_TO_F3(color_result);
+    }
+
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
+    OSL::Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    OSL::Color3 weight = OSL::Color3(1.0f);
+    const void* cur    = closure;
     while (cur) {
         ClosureIDs id = static_cast<ClosureIDs>(
             ((OSL::ClosureColor*)cur)->id);
@@ -318,8 +438,9 @@ process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 const void* Ci, bool light_only)
 {
     // TODO: GPU media?
-    // if (!light_only)
-    //     process_medium_closure(sg, result, Ci, Color3(1));
+    if (!light_only) {
+        process_medium_closure(sg, result, (const ClosureColor*) Ci, Color3(1));
+    }
     process_closure((const ClosureColor*)Ci, result);
 }
 
@@ -557,7 +678,6 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
 
     for (int bounce = 0; bounce <= max_bounces; bounce++) {
         const bool last_bounce = bounce == max_bounces;
-
         int hit_idx  = prev_hit_idx;
         int hit_kind = prev_hit_kind;
 

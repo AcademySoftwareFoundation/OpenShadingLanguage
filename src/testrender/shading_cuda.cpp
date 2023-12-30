@@ -221,7 +221,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     case MX_DIELECTRIC_ID: {
         const MxDielectricParams* params = comp->as<MxDielectricParams>();
         bsdfs[num_bsdfs]                = (OSL::BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id            = MX_DIELECTRIC_ID;
+        bsdfs[num_bsdfs]->id            = MX_OREN_NAYAR_DIFFUSE_ID; // MX_DIELECTRIC_ID;
         // MxMicrofacetBaseParams
         ((MxDielectric*)bsdfs[num_bsdfs])->N            = params->N;
         ((MxDielectric*)bsdfs[num_bsdfs])->U            = params->U;
@@ -414,7 +414,6 @@ CompositeBSDF::get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const
         albedo = ((Diffuse<0>*)bsdf)->Diffuse<0>::get_albedo(wo);
         break;
     case OREN_NAYAR_ID:
-    case MX_OREN_NAYAR_DIFFUSE_ID:
         albedo = ((OrenNayar*)bsdf)->OrenNayar::get_albedo(wo);
         break;
     case PHONG_ID: albedo = ((Phong*)bsdf)->Phong::get_albedo(wo); break;
@@ -450,6 +449,9 @@ CompositeBSDF::get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const
     case MX_DIELECTRIC_ID:
         albedo = ((MxDielectricOpaque*)bsdf)->MxDielectricOpaque::get_albedo(wo);
         break;
+    case MX_OREN_NAYAR_DIFFUSE_ID:
+        albedo = ((MxDielectric*)bsdf)->MxDielectric::get_albedo(wo);
+        break;
     case MX_BURLEY_DIFFUSE_ID:
         albedo = ((MxBurleyDiffuse*)bsdf)->MxBurleyDiffuse::get_albedo(wo);
         break;
@@ -478,7 +480,6 @@ CompositeBSDF::sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry,
         sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz);
         break;
     case OREN_NAYAR_ID:
-    case MX_OREN_NAYAR_DIFFUSE_ID:
         sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz);
         break;
     case PHONG_ID: sample = ((Phong*)bsdf)->sample(wo, rx, ry, rz); break;
@@ -511,6 +512,7 @@ CompositeBSDF::sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry,
     case MX_CONDUCTOR_ID: sample = ((MxConductor*)bsdf)->sample(wo, rx, ry, rz); break;
     case MX_DIELECTRIC_ID: sample = ((MxDielectricOpaque*)bsdf)->sample(wo, rx, ry, rz); break;
     case MX_BURLEY_DIFFUSE_ID: sample = ((MxBurleyDiffuse*)bsdf)->sample(wo, rx, ry, rz); break;
+    case MX_OREN_NAYAR_DIFFUSE_ID: sample = ((MxDielectric*)bsdf)->sample(wo, rx, ry, rz); break;
     case MX_SHEEN_ID: sample = ((MxSheen*)bsdf)->sample(wo, rx, ry, rz); break;
     case MX_GENERALIZED_SCHLICK_ID:
         if (is_black(((MxGeneralizedSchlick*)bsdf)->transmission_tint))
@@ -536,7 +538,6 @@ CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
     BSDF::Sample sample = {};
     switch (bsdf->id) {
     case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
-    case MX_OREN_NAYAR_DIFFUSE_ID:
     case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
     case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
     case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
@@ -566,6 +567,7 @@ CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
     case MX_CONDUCTOR_ID: sample = ((MxConductor*)bsdf)->eval(wo, wi); break;
     case MX_DIELECTRIC_ID: sample = ((MxDielectricOpaque*)bsdf)->eval(wo, wi); break;
     case MX_BURLEY_DIFFUSE_ID: sample = ((MxBurleyDiffuse*)bsdf)->eval(wo, wi); break;
+    case MX_OREN_NAYAR_DIFFUSE_ID: sample = ((MxDielectric*)bsdf)->eval(wo, wi); break;
     case MX_SHEEN_ID: sample = ((MxSheen*)bsdf)->eval(wo, wi); break;
     case MX_GENERALIZED_SCHLICK_ID:
         if (is_black(((MxGeneralizedSchlick*)bsdf)->transmission_tint))

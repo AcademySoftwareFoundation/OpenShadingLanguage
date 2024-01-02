@@ -206,6 +206,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
         ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
         ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->roughness;
         ((OrenNayar*)bsdfs[num_bsdfs])->calcAB();
+        weight *= params->albedo;
         break;
     }
     case MX_BURLEY_DIFFUSE_ID: {
@@ -371,7 +372,6 @@ CompositeBSDF::sample_gpu(const Vec3& wo, float rx, float ry, float rz) const
             s.pdf *= pdfs[i];
             if (s.pdf == 0.0f)
                 return {};
-
             // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
             for (int j = 0; j < num_bsdfs; j++) {
                 if (i != j) {

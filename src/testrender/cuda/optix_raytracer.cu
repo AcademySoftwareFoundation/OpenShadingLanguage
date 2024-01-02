@@ -175,14 +175,112 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.
 }
 
 
+static __device__ Color3
+evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
+{
+    // Null closure, the layer is fully transparent
+    if (closure == nullptr)
+        return Color3(0);
+
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
+    OSL::Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    OSL::Color3 weight = OSL::Color3(1.0f);
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureIDs::MUL: {
+            weight *= ((OSL::ClosureMul*)closure)->weight;
+            closure = ((OSL::ClosureMul*)closure)->closure;
+            break;
+        }
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
+            break;
+        }
+        default: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 w                     = comp->w;
+            switch (comp->id) {
+            case MX_LAYER_ID: {
+                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                closure                   = srcparams->top;
+                ptr_stack[stack_idx]      = srcparams->base;
+                weight_stack[stack_idx++] = weight * w;
+                break;
+            }
+            case REFLECTION_ID:
+            case FRESNEL_REFLECTION_ID: {
+                Reflection bsdf(*comp->as<ReflectionParams>());
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * bsdf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            case MX_DIELECTRIC_ID: {
+                const MxDielectricParams& params = *comp->as<MxDielectricParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint))
+                    return Color3(1);
+                MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params, 1.0f);
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * mf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            case MX_GENERALIZED_SCHLICK_ID: {
+                const MxGeneralizedSchlickParams& params
+                    = *comp->as<MxGeneralizedSchlickParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint))
+                    return Color3(1);
+                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params,
+                                                                            1.0f);
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * mf.get_albedo(-I);
+                closure = nullptr;
+            }
+            case MX_SHEEN_ID: {
+                MxSheen bsdf(*comp->as<MxSheenParams>());
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * bsdf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            default:  // Assume unhandled BSDFs are opaque
+                closure = nullptr;
+                break;
+            }
+        }
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
+    }
+    // OSL_ASSERT(false && "Layer opacity evaluation failed");
+    return weight; // Color3(0);
+}
+
+
 static __device__ float3
-process_closure(const OSL::ClosureColor* closure, ShadingResult& result)
+process_closure(const ShaderGlobalsType& sg, const OSL::ClosureColor* closure, ShadingResult& result,
+                bool light_only)
 {
     OSL::Color3 color_result = OSL::Color3(0.0f);
     if (!closure) {
         return C3_TO_F3(color_result);
     }
-
     // The depth of the closure tree must not exceed the stack size.
     // A stack size of 8 is probably quite generous for relatively
     // balanced trees.
@@ -237,6 +335,22 @@ process_closure(const OSL::ClosureColor* closure, ShadingResult& result)
                 closure = nullptr;
                 break;
             }
+            case MX_LAYER_ID: {
+                // TODO: The weight handling here is questionable ...
+                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                Color3 base_w
+                    = cw
+                      * (Color3(1, 1, 1)
+                         - clamp(evaluate_layer_opacity(sg, srcparams->top),
+                                 0.f, 1.f));
+                closure = srcparams->top;
+                weight  = cw;
+                if (!is_black(base_w)) {
+                    ptr_stack[stack_idx]      = srcparams->base;
+                    weight_stack[stack_idx++] = base_w;
+                }
+                break;
+            }
             case ClosureIDs::MX_ANISOTROPIC_VDF_ID:
             case ClosureIDs::MX_MEDIUM_VDF_ID: {
                 closure = nullptr;
@@ -278,7 +392,7 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
     OSL::Color3 weight_stack[STACK_SIZE];
 
     // Shading accumulator
-    OSL::Color3 weight = OSL::Color3(1.0f);
+    OSL::Color3 weight = w; // OSL::Color3(1.0f);
     while (closure) {
         ClosureIDs id = static_cast<ClosureIDs>(closure->id);
         switch (id) {
@@ -293,18 +407,18 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
             closure = ((OSL::ClosureMul*)closure)->closure;
             break;
         }
-        // case MX_LAYER_ID: {
-        //     const ClosureComponent* comp = closure->as_comp();
-        //     const MxLayerParams* params  = comp->as<MxLayerParams>();
-        //     Color3 base_w
-        //         = w
-        //           * (Color3(1)
-        //              - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
-        //     process_medium_closure(sg, result, params->top, w);
-        //     process_medium_closure(sg, result, params->base, base_w);
-        //     cur = nullptr;
-        //     break;
-        // }
+        case MX_LAYER_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const MxLayerParams* params  = comp->as<MxLayerParams>();
+            Color3 base_w
+                = w
+                  * (Color3(1)
+                     - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
+            closure                   = params->top;
+            ptr_stack[stack_idx]      = params->base;
+            weight_stack[stack_idx++] = weight * w;
+            break;
+        }
         case MX_ANISOTROPIC_VDF_ID: {
             const ClosureComponent* comp = closure->as_comp();
             Color3 cw                    = w * comp->w;
@@ -374,7 +488,7 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
 
 
 static __device__ float3
-process_background_closure(const OSL::ClosureColor* closure)
+process_background_closure(const ShaderGlobalsType& sg, const OSL::ClosureColor* closure)
 {
     OSL::Color3 color_result = OSL::Color3(0.0f);
     if (!closure) {
@@ -433,7 +547,7 @@ process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
     if (!light_only) {
         process_medium_closure(sg, result, (const ClosureColor*) Ci, Color3(1));
     }
-    process_closure((const ClosureColor*)Ci, result);
+    process_closure(sg, (const ClosureColor*)Ci, result, light_only);
 }
 
 
@@ -451,7 +565,7 @@ eval_background(const Dual2<Vec3>& dir, int bounce = -1)
 
     alignas(8) char closure_pool[256];
     execute_shader(sg, closure_pool);
-    float3 ret = process_background_closure((const OSL::ClosureColor*)sg.Ci);
+    float3 ret = process_background_closure(sg, (const OSL::ClosureColor*)sg.Ci);
     return F3_TO_C3(ret);
 }
 

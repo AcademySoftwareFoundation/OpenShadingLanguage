@@ -170,7 +170,8 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
         ((Refraction*)bsdfs[num_bsdfs])->eta = params->eta;
         break;
     }
-    case TRANSPARENT_ID: {
+    case TRANSPARENT_ID:
+    case MX_TRANSPARENT_ID: {
         bsdfs[num_bsdfs]     = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id = TRANSPARENT_ID;
         break;
@@ -418,6 +419,10 @@ CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
     Color3 albedo(0);
     switch (bsdf->id) {
     case DIFFUSE_ID: albedo = get_albedo_fn((Diffuse<0>*)bsdf, wo); break;
+    case TRANSPARENT_ID:
+    case MX_TRANSPARENT_ID:
+        albedo = get_albedo_fn((Transparent*)bsdf, wo);
+        break;
     case OREN_NAYAR_ID: albedo = get_albedo_fn((OrenNayar*)bsdf, wo); break;
     case PHONG_ID: albedo = get_albedo_fn((Phong*)bsdf, wo); break;
     case WARD_ID: albedo = get_albedo_fn((Ward*)bsdf, wo); break;
@@ -487,6 +492,10 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
     switch (bsdf->id) {
     case DIFFUSE_ID:
         sample = sample_fn((Diffuse<0>*)bsdf, wo, rx, ry, rz);
+        break;
+    case TRANSPARENT_ID:
+    case MX_TRANSPARENT_ID:
+        sample = sample_fn((Transparent*)bsdf, wo, rx, ry, rz);
         break;
     case OREN_NAYAR_ID:
         sample = sample_fn((OrenNayar*)bsdf, wo, rx, ry, rz);
@@ -577,6 +586,10 @@ CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
     BSDF::Sample sample = {};
     switch (bsdf->id) {
     case DIFFUSE_ID: sample = eval_fn((Diffuse<0>*)bsdf, wo, wi); break;
+    case TRANSPARENT_ID:
+    case MX_TRANSPARENT_ID:
+        sample = eval_fn((Transparent*)bsdf, wo, wi);
+        break;
     case OREN_NAYAR_ID: sample = eval_fn((OrenNayar*)bsdf, wo, wi); break;
     case PHONG_ID: sample = eval_fn((Phong*)bsdf, wo, wi); break;
     case WARD_ID: sample = eval_fn((Ward*)bsdf, wo, wi); break;

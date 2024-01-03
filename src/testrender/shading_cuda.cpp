@@ -727,9 +727,7 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
             weight  = weight_stack[stack_idx];
         }
     }
-    // We should never reach this point
-    assert(false);
-    Color3(0);
+    return weight;
 }
 
 

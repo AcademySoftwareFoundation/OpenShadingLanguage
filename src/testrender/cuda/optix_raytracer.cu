@@ -161,9 +161,6 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         int hit_idx  = prev_hit_idx;
         int hit_kind = prev_hit_kind;
 
-        // Offset the ray origin for secondary rays
-        constexpr float offset = 0.0f; // 1e-6f;
-
         //
         // Trace camera/bounce ray
         //
@@ -304,7 +301,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
 
         // trace one ray to the background
         if (render_params.bg_id >= 0) {
-            const float3 origin = sg.P + sg.N * offset;  // offset the ray origin
+            const float3 origin = sg.P;
             Dual2<Vec3> bg_dir;
             float bg_pdf   = 0;
             Vec3 bg        = background.sample(xi, yi, bg_dir, bg_pdf);
@@ -354,7 +351,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         //
 
         auto sample_light = [&](const float3& light_dir, float light_pdf, int idx) {
-            const float3 origin = sg.P + sg.N * offset;  // offset the ray origin
+            const float3 origin = sg.P;
             BSDF::Sample b      = result.bsdf.eval_gpu(-F3_TO_V3(sg.I),
                                                        F3_TO_V3(light_dir));
             Color3 contrib      = path_weight * b.weight
@@ -453,7 +450,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         // TODO: Keep track of object IDs for self-intersection avoidance, etc.
         prev_hit_idx  = hit_idx;
         prev_hit_kind = hit_kind;
-        r.origin = sg.P + sg.N * offset;
+        r.origin = sg.P;
     }
 
     return path_radiance;

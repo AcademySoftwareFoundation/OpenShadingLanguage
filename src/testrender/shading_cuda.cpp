@@ -113,7 +113,6 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
     // construct each of the BSDF sub-types.
     switch (id) {
     case DIFFUSE_ID: {
-        // TODO: Do we need to handle trans=1?
         const DiffuseParams* params = comp->as<DiffuseParams>();
         bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
@@ -297,7 +296,6 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
         bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
         ((Diffuse<1>*)bsdfs[num_bsdfs])->N = params->N;
-        // TODO: Gotta do something with albedo?
         weight *= params->albedo;
         break;
     }
@@ -318,15 +316,6 @@ CompositeBSDF::prepare_gpu(const Vec3& wo, const Color3& path_weight,
     for (int i = 0; i < num_bsdfs; i++) {
         pdfs[i] = weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo))
                   / (path_weight.x + path_weight.y + path_weight.z);
-
-        // TODO: What is an acceptable range?
-        assert(pdfs[i] >= (0.0f - 1e-6f));
-        assert(pdfs[i] <= (1.0f + 1e-6f));
-
-        // Clamp the PDF to [0,1]. The PDF can fall outside of this range due to
-        // floating-point precision issues.
-        pdfs[i] = (pdfs[i] < 0.0f) ? 0.0f : (pdfs[i] > 1.0f) ? 1.0f : pdfs[i];
-
         total += pdfs[i];
     }
     if ((!absorb && total > 0) || total > 1) {
@@ -487,19 +476,21 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
     BSDF::Sample sample = {};
     switch (bsdf->id) {
     case DIFFUSE_ID:
-        sample = ((Diffuse<0>*)bsdf)->sample(wo, rx, ry, rz);
+        sample = ((Diffuse<0>*)bsdf)->Diffuse<0>::sample(wo, rx, ry, rz);
         break;
     case OREN_NAYAR_ID:
-        sample = ((OrenNayar*)bsdf)->sample(wo, rx, ry, rz);
+        sample = ((OrenNayar*)bsdf)->OrenNayar::sample(wo, rx, ry, rz);
         break;
-    case PHONG_ID: sample = ((Phong*)bsdf)->sample(wo, rx, ry, rz); break;
-    case WARD_ID: sample = ((Ward*)bsdf)->sample(wo, rx, ry, rz); break;
+    case PHONG_ID:
+        sample = ((Phong*)bsdf)->Phong::sample(wo, rx, ry, rz);
+        break;
+    case WARD_ID: sample = ((Ward*)bsdf)->Ward::sample(wo, rx, ry, rz); break;
     case REFLECTION_ID:
     case FRESNEL_REFLECTION_ID:
-        sample = ((Reflection*)bsdf)->sample(wo, rx, ry, rz);
+        sample = ((Reflection*)bsdf)->Reflection::sample(wo, rx, ry, rz);
         break;
     case REFRACTION_ID:
-        sample = ((Refraction*)bsdf)->sample(wo, rx, ry, rz);
+        sample = ((Refraction*)bsdf)->Refraction::sample(wo, rx, ry, rz);
         break;
     case MICROFACET_ID: {
         const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
@@ -538,25 +529,41 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
         }
         break;
     }
-    case MX_CONDUCTOR_ID: sample = ((MxConductor*)bsdf)->sample(wo, rx, ry, rz); break;
-    case MX_DIELECTRIC_ID: sample = ((MxDielectricOpaque*)bsdf)->sample(wo, rx, ry, rz); break;
-    case MX_BURLEY_DIFFUSE_ID: sample = ((MxBurleyDiffuse*)bsdf)->sample(wo, rx, ry, rz); break;
-    case MX_OREN_NAYAR_DIFFUSE_ID: sample = ((MxDielectric*)bsdf)->sample(wo, rx, ry, rz); break;
-    case MX_SHEEN_ID: sample = ((MxSheen*)bsdf)->sample(wo, rx, ry, rz); break;
+    case MX_CONDUCTOR_ID:
+        sample = ((MxConductor*)bsdf)->MxConductor::sample(wo, rx, ry, rz);
+        break;
+    case MX_DIELECTRIC_ID:
+        sample = ((MxDielectricOpaque*)bsdf)
+                     ->MxDielectricOpaque::sample(wo, rx, ry, rz);
+        break;
+    case MX_BURLEY_DIFFUSE_ID:
+        sample
+            = ((MxBurleyDiffuse*)bsdf)->MxBurleyDiffuse::sample(wo, rx, ry, rz);
+        break;
+    case MX_OREN_NAYAR_DIFFUSE_ID:
+        sample = ((MxDielectric*)bsdf)->MxDielectric::sample(wo, rx, ry, rz);
+        break;
+    case MX_SHEEN_ID:
+        sample = ((MxSheen*)bsdf)->MxSheen::sample(wo, rx, ry, rz);
+        break;
     case MX_GENERALIZED_SCHLICK_ID:
-        if (is_black(((MxGeneralizedSchlick*)bsdf)->transmission_tint))
-            sample = ((MxGeneralizedSchlickOpaque*)bsdf)->sample(wo, rx, ry, rz);
-        else
-            sample = ((MxGeneralizedSchlick*)bsdf)->sample(wo, rx, ry, rz);
+        if (is_black(((MxGeneralizedSchlick*)bsdf)
+                         ->MxGeneralizedSchlick::transmission_tint)) {
+            sample = ((MxGeneralizedSchlickOpaque*)bsdf)
+                         ->MxGeneralizedSchlickOpaque::sample(wo, rx, ry, rz);
+        } else {
+            sample = ((MxGeneralizedSchlick*)bsdf)
+                         ->MxGeneralizedSchlick::sample(wo, rx, ry, rz);
+        }
         break;
     default: break;
     }
-        if (sample.pdf != sample.pdf) {
-            uint3 launch_index = optixGetLaunchIndex();
-            printf("sample_bsdf( %s ), PDF is NaN [%d, %d]\n",
-                   id_to_string(bsdf->id), launch_index.x, launch_index.y);
-        }
-        return sample;
+    if (sample.pdf != sample.pdf) {
+        uint3 launch_index = optixGetLaunchIndex();
+        printf("sample_bsdf( %s ), PDF is NaN [%d, %d]\n",
+               id_to_string(bsdf->id), launch_index.x, launch_index.y);
+    }
+    return sample;
 }
 
 
@@ -565,15 +572,21 @@ CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
 {
     BSDF::Sample sample = {};
     switch (bsdf->id) {
-    case DIFFUSE_ID: sample = ((Diffuse<0>*)bsdf)->eval(wo, wi); break;
-    case OREN_NAYAR_ID: sample = ((OrenNayar*)bsdf)->eval(wo, wi); break;
-    case PHONG_ID: sample = ((Phong*)bsdf)->eval(wo, wi); break;
-    case WARD_ID: sample = ((Ward*)bsdf)->eval(wo, wi); break;
+    case DIFFUSE_ID:
+        sample = ((Diffuse<0>*)bsdf)->Diffuse<0>::eval(wo, wi);
+        break;
+    case OREN_NAYAR_ID:
+        sample = ((OrenNayar*)bsdf)->OrenNayar::eval(wo, wi);
+        break;
+    case PHONG_ID: sample = ((Phong*)bsdf)->Phong::eval(wo, wi); break;
+    case WARD_ID: sample = ((Ward*)bsdf)->Ward::eval(wo, wi); break;
     case REFLECTION_ID:
     case FRESNEL_REFLECTION_ID:
-        sample = ((Reflection*)bsdf)->eval(wo, wi);
+        sample = ((Reflection*)bsdf)->Reflection::eval(wo, wi);
         break;
-    case REFRACTION_ID: sample = ((Refraction*)bsdf)->eval(wo, wi); break;
+    case REFRACTION_ID:
+        sample = ((Refraction*)bsdf)->Refraction::eval(wo, wi);
+        break;
     case MICROFACET_ID: {
         const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
         const char* dist  = ((MicrofacetBeckmannRefl*)bsdf)->dist;
@@ -611,24 +624,35 @@ CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
         }
         break;
     }
-    case MX_CONDUCTOR_ID: sample = ((MxConductor*)bsdf)->eval(wo, wi); break;
-    case MX_DIELECTRIC_ID: sample = ((MxDielectricOpaque*)bsdf)->eval(wo, wi); break;
-    case MX_BURLEY_DIFFUSE_ID: sample = ((MxBurleyDiffuse*)bsdf)->eval(wo, wi); break;
-    case MX_OREN_NAYAR_DIFFUSE_ID: sample = ((MxDielectric*)bsdf)->eval(wo, wi); break;
-    case MX_SHEEN_ID: sample = ((MxSheen*)bsdf)->eval(wo, wi); break;
+    case MX_CONDUCTOR_ID:
+        sample = ((MxConductor*)bsdf)->MxConductor::eval(wo, wi);
+        break;
+    case MX_DIELECTRIC_ID:
+        sample = ((MxDielectricOpaque*)bsdf)->MxDielectricOpaque::eval(wo, wi);
+        break;
+    case MX_BURLEY_DIFFUSE_ID:
+        sample = ((MxBurleyDiffuse*)bsdf)->MxBurleyDiffuse::eval(wo, wi);
+        break;
+    case MX_OREN_NAYAR_DIFFUSE_ID:
+        sample = ((MxDielectric*)bsdf)->MxDielectric::eval(wo, wi);
+        break;
+    case MX_SHEEN_ID: sample = ((MxSheen*)bsdf)->MxSheen::eval(wo, wi); break;
     case MX_GENERALIZED_SCHLICK_ID:
-        if (is_black(((MxGeneralizedSchlick*)bsdf)->transmission_tint))
-            sample = ((MxGeneralizedSchlickOpaque*)bsdf)->eval(wo, wi);
-        else
-            sample = ((MxGeneralizedSchlick*)bsdf)->eval(wo, wi);
+        if (is_black(((MxGeneralizedSchlick*)bsdf)
+                         ->MxGeneralizedSchlick::transmission_tint)) {
+            sample = ((MxGeneralizedSchlickOpaque*)bsdf)
+                         ->MxGeneralizedSchlickOpaque::eval(wo, wi);
+        } else {
+            sample = ((MxGeneralizedSchlick*)bsdf)
+                         ->MxGeneralizedSchlick::eval(wo, wi);
+        }
         break;
     default: break;
     }
-    if (sample.pdf != sample.pdf)
-    {
+    if (sample.pdf != sample.pdf) {
         uint3 launch_index = optixGetLaunchIndex();
-        printf("eval_bsdf( %s ), PDF is NaN [%d, %d]\n",
-               id_to_string(bsdf->id), launch_index.x, launch_index.y);
+        printf("eval_bsdf( %s ), PDF is NaN [%d, %d]\n", id_to_string(bsdf->id),
+               launch_index.x, launch_index.y);
     }
     return sample;
 }

@@ -108,3 +108,9 @@ sub_ru(const float3& a, const float3& b)
 }
 
 }  // anonymous namespace
+
+// Conversion macros for casting between vector types
+#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
+#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
+#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
+#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))

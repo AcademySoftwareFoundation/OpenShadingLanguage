@@ -16,7 +16,7 @@
 
 
 namespace {  // anonymous namespace
-static OSL_HOSTDEVICE const char* id_to_string(ClosureIDs id)
+static OSL_HOSTDEVICE const char* id_to_string(int id)
 {
     switch(id) {
         case ClosureIDs::COMPONENT_BASE_ID: return "COMPONENT_BASE_ID"; break;
@@ -57,8 +57,6 @@ static OSL_HOSTDEVICE const char* id_to_string(ClosureIDs id)
 }  // anonymous namespace
 
 
-using namespace OSL;
-
 OSL_NAMESPACE_ENTER
 
 
@@ -69,9 +67,9 @@ typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true> MxGeneralizedSch
 typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> MxGeneralizedSchlickOpaque;
 
 
-OSL_HOSTDEVICE
-bool
-CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, ShadingResult& result)
+OSL_HOSTDEVICE bool
+CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
+                            ShadingResult& result)
 {
     auto sizeof_params = [](ClosureIDs id) {
         size_t sz = 0;
@@ -117,14 +115,14 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     case DIFFUSE_ID: {
         // TODO: Do we need to handle trans=1?
         const DiffuseParams* params = comp->as<DiffuseParams>();
-        bsdfs[num_bsdfs]                   = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
         ((Diffuse<0>*)bsdfs[num_bsdfs])->N = params->N;
         break;
     }
     case OREN_NAYAR_ID: {
         const OrenNayarParams* params = comp->as<OrenNayarParams>();
-        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                      = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                  = OREN_NAYAR_ID;
         ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
         ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->sigma;
@@ -133,14 +131,14 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case TRANSLUCENT_ID: {
         const DiffuseParams* params = comp->as<DiffuseParams>();
-        bsdfs[num_bsdfs]                   = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
         ((Diffuse<1>*)bsdfs[num_bsdfs])->N = params->N;
         break;
     }
     case PHONG_ID: {
         const PhongParams* params            = comp->as<PhongParams>();
-        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                     = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                 = PHONG_ID;
         ((Phong*)bsdfs[num_bsdfs])->N        = params->N;
         ((Phong*)bsdfs[num_bsdfs])->exponent = params->exponent;
@@ -148,7 +146,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case WARD_ID: {
         const WardParams* params      = comp->as<WardParams>();
-        bsdfs[num_bsdfs]              = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]              = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id          = WARD_ID;
         ((Ward*)bsdfs[num_bsdfs])->N  = params->N;
         ((Ward*)bsdfs[num_bsdfs])->T  = params->T;
@@ -159,7 +157,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     case REFLECTION_ID:
     case FRESNEL_REFLECTION_ID: {
         const ReflectionParams* params       = comp->as<ReflectionParams>();
-        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                     = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                 = REFLECTION_ID;
         ((Reflection*)bsdfs[num_bsdfs])->N   = params->N;
         ((Reflection*)bsdfs[num_bsdfs])->eta = params->eta;
@@ -167,20 +165,20 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case REFRACTION_ID: {
         const RefractionParams* params       = comp->as<RefractionParams>();
-        bsdfs[num_bsdfs]                     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                     = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                 = REFRACTION_ID;
         ((Refraction*)bsdfs[num_bsdfs])->N   = params->N;
         ((Refraction*)bsdfs[num_bsdfs])->eta = params->eta;
         break;
     }
     case TRANSPARENT_ID: {
-        bsdfs[num_bsdfs]     = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]     = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id = TRANSPARENT_ID;
         break;
     }
     case MICROFACET_ID: {
         const MicrofacetParams* params        = comp->as<MicrofacetParams>();
-        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                      = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                  = MICROFACET_ID;
         ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->dist    = params->dist;
         ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->N       = params->N;
@@ -192,7 +190,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
         ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->calcTangentFrame();
 
 #if 0
-        const char* mem  = (const char*)((OSL::ClosureComponent*)comp)->data();
+        const char* mem  = (const char*)((ClosureComponent*)comp)->data();
         const char* dist = *(const char**)&mem[0];
         if (HDSTR(dist) == STRING_PARAMS(default))
             printf("default\n");
@@ -201,7 +199,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case MX_OREN_NAYAR_DIFFUSE_ID: {
         const MxOrenNayarDiffuseParams* params = comp->as<MxOrenNayarDiffuseParams>();
-        bsdfs[num_bsdfs]                      = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                      = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                  = OREN_NAYAR_ID;
         ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
         ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->roughness;
@@ -211,7 +209,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case MX_BURLEY_DIFFUSE_ID: {
         const MxBurleyDiffuseParams* params = comp->as<MxBurleyDiffuseParams>();
-        bsdfs[num_bsdfs]                    = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                    = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                = MX_BURLEY_DIFFUSE_ID;
         ((MxBurleyDiffuse*)bsdfs[num_bsdfs])->N         = params->N;
         ((MxBurleyDiffuse*)bsdfs[num_bsdfs])->albedo    = params->albedo;
@@ -221,7 +219,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case MX_DIELECTRIC_ID: {
         const MxDielectricParams* params = comp->as<MxDielectricParams>();
-        bsdfs[num_bsdfs]                = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id            = MX_OREN_NAYAR_DIFFUSE_ID; // MX_DIELECTRIC_ID;
         // MxMicrofacetBaseParams
         ((MxDielectric*)bsdfs[num_bsdfs])->N            = params->N;
@@ -246,7 +244,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case MX_CONDUCTOR_ID: {
         const MxConductorParams* params = comp->as<MxConductorParams>();
-        bsdfs[num_bsdfs]                = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id            = MX_CONDUCTOR_ID;
         // MxMicrofacetBaseParams
         ((MxConductor*)bsdfs[num_bsdfs])->N                  = params->N;
@@ -266,7 +264,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case MX_GENERALIZED_SCHLICK_ID: {
         const MxGeneralizedSchlickParams* params = comp->as<MxGeneralizedSchlickParams>();
-        bsdfs[num_bsdfs]                = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id            = MX_GENERALIZED_SCHLICK_ID;
         // MxMicrofacetBaseParams
         ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->N            = params->N;
@@ -293,7 +291,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case MX_SHEEN_ID: {
         const MxSheenParams* params = comp->as<MxSheenParams>();
-        bsdfs[num_bsdfs]                        = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                        = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id                    = MX_SHEEN_ID;
         ((MxSheen*)bsdfs[num_bsdfs])->N         = params->N;
         ((MxSheen*)bsdfs[num_bsdfs])->albedo    = params->albedo;
@@ -303,7 +301,7 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, Shadi
     }
     case MX_TRANSLUCENT_ID: {
         const MxTranslucentParams* params  = comp->as<MxTranslucentParams>();
-        bsdfs[num_bsdfs]                   = (OSL::BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
         bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
         ((Diffuse<1>*)bsdfs[num_bsdfs])->N = params->N;
         // TODO: Gotta do something with albedo?
@@ -406,7 +404,7 @@ CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
 
 
 OSL_HOSTDEVICE Color3
-CompositeBSDF::get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const
+CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
 {
     Color3 albedo(0);
     switch (bsdf->id) {
@@ -471,7 +469,7 @@ CompositeBSDF::get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const
 
 
 OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry,
+CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
                            float rz) const
 {
     BSDF::Sample sample = {};
@@ -533,7 +531,7 @@ CompositeBSDF::sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry,
 
 
 OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
+CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
 {
     BSDF::Sample sample = {};
     switch (bsdf->id) {
@@ -585,5 +583,380 @@ CompositeBSDF::eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
     }
     return sample;
 }
+
+
+static __device__ Color3
+evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
+{
+    // Null closure, the layer is fully transparent
+    if (closure == nullptr)
+        return Color3(0);
+
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    Color3 weight = Color3(1.0f);
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureIDs::MUL: {
+            weight *= ((ClosureMul*)closure)->weight;
+            closure = ((ClosureMul*)closure)->closure;
+            break;
+        }
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((ClosureAdd*)closure)->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = ((ClosureAdd*)closure)->closureA;
+            break;
+        }
+        default: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 w                     = comp->w;
+            switch (comp->id) {
+            case MX_LAYER_ID: {
+                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                closure                   = srcparams->top;
+                ptr_stack[stack_idx]      = srcparams->base;
+                weight_stack[stack_idx++] = weight * w;
+                break;
+            }
+            case REFLECTION_ID:
+            case FRESNEL_REFLECTION_ID: {
+                Reflection bsdf(*comp->as<ReflectionParams>());
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * bsdf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            case MX_DIELECTRIC_ID: {
+                const MxDielectricParams& params = *comp->as<MxDielectricParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint))
+                    return Color3(1);
+                MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params, 1.0f);
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * mf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            case MX_GENERALIZED_SCHLICK_ID: {
+                const MxGeneralizedSchlickParams& params
+                    = *comp->as<MxGeneralizedSchlickParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint))
+                    return Color3(1);
+                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params,
+                                                                            1.0f);
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * mf.get_albedo(-I);
+                closure = nullptr;
+            }
+            case MX_SHEEN_ID: {
+                MxSheen bsdf(*comp->as<MxSheenParams>());
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * bsdf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            default:  // Assume unhandled BSDFs are opaque
+                closure = nullptr;
+                break;
+            }
+        }
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
+    }
+    // We should never reach this point
+    assert(false);
+    Color3(0);
+}
+
+
+static __device__ Color3
+process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
+                       const ClosureColor* closure, const Color3& w)
+{
+    Color3 color_result = Color3(0.0f);
+    if (!closure) {
+        return color_result;
+    }
+
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    Color3 weight = w; // Color3(1.0f);
+    while (closure) {
+        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
+        switch (id) {
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((ClosureAdd*)closure)->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = ((ClosureAdd*)closure)->closureA;
+            break;
+        }
+        case ClosureIDs::MUL: {
+            weight *= ((ClosureMul*)closure)->weight;
+            closure = ((ClosureMul*)closure)->closure;
+            break;
+        }
+        case MX_LAYER_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const MxLayerParams* params  = comp->as<MxLayerParams>();
+            Color3 base_w
+                = w
+                  * (Color3(1)
+                     - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
+            closure                   = params->top;
+            ptr_stack[stack_idx]      = params->base;
+            weight_stack[stack_idx++] = weight * w;
+            break;
+        }
+        case MX_ANISOTROPIC_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = w * comp->w;
+            const auto& params           = *comp->as<MxAnisotropicVdfParams>();
+            result.sigma_t               = cw * params.extinction;
+            result.sigma_s               = params.albedo * result.sigma_t;
+            result.medium_g              = params.anisotropy;
+            result.refraction_ior        = 1.0f;
+            result.priority = 0;  // TODO: should this closure have a priority?
+            closure = nullptr;
+            break;
+        }
+        case MX_MEDIUM_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = w * comp->w;
+            const auto& params           = *comp->as<MxMediumVdfParams>();
+            result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
+                               -OIIO::fast_log(params.transmission_color.y),
+                               -OIIO::fast_log(params.transmission_color.z) };
+            // NOTE: closure weight scales the extinction parameter
+            result.sigma_t *= cw / params.transmission_depth;
+            result.sigma_s  = params.albedo * result.sigma_t;
+            result.medium_g = params.anisotropy;
+            // TODO: properly track a medium stack here ...
+            result.refraction_ior = sg.backfacing ? 1.0f / params.ior : params.ior;
+            result.priority       = params.priority;
+            closure = nullptr;
+            break;
+        }
+        case MX_DIELECTRIC_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params           = *comp->as<MxDielectricParams>();
+            if (!is_black(w * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                result.refraction_ior = sg.backfacing ? 1.0f / params.ior
+                                                      : params.ior;
+            }
+            closure = nullptr;
+            break;
+        }
+        case MX_GENERALIZED_SCHLICK_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params           = *comp->as<MxGeneralizedSchlickParams>();
+            if (!is_black(w * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
+                                          / 3.0f,
+                                      0.0f, 0.99f);
+                float sqrt_F0 = sqrtf(avg_F0);
+                float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
+                result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+            }
+            closure = nullptr;
+            break;
+        }
+        default:
+            closure = nullptr;
+            break;
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
+    }
+    return weight;
+}
+
+
+static __device__ void
+process_closure(const ShaderGlobalsType& sg, const ClosureColor* closure, ShadingResult& result,
+                bool light_only)
+{
+    if (!closure) {
+        return;
+    }
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    Color3 weight = Color3(1.0f);
+    while (closure) {
+        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
+        switch (id) {
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((ClosureAdd*)closure)->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = ((ClosureAdd*)closure)->closureA;
+            break;
+        }
+        case ClosureIDs::MUL: {
+            weight *= ((ClosureMul*)closure)->weight;
+            closure = ((ClosureMul*)closure)->closure;
+            break;
+        }
+        default: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = weight * comp->w;
+            switch (id) {
+            case ClosureIDs::EMISSION_ID: {
+                result.Le += cw;
+                closure = nullptr;
+                break;
+            }
+            case ClosureIDs::MICROFACET_ID:
+            case ClosureIDs::DIFFUSE_ID:
+            case ClosureIDs::OREN_NAYAR_ID:
+            case ClosureIDs::PHONG_ID:
+            case ClosureIDs::WARD_ID:
+            case ClosureIDs::REFLECTION_ID:
+            case ClosureIDs::FRESNEL_REFLECTION_ID:
+            case ClosureIDs::REFRACTION_ID:
+            case ClosureIDs::MX_CONDUCTOR_ID:
+            case ClosureIDs::MX_DIELECTRIC_ID:
+            case ClosureIDs::MX_BURLEY_DIFFUSE_ID:
+            case ClosureIDs::MX_OREN_NAYAR_DIFFUSE_ID:
+            case ClosureIDs::MX_SHEEN_ID:
+            case ClosureIDs::MX_GENERALIZED_SCHLICK_ID: {
+                if (!result.bsdf.add_bsdf_gpu(cw, comp, result))
+                    printf("unable to add BSDF\n");
+                closure = nullptr;
+                break;
+            }
+            case MX_LAYER_ID: {
+                // TODO: The weight handling here is questionable ...
+                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                Color3 base_w
+                    = cw
+                      * (Color3(1, 1, 1)
+                         - clamp(evaluate_layer_opacity(sg, srcparams->top),
+                                 0.f, 1.f));
+                closure = srcparams->top;
+                weight  = cw;
+                if (!is_black(base_w)) {
+                    ptr_stack[stack_idx]      = srcparams->base;
+                    weight_stack[stack_idx++] = base_w;
+                }
+                break;
+            }
+            case ClosureIDs::MX_ANISOTROPIC_VDF_ID:
+            case ClosureIDs::MX_MEDIUM_VDF_ID: {
+                closure = nullptr;
+                break;
+            }
+            default:
+                printf("unhandled ID? %s (%d)\n", id_to_string(id), int(id));
+                closure = nullptr;
+                break;
+            }
+        }
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
+    }
+}
+
+
+static __device__ void
+process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
+                const void* Ci, bool light_only)
+{
+    if (!light_only) {
+        process_medium_closure(sg, result, (const ClosureColor*) Ci, Color3(1));
+    }
+    process_closure(sg, (const ClosureColor*)Ci, result, light_only);
+}
+
+
+static __device__ Color3
+process_background_closure(const ShaderGlobalsType& sg, const ClosureColor* closure)
+{
+    if (!closure) {
+        return Color3(0);
+    }
+
+    // The depth of the closure tree must not exceed the stack size.
+    // A stack size of 8 is probably quite generous for relatively
+    // balanced trees.
+    const int STACK_SIZE = 8;
+
+    // Non-recursive traversal stack
+    int stack_idx = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+
+    // Shading accumulator
+    Color3 weight = Color3(1.0f);
+    while (closure) {
+        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
+        switch (id) {
+        case ClosureIDs::ADD: {
+            ptr_stack[stack_idx]      = ((ClosureAdd*)closure)->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = ((ClosureAdd*)closure)->closureA;
+            break;
+        }
+        case ClosureIDs::MUL: {
+            weight *= ((ClosureMul*)closure)->weight;
+            closure = ((ClosureMul*)closure)->closure;
+            break;
+        }
+        case ClosureIDs::BACKGROUND_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            weight *= comp->w;
+            closure = nullptr;
+            break;
+        }
+        default:
+            // Should never get here
+            assert(false);
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
+    }
+    return weight;
+}
+
 
 OSL_NAMESPACE_EXIT

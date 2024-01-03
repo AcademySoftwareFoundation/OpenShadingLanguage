@@ -4,9 +4,6 @@
 
 
 #include <optix.h>
-
-#include "util.h"
-
 #include <optix_device.h>
 
 #include <OSL/hashes.h>
@@ -14,27 +11,23 @@
 #include "optix_raytracer.h"
 #include "rend_lib.h"
 #include "render_params.h"
+#include "util.h"
 #include "vec_math.h"
 
+#include "../background.h"
 #include "../raytracer.h"
 #include "../render_params.h"
 #include "../sampling.h"
+
+// clang-format off
+// These files must be included in this specific order
 #include "../shading.h"
 #include "../shading.cpp"
 #include "../shading_cuda.cpp"
-#include "../background.h"
+// clang-format on
+
 
 #include <cstdint>
-
-
-using OSL_CUDA::ShaderGlobals;
-
-
-// Conversion macros for casting between vector types
-#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
-#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
-#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
-#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
 
 
 OSL_NAMESPACE_ENTER
@@ -57,7 +50,7 @@ __device__ __constant__ RenderParams render_params;
 
 
 static inline __device__ void
-execute_shader(OSL_CUDA::ShaderGlobals& sg, char* closure_pool)
+execute_shader(ShaderGlobalsType& sg, char* closure_pool)
 {
     if (sg.shaderID < 0) {
         // TODO: should probably never get here ...
@@ -83,7 +76,7 @@ execute_shader(OSL_CUDA::ShaderGlobals& sg, char* closure_pool)
     void* interactive_ptr = reinterpret_cast<void**>(
         render_params.interactive_params)[sg.shaderID];
     const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
-    optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
+    optixDirectCall<void, ShaderGlobalsType*, void*, void*, void*, int, void*>(
         shaderIdx, &sg /*shaderglobals_ptr*/,
         nullptr /*groupdata_ptr*/,
         nullptr /*userdata_base_ptr*/,
@@ -91,463 +84,6 @@ execute_shader(OSL_CUDA::ShaderGlobals& sg, char* closure_pool)
         0 /*shadeindex - unused*/,
         interactive_ptr /*interactive_params_ptr*/
     );
-}
-
-//--------------------------------------------------------------------------------
-//
-// Pathtracing
-//
-//--------------------------------------------------------------------------------
-
-// return a direction towards a point on the sphere
-static __device__
-float3 sample_sphere(const float3& x, const SphereParams& sphere,
-                     float xi, float yi, float& pdf)
-{
-    const float TWOPI = float(2 * M_PI);
-    float cmax2       = 1 - sphere.r2 / dot(sphere.c - x, sphere.c - x);
-    float cmax        = cmax2 > 0 ? sqrtf(cmax2) : 0;
-    float cos_a       = 1 - xi + xi * cmax;
-    float sin_a       = sqrtf(1 - cos_a * cos_a);
-    float phi         = TWOPI * yi;
-    float sp, cp;
-    OIIO::fast_sincos(phi, &sp, &cp);
-    float3 sw = normalize(sphere.c - x), su, sv;
-    ortho(sw, su, sv);
-    pdf = 1 / (TWOPI * (1 - cmax));
-    return normalize(su * (cp * sin_a) + sv * (sp * sin_a) + sw * cos_a);
-}
-
-
-// return a direction towards a point on the quad
-static __device__
-float3 sample_quad(const float3& x, const QuadParams& quad,
-                   float xi, float yi, float& pdf)
-{
-    float3 l   = (quad.p + xi * quad.ex + yi * quad.ey) - x;
-    float  d2  = dot(l, l); // l.length2();
-    float3 dir = normalize(l);
-    pdf        = d2 / (quad.a * fabsf(dot(dir, quad.n)));
-    return dir;
-}
-
-
-static __device__ void
-globals_from_hit(OSL_CUDA::ShaderGlobals& sg, float radius=0.0f, float spread=0.0f, Ray::RayType raytype=Ray::RayType::CAMERA)
-{
-    OSL_CUDA::ShaderGlobals local_sg;
-    // hit-kind 0: quad hit
-    //          1: sphere hit
-    optixDirectCall<void, unsigned int, float, float3, float3, OSL_CUDA::ShaderGlobals*>(
-        optixGetHitKind(), optixGetPrimitiveIndex(), optixGetRayTmax(),
-        optixGetWorldRayOrigin(), optixGetWorldRayDirection(), &local_sg);
-    // Setup the ShaderGlobals
-    const float3 ray_direction = optixGetWorldRayDirection();
-    const float3 ray_origin    = optixGetWorldRayOrigin();
-    const float t_hit          = optixGetRayTmax();
-
-    Ray ray(F3_TO_V3(ray_origin), F3_TO_V3(ray_direction), radius, spread, Ray::RayType::CAMERA);
-    Dual2<float> t(t_hit);
-    Dual2<Vec3> P = ray.point(t);
-
-    sg.I  = ray_direction;
-    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
-    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.Ng));
-    sg.P  = V3_TO_F3(P.val());
-    sg.dPdx        = V3_TO_F3(P.dx());
-    sg.dPdy        = V3_TO_F3(P.dy());
-    sg.dPdu        = local_sg.dPdu;
-    sg.dPdv        = local_sg.dPdv;
-    sg.u           = local_sg.u;
-    sg.v           = local_sg.v;
-    sg.Ci          = nullptr;
-    sg.surfacearea = local_sg.surfacearea;
-    sg.backfacing  = dot(sg.N, sg.I) > 0.0f;
-    sg.shaderID    = local_sg.shaderID;
-
-    if (sg.backfacing) {
-        sg.N  = -sg.N;
-        sg.Ng = -sg.Ng;
-    }
-
-    sg.raytype        = raytype;
-    sg.flipHandedness = dot(sg.N, cross(sg.dPdx, sg.dPdy)) < 0.0f;
-}
-
-
-static __device__ Color3
-evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
-{
-    // Null closure, the layer is fully transparent
-    if (closure == nullptr)
-        return Color3(0);
-
-    // The depth of the closure tree must not exceed the stack size.
-    // A stack size of 8 is probably quite generous for relatively
-    // balanced trees.
-    const int STACK_SIZE = 8;
-
-    // Non-recursive traversal stack
-    int stack_idx = 0;
-    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
-    OSL::Color3 weight_stack[STACK_SIZE];
-
-    // Shading accumulator
-    OSL::Color3 weight = OSL::Color3(1.0f);
-
-    while (closure) {
-        switch (closure->id) {
-        case ClosureIDs::MUL: {
-            weight *= ((OSL::ClosureMul*)closure)->weight;
-            closure = ((OSL::ClosureMul*)closure)->closure;
-            break;
-        }
-        case ClosureIDs::ADD: {
-            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
-            weight_stack[stack_idx++] = weight;
-            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
-            break;
-        }
-        default: {
-            const ClosureComponent* comp = closure->as_comp();
-            Color3 w                     = comp->w;
-            switch (comp->id) {
-            case MX_LAYER_ID: {
-                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
-                closure                   = srcparams->top;
-                ptr_stack[stack_idx]      = srcparams->base;
-                weight_stack[stack_idx++] = weight * w;
-                break;
-            }
-            case REFLECTION_ID:
-            case FRESNEL_REFLECTION_ID: {
-                Reflection bsdf(*comp->as<ReflectionParams>());
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * bsdf.get_albedo(-I);
-                closure = nullptr;
-                break;
-            }
-            case MX_DIELECTRIC_ID: {
-                const MxDielectricParams& params = *comp->as<MxDielectricParams>();
-                // Transmissive dielectrics are opaque
-                if (!is_black(params.transmission_tint))
-                    return Color3(1);
-                MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params, 1.0f);
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * mf.get_albedo(-I);
-                closure = nullptr;
-                break;
-            }
-            case MX_GENERALIZED_SCHLICK_ID: {
-                const MxGeneralizedSchlickParams& params
-                    = *comp->as<MxGeneralizedSchlickParams>();
-                // Transmissive dielectrics are opaque
-                if (!is_black(params.transmission_tint))
-                    return Color3(1);
-                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params,
-                                                                            1.0f);
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * mf.get_albedo(-I);
-                closure = nullptr;
-            }
-            case MX_SHEEN_ID: {
-                MxSheen bsdf(*comp->as<MxSheenParams>());
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * bsdf.get_albedo(-I);
-                closure = nullptr;
-                break;
-            }
-            default:  // Assume unhandled BSDFs are opaque
-                closure = nullptr;
-                break;
-            }
-        }
-        }
-        if (closure == nullptr && stack_idx > 0) {
-            closure = ptr_stack[--stack_idx];
-            weight  = weight_stack[stack_idx];
-        }
-    }
-    // OSL_ASSERT(false && "Layer opacity evaluation failed");
-    return weight; // Color3(0);
-}
-
-
-static __device__ float3
-process_closure(const ShaderGlobalsType& sg, const OSL::ClosureColor* closure, ShadingResult& result,
-                bool light_only)
-{
-    OSL::Color3 color_result = OSL::Color3(0.0f);
-    if (!closure) {
-        return C3_TO_F3(color_result);
-    }
-    // The depth of the closure tree must not exceed the stack size.
-    // A stack size of 8 is probably quite generous for relatively
-    // balanced trees.
-    const int STACK_SIZE = 8;
-
-    // Non-recursive traversal stack
-    int stack_idx = 0;
-    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
-    OSL::Color3 weight_stack[STACK_SIZE];
-
-    // Shading accumulator
-    OSL::Color3 weight = OSL::Color3(1.0f);
-    while (closure) {
-        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
-        switch (id) {
-        case ClosureIDs::ADD: {
-            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
-            weight_stack[stack_idx++] = weight;
-            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
-            break;
-        }
-        case ClosureIDs::MUL: {
-            weight *= ((OSL::ClosureMul*)closure)->weight;
-            closure = ((OSL::ClosureMul*)closure)->closure;
-            break;
-        }
-        default: {
-            const ClosureComponent* comp = closure->as_comp();
-            Color3 cw                    = weight * comp->w;
-            switch (id) {
-            case ClosureIDs::EMISSION_ID: {
-                result.Le += cw;
-                closure = nullptr;
-                break;
-            }
-            case ClosureIDs::MICROFACET_ID:
-            case ClosureIDs::DIFFUSE_ID:
-            case ClosureIDs::OREN_NAYAR_ID:
-            case ClosureIDs::PHONG_ID:
-            case ClosureIDs::WARD_ID:
-            case ClosureIDs::REFLECTION_ID:
-            case ClosureIDs::FRESNEL_REFLECTION_ID:
-            case ClosureIDs::REFRACTION_ID:
-            case ClosureIDs::MX_CONDUCTOR_ID:
-            case ClosureIDs::MX_DIELECTRIC_ID:
-            case ClosureIDs::MX_BURLEY_DIFFUSE_ID:
-            case ClosureIDs::MX_OREN_NAYAR_DIFFUSE_ID:
-            case ClosureIDs::MX_SHEEN_ID:
-            case ClosureIDs::MX_GENERALIZED_SCHLICK_ID: {
-                if (!result.bsdf.add_bsdf_gpu(cw, comp, result))
-                    printf("unable to add BSDF\n");
-                closure = nullptr;
-                break;
-            }
-            case MX_LAYER_ID: {
-                // TODO: The weight handling here is questionable ...
-                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
-                Color3 base_w
-                    = cw
-                      * (Color3(1, 1, 1)
-                         - clamp(evaluate_layer_opacity(sg, srcparams->top),
-                                 0.f, 1.f));
-                closure = srcparams->top;
-                weight  = cw;
-                if (!is_black(base_w)) {
-                    ptr_stack[stack_idx]      = srcparams->base;
-                    weight_stack[stack_idx++] = base_w;
-                }
-                break;
-            }
-            case ClosureIDs::MX_ANISOTROPIC_VDF_ID:
-            case ClosureIDs::MX_MEDIUM_VDF_ID: {
-                closure = nullptr;
-                break;
-            }
-            default:
-                printf("unhandled ID? %s (%d)\n", id_to_string(id), int(id));
-                closure = nullptr;
-                break;
-            }
-        }
-        }
-        if (closure == nullptr && stack_idx > 0) {
-            closure = ptr_stack[--stack_idx];
-            weight  = weight_stack[stack_idx];
-        }
-    }
-    return C3_TO_F3(color_result);
-}
-
-
-static __device__ float3
-process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
-                       const OSL::ClosureColor* closure, const Color3& w)
-{
-    OSL::Color3 color_result = OSL::Color3(0.0f);
-    if (!closure) {
-        return C3_TO_F3(color_result);
-    }
-
-    // The depth of the closure tree must not exceed the stack size.
-    // A stack size of 8 is probably quite generous for relatively
-    // balanced trees.
-    const int STACK_SIZE = 8;
-
-    // Non-recursive traversal stack
-    int stack_idx = 0;
-    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
-    OSL::Color3 weight_stack[STACK_SIZE];
-
-    // Shading accumulator
-    OSL::Color3 weight = w; // OSL::Color3(1.0f);
-    while (closure) {
-        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
-        switch (id) {
-        case ClosureIDs::ADD: {
-            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
-            weight_stack[stack_idx++] = weight;
-            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
-            break;
-        }
-        case ClosureIDs::MUL: {
-            weight *= ((OSL::ClosureMul*)closure)->weight;
-            closure = ((OSL::ClosureMul*)closure)->closure;
-            break;
-        }
-        case MX_LAYER_ID: {
-            const ClosureComponent* comp = closure->as_comp();
-            const MxLayerParams* params  = comp->as<MxLayerParams>();
-            Color3 base_w
-                = w
-                  * (Color3(1)
-                     - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
-            closure                   = params->top;
-            ptr_stack[stack_idx]      = params->base;
-            weight_stack[stack_idx++] = weight * w;
-            break;
-        }
-        case MX_ANISOTROPIC_VDF_ID: {
-            const ClosureComponent* comp = closure->as_comp();
-            Color3 cw                    = w * comp->w;
-            const auto& params           = *comp->as<MxAnisotropicVdfParams>();
-            result.sigma_t               = cw * params.extinction;
-            result.sigma_s               = params.albedo * result.sigma_t;
-            result.medium_g              = params.anisotropy;
-            result.refraction_ior        = 1.0f;
-            result.priority = 0;  // TODO: should this closure have a priority?
-            closure = nullptr;
-            break;
-        }
-        case MX_MEDIUM_VDF_ID: {
-            const ClosureComponent* comp = closure->as_comp();
-            Color3 cw                    = w * comp->w;
-            const auto& params           = *comp->as<MxMediumVdfParams>();
-            result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
-                               -OIIO::fast_log(params.transmission_color.y),
-                               -OIIO::fast_log(params.transmission_color.z) };
-            // NOTE: closure weight scales the extinction parameter
-            result.sigma_t *= cw / params.transmission_depth;
-            result.sigma_s  = params.albedo * result.sigma_t;
-            result.medium_g = params.anisotropy;
-            // TODO: properly track a medium stack here ...
-            result.refraction_ior = sg.backfacing ? 1.0f / params.ior : params.ior;
-            result.priority       = params.priority;
-            closure = nullptr;
-            break;
-        }
-        case MX_DIELECTRIC_ID: {
-            const ClosureComponent* comp = closure->as_comp();
-            const auto& params           = *comp->as<MxDielectricParams>();
-            if (!is_black(w * comp->w * params.transmission_tint)) {
-                // TODO: properly track a medium stack here ...
-                result.refraction_ior = sg.backfacing ? 1.0f / params.ior
-                                                      : params.ior;
-            }
-            closure = nullptr;
-            break;
-        }
-        case MX_GENERALIZED_SCHLICK_ID: {
-            const ClosureComponent* comp = closure->as_comp();
-            const auto& params           = *comp->as<MxGeneralizedSchlickParams>();
-            if (!is_black(w * comp->w * params.transmission_tint)) {
-                // TODO: properly track a medium stack here ...
-                float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
-                                          / 3.0f,
-                                      0.0f, 0.99f);
-                float sqrt_F0 = sqrtf(avg_F0);
-                float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
-                result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
-            }
-            closure = nullptr;
-            break;
-        }
-        default:
-            closure = nullptr;
-            break;
-        }
-        if (closure == nullptr && stack_idx > 0) {
-            closure = ptr_stack[--stack_idx];
-            weight  = weight_stack[stack_idx];
-        }
-    }
-    return C3_TO_F3(weight);
-}
-
-
-static __device__ float3
-process_background_closure(const ShaderGlobalsType& sg, const OSL::ClosureColor* closure)
-{
-    OSL::Color3 color_result = OSL::Color3(0.0f);
-    if (!closure) {
-        return C3_TO_F3(color_result);
-    }
-
-    // The depth of the closure tree must not exceed the stack size.
-    // A stack size of 8 is probably quite generous for relatively
-    // balanced trees.
-    const int STACK_SIZE = 8;
-
-    // Non-recursive traversal stack
-    int stack_idx = 0;
-    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
-    OSL::Color3 weight_stack[STACK_SIZE];
-
-    // Shading accumulator
-    OSL::Color3 weight = OSL::Color3(1.0f);
-    while (closure) {
-        ClosureIDs id = static_cast<ClosureIDs>(closure->id);
-        switch (id) {
-        case ClosureIDs::ADD: {
-            ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)closure)->closureB;
-            weight_stack[stack_idx++] = weight;
-            closure                   = ((OSL::ClosureAdd*)closure)->closureA;
-            break;
-        }
-        case ClosureIDs::MUL: {
-            weight *= ((OSL::ClosureMul*)closure)->weight;
-            closure = ((OSL::ClosureMul*)closure)->closure;
-            break;
-        }
-        case ClosureIDs::BACKGROUND_ID: {
-            const ClosureComponent* comp = closure->as_comp();
-            weight *= comp->w;
-            closure = nullptr;
-            break;
-        }
-        default:
-            // Should never get here
-            assert(false);
-        }
-        if (closure == nullptr && stack_idx > 0) {
-            closure = ptr_stack[--stack_idx];
-            weight  = weight_stack[stack_idx];
-        }
-    }
-    return C3_TO_F3(weight);
-}
-
-
-static __device__ void
-process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
-                const void* Ci, bool light_only)
-{
-    if (!light_only) {
-        process_medium_closure(sg, result, (const ClosureColor*) Ci, Color3(1));
-    }
-    process_closure(sg, (const ClosureColor*)Ci, result, light_only);
 }
 
 
@@ -565,208 +101,46 @@ eval_background(const Dual2<Vec3>& dir, int bounce = -1)
 
     alignas(8) char closure_pool[256];
     execute_shader(sg, closure_pool);
-    float3 ret = process_background_closure(sg, (const OSL::ClosureColor*)sg.Ci);
-    return F3_TO_C3(ret);
+    return process_background_closure(sg, (const ClosureColor*)sg.Ci);
 }
 
 
-//
-//
-//
-
-
-extern "C" __global__ void
-__miss__()
+// Return a direction towards a point on the sphere
+static __device__ float3
+sample_sphere(const float3& x, const SphereParams& sphere, float xi, float yi,
+              float& pdf)
 {
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
-
-    float3* output_buffer = reinterpret_cast<float3*>(
-        render_params.output_buffer);
-
-    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
-    output_buffer[pixel] = make_float3(0, 0, 1);
+    const float TWOPI = float(2 * M_PI);
+    float cmax2       = 1 - sphere.r2 / dot(sphere.c - x, sphere.c - x);
+    float cmax        = cmax2 > 0 ? sqrtf(cmax2) : 0;
+    float cos_a       = 1 - xi + xi * cmax;
+    float sin_a       = sqrtf(1 - cos_a * cos_a);
+    float phi         = TWOPI * yi;
+    float sp, cp;
+    OIIO::fast_sincos(phi, &sp, &cp);
+    float3 sw = normalize(sphere.c - x), su, sv;
+    ortho(sw, su, sv);
+    pdf = 1 / (TWOPI * (1 - cmax));
+    return normalize(su * (cp * sin_a) + sv * (sp * sin_a) + sw * cos_a);
 }
 
 
-extern "C" __global__ void
-__miss__occlusion()
+// Return a direction towards a point on the quad
+static __device__ float3
+sample_quad(const float3& x, const QuadParams& quad, float xi, float yi,
+            float& pdf)
 {
-    // printf("__miss__occlusion\n");
+    float3 l   = (quad.p + xi * quad.ex + yi * quad.ey) - x;
+    float  d2  = dot(l, l); // l.length2();
+    float3 dir = normalize(l);
+    pdf        = d2 / (quad.a * fabsf(dot(dir, quad.n)));
+    return dir;
 }
 
 
-extern "C" __global__ void
-__raygen__setglobals()
+static inline __device__ Color3
+subpixel_radiance(Ray r, Sampler& sampler, Background& background)
 {
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
-
-    // Set global variables
-    if (launch_index.x == 0 && launch_index.y == 0) {
-        OSL::pvt::osl_printf_buffer_start
-            = render_params.osl_printf_buffer_start;
-        OSL::pvt::osl_printf_buffer_end = render_params.osl_printf_buffer_end;
-        OSL::pvt::s_color_system        = render_params.color_system;
-        OSL::pvt::test_str_1            = render_params.test_str_1;
-        OSL::pvt::test_str_2            = render_params.test_str_2;
-    }
-
-    Background background;
-    background.set_variables((Vec3*)render_params.bg_values,
-                             (float*)render_params.bg_rows,
-                             (float*)render_params.bg_cols,
-                             render_params.bg_res);
-
-    if (render_params.bg_id < 0)
-        return;
-
-    // TODO: Paralellize Background::prepare()
-    auto evaler = [](const Dual2<Vec3>& dir) {
-        return eval_background(dir);
-    };
-
-    // Background::prepare_gpu must run on a single warp
-    assert(launch_index.x < 32 && launch_index.y == 0);
-    background.prepare_gpu(launch_dims.x, launch_index.x, evaler);
-}
-
-
-extern "C" __global__ void
-__miss__setglobals()
-{
-}
-
-
-extern "C" __global__ void
-__raygen__()
-{
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
-    const float3 eye   = render_params.eye;
-    const float3 dir   = render_params.dir;
-    const float3 cx    = render_params.cx;
-    const float3 cy    = render_params.cy;
-    const float invw   = render_params.invw;
-    const float invh   = render_params.invh;
-
-    // Compute the pixel coordinates
-    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
-                                 static_cast<float>(launch_index.y) + 0.5f);
-
-    // Make the ray for the current pixel
-    RayGeometry r;
-    r.origin    = eye;
-    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
-                            + dir);
-    optixTrace(render_params.traversal_handle, r.origin, r.direction, 1e-3f,
-               1e13f, 0, OptixVisibilityMask(1), OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-               0, 1, 0);
-}
-
-
-// Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
-// let's do the texture look-ups in this file.
-extern "C" __device__ float4
-osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy)
-{
-    const float2 dx = {dsdx, dtdx};
-    const float2 dy = {dsdy, dtdy};
-    cudaTextureObject_t texID = cudaTextureObject_t(handle);
-    return tex2DGrad<float4>(texID, s, t, dx, dy);
-}
-
-
-extern "C" __global__ void
-__closesthit__deferred()
-{
-    Payload payload;
-    payload.get();
-    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.ptr.ptr;
-    uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
-    const float t_hit               = optixGetRayTmax();
-    trace_data[0]                   = optixGetPrimitiveIndex();
-    trace_data[1]                   = optixGetHitKind();
-    trace_data[2]                   = *(uint32_t*)&t_hit;
-    globals_from_hit(*sg_ptr, payload.radius, payload.spread, payload.raytype);
-}
-
-
-extern "C" __global__ void
-__closesthit__occlusion()
-{
-    Payload payload;
-    payload.get();
-    uint32_t* vals_ptr = (uint32_t*) payload.ptr.ptr;
-    vals_ptr[0] = optixGetPrimitiveIndex();
-    vals_ptr[1] = optixGetHitKind();
-}
-
-
-static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Background& background);
-
-
-extern "C" __global__ void
-__raygen__deferred()
-{
-    Background background;
-    background.set_variables((Vec3*)render_params.bg_values,
-                             (float*)render_params.bg_rows,
-                             (float*)render_params.bg_cols,
-                             render_params.bg_res);
-
-    Color3 result(0, 0, 0);
-    const int aa = render_params.aa;
-    for (int si = 0, n = aa * aa; si < n; si++) {
-        uint3 launch_index = optixGetLaunchIndex();
-        Sampler sampler(launch_index.x, launch_index.y, si);
-        Vec3 j = sampler.get();
-        // warp distribution to approximate a tent filter [-1,+1)^2
-        j.x *= 2;
-        j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
-        j.y *= 2;
-        j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
-
-        // Compute the pixel coordinates
-        const float2 d
-            = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
-                          static_cast<float>(launch_index.y) + 0.5f + j.y);
-
-        Color3 r = subpixel_radiance(d, sampler, background);
-        result   = OIIO::lerp(result, r, 1.0f / (si + 1));
-    }
-
-    uint3 launch_dims     = optixGetLaunchDimensions();
-    uint3 launch_index    = optixGetLaunchIndex();
-    float3* output_buffer = reinterpret_cast<float3*>(
-        render_params.output_buffer);
-    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
-    output_buffer[pixel] = C3_TO_F3(result);
-}
-
-
-static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Background& background)
-{
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
-    const float3 eye   = render_params.eye;
-    const float3 dir   = render_params.dir;
-    const float3 cx    = render_params.cx;
-    const float3 cy    = render_params.cy;
-    const float invw   = render_params.invw;
-    const float invh   = render_params.invh;
-
-    //
-    // Generate camera ray
-    //
-
-    const Vec3 v = (F3_TO_V3(cx) * (d.x * invw - 0.5f) + F3_TO_V3(cy) * (0.5f - d.y * invh) + F3_TO_V3(dir))
-        .normalize();
-    const float cos_a = F3_TO_V3(dir).dot(v);
-    float spread
-        = sqrtf(invw * invh * F3_TO_V3(cx).length() * F3_TO_V3(cy).length() * cos_a) * cos_a;
-    Ray r(F3_TO_V3(eye), v, 0.0f, spread, Ray::RayType::CAMERA);
-
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
     float bsdf_pdf = std::numeric_limits<
@@ -1083,4 +457,237 @@ static inline __device__ Color3 subpixel_radiance(float2 d, Sampler& sampler, Ba
     }
 
     return path_radiance;
+}
+
+
+static __device__ void
+globals_from_hit(ShaderGlobalsType& sg, float radius = 0.0f, float spread = 0.0f,
+                 Ray::RayType raytype = Ray::RayType::CAMERA)
+{
+    ShaderGlobalsType local_sg;
+    // hit-kind 0: quad hit
+    //          1: sphere hit
+    optixDirectCall<void, unsigned int, float, float3, float3, ShaderGlobalsType*>(
+        optixGetHitKind(), optixGetPrimitiveIndex(), optixGetRayTmax(),
+        optixGetWorldRayOrigin(), optixGetWorldRayDirection(), &local_sg);
+    // Setup the ShaderGlobals
+    const float3 ray_direction = optixGetWorldRayDirection();
+    const float3 ray_origin    = optixGetWorldRayOrigin();
+    const float t_hit          = optixGetRayTmax();
+
+    Ray ray(F3_TO_V3(ray_origin), F3_TO_V3(ray_direction), radius, spread,
+            Ray::RayType::CAMERA);
+    Dual2<float> t(t_hit);
+    Dual2<Vec3> P = ray.point(t);
+
+    sg.I  = ray_direction;
+    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
+    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.Ng));
+    sg.P  = V3_TO_F3(P.val());
+    sg.dPdx        = V3_TO_F3(P.dx());
+    sg.dPdy        = V3_TO_F3(P.dy());
+    sg.dPdu        = local_sg.dPdu;
+    sg.dPdv        = local_sg.dPdv;
+    sg.u           = local_sg.u;
+    sg.v           = local_sg.v;
+    sg.Ci          = nullptr;
+    sg.surfacearea = local_sg.surfacearea;
+    sg.backfacing  = dot(sg.N, sg.I) > 0.0f;
+    sg.shaderID    = local_sg.shaderID;
+
+    if (sg.backfacing) {
+        sg.N  = -sg.N;
+        sg.Ng = -sg.Ng;
+    }
+
+    sg.raytype        = raytype;
+    sg.flipHandedness = dot(sg.N, cross(sg.dPdx, sg.dPdy)) < 0.0f;
+}
+
+
+// Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
+// let's do the texture look-ups in this file.
+extern "C" __device__ float4
+osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy)
+{
+    const float2 dx = {dsdx, dtdx};
+    const float2 dy = {dsdy, dtdy};
+    cudaTextureObject_t texID = cudaTextureObject_t(handle);
+    return tex2DGrad<float4>(texID, s, t, dx, dy);
+}
+
+
+//
+// OptiX Programs
+//
+
+
+extern "C" __global__ void
+__miss__()
+{
+    uint3 launch_dims  = optixGetLaunchDimensions();
+    uint3 launch_index = optixGetLaunchIndex();
+
+    float3* output_buffer = reinterpret_cast<float3*>(
+        render_params.output_buffer);
+
+    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
+    output_buffer[pixel] = make_float3(0, 0, 1);
+}
+
+
+extern "C" __global__ void
+__miss__occlusion()
+{
+    // printf("__miss__occlusion\n");
+}
+
+
+extern "C" __global__ void
+__raygen__setglobals()
+{
+    uint3 launch_dims  = optixGetLaunchDimensions();
+    uint3 launch_index = optixGetLaunchIndex();
+
+    // Set global variables
+    if (launch_index.x == 0 && launch_index.y == 0) {
+        OSL::pvt::osl_printf_buffer_start
+            = render_params.osl_printf_buffer_start;
+        OSL::pvt::osl_printf_buffer_end = render_params.osl_printf_buffer_end;
+        OSL::pvt::s_color_system        = render_params.color_system;
+        OSL::pvt::test_str_1            = render_params.test_str_1;
+        OSL::pvt::test_str_2            = render_params.test_str_2;
+    }
+
+    Background background;
+    background.set_variables((Vec3*)render_params.bg_values,
+                             (float*)render_params.bg_rows,
+                             (float*)render_params.bg_cols,
+                             render_params.bg_res);
+
+    if (render_params.bg_id < 0)
+        return;
+
+    // TODO: Paralellize Background::prepare()
+    auto evaler = [](const Dual2<Vec3>& dir) {
+        return eval_background(dir);
+    };
+
+    // Background::prepare_gpu must run on a single warp
+    assert(launch_index.x < 32 && launch_index.y == 0);
+    background.prepare_gpu(launch_dims.x, launch_index.x, evaler);
+}
+
+
+extern "C" __global__ void
+__miss__setglobals()
+{
+}
+
+
+extern "C" __global__ void
+__raygen__()
+{
+    uint3 launch_dims  = optixGetLaunchDimensions();
+    uint3 launch_index = optixGetLaunchIndex();
+    const float3 eye   = render_params.eye;
+    const float3 dir   = render_params.dir;
+    const float3 cx    = render_params.cx;
+    const float3 cy    = render_params.cy;
+    const float invw   = render_params.invw;
+    const float invh   = render_params.invh;
+
+    // Compute the pixel coordinates
+    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
+                                 static_cast<float>(launch_index.y) + 0.5f);
+
+    // Make the ray for the current pixel
+    RayGeometry r;
+    r.origin    = eye;
+    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
+                            + dir);
+    optixTrace(render_params.traversal_handle, r.origin, r.direction, 1e-3f,
+               1e13f, 0, OptixVisibilityMask(1), OPTIX_RAY_FLAG_DISABLE_ANYHIT,
+               0, 1, 0);
+}
+
+
+extern "C" __global__ void
+__closesthit__deferred()
+{
+    Payload payload;
+    payload.get();
+    ShaderGlobalsType* sg_ptr = (ShaderGlobalsType*)payload.ptr.ptr;
+    uint32_t* trace_data      = (uint32_t*)sg_ptr->tracedata;
+    const float t_hit         = optixGetRayTmax();
+    trace_data[0]             = optixGetPrimitiveIndex();
+    trace_data[1]             = optixGetHitKind();
+    trace_data[2]             = *(uint32_t*)&t_hit;
+    globals_from_hit(*sg_ptr, payload.radius, payload.spread, payload.raytype);
+}
+
+
+extern "C" __global__ void
+__closesthit__occlusion()
+{
+    Payload payload;
+    payload.get();
+    uint32_t* vals_ptr = (uint32_t*) payload.ptr.ptr;
+    vals_ptr[0] = optixGetPrimitiveIndex();
+    vals_ptr[1] = optixGetHitKind();
+}
+
+
+extern "C" __global__ void
+__raygen__deferred()
+{
+    Background background;
+    background.set_variables((Vec3*)render_params.bg_values,
+                             (float*)render_params.bg_rows,
+                             (float*)render_params.bg_cols,
+                             render_params.bg_res);
+
+    Color3 result(0, 0, 0);
+    const int aa = render_params.aa;
+    for (int si = 0, n = aa * aa; si < n; si++) {
+        uint3 launch_index = optixGetLaunchIndex();
+        Sampler sampler(launch_index.x, launch_index.y, si);
+        Vec3 j = sampler.get();
+        // warp distribution to approximate a tent filter [-1,+1)^2
+        j.x *= 2;
+        j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
+        j.y *= 2;
+        j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
+
+        // Compute the pixel coordinates
+        const float2 d
+            = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
+                          static_cast<float>(launch_index.y) + 0.5f + j.y);
+
+        const Vec3& eye  = F3_TO_V3(render_params.eye);
+        const Vec3& dir  = F3_TO_V3(render_params.dir);
+        const Vec3& cx   = F3_TO_V3(render_params.cx);
+        const Vec3& cy   = F3_TO_V3(render_params.cy);
+        const float invw = render_params.invw;
+        const float invh = render_params.invh;
+
+        // Generate the camera ray
+        const Vec3 v = (cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
+                        + dir)
+                           .normalize();
+        const float cos_a = dir.dot(v);
+        float spread = sqrtf(invw * invh * cx.length() * cy.length() * cos_a)
+                       * cos_a;
+        Ray ray(eye, v, 0.0f, spread, Ray::RayType::CAMERA);
+
+        Color3 r = subpixel_radiance(ray, sampler, background);
+        result   = OIIO::lerp(result, r, 1.0f / (si + 1));
+    }
+
+    uint3 launch_dims     = optixGetLaunchDimensions();
+    uint3 launch_index    = optixGetLaunchIndex();
+    float3* output_buffer = reinterpret_cast<float3*>(
+        render_params.output_buffer);
+    int pixel            = launch_index.y * launch_dims.x + launch_index.x;
+    output_buffer[pixel] = C3_TO_F3(result);
 }

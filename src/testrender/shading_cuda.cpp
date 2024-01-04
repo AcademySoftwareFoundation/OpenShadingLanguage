@@ -114,60 +114,60 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
     switch (id) {
     case DIFFUSE_ID: {
         const DiffuseParams* params = comp->as<DiffuseParams>();
-        bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
-        ((Diffuse<0>*)bsdfs[num_bsdfs])->N = params->N;
+        Diffuse<0>* bsdf = reinterpret_cast<Diffuse<0>*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = (BSDF*)bsdf;
+        bsdf->id         = DIFFUSE_ID;
+        std::memcpy(&bsdf->N, params, sizeof(DiffuseParams));
         break;
     }
     case OREN_NAYAR_ID: {
         const OrenNayarParams* params = comp->as<OrenNayarParams>();
-        bsdfs[num_bsdfs]                      = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                  = OREN_NAYAR_ID;
-        ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
-        ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->sigma;
-        ((OrenNayar*)bsdfs[num_bsdfs])->calcAB();
+        OrenNayar* bsdf  = reinterpret_cast<OrenNayar*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = OREN_NAYAR_ID;
+        std::memcpy(&bsdf->N, params, sizeof(OrenNayarParams));
+        bsdf->calcAB();
         break;
     }
     case TRANSLUCENT_ID: {
         const DiffuseParams* params = comp->as<DiffuseParams>();
-        bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
-        ((Diffuse<1>*)bsdfs[num_bsdfs])->N = params->N;
+        Diffuse<1>* bsdf = reinterpret_cast<Diffuse<1>*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = DIFFUSE_ID;
+        std::memcpy(&bsdf->N, params, sizeof(DiffuseParams));
         break;
     }
     case PHONG_ID: {
-        const PhongParams* params            = comp->as<PhongParams>();
-        bsdfs[num_bsdfs]                     = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                 = PHONG_ID;
-        ((Phong*)bsdfs[num_bsdfs])->N        = params->N;
-        ((Phong*)bsdfs[num_bsdfs])->exponent = params->exponent;
+        const PhongParams* params = comp->as<PhongParams>();
+        Phong* bsdf               = reinterpret_cast<Phong*>(pool + num_bytes);
+        bsdfs[num_bsdfs]          = bsdf;
+        bsdf->id                  = PHONG_ID;
+        std::memcpy(&bsdf->N, params, sizeof(PhongParams));
         break;
     }
     case WARD_ID: {
-        const WardParams* params      = comp->as<WardParams>();
-        bsdfs[num_bsdfs]              = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id          = WARD_ID;
-        ((Ward*)bsdfs[num_bsdfs])->N  = params->N;
-        ((Ward*)bsdfs[num_bsdfs])->T  = params->T;
-        ((Ward*)bsdfs[num_bsdfs])->ax = params->ax;
-        ((Ward*)bsdfs[num_bsdfs])->ay = params->ay;
+        const WardParams* params = comp->as<WardParams>();
+        Ward* bsdf               = reinterpret_cast<Ward*>(pool + num_bytes);
+        bsdfs[num_bsdfs]         = bsdf;
+        bsdf->id                 = WARD_ID;
+        std::memcpy(&bsdf->N, params, sizeof(WardParams));
         break;
     }
     case REFLECTION_ID:
     case FRESNEL_REFLECTION_ID: {
-        const ReflectionParams* params       = comp->as<ReflectionParams>();
-        bsdfs[num_bsdfs]                     = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                 = REFLECTION_ID;
-        ((Reflection*)bsdfs[num_bsdfs])->N   = params->N;
-        ((Reflection*)bsdfs[num_bsdfs])->eta = params->eta;
+        const ReflectionParams* params = comp->as<ReflectionParams>();
+        Reflection* bsdf = reinterpret_cast<Reflection*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = REFLECTION_ID;
+        std::memcpy(&bsdf->N, params, sizeof(ReflectionParams));
         break;
     }
     case REFRACTION_ID: {
-        const RefractionParams* params       = comp->as<RefractionParams>();
-        bsdfs[num_bsdfs]                     = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                 = REFRACTION_ID;
-        ((Refraction*)bsdfs[num_bsdfs])->N   = params->N;
-        ((Refraction*)bsdfs[num_bsdfs])->eta = params->eta;
+        const RefractionParams* params = comp->as<RefractionParams>();
+        Refraction* bsdf = reinterpret_cast<Refraction*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = REFRACTION_ID;
+        std::memcpy(&bsdf->N, params, sizeof(RefractionParams));
         break;
     }
     case TRANSPARENT_ID:
@@ -177,130 +177,92 @@ CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
         break;
     }
     case MICROFACET_ID: {
-        const MicrofacetParams* params        = comp->as<MicrofacetParams>();
-        bsdfs[num_bsdfs]                      = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                  = MICROFACET_ID;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->dist    = params->dist;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->N       = params->N;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->U       = params->U;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->xalpha  = params->xalpha;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->yalpha  = params->yalpha;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->eta     = params->eta;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->refract = params->refract;
-        ((MicrofacetBeckmannRefl*)bsdfs[num_bsdfs])->calcTangentFrame();
+        const MicrofacetParams* params = comp->as<MicrofacetParams>();
+        MicrofacetBeckmannRefl* bsdf
+            = reinterpret_cast<MicrofacetBeckmannRefl*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = MICROFACET_ID;
+        std::memcpy(&bsdf->dist, params, sizeof(MicrofacetParams));
+        bsdf->calcTangentFrame();
         break;
     }
     case MX_OREN_NAYAR_DIFFUSE_ID: {
-        const MxOrenNayarDiffuseParams* params = comp->as<MxOrenNayarDiffuseParams>();
-        bsdfs[num_bsdfs]                      = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                  = OREN_NAYAR_ID;
-        ((OrenNayar*)bsdfs[num_bsdfs])->N     = params->N;
-        ((OrenNayar*)bsdfs[num_bsdfs])->sigma = params->roughness;
-        ((OrenNayar*)bsdfs[num_bsdfs])->calcAB();
-        weight *= params->albedo;
+        const MxOrenNayarDiffuseParams* src_params
+            = comp->as<MxOrenNayarDiffuseParams>();
+        const OrenNayarParams params = { src_params->N, src_params->roughness };
+        OrenNayar* bsdf  = reinterpret_cast<OrenNayar*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = OREN_NAYAR_ID;
+        std::memcpy(&bsdf->N, &params, sizeof(OrenNayarParams));
+        bsdf->calcAB();
+        weight *= src_params->albedo;
         break;
     }
     case MX_BURLEY_DIFFUSE_ID: {
         const MxBurleyDiffuseParams* params = comp->as<MxBurleyDiffuseParams>();
-        bsdfs[num_bsdfs]                    = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                = MX_BURLEY_DIFFUSE_ID;
-        ((MxBurleyDiffuse*)bsdfs[num_bsdfs])->N         = params->N;
-        ((MxBurleyDiffuse*)bsdfs[num_bsdfs])->albedo    = params->albedo;
-        ((MxBurleyDiffuse*)bsdfs[num_bsdfs])->roughness = params->roughness;
-        ((MxBurleyDiffuse*)bsdfs[num_bsdfs])->label     = params->label;
+        MxBurleyDiffuse* bsdf = reinterpret_cast<MxBurleyDiffuse*>(pool
+                                                                   + num_bytes);
+        bsdfs[num_bsdfs]      = bsdf;
+        bsdf->id              = MX_BURLEY_DIFFUSE_ID;
+        std::memcpy(&bsdf->N, params, sizeof(MxBurleyDiffuseParams));
         break;
     }
     case MX_DIELECTRIC_ID: {
         const MxDielectricParams* params = comp->as<MxDielectricParams>();
-        bsdfs[num_bsdfs]                = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id            = MX_OREN_NAYAR_DIFFUSE_ID; // MX_DIELECTRIC_ID;
-        // MxMicrofacetBaseParams
-        ((MxDielectric*)bsdfs[num_bsdfs])->N            = params->N;
-        ((MxDielectric*)bsdfs[num_bsdfs])->U            = params->U;
-        ((MxDielectric*)bsdfs[num_bsdfs])->roughness_x  = params->roughness_x;
-        ((MxDielectric*)bsdfs[num_bsdfs])->roughness_y  = params->roughness_y;
-        ((MxDielectric*)bsdfs[num_bsdfs])->distribution = params->distribution;
-        ((MxDielectric*)bsdfs[num_bsdfs])->label        = params->label;
-        // MxDielectricParams
-        ((MxDielectric*)bsdfs[num_bsdfs])->reflection_tint    = params->reflection_tint;
-        ((MxDielectric*)bsdfs[num_bsdfs])->transmission_tint  = params->transmission_tint;
-        ((MxDielectric*)bsdfs[num_bsdfs])->ior                = params->ior;
-        ((MxDielectric*)bsdfs[num_bsdfs])->thinfilm_thickness = params->thinfilm_thickness;
-        ((MxDielectric*)bsdfs[num_bsdfs])->thinfilm_ior       = params->thinfilm_ior;
-        if (is_black(params->transmission_tint)) {
-            ((MxDielectricOpaque*)bsdfs[num_bsdfs])->set_refraction_ior(1.0f);
-        } else {
-            ((MxDielectric*)bsdfs[num_bsdfs])->set_refraction_ior(result.refraction_ior);
-        }
-        ((MxDielectric*)bsdfs[num_bsdfs])->calcTangentFrame();
+        MxDielectric* bsdf = reinterpret_cast<MxDielectric*>(pool + num_bytes);
+        bsdfs[num_bsdfs]   = bsdf;
+        bsdf->id           = MX_DIELECTRIC_ID;
+        std::memcpy(&bsdf->N, params, sizeof(MxDielectricParams));
+        bsdf->set_refraction_ior(
+            is_black(params->transmission_tint) ? 1.0f : result.refraction_ior);
+        bsdf->calcTangentFrame();
         break;
     }
     case MX_CONDUCTOR_ID: {
         const MxConductorParams* params = comp->as<MxConductorParams>();
-        bsdfs[num_bsdfs]                = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id            = MX_CONDUCTOR_ID;
-        // MxMicrofacetBaseParams
-        ((MxConductor*)bsdfs[num_bsdfs])->N                  = params->N;
-        ((MxConductor*)bsdfs[num_bsdfs])->U                  = params->U;
-        ((MxConductor*)bsdfs[num_bsdfs])->roughness_x        = params->roughness_x;
-        ((MxConductor*)bsdfs[num_bsdfs])->roughness_y        = params->roughness_y;
-        ((MxConductor*)bsdfs[num_bsdfs])->distribution       = params->distribution;
-        ((MxConductor*)bsdfs[num_bsdfs])->label              = params->label;
-        // MxConductorParams
-        ((MxConductor*)bsdfs[num_bsdfs])->ior                = params->ior;
-        ((MxConductor*)bsdfs[num_bsdfs])->extinction         = params->extinction;
-        ((MxConductor*)bsdfs[num_bsdfs])->thinfilm_thickness = params->thinfilm_thickness;
-        ((MxConductor*)bsdfs[num_bsdfs])->thinfilm_ior       = params->thinfilm_ior;
-        ((MxConductor*)bsdfs[num_bsdfs])->calcTangentFrame();
-        ((MxConductor*)bsdfs[num_bsdfs])->set_refraction_ior(1.0f);
+        MxConductor* bsdf = reinterpret_cast<MxConductor*>(pool + num_bytes);
+        bsdfs[num_bsdfs]  = bsdf;
+        bsdf->id          = MX_CONDUCTOR_ID;
+        std::memcpy(&bsdf->N, params, sizeof(MxConductorParams));
+        bsdf->calcTangentFrame();
+        bsdf->set_refraction_ior(1.0f);
         break;
     }
     case MX_GENERALIZED_SCHLICK_ID: {
-        const MxGeneralizedSchlickParams* params = comp->as<MxGeneralizedSchlickParams>();
-        bsdfs[num_bsdfs]                = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id            = MX_GENERALIZED_SCHLICK_ID;
-        // MxMicrofacetBaseParams
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->N            = params->N;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->U            = params->U;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->roughness_x  = params->roughness_x;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->roughness_y  = params->roughness_y;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->distribution = params->distribution;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->label        = params->label;
-        // MxGeneralizedSchlickParams
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->reflection_tint    = params->reflection_tint;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->transmission_tint  = params->transmission_tint;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->f0                 = params->f0;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->f90                = params->f90;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->exponent           = params->exponent;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->thinfilm_thickness = params->thinfilm_thickness;
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->thinfilm_ior       = params->thinfilm_ior;
-        if (is_black(params->transmission_tint)) {
-            ((MxGeneralizedSchlickOpaque*)bsdfs[num_bsdfs])->set_refraction_ior(1.0f);
-        } else {
-            ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->set_refraction_ior(result.refraction_ior);
-        }
-        ((MxGeneralizedSchlick*)bsdfs[num_bsdfs])->calcTangentFrame();
+        const MxGeneralizedSchlickParams* params
+            = comp->as<MxGeneralizedSchlickParams>();
+        MxGeneralizedSchlick* bsdf = reinterpret_cast<MxGeneralizedSchlick*>(
+            pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = MX_GENERALIZED_SCHLICK_ID;
+        std::memcpy(&bsdf->N, params, sizeof(MxGeneralizedSchlickParams));
+        bsdf->set_refraction_ior(
+            is_black(params->transmission_tint) ? 1.0f : result.refraction_ior);
+        bsdf->calcTangentFrame();
         break;
     }
     case MX_SHEEN_ID: {
         const MxSheenParams* params = comp->as<MxSheenParams>();
-        bsdfs[num_bsdfs]                        = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id                    = MX_SHEEN_ID;
-        ((MxSheen*)bsdfs[num_bsdfs])->N         = params->N;
-        ((MxSheen*)bsdfs[num_bsdfs])->albedo    = params->albedo;
-        ((MxSheen*)bsdfs[num_bsdfs])->roughness = params->roughness;
-        ((MxSheen*)bsdfs[num_bsdfs])->label     = params->label;
+        MxSheen* bsdf    = reinterpret_cast<MxSheen*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = MX_SHEEN_ID;
+        std::memcpy(&bsdf->N, params, sizeof(MxSheenParams));
         break;
     }
     case MX_TRANSLUCENT_ID: {
-        const MxTranslucentParams* params  = comp->as<MxTranslucentParams>();
-        bsdfs[num_bsdfs]                   = (BSDF*)(pool + num_bytes);
-        bsdfs[num_bsdfs]->id               = DIFFUSE_ID;
-        ((Diffuse<1>*)bsdfs[num_bsdfs])->N = params->N;
-        weight *= params->albedo;
+        const MxTranslucentParams* src_params = comp->as<MxTranslucentParams>();
+        const DiffuseParams params            = { src_params->N };
+        Diffuse<1>* bsdf = reinterpret_cast<Diffuse<1>*>(pool + num_bytes);
+        bsdfs[num_bsdfs] = bsdf;
+        bsdf->id         = DIFFUSE_ID;
+        std::memcpy(&bsdf->N, &params, sizeof(DiffuseParams));
+        weight *= src_params->albedo;
         break;
     }
-    default: printf("add unknown: %s (%d), sz: %d\n", id_to_string(id), (int)id, num_bytes); break;
+    default:
+        printf("add unknown: %s (%d), sz: %d\n", id_to_string(id), (int)id,
+               num_bytes);
+        break;
     }
     weights[num_bsdfs] = weight;
     num_bsdfs++;
@@ -457,7 +419,10 @@ CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
     }
     case MX_CONDUCTOR_ID: albedo = get_albedo_fn((MxConductor*)bsdf, wo); break;
     case MX_DIELECTRIC_ID:
-        albedo = get_albedo_fn((MxDielectricOpaque*)bsdf, wo);
+        if (is_black(((MxDielectricOpaque*)bsdf)->transmission_tint))
+            albedo = get_albedo_fn((MxDielectricOpaque*)bsdf, wo);
+        else
+            albedo = get_albedo_fn((MxDielectric*)bsdf, wo);
         break;
     case MX_OREN_NAYAR_DIFFUSE_ID:
         albedo = get_albedo_fn((MxDielectric*)bsdf, wo);
@@ -546,7 +511,10 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
         sample = sample_fn((MxConductor*)bsdf, wo, rx, ry, rz);
         break;
     case MX_DIELECTRIC_ID:
-        sample = sample_fn((MxDielectricOpaque*)bsdf, wo, rx, ry, rz);
+        if (is_black(((MxDielectricOpaque*)bsdf)->transmission_tint))
+            sample = sample_fn((MxDielectricOpaque*)bsdf, wo, rx, ry, rz);
+        else
+            sample = sample_fn((MxDielectric*)bsdf, wo, rx, ry, rz);
         break;
     case MX_BURLEY_DIFFUSE_ID:
         sample = sample_fn((MxBurleyDiffuse*)bsdf, wo, rx, ry, rz);
@@ -587,9 +555,7 @@ CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
     switch (bsdf->id) {
     case DIFFUSE_ID: sample = eval_fn((Diffuse<0>*)bsdf, wo, wi); break;
     case TRANSPARENT_ID:
-    case MX_TRANSPARENT_ID:
-        sample = eval_fn((Transparent*)bsdf, wo, wi);
-        break;
+    case MX_TRANSPARENT_ID: sample = eval_fn((Transparent*)bsdf, wo, wi); break;
     case OREN_NAYAR_ID: sample = eval_fn((OrenNayar*)bsdf, wo, wi); break;
     case PHONG_ID: sample = eval_fn((Phong*)bsdf, wo, wi); break;
     case WARD_ID: sample = eval_fn((Ward*)bsdf, wo, wi); break;
@@ -624,7 +590,10 @@ CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
     }
     case MX_CONDUCTOR_ID: sample = eval_fn((MxConductor*)bsdf, wo, wi); break;
     case MX_DIELECTRIC_ID:
-        sample = eval_fn((MxDielectricOpaque*)bsdf, wo, wi);
+        if (is_black(((MxDielectricOpaque*)bsdf)->transmission_tint))
+            sample = eval_fn((MxDielectricOpaque*)bsdf, wo, wi);
+        else
+            sample = eval_fn((MxDielectric*)bsdf, wo, wi);
         break;
     case MX_BURLEY_DIFFUSE_ID:
         sample = eval_fn((MxBurleyDiffuse*)bsdf, wo, wi);
@@ -713,8 +682,7 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                 Reflection* bsdf               = reinterpret_cast<Reflection*>(
                     &bsdf_scratch[0]);
                 bsdf->id  = MX_SHEEN_ID;
-                bsdf->N   = params->N;
-                bsdf->eta = params->eta;
+                std::memcpy(&bsdf->N, params, sizeof(ReflectionParams));
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
@@ -729,19 +697,7 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                 }
                 MxDielectric* bsdf = reinterpret_cast<MxDielectric*>(
                     &bsdf_scratch[0]);
-                // MxMicrofacetBaseParams
-                bsdf->N            = params->N;
-                bsdf->U            = params->U;
-                bsdf->roughness_x  = params->roughness_x;
-                bsdf->roughness_y  = params->roughness_y;
-                bsdf->distribution = params->distribution;
-                bsdf->label        = params->label;
-                // MxDielectricParams
-                bsdf->reflection_tint    = params->reflection_tint;
-                bsdf->transmission_tint  = params->transmission_tint;
-                bsdf->ior                = params->ior;
-                bsdf->thinfilm_thickness = params->thinfilm_thickness;
-                bsdf->thinfilm_ior       = params->thinfilm_ior;
+                std::memcpy(&bsdf->N, params, sizeof(MxDielectricParams));
                 bsdf->set_refraction_ior(1.0f);
                 bsdf->calcTangentFrame();
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
@@ -759,21 +715,7 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                 MxGeneralizedSchlickOpaque* bsdf
                     = reinterpret_cast<MxGeneralizedSchlickOpaque*>(
                         &bsdf_scratch[0]);
-                // MxMicrofacetBaseParams
-                bsdf->N            = params->N;
-                bsdf->U            = params->U;
-                bsdf->roughness_x  = params->roughness_x;
-                bsdf->roughness_y  = params->roughness_y;
-                bsdf->distribution = params->distribution;
-                bsdf->label        = params->label;
-                // MxGeneralizedSchlickParams
-                bsdf->reflection_tint    = params->reflection_tint;
-                bsdf->transmission_tint  = params->transmission_tint;
-                bsdf->f0                 = params->f0;
-                bsdf->f90                = params->f90;
-                bsdf->exponent           = params->exponent;
-                bsdf->thinfilm_thickness = params->thinfilm_thickness;
-                bsdf->thinfilm_ior       = params->thinfilm_ior;
+                std::memcpy(&bsdf->N, params, sizeof(MxGeneralizedSchlickParams));
                 bsdf->set_refraction_ior(1.0f);
                 bsdf->calcTangentFrame();
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
@@ -782,11 +724,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
             }
             case MX_SHEEN_ID: {
                 const MxSheenParams* params = comp->as<MxSheenParams>();
-                MxSheen* bsdf   = reinterpret_cast<MxSheen*>(&bsdf_scratch[0]);
-                bsdf->N         = params->N;
-                bsdf->albedo    = params->albedo;
-                bsdf->roughness = params->roughness;
-                bsdf->label     = params->label;
+                MxSheen* bsdf = reinterpret_cast<MxSheen*>(&bsdf_scratch[0]);
+                std::memcpy(&bsdf->N, params, sizeof(MxSheenParams));
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;

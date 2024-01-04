@@ -732,6 +732,7 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                 const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
                 weight *= w * mf.get_albedo(-I);
                 closure = nullptr;
+                break;
             }
             case MX_SHEEN_ID: {
                 MxSheen bsdf(*comp->as<MxSheenParams>());

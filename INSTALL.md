@@ -16,7 +16,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * A suitable C++14 or C++17 compiler to build OSL itself, which may be any of:
    - GCC 6.1 or newer (tested through gcc 12.1)
-   - Clang 3.4 or newer (tested through clang 16)
+   - Clang 3.4 or newer (tested through clang 17)
    - Microsoft Visual Studio 2017 or newer
    - Intel C++ compiler icc version 17 or newer or LLVM-based icx compiler
      version 2022 or newer.
@@ -64,7 +64,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10)
+    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10, 3.11)
       NOTE: It is likely that 1.13 is the last release that will support
       Python 2.7.
     * pybind11 >= 2.4.2 (Tested through 2.11. Note that pybind11 v2.10+ does

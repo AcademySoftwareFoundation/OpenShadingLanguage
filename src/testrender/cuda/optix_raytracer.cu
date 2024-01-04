@@ -26,7 +26,6 @@
 #include "../shading_cuda.cpp"
 // clang-format on
 
-
 #include <cstdint>
 
 
@@ -655,6 +654,10 @@ __raygen__deferred()
         j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
         j.y *= 2;
         j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
+
+        if (render_params.no_jitter) {
+            j *= 0.0f;
+        }
 
         // Compute the pixel coordinates
         const float2 d

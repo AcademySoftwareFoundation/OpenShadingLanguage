@@ -20,6 +20,7 @@ struct RenderParams {
     int    aa;
     int    max_bounces;
     float  show_albedo_scale;
+    bool   no_jitter;
 
     float invw;
     float invh;

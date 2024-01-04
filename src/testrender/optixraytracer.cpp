@@ -1298,6 +1298,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     const int aa                  = std::max(1, options.get_int("aa"));
     const int max_bounces         = options.get_int("max_bounces");
     const float show_albedo_scale = options.get_float("show_albedo_scale");
+    const bool no_jitter          = options.get_int("no_jitter");
 
     RenderParams params;
     params.eye.x                   = camera.eye.x;
@@ -1315,6 +1316,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.aa                      = aa;
     params.max_bounces             = max_bounces;
     params.show_albedo_scale       = show_albedo_scale;
+    params.no_jitter               = no_jitter;
     params.invw                    = 1.0f / m_xres;
     params.invh                    = 1.0f / m_yres;
     params.interactive_params      = d_interactive_params;

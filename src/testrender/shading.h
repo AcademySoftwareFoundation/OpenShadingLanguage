@@ -239,7 +239,7 @@ struct BSDF {
         float pdf;
         float roughness;
     };
-    BSDF(ClosureIDs id=EMPTY_ID) : id(id) {}
+    OSL_HOSTDEVICE BSDF(ClosureIDs id=EMPTY_ID) : id(id) {}
     virtual OSL_HOSTDEVICE Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
     virtual OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const = 0;
     virtual OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,

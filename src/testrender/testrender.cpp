@@ -368,6 +368,8 @@ main(int argc, const char* argv[])
 
     // We're done with the shading system now, destroy it
     rend->clear();
+    // We need to destroy the shading system before the renderer, because the
+    // shading system destructor may call into the renderer.
     delete shadingsys;
     delete rend;
     return EXIT_SUCCESS;

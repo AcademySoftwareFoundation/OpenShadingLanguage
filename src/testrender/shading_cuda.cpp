@@ -678,6 +678,11 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
     // Shading accumulator
     Color3 weight = Color3(1.0f);
 
+    // We need a scratch space to "construct" BSDFs for the get_albedo() call.
+    // We can't call the constructors since vitual function calls aren't
+    // supported in OptiX.
+    char bsdf_scratch[128];
+
     while (closure) {
         switch (closure->id) {
         case ClosureIDs::MUL: {
@@ -697,47 +702,92 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
             switch (comp->id) {
             case MX_LAYER_ID: {
                 const MxLayerParams* srcparams = comp->as<MxLayerParams>();
-                closure                   = srcparams->top;
-                ptr_stack[stack_idx]      = srcparams->base;
-                weight_stack[stack_idx++] = weight * w;
+                closure                        = srcparams->top;
+                ptr_stack[stack_idx]           = srcparams->base;
+                weight_stack[stack_idx++]      = weight * w;
                 break;
             }
             case REFLECTION_ID:
             case FRESNEL_REFLECTION_ID: {
-                Reflection bsdf(*comp->as<ReflectionParams>());
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * bsdf.get_albedo(-I);
+                const ReflectionParams* params = comp->as<ReflectionParams>();
+                Reflection* bsdf               = reinterpret_cast<Reflection*>(
+                    &bsdf_scratch[0]);
+                bsdf->id  = MX_SHEEN_ID;
+                bsdf->N   = params->N;
+                bsdf->eta = params->eta;
+                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }
             case MX_DIELECTRIC_ID: {
-                const MxDielectricParams& params = *comp->as<MxDielectricParams>();
+                const MxDielectricParams* params
+                    = comp->as<MxDielectricParams>();
                 // Transmissive dielectrics are opaque
-                if (!is_black(params.transmission_tint))
-                    return Color3(1);
-                MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params, 1.0f);
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * mf.get_albedo(-I);
+                if (!is_black(params->transmission_tint)) {
+                    closure = nullptr;
+                    break;
+                }
+                MxDielectric* bsdf = reinterpret_cast<MxDielectric*>(
+                    &bsdf_scratch[0]);
+                // MxMicrofacetBaseParams
+                bsdf->N            = params->N;
+                bsdf->U            = params->U;
+                bsdf->roughness_x  = params->roughness_x;
+                bsdf->roughness_y  = params->roughness_y;
+                bsdf->distribution = params->distribution;
+                bsdf->label        = params->label;
+                // MxDielectricParams
+                bsdf->reflection_tint    = params->reflection_tint;
+                bsdf->transmission_tint  = params->transmission_tint;
+                bsdf->ior                = params->ior;
+                bsdf->thinfilm_thickness = params->thinfilm_thickness;
+                bsdf->thinfilm_ior       = params->thinfilm_ior;
+                bsdf->set_refraction_ior(1.0f);
+                bsdf->calcTangentFrame();
+                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }
             case MX_GENERALIZED_SCHLICK_ID: {
-                const MxGeneralizedSchlickParams& params
-                    = *comp->as<MxGeneralizedSchlickParams>();
+                const MxGeneralizedSchlickParams* params
+                    = comp->as<MxGeneralizedSchlickParams>();
                 // Transmissive dielectrics are opaque
-                if (!is_black(params.transmission_tint))
-                    return Color3(1);
-                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params,
-                                                                            1.0f);
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * mf.get_albedo(-I);
+                if (!is_black(params->transmission_tint)) {
+                    closure = nullptr;
+                    break;
+                }
+                MxGeneralizedSchlickOpaque* bsdf
+                    = reinterpret_cast<MxGeneralizedSchlickOpaque*>(
+                        &bsdf_scratch[0]);
+                // MxMicrofacetBaseParams
+                bsdf->N            = params->N;
+                bsdf->U            = params->U;
+                bsdf->roughness_x  = params->roughness_x;
+                bsdf->roughness_y  = params->roughness_y;
+                bsdf->distribution = params->distribution;
+                bsdf->label        = params->label;
+                // MxGeneralizedSchlickParams
+                bsdf->reflection_tint    = params->reflection_tint;
+                bsdf->transmission_tint  = params->transmission_tint;
+                bsdf->f0                 = params->f0;
+                bsdf->f90                = params->f90;
+                bsdf->exponent           = params->exponent;
+                bsdf->thinfilm_thickness = params->thinfilm_thickness;
+                bsdf->thinfilm_ior       = params->thinfilm_ior;
+                bsdf->set_refraction_ior(1.0f);
+                bsdf->calcTangentFrame();
+                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }
             case MX_SHEEN_ID: {
-                MxSheen bsdf(*comp->as<MxSheenParams>());
-                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-                weight *= w * bsdf.get_albedo(-I);
+                const MxSheenParams* params = comp->as<MxSheenParams>();
+                MxSheen* bsdf   = reinterpret_cast<MxSheen*>(&bsdf_scratch[0]);
+                bsdf->N         = params->N;
+                bsdf->albedo    = params->albedo;
+                bsdf->roughness = params->roughness;
+                bsdf->label     = params->label;
+                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }

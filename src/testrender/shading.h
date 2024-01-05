@@ -262,15 +262,27 @@ struct CompositeBSDF {
     {
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
+#ifndef __CUDACC__
             pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(wo))
                       / (path_weight.x + path_weight.y + path_weight.z);
+#else
+            // NB: We're using a full-precision divide here to avoid going slightly
+            //     out of range and triggering the following asserts.
+            pdfs[i] = __fdiv_rn(weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo)),
+                                path_weight.x + path_weight.y + path_weight.z);
+#endif
             assert(pdfs[i] >= 0);
             assert(pdfs[i] <= 1);
             total += pdfs[i];
         }
         if ((!absorb && total > 0) || total > 1) {
-            for (int i = 0; i < num_bsdfs; i++)
+            for (int i = 0; i < num_bsdfs; i++) {
+#ifndef __CUDACC__
                 pdfs[i] /= total;
+#else
+                pdfs[i] = __fdiv_rn(pdfs[i], total);
+#endif
+            }
         }
     }
 
@@ -278,8 +290,13 @@ struct CompositeBSDF {
     Color3 get_albedo(const Vec3& wo) const
     {
         Color3 result(0, 0, 0);
-        for (int i = 0; i < num_bsdfs; i++)
+        for (int i = 0; i < num_bsdfs; i++) {
+#ifndef __CUDACC__
             result += weights[i] * bsdfs[i]->get_albedo(wo);
+#else
+            result += weights[i] * get_bsdf_albedo(bsdfs[i], wo);
+#endif
+        }
         return result;
     }
 
@@ -288,7 +305,11 @@ struct CompositeBSDF {
     {
         BSDF::Sample s = {};
         for (int i = 0; i < num_bsdfs; i++) {
+#ifndef __CUDACC__
             BSDF::Sample b = bsdfs[i]->eval(wo, wi);
+#else
+            BSDF::Sample b = eval_bsdf(bsdfs[i],wo, wi);
+#endif
             b.weight *= weights[i];
             MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf, pdfs[i]);
             s.roughness += b.roughness * pdfs[i];
@@ -304,7 +325,11 @@ struct CompositeBSDF {
             if (rx < (pdfs[i] + accum)) {
                 rx = (rx - accum) / pdfs[i];
                 rx = std::min(rx, 0.99999994f);  // keep result in [0,1)
+#ifndef __CUDACC__
                 BSDF::Sample s = bsdfs[i]->sample(wo, rx, ry, rz);
+#else
+                BSDF::Sample s = sample_bsdf(bsdfs[i], wo, rx, ry, rz);
+#endif
                 s.weight *= weights[i] * (1 / pdfs[i]);
                 s.pdf *= pdfs[i];
                 if (s.pdf == 0.0f)
@@ -312,7 +337,11 @@ struct CompositeBSDF {
                 // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
                 for (int j = 0; j < num_bsdfs; j++) {
                     if (i != j) {
+#ifndef __CUDACC__
                         BSDF::Sample b = bsdfs[j]->eval(wo, s.wi);
+#else
+                        BSDF::Sample b = eval_bsdf(bsdfs[j], wo, s.wi);
+#endif
                         b.weight *= weights[j];
                         MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf,
                                          pdfs[j]);
@@ -343,10 +372,6 @@ struct CompositeBSDF {
 
 #ifdef __CUDACC__
     OSL_HOSTDEVICE bool add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, ShadingResult& result);
-    OSL_HOSTDEVICE void prepare_gpu(const Vec3& wo, const Color3& path_weight, bool absorb);
-    OSL_HOSTDEVICE Color3 get_albedo_gpu(const Vec3& wo) const;
-    OSL_HOSTDEVICE BSDF::Sample eval_gpu(const Vec3& wo, const Vec3& wi) const;
-    OSL_HOSTDEVICE BSDF::Sample sample_gpu(const Vec3& wo, float rx, float ry, float rz) const;
 
     // Helper functions to avoid virtual function calls
     OSL_HOSTDEVICE Color3 get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const;

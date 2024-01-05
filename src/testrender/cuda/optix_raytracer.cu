@@ -276,14 +276,14 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         // Build PDF
         //
 
-        result.bsdf.prepare_gpu(-F3_TO_C3(sg.I), path_weight, bounce >= rr_depth);
+        result.bsdf.prepare(-F3_TO_C3(sg.I), path_weight, bounce >= rr_depth);
 
         if (render_params.show_albedo_scale > 0) {
             // Instead of path tracing, just visualize the albedo
             // of the bsdf. This can be used to validate the accuracy of
             // the get_albedo method for a particular bsdf.
             path_radiance = path_weight
-                             * result.bsdf.get_albedo_gpu(-F3_TO_V3(sg.I))
+                             * result.bsdf.get_albedo(-F3_TO_V3(sg.I))
                              * render_params.show_albedo_scale;
             break;
         }
@@ -304,7 +304,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
             Dual2<Vec3> bg_dir;
             float bg_pdf   = 0;
             Vec3 bg        = background.sample(xi, yi, bg_dir, bg_pdf);
-            BSDF::Sample b = result.bsdf.eval_gpu(-F3_TO_V3(sg.I), bg_dir.val());
+            BSDF::Sample b = result.bsdf.eval(-F3_TO_V3(sg.I), bg_dir.val());
             Color3 contrib = path_weight * b.weight * bg
                 * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
                                                            b.pdf);
@@ -351,8 +351,8 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
 
         auto sample_light = [&](const float3& light_dir, float light_pdf, int idx) {
             const float3 origin = sg.P;
-            BSDF::Sample b      = result.bsdf.eval_gpu(-F3_TO_V3(sg.I),
-                                                       F3_TO_V3(light_dir));
+            BSDF::Sample b      = result.bsdf.eval(-F3_TO_V3(sg.I),
+                                                   F3_TO_V3(light_dir));
             Color3 contrib      = path_weight * b.weight
                              * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
                                                                       b.pdf);
@@ -433,7 +433,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         // Setup bounce ray
         //
 
-        BSDF::Sample p = result.bsdf.sample_gpu(-F3_TO_V3(sg.I), xi, yi, zi);
+        BSDF::Sample p = result.bsdf.sample(-F3_TO_V3(sg.I), xi, yi, zi);
         path_weight *= p.weight;
         bsdf_pdf  = p.pdf;
         r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays

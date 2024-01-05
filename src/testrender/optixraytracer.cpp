@@ -382,43 +382,25 @@ OptixRaytracer::create_modules(State& state)
 void
 OptixRaytracer::create_programs(State& state)
 {
-    // char msg_log[8192];
-    // size_t sizeof_msg_log;
-
     // Raygen group
     {
         OptixProgramGroupDesc raygen_desc    = {};
         raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
         raygen_desc.raygen.module            = state.program_module;
         raygen_desc.raygen.entryFunctionName = "__raygen__deferred";
-        create_optix_pg(&raygen_desc, 1, &state.program_options, &state.raygen_group);
+        create_optix_pg(&raygen_desc, 1, &state.program_options,
+                        &state.raygen_group);
     }
 
-#if 1
     // Set Globals Raygen group
     {
         OptixProgramGroupDesc raygen_desc    = {};
         raygen_desc.kind                     = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
         raygen_desc.raygen.module            = state.program_module;
         raygen_desc.raygen.entryFunctionName = "__raygen__setglobals";
-        create_optix_pg(&raygen_desc, 1, &state.program_options, &state.setglobals_raygen_group);
+        create_optix_pg(&raygen_desc, 1, &state.program_options,
+                        &state.setglobals_raygen_group);
     }
-#else
-    // Set Globals Raygen group
-    OptixProgramGroupDesc setglobals_raygen_desc = {};
-    setglobals_raygen_desc.kind          = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
-    setglobals_raygen_desc.raygen.module = state.program_module;
-    setglobals_raygen_desc.raygen.entryFunctionName = "__raygen__setglobals";
-
-    sizeof_msg_log = sizeof(msg_log);
-    OPTIX_CHECK_MSG(
-        optixProgramGroupCreate(m_optix_ctx, &setglobals_raygen_desc,
-                                1,                       // number of program groups
-                                &state.program_options,  // program options
-                                msg_log, &sizeof_msg_log,
-                                &state.setglobals_raygen_group),
-        fmtformat("Creating set-globals 'ray-gen' program group: {}", msg_log));
-#endif
 
     // Miss group
     {
@@ -427,27 +409,19 @@ OptixRaytracer::create_programs(State& state)
         miss_desc.miss.module
             = state.program_module;  // raygen file/module contains miss program
         miss_desc.miss.entryFunctionName = "__miss__";
-        create_optix_pg(&miss_desc, 1, &state.program_options, &state.miss_group);
+        create_optix_pg(&miss_desc, 1, &state.program_options,
+                        &state.miss_group);
     }
-
-    // Miss group (occlusion)
-    {
-        OptixProgramGroupDesc miss_desc = {};
-        miss_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_MISS;
-        miss_desc.miss.module
-            = state.program_module;  // raygen file/module contains miss program
-        miss_desc.miss.entryFunctionName = "__miss__occlusion";
-        create_optix_pg(&miss_desc, 1, &state.program_options, &state.miss_occlusion_group);
-    }
-
 
     // Set Globals Miss group
-    OptixProgramGroupDesc setglobals_miss_desc  = {};
-    setglobals_miss_desc.kind                   = OPTIX_PROGRAM_GROUP_KIND_MISS;
-    setglobals_miss_desc.miss.module            = state.program_module;
-    setglobals_miss_desc.miss.entryFunctionName = "__miss__setglobals";
-    create_optix_pg(&setglobals_miss_desc, 1, &state.program_options,
-                    &state.setglobals_miss_group);
+    {
+        OptixProgramGroupDesc setglobals_miss_desc = {};
+        setglobals_miss_desc.kind        = OPTIX_PROGRAM_GROUP_KIND_MISS;
+        setglobals_miss_desc.miss.module = state.program_module;
+        setglobals_miss_desc.miss.entryFunctionName = "__miss__setglobals";
+        create_optix_pg(&setglobals_miss_desc, 1, &state.program_options,
+                        &state.setglobals_miss_group);
+    }
 
     // Hitgroup -- quads
     {
@@ -465,51 +439,44 @@ OptixRaytracer::create_programs(State& state)
                         &state.quad_hit_group);
     }
 
-    // Hitgroup -- quads (occlusion)
+    // Direct-callable -- renderer-specific support functions for OSL on the device
     {
-        OptixProgramGroupDesc quad_hitgroup_desc = {};
-        quad_hitgroup_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-        quad_hitgroup_desc.hitgroup.moduleCH = state.program_module;
-        quad_hitgroup_desc.hitgroup.entryFunctionNameCH
-            = "__closesthit__occlusion";
-        quad_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
-        quad_hitgroup_desc.hitgroup.entryFunctionNameAH
-            = "__anyhit__any_hit_shadow";
-        quad_hitgroup_desc.hitgroup.moduleIS            = state.quad_module;
-        quad_hitgroup_desc.hitgroup.entryFunctionNameIS = "__intersection__quad";
-        create_optix_pg(&quad_hitgroup_desc, 1, &state.program_options,
-                        &state.quad_occlusion_hit_group);
+        OptixProgramGroupDesc rend_lib_desc = {};
+        rend_lib_desc.kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+        rend_lib_desc.callables.moduleDC = state.rend_lib_module;
+        rend_lib_desc.callables.entryFunctionNameDC
+            = "__direct_callable__dummy_rend_lib";
+        rend_lib_desc.callables.moduleCC            = 0;
+        rend_lib_desc.callables.entryFunctionNameCC = nullptr;
+        create_optix_pg(&rend_lib_desc, 1, &state.program_options,
+                        &state.rend_lib_group);
     }
 
-    // Direct-callable -- renderer-specific support functions for OSL on the device
-    OptixProgramGroupDesc rend_lib_desc = {};
-    rend_lib_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    rend_lib_desc.callables.moduleDC    = state.rend_lib_module;
-    rend_lib_desc.callables.entryFunctionNameDC
-        = "__direct_callable__dummy_rend_lib";
-    rend_lib_desc.callables.moduleCC            = 0;
-    rend_lib_desc.callables.entryFunctionNameCC = nullptr;
-    create_optix_pg(&rend_lib_desc, 1, &state.program_options, &state.rend_lib_group);
-
     // Direct-callable -- built-in support functions for OSL on the device
-    OptixProgramGroupDesc shadeops_desc = {};
-    shadeops_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    shadeops_desc.callables.moduleDC    = state.shadeops_module;
-    shadeops_desc.callables.entryFunctionNameDC
-        = "__direct_callable__dummy_shadeops";
-    shadeops_desc.callables.moduleCC            = 0;
-    shadeops_desc.callables.entryFunctionNameCC = nullptr;
-    create_optix_pg(&shadeops_desc, 1, &state.program_options, &state.shadeops_group);
+    {
+        OptixProgramGroupDesc shadeops_desc = {};
+        shadeops_desc.kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+        shadeops_desc.callables.moduleDC = state.shadeops_module;
+        shadeops_desc.callables.entryFunctionNameDC
+            = "__direct_callable__dummy_shadeops";
+        shadeops_desc.callables.moduleCC            = 0;
+        shadeops_desc.callables.entryFunctionNameCC = nullptr;
+        create_optix_pg(&shadeops_desc, 1, &state.program_options,
+                        &state.shadeops_group);
+    }
 
     // Direct-callable -- fills in ShaderGlobals for Quads
-    OptixProgramGroupDesc quad_fillSG_desc = {};
-    quad_fillSG_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    quad_fillSG_desc.callables.moduleDC    = state.quad_module;
-    quad_fillSG_desc.callables.entryFunctionNameDC
-        = "__direct_callable__quad_shaderglobals";
-    quad_fillSG_desc.callables.moduleCC            = 0;
-    quad_fillSG_desc.callables.entryFunctionNameCC = nullptr;
-    create_optix_pg(&quad_fillSG_desc, 1, &state.program_options, &state.quad_fillSG_dc_group);
+    {
+        OptixProgramGroupDesc quad_fillSG_desc = {};
+        quad_fillSG_desc.kind = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+        quad_fillSG_desc.callables.moduleDC = state.quad_module;
+        quad_fillSG_desc.callables.entryFunctionNameDC
+            = "__direct_callable__quad_shaderglobals";
+        quad_fillSG_desc.callables.moduleCC            = 0;
+        quad_fillSG_desc.callables.entryFunctionNameCC = nullptr;
+        create_optix_pg(&quad_fillSG_desc, 1, &state.program_options,
+                        &state.quad_fillSG_dc_group);
+    }
 
     // Hitgroup -- sphere
     {
@@ -528,33 +495,18 @@ OptixRaytracer::create_programs(State& state)
                         &state.sphere_hit_group);
     }
 
-    // Hitgroup -- sphere (occlusion)
-    {
-        OptixProgramGroupDesc sphere_hitgroup_desc = {};
-        sphere_hitgroup_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-        sphere_hitgroup_desc.hitgroup.moduleCH = state.program_module;
-        sphere_hitgroup_desc.hitgroup.entryFunctionNameCH
-            = "__closesthit__occlusion";
-        sphere_hitgroup_desc.hitgroup.moduleAH = state.wrapper_module;
-        sphere_hitgroup_desc.hitgroup.entryFunctionNameAH
-            = "__anyhit__any_hit_shadow";
-        sphere_hitgroup_desc.hitgroup.moduleIS = state.sphere_module;
-        sphere_hitgroup_desc.hitgroup.entryFunctionNameIS
-            = "__intersection__sphere";
-        create_optix_pg(&sphere_hitgroup_desc, 1, &state.program_options,
-                        &state.sphere_occlusion_hit_group);
-    }
-
     // Direct-callable -- fills in ShaderGlobals for Sphere
-    OptixProgramGroupDesc sphere_fillSG_desc = {};
-    sphere_fillSG_desc.kind               = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
-    sphere_fillSG_desc.callables.moduleDC = state.sphere_module;
-    sphere_fillSG_desc.callables.entryFunctionNameDC
-        = "__direct_callable__sphere_shaderglobals";
-    sphere_fillSG_desc.callables.moduleCC            = 0;
-    sphere_fillSG_desc.callables.entryFunctionNameCC = nullptr;
-    create_optix_pg(&sphere_fillSG_desc, 1, &state.program_options,
-                    &state.sphere_fillSG_dc_group);
+    {
+        OptixProgramGroupDesc sphere_fillSG_desc = {};
+        sphere_fillSG_desc.kind = OPTIX_PROGRAM_GROUP_KIND_CALLABLES;
+        sphere_fillSG_desc.callables.moduleDC = state.sphere_module;
+        sphere_fillSG_desc.callables.entryFunctionNameDC
+            = "__direct_callable__sphere_shaderglobals";
+        sphere_fillSG_desc.callables.moduleCC            = 0;
+        sphere_fillSG_desc.callables.entryFunctionNameCC = nullptr;
+        create_optix_pg(&sphere_fillSG_desc, 1, &state.program_options,
+                        &state.sphere_fillSG_dc_group);
+    }
 }
 
 
@@ -676,11 +628,8 @@ OptixRaytracer::create_pipeline(State& state)
     // Gather all of the program groups
     state.final_groups.push_back(state.raygen_group);
     state.final_groups.push_back(state.miss_group);
-    state.final_groups.push_back(state.miss_occlusion_group);
     state.final_groups.push_back(state.quad_hit_group);
-    state.final_groups.push_back(state.quad_occlusion_hit_group);
     state.final_groups.push_back(state.sphere_hit_group);
-    state.final_groups.push_back(state.sphere_occlusion_hit_group);
     state.final_groups.push_back(state.quad_fillSG_dc_group);
     state.final_groups.push_back(state.sphere_fillSG_dc_group);
     state.final_groups.push_back(state.rend_lib_group);
@@ -766,7 +715,6 @@ OptixRaytracer::create_sbt(State& state)
         CUdeviceptr d_miss_record;
 
         OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_group, &miss_records[0]));
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_occlusion_group, &miss_records[1]));
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_miss_record),
                               RAY_TYPE_COUNT * sizeof(GenericRecord)));
@@ -799,23 +747,10 @@ OptixRaytracer::create_sbt(State& state)
                 d_quads_list);
             hitgroup_records[hg_idx].sbtGeoIndex = 0;
             ++hg_idx;
-
-            OPTIX_CHECK(optixSbtRecordPackHeader(state.quad_occlusion_hit_group,
-                                                 &hitgroup_records[hg_idx]));
-            hitgroup_records[hg_idx].data = reinterpret_cast<void*>(
-                d_quads_list);
-            hitgroup_records[hg_idx].sbtGeoIndex = 0;
-            ++hg_idx;
         }
 
         if (have_spheres) {
             OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_hit_group,
-                                                 &hitgroup_records[hg_idx]));
-            hitgroup_records[hg_idx].data = reinterpret_cast<void*>(d_spheres_list);
-            hitgroup_records[hg_idx].sbtGeoIndex = 1;
-            ++hg_idx;
-
-            OPTIX_CHECK(optixSbtRecordPackHeader(state.sphere_occlusion_hit_group,
                                                  &hitgroup_records[hg_idx]));
             hitgroup_records[hg_idx].data = reinterpret_cast<void*>(d_spheres_list);
             hitgroup_records[hg_idx].sbtGeoIndex = 1;

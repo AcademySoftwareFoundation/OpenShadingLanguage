@@ -533,13 +533,6 @@ __miss__()
 
 
 extern "C" __global__ void
-__miss__occlusion()
-{
-    // printf("__miss__occlusion\n");
-}
-
-
-extern "C" __global__ void
 __raygen__setglobals()
 {
     uint3 launch_dims  = optixGetLaunchDimensions();
@@ -582,33 +575,6 @@ __miss__setglobals()
 
 
 extern "C" __global__ void
-__raygen__()
-{
-    uint3 launch_dims  = optixGetLaunchDimensions();
-    uint3 launch_index = optixGetLaunchIndex();
-    const float3 eye   = render_params.eye;
-    const float3 dir   = render_params.dir;
-    const float3 cx    = render_params.cx;
-    const float3 cy    = render_params.cy;
-    const float invw   = render_params.invw;
-    const float invh   = render_params.invh;
-
-    // Compute the pixel coordinates
-    const float2 d = make_float2(static_cast<float>(launch_index.x) + 0.5f,
-                                 static_cast<float>(launch_index.y) + 0.5f);
-
-    // Make the ray for the current pixel
-    RayGeometry r;
-    r.origin    = eye;
-    r.direction = normalize(cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
-                            + dir);
-    optixTrace(render_params.traversal_handle, r.origin, r.direction, 1e-3f,
-               1e13f, 0, OptixVisibilityMask(1), OPTIX_RAY_FLAG_DISABLE_ANYHIT,
-               0, 1, 0);
-}
-
-
-extern "C" __global__ void
 __closesthit__deferred()
 {
     Payload payload;
@@ -620,17 +586,6 @@ __closesthit__deferred()
     trace_data[1]             = optixGetHitKind();
     trace_data[2]             = *(uint32_t*)&t_hit;
     globals_from_hit(*sg_ptr, payload.radius, payload.spread, payload.raytype);
-}
-
-
-extern "C" __global__ void
-__closesthit__occlusion()
-{
-    Payload payload;
-    payload.get();
-    uint32_t* vals_ptr = (uint32_t*) payload.ptr.ptr;
-    vals_ptr[0] = optixGetPrimitiveIndex();
-    vals_ptr[1] = optixGetHitKind();
 }
 
 

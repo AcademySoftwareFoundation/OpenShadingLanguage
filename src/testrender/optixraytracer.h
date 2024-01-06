@@ -143,6 +143,7 @@ private:
     std::unordered_map<ustringhash, optix::TextureSampler> m_samplers;
 
     std::vector<void*> device_ptrs;
+    std::vector<void*> array_ptrs;
 };
 
 

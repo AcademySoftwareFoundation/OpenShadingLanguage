@@ -105,6 +105,7 @@ private:
 
     // CUdeviceptrs that need to be freed after we are done
     std::vector<void*> m_ptrs_to_free;
+    std::vector<void*> m_arrays_to_free;
 };
 
 

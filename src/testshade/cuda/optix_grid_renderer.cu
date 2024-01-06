@@ -175,7 +175,8 @@ __raygen__()
 extern "C" __device__ float4
 osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy)
 {
-    // TODO: Change the call to tex2DGrad, to make use of the derivatives
+    const float2 dx = {dsdx, dtdx};
+    const float2 dy = {dsdy, dtdy};
     cudaTextureObject_t texID = cudaTextureObject_t(handle);
-    return tex2D<float4>(texID, s, t);
+    return tex2DGrad<float4>(texID, s, t, dx, dy);
 }

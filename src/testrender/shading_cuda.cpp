@@ -388,6 +388,10 @@ CompositeBSDF::get_albedo_gpu(const Vec3& wo) const
 OSL_HOSTDEVICE Color3
 CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
 {
+    static const ustringhash uh_ggx("ggx");
+    static const ustringhash uh_beckmann("beckmann");
+    static const ustringhash uh_default("default");
+
     Color3 albedo(0);
     switch (bsdf->id) {
     case DIFFUSE_ID:
@@ -406,10 +410,9 @@ CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
         albedo = ((Refraction*)bsdf)->Refraction::get_albedo(wo);
         break;
     case MICROFACET_ID: {
-        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        const char* dist  = ((MicrofacetBeckmannRefl*)bsdf)->dist;
-        if (HDSTR(dist) == STRING_PARAMS(default)
-            || HDSTR(dist) == STRING_PARAMS(beckmann)) {
+        const int refract      = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        const ustringhash dist = ((MicrofacetBeckmannRefl*)bsdf)->dist;
+        if (dist == uh_default || dist == uh_beckmann) {
             switch (refract) {
             case 0:
                 albedo = ((MicrofacetBeckmannRefl*)bsdf)
@@ -424,7 +427,7 @@ CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
                              ->MicrofacetBeckmannBoth::get_albedo(wo);
                 break;
             }
-        } else if (HDSTR(dist) == STRING_PARAMS(ggx)) {
+        } else if (dist == uh_ggx) {
             switch (refract) {
             case 0:
                 albedo = ((MicrofacetGGXRefl*)bsdf)
@@ -473,6 +476,10 @@ OSL_HOSTDEVICE BSDF::Sample
 CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
                            float rz) const
 {
+    static const ustringhash uh_ggx("ggx");
+    static const ustringhash uh_beckmann("beckmann");
+    static const ustringhash uh_default("default");
+
     BSDF::Sample sample = {};
     switch (bsdf->id) {
     case DIFFUSE_ID:
@@ -493,10 +500,9 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
         sample = ((Refraction*)bsdf)->Refraction::sample(wo, rx, ry, rz);
         break;
     case MICROFACET_ID: {
-        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        const char* dist  = ((MicrofacetBeckmannRefl*)bsdf)->dist;
-        if (HDSTR(dist) == STRING_PARAMS(default)
-            || HDSTR(dist) == STRING_PARAMS(beckmann)) {
+        const int refract      = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        const ustringhash dist = ((MicrofacetBeckmannRefl*)bsdf)->dist;
+        if (dist == uh_default || dist == uh_beckmann) {
             switch (refract) {
             case 0:
                 sample = ((MicrofacetBeckmannRefl*)bsdf)
@@ -511,7 +517,7 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
                              ->MicrofacetBeckmannBoth::sample(wo, rx, ry, rz);
                 break;
             }
-        } else if (HDSTR(dist) == STRING_PARAMS(ggx)) {
+        } else if (dist == uh_ggx) {
             switch (refract) {
             case 0:
                 sample = ((MicrofacetGGXRefl*)bsdf)
@@ -570,6 +576,10 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
 OSL_HOSTDEVICE BSDF::Sample
 CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
 {
+    static const ustringhash uh_ggx("ggx");
+    static const ustringhash uh_beckmann("beckmann");
+    static const ustringhash uh_default("default");
+
     BSDF::Sample sample = {};
     switch (bsdf->id) {
     case DIFFUSE_ID:
@@ -588,10 +598,9 @@ CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
         sample = ((Refraction*)bsdf)->Refraction::eval(wo, wi);
         break;
     case MICROFACET_ID: {
-        const int refract = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        const char* dist  = ((MicrofacetBeckmannRefl*)bsdf)->dist;
-        if (HDSTR(dist) == STRING_PARAMS(default)
-            || HDSTR(dist) == STRING_PARAMS(beckmann)) {
+        const int refract      = ((MicrofacetBeckmannRefl*)bsdf)->refract;
+        const ustringhash dist = ((MicrofacetBeckmannRefl*)bsdf)->dist;
+        if (dist == uh_default || dist == uh_beckmann) {
             switch (refract) {
             case 0:
                 sample = ((MicrofacetBeckmannRefl*)bsdf)
@@ -606,7 +615,7 @@ CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
                              ->MicrofacetBeckmannBoth::eval(wo, wi);
                 break;
             }
-        } else if (HDSTR(dist) == STRING_PARAMS(ggx)) {
+        } else if (dist == uh_ggx) {
             switch (refract) {
             case 0:
                 sample = ((MicrofacetGGXRefl*)bsdf)

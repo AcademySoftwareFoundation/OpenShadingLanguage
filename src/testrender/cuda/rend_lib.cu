@@ -444,9 +444,9 @@ osl_range_check_err(int indexvalue, int length, OSL::ustringhash_pod symname,
 __device__ int
 osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 {
-    r                     = __builtin_assume_aligned(r, alignof(float));
-    OSL::ustringhash from = OSL::ustringhash_from(from_);
-    ShaderGlobals* sg     = (OSL_CUDA::ShaderGlobals*)sg_;
+    r                           = __builtin_assume_aligned(r, alignof(float));
+    OSL::ustringhash from       = OSL::ustringhash_from(from_);
+    OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
     if (from == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;
@@ -489,9 +489,9 @@ osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 __device__ int
 osl_get_inverse_matrix(void* sg_, void* r, OSL::ustringhash_pod to_)
 {
-    r                   = __builtin_assume_aligned(r, alignof(float));
-    OSL::ustringhash to = OSL::ustringhash_from(to_);
-    ShaderGlobals* sg   = (OSL_CUDA::ShaderGlobals*)sg_;
+    r                           = __builtin_assume_aligned(r, alignof(float));
+    OSL::ustringhash to         = OSL::ustringhash_from(to_);
+    OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
     if (to == OSL::Hashes::common) {
         MAT(r).makeIdentity();
         return true;

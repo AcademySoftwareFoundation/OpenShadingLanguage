@@ -6,6 +6,7 @@
 #pragma once
 
 #include <OSL/dual_vec.h>
+#include <OSL/hashes.h>
 #include <OSL/oslclosure.h>
 #include <OSL/oslconfig.h>
 #include <OSL/oslexec.h>
@@ -79,11 +80,7 @@ struct RefractionParams {
     float eta;
 };
 struct MicrofacetParams {
-#ifndef __CUDACC__
-    OIIO::ustring dist;
-#else
-    const char* dist;
-#endif
+    OSL::ustringhash dist;
     OSL::Vec3 N, U;
     float xalpha, yalpha, eta;
     int refract;
@@ -96,11 +93,7 @@ struct MxOrenNayarDiffuseParams {
     OSL::Color3 albedo;
     float roughness;
     // optional
-#ifndef __CUDACC__
-    OIIO::ustring label;
-#else
-    const char* label;
-#endif
+    OSL::ustringhash label;
 };
 
 struct MxBurleyDiffuseParams {
@@ -108,11 +101,7 @@ struct MxBurleyDiffuseParams {
     OSL::Color3 albedo;
     float roughness;
     // optional
-#ifndef __CUDACC__
-    OIIO::ustring label;
-#else
-    const char* label;
-#endif
+    OSL::ustringhash label;
 };
 
 // common to all MaterialX microfacet closures
@@ -120,14 +109,9 @@ struct MxMicrofacetBaseParams {
     OSL::Vec3 N, U;
     float roughness_x;
     float roughness_y;
-#ifndef __CUDACC__
-    OIIO::ustring distribution;
+    OSL::ustringhash distribution;
     // optional
-    OIIO::ustring label;
-#else
-    const char* distribution;
-    const char* label;
-#endif
+    OSL::ustringhash label;
 };
 
 struct MxDielectricParams : public MxMicrofacetBaseParams {
@@ -177,11 +161,7 @@ struct MxTranslucentParams {
     OSL::Vec3 N;
     OSL::Color3 albedo;
     // optional
-#ifndef __CUDACC__
-    OIIO::ustring label;
-#else
-    const char* label;
-#endif
+    OSL::ustringhash label;
 };
 
 struct MxSubsurfaceParams {
@@ -191,11 +171,7 @@ struct MxSubsurfaceParams {
     OSL::Color3 transmission_color;
     float anisotropy;
     // optional
-#ifndef __CUDACC__
-    OIIO::ustring label;
-#else
-    const char* label;
-#endif
+    OSL::ustringhash label;
 };
 
 struct MxSheenParams {
@@ -203,17 +179,13 @@ struct MxSheenParams {
     OSL::Color3 albedo;
     float roughness;
     // optional
-#ifndef __CUDACC__
-    OIIO::ustring label;
-#else
-    const char* label;
-#endif
+    OSL::ustringhash label;
 };
 
 struct MxUniformEdfParams {
     OSL::Color3 emittance;
     // optional
-    OIIO::ustring label;
+    OSL::ustringhash label;
 };
 
 struct MxLayerParams {
@@ -226,7 +198,7 @@ struct MxAnisotropicVdfParams {
     OSL::Color3 extinction;
     float anisotropy;
     // optional
-    OIIO::ustring label;
+    OSL::ustringhash label;
 };
 
 struct MxMediumVdfParams {
@@ -237,7 +209,7 @@ struct MxMediumVdfParams {
     float ior;
     int priority;
     // optional
-    OIIO::ustring label;
+    OSL::ustringhash label;
 };
 
 }

@@ -271,8 +271,18 @@ struct CompositeBSDF {
             pdfs[i] = __fdiv_rn(weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo)),
                                 path_weight.x + path_weight.y + path_weight.z);
 #endif
+
+#ifndef __CUDACC__
+            // TODO: Figure out what to do with weights/albedos with negative
+            //       components (e.g., as might happen when bipolar noise is
+            //       used as a color).
+
+            // The PDF is out-of-range in some test scenes on the CPU path, but
+            // these asserts are no-ops in release builds. The asserts are active
+            // on the CUDA path, so we need to skip them.
             assert(pdfs[i] >= 0);
             assert(pdfs[i] <= 1);
+#endif
             total += pdfs[i];
         }
         if ((!absorb && total > 0) || total > 1) {

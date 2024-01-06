@@ -101,12 +101,6 @@ __raygen__()
     alignas(8) char closure_pool[256];
     alignas(8) char params[256];
 
-    const float invw      = render_params.invw;
-    const float invh      = render_params.invh;
-    bool flipv            = render_params.flipv;
-    float3* output_buffer = reinterpret_cast<float3*>(
-        render_params.output_buffer);
-
     OSL_CUDA::ShaderGlobals sg;
     // Setup the ShaderGlobals
     sg.I  = make_float3(0, 0, 1);

@@ -15,35 +15,6 @@
 static __device__ __inline__ void
 calc_uv(float3 shading_normal, float& u, float& v, float3& dPdu, float3& dPdv, float r)
 {
-#if 0
-    const float3 n = shading_normal;
-
-    const float nx = n.x;
-    const float ny = n.y;
-    const float nz = n.z;
-
-    u = (atan2(nx, nz) + M_PI) * 0.5f * float(M_1_PI);
-    v = acos(ny) * float(M_1_PI);
-
-    float xz2 = nx * nx + nz * nz;
-    if (xz2 > 0.0f) {
-        const float PI    = float(M_PI);
-        const float TWOPI = float(2 * M_PI);
-        float xz          = sqrtf(xz2);
-        float inv         = 1.0f / xz;
-        dPdu              = make_float3(-TWOPI * nx, TWOPI * nz, 0.0f);
-        dPdv = make_float3(-PI * nz * inv * ny, -PI * nx * inv * ny, PI * xz);
-    } else {
-        // pick arbitrary axes for poles to avoid division by 0
-        if (ny > 0.0f) {
-            dPdu = make_float3(0.0f, 0.0f, 1.0f);
-            dPdv = make_float3(1.0f, 0.0f, 0.0f);
-        } else {
-            dPdu = make_float3(0.0f, 0.0f, 1.0f);
-            dPdv = make_float3(-1.0f, 0.0f, 0.0f);
-        }
-    }
-#else
     const float3 n = shading_normal;
     u = (atan2(n.x, n.z) + float(M_PI)) * 0.5f
         * float(M_1_PI);
@@ -61,7 +32,6 @@ calc_uv(float3 shading_normal, float& u, float& v, float3& dPdu, float3& dPdv, f
     dPdv.x    = -pir * cospiv * sin2piu;
     dPdv.y    = -pir * sinpiv;
     dPdv.z    = -pir * cospiv * cos2piu;
-#endif
 }
 
 

@@ -60,15 +60,9 @@ __direct_callable__sphere_shaderglobals(const unsigned int idx,
 extern "C" __global__ void
 __intersection__sphere()
 {
-    const GenericData* g_data = reinterpret_cast<const GenericData*>(
-        optixGetSbtDataPointer());
-    const SphereParams* g_spheres = reinterpret_cast<const SphereParams*>(
-        g_data->data);
-    const unsigned int idx     = optixGetPrimitiveIndex();
-    const SphereParams& sphere = g_spheres[idx];
-    const float3 ray_origin    = optixGetObjectRayOrigin();
-    const float3 ray_direction = optixGetObjectRayDirection();
+    const unsigned int idx = optixGetPrimitiveIndex();
 
+    // Check for self-intersection
     Payload payload;
     payload.get();
 
@@ -76,7 +70,16 @@ __intersection__sphere()
     uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
     const int hit_idx               = ((int*)trace_data)[2];
     const int hit_kind              = ((int*)trace_data)[3];
-    const bool self                 = hit_idx == idx && hit_kind == 1;
+    const bool self = hit_idx == idx && hit_kind == RAYTRACER_HIT_SPHERE;
+
+    const GenericData* g_data = reinterpret_cast<const GenericData*>(
+        optixGetSbtDataPointer());
+    const SphereParams* g_spheres = reinterpret_cast<const SphereParams*>(
+        g_data->data);
+
+    const SphereParams& sphere = g_spheres[idx];
+    const float3 ray_origin    = optixGetObjectRayOrigin();
+    const float3 ray_direction = optixGetObjectRayDirection();
 
     float3 oc = sphere.c - ray_origin;
     float b   = dot(oc, ray_direction);
@@ -99,15 +102,9 @@ __intersection__sphere()
 extern "C" __global__ void
 __intersection__sphere_precise()
 {
-    const GenericData* g_data = reinterpret_cast<const GenericData*>(
-        optixGetSbtDataPointer());
-    const SphereParams* g_spheres = reinterpret_cast<const SphereParams*>(
-        g_data->data);
-    const unsigned int idx     = optixGetPrimitiveIndex();
-    const SphereParams& sphere = g_spheres[idx];
-    const float3 ray_origin    = optixGetObjectRayOrigin();
-    const float3 ray_direction = optixGetObjectRayDirection();
+    const unsigned int idx = optixGetPrimitiveIndex();
 
+    // Check for self-intersection
     Payload payload;
     payload.get();
 
@@ -115,7 +112,16 @@ __intersection__sphere_precise()
     uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
     const int hit_idx               = ((int*)trace_data)[2];
     const int hit_kind              = ((int*)trace_data)[3];
-    const bool self                 = hit_idx == idx && hit_kind == 1;
+    const bool self = hit_idx == idx && hit_kind == RAYTRACER_HIT_SPHERE;
+
+    const GenericData* g_data = reinterpret_cast<const GenericData*>(
+        optixGetSbtDataPointer());
+    const SphereParams* g_spheres = reinterpret_cast<const SphereParams*>(
+        g_data->data);
+
+    const SphereParams& sphere = g_spheres[idx];
+    const float3 ray_origin    = optixGetObjectRayOrigin();
+    const float3 ray_direction = optixGetObjectRayDirection();
 
     // Using the "round up" single-precision intrinsics helps match the results
     // from the CPU path more closely when fast-math is enabled.

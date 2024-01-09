@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <OSL/dual_vec.h>
+
 #include <vector_functions.h>
 #include <vector_types.h>
 
@@ -70,47 +72,24 @@ float3 cross(const float3& a, const float3& b)
 
 
 static __forceinline__ __device__
+float length(const float3& v)
+{
+    return __fsqrt_rn((v.x * v.x) + (v.y * v.y) + (v.z * v.z));
+}
+
+
+static __forceinline__ __device__
 void ortho(const float3& n, float3& x, float3& y)
 {
     x = normalize(fabsf(n.x) > .01f ? make_float3(n.z, 0, -n.x) : make_float3(0, -n.z, n.y));
     y = cross(n, x);
 }
 
-//
-// ========================================
-
-// Define some vector operations using the single-precision "round up"
-// intrinsics.
-//
-// In some cases (e.g., the sphere intersection), using these
-// intrinsics can help match the CPU results more closely, especially
-// when fast-math is used for the GPU code.
-
-static __forceinline__ __device__ float
-dot_ru(const float3& a, const float3& b)
-{
-    float val = __fadd_ru(__fmul_ru(a.x, b.x), __fmul_ru(a.y, b.y));
-    return __fadd_ru(val, __fmul_ru(a.z, b.z));
-}
-
-static __forceinline__ __device__ float3
-add_ru(const float3& a, const float3& b)
-{
-    return make_float3(__fadd_ru(a.x, b.x), __fadd_ru(a.y, b.y),
-                       __fadd_ru(a.z, b.z));
-}
-
-static __forceinline__ __device__ float3
-sub_ru(const float3& a, const float3& b)
-{
-    return make_float3(__fsub_ru(a.x, b.x), __fsub_ru(a.y, b.y),
-                       __fsub_ru(a.z, b.z));
-}
 
 }  // anonymous namespace
 
 // Conversion macros for casting between vector types
-#define F3_TO_V3(f3) (*reinterpret_cast<const Vec3*>(&f3))
-#define F3_TO_C3(f3) (*reinterpret_cast<const Color3*>(&f3))
+#define F3_TO_V3(f3) (*reinterpret_cast<const OSL::Vec3*>(&f3))
+#define F3_TO_C3(f3) (*reinterpret_cast<const OSL::Color3*>(&f3))
 #define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
 #define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))

@@ -492,7 +492,7 @@ OptixRaytracer::create_programs(State& state)
             = "__anyhit__any_hit_shadow";
         sphere_hitgroup_desc.hitgroup.moduleIS = state.sphere_module;
         sphere_hitgroup_desc.hitgroup.entryFunctionNameIS
-            = "__intersection__sphere_precise";
+            = "__intersection__sphere";
         create_optix_pg(&sphere_hitgroup_desc, 1, &state.program_options,
                         &state.sphere_hit_group);
     }

@@ -380,7 +380,7 @@ jobs:
             setenvs: export LLVM_VERSION=10.0.0
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc11/C++17 llvm15 boost1.71 exr3.2 py3.9 avx2 batch-b16avx512
+          - desc: latest releases gcc11/C++17 llvm16 boost1.71 exr3.2 py3.9 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-22.04
             cxx_compiler: g++-11
@@ -392,11 +392,11 @@ jobs:
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=15.0.6
-                            LLVM_DISTRO_NAME=ubuntu-18.04
+            setenvs: export LLVM_VERSION=16.0.4
+                            LLVM_DISTRO_NAME=ubuntu-22.04
                             OPENCOLORIO_VERSION=v2.2.0
                             PUGIXML_VERSION=v1.13
-          - desc: bleeding edge gcc12/C++17 llvm16 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
+          - desc: bleeding edge gcc12/C++17 llvm17 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-22.04
             cxx_compiler: g++-12
@@ -408,7 +408,7 @@ jobs:
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=16.0.4
+            setenvs: export LLVM_VERSION=17.0.6
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master
@@ -486,23 +486,12 @@ jobs:
 
 
   macos:
-    name: "${{matrix.runner}} appleclang${{matrix.aclang}}/C++${{matrix.cxx_std}} py${{matrix.python_ver}} ${{matrix.desc}}"
+    name: "${{matrix.runner}} C++${{matrix.cxx_std}} py${{matrix.python_ver}} ${{matrix.desc}}"
     strategy:
       fail-fast: false
       matrix:
         include:
-          # - desc: MacOS-11
-          #   runner: macos-11
-          #   nametag: macos11-py310
-          #   cc_compiler: /usr/local/opt/llvm@14/bin/clang
-          #   cxx_compiler: /usr/local/opt/llvm@14/bin/clang++
-          #   cxx_std: 17
-          #   python_ver: "3.10"
-          #   aclang: 13
-          #   setenvs: export LLVMBREWVER="@14" DO_BREW_UPDATE=1
-          #                   OPENIMAGEIO_VERSION=release
-          #                   QT_BREW_VERSION="@5"
-          - desc: MacOS-12
+          - desc: llvm15
             runner: macos-12
             nametag: macos12-p310
             cc_compiler: /usr/local/opt/llvm@15/bin/clang
@@ -512,15 +501,15 @@ jobs:
             aclang: 13
             setenvs: export LLVMBREWVER="@15" DO_BREW_UPDATE=1
                             OPENIMAGEIO_VERSION=master
-          - desc: MacOS-13
+          - desc: llvm17
             runner: macos-13
             nametag: macos13-p311
-            cc_compiler: /usr/local/opt/llvm@15/bin/clang
-            cxx_compiler: /usr/local/opt/llvm@15/bin/clang++
+            cc_compiler: /usr/local/opt/llvm/bin/clang
+            cxx_compiler: /usr/local/opt/llvm/bin/clang++
             cxx_std: 17
             python_ver: "3.11"
             aclang: 14
-            setenvs: export LLVMBREWVER="@15" DO_BREW_UPDATE=1
+            setenvs: export DO_BREW_UPDATE=1
                             OPENIMAGEIO_VERSION=master
 
     runs-on: ${{matrix.runner}}

@@ -43,3 +43,7 @@ c1045f2c2845a98e661c7181932a031eb3c76063
 # clang-format: the very last piece of the puzzle (#1555)
 4ee62cd2ef05543f818f4d95a19efc1d684a7381
 5be7c6bd4e7bd2e560cb6be8c06f11985384a87a
+
+# Raise CI formatting standard to clang-format 17
+a9ce35135e6c022d538a4a184fee1b5ce908aed8
+90d94caecbb97141c9df63abc634be6e8394b6c3

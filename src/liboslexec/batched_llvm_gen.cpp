@@ -3234,9 +3234,8 @@ LLVMGEN(llvm_gen_construct_triple)
 
     // Do the transformation in-place, if called for
     if (using_space) {
-        ustring from, to;  // N.B. initialize to empty strings
         if (Space.is_constant()) {
-            from = Space.get_string();
+            ustring from = Space.get_string();
             if (from == Strings::common
                 || from == rop.shadingsys().commonspace_synonym())
                 return true;  // no transformation necessary

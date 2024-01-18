@@ -59,7 +59,6 @@ static ustring op_xor("xor");
 
 static ustring u_distance("distance");
 static ustring u_index("index");
-static ustring u__empty;  // empty/default ustring
 
 
 

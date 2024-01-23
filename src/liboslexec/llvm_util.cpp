@@ -428,6 +428,7 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
     , m_llvm_func_passes(NULL)
     , m_new_pass_manager(NULL)
     , m_llvm_exec(NULL)
+    , m_nvptx_target_machine(nullptr)
     , m_vector_width(vector_width)
     , m_llvm_type_native_mask(nullptr)
     , mVTuneNotifier(nullptr)
@@ -585,6 +586,7 @@ LLVM_Util::~LLVM_Util()
     delete m_new_pass_manager;
     delete m_builder;
     delete m_llvm_debug_builder;
+    delete m_nvptx_target_machine;
     module(NULL);
     // DO NOT delete m_llvm_jitmm;  // just the dummy wrapper around the real MM
 }

@@ -258,6 +258,8 @@ SimpleRenderer::supports(string_view feature) const
 {
     if (m_use_rs_bitcode && feature == "build_attribute_getter")
         return true;
+    else if (m_use_rs_bitcode && feature == "build_interpolated_getter")
+        return true;
     return false;
 }
 
@@ -672,6 +674,65 @@ SimpleRenderer::build_attribute_getter(
         }
     }
 }
+
+
+void
+SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
+                                          const ustring& param_name,
+                                          TypeDesc type, bool derivatives,
+                                          InterpolatedGetterSpec& spec)
+{
+    static const OIIO::ustring rs_get_interpolated_s("rs_get_interpolated_s");
+    static const OIIO::ustring rs_get_interpolated_t("rs_get_interpolated_t");
+    static const OIIO::ustring rs_get_interpolated_red(
+        "rs_get_interpolated_red");
+    static const OIIO::ustring rs_get_interpolated_green(
+        "rs_get_interpolated_green");
+    static const OIIO::ustring rs_get_interpolated_blue(
+        "rs_get_interpolated_blue");
+
+    static const OIIO::ustring rs_get_interpolated_test(
+        "rs_get_interpolated_test");
+    static const OIIO::ustring rs_get_interpolated_generic(
+        "rs_get_interpolated_generic");
+
+    if (param_name == RS::Hashes::s && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_s,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::t
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_t,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::red
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_red,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::green
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_green,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::blue
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_blue,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::test
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_test);
+    } else {
+        spec.set(rs_get_interpolated_generic,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::ParamName,
+                 InterpolatedSpecBuiltinArg::Type,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    }
+}
+
+
 
 bool
 SimpleRenderer::trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,

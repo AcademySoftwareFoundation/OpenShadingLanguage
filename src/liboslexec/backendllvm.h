@@ -570,5 +570,61 @@ private:
 };
 
 
+template<typename TArgVariant>
+void
+append_constant_arg(BackendLLVM& rop, const TArgVariant& arg,
+                    std::vector<llvm::Value*>& args)
+{
+    switch (arg.type()) {
+    default:
+    case TArgVariant::Type::Unspecified:
+    case TArgVariant::Type::Builtin: OSL_DASSERT(false); break;
+    case TArgVariant::Type::Bool:
+        args.push_back(rop.ll.constant_bool(arg.get_bool()));
+        break;
+    case TArgVariant::Type::Int8:
+        args.push_back(rop.ll.constant8(arg.get_int8()));
+        break;
+    case TArgVariant::Type::Int16:
+        args.push_back(rop.ll.constant16(arg.get_int16()));
+        break;
+    case TArgVariant::Type::Int32:
+        args.push_back(rop.ll.constant(arg.get_int32()));
+        break;
+    case TArgVariant::Type::Int64:
+        args.push_back(rop.ll.constanti64(arg.get_int64()));
+        break;
+    case TArgVariant::Type::UInt8:
+        args.push_back(rop.ll.constant8(arg.get_uint8()));
+        break;
+    case TArgVariant::Type::UInt16:
+        args.push_back(rop.ll.constant16(arg.get_uint16()));
+        break;
+    case TArgVariant::Type::UInt32:
+        args.push_back(rop.ll.constant(arg.get_uint32()));
+        break;
+    case TArgVariant::Type::UInt64:
+        args.push_back(rop.ll.constant64(arg.get_uint64()));
+        break;
+    case TArgVariant::Type::Float:
+        args.push_back(rop.ll.constant(arg.get_float()));
+        break;
+    case TArgVariant::Type::Double:
+        args.push_back(rop.ll.constant64(arg.get_double()));
+        break;
+    case TArgVariant::Type::Pointer:
+        args.push_back(rop.ll.constant_ptr(arg.get_ptr()));
+        break;
+    case TArgVariant::Type::UString:
+        args.push_back(rop.ll.constant(arg.get_ustring()));
+        break;
+    case TArgVariant::Type::UStringHash:
+        args.push_back(rop.ll.constant(ustring(arg.get_ustringhash())));
+        break;
+    }
+}
+
+
+
 };  // namespace pvt
 OSL_NAMESPACE_EXIT

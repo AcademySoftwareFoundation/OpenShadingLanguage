@@ -320,9 +320,9 @@ BackendLLVM::llvm_type_groupdata()
         TypeDesc* types = &group().m_userdata_types[0];
         int* offsets    = &group().m_userdata_offsets[0];
         int sz          = (nuserdata + 3) & (~3);
-        fields.push_back(ll.type_array(ll.type_bool(), sz));
+        fields.push_back(ll.type_array(ll.type_int8(), sz));
         m_groupdata_field_names.emplace_back("userdata_init_flags");
-        offset += nuserdata * sizeof(bool);
+        offset += nuserdata * sizeof(int8_t);
         ++order;
         for (int i = 0; i < nuserdata; ++i) {
             TypeDesc type = types[i];
@@ -638,6 +638,99 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             // source didn't have them.
             if (sym.has_derivs() && !symloc->derivs)
                 ll.op_memset(ll.offset_ptr(dstptr, size), 0, 2 * size);
+        } else if (renderer()->supports("build_interpolated_getter")) {
+            InterpolatedGetterSpec spec;
+            renderer()->build_interpolated_getter(group(), symname, type,
+                                                  sym.has_derivs(), spec);
+            if (!spec.function_name().empty()) {
+                std::vector<llvm::Value*> args;
+                args.reserve(spec.arg_count() + 1);
+                for (size_t index = 0; index < spec.arg_count(); index++) {
+                    const auto& arg = spec.arg(index);
+                    if (arg.is_holding<InterpolatedSpecBuiltinArg>()) {
+                        switch (arg.get_builtin()) {
+                        default: OSL_DASSERT(false); break;
+                        case InterpolatedSpecBuiltinArg::OpaqueExecutionContext:
+                            args.push_back(sg_void_ptr());
+                            break;
+                        case InterpolatedSpecBuiltinArg::ShadeIndex:
+                            args.push_back(shadeindex());
+                            break;
+                        case InterpolatedSpecBuiltinArg::Derivatives:
+                            args.push_back(ll.constant_bool(sym.has_derivs()));
+                            break;
+                        case InterpolatedSpecBuiltinArg::Type:
+                            args.push_back(ll.constant(type));
+                            break;
+                        case InterpolatedSpecBuiltinArg::ParamName:
+                            args.push_back(llvm_const_hash(symname));
+                            break;
+                        }
+                    } else {
+                        append_constant_arg(*this, arg, args);
+                    }
+                }
+                args.push_back(
+                    ll.void_ptr(groupdata_field_ptr(2 + userdata_index)));
+                // Start of the osl_bind_interpolated_param instructions
+                int userdata_has_derivs
+                    = group().m_userdata_derivs[userdata_index];
+                llvm::Value* userdata_data = groupdata_field_ptr(
+                    2 + userdata_index);
+                llvm::Value* symbol_data = llvm_void_ptr(sym);
+                int symbol_data_size     = sym.derivsize();
+                // char status = *userdata_initialized;
+                llvm::Value* userdata_initializedPtr = userdata_initialized_ref(
+                    userdata_index);
+                llvm::Value* status = ll.op_int8_to_int(
+                    ll.op_load(ll.type_int8(), userdata_initializedPtr));
+                // if (status == 0)
+                llvm::BasicBlock* then_block  = ll.new_basic_block();
+                llvm::BasicBlock* after_block = ll.new_basic_block();
+                ll.op_branch(ll.op_eq(status, ll.constant(0)), then_block,
+                             after_block);
+                {
+                    // bool ok = interpolated_getter();
+                    llvm::Value* ok
+                        = ll.call_function(spec.function_name().c_str(), args);
+                    ok = ll.op_bool_to_int(ok);
+                    // status = 1 + ok;
+                    status = ll.op_add(ll.constant(1), ok);
+                    // *userdata_initialized = status;
+                    ll.op_store(ll.op_int_to_int8(status),
+                                userdata_initializedPtr);
+                    if (!use_optix() && shadingsys().m_statslevel != 0) {
+                        // sg->context->incr_get_userdata_calls();
+                        ll.call_function("osl_incr_get_userdata_calls",
+                                         sg_void_ptr());
+                    }
+                }
+                // endif
+                ll.op_branch(after_block);
+                status = ll.op_int8_to_int(
+                    ll.op_load(ll.type_int8(), userdata_initializedPtr));
+                // if (status == 2)
+                then_block        = ll.new_basic_block();
+                after_block       = ll.new_basic_block();
+                llvm::Value* cond = ll.op_eq(status, ll.constant(2));
+                ll.op_branch(cond, then_block, after_block);
+                {
+                    int udata_size = (userdata_has_derivs ? 3 : 1)
+                                     * type.size();
+                    // memcpy(symbol_data, userdata_data, std::min(symbol_data_size, udata_size));
+                    ll.op_memcpy(symbol_data, userdata_data,
+                                 std::min(symbol_data_size, udata_size));
+                    if (symbol_data_size > udata_size) {
+                        // memset((char*)symbol_data + udata_size, 0, symbol_data_size - udata_size);
+                        llvm::Value* padding = ll.offset_ptr(symbol_data,
+                                                             udata_size);
+                        ll.op_memset(padding, 0, symbol_data_size - udata_size);
+                    }
+                }
+                // endif
+                ll.op_branch(after_block);
+                got_userdata = ll.op_bool_to_int(cond);
+            }
         } else {
             // No pre-placement: fall back to call to the renderer callback.
             llvm::Value* args[] = {

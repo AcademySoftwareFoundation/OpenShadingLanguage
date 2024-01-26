@@ -69,6 +69,11 @@ public:
                                 TypeDesc type, bool derivatives,
                                 AttributeGetterSpec& spec) override;
 
+    void build_interpolated_getter(const ShaderGroup& group,
+                                   const ustring& param_name, TypeDesc type,
+                                   bool derivatives,
+                                   InterpolatedGetterSpec& spec) override;
+
     bool trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,
                const OSL::Vec3& dPdx, const OSL::Vec3& dPdy, const OSL::Vec3& R,
                const OSL::Vec3& dRdx, const OSL::Vec3& dRdy) override;

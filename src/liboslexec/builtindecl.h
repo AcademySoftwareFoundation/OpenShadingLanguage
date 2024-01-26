@@ -236,6 +236,7 @@ DECL(osl_naninf_check, "xiXiXhihiih")
 DECL(osl_uninit_check, "xLXXhihihhihihii")
 DECL(osl_get_attribute, "iXihhiiLX")
 DECL(osl_bind_interpolated_param, "iXhLiXiXiXi")
+DECL(osl_incr_get_userdata_calls, "xX")
 DECL(osl_get_texture_options, "XX");
 DECL(osl_get_noise_options, "XX");
 DECL(osl_get_trace_options, "XX");

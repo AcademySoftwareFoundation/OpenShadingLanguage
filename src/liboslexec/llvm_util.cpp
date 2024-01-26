@@ -6099,6 +6099,32 @@ LLVM_Util::op_mod(llvm::Value* a, llvm::Value* b)
 
 
 llvm::Value*
+LLVM_Util::op_int8_to_int(llvm::Value* a)
+{
+    if (a->getType() == type_int8())
+        return builder().CreateSExt(a, type_int());
+    if (a->getType() == type_int())
+        return a;
+    OSL_ASSERT(0 && "Op has bad value type combination");
+    return nullptr;
+}
+
+
+
+llvm::Value*
+LLVM_Util::op_int_to_int8(llvm::Value* a)
+{
+    if (a->getType() == type_int())
+        return builder().CreateTrunc(a, type_int8());
+    if (a->getType() == type_int8())
+        return a;
+    OSL_ASSERT(0 && "Op has bad value type combination");
+    return nullptr;
+}
+
+
+
+llvm::Value*
 LLVM_Util::op_float_to_int(llvm::Value* a)
 {
     if (a->getType() == type_float())

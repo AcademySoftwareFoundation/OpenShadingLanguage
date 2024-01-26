@@ -366,6 +366,93 @@ rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
     return false;
 }
 
+OSL_RSOP bool
+rs_get_interpolated_s(OSL::OpaqueExecContextPtr ec, bool derivatives, void* val)
+{
+    ((float*)val)[0] = OSL::get_u(ec);
+    if (derivatives) {
+        ((float*)val)[1] = OSL::get_dudx(ec);
+        ((float*)val)[2] = OSL::get_dudy(ec);
+    }
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_interpolated_t(OSL::OpaqueExecContextPtr ec, bool derivatives, void* val)
+{
+    ((float*)val)[0] = OSL::get_v(ec);
+    if (derivatives) {
+        ((float*)val)[1] = OSL::get_dvdx(ec);
+        ((float*)val)[2] = OSL::get_dvdy(ec);
+    }
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_interpolated_red(OSL::OpaqueExecContextPtr ec, bool derivatives,
+                        void* val)
+{
+    if (OSL::get_P(ec).x > 0.5f) {
+        ((float*)val)[0] = OSL::get_u(ec);
+        if (derivatives) {
+            ((float*)val)[1] = OSL::get_dudx(ec);
+            ((float*)val)[2] = OSL::get_dudy(ec);
+        }
+        return true;
+    }
+    return false;
+}
+
+OSL_RSOP bool
+rs_get_interpolated_green(OSL::OpaqueExecContextPtr ec, bool derivatives,
+                          void* val)
+{
+    if (OSL::get_P(ec).x < 0.5f) {
+        ((float*)val)[0] = OSL::get_v(ec);
+        if (derivatives) {
+            ((float*)val)[1] = OSL::get_dvdx(ec);
+            ((float*)val)[2] = OSL::get_dvdy(ec);
+        }
+        return true;
+    }
+    return false;
+}
+
+OSL_RSOP bool
+rs_get_interpolated_blue(OSL::OpaqueExecContextPtr ec, bool derivatives,
+                         void* val)
+{
+    if ((static_cast<int>(OSL::get_P(ec).y * 12) % 2) == 0) {
+        ((float*)val)[0] = 1.0f - OSL::get_u(ec);
+        if (derivatives) {
+            ((float*)val)[1] = -OSL::get_dudx(ec);
+            ((float*)val)[2] = -OSL::get_dudy(ec);
+        }
+        return true;
+    }
+    return false;
+}
+
+OSL_RSOP bool
+rs_get_interpolated_test(void* val)
+{
+    printf("rs_get_interpolated_test\n");
+    ((float*)val)[0] = 0.42f;
+    return true;
+}
+
+OSL_RSOP bool
+rs_get_interpolated_generic(void* sg_, OSL::ustringhash_pod _name,
+                            OSL::TypeDesc_pod _type, bool derivatives,
+                            void* val)
+{
+    auto name                = OSL::ustringhash_from(_name);
+    const OSL::TypeDesc type = OSL::TypeDesc_from(_type);
+
+    OSL::ShaderGlobals* sg = (OSL::ShaderGlobals*)sg_;
+    return sg->renderer->get_userdata(derivatives, name, type, sg, val);
+}
+
 OSL_RSOP void
 rs_errorfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,

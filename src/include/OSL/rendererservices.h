@@ -32,7 +32,7 @@ typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
 typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
 
 enum class AttributeSpecBuiltinArg {
-    OpaqueExecutionContext,  //OpaqueExecContextPtr
+    OpaqueExecutionContext,  // OpaqueExecContextPtr
     ShadeIndex,              // int
     Derivatives,             // bool
     Type,                    // TypeDesc_pod
@@ -44,6 +44,17 @@ enum class AttributeSpecBuiltinArg {
 
 using AttributeSpecArg    = ArgVariant<AttributeSpecBuiltinArg>;
 using AttributeGetterSpec = FunctionSpec<AttributeSpecArg>;
+
+enum class InterpolatedSpecBuiltinArg {
+    OpaqueExecutionContext,  // OpaqueExecContextPtr
+    ShadeIndex,              // int
+    Derivatives,             // bool
+    Type,                    // TypeDesc_pod
+    ParamName,               // ustringhash_pod
+};
+
+using InterpolatedSpecArg    = ArgVariant<InterpolatedSpecBuiltinArg>;
+using InterpolatedGetterSpec = FunctionSpec<InterpolatedSpecArg>;
 
 // Turn off warnings about unused params for this file, since we have lots
 // of declarations with stub function bodies.
@@ -68,6 +79,7 @@ public:
     /// supports it. Feature names include:
     ///    "OptiX"
     ///    "build_attribute_getter"
+    ///    "build_interpolated_getter"
     ///
     /// This allows some customization of JIT generated code based on the
     /// facilities and features of a particular renderer. It also allows
@@ -272,6 +284,30 @@ public:
     virtual bool get_array_attribute(ShaderGlobals* sg, bool derivatives,
                                      ustringhash object, TypeDesc type,
                                      ustringhash name, int index, void* val);
+
+    /// Builds a free function to provide a value for a given interpolated value.
+    /// This occurs at shader compile time, not at execution time.
+    ///
+    /// @param group
+    ///     The shader group currently requesting the attribute.
+    ///
+    /// @param param_name
+    ///     The parameter name.
+    ///
+    /// @param type
+    ///     The type of the value being requested.
+    ///
+    /// @param derivatives
+    ///     True if derivatives are also being requested.
+    ///
+    /// @param spec
+    ///     The built interpolated getter. An empty function name is interpreted
+    ///     as a missing attribute.
+    ///
+    virtual void build_interpolated_getter(const ShaderGroup& group,
+                                           const ustring& param_name,
+                                           TypeDesc type, bool derivatives,
+                                           InterpolatedGetterSpec& spec);
 
     /// Get the named user-data from the current object and write it into
     /// 'val'. If derivatives is true, the derivatives should be written into val

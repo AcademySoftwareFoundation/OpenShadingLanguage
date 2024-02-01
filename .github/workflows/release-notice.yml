@@ -1,3 +1,8 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/AcademySoftwareFoundation/OpenshadingLanguage
+
+
 name: Publish Release Notice to ASWF Slack
 
 on:
@@ -14,5 +19,8 @@ jobs:
     - name: Notify Slack
       id: slack
       with:
-        slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_RELEASES_URL }}
-      uses: fedecalendino/slack-release-notifier@8329c1c2d20055ff874ce3eaed7021735d17069d # v2.1.0
+        project_name: "Open Shading Language"
+        slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
+        slack_channel: "#release-announcements"
+        project_logo: "https://artwork.aswf.io/projects/openshadinglanguage/AcronymStack/Shaded/openshadinglanguage-AcronymStack-Shaded.png"
+      uses: jmertic/slack-release-notifier@main

@@ -1,8 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
+Release 1.13 -- Feb 1, 2024 (compared to 1.12)
 -------------------------------------------------------------
+- beta 1: December 20, 2023
+- release v1.13.6.1: Feb 1, 2024
 
 ### New minimum dependencies and compatibility changes:
 
@@ -91,6 +93,7 @@ Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
 * OptiX PTX pipeline overhaul [#1680](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1680) (by Tim Grant) (1.13.5.0)
 * Perf: Don't insert redundant run layer calls inside a basic block
   [#1665](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1665) [#1669](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1669) [#1672](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1672) (by Chris Hellmuth) (1.13.4.0)
+* Fix NVPTX TargetMachine leak, etc. [#1763](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1763) (by Tim Grant)
 
 ### 🐛/🔧  Internals: fixes, improvements, and developer concerns
 
@@ -186,6 +189,7 @@ Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
     * For clarity, use the term 'runner' instead of 'os' [#1743](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1743)
     * Test ABI compliance [#1748](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1748)
     * Fix tests passing when test commands fail [#1733](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1733) (by Brecht Van Lommel)
+    * *ci*: Test against LLVM 17 [#1760](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1760)
 * Platform support:
     * Include `immintrin.h` only when needed. #1605 (1.13.1.0)
     * Changed snprintf formatting to satisfy some compilers.
@@ -211,6 +215,7 @@ Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
 
 * Alert slack "release-announcements" channel upon OSL release [#1740](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1740) [#1749](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1749)
 * Update pull request template [#1741](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1741)
+* Account for duplicate emails in the .mailmap [#1759](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1759)
 
 
 ---

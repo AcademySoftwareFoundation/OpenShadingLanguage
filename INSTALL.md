@@ -48,7 +48,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
       recommended that you use 11.0 or higher.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.83)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.84)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/Imath) 2.4
    or newer (recommended: 3.1 or higher; tested through 3.2)
    NOTE: It is likely that 1.13 is the last release that will support

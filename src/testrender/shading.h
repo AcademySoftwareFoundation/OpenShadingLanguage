@@ -35,8 +35,8 @@ struct BSDF {
     BSDF() {}
     virtual Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
     virtual Sample eval(const Vec3& wo, const Vec3& wi) const = 0;
-    virtual Sample sample(const Vec3& wo, float rx, float ry,
-                          float rz) const                     = 0;
+    virtual Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+        = 0;
 };
 
 /// Represents a weighted sum of BSDFS

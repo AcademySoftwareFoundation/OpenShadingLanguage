@@ -32,36 +32,21 @@ public:
 #ifdef __CUDA_ARCH__
     /// On device, act as a pointer. None of these things are allowed on the
     /// host.
-    T* operator->() const
-    {
-        return m_ptr;
-    }
-    T& operator*() const
-    {
-        return *m_ptr;
-    }
+    T* operator->() const { return m_ptr; }
+    T& operator*() const { return *m_ptr; }
 #endif
 
     /// Extract the raw device-side pointer. Use with caution! On the host,
     /// this will not point to valid memory.
-    T* d_get() const
-    {
-        return m_ptr;
-    }
+    T* d_get() const { return m_ptr; }
 
     /// Evaluate as bool is a null pointer check.
-    operator bool() const noexcept
-    {
-        return m_ptr != nullptr;
-    }
+    operator bool() const noexcept { return m_ptr != nullptr; }
 
     /// Reset the pointer to `dptr`, which must be a device-side raw pointer,
     /// or null. Since this device_ptr is non-owning, any previous value is
     /// simply overwritten.
-    void reset(T* dptr = nullptr)
-    {
-        m_ptr = dptr;
-    }
+    void reset(T* dptr = nullptr) { m_ptr = dptr; }
 
 private:
     T* m_ptr = nullptr;  // underlying pointer, initializes to null

@@ -112,8 +112,8 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
         float dsdy = wdsdy[lane];
         float dtdy = wdtdy[lane];
         retVal     = bsr->texturesys()->texture(
-                texture_handle, texture_thread_info, opt, ws[lane], wt[lane], dsdx,
-                dtdx, dsdy, dtdy, 4, (float*)&result_simd,
+            texture_handle, texture_thread_info, opt, ws[lane], wt[lane], dsdx,
+            dtdx, dsdy, dtdy, 4, (float*)&result_simd,
             has_derivs ? (float*)&dresultds_simd : NULL,
             has_derivs ? (float*)&dresultdt_simd : NULL);
 

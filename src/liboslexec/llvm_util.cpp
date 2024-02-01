@@ -359,10 +359,7 @@ public:
     {
         mm->registerEHFrames(Addr, LoadAddr, Size);
     }
-    void deregisterEHFrames() override
-    {
-        mm->deregisterEHFrames();
-    }
+    void deregisterEHFrames() override { mm->deregisterEHFrames(); }
 
     uint64_t getSymbolAddress(const std::string& Name) override
     {
@@ -777,17 +774,17 @@ LLVM_Util::debug_push_inlined_function(OIIO::ustring function_name,
         llvm::DINode::FlagPrototyped | llvm::DINode::FlagNoReturn);
     llvm::DISubprogram* function = nullptr;
     function                     = m_llvm_debug_builder->createFunction(
-                            mDebugCU,               // Scope
-                            function_name.c_str(),  // Name
-                            // We are inlined function so not sure supplying a linkage name
-                            // makes sense
-                            /*function_name.c_str()*/ llvm::StringRef(),  // Linkage Name
-                            file,                                   // File
-                            static_cast<unsigned int>(sourceline),  // Line Number
-                            mSubTypeForInlinedFunction,  // subroutine type
-                            method_scope_line,           // Scope Line,
-                            fnFlags,
-                            llvm::DISubprogram::toSPFlags(true /*isLocalToUnit*/,
+        mDebugCU,               // Scope
+        function_name.c_str(),  // Name
+        // We are inlined function so not sure supplying a linkage name
+        // makes sense
+        /*function_name.c_str()*/ llvm::StringRef(),  // Linkage Name
+        file,                                   // File
+        static_cast<unsigned int>(sourceline),  // Line Number
+        mSubTypeForInlinedFunction,  // subroutine type
+        method_scope_line,           // Scope Line,
+        fnFlags,
+        llvm::DISubprogram::toSPFlags(true /*isLocalToUnit*/,
                                                           true /*isDefinition*/,
                                                           true /*false*/ /*isOptimized*/));
 
@@ -4668,8 +4665,8 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
 
             llvm::Value* unmasked_value = wide_constant(0.0f);
             llvm::Value* args[]         = {
-                        unmasked_value, void_ptr(src_ptr), wide_index, int_mask,
-                        constant(4)  // not sure why the scale
+                unmasked_value, void_ptr(src_ptr), wide_index, int_mask,
+                constant(4)  // not sure why the scale
             };
             return builder().CreateCall(func_avx512_gather_ps,
                                         toArrayRef(args));
@@ -5604,9 +5601,9 @@ LLVM_Util::apply_return_to(llvm::Value* existing_mask)
     OSL_ASSERT(masked_function_context().return_count > 0);
 
     llvm::Value* loc_of_return_mask = masked_function_context().location_of_mask;
-    llvm::Value* rs_mask            = op_load_mask(loc_of_return_mask);
-    llvm::Value* result = builder().CreateSelect(rs_mask, existing_mask,
-                                                 rs_mask);
+    llvm::Value* rs_mask = op_load_mask(loc_of_return_mask);
+    llvm::Value* result  = builder().CreateSelect(rs_mask, existing_mask,
+                                                  rs_mask);
     return result;
 }
 

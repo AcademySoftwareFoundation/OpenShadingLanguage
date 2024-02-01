@@ -538,7 +538,7 @@ ColorSystem::lookup_blackbody_rgb(float T /*Kelvin*/) const
     constexpr int stride = sizeof(Color3) / sizeof(float);
     int sti              = stride * ti;
     Color3 rgb           = OIIO::lerp(
-                  // Have all gathers use the same indices by having different base registers
+        // Have all gathers use the same indices by having different base registers
         // for each of the 6 components
         Color3((blackbody_components + 0)[sti], (blackbody_components + 1)[sti],
                          (blackbody_components + 2)[sti]),

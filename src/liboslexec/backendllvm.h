@@ -304,20 +304,14 @@ public:
 
     /// Return the ShaderGlobals pointer.
     ///
-    llvm::Value* sg_ptr() const
-    {
-        return m_llvm_shaderglobals_ptr;
-    }
+    llvm::Value* sg_ptr() const { return m_llvm_shaderglobals_ptr; }
 
     llvm::Type* llvm_type_closure_component();
     llvm::Type* llvm_type_closure_component_ptr();
 
     /// Return the ShaderGlobals pointer cast as a void*.
     ///
-    llvm::Value* sg_void_ptr()
-    {
-        return ll.void_ptr(m_llvm_shaderglobals_ptr);
-    }
+    llvm::Value* sg_void_ptr() { return ll.void_ptr(m_llvm_shaderglobals_ptr); }
 
     /// Cast the pointer variable specified by val to a pointer to the
     /// basic type comprising `type`.
@@ -343,10 +337,7 @@ public:
 
     /// Return the group data pointer.
     ///
-    llvm::Value* groupdata_ptr() const
-    {
-        return m_llvm_groupdata_ptr;
-    }
+    llvm::Value* groupdata_ptr() const { return m_llvm_groupdata_ptr; }
 
     /// Return the group data pointer cast as a void*.
     ///
@@ -364,22 +355,13 @@ public:
                                      TypeDesc type = TypeDesc::UNKNOWN);
 
     /// Return the userdata base pointer.
-    llvm::Value* userdata_base_ptr() const
-    {
-        return m_llvm_userdata_base_ptr;
-    }
+    llvm::Value* userdata_base_ptr() const { return m_llvm_userdata_base_ptr; }
 
     /// Return the output base pointer.
-    llvm::Value* output_base_ptr() const
-    {
-        return m_llvm_output_base_ptr;
-    }
+    llvm::Value* output_base_ptr() const { return m_llvm_output_base_ptr; }
 
     /// Return the shade index
-    llvm::Value* shadeindex() const
-    {
-        return m_llvm_shadeindex;
-    }
+    llvm::Value* shadeindex() const { return m_llvm_shadeindex; }
 
     // For a symloc, compute the llvm::Value of the pointer to its true,
     // offset location from the base pointer for shade index `sindex`
@@ -507,10 +489,7 @@ public:
 
     /// Return the basic block of the exit for the whole instance.
     ///
-    bool llvm_has_exit_instance_block() const
-    {
-        return m_exit_instance_block;
-    }
+    bool llvm_has_exit_instance_block() const { return m_exit_instance_block; }
 
     /// Return the basic block of the exit for the whole instance.
     ///
@@ -531,10 +510,7 @@ public:
     /// Print debugging line for the op
     void llvm_generate_debug_op_printf(const Opcode& op);
 
-    llvm::Function* layer_func() const
-    {
-        return ll.current_function();
-    }
+    llvm::Function* layer_func() const { return ll.current_function(); }
 
     /// Call this when JITing a texture-like call, to track how many.
     void generated_texture_call(bool handle)
@@ -544,10 +520,7 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
-    void increment_useparam_ops()
-    {
-        shadingsys().m_stat_useparam_ops++;
-    }
+    void increment_useparam_ops() { shadingsys().m_stat_useparam_ops++; }
 
     /// Return the mapping from symbol names to GlobalVariables.
     std::map<std::string, llvm::GlobalVariable*>& get_const_map()
@@ -556,16 +529,10 @@ public:
     }
 
     /// Return whether or not we are compiling for an OptiX-based renderer.
-    bool use_optix()
-    {
-        return m_use_optix;
-    }
+    bool use_optix() { return m_use_optix; }
 
     /// Return if we should compile against free function versions of Renderer Service.
-    bool use_rs_bitcode()
-    {
-        return m_use_rs_bitcode;
-    }
+    bool use_rs_bitcode() { return m_use_rs_bitcode; }
 
     /// Return the userdata index for the given Symbol.  Return -1 if the Symbol
     /// is not an input parameter or is constant and therefore doesn't have an

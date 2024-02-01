@@ -4270,7 +4270,7 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* wide_const_fone_value  = rop.ll.wide_constant(1.0f);
     llvm::Value* const_zero_value       = rop.ll.constant(0);
     llvm::Value* wrap_default_value     = rop.ll.constant(
-            static_cast<int>(Tex::Wrap::Default));
+        static_cast<int>(Tex::Wrap::Default));
 
     llvm::Value* sblur  = wide_const_fzero_value;
     llvm::Value* tblur  = wide_const_fzero_value;
@@ -4289,7 +4289,7 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* twrap        = wrap_default_value;
     llvm::Value* rwrap        = wrap_default_value;
     llvm::Value* mipmode      = rop.ll.constant(
-             static_cast<int>(Tex::MipMode::Default));
+        static_cast<int>(Tex::MipMode::Default));
     llvm::Value* interpmode = rop.ll.constant(
         static_cast<int>(Tex::InterpMode::SmartBicubic));
     llvm::Value* anisotropic         = rop.ll.constant(32);
@@ -7093,7 +7093,7 @@ LLVMGEN(llvm_gen_spline)
                                                                leadLane);
             args[splineNameArgumentIndex]  = scalar_splineName;
             lanesMatchingSplineName        = rop.ll.op_lanes_that_match_masked(
-                       scalar_splineName, splineNameVal, remainingMask);
+                scalar_splineName, splineNameVal, remainingMask);
 
             OSL_ASSERT(lanesMatchingSplineName);
             //rop.llvm_print_mask("lanesMatchingSplineName", lanesMatchingSplineName);
@@ -7339,7 +7339,7 @@ LLVMGEN(llvm_gen_closure)
 
             llvm::Value* dest_base = rop.ll.offset_ptr(mem_void_ptr, p.offset);
             llvm::Type* dest_type  = rop.ll.llvm_type(
-                 static_cast<const TypeSpec&>(p.type).simpletype());
+                static_cast<const TypeSpec&>(p.type).simpletype());
             dest_base = rop.ll.ptr_to_cast(dest_base, dest_type);
 
             if (num_elements > 1) {

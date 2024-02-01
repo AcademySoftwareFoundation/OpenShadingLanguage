@@ -74,8 +74,8 @@ __OSL_MASKED_OP3(dict_find, Wi, Wi, Ws)(void* bsg_, void* wout, void* wnodeID,
         int nodeID    = wNID[lane];
         ustring query = wQ[lane];
         wOut[lane]    = bsg->uniform.context->dict_find(
-               nullptr /*causes errors be reported through ShadingContext*/,
-               nodeID, query);
+            nullptr /*causes errors be reported through ShadingContext*/,
+            nodeID, query);
     });
 }
 
@@ -109,8 +109,8 @@ __OSL_MASKED_OP3(dict_find, Wi, Ws, Ws)(void* bsg_, void* wout,
         ustring dictionary = wD[lane];
         ustring query      = wQ[lane];
         wOut[lane]         = bsg->uniform.context->dict_find(
-                    nullptr /*causes errors be reported through ShadingContext*/,
-                    dictionary, query);
+            nullptr /*causes errors be reported through ShadingContext*/,
+            dictionary, query);
     });
 }
 

@@ -10,8 +10,6 @@
 
 #include "optix_raytracer.h"
 #include "rend_lib.h"
-#include "render_params.h"
-#include "util.h"
 #include "vec_math.h"
 
 #include "../background.h"
@@ -167,14 +165,16 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         ShaderGlobalsType sg;
         sg.shaderID = -1;
 
-        Payload payload;
-        payload.ptr.ptr = (uint64_t)&sg;
-
         uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
                                    *(unsigned int*)&hit_idx,
                                    *(unsigned int*)&hit_kind };
         sg.tracedata           = (void*)&trace_data[0];
 
+        Payload payload;
+        payload.sg_ptr = (uint64_t)&sg;
+
+        uint32_t p0 = payload.raw[0];
+        uint32_t p1 = payload.raw[1];
         uint32_t p2 = __float_as_uint(r.radius);
         uint32_t p3 = __float_as_uint(r.spread);
         uint32_t p4 = r.raytype;
@@ -188,11 +188,11 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                    0,                              // ray time
                    OptixVisibilityMask(1),         // visibility mask
                    OPTIX_RAY_FLAG_DISABLE_ANYHIT,  // ray flags
-                   RAY_TYPE_RADIANCE,              // SBT offset
-                   RAY_TYPE_COUNT,                 // SBT stride
-                   RAY_TYPE_RADIANCE,              // miss SBT offset
-                   payload.ab.a,
-                   payload.ab.b,
+                   0,                              // SBT offset
+                   1,                              // SBT stride
+                   0,                              // miss SBT offset
+                   p0,
+                   p1,
                    p2,
                    p3,
                    p4
@@ -314,7 +314,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                 light_sg.shaderID = -1;
 
                 Payload payload;
-                payload.ptr.ptr = (uint64_t)&light_sg;
+                payload.sg_ptr = (uint64_t)&light_sg;
 
                 uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
                     *(unsigned int*)&hit_idx,
@@ -332,11 +332,11 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                            0,                               // ray time
                            OptixVisibilityMask(1),          // visibility mask
                            OPTIX_RAY_FLAG_DISABLE_ANYHIT,   // ray flags
-                           RAY_TYPE_RADIANCE,               // SBT offset
-                           RAY_TYPE_COUNT,                  // SBT stride
-                           RAY_TYPE_RADIANCE,               // miss SBT offset
-                           payload.ab.a,
-                           payload.ab.b);
+                           0,                               // SBT offset
+                           1,                               // SBT stride
+                           0,                               // miss SBT offset
+                           payload.raw[0],
+                           payload.raw[1]);
 
                 const uint32_t prim_idx = trace_data[0];
                 if (prim_idx == UINT32_MAX) {
@@ -362,7 +362,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                 light_sg.shaderID = -1;
 
                 Payload payload;
-                payload.ptr.ptr = (uint64_t)&light_sg;
+                payload.sg_ptr = (uint64_t)&light_sg;
 
                 uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
                     *(unsigned int*)&hit_idx,
@@ -381,11 +381,11 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                            0,                               // ray time
                            OptixVisibilityMask(1),          // visibility mask
                            OPTIX_RAY_FLAG_DISABLE_ANYHIT,   // ray flags
-                           RAY_TYPE_RADIANCE,               // SBT offset
-                           RAY_TYPE_COUNT,                  // SBT stride
-                           RAY_TYPE_RADIANCE,               // miss SBT offset
-                           payload.ab.a,
-                           payload.ab.b);
+                           0,                               // SBT offset
+                           1,                               // SBT stride
+                           0,                               // miss SBT offset
+                           payload.raw[0],
+                           payload.raw[1]);
 
                 // TODO: Make sure that the primitive indexing is correct
                 const uint32_t prim_idx = trace_data[0];
@@ -579,7 +579,7 @@ __closesthit__deferred()
 {
     Payload payload;
     payload.get();
-    ShaderGlobalsType* sg_ptr = (ShaderGlobalsType*)payload.ptr.ptr;
+    ShaderGlobalsType* sg_ptr = (ShaderGlobalsType*)payload.sg_ptr;
     uint32_t* trace_data      = (uint32_t*)sg_ptr->tracedata;
     const float t_hit         = optixGetRayTmax();
     trace_data[0]             = optixGetPrimitiveIndex();

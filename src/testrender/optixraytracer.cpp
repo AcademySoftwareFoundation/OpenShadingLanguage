@@ -713,21 +713,21 @@ OptixRaytracer::create_sbt(State& state)
 
     // Miss
     {
-        GenericRecord miss_records[RAY_TYPE_COUNT];
+        GenericRecord miss_record;
         CUdeviceptr d_miss_record;
 
-        OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_group, &miss_records[0]));
+        OPTIX_CHECK(optixSbtRecordPackHeader(state.miss_group, &miss_record));
 
         CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_miss_record),
-                              RAY_TYPE_COUNT * sizeof(GenericRecord)));
+                              sizeof(GenericRecord)));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_miss_record),
-                              &miss_records[0], RAY_TYPE_COUNT * sizeof(GenericRecord),
+                              &miss_record, sizeof(GenericRecord),
                               cudaMemcpyHostToDevice));
         device_ptrs.push_back(reinterpret_cast<void*>(d_miss_record));
 
         m_optix_sbt.missRecordBase          = d_miss_record;
         m_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
-        m_optix_sbt.missRecordCount         = RAY_TYPE_COUNT;
+        m_optix_sbt.missRecordCount         = 1;
     }
 
     // Hitgroups
@@ -735,7 +735,7 @@ OptixRaytracer::create_sbt(State& state)
         const bool have_quads    = scene.quads.size() > 0;
         const bool have_spheres  = scene.spheres.size() > 0;
         const int num_geom_types = have_quads + have_spheres;
-        const int num_hit_groups = RAY_TYPE_COUNT * num_geom_types;
+        const int num_hit_groups = num_geom_types;
 
         std::vector<GenericRecord> hitgroup_records;
         CUdeviceptr d_hitgroup_records;

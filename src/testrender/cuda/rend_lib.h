@@ -88,6 +88,7 @@ struct ShadingContextCUDA {
     __device__ void* trace_options_ptr() { return m_traceopt; }
 };
 
+
 namespace OSL_CUDA {
 struct ShaderGlobals {
     float3 P, dPdx, dPdy;
@@ -120,96 +121,5 @@ struct ShaderGlobals {
     int shaderID;
 };
 }
-
-
-enum RayType {
-    CAMERA       = 1,
-    SHADOW       = 2,
-    REFLECTION   = 4,
-    REFRACTION   = 8,
-    DIFFUSE      = 16,
-    GLOSSY       = 32,
-    SUBSURFACE   = 64,
-    DISPLACEMENT = 128
-};
-
-
-struct t_ab {
-    uint32_t a, b;
-};
-
-
-struct t_ptr {
-    uint64_t ptr;
-};
-
-
-struct Payload {
-    union {
-        t_ab ab;
-        t_ptr ptr;
-    };
-
-    float radius;
-    float spread;
-    OSL::Ray::RayType raytype;
-
-    __forceinline__ __device__ void set()
-    {
-        optixSetPayload_0(ab.a);
-        optixSetPayload_1(ab.b);
-        optixSetPayload_2(__float_as_uint(radius));
-        optixSetPayload_3(__float_as_uint(spread));
-    }
-
-    __forceinline__ __device__ void get()
-    {
-        ab.a    = optixGetPayload_0();
-        ab.b    = optixGetPayload_1();
-        radius  = __uint_as_float(optixGetPayload_2());
-        spread  = __uint_as_float(optixGetPayload_3());
-        raytype = (OSL::Ray::RayType) optixGetPayload_4();
-    }
-};
-
-
-#if 0
-// Closures supported by the OSL sample renderer.  This list is mostly aspirational.
-enum class ClosureIDs : int32_t {
-    COMPONENT_BASE_ID = 0, MUL = -1, ADD = -2,
-    EMISSION_ID = 1,
-    BACKGROUND_ID,
-    DIFFUSE_ID,
-    OREN_NAYAR_ID,
-    TRANSLUCENT_ID,
-    PHONG_ID,
-    WARD_ID,
-    MICROFACET_ID,
-    REFLECTION_ID,
-    FRESNEL_REFLECTION_ID,
-    REFRACTION_ID,
-    TRANSPARENT_ID,
-    DEBUG_ID,
-    HOLDOUT_ID,
-};
-
-enum class MyClosureIDs : int32_t {
-    COMPONENT_BASE_ID = 0, MUL = -1, ADD = -2,
-    EMISSION_ID = 1,
-    BACKGROUND_ID,
-    DIFFUSE_ID,
-    OREN_NAYAR_ID,
-    TRANSLUCENT_ID,
-    PHONG_ID,
-    WARD_ID,
-    MICROFACET_ID,
-    REFLECTION_ID,
-    FRESNEL_REFLECTION_ID,
-    REFRACTION_ID,
-    TRANSPARENT_ID,
-    DEBUG_ID,
-    HOLDOUT_ID,
-};
-#endif
 
 }  // anonymous namespace

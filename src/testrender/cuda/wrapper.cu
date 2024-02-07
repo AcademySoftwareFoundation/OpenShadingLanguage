@@ -10,8 +10,8 @@
 
 #include <OSL/oslclosure.h>
 
+#include "optix_raytracer.h"
 #include "rend_lib.h"
-#include "util.h"
 #include "vec_math.h"
 
 #include "../render_params.h"
@@ -69,7 +69,7 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
     }
 
     // NB: These variables are not used in the current iteration of the sample
-    sg.raytype        = CAMERA;
+    sg.raytype        = OSL::Ray::CAMERA;
     sg.flipHandedness = 0;
 }
 

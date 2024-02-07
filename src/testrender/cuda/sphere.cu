@@ -6,8 +6,8 @@
 #include <optix.h>
 
 
+#include "optix_raytracer.h"
 #include "rend_lib.h"
-#include "render_params.h"
 #include "vec_math.h"
 #include "wrapper.h"
 
@@ -66,7 +66,7 @@ __intersection__sphere()
     Payload payload;
     payload.get();
 
-    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.ptr.ptr;
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.sg_ptr;
     uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
     const int hit_idx               = ((int*)trace_data)[2];
     const int hit_kind              = ((int*)trace_data)[3];

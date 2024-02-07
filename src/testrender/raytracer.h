@@ -41,7 +41,6 @@ ortho(const Vec3& n, Vec3& x, Vec3& y)
 }
 
 
-// Note: not used in OptiX mode
 struct Ray {
     enum RayType {
         CAMERA       = 1,

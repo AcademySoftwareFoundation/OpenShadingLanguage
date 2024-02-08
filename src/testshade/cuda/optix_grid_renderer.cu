@@ -130,7 +130,7 @@ __raygen__()
     sg.backfacing  = 0;
 
     // NB: These variables are not used in the current iteration of the sample
-    sg.raytype        = CAMERA;
+    sg.raytype        = OSL::Ray::CAMERA;
     sg.flipHandedness = 0;
 
     sg.shader2common = reinterpret_cast<void*>(render_params.shader2common);

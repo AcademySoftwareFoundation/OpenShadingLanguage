@@ -442,14 +442,13 @@ rs_get_interpolated_test(void* val)
 }
 
 OSL_RSOP bool
-rs_get_interpolated_generic(void* sg_, OSL::ustringhash_pod _name,
+rs_get_interpolated_generic(OSL::OpaqueExecContextPtr ec, OSL::ustringhash_pod _name,
                             OSL::TypeDesc_pod _type, bool derivatives,
                             void* val)
 {
+    auto sg                  = OSL::get_rs<OSL::ShaderGlobals>(ec);
     auto name                = OSL::ustringhash_from(_name);
     const OSL::TypeDesc type = OSL::TypeDesc_from(_type);
-
-    OSL::ShaderGlobals* sg = (OSL::ShaderGlobals*)sg_;
     return sg->renderer->get_userdata(derivatives, name, type, sg, val);
 }
 

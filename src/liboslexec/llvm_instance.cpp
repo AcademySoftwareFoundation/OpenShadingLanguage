@@ -311,6 +311,9 @@ BackendLLVM::llvm_type_groupdata()
 
     // Now add the array that tells which userdata have been initialized,
     // and the space for the userdata values.
+    // The initialized array can contains 3 different values. 0 means the value
+    // is not initialized, 1 means the value can not be found, and 2 means the
+    // value has been found and cached in the userdata values.
     int nuserdata = (int)group().m_userdata_names.size();
     if (nuserdata) {
         if (llvm_debug() >= 2)
@@ -645,6 +648,9 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
             if (!spec.function_name().empty()) {
                 std::vector<llvm::Value*> args;
                 args.reserve(spec.arg_count() + 1);
+                // Pushed the arguments of the function stored in the
+                // InterpolatedGetterSpec. Each value can either be the enum
+                // InterpolatedSpecBuiltinArg or a constant value.
                 for (size_t index = 0; index < spec.arg_count(); index++) {
                     const auto& arg = spec.arg(index);
                     if (arg.is_holding<InterpolatedSpecBuiltinArg>()) {
@@ -670,6 +676,7 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                         append_constant_arg(*this, arg, args);
                     }
                 }
+                // Push userdata data ptr
                 args.push_back(
                     ll.void_ptr(groupdata_field_ptr(2 + userdata_index)));
                 // Start of the osl_bind_interpolated_param instructions

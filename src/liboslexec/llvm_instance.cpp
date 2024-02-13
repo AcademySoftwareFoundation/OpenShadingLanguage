@@ -737,6 +737,8 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
                 // endif
                 ll.op_branch(after_block);
                 got_userdata = ll.op_bool_to_int(cond);
+            } else {
+                got_userdata = ll.constant(0);
             }
         } else {
             // No pre-placement: fall back to call to the renderer callback.

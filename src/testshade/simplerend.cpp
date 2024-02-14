@@ -741,12 +741,11 @@ SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
     } else if (const OIIO::ParamValue* p = userdata.find_pv(param_name, type)) {
         if (p->type().basetype == OIIO::TypeDesc::INT) {
             if (p->type().aggregate == 1) {
-                spec.set(rs_get_attribute_constant_int,
-                         ((int*)p->data())[0]);
+                spec.set(rs_get_attribute_constant_int, ((int*)p->data())[0]);
                 return;
             } else if (p->type().aggregate == 2) {
-                spec.set(rs_get_attribute_constant_int2,
-                         ((int*)p->data())[0], ((int*)p->data())[1]);
+                spec.set(rs_get_attribute_constant_int2, ((int*)p->data())[0],
+                         ((int*)p->data())[1]);
                 return;
             } else if (p->type().aggregate == 3) {
                 spec.set(rs_get_attribute_constant_int3,
@@ -754,9 +753,9 @@ SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
                          ((int*)p->data())[2]);
                 return;
             } else if (p->type().aggregate == 4) {
-                spec.set(rs_get_attribute_constant_int4,
-                         ((int*)p->data())[0], ((int*)p->data())[1],
-                         ((int*)p->data())[2], ((int*)p->data())[3]);
+                spec.set(rs_get_attribute_constant_int4, ((int*)p->data())[0],
+                         ((int*)p->data())[1], ((int*)p->data())[2],
+                         ((int*)p->data())[3]);
                 return;
             }
         } else if (p->type().basetype == OIIO::TypeDesc::FLOAT) {

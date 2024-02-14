@@ -742,45 +742,45 @@ SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
         if (p->type().basetype == OIIO::TypeDesc::INT) {
             if (p->type().aggregate == 1) {
                 spec.set(rs_get_attribute_constant_int,
-                            ((int*)p->data())[0]);
+                         ((int*)p->data())[0]);
                 return;
             } else if (p->type().aggregate == 2) {
                 spec.set(rs_get_attribute_constant_int2,
-                            ((int*)p->data())[0], ((int*)p->data())[1]);
+                         ((int*)p->data())[0], ((int*)p->data())[1]);
                 return;
             } else if (p->type().aggregate == 3) {
                 spec.set(rs_get_attribute_constant_int3,
-                            ((int*)p->data())[0], ((int*)p->data())[1],
-                            ((int*)p->data())[2]);
+                         ((int*)p->data())[0], ((int*)p->data())[1],
+                         ((int*)p->data())[2]);
                 return;
             } else if (p->type().aggregate == 4) {
                 spec.set(rs_get_attribute_constant_int4,
-                            ((int*)p->data())[0], ((int*)p->data())[1],
-                            ((int*)p->data())[2], ((int*)p->data())[3]);
+                         ((int*)p->data())[0], ((int*)p->data())[1],
+                         ((int*)p->data())[2], ((int*)p->data())[3]);
                 return;
             }
         } else if (p->type().basetype == OIIO::TypeDesc::FLOAT) {
             if (p->type().aggregate == 1) {
                 spec.set(rs_get_attribute_constant_float,
-                            ((float*)p->data())[0],
-                            InterpolatedSpecBuiltinArg::Derivatives);
+                         ((float*)p->data())[0],
+                         InterpolatedSpecBuiltinArg::Derivatives);
                 return;
             } else if (p->type().aggregate == 2) {
                 spec.set(rs_get_attribute_constant_float2,
-                            ((float*)p->data())[0], ((float*)p->data())[1],
-                            InterpolatedSpecBuiltinArg::Derivatives);
+                         ((float*)p->data())[0], ((float*)p->data())[1],
+                         InterpolatedSpecBuiltinArg::Derivatives);
                 return;
             } else if (p->type().aggregate == 3) {
                 spec.set(rs_get_attribute_constant_float3,
-                            ((float*)p->data())[0], ((float*)p->data())[1],
-                            ((float*)p->data())[2],
-                            InterpolatedSpecBuiltinArg::Derivatives);
+                         ((float*)p->data())[0], ((float*)p->data())[1],
+                         ((float*)p->data())[2],
+                         InterpolatedSpecBuiltinArg::Derivatives);
                 return;
             } else if (p->type().aggregate == 4) {
                 spec.set(rs_get_attribute_constant_float4,
-                            ((float*)p->data())[0], ((float*)p->data())[1],
-                            ((float*)p->data())[2], ((float*)p->data())[3],
-                            InterpolatedSpecBuiltinArg::Derivatives);
+                         ((float*)p->data())[0], ((float*)p->data())[1],
+                         ((float*)p->data())[2], ((float*)p->data())[3],
+                         InterpolatedSpecBuiltinArg::Derivatives);
                 return;
             }
         }

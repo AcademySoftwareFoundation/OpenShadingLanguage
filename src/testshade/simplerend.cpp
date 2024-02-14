@@ -748,9 +748,8 @@ SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
                          ((int*)p->data())[1]);
                 return;
             } else if (p->type().aggregate == 3) {
-                spec.set(rs_get_attribute_constant_int3,
-                         ((int*)p->data())[0], ((int*)p->data())[1],
-                         ((int*)p->data())[2]);
+                spec.set(rs_get_attribute_constant_int3, ((int*)p->data())[0],
+                         ((int*)p->data())[1], ((int*)p->data())[2]);
                 return;
             } else if (p->type().aggregate == 4) {
                 spec.set(rs_get_attribute_constant_int4, ((int*)p->data())[0],

@@ -9,7 +9,7 @@
 [![Build Status](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/workflows/CI/badge.svg)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/actions)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/LICENSE.md)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3061/badge)](https://bestpractices.coreinfrastructure.org/projects/3061)
-
+[![Documentation Status](https://readthedocs.org/projects/open-shading-language/badge/?version=main)](https://open-shading-language.readthedocs.io/en/main/?badge=main)
 
 
 Introduction
@@ -452,7 +452,7 @@ The OSL language specification can be found at
 distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
 installed binary distribution.
 
-[Experimental OSL Documentation on ReadTheDocs](https://openshadinglanguage.readthedocs.io/)
+[Experimental OSL Documentation on ReadTheDocs](https://open-shading-language.readthedocs.io/)
 This will be the future documentation. It's probably as complete as the PDF,
 but it needs some proofreading, so the PDF is still considered the
 authoritative source for now. But some time soon, the old PDF specification
@@ -461,7 +461,7 @@ this online documentation.
 <!-- is the best place to start if you are interested in how to use OSL,
 its APIs. -->
 There is also a [PDF
-version](https://readthedocs.org/projects/openshadinglanguage/downloads/pdf/latest/).
+version](https://readthedocs.org/projects/open-shading-language/downloads/pdf/latest/).
 
 For those interested in learning to program shaders in OSL, there is the
 [Siggraph 2022 Educator's Forum](https://dl.acm.org/doi/proceedings/10.1145/3532724)

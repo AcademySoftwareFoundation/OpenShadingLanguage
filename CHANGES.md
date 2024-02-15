@@ -237,7 +237,7 @@ Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
 ### 📚  Documentation
 
 * First stab at ReadTheDocs -- new [Experimental OSL Documentation on
-  ReadTheDocs](https://openshadinglanguage.readthedocs.io/)
+  ReadTheDocs](https://open-shading-language.readthedocs.io/)
   is still a little rough, but eventually will be our primary documentation.
   [#1736](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1736)
 * `doc/RELEASING.md` documents our release process and versioning policies.

@@ -4772,3 +4772,12 @@ osl_bind_interpolated_param(void* sg_, ustringhash_pod name_, long long type,
     }
     return 0;  // no such user data
 }
+
+
+
+OSL_SHADEOP void
+osl_incr_get_userdata_calls(void* sg_)
+{
+    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+    sg->context->incr_get_userdata_calls();
+}

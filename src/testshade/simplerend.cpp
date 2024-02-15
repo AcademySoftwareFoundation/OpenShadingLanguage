@@ -258,6 +258,8 @@ SimpleRenderer::supports(string_view feature) const
 {
     if (m_use_rs_bitcode && feature == "build_attribute_getter")
         return true;
+    else if (m_use_rs_bitcode && feature == "build_interpolated_getter")
+        return true;
     return false;
 }
 
@@ -672,6 +674,118 @@ SimpleRenderer::build_attribute_getter(
         }
     }
 }
+
+
+void
+SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
+                                          const ustring& param_name,
+                                          TypeDesc type, bool derivatives,
+                                          InterpolatedGetterSpec& spec)
+{
+    static const OIIO::ustring rs_get_interpolated_s("rs_get_interpolated_s");
+    static const OIIO::ustring rs_get_interpolated_t("rs_get_interpolated_t");
+    static const OIIO::ustring rs_get_interpolated_red(
+        "rs_get_interpolated_red");
+    static const OIIO::ustring rs_get_interpolated_green(
+        "rs_get_interpolated_green");
+    static const OIIO::ustring rs_get_interpolated_blue(
+        "rs_get_interpolated_blue");
+    static const OIIO::ustring rs_get_interpolated_test(
+        "rs_get_interpolated_test");
+
+    static const OIIO::ustring rs_get_attribute_constant_int(
+        "rs_get_attribute_constant_int");
+    static const OIIO::ustring rs_get_attribute_constant_int2(
+        "rs_get_attribute_constant_int2");
+    static const OIIO::ustring rs_get_attribute_constant_int3(
+        "rs_get_attribute_constant_int3");
+    static const OIIO::ustring rs_get_attribute_constant_int4(
+        "rs_get_attribute_constant_int4");
+
+    static const OIIO::ustring rs_get_attribute_constant_float(
+        "rs_get_attribute_constant_float");
+    static const OIIO::ustring rs_get_attribute_constant_float2(
+        "rs_get_attribute_constant_float2");
+    static const OIIO::ustring rs_get_attribute_constant_float3(
+        "rs_get_attribute_constant_float3");
+    static const OIIO::ustring rs_get_attribute_constant_float4(
+        "rs_get_attribute_constant_float4");
+
+    if (param_name == RS::Hashes::s && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_s,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::t
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_t,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::red
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_red,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::green
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_green,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::blue
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_blue,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
+                 InterpolatedSpecBuiltinArg::Derivatives);
+    } else if (param_name == RS::Hashes::test
+               && type == OIIO::TypeDesc::TypeFloat) {
+        spec.set(rs_get_interpolated_test);
+    } else if (const OIIO::ParamValue* p = userdata.find_pv(param_name, type)) {
+        if (p->type().basetype == OIIO::TypeDesc::INT) {
+            if (p->type().aggregate == 1) {
+                spec.set(rs_get_attribute_constant_int, ((int*)p->data())[0]);
+                return;
+            } else if (p->type().aggregate == 2) {
+                spec.set(rs_get_attribute_constant_int2, ((int*)p->data())[0],
+                         ((int*)p->data())[1]);
+                return;
+            } else if (p->type().aggregate == 3) {
+                spec.set(rs_get_attribute_constant_int3, ((int*)p->data())[0],
+                         ((int*)p->data())[1], ((int*)p->data())[2]);
+                return;
+            } else if (p->type().aggregate == 4) {
+                spec.set(rs_get_attribute_constant_int4, ((int*)p->data())[0],
+                         ((int*)p->data())[1], ((int*)p->data())[2],
+                         ((int*)p->data())[3]);
+                return;
+            }
+        } else if (p->type().basetype == OIIO::TypeDesc::FLOAT) {
+            if (p->type().aggregate == 1) {
+                spec.set(rs_get_attribute_constant_float,
+                         ((float*)p->data())[0],
+                         InterpolatedSpecBuiltinArg::Derivatives);
+                return;
+            } else if (p->type().aggregate == 2) {
+                spec.set(rs_get_attribute_constant_float2,
+                         ((float*)p->data())[0], ((float*)p->data())[1],
+                         InterpolatedSpecBuiltinArg::Derivatives);
+                return;
+            } else if (p->type().aggregate == 3) {
+                spec.set(rs_get_attribute_constant_float3,
+                         ((float*)p->data())[0], ((float*)p->data())[1],
+                         ((float*)p->data())[2],
+                         InterpolatedSpecBuiltinArg::Derivatives);
+                return;
+            } else if (p->type().aggregate == 4) {
+                spec.set(rs_get_attribute_constant_float4,
+                         ((float*)p->data())[0], ((float*)p->data())[1],
+                         ((float*)p->data())[2], ((float*)p->data())[3],
+                         InterpolatedSpecBuiltinArg::Derivatives);
+                return;
+            }
+        }
+    }
+}
+
+
 
 bool
 SimpleRenderer::trace(TraceOpt& options, ShaderGlobals* sg, const OSL::Vec3& P,

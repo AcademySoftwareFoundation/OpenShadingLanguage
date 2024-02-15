@@ -158,6 +158,16 @@ RendererServices::get_array_attribute(ShaderGlobals* sg, bool derivatives,
 
 
 
+void
+RendererServices::build_interpolated_getter(const ShaderGroup& group,
+                                            const ustring& param_name,
+                                            TypeDesc type, bool derivatives,
+                                            InterpolatedGetterSpec& spec)
+{
+}
+
+
+
 bool
 RendererServices::get_userdata(bool derivatives, ustringhash name,
                                TypeDesc type, ShaderGlobals* sg, void* val)

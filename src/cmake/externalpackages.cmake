@@ -199,6 +199,7 @@ endif ()
 
 
 # CUDA setup
+option (CUDA_PREFER_STATIC_LIBS "Prefer static CUDA libraries" OFF)
 if (OSL_USE_OPTIX)
     if (USE_LLVM_BITCODE)
         if (NOT CUDA_TOOLKIT_ROOT_DIR AND NOT $ENV{CUDA_TOOLKIT_ROOT_DIR} STREQUAL "")
@@ -225,20 +226,25 @@ if (OSL_USE_OPTIX)
 
         set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
 
-        find_library(cuda_lib NAMES cudart
-                    PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"
-                    REQUIRED)
-        set(CUDA_LIBRARIES ${cuda_lib})
-
-        # testrender & testshade need libnvrtc
-        if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "10.0")
-            find_library(nvrtc_lib NAMES nvrtc
-                        PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"
-                        REQUIRED)
-            set(CUDA_LIBRARIES ${CUDA_LIBRARIES} ${nvrtc_lib})
-
-            set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl)
-        endif()
+        # If the user wants, try to use static libs here to putting static lib
+        # suffixes earlier in the suffix list. Don't forget to restore after
+        # so that this only applies to these library searches right here.
+        set (save_lib_path ${CMAKE_FIND_LIBRARY_SUFFIXES})
+        if (CUDA_PREFER_STATIC_LIBS)
+            set (CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+            find_library(cudart_lib REQUIRED
+                         NAMES cudart_static cudart
+                         PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+        else ()
+            find_library(cudart_lib REQUIRED
+                         NAMES cudart
+                         PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+        endif ()
+        # Is it really a good idea to completely reset CUDA_LIBRARIES here?
+        set(CUDA_LIBRARIES ${cudart_lib})
+        set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl rt)
+        set (CMAKE_FIND_LIBRARY_SUFFIXES ${save_lib_path})
+        unset (save_lib_path)
     endif()
 
     # OptiX setup

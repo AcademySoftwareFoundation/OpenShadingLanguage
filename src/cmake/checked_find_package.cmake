@@ -66,6 +66,9 @@ endfunction ()
 #     file from the package before using a FindPackage.cmake module.
 #   * Optional DEBUG turns on extra debugging information related to how
 #     this package is found.
+#   * If either the optional PREFER_STATIC_LIBS argument to this macro, *or*
+#     CMake variable <Pkgname>_PREFER_STATIC_LIBS is true, then try to prefer
+#     static versions of any libraries found.
 #
 # N.B. This needs to be a macro, not a function, because the find modules
 # will set(blah val PARENT_SCOPE) and we need that to be the global scope,
@@ -73,7 +76,7 @@ endfunction ()
 macro (checked_find_package pkgname)
     cmake_parse_arguments(_pkg   # prefix
         # noValueKeywords:
-        "REQUIRED;PREFER_CONFIG;DEBUG"
+        "REQUIRED;PREFER_CONFIG;DEBUG;PREFER_STATIC_LIBS"
         # singleValueKeywords:
         "ENABLE;ISDEPOF;VERSION_MIN;VERSION_MAX;RECOMMEND_MIN;RECOMMEND_MIN_REASON"
         # multiValueKeywords:
@@ -115,6 +118,10 @@ macro (checked_find_package pkgname)
     endif ()
     set (_config_status "")
     if (_enable OR _pkg_REQUIRED)
+        set (save_lib_path ${CMAKE_FIND_LIBRARY_SUFFIXES})
+        if (_pkg_PREFER_STATIC_LIBS OR ${pkgname}_PREFER_STATIC_LIBS)
+            set (CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+        endif ()
         if (${pkgname}_FOUND OR ${pkgname_upper}_FOUND)
             # was already found
         elseif (_pkg_PREFER_CONFIG OR ALWAYS_PREFER_CONFIG)
@@ -126,6 +133,8 @@ macro (checked_find_package pkgname)
         if (NOT (${pkgname}_FOUND OR ${pkgname_upper}_FOUND))
             find_package (${pkgname} ${_pkg_UNPARSED_ARGUMENTS})
         endif()
+        set (CMAKE_FIND_LIBRARY_SUFFIXES ${save_lib_path})
+        unset (save_lib_path)
         if ((${pkgname}_FOUND OR ${pkgname_upper}_FOUND)
               AND ${pkgname}_VERSION
               AND (_pkg_VERSION_MIN OR _pkg_VERSION_MAX))

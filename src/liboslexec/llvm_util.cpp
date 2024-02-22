@@ -45,7 +45,11 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ErrorOr.h>
 #include <llvm/Support/FileSystem.h>
-#include <llvm/Support/Host.h>
+#if OSL_LLVM_VERSION < 160
+#    include <llvm/Support/Host.h>
+#else
+#    include <llvm/TargetParser/Host.h>
+#endif
 #include <llvm/Support/raw_os_ostream.h>
 #if OSL_LLVM_VERSION < 140
 #    include <llvm/Support/TargetRegistry.h>

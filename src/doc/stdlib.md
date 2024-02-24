@@ -127,9 +127,10 @@ the computations are performed component-by-component (separately for `x`,
 
   : Various rounding methods: `floor` returns the largest integer less than or
     equal to $x$; `ceil` returns the smallest integer greater than or equal to
-    $x$; `round` returns the closest integer to $x$, in either direction; and
-    `trunc` returns the integral part of $x$ (equivalent to `floor` if $x>0$
-    and `ceil` if $x<0$).
+    $x$; `round` returns the closest integer to $x$, in either direction
+    (rounding away from 0 in cases where $x$ is exactly half way between
+    integers); and `trunc` returns the integral part of $x$ (equivalent to
+    `floor` if $x>0$ and `ceil` if $x<0$).
 
 
 *`type`* **`fmod`** (*`type`* `a`, *`type`* `b`) <br> *`type`* **`mod`** (*`type`* `a`, *`type`* `b`)

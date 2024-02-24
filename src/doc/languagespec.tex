@@ -3078,7 +3078,8 @@ Returns 1 if $x>0$, -1 if $x<0$, 0 if $x=0$.
 Various rounding methods: {\cf floor} returns the largest integer less
 than or equal to $x$; {\cf ceil} returns the smallest integer greater than
 or equal to $x$; {\cf round} returns the closest integer to $x$, in
-either direction; and {\cf trunc} returns the integral part of $x$
+either direction (rounding away from 0 in cases where $x$ is exactly
+half way between integers); and {\cf trunc} returns the integral part of $x$
 (equivalent to {\cf floor} if $x>0$ and {\cf ceil} if $x<0$).
 \apiend
 

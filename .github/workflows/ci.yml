@@ -494,26 +494,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: llvm15
-            runner: macos-12
-            nametag: macos12-p310
-            cc_compiler: /usr/local/opt/llvm@15/bin/clang
-            cxx_compiler: /usr/local/opt/llvm@15/bin/clang++
-            cxx_std: 17
-            python_ver: "3.10"
-            aclang: 13
-            setenvs: export LLVMBREWVER="@15" DO_BREW_UPDATE=1
-                            OPENIMAGEIO_VERSION=master
-          - desc: llvm17
+          - desc: MacOS-13 llvm17
             runner: macos-13
             nametag: macos13-p311
             cc_compiler: /usr/local/opt/llvm/bin/clang
             cxx_compiler: /usr/local/opt/llvm/bin/clang++
             cxx_std: 17
+            openimageio_ver: master
             python_ver: "3.11"
             aclang: 14
             setenvs: export DO_BREW_UPDATE=1
-                            OPENIMAGEIO_VERSION=master
+          - desc: MacOS-14-ARM llvm17
+            runner: macos-14
+            nametag: macos14-arm-p311
+            cc_compiler: clang
+            cxx_compiler: clang++
+            Xcc_compiler: /usr/local/opt/llvm/bin/clang
+            Xcxx_compiler: /usr/local/opt/llvm/bin/clang++
+            cxx_std: 17
+            openimageio_ver: master
+            python_ver: "3.11"
+            aclang: 15
+            setenvs: export DO_BREW_UPDATE=1
 
     runs-on: ${{matrix.runner}}
     env:
@@ -542,7 +544,7 @@ jobs:
         run: |
             source src/build-scripts/install_homebrew_deps.bash
             if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then \
-                OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0" ; \
+                OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0 -DCMAKE_UNITY_BUILD=ON" ; \
                 source src/build-scripts/build_openimageio.bash ; \
             else \
                 brew install --display-times -q openimageio ; \

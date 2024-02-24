@@ -63,7 +63,7 @@ test (color cparam = color (.1, .7, .2),
         printf ("  color (\"YIQ\", %g, %g, %g) = %g\n",
                 pretty(Y), pretty(I), pretty(Q), pretty(color("YIQ", Y,I,Q)));
         float x = 0.25, y = 0.5, z = 0.25;
-        printf ("  color (\"XYZ\", %g, %g, %g) = %g\n",
+        printf ("  color (\"XYZ\", %0.4g, %0.4g, %0.4g) = %0.4g\n",
                 pretty(x), pretty(y), pretty(z), pretty(color("XYZ",x,y,z)));
     }
 

@@ -26,7 +26,11 @@
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/Lex/PreprocessorOptions.h>
-#include <llvm/Support/Host.h>
+#if OSL_LLVM_VERSION < 160
+#    include <llvm/Support/Host.h>
+#else
+#    include <llvm/TargetParser/Host.h>
+#endif
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>

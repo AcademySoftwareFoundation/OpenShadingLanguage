@@ -31,7 +31,6 @@ brew list --versions
 brew install --display-times -q gcc ccache cmake ninja boost || true
 brew link --overwrite gcc
 brew install --display-times -q python@${PYTHON_VERSION} || true
-# brew unlink python@2.7 || true
 # brew unlink python@3.8 || true
 # brew unlink python@3.9 || true
 brew unlink python@3.10 || true
@@ -43,31 +42,30 @@ brew install --display-times -q --overwrite --force opencolorio || true
 brew install --display-times -q partio pugixml
 brew install --display-times -q pybind11 numpy || true
 brew install --display-times -q tbb || true
+brew install --display-times -q openvdb || true
 brew install --display-times -q flex bison
 brew install --display-times -q fmt
 brew install --display-times -q llvm${LLVMBREWVER}
-brew install --display-times -q qt${QT_BREW_VERSION}
+if [[ "${USE_QT}" != "0" ]] ; then
+    brew install --display-times -q qt${QT_VERSION}
+fi
 
 echo ""
 echo "After brew installs:"
 brew list --versions
 
 # Needed on some systems
-if [[ $PYTHON_VERSION != "2.7" ]] ; then
-    pip3 install numpy
-else
-    pip install numpy
-fi
+pip${PYTHON_VERSION} install numpy
 
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.
-export PATH=/usr/local/opt/qt5/bin:$PATH
-export PATH=/usr/local/opt/python/libexec/bin:$PATH
-export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
-# export PATH=/usr/local/opt/llvm${LLVMBREWVER}/bin:$PATH
-export LLVM_DIRECTORY=/usr/local/opt/llvm${LLVMBREWVER}
-export LLVM_ROOT=/usr/local/opt/llvm${LLVMBREWVER}
-export PATH=/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH
+export PATH=${HOMEBREW_PREFIX}/opt/qt5/bin:$PATH
+export PATH=${HOMEBREW_PREFIX}/opt/python/libexec/bin:$PATH
+export PYTHONPATH=${HOMEBREW_PREFIX}/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
+# export PATH=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}/bin:$PATH
+export LLVM_DIRECTORY=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}
+export LLVM_ROOT=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}
+export PATH=${HOMEBREW_PREFIX}/opt/flex/bin:${HOMEBREW_PREFIX}/opt/bison/bin:$PATH
 
 # Save the env for use by other stages
 src/build-scripts/save-env.bash

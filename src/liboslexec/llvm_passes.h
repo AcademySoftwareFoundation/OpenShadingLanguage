@@ -349,7 +349,11 @@ public:
                                         // Should handle promoting whatever the constant value is (most likely zeroinitializer)
                                         llvm::ConstantFolder Folder;
                                         auto* signExtConstant
+#if OSL_LLVM_VERSION < 180
                                             = Folder.CreateCast(
+#else
+                                            = Folder.FoldCast(
+#endif
                                                 llvm::Instruction::SExt,
                                                 constant, m_native_mask_type);
 

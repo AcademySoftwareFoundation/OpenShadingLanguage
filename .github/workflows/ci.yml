@@ -503,7 +503,7 @@ jobs:
             openimageio_ver: master
             python_ver: "3.11"
             aclang: 14
-            setenvs: export DO_BREW_UPDATE=1
+            setenvs: export DO_BREW_UPDATE=1 CTEST_TEST_TIMEOUT=120
           - desc: MacOS-14-ARM llvm17
             runner: macos-14
             nametag: macos14-arm-p311

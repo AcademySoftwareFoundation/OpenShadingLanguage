@@ -3,6 +3,7 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 #include <cstdarg>
+#include <sstream>
 
 #include "pointcloud.h"
 
@@ -29,7 +30,13 @@ PointCloud::get(ustringhash filename, bool write)
     // Not found. Create a new one.
     Partio::ParticlesDataMutable* partio_cloud = nullptr;
     if (!write) {
-        partio_cloud = Partio::read(filename.c_str(), false);
+        // Mute Partio error prints: by default Partio::read sends errors directly
+        // to std::err, but in most cases we want errors to go via errorfmt so the
+        // renderer can recognize the message as an error, as we do in
+        // pointcloud_search and pointcloud_get.
+        std::stringstream m_errorStream;
+
+        partio_cloud = Partio::read(filename.c_str(), false, m_errorStream);
         if (!partio_cloud)
             return nullptr;
     } else {

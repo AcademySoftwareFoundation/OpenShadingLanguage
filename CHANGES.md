@@ -1,8 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.13.7.0 -- 1 Mar 2024 (compared to 1.13.6.1)
+--------------------------------------------------------
+- *fix*: Mute partio error prints [#1774](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1774) (by olegul)
+- *ci*: Test with Mac ARM runner [#1770](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1770)
+- *docs*: Fix links to RTD docs from github landing page [#1768](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1768)
+- *admin*: Switch release announcement workflow to jmertic's awesome action [#1766](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1766)
+
+<br>
+
+
 Release 1.13 -- Feb 1, 2024 (compared to 1.12)
--------------------------------------------------------------
+===============================================
 - beta 1: December 20, 2023
 - release v1.13.6.1: Feb 1, 2024
 

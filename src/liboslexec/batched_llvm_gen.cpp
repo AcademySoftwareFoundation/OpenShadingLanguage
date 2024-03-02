@@ -2287,7 +2287,8 @@ LLVMGEN(llvm_gen_compref)
 
     bool op_is_uniform = Result.is_uniform();
 
-    llvm::Value* c = rop.llvm_load_value(Index);
+    llvm::Value* c = rop.llvm_load_value(Index, /*deriv=*/0, /*component=*/0,
+                                         TypeDesc::UNKNOWN, Index.is_uniform());
 
     if (Index.is_uniform()) {
         if (rop.inst()->master()->range_checking()) {
@@ -6757,13 +6758,18 @@ LLVMGEN(llvm_gen_getmessage)
         rop.ll.call_function(rop.build_name(FuncSpec("getmessage").mask()),
                              args);
     } else {
-        llvm::Value* nameVal = rop.llvm_load_value(Name);
+        llvm::Value* nameVal
+            = rop.llvm_load_value(Name, /*deriv=*/0, /*component=*/0,
+                                  TypeDesc::UNKNOWN, nameVal_is_uniform);
         if (nameVal_is_uniform) {
             args[nameArgumentIndex] = nameVal;
         }
 
-        llvm::Value* sourceVal = has_source ? rop.llvm_load_value(Source)
-                                            : rop.ll.constant(ustring());
+        llvm::Value* sourceVal
+            = has_source
+                  ? rop.llvm_load_value(Source, /*deriv=*/0, /*component=*/0,
+                                        TypeDesc::UNKNOWN, sourceVal_is_uniform)
+                  : rop.ll.constant(ustring());
         if (sourceVal_is_uniform) {
             args[sourceArgumentIndex] = sourceVal;
         }
@@ -7001,6 +7007,16 @@ LLVMGEN(llvm_gen_spline)
                 && (!has_knot_count
                     || (has_knot_count && Knot_count.typespec().is_int())));
 
+    if (has_knot_count && !Knot_count.is_uniform()) {
+        // TODO: varying knot count support could be added below as we already
+        // have a loop to handle varying spline basis.  Just need to add tests
+        // to exercise and verify functions properly, until then...
+        rop.shadingcontext()->errorfmt(
+            "spline nknots parameter is varying, batched code gen requires a constant or uniform nknots, called from ({}:{})",
+            op.sourcefile(), op.sourceline());
+        return false;
+    }
+
     bool op_is_uniform = Spline.is_uniform() && Value.is_uniform()
                          && Knots.is_uniform();
 
@@ -7051,7 +7067,8 @@ LLVMGEN(llvm_gen_spline)
     args.push_back(rop.llvm_void_ptr(Value));  // make things easy
     args.push_back(rop.llvm_void_ptr(Knots));
     if (has_knot_count)
-        args.push_back(rop.llvm_load_value(Knot_count));
+        args.push_back(rop.llvm_load_value(
+            Knot_count));  // TODO: add support for varying Knot_count
     else
         args.push_back(rop.ll.constant((int)Knots.typespec().arraylength()));
     args.push_back(rop.ll.constant((int)Knots.typespec().arraylength()));

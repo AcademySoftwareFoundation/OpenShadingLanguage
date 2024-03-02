@@ -308,6 +308,7 @@ macro (osl_add_all_tests)
                 metadata-braces min-reg miscmath missing-shader
                 mix-reg
                 named-components
+                nestedloop-reg
                 noise noise-cell
                 noise-gabor noise-gabor2d-filter noise-gabor3d-filter
                 noise-gabor-reg

@@ -6800,7 +6800,7 @@ LLVMGEN(llvm_gen_getmessage)
         }
 
         llvm::Value* sourceVal
-            = has_source 
+            = has_source
                   ? rop.llvm_load_value(Source, /*deriv=*/0, /*component=*/0,
                                         TypeDesc::UNKNOWN, sourceVal_is_uniform)
                   : rop.ll.constant(ustring());

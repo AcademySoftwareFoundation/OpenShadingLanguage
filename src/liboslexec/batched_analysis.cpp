@@ -838,11 +838,12 @@ private:
     std::vector<Position> m_function_stack;
     std::vector<Position> m_before_if_block_stack;
     std::vector<Position> m_after_if_block_stack;
+    std::vector<int> m_loop_depth_stack;
 
 public:
     OSL_FORCEINLINE FunctionTreeTracker() : m_top_of_stack(end_pos())
     {
-        push_function_call();
+        push_function_call(0);
     }
 
     FunctionTreeTracker(const FunctionTreeTracker&) = delete;
@@ -977,11 +978,12 @@ public:
 
     OSL_FORCEINLINE Iterator end() const { return Iterator(*this, end_pos()); }
 
-    OSL_FORCEINLINE void push_function_call()
+    OSL_FORCEINLINE void push_function_call(int loop_depth_at_function)
     {
         OSL_DEV_ONLY(std::cout << "DependencyTreeTracker push_function_call"
                                << std::endl);
         m_function_stack.push_back(m_top_of_stack);
+        m_loop_depth_stack.push_back(loop_depth_at_function);
     }
 
     OSL_FORCEINLINE void push_if_block()
@@ -1062,7 +1064,15 @@ public:
 
     OSL_FORCEINLINE Position top_pos() const { return m_top_of_stack; }
 
-    OSL_FORCEINLINE void pop_function_call()
+    OSL_FORCEINLINE int loop_depth_at_start_of_call() {
+        if (m_loop_depth_stack.empty()) {
+            return 0;
+        } else {
+            return m_loop_depth_stack.back();
+        }
+    }
+
+    OSL_FORCEINLINE void pop_function_call(int loop_depth_at_function)
     {
         OSL_DEV_ONLY(std::cout << "DependencyTreeTracker pop_function_call"
                                << std::endl);
@@ -1090,6 +1100,9 @@ public:
                 process_exit(early_out.dtt_pos);
             }
         }
+
+        OSL_ASSERT(m_loop_depth_stack.back() == loop_depth_at_function);
+        m_loop_depth_stack.pop_back();
     }
 };
 
@@ -1214,8 +1227,10 @@ class LoopStack {
 
     std::vector<LoopInfo> m_loop_info_by_depth;
 
+    bool is_inside_loop() const { return depth() != 0; }
 public:
-    bool is_inside_loop() const { return !m_loop_info_by_depth.empty(); }
+    int depth() const { return m_loop_info_by_depth.size(); }
+
 
     int current_loop_op_index() const
     {
@@ -1603,7 +1618,7 @@ struct Analyzer {
 
     OSL_NOINLINE void make_loops_control_flow_depend_on_early_out_conditions()
     {
-        // Need change the loop control flow which is dependent upon
+        // Need to change the loop control flow which is dependent upon
         // a conditional.  By making a circular dependency between the this
         // [return|exit|break|continue] operation and the conditionals value,
         // any varying values in the conditional controlling
@@ -1986,9 +2001,9 @@ struct Analyzer {
                     // as the current block, there was no conditionals involved
                     OSL_DEV_ONLY(std::cout << " FUNCTION CALL BLOCK BEGIN"
                                            << std::endl);
-                    m_execution_scope_stack.push_function_call();
+                    m_execution_scope_stack.push_function_call(m_loop_stack.depth());
                     discover_symbols_between(op_index + 1, opcode.jump(0));
-                    m_execution_scope_stack.pop_function_call();
+                    m_execution_scope_stack.pop_function_call(m_loop_stack.depth());
                     OSL_DEV_ONLY(std::cout << " FUNCTION CALL BLOCK END"
                                            << std::endl);
 
@@ -2020,12 +2035,15 @@ struct Analyzer {
                 m_execution_scope_stack.process_return(
                     m_conditional_symbol_stack.top_pos());
 
-                // The return will need change the loop control flow which is dependent upon
+                // IF AND ONLY IF, the current loop control exists inside
+                // the current function, because the return should only early
+                // out of those loops, not any higher in the call stack.                
+                // The return will need to change the loop control flow which is dependent upon
                 // a conditional.  By making a circular dependency between the return operation
                 // and the conditionals value, any varying values in the conditional controlling
                 // the return should flow back to the loop control variable, which might need to
                 // be varying so allow lanes to terminate the loop independently
-                if (m_loop_stack.is_inside_loop()) {
+                if (m_loop_stack.depth() > m_execution_scope_stack.loop_depth_at_start_of_call()) {
                     make_loops_control_flow_depend_on_early_out_conditions();
                 }
             }
@@ -2037,12 +2055,17 @@ struct Analyzer {
                 m_execution_scope_stack.process_exit(
                     m_conditional_symbol_stack.top_pos());
 
-                // The exit will need change the loop control flow which is dependent upon
+                // IF AND ONLY IF, the current loop control exists inside
+                // the current function, because the return should only early
+                // out of those loops, not any higher in the call stack.
+                // A different mechanism will look for early outs when 
+                // unwinding up the callstack.
+                // The exit will need to change the loop control flow which is dependent upon
                 // a conditional.  By making a circular dependency between the exit operation
                 // and the conditionals value, any varying values in the conditional controlling
                 // the exit should flow back to the loop control variable, which might need to
                 // be varying so allow lanes to terminate the loop independently
-                if (m_loop_stack.is_inside_loop()) {
+                if (m_loop_stack.depth() > m_execution_scope_stack.loop_depth_at_start_of_call()) {
                     make_loops_control_flow_depend_on_early_out_conditions();
                 }
             }
@@ -2095,6 +2118,11 @@ struct Analyzer {
                        || symbol_to_be_varying->typespec().is_closure()
                        || symbol_to_be_varying->connected()
                        || symbol_to_be_varying->connected_down());
+            OSL_DEV_ONLY(std::cout
+                         << "<<<< make_varying symbol: "
+                         << symbol_to_be_varying->unmangled().c_str()
+                         << " force=" << force << std::endl);
+
             symbol_to_be_varying->make_varying();
             auto range = m_symbols_dependent_upon.equal_range(
                 symbol_to_be_varying);
@@ -2107,6 +2135,10 @@ struct Analyzer {
                     recursively_mark_varying(dependent_symbol);
                 }
             };
+            OSL_DEV_ONLY(std::cout
+                         << ">>>> end make_varying symbol: "
+                         << symbol_to_be_varying->unmangled().c_str() << std::endl);
+
         }
     };
 
@@ -2639,6 +2671,7 @@ struct Analyzer {
 
     OSL_NOINLINE void push_varying_of_shader_globals()
     {
+        OSL_DEV_ONLY(std::cout << "push_varying_of_shader_globals begin" << std::endl);
         for (auto&& s : inst()->symbols()) {
             if (s.symtype() == SymTypeGlobal) {
                 // TODO: now that symbol has is_uniform()
@@ -2659,10 +2692,12 @@ struct Analyzer {
             // so force their dependents to get marked
             recursively_mark_varying(sym_ptr, true /*force*/);
         }
+        OSL_DEV_ONLY(std::cout << "push_varying_of_shader_globals end" << std::endl);
     }
 
     OSL_NOINLINE void make_renderer_outputs_varying()
     {
+        OSL_DEV_ONLY(std::cout << "make_renderer_outputs_varying begin" << std::endl);
         // Mark all output parameters as varying to catch
         // output parameters written to by uniform variables,
         // as nothing would have made them varying, however as
@@ -2679,10 +2714,12 @@ struct Analyzer {
                 }
             }
         }
+        OSL_DEV_ONLY(std::cout << "make_renderer_outputs_varying end" << std::endl);
     }
 
     OSL_NOINLINE void make_interpolated_parameters_varying()
     {
+        OSL_DEV_ONLY(std::cout << "make_interpolated_parameters_varying begin" << std::endl);
         // Mark all interpolated parameters as varying,
         // As we expect interpolated data,  get_userdata will
         // only provide varying values, so we must mark
@@ -2694,10 +2731,12 @@ struct Analyzer {
                 recursively_mark_varying(&s);
             }
         }
+        OSL_DEV_ONLY(std::cout << "make_interpolated_parameters_varying end" << std::endl);
     }
 
     OSL_NOINLINE void make_closures_varying()
     {
+        OSL_DEV_ONLY(std::cout << "make_closures_varying begin" << std::endl);
         // We assume that closures are always stored as varying pointers
         FOREACH_SYM(Symbol & s, inst())
         {
@@ -2707,6 +2746,7 @@ struct Analyzer {
                 recursively_mark_varying(&s);
             }
         }
+        OSL_DEV_ONLY(std::cout << "make_closures_varying end" << std::endl);
     }
 
     OSL_NOINLINE void push_varying_of_upstream_connections()

@@ -2298,7 +2298,7 @@ LLVMGEN(llvm_gen_compref)
 
     bool op_is_uniform = Result.is_uniform();
 
-    llvm::Value* c = rop.llvm_load_value(Index, /*deriv=*/ 0, /*component=*/0,
+    llvm::Value* c = rop.llvm_load_value(Index, /*deriv=*/0, /*component=*/0,
                                          TypeDesc::UNKNOWN, Index.is_uniform());
 
     if (Index.is_uniform()) {
@@ -6792,17 +6792,18 @@ LLVMGEN(llvm_gen_getmessage)
         rop.ll.call_function(rop.build_name(FuncSpec("getmessage").mask()),
                              args);
     } else {
-        llvm::Value* nameVal = rop.llvm_load_value(Name, /*deriv=*/ 0, /*component=*/0,
-                                                   TypeDesc::UNKNOWN, nameVal_is_uniform);
+        llvm::Value* nameVal
+            = rop.llvm_load_value(Name, /*deriv=*/0, /*component=*/0,
+                                  TypeDesc::UNKNOWN, nameVal_is_uniform);
         if (nameVal_is_uniform) {
             args[nameArgumentIndex] = nameVal;
         }
 
         llvm::Value* sourceVal
-           = has_source 
-                 ? rop.llvm_load_value(Source, /*deriv=*/ 0, /*component=*/0,
-                                       TypeDesc::UNKNOWN, sourceVal_is_uniform)
-                 : rop.ll.constant(ustring());
+            = has_source 
+                  ? rop.llvm_load_value(Source, /*deriv=*/0, /*component=*/0,
+                                        TypeDesc::UNKNOWN, sourceVal_is_uniform)
+                  : rop.ll.constant(ustring());
         if (sourceVal_is_uniform) {
             args[sourceArgumentIndex] = sourceVal;
         }
@@ -7110,7 +7111,7 @@ LLVMGEN(llvm_gen_spline)
     args.push_back(rop.llvm_void_ptr(Knots));
     if (has_knot_count)
         args.push_back(rop.llvm_load_value(
-            Knot_count)); // TODO: add support for varying Knot_count
+            Knot_count));  // TODO: add support for varying Knot_count
     else
         args.push_back(rop.ll.constant((int)Knots.typespec().arraylength()));
     args.push_back(rop.ll.constant((int)Knots.typespec().arraylength()));

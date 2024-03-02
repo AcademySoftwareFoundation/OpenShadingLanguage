@@ -2141,7 +2141,7 @@ struct Analyzer {
                 }
             };
             OSL_DEV_ONLY(std::cout << ">>>> end make_varying symbol: "
-                                   << symbol_to_be_varying->unmangled().c_str() 
+                                   << symbol_to_be_varying->unmangled().c_str()
                                    << std::endl);
         }
     };

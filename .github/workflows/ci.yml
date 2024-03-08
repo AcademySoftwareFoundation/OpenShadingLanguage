@@ -23,6 +23,8 @@ on:
     # Full nightly build, for the main project repo (not for forks)
     - cron: "0 6 * * *"
       if: github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
+  workflow_dispatch:
+    # This allows manual triggering of the workflow from the web
 
 
 permissions: read-all

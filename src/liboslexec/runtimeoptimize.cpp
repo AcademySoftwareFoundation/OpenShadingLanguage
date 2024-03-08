@@ -42,6 +42,8 @@ static ustring u_setmessage("setmessage");
 static ustring u_getmessage("getmessage");
 static ustring u_getattribute("getattribute");
 static ustring u_backfacing("backfacing");
+static ustring u_calculatenormal("calculatenormal");
+static ustring u_flipHandedness("flipHandedness");
 static ustring u_N("N");
 static ustring u_I("I");
 
@@ -3352,6 +3354,8 @@ RuntimeOptimizer::run()
             } else if (op.opname() == u_backfacing) {
                 m_globals_needed.insert(u_N);
                 m_globals_needed.insert(u_I);
+            } else if (op.opname() == u_calculatenormal) {
+                m_globals_needed.insert(u_flipHandedness);
             } else if (op.opname() == u_getattribute) {
                 Symbol* sym1 = opargsym(op, 1);
                 OSL_DASSERT(sym1 && sym1->typespec().is_string());

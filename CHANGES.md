@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.13.8.0 -- 1 Apr? 2024 (compared to 1.13.7.0)
+--------------------------------------------------------
+
+
 Release 1.13.7.0 -- 1 Mar 2024 (compared to 1.13.6.1)
 --------------------------------------------------------
 - *fix*: Mute partio error prints [#1774](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1774) (by olegul)

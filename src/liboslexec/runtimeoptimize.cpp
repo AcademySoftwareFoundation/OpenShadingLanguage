@@ -42,8 +42,8 @@ static ustring u_setmessage("setmessage");
 static ustring u_getmessage("getmessage");
 static ustring u_getattribute("getattribute");
 static ustring u_backfacing("backfacing");
-static ustring u_calculatenormal ("calculatenormal");
-static ustring u_flipHandedness ("flipHandedness");
+static ustring u_calculatenormal("calculatenormal");
+static ustring u_flipHandedness("flipHandedness");
 static ustring u_N("N");
 static ustring u_I("I");
 

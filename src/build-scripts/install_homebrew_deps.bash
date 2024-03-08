@@ -19,9 +19,9 @@ if [[ `which brew` == "" ]] ; then
     exit 1
 fi
 
-set -ex
+# set -ex
 
-if [[ "$DO_BREW_UPDATE" != "" ]] ; then
+if [[ "${DO_BREW_UPDATE:=0}" != "0" ]] ; then
     brew update >/dev/null
 fi
 echo ""
@@ -35,11 +35,10 @@ brew install --display-times -q python@${PYTHON_VERSION} || true
 # brew unlink python@3.9 || true
 brew unlink python@3.10 || true
 brew link --overwrite --force python@${PYTHON_VERSION} || true
-brew upgrade --display-times -q cmake || true
-brew install --display-times -q imath openexr
+#brew upgrade --display-times -q cmake || true
+brew install --display-times -q imath openexr opencolorio || true
 #brew install --display-times -q freetype
-brew install --display-times -q --overwrite --force opencolorio || true
-brew install --display-times -q partio pugixml
+brew install --display-times -q partio pugixml || true
 brew install --display-times -q pybind11 numpy || true
 brew install --display-times -q tbb || true
 brew install --display-times -q openvdb || true
@@ -55,7 +54,7 @@ echo "After brew installs:"
 brew list --versions
 
 # Needed on some systems
-pip${PYTHON_VERSION} install numpy
+pip${PYTHON_VERSION} install numpy || true
 
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.

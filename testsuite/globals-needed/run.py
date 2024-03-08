@@ -5,6 +5,7 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 command += testshade("-g 2 2 -debug printbackfacing")
+command += testshade("-g 2 2 -debug printcalculatenormal")
 
 # debug output is very verbose, use regexp to filter down to
 # only the line we're interested in testing

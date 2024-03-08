@@ -241,11 +241,6 @@ if (INSTALL_DOCS)
     add_subdirectory (src/doc)
 endif ()
 
-# Last minute site-specific instructions, if they exist
-if (OSL_SITE AND EXISTS "${PROJECT_SOURCE_DIR}/site/${OSL_SITE}/cmake/sitecustom.cmake")
-    include ("${PROJECT_SOURCE_DIR}/site/${OSL_SITE}/cmake/sitecustom.cmake")
-endif ()
-
 # install pkgconfig files
 if ( NOT MSVC )
    configure_file(src/build-scripts/oslexec.pc.in "${CMAKE_BINARY_DIR}/oslexec.pc" @ONLY)

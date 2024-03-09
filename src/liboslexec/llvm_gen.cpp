@@ -3830,11 +3830,11 @@ LLVMGEN(llvm_gen_closure)
     const ClosureRegistry::ClosureEntry* clentry
         = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.llvm_gen_error(fmtformat(
+        rop.shadingcontext()->errorfmt(
             "Closure '{}' is not supported by the current renderer, called from {}:{} in shader \"{}\", layer {} \"{}\", group \"{}\"",
             closure_name, op.sourcefile(), op.sourceline(),
             rop.inst()->shadername(), rop.layer(), rop.inst()->layername(),
-            rop.group().name()));
+            rop.group().name());
         return false;
     }
 

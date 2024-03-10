@@ -2501,7 +2501,8 @@ RuntimeOptimizer::resolve_isconnected()
             bool upconnected = s->connected();
             if (s->interpolated() && shadingsys().userdata_isconnected())
                 upconnected = true;
-            int val = (upconnected ? 1 : 0) + (s->connected_down() ? 2 : 0);
+            bool downconnected = s->connected_down() || s->renderer_output();
+            int val = (upconnected ? 1 : 0) + (downconnected ? 2 : 0);
             turn_into_assign(op, add_constant(TypeDesc::TypeInt, &val),
                              "resolve isconnected()");
         }

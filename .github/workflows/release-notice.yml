@@ -22,5 +22,5 @@ jobs:
         project_name: "Open Shading Language"
         slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
         slack_channel: "#release-announcements"
-        project_logo: "https://artwork.aswf.io/projects/openshadinglanguage/AcronymStack/Shaded/openshadinglanguage-AcronymStack-Shaded.png"
+        project_logo: "https://artwork.aswf.io/projects/openshadinglanguage/Icon/Color/openshadinglanguage-Icon-Color.png"
       uses: jmertic/slack-release-notifier@main

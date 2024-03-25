@@ -798,7 +798,7 @@ OSLToyMainWindow::osl_do_rerender(float /*frametime*/)
         float start = timer();
         renderer()->set_time(start);
         renderer()->render_image();
-        OIIO_UNUSED_OK float rendertime = timer() - start;
+        OIIO_MAYBE_UNUSED float rendertime = timer() - start;
 
         renderView->update(renderer()->framebuffer());
 

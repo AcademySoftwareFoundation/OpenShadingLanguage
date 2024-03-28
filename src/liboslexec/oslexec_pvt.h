@@ -2495,6 +2495,21 @@ private:
 
 #ifndef __CUDACC__
 inline int
+tex_interp_to_code(ustringhash modename)
+{
+    int mode = -1;
+    if (modename == Hashes::smartcubic)
+        mode = TextureOpt::InterpSmartBicubic;
+    else if (modename == Hashes::linear)
+        mode = TextureOpt::InterpBilinear;
+    else if (modename == Hashes::cubic)
+        mode = TextureOpt::InterpBicubic;
+    else if (modename == Hashes::closest)
+        mode = TextureOpt::InterpClosest;
+    return mode;
+}
+
+inline int
 tex_interp_to_code(ustring modename)
 {
     int mode = -1;

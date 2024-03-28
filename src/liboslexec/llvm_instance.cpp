@@ -792,22 +792,6 @@ BackendLLVM::llvm_assign_initial_value(const Symbol& sym, bool force)
         if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
             // Handle init ops.
             build_llvm_code(sym.initbegin(), sym.initend());
-        } else if (sym.interpolated() && !sym.typespec().is_closure()) {
-            // geometrically-varying param; memcpy its default value
-            TypeDesc t = sym.typespec().simpletype();
-            if (sym.typespec().is_string()) {
-                //llvm_create_constant(sym);
-                auto default_str = ll.constant64(
-                    uint64_t(sym.get_string().hash()));
-
-                OSL_ASSERT(llvm_store_value(default_str, sym, 0, nullptr, 0));
-            } else {
-                ll.op_memcpy(llvm_void_ptr(sym), ll.constant_ptr(sym.data()),
-                             t.size(), t.basesize() /*align*/);
-            }
-
-            if (sym.has_derivs())
-                llvm_zero_derivs(sym);
         } else {
             // Use default value
             int num_components = sym.typespec().simpletype().aggregate;

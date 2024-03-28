@@ -42,7 +42,8 @@ osl_texture_set_firstchannel(void* opt, int x)
     ((TextureOpt*)opt)->firstchannel = x;
 }
 
-static TextureOpt::Wrap decode_wrapmode(ustringhash_pod name_)
+static TextureOpt::Wrap
+decode_wrapmode(ustringhash_pod name_)
 {
     ustringhash name_hash = ustringhash_from(name_);
 #ifdef OIIO_TEXTURESYSTEM_SUPPORTS_DECODE_BY_USTRINGHASH

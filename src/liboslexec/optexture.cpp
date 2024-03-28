@@ -42,44 +42,45 @@ osl_texture_set_firstchannel(void* opt, int x)
     ((TextureOpt*)opt)->firstchannel = x;
 }
 
+static TextureOpt::Wrap decode_wrapmode(ustringhash_pod name_)
+{
+    ustringhash name_hash = ustringhash_from(name_);
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_DECODE_BY_USTRINGHASH
+    return OIIO::TextureOpt::decode_wrapmode(name_hash);
+#else
+    ustring name = ustring_from(name_hash);
+    return OIIO::TextureOpt::decode_wrapmode(name);
+#endif
+}
+
 OSL_SHADEOP int
 osl_texture_decode_wrapmode(ustringhash_pod name_)
 {
-    ustringhash name_hash = ustringhash_from(name_);
-    ustring name          = ustring_from(name_hash);
-    return OIIO::TextureOpt::decode_wrapmode(name);
+    return decode_wrapmode(name_);
 }
 
 OSL_SHADEOP void
 osl_texture_set_swrap(void* opt, ustringhash_pod x_)
 {
-    ustringhash x_hash        = ustringhash_from(x_);
-    ustring x                 = ustring_from(x_hash);
-    ((TextureOpt*)opt)->swrap = TextureOpt::decode_wrapmode(x);
+    ((TextureOpt*)opt)->swrap = decode_wrapmode(x_);
 }
 
 OSL_SHADEOP void
 osl_texture_set_twrap(void* opt, ustringhash_pod x_)
 {
-    ustringhash x_hash        = ustringhash_from(x_);
-    ustring x                 = ustring_from(x_hash);
-    ((TextureOpt*)opt)->twrap = TextureOpt::decode_wrapmode(x);
+    ((TextureOpt*)opt)->twrap = decode_wrapmode(x_);
 }
 
 OSL_SHADEOP void
 osl_texture_set_rwrap(void* opt, ustringhash_pod x_)
 {
-    ustringhash x_hash        = ustringhash_from(x_);
-    ustring x                 = ustring_from(x_hash);
-    ((TextureOpt*)opt)->rwrap = TextureOpt::decode_wrapmode(x);
+    ((TextureOpt*)opt)->rwrap = decode_wrapmode(x_);
 }
 
 OSL_SHADEOP void
 osl_texture_set_stwrap(void* opt, ustringhash_pod x_)
 {
-    ustringhash x_hash        = ustringhash_from(x_);
-    ustring x                 = ustring_from(x_hash);
-    TextureOpt::Wrap code     = TextureOpt::decode_wrapmode(x);
+    TextureOpt::Wrap code     = decode_wrapmode(x_);
     ((TextureOpt*)opt)->swrap = code;
     ((TextureOpt*)opt)->twrap = code;
 }
@@ -175,8 +176,7 @@ OSL_SHADEOP int
 osl_texture_decode_interpmode(ustringhash_pod name_)
 {
     ustringhash name_hash = ustringhash_from(name_);
-    ustring name          = ustring_from(name_hash);
-    return tex_interp_to_code(name);
+    return tex_interp_to_code(name_hash);
 }
 
 OSL_SHADEOP void

@@ -1,20 +1,25 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.13.9.0 -- 1 May 2024 (compared to 1.13.8.0)
+--------------------------------------------------------
+
+
+
 Release 1.13.8.0 -- 1 Apr 2024 (compared to 1.13.7.0)
 --------------------------------------------------------
-- *fix(batched)*: Codegen bug for compref with varying index for batched shading [#1776](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1776) (by Alex Wells)
-- *fix*: Calculatenormal needs fliphandedness [#1783](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1783) (by sfriedmapixar)
-- *fix*: Print closure missing error message at compile time instead of run time.  [#1781](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1781) (by sfriedmapixar)
-- *int*: Change long-deprecated OIIO macro to new one [#1788](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1788)
-- *ci*: Fix broken Macos-13 CI [#1780](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1780)
+* *fix(batched)*: Codegen bug for compref with varying index for batched shading [#1776](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1776) (by Alex Wells)
+* *fix*: Calculatenormal needs fliphandedness [#1783](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1783) (by sfriedmapixar)
+* *fix*: Print closure missing error message at compile time instead of run time.  [#1781](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1781) (by sfriedmapixar)
+* *int*: Change long-deprecated OIIO macro to new one [#1788](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1788)
+* *ci*: Fix broken Macos-13 CI [#1780](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1780)
 
 Release 1.13.7.0 -- 1 Mar 2024 (compared to 1.13.6.1)
 --------------------------------------------------------
-- *fix*: Mute partio error prints [#1774](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1774) (by olegul)
-- *ci*: Test with Mac ARM runner [#1770](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1770)
-- *docs*: Fix links to RTD docs from github landing page [#1768](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1768)
-- *admin*: Switch release announcement workflow to jmertic's awesome action [#1766](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1766)
+* *fix*: Mute partio error prints [#1774](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1774) (by olegul)
+* *ci*: Test with Mac ARM runner [#1770](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1770)
+* *docs*: Fix links to RTD docs from github landing page [#1768](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1768)
+* *admin*: Switch release announcement workflow to jmertic's awesome action [#1766](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1766)
 
 <br>
 

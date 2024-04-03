@@ -19,9 +19,38 @@ Sony Pictures Imageworks terms, above.
 #include <string>
 #include <vector>
 
-#include <OSL/oslconfig.h>
+#include <OSL/export.h>
+#include <OSL/oslversion.h>
+#include <OSL/platform.h>
+
+#include <OpenImageIO/span.h>
+#include <OpenImageIO/string_view.h>
+#include <OpenImageIO/typedesc.h>
+#include <OpenImageIO/ustring.h>
+
+// #include <OSL/oslconfig.h>
 
 OSL_NAMESPACE_ENTER
+
+using OIIO::cspan;
+using OIIO::span;
+using OIIO::string_view;
+using OIIO::ustring;
+
+using OIIO::TypeColor;
+using OIIO::TypeDesc;
+using OIIO::TypeFloat;
+using OIIO::TypeFloat2;
+using OIIO::TypeFloat4;
+using OIIO::TypeInt;
+using OIIO::TypeMatrix;
+using OIIO::TypeNormal;
+using OIIO::TypePoint;
+using OIIO::TypeString;
+using OIIO::TypeUnknown;
+using OIIO::TypeVector;
+using OIIO::TypeVector2;
+using OIIO::TypeVector4;
 
 class ShaderGroup;  // opaque class for now
 

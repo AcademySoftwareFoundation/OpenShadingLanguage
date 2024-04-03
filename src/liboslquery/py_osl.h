@@ -25,6 +25,8 @@
 
 #include <OSL/oslquery.h>
 
+#include <OSL/oslconfig.h>
+
 #if OSL_USING_IMATH >= 3
 #    include <Imath/half.h>
 #else

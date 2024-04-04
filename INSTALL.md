@@ -4,7 +4,14 @@
 Building OSL
 ============
 
-OSL currently compiles and runs cleanly on Linux, Mac OS X, and Windows.
+OSL currently compiles and runs cleanly on Linux (x86_64), Mac OS X (x86_64
+and aarch64), and Windows (x86_64). It may build and run on other platforms as
+well, but we don't officially support or test other than these platforms.
+
+Shader execution is supported on the native architectures of those x86_64 and
+aarch64 platforms, a special batched 8- or 16-wide SIMD execution mode
+requiring x86_64 with AVX2 or AVX-512 instructions, as well as on NVIDIA GPUs
+using Cuda+OptiX.
 
 Dependencies
 ------------

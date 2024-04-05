@@ -2,6 +2,8 @@ Compiled test.osl -> test.oso
 Compiled upstream.osl -> upstream.oso
 Connect upstream.out to downstream.a
 Connect upstream.struct1 to downstream.mystruct1
+
+Output Fout to out.tif
 Upstream:
 out connected: 2  (value=0.5)
 notout connected: 0  (value=10)
@@ -22,7 +24,7 @@ mystruct1.y connected: 1  (value=4)
 mystruct2 connected: 0  (value={0, 0})
 mystruct2.x connected: 0  (value=0)
 mystruct2.y connected: 0  (value=0)
-
+Fout connected: 2  (value=0.42)
 Connect upstream.out to downstream.a
 Connect upstream.struct1 to downstream.mystruct1
 Upstream:
@@ -45,4 +47,5 @@ mystruct1.y connected: 1  (value=4)
 mystruct2 connected: 0  (value={0, 0})
 mystruct2.x connected: 0  (value=0)
 mystruct2.y connected: 0  (value=0)
+Fout connected: 0  (value=0)
 

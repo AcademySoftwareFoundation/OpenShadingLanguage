@@ -40,6 +40,7 @@ mkdir -p ${OPENEXR_INSTALL_DIR} && true
 
 pushd ${OPENEXR_SOURCE_DIR}
 git checkout ${OPENEXR_VERSION} --force
+echo "Building OpenEXR from commit" `git rev-parse --short HEAD`
 
 cmake   -S . -B ${OPENEXR_BUILD_DIR} \
         -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} \

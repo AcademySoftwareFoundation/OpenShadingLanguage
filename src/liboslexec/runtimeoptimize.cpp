@@ -2503,7 +2503,7 @@ RuntimeOptimizer::resolve_isconnected()
                 upconnected = true;
             bool downconnected = s->connected_down() || s->renderer_output();
             int val = (upconnected ? 1 : 0) + (downconnected ? 2 : 0);
-            turn_into_assign(op, add_constant(TypeDesc::TypeInt, &val),
+            turn_into_assign(op, add_constant(TypeInt, &val),
                              "resolve isconnected()");
         }
     }

@@ -1032,19 +1032,19 @@ public:
     ASTliteral(OSLCompilerImpl* comp, int i)
         : ASTNode(literal_node, comp), m_i(i)
     {
-        m_typespec = TypeDesc::TypeInt;
+        m_typespec = TypeInt;
     }
 
     ASTliteral(OSLCompilerImpl* comp, float f)
         : ASTNode(literal_node, comp), m_f(f)
     {
-        m_typespec = TypeDesc::TypeFloat;
+        m_typespec = TypeFloat;
     }
 
     ASTliteral(OSLCompilerImpl* comp, ustring s)
         : ASTNode(literal_node, comp), m_s(s)
     {
-        m_typespec = TypeDesc::TypeString;
+        m_typespec = TypeString;
     }
 
     const char* nodetypename() const { return "literal"; }

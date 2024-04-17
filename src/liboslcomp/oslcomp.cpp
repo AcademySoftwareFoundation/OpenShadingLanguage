@@ -632,20 +632,15 @@ struct GlobalTable {
 void
 OSLCompilerImpl::initialize_globals()
 {
-    static GlobalTable globals[]
-        = { { "P", TypeDesc::TypePoint, false },
-            { "I", TypeDesc::TypeVector, false },
-            { "N", TypeDesc::TypeNormal, false },
-            { "Ng", TypeDesc::TypeNormal },
-            { "u", TypeDesc::TypeFloat },
-            { "v", TypeDesc::TypeFloat },
-            { "dPdu", TypeDesc::TypeVector },
-            { "dPdv", TypeDesc::TypeVector },
-            { "Ps", TypeDesc::TypePoint },
-            { "Ci", TypeSpec(TypeDesc::TypeColor, true), false },
-            { "time", TypeDesc::TypeFloat },
-            { "dtime", TypeDesc::TypeFloat },
-            { "dPdtime", TypeDesc::TypeVector } };
+    static GlobalTable globals[] = {
+        { "P", TypePoint, false },  { "I", TypeVector, false },
+        { "N", TypeNormal, false }, { "Ng", TypeNormal },
+        { "u", TypeFloat },         { "v", TypeFloat },
+        { "dPdu", TypeVector },     { "dPdv", TypeVector },
+        { "Ps", TypePoint },        { "Ci", TypeSpec(TypeColor, true), false },
+        { "time", TypeFloat },      { "dtime", TypeFloat },
+        { "dPdtime", TypeVector }
+    };
 
     for (auto& g : globals) {
         Symbol* s = new Symbol(ustring(g.name), g.type, SymTypeGlobal);
@@ -706,7 +701,7 @@ OSLCompilerImpl::write_oso_const_value(const ConstantSymbol* sym) const
     else if (elemtype == TypeDesc::FLOAT)
         for (int i = 0; i < nelements; ++i)
             osofmt("{:.9g}{}", sym->floatval(i), nelements > 1 ? " " : "");
-    else if (equivalent(elemtype, TypeDesc::TypeVector))
+    else if (equivalent(elemtype, TypeVector))
         for (int i = 0; i < nelements; ++i) {
             Vec3 v = sym->get_vec3(i);
             osofmt("{:.9g} {:.9g} {:.9g}{}", v.x, v.y, v.z,

@@ -417,21 +417,21 @@ OSOReaderToMaster::hint(string_view hintstring)
         if (m_master->m_symbols.size()) {
             // metadata is attached to a particular symbol
             Symbol& sym(m_master->m_symbols.back());
-            if (type == TypeDesc::TypeInt && ident == "lockgeom"
+            if (type == TypeInt && ident == "lockgeom"
                 && Strutil::parse_int(h, ival) && ival >= 0)
                 sym.interpolated(!ival);  // soft deprecated
-            else if (type == TypeDesc::TypeInt && ident == "interpolated"
+            else if (type == TypeInt && ident == "interpolated"
                      && Strutil::parse_int(h, ival) && ival >= 0)
                 sym.interpolated(ival);
-            else if (type == TypeDesc::TypeInt && ident == "interactive"
+            else if (type == TypeInt && ident == "interactive"
                      && Strutil::parse_int(h, ival) && ival >= 0)
                 sym.interactive(ival);
-            else if (type == TypeDesc::TypeInt && ident == "allowconnect"
+            else if (type == TypeInt && ident == "allowconnect"
                      && Strutil::parse_int(h, ival) && ival >= 0)
                 sym.allowconnect(ival);
         } else {
             // metadata is attached at the shader level
-            if (type == TypeDesc::TypeInt && ident == "range_checking"
+            if (type == TypeInt && ident == "range_checking"
                 && Strutil::parse_int(h, ival) && ival >= 0)
                 m_master->range_checking(ival != 0);
         }

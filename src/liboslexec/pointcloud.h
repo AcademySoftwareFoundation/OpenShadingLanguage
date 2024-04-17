@@ -72,13 +72,13 @@ struct SortedPointCompare {
 inline Partio::ParticleAttributeType
 PartioType(TypeDesc t)
 {
-    if (t == TypeDesc::TypeFloat)
+    if (t == TypeFloat)
         return Partio::FLOAT;
     if (t.basetype == TypeDesc::FLOAT && t.aggregate == TypeDesc::VEC3)
         return Partio::VECTOR;
-    if (t == TypeDesc::TypeInt)
+    if (t == TypeInt)
         return Partio::INT;
-    if (t == TypeDesc::TypeString)
+    if (t == TypeString)
         return Partio::INDEXEDSTR;
     return Partio::NONE;
 }

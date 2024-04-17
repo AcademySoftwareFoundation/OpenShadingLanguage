@@ -330,14 +330,14 @@ inline TypeDesc
 OSL::pvt::osolextype (int lex)
 {
     switch (lex) {
-    case COLORTYPE  : return TypeDesc::TypeColor;
-    case FLOATTYPE  : return TypeDesc::TypeFloat;
-    case INTTYPE    : return TypeDesc::TypeInt;
-    case MATRIXTYPE : return TypeDesc::TypeMatrix;
-    case NORMALTYPE : return TypeDesc::TypeNormal;
-    case POINTTYPE  : return TypeDesc::TypePoint;
-    case STRINGTYPE : return TypeDesc::TypeString;
-    case VECTORTYPE : return TypeDesc::TypeVector;
+    case COLORTYPE  : return TypeColor;
+    case FLOATTYPE  : return TypeFloat;
+    case INTTYPE    : return TypeInt;
+    case MATRIXTYPE : return TypeMatrix;
+    case NORMALTYPE : return TypeNormal;
+    case POINTTYPE  : return TypePoint;
+    case STRINGTYPE : return TypeString;
+    case VECTORTYPE : return TypeVector;
     case VOIDTYPE   : return TypeDesc::NONE;
     default: return TypeDesc::UNKNOWN;
     }

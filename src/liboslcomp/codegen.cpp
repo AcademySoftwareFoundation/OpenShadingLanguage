@@ -354,7 +354,7 @@ ASTNode::codegen_int(Symbol*, bool boolify, bool invert)
     if (!type.is_int() || boolify || invert) {
         // If they're not using an int as the condition, then it's an
         // implied comparison to zero.
-        Symbol* tempvar = m_compiler->make_temporary(TypeDesc::TypeInt);
+        Symbol* tempvar = m_compiler->make_temporary(TypeInt);
         Symbol* zerovar = NULL;
         if (type.is_closure())
             zerovar = m_compiler->make_constant((int)0);
@@ -1543,7 +1543,7 @@ ASTbinary_expression::codegen(Symbol* dest)
         if (m_op == Mul || m_op == Div) {
             // Need to coerce the weight into a color.
             // N.B. The typecheck always reorders c=k*c into c=c*k.
-            rsym = coerce(rsym, TypeDesc::TypeColor, true);
+            rsym = coerce(rsym, TypeColor, true);
         }
         emitcode(opword(), dest, lsym, rsym);
         return dest;

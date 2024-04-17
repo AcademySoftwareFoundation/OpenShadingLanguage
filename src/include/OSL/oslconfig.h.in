@@ -118,6 +118,7 @@ using OIIO::TypePoint;
 using OIIO::TypeVector;
 using OIIO::TypeNormal;
 using OIIO::TypeMatrix;
+using OIIO::TypeMatrix44;
 using OIIO::TypeFloat4;
 using OIIO::TypeString;
 using OIIO::TypeInt;

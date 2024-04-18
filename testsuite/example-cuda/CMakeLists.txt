@@ -38,9 +38,13 @@ find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES
 # TODO: move to sm_60?
 set(CUDA_TARGET_ARCH sm_35)
 
+set (CMAKE_CXX_STANDARD 14 CACHE STRING
+     "C++ standard to build with (14, 17, 20, etc.)")
+
 # Compile our "renderer" to PTX
 cuda_compile_ptx(CUDA_PTX_FILES cuda_grid_renderer.cu
-    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc --std=c++14
+    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc
+            --std=c++${CMAKE_CXX_STANDARD}
             --expt-relaxed-constexpr
             -I${OSL_INCLUDES}
             -I${IMATH_INCLUDES}
@@ -58,7 +62,8 @@ add_custom_target(cuda_grid_renderer_ptx ALL
 
 # Compile the rend_lib shadeops to PTX
 cuda_compile_ptx(CUDA_PTX_FILES rend_lib.cu
-    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc --std=c++14
+    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc
+            --std=c++${CMAKE_CXX_STANDARD}
             --expt-relaxed-constexpr
             -I${OSL_INCLUDES}
             -I${IMATH_INCLUDES}

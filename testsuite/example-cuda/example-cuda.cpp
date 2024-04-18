@@ -337,7 +337,7 @@ register_closures(ShadingSystem& ss)
 
 const char* cuda_compile_options[] = { "--gpu-architecture=compute_35",
                                        "--use_fast_math", "-dc",
-                                       "--std=c++11" };
+                                       "--std=c++" #OSL_CPLUSPLUS_VERSION };
 
 std::string
 build_trampoline_ptx(OSL::ShaderGroup& group, std::string init_name,

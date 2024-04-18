@@ -51,7 +51,9 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx
-            --std=c++14 -dc --use_fast_math ${CUDA_OPT_FLAG_NVCC} ${NVCC_FTZ_FLAG} --expt-relaxed-constexpr
+            --std=c++${CMAKE_CXX_STANDARD}
+            -dc --use_fast_math ${CUDA_OPT_FLAG_NVCC} ${NVCC_FTZ_FLAG}
+            --expt-relaxed-constexpr
             ${extra_nvcc_args}
             ${OSL_EXTRA_NVCC_ARGS}
             ${cuda_src} -o ${cuda_ptx}

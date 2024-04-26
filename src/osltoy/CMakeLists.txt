@@ -19,7 +19,7 @@ target_link_libraries (osltoy
         $<TARGET_NAME_IF_EXISTS:Qt6::Core>
         $<TARGET_NAME_IF_EXISTS:Qt6::Gui>
         $<TARGET_NAME_IF_EXISTS:Qt6::Widgets>
-        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+        ${CMAKE_DL_LIBS})
 if (Qt5_FOUND)
     target_compile_definitions(osltoy PRIVATE OSL_QT_MAJOR=5)
 endif ()

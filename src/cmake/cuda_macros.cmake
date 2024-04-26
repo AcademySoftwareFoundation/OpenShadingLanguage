@@ -46,7 +46,6 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
             ${ALL_OpenImageIO_INCLUDES}
             ${ALL_IMATH_INCLUDES}
             ${ALL_OPENEXR_INCLUDES}
-            "-I${Boost_INCLUDE_DIRS}"
             "-DFMT_DEPRECATED=\"\""
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
@@ -169,7 +168,6 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             ${ALL_OpenImageIO_INCLUDES}
             ${ALL_IMATH_INCLUDES}
             ${ALL_OPENEXR_INCLUDES}
-            "-I${Boost_INCLUDE_DIRS}"
             ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX} ${CUDA_TEXREF_FIX}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}

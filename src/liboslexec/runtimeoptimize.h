@@ -8,9 +8,12 @@
 #include <set>
 #include <vector>
 
-#include <boost/container/flat_map.hpp>
-#include <boost/container/flat_set.hpp>
-#define USE_FLAT_MAP 1
+#define USE_ROBIN_MAP 1
+
+#if USE_ROBIN_MAP
+#include <tsl/robin_map.h>
+#include <tsl/robin_set.h>
+#endif
 
 #include "oslexec_pvt.h"
 using namespace OSL;
@@ -21,9 +24,9 @@ OSL_NAMESPACE_ENTER
 
 namespace pvt {  // OSL::pvt
 
-#if USE_FLAT_MAP
-typedef boost::container::flat_map<int, int> FastIntMap;
-typedef boost::container::flat_set<int> FastIntSet;
+#if USE_ROBIN_MAP
+typedef tsl::robin_map<int, int> FastIntMap;
+typedef tsl::robin_set<int> FastIntSet;
 #else
 typedef std::map<int, int> FastIntMap;
 typedef std::set<int> FastIntSet;

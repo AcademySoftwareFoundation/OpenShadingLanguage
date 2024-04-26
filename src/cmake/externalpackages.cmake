@@ -80,6 +80,8 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
+checked_find_package(tsl-robin-map REQUIRED)
+
 # IlmBase & OpenEXR
 checked_find_package (OpenEXR REQUIRED
                       VERSION_MIN 2.4

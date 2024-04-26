@@ -28,7 +28,7 @@ target_link_libraries (${local_lib}
         # For OpenEXR <= 2.3:
         ${ILMBASE_LIBRARIES}
     PRIVATE
-        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+        ${CMAKE_DL_LIBS}
     )
 
 target_compile_features (${local_lib}

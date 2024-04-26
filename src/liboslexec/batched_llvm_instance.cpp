@@ -8,11 +8,9 @@
 #include <cmath>
 #include <cstddef>
 #include <iostream>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
-#include <boost/functional/hash.hpp>
+#include <tsl/robin_map.h>
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/fmath.h>
@@ -47,7 +45,7 @@ interpreter.
 
 Schematically, we want to create code that resembles the following:
 
-    // Assume 2 layers. 
+    // Assume 2 layers.
     struct GroupData_1 {
         // Array telling if we have already run each layer
         char layer_run[nlayers];
@@ -202,15 +200,7 @@ struct CStrHash {
     OSL_FORCEINLINE size_t operator()(const char* str) const
     {
         OSL_DASSERT(str != nullptr);
-        size_t seed = 0;
-        for (;;) {
-            char c = *str;
-            if (c == 0)
-                break;
-            boost::hash_combine<char>(seed, c);
-            ++str;
-        }
-        return seed;
+        return OIIO::strhash(str);
     }
 };
 
@@ -224,7 +214,7 @@ struct CStrEquality {
 };
 
 
-typedef std::unordered_map<const char*, HelperFuncRecord, CStrHash, CStrEquality>
+typedef tsl::robin_map<const char*, HelperFuncRecord, CStrHash, CStrEquality>
     HelperFuncMap;
 static HelperFuncMap llvm_helper_function_map;
 static atomic_int llvm_helper_function_map_initialized(0);
@@ -2169,7 +2159,7 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     }
 
     // Track all symbols who needed 'partial' initialization
-    std::unordered_set<Symbol*> initedsyms;
+    tsl::robin_set<Symbol*> initedsyms;
 
     {
         // The current mask could be altered by early returns or exit
@@ -2756,7 +2746,7 @@ BatchedBackendLLVM::run()
     // entry points, as well as for all the external functions that are
     // just declarations (not definitions) in the module (which we have
     // conveniently stashed in external_function_names).
-    std::unordered_set<llvm::Function*> external_functions;
+    tsl::robin_set<llvm::Function*> external_functions;
     external_functions.insert(init_func);
     for (int layer = 0; layer < nlayers; ++layer) {
         llvm::Function* f = funcs[layer];

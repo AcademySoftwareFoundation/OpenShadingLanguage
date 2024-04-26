@@ -62,13 +62,13 @@ set ( liboslexec_target_srcs
    ../liboslnoise/wide/wide_gabor_hybrid_disabled
    ../liboslnoise/wide/wide_gabor_hybrid_enabled
    ../liboslnoise/wide/wide_gabor_isotropic_disabled
-   ../liboslnoise/wide/wide_gabor_isotropic_enabled   
+   ../liboslnoise/wide/wide_gabor_isotropic_enabled
    ../liboslnoise/wide/wide_gabor3_anisotropic_disabled
    ../liboslnoise/wide/wide_gabor3_anisotropic_enabled
    ../liboslnoise/wide/wide_gabor3_hybrid_disabled
    ../liboslnoise/wide/wide_gabor3_hybrid_enabled
    ../liboslnoise/wide/wide_gabor3_isotropic_disabled
-   ../liboslnoise/wide/wide_gabor3_isotropic_enabled   
+   ../liboslnoise/wide/wide_gabor3_isotropic_enabled
     )
 
 
@@ -95,9 +95,9 @@ set ( liboslexec_override_limits
    ../liboslnoise/wide/wide_gabor3_hybrid_disabled
    ../liboslnoise/wide/wide_gabor3_hybrid_enabled
    ../liboslnoise/wide/wide_gabor3_isotropic_disabled
-   ../liboslnoise/wide/wide_gabor3_isotropic_enabled   
+   ../liboslnoise/wide/wide_gabor3_isotropic_enabled
     )
-    
+
 set ( liboslexec_require_INF_NaN
     shadingsys.cpp
     wide/wide_shadingsys
@@ -129,14 +129,14 @@ set (lib_src
           journal.cpp
     )
 if (OSL_BUILD_BATCHED)
-    list(APPEND lib_src 
+    list(APPEND lib_src
           batched_analysis.cpp
           batched_backendllvm.cpp
           batched_llvm_gen.cpp
           batched_llvm_instance.cpp
           batched_rendservices.cpp
         )
-endif()    
+endif()
 
 if (BUILD_SHARED_LIBS)
     # oslcomp symbols used in oslexec
@@ -162,7 +162,7 @@ set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTAN
 
 macro ( REQUIRE_INF_NAN SRC )
     if (CMAKE_COMPILER_IS_INTELCLANG)
-        # if -ffast-math is enabled to to the underlying compiler, 
+        # if -ffast-math is enabled to to the underlying compiler,
         # inf's and NaN's may not be handled properly (by design)
         if (MSVC)
             set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS "/fp:precise")
@@ -172,9 +172,9 @@ macro ( REQUIRE_INF_NAN SRC )
             # Disabling fast-math should be enough to enable proper support of INF and NaN
             #set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS "-fno-fast-math")
             # We can explicitly honor inf, nans, and signed 0's
-            set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS 
-                "-fhonor-infinities" 
-                "-fhonor-nans" 
+            set_property(SOURCE ${SRC} APPEND PROPERTY COMPILE_OPTIONS
+                "-fhonor-infinities"
+                "-fhonor-nans"
                 "-fsigned-zeros")
         endif()
     endif()
@@ -184,7 +184,7 @@ endmacro ( )
 foreach(src ${lib_src})
     if (${src} IN_LIST liboslexec_require_INF_NaN)
         set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
-        REQUIRE_INF_NAN ( ${SRC} )  
+        REQUIRE_INF_NAN ( ${SRC} )
     endif()
 endforeach(src)
 
@@ -197,14 +197,14 @@ if (USE_LLVM_BITCODE)
     list(APPEND include_dirs ${IMATH_INCLUDES})
     list(APPEND include_dirs ${OPENEXR_INCLUDES})
     list(APPEND include_dirs ${OpenImageIO_INCLUDES})
-    list(APPEND include_dirs ${Boost_INCLUDE_DIRS})
+    list(APPEND include_dirs ${tsl-robin-map_INCLUDE_DIRS})
 
     EMBED_LLVM_BITCODE_IN_CPP ( "${llvm_ops_srcs}" "_host" "osl_llvm_compiled_ops" lib_src "" "${include_dirs}")
 
     set (rs_dependent_ops_srcs
          opmatrix.cpp opfmt.cpp
          )
-    # Achieve the effect of absorbing osl_llvm_compiled_ops by adding its 
+    # Achieve the effect of absorbing osl_llvm_compiled_ops by adding its
     # sources to rs_dependent_ops_srcs which avoids having to do it at runtime.
     list (APPEND rs_dependent_ops_srcs ${llvm_ops_srcs})
 
@@ -263,8 +263,8 @@ endif ()
 # For each target specific shared library being built, we need
 # we need to let a couple source files know so they can build
 # function mappings for those targets
-set_property(SOURCE "batched_llvm_instance.cpp"  "shadingsys.cpp"  
-    APPEND PROPERTY COMPILE_DEFINITIONS ${BATCHED_SUPPORT_DEFINES}) 
+set_property(SOURCE "batched_llvm_instance.cpp"  "shadingsys.cpp"
+    APPEND PROPERTY COMPILE_DEFINITIONS ${BATCHED_SUPPORT_DEFINES})
 
 set (BATCHED_TARGET_LIBS)
 foreach(batched_target ${BATCHED_TARGET_LIST})
@@ -279,28 +279,28 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
     if (NUM_TARGET_OPTS EQUAL 3)
         list (GET TARGET_OPTS 2 TARGET_OPT_FMA)
         set (TARGET_ISA "${TARGET_OPT_ISA}_${TARGET_OPT_FMA}")
-    endif() 
+    endif()
     string (SUBSTRING ${TARGET_OPT_SIZE} 1 -1 TARGET_BATCH_SIZE)
-    # Strategy is to make a copy of each cpp in liboslexec_target_srcs for 
-    # each target batch width and ISA combination, applying compiler flags to define 
+    # Strategy is to make a copy of each cpp in liboslexec_target_srcs for
+    # each target batch width and ISA combination, applying compiler flags to define
     # -D__OSL_WIDTH=[4|8|16]
     # -D__OSL_TARGET_ISA=[AVX512|AVX2|AVX|SSE4_2]
     # and compiler flags to choose correct target ISA for your compiler
     # You may then add/remove the desired  ${TARGET_SOURCES_B[4|8|16]_[AVX512|AVX2|AVX|SSE4_2]}
-    # to your add_library call 
+    # to your add_library call
     set (TARGET_LIB_SOURCES)
     set (TARGET_CXX_DEFS)
     set (TARGET_CXX_OPTS)
-    
+
     list (APPEND TARGET_CXX_OPTS
         "-I${CMAKE_CURRENT_SOURCE_DIR}/wide"
         "-I${CMAKE_CURRENT_SOURCE_DIR}/../liboslnoise/wide"
         )
-        
+
     list (APPEND TARGET_CXX_DEFS
         "__OSL_WIDTH=${TARGET_BATCH_SIZE}"
-        "__OSL_TARGET_ISA=${TARGET_ISA}"        
-        "OSL_OPENMP_SIMD"        
+        "__OSL_TARGET_ISA=${TARGET_ISA}"
+        "OSL_OPENMP_SIMD"
         )
 
     if (CMAKE_COMPILER_IS_INTEL)
@@ -319,20 +319,20 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             else ()
                 message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
             endif ()
-            
+
             if (${TARGET_OPT_FMA} STREQUAL "noFMA")
                 list (APPEND TARGET_CXX_OPTS "/Qfma-")
             endif ()
-            
-            list (APPEND TARGET_CXX_OPTS 
-                "/Qprec-div" 
+
+            list (APPEND TARGET_CXX_OPTS
+                "/Qprec-div"
                 "/Qopenmp-simd"
                 )
             if (VEC_REPORT)
                 list (APPEND TARGET_CXX_OPTS "/Qopt-report:5")
             endif ()
-                
-                
+
+
         else ()
             if (${TARGET_OPT_ISA} STREQUAL "AVX512")
                 list (APPEND TARGET_CXX_OPTS "-xCORE-AVX512")
@@ -348,27 +348,27 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             else ()
                 message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
             endif ()
-            
+
             if (${TARGET_OPT_FMA} STREQUAL "noFMA")
                 list (APPEND TARGET_CXX_OPTS "-no-fma")
             endif ()
-            
-            list (APPEND TARGET_CXX_OPTS 
-                "-prec-div" 
+
+            list (APPEND TARGET_CXX_OPTS
+                "-prec-div"
                 "-qopenmp-simd"
                 "-qno-opt-multiple-gather-scatter-by-shuffles"
                 )
-                
+
             if (VEC_REPORT)
                 list (APPEND TARGET_CXX_OPTS "-qopt-report=5")
             endif ()
-                
+
         endif ()
     endif ()
-    
+
     if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
         # REQUIRES CLANG 7+ to use successfully vectorize with OpenMP simd
-        
+
         if (${TARGET_OPT_ISA} STREQUAL "AVX512")
             list (APPEND TARGET_CXX_OPTS "-march=skylake-avx512")
             if (${TARGET_BATCH_SIZE} STREQUAL "16")
@@ -383,27 +383,27 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         else ()
             message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
         endif ()
-        
+
         if (${TARGET_OPT_FMA} STREQUAL "noFMA")
             # Do NOT use "-mno-fma" as it may lower ISA to one without any FMA
-            # instructions (AVX512->AVX2).  Our intent is to not generate 
-            # FMA's but still use the available instructions and register 
-            # width. However math library calls may use still end up using 
-            # FMA's, but lets try turning of fused math ops because many OSL 
+            # instructions (AVX512->AVX2).  Our intent is to not generate
+            # FMA's but still use the available instructions and register
+            # width. However math library calls may use still end up using
+            # FMA's, but lets try turning of fused math ops because many OSL
             # math functions are from OIIO/IMath headers generate non FMA
             list (APPEND TARGET_CXX_OPTS "-ffp-contract=off")
         endif ()
-        
+
         if (NOT CMAKE_COMPILER_IS_INTELCLANG)
             # large SIMD function loops will exceed llvm's -inline-threshold default of 225.
-            # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]     
-            # choose to increase that limit via compiler flags vs. 
-            # workaround with __attribute__((flatten))     
+            # remark: loop not vectorized: call instruction cannot be vectorized [-Rpass-analysis]
+            # choose to increase that limit via compiler flags vs.
+            # workaround with __attribute__((flatten))
             list (APPEND TARGET_CXX_OPTS "-mllvm" "-inline-threshold=100000")
             # NOTE: INTELCLANG we use icx/icc specific "#pragma force inline recursive"
             #       to only inline the SIMD loops contents vs. everything.
         endif ()
-            
+
         # For loops with small loop bodies, clang was unrolling the loop before
         # #pragma omp simd
         # was processed.  Thus there was no loop left for the pragma to apply to
@@ -418,30 +418,30 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         else ()
             list (APPEND TARGET_CXX_OPTS "-fopenmp")
         endif ()
-        
+
         if (VEC_REPORT)
             if (CMAKE_COMPILER_IS_INTELCLANG)
-                list (APPEND TARGET_CXX_OPTS 
+                list (APPEND TARGET_CXX_OPTS
                     "-qopt-report=3"
                     )
             else ()
-                list (APPEND TARGET_CXX_OPTS 
-                    "-Rpass=loop-vectorize" 
-                    "-Rpass-analysis=loop-vectorize" 
+                list (APPEND TARGET_CXX_OPTS
+                    "-Rpass=loop-vectorize"
+                    "-Rpass-analysis=loop-vectorize"
                     # Uncomment next section to investigate failures in vectorization
                     #"-Rpass-missed=loop-vectorize"
                     )
             endif ()
         endif ()
     endif ()
-    
-    
+
+
     if (CMAKE_COMPILER_IS_GNUCC)
         # Experimental, not exhaustively tested with GCC.
         # More compiler options may be needed to successfully vectorize
-        # complex control flow 
+        # complex control flow
         list (APPEND TARGET_CXX_OPTS "-finline-limit=1000000")
-        
+
         if (${TARGET_OPT_ISA} STREQUAL "AVX512")
             list (APPEND TARGET_CXX_OPTS "-march=skylake-avx512")
             if (NOT ${GCC_VERSION} VERSION_LESS 8.1)
@@ -458,32 +458,32 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         else ()
             message (FATAL_ERROR "Unknown ISA=${TARGET_OPT_ISA} extract from USE_BATCHED entry ${batched_target}")
         endif ()
-        
+
         if (${TARGET_OPT_FMA} STREQUAL "noFMA")
             # Do NOT use "-mno-fma" as it may lower ISA to one without any FMA
-            # instructions (AVX512->AVX2).  Our intent is to not generate 
-            # FMA's but still use the available instructions and register 
-            # width. However math library calls may use still end up using 
-            # FMA's, but lets try turning of fused math ops because many OSL 
+            # instructions (AVX512->AVX2).  Our intent is to not generate
+            # FMA's but still use the available instructions and register
+            # width. However math library calls may use still end up using
+            # FMA's, but lets try turning of fused math ops because many OSL
             # math functions are from OIIO/IMath headers generate non FMA
             list (APPEND TARGET_CXX_OPTS "-ffp-contract=off")
         endif ()
-        
+
         list (APPEND TARGET_CXX_OPTS "-fopenmp-simd")
-    endif ()    
-        
+    endif ()
+
     foreach(target_src ${liboslexec_target_srcs})
         set(TARGET_SRC "${CMAKE_CURRENT_BINARY_DIR}/${target_src}_${batched_target}.cpp")
-        set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/${target_src}.cpp")        
+        set(SRC "${CMAKE_CURRENT_SOURCE_DIR}/${target_src}.cpp")
         CONFIGURE_FILE("${SRC}" ${TARGET_SRC} COPYONLY)
         list(APPEND TARGET_LIB_SOURCES "${TARGET_SRC}")
-        
+
         set_property(SOURCE ${TARGET_SRC}
             APPEND PROPERTY COMPILE_DEFINITIONS ${TARGET_CXX_DEFS})
-            
-        set_property(SOURCE ${TARGET_SRC}  
+
+        set_property(SOURCE ${TARGET_SRC}
             APPEND PROPERTY COMPILE_OPTIONS ${TARGET_CXX_OPTS})
-            
+
         if (${target_src} IN_LIST liboslexec_override_limits)
             if (CMAKE_COMPILER_IS_INTEL)
                 if (MSVC)
@@ -493,9 +493,9 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
                 endif()
             endif()
         endif()
-        
+
         if (${target_src} IN_LIST liboslexec_require_INF_NaN)
-            REQUIRE_INF_NAN ( ${TARGET_SRC} ) 
+            REQUIRE_INF_NAN ( ${TARGET_SRC} )
         endif()
 
         if (CMAKE_COMPILER_IS_INTELCLANG)
@@ -503,16 +503,16 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
                 # NOTE: Some files still require increasing
                 #       inlining threshold to successfully vectorize.
                 #       Retest with future compiler versions
-                set_property(SOURCE ${TARGET_SRC} APPEND PROPERTY COMPILE_OPTIONS 
+                set_property(SOURCE ${TARGET_SRC} APPEND PROPERTY COMPILE_OPTIONS
                     "-mllvm" "-inline-threshold=100000")
             endif()
         endif()
 
 
     endforeach(target_src)
-    
+
     add_library ( ${batched_target_lib} MODULE ${TARGET_LIB_SOURCES} )
-      
+
     target_include_directories (${batched_target_lib}
         PUBLIC
             ${CMAKE_INSTALL_FULL_INCLUDEDIR}
@@ -526,7 +526,7 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         target_link_libraries(${batched_target_lib} PRIVATE partio::partio)
         target_compile_definitions (${batched_target_lib} PRIVATE USE_PARTIO=1)
     endif ()
-        
+
 endforeach(batched_target)
 
 add_library (${local_lib} ${lib_src})
@@ -580,7 +580,7 @@ target_link_libraries (${local_lib}
         ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml::pugixml
-        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+        ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
     )
@@ -613,17 +613,17 @@ install_targets (${local_lib})
 # Unit tests
 if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_executable (accum_test accum_test.cpp)
-    target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (accum_test PRIVATE oslexec ${CMAKE_DL_LIBS})
     set_target_properties (accum_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
 
     add_executable (dual_test dual_test.cpp)
-    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${CMAKE_DL_LIBS})
     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
 
     add_executable (llvmutil_test llvmutil_test.cpp)
-    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (llvmutil_test PRIVATE oslexec ${CMAKE_DL_LIBS})
     set_target_properties (llvmutil_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_llvmutil ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvmutil_test)
 endif ()

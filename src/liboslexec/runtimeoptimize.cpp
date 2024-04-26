@@ -1579,16 +1579,11 @@ RuntimeOptimizer::dealias_symbol(int symindex, int opnum)
 void
 RuntimeOptimizer::block_unalias(int symindex)
 {
-    FastIntMap::iterator i = m_block_aliases.find(symindex);
-    if (i != m_block_aliases.end())
-        i->second = -1;
+    m_block_aliases.erase(symindex);
     // In addition to the current block_aliases, unalias from any
     // saved alias lists.
-    for (auto& ba : m_block_aliases_stack) {
-        FastIntMap::iterator i = ba->find(symindex);
-        if (i != ba->end())
-            i->second = -1;
-    }
+    for (auto& ba : m_block_aliases_stack)
+        ba->erase(symindex);
 }
 
 

@@ -3432,13 +3432,8 @@ ShadingSystemImpl::get_context(PerThreadInfo* threadinfo,
                                TextureSystem::Perthread* texture_threadinfo)
 {
     if (!threadinfo) {
-#if OSL_VERSION < 20200
-        threadinfo = get_perthread_info();
-        warning("ShadingSystem::get_context called without a PerThreadInfo");
-#else
         error("ShadingSystem::get_context called without a PerThreadInfo");
         return nullptr;
-#endif
     }
     ShadingContext* ctx = threadinfo->context_pool.empty()
                               ? new ShadingContext(*this, threadinfo)

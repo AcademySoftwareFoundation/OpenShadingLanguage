@@ -9,8 +9,6 @@
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/thread.h>
 
-#include <boost/thread/tss.hpp> /* for thread_specific_ptr */
-
 #include <OSL/llvm_util.h>
 #include <OSL/oslconfig.h>
 #include <OSL/wide.h>

@@ -117,7 +117,14 @@ jobs:
             cxx_compiler: icpc
             cxx_std: 17
             fmt_ver: 7.1.3
-            openimageio_ver: master
+            openimageio_ver: release
+            # Changes to OIIO's simd.h starting in commit 68666db9 (from PR
+            # #4187) seem to trigger compiler bugs in icc and generate wrong
+            # SIMD code. It's probably not worth tracking down for just this
+            # obsolete compiler. Just lock down to OIIO 2.5 for icc builds to
+            # avoid the problem.
+            # openimageio_ver: e41ac03c0b21  # works
+            # openimageio_ver: 68666db994d5 # broken
             python_ver: 3.9
             pybind11_ver: v2.9.0
             # simd: avx2,f16c

@@ -3329,7 +3329,7 @@ LLVMGEN(llvm_gen_construct_triple)
             FuncSpec func_spec(transform_name);
             func_spec.arg(Result, Result.has_derivs(), resultIsUniform);
             func_spec.arg(Result, Result.has_derivs(), resultIsUniform);
-            func_spec.arg_varying(TypeMatrix44);
+            func_spec.arg_varying(TypeMatrix);
             func_spec.mask();
 
             rop.ll.call_function(rop.build_name(func_spec), args);
@@ -3586,7 +3586,7 @@ LLVMGEN(llvm_gen_transform)
                                     rop.ll.mask_as_int(rop.ll.current_mask()) };
 
             FuncSpec func_spec("build_transform_matrix");
-            func_spec.arg_varying(TypeMatrix44);
+            func_spec.arg_varying(TypeMatrix);
             // Ignore derivatives if unneeded or unsupplied
             func_spec.arg(*From, from_is_uniform);
             func_spec.arg(*To, to_is_uniform);
@@ -3616,7 +3616,7 @@ LLVMGEN(llvm_gen_transform)
             // The matrix is always varying if we looked it up,
             // if it was passed directly in "To", then we respect to's uniformity
             // otherwise it will be the varying result of the callback to the renderer
-            func_spec.arg(TypeMatrix44,
+            func_spec.arg(TypeMatrix,
                           To->typespec().is_matrix() ? to_is_uniform : false);
             func_spec.arg(*Result, has_derivs, result_is_uniform);
 
@@ -3641,7 +3641,7 @@ LLVMGEN(llvm_gen_transform)
             // The matrix is always varying if we looked it up,
             // if it was passed directly in "To", then we respect to's uniformity
             // otherwise it will be the varying result of the callback to the renderer
-            func_spec.arg(TypeMatrix44,
+            func_spec.arg(TypeMatrix,
                           To->typespec().is_matrix() ? to_is_uniform : false);
             func_spec.mask();
 

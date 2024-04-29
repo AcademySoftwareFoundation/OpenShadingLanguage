@@ -32,6 +32,7 @@ mkdir -p ${OPENIMAGEIO_BUILD_DIR} && true
 pushd $OPENIMAGEIO_SRCDIR
 git fetch --all -p
 git checkout $OPENIMAGEIO_VERSION --force
+echo "Building OpenImageIO from commit" `git rev-parse --short HEAD`
 
 if [[ "$USE_SIMD" != "" ]] ; then
     OPENIMAGEIO_CMAKE_FLAGS="$OPENIMAGEIO_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"

@@ -43,6 +43,8 @@ cd ${OPENCOLORIO_SOURCE_DIR}
 
 echo "git checkout ${OPENCOLORIO_VERSION} --force"
 git checkout ${OPENCOLORIO_VERSION} --force
+echo "Building OpenColorIO from commit" `git rev-parse --short HEAD`
+
 time cmake -S . -B ${OPENCOLORIO_BUILD_DIR} \
            -DCMAKE_BUILD_TYPE=${OPENCOLORIO_BUILD_TYPE} \
            -DCMAKE_INSTALL_PREFIX=${OPENCOLORIO_INSTALL_DIR} \

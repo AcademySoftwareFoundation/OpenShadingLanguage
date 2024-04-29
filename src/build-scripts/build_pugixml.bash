@@ -37,6 +37,7 @@ cd ${PUGIXML_SRC_DIR}
 
 echo "git checkout ${PUGIXML_VERSION} --force"
 git checkout ${PUGIXML_VERSION} --force
+echo "Building pugixml from commit" `git rev-parse --short HEAD`
 
 if [[ -z $DEP_DOWNLOAD_ONLY ]]; then
     time cmake -S . -B ${PUGIXML_BUILD_DIR} -DCMAKE_BUILD_TYPE=Release \

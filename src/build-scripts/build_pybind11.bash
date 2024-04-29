@@ -41,6 +41,7 @@ cd ${PYBIND11_SRC_DIR}
 
 echo "git checkout ${PYBIND11_VERSION} --force"
 git checkout ${PYBIND11_VERSION} --force
+echo "Building pybind11 from commit" `git rev-parse --short HEAD`
 
 if [[ -z $DEP_DOWNLOAD_ONLY ]]; then
     time cmake -S . -B ${PYBIND11_BUILD_DIR} -DCMAKE_BUILD_TYPE=Release \

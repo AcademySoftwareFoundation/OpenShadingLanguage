@@ -47,7 +47,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* [LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, 15, 16, or 17, including
+* [LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, 15, 16, 17, or 18, including
   clang libraries.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
@@ -71,7 +71,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10, 3.11)
+    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12)
       NOTE: It is likely that 1.13 is the last release that will support
       Python 2.7.
     * pybind11 >= 2.4.2 (Tested through 2.11. Note that pybind11 v2.10+ does

@@ -117,7 +117,7 @@ checked_find_package (pugixml REQUIRED
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
                       VERSION_MIN 9.0
-                      VERSION_MAX 17.9
+                      VERSION_MAX 18.9
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
@@ -139,9 +139,8 @@ if (APPLE AND LLVM_VERSION VERSION_EQUAL 10.0.1 AND EXISTS "/usr/local/Cellar/ll
              "    brew upgrade llvm \n"
              "${ColorReset}\n")
 endif ()
-if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0
-    AND (   (CMAKE_COMPILER_IS_APPLECLANG AND APPLECLANG_VERSION_STRING VERSION_LESS 15.0)
-         OR (CMAKE_COMPILER_IS_CLANG AND CLANG_VERSION_STRING VERSION_LESS 15.0)))
+if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0 AND CMAKE_COMPILER_IS_CLANG
+    AND ANY_CLANG_VERSION_STRING VERSION_LESS 15.0)
     message (WARNING
          "${ColorYellow}"
          "If you are using LLVM 15 or higher, you should also use clang version "
@@ -155,7 +154,8 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     if (CMAKE_COMPILER_IS_GNUCC AND (GCC_VERSION VERSION_LESS 7.0))
         message (WARNING "${ColorYellow}LLVM 16+ requires gcc 7.0 or higher.${ColorReset}\n")
     endif ()
-    if (CMAKE_COMPILER_IS_CLANG AND (CLANG_VERSION_STRING VERSION_LESS 5.0))
+    if (CMAKE_COMPILER_IS_CLANG AND (CLANG_VERSION_STRING VERSION_LESS 5.0
+                                     OR APPLE_CLANG_VERSION_STRING VERSION_LESS 5.0))
         message (WARNING "${ColorYellow}LLVM 16+ requires clang 5.0 or higher.${ColorReset}\n")
     endif ()
 endif ()

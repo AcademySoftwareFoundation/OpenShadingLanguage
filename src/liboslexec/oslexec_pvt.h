@@ -14,8 +14,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/thread/tss.hpp> /* for thread_specific_ptr */
-
 // Pull in the modified Imath headers and the OSL_HOSTDEVICE macro
 #ifdef __CUDACC__
 #    include <OSL/oslconfig.h>
@@ -836,20 +834,6 @@ private:
                                           string_view layername,
                                           ShaderInstance* inst);
 
-    /// Get the per-thread info, create it if necessary.
-    // N.B. This will be DEPRECATED (as will the m_perthread_info itself)
-    // in OSL 2.1 when we fully require the app to allocate the per-thread
-    // info data.
-    PerThreadInfo* get_perthread_info() const
-    {
-        PerThreadInfo* p = m_perthread_info.get();
-        if (!p) {
-            p = new PerThreadInfo;
-            m_perthread_info.reset(p);
-        }
-        return p;
-    }
-
     /// Set up LLVM -- make sure we have a Context, Module, ExecutionEngine,
     /// retained JITMemoryManager, etc.
     void SetupLLVM();
@@ -984,7 +968,6 @@ private:
 
     // Thread safety
     mutable mutex m_mutex;
-    mutable boost::thread_specific_ptr<PerThreadInfo> m_perthread_info;
 
     // Stats
     atomic_int m_stat_shaders_loaded;      ///< Stat: shaders loaded

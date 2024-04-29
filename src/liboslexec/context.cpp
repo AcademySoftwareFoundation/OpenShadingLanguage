@@ -46,13 +46,13 @@ ShadingContext::ShadingContext(ShadingSystemImpl& shadingsys,
                                PerThreadInfo* threadinfo)
     : m_shadingsys(shadingsys)
     , m_renderer(m_shadingsys.renderer())
+    , m_threadinfo(threadinfo)
     , m_group(NULL)
     , m_max_warnings(shadingsys.max_warnings_per_thread())
     , m_dictionary(NULL)
     , batch_size_executed(0)
 {
     m_shadingsys.m_stat_contexts += 1;
-    m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info();
     m_texture_thread_info = NULL;
 }
 

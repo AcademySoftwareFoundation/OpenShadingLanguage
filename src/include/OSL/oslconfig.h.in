@@ -50,7 +50,7 @@
 #    ifdef OIIO_ERRORHANDLER_HIDE_PRINTF
 #        define OIIO_ERRORHANDLER_HIDE_PRINTF 1
 #    endif
-#    ifdef OIIO_HIDE_FORMAT
+#    ifndef OIIO_HIDE_FORMAT
 #        define OIIO_HIDE_FORMAT 1
 #    endif
 #endif

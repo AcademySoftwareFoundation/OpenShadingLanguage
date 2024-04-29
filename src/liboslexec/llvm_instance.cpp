@@ -485,6 +485,9 @@ BackendLLVM::build_offsets_of_ShaderGlobals(
     offset_by_index.push_back(offsetof(ShaderGlobals, flipHandedness));
     offset_by_index.push_back(offsetof(ShaderGlobals, backfacing));
 }
+
+
+
 void
 BackendLLVM::llvm_create_constant(const Symbol& sym)
 {
@@ -1758,7 +1761,13 @@ BackendLLVM::prepare_module_for_cuda_jit()
     for (llvm::Function& fn : *ll.module()) {
         if (fn.hasFnAttribute("osl-lib-function")) {
             fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
-        } else if (fn.getName().startswith(group().name().c_str())) {
+        }
+#if OSL_LLVM_VERSION >= 180
+        else if (fn.getName().starts_with(group().name().c_str()))
+#else
+        else if (fn.getName().startswith(group().name().c_str()))
+#endif
+        {
             fn.setLinkage(llvm::GlobalValue::PrivateLinkage);
         }
     }
@@ -1770,9 +1779,15 @@ BackendLLVM::prepare_module_for_cuda_jit()
         // Don't modify the inlining attribute for:
         //  * group entry functions
         //  * llvm library functions
+#if OSL_LLVM_VERSION >= 180
+        if (fn.getName().starts_with("__direct_callable__")
+            || fn.getName().starts_with("llvm."))
+            continue;
+#else
         if (fn.getName().startswith("__direct_callable__")
             || fn.getName().startswith("llvm."))
             continue;
+#endif
 
         // Merge layer functions which are only called from one place
         if (merge_layer_funcs && !fn.hasFnAttribute("osl-lib-function")

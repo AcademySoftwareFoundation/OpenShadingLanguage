@@ -488,26 +488,20 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
     else
         m_llvm_type_addrint = (llvm::Type*)llvm::Type::getInt64Ty(
             *m_llvm_context);
-    m_llvm_type_int_ptr = (llvm::PointerType*)llvm::Type::getInt32PtrTy(
-        *m_llvm_context);
-    m_llvm_type_int8_ptr = (llvm::PointerType*)llvm::Type::getInt8PtrTy(
-        *m_llvm_context);
-    m_llvm_type_int64_ptr = (llvm::PointerType*)llvm::Type::getInt64PtrTy(
-        *m_llvm_context);
     m_llvm_type_bool     = (llvm::Type*)llvm::Type::getInt1Ty(*m_llvm_context);
-    m_llvm_type_bool_ptr = (llvm::PointerType*)llvm::Type::getInt1PtrTy(
-        *m_llvm_context);
     m_llvm_type_char     = (llvm::Type*)llvm::Type::getInt8Ty(*m_llvm_context);
     m_llvm_type_longlong = (llvm::Type*)llvm::Type::getInt64Ty(*m_llvm_context);
     m_llvm_type_void     = (llvm::Type*)llvm::Type::getVoidTy(*m_llvm_context);
-    m_llvm_type_char_ptr = (llvm::PointerType*)llvm::Type::getInt8PtrTy(
-        *m_llvm_context);
-    m_llvm_type_float_ptr = (llvm::PointerType*)llvm::Type::getFloatPtrTy(
-        *m_llvm_context);
-    m_llvm_type_longlong_ptr = (llvm::PointerType*)llvm::Type::getInt64PtrTy(
-        *m_llvm_context);
-    m_llvm_type_void_ptr   = m_llvm_type_char_ptr;
-    m_llvm_type_double_ptr = llvm::Type::getDoublePtrTy(*m_llvm_context);
+
+    m_llvm_type_int_ptr      = llvm::PointerType::get(m_llvm_type_int, 0);
+    m_llvm_type_int8_ptr     = llvm::PointerType::get(m_llvm_type_int8, 0);
+    m_llvm_type_int64_ptr    = llvm::PointerType::get(m_llvm_type_int64, 0);
+    m_llvm_type_bool_ptr     = llvm::PointerType::get(m_llvm_type_bool, 0);
+    m_llvm_type_char_ptr     = llvm::PointerType::get(m_llvm_type_char, 0);
+    m_llvm_type_void_ptr     = m_llvm_type_char_ptr;
+    m_llvm_type_float_ptr    = llvm::PointerType::get(m_llvm_type_float, 0);
+    m_llvm_type_longlong_ptr = llvm::PointerType::get(m_llvm_type_int64, 0);
+    m_llvm_type_double_ptr   = llvm::PointerType::get(m_llvm_type_double, 0);
 
     // A triple is a struct composed of 3 floats
     std::vector<llvm::Type*> triplefields(3, m_llvm_type_float);
@@ -561,7 +555,7 @@ void
 LLVM_Util::ustring_rep(UstringRep rep)
 {
     m_ustring_rep            = rep;
-    m_llvm_type_real_ustring = llvm::Type::getInt8PtrTy(*m_llvm_context);
+    m_llvm_type_real_ustring = m_llvm_type_int8_ptr;
     if (m_ustring_rep == UstringRep::charptr) {
         m_llvm_type_ustring = m_llvm_type_real_ustring;
     } else {
@@ -1515,8 +1509,14 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
         std::unique_ptr<llvm::RTDyldMemoryManager>(
             new MemoryManager(m_llvm_jitmm)));
 
+#if OSL_LLVM_VERSION >= 180
+    engine_builder.setOptLevel(jit_aggressive()
+                                   ? llvm::CodeGenOptLevel::Aggressive
+                                   : llvm::CodeGenOptLevel::Default);
+#else
     engine_builder.setOptLevel(jit_aggressive() ? llvm::CodeGenOpt::Aggressive
                                                 : llvm::CodeGenOpt::Default);
+#endif
 
     llvm::TargetOptions options;
     // Enables FMA's in IR generation.
@@ -1818,7 +1818,12 @@ LLVM_Util::nvptx_target_machine()
         m_nvptx_target_machine = llvm_target->createTargetMachine(
             ModuleTriple.str(), CUDA_TARGET_ARCH, "+ptx50", options,
             llvm::Reloc::Static, llvm::CodeModel::Small,
-            llvm::CodeGenOpt::Default);
+#if OSL_LLVM_VERSION >= 180
+            llvm::CodeGenOptLevel::Default
+#else
+            llvm::CodeGenOpt::Default
+#endif
+        );
 
         OSL_ASSERT(m_nvptx_target_machine
                    && "Unable to create TargetMachine for NVPTX");
@@ -2958,7 +2963,12 @@ LLVM_Util::prune_and_internalize_module(
                             || llvm::cast<llvm::GlobalValue>(val)
                                    ->hasLocalLinkage()) {
                             if (!debug()
-                                || !val->getName().startswith("llvm.dbg")) {
+#if OSL_LLVM_VERSION >= 180
+                                || !val->getName().starts_with("llvm.dbg")
+#else
+                                || !val->getName().startswith("llvm.dbg")
+#endif
+                            ) {
                                 __OSL_PRUNE_ONLY(
                                     std::cout
                                     << "remove symbol table for value:  "
@@ -6524,7 +6534,11 @@ LLVM_Util::ptx_compile_group(llvm::Module*, const std::string& name,
     llvm::raw_svector_ostream assembly_stream(assembly);
 
     // TODO: Make sure rounding modes, etc., are set correctly
-#    if OSL_LLVM_VERSION >= 100
+#    if OSL_LLVM_VERSION >= 180
+    target_machine->addPassesToEmitFile(mpm, assembly_stream,
+                                        nullptr,  // FIXME: Correct?
+                                        llvm::CodeGenFileType::AssemblyFile);
+#    elif OSL_LLVM_VERSION >= 100
     target_machine->addPassesToEmitFile(mpm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::CGFT_AssemblyFile);

@@ -18,7 +18,7 @@ OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
-OIIO_CONSTEXPR14 inline size_t
+constexpr inline size_t
 pvtstrlen(const char* s)
 {
     if (s == nullptr)
@@ -36,7 +36,7 @@ pvtstrlen(const char* s)
 // constexpr for c++14.
 // workaround by using local version here with a private
 // constexpr strlen
-OIIO_CONSTEXPR14 inline size_t
+constexpr inline size_t
 strhash(const char* s)
 {
     size_t len = pvt::pvtstrlen(s);

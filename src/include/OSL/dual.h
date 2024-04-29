@@ -130,12 +130,12 @@ public:
     // To better enable Scalar Replacement of Aggregates and other
     // transformations, CLANG has easier time if the per element
     // constructors declared.
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage() {}
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage(const T & val, const T & dx)
+    OSL_HOSTDEVICE constexpr DualStorage() {}
+    OSL_HOSTDEVICE constexpr DualStorage(const T & val, const T & dx)
     : m_val(val)
     , m_dx(dx)
     {}
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage(const DualStorage &other)
+    OSL_HOSTDEVICE constexpr DualStorage(const DualStorage &other)
     : m_val(other.m_val)
     , m_dx(other.m_dx)
     {}
@@ -159,13 +159,13 @@ public:
     // To better enable Scalar Replacement of Aggregates and other
     // transformations, CLANG has easier time if the per element
     // constructors declared.
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage() {}
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage(const T & val, const T & dx, const T & dy)
+    OSL_HOSTDEVICE constexpr DualStorage() {}
+    OSL_HOSTDEVICE constexpr DualStorage(const T & val, const T & dx, const T & dy)
     : m_val(val)
     , m_dx(dx)
     , m_dy(dy)
     {}
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage(const DualStorage &other)
+    OSL_HOSTDEVICE constexpr DualStorage(const DualStorage &other)
     : m_val(other.m_val)
     , m_dx(other.m_dx)
     , m_dy(other.m_dy)
@@ -192,15 +192,15 @@ public:
     // To better enable Scalar Replacement of Aggregates and other
     // transformations, CLANG has easier time if the per element
     // constructors declared.
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage() {}
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage(const T & val, const T & dx, const T & dy, const T & dz)
+    OSL_HOSTDEVICE constexpr DualStorage() {}
+    OSL_HOSTDEVICE constexpr DualStorage(const T & val, const T & dx, const T & dy, const T & dz)
     : m_val(val)
     , m_dx(dx)
     , m_dy(dy)
     , m_dz(dz)
     {}
 
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 DualStorage(const DualStorage &other)
+    OSL_HOSTDEVICE constexpr DualStorage(const DualStorage &other)
     : m_val(other.m_val)
     , m_dx(other.m_dx)
     , m_dy(other.m_dy)
@@ -230,7 +230,7 @@ class Dual : public DualStorage<T, PARTIALS> {
     static_assert (PARTIALS>=1, "Can't have a Dual with 0 partials");
 public:
     using value_type = T;
-    static OSL_FORCEINLINE OSL_HOSTDEVICE OSL_CONSTEXPR14 T zero() { return T(0.0); }
+    static OSL_FORCEINLINE OSL_HOSTDEVICE constexpr T zero() { return T(0.0); }
 
     using DualStorage<T, PARTIALS>::elem;
     template<int N>
@@ -240,13 +240,13 @@ public:
 
     /// Default ctr leaves everything uninitialized
     ///
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 Dual ()
+    OSL_HOSTDEVICE constexpr Dual ()
     : DualStorage<T, PARTIALS>()
     {}
 
     /// Construct a Dual from just a real value (derivs set to 0)
     ///
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 Dual (const T &x)
+    OSL_HOSTDEVICE constexpr Dual (const T &x)
     : DualStorage<T, PARTIALS>()
     {
         val() = x;
@@ -258,7 +258,7 @@ public:
     /// Copy constructor from another Dual of same dimension and different,
     /// but castable, data type.
     template<class F>
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 Dual (const Dual<F,PARTIALS> &x)
+    OSL_HOSTDEVICE constexpr Dual (const Dual<F,PARTIALS> &x)
     : DualStorage<T, PARTIALS>()
     {
         OSL_INDEX_LOOP(i, elements, {
@@ -266,8 +266,8 @@ public:
         });
     }
 
-    //OSL_HOSTDEVICE OSL_CONSTEXPR14 Dual (const Dual &x) = default;
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 Dual (const Dual &x)
+    //OSL_HOSTDEVICE constexpr Dual (const Dual &x) = default;
+    OSL_HOSTDEVICE constexpr Dual (const Dual &x)
     : DualStorage<T, PARTIALS>(x)
     {}
 
@@ -297,7 +297,7 @@ public:
         set_expander(pvt::make_int_sequence<elements>(), values...);
     }
 
-    OSL_HOSTDEVICE OSL_CONSTEXPR14 Dual (std::initializer_list<T> vals) {
+    OSL_HOSTDEVICE constexpr Dual (std::initializer_list<T> vals) {
 #if OIIO_CPLUSPLUS_VERSION >= 14
         static_assert (vals.size() == elements, "Wrong number of initializers");
 #endif
@@ -401,7 +401,7 @@ template<class T> using Dual2 = Dual<T,2>;
 /// Addition of duals.
 ///
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator+ (const Dual<T,P> &a, const Dual<T,P> &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator+ (const Dual<T,P> &a, const Dual<T,P> &b)
 {
     Dual<T,P> result = a;
     OSL_INDEX_LOOP(i, P+1, {
@@ -412,7 +412,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator+ (const Dual<T
 
 
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator+ (const Dual<T,P> &a, const T &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator+ (const Dual<T,P> &a, const T &b)
 {
     Dual<T,P> result = a;
     result.val() += b;
@@ -421,7 +421,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator+ (const Dual<T
 
 
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator+ (const T &a, const Dual<T,P> &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator+ (const T &a, const Dual<T,P> &b)
 {
     Dual<T,P> result = b;
     result.val() += a;
@@ -450,7 +450,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P>& operator+= (Dual<T,P> &a, const T &b)
 /// Subtraction of duals.
 ///
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator- (const Dual<T,P> &a, const Dual<T,P> &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator- (const Dual<T,P> &a, const Dual<T,P> &b)
 {
     Dual<T,P> result;
     OSL_INDEX_LOOP(i, P+1, {
@@ -461,7 +461,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator- (const Dual<T
 
 
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator- (const Dual<T,P> &a, const T &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator- (const Dual<T,P> &a, const T &b)
 {
     Dual<T,P> result = a;
     result.val() -= b;
@@ -470,7 +470,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator- (const Dual<T
 
 
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator- (const T &a, const Dual<T,P> &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator- (const T &a, const Dual<T,P> &b)
 {
     Dual<T,P> result;
     result.val() = a - b.val();
@@ -503,7 +503,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P>& operator-= (Dual<T,P> &a, const T &b)
 /// Negation of duals.
 ///
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator- (const Dual<T,P> &a)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator- (const Dual<T,P> &a)
 {
     Dual<T,P> result;
     OSL_INDEX_LOOP(i, P+1, {
@@ -516,7 +516,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator- (const Dual<T
 /// Multiplication of duals. This will work for any Dual<T>*Dual<S>
 /// where T*S is meaningful.
 template<class T, int P, class S>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 auto
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr auto
 operator* (const Dual<T,P> &a, const Dual<S,P> &b) -> Dual<decltype(a.val()*b.val()),P>
 {
     // Use the chain rule
@@ -533,7 +533,7 @@ operator* (const Dual<T,P> &a, const Dual<S,P> &b) -> Dual<decltype(a.val()*b.va
 /// Dual<T> * S where T*S is meaningful.
 template<class T, int P, class S,
          DUAL_REQUIRES(is_Dual<S>::value == false)>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 auto
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr auto
 operator* (const Dual<T,P> &a, const S &b) -> Dual<decltype(a.val()*b),P>
 {
     Dual<decltype(a.val()*b),P> result;
@@ -562,7 +562,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE const Dual<T,P>& operator*= (Dual<T,P> &a, const 
 /// Dual<T> * S where T*S is meaningful.
 template<class T, int P, class S,
          DUAL_REQUIRES(is_Dual<S>::value == false)>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 auto
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr auto
 operator* (const S &b, const Dual<T,P> &a) -> Dual<decltype(a.val()*b),P>
 {
     return a*b;
@@ -573,7 +573,7 @@ operator* (const S &b, const Dual<T,P> &a) -> Dual<decltype(a.val()*b),P>
 /// Division of duals.
 ///
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T,P> &a, const Dual<T,P> &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator/ (const Dual<T,P> &a, const Dual<T,P> &b)
 {
     T bvalinv = T(1) / b.val();
     T aval_bval = a.val() / b.val();
@@ -589,7 +589,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T
 /// Division of dual by scalar.
 ///
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T,P> &a, const T &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator/ (const Dual<T,P> &a, const T &b)
 {
     T bvalinv = T(1) / b;
     T aval_bval = a.val() / b;
@@ -605,7 +605,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T
 /// Division of scalar by dual.
 ///
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> operator/ (const T &aval, const Dual<T,P> &b)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> operator/ (const T &aval, const Dual<T,P> &b)
 {
     T bvalinv = T(1) / b.val();
     T aval_bval = aval / b.val();
@@ -742,12 +742,12 @@ OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool equalVal (const T &x, const Dual<T
 /// equalAll is the same as equalVal generally, but for two Duals of the same
 /// type, they also compare derivs.
 template<class T>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 bool equalAll (const T &x, const T &y) {
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool equalAll (const T &x, const T &y) {
     return equalVal(x, y);
 }
 
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 bool equalAll (const Dual<T,P> &x, const Dual<T,P> &y) {
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool equalAll (const Dual<T,P> &x, const Dual<T,P> &y) {
     bool r = true;
     OSL_INDEX_LOOP(i, P+1, {
         r &= (x.elem(i) == y.elem(i));
@@ -763,7 +763,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 bool equalAll (const Dual<T,P> &x
 // function f(scalar), then the dual function F(<u,u'>) is defined as:
 //    F(<u,u'>) = < f(u), f'(u)*u' >
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P>
 dualfunc (const Dual<T,P>& u, const T& f_val, const T& df_val)
 {
     Dual<T,P> result;
@@ -781,7 +781,7 @@ dualfunc (const Dual<T,P>& u, const T& f_val, const T& df_val)
 //   F(<u,u'>, <v,v'>) = < f(u,v), dfdu(u,v)u' + dfdv(u,v)v' >
 // (from http://en.wikipedia.org/wiki/Automatic_differentiation)
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P>
 dualfunc (const Dual<T,P>& u, const Dual<T,P>& v,
           const T& f_val, const T& dfdu_val, const T& dfdv_val)
 {
@@ -796,7 +796,7 @@ dualfunc (const Dual<T,P>& u, const Dual<T,P>& v,
 
 // Helper for construction the result of a Dual function of three variables.
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P>
 dualfunc (const Dual<T,P>& u, const Dual<T,P>& v, const Dual<T,P>& w,
           const T& f_val, const T& dfdu_val, const T& dfdv_val, const T& dfdw_val)
 {
@@ -815,7 +815,7 @@ dualfunc (const Dual<T,P>& u, const Dual<T,P>& v, const Dual<T,P>& w,
 /// OIIO's fast_math.h fast_neg for a more full explanation of why this is
 /// faster.
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> fast_neg (const Dual<T,P> &a)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> fast_neg (const Dual<T,P> &a)
 {
     Dual<T,P> result;
     OSL_INDEX_LOOP(i, P+1, {
@@ -1210,7 +1210,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> fast_erfc(const Dual<T,P> &a)
 
 // f(x) = sqrt(x), f'(x) = 1/(2*sqrt(x))
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> sqrt (const Dual<T,P> &a)
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr Dual<T,P> sqrt (const Dual<T,P> &a)
 {
     Dual<T,P> result;
     if (OSL_LIKELY(a.val() > T(0))) {
@@ -1336,7 +1336,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> smoothstep (const Dual<T,P> &e0, const 
 
 
 #ifdef __CUDA_ARCH__
-template<> inline OSL_HOSTDEVICE OSL_CONSTEXPR14 float3 Dual<float3, 2>::zero() {
+template<> inline OSL_HOSTDEVICE constexpr float3 Dual<float3, 2>::zero() {
     return float3{0.f, 0.f, 0.f};
 }
 #endif

@@ -517,6 +517,8 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         PUBLIC
             ${CMAKE_INSTALL_FULL_INCLUDEDIR}
             ${IMATH_INCLUDES}
+        PRIVATE
+            ${tsl-robin-map_INCLUDE_DIRS}
         )
     target_link_libraries (${batched_target_lib}
         PUBLIC
@@ -535,6 +537,7 @@ target_include_directories (${local_lib}
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
         ${IMATH_INCLUDES}
     PRIVATE
+        ${tsl-robin-map_INCLUDE_DIRS}
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
     )
 target_compile_definitions (${local_lib}
@@ -580,6 +583,7 @@ target_link_libraries (${local_lib}
         ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml::pugixml
+        tsl::robin_map
         ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}

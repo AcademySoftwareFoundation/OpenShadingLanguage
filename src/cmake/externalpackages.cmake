@@ -30,13 +30,19 @@ message (STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
 
 
 include (ExternalProject)
+include(FetchContent)
 
 option (BUILD_MISSING_DEPS "Try to download and build any missing dependencies" OFF)
 
+FetchContent_Declare(
+  tsl-robin-map
+  GIT_REPOSITORY https://github.com/Tessil/robin-map.git
+  GIT_TAG        v1.3.0
+  FIND_PACKAGE_ARGS NAMES tsl-robin-map
+)
+FetchContent_MakeAvailable(tsl-robin-map)
 
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
-
-checked_find_package(tsl-robin-map REQUIRED)
 
 # IlmBase & OpenEXR
 checked_find_package (OpenEXR REQUIRED

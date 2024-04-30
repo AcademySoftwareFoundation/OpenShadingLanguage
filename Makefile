@@ -369,7 +369,6 @@ help:
 	@echo "      if found. And you can hint where to find it with Foo_ROOT=path"
 	@echo "      Note that it is case sensitive!"
 	@echo "  Finding and Using Dependencies:"
-	@echo "      BOOST_ROOT=path          Custom Boost installation"
 	@echo "      USE_QT=0                 Skip anything that needs Qt"
 	@echo "  LLVM-related options:"
 	@echo "      LLVM_VERSION=12.0        Specify which LLVM version to use"

@@ -567,7 +567,6 @@ The OSL implementation depends upon several other open source packages,
 all with compatible licenses:
 
 * [OpenImageIO](http://www.openimageio.org)
-* [Boost](http://www.boost.org)
 * [IlmBase](http://www.openexr.com)
 * [LLVM Compiler Infrastructure](http://llvm.org)
 

@@ -120,7 +120,7 @@ find are different in OSL compared to other languages:
 
   OSL shaders are evaluated in SIMD fashion, executing shaders on many
   points at once, but there is no need to burden shader writers with
-  declaring which variables need to be uniform or varying.  
+  declaring which variables need to be uniform or varying.
 
   In the open source OSL implementation, this is done both automatically
   and dynamically, meaning that a variable can switch back and forth
@@ -133,7 +133,7 @@ find are different in OSL compared to other languages:
   and use arbitrary quantities as texture coordinates and expect correct
   filtering.  This does not require that shaded points be arranged in a
   rectangular grid, or have any particular connectivity, or that any
-  "extra points" be shaded.  
+  "extra points" be shaded.
 
   In the open source OSL implementation, this is possible because
   derivatives are not computed by finite differences with neighboring
@@ -182,7 +182,6 @@ other open source packages:
   http://openimageio.org
 - **Imath** Copyright Contributors to Imath.
   http://www.openexr.com
-- **Boost** Copyright various authors.  http://www.boost.org
 - **LLVM** Copyright 2003-2010 University of Illinois at
   Urbana-Champaign. http://llvm.org
 

@@ -34,50 +34,6 @@ include (ExternalProject)
 option (BUILD_MISSING_DEPS "Try to download and build any missing dependencies" OFF)
 
 
-###########################################################################
-# Boost setup
-if (LINKSTATIC)
-    set (Boost_USE_STATIC_LIBS ON)
-else ()
-    if (MSVC)
-        add_definitions (-DBOOST_ALL_DYN_LINK=1)
-    endif ()
-endif ()
-if (BOOST_CUSTOM)
-    set (Boost_FOUND true)
-    # N.B. For a custom version, the caller had better set up the variables
-    # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
-else ()
-    set (Boost_COMPONENTS filesystem system thread)
-    # The FindBoost.cmake interface is broken if it uses boost's installed
-    # cmake output (e.g. boost 1.70.0, cmake <= 3.14). Specifically it fails
-    # to set the expected variables printed below. So until that's fixed
-    # force FindBoost.cmake to use the original brute force path.
-    if (NOT DEFINED Boost_NO_BOOST_CMAKE)
-        set (Boost_NO_BOOST_CMAKE ON)
-    endif ()
-    checked_find_package (Boost REQUIRED
-                       VERSION_MIN 1.55
-                       COMPONENTS ${Boost_COMPONENTS}
-                       RECOMMEND_MIN 1.66
-                       RECOMMEND_MIN_REASON "Boost 1.66 is the oldest version our CI tests against"
-                       PRINT Boost_INCLUDE_DIRS Boost_LIBRARIES
-                      )
-endif ()
-
-# On Linux, Boost 1.55 and higher seems to need to link against -lrt
-if (CMAKE_SYSTEM_NAME MATCHES "Linux"
-      AND ${Boost_VERSION} VERSION_GREATER_EQUAL 105500)
-    list (APPEND Boost_LIBRARIES "rt")
-endif ()
-
-include_directories (SYSTEM "${Boost_INCLUDE_DIRS}")
-link_directories ("${Boost_LIBRARY_DIRS}")
-
-# end Boost setup
-###########################################################################
-
-
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 checked_find_package(tsl-robin-map REQUIRED)

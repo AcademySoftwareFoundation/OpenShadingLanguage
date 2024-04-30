@@ -182,7 +182,7 @@ Unported License. \\
 \smallskip
 \spc \includegraphics[width=0.85in]{Figures/CC-BY.png}
 \spc http://creativecommons.org/licenses/by/4.0/
- \bigskip 
+ \bigskip
 
 
 
@@ -318,7 +318,7 @@ find are different in OSL compared to other languages:
 
   OSL shaders are evaluated in SIMD fashion, executing shaders on many
   points at once, but there is no need to burden shader writers with
-  declaring which variables need to be uniform or varying.  
+  declaring which variables need to be uniform or varying.
 
   In the open source OSL implementation, this is done both automatically
   and dynamically, meaning that a variable can switch back and forth
@@ -331,7 +331,7 @@ find are different in OSL compared to other languages:
   and use arbitrary quantities as texture coordinates and expect correct
   filtering.  This does not require that shaded points be arranged in a
   rectangular grid, or have any particular connectivity, or that any
-  "extra points" be shaded.  
+  "extra points" be shaded.
 
   In the open source OSL implementation, this is possible because
   derivatives are not computed by finite differences with neighboring
@@ -384,7 +384,6 @@ other open source packages:
 \url{http://openimageio.org}
 \item Imath \copyright\ Contributors to Imath.
 \url{http://www.openexr.com}
-\item Boost \copyright\ various authors.  \url{http://www.boost.org}
 \item LLVM \copyright\ 2003-2010 University of Illinois at
   Urbana-Champaign. \url{http://llvm.org}
 \end{itemize}
@@ -402,7 +401,7 @@ to be used by and distributed with \product.
 % readers of early drafts, sometimes questions, sometimes guideposts
 % to uncertain areas, sometimes explanations of what is to come but that
 % has not yet been fully fleshed out.
-% 
+%
 % \begin{comment}
 % Short annotations will sometimes spring up anywhere, but there's also a
 % full chapter of discussion of design choices
@@ -418,7 +417,7 @@ to be used by and distributed with \product.
 \label{chap:bigpicture}
 
 This chapter attempts to lay out the major concepts of \langname,
-define key nomenclature, and sketch out how individual shaders fit 
+define key nomenclature, and sketch out how individual shaders fit
 together in the context of a renderer as a whole.
 
 % \begin{annotate}
@@ -445,9 +444,9 @@ in its output {\cf Cout}:
 
 \medskip
 
-The shader's inputs and outputs are called \emph{shader parameters}.  
+The shader's inputs and outputs are called \emph{shader parameters}.
 Parameters have default values, specified in the shader code, but may
-also be given new values by the renderer at runtime.  
+also be given new values by the renderer at runtime.
 
 \subsection*{Shader instances}
 
@@ -744,7 +743,7 @@ are equivalent to a single whitespace character. \index{whitespace}
 
 Source code may be split into multiple lines, separated by end-of-line
 markers (carriage return and/or linefeed).  Lines may be of any length
-and end-of-line markers carry no significant difference from other 
+and end-of-line markers carry no significant difference from other
 whitespace, except that they terminate {\cf //} comments and delimit
 preprocessor directives.
 
@@ -824,11 +823,11 @@ languages: \index{reserved words}
 
 \begin{quote} {\cf
 
-bool case catch char class const delete default double 
+bool case catch char class const delete default double
 enum extern false friend
-goto inline long new operator private protected 
-short signed sizeof static 
-switch template this throw true try typedef 
+goto inline long new operator private protected
+short signed sizeof static
+switch template this throw true try typedef
 uniform union unsigned varying virtual volatile
 
 }
@@ -850,7 +849,7 @@ uniform union unsigned varying virtual volatile
 \indexapi{\#pragma}
 
 Shader source code is passed through a standard C preprocessor as a
-first step in parsing.  
+first step in parsing.
 
 Preprocessor directives are designated by a hash mark ({\cf \#}) as the
 first character on a line, followed by a preprocessor directive name.
@@ -992,13 +991,13 @@ parameters.  Formally, the grammar for a simple parameter
 declaration looks like this:
 
 \medskip
-\spc \emph{type parametername = default-expression} 
+\spc \emph{type parametername = default-expression}
 \medskip
 
 \noindent where \emph{type} is one of the data types described
 in Chapter~\ref{chap:types}, \emph{parametername} is the name of the
 parameter, and \emph{default-expression} is a valid expression
-(see Section~\ref{sec:expressions}).  Multiple parameters are 
+(see Section~\ref{sec:expressions}).  Multiple parameters are
 simply separated by commas:
 
 \medskip
@@ -1079,7 +1078,7 @@ renderer's API).
 Here is an example of a shader declaration, with several parameters:
 
 \begin{code}
-    surface wood ( 
+    surface wood (
                /* Simple params with constant initializers */
                    float Kd = 0.5,
                    color woodcolor = color (.7, .5, .3),
@@ -1163,9 +1162,9 @@ Below is an example shader declaration showing the use of shader and
 parameter metadata:
 
 \begin{code}
-    surface wood 
+    surface wood
                 [[ string help = "Realistic wood shader" ]]
-        ( 
+        (
            float Kd = 0.5
                [[ string help = "Diffuse reflectivity",
                   float min = 0, float max = 1 ]] ,
@@ -1190,7 +1189,7 @@ not affect the actual execution of the shader.  Most metadata exist only
 to be embedded in the compiled shader and able to be queried by other
 applications, such as to construct user interfaces for shader assignment
 that allow usage tips, appropriate kinds of widgets for setting each
-parameter, etc.  
+parameter, etc.
 
 The choice of metadata and their meaning is completely up to the shader
 writer and/or modeling system.  However, we propose some conventions
@@ -1593,17 +1592,17 @@ lists the built-in color spaces.
 {\cf "rgb"} & The coordinate system that all colors start out in, and
 in which the renderer expects to find colors that are set by
 your shader.   \\
-\hline 
+\hline
 {\cf "hsv"} & hue, saturation, and value. \\
-\hline 
+\hline
 {\cf "hsl"} & hue, saturation, and lightness. \\
-\hline 
+\hline
 {\cf "YIQ"} & the color space used for the NTSC television standard. \\
-\hline 
+\hline
 {\cf "XYZ"} & CIE \emph{XYZ} coordinates. \\
-\hline 
+\hline
 {\cf "xyY"} & CIE \emph{xyY} coordinates. \\
-\hline 
+\hline
 \end{tabular}
 \end{table}
 
@@ -1693,7 +1692,7 @@ describe below.
 
 All of these point-like types are internally represented by three
 floating-point numbers that uniquely describe a position or
-direction relative to the three axes of some coordinate system.  
+direction relative to the three axes of some coordinate system.
 
 All points, vectors, and normals are described relative to some
 coordinate system.  All data provided to a shader (surface information,
@@ -1739,7 +1738,7 @@ Some computations may be easier in a coordinate system other than
 ``solid texture'' to a moving object in its \objectspace than in
 \commonspace.  For these reasons, OSL provides a built-in
 {\cf transform} function that
-allows you to transform points, vectors, and normals 
+allows you to transform points, vectors, and normals
 among different coordinate systems (see Section~\ref{sec:stdlib:geom}).  Note,
 however, that \langname does not keep track of which point variables are
 in which coordinate systems.  It is the responsibility of the shader
@@ -1759,31 +1758,31 @@ to designate transformations.
 {\cf "common"} & The coordinate system that all spatial values start out in and
 the one in which all lighting calculations are carried out.  Note that
 the choice of {\cf "common"} space may be different on each renderer. \\
-\hline 
+\hline
 {\cf "object"} & The local coordinate system of the graphics primitive (sphere,
 patch, etc.) that we are shading. \\
-\hline 
+\hline
 {\cf "shader"} & The local coordinate system active at the time that the shader
 was instanced. \\
-\hline 
+\hline
 {\cf "world"} & The world coordinate system designated in the scene. \\
-\hline 
+\hline
 {\cf "camera"} & The coordinate system with its origin at the center of
 the camera lens, $x$-axis pointing right, $y$-axis pointing up, and
 $z$-axis pointing into the screen. \\
-\hline 
+\hline
 {\cf "screen"} & The coordinate system of the camera's image plane
 (after perspective transformation, if any).  Coordinate (0,0) of {\cf
 "screen"} space is looking along the $z$-axis of \cameraspace. \\
-\hline 
+\hline
 {\cf "raster"} & 2D pixel coordinates, with (0,0) as the upper-left
 corner of the image and (xres, yres) as the lower-right corner. \\
-\hline 
+\hline
 {\cf "NDC"} & 2D Normalized Device Coordinates --- like raster space, but
 normalized so that $x$ and $y$ both run from 0 to 1 across the whole
 image, with (0,0) being at the upper left of the image, and (1,1) being
 at the lower right. \\
-\hline 
+\hline
 \end{tabular}
 \end{table}
 
@@ -1867,7 +1866,7 @@ example:
     matrix ident = 1;  // makes the identity matrix
 
     // Construct a matrix from 16 floats
-    matrix m = matrix (m00, m01, m02, m03, m10, m11, m12, m13, 
+    matrix m = matrix (m00, m01, m02, m03, m10, m11, m12, m13,
                        m20, m21, m22, m23, m30, m31, m32, m33);
 \end{code}
 
@@ -1875,7 +1874,7 @@ example:
 in a matrix with diagonal components all being $x$ and other
 components being zero (i.e., $x$ times the identity matrix).
 Constructing a matrix with 16 floats will create the matrix whose
-components are those floats, in row-major order.  
+components are those floats, in row-major order.
 
 Similar to point-like types, a {\cf matrix} may be constructed in
 reference to a named space:
@@ -1883,7 +1882,7 @@ reference to a named space:
 \begin{code}
     // Construct matrices relative to something other than "common"
     matrix q = matrix ("shader", 1);
-    matrix m = matrix ("world", m00, m01, m02, m03, m10, m11, m12, m13, 
+    matrix m = matrix ("world", m00, m01, m02, m03, m10, m11, m12, m13,
                                m20, m21, m22, m23, m30, m31, m32, m33);
 \end{code}
 
@@ -2218,7 +2217,7 @@ to its use.  For example
 The syntax for declaring a variable in \langname is:
 
 \vspace{12pt}
-\spc \emph{type} \emph{name} 
+\spc \emph{type} \emph{name}
 
 \spc \emph{type} \emph{name} = \emph{value}
 \vspace{12pt}
@@ -2283,7 +2282,7 @@ types into a single object that can be referred to by name.  The syntax
 for declaring a structure type is:
 
 \vspace{12pt}
-\spc {\cf struct} \emph{structname} {\cf \{} 
+\spc {\cf struct} \emph{structname} {\cf \{}
 
 \spc\spc \emph{type1} \emph{fieldname1} {\cf ;}
 
@@ -2309,7 +2308,7 @@ initialized with the initializer in the corresponding position, which
 is expected to be of the appropriate type.
 
 Structure elements are accessed in the same way as other C-like
-languages, using the `dot' operator: 
+languages, using the `dot' operator:
 
 \vspace{12pt}
 \spc \emph{variablename}{\cf .} \emph{fieldname}
@@ -2364,7 +2363,7 @@ assembled bit by bit at runtime.
 \item An individual element of an array (using {\cf [ ] })
 
 \item An individual component of a \color,
-\point, \vector, \normal (using {\cf [ ]}), 
+\point, \vector, \normal (using {\cf [ ]}),
 or of a \matrix (using {\cf [][]})
 
 \item prefix and postfix increment and decrement operators:
@@ -2409,7 +2408,7 @@ multiplication and matrix multiplication by the inverse of another
 matrix.
 
 The integer and bit-wise operators {\cf \%}, {\cf <<}, {\cf >>},
-{\cf \&}, {\cf |}, {\cf \textasciicircum}, and {\cf \textasciitilde} may only be 
+{\cf \&}, {\cf |}, {\cf \textasciicircum}, and {\cf \textasciitilde} may only be
 used with expressions of type \inttype.
 
 For details on which operators are allowed, please consult the operator
@@ -2461,7 +2460,7 @@ the empty string (\qkw{}).
 \item another expression enclosed in parentheses: {\cf ( )}.
   Parentheses may be used to guarantee associativity of operations.
 
-\item Type casts, specified either by having the type name in 
+\item Type casts, specified either by having the type name in
 parentheses in front of the value to cast (C-style typecasts)
 or the type name called as a constructor (C++-style type constructors):
 \begin{code}
@@ -2510,7 +2509,7 @@ allowed only if {\cf var = var OP expr} is allowed, and means exactly
 the same thing.  Please consult the operator tables for each individual
 type in Chapter~\ref{chap:types}.
 
-\item ternary operator, just like C: 
+\item ternary operator, just like C:
 
 \hspace{0.5in}  \emph{condition} {\cf ?} \emph{expr1} {\cf :} \emph{expr2}
 
@@ -2534,7 +2533,7 @@ Conditionals in \langname just like in C or C++:
 \begin{tabbing}
 \hspace{0.5in} \= \hspace{0.3in} \= \kill
 \> {\cf if (} \emph{condition} {\cf )} \\
-\> \> \emph{truestatement}  
+\> \> \emph{truestatement}
 \end{tabbing}
 
 \noindent and
@@ -2544,7 +2543,7 @@ Conditionals in \langname just like in C or C++:
 \> {\cf if (} \emph{condition} {\cf )} \\
 \> \> \emph{truestatement}  \\
 \> {\cf else} \\
-\> \> \emph{falsestatement}  
+\> \> \emph{falsestatement}
 \end{tabbing}
 
 \noindent The statements can also be entire blocks, surrounded by curly
@@ -2586,7 +2585,7 @@ possible with a {\cf while} statement:
 \begin{tabbing}
 \hspace{0.5in} \= \hspace{0.3in} \= \kill
 \> {\cf while (} \emph{condition} {\cf )} \\
-\> \> \emph{statement}  
+\> \> \emph{statement}
 \end{tabbing}
 
 Or the test may happen after the body of the loop, with a {\cf do/while}
@@ -2605,7 +2604,7 @@ loop:
 \begin{tabbing}
 \hspace{0.5in} \= \hspace{0.3in} \= \kill
 \> {\cf for (} \emph{initialization-statement} {\cf ;} \emph{condition} {\cf ;} \emph{iteration-statement} {\cf )} \\
-\> \> \emph{body}  
+\> \> \emph{body}
 \end{tabbing}
 
 \indexapi{for}
@@ -2620,7 +2619,7 @@ loop itself.  For example,
 \end{code}
 
 As with {\cf if} statements, loop conditions may be relations or
-numerical quantities (which are considered ``true'' if nonzero, 
+numerical quantities (which are considered ``true'' if nonzero,
 ``false'' if zero), or strings (considered ``true'' if nonempty,
 ``false'' if the empty string \qkw{}).
 
@@ -2698,8 +2697,8 @@ will not be noticeably different from C-style ``pass by value''
 semantics, except if you pass the same variable as two separate
 arguments to a function that modifies an argument's value.
 
-Certain functions allow optional arguments to be passed.  
-Optional arguments are key-value pairs with the key passed as an 
+Certain functions allow optional arguments to be passed.
+Optional arguments are key-value pairs with the key passed as an
 argument and the associated value passed as the subsequent argument:
 
 \begin{tabbing}
@@ -2782,7 +2781,7 @@ simply available by default in your shader.  Global variables available
 in shaders are listed in Table~\ref{tab:globalvars}.
 
 \begin{table}[H]
-\begin{tabular}{|p{1.5in}p{4in}|} 
+\begin{tabular}{|p{1.5in}p{4in}|}
 \hline
 {\bf Variable} & {\bf Description} \\
 \hline
@@ -2801,7 +2800,7 @@ displacement shader, changing this variable displaces the surface. \\
   true surface geometric normal
   of the surface at \P. \\
 \hline
-\float\ {\ce u}, {\ce v} & The 2D parametric coordinates of \P (on the 
+\float\ {\ce u}, {\ce v} & The 2D parametric coordinates of \P (on the
 		  particular geometric primitive you are shading). \\
 \hline
 \vector\ {\ce dPdu}, {\ce dPdv} & Partial derivatives $\partial
@@ -2812,13 +2811,13 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 %\hline
 %\color\ {\ce Cl} & Incoming light color at P. \\
 \hline
-\point\ {\ce Ps} & Position at which the light is being queried 
+\point\ {\ce Ps} & Position at which the light is being queried
     (currently only used for light attenuation shaders) \\
 %\\
 %\hline
 %\normal\ {\ce Ns} & Axis about which the light is being queried
 % (i.e., the axis passed to \illuminance), or the surface's \N if no
-% axis was passed to \illuminance). 
+% axis was passed to \illuminance).
 %\\
 %\hline
 %\point\ {\ce Pl} & Position of the light source. \\
@@ -2868,7 +2867,7 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 %{\cf Nl}      &       &    & R$^2$ & R \\
 {\cf Pl}      &       &    &  & R \\
 {\cf Nl}      &       &    &  & R \\
-\hline 
+\hline
 \end{tabular}
 \end{table}
 \end{comment}
@@ -2890,7 +2889,7 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 {\cf dtime}   & R     & R  & R       \\
 {\cf dPdtime} & R     & R  & R       \\
 \Ci           & RW    &    & RW     \\
-\hline 
+\hline
 \end{tabular}
 
 %$^1$Certain surface variables (including \N, \Ng, \I, etc.) are readable
@@ -3017,7 +3016,7 @@ operations, such as {\cf pow(-1,0.5)}.
 \emph{type} {\ce exp2} (\emph{type} x) \\
 \emph{type} {\ce expm1} (\emph{type} x)}
 \indexapi{exp()} \indexapi{exp2()} \indexapi{expm1()}
-Computes $e^x$, $2^x$, and $e^x-1$, respectively.  Note that 
+Computes $e^x$, $2^x$, and $e^x-1$, respectively.  Note that
 {\cf expm1(x)} is accurate even for very small values of $x$.
 \apiend
 
@@ -3053,7 +3052,7 @@ Computes $\sqrt{x^2+y^2}$ and $\sqrt{x^2+y^2+z^z}$, respectively.
 \apiend
 
 \apiitem{\emph{type} {\ce abs} (\emph{type} x) \\
-\emph{type} {\ce fabs} (\emph{type} x)} 
+\emph{type} {\ce fabs} (\emph{type} x)}
 \indexapi{abs()} \indexapi{fabs()}
 Absolute value of $x$.  (The two functions are synonyms.)
 \apiend
@@ -3095,7 +3094,7 @@ in OSL, {\cf fmod(a,0)} returns {\cf 0}, rather than {\cf NaN}.  Note
 that if $a < 0$, the return value will be negative.
 
 The {\cf mod()} function returns $a - b*\mbox{floor}(a/b)$, which will
-always be a positive number or zero.  
+always be a positive number or zero.
 As an example, {\cf fmod(-0.25,1.0) = -0.25}, but {\cf mod(-0.25,1.0) =
   0.75}.  For positive {\cf a} they return the same value.
 
@@ -3148,7 +3147,7 @@ NaN), 0 otherwise.  \apiend
 \apiitem{float {\ce erf} (float x) \\
 float {\ce erfc} (float x)}
 \indexapi{erf()} \indexapi{erfc()}
-The {\cf erf()} function returns the error function 
+The {\cf erf()} function returns the error function
 ${\mathrm{erf}(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2}} dt$.
 The {\cf erfc} returns the complementary error function {\cf 1-erf(x)}
 (useful in maintaining precision for large values of $x$).
@@ -3189,13 +3188,13 @@ to the named coordinate system.  In other words,
 
 \apiitem{float {\ce dot} (vector A, vector B)}
 \indexapi{dot()}
-Returns the inner product of the two vectors (or normals), i.e., 
+Returns the inner product of the two vectors (or normals), i.e.,
 $A \cdot B = A_x B_x + A_y B_y + A_z C_z$.
 \apiend
 
 \apiitem{vector {\ce cross} (vector A, vector B)}
 \indexapi{cross()}
-Returns the cross product of two vectors (or normals), i.e., 
+Returns the cross product of two vectors (or normals), i.e.,
 $A \times B$.
 \apiend
 
@@ -3257,12 +3256,12 @@ normalized (unit length) for this formula to work properly.
 
 \apiitem{vector {\ce refract} (vector I, vector N, float eta)}
 \indexapi{refract()}
-For incident vector {\cf I} and surface orientation {\cf N}, 
-returns the refraction direction using Snell's law. The {\cf eta} 
+For incident vector {\cf I} and surface orientation {\cf N},
+returns the refraction direction using Snell's law. The {\cf eta}
 parameter is the ratio of the index of refraction of the volume containing
 {\cf I} divided by the index of refraction of the volume being entered.
-The result is not necessarily normalized and a zero-length vector is 
-returned in the case of total internal reflection.  
+The result is not necessarily normalized and a zero-length vector is
+returned in the case of total internal reflection.
 For reference, here is the equivalent \langname of the implementation:
 
 \begin{code}
@@ -3303,7 +3302,7 @@ or about the {\cf axis} vector centered on the origin.
 
 Transform a \point, \vector, or \normal (depending on the type of the
 \emph{ptype p} argument) from the coordinate system named by
-\emph{fromspace} to the one named by \emph{tospace}.  If 
+\emph{fromspace} to the one named by \emph{tospace}.  If
 \emph{fromspace} is not supplied, $p$ is assumed to be in \commonspace
 coordinates, so the transformation will be from \commonspace to
 \emph{tospace}.  A $4 \times 4$ matrix may be passed directly rather
@@ -3421,7 +3420,7 @@ it is assumed to be transforming from \rgbspace.
 \bigspc\spc float m30, float m31, float m32, float m33)}
 \indexapi{matrix()}
 Constructs a \matrix from 16 individual \float values, in row-major
-order.  
+order.
 \apiend
 
 \apiitem{matrix {\ce matrix} (float f)}
@@ -3438,7 +3437,7 @@ Constructs a \matrix relative to the named space, multiplying it by the
 {\cf space}-to-{\cf common} transformation matrix.  If the coordinate
 system name is unknown, it will be assumed to be the identity matrix.
 
-Note that {\cf matrix (space, 1)} returns the 
+Note that {\cf matrix (space, 1)} returns the
 \emph{space}-to-{\cf common} transformation matrix. If the coordinate
 system name is unknown, it will be assumed to be the identity matrix.
 \apiend
@@ -3546,7 +3545,7 @@ or 4 (\point and \float), with a return value of either 1D (\float) or 3D
 (\color, \point, \vector, or \normal).
 
 The {\cf noisename} specifies which of a variety of possible noise
-functions will be used.  
+functions will be used.
 
 \apiitem{"perlin", "snoise"}
 \vspace{12pt}
@@ -3612,7 +3611,7 @@ derivatives.  Gabor noise allows several optional parameters to the
 \vspace{12pt}
 If {\cf anisotropic} is 0 (the default), Gabor noise
 will be isotropic.  If {\cf anisotropic} is 1, the Gabor noise will
-be anisotropic with the 3D frequency given by the {\cf direction} 
+be anisotropic with the 3D frequency given by the {\cf direction}
 vector (which defaults to {\cf (1,0,0)}).  If {\cf anisotropic} is
 2, a hybrid mode will be used which is anisotropic along the
 {\cf direction} vector, but radially isotropic perpendicular to that
@@ -3701,7 +3700,7 @@ is equivalent to {\cf noise("perlin",...coords...)}.
 \apiitem{\emph{type} {\ce pnoise} (float u, float uperiod) \\
 \emph{type} {\ce pnoise} (float u, float v, float uperiod, float vperiod) \\
 \emph{type} {\ce pnoise} (point p, point pperiod) \\
-\emph{type} {\ce pnoise} (point p, float t, point pperiod, float tperiod) 
+\emph{type} {\ce pnoise} (point p, float t, point pperiod, float tperiod)
 \smallskip \\
 \emph{type} {\ce psnoise} (float u, float uperiod) \\
 \emph{type} {\ce psnoise} (float u, float v, float uperiod, float vperiod) \\
@@ -3765,7 +3764,7 @@ each component will be interpolated separately.
 
 The type of interpolation is specified by the \emph{basis} name,
 \emph{basis} parameter, which may be any of: \qkw{catmull-rom},
-\qkw{bezier}, \qkw{bspline}, \qkw{hermite}, \qkw{linear}, or 
+\qkw{bezier}, \qkw{bspline}, \qkw{hermite}, \qkw{linear}, or
 \qkw{constant}. Some basis
 types require particular numbers of knot values -- Bezier splines
 require $3n+1$ values, Hermite splines require $2n+2$ values, and all of
@@ -3785,7 +3784,7 @@ float {\ce splineinverse} (string basis, float v, int nknots, float y[])}
 
 Computes the \emph{inverse} of the {\cf spline()} function, i.e., returns
 the value $x$ for which \\
-   \spc {\cf spline (basis, x, y...)}\\ 
+   \spc {\cf spline (basis, x, y...)}\\
 would return value
 $v$.  Results are undefined if the knots do not specify a monotonic
 (only increasing or only decreasing) set of values.
@@ -3835,7 +3834,7 @@ in $x$ between adjacent shading samples.
 \apiitem{float {\ce area} (point p)}
 \indexapi{area()}
 Returns the differential area of position $p$ corresponding to this
-shading sample.  If $p$ is the actual surface position \P, then 
+shading sample.  If $p$ is the actual surface position \P, then
 {\ce area(P)} will return the surface area of the section of the
 surface that is ``covered'' by this shading sample.
 \apiend
@@ -3854,7 +3853,7 @@ float {\ce aastep} (float edge, float s, float dedge, float ds)}
 Computes an antialiased step function, similar to {\cf step(edge,s)} but
 filtering the edge to take into account how rapidly {\cf s} and {\cf edge}
 are changing over the surface.  If the differentials {\cf ds} and/or
-{\cf dedge} are not passed explicitly, they will be automatically 
+{\cf dedge} are not passed explicitly, they will be automatically
 computed (using {\cf filterwidth()}).
 \apiend
 
@@ -3911,7 +3910,7 @@ the C language. The {\cf \%d}, {\cf \%i}, {\cf \%o}, and {\cf \%x}
 arguments expect an {\cf int} argument.  The {\cf \%f}, {\cf \%g}, and
 {\cf \%e} expect a \float, \color, point-like, or \matrix argument (for
 multi-component types such as \color, the format will be applied to each
-of the components).  The {\cf \%s} expects a {\cf string} or 
+of the components).  The {\cf \%s} expects a {\cf string} or
 {\cf closure} argument.
 
 All of the substitution commands follow the usual C/C++ formatting rules,
@@ -3966,7 +3965,7 @@ otherwise return 0.
 
 \apiitem{int {\ce stoi} (string str)}
 \indexapi{stoi()}
-Convert/decode the initial part of {\cf str} to an {\cf int} 
+Convert/decode the initial part of {\cf str} to an {\cf int}
 representation.  Base 10 is assumed.
 The return value will be {\cf 0} if the string doesn't appear to hold
 valid representation of the destination type.
@@ -4017,11 +4016,11 @@ Returns a deterministic, repeatable \emph{hash} of the string.
 \apiitem{int {\ce regex_search} (string subject, string regex) \\
 int {\ce regex_search} (string subject, int results[], string regex)}
 \indexapi{regex_search()}
-Returns 1 if any substring of \emph{subject} matches a standard POSIX 
+Returns 1 if any substring of \emph{subject} matches a standard POSIX
 regular expression \emph{regex}, 0 if it does not.
 
 In the form that also supplies a {\cf results} array, when a match is
-found, the array will be filled in as follows: 
+found, the array will be filled in as follows:
 
 \begin{tabular}{p{1.5in} p{3.5in}}
 {\cf\small results[0]} & the character index of the start of the
@@ -4185,7 +4184,7 @@ errors. The error message stored will be \qkw{} if no error occurred.
 
 \apiitem{"interp", <string>}
 \vspace{12pt}
-Overrides the texture interpolation method: \qkw{smartcubic} (the 
+Overrides the texture interpolation method: \qkw{smartcubic} (the
 default), \qkw{cubic}, \qkw{linear}, or \qkw{closest}.
 \apiend
 \vspace{-16pt}
@@ -4359,7 +4358,7 @@ The first channel to look up from the texture map (default: 0).
 
 \apiitem{"fill", <float>}
 \vspace{12pt}
-The value to return for any channels that are requested, but 
+The value to return for any channels that are requested, but
 not present in the texture file (default: 0).
 \apiend
 \vspace{-16pt}
@@ -4565,7 +4564,7 @@ maxpoints} of the data type in the file).
 
 Given a point cloud and a list of points {\cf indices[0..count-1]},
 store the attribute named by {\cf attr} for each point, respectively, in
-{\cf data[0..count-1]}.  Return 1 if successful, 0 for failure, which 
+{\cf data[0..count-1]}.  Return 1 if successful, 0 for failure, which
 could include the attribute not matching the type of {\cf data}, invalid
 indices, or an unknown point cloud file.
 
@@ -4654,19 +4653,19 @@ model.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{albedo}
   \vspace{12pt}
   Surface albedo.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness}
   \vspace{12pt}
   Surface roughness [0,1]. A value of 0.0 gives Lambertian reflectance.
   \apiend
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -4682,7 +4681,7 @@ SIGGRAPH 1994, pp.239-246 (July, 1994).
 \apiitem{\colorclosure\ {\ce burley_diffuse_bsdf} (normal N, color albedo, float roughness)}
 \indexapi{burley_diffuse_bsdf()}
 
-Constructs a diffuse reflection BSDF based on the corresponding component of 
+Constructs a diffuse reflection BSDF based on the corresponding component of
 the Disney Principled shading model.
 
 \noindent Parameters include:
@@ -4692,19 +4691,19 @@ the Disney Principled shading model.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{albedo}
   \vspace{12pt}
   Surface albedo.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness}
   \vspace{12pt}
   Surface roughness [0,1]. A value of 0.0 gives Lambertian reflectance.
   \apiend
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -4738,64 +4737,64 @@ interior to handle absorption and scattering inside the medium.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{U}
   \vspace{12pt}
   Tangent vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{reflection_tint}
   \vspace{12pt}
   Weight per color channel for the reflection lobe. Should be (1,1,1) for a physically-correct dielectric surface, but can be tweaked for artistic control. Set to (0,0,0) to disable reflection.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{transmission_tint}
   \vspace{12pt}
   Weight per color channel for the transmission lobe. Should be (1,1,1) for a physically-correct dielectric surface, but can be tweaked for artistic control. Set to (0,0,0) to disable transmission.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness_x}
   \vspace{12pt}
   Surface roughness in the U direction with a perceptually linear response over its range.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness_y}
   \vspace{12pt}
   Surface roughness in the V direction with a perceptually linear response
   over its range.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{ior}
   \vspace{12pt}
   Refraction index.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{distribution}
   \vspace{12pt}
   Microfacet distribution. An implementation is expected to support the
   following distributions: \qkw{ggx}
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{thinfilm_thickness}
   \vspace{12pt}
   Optional float parameter for thickness of an iridescent thin film layer on
   top of this BSDF. Given in nanometers.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{thinfilm_ior}
   \vspace{12pt}
   Optional float parameter for refraction index of the thin film layer.
   \apiend
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -4820,57 +4819,57 @@ function can be used to convert from artistic to physical parameters.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{U}
   \vspace{12pt}
   Tangent vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness_x}
   \vspace{12pt}
   Surface roughness in the U direction with a perceptually linear response over its range.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness_y}
   \vspace{12pt}
   Surface roughness in the V direction with a perceptually linear response over its range.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{ior}
   \vspace{12pt}
   Refraction index.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{extinction}
   \vspace{12pt}
   Extinction coefficient.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{distribution}
   \vspace{12pt}
   Microfacet distribution. An implementation is expected to support the
   following distributions: \qkw{ggx}
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{thinfilm_thickness}
   \vspace{12pt}
   Optional float parameter for thickness of an iridescent thin film layer on
   top of this BSDF. Given in nanometers.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{thinfilm_ior}
   \vspace{12pt}
   Optional float parameter for refraction index of the thin film layer.
   \apiend
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -4903,80 +4902,80 @@ handle absorption and scattering inside the medium.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{U}
   \vspace{12pt}
   Tangent vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{reflection_tint}
   \vspace{12pt}
   Weight per color channel for the reflection lobe. Set to (0,0,0) to disable
   reflection.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{transmission_tint}
   \vspace{12pt}
   Weight per color channel for the transmission lobe. Set to (0,0,0) to
   disable transmission.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness_x}
   \vspace{12pt}
   Surface roughness in the U direction with a perceptually linear response
   over its range.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness_y}
   \vspace{12pt}
   Surface roughness in the V direction with a perceptually linear response
   over its range.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{f0}
   \vspace{12pt}
   Reflectivity per color channel at facing angles.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{f90}
   \vspace{12pt}
   Reflectivity per color channel at grazing angles.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{exponent}
   \vspace{12pt}
   Variable exponent for the Schlick Fresnel curve, the default value should be
   5.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{distribution}
   \vspace{12pt}
   Microfacet distribution. An implementation is expected to support the
   following distributions: \qkw{ggx}
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{thinfilm_thickness}
   \vspace{12pt}
   Optional float parameter for thickness of an iridescent thin film layer on
   top of this BSDF. Given in nanometers.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{thinfilm_ior}
   \vspace{12pt}
   Optional float parameter for refraction index of the thin film layer.
   \apiend
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -4999,19 +4998,19 @@ reflectance model.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{albedo}
   \vspace{12pt}
   Surface albedo.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness}
   \vspace{12pt}
   Surface roughness [0,1]. A value of 0.0 gives Lambertian reflectance.
   \apiend
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -5040,13 +5039,13 @@ Constructs a BSSRDF for subsurface scattering within a homogeneous medium.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{albedo}
   \vspace{12pt}
   Single-scattering albedo of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{transmission_depth}
   \vspace{12pt}
   Distance travelled inside the medium by white light before its color becomes
@@ -5055,7 +5054,7 @@ Constructs a BSSRDF for subsurface scattering within a homogeneous medium.
   extinction coefficient of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{transmission_color}
   \vspace{12pt}
   Desired color resulting from white light transmitted a distance of
@@ -5063,15 +5062,15 @@ Constructs a BSSRDF for subsurface scattering within a homogeneous medium.
   this determines the extinction coefficient of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{anisotropy}
   \vspace{12pt}
   Scattering anisotropy [-1,1]. Negative values give backwards scattering,
   positive values give forward scattering, and 0.0 gives uniform scattering.
   \apiend
-  
+
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -5093,19 +5092,19 @@ energy that is not reflected will be transmitted to the base closure.
   Normal vector of the surface point being shaded.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{albedo}
   \vspace{12pt}
   Surface albedo.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{roughness}
   \vspace{12pt}
   Surface roughness [0,1].
   \apiend
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -5131,20 +5130,20 @@ is supported and controlled by the anisotropy input.
   Single-scattering albedo of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{extinction}
   \vspace{12pt}
   Volume extinction coefficient.
   \apiend
-  
+
   \apiitem{anisotropy}
   \vspace{12pt}
   Scattering anisotropy [-1,1]. Negative values give backwards scattering,
   positive values give forward scattering, and 0.0 gives uniform scattering.
   \apiend
-  
+
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -5169,7 +5168,7 @@ overlapping media.
   Single-scattering albedo of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{transmission_depth}
   \vspace{12pt}
   Distance travelled inside the medium by white light before its color becomes
@@ -5178,7 +5177,7 @@ overlapping media.
   extinction coefficient of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{transmission_color}
   \vspace{12pt}
   Desired color resulting from white light transmitted a distance of
@@ -5186,27 +5185,27 @@ overlapping media.
   this determines the extinction coefficient of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{anisotropy}
   \vspace{12pt}
   Scattering anisotropy [-1,1]. Negative values give backwards scattering,
   positive values give forward scattering, and 0.0 gives uniform scattering.
   \apiend
-  
+
   \apiitem{ior}
   \vspace{12pt}
   Refraction index of the medium.
   \apiend
   \vspace{-16pt}
-  
+
   \apiitem{priority}
   \vspace{12pt}
   Priority of this medium (for nested dielectrics).
   \apiend
   \vspace{-16pt}
-  
+
 %   \vspace{-16pt}
-  
+
   % \apiitem{label}
   % \vspace{12pt}
   % Optional string parameter to name this component. For use in AOVs / LPEs.
@@ -5253,7 +5252,7 @@ reflectance() calculates the directional albedo of a given top BSDF.
 \apiitem{\colorclosure\ {\ce holdout} ( )}
 \indexapi{holdout()}
 Returns a \colorclosure that does not represent any additional light
-reflection from the surface, but does signal to the renderer that 
+reflection from the surface, but does signal to the renderer that
 the surface is a \emph{holdout object} (appears transparent in
 the final output yet hides objects behind it).  ``Partial holdouts''
 may be designated by weighting the {\cf holdout()} closure by a
@@ -5298,7 +5297,7 @@ NOTE: This is not equal to 'f90' in a Schlick Fresnel parameterization.
 Output refraction index.
 \apiend
 \vspace{-16pt}
-  
+
 \apiitem{extinction}
 \vspace{12pt}
 Output extinction coefficient.
@@ -5377,7 +5376,7 @@ implemented as follows:
         float theta_i = acos (cos_theta_i);
         float alpha = max (theta_i, theta_r);
         float beta = min (theta_i, theta_r);
-        C += Cl * cos_theta_i * 
+        C += Cl * cos_theta_i *
                 (A + B * max(0,cos_phi_diff) * sin(alpha) * tan(beta));
     }
     return C;
@@ -5386,7 +5385,7 @@ implemented as follows:
 
 \apiend
 
-\apiitem{\colorclosure\ {\ce ward} (normal N, vector T, 
+\apiitem{\colorclosure\ {\ce ward} (normal N, vector T,
   float xrough, float yrough)}
 \indexapi{ward()}
 
@@ -5470,7 +5469,7 @@ objects ``behind'' the surface.  The \emph{eta} parameter is the ratio
 of the index of refraction of the medium on the ``inside'' of the
 surface divided by the index of refration of the medium on the
 ``outside'' of the surface.  The ``outside'' direction is the one
-specified by \N.  
+specified by \N.
 The refraction direction will be automatically computed based on the
 incident angle and \emph{eta}, and the radiance returned will be
 automatically scaled by the Fresnel factor for dielectrics.
@@ -5621,7 +5620,7 @@ assignment in OSL source code: {\cf int} to {\cf float}, {\cf float} to
 {\cf int} (truncation), {\cf float} (or {\cf int}) to \emph{triple}
 (replicating the value), any \emph{triple} to any other \emph{triple}.
 Additionally, the following conversions which are not allowed by
-assignment in OSL source code will also be performed by this call: 
+assignment in OSL source code will also be performed by this call:
 {\cf float} (or {\cf int}) to {\cf float[2]} (replication into both
 array elements), {\cf float[2]} to \emph{triple} (setting the third
 component to 0).
@@ -5775,9 +5774,9 @@ by the shader (via {\cf setmessage()}).
 \apiitem{float {\ce surfacearea} ()}
 \indexapi{surfacearea()}
 Returns the surface area of the area light geometry being shaded.  This
-is meant to be used in conjunction with {\cf emission()} in order to 
+is meant to be used in conjunction with {\cf emission()} in order to
 produce the correct emissive radiance given a user preference for a
-total wattage for the area light source.  The value of this function 
+total wattage for the area light source.  The value of this function
 is not expected to be meaningful for non-light shaders.
 \apiend
 
@@ -5812,7 +5811,7 @@ from the ``front'' or the ``outside'' of a closed object.
 \apiitem{int {\ce isconnected} (\emph{type} parameter)}
 \indexapi{isconnected()}
 Returns {\cf 1} if the argument is a shader parameter and is connected
-to an earlier layer in the shader group, 
+to an earlier layer in the shader group,
 {\cf 2} if the argument is a shader output parameter connected
 to a later layer in the shader group, {\cf 3} if connected to both
 earlier and later layers, otherwise returns {\cf 0}.
@@ -5910,16 +5909,16 @@ view-dependence into shaders.
 The return value is 0 if the ray missed all geometry, 1 if it hit
 anything within the distance range.
 
-The following optional key-value arguments 
+The following optional key-value arguments
 (see Section~\ref{sec:syntax:functioncalls}) can be passed:
 
 \apiitem{"mindist", <float>}
 \vspace{12pt}
 The minimum hit distance (default: 0).
 
-The units of the {\cf "mindist"} and {\cf "maxdist"} are determined by the renderer 
-and are sometimes defined by the dir vector, which can lead to unexpected 
-behavior.  So, generally, clearly written and portable shaders should pass 
+The units of the {\cf "mindist"} and {\cf "maxdist"} are determined by the renderer
+and are sometimes defined by the dir vector, which can lead to unexpected
+behavior.  So, generally, clearly written and portable shaders should pass
 a unit length (see Section~\ref{sec:stdlib:geom}) dir vector.
 \apiend
 \vspace{-16pt}
@@ -5932,7 +5931,7 @@ The maximum hit distance (default: infinite).
 
 \apiitem{"shade", <int>}
 \vspace{12pt}
-Defines whether objects hit will be shaded (default: 0).  
+Defines whether objects hit will be shaded (default: 0).
 \apiend
 \vspace{-16pt}
 
@@ -6019,7 +6018,7 @@ nothing (empty, no token).
 <number> ::= <integer>
 \alt <floating-point>
 
-<char-sequence> ::= \{ <any-char> \} 
+<char-sequence> ::= \{ <any-char> \}
 
 <stringliteral> ::= `"' <char-sequence> `"'
 
@@ -6032,12 +6031,12 @@ nothing (empty, no token).
 \begin{grammar}
 <shader-file> ::= \{ <global-declaration> \}
 
-<global-declaration> ::= <function-declaration> 
+<global-declaration> ::= <function-declaration>
 \alt <struct-declaration>
 \alt <shader-declaration>
 
-<shader-declaration> ::= \spc \\ 
-    <shadertype> <identifier> <metadata-block-opt> 
+<shader-declaration> ::= \spc \\
+    <shadertype> <identifier> <metadata-block-opt>
     "(" <shader-formal-params-opt> ")" "{" <statement-list> "}"
 
 <shadertype> ::= "displacement" |  "shader" | "surface" | "volume"
@@ -6059,7 +6058,7 @@ nothing (empty, no token).
 \section*{Declarations}
 \begin{grammar}
 
-<function-declaration> ::= \spc \\ <typespec> <identifier> 
+<function-declaration> ::= \spc \\ <typespec> <identifier>
       "(" <function-formal-params-opt> ")" "{" <statement-list> "}"
 
 <function-formal-params> ::= <function-formal-param> \{ "," <function-formal-param> \}
@@ -6101,11 +6100,11 @@ nothing (empty, no token).
 
 <init-expression> ::= <expression> | <compound-initializer>
 
-<typespec> ::= <simple-typename> 
+<typespec> ::= <simple-typename>
 \alt "closure" <simple-typename>
 \alt <identifier-structname>
 
-<simple-typename> ::= 
+<simple-typename> ::=
 "color"
 | "float"
 | "matrix"
@@ -6123,7 +6122,7 @@ nothing (empty, no token).
 
 <statement-list> ::= <statement> \{ <statement> \}
 
-<statement> ::= 
+<statement> ::=
 <compound-expression-opt> ";"
 \alt <scoped-statements>
 \alt <local-declaration>
@@ -6140,7 +6139,7 @@ nothing (empty, no token).
 
 <loop-statement> ::= \spc \\ "while" "(" <compound-expression> ")" <statement>
 \alt "do" <statement> "while" "(" <compound-expression> ")" ";"
-\alt "for" "(" <for-init-statement-opt>  <compound-expression-opt> ";" 
+\alt "for" "(" <for-init-statement-opt>  <compound-expression-opt> ";"
                 <compound-expression-opt> ")" <statement>
 
 <for-init-statement> ::= \spc \\ <expression-opt> ";"
@@ -6183,7 +6182,7 @@ nothing (empty, no token).
 \alt <variable_lvalue> "[" <expression> "]"
 \alt <variable_lvalue> "." <identifier>
 
-<variable-ref> ::= <identifier> <array-deref-opt> 
+<variable-ref> ::= <identifier> <array-deref-opt>
 
 <array-deref> ::= "[" <expression> "]"
 
@@ -6193,10 +6192,10 @@ nothing (empty, no token).
 <component-field> ::= "x" | "y" | "z" | "r" | "g" | "b"
 
 <binary-op> ::= "*" | "/" | "\%"
-\alt "+" | "-" 
+\alt "+" | "-"
 \alt "<<" | ">>"
-\alt "<" | "<=" | ">" | ">=" 
-\alt "==" | "!=" 
+\alt "<" | "<=" | ">" | ">="
+\alt "==" | "!="
 \alt "&"
 \alt "^"
 \alt "|"
@@ -6351,7 +6350,7 @@ unnecessary things or a bad idea.
 Right now, this is just a hodge-podge of topics.  Some day I will give
 it a more coherent form.
 
-\medskip 
+\medskip
 
 {\bf Meta-discussion: the editing of this chapter has NOT kept pace with
   development and solidification of the rest of the spec.  It's largely
@@ -6504,7 +6503,7 @@ anybody want to argue for any of the following to be included?
 \item Array assignment: {\cf A = B}, legal as long as {\cf A} and {\cf
   B} are the same type and have the same number of elements length?
 \item Casting to built-in types: Ability to assign an array of length 3
-  to a \color, \point, \vector, or \normal, and vice versa?  
+  to a \color, \point, \vector, or \normal, and vice versa?
 \item Array arithmetic: {\cf A + B}, and so on, defined as
   element-by-element addition, subtraction, etc., legal as long as the
   two arrays are the same type and have the same number of elements?
@@ -6612,13 +6611,13 @@ In this document, I'm tentatively using the RenderMan-inspired {\cf Ci}
 and for output radiance.  (The ``i'' is for
 \emph{incident}.)  In Gelato, we used {\cf C}, which I
 think was slightly less obtuse (though loses the advantage of being
-familiar to RenderMan experts).  
+familiar to RenderMan experts).
 
 
 \subsection{Global variables and view-dependence}
 
 Should we allow access to \I (incident viewing ray) from anyplace except
-inside the integrator?  
+inside the integrator?
 
 On one hand, it's just an invitation to inadvertently build
 view-dependence into material descriptions.
@@ -6651,7 +6650,7 @@ consistent for each ``side?''
 \subsection{Light loops -- to be, or not to be?}
 
 With closures, can we remove all facilities for an explicit loop over
-lights (i.e., what RenderMan calls {\cf illuminance})?  At least, 
+lights (i.e., what RenderMan calls {\cf illuminance})?  At least,
 unless/until we allow people to code integrators in the language itself?
 
 Or does it makes sense to allow explicit light loops, in case somebody
@@ -6674,7 +6673,7 @@ It's very tempting to extend the language itself to be able to express a
 primitive closure function or an integrator.  But I fear that (1) this
 will be more expensive than we want; and (2) we don't know the best way
 to do it yet; (3) it will require a variety of syntaxes, functions, and
-complications in the language that would not otherwise be needed.  
+complications in the language that would not otherwise be needed.
 
 So I'm currently leaning toward leaving this out of the language for
 now, and considering it for a future revision.  Comments?
@@ -6689,7 +6688,7 @@ back side of a surface; (2) Proper coherent refraction of objects
 primitive, usually employing a ``compositing'' method; (4) making an
 object ``disappear'' to form a ``stencil'' effect under shader control.
 
-It is clear that \#1 and \#2 are properly handled with our usual 
+It is clear that \#1 and \#2 are properly handled with our usual
 material closures ({\cf translucent} and {\cf refraction()},
 respectively).
 
@@ -6751,7 +6750,7 @@ But I want to throw a few additional options out here for debate:
   \end{code}
   Or even, {\cf refraction()} could serve the same purpose, and the
   renderer could just know that if the index of refraction is 1, it
-  should use the compositing trick.  
+  should use the compositing trick.
 
   Holdout mattes don't fall into this scheme especially well, so there's
   an orthogonal problem of whether to have a {\cf holdout} variable to
@@ -6922,7 +6921,7 @@ full control in the shader.
 % Canonical figure
 %\begin{figure}[ht]
 %\noindent
-%\includegraphics[width=5in]{Figures/foo} 
+%\includegraphics[width=5in]{Figures/foo}
 %\caption{Caption
 %\label{fig:foo}}
 %\end{figure}

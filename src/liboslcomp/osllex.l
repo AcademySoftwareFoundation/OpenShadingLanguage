@@ -361,7 +361,7 @@ preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param)
                     ++len;
                 std::string filename (f, len);
                 // Make it relative to the working directory, so error output
-                // isn't hugely cluttered (and also to make Boost::wave's
+                // isn't hugely cluttered (and also to make the preprocessor's
                 // error output match the standard cpp.
                 if (filename.find (oslcompiler->cwd()) == 0) {
                     filename.erase (0, oslcompiler->cwd().size());
@@ -371,6 +371,8 @@ preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param)
                 }
                 ustring ufilename(filename);
                 oslcompiler->filename (ufilename);
+                // TODO: We no longer use Boost Wave, so verify if the
+                // workaround below is still needed ..
                 // Spooky workaround for Boost Wave bug: force_include
                 // is broken and doesn't give us the right lines/files, so
                 // instead we forcefully insert a '#include "stdosl.h"' into

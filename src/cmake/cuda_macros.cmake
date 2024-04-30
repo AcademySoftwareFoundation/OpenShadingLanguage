@@ -120,9 +120,6 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
     endif ()
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-        # fix compilation error when using MSVC
-        set (CLANG_MSVC_FIX "-DBOOST_CONFIG_REQUIRES_THREADS_HPP")
-
         # these are warnings triggered by the dllimport/export attributes not being supported when
         # compiling for Cuda. When all 3rd parties have their export macro fixed these warnings
         # can be restored.

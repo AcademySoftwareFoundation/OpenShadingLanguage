@@ -26,9 +26,9 @@ examples), as you are just coding in C++, but there are some rules:
 * Argument passing: int and float (without derivs) are passed as int and
   float.  Aggregates (color/point/vector/normal/matrix), arrays of any
   types, or floats with derivatives are passed as a void* and to their
-  memory location you need to cast appropriately.  See the handy 
+  memory location you need to cast appropriately.  See the handy
   MAT, VEC, DFLOAT, DVEC macros for
-  handy/cheap casting of those void*'s to references to 
+  handy/cheap casting of those void*'s to references to
   Matrix44&, Vec3&, Dual2<float>&, and Dual2<Vec3>, respectively.
 
 * You must provide all allowable polymorphic and derivative combinations!
@@ -53,15 +53,15 @@ examples), as you are just coding in C++, but there are some rules:
   symbols are exported for LLVM to find them.
 
 * You may use full C++, including standard library.  You may have calls
-  to any other part of the OSL library software.  You may use Boost,
-  Ilmbase (Vec3, Matrix44, etc.) or any other external routines.  You
+  to any other part of the OSL library software.  You may use Ilmbase
+  (Vec3, Matrix44, etc.) or any other external routines.  You
   may write templates or helper functions (which do NOT need to use
   OSL_SHADEOP, since they don't need to be runtime-discoverable by LLVM.
 
 * If you need to access non-passed globals (P, N, etc.) or make renderer
   callbacks, just make the first argument to the function is an
   OpaqueExecContextPtr (void* ec) that is passed to get_*() functions to
-  the globals get_P(ec), get_N(ec), typed renderer state 
+  the globals get_P(ec), get_N(ec), typed renderer state
   get_rs<T>(ec), etc.
 
 */

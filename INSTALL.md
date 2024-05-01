@@ -19,11 +19,11 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.27)
+* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.29)
 
 * A suitable C++14 or C++17 compiler to build OSL itself, which may be any of:
    - GCC 6.1 or newer (tested through gcc 12.1)
-   - Clang 3.4 or newer (tested through clang 17)
+   - Clang 3.4 or newer (tested through clang 18)
    - Microsoft Visual Studio 2017 or newer
    - Intel C++ compiler icc version 17 or newer or LLVM-based icx compiler
      version 2022 or newer.
@@ -55,10 +55,10 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
       recommended that you use 11.0 or higher.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.84)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.85)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/Imath) 2.4
    or newer (recommended: 3.1 or higher; tested through 3.2)
-   NOTE: It is likely that 1.13 is the last release that will support
+   NOTE: OSL 1.13.x is the last release family that will support
    Imath/OpenEXR 2.x.
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
   [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
@@ -72,12 +72,11 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
     * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12)
-      NOTE: It is likely that 1.13 is the last release that will support
-      Python 2.7.
-    * pybind11 >= 2.4.2 (Tested through 2.11. Note that pybind11 v2.10+ does
+      NOTE: OSL 1.13.x is the last release family that will support Python 2.7.
+    * pybind11 >= 2.4.2 (Tested through 2.12. Note that pybind11 v2.10+ does
       not support Python < 3.6.)
     * NumPy
-* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.6).
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.7).
   If not found at build time, the `osltoy` application will be disabled.
 
 

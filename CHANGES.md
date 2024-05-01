@@ -3,7 +3,15 @@
 
 Release 1.13.9.0 -- 1 May 2024 (compared to 1.13.8.0)
 --------------------------------------------------------
-
+  - *deps*: Support for LLVM-18 [#1773](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1773) (by مهدي شينون (Mehdi Chinoune) [#1803](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1803) (by Larry Gritz)
+  - *fix*: Make isconnected() work with downstream renderer "connections." [#1782](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1782) (by sfriedmapixar)
+  - *cleanup*: Change OSL_CONSTEXPR14 to constexpr [#1805](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1805)
+  - *internals build*: Fix ifdef typo [#1804](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1804)
+  - *build*: Propagate cpp version [#1797](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1797)
+  - *build*: Print commit hash of locally built dependencies [#1798](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1798)
+  - *ci*: Lock down to OIIO 2.5 for icc tests [#1799](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1799)
+  - *ci*: Suppress leak sanitizer warnings about internals of robin_hash [#1807](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1807)
+  - *docs*: More detail about supported platforms in INSTALL.md [#1796](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1796)
 
 
 Release 1.13.8.0 -- 1 Apr 2024 (compared to 1.13.7.0)

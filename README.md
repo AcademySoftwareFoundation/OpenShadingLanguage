@@ -426,7 +426,7 @@ nominated for major awards.)
   Obi-Wan Kenobi (series),
   The Boys (S3),
   Andor (S1)
-* **(2023 / upcoming)**
+* **(2023)**
   Ant-Man and the Wasp: Quantumania,
   The Mandalorian S3,
   The Magician's Elephant,
@@ -434,6 +434,10 @@ nominated for major awards.)
   Guardians of the Galaxy 3,
   Spider-Man: Across the Spider-Verse,
   Elemental,
+  The Marvels,
+  Leo
+* **(2024 / upcoming)**
+  Ghostbusters: Frozen Empire,
   ...
 
 
@@ -531,17 +535,17 @@ Stefan Bruens, Stefan Büttner, Matthaus G. Chajdas, Clark Chen, Alejandro
 Conty, Damien Courtois, Dieter De Baets, Thomas Dinges, Daniel Dresser, Mads
 Drøschler, Peter Ellerington, Luke Emrose, Louis Feng, Mark Final, Henri
 Fousse, Stephen Friedman, Syoyo Fujita, Tim Grant, Larry Gritz, Nicolas
-Guiard, Euan Haahr, Derek Haase, Sven-Hendrik Haase, John Haddon, Niklas
-Harrysson, Daniel Heckenberg, Chris Hellmuth, Adrien Herubel, Dan Horák,
-Thiago Ize, Matt Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani,
-Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, Patrick Mours,
-Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jino Park, Alexei Pawlow, Jay
-Reynolds, Declan Russell, Benoit Ruiz, Patrick Scheibe, Alex Schworer,
-Jonathan Scruggs, Sergey Sharybin, Mark Sisson, Sandip Shukla, Cliff Stein,
-Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel,
-Alexander von Knorring, Aidan Welch, Alex Wells, Roman Zulak. (Listed
-alphabetically; if we've left anybody out, it is inadvertent, please let us
-know.)
+Guiard, Ole Gulbrandsen, Euan Haahr, Derek Haase, Sven-Hendrik Haase, John
+Haddon, Niklas Harrysson, Daniel Heckenberg, Chris Hellmuth, Adrien Herubel,
+Dan Horák, Thiago Ize, Matt Johnson, Ronan Keryell, Chris Kulla, Elvic Liang,
+Max Liani, Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, John
+Mertic, Patrick Mours, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jino Park,
+Alexei Pawlow, Jay Reynolds, Declan Russell, Benoit Ruiz, Patrick Scheibe,
+Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark Sisson, Sandip Shukla,
+Cliff Stein, Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari, Brecht
+Van Lommel, Thibault Vergne, Alexander von Knorring, Aidan Welch, Alex Wells,
+Roman Zulak. (Listed alphabetically; if we've left anybody out, it is
+inadvertent, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

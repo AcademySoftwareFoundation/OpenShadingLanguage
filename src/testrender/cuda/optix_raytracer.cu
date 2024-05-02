@@ -103,6 +103,7 @@ eval_background(const Dual2<Vec3>& dir, int bounce = -1)
 
 
 // Return a direction towards a point on the sphere
+// Adapted from Sphere::sample in ../raytracer.h
 static __device__ float3
 sample_sphere(const float3& x, const SphereParams& sphere, float xi, float yi,
               float& pdf)
@@ -123,6 +124,7 @@ sample_sphere(const float3& x, const SphereParams& sphere, float xi, float yi,
 
 
 // Return a direction towards a point on the quad
+// Adapted from Quad::sample in ../raytracer.h
 static __device__ float3
 sample_quad(const float3& x, const QuadParams& quad, float xi, float yi,
             float& pdf)

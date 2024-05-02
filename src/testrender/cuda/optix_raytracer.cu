@@ -171,7 +171,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         sg.tracedata           = (void*)&trace_data[0];
 
         Payload payload;
-        payload.sg_ptr = (uint64_t)&sg;
+        payload.sg_ptr = &sg;
 
         uint32_t p0 = payload.raw[0];
         uint32_t p1 = payload.raw[1];
@@ -314,7 +314,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                 light_sg.shaderID = -1;
 
                 Payload payload;
-                payload.sg_ptr = (uint64_t)&light_sg;
+                payload.sg_ptr = &light_sg;
 
                 uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
                     *(unsigned int*)&hit_idx,
@@ -362,7 +362,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                 light_sg.shaderID = -1;
 
                 Payload payload;
-                payload.sg_ptr = (uint64_t)&light_sg;
+                payload.sg_ptr = &light_sg;
 
                 uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
                     *(unsigned int*)&hit_idx,
@@ -579,7 +579,7 @@ __closesthit__deferred()
 {
     Payload payload;
     payload.get();
-    ShaderGlobalsType* sg_ptr = (ShaderGlobalsType*)payload.sg_ptr;
+    ShaderGlobalsType* sg_ptr = payload.sg_ptr;
     uint32_t* trace_data      = (uint32_t*)sg_ptr->tracedata;
     const float t_hit         = optixGetRayTmax();
     trace_data[0]             = optixGetPrimitiveIndex();

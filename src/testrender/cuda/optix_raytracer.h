@@ -3,6 +3,7 @@
 #include <OSL/oslconfig.h>
 #include <optix.h>
 
+#include "rend_lib.h"
 #include "../raytracer.h"
 
 #include <cstdint>
@@ -12,7 +13,7 @@
 struct Payload {
     union {
         uint32_t raw[2];
-        uint64_t sg_ptr;
+        OSL_CUDA::ShaderGlobals* sg_ptr;
     };
     float radius;
     float spread;
@@ -36,16 +37,5 @@ struct Payload {
         raytype = (OSL::Ray::RayType)optixGetPayload_4();
     }
 };
-
-
-static __device__ __inline__ uchar4
-make_color(const float3& c)
-{
-    return make_uchar4(
-        static_cast<unsigned char>(__saturatef(c.z) * 255.99f), /* B */
-        static_cast<unsigned char>(__saturatef(c.y) * 255.99f), /* G */
-        static_cast<unsigned char>(__saturatef(c.x) * 255.99f), /* R */
-        255u);                                                  /* A */
-}
 
 #endif  // #ifdef __CUDACC__

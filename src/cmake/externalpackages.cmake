@@ -30,17 +30,8 @@ message (STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
 
 
 include (ExternalProject)
-include(FetchContent)
 
 option (BUILD_MISSING_DEPS "Try to download and build any missing dependencies" OFF)
-
-FetchContent_Declare(
-  tsl-robin-map
-  GIT_REPOSITORY https://github.com/Tessil/robin-map.git
-  GIT_TAG        v1.3.0
-  FIND_PACKAGE_ARGS NAMES tsl-robin-map
-)
-FetchContent_MakeAvailable(tsl-robin-map)
 
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
@@ -231,3 +222,45 @@ else ()
     function (osl_optix_target TARGET)
     endfunction()
 endif ()
+
+
+###########################################################################
+# Tessil/robin-map
+
+option (BUILD_ROBINMAP_FORCE "Force local download/build of robin-map even if installed" OFF)
+option (BUILD_MISSING_ROBINMAP "Local download/build of robin-map if not installed" ON)
+set (BUILD_ROBINMAP_VERSION "v0.6.2" CACHE STRING "Preferred Tessil/robin-map version, of downloading/building our own")
+
+macro (find_or_download_robin_map)
+    # If we weren't told to force our own download/build of robin-map, look
+    # for an installed version. Still prefer a copy that seems to be
+    # locally installed in this tree.
+    if (NOT BUILD_ROBINMAP_FORCE)
+        find_package (Robinmap QUIET)
+    endif ()
+    # If an external copy wasn't found and we requested that missing
+    # packages be built, or we we are forcing a local copy to be built, then
+    # download and build it.
+    # Download the headers from github
+    if ((BUILD_MISSING_ROBINMAP AND NOT ROBINMAP_FOUND) OR BUILD_ROBINMAP_FORCE)
+        message (STATUS "Downloading local Tessil/robin-map")
+        set (ROBINMAP_INSTALL_DIR "${PROJECT_SOURCE_DIR}/ext/robin-map")
+        set (ROBINMAP_GIT_REPOSITORY "https://github.com/Tessil/robin-map")
+        if (NOT IS_DIRECTORY ${ROBINMAP_INSTALL_DIR}/include/tsl)
+            find_package (Git REQUIRED)
+            execute_process(COMMAND             ${GIT_EXECUTABLE} clone    ${ROBINMAP_GIT_REPOSITORY} -n ${ROBINMAP_INSTALL_DIR})
+            execute_process(COMMAND             ${GIT_EXECUTABLE} checkout ${BUILD_ROBINMAP_VERSION}
+                            WORKING_DIRECTORY   ${ROBINMAP_INSTALL_DIR})
+            if (IS_DIRECTORY ${ROBINMAP_INSTALL_DIR}/include/tsl)
+                message (STATUS "DOWNLOADED Tessil/robin-map to ${ROBINMAP_INSTALL_DIR}.\n"
+                         "Remove that dir to get rid of it.")
+            else ()
+                message (FATAL_ERROR "Could not download Tessil/robin-map")
+            endif ()
+        endif ()
+        set (ROBINMAP_INCLUDE_DIR "${ROBINMAP_INSTALL_DIR}/include")
+    endif ()
+    checked_find_package (Robinmap REQUIRED)
+endmacro()
+
+find_or_download_robin_map ()

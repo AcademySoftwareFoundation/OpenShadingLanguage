@@ -197,7 +197,7 @@ if (USE_LLVM_BITCODE)
     list(APPEND include_dirs ${IMATH_INCLUDES})
     list(APPEND include_dirs ${OPENEXR_INCLUDES})
     list(APPEND include_dirs ${OpenImageIO_INCLUDES})
-    list(APPEND include_dirs ${Boost_INCLUDE_DIRS})
+    list(APPEND include_dirs ${ROBINMAP_INCLUDES})
 
     EMBED_LLVM_BITCODE_IN_CPP ( "${llvm_ops_srcs}" "_host" "osl_llvm_compiled_ops" lib_src "" "${include_dirs}")
 
@@ -580,7 +580,6 @@ target_link_libraries (${local_lib}
         ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml::pugixml
-        tsl::robin_map
         ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
@@ -614,17 +613,17 @@ install_targets (${local_lib})
 # Unit tests
 if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_executable (accum_test accum_test.cpp)
-    target_link_libraries (accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (accum_test PRIVATE oslexec ${CMAKE_DL_LIBS})
     set_target_properties (accum_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
 
     add_executable (dual_test dual_test.cpp)
-    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${CMAKE_DL_LIBS})
     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
 
     add_executable (llvmutil_test llvmutil_test.cpp)
-    target_link_libraries (llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (llvmutil_test PRIVATE oslexec ${CMAKE_DL_LIBS})
     set_target_properties (llvmutil_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_llvmutil ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvmutil_test)
 endif ()

@@ -200,7 +200,7 @@ struct CStrHash {
     OSL_FORCEINLINE size_t operator()(const char* str) const
     {
         OSL_DASSERT(str != nullptr);
-        return OIIO::strhash(str);
+        return OIIO::Strutil::strhash(str);
     }
 };
 

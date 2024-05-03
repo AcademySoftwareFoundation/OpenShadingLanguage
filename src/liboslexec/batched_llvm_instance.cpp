@@ -2746,7 +2746,7 @@ BatchedBackendLLVM::run()
     // entry points, as well as for all the external functions that are
     // just declarations (not definitions) in the module (which we have
     // conveniently stashed in external_function_names).
-    tsl::robin_set<llvm::Function*> external_functions;
+    std::unordered_set<llvm::Function*> external_functions;
     external_functions.insert(init_func);
     for (int layer = 0; layer < nlayers; ++layer) {
         llvm::Function* f = funcs[layer];

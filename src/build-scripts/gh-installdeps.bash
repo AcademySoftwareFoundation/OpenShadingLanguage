@@ -67,6 +67,7 @@ else
 
     time sudo apt-get -q install -y \
         git cmake ninja-build ccache g++ \
+        libboost-dev libboost-thread-dev libboost-filesystem-dev \
         libilmbase-dev libopenexr-dev \
         libtiff-dev libgif-dev libpng-dev \
         flex bison libbison-dev \

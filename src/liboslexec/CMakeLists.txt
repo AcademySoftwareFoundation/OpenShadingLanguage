@@ -517,6 +517,8 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         PUBLIC
             ${CMAKE_INSTALL_FULL_INCLUDEDIR}
             ${IMATH_INCLUDES}
+        PRIVATE
+            ${ROBINMAP_INCLUDES}
         )
     target_link_libraries (${batched_target_lib}
         PUBLIC
@@ -536,6 +538,7 @@ target_include_directories (${local_lib}
         ${IMATH_INCLUDES}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
+        ${ROBINMAP_INCLUDES}
     )
 target_compile_definitions (${local_lib}
     PRIVATE

@@ -525,7 +525,7 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
             OpenImageIO::OpenImageIO
         )
     if (partio_FOUND)
-        target_link_libraries(${batched_target_lib} PRIVATE partio::partio)
+        target_link_libraries(${batched_target_lib} PRIVATE partio::partio ZLIB::ZLIB)
         target_compile_definitions (${batched_target_lib} PRIVATE USE_PARTIO=1)
     endif ()
         
@@ -548,7 +548,7 @@ target_compile_definitions (${local_lib}
         OSL_OPTIX_VERSION="${OPTIX_VERSION}"
     )
 if (partio_FOUND)
-    target_link_libraries(${local_lib} PRIVATE partio::partio)
+    target_link_libraries(${local_lib} PRIVATE partio::partio ZLIB::ZLIB)
     target_compile_definitions (${local_lib} PRIVATE USE_PARTIO=1)
 endif ()
 

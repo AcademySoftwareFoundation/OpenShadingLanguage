@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc6/C++14 llvm9 py2.7 boost1.66 exr2.4 oiio2.3 sse2
+          - desc: gcc6/C++14 llvm9 py2.7 exr2.4 oiio2.3 sse2
             nametag: linux-vfx2020
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2019-clang9
@@ -49,7 +49,7 @@ jobs:
             python_ver: 2.7
             pybind11_ver: v2.4.2
             setenvs: export CMAKE_VERSION=3.15.5
-          - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.4 py2.7
+          - desc: clang9/C++14 llvm9 oiio-release avx2 exr2.4 py2.7
             nametag: linux-clang9-llvm9
             runner: ubuntu-20.04
             container: aswftesting/ci-osl:2019-clang9
@@ -63,7 +63,7 @@ jobs:
             # pybind11_ver: v2.9.0
             simd: avx
             setenvs: export CMAKE_VERSION=3.15.5
-          - desc: gcc6/C++14 llvm10 py3.7 boost1.70 exr2.4 oiio2.2 sse4
+          - desc: gcc6/C++14 llvm10 py3.7 exr2.4 oiio2.2 sse4
             nametag: linux-vfx2020
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2020
@@ -74,7 +74,7 @@ jobs:
             pybind11_ver: v2.5.0
             simd: sse4.2
             setenvs: export CONAN_LLVM_VERSION=10.0.1
-          - desc: gcc9/C++17 llvm11 py3.7 boost1.73 exr2.5 oiio2.3 avx2 batch-b8avx2
+          - desc: gcc9/C++17 llvm11 py3.7 exr2.5 oiio2.3 avx2 batch-b8avx2
             nametag: linux-vfx2021
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2021-clang11
@@ -85,7 +85,7 @@ jobs:
             pybind11_ver: v2.7.0
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
-          - desc: gcc9/C++17 llvm13 py3.9 boost1.76 exr3.1 oiio-rel avx2
+          - desc: gcc9/C++17 llvm13 py3.9 exr3.1 oiio-rel avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang13
@@ -96,7 +96,7 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: clang12/C++17 llvm12 oiio-master boost1.73 exr3.1 py3.9 avx2 batch-avx512
+          - desc: clang12/C++17 llvm12 oiio-master exr3.1 py3.9 avx2 batch-avx512
             nametag: linux-clang12-llvm12-batch
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang12
@@ -108,7 +108,7 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
-          - desc: icc/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio-master avx2
+          - desc: icc/C++17 llvm14 py3.9 exr3.1 oiio-master avx2
             nametag: linux-icc
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -132,7 +132,7 @@ jobs:
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF -DEXTRA_CPP_ARGS=-fp-model=consistent"
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=7.1.3
                             USE_OPENVDB=0
-          - desc: icx/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio2.3 avx2
+          - desc: icx/C++17 llvm14 py3.9 exr3.1 oiio2.3 avx2
             nametag: linux-icx
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -147,7 +147,7 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
-          - desc: gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 oiio-rel avx2
+          - desc: gcc11/C++17 llvm15 py3.10 exr3.1 oiio-rel avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
@@ -158,7 +158,7 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 OIIO-master avx2
+          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 exr3.1 OIIO-master avx2
             nametag: linux-optix7-2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
@@ -171,7 +171,7 @@ jobs:
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
-          - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.3 no-simd exr2.4
+          - desc: oldest everything gcc6/C++14 llvm9 py2.7 oiio2.3 no-simd exr2.4
             nametag: linux-oldest
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2019-clang9
@@ -342,7 +342,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: Debug gcc7/C++14 llvm9 py2.7 oiio2.3 exr2.4 sse4 boost1.65 exr2.4
+          - desc: Debug gcc7/C++14 llvm9 py2.7 oiio2.3 exr2.4 sse4 exr2.4
             nametag: linux-debug-gcc7-llvm9
             runner: ubuntu-20.04
             cxx_compiler: g++-7
@@ -356,7 +356,7 @@ jobs:
                             LLVM_VERSION=9.0.0
                             PUGIXML_VERSION=v1.9
                             CTEST_TEST_TIMEOUT=240
-          - desc: gcc10/C++17 llvm10 oiio-release boost1.65 exr2.5 avx2
+          - desc: gcc10/C++17 llvm10 oiio-release exr2.5 avx2
             nametag: linux-2021ish-gcc10-llvm10
             runner: ubuntu-20.04
             cxx_compiler: g++-10
@@ -370,7 +370,7 @@ jobs:
             setenvs: export LLVM_VERSION=10.0.0
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc11/C++17 llvm16 boost1.71 exr3.2 py3.9 avx2 batch-b16avx512
+          - desc: latest releases gcc11/C++17 llvm16 exr3.2 py3.9 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-22.04
             cxx_compiler: g++-11
@@ -386,7 +386,7 @@ jobs:
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             OPENCOLORIO_VERSION=v2.2.0
                             PUGIXML_VERSION=v1.13
-          - desc: bleeding edge gcc12/C++17 llvm17 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
+          - desc: bleeding edge gcc12/C++17 llvm17 oiio/ocio/exr/pybind-master py3.10 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-22.04
             cxx_compiler: g++-12
@@ -402,7 +402,7 @@ jobs:
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master
-          - desc: clang14/C++17 llvm14 boost1.71 exr3.1 py3.8 avx2 batch-b16avx512
+          - desc: clang14/C++17 llvm14 exr3.1 py3.8 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
             runner: ubuntu-20.04
             cxx_compiler: clang++

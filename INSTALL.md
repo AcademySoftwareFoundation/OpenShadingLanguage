@@ -55,7 +55,6 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
       recommended that you use 11.0 or higher.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.83)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/Imath) 2.4
    or newer (recommended: 3.1 or higher; tested through 3.2)
    NOTE: It is likely that 1.13 is the last release that will support
@@ -100,7 +99,7 @@ Here are the steps to check out, build, and test the OSL distribution:
 
    Note: OSL uses 'CMake' for its cross-platform build system.  But for
    simplicity, we have made a "make wrapper" around it, so that by just
-   typing 'make' everything will build.  Type 'make help' for other 
+   typing 'make' everything will build.  Type 'make help' for other
    options, and note that 'make nuke' will blow everything away for the
    freshest possible compile.
 
@@ -130,7 +129,7 @@ Here are the steps to check out, build, and test the OSL distribution:
    test suite with:
 
         make test
-        
+
 Troubleshooting
 ----------------
 

@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Modified Apache 2.0 License
 # Coyright Notice From Pixar USD (Modified Apache 2.0 License)
 # 90% of the content is changed to be compatible for installing OSL and its dependencies
-# 
+#
 # Based on USD build_scripts by Pixar Animation Studio
-# 
+#
 
 # ---------------------------------------------------------------------------
 #
@@ -32,7 +32,7 @@
 # KIND, either express or implied. See the Apache License for the specific
 # language governing permissions and limitations under the Apache License.
 #
-# 
+#
 
 from __future__ import print_function
 
@@ -208,7 +208,7 @@ def GetPythonInfo():
 
     This function is used to extract build information from the Python
     interpreter used to launch this script. This information is used
-    in the Boost and OSL builds. By taking this approach we can support
+    in the OSL builds. By taking this approach we can support
     having OSL builds for different Python versions built on the same
     machine. This is very useful, especially when developers have multiple
     versions installed on their machine, which is quite common now with
@@ -731,170 +731,6 @@ def InstallZlib(context, force, buildArgs):
 ZLIB = Dependency("zlib", InstallZlib, "include/zlib.h")
 
 ############################################################
-# boost
-
-if Linux() or MacOS():
-    if Python3():
-        BOOST_URL = "https://downloads.sourceforge.net/project/boost/boost/1.70.0/boost_1_70_0.tar.gz"
-    else:
-        BOOST_URL = "https://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.tar.gz"
-    BOOST_VERSION_FILE = "include/boost/version.hpp"
-elif Windows():
-    # The default installation of boost on Windows puts headers in a versioned
-    # subdirectory, which we have to account for here. In theory, specifying
-    # "layout=system" would make the Windows install match Linux/MacOS, but that
-    # causes problems for other dependencies that look for boost.
-    #
-    # boost 1.70 is required for Visual Studio 2019. For simplicity, we use
-    # this version for all older Visual Studio versions as well.
-    BOOST_URL = "https://downloads.sourceforge.net/project/boost/boost/1.70.0/boost_1_70_0.tar.gz"
-    BOOST_VERSION_FILE = "include/boost-1_70/boost/version.hpp"
-
-
-def InstallBoost_Helper(context, force, buildArgs):
-    # Documentation files in the boost archive can have exceptionally
-    # long paths. This can lead to errors when extracting boost on Windows,
-    # since paths are limited to 260 characters by default on that platform.
-    # To avoid this, we skip extracting all documentation.
-    #
-    # For some examples, see: https://svn.boost.org/trac10/ticket/11677
-    dontExtract = ["*/doc/*", "*/libs/*/doc/*"]
-
-    with CurrentWorkingDirectory(DownloadURL(BOOST_URL, context, force, dontExtract)):
-        bootstrap = "bootstrap.bat" if Windows() else "./bootstrap.sh"
-        Run(
-            '{bootstrap} --prefix="{instDir}"'.format(
-                bootstrap=bootstrap, instDir=context.instDir
-            )
-        )
-
-        # b2 supports at most -j64 and will error if given a higher value.
-        num_procs = min(64, context.numJobs)
-
-        b2_settings = [
-            '--prefix="{instDir}"'.format(instDir=context.instDir),
-            '--build-dir="{buildDir}"'.format(buildDir=context.buildDir),
-            "-j{procs}".format(procs=num_procs),
-            "address-model=64",
-            "link=shared",
-            "runtime-link=shared",
-            "threading=multi",
-            "variant={variant}".format(
-                variant="debug" if context.buildDebug else "release"
-            ),
-            "--with-atomic",
-            "--with-program_options",
-            "--with-regex",
-        ]
-
-        if context.buildPython:
-            b2_settings.append("--with-python")
-            pythonInfo = GetPythonInfo()
-            if Windows():
-                # Unfortunately Boost build scripts require the Python folder
-                # that contains the executable on Windows
-                pythonPath = os.path.dirname(pythonInfo[0])
-            else:
-                # While other platforms want the complete executable path
-                pythonPath = pythonInfo[0]
-            # This is the only platform-independent way to configure these
-            # settings correctly and robustly for the Boost jam build system.
-            # There are Python config arguments that can be passed to bootstrap
-            # but those are not available in boostrap.bat (Windows) so we must
-            # take the following approach:
-            projectPath = "python-config.jam"
-            with open(projectPath, "w") as projectFile:
-                # Note that we must escape any special characters, like
-                # backslashes for jam, hence the mods below for the path
-                # arguments. Also, if the path contains spaces jam will not
-                # handle them well. Surround the path parameters in quotes.
-                line = 'using python : %s : "%s" : "%s" ;\n' % (
-                    pythonInfo[3],
-                    pythonPath.replace("\\", "\\\\"),
-                    pythonInfo[2].replace("\\", "\\\\"),
-                )
-                projectFile.write(line)
-            b2_settings.append("--user-config=python-config.jam")
-
-        if context.buildOIIO:
-            b2_settings.append("--with-date_time")
-
-        if context.buildOIIO:
-            b2_settings.append("--with-system")
-            b2_settings.append("--with-thread")
-        # if Linux():
-        #     b2_settings.append("toolset=gcc")
-
-        if context.buildOPENVDB:
-            b2_settings.append("--with-iostreams")
-
-            # b2 with -sNO_COMPRESSION=1 fails with the following error message:
-            #     error: at [...]/boost_1_61_0/tools/build/src/kernel/modules.jam:107
-            #     error: Unable to find file or target named
-            #     error:     '/zlib//zlib'
-            #     error: referred to from project at
-            #     error:     'libs/iostreams/build'
-            #     error: could not resolve project reference '/zlib'
-
-            # But to avoid an extra library dependency, we can still explicitly
-            # exclude the bzip2 compression from boost_iostreams (note that
-            # OpenVDB uses blosc compression).
-            b2_settings.append("-sNO_BZIP2=1")
-
-        if context.buildOIIO:
-            b2_settings.append("--with-filesystem")
-
-        if force:
-            b2_settings.append("-a")
-
-        if Windows():
-            # toolset parameter for Visual Studio documented here:
-            # https://github.com/boostorg/build/blob/develop/src/tools/msvc.jam
-            if context.cmakeToolset == "v142":
-                b2_settings.append("toolset=msvc-14.2")
-            elif context.cmakeToolset == "v141":
-                b2_settings.append("toolset=msvc-14.1")
-            elif context.cmakeToolset == "v140":
-                b2_settings.append("toolset=msvc-14.0")
-            elif IsVisualStudio2019OrGreater():
-                b2_settings.append("toolset=msvc-14.2")
-            elif IsVisualStudio2017OrGreater():
-                b2_settings.append("toolset=msvc-14.1")
-            else:
-                b2_settings.append("toolset=msvc-14.0")
-
-        if MacOS():
-            # Must specify toolset=clang to ensure install_name for boost
-            # libraries includes @rpath
-            b2_settings.append("toolset=clang")
-
-        # Add on any user-specified extra arguments.
-        b2_settings += buildArgs
-
-        b2 = "b2" if Windows() else "./b2"
-        Run("{b2} {options} install".format(b2=b2, options=" ".join(b2_settings)))
-
-
-def InstallBoost(context, force, buildArgs):
-    # Boost's build system will install the version.hpp header before
-    # building its libraries. We make sure to remove it in case of
-    # any failure to ensure that the build script detects boost as a
-    # dependency to build the next time it's run.
-    try:
-        InstallBoost_Helper(context, force, buildArgs)
-    except:
-        versionHeader = os.path.join(context.instDir, BOOST_VERSION_FILE)
-        if os.path.isfile(versionHeader):
-            try:
-                os.remove(versionHeader)
-            except:
-                pass
-        raise
-
-
-BOOST = Dependency("boost", InstallBoost, BOOST_VERSION_FILE)
-
-############################################################
 # JPEGTurbo
 
 JPEGTurbo_URL = "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.zip"
@@ -1235,10 +1071,6 @@ def InstallOSL(context, force, buildArgs):
         #     extraArgs.append('-DCMAKE_CXX_FLAGS="-fPIC"')
 
         if Windows():
-            # for now have to use manual boost build
-            extraArgs.append("-DBoost_NO_BOOST_CMAKE=On")
-            extraArgs.append("-DBoost_NO_SYSTEM_PATHS=True")
-
             # Increase the precompiled header buffer limit.
             extraArgs.append('-DCMAKE_CXX_FLAGS="/Zm150"')
             if context.buildDebug:
@@ -1313,11 +1145,6 @@ def InstallOpenVDB(context, force, buildArgs):
             "-DOPENVDB_BUILD_UNITTESTS=OFF",
         ]
 
-        # Make sure to use boost installed by the build script and not any
-        # system installed boost
-        extraArgs.append("-DBoost_NO_BOOST_CMAKE=On")
-        extraArgs.append("-DBoost_NO_SYSTEM_PATHS=True")
-
         extraArgs.append('-DBLOSC_ROOT="{instDir}"'.format(instDir=context.instDir))
         extraArgs.append('-DTBB_ROOT="{instDir}"'.format(instDir=context.instDir))
         # OpenVDB needs Half type from IlmBase
@@ -1358,12 +1185,6 @@ def InstallOpenImageIO(context, force, buildArgs):
         # library outside of our build.
         if not context.buildPTEX:
             extraArgs.append("-DUSE_PTEX=OFF")
-
-        # Make sure to use boost installed by the build script and not any
-        # system installed boost
-        if Windows():
-            extraArgs.append("-DBoost_NO_BOOST_CMAKE=On")
-            extraArgs.append("-DBoost_NO_SYSTEM_PATHS=True")
 
         # Add on any user-specified extra arguments.
         extraArgs += buildArgs
@@ -1444,20 +1265,20 @@ options, like --force or --build-args.
 
 - Downloading Libraries:
 If curl or powershell (on Windows) are installed and located in PATH, they
-will be used to download dependencies. Otherwise, a built-in downloader will 
+will be used to download dependencies. Otherwise, a built-in downloader will
 be used.
 
 - Specifying Custom Build Arguments:
 Users may specify custom build arguments for libraries using the --build-args
-option. This values for this option must take the form <library name>,<option>. 
+option. This values for this option must take the form <library name>,<option>.
 For example:
 
-%(prog)s --build-args boost,cxxflags=... OSL,-DCMAKE_CXX_STANDARD=14 ...
+%(prog)s --build-args cxxflags=... OSL,-DCMAKE_CXX_STANDARD=14 ...
 
-These arguments will be passed directly to the build system for the specified 
-library. Multiple quotes may be needed to ensure arguments are passed on 
+These arguments will be passed directly to the build system for the specified
+library. Multiple quotes may be needed to ensure arguments are passed on
 exactly as desired. Users must ensure these arguments are suitable for the
-specified library and do not conflict with other options, otherwise build 
+specified library and do not conflict with other options, otherwise build
 errors may occur.
 
 """.format(
@@ -1627,14 +1448,6 @@ subgroup.add_argument(
     action="store_true",
     default=False,
     help="Build zlib for OSL",
-)
-subgroup = group.add_mutually_exclusive_group()
-subgroup.add_argument(
-    "--boost",
-    dest="build_boost",
-    action="store_true",
-    default=False,
-    help="Build boost for OSL",
 )
 subgroup = group.add_mutually_exclusive_group()
 subgroup.add_argument(
@@ -1935,7 +1748,6 @@ class InstallContext:
 
         self.buildOIIO = args.build_oiio
         self.buildZLIB = args.build_zlib
-        self.buildBOOST = args.build_boost
         self.buildLLVM = args.build_llvm
         self.buildCLANG = args.build_clang
         self.buildPUGIXML = args.build_pugixml
@@ -2003,12 +1815,9 @@ requiredDependencies = []
 
 # Determine list of dependencies that are required based on options
 # user has selected.
-# BOOST is deleted becauseI want to use system installed boost
 if Windows():
     if context.buildZLIB:
         requiredDependencies += [ZLIB]
-    if context.buildBOOST:
-        requiredDependencies += [BOOST]
 
 if Windows():
     if context.buildLLVM:
@@ -2117,12 +1926,7 @@ else:
 
 if find_executable("cmake"):
     # Check cmake requirements
-    if Windows():
-        # Windows build depend on boost 1.70, which is not supported before
-        # cmake version 3.14
-        cmake_required_version = (3, 14)
-    else:
-        cmake_required_version = (3, 12)
+    cmake_required_version = (3, 15)
     cmake_version = GetCMakeVersion()
     if not cmake_version:
         PrintError("Failed to determine CMake version")
@@ -2179,9 +1983,8 @@ Building with settings:         ------------
   Building                      {buildType}
     Config                      {buildConfig}
 
-  Mandatory Dependencies:       ------------ 
+  Mandatory Dependencies:       ------------
     Zlib:                       {buildZLIB}
-    Boost:                      {buildBOOST}
     LLVM:                       {buildLLVM}
     CLANG:                      {buildCLANG}
     PugiXML:                    {buildPUGIXML}
@@ -2193,7 +1996,7 @@ Building with settings:         ------------
     Flex:                       {buildFLEX}
     Bison:                      {buildBISON}
 
-  Optional Dependencies:        ------------     
+  Optional Dependencies:        ------------
     Ptex:                       {buildPTEX}
     OpenColorIO:                {buildOCIO}
     LibRaw:                     {buildLIBRAW}
@@ -2266,7 +2069,6 @@ summaryMsg = summaryMsg.format(
     buildPTEX=("On" if context.buildPTEX else "Off"),
     buildOIIO=("On" if context.buildOIIO else "Off"),
     buildZLIB=("On" if context.buildZLIB else "Off"),
-    buildBOOST=("On" if context.buildBOOST else "Off"),
     buildLLVM=("On" if context.buildLLVM else "Off"),
     buildCLANG=("On" if context.buildCLANG else "Off"),
     buildPUGIXML=("On" if context.buildPUGIXML else "Off"),

@@ -4,12 +4,13 @@
 
 // #define OSL_DEV 1
 
-#include <boost/container/flat_set.hpp>
 #include <iterator>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#include <tsl/robin_set.h>
 
 #include <llvm/ADT/SmallVector.h>
 
@@ -154,7 +155,7 @@ does_op_implementation_require_masking(ustring opname)
 {
     // TODO: should OpDescriptor handle identifying operations that always
     // require masking vs. this lazy_lookup?  Perhaps a BatchedOpDescriptor?
-    static boost::container::flat_set<ustring> lazy_lookup(
+    static tsl::robin_set<ustring> lazy_lookup(
         { // safe_pows's implementation uses an OSL_UNLIKELY
           // which will perform a horizontal operation to check if
           // a condition is false for all data lane in order to skip
@@ -385,7 +386,7 @@ bool
 is_op_return_always_logically_boolean(ustring opname)
 {
     // Test if explicit comparison is faster or not
-    static boost::container::flat_set<ustring> lazy_lookup(
+    static tsl::robin_set<ustring> lazy_lookup(
         { Strings::op_getattribute, Strings::op_eq, Strings::op_ge,
           Strings::op_gt, Strings::op_le, Strings::op_lt, Strings::op_neq,
           Strings::op_and, Strings::op_or });

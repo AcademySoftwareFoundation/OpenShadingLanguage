@@ -33,51 +33,6 @@ include (ExternalProject)
 
 option (BUILD_MISSING_DEPS "Try to download and build any missing dependencies" OFF)
 
-
-###########################################################################
-# Boost setup
-if (LINKSTATIC)
-    set (Boost_USE_STATIC_LIBS ON)
-else ()
-    if (MSVC)
-        add_definitions (-DBOOST_ALL_DYN_LINK=1)
-    endif ()
-endif ()
-if (BOOST_CUSTOM)
-    set (Boost_FOUND true)
-    # N.B. For a custom version, the caller had better set up the variables
-    # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
-else ()
-    set (Boost_COMPONENTS filesystem system thread)
-    # The FindBoost.cmake interface is broken if it uses boost's installed
-    # cmake output (e.g. boost 1.70.0, cmake <= 3.14). Specifically it fails
-    # to set the expected variables printed below. So until that's fixed
-    # force FindBoost.cmake to use the original brute force path.
-    if (NOT DEFINED Boost_NO_BOOST_CMAKE)
-        set (Boost_NO_BOOST_CMAKE ON)
-    endif ()
-    checked_find_package (Boost REQUIRED
-                       VERSION_MIN 1.55
-                       COMPONENTS ${Boost_COMPONENTS}
-                       RECOMMEND_MIN 1.66
-                       RECOMMEND_MIN_REASON "Boost 1.66 is the oldest version our CI tests against"
-                       PRINT Boost_INCLUDE_DIRS Boost_LIBRARIES
-                      )
-endif ()
-
-# On Linux, Boost 1.55 and higher seems to need to link against -lrt
-if (CMAKE_SYSTEM_NAME MATCHES "Linux"
-      AND ${Boost_VERSION} VERSION_GREATER_EQUAL 105500)
-    list (APPEND Boost_LIBRARIES "rt")
-endif ()
-
-include_directories (SYSTEM "${Boost_INCLUDE_DIRS}")
-link_directories ("${Boost_LIBRARY_DIRS}")
-
-# end Boost setup
-###########################################################################
-
-
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 # IlmBase & OpenEXR
@@ -267,3 +222,45 @@ else ()
     function (osl_optix_target TARGET)
     endfunction()
 endif ()
+
+
+###########################################################################
+# Tessil/robin-map
+
+option (BUILD_ROBINMAP_FORCE "Force local download/build of robin-map even if installed" OFF)
+option (BUILD_MISSING_ROBINMAP "Local download/build of robin-map if not installed" ON)
+set (BUILD_ROBINMAP_VERSION "v0.6.2" CACHE STRING "Preferred Tessil/robin-map version, of downloading/building our own")
+
+macro (find_or_download_robin_map)
+    # If we weren't told to force our own download/build of robin-map, look
+    # for an installed version. Still prefer a copy that seems to be
+    # locally installed in this tree.
+    if (NOT BUILD_ROBINMAP_FORCE)
+        find_package (Robinmap QUIET)
+    endif ()
+    # If an external copy wasn't found and we requested that missing
+    # packages be built, or we we are forcing a local copy to be built, then
+    # download and build it.
+    # Download the headers from github
+    if ((BUILD_MISSING_ROBINMAP AND NOT ROBINMAP_FOUND) OR BUILD_ROBINMAP_FORCE)
+        message (STATUS "Downloading local Tessil/robin-map")
+        set (ROBINMAP_INSTALL_DIR "${PROJECT_SOURCE_DIR}/ext/robin-map")
+        set (ROBINMAP_GIT_REPOSITORY "https://github.com/Tessil/robin-map")
+        if (NOT IS_DIRECTORY ${ROBINMAP_INSTALL_DIR}/include/tsl)
+            find_package (Git REQUIRED)
+            execute_process(COMMAND             ${GIT_EXECUTABLE} clone    ${ROBINMAP_GIT_REPOSITORY} -n ${ROBINMAP_INSTALL_DIR})
+            execute_process(COMMAND             ${GIT_EXECUTABLE} checkout ${BUILD_ROBINMAP_VERSION}
+                            WORKING_DIRECTORY   ${ROBINMAP_INSTALL_DIR})
+            if (IS_DIRECTORY ${ROBINMAP_INSTALL_DIR}/include/tsl)
+                message (STATUS "DOWNLOADED Tessil/robin-map to ${ROBINMAP_INSTALL_DIR}.\n"
+                         "Remove that dir to get rid of it.")
+            else ()
+                message (FATAL_ERROR "Could not download Tessil/robin-map")
+            endif ()
+        endif ()
+        set (ROBINMAP_INCLUDE_DIR "${ROBINMAP_INSTALL_DIR}/include")
+    endif ()
+    checked_find_package (Robinmap REQUIRED)
+endmacro()
+
+find_or_download_robin_map ()

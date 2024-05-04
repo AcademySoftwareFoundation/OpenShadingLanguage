@@ -64,8 +64,6 @@ My System and Setup Configuration:
 
 **OpenShadingLanguage:** cloned from latest master branch
 
-**Boost:** 1.70
-
 **LLVM:** 11.0.0 C++ is set on C++14
 
 **CLANG:** 11.0.0 C++ is set on C++14
@@ -152,9 +150,9 @@ Open `doc/build_install/windows/osl_env_vars_setup.bat` in your editor and edit 
 
 The main build launcher is here `doc/build_install/windows/build_osl.bat`
 
-For now we can not assign pre-installed llvm or boost so we have to build all together at once and put all of them in one directory.
+For now we can not assign pre-installed llvm so we have to build all together at once and put all of them in one directory.
 
-I am working on it to see how we can use external llvm and boost installation without error.
+I am working on it to see how we can use external llvm installation without error.
 
 **Table of flags we can assign to the command**
 
@@ -163,7 +161,6 @@ I am working on it to see how we can use external llvm and boost installation wi
 | --osl         | Implemented     | Yes     |
 | --python      | Implemented     | Yes     |
 | --zlib        | Implemented     | Yes     |
-| --boost       | Implemented     | Yes     |
 | --llvm        | Implemented     | Yes     |
 | --clang       | Implemented     | Yes     |
 | --pugixml     | Implemented     | Yes     |

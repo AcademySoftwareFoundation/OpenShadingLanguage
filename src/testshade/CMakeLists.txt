@@ -71,7 +71,6 @@ list(APPEND include_dirs ${CMAKE_BINARY_DIR}/include)
 list(APPEND include_dirs ${IMATH_INCLUDES})
 list(APPEND include_dirs ${OPENEXR_INCLUDES})
 list(APPEND include_dirs ${OpenImageIO_INCLUDES})
-list(APPEND include_dirs ${Boost_INCLUDE_DIRS})
 
 EMBED_LLVM_BITCODE_IN_CPP ( "${rs_srcs}" "_host" "testshade_llvm_compiled_rs" testshade_srcs "-DOSL_HOST_RS_BITCODE=1" "${include_dirs}")
 
@@ -116,7 +115,7 @@ if (NOT CODECOV)
     target_link_libraries (testshade_dso
                            PRIVATE
                                OpenImageIO::OpenImageIO
-                               ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
+                               ${CMAKE_DL_LIBS} )
     install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
     osl_optix_target(libtestshade)
 endif ()

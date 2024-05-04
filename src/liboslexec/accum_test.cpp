@@ -163,7 +163,7 @@ main()
     for (int i = 0; test[i].path[0]; ++i)
         simulate(accum, test[i].path, i);
 
-    // And check. We unroll this loop for boost to give us a useful
+    // And check. We unroll this loop for the macros to give us a useful
     // error in case they fail
     OIIO_CHECK_ASSERT(aovs[beauty].check());
     OIIO_CHECK_ASSERT(aovs[diffuse2_3].check());

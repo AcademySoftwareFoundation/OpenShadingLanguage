@@ -12,12 +12,7 @@ VCPKG_INSTALLATION_ROOT=/c/vcpkg
 
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:=.}
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$DEP_DIR"
-export BOOST_ROOT=${BOOST_ROOT_1_72_0}
 
-BOOST_UNIX_PATH=$(echo "/$BOOST_ROOT" | sed -e 's/\\/\//g' -e 's/://')
-echo "BOOST_UNIX_PATH=$BOOST_UNIX_PATH"
-
-export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$BOOST_ROOT"
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$VCPKG_INSTALLATION_ROOT/installed/x64-windows"
 export PATH="$PATH:$DEP_DIR/bin:$DEP_DIR/lib:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin:/bin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DEP_DIR/bin:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
@@ -49,7 +44,7 @@ echo "All pre-installed VCPkg installs:"
 vcpkg list
 echo "---------------"
 # vcpkg update
-# 
+#
 # # vcpkg install zlib:x64-windows
 vcpkg install tiff:x64-windows
 vcpkg install libpng:x64-windows

@@ -320,7 +320,7 @@ OSLToyRenderer::get_array_attribute(ShaderGlobals* sg, bool derivatives,
     // In order to test getattribute(), respond positively to
     // "options"/"blahblah"
     if (object == RS::Hashes::options && name == RS::Hashes::blahblah
-        && type == TypeDesc::TypeFloat) {
+        && type == TypeFloat) {
         *(float*)val = 3.14159;
         return true;
     }
@@ -354,7 +354,7 @@ OSLToyRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
     // look up something specific to the primitive, rather than have hard-
     // coded names.
 
-    if (name == RS::Hashes::s && type == TypeDesc::TypeFloat) {
+    if (name == RS::Hashes::s && type == TypeFloat) {
         ((float*)val)[0] = sg->u;
         if (derivatives) {
             ((float*)val)[1] = sg->dudx;
@@ -362,7 +362,7 @@ OSLToyRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == RS::Hashes::t && type == TypeDesc::TypeFloat) {
+    if (name == RS::Hashes::t && type == TypeFloat) {
         ((float*)val)[0] = sg->v;
         if (derivatives) {
             ((float*)val)[1] = sg->dvdx;
@@ -380,7 +380,7 @@ OSLToyRenderer::get_osl_version(ShaderGlobals* /*sg*/, bool /*derivs*/,
                                 ustringhash /*object*/, TypeDesc type,
                                 ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeInt) {
+    if (type == TypeInt) {
         ((int*)val)[0] = OSL_VERSION;
         return true;
     }
@@ -407,7 +407,7 @@ OSLToyRenderer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
                                       ustringhash /*object*/, TypeDesc type,
                                       ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeString) {
+    if (type == TypeString) {
         ((ustringhash*)val)[0] = m_projection;
         return true;
     }
@@ -421,7 +421,7 @@ OSLToyRenderer::get_camera_fov(ShaderGlobals* /*sg*/, bool derivs,
                                ustringhash /*name*/, void* val)
 {
     // N.B. in a real renderer, this may be time-dependent
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_fov;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -436,7 +436,7 @@ OSLToyRenderer::get_camera_pixelaspect(ShaderGlobals* /*sg*/, bool derivs,
                                        ustringhash /*object*/, TypeDesc type,
                                        ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_pixelaspect;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -467,7 +467,7 @@ OSLToyRenderer::get_camera_clip_near(ShaderGlobals* /*sg*/, bool derivs,
                                      ustringhash /*object*/, TypeDesc type,
                                      ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_hither;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -482,7 +482,7 @@ OSLToyRenderer::get_camera_clip_far(ShaderGlobals* /*sg*/, bool derivs,
                                     ustringhash /*object*/, TypeDesc type,
                                     ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_yon;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -514,7 +514,7 @@ OSLToyRenderer::get_camera_shutter_open(ShaderGlobals* /*sg*/, bool derivs,
                                         ustringhash /*object*/, TypeDesc type,
                                         ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_shutter[0];
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -529,7 +529,7 @@ OSLToyRenderer::get_camera_shutter_close(ShaderGlobals* /*sg*/, bool derivs,
                                          ustringhash /*object*/, TypeDesc type,
                                          ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_shutter[1];
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());

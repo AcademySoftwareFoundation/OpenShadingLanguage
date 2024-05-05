@@ -378,13 +378,13 @@ BackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
     if (sym.is_constant() && !sym.typespec().is_array() && !arrayindex) {
         // Shortcut for simple constants
         if (sym.typespec().is_float()) {
-            if (cast == TypeDesc::TypeInt)
+            if (cast == TypeInt)
                 return ll.constant((int)sym.get_float());
             else
                 return ll.constant(sym.get_float());
         }
         if (sym.typespec().is_int()) {
-            if (cast == TypeDesc::TypeFloat)
+            if (cast == TypeFloat)
                 return ll.constant((float)sym.get_int());
             else
                 return ll.constant(sym.get_int());
@@ -438,9 +438,9 @@ BackendLLVM::llvm_load_value(llvm::Value* ptr, const TypeSpec& type, int deriv,
         return result;
 
     // Handle int<->float type casting
-    if (type.is_float_based() && !type.is_array() && cast == TypeDesc::TypeInt)
+    if (type.is_float_based() && !type.is_array() && cast == TypeInt)
         result = ll.op_float_to_int(result);
-    else if (type.is_int() && cast == TypeDesc::TypeFloat)
+    else if (type.is_int() && cast == TypeFloat)
         result = ll.op_int_to_float(result);
 
     return result;
@@ -473,13 +473,13 @@ BackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
         return ll.constant(sym.get_float(linear_index));
     }
     if (sym.typespec().is_float_based()) {
-        if (cast == TypeDesc::TypeInt)
+        if (cast == TypeInt)
             return ll.constant((int)sym.get_float(linear_index));
         else
             return ll.constant(sym.get_float(linear_index));
     }
     if (sym.typespec().is_int_based()) {
-        if (cast == TypeDesc::TypeFloat)
+        if (cast == TypeFloat)
             return ll.constant((float)sym.get_int(linear_index));
         else
             return ll.constant(sym.get_int(linear_index));
@@ -719,7 +719,7 @@ BackendLLVM::llvm_test_nonzero(Symbol& val, bool test_derivs)
     TypeDesc t = ts.simpletype();
 
     // Handle int case -- guaranteed no derivs, no multi-component
-    if (t == TypeDesc::TypeInt)
+    if (t == TypeInt)
         return ll.op_ne(llvm_load_value(val), ll.constant(0));
 
     // float-based

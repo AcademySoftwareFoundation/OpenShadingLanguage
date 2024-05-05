@@ -598,7 +598,7 @@ LLVMGEN(llvm_gen_aref)
     bool index_is_uniform = Index.is_uniform();
 
     // Get array index we're interested in
-    llvm::Value* index = rop.loadLLVMValue(Index, 0, 0, TypeDesc::TypeInt,
+    llvm::Value* index = rop.loadLLVMValue(Index, 0, 0, TypeInt,
                                            index_is_uniform);
     if (!index)
         return false;
@@ -681,7 +681,7 @@ LLVMGEN(llvm_gen_aassign)
     OSL_ASSERT(index_is_uniform || !resultIsUniform);
 
     // Get array index we're interested in
-    llvm::Value* index = rop.loadLLVMValue(Index, 0, 0, TypeDesc::TypeInt,
+    llvm::Value* index = rop.loadLLVMValue(Index, 0, 0, TypeInt,
                                            index_is_uniform);
 
     if (!index)
@@ -1017,11 +1017,9 @@ LLVMGEN(llvm_gen_andor)
     bool result_is_uniform = result.is_uniform();
 
 
-    llvm::Value* i1_res   = NULL;
-    llvm::Value* a_val    = rop.llvm_load_value(a, 0, 0, TypeDesc::TypeInt,
-                                                op_is_uniform);
-    llvm::Value* b_val    = rop.llvm_load_value(b, 0, 0, TypeDesc::TypeInt,
-                                                op_is_uniform);
+    llvm::Value* i1_res = NULL;
+    llvm::Value* a_val  = rop.llvm_load_value(a, 0, 0, TypeInt, op_is_uniform);
+    llvm::Value* b_val  = rop.llvm_load_value(b, 0, 0, TypeInt, op_is_uniform);
     llvm::Value* zero_set = op_is_uniform ? rop.ll.constant(0)
                                           : rop.ll.wide_constant(0);
 
@@ -2115,7 +2113,7 @@ LLVMGEN(llvm_gen_bitwise_binary_op)
     bool op_is_uniform     = A.is_uniform() && B.is_uniform();
     bool result_is_uniform = Result.is_uniform();
 
-    TypeDesc type      = TypeDesc::TypeInt;
+    TypeDesc type      = TypeInt;
     bool is_logical_op = op.opname() == op_bitand || op.opname() == op_bitor
                          || op.opname() == op_xor;
     if (is_logical_op) {
@@ -2437,8 +2435,7 @@ LLVMGEN(llvm_gen_compassign)
         }
 
         for (int d = 0; d < 3; ++d) {  // deriv
-            llvm::Value* val = rop.llvm_load_value(Val, d, 0,
-                                                   TypeDesc::TypeFloat,
+            llvm::Value* val = rop.llvm_load_value(Val, d, 0, TypeFloat,
                                                    op_is_uniform);
             if (Index.is_constant()) {
                 int i = Index.get_int();
@@ -2497,8 +2494,7 @@ LLVMGEN(llvm_gen_compassign)
 
         for (int d = 0; d < 3; ++d) {  // deriv
 
-            llvm::Value* val = rop.llvm_load_value(Val, d, 0,
-                                                   TypeDesc::TypeFloat,
+            llvm::Value* val = rop.llvm_load_value(Val, d, 0, TypeFloat,
                                                    op_is_uniform);
 
             llvm::Value* valc0 = rop.llvm_load_value(Result, d, 0,
@@ -2613,8 +2609,7 @@ LLVMGEN(llvm_gen_mxcompref)
         int r    = Imath::clamp(Row.get_int(), 0, 3);
         int c    = Imath::clamp(Col.get_int(), 0, 3);
         int comp = 4 * r + c;
-        val      = rop.llvm_load_value(M, 0, comp, TypeDesc::TypeFloat,
-                                       op_is_uniform);
+        val      = rop.llvm_load_value(M, 0, comp, TypeFloat, op_is_uniform);
     } else {
         llvm::Value* comp = rop.ll.op_mul(row, components_are_uniform
                                                    ? rop.ll.constant(4)
@@ -2712,8 +2707,7 @@ LLVMGEN(llvm_gen_mxcompassign)
         }
     }
 
-    llvm::Value* val = rop.llvm_load_value(Val, 0, 0, TypeDesc::TypeFloat,
-                                           op_is_uniform);
+    llvm::Value* val = rop.llvm_load_value(Val, 0, 0, TypeFloat, op_is_uniform);
 
     if (Row.is_constant() && Col.is_constant()) {
         int r    = Imath::clamp(Row.get_int(), 0, 3);
@@ -2770,9 +2764,8 @@ LLVMGEN(llvm_gen_construct_color)
     for (int d = 0; d < dmax; ++d) {   // loop over derivs
         for (int c = 0; c < 3; ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym(op, c + 1 + using_space);
-            llvm::Value* val   = rop.llvm_load_value(comp, d, NULL, 0,
-                                                     TypeDesc::TypeFloat,
-                                                     result_is_uniform);
+            llvm::Value* val = rop.llvm_load_value(comp, d, NULL, 0, TypeFloat,
+                                                   result_is_uniform);
             rop.llvm_store_value(val, Result, d, NULL, c);
         }
     }
@@ -3248,9 +3241,8 @@ LLVMGEN(llvm_gen_construct_triple)
     for (int d = 0; d < dmax; ++d) {   // loop over derivs
         for (int c = 0; c < 3; ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym(op, c + 1 + using_space);
-            llvm::Value* val   = rop.llvm_load_value(comp, d, NULL, 0,
-                                                     TypeDesc::TypeFloat,
-                                                     op_is_uniform);
+            llvm::Value* val = rop.llvm_load_value(comp, d, NULL, 0, TypeFloat,
+                                                   op_is_uniform);
 
             if (op_is_uniform && !resultIsUniform) {
                 rop.llvm_broadcast_uniform_value(val, Result, d, c);
@@ -3313,9 +3305,9 @@ LLVMGEN(llvm_gen_construct_triple)
 
             // Dynamically build function name
             FuncSpec func_spec("build_transform_matrix");
-            func_spec.arg_varying(TypeDesc::TypeMatrix);
+            func_spec.arg_varying(TypeMatrix);
             func_spec.arg(Space, false /*derivs*/, space_is_uniform);
-            func_spec.arg_uniform(TypeDesc::TypeString);
+            func_spec.arg_uniform(TypeString);
             func_spec.mask();
 
             succeeded_as_int = rop.ll.call_function(rop.build_name(func_spec),
@@ -3337,7 +3329,7 @@ LLVMGEN(llvm_gen_construct_triple)
             FuncSpec func_spec(transform_name);
             func_spec.arg(Result, Result.has_derivs(), resultIsUniform);
             func_spec.arg(Result, Result.has_derivs(), resultIsUniform);
-            func_spec.arg_varying(TypeDesc::TypeMatrix44);
+            func_spec.arg_varying(TypeMatrix);
             func_spec.mask();
 
             rop.ll.call_function(rop.build_name(func_spec), args);
@@ -3594,7 +3586,7 @@ LLVMGEN(llvm_gen_transform)
                                     rop.ll.mask_as_int(rop.ll.current_mask()) };
 
             FuncSpec func_spec("build_transform_matrix");
-            func_spec.arg_varying(TypeDesc::TypeMatrix44);
+            func_spec.arg_varying(TypeMatrix);
             // Ignore derivatives if unneeded or unsupplied
             func_spec.arg(*From, from_is_uniform);
             func_spec.arg(*To, to_is_uniform);
@@ -3624,7 +3616,7 @@ LLVMGEN(llvm_gen_transform)
             // The matrix is always varying if we looked it up,
             // if it was passed directly in "To", then we respect to's uniformity
             // otherwise it will be the varying result of the callback to the renderer
-            func_spec.arg(TypeDesc::TypeMatrix44,
+            func_spec.arg(TypeMatrix,
                           To->typespec().is_matrix() ? to_is_uniform : false);
             func_spec.arg(*Result, has_derivs, result_is_uniform);
 
@@ -3649,7 +3641,7 @@ LLVMGEN(llvm_gen_transform)
             // The matrix is always varying if we looked it up,
             // if it was passed directly in "To", then we respect to's uniformity
             // otherwise it will be the varying result of the callback to the renderer
-            func_spec.arg(TypeDesc::TypeMatrix44,
+            func_spec.arg(TypeMatrix,
                           To->typespec().is_matrix() ? to_is_uniform : false);
             func_spec.mask();
 
@@ -4511,8 +4503,7 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             continue;
         }
 
-        if (name == Strings::missingcolor
-            && equivalent(valtype, TypeDesc::TypeColor)) {
+        if (name == Strings::missingcolor && equivalent(valtype, TypeColor)) {
             if (!missingcolor_buffer) {
                 // If not already done, allocate enough storage for the
                 // missingcolor value (4 floats), and call the special
@@ -4851,8 +4842,7 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM& rop, int opnum,
         PARAM_VARYING_STRING_CODE(interp, osl_texture_decode_interpmode,
                                   interpmode)
 
-        if (name == Strings::missingcolor
-            && equivalent(valtype, TypeDesc::TypeColor)) {
+        if (name == Strings::missingcolor && equivalent(valtype, TypeColor)) {
             OSL_ASSERT(missingcolor_buffer != nullptr);
 
             int num_components = valtype.aggregate;
@@ -5852,7 +5842,7 @@ llvm_batched_noise_options(BatchedBackendLLVM& rop, int opnum,
             }
             rop.ll.call_function("osl_noiseparams_set_bandwidth", opt,
                                  rop.llvm_load_value(Val, 0, NULL, 0,
-                                                     TypeDesc::TypeFloat));
+                                                     TypeFloat));
         } else if (name == Strings::impulses
                    && (Val.typespec().is_float() || Val.typespec().is_int())) {
             if (!Val.is_uniform()) {
@@ -5861,7 +5851,7 @@ llvm_batched_noise_options(BatchedBackendLLVM& rop, int opnum,
             }
             rop.ll.call_function("osl_noiseparams_set_impulses", opt,
                                  rop.llvm_load_value(Val, 0, NULL, 0,
-                                                     TypeDesc::TypeFloat));
+                                                     TypeFloat));
         } else {
             rop.shadingcontext()->errorfmt(
                 "Unknown {} optional argument: \"{}\", <{}> ({}:{})",
@@ -5941,7 +5931,7 @@ llvm_batched_noise_varying_options(BatchedBackendLLVM& rop, int opnum,
             llvm::Value* wide_bandwidth
                 = rop.llvm_load_value(Val,
                                       /*deriv=*/0, /*component=*/0,
-                                      /*cast=*/TypeDesc::TypeFloat,
+                                      /*cast=*/TypeFloat,
                                       /*op_is_uniform=*/false);
             llvm::Value* scalar_bandwidth = rop.ll.op_extract(wide_bandwidth,
                                                               leadLane);
@@ -5956,7 +5946,7 @@ llvm_batched_noise_varying_options(BatchedBackendLLVM& rop, int opnum,
             llvm::Value* wide_impulses
                 = rop.llvm_load_value(Val,
                                       /*deriv=*/0, /*component=*/0,
-                                      /*cast=*/TypeDesc::TypeFloat,
+                                      /*cast=*/TypeFloat,
                                       /*op_is_uniform=*/false);
             llvm::Value* scalar_impulses = rop.ll.op_extract(wide_impulses,
                                                              leadLane);

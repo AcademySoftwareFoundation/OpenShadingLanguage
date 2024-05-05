@@ -426,7 +426,7 @@ ASTunary_expression::typecheck(TypeSpec expected)
         m_typespec = t;
         break;
     case Not:
-        m_typespec = TypeDesc::TypeInt;  // ! is always an int
+        m_typespec = TypeInt;  // ! is always an int
         break;
     case Compl:
         if (!t.is_int()) {
@@ -515,7 +515,7 @@ ASTbinary_expression::typecheck(TypeSpec expected)
         if (m_op == And || m_op == Or) {
             // Logical ops work can work on closures (since they test
             // for nonemptiness, but always return int.
-            return m_typespec = TypeDesc::TypeInt;
+            return m_typespec = TypeInt;
         }
         // If we got this far, it's an op that's not allowed
         errorfmt("Not allowed: '{} {} {}'", l, opname(), r);
@@ -538,10 +538,10 @@ ASTbinary_expression::typecheck(TypeSpec expected)
         if (equivalent(l, r)) {
             // handle a few couple special cases
             if (m_op == Sub && l.is_point() && r.is_point())  // p-p == v
-                return m_typespec = TypeDesc::TypeVector;
+                return m_typespec = TypeVector;
             if ((m_op == Add || m_op == Sub)
                 && (l.is_point() || r.is_point()))  // p +/- v, v +/- p == p
-                return m_typespec = TypeDesc::TypePoint;
+                return m_typespec = TypePoint;
             // everything else: the first operand is also the return type
             return m_typespec = l;
         }
@@ -553,7 +553,7 @@ ASTbinary_expression::typecheck(TypeSpec expected)
     case Mod:
         // Mod only works with ints, and return ints.
         if (l.is_int() && r.is_int())
-            return m_typespec = TypeDesc::TypeInt;
+            return m_typespec = TypeInt;
         break;
 
     case Equal:
@@ -563,7 +563,7 @@ ASTbinary_expression::typecheck(TypeSpec expected)
         // Result is always an int.
         if (equivalent(l, r) || (l.is_numeric() && r.is_int_or_float())
             || (l.is_int_or_float() && r.is_numeric()))
-            return m_typespec = TypeDesc::TypeInt;
+            return m_typespec = TypeInt;
         break;
 
     case Greater:
@@ -573,7 +573,7 @@ ASTbinary_expression::typecheck(TypeSpec expected)
         // G/L comparisons only work with floats or ints, and always
         // return int.
         if (l.is_int_or_float() && r.is_int_or_float())
-            return m_typespec = TypeDesc::TypeInt;
+            return m_typespec = TypeInt;
         break;
 
     case BitAnd:
@@ -583,14 +583,14 @@ ASTbinary_expression::typecheck(TypeSpec expected)
     case ShiftRight:
         // Bitwise ops only work with ints, and return ints.
         if (l.is_int() && r.is_int())
-            return m_typespec = TypeDesc::TypeInt;
+            return m_typespec = TypeInt;
         break;
 
     case And:
     case Or:
         // Logical ops work on any simple type (since they test for
         // nonzeroness), but always return int.
-        return m_typespec = TypeDesc::TypeInt;
+        return m_typespec = TypeInt;
 
     default: errorfmt("unknown binary operator");
     }
@@ -606,7 +606,7 @@ TypeSpec
 ASTternary_expression::typecheck(TypeSpec expected)
 {
     // FIXME - closures
-    TypeSpec c = typecheck_list(cond(), TypeDesc::TypeInt);
+    TypeSpec c = typecheck_list(cond(), TypeInt);
     TypeSpec t = typecheck_list(trueexpr(), expected);
     TypeSpec f = typecheck_list(falseexpr(), expected);
 
@@ -1268,9 +1268,9 @@ ASTfunction_call::typecheck_builtin_specialcase()
     if (m_name == "transform") {
         // Special case for transform: under the covers, it selects
         // vector or normal special versions depending on its use.
-        if (typespec().simpletype() == TypeDesc::TypeVector)
+        if (typespec().simpletype() == TypeVector)
             m_name = ustring("transformv");
-        else if (typespec().simpletype() == TypeDesc::TypeNormal)
+        else if (typespec().simpletype() == TypeNormal)
             m_name = ustring("transformn");
     }
 
@@ -1760,21 +1760,21 @@ public:
                 OSL_DASSERT(!s.is_closure() || s.is_color_closure());
 
                 const TypeDesc& td = s.simpletype();
-                if (td == TypeDesc::TypeFloat)
+                if (td == TypeFloat)
                     return 0;
-                if (td == TypeDesc::TypeInt)
+                if (td == TypeInt)
                     return 1;
-                if (td == TypeDesc::TypeColor)
+                if (td == TypeColor)
                     return 2;
-                if (td == TypeDesc::TypeVector)
+                if (td == TypeVector)
                     return 3;
-                if (td == TypeDesc::TypePoint)
+                if (td == TypePoint)
                     return 4;
-                if (td == TypeDesc::TypeNormal)
+                if (td == TypeNormal)
                     return 5;
-                if (td == TypeDesc::TypeMatrix)
+                if (td == TypeMatrix)
                     return 6;
-                if (td == TypeDesc::TypeString)
+                if (td == TypeString)
                     return 7;
 
                 if (s.is_color_closure())
@@ -2238,20 +2238,20 @@ OSLCompilerImpl::type_from_code(const char* code, int* advance)
     TypeSpec t;
     int i = 0;
     switch (code[i]) {
-    case 'i': t = TypeDesc::TypeInt; break;
-    case 'f': t = TypeDesc::TypeFloat; break;
-    case 'c': t = TypeDesc::TypeColor; break;
-    case 'p': t = TypeDesc::TypePoint; break;
-    case 'v': t = TypeDesc::TypeVector; break;
-    case 'n': t = TypeDesc::TypeNormal; break;
-    case 'm': t = TypeDesc::TypeMatrix; break;
-    case 's': t = TypeDesc::TypeString; break;
+    case 'i': t = TypeInt; break;
+    case 'f': t = TypeFloat; break;
+    case 'c': t = TypeColor; break;
+    case 'p': t = TypePoint; break;
+    case 'v': t = TypeVector; break;
+    case 'n': t = TypeNormal; break;
+    case 'm': t = TypeMatrix; break;
+    case 's': t = TypeString; break;
     case 'h': t = OSL::TypeUInt64; break;  // ustringhash_pod
     case 'x': t = TypeDesc(TypeDesc::NONE); break;
     case 'X': t = TypeDesc(TypeDesc::PTR); break;
     case 'L': t = TypeDesc(TypeDesc::LONGLONG); break;
     case 'C':  // color closure
-        t = TypeSpec(TypeDesc::TypeColor, true);
+        t = TypeSpec(TypeColor, true);
         break;
     case 'S':  // structure
         // Following the 'S' is the numeric structure ID
@@ -2337,21 +2337,21 @@ OSLCompilerImpl::code_from_type(TypeSpec type) const
     } else if (type.is_closure() || type.is_closure_array()) {
         out = 'C';
     } else {
-        if (elem == TypeDesc::TypeInt)
+        if (elem == TypeInt)
             out = 'i';
-        else if (elem == TypeDesc::TypeFloat)
+        else if (elem == TypeFloat)
             out = 'f';
-        else if (elem == TypeDesc::TypeColor)
+        else if (elem == TypeColor)
             out = 'c';
-        else if (elem == TypeDesc::TypePoint)
+        else if (elem == TypePoint)
             out = 'p';
-        else if (elem == TypeDesc::TypeVector)
+        else if (elem == TypeVector)
             out = 'v';
-        else if (elem == TypeDesc::TypeNormal)
+        else if (elem == TypeNormal)
             out = 'n';
-        else if (elem == TypeDesc::TypeMatrix)
+        else if (elem == TypeMatrix)
             out = 'm';
-        else if (elem == TypeDesc::TypeString)
+        else if (elem == TypeString)
             out = 's';
         else if (elem == TypeDesc::NONE)
             out = 'x';

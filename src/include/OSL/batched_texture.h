@@ -219,7 +219,7 @@ public:
                                    void* errormessage, Mask<WidthT> mask)
         : m_result(result)
         , m_resultHasDerivs(resultHasDerivs)
-        , m_resultType((chans == 1) ? TypeDesc::TypeFloat : TypeDesc::TypeColor)
+        , m_resultType((chans == 1) ? TypeFloat : TypeColor)
         , m_alpha(alpha)
         , m_alphaHasDerivs(alphaHasDerivs)
         , m_errormessage(errormessage)
@@ -240,15 +240,13 @@ public:
     // The return value maybe invalid or be Masked<float, WidthT>
     OSL_FORCEINLINE MaskedData<WidthT> alpha()
     {
-        return MaskedData<WidthT>(TypeDesc::TypeFloat, m_alphaHasDerivs, m_mask,
-                                  m_alpha);
+        return MaskedData<WidthT>(TypeFloat, m_alphaHasDerivs, m_mask, m_alpha);
     }
 
     // The return value maybe invalid or be Masked<ustring, WidthT>
     OSL_FORCEINLINE MaskedData<WidthT> errormessage()
     {
-        return MaskedData<WidthT>(TypeDesc::TypeString, false, m_mask,
-                                  m_errormessage);
+        return MaskedData<WidthT>(TypeString, false, m_mask, m_errormessage);
     }
 
 private:

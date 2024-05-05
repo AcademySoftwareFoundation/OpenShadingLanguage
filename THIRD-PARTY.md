@@ -12,12 +12,6 @@ In no particular order:
 BSD 3-Clause License
 SPDX-License-Identifier: BSD-3-Clause
 
-* OpenImageIO Copyright (c) Larry Gritz, et al.
-  https://github.com/OpenImageIO/oiio
-
-  Many bits of code flow back and forth between OIIO and OSL, especially
-  parts of the CMake build system.
-
 * OpenEXR, Copyright (c) Contributors to the OpenEXR Project.
   https://github.com/AcademySoftwareFoundation/OpenEXR
 
@@ -105,6 +99,30 @@ Public domain
   into the public domain in February 2011. You may do anything
   you like with it. You may even remove all attributions,
   but of course I'd appreciate it if you kept my name somewhere.
+
+
+-------------------------------------------------------------------------
+
+Apache 2.0 License.
+SPDX-License-Identifier: Apache-2.0
+
+* OpenImageIO Copyright (c) Contributors to the OpenImageIO Project.
+  https://github.com/AcademySoftwareFoundation/OpenImageIO
+
+  Many bits of code flow back and forth between OIIO and OSL, especially
+  parts of the CMake build system.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 
 -------------------------------------------------------------------------

@@ -43,17 +43,17 @@ print_component_value(std::ostream& out, ShadingSystemImpl* ss, TypeDesc type,
                       const void* data)
 
 {
-    if (type == TypeDesc::TypeInt)
+    if (type == TypeInt)
         out << *(int*)data;
-    else if (type == TypeDesc::TypeFloat)
+    else if (type == TypeFloat)
         out << *(float*)data;
-    else if (type == TypeDesc::TypeColor)
+    else if (type == TypeColor)
         out << "(" << ((Color3*)data)->x << ", " << ((Color3*)data)->y << ", "
             << ((Color3*)data)->z << ")";
-    else if (type == TypeDesc::TypeVector)
+    else if (type == TypeVector)
         out << "(" << ((Vec3*)data)->x << ", " << ((Vec3*)data)->y << ", "
             << ((Vec3*)data)->z << ")";
-    else if (type == TypeDesc::TypeString)
+    else if (type == TypeString)
         out << "\"" << *((ustring*)data) << "\"";
     else if (type == TypeDesc::PTR)  // this only happens for closures
         print_closure(out, *(const ClosureColor**)data, ss);

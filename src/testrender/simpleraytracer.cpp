@@ -364,28 +364,23 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                         float f[3];
                         string_view val(attr.value());
                         if (parse_prefix_and_ints(val, "int ", 1, &i))
-                            shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeInt,
+                            shadingsys->Parameter(*group, attr.name(), TypeInt,
                                                   store.Int(i));
                         else if (parse_prefix_and_floats(val, "float ", 1, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeFloat,
-                                                  store.Float(f[0]));
+                                                  TypeFloat, store.Float(f[0]));
                         else if (parse_prefix_and_floats(val, "vector ", 3, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeVector,
-                                                  store.Vec(f));
+                                                  TypeVector, store.Vec(f));
                         else if (parse_prefix_and_floats(val, "point ", 3, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypePoint,
-                                                  store.Vec(f));
+                                                  TypePoint, store.Vec(f));
                         else if (parse_prefix_and_floats(val, "color ", 3, f))
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeColor,
-                                                  store.Vec(f));
+                                                  TypeColor, store.Vec(f));
                         else
                             shadingsys->Parameter(*group, attr.name(),
-                                                  TypeDesc::TypeString,
+                                                  TypeString,
                                                   store.Str(attr.value()));
                     }
                 } else if (strcmp(gnode.name(), "Shader") == 0) {
@@ -589,7 +584,7 @@ SimpleRaytracer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
     // look up something specific to the primitive, rather than have hard-
     // coded names.
 
-    if (name == u_s && type == TypeDesc::TypeFloat) {
+    if (name == u_s && type == TypeFloat) {
         ((float*)val)[0] = sg->u;
         if (derivatives) {
             ((float*)val)[1] = sg->dudx;
@@ -597,7 +592,7 @@ SimpleRaytracer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_t && type == TypeDesc::TypeFloat) {
+    if (name == u_t && type == TypeFloat) {
         ((float*)val)[0] = sg->v;
         if (derivatives) {
             ((float*)val)[1] = sg->dvdx;
@@ -615,7 +610,7 @@ SimpleRaytracer::get_osl_version(ShaderGlobals* /*sg*/, bool /*derivs*/,
                                  ustringhash /*object*/, TypeDesc type,
                                  ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeInt) {
+    if (type == TypeInt) {
         ((int*)val)[0] = OSL_VERSION;
         return true;
     }
@@ -642,7 +637,7 @@ SimpleRaytracer::get_camera_projection(ShaderGlobals* /*sg*/, bool /*derivs*/,
                                        ustringhash /*object*/, TypeDesc type,
                                        ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeString) {
+    if (type == TypeString) {
         ((ustring*)val)[0] = m_projection;
         return true;
     }
@@ -656,7 +651,7 @@ SimpleRaytracer::get_camera_fov(ShaderGlobals* /*sg*/, bool derivs,
                                 ustringhash /*name*/, void* val)
 {
     // N.B. in a real renderer, this may be time-dependent
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_fov;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -671,7 +666,7 @@ SimpleRaytracer::get_camera_pixelaspect(ShaderGlobals* /*sg*/, bool derivs,
                                         ustringhash /*object*/, TypeDesc type,
                                         ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_pixelaspect;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -702,7 +697,7 @@ SimpleRaytracer::get_camera_clip_near(ShaderGlobals* /*sg*/, bool derivs,
                                       ustringhash /*object*/, TypeDesc type,
                                       ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_hither;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -717,7 +712,7 @@ SimpleRaytracer::get_camera_clip_far(ShaderGlobals* /*sg*/, bool derivs,
                                      ustringhash /*object*/, TypeDesc type,
                                      ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_yon;
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -749,7 +744,7 @@ SimpleRaytracer::get_camera_shutter_open(ShaderGlobals* /*sg*/, bool derivs,
                                          ustringhash /*object*/, TypeDesc type,
                                          ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_shutter[0];
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());
@@ -764,7 +759,7 @@ SimpleRaytracer::get_camera_shutter_close(ShaderGlobals* /*sg*/, bool derivs,
                                           ustringhash /*object*/, TypeDesc type,
                                           ustringhash /*name*/, void* val)
 {
-    if (type == TypeDesc::TypeFloat) {
+    if (type == TypeFloat) {
         ((float*)val)[0] = m_shutter[1];
         if (derivs)
             memset((char*)val + type.size(), 0, 2 * type.size());

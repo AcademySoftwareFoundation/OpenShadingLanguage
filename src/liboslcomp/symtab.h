@@ -114,20 +114,17 @@ private:
 /// the parent class to properly free it upon destruction.
 class ConstantSymbol final : public Symbol {
 public:
-    ConstantSymbol(ustring n, ustring val)
-        : Symbol(n, TypeDesc::TypeString, SymTypeConst)
+    ConstantSymbol(ustring n, ustring val) : Symbol(n, TypeString, SymTypeConst)
     {
         m_val.s = val.c_str();
         set_dataptr(SymArena::Absolute, &m_val.s);
     }
-    ConstantSymbol(ustring n, int val)
-        : Symbol(n, TypeDesc::TypeInt, SymTypeConst)
+    ConstantSymbol(ustring n, int val) : Symbol(n, TypeInt, SymTypeConst)
     {
         m_val.i = val;
         set_dataptr(SymArena::Absolute, &m_val.i);
     }
-    ConstantSymbol(ustring n, float val)
-        : Symbol(n, TypeDesc::TypeFloat, SymTypeConst)
+    ConstantSymbol(ustring n, float val) : Symbol(n, TypeFloat, SymTypeConst)
     {
         m_val.f = val;
         set_dataptr(SymArena::Absolute, &m_val.f);
@@ -148,7 +145,7 @@ public:
             set_dataptr(SymArena::Absolute, &m_val.i);
         else if (type == TypeDesc::STRING)
             set_dataptr(SymArena::Absolute, &m_val.s);
-        else if (equivalent(type, TypeDesc::TypeVector))
+        else if (equivalent(type, TypeVector))
             set_dataptr(SymArena::Absolute, &m_val.v);
         else {
             OSL_DASSERT(arena() == SymArena::Unknown);

@@ -291,7 +291,7 @@ DECLFOLDER(constfold_dot)
     if (A.is_constant() && B.is_constant()) {
         OSL_DASSERT(A.typespec().is_triple() && B.typespec().is_triple());
         float result = A.get_vec3().dot(B.get_vec3());
-        int cind     = rop.add_constant(TypeDesc::TypeFloat, &result);
+        int cind     = rop.add_constant(TypeFloat, &result);
         rop.turn_into_assign(op, cind, "dot(const,const)");
         return 1;
     }
@@ -376,8 +376,7 @@ DECLFOLDER(constfold_eq)
         }
         // Turn the 'eq R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const == const");
         return 1;
     }
@@ -404,8 +403,7 @@ DECLFOLDER(constfold_neq)
         }
         // Turn the 'neq R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const != const");
         return 1;
     }
@@ -436,8 +434,7 @@ DECLFOLDER(constfold_lt)
         } else {
             return 0;  // unhandled case
         }
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const < const");
         return 1;
     }
@@ -468,8 +465,7 @@ DECLFOLDER(constfold_le)
         } else {
             return 0;  // unhandled case
         }
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const <= const");
         return 1;
     }
@@ -500,8 +496,7 @@ DECLFOLDER(constfold_gt)
         } else {
             return 0;  // unhandled case
         }
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const > const");
         return 1;
     }
@@ -532,8 +527,7 @@ DECLFOLDER(constfold_ge)
         } else {
             return 0;  // unhandled case
         }
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const >= const");
         return 1;
     }
@@ -552,8 +546,7 @@ DECLFOLDER(constfold_or)
         bool val = A.get_int() || B.get_int();
         // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const || const");
         return 1;
     }
@@ -572,8 +565,7 @@ DECLFOLDER(constfold_and)
         OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
         bool val                  = A.get_int() && B.get_int();
         static const int int_zero = 0, int_one = 1;
-        int cind = rop.add_constant(TypeDesc::TypeInt,
-                                    val ? &int_one : &int_zero);
+        int cind = rop.add_constant(TypeInt, val ? &int_one : &int_zero);
         rop.turn_into_assign(op, cind, "const && const");
         return 1;
     }
@@ -1300,7 +1292,7 @@ DECLFOLDER(constfold_concat)
     }
     // If we made it this far, all args were constants, and the
     // concatenation is in result.
-    int cind = rop.add_constant(TypeDesc::TypeString, &result);
+    int cind = rop.add_constant(TypeString, &result);
     rop.turn_into_assign(op, cind, "const fold concat");
     return 1;
 }
@@ -1604,7 +1596,7 @@ DECLFOLDER(constfold_mix)
         if (B.connected()) {
             // Add the test and conditional for X==0, in which case we can
             // just R=A and not have to access B
-            int cond  = rop.add_temp(TypeDesc::TypeInt);
+            int cond  = rop.add_temp(TypeInt);
             int fzero = rop.add_constant(0.0f);
             rop.insert_code(opnum++, u_eq, RuntimeOptimizer::GroupWithNext,
                             cond, Xind, fzero);
@@ -1621,7 +1613,7 @@ DECLFOLDER(constfold_mix)
         if (A.connected()) {
             // Add the test and conditional for X==1, in which case we can
             // just R=B and not have to access A
-            int cond = rop.add_temp(TypeDesc::TypeInt);
+            int cond = rop.add_temp(TypeInt);
             int fone = rop.add_constant(1.0f);
             rop.insert_code(opnum++, u_eq, RuntimeOptimizer::GroupWithNext,
                             cond, Xind, fone);
@@ -2043,7 +2035,7 @@ DECLFOLDER(constfold_matrix)
             // turn it into a constant rather than calling getmatrix at
             // execution time.
             Matrix44 Mresult = Mfrom * Mto;
-            int cind         = rop.add_constant(TypeDesc::TypeMatrix, &Mresult);
+            int cind         = rop.add_constant(TypeMatrix, &Mresult);
             rop.turn_into_assign(op, cind, "const fold matrix");
             return 1;
         }
@@ -2079,7 +2071,7 @@ DECLFOLDER(constfold_matrix)
             }
         }
         if (all_const) {
-            rop.turn_into_assign(op, rop.add_constant(TypeDesc::TypeMatrix, M),
+            rop.turn_into_assign(op, rop.add_constant(TypeMatrix, M),
                                  "const fold matrix");
             return 1;
         }
@@ -2142,14 +2134,14 @@ DECLFOLDER(constfold_getmatrix)
         rop.inst()->args()[op.firstarg() + 0] = dataarg;
         // Now turn it into an assignment
         Matrix44 Mresult = Mfrom * Mto;
-        int cind         = rop.add_constant(TypeDesc::TypeMatrix, &Mresult);
+        int cind         = rop.add_constant(TypeMatrix, &Mresult);
         rop.turn_into_assign(op, cind, "getmatrix of known matrix");
 
         // Now insert a new instruction that assigns 1 to the
         // original return result of getmatrix.
         const int one           = 1;
         const int args_to_add[] = { resultarg,
-                                    rop.add_constant(TypeDesc::TypeInt, &one) };
+                                    rop.add_constant(TypeInt, &one) };
         rop.insert_code(opnum, u_assign, args_to_add,
                         RuntimeOptimizer::RecomputeRWRanges,
                         RuntimeOptimizer::GroupWithNext);
@@ -2316,22 +2308,19 @@ DECLFOLDER(constfold_getattribute)
     bool found = false;
 
     // Check global things first
-    if (attr_name == "osl:version" && attr_type == TypeDesc::TypeInt) {
+    if (attr_name == "osl:version" && attr_type == TypeInt) {
         int* val = (int*)(char*)buf;
         *val     = OSL_VERSION;
         found    = true;
-    } else if (attr_name == "shader:shadername"
-               && attr_type == TypeDesc::TypeString) {
+    } else if (attr_name == "shader:shadername" && attr_type == TypeString) {
         ustring* up = (ustring*)(char*)buf;
         *up         = ustring(rop.inst()->shadername());
         found       = true;
-    } else if (attr_name == "shader:layername"
-               && attr_type == TypeDesc::TypeString) {
+    } else if (attr_name == "shader:layername" && attr_type == TypeString) {
         ustring* up = (ustring*)(char*)buf;
         *up         = rop.inst()->layername();
         found       = true;
-    } else if (attr_name == "shader:groupname"
-               && attr_type == TypeDesc::TypeString) {
+    } else if (attr_name == "shader:groupname" && attr_type == TypeString) {
         ustring* up = (ustring*)(char*)buf;
         *up         = rop.group().name();
         found       = true;
@@ -2374,7 +2363,7 @@ DECLFOLDER(constfold_getattribute)
         // original return result of getattribute.
         const int one           = 1;
         const int args_to_add[] = { oldresultarg,
-                                    rop.add_constant(TypeDesc::TypeInt, &one) };
+                                    rop.add_constant(TypeInt, &one) };
         rop.insert_code(opnum, u_assign, args_to_add,
                         RuntimeOptimizer::RecomputeRWRanges,
                         RuntimeOptimizer::GroupWithNext);
@@ -2438,9 +2427,9 @@ DECLFOLDER(constfold_gettextureinfo)
 
             // Now insert a new instruction that assigns 1 to the
             // original return result of gettextureinfo.
-            int one = 1;
-            const int args_to_add[]
-                = { oldresultarg, rop.add_constant(TypeDesc::TypeInt, &one) };
+            int one                 = 1;
+            const int args_to_add[] = { oldresultarg,
+                                        rop.add_constant(TypeInt, &one) };
             rop.insert_code(opnum, u_assign, args_to_add,
                             RuntimeOptimizer::RecomputeRWRanges,
                             RuntimeOptimizer::GroupWithNext);
@@ -2587,7 +2576,7 @@ DECLFOLDER(constfold_texture)
                 // Just turn the param name into empty string and it will
                 // be skipped.
                 ustring empty;
-                int cind = rop.add_constant(TypeDesc::TypeString, &empty);
+                int cind = rop.add_constant(TypeString, &empty);
                 rop.inst()->args()[op.firstarg() + i]     = cind;
                 rop.inst()->args()[op.firstarg() + i + 1] = cind;
                 any_elided                                = true;
@@ -2739,8 +2728,7 @@ DECLFOLDER(constfold_pointcloud_search)
 
     // Query results all copied.  The only thing left to do is to assign
     // status (query result count) to the original "result".
-    const int args_to_add[] = { result_sym,
-                                rop.add_constant(TypeDesc::TypeInt, &count) };
+    const int args_to_add[] = { result_sym, rop.add_constant(TypeInt, &count) };
     rop.insert_code(opnum, u_assign, args_to_add,
                     RuntimeOptimizer::RecomputeRWRanges,
                     RuntimeOptimizer::GroupWithNext);
@@ -2789,7 +2777,7 @@ DECLFOLDER(constfold_pointcloud_get)
                                             &data[0]);
     rop.shadingsys().pointcloud_stats(0, 1, 0);
 
-    rop.turn_into_assign(op, rop.add_constant(TypeDesc::TypeInt, &ok),
+    rop.turn_into_assign(op, rop.add_constant(TypeInt, &ok),
                          "Folded constant pointcloud_get");
 
     // Now make a constant array for those results we just retrieved...
@@ -2908,7 +2896,7 @@ DECLFOLDER(constfold_noise)
                 cell(n, Vec3(input[0], input[1], input[2]));
             else
                 cell(n, Vec3(input[0], input[1], input[2]), input[3]);
-            int cind = rop.add_constant(TypeDesc::TypePoint, &n);
+            int cind = rop.add_constant(TypePoint, &n);
             rop.turn_into_assign(op, cind, "const fold cellnoise");
             return 1;
         }

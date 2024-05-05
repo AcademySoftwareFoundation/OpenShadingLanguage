@@ -58,9 +58,9 @@ struct Background {
 #if 0  // DEBUG: visualize importance table
         using namespace OIIO;
         ImageOutput* out = ImageOutput::create("bg.exr");
-        ImageSpec spec(res, res, 3, TypeDesc::TypeFloat);
+        ImageSpec spec(res, res, 3, TypeFloat);
         if (out && out->open("bg.exr", spec))
-            out->write_image(TypeDesc::TypeFloat, &values[0]);
+            out->write_image(TypeFloat, &values[0]);
         delete out;
 #endif
     }

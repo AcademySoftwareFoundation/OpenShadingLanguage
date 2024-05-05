@@ -1559,7 +1559,7 @@ LLVMGEN(llvm_gen_compassign)
     }
 
     for (int d = 0; d < 3; ++d) {  // deriv
-        llvm::Value* val = rop.llvm_load_value(Val, d, 0, TypeDesc::TypeFloat);
+        llvm::Value* val = rop.llvm_load_value(Val, d, 0, TypeFloat);
         if (Index.is_constant()) {
             int i = Index.get_int();
             i     = Imath::clamp(i, 0, 2);
@@ -1670,7 +1670,7 @@ LLVMGEN(llvm_gen_mxcompassign)
         }
     }
 
-    llvm::Value* val = rop.llvm_load_value(Val, 0, 0, TypeDesc::TypeFloat);
+    llvm::Value* val = rop.llvm_load_value(Val, 0, 0, TypeFloat);
 
     if (Row.is_constant() && Col.is_constant()) {
         int r    = Imath::clamp(Row.get_int(), 0, 3);
@@ -1830,8 +1830,7 @@ LLVMGEN(llvm_gen_construct_color)
     for (int d = 0; d < dmax; ++d) {   // loop over derivs
         for (int c = 0; c < 3; ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym(op, c + 1 + using_space);
-            llvm::Value* val   = rop.llvm_load_value(comp, d, NULL, 0,
-                                                     TypeDesc::TypeFloat);
+            llvm::Value* val = rop.llvm_load_value(comp, d, NULL, 0, TypeFloat);
             rop.llvm_store_value(val, Result, d, NULL, c);
         }
     }
@@ -1876,8 +1875,7 @@ LLVMGEN(llvm_gen_construct_triple)
     for (int d = 0; d < dmax; ++d) {   // loop over derivs
         for (int c = 0; c < 3; ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym(op, c + 1 + using_space);
-            llvm::Value* val   = rop.llvm_load_value(comp, d, NULL, 0,
-                                                     TypeDesc::TypeFloat);
+            llvm::Value* val = rop.llvm_load_value(comp, d, NULL, 0, TypeFloat);
             rop.llvm_store_value(val, Result, d, NULL, c);
         }
     }
@@ -2439,8 +2437,8 @@ LLVMGEN(llvm_gen_andor)
     Symbol& b      = *rop.opargsym(op, 2);
 
     llvm::Value* i1_res = NULL;
-    llvm::Value* a_val  = rop.llvm_load_value(a, 0, 0, TypeDesc::TypeInt);
-    llvm::Value* b_val  = rop.llvm_load_value(b, 0, 0, TypeDesc::TypeInt);
+    llvm::Value* a_val  = rop.llvm_load_value(a, 0, 0, TypeInt);
+    llvm::Value* b_val  = rop.llvm_load_value(b, 0, 0, TypeInt);
     if (op.opname() == op_and) {
         // From the old bitcode generated
         // define i32 @osl_and_iii(i32 %a, i32 %b) nounwind readnone ssp {
@@ -2720,8 +2718,7 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
             errormessage = rop.llvm_get_pointer(Val);
             continue;
         }
-        if (name == Strings::missingcolor
-            && equivalent(valtype, TypeDesc::TypeColor)) {
+        if (name == Strings::missingcolor && equivalent(valtype, TypeColor)) {
             if (!missingcolor) {
                 // If not already done, allocate enough storage for the
                 // missingcolor value (4 floats), and call the special
@@ -3090,12 +3087,12 @@ llvm_gen_noise_options(BackendLLVM& rop, int opnum, int first_optional_arg)
                    && (Val.typespec().is_float() || Val.typespec().is_int())) {
             rop.ll.call_function("osl_noiseparams_set_bandwidth", opt,
                                  rop.llvm_load_value(Val, 0, NULL, 0,
-                                                     TypeDesc::TypeFloat));
+                                                     TypeFloat));
         } else if (name == Strings::impulses
                    && (Val.typespec().is_float() || Val.typespec().is_int())) {
             rop.ll.call_function("osl_noiseparams_set_impulses", opt,
                                  rop.llvm_load_value(Val, 0, NULL, 0,
-                                                     TypeDesc::TypeFloat));
+                                                     TypeFloat));
         } else {
             rop.shadingcontext()->errorfmt(
                 "Unknown {} optional argument: \"{}\", <{}> ({}:{})",

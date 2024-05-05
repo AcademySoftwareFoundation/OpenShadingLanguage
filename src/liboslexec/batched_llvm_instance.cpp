@@ -1203,7 +1203,7 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                                     ll.constant(ncomps),
                                     ll.constant("<get_userdata>") };
             ll.call_function(build_name(FuncSpec("naninf_check_offset")
-                                            .arg_uniform(TypeDesc::TypeInt)
+                                            .arg_uniform(TypeInt)
                                             .mask()),
                              args);
         }
@@ -1465,7 +1465,7 @@ BatchedBackendLLVM::llvm_generate_debugnan(const Opcode& op)
                                     ncheck,
                                     ll.constant(op.opname()) };
             ll.call_function(build_name(FuncSpec("naninf_check_offset")
-                                            .arg_varying(TypeDesc::TypeInt)
+                                            .arg_varying(TypeInt)
                                             .mask()),
                              args);
 
@@ -1495,7 +1495,7 @@ BatchedBackendLLVM::llvm_generate_debugnan(const Opcode& op)
                                         ncheck,
                                         ll.constant(op.opname()) };
                 ll.call_function(build_name(FuncSpec("naninf_check_offset")
-                                                .arg_uniform(TypeDesc::TypeInt)
+                                                .arg_uniform(TypeInt)
                                                 .mask()),
                                  args);
             }
@@ -1639,14 +1639,14 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                 ll.call_function(build_name(
                                      FuncSpec("uninit_check_values_offset")
                                          .arg_uniform(TypeDesc::PTR)
-                                         .arg_varying(TypeDesc::TypeInt)
+                                         .arg_varying(TypeInt)
                                          .mask()),
                                  args);
             } else {
                 ll.call_function(build_name(
                                      FuncSpec("uninit_check_values_offset")
                                          .arg_varying(TypeDesc::PTR)
-                                         .arg_varying(TypeDesc::TypeInt)
+                                         .arg_varying(TypeInt)
                                          .mask()),
                                  args);
             }
@@ -1671,7 +1671,7 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                 ll.call_function(build_name(
                                      FuncSpec("uninit_check_values_offset")
                                          .arg_uniform(TypeDesc::PTR)
-                                         .arg_uniform(TypeDesc::TypeInt)),
+                                         .arg_uniform(TypeInt)),
                                  args);
             } else {
                 llvm::Value* args[]
@@ -1694,7 +1694,7 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                 ll.call_function(build_name(
                                      FuncSpec("uninit_check_values_offset")
                                          .arg_varying(TypeDesc::PTR)
-                                         .arg_uniform(TypeDesc::TypeInt)
+                                         .arg_uniform(TypeInt)
                                          .mask()),
                                  args);
             }
@@ -2109,10 +2109,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                             ll.constant(0),
                             ll.constant(ncomps),
                             ll.constant("<none>") };
-                    ll.call_function(build_name(
-                                         FuncSpec("naninf_check_offset")
-                                             .arg_uniform(TypeDesc::TypeInt)
-                                             .mask()),
+                    ll.call_function(build_name(FuncSpec("naninf_check_offset")
+                                                    .arg_uniform(TypeInt)
+                                                    .mask()),
                                      args);
                 }
             }

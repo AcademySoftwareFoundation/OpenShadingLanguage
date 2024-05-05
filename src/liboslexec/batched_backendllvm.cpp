@@ -702,7 +702,7 @@ BatchedBackendLLVM::llvm_widen_value_into_temp(const Symbol& sym, int deriv)
     auto disable_masked_stores = ll.create_masking_scope(false);
     for (int c = 0; c < t.aggregate(); ++c) {
         // NOTE: we use the passed deriv to load, but store to value (deriv==0)
-        llvm::Value* v = llvm_load_value(sym, deriv, c, TypeDesc::UNKNOWN,
+        llvm::Value* v = llvm_load_value(sym, deriv, c, TypeUnknown,
                                          /*is_uniform*/ false);
         llvm_store_value(v, widePtr, t, 0, NULL, c, /*is_uniform*/ false);
     }
@@ -739,7 +739,7 @@ BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
         // Shortcut for simple constants
         if (sym.typespec().is_float()) {
             float float_val = sym.get_float();
-            if (cast == TypeDesc::TypeInt) {
+            if (cast == TypeInt) {
                 int int_val = static_cast<int>(float_val);
                 if (op_is_uniform) {
                     return ll.constant(int_val);
@@ -754,7 +754,7 @@ BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
         }
         if (sym.typespec().is_int()) {
             int int_val = sym.get_int();
-            if (cast == TypeDesc::TypeFloat) {
+            if (cast == TypeFloat) {
                 float float_val = static_cast<float>(int_val);
                 if (op_is_uniform) {
                     return ll.constant(float_val);
@@ -806,9 +806,9 @@ BatchedBackendLLVM::llvm_load_mask(const Symbol& cond)
     llvm::Value* llvm_mask = nullptr;
     llvm::Value* llvm_mask_or_wide_int
         = llvm_load_value(cond, /*deriv*/ 0, /*component*/ 0,
-                          /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+                          /*cast*/ TypeUnknown, /*op_is_uniform*/ false);
     if (cond.forced_llvm_bool()) {
-        // The llvm_load_value + TypeDesc::UNKNOWN will check and convert to llvm mask already
+        // The llvm_load_value + TypeUnknown will check and convert to llvm mask already
         llvm_mask = llvm_mask_or_wide_int;
     } else {
         OSL_ASSERT(ll.llvm_typeof(llvm_mask_or_wide_int) == ll.type_wide_int());
@@ -890,19 +890,19 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* src_ptr, const TypeSpec& type,
                 result = ll.native_to_llvm_mask(result);
             }
 
-            if (cast != TypeDesc::UNKNOWN) {
-                if (cast == TypeDesc::TypeInt) {
+            if (cast != TypeUnknown) {
+                if (cast == TypeInt) {
                     result = ll.op_bool_to_int(result);
-                } else if (cast == TypeDesc::TypeFloat) {
+                } else if (cast == TypeFloat) {
                     result = ll.op_bool_to_float(result);
                 }
             }
         }
 
         // Handle int<->float type casting
-        if (type.is_float_based() && cast == TypeDesc::TypeInt)
+        if (type.is_float_based() && cast == TypeInt)
             result = ll.op_float_to_int(result);
-        else if (type.is_int() && cast == TypeDesc::TypeFloat)
+        else if (type.is_int() && cast == TypeFloat)
             result = ll.op_int_to_float(result);
         else if (type.is_string() && cast == TypeDesc::LONGLONG)
             result = ll.ptr_to_cast(result, ll.type_longlong());
@@ -911,12 +911,11 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* src_ptr, const TypeSpec& type,
             // TODO:  remove this assert once we have confirmed correct handling off all the
             // different data types.  Using OSL_ASSERT as a checklist to verify what we have
             // handled so far during development
-            OSL_ASSERT(
-                cast == TypeDesc::UNKNOWN || cast == TypeDesc::TypeColor
-                || cast == TypeDesc::TypeVector || cast == TypeDesc::TypePoint
-                || cast == TypeDesc::TypeNormal || cast == TypeDesc::TypeFloat
-                || cast == TypeDesc::TypeInt || cast == TypeDesc::TypeString
-                || cast == TypeDesc::TypeMatrix || cast == TypeDesc::LONGLONG);
+            OSL_ASSERT(cast == TypeUnknown || cast == TypeColor
+                       || cast == TypeVector || cast == TypePoint
+                       || cast == TypeNormal || cast == TypeFloat
+                       || cast == TypeInt || cast == TypeString
+                       || cast == TypeMatrix || cast == TypeDesc::LONGLONG);
 
             if ((ll.llvm_typeof(result) == ll.type_bool())
                 || (ll.llvm_typeof(result) == ll.type_float())
@@ -991,9 +990,9 @@ BatchedBackendLLVM::llvm_load_value(llvm::Value* src_ptr, const TypeSpec& type,
         OSL_ASSERT(ll.llvm_typeof(result) != ll.type_wide_bool());
 
         // Handle int<->float type casting
-        if (type.is_float_based() && cast == TypeDesc::TypeInt)
+        if (type.is_float_based() && cast == TypeInt)
             result = ll.op_float_to_int(result);
-        else if (type.is_int() && cast == TypeDesc::TypeFloat)
+        else if (type.is_int() && cast == TypeFloat)
             result = ll.op_int_to_float(result);
         else if (type.is_string() && cast == TypeDesc::LONGLONG)
             result = ll.ptr_to_cast(result, ll.type_longlong());
@@ -1027,7 +1026,7 @@ BatchedBackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
 
     if (elementType.is_float()) {
         float float_elem = sym.get_float(arrayindex);
-        if (cast == TypeDesc::TypeInt) {
+        if (cast == TypeInt) {
             int int_elem = static_cast<int>(float_elem);
             if (op_is_uniform) {
                 return ll.constant(int_elem);
@@ -1042,7 +1041,7 @@ BatchedBackendLLVM::llvm_load_constant_value(const Symbol& sym, int arrayindex,
     }
     if (elementType.is_int()) {
         int int_elem = sym.get_int(arrayindex);
-        if (cast == TypeDesc::TypeFloat) {
+        if (cast == TypeFloat) {
             float float_elem = static_cast<float>(int_elem);
             if (op_is_uniform) {
                 return ll.constant(float_elem);
@@ -1164,14 +1163,14 @@ BatchedBackendLLVM::llvm_load_arg(const Symbol& sym, bool derivs,
         // get passed as a pointer instead of by value
         // So let this case fall through
         if (op_is_uniform) {
-            return llvm_load_value(sym, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
+            return llvm_load_value(sym, 0, 0, TypeUnknown, op_is_uniform);
         } else if (sym.symtype() == SymTypeConst) {
             // As the case to deliver a pointer to a symbol data
             // doesn't provide an opportunity to promote a uniform constant
             // to a wide value that the non-uniform function is expecting
             // we will handle it here.
             llvm::Value* wide_constant_value
-                = llvm_load_constant_value(sym, 0, 0, TypeDesc::UNKNOWN,
+                = llvm_load_constant_value(sym, 0, 0, TypeUnknown,
                                            op_is_uniform);
 
             // Have to have a place on the stack for the pointer to the wide constant to point to
@@ -1208,7 +1207,7 @@ BatchedBackendLLVM::llvm_load_arg(const Symbol& sym, bool derivs,
                 for (int c = 0; c < t.aggregate(); ++c) {
                     // Will automatically widen value if needed
                     llvm::Value* v = llvm_load_value(sym, d, arrayIndex, c,
-                                                     TypeDesc::UNKNOWN,
+                                                     TypeUnknown,
                                                      op_is_uniform);
                     llvm_store_value(v, tmpptr, t, d, arrayIndex, c,
                                      op_is_uniform);
@@ -1460,10 +1459,11 @@ BatchedBackendLLVM::llvm_broadcast_uniform_value_from_mem(
                 // Load the uniform component from the temporary
                 // base passing false for op_is_uniform, the llvm_load_value will
                 // automatically broadcast the uniform value to a vector type
-                llvm::Value* wide_component_value = llvm_load_value(
-                    pointerTotempUniform, dest_type, derivIndex,
-                    llvm_array_index, componentIndex, true /*src_is_uniform*/,
-                    TypeDesc::UNKNOWN, false /*op_is_uniform*/);
+                llvm::Value* wide_component_value
+                    = llvm_load_value(pointerTotempUniform, dest_type,
+                                      derivIndex, llvm_array_index,
+                                      componentIndex, true /*src_is_uniform*/,
+                                      TypeUnknown, false /*op_is_uniform*/);
                 bool success = llvm_store_value(wide_component_value,
                                                 Destination, derivIndex,
                                                 llvm_array_index,
@@ -1556,7 +1556,7 @@ BatchedBackendLLVM::groupdata_field_ptr(int fieldnum, TypeDesc type,
                                         bool is_uniform, bool forceBool)
 {
     llvm::Value* result = ll.void_ptr(groupdata_field_ref(fieldnum));
-    if (type != TypeDesc::UNKNOWN) {
+    if (type != TypeUnknown) {
         if (is_uniform) {
             result = ll.ptr_to_cast(result, forceBool ? ll.type_bool()
                                                       : llvm_type(type));
@@ -1713,9 +1713,10 @@ BatchedBackendLLVM::llvm_call_function(const FuncSpec& name,
                     int numDeriv               = s.has_derivs() ? 3 : 1;
                     for (int d = 0; d < numDeriv; ++d) {
                         for (int c = 0; c < t.simpletype().aggregate; ++c) {
-                            llvm::Value* wide_value = llvm_load_value(
-                                s, /*deriv=*/d, /*component*/ c,
-                                TypeDesc::UNKNOWN, function_is_uniform);
+                            llvm::Value* wide_value
+                                = llvm_load_value(s, /*deriv=*/d,
+                                                  /*component*/ c, TypeUnknown,
+                                                  function_is_uniform);
                             // Store our wide pointer on the stack
                             llvm_store_value(wide_value, tmpptr, t, d, NULL, c,
                                              /*dst_is_uniform*/ false);
@@ -1748,7 +1749,7 @@ BatchedBackendLLVM::llvm_call_function(const FuncSpec& name,
                 auto disable_masked_stores = ll.create_masking_scope(false);
                 for (int a = 0; a < t.simpletype().aggregate; ++a) {
                     llvm::Value* wide_constant_value
-                        = llvm_load_constant_value(s, 0, a, TypeDesc::UNKNOWN,
+                        = llvm_load_constant_value(s, 0, a, TypeUnknown,
                                                    function_is_uniform);
                     // Store our wide pointer on the stack
                     llvm_store_value(wide_constant_value, tmpptr, t, 0, NULL, a,
@@ -1765,8 +1766,7 @@ BatchedBackendLLVM::llvm_call_function(const FuncSpec& name,
             OSL_DEV_ONLY(std::cout << "....pushing " << s.name().c_str()
                                    << " as value" << std::endl);
             valargs[i] = llvm_load_value(s, /*deriv*/ 0, /*component*/ 0,
-                                         TypeDesc::UNKNOWN,
-                                         function_is_uniform);
+                                         TypeUnknown, function_is_uniform);
         }
     }
 
@@ -1852,7 +1852,7 @@ BatchedBackendLLVM::llvm_test_nonzero(const Symbol& val, bool test_derivs)
     TypeDesc t = ts.simpletype();
 
     // Handle int case -- guaranteed no derivs, no multi-component
-    if (t == TypeDesc::TypeInt) {
+    if (t == TypeInt) {
         // Because we allow temporaries and local results of comparison operations
         // to use the native bool type of i1, we will need to build an matching constant 0
         // for comparisons.
@@ -1911,8 +1911,7 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
         if (Src.typespec().is_closure()) {
             llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0,
-                                                  TypeDesc::UNKNOWN,
-                                                  op_is_uniform);
+                                                  TypeUnknown, op_is_uniform);
             llvm_store_value(srcval, Result, 0, arrind, 0);
         } else {
             llvm::Value* null_value = ll.constant_ptr(NULL, ll.type_void_ptr());
@@ -2030,8 +2029,7 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
                             // src and result both have derivs -- copy them
                             // allow a uniform Src to store to a varying Result,
                             val = llvm_load_value(Src, d, arrind, i,
-                                                  TypeDesc::UNKNOWN,
-                                                  op_is_uniform);
+                                                  TypeUnknown, op_is_uniform);
                         }
                         llvm_store_value(val, Result, d, arrind, i);
                     }
@@ -2041,7 +2039,7 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
                         // src and result both have derivs -- copy them
                         // allow a uniform Src to store to a varying Result,
                         val = llvm_load_value(Src, d, arrind, srccomp,
-                                              TypeDesc::UNKNOWN, op_is_uniform);
+                                              TypeUnknown, op_is_uniform);
                     }
 
                     if (dstcomp == -1) {
@@ -2085,13 +2083,13 @@ BatchedBackendLLVM::append_arg_to(llvm::raw_svector_ostream& OS,
 
     const TypeDesc& td = arg.type();
     const char* name   = nullptr;
-    if (td == TypeDesc::TypeInt)
+    if (td == TypeInt)
         name = "i";
-    else if (td == TypeDesc::TypeMatrix)
+    else if (td == TypeMatrix)
         name = "m";
-    else if (td == TypeDesc::TypeString)
+    else if (td == TypeString)
         name = "s";
-    else if (td == TypeDesc::TypeFloat)
+    else if (td == TypeFloat)
         name = arg.has_derivs() ? "df" : "f";
     else if (td.aggregate == 3 && td.basetype == TypeDesc::FLOAT
              && td.arraylen == 0)

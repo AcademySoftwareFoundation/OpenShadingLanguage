@@ -244,46 +244,25 @@ public:
     // m_simple is always UNKNOWN for structures.
 
     /// Is it a simple scalar int?
-    bool is_int() const
-    {
-        return m_simple == TypeDesc::TypeInt && !is_closure();
-    }
+    bool is_int() const { return m_simple == TypeInt && !is_closure(); }
 
     /// Is it a simple scalar float?
-    bool is_float() const
-    {
-        return m_simple == TypeDesc::TypeFloat && !is_closure();
-    }
+    bool is_float() const { return m_simple == TypeFloat && !is_closure(); }
 
     /// Is it a color?
-    bool is_color() const
-    {
-        return m_simple == TypeDesc::TypeColor && !is_closure();
-    }
+    bool is_color() const { return m_simple == TypeColor && !is_closure(); }
 
     /// Is it a point?
-    bool is_point() const
-    {
-        return m_simple == TypeDesc::TypePoint && !is_closure();
-    }
+    bool is_point() const { return m_simple == TypePoint && !is_closure(); }
 
     /// Is it a vector?
-    bool is_vector() const
-    {
-        return m_simple == TypeDesc::TypeVector && !is_closure();
-    }
+    bool is_vector() const { return m_simple == TypeVector && !is_closure(); }
 
     /// Is it a normal?
-    bool is_normal() const
-    {
-        return m_simple == TypeDesc::TypeNormal && !is_closure();
-    }
+    bool is_normal() const { return m_simple == TypeNormal && !is_closure(); }
 
     /// Is it a simple string?
-    bool is_string() const
-    {
-        return m_simple == TypeDesc::TypeString && !is_closure();
-    }
+    bool is_string() const { return m_simple == TypeString && !is_closure(); }
 
     /// Is it a string or an array of strings?
     ///
@@ -357,9 +336,8 @@ public:
     bool is_vectriple() const
     {
         return !is_closure()
-               && (m_simple == TypeDesc::TypePoint
-                   || m_simple == TypeDesc::TypeVector
-                   || m_simple == TypeDesc::TypeNormal);
+               && (m_simple == TypePoint || m_simple == TypeVector
+                   || m_simple == TypeNormal);
     }
 
     /// Is it based on a vector-like triple (point, vector, or normal)?
@@ -367,16 +345,12 @@ public:
     bool is_vectriple_based() const
     {
         auto elem = m_simple.elementtype();
-        return (elem == TypeDesc::TypePoint || elem == TypeDesc::TypeVector
-                || elem == TypeDesc::TypeNormal);
+        return (elem == TypePoint || elem == TypeVector || elem == TypeNormal);
     }
 
     /// Is it a simple matrix (but not an array or closure)?
     ///
-    bool is_matrix() const
-    {
-        return m_simple == TypeDesc::TypeMatrix && !is_closure();
-    }
+    bool is_matrix() const { return m_simple == TypeMatrix && !is_closure(); }
 
     /// Is it a color closure?
     ///

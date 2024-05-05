@@ -81,20 +81,11 @@ public:
     /// and returning its index.
     int add_constant(const TypeSpec& type, const void* data,
                      TypeDesc datatype = TypeDesc::UNKNOWN);
-    int add_constant(float c) { return add_constant(TypeDesc::TypeFloat, &c); }
-    int add_constant(int c) { return add_constant(TypeDesc::TypeInt, &c); }
-    int add_constant(ustring s)
-    {
-        return add_constant(TypeDesc::TypeString, &s);
-    }
-    int add_constant(const Matrix44& c)
-    {
-        return add_constant(TypeDesc::TypeMatrix, &c);
-    }
-    int add_constantc(const Color3& c)
-    {
-        return add_constant(TypeDesc::TypeColor, &c);
-    }
+    int add_constant(float c) { return add_constant(TypeFloat, &c); }
+    int add_constant(int c) { return add_constant(TypeInt, &c); }
+    int add_constant(ustring s) { return add_constant(TypeString, &s); }
+    int add_constant(const Matrix44& c) { return add_constant(TypeMatrix, &c); }
+    int add_constantc(const Color3& c) { return add_constant(TypeColor, &c); }
     int add_constantv(const Vec3& c, const TypeSpec& vectype)
     {
         return add_constant(vectype, &c);
@@ -102,7 +93,7 @@ public:
     int add_constant(string_view s)
     {
         ustring u(s);
-        return add_constant(TypeDesc::TypeString, &s);
+        return add_constant(TypeString, &s);
     }
 
     /// Create a new temporary variable of the given type, return its index.

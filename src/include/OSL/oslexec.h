@@ -576,7 +576,7 @@ public:
     //       float blur = 0.001;
     //       ss->Parameter (*group, "blur", blur);
     //       Vec3 colorfilter (0.5f, 0.5f, 1.0f);
-    //       ss->Parameter (*group, "colorfilter", TypeDesc::TypeColor,
+    //       ss->Parameter (*group, "colorfilter", TypeColor,
     //                      &colorfilter);
     //    ss->Shader ("surface", "texmap", "texturelayer");
     //    /* Second layer - generate the BSDF closure: */

@@ -1052,14 +1052,14 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
             auto label_and_adjust_layout = new QHBoxLayout;
             label_and_adjust->setLayout(label_and_adjust_layout);
             std::string labeltext;
-            if (param->type == TypeDesc::TypeColor)
+            if (param->type == TypeColor)
                 labeltext = string_view(&("RGB"[c]), 1);
             else
                 labeltext = string_view(&("xyz"[c]), 1);
             auto channellabel = QtUtils::make_qlabelfmt("{}", labeltext);
             label_and_adjust_layout->addWidget(channellabel);
             auto adjustWidget = new QtUtils::DoubleSpinBox(param->fdefault[c]);
-            if (param->type == TypeDesc::TypeColor) {
+            if (param->type == TypeColor) {
                 adjustWidget->setRange(0.0, 1.0);
             }
             label_and_adjust_layout->addWidget(adjustWidget);

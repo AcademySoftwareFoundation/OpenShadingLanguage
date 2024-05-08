@@ -82,7 +82,7 @@ public:
     virtual void prepare_render();
     virtual void warmup() {}
     virtual void render(int xres, int yres);
-    virtual void clear() {}
+    virtual void clear();
 
     // After render, get the pixels into pixelbuf, if they aren't already.
     virtual void finalize_pixel_buffer() {}

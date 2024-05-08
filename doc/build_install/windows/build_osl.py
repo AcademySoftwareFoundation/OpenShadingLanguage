@@ -1,7 +1,7 @@
 #
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: Modified Apache 2.0 License
-# Coyright Notice From Pixar USD (Modified Apache 2.0 License)
+# Copyright Notice From Pixar USD (Modified Apache 2.0 License)
 # 90% of the content is changed to be compatible for installing OSL and its dependencies
 # 
 # Based on USD build_scripts by Pixar Animation Studio
@@ -1331,8 +1331,8 @@ OPENVDB = Dependency("OpenVDB", InstallOpenVDB, "include/openvdb/openvdb.h")
 ############################################################
 # OpenImageIO
 
-# OIIO_URL = "https://github.com/OpenImageIO/oiio/archive/Release-2.2.7.0.zip"
-OIIO_URL = "https://github.com/OpenImageIO/oiio/archive/Release-2.1.20.0.zip"
+# OIIO_URL = "https://github.com/AcademySoftwareFoundation/OpenImageIO/archive/Release-2.2.7.0.zip"
+OIIO_URL = "https://github.com/AcademySoftwareFoundation/OpenImageIO/archive/Release-2.1.20.0.zip"
 
 
 def InstallOpenImageIO(context, force, buildArgs):

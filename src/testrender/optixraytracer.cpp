@@ -1253,7 +1253,7 @@ OptixRaytracer::finalize_pixel_buffer()
 void
 OptixRaytracer::clear()
 {
-    shaders().clear();
+    SimpleRaytracer::clear();
     OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
     m_optix_ctx = 0;
 }

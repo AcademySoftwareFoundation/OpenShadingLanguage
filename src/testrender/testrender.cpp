@@ -368,7 +368,7 @@ main(int argc, const char* argv[])
 
     // We're done with the shading system now, destroy it
     rend->clear();
-    delete rend;
     delete shadingsys;
+    delete rend;
     return EXIT_SUCCESS;
 }

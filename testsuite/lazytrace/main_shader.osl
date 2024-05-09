@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader main_shader(int x = 0)
+{
+    printf("executing main shader\n");
+    if (u == 99.5230942) {
+        printf("  x = %i\n", x);
+    }
+}

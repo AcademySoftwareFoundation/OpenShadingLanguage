@@ -1,0 +1,15 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader trace_shader(output int x = 0)
+{
+    printf("executing trace shader\n");
+    vector dir = vector(1.0, 1.0, 1.0) - P;
+
+    int result = trace(P, dir);
+    if (result) {
+        printf("  Hit!\n");
+        x = 1;
+    }
+}

@@ -152,17 +152,17 @@ struct Background {
     }
 
     template<typename F>
-    OSL_HOSTDEVICE void prepare_gpu(int stride, int idx, F cb)
+    OSL_HOSTDEVICE void prepare_cuda(int stride, int idx, F cb)
     {
-        prepare_gpu_01(stride, idx, cb);
+        prepare_cuda_01(stride, idx, cb);
         if (idx == 0)
-            prepare_gpu_02();
-        prepare_gpu_03(stride, idx);
+            prepare_cuda_02();
+        prepare_cuda_03(stride, idx);
     }
 
     // Pre-compute the 'values' table in parallel
     template<typename F>
-    OSL_HOSTDEVICE void prepare_gpu_01(int stride, int idx, F cb)
+    OSL_HOSTDEVICE void prepare_cuda_01(int stride, int idx, F cb)
     {
         for (int y = 0; y < res; y++) {
             const int row_start = y * res;
@@ -177,7 +177,7 @@ struct Background {
     }
 
     // Compute 'cols' and 'rows' using a single thread
-    OSL_HOSTDEVICE void prepare_gpu_02()
+    OSL_HOSTDEVICE void prepare_cuda_02()
     {
         for (int y = 0, i = 0; y < res; y++) {
             for (int x = 0; x < res; x++, i++) {
@@ -197,7 +197,7 @@ struct Background {
     }
 
     // Normalize the row PDFs and finalize the 'values' table
-    OSL_HOSTDEVICE void prepare_gpu_03(int stride, int idx)
+    OSL_HOSTDEVICE void prepare_cuda_03(int stride, int idx)
     {
         // normalize the pdf across all scanlines
         for (int y = idx; y < res; y += stride) {

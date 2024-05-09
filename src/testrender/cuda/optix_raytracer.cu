@@ -564,9 +564,9 @@ __raygen__setglobals()
         return eval_background(dir);
     };
 
-    // Background::prepare_gpu must run on a single warp
+    // Background::prepare_cuda must run on a single warp
     assert(launch_index.x < 32 && launch_index.y == 0);
-    background.prepare_gpu(launch_dims.x, launch_index.x, evaler);
+    background.prepare_cuda(launch_dims.x, launch_index.x, evaler);
 }
 
 

@@ -246,7 +246,7 @@ struct BSDF {
                                          float rz) const                     = 0;
 
 #ifdef __CUDACC__
-    OSL_HOSTDEVICE Color3 get_albedo_gpu(const Vec3& wo, ClosureIDs id) const;
+    OSL_HOSTDEVICE Color3 get_albedo_cuda(const Vec3& wo, ClosureIDs id) const;
 #endif
     ClosureIDs id;
 };
@@ -381,7 +381,7 @@ struct CompositeBSDF {
     }
 
 #ifdef __CUDACC__
-    OSL_HOSTDEVICE bool add_bsdf_gpu(const Color3& w, const ClosureComponent* comp, ShadingResult& result);
+    OSL_HOSTDEVICE bool add_bsdf_cuda(const Color3& w, const ClosureComponent* comp, ShadingResult& result);
 
     // Helper functions to avoid virtual function calls
     OSL_HOSTDEVICE Color3 get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const;

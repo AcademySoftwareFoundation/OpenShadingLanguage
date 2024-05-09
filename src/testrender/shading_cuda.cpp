@@ -68,8 +68,8 @@ typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> MxGeneralizedSc
 
 
 OSL_HOSTDEVICE bool
-CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
-                            ShadingResult& result)
+CompositeBSDF::add_bsdf_cuda(const Color3& w, const ClosureComponent* comp,
+                             ShadingResult& result)
 {
     ClosureIDs id = static_cast<ClosureIDs>(comp->id);
     size_t sz     = 0;
@@ -842,7 +842,7 @@ process_closure(const ShaderGlobalsType& sg, const ClosureColor* closure, Shadin
             case ClosureIDs::MX_OREN_NAYAR_DIFFUSE_ID:
             case ClosureIDs::MX_SHEEN_ID:
             case ClosureIDs::MX_GENERALIZED_SCHLICK_ID: {
-                if (!result.bsdf.add_bsdf_gpu(cw, comp, result))
+                if (!result.bsdf.add_bsdf_cuda(cw, comp, result))
                     printf("unable to add BSDF\n");
                 closure = nullptr;
                 break;

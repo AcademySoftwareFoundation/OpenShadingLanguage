@@ -71,36 +71,29 @@ OSL_HOSTDEVICE bool
 CompositeBSDF::add_bsdf_gpu(const Color3& w, const ClosureComponent* comp,
                             ShadingResult& result)
 {
-    auto sizeof_params = [](ClosureIDs id) {
-        size_t sz = 0;
-        switch (id) {
-        case DIFFUSE_ID: sz = sizeof(Diffuse<0>); break;
-        case OREN_NAYAR_ID: sz = sizeof(OrenNayar); break;
-        case PHONG_ID: sz = sizeof(Phong); break;
-        case WARD_ID: sz = sizeof(Ward); break;
-        case REFLECTION_ID: sz = sizeof(Reflection); break;
-        case FRESNEL_REFLECTION_ID: sz = sizeof(Reflection); break;
-        case REFRACTION_ID: sz = sizeof(Refraction); break;
-        case TRANSPARENT_ID: sz = sizeof(Transparent); break;
-        case MICROFACET_ID: sz = sizeof(MicrofacetBeckmannRefl); break;
-        case MX_OREN_NAYAR_DIFFUSE_ID: sz = sizeof(OrenNayar); break;
-        case MX_BURLEY_DIFFUSE_ID: sz = sizeof(MxBurleyDiffuse); break;
-        case MX_DIELECTRIC_ID: sz = sizeof(MxDielectric); break;
-        case MX_CONDUCTOR_ID: sz = sizeof(MxConductor); break;
-        case MX_GENERALIZED_SCHLICK_ID:
-            sz = sizeof(MxGeneralizedSchlick);
-            break;
-        case MX_TRANSLUCENT_ID: sz = sizeof(Diffuse<1>); break;
-        case MX_TRANSPARENT_ID: sz = sizeof(Transparent); break;
-        case MX_SUBSURFACE_ID: sz = sizeof(Diffuse<0>); break;
-        case MX_SHEEN_ID: sz = sizeof(MxSheen); break;
-        default: assert(false); break;
-        }
-        return sz;
-    };
-
     ClosureIDs id = static_cast<ClosureIDs>(comp->id);
-    size_t sz     = sizeof_params(id);
+    size_t sz     = 0;
+    switch (id) {
+    case DIFFUSE_ID: sz = sizeof(Diffuse<0>); break;
+    case OREN_NAYAR_ID: sz = sizeof(OrenNayar); break;
+    case PHONG_ID: sz = sizeof(Phong); break;
+    case WARD_ID: sz = sizeof(Ward); break;
+    case REFLECTION_ID: sz = sizeof(Reflection); break;
+    case FRESNEL_REFLECTION_ID: sz = sizeof(Reflection); break;
+    case REFRACTION_ID: sz = sizeof(Refraction); break;
+    case TRANSPARENT_ID: sz = sizeof(Transparent); break;
+    case MICROFACET_ID: sz = sizeof(MicrofacetBeckmannRefl); break;
+    case MX_OREN_NAYAR_DIFFUSE_ID: sz = sizeof(OrenNayar); break;
+    case MX_BURLEY_DIFFUSE_ID: sz = sizeof(MxBurleyDiffuse); break;
+    case MX_DIELECTRIC_ID: sz = sizeof(MxDielectric); break;
+    case MX_CONDUCTOR_ID: sz = sizeof(MxConductor); break;
+    case MX_GENERALIZED_SCHLICK_ID: sz = sizeof(MxGeneralizedSchlick); break;
+    case MX_TRANSLUCENT_ID: sz = sizeof(Diffuse<1>); break;
+    case MX_TRANSPARENT_ID: sz = sizeof(Transparent); break;
+    case MX_SUBSURFACE_ID: sz = sizeof(Diffuse<0>); break;
+    case MX_SHEEN_ID: sz = sizeof(MxSheen); break;
+    default: assert(false); break;
+    }
 
     if (num_bsdfs >= MaxEntries)
         return false;

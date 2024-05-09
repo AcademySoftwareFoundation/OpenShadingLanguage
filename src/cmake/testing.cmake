@@ -299,6 +299,7 @@ macro (osl_add_all_tests)
                 isconstant
                 layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
                 layers-nonlazycopy layers-repeatedoutputs
+                lazytrace
                 length-reg linearstep
                 logic loop luminance-reg
                 matrix matrix-reg matrix-arithmetic-reg

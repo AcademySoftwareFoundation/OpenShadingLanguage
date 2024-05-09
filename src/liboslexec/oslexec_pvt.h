@@ -663,6 +663,7 @@ public:
     }
     bool countlayerexecs() const { return m_countlayerexecs; }
     bool lazy_userdata() const { return m_lazy_userdata; }
+    bool lazy_trace() const { return m_lazy_trace; }
     bool userdata_isconnected() const { return m_userdata_isconnected; }
     int profile() const { return m_profile; }
     bool no_noise() const { return m_no_noise; }
@@ -871,6 +872,7 @@ private:
     bool m_lazyunconnected;       ///< Run lazily even if not connected?
     bool m_lazyerror;             ///< Run lazily even if it has error op
     bool m_lazy_userdata;         ///< Retrieve userdata lazily?
+    bool m_lazy_trace;            ///< Run lazily even if it has trace call
     bool m_userdata_isconnected;  ///< Userdata params isconnected()?
     bool m_clearmemory;           ///< Zero mem before running shader?
     bool m_debugnan;              ///< Root out NaN's?
@@ -1261,6 +1263,9 @@ public:
     bool has_error_op() const { return m_has_error_op; }
     void has_error_op(bool val) { m_has_error_op = val; }
 
+    bool has_trace_op() const { return m_has_trace_op; }
+    void has_trace_op(bool val) { m_has_trace_op = val; }
+
     /// Should this instance only be run lazily (i.e., not
     /// unconditionally)?
     bool run_lazily() const
@@ -1284,6 +1289,10 @@ public:
         // Shaders with error ops are not lazy unless lazyerror is on.
         if (!shadingsys().m_lazyerror && has_error_op())
             return false;
+
+        if (!shadingsys().lazy_trace() && has_trace_op())
+            return false;
+
         return true;
     }
 
@@ -1512,6 +1521,7 @@ private:
     bool m_outgoing_connections;         ///< Any outgoing connections?
     bool m_renderer_outputs;             ///< Any outputs params render outputs?
     bool m_has_error_op;                 ///< Any error ops in the code?
+    bool m_has_trace_op;                 ///< Any trace ops in the code?
     bool m_merged_unused;                ///< Unused because of a merge
     bool m_last_layer;                   ///< Is it the group's last layer?
     bool m_entry_layer;                  ///< Is it an entry layer?

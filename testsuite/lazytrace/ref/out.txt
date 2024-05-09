@@ -1,0 +1,10 @@
+Compiled main_shader.osl -> main_shader.oso
+Compiled trace_shader.osl -> trace_shader.oso
+Connect trace_layer.x to main_layer.x
+executing main shader
+
+Connect trace_layer.x to main_layer.x
+executing trace shader
+  Hit!
+executing main shader
+

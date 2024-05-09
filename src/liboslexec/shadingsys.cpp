@@ -1045,6 +1045,7 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_lazyunconnected(true)
     , m_lazyerror(true)
     , m_lazy_userdata(false)
+    , m_lazy_trace(true)
     , m_userdata_isconnected(false)
     , m_clearmemory(false)
     , m_debugnan(false)
@@ -1580,6 +1581,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("lazyglobals", int, m_lazyglobals);
     ATTR_SET("lazyunconnected", int, m_lazyunconnected);
     ATTR_SET("lazyerror", int, m_lazyerror);
+    ATTR_SET("lazytrace", int, m_lazy_trace);
     ATTR_SET("lazy_userdata", int, m_lazy_userdata);
     ATTR_SET("userdata_isconnected", int, m_userdata_isconnected);
     ATTR_SET("clearmemory", int, m_clearmemory);
@@ -1769,6 +1771,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE("lazylayers", int, m_lazylayers);
     ATTR_DECODE("lazyglobals", int, m_lazyglobals);
     ATTR_DECODE("lazyunconnected", int, m_lazyunconnected);
+    ATTR_DECODE("lazytrace", int, m_lazy_trace);
     ATTR_DECODE("lazy_userdata", int, m_lazy_userdata);
     ATTR_DECODE("userdata_isconnected", int, m_userdata_isconnected);
     ATTR_DECODE("clearmemory", int, m_clearmemory);
@@ -2404,6 +2407,7 @@ ShadingSystemImpl::getstats(int level) const
     BOOLOPT(lazyunconnected);
     BOOLOPT(lazyerror);
     BOOLOPT(lazy_userdata);
+    BOOLOPT(lazy_trace);
     BOOLOPT(userdata_isconnected);
     BOOLOPT(clearmemory);
     BOOLOPT(debugnan);

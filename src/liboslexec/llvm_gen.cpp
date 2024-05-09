@@ -187,6 +187,13 @@ BackendLLVM::llvm_run_connected_layers(Symbol& sym, int symindex, int opnum,
         const Connection& con(inst()->connection(c));
         // If the connection gives a value to this param
         if (con.dst.param == symindex) {
+            // Non-lazy layers are run upfront directly via llvm_call_layer.
+            // Eliding them here doesn't change the semantics of execution,
+            // but it will prevent optixTrace calls from being repeatedly
+            // inlined when lazytrace=0.
+            if (!group()[con.srclayer]->run_lazily())
+                continue;
+
             // already_run is a set of layers run for this particular op.
             // Just so we don't stupidly do several consecutive checks on
             // whether we ran this same layer. It's JUST for this op.
@@ -3022,6 +3029,12 @@ LLVMGEN(llvm_gen_trace)
     };
     llvm::Value* r = rop.ll.call_function("osl_trace", args);
     rop.llvm_store_value(r, Result);
+
+    // Mark the instance as containing a trace call.
+    // With lazytrace=0, we will want to flag the instance
+    // for eager execution.
+    rop.inst()->has_trace_op(true);
+
     return true;
 }
 

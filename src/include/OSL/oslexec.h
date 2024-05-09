@@ -228,6 +228,8 @@ public:
     ///                              output connections (1). For debugging.
     ///    int lazyerror          Run layers lazily even if they have error
     ///                              ops after optimization (1).
+    ///    int lazytrace          Run layers lazily even if they have trace
+    ///                              operations (1). Recommend 0 for OptiX.
     ///    int lazy_userdata      Retrieve userdata lazily (0).
     ///    int userdata_isconnected  Should interpolated=1 params (that may
     ///                              receive userdata) return true from

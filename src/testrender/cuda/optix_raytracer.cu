@@ -709,7 +709,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         float k = 1;
         if (is_light(hit_idx, hit_kind)) {
             // figure out the probability of reaching this point
-            float light_pdf = shape_pdf(hit_idx, hit_kind, r.origin, F3_TO_C3(sg.P));
+            float light_pdf = shape_pdf(hit_idx, hit_kind, r.origin, F3_TO_V3(sg.P));
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
@@ -722,7 +722,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         // Build PDF
         //
 
-        result.bsdf.prepare(-F3_TO_C3(sg.I), path_weight, bounce >= rr_depth);
+        result.bsdf.prepare(-F3_TO_V3(sg.I), path_weight, bounce >= rr_depth);
 
         if (render_params.show_albedo_scale > 0) {
             // Instead of path tracing, just visualize the albedo

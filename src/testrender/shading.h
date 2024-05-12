@@ -248,20 +248,25 @@ struct BSDF {
     OSL_HOSTDEVICE BSDF(ClosureIDs id=EMPTY_ID) : id(id) {}
 
 #ifndef __CUDACC__
-    virtual OSL_HOSTDEVICE Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
-    virtual OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const = 0;
-    virtual OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                                         float rz) const                     = 0;
+    virtual Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
+    virtual Sample eval(const Vec3& wo, const Vec3& wi) const = 0;
+    virtual Sample sample(const Vec3& wo, float rx, float ry, float rz) const = 0;
 #else
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const;
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& /*wo*/) const
+    {
+        return Color3(1);
+    }
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
+    {
+        return {};
+    }
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                                                        float rz) const;
+                                 float rz) const
+    {
+        return {};
+    }
 #endif
 
-#ifdef __CUDACC__
-    OSL_HOSTDEVICE Color3 get_albedo_cuda(const Vec3& wo, ClosureIDs id) const;
-#endif
     ClosureIDs id;
 };
 

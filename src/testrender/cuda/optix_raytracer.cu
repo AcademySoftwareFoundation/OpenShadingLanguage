@@ -187,10 +187,7 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
             case REFLECTION_ID:
             case FRESNEL_REFLECTION_ID: {
                 const ReflectionParams* params = comp->as<ReflectionParams>();
-                Reflection* bsdf               = reinterpret_cast<Reflection*>(
-                    &bsdf_scratch[0]);
-                bsdf->id  = MX_SHEEN_ID;
-                std::memcpy(&bsdf->N, params, sizeof(ReflectionParams));
+                Reflection* bsdf = new (&bsdf_scratch[0]) Reflection(*params);
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
@@ -203,11 +200,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                     closure = nullptr;
                     break;
                 }
-                MxDielectric* bsdf = reinterpret_cast<MxDielectric*>(
-                    &bsdf_scratch[0]);
-                std::memcpy(&bsdf->N, params, sizeof(MxDielectricParams));
-                bsdf->set_refraction_ior(1.0f);
-                bsdf->calcTangentFrame();
+                MxDielectricOpaque* bsdf = new (&bsdf_scratch[0])
+                    MxDielectricOpaque(*params, 1.0f);
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
@@ -220,20 +214,15 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                     closure = nullptr;
                     break;
                 }
-                MxGeneralizedSchlickOpaque* bsdf
-                    = reinterpret_cast<MxGeneralizedSchlickOpaque*>(
-                        &bsdf_scratch[0]);
-                std::memcpy(&bsdf->N, params, sizeof(MxGeneralizedSchlickParams));
-                bsdf->set_refraction_ior(1.0f);
-                bsdf->calcTangentFrame();
+                MxGeneralizedSchlickOpaque* bsdf = new (&bsdf_scratch[0])
+                    MxGeneralizedSchlickOpaque(*params, 1.0f);
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }
             case MX_SHEEN_ID: {
                 const MxSheenParams* params = comp->as<MxSheenParams>();
-                MxSheen* bsdf = reinterpret_cast<MxSheen*>(&bsdf_scratch[0]);
-                std::memcpy(&bsdf->N, params, sizeof(MxSheenParams));
+                MxSheen* bsdf = new (&bsdf_scratch[0]) MxSheen(*params);
                 weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;

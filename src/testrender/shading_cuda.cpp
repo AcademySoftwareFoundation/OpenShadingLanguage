@@ -102,153 +102,137 @@ CompositeBSDF::add_bsdf_cuda(const Color3& w, const ClosureComponent* comp,
 
     Color3 weight = w;
 
-    // OptiX doesn't support virtual function calls, so we need to manually
-    // construct each of the BSDF sub-types.
     switch (id) {
     case DIFFUSE_ID: {
-        const DiffuseParams* params = comp->as<DiffuseParams>();
-        Diffuse<0>* bsdf = reinterpret_cast<Diffuse<0>*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = (BSDF*)bsdf;
-        bsdf->id         = DIFFUSE_ID;
-        std::memcpy(&bsdf->N, params, sizeof(DiffuseParams));
+        const DiffuseParams& params = *comp->as<DiffuseParams>();
+        Diffuse<0>* bsdf            = new (pool + num_bytes) Diffuse<0>(params);
+        bsdf->id                    = DIFFUSE_ID;
+        bsdfs[num_bsdfs]            = (BSDF*)bsdf;
         break;
     }
     case OREN_NAYAR_ID: {
-        const OrenNayarParams* params = comp->as<OrenNayarParams>();
-        OrenNayar* bsdf  = reinterpret_cast<OrenNayar*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
+        const OrenNayarParams& params = *comp->as<OrenNayarParams>();
+        OrenNayar* bsdf  = new (pool + num_bytes) OrenNayar(params);
         bsdf->id         = OREN_NAYAR_ID;
-        std::memcpy(&bsdf->N, params, sizeof(OrenNayarParams));
-        bsdf->calcAB();
+        bsdfs[num_bsdfs] = bsdf;
         break;
     }
     case TRANSLUCENT_ID: {
-        const DiffuseParams* params = comp->as<DiffuseParams>();
-        Diffuse<1>* bsdf = reinterpret_cast<Diffuse<1>*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
-        bsdf->id         = TRANSLUCENT_ID;
-        std::memcpy(&bsdf->N, params, sizeof(DiffuseParams));
+        const DiffuseParams& params = *comp->as<DiffuseParams>();
+        Diffuse<1>* bsdf            = new (pool + num_bytes) Diffuse<1>(params);
+        bsdf->id                    = TRANSLUCENT_ID;
+        bsdfs[num_bsdfs]            = bsdf;
         break;
     }
     case PHONG_ID: {
-        const PhongParams* params = comp->as<PhongParams>();
-        Phong* bsdf               = reinterpret_cast<Phong*>(pool + num_bytes);
-        bsdfs[num_bsdfs]          = bsdf;
+        const PhongParams& params = *comp->as<PhongParams>();
+        Phong* bsdf               = new (pool + num_bytes) Phong(params);
         bsdf->id                  = PHONG_ID;
-        std::memcpy(&bsdf->N, params, sizeof(PhongParams));
+        bsdfs[num_bsdfs]          = bsdf;
         break;
     }
     case WARD_ID: {
-        const WardParams* params = comp->as<WardParams>();
-        Ward* bsdf               = reinterpret_cast<Ward*>(pool + num_bytes);
-        bsdfs[num_bsdfs]         = bsdf;
+        const WardParams& params = *comp->as<WardParams>();
+        Ward* bsdf               = new (pool + num_bytes) Ward(params);
         bsdf->id                 = WARD_ID;
-        std::memcpy(&bsdf->N, params, sizeof(WardParams));
+        bsdfs[num_bsdfs]         = bsdf;
         break;
     }
     case REFLECTION_ID:
     case FRESNEL_REFLECTION_ID: {
-        const ReflectionParams* params = comp->as<ReflectionParams>();
-        Reflection* bsdf = reinterpret_cast<Reflection*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
+        const ReflectionParams& params = *comp->as<ReflectionParams>();
+        Reflection* bsdf = new (pool + num_bytes) Reflection(params);
         bsdf->id         = REFLECTION_ID;
-        std::memcpy(&bsdf->N, params, sizeof(ReflectionParams));
+        bsdfs[num_bsdfs] = bsdf;
         break;
     }
     case REFRACTION_ID: {
-        const RefractionParams* params = comp->as<RefractionParams>();
-        Refraction* bsdf = reinterpret_cast<Refraction*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
+        const RefractionParams& params = *comp->as<RefractionParams>();
+        Refraction* bsdf = new (pool + num_bytes) Refraction(params);
         bsdf->id         = REFRACTION_ID;
-        std::memcpy(&bsdf->N, params, sizeof(RefractionParams));
+        bsdfs[num_bsdfs] = bsdf;
         break;
     }
     case TRANSPARENT_ID:
     case MX_TRANSPARENT_ID: {
-        bsdfs[num_bsdfs]     = (BSDF*)(pool + num_bytes);
+        bsdfs[num_bsdfs]     = new (pool + num_bytes) BSDF(TRANSPARENT_ID);
         bsdfs[num_bsdfs]->id = TRANSPARENT_ID;
         break;
     }
     case MICROFACET_ID: {
-        const MicrofacetParams* params = comp->as<MicrofacetParams>();
-        MicrofacetBeckmannRefl* bsdf
-            = reinterpret_cast<MicrofacetBeckmannRefl*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
+        const MicrofacetParams& params = *comp->as<MicrofacetParams>();
+        MicrofacetBeckmannRefl* bsdf   = new (pool + num_bytes)
+            MicrofacetBeckmannRefl(params);
         bsdf->id         = MICROFACET_ID;
-        std::memcpy(&bsdf->dist, params, sizeof(MicrofacetParams));
-        bsdf->calcTangentFrame();
+        bsdfs[num_bsdfs] = bsdf;
         break;
     }
     case MX_OREN_NAYAR_DIFFUSE_ID: {
         const MxOrenNayarDiffuseParams* src_params
             = comp->as<MxOrenNayarDiffuseParams>();
         const OrenNayarParams params = { src_params->N, src_params->roughness };
-        OrenNayar* bsdf  = reinterpret_cast<OrenNayar*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
-        bsdf->id         = OREN_NAYAR_ID;
-        std::memcpy(&bsdf->N, &params, sizeof(OrenNayarParams));
-        bsdf->calcAB();
+        OrenNayar* bsdf              = new (pool + num_bytes) OrenNayar(params);
+        bsdf->id                     = OREN_NAYAR_ID;
+        bsdfs[num_bsdfs]             = bsdf;
         weight *= src_params->albedo;
         break;
     }
     case MX_BURLEY_DIFFUSE_ID: {
-        const MxBurleyDiffuseParams* params = comp->as<MxBurleyDiffuseParams>();
-        MxBurleyDiffuse* bsdf = reinterpret_cast<MxBurleyDiffuse*>(pool
-                                                                   + num_bytes);
-        bsdfs[num_bsdfs]      = bsdf;
+        const MxBurleyDiffuseParams& params = *comp->as<MxBurleyDiffuseParams>();
+        MxBurleyDiffuse* bsdf = new (pool + num_bytes) MxBurleyDiffuse(params);
         bsdf->id              = MX_BURLEY_DIFFUSE_ID;
-        std::memcpy(&bsdf->N, params, sizeof(MxBurleyDiffuseParams));
+        bsdfs[num_bsdfs]      = bsdf;
         break;
     }
     case MX_DIELECTRIC_ID: {
-        const MxDielectricParams* params = comp->as<MxDielectricParams>();
-        MxDielectric* bsdf = reinterpret_cast<MxDielectric*>(pool + num_bytes);
-        bsdfs[num_bsdfs]   = bsdf;
-        bsdf->id           = MX_DIELECTRIC_ID;
-        std::memcpy(&bsdf->N, params, sizeof(MxDielectricParams));
-        bsdf->set_refraction_ior(
-            is_black(params->transmission_tint) ? 1.0f : result.refraction_ior);
-        bsdf->calcTangentFrame();
+        const MxDielectricParams& params = *comp->as<MxDielectricParams>();
+        if (is_black(params.transmission_tint)) {
+            MxDielectricOpaque* bsdf = new (pool + num_bytes)
+                MxDielectricOpaque(params, 1.0f);
+            bsdfs[num_bsdfs] = bsdf;
+        } else {
+            MxDielectric* bsdf = new (pool + num_bytes)
+                MxDielectric(params, result.refraction_ior);
+            bsdfs[num_bsdfs] = bsdf;
+        }
+        bsdfs[num_bsdfs]->id = MX_DIELECTRIC_ID;
         break;
     }
     case MX_CONDUCTOR_ID: {
-        const MxConductorParams* params = comp->as<MxConductorParams>();
-        MxConductor* bsdf = reinterpret_cast<MxConductor*>(pool + num_bytes);
+        const MxConductorParams& params = *comp->as<MxConductorParams>();
+        MxConductor* bsdf = new (pool + num_bytes) MxConductor(params, 1.0f);
         bsdfs[num_bsdfs]  = bsdf;
         bsdf->id          = MX_CONDUCTOR_ID;
-        std::memcpy(&bsdf->N, params, sizeof(MxConductorParams));
-        bsdf->calcTangentFrame();
-        bsdf->set_refraction_ior(1.0f);
         break;
     }
     case MX_GENERALIZED_SCHLICK_ID: {
-        const MxGeneralizedSchlickParams* params
-            = comp->as<MxGeneralizedSchlickParams>();
-        MxGeneralizedSchlick* bsdf = reinterpret_cast<MxGeneralizedSchlick*>(
-            pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
-        bsdf->id         = MX_GENERALIZED_SCHLICK_ID;
-        std::memcpy(&bsdf->N, params, sizeof(MxGeneralizedSchlickParams));
-        bsdf->set_refraction_ior(
-            is_black(params->transmission_tint) ? 1.0f : result.refraction_ior);
-        bsdf->calcTangentFrame();
+        const MxGeneralizedSchlickParams& params
+            = *comp->as<MxGeneralizedSchlickParams>();
+        if (is_black(params.transmission_tint)) {
+            MxGeneralizedSchlickOpaque* bsdf = new (pool + num_bytes)
+                MxGeneralizedSchlickOpaque(params, 1.0f);
+            bsdfs[num_bsdfs] = bsdf;
+        } else {
+            MxGeneralizedSchlick* bsdf = new (pool + num_bytes)
+                MxGeneralizedSchlick(params, result.refraction_ior);
+            bsdfs[num_bsdfs] = bsdf;
+        }
+        bsdfs[num_bsdfs]->id = MX_GENERALIZED_SCHLICK_ID;
         break;
     }
     case MX_SHEEN_ID: {
-        const MxSheenParams* params = comp->as<MxSheenParams>();
-        MxSheen* bsdf    = reinterpret_cast<MxSheen*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
-        bsdf->id         = MX_SHEEN_ID;
-        std::memcpy(&bsdf->N, params, sizeof(MxSheenParams));
+        const MxSheenParams& params = *comp->as<MxSheenParams>();
+        MxSheen* bsdf               = new (pool + num_bytes) MxSheen(params);
+        bsdf->id                    = MX_SHEEN_ID;
+        bsdfs[num_bsdfs]            = bsdf;
         break;
     }
     case MX_TRANSLUCENT_ID: {
         const MxTranslucentParams* src_params = comp->as<MxTranslucentParams>();
         const DiffuseParams params            = { src_params->N };
-        Diffuse<1>* bsdf = reinterpret_cast<Diffuse<1>*>(pool + num_bytes);
-        bsdfs[num_bsdfs] = bsdf;
+        Diffuse<1>* bsdf = new (pool + num_bytes) Diffuse<1>(params);
         bsdf->id         = DIFFUSE_ID;
-        std::memcpy(&bsdf->N, &params, sizeof(DiffuseParams));
+        bsdfs[num_bsdfs] = bsdf;
         weight *= src_params->albedo;
         break;
     }

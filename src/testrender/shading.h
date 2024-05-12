@@ -285,10 +285,8 @@ struct CompositeBSDF {
             pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(wo))
                       / (path_weight.x + path_weight.y + path_weight.z);
 #else
-            // NB: We're using a full-precision divide here to avoid going slightly
-            //     out of range and triggering the following asserts.
-            pdfs[i] = __fdiv_rn(weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo)),
-                                path_weight.x + path_weight.y + path_weight.z);
+            pdfs[i] = weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo))
+                      / (path_weight.x + path_weight.y + path_weight.z);
 #endif
 
 #ifndef __CUDACC__
@@ -337,7 +335,7 @@ struct CompositeBSDF {
 #ifndef __CUDACC__
             BSDF::Sample b = bsdfs[i]->eval(wo, wi);
 #else
-            BSDF::Sample b = eval_bsdf(bsdfs[i],wo, wi);
+            BSDF::Sample b = eval_bsdf(bsdfs[i], wo, wi);
 #endif
             b.weight *= weights[i];
             MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf, pdfs[i]);

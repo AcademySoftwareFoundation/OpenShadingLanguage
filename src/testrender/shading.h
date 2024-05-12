@@ -379,8 +379,7 @@ struct CompositeBSDF {
     }
 
     template<typename BSDF_Type, typename... BSDF_Args>
-    OSL_HOSTDEVICE
-    bool add_bsdf(const Color3& w, BSDF_Args&&... args)
+    OSL_HOSTDEVICE bool add_bsdf(const Color3& w, BSDF_Args&&... args)
     {
         if (num_bsdfs >= MaxEntries)
             return false;
@@ -395,7 +394,17 @@ struct CompositeBSDF {
     }
 
 #ifdef __CUDACC__
-    OSL_HOSTDEVICE bool add_bsdf_cuda(const Color3& w, const ClosureComponent* comp, ShadingResult& result);
+    template<typename BSDF_Type, typename... BSDF_Args>
+    OSL_HOSTDEVICE bool add_bsdf(const Color3& w, ClosureIDs id,
+                                 BSDF_Args&&... args)
+    {
+        const int cur_bsdf = num_bsdfs;
+        if (add_bsdf<BSDF_Type>(w, args...)) {
+            bsdfs[cur_bsdf]->id = id;
+            return true;
+        }
+        return false;
+    }
 
     // Helper functions to avoid virtual function calls
     OSL_HOSTDEVICE Color3 get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const;

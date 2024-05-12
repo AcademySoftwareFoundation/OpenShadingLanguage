@@ -308,7 +308,7 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
             result.sigma_s               = params.albedo * result.sigma_t;
             result.medium_g              = params.anisotropy;
             result.refraction_ior        = 1.0f;
-            result.priority = 0;  // TODO: should this closure have a priority?
+            result.priority = 0;
             closure = nullptr;
             break;
         }
@@ -581,6 +581,31 @@ sample_quad(const float3& x, const QuadParams& quad, float xi, float yi,
 }
 
 
+static inline __device__ void
+trace_ray(OptixTraversableHandle handle, const Payload& payload, const float3& origin,
+          const float3& direction)
+{
+    uint32_t p0 = payload.raw[0];
+    uint32_t p1 = payload.raw[1];
+    uint32_t p2 = __float_as_uint(payload.radius);
+    uint32_t p3 = __float_as_uint(payload.spread);
+    uint32_t p4 = payload.raytype;
+
+    optixTrace(handle,                         // handle
+               origin,                         // origin
+               direction,                      // direction
+               1e-3f,                          // tmin
+               1e13f,                          // tmax
+               0,                              // ray time
+               OptixVisibilityMask(1),         // visibility mask
+               OPTIX_RAY_FLAG_DISABLE_ANYHIT,  // ray flags
+               0,                              // SBT offset
+               1,                              // SBT stride
+               0,                              // miss SBT offset
+               p0, p1, p2, p3, p4);
+};
+
+
 static inline __device__ Color3
 subpixel_radiance(Ray r, Sampler& sampler, Background& background)
 {
@@ -617,32 +642,12 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
         sg.tracedata           = (void*)&trace_data[0];
 
         Payload payload;
-        payload.sg_ptr = &sg;
-
-        uint32_t p0 = payload.raw[0];
-        uint32_t p1 = payload.raw[1];
-        uint32_t p2 = __float_as_uint(r.radius);
-        uint32_t p3 = __float_as_uint(r.spread);
-        uint32_t p4 = r.raytype;
-
-        // Trace the camera ray against the scene
-        optixTrace(render_params.traversal_handle, // handle
-                   V3_TO_F3(r.origin),             // origin
-                   V3_TO_F3(r.direction),          // direction
-                   1e-3f,                          // tmin
-                   1e13f,                          // tmax
-                   0,                              // ray time
-                   OptixVisibilityMask(1),         // visibility mask
-                   OPTIX_RAY_FLAG_DISABLE_ANYHIT,  // ray flags
-                   0,                              // SBT offset
-                   1,                              // SBT stride
-                   0,                              // miss SBT offset
-                   p0,
-                   p1,
-                   p2,
-                   p3,
-                   p4
-            );
+        payload.sg_ptr  = &sg;
+        payload.radius  = r.radius;
+        payload.spread  = r.spread;
+        payload.raytype = *reinterpret_cast<Ray::RayType*>(&r.raytype);
+        trace_ray(render_params.traversal_handle, payload,
+                  V3_TO_F3(r.origin), V3_TO_F3(r.direction));
 
         //
         // Execute the shader
@@ -760,7 +765,10 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                 light_sg.shaderID = -1;
 
                 Payload payload;
-                payload.sg_ptr = &light_sg;
+                payload.sg_ptr  = &light_sg;
+                payload.radius  = radius;
+                payload.spread  = 0.0f;
+                payload.raytype = Ray::SHADOW;
 
                 uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
                     *(unsigned int*)&hit_idx,
@@ -768,21 +776,7 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                 light_sg.tracedata           = (void*)&trace_data[0];
 
                 const float3 dir = V3_TO_F3(bg_dir.val());
-
-                // Trace the camera ray against the scene
-                optixTrace(render_params.traversal_handle,  // handle
-                           origin,                          // origin
-                           dir,                             // direction
-                           1e-3f,                           // tmin
-                           1e13f,                           // tmax
-                           0,                               // ray time
-                           OptixVisibilityMask(1),          // visibility mask
-                           OPTIX_RAY_FLAG_DISABLE_ANYHIT,   // ray flags
-                           0,                               // SBT offset
-                           1,                               // SBT stride
-                           0,                               // miss SBT offset
-                           payload.raw[0],
-                           payload.raw[1]);
+                trace_ray(render_params.traversal_handle, payload, origin, dir);
 
                 const uint32_t prim_idx = trace_data[0];
                 if (prim_idx == UINT32_MAX) {
@@ -808,32 +802,19 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
                 light_sg.shaderID = -1;
 
                 Payload payload;
-                payload.sg_ptr = &light_sg;
+                payload.sg_ptr  = &light_sg;
+                payload.radius  = radius;
+                payload.spread  = 0.0f;
+                payload.raytype = Ray::SHADOW;
 
                 uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
-                    *(unsigned int*)&hit_idx,
-                    *(unsigned int*)&hit_kind };
-                light_sg.tracedata           = (void*)&trace_data[0];
+                                           *(unsigned int*)&hit_idx,
+                                           *(unsigned int*)&hit_kind };
+                light_sg.tracedata     = (void*)&trace_data[0];
 
-                uint32_t p2 = __float_as_uint(r.radius);
-                uint32_t p3 = __float_as_uint(r.spread);
+                trace_ray(render_params.traversal_handle, payload, origin,
+                          light_dir);
 
-                // Trace the camera ray against the scene
-                optixTrace(render_params.traversal_handle,  // handle
-                           origin,                          // origin
-                           light_dir,                       // direction
-                           1e-3f,                           // tmin
-                           1e13f,                           // tmax
-                           0,                               // ray time
-                           OptixVisibilityMask(1),          // visibility mask
-                           OPTIX_RAY_FLAG_DISABLE_ANYHIT,   // ray flags
-                           0,                               // SBT offset
-                           1,                               // SBT stride
-                           0,                               // miss SBT offset
-                           payload.raw[0],
-                           payload.raw[1]);
-
-                // TODO: Make sure that the primitive indexing is correct
                 const uint32_t prim_idx = trace_data[0];
                 if (prim_idx == idx && light_sg.shaderID >= 0) {
                     // execute the light shader (for emissive closures only)
@@ -892,7 +873,6 @@ subpixel_radiance(Ray r, Sampler& sampler, Background& background)
             break;  // filter out all 0's or NaNs
         }
 
-        // TODO: Keep track of object IDs for self-intersection avoidance, etc.
         prev_hit_idx  = hit_idx;
         prev_hit_kind = hit_kind;
         r.origin = sg.P;
@@ -958,7 +938,6 @@ __raygen__setglobals()
     if (render_params.bg_id < 0)
         return;
 
-    // TODO: Paralellize Background::prepare()
     auto evaler = [](const Dual2<Vec3>& dir) {
         return eval_background(dir);
     };

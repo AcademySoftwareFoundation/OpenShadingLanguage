@@ -226,7 +226,6 @@ struct ShadingResult;
 #define OSL_HOSTDEVICE_OVERRIDE
 #endif
 
-
 /// Individual BSDF (diffuse, phong, refraction, etc ...)
 /// Actual implementations of this class are private
 struct BSDF {
@@ -270,6 +269,7 @@ struct BSDF {
     ClosureIDs id;
 };
 
+
 /// Represents a weighted sum of BSDFS
 /// NOTE: no need to inherit from BSDF here because we use a "flattened" representation and therefore never nest these
 ///
@@ -281,13 +281,8 @@ struct CompositeBSDF {
     {
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
-#ifndef __CUDACC__
-            pdfs[i] = weights[i].dot(path_weight * bsdfs[i]->get_albedo(wo))
+            pdfs[i] = weights[i].dot(path_weight * get_albedo(bsdfs[i], wo))
                       / (path_weight.x + path_weight.y + path_weight.z);
-#else
-            pdfs[i] = weights[i].dot(path_weight * get_bsdf_albedo(bsdfs[i], wo))
-                      / (path_weight.x + path_weight.y + path_weight.z);
-#endif
 
 #ifndef __CUDACC__
             // TODO: Figure out what to do with weights/albedos with negative
@@ -318,11 +313,7 @@ struct CompositeBSDF {
     {
         Color3 result(0, 0, 0);
         for (int i = 0; i < num_bsdfs; i++) {
-#ifndef __CUDACC__
-            result += weights[i] * bsdfs[i]->get_albedo(wo);
-#else
-            result += weights[i] * get_bsdf_albedo(bsdfs[i], wo);
-#endif
+            result += weights[i] * get_albedo(bsdfs[i], wo);
         }
         return result;
     }
@@ -332,11 +323,7 @@ struct CompositeBSDF {
     {
         BSDF::Sample s = {};
         for (int i = 0; i < num_bsdfs; i++) {
-#ifndef __CUDACC__
-            BSDF::Sample b = bsdfs[i]->eval(wo, wi);
-#else
-            BSDF::Sample b = eval_bsdf(bsdfs[i], wo, wi);
-#endif
+            BSDF::Sample b = eval(bsdfs[i], wo, wi);
             b.weight *= weights[i];
             MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf, pdfs[i]);
             s.roughness += b.roughness * pdfs[i];
@@ -352,11 +339,7 @@ struct CompositeBSDF {
             if (rx < (pdfs[i] + accum)) {
                 rx = (rx - accum) / pdfs[i];
                 rx = std::min(rx, 0.99999994f);  // keep result in [0,1)
-#ifndef __CUDACC__
-                BSDF::Sample s = bsdfs[i]->sample(wo, rx, ry, rz);
-#else
-                BSDF::Sample s = sample_bsdf(bsdfs[i], wo, rx, ry, rz);
-#endif
+                BSDF::Sample s = sample(bsdfs[i], wo, rx, ry, rz);
                 s.weight *= weights[i] * (1 / pdfs[i]);
                 s.pdf *= pdfs[i];
                 if (s.pdf == 0.0f)
@@ -364,11 +347,7 @@ struct CompositeBSDF {
                 // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
                 for (int j = 0; j < num_bsdfs; j++) {
                     if (i != j) {
-#ifndef __CUDACC__
-                        BSDF::Sample b = bsdfs[j]->eval(wo, s.wi);
-#else
-                        BSDF::Sample b = eval_bsdf(bsdfs[j], wo, s.wi);
-#endif
+                        BSDF::Sample b = eval(bsdfs[j], wo, s.wi);
                         b.weight *= weights[j];
                         MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf,
                                          pdfs[j]);
@@ -414,15 +393,50 @@ struct CompositeBSDF {
 
     // Helper functions to avoid virtual function calls by directly dispatching
     // calls to the correct BSDF type based on the closure ID.
-    OSL_HOSTDEVICE Color3 get_bsdf_albedo(OSL::BSDF* bsdf, const Vec3& wo) const;
-    OSL_HOSTDEVICE BSDF::Sample sample_bsdf(OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) const;
-    OSL_HOSTDEVICE BSDF::Sample eval_bsdf(OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const;
+    OSL_HOSTDEVICE Color3 get_bsdf_albedo(const OSL::BSDF* bsdf, const Vec3& wo) const;
+    OSL_HOSTDEVICE BSDF::Sample sample_bsdf(const OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) const;
+    OSL_HOSTDEVICE BSDF::Sample eval_bsdf(const OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const;
 #endif
 
 private:
     /// Never try to copy this struct because it would invalidate the bsdf pointers
     OSL_HOSTDEVICE CompositeBSDF(const CompositeBSDF& c);
     OSL_HOSTDEVICE CompositeBSDF& operator=(const CompositeBSDF& c);
+
+    // On the CUDA/OptiX path, we can't rely on regular C++ polymorphism to
+    // ivoke the correct get_albedo, eval, and sample functions for each of the
+    // BSDF sub-types. Instead, we use wrapper functions to call the correct
+    // functions based on the closure ID.
+
+    inline OSL_HOSTDEVICE Color3 get_albedo(const BSDF* bsdf,
+                                            const Vec3& wo) const
+    {
+#ifndef __CUDACC__
+        return bsdf->get_albedo(wo);
+#else
+        return get_bsdf_albedo(bsdf, wo);
+#endif
+    }
+
+    inline OSL_HOSTDEVICE BSDF::Sample eval(const BSDF* bsdf, const Vec3& wo,
+                                            const Vec3& wi) const
+    {
+#ifndef __CUDACC__
+        return bsdf->eval(wo, wi);
+#else
+        return eval_bsdf(bsdf, wo, wi);
+#endif
+    }
+
+    inline OSL_HOSTDEVICE BSDF::Sample
+    sample(const BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) const
+    {
+#ifndef __CUDACC__
+        return bsdf->sample(wo, rx, ry, rz);
+#else
+        return sample_bsdf(bsdf, wo, rx, ry, rz);
+#endif
+    }
 
     enum { MaxEntries = 8 };
     enum { MaxSize = 256 * sizeof(float) };

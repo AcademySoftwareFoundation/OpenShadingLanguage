@@ -73,7 +73,7 @@ typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> MxGeneralizedSc
 
 template <class BSDF_TYPE>
 __forceinline__ __device__ Color3
-get_albedo_fn(BSDF_TYPE* bsdf, const Vec3& wo)
+get_albedo_fn(const BSDF_TYPE* bsdf, const Vec3& wo)
 {
     return bsdf->BSDF_TYPE::get_albedo(wo);
 }
@@ -81,7 +81,7 @@ get_albedo_fn(BSDF_TYPE* bsdf, const Vec3& wo)
 
 template <class BSDF_TYPE>
 __forceinline__ __device__ BSDF::Sample
-sample_fn(BSDF_TYPE* bsdf, const Vec3& wo, float rx, float ry, float rz)
+sample_fn(const BSDF_TYPE* bsdf, const Vec3& wo, float rx, float ry, float rz)
 {
     return bsdf->BSDF_TYPE::sample(wo, rx, ry, rz);
 }
@@ -89,14 +89,14 @@ sample_fn(BSDF_TYPE* bsdf, const Vec3& wo, float rx, float ry, float rz)
 
 template <class BSDF_TYPE>
 __forceinline__ __device__ BSDF::Sample
-eval_fn(BSDF_TYPE* bsdf, const Vec3& wo, const Vec3& wi)
+eval_fn(const BSDF_TYPE* bsdf, const Vec3& wo, const Vec3& wi)
 {
     return bsdf->BSDF_TYPE::eval(wo, wi);
 }
 
 
 OSL_HOSTDEVICE Color3
-CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
+CompositeBSDF::get_bsdf_albedo(const BSDF* bsdf, const Vec3& wo) const
 {
     static const ustringhash uh_ggx("ggx");
     static const ustringhash uh_beckmann("beckmann");
@@ -171,7 +171,7 @@ CompositeBSDF::get_bsdf_albedo(BSDF* bsdf, const Vec3& wo) const
 
 
 OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
+CompositeBSDF::sample_bsdf(const BSDF* bsdf, const Vec3& wo, float rx, float ry,
                            float rz) const
 {
     static const ustringhash uh_ggx("ggx");
@@ -273,7 +273,7 @@ CompositeBSDF::sample_bsdf(BSDF* bsdf, const Vec3& wo, float rx, float ry,
 
 
 OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::eval_bsdf(BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
+CompositeBSDF::eval_bsdf(const BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
 {
     static const ustringhash uh_ggx("ggx");
     static const ustringhash uh_beckmann("beckmann");

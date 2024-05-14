@@ -22,6 +22,7 @@ class ShaderGroup;
 template<int SimdWidthT> class WidthOf {};
 
 
+
 /// Opaque pointer to whatever the renderer uses to represent a
 /// (potentially motion-blurred) coordinate transformation.
 typedef const void* TransformationPtr;

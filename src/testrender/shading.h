@@ -376,21 +376,6 @@ struct CompositeBSDF {
     }
 
 #ifdef __CUDACC__
-    // The BSDF 'id' field is not correctly set when calling the normal version
-    // of add_bsdf(), so we're using this wrapper to manually set the id after
-    // the BSDF has been constructed.
-    template<typename BSDF_Type, typename... BSDF_Args>
-    OSL_HOSTDEVICE bool add_bsdf(const Color3& w, ClosureIDs id,
-                                 BSDF_Args&&... args)
-    {
-        const int cur_bsdf = num_bsdfs;
-        if (add_bsdf<BSDF_Type>(w, args...)) {
-            bsdfs[cur_bsdf]->id = id;
-            return true;
-        }
-        return false;
-    }
-
     // Helper functions to avoid virtual function calls by directly dispatching
     // calls to the correct BSDF type based on the closure ID.
     OSL_HOSTDEVICE Color3 get_bsdf_albedo(const OSL::BSDF* bsdf, const Vec3& wo) const;

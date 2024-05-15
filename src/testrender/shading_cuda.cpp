@@ -69,12 +69,17 @@ id_to_string(int id)
 OSL_NAMESPACE_ENTER
 
 
-typedef MxMicrofacet<MxConductorParams, GGXDist, false> MxConductor;
-typedef MxMicrofacet<MxDielectricParams, GGXDist, true> MxDielectric;
-typedef MxMicrofacet<MxDielectricParams, GGXDist, false> MxDielectricOpaque;
-typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true>
+typedef MxMicrofacet<MxConductorParams, GGXDist, MX_CONDUCTOR_ID, false>
+    MxConductor;
+typedef MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, true>
+    MxDielectric;
+typedef MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, false>
+    MxDielectricOpaque;
+typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
+                     MX_GENERALIZED_SCHLICK_ID, true>
     MxGeneralizedSchlick;
-typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>
+typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
+                     MX_GENERALIZED_SCHLICK_ID, false>
     MxGeneralizedSchlickOpaque;
 
 

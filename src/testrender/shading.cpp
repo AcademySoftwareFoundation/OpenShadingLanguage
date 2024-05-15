@@ -884,11 +884,12 @@ typedef Microfacet<BeckmannDist, 2> MicrofacetBeckmannBoth;
 
 
 // We use the CRTP to inherit the parameters because each MaterialX closure uses a different set of parameters
-template<typename MxMicrofacetParams, typename Distribution,
+template<typename MxMicrofacetParams, typename Distribution, ClosureIDs ID,
          bool EnableTransmissionLobe>
 struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
-    OSL_HOSTDEVICE MxMicrofacet(const MxMicrofacetParams& params, float refraction_ior)
-        : BSDF(MX_OREN_NAYAR_DIFFUSE_ID) // TODO: What type should this be?
+    OSL_HOSTDEVICE MxMicrofacet(const MxMicrofacetParams& params,
+                                float refraction_ior)
+        : BSDF(ID)
         , MxMicrofacetParams(params)
         , tf(MxMicrofacetParams::U == Vec3(0)
                      || MxMicrofacetParams::roughness_x
@@ -1353,7 +1354,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg,
             // Transmissive dielectrics are opaque
             if (!is_black(params.transmission_tint))
                 return Color3(1);
-            MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params, 1.0f);
+            MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, false>
+                mf(params, 1.0f);
             const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
             return w * mf.get_albedo(-I);
         }
@@ -1363,8 +1365,9 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg,
             // Transmissive dielectrics are opaque
             if (!is_black(params.transmission_tint))
                 return Color3(1);
-            MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params,
-                                                                        1.0f);
+            MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
+                         MX_GENERALIZED_SCHLICK_ID, false>
+                mf(params, 1.0f);
             const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
             return w * mf.get_albedo(-I);
         }
@@ -1589,32 +1592,35 @@ process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 const MxDielectricParams& params
                     = *comp->as<MxDielectricParams>();
                 if (is_black(params.transmission_tint))
-                    ok = result.bsdf.add_bsdf<
-                        MxMicrofacet<MxDielectricParams, GGXDist, false>>(
+                    ok = result.bsdf.add_bsdf<MxMicrofacet<
+                        MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, false>>(
                         cw, params, 1.0f);
                 else
-                    ok = result.bsdf.add_bsdf<
-                        MxMicrofacet<MxDielectricParams, GGXDist, true>>(
+                    ok = result.bsdf.add_bsdf<MxMicrofacet<
+                        MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, true>>(
                         cw, params, result.refraction_ior);
                 break;
             }
             case MX_CONDUCTOR_ID: {
                 const MxConductorParams& params = *comp->as<MxConductorParams>();
-                ok = result.bsdf.add_bsdf<
-                    MxMicrofacet<MxConductorParams, GGXDist, false>>(cw, params,
-                                                                     1.0f);
+                ok = result.bsdf.add_bsdf<MxMicrofacet<
+                    MxConductorParams, GGXDist, MX_DIELECTRIC_ID, false>>(
+                    cw, params, 1.0f);
                 break;
             };
             case MX_GENERALIZED_SCHLICK_ID: {
                 const MxGeneralizedSchlickParams& params
                     = *comp->as<MxGeneralizedSchlickParams>();
                 if (is_black(params.transmission_tint))
-                    ok = result.bsdf.add_bsdf<MxMicrofacet<
-                        MxGeneralizedSchlickParams, GGXDist, false>>(cw, params,
-                                                                     1.0f);
+                    ok = result.bsdf.add_bsdf<
+                        MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
+                                     MX_GENERALIZED_SCHLICK_ID, false>>(cw,
+                                                                        params,
+                                                                        1.0f);
                 else
                     ok = result.bsdf.add_bsdf<
-                        MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true>>(
+                        MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
+                                     MX_GENERALIZED_SCHLICK_ID, true>>(
                         cw, params, result.refraction_ior);
                 break;
             };

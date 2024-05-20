@@ -69,7 +69,7 @@ struct DiffuseParams {
 struct OrenNayarParams {
     Vec3 N;
     float sigma;
-    int energy_conservation;
+    int energy_compensation;
 };
 struct PhongParams {
     Vec3 N;
@@ -102,7 +102,7 @@ struct MxOrenNayarDiffuseParams {
     float roughness;
     // optional
     ustringhash label;
-    int energy_conservation;
+    int energy_compensation;
 };
 
 struct MxBurleyDiffuseParams {
@@ -269,7 +269,8 @@ register_closures(OSL::ShadingSystem* shadingsys)
           OREN_NAYAR_ID,
           { CLOSURE_VECTOR_PARAM(OrenNayarParams, N),
             CLOSURE_FLOAT_PARAM(OrenNayarParams, sigma),
-            CLOSURE_INT_KEYPARAM(OrenNayarParams, energy_conservation, "energy_conservation"),
+            CLOSURE_INT_KEYPARAM(OrenNayarParams, energy_compensation,
+                                 "energy_compensation"),
             CLOSURE_FINISH_PARAM(OrenNayarParams) } },
         { "translucent",
           TRANSLUCENT_ID,
@@ -319,7 +320,8 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_COLOR_PARAM(MxOrenNayarDiffuseParams, albedo),
             CLOSURE_FLOAT_PARAM(MxOrenNayarDiffuseParams, roughness),
             CLOSURE_STRING_KEYPARAM(MxOrenNayarDiffuseParams, label, "label"),
-            CLOSURE_INT_KEYPARAM(MxOrenNayarDiffuseParams, energy_conservation, "energy_conservation"),
+            CLOSURE_INT_KEYPARAM(MxOrenNayarDiffuseParams, energy_compensation,
+                                 "energy_compensation"),
             CLOSURE_FINISH_PARAM(MxOrenNayarDiffuseParams) } },
         { "burley_diffuse_bsdf",
           MX_BURLEY_DIFFUSE_ID,
@@ -470,11 +472,9 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
         float NL = N.dot(wi);
         float NV = N.dot(wo);
         if (NL > 0 && NV > 0) {
-
-            float LV    = wo.dot(wi);
-            float s     = LV - NL * NV;
-            if (energy_conservation)
-            {
+            float LV = wo.dot(wi);
+            float s  = LV - NL * NV;
+            if (energy_compensation) {
                 // Code below from Jamie Portsmouth's tech report on Energy conversion Oren-Nayar
                 // See slack thread for whitepaper:
                 // https://academysoftwarefdn.slack.com/files/U03SWQFPD08/F06S50CUKV1/oren_nayar.pdf
@@ -486,18 +486,22 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
 
                 const float rho = 1;
 
-                float AF = 1.0f / (1.0f + constant1_FON*sigma);
+                float AF    = 1.0f / (1.0f + constant1_FON * sigma);
                 float stinv = s > 0 ? s / std::max(NL, NV) : s;
-                float f_ss = rho * AF * (1.0 + sigma*stinv); // single-scatt. BRDF
-                float EFo = E_FON_analytic(NV); // EFo at rho=1 (analytic)
-                float EFi = E_FON_analytic(NL); // EFi at rho=1 (analytic)
-                float avgEF = AF * (1.0f + constant2_FON * sigma); // avg. albedo
-                float rho_ms = (rho * rho) * avgEF / (1.0f - rho * std::max(0.0f, 1.0f - avgEF));
-                float f_ms = rho_ms * std::max(1e-7f, 1.0f - EFo) *  std::max(1e-7f, 1.0f - EFi) / std::max(1e-7f, 1.0f - avgEF); // multi-scatter lobe
+                float f_ss  = rho * AF
+                             * (1.0 + sigma * stinv);  // single-scatt. BRDF
+                float EFo   = E_FON_analytic(NV);  // EFo at rho=1 (analytic)
+                float EFi   = E_FON_analytic(NL);  // EFi at rho=1 (analytic)
+                float avgEF = AF
+                              * (1.0f + constant2_FON * sigma);  // avg. albedo
+                float rho_ms = (rho * rho) * avgEF
+                               / (1.0f - rho * std::max(0.0f, 1.0f - avgEF));
+                float f_ms = rho_ms * std::max(1e-7f, 1.0f - EFo)
+                             * std::max(1e-7f, 1.0f - EFi)
+                             / std::max(1e-7f,
+                                        1.0f - avgEF);  // multi-scatter lobe
                 return { wi, Color3(f_ss + f_ms), NL * float(M_1_PI), 1.0f };
-            }
-            else
-            {
+            } else {
                 // Simplified math from: "A tiny improvement of Oren-Nayar reflectance model"
                 // by Yasuhiro Fujii
                 // http://mimosa-pudica.net/improved-oren-nayar.html
@@ -505,9 +509,9 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
                 // (QON in the paper above) and not the tweak proposed in the text which
                 // is a slightly different BRDF (FON in the paper above). This is done for
                 // backwards compatibility purposes only.
-                float s2 = sigma * sigma;
-                float A = 1 - 0.50f * s2 / (s2 + 0.33f);
-                float B = 0.45f * s2 / (s2 + 0.09f);
+                float s2    = sigma * sigma;
+                float A     = 1 - 0.50f * s2 / (s2 + 0.33f);
+                float B     = 0.45f * s2 / (s2 + 0.09f);
                 float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
                 return { wi, Color3(A + B * stinv), NL * float(M_1_PI), 1.0f };
             }
@@ -522,15 +526,21 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
         Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
         return eval(wo, out_dir);
     }
-private:
-    static constexpr float constant1_FON = float(0.5 - 2.0/(3.0*M_PI));
-    static constexpr float constant2_FON = float(2.0/3.0 - 28.0/(15.0*M_PI));
 
-    float E_FON_analytic(float mu) const {
-        float AF = 1.0f / (1.0f + constant1_FON * sigma); // Fujii model A coefficient
-        float BF = sigma * AF; // Fujii model B coefficient
+private:
+    static constexpr float constant1_FON = float(0.5 - 2.0 / (3.0 * M_PI));
+    static constexpr float constant2_FON = float(2.0 / 3.0
+                                                 - 28.0 / (15.0 * M_PI));
+
+    float E_FON_analytic(float mu) const
+    {
+        float AF = 1.0f
+                   / (1.0f
+                      + constant1_FON * sigma);  // Fujii model A coefficient
+        float BF = sigma * AF;                   // Fujii model B coefficient
         float Si = sqrtf(std::max(0.0f, 1.0f - mu * mu));
-        float G = Si * (OIIO::fast_acos(mu) - Si * mu) + 2.0 * ((Si / mu) * (1.0 - Si * Si * Si) - Si) / 3.0f;
+        float G  = Si * (OIIO::fast_acos(mu) - Si * mu)
+                  + 2.0 * ((Si / mu) * (1.0 - Si * Si * Si) - Si) / 3.0f;
         float E = AF + (BF * float(M_1_PI)) * G;
         return E;
     }
@@ -1660,10 +1670,10 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 // translate MaterialX parameters into existing closure
                 const MxOrenNayarDiffuseParams* srcparams
                     = comp->as<MxOrenNayarDiffuseParams>();
-                OrenNayarParams params = {};
-                params.N               = srcparams->N;
-                params.sigma           = srcparams->roughness;
-                params.energy_conservation = srcparams->energy_conservation;
+                OrenNayarParams params     = {};
+                params.N                   = srcparams->N;
+                params.sigma               = srcparams->roughness;
+                params.energy_compensation = srcparams->energy_compensation;
                 ok = result.bsdf.add_bsdf<OrenNayar>(cw * srcparams->albedo,
                                                      params);
                 break;

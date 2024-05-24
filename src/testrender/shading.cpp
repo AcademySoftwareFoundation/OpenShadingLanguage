@@ -69,7 +69,6 @@ struct DiffuseParams {
 struct OrenNayarParams {
     Vec3 N;
     float sigma;
-    int energy_compensation;
 };
 struct PhongParams {
     Vec3 N;
@@ -269,8 +268,6 @@ register_closures(OSL::ShadingSystem* shadingsys)
           OREN_NAYAR_ID,
           { CLOSURE_VECTOR_PARAM(OrenNayarParams, N),
             CLOSURE_FLOAT_PARAM(OrenNayarParams, sigma),
-            CLOSURE_INT_KEYPARAM(OrenNayarParams, energy_compensation,
-                                 "energy_compensation"),
             CLOSURE_FINISH_PARAM(OrenNayarParams) } },
         { "translucent",
           TRANSLUCENT_ID,
@@ -463,10 +460,7 @@ template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
 };
 
 struct OrenNayar final : public BSDF, OrenNayarParams {
-    OrenNayar(const OrenNayarParams& params) : BSDF(), OrenNayarParams(params)
-    {
-        // precompute some constants
-    }
+    OrenNayar(const OrenNayarParams& params) : BSDF(), OrenNayarParams(params) {}
     Sample eval(const Vec3& wo, const OSL::Vec3& wi) const override
     {
         float NL = N.dot(wi);
@@ -474,47 +468,18 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
         if (NL > 0 && NV > 0) {
             float LV = wo.dot(wi);
             float s  = LV - NL * NV;
-            if (energy_compensation) {
-                // Code below from Jamie Portsmouth's tech report on Energy conversion Oren-Nayar
-                // See slack thread for whitepaper:
-                // https://academysoftwarefdn.slack.com/files/U03SWQFPD08/F06S50CUKV1/oren_nayar.pdf
-
-                // TODO: rho should be the albedo which is a parameter of the closure in the Mx parameters
-                // This only matters for the color-saturation aspect of the BRDF which is rather subtle anyway
-                // and not always desireable for artists. Hardcoding to 1 leaves the coloring entirely up to the
-                // closure weight.
-
-                const float rho = 1;
-
-                float AF    = 1.0f / (1.0f + constant1_FON * sigma);
-                float stinv = s > 0 ? s / std::max(NL, NV) : s;
-                float f_ss  = rho * AF
-                             * (1.0 + sigma * stinv);  // single-scatt. BRDF
-                float EFo   = E_FON_analytic(NV);  // EFo at rho=1 (analytic)
-                float EFi   = E_FON_analytic(NL);  // EFi at rho=1 (analytic)
-                float avgEF = AF
-                              * (1.0f + constant2_FON * sigma);  // avg. albedo
-                float rho_ms = (rho * rho) * avgEF
-                               / (1.0f - rho * std::max(0.0f, 1.0f - avgEF));
-                float f_ms = rho_ms * std::max(1e-7f, 1.0f - EFo)
-                             * std::max(1e-7f, 1.0f - EFi)
-                             / std::max(1e-7f,
-                                        1.0f - avgEF);  // multi-scatter lobe
-                return { wi, Color3(f_ss + f_ms), NL * float(M_1_PI), 1.0f };
-            } else {
-                // Simplified math from: "A tiny improvement of Oren-Nayar reflectance model"
-                // by Yasuhiro Fujii
-                // http://mimosa-pudica.net/improved-oren-nayar.html
-                // NOTE: This is using the math to match the original qualitative ON model
-                // (QON in the paper above) and not the tweak proposed in the text which
-                // is a slightly different BRDF (FON in the paper above). This is done for
-                // backwards compatibility purposes only.
-                float s2    = sigma * sigma;
-                float A     = 1 - 0.50f * s2 / (s2 + 0.33f);
-                float B     = 0.45f * s2 / (s2 + 0.09f);
-                float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
-                return { wi, Color3(A + B * stinv), NL * float(M_1_PI), 1.0f };
-            }
+            // Simplified math from: "A tiny improvement of Oren-Nayar reflectance model"
+            // by Yasuhiro Fujii
+            // http://mimosa-pudica.net/improved-oren-nayar.html
+            // NOTE: This is using the math to match the original qualitative ON model
+            // (QON in the paper above) and not the tweak proposed in the text which
+            // is a slightly different BRDF (FON in the paper above). This is done for
+            // backwards compatibility purposes only.
+            float s2    = sigma * sigma;
+            float A     = 1 - 0.50f * s2 / (s2 + 0.33f);
+            float B     = 0.45f * s2 / (s2 + 0.09f);
+            float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
+            return { wi, Color3(A + B * stinv), NL * float(M_1_PI), 1.0f };
         }
         return {};
     }
@@ -526,7 +491,50 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
         Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
         return eval(wo, out_dir);
     }
+};
 
+struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
+    EnergyCompensatedOrenNayar(const MxOrenNayarDiffuseParams& params) : BSDF(), MxOrenNayarDiffuseParams(params) {}
+    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const override
+    {
+        float NL = N.dot(wi);
+        float NV = N.dot(wo);
+        if (NL > 0 && NV > 0) {
+            float LV = wo.dot(wi);
+            float s  = LV - NL * NV;
+            // Code below from Jamie Portsmouth's tech report on Energy conversion Oren-Nayar
+            // See slack thread for whitepaper:
+            // https://academysoftwarefdn.slack.com/files/U03SWQFPD08/F06S50CUKV1/oren_nayar.pdf
+
+            // TODO: rho should be the albedo which is a parameter of the closure in the Mx parameters
+            // This only matters for the color-saturation aspect of the BRDF which is rather subtle anyway
+            // and not always desireable for artists. Hardcoding to 1 leaves the coloring entirely up to the
+            // closure weight.
+
+            const Color3 rho = albedo;
+            const float sigma = roughness;
+
+            float AF    = 1.0f / (1.0f + constant1_FON * sigma);
+            float stinv = s > 0 ? s / std::max(NL, NV) : s;
+            float f_ss  = AF * (1.0 + sigma * stinv);  // single-scatt. BRDF
+            float EFo   = E_FON_analytic(NV);  // EFo at rho=1 (analytic)
+            float EFi   = E_FON_analytic(NL);  // EFi at rho=1 (analytic)
+            float avgEF = AF * (1.0f + constant2_FON * sigma);  // avg. albedo
+            Color3 rho_ms = (rho * rho) * avgEF / (Color3(1.0f) - rho * std::max(0.0f, 1.0f - avgEF));
+            float f_ms = std::max(1e-7f, 1.0f - EFo) * std::max(1e-7f, 1.0f - EFi) / std::max(1e-7f, 1.0f - avgEF);  // multi-scatter lobe
+            return { wi, Color3(rho * f_ss + rho_ms * f_ms), NL * float(M_1_PI), 1.0f };
+        }
+        return {};
+    }
+
+    Sample sample(const Vec3& wo, float rx, float ry,
+                  float /*rz*/) const override
+    {
+        Vec3 out_dir;
+        float pdf;
+        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
+        return eval(wo, out_dir);
+    }
 private:
     static constexpr float constant1_FON = float(0.5 - 2.0 / (3.0 * M_PI));
     static constexpr float constant2_FON = float(2.0 / 3.0
@@ -534,9 +542,8 @@ private:
 
     float E_FON_analytic(float mu) const
     {
-        float AF = 1.0f
-                   / (1.0f
-                      + constant1_FON * sigma);  // Fujii model A coefficient
+        const float sigma = roughness;
+        float AF = 1.0f / (1.0f + constant1_FON * sigma);  // Fujii model A coefficient
         float BF = sigma * AF;                   // Fujii model B coefficient
         float Si = sqrtf(std::max(0.0f, 1.0f - mu * mu));
         float G  = Si * (OIIO::fast_acos(mu) - Si * mu)
@@ -1667,15 +1674,20 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 ok = result.bsdf.add_bsdf<Transparent>(cw);
                 break;
             case MX_OREN_NAYAR_DIFFUSE_ID: {
-                // translate MaterialX parameters into existing closure
                 const MxOrenNayarDiffuseParams* srcparams
                     = comp->as<MxOrenNayarDiffuseParams>();
-                OrenNayarParams params     = {};
-                params.N                   = srcparams->N;
-                params.sigma               = srcparams->roughness;
-                params.energy_compensation = srcparams->energy_compensation;
-                ok = result.bsdf.add_bsdf<OrenNayar>(cw * srcparams->albedo,
-                                                     params);
+                if (srcparams->energy_compensation) {
+                    // energy compensation handled by its own BSDF
+                    ok = result.bsdf.add_bsdf<EnergyCompensatedOrenNayar>(
+                        cw, *srcparams);
+                } else {
+                    // translate MaterialX parameters into existing closure
+                    OrenNayarParams params     = {};
+                    params.N                   = srcparams->N;
+                    params.sigma               = srcparams->roughness;
+                    ok = result.bsdf.add_bsdf<OrenNayar>(cw * srcparams->albedo,
+                                                        params);
+                }
                 break;
             }
             case MX_BURLEY_DIFFUSE_ID: {

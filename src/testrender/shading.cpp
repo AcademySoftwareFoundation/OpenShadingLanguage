@@ -460,7 +460,9 @@ template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
 };
 
 struct OrenNayar final : public BSDF, OrenNayarParams {
-    OrenNayar(const OrenNayarParams& params) : BSDF(), OrenNayarParams(params) {}
+    OrenNayar(const OrenNayarParams& params) : BSDF(), OrenNayarParams(params)
+    {
+    }
     Sample eval(const Vec3& wo, const OSL::Vec3& wi) const override
     {
         float NL = N.dot(wi);
@@ -494,7 +496,10 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
 };
 
 struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
-    EnergyCompensatedOrenNayar(const MxOrenNayarDiffuseParams& params) : BSDF(), MxOrenNayarDiffuseParams(params) {}
+    EnergyCompensatedOrenNayar(const MxOrenNayarDiffuseParams& params)
+        : BSDF(), MxOrenNayarDiffuseParams(params)
+    {
+    }
     Sample eval(const Vec3& wo, const OSL::Vec3& wi) const override
     {
         float NL = N.dot(wi);
@@ -511,18 +516,23 @@ struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
             // and not always desireable for artists. Hardcoding to 1 leaves the coloring entirely up to the
             // closure weight.
 
-            const Color3 rho = albedo;
+            const Color3 rho  = albedo;
             const float sigma = roughness;
 
-            float AF    = 1.0f / (1.0f + constant1_FON * sigma);
-            float stinv = s > 0 ? s / std::max(NL, NV) : s;
-            float f_ss  = AF * (1.0 + sigma * stinv);  // single-scatt. BRDF
-            float EFo   = E_FON_analytic(NV);  // EFo at rho=1 (analytic)
-            float EFi   = E_FON_analytic(NL);  // EFi at rho=1 (analytic)
-            float avgEF = AF * (1.0f + constant2_FON * sigma);  // avg. albedo
-            Color3 rho_ms = (rho * rho) * avgEF / (Color3(1.0f) - rho * std::max(0.0f, 1.0f - avgEF));
-            float f_ms = std::max(1e-7f, 1.0f - EFo) * std::max(1e-7f, 1.0f - EFi) / std::max(1e-7f, 1.0f - avgEF);  // multi-scatter lobe
-            return { wi, Color3(rho * f_ss + rho_ms * f_ms), NL * float(M_1_PI), 1.0f };
+            float AF      = 1.0f / (1.0f + constant1_FON * sigma);
+            float stinv   = s > 0 ? s / std::max(NL, NV) : s;
+            float f_ss    = AF * (1.0 + sigma * stinv);  // single-scatt. BRDF
+            float EFo     = E_FON_analytic(NV);  // EFo at rho=1 (analytic)
+            float EFi     = E_FON_analytic(NL);  // EFi at rho=1 (analytic)
+            float avgEF   = AF * (1.0f + constant2_FON * sigma);  // avg. albedo
+            Color3 rho_ms = (rho * rho) * avgEF
+                            / (Color3(1.0f)
+                               - rho * std::max(0.0f, 1.0f - avgEF));
+            float f_ms = std::max(1e-7f, 1.0f - EFo)
+                         * std::max(1e-7f, 1.0f - EFi)
+                         / std::max(1e-7f, 1.0f - avgEF);  // multi-scatter lobe
+            return { wi, Color3(rho * f_ss + rho_ms * f_ms), NL * float(M_1_PI),
+                     1.0f };
         }
         return {};
     }
@@ -535,6 +545,7 @@ struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
         Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
         return eval(wo, out_dir);
     }
+
 private:
     static constexpr float constant1_FON = float(0.5 - 2.0 / (3.0 * M_PI));
     static constexpr float constant2_FON = float(2.0 / 3.0
@@ -543,7 +554,9 @@ private:
     float E_FON_analytic(float mu) const
     {
         const float sigma = roughness;
-        float AF = 1.0f / (1.0f + constant1_FON * sigma);  // Fujii model A coefficient
+        float AF          = 1.0f
+                   / (1.0f
+                      + constant1_FON * sigma);  // Fujii model A coefficient
         float BF = sigma * AF;                   // Fujii model B coefficient
         float Si = sqrtf(std::max(0.0f, 1.0f - mu * mu));
         float G  = Si * (OIIO::fast_acos(mu) - Si * mu)
@@ -1682,11 +1695,11 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                         cw, *srcparams);
                 } else {
                     // translate MaterialX parameters into existing closure
-                    OrenNayarParams params     = {};
-                    params.N                   = srcparams->N;
-                    params.sigma               = srcparams->roughness;
+                    OrenNayarParams params = {};
+                    params.N               = srcparams->N;
+                    params.sigma           = srcparams->roughness;
                     ok = result.bsdf.add_bsdf<OrenNayar>(cw * srcparams->albedo,
-                                                        params);
+                                                         params);
                 }
                 break;
             }

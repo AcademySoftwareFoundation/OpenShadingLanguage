@@ -18,5 +18,5 @@ matte
             float UImin = 0, float UImax = 1 ]]
   )
 {
-    Ci = Kd * oren_nayar_diffuse_bsdf (N, Cs, roughness);
+    Ci = Kd * oren_nayar_diffuse_bsdf (N, Cs, roughness, "energy_compensation", N.y < 0);
 }

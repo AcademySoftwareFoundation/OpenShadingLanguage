@@ -3,6 +3,8 @@
 
 Release 1.13.10.0 -- 1 June 2024 (compared to 1.13.9.0)
 --------------------------------------------------------
+  - *testrender*: Implement new Oren-Nayar model from OpenPBR [#1817](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1817) (by Christopher Kulla)
+  - *docs*: Fix outdated or wrong repo URLs [#1811](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1811)
 
 
 Release 1.13.9.0 -- 1 May 2024 (compared to 1.13.8.0)

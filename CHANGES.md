@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.13.10.0 -- 1 June 2024 (compared to 1.13.9.0)
+--------------------------------------------------------
+
+
 Release 1.13.9.0 -- 1 May 2024 (compared to 1.13.8.0)
 --------------------------------------------------------
   - *deps*: Support for LLVM-18 [#1773](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1773) (by مهدي شينون (Mehdi Chinoune) [#1803](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1803) (by Larry Gritz)

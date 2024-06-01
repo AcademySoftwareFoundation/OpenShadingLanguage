@@ -1267,7 +1267,7 @@ properties of the physically-based shading nodes of MaterialX v1.38
 
 ### Surface BSDF closures
 
-`closure color` **`oren_nayar_diffuse_bsdf`** `(normal N, color albedo, float roughness)`
+`closure color` **`oren_nayar_diffuse_bsdf`** `(normal N, color albedo, float roughness, int energy_compensation=0)`
 
   : Constructs a diffuse reflection BSDF based on the Oren-Nayar reflectance
     model.
@@ -1283,10 +1283,14 @@ properties of the physically-based shading nodes of MaterialX v1.38
     `roughness`
       : Surface roughness [0,1]. A value of 0.0 gives Lambertian reflectance.
 
+    `energy_compensation`
+      : Optional int parameter to select if energy compensation should be applied.
+
     The Oren-Nayar reflection model is described in  M. Oren and S. K.
     Nayar, "Generalization of Lambert's Reflectance Model," Proceedings of
     SIGGRAPH 1994, pp.239-246 (July, 1994).
 
+    The energy compensated model is described in the white paper: "An energy-preserving Qualitative Oren-Nayar model" by Jamie Portsmouth.
 
 `closure color` **`burley_diffuse_bsdf`** `(normal N, color albedo, float roughness)`
 

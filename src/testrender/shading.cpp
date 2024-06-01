@@ -399,7 +399,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_COLOR_PARAM(MxSheenParams, albedo),
             CLOSURE_FLOAT_PARAM(MxSheenParams, roughness),
             CLOSURE_STRING_KEYPARAM(MxSheenParams, label, "label"),
-            CLOSURE_INT_KEYPARAM(MxSheenParams   , mode, "mode"),
+            CLOSURE_INT_KEYPARAM(MxSheenParams, mode, "mode"),
             CLOSURE_FINISH_PARAM(MxSheenParams) } },
         { "uniform_edf",
           MX_UNIFORM_EDF_ID,
@@ -1455,7 +1455,10 @@ struct CharlieSheen final : public BSDF, MxSheenParams {
 // Tizian Zeltner, Brent Burley, Matt Jen-Yuan Chiang - Siggraph 2022
 // https://tizianzeltner.com/projects/Zeltner2022Practical/
 struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
-    ZeltnerBurleySheen(const MxSheenParams& params) : BSDF(), MxSheenParams(params) {}
+    ZeltnerBurleySheen(const MxSheenParams& params)
+        : BSDF(), MxSheenParams(params)
+    {
+    }
 
 #define USE_LTC_SAMPLING 1
 
@@ -1469,36 +1472,27 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
     {
         const Vec3 L = wi, V = wo;
         const float NdotV = clamp(N.dot(V), 0.0f, 1.0f);
-        const Vec3 ltc = fetch_ltc(NdotV);
+        const Vec3 ltc    = fetch_ltc(NdotV);
 
-        const Vec3 T1 = (V - N * NdotV).normalize();
-        const Vec3 T2 = N.cross(T1);
-        const Vec3 localL = Vec3(
-            T1.dot(L),
-            T2.dot(L),
-            N.dot(L)
-        );
+        const Vec3 T1     = (V - N * NdotV).normalize();
+        const Vec3 T2     = N.cross(T1);
+        const Vec3 localL = Vec3(T1.dot(L), T2.dot(L), N.dot(L));
 
         const float aInv = ltc.x, bInv = ltc.y, R = ltc.z;
-        Vec3 wiOriginal(
-            aInv * localL.x + bInv * localL.z,
-            aInv * localL.y,
-            localL.z);
+        Vec3 wiOriginal(aInv * localL.x + bInv * localL.z, aInv * localL.y,
+                        localL.z);
         const float len2 = dot(wiOriginal, wiOriginal);
 
-        float det = aInv * aInv;
+        float det      = aInv * aInv;
         float jacobian = det / (len2 * len2);
 
 #if USE_LTC_SAMPLING == 1
         float pdf = jacobian * std::max(wiOriginal.z, 0.0f) * float(M_1_PI);
-        return { wi,
-                 Color3(R),
-                 pdf, 1.0f };
+        return { wi, Color3(R), pdf, 1.0f };
 #else
         float pdf = float(0.5 * M_1_PI);
         // NOTE: sheen closure has no fresnel/masking
-        return { wi,
-                 Color3(2 * R * jacobian * std::max(wiOriginal.z, 0.0f)),
+        return { wi, Color3(2 * R * jacobian * std::max(wiOriginal.z, 0.0f)),
                  pdf, 1.0f };
 #endif
     }
@@ -1506,9 +1500,9 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
     Sample sample(const Vec3& wo, float rx, float ry, float rz) const override
     {
 #if USE_LTC_SAMPLING == 1
-        const Vec3 V = wo;
+        const Vec3 V      = wo;
         const float NdotV = clamp(N.dot(V), 0.0f, 1.0f);
-        const Vec3 ltc = fetch_ltc(NdotV);
+        const Vec3 ltc    = fetch_ltc(NdotV);
         const float aInv = ltc.x, bInv = ltc.y, R = ltc.z;
         Vec3 wi;
         float pdf;
@@ -1518,15 +1512,12 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
 
         const Vec3 T1 = (V - N * NdotV).normalize();
         const Vec3 T2 = N.cross(T1);
-        const Vec3 L = Vec3(wi.x * T1 + wi.y * T2 + wi.z * N);
+        const Vec3 L  = Vec3(wi.x * T1 + wi.y * T2 + wi.z * N);
 
         // TODO: is there a cheaper way to get the jacobian here?
-        const Vec3 wiOriginal(
-            aInv * wi.x + bInv * wi.z,
-            aInv * wi.y,
-            wi.z);
-        const float len2 = dot(wiOriginal, wiOriginal);
-        const float det = aInv * aInv;
+        const Vec3 wiOriginal(aInv * wi.x + bInv * wi.z, aInv * wi.y, wi.z);
+        const float len2     = dot(wiOriginal, wiOriginal);
+        const float det      = aInv * aInv;
         const float jacobian = det / (len2 * len2);
         pdf = jacobian * std::max(wiOriginal.z, 0.0f) * float(M_1_PI);
 
@@ -1539,17 +1530,27 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
         return eval(wo, out_dir);
 #endif
     }
+
 private:
-    Vec3 fetch_ltc(float NdotV) const {
+    Vec3 fetch_ltc(float NdotV) const
+    {
         // To avoid look-up tables, we use a fit of the LTC coefficients derived by Stephen Hill:
         // https://blog.selfshadow.com/sheen/ltc_sheen.html
         float x = NdotV;
         float y = roughness;
-        float A = ((2.58126f * x + 0.813703f * y) * y) / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
-        float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y / (0.0000254053f + 1.71228f * x - 1.71506f * x * y + 1.34174f * y * y);
-        float s = y * (0.0206607f + 1.58491f * y) / (0.0379424f + y * (1.32227f + y));
-        float m = y * (-0.193854f + y * (-1.14885 + y*(1.7932f - 0.95943f * y * y))) / (0.046391f + y);
-        float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y) / (1.26264f + y * (-1.92021f + y));
+        float A = ((2.58126f * x + 0.813703f * y) * y)
+                  / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
+        float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y
+                  / (0.0000254053f + 1.71228f * x - 1.71506f * x * y
+                     + 1.34174f * y * y);
+        float s = y * (0.0206607f + 1.58491f * y)
+                  / (0.0379424f + y * (1.32227f + y));
+        float m = y
+                  * (-0.193854f
+                     + y * (-1.14885 + y * (1.7932f - 0.95943f * y * y)))
+                  / (0.046391f + y);
+        float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y)
+                  / (1.26264f + y * (-1.92021f + y));
         float q = (x - m) / s;
         float R = expf(-0.5f * q * q) / (s * float(sqrt(2.0 * M_PI))) + o;
         return Vec3(A, B, R);
@@ -1884,7 +1885,8 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 if (params.mode == 1)
                     ok = result.bsdf.add_bsdf<ZeltnerBurleySheen>(cw, params);
                 else
-                    ok = result.bsdf.add_bsdf<CharlieSheen>(cw, params); // default to legacy closure
+                    ok = result.bsdf.add_bsdf<CharlieSheen>(
+                        cw, params);  // default to legacy closure
                 break;
             }
             case MX_LAYER_ID: {

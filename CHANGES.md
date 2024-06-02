@@ -1,6 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.13.11.0 -- 1? July 2024 (compared to 1.13.10.0)
+---------------------------------------------------------
+
+
+
 Release 1.13.10.0 -- 1 June 2024 (compared to 1.13.9.0)
 --------------------------------------------------------
   - *testrender*: Implement new Oren-Nayar model from OpenPBR [#1817](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1817) (by Christopher Kulla)

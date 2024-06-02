@@ -211,7 +211,7 @@ if (USE_LLVM_BITCODE)
     EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependent_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependent_ops" lib_src "" "${include_dirs}")
 
     if (CUDA_FOUND)
-        add_definitions (-DOSL_LLVM_CUDA_BITCODE)
+        add_compile_definitions (OSL_LLVM_CUDA_BITCODE)
 
         # The shadeops are compiled to both LLVM bitcode and PTX, and embedded
         # in liboslexec in binary format. The bitcode is used to seed the LLVM
@@ -255,7 +255,7 @@ else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due
     # to clang being unable to compile MSVC C++ header files at this time.
     # Instead it is part of the regular build process.
-    add_definitions (-DOSL_LLVM_NO_BITCODE)
+    add_compile_definitions (OSL_LLVM_NO_BITCODE)
     set (lib_src ${lib_src} llvm_ops.cpp)
 endif ()
 

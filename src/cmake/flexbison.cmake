@@ -41,7 +41,7 @@ if ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
     macro ( FLEX_BISON flexsrc bisonsrc prefix srclist compiler_headers )
         # mangle osoparse & oslparse symbols to avoid multiple library conflicts
         # XXX: This may be excessive now that OSL::pvt::ExtraArg is mangled into the function signature
-        add_definitions(-D${prefix}parse=${PROJ_NAMESPACE_V}_${prefix}parse)
+        add_compile_definitions(${prefix}parse=${PROJ_NAMESPACE_V}_${prefix}parse)
 
         message (VERBOSE "FLEX_BISON flex=${flexsrc} bison=${bisonsrc} prefix=${prefix}")
         get_filename_component ( bisonsrc_we ${bisonsrc} NAME_WE )

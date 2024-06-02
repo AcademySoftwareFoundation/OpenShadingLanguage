@@ -118,28 +118,28 @@ option (OSL_USTRINGREP_IS_HASH "Always use ustringhash for strings" OFF)
 
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
 if (OSL_NO_DEFAULT_TEXTURESYSTEM)
-    add_definitions ("-DOSL_NO_DEFAULT_TEXTURESYSTEM=1")
+    add_compile_definitions (OSL_NO_DEFAULT_TEXTURESYSTEM=1)
 endif ()
 
 option (USE_FAST_MATH "Use fast math approximations (if no, then use system math library)" ON)
 if (USE_FAST_MATH)
-    add_definitions ("-DOSL_FAST_MATH=1")
+    add_compile_definitions (OSL_FAST_MATH=1)
 else ()
-    add_definitions ("-DOSL_FAST_MATH=0")
+    add_compile_definitions (OSL_FAST_MATH=0)
 endif ()
 
 option (OIIO_FMATH_SIMD_FRIENDLY "Make sure OIIO fmath functions are SIMD-friendly" OFF)
 if (OIIO_FMATH_SIMD_FRIENDLY)
-    add_definitions (-DOIIO_FMATH_SIMD_FRIENDLY=1)
+    add_compile_definitions (OIIO_FMATH_SIMD_FRIENDLY=1)
 endif ()
 
 # Define OSL_INTERNAL symbol only when building OSL itself, will not be
 # defined for downstream projects using OSL.
-add_definitions (-DOSL_INTERNAL=1)
+add_compile_definitions (OSL_INTERNAL=1)
 
 # To make sure we aren't relying on deprecated OIIO features, we define
 # OIIO_DISABLE_DEPRECATED before including any OIIO headers.
-add_definitions (-DOIIO_DISABLE_DEPRECATED=900000)
+add_compile_definitions (OIIO_DISABLE_DEPRECATED=900000)
 
 # Set the default namespace. For symbol hiding reasons, it's important that
 # the project name is a subset of the namespace name.

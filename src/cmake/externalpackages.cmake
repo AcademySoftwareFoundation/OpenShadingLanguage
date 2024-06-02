@@ -50,7 +50,7 @@ checked_find_package (OpenEXR REQUIRED
 # install version of 2.x.
 include_directories(BEFORE ${IMATH_INCLUDES})
 if (MSVC AND NOT LINKSTATIC)
-    add_definitions (-DOPENEXR_DLL) # Is this needed for new versions?
+    add_compile_definitions (OPENEXR_DLL) # Is this needed for new versions?
 endif ()
 
 if (OPENEXR_VERSION VERSION_GREATER_EQUAL 2.5.99)
@@ -63,7 +63,7 @@ endif ()
 # OpenImageIO
 checked_find_package (OpenImageIO REQUIRED
                       VERSION_MIN 2.4
-                      DEFINITIONS -DOIIO_HIDE_FORMAT=1)
+                      DEFINITIONS OIIO_HIDE_FORMAT=1)
 
 checked_find_package (pugixml REQUIRED
                       VERSION_MIN 1.8)
@@ -80,10 +80,10 @@ link_directories ("${LLVM_LIB_DIR}")
 # Extract and concatenate major & minor, remove wayward patches,
 # dots, and "svn" or other suffixes.
 string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
-add_definitions (-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION})
-add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
+add_compile_definitions (OSL_LLVM_VERSION=${OSL_LLVM_VERSION})
+add_compile_definitions (OSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
 if (LLVM_NAMESPACE)
-    add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
+    add_compile_definitions (LLVM_NAMESPACE=${LLVM_NAMESPACE})
 endif ()
 if (APPLE AND LLVM_VERSION VERSION_EQUAL 10.0.1 AND EXISTS "/usr/local/Cellar/llvm")
     message (WARNING
@@ -118,7 +118,7 @@ endif ()
 # Use opaque pointers starting with LLVM 16
 if (${LLVM_VERSION} VERSION_GREATER_EQUAL 16.0)
   set(LLVM_OPAQUE_POINTERS ON)
-  add_definitions (-DOSL_LLVM_OPAQUE_POINTERS)
+  add_compile_definitions (OSL_LLVM_OPAQUE_POINTERS)
 else()
   set(LLVM_OPAQUE_POINTERS OFF)
 endif()
@@ -126,7 +126,7 @@ endif()
 # Enable new pass manager for LLVM 16+
 if (${LLVM_VERSION} VERSION_GREATER_EQUAL 16.0)
   set(LLVM_NEW_PASS_MANAGER ON)
-  add_definitions (-DOSL_LLVM_NEW_PASS_MANAGER)
+  add_compile_definitions (OSL_LLVM_NEW_PASS_MANAGER)
 else()
   set(LLVM_NEW_PASS_MANAGER OFF)
 endif()
@@ -215,7 +215,7 @@ if (OSL_USE_OPTIX)
     function (osl_optix_target TARGET)
         target_include_directories (${TARGET} BEFORE PRIVATE ${CUDA_INCLUDES} ${OPTIX_INCLUDES})
         ## XXX: Should -DPTX_PATH point to (or include) CMAKE_CURRENT_BINARY_DIR so tests can run before installation ?
-        target_compile_definitions (${TARGET} PRIVATE "-DPTX_PATH=\"${OSL_PTX_INSTALL_DIR}\"")
+        target_compile_definitions (${TARGET} PRIVATE PTX_PATH="${OSL_PTX_INSTALL_DIR}")
         target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
     endfunction()
 else ()

@@ -1535,23 +1535,16 @@ private:
         // To avoid look-up tables, we use a fit of the LTC coefficients derived by Stephen Hill
         // for the implementation in MaterialX:
         // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_sheen.glsl
-        float x = NdotV;
-        float y = roughness;
-        float A = ((2.58126f * x + 0.813703f * y) * y)
-                  / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
-        float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y
-                  / (0.0000254053f + 1.71228f * x - 1.71506f * x * y
-                     + 1.34174f * y * y);
-        float s = y * (0.0206607f + 1.58491f * y)
-                  / (0.0379424f + y * (1.32227f + y));
-        float m = y
-                  * (-0.193854f
-                     + y * (-1.14885 + y * (1.7932f - 0.95943f * y * y)))
-                  / (0.046391f + y);
-        float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y)
-                  / (1.26264f + y * (-1.92021f + y));
-        float q = (x - m) / s;
-        float R = expf(-0.5f * q * q) / (s * float(sqrt(2.0 * M_PI))) + o;
+        const float x = NdotV;
+        const float y = roughness;
+        const float A = ((2.58126f * x + 0.813703f * y) * y) / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
+        const float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y / (0.0000254053f + 1.71228f * x - 1.71506f * x * y + 1.34174f * y * y);
+        const float invs = (0.0379424f + y * (1.32227f + y)) / (y * (0.0206607f + 1.58491f * y));
+        const float m = y * (-0.193854f + y * (-1.14885 + y * (1.7932f - 0.95943f * y * y))) / (0.046391f + y);
+        const float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y) / (1.26264f + y * (-1.92021f + y));
+        float q = (x - m) * invs;
+        const float inv_sqrt2pi = 0.39894228040143f;
+        float R = expf(-0.5f * q * q) * invs * inv_sqrt2pi + o;
         return Vec3(A, B, R);
     }
 };

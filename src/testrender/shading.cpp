@@ -591,14 +591,15 @@ struct Phong final : public BSDF, PhongParams {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
             // reflect the view vector
-            Vec3 R = (2 * cosNO) * N - wo;
+            Vec3 R    = (2 * cosNO) * N - wo;
             float phi = 2 * float(M_PI) * rx;
             float sp, cp;
             OIIO::fast_sincos(phi, &sp, &cp);
             float cosTheta  = OIIO::fast_safe_pow(ry, 1 / (exponent + 1));
             float sinTheta2 = 1 - cosTheta * cosTheta;
             float sinTheta  = sinTheta2 > 0 ? sqrtf(sinTheta2) : 0;
-            Vec3 wi         = TangentFrame::from_normal(R).get(cp * sinTheta, sp * sinTheta, cosTheta);
+            Vec3 wi         = TangentFrame::from_normal(R).get(cp * sinTheta,
+                                                               sp * sinTheta, cosTheta);
             return eval(wo, wi);
         }
         return {};
@@ -1034,7 +1035,8 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     MxMicrofacet(const MxMicrofacetParams& params, float refraction_ior)
         : BSDF()
         , MxMicrofacetParams(params)
-        , tf(TangentFrame::from_normal_and_tangent(MxMicrofacetParams::N, MxMicrofacetParams::U))
+        , tf(TangentFrame::from_normal_and_tangent(MxMicrofacetParams::N,
+                                                   MxMicrofacetParams::U))
         , refraction_ior(refraction_ior)
     {
     }
@@ -1468,7 +1470,8 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
         const float NdotV = clamp(N.dot(V), 0.0f, 1.0f);
         const Vec3 ltc    = fetch_ltc(NdotV);
 
-        const Vec3 localL = TangentFrame::from_normal_and_tangent(N, V).tolocal(L);
+        const Vec3 localL = TangentFrame::from_normal_and_tangent(N, V).tolocal(
+            L);
 
         const float aInv = ltc.x, bInv = ltc.y, R = ltc.z;
         Vec3 wiOriginal(aInv * localL.x + bInv * localL.z, aInv * localL.y,
@@ -1505,7 +1508,7 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
         const float jacobian = len2 * len2 / (aInv * aInv);
         const Vec3 wn        = w / sqrtf(len2);
 
-        const Vec3 L  = TangentFrame::from_normal_and_tangent(N, V).toworld(wn);
+        const Vec3 L = TangentFrame::from_normal_and_tangent(N, V).toworld(wn);
 
         pdf = jacobian * std::max(wn.z, 0.0f) * float(M_1_PI);
 

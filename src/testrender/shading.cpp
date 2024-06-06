@@ -592,14 +592,13 @@ struct Phong final : public BSDF, PhongParams {
         if (cosNO > 0) {
             // reflect the view vector
             Vec3 R = (2 * cosNO) * N - wo;
-            TangentFrame tf(R);
             float phi = 2 * float(M_PI) * rx;
             float sp, cp;
             OIIO::fast_sincos(phi, &sp, &cp);
             float cosTheta  = OIIO::fast_safe_pow(ry, 1 / (exponent + 1));
             float sinTheta2 = 1 - cosTheta * cosTheta;
             float sinTheta  = sinTheta2 > 0 ? sqrtf(sinTheta2) : 0;
-            Vec3 wi         = tf.get(cp * sinTheta, sp * sinTheta, cosTheta);
+            Vec3 wi         = TangentFrame::from_normal(R).get(cp * sinTheta, sp * sinTheta, cosTheta);
             return eval(wo, wi);
         }
         return {};
@@ -616,7 +615,7 @@ struct Ward final : public BSDF, WardParams {
             // get half vector and get x,y basis on the surface for anisotropy
             Vec3 H = wi + wo;
             H.normalize();  // normalize needed for pdf
-            TangentFrame tf(N, T);
+            TangentFrame tf = TangentFrame::from_normal_and_tangent(N, T);
             // eq. 4
             float dotx = tf.getx(H) / ax;
             float doty = tf.gety(H) / ay;
@@ -638,7 +637,7 @@ struct Ward final : public BSDF, WardParams {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
-            TangentFrame tf(N, T);
+            TangentFrame tf = TangentFrame::from_normal_and_tangent(N, T);
             // generate random angles for the half vector
             float phi = 2 * float(M_PI) * rx;
             float sp, cp;
@@ -811,8 +810,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
     Microfacet(const MicrofacetParams& params)
         : BSDF()
         , MicrofacetParams(params)
-        , tf(U == Vec3(0) || xalpha == yalpha ? TangentFrame(N)
-                                              : TangentFrame(N, U))
+        , tf(TangentFrame::from_normal_and_tangent(N, U))
     {
     }
     Color3 get_albedo(const Vec3& wo) const override
@@ -1036,11 +1034,7 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     MxMicrofacet(const MxMicrofacetParams& params, float refraction_ior)
         : BSDF()
         , MxMicrofacetParams(params)
-        , tf(MxMicrofacetParams::U == Vec3(0)
-                     || MxMicrofacetParams::roughness_x
-                            == MxMicrofacetParams::roughness_y
-                 ? TangentFrame(MxMicrofacetParams::N)
-                 : TangentFrame(MxMicrofacetParams::N, MxMicrofacetParams::U))
+        , tf(TangentFrame::from_normal_and_tangent(MxMicrofacetParams::N, MxMicrofacetParams::U))
         , refraction_ior(refraction_ior)
     {
     }
@@ -1474,9 +1468,7 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
         const float NdotV = clamp(N.dot(V), 0.0f, 1.0f);
         const Vec3 ltc    = fetch_ltc(NdotV);
 
-        const Vec3 T1     = (V - N * NdotV).normalize();
-        const Vec3 T2     = N.cross(T1);
-        const Vec3 localL = Vec3(T1.dot(L), T2.dot(L), N.dot(L));
+        const Vec3 localL = TangentFrame::from_normal_and_tangent(N, V).tolocal(L);
 
         const float aInv = ltc.x, bInv = ltc.y, R = ltc.z;
         Vec3 wiOriginal(aInv * localL.x + bInv * localL.z, aInv * localL.y,
@@ -1513,9 +1505,7 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
         const float jacobian = len2 * len2 / (aInv * aInv);
         const Vec3 wn        = w / sqrtf(len2);
 
-        const Vec3 T1 = (V - N * NdotV).normalize();
-        const Vec3 T2 = N.cross(T1);
-        const Vec3 L  = Vec3(wn.x * T1 + wn.y * T2 + wn.z * N);
+        const Vec3 L  = TangentFrame::from_normal_and_tangent(N, V).toworld(wn);
 
         pdf = jacobian * std::max(wn.z, 0.0f) * float(M_1_PI);
 

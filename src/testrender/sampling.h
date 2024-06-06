@@ -14,18 +14,28 @@ OSL_NAMESPACE_ENTER
 
 struct TangentFrame {
     // build frame from unit normal
-    TangentFrame(const Vec3& n) : w(n)
-    {
-        u = (fabsf(w.x) > .01f ? Vec3(w.z, 0, -w.x) : Vec3(0, -w.z, w.y))
-                .normalize();
-        v = w.cross(u);
+    static TangentFrame from_normal(const Vec3& n) {
+        // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+        const float sign = copysignf(1.0f, n.z);
+        const float a = -1 / (sign + n.z);
+        const float b = n.x * n.y * a;
+        const Vec3 u = Vec3(1 + sign * n.x * n.x * a, sign * b, -sign * n.x);
+        const Vec3 v = Vec3(b, sign + n.y * n.y * a, -n.y);
+        return { u, v, n };
     }
 
     // build frame from unit normal and unit tangent
-    TangentFrame(const Vec3& n, const Vec3& t) : w(n)
-    {
-        v = w.cross(t);
-        u = v.cross(w);
+    // fallsback to an arbitrary basis if the tangent is 0 or colinear with n
+    static TangentFrame from_normal_and_tangent(const Vec3& n, const Vec3& t) {
+        Vec3 y = n.cross(t);
+        float ylen2 = dot(y, y);
+        if (ylen2 > 0) {
+            y *= 1.0f / sqrtf(ylen2);
+            return { y.cross(n), y, n };
+        } else {
+            // degenerate case, fallback to generic tangent frame
+            return from_normal(n);
+        }
     }
 
     // transform vector
@@ -42,7 +52,6 @@ struct TangentFrame {
     }
     Vec3 toworld(const Vec3& a) const { return get(a.x, a.y, a.z); }
 
-private:
     Vec3 u, v, w;
 };
 
@@ -76,8 +85,7 @@ struct Sampling {
     {
         to_unit_disk(rndx, rndy);
         float cos_theta = sqrtf(std::max(1 - rndx * rndx - rndy * rndy, 0.0f));
-        TangentFrame f(N);
-        out = f.get(rndx, rndy, cos_theta);
+        out = TangentFrame::from_normal(N).get(rndx, rndy, cos_theta);
         pdf = cos_theta * float(M_1_PI);
     }
 
@@ -87,8 +95,7 @@ struct Sampling {
         float phi       = float(2 * M_PI) * rndx;
         float cos_theta = rndy;
         float sin_theta = sqrtf(1 - cos_theta * cos_theta);
-        TangentFrame f(N);
-        out = f.get(sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta);
+        out = TangentFrame::from_normal(N).get(sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta);
         pdf = float(0.5 * M_1_PI);
     }
 };

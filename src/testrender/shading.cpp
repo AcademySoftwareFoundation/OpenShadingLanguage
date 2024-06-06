@@ -1508,18 +1508,16 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
         float pdf;
         Sampling::sample_cosine_hemisphere(Vec3(0, 0, 1), rx, ry, wi, pdf);
 
-        wi = Vec3(wi.x - wi.z * bInv, wi.y, wi.z * aInv).normalize();
+        const Vec3 w = Vec3(wi.x - wi.z * bInv, wi.y, wi.z * aInv);
+        const float len2 = dot(w, w);
+        const float jacobian = len2 * len2 / (aInv * aInv);
+        const Vec3 wn = w / sqrtf(len2);
 
         const Vec3 T1 = (V - N * NdotV).normalize();
         const Vec3 T2 = N.cross(T1);
-        const Vec3 L  = Vec3(wi.x * T1 + wi.y * T2 + wi.z * N);
+        const Vec3 L  = Vec3(wn.x * T1 + wn.y * T2 + wn.z * N);
 
-        // TODO: is there a cheaper way to get the jacobian here?
-        const Vec3 wiOriginal(aInv * wi.x + bInv * wi.z, aInv * wi.y, wi.z);
-        const float len2     = dot(wiOriginal, wiOriginal);
-        const float det      = aInv * aInv;
-        const float jacobian = det / (len2 * len2);
-        pdf = jacobian * std::max(wiOriginal.z, 0.0f) * float(M_1_PI);
+        pdf = jacobian * std::max(wn.z, 0.0f) * float(M_1_PI);
 
         return { L, Color3(R), pdf, 1.0f };
 #else
@@ -1534,8 +1532,9 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
 private:
     Vec3 fetch_ltc(float NdotV) const
     {
-        // To avoid look-up tables, we use a fit of the LTC coefficients derived by Stephen Hill:
-        // https://blog.selfshadow.com/sheen/ltc_sheen.html
+        // To avoid look-up tables, we use a fit of the LTC coefficients derived by Stephen Hill
+        // for the implementation in MaterialX:
+        // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_sheen.glsl
         float x = NdotV;
         float y = roughness;
         float A = ((2.58126f * x + 0.813703f * y) * y)

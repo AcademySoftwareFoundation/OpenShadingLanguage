@@ -184,8 +184,7 @@ OSL_SHADEOP void
 osl_texture_set_interp(void* opt, ustringhash_pod modename_)
 {
     ustringhash modename_hash = ustringhash_from(modename_);
-    ustring modename          = ustring_from(modename_hash);
-    int mode                  = tex_interp_to_code(modename);
+    int mode                  = tex_interp_to_code(modename_hash);
     if (mode >= 0)
         ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
 }

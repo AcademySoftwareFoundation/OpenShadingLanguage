@@ -1508,10 +1508,10 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
         float pdf;
         Sampling::sample_cosine_hemisphere(Vec3(0, 0, 1), rx, ry, wi, pdf);
 
-        const Vec3 w = Vec3(wi.x - wi.z * bInv, wi.y, wi.z * aInv);
-        const float len2 = dot(w, w);
+        const Vec3 w         = Vec3(wi.x - wi.z * bInv, wi.y, wi.z * aInv);
+        const float len2     = dot(w, w);
         const float jacobian = len2 * len2 / (aInv * aInv);
-        const Vec3 wn = w / sqrtf(len2);
+        const Vec3 wn        = w / sqrtf(len2);
 
         const Vec3 T1 = (V - N * NdotV).normalize();
         const Vec3 T2 = N.cross(T1);
@@ -1537,14 +1537,22 @@ private:
         // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_sheen.glsl
         const float x = NdotV;
         const float y = roughness;
-        const float A = ((2.58126f * x + 0.813703f * y) * y) / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
-        const float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y / (0.0000254053f + 1.71228f * x - 1.71506f * x * y + 1.34174f * y * y);
-        const float invs = (0.0379424f + y * (1.32227f + y)) / (y * (0.0206607f + 1.58491f * y));
-        const float m = y * (-0.193854f + y * (-1.14885 + y * (1.7932f - 0.95943f * y * y))) / (0.046391f + y);
-        const float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y) / (1.26264f + y * (-1.92021f + y));
-        float q = (x - m) * invs;
+        const float A = ((2.58126f * x + 0.813703f * y) * y)
+                        / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
+        const float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y
+                        / (0.0000254053f + 1.71228f * x - 1.71506f * x * y
+                           + 1.34174f * y * y);
+        const float invs = (0.0379424f + y * (1.32227f + y))
+                           / (y * (0.0206607f + 1.58491f * y));
+        const float m = y
+                        * (-0.193854f
+                           + y * (-1.14885 + y * (1.7932f - 0.95943f * y * y)))
+                        / (0.046391f + y);
+        const float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y)
+                        / (1.26264f + y * (-1.92021f + y));
+        float q                 = (x - m) * invs;
         const float inv_sqrt2pi = 0.39894228040143f;
-        float R = expf(-0.5f * q * q) * invs * inv_sqrt2pi + o;
+        float R                 = expf(-0.5f * q * q) * invs * inv_sqrt2pi + o;
         return Vec3(A, B, R);
     }
 };

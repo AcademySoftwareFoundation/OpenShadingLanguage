@@ -29,7 +29,7 @@ struct TangentFrame {
     // fallsback to an arbitrary basis if the tangent is 0 or colinear with n
     static TangentFrame from_normal_and_tangent(const Vec3& n, const Vec3& t)
     {
-        Vec3 x = t - n * dot(n, t);
+        Vec3 x      = t - n * dot(n, t);
         float xlen2 = dot(x, x);
         if (xlen2 > 0) {
             x *= 1.0f / sqrtf(xlen2);

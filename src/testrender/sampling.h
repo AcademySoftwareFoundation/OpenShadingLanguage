@@ -29,11 +29,11 @@ struct TangentFrame {
     // fallsback to an arbitrary basis if the tangent is 0 or colinear with n
     static TangentFrame from_normal_and_tangent(const Vec3& n, const Vec3& t)
     {
-        Vec3 y      = n.cross(t);
-        float ylen2 = dot(y, y);
-        if (ylen2 > 0) {
-            y *= 1.0f / sqrtf(ylen2);
-            return { y.cross(n), y, n };
+        Vec3 x = t - n * dot(n, t);
+        float xlen2 = dot(x, x);
+        if (xlen2 > 0) {
+            x *= 1.0f / sqrtf(xlen2);
+            return { x, n.cross(x), n };
         } else {
             // degenerate case, fallback to generic tangent frame
             return from_normal(n);

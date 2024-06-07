@@ -1648,63 +1648,6 @@ BackendLLVM::build_llvm_instance(bool groupentry)
                     }
                 }
 
-                if (con.dst.arrayindex != -1 && con.src.arrayindex == -1
-                    && initedsyms.count(dstsym) == 0) {
-                    initedsyms.insert(dstsym);
-                    // This may just be a sparse set of connections, so we go
-                    // ahead and run the initializers if any would otherwise
-                    // be left out
-                    int initArrayIndex = con.dst.arrayindex;
-
-                    int arraylen     = 0;
-                    TypeSpec dstType = dstsym->typespec();
-                    if (dstType.is_unsized_array()) {
-                        const ShaderInstance::SymOverrideInfo* sym_override
-                            = child->instoverride(con.dst.param);
-
-                        OSL_DASSERT(sym_override);
-
-                        if (sym_override
-                            && (sym_override->valuesource()
-                                    == Symbol::InstanceVal
-                                || sym_override->valuesource()
-                                       == Symbol::ConnectedVal)) {
-                            arraylen = sym_override->arraylen();
-                        } else {
-                            arraylen = 0;
-                        }
-
-                    } else {
-                        arraylen = dstType.numelements();
-                    }
-
-                    std::vector<bool> inited(arraylen, false);
-                    inited[con.dst.arrayindex] = true;
-                    unsigned ninit             = arraylen - 1;
-                    llvm_assign_initial_value(*dstsym, true, initArrayIndex);
-                    for (int rc = c + 1; rc < Nc && ninit; ++rc) {
-                        const Connection& next(child->connection(rc));
-                        if (next.srclayer == this->layer()) {
-                            // Allow redundant/overwriting connections, i.e:
-                            // 1.  connect layer.value[i] connect layer.value[j]
-                            // 2.  connect layer.value connect layer.value
-                            if (child->symbol(next.dst.param) == dstsym) {
-                                if (next.dst.arrayindex != -1) {
-                                    initArrayIndex = next.dst.arrayindex;
-                                    if (!inited[initArrayIndex]) {
-                                        inited[initArrayIndex] = true;
-                                        llvm_assign_initial_value(
-                                            *dstsym, true, initArrayIndex);
-                                    }
-                                } else {
-                                    llvm_assign_initial_value(*dstsym, true);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
                 // llvm_run_connected_layers tracks layers that have been run,
                 // so no need to do it here as well
                 llvm_run_connected_layers(*srcsym, con.src.param);

@@ -3353,8 +3353,7 @@ RuntimeOptimizer::run()
                     m_unknown_closures_needed = true;
                 }
             } else if (op.opname() == u_backfacing) {
-                m_globals_needed.insert(u_N);
-                m_globals_needed.insert(u_I);
+                m_globals_needed.insert(u_backfacing);
             } else if (op.opname() == u_calculatenormal) {
                 m_globals_needed.insert(u_flipHandedness);
             } else if (op.opname() == u_getattribute) {

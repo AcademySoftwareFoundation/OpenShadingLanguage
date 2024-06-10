@@ -555,7 +555,7 @@ transformWideTextureGradients(BatchedTextureOutputs& outputs,
             {
                 MaskedDx<float> drds(resultRef);
                 MaskedDy<float> drdt(resultRef);
-    
+
                 OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
                 for (int i = 0; i < __OSL_WIDTH; ++i) {
                     float drdsVal = drds[i];
@@ -578,7 +578,7 @@ transformWideTextureGradients(BatchedTextureOutputs& outputs,
                 for (int i = 0; i < __OSL_WIDTH; ++i) {
                     Color3 drdsColor = widedrds[i];
                     Color3 drdtColor = widedrdt[i];
-    
+
                     widedrds[i] = drdsColor * dsdx[i] + drdtColor * dtdx[i];
                     widedrdt[i] = drdsColor * dsdy[i] + drdtColor * dtdy[i];
                 }
@@ -623,15 +623,17 @@ transformWideTextureGradientsTexture3d(BatchedTextureOutputs& outputs,
                     float dres_xVal = drds[i];
                     float dres_yVal = drdt[i];
                     //float dres_zVal = drdr[i];
-    
+
                     Vec3 v3pdx = Pdx[i];
                     Vec3 v3pdy = Pdy[i];
                     //Vec3 v3pdz = Pdz[i];
 
                     float dres_x = dres_xVal * v3pdx.x
-                                   + dres_yVal * v3pdx.y;  // + dres_zVal * v3pdx.z;
+                                   + dres_yVal
+                                         * v3pdx.y;  // + dres_zVal * v3pdx.z;
                     float dres_y = dres_xVal * v3pdy.x
-                                   + dres_yVal * v3pdy.y;  // + dres_zVal * v3pdy.z;
+                                   + dres_yVal
+                                         * v3pdy.y;  // + dres_zVal * v3pdy.z;
                     //float dres_z = dres_xVal * v3pdz.x + dres_yVal * v3pdz.y + dres_zVal * v3pdz.z;
 
                     drds[i] = dres_x;

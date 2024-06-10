@@ -155,11 +155,6 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
     // Shading accumulator
     Color3 weight = Color3(1.0f);
 
-    // We need a scratch space to "construct" BSDFs for the get_albedo() call.
-    // We can't call the constructors since vitual function calls aren't
-    // supported in OptiX.
-    char bsdf_scratch[128];
-
     while (closure) {
         switch (closure->id) {
         case MUL: {
@@ -187,8 +182,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
             case REFLECTION_ID:
             case FRESNEL_REFLECTION_ID: {
                 const ReflectionParams* params = comp->as<ReflectionParams>();
-                Reflection* bsdf = new (&bsdf_scratch[0]) Reflection(*params);
-                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
+                Reflection bsdf(*params);
+                weight *= w * bsdf.get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }
@@ -200,9 +195,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                     closure = nullptr;
                     break;
                 }
-                MxDielectricOpaque* bsdf = new (&bsdf_scratch[0])
-                    MxDielectricOpaque(*params, 1.0f);
-                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
+                MxDielectricOpaque bsdf(*params, 1.0f);
+                weight *= w * bsdf.get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }
@@ -214,16 +208,15 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                     closure = nullptr;
                     break;
                 }
-                MxGeneralizedSchlickOpaque* bsdf = new (&bsdf_scratch[0])
-                    MxGeneralizedSchlickOpaque(*params, 1.0f);
-                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
+                MxGeneralizedSchlickOpaque bsdf(*params, 1.0f);
+                weight *= w * bsdf.get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }
             case MX_SHEEN_ID: {
                 const MxSheenParams* params = comp->as<MxSheenParams>();
-                MxSheen* bsdf = new (&bsdf_scratch[0]) MxSheen(*params);
-                weight *= w * bsdf->get_albedo(-F3_TO_V3(sg.I));
+                MxSheen bsdf(*params);
+                weight *= w * bsdf.get_albedo(-F3_TO_V3(sg.I));
                 closure = nullptr;
                 break;
             }

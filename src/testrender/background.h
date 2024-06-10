@@ -12,7 +12,7 @@ OSL_NAMESPACE_ENTER
 
 #ifdef __CUDACC__
 // std::upper_bound is not supported in device code, so define a version of it here.
-// Adapted from /usr/local/cuda-12.3/targets/x86_64-linux/include/cuda/std/detail/libcxx/include/algorithm
+// Adapted from the LLVM Project, see https://llvm.org/LICENSE.txt for license information.
 inline OSL_HOSTDEVICE const float*
 upper_bound_cuda(const float* data, int count, const float value)
 {

@@ -94,6 +94,7 @@ struct MxOrenNayarDiffuseParams {
     float roughness;
     // optional
     OSL::ustringhash label;
+    int energy_compensation;
 };
 
 struct MxBurleyDiffuseParams {

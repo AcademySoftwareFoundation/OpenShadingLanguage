@@ -7,4 +7,4 @@
 failthresh = 0.03   # allow a little more LSB noise between platforms
 failpercent = .5
 outputs  = [ "out.exr" ]
-command  = testrender("-optix -res 320 240 scene.xml out.exr")
+command  = testrender("-optix -res 320 240 -no-jitter -albedo 1.0 scene.xml out.exr")

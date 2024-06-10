@@ -24,7 +24,9 @@ if (OSL_USE_OPTIX)
         )
 
     set ( testshade_cuda_headers
-        ../testrender/cuda/rend_lib.h )
+        ../testrender/cuda/rend_lib.h
+        ../testrender/raytracer.h
+        )
 
     # We need to make sure that the PTX files are regenerated whenever these
     # headers change.

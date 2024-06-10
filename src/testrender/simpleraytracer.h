@@ -99,6 +99,9 @@ public:
     OIIO::ParamValueList options;
     OIIO::ImageBuf pixelbuf;
 
+    int getBackgroundShaderID() const { return backgroundShaderID; }
+    int getBackgroundResolution() const { return backgroundResolution; }
+
 private:
     // Camera parameters
     Matrix44 m_world_to_camera;

@@ -4,6 +4,8 @@
 
 #pragma once
 
+namespace testshade {
+
 struct RenderParams {
     float invw;
     float invh;
@@ -40,3 +42,5 @@ struct GenericRecord {
     // What follows should duplicate GenericData
     void* data;
 };
+
+}  // namespace testshade

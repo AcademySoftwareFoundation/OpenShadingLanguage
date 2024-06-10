@@ -10,10 +10,14 @@
 
 #include <OSL/oslclosure.h>
 
+#include "optix_raytracer.h"
 #include "rend_lib.h"
-#include "util.h"
+#include "vec_math.h"
 
 #include "../render_params.h"
+#include "../shading.h"
+
+using OSL_CUDA::ShaderGlobals;
 
 
 extern "C" {
@@ -30,21 +34,21 @@ __anyhit__any_hit_shadow()
 
 
 static __device__ void
-globals_from_hit(ShaderGlobals& sg)
+globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
 {
     const GenericRecord* record = reinterpret_cast<GenericRecord*>(
         optixGetSbtDataPointer());
 
-    ShaderGlobals local_sg;
+    OSL_CUDA::ShaderGlobals local_sg;
     // hit-kind 0: quad hit
     //          1: sphere hit
-    optixDirectCall<void, unsigned int, float, float3, float3, ShaderGlobals*>(
+    optixDirectCall<void, unsigned int, float, float3, float3, OSL_CUDA::ShaderGlobals*>(
         optixGetHitKind(), optixGetPrimitiveIndex(), optixGetRayTmax(),
         optixGetWorldRayOrigin(), optixGetWorldRayDirection(), &local_sg);
     // Setup the ShaderGlobals
     const float3 ray_direction = optixGetWorldRayDirection();
     const float3 ray_origin    = optixGetWorldRayOrigin();
-    const float t_hit          = optixGetRayTmin();
+    const float t_hit          = optixGetRayTmax();
 
     sg.I  = ray_direction;
     sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
@@ -65,7 +69,7 @@ globals_from_hit(ShaderGlobals& sg)
     }
 
     // NB: These variables are not used in the current iteration of the sample
-    sg.raytype        = CAMERA;
+    sg.raytype        = OSL::Ray::CAMERA;
     sg.flipHandedness = 0;
 }
 
@@ -95,38 +99,39 @@ process_closure(const OSL::ClosureColor* closure_tree)
 
     const void* cur = closure_tree;
     while (cur) {
-        switch (((OSL::ClosureColor*)cur)->id) {
-        case OSL::ClosureColor::ADD: {
+        ClosureIDs id = static_cast<ClosureIDs>(((OSL::ClosureColor*)cur)->id);
+        switch (id) {
+        case ClosureIDs::ADD: {
             ptr_stack[stack_idx]      = ((OSL::ClosureAdd*)cur)->closureB;
             weight_stack[stack_idx++] = weight;
             cur                       = ((OSL::ClosureAdd*)cur)->closureA;
             break;
         }
 
-        case OSL::ClosureColor::MUL: {
+        case ClosureIDs::MUL: {
             weight *= ((OSL::ClosureMul*)cur)->weight;
             cur = ((OSL::ClosureMul*)cur)->closure;
             break;
         }
 
-        case EMISSION_ID: {
+        case ClosureIDs::EMISSION_ID: {
             cur = NULL;
             break;
         }
 
-        case DIFFUSE_ID:
-        case OREN_NAYAR_ID:
-        case PHONG_ID:
-        case WARD_ID:
-        case REFLECTION_ID:
-        case REFRACTION_ID:
-        case FRESNEL_REFLECTION_ID: {
+        case ClosureIDs::DIFFUSE_ID:
+        case ClosureIDs::OREN_NAYAR_ID:
+        case ClosureIDs::PHONG_ID:
+        case ClosureIDs::WARD_ID:
+        case ClosureIDs::REFLECTION_ID:
+        case ClosureIDs::REFRACTION_ID:
+        case ClosureIDs::FRESNEL_REFLECTION_ID: {
             result += ((OSL::ClosureComponent*)cur)->w * weight;
             cur = NULL;
             break;
         }
 
-        case MICROFACET_ID: {
+        case ClosureIDs::MICROFACET_ID: {
             const char* mem = (const char*)((OSL::ClosureComponent*)cur)->data();
             OSL::ustringhash dist_uh = *(OSL::ustringhash*)&mem[0];
 
@@ -161,7 +166,7 @@ __closesthit__closest_hit_osl()
     //       exceeded.
     alignas(8) char closure_pool[256];
 
-    ShaderGlobals sg;
+    OSL_CUDA::ShaderGlobals sg;
     globals_from_hit(sg);
 
     // Pack the "closure pool" into one of the ShaderGlobals pointers
@@ -184,7 +189,7 @@ __closesthit__closest_hit_osl()
     void* interactive_ptr = reinterpret_cast<void**>(
         render_params.interactive_params)[sg.shaderID];
     const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
-    optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
+    optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
         shaderIdx, &sg /*shaderglobals_ptr*/, nullptr /*groupdata_ptr*/,
         nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
         0 /*shadeindex - unused*/, interactive_ptr /*interactive_params_ptr*/);

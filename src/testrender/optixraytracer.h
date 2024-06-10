@@ -14,7 +14,37 @@
 #include "render_params.h"
 #include "simpleraytracer.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_ENTER;
+
+
+struct State {
+    OptixModuleCompileOptions module_compile_options     = {};
+    OptixPipelineCompileOptions pipeline_compile_options = {};
+    OptixPipelineLinkOptions pipeline_link_options       = {};
+    OptixProgramGroupOptions program_options             = {};
+
+    OptixModule program_module;
+    OptixModule quad_module;
+    OptixModule sphere_module;
+    OptixModule wrapper_module;
+    OptixModule rend_lib_module;
+    OptixModule shadeops_module;
+
+    OptixProgramGroup raygen_group;
+    OptixProgramGroup miss_group;
+    OptixProgramGroup rend_lib_group;
+    OptixProgramGroup shadeops_group;
+    OptixProgramGroup setglobals_raygen_group;
+    OptixProgramGroup setglobals_miss_group;
+    OptixProgramGroup quad_hit_group;
+    OptixProgramGroup sphere_hit_group;
+    OptixProgramGroup quad_fillSG_dc_group;
+    OptixProgramGroup sphere_fillSG_dc_group;
+
+    std::vector<OptixModule> shader_modules;
+    std::vector<OptixProgramGroup> shader_groups;
+    std::vector<OptixProgramGroup> final_groups;
+};
 
 
 class OptixRaytracer final : public SimpleRaytracer {
@@ -37,12 +67,21 @@ public:
 
     bool init_optix_context(int xres, int yres);
     bool make_optix_materials();
+    void build_accel();
+    void prepare_background();
     bool finalize_scene();
     void prepare_render() override;
     void warmup() override;
     void render(int xres, int yres) override;
     void finalize_pixel_buffer() override;
     void clear() override;
+
+    void create_modules(State& state);
+    void create_programs(State& state);
+    void create_shaders(State& state);
+    void create_pipeline(State& state);
+    void create_sbt(State& state);
+    void cleanup_programs(State& state);
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
@@ -80,7 +119,11 @@ private:
     CUdeviceptr d_quads_list         = 0;
     CUdeviceptr d_spheres_list       = 0;
     CUdeviceptr d_interactive_params = 0;
-    int m_xres, m_yres;
+    CUdeviceptr d_bg_values          = 0;
+    CUdeviceptr d_bg_rows            = 0;
+    CUdeviceptr d_bg_cols            = 0;
+    int m_xres = 0;
+    int m_yres = 0;
     CUdeviceptr d_osl_printf_buffer;
     CUdeviceptr d_color_system;
     uint64_t test_str_1;
@@ -98,6 +141,9 @@ private:
 
     std::string m_materials_ptx;
     std::unordered_map<ustringhash, optix::TextureSampler> m_samplers;
+
+    std::vector<void*> device_ptrs;
+    std::vector<void*> array_ptrs;
 };
 
 

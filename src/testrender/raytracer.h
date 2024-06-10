@@ -32,7 +32,7 @@ class OptixRenderer;  // FIXME -- should not be here
 
 
 // build two vectors orthogonal to the first, assumes n is normalized
-inline void
+inline OSL_HOSTDEVICE void
 ortho(const Vec3& n, Vec3& x, Vec3& y)
 {
     x = (fabsf(n.x) > .01f ? Vec3(n.z, 0, -n.x) : Vec3(0, -n.z, n.y))
@@ -41,7 +41,6 @@ ortho(const Vec3& n, Vec3& x, Vec3& y)
 }
 
 
-// Note: not used in OptiX mode
 struct Ray {
     enum RayType {
         CAMERA       = 1,
@@ -54,6 +53,7 @@ struct Ray {
         DISPLACEMENT = 128
     };
 
+    OSL_HOSTDEVICE
     Ray(const Vec3& o, const Vec3& d, float radius, float spread,
         RayType raytype)
         : origin(o)
@@ -64,7 +64,9 @@ struct Ray {
     {
     }
 
+    OSL_HOSTDEVICE
     Vec3 point(float t) const { return origin + direction * t; }
+
     Dual2<Vec3> dual_direction() const
     {
         Dual2<Vec3> v;
@@ -75,6 +77,7 @@ struct Ray {
         return v;
     }
 
+    OSL_HOSTDEVICE
     Dual2<Vec3> point(Dual2<float> t) const
     {
         const float r = radius + spread * t.val();
@@ -283,9 +286,11 @@ struct Sphere final : public Primitive {
     {
         SphereParams* sphere_data = reinterpret_cast<SphereParams*>(data);
         sphere_data->c            = make_float3(c.x, c.y, c.z);
+        sphere_data->r            = r;
         sphere_data->r2           = r2;
-        sphere_data->a            = M_PI * (r2 * r2);
+        sphere_data->a            = M_PI * r2;
         sphere_data->shaderID     = shaderid();
+        sphere_data->isLight      = islight();
     }
 #endif
 
@@ -389,6 +394,7 @@ struct Quad final : public Primitive {
         quad_data->ev         = ev;
         quad_data->a          = a;
         quad_data->shaderID   = shaderid();
+        quad_data->isLight    = islight();
     }
 #endif
 

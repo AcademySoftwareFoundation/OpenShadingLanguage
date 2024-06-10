@@ -18,6 +18,8 @@
 #include <OSL/oslexec.h>
 
 
+#include "../raytracer.h"
+
 OSL_NAMESPACE_ENTER
 
 
@@ -87,6 +89,7 @@ struct ShadingContextCUDA {
 };
 
 
+namespace OSL_CUDA {
 struct ShaderGlobals {
     float3 P, dPdx, dPdy;
     float3 dPdz;
@@ -117,86 +120,6 @@ struct ShaderGlobals {
     int backfacing;
     int shaderID;
 };
-
-
-enum RayType {
-    CAMERA       = 1,
-    SHADOW       = 2,
-    REFLECTION   = 4,
-    REFRACTION   = 8,
-    DIFFUSE      = 16,
-    GLOSSY       = 32,
-    SUBSURFACE   = 64,
-    DISPLACEMENT = 128
-};
-
-
-// Closures supported by the OSL sample renderer.  This list is mostly aspirational.
-enum ClosureIDs {
-    EMISSION_ID = 1,
-    BACKGROUND_ID,
-    DIFFUSE_ID,
-    OREN_NAYAR_ID,
-    TRANSLUCENT_ID,
-    PHONG_ID,
-    WARD_ID,
-    MICROFACET_ID,
-    REFLECTION_ID,
-    FRESNEL_REFLECTION_ID,
-    REFRACTION_ID,
-    TRANSPARENT_ID,
-    DEBUG_ID,
-    HOLDOUT_ID,
-};
-
-
-// ========================================
-//
-// Some helper vector functions
-//
-static __forceinline__ __device__ float3
-operator*(const float a, const float3& b)
-{
-    return make_float3(a * b.x, a * b.y, a * b.z);
 }
-
-static __forceinline__ __device__ float3
-operator*(const float3& a, const float b)
-{
-    return make_float3(a.x * b, a.y * b, a.z * b);
-}
-
-static __forceinline__ __device__ float3
-operator+(const float3& a, const float3& b)
-{
-    return make_float3(a.x + b.x, a.y + b.y, a.z + b.z);
-}
-
-static __forceinline__ __device__ float3
-operator-(const float3& a, const float3& b)
-{
-    return make_float3(a.x - b.x, a.y - b.y, a.z - b.z);
-}
-
-static __forceinline__ __device__ float3
-operator-(const float3& a)
-{
-    return make_float3(-a.x, -a.y, -a.z);
-}
-
-static __forceinline__ __device__ float
-dot(const float3& a, const float3& b)
-{
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-static __forceinline__ __device__ float3
-normalize(const float3& v)
-{
-    float invLen = 1.0f / sqrtf(dot(v, v));
-    return invLen * v;
-}
-//
-// ========================================
 
 }  // anonymous namespace

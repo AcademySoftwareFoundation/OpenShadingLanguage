@@ -196,8 +196,7 @@ struct MxTranslucentParams {
 struct MxSubsurfaceParams {
     Vec3 N;
     Color3 albedo;
-    float transmission_depth;
-    Color3 transmission_color;
+    Color3 radius;
     float anisotropy;
     // optional
     ustringhash label;
@@ -389,8 +388,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
           MX_SUBSURFACE_ID,
           { CLOSURE_VECTOR_PARAM(MxSubsurfaceParams, N),
             CLOSURE_COLOR_PARAM(MxSubsurfaceParams, albedo),
-            CLOSURE_FLOAT_PARAM(MxSubsurfaceParams, transmission_depth),
-            CLOSURE_COLOR_PARAM(MxSubsurfaceParams, transmission_color),
+            CLOSURE_COLOR_PARAM(MxSubsurfaceParams, radius),
             CLOSURE_FLOAT_PARAM(MxSubsurfaceParams, anisotropy),
             CLOSURE_STRING_KEYPARAM(MxSubsurfaceParams, label, "label"),
             CLOSURE_FINISH_PARAM(MxSubsurfaceParams) } },

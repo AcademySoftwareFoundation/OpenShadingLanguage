@@ -33,6 +33,7 @@ if (OSL_USE_OPTIX)
         shading.h
         shading.cpp
         shading_cuda.cpp
+        simpleraytracer.cpp
         cuda/vec_math.h
         )
 

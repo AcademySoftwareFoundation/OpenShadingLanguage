@@ -9,13 +9,11 @@
 #include "optix_raytracer.h"
 #include "rend_lib.h"
 #include "vec_math.h"
-#include "wrapper.h"
 
 
 static __device__ __inline__ void
-calc_uv(float3 shading_normal, float& u, float& v, float3& dPdu, float3& dPdv, float r)
+calc_uv(OSL::Vec3 n, float& u, float& v, OSL::Vec3& dPdu, OSL::Vec3& dPdv, float r)
 {
-    const float3 n = shading_normal;
     u = (atan2(n.x, n.z) + float(M_PI)) * 0.5f
         * float(M_1_PI);
     v = acos(n.y) * float(M_1_PI);

@@ -20,6 +20,11 @@
 #    include <vector_functions.h>  // from CUDA
 #endif
 
+#ifdef __CUDACC__
+#    include "cuda/rend_lib.h"
+#    include "cuda/vec_math.h"
+#endif
+
 // The primitives don't included the intersection routines, etc., from the
 // versions in testrender, since those operations are performed on the GPU.
 //
@@ -97,9 +102,10 @@ struct Ray {
 
 
 struct Camera {
-    Camera() {}
+    OSL_HOSTDEVICE Camera() {}
 
     // Set where the camera sits and looks at.
+    OSL_HOSTDEVICE
     void lookat(const Vec3& eye, const Vec3& dir, const Vec3& up, float fov)
     {
         this->eye = eye;
@@ -110,6 +116,7 @@ struct Camera {
     }
 
     // Set resolution
+    OSL_HOSTDEVICE
     void resolution(int w, int h)
     {
         xres = w;
@@ -120,6 +127,7 @@ struct Camera {
     }
 
     // Compute all derived values based on camera parameters.
+    OSL_HOSTDEVICE
     void finalize()
     {
         float k    = OIIO::fast_tan(fov * float(M_PI / 360));
@@ -129,10 +137,21 @@ struct Camera {
     }
 
     // Get a ray for the given screen coordinates.
+    OSL_HOSTDEVICE
     Ray get(float x, float y) const
     {
+        // TODO: On CUDA devices, the normalize() operation can result in vector
+        // components with magnitudes slightly greater than 1.0, which can cause
+        // downstream computations to blow up and produce NaNs. Normalizing the
+        // vector again avoids this issue.
         const Vec3 v = (cx * (x * invw - 0.5f) + cy * (0.5f - y * invh) + dir)
+#ifndef __CUDACC__
                            .normalize();
+#else
+                           .normalize()
+                           .normalized();
+#endif
+
         const float cos_a = dir.dot(v);
         const float spread
             = sqrtf(invw * invh * cx.length() * cy.length() * cos_a) * cos_a;
@@ -412,7 +431,7 @@ struct Scene {
 
     int num_prims() const { return spheres.size() + quads.size(); }
 
-    bool intersect(const Ray& r, Dual2<float>& t, int& primID) const
+    bool intersect(const Ray& r, Dual2<float>& t, int& primID, const void* sg=nullptr) const
     {
         const int ns   = spheres.size();
         const int nq   = quads.size();

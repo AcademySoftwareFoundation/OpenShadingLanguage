@@ -4,7 +4,9 @@
 #include <optix.h>
 
 #include "rend_lib.h"
+#include "../background.h"
 #include "../raytracer.h"
+#include "../sampling.h"
 
 #include <cstdint>
 
@@ -37,5 +39,42 @@ struct Payload {
         raytype = (OSL::Ray::RayType)optixGetPayload_4();
     }
 };
+
+OSL_NAMESPACE_ENTER
+
+struct CudaScene {
+    OSL_HOSTDEVICE bool intersect(const Ray& r, Dual2<float>& t, int& primID,
+                                  void* sg = nullptr) const;
+    OSL_HOSTDEVICE float shapepdf(int primID, const Vec3& x,
+                                  const Vec3& p) const;
+    OSL_HOSTDEVICE bool islight(int primID) const;
+    OSL_HOSTDEVICE Vec3 sample(int primID, const Vec3& x, float xi, float yi,
+                               float& pdf) const;
+    OSL_HOSTDEVICE int num_prims() const;
+
+    uint64_t num_spheres;
+    uint64_t num_quads;
+    CUdeviceptr spheres_buffer;
+    CUdeviceptr quads_buffer;
+    OptixTraversableHandle handle;
+};
+
+struct SimpleRaytracer {
+    Background background;
+    Camera camera;
+    CudaScene scene;
+    int aa                   = 1;
+    int backgroundResolution = 1024;
+    int backgroundShaderID   = -1;
+    int max_bounces          = 1000000;
+    int rr_depth             = 5;
+    float show_albedo_scale  = 0.0f;
+
+    using ShadingContext = ShadingContextCUDA;
+    OSL_HOSTDEVICE Color3 subpixel_radiance(float x, float y, Sampler& sampler,
+                                            ShadingContext* ctx = nullptr);
+};
+
+OSL_NAMESPACE_EXIT
 
 #endif  // #ifdef __CUDACC__

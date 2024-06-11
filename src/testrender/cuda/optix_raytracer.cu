@@ -68,8 +68,8 @@ globals_from_hit(ShaderGlobalsType& sg, float radius = 0.0f, float spread = 0.0f
     Dual2<Vec3> P = ray.point(t);
 
     sg.I  = ray_direction;
-    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
-    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.Ng));
+    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(V3_TO_F3(local_sg.N)));
+    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(V3_TO_F3(local_sg.Ng)));
     sg.P  = V3_TO_F3(P.val());
     sg.dPdx        = V3_TO_F3(P.dx());
     sg.dPdy        = V3_TO_F3(P.dy());
@@ -79,7 +79,7 @@ globals_from_hit(ShaderGlobalsType& sg, float radius = 0.0f, float spread = 0.0f
     sg.v           = local_sg.v;
     sg.Ci          = nullptr;
     sg.surfacearea = local_sg.surfacearea;
-    sg.backfacing  = dot(sg.N, sg.I) > 0.0f;
+    sg.backfacing  = dot(V3_TO_F3(sg.N), V3_TO_F3(sg.I)) > 0.0f;
     sg.shaderID    = local_sg.shaderID;
 
     if (sg.backfacing) {
@@ -88,7 +88,7 @@ globals_from_hit(ShaderGlobalsType& sg, float radius = 0.0f, float spread = 0.0f
     }
 
     sg.raytype        = raytype;
-    sg.flipHandedness = dot(sg.N, cross(sg.dPdx, sg.dPdy)) < 0.0f;
+    sg.flipHandedness = dot(V3_TO_F3(sg.N), cross(V3_TO_F3(sg.dPdx), V3_TO_F3(sg.dPdy))) < 0.0f;
 }
 
 
@@ -632,7 +632,7 @@ process_background_closure(const ShaderGlobalsType& sg, const ClosureColor* clos
 
 
 static __device__ Color3
-eval_background(const Dual2<Vec3>& dir, int bounce = -1)
+eval_background(const Dual2<Vec3>& dir, void* /*ctx*/, int bounce = -1)
 {
     ShaderGlobalsType sg;
     memset((char*)&sg, 0, sizeof(ShaderGlobalsType));
@@ -652,18 +652,18 @@ eval_background(const Dual2<Vec3>& dir, int bounce = -1)
 // Return a direction towards a point on the sphere
 // Adapted from Sphere::sample in ../raytracer.h
 static __device__ float3
-sample_sphere(const float3& x, const SphereParams& sphere, float xi, float yi,
+sample_sphere(const Vec3& x, const SphereParams& sphere, float xi, float yi,
               float& pdf)
 {
     const float TWOPI = float(2 * M_PI);
-    float cmax2       = 1 - sphere.r2 / dot(sphere.c - x, sphere.c - x);
+    float cmax2       = 1 - sphere.r2 / dot(sphere.c - V3_TO_F3(x), sphere.c - V3_TO_F3(x));
     float cmax        = cmax2 > 0 ? sqrtf(cmax2) : 0;
     float cos_a       = 1 - xi + xi * cmax;
     float sin_a       = sqrtf(1 - cos_a * cos_a);
     float phi         = TWOPI * yi;
     float sp, cp;
     OIIO::fast_sincos(phi, &sp, &cp);
-    float3 sw = normalize(sphere.c - x), su, sv;
+    float3 sw = normalize(sphere.c - V3_TO_F3(x)), su, sv;
     ortho(sw, su, sv);
     pdf = 1 / (TWOPI * (1 - cmax));
     return normalize(su * (cp * sin_a) + sv * (sp * sin_a) + sw * cos_a);
@@ -673,10 +673,10 @@ sample_sphere(const float3& x, const SphereParams& sphere, float xi, float yi,
 // Return a direction towards a point on the quad
 // Adapted from Quad::sample in ../raytracer.h
 static __device__ float3
-sample_quad(const float3& x, const QuadParams& quad, float xi, float yi,
+sample_quad(const Vec3& x, const QuadParams& quad, float xi, float yi,
             float& pdf)
 {
-    float3 l   = (quad.p + xi * quad.ex + yi * quad.ey) - x;
+    float3 l   = (quad.p + xi * quad.ex + yi * quad.ey) - V3_TO_F3(x);
     float  d2  = dot(l, l); // l.length2();
     float3 dir = normalize(l);
     pdf        = d2 / (quad.a * fabsf(dot(dir, quad.n)));
@@ -708,282 +708,86 @@ trace_ray(OptixTraversableHandle handle, const Payload& payload, const float3& o
                p0, p1, p2, p3, p4);
 };
 
+//
+// CudaScene
+//
 
-static inline __device__ Color3
-subpixel_radiance(Ray r, Sampler& sampler, Background& background)
+OSL_HOSTDEVICE bool
+CudaScene::intersect(const Ray& r, Dual2<float>& t, int& primID, void* sg) const
 {
-    Color3 path_weight(1, 1, 1);
-    Color3 path_radiance(0, 0, 0);
-    float bsdf_pdf = std::numeric_limits<
-        float>::infinity();  // camera ray has only one possible direction
-
-    // TODO: Should these be separate?
-    alignas(8) char closure_pool[256];
-    alignas(8) char light_closure_pool[256];
-
-    int max_bounces = render_params.max_bounces;
-    int rr_depth    = 5;
-
-    int prev_hit_idx  = -1;
-    int prev_hit_kind = -1;
-
-    for (int bounce = 0; bounce <= max_bounces; bounce++) {
-        const bool last_bounce = bounce == max_bounces;
-        int hit_idx  = prev_hit_idx;
-        int hit_kind = prev_hit_kind;
-
-        //
-        // Trace camera/bounce ray
-        //
-
-        ShaderGlobalsType sg;
-        sg.shaderID = -1;
-
-        uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
-                                   *(unsigned int*)&hit_idx,
-                                   *(unsigned int*)&hit_kind };
-        sg.tracedata           = (void*)&trace_data[0];
-
-        Payload payload;
-        payload.sg_ptr  = &sg;
-        payload.radius  = r.radius;
-        payload.spread  = r.spread;
-        payload.raytype = *reinterpret_cast<Ray::RayType*>(&r.raytype);
-        trace_ray(render_params.traversal_handle, payload,
-                  V3_TO_F3(r.origin), V3_TO_F3(r.direction));
-
-        //
-        // Execute the shader
-        //
-
-        ShadingResult result;
-        if (sg.shaderID >= 0) {
-            hit_idx  = trace_data[0];
-            hit_kind = trace_data[1];
-            execute_shader(sg, closure_pool);
-        } else {
-            // ray missed
-            if (render_params.bg_id >= 0) {
-                if (bounce > 0 && render_params.bg_res > 0) {
-                    float bg_pdf = 0;
-                    Vec3 bg      = background.eval(r.direction, bg_pdf);
-                    path_radiance
-                        += path_weight * bg
-                           * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bsdf_pdf,
-                                                                      bg_pdf);
-                } else {
-                    // we aren't importance sampling the background - so just run it directly
-                    path_radiance += path_weight * eval_background(r.direction, bounce);
-                }
-            }
-            break;
-        }
-
-        const float t      = ((float*)trace_data)[2];
-        const float radius = r.radius + r.spread * t;
-
-        //
-        // Process the output closure
-        //
-
-        process_closure(sg, result, (void*) sg.Ci, last_bounce);
-
-        //
-        // Helpers
-        //
-
-        auto is_light = [&](unsigned int idx, unsigned int hit_kind) {
-            QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
-            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
-
-            return (hit_kind == 0)
-                       ? quads[idx].isLight
-                       : spheres[idx].isLight;
-        };
-
-        auto shape_pdf = [&](unsigned int idx, unsigned int hit_kind,
-                             const Vec3& x, const Vec3& p) {
-            QuadParams* quads     = (QuadParams*)render_params.quads_buffer;
-            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
-            return (hit_kind == 0)
-                       ? quads[idx].shapepdf(x, p)
-                       : spheres[idx].shapepdf(x, p);
-        };
-
-        //
-        // Add self-emission
-        //
-
-        float k = 1;
-        if (is_light(hit_idx, hit_kind)) {
-            // figure out the probability of reaching this point
-            float light_pdf = shape_pdf(hit_idx, hit_kind, r.origin, F3_TO_V3(sg.P));
-            k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
-        }
-        path_radiance += path_weight * k * result.Le;
-
-        if (last_bounce) {
-            break;
-        }
-
-        //
-        // Build PDF
-        //
-
-        result.bsdf.prepare(-F3_TO_V3(sg.I), path_weight, bounce >= rr_depth);
-
-        if (render_params.show_albedo_scale > 0) {
-            // Instead of path tracing, just visualize the albedo
-            // of the bsdf. This can be used to validate the accuracy of
-            // the get_albedo method for a particular bsdf.
-            path_radiance = path_weight
-                             * result.bsdf.get_albedo(-F3_TO_V3(sg.I))
-                             * render_params.show_albedo_scale;
-            break;
-        }
-
-        // get three random numbers
-        Vec3 s   = sampler.get();
-        float xi = std::max(0.0f, std::min(1.0f, s.x));
-        float yi = std::max(0.0f, std::min(1.0f, s.y));
-        float zi = std::max(0.0f, std::min(1.0f, s.z));
-
-        //
-        // Trace background ray
-        //
-
-        // trace one ray to the background
-        if (render_params.bg_id >= 0) {
-            const float3 origin = sg.P;
-            Dual2<Vec3> bg_dir;
-            float bg_pdf   = 0;
-            Vec3 bg        = background.sample(xi, yi, bg_dir, bg_pdf);
-            BSDF::Sample b = result.bsdf.eval(-F3_TO_V3(sg.I), bg_dir.val());
-            Color3 contrib = path_weight * b.weight * bg
-                * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
-                                                           b.pdf);
-
-            if ((contrib.x + contrib.y + contrib.z) > 0) {
-                ShaderGlobalsType light_sg;
-                light_sg.shaderID = -1;
-
-                Payload payload;
-                payload.sg_ptr  = &light_sg;
-                payload.radius  = radius;
-                payload.spread  = 0.0f;
-                payload.raytype = Ray::SHADOW;
-
-                uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
-                    *(unsigned int*)&hit_idx,
-                    *(unsigned int*)&hit_kind };
-                light_sg.tracedata           = (void*)&trace_data[0];
-
-                const float3 dir = V3_TO_F3(bg_dir.val());
-                trace_ray(render_params.traversal_handle, payload, origin, dir);
-
-                const uint32_t prim_idx = trace_data[0];
-                if (prim_idx == UINT32_MAX) {
-                    path_radiance += contrib;
-                }
-            }
-        }
-
-        //
-        // Trace light rays
-        //
-
-        auto sample_light = [&](const float3& light_dir, float light_pdf, int idx) {
-            const float3 origin = sg.P;
-            BSDF::Sample b      = result.bsdf.eval(-F3_TO_V3(sg.I),
-                                                   F3_TO_V3(light_dir));
-            Color3 contrib      = path_weight * b.weight
-                             * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
-                                                                      b.pdf);
-
-            if ((contrib.x + contrib.y + contrib.z) > 0) {
-                ShaderGlobalsType light_sg;
-                light_sg.shaderID = -1;
-
-                Payload payload;
-                payload.sg_ptr  = &light_sg;
-                payload.radius  = radius;
-                payload.spread  = 0.0f;
-                payload.raytype = Ray::SHADOW;
-
-                uint32_t trace_data[4] = { UINT32_MAX, UINT32_MAX,
-                                           *(unsigned int*)&hit_idx,
-                                           *(unsigned int*)&hit_kind };
-                light_sg.tracedata     = (void*)&trace_data[0];
-
-                trace_ray(render_params.traversal_handle, payload, origin,
-                          light_dir);
-
-                const uint32_t prim_idx = trace_data[0];
-                if (prim_idx == idx && light_sg.shaderID >= 0) {
-                    // execute the light shader (for emissive closures only)
-                    execute_shader(light_sg, light_closure_pool);
-
-                    ShadingResult light_result;
-                    process_closure(light_sg, light_result, (void*)light_sg.Ci,
-                                    true);
-
-                    // accumulate contribution
-                    path_radiance += contrib * light_result.Le;
-                }
-            }
-        };
-
-        // Trace one ray to each quad light
-        for (size_t idx = 0; idx < render_params.num_quads; ++idx) {
-            QuadParams* quads = (QuadParams*)render_params.quads_buffer;
-            if (hit_kind == 0 && hit_idx == idx)
-                continue;  // skip self
-            if (is_light(idx, 0)) {
-                float light_pdf        = 0.0f;
-                const float3 light_dir = sample_quad(sg.P, quads[idx], xi, yi,
-                                                     light_pdf);
-                sample_light(light_dir, light_pdf, idx);
-            }
-        }
-
-        // Trace one ray to each sphere light
-        for (size_t idx = 0; idx < render_params.num_spheres; ++idx) {
-            SphereParams* spheres = (SphereParams*)render_params.spheres_buffer;
-            if (hit_kind == 1 && hit_idx == idx)
-                continue;  // skip self
-            if (is_light(idx, 1)) {
-                float light_pdf        = 0.0f;
-                const float3 light_dir = sample_sphere(sg.P, spheres[idx], xi,
-                                                       yi, light_pdf);
-                sample_light(light_dir, light_pdf, idx);
-            }
-        }
-
-        //
-        // Setup bounce ray
-        //
-
-        BSDF::Sample p = result.bsdf.sample(-F3_TO_V3(sg.I), xi, yi, zi);
-        path_weight *= p.weight;
-        bsdf_pdf  = p.pdf;
-        r.raytype = Ray::DIFFUSE;  // FIXME? Use DIFFUSE for all indiirect rays
-        r.direction = p.wi;
-        r.radius    = radius;
-        // Just simply use roughness as spread slope
-        r.spread = std::max(r.spread, p.roughness);
-        if (!(path_weight.x > 0) && !(path_weight.y > 0)
-            && !(path_weight.z > 0)) {
-            break;  // filter out all 0's or NaNs
-        }
-
-        prev_hit_idx  = hit_idx;
-        prev_hit_kind = hit_kind;
-        r.origin = sg.P;
+    Payload payload;
+    payload.sg_ptr  = reinterpret_cast<ShaderGlobalsType*>(sg);
+    payload.radius  = r.radius;
+    payload.spread  = r.spread;
+    payload.raytype = *reinterpret_cast<const Ray::RayType*>(&r.raytype);
+    // The renderer uses global object IDs across primitive types, but
+    // OptiX uses object IDs for each primitive type. So we need to convert
+    // between the two ranges.
+    // TODO: Make this less convoluted.
+    {
+        int* tracedata = (int*)payload.sg_ptr->tracedata;
+        int hit_kind   = tracedata[3];
+        primID = (hit_kind == 0) ? primID - num_spheres : primID;
+        tracedata[2]   = (hit_kind == 0) ? tracedata[2] - num_spheres
+                                         : tracedata[2];
+        trace_ray(handle, payload, V3_TO_F3(r.origin), V3_TO_F3(r.direction));
     }
-
-    return path_radiance;
+    {
+        int* tracedata = (int*)payload.sg_ptr->tracedata;
+        int hit_kind   = tracedata[1];
+        primID = (hit_kind == 0) ? tracedata[0] + num_spheres : tracedata[0];
+        tracedata[0] = primID;
+    }
+    return (payload.sg_ptr->shaderID >= 0);
 }
 
+
+OSL_HOSTDEVICE float
+CudaScene::shapepdf(int primID, const Vec3& x, const Vec3& p) const
+{
+    SphereParams* spheres = (SphereParams*)spheres_buffer;
+    QuadParams* quads     = (QuadParams*)quads_buffer;
+    return (primID < num_spheres)
+               ? spheres[primID].shapepdf(x, p)
+               : quads[primID - num_spheres].shapepdf(x, p);
+}
+
+
+OSL_HOSTDEVICE bool
+CudaScene::islight(int primID) const
+{
+    SphereParams* spheres = (SphereParams*)spheres_buffer;
+    QuadParams* quads     = (QuadParams*)quads_buffer;
+
+    if (primID < num_spheres)
+        return spheres[primID].isLight;
+    return quads[primID - num_spheres].isLight;
+}
+
+
+OSL_HOSTDEVICE Vec3
+CudaScene::sample(int primID, const Vec3& x, float xi, float yi,
+                  float& pdf) const
+{
+    SphereParams* spheres = (SphereParams*)spheres_buffer;
+    QuadParams* quads     = (QuadParams*)quads_buffer;
+
+    float3 res;
+    if (primID < num_spheres)
+        res = sample_sphere(x, spheres[primID], xi, yi, pdf);
+    else
+        res = sample_quad(x, quads[primID - num_spheres], xi, yi, pdf);
+    return F3_TO_V3(res);
+}
+
+
+OSL_HOSTDEVICE int
+CudaScene::num_prims() const
+{
+    return num_spheres + num_quads;
+}
+
+//------------------------------------------------------------------------------
 
 // Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
 // let's do the texture look-ups in this file.
@@ -1042,7 +846,7 @@ __raygen__setglobals()
         return;
 
     auto evaler = [](const Dual2<Vec3>& dir) {
-        return eval_background(dir);
+        return eval_background(dir, nullptr);
     };
 
     // Background::prepare_cuda must run on a single warp
@@ -1102,24 +906,34 @@ __raygen__deferred()
             = make_float2(static_cast<float>(launch_index.x) + 0.5f + j.x,
                           static_cast<float>(launch_index.y) + 0.5f + j.y);
 
-        const Vec3& eye  = F3_TO_V3(render_params.eye);
-        const Vec3& dir  = F3_TO_V3(render_params.dir);
-        const Vec3& cx   = F3_TO_V3(render_params.cx);
-        const Vec3& cy   = F3_TO_V3(render_params.cy);
-        const float invw = render_params.invw;
-        const float invh = render_params.invh;
+        SimpleRaytracer raytracer;
+        raytracer.background           = background;
+        raytracer.backgroundResolution = render_params.bg_id >= 0
+                                             ? render_params.bg_res
+                                             : 0;
+        raytracer.backgroundShaderID   = render_params.bg_id;
+        raytracer.max_bounces          = render_params.max_bounces;
+        raytracer.rr_depth             = 5;
+        raytracer.show_albedo_scale    = render_params.show_albedo_scale;
 
-        // Generate the camera ray
-        const Vec3 v = (cx * (d.x * invw - 0.5f) + cy * (0.5f - d.y * invh)
-                        + dir)
-                           .normalize();
-        const float cos_a = dir.dot(v);
-        float spread = sqrtf(invw * invh * cx.length() * cy.length() * cos_a)
-                       * cos_a;
-        Ray ray(eye, v, 0.0f, spread, Ray::RayType::CAMERA);
+        const Vec3 eye  = F3_TO_V3(render_params.eye);
+        const Vec3 dir  = F3_TO_V3(render_params.dir);
+        const Vec3 up   = F3_TO_V3(render_params.up);
+        const float fov = render_params.fov;
 
-        Color3 r = subpixel_radiance(ray, sampler, background);
-        result   = OIIO::lerp(result, r, 1.0f / (si + 1));
+        uint3 launch_dims = optixGetLaunchDimensions();
+        raytracer.camera.resolution(launch_dims.x, launch_dims.y);
+        raytracer.camera.lookat(eye, dir, up, fov);
+        raytracer.camera.finalize();
+
+        raytracer.scene = { render_params.num_spheres, render_params.num_quads,
+                            render_params.spheres_buffer,
+                            render_params.quads_buffer,
+                            render_params.traversal_handle };
+
+        Color3 r = raytracer.subpixel_radiance(d.x, d.y, sampler, nullptr);
+
+        result = OIIO::lerp(result, r, 1.0f / (si + 1));
     }
 
     uint3 launch_dims     = optixGetLaunchDimensions();
@@ -1129,3 +943,11 @@ __raygen__deferred()
     int pixel            = launch_index.y * launch_dims.x + launch_index.x;
     output_buffer[pixel] = C3_TO_F3(result);
 }
+
+//------------------------------------------------------------------------------
+
+// We need to pull in the definition of SimpleRaytracer::subpixel_radiance(),
+// which is shared between the host and CUDA renderers.
+#include "../simpleraytracer.cpp"
+
+//------------------------------------------------------------------------------

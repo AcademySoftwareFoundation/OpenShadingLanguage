@@ -17,8 +17,12 @@
 #include <OSL/hashes.h>
 #include <OSL/oslexec.h>
 
-
 #include "../raytracer.h"
+
+
+#define RAYTRACER_HIT_QUAD   0
+#define RAYTRACER_HIT_SPHERE 1
+
 
 OSL_NAMESPACE_ENTER
 
@@ -91,18 +95,18 @@ struct ShadingContextCUDA {
 
 namespace OSL_CUDA {
 struct ShaderGlobals {
-    float3 P, dPdx, dPdy;
-    float3 dPdz;
-    float3 I, dIdx, dIdy;
-    float3 N;
-    float3 Ng;
+    OSL::Vec3 P, dPdx, dPdy;
+    OSL::Vec3 dPdz;
+    OSL::Vec3 I, dIdx, dIdy;
+    OSL::Vec3 N;
+    OSL::Vec3 Ng;
     float u, dudx, dudy;
     float v, dvdx, dvdy;
-    float3 dPdu, dPdv;
+    OSL::Vec3 dPdu, dPdv;
     float time;
     float dtime;
-    float3 dPdtime;
-    float3 Ps, dPsdx, dPsdy;
+    OSL::Vec3 dPdtime;
+    OSL::Vec3 Ps, dPsdx, dPsdy;
     void* renderstate;
     void* tracedata;
     void* objdata;

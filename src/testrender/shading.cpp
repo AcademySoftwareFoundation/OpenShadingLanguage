@@ -9,7 +9,7 @@
 #include "sampling.h"
 
 #ifdef __CUDACC__
-#include "cuda/vec_math.h"
+#    include "cuda/vec_math.h"
 #endif
 
 

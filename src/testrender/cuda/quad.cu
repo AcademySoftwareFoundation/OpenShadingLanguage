@@ -8,7 +8,6 @@
 #include "optix_raytracer.h"
 #include "rend_lib.h"
 #include "vec_math.h"
-#include "wrapper.h"
 
 
 extern "C" __device__ void
@@ -34,7 +33,7 @@ __direct_callable__quad_shaderglobals(const unsigned int idx, const float t_hit,
     sg->dPdv        = quad.ex;
     sg->surfacearea = quad.a;
     sg->shaderID    = quad.shaderID;
-    sg->backfacing   = dot(sg->N, sg->I) > 0.0f;
+    sg->backfacing  = dot(V3_TO_F3(sg->N), V3_TO_F3(sg->I)) > 0.0f;
 
     if (sg->backfacing) {
         sg->N  = -sg->N;

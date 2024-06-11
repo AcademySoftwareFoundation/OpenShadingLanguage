@@ -51,8 +51,8 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
     const float t_hit          = optixGetRayTmax();
 
     sg.I  = ray_direction;
-    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
-    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.Ng));
+    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(V3_TO_F3(local_sg.N)));
+    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(V3_TO_F3(local_sg.Ng)));
     sg.P  = ray_origin + t_hit * ray_direction;
     sg.dPdu        = local_sg.dPdu;
     sg.dPdv        = local_sg.dPdv;
@@ -60,7 +60,7 @@ globals_from_hit(OSL_CUDA::ShaderGlobals& sg)
     sg.v           = local_sg.v;
     sg.Ci          = NULL;
     sg.surfacearea = local_sg.surfacearea;
-    sg.backfacing  = dot(sg.N, sg.I) > 0.0f;
+    sg.backfacing  = dot(V3_TO_F3(sg.N), V3_TO_F3(sg.I)) > 0.0f;
     sg.shaderID    = local_sg.shaderID;
 
     if (sg.backfacing) {

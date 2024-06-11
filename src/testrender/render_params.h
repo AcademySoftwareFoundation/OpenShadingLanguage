@@ -15,15 +15,12 @@ struct RenderParams {
 
     float3 eye;
     float3 dir;
-    float3 cx;
-    float3 cy;
-    int    aa;
-    int    max_bounces;
-    float  show_albedo_scale;
-    bool   no_jitter;
-
-    float invw;
-    float invh;
+    float3 up;
+    float fov;
+    int aa;
+    int max_bounces;
+    float show_albedo_scale;
+    bool no_jitter;
 
     CUdeviceptr traversal_handle;
     CUdeviceptr output_buffer;
@@ -43,10 +40,10 @@ struct RenderParams {
     uint64_t test_str_1;
     uint64_t test_str_2;
 
-    uint64_t    num_quads;
     uint64_t    num_spheres;
-    CUdeviceptr quads_buffer;
+    uint64_t    num_quads;
     CUdeviceptr spheres_buffer;
+    CUdeviceptr quads_buffer;
 
     // for the background
     int bg_res;

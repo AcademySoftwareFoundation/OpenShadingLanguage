@@ -10,6 +10,7 @@
 
 OSL_NAMESPACE_ENTER
 
+
 #ifdef __CUDACC__
 // std::upper_bound is not supported in device code, so define a version of it here.
 // Adapted from the LLVM Project, see https://llvm.org/LICENSE.txt for license information.
@@ -17,23 +18,24 @@ template<typename T>
 inline OSL_HOSTDEVICE const T*
 upper_bound_cuda(const T* data, int count, const T value)
 {
-    const T* __first = data;
-    const T __value_ = value;
-    int __len        = count;
-    while (__len != 0) {
-        int __l2     = __len / 2;
-        const T* __m = __first;
-        __m += __l2;  // TODO: This is possibly unsafe, should be something like std::advance
-        if (__value_ < *__m)
-            __len = __l2;
+    const T* first = data;
+    const T value_ = value;
+    int len        = count;
+    while (len != 0) {
+        int l2     = len / 2;
+        const T* m = first;
+        m += l2;
+        if (value_ < *m)
+            len = l2;
         else {
-            __first = ++__m;
-            __len -= __l2 + 1;
+            first = ++m;
+            len -= l2 + 1;
         }
     }
-    return __first;
+    return first;
 }
 #endif
+
 
 struct Background {
     OSL_HOSTDEVICE

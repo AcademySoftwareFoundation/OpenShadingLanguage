@@ -75,7 +75,8 @@ public:
 
     void llvm_create_constant(const Symbol& sym);
 
-    void llvm_assign_initial_value(const Symbol& sym, bool force = false);
+    void llvm_assign_initial_value(const Symbol& sym, bool force = false,
+                                   int arrayindex = -1);
     llvm::LLVMContext& llvm_context() const { return ll.context(); }
     AllocationMap& named_values() { return m_named_values; }
 
@@ -256,8 +257,9 @@ public:
 
     /// Implementation of Simple assignment.  If arrayindex >= 0, in
     /// designates a particular array index to assign.
-    bool llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex = -1,
-                          int srccomp = -1, int dstcomp = -1);
+    bool llvm_assign_impl(Symbol& Result, Symbol& Src, int srcarrayindex = -1,
+                          int dstarrayindex = -1, int srccomp = -1,
+                          int dstcomp = -1);
 
 
     /// Convert the name of a global (and its derivative index) into the

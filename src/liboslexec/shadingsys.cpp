@@ -3557,7 +3557,26 @@ ShadingSystemImpl::decode_connected_param(string_view connectionname,
             return c;
         }
         c.arrayindex = index;
-        if (c.arrayindex >= c.type.arraylength()) {
+        int arraylen = 0;
+        if (c.type.is_unsized_array()) {
+            const ShaderInstance::SymOverrideInfo* sym_override
+                = inst->instoverride(c.param);
+            OSL_DASSERT(sym_override);
+
+            if (sym_override->valuesource() != Symbol::InstanceVal
+                && sym_override->valuesource() != Symbol::ConnectedVal) {
+                errorfmt(
+                    "ConnectShaders: unable to connect to element of dynamic array "
+                    "parameter \"{}\" without an override to indicate size.",
+                    connectionname);
+                c.param = -1;
+                return c;
+            }
+            arraylen = sym_override->arraylen();
+        } else {
+            arraylen = c.type.arraylength();
+        }
+        if (c.arrayindex >= arraylen) {
             errorfmt("ConnectShaders: cannot request array element {} from a {}",
                      connectionname, c.type);
             c.arrayindex = c.type.arraylength() - 1;  // clamp it

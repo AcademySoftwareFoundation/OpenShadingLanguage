@@ -398,6 +398,7 @@ macro (osl_add_all_tests)
                 userdata userdata-defaults userdata-partial userdata-custom userdata-passthrough
                 vararray-connect vararray-default
                 vararray-deserialize vararray-param
+                vararray-scalar-connect
                 vecctr vector vector-reg
                 wavelength_color wavelength_color-reg Werror xml xml-reg )
 

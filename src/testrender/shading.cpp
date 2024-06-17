@@ -1326,63 +1326,94 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg,
     if (closure == nullptr)
         return Color3(0);
 
+    // Non-recursive traversal stack
+    const int STACK_SIZE = 16;
+    int stack_idx        = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+    Color3 weight = Color3(1.0f);
+
+    while (closure) {
     switch (closure->id) {
-    case ClosureColor::MUL:
-        return closure->as_mul()->weight
-               * evaluate_layer_opacity(sg, closure->as_mul()->closure);
-    case ClosureColor::ADD:
-        return evaluate_layer_opacity(sg, closure->as_add()->closureA)
-               + evaluate_layer_opacity(sg, closure->as_add()->closureB);
-    default: {
-        const ClosureComponent* comp = closure->as_comp();
-        Color3 w                     = comp->w;
-        switch (comp->id) {
-        case MX_LAYER_ID: {
-            const MxLayerParams* srcparams = comp->as<MxLayerParams>();
-            return w
-                   * (evaluate_layer_opacity(sg, srcparams->top)
-                      + evaluate_layer_opacity(sg, srcparams->base));
+        case ClosureColor::MUL:
+            weight *= closure->as_mul()->weight;
+            closure = closure->as_mul()->closure;
+            break;
+        case ClosureColor::ADD:
+            ptr_stack[stack_idx]      = closure->as_add()->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = closure->as_add()->closureA;
+            break;
+        default: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 w                     = comp->w;
+            switch (comp->id) {
+            case MX_LAYER_ID: {
+                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                closure                        = srcparams->top;
+                ptr_stack[stack_idx]           = srcparams->base;
+                weight_stack[stack_idx++]      = weight * w;
+                break;
+            }
+            case REFLECTION_ID:
+            case FRESNEL_REFLECTION_ID: {
+                Reflection bsdf(*comp->as<ReflectionParams>());
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * bsdf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            case MX_DIELECTRIC_ID: {
+                const MxDielectricParams& params = *comp->as<MxDielectricParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint)) {
+                    // return Color3(1);
+                    closure = nullptr;
+                    break;
+                }
+                MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, false>
+                    mf(params, 1.0f);
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * mf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            case MX_GENERALIZED_SCHLICK_ID: {
+                const MxGeneralizedSchlickParams& params
+                    = *comp->as<MxGeneralizedSchlickParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint)) {
+                    // return Color3(1);
+                    closure = nullptr;
+                    break;
+                }
+                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
+                             MX_GENERALIZED_SCHLICK_ID, false>
+                    mf(params, 1.0f);
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * mf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            case MX_SHEEN_ID: {
+                MxSheen bsdf(*comp->as<MxSheenParams>());
+                const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
+                weight *= w * bsdf.get_albedo(-I);
+                closure = nullptr;
+                break;
+            }
+            default:  // Assume unhandled BSDFs are opaque
+                closure = nullptr;
+                break;
+            }
         }
-        case REFLECTION_ID:
-        case FRESNEL_REFLECTION_ID: {
-            Reflection bsdf(*comp->as<ReflectionParams>());
-            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-            return w * bsdf.get_albedo(-I);
         }
-        case MX_DIELECTRIC_ID: {
-            const MxDielectricParams& params = *comp->as<MxDielectricParams>();
-            // Transmissive dielectrics are opaque
-            if (!is_black(params.transmission_tint))
-                return Color3(1);
-            MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, false>
-                mf(params, 1.0f);
-            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-            return w * mf.get_albedo(-I);
-        }
-        case MX_GENERALIZED_SCHLICK_ID: {
-            const MxGeneralizedSchlickParams& params
-                = *comp->as<MxGeneralizedSchlickParams>();
-            // Transmissive dielectrics are opaque
-            if (!is_black(params.transmission_tint))
-                return Color3(1);
-            MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
-                         MX_GENERALIZED_SCHLICK_ID, false>
-                mf(params, 1.0f);
-            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-            return w * mf.get_albedo(-I);
-        }
-        case MX_SHEEN_ID: {
-            MxSheen bsdf(*comp->as<MxSheenParams>());
-            const Vec3& I = *reinterpret_cast<const Vec3*>(&sg.I);
-            return w * bsdf.get_albedo(-I);
-        }
-        default:  // Assume unhandled BSDFs are opaque
-            return Color3(1);
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
         }
     }
-    }
-    OSL_ASSERT(false && "Layer opacity evaluation failed");
-    return Color3(0);
+    return weight;
 }
 
 

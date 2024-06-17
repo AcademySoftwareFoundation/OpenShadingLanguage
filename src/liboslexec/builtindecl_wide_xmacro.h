@@ -45,14 +45,14 @@
 
 
 #define WIDE_GENERIC_NOISE_DERIV_IMPL_INDIRECT(name)         \
-    DECL(__OSL_MASKED_OP2(name, Wdf, Wdf), "xsXXXXXi")       \
-    DECL(__OSL_MASKED_OP3(name, Wdf, Wdf, Wdf), "xsXXXXXXi") \
-    DECL(__OSL_MASKED_OP2(name, Wdf, Wdv), "xsXXXXXi")       \
-    DECL(__OSL_MASKED_OP3(name, Wdf, Wdv, Wdf), "xsXXXXXXi") \
-    DECL(__OSL_MASKED_OP2(name, Wdv, Wdf), "xsXXXXXi")       \
-    DECL(__OSL_MASKED_OP3(name, Wdv, Wdf, Wdf), "xsXXXXXXi") \
-    DECL(__OSL_MASKED_OP2(name, Wdv, Wdv), "xsXXXXXi")       \
-    DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wdf), "xsXXXXXXi")
+    DECL(__OSL_MASKED_OP2(name, Wdf, Wdf), "xhXXXXXi")       \
+    DECL(__OSL_MASKED_OP3(name, Wdf, Wdf, Wdf), "xhXXXXXXi") \
+    DECL(__OSL_MASKED_OP2(name, Wdf, Wdv), "xhXXXXXi")       \
+    DECL(__OSL_MASKED_OP3(name, Wdf, Wdv, Wdf), "xhXXXXXXi") \
+    DECL(__OSL_MASKED_OP2(name, Wdv, Wdf), "xhXXXXXi")       \
+    DECL(__OSL_MASKED_OP3(name, Wdv, Wdf, Wdf), "xhXXXXXXi") \
+    DECL(__OSL_MASKED_OP2(name, Wdv, Wdv), "xhXXXXXi")       \
+    DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wdf), "xhXXXXXXi")
 
 #define WIDE_GENERIC_NOISE_DERIV_IMPL(name) \
     WIDE_GENERIC_NOISE_DERIV_IMPL_INDIRECT(name)
@@ -90,14 +90,14 @@
 
 
 #define WIDE_GENERIC_PNOISE_DERIV_IMPL_INDIRECT(name)                  \
-    DECL(__OSL_MASKED_OP3(name, Wdf, Wdf, Wf), "xsXXXXXXi")            \
-    DECL(__OSL_MASKED_OP5(name, Wdf, Wdf, Wdf, Wf, Wf), "xsXXXXXXXXi") \
-    DECL(__OSL_MASKED_OP3(name, Wdf, Wdv, Wv), "xsXXXXXXi")            \
-    DECL(__OSL_MASKED_OP5(name, Wdf, Wdv, Wdf, Wv, Wf), "xsXXXXXXXXi") \
-    DECL(__OSL_MASKED_OP3(name, Wdv, Wdf, Wf), "xsXXXXXXi")            \
-    DECL(__OSL_MASKED_OP5(name, Wdv, Wdf, Wdf, Wf, Wf), "xsXXXXXXXXi") \
-    DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wv), "xsXXXXXXi")            \
-    DECL(__OSL_MASKED_OP5(name, Wdv, Wdv, Wdf, Wv, Wf), "xsXXXXXXXXi")
+    DECL(__OSL_MASKED_OP3(name, Wdf, Wdf, Wf), "xhXXXXXXi")            \
+    DECL(__OSL_MASKED_OP5(name, Wdf, Wdf, Wdf, Wf, Wf), "xhXXXXXXXXi") \
+    DECL(__OSL_MASKED_OP3(name, Wdf, Wdv, Wv), "xhXXXXXXi")            \
+    DECL(__OSL_MASKED_OP5(name, Wdf, Wdv, Wdf, Wv, Wf), "xhXXXXXXXXi") \
+    DECL(__OSL_MASKED_OP3(name, Wdv, Wdf, Wf), "xhXXXXXXi")            \
+    DECL(__OSL_MASKED_OP5(name, Wdv, Wdf, Wdf, Wf, Wf), "xhXXXXXXXXi") \
+    DECL(__OSL_MASKED_OP3(name, Wdv, Wdv, Wv), "xhXXXXXXi")            \
+    DECL(__OSL_MASKED_OP5(name, Wdv, Wdv, Wdf, Wv, Wf), "xhXXXXXXXXi")
 
 #define WIDE_GENERIC_PNOISE_DERIV_IMPL(name) \
     WIDE_GENERIC_PNOISE_DERIV_IMPL_INDIRECT(name)
@@ -175,12 +175,12 @@ DECL(__OSL_MASKED_OP(mul_closure_float), "xXXXXi")
 DECL(__OSL_MASKED_OP(mul_closure_color), "xXXXXi")
 DECL(__OSL_OP(closure_to_string), "sXX")
 
-DECL(__OSL_OP(format), "xXis*")
-DECL(__OSL_OP(format_uniform), "ss*")
-DECL(__OSL_OP(printf), "xXis*")
-DECL(__OSL_OP(error), "xXis*")
-DECL(__OSL_OP(warning), "xXis*")
-DECL(__OSL_OP(fprintf), "xXiss*")
+DECL(__OSL_OP(format), "xXih*")
+DECL(__OSL_OP(format_uniform), "hh*")
+DECL(__OSL_OP(printf), "xXih*")
+DECL(__OSL_OP(error), "xXih*")
+DECL(__OSL_OP(warning), "xXih*")
+DECL(__OSL_OP(fprintf), "xXihh*")
 
 DECL(__OSL_MASKED_OP(split), "xXXXXXii")
 
@@ -263,61 +263,61 @@ DECL(__OSL_MASKED_OP3(hash, Wi, Wv, Wf), "xXXXi")
 // first vs. directly passing the shader global.  We don't expect this
 // to be encountered, but is possible
 
-DECL(__OSL_MASKED_OP3(spline, Wf, Wf, Wf), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wf, Wf, f), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wf, f, Wf), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wf, Wf, Wf), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wf, Wf, f), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wf, f, Wf), "xXhXXiii")
 
 
-DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, Wdf), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, df), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdf, Wf, df), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdf, df, Wdf), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, Wdf), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, df), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, Wf, df), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, df, Wdf), "xXhXXiii")
 
-DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, f), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, Wdf, f), "xXhXXiii")
 
-DECL(__OSL_MASKED_OP3(spline, Wv, Wf, Wv), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wv, Wf, v), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wv, f, Wv), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wv, Wf, Wv), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wv, Wf, v), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wv, f, Wv), "xXhXXiii")
 
-DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, Wdv), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, dv), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdv, df, Wdv), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, Wdv), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, dv), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, df, Wdv), "xXhXXiii")
 
-DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, v), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, Wv), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdv, df, Wv), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, v), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, Wdf, Wv), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, df, Wv), "xXhXXiii")
 
-DECL(__OSL_MASKED_OP3(spline, Wdf, f, Wdf), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdf, Wf, Wdf), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, f, Wdf), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdf, Wf, Wdf), "xXhXXiii")
 
-DECL(__OSL_MASKED_OP3(spline, Wdv, f, Wdv), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdv, Wf, Wdv), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(spline, Wdv, Wf, dv), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, f, Wdv), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, Wf, Wdv), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(spline, Wdv, Wf, dv), "xXhXXiii")
 
 //---------------------------------------------------------------
-DECL(__OSL_MASKED_OP3(splineinverse, Wf, Wf, Wf), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(splineinverse, Wf, Wf, f), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(splineinverse, Wf, f, Wf), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(splineinverse, Wf, Wf, Wf), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(splineinverse, Wf, Wf, f), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(splineinverse, Wf, f, Wf), "xXhXXiii")
 
 //dfdfdf is treated as dfdff
-DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wdf, Wdf), "xXXXXiii")  //redone
-DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wdf, df), "xXXXXiii")
-DECL(__OSL_MASKED_OP3(splineinverse, Wdf, df, Wdf), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wdf, Wdf), "xXhXXiii")  //redone
+DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wdf, df), "xXhXXiii")
+DECL(__OSL_MASKED_OP3(splineinverse, Wdf, df, Wdf), "xXhXXiii")
 //======
-DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wdf, f), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wdf, f), "xXhXXiii")
 
 //dffdf is treated as fff
-DECL(__OSL_MASKED_OP3(splineinverse, Wdf, f, Wdf), "xXXXXiii")
+DECL(__OSL_MASKED_OP3(splineinverse, Wdf, f, Wdf), "xXhXXiii")
 // // unreachable, can't find .osl to produce this combination
 //DECL(__OSL_MASKED_OP3(splineinverse, Wdf, Wf, Wdf), "xXXXXiii")
 
-DECL(__OSL_MASKED_OP(pointcloud_search), "xXXsXXiiXiXiiii*")
-DECL(__OSL_MASKED_OP(pointcloud_get), "iXsXiXsLXi")
-DECL(__OSL_MASKED_OP(pointcloud_write), "iXsXiXXXi")
+DECL(__OSL_MASKED_OP(pointcloud_search), "xXXhXXiiXiXiiii*")
+DECL(__OSL_MASKED_OP(pointcloud_get), "iXhXiXhLXi")
+DECL(__OSL_MASKED_OP(pointcloud_write), "iXhXiXXXi")
 
-DECL(__OSL_MASKED_OP(getmessage), "xXXssLXiisii")
-DECL(__OSL_MASKED_OP2(setmessage, s, WX), "xXsLXisii")
-DECL(__OSL_MASKED_OP2(setmessage, Ws, WX), "xXXLXisii")
+DECL(__OSL_MASKED_OP(getmessage), "xXXhhLXiihii")
+DECL(__OSL_MASKED_OP2(setmessage, s, WX), "xXhLXihii")
+DECL(__OSL_MASKED_OP2(setmessage, Ws, WX), "xXXLXihii")
 
 DECL(__OSL_OP(blackbody_vf), "xXXf")
 DECL(__OSL_MASKED_OP2(blackbody, Wv, Wf), "xXXXi")
@@ -329,13 +329,13 @@ DECL(__OSL_MASKED_OP2(wavelength_color, Wv, Wf), "xXXXi")
 //DECL (osl_luminance_fv, "xXXX")
 //DECL (osl_luminance_dfdv, "xXXX")
 
-DECL(__OSL_OP(prepend_color_from_vs), "xXXs")
-DECL(__OSL_MASKED_OP2(prepend_color_from, Wv, s), "xXXsi")
+DECL(__OSL_OP(prepend_color_from_vs), "xXXh")
+DECL(__OSL_MASKED_OP2(prepend_color_from, Wv, s), "xXXhi")
 DECL(__OSL_MASKED_OP2(prepend_color_from, Wv, Ws), "xXXXi")
 
 
 // forced masked version only
-DECL(__OSL_MASKED_OP2(prepend_matrix_from, Wm, s), "xXXsi")
+DECL(__OSL_MASKED_OP2(prepend_matrix_from, Wm, s), "xXXhi")
 DECL(__OSL_MASKED_OP2(prepend_matrix_from, Wm, Ws), "xXXXi")
 
 // Batched code gen uses a combination of osl_build_transform_matrix
@@ -345,42 +345,42 @@ DECL(__OSL_MASKED_OP2(prepend_matrix_from, Wm, Ws), "xXXXi")
 // DECL (osl_transform_triple, "iXXiXiXXi") // unneeded
 // DECL (osl_transform_triple_nonlinear, "iXXiXiXXi") // unneeded
 
-DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, s, s), "iXXXXi")
-DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s), "iXXXXi")
-DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws), "iXXXXi")
+DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, s, s), "iXXhhi")
+DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, s), "iXXXhi")
+DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, s, Ws), "iXXhXi")
 DECL(__OSL_MASKED_OP3(build_transform_matrix, Wm, Ws, Ws), "iXXXXi")
 
-DECL(__OSL_OP(dict_find_iis), "iXis")
+DECL(__OSL_OP(dict_find_iis), "iXih")
 DECL(__OSL_MASKED_OP3(dict_find, Wi, Wi, Ws), "xXXXXi")
 
-DECL(__OSL_OP(dict_find_iss), "iXss")
+DECL(__OSL_OP(dict_find_iss), "iXhh")
 DECL(__OSL_MASKED_OP3(dict_find, Wi, Ws, Ws), "xXXXXi")
 
 DECL(__OSL_OP(dict_next), "iXi")
 DECL(__OSL_MASKED_OP(dict_next), "xXXXi")
 
-DECL(__OSL_OP(dict_value), "iXisLX")
+DECL(__OSL_OP(dict_value), "iXihLX")
 DECL(__OSL_MASKED_OP(dict_value), "xXXXXLXi")
 
 
-DECL(__OSL_OP(raytype_name), "iXs")
+DECL(__OSL_OP(raytype_name), "iXh")
 DECL(__OSL_MASKED_OP(raytype_name), "xXXXi")
-DECL(__OSL_OP(naninf_check), "xiXiXsisiis")
-DECL(__OSL_MASKED_OP1(naninf_check_offset, i), "xiiXiXsisiis")
-DECL(__OSL_MASKED_OP1(naninf_check_offset, Wi), "xiiXiXsisXis")
-DECL(__OSL_OP(range_check), "iiisXsisiss")
-DECL(__OSL_MASKED_OP(range_check), "xXiisXsisiss")
-DECL(__OSL_OP2(uninit_check_values_offset, X, i), "xLXXsisissisisii")
-DECL(__OSL_MASKED_OP2(uninit_check_values_offset, X, Wi), "xiLXXsisissisisXi")
-DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, i), "xiLXXsisissisisii")
-DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi), "xiLXXsisissisisXi")
+DECL(__OSL_OP(naninf_check), "xiXiXhihiih")
+DECL(__OSL_MASKED_OP1(naninf_check_offset, i), "xiiXiXhihiih")
+DECL(__OSL_MASKED_OP1(naninf_check_offset, Wi), "xiiXiXhihXih")
+DECL(__OSL_OP(range_check), "iiihXhihihh")
+DECL(__OSL_MASKED_OP(range_check), "xXiihXhihihh")
+DECL(__OSL_OP2(uninit_check_values_offset, X, i), "xLXXhihihhihihii")
+DECL(__OSL_MASKED_OP2(uninit_check_values_offset, X, Wi), "xiLXXhihihhihihXi")
+DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, i), "xiLXXhihihhihihii")
+DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi), "xiLXXhihihhihihXi")
 
-DECL(__OSL_OP1(get_attribute, s), "iXissiiXXi")
-DECL(__OSL_MASKED_OP1(get_attribute, Ws), "iXisXiiXXi")
-DECL(__OSL_OP(get_attribute_uniform), "iXissiiXX")
+DECL(__OSL_OP1(get_attribute, s), "iXihhiiXXi")
+DECL(__OSL_MASKED_OP1(get_attribute, Ws), "iXihXiiXXi")
+DECL(__OSL_OP(get_attribute_uniform), "iXihhiiXX")
 
 // TODO:  shouldn't bind_interpolated_param be MASKED?  change name to reflect
-DECL(__OSL_OP(bind_interpolated_param), "iXsLiXiXiXii")
+DECL(__OSL_OP(bind_interpolated_param), "iXhLiXiXiXii")
 
 //DECL (osl_get_texture_options, "XX") // unneeded
 DECL(__OSL_OP(get_noise_options), "XX")
@@ -588,9 +588,9 @@ DECL(__OSL_MASKED_OP3(div, Wm, Wm, Wf), "xXXXi")
 DECL(__OSL_MASKED_OP3(div, Wm, Wf, Wm), "xXXXi")
 
 // forced masked version only
-DECL(__OSL_MASKED_OP3(get_from_to_matrix, Wm, s, s), "iXXssi")
-DECL(__OSL_MASKED_OP3(get_from_to_matrix, Wm, s, Ws), "iXXsXi")
-DECL(__OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws, s), "iXXXsi")
+DECL(__OSL_MASKED_OP3(get_from_to_matrix, Wm, s, s), "iXXhhi")
+DECL(__OSL_MASKED_OP3(get_from_to_matrix, Wm, s, Ws), "iXXhXi")
+DECL(__OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws, s), "iXXXhi")
 DECL(__OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws, Ws), "iXXXXi")
 
 //varying vs non varying
@@ -612,17 +612,17 @@ DECL(__OSL_MASKED_OP2(stof, Wf, Ws), "xXXi")
 DECL(__OSL_MASKED_OP4(substr, Ws, Ws, Wi, Wi), "xXXXXi")
 
 DECL(__OSL_MASKED_OP(regex_impl), "xXXXXiXii")
-DECL(__OSL_OP(regex_impl), "iXsXisi")
+DECL(__OSL_OP(regex_impl), "iXhXihi")
 
 // BATCH texturing manages the BatchedTextureOptions
 // directly in LLVM ir, and has no need for wide versions
 // of osl_texture_set_XXX functions
-DECL(__OSL_MASKED_OP(texture), "iXsXXXXXXXXiXiXiXi")
-DECL(__OSL_MASKED_OP(texture3d), "iXsXXXXXXiXiXiXi")
-DECL(__OSL_MASKED_OP(environment), "iXsXXXXXiXiXiXi")
-DECL(__OSL_OP(resolve_udim_uniform), "XXXXff")
-DECL(__OSL_MASKED_OP(resolve_udim), "xXXXXXXi")
-DECL(__OSL_OP(get_textureinfo_uniform), "iXsXsXX")
+DECL(__OSL_MASKED_OP(texture), "iXhXXXXXXXXiXiXiXi")
+DECL(__OSL_MASKED_OP(texture3d), "iXhXXXXXXiXiXiXi")
+DECL(__OSL_MASKED_OP(environment), "iXhXXXXXiXiXiXi")
+DECL(__OSL_OP(resolve_udim_uniform), "XXhXff")
+DECL(__OSL_MASKED_OP(resolve_udim), "xXhXXXXi")
+DECL(__OSL_OP(get_textureinfo_uniform), "iXhXhXX")
 
 // Wide Code generator will set trace options directly in LLVM IR
 // without calling helper functions

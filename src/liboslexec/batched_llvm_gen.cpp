@@ -15,7 +15,7 @@
 #endif
 
 #include "batched_backendllvm.h"
-
+#include <llvm/Support/raw_ostream.h>
 
 
 using namespace OSL;
@@ -375,6 +375,7 @@ LLVMGEN(llvm_gen_printf)
             std::string ourformat(oldfmt, format);  // straddle the format
             // Doctor it to fix mismatches between format and data
             Symbol& sym(*rop.opargsym(op, arg));
+
             OSL_ASSERT(!sym.typespec().is_structure_based());
 
             bool arg_is_uniform = sym.is_uniform();
@@ -416,11 +417,13 @@ LLVMGEN(llvm_gen_printf)
                     // widened, so our typical op_is_uniform doesn't do what we
                     // want for this when loading.  So just pass arg_is_uniform
                     // which will avoid widening any uniform arguments.
-                    llvm::Value* loaded
-                        = rop.llvm_load_value(sym, 0, arrind, c,
-                                              TypeDesc::UNKNOWN,
-                                              /*op_is_uniform*/ arg_is_uniform,
-                                              /*index_is_uniform*/ true);
+                    // Always use real ustring here because wide/opstring printf va_args expects
+                    // strings and not hashes
+                    bool always_real_ustring = true;
+                    llvm::Value* loaded      = rop.llvm_load_value(
+                        sym, 0, arrind, c, TypeDesc::UNKNOWN,
+                        /*op_is_uniform*/ arg_is_uniform,
+                        /*index_is_uniform*/ true, always_real_ustring);
 
                     // Always expand llvm booleans to integers
                     if (sym.forced_llvm_bool()) {
@@ -481,6 +484,7 @@ LLVMGEN(llvm_gen_printf)
     if (op_is_uniform) {
         llvm::Value* ret = rop.ll.call_function(rop.build_name(func_spec),
                                                 call_args);
+
 
         // The format op returns a string value, put in in the right spot
         if (op.opname() == op_format)
@@ -861,6 +865,7 @@ LLVMGEN(llvm_gen_generic)
             && (uniformFormOfFunction || functionIsLlvmInlined)) {
             OSL_DEV_ONLY(std::cout << ">>stores return value "
                                    << rop.build_name(func_spec) << std::endl);
+
             llvm::Value* r = rop.llvm_call_function(
                 func_spec, &(args[1]), op.nargs() - 1,
                 /*deriv_ptrs*/ false, uniformFormOfFunction,
@@ -3300,7 +3305,7 @@ LLVMGEN(llvm_gen_construct_triple)
                 = { rop.sg_void_ptr(), rop.ll.void_ptr(transform),
                     space_is_uniform ? rop.llvm_load_value(Space)
                                      : rop.llvm_void_ptr(Space),
-                    rop.ll.constant(Strings::common),
+                    rop.llvm_const_hash(Strings::common),
                     rop.ll.mask_as_int(rop.ll.current_mask()) };
 
             // Dynamically build function name

@@ -79,8 +79,8 @@ dispatch_Vec3_result(const NoiseParams* opt, Block<Vec3>* opt_varying_direction,
 }  // namespace
 
 OSL_BATCHOP void
-__OSL_NOISE_OP2(Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr, char* bsg,
-                          char* opt, char* varying_direction_ptr,
+__OSL_NOISE_OP2(Wdf, Wdf)(ustringhash_pod name, char* r_ptr, char* x_ptr,
+                          char* bsg, char* opt, char* varying_direction_ptr,
                           unsigned int mask_value)
 {
     dispatch_float_result(reinterpret_cast<const NoiseParams*>(opt),
@@ -92,7 +92,7 @@ __OSL_NOISE_OP2(Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr, char* bsg,
 
 
 OSL_BATCHOP void
-__OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
+__OSL_NOISE_OP3(Wdf, Wdf, Wdf)(ustringhash_pod name, char* r_ptr, char* x_ptr,
                                char* y_ptr, char* bsg, char* opt,
                                char* varying_direction_ptr,
                                unsigned int mask_value)
@@ -107,8 +107,8 @@ __OSL_NOISE_OP3(Wdf, Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
 
 
 OSL_BATCHOP void
-__OSL_NOISE_OP2(Wdf, Wdv)(char* name, char* r_ptr, char* p_ptr, char* bsg,
-                          char* opt, char* varying_direction_ptr,
+__OSL_NOISE_OP2(Wdf, Wdv)(ustringhash_pod name, char* r_ptr, char* p_ptr,
+                          char* bsg, char* opt, char* varying_direction_ptr,
                           unsigned int mask_value)
 {
     dispatch_float_result(reinterpret_cast<const NoiseParams*>(opt),
@@ -120,7 +120,7 @@ __OSL_NOISE_OP2(Wdf, Wdv)(char* name, char* r_ptr, char* p_ptr, char* bsg,
 
 
 OSL_BATCHOP void
-__OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* name, char* r_ptr, char* p_ptr,
+__OSL_NOISE_OP3(Wdf, Wdv, Wdf)(ustringhash_pod name, char* r_ptr, char* p_ptr,
                                char* t_ptr, char* bsg, char* opt,
                                char* varying_direction_ptr,
                                unsigned int mask_value)
@@ -135,7 +135,7 @@ __OSL_NOISE_OP3(Wdf, Wdv, Wdf)(char* name, char* r_ptr, char* p_ptr,
 
 
 OSL_BATCHOP void
-__OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* name, char* r_ptr, char* p_ptr,
+__OSL_NOISE_OP3(Wdv, Wdv, Wdf)(ustringhash_pod name, char* r_ptr, char* p_ptr,
                                char* t_ptr, char* bsg, char* opt,
                                char* varying_direction_ptr,
                                unsigned int mask_value)
@@ -150,8 +150,8 @@ __OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* name, char* r_ptr, char* p_ptr,
 
 
 OSL_BATCHOP void
-__OSL_NOISE_OP2(Wdv, Wdf)(char* name, char* r_ptr, char* x_ptr, char* bsg,
-                          char* opt, char* varying_direction_ptr,
+__OSL_NOISE_OP2(Wdv, Wdf)(ustringhash_pod name, char* r_ptr, char* x_ptr,
+                          char* bsg, char* opt, char* varying_direction_ptr,
                           unsigned int mask_value)
 {
     dispatch_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),
@@ -163,7 +163,7 @@ __OSL_NOISE_OP2(Wdv, Wdf)(char* name, char* r_ptr, char* x_ptr, char* bsg,
 
 
 OSL_BATCHOP void
-__OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
+__OSL_NOISE_OP3(Wdv, Wdf, Wdf)(ustringhash_pod name, char* r_ptr, char* x_ptr,
                                char* y_ptr, char* bsg, char* opt,
                                char* varying_direction_ptr,
                                unsigned int mask_value)
@@ -178,8 +178,8 @@ __OSL_NOISE_OP3(Wdv, Wdf, Wdf)(char* name, char* r_ptr, char* x_ptr,
 
 
 OSL_BATCHOP void
-__OSL_NOISE_OP2(Wdv, Wdv)(char* name, char* r_ptr, char* p_ptr, char* bsg,
-                          char* opt, char* varying_direction_ptr,
+__OSL_NOISE_OP2(Wdv, Wdv)(ustringhash_pod name, char* r_ptr, char* p_ptr,
+                          char* bsg, char* opt, char* varying_direction_ptr,
                           unsigned int mask_value)
 {
     dispatch_Vec3_result(reinterpret_cast<const NoiseParams*>(opt),

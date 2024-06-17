@@ -31,10 +31,12 @@ namespace pvt {
 // Shims to convert llvm gen to rs free function C++ parameter types
 // and forward on calls to re free functions.
 
+// TODO this can be removed now that batched supports ustringhash_pod
 OSL_RSOP OSL::ustringhash_pod
-osl_gen_ustringhash_pod(ustring_pod s)
+osl_gen_ustringhash_pod(OSL::ustringhash_pod hash)
 {
-    return USTR(s).hash();
+    return hash;
+    //return USTR(s).hash();
 }
 
 OSL_RSOP const char*

@@ -133,7 +133,7 @@ DECL(osl_closure_to_string, "sXX")
 DECL(osl_closure_to_ustringhash, "hXX")
 #endif
 DECL(osl_format, "hh*")
-DECL(osl_gen_ustringhash_pod, "hs")
+DECL(osl_gen_ustringhash_pod, "hh")
 DECL(osl_gen_ustring, "sh")
 DECL(osl_gen_printfmt, "xXhiXiX")
 DECL(osl_gen_filefmt, "xXhhiXiX")

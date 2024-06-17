@@ -143,6 +143,10 @@ BatchedBackendLLVM::BatchedBackendLLVM(ShadingSystemImpl& shadingsys,
     case 8: m_true_mask_value = Mask<8>(true).value(); break;
     default: OSL_ASSERT(0 && "unsupported vector width");
     }
+
+    // Select the appropriate ustring representation
+    ll.ustring_rep(LLVM_Util::UstringRep::hash);
+
     ll.dumpasm(shadingsys.m_llvm_dumpasm);
     ll.jit_fma(shadingsys.m_llvm_jit_fma);
     ll.jit_aggressive(shadingsys.m_llvm_jit_aggressive);
@@ -191,7 +195,7 @@ BatchedBackendLLVM::llvm_pass_type(const TypeSpec& typespec)
     else if (t == TypeDesc::INT)
         lt = ll.type_int();
     else if (t == TypeDesc::STRING)
-        lt = (llvm::Type*)ll.type_ustring();
+        lt = (llvm::Type*)ll.type_real_ustring();
     else if (t.aggregate == TypeDesc::VEC3)
         lt = (llvm::Type*)ll.type_void_ptr();  //llvm_type_triple_ptr();
     else if (t.aggregate == TypeDesc::MATRIX44)
@@ -271,9 +275,9 @@ BatchedBackendLLVM::llvm_assign_zero(const Symbol& sym)
             zero = ll.wide_constant(0);
     } else if (elemtype.is_string_based()) {
         if (sym.is_uniform())
-            zero = ll.constant(ustring());
+            zero = ll.constant(uint64_t(0));
         else
-            zero = ll.wide_constant(ustring());
+            zero = ll.wide_constant(uint64_t(0));
     } else if (elemtype.is_closure_based()) {
         if (sym.is_uniform())
             zero = ll.void_ptr_null();
@@ -715,7 +719,8 @@ llvm::Value*
 BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
                                     llvm::Value* arrayindex, int component,
                                     TypeDesc cast, bool op_is_uniform,
-                                    bool index_is_uniform)
+                                    bool index_is_uniform,
+                                    bool always_real_ustring)
 {
     // A uniform symbol can be broadcast into a varying value.
     // But a varying symbol can NOT be loaded into a uniform value.
@@ -780,9 +785,15 @@ BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
         if (sym.typespec().is_string()) {
             ustring string_val = sym.get_string();
             if (op_is_uniform) {
-                return ll.constant(string_val);
+                if (!always_real_ustring)
+                    return ll.constant(string_val);
+                else
+                    return ll.constant_real_ustring(string_val);
             } else {
-                return ll.wide_constant(string_val);
+                if (!always_real_ustring)
+                    return ll.wide_constant(string_val);
+                else
+                    return ll.wide_constant_real_ustring(string_val);
             }
         }
         OSL_ASSERT(0 && "unhandled constant type");
@@ -796,7 +807,17 @@ BatchedBackendLLVM::llvm_load_value(const Symbol& sym, int deriv,
                            sym.forced_llvm_bool());
 }
 
+llvm::Value*
+BatchedBackendLLVM::llvm_const_hash(string_view str)
+{
+    return llvm_const_hash(ustring(str));
+}
 
+llvm::Value*
+BatchedBackendLLVM::llvm_const_hash(ustring str)
+{
+    return ll.constant64((uint64_t)str.hash());
+}
 
 llvm::Value*
 BatchedBackendLLVM::llvm_load_mask(const Symbol& cond)
@@ -1717,6 +1738,7 @@ BatchedBackendLLVM::llvm_call_function(const FuncSpec& name,
                                 = llvm_load_value(s, /*deriv=*/d,
                                                   /*component*/ c, TypeUnknown,
                                                   function_is_uniform);
+
                             // Store our wide pointer on the stack
                             llvm_store_value(wide_value, tmpptr, t, d, NULL, c,
                                              /*dst_is_uniform*/ false);

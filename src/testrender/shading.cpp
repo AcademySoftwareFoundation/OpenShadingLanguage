@@ -1779,22 +1779,39 @@ process_background_closure(const ClosureColor* closure)
 {
     if (!closure)
         return Vec3(0, 0, 0);
-    switch (closure->id) {
-    case ClosureColor::MUL: {
-        return closure->as_mul()->weight
-               * process_background_closure(closure->as_mul()->closure);
+
+    // Non-recursive traversal stack
+    const int STACK_SIZE = 16;
+    int stack_idx        = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+    Color3 weight = Color3(1.0f);
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureColor::MUL: {
+            weight *= closure->as_mul()->weight;
+            closure = closure->as_mul()->closure;
+            break;
+        }
+        case ClosureColor::ADD: {
+            ptr_stack[stack_idx]      = closure->as_add()->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = closure->as_add()->closureA;
+            break;
+        }
+        case BACKGROUND_ID: {
+            weight *= closure->as_comp()->w;
+            closure = nullptr;
+            break;
+        }
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
     }
-    case ClosureColor::ADD: {
-        return process_background_closure(closure->as_add()->closureA)
-               + process_background_closure(closure->as_add()->closureB);
-    }
-    case BACKGROUND_ID: {
-        return closure->as_comp()->w;
-    }
-    }
-    // should never happen
-    OSL_ASSERT(false && "Invalid closure invoked in background shader");
-    return Vec3(0, 0, 0);
+    return weight;
 }
 #endif // !defined(__CUDACC__)
 

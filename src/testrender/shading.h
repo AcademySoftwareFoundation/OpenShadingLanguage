@@ -227,6 +227,9 @@ struct ShadingResult;
 #define OSL_HOSTDEVICE_OVERRIDE
 #endif
 
+// Cast a BSDF* to the specified sub-type
+#define BSDF_CAST(BSDF_TYPE, bsdf) reinterpret_cast<const BSDF_TYPE*>(bsdf)
+
 /// Individual BSDF (diffuse, phong, refraction, etc ...)
 /// Actual implementations of this class are private
 struct BSDF {
@@ -376,53 +379,16 @@ struct CompositeBSDF {
         return true;
     }
 
-#ifdef __CUDACC__
-    // Helper functions to avoid virtual function calls by directly dispatching
-    // calls to the correct BSDF type based on the closure ID.
-    OSL_HOSTDEVICE Color3 get_bsdf_albedo(const OSL::BSDF* bsdf, const Vec3& wo) const;
-    OSL_HOSTDEVICE BSDF::Sample sample_bsdf(const OSL::BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) const;
-    OSL_HOSTDEVICE BSDF::Sample eval_bsdf(const OSL::BSDF* bsdf, const Vec3& wo, const Vec3& wi) const;
-#endif
-
 private:
     /// Never try to copy this struct because it would invalidate the bsdf pointers
     OSL_HOSTDEVICE CompositeBSDF(const CompositeBSDF& c);
     OSL_HOSTDEVICE CompositeBSDF& operator=(const CompositeBSDF& c);
 
-    // On the CUDA/OptiX path, we can't rely on regular C++ polymorphism to
-    // ivoke the correct get_albedo, eval, and sample functions for each of the
-    // BSDF sub-types. Instead, we use wrapper functions to call the correct
-    // functions based on the closure ID.
-
-    inline OSL_HOSTDEVICE Color3 get_albedo(const BSDF* bsdf,
-                                            const Vec3& wo) const
-    {
-#ifndef __CUDACC__
-        return bsdf->get_albedo(wo);
-#else
-        return get_bsdf_albedo(bsdf, wo);
-#endif
-    }
-
-    inline OSL_HOSTDEVICE BSDF::Sample eval(const BSDF* bsdf, const Vec3& wo,
-                                            const Vec3& wi) const
-    {
-#ifndef __CUDACC__
-        return bsdf->eval(wo, wi);
-#else
-        return eval_bsdf(bsdf, wo, wi);
-#endif
-    }
-
-    inline OSL_HOSTDEVICE BSDF::Sample
-    sample(const BSDF* bsdf, const Vec3& wo, float rx, float ry, float rz) const
-    {
-#ifndef __CUDACC__
-        return bsdf->sample(wo, rx, ry, rz);
-#else
-        return sample_bsdf(bsdf, wo, rx, ry, rz);
-#endif
-    }
+    OSL_HOSTDEVICE Color3 get_albedo(const BSDF* bsdf, const Vec3& wo) const;
+    OSL_HOSTDEVICE BSDF::Sample eval(const BSDF* bsdf, const Vec3& wo,
+                                     const Vec3& wi) const;
+    OSL_HOSTDEVICE BSDF::Sample sample(const BSDF* bsdf, const Vec3& wo,
+                                       float rx, float ry, float rz) const;
 
     enum { MaxEntries = 8 };
     enum { MaxSize = 256 * sizeof(float) };
@@ -445,14 +411,15 @@ struct ShadingResult {
     int priority         = 0;
 };
 
-#if !defined(__CUDACC__)
+#ifndef __CUDACC__
 void
 register_closures(ShadingSystem* shadingsys);
-void
+#endif
+
+OSL_HOSTDEVICE void
 process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 const ClosureColor* Ci, bool light_only);
-Vec3
+OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* Ci);
-#endif // !defined(__CUDACC__)
 
 OSL_NAMESPACE_EXIT

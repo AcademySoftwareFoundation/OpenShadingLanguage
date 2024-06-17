@@ -21,7 +21,6 @@
 // These files must be included in this specific order
 #include "../shading.h"
 #include "../shading.cpp"
-#include "../shading_cuda.cpp"
 // clang-format on
 
 #include <cstdint>

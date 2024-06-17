@@ -22,7 +22,7 @@ if (OSL_USE_OPTIX)
         )
 
     # We need to make sure that the PTX files are regenerated whenever these
-    # headers change.
+    # files change.
     set (testrender_cuda_headers
         cuda/rend_lib.h
         background.h
@@ -32,7 +32,6 @@ if (OSL_USE_OPTIX)
         sampling.h
         shading.h
         shading.cpp
-        shading_cuda.cpp
         simpleraytracer.cpp
         cuda/vec_math.h
         )

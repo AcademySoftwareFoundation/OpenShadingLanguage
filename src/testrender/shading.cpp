@@ -1388,83 +1388,106 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg,
 
 void
 process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
-                       const ClosureColor* closure, const Color3& w)
+                       const ClosureColor* closure, const Color3& w_in)
 {
     if (!closure)
         return;
-    switch (closure->id) {
-    case ClosureColor::MUL: {
-        process_medium_closure(sg, result, closure->as_mul()->closure,
-                               w * closure->as_mul()->weight);
-        break;
-    }
-    case ClosureColor::ADD: {
-        process_medium_closure(sg, result, closure->as_add()->closureA, w);
-        process_medium_closure(sg, result, closure->as_add()->closureB, w);
-        break;
-    }
-    case MX_LAYER_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        const MxLayerParams* params  = comp->as<MxLayerParams>();
-        Color3 base_w
-            = w
-              * (Color3(1)
-                 - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
-        process_medium_closure(sg, result, params->top, w);
-        process_medium_closure(sg, result, params->base, base_w);
-        break;
-    }
-    case MX_ANISOTROPIC_VDF_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        Color3 cw                    = w * comp->w;
-        const auto& params           = *comp->as<MxAnisotropicVdfParams>();
-        result.sigma_t               = cw * params.extinction;
-        result.sigma_s               = params.albedo * result.sigma_t;
-        result.medium_g              = params.anisotropy;
-        result.refraction_ior        = 1.0f;
-        result.priority = 0;  // TODO: should this closure have a priority?
-        break;
-    }
-    case MX_MEDIUM_VDF_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        Color3 cw                    = w * comp->w;
-        const auto& params           = *comp->as<MxMediumVdfParams>();
-        result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
-                           -OIIO::fast_log(params.transmission_color.y),
-                           -OIIO::fast_log(params.transmission_color.z) };
-        // NOTE: closure weight scales the extinction parameter
-        result.sigma_t *= cw / params.transmission_depth;
-        result.sigma_s  = params.albedo * result.sigma_t;
-        result.medium_g = params.anisotropy;
-        // TODO: properly track a medium stack here ...
-        result.refraction_ior = sg.backfacing ? 1.0f / params.ior : params.ior;
-        result.priority       = params.priority;
-        break;
-    }
-    case MX_DIELECTRIC_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        const auto& params           = *comp->as<MxDielectricParams>();
-        if (!is_black(w * comp->w * params.transmission_tint)) {
-            // TODO: properly track a medium stack here ...
-            result.refraction_ior = sg.backfacing ? 1.0f / params.ior
-                                                  : params.ior;
+
+    // Non-recursive traversal stack
+    const int STACK_SIZE = 16;
+    int stack_idx        = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+    Color3 weight = w_in;
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureColor::MUL: {
+            weight *= closure->as_mul()->weight;
+            closure = closure->as_mul()->closure;
+            break;
         }
-        break;
-    }
-    case MX_GENERALIZED_SCHLICK_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        const auto& params           = *comp->as<MxGeneralizedSchlickParams>();
-        if (!is_black(w * comp->w * params.transmission_tint)) {
-            // TODO: properly track a medium stack here ...
-            float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
-                                      / 3.0f,
-                                  0.0f, 0.99f);
-            float sqrt_F0 = sqrtf(avg_F0);
-            float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
-            result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+        case ClosureColor::ADD: {
+            weight_stack[stack_idx] = weight;
+            ptr_stack[stack_idx++]  = closure->as_add()->closureB;
+            closure                 = closure->as_add()->closureA;
+            break;
         }
-        break;
-    }
+        case MX_LAYER_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const MxLayerParams* params  = comp->as<MxLayerParams>();
+            Color3 base_w
+                = weight
+                  * (Color3(1)
+                     - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
+            closure                   = params->top;
+            ptr_stack[stack_idx]      = params->base;
+            weight_stack[stack_idx++] = weight * base_w;
+            break;
+        }
+        case MX_ANISOTROPIC_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = weight * comp->w;
+            const auto& params           = *comp->as<MxAnisotropicVdfParams>();
+            result.sigma_t               = cw * params.extinction;
+            result.sigma_s               = params.albedo * result.sigma_t;
+            result.medium_g              = params.anisotropy;
+            result.refraction_ior        = 1.0f;
+            result.priority = 0;  // TODO: should this closure have a priority?
+            closure = nullptr;
+            break;
+        }
+        case MX_MEDIUM_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = weight * comp->w;
+            const auto& params           = *comp->as<MxMediumVdfParams>();
+            result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
+                               -OIIO::fast_log(params.transmission_color.y),
+                               -OIIO::fast_log(params.transmission_color.z) };
+            // NOTE: closure weight scales the extinction parameter
+            result.sigma_t *= cw / params.transmission_depth;
+            result.sigma_s  = params.albedo * result.sigma_t;
+            result.medium_g = params.anisotropy;
+            // TODO: properly track a medium stack here ...
+            result.refraction_ior = sg.backfacing ? 1.0f / params.ior : params.ior;
+            result.priority       = params.priority;
+            closure = nullptr;
+            break;
+        }
+        case MX_DIELECTRIC_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params           = *comp->as<MxDielectricParams>();
+            if (!is_black(weight * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                result.refraction_ior = sg.backfacing ? 1.0f / params.ior
+                                                      : params.ior;
+            }
+            closure = nullptr;
+            break;
+        }
+        case MX_GENERALIZED_SCHLICK_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params           = *comp->as<MxGeneralizedSchlickParams>();
+            if (!is_black(weight * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
+                                          / 3.0f,
+                                      0.0f, 0.99f);
+                float sqrt_F0 = sqrtf(avg_F0);
+                float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
+                result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+            }
+            closure = nullptr;
+            break;
+        }
+        default:
+            closure = nullptr;
+            break;
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
     }
 }
 

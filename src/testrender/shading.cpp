@@ -1672,7 +1672,7 @@ process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 case MX_CONDUCTOR_ID: {
                     const MxConductorParams& params = *comp->as<MxConductorParams>();
                     ok = result.bsdf.add_bsdf<MxMicrofacet<
-                        MxConductorParams, GGXDist, MX_DIELECTRIC_ID, false>>(
+                        MxConductorParams, GGXDist, MX_CONDUCTOR_ID, false>>(
                         cw, params, 1.0f);
                     break;
                 };

@@ -339,10 +339,13 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
 };
 
 struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
+    OSL_HOSTDEVICE
     EnergyCompensatedOrenNayar(const MxOrenNayarDiffuseParams& params)
         : BSDF(), MxOrenNayarDiffuseParams(params)
     {
     }
+
+    OSL_HOSTDEVICE
     Sample eval(const Vec3& wo, const OSL::Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
     {
         float NL = N.dot(wi);
@@ -380,6 +383,7 @@ struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
         return {};
     }
 
+    OSL_HOSTDEVICE
     Sample sample(const Vec3& wo, float rx, float ry,
                   float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
     {
@@ -394,6 +398,7 @@ private:
     static constexpr float constant2_FON = float(2.0 / 3.0
                                                  - 28.0 / (15.0 * M_PI));
 
+    OSL_HOSTDEVICE
     float E_FON_analytic(float mu) const
     {
         const float sigma = roughness;
@@ -1317,8 +1322,7 @@ struct MxSheen final : public BSDF, MxSheenParams {
 };
 
 
-#if !defined(__CUDACC__)
-Color3
+OSL_HOSTDEVICE Color3
 evaluate_layer_opacity(const ShaderGlobalsType& sg,
                        const ClosureColor* closure)
 {
@@ -1417,7 +1421,7 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg,
 }
 
 
-void
+OSL_HOSTDEVICE void
 process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                        const ClosureColor* closure, const Color3& w_in)
 {
@@ -1522,8 +1526,8 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
     }
 }
 
-// recursively walk through the closure tree, creating bsdfs as we go
-void
+// walk through the closure tree, creating bsdfs as we go
+OSL_HOSTDEVICE void
 process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                      const ClosureColor* closure, const Color3& w_in,
                      bool light_only)
@@ -1742,6 +1746,7 @@ process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                     break;
                 }
                 }
+#ifndef __CUDACC__
                 OSL_ASSERT(ok && "Invalid closure invoked in surface shader");
 #else
                 if (!ok) {
@@ -1758,14 +1763,12 @@ process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
         }
     }
 }
-#endif // !defined(__CUDACC__)
 
 }  // anonymous namespace
 
 OSL_NAMESPACE_ENTER
 
-#if !defined(__CUDACC__)
-void
+OSL_HOSTDEVICE void
 process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 const ClosureColor* Ci, bool light_only)
 {
@@ -1774,7 +1777,7 @@ process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
     process_bsdf_closure(sg, result, Ci, Color3(1), light_only);
 }
 
-Vec3
+OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* closure)
 {
     if (!closure)
@@ -1813,6 +1816,5 @@ process_background_closure(const ClosureColor* closure)
     }
     return weight;
 }
-#endif // !defined(__CUDACC__)
 
 OSL_NAMESPACE_EXIT

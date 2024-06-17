@@ -135,6 +135,7 @@ execute_shader(ShaderGlobalsType& sg, char* closure_pool)
 //
 
 
+#if 0
 static __device__ Color3
 evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
 {
@@ -629,6 +630,7 @@ process_background_closure(const ShaderGlobalsType& sg, const ClosureColor* clos
     }
     return weight;
 }
+#endif
 
 
 static __device__ Color3
@@ -645,7 +647,7 @@ eval_background(const Dual2<Vec3>& dir, void* /*ctx*/, int bounce = -1)
 
     alignas(8) char closure_pool[256];
     execute_shader(sg, closure_pool);
-    return process_background_closure(sg, (const ClosureColor*)sg.Ci);
+    return process_background_closure((const ClosureColor*)sg.Ci);
 }
 
 

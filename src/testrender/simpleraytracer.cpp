@@ -959,7 +959,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
 
         ShadingResult result;
         bool last_bounce = b == max_bounces;
-        process_closure(sg, result, sg.Ci, last_bounce);
+        process_closure(sg, result, (const ClosureColor*)sg.Ci, last_bounce);
 
         // add self-emission
         float k = 1;
@@ -1063,7 +1063,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
                     execute_shader(light_sg, light_closure_pool);
 #endif
                     ShadingResult light_result;
-                    process_closure(light_sg, light_result, light_sg.Ci, true);
+                    process_closure(light_sg, light_result, (const ClosureColor*) light_sg.Ci, true);
                     // accumulate contribution
                     path_radiance += contrib * light_result.Le;
                 }

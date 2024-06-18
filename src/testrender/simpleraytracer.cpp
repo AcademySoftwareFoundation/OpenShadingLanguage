@@ -866,58 +866,39 @@ SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
 
 #endif // #ifndef __CUDACC__
 
+
 #ifndef __CUDACC__
 using ShaderGlobalsType = OSL::ShaderGlobals;
 #else
 using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
 #endif
 
+
 OSL_HOSTDEVICE Color3
 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx)
 {
-    Ray r = camera.get(x, y);
-    Color3 path_weight(1, 1, 1);
-    Color3 path_radiance(0, 0, 0);
-    int prev_id    = -1;
-    int prev_kind  = -1;
-    float bsdf_pdf = std::numeric_limits<
-        float>::infinity();  // camera ray has only one possible direction
-
 #ifdef __CUDACC__
-    // We use the tracedata to communicate information about the object ID
-    // and hit type between raygen, the intersection programs, and the hit programs.
-    //     tracedata[0] - The ID of the object being intersected. Set in CH.
-    //     tracedata[1] - The type of the object being intersected. Set in CH.
-    //     tracedata[2] - The ID of the object being shaded.
-    //     tracedata[3] - The type of the object being shaded.
-    auto pack_tracedata = [](uint32_t* tracedata, ShaderGlobalsType& sg, int id,
-                             int kind) {
-        tracedata[0] = UINT32_MAX;
-        tracedata[1] = UINT32_MAX;
-        tracedata[2] = id;
-        tracedata[3] = kind;
-        sg.tracedata = (void*)&tracedata[0];
-        sg.shaderID  = -1;
-    };
-
     // Scratch space for the output closure.
     alignas(8) char closure_pool[256];
     alignas(8) char light_closure_pool[256];
 #endif
 
+    Ray r = camera.get(x, y);
+    Color3 path_weight(1, 1, 1);
+    Color3 path_radiance(0, 0, 0);
+    int prev_id    = -1;
+    float bsdf_pdf = std::numeric_limits<
+        float>::infinity();  // camera ray has only one possible direction
+
     for (int b = 0; b <= max_bounces; b++) {
         // trace the ray against the scene
         Dual2<float> t;
         int id       = prev_id;
-        int hit_kind = prev_kind;
-
         ShaderGlobalsType sg;
-
 #ifdef __CUDACC__
-        uint32_t tracedata[4];
-        pack_tracedata(tracedata, sg, id, hit_kind);
+        // See the definition of TraceData in ./cuda/rend_lib.h
+        TraceData tracedata(sg, id);
 #endif
-
         if (!scene.intersect(r, t, id, &sg)) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
@@ -937,8 +918,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
             break;
         } else {
 #ifdef __CUDACC__
-            hit_kind = tracedata[1];
-            id       = tracedata[0];
+            id = tracedata.hit_id;
             execute_shader(sg, closure_pool);
 #endif
         }
@@ -953,7 +933,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
         // execute shader and process the resulting list of closures
         shadingsys->execute(*ctx, *m_shaders[shaderID], sg);
 #else
-        t                  = ((float*)tracedata)[2];
+        t                  = tracedata.hit_t;
         const float radius = r.radius + r.spread * t.val();
 #endif
 
@@ -1009,8 +989,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
                 ShaderGlobalsType shadow_sg;
 
 #ifdef __CUDACC__
-                uint32_t tracedata[4];
-                pack_tracedata(tracedata, shadow_sg, id, hit_kind);
+                TraceData tracedata(shadow_sg, id);
 #endif
 
                 if (!scene.intersect(shadow_ray, shadow_dist, shadow_id,
@@ -1048,8 +1027,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
                 ShaderGlobalsType light_sg;
 
 #ifdef __CUDACC__
-                uint32_t tracedata[4];
-                pack_tracedata(tracedata, light_sg, shadow_id, hit_kind);
+                TraceData tracedata(light_sg, shadow_id);
 #endif
                 if (scene.intersect(shadow_ray, shadow_dist, shadow_id, &light_sg)
                     && shadow_id == lid) {
@@ -1083,7 +1061,6 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs
         prev_id   = id;
-        prev_kind = hit_kind;
         r.origin  = sg.P;
     }
     return path_radiance;

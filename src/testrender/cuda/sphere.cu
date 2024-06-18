@@ -58,31 +58,27 @@ __direct_callable__sphere_shaderglobals(const unsigned int idx,
 extern "C" __global__ void
 __intersection__sphere()
 {
-    const unsigned int idx = optixGetPrimitiveIndex();
-
-    // Check for self-intersection
-    Payload payload;
-    payload.get();
-
-    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.sg_ptr;
-    uint32_t* trace_data            = (uint32_t*)sg_ptr->tracedata;
-    const int hit_idx               = ((int*)trace_data)[2];
-    const int hit_kind              = ((int*)trace_data)[3];
-    const bool self = hit_idx == idx && hit_kind == RAYTRACER_HIT_SPHERE;
-
     const GenericData* g_data = reinterpret_cast<const GenericData*>(
         optixGetSbtDataPointer());
     const SphereParams* g_spheres = reinterpret_cast<const SphereParams*>(
         g_data->data);
 
+    Payload payload;
+    payload.get();
+    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.sg_ptr;
+    TraceData* tracedata   = reinterpret_cast<TraceData*>(sg_ptr->tracedata);
+    const int obj_id       = tracedata->obj_id;
+    const unsigned int idx = optixGetPrimitiveIndex();
     const SphereParams& sphere = g_spheres[idx];
+
+    // Check for self-intersection
+    const bool self = obj_id == sphere.objID;
+
     const float3 ray_origin    = optixGetObjectRayOrigin();
     const float3 ray_direction = optixGetObjectRayDirection();
-
-    float3 oc = sphere.c - ray_origin;
-    float b   = dot(oc, ray_direction);
-    float det = b * b - dot(oc, oc) + sphere.r2;
-
+    float3 oc                  = sphere.c - ray_origin;
+    float b                    = dot(oc, ray_direction);
+    float det                  = b * b - dot(oc, oc) + sphere.r2;
     if (det >= 0.0f) {
         det     = sqrtf(det);
         float x = b - det;

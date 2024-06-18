@@ -218,24 +218,10 @@ CudaScene::intersect(const Ray& r, Dual2<float>& t, int& primID, void* sg) const
     payload.radius  = r.radius;
     payload.spread  = r.spread;
     payload.raytype = *reinterpret_cast<const Ray::RayType*>(&r.raytype);
-    // The renderer uses global object IDs across primitive types, but
-    // OptiX uses object IDs for each primitive type. So we need to convert
-    // between the two ranges.
-    // TODO: Make this less convoluted.
-    {
-        int* tracedata = (int*)payload.sg_ptr->tracedata;
-        int hit_kind   = tracedata[3];
-        primID = (hit_kind == 0) ? primID - num_spheres : primID;
-        tracedata[2]   = (hit_kind == 0) ? tracedata[2] - num_spheres
-                                         : tracedata[2];
-        trace_ray(handle, payload, V3_TO_F3(r.origin), V3_TO_F3(r.direction));
-    }
-    {
-        int* tracedata = (int*)payload.sg_ptr->tracedata;
-        int hit_kind   = tracedata[1];
-        primID = (hit_kind == 0) ? tracedata[0] + num_spheres : tracedata[0];
-        tracedata[0] = primID;
-    }
+    trace_ray(handle, payload, V3_TO_F3(r.origin), V3_TO_F3(r.direction));
+    TraceData* tracedata = reinterpret_cast<TraceData*>(
+        payload.sg_ptr->tracedata);
+    primID = tracedata->hit_id;
     return (payload.sg_ptr->shaderID >= 0);
 }
 
@@ -365,12 +351,22 @@ __closesthit__deferred()
     Payload payload;
     payload.get();
     ShaderGlobalsType* sg_ptr = payload.sg_ptr;
-    uint32_t* trace_data      = (uint32_t*)sg_ptr->tracedata;
-    const float t_hit         = optixGetRayTmax();
-    trace_data[0]             = optixGetPrimitiveIndex();
-    trace_data[1]             = optixGetHitKind();
-    trace_data[2]             = *(uint32_t*)&t_hit;
+    TraceData* tracedata      = reinterpret_cast<TraceData*>(sg_ptr->tracedata);
     globals_from_hit(*sg_ptr, payload.radius, payload.spread, payload.raytype);
+
+    const unsigned int hit_idx  = optixGetPrimitiveIndex();
+    const unsigned int hit_kind = optixGetHitKind();
+    if (hit_kind == 0) {
+        const QuadParams* quads = reinterpret_cast<const QuadParams*>(
+            render_params.quads_buffer);
+        tracedata->hit_id = quads[hit_idx].objID;
+    } else if (hit_kind == 1) {
+        const SphereParams* spheres = reinterpret_cast<const SphereParams*>(
+            render_params.spheres_buffer);
+        tracedata->hit_id = spheres[hit_idx].objID;
+    }
+    const float hit_t = optixGetRayTmax();
+    tracedata->hit_t  = *(uint32_t*)&hit_t;
 }
 
 

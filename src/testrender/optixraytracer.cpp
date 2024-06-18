@@ -908,13 +908,14 @@ OptixRaytracer::build_accel()
     quadsParams.reserve(scene.quads.size());
     std::vector<int> quadShaders;
     quadShaders.reserve(scene.quads.size());
+    int objID = static_cast<int>(scene.spheres.size());
     for (const auto& quad : scene.quads) {
         OptixAabb aabb;
         quad.getBounds(aabb.minX, aabb.minY, aabb.minZ, aabb.maxX, aabb.maxY,
                        aabb.maxZ);
         quadsAabb.push_back(aabb);
         QuadParams quad_params;
-        quad.setOptixVariables(&quad_params);
+        quad.setOptixVariables(&quad_params, objID++);
         quadsParams.push_back(quad_params);
     }
     // Copy Quads bounding boxes to cuda device
@@ -967,6 +968,7 @@ OptixRaytracer::build_accel()
     spheresParams.reserve(scene.spheres.size());
     std::vector<int> sphereShaders;
     sphereShaders.reserve(scene.spheres.size());
+    objID = 0;
     for (const auto& sphere : scene.spheres) {
         OptixAabb aabb;
         sphere.getBounds(aabb.minX, aabb.minY, aabb.minZ, aabb.maxX, aabb.maxY,
@@ -974,7 +976,7 @@ OptixRaytracer::build_accel()
         spheresAabb.push_back(aabb);
 
         SphereParams sphere_params;
-        sphere.setOptixVariables(&sphere_params);
+        sphere.setOptixVariables(&sphere_params, objID++);
         spheresParams.push_back(sphere_params);
     }
     // Copy Spheres bounding boxes to cuda device

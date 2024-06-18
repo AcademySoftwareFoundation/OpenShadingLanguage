@@ -57,7 +57,8 @@ struct RenderParams {
 
 struct PrimitiveParams {
     float a;  // area
-    unsigned int shaderID;
+    int32_t shaderID;
+    int32_t objID;
     bool isLight;
 };
 

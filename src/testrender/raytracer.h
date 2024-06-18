@@ -190,7 +190,7 @@ struct Primitive {
                    float& maxy, float& maxz) const;
 
 #if OSL_USE_OPTIX
-    virtual void setOptixVariables(void* data) const = 0;
+    virtual void setOptixVariables(void* data, int objID) const = 0;
 #endif
 
 private:
@@ -301,7 +301,7 @@ struct Sphere final : public Primitive {
     }
 
 #if OSL_USE_OPTIX
-    virtual void setOptixVariables(void* data) const
+    virtual void setOptixVariables(void* data, int objID) const
     {
         SphereParams* sphere_data = reinterpret_cast<SphereParams*>(data);
         sphere_data->c            = make_float3(c.x, c.y, c.z);
@@ -310,6 +310,7 @@ struct Sphere final : public Primitive {
         sphere_data->a            = M_PI * r2;
         sphere_data->shaderID     = shaderid();
         sphere_data->isLight      = islight();
+        sphere_data->objID        = objID;
     }
 #endif
 
@@ -402,7 +403,7 @@ struct Quad final : public Primitive {
     }
 
 #if OSL_USE_OPTIX
-    virtual void setOptixVariables(void* data) const
+    virtual void setOptixVariables(void* data, int objID) const
     {
         QuadParams* quad_data = reinterpret_cast<QuadParams*>(data);
         quad_data->p          = make_float3(p.x, p.y, p.z);
@@ -414,6 +415,7 @@ struct Quad final : public Primitive {
         quad_data->a          = a;
         quad_data->shaderID   = shaderid();
         quad_data->isLight    = islight();
+        quad_data->objID      = objID;
     }
 #endif
 

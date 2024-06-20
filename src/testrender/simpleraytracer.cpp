@@ -867,18 +867,17 @@ SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
 #endif // #ifndef __CUDACC__
 
 
-#ifndef __CUDACC__
-using ShaderGlobalsType = OSL::ShaderGlobals;
-#else
-using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
-#endif
-
-
 OSL_HOSTDEVICE Color3
 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx)
 {
+#ifndef __CUDACC__
+    using ShaderGlobalsType = OSL::ShaderGlobals;
+#else
+    using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
+#endif
+
 #ifdef __CUDACC__
-    // Scratch space for the output closure.
+    // Scratch space for the output closures
     alignas(8) char closure_pool[256];
     alignas(8) char light_closure_pool[256];
 #endif
@@ -895,10 +894,6 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
         Dual2<float> t;
         int id       = prev_id;
         ShaderGlobalsType sg;
-#ifdef __CUDACC__
-        // See the definition of TraceData in ./cuda/rend_lib.h
-        TraceData tracedata(sg, id);
-#endif
         if (!scene.intersect(r, t, id, &sg)) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
@@ -916,12 +911,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
                 }
             }
             break;
-        } else {
-#ifdef __CUDACC__
-            id = tracedata.hit_id;
-            execute_shader(sg, closure_pool);
-#endif
         }
+
 #ifndef __CUDACC__
         // construct a shader globals for the hit point
         globals_from_hit(sg, r, t, id);
@@ -933,7 +924,9 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
         // execute shader and process the resulting list of closures
         shadingsys->execute(*ctx, *m_shaders[shaderID], sg);
 #else
-        t                  = tracedata.hit_t;
+        // The ShaderGlobals are populated in the closest-hit program,
+        // so we don't need to do that here.
+        execute_shader(sg, closure_pool);
         const float radius = r.radius + r.spread * t.val();
 #endif
 
@@ -988,10 +981,6 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
                 Dual2<float> shadow_dist;
                 ShaderGlobalsType shadow_sg;
 
-#ifdef __CUDACC__
-                TraceData tracedata(shadow_sg, id);
-#endif
-
                 if (!scene.intersect(shadow_ray, shadow_dist, shadow_id,
                                      &shadow_sg))  // ray reached the background?
                     path_radiance += contrib;
@@ -1025,15 +1014,10 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingCo
                 int shadow_id = id;  // ignore self hit
                 Dual2<float> shadow_dist;
                 ShaderGlobalsType light_sg;
-
-#ifdef __CUDACC__
-                TraceData tracedata(light_sg, shadow_id);
-#endif
                 if (scene.intersect(shadow_ray, shadow_dist, shadow_id, &light_sg)
                     && shadow_id == lid) {
 #ifndef __CUDACC__
                     // setup a shader global for the point on the light
-                    ShaderGlobals light_sg;
                     globals_from_hit(light_sg, shadow_ray, shadow_dist, lid);
                     // execute the light shader (for emissive closures only)
                     shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);

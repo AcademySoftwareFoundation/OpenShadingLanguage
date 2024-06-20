@@ -218,10 +218,10 @@ CudaScene::intersect(const Ray& r, Dual2<float>& t, int& primID, void* sg) const
     payload.radius  = r.radius;
     payload.spread  = r.spread;
     payload.raytype = *reinterpret_cast<const Ray::RayType*>(&r.raytype);
+    TraceData tracedata(*payload.sg_ptr, primID);
     trace_ray(handle, payload, V3_TO_F3(r.origin), V3_TO_F3(r.direction));
-    TraceData* tracedata = reinterpret_cast<TraceData*>(
-        payload.sg_ptr->tracedata);
-    primID = tracedata->hit_id;
+    primID = tracedata.hit_id;
+    t      = tracedata.hit_t;
     return (payload.sg_ptr->shaderID >= 0);
 }
 

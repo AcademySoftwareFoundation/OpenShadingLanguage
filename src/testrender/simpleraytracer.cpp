@@ -849,33 +849,41 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.renderstate = &sg;
 }
 
-Vec3
-SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
-                                 int bounce)
-{
-    ShaderGlobals sg;
-    memset((char*)&sg, 0, sizeof(ShaderGlobals));
-    sg.I    = dir.val();
-    sg.dIdx = dir.dx();
-    sg.dIdy = dir.dy();
-    if (bounce >= 0)
-        sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
-    shadingsys->execute(*ctx, *m_shaders[backgroundShaderID], sg);
-    return process_background_closure(sg.Ci);
-}
-
 #endif // #ifndef __CUDACC__
 
 
-OSL_HOSTDEVICE Color3
-SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx)
-{
 #ifndef __CUDACC__
     using ShaderGlobalsType = OSL::ShaderGlobals;
 #else
     using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
 #endif
 
+
+OSL_HOSTDEVICE Vec3
+SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
+                                 int bounce)
+{
+    ShaderGlobalsType sg;
+    memset((char*)&sg, 0, sizeof(ShaderGlobalsType));
+    sg.I    = dir.val();
+    sg.dIdx = dir.dx();
+    sg.dIdy = dir.dy();
+    if (bounce >= 0)
+        sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
+#ifndef __CUDACC__
+    shadingsys->execute(*ctx, *m_shaders[backgroundShaderID], sg);
+#else
+    alignas(8) char closure_pool[256];
+    sg.shaderID = render_params.bg_id;
+    execute_shader(sg, closure_pool);
+#endif
+    return process_background_closure((const ClosureColor*) sg.Ci);
+}
+
+
+OSL_HOSTDEVICE Color3
+SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx)
+{
 #ifdef __CUDACC__
     // Scratch space for the output closures
     alignas(8) char closure_pool[256];

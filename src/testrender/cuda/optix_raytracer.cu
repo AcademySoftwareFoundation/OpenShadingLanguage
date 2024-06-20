@@ -129,24 +129,6 @@ execute_shader(ShaderGlobalsType& sg, char* closure_pool)
 }
 
 
-static __device__ Color3
-eval_background(const Dual2<Vec3>& dir, void* /*ctx*/, int bounce = -1)
-{
-    ShaderGlobalsType sg;
-    memset((char*)&sg, 0, sizeof(ShaderGlobalsType));
-    sg.I    = V3_TO_F3(dir.val());
-    sg.dIdx = V3_TO_F3(dir.dx());
-    sg.dIdy = V3_TO_F3(dir.dy());
-    if (bounce >= 0)
-        sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
-    sg.shaderID = render_params.bg_id;
-
-    alignas(8) char closure_pool[256];
-    execute_shader(sg, closure_pool);
-    return process_background_closure((const ClosureColor*)sg.Ci);
-}
-
-
 // Return a direction towards a point on the sphere
 // Adapted from Sphere::sample in ../raytracer.h
 static __device__ float3
@@ -326,11 +308,21 @@ __raygen__setglobals()
                              (float*)render_params.bg_cols,
                              render_params.bg_res);
 
+    SimpleRaytracer raytracer;
+    raytracer.background           = background;
+    raytracer.backgroundResolution = render_params.bg_id >= 0
+        ? render_params.bg_res
+        : 0;
+    raytracer.backgroundShaderID   = render_params.bg_id;
+    raytracer.max_bounces          = render_params.max_bounces;
+    raytracer.rr_depth             = 5;
+    raytracer.show_albedo_scale    = render_params.show_albedo_scale;
+
     if (render_params.bg_id < 0)
         return;
 
-    auto evaler = [](const Dual2<Vec3>& dir) {
-        return eval_background(dir, nullptr);
+    auto evaler = [&](const Dual2<Vec3>& dir) {
+        return raytracer.eval_background(dir, nullptr);
     };
 
     // Background::prepare_cuda must run on a single warp

@@ -60,6 +60,8 @@ struct CudaScene {
 };
 
 struct SimpleRaytracer {
+    using ShadingContext = ShadingContextCUDA;
+
     Background background;
     Camera camera;
     CudaScene scene;
@@ -70,7 +72,8 @@ struct SimpleRaytracer {
     int rr_depth             = 5;
     float show_albedo_scale  = 0.0f;
 
-    using ShadingContext = ShadingContextCUDA;
+    OSL_HOSTDEVICE Vec3 eval_background(const Dual2<Vec3>& dir,
+                                        ShadingContext* ctx, int bounce = -1);
     OSL_HOSTDEVICE Color3 subpixel_radiance(float x, float y, Sampler& sampler,
                                             ShadingContext* ctx = nullptr);
 };

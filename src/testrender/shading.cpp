@@ -1460,7 +1460,7 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
 
     Color3 get_albedo(const Vec3& wo) const override
     {
-        const float NdotV = clamp(N.dot(wo), 0.0f, 1.0f);
+        const float NdotV = clamp(N.dot(wo), 1e-5f, 1.0f);
         return Color3(fetch_ltc(NdotV).z);
     }
 
@@ -1529,7 +1529,7 @@ private:
         // for the implementation in MaterialX:
         // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_sheen.glsl
         const float x = NdotV;
-        const float y = roughness;
+        const float y = std::max(roughness, 1e-3f);
         const float A = ((2.58126f * x + 0.813703f * y) * y)
                         / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
         const float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y
@@ -1546,6 +1546,9 @@ private:
         float q                 = (x - m) * invs;
         const float inv_sqrt2pi = 0.39894228040143f;
         float R                 = expf(-0.5f * q * q) * invs * inv_sqrt2pi + o;
+        assert(isfinite(A));
+        assert(isfinite(B));
+        assert(isfinite(R));
         return Vec3(A, B, R);
     }
 };

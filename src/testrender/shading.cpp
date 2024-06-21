@@ -207,6 +207,7 @@ struct MxSheenParams {
     Color3 albedo;
     float roughness;
     // optional
+    int mode;
     ustringhash label;
 };
 
@@ -398,6 +399,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_COLOR_PARAM(MxSheenParams, albedo),
             CLOSURE_FLOAT_PARAM(MxSheenParams, roughness),
             CLOSURE_STRING_KEYPARAM(MxSheenParams, label, "label"),
+            CLOSURE_INT_KEYPARAM(MxSheenParams, mode, "mode"),
             CLOSURE_FINISH_PARAM(MxSheenParams) } },
         { "uniform_edf",
           MX_UNIFORM_EDF_ID,
@@ -589,15 +591,15 @@ struct Phong final : public BSDF, PhongParams {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
             // reflect the view vector
-            Vec3 R = (2 * cosNO) * N - wo;
-            TangentFrame tf(R);
+            Vec3 R    = (2 * cosNO) * N - wo;
             float phi = 2 * float(M_PI) * rx;
             float sp, cp;
             OIIO::fast_sincos(phi, &sp, &cp);
             float cosTheta  = OIIO::fast_safe_pow(ry, 1 / (exponent + 1));
             float sinTheta2 = 1 - cosTheta * cosTheta;
             float sinTheta  = sinTheta2 > 0 ? sqrtf(sinTheta2) : 0;
-            Vec3 wi         = tf.get(cp * sinTheta, sp * sinTheta, cosTheta);
+            Vec3 wi         = TangentFrame::from_normal(R).get(cp * sinTheta,
+                                                               sp * sinTheta, cosTheta);
             return eval(wo, wi);
         }
         return {};
@@ -614,7 +616,7 @@ struct Ward final : public BSDF, WardParams {
             // get half vector and get x,y basis on the surface for anisotropy
             Vec3 H = wi + wo;
             H.normalize();  // normalize needed for pdf
-            TangentFrame tf(N, T);
+            TangentFrame tf = TangentFrame::from_normal_and_tangent(N, T);
             // eq. 4
             float dotx = tf.getx(H) / ax;
             float doty = tf.gety(H) / ay;
@@ -636,7 +638,7 @@ struct Ward final : public BSDF, WardParams {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
-            TangentFrame tf(N, T);
+            TangentFrame tf = TangentFrame::from_normal_and_tangent(N, T);
             // generate random angles for the half vector
             float phi = 2 * float(M_PI) * rx;
             float sp, cp;
@@ -809,8 +811,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
     Microfacet(const MicrofacetParams& params)
         : BSDF()
         , MicrofacetParams(params)
-        , tf(U == Vec3(0) || xalpha == yalpha ? TangentFrame(N)
-                                              : TangentFrame(N, U))
+        , tf(TangentFrame::from_normal_and_tangent(N, U))
     {
     }
     Color3 get_albedo(const Vec3& wo) const override
@@ -1034,11 +1035,8 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     MxMicrofacet(const MxMicrofacetParams& params, float refraction_ior)
         : BSDF()
         , MxMicrofacetParams(params)
-        , tf(MxMicrofacetParams::U == Vec3(0)
-                     || MxMicrofacetParams::roughness_x
-                            == MxMicrofacetParams::roughness_y
-                 ? TangentFrame(MxMicrofacetParams::N)
-                 : TangentFrame(MxMicrofacetParams::N, MxMicrofacetParams::U))
+        , tf(TangentFrame::from_normal_and_tangent(MxMicrofacetParams::N,
+                                                   MxMicrofacetParams::U))
         , refraction_ior(refraction_ior)
     {
     }
@@ -1398,8 +1396,12 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
     }
 };
 
-struct MxSheen final : public BSDF, MxSheenParams {
-    MxSheen(const MxSheenParams& params) : BSDF(), MxSheenParams(params) {}
+// Implementation of the "Charlie Sheen" model [Conty & Kulla, 2017]
+// https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_sheen.pdf
+// To simplify the implementation, the simpler shadowing/masking visibility term below is used:
+// https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2022x.md.html#components/sheen
+struct CharlieSheen final : public BSDF, MxSheenParams {
+    CharlieSheen(const MxSheenParams& params) : BSDF(), MxSheenParams(params) {}
 
     Color3 get_albedo(const Vec3& wo) const override
     {
@@ -1443,6 +1445,114 @@ struct MxSheen final : public BSDF, MxSheenParams {
         return eval(wo, out_dir);
     }
 };
+
+// Implement the sheen model proposed in:
+//  "Practical Multiple-Scattering Sheen Using Linearly Transformed Cosines"
+// Tizian Zeltner, Brent Burley, Matt Jen-Yuan Chiang - Siggraph 2022
+// https://tizianzeltner.com/projects/Zeltner2022Practical/
+struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
+    ZeltnerBurleySheen(const MxSheenParams& params)
+        : BSDF(), MxSheenParams(params)
+    {
+    }
+
+#define USE_LTC_SAMPLING 1
+
+    Color3 get_albedo(const Vec3& wo) const override
+    {
+        const float NdotV = clamp(N.dot(wo), 1e-5f, 1.0f);
+        return Color3(fetch_ltc(NdotV).z);
+    }
+
+    Sample eval(const Vec3& wo, const Vec3& wi) const override
+    {
+        const Vec3 L = wi, V = wo;
+        const float NdotV = clamp(N.dot(V), 0.0f, 1.0f);
+        const Vec3 ltc    = fetch_ltc(NdotV);
+
+        const Vec3 localL = TangentFrame::from_normal_and_tangent(N, V).tolocal(
+            L);
+
+        const float aInv = ltc.x, bInv = ltc.y, R = ltc.z;
+        Vec3 wiOriginal(aInv * localL.x + bInv * localL.z, aInv * localL.y,
+                        localL.z);
+        const float len2 = dot(wiOriginal, wiOriginal);
+
+        float det      = aInv * aInv;
+        float jacobian = det / (len2 * len2);
+
+#if USE_LTC_SAMPLING == 1
+        float pdf = jacobian * std::max(wiOriginal.z, 0.0f) * float(M_1_PI);
+        return { wi, Color3(R), pdf, 1.0f };
+#else
+        float pdf = float(0.5 * M_1_PI);
+        // NOTE: sheen closure has no fresnel/masking
+        return { wi, Color3(2 * R * jacobian * std::max(wiOriginal.z, 0.0f)),
+                 pdf, 1.0f };
+#endif
+    }
+
+    Sample sample(const Vec3& wo, float rx, float ry, float rz) const override
+    {
+#if USE_LTC_SAMPLING == 1
+        const Vec3 V      = wo;
+        const float NdotV = clamp(N.dot(V), 0.0f, 1.0f);
+        const Vec3 ltc    = fetch_ltc(NdotV);
+        const float aInv = ltc.x, bInv = ltc.y, R = ltc.z;
+        Vec3 wi;
+        float pdf;
+        Sampling::sample_cosine_hemisphere(Vec3(0, 0, 1), rx, ry, wi, pdf);
+
+        const Vec3 w         = Vec3(wi.x - wi.z * bInv, wi.y, wi.z * aInv);
+        const float len2     = dot(w, w);
+        const float jacobian = len2 * len2 / (aInv * aInv);
+        const Vec3 wn        = w / sqrtf(len2);
+
+        const Vec3 L = TangentFrame::from_normal_and_tangent(N, V).toworld(wn);
+
+        pdf = jacobian * std::max(wn.z, 0.0f) * float(M_1_PI);
+
+        return { L, Color3(R), pdf, 1.0f };
+#else
+        // plain uniform-sampling for validation
+        Vec3 out_dir;
+        float pdf;
+        Sampling::sample_uniform_hemisphere(N, rx, ry, out_dir, pdf);
+        return eval(wo, out_dir);
+#endif
+    }
+
+private:
+    Vec3 fetch_ltc(float NdotV) const
+    {
+        // To avoid look-up tables, we use a fit of the LTC coefficients derived by Stephen Hill
+        // for the implementation in MaterialX:
+        // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_sheen.glsl
+        const float x = NdotV;
+        const float y = std::max(roughness, 1e-3f);
+        const float A = ((2.58126f * x + 0.813703f * y) * y)
+                        / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
+        const float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y
+                        / (0.0000254053f + 1.71228f * x - 1.71506f * x * y
+                           + 1.34174f * y * y);
+        const float invs = (0.0379424f + y * (1.32227f + y))
+                           / (y * (0.0206607f + 1.58491f * y));
+        const float m = y
+                        * (-0.193854f
+                           + y * (-1.14885 + y * (1.7932f - 0.95943f * y * y)))
+                        / (0.046391f + y);
+        const float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y)
+                        / (1.26264f + y * (-1.92021f + y));
+        float q                 = (x - m) * invs;
+        const float inv_sqrt2pi = 0.39894228040143f;
+        float R                 = expf(-0.5f * q * q) * invs * inv_sqrt2pi + o;
+        assert(isfinite(A));
+        assert(isfinite(B));
+        assert(isfinite(R));
+        return Vec3(A, B, R);
+    }
+};
+
 
 Color3
 evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
@@ -1493,8 +1603,11 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
             return w * mf.get_albedo(-sg.I);
         }
         case MX_SHEEN_ID: {
-            MxSheen bsdf(*comp->as<MxSheenParams>());
-            return w * bsdf.get_albedo(-sg.I);
+            const MxSheenParams& params = *comp->as<MxSheenParams>();
+            if (params.mode == 1)
+                return w * ZeltnerBurleySheen(params).get_albedo(-sg.I);
+            // otherwise, default to old sheen model
+            return w * CharlieSheen(params).get_albedo(-sg.I);
         }
         default:  // Assume unhandled BSDFs are opaque
             return Color3(1);
@@ -1765,7 +1878,11 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
             }
             case MX_SHEEN_ID: {
                 const MxSheenParams& params = *comp->as<MxSheenParams>();
-                ok = result.bsdf.add_bsdf<MxSheen>(cw, params);
+                if (params.mode == 1)
+                    ok = result.bsdf.add_bsdf<ZeltnerBurleySheen>(cw, params);
+                else
+                    ok = result.bsdf.add_bsdf<CharlieSheen>(
+                        cw, params);  // default to legacy closure
                 break;
             }
             case MX_LAYER_ID: {

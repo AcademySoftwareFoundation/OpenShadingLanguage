@@ -249,6 +249,14 @@ def oiiodiff (fileA, fileB, extraargs="", silent=True, concat=True) :
         command += " ;\n"
     return command
 
+# Construct a command that run testminimal with the specified arguments,
+# appending output to the file "out.txt".
+def testminimal (args) :
+    if os.environ.__contains__('OSL_TESTMINIMAL_NAME') :
+        testminimalname = os.environ['OSL_TESTMINIMAL_NAME'] + " "
+    else :
+        testminimalname = osl_app("testminimal")
+    return (testminimalname + args + redirect + " ;\n")
 
 # Construct a command that run testshade with the specified arguments,
 # appending output to the file "out.txt".

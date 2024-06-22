@@ -154,28 +154,28 @@ bitcast_to_uint (float x)
 OSL_FORCEINLINE void
 bjmix(vint4& a, vint4& b, vint4& c)
 {
-    using OIIO::simd::rotl32;
-    a -= c;  a ^= rotl32(c, 4);  c += b;
-    b -= a;  b ^= rotl32(a, 6);  a += c;
-    c -= b;  c ^= rotl32(b, 8);  b += a;
-    a -= c;  a ^= rotl32(c,16);  c += b;
-    b -= a;  b ^= rotl32(a,19);  a += c;
-    c -= b;  c ^= rotl32(b, 4);  b += a;
+    using OIIO::simd::rotl;
+    a -= c;  a ^= rotl(c, 4);  c += b;
+    b -= a;  b ^= rotl(a, 6);  a += c;
+    c -= b;  c ^= rotl(b, 8);  b += a;
+    a -= c;  a ^= rotl(c,16);  c += b;
+    b -= a;  b ^= rotl(a,19);  a += c;
+    c -= b;  c ^= rotl(b, 4);  b += a;
 }
 
 // Perform a bjfinal (see OpenImageIO/hash.h) on 4 sets of values at once.
 OSL_FORCEINLINE vint4
 bjfinal(const vint4& a_, const vint4& b_, const vint4& c_)
 {
-    using OIIO::simd::rotl32;
+    using OIIO::simd::rotl;
     vint4 a(a_), b(b_), c(c_);
-    c ^= b; c -= rotl32(b,14);
-    a ^= c; a -= rotl32(c,11);
-    b ^= a; b -= rotl32(a,25);
-    c ^= b; c -= rotl32(b,16);
-    a ^= c; a -= rotl32(c,4);
-    b ^= a; b -= rotl32(a,14);
-    c ^= b; c -= rotl32(b,24);
+    c ^= b; c -= rotl(b,14);
+    a ^= c; a -= rotl(c,11);
+    b ^= a; b -= rotl(a,25);
+    c ^= b; c -= rotl(b,16);
+    a ^= c; a -= rotl(c,4);
+    b ^= a; b -= rotl(a,14);
+    c ^= b; c -= rotl(b,24);
     return c;
 }
 #endif

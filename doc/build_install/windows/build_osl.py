@@ -896,7 +896,7 @@ def InstallPtex_Windows(context, force, buildArgs):
         )
         PatchFile(
             "src\\tests\\CMakeLists.txt",
-            [("add_definitions(-DPTEX_STATIC)", "# add_definitions(-DPTEX_STATIC)")],
+            [("add_compile_definitions(PTEX_STATIC)", "# add_compile_definitions(PTEX_STATIC)")],
         )
 
         # Patch Ptex::String to export symbol for operator<<

@@ -38,7 +38,7 @@ if (OSL_USE_OPTIX)
     endforeach ()
 
     # Compile the renderer-supplied shadeops (rend_lib) to LLVM bitcode and PTX
-    add_definitions (-DOSL_LLVM_CUDA_BITCODE)
+    add_compile_definitions (OSL_LLVM_CUDA_BITCODE)
     CUDA_SHADEOPS_COMPILE ( "rend_lib_testshade"
         rend_lib_bc
         rend_lib_ptx

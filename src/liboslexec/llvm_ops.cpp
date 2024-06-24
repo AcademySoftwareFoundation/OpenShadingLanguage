@@ -639,19 +639,19 @@ osl_step_vvv(void* result, void* edge, void* x)
 OSL_SHADEOP int
 osl_isnan_if(float f)
 {
-    return OIIO::isnan(f);
+    return std::isnan(f);
 }
 
 OSL_SHADEOP int
 osl_isinf_if(float f)
 {
-    return OIIO::isinf(f);
+    return std::isinf(f);
 }
 
 OSL_SHADEOP int
 osl_isfinite_if(float f)
 {
-    return OIIO::isfinite(f);
+    return std::isfinite(f);
 }
 
 
@@ -705,7 +705,7 @@ safe_div(float a, float b)
     // to see if is finite and return 0.0f when it is not.
     // Typical implementation isfinite is (fabs(v) != INF), so not too expensive.
     float q = a / b;
-    return OIIO::isfinite(q) ? q : 0.0f;
+    return std::isfinite(q) ? q : 0.0f;
     // TODO: add a FTZ mode and only add checking the result when FTZ is disabled
 #endif
 }

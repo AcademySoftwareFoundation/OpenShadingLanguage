@@ -4591,7 +4591,7 @@ osl_naninf_check(int ncomps, const void* vals_, int has_derivs, void* sg,
     for (int d = 0; d < (has_derivs ? 3 : 1); ++d) {
         for (int c = firstcheck, e = c + nchecks; c < e; ++c) {
             int i = d * ncomps + c;
-            if (!OIIO::isfinite(vals[i])) {
+            if (!std::isfinite(vals[i])) {
                 OSL::errorfmt(ec, "Detected {} value in {}{} at {}:{} (op {})",
                               vals[i], d > 0 ? "the derivatives of " : "",
                               OSL::ustringhash_from(symbolname_),
@@ -4627,7 +4627,7 @@ osl_uninit_check(long long typedesc_, void* vals_, void* sg,
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float* vals = (float*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
-            if (!OIIO::isfinite(vals[c])) {
+            if (!std::isfinite(vals[c])) {
                 uninit  = true;
                 vals[c] = 0;
             }

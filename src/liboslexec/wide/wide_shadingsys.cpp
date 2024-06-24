@@ -39,7 +39,7 @@ __OSL_OP(naninf_check)(int ncomps, const void* vals_, int has_derivs,
     for (int d = 0; d < (has_derivs ? 3 : 1); ++d) {
         for (int c = firstcheck, e = c + nchecks; c < e; ++c) {
             int i = d * ncomps + c;
-            if (!OIIO::isfinite(vals[i])) {
+            if (!std::isfinite(vals[i])) {
                 ctx->errorfmt("Detected {} value in {}{} at {}:{} (op {})",
                               vals[i], d > 0 ? "the derivatives of " : "",
                               USTR(symbolname), USTR(sourcefile), sourceline,
@@ -68,7 +68,7 @@ __OSL_MASKED_OP1(naninf_check_offset,
         for (int c = firstcheck, e = c + nchecks; c < e; ++c) {
             int i = d * ncomps + c;
             mask.foreach ([=](ActiveLane lane) -> void {
-                if (!OIIO::isfinite(vals[i * __OSL_WIDTH + lane])) {
+                if (!std::isfinite(vals[i * __OSL_WIDTH + lane])) {
                     ctx->errorfmt(
                         "Detected {} value in {}{} at {}:{} (op {}) batch lane:{}",
                         vals[i * __OSL_WIDTH + lane],
@@ -107,7 +107,7 @@ __OSL_MASKED_OP1(naninf_check_offset,
             int firstcheck = wOffsets[lane];
             for (int c = firstcheck, e = c + nchecks; c < e; ++c) {
                 int i = d * ncomps + c;
-                if (!OIIO::isfinite(vals[i * __OSL_WIDTH + lane])) {
+                if (!std::isfinite(vals[i * __OSL_WIDTH + lane])) {
                     ctx->errorfmt(
                         "Detected {} value in {}{} at {}:{} (op {}) batch lane:{}",
                         vals[i * __OSL_WIDTH + lane],
@@ -143,7 +143,7 @@ __OSL_OP2(uninit_check_values_offset, X,
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float* vals = (float*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
-            if (!OIIO::isfinite(vals[c])) {
+            if (!std::isfinite(vals[c])) {
                 uninit  = true;
                 vals[c] = 0;
             }
@@ -200,7 +200,7 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
         float* vals = (float*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
             mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
-                if (!OIIO::isfinite(vals[c * __OSL_WIDTH + lane])) {
+                if (!std::isfinite(vals[c * __OSL_WIDTH + lane])) {
                     lanes_uninit.set_on(lane);
                     vals[c * __OSL_WIDTH + lane] = 0;
                 }
@@ -265,7 +265,7 @@ __OSL_MASKED_OP2(uninit_check_values_offset, X,
         mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
             int firstcheck = wOffsets[lane];
             for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
-                if (!OIIO::isfinite(vals[c])) {
+                if (!std::isfinite(vals[c])) {
                     lanes_uninit.set_on(lane);
                     vals[c] = 0;
                 }
@@ -331,7 +331,7 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
         mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
             int firstcheck = wOffsets[lane];
             for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
-                if (!OIIO::isfinite(vals[c * __OSL_WIDTH + lane])) {
+                if (!std::isfinite(vals[c * __OSL_WIDTH + lane])) {
                     lanes_uninit.set_on(lane);
                     vals[c * __OSL_WIDTH + lane] = 0;
                 }

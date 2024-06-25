@@ -520,8 +520,8 @@ DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, Wm), "xXXXii")
 DECL(__OSL_MASKED_OP3(transform_normal, Wv, Wv, m), "xXXXii")
 DECL(__OSL_MASKED_OP3(transform_normal, Wdv, Wdv, m), "xXXXii")
 
-DECL(__OSL_MASKED_OP3(transform_color, Wv, s, s), "xXXiXissi")
-DECL(__OSL_OP3(transform_color, v, s, s), "xXXiXiss")
+DECL(__OSL_MASKED_OP3(transform_color, Wv, s, s), "xXXiXihhi")
+DECL(__OSL_OP3(transform_color, v, s, s), "xXXiXihh")
 
 DECL(__OSL_OP3(dot, Wf, Wv, Wv), "xXXX")
 DECL(__OSL_MASKED_OP3(dot, Wf, Wv, Wv), "xXXXi")

@@ -143,7 +143,7 @@ add_definitions (-DOSL_INTERNAL=1)
 
 # To make sure we aren't relying on deprecated OIIO features, we define
 # OIIO_DISABLE_DEPRECATED before including any OIIO headers.
-add_definitions (-DOIIO_DISABLE_DEPRECATED=1)
+add_definitions (-DOIIO_DISABLE_DEPRECATED=900000)
 
 # Set the default namespace. For symbol hiding reasons, it's important that
 # the project name is a subset of the namespace name.

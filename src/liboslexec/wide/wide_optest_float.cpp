@@ -25,17 +25,14 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
 #include "define_opname_macros.h"
 
-#define __OSL_XMACRO_ARGS (isnan, OIIO::isnan)
-//#define __OSL_XMACRO_ARGS (isnan,std::isnan)
+#define __OSL_XMACRO_ARGS (isnan, std::isnan)
 #include "wide_optest_float_xmacro.h"
 
-#define __OSL_XMACRO_ARGS (isinf, OIIO::isinf)
+#define __OSL_XMACRO_ARGS (isinf, std::isinf)
 //#define __OSL_XMACRO_ARGS (isinf, sfm::isinf)
-//#define __OSL_XMACRO_ARGS (isinf, std::isinf)
 #include "wide_optest_float_xmacro.h"
 
-#define __OSL_XMACRO_ARGS (isfinite, OIIO::isfinite)
-//#define __OSL_XMACRO_ARGS (isfinite,std::isfinite)
+#define __OSL_XMACRO_ARGS (isfinite, std::isfinite)
 #include "wide_optest_float_xmacro.h"
 
 

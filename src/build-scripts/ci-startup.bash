@@ -47,6 +47,9 @@ export DYLD_LIBRARY_PATH=${LOCAL_DEPS_DIR}/dist/lib:$DYLD_LIBRARY_PATH
 
 export TESTSUITE_CLEANUP_ON_SUCCESS=${TESTSUITE_CLEANUP_ON_SUCCESS:=1}
 
+# For CI, default to building missing dependencies automatically
+export OpenImageIO_BUILD_MISSING_DEPS=${OpenImageIO_BUILD_MISSING_DEPS:=all}
+
 # Parallel builds
 if [[ `uname -s` == "Linux" ]] ; then
     echo "procs: " `nproc`

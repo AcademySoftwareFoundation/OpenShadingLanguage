@@ -3854,13 +3854,36 @@ LLVM_Util::mask_as_int8(llvm::Value* mask)
 llvm::Value*
 LLVM_Util::mask4_as_int8(llvm::Value* mask)
 {
-    OSL_ASSERT(m_supports_llvm_bit_masks_natively);
-    // combine <4xi1> mask with <4xi1> zero init to get <8xi1> and cast it
-    // to i8
-    llvm::Value* zero_mask4
-        = llvm::ConstantDataVector::getSplat(4, constant_bool(false));
-    return builder().CreateBitCast(op_combine_4x_vectors(mask, zero_mask4),
-                                   type_int8());
+    if (m_supports_llvm_bit_masks_natively) {
+        // combine <4xi1> mask with <4xi1> zero init to get <8xi1> and cast it
+        // to i8
+        llvm::Value* zero_mask4
+            = llvm::ConstantDataVector::getSplat(4, constant_bool(false));
+        return builder().CreateBitCast(op_combine_4x_vectors(mask, zero_mask4),
+                                       type_int8());
+    } else {
+        // Convert <4 x i1> -> <4 x i32>
+        llvm::Value* wide_int_mask = builder().CreateSExt(mask,
+                                                          type_wide_int());
+
+        // Now we will use the horizontal sign extraction intrinsic
+        // to build a 32 bit mask value. However the only 128bit
+        // version works on floats, so we will cast from int32 to
+        // float beforehand
+        llvm::Type* w4_float_type  = llvm_vector_type(m_llvm_type_float, 4);
+        llvm::Value* w4_float_mask = builder().CreateBitCast(wide_int_mask,
+                                                             w4_float_type);
+
+        llvm::Function* func = llvm::Intrinsic::getDeclaration(
+            module(), llvm::Intrinsic::x86_sse_movmsk_ps);
+
+        llvm::Value* args[1] = { w4_float_mask };
+        llvm::Value* int32   = builder().CreateCall(func, toArrayRef(args));
+
+        llvm::Value* i8 = builder().CreateIntCast(int32, type_int8(), true);
+
+        return i8;
+    }
 }
 
 
@@ -4013,17 +4036,22 @@ LLVM_Util::op_1st_active_lane_of(llvm::Value* mask)
         intMaskType = type_int8();
         break;
     case 4: {
-        // We can just reinterpret cast a 4 bit mask to a 8 bit integer
-        // and all types are happy
         intMaskType = type_int8();
 
-        //            extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
-        //            llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
-        //
-        //            int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
-        //            zeroConstant = constant128(0);
-        //
-        //            llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+        llvm::Value* mask_as_int = mask4_as_int8(mask);
+
+        // Count trailing zeros, least significant
+        llvm::Type* types[] = { intMaskType };
+        llvm::Function* func_cttz
+            = llvm::Intrinsic::getDeclaration(module(), llvm::Intrinsic::cttz,
+                                              toArrayRef(types));
+
+        llvm::Value* args[2] = { mask_as_int, constant_bool(true) };
+
+        llvm::Value* firstNonZeroIndex = builder().CreateCall(func_cttz,
+                                                              toArrayRef(args));
+        return firstNonZeroIndex;
+
         break;
     }
     default: OSL_ASSERT(0 && "unsupported native bit mask width");

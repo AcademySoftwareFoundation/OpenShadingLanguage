@@ -367,7 +367,7 @@ gabor_cell(const sfm::GaborUniformParams& gup, const sfm::GaborParams& gp,
                 //bool not_finite = std::isnan(gk.val()) | std::isinf(gk.val());
                 bool not_finite = std::isnan(gk.val()) || std::isinf(gk.val());
 #else
-                bool not_finite = !OIIO::isfinite(gk.val());
+                bool not_finite = !std::isfinite(gk.val());
 #endif
                 if (OSL_UNLIKELY(not_finite)) {
                     // Numeric failure of the filtered version.  Fall

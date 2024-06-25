@@ -5049,27 +5049,19 @@ Constructs a BSSRDF for subsurface scattering within a homogeneous medium.
   
   \apiitem{albedo}
   \vspace{12pt}
-  Single-scattering albedo of the medium.
+  Effective albedo of the medium (after multiple scattering). The renderer is expected to
+  invert this color to derive the appropriate single-scattering albedo that will produce
+  this color for the average random walk.
   \apiend
   \vspace{-16pt}
   
-  \apiitem{transmission_depth}
+  \apiitem{radius}
   \vspace{12pt}
-  Distance travelled inside the medium by white light before its color becomes
-  transmission_color by Beer's law. Given in scene length units, range
-  [0,infinity). Together with transmission_color this determines the
-  extinction coefficient of the medium.
+  Average distance travelled inside the medium per color channel. This is typically taken
+  to be the mean-free path of the volume.
   \apiend
   \vspace{-16pt}
-  
-  \apiitem{transmission_color}
-  \vspace{12pt}
-  Desired color resulting from white light transmitted a distance of
-  'transmission_depth' through the medium. Together with transmission_depth
-  this determines the extinction coefficient of the medium.
-  \apiend
-  \vspace{-16pt}
-  
+
   \apiitem{anisotropy}
   \vspace{12pt}
   Scattering anisotropy [-1,1]. Negative values give backwards scattering,

@@ -1506,14 +1506,11 @@ properties of the physically-based shading nodes of MaterialX v1.38
       : Normal vector of the surface point being shaded.
     
     `albedo`
-      : Single-scattering albedo of the medium.
+      : Effective albedo of the medium (after multiple scattering). The renderer is expected to invert this color to derive the appropriate single-scattering albedo that will produce this color for the average random walk.
     
-    `transmission_depth`
-      : Distance travelled inside the medium by white light before its color becomes transmission_color by Beer's law. Given in scene length units, range [0,infinity). Together with transmission_color this determines the extinction coefficient of the medium.
-    
-    `transmission_color`
-      : Desired color resulting from white light transmitted a distance of 'transmission_depth' through the medium. Together with transmission_depth this determines the extinction coefficient of the medium.
-    
+    `radius`
+      : Average distance travelled inside the medium per color channel. This is typically taken to be the mean-free path of the volume.
+
     `anisotropy`
       : Scattering anisotropy [-1,1]. Negative values give backwards scattering, positive values give forward scattering, and 0.0 gives uniform scattering.
     

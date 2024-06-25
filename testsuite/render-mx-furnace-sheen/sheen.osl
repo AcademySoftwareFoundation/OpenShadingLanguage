@@ -15,5 +15,8 @@ sheen
             float UImin = 0, float UImax = 1 ]]
   )
 {
-    Ci = sheen_bsdf (N, Cs, roughness);
+    if (N.y < 0)
+        Ci = sheen_bsdf (N, Cs, sqrt(roughness), "mode", 1);
+    else
+        Ci = sheen_bsdf (N, Cs, roughness);
 }

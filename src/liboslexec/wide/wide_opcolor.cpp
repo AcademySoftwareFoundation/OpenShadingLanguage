@@ -281,9 +281,9 @@ __OSL_MASKED_OP2(prepend_color_from, Wv, Ws)(void* bsg_, void* c_, void* from_,
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
-    Wide<const ustring> wFrom(from_);
+    Wide<const ustringhash> wFrom(from_);
     foreach_unique(wFrom, Mask(mask_value),
-                   [=, &cs](const ustring& from, Mask from_mask) {
+                   [=, &cs](const ustringhash& from, Mask from_mask) {
                        // Reuse the uniform from implementation by restricting results to
                        // just the lanes with the same value of "from".
                        Masked<Color3> wsub_result(c_, from_mask);
@@ -305,16 +305,16 @@ namespace {
 
 template<typename COLOR>
 OSL_NOINLINE void
-wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
-                Masked<COLOR> wOutput, Wide<const COLOR> wInput,
-                ShadingContext* context);
+wide_transformc(const ColorSystem cs, ustringhash fromspace,
+                ustringhash tospace, Masked<COLOR> wOutput,
+                Wide<const COLOR> wInput, ShadingContext* context);
 
 // NOTE: keep implementation as mirror of ColorSystem::transformc
 template<typename COLOR>
 void
-wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
-                Masked<COLOR> wOutput, Wide<const COLOR> wInput,
-                ShadingContext* context)
+wide_transformc(const ColorSystem cs, ustringhash fromspace,
+                ustringhash tospace, Masked<COLOR> wOutput,
+                Wide<const COLOR> wInput, ShadingContext* context)
 {
     // Rather than attempt outer loop vectorization of ColorSystem::transformc
     // we will pull it's implementation up and insert SIMD loops inside
@@ -479,8 +479,8 @@ __OSL_MASKED_OP3(transform_color, Wv, s,
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
-    ustring from = ustring_from(from_);
-    ustring to   = ustring_from(to_);
+    ustringhash from = ustringhash_from(from_);
+    ustringhash to   = ustringhash_from(to_);
 
     if (Cout_derivs) {
         if (Cin_derivs) {
@@ -517,8 +517,8 @@ __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
-    ustring from = ustring_from(from_);
-    ustring to   = ustring_from(to_);
+    ustringhash from = ustringhash_from(from_);
+    ustringhash to   = ustringhash_from(to_);
 
     if (Cout_derivs) {
         if (Cin_derivs) {

@@ -21,9 +21,14 @@
 # MacOS/xcode in /usr/bin, which seems to be too old for the reentrant
 # parser directives we use. Only do this if there is no BISON_ROOT
 # specifying a particular Bison to use.
-if (APPLE AND EXISTS /usr/local/opt
-        AND NOT BISON_ROOT AND NOT DEFINED ENV{BISON_ROOT})
-    find_program(BISON_EXECUTABLE NAMES /usr/local/opt/bison/bin/bison
+if (APPLE AND NOT BISON_ROOT AND NOT DEFINED ENV{BISON_ROOT}
+    AND (EXISTS /usr/local/opt OR EXISTS /opt/homebrew
+         OR DEFINED ENV{HOMEBREW_PREFIX}))
+    find_program(BISON_EXECUTABLE
+                 NAMES
+                    ENV{HOMEBREW_PREFIX}/opt/bison/bin/bison
+                    /opt/homebrew/opt/bison/bin/bison
+                    /usr/local/opt/bison/bin/bison
                  DOC "path to the bison executable")
 endif()
 

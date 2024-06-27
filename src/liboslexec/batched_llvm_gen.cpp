@@ -79,8 +79,8 @@ BatchedBackendLLVM::llvm_gen_debug_printf(string_view message)
 {
     ustring s = ustring::fmtformat("({} {}) {}", inst()->shadername(),
                                    inst()->layername(), message);
-    ll.call_function(build_name("printf"), sg_void_ptr(), ll.constant("%s\n"),
-                     ll.constant(s));
+    ll.call_function(build_name("printf"), sg_void_ptr(), ll.constant((unsigned int)(1)), ll.constant("%s\n"),
+                     ll.constant_real_ustring(s));
 }
 
 

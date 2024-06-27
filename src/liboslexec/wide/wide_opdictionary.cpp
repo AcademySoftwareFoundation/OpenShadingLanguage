@@ -48,12 +48,12 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 #include "define_opname_macros.h"
 
 OSL_BATCHOP int
-__OSL_OP(dict_find_iis)(void* bsg_, int nodeID, ustring_pod query)
+__OSL_OP(dict_find_iis)(void* bsg_, int nodeID, ustringhash_pod query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return bsg->uniform.context->dict_find(
         nullptr /*causes errors be reported through ShadingContext*/, nodeID,
-        USTR(query));
+        ustring_from(query));
 }
 
 
@@ -82,12 +82,13 @@ __OSL_MASKED_OP3(dict_find, Wi, Wi, Ws)(void* bsg_, void* wout, void* wnodeID,
 
 
 OSL_BATCHOP int
-__OSL_OP(dict_find_iss)(void* bsg_, ustring_pod dictionary, ustring_pod query)
+__OSL_OP(dict_find_iss)(void* bsg_, ustringhash_pod dictionary,
+                        ustringhash_pod query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     return bsg->uniform.context->dict_find(
         nullptr /*causes errors be reported through ShadingContext*/,
-        USTR(dictionary), USTR(query));
+        ustring_from(dictionary), ustring_from(query));
 }
 
 
@@ -145,11 +146,11 @@ __OSL_MASKED_OP(dict_next)(void* bsg_, void* wout, void* wNodeID,
 
 
 OSL_BATCHOP int
-__OSL_OP(dict_value)(void* bsg_, int nodeID, ustring_pod attribname,
+__OSL_OP(dict_value)(void* bsg_, int nodeID, ustringhash_pod attribname,
                      long long type, void* data)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return bsg->uniform.context->dict_value(nodeID, USTR(attribname),
+    return bsg->uniform.context->dict_value(nodeID, ustring_from(attribname),
                                             TYPEDESC(type), data,
                                             /*treat_ustrings_as_hash*/ false);
 }

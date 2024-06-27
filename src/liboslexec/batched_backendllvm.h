@@ -98,10 +98,14 @@ public:
     /// performed if cast is the default of UNKNOWN).
     llvm::Value* llvm_load_value(const Symbol& sym, int deriv,
                                  llvm::Value* arrayindex, int component,
-                                 TypeDesc cast         = TypeDesc::UNKNOWN,
-                                 bool op_is_uniform    = true,
-                                 bool index_is_uniform = true);
+                                 TypeDesc cast            = TypeDesc::UNKNOWN,
+                                 bool op_is_uniform       = true,
+                                 bool index_is_uniform    = true,
+                                 bool always_real_ustring = false);
 
+    llvm::Value* llvm_const_hash(string_view str);
+
+    llvm::Value* llvm_const_hash(ustring str);
 
     /// Given an llvm::Value* of a pointer (and the type of the data
     /// that it points to), Return the llvm::Value* corresponding to the

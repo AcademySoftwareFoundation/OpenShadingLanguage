@@ -494,7 +494,7 @@ dispatch_pointcloud_write(BatchedShaderGlobals* bsg, ustringhash filename,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP(pointcloud_search)(
-    BatchedShaderGlobals* bsg, void* wout_num_points_, ustring_pod filename,
+    BatchedShaderGlobals* bsg, void* wout_num_points_, ustringhash_pod filename,
     const void* wcenter_, void* wradius_, int max_points, int sort,
     void* wout_indices_, int indices_array_length, void* wout_distances_,
     int distances_array_length, int distances_has_derivs, int mask_value,
@@ -521,8 +521,8 @@ __OSL_MASKED_OP(pointcloud_search)(
 
     Wide<const float> wradius(wradius_);
 
-    dispatch_pointcloud_search(bsg, USTR(filename).uhash(), wcenter_, wradius,
-                               max_points, sort, pcsr);
+    dispatch_pointcloud_search(bsg, ustringhash_from(filename), wcenter_,
+                               wradius, max_points, sort, pcsr);
 
     if (nattrs > 0) {
         Wide<const int[]> windices { wout_indices_, indices_array_length };
@@ -531,12 +531,15 @@ __OSL_MASKED_OP(pointcloud_search)(
         va_list args;
         va_start(args, nattrs);
         for (int i = 0; i < nattrs; i++) {
-            ustring attr_name  = USTR(va_arg(args, ustring_pod));
+            ustringhash attr_name = ustringhash_from(
+                va_arg(args, ustringhash_pod));
             TypeDesc attr_type = TYPEDESC(va_arg(args, long long));
             void* out_data     = va_arg(args, void*);
-            dispatch_pointcloud_get(
-                bsg, USTR(filename), windices, wnum_points, attr_name,
-                MaskedData { attr_type, false, Mask { mask_value }, out_data });
+            dispatch_pointcloud_get(bsg, ustringhash_from(filename), windices,
+                                    wnum_points, attr_name,
+                                    MaskedData { attr_type, false,
+                                                 Mask { mask_value },
+                                                 out_data });
         }
         va_end(args);
     }
@@ -548,11 +551,11 @@ __OSL_MASKED_OP(pointcloud_search)(
 
 
 OSL_BATCHOP int
-__OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, ustring_pod filename,
-                                void* windices_, int indices_array_length,
-                                void* wnum_points_, ustring_pod attr_name,
-                                long long attr_type_, void* wout_data_,
-                                int mask_value)
+__OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg,
+                                ustringhash_pod filename, void* windices_,
+                                int indices_array_length, void* wnum_points_,
+                                ustringhash_pod attr_name, long long attr_type_,
+                                void* wout_data_, int mask_value)
 {
     ShadingContext* ctx = bsg->uniform.context;
     if (ctx->shadingsys()
@@ -565,8 +568,8 @@ __OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, ustring_pod filename,
     TypeDesc attr_type = TYPEDESC(attr_type_);
 
     Mask success = dispatch_pointcloud_get(
-        bsg, USTR(filename).uhash(), windices, wnum_points,
-        USTR(attr_name).uhash(),
+        bsg, ustringhash_from(filename), windices, wnum_points,
+        ustringhash_from(attr_name),
         MaskedData { attr_type, false, Mask { mask_value }, wout_data_ });
     return success.value();
 }
@@ -575,7 +578,7 @@ __OSL_MASKED_OP(pointcloud_get)(BatchedShaderGlobals* bsg, ustring_pod filename,
 
 OSL_BATCHOP int
 __OSL_MASKED_OP(pointcloud_write)(BatchedShaderGlobals* bsg,
-                                  ustring_pod filename, const void* wpos_,
+                                  ustringhash_pod filename, const void* wpos_,
                                   int nattribs, const ustring* attr_names,
                                   const TypeDesc* attr_types,
                                   const void** ptrs_to_wide_attr_value,
@@ -589,10 +592,10 @@ __OSL_MASKED_OP(pointcloud_write)(BatchedShaderGlobals* bsg,
 
     Wide<const OSL::Vec3> wpos(wpos_);
 
-    Mask success = dispatch_pointcloud_write(bsg, USTR(filename).uhash(), wpos,
-                                             nattribs, attr_names, attr_types,
-                                             ptrs_to_wide_attr_value,
-                                             Mask(mask_value));
+    Mask success
+        = dispatch_pointcloud_write(bsg, ustringhash_from(filename), wpos,
+                                    nattribs, attr_names, attr_types,
+                                    ptrs_to_wide_attr_value, Mask(mask_value));
     return success.value();
 }
 

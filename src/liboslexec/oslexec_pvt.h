@@ -245,14 +245,14 @@ struct AttributeNeeded {
 // "C" linkage (no C++ name mangling).
 #define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
 
-
+/*
 // Handy re-casting macros
 inline ustring
 USTR(ustring_pod s) noexcept
 {
     return OSL::bitcast<ustring>(s);
 }
-
+*/
 
 #define MAT(m)      (*(Matrix44*)m)
 #define VEC(v)      (*(Vec3*)v)
@@ -673,6 +673,10 @@ public:
     ustring commonspace_synonym() const
     {
         return ustring_from(m_shading_state_uniform.m_commonspace_synonym);
+    }
+    ustringhash commonspace_synonym_hash() const
+    {
+        return ustringhash_from(m_shading_state_uniform.m_commonspace_synonym);
     }
 
     bool llvm_jit_fma() const { return m_llvm_jit_fma; }

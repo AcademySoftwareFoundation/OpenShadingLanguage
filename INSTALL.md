@@ -9,9 +9,9 @@ and aarch64), and Windows (x86_64). It may build and run on other platforms as
 well, but we don't officially support or test other than these platforms.
 
 Shader execution is supported on the native architectures of those x86_64 and
-aarch64 platforms, a special batched 8- or 16-wide SIMD execution mode
-requiring x86_64 with AVX2 or AVX-512 instructions, as well as on NVIDIA GPUs
-using Cuda+OptiX.
+aarch64 platforms, a special batched 4-, 8- or 16-wide SIMD execution mode
+requiring x86_64 with SSE2, AVX/AVX2 or AVX-512 instructions, as well as on
+NVIDIA GPUs using Cuda+OptiX.
 
 Dependencies
 ------------

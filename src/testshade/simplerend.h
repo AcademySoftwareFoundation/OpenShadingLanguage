@@ -177,12 +177,17 @@ public:
     {
         return &m_batch_8_simple_renderer;
     }
+    BatchedRendererServices<4>* batched(WidthOf<4>) override
+    {
+        return &m_batch_4_simple_renderer;
+    }
 #endif
 
 protected:
 #if OSL_USE_BATCHED
     BatchedSimpleRenderer<16> m_batch_16_simple_renderer;
     BatchedSimpleRenderer<8> m_batch_8_simple_renderer;
+    BatchedSimpleRenderer<4> m_batch_4_simple_renderer;
 #endif
 
     // Camera parameters

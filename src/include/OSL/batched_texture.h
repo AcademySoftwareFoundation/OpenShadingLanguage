@@ -49,6 +49,9 @@ static_assert(std::alignment_of<VaryingTextureOptions<16>>::value
 static_assert(std::alignment_of<VaryingTextureOptions<8>>::value
                   == VecReg<8>::alignment,
               "Expect alignment of data member to set alignment of struct");
+static_assert(std::alignment_of<VaryingTextureOptions<4>>::value
+                  == VecReg<4>::alignment,
+              "Expect alignment of data member to set alignment of struct");
 
 template<int WidthT> struct BatchedTextureOptions {
     VaryingTextureOptions<WidthT> varying;
@@ -90,11 +93,15 @@ static_assert(std::alignment_of<BatchedTextureOptions<16>>::value
 static_assert(std::alignment_of<BatchedTextureOptions<8>>::value
                   == VecReg<8>::alignment,
               "Expect alignment of data member to set alignment of struct");
+static_assert(std::alignment_of<BatchedTextureOptions<4>>::value
+                  == VecReg<4>::alignment,
+              "Expect alignment of data member to set alignment of struct");
 
 #ifdef OIIO_TEXTURE_SIMD_BATCH_WIDTH
 // Code here is to validate our OSL BatchedTextureOptions<WidthT> is binary compatible
 // and safe to reinterpret_cast<TextureOptBatch*>
-static_assert((OIIO::Tex::BatchWidth == 16) || (OIIO::Tex::BatchWidth == 8),
+static_assert((OIIO::Tex::BatchWidth == 16) || (OIIO::Tex::BatchWidth == 8)
+                  || (OIIO::Tex::BatchWidth == 4),
               "This validation requires OIIO_TEXTURE_SIMD_BATCH_WIDTH=16");
 
 namespace validate_offsets {

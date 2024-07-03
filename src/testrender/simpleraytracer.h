@@ -118,7 +118,6 @@ private:
     std::vector<bool> m_shader_is_light;
     std::vector<float> m_shader_surfacearea; // surface area of all triangles that share the same shader
     std::vector<unsigned> m_lightprims; // array of all triangles that have a "light" shader on them
-    std::vector<float>    m_lightcdf; // cdf for sampling a light triangle
 
     class ErrorHandler;  // subclass ErrorHandler for SimpleRaytracer
     std::unique_ptr<OIIO::ErrorHandler> m_errhandler;

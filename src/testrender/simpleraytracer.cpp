@@ -945,8 +945,9 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         // add self-emission
         float k = 1;
         if (m_shader_is_light[shaderID]) {
+            const float light_pick_pdf = 1.0f / m_lightprims.size();
             // figure out the probability of reaching this point
-            float light_pdf = scene.shapepdf(hit.id, r.origin, sg.P);
+            float light_pdf = light_pick_pdf * scene.shapepdf(hit.id, r.origin, sg.P);
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
@@ -991,24 +992,17 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             }
         }
 
-        // trace one ray to each light primitive
-        // TODO: pick only one of lightprim for better scalability
+        // trace a shadow ray to one of the light emitting primitives
+        if (!m_lightprims.empty()) {
+            const float light_pick_pdf = 1.0f / m_lightprims.size();
 
-        if (!m_lightcdf.empty()) {
-            const float* lightcdf_begin = m_lightcdf.data();
-            const float* lightcdf_end = m_lightcdf.data() + m_lightcdf.size();
+            // uniform probability for each light
+            float xl = xi * m_lightprims.size();
+            int ls = floorf(xl);
+            xl -= ls;
 
-            float xl = xi * lightcdf_end[-1];
-            int ls = std::upper_bound(lightcdf_begin, lightcdf_end, xl) - lightcdf_begin;
             int lid = m_lightprims[ls];
             if (lid != hit.id) {
-                // if we didn't choose the triangle we are already on
-                float x0 = ls ? m_lightcdf[ls - 1] : 0;
-                float x1 = m_lightcdf[ls];
-
-                float light_pick_pdf = (x1 - x0) / lightcdf_end[-1];
-                // rescale random number to sample insight the selected triangle
-                xl = std::min((xl - x0) / (x1 - x0), 0.99999994f);
                 int shaderID = scene.shaderid(lid);
                 // sample a random direction towards the object
                 LightSample sample = scene.sample(lid, sg.P, xl, yi);
@@ -1111,19 +1105,15 @@ SimpleRaytracer::prepare_render()
 
     m_shader_surfacearea.resize(m_shaders.size());
 
-    // collect all light emitting triangles and build a cdf
-    float area_sum = 0;
+    // collect all light emitting triangles
     for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
         int shaderID = scene.shaderid(t);
         if (shaderID < 0 || !m_shaders[shaderID])
             continue;  // no shader attached
         float area = scene.primitivearea(t);
         m_shader_surfacearea[shaderID] += area;
-        if (m_shader_is_light[shaderID]) {
+        if (m_shader_is_light[shaderID])
             m_lightprims.emplace_back(t);
-            area_sum += area;
-            m_lightcdf.emplace_back(area_sum);
-        }
     }
     if (!m_lightprims.empty()) {
         errhandler().infofmt("Found {} triangles to be treated as lights", m_lightprims.size());

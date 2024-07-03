@@ -185,7 +185,6 @@ strtobool(const char* str)
            || strcmp(str, "yes") == 0;
 }
 
-
 template<int N> struct ParamStorage {
     ParamStorage() : fparamindex(0), iparamindex(0), sparamindex(0) {}
 
@@ -323,17 +322,19 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             // load sphere
             pugi::xml_attribute center_attr = node.attribute("center");
             pugi::xml_attribute radius_attr = node.attribute("radius");
+            
             if (center_attr && radius_attr) {
                 Vec3 center  = strtovec(center_attr.value());
                 float radius = OIIO::Strutil::from_string<float>(
                     radius_attr.value());
                 if (radius > 0) {
-                    pugi::xml_attribute light_attr = node.attribute("is_light");
-                    bool is_light = light_attr ? strtobool(light_attr.value())
-                                               : false;
-                    scene.add_sphere(Sphere(center, radius,
-                                            int(shaders().size()) - 1,
-                                            is_light));
+                    pugi::xml_attribute resolution_attr = node.attribute("radius");
+                    int resolution = 64;
+                    if (resolution_attr) {
+                        OIIO::string_view str = resolution_attr.value();
+                        OIIO::Strutil::parse_int(str, resolution);
+                    }
+                    scene.add_sphere(center, radius, int(shaders().size()) - 1, resolution);
                 }
             }
         } else if (strcmp(node.name(), "Quad") == 0) {
@@ -342,14 +343,18 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             pugi::xml_attribute edge_x_attr = node.attribute("edge_x");
             pugi::xml_attribute edge_y_attr = node.attribute("edge_y");
             if (corner_attr && edge_x_attr && edge_y_attr) {
-                pugi::xml_attribute light_attr = node.attribute("is_light");
-                bool is_light = light_attr ? strtobool(light_attr.value())
-                                           : false;
                 Vec3 co       = strtovec(corner_attr.value());
                 Vec3 ex       = strtovec(edge_x_attr.value());
                 Vec3 ey       = strtovec(edge_y_attr.value());
-                scene.add_quad(
-                    Quad(co, ex, ey, int(shaders().size()) - 1, is_light));
+
+                int resolution = 1;
+                pugi::xml_attribute resolution_attr = node.attribute("radius");
+                if (resolution_attr) {
+                    OIIO::string_view str = resolution_attr.value();
+                    OIIO::Strutil::parse_int(str, resolution);
+                }
+
+                scene.add_quad(co, ex, ey, int(shaders().size()) - 1, resolution);
             }
         } else if (strcmp(node.name(), "Model") == 0) {
             // load .obj model
@@ -882,14 +887,15 @@ Color3
 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                    ShadingContext* ctx)
 {
+    constexpr float inf = std::numeric_limits<float>::infinity();
     Ray r = camera.get(x, y);
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
     int prev_id    = -1;
-    float bsdf_pdf = std::numeric_limits<
-        float>::infinity();  // camera ray has only one possible direction
+    float bsdf_pdf = inf;  // camera ray has only one possible direction
     for (int b = 0; b <= max_bounces; b++) {
 
+#if 0
         if (b == 0) {
             const float tmax = std::numeric_limits<float>::infinity();
             Intersection hit = scene.bvh->intersect(r.origin, r.direction, tmax, scene.verts.data(), scene.indices.data(), ~0u);
@@ -902,10 +908,10 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 break;
             }
         }
+#endif
         // trace the ray against the scene
-        Dual2<float> t;
-        int id = prev_id;
-        if (!scene.intersect(r, t, id)) {
+        Intersection hit = scene.intersect(r, prev_id);
+        if (hit.t == inf) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
                 if (b > 0 && backgroundResolution > 0) {
@@ -926,9 +932,9 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 
         // construct a shader globals for the hit point
         ShaderGlobals sg;
-        globals_from_hit(sg, r, t, id);
-        const float radius = r.radius + r.spread * t.val();
-        int shaderID       = scene.shaderid(id);
+        globals_from_hit(sg, r, hit.t, hit.id);
+        const float radius = r.radius + r.spread * hit.t;
+        int shaderID       = scene.shaderid(hit.id);
         if (shaderID < 0 || !m_shaders[shaderID])
             break;  // no shader attached? done
 
@@ -940,9 +946,9 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 
         // add self-emission
         float k = 1;
-        if (scene.islight(id)) {
+        if (scene.islight(hit.id)) {
             // figure out the probability of reaching this point
-            float light_pdf = scene.shapepdf(id, r.origin, sg.P);
+            float light_pdf = scene.shapepdf(hit.id, r.origin, sg.P);
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
@@ -979,16 +985,16 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                              * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
                                                                         b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
-                int shadow_id  = id;
                 Ray shadow_ray = Ray(sg.P, bg_dir.val(), radius, 0,
                                      Ray::SHADOW);
-                Dual2<float> shadow_dist;
-                if (!scene.intersect(shadow_ray, shadow_dist,
-                                     shadow_id))  // ray reached the background?
+                Intersection shadow_hit = scene.intersect(shadow_ray, hit.id);
+                if (shadow_hit.t == inf)  // ray reached the background?
                     path_radiance += contrib;
             }
         }
 
+#if 0
+        // TODO: build a PDF to pick a random primitive to trace a ray to
         // trace one ray to each light
         for (int lid = 0; lid < scene.num_prims(); lid++) {
             if (lid == id)
@@ -1009,13 +1015,11 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 Ray shadow_ray = Ray(sg.P, ldir, radius, 0, Ray::SHADOW);
                 // trace a shadow ray and see if we actually hit the target
                 // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-                int shadow_id = id;  // ignore self hit
-                Dual2<float> shadow_dist;
-                if (scene.intersect(shadow_ray, shadow_dist, shadow_id)
-                    && shadow_id == lid) {
+                Intersection shadow_hit = scene.intersect(shadow_ray, id);
+                if (shadow_hit.t == inf || (shadow_hit.t < inf && shadow_hit.id == lid)) {
                     // setup a shader global for the point on the light
                     ShaderGlobals light_sg;
-                    globals_from_hit(light_sg, shadow_ray, shadow_dist, lid);
+                    globals_from_hit(light_sg, shadow_ray, shadow_hit.t, lid);
                     // execute the light shader (for emissive closures only)
                     shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
                     ShadingResult light_result;
@@ -1025,6 +1029,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 }
             }
         }
+#endif
 
         // trace indirect ray and continue
         BSDF::Sample p = result.bsdf.sample(-sg.I, xi, yi, zi);
@@ -1038,7 +1043,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs
-        prev_id  = id;
+        prev_id  = hit.id;
         r.origin = sg.P;
     }
     return path_radiance;

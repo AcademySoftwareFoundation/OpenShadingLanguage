@@ -399,100 +399,82 @@ private:
 };
 
 struct Scene {
-    void add_sphere(const Sphere& s) { spheres.push_back(s); }
+    void add_sphere(const Vec3& c, float r, int shaderID, int resolution);
 
-    void add_quad(const Quad& q) { quads.push_back(q); }
+    void add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID, int resolution);
 
     // add models parsed from a .obj file
     void add_model(const std::string& filename, OIIO::ErrorHandler& errhandler);
 
-    int num_prims() const { return spheres.size() + quads.size(); }
+    int num_prims() const { return indices.size() / 3; }
 
     void prepare(OIIO::ErrorHandler& errhandler);
 
-    bool intersect(const Ray& r, Dual2<float>& t, int& primID) const
+    Intersection intersect(const Ray& r, unsigned skipID) const
     {
-        const int ns   = spheres.size();
-        const int nq   = quads.size();
-        const int self = primID;  // remember which object we started from
-        t              = std::numeric_limits<float>::infinity();
-        primID         = -1;  // reset ID
-        for (int i = 0; i < ns; i++) {
-            Dual2<float> d = spheres[i].intersect(r, self == i);
-            if (d.val() > 0 && d.val() < t.val()) {  // found valid hit?
-                t      = d;
-                primID = i;
-            }
-        }
-        for (int i = 0; i < nq; i++) {
-            Dual2<float> d = quads[i].intersect(r, self == (i + ns));
-            if (d.val() > 0 && d.val() < t.val()) {  // found valid hit?
-                t      = d;
-                primID = i + ns;
-            }
-        }
-        return primID >= 0;
+        return bvh->intersect(r.origin, r.direction, std::numeric_limits<float>::infinity(), verts.data(), indices.data(), skipID);
     }
 
     Vec3 sample(int primID, const Vec3& x, float xi, float yi, float& pdf) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].sample(x, xi, yi, pdf);
-        primID -= spheres.size();
-        return quads[primID].sample(x, xi, yi, pdf);
+        // A Low-Distortion Map Between Triangle and Square
+        // Eric Heitz, 2019
+        if (yi > xi ) {
+            xi *= 0.5f;
+            yi -= xi;
+        } else {
+            yi *= 0.5f;
+            xi -= yi;
+        }
+        const Vec3 va = verts[indices[3 * primID + 0]];
+        const Vec3 vb = verts[indices[3 * primID + 1]];
+        const Vec3 vc = verts[indices[3 * primID + 2]];
+        pdf = 2.0f / (va - vb).cross(va - vc).length();
+        return ((1 - xi - yi) * va + xi * vb + yi * vc) - x;
     }
 
     float shapepdf(int primID, const Vec3& x, const Vec3& p) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].shapepdf(x, p);
-        primID -= spheres.size();
-        return quads[primID].shapepdf(x, p);
+        const Vec3 va = verts[indices[3 * primID + 0]];
+        const Vec3 vb = verts[indices[3 * primID + 1]];
+        const Vec3 vc = verts[indices[3 * primID + 2]];
+        return 2.0f / (va - vb).cross(va - vc).length();
     }
 
     float surfacearea(int primID) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].surfacearea();
-        primID -= spheres.size();
-        return quads[primID].surfacearea();
+        const Vec3 va = verts[indices[3 * primID + 0]];
+        const Vec3 vb = verts[indices[3 * primID + 1]];
+        const Vec3 vc = verts[indices[3 * primID + 2]];
+        return 0.5f * (va - vb).cross(va - vc).length();
     }
 
-    Dual2<Vec3> normal(const Dual2<Vec3>& p, int primID) const
+    Vec3 normal(const Dual2<Vec3>& p, int primID) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].normal(p);
-        primID -= spheres.size();
-        return quads[primID].normal(p);
+        const Vec3 va = verts[indices[3 * primID + 0]];
+        const Vec3 vb = verts[indices[3 * primID + 1]];
+        const Vec3 vc = verts[indices[3 * primID + 2]];
+        return (va - vb).cross(va - vc).normalize();
     }
 
     Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& n, Vec3& dPdu,
                    Vec3& dPdv, int primID) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].uv(p, n, dPdu, dPdv);
-        primID -= spheres.size();
-        return quads[primID].uv(p, n, dPdu, dPdv);
+        return Dual2<Vec2>(Vec2(0, 0));
     }
 
     int shaderid(int primID) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].shaderid();
-        primID -= spheres.size();
-        return quads[primID].shaderid();
+        // TODO: implement this
+        return 0;
     }
 
     bool islight(int primID) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].islight();
-        primID -= spheres.size();
-        return quads[primID].islight();
+        // TODO: implement this (by tagging materials)
+        return false;
     }
 
-    std::vector<Sphere> spheres;
-    std::vector<Quad> quads;
     // basic triangle data
     std::vector<Vec3> verts;
     std::vector<unsigned> indices;

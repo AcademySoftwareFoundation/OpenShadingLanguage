@@ -48,4 +48,77 @@ void Scene::add_model(const std::string& filename, OIIO::ErrorHandler& errhandle
     errhandler.infofmt("Parsed {} vertices and {} triangles from {} in {}", nverts, ntris, filename, OIIO::Strutil::timeintervalformat(loadtime, 2));
 }
 
+void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
+    const int W = 2 * resolution;
+    const int H = resolution;
+    const int NV = 2 + W * H; // poles + grid = total vertex count
+    unsigned base_idx = verts.size();
+    // vertices
+    verts.emplace_back(c - Vec3(0, 0, r)); // pole -z
+    // W * H grid of points
+    for (int y = 0; y < H; y++) {
+        float s = float(y + 0.5f) / float(H);
+        float z = cosf((1 - s) * float(M_PI));
+        float q = sqrtf(1 - z * z);
+        for (int x = 0; x < W; x++) {
+            const float a = float(2 * M_PI) * float(x) / float(W);
+            const Vec3 p(q * cosf(a), q * sinf(a), z);
+            verts.emplace_back(c + r * p);
+        }
+    }
+    verts.emplace_back(c + Vec3(0, 0, r)); // pole +z
+
+    for (int x0 = 0, x1 = W - 1; x0 < W; x1 = x0, x0++) {
+        // tri to pole
+        indices.emplace_back(base_idx);
+        indices.emplace_back(base_idx + 1 + x0);
+        indices.emplace_back(base_idx + 1 + x1);
+        for (int y = 0; y < H - 1; y++) {
+            // quads
+            unsigned i00 = base_idx + 1 + (x0 + W * (y + 0));
+            unsigned i10 = base_idx + 1 + (x1 + W * (y + 0));
+            unsigned i11 = base_idx + 1 + (x1 + W * (y + 1));
+            unsigned i01 = base_idx + 1 + (x0 + W * (y + 1));
+
+            indices.push_back(i00);
+            indices.push_back(i11);
+            indices.push_back(i10);
+
+
+            indices.push_back(i00);
+            indices.push_back(i01);
+            indices.push_back(i11);
+        }
+        indices.emplace_back(base_idx + NV - 1);
+        indices.emplace_back(base_idx + NV - 1 - W + x1);
+        indices.emplace_back(base_idx + NV - 1 - W + x0);        
+    }
+}
+
+void Scene::add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID, int resolution) {
+    // add vertices
+    unsigned base_idx = verts.size();
+    for (int v = 0; v <= resolution; v++)
+    for (int u = 0; u <= resolution; u++) {
+        float s = float(u) / float(resolution);
+        float t = float(v) / float(resolution);
+        verts.emplace_back(p + s * ex + t * ey);
+    }
+    for (int v = 0; v < resolution; v++) 
+    for (int u = 0; u < resolution; u++) {
+        unsigned i00 = base_idx + (u + 0) + (v + 0) * (resolution + 1);
+        unsigned i10 = base_idx + (u + 1) + (v + 0) * (resolution + 1);
+        unsigned i11 = base_idx + (u + 1) + (v + 1) * (resolution + 1);
+        unsigned i01 = base_idx + (u + 0) + (v + 1) * (resolution + 1);
+        indices.push_back(i00);
+        indices.push_back(i10);
+        indices.push_back(i11);
+
+        indices.push_back(i00);
+        indices.push_back(i11);
+        indices.push_back(i01);
+    }
+}
+
+
 OSL_NAMESPACE_EXIT

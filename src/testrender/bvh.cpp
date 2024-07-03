@@ -279,6 +279,8 @@ Intersection BVH::intersect(const Vec3& org, const Vec3& dir, const float tmax, 
 }
 
 void Scene::prepare(OIIO::ErrorHandler& errhandler) {
+    verts.shrink_to_fit();
+    indices.shrink_to_fit();
     bvh = build_bvh(verts.data(), indices.data(), indices.size() / 3, errhandler);
 }
 

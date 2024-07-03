@@ -285,6 +285,7 @@ Intersection Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1
 void Scene::prepare(OIIO::ErrorHandler& errhandler) {
     verts.shrink_to_fit();
     triangles.shrink_to_fit();
+    shaderids.shrink_to_fit();
     bvh = build_bvh(verts, triangles, errhandler);
 }
 

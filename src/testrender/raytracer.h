@@ -408,13 +408,15 @@ struct LightSample {
     float pdf;
 };
 
+using ShaderMap = std::unordered_map<std::string, int>;
+
 struct Scene {
     void add_sphere(const Vec3& c, float r, int shaderID, int resolution);
 
     void add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID, int resolution);
 
     // add models parsed from a .obj file
-    void add_model(const std::string& filename, OIIO::ErrorHandler& errhandler);
+    void add_model(const std::string& filename, const ShaderMap& shadermap, int shaderID, OIIO::ErrorHandler& errhandler);
 
     int num_prims() const { return triangles.size(); }
 
@@ -484,8 +486,7 @@ struct Scene {
 
     int shaderid(int primID) const
     {
-        // TODO: implement this
-        return 0;
+        return shaderids[primID];
     }
 
     bool islight(int primID) const
@@ -497,6 +498,7 @@ struct Scene {
     // basic triangle data
     std::vector<Vec3> verts;
     std::vector<TriangleIndices> triangles;
+    std::vector<int> shaderids;
     // acceleration structure (built over triangles)
     std::unique_ptr<BVH> bvh;
 };

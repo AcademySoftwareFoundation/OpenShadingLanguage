@@ -16,13 +16,6 @@
 
    <Quad corner="-1.5,3,-1.5" edge_x="3,0,0" edge_y="0,0,3" /> <!-- Top  -->
 
-   <ShaderGroup>float power 26000; shader emitter layer1</ShaderGroup>
-   <Quad corner="-0.5,2.98,-0.5" edge_x="1, 0, 0" edge_y="0, 0, 1" is_light="yes" /> <!--Lite -->
-
-   <ShaderGroup>
-     string filename "../common/textures/kitchen_probe.hdr";
-     shader envmap layer1;
-   </ShaderGroup>
-   <Background resolution="1024" />
-
+   <ShaderGroup is_light="yes">float power 100; shader emitter layer1</ShaderGroup>
+   <Quad corner="-0.5,2.98,-0.5" edge_x="1, 0, 0" edge_y="0, 0, 1"/> <!--Lite -->
 </World>

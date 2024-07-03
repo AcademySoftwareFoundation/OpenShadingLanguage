@@ -266,6 +266,7 @@ parse_prefix_and_ints(string_view str, string_view prefix, int nvals, int* vals)
 void
 SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
 {
+    ShaderMap shadermap;
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result;
     if (OIIO::Strutil::ends_with(scenefile, ".xml")
@@ -370,7 +371,8 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 }
                 else
                 {
-                    scene.add_model(actual_filename, errhandler());
+                    // we got a valid filename, try to load the model
+                    scene.add_model(actual_filename, shadermap, int(shaders().size() - 1), errhandler());
                 }
             }
         } else if (strcmp(node.name(), "Background") == 0) {
@@ -448,6 +450,8 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 }
             }
             shadingsys->ShaderGroupEnd(*group);
+            if (name_attr)
+                shadermap.emplace(name_attr.value(), int(shaders().size()));
             shaders().emplace_back(group);
         } else {
             // unknown element?

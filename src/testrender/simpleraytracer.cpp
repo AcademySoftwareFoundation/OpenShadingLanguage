@@ -894,23 +894,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
     int prev_id    = -1;
     float bsdf_pdf = inf;  // camera ray has only one possible direction
     for (int b = 0; b <= max_bounces; b++) {
-
-#if 0
-        if (b == 0) {
-            const float tmax = std::numeric_limits<float>::infinity();
-            Intersection hit = scene.bvh->intersect(r.origin, r.direction, tmax, scene.verts.data(), scene.indices.data(), ~0u);
-            if (hit.t < tmax) {
-                Vec3 va = scene.verts[scene.indices[3 * hit.id + 0]];
-                Vec3 vb = scene.verts[scene.indices[3 * hit.id + 1]];
-                Vec3 vc = scene.verts[scene.indices[3 * hit.id + 2]];
-                Vec3 n = (va - vb).cross(va - vc).normalize();
-                path_radiance = Color3(n.x, n.y, n.z) * 0.5f + Color3(0.5f);
-                break;
-            }
-        }
-#endif
         // trace the ray against the scene
-        Intersection hit = scene.intersect(r, prev_id);
+        Intersection hit = scene.intersect(r, inf, prev_id);
         if (hit.t == inf) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
@@ -987,7 +972,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             if ((contrib.x + contrib.y + contrib.z) > 0) {
                 Ray shadow_ray = Ray(sg.P, bg_dir.val(), radius, 0,
                                      Ray::SHADOW);
-                Intersection shadow_hit = scene.intersect(shadow_ray, hit.id);
+                Intersection shadow_hit = scene.intersect(shadow_ray, inf, hit.id);
                 if (shadow_hit.t == inf)  // ray reached the background?
                     path_radiance += contrib;
             }
@@ -1005,9 +990,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             if (shaderID < 0 || !m_shaders[shaderID])
                 continue;  // no shader attached to this light
             // sample a random direction towards the object
-            float light_pdf;
-            Vec3 ldir      = scene.sample(lid, sg.P, xi, yi, light_pdf);
-            BSDF::Sample b = result.bsdf.eval(-sg.I, ldir);
+            LightSample sample = scene.sample(lid, sg.P, xi, yi);
+            BSDF::Sample b = result.bsdf.eval(-sg.I, sample.dir);
             Color3 contrib = path_weight * b.weight
                              * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
                                                                       b.pdf);
@@ -1015,11 +999,11 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 Ray shadow_ray = Ray(sg.P, ldir, radius, 0, Ray::SHADOW);
                 // trace a shadow ray and see if we actually hit the target
                 // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-                Intersection shadow_hit = scene.intersect(shadow_ray, id);
-                if (shadow_hit.t == inf || (shadow_hit.t < inf && shadow_hit.id == lid)) {
+                Intersection shadow_hit = scene.intersect(shadow_ray, sample.dist, id, lid);
+                if (shadow_hit.t == sample.dist) {
                     // setup a shader global for the point on the light
                     ShaderGlobals light_sg;
-                    globals_from_hit(light_sg, shadow_ray, shadow_hit.t, lid);
+                    globals_from_hit(light_sg, shadow_ray, sample.dist, lid);
                     // execute the light shader (for emissive closures only)
                     shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
                     ShadingResult light_result;

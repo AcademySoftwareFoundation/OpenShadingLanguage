@@ -23,33 +23,33 @@ float half_area(const Box3& b) {
 static constexpr int NumBins = 16;
 static constexpr int MaxDepth = 64;
 
-static std::unique_ptr<BVH> build_bvh(const Vec3* verts, const unsigned* triangles, const unsigned ntris, OIIO::ErrorHandler& errhandler) {
+static std::unique_ptr<BVH> build_bvh(OIIO::cspan<Vec3> verts, OIIO::cspan<TriangleIndices> triangles, OIIO::ErrorHandler& errhandler) {
     std::unique_ptr<BVH> bvh = std::make_unique<BVH>();
     OIIO::Timer timer;
-    bvh->indices = std::make_unique<unsigned[]>(ntris);
+    bvh->indices = std::make_unique<unsigned[]>(triangles.size());
 
     std::vector<BVHNode> buildnodes;
     std::vector<Box3> triangle_bounds;
-    buildnodes.reserve(2 * ntris + 1);
+    buildnodes.reserve(2 * triangles.size() + 1);
     buildnodes.emplace_back();
-    triangle_bounds.reserve(ntris);
+    triangle_bounds.reserve(triangles.size());
     BuildNode current;
     Box3 shape_bounds;
-    for (unsigned i = 0; i < ntris; i++) {
+    for (unsigned i = 0; i < triangles.size(); i++) {
         bvh->indices[i] = i;
-        Vec3 A = verts[triangles[3 * i + 0]];
-        Vec3 B = verts[triangles[3 * i + 1]];
-        Vec3 C = verts[triangles[3 * i + 2]];
-        Box3 b(A);
-        b.extendBy(B);
-        b.extendBy(C);
+        Vec3 va = verts[triangles[i].a];
+        Vec3 vb = verts[triangles[i].b];
+        Vec3 vc = verts[triangles[i].c];
+        Box3 b(va);
+        b.extendBy(vb);
+        b.extendBy(vc);
         triangle_bounds.emplace_back(b);
         current.centroid.extendBy(b.center());
         shape_bounds.extendBy(b);
     }
     buildnodes[0].set(shape_bounds.min, shape_bounds.max);
     current.left = 0;
-    current.right = ntris;
+    current.right = triangles.size();
     current.depth = 1;
     current.nodeIndex = 0;
     int stackPtr = 0;
@@ -171,7 +171,7 @@ static std::unique_ptr<BVH> build_bvh(const Vec3* verts, const unsigned* triangl
     bvh->nodes = std::make_unique<BVHNode[]>(buildnodes.size());
     memcpy(bvh->nodes.get(), buildnodes.data(), buildnodes.size() * sizeof(BVHNode));
     double loadtime = timer();
-    errhandler.infofmt("BVH built {} nodes over {} triangles in {}", buildnodes.size(), ntris, OIIO::Strutil::timeintervalformat(loadtime, 2));
+    errhandler.infofmt("BVH built {} nodes over {} triangles in {}", buildnodes.size(), triangles.size(), OIIO::Strutil::timeintervalformat(loadtime, 2));
     errhandler.infofmt("Root bounding box {}, {}, {} to {}, {}, {}",
         shape_bounds.min.x, shape_bounds.min.y, shape_bounds.min.z,
         shape_bounds.max.x, shape_bounds.max.y, shape_bounds.max.z
@@ -205,14 +205,17 @@ static inline float xorf(float a, unsigned b) {
     return OIIO::bitcast<float>(OIIO::bitcast<unsigned>(a) ^ b);
 }
 
-Intersection BVH::intersect(const Vec3& org, const Vec3& dir, const float tmax, const Vec3* verts, const unsigned* triangles, const unsigned skipID) {
+
+Intersection Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1, unsigned skipID2) const {
     struct StackItem {
         BVHNode* node;
         float dist;
     }  stack[MaxDepth];
     Intersection result;
     result.t = tmax;
-    stack[0] = { nodes.get(), result.t };
+    stack[0] = { bvh->nodes.get(), result.t };
+    const Vec3 org = ray.origin;
+    const Vec3 dir = ray.direction;
     const Vec3 rdir(1 / dir.x, 1 / dir.y, 1 / dir.z );
     int kz = 0;
     if (fabsf(dir.y) > fabsf(dir[kz])) kz = 1;
@@ -225,12 +228,12 @@ Intersection BVH::intersect(const Vec3& org, const Vec3& dir, const float tmax, 
         BVHNode* node = stack[stackPtr].node;
 		if (node->nprims) {
 			for (unsigned i = 0, nprims = node->nprims; i < nprims; i++) {
-                unsigned id = indices[node->child + i];
+                unsigned id = bvh->indices[node->child + i];
                 // Watertight Ray/Triangle Intersection - JCGT 2013
                 // https://jcgt.org/published/0002/01/05/
-                const Vec3 A = verts[triangles[3 * id + 0]] - org;
-                const Vec3 B = verts[triangles[3 * id + 1]] - org;
-                const Vec3 C = verts[triangles[3 * id + 2]] - org;
+                const Vec3 A = verts[triangles[id].a] - org;
+                const Vec3 B = verts[triangles[id].b] - org;
+                const Vec3 C = verts[triangles[id].c] - org;
                 const float Ax = A[kx] - shearDir.x * A[kz];
                 const float Ay = A[ky] - shearDir.y * A[kz];
                 const float Bx = B[kx] - shearDir.x * B[kz];
@@ -254,7 +257,8 @@ Intersection BVH::intersect(const Vec3& org, const Vec3& dir, const float tmax, 
                 const unsigned mask = signmask(det);
                 if (xorf(T, mask) < 0) continue;
                 if (xorf(T, mask) > result.t * xorf(det, mask)) continue;
-                if (id == skipID) continue; // skip self
+                if (id == skipID1) continue; // skip source triangle
+                if (id == skipID2) continue; // skip target triangle
                 // we know this is a valid hit, record as closest
                 const float rcpDet = 1 / det;
                 result.t = T * rcpDet;
@@ -263,7 +267,7 @@ Intersection BVH::intersect(const Vec3& org, const Vec3& dir, const float tmax, 
                 result.id = id;
 			}
 		} else {
-            BVHNode* child1 = nodes.get() + node->child;
+            BVHNode* child1 = bvh->nodes.get() + node->child;
             BVHNode* child2 = child1 + 1;
             float dist1 = box_intersect(org, rdir, result.t, child1->bounds);
             float dist2 = box_intersect(org, rdir, result.t, child2->bounds);
@@ -280,8 +284,8 @@ Intersection BVH::intersect(const Vec3& org, const Vec3& dir, const float tmax, 
 
 void Scene::prepare(OIIO::ErrorHandler& errhandler) {
     verts.shrink_to_fit();
-    indices.shrink_to_fit();
-    bvh = build_bvh(verts.data(), indices.data(), indices.size() / 3, errhandler);
+    triangles.shrink_to_fit();
+    bvh = build_bvh(verts, triangles, errhandler);
 }
 
 OSL_NAMESPACE_EXIT

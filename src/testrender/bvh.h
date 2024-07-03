@@ -23,16 +23,12 @@ struct BVHNode {
 
     }
 };
-
 struct Intersection {
     float t, u, v;
     unsigned id;
 };
 
 struct BVH {
-    // find nearest hit along a ray (returns <0 if not found)
-    Intersection intersect(const Vec3& org, const Vec3& dir, const float tmax, const Vec3* verts, const unsigned* triangles, const unsigned skipID);
-
     std::unique_ptr<BVHNode[]>  nodes;
     std::unique_ptr<unsigned[]> indices;
 };

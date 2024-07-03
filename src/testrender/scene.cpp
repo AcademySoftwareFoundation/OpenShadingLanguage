@@ -38,9 +38,10 @@ void Scene::add_model(const std::string& filename, OIIO::ErrorHandler& errhandle
             int a = shape.mesh.indices[i + 0].position_index;
             int b = shape.mesh.indices[i + 1].position_index;
             int c = shape.mesh.indices[i + 2].position_index;
-            indices.push_back(base_idx + a);
-            indices.push_back(base_idx + b);
-            indices.push_back(base_idx + c);
+            triangles.emplace_back(TriangleIndices{
+                base_idx + a,
+                base_idx + b,
+                base_idx + c});
             ntris++;
         }
     }
@@ -70,9 +71,11 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
 
     for (int x0 = 0, x1 = W - 1; x0 < W; x1 = x0, x0++) {
         // tri to pole
-        indices.emplace_back(base_idx);
-        indices.emplace_back(base_idx + 1 + x0);
-        indices.emplace_back(base_idx + 1 + x1);
+        triangles.emplace_back(TriangleIndices{
+            base_idx,
+            base_idx + 1 + x0,
+            base_idx + 1 + x1
+        });
         for (int y = 0; y < H - 1; y++) {
             // quads
             unsigned i00 = base_idx + 1 + (x0 + W * (y + 0));
@@ -80,18 +83,21 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             unsigned i11 = base_idx + 1 + (x1 + W * (y + 1));
             unsigned i01 = base_idx + 1 + (x0 + W * (y + 1));
 
-            indices.push_back(i00);
-            indices.push_back(i11);
-            indices.push_back(i10);
+            triangles.emplace_back(TriangleIndices{
+                i00,
+                i11,
+                i10});
 
 
-            indices.push_back(i00);
-            indices.push_back(i01);
-            indices.push_back(i11);
+            triangles.emplace_back(TriangleIndices{
+                i00,
+                i01,
+                i11});
         }
-        indices.emplace_back(base_idx + NV - 1);
-        indices.emplace_back(base_idx + NV - 1 - W + x1);
-        indices.emplace_back(base_idx + NV - 1 - W + x0);        
+        triangles.emplace_back(TriangleIndices{
+            base_idx + NV - 1,
+            base_idx + NV - 1 - W + x1,
+            base_idx + NV - 1 - W + x0});
     }
 }
 
@@ -110,13 +116,15 @@ void Scene::add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID
         unsigned i10 = base_idx + (u + 1) + (v + 0) * (resolution + 1);
         unsigned i11 = base_idx + (u + 1) + (v + 1) * (resolution + 1);
         unsigned i01 = base_idx + (u + 0) + (v + 1) * (resolution + 1);
-        indices.push_back(i00);
-        indices.push_back(i10);
-        indices.push_back(i11);
+        triangles.emplace_back(TriangleIndices{
+            i00,
+            i10,
+            i11});
 
-        indices.push_back(i00);
-        indices.push_back(i11);
-        indices.push_back(i01);
+        triangles.emplace_back(TriangleIndices{
+            i00,
+            i11,
+            i01});
     }
 }
 

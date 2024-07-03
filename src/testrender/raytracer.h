@@ -398,6 +398,16 @@ private:
     float a, eu, ev;
 };
 
+struct TriangleIndices {
+    unsigned a, b, c;
+};
+
+struct LightSample {
+    Vec3 dir;
+    float dist;
+    float pdf;
+};
+
 struct Scene {
     void add_sphere(const Vec3& c, float r, int shaderID, int resolution);
 
@@ -406,16 +416,13 @@ struct Scene {
     // add models parsed from a .obj file
     void add_model(const std::string& filename, OIIO::ErrorHandler& errhandler);
 
-    int num_prims() const { return indices.size() / 3; }
+    int num_prims() const { return triangles.size(); }
 
     void prepare(OIIO::ErrorHandler& errhandler);
 
-    Intersection intersect(const Ray& r, unsigned skipID) const
-    {
-        return bvh->intersect(r.origin, r.direction, std::numeric_limits<float>::infinity(), verts.data(), indices.data(), skipID);
-    }
+    Intersection intersect(const Ray& r, const float tmax, const unsigned skipID1, const unsigned skipID2 = ~0u) const;
 
-    Vec3 sample(int primID, const Vec3& x, float xi, float yi, float& pdf) const
+    LightSample sample(int primID, const Vec3& x, float xi, float yi) const
     {
         // A Low-Distortion Map Between Triangle and Square
         // Eric Heitz, 2019
@@ -426,34 +433,46 @@ struct Scene {
             yi *= 0.5f;
             xi -= yi;
         }
-        const Vec3 va = verts[indices[3 * primID + 0]];
-        const Vec3 vb = verts[indices[3 * primID + 1]];
-        const Vec3 vc = verts[indices[3 * primID + 2]];
-        pdf = 2.0f / (va - vb).cross(va - vc).length();
-        return ((1 - xi - yi) * va + xi * vb + yi * vc) - x;
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+        const Vec3 n = (va - vb).cross(va - vc);
+
+        Vec3 l   = ((1 - xi - yi) * va + xi * vb + yi * vc) - x;
+        float d2 = l.length2();
+        Vec3 dir = l.normalize();
+        // length of n is twice the area
+        float pdf = d2 / (0.5f * fabsf(dir.dot(n)));
+        return { dir, sqrtf(d2), pdf };
     }
 
     float shapepdf(int primID, const Vec3& x, const Vec3& p) const
     {
-        const Vec3 va = verts[indices[3 * primID + 0]];
-        const Vec3 vb = verts[indices[3 * primID + 1]];
-        const Vec3 vc = verts[indices[3 * primID + 2]];
-        return 2.0f / (va - vb).cross(va - vc).length();
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+        const Vec3 n = (va - vb).cross(va - vc);
+
+        Vec3 l   = p - x;
+        float d2 = l.length2();
+        Vec3 dir = l.normalize();
+        // length of n is twice the area
+        return d2 / (0.5f * fabsf(dir.dot(n)));
     }
 
     float surfacearea(int primID) const
     {
-        const Vec3 va = verts[indices[3 * primID + 0]];
-        const Vec3 vb = verts[indices[3 * primID + 1]];
-        const Vec3 vc = verts[indices[3 * primID + 2]];
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
         return 0.5f * (va - vb).cross(va - vc).length();
     }
 
     Vec3 normal(const Dual2<Vec3>& p, int primID) const
     {
-        const Vec3 va = verts[indices[3 * primID + 0]];
-        const Vec3 vb = verts[indices[3 * primID + 1]];
-        const Vec3 vc = verts[indices[3 * primID + 2]];
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
         return (va - vb).cross(va - vc).normalize();
     }
 
@@ -477,7 +496,7 @@ struct Scene {
 
     // basic triangle data
     std::vector<Vec3> verts;
-    std::vector<unsigned> indices;
+    std::vector<TriangleIndices> triangles;
     // acceleration structure (built over triangles)
     std::unique_ptr<BVH> bvh;
 };

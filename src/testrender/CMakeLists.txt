@@ -6,6 +6,8 @@
 set (testrender_srcs
      shading.cpp
      simpleraytracer.cpp
+     scene.cpp
+     bvh.cpp
      testrender.cpp)
 
 if (OSL_USE_OPTIX)

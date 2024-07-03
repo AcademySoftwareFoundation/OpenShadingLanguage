@@ -11,6 +11,7 @@
 
 #include "optix_compat.h"
 #include "render_params.h"
+#include "bvh.h"
 #include <OSL/dual_vec.h>
 #include <OSL/oslconfig.h>
 
@@ -397,14 +398,17 @@ private:
     float a, eu, ev;
 };
 
-
-
 struct Scene {
     void add_sphere(const Sphere& s) { spheres.push_back(s); }
 
     void add_quad(const Quad& q) { quads.push_back(q); }
 
+    // add models parsed from a .obj file
+    void add_model(const std::string& filename, OIIO::ErrorHandler& errhandler);
+
     int num_prims() const { return spheres.size() + quads.size(); }
+
+    void prepare(OIIO::ErrorHandler& errhandler);
 
     bool intersect(const Ray& r, Dual2<float>& t, int& primID) const
     {
@@ -489,6 +493,11 @@ struct Scene {
 
     std::vector<Sphere> spheres;
     std::vector<Quad> quads;
+    // basic triangle data
+    std::vector<Vec3> verts;
+    std::vector<unsigned> indices;
+    // acceleration structure (built over triangles)
+    std::unique_ptr<BVH> bvh;
 };
 
 OSL_NAMESPACE_EXIT

@@ -351,6 +351,23 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 scene.add_quad(
                     Quad(co, ex, ey, int(shaders().size()) - 1, is_light));
             }
+        } else if (strcmp(node.name(), "Model") == 0) {
+            // load .obj model
+            pugi::xml_attribute filename_attr = node.attribute("filename");
+            if (filename_attr) {
+                std::string filename = filename_attr.value();
+                std::vector<std::string> searchpath;
+                searchpath.emplace_back(OIIO::Filesystem::parent_path(scenefile));
+                std::string actual_filename = OIIO::Filesystem::searchpath_find(filename, searchpath, false);
+                if (actual_filename.empty())
+                {
+                    errhandler().errorfmt("Unable to find model file {}", filename);
+                }
+                else
+                {
+                    scene.add_model(actual_filename, errhandler());
+                }
+            }
         } else if (strcmp(node.name(), "Background") == 0) {
             pugi::xml_attribute res_attr = node.attribute("resolution");
             if (res_attr)
@@ -426,7 +443,7 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 }
             }
             shadingsys->ShaderGroupEnd(*group);
-            shaders().push_back(group);
+            shaders().emplace_back(group);
         } else {
             // unknown element?
         }
@@ -872,6 +889,19 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
     float bsdf_pdf = std::numeric_limits<
         float>::infinity();  // camera ray has only one possible direction
     for (int b = 0; b <= max_bounces; b++) {
+
+        if (b == 0) {
+            const float tmax = std::numeric_limits<float>::infinity();
+            Intersection hit = scene.bvh->intersect(r.origin, r.direction, tmax, scene.verts.data(), scene.indices.data(), ~0u);
+            if (hit.t < tmax) {
+                Vec3 va = scene.verts[scene.indices[3 * hit.id + 0]];
+                Vec3 vb = scene.verts[scene.indices[3 * hit.id + 1]];
+                Vec3 vc = scene.verts[scene.indices[3 * hit.id + 2]];
+                Vec3 n = (va - vb).cross(va - vc).normalize();
+                path_radiance = Color3(n.x, n.y, n.z) * 0.5f + Color3(0.5f);
+                break;
+            }
+        }
         // trace the ray against the scene
         Dual2<float> t;
         int id = prev_id;
@@ -1073,6 +1103,7 @@ void
 SimpleRaytracer::render(int xres, int yres)
 {
     ShadingSystem* shadingsys = this->shadingsys;
+    scene.prepare(errhandler());
     OIIO::parallel_for_chunked(
         0, yres, 0, [&, this](int64_t ybegin, int64_t yend) {
             // Request an OSL::PerThreadInfo for this thread.

@@ -856,7 +856,8 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.v                  = uv.val().y;
     sg.dvdx               = uv.dx().y;
     sg.dvdy               = uv.dy().y;
-    sg.surfacearea        = scene.surfacearea(id);
+    int shaderID = scene.shaderid(id);
+    sg.surfacearea        = shaderID >= 0 ? m_shader_surfacearea[shaderID] : 0;
     Dual2<Vec3> direction = r.dual_direction();
     sg.I                  = direction.val();
     sg.dIdx               = direction.dx();
@@ -924,6 +925,12 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         // construct a shader globals for the hit point
         ShaderGlobals sg;
         globals_from_hit(sg, r, hit.t, hit.id);
+        if (show_normals) {
+            // visualize normals
+            Color3 c(sg.N.x, sg.N.y, sg.N.z);
+            path_radiance += path_weight * (c * 0.5f + Color3(0.5f));
+            break;
+        }
         const float radius = r.radius + r.spread * hit.t;
         int shaderID       = scene.shaderid(hit.id);
         if (shaderID < 0 || !m_shaders[shaderID])
@@ -992,7 +999,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             const float* lightcdf_end = m_lightcdf.data() + m_lightcdf.size();
 
             float xl = xi * lightcdf_end[-1];
-            int ls = std::upper_bound(lightcdf_begin, lightcdf_end, xi * lightcdf_end[-1]) - lightcdf_begin;
+            int ls = std::upper_bound(lightcdf_begin, lightcdf_end, xl) - lightcdf_begin;
             int lid = m_lightprims[ls];
             if (lid != hit.id) {
                 // if we didn't choose the triangle we are already on
@@ -1077,6 +1084,7 @@ SimpleRaytracer::prepare_render()
     max_bounces       = options.get_int("max_bounces");
     rr_depth          = options.get_int("rr_depth");
     show_albedo_scale = options.get_float("show_albedo_scale");
+    show_normals      = options.get_int("show_normals") != 0;
 
     // prepare background importance table (if requested)
     if (backgroundResolution > 0 && backgroundShaderID >= 0) {
@@ -1101,15 +1109,24 @@ SimpleRaytracer::prepare_render()
     // build bvh and prepare triangles
     scene.prepare(errhandler());
 
+    m_shader_surfacearea.resize(m_shaders.size());
+
     // collect all light emitting triangles and build a cdf
+    float area_sum = 0;
     for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
         int shaderID = scene.shaderid(t);
         if (shaderID < 0 || !m_shaders[shaderID])
             continue;  // no shader attached
+        float area = scene.primitivearea(t);
+        m_shader_surfacearea[shaderID] += area;
         if (m_shader_is_light[shaderID]) {
             m_lightprims.emplace_back(t);
-            m_lightcdf.emplace_back(m_lightcdf.back() + scene.surfacearea(t));
+            area_sum += area;
+            m_lightcdf.emplace_back(area_sum);
         }
+    }
+    if (!m_lightprims.empty()) {
+        errhandler().infofmt("Found {} triangles to be treated as lights", m_lightprims.size());
     }
 }
 

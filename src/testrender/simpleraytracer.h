@@ -113,8 +113,10 @@ private:
     int max_bounces          = 1000000;
     int rr_depth             = 5;
     float show_albedo_scale  = 0.0f;
+    bool  show_normals       = false;
     std::vector<ShaderGroupRef> m_shaders;
     std::vector<bool> m_shader_is_light;
+    std::vector<float> m_shader_surfacearea; // surface area of all triangles that share the same shader
     std::vector<unsigned> m_lightprims; // array of all triangles that have a "light" shader on them
     std::vector<float>    m_lightcdf; // cdf for sampling a light triangle
 

@@ -350,6 +350,7 @@ macro (osl_add_all_tests)
                 raytype raytype-reg raytype-specialized regex-reg
                 reparam reparam-arrays reparam-string testoptix-reparam
                 render-background render-bumptest
+                render-bunny
                 render-cornell render-furnace-diffuse
                 render-mx-furnace-burley-diffuse
                 render-mx-furnace-oren-nayar

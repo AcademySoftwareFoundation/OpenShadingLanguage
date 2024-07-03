@@ -383,6 +383,7 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             backgroundShaderID = int(shaders().size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
             ShaderGroupRef group;
+            pugi::xml_attribute is_light_attr = node.attribute("is_light");
             pugi::xml_attribute name_attr = node.attribute("name");
             std::string name = name_attr ? name_attr.value() : "group";
             pugi::xml_attribute type_attr = node.attribute("type");
@@ -453,6 +454,7 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             if (name_attr)
                 shadermap.emplace(name_attr.value(), int(shaders().size()));
             shaders().emplace_back(group);
+            m_shader_is_light.emplace_back(is_light_attr ? strtobool(is_light_attr.value()) : false);
         } else {
             // unknown element?
         }
@@ -935,7 +937,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 
         // add self-emission
         float k = 1;
-        if (scene.islight(hit.id)) {
+        if (m_shader_is_light[shaderID]) {
             // figure out the probability of reaching this point
             float light_pdf = scene.shapepdf(hit.id, r.origin, sg.P);
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
@@ -982,43 +984,50 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             }
         }
 
-#if 0
-        // TODO: build a PDF to pick a random primitive to trace a ray to
-        // trace one ray to each light
-        for (int lid = 0; lid < scene.num_prims(); lid++) {
-            if (lid == id)
-                continue;  // skip self
-            if (!scene.islight(lid))
-                continue;  // doesn't want to be sampled as a light
-            int shaderID = scene.shaderid(lid);
-            if (shaderID < 0 || !m_shaders[shaderID])
-                continue;  // no shader attached to this light
-            // sample a random direction towards the object
-            LightSample sample = scene.sample(lid, sg.P, xi, yi);
-            BSDF::Sample b = result.bsdf.eval(-sg.I, sample.dir);
-            Color3 contrib = path_weight * b.weight
-                             * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
-                                                                      b.pdf);
-            if ((contrib.x + contrib.y + contrib.z) > 0) {
-                Ray shadow_ray = Ray(sg.P, ldir, radius, 0, Ray::SHADOW);
-                // trace a shadow ray and see if we actually hit the target
-                // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-                Intersection shadow_hit = scene.intersect(shadow_ray, sample.dist, id, lid);
-                if (shadow_hit.t == sample.dist) {
-                    // setup a shader global for the point on the light
-                    ShaderGlobals light_sg;
-                    globals_from_hit(light_sg, shadow_ray, sample.dist, lid);
-                    // execute the light shader (for emissive closures only)
-                    shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
-                    ShadingResult light_result;
-                    process_closure(light_sg, light_result, light_sg.Ci, true);
-                    // accumulate contribution
-                    path_radiance += contrib * light_result.Le;
+        // trace one ray to each light primitive
+        // TODO: pick only one of lightprim for better scalability
+
+        if (!m_lightcdf.empty()) {
+            const float* lightcdf_begin = m_lightcdf.data();
+            const float* lightcdf_end = m_lightcdf.data() + m_lightcdf.size();
+
+            float xl = xi * lightcdf_end[-1];
+            int ls = std::upper_bound(lightcdf_begin, lightcdf_end, xi * lightcdf_end[-1]) - lightcdf_begin;
+            int lid = m_lightprims[ls];
+            if (lid != hit.id) {
+                // if we didn't choose the triangle we are already on
+                float x0 = ls ? m_lightcdf[ls - 1] : 0;
+                float x1 = m_lightcdf[ls];
+
+                float light_pick_pdf = (x1 - x0) / lightcdf_end[-1];
+                // rescale random number to sample insight the selected triangle
+                xl = std::min((xl - x0) / (x1 - x0), 0.99999994f);
+                int shaderID = scene.shaderid(lid);
+                // sample a random direction towards the object
+                LightSample sample = scene.sample(lid, sg.P, xl, yi);
+                BSDF::Sample b = result.bsdf.eval(-sg.I, sample.dir);
+                Color3 contrib = path_weight * b.weight
+                                * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pick_pdf * sample.pdf,
+                                                                        b.pdf);
+                if ((contrib.x + contrib.y + contrib.z) > 0) {
+                    Ray shadow_ray = Ray(sg.P, sample.dir, radius, 0, Ray::SHADOW);
+                    // trace a shadow ray and see if we actually hit the target
+                    // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
+                    Intersection shadow_hit = scene.intersect(shadow_ray, sample.dist, hit.id, lid);
+                    if (shadow_hit.t == sample.dist) {
+                        // setup a shader global for the point on the light
+                        ShaderGlobals light_sg;
+                        globals_from_hit(light_sg, shadow_ray, sample.dist, lid);
+                        // execute the light shader (for emissive closures only)
+                        shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
+                        ShadingResult light_result;
+                        process_closure(light_sg, light_result, light_sg.Ci, true);
+                        // accumulate contribution
+                        path_radiance += contrib * light_result.Le;
+                    }
                 }
             }
         }
-#endif
-
         // trace indirect ray and continue
         BSDF::Sample p = result.bsdf.sample(-sg.I, xi, yi, zi);
         path_weight *= p.weight;
@@ -1088,6 +1097,20 @@ SimpleRaytracer::prepare_render()
         // we aren't directly evaluating the background
         backgroundResolution = 0;
     }
+
+    // build bvh and prepare triangles
+    scene.prepare(errhandler());
+
+    // collect all light emitting triangles and build a cdf
+    for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
+        int shaderID = scene.shaderid(t);
+        if (shaderID < 0 || !m_shaders[shaderID])
+            continue;  // no shader attached
+        if (m_shader_is_light[shaderID]) {
+            m_lightprims.emplace_back(t);
+            m_lightcdf.emplace_back(m_lightcdf.back() + scene.surfacearea(t));
+        }
+    }
 }
 
 
@@ -1096,7 +1119,7 @@ void
 SimpleRaytracer::render(int xres, int yres)
 {
     ShadingSystem* shadingsys = this->shadingsys;
-    scene.prepare(errhandler());
+
     OIIO::parallel_for_chunked(
         0, yres, 0, [&, this](int64_t ybegin, int64_t yend) {
             // Request an OSL::PerThreadInfo for this thread.

@@ -489,12 +489,6 @@ struct Scene {
         return shaderids[primID];
     }
 
-    bool islight(int primID) const
-    {
-        // TODO: implement this (by tagging materials)
-        return false;
-    }
-
     // basic triangle data
     std::vector<Vec3> verts;
     std::vector<TriangleIndices> triangles;

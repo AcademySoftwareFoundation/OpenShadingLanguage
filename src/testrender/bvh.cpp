@@ -197,14 +197,12 @@ static inline float box_intersect(const Vec3& org, const Vec3& rdir, float tmax,
     return tmin <= tmax ? tmin : -1;
 }
 
-
 static inline unsigned signmask(float a) {
     return OIIO::bitcast<unsigned>(a) & 0x80000000u;
 }
 static inline float xorf(float a, unsigned b) {
     return OIIO::bitcast<float>(OIIO::bitcast<unsigned>(a) ^ b);
 }
-
 
 Intersection Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1, unsigned skipID2) const {
     struct StackItem {

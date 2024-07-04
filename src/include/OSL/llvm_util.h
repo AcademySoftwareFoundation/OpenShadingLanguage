@@ -693,6 +693,8 @@ public:
     llvm::Constant* constant(uint32_t i);
 
     /// Return an llvm::Constant holding the given integer constant.
+    llvm::Constant* constant4(int8_t i);
+    llvm::Constant* constant4(uint8_t i);
     llvm::Constant* constant8(int8_t i);
     llvm::Constant* constant8(uint8_t i);
     llvm::Constant* constant16(int16_t i);
@@ -1229,6 +1231,7 @@ private:
 
     llvm::Value* op_linearize_16x_indices(llvm::Value* wide_index);
     llvm::Value* op_linearize_8x_indices(llvm::Value* wide_index);
+    llvm::Value* op_linearize_4x_indices(llvm::Value* wide_index);
     std::array<llvm::Value*, 2> op_split_16x(llvm::Value* vector_val);
     std::array<llvm::Value*, 2> op_split_8x(llvm::Value* vector_val);
     std::array<llvm::Value*, 4> op_quarter_16x(llvm::Value* vector_val);

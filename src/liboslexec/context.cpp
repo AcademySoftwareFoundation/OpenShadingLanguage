@@ -674,6 +674,7 @@ osl_incr_layers_executed(ShaderGlobals* sg)
 // Explicit template instantiation for supported batch sizes
 template class ShadingContext::Batched<16>;
 template class ShadingContext::Batched<8>;
+template class ShadingContext::Batched<4>;
 #endif
 
 

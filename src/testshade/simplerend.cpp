@@ -218,7 +218,9 @@ register_closures(OSL::ShadingSystem* shadingsys)
 
 SimpleRenderer::SimpleRenderer()
 #if OSL_USE_BATCHED
-    : m_batch_16_simple_renderer(*this), m_batch_8_simple_renderer(*this)
+    : m_batch_16_simple_renderer(*this)
+    , m_batch_8_simple_renderer(*this)
+    , m_batch_4_simple_renderer(*this)
 #endif
 {
     Matrix44 M;

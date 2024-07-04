@@ -524,4 +524,11 @@ RendererServices::batched(WidthOf<8>)
     return nullptr;
 }
 
+BatchedRendererServices<4>*
+RendererServices::batched(WidthOf<4>)
+{
+    // No default implementation for batched services
+    return nullptr;
+}
+
 OSL_NAMESPACE_EXIT

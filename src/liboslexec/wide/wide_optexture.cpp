@@ -180,7 +180,8 @@ default_texture(BatchedRendererServices* bsr, ustringhash_pod filename,
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
                 } else {
-                    errormessage[lane] = Strings::unknown;
+                    // TODO FIXME
+                    //errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
                 context->batched<__OSL_WIDTH>().errorfmt(
@@ -377,7 +378,8 @@ default_texture3d(BatchedRendererServices* bsr, ustringhash_pod filename,
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
                 } else {
-                    errormessage[lane] = Strings::unknown;
+                    // TODO FIXME
+                    //errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
                 context->batched<__OSL_WIDTH>().errorfmt(
@@ -525,7 +527,8 @@ default_environment(BatchedRendererServices* bsr, ustringhash_pod filename,
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
                 } else {
-                    errormessage[lane] = Strings::unknown;
+                    // TODO FIXME
+                    //errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
                 context->batched<__OSL_WIDTH>().errorfmt(
@@ -598,7 +601,8 @@ __OSL_MASKED_OP(texture)(void* bsg_, ustringhash_pod name_, void* handle,
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int i = 0; i < __OSL_WIDTH; ++i) {
             if (retVal[i]) {
-                err[i] = Strings::_emptystring_;
+                // TODO FIXME
+                //err[i] = Strings::_emptystring_;
             }
         }
     }
@@ -645,7 +649,8 @@ __OSL_MASKED_OP(texture3d)(void* bsg_, ustringhash_pod name_, void* handle,
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int i = 0; i < __OSL_WIDTH; ++i) {
             if (retVal[i]) {
-                err[i] = Strings::_emptystring_;
+                // TODO FIXME
+                //err[i] = Strings::_emptystring_;
             }
         }
     }
@@ -715,7 +720,8 @@ __OSL_MASKED_OP(environment)(void* bsg_, ustringhash_pod name_, void* handle,
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int i = 0; i < __OSL_WIDTH; ++i) {
             if (retVal[i]) {
-                err[i] = Strings::_emptystring_;
+                // TODO FIXME
+                //err[i] = Strings::_emptystring_;
             }
         }
     }

@@ -34,7 +34,6 @@ OSL_BATCHOP void
 __OSL_MASKED_OP3(concat, Ws, Ws, Ws)(void* wr_, void* ws_, void* wt_,
                                      unsigned int mask_value)
 {
-    // TODO: ustringhash_pod doesn't work inside Wide<>
     Wide<const ustringhash> wS(ws_);
     Wide<const ustringhash> wT(wt_);
     Masked<ustring> wR(wr_, Mask(mask_value));
@@ -304,7 +303,10 @@ __OSL_OP(regex_impl)(void* bsg_, ustringhash_pod subject_, void* results,
     const std::string& subject(
         ustring::from_unique(ustring_from(subject_).c_str()).string());
     std::match_results<std::string::const_iterator> mresults;
-    const std::regex& regex(ctx->find_regex(ustring_from(pattern)));
+    // TODO FIXME
+    //const std::regex& regex(ctx->find_regex(ustring_from(pattern)));
+    return 0;
+    /*
     if (nresults > 0) {
         std::string::const_iterator start = subject.begin();
         int res = fullmatch ? std::regex_match(subject, mresults, regex)
@@ -325,6 +327,7 @@ __OSL_OP(regex_impl)(void* bsg_, ustringhash_pod subject_, void* results,
         return fullmatch ? regex_match(subject, regex)
                          : regex_search(subject, regex);
     }
+*/
 }
 
 
@@ -356,6 +359,8 @@ __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr, void* wsubject_ptr,
 
         const std::string& subject = usubject.string();
         std::match_results<std::string::const_iterator> mresults;
+        // TODO FIXME
+        /*
         const std::regex& regex(ctx->find_regex(pattern));
         if (nresults > 0) {
             std::string::const_iterator start = subject.begin();
@@ -376,6 +381,7 @@ __OSL_MASKED_OP(regex_impl)(void* bsg_, void* wsuccess_ptr, void* wsubject_ptr,
             wsuccess[lane] = fullmatch ? regex_match(subject, regex)
                                        : regex_search(subject, regex);
         }
+*/
     });
 }
 
@@ -421,9 +427,10 @@ __OSL_OP(printf)(BatchedShaderGlobals* bsg, unsigned int mask_value,
     std::string s = Strutil::vsprintf(ustring_from(format_str).c_str(), args);
     va_end(args);
 
-    bsg->uniform.context->record_error(
-        ErrorHandler::EH_MESSAGE, s,
-        static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
+    //TODO FIXME
+    //bsg->uniform.context->record_error(
+    //    ErrorHandler::EH_MESSAGE, s,
+    //    static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
 }
 
 
@@ -442,9 +449,10 @@ __OSL_OP(error)(BatchedShaderGlobals* bsg, unsigned int mask_value,
     std::string s = Strutil::vsprintf(ustring_from(format_str).c_str(), args);
     va_end(args);
 
-    bsg->uniform.context->record_error(
-        ErrorHandler::EH_ERROR, s,
-        static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
+    //TODO FIXME
+    //bsg->uniform.context->record_error(
+    //    ErrorHandler::EH_ERROR, s,
+    //    static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
 }
 
 
@@ -465,9 +473,10 @@ __OSL_OP(warning)(BatchedShaderGlobals* bsg, unsigned int mask_value,
                                           args);
         va_end(args);
 
-        bsg->uniform.context->record_error(
-            ErrorHandler::EH_WARNING, s,
-            static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
+        //TODO FIXME
+        //bsg->uniform.context->record_error(
+        //    ErrorHandler::EH_WARNING, s,
+        //    static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
     }
 }
 
@@ -489,9 +498,10 @@ __OSL_OP(fprintf)(BatchedShaderGlobals* bsg, unsigned int mask_value,
     std::string s = Strutil::vsprintf(ustring_from(format_str).c_str(), args);
     va_end(args);
 
-    bsg->uniform.context->record_to_file(
-        ustring_from(filename), s,
-        static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
+    //TODO FIXME
+    //bsg->uniform.context->record_to_file(
+    //    ustring_from(filename), s,
+    //    static_cast<OSL::Mask<MaxSupportedSimdLaneCount>>(mask));
 }
 
 

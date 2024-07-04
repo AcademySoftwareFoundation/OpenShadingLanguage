@@ -159,9 +159,9 @@ __OSL_OP2(uninit_check_values_offset, X,
             }
     }
     if (typedesc.basetype == TypeDesc::STRING) {
-        ustring* vals = (ustring*)vals_;
+        ustringhash* vals = (ustringhash*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
-            if (vals[c] == Strings::uninitialized_string) {
+            if (vals[c] == Hashes::uninitialized_string) {
                 uninit  = true;
                 vals[c] = ustring();
             }
@@ -220,11 +220,11 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
             });
     }
     if (typedesc.basetype == TypeDesc::STRING) {
-        ustring* vals = (ustring*)vals_;
+        ustringhash* vals = (ustringhash*)vals_;
         for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
             mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
                 if (vals[c * __OSL_WIDTH + lane]
-                    == Strings::uninitialized_string) {
+                    == Hashes::uninitialized_string) {
                     lanes_uninit.set_on(lane);
                     vals[c * __OSL_WIDTH + lane] = ustring();
                 }
@@ -286,11 +286,11 @@ __OSL_MASKED_OP2(uninit_check_values_offset, X,
         });
     }
     if (typedesc.basetype == TypeDesc::STRING) {
-        ustring* vals = (ustring*)vals_;
+        ustringhash* vals = (ustringhash*)vals_;
         mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
             int firstcheck = wOffsets[lane];
             for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
-                if (vals[c] == Strings::uninitialized_string) {
+                if (vals[c] == Hashes::uninitialized_string) {
                     lanes_uninit.set_on(lane);
                     vals[c] = ustring();
                 }
@@ -354,12 +354,12 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
         });
     }
     if (typedesc.basetype == TypeDesc::STRING) {
-        ustring* vals = (ustring*)vals_;
+        ustringhash* vals = (ustringhash*)vals_;
         mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
             int firstcheck = wOffsets[lane];
             for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c)
                 if (vals[c * __OSL_WIDTH + lane]
-                    == Strings::uninitialized_string) {
+                    == Hashes::uninitialized_string) {
                     lanes_uninit.set_on(lane);
                     vals[c * __OSL_WIDTH + lane] = ustring();
                 }
@@ -596,8 +596,10 @@ __OSL_OP(bind_interpolated_param)(void* bsg_, ustringhash_pod name,
 OSL_BATCHOP int
 __OSL_OP(raytype_bit)(void* bsg_, int bit)
 {
-    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return (bsg->uniform.raytype & bit) != 0;
+    //TODO FIXME
+    //auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    //return (bsg->uniform.raytype & bit) != 0;
+    return 0;
 }
 
 
@@ -607,10 +609,12 @@ OSL_BATCHOP int
 __OSL_OP(raytype_name)(void* bsg_, ustringhash_pod name)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    int bit   = bsg->uniform.context->shadingsys().raytype_bit(
-        // TODO change to ustringhash
-        ustring_from(name));
-    return (bsg->uniform.raytype & bit) != 0;
+    //TODO FIXME
+    //int bit   = bsg->uniform.context->shadingsys().raytype_bit(
+    //    // TODO change to ustringhash
+    //    ustring_from(name));
+    //return (bsg->uniform.raytype & bit) != 0;
+    return 0;
 }
 
 
@@ -624,7 +628,9 @@ __OSL_MASKED_OP(raytype_name)(void* bsg_, void* r_, ustring* name_,
     Mask mask(mask_value);
 
     foreach_unique(wname, mask, [=](ustring name, Mask matching_lanes) -> void {
-        int bit = bsg->uniform.context->shadingsys().raytype_bit(name);
+        // TODO FIXME
+        //int bit = bsg->uniform.context->shadingsys().raytype_bit(name);
+        int bit               = 0;
         int ray_is_named_type = ((bsg->uniform.raytype & bit) != 0);
         Masked<int> wr(r_, matching_lanes);
         assign_all(wr, ray_is_named_type);

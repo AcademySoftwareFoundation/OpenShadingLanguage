@@ -528,6 +528,12 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         target_link_libraries(${batched_target_lib} PRIVATE partio::partio ZLIB::ZLIB)
         target_compile_definitions (${batched_target_lib} PRIVATE USE_PARTIO=1)
     endif ()
+
+    target_compile_definitions (${batched_target_lib}
+        PRIVATE
+            OSL_NO_DLL_IMPORTS
+            INCLUDED_FROM_WIDE
+    )
         
 endforeach(batched_target)
 

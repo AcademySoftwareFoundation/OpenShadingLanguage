@@ -161,14 +161,14 @@ __OSL_MASKED_OP2(wavelength_color, Wv, Wf)(void* bsg_, void* wout_,
 }
 
 
-
 OSL_BATCHOP void
 __OSL_OP(prepend_color_from_vs)(void* bsg_, void* c_, ustringhash_pod from)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
 
     Color3& c(*(Color3*)c_);
-    c = cs.to_rgb(ustringhash_from(from), c, context_from_bsg(bsg_));
+    // TODO FIXME
+    //c = cs.to_rgb(ustringhash_from(from), c, context_from_bsg(bsg_));
 }
 
 namespace {
@@ -249,8 +249,9 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
     // Serialize calls to ocio
     wR.mask().foreach ([=, &cs](ActiveLane lane) -> void {
         Color3 C = wR[lane];
-        Color3 R = cs.ocio_transform(fromspace, Hashes::RGB, C, ctx);
-        wR[lane] = R;
+        // TODO FIXME
+        //Color3 R = cs.ocio_transform(fromspace, Hashes::RGB, C, ctx);
+        //wR[lane] = R;
     });
 }
 
@@ -457,9 +458,10 @@ wide_transformc(const ColorSystem cs, ustringhash fromspace,
     if (use_colorconfig) {
         // Serialize calls to ocio
         wOutput.mask().foreach ([=, &cs](ActiveLane lane) -> void {
-            COLOR C       = wInput[lane];
-            COLOR Cto     = cs.ocio_transform(fromspace, tospace, C, context);
-            wOutput[lane] = Cto;
+            COLOR C = wInput[lane];
+            // TODO FIXME
+            //COLOR Cto     = cs.ocio_transform(fromspace, tospace, C, context);
+            //wOutput[lane] = Cto;
         });
     }
 }
@@ -522,7 +524,8 @@ __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
 
     if (Cout_derivs) {
         if (Cin_derivs) {
-            DCOL(Cout) = cs.transformc(from, to, DCOL(Cin), ctx);
+            // TODO FIXME
+            //DCOL(Cout) = cs.transformc(from, to, DCOL(Cin), ctx);
             return;
         } else {
             // We had output derivs, but not input. Zero the output
@@ -533,7 +536,8 @@ __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
     }
 
     // No-derivs case
-    COL(Cout) = cs.transformc(from, to, COL(Cin), ctx);
+    // TODO FIXME
+    //COL(Cout) = cs.transformc(from, to, COL(Cin), ctx);
     return;
 }
 

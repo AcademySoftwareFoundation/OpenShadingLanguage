@@ -566,7 +566,8 @@ impl_get_uniform_from_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
         makeIdentity(failedResults);
         ShadingContext* ctx = bsg->uniform.context;
         if (ctx->shadingsys().unknown_coordsys_error()) {
-            ctx->errorfmt("Unknown transformation \"{}\"", from);
+            // TODO FIXME
+            //ctx->errorfmt("Unknown transformation \"{}\"", from);
         }
     }
     return succeeded;
@@ -611,7 +612,8 @@ impl_get_uniform_to_inverse_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
     if (failedResults.mask().any_on()) {
         makeIdentity(failedResults);
         if (ctx->shadingsys().unknown_coordsys_error()) {
-            ctx->errorfmt("Unknown transformation \"{}\"", to);
+            // TODO FIXME
+            //ctx->errorfmt("Unknown transformation \"{}\"", to);
         }
     }
     return succeeded;
@@ -721,9 +723,10 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustringhash from = wFrom[lane];
-                        ctx->batched<__OSL_WIDTH>().errorfmt(
-                            Mask(Lane(lane)), "Unknown transformation \"{}\"",
-                            ustring(from));
+                        // TODO FIXME
+                        //ctx->batched<__OSL_WIDTH>().errorfmt(
+                        //    Mask(Lane(lane)), "Unknown transformation \"{}\"",
+                        //    ustring(from));
                     }
                 }
             }
@@ -860,9 +863,10 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustringhash to = wTo[lane];
-                        ctx->batched<__OSL_WIDTH>().errorfmt(
-                            Mask(Lane(lane)), "Unknown transformation \"{}\"",
-                            ustring(to));
+                        // TODO FIXME
+                        //ctx->batched<__OSL_WIDTH>().errorfmt(
+                        //    Mask(Lane(lane)), "Unknown transformation \"{}\"",
+                        //    ustring(to));
                     }
                 }
             }

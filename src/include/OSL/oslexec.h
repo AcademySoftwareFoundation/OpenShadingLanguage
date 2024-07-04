@@ -55,9 +55,7 @@ namespace Strings {
 #ifdef __CUDA_ARCH__
 #    define STRDECL(str, var_name)
 #else
-// Any strings referenced inside of a libsoslexec/wide/*.cpp
-// or liboslnoise/wide/*.cpp will need OSLEXECPUBLIC
-#    define STRDECL(str, var_name) OSLEXECPUBLIC extern const ustring var_name;
+#    define STRDECL(str, var_name) extern const ustring var_name;
 #endif
 #include <OSL/strdecls.h>
 #undef STRDECL

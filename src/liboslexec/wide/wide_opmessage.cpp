@@ -163,7 +163,6 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
             lanes_with_data.foreach ([=](ActiveLane lane) -> void {
                 ustring msg_sourcefile = msg_wsourcefile[lane];
                 int msg_sourceline     = msg_wsourceline[lane];
-
                 bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                     lanes_with_data,
                     "message \"{}\" already exists (created here: {}:{})"
@@ -183,6 +182,7 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
         lanes_that_getmessage_called_on.foreach ([=](ActiveLane lane) -> void {
             ustring msg_sourcefile = msg_wsourcefile[lane];
             int msg_sourceline     = msg_wsourceline[lane];
+
             bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                 Mask(Lane(lane)),
                 "message \"{}\" was queried before being set (queried here: {}:{})"

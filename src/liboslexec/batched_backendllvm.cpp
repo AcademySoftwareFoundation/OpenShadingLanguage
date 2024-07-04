@@ -19,19 +19,6 @@ using namespace OSL::pvt;
 
 OSL_NAMESPACE_ENTER
 
-namespace Strings {
-
-// TODO: What qualifies these to move to strdecls.h?
-//       Being used in more than one .cpp?
-
-// Shader global strings
-static ustring backfacing("backfacing");
-static ustring surfacearea("surfacearea");
-static ustring object2common("object2common");
-static ustring shader2common("shader2common");
-static ustring flipHandedness("flipHandedness");
-}  // namespace Strings
-
 namespace pvt {
 
 namespace  // Unnamed
@@ -40,39 +27,39 @@ namespace  // Unnamed
 // BatchedShaderGlobals struct in batched_shaderglobals.h,
 // as well as the llvm 'sg' type
 // defined in BatchedBackendLLVM::llvm_type_sg().
-static ustring fields[] = {
+static ustringhash fields[] = {
     // Uniform
-    ustring("renderstate"),     //
-    ustring("tracedata"),       //
-    ustring("objdata"),         //
-    ustring("shadingcontext"),  //
-    ustring("renderer"),        //
-    Strings::raytype,           //
-    ustring("pad0"),            //
-    ustring("pad1"),            //
-    ustring("pad2"),            //
-    ustring("pad3"),            //
-    ustring("pad4"),            //
+    ustringhash("renderstate"),     //
+    ustringhash("tracedata"),       //
+    ustringhash("objdata"),         //
+    ustringhash("shadingcontext"),  //
+    ustringhash("renderer"),        //
+    Hashes::raytype,                //
+    ustringhash("pad0"),            //
+    ustringhash("pad1"),            //
+    ustringhash("pad2"),            //
+    ustringhash("pad3"),            //
+    ustringhash("pad4"),            //
     // Varying
-    Strings::P,               //
-    ustring("dPdz"),          //
-    Strings::I,               //
-    Strings::N,               //
-    Strings::Ng,              //
-    Strings::u,               //
-    Strings::v,               //
-    Strings::dPdu,            //
-    Strings::dPdv,            //
-    Strings::time,            //
-    Strings::dtime,           //
-    Strings::dPdtime,         //
-    Strings::Ps,              //
-    Strings::object2common,   //
-    Strings::shader2common,   //
-    Strings::Ci,              //
-    Strings::surfacearea,     //
-    Strings::flipHandedness,  //
-    Strings::backfacing
+    Hashes::P,                      //
+    ustringhash("dPdz"),            //
+    Hashes::I,                      //
+    Hashes::N,                      //
+    Hashes::Ng,                     //
+    Hashes::u,                      //
+    Hashes::v,                      //
+    Hashes::dPdu,                   //
+    Hashes::dPdv,                   //
+    Hashes::time,                   //
+    Hashes::dtime,                  //
+    Hashes::dPdtime,                //
+    Hashes::Ps,                     //
+    ustringhash("object2common"),   //
+    ustringhash("shader2common"),   //
+    Hashes::Ci,                     //
+    ustringhash("surfacearea"),     //
+    ustringhash("flipHandedness"),  //
+    ustringhash("backfacing")
 };
 
 static bool field_is_uniform[] = {

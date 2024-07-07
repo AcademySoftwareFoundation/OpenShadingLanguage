@@ -265,6 +265,8 @@ jobs:
       USE_BATCHED: ${{matrix.batched}}
       USE_SIMD: ${{matrix.simd}}
       ABI_CHECK: ${{matrix.abi_check}}
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
       # We would like to use harden-runner, but it flags too many false
       # positives, every time we download a dependency. We should use it only

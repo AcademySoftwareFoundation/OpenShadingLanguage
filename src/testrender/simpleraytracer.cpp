@@ -329,7 +329,7 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 float radius = OIIO::Strutil::from_string<float>(
                     radius_attr.value());
                 if (radius > 0) {
-                    pugi::xml_attribute resolution_attr = node.attribute("radius");
+                    pugi::xml_attribute resolution_attr = node.attribute("resolution");
                     int resolution = 64;
                     if (resolution_attr) {
                         OIIO::string_view str = resolution_attr.value();
@@ -349,7 +349,7 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 Vec3 ey       = strtovec(edge_y_attr.value());
 
                 int resolution = 1;
-                pugi::xml_attribute resolution_attr = node.attribute("radius");
+                pugi::xml_attribute resolution_attr = node.attribute("resolution");
                 if (resolution_attr) {
                     OIIO::string_view str = resolution_attr.value();
                     OIIO::Strutil::parse_int(str, resolution);
@@ -464,6 +464,8 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             "Error reading {}: Found multiple top-level elements", scenefile);
     if (shaders().empty())
         errhandler().severefmt("No shaders in scene");
+    if (scene.num_prims() == 0)
+        errhandler().severefmt("No primitives in scene");
     camera.finalize();
 }
 

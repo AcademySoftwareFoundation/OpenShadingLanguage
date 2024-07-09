@@ -1,0 +1,4 @@
+Compiled test.osl -> test.oso
+test_string = initial value
+test_string = updated value
+

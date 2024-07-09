@@ -3290,7 +3290,13 @@ RuntimeOptimizer::run()
                 offset = OIIO::round_to_multiple_of_pow2(offset, alignment);
                 interactive_data.resize(offset + totalsize);
                 // Copy from the instance value to the interactive block
-                memcpy(&interactive_data[offset], s.data(), typesize);
+                // If the value is a string, copy its hash.
+                if (s.typespec().is_string()) {
+                    ustring string_data = *reinterpret_cast<ustring*>(s.data());
+                    ustringhash string_hash(string_data);
+                    memcpy(&interactive_data[offset], &string_hash, typesize);
+                } else
+                    memcpy(&interactive_data[offset], s.data(), typesize);
                 if (totalsize > typesize)
                     memset(&interactive_data[offset] + typesize, 0,
                            totalsize - typesize);

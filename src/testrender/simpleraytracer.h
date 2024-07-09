@@ -116,7 +116,7 @@ private:
     bool  show_normals       = false;
     std::vector<ShaderGroupRef> m_shaders;
     std::vector<bool> m_shader_is_light;
-    std::vector<float> m_shader_surfacearea; // surface area of all triangles that share the same shader
+    std::vector<float> m_mesh_surfacearea; // surface area of all triangles in each mesh (one entry per mesh)
     std::vector<unsigned> m_lightprims; // array of all triangles that have a "light" shader on them
 
     class ErrorHandler;  // subclass ErrorHandler for SimpleRaytracer

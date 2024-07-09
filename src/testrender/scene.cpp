@@ -77,6 +77,7 @@ void Scene::add_model(const std::string& filename, const ShaderMap& shadermap, i
                 shaderids.emplace_back(shapeShaderID);
             ntris++;
         }
+        last_index.emplace_back(triangles.size());
     }
     double loadtime = timer();
     errhandler.infofmt("Parsed {} vertices and {} triangles from {} in {}", nverts, ntris, filename, OIIO::Strutil::timeintervalformat(loadtime, 2));
@@ -134,6 +135,7 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             base_idx + NV - 1 - W + x0});
         shaderids.emplace_back(shaderID);
     }
+    last_index.emplace_back(triangles.size());
 }
 
 void Scene::add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID, int resolution) {
@@ -163,6 +165,7 @@ void Scene::add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID
         shaderids.emplace_back(shaderID);
         shaderids.emplace_back(shaderID);
     }
+    last_index.emplace_back(triangles.size());
 }
 
 

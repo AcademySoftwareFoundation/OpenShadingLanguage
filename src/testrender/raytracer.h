@@ -245,6 +245,7 @@ struct Scene {
     std::vector<Vec3> verts;
     std::vector<TriangleIndices> triangles;
     std::vector<int> shaderids;
+    std::vector<int> last_index; // one entry per mesh, stores the last triangle index (+1) -- also is the start triangle of the next mesh
     // acceleration structure (built over triangles)
     std::unique_ptr<BVH> bvh;
 };

@@ -858,8 +858,8 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.v                  = uv.val().y;
     sg.dvdx               = uv.dx().y;
     sg.dvdy               = uv.dy().y;
-    int shaderID = scene.shaderid(id);
-    sg.surfacearea        = shaderID >= 0 ? m_shader_surfacearea[shaderID] : 0;
+    const int meshid = std::upper_bound(scene.last_index.begin(), scene.last_index.end(), id) - scene.last_index.begin();
+    sg.surfacearea        = m_mesh_surfacearea[meshid];
     Dual2<Vec3> direction = r.dual_direction();
     sg.I                  = direction.val();
     sg.dIdx               = direction.dx();
@@ -1105,21 +1105,28 @@ SimpleRaytracer::prepare_render()
     // build bvh and prepare triangles
     scene.prepare(errhandler());
 
-    m_shader_surfacearea.resize(m_shaders.size());
+    m_mesh_surfacearea.reserve(scene.last_index.size());
 
+    // measure the total surface area of each mesh
+    int first_index = 0;
+    for (int last_index : scene.last_index) {
+        float area = 0;
+        for (int index = first_index; index < last_index; index++) {
+            area += scene.primitivearea(index);
+        }
+        m_mesh_surfacearea.emplace_back(area);
+        first_index = last_index;
+    }
     // collect all light emitting triangles
     for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
         int shaderID = scene.shaderid(t);
         if (shaderID < 0 || !m_shaders[shaderID])
             continue;  // no shader attached
-        float area = scene.primitivearea(t);
-        m_shader_surfacearea[shaderID] += area;
         if (m_shader_is_light[shaderID])
             m_lightprims.emplace_back(t);
     }
-    if (!m_lightprims.empty()) {
+    if (!m_lightprims.empty())
         errhandler().infofmt("Found {} triangles to be treated as lights", m_lightprims.size());
-    }
 }
 
 

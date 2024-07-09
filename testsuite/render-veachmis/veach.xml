@@ -45,10 +45,10 @@
    </ShaderGroup>
    <Quad corner="-80,10,110" edge_x="0,-5  ,20" edge_y="160,0,0" />
 
-   <ShaderGroup>float power 2000; shader emitter layer1;</ShaderGroup>
-   <Sphere center="-90, 130, 50" radius="1" is_light="yes" /> <!--Lite -->
-   <Sphere center="-35, 130, 50" radius="5" is_light="yes" /> <!--Lite -->
-   <Sphere center=" 30, 130, 50" radius="10" is_light="yes" /> <!--Lite -->
-   <Sphere center=" 90, 130, 50" radius="20" is_light="yes" /> <!--Lite -->
+   <ShaderGroup is_light="yes">float power 2000; shader emitter layer1;</ShaderGroup>
+   <Sphere center="-90, 130, 50" radius="1"  resolution="8" /> <!--Lite -->
+   <Sphere center="-35, 130, 50" radius="5"  resolution="8"  /> <!--Lite -->
+   <Sphere center=" 30, 130, 50" radius="10" resolution="8"  /> <!--Lite -->
+   <Sphere center=" 90, 130, 50" radius="20" resolution="8"  /> <!--Lite -->
    
 </World>

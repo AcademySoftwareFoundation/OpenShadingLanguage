@@ -841,7 +841,7 @@ SimpleRaytracer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
 
 void
 SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
-                                  const Dual2<float>& t, int id)
+                                  const Dual2<float>& t, int id, float u, float v)
 {
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
     Dual2<Vec3> P = r.point(t);
@@ -849,9 +849,8 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.P          = P.val();
     sg.dPdx       = P.dx();
     sg.dPdy       = P.dy();
-    Dual2<Vec3> N = scene.normal(P, id);
-    sg.Ng = sg.N          = N.val();
-    Dual2<Vec2> uv        = scene.uv(P, N, sg.dPdu, sg.dPdv, id);
+    sg.N          = scene.normal(P, sg.Ng, id, u, v);
+    Dual2<Vec2> uv        = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
     sg.u                  = uv.val().x;
     sg.dudx               = uv.dx().x;
     sg.dudy               = uv.dy().x;
@@ -926,7 +925,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 
         // construct a shader globals for the hit point
         ShaderGlobals sg;
-        globals_from_hit(sg, r, hit.t, hit.id);
+        globals_from_hit(sg, r, hit.t, hit.id, hit.u, hit.v);
         if (show_normals) {
             // visualize normals
             Color3 c(sg.N.x, sg.N.y, sg.N.z);
@@ -1020,7 +1019,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                     if (shadow_hit.t == sample.dist) {
                         // setup a shader global for the point on the light
                         ShaderGlobals light_sg;
-                        globals_from_hit(light_sg, shadow_ray, sample.dist, lid);
+                        // TODO: return u,v from sample so we can use it here
+                        globals_from_hit(light_sg, shadow_ray, sample.dist, lid, 0, 0);
                         // execute the light shader (for emissive closures only)
                         shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
                         ShadingResult light_result;

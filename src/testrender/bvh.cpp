@@ -282,7 +282,13 @@ Intersection Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1
 
 void Scene::prepare(OIIO::ErrorHandler& errhandler) {
     verts.shrink_to_fit();
+    normals.shrink_to_fit();
+    uvs.shrink_to_fit();
     triangles.shrink_to_fit();
+    n_triangles.shrink_to_fit();
+    uv_triangles.shrink_to_fit();
+    OSL_DASSERT(triangles.size() == n_triangles.size());
+    OSL_DASSERT(triangles.size() == uv_triangles.size());
     shaderids.shrink_to_fit();
     bvh = build_bvh(verts, triangles, errhandler);
 }

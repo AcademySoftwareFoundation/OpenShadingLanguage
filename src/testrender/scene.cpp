@@ -36,14 +36,31 @@ void Scene::add_model(const std::string& filename, const ShaderMap& shadermap, i
         }
     }
     int nverts = obj_file.attributes.positions.size() / 3;
-    unsigned base_idx = verts.size();
+    int base_idx = verts.size();
     verts.reserve(verts.size() + nverts);
     for (int i = 0, i3 = 0; i < nverts; i++, i3 += 3) {
         float x = obj_file.attributes.positions[i3 + 0];
         float y = obj_file.attributes.positions[i3 + 1];
         float z = obj_file.attributes.positions[i3 + 2];
         verts.emplace_back(x, y, z);
-    }        
+    }
+    int n_base_idx = normals.size();
+    int nnorms = obj_file.attributes.normals.size() / 3;
+    normals.reserve(normals.size() + nnorms);
+    for (int i = 0, i3 = 0; i < nnorms; i++, i3 += 3) {
+        float x = obj_file.attributes.normals[i3 + 0];
+        float y = obj_file.attributes.normals[i3 + 1];
+        float z = obj_file.attributes.normals[i3 + 2];
+        normals.emplace_back(x, y, z);
+    }
+    int uv_base_idx = uvs.size();
+    int nuvs = obj_file.attributes.texcoords.size() / 2;
+    uvs.reserve(uvs.size() + nuvs);
+    for (int i = 0, i2 = 0; i < nuvs; i++, i2 += 2) {
+        float u = obj_file.attributes.texcoords[i2 + 0];
+        float v = obj_file.attributes.texcoords[i2 + 1];
+        uvs.emplace_back(u, v);
+    }
     int ntris = 0;
     for (auto&& shape : obj_file.shapes) {
         int shapeShaderID = shaderID;
@@ -67,6 +84,32 @@ void Scene::add_model(const std::string& filename, const ShaderMap& shadermap, i
                 base_idx + a,
                 base_idx + b,
                 base_idx + c});
+            int na = shape.mesh.indices[i + 0].normal_index;
+            int nb = shape.mesh.indices[i + 1].normal_index;
+            int nc = shape.mesh.indices[i + 2].normal_index;
+            // either all are valid, or none are valid
+            OSL_DASSERT(
+                (na < 0  && nb < 0  && nc <  0) ||
+                (na >= 0 && nb >= 0 && nc >= 0)
+            );
+            n_triangles.emplace_back(TriangleIndices{
+                na < 0 ? -1 : n_base_idx + na,
+                na < 0 ? -1 : n_base_idx + nb,
+                na < 0 ? -1 : n_base_idx + nc,
+            });
+            int ta = shape.mesh.indices[i + 0].texcoord_index;
+            int tb = shape.mesh.indices[i + 1].texcoord_index;
+            int tc = shape.mesh.indices[i + 2].texcoord_index;
+            OSL_DASSERT(
+                (ta <  0 && tb <  0 && tc <  0) ||
+                (ta >= 0 && tb >= 0 && tc >= 0)
+            );
+            uv_triangles.emplace_back(TriangleIndices{
+                ta < 0 ? -1 : uv_base_idx + ta,
+                ta < 0 ? -1 : uv_base_idx + tb,
+                ta < 0 ? -1 : uv_base_idx + tc
+            });
+
             if (use_material_ids && !shape.mesh.material_ids.empty()) {
                 // remap the material ID to our indexing
                 int obj_mat_id = shape.mesh.material_ids[f];
@@ -87,9 +130,11 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
     const int W = 2 * resolution;
     const int H = resolution;
     const int NV = 2 + W * H; // poles + grid = total vertex count
-    unsigned base_idx = verts.size();
+    int base_idx = verts.size();
+    int n_base_idx = normals.size();
     // vertices
     verts.emplace_back(c - Vec3(0, 0, r)); // pole -z
+    normals.emplace_back(0, 0, -1);
     // W * H grid of points
     for (int y = 0; y < H; y++) {
         float s = float(y + 0.5f) / float(H);
@@ -97,11 +142,13 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
         float q = sqrtf(1 - z * z);
         for (int x = 0; x < W; x++) {
             const float a = float(2 * M_PI) * float(x) / float(W);
-            const Vec3 p(q * cosf(a), q * sinf(a), z);
-            verts.emplace_back(c + r * p);
+            const Vec3 n(q * cosf(a), q * sinf(a), z);
+            verts.emplace_back(c + r * n);
+            normals.emplace_back(n);
         }
     }
     verts.emplace_back(c + Vec3(0, 0, r)); // pole +z
+    normals.emplace_back(0, 0, -1);
 
     for (int x0 = 0, x1 = W - 1; x0 < W; x1 = x0, x0++) {
         // tri to pole
@@ -110,22 +157,30 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             base_idx + 1 + x0,
             base_idx + 1 + x1
         });
+        n_triangles.emplace_back(TriangleIndices{
+            n_base_idx,
+            n_base_idx + 1 + x0,
+            n_base_idx + 1 + x1
+        });
+        uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
+
         shaderids.emplace_back(shaderID);
         for (int y = 0; y < H - 1; y++) {
             // quads
-            unsigned i00 = base_idx + 1 + (x0 + W * (y + 0));
-            unsigned i10 = base_idx + 1 + (x1 + W * (y + 0));
-            unsigned i11 = base_idx + 1 + (x1 + W * (y + 1));
-            unsigned i01 = base_idx + 1 + (x0 + W * (y + 1));
+            int i00 = 1 + (x0 + W * (y + 0));
+            int i10 = 1 + (x1 + W * (y + 0));
+            int i11 = 1 + (x1 + W * (y + 1));
+            int i01 = 1 + (x0 + W * (y + 1));
 
-            triangles.emplace_back(TriangleIndices{
-                i00,
-                i11,
-                i10});
-            triangles.emplace_back(TriangleIndices{
-                i00,
-                i01,
-                i11});
+            triangles.emplace_back(TriangleIndices{base_idx + i00, base_idx + i11, base_idx + i10});
+            triangles.emplace_back(TriangleIndices{base_idx + i00, base_idx + i01, base_idx + i11});
+
+            n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i11, n_base_idx + i10});
+            n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i01, n_base_idx + i11});
+
+            uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
+            uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
+
             shaderids.emplace_back(shaderID);
             shaderids.emplace_back(shaderID);
         }
@@ -133,6 +188,11 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             base_idx + NV - 1,
             base_idx + NV - 1 - W + x1,
             base_idx + NV - 1 - W + x0});
+        n_triangles.emplace_back(TriangleIndices{
+            n_base_idx + NV - 1,
+            n_base_idx + NV - 1 - W + x1,
+            n_base_idx + NV - 1 - W + x0});
+        uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
         shaderids.emplace_back(shaderID);
     }
     last_index.emplace_back(triangles.size());
@@ -140,28 +200,39 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
 
 void Scene::add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID, int resolution) {
     // add vertices
-    unsigned base_idx = verts.size();
+    int base_idx = verts.size();
+    int t_base_idx = uvs.size();
     for (int v = 0; v <= resolution; v++)
     for (int u = 0; u <= resolution; u++) {
         float s = float(u) / float(resolution);
         float t = float(v) / float(resolution);
         verts.emplace_back(p + s * ex + t * ey);
+        uvs.emplace_back(s, t);
     }
     for (int v = 0; v < resolution; v++) 
     for (int u = 0; u < resolution; u++) {
-        unsigned i00 = base_idx + (u + 0) + (v + 0) * (resolution + 1);
-        unsigned i10 = base_idx + (u + 1) + (v + 0) * (resolution + 1);
-        unsigned i11 = base_idx + (u + 1) + (v + 1) * (resolution + 1);
-        unsigned i01 = base_idx + (u + 0) + (v + 1) * (resolution + 1);
+        int i00 = (u + 0) + (v + 0) * (resolution + 1);
+        int i10 = (u + 1) + (v + 0) * (resolution + 1);
+        int i11 = (u + 1) + (v + 1) * (resolution + 1);
+        int i01 = (u + 0) + (v + 1) * (resolution + 1);
         triangles.emplace_back(TriangleIndices{
-            i00,
-            i10,
-            i11});
-
+            base_idx + i00,
+            base_idx + i10,
+            base_idx + i11});
         triangles.emplace_back(TriangleIndices{
-            i00,
-            i11,
-            i01});
+            base_idx + i00,
+            base_idx + i11,
+            base_idx + i01});
+        n_triangles.emplace_back(TriangleIndices{-1, -1, -1});
+        n_triangles.emplace_back(TriangleIndices{-1, -1, -1});
+        uv_triangles.emplace_back(TriangleIndices{
+            t_base_idx + i00,
+            t_base_idx + i10,
+            t_base_idx + i11});
+        uv_triangles.emplace_back(TriangleIndices{
+            t_base_idx + i00,
+            t_base_idx + i11,
+            t_base_idx + i01});
         shaderids.emplace_back(shaderID);
         shaderids.emplace_back(shaderID);
     }

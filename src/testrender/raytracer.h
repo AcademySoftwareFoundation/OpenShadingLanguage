@@ -151,7 +151,7 @@ struct Camera {
 };
 
 struct TriangleIndices {
-    unsigned a, b, c;
+    int a, b, c;
 };
 
 struct LightSample {
@@ -222,18 +222,31 @@ struct Scene {
         return 0.5f * (va - vb).cross(va - vc).length();
     }
 
-    Vec3 normal(const Dual2<Vec3>& p, int primID) const
+    Vec3 normal(const Dual2<Vec3>& p, Vec3& Ng, int primID, float u, float v) const
     {
+        // this triangle doesn't have vertex normals, just use face normal
         const Vec3 va = verts[triangles[primID].a];
         const Vec3 vb = verts[triangles[primID].b];
         const Vec3 vc = verts[triangles[primID].c];
-        return (va - vb).cross(va - vc).normalize();
+        Ng = (va - vb).cross(va - vc).normalize();
+        if (n_triangles[primID].a < 0)
+            return Ng;
+        const Vec3 na = normals[n_triangles[primID].a];
+        const Vec3 nb = normals[n_triangles[primID].b];
+        const Vec3 nc = normals[n_triangles[primID].c];
+        return ((1 - u - v) * na + u * nb + v * nc).normalize();
     }
 
-    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& n, Vec3& dPdu,
-                   Vec3& dPdv, int primID) const
+    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Vec3& n, Vec3& dPdu,
+                   Vec3& dPdv, int primID, float u, float v) const
     {
-        return Dual2<Vec2>(Vec2(0, 0));
+        if (uv_triangles[primID].a < 0)
+            return Dual2<Vec2>(Vec2(0, 0));
+        const Vec2 ta = uvs[uv_triangles[primID].a];
+        const Vec2 tb = uvs[uv_triangles[primID].b];
+        const Vec2 tc = uvs[uv_triangles[primID].c];
+        // TODO: compute dPdu and dPdv
+        return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc);
     }
 
     int shaderid(int primID) const
@@ -243,7 +256,11 @@ struct Scene {
 
     // basic triangle data
     std::vector<Vec3> verts;
+    std::vector<Vec3> normals;
+    std::vector<Vec2> uvs;    
     std::vector<TriangleIndices> triangles;
+    std::vector<TriangleIndices> uv_triangles;
+    std::vector<TriangleIndices> n_triangles;
     std::vector<int> shaderids;
     std::vector<int> last_index; // one entry per mesh, stores the last triangle index (+1) -- also is the start triangle of the next mesh
     // acceleration structure (built over triangles)

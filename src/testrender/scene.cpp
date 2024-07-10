@@ -132,6 +132,7 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
     const int NV = 2 + W * H; // poles + grid = total vertex count
     int base_idx = verts.size();
     int n_base_idx = normals.size();
+    int t_base_idx = uvs.size();
     // vertices
     verts.emplace_back(c - Vec3(0, 0, r)); // pole -z
     normals.emplace_back(0, 0, -1);
@@ -142,13 +143,26 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
         float q = sqrtf(1 - z * z);
         for (int x = 0; x < W; x++) {
             const float a = float(2 * M_PI) * float(x) / float(W);
-            const Vec3 n(q * cosf(a), q * sinf(a), z);
+            const Vec3 n(q * cosf(a), z, q * sinf(a));
             verts.emplace_back(c + r * n);
             normals.emplace_back(n);
         }
     }
     verts.emplace_back(c + Vec3(0, 0, r)); // pole +z
     normals.emplace_back(0, 0, -1);
+    // create rows for the poles (we use triangles instead of quads near the poles, so the top vertex should be evenly spaced)
+    for (int y = 0; y < 2; y++)
+    for (int x = 0; x < W; x++) {
+        float s = float(x + 0.5f) / float(W);
+        uvs.emplace_back(s, 1 - y);
+    }
+    // now create the rest of the plane with a regular spacing
+    for (int y = 0; y < H; y++)
+    for (int x = 0; x <= W; x++) {
+        float s = float(x) / float(W);
+        float t = float(y + 0.5f) / float(H);
+        uvs.emplace_back(s, 1 - t);
+    }
 
     for (int x0 = 0, x1 = W - 1; x0 < W; x1 = x0, x0++) {
         // tri to pole
@@ -162,7 +176,11 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             n_base_idx + 1 + x0,
             n_base_idx + 1 + x1
         });
-        uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
+        uv_triangles.emplace_back(TriangleIndices{
+            t_base_idx + x1,
+            t_base_idx + 2 * W + x1 + 1,
+            t_base_idx + 2 * W + x1
+        });
 
         shaderids.emplace_back(shaderID);
         for (int y = 0; y < H - 1; y++) {
@@ -178,8 +196,12 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i11, n_base_idx + i10});
             n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i01, n_base_idx + i11});
 
-            uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
-            uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
+            int t00 = 2 * W + x1 + 1 + (W + 1) * (y + 0);
+            int t10 = 2 * W + x1     + (W + 1) * (y + 0);
+            int t11 = 2 * W + x1     + (W + 1) * (y + 1);
+            int t01 = 2 * W + x1 + 1 + (W + 1) * (y + 1);
+            uv_triangles.emplace_back(TriangleIndices{t_base_idx + t00, t_base_idx + t11, t_base_idx + t10});
+            uv_triangles.emplace_back(TriangleIndices{t_base_idx + t00, t_base_idx + t01, t_base_idx + t11});
 
             shaderids.emplace_back(shaderID);
             shaderids.emplace_back(shaderID);
@@ -192,7 +214,11 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             n_base_idx + NV - 1,
             n_base_idx + NV - 1 - W + x1,
             n_base_idx + NV - 1 - W + x0});
-        uv_triangles.emplace_back(TriangleIndices{ -1, -1, -1 });
+        uv_triangles.emplace_back(TriangleIndices{
+            t_base_idx + W + x1,
+            t_base_idx + 2 * W + x1     + (W + 1) * (H - 1),
+            t_base_idx + 2 * W + x1 + 1 + (W + 1) * (H - 1)
+        });
         shaderids.emplace_back(shaderID);
     }
     last_index.emplace_back(triangles.size());

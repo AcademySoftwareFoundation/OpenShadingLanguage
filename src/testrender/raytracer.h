@@ -158,6 +158,7 @@ struct LightSample {
     Vec3 dir;
     float dist;
     float pdf;
+    float u, v;
 };
 
 using ShaderMap = std::unordered_map<std::string, int>;
@@ -197,7 +198,7 @@ struct Scene {
         Vec3 dir = l.normalize();
         // length of n is twice the area
         float pdf = d2 / (0.5f * fabsf(dir.dot(n)));
-        return { dir, sqrtf(d2), pdf };
+        return { dir, sqrtf(d2), pdf, xi, yi };
     }
 
     float shapepdf(int primID, const Vec3& x, const Vec3& p) const

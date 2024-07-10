@@ -1025,8 +1025,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                     if (shadow_hit.t == sample.dist) {
                         // setup a shader global for the point on the light
                         ShaderGlobals light_sg;
-                        // TODO: return u,v from sample so we can use it here
-                        globals_from_hit(light_sg, shadow_ray, sample.dist, lid, 0, 0);
+                        globals_from_hit(light_sg, shadow_ray, sample.dist, lid, sample.u, sample.v);
                         // execute the light shader (for emissive closures only)
                         shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
                         ShadingResult light_result;

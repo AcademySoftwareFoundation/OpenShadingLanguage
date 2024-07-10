@@ -134,8 +134,8 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
     int n_base_idx = normals.size();
     int t_base_idx = uvs.size();
     // vertices
-    verts.emplace_back(c + Vec3(0, 0, r)); // pole +z
-    normals.emplace_back(0, 0, 1);
+    verts.emplace_back(c + Vec3(0, r, 0)); // pole +z
+    normals.emplace_back(0, 1, 0);
     // W * H grid of points
     for (int y = 0; y < H; y++) {
         float t = float(y + 0.5f) / float(H);
@@ -149,8 +149,8 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             normals.emplace_back(n);
         }
     }
-    verts.emplace_back(c - Vec3(0, 0, r)); // pole -z
-    normals.emplace_back(0, 0, -1);
+    verts.emplace_back(c - Vec3(0, r, 0)); // pole -z
+    normals.emplace_back(0, -1, 0);
     // create rows for the poles (we use triangles instead of quads near the poles, so the top vertex should be evenly spaced)
     for (int y = 0; y < 2; y++)
     for (int x = 0; x < W; x++) {

@@ -857,7 +857,7 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.v                  = uv.val().y;
     sg.dvdx               = uv.dx().y;
     sg.dvdy               = uv.dy().y;
-    const int meshid = std::upper_bound(scene.last_index.begin(), scene.last_index.end(), id) - scene.last_index.begin();
+    const int meshid      = std::upper_bound(scene.last_index.begin(), scene.last_index.end(), id) - scene.last_index.begin();
     sg.surfacearea        = m_mesh_surfacearea[meshid];
     Dual2<Vec3> direction = r.dual_direction();
     sg.I                  = direction.val();
@@ -1133,6 +1133,16 @@ SimpleRaytracer::prepare_render()
     }
     if (!m_lightprims.empty())
         errhandler().infofmt("Found {} triangles to be treated as lights", m_lightprims.size());
+#if 0
+    // dump scene to disk as obj for debugging purposes
+    // TODO: make this a feature?
+    FILE* fp = fopen("/tmp/test.obj", "w");
+    for (Vec3 v : scene.verts)
+        fprintf(fp, "v %.9g %.9g %.9g\n", v.x, v.y, v.z);
+    for (TriangleIndices t : scene.triangles)
+        fprintf(fp, "f %d %d %d\n", 1 + t.a, 1 + t.b, 1 + t.c);
+    fclose(fp);
+#endif
 }
 
 

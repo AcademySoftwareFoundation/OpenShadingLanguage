@@ -134,34 +134,35 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
     int n_base_idx = normals.size();
     int t_base_idx = uvs.size();
     // vertices
-    verts.emplace_back(c - Vec3(0, 0, r)); // pole -z
-    normals.emplace_back(0, 0, -1);
+    verts.emplace_back(c + Vec3(0, 0, r)); // pole +z
+    normals.emplace_back(0, 0, 1);
     // W * H grid of points
     for (int y = 0; y < H; y++) {
-        float s = float(y + 0.5f) / float(H);
-        float z = cosf((1 - s) * float(M_PI));
+        float t = float(y + 0.5f) / float(H);
+        float z = cosf(t * float(M_PI));
         float q = sqrtf(1 - z * z);
         for (int x = 0; x < W; x++) {
+            // match the previous parameterization
             const float a = float(2 * M_PI) * float(x) / float(W);
-            const Vec3 n(q * cosf(a), z, q * sinf(a));
+            const Vec3 n(q * -sinf(a), z, q * -cosf(a));
             verts.emplace_back(c + r * n);
             normals.emplace_back(n);
         }
     }
-    verts.emplace_back(c + Vec3(0, 0, r)); // pole +z
+    verts.emplace_back(c - Vec3(0, 0, r)); // pole -z
     normals.emplace_back(0, 0, -1);
     // create rows for the poles (we use triangles instead of quads near the poles, so the top vertex should be evenly spaced)
     for (int y = 0; y < 2; y++)
     for (int x = 0; x < W; x++) {
         float s = float(x + 0.5f) / float(W);
-        uvs.emplace_back(s, 1 - y);
+        uvs.emplace_back(s, y);
     }
     // now create the rest of the plane with a regular spacing
     for (int y = 0; y < H; y++)
     for (int x = 0; x <= W; x++) {
         float s = float(x) / float(W);
         float t = float(y + 0.5f) / float(H);
-        uvs.emplace_back(s, 1 - t);
+        uvs.emplace_back(s, t);
     }
 
     for (int x0 = 0, x1 = W - 1; x0 < W; x1 = x0, x0++) {

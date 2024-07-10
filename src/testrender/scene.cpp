@@ -168,18 +168,18 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
         // tri to pole
         triangles.emplace_back(TriangleIndices{
             base_idx,
-            base_idx + 1 + x0,
-            base_idx + 1 + x1
+            base_idx + 1 + x1,
+            base_idx + 1 + x0
         });
         n_triangles.emplace_back(TriangleIndices{
             n_base_idx,
-            n_base_idx + 1 + x0,
-            n_base_idx + 1 + x1
+            n_base_idx + 1 + x1,
+            n_base_idx + 1 + x0
         });
         uv_triangles.emplace_back(TriangleIndices{
             t_base_idx + x1,
-            t_base_idx + 2 * W + x1 + 1,
-            t_base_idx + 2 * W + x1
+            t_base_idx + 2 * W + x1,
+            t_base_idx + 2 * W + x1 + 1
         });
 
         shaderids.emplace_back(shaderID);
@@ -190,34 +190,34 @@ void Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution) {
             int i11 = 1 + (x1 + W * (y + 1));
             int i01 = 1 + (x0 + W * (y + 1));
 
-            triangles.emplace_back(TriangleIndices{base_idx + i00, base_idx + i11, base_idx + i10});
-            triangles.emplace_back(TriangleIndices{base_idx + i00, base_idx + i01, base_idx + i11});
+            triangles.emplace_back(TriangleIndices{base_idx + i00, base_idx + i10, base_idx + i11});
+            triangles.emplace_back(TriangleIndices{base_idx + i00, base_idx + i11, base_idx + i01});
 
-            n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i11, n_base_idx + i10});
-            n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i01, n_base_idx + i11});
+            n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i10, n_base_idx + i11});
+            n_triangles.emplace_back(TriangleIndices{n_base_idx + i00, n_base_idx + i11, n_base_idx + i01});
 
             int t00 = 2 * W + x1 + 1 + (W + 1) * (y + 0);
             int t10 = 2 * W + x1     + (W + 1) * (y + 0);
             int t11 = 2 * W + x1     + (W + 1) * (y + 1);
             int t01 = 2 * W + x1 + 1 + (W + 1) * (y + 1);
-            uv_triangles.emplace_back(TriangleIndices{t_base_idx + t00, t_base_idx + t11, t_base_idx + t10});
-            uv_triangles.emplace_back(TriangleIndices{t_base_idx + t00, t_base_idx + t01, t_base_idx + t11});
+            uv_triangles.emplace_back(TriangleIndices{t_base_idx + t00, t_base_idx + t10, t_base_idx + t11});
+            uv_triangles.emplace_back(TriangleIndices{t_base_idx + t00, t_base_idx + t11, t_base_idx + t01});
 
             shaderids.emplace_back(shaderID);
             shaderids.emplace_back(shaderID);
         }
         triangles.emplace_back(TriangleIndices{
             base_idx + NV - 1,
-            base_idx + NV - 1 - W + x1,
-            base_idx + NV - 1 - W + x0});
+            base_idx + NV - 1 - W + x0,
+            base_idx + NV - 1 - W + x1});
         n_triangles.emplace_back(TriangleIndices{
             n_base_idx + NV - 1,
-            n_base_idx + NV - 1 - W + x1,
-            n_base_idx + NV - 1 - W + x0});
+            n_base_idx + NV - 1 - W + x0,
+            n_base_idx + NV - 1 - W + x1});
         uv_triangles.emplace_back(TriangleIndices{
             t_base_idx + W + x1,
-            t_base_idx + 2 * W + x1     + (W + 1) * (H - 1),
-            t_base_idx + 2 * W + x1 + 1 + (W + 1) * (H - 1)
+            t_base_idx + 2 * W + x1 + 1 + (W + 1) * (H - 1),
+            t_base_idx + 2 * W + x1     + (W + 1) * (H - 1)
         });
         shaderids.emplace_back(shaderID);
     }

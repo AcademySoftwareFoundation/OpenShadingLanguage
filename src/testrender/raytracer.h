@@ -224,13 +224,16 @@ struct Scene {
 
     Vec3 normal(const Dual2<Vec3>& p, Vec3& Ng, int primID, float u, float v) const
     {
-        // this triangle doesn't have vertex normals, just use face normal
         const Vec3 va = verts[triangles[primID].a];
         const Vec3 vb = verts[triangles[primID].b];
         const Vec3 vc = verts[triangles[primID].c];
         Ng = (va - vb).cross(va - vc).normalize();
+
+        // this triangle doesn't have vertex normals, just use face normal
         if (n_triangles[primID].a < 0)
             return Ng;
+
+        // use vertex normals
         const Vec3 na = normals[n_triangles[primID].a];
         const Vec3 nb = normals[n_triangles[primID].b];
         const Vec3 nc = normals[n_triangles[primID].c];
@@ -245,7 +248,22 @@ struct Scene {
         const Vec2 ta = uvs[uv_triangles[primID].a];
         const Vec2 tb = uvs[uv_triangles[primID].b];
         const Vec2 tc = uvs[uv_triangles[primID].c];
-        // TODO: compute dPdu and dPdv
+
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+
+        const Vec2 dt02 = ta - tc, dt12 = tb - tc;
+        const Vec3 dp02 = va - vc, dp12 = vb - vc;
+        // TODO: could use Kahan's algorithm here
+        // https://pharr.org/matt/blog/2019/11/03/difference-of-floats
+        const float det = dt02.x * dt12.y - dt02.y * dt12.x;
+        if (det != 0) {
+            Float invdet = 1 / det;
+            dPdu = ( dt12.y * dp02 - dt02.y * dp12) * invdet;
+            dPdv = (-dt12.x * dp02 + dt02.x * dp12) * invdet;
+            // TODO: smooth out dPdu and dPdv by storing per vertex tangents
+        }
         return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc);
     }
 

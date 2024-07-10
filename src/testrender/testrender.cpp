@@ -51,7 +51,7 @@ static std::string texoptions;
 static int xres = 640, yres = 480;
 static int aa = 1, max_bounces = 1000000, rr_depth = 5;
 static float show_albedo_scale = 0.0f;
-static bool show_normals = false;
+static int show_globals = 0;
 static int num_threads         = 0;
 static int iters               = 1;
 static std::string scenefile, imagefile;
@@ -175,8 +175,21 @@ getargs(int argc, const char* argv[])
       .help("Trace NxN rays per pixel");
     ap.arg("-albedo %f:SCALE", &show_albedo_scale)
       .help("Visualize the albedo of each pixel instead of path tracing");
-    ap.arg("-normals", &show_normals)
-      .help("Visualize the shading normals instead of path tracing");
+    ap.arg("-normals")
+      .help("Visualize the shading normals instead of path tracing")
+      .action([&](cspan<const char*> argv) { show_globals = 1; });
+    ap.arg("-geonormals")
+      .help("Visualize the geometric normals instead of path tracing")
+      .action([&](cspan<const char*> argv) { show_globals = 2; });
+    ap.arg("-utangents")
+      .help("Visualize the surface tangent with respect to the u texture coordinate instead of path tracing")
+      .action([&](cspan<const char*> argv) { show_globals = 3; });
+    ap.arg("-vtangents")
+      .help("Visualize the surface tangent with respect to the v texture coordinate instead of path tracing")
+      .action([&](cspan<const char*> argv) { show_globals = 4; });
+    ap.arg("-uvs")
+      .help("Visualize the texture coordinates instead of path tracing")
+      .action([&](cspan<const char*> argv) { show_globals = 5; });
     ap.arg("--iters %d:N", &iters)
       .help("Number of iterations");
     ap.arg("-O0", &O0)
@@ -284,7 +297,7 @@ main(int argc, const char* argv[])
     rend->attribute("rr_depth", rr_depth);
     rend->attribute("aa", aa);
     rend->attribute("show_albedo_scale", show_albedo_scale);
-    rend->attribute("show_normals", show_normals);
+    rend->attribute("show_globals", show_globals);
     OIIO::attribute("threads", num_threads);
 
 #if OSL_USE_OPTIX

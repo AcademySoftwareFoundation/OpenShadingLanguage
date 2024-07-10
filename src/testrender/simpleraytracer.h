@@ -113,7 +113,7 @@ private:
     int max_bounces          = 1000000;
     int rr_depth             = 5;
     float show_albedo_scale  = 0.0f;
-    bool  show_normals       = false;
+    int   show_globals       = 0;
     std::vector<ShaderGroupRef> m_shaders;
     std::vector<bool> m_shader_is_light;
     std::vector<float> m_mesh_surfacearea; // surface area of all triangles in each mesh (one entry per mesh)

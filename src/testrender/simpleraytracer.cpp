@@ -863,7 +863,7 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.I                  = direction.val();
     sg.dIdx               = direction.dx();
     sg.dIdy               = direction.dy();
-    sg.backfacing         = sg.N.dot(sg.I) > 0;
+    sg.backfacing         = sg.Ng.dot(sg.I) > 0;
     if (sg.backfacing) {
         sg.N  = -sg.N;
         sg.Ng = -sg.Ng;
@@ -926,10 +926,16 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         // construct a shader globals for the hit point
         ShaderGlobals sg;
         globals_from_hit(sg, r, hit.t, hit.id, hit.u, hit.v);
-        if (show_normals) {
-            // visualize normals
-            Color3 c(sg.N.x, sg.N.y, sg.N.z);
-            path_radiance += path_weight * (c * 0.5f + Color3(0.5f));
+        if (show_globals) {
+            // visualize the main fields of the shader globals
+            Vec3 v = sg.Ng;
+            if (show_globals == 2) v = sg.N;
+            if (show_globals == 3) v = sg.dPdu.normalize();
+            if (show_globals == 4) v = sg.dPdv.normalize();
+            if (show_globals == 5) v = Vec3(sg.u, sg.v, 0);
+            Color3 c(v.x, v.y, v.z);
+            if (show_globals != 5) c = c * 0.5f + Color3(0.5f);
+            path_radiance += path_weight * c;
             break;
         }
         const float radius = r.radius + r.spread * hit.t;
@@ -1080,7 +1086,7 @@ SimpleRaytracer::prepare_render()
     max_bounces       = options.get_int("max_bounces");
     rr_depth          = options.get_int("rr_depth");
     show_albedo_scale = options.get_float("show_albedo_scale");
-    show_normals      = options.get_int("show_normals") != 0;
+    show_globals      = options.get_int("show_globals");
 
     // prepare background importance table (if requested)
     if (backgroundResolution > 0 && backgroundShaderID >= 0) {

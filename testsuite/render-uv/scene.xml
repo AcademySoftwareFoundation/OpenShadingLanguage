@@ -17,7 +17,7 @@
    </ShaderGroup>
    <Sphere center=" 60,30,60"        radius="30" />
 
-   <ShaderGroup is_light="yes">float power 160000; shader emitter layer1;</ShaderGroup>
+   <ShaderGroup is_light="yes">float power 640000; shader emitter layer1;</ShaderGroup>
    <Sphere center="-120, 130, 250" radius="1" /> <!--Lite -->
    
 </World>

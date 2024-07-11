@@ -105,7 +105,7 @@ ImageBuf_to_QImage(const OIIO::ImageBuf& ib)
         return {};
 
     if (ib.cachedpixels())
-        const_cast<ImageBuf*>(&ib)->make_writeable(true);
+        const_cast<ImageBuf*>(&ib)->make_writable(true);
     return QImage((const uchar*)ib.localpixels(), spec.width, spec.height,
                   (int)spec.scanline_bytes(), format);
 }

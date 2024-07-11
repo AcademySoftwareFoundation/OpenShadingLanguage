@@ -1159,7 +1159,7 @@ shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
             const ShaderGlobals* defaultsg, OIIO::ImageBuf& buf,
             cspan<ustring> outputs,
             ShadeImageLocations shadelocations = ShadePixelCenters,
-            OIIO::ROI roi = OIIO::ROI(), OIIO::parallel_options popt = 0);
+            OIIO::ROI roi = OIIO::ROI(), OIIO::paropt popt = 0);
 
 #endif
 

@@ -26,7 +26,7 @@ bool
 shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
             const ShaderGlobals* defaultsg, OIIO::ImageBuf& buf,
             cspan<ustring> outputs, ShadeImageLocations shadelocations,
-            OIIO::ROI roi, OIIO::parallel_options popt)
+            OIIO::ROI roi, OIIO::paropt popt)
 {
     using namespace OIIO;
     using namespace ImageBufAlgo;
@@ -172,5 +172,17 @@ shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
 }
 
 
+
+// DEPRECATED(1.14)
+OSLEXECPUBLIC
+bool
+shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
+            const ShaderGlobals* defaultsg, OIIO::ImageBuf& buf,
+            cspan<ustring> outputs, ShadeImageLocations shadelocations,
+            OIIO::ROI roi, OIIO::parallel_options popt)
+{
+    return shade_image(shadingsys, group, defaultsg, buf, outputs,
+                       shadelocations, roi, OIIO::paropt(popt));
+}
 
 OSL_NAMESPACE_EXIT

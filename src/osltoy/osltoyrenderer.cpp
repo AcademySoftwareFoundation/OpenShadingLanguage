@@ -130,11 +130,7 @@ OSLToyRenderer::render_image()
             OIIO::ImageSpec(m_xres, m_yres, 3, TypeDesc::FLOAT));
 
     static ustring outputs[] = { ustring("Cout") };
-    //    OIIO::Timer timer;
-    OIIO::parallel_options popt;
-    popt.minitems  = 4096;
-    popt.splitdir  = OIIO::Split_Tile;
-    popt.recursive = true;
+    OIIO::paropt popt(0, OIIO::paropt::SplitDir::Tile, 4096);
     shade_image(*shadingsys(), *shadergroup(), &m_shaderglobals_template,
                 m_framebuffer, outputs, ShadePixelCenters, OIIO::ROI(), popt);
     //    std::cout << timer() << "\n";

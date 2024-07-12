@@ -32,6 +32,7 @@ void Scene::add_model(const std::string& filename, const ShaderMap& shadermap, i
                 use_material_ids = true;
             } else {
                 material_ids.emplace_back(shaderID);
+                errhandler.infofmt("Material {} did not match any shader names", mat.name);
             }
         }
     }
@@ -70,6 +71,8 @@ void Scene::add_model(const std::string& filename, const ShaderMap& shadermap, i
             if (it != shadermap.end()) {
                 errhandler.infofmt("Found mesh {}", shape.name);
                 shapeShaderID = it->second;
+            } else {
+                errhandler.infofmt("Mesh {} did not match any shader names", shape.name);
             }
         }
         OSL_ASSERT(

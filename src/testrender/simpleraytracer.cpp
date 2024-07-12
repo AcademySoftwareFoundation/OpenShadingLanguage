@@ -4,6 +4,7 @@
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/parallel.h>
+#include <OpenImageIO/timer.h>
 
 #include <pugixml.hpp>
 
@@ -1149,8 +1150,8 @@ SimpleRaytracer::prepare_render()
 void
 SimpleRaytracer::render(int xres, int yres)
 {
+    OIIO::Timer timer;
     ShadingSystem* shadingsys = this->shadingsys;
-
     OIIO::parallel_for_chunked(
         0, yres, 0, [&, this](int64_t ybegin, int64_t yend) {
             // Request an OSL::PerThreadInfo for this thread.
@@ -1175,6 +1176,8 @@ SimpleRaytracer::render(int xres, int yres)
             shadingsys->release_context(ctx);
             shadingsys->destroy_thread_info(thread_info);
         });
+    double rendertime = timer();
+    errhandler().infofmt("Rendered {}x{} image with {} samples in {}", xres, yres, aa * aa, OIIO::Strutil::timeintervalformat(rendertime, 2));
 }
 
 

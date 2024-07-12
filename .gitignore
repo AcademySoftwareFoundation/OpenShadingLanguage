@@ -10,4 +10,4 @@ build
 *.log
 .vscode
 .envrc
-
+.DS_Store

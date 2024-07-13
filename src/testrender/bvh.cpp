@@ -183,18 +183,19 @@ static std::unique_ptr<BVH> build_bvh(OIIO::cspan<Vec3> verts, OIIO::cspan<Trian
 static inline float minf(float a, float b) { return b < a ? b : a; }
 static inline float maxf(float a, float b) { return b > a ? b : a; }
 
-static inline float box_intersect(const Vec3& org, const Vec3& rdir, float tmax, const float* bounds) {
+static inline bool box_intersect(const Vec3& org, const Vec3& rdir, float tmax, const float* bounds, float* dist) {
     const float tx1 = (bounds[0] - org.x) * rdir.x;
     const float tx2 = (bounds[1] - org.x) * rdir.x;
     const float ty1 = (bounds[2] - org.y) * rdir.y;
     const float ty2 = (bounds[3] - org.y) * rdir.y;
     const float tz1 = (bounds[4] - org.z) * rdir.z;
     const float tz2 = (bounds[5] - org.z) * rdir.z;
-    float tmin = 0.0f;
-    tmin = maxf(tmin, minf(tx1, tx2)); tmax = minf(tmax, maxf(tx1, tx2));
+    float tmin =      minf(tx1, tx2) ; tmax = minf(tmax, maxf(tx1, tx2));
     tmin = maxf(tmin, minf(ty1, ty2)); tmax = minf(tmax, maxf(ty1, ty2));
     tmin = maxf(tmin, minf(tz1, tz2)); tmax = minf(tmax, maxf(tz1, tz2));
-    return tmin <= tmax ? tmin : -1;
+    *dist = tmin; // actual distance to near plane on the box
+    tmin = maxf(0.0f, tmin); // clip to valid portion of ray
+    return tmin <= tmax;
 }
 
 static inline unsigned signmask(float a) {
@@ -267,14 +268,15 @@ Intersection Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1
 		} else {
             BVHNode* child1 = bvh->nodes.get() + node->child;
             BVHNode* child2 = child1 + 1;
-            float dist1 = box_intersect(org, rdir, result.t, child1->bounds);
-            float dist2 = box_intersect(org, rdir, result.t, child2->bounds);
+            float dist1 = 0; bool hit1 = box_intersect(org, rdir, result.t, child1->bounds, &dist1);
+            float dist2 = 0; bool hit2 = box_intersect(org, rdir, result.t, child2->bounds, &dist2);
             if (dist1 > dist2) {
+                std::swap(hit1  , hit2  );
                 std::swap(dist1 , dist2 ); 
                 std::swap(child1, child2);
             }
-            stack[stackPtr] = { child2, dist2 }; stackPtr += (dist2 >= 0);
-            stack[stackPtr] = { child1, dist1 }; stackPtr += (dist1 >= 0);
+            stack[stackPtr] = { child2, dist2 }; stackPtr += hit2;
+            stack[stackPtr] = { child1, dist1 }; stackPtr += hit1;
         }
 	}
     return result;

@@ -221,12 +221,6 @@ OSL_NAMESPACE_ENTER
 
 struct ShadingResult;
 
-#ifndef __CUDACC__
-#define OSL_HOSTDEVICE_OVERRIDE override
-#else
-#define OSL_HOSTDEVICE_OVERRIDE
-#endif
-
 // Cast a BSDF* to the specified sub-type
 #define BSDF_CAST(BSDF_TYPE, bsdf) reinterpret_cast<const BSDF_TYPE*>(bsdf)
 
@@ -250,25 +244,21 @@ struct BSDF {
     };
     OSL_HOSTDEVICE BSDF(ClosureIDs id=EMPTY_ID) : id(id) {}
 
-#ifndef __CUDACC__
-    virtual Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
-    virtual Sample eval(const Vec3& wo, const Vec3& wi) const = 0;
-    virtual Sample sample(const Vec3& wo, float rx, float ry, float rz) const = 0;
-#else
     OSL_HOSTDEVICE Color3 get_albedo(const Vec3& /*wo*/) const
     {
         return Color3(1);
     }
+
     OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         return {};
     }
+
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
                                  float rz) const
     {
         return {};
     }
-#endif
 
     ClosureIDs id;
 };

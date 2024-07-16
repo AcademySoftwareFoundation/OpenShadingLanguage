@@ -287,13 +287,13 @@ template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
         if (trans)
             N = -N;
     }
-    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const OSL::Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const OSL::Vec3& wi) const
     {
         const float pdf = std::max(N.dot(wi), 0.0f) * float(M_1_PI);
         return { wi, Color3(1.0f), pdf, 1.0f };
     }
     OSL_HOSTDEVICE Sample sample(const Vec3& /*wo*/, float rx, float ry,
-                  float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                  float /*rz*/) const
     {
         Vec3 out_dir;
         float pdf;
@@ -306,7 +306,7 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
     OSL_HOSTDEVICE OrenNayar(const OrenNayarParams& params) : BSDF(OREN_NAYAR_ID), OrenNayarParams(params)
     {
     }
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         float NL = N.dot(wi);
         float NV = N.dot(wo);
@@ -329,7 +329,7 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
         return {};
     }
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                                 float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                                 float /*rz*/) const
     {
         Vec3 out_dir;
         float pdf;
@@ -346,7 +346,7 @@ struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
     }
 
     OSL_HOSTDEVICE
-    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         float NL = N.dot(wi);
         float NV = N.dot(wo);
@@ -385,7 +385,7 @@ struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
 
     OSL_HOSTDEVICE
     Sample sample(const Vec3& wo, float rx, float ry,
-                  float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                  float /*rz*/) const
     {
         Vec3 out_dir;
         float pdf;
@@ -416,7 +416,7 @@ private:
 
 struct Phong final : public BSDF, PhongParams {
     OSL_HOSTDEVICE Phong(const PhongParams& params) : BSDF(PHONG_ID), PhongParams(params) {}
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         float cosNI = N.dot(wi);
         float cosNO = N.dot(wo);
@@ -434,7 +434,7 @@ struct Phong final : public BSDF, PhongParams {
         return {};
     }
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                  float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                  float /*rz*/) const
     {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
@@ -456,7 +456,7 @@ struct Phong final : public BSDF, PhongParams {
 
 struct Ward final : public BSDF, WardParams {
     OSL_HOSTDEVICE Ward(const WardParams& params) : BSDF(WARD_ID), WardParams(params) {}
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         float cosNO = N.dot(wo);
         float cosNI = N.dot(wi);
@@ -481,7 +481,7 @@ struct Ward final : public BSDF, WardParams {
         return {};
     }
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                                 float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                                 float /*rz*/) const
     {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
@@ -663,7 +663,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
                                               : TangentFrame(N, U))
     {
     }
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         if (Refract == 2)
             return Color3(1.0f);
@@ -672,7 +672,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
         float fr = fresnel_dielectric(N.dot(wo), eta);
         return Color3(Refract ? 1 - fr : fr);
     }
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         const Vec3 wo_l = tf.tolocal(wo);
         const Vec3 wi_l = tf.tolocal(wi);
@@ -739,7 +739,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
         return {};
     }
 
-    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const
     {
         const Vec3 wo_l   = tf.tolocal(wo);
         const float cosNO = wo_l.z;
@@ -919,7 +919,7 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
         return cos_theta;
     }
 
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         // if transmission is enabled, punt on
         if (EnableTransmissionLobe)
@@ -931,7 +931,7 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
             get_fresnel_angle(MxMicrofacetParams::N.dot(wo)));
     }
 
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         const Vec3 wo_l = tf.tolocal(wo);
         const Vec3 wi_l = tf.tolocal(wi);
@@ -1010,7 +1010,7 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     }
 
 
-    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const
     {
         const Vec3 wo_l   = tf.tolocal(wo);
         const float cosNO = wo_l.z;
@@ -1177,19 +1177,19 @@ struct Reflection final : public BSDF, ReflectionParams {
         : BSDF(REFLECTION_ID), ReflectionParams(params)
     {
     }
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         float cosNO = N.dot(wo);
         if (cosNO > 0)
             return Color3(fresnel_dielectric(cosNO, eta));
         return Color3(1);
     }
-    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const OSL::Vec3& /*wi*/) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const OSL::Vec3& /*wi*/) const
     {
         return {};
     }
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
-                  float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                  float /*rz*/) const
     {
         // only one direction is possible
         float cosNO = dot(N, wo);
@@ -1207,17 +1207,17 @@ struct Refraction final : public BSDF, RefractionParams {
         : BSDF(REFRACTION_ID), RefractionParams(params)
     {
     }
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         float cosNO = N.dot(wo);
         return Color3(1 - fresnel_dielectric(cosNO, eta));
     }
-    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const OSL::Vec3& /*wi*/) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const OSL::Vec3& /*wi*/) const
     {
         return {};
     }
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
-                  float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                  float /*rz*/) const
     {
         float pdf = std::numeric_limits<float>::infinity();
         Vec3 wi;
@@ -1228,12 +1228,12 @@ struct Refraction final : public BSDF, RefractionParams {
 
 struct Transparent final : public BSDF {
     OSL_HOSTDEVICE Transparent() : BSDF(TRANSPARENT_ID) {}
-    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const Vec3& /*wi*/) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const Vec3& /*wi*/) const
     {
         return {};
     }
     OSL_HOSTDEVICE Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
-                  float /*rz*/) const OSL_HOSTDEVICE_OVERRIDE
+                  float /*rz*/) const
     {
         Vec3 wi   = -wo;
         float pdf = std::numeric_limits<float>::infinity();
@@ -1247,9 +1247,9 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
     {
     }
 
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const OSL_HOSTDEVICE_OVERRIDE { return albedo; }
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const { return albedo; }
 
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         const Vec3 L = wi, V = wo;
         const Vec3 H = (L + V).normalize();
@@ -1263,7 +1263,7 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
         return { wi, albedo * refL * refV, pdf, 1.0f };
     }
 
-    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const
     {
         Vec3 out_dir;
         float pdf;
@@ -1278,7 +1278,7 @@ struct MxSheen final : public BSDF, MxSheenParams {
     {
     }
 
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         const float NdotV = clamp(N.dot(wo), 0.0f, 1.0f);
         // Rational fit from the Material X project
@@ -1292,7 +1292,7 @@ struct MxSheen final : public BSDF, MxSheenParams {
         return clamp(albedo * (r.x / r.y), 0.0f, 1.0f);
     }
 
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         const Vec3 L = wi, V = wo;
         const Vec3 H       = (L + V).normalize();
@@ -1312,7 +1312,7 @@ struct MxSheen final : public BSDF, MxSheenParams {
                  pdf, 1.0f };
     }
 
-    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const OSL_HOSTDEVICE_OVERRIDE
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry, float rz) const
     {
         Vec3 out_dir;
         float pdf;

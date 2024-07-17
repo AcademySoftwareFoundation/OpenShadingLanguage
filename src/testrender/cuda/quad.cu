@@ -21,25 +21,29 @@ __direct_callable__quad_shaderglobals(const unsigned int idx, const float t_hit,
         optixGetSbtDataPointer());
     const QuadParams* g_quads = reinterpret_cast<const QuadParams*>(
         g_data->data);
-    const QuadParams& quad = g_quads[idx];
-    const float3 P         = ray_origin + t_hit * ray_direction;
-
-    float3 h = P - quad.p;
+    const QuadParams& params = g_quads[idx];
+    const float3 P           = ray_origin + t_hit * ray_direction;
 
     sg->I = ray_direction;
-    sg->N = sg->Ng  = quad.n;
-    sg->u           = dot(h, quad.ex) * quad.eu;
-    sg->v           = dot(h, quad.ey) * quad.ev;
-    sg->dPdu        = quad.ey;
-    sg->dPdv        = quad.ex;
-    sg->surfacearea = quad.a;
-    sg->shaderID    = quad.shaderID;
+    sg->N = sg->Ng  = params.n;
+    sg->surfacearea = params.a;
+    sg->shaderID    = params.shaderID;
     sg->backfacing  = dot(V3_TO_F3(sg->N), V3_TO_F3(sg->I)) > 0.0f;
 
     if (sg->backfacing) {
         sg->N  = -sg->N;
         sg->Ng = -sg->Ng;
     }
+
+    const OSL::Quad quad(F3_TO_V3(params.p), F3_TO_V3(params.ex),
+                         F3_TO_V3(params.ey), 0, false);
+    OSL::Vec3 dPdu, dPdv;
+    OSL::Dual2<OSL::Vec2> uv = quad.uv(F3_TO_V3(P), F3_TO_V3(sg->N), dPdu,
+                                       dPdv);
+    sg->u                    = uv.val().x;
+    sg->v                    = uv.val().y;
+    sg->dPdu                 = V3_TO_F3(dPdu);
+    sg->dPdv                 = V3_TO_F3(dPdv);
 }
 
 

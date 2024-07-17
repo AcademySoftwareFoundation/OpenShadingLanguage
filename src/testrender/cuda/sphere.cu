@@ -12,28 +12,6 @@
 #include "vec_math.h"
 
 
-static __device__ __inline__ void
-calc_uv(OSL::Vec3 n, float& u, float& v, OSL::Vec3& dPdu, OSL::Vec3& dPdv, float r)
-{
-    u = (atan2(n.x, n.z) + float(M_PI)) * 0.5f
-        * float(M_1_PI);
-    v = acos(n.y) * float(M_1_PI);
-    const float pi = float(M_PI);
-    float twopiu   = 2.0f * pi * u;
-    float sin2piu, cos2piu;
-    OIIO::sincos(twopiu, &sin2piu, &cos2piu);
-    float sinpiv, cospiv;
-    OIIO::sincos(pi * v, &sinpiv, &cospiv);
-    float pir = pi * r;
-    dPdu.x    = -2.0f * pir * sinpiv * cos2piu;
-    dPdu.y    = 0.0f;
-    dPdu.z    = 2.0f * pir * sinpiv * sin2piu;
-    dPdv.x    = -pir * cospiv * sin2piu;
-    dPdv.y    = -pir * sinpiv;
-    dPdv.z    = -pir * cospiv * cos2piu;
-}
-
-
 extern "C" __device__ void
 __direct_callable__sphere_shaderglobals(const unsigned int idx,
                                         const float t_hit,
@@ -45,14 +23,21 @@ __direct_callable__sphere_shaderglobals(const unsigned int idx,
         optixGetSbtDataPointer());
     const SphereParams* g_spheres = reinterpret_cast<const SphereParams*>(
         g_data->data);
-    const SphereParams& sphere = g_spheres[idx];
+    const SphereParams& params = g_spheres[idx];
     const float3 P             = ray_origin + t_hit * ray_direction;
 
-    sg->N = sg->Ng  = normalize(P - sphere.c);
-    sg->surfacearea = sphere.a;
-    sg->shaderID    = sphere.shaderID;
+    sg->N = sg->Ng  = normalize(P - params.c);
+    sg->surfacearea = params.a;
+    sg->shaderID    = params.shaderID;
 
-    calc_uv(sg->N, sg->u, sg->v, sg->dPdu, sg->dPdv, sphere.r);
+    const OSL::Sphere sphere(F3_TO_V3(params.c), params.r, 0, false);
+    OSL::Vec3 dPdu, dPdv;
+    OSL::Dual2<OSL::Vec2> uv = sphere.uv(F3_TO_V3(P), F3_TO_V3(sg->N), dPdu,
+                                         dPdv);
+    sg->u                    = uv.val().x;
+    sg->v                    = uv.val().y;
+    sg->dPdu                 = V3_TO_F3(dPdu);
+    sg->dPdv                 = V3_TO_F3(dPdv);
 }
 
 

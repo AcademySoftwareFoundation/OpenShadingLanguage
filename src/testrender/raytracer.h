@@ -382,6 +382,7 @@ struct Quad final : public Primitive {
         return Dual2<Vec3>(n, Vec3(0, 0, 0), Vec3(0, 0, 0));
     }
 
+    OSL_HOSTDEVICE
     Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& /*n*/, Vec3& dPdu,
                    Vec3& dPdv) const
     {

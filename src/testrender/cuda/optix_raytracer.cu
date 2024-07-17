@@ -129,41 +129,6 @@ execute_shader(ShaderGlobalsType& sg, char* closure_pool)
 }
 
 
-// Return a direction towards a point on the sphere
-// Adapted from Sphere::sample in ../raytracer.h
-static __device__ float3
-sample_sphere(const Vec3& x, const SphereParams& sphere, float xi, float yi,
-              float& pdf)
-{
-    const float TWOPI = float(2 * M_PI);
-    float cmax2       = 1 - sphere.r2 / dot(sphere.c - V3_TO_F3(x), sphere.c - V3_TO_F3(x));
-    float cmax        = cmax2 > 0 ? sqrtf(cmax2) : 0;
-    float cos_a       = 1 - xi + xi * cmax;
-    float sin_a       = sqrtf(1 - cos_a * cos_a);
-    float phi         = TWOPI * yi;
-    float sp, cp;
-    OIIO::fast_sincos(phi, &sp, &cp);
-    float3 sw = normalize(sphere.c - V3_TO_F3(x)), su, sv;
-    ortho(sw, su, sv);
-    pdf = 1 / (TWOPI * (1 - cmax));
-    return normalize(su * (cp * sin_a) + sv * (sp * sin_a) + sw * cos_a);
-}
-
-
-// Return a direction towards a point on the quad
-// Adapted from Quad::sample in ../raytracer.h
-static __device__ float3
-sample_quad(const Vec3& x, const QuadParams& quad, float xi, float yi,
-            float& pdf)
-{
-    float3 l   = (quad.p + xi * quad.ex + yi * quad.ey) - V3_TO_F3(x);
-    float  d2  = dot(l, l); // l.length2();
-    float3 dir = normalize(l);
-    pdf        = d2 / (quad.a * fabsf(dot(dir, quad.n)));
-    return dir;
-}
-
-
 static inline __device__ void
 trace_ray(OptixTraversableHandle handle, const Payload& payload, const float3& origin,
           const float3& direction)
@@ -213,9 +178,16 @@ CudaScene::shapepdf(int primID, const Vec3& x, const Vec3& p) const
 {
     SphereParams* spheres = (SphereParams*)spheres_buffer;
     QuadParams* quads     = (QuadParams*)quads_buffer;
-    return (primID < num_spheres)
-               ? spheres[primID].shapepdf(x, p)
-               : quads[primID - num_spheres].shapepdf(x, p);
+    if (primID < num_spheres) {
+        const SphereParams& params = spheres[primID];
+        const OSL::Sphere sphere(F3_TO_V3(params.c), params.r, 0, false);
+        return sphere.shapepdf(x, p);
+    } else {
+        const QuadParams& params = quads[primID - num_spheres];
+        const OSL::Quad quad(F3_TO_V3(params.p), F3_TO_V3(params.ex),
+                             F3_TO_V3(params.ey), 0, false);
+        return quad.shapepdf(x, p);
+    }
 }
 
 
@@ -237,13 +209,16 @@ CudaScene::sample(int primID, const Vec3& x, float xi, float yi,
 {
     SphereParams* spheres = (SphereParams*)spheres_buffer;
     QuadParams* quads     = (QuadParams*)quads_buffer;
-
-    float3 res;
-    if (primID < num_spheres)
-        res = sample_sphere(x, spheres[primID], xi, yi, pdf);
-    else
-        res = sample_quad(x, quads[primID - num_spheres], xi, yi, pdf);
-    return F3_TO_V3(res);
+    if (primID < num_spheres) {
+        const SphereParams& params = spheres[primID];
+        const OSL::Sphere sphere(F3_TO_V3(params.c), params.r, 0, false);
+        return sphere.sample(x, xi, yi, pdf);
+    } else {
+        const QuadParams& params = quads[primID - num_spheres];
+        const OSL::Quad quad(F3_TO_V3(params.p), F3_TO_V3(params.ex),
+                             F3_TO_V3(params.ey), 0, false);
+        return quad.sample(x, xi, yi, pdf);
+    }
 }
 
 

@@ -283,6 +283,7 @@ struct Sphere final : public Primitive {
     }
 
     // return a direction towards a point on the sphere
+    OSL_HOSTDEVICE
     Vec3 sample(const Vec3& x, float xi, float yi, float& pdf) const
     {
         const float TWOPI = float(2 * M_PI);
@@ -299,6 +300,7 @@ struct Sphere final : public Primitive {
         return (su * (cp * sin_a) + sv * (sp * sin_a) + sw * cos_a).normalize();
     }
 
+    OSL_HOSTDEVICE
     float shapepdf(const Vec3& x, const Vec3& /*p*/) const
     {
         const float TWOPI = float(2 * M_PI);
@@ -395,6 +397,7 @@ struct Quad final : public Primitive {
     }
 
     // return a direction towards a point on the sphere
+    OSL_HOSTDEVICE
     Vec3 sample(const Vec3& x, float xi, float yi, float& pdf) const
     {
         Vec3 l   = (p + xi * ex + yi * ey) - x;
@@ -404,6 +407,7 @@ struct Quad final : public Primitive {
         return dir;
     }
 
+    OSL_HOSTDEVICE
     float shapepdf(const Vec3& x, const Vec3& p) const
     {
         Vec3 l   = p - x;
@@ -443,7 +447,8 @@ struct Scene {
 
     int num_prims() const { return spheres.size() + quads.size(); }
 
-    bool intersect(const Ray& r, Dual2<float>& t, int& primID, const void* sg=nullptr) const
+    bool intersect(const Ray& r, Dual2<float>& t, int& primID,
+                   const void* sg = nullptr) const
     {
         const int ns   = spheres.size();
         const int nq   = quads.size();

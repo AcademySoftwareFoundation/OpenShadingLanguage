@@ -179,17 +179,21 @@ struct Camera {
 
 
 struct Primitive {
+    OSL_HOSTDEVICE
     Primitive(int shaderID, bool isLight) : shaderID(shaderID), isLight(isLight)
     {
     }
+
+#ifndef __CUDACC__
     virtual ~Primitive() {}
+#endif
 
     int shaderid() const { return shaderID; }
     bool islight() const { return isLight; }
     void getBounds(float& minx, float& miny, float& minz, float& maxx,
                    float& maxy, float& maxz) const;
 
-#if OSL_USE_OPTIX
+#if defined(OSL_USE_OPTIX) && !defined(__CUDACC__)
     virtual void setOptixVariables(void* data, int objID) const = 0;
 #endif
 
@@ -200,6 +204,7 @@ private:
 
 
 struct Sphere final : public Primitive {
+    OSL_HOSTDEVICE
     Sphere(Vec3 c, float r, int shaderID, bool isLight)
         : Primitive(shaderID, isLight), c(c), r(r), r2(r * r)
     {
@@ -218,6 +223,7 @@ struct Sphere final : public Primitive {
     }
 
     // returns distance to nearest hit or 0
+    OSL_HOSTDEVICE
     Dual2<float> intersect(const Ray& r, bool self) const
     {
         Dual2<Vec3> oc   = c - r.origin;
@@ -239,6 +245,7 @@ struct Sphere final : public Primitive {
 
     Dual2<Vec3> normal(const Dual2<Vec3>& p) const { return normalize(p - c); }
 
+    OSL_HOSTDEVICE
     Dual2<Vec2> uv(const Dual2<Vec3>& /*p*/, const Dual2<Vec3>& n, Vec3& dPdu,
                    Vec3& dPdv) const
     {
@@ -300,7 +307,7 @@ struct Sphere final : public Primitive {
         return 1 / (TWOPI * (1 - cmax));
     }
 
-#if OSL_USE_OPTIX
+#if defined(OSL_USE_OPTIX) && !defined(__CUDACC__)
     virtual void setOptixVariables(void* data, int objID) const
     {
         SphereParams* sphere_data = reinterpret_cast<SphereParams*>(data);
@@ -322,6 +329,7 @@ private:
 
 
 struct Quad final : public Primitive {
+    OSL_HOSTDEVICE
     Quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID,
          bool isLight)
         : Primitive(shaderID, isLight), p(p), ex(ex), ey(ey)
@@ -349,6 +357,7 @@ struct Quad final : public Primitive {
     }
 
     // returns distance to nearest hit or 0
+    OSL_HOSTDEVICE
     Dual2<float> intersect(const Ray& r, bool self) const
     {
         if (self)
@@ -402,7 +411,7 @@ struct Quad final : public Primitive {
         return d2 / (a * fabsf(dir.dot(n)));
     }
 
-#if OSL_USE_OPTIX
+#if defined(OSL_USE_OPTIX) && !defined(__CUDACC__)
     virtual void setOptixVariables(void* data, int objID) const
     {
         QuadParams* quad_data = reinterpret_cast<QuadParams*>(data);

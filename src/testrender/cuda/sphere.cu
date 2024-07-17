@@ -6,6 +6,7 @@
 #include <optix.h>
 
 
+#include "../raytracer.h"
 #include "optix_raytracer.h"
 #include "rend_lib.h"
 #include "vec_math.h"
@@ -65,29 +66,22 @@ __intersection__sphere()
 
     Payload payload;
     payload.get();
-    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.sg_ptr;
-    TraceData* tracedata   = reinterpret_cast<TraceData*>(sg_ptr->tracedata);
-    const int obj_id       = tracedata->obj_id;
-    const unsigned int idx = optixGetPrimitiveIndex();
-    const SphereParams& sphere = g_spheres[idx];
-
-    // Check for self-intersection
-    const bool self = obj_id == sphere.objID;
-
+    const OSL_CUDA::ShaderGlobals* sg_ptr
+        = reinterpret_cast<OSL_CUDA::ShaderGlobals*>(payload.sg_ptr);
+    const TraceData* tracedata = reinterpret_cast<TraceData*>(
+        sg_ptr->tracedata);
+    const int obj_id           = tracedata->obj_id;
+    const unsigned int idx     = optixGetPrimitiveIndex();
+    const SphereParams& params = g_spheres[idx];
     const float3 ray_origin    = optixGetObjectRayOrigin();
     const float3 ray_direction = optixGetObjectRayDirection();
-    float3 oc                  = sphere.c - ray_origin;
-    float b                    = dot(oc, ray_direction);
-    float det                  = b * b - dot(oc, oc) + sphere.r2;
-    if (det >= 0.0f) {
-        det     = sqrtf(det);
-        float x = b - det;
-        float y = b + det;
-        float t = self ? (fabsf(x) > fabsf(y) ? (x > 0 ? x : 0)
-                                              : (y > 0 ? y : 0))
-                       : (x > 0 ? x : (y > 0 ? y : 0));
+    const bool self            = obj_id == params.objID;
 
-        if (t < optixGetRayTmax())
-            optixReportIntersection(t, RAYTRACER_HIT_SPHERE);
-    }
+    const OSL::Sphere sphere(F3_TO_V3(params.c), params.r, 0, false);
+    const OSL::Ray ray(F3_TO_V3(ray_origin), F3_TO_V3(ray_direction),
+                       payload.radius, payload.spread, payload.raytype);
+    const OSL::Dual2<float> t = sphere.Sphere::intersect(ray, self);
+
+    if (t.val() != 0.0f && t.val() < optixGetRayTmax())
+        optixReportIntersection(t.val(), RAYTRACER_HIT_SPHERE);
 }

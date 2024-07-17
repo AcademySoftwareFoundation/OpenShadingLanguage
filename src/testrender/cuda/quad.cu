@@ -5,6 +5,7 @@
 
 #include <optix.h>
 
+#include "../raytracer.h"
 #include "optix_raytracer.h"
 #include "rend_lib.h"
 #include "vec_math.h"
@@ -52,30 +53,26 @@ __intersection__quad()
 
     Payload payload;
     payload.get();
-    OSL_CUDA::ShaderGlobals* sg_ptr = (OSL_CUDA::ShaderGlobals*)payload.sg_ptr;
-    TraceData* tracedata   = reinterpret_cast<TraceData*>(sg_ptr->tracedata);
-    const int obj_id       = tracedata->obj_id;
-    const unsigned int idx = optixGetPrimitiveIndex();
-    const QuadParams& quad = g_quads[idx];
-
-    // Check for self-intersection
-    const bool self = obj_id == quad.objID;
-    if (self) {
-        return;
-    }
-
+    const OSL_CUDA::ShaderGlobals* sg_ptr
+        = reinterpret_cast<OSL_CUDA::ShaderGlobals*>(payload.sg_ptr);
+    const TraceData* tracedata = reinterpret_cast<TraceData*>(
+        sg_ptr->tracedata);
+    const int obj_id           = tracedata->obj_id;
+    const unsigned int idx     = optixGetPrimitiveIndex();
+    const QuadParams& params   = g_quads[idx];
     const float3 ray_origin    = optixGetObjectRayOrigin();
     const float3 ray_direction = optixGetObjectRayDirection();
-    float dn                   = dot(ray_direction, quad.n);
-    float en                   = dot(quad.p - ray_origin, quad.n);
-    if (dn * en > 0) {
-        float t  = en / dn;
-        float3 h = (ray_origin + ray_direction * t) - quad.p;
-        float dx = dot(h, quad.ex) * quad.eu;
-        float dy = dot(h, quad.ey) * quad.ev;
+    const bool self            = obj_id == params.objID;
 
-        if (dx >= 0 && dx < 1.0f && dy >= 0 && dy < 1.0f
-            && t < optixGetRayTmax())
-            optixReportIntersection(t, RAYTRACER_HIT_QUAD);
-    }
+    if (self)
+        return;
+
+    const OSL::Quad quad(F3_TO_V3(params.p), F3_TO_V3(params.ex),
+                         F3_TO_V3(params.ey), 0, false);
+    const OSL::Ray ray(F3_TO_V3(ray_origin), F3_TO_V3(ray_direction),
+                       payload.radius, payload.spread, payload.raytype);
+    const OSL::Dual2<float> t = quad.intersect(ray, self);
+
+    if (t.val() != 0.0f && t.val() < optixGetRayTmax())
+        optixReportIntersection(t.val(), RAYTRACER_HIT_QUAD);
 }

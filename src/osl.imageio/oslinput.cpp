@@ -59,29 +59,29 @@ OSL_NAMESPACE_ENTER
 class OSLInput final : public ImageInput {
 public:
     OSLInput();
-    virtual ~OSLInput();
-    virtual const char* format_name(void) const { return "osl"; }
-    virtual int supports(string_view feature) const
+    virtual ~OSLInput() override;
+    virtual const char* format_name(void) const override { return "osl"; }
+    virtual int supports(string_view feature) const override
     {
         return (feature == "procedural");
     }
-    virtual bool valid_file(const std::string& filename) const;
-    virtual bool open(const std::string& name, ImageSpec& newspec);
+    virtual bool valid_file(const std::string& filename) const override;
+    virtual bool open(const std::string& name, ImageSpec& newspec) override;
     virtual bool open(const std::string& name, ImageSpec& newspec,
-                      const ImageSpec& config);
-    virtual bool close();
-    virtual int current_subimage(void) const { return m_subimage; }
-    virtual int current_miplevel(void) const { return m_miplevel; }
-    virtual bool seek_subimage(int subimage, int miplevel);
+                      const ImageSpec& config) override;
+    virtual bool close() override;
+    virtual int current_subimage(void) const override { return m_subimage; }
+    virtual int current_miplevel(void) const override { return m_miplevel; }
+    virtual bool seek_subimage(int subimage, int miplevel) override;
     virtual bool read_native_scanline(int subimage, int miplevel, int y, int z,
-                                      void* data);
+                                      void* data) override;
     virtual bool read_native_scanlines(int subimage, int miplevel, int ybegin,
-                                       int yend, int z, void* data);
+                                       int yend, int z, void* data) override;
     virtual bool read_native_tile(int subimage, int miplevel, int x, int y,
-                                  int z, void* data);
+                                  int z, void* data) override;
     virtual bool read_native_tiles(int subimage, int miplevel, int xbegin,
                                    int xend, int ybegin, int yend, int zbegin,
-                                   int zend, void* data);
+                                   int zend, void* data) override;
 
 private:
     std::string m_filename;  ///< Stash the filename
@@ -112,13 +112,13 @@ osl_input_imageio_create()
     return new OSLInput;
 }
 
-OIIO_EXPORT void
-osl_input_imageio_delete(ImageInput* p)
-{
-    delete p;
-}
-
 OIIO_EXPORT int osl_imageio_version = OIIO_PLUGIN_VERSION;
+
+OIIO_EXPORT const char*
+osl_imageio_library_version()
+{
+    return ustring(OSL_LIBRARY_VERSION_STRING).c_str();
+}
 
 OIIO_EXPORT const char* osl_input_extensions[] = { "osl", "oso", "oslgroup",
                                                    "oslbody", NULL };
@@ -498,14 +498,13 @@ OSLInput::open(const std::string& name, ImageSpec& newspec,
         OIIO::lock_guard lock(shading_mutex);
         shadername.remove_suffix(4);
         m_group = shadingsys->ShaderGroupBegin();
-        for (size_t p = 0, np = m_topspec.extra_attribs.size(); p < np; ++p) {
-            const ParamValue& pv(m_topspec.extra_attribs[p]);
+        for (auto&& pv : m_topspec.extra_attribs) {
             shadingsys->Parameter(pv.name(), pv.type(), pv.data(),
                                   pv.interp() == ParamValue::INTERP_CONSTANT);
         }
         if (!shadingsys->Shader("surface", shadername, "" /*layername*/)) {
-            errorfmt("y {}", errhandler.haserror() ? errhandler.geterror()
-                                                   : std::string("OSL error"));
+            errorfmt("{}", errhandler.haserror() ? errhandler.geterror()
+                                                 : std::string("OSL error"));
             ok = false;
         }
         shadingsys->ShaderGroupEnd();
@@ -605,11 +604,7 @@ bool
 OSLInput::read_native_scanlines(int subimage, int miplevel, int ybegin,
                                 int yend, int z, void* data)
 {
-#if OIIO_PLUGIN_VERSION >= 24
     lock_guard lock(*this);
-#else
-    lock_guard lock(m_mutex);
-#endif
     if (!seek_subimage(subimage, miplevel))
         return false;
 
@@ -650,20 +645,16 @@ OSLInput::read_native_tiles(int subimage, int miplevel, int xbegin, int xend,
                             int ybegin, int yend, int zbegin, int zend,
                             void* data)
 {
-#if OIIO_PLUGIN_VERSION >= 24
     lock_guard lock(*this);
-#else
-    lock_guard lock(m_mutex);
-#endif
     if (!seek_subimage(subimage, miplevel))
         return false;
     if (!m_group.get()) {
-        errorfmt("read_native_scanlines called with missing shading group");
+        errorfmt("read_native_tiles called with missing shading group");
         return false;
     }
 
     // Create an ImageBuf wrapper of the user's data
-    ImageSpec spec = m_spec;  // Make a spec that describes just this scanline
+    ImageSpec spec = m_spec;  // Make a spec that describes just these tiles
     spec.x         = xbegin;
     spec.y         = ybegin;
     spec.z         = zbegin;

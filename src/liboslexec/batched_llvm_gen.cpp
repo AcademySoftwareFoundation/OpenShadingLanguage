@@ -2918,7 +2918,8 @@ LLVMGEN(llvm_gen_filterwidth)
             }
 
             rop.ll.call_function(rop.build_name(func_spec),
-                                 { &args[0], argCount });
+                                 { &args[0],
+                                   cspan<llvm::Value*>::size_type(argCount) });
             // Don't have 2nd order derivs
             rop.llvm_zero_derivs(Result);
         }
@@ -6923,7 +6924,9 @@ LLVMGEN(llvm_gen_calculatenormal)
         args[arg_count++] = rop.ll.mask_as_int(rop.ll.current_mask());
         func_spec.mask();
     }
-    rop.ll.call_function(rop.build_name(func_spec), { &args[0], arg_count });
+    rop.ll.call_function(rop.build_name(func_spec),
+                         { &args[0],
+                           cspan<llvm::Value*>::size_type(arg_count) });
 
     if (Result.has_derivs())
         rop.llvm_zero_derivs(Result);

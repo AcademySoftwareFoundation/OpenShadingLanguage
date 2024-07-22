@@ -40,7 +40,11 @@ constexpr inline size_t
 strhash(const char* s)
 {
     size_t len = pvt::pvtstrlen(s);
-    return OIIO::Strutil::strhash(OIIO::string_view(s, len));
+#ifdef OIIO_USTRING_SAFE_HASH
+    return ustring::strhash(string_view(s, len));
+#else
+    return OIIO::Strutil::strhash(string_view(s, len));
+#endif
 }
 
 // Template to ensure the hash is evaluated at compile time.

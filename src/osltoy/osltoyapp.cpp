@@ -432,9 +432,8 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
     QPixmap pixmap(xres, yres);
     OIIO::ImageBuf checks(
         OIIO::ImageSpec(xres, yres, 3, OIIO::TypeDesc::UINT8));
-    const float white[] = { 1, 1, 1 };
-    const float black[] = { 0, 0, 0 };
-    OIIO::ImageBufAlgo::checker(checks, 16, 16, 1, white, black);
+    OIIO::ImageBufAlgo::checker(checks, 16, 16, 1, 1.0f /* white */,
+                                0.0f /* black */);
     renderView->update(checks);
 
     textTabs = new QTabWidget;

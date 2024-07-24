@@ -367,6 +367,7 @@ macro (osl_add_all_tests)
                 render-microfacet render-oren-nayar
                 render-uv render-veachmis render-ward
                 render-raytypes
+                render-shaderpreview
                 select select-reg shaderglobals shortcircuit
                 smoothstep-reg
                 spline spline-reg splineinverse splineinverse-ident

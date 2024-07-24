@@ -1048,8 +1048,7 @@ def InstallOSL(context, force, buildArgs):
                 extraArgs.append("-DUSE_PYTHON=0")
 
         extraArgs.append("-DOSL_BUILD_TESTS=0")
-        # if you are using LLVM 10 or higher C++ should be set on 14
-        extraArgs.append("-DCMAKE_CXX_STANDARD=14")
+        extraArgs.append("-DCMAKE_CXX_STANDARD=17")
 
         # if you are using LLVM 10 or higher C++ should be set on 11
         # extraArgs.append("-DCMAKE_CXX_STANDARD=11")
@@ -1273,7 +1272,7 @@ Users may specify custom build arguments for libraries using the --build-args
 option. This values for this option must take the form <library name>,<option>.
 For example:
 
-%(prog)s --build-args cxxflags=... OSL,-DCMAKE_CXX_STANDARD=14 ...
+%(prog)s --build-args cxxflags=... OSL,-DCMAKE_CXX_STANDARD=17 ...
 
 These arguments will be passed directly to the build system for the specified
 library. Multiple quotes may be needed to ensure arguments are passed on

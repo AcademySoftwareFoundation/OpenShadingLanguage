@@ -183,8 +183,8 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
     # Options common to gcc and clang
 
     # Ensure this macro is set for stdint.h
-    add_definitions ("-D__STDC_LIMIT_MACROS")
-    add_definitions ("-D__STDC_CONSTANT_MACROS")
+    add_compile_definitions (__STDC_LIMIT_MACROS)
+    add_compile_definitions (__STDC_CONSTANT_MACROS)
     # this allows native instructions to be used for sqrtf instead of a function call
     add_compile_options ("-fno-math-errno")
 endif ()
@@ -197,11 +197,11 @@ endif ()
 if (MSVC)
     # Microsoft specific options
     string (REGEX REPLACE "/W[1-4]" "/W1" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-    add_definitions (-D_CRT_SECURE_NO_DEPRECATE)
-    add_definitions (-D_CRT_SECURE_NO_WARNINGS)
-    add_definitions (-D_CRT_NONSTDC_NO_WARNINGS)
-    add_definitions (-D_SCL_SECURE_NO_WARNINGS)
-    add_definitions (-DJAS_WIN_MSVC_BUILD)
+    add_compile_definitions (_CRT_SECURE_NO_DEPRECATE)
+    add_compile_definitions (_CRT_SECURE_NO_WARNINGS)
+    add_compile_definitions (_CRT_NONSTDC_NO_WARNINGS)
+    add_compile_definitions (_SCL_SECURE_NO_WARNINGS)
+    add_compile_definitions (JAS_WIN_MSVC_BUILD)
 endif (MSVC)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD"
@@ -284,7 +284,7 @@ endif ()
 set (GLIBCXX_USE_CXX11_ABI "" CACHE STRING "For gcc, use the new C++11 library ABI (0|1)")
 if (CMAKE_COMPILER_IS_GNUCC AND ${GCC_VERSION} VERSION_GREATER_EQUAL 5.0)
     if (NOT ${GLIBCXX_USE_CXX11_ABI} STREQUAL "")
-        add_definitions ("-D_GLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI}")
+        add_compile_definitions (_GLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI})
     endif ()
 endif ()
 
@@ -368,7 +368,7 @@ option (CODECOV "Build code coverage tests" OFF)
 if (CODECOV AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
     message (STATUS "Compiling for code coverage analysis")
     add_compile_options (-ftest-coverage -fprofile-arcs)
-    add_definitions ("-D${PROJ_NAME}_CODE_COVERAGE=1")
+    add_compile_definitions (${PROJ_NAME}_CODE_COVERAGE=1)
     link_libraries(gcov)
 endif ()
 
@@ -388,9 +388,9 @@ if (SANITIZE AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
     add_compile_options (-g -fno-omit-frame-pointer)
     if (CMAKE_COMPILER_IS_GNUCC)
         # turn on glibcxx extra annotations to find vector writes past end
-        add_definitions ("-D_GLIBCXX_SANITIZE_VECTOR=1")
+        add_compile_definitions (_GLIBCXX_SANITIZE_VECTOR=1)
     endif ()
-    add_definitions ("-D${PROJECT_NAME}_SANITIZE=1")
+    add_compile_definitions (${PROJECT_NAME}_SANITIZE=1)
 endif ()
 
 
@@ -524,7 +524,7 @@ message(VERBOSE "Setting SOVERSION to: ${SOVERSION}")
 #
 option (BUILD_SHARED_LIBS "Build shared libraries (set to OFF to build static libs)" ON)
 if (NOT BUILD_SHARED_LIBS)
-    add_definitions (-D${PROJECT_NAME}_STATIC_DEFINE=1)
+    add_compile_definitions (${PROJECT_NAME}_STATIC_DEFINE=1)
 endif ()
 
 
@@ -549,7 +549,7 @@ endif ()
 # We expect our own CI runs to define env variable ${PROJECT_NAME}_CI
 #
 if (DEFINED ENV{${PROJECT_NAME}_CI})
-    add_definitions (-D${PROJ_NAME}_CI=1 -DBUILD_CI=1)
+    add_compile_definitions (${PROJ_NAME}_CI=1 BUILD_CI=1)
     if (APPLE)
         # Keep Mono framework from being incorrectly searched for include
         # files on GitHub Actions CI.

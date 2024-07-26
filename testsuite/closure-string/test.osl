@@ -1,0 +1,4 @@
+shader test(string distribution = "ggx")
+{
+    Ci = microfacet(distribution, N, N, 0.1, 0.1, 0.0, 0);
+}

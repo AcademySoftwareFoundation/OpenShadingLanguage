@@ -431,7 +431,7 @@ spline_evaluate_wide_with_static_matrix(RAccessorT wR, XAccessorT wX,
 
 template<typename RAccessorT, typename XAccessorT, typename KAccessor_T>
 OSL_FORCEINLINE void
-spline_evaluate_wide(RAccessorT wR, ustring spline_basis, XAccessorT wX,
+spline_evaluate_wide(RAccessorT wR, ustringhash spline_basis, XAccessorT wX,
                      KAccessor_T wK, int knot_count)
 {
     typedef void (*FuncPtr)(RAccessorT, XAccessorT, KAccessor_T,
@@ -514,8 +514,8 @@ splineinverse_evaluate_wide_with_static_matrix(RAccessorT wR, XAccessorT wX,
 
 template<typename RAccessorT, typename XAccessorT, typename KAccessor_T>
 OSL_FORCEINLINE void
-splineinverse_evaluate_wide(RAccessorT wR, ustring spline_basis, XAccessorT wX,
-                            KAccessor_T wK, int knot_count)
+splineinverse_evaluate_wide(RAccessorT wR, ustringhash spline_basis,
+                            XAccessorT wX, KAccessor_T wK, int knot_count)
 {
     typedef void (*FuncPtr)(RAccessorT, XAccessorT, KAccessor_T,
                             int /*knot_count*/);
@@ -554,12 +554,12 @@ splineinverse_evaluate_wide(RAccessorT wR, ustring spline_basis, XAccessorT wX,
 // spline (hermite, bezier, etc.) vs. making us doing a bunch of comparisons
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wf, Wf, f)(void* wout_, const char* spline_, void* wx_,
-                                    float* knots, int knot_count,
+__OSL_MASKED_OP3(spline, Wf, Wf, f)(void* wout_, ustringhash_pod spline_,
+                                    void* wx_, float* knots, int knot_count,
                                     int knot_arraylen, unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<float>(wout_, Mask(mask_value)), USTR(spline_),
-                         Wide<const float>(wx_),
+    spline_evaluate_wide(Masked<float>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
                          UniformAsWide<const float[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -567,11 +567,12 @@ __OSL_MASKED_OP3(spline, Wf, Wf, f)(void* wout_, const char* spline_, void* wx_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wf, f, Wf)(void* wout_, const char* spline_, void* wx_,
-                                    float* knots, int knot_count,
+__OSL_MASKED_OP3(spline, Wf, f, Wf)(void* wout_, ustringhash_pod spline_,
+                                    void* wx_, float* knots, int knot_count,
                                     int knot_arraylen, unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<float>(wout_, Mask(mask_value)), USTR(spline_),
+    spline_evaluate_wide(Masked<float>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_),
                          UniformAsWide<const float>(wx_),
                          Wide<const float[]>(knots, knot_arraylen), knot_count);
 }
@@ -579,13 +580,14 @@ __OSL_MASKED_OP3(spline, Wf, f, Wf)(void* wout_, const char* spline_, void* wx_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdf, Wdf, Wdf)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdf, Wdf, Wdf)(void* wout_, ustringhash_pod spline_,
                                         void* wx_, float* knots, int knot_count,
                                         int knot_arraylen,
                                         unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const Dual2<float>>(wx_),
+                         ustringhash_from(spline_),
+                         Wide<const Dual2<float>>(wx_),
                          Wide<const Dual2<float>[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -593,70 +595,73 @@ __OSL_MASKED_OP3(spline, Wdf, Wdf, Wdf)(void* wout_, const char* spline_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdf, Wdf,
-                 df)(void* wout_, const char* spline_, void* wx_, float* knots,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
-{
-    spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const Dual2<float>>(wx_),
-                         UniformAsWide<const Dual2<float>[]>(knots,
-                                                             knot_arraylen),
-                         knot_count);
-}
-
-
-
-OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdf, Wf,
-                 df)(void* wout_, const char* spline_, void* wx_, float* knots,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
-{
-    spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const float>(wx_),
-                         UniformAsWide<const Dual2<float>[]>(knots,
-                                                             knot_arraylen),
-                         knot_count);
-}
-
-
-
-OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdf, df, Wdf)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdf, Wdf, df)(void* wout_, ustringhash_pod spline_,
                                        void* wx_, float* knots, int knot_count,
                                        int knot_arraylen,
                                        unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                         USTR(spline_), UniformAsWide<const Dual2<float>>(wx_),
-                         Wide<const Dual2<float>[]>(knots, knot_arraylen),
-                         knot_count);
+    spline_evaluate_wide(
+        Masked<Dual2<float>>(wout_, Mask(mask_value)),
+        ustringhash_from(spline_), Wide<const Dual2<float>>(wx_),
+        UniformAsWide<const Dual2<float>[]>(knots, knot_arraylen), knot_count);
 }
 
 
 
-//===========================================================================
-
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdf, f, Wdf)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdf, Wf, df)(void* wout_, ustringhash_pod spline_,
                                       void* wx_, float* knots, int knot_count,
                                       int knot_arraylen,
                                       unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                         USTR(spline_), UniformAsWide<const float>(wx_),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
+                         UniformAsWide<const Dual2<float>[]>(knots,
+                                                             knot_arraylen),
+                         knot_count);
+}
+
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(spline, Wdf, df, Wdf)(void* wout_, ustringhash_pod spline_,
+                                       void* wx_, float* knots, int knot_count,
+                                       int knot_arraylen,
+                                       unsigned int mask_value)
+{
+    spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_),
+                         UniformAsWide<const Dual2<float>>(wx_),
+                         Wide<const Dual2<float>[]>(knots, knot_arraylen),
+                         knot_count);
+}
+
+
+
+//===========================================================================
+
+OSL_BATCHOP void
+__OSL_MASKED_OP3(spline, Wdf, f, Wdf)(void* wout_, ustringhash_pod spline_,
+                                      void* wx_, float* knots, int knot_count,
+                                      int knot_arraylen,
+                                      unsigned int mask_value)
+{
+    spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_),
+                         UniformAsWide<const float>(wx_),
                          Wide<const Dual2<float>[]>(knots, knot_arraylen),
                          knot_count);
 }
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdf, Wf, Wdf)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdf, Wf, Wdf)(void* wout_, ustringhash_pod spline_,
                                        void* wx_, float* knots, int knot_count,
                                        int knot_arraylen,
                                        unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const float>(wx_),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
                          Wide<const Dual2<float>[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -665,12 +670,14 @@ __OSL_MASKED_OP3(spline, Wdf, Wf, Wdf)(void* wout_, const char* spline_,
 
 //===========================================================================
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdf, Wdf,
-                 f)(void* wout_, const char* spline_, void* wx_, float* knots,
-                    int knot_count, int knot_arraylen, unsigned int mask_value)
+__OSL_MASKED_OP3(spline, Wdf, Wdf, f)(void* wout_, ustringhash_pod spline_,
+                                      void* wx_, float* knots, int knot_count,
+                                      int knot_arraylen,
+                                      unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const Dual2<float>>(wx_),
+                         ustringhash_from(spline_),
+                         Wide<const Dual2<float>>(wx_),
                          UniformAsWide<const float[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -678,12 +685,12 @@ __OSL_MASKED_OP3(spline, Wdf, Wdf,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wf, Wf, Wf)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wf, Wf, Wf)(void* wout_, ustringhash_pod spline_,
                                      void* wx_, void* wknots_, int knot_count,
                                      int knot_arraylen, unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<float>(wout_, Mask(mask_value)), USTR(spline_),
-                         Wide<const float>(wx_),
+    spline_evaluate_wide(Masked<float>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
                          Wide<const float[]>(wknots_, knot_arraylen),
                          knot_count);
 }
@@ -692,12 +699,12 @@ __OSL_MASKED_OP3(spline, Wf, Wf, Wf)(void* wout_, const char* spline_,
 
 //=======================================================================
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wv, Wf, v)(void* wout_, const char* spline_, void* wx_,
-                                    Vec3* knots, int knot_count,
+__OSL_MASKED_OP3(spline, Wv, Wf, v)(void* wout_, ustringhash_pod spline_,
+                                    void* wx_, Vec3* knots, int knot_count,
                                     int knot_arraylen, unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<Vec3>(wout_, Mask(mask_value)), USTR(spline_),
-                         Wide<const float>(wx_),
+    spline_evaluate_wide(Masked<Vec3>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
                          UniformAsWide<const Vec3[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -705,23 +712,24 @@ __OSL_MASKED_OP3(spline, Wv, Wf, v)(void* wout_, const char* spline_, void* wx_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wv, Wf, Wv)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wv, Wf, Wv)(void* wout_, ustringhash_pod spline_,
                                      void* wx_, Vec3* knots, int knot_count,
                                      int knot_arraylen, unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<Vec3>(wout_, Mask(mask_value)), USTR(spline_),
-                         Wide<const float>(wx_),
+    spline_evaluate_wide(Masked<Vec3>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
                          Wide<const Vec3[]>(knots, knot_arraylen), knot_count);
 }
 
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wv, f, Wv)(void* wout_, const char* spline_, void* wx_,
-                                    Vec3* knots, int knot_count,
+__OSL_MASKED_OP3(spline, Wv, f, Wv)(void* wout_, ustringhash_pod spline_,
+                                    void* wx_, Vec3* knots, int knot_count,
                                     int knot_arraylen, unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<Vec3>(wout_, Mask(mask_value)), USTR(spline_),
+    spline_evaluate_wide(Masked<Vec3>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_),
                          UniformAsWide<const float>(wx_),
                          Wide<const Vec3[]>(knots, knot_arraylen), knot_count);
 }
@@ -729,12 +737,14 @@ __OSL_MASKED_OP3(spline, Wv, f, Wv)(void* wout_, const char* spline_, void* wx_,
 //=======================================================================
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, Wdf,
-                 v)(void* wout_, const char* spline_, void* wx_, Vec3* knots,
-                    int knot_count, int knot_arraylen, unsigned int mask_value)
+__OSL_MASKED_OP3(spline, Wdv, Wdf, v)(void* wout_, ustringhash_pod spline_,
+                                      void* wx_, Vec3* knots, int knot_count,
+                                      int knot_arraylen,
+                                      unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const Dual2<float>>(wx_),
+                         ustringhash_from(spline_),
+                         Wide<const Dual2<float>>(wx_),
                          UniformAsWide<const Vec3[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -742,38 +752,43 @@ __OSL_MASKED_OP3(spline, Wdv, Wdf,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, Wdf,
-                 Wv)(void* wout_, const char* spline_, void* wx_, Vec3* knots,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
+__OSL_MASKED_OP3(spline, Wdv, Wdf, Wv)(void* wout_, ustringhash_pod spline_,
+                                       void* wx_, Vec3* knots, int knot_count,
+                                       int knot_arraylen,
+                                       unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const Dual2<float>>(wx_),
+                         ustringhash_from(spline_),
+                         Wide<const Dual2<float>>(wx_),
                          Wide<const Vec3[]>(knots, knot_arraylen), knot_count);
 }
 
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, df,
-                 Wv)(void* wout_, const char* spline_, void* wx_, Vec3* knots,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
-{
-    spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), UniformAsWide<const Dual2<float>>(wx_),
-                         Wide<const Vec3[]>(knots, knot_arraylen), knot_count);
-}
-
-
-
-//=======================================================================
-OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, f, Wdv)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdv, df, Wv)(void* wout_, ustringhash_pod spline_,
                                       void* wx_, Vec3* knots, int knot_count,
                                       int knot_arraylen,
                                       unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), UniformAsWide<const float>(wx_),
+                         ustringhash_from(spline_),
+                         UniformAsWide<const Dual2<float>>(wx_),
+                         Wide<const Vec3[]>(knots, knot_arraylen), knot_count);
+}
+
+
+
+//=======================================================================
+OSL_BATCHOP void
+__OSL_MASKED_OP3(spline, Wdv, f, Wdv)(void* wout_, ustringhash_pod spline_,
+                                      void* wx_, Vec3* knots, int knot_count,
+                                      int knot_arraylen,
+                                      unsigned int mask_value)
+{
+    spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
+                         ustringhash_from(spline_),
+                         UniformAsWide<const float>(wx_),
                          Wide<const Dual2<Vec3>[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -781,13 +796,13 @@ __OSL_MASKED_OP3(spline, Wdv, f, Wdv)(void* wout_, const char* spline_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, Wf, Wdv)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdv, Wf, Wdv)(void* wout_, ustringhash_pod spline_,
                                        void* wx_, Vec3* knots, int knot_count,
                                        int knot_arraylen,
                                        unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const float>(wx_),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
                          Wide<const Dual2<Vec3>[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -795,12 +810,13 @@ __OSL_MASKED_OP3(spline, Wdv, Wf, Wdv)(void* wout_, const char* spline_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, Wf,
-                 dv)(void* wout_, const char* spline_, void* wx_, Vec3* knots,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
+__OSL_MASKED_OP3(spline, Wdv, Wf, dv)(void* wout_, ustringhash_pod spline_,
+                                      void* wx_, Vec3* knots, int knot_count,
+                                      int knot_arraylen,
+                                      unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const float>(wx_),
+                         ustringhash_from(spline_), Wide<const float>(wx_),
                          UniformAsWide<const Dual2<Vec3>[]>(knots,
                                                             knot_arraylen),
                          knot_count);
@@ -810,13 +826,14 @@ __OSL_MASKED_OP3(spline, Wdv, Wf,
 
 //=======================================================================
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, Wdf, Wdv)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdv, Wdf, Wdv)(void* wout_, ustringhash_pod spline_,
                                         void* wx_, Vec3* knots, int knot_count,
                                         int knot_arraylen,
                                         unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const Dual2<float>>(wx_),
+                         ustringhash_from(spline_),
+                         Wide<const Dual2<float>>(wx_),
                          Wide<const Dual2<Vec3>[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -824,27 +841,28 @@ __OSL_MASKED_OP3(spline, Wdv, Wdf, Wdv)(void* wout_, const char* spline_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, Wdf,
-                 dv)(void* wout_, const char* spline_, void* wx_, Vec3* knots,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
+__OSL_MASKED_OP3(spline, Wdv, Wdf, dv)(void* wout_, ustringhash_pod spline_,
+                                       void* wx_, Vec3* knots, int knot_count,
+                                       int knot_arraylen,
+                                       unsigned int mask_value)
 {
-    spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), Wide<const Dual2<float>>(wx_),
-                         UniformAsWide<const Dual2<Vec3>[]>(knots,
-                                                            knot_arraylen),
-                         knot_count);
+    spline_evaluate_wide(
+        Masked<Dual2<Vec3>>(wout_, Mask(mask_value)), ustringhash_from(spline_),
+        Wide<const Dual2<float>>(wx_),
+        UniformAsWide<const Dual2<Vec3>[]>(knots, knot_arraylen), knot_count);
 }
 
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(spline, Wdv, df, Wdv)(void* wout_, const char* spline_,
+__OSL_MASKED_OP3(spline, Wdv, df, Wdv)(void* wout_, ustringhash_pod spline_,
                                        void* wx_, Vec3* knots, int knot_count,
                                        int knot_arraylen,
                                        unsigned int mask_value)
 {
     spline_evaluate_wide(Masked<Dual2<Vec3>>(wout_, Mask(mask_value)),
-                         USTR(spline_), UniformAsWide<const Dual2<float>>(wx_),
+                         ustringhash_from(spline_),
+                         UniformAsWide<const Dual2<float>>(wx_),
                          Wide<const Dual2<Vec3>[]>(knots, knot_arraylen),
                          knot_count);
 }
@@ -861,12 +879,14 @@ __OSL_MASKED_OP3(spline, Wdv, df, Wdv)(void* wout_, const char* spline_,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP3(splineinverse, Wf, Wf,
-                 Wf)(void* wout_, const char* spline_, void* wx_, void* wknots_,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
+                 Wf)(void* wout_, ustringhash_pod spline_, void* wx_,
+                     void* wknots_, int knot_count, int knot_arraylen,
+                     unsigned int mask_value)
 {
     // Version with no derivs
     splineinverse_evaluate_wide(Masked<float>(wout_, Mask(mask_value)),
-                                USTR(spline_), Wide<const float>(wx_),
+                                ustringhash_from(spline_),
+                                Wide<const float>(wx_),
                                 Wide<const float[]>(wknots_, knot_arraylen),
                                 knot_count);
 }
@@ -874,28 +894,30 @@ __OSL_MASKED_OP3(splineinverse, Wf, Wf,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(splineinverse, Wf, Wf,
-                 f)(void* wout_, const char* spline_, void* wx_, void* wknots_,
-                    int knot_count, int knot_arraylen, unsigned int mask_value)
+__OSL_MASKED_OP3(splineinverse, Wf, Wf, f)(void* wout_, ustringhash_pod spline_,
+                                           void* wx_, void* wknots_,
+                                           int knot_count, int knot_arraylen,
+                                           unsigned int mask_value)
 {
     // Version with no derivs
-    splineinverse_evaluate_wide(Masked<float>(wout_, Mask(mask_value)),
-                                USTR(spline_), Wide<const float>(wx_),
-                                UniformAsWide<const float[]>(wknots_,
-                                                             knot_arraylen),
-                                knot_count);
+    splineinverse_evaluate_wide(
+        Masked<float>(wout_, Mask(mask_value)), ustringhash_from(spline_),
+        Wide<const float>(wx_),
+        UniformAsWide<const float[]>(wknots_, knot_arraylen), knot_count);
 }
 
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(splineinverse, Wf, f,
-                 Wf)(void* wout_, const char* spline_, void* wx_, void* wknots_,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
+__OSL_MASKED_OP3(splineinverse, Wf, f, Wf)(void* wout_, ustringhash_pod spline_,
+                                           void* wx_, void* wknots_,
+                                           int knot_count, int knot_arraylen,
+                                           unsigned int mask_value)
 {
     // Version with no derivs
     splineinverse_evaluate_wide(Masked<float>(wout_, Mask(mask_value)),
-                                USTR(spline_), UniformAsWide<const float>(wx_),
+                                ustringhash_from(spline_),
+                                UniformAsWide<const float>(wx_),
                                 Wide<const float[]>(wknots_, knot_arraylen),
                                 knot_count);
 }
@@ -904,22 +926,22 @@ __OSL_MASKED_OP3(splineinverse, Wf, f,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP3(splineinverse, Wdf, Wdf,
-                 f)(void* wout_, const char* spline_, void* wx_, void* wknots_,
-                    int knot_count, int knot_arraylen, unsigned int mask_value)
+                 f)(void* wout_, ustringhash_pod spline_, void* wx_,
+                    void* wknots_, int knot_count, int knot_arraylen,
+                    unsigned int mask_value)
 {
     // x has derivs, so return derivs as well
-    splineinverse_evaluate_wide(Masked<Dual2<float>>(wout_, Mask(mask_value)),
-                                USTR(spline_), Wide<const Dual2<float>>(wx_),
-                                UniformAsWide<const float[]>(wknots_,
-                                                             knot_arraylen),
-                                knot_count);
+    splineinverse_evaluate_wide(
+        Masked<Dual2<float>>(wout_, Mask(mask_value)),
+        ustringhash_from(spline_), Wide<const Dual2<float>>(wx_),
+        UniformAsWide<const float[]>(wknots_, knot_arraylen), knot_count);
 }
 
 
 
 OSL_BATCHOP void
 __OSL_MASKED_OP3(splineinverse, Wdf, Wdf,
-                 Wdf)(void* wout_, const char* spline_, void* wx_,
+                 Wdf)(void* wout_, ustringhash_pod spline_, void* wx_,
                       void* wknots_, int knot_count, int knot_arraylen,
                       unsigned int mask_value)
 {
@@ -927,8 +949,8 @@ __OSL_MASKED_OP3(splineinverse, Wdf, Wdf,
     //
     // x has derivs, so return derivs as well
     splineinverse_evaluate_wide(
-        Masked<Dual2<float>>(wout_, Mask(mask_value)), USTR(spline_),
-        Wide<const Dual2<float>>(wx_),
+        Masked<Dual2<float>>(wout_, Mask(mask_value)),
+        ustringhash_from(spline_), Wide<const Dual2<float>>(wx_),
         // wknots_ is really a Wide<const Dual2<float>[]>,
         // but we are ignoring knot derivatives,
         // so just treat it as Wide<const float[]> which is binary compatible.
@@ -938,8 +960,9 @@ __OSL_MASKED_OP3(splineinverse, Wdf, Wdf,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP3(splineinverse, Wdf, Wdf,
-                 df)(void* wout_, const char* spline_, void* wx_, void* wknots_,
-                     int knot_count, int knot_arraylen, unsigned int mask_value)
+                 df)(void* wout_, ustringhash_pod spline_, void* wx_,
+                     void* wknots_, int knot_count, int knot_arraylen,
+                     unsigned int mask_value)
 {
     // Ignore knot derivatives
     __OSL_MASKED_OP3(splineinverse, Wdf, Wdf, f)
@@ -949,15 +972,15 @@ __OSL_MASKED_OP3(splineinverse, Wdf, Wdf,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(splineinverse, Wdf, df, Wdf)(void* wout_, const char* spline_,
-                                              void* wx_, void* wknots_,
-                                              int knot_count, int knot_arraylen,
-                                              unsigned int mask_value)
+__OSL_MASKED_OP3(splineinverse, Wdf, df,
+                 Wdf)(void* wout_, ustringhash_pod spline_, void* wx_,
+                      void* wknots_, int knot_count, int knot_arraylen,
+                      unsigned int mask_value)
 {
     // Ignore knot derivatives
     splineinverse_evaluate_wide(
-        Masked<Dual2<float>>(wout_, Mask(mask_value)), USTR(spline_),
-        UniformAsWide<const Dual2<float>>(wx_),
+        Masked<Dual2<float>>(wout_, Mask(mask_value)),
+        ustringhash_from(spline_), UniformAsWide<const Dual2<float>>(wx_),
         // wknots_ is really a Wide<const Dual2<float>[]>,
         // but we are ignoring knot derivatives,
         // so just treat it as Wide<const float[]> which is binary compatible.
@@ -967,10 +990,10 @@ __OSL_MASKED_OP3(splineinverse, Wdf, df, Wdf)(void* wout_, const char* spline_,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP3(splineinverse, Wdf, f, Wdf)(void* wout_, const char* spline_,
-                                             void* wx_, void* wknots_,
-                                             int knot_count, int knot_arraylen,
-                                             unsigned int mask_value)
+__OSL_MASKED_OP3(splineinverse, Wdf, f,
+                 Wdf)(void* wout_, ustringhash_pod spline_, void* wx_,
+                      void* wknots_, int knot_count, int knot_arraylen,
+                      unsigned int mask_value)
 {
     // Ignore knot derivs
     // treated as fff

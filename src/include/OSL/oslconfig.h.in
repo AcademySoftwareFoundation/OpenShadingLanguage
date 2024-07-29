@@ -248,19 +248,8 @@ enum class SymArena {
 // various C++ versions or compilers, or to make up for things not
 // yet available in earlier C++ standards.
 
-#if OSL_CPLUSPLUS_VERSION >= 17
-    // fold expression to expand
-    #define __OSL_EXPAND_PARAMETER_PACKS(EXPRESSION) \
-        (void((EXPRESSION)) , ... );
-#else
-    // Choose to use initializer list to expand our parameter pack so that
-    // the order they are evaluated in the order they appear
-    #define __OSL_EXPAND_PARAMETER_PACKS(EXPRESSION) \
-        { \
-            using expander = int [sizeof...(IntListT)]; \
-            (void)expander{((EXPRESSION),0)...}; \
-        }
-#endif
+// fold expression to expand
+#define __OSL_EXPAND_PARAMETER_PACKS(EXPRESSION) (void((EXPRESSION)), ...);
 
 
 namespace pvt {
@@ -271,26 +260,20 @@ using int_sequence = std::integer_sequence<int, IntegerListT...>;
 template<int EndBeforeT>
 using make_int_sequence =  std::make_integer_sequence<int, EndBeforeT>;
 
- template<bool... BoolListT >
-using bool_sequence = std::integer_sequence<bool, BoolListT... >;
+template<bool... BoolListT>
+using bool_sequence = std::integer_sequence<bool, BoolListT...>;
 
-#if (OSL_CPLUSPLUS_VERSION >= 17)
-    template<class... ListT>
-    using conjunction = std::conjunction<ListT...>;
-#else
-    template<class... ListT>
-    using conjunction = std::is_same<bool_sequence<true,ListT::value...>, bool_sequence<ListT::value..., true>>;
-#endif
+template<class... ListT> using conjunction = std::conjunction<ListT...>;
 
-    // We need the SFINAE type to be different for
-    // enable_if_type from disable_if_type so that we can apply both to
-    // the same template signature to avoid
-    // "error: invalid redeclaration of member function template"
-    // NOTE: std::enable_if_t is a c++14 library feature, our baseline
-    // and we wish to remain compatible with c++11 header libraries.
-    // Also we are using std::true_type vs. void as the default type
-    template <bool TestT, typename TypeT = std::true_type>
-    using enable_if_type = typename std::enable_if<TestT, TypeT>::type;
+// We need the SFINAE type to be different for
+// enable_if_type from disable_if_type so that we can apply both to
+// the same template signature to avoid
+// "error: invalid redeclaration of member function template"
+// NOTE: std::enable_if_t is a c++14 library feature, our baseline
+// and we wish to remain compatible with c++11 header libraries.
+// Also we are using std::true_type vs. void as the default type
+template<bool TestT, typename TypeT = std::true_type>
+using enable_if_type = typename std::enable_if<TestT, TypeT>::type;
 
 } // namespace pvt
 

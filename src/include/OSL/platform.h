@@ -113,6 +113,10 @@
 #  define OSL_MSVS_BEFORE_2015   (_MSC_VER <  1900)
 #  define OSL_MSVS_AT_LEAST_2017 (_MSC_VER >= 1910)
 #  define OSL_MSVS_BEFORE_2017   (_MSC_VER <  1910)
+#  define OSL_MSVS_AT_LEAST_2019 (_MSC_VER >= 1920)
+#  define OSL_MSVS_BEFORE_2019   (_MSC_VER <  1920)
+#  define OSL_MSVS_AT_LEAST_2022 (_MSC_VER >= 1930)
+#  define OSL_MSVS_BEFORE_2022   (_MSC_VER <  1930)
 #  if OSL_MSVS_BEFORE_2017
 #    error "This version of OSL is meant to work only with Visual Studio 2017 or later"
 #  endif
@@ -124,6 +128,10 @@
 #  define OSL_MSVS_BEFORE_2015   0
 #  define OSL_MSVS_AT_LEAST_2017 0
 #  define OSL_MSVS_BEFORE_2017   0
+#  define OSL_MSVS_AT_LEAST_2019 0
+#  define OSL_MSVS_BEFORE_2019   0
+#  define OSL_MSVS_AT_LEAST_2022 0
+#  define OSL_MSVS_BEFORE_2022   0
 #endif
 
 
@@ -132,30 +140,27 @@
 // Detect which C++ standard we're using, and handy macros.
 // See https://en.cppreference.com/w/cpp/compiler_support
 //
-// Note: oslversion.h defines OSL_BUILD_CPP to be 14, 17, etc., to reflect
+// Note: oslversion.h defines OSL_BUILD_CPP to be 17, 20, etc., to reflect
 // the version that OSL itself was built with. In contrast,
 // OSL_CPLUSPLUS_VERSION defined below will be set to the right number for
 // the C++ standard being compiled RIGHT NOW by whomever is parsing these
 // header files. These two things may be the same when compiling OSL, but
 // they may not be the same if another package is compiling against OSL and
-// using these headers (e.g., OSL may be C++14 but the client package may be
+// using these headers (e.g., OSL may be C++17 but the client package may be
 // newer, or vice versa -- use these two symbols to differentiate these
 // cases, when important).
 #if (__cplusplus >= 202001L)
 #    define OSL_CPLUSPLUS_VERSION 20
-#    define OSL_CONSTEXPR17 constexpr
 #    define OSL_CONSTEXPR20 constexpr
-#elif (__cplusplus >= 201703L)
+#elif (__cplusplus >= 201703L) || (defined(_MSC_VER) && _MSC_VER >= 1914)
 #    define OSL_CPLUSPLUS_VERSION 17
-#    define OSL_CONSTEXPR17 constexpr
-#    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
-#elif (__cplusplus >= 201402L) || (defined(_MSC_VER) && _MSC_VER >= 1914)
-#    define OSL_CPLUSPLUS_VERSION 14
-#    define OSL_CONSTEXPR17 /* not constexpr before C++17 */
 #    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
 #else
-#    error "This version of OSL requires C++14 or above"
+#    error "This version of OSL requires C++17 or above"
 #endif
+
+// DEPRECATED(1.14): use C++17 constexpr
+#define OSL_CONSTEXPR17 constexpr
 
 // DEPRECATED(1.12): use C++14 constexpr
 #define OSL_CONSTEXPR14 constexpr
@@ -339,13 +344,9 @@
 
 // OSL_MAYBE_UNUSED is a function or variable attribute that assures the
 // compiler that it's fine for the item to appear to be unused.
-#if OSL_CPLUSPLUS_VERSION >= 17 || __has_cpp_attribute(maybe_unused)
-#    define OSL_MAYBE_UNUSED [[maybe_unused]]
-#elif defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || __has_attribute(unused)
-#    define OSL_MAYBE_UNUSED __attribute__((unused))
-#else
-#    define OSL_MAYBE_UNUSED
-#endif
+// Consider this deprecated (as of OSL 1.14, C++17 minimum), you should favor
+// C++17's [[maybe_unused]] attribute.
+#define OSL_MAYBE_UNUSED [[maybe_unused]]
 
 
 // Some compilers define a special intrinsic to use in conditionals that can
@@ -393,26 +394,18 @@
 
 
 // OSL_DEPRECATED before a function declaration marks it as deprecated in
-// a way that will generate compile warnings if it is called (but will
-// preserve linkage compatibility).
-#if OSL_CPLUSPLUS_VERSION >= 14 || __has_cpp_attribute(deprecated)
-#  define OSL_DEPRECATED(msg) [[deprecated(msg)]]
-#elif defined(__GNUC__) || defined(__clang__) || __has_attribute(deprecated)
-#  define OSL_DEPRECATED(msg) __attribute__((deprecated(msg)))
-#elif defined(_MSC_VER)
-#  define OSL_DEPRECATED(msg) __declspec(deprecated(msg))
-#else
-#  define OSL_DEPRECATED(msg)
-#endif
+// a way that will generate compile warnings if it is called. This should
+// itself be considered deprecated (as of OSL 1.14) and code should use
+// [[deprecated(msg)]] instead.
+#define OSL_DEPRECATED(msg) [[deprecated(msg)]]
+
 
 // OSL_FALLTHROUGH at the end of a `case` label's statements documents that
 // the switch statement case is intentionally falling through to the code for
 // the next case.
-#if OSL_CPLUSPLUS_VERSION >= 17 || __has_cpp_attribute(fallthrough)
-#    define OSL_FALLTHROUGH [[fallthrough]]
-#else
-#    define OSL_FALLTHROUGH
-#endif
+// Consider this deprecated (as of OSL 1.14), you should favor C++17's
+// [[fallthrough]] attribute.
+#define OSL_FALLTHROUGH [[fallthrough]]
 
 
 // OSL_NODISCARD following a function declaration documents that the

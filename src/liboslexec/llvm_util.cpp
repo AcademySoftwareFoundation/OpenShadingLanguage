@@ -620,6 +620,12 @@ LLVM_Util::SetupLLVM()
 #ifndef OSL_LLVM_NEW_PASS_MANAGER
     // LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks
     static llvm::RegisterPass<
+        LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<4>>
+        sRegCustomPass2(
+            "PreventBitMasksFromBeingLiveinsToBasicBlocks<4>",
+            "Prevent Bit Masks <4xi1> From Being Liveins To Basic Blocks Pass",
+            false /* Only looks at CFG */, false /* Analysis Pass */);
+    static llvm::RegisterPass<
         LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>>
         sRegCustomPass0(
             "PreventBitMasksFromBeingLiveinsToBasicBlocks<8>",
@@ -2305,7 +2311,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
                 break;
             }
             case 4:
-                // We don't use masking or SIMD shading for 4-wide
+                // MUST BE THE FINAL PASS!
+                m_new_pass_manager->module_pass_manager.addPass(
+                    createModuleToFunctionPassAdaptor(
+                        NewPreventBitMasksFromBeingLiveinsToBasicBlocks<4>(
+                            context())));
                 break;
             default:
                 std::cout << "m_vector_width = " << m_vector_width << "\n";
@@ -2618,7 +2628,9 @@ LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
                     new LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>());
                 break;
             case 4:
-                // We don't use masking or SIMD shading for 4-wide
+                // MUST BE THE FINAL PASS!
+                mpm.add(
+                    new LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<4>());
                 break;
             default:
                 std::cout << "m_vector_width = " << m_vector_width << "\n";
@@ -3394,6 +3406,19 @@ LLVM_Util::constant(uint32_t i)
 }
 
 llvm::Constant*
+LLVM_Util::constant4(int8_t i)
+{
+    return llvm::ConstantInt::get(context(),
+                                  llvm::APInt(4, i, true /*signed*/));
+}
+
+llvm::Constant*
+LLVM_Util::constant4(uint8_t i)
+{
+    return llvm::ConstantInt::get(context(), llvm::APInt(4, i));
+}
+
+llvm::Constant*
 LLVM_Util::constant8(int8_t i)
 {
     return llvm::ConstantInt::get(context(),
@@ -3592,6 +3617,11 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
             // and all types are happy
             intMaskType = type_int8();
             break;
+        case 4:
+            // We can just reinterpret cast a 4 bit mask to a 8 bit integer
+            // and all types are happy
+            intMaskType = type_int8();
+            break;
         default: OSL_ASSERT(0 && "unsupported native bit mask width");
         };
 
@@ -3659,6 +3689,25 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
             int8_mask = builder().CreateCall(func, toArrayRef(args));
             return int8_mask;
         }
+        case 4: {
+            // We need to do more than a simple cast to an int. Since we
+            // know vectorized comparison for SSE2 ends up setting 4
+            // 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to
+            // do more than a simple cast to an int.
+
+            // Convert <4 x i1> -> <4 x i32>
+            llvm::Value* w4_int_mask = builder().CreateSExt(mask,
+                                                            type_wide_int());
+            // Now we will use the horizontal sign extraction intrinsic
+            // to build a 32 bit mask value.
+            llvm::Function* func = llvm::Intrinsic::getDeclaration(
+                module(), llvm::Intrinsic::x86_sse2_pmovmskb_128);
+
+            llvm::Value* args[1] = { w4_int_mask };
+            llvm::Value* int8_mask;
+            int8_mask = builder().CreateCall(func, toArrayRef(args));
+            return int8_mask;
+        }
         default: {
             OSL_ASSERT(0 && "unsupported native bit mask width");
             return mask;
@@ -3678,28 +3727,18 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
             auto w4_int_masks          = op_quarter_16x(wide_int_mask);
 
             // Now we will use the horizontal sign extraction intrinsic
-            // to build a 32 bit mask value. However the only 128bit
-            // version works on floats, so we will cast from int32 to
-            // float beforehand
-            llvm::Type* w4_float_type = llvm_vector_type(m_llvm_type_float, 4);
-            std::array<llvm::Value*, 4> w4_float_masks = {
-                { builder().CreateBitCast(w4_int_masks[0], w4_float_type),
-                  builder().CreateBitCast(w4_int_masks[1], w4_float_type),
-                  builder().CreateBitCast(w4_int_masks[2], w4_float_type),
-                  builder().CreateBitCast(w4_int_masks[3], w4_float_type) }
-            };
-
+            // to build a 32 bit mask value.
             llvm::Function* func = llvm::Intrinsic::getDeclaration(
-                module(), llvm::Intrinsic::x86_sse_movmsk_ps);
+                module(), llvm::Intrinsic::x86_sse2_pmovmskb_128);
 
-            llvm::Value* args[1] = { w4_float_masks[0] };
+            llvm::Value* args[1] = { w4_int_masks[0] };
             std::array<llvm::Value*, 4> int4_masks;
             int4_masks[0] = builder().CreateCall(func, toArrayRef(args));
-            args[0]       = w4_float_masks[1];
+            args[0]       = w4_int_masks[1];
             int4_masks[1] = builder().CreateCall(func, toArrayRef(args));
-            args[0]       = w4_float_masks[2];
+            args[0]       = w4_int_masks[2];
             int4_masks[2] = builder().CreateCall(func, toArrayRef(args));
-            args[0]       = w4_float_masks[3];
+            args[0]       = w4_int_masks[3];
             int4_masks[3] = builder().CreateCall(func, toArrayRef(args));
 
             llvm::Value* bits12_15 = op_shl(int4_masks[3], constant(12));
@@ -3720,22 +3759,14 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
             auto w4_int_masks          = op_split_8x(wide_int_mask);
 
             // Now we will use the horizontal sign extraction intrinsic
-            // to build a 32 bit mask value. However the only 128bit
-            // version works on floats, so we will cast from int32 to
-            // float beforehand
-            llvm::Type* w4_float_type = llvm_vector_type(m_llvm_type_float, 4);
-            std::array<llvm::Value*, 2> w4_float_masks = {
-                { builder().CreateBitCast(w4_int_masks[0], w4_float_type),
-                  builder().CreateBitCast(w4_int_masks[1], w4_float_type) }
-            };
-
+            // to build a 32 bit mask value.
             llvm::Function* func = llvm::Intrinsic::getDeclaration(
-                module(), llvm::Intrinsic::x86_sse_movmsk_ps);
+                module(), llvm::Intrinsic::x86_sse2_pmovmskb_128);
 
-            llvm::Value* args[1] = { w4_float_masks[0] };
+            llvm::Value* args[1] = { w4_int_masks[0] };
             std::array<llvm::Value*, 2> int4_masks;
             int4_masks[0] = builder().CreateCall(func, toArrayRef(args));
-            args[0]       = w4_float_masks[1];
+            args[0]       = w4_int_masks[1];
             int4_masks[1] = builder().CreateCall(func, toArrayRef(args));
 
             llvm::Value* bits4_7 = op_shl(int4_masks[1], constant(4));
@@ -3748,21 +3779,15 @@ LLVM_Util::mask_as_int(llvm::Value* mask)
             // do more than a simple cast to an int.
 
             // Convert <4 x i1> -> <4 x i32>
-            llvm::Value* wide_int_mask = builder().CreateSExt(mask,
-                                                              type_wide_int());
+            llvm::Value* w4_int_mask = builder().CreateSExt(mask,
+                                                            type_wide_int());
 
             // Now we will use the horizontal sign extraction intrinsic
-            // to build a 32 bit mask value. However the only 128bit
-            // version works on floats, so we will cast from int32 to
-            // float beforehand
-            llvm::Type* w4_float_type  = llvm_vector_type(m_llvm_type_float, 4);
-            llvm::Value* w4_float_mask = builder().CreateBitCast(wide_int_mask,
-                                                                 w4_float_type);
-
+            // to build a 32 bit mask value.
             llvm::Function* func = llvm::Intrinsic::getDeclaration(
-                module(), llvm::Intrinsic::x86_sse_movmsk_ps);
+                module(), llvm::Intrinsic::x86_sse2_pmovmskb_128);
 
-            llvm::Value* args[1]   = { w4_float_mask };
+            llvm::Value* args[1]   = { w4_int_mask };
             llvm::Value* int4_mask = builder().CreateCall(func,
                                                           toArrayRef(args));
 
@@ -3797,13 +3822,28 @@ LLVM_Util::mask_as_int8(llvm::Value* mask)
 llvm::Value*
 LLVM_Util::mask4_as_int8(llvm::Value* mask)
 {
-    OSL_ASSERT(m_supports_llvm_bit_masks_natively);
-    // combine <4xi1> mask with <4xi1> zero init to get <8xi1> and cast it
-    // to i8
-    llvm::Value* zero_mask4
-        = llvm::ConstantDataVector::getSplat(4, constant_bool(false));
-    return builder().CreateBitCast(op_combine_4x_vectors(mask, zero_mask4),
-                                   type_int8());
+    if (m_supports_llvm_bit_masks_natively) {
+        // combine <4xi1> mask with <4xi1> zero init to get <8xi1> and cast it
+        // to i8
+        llvm::Value* zero_mask4
+            = llvm::ConstantDataVector::getSplat(4, constant_bool(false));
+        return builder().CreateBitCast(op_combine_4x_vectors(mask, zero_mask4),
+                                       type_int8());
+    } else {
+        // Convert <4 x i1> -> <4 x i32>
+        llvm::Value* w4_int_mask = builder().CreateSExt(mask, type_wide_int());
+
+        // Now we will use the horizontal sign extraction intrinsic
+        // to build a 32 bit mask value.
+        llvm::Function* func = llvm::Intrinsic::getDeclaration(
+            module(), llvm::Intrinsic::x86_sse2_pmovmskb_128);
+
+        llvm::Value* args[1] = { w4_int_mask };
+        llvm::Value* int32   = builder().CreateCall(func, toArrayRef(args));
+        llvm::Value* i8 = builder().CreateIntCast(int32, type_int8(), true);
+
+        return i8;
+    }
 }
 
 
@@ -3828,14 +3868,19 @@ LLVM_Util::int_as_mask(llvm::Value* value)
             // and all types are happy
             intMaskType = type_int8();
             break;
+        case 4:
+            // We can just reinterpret cast a 8 bit integer to a 4 bit mask
+            // and all types are happy
+            intMaskType = type_int8();
+            break;
         default: OSL_ASSERT(0 && "unsupported native bit mask width");
         };
         llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
 
         result = builder().CreateBitCast(intMask, type_wide_bool());
     } else {
-        // Since we know vectorized comparisons for AVX&AVX2 end up setting
-        // 8 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to do more
+        // Since we know vectorized comparisons for SSE2&AVX&AVX2 end up setting
+        // 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to do more
         // than a simple cast to an int.
 
         // Broadcast out the int32 mask to all data lanes
@@ -3950,23 +3995,25 @@ LLVM_Util::op_1st_active_lane_of(llvm::Value* mask)
         // and all types are happy
         intMaskType = type_int8();
         break;
-#if 0  // WIP
-        case 4:
-        {
-            // We can just reinterpret cast a 8 bit mask to a 8 bit integer
-            // and all types are happy
-            intMaskType = type_int8();
+    case 4: {
+        intMaskType = type_int8();
 
-//            extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
-//            llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
-//
-//            int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
-//            zeroConstant = constant128(0);
-//
-//            llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
-            break;
-        }
-#endif
+        llvm::Value* mask_as_int = mask4_as_int8(mask);
+
+        // Count trailing zeros, least significant
+        llvm::Type* types[] = { intMaskType };
+        llvm::Function* func_cttz
+            = llvm::Intrinsic::getDeclaration(module(), llvm::Intrinsic::cttz,
+                                              toArrayRef(types));
+
+        llvm::Value* args[2] = { mask_as_int, constant_bool(true) };
+
+        llvm::Value* firstNonZeroIndex = builder().CreateCall(func_cttz,
+                                                              toArrayRef(args));
+        return firstNonZeroIndex;
+
+        break;
+    }
     default: OSL_ASSERT(0 && "unsupported native bit mask width");
     };
 
@@ -4455,6 +4502,19 @@ LLVM_Util::op_linearize_8x_indices(llvm::Value* wide_index)
 }
 
 
+llvm::Value*
+LLVM_Util::op_linearize_4x_indices(llvm::Value* wide_index)
+{
+    llvm::Value* strided_indices = op_mul(wide_index, wide_constant(4, 4));
+    llvm::Constant* offsets_to_lane[4] = { constant(0), constant(1),
+                                           constant(2), constant(3) };
+    llvm::Value* const_vec_offsets     = llvm::ConstantVector::get(
+        llvm::ArrayRef<llvm::Constant*>(&offsets_to_lane[0], 4));
+
+    return op_add(strided_indices, const_vec_offsets);
+}
+
+
 std::array<llvm::Value*, 2>
 LLVM_Util::op_split_16x(llvm::Value* vector_val)
 {
@@ -4613,6 +4673,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                     module(), llvm::Intrinsic::x86_avx512_gather_dpi_512);
                 break;
             case 8:
+            case 4:
                 int_mask              = mask_as_int8(current_mask());
                 func_avx512_gather_pi = llvm::Intrinsic::getDeclaration(
                     module(), llvm::Intrinsic::x86_avx512_gather3siv8_si);
@@ -4663,6 +4724,16 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                            toArrayRef(args));
                 return gather_result;
             }
+            case 4: {
+                llvm::Value* args[] = { avx2_unmasked_value, void_ptr(src_ptr),
+                                        wide_index, wide_int_mask,
+                                        constant4((uint8_t)4) };
+                llvm::Value* gather_result
+                    = builder().CreateCall(func_avx2_gather_pi,
+                                           toArrayRef(args));
+                return gather_result;
+            }
+
             default: OSL_ASSERT(0 && "unsupported width");
             };
         } else {
@@ -4680,6 +4751,7 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                     module(), llvm::Intrinsic::x86_avx512_gather_dps_512);
                 break;
             case 8:
+            case 4:
                 int_mask              = mask_as_int8(current_mask());
                 func_avx512_gather_ps = llvm::Intrinsic::getDeclaration(
                     module(), llvm::Intrinsic::x86_avx512_gather3siv8_sf);
@@ -4734,6 +4806,17 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                     builder().CreateBitCast(wide_int_mask,
                                             llvm_vector_type(type_float(), 8)),
                     constant8((uint8_t)4)
+                };
+                llvm::Value* gather = builder().CreateCall(func_avx2_gather_ps,
+                                                           toArrayRef(args));
+                return gather;
+            }
+            case 4: {
+                llvm::Value* args[] = {
+                    avx2_unmasked_value, void_ptr(src_ptr), wide_index,
+                    builder().CreateBitCast(wide_int_mask,
+                                            llvm_vector_type(type_float(), 4)),
+                    constant4((uint8_t)4)
                 };
                 llvm::Value* gather = builder().CreateCall(func_avx2_gather_ps,
                                                            toArrayRef(args));
@@ -4805,6 +4888,29 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                                                       gather2),
                                                 type_wide_ustring());
             }
+            case 4: {
+                // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+                llvm::Function* func_avx512_gather_dpq
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx512_gather3siv4_di);
+                OSL_ASSERT(func_avx512_gather_dpq);
+
+                auto w4_bit_masks   = current_mask();
+                auto w4_int_indices = wide_index;
+
+                llvm::Value* unmasked_value
+                    = builder().CreateVectorSplat(4, constant64((uint64_t)0));
+                llvm::Value* args[]
+                    = { unmasked_value, void_ptr(src_ptr), w4_int_indices,
+                        mask4_as_int8(w4_bit_masks), constant(4) };
+                llvm::Value* gather1
+                    = builder().CreateCall(func_avx512_gather_dpq,
+                                           toArrayRef(args));
+                args[2] = w4_int_indices;
+                args[3] = mask4_as_int8(w4_bit_masks);
+
+                return builder().CreateIntToPtr(gather1, type_wide_ustring());
+            }
             default: OSL_ASSERT(0 && "unsupported native bit mask width");
             }
         } else {
@@ -4836,6 +4942,20 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                 llvm::Value* unmasked_value = wide_constant(0.0f);
                 llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
                                         op_linearize_8x_indices(wide_index),
+                                        mask_as_int8(current_mask()),
+                                        constant(4) };
+                return builder().CreateCall(func_avx512_gather_ps,
+                                            toArrayRef(args));
+            }
+            case 4: {
+                llvm::Function* func_avx512_gather_ps
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx512_gather3siv8_sf);
+                OSL_ASSERT(func_avx512_gather_ps);
+
+                llvm::Value* unmasked_value = wide_constant(0.0f);
+                llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
+                                        op_linearize_4x_indices(wide_index),
                                         mask_as_int8(current_mask()),
                                         constant(4) };
                 return builder().CreateCall(func_avx512_gather_ps,
@@ -4889,6 +5009,19 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                            toArrayRef(args));
                 return gather_result;
             }
+            case 4: {
+                auto int_indices    = op_linearize_4x_indices(wide_index);
+                llvm::Value* args[] = {
+                    avx2_unmasked_value, void_ptr(src_ptr), int_indices,
+                    builder().CreateBitCast(wide_int_mask,
+                                            llvm_vector_type(type_float(), 4)),
+                    constant8((uint8_t)4)
+                };
+                llvm::Value* gather_result
+                    = builder().CreateCall(func_avx2_gather_ps,
+                                           toArrayRef(args));
+                return gather_result;
+            }
             default:
                 OSL_ASSERT(0 && "unsupported vector width for avx2 gather");
             }
@@ -4921,6 +5054,20 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                 llvm::Value* unmasked_value = wide_constant(0);
                 llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
                                         op_linearize_8x_indices(wide_index),
+                                        mask_as_int8(current_mask()),
+                                        constant(4) };
+                return builder().CreateCall(func_avx512_gather_pi,
+                                            toArrayRef(args));
+            }
+            case 4: {
+                llvm::Function* func_avx512_gather_pi
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx512_gather3siv8_si);
+                OSL_ASSERT(func_avx512_gather_pi);
+
+                llvm::Value* unmasked_value = wide_constant(0);
+                llvm::Value* args[] = { unmasked_value, void_ptr(src_ptr),
+                                        op_linearize_4x_indices(wide_index),
                                         mask_as_int8(current_mask()),
                                         constant(4) };
                 return builder().CreateCall(func_avx512_gather_pi,
@@ -4975,6 +5122,26 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                            toArrayRef(args));
                 return gather_result;
             }
+            case 4: {
+                llvm::Function* func_avx2_gather_pi
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx2_gather_d_d_256);
+                OSL_ASSERT(func_avx2_gather_pi);
+
+                llvm::Constant* avx2_unmasked_value = wide_constant(8, 0);
+
+                // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+                llvm::Value* wide_int_mask
+                    = builder().CreateSExt(current_mask(), type_wide_int());
+                auto int_indices    = op_linearize_4x_indices(wide_index);
+                llvm::Value* args[] = { avx2_unmasked_value, void_ptr(src_ptr),
+                                        int_indices, wide_int_mask,
+                                        constant8((uint8_t)4) };
+                llvm::Value* gather_result
+                    = builder().CreateCall(func_avx2_gather_pi,
+                                           toArrayRef(args));
+                return gather_result;
+            }
             default:
                 OSL_ASSERT(0 && "unsupported vector width for avx2 gather");
             }
@@ -5017,7 +5184,8 @@ LLVM_Util::op_gather(llvm::Type* src_type, llvm::Value* src_ptr,
                                                                       gather2),
                                                 type_wide_ustring());
             }
-            case 8: {
+            case 8:
+            case 4: {
                 // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
                 llvm::Function* func_avx512_gather_dpq
                     = llvm::Intrinsic::getDeclaration(
@@ -5093,6 +5261,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 linear_indices = op_linearize_16x_indices(wide_index);
                 break;
             case 8: linear_indices = op_linearize_8x_indices(wide_index); break;
+            case 4: linear_indices = op_linearize_4x_indices(wide_index); break;
             default: OSL_ASSERT(0 && "unsupported vector width for scatter");
             };
         } else {
@@ -5150,6 +5319,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                     module(), llvm::Intrinsic::x86_avx512_scatter_dps_512);
                 break;
             case 8:
+            case 4:
                 int_mask               = mask_as_int8(current_mask());
                 func_avx512_scatter_ps = llvm::Intrinsic::getDeclaration(
                     module(), llvm::Intrinsic::x86_avx512_scattersiv8_sf);
@@ -5182,6 +5352,7 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                     module(), llvm::Intrinsic::x86_avx512_scatter_dpi_512);
                 break;
             case 8:
+            case 4:
                 int_mask               = mask_as_int8(current_mask());
                 func_avx512_scatter_pi = llvm::Intrinsic::getDeclaration(
                     module(), llvm::Intrinsic::x86_avx512_scattersiv8_si);
@@ -5256,6 +5427,25 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 return;
             }
+            case 4: {
+                llvm::Value* linear_indices = wide_index;
+
+                llvm::Function* func_avx512_scatter_dpq
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx512_scatter_dpq_512);
+                OSL_ASSERT(func_avx512_scatter_dpq);
+
+                llvm::Type* wide_address_int_type
+                    = llvm_vector_type(type_addrint(), 4);
+                llvm::Value* address_int_val
+                    = builder().CreatePtrToInt(wide_val, wide_address_int_type);
+
+                llvm::Value* args[]
+                    = { void_ptr(src_ptr), mask_as_int8(current_mask()),
+                        linear_indices, address_int_val, constant(4) };
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
+                return;
+            }
             default:
                 OSL_ASSERT(0 && "incomplete vector width for AVX512 scatter");
             }
@@ -5291,6 +5481,19 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 llvm::Value* args[] = { void_ptr(src_ptr),
                                         mask_as_int8(current_mask()),
                                         op_linearize_8x_indices(wide_index),
+                                        wide_val, constant(4) };
+                builder().CreateCall(func_avx512_scatter_ps, toArrayRef(args));
+                return;
+            }
+            case 4: {
+                llvm::Function* func_avx512_scatter_ps
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx512_scattersiv8_sf);
+                OSL_ASSERT(func_avx512_scatter_ps);
+
+                llvm::Value* args[] = { void_ptr(src_ptr),
+                                        mask_as_int8(current_mask()),
+                                        op_linearize_4x_indices(wide_index),
                                         wide_val, constant(4) };
                 builder().CreateCall(func_avx512_scatter_ps, toArrayRef(args));
                 return;
@@ -5334,6 +5537,19 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 llvm::Value* args[] = { void_ptr(src_ptr),
                                         mask_as_int8(current_mask()),
                                         op_linearize_8x_indices(wide_index),
+                                        wide_val, constant(4) };
+                builder().CreateCall(func_avx512_scatter_pi, toArrayRef(args));
+                return;
+            }
+            case 4: {
+                llvm::Function* func_avx512_scatter_pi
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx512_scattersiv8_si);
+                OSL_ASSERT(func_avx512_scatter_pi);
+
+                llvm::Value* args[] = { void_ptr(src_ptr),
+                                        mask_as_int8(current_mask()),
+                                        op_linearize_4x_indices(wide_index),
                                         wide_val, constant(4) };
                 builder().CreateCall(func_avx512_scatter_pi, toArrayRef(args));
                 return;
@@ -5404,6 +5620,26 @@ LLVM_Util::op_scatter(llvm::Value* wide_val, llvm::Type* src_type,
                 llvm::Value* args[]
                     = { void_ptr(src_ptr), mask_as_int8(current_mask()),
                         linear_indices, address_int_val, constant(8) };
+                builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
+                return;
+            }
+            case 4: {
+                llvm::Value* linear_indices = op_linearize_4x_indices(
+                    wide_index);
+
+                llvm::Function* func_avx512_scatter_dpq
+                    = llvm::Intrinsic::getDeclaration(
+                        module(), llvm::Intrinsic::x86_avx512_scatter_dpq_512);
+                OSL_ASSERT(func_avx512_scatter_dpq);
+
+                llvm::Type* wide_address_int_type
+                    = llvm_vector_type(type_addrint(), 4);
+                llvm::Value* address_int_val
+                    = builder().CreatePtrToInt(wide_val, wide_address_int_type);
+
+                llvm::Value* args[]
+                    = { void_ptr(src_ptr), mask_as_int8(current_mask()),
+                        linear_indices, address_int_val, constant(4) };
                 builder().CreateCall(func_avx512_scatter_dpq, toArrayRef(args));
                 return;
             }

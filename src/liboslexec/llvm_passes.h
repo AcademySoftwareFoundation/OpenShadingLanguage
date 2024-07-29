@@ -435,6 +435,8 @@ public:
 // including this file will need its own static members defined. LLVM will
 // assign IDs when they get registered, so this initialization value is not
 // important.
+template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<4>::ID = 0;
+
 template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>::ID = 0;
 
 template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>::ID = 0;

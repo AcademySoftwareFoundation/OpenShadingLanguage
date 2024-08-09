@@ -14,7 +14,7 @@
 #include "render_params.h"
 #include "simpleraytracer.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_ENTER;
 
 
 class OptixRaytracer final : public SimpleRaytracer {
@@ -35,9 +35,16 @@ public:
     std::string load_ptx_file(string_view filename);
     bool synch_attributes();
 
-    bool init_optix_context(int xres, int yres);
     bool make_optix_materials();
-    bool finalize_scene();
+    bool init_optix_context(int xres, int yres);
+    void create_modules();
+    void create_programs();
+    void create_shaders();
+    void create_pipeline();
+    void create_sbt();
+    void cleanup_programs();
+    void build_accel();
+    void upload_mesh_data();
     void prepare_render() override;
     void warmup() override;
     void render(int xres, int yres) override;
@@ -68,23 +75,54 @@ public:
                                  size_t size) override;
 
 private:
-    optix::Context m_optix_ctx = nullptr;
+    // OptiX state
+    optix::Context m_optix_ctx                             = nullptr;
+    CUstream m_cuda_stream                                 = 0;
+    OptixTraversableHandle m_travHandle                    = {};
+    OptixShaderBindingTable m_optix_sbt                    = {};
+    OptixShaderBindingTable m_setglobals_optix_sbt         = {};
+    OptixPipeline m_optix_pipeline                         = {};
+    OptixModuleCompileOptions m_module_compile_options     = {};
+    OptixPipelineCompileOptions m_pipeline_compile_options = {};
+    OptixPipelineLinkOptions m_pipeline_link_options       = {};
+    OptixProgramGroupOptions m_program_options             = {};
+    OptixModule m_program_module                           = {};
+    OptixModule m_wrapper_module                           = {};
+    OptixModule m_rend_lib_module                          = {};
+    OptixModule m_shadeops_module                          = {};
+    OptixProgramGroup m_raygen_group                       = {};
+    OptixProgramGroup m_miss_group                         = {};
+    OptixProgramGroup m_rend_lib_group                     = {};
+    OptixProgramGroup m_shadeops_group                     = {};
+    OptixProgramGroup m_setglobals_raygen_group            = {};
+    OptixProgramGroup m_setglobals_miss_group              = {};
+    OptixProgramGroup m_closesthit_group                   = {};
+    std::vector<OptixModule> m_shader_modules;
+    std::vector<OptixProgramGroup> m_shader_groups;
+    std::vector<OptixProgramGroup> m_final_groups;
 
-    CUstream m_cuda_stream;
-    OptixTraversableHandle m_travHandle;
-    OptixShaderBindingTable m_optix_sbt            = {};
-    OptixShaderBindingTable m_setglobals_optix_sbt = {};
-    OptixPipeline m_optix_pipeline                 = {};
-    CUdeviceptr d_output_buffer;
-    CUdeviceptr d_launch_params      = 0;
-    CUdeviceptr d_quads_list         = 0;
-    CUdeviceptr d_spheres_list       = 0;
-    CUdeviceptr d_interactive_params = 0;
-    int m_xres, m_yres;
-    CUdeviceptr d_osl_printf_buffer;
-    CUdeviceptr d_color_system;
-    uint64_t test_str_1;
-    uint64_t test_str_2;
+    // Device pointers
+    CUdeviceptr d_output_buffer       = 0;
+    CUdeviceptr d_launch_params       = 0;
+    CUdeviceptr d_accel_output_buffer = 0;
+    CUdeviceptr d_vertices            = 0;
+    CUdeviceptr d_normals             = 0;
+    CUdeviceptr d_uvs                 = 0;
+    CUdeviceptr d_vert_indices        = 0;
+    CUdeviceptr d_normal_indices      = 0;
+    CUdeviceptr d_uv_indices          = 0;
+    CUdeviceptr d_shader_ids          = 0;
+    CUdeviceptr d_shader_is_light     = 0;
+    CUdeviceptr d_mesh_ids            = 0;
+    CUdeviceptr d_surfacearea         = 0;
+    CUdeviceptr d_interactive_params  = 0;
+    CUdeviceptr d_osl_printf_buffer   = 0;
+    CUdeviceptr d_color_system        = 0;
+
+    uint64_t test_str_1                        = 0;
+    uint64_t test_str_2                        = 0;
+    int m_xres                                 = 0;
+    int m_yres                                 = 0;
     const unsigned long OSL_PRINTF_BUFFER_SIZE = 8 * 1024 * 1024;
 
     bool load_optix_module(
@@ -98,6 +136,8 @@ private:
 
     std::string m_materials_ptx;
     std::unordered_map<ustringhash, optix::TextureSampler> m_samplers;
+
+    std::vector<CUdeviceptr> device_ptrs;
 };
 
 

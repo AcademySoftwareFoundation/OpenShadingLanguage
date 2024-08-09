@@ -92,6 +92,8 @@ public:
 
     OIIO::ErrorHandler& errhandler() const { return *m_errhandler; }
 
+    const std::vector<bool>& shader_is_light() { return m_shader_is_light; }
+
     Camera camera;
     Scene scene;
     Background background;

@@ -38,41 +38,26 @@ struct RenderParams {
     // for used-data tests
     uint64_t test_str_1;
     uint64_t test_str_2;
-};
 
-
-
-struct PrimitiveParams {
-    float a;  // area
-    unsigned int shaderID;
-};
-
-
-
-struct SphereParams : PrimitiveParams {
-    float3 c;  // center
-    float r2;  // radius ^2
-};
-
-
-
-struct QuadParams : PrimitiveParams {
-    float3 p;
-    float3 ex;
-    float3 ey;
-    float3 n;
-    float eu;
-    float ev;
+    // geometry data
+    CUdeviceptr triangles;
+    CUdeviceptr verts;
+    CUdeviceptr uvs;
+    CUdeviceptr uv_indices;
+    CUdeviceptr normals;
+    CUdeviceptr normal_indices;
+    CUdeviceptr shader_ids;
+    CUdeviceptr shader_is_light;
+    CUdeviceptr mesh_ids;
+    CUdeviceptr surfacearea;
 };
 
 
 
 struct GenericData {
-    // For geometry hit callables, data is the pointer to the array of
-    // primitive params for that primitive type, and sbtGeoIndex is the index
-    // for this primitive.
+    // NB: This used to point to the geometry data for spheres and quads,
+    //     but it is currently unused.
     void* data;
-    unsigned int sbtGeoIndex;
 };
 
 
@@ -82,7 +67,6 @@ struct GenericRecord {
         OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     // What follows should duplicate GenericData
     void* data;
-    unsigned int sbtGeoIndex;
 };
 
 #endif

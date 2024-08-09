@@ -32,32 +32,83 @@ __anyhit__any_hit_shadow()
 static __device__ void
 globals_from_hit(ShaderGlobals& sg)
 {
-    const GenericRecord* record = reinterpret_cast<GenericRecord*>(
-        optixGetSbtDataPointer());
-
-    ShaderGlobals local_sg;
-    // hit-kind 0: quad hit
-    //          1: sphere hit
-    optixDirectCall<void, unsigned int, float, float3, float3, ShaderGlobals*>(
-        optixGetHitKind(), optixGetPrimitiveIndex(), optixGetRayTmax(),
-        optixGetWorldRayOrigin(), optixGetWorldRayDirection(), &local_sg);
     // Setup the ShaderGlobals
+    const int primID           = optixGetPrimitiveIndex();
     const float3 ray_direction = optixGetWorldRayDirection();
     const float3 ray_origin    = optixGetWorldRayOrigin();
-    const float t_hit          = optixGetRayTmin();
+    const float t_hit          = optixGetRayTmax();
+    const int shader_id        = reinterpret_cast<int*>(
+        render_params.shader_ids)[primID];
+
+    const OSL::Vec3* verts = reinterpret_cast<const OSL::Vec3*>(
+        render_params.verts);
+    const OSL::Vec3* normals = reinterpret_cast<const OSL::Vec3*>(
+        render_params.normals);
+    const OSL::Vec2* uvs = reinterpret_cast<const OSL::Vec2*>(
+        render_params.uvs);
+    const int3* triangles = reinterpret_cast<const int3*>(
+        render_params.triangles);
+    const int3* n_triangles = reinterpret_cast<const int3*>(
+        render_params.normal_indices);
+    const int3* uv_triangles = reinterpret_cast<const int3*>(
+        render_params.uv_indices);
+    const int* mesh_ids = reinterpret_cast<const int*>(
+        render_params.mesh_ids);
+    const float* surfacearea = reinterpret_cast<const float*>(
+        render_params.surfacearea);
+
+    // Calculate UV and its derivatives
+    const float2 barycentrics = optixGetTriangleBarycentrics();
+    const float b1            = barycentrics.x;
+    const float b2            = barycentrics.y;
+    const float b0            = 1.0f - (b1 + b2);
+
+    const OSL::Vec2 ta = uvs[uv_triangles[primID].x];
+    const OSL::Vec2 tb = uvs[uv_triangles[primID].y];
+    const OSL::Vec2 tc = uvs[uv_triangles[primID].z];
+    const OSL::Vec2 uv = b0 * ta + b1 * tb + b2 * tc;
+    const float u      = uv.x;
+    const float v      = uv.y;
+
+    const OSL::Vec3 va = verts[triangles[primID].x];
+    const OSL::Vec3 vb = verts[triangles[primID].y];
+    const OSL::Vec3 vc = verts[triangles[primID].z];
+
+    const OSL::Vec2 dt02 = ta - tc, dt12 = tb - tc;
+    const OSL::Vec3 dp02 = va - vc, dp12 = vb - vc;
+
+    OSL::Vec3 dPdu, dPdv;
+    const float det = dt02.x * dt12.y - dt02.y * dt12.x;
+    if (det != 0.0f) {
+        float invdet = 1.0f / det;
+        dPdu         = (dt12.y * dp02 - dt02.y * dp12) * invdet;
+        dPdv         = (-dt12.x * dp02 + dt02.x * dp12) * invdet;
+    }
+
+    // Calculate the normals
+    const OSL::Vec3 Ng = (va - vb).cross(va - vc).normalize();
+    OSL::Vec3 N;
+    if (n_triangles[primID].x < 0.0f) {
+        N = Ng;
+    } else {
+        const OSL::Vec3 na = normals[n_triangles[primID].x];
+        const OSL::Vec3 nb = normals[n_triangles[primID].y];
+        const OSL::Vec3 nc = normals[n_triangles[primID].z];
+        N                  = ((1 - u - v) * na + u * nb + v * nc).normalize();
+    }
 
     sg.I  = ray_direction;
-    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.N));
-    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(local_sg.Ng));
+    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(*(float3*)(&N)));
+    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(*(float3*)(&Ng)));
     sg.P  = ray_origin + t_hit * ray_direction;
-    sg.dPdu        = local_sg.dPdu;
-    sg.dPdv        = local_sg.dPdv;
-    sg.u           = local_sg.u;
-    sg.v           = local_sg.v;
+    sg.dPdu        = *(float3*)(&dPdu);
+    sg.dPdv        = *(float3*)(&dPdv);
+    sg.u           = u;
+    sg.v           = v;
     sg.Ci          = NULL;
-    sg.surfacearea = local_sg.surfacearea;
+    sg.surfacearea = surfacearea[mesh_ids[primID]];
     sg.backfacing  = dot(sg.N, sg.I) > 0.0f;
-    sg.shaderID    = local_sg.shaderID;
+    sg.shaderID    = shader_id;
 
     if (sg.backfacing) {
         sg.N  = -sg.N;
@@ -183,7 +234,7 @@ __closesthit__closest_hit_osl()
     // Run the OSL callable
     void* interactive_ptr = reinterpret_cast<void**>(
         render_params.interactive_params)[sg.shaderID];
-    const unsigned int shaderIdx = 2u + sg.shaderID + 0u;
+    const unsigned int shaderIdx = sg.shaderID + 0u;
     optixDirectCall<void, ShaderGlobals*, void*, void*, void*, int, void*>(
         shaderIdx, &sg /*shaderglobals_ptr*/, nullptr /*groupdata_ptr*/,
         nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,

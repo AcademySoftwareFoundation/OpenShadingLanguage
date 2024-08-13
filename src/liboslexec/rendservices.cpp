@@ -19,6 +19,14 @@ using namespace OSL::pvt;
 OSL_NAMESPACE_ENTER
 
 
+#ifdef OIIO_TEXTURESYSTEM_CREATE_SHARED
+namespace {
+std::mutex shared_texturesys_mutex;
+std::shared_ptr<TextureSystem> shared_texturesys;
+}  // namespace
+#endif
+
+
 
 RendererServices::RendererServices(TextureSystem* texsys) : m_texturesys(texsys)
 {
@@ -31,7 +39,17 @@ RendererServices::RendererServices(TextureSystem* texsys) : m_texturesys(texsys)
         OSL_ASSERT(
             0 && "RendererServices was not passed a working TextureSystem*");
 #else
+#    ifdef OIIO_TEXTURESYSTEM_CREATE_SHARED
+        {
+            std::lock_guard<std::mutex> lock(shared_texturesys_mutex);
+            if (!shared_texturesys) {
+                shared_texturesys = TextureSystem::create(true /* shared */);
+            }
+            m_texturesys = shared_texturesys.get();
+        }
+#    else
         m_texturesys = TextureSystem::create(true /* shared */);
+#    endif
         // Make some good guesses about default options
         m_texturesys->attribute("automip", 1);
         m_texturesys->attribute("autotile", 64);

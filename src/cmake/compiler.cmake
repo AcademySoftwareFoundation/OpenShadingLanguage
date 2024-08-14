@@ -25,13 +25,22 @@ message (STATUS  "CMAKE_CXX_COMPILER_ID  = ${CMAKE_CXX_COMPILER_ID}")
 ###########################################################################
 # C++ language standard
 #
+set (CMAKE_CXX_MINIMUM 17)
 set (CMAKE_CXX_STANDARD 17 CACHE STRING
-     "C++ standard to build with (14, 17, 20, etc.)")
-set (DOWNSTREAM_CXX_STANDARD 14 CACHE STRING
+     "C++ standard to build with (17, 20, etc.) Minimum is ${CMAKE_CXX_MINIMUM}.")
+set (DOWNSTREAM_CXX_STANDARD 17 CACHE STRING
      "C++ minimum standard to impose on downstream clients")
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
 message (STATUS "Building with C++${CMAKE_CXX_STANDARD}, downstream minimum C++${DOWNSTREAM_CXX_STANDARD}")
+if (CMAKE_CXX_STANDARD VERSION_LESS CMAKE_CXX_MINIMUM)
+    message (FATAL_ERROR "C++${CMAKE_CXX_STANDARD} is not supported, minimum is C++${CMAKE_CXX_MINIMUM}")
+endif ()
+# Remember the -std flags we need will be used later for custom Cuda builds
+set (CSTD_FLAGS "")
+if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_INTEL)
+    set (CSTD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
+endif ()
 
 
 ###########################################################################

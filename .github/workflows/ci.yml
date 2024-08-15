@@ -147,6 +147,7 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
+                            OPENCOLORIO_VERSION=v2.3.2 OPENCOLORIO_CXX=g++
           - desc: gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 oiio-rel avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest

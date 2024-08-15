@@ -117,14 +117,6 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
             has_derivs ? (float*)&dresultds_simd : NULL,
             has_derivs ? (float*)&dresultdt_simd : NULL);
 
-        OIIO::simd::vfloat4 dresultdx_simd;
-        OIIO::simd::vfloat4 dresultdy_simd;
-        if (has_derivs) {
-            // Correct our st texture space gradients into xy-space gradients
-            dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
-            dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
-        }
-
         // NOTE: regardless of the value of "retVal" we will always copy over the texture system's results.
         // We are relying on the texture system properly filling in missing or fill colors
 
@@ -142,10 +134,10 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
                 MaskedDx<Color3> resultDx(resultRef);
                 MaskedDy<Color3> resultDy(resultRef);
 
-                resultDx[lane] = Color3(dresultdx_simd[0], dresultdx_simd[1],
-                                        dresultdx_simd[2]);
-                resultDy[lane] = Color3(dresultdy_simd[0], dresultdy_simd[1],
-                                        dresultdy_simd[2]);
+                resultDx[lane] = Color3(dresultds_simd[0], dresultds_simd[1],
+                                        dresultds_simd[2]);
+                resultDy[lane] = Color3(dresultdt_simd[0], dresultdt_simd[1],
+                                        dresultdt_simd[2]);
             }
         } else if (Masked<float>::is(resultRef)) {
             alphaChannelIndex = 1;
@@ -154,8 +146,8 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
             MaskedDy<float> resultDy(resultRef);
             result[lane] = result_simd[0];
             if (resultRef.has_derivs()) {
-                resultDx[lane] = dresultdx_simd[0];
-                resultDy[lane] = dresultdy_simd[0];
+                resultDx[lane] = dresultds_simd[0];
+                resultDy[lane] = dresultdt_simd[0];
             }
         }
 
@@ -165,8 +157,8 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
             if (alphaRef.has_derivs()) {
                 MaskedDx<float> alphaDx(alphaRef);
                 MaskedDy<float> alphaDy(alphaRef);
-                alphaDx[lane] = dresultdx_simd[alphaChannelIndex];
-                alphaDy[lane] = dresultdy_simd[alphaChannelIndex];
+                alphaDx[lane] = dresultds_simd[alphaChannelIndex];
+                alphaDy[lane] = dresultdt_simd[alphaChannelIndex];
             }
         }
         //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
@@ -311,16 +303,6 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
             has_derivs ? (float*)&dresultdt_simd : nullptr,
             has_derivs ? (float*)&dresultdr_simd : nullptr);
 
-        OIIO::simd::vfloat4 dresultdx_simd;
-        OIIO::simd::vfloat4 dresultdy_simd;
-        if (has_derivs) {
-            // Correct our str texture space gradients into xyz-space gradients
-            dresultdx_simd = dresultds_simd * dPdx.x + dresultdt_simd * dPdx.y
-                             + dresultdr_simd * dPdx.z;
-            dresultdy_simd = dresultds_simd * dPdy.x + dresultdt_simd * dPdy.y
-                             + dresultdr_simd * dPdy.z;
-        }
-
         // NOTE: regardless of the value of "retVal" we will always copy over the texture system's results.
         // We are relying on the texture system properly filling in missing or fill colors
 
@@ -337,10 +319,10 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
             if (resultRef.has_derivs()) {
                 MaskedDx<Color3> resultDx(resultRef);
                 MaskedDy<Color3> resultDy(resultRef);
-                resultDx[lane] = Color3(dresultdx_simd[0], dresultdx_simd[1],
-                                        dresultdx_simd[2]);
-                resultDy[lane] = Color3(dresultdy_simd[0], dresultdy_simd[1],
-                                        dresultdy_simd[2]);
+                resultDx[lane] = Color3(dresultds_simd[0], dresultds_simd[1],
+                                        dresultds_simd[2]);
+                resultDy[lane] = Color3(dresultdt_simd[0], dresultdt_simd[1],
+                                        dresultdt_simd[2]);
             }
         } else if (Masked<float>::is(resultRef)) {
             alphaChannelIndex = 1;
@@ -349,8 +331,8 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
             if (resultRef.has_derivs()) {
                 MaskedDx<float> resultDx(resultRef);
                 MaskedDy<float> resultDy(resultRef);
-                resultDx[lane] = dresultdx_simd[0];
-                resultDy[lane] = dresultdy_simd[0];
+                resultDx[lane] = dresultds_simd[0];
+                resultDy[lane] = dresultdt_simd[0];
             }
         }
 
@@ -361,8 +343,8 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
             if (alphaRef.has_derivs()) {
                 MaskedDx<float> alphaDx(alphaRef);
                 MaskedDy<float> alphaDy(alphaRef);
-                alphaDx[lane] = dresultdx_simd[alphaChannelIndex];
-                alphaDy[lane] = dresultdy_simd[alphaChannelIndex];
+                alphaDx[lane] = dresultds_simd[alphaChannelIndex];
+                alphaDy[lane] = dresultdt_simd[alphaChannelIndex];
             }
         }
 
@@ -561,6 +543,164 @@ dispatch_environment(BatchedRendererServices* bsr, ustring filename,
 }  // namespace
 
 
+static OSL_NOINLINE void
+transformWideTextureGradients(BatchedTextureOutputs& outputs,
+                              Wide<const float> dsdx, Wide<const float> dtdx,
+                              Wide<const float> dsdy, Wide<const float> dtdy)
+{
+    MaskedData resultRef = outputs.result();
+    if (resultRef.valid() && resultRef.has_derivs()) {
+        if (Masked<float>::is(resultRef)) {
+            OSL_FORCEINLINE_BLOCK
+            {
+                MaskedDx<float> drds(resultRef);
+                MaskedDy<float> drdt(resultRef);
+
+                OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+                for (int i = 0; i < __OSL_WIDTH; ++i) {
+                    float drdsVal = drds[i];
+                    float drdtVal = drdt[i];
+                    float drdx    = drdsVal * dsdx[i] + drdtVal * dtdx[i];
+                    float drdy    = drdsVal * dsdy[i] + drdtVal * dtdy[i];
+                    drds[i]       = drdx;
+                    drdt[i]       = drdy;
+                }
+            }
+        } else {
+            // keep assert out of inlined code
+            OSL_DASSERT(Masked<Color3>::is(resultRef));
+            OSL_FORCEINLINE_BLOCK
+            {
+                //printf("doint color\n");
+                MaskedDx<Color3> widedrds(resultRef);
+                MaskedDy<Color3> widedrdt(resultRef);
+                OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+                for (int i = 0; i < __OSL_WIDTH; ++i) {
+                    Color3 drdsColor = widedrds[i];
+                    Color3 drdtColor = widedrdt[i];
+
+                    widedrds[i] = drdsColor * dsdx[i] + drdtColor * dtdx[i];
+                    widedrdt[i] = drdsColor * dsdy[i] + drdtColor * dtdy[i];
+                }
+            }
+        }
+    }
+
+    MaskedData alphaRef = outputs.alpha();
+    OSL_FORCEINLINE_BLOCK
+    if (alphaRef.valid() && alphaRef.has_derivs()) {
+        MaskedDx<float> dads(alphaRef);
+        MaskedDy<float> dadt(alphaRef);
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        for (int i = 0; i < __OSL_WIDTH; ++i) {
+            float dadsVal = dads[i];
+            float dadtVal = dadt[i];
+            float dadx    = dadsVal * dsdx[i] + dadtVal * dtdx[i];
+            float dady    = dadsVal * dsdy[i] + dadtVal * dtdy[i];
+            dads[i]       = dadx;
+            dadt[i]       = dady;
+        }
+    }
+}
+
+static OSL_NOINLINE void
+transformWideTextureGradientsTexture3d(BatchedTextureOutputs& outputs,
+                                       Wide<const Vec3> Pdx,
+                                       Wide<const Vec3> Pdy,
+                                       Wide<const Vec3> Pdz)
+{
+    MaskedData resultRef = outputs.result();
+    if (resultRef.valid() && resultRef.has_derivs()) {
+        if (Masked<float>::is(resultRef)) {
+            OSL_FORCEINLINE_BLOCK
+            {
+                MaskedDx<float> drds(resultRef);
+                MaskedDy<float> drdt(resultRef);
+                //MaskedDz<float> drdr(resultRef); // our duals don't actually have space for this
+
+                OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+                for (int i = 0; i < __OSL_WIDTH; ++i) {
+                    float dres_xVal = drds[i];
+                    float dres_yVal = drdt[i];
+                    //float dres_zVal = drdr[i];
+
+                    Vec3 v3pdx = Pdx[i];
+                    Vec3 v3pdy = Pdy[i];
+                    //Vec3 v3pdz = Pdz[i];
+
+                    float dres_x = dres_xVal * v3pdx.x
+                                   + dres_yVal
+                                         * v3pdx.y;  // + dres_zVal * v3pdx.z;
+                    float dres_y = dres_xVal * v3pdy.x
+                                   + dres_yVal
+                                         * v3pdy.y;  // + dres_zVal * v3pdy.z;
+                    //float dres_z = dres_xVal * v3pdz.x + dres_yVal * v3pdz.y + dres_zVal * v3pdz.z;
+
+                    drds[i] = dres_x;
+                    drdt[i] = dres_y;
+                    //drdr[i] = dres_z;
+                }
+            }
+        } else {
+            // keep assert out of inlined code
+            OSL_DASSERT(Masked<Color3>::is(resultRef));
+            OSL_FORCEINLINE_BLOCK
+            {
+                MaskedDx<Color3> widedrp1(resultRef);
+                MaskedDy<Color3> widedrp2(resultRef);
+                //MaskedDz<Color3> widedrp3(resultRef);
+
+                OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+                for (int i = 0; i < __OSL_WIDTH; ++i) {
+                    Color3 drdp1Color = widedrp1[i];
+                    Color3 drdp2Color = widedrp2[i];
+                    //Color3 drdp3Color = widedrp3[i];
+
+                    Vec3 v3pdx = Pdx[i];
+                    Vec3 v3pdy = Pdy[i];
+                    //Vec3 v3pdz = Pdz[i];
+
+                    widedrp1[i] = drdp1Color * v3pdx.x
+                                  + drdp2Color
+                                        * v3pdx.y;  // + drdp3Color * v3pdx.z;
+                    widedrp2[i] = drdp1Color * v3pdy.x
+                                  + drdp2Color
+                                        * v3pdy.y;  // + drdp3Color * v3pdy.z;
+                    //widedrp3[i] = drdp1Color * v3pdz.x +  drdp2Color * v3pdz.y + drdp3Color * v3pdz.z;
+                }
+            }
+        }
+    }
+
+    MaskedData alphaRef = outputs.alpha();
+    OSL_FORCEINLINE_BLOCK
+    if (alphaRef.valid() && alphaRef.has_derivs()) {
+        MaskedDx<float> dap1(alphaRef);
+        MaskedDy<float> dap2(alphaRef);
+        // MaskedDz<float> dap3(alphaRef);
+
+        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        for (int i = 0; i < __OSL_WIDTH; ++i) {
+            float dadp1Val = dap1[i];
+            float dadp2Val = dap2[i];
+            //float dadp3Val = dap3[i];
+
+            Vec3 v3pdx = Pdx[i];
+            Vec3 v3pdy = Pdy[i];
+            //Vec3 v3pdz = Pdz[i];
+
+            float dadpx = dadp1Val * v3pdx.x
+                          + dadp2Val * v3pdx.y;  // + dadp3Val * v3pdx.z;
+            float dadpy = dadp1Val * v3pdy.x
+                          + dadp2Val * v3pdy.y;  // + dadp3Val * v3pdy.z;
+            //float dadpz = dadp1Val * v3pdz.x + dadp2Val * v3pdz.y + dadp3Val * v3pdz.z;
+
+            dap1[i] = dadpx;
+            dap2[i] = dadpy;
+            //dap3[i] = dadpz;
+        }
+    }
+}
 
 OSL_BATCHOP int
 __OSL_MASKED_OP(texture)(void* bsg_, void* name, void* handle, const void* opt_,
@@ -589,6 +729,14 @@ __OSL_MASKED_OP(texture)(void* bsg_, void* name, void* handle, const void* opt_,
                            Wide<const float>(dsdx), Wide<const float>(dtdx),
                            Wide<const float>(dsdy), Wide<const float>(dtdy),
                            outputs);
+
+    // Correct our st texture space gradients into xy-space gradients
+    if (resultHasDerivs || alphaHasDerivs) {
+        transformWideTextureGradients(outputs, Wide<const float>(dsdx),
+                                      Wide<const float>(dtdx),
+                                      Wide<const float>(dsdy),
+                                      Wide<const float>(dtdy));
+    }
 
     OSL_FORCEINLINE_BLOCK
     if (outputs.errormessage().valid()) {
@@ -636,6 +784,13 @@ __OSL_MASKED_OP(texture3d)(void* bsg_, void* name, void* handle,
                              bsg, Wide<const Vec3>(wP), Wide<const Vec3>(wPdx),
                              Wide<const Vec3>(wPdy), Wide<const Vec3>(wPdz),
                              outputs);
+
+    // Correct our P (Vec3) space gradients into xyz-space gradients
+    if (resultHasDerivs || alphaHasDerivs) {
+        transformWideTextureGradientsTexture3d(outputs, Wide<const Vec3>(wPdx),
+                                               Wide<const Vec3>(wPdy),
+                                               Wide<const Vec3>(wPdz));
+    }
 
     OSL_FORCEINLINE_BLOCK
     if (outputs.errormessage().valid()) {

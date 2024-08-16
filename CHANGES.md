@@ -6,42 +6,158 @@ Release 1.14 -- in progress (compared to 1.13)
 ### New minimum dependencies and compatibility changes:
 
 * Note: it is likely that by the time it is released, OSL 1.14 will require
-  Imath >= 3.1.
+  Imath >= 3.1, Python >= 3.7, C++ >= 17, gcc >= 9.3.
 
 
-### OSL Language and oslc compiler (for shader writers):
+### OSL Language, standard library, and oslc compiler (for shader writers):
+  - Fix the subsurface_bssrdf parameters to conform to MaterialX. [#1823](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1823) (by Christopher Kulla) (1.14.1.0)
 
 
 ### ⛰️  API changes and new ShadingSystem features (for renderer writers):
+* The big switch to `ustringhash`: To better accommodate GPU execution, and to
+  make the code and techniques less divergent between CPU and GPU code paths,
+  we have changed the runtime representation of strings from `ustring` to
+  `ustringhash` -- which is still a 64 bit token, but rather than the address
+  of the unique characters, which may change from run to run and harm the
+  OptiX/CUDA PTX cache performance, it is the deterministic hash of the
+  characters. Thus, not just the runtime, but all of the interfaces of
+  RendererServices and other APIs that the renderers use to set up and
+  communicate with the ShadingSystem, now have been changed to expect
+  ustringhash instead of ustring.
+  [#1732](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1732) (by Steena Monteiro) (1.14.0.0)
+* Add API for building interpolated getter free functions.
+  [#1765](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1765) (by Thibault Vergne) (1.14.0.0)
+* Switch `shade_image()` to use current OIIO::paropt [#1843](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1843) (1.14.1.1)
 
 
 ### 🚀  SIMD batched shading mode
+  - *batched*: Codegen bug for compref with varying index [#1776](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1776) (by Alex Wells) (1.14.1.0)
 
 
 ### 🚀  OptiX GPU rendering
+  - Fix NVPTX TargetMachine leak, etc. [#1763](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1763) (by Tim Grant) (1.14.0.0)
+  - Fix GPU interpolated param initialization [#1791](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1791) (by Chris Hellmuth) (1.14.1.0)
+  - Add `lazytrace` ShadingSystem option to avoid combinatoric optixTrace
+    inlining: when enabled, run layers with trace ops unconditionally at the
+    start of shader evaluation. This costs some potential performance in cases
+    where the trace layer would never be evaluated, but removes all the
+    compilation penalties that the inlining was presenting.
+    [#1815](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1815) (by Chris Hellmuth) (1.14.1.0)
 
 
 ### 🐛/🔧  Internals: fixes, improvements, and developer concerns
+  - Mute partio error prints [#1774](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1774) (by olegul) (1.14.1.0)
+  - calculatenormal needs to use the fliphandedness global [#1783](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1783) (by sfriedmapixar) (1.14.1.0)
+  - Print closure missing error message at compile time instead of run time.  [#1781](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1781) (by sfriedmapixar) (1.14.1.0)
+  - Make isconnected() work with downstream renderer "connections." [#1782](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1782) (by sfriedmapixar) (1.14.1.0)
+  - *int*: Change OSL_CONSTEXPR14 to constexpr [#1805](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1805) (1.14.1.0)
+  - Remove unnecessary ustring lookup [#1824](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1824) (by Chris Hellmuth) (1.14.1.0)
+  - Make backfacing shadeop indicate backfacing shader-global is needed [#1827](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1827) (by sfriedmapixar) (1.14.1.0)
+  - Reparameter string needed to be ustringhash [#1841](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1841) (by Chris Hellmuth) (1.14.1.0)
+  - Some modernization of osl.imageio [#1840](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1840) (1.14.1.1)
 
 
 ### 🏗  Build/test/CI and platform ports
 
 * CMake build system and scripts:
+  - *build*: Add options to use static Cuda libraries (controlled by
+    CMake variable `CUDA_PREFER_STATIC_LIBS`) [#1772](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1772) (1.14.1.0)
+  - *build*: Remove a lot of old SPI build cruft [#1778](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1778) (1.14.1.0)
+  - Simplify oslquery library include and link needs [#1787](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1787) (1.14.1.0)
+  - Propagate cpp version: when building against an OIIO that needs C++17,
+    OSL will need to be build with C++17, too. [#1797](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1797) (1.14.1.0)
+  - Eliminate boost as a dependency: [#1802](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1802) (by Christopher Kulla) (1.14.1.0) [#1808](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1808) (by Christopher Kulla) (1.14.1.0)
+  - Default to C++17 mode (but for now, C++14 is still supported by
+    setting `CMAKE_CXX_STANDARD`). [#1818](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1818) (1.14.1.0)
 * Dependency version support:
+  - Support for LLVM 18. [#1773](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1773) (by مهدي شينون (Mehdi Chinoune)) (1.14.1.0)
+    [#1803](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1803) (1.14.1.0)
+  - LLVM 18 compat issue - include libclangAPINotes [#1812](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1812) (1.14.1.1)
+  - Various fixes to deal with deprecations in the development branch and
+    upcoming 3.0 release of OpenImageIO:
+    [#1788](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1788) (1.14.1.0), [#1806](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1806) (1.14.1.0), [#1834](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1834) (1.14.1.0), [#1838](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1838) (1.14.1.0), [#1842](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1842) (1.14.1.1), [#1844](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1844) (1.14.1.1)
+  - *Use new OIIO ustringhash decode methods when available [#1792](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1792) (by Chris Hellmuth) (1.14.1.0)
 * Testing and Continuous integration (CI) systems:
+  - *(testrender)*: Fix testrender GPU regression with bad destruction order [#1814](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1814) (1.14.1.0)
+  - *(testrender)*: Implement new Oren-Nayar model from OpenPBR [#1817](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1817) (by Christopher Kulla) (1.14.1.0)
+  - *(testrender)*: Implement OpenPBR's sheen BRDF [#1819](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1819) (by Christopher Kulla) (1.14.1.0)
+  - *tests*: Update ref output for OptiX execution order variance [#1816](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1816) (1.14.1.0)
+  - *ci*: Test against LLVM 17 [#1760](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1760) (1.14.0.0)
+  - *ci*: Increase timeout for slow MacOS-13 runner [#1775](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1775) (1.14.1.0)
+  - *ci*: Fix broken Macos-13 CI [#1780](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1780) (1.14.1.0)
+  - *ci*: Allow triggering CI workflow from web [#1779](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1779) (1.14.1.0)
+  - *ci*: Lock down to OIIO 2.5 for icc tests [#1799](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1799) (1.14.1.0)
+  - *ci*: Print commit hash of locally built dependencies [#1798](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1798) (1.14.1.0)
+  - *ci*: Suppress leak sanitizer warnings about internals of robin_hash [#1807](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1807) (1.14.1.0)
+  - *ci*: Mods to CI to deal with OIIO master raising dependency mins [#1833](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1833) (1.14.1.0)
+  - *ci*: Fix GHA CI after they upgraded nodejs [#1837](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1837) (1.14.1.0)
+  - *ci*: Deal with CentOS 7 EOL and disappearance of yum mirrors [#1839](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1839) (1.14.1.0)
 * Platform support:
+  - *Mac ARM*: Test with Mac ARM runner [#1770](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1770) (1.14.1.0)
+  - *Mac ARM*: Make finding bison work better on Apple Silicon Macs + homebrew
+    [#1822](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1822) (1.14.1.1)
 
 ### 📚  Documentation
-
+  - Fix links to RTD docs from github landing page [#1768](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1768) (1.14.0.0)
+  - Clarify behavior of `round()`: OSL uses "round away from zero" policy for
+    input values exactly half way between two integers, matching C/C++
+    standard round(). But we were not clear about it in the docs.
+    [#1767](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1767) (1.14.1.0)
+  - More detail about supported platforms in INSTALL.md [#1796](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1796) (1.14.1.0)
+  - Fix outdated or wrong repo URLs [#1811](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1811) (1.14.1.0)
+  - Fixes to documentation of new oren_nayar_diffuse_bsdf parameters [#1820](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1820) (1.14.1.0)
 
 ### 🏢  Project Administration
+  - Account for duplicate emails in the .mailmap [#1759](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1759) (1.14.0.0)
+  - Releases trigger automatic announcements to the Slack channel.
+    [#1766](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1766) [#1777](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1777) (by John Mertic) (1.14.1.0)
+  - Raise our code formatting standard to clang-format 17 [#1761](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1761) (1.14.0.0)
 
 
 
 
 
-Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
--------------------------------------------------------------
+Release 1.13.10.0 -- 1 June 2024 (compared to 1.13.9.0)
+--------------------------------------------------------
+  - *testrender*: Implement new Oren-Nayar model from OpenPBR [#1817](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1817) (by Christopher Kulla)
+  - *docs*: Fix outdated or wrong repo URLs [#1811](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1811)
+
+
+Release 1.13.9.0 -- 1 May 2024 (compared to 1.13.8.0)
+--------------------------------------------------------
+  - *deps*: Support for LLVM-18 [#1773](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1773) (by مهدي شينون (Mehdi Chinoune) [#1803](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1803) (by Larry Gritz)
+  - *fix*: Make isconnected() work with downstream renderer "connections." [#1782](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1782) (by sfriedmapixar)
+  - *cleanup*: Change OSL_CONSTEXPR14 to constexpr [#1805](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1805)
+  - *internals build*: Fix ifdef typo [#1804](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1804)
+  - *build*: Propagate cpp version [#1797](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1797)
+  - *build*: Print commit hash of locally built dependencies [#1798](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1798)
+  - *ci*: Lock down to OIIO 2.5 for icc tests [#1799](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1799)
+  - *ci*: Suppress leak sanitizer warnings about internals of robin_hash [#1807](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1807)
+  - *docs*: More detail about supported platforms in INSTALL.md [#1796](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1796)
+
+
+Release 1.13.8.0 -- 1 Apr 2024 (compared to 1.13.7.0)
+--------------------------------------------------------
+* *fix(batched)*: Codegen bug for compref with varying index for batched shading [#1776](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1776) (by Alex Wells)
+* *fix*: Calculatenormal needs fliphandedness [#1783](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1783) (by sfriedmapixar)
+* *fix*: Print closure missing error message at compile time instead of run time.  [#1781](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1781) (by sfriedmapixar)
+* *int*: Change long-deprecated OIIO macro to new one [#1788](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1788)
+* *ci*: Fix broken Macos-13 CI [#1780](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1780)
+
+Release 1.13.7.0 -- 1 Mar 2024 (compared to 1.13.6.1)
+--------------------------------------------------------
+* *fix*: Mute partio error prints [#1774](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1774) (by olegul)
+* *ci*: Test with Mac ARM runner [#1770](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1770)
+* *docs*: Fix links to RTD docs from github landing page [#1768](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1768)
+* *admin*: Switch release announcement workflow to jmertic's awesome action [#1766](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1766)
+
+<br>
+
+
+Release 1.13 -- Feb 1, 2024 (compared to 1.12)
+===============================================
+- beta 1: December 20, 2023
+- release v1.13.6.1: Feb 1, 2024
 
 ### New minimum dependencies and compatibility changes:
 
@@ -130,6 +246,7 @@ Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
 * OptiX PTX pipeline overhaul [#1680](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1680) (by Tim Grant) (1.13.5.0)
 * Perf: Don't insert redundant run layer calls inside a basic block
   [#1665](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1665) [#1669](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1669) [#1672](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1672) (by Chris Hellmuth) (1.13.4.0)
+* Fix NVPTX TargetMachine leak, etc. [#1763](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1763) (by Tim Grant)
 
 ### 🐛/🔧  Internals: fixes, improvements, and developer concerns
 
@@ -225,6 +342,7 @@ Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
     * For clarity, use the term 'runner' instead of 'os' [#1743](https://github.com/AcademySoftwareFoundation/OpenShadingLangauge/pull/1743)
     * Test ABI compliance [#1748](https://github.com/AcademySoftwareFoundation/OpenShadingLangauge/pull/1748)
     * Fix tests passing when test commands fail [#1733](https://github.com/AcademySoftwareFoundation/OpenShadingLangauge/pull/1733) (by Brecht Van Lommel)
+    * *ci*: Test against LLVM 17 [#1760](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1760)
 * Platform support:
     * Include `immintrin.h` only when needed. #1605 (1.13.1.0)
     * Changed snprintf formatting to satisfy some compilers.
@@ -250,6 +368,7 @@ Release 1.13 -- beta 1: December 20, 2023 (compared to 1.12)
 
 * Alert slack "release-announcements" channel upon OSL release [#1740](https://github.com/AcademySoftwareFoundation/OpenShadingLangauge/pull/1740) [#1749](https://github.com/AcademySoftwareFoundation/OpenShadingLangauge/pull/1749)
 * Update pull request template [#1741](https://github.com/AcademySoftwareFoundation/OpenShadingLangauge/pull/1741)
+* Account for duplicate emails in the .mailmap [#1759](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1759)
 
 
 ---

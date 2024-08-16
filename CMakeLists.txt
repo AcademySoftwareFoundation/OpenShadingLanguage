@@ -4,7 +4,7 @@
 
 cmake_minimum_required (VERSION 3.15)
 
-set (OSL_VERSION "1.14.1.0")
+set (OSL_VERSION "1.14.1.1")
 set (OSL_VERSION_OVERRIDE "" CACHE STRING
      "Version override (use with caution)!")
 mark_as_advanced (OSL_VERSION_OVERRIDE)
@@ -39,6 +39,28 @@ if (CMAKE_VERSION VERSION_LESS 3.21)
     endif ()
 endif ()
 
+# Set up module path for our own cmake modules and add some esential ones
+list (APPEND CMAKE_MODULE_PATH
+      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
+      "${PROJECT_SOURCE_DIR}/src/cmake")
+
+# Utilities
+include (colors)
+include (set_utils)
+include (check_is_enabled)
+include (fancy_add_executable)
+
+# If the user wants to use Conan to build dependencies, they will have done
+# this prior to the cmake config:
+#   cd <build area>
+#   conan install <source area>
+# and that will leave a conanbuildinfo.cmake in the build area for us.
+if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include (${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    message (STATUS "Using Conan for dependencies")
+    conan_basic_setup()
+endif()
+
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
 endif ()
@@ -60,6 +82,7 @@ message (STATUS "Project build dir      = ${CMAKE_BINARY_DIR}")
 message (STATUS "Project install prefix = ${CMAKE_INSTALL_PREFIX}")
 message (STATUS "Configuration types    = ${CMAKE_CONFIGURATION_TYPES}")
 message (STATUS "Build type             = ${CMAKE_BUILD_TYPE}")
+message (STATUS "Supported release      = ${${PROJECT_NAME}_SUPPORTED_RELEASE}")
 
 # Make the build area layout look a bit more like the final dist layout
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -69,7 +92,6 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message (FATAL_ERROR "Not allowed to run in-source build!")
 endif ()
-
 
 option (CMAKE_USE_FOLDERS "Use the FOLDER target property to organize targets into folders." ON)
 mark_as_advanced (CMAKE_USE_FOLDERS)
@@ -118,28 +140,28 @@ option (OSL_USTRINGREP_IS_HASH "Always use ustringhash for strings" OFF)
 
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
 if (OSL_NO_DEFAULT_TEXTURESYSTEM)
-    add_definitions ("-DOSL_NO_DEFAULT_TEXTURESYSTEM=1")
+    add_compile_definitions (OSL_NO_DEFAULT_TEXTURESYSTEM=1)
 endif ()
 
 option (USE_FAST_MATH "Use fast math approximations (if no, then use system math library)" ON)
 if (USE_FAST_MATH)
-    add_definitions ("-DOSL_FAST_MATH=1")
+    add_compile_definitions (OSL_FAST_MATH=1)
 else ()
-    add_definitions ("-DOSL_FAST_MATH=0")
+    add_compile_definitions (OSL_FAST_MATH=0)
 endif ()
 
 option (OIIO_FMATH_SIMD_FRIENDLY "Make sure OIIO fmath functions are SIMD-friendly" OFF)
 if (OIIO_FMATH_SIMD_FRIENDLY)
-    add_definitions (-DOIIO_FMATH_SIMD_FRIENDLY=1)
+    add_compile_definitions (OIIO_FMATH_SIMD_FRIENDLY=1)
 endif ()
 
 # Define OSL_INTERNAL symbol only when building OSL itself, will not be
 # defined for downstream projects using OSL.
-add_definitions (-DOSL_INTERNAL=1)
+add_compile_definitions (OSL_INTERNAL=1)
 
 # To make sure we aren't relying on deprecated OIIO features, we define
 # OIIO_DISABLE_DEPRECATED before including any OIIO headers.
-add_definitions (-DOIIO_DISABLE_DEPRECATED=900000)
+add_compile_definitions (OIIO_DISABLE_DEPRECATED=900000)
 
 # Set the default namespace. For symbol hiding reasons, it's important that
 # the project name is a subset of the namespace name.
@@ -158,22 +180,24 @@ if (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH)
 endif ()
 message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 
+# Define OSL_INTERNAL symbol only when building OSL itself, will not be
+# defined for downstream projects using OSL.
+add_definitions (-DOSL_INTERNAL=1)
 
-list (APPEND CMAKE_MODULE_PATH
-      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
-      "${PROJECT_SOURCE_DIR}/src/cmake")
-
-# Helpful functions and macros for our project
-include (colors)
-include (check_is_enabled)
-include (checked_find_package)
+# To make sure we aren't relying on deprecated OIIO features, we define
+# OIIO_DISABLE_DEPRECATED before including any OIIO headers.
+add_definitions (-DOIIO_DISABLE_DEPRECATED=900000)
 
 # All the C++ and compiler related options and adjustments
 include (compiler)
 
+# Dependency finding utilities and all dependency-related options
+include (dependency_utils)
+
 # Utilities and options related to finding python and making python bindings
 include (pythonutils)
 
+# Dependency finding utilities and all dependency-related options
 include (externalpackages)
 include (flexbison)
 include (cuda_macros)
@@ -311,3 +335,5 @@ endif ()
 if (PROJECT_IS_TOP_LEVEL)
     include (packaging)
 endif ()
+
+print_package_notfound_report ()

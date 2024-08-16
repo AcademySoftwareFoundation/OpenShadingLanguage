@@ -11,7 +11,7 @@ set (CUDA_OPT_FLAG_CLANG "-O3" CACHE STRING "The optimization level to use when 
 # host behavior, etc.
 set (CUDA_NO_FTZ OFF CACHE BOOL "Do not enable force-to-zero when compiling for CUDA")
 if (CUDA_NO_FTZ)
-    add_definitions ("-DOSL_CUDA_NO_FTZ=1")
+    add_compile_definitions (DOSL_CUDA_NO_FTZ=1)
 endif ()
 
 # Compile a CUDA file to PTX using NVCC

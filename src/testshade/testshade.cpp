@@ -1423,9 +1423,9 @@ batched_save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
                     int y    = by[batchIndex];
                     int data = batchResults[batchIndex];
                     float pixel[1];
-                    OIIO::convert_types(TypeDesc::BASETYPE(t.basetype), &data,
-                                        TypeDesc::FLOAT, &pixel[0],
-                                        1 /*nchans*/);
+                    OIIO::convert_pixel_values(TypeDesc::BASETYPE(t.basetype),
+                                               &data, TypeDesc::FLOAT,
+                                               &pixel[0], 1 /*nchans*/);
                     outputimg->setpixel(x, y, &pixel[0]);
                     if (print_outputs) {
                         *oStreams[batchIndex]
@@ -1447,9 +1447,9 @@ batched_save_outputs(SimpleRenderer* rend, ShadingSystem* shadingsys,
                         intPixel[c] = batchResults[batchIndex][c];
                     }
 
-                    OIIO::convert_types(TypeDesc::BASETYPE(t.basetype),
-                                        intPixel, TypeDesc::FLOAT, floatPixel,
-                                        3 /*nchans*/);
+                    OIIO::convert_pixel_values(TypeDesc::BASETYPE(t.basetype),
+                                               intPixel, TypeDesc::FLOAT,
+                                               floatPixel, 3 /*nchans*/);
                     outputimg->setpixel(x, y, floatPixel);
                     if (print_outputs) {
                         (*oStreams[batchIndex])

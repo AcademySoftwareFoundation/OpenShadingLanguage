@@ -21,9 +21,14 @@
 # MacOS/xcode in /usr/bin, which seems to be too old for the reentrant
 # parser directives we use. Only do this if there is no BISON_ROOT
 # specifying a particular Bison to use.
-if (APPLE AND EXISTS /usr/local/opt
-        AND NOT BISON_ROOT AND NOT DEFINED ENV{BISON_ROOT})
-    find_program(BISON_EXECUTABLE NAMES /usr/local/opt/bison/bin/bison
+if (APPLE AND NOT BISON_ROOT AND NOT DEFINED ENV{BISON_ROOT}
+    AND (EXISTS /usr/local/opt OR EXISTS /opt/homebrew
+         OR DEFINED ENV{HOMEBREW_PREFIX}))
+    find_program(BISON_EXECUTABLE
+                 NAMES
+                    ENV{HOMEBREW_PREFIX}/opt/bison/bin/bison
+                    /opt/homebrew/opt/bison/bin/bison
+                    /usr/local/opt/bison/bin/bison
                  DOC "path to the bison executable")
 endif()
 
@@ -36,7 +41,7 @@ if ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
     macro ( FLEX_BISON flexsrc bisonsrc prefix srclist compiler_headers )
         # mangle osoparse & oslparse symbols to avoid multiple library conflicts
         # XXX: This may be excessive now that OSL::pvt::ExtraArg is mangled into the function signature
-        add_definitions(-D${prefix}parse=${PROJ_NAMESPACE_V}_${prefix}parse)
+        add_compile_definitions(${prefix}parse=${PROJ_NAMESPACE_V}_${prefix}parse)
 
         message (VERBOSE "FLEX_BISON flex=${flexsrc} bison=${bisonsrc} prefix=${prefix}")
         get_filename_component ( bisonsrc_we ${bisonsrc} NAME_WE )

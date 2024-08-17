@@ -129,7 +129,6 @@ static char* userdata_base_ptr = nullptr;
 static char* output_base_ptr   = nullptr;
 static bool use_rs_bitcode
     = false;  // use free function bitcode version of renderer services
-
 static int jbufferMB = 16;
 
 // Testshade thread tracking and assignment.
@@ -678,8 +677,12 @@ print_info()
     else
 #endif
         rend = new SimpleRenderer;
-    TextureSystem* texturesys = TextureSystem::create();
+    auto texturesys = TextureSystem::create();
+#if OIIO_TEXTURESYSTEM_CREATE_SHARED
+    shadingsys = new ShadingSystem(rend, texturesys.get(), &errhandler);
+#else
     shadingsys = new ShadingSystem(rend, texturesys, &errhandler);
+#endif
     rend->init_shadingsys(shadingsys);
     set_shadingsys_options();
 
@@ -1968,7 +1971,12 @@ test_shade(int argc, const char* argv[])
     // Request a TextureSystem (by default it will be the global shared
     // one). This isn't strictly necessary, if you pass nullptr to
     // ShadingSystem ctr, it will ask for the shared one internally.
+#if OIIO_TEXTURESYSTEM_CREATE_SHARED
+    std::shared_ptr<TextureSystem> texturesys_owned = TextureSystem::create();
+    TextureSystem* texturesys                       = texturesys_owned.get();
+#else
     TextureSystem* texturesys = TextureSystem::create();
+#endif
 
     // Create a new shading system.  We pass it the RendererServices
     // object that services callbacks from the shading system, the
@@ -2338,8 +2346,8 @@ test_shade(int argc, const char* argv[])
         std::cout << "ERRORS left in TextureSystem:\n" << err << "\n";
         retcode = EXIT_FAILURE;
     }
-    OIIO::ImageCache* ic = texturesys->imagecache();
-    err                  = ic ? ic->geterror() : std::string();
+    auto ic = texturesys->imagecache();
+    err     = ic ? ic->geterror() : std::string();
     if (!err.empty()) {
         std::cout << "ERRORS left in ImageCache:\n" << err << "\n";
         retcode = EXIT_FAILURE;

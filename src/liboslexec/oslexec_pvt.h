@@ -871,7 +871,8 @@ private:
     void setup_op_descriptors();
 
     RendererServices* m_renderer;  ///< Renderer services
-    TextureSystem* m_texturesys;   ///< Texture system
+    std::shared_ptr<TextureSystem> m_texturesys_sp;
+    TextureSystem* m_texturesys;  ///< Texture system
 
     ErrorHandler* m_err;  ///< Error handler
     mutable std::list<std::string> m_errseen, m_warnseen;

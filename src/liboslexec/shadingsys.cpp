@@ -1200,7 +1200,12 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
         OSL_ASSERT(0
                    && "ShadingSystem was not passed a working TextureSystem*");
 #else
+#    if OIIO_TEXTURESYSTEM_CREATE_SHARED
+        m_texturesys_sp = TextureSystem::create(true /* shared */);
+        m_texturesys    = m_texturesys_sp.get();
+#    else
         m_texturesys = TextureSystem::create(true /* shared */);
+#    endif
         // Make some good guesses about default options
         m_texturesys->attribute("automip", 1);
         m_texturesys->attribute("autotile", 64);

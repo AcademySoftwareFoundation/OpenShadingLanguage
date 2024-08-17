@@ -4027,34 +4027,23 @@ LLVM_Util::op_1st_active_lane_of(llvm::Value* mask)
     // Assumes mask is not empty
 
     llvm::Type* intMaskType = nullptr;
+    llvm::Value* int_mask   = nullptr;
     switch (m_vector_width) {
     case 16:
         // We can just reinterpret cast a 16 bit mask to a 16 bit integer
         // and all types are happy
         intMaskType = type_int16();
+        int_mask    = builder().CreateBitCast(mask, intMaskType);
         break;
     case 8:
         // We can just reinterpret cast a 8 bit mask to a 8 bit integer
         // and all types are happy
         intMaskType = type_int8();
+        int_mask    = builder().CreateBitCast(mask, intMaskType);
         break;
     case 4: {
         intMaskType = type_int8();
-
-        llvm::Value* mask_as_int = mask4_as_int8(mask);
-
-        // Count trailing zeros, least significant
-        llvm::Type* types[] = { intMaskType };
-        llvm::Function* func_cttz
-            = llvm::Intrinsic::getDeclaration(module(), llvm::Intrinsic::cttz,
-                                              toArrayRef(types));
-
-        llvm::Value* args[2] = { mask_as_int, constant_bool(true) };
-
-        llvm::Value* firstNonZeroIndex = builder().CreateCall(func_cttz,
-                                                              toArrayRef(args));
-        return firstNonZeroIndex;
-
+        int_mask    = mask4_as_int8(mask);
         break;
     }
     default: OSL_ASSERT(0 && "unsupported native bit mask width");
@@ -4066,8 +4055,7 @@ LLVM_Util::op_1st_active_lane_of(llvm::Value* mask)
         = llvm::Intrinsic::getDeclaration(module(), llvm::Intrinsic::cttz,
                                           toArrayRef(types));
 
-    llvm::Value* int_mask = builder().CreateBitCast(mask, intMaskType);
-    llvm::Value* args[2]  = { int_mask, constant_bool(true) };
+    llvm::Value* args[2] = { int_mask, constant_bool(true) };
 
     llvm::Value* firstNonZeroIndex = builder().CreateCall(func_cttz,
                                                           toArrayRef(args));

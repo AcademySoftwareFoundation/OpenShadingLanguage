@@ -9,7 +9,7 @@
 
 namespace pvt {
 
-OIIO_CONSTEXPR14 inline size_t
+constexpr inline size_t
 pvtstrlen(const char* s)
 {
     if (s == nullptr)
@@ -23,7 +23,7 @@ pvtstrlen(const char* s)
 }  // namespace pvt
 
 namespace UStringHash {
-OIIO_CONSTEXPR14 inline size_t
+constexpr inline size_t
 Hash(const char* s)
 {
     size_t len = pvt::pvtstrlen(s);

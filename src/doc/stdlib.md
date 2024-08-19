@@ -458,36 +458,36 @@ the computations are performed component-by-component (separately for `x`,
     performed component-by-component (separately for $x$, $y$, and $z$).
 
 
-`float` **`linearstep`** `(float edge0, float edge1, float x)` <br> *`type`* **`linearstep`** (*`type`* `edge0`, *`type`* `edge1`, *`type`* `x`)
+`float` **`linearstep`** `(float low, float high, float x)` <br> *`type`* **`linearstep`** (*`type`* `low`, *`type`* `high`, *`type`* `x`)
 
-  : Returns 0 if `x` $\le$ `edge0`, and 1 if `x` $\ge$ `edge1`, and performs a
-    linear interpolation between 0 and 1 when `edge0` $<$ `x` $<$ `edge1`.
-    This is equivalent to `step(edge0, x)` when `edge0 == edge1`. For `color`
+  : Returns 0 if `x` $<$ `low`, and 1 if `x` $\ge$ `high`, and performs a
+    linear interpolation between 0 and 1 when `low` $<$ `x` $<$ `high`.
+    This is equivalent to `step(low, x)` when `low == high`. For `color`
     and `point`-like types, the computations are performed
     component-by-component (separately for $x$, $y$, and $z$).
 
 
-`float` **`smoothstep`** `(float edge0, float edge1, float x)` <br> *`type`* **`smoothstep`** (*`type`* `edge0`, *`type`* `edge1`, *`type`* `x`)
+`float` **`smoothstep`** `(float low, float high, float x)` <br> *`type`* **`smoothstep`** (*`type`* `low`, *`type`* `high`, *`type`* `x`)
 
-  : Returns 0 if `x` $\le$ `edge0`, and 1 if `x` $\ge$ `edge1`, and performs a
-    smooth Hermite interpolation between 0 and 1 when `edge0` $<$ `x` $<$
-    `edge1`. This is useful in cases where you would want a thresholding
-    function with a smooth transition.
+  : Returns 0 if `x` $\le$ `low`, and 1 if `x` $\ge$ `high`, and performs a
+    smooth Hermite interpolation between 0 and 1 when `low` $<$ `x` $<$
+    `high`. This is useful in cases where you would want a thresholding
+    function with a smooth transition.  In the degenerate case where
+    `high` $\le$ `low`, the return value will be 0 if `x` $<$ `high` and 1 if
+    `x` $\ge$ `high`, making the behavior identical to `step(high, x)`.
 
     The *`type`* may be any of of `float`, `color`, `point`, `vector`, or
     `normal`.  For `color` and `point`-like types, the computations are
     performed component-by-component.
 
 
-`float` **`smooth_linearstep`** `(float edge0, float edge1, float x, float eps)` <br> *`type`* **`smooth_linearstep`** (*`type`* `edge0`, *`type`* `edge1`, *`type`* `x`, *`type`* eps)
+`float` **`smooth_linearstep`** `(float low, float high, float x, float eps)` <br> *`type`* **`smooth_linearstep`** (*`type`* `low`, *`type`* `high`, *`type`* `x`, *`type`* eps)
 
-  : This function is strictly linear between `edge0 + eps` and `edge1 - eps`
-    but smoothly ramps to 0 between `edge0 - eps` and `edge0 + eps`
-    and smoothly ramps to 1 between `edge1 - eps` and `edge1 + eps`.
-    It is 0 when `x` $\le$ `edge0-eps,` and 1 if `x` $\ge$ `edge1 + eps`,
-    and performs a linear interpolation between 0 and 1 when
-    `edge0` < x < `edge1`. For `color` and `point`-like types, the
-    computations are performed component-by-component.
+  : This function returns 0 if `x` $<$ `low-eps`, and 1 if `x` $\ge$ `high + eps`,
+    is strictly linear between `low + eps` and `high - eps`, but smoothly
+    ramps to 0 between `low - eps` and `low + eps` and smoothly ramps to 1
+    between `high - eps` and `high + eps`. For `color` and `point`-like types,
+    the computations are performed component-by-component.
 
 
 %## Noise functions

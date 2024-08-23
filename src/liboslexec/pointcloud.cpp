@@ -407,7 +407,7 @@ osl_pointcloud_search(OpaqueExecContextPtr oec, ustringhash_pod filename_,
         indices = OSL_ALLOCA(size_t, max_points);
 
     ustringhash filename = ustringhash_from(filename_);
-    int count = rs_pointcloud_search(sg, filename, *((Vec3*)center), radius,
+    int count = rs_pointcloud_search(oec, filename, *((Vec3*)center), radius,
                                      max_points, sort, indices,
                                      (float*)out_distances, derivs_offset);
     va_list args;
@@ -467,9 +467,9 @@ osl_pointcloud_get(OpaqueExecContextPtr oec, ustringhash_pod filename_,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_pointcloud_write_helper(void* names_, void* types_,
-                            void** values, int index, ustringhash_pod name_,
-                            long long type, void* val)
+osl_pointcloud_write_helper(void* names_, void* types_, void** values,
+                            int index, ustringhash_pod name_, long long type,
+                            void* val)
 {
     auto names       = reinterpret_cast<ustringhash*>(names_);
     auto types       = reinterpret_cast<TypeDesc*>(types_);
@@ -483,9 +483,8 @@ osl_pointcloud_write_helper(void* names_, void* types_,
 
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
-                     const void* pos_, int nattribs,
-                     const void* names_, const void* types,
-                     const void** values)
+                     const void* pos_, int nattribs, const void* names_,
+                     const void* types, const void** values)
 {
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;

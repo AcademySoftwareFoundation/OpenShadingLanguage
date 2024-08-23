@@ -2477,8 +2477,7 @@ private:
 };
 
 
-#ifndef __CUDACC__
-inline int
+OSL_HOSTDEVICE inline int
 tex_interp_to_code(ustringhash modename)
 {
     int mode = -1;
@@ -2493,6 +2492,7 @@ tex_interp_to_code(ustringhash modename)
     return mode;
 }
 
+#ifndef __CUDACC__
 inline int
 tex_interp_to_code(ustring modename)
 {

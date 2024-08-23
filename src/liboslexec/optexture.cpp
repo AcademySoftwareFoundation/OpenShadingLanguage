@@ -28,7 +28,18 @@ namespace pvt {
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
 {
-    new (opt) TextureOpt;
+    // TODO: Simplify when TextureOpt() has __device__ marker.
+    // new (opt) TextureOpt;
+    TextureOpt* o = reinterpret_cast<TextureOpt*>(opt);
+    memset(o, 0, sizeof(TextureOpt));
+    o->interpmode          = TexturOpt::InterpSmartBicubic;
+    o->anisotropic         = 32;
+    o->conservative_filter = true;
+    o->swidth              = 1.f;
+    o->twidth              = 1.f;
+    o->rnd                 = -1.f;
+    o->samples             = 1;
+    o->rwidth              = 1.f;
 }
 
 
@@ -38,15 +49,20 @@ osl_texture_set_firstchannel(void* opt, int x)
     ((TextureOpt*)opt)->firstchannel = x;
 }
 
-static TextureOpt::Wrap
+OSL_HOSTDEVICE inline TextureOpt::Wrap
 decode_wrapmode(ustringhash_pod name_)
 {
+    // TODO: Enable when decode_wrapmode has __device__ marker.
+#ifndef __CUDACC__
     ustringhash name_hash = ustringhash_from(name_);
-#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_DECODE_BY_USTRINGHASH
+#    ifdef OIIO_TEXTURESYSTEM_SUPPORTS_DECODE_BY_USTRINGHASH
     return OIIO::TextureOpt::decode_wrapmode(name_hash);
-#else
+#    else
     ustring name = ustring_from(name_hash);
     return OIIO::TextureOpt::decode_wrapmode(name);
+#    endif
+#else
+    return TextureOpt::WrapDefault;
 #endif
 }
 
@@ -201,9 +217,12 @@ osl_texture_set_subimage(void* opt, int subimage)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_subimagename(void* opt, ustringhash_pod subimagename_)
 {
+    // TODO: Enable when subimagename is ustringhash.
+#ifndef __CUDACC__
     ustringhash subimagename_hash    = ustringhash_from(subimagename_);
     ustring subimagename             = ustring_from(subimagename_hash);
     ((TextureOpt*)opt)->subimagename = subimagename;
+#endif
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
@@ -244,7 +263,7 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 #ifndef __CUDACC__
                          sg->context->texture_thread_info(),
 #else
-        nullptr
+                         nullptr,
 #endif
                          *opt, s, t, dsdx, dtdx, dsdy, dtdy, 4,
                          (float*)&result_simd,

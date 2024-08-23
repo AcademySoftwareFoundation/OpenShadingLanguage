@@ -260,18 +260,28 @@ osl_texture_set_missingcolor_alpha(void* opt, int alphaindex,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
             void* opt_, float s, float t, float dsdx, float dtdx, float dsdy,
-            float dtdy, int chans, void* result, void* dresultdx,
-            void* dresultdy, void* alpha, void* dalphadx, void* dalphady,
-            void* errormessage)
+            float dtdy, int chans, void* result_, void* dresultdx_,
+            void* dresultdy_, void* alpha_, void* dalphadx_, void* dalphady_,
+            void* errormessage_)
 {
+#ifndef __CUDACC__
+    using float4 = OIIO::simd::vfloat4;
+#endif
+    TextureOpt* opt               = (TextureOpt*)opt_;
+    float* result                 = (float*)result_;
+    float* dresultdx              = (float*)dresultdx_;
+    float* dresultdy              = (float*)dresultdy_;
+    float* alpha                  = (float*)alpha_;
+    float* dalphadx               = (float*)dalphadx_;
+    float* dalphady               = (float*)dalphady_;
+    ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
+    bool derivs                   = (dresultdx || dalphadx);
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
-    TextureOpt* opt = (TextureOpt*)opt_;
-    bool derivs     = (dresultdx || dalphadx);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
-    OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd;
+    float4 result_simd, dresultds_simd, dresultdt_simd;
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture(oec, name, (TextureSystem::TextureHandle*)handle,
@@ -287,33 +297,30 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
                          errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
-        ((float*)result)[i] = result_simd[i];
+        result[i] = result_simd[i];
     if (alpha)
-        ((float*)alpha)[0] = result_simd[chans];
+        alpha[0] = result_simd[chans];
 
     // Correct our st texture space gradients into xy-space gradients
     if (derivs) {
         OSL_DASSERT((dresultdx == nullptr) == (dresultdy == nullptr));
         OSL_DASSERT((dalphadx == nullptr) == (dalphady == nullptr));
-        OIIO::simd::vfloat4 dresultdx_simd = dresultds_simd * dsdx
-                                             + dresultdt_simd * dtdx;
-        OIIO::simd::vfloat4 dresultdy_simd = dresultds_simd * dsdy
-                                             + dresultdt_simd * dtdy;
+        float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
+        float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
         if (dresultdx) {
             for (int i = 0; i < chans; ++i)
-                ((float*)dresultdx)[i] = dresultdx_simd[i];
+                dresultdx[i] = dresultdx_simd[i];
             for (int i = 0; i < chans; ++i)
-                ((float*)dresultdy)[i] = dresultdy_simd[i];
+                dresultdy[i] = dresultdy_simd[i];
         }
         if (dalphadx) {
-            ((float*)dalphadx)[0] = dresultdx_simd[chans];
-            ((float*)dalphady)[0] = dresultdy_simd[chans];
+            dalphadx[0] = dresultdx_simd[chans];
+            dalphady[0] = dresultdy_simd[chans];
         }
     }
 
     if (errormessage)
-        *reinterpret_cast<ustringhash_pod*>(errormessage)
-            = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -322,9 +329,13 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
               void* opt_, void* P_, void* dPdx_, void* dPdy_, void* dPdz_,
-              int chans, void* result, void* dresultdx, void* dresultdy,
-              void* alpha, void* dalphadx, void* dalphady, void* errormessage)
+              int chans, void* result_, void* dresultdx_, void* dresultdy_,
+              void* alpha_, void* dalphadx_, void* dalphady_,
+              void* errormessage_)
 {
+#ifndef __CUDACC__
+    using float4 = OIIO::simd::vfloat4;
+#endif
     const Vec3& P(*(Vec3*)P_);
     const Vec3& dPdx(*(Vec3*)dPdx_);
     const Vec3& dPdy(*(Vec3*)dPdy_);
@@ -332,15 +343,21 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     if (dPdz_ != nullptr) {
         dPdz = (*(Vec3*)dPdz_);
     }
+    TextureOpt* opt               = (TextureOpt*)opt_;
+    float* result                 = (float*)result_;
+    float* dresultdx              = (float*)dresultdx_;
+    float* dresultdy              = (float*)dresultdy_;
+    float* alpha                  = (float*)alpha_;
+    float* dalphadx               = (float*)dalphadx_;
+    float* dalphady               = (float*)dalphady_;
+    ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
+    bool derivs                   = (dresultdx || dalphadx);
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
-    TextureOpt* opt = (TextureOpt*)opt_;
-    bool derivs     = (dresultdx != NULL || dalphadx != NULL);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
-    OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd,
-        dresultdr_simd;
+    float4 result_simd, dresultds_simd, dresultdt_simd, dresultdr_simd;
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture3d(oec, name, (TextureSystem::TextureHandle*)handle,
@@ -356,33 +373,32 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
                            errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
-        ((float*)result)[i] = result_simd[i];
+        result[i] = result_simd[i];
     if (alpha)
-        ((float*)alpha)[0] = result_simd[chans];
+        alpha[0] = result_simd[chans];
 
     // Correct our str texture space gradients into xyz-space gradients
     if (derivs) {
-        OIIO::simd::vfloat4 dresultdx_simd = dresultds_simd * dPdx.x
-                                             + dresultdt_simd * dPdx.y
-                                             + dresultdr_simd * dPdx.z;
-        OIIO::simd::vfloat4 dresultdy_simd = dresultds_simd * dPdy.x
-                                             + dresultdt_simd * dPdy.y
-                                             + dresultdr_simd * dPdy.z;
+        vfloat4 dresultdx_simd = dresultds_simd * dPdx.x
+                                 + dresultdt_simd * dPdx.y
+                                 + dresultdr_simd * dPdx.z;
+        vfloat4 dresultdy_simd = dresultds_simd * dPdy.x
+                                 + dresultdt_simd * dPdy.y
+                                 + dresultdr_simd * dPdy.z;
         if (dresultdx) {
             for (int i = 0; i < chans; ++i)
-                ((float*)dresultdx)[i] = dresultdx_simd[i];
+                dresultdx[i] = dresultdx_simd[i];
             for (int i = 0; i < chans; ++i)
-                ((float*)dresultdy)[i] = dresultdy_simd[i];
+                dresultdy[i] = dresultdy_simd[i];
         }
         if (dalphadx) {
-            ((float*)dalphadx)[0] = dresultdx_simd[chans];
-            ((float*)dalphady)[0] = dresultdy_simd[chans];
+            dalphadx[0] = dresultdx_simd[chans];
+            dalphady[0] = dresultdy_simd[chans];
         }
     }
 
     if (errormessage)
-        *reinterpret_cast<ustringhash_pod*>(errormessage)
-            = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -391,19 +407,29 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
                 void* opt_, void* R_, void* dRdx_, void* dRdy_, int chans,
-                void* result, void* dresultdx, void* dresultdy, void* alpha,
-                void* dalphadx, void* dalphady, void* errormessage)
+                void* result_, void* dresultdx_, void* dresultdy_, void* alpha_,
+                void* dalphadx_, void* dalphady_, void* errormessage_)
 {
+#ifndef __CUDACC__
+    using float4 = OIIO::simd::vfloat4;
+#endif
     const Vec3& R(*(Vec3*)R_);
     const Vec3& dRdx(*(Vec3*)dRdx_);
     const Vec3& dRdy(*(Vec3*)dRdy_);
+    TextureOpt* opt               = (TextureOpt*)opt_;
+    float* result                 = (float*)result_;
+    float* dresultdx              = (float*)dresultdx_;
+    float* dresultdy              = (float*)dresultdy_;
+    float* alpha                  = (float*)alpha_;
+    float* dalphadx               = (float*)dalphadx_;
+    float* dalphady               = (float*)dalphady_;
+    ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
-    TextureOpt* opt = (TextureOpt*)opt_;
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
-    OIIO::simd::vfloat4 local_result;
+    float4 local_result;
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_environment(oec, name, (TextureSystem::TextureHandle*)handle,
@@ -416,7 +442,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
                              NULL, NULL, errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
-        ((float*)result)[i] = local_result[i];
+        result[i] = local_result[i];
 
     // For now, just zero out the result derivatives.  If somebody needs
     // derivatives of environment lookups, we'll fix it.  The reason
@@ -427,17 +453,17 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     // rug for a day when somebody is really asking for it.
     if (dresultdx) {
         for (int i = 0; i < chans; ++i)
-            ((float*)dresultdx)[i] = 0.0f;
+            dresultdx[i] = 0.0f;
         for (int i = 0; i < chans; ++i)
-            ((float*)dresultdy)[i] = 0.0f;
+            dresultdy[i] = 0.0f;
     }
     if (alpha) {
-        ((float*)alpha)[0] = local_result[chans];
+        alpha[0] = local_result[chans];
         // Zero out the alpha derivatives, for the same reason as above.
         if (dalphadx)
-            ((float*)dalphadx)[0] = 0.0f;
+            dalphadx[0] = 0.0f;
         if (dalphady)
-            ((float*)dalphady)[0] = 0.0f;
+            dalphady[0] = 0.0f;
     }
 
     if (errormessage)

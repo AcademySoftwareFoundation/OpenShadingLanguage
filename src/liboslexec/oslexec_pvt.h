@@ -2519,7 +2519,7 @@ struct NoiseParams {
     float bandwidth;
     float impulses;
 
-    NoiseParams()
+    OSL_HOSTDEVICE NoiseParams()
         : anisotropic(0)
         , do_filter(true)
         , direction(1.0f, 0.0f, 0.0f)

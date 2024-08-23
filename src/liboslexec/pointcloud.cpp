@@ -382,12 +382,13 @@ RendererServices::pointcloud_write(ShaderGlobals* /*sg*/, ustringhash filename,
 namespace pvt {
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
+osl_pointcloud_search(OpaqueExecContextPtr oec, ustringhash_pod filename_,
                       void* center, float radius, int max_points, int sort,
                       void* out_indices, void* out_distances, int derivs_offset,
                       int nattrs, ...)
 {
 #ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
@@ -418,7 +419,7 @@ osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
         long long lltype           = va_arg(args, long long);
         TypeDesc attr_type         = TYPEDESC(lltype);
         void* out_data             = va_arg(args, void*);
-        rs_pointcloud_get(sg, filename, indices, count, attr_name, attr_type,
+        rs_pointcloud_get(oec, filename, indices, count, attr_name, attr_type,
                           out_data);
     }
     va_end(args);
@@ -438,11 +439,12 @@ osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_pointcloud_get(ShaderGlobals* sg, ustringhash_pod filename_,
+osl_pointcloud_get(OpaqueExecContextPtr oec, ustringhash_pod filename_,
                    void* in_indices, int count, ustringhash_pod attr_name_,
                    long long attr_type, void* out_data)
 {
 #ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
@@ -458,18 +460,19 @@ osl_pointcloud_get(ShaderGlobals* sg, ustringhash_pod filename_,
 
     ustringhash filename  = ustringhash_from(filename_);
     ustringhash attr_name = ustringhash_from(attr_name_);
-    return rs_pointcloud_get(sg, filename, (size_t*)indices, count, attr_name,
+    return rs_pointcloud_get(oec, filename, (size_t*)indices, count, attr_name,
                              TYPEDESC(attr_type), out_data);
 }
 
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_pointcloud_write_helper(ustringhash_pod* names_, TypeDesc* types,
+osl_pointcloud_write_helper(void* names_, void* types_,
                             void** values, int index, ustringhash_pod name_,
                             long long type, void* val)
 {
     auto names       = reinterpret_cast<ustringhash*>(names_);
+    auto types       = reinterpret_cast<TypeDesc*>(types_);
     ustringhash name = ustringhash_from(name_);
     names[index]     = name;
     types[index]     = TYPEDESC(type);
@@ -479,12 +482,13 @@ osl_pointcloud_write_helper(ustringhash_pod* names_, TypeDesc* types,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_pointcloud_write(ShaderGlobals* sg, ustringhash_pod filename_,
-                     const Vec3* pos, int nattribs,
-                     const ustringhash_pod* names_, const TypeDesc* types,
+osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
+                     const void* pos_, int nattribs,
+                     const void* names_, const void* types,
                      const void** values)
 {
 #ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
@@ -493,9 +497,11 @@ osl_pointcloud_write(ShaderGlobals* sg, ustringhash_pod filename_,
 #endif
 
     ustringhash filename = ustringhash_from(filename_);
+    auto pos             = reinterpret_cast<const Vec3*>(pos_);
     auto names           = reinterpret_cast<const ustringhash*>(names_);
+    auto types           = reinterpret_cast<TypeDesc*>(types_);
 
-    return rs_pointcloud_write(sg, filename, *pos, nattribs, names, types,
+    return rs_pointcloud_write(oec, filename, *pos, nattribs, names, types,
                                values);
 }
 

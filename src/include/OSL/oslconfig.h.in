@@ -229,19 +229,13 @@ TypeDesc_from(TypeDesc_pod type)
 
 /// Options for the trace call.
 struct TraceOpt {
-    float mindist;        ///< ignore hits closer than this
-    float maxdist;        ///< ignore hits farther than this
-    bool shade;           ///< whether to shade what is hit
-    OSL::ustringrep traceset;  ///< named trace set
+    float mindist;             ///< ignore hits closer than this
+    float maxdist;             ///< ignore hits farther than this
+    bool shade;                ///< whether to shade what is hit
+    OSL::ustrinhash traceset;  ///< named trace set
     TraceOpt() : mindist(0.0f), maxdist(1.0e30), shade(false) {}
 
-    enum class LLVMMemberIndex {
-        mindist = 0,
-        maxdist,
-        shade,
-        traceset,
-        count
-    };
+    enum class LLVMMemberIndex { mindist = 0, maxdist, shade, traceset, count };
 };
 
 

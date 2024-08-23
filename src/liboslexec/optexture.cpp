@@ -30,28 +30,30 @@ osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
 {
     // TODO: Simplify when TextureOpt() has __device__ marker.
     // new (opt) TextureOpt;
-    TextureOpt* o = reinterpret_cast<TextureOpt*>(opt);
-    o->firstchannel = 0;
-    o->subimage = 0;
-    o->swrap = WrapDefault;
-    o->twrap = WrapDefault;
-    o->mipmode = MipModeDefault;
-    o->interpmode = InterpSmartBicubic;
-    o->anisotropic = 32;
+    TextureOpt* o          = reinterpret_cast<TextureOpt*>(opt);
+    o->firstchannel        = 0;
+    o->subimage            = 0;
+    o->swrap               = TextureOpt::WrapDefault;
+    o->twrap               = TextureOpt::WrapDefault;
+    o->mipmode             = TextureOpt::MipModeDefault;
+    o->interpmode          = TextureOpt::InterpSmartBicubic;
+    o->anisotropic         = 32;
     o->conservative_filter = true;
-    o->sblur = 0.0f;
-    o->tblur = 0.0f;
-    o->swidth = 1.0f;
-    o->twidth = 1.0f;
-    o->fill = 0.0f;
-    o->missingcolor = nullptr;
-    o->time = 0.0f;
-    o->rnd = -1.0f;
-    o->samples = 1;
-    o->rwrap = WrapDefault;
-    o->rblur = 0.0f;
-    o->rwidth = 1.0f;
+    o->sblur               = 0.0f;
+    o->tblur               = 0.0f;
+    o->swidth              = 1.0f;
+    o->twidth              = 1.0f;
+    o->fill                = 0.0f;
+    o->missingcolor        = nullptr;
+    o->time                = 0.0f;
+    o->rnd                 = -1.0f;
+    o->samples             = 1;
+    o->rwrap               = TextureOpt::WrapDefault;
+    o->rblur               = 0.0f;
+    o->rwidth              = 1.0f;
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
     o->colortransformid = 0;
+#endif
     //o->envlayout = 0;
 }
 

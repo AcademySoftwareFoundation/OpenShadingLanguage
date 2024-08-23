@@ -32,7 +32,7 @@ osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
     // new (opt) TextureOpt;
     TextureOpt* o = reinterpret_cast<TextureOpt*>(opt);
     memset(o, 0, sizeof(TextureOpt));
-    o->interpmode          = TexturOpt::InterpSmartBicubic;
+    o->interpmode          = TextureOpt::InterpSmartBicubic;
     o->anisotropic         = 32;
     o->conservative_filter = true;
     o->swidth              = 1.f;

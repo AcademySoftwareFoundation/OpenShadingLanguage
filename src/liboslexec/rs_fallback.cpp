@@ -215,7 +215,7 @@ rs_pointcloud_get(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
 OSL_RSOP bool
 rs_pointcloud_write(OSL::OpaqueExecContextPtr exec_ctx,
                     OSL::ustringhash filename, const OSL::Vec3& pos,
-                    int nattribs, const OSL::ustringrep* names,
+                    int nattribs, const OSL::ustringhash* names,
                     const OSL::TypeDesc* types, const void** data)
 {
     auto sg = get_sg(exec_ctx);

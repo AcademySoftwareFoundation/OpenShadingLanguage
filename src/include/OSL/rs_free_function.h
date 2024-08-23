@@ -300,7 +300,7 @@ rs_pointcloud_get(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 OSL_RSOP bool
 rs_pointcloud_write(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                     const OSL::Vec3& pos, int nattribs,
-                    const OSL::ustringrep* names, const OSL::TypeDesc* types,
+                    const OSL::ustringhash* names, const OSL::TypeDesc* types,
                     const void** data);
 
 /// Immediately trace a ray from P in the direction R.  Return true

@@ -476,13 +476,15 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
                     void* handle, ustringhash_pod dataname_, int type,
-                    int arraylen, int aggregate, void* data, void* errormessage)
+                    int arraylen, int aggregate, void* data,
+                    void* errormessage_)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
-    typedesc.basetype  = type;
-    typedesc.arraylen  = arraylen;
-    typedesc.aggregate = aggregate;
+    typedesc.basetype             = type;
+    typedesc.arraylen             = arraylen;
+    typedesc.aggregate            = aggregate;
+    ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
 
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
@@ -511,13 +513,14 @@ OSL_SHADEOP OSL_HOSTDEVICE int
 osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
                        void* handle, float s, float t,
                        ustringhash_pod dataname_, int type, int arraylen,
-                       int aggregate, void* data, void* errormessage)
+                       int aggregate, void* data, void* errormessage_)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
-    typedesc.basetype  = type;
-    typedesc.arraylen  = arraylen;
-    typedesc.aggregate = aggregate;
+    typedesc.basetype             = type;
+    typedesc.arraylen             = arraylen;
+    typedesc.aggregate            = aggregate;
+    ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
 
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;

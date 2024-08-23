@@ -810,11 +810,11 @@ BatchedBackendLLVM::llvm_type_noise_options()
         return m_llvm_type_noise_options;
 
     std::vector<llvm::Type*> comp_types;
-    comp_types.push_back(ll.type_int());    // anisotropic;
-    comp_types.push_back(ll.type_int());    // do_filter;
-    comp_types.push_back(ll.type_triple()); // direction;
-    comp_types.push_back(ll.type_float());  // bandwidth;
-    comp_types.push_back(ll.type_float());  // impulses;
+    comp_types.push_back(ll.type_int());     // anisotropic;
+    comp_types.push_back(ll.type_int());     // do_filter;
+    comp_types.push_back(ll.type_triple());  // direction;
+    comp_types.push_back(ll.type_float());   // bandwidth;
+    comp_types.push_back(ll.type_float());   // impulses;
 
     m_llvm_type_noise_options = ll.type_struct(comp_types, "NoiseOptions");
 

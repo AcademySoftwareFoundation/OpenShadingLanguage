@@ -453,28 +453,28 @@ BackendLLVM::llvm_type_texture_options()
         return m_llvm_type_texture_options;
 
     std::vector<llvm::Type*> comp_types;
-    comp_types.push_back(ll.type_int());       // firstchannel
-    comp_types.push_back(ll.type_int());       // subimage
-    comp_types.push_back(ll.type_ustring());   // subimagename
-    comp_types.push_back(ll.type_int());       // swrap
-    comp_types.push_back(ll.type_int());       // twrap
-    comp_types.push_back(ll.type_int());       // mipmode
-    comp_types.push_back(ll.type_int());       // interpmode
-    comp_types.push_back(ll.type_int());       // anisotropic
-    comp_types.push_back(ll.type_bool());      // conservative_filter
-    comp_types.push_back(ll.type_float());     // sblur
-    comp_types.push_back(ll.type_float());     // tblur
-    comp_types.push_back(ll.type_float());     // swidth
-    comp_types.push_back(ll.type_float());     // twidth
-    comp_types.push_back(ll.type_float());     // fill
-    comp_types.push_back(ll.type_float_ptr()); // missingcolor
-    comp_types.push_back(ll.type_float());     // time
-    comp_types.push_back(ll.type_float());     // rnd
-    comp_types.push_back(ll.type_int());       // samples
-    comp_types.push_back(ll.type_int());       // rwrap
-    comp_types.push_back(ll.type_float());     // rblur
-    comp_types.push_back(ll.type_float());     // rwidth
-    comp_types.push_back(ll.type_int());       // envlayout
+    comp_types.push_back(ll.type_int());        // firstchannel
+    comp_types.push_back(ll.type_int());        // subimage
+    comp_types.push_back(ll.type_ustring());    // subimagename
+    comp_types.push_back(ll.type_int());        // swrap
+    comp_types.push_back(ll.type_int());        // twrap
+    comp_types.push_back(ll.type_int());        // mipmode
+    comp_types.push_back(ll.type_int());        // interpmode
+    comp_types.push_back(ll.type_int());        // anisotropic
+    comp_types.push_back(ll.type_bool());       // conservative_filter
+    comp_types.push_back(ll.type_float());      // sblur
+    comp_types.push_back(ll.type_float());      // tblur
+    comp_types.push_back(ll.type_float());      // swidth
+    comp_types.push_back(ll.type_float());      // twidth
+    comp_types.push_back(ll.type_float());      // fill
+    comp_types.push_back(ll.type_float_ptr());  // missingcolor
+    comp_types.push_back(ll.type_float());      // time
+    comp_types.push_back(ll.type_float());      // rnd
+    comp_types.push_back(ll.type_int());        // samples
+    comp_types.push_back(ll.type_int());        // rwrap
+    comp_types.push_back(ll.type_float());      // rblur
+    comp_types.push_back(ll.type_float());      // rwidth
+    comp_types.push_back(ll.type_int());        // envlayout
 
     m_llvm_type_texture_options = ll.type_struct(comp_types, "TextureOptions");
 
@@ -534,10 +534,10 @@ BackendLLVM::llvm_type_trace_options()
         return m_llvm_type_trace_options;
 
     std::vector<llvm::Type*> comp_types;
-    comp_types.push_back(ll.type_float());   // mindist
-    comp_types.push_back(ll.type_float());   // maxdist
-    comp_types.push_back(ll.type_bool());    // shade
-    comp_types.push_back(ll.type_ustring()); // traceset
+    comp_types.push_back(ll.type_float());    // mindist
+    comp_types.push_back(ll.type_float());    // maxdist
+    comp_types.push_back(ll.type_bool());     // shade
+    comp_types.push_back(ll.type_ustring());  // traceset
 
     m_llvm_type_trace_options = ll.type_struct(comp_types, "TraceOptions");
 
@@ -581,11 +581,11 @@ BackendLLVM::llvm_type_noise_options()
         return m_llvm_type_noise_options;
 
     std::vector<llvm::Type*> comp_types;
-    comp_types.push_back(ll.type_int());    // anisotropic;
-    comp_types.push_back(ll.type_int());    // do_filter;
-    comp_types.push_back(ll.type_triple()); // direction;
-    comp_types.push_back(ll.type_float());  // bandwidth;
-    comp_types.push_back(ll.type_float());  // impulses;
+    comp_types.push_back(ll.type_int());     // anisotropic;
+    comp_types.push_back(ll.type_int());     // do_filter;
+    comp_types.push_back(ll.type_triple());  // direction;
+    comp_types.push_back(ll.type_float());   // bandwidth;
+    comp_types.push_back(ll.type_float());   // impulses;
 
     m_llvm_type_noise_options = ll.type_struct(comp_types, "NoiseOptions");
 

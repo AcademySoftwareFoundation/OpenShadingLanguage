@@ -16,19 +16,9 @@
 
 #include <OSL/oslconfig.h>
 
-#if OSL_USING_IMATH < 3
-#   include <OSL/matrix22.h>
-#endif
-
+// clang-format off
 
 OSL_NAMESPACE_ENTER
-
-
-#if OSL_USING_IMATH >= 3
-using Matrix22 = Imath::Matrix22<Float>;
-#else
-using Matrix22 = Imathx::Matrix22<Float>;
-#endif
 
 
 // Choose to treat helper functions as static

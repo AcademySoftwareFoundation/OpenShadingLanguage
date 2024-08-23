@@ -69,7 +69,6 @@ set(include_dirs ${CMAKE_CURRENT_SOURCE_DIR})
 list(APPEND include_dirs ${CMAKE_SOURCE_DIR}/src/include)
 list(APPEND include_dirs ${CMAKE_BINARY_DIR}/include)
 list(APPEND include_dirs ${IMATH_INCLUDES})
-list(APPEND include_dirs ${OPENEXR_INCLUDES})
 list(APPEND include_dirs ${OpenImageIO_INCLUDES})
 
 EMBED_LLVM_BITCODE_IN_CPP ( "${rs_srcs}" "_host" "testshade_llvm_compiled_rs" testshade_srcs "-DOSL_HOST_RS_BITCODE=1" "${include_dirs}")

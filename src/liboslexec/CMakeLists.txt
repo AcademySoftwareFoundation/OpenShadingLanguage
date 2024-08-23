@@ -195,7 +195,6 @@ if (USE_LLVM_BITCODE)
     list(APPEND include_dirs ${CMAKE_SOURCE_DIR}/src/include)
     list(APPEND include_dirs ${CMAKE_BINARY_DIR}/include)
     list(APPEND include_dirs ${IMATH_INCLUDES})
-    list(APPEND include_dirs ${OPENEXR_INCLUDES})
     list(APPEND include_dirs ${OpenImageIO_INCLUDES})
     list(APPEND include_dirs ${ROBINMAP_INCLUDES})
 
@@ -571,16 +570,8 @@ target_link_libraries (${local_lib}
     PUBLIC
         oslquery oslnoise
         OpenImageIO::OpenImageIO
-        # For OpenEXR/Imath 3.x:
         $<TARGET_NAME_IF_EXISTS:Imath::Imath>
         $<TARGET_NAME_IF_EXISTS:Imath::Half>
-        # For OpenEXR >= 2.4/2.5 with reliable exported targets
-        $<TARGET_NAME_IF_EXISTS:IlmBase::Imath>
-        $<TARGET_NAME_IF_EXISTS:IlmBase::Half>
-        $<TARGET_NAME_IF_EXISTS:IlmBase::IlmThread>
-        $<TARGET_NAME_IF_EXISTS:IlmBase::Iex>
-        # For OpenEXR <= 2.3:
-        ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml::pugixml
         ${CMAKE_DL_LIBS}
@@ -621,7 +612,7 @@ if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
 
     add_executable (dual_test dual_test.cpp)
-    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO Imath::Imath ${CMAKE_DL_LIBS})
     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
 

@@ -27,11 +27,7 @@
 
 #include <OSL/oslconfig.h>
 
-#if OSL_USING_IMATH >= 3
-#    include <Imath/half.h>
-#else
-#    include <OpenEXR/half.h>
-#endif
+#include <Imath/half.h>
 
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>

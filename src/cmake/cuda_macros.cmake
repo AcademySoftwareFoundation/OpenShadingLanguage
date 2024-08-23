@@ -45,7 +45,6 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
             ${ALL_OpenImageIO_INCLUDES}
             ${ALL_IMATH_INCLUDES}
-            ${ALL_OPENEXR_INCLUDES}
             "-DFMT_DEPRECATED=\"\""
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1

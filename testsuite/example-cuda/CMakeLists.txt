@@ -21,8 +21,8 @@ include(checked_find_package)
 find_package(OSL REQUIRED)
 find_package(CUDA REQUIRED)
 checked_find_package(LLVM 7.0 REQUIRED)
-checked_find_package(OpenEXR 2.0 REQUIRED)
-checked_find_package(OpenImageIO 2.2 REQUIRED)
+checked_find_package(Imath 3.1 REQUIRED)
+checked_find_package(OpenImageIO 2.4 REQUIRED)
 checked_find_package(OptiX REQUIRED)
 
 

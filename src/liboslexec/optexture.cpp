@@ -31,15 +31,28 @@ osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
     // TODO: Simplify when TextureOpt() has __device__ marker.
     // new (opt) TextureOpt;
     TextureOpt* o = reinterpret_cast<TextureOpt*>(opt);
-    memset(o, 0, sizeof(TextureOpt));
-    o->interpmode          = TextureOpt::InterpSmartBicubic;
-    o->anisotropic         = 32;
+    o->firstchannel = 0;
+    o->subimage = 0;
+    o->swrap = WrapDefault;
+    o->twrap = WrapDefault;
+    o->mipmode = MipModeDefault;
+    o->interpmode = InterpSmartBicubic;
+    o->anisotropic = 32;
     o->conservative_filter = true;
-    o->swidth              = 1.f;
-    o->twidth              = 1.f;
-    o->rnd                 = -1.f;
-    o->samples             = 1;
-    o->rwidth              = 1.f;
+    o->sblur = 0.0f;
+    o->tblur = 0.0f;
+    o->swidth = 1.0f;
+    o->twidth = 1.0f;
+    o->fill = 0.0f;
+    o->missingcolor = nullptr;
+    o->time = 0.0f;
+    o->rnd = -1.0f;
+    o->samples = 1;
+    o->rwrap = WrapDefault;
+    o->rblur = 0.0f;
+    o->rwidth = 1.0f;
+    o->colortransformid = 0;
+    //o->envlayout = 0;
 }
 
 

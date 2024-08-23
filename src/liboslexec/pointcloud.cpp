@@ -479,9 +479,10 @@ osl_pointcloud_write_helper(ustringhash_pod* names_, TypeDesc* types,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_pointcloud_write(ShaderGlobals* sg, ustringhash_pod filename_, const Vec3* pos,
-                     int nattribs, const ustringhash_pod* names_,
-                     const TypeDesc* types, const void** values)
+osl_pointcloud_write(ShaderGlobals* sg, ustringhash_pod filename_,
+                     const Vec3* pos, int nattribs,
+                     const ustringhash_pod* names_, const TypeDesc* types,
+                     const void** values)
 {
 #ifndef __CUDACC__
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());

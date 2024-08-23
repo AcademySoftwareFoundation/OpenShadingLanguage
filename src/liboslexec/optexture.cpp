@@ -510,7 +510,7 @@ osl_trace_set_shade(void* opt, int x)
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_trace_set_traceset(void* opt, const char* x)
+osl_trace_set_traceset(void* opt, const ustringhash_pod x)
 {
     ((TraceOpt*)opt)->traceset = ustring_from(x);
 }

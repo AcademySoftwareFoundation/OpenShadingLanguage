@@ -17,16 +17,10 @@ namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
-// Utility: retrieve a pointer to the ShadingContext's noise params
-// struct, also re-initialize its contents.
-OSL_BATCHOP void*
-__OSL_OP(get_noise_options)(void* bsg_)
+OSL_BATCHOP void
+__OSL_OP(osl_init_noise_options)(void* bsg_, void* opt)
 {
-    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-
-    RendererServices::NoiseOpt* opt = bsg->uniform.context->noise_options_ptr();
-    new (opt) RendererServices::NoiseOpt;
-    return opt;
+    new (opt) NoiseParams;
 }
 
 

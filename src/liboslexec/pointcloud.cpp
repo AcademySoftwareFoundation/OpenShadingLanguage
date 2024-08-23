@@ -9,6 +9,8 @@
 
 #include "oslexec_pvt.h"
 
+#include <OSL/rs_free_function.h>
+
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
@@ -379,15 +381,17 @@ RendererServices::pointcloud_write(ShaderGlobals* /*sg*/, ustringhash filename,
 
 namespace pvt {
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
                       void* center, float radius, int max_points, int sort,
                       void* out_indices, void* out_distances, int derivs_offset,
                       int nattrs, ...)
 {
+#ifndef __CUDACC__
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
+#endif
 
     // RS::pointcloud_search takes size_t index array (because of the
     // presumed use of Partio underneath), but OSL only has int, so we
@@ -402,10 +406,9 @@ osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
         indices = OSL_ALLOCA(size_t, max_points);
 
     ustringhash filename = ustringhash_from(filename_);
-    int count = sg->renderer->pointcloud_search(sg, filename, *((Vec3*)center),
-                                                radius, max_points, sort,
-                                                indices, (float*)out_distances,
-                                                derivs_offset);
+    int count = rs_pointcloud_search(sg, filename, *((Vec3*)center), radius,
+                                     max_points, sort, indices,
+                                     (float*)out_distances, derivs_offset);
     va_list args;
     va_start(args, nattrs);
     for (int i = 0; i < nattrs; i++) {
@@ -415,8 +418,8 @@ osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
         long long lltype           = va_arg(args, long long);
         TypeDesc attr_type         = TYPEDESC(lltype);
         void* out_data             = va_arg(args, void*);
-        sg->renderer->pointcloud_get(sg, filename, indices, count, attr_name,
-                                     attr_type, out_data);
+        rs_pointcloud_get(sg, filename, indices, count, attr_name, attr_type,
+                          out_data);
     }
     va_end(args);
 
@@ -425,38 +428,43 @@ osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
         for (int i = 0; i < count; ++i)
             ((int*)out_indices)[i] = indices[i];
 
+#ifndef __CUDACC__
     shadingsys.pointcloud_stats(1, 0, count);
+#endif
 
     return count;
 }
 
 
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_pointcloud_get(ShaderGlobals* sg, ustringhash_pod filename_,
                    void* in_indices, int count, ustringhash_pod attr_name_,
                    long long attr_type, void* out_data)
 {
+#ifndef __CUDACC__
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
+#endif
 
     size_t* indices = OSL_ALLOCA(size_t, count);
     for (int i = 0; i < count; ++i)
         indices[i] = ((int*)in_indices)[i];
 
+#ifndef __CUDACC__
     shadingsys.pointcloud_stats(0, 1, 0);
+#endif
 
     ustringhash filename  = ustringhash_from(filename_);
     ustringhash attr_name = ustringhash_from(attr_name_);
-    return sg->renderer->pointcloud_get(sg, filename, (size_t*)indices, count,
-                                        attr_name, TYPEDESC(attr_type),
-                                        out_data);
+    return rs_pointcloud_get(sg, filename, (size_t*)indices, count, attr_name,
+                             TYPEDESC(attr_type), out_data);
 }
 
 
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_pointcloud_write_helper(ustringhash_pod* names_, TypeDesc* types,
                             void** values, int index, ustringhash_pod name_,
                             long long type, void* val)
@@ -470,22 +478,24 @@ osl_pointcloud_write_helper(ustringhash_pod* names_, TypeDesc* types,
 
 
 
-OSL_SHADEOP int
-osl_pointcloud_write(ShaderGlobals* sg, ustringhash_pod filename_,
-                     const Vec3* pos, int nattribs,
-                     const ustringhash_pod* names_, const TypeDesc* types,
-                     const void** values)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_pointcloud_write(ShaderGlobals* sg, ustringhash_pod filename_, const Vec3* pos,
+                     int nattribs, const ustringhash_pod* names_,
+                     const TypeDesc* types, const void** values)
 {
+#ifndef __CUDACC__
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
 
     shadingsys.pointcloud_stats(0, 0, 0, 1);
+#endif
+
     ustringhash filename = ustringhash_from(filename_);
     auto names           = reinterpret_cast<const ustringhash*>(names_);
 
-    return sg->renderer->pointcloud_write(sg, filename, *pos, nattribs, names,
-                                          types, values);
+    return rs_pointcloud_write(sg, filename, *pos, nattribs, names, types,
+                               values);
 }
 
 }  // namespace pvt

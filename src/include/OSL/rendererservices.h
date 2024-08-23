@@ -504,21 +504,7 @@ public:
                                   const TypeDesc* types, const void** data);
 
     /// Options for the trace call.
-    struct TraceOpt {
-        float mindist;         ///< ignore hits closer than this
-        float maxdist;         ///< ignore hits farther than this
-        bool shade;            ///< whether to shade what is hit
-        ustringhash traceset;  ///< named trace set
-        TraceOpt() : mindist(0.0f), maxdist(1.0e30), shade(false) {}
-
-        enum class LLVMMemberIndex {
-            mindist = 0,
-            maxdist,
-            shade,
-            traceset,
-            count
-        };
-    };
+    using TraceOpt = OSL::TraceOpt;
 
     /// Immediately trace a ray from P in the direction R.  Return true
     /// if anything hit, otherwise false.

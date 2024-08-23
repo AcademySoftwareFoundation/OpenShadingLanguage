@@ -134,6 +134,181 @@ rs_transform_points(OSL::OpaqueExecContextPtr oec, OSL::ustringhash from,
                     OSL::Vec3* Pout, int npoints,
                     OSL::TypeDesc::VECSEMANTICS vectype);
 
+/// Filtered 2D texture lookup for a single point.
+///
+/// s,t are the texture coordinates; dsdx, dtdx, dsdy, and dtdy are
+/// the differentials of s and t change in some canonical directions
+/// x and y.  The choice of x and y are not important to the
+/// implementation; it can be any imposed 2D coordinates, such as
+/// pixels in screen space, adjacent samples in parameter space on a
+/// surface, etc.
+///
+/// The filename will always be passed, and it's ok for the renderer
+/// implementation to use only that (and in fact should be prepared to
+/// deal with texture_handle and texture_thread_info being NULL). But
+/// sometimes OSL can figure out the texture handle or thread info also
+/// and may pass them as non-NULL, in which case the renderer may (if it
+/// can) use that extra information to perform a less expensive texture
+/// lookup.
+///
+/// Return true if the file is found and could be opened, otherwise
+/// return false.
+///
+/// If the errormessage parameter is NULL, this method is expected to
+/// handle the errors fully, including forwarding them to the renderer
+/// or shading system. If errormessage is non-NULL, any resulting error
+/// messages (in case of failure, when the function returns false) will
+/// be stored there, leaving it up to the caller/shader to handle the
+/// error.
+OSL_RSOP bool
+rs_texture(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+           OSL::TextureSystem::TextureHandle* texture_handle,
+           OSL::TextureSystem::Perthread* texture_thread_info,
+           OSL::TextureOpt& options, float s, float t, float dsdx, float dtdx,
+           float dsdy, float dtdy, int nchannels, float* result,
+           float* dresultds, float* dresultdt, OSL::ustringhash* errormessage);
+
+/// Filtered 3D texture lookup for a single point.
+///
+/// P is the volumetric texture coordinate; dPd{x,y,z} are the
+/// differentials of P in some canonical directions x, y, and z.
+/// The choice of x,y,z are not important to the implementation; it
+/// can be any imposed 3D coordinates, such as pixels in screen
+/// space and depth along the ray, etc.
+///
+/// The filename will always be passed, and it's ok for the renderer
+/// implementation to use only that (and in fact should be prepared to
+/// deal with texture_handle and texture_thread_info being NULL). But
+/// sometimes OSL can figure out the texture handle or thread info also
+/// and may pass them as non-NULL, in which case the renderer may (if it
+/// can) use that extra information to perform a less expensive texture
+/// lookup.
+///
+/// Return true if the file is found and could be opened, otherwise
+/// return false.
+///
+/// If the errormessage parameter is NULL, this method is expected to
+/// handle the errors fully, including forwarding them to the renderer
+/// or shading system. If errormessage is non-NULL, any resulting error
+/// messages (in case of failure, when the function returns false) will
+/// be stored there, leaving it up to the caller/shader to handle the
+/// error.
+OSL_RSOP bool
+rs_texture3d(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+             OSL::TextureSystem::TextureHandle* texture_handle,
+             OSL::TextureSystem::Perthread* texture_thread_info,
+             OSL::TextureOpt& options, const OSL::Vec3& P,
+             const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
+             const OSL::Vec3& dPdz, int nchannels, float* result,
+             float* dresultds, float* dresultdt, float* dresultdr,
+             OSL::ustringhash* errormessage);
+
+/// Filtered environment lookup for a single point.
+///
+/// R is the directional texture coordinate; dRd[xy] are the
+/// differentials of R in canonical directions x, y.
+///
+/// The filename will always be passed, and it's ok for the renderer
+/// implementation to use only that (and in fact should be prepared to
+/// deal with texture_handle and texture_thread_info being NULL). But
+/// sometimes OSL can figure out the texture handle or thread info also
+/// and may pass them as non-NULL, in which case the renderer may (if it
+/// can) use that extra information to perform a less expensive texture
+/// lookup.
+///
+/// Return true if the file is found and could be opened, otherwise
+/// return false.
+///
+/// If the errormessage parameter is NULL, this method is expected to
+/// handle the errors fully, including forwarding them to the renderer
+/// or shading system. If errormessage is non-NULL, any resulting error
+/// messages (in case of failure, when the function returns false) will
+/// be stored there, leaving it up to the caller/shader to handle the
+/// error.
+OSL_RSOP bool
+rs_environment(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+               OSL::TextureSystem::TextureHandle* texture_handle,
+               OSL::TextureSystem::Perthread* texture_thread_info,
+               OSL::TextureOpt& options, const OSL::Vec3& R,
+               const OSL::Vec3& dRdx, const OSL::Vec3& dRdy, int nchannels,
+               float* result, float* dresultds, float* dresultdt,
+               OSL::ustringhash* errormessage);
+
+/// Get information about the given texture.  Return true if found
+/// and the data has been put in *data.  Return false if the texture
+/// doesn't exist, doesn't have the requested data, if the data
+/// doesn't match the type requested. or some other failure.
+///
+/// The filename will always be passed, and it's ok for the renderer
+/// implementation to use only that (and in fact should be prepared to
+/// deal with texture_handle and texture_thread_info being NULL). But
+/// sometimes OSL can figure out the texture handle or thread info also
+/// and may pass them as non-NULL, in which case the renderer may (if it
+/// can) use that extra information to perform a less expensive texture
+/// lookup.
+///
+/// If the errormessage parameter is NULL, this method is expected to
+/// handle the errors fully, including forwarding them to the renderer
+/// or shading system. If errormessage is non-NULL, any resulting error
+/// messages (in case of failure, when the function returns false) will
+/// be stored there, leaving it up to the caller/shader to handle the
+/// error.
+OSL_RSOP bool
+rs_get_texture_info(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+                    OSL::TextureSystem::TextureHandle* texture_handle,
+                    OSL::TextureSystem::Perthread* texture_thread_info,
+                    int subimage, OSL::ustringhash dataname,
+                    OSL::TypeDesc datatype, void* data,
+                    OSL::ustringhash* errormessage);
+
+OSL_RSOP bool
+rs_get_texture_info_st(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+                       OSL::TextureSystem::TextureHandle* texture_handle,
+                       float s, float t,
+                       OSL::TextureSystem::Perthread* texture_thread_info,
+                       int subimage, OSL::ustringhash dataname,
+                       OSL::TypeDesc datatype, void* data,
+                       OSL::ustringhash* errormessage);
+
+
+/// Lookup nearest points in a point cloud. It will search for
+/// points around the given center within the specified radius. A
+/// list of indices is returned so the programmer can later retrieve
+/// attributes with pointcloud_get. The indices array is mandatory,
+/// but distances can be NULL.  If a derivs_offset > 0 is given,
+/// derivatives will be computed for distances (when provided).
+///
+/// Return the number of points found, always < max_points
+OSL_RSOP int
+rs_pointcloud_search(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+                     const OSL::Vec3& center, float radius, int max_points,
+                     bool sort, size_t* out_indices, float* out_distances,
+                     int derivs_offset);
+
+/// Retrieve an attribute for an index list. The result is another array
+/// of the requested type stored in out_data.
+///
+/// Return 1 if the attribute is found, 0 otherwise.
+OSL_RSOP int
+rs_pointcloud_get(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+                  size_t* indices, int count, OSL::ustringhash attr_name,
+                  OSL::TypeDesc attr_type, void* out_data);
+
+/// Write a point to the named pointcloud, which will be saved
+/// at the end of the frame.  Return true if everything is ok,
+/// false if there was an error.
+OSL_RSOP bool
+rs_pointcloud_write(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
+                    const OSL::Vec3& pos, int nattribs,
+                    const OSL::ustringrep* names, const OSL::TypeDesc* types,
+                    const void** data);
+
+/// Immediately trace a ray from P in the direction R.  Return true
+/// if anything hit, otherwise false.
+OSL_RSOP bool
+rs_trace(OSL::OpaqueExecContextPtr oec, OSL::TraceOpt& options,
+         const OSL::Vec3& P, const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
+         const OSL::Vec3& R, const OSL::Vec3& dRdx, const OSL::Vec3& dRdy);
 
 /// Report errors, warnings, printf, and fprintf.
 /// Fmtlib style format specifier is used (vs. printf style)

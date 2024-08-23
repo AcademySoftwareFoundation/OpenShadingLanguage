@@ -5778,8 +5778,9 @@ llvm_batched_noise_options(BatchedBackendLLVM& rop, int opnum,
                            llvm::Value*& loc_wide_direction,
                            bool& all_options_are_uniform)
 {
-    llvm::Value* opt = rop.ll.call_function(rop.build_name("get_noise_options"),
-                                            rop.sg_void_ptr());
+    llvm::Value* opt = rop.noise_options_void_ptr();
+    rop.ll.call_function(rop.build_name("osl_init_noise_options"),
+                         rop.sg_void_ptr(), opt);
     bool is_anisotropic_uniform = true;
     bool is_bandwidth_uniform   = true;
     bool is_impulses_uniform    = true;

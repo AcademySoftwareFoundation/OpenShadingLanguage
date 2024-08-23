@@ -2566,8 +2566,8 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
                          llvm::Value*& dalphadx, llvm::Value*& dalphady,
                          llvm::Value*& errormessage)
 {
-    llvm::Value* opt          = rop.ll.call_function("osl_get_texture_options",
-                                                     rop.sg_void_ptr());
+    llvm::Value* opt = rop.texture_options_void_ptr();
+    rop.ll.call_function("osl_init_texture_options", rop.sg_void_ptr(), opt);
     llvm::Value* missingcolor = NULL;
     TextureOpt optdefaults;  // So we can check the defaults
     bool swidth_set = false, twidth_set = false, rwidth_set = false;
@@ -2973,8 +2973,8 @@ LLVMGEN(llvm_gen_environment)
 static llvm::Value*
 llvm_gen_trace_options(BackendLLVM& rop, int opnum, int first_optional_arg)
 {
-    llvm::Value* opt = rop.ll.call_function("osl_get_trace_options",
-                                            rop.sg_void_ptr());
+    llvm::Value* opt = rop.trace_options_void_ptr();
+    rop.ll.call_function("osl_init_trace_options", rop.sg_void_ptr(), opt);
     Opcode& op(rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg; a < op.nargs(); ++a) {
         Symbol& Name(*rop.opargsym(op, a));
@@ -3068,8 +3068,8 @@ arg_typecode(Symbol* sym, bool derivs)
 static llvm::Value*
 llvm_gen_noise_options(BackendLLVM& rop, int opnum, int first_optional_arg)
 {
-    llvm::Value* opt = rop.ll.call_function("osl_get_noise_options",
-                                            rop.sg_void_ptr());
+    llvm::Value* opt = rop.noise_options_void_ptr();
+    rop.ll.call_function("osl_init_noise_options", rop.sg_void_ptr(), opt);
 
     Opcode& op(rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg; a < op.nargs(); ++a) {

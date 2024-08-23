@@ -237,9 +237,9 @@ DECL(osl_uninit_check, "xLXXhihihhihihii")
 DECL(osl_get_attribute, "iXihhiiLX")
 DECL(osl_bind_interpolated_param, "iXhLiXiXiXi")
 DECL(osl_incr_get_userdata_calls, "xX")
-DECL(osl_get_texture_options, "XX");
-DECL(osl_get_noise_options, "XX");
-DECL(osl_get_trace_options, "XX");
+DECL(osl_init_texture_options, "xXX");
+DECL(osl_init_noise_options, "xXX");
+DECL(osl_init_trace_options, "xXX");
 
 
 // The following are defined inside llvm_ops.cpp. Only include these

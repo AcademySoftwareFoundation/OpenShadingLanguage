@@ -108,6 +108,130 @@ rs_transform_points(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash from,
                                           npoints, vectype);
 }
 
+OSL_RSOP bool
+rs_texture(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
+           OSL::TextureSystem::TextureHandle* texture_handle,
+           OSL::TextureSystem::Perthread* texture_thread_info,
+           OSL::TextureOpt& options, float s, float t, float dsdx, float dtdx,
+           float dsdy, float dtdy, int nchannels, float* result,
+           float* dresultds, float* dresultdt, OSL::ustringhash* errormessage)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->texture(filename, texture_handle, texture_thread_info,
+                                 options, sg, s, t, dsdx, dtdx, dsdy, dtdy,
+                                 nchannels, result, dresultds, dresultdt,
+                                 errormessage);
+}
+
+OSL_RSOP bool
+rs_texture3d(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
+             OSL::TextureSystem::TextureHandle* texture_handle,
+             OSL::TextureSystem::Perthread* texture_thread_info,
+             OSL::TextureOpt& options, const OSL::Vec3& P,
+             const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
+             const OSL::Vec3& dPdz, int nchannels, float* result,
+             float* dresultds, float* dresultdt, float* dresultdr,
+             OSL::ustringhash* errormessage)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->texture3d(filename, texture_handle,
+                                   texture_thread_info, options, sg, P, dPdx,
+                                   dPdy, dPdz, nchannels, result, dresultds,
+                                   dresultdt, dresultdr, errormessage);
+}
+
+OSL_RSOP bool
+rs_environment(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
+               OSL::TextureSystem::TextureHandle* texture_handle,
+               OSL::TextureSystem::Perthread* texture_thread_info,
+               OSL::TextureOpt& options, const OSL::Vec3& R,
+               const OSL::Vec3& dRdx, const OSL::Vec3& dRdy, int nchannels,
+               float* result, float* dresultds, float* dresultdt,
+               OSL::ustringhash* errormessage)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->environment(filename, texture_handle,
+                                     texture_thread_info, options, sg, R, dRdx,
+                                     dRdy, nchannels, result, dresultds,
+                                     dresultdt, errormessage);
+}
+
+OSL_RSOP bool
+rs_get_texture_info(OSL::OpaqueExecContextPtr exec_ctx,
+                    OSL::ustringhash filename,
+                    OSL::TextureSystem::TextureHandle* texture_handle,
+                    OSL::TextureSystem::Perthread* texture_thread_info,
+                    int subimage, OSL::ustringhash dataname,
+                    OSL::TypeDesc datatype, void* data,
+                    OSL::ustringhash* errormessage)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->get_texture_info(filename, texture_handle,
+                                          texture_thread_info, sg, subimage,
+                                          dataname, datatype, data,
+                                          errormessage);
+}
+
+OSL_RSOP bool
+rs_get_texture_info_st(OSL::OpaqueExecContextPtr exec_ctx,
+                       OSL::ustringhash filename,
+                       OSL::TextureSystem::TextureHandle* texture_handle,
+                       float s, float t,
+                       OSL::TextureSystem::Perthread* texture_thread_info,
+                       int subimage, OSL::ustringhash dataname,
+                       OSL::TypeDesc datatype, void* data,
+                       OSL::ustringhash* errormessage)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->get_texture_info(filename, texture_handle, s, t,
+                                          texture_thread_info, sg, subimage,
+                                          dataname, datatype, data,
+                                          errormessage);
+}
+
+OSL_RSOP int
+rs_pointcloud_search(OSL::OpaqueExecContextPtr exec_ctx,
+                     OSL::ustringhash filename, const OSL::Vec3& center,
+                     float radius, int max_points, bool sort,
+                     size_t* out_indices, float* out_distances,
+                     int derivs_offset)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->pointcloud_search(sg, filename, center, radius,
+                                           max_points, sort, out_indices,
+                                           out_distances, derivs_offset);
+}
+
+OSL_RSOP int
+rs_pointcloud_get(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
+                  size_t* indices, int count, OSL::ustringhash attr_name,
+                  OSL::TypeDesc attr_type, void* out_data)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->pointcloud_get(sg, filename, indices, count, attr_name,
+                                        attr_type, out_data);
+}
+
+OSL_RSOP bool
+rs_pointcloud_write(OSL::OpaqueExecContextPtr exec_ctx,
+                    OSL::ustringhash filename, const OSL::Vec3& pos,
+                    int nattribs, const OSL::ustringrep* names,
+                    const OSL::TypeDesc* types, const void** data)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->pointcloud_write(sg, filename, pos, nattribs, names,
+                                          types, data);
+}
+
+OSL_RSOP bool
+rs_trace(OSL::OpaqueExecContextPtr exec_ctx, OSL::TraceOpt& options,
+         const OSL::Vec3& P, const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
+         const OSL::Vec3& R, const OSL::Vec3& dRdx, const OSL::Vec3& dRdy)
+{
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->trace(options, sg, P, dPdx, dPdy, R, dRdx, dRdy);
+}
+
 OSL_RSOP void
 rs_errorfmt(OSL::OpaqueExecContextPtr exec_ctx,
             OSL::ustringhash fmt_specification, int32_t count,

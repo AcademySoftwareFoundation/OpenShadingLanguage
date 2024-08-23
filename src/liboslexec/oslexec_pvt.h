@@ -2316,12 +2316,6 @@ public:
         return thread_info()->llvm_thread_info;
     }
 
-    TextureOpt* texture_options_ptr() { return &m_textureopt; }
-
-    RendererServices::NoiseOpt* noise_options_ptr() { return &m_noiseopt; }
-
-    RendererServices::TraceOpt* trace_options_ptr() { return &m_traceopt; }
-
     void* alloc_scratch(size_t size, size_t align = 1)
     {
         return m_scratch_pool.alloc(size, align);
@@ -2434,10 +2428,6 @@ private:
     int m_stat_get_userdata_calls;  ///< Number of calls to get_userdata
     int m_stat_layers_executed;     ///< Number of layers executed
     long long m_ticks;              ///< Time executing the shader
-
-    TextureOpt m_textureopt;                ///< texture call options
-    RendererServices::NoiseOpt m_noiseopt;  ///< noise call options
-    RendererServices::TraceOpt m_traceopt;  ///< trace call options
 
     SimplePool<20 * 1024> m_closure_pool;
     SimplePool<64 * 1024> m_scratch_pool;

@@ -444,6 +444,185 @@ BackendLLVM::llvm_type_closure_component_ptr()
     return ll.type_ptr(llvm_type_closure_component());
 }
 
+
+
+llvm::Type*
+BackendLLVM::llvm_type_texture_options()
+{
+    if (m_llvm_type_texture_options)
+        return m_llvm_type_texture_options;
+
+    std::vector<llvm::Type*> comp_types;
+    comp_types.push_back(ll.type_int());       // firstchannel
+    comp_types.push_back(ll.type_int());       // subimage
+    comp_types.push_back(ll.type_ustring());   // subimagename
+    comp_types.push_back(ll.type_int());       // swrap
+    comp_types.push_back(ll.type_int());       // twrap
+    comp_types.push_back(ll.type_int());       // mipmode
+    comp_types.push_back(ll.type_int());       // interpmode
+    comp_types.push_back(ll.type_int());       // anisotropic
+    comp_types.push_back(ll.type_bool());      // conservative_filter
+    comp_types.push_back(ll.type_float());     // sblur
+    comp_types.push_back(ll.type_float());     // tblur
+    comp_types.push_back(ll.type_float());     // swidth
+    comp_types.push_back(ll.type_float());     // twidth
+    comp_types.push_back(ll.type_float());     // fill
+    comp_types.push_back(ll.type_float_ptr()); // missingcolor
+    comp_types.push_back(ll.type_float());     // time
+    comp_types.push_back(ll.type_float());     // rnd
+    comp_types.push_back(ll.type_int());       // samples
+    comp_types.push_back(ll.type_int());       // rwrap
+    comp_types.push_back(ll.type_float());     // rblur
+    comp_types.push_back(ll.type_float());     // rwidth
+    comp_types.push_back(ll.type_int());       // envlayout
+
+    m_llvm_type_texture_options = ll.type_struct(comp_types, "TextureOptions");
+
+    //std::vector<unsigned int> offset_by_index;
+    //offset_by_index.push_back(offsetof(TextureOpt, firstchannel));
+    //offset_by_index.push_back(offsetof(TextureOpt, subimage));
+    //offset_by_index.push_back(offsetof(TextureOpt, subimagename));
+    //offset_by_index.push_back(offsetof(TextureOpt, swrap));
+    //offset_by_index.push_back(offsetof(TextureOpt, twrap));
+    //offset_by_index.push_back(offsetof(TextureOpt, mipmode));
+    //offset_by_index.push_back(offsetof(TextureOpt, interpmode));
+    //offset_by_index.push_back(offsetof(TextureOpt, anisotropic));
+    //offset_by_index.push_back(offsetof(TextureOpt, conservative_filter));
+    //offset_by_index.push_back(offsetof(TextureOpt, sblur));
+    //offset_by_index.push_back(offsetof(TextureOpt, tblur));
+    //offset_by_index.push_back(offsetof(TextureOpt, swidth));
+    //offset_by_index.push_back(offsetof(TextureOpt, twidth));
+    //offset_by_index.push_back(offsetof(TextureOpt, fill));
+    //offset_by_index.push_back(offsetof(TextureOpt, missingcolor));
+    //offset_by_index.push_back(offsetof(TextureOpt, time));
+    //offset_by_index.push_back(offsetof(TextureOpt, rnd));
+    //offset_by_index.push_back(offsetof(TextureOpt, samples));
+    //offset_by_index.push_back(offsetof(TextureOpt, rwrap));
+    //offset_by_index.push_back(offsetof(TextureOpt, rblur));
+    //offset_by_index.push_back(offsetof(TextureOpt, rwidth));
+    //offset_by_index.push_back(offsetof(TextureOpt, envlayout));
+    //ll.validate_struct_data_layout(m_llvm_type_texture_options, offset_by_index);
+
+    return m_llvm_type_texture_options;
+}
+
+
+
+llvm::Type*
+BackendLLVM::llvm_type_texture_options_ptr()
+{
+    return ll.type_ptr(llvm_type_texture_options());
+}
+
+llvm::Value*
+BackendLLVM::texture_options_ptr()
+{
+    if (m_llvm_texture_options_ptr == nullptr) {
+        // Don't worry about what basic block we are currently inside of because
+        // we insert all alloca's to the top function, not the current insertion point
+        m_llvm_texture_options_ptr = ll.op_alloca(llvm_type_texture_options());
+    }
+    return m_llvm_texture_options_ptr;
+}
+
+
+
+llvm::Type*
+BackendLLVM::llvm_type_trace_options()
+{
+    if (m_llvm_type_trace_options)
+        return m_llvm_type_trace_options;
+
+    std::vector<llvm::Type*> comp_types;
+    comp_types.push_back(ll.type_float());   // mindist
+    comp_types.push_back(ll.type_float());   // maxdist
+    comp_types.push_back(ll.type_bool());    // shade
+    comp_types.push_back(ll.type_ustring()); // traceset
+
+    m_llvm_type_trace_options = ll.type_struct(comp_types, "TraceOptions");
+
+    std::vector<unsigned int> offset_by_index;
+    offset_by_index.push_back(offsetof(TraceOpt, mindist));
+    offset_by_index.push_back(offsetof(TraceOpt, maxdist));
+    offset_by_index.push_back(offsetof(TraceOpt, shade));
+    offset_by_index.push_back(offsetof(TraceOpt, traceset));
+    ll.validate_struct_data_layout(m_llvm_type_trace_options, offset_by_index);
+
+    return m_llvm_type_trace_options;
+}
+
+
+
+llvm::Type*
+BackendLLVM::llvm_type_trace_options_ptr()
+{
+    return ll.type_ptr(llvm_type_trace_options());
+}
+
+
+
+llvm::Value*
+BackendLLVM::trace_options_ptr()
+{
+    if (m_llvm_trace_options_ptr == nullptr) {
+        // Don't worry about what basic block we are currently inside of because
+        // we insert all alloca's to the top function, not the current insertion point
+        m_llvm_trace_options_ptr = ll.op_alloca(llvm_type_trace_options());
+    }
+    return m_llvm_trace_options_ptr;
+}
+
+
+
+llvm::Type*
+BackendLLVM::llvm_type_noise_options()
+{
+    if (m_llvm_type_noise_options)
+        return m_llvm_type_noise_options;
+
+    std::vector<llvm::Type*> comp_types;
+    comp_types.push_back(ll.type_int());    // anisotropic;
+    comp_types.push_back(ll.type_int());    // do_filter;
+    comp_types.push_back(ll.type_triple()); // direction;
+    comp_types.push_back(ll.type_float());  // bandwidth;
+    comp_types.push_back(ll.type_float());  // impulses;
+
+    m_llvm_type_noise_options = ll.type_struct(comp_types, "NoiseOptions");
+
+    std::vector<unsigned int> offset_by_index;
+    offset_by_index.push_back(offsetof(NoiseParams, anisotropic));
+    offset_by_index.push_back(offsetof(NoiseParams, do_filter));
+    offset_by_index.push_back(offsetof(NoiseParams, direction));
+    offset_by_index.push_back(offsetof(NoiseParams, bandwidth));
+    offset_by_index.push_back(offsetof(NoiseParams, impulses));
+    ll.validate_struct_data_layout(m_llvm_type_noise_options, offset_by_index);
+
+    return m_llvm_type_noise_options;
+}
+
+
+
+llvm::Type*
+BackendLLVM::llvm_type_noise_options_ptr()
+{
+    return ll.type_ptr(llvm_type_noise_options());
+}
+
+
+
+llvm::Value*
+BackendLLVM::noise_options_ptr()
+{
+    if (m_llvm_noise_options_ptr == nullptr) {
+        // Don't worry about what basic block we are currently inside of because
+        // we insert all alloca's to the top function, not the current insertion point
+        m_llvm_noise_options_ptr = ll.op_alloca(llvm_type_noise_options());
+    }
+    return m_llvm_noise_options_ptr;
+}
+
+
+
 void
 BackendLLVM::build_offsets_of_ShaderGlobals(
     std::vector<unsigned int>& offset_by_index)
@@ -1110,6 +1289,10 @@ BackendLLVM::build_llvm_init()
     m_llvm_interactive_params_ptr = ll.current_function_arg(5);  //arg_it++;
     m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
 
+    // New function, reset temp matrix pointer
+    m_llvm_texture_options_ptr = nullptr;
+    m_llvm_trace_options_ptr   = nullptr;
+
     // Set up a new IR builder
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_name);
     ll.new_builder(entry_bb);
@@ -1367,6 +1550,10 @@ BackendLLVM::build_llvm_instance(bool groupentry)
     m_llvm_shadeindex->setName("shadeindex");
     m_llvm_interactive_params_ptr = ll.current_function_arg(5);  //arg_it++;
     m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
+
+    // New function, reset temp matrix pointer
+    m_llvm_texture_options_ptr = nullptr;
+    m_llvm_trace_options_ptr   = nullptr;
 
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_layer_name);
     m_exit_instance_block      = NULL;
@@ -1676,6 +1863,8 @@ BackendLLVM::initialize_llvm_group()
     m_llvm_type_sg                = NULL;
     m_llvm_type_groupdata         = NULL;
     m_llvm_type_closure_component = NULL;
+    m_llvm_type_texture_options   = NULL;
+    m_llvm_type_trace_options     = NULL;
 
     initialize_llvm_helper_function_map();
 

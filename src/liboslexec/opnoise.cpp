@@ -887,15 +887,10 @@ struct GenericPNoise {
 PNOISE_IMPL_DERIV_OPT(genericpnoise, GenericPNoise)
 
 
-// Utility: retrieve a pointer to the ShadingContext's noise params
-// struct, also re-initialize its contents.
-OSL_SHADEOP void*
-osl_get_noise_options(void* sg_)
+OSL_SHADEOP OSL_HOSTDEVICE void
+osl_init_noise_options(void* sg_, void* opt)
 {
-    ShaderGlobals* sg               = (ShaderGlobals*)sg_;
-    RendererServices::NoiseOpt* opt = sg->context->noise_options_ptr();
-    new (opt) RendererServices::NoiseOpt;
-    return opt;
+    new (opt) NoiseParams;
 }
 
 
@@ -903,7 +898,7 @@ osl_get_noise_options(void* sg_)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_noiseparams_set_anisotropic(void* opt, int a)
 {
-    ((RendererServices::NoiseOpt*)opt)->anisotropic = a;
+    ((NoiseParams*)opt)->anisotropic = a;
 }
 
 
@@ -911,7 +906,7 @@ osl_noiseparams_set_anisotropic(void* opt, int a)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_noiseparams_set_do_filter(void* opt, int a)
 {
-    ((RendererServices::NoiseOpt*)opt)->do_filter = a;
+    ((NoiseParams*)opt)->do_filter = a;
 }
 
 
@@ -919,7 +914,7 @@ osl_noiseparams_set_do_filter(void* opt, int a)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_noiseparams_set_direction(void* opt, void* dir)
 {
-    ((RendererServices::NoiseOpt*)opt)->direction = VEC(dir);
+    ((NoiseParams*)opt)->direction = VEC(dir);
 }
 
 
@@ -927,7 +922,7 @@ osl_noiseparams_set_direction(void* opt, void* dir)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_noiseparams_set_bandwidth(void* opt, float b)
 {
-    ((RendererServices::NoiseOpt*)opt)->bandwidth = b;
+    ((NoiseParams*)opt)->bandwidth = b;
 }
 
 
@@ -935,7 +930,7 @@ osl_noiseparams_set_bandwidth(void* opt, float b)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_noiseparams_set_impulses(void* opt, float i)
 {
-    ((RendererServices::NoiseOpt*)opt)->impulses = i;
+    ((NoiseParams*)opt)->impulses = i;
 }
 
 

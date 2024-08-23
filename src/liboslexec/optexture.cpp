@@ -18,25 +18,21 @@
 
 #include "oslexec_pvt.h"
 #include <OSL/dual.h>
+#include <OSL/rs_free_function.h>
 
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-// Utility: retrieve a pointer to the ShadingContext's texture options
-// struct, also re-initialize its contents.
-OSL_SHADEOP void*
-osl_get_texture_options(void* sg_)
+OSL_SHADEOP OSL_HOSTDEVICE void
+osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
-    TextureOpt* opt   = sg->context->texture_options_ptr();
     new (opt) TextureOpt;
-    return opt;
 }
 
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_firstchannel(void* opt, int x)
 {
     ((TextureOpt*)opt)->firstchannel = x;
@@ -54,31 +50,31 @@ decode_wrapmode(ustringhash_pod name_)
 #endif
 }
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_texture_decode_wrapmode(ustringhash_pod name_)
 {
     return decode_wrapmode(name_);
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_swrap(void* opt, ustringhash_pod x_)
 {
     ((TextureOpt*)opt)->swrap = decode_wrapmode(x_);
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_twrap(void* opt, ustringhash_pod x_)
 {
     ((TextureOpt*)opt)->twrap = decode_wrapmode(x_);
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_rwrap(void* opt, ustringhash_pod x_)
 {
     ((TextureOpt*)opt)->rwrap = decode_wrapmode(x_);
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_stwrap(void* opt, ustringhash_pod x_)
 {
     TextureOpt::Wrap code     = decode_wrapmode(x_);
@@ -86,101 +82,101 @@ osl_texture_set_stwrap(void* opt, ustringhash_pod x_)
     ((TextureOpt*)opt)->twrap = code;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_swrap_code(void* opt, int mode)
 {
     ((TextureOpt*)opt)->swrap = (TextureOpt::Wrap)mode;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_twrap_code(void* opt, int mode)
 {
     ((TextureOpt*)opt)->twrap = (TextureOpt::Wrap)mode;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_rwrap_code(void* opt, int mode)
 {
     ((TextureOpt*)opt)->rwrap = (TextureOpt::Wrap)mode;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_stwrap_code(void* opt, int mode)
 {
     ((TextureOpt*)opt)->swrap = (TextureOpt::Wrap)mode;
     ((TextureOpt*)opt)->twrap = (TextureOpt::Wrap)mode;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_sblur(void* opt, float x)
 {
     ((TextureOpt*)opt)->sblur = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_tblur(void* opt, float x)
 {
     ((TextureOpt*)opt)->tblur = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_rblur(void* opt, float x)
 {
     ((TextureOpt*)opt)->rblur = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_stblur(void* opt, float x)
 {
     ((TextureOpt*)opt)->sblur = x;
     ((TextureOpt*)opt)->tblur = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_swidth(void* opt, float x)
 {
     ((TextureOpt*)opt)->swidth = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_twidth(void* opt, float x)
 {
     ((TextureOpt*)opt)->twidth = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_rwidth(void* opt, float x)
 {
     ((TextureOpt*)opt)->rwidth = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_stwidth(void* opt, float x)
 {
     ((TextureOpt*)opt)->swidth = x;
     ((TextureOpt*)opt)->twidth = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_fill(void* opt, float x)
 {
     ((TextureOpt*)opt)->fill = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_time(void* opt, float x)
 {
     ((TextureOpt*)opt)->time = x;
 }
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_texture_decode_interpmode(ustringhash_pod name_)
 {
     ustringhash name_hash = ustringhash_from(name_);
     return tex_interp_to_code(name_hash);
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_interp(void* opt, ustringhash_pod modename_)
 {
     ustringhash modename_hash = ustringhash_from(modename_);
@@ -189,20 +185,20 @@ osl_texture_set_interp(void* opt, ustringhash_pod modename_)
         ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_interp_code(void* opt, int mode)
 {
     ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_subimage(void* opt, int subimage)
 {
     ((TextureOpt*)opt)->subimage = subimage;
 }
 
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_subimagename(void* opt, ustringhash_pod subimagename_)
 {
     ustringhash subimagename_hash    = ustringhash_from(subimagename_);
@@ -210,13 +206,13 @@ osl_texture_set_subimagename(void* opt, ustringhash_pod subimagename_)
     ((TextureOpt*)opt)->subimagename = subimagename;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_missingcolor_arena(void* opt, const void* missing)
 {
     ((TextureOpt*)opt)->missingcolor = (const float*)missing;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_missingcolor_alpha(void* opt, int alphaindex,
                                    float missingalpha)
 {
@@ -227,13 +223,16 @@ osl_texture_set_missingcolor_alpha(void* opt, int alphaindex,
 
 
 
-OSL_SHADEOP int
-osl_texture(void* sg_, ustringhash_pod name_, void* handle, void* opt_, float s,
-            float t, float dsdx, float dtdx, float dsdy, float dtdy, int chans,
-            void* result, void* dresultdx, void* dresultdy, void* alpha,
-            void* dalphadx, void* dalphady, ustringhash_pod* errormessage)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
+            void* opt_, float s, float t, float dsdx, float dtdx, float dsdy,
+            float dtdy, int chans, void* result, void* dresultdx,
+            void* dresultdy, void* alpha, void* dalphadx, void* dalphady,
+            ustringhash_pod* errormessage)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+#ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
+#endif
     TextureOpt* opt   = (TextureOpt*)opt_;
     bool derivs       = (dresultdx || dalphadx);
     // It's actually faster to ask for 4 channels (even if we need fewer)
@@ -241,13 +240,15 @@ osl_texture(void* sg_, ustringhash_pod name_, void* handle, void* opt_, float s,
     OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd;
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
-    bool ok = sg->renderer->texture(name, (TextureSystem::TextureHandle*)handle,
-                                    sg->context->texture_thread_info(), *opt,
-                                    sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
-                                    (float*)&result_simd,
-                                    derivs ? (float*)&dresultds_simd : NULL,
-                                    derivs ? (float*)&dresultdt_simd : NULL,
-                                    errormessage ? &em : nullptr);
+    bool ok = rs_texture(oec, name, (TextureSystem::TextureHandle*)handle,
+#ifndef __CUDACC__
+        sg->context->texture_thread_info(),
+#else
+        nullptr
+#endif
+        *opt, s, t, dsdx, dtdx, dsdy, dtdy, 4, (float*)&result_simd,
+        derivs ? (float*)&dresultds_simd : NULL,
+        derivs ? (float*)&dresultdt_simd : NULL, errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = result_simd[i];
@@ -281,11 +282,12 @@ osl_texture(void* sg_, ustringhash_pod name_, void* handle, void* opt_, float s,
 
 
 
-OSL_SHADEOP int
-osl_texture3d(void* sg_, ustringhash_pod name_, void* handle, void* opt_,
-              void* P_, void* dPdx_, void* dPdy_, void* dPdz_, int chans,
-              void* result, void* dresultdx, void* dresultdy, void* alpha,
-              void* dalphadx, void* dalphady, ustringhash_pod* errormessage)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
+              void* opt_, void* P_, void* dPdx_, void* dPdy_, void* dPdz_,
+              int chans, void* result, void* dresultdx, void* dresultdy,
+              void* alpha, void* dalphadx, void* dalphady,
+              ustringhash_pod* errormessage)
 {
     const Vec3& P(*(Vec3*)P_);
     const Vec3& dPdx(*(Vec3*)dPdx_);
@@ -294,7 +296,9 @@ osl_texture3d(void* sg_, ustringhash_pod name_, void* handle, void* opt_,
     if (dPdz_ != nullptr) {
         dPdz = (*(Vec3*)dPdz_);
     }
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+#ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
+#endif
     TextureOpt* opt   = (TextureOpt*)opt_;
     bool derivs       = (dresultdx != NULL || dalphadx != NULL);
     // It's actually faster to ask for 4 channels (even if we need fewer)
@@ -303,14 +307,17 @@ osl_texture3d(void* sg_, ustringhash_pod name_, void* handle, void* opt_,
         dresultdr_simd;
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
-    bool ok
-        = sg->renderer->texture3d(name, (TextureSystem::TextureHandle*)handle,
-                                  sg->context->texture_thread_info(), *opt, sg,
-                                  P, dPdx, dPdy, dPdz, 4, (float*)&result_simd,
-                                  derivs ? (float*)&dresultds_simd : nullptr,
-                                  derivs ? (float*)&dresultdt_simd : nullptr,
-                                  derivs ? (float*)&dresultdr_simd : nullptr,
-                                  errormessage ? &em : nullptr);
+    bool ok = rs_texture3d(oec, name, (TextureSystem::TextureHandle*)handle,
+#ifndef __CUDACC__
+        sg->context->texture_thread_info(),
+#else
+        nullptr,
+#endif
+        *opt, P, dPdx, dPdy, dPdz, 4, (float*)&result_simd,
+        derivs ? (float*)&dresultds_simd : nullptr,
+        derivs ? (float*)&dresultdt_simd : nullptr,
+        derivs ? (float*)&dresultdr_simd : nullptr,
+        errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = result_simd[i];
@@ -344,27 +351,33 @@ osl_texture3d(void* sg_, ustringhash_pod name_, void* handle, void* opt_,
 
 
 
-OSL_SHADEOP int
-osl_environment(void* sg_, ustringhash_pod name_, void* handle, void* opt_,
-                void* R_, void* dRdx_, void* dRdy_, int chans, void* result,
-                void* dresultdx, void* dresultdy, void* alpha, void* dalphadx,
-                void* dalphady, ustringhash_pod* errormessage)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
+                void* opt_, void* R_, void* dRdx_, void* dRdy_, int chans,
+                void* result, void* dresultdx, void* dresultdy, void* alpha,
+                void* dalphadx, void* dalphady, ustringhash_pod* errormessage)
 {
     const Vec3& R(*(Vec3*)R_);
     const Vec3& dRdx(*(Vec3*)dRdx_);
     const Vec3& dRdy(*(Vec3*)dRdy_);
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+#ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
+#endif
     TextureOpt* opt   = (TextureOpt*)opt_;
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::vfloat4 local_result;
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
-    bool ok
-        = sg->renderer->environment(name, (TextureSystem::TextureHandle*)handle,
-                                    sg->context->texture_thread_info(), *opt,
-                                    sg, R, dRdx, dRdy, 4, (float*)&local_result,
-                                    NULL, NULL, errormessage ? &em : nullptr);
+    bool ok = rs_environment(oec, name, (TextureSystem::TextureHandle*)handle,
+#ifndef __CUDACC__
+                                        sg->context->texture_thread_info(),
+#else
+                                        nullptr,
+#endif
+                                        *opt, R, dRdx, dRdy, 4,
+                                        (float*)&local_result, NULL, NULL,
+                                        errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = local_result[i];
@@ -398,10 +411,11 @@ osl_environment(void* sg_, ustringhash_pod name_, void* handle, void* opt_,
 
 
 
-OSL_SHADEOP int
-osl_get_textureinfo(void* sg_, ustringhash_pod name_, void* handle,
-                    ustringhash_pod dataname_, int type, int arraylen,
-                    int aggregate, void* data, ustringhash_pod* errormessage)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
+                    void* handle, ustringhash_pod dataname_, int type,
+                    int arraylen, int aggregate, void* data,
+                    ustringhash_pod* errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -409,15 +423,22 @@ osl_get_textureinfo(void* sg_, ustringhash_pod name_, void* handle,
     typedesc.arraylen  = arraylen;
     typedesc.aggregate = aggregate;
 
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+#ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
+#endif
 
     ustringhash em;
     ustringhash name     = ustringhash_from(name_);
     ustringhash dataname = ustringhash_from(dataname_);
-    bool ok              = sg->renderer->get_texture_info(
-        name, (RendererServices::TextureHandle*)handle,
-        sg->context->texture_thread_info(), sg, 0 /*FIXME-ptex*/, dataname,
-        typedesc, data, errormessage ? &em : nullptr);
+    bool ok              = rs_get_texture_info(oec, name,
+                                               (OSL::TextureSystem::TextureHandle*)handle,
+#ifndef __CUDACC__
+                                  sg->context->texture_thread_info(),
+#else
+                                  nullptr,
+#endif
+                                  0 /*FIXME-ptex*/, dataname,
+                                  typedesc, data, errormessage ? &em : nullptr);
     if (errormessage)
         *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
@@ -425,11 +446,11 @@ osl_get_textureinfo(void* sg_, ustringhash_pod name_, void* handle,
 
 
 
-OSL_SHADEOP int
-osl_get_textureinfo_st(void* sg_, ustringhash_pod name_, void* handle, float s,
-                       float t, ustringhash_pod dataname_, int type,
-                       int arraylen, int aggregate, void* data,
-                       ustringhash_pod* errormessage)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
+                       void* handle, float s, float t,
+                       ustringhash_pod dataname_, int type, int arraylen,
+                       int aggregate, void* data, ustringhash_pod* errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -437,15 +458,23 @@ osl_get_textureinfo_st(void* sg_, ustringhash_pod name_, void* handle, float s,
     typedesc.arraylen  = arraylen;
     typedesc.aggregate = aggregate;
 
-    ShaderGlobals* sg = (ShaderGlobals*)sg_;
+#ifndef __CUDACC__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
+#endif
 
     ustringhash em;
     ustringhash name     = ustringhash_from(name_);
     ustringhash dataname = ustringhash_from(dataname_);
-    bool ok              = sg->renderer->get_texture_info(
-        name, (RendererServices::TextureHandle*)handle, s, t,
-        sg->context->texture_thread_info(), sg, 0 /*FIXME-ptex*/, dataname,
-        typedesc, data, errormessage ? &em : nullptr);
+    bool ok              = rs_get_texture_info_st(oec, name,
+                                                  (OSL::TextureSystem::TextureHandle*)handle,
+                                                  s, t,
+#ifndef __CUDACC__
+                                     sg->context->texture_thread_info(),
+#else
+                                     nullptr,
+#endif
+                                     0 /*FIXME-ptex*/, dataname, typedesc, data,
+                                     errormessage ? &em : nullptr);
     if (errormessage)
         *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
@@ -455,49 +484,43 @@ osl_get_textureinfo_st(void* sg_, ustringhash_pod name_, void* handle, float s,
 
 // Trace
 
-// Utility: retrieve a pointer to the ShadingContext's trace options
-// struct, also re-initialize its contents.
-OSL_SHADEOP void*
-osl_get_trace_options(void* sg_)
+OSL_SHADEOP OSL_HOSTDEVICE void
+osl_init_trace_options(OpaqueExecContextPtr oec, void* opt)
 {
-    ShaderGlobals* sg               = (ShaderGlobals*)sg_;
-    RendererServices::TraceOpt* opt = sg->context->trace_options_ptr();
-    new (opt) RendererServices::TraceOpt;
-    return opt;
+    new (opt) TraceOpt;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_trace_set_mindist(void* opt, float x)
 {
-    ((RendererServices::TraceOpt*)opt)->mindist = x;
+    ((TraceOpt*)opt)->mindist = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_trace_set_maxdist(void* opt, float x)
 {
-    ((RendererServices::TraceOpt*)opt)->maxdist = x;
+    ((TraceOpt*)opt)->maxdist = x;
 }
 
-OSL_SHADEOP void
+OSL_SHADEOP OSL_HOSTDEVICE void
 osl_trace_set_shade(void* opt, int x)
 {
-    ((RendererServices::TraceOpt*)opt)->shade = x;
+    ((TraceOpt*)opt)->shade = x;
 }
 
 
-OSL_SHADEOP void
-osl_trace_set_traceset(void* opt, const ustringhash_pod x)
+OSL_SHADEOP OSL_HOSTDEVICE void
+osl_trace_set_traceset(void* opt, const char* x)
 {
-    ((RendererServices::TraceOpt*)opt)->traceset = ustring_from(x);
+    ((TraceOpt*)opt)->traceset = ustring_from(x);
 }
 
 
-OSL_SHADEOP int
-osl_trace(void* sg_, void* opt_, void* Pos_, void* dPosdx_, void* dPosdy_,
-          void* Dir_, void* dDirdx_, void* dDirdy_)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_trace(OpaqueExecContextPtr oec, void* opt_, void* Pos_, void* dPosdx_,
+          void* dPosdy_, void* Dir_, void* dDirdx_, void* dDirdy_)
 {
-    ShaderGlobals* sg               = (ShaderGlobals*)sg_;
-    RendererServices::TraceOpt* opt = (RendererServices::TraceOpt*)opt_;
+    TraceOpt* opt = (TraceOpt*)opt_;
     static const Vec3 Zero(0.0f, 0.0f, 0.0f);
     const Vec3* Pos    = (Vec3*)Pos_;
     const Vec3* dPosdx = dPosdx_ ? (Vec3*)dPosdx_ : &Zero;
@@ -505,8 +528,7 @@ osl_trace(void* sg_, void* opt_, void* Pos_, void* dPosdx_, void* dPosdy_,
     const Vec3* Dir    = (Vec3*)Dir_;
     const Vec3* dDirdx = dDirdx_ ? (Vec3*)dDirdx_ : &Zero;
     const Vec3* dDirdy = dDirdy_ ? (Vec3*)dDirdy_ : &Zero;
-    return sg->renderer->trace(*opt, sg, *Pos, *dPosdx, *dPosdy, *Dir, *dDirdx,
-                               *dDirdy);
+    return rs_trace(oec, *opt, *Pos, *dPosdx, *dPosdy, *Dir, *dDirdx, *dDirdy);
 }
 
 

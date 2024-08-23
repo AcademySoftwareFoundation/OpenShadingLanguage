@@ -382,8 +382,8 @@ DECL(__OSL_OP(get_attribute_uniform), "iXissiiXX")
 // TODO:  shouldn't bind_interpolated_param be MASKED?  change name to reflect
 DECL(__OSL_OP(bind_interpolated_param), "iXsLiXiXiXii")
 
-//DECL (osl_get_texture_options, "XX") // unneeded
-DECL(__OSL_OP(get_noise_options), "XX")
+//DECL (osl_init_texture_options, "xXX") // unneeded
+DECL(__OSL_OP(osl_init_noise_options), "xXX")
 
 // The following are defined inside llvm_ops.cpp. Only include these
 // declarations in the OSL_LLVM_NO_BITCODE case.

@@ -356,38 +356,6 @@ osl_printf(void* sg_, OSL::ustringhash_pod fmt_str_hash, void* args)
 
 
 
-__device__ void*
-osl_get_noise_options(void* sg_)
-{
-    ShaderGlobals* sg = ((ShaderGlobals*)sg_);
-    NoiseOptCUDA* opt
-        = (NoiseOptCUDA*)((ShadingContextCUDA*)sg->context)->noise_options_ptr();
-    new (opt) NoiseOptCUDA;
-    return opt;
-}
-
-
-__device__ void*
-osl_get_texture_options(void* sg_)
-{
-    return 0;
-}
-
-__device__ void
-osl_texture_set_interp_code(void* opt, int mode)
-{
-    // ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
-}
-
-
-__device__ void
-osl_texture_set_stwrap_code(void* opt, int mode)
-{
-    //((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
-    //((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
-}
-
-
 __forceinline__ __device__ float3
 make_float3(const float4& a)
 {

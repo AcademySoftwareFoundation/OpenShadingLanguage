@@ -228,13 +228,13 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
             void* opt_, float s, float t, float dsdx, float dtdx, float dsdy,
             float dtdy, int chans, void* result, void* dresultdx,
             void* dresultdy, void* alpha, void* dalphadx, void* dalphady,
-            ustringhash_pod* errormessage)
+            void* errormessage)
 {
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
-    TextureOpt* opt   = (TextureOpt*)opt_;
-    bool derivs       = (dresultdx || dalphadx);
+    TextureOpt* opt = (TextureOpt*)opt_;
+    bool derivs     = (dresultdx || dalphadx);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd;
@@ -242,13 +242,15 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture(oec, name, (TextureSystem::TextureHandle*)handle,
 #ifndef __CUDACC__
-        sg->context->texture_thread_info(),
+                         sg->context->texture_thread_info(),
 #else
         nullptr
 #endif
-        *opt, s, t, dsdx, dtdx, dsdy, dtdy, 4, (float*)&result_simd,
-        derivs ? (float*)&dresultds_simd : NULL,
-        derivs ? (float*)&dresultdt_simd : NULL, errormessage ? &em : nullptr);
+                         *opt, s, t, dsdx, dtdx, dsdy, dtdy, 4,
+                         (float*)&result_simd,
+                         derivs ? (float*)&dresultds_simd : NULL,
+                         derivs ? (float*)&dresultdt_simd : NULL,
+                         errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = result_simd[i];
@@ -276,7 +278,8 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     }
 
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *reinterpret_cast<ustringhash_pod*>(errormessage)
+            = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -286,8 +289,7 @@ OSL_SHADEOP OSL_HOSTDEVICE int
 osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
               void* opt_, void* P_, void* dPdx_, void* dPdy_, void* dPdz_,
               int chans, void* result, void* dresultdx, void* dresultdy,
-              void* alpha, void* dalphadx, void* dalphady,
-              ustringhash_pod* errormessage)
+              void* alpha, void* dalphadx, void* dalphady, void* errormessage)
 {
     const Vec3& P(*(Vec3*)P_);
     const Vec3& dPdx(*(Vec3*)dPdx_);
@@ -299,8 +301,8 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
-    TextureOpt* opt   = (TextureOpt*)opt_;
-    bool derivs       = (dresultdx != NULL || dalphadx != NULL);
+    TextureOpt* opt = (TextureOpt*)opt_;
+    bool derivs     = (dresultdx != NULL || dalphadx != NULL);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::vfloat4 result_simd, dresultds_simd, dresultdt_simd,
@@ -309,15 +311,15 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture3d(oec, name, (TextureSystem::TextureHandle*)handle,
 #ifndef __CUDACC__
-        sg->context->texture_thread_info(),
+                           sg->context->texture_thread_info(),
 #else
-        nullptr,
+                           nullptr,
 #endif
-        *opt, P, dPdx, dPdy, dPdz, 4, (float*)&result_simd,
-        derivs ? (float*)&dresultds_simd : nullptr,
-        derivs ? (float*)&dresultdt_simd : nullptr,
-        derivs ? (float*)&dresultdr_simd : nullptr,
-        errormessage ? &em : nullptr);
+                           *opt, P, dPdx, dPdy, dPdz, 4, (float*)&result_simd,
+                           derivs ? (float*)&dresultds_simd : nullptr,
+                           derivs ? (float*)&dresultdt_simd : nullptr,
+                           derivs ? (float*)&dresultdr_simd : nullptr,
+                           errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = result_simd[i];
@@ -345,7 +347,8 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     }
 
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *reinterpret_cast<ustringhash_pod*>(errormessage)
+            = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -355,7 +358,7 @@ OSL_SHADEOP OSL_HOSTDEVICE int
 osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
                 void* opt_, void* R_, void* dRdx_, void* dRdy_, int chans,
                 void* result, void* dresultdx, void* dresultdy, void* alpha,
-                void* dalphadx, void* dalphady, ustringhash_pod* errormessage)
+                void* dalphadx, void* dalphady, void* errormessage)
 {
     const Vec3& R(*(Vec3*)R_);
     const Vec3& dRdx(*(Vec3*)dRdx_);
@@ -363,7 +366,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
-    TextureOpt* opt   = (TextureOpt*)opt_;
+    TextureOpt* opt = (TextureOpt*)opt_;
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::vfloat4 local_result;
@@ -371,13 +374,12 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_environment(oec, name, (TextureSystem::TextureHandle*)handle,
 #ifndef __CUDACC__
-                                        sg->context->texture_thread_info(),
+                             sg->context->texture_thread_info(),
 #else
-                                        nullptr,
+                             nullptr,
 #endif
-                                        *opt, R, dRdx, dRdy, 4,
-                                        (float*)&local_result, NULL, NULL,
-                                        errormessage ? &em : nullptr);
+                             *opt, R, dRdx, dRdy, 4, (float*)&local_result,
+                             NULL, NULL, errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         ((float*)result)[i] = local_result[i];
@@ -405,7 +407,8 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     }
 
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *reinterpret_cast<ustringhash_pod*>(errormessage)
+            = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -414,8 +417,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
                     void* handle, ustringhash_pod dataname_, int type,
-                    int arraylen, int aggregate, void* data,
-                    ustringhash_pod* errormessage)
+                    int arraylen, int aggregate, void* data, void* errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -437,10 +439,11 @@ osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
 #else
                                   nullptr,
 #endif
-                                  0 /*FIXME-ptex*/, dataname,
-                                  typedesc, data, errormessage ? &em : nullptr);
+                                  0 /*FIXME-ptex*/, dataname, typedesc, data,
+                                  errormessage ? &em : nullptr);
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *reinterpret_cast<ustringhash_pod*>(errormessage)
+            = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -450,7 +453,7 @@ OSL_SHADEOP OSL_HOSTDEVICE int
 osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
                        void* handle, float s, float t,
                        ustringhash_pod dataname_, int type, int arraylen,
-                       int aggregate, void* data, ustringhash_pod* errormessage)
+                       int aggregate, void* data, void* errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -476,7 +479,8 @@ osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
                                      0 /*FIXME-ptex*/, dataname, typedesc, data,
                                      errormessage ? &em : nullptr);
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *reinterpret_cast<ustringhash_pod*>(errormessage)
+            = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 

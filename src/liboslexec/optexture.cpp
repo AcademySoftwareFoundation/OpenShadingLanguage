@@ -266,6 +266,8 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 {
 #ifndef __CUDACC__
     using float4 = OIIO::simd::vfloat4;
+#else
+    using float4 = Imath::Vec4<float>;
 #endif
     TextureOpt* opt               = (TextureOpt*)opt_;
     float* result                 = (float*)result_;
@@ -335,6 +337,8 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 {
 #ifndef __CUDACC__
     using float4 = OIIO::simd::vfloat4;
+#else
+    using float4 = Imath::Vec4<float>;
 #endif
     const Vec3& P(*(Vec3*)P_);
     const Vec3& dPdx(*(Vec3*)dPdx_);
@@ -412,6 +416,8 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 {
 #ifndef __CUDACC__
     using float4 = OIIO::simd::vfloat4;
+#else
+    using float4 = Imath::Vec4<float>;
 #endif
     const Vec3& R(*(Vec3*)R_);
     const Vec3& dRdx(*(Vec3*)dRdx_);
@@ -475,15 +481,22 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
-                    void* handle, ustringhash_pod dataname_, int type,
+                    void* handle_, ustringhash_pod dataname_, int type,
                     int arraylen, int aggregate, void* data,
                     void* errormessage_)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
-    typedesc.basetype             = type;
-    typedesc.arraylen             = arraylen;
-    typedesc.aggregate            = aggregate;
+    typedesc.basetype  = type;
+    typedesc.arraylen  = arraylen;
+    typedesc.aggregate = aggregate;
+
+    ustringhash name     = ustringhash_from(name_);
+    ustringhash dataname = ustringhash_from(dataname_);
+
+    TextureSystem::TextureHandle* handle
+        = (TextureSystem::TextureHandle*)handle_;
+
     ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
 
 #ifndef __CUDACC__
@@ -491,10 +504,7 @@ osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
 #endif
 
     ustringhash em;
-    ustringhash name     = ustringhash_from(name_);
-    ustringhash dataname = ustringhash_from(dataname_);
-    bool ok              = rs_get_texture_info(oec, name,
-                                               (OSL::TextureSystem::TextureHandle*)handle,
+    bool ok = rs_get_texture_info(oec, name, handle,
 #ifndef __CUDACC__
                                   sg->context->texture_thread_info(),
 #else
@@ -511,15 +521,22 @@ osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
 
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
-                       void* handle, float s, float t,
+                       void* handle_, float s, float t,
                        ustringhash_pod dataname_, int type, int arraylen,
                        int aggregate, void* data, void* errormessage_)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
-    typedesc.basetype             = type;
-    typedesc.arraylen             = arraylen;
-    typedesc.aggregate            = aggregate;
+    typedesc.basetype  = type;
+    typedesc.arraylen  = arraylen;
+    typedesc.aggregate = aggregate;
+
+    ustringhash name     = ustringhash_from(name_);
+    ustringhash dataname = ustringhash_from(dataname_);
+
+    TextureSystem::TextureHandle* handle
+        = (TextureSystem::TextureHandle*)handle_;
+
     ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
 
 #ifndef __CUDACC__
@@ -527,11 +544,7 @@ osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
 #endif
 
     ustringhash em;
-    ustringhash name     = ustringhash_from(name_);
-    ustringhash dataname = ustringhash_from(dataname_);
-    bool ok              = rs_get_texture_info_st(oec, name,
-                                                  (OSL::TextureSystem::TextureHandle*)handle,
-                                                  s, t,
+    bool ok = rs_get_texture_info_st(oec, name, handle, s, t,
 #ifndef __CUDACC__
                                      sg->context->texture_thread_info(),
 #else

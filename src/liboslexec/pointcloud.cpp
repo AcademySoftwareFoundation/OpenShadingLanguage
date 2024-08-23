@@ -498,7 +498,7 @@ osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
     ustringhash filename = ustringhash_from(filename_);
     auto pos             = reinterpret_cast<const Vec3*>(pos_);
     auto names           = reinterpret_cast<const ustringhash*>(names_);
-    auto types           = reinterpret_cast<TypeDesc*>(types_);
+    auto types           = reinterpret_cast<const TypeDesc*>(types_);
 
     return rs_pointcloud_write(oec, filename, *pos, nattribs, names, types,
                                values);

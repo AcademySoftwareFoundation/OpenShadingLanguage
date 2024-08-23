@@ -379,12 +379,12 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
 
     // Correct our str texture space gradients into xyz-space gradients
     if (derivs) {
-        vfloat4 dresultdx_simd = dresultds_simd * dPdx.x
-                                 + dresultdt_simd * dPdx.y
-                                 + dresultdr_simd * dPdx.z;
-        vfloat4 dresultdy_simd = dresultds_simd * dPdy.x
-                                 + dresultdt_simd * dPdy.y
-                                 + dresultdr_simd * dPdy.z;
+        float4 dresultdx_simd = dresultds_simd * dPdx.x
+                                + dresultdt_simd * dPdx.y
+                                + dresultdr_simd * dPdx.z;
+        float4 dresultdy_simd = dresultds_simd * dPdy.x
+                                + dresultdt_simd * dPdy.y
+                                + dresultdr_simd * dPdy.z;
         if (dresultdx) {
             for (int i = 0; i < chans; ++i)
                 dresultdx[i] = dresultdx_simd[i];
@@ -467,8 +467,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     }
 
     if (errormessage)
-        *reinterpret_cast<ustringhash_pod*>(errormessage)
-            = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -502,8 +501,7 @@ osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
                                   0 /*FIXME-ptex*/, dataname, typedesc, data,
                                   errormessage ? &em : nullptr);
     if (errormessage)
-        *reinterpret_cast<ustringhash_pod*>(errormessage)
-            = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -539,8 +537,7 @@ osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
                                      0 /*FIXME-ptex*/, dataname, typedesc, data,
                                      errormessage ? &em : nullptr);
     if (errormessage)
-        *reinterpret_cast<ustringhash_pod*>(errormessage)
-            = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = ok ? ustringhash {}.hash() : em.hash();
     return ok;
 }
 
@@ -576,7 +573,7 @@ osl_trace_set_shade(void* opt, int x)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_trace_set_traceset(void* opt, const ustringhash_pod x)
 {
-    ((TraceOpt*)opt)->traceset = ustring_from(x);
+    ((TraceOpt*)opt)->traceset = ustringhash_from(x);
 }
 
 

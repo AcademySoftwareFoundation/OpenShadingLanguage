@@ -20,21 +20,12 @@ add_library (${local_lib} ${lib_src})
 target_include_directories(${local_lib}
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-        ${IMATH_INCLUDES}
     )
 target_link_libraries (${local_lib}
     PUBLIC
         OpenImageIO::OpenImageIO
-        # For OpenEXR/Imath 3.x:
         $<TARGET_NAME_IF_EXISTS:Imath::Imath>
         $<TARGET_NAME_IF_EXISTS:Imath::Half>
-        # For OpenEXR >= 2.4/2.5 with reliable exported targets
-        $<TARGET_NAME_IF_EXISTS:IlmBase::Imath>
-        $<TARGET_NAME_IF_EXISTS:IlmBase::Half>
-        $<TARGET_NAME_IF_EXISTS:IlmBase::IlmThread>
-        $<TARGET_NAME_IF_EXISTS:IlmBase::Iex>
-        # For OpenEXR <= 2.3:
-        ${ILMBASE_LIBRARIES}
     PRIVATE
         ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}

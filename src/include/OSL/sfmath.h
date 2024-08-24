@@ -157,9 +157,6 @@ namespace sfm
 #endif
     }
 
-#if OSL_USING_IMATH >= 3
-    // Imath 3.0 has adequate optimized versions of these.
-
     OSL_FORCEINLINE OSL_HOSTDEVICE
     float length(const Vec3 &N)
     {
@@ -171,75 +168,6 @@ namespace sfm
     {
         return N.normalized();
     }
-
-#else
-    // because lengthTiny does a lot of work including another
-    // sqrt, we really want to skip that if possible because
-    // with SIMD execution, we end up doing the sqrt twice
-    // and blending the results.  Although code could be
-    // refactored to do a single sqrt, think its better
-    // to skip the code block as we don't expect near 0 lengths
-    // TODO: get OpenEXR ImathVec to update to similar, don't think
-    // it can cause harm
-
-    // Imath::Vec3::lengthTiny is private
-    // local copy here no changes
-    OSL_FORCEINLINE OSL_HOSTDEVICE float accessibleTinyLength(const Vec3 &N)
-    {
-//        float absX = (N.x >= float (0))? N.x: -N.x;
-//        float absY = (N.y >= float (0))? N.y: -N.y;
-//        float absZ = (N.z >= float (0))? N.z: -N.z;
-        // gcc builtin for abs is 2 instructions using bit twiddling vs. compares
-        float absX = std::abs(N.x);
-        float absY = std::abs(N.y);
-        float absZ = std::abs(N.z);
-
-        float max = absX;
-
-        if (max < absY)
-            max = absY;
-
-        if (max < absZ)
-            max = absZ;
-
-        if (OSL_UNLIKELY(max == 0.0f))
-            return 0.0f;
-
-        //
-        // Do not replace the divisions by max with multiplications by 1/max.
-        // Computing 1/max can overflow but the divisions below will always
-        // produce results less than or equal to 1.
-        //
-
-        absX /= max;
-        absY /= max;
-        absZ /= max;
-
-        return max * std::sqrt(absX * absX + absY * absY + absZ * absZ);
-    }
-
-    OSL_FORCEINLINE OSL_HOSTDEVICE
-    float length(const Vec3 &N)
-    {
-        float length2 = N.dot (N);
-
-        if (OSL_UNLIKELY(length2 < 2.0f * std::numeric_limits<float>::min()))
-            return accessibleTinyLength(N);
-
-        return std::sqrt(length2);
-    }
-
-    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
-    normalize(const Vec3 &N)
-    {
-        float l = length(N);
-
-        if (OSL_UNLIKELY(l == float (0)))
-            return Vec3 (float (0));
-
-        return Vec3 (N.x / l, N.y / l, N.z / l);
-    }
-#endif
 
     OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3>
     normalize (const Dual2<Vec3> &a)
@@ -328,106 +256,7 @@ namespace sfm
 
 #endif
 
-#if OSL_USING_IMATH >= 3
     using Matrix33 = OSL::Matrix33;
-#else
-    class Matrix33 : public OSL::Matrix33
-    {
-    public:
-        typedef OSL::Matrix33 parent;
-
-        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (Imath::Uninitialized uninit)
-        : parent(uninit)
-        {}
-
-        // Avoid the memset that is part of the Imath::Matrix33
-        // default constructor
-        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 ()
-        : parent(1.0f, 0.0f, 0.0f,
-                                 0.0f, 1.0f, 0.0f,
-                                 0.0f, 0.0f, 1.0f)
-        {}
-
-        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (float a, float b, float c, float d, float e, float f, float g, float h, float i)
-        : parent(a,b,c,d,e,f,g,h,i)
-        {}
-
-        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (const OSL::Matrix33 &a)
-        : parent(a)
-        {}
-
-        // Avoid the memcpy that is part of the Imath::Matrix33
-        OSL_FORCEINLINE OSL_HOSTDEVICE
-        Matrix33 (const float a[3][3])
-        : OSL::Matrix33(
-            a[0][0], a[0][1], a[0][2],
-            a[1][0], a[1][1], a[1][2],
-            a[2][0], a[2][1], a[2][2])
-        {}
-
-
-        // Avoid the memcpy that is part of Imath::Matrix33::operator=
-        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 &
-        operator = (const Matrix33 &v)
-        {
-            parent::x[0][0] = v.x[0][0];
-            parent::x[0][1] = v.x[0][1];
-            parent::x[0][2] = v.x[0][2];
-
-            parent::x[1][0] = v.x[1][0];
-            parent::x[1][1] = v.x[1][1];
-            parent::x[1][2] = v.x[1][2];
-
-            parent::x[2][0] = v.x[2][0];
-            parent::x[2][1] = v.x[2][1];
-            parent::x[2][2] = v.x[2][2];
-
-            return *this;
-        }
-
-
-        // Avoid Imath::Matrix33::operator * that
-        // initializing values to 0 before overwriting them
-        // Also manually unroll its nested loops
-        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33
-        operator * (const Matrix33 &v) const
-        {
-            Matrix33 tmp(Imath::UNINITIALIZED);
-
-            tmp.x[0][0] = parent::x[0][0] * v.x[0][0] +
-                          parent::x[0][1] * v.x[1][0] +
-                          parent::x[0][2] * v.x[2][0];
-            tmp.x[0][1] = parent::x[0][0] * v.x[0][1] +
-                    parent::x[0][1] * v.x[1][1] +
-                    parent::x[0][2] * v.x[2][1];
-            tmp.x[0][2] = parent::x[0][0] * v.x[0][2] +
-                    parent::x[0][1] * v.x[1][2] +
-                    parent::x[0][2] * v.x[2][2];
-
-            tmp.x[1][0] = parent::x[1][0] * v.x[0][0] +
-                    parent::x[1][1] * v.x[1][0] +
-                    parent::x[1][2] * v.x[2][0];
-            tmp.x[1][1] = parent::x[1][0] * v.x[0][1] +
-                    parent::x[1][1] * v.x[1][1] +
-                    parent::x[1][2] * v.x[2][1];
-            tmp.x[1][2] = parent::x[1][0] * v.x[0][2] +
-                    parent::x[1][1] * v.x[1][2] +
-                    parent::x[1][2] * v.x[2][2];
-
-            tmp.x[2][0] = parent::x[2][0] * v.x[0][0] +
-                    parent::x[2][1] * v.x[1][0] +
-                    parent::x[2][2] * v.x[2][0];
-            tmp.x[2][1] = parent::x[2][0] * v.x[0][1] +
-                    parent::x[2][1] * v.x[1][1] +
-                    parent::x[2][2] * v.x[2][1];
-            tmp.x[2][2] = parent::x[2][0] * v.x[0][2] +
-                    parent::x[2][1] * v.x[1][2] +
-                    parent::x[2][2] * v.x[2][2];
-
-            return tmp;
-        }
-    };
-#endif
 
     OSL_FORCEINLINE OSL_HOSTDEVICE sfm::Matrix33
     make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)

@@ -27,7 +27,7 @@ export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
 export ASAN_OPTIONS=print_suppressions=0:detect_odr_violation=1
 
 export USE_PYTHON=${USE_PYTHON:=1}
-export PYTHON_VERSION=${PYTHON_VERSION:="2.7"}
+export PYTHON_VERSION=${PYTHON_VERSION:="3.7"}
 export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 export PYTHONPATH=/usr/local/lib64/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 export PYTHONPATH=$OSL_ROOT/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH

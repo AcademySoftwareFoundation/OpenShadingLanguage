@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 
-# These lines make us compatible with both Python 2 and 3
-from __future__ import print_function
-from __future__ import absolute_import
-
 # Import the Python bindings for OSLQuery.
 # It may also be smart for many applications to
 #     import OpenImageIO

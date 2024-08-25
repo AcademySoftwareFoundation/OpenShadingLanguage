@@ -112,7 +112,7 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
      # Serialize the linked bitcode into a CPP file 
     set ( src_bc_cpp "${CMAKE_CURRENT_BINARY_DIR}/${output_name}.bc.cpp" )
     add_custom_command ( OUTPUT ${src_bc_cpp}
-        COMMAND ${Python_EXECUTABLE} "${_THIS_MODULE_BASE_DIR}/../build-scripts/serialize-bc.py"
+        COMMAND ${Python3_EXECUTABLE} "${_THIS_MODULE_BASE_DIR}/../build-scripts/serialize-bc.py"
             ${linked_src_bc} ${src_bc_cpp} ${output_name}
         DEPENDS "${_THIS_MODULE_BASE_DIR}/../build-scripts/serialize-bc.py" ${linked_src_bc}
         ${exec_headers} ${PROJECT_PUBLIC_HEADERS}

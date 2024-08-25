@@ -185,7 +185,7 @@ function ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated extra
     MAKE_CUDA_BITCODE (${llvm_src} "" llvm_bc "${extra_clang_args}")
 
     add_custom_command (OUTPUT ${llvm_bc_cpp}
-        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} ${prefix}
+        COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} ${prefix}
         MAIN_DEPENDENCY ${llvm_src}
         DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${llvm_src} ${headers} ${llvm_bc}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
@@ -193,7 +193,7 @@ endfunction ()
 
 function ( MAKE_EMBEDDED_CPP symbol_name output_cpp input_file )
     add_custom_command ( OUTPUT ${output_cpp}
-        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
+        COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py"
             ${input_file} ${output_cpp} "${symbol_name}"
 
         DEPENDS "${CMAKE_SOURCE_DIR}/src/build-scripts/serialize-bc.py" ${linked_bc}
@@ -227,7 +227,7 @@ function ( CUDA_SHADEOPS_COMPILE prefix output_bc output_ptx input_srcs headers 
         COMMAND ${LLVM_OPT_TOOL} ${opt_tool_flags} ${linked_bc} -o ${linked_bc}
         COMMAND ${LLVM_LLC_TOOL} --march=nvptx64 -mcpu=${CUDA_TARGET_ARCH} ${linked_bc} -o ${linked_ptx}
         # This script converts all of the .weak functions defined in the PTX into .visible functions.
-        COMMAND ${Python_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
+        COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"
             ${linked_ptx} ${linked_ptx}
             DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${input_srcs} ${headers}
                 "${CMAKE_SOURCE_DIR}/src/build-scripts/process-ptx.py"

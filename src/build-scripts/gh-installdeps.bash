@@ -47,6 +47,19 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
         popd
     fi
 
+    if [[ "${CONAN_PACKAGES}" != "" ]] ; then
+        export PATH=$PWD/conan/bin:$PATH
+        export LD_LIBRARY_PATH=$PWD/conan/lib:$LD_LIBRARY_PATH
+        mkdir -p conan
+        pushd conan
+        for pkg in ${CONAN_PACKAGES} ; do
+            echo "Installing $pkg via Conan..."
+            time conan install $pkg
+        done
+        popd
+        ls -R conan
+    fi
+
     if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" ]] ; then
         # Lock down icc to 2022.1 because newer versions hosted on the Intel
         # repo require a glibc too new for the ASWF CentOS7-based containers

@@ -138,6 +138,18 @@ jobs:
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
+          - desc: gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
+            nametag: linux-vfx2024
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2024-clang17
+            vfxyear: 2024
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: "3.11"
+            pybind11_ver: v2.11.1
+            simd: avx2,f16c
+            batched: b8_AVX2
+            # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
           - desc: oldest everything gcc9/C++17 llvm9 py3.7 oiio2.3 no-simd
             nametag: linux-oldest
             runner: ubuntu-latest
@@ -355,7 +367,7 @@ jobs:
             fmt_ver: 10.1.0
             openexr_ver: v3.2.1
             openimageio_ver: master
-            pybind11_ver: v2.10.0
+            pybind11_ver: v2.11.1
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512

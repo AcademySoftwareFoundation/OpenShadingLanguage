@@ -42,7 +42,7 @@ extern "C" {
 /// Get the 4x4 matrix that transforms by the specified
 /// transformation at the given time.  Return true if ok, false
 /// on error.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_xform_time(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
                          OSL::TransformationPtr from, float time);
 
@@ -50,7 +50,7 @@ rs_get_matrix_xform_time(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
 /// transformation at the given time.  Return true if ok, false on
 /// error.  Suggested implementation is to use rs_get_matrix_xform_time and
 /// invert it, but a particular renderer may have a better technique.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr oec,
                                  OSL::Matrix44& result,
                                  OSL::TransformationPtr xform, float time);
@@ -58,7 +58,7 @@ rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr oec,
 /// Get the 4x4 matrix that transforms points from the named
 /// 'from' coordinate system to "common" space at the given time.
 /// Returns true if ok, false if the named matrix is not known.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_space_time(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
                          OSL::ustringhash from, float time);
 
@@ -66,7 +66,7 @@ rs_get_matrix_space_time(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
 /// the named 'to' coordinate system to at the given time.  Suggested
 /// implementation is to use rs_get_matrix_space_time and invert it, but a
 /// particular renderer may have a better technique.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr oec,
                                  OSL::Matrix44& result, OSL::ustringhash to,
                                  float time);
@@ -75,7 +75,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr oec,
 /// transformation.  Return true if ok, false on error.  Since no
 /// time value is given, also return false if the transformation may
 /// be time-varying.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_xform(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
                     OSL::TransformationPtr xform);
 
@@ -85,7 +85,7 @@ rs_get_matrix_xform(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
 /// be time-varying.  Suggested implementation is to use
 /// rs_get_matrix_xform and invert it, but a particular renderer may have a
 /// better technique.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr oec,
                             OSL::Matrix44& result,
                             OSL::TransformationPtr xform);
@@ -94,7 +94,7 @@ rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr oec,
 /// Since there is no time value passed, return false if the
 /// transformation may be time-varying (as well as if it's not found
 /// at all).
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_space(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
                     OSL::ustringhash from);
 
@@ -104,7 +104,7 @@ rs_get_matrix_space(OSL::OpaqueExecContextPtr oec, OSL::Matrix44& result,
 /// (as well as if it's not found at all).  Suggested
 /// implementation is to use rs_get_matrix_space and invert it, but a
 /// particular renderer may have a better technique.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr oec,
                             OSL::Matrix44& result, OSL::ustringhash to);
 
@@ -128,7 +128,7 @@ rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr oec,
 /// Note to implementations: just return 'false'
 /// if there isn't a special nonlinear transformation between the
 /// two spaces.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_transform_points(OSL::OpaqueExecContextPtr oec, OSL::ustringhash from,
                     OSL::ustringhash to, float time, const OSL::Vec3* Pin,
                     OSL::Vec3* Pout, int npoints,
@@ -160,7 +160,7 @@ rs_transform_points(OSL::OpaqueExecContextPtr oec, OSL::ustringhash from,
 /// messages (in case of failure, when the function returns false) will
 /// be stored there, leaving it up to the caller/shader to handle the
 /// error.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_texture(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
            OSL::TextureSystem::TextureHandle* texture_handle,
            OSL::TextureSystem::Perthread* texture_thread_info,
@@ -193,7 +193,7 @@ rs_texture(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 /// messages (in case of failure, when the function returns false) will
 /// be stored there, leaving it up to the caller/shader to handle the
 /// error.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_texture3d(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
              OSL::TextureSystem::TextureHandle* texture_handle,
              OSL::TextureSystem::Perthread* texture_thread_info,
@@ -225,7 +225,7 @@ rs_texture3d(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 /// messages (in case of failure, when the function returns false) will
 /// be stored there, leaving it up to the caller/shader to handle the
 /// error.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_environment(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                OSL::TextureSystem::TextureHandle* texture_handle,
                OSL::TextureSystem::Perthread* texture_thread_info,
@@ -253,7 +253,7 @@ rs_environment(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 /// messages (in case of failure, when the function returns false) will
 /// be stored there, leaving it up to the caller/shader to handle the
 /// error.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_texture_info(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                     OSL::TextureSystem::TextureHandle* texture_handle,
                     OSL::TextureSystem::Perthread* texture_thread_info,
@@ -261,7 +261,7 @@ rs_get_texture_info(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                     OSL::TypeDesc datatype, void* data,
                     OSL::ustringhash* errormessage);
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_texture_info_st(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                        OSL::TextureSystem::TextureHandle* texture_handle,
                        float s, float t,
@@ -279,7 +279,7 @@ rs_get_texture_info_st(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 /// derivatives will be computed for distances (when provided).
 ///
 /// Return the number of points found, always < max_points
-OSL_RSOP int
+OSL_RSOP OSL_HOSTDEVICE int
 rs_pointcloud_search(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                      const OSL::Vec3& center, float radius, int max_points,
                      bool sort, size_t* out_indices, float* out_distances,
@@ -289,7 +289,7 @@ rs_pointcloud_search(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 /// of the requested type stored in out_data.
 ///
 /// Return 1 if the attribute is found, 0 otherwise.
-OSL_RSOP int
+OSL_RSOP OSL_HOSTDEVICE int
 rs_pointcloud_get(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                   size_t* indices, int count, OSL::ustringhash attr_name,
                   OSL::TypeDesc attr_type, void* out_data);
@@ -297,7 +297,7 @@ rs_pointcloud_get(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 /// Write a point to the named pointcloud, which will be saved
 /// at the end of the frame.  Return true if everything is ok,
 /// false if there was an error.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_pointcloud_write(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                     const OSL::Vec3& pos, int nattribs,
                     const OSL::ustringhash* names, const OSL::TypeDesc* types,
@@ -305,7 +305,7 @@ rs_pointcloud_write(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 
 /// Immediately trace a ray from P in the direction R.  Return true
 /// if anything hit, otherwise false.
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_trace(OSL::OpaqueExecContextPtr oec, OSL::TraceOpt& options,
          const OSL::Vec3& P, const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
          const OSL::Vec3& R, const OSL::Vec3& dRdx, const OSL::Vec3& dRdy);
@@ -319,24 +319,24 @@ rs_trace(OSL::OpaqueExecContextPtr oec, OSL::TraceOpt& options,
 /// are passed as ustringhash's.
 /// It is recomended to override and make use of the journal buffer to record
 /// everything to a buffer than can be post processed as needed.
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_errorfmt(OSL::OpaqueExecContextPtr oec, OSL::ustringhash fmt_specification,
             int32_t count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues);
 
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_filefmt(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filname_hash,
            OSL::ustringhash fmt_specification, int32_t count,
            const OSL::EncodedType* argTypes, uint32_t argValuesSize,
            uint8_t* argValues);
 
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_printfmt(OSL::OpaqueExecContextPtr oec, OSL::ustringhash fmt_specification,
             int32_t count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues);
 
 
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_warningfmt(OSL::OpaqueExecContextPtr oec, OSL::ustringhash fmt_specification,
               int32_t count, const OSL::EncodedType* argTypes,
               uint32_t argValuesSize, uint8_t* argValues);

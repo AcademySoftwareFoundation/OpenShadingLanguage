@@ -68,7 +68,7 @@ OSL_HOSTDEVICE inline TextureOpt::Wrap
 decode_wrapmode(ustringhash_pod name_)
 {
     // TODO: Enable when decode_wrapmode has __device__ marker.
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     ustringhash name_hash = ustringhash_from(name_);
 #    ifdef OIIO_TEXTURESYSTEM_SUPPORTS_DECODE_BY_USTRINGHASH
     return OIIO::TextureOpt::decode_wrapmode(name_hash);
@@ -233,7 +233,7 @@ OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_subimagename(void* opt, ustringhash_pod subimagename_)
 {
     // TODO: Enable when subimagename is ustringhash.
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     ustringhash subimagename_hash    = ustringhash_from(subimagename_);
     ustring subimagename             = ustring_from(subimagename_hash);
     ((TextureOpt*)opt)->subimagename = subimagename;
@@ -264,7 +264,7 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
             void* dresultdy_, void* alpha_, void* dalphadx_, void* dalphady_,
             void* errormessage_)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     using float4 = OIIO::simd::vfloat4;
 #else
     using float4 = Imath::Vec4<float>;
@@ -278,7 +278,7 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     float* dalphady               = (float*)dalphady_;
     ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
     bool derivs                   = (dresultdx || dalphadx);
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
     // It's actually faster to ask for 4 channels (even if we need fewer)
@@ -287,7 +287,7 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture(oec, name, (TextureSystem::TextureHandle*)handle,
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
                          sg->context->texture_thread_info(),
 #else
                          nullptr,
@@ -335,7 +335,7 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
               void* alpha_, void* dalphadx_, void* dalphady_,
               void* errormessage_)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     using float4 = OIIO::simd::vfloat4;
 #else
     using float4 = Imath::Vec4<float>;
@@ -356,7 +356,7 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     float* dalphady               = (float*)dalphady_;
     ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
     bool derivs                   = (dresultdx || dalphadx);
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
     // It's actually faster to ask for 4 channels (even if we need fewer)
@@ -365,7 +365,7 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture3d(oec, name, (TextureSystem::TextureHandle*)handle,
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
                            sg->context->texture_thread_info(),
 #else
                            nullptr,
@@ -414,7 +414,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
                 void* result_, void* dresultdx_, void* dresultdy_, void* alpha_,
                 void* dalphadx_, void* dalphady_, void* errormessage_)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     using float4 = OIIO::simd::vfloat4;
 #else
     using float4 = Imath::Vec4<float>;
@@ -430,7 +430,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     float* dalphadx               = (float*)dalphadx_;
     float* dalphady               = (float*)dalphady_;
     ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
     // It's actually faster to ask for 4 channels (even if we need fewer)
@@ -439,7 +439,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash em;
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_environment(oec, name, (TextureSystem::TextureHandle*)handle,
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
                              sg->context->texture_thread_info(),
 #else
                              nullptr,
@@ -499,13 +499,13 @@ osl_get_textureinfo(OpaqueExecContextPtr oec, ustringhash_pod name_,
 
     ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
 
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
 
     ustringhash em;
     bool ok = rs_get_texture_info(oec, name, handle,
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
                                   sg->context->texture_thread_info(),
 #else
                                   nullptr,
@@ -539,13 +539,13 @@ osl_get_textureinfo_st(OpaqueExecContextPtr oec, ustringhash_pod name_,
 
     ustringhash_pod* errormessage = (ustringhash_pod*)errormessage_;
 
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
 #endif
 
     ustringhash em;
     bool ok = rs_get_texture_info_st(oec, name, handle, s, t,
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
                                      sg->context->texture_thread_info(),
 #else
                                      nullptr,

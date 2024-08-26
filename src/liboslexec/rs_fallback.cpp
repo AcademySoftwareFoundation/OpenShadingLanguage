@@ -34,7 +34,7 @@ rs_get_matrix_xform_time(OSL::OpaqueExecContextPtr exec_ctx,
                          OSL::Matrix44& result, OSL::TransformationPtr from,
                          float time)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_matrix(sg, result, from, time);
 #else
@@ -47,7 +47,7 @@ rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr exec_ctx,
                                  OSL::Matrix44& result,
                                  OSL::TransformationPtr xform, float time)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_inverse_matrix(sg, result, xform, time);
 #else
@@ -60,7 +60,7 @@ rs_get_matrix_space_time(OSL::OpaqueExecContextPtr exec_ctx,
                          OSL::Matrix44& result, OSL::ustringhash from,
                          float time)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_matrix(sg, result, from, time);
 #else
@@ -73,7 +73,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr exec_ctx,
                                  OSL::Matrix44& result, OSL::ustringhash to,
                                  float time)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_inverse_matrix(sg, result, to, time);
 #else
@@ -85,7 +85,7 @@ OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_xform(OSL::OpaqueExecContextPtr exec_ctx, OSL::Matrix44& result,
                     OSL::TransformationPtr xform)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_matrix(sg, result, xform);
 #else
@@ -97,7 +97,7 @@ OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr exec_ctx,
                             OSL::Matrix44& result, OSL::TransformationPtr xform)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_inverse_matrix(sg, result, xform);
 #else
@@ -109,7 +109,7 @@ OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_space(OSL::OpaqueExecContextPtr exec_ctx, OSL::Matrix44& result,
                     OSL::ustringhash from)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_matrix(sg, result, from);
 #else
@@ -121,7 +121,7 @@ OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr exec_ctx,
                             OSL::Matrix44& result, OSL::ustringhash to)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_inverse_matrix(sg, result, to);
 #else
@@ -135,7 +135,7 @@ rs_transform_points(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash from,
                     OSL::Vec3* Pout, int npoints,
                     OSL::TypeDesc::VECSEMANTICS vectype)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->transform_points(sg, from, to, time, Pin, Pout,
                                           npoints, vectype);
@@ -152,7 +152,7 @@ rs_texture(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
            float dsdy, float dtdy, int nchannels, float* result,
            float* dresultds, float* dresultdt, OSL::ustringhash* errormessage)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->texture(filename, texture_handle, texture_thread_info,
                                  options, sg, s, t, dsdx, dtdx, dsdy, dtdy,
@@ -173,7 +173,7 @@ rs_texture3d(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
              float* dresultds, float* dresultdt, float* dresultdr,
              OSL::ustringhash* errormessage)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->texture3d(filename, texture_handle,
                                    texture_thread_info, options, sg, P, dPdx,
@@ -193,7 +193,7 @@ rs_environment(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
                float* result, float* dresultds, float* dresultdt,
                OSL::ustringhash* errormessage)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->environment(filename, texture_handle,
                                      texture_thread_info, options, sg, R, dRdx,
@@ -213,7 +213,7 @@ rs_get_texture_info(OSL::OpaqueExecContextPtr exec_ctx,
                     OSL::TypeDesc datatype, void* data,
                     OSL::ustringhash* errormessage)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_texture_info(filename, texture_handle,
                                           texture_thread_info, sg, subimage,
@@ -234,7 +234,7 @@ rs_get_texture_info_st(OSL::OpaqueExecContextPtr exec_ctx,
                        OSL::TypeDesc datatype, void* data,
                        OSL::ustringhash* errormessage)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->get_texture_info(filename, texture_handle, s, t,
                                           texture_thread_info, sg, subimage,
@@ -252,7 +252,7 @@ rs_pointcloud_search(OSL::OpaqueExecContextPtr exec_ctx,
                      size_t* out_indices, float* out_distances,
                      int derivs_offset)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->pointcloud_search(sg, filename, center, radius,
                                            max_points, sort, out_indices,
@@ -267,7 +267,7 @@ rs_pointcloud_get(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
                   size_t* indices, int count, OSL::ustringhash attr_name,
                   OSL::TypeDesc attr_type, void* out_data)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->pointcloud_get(sg, filename, indices, count, attr_name,
                                         attr_type, out_data);
@@ -282,7 +282,7 @@ rs_pointcloud_write(OSL::OpaqueExecContextPtr exec_ctx,
                     int nattribs, const OSL::ustringhash* names,
                     const OSL::TypeDesc* types, const void** data)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->pointcloud_write(sg, filename, pos, nattribs, names,
                                           types, data);
@@ -296,7 +296,7 @@ rs_trace(OSL::OpaqueExecContextPtr exec_ctx, OSL::TraceOpt& options,
          const OSL::Vec3& P, const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
          const OSL::Vec3& R, const OSL::Vec3& dRdx, const OSL::Vec3& dRdy)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     return sg->renderer->trace(options, sg, P, dPdx, dPdy, R, dRdx, dRdy);
 #else
@@ -310,7 +310,7 @@ rs_errorfmt(OSL::OpaqueExecContextPtr exec_ctx,
             const OSL::EncodedType* argTypes, uint32_t argValuesSize,
             uint8_t* argValues)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     sg->renderer->errorfmt(sg, fmt_specification, count, argTypes,
                            argValuesSize, argValues);
@@ -323,7 +323,7 @@ rs_warningfmt(OSL::OpaqueExecContextPtr exec_ctx,
               const OSL::EncodedType* argTypes, uint32_t argValuesSize,
               uint8_t* argValues)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     sg->renderer->warningfmt(sg, fmt_specification, count, argTypes,
                              argValuesSize, argValues);
@@ -336,7 +336,7 @@ rs_printfmt(OSL::OpaqueExecContextPtr exec_ctx,
             const OSL::EncodedType* argTypes, uint32_t argValuesSize,
             uint8_t* argValues)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     sg->renderer->printfmt(sg, fmt_specification, count, argTypes,
                            argValuesSize, argValues);
@@ -349,7 +349,7 @@ rs_filefmt(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash filename,
            const OSL::EncodedType* argTypes, uint32_t argValuesSize,
            uint8_t* argValues)
 {
-#ifndef __CUDACC__
+#ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);
     sg->renderer->filefmt(sg, filename, fmt_specification, count, argTypes,
                           argValuesSize, argValues);

@@ -4082,7 +4082,7 @@ LLVMGEN(llvm_gen_pointcloud_write)
         llvm::Value* args[] = {
             rop.ll.void_ptr(names),
             rop.ll.void_ptr(types),
-            values,
+            rop.ll.void_ptr(values),
             rop.ll.constant(i),
             rop.llvm_load_value(*namesym),                     // name[i]
             rop.ll.constant(valsym->typespec().simpletype()),  // type[i]
@@ -4098,7 +4098,7 @@ LLVMGEN(llvm_gen_pointcloud_write)
         rop.ll.constant(nattrs),        // number of attributes
         rop.ll.void_ptr(names),         // attribute names array
         rop.ll.void_ptr(types),         // attribute types array
-        values                          // attribute values array
+        rop.ll.void_ptr(values)         // attribute values array
     };
     llvm::Value* ret = rop.ll.call_function("osl_pointcloud_write", args);
     rop.llvm_store_value(ret, Result);

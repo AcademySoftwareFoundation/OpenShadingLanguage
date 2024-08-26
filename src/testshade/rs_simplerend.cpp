@@ -240,8 +240,7 @@ rs_environment(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
 }
 
 OSL_RSOP OSL_HOSTDEVICE bool
-rs_get_texture_info(OSL::OpaqueExecContextPtr ec,
-                    OSL::ustringhash filename,
+rs_get_texture_info(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
                     OSL::TextureSystem::TextureHandle* texture_handle,
                     OSL::TextureSystem::Perthread* texture_thread_info,
                     int subimage, OSL::ustringhash dataname,
@@ -260,8 +259,7 @@ rs_get_texture_info(OSL::OpaqueExecContextPtr ec,
 }
 
 OSL_RSOP OSL_HOSTDEVICE bool
-rs_get_texture_info_st(OSL::OpaqueExecContextPtr ec,
-                       OSL::ustringhash filename,
+rs_get_texture_info_st(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
                        OSL::TextureSystem::TextureHandle* texture_handle,
                        float s, float t,
                        OSL::TextureSystem::Perthread* texture_thread_info,
@@ -281,10 +279,9 @@ rs_get_texture_info_st(OSL::OpaqueExecContextPtr ec,
 }
 
 OSL_RSOP OSL_HOSTDEVICE int
-rs_pointcloud_search(OSL::OpaqueExecContextPtr ec,
-                     OSL::ustringhash filename, const OSL::Vec3& center,
-                     float radius, int max_points, bool sort,
-                     size_t* out_indices, float* out_distances,
+rs_pointcloud_search(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+                     const OSL::Vec3& center, float radius, int max_points,
+                     bool sort, size_t* out_indices, float* out_distances,
                      int derivs_offset)
 {
 #ifndef __CUDA_ARCH__
@@ -312,10 +309,10 @@ rs_pointcloud_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
 }
 
 OSL_RSOP OSL_HOSTDEVICE bool
-rs_pointcloud_write(OSL::OpaqueExecContextPtr ec,
-                    OSL::ustringhash filename, const OSL::Vec3& pos,
-                    int nattribs, const OSL::ustringhash* names,
-                    const OSL::TypeDesc* types, const void** data)
+rs_pointcloud_write(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+                    const OSL::Vec3& pos, int nattribs,
+                    const OSL::ustringhash* names, const OSL::TypeDesc* types,
+                    const void** data)
 {
 #ifndef __CUDA_ARCH__
     auto sg = (OSL::ShaderGlobals*)ec;

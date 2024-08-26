@@ -467,12 +467,13 @@ osl_pointcloud_get(OpaqueExecContextPtr oec, ustringhash_pod filename_,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_pointcloud_write_helper(void* names_, void* types_, void** values,
+osl_pointcloud_write_helper(void* names_, void* types_, void* values_,
                             int index, ustringhash_pod name_, long long type,
                             void* val)
 {
-    auto names       = reinterpret_cast<ustringhash*>(names_);
-    auto types       = reinterpret_cast<TypeDesc*>(types_);
+    auto names       = (ustringhash*)names_;
+    auto types       = (TypeDesc*)types_;
+    auto values      = (void**)values_;
     ustringhash name = ustringhash_from(name_);
     names[index]     = name;
     types[index]     = TYPEDESC(type);
@@ -484,7 +485,7 @@ osl_pointcloud_write_helper(void* names_, void* types_, void** values,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
                      const void* pos_, int nattribs, const void* names_,
-                     const void* types_, const void** values)
+                     const void* types_, const void** values_)
 {
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
@@ -496,9 +497,10 @@ osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
 #endif
 
     ustringhash filename = ustringhash_from(filename_);
-    auto pos             = reinterpret_cast<const Vec3*>(pos_);
-    auto names           = reinterpret_cast<const ustringhash*>(names_);
-    auto types           = reinterpret_cast<const TypeDesc*>(types_);
+    auto pos             = (const Vec3*)pos_;
+    auto names           = (const ustringhash*)names_;
+    auto types           = (const TypeDesc*)types_;
+    auto values          = (const void**)values_;
 
     return rs_pointcloud_write(oec, filename, *pos, nattribs, names, types,
                                values);

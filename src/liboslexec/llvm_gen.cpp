@@ -3921,6 +3921,11 @@ LLVMGEN(llvm_gen_pointcloud_search)
     }
     int nattrs = (op.nargs() - attr_arg_offset) / 2;
 
+    // Generate local space for the names/types/values arrays
+    llvm::Value* names  = rop.ll.op_alloca(rop.ll.type_int64(), nattrs);
+    llvm::Value* types  = rop.ll.op_alloca(rop.ll.type_typedesc(), nattrs);
+    llvm::Value* values = rop.ll.op_alloca(rop.ll.type_void_ptr(), nattrs);
+
     std::vector<llvm::Value*> args;
     args.push_back(rop.sg_void_ptr());              // 0 sg
     args.push_back(rop.llvm_load_value(Filename));  // 1 filename
@@ -3965,9 +3970,16 @@ LLVMGEN(llvm_gen_pointcloud_search)
             }
         } else {
             // It is a regular attribute, push it to the arg list
-            args.push_back(rop.llvm_load_value(Name));
-            args.push_back(rop.ll.constant(simpletype));
-            args.push_back(rop.llvm_void_ptr(Value));
+            llvm::Value* write_args[] = {
+                rop.ll.void_ptr(names),
+                rop.ll.void_ptr(types),
+                rop.ll.void_ptr(values),
+                rop.ll.constant(i),
+                rop.llvm_load_value(Name),    // name[i]
+                rop.ll.constant(simpletype),  // type[i]
+                rop.llvm_void_ptr(Value)      // value[i]
+            };
+            rop.ll.call_function("osl_pointcloud_write_helper", write_args);
             if (Value.has_derivs())
                 clear_derivs_of.push_back(&Value);
             extra_attrs++;
@@ -3978,6 +3990,9 @@ LLVMGEN(llvm_gen_pointcloud_search)
     }
 
     args[9] = rop.ll.constant(extra_attrs);
+    args.push_back(rop.ll.void_ptr(names));   // attribute names array
+    args.push_back(rop.ll.void_ptr(types));   // attribute types array
+    args.push_back(rop.ll.void_ptr(values));  // attribute values array
 
     if (Max_points.is_constant()) {
         // Compare capacity to the requested number of points.

@@ -385,7 +385,8 @@ OSL_SHADEOP OSL_HOSTDEVICE int
 osl_pointcloud_search(OpaqueExecContextPtr oec, ustringhash_pod filename_,
                       void* center, float radius, int max_points, int sort,
                       void* out_indices, void* out_distances, int derivs_offset,
-                      int nattrs, ...)
+                      int nattrs, const void* names_, const void* types_,
+                      const void* values_)
 {
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;
@@ -410,19 +411,15 @@ osl_pointcloud_search(OpaqueExecContextPtr oec, ustringhash_pod filename_,
     int count = rs_pointcloud_search(oec, filename, *((Vec3*)center), radius,
                                      max_points, sort, indices,
                                      (float*)out_distances, derivs_offset);
-    va_list args;
-    va_start(args, nattrs);
+
+    auto names  = (const ustringhash*)names_;
+    auto types  = (const TypeDesc*)types_;
+    auto values = (void**)values_;
+
     for (int i = 0; i < nattrs; i++) {
-        ustringhash_pod attr_name_ = (ustringhash_pod)va_arg(args,
-                                                             ustringhash_pod);
-        ustringhash attr_name      = ustringhash_from(attr_name_);
-        long long lltype           = va_arg(args, long long);
-        TypeDesc attr_type         = TYPEDESC(lltype);
-        void* out_data             = va_arg(args, void*);
-        rs_pointcloud_get(oec, filename, indices, count, attr_name, attr_type,
-                          out_data);
+        rs_pointcloud_get(oec, filename, indices, count, names[i], types[i],
+                          values[i]);
     }
-    va_end(args);
 
     // Only copy out if we need to
     if (out_indices && sizeof(int) != sizeof(size_t))

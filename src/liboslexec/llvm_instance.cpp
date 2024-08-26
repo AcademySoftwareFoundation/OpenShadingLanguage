@@ -1292,6 +1292,7 @@ BackendLLVM::build_llvm_init()
     // New function, reset temp matrix pointer
     m_llvm_texture_options_ptr = nullptr;
     m_llvm_trace_options_ptr   = nullptr;
+    m_llvm_noise_options_ptr   = nullptr;
 
     // Set up a new IR builder
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_name);
@@ -1554,6 +1555,7 @@ BackendLLVM::build_llvm_instance(bool groupentry)
     // New function, reset temp matrix pointer
     m_llvm_texture_options_ptr = nullptr;
     m_llvm_trace_options_ptr   = nullptr;
+    m_llvm_noise_options_ptr   = nullptr;
 
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_layer_name);
     m_exit_instance_block      = NULL;
@@ -1865,6 +1867,7 @@ BackendLLVM::initialize_llvm_group()
     m_llvm_type_closure_component = NULL;
     m_llvm_type_texture_options   = NULL;
     m_llvm_type_trace_options     = NULL;
+    m_llvm_type_noise_options     = NULL;
 
     initialize_llvm_helper_function_map();
 

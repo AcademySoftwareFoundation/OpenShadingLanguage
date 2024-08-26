@@ -1863,6 +1863,7 @@ BatchedBackendLLVM::build_llvm_init()
     m_llvm_temp_wide_matrix_ptr             = nullptr;
     m_llvm_temp_batched_texture_options_ptr = nullptr;
     m_llvm_temp_batched_trace_options_ptr   = nullptr;
+    m_llvm_temp_noise_options_ptr           = nullptr;
 
     // Set up a new IR builder
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_name);
@@ -2001,6 +2002,7 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     m_llvm_temp_wide_matrix_ptr             = nullptr;
     m_llvm_temp_batched_texture_options_ptr = nullptr;
     m_llvm_temp_batched_trace_options_ptr   = nullptr;
+    m_llvm_temp_noise_options_ptr           = nullptr;
 
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_layer_name);
     m_exit_instance_block      = NULL;
@@ -2438,6 +2440,7 @@ BatchedBackendLLVM::initialize_llvm_group()
     m_llvm_type_closure_component       = NULL;
     m_llvm_type_batched_texture_options = NULL;
     m_llvm_type_batched_trace_options   = NULL;
+    m_llvm_type_noise_options           = NULL;
 
     initialize_llvm_helper_function_map();
 

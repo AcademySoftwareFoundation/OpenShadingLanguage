@@ -16,19 +16,9 @@
 
 // All the things we need from Imath.
 #define OSL_USING_IMATH @OSL_USING_IMATH@
-#if OSL_USING_IMATH >= 3
-#   include <Imath/ImathVec.h>
-#   include <Imath/ImathMatrix.h>
-#   include <Imath/ImathColor.h>
-#else
-    // OpenEXR 2.x lacks the Cuda decorators we need, so we replicated some
-    // Imath files in OSL/Imathx, adding the decorations needed for them to
-    // be safe to compile with Cuda (and sometimes other improvements).
-#   include <OSL/Imathx/ImathLimits.h>
-#   include <OSL/Imathx/ImathVec.h>
-#   include <OSL/Imathx/ImathMatrix.h>
-#   include <OSL/Imathx/ImathColor.h>
-#endif
+#include <Imath/ImathVec.h>
+#include <Imath/ImathMatrix.h>
+#include <Imath/ImathColor.h>
 
 // We included the Imath files we needed, so set the OIIO_IMATH_H_INCLUDED
 // symbol to prevent OpenImageIO/Imath.h from including them again (or
@@ -79,7 +69,7 @@ OSL_NAMESPACE_ENTER
 typedef float Float;
 
 /// By default, use the excellent Imath vector, matrix, and color types
-/// from the IlmBase package from: http://www.openexr.com
+/// from https://github.com/AcademySoftwareFoundation/Imath
 ///
 /// It's permissible to override these types with the vector, matrix,
 /// and color classes of your choice, provided that (a) your vectors
@@ -90,6 +80,7 @@ typedef float Float;
 using Vec2     = Imath::Vec2<Float>;
 using Vec3     = Imath::Vec3<Float>;
 using Color3   = Imath::Color3<Float>;
+using Matrix22 = Imath::Matrix22<Float>;
 using Matrix33 = Imath::Matrix33<Float>;
 using Matrix44 = Imath::Matrix44<Float>;
 

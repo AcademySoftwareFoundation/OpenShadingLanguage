@@ -32,7 +32,7 @@
 using namespace OSL;
 using namespace OSL::pvt;
 
-#include <OpenEXR/ImfChannelList.h>  // Just for OPENEXR_VERSION_STRING
+#include <Imath/ImathConfig.h>  // Just for IMATH_VERSION_STRING
 
 // avoid naming conflicts with MSVC macros
 #ifdef _MSC_VER
@@ -1997,7 +1997,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     if (name == "osl:dependencies" && type == TypeDesc::STRING) {
         std::string deps = fmtformat("LLVM-{},OpenImageIO-{},Imath-{}",
                                      OSL_LLVM_FULL_VERSION, OIIO_VERSION_STRING,
-                                     OPENEXR_VERSION_STRING);
+                                     IMATH_VERSION_STRING);
         if (!strcmp(OSL_CUDA_VERSION, ""))
             deps += ",Cuda-NONE";
         else

@@ -140,8 +140,7 @@ export PATH="$DEP_DIR/lib:$DEP_DIR/bin:$PATH:$VCPKG_INSTALLATION_ROOT/installed/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$VCPKG_INSTALLATION_ROOT/installed/x64-windows/lib:$DEP_DIR/lib:$DEP_DIR/bin"
 
 
-# source src/build-scripts/build_openexr.bash
-# export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$ILMBASE_ROOT;$OPENEXR_ROOT"
+# source src/build-scripts/build_imath.bash
 # source src/build-scripts/build_opencolorio.bash
 
 

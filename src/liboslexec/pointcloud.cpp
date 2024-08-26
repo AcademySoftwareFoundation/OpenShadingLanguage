@@ -485,7 +485,7 @@ osl_pointcloud_write_helper(void* names_, void* types_, void* values_,
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
                      const void* pos_, int nattribs, const void* names_,
-                     const void* types_, const void** values_)
+                     const void* types_, const void* values_)
 {
 #ifndef __CUDACC__
     ShaderGlobals* sg = (ShaderGlobals*)oec;

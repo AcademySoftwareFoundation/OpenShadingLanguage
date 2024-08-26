@@ -3970,15 +3970,11 @@ LLVMGEN(llvm_gen_pointcloud_search)
             }
         } else {
             // It is a regular attribute, push it to the arg list
-            llvm::Value* write_args[] = {
-                rop.ll.void_ptr(names),
-                rop.ll.void_ptr(types),
-                rop.ll.void_ptr(values),
-                rop.ll.constant(i),
-                rop.llvm_load_value(Name),    // name[i]
-                rop.ll.constant(simpletype),  // type[i]
-                rop.llvm_void_ptr(Value)      // value[i]
-            };
+            llvm::Value* write_args[]
+                = { rop.ll.void_ptr(names),    rop.ll.void_ptr(types),
+                    rop.ll.void_ptr(values),   rop.ll.constant(extra_attrs),
+                    rop.llvm_load_value(Name), rop.ll.constant(simpletype),
+                    rop.llvm_void_ptr(Value) };
             rop.ll.call_function("osl_pointcloud_write_helper", write_args);
             if (Value.has_derivs())
                 clear_derivs_of.push_back(&Value);

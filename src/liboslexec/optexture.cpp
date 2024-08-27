@@ -53,8 +53,11 @@ osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
     o->rwidth              = 1.0f;
 #ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
     o->colortransformid = 0;
+    int* envlayout      = (int*)&o->colortransformid + 1;
+#else
+    int* envlayout = (int*)&o->rwidth + 1;
 #endif
-    //o->envlayout = 0;
+    *envlayout = 0;
 }
 
 

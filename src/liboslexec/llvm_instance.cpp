@@ -474,6 +474,9 @@ BackendLLVM::llvm_type_texture_options()
     comp_types.push_back(ll.type_int());        // rwrap
     comp_types.push_back(ll.type_float());      // rblur
     comp_types.push_back(ll.type_float());      // rwidth
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+    comp_types.push_back(ll.type_int());        // colortransformid
+#endif
     comp_types.push_back(ll.type_int());        // envlayout
 
     m_llvm_type_texture_options = ll.type_struct(comp_types, "TextureOptions");
@@ -500,6 +503,7 @@ BackendLLVM::llvm_type_texture_options()
     //offset_by_index.push_back(offsetof(TextureOpt, rwrap));
     //offset_by_index.push_back(offsetof(TextureOpt, rblur));
     //offset_by_index.push_back(offsetof(TextureOpt, rwidth));
+    //offset_by_index.push_back(offsetof(TextureOpt, colortransformid));
     //offset_by_index.push_back(offsetof(TextureOpt, envlayout));
     //ll.validate_struct_data_layout(m_llvm_type_texture_options, offset_by_index);
 

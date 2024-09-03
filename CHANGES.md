@@ -1,9 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.13.11.0 -- 1? July 2024 (compared to 1.13.10.0)
+Release 1.13.11.0 -- 1 Sep 2024 (compared to 1.13.10.0)
 ---------------------------------------------------------
-
+- *fix/batched*: Assume BatchedRendererServices texture derivatives are in st space. [#1828](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1828) (by sfriedmapixar) (1.13.10.0)
+- *fix*: Make backfacing shadeop indicate backfacing shader-global is needed [#1827](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1827) (by sfriedmapixar) (1.13.10.0)
+- *deps*: Handle various OpenImageIO deprecations and changes in the run-up to OIIO 3.0 [#1834](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1834) [#1806](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1806) [#1838](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1838) [#1842](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1842) [#1850](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1850) (1.13.10.0)
+- *deps*: Adjust to OIIO change to IC/TS API [#1848](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1848) (1.13.10.0)
+- *deps*: Llvm 18 compat issue - include libclangAPINotes [#1812](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1812) (1.13.10.0)
+- *deps*: Make finding bison work better on Apple Silicon Macs + homebrew [#1822](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1822) (1.13.10.0)
+- *ci*: Mods to CI to deal with OIIO master raising dependency mins [#1833](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1833) (1.13.10.0)
+- *ci*: Deal with CentOS 7 EOL and disappearance of yum mirrors [#1839](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1839) (1.13.10.0)
+- *ci*: Fix GHA CI after they upgraded nodejs [#1837](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1837) (1.13.10.0)
+- *admin*: Change release notice icon to use the icon vs the normal logo so it shows up better [#1777](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1777) (by John Mertic) (1.13.10.0)
 
 
 Release 1.13.10.0 -- 1 June 2024 (compared to 1.13.9.0)

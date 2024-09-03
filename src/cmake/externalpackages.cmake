@@ -36,28 +36,14 @@ option (BUILD_MISSING_DEPS "Try to download and build any missing dependencies" 
 checked_find_package (ZLIB REQUIRED)  # Needed by several packages
 
 # IlmBase & OpenEXR
-checked_find_package (OpenEXR REQUIRED
-                      VERSION_MIN 2.4
-                      RECOMMEND_MIN 2.5
-                      RECOMMEND_MIN_REASON
-                        "Even extremely critical patches are no longer supplied to < 2.5"
-                      PRINT IMATH_INCLUDES
+checked_find_package (Imath REQUIRED
+                      VERSION_MIN 3.1
+                      PRINT IMATH_INCLUDES Imath_VERSION
                      )
 # Force Imath includes to be before everything else to ensure that we have
-# the right Imath/OpenEXR version, not some older version in the system
-# library. This shouldn't be necessary, except for the common case of people
-# building against Imath/OpenEXR 3.x when there is still a system-level
-# install version of 2.x.
+# the right Imath version, not some older version in the system library.
 include_directories(BEFORE ${IMATH_INCLUDES})
-if (MSVC AND NOT LINKSTATIC)
-    add_compile_definitions (OPENEXR_DLL) # Is this needed for new versions?
-endif ()
-
-if (OPENEXR_VERSION VERSION_GREATER_EQUAL 2.5.99)
-    set (OSL_USING_IMATH 3)
-else ()
-    set (OSL_USING_IMATH 2)
-endif ()
+set (OSL_USING_IMATH 3)
 
 
 # OpenImageIO

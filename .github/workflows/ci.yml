@@ -38,12 +38,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc9/C++17 llvm11 py3.7 exr2.5 oiio2.3 sse4 batch-b8avx2
+          - desc: gcc9/C++17 llvm11 py3.7 oiio2.3 sse4 batch-b8avx2
             nametag: linux-vfx2021
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2021-clang11
             vfxyear: 2021
             cxx_std: 17
+            openexr_ver: v3.1.3
             openimageio_ver: v2.4.13.0
             python_ver: 3.7
             pybind11_ver: v2.7.0
@@ -71,7 +72,7 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: clang12/C++17 llvm12 oiio-master exr3.1 py3.9 avx2 batch-avx512
+          - desc: clang12/C++17 llvm12 oiio-master py3.9 avx2 batch-avx512
             nametag: linux-clang12-llvm12-batch
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang12
@@ -83,7 +84,7 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
-          - desc: icc/C++17 llvm14 py3.9 exr3.1 oiio-master avx2
+          - desc: icc/C++17 llvm14 py3.9 oiio-master avx2
             nametag: linux-icc
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -107,7 +108,7 @@ jobs:
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF -DEXTRA_CPP_ARGS=-fp-model=consistent"
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=7.1.3
                             USE_OPENVDB=0
-          - desc: icx/C++17 llvm14 py3.9 exr3.1 oiio2.3 avx2
+          - desc: icx/C++17 llvm14 py3.9 oiio2.3 avx2
             nametag: linux-icx
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -123,7 +124,7 @@ jobs:
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
                             OPENCOLORIO_VERSION=v2.3.2 OPENCOLORIO_CXX=g++
-          - desc: gcc11/C++17 llvm15 py3.10 exr3.1 oiio-rel avx2
+          - desc: gcc11/C++17 llvm15 py3.10 oiio-rel avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
@@ -134,7 +135,7 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 exr3.1 OIIO-master avx2
+          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 OIIO-master avx2
             nametag: linux-optix7-2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
@@ -147,19 +148,32 @@ jobs:
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
-          - desc: oldest everything gcc9/C++17 llvm9 py3.7 oiio2.3 no-simd exr2.4
+          - desc: gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
+            nametag: linux-vfx2024
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2024-clang17
+            vfxyear: 2024
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: "3.11"
+            pybind11_ver: v2.11.1
+            simd: avx2,f16c
+            batched: b8_AVX2
+            # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
+          - desc: oldest everything gcc9/C++17 llvm9 py3.7 oiio2.3 no-simd
             nametag: linux-oldest
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2021-clang11
             vfxyear: 2021
             cxx_std: 17
-            openexr_ver: v2.4.3
+            openexr_ver: v3.1.0
             openimageio_ver: v2.4.13.0
             python_ver: 3.7
             pybind11_ver: v2.7.0
             simd: 0
             setenvs: export PUGIXML_VERSION=v1.8
                             CMAKE_VERSION=3.15.5
+                            ENABLE_OPENVDB=0
 
           # Address and leak sanitizers
           - desc: sanitizers
@@ -273,6 +287,13 @@ jobs:
             sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
             sudo rm -rf /usr/local/lib*/libOpenImageIO*
             sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
+      - name: Remove existing OpenEXR
+        if: matrix.openexr_ver != ''
+        run: |
+            sudo rm -rf /usr/local/include/OpenEXR
+            sudo rm -rf /usr/local/lib*/cmake/OpenEXR
+            sudo rm -rf /usr/local/lib*/libOpenOpenEXR*
+            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenOpenEXR*
       - name: Dependencies
         run: |
             ${{matrix.depcmds}}
@@ -325,7 +346,7 @@ jobs:
             runner: ubuntu-20.04
             cxx_compiler: g++-9
             cxx_std: 17
-            openexr_ver: v2.4.3
+            openexr_ver: v3.1.11
             openimageio_ver: v2.4.13.0
             pybind11_ver: v2.6.2
             python_ver: 2.7
@@ -334,13 +355,13 @@ jobs:
                             LLVM_VERSION=9.0.0
                             PUGIXML_VERSION=v1.9
                             CTEST_TEST_TIMEOUT=240
-          - desc: gcc10/C++17 llvm10 oiio-release exr2.5 avx2
+          - desc: gcc10/C++17 llvm10 oiio-release avx2
             nametag: linux-2021ish-gcc10-llvm10
             runner: ubuntu-20.04
             cxx_compiler: g++-10
             cxx_std: 17
             fmt_ver: 7.0.1
-            openexr_ver: v2.5.6
+            openexr_ver: v3.1.11
             openimageio_ver: release
             pybind11_ver: v2.8.1
             # python_ver: 2.7   FIXME
@@ -356,7 +377,7 @@ jobs:
             fmt_ver: 10.1.0
             openexr_ver: v3.2.1
             openimageio_ver: master
-            pybind11_ver: v2.10.0
+            pybind11_ver: v2.11.1
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
@@ -380,14 +401,14 @@ jobs:
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master
-          - desc: clang14/C++17 llvm14 exr3.1 py3.8 avx2 batch-b16avx512
+          - desc: clang14/C++17 llvm14 py3.8 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
             runner: ubuntu-20.04
             cxx_compiler: clang++
             cc_compiler: clang
             cxx_std: 17
             fmt_ver: 8.1.1
-            openexr_ver: v3.1.7
+            openexr_ver: v3.1.11
             openimageio_ver: master
             pybind11_ver: v2.9.2
             python_ver: 3.8
@@ -405,9 +426,9 @@ jobs:
           - desc: "clang-format"
             nametag: clang-format
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang14
             cxx_std: 17
             extra_artifacts: "src/*.*"
+            openexr_ver: v3.1.11
             openimageio_ver: release
             python_ver: "3.10"
             simd: avx2,f16c

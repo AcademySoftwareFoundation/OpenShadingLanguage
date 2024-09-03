@@ -47,6 +47,19 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
         popd
     fi
 
+    if [[ "${CONAN_PACKAGES}" != "" ]] ; then
+        export PATH=$PWD/conan/bin:$PATH
+        export LD_LIBRARY_PATH=$PWD/conan/lib:$LD_LIBRARY_PATH
+        mkdir -p conan
+        pushd conan
+        for pkg in ${CONAN_PACKAGES} ; do
+            echo "Installing $pkg via Conan..."
+            time conan install $pkg
+        done
+        popd
+        ls -R conan
+    fi
+
     if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" ]] ; then
         # Lock down icc to 2022.1 because newer versions hosted on the Intel
         # repo require a glibc too new for the ASWF CentOS7-based containers
@@ -75,7 +88,6 @@ else
     time sudo apt-get -q install -y \
         git cmake ninja-build ccache g++ \
         libboost-dev libboost-thread-dev libboost-filesystem-dev \
-        libilmbase-dev libopenexr-dev \
         libtiff-dev libgif-dev libpng-dev \
         flex bison libbison-dev \
         libpugixml-dev \
@@ -102,13 +114,7 @@ else
         pip3 install numpy
     fi
 
-    if [[ "$CXX" == "g++-6" ]] ; then
-        time sudo apt-get install -y g++-6
-    elif [[ "$CXX" == "g++-7" ]] ; then
-        time sudo apt-get install -y g++-7
-    elif [[ "$CXX" == "g++-8" ]] ; then
-        time sudo apt-get install -y g++-8
-    elif [[ "$CXX" == "g++-9" ]] ; then
+    if [[ "$CXX" == "g++-9" ]] ; then
         time sudo apt-get install -y g++-9
     elif [[ "$CXX" == "g++-10" ]] ; then
         time sudo apt-get install -y g++-10
@@ -116,6 +122,8 @@ else
         time sudo apt-get install -y g++-11
     elif [[ "$CXX" == "g++-12" ]] ; then
         time sudo apt-get install -y g++-12
+    elif [[ "$CXX" == "g++-13" ]] ; then
+        time sudo apt-get install -y g++-13
     fi
 
     if [[ "$CXX" == "icpc" || "$CC" == "icc" || "$USE_ICC" != "" || "$CXX" == "icpx" || "$CC" == "icx" || "$USE_ICX" != "" ]] ; then

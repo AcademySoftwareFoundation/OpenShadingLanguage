@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc9/C++17 llvm11 py3.7 oiio2.3 sse4 batch-b8avx2
+          - desc: gcc9/C++17 llvm11 py3.7 oiio2.4 sse4 batch-b8avx2
             nametag: linux-vfx2021
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2021-clang11
@@ -50,17 +50,7 @@ jobs:
             pybind11_ver: v2.7.0
             simd: sse4.2
             batched: b8_AVX2_noFMA
-          - desc: gcc9/C++17 llvm11 py3.7 exr2.5 oiio2.3 sse2 batch-b4sse2
-            nametag: linux-vfx2021
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2021-clang11
-            vfxyear: 2021
-            cxx_std: 17
-            openimageio_ver: v2.4.13.0
-            python_ver: 3.7
-            pybind11_ver: v2.7.0
-            simd: sse2
-            batched: b4_SSE2
+            setenvs: export USE_OPENVDB=0
           - desc: gcc9/C++17 llvm13 py3.9 exr3.1 oiio-rel avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
@@ -84,6 +74,17 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
+          - desc: gcc9/C++17 llvm11 py3.9 exr3.1 oiio2.3 sse2 batch-b4sse2
+            nametag: linux-vfx2021
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang13
+            vfxyear: 2022
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: 3.9
+            pybind11_ver: v2.9.0
+            simd: sse2
+            batched: b4_SSE2
           - desc: icc/C++17 llvm14 py3.9 oiio-master avx2
             nametag: linux-icc
             runner: ubuntu-latest
@@ -280,13 +281,6 @@ jobs:
         run: |
             ${{matrix.setenvs}}
             src/build-scripts/ci-startup.bash
-      - name: Remove existing OIIO
-        if: matrix.openimageio_ver != ''
-        run: |
-            sudo rm -rf /usr/local/include/OpenImageIO
-            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
-            sudo rm -rf /usr/local/lib*/libOpenImageIO*
-            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
       - name: Remove existing OpenEXR
         if: matrix.openexr_ver != ''
         run: |
@@ -294,6 +288,13 @@ jobs:
             sudo rm -rf /usr/local/lib*/cmake/OpenEXR
             sudo rm -rf /usr/local/lib*/libOpenOpenEXR*
             sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenOpenEXR*
+      - name: Remove existing OIIO
+        if: matrix.openimageio_ver != ''
+        run: |
+            sudo rm -rf /usr/local/include/OpenImageIO
+            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
+            sudo rm -rf /usr/local/lib*/libOpenImageIO*
+            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
       - name: Dependencies
         run: |
             ${{matrix.depcmds}}

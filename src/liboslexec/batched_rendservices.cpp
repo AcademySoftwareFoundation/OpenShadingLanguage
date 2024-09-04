@@ -347,5 +347,6 @@ BatchedRendererServices<WidthT>::getmessage(BatchedShaderGlobals* bsg,
 // Explicitly instantiate BatchedRendererServices template
 template class OSLEXECPUBLIC BatchedRendererServices<16>;
 template class OSLEXECPUBLIC BatchedRendererServices<8>;
+template class OSLEXECPUBLIC BatchedRendererServices<4>;
 
 OSL_NAMESPACE_EXIT

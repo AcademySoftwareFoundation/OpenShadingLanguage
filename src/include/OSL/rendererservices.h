@@ -601,6 +601,7 @@ public:
     /// Unless overridden, a nullptr is returned.
     virtual BatchedRendererServices<16>* batched(WidthOf<16>);
     virtual BatchedRendererServices<8>* batched(WidthOf<8>);
+    virtual BatchedRendererServices<4>* batched(WidthOf<4>);
 
 protected:
     TextureSystem* m_texturesys;  // A place to hold a TextureSystem

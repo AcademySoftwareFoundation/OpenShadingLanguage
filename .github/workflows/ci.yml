@@ -50,8 +50,18 @@ jobs:
             pybind11_ver: v2.7.0
             simd: sse4.2
             batched: b8_AVX2_noFMA
-            setenvs: export ENABLE_OPENVDB=0
-          - desc: gcc9/C++17 llvm13 py3.9 oiio-rel avx2
+          - desc: gcc9/C++17 llvm11 py3.7 exr2.5 oiio2.3 sse2 batch-b4sse2
+            nametag: linux-vfx2021
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2021-clang11
+            vfxyear: 2021
+            cxx_std: 17
+            openimageio_ver: v2.4.13.0
+            python_ver: 3.7
+            pybind11_ver: v2.7.0
+            simd: sse2
+            batched: b4_SSE2
+          - desc: gcc9/C++17 llvm13 py3.9 exr3.1 oiio-rel avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang13

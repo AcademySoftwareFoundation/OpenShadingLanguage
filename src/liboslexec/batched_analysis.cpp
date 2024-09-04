@@ -1813,10 +1813,16 @@ struct Analyzer {
                     // specific BatchedRendererServices.
                     // Right here we don't know which width will be used,
                     // so we will just require all widths provide the same answer
+                    auto rs4  = m_ba.renderer()->batched(WidthOf<4>());
                     auto rs8  = m_ba.renderer()->batched(WidthOf<8>());
                     auto rs16 = m_ba.renderer()->batched(WidthOf<16>());
-                    if (rs8 || rs16) {
+                    if (rs4 || rs8 || rs16) {
                         get_attr_is_uniform = true;
+                        if (rs4) {
+                            get_attr_is_uniform
+                                &= rs4->is_attribute_uniform(obj_name,
+                                                             attr_name);
+                        }
                         if (rs8) {
                             get_attr_is_uniform
                                 &= rs8->is_attribute_uniform(obj_name,

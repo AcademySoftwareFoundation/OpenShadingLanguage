@@ -1001,6 +1001,7 @@ BatchedSimpleRenderer<WidthT>::get_camera_screen_window(ustringhash /*object*/,
 // Explicitly instantiate BatchedSimpleRenderer template
 template class BatchedSimpleRenderer<16>;
 template class BatchedSimpleRenderer<8>;
+template class BatchedSimpleRenderer<4>;
 
 
 OSL_NAMESPACE_EXIT

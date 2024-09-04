@@ -305,6 +305,9 @@ set_shadingsys_options()
         } else if ((!batch_size_requested || batch_size == 8)
                    && shadingsys->configure_batch_execution_at(8)) {
             batch_size = 8;
+        } else if ((!batch_size_requested || batch_size == 4)
+                   && shadingsys->configure_batch_execution_at(4)) {
+            batch_size = 4;
         } else {
             OSL::print(
                 "WARNING:  Hardware or library requirements to utilize batched execution");
@@ -1197,9 +1200,11 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
             // jit_group will optimize the group if necesssary
             if (batch_size == 16) {
                 shadingsys->batched<16>().jit_group(shadergroup.get(), ctx);
-            } else {
-                ASSERT((batch_size == 8) && "Unsupported batch size");
+            } else if (batch_size == 8) {
                 shadingsys->batched<8>().jit_group(shadergroup.get(), ctx);
+            } else {
+                ASSERT((batch_size == 4) && "Unsupported batch size");
+                shadingsys->batched<4>().jit_group(shadergroup.get(), ctx);
             }
         } else
 #endif
@@ -2203,11 +2208,17 @@ test_shade(int argc, const char* argv[])
                             batched_shade_region<16>(rend, shadergroup.get(),
                                                      sub_roi, save);
                         });
-                } else {
-                    ASSERT((batch_size == 8) && "Unsupported batch size");
+                } else if (batch_size == 8) {
                     OIIO::ImageBufAlgo::parallel_image(
                         roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
                             batched_shade_region<8>(rend, shadergroup.get(),
+                                                    sub_roi, save);
+                        });
+                } else {
+                    ASSERT((batch_size == 4) && "Unsupported batch size");
+                    OIIO::ImageBufAlgo::parallel_image(
+                        roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
+                            batched_shade_region<4>(rend, shadergroup.get(),
                                                     sub_roi, save);
                         });
                 }

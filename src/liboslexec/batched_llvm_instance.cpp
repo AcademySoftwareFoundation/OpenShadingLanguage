@@ -537,6 +537,33 @@ const char*
     = "b8_AVX_";
 #endif
 
+#ifdef __OSL_SUPPORTS_b4_SSE2
+template<>
+const NameAndSignature
+    ConcreteTargetLibraryHelper<4, TargetISA::x64>::library_functions[]
+    = {
+#    define DECL_INDIRECT(name, signature) \
+        NameAndSignature { #name, signature },
+#    define DECL(name, signature) DECL_INDIRECT(name, signature)
+#    define __OSL_WIDTH           4
+#    define __OSL_TARGET_ISA      SSE2
+// Don't allow order of xmacro includes be rearranged
+// clang-format off
+#    include "wide/define_opname_macros.h"
+#    include "builtindecl_wide_xmacro.h"
+#    include "wide/undef_opname_macros.h"
+// clang-format on
+#    undef __OSL_TARGET_ISA
+#    undef __OSL_WIDTH
+#    undef DECL
+#    undef DECL_INDIRECT
+      };
+template<>
+const char*
+    ConcreteTargetLibraryHelper<4, TargetISA::x64>::library_selector_string
+    = "b4_SSE2_";
+#endif
+
 
 
 std::unique_ptr<BatchedBackendLLVM::TargetLibraryHelper>
@@ -592,6 +619,17 @@ BatchedBackendLLVM::TargetLibraryHelper::build(ShadingContext* context,
         default: break;
         }
         break;
+    case 4:
+        switch (target_isa) {
+#ifdef __OSL_SUPPORTS_b4_SSE2
+        case TargetISA::x64:
+            return RetType(
+                new ConcreteTargetLibraryHelper<4, TargetISA::x64>());
+#endif
+        default: break;
+        }
+        break;
+
     default: OSL_ASSERT(0 && "unsupported vector width");
     }
     std::cerr << "Build is not configured to support TargetISA of "
@@ -735,6 +773,9 @@ BatchedBackendLLVM::llvm_type_batched_texture_options()
     {
         std::vector<unsigned int> offset_by_index;
         switch (m_width) {
+        case 4:
+            build_offsets_of_BatchedTextureOptions<4>(offset_by_index);
+            break;
         case 8:
             build_offsets_of_BatchedTextureOptions<8>(offset_by_index);
             break;
@@ -2698,6 +2739,9 @@ BatchedBackendLLVM::run()
     {
         std::vector<unsigned int> offset_by_index;
         switch (m_width) {
+        case 4:
+            build_offsets_of_BatchedShaderGlobals<4>(offset_by_index);
+            break;
         case 8:
             build_offsets_of_BatchedShaderGlobals<8>(offset_by_index);
             break;

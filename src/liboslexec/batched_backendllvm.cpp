@@ -141,6 +141,7 @@ BatchedBackendLLVM::BatchedBackendLLVM(ShadingSystemImpl& shadingsys,
     switch (vector_width()) {
     case 16: m_true_mask_value = Mask<16>(true).value(); break;
     case 8: m_true_mask_value = Mask<8>(true).value(); break;
+    case 4: m_true_mask_value = Mask<4>(true).value(); break;
     default: OSL_ASSERT(0 && "unsupported vector width");
     }
     ll.dumpasm(shadingsys.m_llvm_dumpasm);

@@ -107,12 +107,8 @@ else
     if [[ "${PYTHON_VERSION}" == "3.9" ]] ; then
         time sudo apt-get -q install -y python3.9-dev python3-numpy
         pip3 --version
-        pip3 install numpy
-    elif [[ "$PYTHON_VERSION" == "2.7" ]] ; then
-        time sudo apt-get -q install -y python-dev python-numpy
-    else
-        pip3 install numpy
     fi
+    pip3 install numpy
 
     if [[ "$CXX" == "g++-9" ]] ; then
         time sudo apt-get install -y g++-9

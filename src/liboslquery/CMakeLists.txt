@@ -39,9 +39,7 @@ install_targets (${local_lib})
 
 
 # from pythonutils.cmake
-if (USE_PYTHON AND Python_Development_FOUND)
-    checked_find_package (pybind11 2.4.2 REQUIRED)
-
+if (USE_PYTHON AND Python3_Development_FOUND)
     file (GLOB python_srcs py_*.cpp)
     setup_python_module (TARGET    pyoslquery
                          MODULE    oslquery

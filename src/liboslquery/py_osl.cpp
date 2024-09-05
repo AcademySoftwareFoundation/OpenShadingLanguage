@@ -170,13 +170,7 @@ declare_oslquery(py::module& m)
 
 
 
-// This OSL_DECLARE_PYMODULE mojo is necessary if we want to pass in the
-// MODULE name as a #define. Google for Argument-Prescan for additional
-// info on why this is necessary
-
-#define OSL_DECLARE_PYMODULE(x) PYBIND11_MODULE(x, m)
-
-OSL_DECLARE_PYMODULE(PYMODULE_NAME)
+PYBIND11_MODULE(oslquery, m)
 {
     // Force an OIIO module load so we have TypeDesc, among other things.
     py::module oiio = py::module::import("OpenImageIO");

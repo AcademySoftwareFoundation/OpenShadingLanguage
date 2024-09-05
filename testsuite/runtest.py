@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-from __future__ import print_function, absolute_import
 import os
 import glob
 import sys

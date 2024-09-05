@@ -5,8 +5,9 @@ Release 1.14 -- in progress (compared to 1.13)
 -------------------------------------------------------------
 ### New minimum dependencies and compatibility changes:
 
-* Note: it is likely that by the time it is released, OSL 1.14 will require
-  Imath >= 3.1, Python >= 3.7, C++ >= 17, gcc >= 9.3.
+* *C++*: Move to C++17 standard minimum (from 14), which also implies a minimum gcc 9.3 (raised from 6.3)
+* *Python*: 3.7 minimum.
+* *Imath*: minimum raised to 3.1 (from 2.4)
 
 
 ### OSL Language, standard library, and oslc compiler (for shader writers):

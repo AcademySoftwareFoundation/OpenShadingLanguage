@@ -37,7 +37,7 @@ macro (add_one_testsuite testname testsrcdir)
     set (testdir "${CMAKE_BINARY_DIR}/testsuite/${testname}")
     file (MAKE_DIRECTORY "${testdir}")
     if (NOT _tst_COMMAND)
-        set (_tst_COMMAND ${Python_EXECUTABLE} "${testsuite}/runtest.py" ${testdir})
+        set (_tst_COMMAND ${Python3_EXECUTABLE} "${testsuite}/runtest.py" ${testdir})
         if (MSVC_IDE)
             list (APPEND _tst_COMMAND --devenv-config $<CONFIGURATION>
                                       --solution-path "${CMAKE_BINARY_DIR}" )
@@ -410,7 +410,7 @@ macro (osl_add_all_tests)
     # We also exclude these tests if this is a sanitizer build, because the
     # Python interpreter itself won't be linked with the right asan
     # libraries to run correctly.
-    if (USE_PYTHON AND NOT SANITIZE)
+    if (USE_PYTHON AND Python3_Development_FOUND AND NOT SANITIZE)
         TESTSUITE ( python-oslquery )
     endif ()
 

@@ -4,8 +4,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-from __future__ import absolute_import
-
 import os
 
 if os.path.isfile("data.txt") :

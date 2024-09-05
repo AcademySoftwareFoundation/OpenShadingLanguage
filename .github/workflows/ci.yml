@@ -349,8 +349,8 @@ jobs:
             cxx_std: 17
             openexr_ver: v3.1.11
             openimageio_ver: v2.4.13.0
-            pybind11_ver: v2.6.2
-            python_ver: 2.7
+            pybind11_ver: v2.7.0
+            python_ver: 3.8
             simd: sse4.2
             setenvs: export CMAKE_BUILD_TYPE=Debug
                             LLVM_VERSION=9.0.0
@@ -365,7 +365,7 @@ jobs:
             openexr_ver: v3.1.11
             openimageio_ver: release
             pybind11_ver: v2.8.1
-            # python_ver: 2.7   FIXME
+            python_ver: 3.8
             simd: avx2,f16c
             setenvs: export LLVM_VERSION=10.0.0
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"

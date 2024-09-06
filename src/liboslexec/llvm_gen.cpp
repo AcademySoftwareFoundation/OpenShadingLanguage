@@ -3963,7 +3963,9 @@ LLVMGEN(llvm_gen_pointcloud_search)
                 else
                     clear_derivs_of.push_back(&Value);
             }
-        } else {
+        } else if (!rop.use_optix()) {
+            //TODO: Implement custom attribute arguments for OptiX
+
             // It is a regular attribute, push it to the arg list
             args.push_back(rop.llvm_load_value(Name));
             args.push_back(rop.ll.constant(simpletype));
@@ -3977,7 +3979,14 @@ LLVMGEN(llvm_gen_pointcloud_search)
                             capacity);
     }
 
-    args[9] = rop.ll.constant(extra_attrs);
+    if (rop.use_optix()) {
+        // TODO: Implement proper variadic arguments for OptiX.
+        // In the meantime, dropping the custom attributes lets shader ptx compile properly.
+        args[9] = rop.ll.constant(0);
+        args.push_back(rop.ll.void_ptr_null());
+    } else {
+        args[9] = rop.ll.constant(extra_attrs);
+    }
 
     if (Max_points.is_constant()) {
         // Compare capacity to the requested number of points.

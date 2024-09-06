@@ -614,11 +614,11 @@ osl_trace(OpaqueExecContextPtr oec, void* opt_, void* Pos_, void* dPosdx_,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE int
-osl_trace_get(OpaqueExecContextPtr oec, void* name_, long long type_, void* val,
-              int derivatives)
+osl_trace_get(OpaqueExecContextPtr oec, ustringhash_pod name_, long long type_,
+              void* val, int derivatives)
 {
-    OSL::ustringhash name = USTR(name_).uhash();
-    OSL::TypeDesc type    = TYPEDESC(type_);
+    ustringhash name   = ustringhash_from(name_);
+    OSL::TypeDesc type = TYPEDESC(type_);
     return rs_trace_get(oec, name, type, val, derivatives);
 }
 

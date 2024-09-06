@@ -33,6 +33,7 @@ osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
     TextureOpt* o          = reinterpret_cast<TextureOpt*>(opt);
     o->firstchannel        = 0;
     o->subimage            = 0;
+    o->subimagename        = ustring();
     o->swrap               = TextureOpt::WrapDefault;
     o->twrap               = TextureOpt::WrapDefault;
     o->mipmode             = TextureOpt::MipModeDefault;

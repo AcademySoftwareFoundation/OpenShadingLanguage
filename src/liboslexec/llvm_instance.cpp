@@ -481,33 +481,37 @@ BackendLLVM::llvm_type_texture_options()
 
     m_llvm_type_texture_options = ll.type_struct(comp_types, "TextureOptions");
 
-    //std::vector<unsigned int> offset_by_index;
-    //offset_by_index.push_back(offsetof(TextureOpt, firstchannel));
-    //offset_by_index.push_back(offsetof(TextureOpt, subimage));
-    //offset_by_index.push_back(offsetof(TextureOpt, subimagename));
-    //offset_by_index.push_back(offsetof(TextureOpt, swrap));
-    //offset_by_index.push_back(offsetof(TextureOpt, twrap));
-    //offset_by_index.push_back(offsetof(TextureOpt, mipmode));
-    //offset_by_index.push_back(offsetof(TextureOpt, interpmode));
-    //offset_by_index.push_back(offsetof(TextureOpt, anisotropic));
-    //offset_by_index.push_back(offsetof(TextureOpt, conservative_filter));
-    //offset_by_index.push_back(offsetof(TextureOpt, sblur));
-    //offset_by_index.push_back(offsetof(TextureOpt, tblur));
-    //offset_by_index.push_back(offsetof(TextureOpt, swidth));
-    //offset_by_index.push_back(offsetof(TextureOpt, twidth));
-    //offset_by_index.push_back(offsetof(TextureOpt, fill));
-    //offset_by_index.push_back(offsetof(TextureOpt, missingcolor));
-    //offset_by_index.push_back(offsetof(TextureOpt, time));
-    //offset_by_index.push_back(offsetof(TextureOpt, rnd));
-    //offset_by_index.push_back(offsetof(TextureOpt, samples));
-    //offset_by_index.push_back(offsetof(TextureOpt, rwrap));
-    //offset_by_index.push_back(offsetof(TextureOpt, rblur));
-    //offset_by_index.push_back(offsetof(TextureOpt, rwidth));
+#ifdef OSL_DEV
+    // Using reckless_offsetof instead of offsetof here due to TextureOpt
+    // being classified by the compiler as a non standard layout type.
+    std::vector<unsigned int> offset_by_index;
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, firstchannel));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, subimage));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, subimagename));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, swrap));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, twrap));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, mipmode));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, interpmode));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, anisotropic));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, conservative_filter));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, sblur));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, tblur));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, swidth));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, twidth));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, fill));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, missingcolor));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, time));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, rnd));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, samples));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, rwrap));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, rblur));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, rwidth));
 #ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
-    //offset_by_index.push_back(offsetof(TextureOpt, colortransformid));
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, colortransformid));
 #endif
-    //offset_by_index.push_back(offsetof(TextureOpt, envlayout));
-    //ll.validate_struct_data_layout(m_llvm_type_texture_options, offset_by_index);
+    offset_by_index.push_back(reckless_offsetof(TextureOpt, envlayout));
+    ll.validate_struct_data_layout(m_llvm_type_texture_options, offset_by_index);
+#endif
 
     return m_llvm_type_texture_options;
 }
@@ -521,14 +525,14 @@ BackendLLVM::llvm_type_texture_options_ptr()
 }
 
 llvm::Value*
-BackendLLVM::texture_options_ptr()
+BackendLLVM::temp_texture_options_ptr()
 {
-    if (m_llvm_texture_options_ptr == nullptr) {
+    if (m_llvm_temp_ == nullptr) {
         // Don't worry about what basic block we are currently inside of because
         // we insert all alloca's to the top function, not the current insertion point
-        m_llvm_texture_options_ptr = ll.op_alloca(llvm_type_texture_options());
+        m_llvm_temp_texture_options_ptr = ll.op_alloca(llvm_type_texture_options());
     }
-    return m_llvm_texture_options_ptr;
+    return m_llvm_temp_texture_options_ptr;
 }
 
 
@@ -547,12 +551,14 @@ BackendLLVM::llvm_type_trace_options()
 
     m_llvm_type_trace_options = ll.type_struct(comp_types, "TraceOptions");
 
+#ifdef OSL_DEV
     std::vector<unsigned int> offset_by_index;
     offset_by_index.push_back(offsetof(TraceOpt, mindist));
     offset_by_index.push_back(offsetof(TraceOpt, maxdist));
     offset_by_index.push_back(offsetof(TraceOpt, shade));
     offset_by_index.push_back(offsetof(TraceOpt, traceset));
     ll.validate_struct_data_layout(m_llvm_type_trace_options, offset_by_index);
+#endif
 
     return m_llvm_type_trace_options;
 }
@@ -595,6 +601,7 @@ BackendLLVM::llvm_type_noise_options()
 
     m_llvm_type_noise_options = ll.type_struct(comp_types, "NoiseOptions");
 
+#ifdef OSL_DEV
     std::vector<unsigned int> offset_by_index;
     offset_by_index.push_back(offsetof(NoiseParams, anisotropic));
     offset_by_index.push_back(offsetof(NoiseParams, do_filter));
@@ -602,6 +609,7 @@ BackendLLVM::llvm_type_noise_options()
     offset_by_index.push_back(offsetof(NoiseParams, bandwidth));
     offset_by_index.push_back(offsetof(NoiseParams, impulses));
     ll.validate_struct_data_layout(m_llvm_type_noise_options, offset_by_index);
+#endif
 
     return m_llvm_type_noise_options;
 }

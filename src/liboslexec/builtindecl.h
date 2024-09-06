@@ -408,6 +408,7 @@ DECL(osl_trace_set_maxdist, "xXf")
 DECL(osl_trace_set_shade, "xXi")
 DECL(osl_trace_set_traceset, "xXh")
 DECL(osl_trace, "iXXXXXXXX")
+DECL(osl_trace_get, "iXhLXi")
 
 #ifdef OSL_LLVM_NO_BITCODE
 DECL(osl_calculatenormal, "xXXX")

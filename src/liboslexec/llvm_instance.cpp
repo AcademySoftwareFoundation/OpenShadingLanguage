@@ -568,14 +568,14 @@ BackendLLVM::llvm_type_trace_options_ptr()
 
 
 llvm::Value*
-BackendLLVM::trace_options_ptr()
+BackendLLVM::temp_trace_options_ptr()
 {
-    if (m_llvm_trace_options_ptr == nullptr) {
+    if (m_llvm_temp_trace_options_ptr == nullptr) {
         // Don't worry about what basic block we are currently inside of because
         // we insert all alloca's to the top function, not the current insertion point
-        m_llvm_trace_options_ptr = ll.op_alloca(llvm_type_trace_options());
+        m_llvm_temp_trace_options_ptr = ll.op_alloca(llvm_type_trace_options());
     }
-    return m_llvm_trace_options_ptr;
+    return m_llvm_temp_trace_options_ptr;
 }
 
 
@@ -617,14 +617,14 @@ BackendLLVM::llvm_type_noise_options_ptr()
 
 
 llvm::Value*
-BackendLLVM::noise_options_ptr()
+BackendLLVM::temp_noise_options_ptr()
 {
-    if (m_llvm_noise_options_ptr == nullptr) {
+    if (m_llvm_temp_noise_options_ptr == nullptr) {
         // Don't worry about what basic block we are currently inside of because
         // we insert all alloca's to the top function, not the current insertion point
-        m_llvm_noise_options_ptr = ll.op_alloca(llvm_type_noise_options());
+        m_llvm_temp_noise_options_ptr = ll.op_alloca(llvm_type_noise_options());
     }
-    return m_llvm_noise_options_ptr;
+    return m_llvm_temp_noise_options_ptr;
 }
 
 
@@ -1296,9 +1296,9 @@ BackendLLVM::build_llvm_init()
     m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
 
     // New function, reset temp matrix pointer
-    m_llvm_texture_options_ptr = nullptr;
-    m_llvm_trace_options_ptr   = nullptr;
-    m_llvm_noise_options_ptr   = nullptr;
+    m_llvm_temp_texture_options_ptr = nullptr;
+    m_llvm_temp_trace_options_ptr   = nullptr;
+    m_llvm_temp_noise_options_ptr   = nullptr;
 
     // Set up a new IR builder
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_name);
@@ -1559,9 +1559,9 @@ BackendLLVM::build_llvm_instance(bool groupentry)
     m_llvm_interactive_params_ptr->setName("interactive_params_ptr");
 
     // New function, reset temp matrix pointer
-    m_llvm_texture_options_ptr = nullptr;
-    m_llvm_trace_options_ptr   = nullptr;
-    m_llvm_noise_options_ptr   = nullptr;
+    m_llvm_temp_texture_options_ptr = nullptr;
+    m_llvm_temp_trace_options_ptr   = nullptr;
+    m_llvm_temp_noise_options_ptr   = nullptr;
 
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_layer_name);
     m_exit_instance_block      = NULL;

@@ -337,6 +337,19 @@ rs_trace(OSL::OpaqueExecContextPtr ec, OSL::TraceOpt& options,
 }
 
 OSL_RSOP OSL_HOSTDEVICE bool
+rs_trace_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash name,
+             OSL::TypeDesc type, void* val, bool derivatives)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->getmessage(sg, OSL::Strings::trace, name, type, val,
+                                    derivatives);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_string(OSL::ustringhash value, void* result)
 {
     reinterpret_cast<OSL::ustringhash*>(result)[0] = value;

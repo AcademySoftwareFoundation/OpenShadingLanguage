@@ -304,6 +304,19 @@ rs_trace(OSL::OpaqueExecContextPtr exec_ctx, OSL::TraceOpt& options,
 #endif
 }
 
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_trace_get(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash name,
+             OSL::TypeDesc type, void* val, bool derivatives)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = get_sg(exec_ctx);
+    return sg->renderer->getmessage(sg, OSL::Strings::trace, name, type, val,
+                                    derivatives);
+#else
+    return false;
+#endif
+}
+
 OSL_RSOP OSL_HOSTDEVICE void
 rs_errorfmt(OSL::OpaqueExecContextPtr exec_ctx,
             OSL::ustringhash fmt_specification, int32_t count,

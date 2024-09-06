@@ -281,26 +281,26 @@ public:
 
     llvm::Type* llvm_type_texture_options();
     llvm::Type* llvm_type_texture_options_ptr();
-    llvm::Value* texture_options_ptr();
-    llvm::Value* texture_options_void_ptr()
+    llvm::Value* temp_texture_options_ptr();
+    llvm::Value* temp_texture_options_void_ptr()
     {
-        return ll.void_ptr(texture_options_ptr());
+        return ll.void_ptr(temp_texture_options_ptr());
     }
 
     llvm::Type* llvm_type_trace_options();
     llvm::Type* llvm_type_trace_options_ptr();
-    llvm::Value* trace_options_ptr();
-    llvm::Value* trace_options_void_ptr()
+    llvm::Value* temp_trace_options_ptr();
+    llvm::Value* temp_trace_options_void_ptr()
     {
-        return ll.void_ptr(trace_options_ptr());
+        return ll.void_ptr(temp_trace_options_ptr());
     }
 
     llvm::Type* llvm_type_noise_options();
     llvm::Type* llvm_type_noise_options_ptr();
-    llvm::Value* noise_options_ptr();
-    llvm::Value* noise_options_void_ptr()
+    llvm::Value* temp_noise_options_ptr();
+    llvm::Value* temp_noise_options_void_ptr()
     {
-        return ll.void_ptr(noise_options_ptr());
+        return ll.void_ptr(temp_noise_options_ptr());
     }
 
     /// Return the ShaderGlobals pointer cast as a void*.
@@ -572,9 +572,9 @@ private:
     llvm::Value* m_llvm_userdata_base_ptr;
     llvm::Value* m_llvm_output_base_ptr;
     llvm::Value* m_llvm_shadeindex;
-    llvm::Value* m_llvm_texture_options_ptr;
-    llvm::Value* m_llvm_trace_options_ptr;
-    llvm::Value* m_llvm_noise_options_ptr;
+    llvm::Value* m_llvm_temp_texture_options_ptr;
+    llvm::Value* m_llvm_temp_trace_options_ptr;
+    llvm::Value* m_llvm_temp_noise_options_ptr;
     llvm::BasicBlock* m_exit_instance_block;  // exit point for the instance
     llvm::Type* m_llvm_type_sg;         // LLVM type of ShaderGlobals struct
     llvm::Type* m_llvm_type_groupdata;  // LLVM type of group data

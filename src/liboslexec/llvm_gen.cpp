@@ -2566,7 +2566,7 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
                          llvm::Value*& dalphadx, llvm::Value*& dalphady,
                          llvm::Value*& errormessage)
 {
-    llvm::Value* opt = rop.texture_options_void_ptr();
+    llvm::Value* opt = rop.temp_texture_options_void_ptr();
     rop.ll.call_function("osl_init_texture_options", rop.sg_void_ptr(), opt);
     llvm::Value* missingcolor = NULL;
     TextureOpt optdefaults;  // So we can check the defaults
@@ -2973,7 +2973,7 @@ LLVMGEN(llvm_gen_environment)
 static llvm::Value*
 llvm_gen_trace_options(BackendLLVM& rop, int opnum, int first_optional_arg)
 {
-    llvm::Value* opt = rop.trace_options_void_ptr();
+    llvm::Value* opt = rop.temp_trace_options_void_ptr();
     rop.ll.call_function("osl_init_trace_options", rop.sg_void_ptr(), opt);
     Opcode& op(rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg; a < op.nargs(); ++a) {
@@ -3068,7 +3068,7 @@ arg_typecode(Symbol* sym, bool derivs)
 static llvm::Value*
 llvm_gen_noise_options(BackendLLVM& rop, int opnum, int first_optional_arg)
 {
-    llvm::Value* opt = rop.noise_options_void_ptr();
+    llvm::Value* opt = rop.temp_noise_options_void_ptr();
     rop.ll.call_function("osl_init_noise_options", rop.sg_void_ptr(), opt);
 
     Opcode& op(rop.inst()->ops()[opnum]);
@@ -3522,6 +3522,28 @@ LLVMGEN(llvm_gen_getmessage)
     Symbol& Data   = *rop.opargsym(op, 2 + has_source);
     OSL_DASSERT(Result.typespec().is_int() && Name.typespec().is_string());
     OSL_DASSERT(has_source == 0 || Source.typespec().is_string());
+
+    if (has_source && Source.is_constant() && Source.get_string() == "trace") {
+        llvm::Value* args[5];
+        args[0] = rop.sg_void_ptr();
+        args[1] = rop.llvm_load_value(Name);
+
+        if (Data.typespec().is_closure_based()) {
+            // FIXME: secret handshake for closures ...
+            args[2] = rop.ll.constant(
+                TypeDesc(TypeDesc::UNKNOWN, Data.typespec().arraylength()));
+            // We need a void ** here so the function can modify the closure
+            args[3] = rop.llvm_void_ptr(Data);
+        } else {
+            args[2] = rop.ll.constant(Data.typespec().simpletype());
+            args[3] = rop.llvm_void_ptr(Data);
+        }
+        args[4] = rop.ll.constant((int)Data.has_derivs());
+
+        llvm::Value* r = rop.ll.call_function("osl_trace_get", args);
+        rop.llvm_store_value(r, Result);
+        return true;
+    }
 
     llvm::Value* args[9];
     args[0] = rop.sg_void_ptr();

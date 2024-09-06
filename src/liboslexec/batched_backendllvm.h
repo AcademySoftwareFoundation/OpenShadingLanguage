@@ -361,10 +361,10 @@ public:
 
     llvm::Type* llvm_type_noise_options();
     llvm::Type* llvm_type_noise_options_ptr();
-    llvm::Value* noise_options_ptr();
-    llvm::Value* noise_options_void_ptr()
+    llvm::Value* temp_noise_options_ptr();
+    llvm::Value* temp_noise_options_void_ptr()
     {
-        return ll.void_ptr(noise_options_ptr());
+        return ll.void_ptr(temp_noise_options_ptr());
     }
 
     /// Return the ShaderGlobals pointer.

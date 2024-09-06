@@ -310,6 +310,12 @@ rs_trace(OSL::OpaqueExecContextPtr oec, OSL::TraceOpt& options,
          const OSL::Vec3& P, const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
          const OSL::Vec3& R, const OSL::Vec3& dRdx, const OSL::Vec3& dRdy);
 
+/// Retrieves data about the object hit by the last `trace` call made.
+/// Return true if the attribute is found, false otherwise.
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_trace_get(OSL::OpaqueExecContextPtr oec, OSL::ustringhash name,
+             OSL::TypeDesc type, void* val, bool derivatives);
+
 /// Report errors, warnings, printf, and fprintf.
 /// Fmtlib style format specifier is used (vs. printf style)
 /// Arguments are represented as EncodedTypes (encodedtypes.h) and

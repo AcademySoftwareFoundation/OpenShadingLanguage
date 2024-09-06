@@ -840,7 +840,7 @@ BatchedBackendLLVM::llvm_type_noise_options_ptr()
 
 
 llvm::Value*
-BatchedBackendLLVM::noise_options_ptr()
+BatchedBackendLLVM::temp_noise_options_ptr()
 {
     if (m_llvm_temp_noise_options_ptr == nullptr) {
         // Don't worry about what basic block we are currently inside of because

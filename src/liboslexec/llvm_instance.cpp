@@ -493,7 +493,8 @@ BackendLLVM::llvm_type_texture_options()
     offset_by_index.push_back(reckless_offsetof(TextureOpt, mipmode));
     offset_by_index.push_back(reckless_offsetof(TextureOpt, interpmode));
     offset_by_index.push_back(reckless_offsetof(TextureOpt, anisotropic));
-    offset_by_index.push_back(reckless_offsetof(TextureOpt, conservative_filter));
+    offset_by_index.push_back(
+        reckless_offsetof(TextureOpt, conservative_filter));
     offset_by_index.push_back(reckless_offsetof(TextureOpt, sblur));
     offset_by_index.push_back(reckless_offsetof(TextureOpt, tblur));
     offset_by_index.push_back(reckless_offsetof(TextureOpt, swidth));
@@ -506,11 +507,12 @@ BackendLLVM::llvm_type_texture_options()
     offset_by_index.push_back(reckless_offsetof(TextureOpt, rwrap));
     offset_by_index.push_back(reckless_offsetof(TextureOpt, rblur));
     offset_by_index.push_back(reckless_offsetof(TextureOpt, rwidth));
-#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+#    ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
     offset_by_index.push_back(reckless_offsetof(TextureOpt, colortransformid));
-#endif
+#    endif
     offset_by_index.push_back(reckless_offsetof(TextureOpt, envlayout));
-    ll.validate_struct_data_layout(m_llvm_type_texture_options, offset_by_index);
+    ll.validate_struct_data_layout(m_llvm_type_texture_options,
+                                   offset_by_index);
 #endif
 
     return m_llvm_type_texture_options;
@@ -527,10 +529,11 @@ BackendLLVM::llvm_type_texture_options_ptr()
 llvm::Value*
 BackendLLVM::temp_texture_options_ptr()
 {
-    if (m_llvm_temp_ == nullptr) {
+    if (m_llvm_temp_texture_options_ptr == nullptr) {
         // Don't worry about what basic block we are currently inside of because
         // we insert all alloca's to the top function, not the current insertion point
-        m_llvm_temp_texture_options_ptr = ll.op_alloca(llvm_type_texture_options());
+        m_llvm_temp_texture_options_ptr = ll.op_alloca(
+            llvm_type_texture_options());
     }
     return m_llvm_temp_texture_options_ptr;
 }

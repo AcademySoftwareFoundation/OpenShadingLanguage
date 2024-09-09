@@ -19,7 +19,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.27)
+* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.30)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
    - **GCC 9.3** or newer (tested through gcc 12.1)
@@ -42,7 +42,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
     After building OpenImageIO, if you don't have it installed in a
     "standard" place (like /usr/include), you should set the environment
-    variable $OpenImageIO_ROOT to point to the compiled distribution, and
+    variable `$OpenImageIO_ROOT` to point to the compiled distribution, and
     then OSL's build scripts will be able to find it. You should also have
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).

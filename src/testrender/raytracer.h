@@ -11,9 +11,9 @@
 
 #include "optix_compat.h"
 #include "render_params.h"
-#include "bvh.h"
 #include <OSL/dual_vec.h>
 #include <OSL/oslconfig.h>
+#include "bvh.h"
 
 
 #if OSL_USE_OPTIX
@@ -166,22 +166,26 @@ using ShaderMap = std::unordered_map<std::string, int>;
 struct Scene {
     void add_sphere(const Vec3& c, float r, int shaderID, int resolution);
 
-    void add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID, int resolution);
+    void add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID,
+                  int resolution);
 
     // add models parsed from a .obj file
-    void add_model(const std::string& filename, const ShaderMap& shadermap, int shaderID, OIIO::ErrorHandler& errhandler);
+    void add_model(const std::string& filename, const ShaderMap& shadermap,
+                   int shaderID, OIIO::ErrorHandler& errhandler);
 
     int num_prims() const { return triangles.size(); }
 
     void prepare(OIIO::ErrorHandler& errhandler);
 
-    Intersection intersect(const Ray& r, const float tmax, const unsigned skipID1, const unsigned skipID2 = ~0u) const;
+    Intersection intersect(const Ray& r, const float tmax,
+                           const unsigned skipID1,
+                           const unsigned skipID2 = ~0u) const;
 
     LightSample sample(int primID, const Vec3& x, float xi, float yi) const
     {
         // A Low-Distortion Map Between Triangle and Square
         // Eric Heitz, 2019
-        if (yi > xi ) {
+        if (yi > xi) {
             xi *= 0.5f;
             yi -= xi;
         } else {
@@ -191,7 +195,7 @@ struct Scene {
         const Vec3 va = verts[triangles[primID].a];
         const Vec3 vb = verts[triangles[primID].b];
         const Vec3 vc = verts[triangles[primID].c];
-        const Vec3 n = (va - vb).cross(va - vc);
+        const Vec3 n  = (va - vb).cross(va - vc);
 
         Vec3 l   = ((1 - xi - yi) * va + xi * vb + yi * vc) - x;
         float d2 = l.length2();
@@ -206,7 +210,7 @@ struct Scene {
         const Vec3 va = verts[triangles[primID].a];
         const Vec3 vb = verts[triangles[primID].b];
         const Vec3 vc = verts[triangles[primID].c];
-        const Vec3 n = (va - vb).cross(va - vc);
+        const Vec3 n  = (va - vb).cross(va - vc);
 
         Vec3 l   = p - x;
         float d2 = l.length2();
@@ -223,12 +227,13 @@ struct Scene {
         return 0.5f * (va - vb).cross(va - vc).length();
     }
 
-    Vec3 normal(const Dual2<Vec3>& p, Vec3& Ng, int primID, float u, float v) const
+    Vec3 normal(const Dual2<Vec3>& p, Vec3& Ng, int primID, float u,
+                float v) const
     {
         const Vec3 va = verts[triangles[primID].a];
         const Vec3 vb = verts[triangles[primID].b];
         const Vec3 vc = verts[triangles[primID].c];
-        Ng = (va - vb).cross(va - vc).normalize();
+        Ng            = (va - vb).cross(va - vc).normalize();
 
         // this triangle doesn't have vertex normals, just use face normal
         if (n_triangles[primID].a < 0)
@@ -241,8 +246,8 @@ struct Scene {
         return ((1 - u - v) * na + u * nb + v * nc).normalize();
     }
 
-    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Vec3& n, Vec3& dPdu,
-                   Vec3& dPdv, int primID, float u, float v) const
+    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Vec3& n, Vec3& dPdu, Vec3& dPdv,
+                   int primID, float u, float v) const
     {
         if (uv_triangles[primID].a < 0)
             return Dual2<Vec2>(Vec2(0, 0));
@@ -261,27 +266,25 @@ struct Scene {
         const float det = dt02.x * dt12.y - dt02.y * dt12.x;
         if (det != 0) {
             Float invdet = 1 / det;
-            dPdu = ( dt12.y * dp02 - dt02.y * dp12) * invdet;
-            dPdv = (-dt12.x * dp02 + dt02.x * dp12) * invdet;
+            dPdu         = (dt12.y * dp02 - dt02.y * dp12) * invdet;
+            dPdv         = (-dt12.x * dp02 + dt02.x * dp12) * invdet;
             // TODO: smooth out dPdu and dPdv by storing per vertex tangents
         }
         return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc);
     }
 
-    int shaderid(int primID) const
-    {
-        return shaderids[primID];
-    }
+    int shaderid(int primID) const { return shaderids[primID]; }
 
     // basic triangle data
     std::vector<Vec3> verts;
     std::vector<Vec3> normals;
-    std::vector<Vec2> uvs;    
+    std::vector<Vec2> uvs;
     std::vector<TriangleIndices> triangles;
     std::vector<TriangleIndices> uv_triangles;
     std::vector<TriangleIndices> n_triangles;
     std::vector<int> shaderids;
-    std::vector<int> last_index; // one entry per mesh, stores the last triangle index (+1) -- also is the start triangle of the next mesh
+    std::vector<int>
+        last_index;  // one entry per mesh, stores the last triangle index (+1) -- also is the start triangle of the next mesh
     // acceleration structure (built over triangles)
     std::unique_ptr<BVH> bvh;
 };

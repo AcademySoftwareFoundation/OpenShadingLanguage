@@ -113,11 +113,13 @@ private:
     int max_bounces          = 1000000;
     int rr_depth             = 5;
     float show_albedo_scale  = 0.0f;
-    int   show_globals       = 0;
+    int show_globals         = 0;
     std::vector<ShaderGroupRef> m_shaders;
     std::vector<bool> m_shader_is_light;
-    std::vector<float> m_mesh_surfacearea; // surface area of all triangles in each mesh (one entry per mesh)
-    std::vector<unsigned> m_lightprims; // array of all triangles that have a "light" shader on them
+    std::vector<float>
+        m_mesh_surfacearea;  // surface area of all triangles in each mesh (one entry per mesh)
+    std::vector<unsigned>
+        m_lightprims;  // array of all triangles that have a "light" shader on them
 
     class ErrorHandler;  // subclass ErrorHandler for SimpleRaytracer
     std::unique_ptr<OIIO::ErrorHandler> m_errhandler;

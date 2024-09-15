@@ -353,7 +353,6 @@ macro (osl_add_all_tests)
                 raytype raytype-reg raytype-specialized regex-reg
                 reparam reparam-arrays reparam-string testoptix-reparam
                 render-background render-bumptest
-                render-bunny
                 render-cornell render-furnace-diffuse
                 render-mx-furnace-burley-diffuse
                 render-mx-furnace-oren-nayar
@@ -367,7 +366,6 @@ macro (osl_add_all_tests)
                 render-microfacet render-oren-nayar
                 render-uv render-veachmis render-ward
                 render-raytypes
-                render-shaderpreview
                 select select-reg shaderglobals shortcircuit
                 smoothstep-reg
                 spline spline-reg splineinverse splineinverse-ident

@@ -1026,7 +1026,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             int ls   = floorf(xl);
             xl -= ls;
 
-            int lid = m_lightprims[ls];
+            uint32_t lid = m_lightprims[ls];
             if (lid != hit.id) {
                 int shaderID = scene.shaderid(lid);
                 // sample a random direction towards the object

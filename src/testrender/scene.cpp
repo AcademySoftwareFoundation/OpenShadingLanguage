@@ -116,7 +116,7 @@ Scene::add_model(const std::string& filename, const ShaderMap& shadermap,
                 // remap the material ID to our indexing
                 int obj_mat_id = shape.mesh.material_ids[f];
                 OSL_ASSERT(obj_mat_id >= 0);
-                OSL_ASSERT(obj_mat_id < material_ids.size());
+                OSL_ASSERT(obj_mat_id < int(material_ids.size()));
                 shaderids.emplace_back(material_ids[obj_mat_id]);
             } else
                 shaderids.emplace_back(shapeShaderID);

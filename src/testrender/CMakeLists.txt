@@ -10,6 +10,8 @@ set (testrender_srcs
      bvh.cpp
      testrender.cpp)
 
+find_package(Threads REQUIRED)
+
 if (OSL_USE_OPTIX)
     list (APPEND testrender_srcs optixraytracer.cpp)
     set (testrender_cuda_srcs
@@ -71,7 +73,8 @@ add_executable (testrender ${testrender_srcs})
 target_link_libraries (testrender
     PRIVATE
         oslexec oslquery
-        pugixml::pugixml)
+        pugixml::pugixml
+        Threads::Threads)
 
 osl_optix_target (testrender)
 

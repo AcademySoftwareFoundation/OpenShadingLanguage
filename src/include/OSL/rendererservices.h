@@ -479,7 +479,7 @@ public:
     virtual int pointcloud_search(ShaderGlobals* sg, ustringhash filename,
                                   const OSL::Vec3& center, float radius,
                                   int max_points, bool sort,
-                                  size_t* out_indices, float* out_distances,
+                                  int* out_indices, float* out_distances,
                                   int derivs_offset);
 
     /// Retrieve an attribute for an index list. The result is another array
@@ -489,7 +489,7 @@ public:
     /// NOTE: During shader execution when attr_type==TypeDesc::STRING,
     ///       out_data should be populated with a ustringhash
     virtual int pointcloud_get(ShaderGlobals* sg, ustringhash filename,
-                               size_t* indices, int count,
+                               const int* indices, int count,
                                ustringhash attr_name, TypeDesc attr_type,
                                void* out_data);
 

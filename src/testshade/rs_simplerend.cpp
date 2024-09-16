@@ -281,7 +281,7 @@ rs_get_texture_info_st(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
 OSL_RSOP OSL_HOSTDEVICE int
 rs_pointcloud_search(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
                      const OSL::Vec3& center, float radius, int max_points,
-                     bool sort, size_t* out_indices, float* out_distances,
+                     bool sort, int* out_indices, float* out_distances,
                      int derivs_offset)
 {
 #ifndef __CUDA_ARCH__
@@ -296,7 +296,7 @@ rs_pointcloud_search(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
 
 OSL_RSOP OSL_HOSTDEVICE int
 rs_pointcloud_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
-                  size_t* indices, int count, OSL::ustringhash attr_name,
+                  const int* indices, int count, OSL::ustringhash attr_name,
                   OSL::TypeDesc attr_type, void* out_data)
 {
 #ifndef __CUDA_ARCH__

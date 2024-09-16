@@ -282,7 +282,7 @@ rs_get_texture_info_st(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 OSL_RSOP OSL_HOSTDEVICE int
 rs_pointcloud_search(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
                      const OSL::Vec3& center, float radius, int max_points,
-                     bool sort, size_t* out_indices, float* out_distances,
+                     bool sort, int* out_indices, float* out_distances,
                      int derivs_offset);
 
 /// Retrieve an attribute for an index list. The result is another array
@@ -291,7 +291,7 @@ rs_pointcloud_search(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
 /// Return 1 if the attribute is found, 0 otherwise.
 OSL_RSOP OSL_HOSTDEVICE int
 rs_pointcloud_get(OSL::OpaqueExecContextPtr oec, OSL::ustringhash filename,
-                  size_t* indices, int count, OSL::ustringhash attr_name,
+                  const int* indices, int count, OSL::ustringhash attr_name,
                   OSL::TypeDesc attr_type, void* out_data);
 
 /// Write a point to the named pointcloud, which will be saved

@@ -3961,7 +3961,8 @@ LLVMGEN(llvm_gen_pointcloud_search)
 
     args.push_back(Sort ? rop.llvm_load_value(*Sort)  // 5 sort
                         : rop.ll.constant(0));
-    args.push_back(rop.ll.constant_ptr(NULL));  // 6 indices
+    constexpr int indicesArgumentIndex = 6;     // 6 indices
+    args.push_back(NULL);                       // 6 indices
     args.push_back(rop.ll.constant_ptr(NULL));  // 7 distances
     args.push_back(rop.ll.constant(0));         // 8 derivs_offset
     args.push_back(NULL);                       // 9 nattrs
@@ -3979,7 +3980,7 @@ LLVMGEN(llvm_gen_pointcloud_search)
         TypeDesc simpletype = Value.typespec().simpletype();
         if (Name.is_constant() && Name.get_string() == u_index
             && simpletype.elementtype() == TypeDesc::INT) {
-            args[6] = rop.llvm_void_ptr(Value);
+            args[indicesArgumentIndex] = rop.llvm_void_ptr(Value);
         } else if (Name.is_constant() && Name.get_string() == u_distance
                    && simpletype.elementtype() == TypeDesc::FLOAT) {
             args[7] = rop.llvm_void_ptr(Value);
@@ -4011,6 +4012,11 @@ LLVMGEN(llvm_gen_pointcloud_search)
     args.push_back(rop.ll.void_ptr(names));   // attribute names array
     args.push_back(rop.ll.void_ptr(types));   // attribute types array
     args.push_back(rop.ll.void_ptr(values));  // attribute values array
+
+    if (!args[indicesArgumentIndex]) {
+        llvm::Value* indices = rop.ll.op_alloca(rop.ll.type_int(), capacity);
+        args[indicesArgumentIndex] = rop.ll.void_ptr(indices);
+    }
 
     if (Max_points.is_constant()) {
         // Compare capacity to the requested number of points.
@@ -4067,7 +4073,6 @@ LLVMGEN(llvm_gen_pointcloud_get)
     llvm::Value* cond           = rop.ll.op_le(elem_count_val, count);
     llvm::Value* clampedCount   = rop.ll.op_select(cond, elem_count_val, count);
 
-    // Convert 32bit indices to 64bit
     llvm::Value* args[] = {
         rop.sg_void_ptr(),
         rop.llvm_load_value(Filename),

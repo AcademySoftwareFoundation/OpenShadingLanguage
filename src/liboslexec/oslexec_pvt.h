@@ -758,7 +758,7 @@ public:
         m_stat_pointcloud_searches_total_results += results;
         if (search && !results)
             ++m_stat_pointcloud_failures;
-        atomic_max(m_stat_pointcloud_max_results, results);
+        OIIO::atomic_max(m_stat_pointcloud_max_results, results);
         m_stat_pointcloud_writes += writes;
     }
 

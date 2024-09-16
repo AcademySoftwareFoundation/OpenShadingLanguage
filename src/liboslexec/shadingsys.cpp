@@ -2341,23 +2341,6 @@ ShadingSystemImpl::message(const std::string& msg) const
 
 
 
-void
-ShadingSystemImpl::pointcloud_stats(int search, int get, int results,
-                                    int writes)
-{
-    spin_lock lock(m_stat_mutex);
-    m_stat_pointcloud_searches += search;
-    m_stat_pointcloud_gets += get;
-    m_stat_pointcloud_searches_total_results += results;
-    if (search && !results)
-        ++m_stat_pointcloud_failures;
-    m_stat_pointcloud_max_results = std::max(m_stat_pointcloud_max_results,
-                                             results);
-    m_stat_pointcloud_writes += writes;
-}
-
-
-
 namespace {
 typedef std::pair<ustring, long long> GroupTimeVal;
 struct group_time_compare {  // So looking forward to C++11 lambdas!

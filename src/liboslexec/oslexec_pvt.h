@@ -751,7 +751,16 @@ public:
             return NULL;
     }
 
-    void pointcloud_stats(int search, int get, int results, int writes = 0);
+    void pointcloud_stats(int search, int get, int results, int writes = 0)
+    {
+        m_stat_pointcloud_searches += search;
+        m_stat_pointcloud_gets += get;
+        m_stat_pointcloud_searches_total_results += results;
+        if (search && !results)
+            ++m_stat_pointcloud_failures;
+        atomic_max(m_stat_pointcloud_max_results, results);
+        m_stat_pointcloud_writes += writes;
+    }
 
     /// Is the named symbol among the renderer outputs?
     bool is_renderer_output(ustring layername, ustring paramname,
@@ -1013,12 +1022,12 @@ private:
     atomic_ll m_stat_getattribute_calls;   ///< Stat: Number of getattribute
     atomic_ll m_stat_get_userdata_calls;   ///< Stat: # of get_userdata calls
     atomic_ll m_stat_noise_calls;          ///< Stat: # of noise calls
-    long long m_stat_pointcloud_searches;
-    long long m_stat_pointcloud_searches_total_results;
-    int m_stat_pointcloud_max_results;
-    int m_stat_pointcloud_failures;
-    long long m_stat_pointcloud_gets;
-    long long m_stat_pointcloud_writes;
+    atomic_ll m_stat_pointcloud_searches;
+    atomic_ll m_stat_pointcloud_searches_total_results;
+    atomic_int m_stat_pointcloud_max_results;
+    atomic_int m_stat_pointcloud_failures;
+    atomic_ll m_stat_pointcloud_gets;
+    atomic_ll m_stat_pointcloud_writes;
     atomic_ll m_stat_layers_executed;           ///< Total layers executed
     atomic_ll m_stat_total_shading_time_ticks;  ///< Total shading time (ticks)
     atomic_ll m_stat_reparam_calls_total;

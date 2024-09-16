@@ -478,9 +478,8 @@ public:
     /// Return the number of points found, always < max_points
     virtual int pointcloud_search(ShaderGlobals* sg, ustringhash filename,
                                   const OSL::Vec3& center, float radius,
-                                  int max_points, bool sort,
-                                  int* out_indices, float* out_distances,
-                                  int derivs_offset);
+                                  int max_points, bool sort, int* out_indices,
+                                  float* out_distances, int derivs_offset);
 
     /// Retrieve an attribute for an index list. The result is another array
     /// of the requested type stored in out_data.

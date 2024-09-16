@@ -2646,7 +2646,7 @@ DECLFOLDER(constfold_pointcloud_search)
 
     // We're doing a fixed query, so instead of running at every shade,
     // perform the search now.
-    const int maxconst = 256;  // Max number of points to consider a constant
+    const int maxconst = 256;   // Max number of points to consider a constant
     int indices[maxconst + 1];  // Make room for one more!
     float distances[maxconst + 1];
     int maxpoints    = std::min(maxconst + 1, Max_points.get_int());

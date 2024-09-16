@@ -451,7 +451,7 @@ osl_pointcloud_get(OpaqueExecContextPtr oec, ustringhash_pod filename_,
 
     ustringhash filename  = ustringhash_from(filename_);
     ustringhash attr_name = ustringhash_from(attr_name_);
-    return rs_pointcloud_get(oec, filename, (int*)indices, count, attr_name,
+    return rs_pointcloud_get(oec, filename, (int*)in_indices, count, attr_name,
                              TYPEDESC(attr_type), out_data);
 }
 

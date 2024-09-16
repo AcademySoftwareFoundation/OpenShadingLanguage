@@ -248,9 +248,8 @@ rs_get_texture_info_st(OSL::OpaqueExecContextPtr exec_ctx,
 OSL_RSOP OSL_HOSTDEVICE int
 rs_pointcloud_search(OSL::OpaqueExecContextPtr exec_ctx,
                      OSL::ustringhash filename, const OSL::Vec3& center,
-                     float radius, int max_points, bool sort,
-                     int* out_indices, float* out_distances,
-                     int derivs_offset)
+                     float radius, int max_points, bool sort, int* out_indices,
+                     float* out_distances, int derivs_offset)
 {
 #ifndef __CUDA_ARCH__
     auto sg = get_sg(exec_ctx);

@@ -427,7 +427,7 @@ osl_pointcloud_search(OpaqueExecContextPtr oec, ustringhash_pod filename_,
             ((int*)out_indices)[i] = indices[i];
 
 #ifndef __CUDA_ARCH__
-    shadingsys.pointcloud_stats(1, 0, count);
+    //shadingsys.pointcloud_stats(1, 0, count);
 #endif
 
     return count;
@@ -452,7 +452,7 @@ osl_pointcloud_get(OpaqueExecContextPtr oec, ustringhash_pod filename_,
         indices[i] = ((int*)in_indices)[i];
 
 #ifndef __CUDA_ARCH__
-    shadingsys.pointcloud_stats(0, 1, 0);
+    //shadingsys.pointcloud_stats(0, 1, 0);
 #endif
 
     ustringhash filename  = ustringhash_from(filename_);
@@ -490,7 +490,7 @@ osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
 
-    shadingsys.pointcloud_stats(0, 0, 0, 1);
+    //shadingsys.pointcloud_stats(0, 0, 0, 1);
 #endif
 
     ustringhash filename = ustringhash_from(filename_);

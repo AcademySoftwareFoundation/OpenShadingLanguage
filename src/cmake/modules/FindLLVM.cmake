@@ -97,10 +97,12 @@ string (REPLACE " " ";" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
 
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION} LLVM
-               PATHS ${LLVM_LIB_DIR})
+               PATHS ${LLVM_LIB_DIR}
+               NO_DEFAULT_PATH)
 find_library ( LLVM_MCJIT_LIBRARY
                NAMES LLVMMCJIT
-               PATHS ${LLVM_LIB_DIR})
+               PATHS ${LLVM_LIB_DIR}
+               NO_DEFAULT_PATH)
 
 if (NOT LLVM_LIBRARY)
     # if no single library was found, use llvm-config to generate the list
@@ -118,8 +120,9 @@ execute_process (COMMAND ${LLVM_CONFIG} --shared-mode
        OUTPUT_STRIP_TRAILING_WHITESPACE)
 if (LLVM_VERSION VERSION_GREATER_EQUAL 9.0 AND (LLVM_SHARED_MODE STREQUAL "shared"))
     find_library ( _CLANG_CPP_LIBRARY
-		  NAMES "clang-cpp"
-		  PATHS ${LLVM_LIB_DIR})
+                   NAMES "clang-cpp"
+                   PATHS ${LLVM_LIB_DIR}
+                   NO_DEFAULT_PATH)
     if (_CLANG_CPP_LIBRARY)
         list (APPEND CLANG_LIBRARIES ${_CLANG_CPP_LIBRARY})
     endif ()
@@ -131,7 +134,8 @@ foreach (COMPONENT clangFrontend clangDriver clangSerialization
                    clangSupport clangAPINotes)
     find_library ( _CLANG_${COMPONENT}_LIBRARY
                   NAMES ${COMPONENT}
-                  PATHS ${LLVM_LIB_DIR})
+                  PATHS ${LLVM_LIB_DIR}
+                  NO_DEFAULT_PATH)
     if (_CLANG_${COMPONENT}_LIBRARY)
         list (APPEND CLANG_LIBRARIES ${_CLANG_${COMPONENT}_LIBRARY})
     endif ()

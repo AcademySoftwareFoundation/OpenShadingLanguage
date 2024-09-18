@@ -28,7 +28,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
    - Intel C++ compiler **icc version 19** or newer or LLVM-based icx compiler
      version 2022 or newer.
 
-* **[OpenImageIO](http://openimageio.org) 2.4 or newer** (tested through 2.5 and master)
+* **[OpenImageIO](http://openimageio.org) 2.4 or newer** (tested through 2.5 and main)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing

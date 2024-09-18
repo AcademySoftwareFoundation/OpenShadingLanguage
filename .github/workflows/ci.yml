@@ -96,19 +96,30 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: clang12/C++17 llvm12 oiio-master boost1.73 exr3.1 py3.9 avx2 batch-avx512
+          - desc: clang12/C++17 llvm12 oiio-main boost1.73 exr3.1 py3.9 avx2 batch-avx512
             nametag: linux-clang12-llvm12-batch
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang12
             vfxyear: 2022
             cxx_std: 17
-            openimageio_ver: master
+            openimageio_ver: main
             python_ver: 3.9
             pybind11_ver: v2.7.0
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
-          - desc: icc/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio-master avx2
+          - desc: icc/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio-main avx2
+            nametag: linux-vfx2021
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2022-clang13
+            vfxyear: 2022
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: 3.9
+            pybind11_ver: v2.9.0
+            simd: sse2
+            batched: b4_SSE2
+          - desc: icc/C++17 llvm14 py3.9 oiio-main avx2
             nametag: linux-icc
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -141,7 +152,7 @@ jobs:
             cxx_compiler: icpx
             cxx_std: 17
             fmt_ver: 7.1.3
-            openimageio_ver: master
+            openimageio_ver: main
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: avx2,f16c
@@ -159,13 +170,13 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 OIIO-master avx2
+          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 OIIO-main avx2
             nametag: linux-optix7-2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
             vfxyear: 2023
             cxx_std: 17
-            openimageio_ver: master
+            openimageio_ver: main
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c
@@ -207,7 +218,7 @@ jobs:
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
-            openimageio_ver: master
+            openimageio_ver: main
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: avx2,f16c
@@ -392,7 +403,7 @@ jobs:
             cxx_std: 17
             fmt_ver: 10.1.0
             openexr_ver: v3.2.1
-            openimageio_ver: master
+            openimageio_ver: main
             pybind11_ver: v2.11.1
             python_ver: "3.10"
             simd: avx2,f16c
@@ -401,14 +412,14 @@ jobs:
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             OPENCOLORIO_VERSION=v2.2.0
                             PUGIXML_VERSION=v1.13
-          - desc: bleeding edge gcc12/C++17 llvm17 oiio/ocio/exr/pybind-master boost1.71 py3.10 avx2 batch-b16avx512
+          - desc: bleeding edge gcc12/C++17 llvm17 oiio/ocio/exr/pybind-main boost1.71 py3.10 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-22.04
             cxx_compiler: g++-12
             cxx_std: 17
             fmt_ver: master
             openexr_ver: main
-            openimageio_ver: master
+            openimageio_ver: main
             pybind11_ver: master
             python_ver: "3.10"
             simd: avx2,f16c
@@ -424,8 +435,8 @@ jobs:
             cc_compiler: clang
             cxx_std: 17
             fmt_ver: 8.1.1
-            openexr_ver: v3.1.7
-            openimageio_ver: master
+            openexr_ver: v3.1.11
+            openimageio_ver: main
             pybind11_ver: v2.9.2
             python_ver: 3.8
             simd: avx2,f16c
@@ -524,7 +535,7 @@ jobs:
             cc_compiler: /usr/local/opt/llvm/bin/clang
             cxx_compiler: /usr/local/opt/llvm/bin/clang++
             cxx_std: 17
-            openimageio_ver: master
+            openimageio_ver: main
             python_ver: "3.11"
             aclang: 14
             setenvs: export DO_BREW_UPDATE=1 CTEST_TEST_TIMEOUT=120
@@ -536,7 +547,7 @@ jobs:
             Xcc_compiler: /usr/local/opt/llvm/bin/clang
             Xcxx_compiler: /usr/local/opt/llvm/bin/clang++
             cxx_std: 17
-            openimageio_ver: master
+            openimageio_ver: main
             python_ver: "3.11"
             aclang: 15
             setenvs: export DO_BREW_UPDATE=1

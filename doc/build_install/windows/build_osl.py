@@ -34,8 +34,6 @@
 #
 #
 
-from __future__ import print_function
-
 from distutils.spawn import find_executable
 
 import argparse

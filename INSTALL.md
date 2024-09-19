@@ -9,9 +9,9 @@ and aarch64), and Windows (x86_64). It may build and run on other platforms as
 well, but we don't officially support or test other than these platforms.
 
 Shader execution is supported on the native architectures of those x86_64 and
-aarch64 platforms, a special batched 8- or 16-wide SIMD execution mode
-requiring x86_64 with AVX2 or AVX-512 instructions, as well as on NVIDIA GPUs
-using Cuda+OptiX.
+aarch64 platforms, a special batched 4-, 8- or 16-wide SIMD execution mode
+requiring x86_64 with SSE2, AVX/AVX2 or AVX-512 instructions, as well as on
+NVIDIA GPUs using Cuda+OptiX.
 
 Dependencies
 ------------
@@ -19,7 +19,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.27)
+* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.30)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
    - **GCC 9.3** or newer (tested through gcc 12.1)
@@ -28,7 +28,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
    - Intel C++ compiler **icc version 19** or newer or LLVM-based icx compiler
      version 2022 or newer.
 
-* **[OpenImageIO](http://openimageio.org) 2.4 or newer** (tested through 2.5 and master)
+* **[OpenImageIO](http://openimageio.org) 2.4 or newer** (tested through 2.5 and main)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -42,7 +42,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
     After building OpenImageIO, if you don't have it installed in a
     "standard" place (like /usr/include), you should set the environment
-    variable $OpenImageIO_ROOT to point to the compiled distribution, and
+    variable `$OpenImageIO_ROOT` to point to the compiled distribution, and
     then OSL's build scripts will be able to find it. You should also have
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
@@ -55,7 +55,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
       recommended that you use 11.0 or higher.
 
-* [Imath](https://github.com/AcademySoftwareFoundation/Imath) 3.1 or newer.
+* [Imath](https://github.com/AcademySoftwareFoundation/Imath) **3.1 or newer**.
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
   [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
@@ -67,13 +67,10 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12)
-      NOTE: It is likely that 1.13 is the last release that will support
-      Python 2.7.
-    * pybind11 >= 2.4.2 (Tested through 2.11. Note that pybind11 v2.10+ does
-      not support Python < 3.6.)
+    * **Python >= 3.7** (tested through 3.12)
+    * **pybind11 >= 2.7** (tested through 2.13)
     * NumPy
-* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.6).
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.7).
   If not found at build time, the `osltoy` application will be disabled.
 
 

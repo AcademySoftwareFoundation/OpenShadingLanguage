@@ -182,10 +182,15 @@ public:
     {
         return &m_batch_8_rs;
     }
+    OSL::BatchedRendererServices<4>* batched(OSL::WidthOf<4>) override
+    {
+        return &m_batch_4_rs;
+    }
 
 private:
     MyBatchedRendererServices<16> m_batch_16_rs;
     MyBatchedRendererServices<8> m_batch_8_rs;
+    MyBatchedRendererServices<4> m_batch_4_rs;
 };
 
 
@@ -232,11 +237,13 @@ main(int argc, char* argv[])
         batch_width = 16;
     } else if (shadsys->configure_batch_execution_at(8)) {
         batch_width = 8;
+    } else if (shadsys->configure_batch_execution_at(4)) {
+        batch_width = 4;
     } else {
         std::cout
-            << "Error:  Hardware doesn't support 8 or 16 wide SIMD or the OSL has not been configured and built with a proper USE_BATCHED."
+            << "Error:  Hardware doesn't support 4, 8 or 16 wide SIMD or the OSL has not been configured and built with a proper USE_BATCHED."
             << std::endl;
-        std::cout << "Error:  e.g.:  USE_BATCHED=b8_AVX2,b8_AVX512,b16_AVX512"
+        std::cout << "Error:  e.g.:  USE_BATCHED=b4_SSE2,b8_AVX2,b8_AVX512,b16_AVX512"
                   << std::endl;
         return -1;
     }
@@ -432,8 +439,11 @@ main(int argc, char* argv[])
 
     if (batch_width == 16) {
         batched_shadepoints(std::integral_constant<int, 16> {});
-    } else {
+    }
+    else if (batch_width == 8) {
         batched_shadepoints(std::integral_constant<int, 8> {});
+    } else {
+        batched_shadepoints(std::integral_constant<int, 4> {});
     }
 
     // Print some results to prove that we generated an expected Pout.

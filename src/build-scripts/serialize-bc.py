@@ -6,8 +6,6 @@
 # Turn an LLVM-compiled bitfile into a C++ source file where the compiled
 # bitcode is in a huge array.
 
-from __future__ import print_function, absolute_import
-
 import sys
 
 in_name = sys.argv[1]

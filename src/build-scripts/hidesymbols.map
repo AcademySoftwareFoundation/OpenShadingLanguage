@@ -1,4 +1,4 @@
 {
-    global: *OSL*; test_shade; *osl*imageio*; *osl_input_extensions;
+    global: *OSL*; test_shade; *osl*imageio*; *osl_input_extensions; PyInit*;
     local: osl_*; *pvt*; *;
 };

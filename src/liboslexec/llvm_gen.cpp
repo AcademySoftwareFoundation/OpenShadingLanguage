@@ -3991,7 +3991,9 @@ LLVMGEN(llvm_gen_pointcloud_search)
                 else
                     clear_derivs_of.push_back(&Value);
             }
-        } else {
+        } else if (!rop.use_optix()) {
+            //TODO: Implement custom attribute arguments for OptiX
+
             // It is a regular attribute, push it to the arg list
             llvm::Value* write_args[]
                 = { rop.ll.void_ptr(names),    rop.ll.void_ptr(types),

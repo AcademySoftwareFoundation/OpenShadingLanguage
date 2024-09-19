@@ -626,6 +626,29 @@ ShadingSystem::configure_batch_execution_at(int width)
         default: return false;
         };
         return false;
+    case 4:
+        switch (requestedISA) {
+        case TargetISA::UNKNOWN:
+            // fallthrough
+        case TargetISA::x64:
+#    ifdef __OSL_SUPPORTS_b4_SSE2
+            if (LLVM_Util::supports_isa(TargetISA::x64)) {
+                if (!target_requested)
+                    m_impl->attribute("llvm_jit_target",
+                                      LLVM_Util::target_isa_name(
+                                          TargetISA::x64));
+                // SSE2 doesn't support FMA
+                m_impl->attribute("llvm_jit_fma", 0);
+                return true;
+            }
+#    endif
+            if (target_requested) {
+                break;
+            }
+            // fallthrough
+        default: return false;
+        };
+        return false;
     default: return false;
     }
 }
@@ -885,6 +908,7 @@ ShadingSystem::BatchedExecutor<WidthT>::jit_all_groups(int nthreads)
 // Explicitly instantiate
 template class ShadingSystem::BatchedExecutor<16>;
 template class ShadingSystem::BatchedExecutor<8>;
+template class ShadingSystem::BatchedExecutor<4>;
 #endif
 
 
@@ -1079,7 +1103,8 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     , m_opt_groupdata(true)
 #if OSL_USE_BATCHED
     , m_opt_batched_analysis((renderer->batched(WidthOf<16>()) != nullptr)
-                             || (renderer->batched(WidthOf<8>()) != nullptr))
+                             || (renderer->batched(WidthOf<8>()) != nullptr)
+                             || (renderer->batched(WidthOf<4>()) != nullptr))
 #else
     , m_opt_batched_analysis(false)
 #endif
@@ -3792,7 +3817,8 @@ ShadingSystemImpl::optimize_group(ShaderGroup& group, ShadingContext* ctx,
         // the batch jit has already happened,
         // as it requires the ops so we can't delete them yet!
         if (((renderer()->batched(WidthOf<16>()) == nullptr)
-             && (renderer()->batched(WidthOf<8>()) == nullptr))
+             && (renderer()->batched(WidthOf<8>()) == nullptr)
+             && (renderer()->batched(WidthOf<4>()) == nullptr))
             || group.batch_jitted()) {
             group_post_jit_cleanup(group);
         }
@@ -4013,6 +4039,7 @@ ShadingSystemImpl::Batched<WidthT>::jit_all_groups(int nthreads, int mythread,
 // machine as well, start with just the batch size
 template class pvt::ShadingSystemImpl::Batched<16>;
 template class pvt::ShadingSystemImpl::Batched<8>;
+template class pvt::ShadingSystemImpl::Batched<4>;
 #endif
 
 int

@@ -443,9 +443,7 @@ osl_pointcloud_get(OpaqueExecContextPtr oec, ustringhash_pod filename_,
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
-#endif
 
-#ifndef __CUDA_ARCH__
     shadingsys.pointcloud_stats(0, 1, 0);
 #endif
 

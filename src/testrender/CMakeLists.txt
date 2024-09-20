@@ -63,7 +63,7 @@ endif()
 
 if (CMAKE_COMPILER_IS_INTELCLANG)
     # To better match existing test results
-    add_compile_options("-fp-model=strict")
+    add_compile_options("-fp-model=precise")
     # Better performance is likely by not requiring a precise floating point
     # model, although with slightly different numerical results.
 endif ()

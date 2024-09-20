@@ -58,6 +58,7 @@ osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
 #else
     int* envlayout = (int*)&o->rwidth + 1;
 #endif
+    // envlayout is private so we access it from the last public member for now.
     *envlayout = 0;
 }
 
@@ -236,11 +237,17 @@ osl_texture_set_subimage(void* opt, int subimage)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_subimagename(void* opt, ustringhash_pod subimagename_)
 {
-    // TODO: Enable when subimagename is ustringhash.
+    ustringhash subimagename_hash = ustringhash_from(subimagename_);
 #ifndef __CUDA_ARCH__
-    ustringhash subimagename_hash    = ustringhash_from(subimagename_);
+    // TODO: Enable when subimagename is ustringhash.
     ustring subimagename             = ustring_from(subimagename_hash);
     ((TextureOpt*)opt)->subimagename = subimagename;
+#else
+    // TODO: HACK to get this data through in some form, it won't be a valid
+    // ustring but the GPU clients can at least convert it back to a hash.
+    static_assert(sizeof(ustring) == sizeof(ustringhash), "Sizes must match");
+    memcpy((void*)(&((TextureOpt*)opt)->subimagename), &subimagename_hash,
+           sizeof(subimagename_hash));
 #endif
 }
 

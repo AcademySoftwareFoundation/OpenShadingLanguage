@@ -48,13 +48,13 @@
    </ShaderGroup>
    <Quad corner="-80,70, 20" edge_x="0,-60 ,90" edge_y="160,0,0" />
 
-   <ShaderGroup>
+   <ShaderGroup is_light="yes">
       <Parameter power="float 2000" />
       <Shader name="emitter" layer="layer1" />
    </ShaderGroup>
-   <Sphere center="-90, 130, 50" radius="1" is_light="yes" /> <!--Lite -->
-   <Sphere center="-35, 130, 50" radius="5" is_light="yes" /> <!--Lite -->
-   <Sphere center=" 30, 130, 50" radius="10" is_light="yes" /> <!--Lite -->
-   <Sphere center=" 90, 130, 50" radius="20" is_light="yes" /> <!--Lite -->
+   <Sphere center="-90, 130, 50" radius="1"  /> <!--Lite -->
+   <Sphere center="-35, 130, 50" radius="5"  /> <!--Lite -->
+   <Sphere center=" 30, 130, 50" radius="10" /> <!--Lite -->
+   <Sphere center=" 90, 130, 50" radius="20" /> <!--Lite -->
    
 </World>

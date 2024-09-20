@@ -33,7 +33,7 @@
    </ShaderGroup>
    <Sphere center=" 60,30,120"        radius="30" />
 
-   <ShaderGroup>float power 160000; shader emitter layer1;</ShaderGroup>
-   <Sphere center="-120, 130, 250" radius="1" is_light="yes" /> <!--Lite -->
+   <ShaderGroup is_light="yes">float power 200000; shader emitter layer1;</ShaderGroup>
+   <Quad corner="-120, 130, 250" edge_x="1,0,0" edge_y="0,1,0" /> <!--Lite -->
    
 </World>

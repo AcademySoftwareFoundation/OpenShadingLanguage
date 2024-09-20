@@ -4,6 +4,7 @@
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/parallel.h>
+#include <OpenImageIO/timer.h>
 
 #include <pugixml.hpp>
 
@@ -185,7 +186,6 @@ strtobool(const char* str)
            || strcmp(str, "yes") == 0;
 }
 
-
 template<int N> struct ParamStorage {
     ParamStorage() : fparamindex(0), iparamindex(0), sparamindex(0) {}
 
@@ -267,6 +267,7 @@ parse_prefix_and_ints(string_view str, string_view prefix, int nvals, int* vals)
 void
 SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
 {
+    ShaderMap shadermap;
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result;
     if (OIIO::Strutil::ends_with(scenefile, ".xml")
@@ -323,17 +324,21 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             // load sphere
             pugi::xml_attribute center_attr = node.attribute("center");
             pugi::xml_attribute radius_attr = node.attribute("radius");
+
             if (center_attr && radius_attr) {
                 Vec3 center  = strtovec(center_attr.value());
                 float radius = OIIO::Strutil::from_string<float>(
                     radius_attr.value());
                 if (radius > 0) {
-                    pugi::xml_attribute light_attr = node.attribute("is_light");
-                    bool is_light = light_attr ? strtobool(light_attr.value())
-                                               : false;
-                    scene.add_sphere(Sphere(center, radius,
-                                            int(shaders().size()) - 1,
-                                            is_light));
+                    pugi::xml_attribute resolution_attr = node.attribute(
+                        "resolution");
+                    int resolution = 64;
+                    if (resolution_attr) {
+                        OIIO::string_view str = resolution_attr.value();
+                        OIIO::Strutil::parse_int(str, resolution);
+                    }
+                    scene.add_sphere(center, radius, int(shaders().size()) - 1,
+                                     resolution);
                 }
             }
         } else if (strcmp(node.name(), "Quad") == 0) {
@@ -342,14 +347,40 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             pugi::xml_attribute edge_x_attr = node.attribute("edge_x");
             pugi::xml_attribute edge_y_attr = node.attribute("edge_y");
             if (corner_attr && edge_x_attr && edge_y_attr) {
-                pugi::xml_attribute light_attr = node.attribute("is_light");
-                bool is_light = light_attr ? strtobool(light_attr.value())
-                                           : false;
-                Vec3 co       = strtovec(corner_attr.value());
-                Vec3 ex       = strtovec(edge_x_attr.value());
-                Vec3 ey       = strtovec(edge_y_attr.value());
-                scene.add_quad(
-                    Quad(co, ex, ey, int(shaders().size()) - 1, is_light));
+                Vec3 co = strtovec(corner_attr.value());
+                Vec3 ex = strtovec(edge_x_attr.value());
+                Vec3 ey = strtovec(edge_y_attr.value());
+
+                int resolution                      = 1;
+                pugi::xml_attribute resolution_attr = node.attribute(
+                    "resolution");
+                if (resolution_attr) {
+                    OIIO::string_view str = resolution_attr.value();
+                    OIIO::Strutil::parse_int(str, resolution);
+                }
+
+                scene.add_quad(co, ex, ey, int(shaders().size()) - 1,
+                               resolution);
+            }
+        } else if (strcmp(node.name(), "Model") == 0) {
+            // load .obj model
+            pugi::xml_attribute filename_attr = node.attribute("filename");
+            if (filename_attr) {
+                std::string filename = filename_attr.value();
+                std::vector<std::string> searchpath;
+                searchpath.emplace_back(
+                    OIIO::Filesystem::parent_path(scenefile));
+                std::string actual_filename
+                    = OIIO::Filesystem::searchpath_find(filename, searchpath,
+                                                        false);
+                if (actual_filename.empty()) {
+                    errhandler().errorfmt("Unable to find model file {}",
+                                          filename);
+                } else {
+                    // we got a valid filename, try to load the model
+                    scene.add_model(actual_filename, shadermap,
+                                    int(shaders().size() - 1), errhandler());
+                }
             }
         } else if (strcmp(node.name(), "Background") == 0) {
             pugi::xml_attribute res_attr = node.attribute("resolution");
@@ -359,7 +390,8 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             backgroundShaderID = int(shaders().size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
             ShaderGroupRef group;
-            pugi::xml_attribute name_attr = node.attribute("name");
+            pugi::xml_attribute is_light_attr = node.attribute("is_light");
+            pugi::xml_attribute name_attr     = node.attribute("name");
             std::string name = name_attr ? name_attr.value() : "group";
             pugi::xml_attribute type_attr = node.attribute("type");
             std::string shadertype = type_attr ? type_attr.value() : "surface";
@@ -426,7 +458,11 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 }
             }
             shadingsys->ShaderGroupEnd(*group);
-            shaders().push_back(group);
+            if (name_attr)
+                shadermap.emplace(name_attr.value(), int(shaders().size()));
+            shaders().emplace_back(group);
+            m_shader_is_light.emplace_back(
+                is_light_attr ? strtobool(is_light_attr.value()) : false);
         } else {
             // unknown element?
         }
@@ -436,6 +472,8 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
             "Error reading {}: Found multiple top-level elements", scenefile);
     if (shaders().empty())
         errhandler().severefmt("No shaders in scene");
+    if (scene.num_prims() == 0)
+        errhandler().severefmt("No primitives in scene");
     camera.finalize();
 }
 
@@ -811,29 +849,32 @@ SimpleRaytracer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
 
 void
 SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
-                                  const Dual2<float>& t, int id)
+                                  const Dual2<float>& t, int id, float u,
+                                  float v)
 {
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
     Dual2<Vec3> P = r.point(t);
     // We are missing the projection onto the surface here
-    sg.P          = P.val();
-    sg.dPdx       = P.dx();
-    sg.dPdy       = P.dy();
-    Dual2<Vec3> N = scene.normal(P, id);
-    sg.Ng = sg.N          = N.val();
-    Dual2<Vec2> uv        = scene.uv(P, N, sg.dPdu, sg.dPdv, id);
-    sg.u                  = uv.val().x;
-    sg.dudx               = uv.dx().x;
-    sg.dudy               = uv.dy().x;
-    sg.v                  = uv.val().y;
-    sg.dvdx               = uv.dx().y;
-    sg.dvdy               = uv.dy().y;
-    sg.surfacearea        = scene.surfacearea(id);
+    sg.P             = P.val();
+    sg.dPdx          = P.dx();
+    sg.dPdy          = P.dy();
+    sg.N             = scene.normal(P, sg.Ng, id, u, v);
+    Dual2<Vec2> uv   = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
+    sg.u             = uv.val().x;
+    sg.dudx          = uv.dx().x;
+    sg.dudy          = uv.dy().x;
+    sg.v             = uv.val().y;
+    sg.dvdx          = uv.dx().y;
+    sg.dvdy          = uv.dy().y;
+    const int meshid = std::upper_bound(scene.last_index.begin(),
+                                        scene.last_index.end(), id)
+                       - scene.last_index.begin();
+    sg.surfacearea        = m_mesh_surfacearea[meshid];
     Dual2<Vec3> direction = r.dual_direction();
     sg.I                  = direction.val();
     sg.dIdx               = direction.dx();
     sg.dIdy               = direction.dy();
-    sg.backfacing         = sg.N.dot(sg.I) > 0;
+    sg.backfacing         = sg.Ng.dot(sg.I) > 0;
     if (sg.backfacing) {
         sg.N  = -sg.N;
         sg.Ng = -sg.Ng;
@@ -865,17 +906,16 @@ Color3
 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                    ShadingContext* ctx)
 {
-    Ray r = camera.get(x, y);
+    constexpr float inf = std::numeric_limits<float>::infinity();
+    Ray r               = camera.get(x, y);
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
     int prev_id    = -1;
-    float bsdf_pdf = std::numeric_limits<
-        float>::infinity();  // camera ray has only one possible direction
+    float bsdf_pdf = inf;  // camera ray has only one possible direction
     for (int b = 0; b <= max_bounces; b++) {
         // trace the ray against the scene
-        Dual2<float> t;
-        int id = prev_id;
-        if (!scene.intersect(r, t, id)) {
+        Intersection hit = scene.intersect(r, inf, prev_id);
+        if (hit.t == inf) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
                 if (b > 0 && backgroundResolution > 0) {
@@ -896,9 +936,26 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 
         // construct a shader globals for the hit point
         ShaderGlobals sg;
-        globals_from_hit(sg, r, t, id);
-        const float radius = r.radius + r.spread * t.val();
-        int shaderID       = scene.shaderid(id);
+        globals_from_hit(sg, r, hit.t, hit.id, hit.u, hit.v);
+        if (show_globals) {
+            // visualize the main fields of the shader globals
+            Vec3 v = sg.Ng;
+            if (show_globals == 2)
+                v = sg.N;
+            if (show_globals == 3)
+                v = sg.dPdu.normalize();
+            if (show_globals == 4)
+                v = sg.dPdv.normalize();
+            if (show_globals == 5)
+                v = Vec3(sg.u, sg.v, 0);
+            Color3 c(v.x, v.y, v.z);
+            if (show_globals != 5)
+                c = c * 0.5f + Color3(0.5f);
+            path_radiance += path_weight * c;
+            break;
+        }
+        const float radius = r.radius + r.spread * hit.t;
+        int shaderID       = scene.shaderid(hit.id);
         if (shaderID < 0 || !m_shaders[shaderID])
             break;  // no shader attached? done
 
@@ -910,9 +967,11 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 
         // add self-emission
         float k = 1;
-        if (scene.islight(id)) {
+        if (m_shader_is_light[shaderID]) {
+            const float light_pick_pdf = 1.0f / m_lightprims.size();
             // figure out the probability of reaching this point
-            float light_pdf = scene.shapepdf(id, r.origin, sg.P);
+            float light_pdf = light_pick_pdf
+                              * scene.shapepdf(hit.id, r.origin, sg.P);
             k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
@@ -949,53 +1008,57 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                              * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
                                                                         b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
-                int shadow_id  = id;
-                Ray shadow_ray = Ray(sg.P, bg_dir.val(), radius, 0,
-                                     Ray::SHADOW);
-                Dual2<float> shadow_dist;
-                if (!scene.intersect(shadow_ray, shadow_dist,
-                                     shadow_id))  // ray reached the background?
+                Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0,
+                                              Ray::SHADOW);
+                Intersection shadow_hit = scene.intersect(shadow_ray, inf,
+                                                          hit.id);
+                if (shadow_hit.t == inf)  // ray reached the background?
                     path_radiance += contrib;
             }
         }
 
-        // trace one ray to each light
-        for (int lid = 0; lid < scene.num_prims(); lid++) {
-            if (lid == id)
-                continue;  // skip self
-            if (!scene.islight(lid))
-                continue;  // doesn't want to be sampled as a light
-            int shaderID = scene.shaderid(lid);
-            if (shaderID < 0 || !m_shaders[shaderID])
-                continue;  // no shader attached to this light
-            // sample a random direction towards the object
-            float light_pdf;
-            Vec3 ldir      = scene.sample(lid, sg.P, xi, yi, light_pdf);
-            BSDF::Sample b = result.bsdf.eval(-sg.I, ldir);
-            Color3 contrib = path_weight * b.weight
-                             * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf,
-                                                                      b.pdf);
-            if ((contrib.x + contrib.y + contrib.z) > 0) {
-                Ray shadow_ray = Ray(sg.P, ldir, radius, 0, Ray::SHADOW);
-                // trace a shadow ray and see if we actually hit the target
-                // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-                int shadow_id = id;  // ignore self hit
-                Dual2<float> shadow_dist;
-                if (scene.intersect(shadow_ray, shadow_dist, shadow_id)
-                    && shadow_id == lid) {
-                    // setup a shader global for the point on the light
-                    ShaderGlobals light_sg;
-                    globals_from_hit(light_sg, shadow_ray, shadow_dist, lid);
-                    // execute the light shader (for emissive closures only)
-                    shadingsys->execute(*ctx, *m_shaders[shaderID], light_sg);
-                    ShadingResult light_result;
-                    process_closure(light_sg, light_result, light_sg.Ci, true);
-                    // accumulate contribution
-                    path_radiance += contrib * light_result.Le;
+        // trace a shadow ray to one of the light emitting primitives
+        if (!m_lightprims.empty()) {
+            const float light_pick_pdf = 1.0f / m_lightprims.size();
+
+            // uniform probability for each light
+            float xl = xi * m_lightprims.size();
+            int ls   = floorf(xl);
+            xl -= ls;
+
+            uint32_t lid = m_lightprims[ls];
+            if (lid != hit.id) {
+                int shaderID = scene.shaderid(lid);
+                // sample a random direction towards the object
+                LightSample sample = scene.sample(lid, sg.P, xl, yi);
+                BSDF::Sample b     = result.bsdf.eval(-sg.I, sample.dir);
+                Color3 contrib     = path_weight * b.weight
+                                 * MIS::power_heuristic<MIS::EVAL_WEIGHT>(
+                                     light_pick_pdf * sample.pdf, b.pdf);
+                if ((contrib.x + contrib.y + contrib.z) > 0) {
+                    Ray shadow_ray = Ray(sg.P, sample.dir, radius, 0,
+                                         Ray::SHADOW);
+                    // trace a shadow ray and see if we actually hit the target
+                    // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
+                    Intersection shadow_hit
+                        = scene.intersect(shadow_ray, sample.dist, hit.id, lid);
+                    if (shadow_hit.t == sample.dist) {
+                        // setup a shader global for the point on the light
+                        ShaderGlobals light_sg;
+                        globals_from_hit(light_sg, shadow_ray, sample.dist, lid,
+                                         sample.u, sample.v);
+                        // execute the light shader (for emissive closures only)
+                        shadingsys->execute(*ctx, *m_shaders[shaderID],
+                                            light_sg);
+                        ShadingResult light_result;
+                        process_closure(light_sg, light_result, light_sg.Ci,
+                                        true);
+                        // accumulate contribution
+                        path_radiance += contrib * light_result.Le;
+                    }
                 }
             }
         }
-
         // trace indirect ray and continue
         BSDF::Sample p = result.bsdf.sample(-sg.I, xi, yi, zi);
         path_weight *= p.weight;
@@ -1008,7 +1071,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs
-        prev_id  = id;
+        prev_id  = hit.id;
         r.origin = sg.P;
     }
     return path_radiance;
@@ -1045,6 +1108,7 @@ SimpleRaytracer::prepare_render()
     max_bounces       = options.get_int("max_bounces");
     rr_depth          = options.get_int("rr_depth");
     show_albedo_scale = options.get_float("show_albedo_scale");
+    show_globals      = options.get_int("show_globals");
 
     // prepare background importance table (if requested)
     if (backgroundResolution > 0 && backgroundShaderID >= 0) {
@@ -1065,6 +1129,43 @@ SimpleRaytracer::prepare_render()
         // we aren't directly evaluating the background
         backgroundResolution = 0;
     }
+
+    // build bvh and prepare triangles
+    scene.prepare(errhandler());
+
+    m_mesh_surfacearea.reserve(scene.last_index.size());
+
+    // measure the total surface area of each mesh
+    int first_index = 0;
+    for (int last_index : scene.last_index) {
+        float area = 0;
+        for (int index = first_index; index < last_index; index++) {
+            area += scene.primitivearea(index);
+        }
+        m_mesh_surfacearea.emplace_back(area);
+        first_index = last_index;
+    }
+    // collect all light emitting triangles
+    for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
+        int shaderID = scene.shaderid(t);
+        if (shaderID < 0 || !m_shaders[shaderID])
+            continue;  // no shader attached
+        if (m_shader_is_light[shaderID])
+            m_lightprims.emplace_back(t);
+    }
+    if (!m_lightprims.empty())
+        errhandler().infofmt("Found {} triangles to be treated as lights",
+                             m_lightprims.size());
+#if 0
+    // dump scene to disk as obj for debugging purposes
+    // TODO: make this a feature?
+    FILE* fp = fopen("/tmp/test.obj", "w");
+    for (Vec3 v : scene.verts)
+        fprintf(fp, "v %.9g %.9g %.9g\n", v.x, v.y, v.z);
+    for (TriangleIndices t : scene.triangles)
+        fprintf(fp, "f %d %d %d\n", 1 + t.a, 1 + t.b, 1 + t.c);
+    fclose(fp);
+#endif
 }
 
 
@@ -1072,6 +1173,7 @@ SimpleRaytracer::prepare_render()
 void
 SimpleRaytracer::render(int xres, int yres)
 {
+    OIIO::Timer timer;
     ShadingSystem* shadingsys = this->shadingsys;
     OIIO::parallel_for_chunked(
         0, yres, 0, [&, this](int64_t ybegin, int64_t yend) {
@@ -1097,6 +1199,10 @@ SimpleRaytracer::render(int xres, int yres)
             shadingsys->release_context(ctx);
             shadingsys->destroy_thread_info(thread_info);
         });
+    double rendertime = timer();
+    errhandler().infofmt("Rendered {}x{} image with {} samples in {}", xres,
+                         yres, aa * aa,
+                         OIIO::Strutil::timeintervalformat(rendertime, 2));
 }
 
 

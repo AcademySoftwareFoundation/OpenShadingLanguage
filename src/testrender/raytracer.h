@@ -13,6 +13,7 @@
 #include "render_params.h"
 #include <OSL/dual_vec.h>
 #include <OSL/oslconfig.h>
+#include "bvh.h"
 
 
 #if OSL_USE_OPTIX
@@ -149,346 +150,143 @@ struct Camera {
     float invw, invh;
 };
 
-
-
-// Note: The primitives only use the intersection routines, etc., for CPU.
-// They aren't used for OptiX mode, where instead the equivalent are in
-// the cuda subdirectory.
-
-
-struct Primitive {
-    Primitive(int shaderID, bool isLight) : shaderID(shaderID), isLight(isLight)
-    {
-    }
-    virtual ~Primitive() {}
-
-    int shaderid() const { return shaderID; }
-    bool islight() const { return isLight; }
-    void getBounds(float& minx, float& miny, float& minz, float& maxx,
-                   float& maxy, float& maxz) const;
-
-#if OSL_USE_OPTIX
-    virtual void setOptixVariables(void* data) const = 0;
-#endif
-
-private:
-    int shaderID;
-    bool isLight;
+struct TriangleIndices {
+    int a, b, c;
 };
 
-
-struct Sphere final : public Primitive {
-    Sphere(Vec3 c, float r, int shaderID, bool isLight)
-        : Primitive(shaderID, isLight), c(c), r(r), r2(r * r)
-    {
-        OSL_DASSERT(r > 0);
-    }
-
-    void getBounds(float& minx, float& miny, float& minz, float& maxx,
-                   float& maxy, float& maxz) const
-    {
-        minx = c.x - r;
-        miny = c.y - r;
-        minz = c.z - r;
-        maxx = c.x + r;
-        maxy = c.y + r;
-        maxz = c.z + r;
-    }
-
-    // returns distance to nearest hit or 0
-    Dual2<float> intersect(const Ray& r, bool self) const
-    {
-        Dual2<Vec3> oc   = c - r.origin;
-        Dual2<float> b   = dot(oc, r.direction);
-        Dual2<float> det = b * b - dot(oc, oc) + r2;
-        if (det.val() >= 0) {
-            det            = sqrt(det);
-            Dual2<float> x = b - det;
-            Dual2<float> y = b + det;
-            return self ? (fabsf(x.val()) > fabsf(y.val())
-                               ? (x.val() > 0 ? x : 0)
-                               : (y.val() > 0 ? y : 0))
-                        : (x.val() > 0 ? x : (y.val() > 0 ? y : 0));
-        }
-        return 0;  // no hit
-    }
-
-    float surfacearea() const { return float(M_PI) * r2; }
-
-    Dual2<Vec3> normal(const Dual2<Vec3>& p) const { return normalize(p - c); }
-
-    Dual2<Vec2> uv(const Dual2<Vec3>& /*p*/, const Dual2<Vec3>& n, Vec3& dPdu,
-                   Vec3& dPdv) const
-    {
-        Dual2<float> nx(n.val().x, n.dx().x, n.dy().x);
-        Dual2<float> ny(n.val().y, n.dx().y, n.dy().y);
-        Dual2<float> nz(n.val().z, n.dx().z, n.dy().z);
-        Dual2<float> u = (atan2(nx, nz) + Dual2<float>(M_PI)) * 0.5f
-                         * float(M_1_PI);
-        Dual2<float> v = safe_acos(ny) * float(M_1_PI);
-        // Review of sphere parameterization:
-        //    x = r * -sin(2pi*u) * sin(pi*v)
-        //    y = r * cos(pi*v)
-        //    z = r * -cos(2pi*u) * sin(pi*v)
-        // partial derivs:
-        //    dPdu.x = -r * sin(pi*v) * 2pi * cos(2pi*u)
-        //    dPdu.y = 0
-        //    dPdu.z = r * sin(pi*v) * 2pi * sin(2pi*u)
-        //    dPdv.x = r * -cos(pi*v) * pi * sin(2pi*u)
-        //    dPdv.y = r * -pi * sin(pi*v)
-        //    dPdv.z = r * -cos(pi*v) * pi * cos(2pi*u)
-        const float pi = float(M_PI);
-        float twopiu   = 2.0f * pi * u.val();
-        float sin2piu, cos2piu;
-        OIIO::sincos(twopiu, &sin2piu, &cos2piu);
-        float sinpiv, cospiv;
-        OIIO::sincos(pi * v.val(), &sinpiv, &cospiv);
-        float pir = pi * r;
-        dPdu.x    = -2.0f * pir * sinpiv * cos2piu;
-        dPdu.y    = 0.0f;
-        dPdu.z    = 2.0f * pir * sinpiv * sin2piu;
-        dPdv.x    = -pir * cospiv * sin2piu;
-        dPdv.y    = -pir * sinpiv;
-        dPdv.z    = -pir * cospiv * cos2piu;
-        return make_Vec2(u, v);
-    }
-
-    // return a direction towards a point on the sphere
-    Vec3 sample(const Vec3& x, float xi, float yi, float& pdf) const
-    {
-        const float TWOPI = float(2 * M_PI);
-        float cmax2       = 1 - r2 / (c - x).length2();
-        float cmax        = cmax2 > 0 ? sqrtf(cmax2) : 0;
-        float cos_a       = 1 - xi + xi * cmax;
-        float sin_a       = sqrtf(1 - cos_a * cos_a);
-        float phi         = TWOPI * yi;
-        float sp, cp;
-        OIIO::fast_sincos(phi, &sp, &cp);
-        Vec3 sw = (c - x).normalize(), su, sv;
-        ortho(sw, su, sv);
-        pdf = 1 / (TWOPI * (1 - cmax));
-        return (su * (cp * sin_a) + sv * (sp * sin_a) + sw * cos_a).normalize();
-    }
-
-    float shapepdf(const Vec3& x, const Vec3& /*p*/) const
-    {
-        const float TWOPI = float(2 * M_PI);
-        float cmax2       = 1 - r2 / (c - x).length2();
-        float cmax        = cmax2 > 0 ? sqrtf(cmax2) : 0;
-        return 1 / (TWOPI * (1 - cmax));
-    }
-
-#if OSL_USE_OPTIX
-    virtual void setOptixVariables(void* data) const
-    {
-        SphereParams* sphere_data = reinterpret_cast<SphereParams*>(data);
-        sphere_data->c            = make_float3(c.x, c.y, c.z);
-        sphere_data->r2           = r2;
-        sphere_data->a            = M_PI * (r2 * r2);
-        sphere_data->shaderID     = shaderid();
-    }
-#endif
-
-private:
-    Vec3 c;
-    float r, r2;
+struct LightSample {
+    Vec3 dir;
+    float dist;
+    float pdf;
+    float u, v;
 };
 
-
-
-struct Quad final : public Primitive {
-    Quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID,
-         bool isLight)
-        : Primitive(shaderID, isLight), p(p), ex(ex), ey(ey)
-    {
-        n  = ex.cross(ey);
-        a  = n.length();
-        n  = n.normalize();
-        eu = 1 / ex.length2();
-        ev = 1 / ey.length2();
-    }
-
-    void getBounds(float& minx, float& miny, float& minz, float& maxx,
-                   float& maxy, float& maxz) const
-    {
-        const Vec3 p0 = p;
-        const Vec3 p1 = p + ex;
-        const Vec3 p2 = p + ex + ey;
-        const Vec3 p3 = p + ey;
-        minx          = std::min(p0.x, std::min(p1.x, std::min(p2.x, p3.x)));
-        miny          = std::min(p0.y, std::min(p1.y, std::min(p2.y, p3.y)));
-        minz          = std::min(p0.z, std::min(p1.z, std::min(p2.z, p3.z)));
-        maxx          = std::max(p0.x, std::max(p1.x, std::max(p2.x, p3.x)));
-        maxy          = std::max(p0.y, std::max(p1.y, std::max(p2.y, p3.y)));
-        maxz          = std::max(p0.z, std::max(p1.z, std::max(p2.z, p3.z)));
-    }
-
-    // returns distance to nearest hit or 0
-    Dual2<float> intersect(const Ray& r, bool self) const
-    {
-        if (self)
-            return 0;
-        Dual2<float> dn = dot(r.direction, n);
-        Dual2<float> en = dot(p - r.origin, n);
-        if (dn.val() * en.val() > 0) {
-            Dual2<float> t  = en / dn;
-            Dual2<Vec3> h   = r.point(t) - p;
-            Dual2<float> dx = dot(h, ex) * eu;
-            Dual2<float> dy = dot(h, ey) * ev;
-            if (dx.val() >= 0 && dx.val() < 1 && dy.val() >= 0 && dy.val() < 1)
-                return t;
-        }
-        return 0;  // no hit
-    }
-
-    float surfacearea() const { return a; }
-
-    Dual2<Vec3> normal(const Dual2<Vec3>& /*p*/) const
-    {
-        return Dual2<Vec3>(n, Vec3(0, 0, 0), Vec3(0, 0, 0));
-    }
-
-    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& /*n*/, Vec3& dPdu,
-                   Vec3& dPdv) const
-    {
-        Dual2<Vec3> h  = p - this->p;
-        Dual2<float> u = dot(h, ex) * eu;
-        Dual2<float> v = dot(h, ey) * ev;
-        dPdu           = ex;
-        dPdv           = ey;
-        return make_Vec2(u, v);
-    }
-
-    // return a direction towards a point on the sphere
-    Vec3 sample(const Vec3& x, float xi, float yi, float& pdf) const
-    {
-        Vec3 l   = (p + xi * ex + yi * ey) - x;
-        float d2 = l.length2();
-        Vec3 dir = l.normalize();
-        pdf      = d2 / (a * fabsf(dir.dot(n)));
-        return dir;
-    }
-
-    float shapepdf(const Vec3& x, const Vec3& p) const
-    {
-        Vec3 l   = p - x;
-        float d2 = l.length2();
-        Vec3 dir = l.normalize();
-        return d2 / (a * fabsf(dir.dot(n)));
-    }
-
-#if OSL_USE_OPTIX
-    virtual void setOptixVariables(void* data) const
-    {
-        QuadParams* quad_data = reinterpret_cast<QuadParams*>(data);
-        quad_data->p          = make_float3(p.x, p.y, p.z);
-        quad_data->ex         = make_float3(ex.x, ex.y, ex.z);
-        quad_data->ey         = make_float3(ey.x, ey.y, ey.z);
-        quad_data->n          = make_float3(n.x, n.y, n.z);
-        quad_data->eu         = eu;
-        quad_data->ev         = ev;
-        quad_data->a          = a;
-        quad_data->shaderID   = shaderid();
-    }
-#endif
-
-private:
-    Vec3 p, ex, ey, n;
-    float a, eu, ev;
-};
-
-
+using ShaderMap = std::unordered_map<std::string, int>;
 
 struct Scene {
-    void add_sphere(const Sphere& s) { spheres.push_back(s); }
+    void add_sphere(const Vec3& c, float r, int shaderID, int resolution);
 
-    void add_quad(const Quad& q) { quads.push_back(q); }
+    void add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID,
+                  int resolution);
 
-    int num_prims() const { return spheres.size() + quads.size(); }
+    // add models parsed from a .obj file
+    void add_model(const std::string& filename, const ShaderMap& shadermap,
+                   int shaderID, OIIO::ErrorHandler& errhandler);
 
-    bool intersect(const Ray& r, Dual2<float>& t, int& primID) const
+    int num_prims() const { return triangles.size(); }
+
+    void prepare(OIIO::ErrorHandler& errhandler);
+
+    Intersection intersect(const Ray& r, const float tmax,
+                           const unsigned skipID1,
+                           const unsigned skipID2 = ~0u) const;
+
+    LightSample sample(int primID, const Vec3& x, float xi, float yi) const
     {
-        const int ns   = spheres.size();
-        const int nq   = quads.size();
-        const int self = primID;  // remember which object we started from
-        t              = std::numeric_limits<float>::infinity();
-        primID         = -1;  // reset ID
-        for (int i = 0; i < ns; i++) {
-            Dual2<float> d = spheres[i].intersect(r, self == i);
-            if (d.val() > 0 && d.val() < t.val()) {  // found valid hit?
-                t      = d;
-                primID = i;
-            }
+        // A Low-Distortion Map Between Triangle and Square
+        // Eric Heitz, 2019
+        if (yi > xi) {
+            xi *= 0.5f;
+            yi -= xi;
+        } else {
+            yi *= 0.5f;
+            xi -= yi;
         }
-        for (int i = 0; i < nq; i++) {
-            Dual2<float> d = quads[i].intersect(r, self == (i + ns));
-            if (d.val() > 0 && d.val() < t.val()) {  // found valid hit?
-                t      = d;
-                primID = i + ns;
-            }
-        }
-        return primID >= 0;
-    }
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+        const Vec3 n  = (va - vb).cross(va - vc);
 
-    Vec3 sample(int primID, const Vec3& x, float xi, float yi, float& pdf) const
-    {
-        if (primID < int(spheres.size()))
-            return spheres[primID].sample(x, xi, yi, pdf);
-        primID -= spheres.size();
-        return quads[primID].sample(x, xi, yi, pdf);
+        Vec3 l   = ((1 - xi - yi) * va + xi * vb + yi * vc) - x;
+        float d2 = l.length2();
+        Vec3 dir = l.normalize();
+        // length of n is twice the area
+        float pdf = d2 / (0.5f * fabsf(dir.dot(n)));
+        return { dir, sqrtf(d2), pdf, xi, yi };
     }
 
     float shapepdf(int primID, const Vec3& x, const Vec3& p) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].shapepdf(x, p);
-        primID -= spheres.size();
-        return quads[primID].shapepdf(x, p);
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+        const Vec3 n  = (va - vb).cross(va - vc);
+
+        Vec3 l   = p - x;
+        float d2 = l.length2();
+        Vec3 dir = l.normalize();
+        // length of n is twice the area
+        return d2 / (0.5f * fabsf(dir.dot(n)));
     }
 
-    float surfacearea(int primID) const
+    float primitivearea(int primID) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].surfacearea();
-        primID -= spheres.size();
-        return quads[primID].surfacearea();
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+        return 0.5f * (va - vb).cross(va - vc).length();
     }
 
-    Dual2<Vec3> normal(const Dual2<Vec3>& p, int primID) const
+    Vec3 normal(const Dual2<Vec3>& p, Vec3& Ng, int primID, float u,
+                float v) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].normal(p);
-        primID -= spheres.size();
-        return quads[primID].normal(p);
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+        Ng            = (va - vb).cross(va - vc).normalize();
+
+        // this triangle doesn't have vertex normals, just use face normal
+        if (n_triangles[primID].a < 0)
+            return Ng;
+
+        // use vertex normals
+        const Vec3 na = normals[n_triangles[primID].a];
+        const Vec3 nb = normals[n_triangles[primID].b];
+        const Vec3 nc = normals[n_triangles[primID].c];
+        return ((1 - u - v) * na + u * nb + v * nc).normalize();
     }
 
-    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& n, Vec3& dPdu,
-                   Vec3& dPdv, int primID) const
+    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Vec3& n, Vec3& dPdu, Vec3& dPdv,
+                   int primID, float u, float v) const
     {
-        if (primID < int(spheres.size()))
-            return spheres[primID].uv(p, n, dPdu, dPdv);
-        primID -= spheres.size();
-        return quads[primID].uv(p, n, dPdu, dPdv);
+        if (uv_triangles[primID].a < 0)
+            return Dual2<Vec2>(Vec2(0, 0));
+        const Vec2 ta = uvs[uv_triangles[primID].a];
+        const Vec2 tb = uvs[uv_triangles[primID].b];
+        const Vec2 tc = uvs[uv_triangles[primID].c];
+
+        const Vec3 va = verts[triangles[primID].a];
+        const Vec3 vb = verts[triangles[primID].b];
+        const Vec3 vc = verts[triangles[primID].c];
+
+        const Vec2 dt02 = ta - tc, dt12 = tb - tc;
+        const Vec3 dp02 = va - vc, dp12 = vb - vc;
+        // TODO: could use Kahan's algorithm here
+        // https://pharr.org/matt/blog/2019/11/03/difference-of-floats
+        const float det = dt02.x * dt12.y - dt02.y * dt12.x;
+        if (det != 0) {
+            Float invdet = 1 / det;
+            dPdu         = (dt12.y * dp02 - dt02.y * dp12) * invdet;
+            dPdv         = (-dt12.x * dp02 + dt02.x * dp12) * invdet;
+            // TODO: smooth out dPdu and dPdv by storing per vertex tangents
+        }
+        return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc);
     }
 
-    int shaderid(int primID) const
-    {
-        if (primID < int(spheres.size()))
-            return spheres[primID].shaderid();
-        primID -= spheres.size();
-        return quads[primID].shaderid();
-    }
+    int shaderid(int primID) const { return shaderids[primID]; }
 
-    bool islight(int primID) const
-    {
-        if (primID < int(spheres.size()))
-            return spheres[primID].islight();
-        primID -= spheres.size();
-        return quads[primID].islight();
-    }
-
-    std::vector<Sphere> spheres;
-    std::vector<Quad> quads;
+    // basic triangle data
+    std::vector<Vec3> verts;
+    std::vector<Vec3> normals;
+    std::vector<Vec2> uvs;
+    std::vector<TriangleIndices> triangles;
+    std::vector<TriangleIndices> uv_triangles;
+    std::vector<TriangleIndices> n_triangles;
+    std::vector<int> shaderids;
+    std::vector<int>
+        last_index;  // one entry per mesh, stores the last triangle index (+1) -- also is the start triangle of the next mesh
+    // acceleration structure (built over triangles)
+    std::unique_ptr<BVH> bvh;
 };
 
 OSL_NAMESPACE_EXIT

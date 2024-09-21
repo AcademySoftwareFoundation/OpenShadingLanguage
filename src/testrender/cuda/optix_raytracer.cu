@@ -11,8 +11,8 @@
 
 #include <OSL/hashes.h>
 
-#include "rend_lib.h"
 #include "../render_params.h"
+#include "rend_lib.h"
 
 
 OSL_NAMESPACE_ENTER

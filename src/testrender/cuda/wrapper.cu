@@ -52,8 +52,7 @@ globals_from_hit(ShaderGlobals& sg)
         render_params.normal_indices);
     const int3* uv_triangles = reinterpret_cast<const int3*>(
         render_params.uv_indices);
-    const int* mesh_ids = reinterpret_cast<const int*>(
-        render_params.mesh_ids);
+    const int* mesh_ids = reinterpret_cast<const int*>(render_params.mesh_ids);
     const float* surfacearea = reinterpret_cast<const float*>(
         render_params.surfacearea);
 
@@ -97,10 +96,12 @@ globals_from_hit(ShaderGlobals& sg)
         N                  = ((1 - u - v) * na + u * nb + v * nc).normalize();
     }
 
-    sg.I  = ray_direction;
-    sg.N  = normalize(optixTransformNormalFromObjectToWorldSpace(*(float3*)(&N)));
-    sg.Ng = normalize(optixTransformNormalFromObjectToWorldSpace(*(float3*)(&Ng)));
-    sg.P  = ray_origin + t_hit * ray_direction;
+    sg.I = ray_direction;
+    sg.N = normalize(
+        optixTransformNormalFromObjectToWorldSpace(*(float3*)(&N)));
+    sg.Ng = normalize(
+        optixTransformNormalFromObjectToWorldSpace(*(float3*)(&Ng)));
+    sg.P           = ray_origin + t_hit * ray_direction;
     sg.dPdu        = *(float3*)(&dPdu);
     sg.dPdv        = *(float3*)(&dPdv);
     sg.u           = u;

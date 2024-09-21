@@ -343,8 +343,10 @@ OptixRaytracer::create_modules()
         = OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;
     m_pipeline_compile_options.pipelineLaunchParamsVariableName
         = "render_params";
+#if OPTIX_VERSION >= 70100
     m_pipeline_compile_options.usesPrimitiveTypeFlags
         = OPTIX_PRIMITIVE_TYPE_FLAGS_TRIANGLE;
+#endif
 
     // Set the module compile options
     m_module_compile_options.maxRegisterCount

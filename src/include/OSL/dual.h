@@ -204,7 +204,7 @@ public:
     : m_val(other.m_val)
     , m_dx(other.m_dx)
     , m_dy(other.m_dy)
-    , m_dz(other.dz)
+    , m_dz(other.m_dz)
     {}
 
     OSL_HOSTDEVICE constexpr const T& elem (ConstIndex<0>) const { return m_val; }

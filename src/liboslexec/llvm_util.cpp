@@ -1173,7 +1173,12 @@ static llvm::StringMap<bool> sCpuFeatures;
 static bool
 populateCpuFeatures()
 {
+#if OSL_LLVM_VERSION >= 190
+    sCpuFeatures = llvm::sys::getHostCPUFeatures();
+    return true;
+#else
     return llvm::sys::getHostCPUFeatures(sCpuFeatures);
+#endif
 }
 
 
@@ -1301,6 +1306,7 @@ static cspan<const char*>
 get_required_cpu_features_for(TargetISA target)
 {
     switch (target) {
+    case TargetISA::UNKNOWN:
     case TargetISA::NONE: return {};
     case TargetISA::x64: return required_cpu_features_by_x64;
     case TargetISA::SSE4_2: return required_cpu_features_by_SSE4_2;
@@ -1551,10 +1557,12 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
 #if OSL_LLVM_VERSION < 120
     options.StackAlignmentOverride = 0;
 #endif
-    options.FunctionSections    = true;
-    options.UseInitArray        = false;
-    options.FloatABIType        = llvm::FloatABI::Default;
+    options.FunctionSections = true;
+    options.UseInitArray     = false;
+    options.FloatABIType     = llvm::FloatABI::Default;
+#if OSL_LLVM_VERSION < 190
     options.RelaxELFRelocations = false;
+#endif
     //options.DebuggerTuning = llvm::DebuggerKind::GDB;
 
     // TODO: Find equivalent function for PrintMachineCode post LLVM 12

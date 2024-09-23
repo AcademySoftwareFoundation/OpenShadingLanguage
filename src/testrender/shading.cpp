@@ -1653,8 +1653,6 @@ process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
         result.sigma_t               = cw * params.extinction;
         result.sigma_s               = params.albedo * result.sigma_t;
         result.medium_g              = params.anisotropy;
-        result.refraction_ior        = 1.0f;
-        result.priority = 0;  // TODO: should this closure have a priority?
         break;
     }
     case MX_MEDIUM_VDF_ID: {

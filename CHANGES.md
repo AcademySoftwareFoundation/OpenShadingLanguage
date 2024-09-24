@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.13.12.0 -- 1 Oct? 2024 (compared to 1.13.11.0)
+---------------------------------------------------------
+
+
 Release 1.13.11.0 -- 1 Sep 2024 (compared to 1.13.10.0)
 ---------------------------------------------------------
 - *fix/batched*: Assume BatchedRendererServices texture derivatives are in st space. [#1828](https://github.com/AcademySoftwareFoundation/OpenImageIO/pull/1828) (by sfriedmapixar) (1.13.10.0)

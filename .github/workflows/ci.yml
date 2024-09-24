@@ -109,17 +109,6 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
           - desc: icc/C++17 llvm14 py3.9 boost1.76 exr3.1 oiio-main avx2
-            nametag: linux-vfx2021
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang13
-            vfxyear: 2022
-            cxx_std: 17
-            openimageio_ver: release
-            python_ver: 3.9
-            pybind11_ver: v2.9.0
-            simd: sse2
-            batched: b4_SSE2
-          - desc: icc/C++17 llvm14 py3.9 oiio-main avx2
             nametag: linux-icc
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14

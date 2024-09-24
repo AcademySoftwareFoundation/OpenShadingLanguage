@@ -94,11 +94,12 @@ else
         libopencolorio-dev
 
     if [[ "${QT_VERSION:-5}" == "5" ]] ; then
-        time sudo apt-get -q install -y \
-            qt5-default || /bin/true
+        time sudo apt-get -q install -y qt5-default || /bin/true
     elif [[ "${QT_VERSION}" == "6" ]] ; then
-        time sudo apt-get -q install -y \
-            qt6-base-dev || /bin/true
+        time sudo apt-get -q install -y qt6-base-dev || /bin/true
+    fi
+    if [[ "${EXTRA_DEP_PACKAGES}" != "" ]] ; then
+        time sudo apt-get -q install -y ${EXTRA_DEP_PACKAGES}
     fi
 
     export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH

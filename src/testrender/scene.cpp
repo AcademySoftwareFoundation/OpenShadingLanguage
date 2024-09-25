@@ -150,7 +150,7 @@ Scene::add_sphere(const Vec3& c, float r, int shaderID, int resolution)
     for (int y = 0; y < H; y++) {
         float t = float(y + 0.5f) / float(H);
         float z = cosf(t * float(M_PI));
-        float q = sqrtf(1 - z * z);
+        float q = sqrtf(std::max(0.0f, 1.0f - z * z));
         for (int x = 0; x < W; x++) {
             // match the previous parameterization
             const float a = float(2 * M_PI) * float(x) / float(W);

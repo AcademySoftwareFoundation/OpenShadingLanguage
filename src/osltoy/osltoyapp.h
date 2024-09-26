@@ -91,6 +91,8 @@ public:
 
     bool open_file(const std::string& filename);
 
+    void add_include_search_path(const std::string& path);
+
     void rerender_needed() { m_rerender_needed = 1; }
 
 private slots:
@@ -183,6 +185,8 @@ private:
     void make_param_adjustment_row(ParamRec* param, QGridLayout* layout,
                                    int row);
 
+    void regenerate_compile_options();
+
     void rebuild_param_area();
     void inventory_params();
     OIIO::ImageBuf& framebuffer();
@@ -196,6 +200,13 @@ private:
     std::string m_firstshadername;
     std::string m_groupname;
     bool m_shader_uses_time = false;
+
+    std::vector<std::string> m_include_search_paths;
+
+
+    bool m_should_regenerate_compile_options = true;
+    std::vector<std::string> m_compile_options;
+
 
     // Access control mutex for handing things off between the GUI thread
     // and the shading thread.

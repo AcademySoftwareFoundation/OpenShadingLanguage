@@ -711,6 +711,22 @@ OSLToyMainWindow::open_file(const std::string& filename)
 }
 
 
+void 
+OSLToyMainWindow::add_include_search_path(const std::string& path) 
+{
+    auto begin = m_include_search_paths.begin();
+    auto end = m_include_search_paths.end();
+    if (std::find(begin, end, path) == end) { 
+        m_include_search_paths.push_back(path);
+        m_should_regenerate_compile_options = true;
+
+        // Open question: Do we want to force a recompile whenever the list is updated?
+        //                For now this doesn't matter cause the list is only modified 
+        //                via command line arguments, but if we want to have a GUI component,
+        //                this is worth considering. 
+    }
+}
+
 
 void
 OSLToyMainWindow::action_saveas()
@@ -836,6 +852,24 @@ private:
 };
 
 
+void 
+OSLToyMainWindow::regenerate_compile_options()
+{
+    // Right now, the only option we consider is include search path (-I)
+    
+    // Annoyingly, oslcomp only supports -I flags without any seperator between 
+    // the -I and the path itself, but OIIO::ArgParse does not support parsing
+    // arguments in this manner. Oy vey.
+
+    m_compile_options.clear();
+
+    for (auto&& path : m_include_search_paths) 
+        m_compile_options.push_back(std::string("-I").append(path));
+
+
+    m_should_regenerate_compile_options = false;
+}
+
 
 void
 OSLToyMainWindow::recompile_shaders()
@@ -863,11 +897,20 @@ OSLToyMainWindow::recompile_shaders()
             MyOSLCErrorHandler errhandler(this);
             OSLCompiler oslcomp(&errhandler);
             std::string osooutput;
-            std::vector<std::string> options;
-            ok = oslcomp.compile_buffer(source, osooutput, options, "",
+
+            if (m_should_regenerate_compile_options)
+                regenerate_compile_options();
+
+            ok = oslcomp.compile_buffer(source, osooutput, m_compile_options, "",
                                         briefname);
-            set_error_message(tab,
-                              OIIO::Strutil::join(errhandler.errors, "\n"));
+
+            auto error_message = OIIO::Strutil::fmt::format(
+                    "{}\n\nCompiled {} with options: {}", 
+                    OIIO::Strutil::join(errhandler.errors, "\n"),
+                    briefname, 
+                    OIIO::Strutil::join(m_compile_options, " "));
+            set_error_message(tab, error_message);
+            
             if (ok) {
                 // std::cout << osooutput << "\n";
                 ok = shadingsys()->LoadMemoryCompiledShader(briefname,

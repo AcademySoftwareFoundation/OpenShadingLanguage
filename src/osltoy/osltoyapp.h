@@ -57,6 +57,7 @@ public:
 };
 
 class OSLToyRenderView;
+class OSLToySearchPathEditor;
 
 class OSLToyMainWindow final : public QMainWindow {
     Q_OBJECT
@@ -91,7 +92,8 @@ public:
 
     bool open_file(const std::string& filename);
 
-    void add_include_search_path(const std::string& path);
+    void set_include_search_paths(const std::vector<std::string>& paths);
+    void update_include_search_paths(const std::vector<std::string>& paths);
 
     void rerender_needed() { m_rerender_needed = 1; }
 
@@ -105,6 +107,7 @@ private:
     // for deleting.
     QSplitter* centralSplitter;
     OSLToyRenderView* renderView = nullptr;
+    OSLToySearchPathEditor* searchPathEditor = nullptr;
     QTabWidget* textTabs         = nullptr;
     QScrollArea* paramScroll     = nullptr;
     QWidget* paramWidget         = nullptr;
@@ -166,6 +169,8 @@ private:
     void action_drill() {}
     void action_fullscreen() {}
     void action_about() {}
+
+    void action_open_search_path_popup();
 
     void set_ui_to_paramval(ParamRec* param);
     void reset_param_to_default(ParamRec* param);

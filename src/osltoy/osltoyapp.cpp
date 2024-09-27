@@ -32,6 +32,7 @@
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QToolTip>
+#include <QVBoxLayout>
 
 // QT's extension foreach defines a foreach macro which interferes
 // with an OSL internal foreach method.  So we will undefine it here
@@ -351,6 +352,272 @@ public:
 #endif
 };
 
+class OSLToySearchPathLine final : public QLineEdit {
+    // Q_OBJECT
+public:
+
+    explicit OSLToySearchPathLine(OSLToySearchPathEditor* editor, int index);
+
+
+    bool previouslyHadContent() const {
+        return m_previouslyHadContent;
+    }
+
+    void setPreviouslyHadContent(bool value) {
+        m_previouslyHadContent = value;
+    }
+
+    int getIndex() const {
+        return m_index;
+    }
+
+    QSize sizeHint() const override;
+
+private:
+
+    static QColor getColor(int index) {
+        if (index % 2)
+            return QColor(0xFFE0F0FF); // light blue
+        else
+            return Qt::white;
+    }
+
+
+    bool m_previouslyHadContent = false;
+    int  m_index;
+    OSLToySearchPathEditor* m_editor = nullptr;
+};
+
+
+// More generically, this is a popup window with a list (that grows as needed) of editable text items.
+class OSLToySearchPathEditor final : public QWidget {
+    // Q_OBJECT
+
+    using UpdatePathListAction = std::function<void(const std::vector<std::string>&)>;
+public:
+
+    OSLToySearchPathEditor(QWidget* parent, UpdatePathListAction updatePathsAction) 
+        : QWidget(parent, static_cast<Qt::WindowFlags>(Qt::Tool | Qt::WindowStaysOnTopHint)),
+        m_lines(),
+        m_updateAction(updatePathsAction)
+        {
+            window()->setWindowTitle(tr("#include Search Path List"));
+
+
+            int thisWidth = parent->width(); // / 3;
+            int thisHeight = parent->height(); // / 4;
+
+            resize(thisWidth, thisHeight);
+
+            setFixedSize(size());
+
+            class MyScrollArea : public QScrollArea {
+                QWidget* m_parent;
+            public:
+                explicit MyScrollArea(QWidget* parent) : QScrollArea(parent), m_parent(parent) { }
+
+                QSize sizeHint() const override {
+                    return m_parent->size();
+                }
+            };
+
+            class MyFrame : public QFrame {
+                QWidget* m_parent;
+            public:
+                explicit MyFrame(QWidget* parent) : QFrame(parent), m_parent(parent) { }
+
+                QSize sizeHint() const override {
+                    return m_parent->size();
+                }
+            };
+
+            auto scroll_area = new MyScrollArea(this);
+            scroll_area->setWidgetResizable(true);
+
+            auto frame = new MyFrame(scroll_area);
+            // frame->setWidgetResizable(true);
+
+            auto layout = new QVBoxLayout();
+            layout->setSpacing(0);
+            // int topMargin = thisWidth / 6;
+            // layout->setContentsMargins(topMargin / 2, topMargin, topMargin / 2, topMargin / 2);
+
+            frame->setLayout(layout);
+
+            frame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+            scroll_area->setWidget(frame);
+
+            m_layout = layout;
+
+            scroll_area->show();
+            m_scrollArea = scroll_area;
+        }
+
+
+    void set_path_list(const std::vector<std::string>& paths) {
+
+        while (!m_lines.empty())
+            pop_line();
+
+
+        m_maxIndexWithContent = (int)paths.size() - 1; // ok that this is -1 if the paths are empty
+
+
+
+        auto initialLineCount = required_lines();
+
+        m_lines.reserve(initialLineCount);
+
+        while (m_lines.size() < initialLineCount) {
+            push_line();
+        }
+
+        for (size_t i = 0; i < paths.size(); ++i) {
+            m_lines[i]->setText(QString::fromStdString(paths[i]));
+        }
+
+        update_path_list();
+    }
+
+
+    void observe_changed_text() {
+        // Only listen to signals from OSLToySearchPathLine objects
+        if (auto changedLine = dynamic_cast<OSLToySearchPathLine*>(sender())) {
+            bool isNowEmpty = changedLine->text().isEmpty();
+
+            if (changedLine->previouslyHadContent() && isNowEmpty) {
+                if (changedLine->getIndex() == m_maxIndexWithContent) {
+
+                    // Find the next max index with content, or -1 if none.
+                    do {
+                        --m_maxIndexWithContent;
+                    } while(m_maxIndexWithContent >= 0 && 
+                            !m_lines[m_maxIndexWithContent]->previouslyHadContent());
+
+                    shrink_as_needed();
+                }
+            }
+            else if (!changedLine->previouslyHadContent() && !isNowEmpty) {
+                if (changedLine->getIndex() > m_maxIndexWithContent) {
+                    m_maxIndexWithContent = changedLine->getIndex();
+                    grow_as_needed();
+                }
+            }
+
+            changedLine->setPreviouslyHadContent(!isNowEmpty);
+        }
+    }
+
+protected:
+
+    void closeEvent(QCloseEvent *ev) override {
+        // On close, collate the list of search paths, and if there has been any change, update.
+        bool has_updated = false;
+
+        for (auto line : m_lines) {
+            if (line->isModified()) {
+                if (!has_updated) {
+                    update_path_list();
+                    has_updated = true;
+                }
+                line->setModified(false);
+            }
+        }
+
+        ev->accept();
+    }
+
+
+private:
+
+    
+
+    void push_line() 
+    {
+        auto l = new OSLToySearchPathLine(this, (int)m_lines.size());
+        
+        m_layout->addWidget(l);
+        m_lines.push_back(l);
+    }
+
+
+    void pop_line() 
+    {
+        auto line = m_lines.back();
+        m_lines.pop_back();
+        m_layout->removeWidget(line);
+    }
+
+    void update_path_list() 
+    {
+        std::vector<std::string> path_list;
+        for (auto line : m_lines) {
+            auto&& text = line->text();
+            if (!text.isEmpty())
+                path_list.push_back(text.toStdString());
+        }
+        m_updateAction(path_list);
+    }
+
+    size_t required_lines() const {
+        return static_cast<size_t>((std::max)(m_minLineCount, m_maxIndexWithContent + m_guaranteedEmptyLineCount + 1));
+    }
+
+    void grow_as_needed() {
+        auto newReqLines = required_lines();
+
+        while (m_lines.size() < newReqLines) {
+            push_line();
+        }
+    }
+
+    void shrink_as_needed() {
+        auto newReqLines = required_lines();
+
+        while (m_lines.size() > newReqLines) {
+            pop_line();
+        }
+    }
+
+
+
+    int m_minLineCount = 12;
+    int m_guaranteedEmptyLineCount = 5;
+    int m_maxIndexWithContent = -1;
+    std::vector<OSLToySearchPathLine*> m_lines;
+    QLayout* m_layout = nullptr;
+    QScrollArea* m_scrollArea = nullptr;
+    UpdatePathListAction m_updateAction;
+};
+
+
+
+OSLToySearchPathLine::OSLToySearchPathLine(OSLToySearchPathEditor* editor, int index) 
+        : QLineEdit(),
+        m_index(index),
+        m_editor(editor)
+        { 
+            setFrame(true);
+
+            auto p = this->palette();
+            p.setColor(QPalette::Base, getColor(index));
+            setPalette(p);
+
+            setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+            QObject::connect(this, &OSLToySearchPathLine::editingFinished, 
+                             editor, &OSLToySearchPathEditor::observe_changed_text);
+
+            // Maybe add a QCompleter that completes known paths
+            // setCompletion
+            show();
+        }
+
+QSize OSLToySearchPathLine::sizeHint() const {
+    return QSize(m_editor->width() - 4, 10);
+}
+
 void
 #if OSL_QT_MAJOR < 6
 Magnifier::enterEvent(QEvent* event)
@@ -458,6 +725,10 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
             &OSLToyMainWindow::restart_time);
     control_area_layout->addWidget(restartButton);
 
+    searchPathEditor = new OSLToySearchPathEditor(this, [this](auto&& paths) mutable {
+        update_include_search_paths(paths);
+    });
+
     auto editorarea = new QWidget;
     QFontMetrics fontmetrics(CodeEditor::fixedFont());
 #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
@@ -517,6 +788,12 @@ OSLToyMainWindow::createActions()
                &OSLToyMainWindow::recompile_shaders);
     add_action("Enter Full Screen", "", "",
                &OSLToyMainWindow::action_fullscreen);
+
+
+    add_action("search-path-popup", 
+               "Edit #include search paths...", 
+               "Shift-Ctrl+P", 
+               &OSLToyMainWindow::action_open_search_path_popup);
 }
 
 
@@ -553,6 +830,7 @@ OSLToyMainWindow::createMenus()
 
     toolsMenu = new QMenu(tr("&Tools"), this);
     toolsMenu->addAction(actions["Recompile shaders"]);
+    toolsMenu->addAction(actions["search-path-popup"]);
     menuBar()->addMenu(toolsMenu);
 
     helpMenu = new QMenu(tr("&Help"), this);
@@ -712,19 +990,20 @@ OSLToyMainWindow::open_file(const std::string& filename)
 
 
 void 
-OSLToyMainWindow::add_include_search_path(const std::string& path) 
+OSLToyMainWindow::set_include_search_paths(const std::vector<std::string>& paths) 
 {
-    auto begin = m_include_search_paths.begin();
-    auto end = m_include_search_paths.end();
-    if (std::find(begin, end, path) == end) { 
-        m_include_search_paths.push_back(path);
-        m_should_regenerate_compile_options = true;
+    searchPathEditor->set_path_list(paths);
+}
 
-        // Open question: Do we want to force a recompile whenever the list is updated?
-        //                For now this doesn't matter cause the list is only modified 
-        //                via command line arguments, but if we want to have a GUI component,
-        //                this is worth considering. 
-    }
+void 
+OSLToyMainWindow::update_include_search_paths(const std::vector<std::string>& paths) 
+{
+
+    m_include_search_paths = paths;
+    m_should_regenerate_compile_options = true;
+
+    // Open question: Do we want to force a recompile whenever the list is updated?
+    //                For now, I'm defaulting to no, but this is just a guess.
 }
 
 
@@ -770,6 +1049,15 @@ OSLToyMainWindow::action_save()
         err.showMessage(msg.c_str());
         err.exec();
     }
+}
+
+
+
+void OSLToyMainWindow::action_open_search_path_popup () {
+    auto centeredXPos = x() + (width() - searchPathEditor->width()) / 2;
+    auto centeredYPos = y() + (height() - searchPathEditor->height()) / 2;
+    searchPathEditor->move(centeredXPos, centeredYPos);
+    searchPathEditor->show();
 }
 
 
@@ -910,7 +1198,7 @@ OSLToyMainWindow::recompile_shaders()
                     briefname, 
                     OIIO::Strutil::join(m_compile_options, " "));
             set_error_message(tab, error_message);
-            
+
             if (ok) {
                 // std::cout << osooutput << "\n";
                 ok = shadingsys()->LoadMemoryCompiledShader(briefname,

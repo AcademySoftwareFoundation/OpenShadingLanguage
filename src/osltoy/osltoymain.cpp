@@ -99,8 +99,7 @@ main(int argc, char* argv[])
     OSLToyMainWindow mainwin(rend, xres, yres);
     mainwin.show();
 
-    for (auto&& path : include_paths)
-        mainwin.add_include_search_path(path);
+    mainwin.set_include_search_paths(include_paths);
 
     for (auto&& filename : filenames)
         mainwin.open_file(filename);

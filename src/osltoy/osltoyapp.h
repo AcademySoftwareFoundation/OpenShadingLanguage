@@ -106,12 +106,12 @@ private:
     // Non-owning pointers to all the widgets we create. Qt is responsible
     // for deleting.
     QSplitter* centralSplitter;
-    OSLToyRenderView* renderView = nullptr;
+    OSLToyRenderView* renderView             = nullptr;
     OSLToySearchPathEditor* searchPathEditor = nullptr;
-    QTabWidget* textTabs         = nullptr;
-    QScrollArea* paramScroll     = nullptr;
-    QWidget* paramWidget         = nullptr;
-    QGridLayout* paramLayout     = nullptr;
+    QTabWidget* textTabs                     = nullptr;
+    QScrollArea* paramScroll                 = nullptr;
+    QWidget* paramWidget                     = nullptr;
+    QGridLayout* paramLayout                 = nullptr;
     QLabel* statusFPS;
     QMenu *fileMenu, *editMenu, *viewMenu, *toolsMenu, *helpMenu;
     QPushButton *recompileButton, *pauseButton, *restartButton;

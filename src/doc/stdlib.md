@@ -453,7 +453,7 @@ the computations are performed component-by-component (separately for `x`,
 
   : Returns 0 if $x < {\mathit edge}$ and 1 if $x \ge {\mathit edge}$.
 
-    The *`type`* may be any of of `float`, `color`, `point`, `vector`, or
+    The *`type`* may be any of `float`, `color`, `point`, `vector`, or
     `normal`.  For `color` and `point`-like types, the computations are
     performed component-by-component (separately for $x$, $y$, and $z$).
 
@@ -474,7 +474,7 @@ the computations are performed component-by-component (separately for `x`,
     `edge1`. This is useful in cases where you would want a thresholding
     function with a smooth transition.
 
-    The *`type`* may be any of of `float`, `color`, `point`, `vector`, or
+    The *`type`* may be any of `float`, `color`, `point`, `vector`, or
     `normal`.  For `color` and `point`-like types, the computations are
     performed component-by-component.
 

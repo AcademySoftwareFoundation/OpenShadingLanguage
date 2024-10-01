@@ -387,6 +387,7 @@ private:
 class OSLToySearchPathEditor final : public QWidget {
     using UpdatePathListAction
         = std::function<void(const std::vector<std::string>&)>;
+
 public:
     OSLToySearchPathEditor(QWidget* parent,
                            UpdatePathListAction updatePathsAction)
@@ -427,14 +428,14 @@ public:
 
         auto scroll_area = new MyScrollArea(this);
         scroll_area->setWidgetResizable(true);
-        auto frame = new MyFrame(scroll_area);
+        auto frame  = new MyFrame(scroll_area);
         auto layout = new QVBoxLayout();
         layout->setSpacing(0);
         frame->setLayout(layout);
         frame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         scroll_area->setWidget(frame);
         scroll_area->show();
-        m_layout = layout;
+        m_layout     = layout;
         m_scrollArea = scroll_area;
     }
 
@@ -447,9 +448,9 @@ public:
               - 1;  // ok that this is -1 if the paths are empty
         auto initialLineCount = required_lines();
         m_lines.reserve(initialLineCount);
-        while (m_lines.size() < initialLineCount) 
+        while (m_lines.size() < initialLineCount)
             push_line();
-        for (size_t i = 0; i < paths.size(); ++i) 
+        for (size_t i = 0; i < paths.size(); ++i)
             m_lines[i]->setText(QString::fromStdString(paths[i]));
         update_path_list();
     }

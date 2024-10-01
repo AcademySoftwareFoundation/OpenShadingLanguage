@@ -352,11 +352,12 @@ public:
 #endif
 };
 
+
+
 class OSLToySearchPathLine final : public QLineEdit {
     // Q_OBJECT
 public:
     explicit OSLToySearchPathLine(OSLToySearchPathEditor* editor, int index);
-
 
     bool previouslyHadContent() const { return m_previouslyHadContent; }
 
@@ -375,20 +376,17 @@ private:
             return Qt::white;
     }
 
-
     bool m_previouslyHadContent = false;
     int m_index;
     OSLToySearchPathEditor* m_editor = nullptr;
 };
 
 
+
 // More generically, this is a popup window with a list (that grows as needed) of editable text items.
 class OSLToySearchPathEditor final : public QWidget {
-    // Q_OBJECT
-
     using UpdatePathListAction
         = std::function<void(const std::vector<std::string>&)>;
-
 public:
     OSLToySearchPathEditor(QWidget* parent,
                            UpdatePathListAction updatePathsAction)
@@ -399,12 +397,9 @@ public:
     {
         window()->setWindowTitle(tr("#include Search Path List"));
 
-
         int thisWidth  = parent->width();   // / 3;
         int thisHeight = parent->height();  // / 4;
-
         resize(thisWidth, thisHeight);
-
         setFixedSize(size());
 
         class MyScrollArea : public QScrollArea {
@@ -432,62 +427,38 @@ public:
 
         auto scroll_area = new MyScrollArea(this);
         scroll_area->setWidgetResizable(true);
-
         auto frame = new MyFrame(scroll_area);
-        // frame->setWidgetResizable(true);
-
         auto layout = new QVBoxLayout();
         layout->setSpacing(0);
-        // int topMargin = thisWidth / 6;
-        // layout->setContentsMargins(topMargin / 2, topMargin, topMargin / 2, topMargin / 2);
-
         frame->setLayout(layout);
-
         frame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-
         scroll_area->setWidget(frame);
-
-        m_layout = layout;
-
         scroll_area->show();
+        m_layout = layout;
         m_scrollArea = scroll_area;
     }
-
 
     void set_path_list(const std::vector<std::string>& paths)
     {
         while (!m_lines.empty())
             pop_line();
-
-
         m_maxIndexWithContent
             = (int)paths.size()
               - 1;  // ok that this is -1 if the paths are empty
-
-
-
         auto initialLineCount = required_lines();
-
         m_lines.reserve(initialLineCount);
-
-        while (m_lines.size() < initialLineCount) {
+        while (m_lines.size() < initialLineCount) 
             push_line();
-        }
-
-        for (size_t i = 0; i < paths.size(); ++i) {
+        for (size_t i = 0; i < paths.size(); ++i) 
             m_lines[i]->setText(QString::fromStdString(paths[i]));
-        }
-
         update_path_list();
     }
-
 
     void observe_changed_text()
     {
         // Only listen to signals from OSLToySearchPathLine objects
         if (auto changedLine = dynamic_cast<OSLToySearchPathLine*>(sender())) {
             bool isNowEmpty = changedLine->text().isEmpty();
-
             if (changedLine->previouslyHadContent() && isNowEmpty) {
                 if (changedLine->getIndex() == m_maxIndexWithContent) {
                     // Find the next max index with content, or -1 if none.
@@ -515,7 +486,6 @@ protected:
     {
         // On close, collate the list of search paths, and if there has been any change, update.
         bool has_updated = false;
-
         for (auto line : m_lines) {
             if (line->isModified()) {
                 if (!has_updated) {
@@ -529,16 +499,13 @@ protected:
         ev->accept();
     }
 
-
 private:
     void push_line()
     {
         auto l = new OSLToySearchPathLine(this, (int)m_lines.size());
-
         m_layout->addWidget(l);
         m_lines.push_back(l);
     }
-
 
     void pop_line()
     {
@@ -568,7 +535,6 @@ private:
     void grow_as_needed()
     {
         auto newReqLines = required_lines();
-
         while (m_lines.size() < newReqLines) {
             push_line();
         }
@@ -577,13 +543,10 @@ private:
     void shrink_as_needed()
     {
         auto newReqLines = required_lines();
-
         while (m_lines.size() > newReqLines) {
             pop_line();
         }
     }
-
-
 
     int m_minLineCount             = 12;
     int m_guaranteedEmptyLineCount = 5;
@@ -605,22 +568,23 @@ OSLToySearchPathLine::OSLToySearchPathLine(OSLToySearchPathEditor* editor,
     auto p = this->palette();
     p.setColor(QPalette::Base, getColor(index));
     setPalette(p);
-
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-
     QObject::connect(this, &OSLToySearchPathLine::editingFinished, editor,
                      &OSLToySearchPathEditor::observe_changed_text);
 
     // Maybe add a QCompleter that completes known paths
-    // setCompletion
     show();
 }
+
+
 
 QSize
 OSLToySearchPathLine::sizeHint() const
 {
     return QSize(m_editor->width() - 4, 10);
 }
+
+
 
 void
 #if OSL_QT_MAJOR < 6
@@ -672,9 +636,6 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
     // read_settings ();
 
     setWindowTitle(tr("OSL Toy"));
-
-    // Set size of the window
-    // setFixedSize(100, 50);
 
     createActions();
     createMenus();
@@ -793,8 +754,6 @@ OSLToyMainWindow::createActions()
                &OSLToyMainWindow::recompile_shaders);
     add_action("Enter Full Screen", "", "",
                &OSLToyMainWindow::action_fullscreen);
-
-
     add_action("search-path-popup", "Edit #include search paths...",
                "Shift-Ctrl+P",
                &OSLToyMainWindow::action_open_search_path_popup);

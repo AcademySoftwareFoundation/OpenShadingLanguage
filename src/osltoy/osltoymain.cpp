@@ -39,6 +39,7 @@ static bool foreground_mode = true;
 static int threads          = 0;
 static int xres = 512, yres = 512;
 static std::vector<std::string> filenames;
+static std::vector<std::string> include_paths;
 
 
 static void
@@ -58,6 +59,9 @@ getargs(int argc, char* argv[])
       .help("Set thread count (0=cores)");
     ap.arg("--res %d:XRES %d:YRES", &xres, &yres)
       .help("Set resolution");
+    ap.arg("-I DIRPATH")
+      .action([&](cspan<const char*> argv){ include_paths.emplace_back(argv[1]); })
+      .help("Add DIRPATH to the list of header search paths.");
     // clang-format on
     if (ap.parse(argc, (const char**)argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
@@ -94,6 +98,9 @@ main(int argc, char* argv[])
     QApplication app(argc, argv);
     OSLToyMainWindow mainwin(rend, xres, yres);
     mainwin.show();
+
+    mainwin.set_include_search_paths(include_paths);
+
     for (auto&& filename : filenames)
         mainwin.open_file(filename);
 

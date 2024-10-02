@@ -57,6 +57,7 @@ public:
 };
 
 class OSLToyRenderView;
+class OSLToySearchPathEditor;
 
 class OSLToyMainWindow final : public QMainWindow {
     Q_OBJECT
@@ -91,6 +92,9 @@ public:
 
     bool open_file(const std::string& filename);
 
+    void set_include_search_paths(const std::vector<std::string>& paths);
+    void update_include_search_paths(const std::vector<std::string>& paths);
+
     void rerender_needed() { m_rerender_needed = 1; }
 
 private slots:
@@ -102,11 +106,12 @@ private:
     // Non-owning pointers to all the widgets we create. Qt is responsible
     // for deleting.
     QSplitter* centralSplitter;
-    OSLToyRenderView* renderView = nullptr;
-    QTabWidget* textTabs         = nullptr;
-    QScrollArea* paramScroll     = nullptr;
-    QWidget* paramWidget         = nullptr;
-    QGridLayout* paramLayout     = nullptr;
+    OSLToyRenderView* renderView             = nullptr;
+    OSLToySearchPathEditor* searchPathEditor = nullptr;
+    QTabWidget* textTabs                     = nullptr;
+    QScrollArea* paramScroll                 = nullptr;
+    QWidget* paramWidget                     = nullptr;
+    QGridLayout* paramLayout                 = nullptr;
     QLabel* statusFPS;
     QMenu *fileMenu, *editMenu, *viewMenu, *toolsMenu, *helpMenu;
     QPushButton *recompileButton, *pauseButton, *restartButton;
@@ -165,6 +170,8 @@ private:
     void action_fullscreen() {}
     void action_about() {}
 
+    void action_open_search_path_popup();
+
     void set_ui_to_paramval(ParamRec* param);
     void reset_param_to_default(ParamRec* param);
     void set_param_instance_value(ParamRec* param);
@@ -183,6 +190,8 @@ private:
     void make_param_adjustment_row(ParamRec* param, QGridLayout* layout,
                                    int row);
 
+    void regenerate_compile_options();
+
     void rebuild_param_area();
     void inventory_params();
     OIIO::ImageBuf& framebuffer();
@@ -196,6 +205,13 @@ private:
     std::string m_firstshadername;
     std::string m_groupname;
     bool m_shader_uses_time = false;
+
+    std::vector<std::string> m_include_search_paths;
+
+
+    bool m_should_regenerate_compile_options = true;
+    std::vector<std::string> m_compile_options;
+
 
     // Access control mutex for handing things off between the GUI thread
     // and the shading thread.

@@ -1562,60 +1562,93 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
     if (closure == nullptr)
         return Color3(0);
 
-    switch (closure->id) {
-    case ClosureColor::MUL:
-        return closure->as_mul()->weight
-               * evaluate_layer_opacity(sg, closure->as_mul()->closure);
-    case ClosureColor::ADD:
-        return evaluate_layer_opacity(sg, closure->as_add()->closureA)
-               + evaluate_layer_opacity(sg, closure->as_add()->closureB);
-    default: {
-        const ClosureComponent* comp = closure->as_comp();
-        Color3 w                     = comp->w;
-        switch (comp->id) {
-        case MX_LAYER_ID: {
-            const MxLayerParams* srcparams = comp->as<MxLayerParams>();
-            return w
-                   * (evaluate_layer_opacity(sg, srcparams->top)
-                      + evaluate_layer_opacity(sg, srcparams->base));
+    // Non-recursive traversal stack
+    const int STACK_SIZE = 16;
+    int stack_idx        = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+    Color3 weight = Color3(1.0f);
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureColor::MUL:
+            weight *= closure->as_mul()->weight;
+            closure = closure->as_mul()->closure;
+            break;
+        case ClosureColor::ADD:
+            ptr_stack[stack_idx]      = closure->as_add()->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = closure->as_add()->closureA;
+            break;
+        default: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 w                     = comp->w;
+            switch (comp->id) {
+            case MX_LAYER_ID: {
+                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                closure                        = srcparams->top;
+                ptr_stack[stack_idx]           = srcparams->base;
+                weight_stack[stack_idx++]      = weight * w;
+                break;
+            }
+            case REFLECTION_ID:
+            case FRESNEL_REFLECTION_ID: {
+                Reflection bsdf(*comp->as<ReflectionParams>());
+                weight *= w * bsdf.get_albedo(-sg.I);
+                closure = nullptr;
+                break;
+            }
+            case MX_DIELECTRIC_ID: {
+                const MxDielectricParams& params
+                    = *comp->as<MxDielectricParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint)) {
+                    closure = nullptr;
+                    break;
+                }
+                MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params,
+                                                                    1.0f);
+                weight *= w * mf.get_albedo(-sg.I);
+                closure = nullptr;
+                break;
+            }
+            case MX_GENERALIZED_SCHLICK_ID: {
+                const MxGeneralizedSchlickParams& params
+                    = *comp->as<MxGeneralizedSchlickParams>();
+                // Transmissive dielectrics are opaque
+                if (!is_black(params.transmission_tint)) {
+                    closure = nullptr;
+                    break;
+                }
+                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(
+                    params, 1.0f);
+                weight *= w * mf.get_albedo(-sg.I);
+                closure = nullptr;
+                break;
+            }
+            case MX_SHEEN_ID: {
+                const MxSheenParams& params = *comp->as<MxSheenParams>();
+                if (params.mode == 1) {
+                    weight *= w * ZeltnerBurleySheen(params).get_albedo(-sg.I);
+                } else {
+                    // otherwise, default to old sheen model
+                    weight *= w * CharlieSheen(params).get_albedo(-sg.I);
+                }
+                closure = nullptr;
+                break;
+            }
+            default:  // Assume unhandled BSDFs are opaque
+                closure = nullptr;
+                break;
+            }
         }
-        case REFLECTION_ID:
-        case FRESNEL_REFLECTION_ID: {
-            Reflection bsdf(*comp->as<ReflectionParams>());
-            return w * bsdf.get_albedo(-sg.I);
         }
-        case MX_DIELECTRIC_ID: {
-            const MxDielectricParams& params = *comp->as<MxDielectricParams>();
-            // Transmissive dielectrics are opaque
-            if (!is_black(params.transmission_tint))
-                return Color3(1);
-            MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params, 1.0f);
-            return w * mf.get_albedo(-sg.I);
-        }
-        case MX_GENERALIZED_SCHLICK_ID: {
-            const MxGeneralizedSchlickParams& params
-                = *comp->as<MxGeneralizedSchlickParams>();
-            // Transmissive dielectrics are opaque
-            if (!is_black(params.transmission_tint))
-                return Color3(1);
-            MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(params,
-                                                                        1.0f);
-            return w * mf.get_albedo(-sg.I);
-        }
-        case MX_SHEEN_ID: {
-            const MxSheenParams& params = *comp->as<MxSheenParams>();
-            if (params.mode == 1)
-                return w * ZeltnerBurleySheen(params).get_albedo(-sg.I);
-            // otherwise, default to old sheen model
-            return w * CharlieSheen(params).get_albedo(-sg.I);
-        }
-        default:  // Assume unhandled BSDFs are opaque
-            return Color3(1);
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
         }
     }
-    }
-    OSL_ASSERT(false && "Layer opacity evaluation failed");
-    return Color3(0);
+    return weight;
 }
 
 void
@@ -1624,77 +1657,99 @@ process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
 {
     if (!closure)
         return;
-    switch (closure->id) {
-    case ClosureColor::MUL: {
-        process_medium_closure(sg, result, closure->as_mul()->closure,
-                               w * closure->as_mul()->weight);
-        break;
-    }
-    case ClosureColor::ADD: {
-        process_medium_closure(sg, result, closure->as_add()->closureA, w);
-        process_medium_closure(sg, result, closure->as_add()->closureB, w);
-        break;
-    }
-    case MX_LAYER_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        const MxLayerParams* params  = comp->as<MxLayerParams>();
-        Color3 base_w
-            = w
-              * (Color3(1)
-                 - clamp(evaluate_layer_opacity(sg, params->top), 0.f, 1.f));
-        process_medium_closure(sg, result, params->top, w);
-        process_medium_closure(sg, result, params->base, base_w);
-        break;
-    }
-    case MX_ANISOTROPIC_VDF_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        Color3 cw                    = w * comp->w;
-        const auto& params           = *comp->as<MxAnisotropicVdfParams>();
-        result.sigma_t               = cw * params.extinction;
-        result.sigma_s               = params.albedo * result.sigma_t;
-        result.medium_g              = params.anisotropy;
-        break;
-    }
-    case MX_MEDIUM_VDF_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        Color3 cw                    = w * comp->w;
-        const auto& params           = *comp->as<MxMediumVdfParams>();
-        result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
-                           -OIIO::fast_log(params.transmission_color.y),
-                           -OIIO::fast_log(params.transmission_color.z) };
-        // NOTE: closure weight scales the extinction parameter
-        result.sigma_t *= cw / params.transmission_depth;
-        result.sigma_s  = params.albedo * result.sigma_t;
-        result.medium_g = params.anisotropy;
-        // TODO: properly track a medium stack here ...
-        result.refraction_ior = sg.backfacing ? 1.0f / params.ior : params.ior;
-        result.priority       = params.priority;
-        break;
-    }
-    case MX_DIELECTRIC_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        const auto& params           = *comp->as<MxDielectricParams>();
-        if (!is_black(w * comp->w * params.transmission_tint)) {
+
+    // Non-recursive traversal stack
+    const int STACK_SIZE = 16;
+    int stack_idx        = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+    Color3 weight = w;
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureColor::MUL: {
+            weight *= closure->as_mul()->weight;
+            closure = closure->as_mul()->closure;
+            break;
+        }
+        case ClosureColor::ADD: {
+            weight_stack[stack_idx] = weight;
+            ptr_stack[stack_idx++]  = closure->as_add()->closureB;
+            closure                 = closure->as_add()->closureA;
+            break;
+        }
+        case MX_LAYER_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const MxLayerParams* params  = comp->as<MxLayerParams>();
+            Color3 base_w                = weight
+                            * (Color3(1)
+                               - clamp(evaluate_layer_opacity(sg, params->top),
+                                       0.f, 1.f));
+            closure                   = params->top;
+            ptr_stack[stack_idx]      = params->base;
+            weight_stack[stack_idx++] = weight * base_w;
+            break;
+        }
+        case MX_ANISOTROPIC_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = weight * comp->w;
+            const auto& params           = *comp->as<MxAnisotropicVdfParams>();
+            result.sigma_t               = cw * params.extinction;
+            result.sigma_s               = params.albedo * result.sigma_t;
+            result.medium_g              = params.anisotropy;
+            closure                      = nullptr;
+            break;
+        }
+        case MX_MEDIUM_VDF_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = weight * comp->w;
+            const auto& params           = *comp->as<MxMediumVdfParams>();
+            result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
+                               -OIIO::fast_log(params.transmission_color.y),
+                               -OIIO::fast_log(params.transmission_color.z) };
+            // NOTE: closure weight scales the extinction parameter
+            result.sigma_t *= cw / params.transmission_depth;
+            result.sigma_s  = params.albedo * result.sigma_t;
+            result.medium_g = params.anisotropy;
             // TODO: properly track a medium stack here ...
             result.refraction_ior = sg.backfacing ? 1.0f / params.ior
                                                   : params.ior;
+            result.priority       = params.priority;
+            closure               = nullptr;
+            break;
         }
-        break;
-    }
-    case MX_GENERALIZED_SCHLICK_ID: {
-        const ClosureComponent* comp = closure->as_comp();
-        const auto& params           = *comp->as<MxGeneralizedSchlickParams>();
-        if (!is_black(w * comp->w * params.transmission_tint)) {
-            // TODO: properly track a medium stack here ...
-            float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
-                                      / 3.0f,
-                                  0.0f, 0.99f);
-            float sqrt_F0 = sqrtf(avg_F0);
-            float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
-            result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+        case MX_DIELECTRIC_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params           = *comp->as<MxDielectricParams>();
+            if (!is_black(weight * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                result.refraction_ior = sg.backfacing ? 1.0f / params.ior
+                                                      : params.ior;
+            }
+            closure = nullptr;
+            break;
         }
-        break;
-    }
+        case MX_GENERALIZED_SCHLICK_ID: {
+            const ClosureComponent* comp = closure->as_comp();
+            const auto& params = *comp->as<MxGeneralizedSchlickParams>();
+            if (!is_black(weight * comp->w * params.transmission_tint)) {
+                // TODO: properly track a medium stack here ...
+                float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
+                                          / 3.0f,
+                                      0.0f, 0.99f);
+                float sqrt_F0 = sqrtf(avg_F0);
+                float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
+                result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+            }
+            closure = nullptr;
+            break;
+        }
+        default: closure = nullptr; break;
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
     }
 }
 
@@ -1709,205 +1764,230 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
     static const ustringhash uh_default("default");
     if (!closure)
         return;
-    switch (closure->id) {
-    case ClosureColor::MUL: {
-        Color3 cw = w * closure->as_mul()->weight;
-        process_bsdf_closure(sg, result, closure->as_mul()->closure, cw,
-                             light_only);
-        break;
-    }
-    case ClosureColor::ADD: {
-        process_bsdf_closure(sg, result, closure->as_add()->closureA, w,
-                             light_only);
-        process_bsdf_closure(sg, result, closure->as_add()->closureB, w,
-                             light_only);
-        break;
-    }
-    default: {
-        const ClosureComponent* comp = closure->as_comp();
-        Color3 cw                    = w * comp->w;
-        if (comp->id == EMISSION_ID)
-            result.Le += cw;
-        else if (comp->id == MX_UNIFORM_EDF_ID)
-            result.Le += cw * comp->as<MxUniformEdfParams>()->emittance;
-        else if (!light_only) {
-            bool ok = false;
-            switch (comp->id) {
-            case DIFFUSE_ID:
-                ok = result.bsdf.add_bsdf<Diffuse<0>>(
-                    cw, *comp->as<DiffuseParams>());
-                break;
-            case OREN_NAYAR_ID:
-                ok = result.bsdf.add_bsdf<OrenNayar>(
-                    cw, *comp->as<OrenNayarParams>());
-                break;
-            case TRANSLUCENT_ID:
-                ok = result.bsdf.add_bsdf<Diffuse<1>>(
-                    cw, *comp->as<DiffuseParams>());
-                break;
-            case PHONG_ID:
-                ok = result.bsdf.add_bsdf<Phong>(cw, *comp->as<PhongParams>());
-                break;
-            case WARD_ID:
-                ok = result.bsdf.add_bsdf<Ward>(cw, *comp->as<WardParams>());
-                break;
-            case MICROFACET_ID: {
-                const MicrofacetParams* mp = comp->as<MicrofacetParams>();
-                if (mp->dist == uh_ggx) {
-                    switch (mp->refract) {
-                    case 0:
-                        ok = result.bsdf.add_bsdf<MicrofacetGGXRefl>(cw, *mp);
-                        break;
-                    case 1:
-                        ok = result.bsdf.add_bsdf<MicrofacetGGXRefr>(cw, *mp);
-                        break;
-                    case 2:
-                        ok = result.bsdf.add_bsdf<MicrofacetGGXBoth>(cw, *mp);
-                        break;
-                    }
-                } else if (mp->dist == uh_beckmann || mp->dist == uh_default) {
-                    switch (mp->refract) {
-                    case 0:
-                        ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl>(cw,
-                                                                          *mp);
-                        break;
-                    case 1:
-                        ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr>(cw,
-                                                                          *mp);
-                        break;
-                    case 2:
-                        ok = result.bsdf.add_bsdf<MicrofacetBeckmannBoth>(cw,
-                                                                          *mp);
-                        break;
-                    }
-                }
-                break;
-            }
-            case REFLECTION_ID:
-            case FRESNEL_REFLECTION_ID:
-                ok = result.bsdf.add_bsdf<Reflection>(
-                    cw, *comp->as<ReflectionParams>());
-                break;
-            case REFRACTION_ID:
-                ok = result.bsdf.add_bsdf<Refraction>(
-                    cw, *comp->as<RefractionParams>());
-                break;
-            case TRANSPARENT_ID:
-                ok = result.bsdf.add_bsdf<Transparent>(cw);
-                break;
-            case MX_OREN_NAYAR_DIFFUSE_ID: {
-                const MxOrenNayarDiffuseParams* srcparams
-                    = comp->as<MxOrenNayarDiffuseParams>();
-                if (srcparams->energy_compensation) {
-                    // energy compensation handled by its own BSDF
-                    ok = result.bsdf.add_bsdf<EnergyCompensatedOrenNayar>(
-                        cw, *srcparams);
-                } else {
-                    // translate MaterialX parameters into existing closure
-                    OrenNayarParams params = {};
-                    params.N               = srcparams->N;
-                    params.sigma           = srcparams->roughness;
-                    ok = result.bsdf.add_bsdf<OrenNayar>(cw * srcparams->albedo,
-                                                         params);
-                }
-                break;
-            }
-            case MX_BURLEY_DIFFUSE_ID: {
-                const MxBurleyDiffuseParams& params
-                    = *comp->as<MxBurleyDiffuseParams>();
-                ok = result.bsdf.add_bsdf<MxBurleyDiffuse>(cw, params);
-                break;
-            }
-            case MX_DIELECTRIC_ID: {
-                const MxDielectricParams& params
-                    = *comp->as<MxDielectricParams>();
-                if (is_black(params.transmission_tint))
-                    ok = result.bsdf.add_bsdf<
-                        MxMicrofacet<MxDielectricParams, GGXDist, false>>(
-                        cw, params, 1.0f);
-                else
-                    ok = result.bsdf.add_bsdf<
-                        MxMicrofacet<MxDielectricParams, GGXDist, true>>(
-                        cw, params, result.refraction_ior);
-                break;
-            }
-            case MX_CONDUCTOR_ID: {
-                const MxConductorParams& params = *comp->as<MxConductorParams>();
-                ok = result.bsdf.add_bsdf<
-                    MxMicrofacet<MxConductorParams, GGXDist, false>>(cw, params,
-                                                                     1.0f);
-                break;
-            };
-            case MX_GENERALIZED_SCHLICK_ID: {
-                const MxGeneralizedSchlickParams& params
-                    = *comp->as<MxGeneralizedSchlickParams>();
-                if (is_black(params.transmission_tint))
-                    ok = result.bsdf.add_bsdf<MxMicrofacet<
-                        MxGeneralizedSchlickParams, GGXDist, false>>(cw, params,
-                                                                     1.0f);
-                else
-                    ok = result.bsdf.add_bsdf<
-                        MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true>>(
-                        cw, params, result.refraction_ior);
-                break;
-            };
-            case MX_TRANSLUCENT_ID: {
-                const MxTranslucentParams* srcparams
-                    = comp->as<MxTranslucentParams>();
-                DiffuseParams params = {};
-                params.N             = srcparams->N;
-                ok = result.bsdf.add_bsdf<Diffuse<1>>(cw * srcparams->albedo,
-                                                      params);
-                break;
-            }
-            case MX_TRANSPARENT_ID: {
-                ok = result.bsdf.add_bsdf<Transparent>(cw);
-                break;
-            }
-            case MX_SUBSURFACE_ID: {
-                // TODO: implement BSSRDF support?
-                const MxSubsurfaceParams* srcparams
-                    = comp->as<MxSubsurfaceParams>();
-                DiffuseParams params = {};
-                params.N             = srcparams->N;
-                ok = result.bsdf.add_bsdf<Diffuse<0>>(cw * srcparams->albedo,
-                                                      params);
-                break;
-            }
-            case MX_SHEEN_ID: {
-                const MxSheenParams& params = *comp->as<MxSheenParams>();
-                if (params.mode == 1)
-                    ok = result.bsdf.add_bsdf<ZeltnerBurleySheen>(cw, params);
-                else
-                    ok = result.bsdf.add_bsdf<CharlieSheen>(
-                        cw, params);  // default to legacy closure
-                break;
-            }
-            case MX_LAYER_ID: {
-                const MxLayerParams* srcparams = comp->as<MxLayerParams>();
-                Color3 base_w
-                    = w
-                      * (Color3(1, 1, 1)
-                         - clamp(evaluate_layer_opacity(sg, srcparams->top),
-                                 0.f, 1.f));
-                process_bsdf_closure(sg, result, srcparams->top, w, light_only);
-                if (!is_black(base_w))
-                    process_bsdf_closure(sg, result, srcparams->base, base_w,
-                                         light_only);
-                ok = true;
-                break;
-            }
-            case MX_ANISOTROPIC_VDF_ID:
-            case MX_MEDIUM_VDF_ID: {
-                // already processed by process_medium_closure
-                ok = true;
-                break;
-            }
-            }
-            OSL_ASSERT(ok && "Invalid closure invoked in surface shader");
+
+    // Non-recursive traversal stack
+    const int STACK_SIZE = 16;
+    int stack_idx        = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+    Color3 weight = w;
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureColor::MUL: {
+            weight *= closure->as_mul()->weight;
+            closure = closure->as_mul()->closure;
+            break;
         }
-        break;
-    }
+        case ClosureColor::ADD: {
+            ptr_stack[stack_idx]      = closure->as_add()->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = closure->as_add()->closureA;
+            break;
+        }
+        default: {
+            const ClosureComponent* comp = closure->as_comp();
+            Color3 cw                    = weight * comp->w;
+            closure                      = nullptr;
+            if (comp->id == EMISSION_ID)
+                result.Le += cw;
+            else if (comp->id == MX_UNIFORM_EDF_ID)
+                result.Le += cw * comp->as<MxUniformEdfParams>()->emittance;
+            else if (!light_only) {
+                bool ok = false;
+                switch (comp->id) {
+                case DIFFUSE_ID:
+                    ok = result.bsdf.add_bsdf<Diffuse<0>>(
+                        cw, *comp->as<DiffuseParams>());
+                    break;
+                case OREN_NAYAR_ID:
+                    ok = result.bsdf.add_bsdf<OrenNayar>(
+                        cw, *comp->as<OrenNayarParams>());
+                    break;
+                case TRANSLUCENT_ID:
+                    ok = result.bsdf.add_bsdf<Diffuse<1>>(
+                        cw, *comp->as<DiffuseParams>());
+                    break;
+                case PHONG_ID:
+                    ok = result.bsdf.add_bsdf<Phong>(cw,
+                                                     *comp->as<PhongParams>());
+                    break;
+                case WARD_ID:
+                    ok = result.bsdf.add_bsdf<Ward>(cw,
+                                                    *comp->as<WardParams>());
+                    break;
+                case MICROFACET_ID: {
+                    const MicrofacetParams* mp = comp->as<MicrofacetParams>();
+                    if (mp->dist == uh_ggx) {
+                        switch (mp->refract) {
+                        case 0:
+                            ok = result.bsdf.add_bsdf<MicrofacetGGXRefl>(cw,
+                                                                         *mp);
+                            break;
+                        case 1:
+                            ok = result.bsdf.add_bsdf<MicrofacetGGXRefr>(cw,
+                                                                         *mp);
+                            break;
+                        case 2:
+                            ok = result.bsdf.add_bsdf<MicrofacetGGXBoth>(cw,
+                                                                         *mp);
+                            break;
+                        }
+                    } else if (mp->dist == uh_beckmann
+                               || mp->dist == uh_default) {
+                        switch (mp->refract) {
+                        case 0:
+                            ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefl>(
+                                cw, *mp);
+                            break;
+                        case 1:
+                            ok = result.bsdf.add_bsdf<MicrofacetBeckmannRefr>(
+                                cw, *mp);
+                            break;
+                        case 2:
+                            ok = result.bsdf.add_bsdf<MicrofacetBeckmannBoth>(
+                                cw, *mp);
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case REFLECTION_ID:
+                case FRESNEL_REFLECTION_ID:
+                    ok = result.bsdf.add_bsdf<Reflection>(
+                        cw, *comp->as<ReflectionParams>());
+                    break;
+                case REFRACTION_ID:
+                    ok = result.bsdf.add_bsdf<Refraction>(
+                        cw, *comp->as<RefractionParams>());
+                    break;
+                case TRANSPARENT_ID:
+                    ok = result.bsdf.add_bsdf<Transparent>(cw);
+                    break;
+                case MX_OREN_NAYAR_DIFFUSE_ID: {
+                    const MxOrenNayarDiffuseParams* srcparams
+                        = comp->as<MxOrenNayarDiffuseParams>();
+                    if (srcparams->energy_compensation) {
+                        // energy compensation handled by its own BSDF
+                        ok = result.bsdf.add_bsdf<EnergyCompensatedOrenNayar>(
+                            cw, *srcparams);
+                    } else {
+                        // translate MaterialX parameters into existing closure
+                        OrenNayarParams params = {};
+                        params.N               = srcparams->N;
+                        params.sigma           = srcparams->roughness;
+                        ok = result.bsdf.add_bsdf<OrenNayar>(
+                            cw * srcparams->albedo, params);
+                    }
+                    break;
+                }
+                case MX_BURLEY_DIFFUSE_ID: {
+                    const MxBurleyDiffuseParams& params
+                        = *comp->as<MxBurleyDiffuseParams>();
+                    ok = result.bsdf.add_bsdf<MxBurleyDiffuse>(cw, params);
+                    break;
+                }
+                case MX_DIELECTRIC_ID: {
+                    const MxDielectricParams& params
+                        = *comp->as<MxDielectricParams>();
+                    if (is_black(params.transmission_tint))
+                        ok = result.bsdf.add_bsdf<
+                            MxMicrofacet<MxDielectricParams, GGXDist, false>>(
+                            cw, params, 1.0f);
+                    else
+                        ok = result.bsdf.add_bsdf<
+                            MxMicrofacet<MxDielectricParams, GGXDist, true>>(
+                            cw, params, result.refraction_ior);
+                    break;
+                }
+                case MX_CONDUCTOR_ID: {
+                    const MxConductorParams& params
+                        = *comp->as<MxConductorParams>();
+                    ok = result.bsdf.add_bsdf<
+                        MxMicrofacet<MxConductorParams, GGXDist, false>>(cw,
+                                                                         params,
+                                                                         1.0f);
+                    break;
+                };
+                case MX_GENERALIZED_SCHLICK_ID: {
+                    const MxGeneralizedSchlickParams& params
+                        = *comp->as<MxGeneralizedSchlickParams>();
+                    if (is_black(params.transmission_tint))
+                        ok = result.bsdf.add_bsdf<MxMicrofacet<
+                            MxGeneralizedSchlickParams, GGXDist, false>>(cw,
+                                                                         params,
+                                                                         1.0f);
+                    else
+                        ok = result.bsdf.add_bsdf<MxMicrofacet<
+                            MxGeneralizedSchlickParams, GGXDist, true>>(
+                            cw, params, result.refraction_ior);
+                    break;
+                };
+                case MX_TRANSLUCENT_ID: {
+                    const MxTranslucentParams* srcparams
+                        = comp->as<MxTranslucentParams>();
+                    DiffuseParams params = {};
+                    params.N             = srcparams->N;
+                    ok = result.bsdf.add_bsdf<Diffuse<1>>(cw * srcparams->albedo,
+                                                          params);
+                    break;
+                }
+                case MX_TRANSPARENT_ID: {
+                    ok = result.bsdf.add_bsdf<Transparent>(cw);
+                    break;
+                }
+                case MX_SUBSURFACE_ID: {
+                    // TODO: implement BSSRDF support?
+                    const MxSubsurfaceParams* srcparams
+                        = comp->as<MxSubsurfaceParams>();
+                    DiffuseParams params = {};
+                    params.N             = srcparams->N;
+                    ok = result.bsdf.add_bsdf<Diffuse<0>>(cw * srcparams->albedo,
+                                                          params);
+                    break;
+                }
+                case MX_SHEEN_ID: {
+                    const MxSheenParams& params = *comp->as<MxSheenParams>();
+                    if (params.mode == 1)
+                        ok = result.bsdf.add_bsdf<ZeltnerBurleySheen>(cw,
+                                                                      params);
+                    else
+                        ok = result.bsdf.add_bsdf<CharlieSheen>(
+                            cw, params);  // default to legacy closure
+                    break;
+                }
+                case MX_LAYER_ID: {
+                    const MxLayerParams* srcparams = comp->as<MxLayerParams>();
+                    Color3 base_w
+                        = weight
+                          * (Color3(1, 1, 1)
+                             - clamp(evaluate_layer_opacity(sg, srcparams->top),
+                                     0.f, 1.f));
+                    closure = srcparams->top;
+                    weight  = cw;
+                    if (!is_black(base_w)) {
+                        ptr_stack[stack_idx]      = srcparams->base;
+                        weight_stack[stack_idx++] = base_w;
+                    }
+                    ok = true;
+                    break;
+                }
+                case MX_ANISOTROPIC_VDF_ID:
+                case MX_MEDIUM_VDF_ID: {
+                    // already processed by process_medium_closure
+                    ok = true;
+                    break;
+                }
+                }
+                OSL_ASSERT(ok && "Invalid closure invoked in surface shader");
+            }
+            break;
+        }
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
     }
 }
 
@@ -1929,22 +2009,39 @@ process_background_closure(const ClosureColor* closure)
 {
     if (!closure)
         return Vec3(0, 0, 0);
-    switch (closure->id) {
-    case ClosureColor::MUL: {
-        return closure->as_mul()->weight
-               * process_background_closure(closure->as_mul()->closure);
+
+    // Non-recursive traversal stack
+    const int STACK_SIZE = 16;
+    int stack_idx        = 0;
+    const ClosureColor* ptr_stack[STACK_SIZE];
+    Color3 weight_stack[STACK_SIZE];
+    Color3 weight = Color3(1.0f);
+
+    while (closure) {
+        switch (closure->id) {
+        case ClosureColor::MUL: {
+            weight *= closure->as_mul()->weight;
+            closure = closure->as_mul()->closure;
+            break;
+        }
+        case ClosureColor::ADD: {
+            ptr_stack[stack_idx]      = closure->as_add()->closureB;
+            weight_stack[stack_idx++] = weight;
+            closure                   = closure->as_add()->closureA;
+            break;
+        }
+        case BACKGROUND_ID: {
+            weight *= closure->as_comp()->w;
+            closure = nullptr;
+            break;
+        }
+        }
+        if (closure == nullptr && stack_idx > 0) {
+            closure = ptr_stack[--stack_idx];
+            weight  = weight_stack[stack_idx];
+        }
     }
-    case ClosureColor::ADD: {
-        return process_background_closure(closure->as_add()->closureA)
-               + process_background_closure(closure->as_add()->closureB);
-    }
-    case BACKGROUND_ID: {
-        return closure->as_comp()->w;
-    }
-    }
-    // should never happen
-    OSL_ASSERT(false && "Invalid closure invoked in background shader");
-    return Vec3(0, 0, 0);
+    return weight;
 }
 
 

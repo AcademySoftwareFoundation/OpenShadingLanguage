@@ -9,7 +9,7 @@
 
 OSL_NAMESPACE_ENTER
 
-inline float
+static inline float
 fresnel_dielectric(float cosi, float eta)
 {
     // special case: ignore fresnel
@@ -30,7 +30,7 @@ fresnel_dielectric(float cosi, float eta)
     return 1.0f;  // TIR (no refracted component)
 }
 
-inline float
+static inline float
 fresnel_refraction(const Vec3& I, const Vec3& N, float eta, Vec3& T)
 {
     // compute refracted direction and fresnel term
@@ -63,7 +63,7 @@ fresnel_refraction(const Vec3& I, const Vec3& N, float eta, Vec3& T)
     return 0;
 }
 
-Color3
+static inline Color3
 fresnel_conductor(float cos_theta, Color3 n, Color3 k)
 {
     cos_theta       = OIIO::clamp(cos_theta, 0.0f, 1.0f);
@@ -89,7 +89,7 @@ fresnel_conductor(float cos_theta, Color3 n, Color3 k)
     return 0.5f * (rp + rs);
 }
 
-inline float
+static inline float
 fresnel_schlick(float cos_theta, float F0, float F90)
 {
     float x  = OIIO::clamp(1.0f - cos_theta, 0.0f, 1.0f);
@@ -99,7 +99,7 @@ fresnel_schlick(float cos_theta, float F0, float F90)
     return OIIO::lerp(F0, F90, x5);
 }
 
-inline Color3
+static inline Color3
 fresnel_generalized_schlick(float cos_theta, Color3 F0, Color3 F90,
                             float exponent)
 {

@@ -129,12 +129,31 @@ OSLToyRenderer::render_image()
         m_framebuffer.reset(
             OIIO::ImageSpec(m_xres, m_yres, 3, TypeDesc::FLOAT));
 
-    static ustring outputs[] = { ustring("Cout") };
+    std::vector<ustring> output_vars;
+
+    // Get the list of output variables from the shader group
+    shadingsys()->getattribute(shadergroup(), "renderer_outputs", output_vars);
+
+    // If no output variables are found, default to Cout
+    if (output_vars.empty()) {
+        output_vars.push_back(ustring("Cout"));
+    }
+
+    // If there's only one output variable, automatically use it
+    const ustring* outputs = &output_vars[0];
+    if (output_vars.size() == 1) {
+        outputs = &output_vars[0]; // auto-detect and use the single output
+    } else {
+        // If there are multiple outputs, you could implement additional logic here
+        // to choose between them or provide the user with a choice.
+        outputs = &output_vars[0]; // default to the first output
+    }
+
     OIIO::paropt popt(0, OIIO::paropt::SplitDir::Tile, 4096);
     shade_image(*shadingsys(), *shadergroup(), &m_shaderglobals_template,
                 m_framebuffer, outputs, ShadePixelCenters, OIIO::ROI(), popt);
-    //    std::cout << timer() << "\n";
 }
+
 
 
 

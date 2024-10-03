@@ -10,18 +10,27 @@
 
 using namespace OSL;
 
+
+#ifndef __CUDACC__
+using ShaderGlobalsType = OSL::ShaderGlobals;
+#else
+using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
+#endif
+
+
 namespace {  // anonymous namespace
 
 using OIIO::clamp;
+using OSL::dot;
 
-Color3
+OSL_HOSTDEVICE Color3
 clamp(const Color3& c, float min, float max)
 {
     return Color3(clamp(c.x, min, max), clamp(c.y, min, max),
                   clamp(c.z, min, max));
 }
 
-bool
+OSL_HOSTDEVICE bool
 is_black(const Color3& c)
 {
     return c.x == 0 && c.y == 0 && c.z == 0;
@@ -33,6 +42,7 @@ is_black(const Color3& c)
 OSL_NAMESPACE_ENTER
 
 
+#ifndef __CUDACC__
 void
 register_closures(OSL::ShadingSystem* shadingsys)
 {
@@ -219,24 +229,26 @@ register_closures(OSL::ShadingSystem* shadingsys)
     for (const BuiltinClosures& b : builtins)
         shadingsys->register_closure(b.name, b.id, b.params, nullptr, nullptr);
 }
+#endif  // ifndef __CUDACC__
 
 OSL_NAMESPACE_EXIT
 
 namespace {  // anonymous namespace
 
 template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
-    Diffuse(const DiffuseParams& params)
+    OSL_HOSTDEVICE Diffuse(const DiffuseParams& params)
         : BSDF(DIFFUSE_ID), DiffuseParams(params)
     {
         if (trans)
             N = -N;
     }
-    Sample eval(const Vec3& /*wo*/, const OSL::Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const OSL::Vec3& wi) const
     {
         const float pdf = std::max(N.dot(wi), 0.0f) * float(M_1_PI);
         return { wi, Color3(1.0f), pdf, 1.0f };
     }
-    Sample sample(const Vec3& /*wo*/, float rx, float ry, float /*rz*/) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& /*wo*/, float rx, float ry,
+                                 float /*rz*/) const
     {
         Vec3 out_dir;
         float pdf;
@@ -246,11 +258,11 @@ template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
 };
 
 struct OrenNayar final : public BSDF, OrenNayarParams {
-    OrenNayar(const OrenNayarParams& params)
+    OSL_HOSTDEVICE OrenNayar(const OrenNayarParams& params)
         : BSDF(OREN_NAYAR_ID), OrenNayarParams(params)
     {
     }
-    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         float NL = N.dot(wi);
         float NV = N.dot(wo);
@@ -272,7 +284,8 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
         }
         return {};
     }
-    Sample sample(const Vec3& wo, float rx, float ry, float /*rz*/) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float /*rz*/) const
     {
         Vec3 out_dir;
         float pdf;
@@ -282,11 +295,12 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
 };
 
 struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
+    OSL_HOSTDEVICE
     EnergyCompensatedOrenNayar(const MxOrenNayarDiffuseParams& params)
         : BSDF(MX_OREN_NAYAR_DIFFUSE_ID), MxOrenNayarDiffuseParams(params)
     {
     }
-    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         float NL = N.dot(wi);
         float NV = N.dot(wo);
@@ -323,7 +337,8 @@ struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
         return {};
     }
 
-    Sample sample(const Vec3& wo, float rx, float ry, float /*rz*/) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float /*rz*/) const
     {
         Vec3 out_dir;
         float pdf;
@@ -336,7 +351,7 @@ private:
     static constexpr float constant2_FON = float(2.0 / 3.0
                                                  - 28.0 / (15.0 * M_PI));
 
-    float E_FON_analytic(float mu) const
+    OSL_HOSTDEVICE float E_FON_analytic(float mu) const
     {
         const float sigma = roughness;
         float AF          = 1.0f
@@ -352,8 +367,11 @@ private:
 };
 
 struct Phong final : public BSDF, PhongParams {
-    Phong(const PhongParams& params) : BSDF(PHONG_ID), PhongParams(params) {}
-    Sample eval(const Vec3& wo, const Vec3& wi) const
+    OSL_HOSTDEVICE Phong(const PhongParams& params)
+        : BSDF(PHONG_ID), PhongParams(params)
+    {
+    }
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         float cosNI = N.dot(wi);
         float cosNO = N.dot(wo);
@@ -370,7 +388,8 @@ struct Phong final : public BSDF, PhongParams {
         }
         return {};
     }
-    Sample sample(const Vec3& wo, float rx, float ry, float /*rz*/) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float /*rz*/) const
     {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
@@ -391,8 +410,11 @@ struct Phong final : public BSDF, PhongParams {
 };
 
 struct Ward final : public BSDF, WardParams {
-    Ward(const WardParams& params) : BSDF(WARD_ID), WardParams(params) {}
-    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
+    OSL_HOSTDEVICE Ward(const WardParams& params)
+        : BSDF(WARD_ID), WardParams(params)
+    {
+    }
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         float cosNO = N.dot(wo);
         float cosNI = N.dot(wi);
@@ -416,7 +438,8 @@ struct Ward final : public BSDF, WardParams {
         }
         return {};
     }
-    Sample sample(const Vec3& wo, float rx, float ry, float /*rz*/) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float /*rz*/) const
     {
         float cosNO = N.dot(wo);
         if (cosNO > 0) {
@@ -493,17 +516,18 @@ struct Ward final : public BSDF, WardParams {
  * is sufficient).
  */
 struct GGXDist {
-    static float F(const float tan_m2)
+    static OSL_HOSTDEVICE float F(const float tan_m2)
     {
         return 1 / (float(M_PI) * (1 + tan_m2) * (1 + tan_m2));
     }
 
-    static float Lambda(const float a2)
+    static OSL_HOSTDEVICE float Lambda(const float a2)
     {
         return 0.5f * (-1.0f + sqrtf(1.0f + 1.0f / a2));
     }
 
-    static Vec2 sampleSlope(float cos_theta, float randu, float randv)
+    static OSL_HOSTDEVICE Vec2 sampleSlope(float cos_theta, float randu,
+                                           float randv)
     {
         // GGX
         Vec2 slope;
@@ -530,12 +554,12 @@ struct GGXDist {
 };
 
 struct BeckmannDist {
-    static float F(const float tan_m2)
+    static OSL_HOSTDEVICE float F(const float tan_m2)
     {
         return float(1 / M_PI) * OIIO::fast_exp(-tan_m2);
     }
 
-    static float Lambda(const float a2)
+    static OSL_HOSTDEVICE float Lambda(const float a2)
     {
         const float a = sqrtf(a2);
         return a < 1.6f ? (1.0f - 1.259f * a + 0.396f * a2)
@@ -543,7 +567,8 @@ struct BeckmannDist {
                         : 0.0f;
     }
 
-    static Vec2 sampleSlope(float cos_theta, float randu, float randv)
+    static OSL_HOSTDEVICE Vec2 sampleSlope(float cos_theta, float randu,
+                                           float randv)
     {
         const float SQRT_PI_INV = 1 / sqrtf(float(M_PI));
         float ct                = cos_theta < 1e-6f ? 1e-6f : cos_theta;
@@ -591,13 +616,13 @@ struct BeckmannDist {
 
 template<typename Distribution, int Refract>
 struct Microfacet final : public BSDF, MicrofacetParams {
-    Microfacet(const MicrofacetParams& params)
+    OSL_HOSTDEVICE Microfacet(const MicrofacetParams& params)
         : BSDF(MICROFACET_ID)
         , MicrofacetParams(params)
         , tf(TangentFrame::from_normal_and_tangent(N, U))
     {
     }
-    Color3 get_albedo(const Vec3& wo) const
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         if (Refract == 2)
             return Color3(1.0f);
@@ -606,7 +631,7 @@ struct Microfacet final : public BSDF, MicrofacetParams {
         float fr = fresnel_dielectric(N.dot(wo), eta);
         return Color3(Refract ? 1 - fr : fr);
     }
-    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         const Vec3 wo_l = tf.tolocal(wo);
         const Vec3 wi_l = tf.tolocal(wi);
@@ -673,7 +698,8 @@ struct Microfacet final : public BSDF, MicrofacetParams {
         return {};
     }
 
-    Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float rz) const
     {
         const Vec3 wo_l   = tf.tolocal(wo);
         const float cosNO = wo_l.z;
@@ -731,9 +757,9 @@ struct Microfacet final : public BSDF, MicrofacetParams {
     }
 
 private:
-    static float SQR(float x) { return x * x; }
+    static OSL_HOSTDEVICE float SQR(float x) { return x * x; }
 
-    float evalLambda(const Vec3 w) const
+    OSL_HOSTDEVICE float evalLambda(const Vec3 w) const
     {
         float cosTheta2 = SQR(w.z);
         /* Have these two multiplied by sinTheta^2 for convenience */
@@ -742,15 +768,18 @@ private:
         return Distribution::Lambda(cosTheta2 / (cosPhi2st2 + sinPhi2st2));
     }
 
-    static float evalG2(float Lambda_i, float Lambda_o)
+    static OSL_HOSTDEVICE float evalG2(float Lambda_i, float Lambda_o)
     {
         // correlated masking-shadowing
         return 1 / (Lambda_i + Lambda_o + 1);
     }
 
-    static float evalG1(float Lambda_v) { return 1 / (Lambda_v + 1); }
+    static OSL_HOSTDEVICE float evalG1(float Lambda_v)
+    {
+        return 1 / (Lambda_v + 1);
+    }
 
-    float evalD(const Vec3 Hr) const
+    OSL_HOSTDEVICE float evalD(const Vec3 Hr) const
     {
         float cosThetaM = Hr.z;
         if (cosThetaM > 0) {
@@ -762,18 +791,30 @@ private:
 
             float tanThetaM2 = (cosPhi2st2 + sinPhi2st2) / cosThetaM2;
 
-            return Distribution::F(tanThetaM2) / (xalpha * yalpha * cosThetaM4);
+            const float val = Distribution::F(tanThetaM2)
+                              / (xalpha * yalpha * cosThetaM4);
+#ifndef __CUDACC__
+            return val;
+#else
+            // Filter out NaNs that can be produced when cosThetaM is very small.
+            return (val == val) ? val : 0;
+#endif
         }
         return 0;
     }
 
-    Vec3 sampleMicronormal(const Vec3 wo, float randu, float randv) const
+    OSL_HOSTDEVICE Vec3 sampleMicronormal(const Vec3 wo, float randu,
+                                          float randv) const
     {
         /* Project wo and stretch by alpha values */
         Vec3 swo = wo;
         swo.x *= xalpha;
         swo.y *= yalpha;
         swo = swo.normalize();
+
+#ifdef __CUDACC__
+        swo = swo.normalize();
+#endif
 
         // figure out angles for the incoming vector
         float cos_theta = std::max(swo.z, 0.0f);
@@ -815,7 +856,8 @@ typedef Microfacet<BeckmannDist, 2> MicrofacetBeckmannBoth;
 template<typename MxMicrofacetParams, typename Distribution, ClosureIDs ID,
          bool EnableTransmissionLobe>
 struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
-    MxMicrofacet(const MxMicrofacetParams& params, float refraction_ior)
+    OSL_HOSTDEVICE MxMicrofacet(const MxMicrofacetParams& params,
+                                float refraction_ior)
         : BSDF(ID)
         , MxMicrofacetParams(params)
         , tf(TangentFrame::from_normal_and_tangent(MxMicrofacetParams::N,
@@ -824,7 +866,7 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     {
     }
 
-    float get_fresnel_angle(float cos_theta) const
+    OSL_HOSTDEVICE float get_fresnel_angle(float cos_theta) const
     {
         if (EnableTransmissionLobe && refraction_ior < 1) {
             // handle TIR if we are on the backside
@@ -838,7 +880,7 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
         return cos_theta;
     }
 
-    Color3 get_albedo(const Vec3& wo) const
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         // if transmission is enabled, punt on
         if (EnableTransmissionLobe)
@@ -850,7 +892,7 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
             get_fresnel_angle(MxMicrofacetParams::N.dot(wo)));
     }
 
-    Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
     {
         const Vec3 wo_l = tf.tolocal(wo);
         const Vec3 wi_l = tf.tolocal(wi);
@@ -929,7 +971,8 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     }
 
 
-    Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float rz) const
     {
         const Vec3 wo_l   = tf.tolocal(wo);
         const float cosNO = wo_l.z;
@@ -1004,9 +1047,9 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     }
 
 private:
-    static float SQR(float x) { return x * x; }
+    static OSL_HOSTDEVICE float SQR(float x) { return x * x; }
 
-    float evalLambda(const Vec3 w) const
+    OSL_HOSTDEVICE float evalLambda(const Vec3 w) const
     {
         float cosTheta2 = SQR(w.z);
         /* Have these two multiplied by sinTheta^2 for convenience */
@@ -1015,15 +1058,18 @@ private:
         return Distribution::Lambda(cosTheta2 / (cosPhi2st2 + sinPhi2st2));
     }
 
-    static float evalG2(float Lambda_i, float Lambda_o)
+    static OSL_HOSTDEVICE float evalG2(float Lambda_i, float Lambda_o)
     {
         // correlated masking-shadowing
         return 1 / (Lambda_i + Lambda_o + 1);
     }
 
-    static float evalG1(float Lambda_v) { return 1 / (Lambda_v + 1); }
+    static OSL_HOSTDEVICE float evalG1(float Lambda_v)
+    {
+        return 1 / (Lambda_v + 1);
+    }
 
-    float evalD(const Vec3 Hr) const
+    OSL_HOSTDEVICE float evalD(const Vec3 Hr) const
     {
         float cosThetaM = Hr.z;
         if (cosThetaM > 0) {
@@ -1035,14 +1081,22 @@ private:
 
             float tanThetaM2 = (cosPhi2st2 + sinPhi2st2) / cosThetaM2;
 
-            return Distribution::F(tanThetaM2)
-                   / (MxMicrofacetParams::roughness_x
-                      * MxMicrofacetParams::roughness_y * cosThetaM4);
+            const float val = Distribution::F(tanThetaM2)
+                              / (MxMicrofacetParams::roughness_x
+                                 * MxMicrofacetParams::roughness_y
+                                 * cosThetaM4);
+#ifndef __CUDACC__
+            return val;
+#else
+            // Filter out NaNs that can be produced when cosThetaM is very small.
+            return (val == val) ? val : 0.0;
+#endif
         }
         return 0;
     }
 
-    Vec3 sampleMicronormal(const Vec3 wo, float randu, float randv) const
+    OSL_HOSTDEVICE Vec3 sampleMicronormal(const Vec3 wo, float randu,
+                                          float randv) const
     {
         /* Project wo and stretch by alpha values */
         Vec3 swo = wo;
@@ -1080,23 +1134,24 @@ private:
 };
 
 struct Reflection final : public BSDF, ReflectionParams {
-    Reflection(const ReflectionParams& params)
+    OSL_HOSTDEVICE Reflection(const ReflectionParams& params)
         : BSDF(REFLECTION_ID), ReflectionParams(params)
     {
     }
-    Color3 get_albedo(const Vec3& wo) const
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         float cosNO = N.dot(wo);
         if (cosNO > 0)
             return Color3(fresnel_dielectric(cosNO, eta));
         return Color3(1);
     }
-    Sample eval(const Vec3& /*wo*/, const OSL::Vec3& /*wi*/) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/,
+                               const OSL::Vec3& /*wi*/) const
     {
         return {};
     }
-    Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
-                  float /*rz*/) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
+                                 float /*rz*/) const
     {
         // only one direction is possible
         float cosNO = dot(N, wo);
@@ -1110,21 +1165,22 @@ struct Reflection final : public BSDF, ReflectionParams {
 };
 
 struct Refraction final : public BSDF, RefractionParams {
-    Refraction(const RefractionParams& params)
+    OSL_HOSTDEVICE Refraction(const RefractionParams& params)
         : BSDF(REFRACTION_ID), RefractionParams(params)
     {
     }
-    Color3 get_albedo(const Vec3& wo) const
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         float cosNO = N.dot(wo);
         return Color3(1 - fresnel_dielectric(cosNO, eta));
     }
-    Sample eval(const Vec3& /*wo*/, const OSL::Vec3& /*wi*/) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/,
+                               const OSL::Vec3& /*wi*/) const
     {
         return {};
     }
-    Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
-                  float /*rz*/) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
+                                 float /*rz*/) const
     {
         float pdf = std::numeric_limits<float>::infinity();
         Vec3 wi;
@@ -1134,10 +1190,13 @@ struct Refraction final : public BSDF, RefractionParams {
 };
 
 struct Transparent final : public BSDF {
-    Transparent() : BSDF(MX_TRANSPARENT_ID) {}
-    Sample eval(const Vec3& /*wo*/, const Vec3& /*wi*/) const { return {}; }
-    Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
-                  float /*rz*/) const
+    OSL_HOSTDEVICE Transparent() : BSDF(TRANSPARENT_ID) {}
+    OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const Vec3& /*wi*/) const
+    {
+        return {};
+    }
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float /*rx*/, float /*ry*/,
+                                 float /*rz*/) const
     {
         Vec3 wi   = -wo;
         float pdf = std::numeric_limits<float>::infinity();
@@ -1146,14 +1205,14 @@ struct Transparent final : public BSDF {
 };
 
 struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
-    MxBurleyDiffuse(const MxBurleyDiffuseParams& params)
+    OSL_HOSTDEVICE MxBurleyDiffuse(const MxBurleyDiffuseParams& params)
         : BSDF(MX_BURLEY_DIFFUSE_ID), MxBurleyDiffuseParams(params)
     {
     }
 
-    Color3 get_albedo(const Vec3& wo) const { return albedo; }
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const { return albedo; }
 
-    Sample eval(const Vec3& wo, const Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         const Vec3 L = wi, V = wo;
         const Vec3 H = (L + V).normalize();
@@ -1167,7 +1226,8 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
         return { wi, albedo * refL * refV, pdf, 1.0f };
     }
 
-    Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float rz) const
     {
         Vec3 out_dir;
         float pdf;
@@ -1181,12 +1241,12 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
 // To simplify the implementation, the simpler shadowing/masking visibility term below is used:
 // https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2022x.md.html#components/sheen
 struct CharlieSheen final : public BSDF, MxSheenParams {
-    CharlieSheen(const MxSheenParams& params)
+    OSL_HOSTDEVICE CharlieSheen(const MxSheenParams& params)
         : BSDF(MX_SHEEN_ID), MxSheenParams(params)
     {
     }
 
-    Color3 get_albedo(const Vec3& wo) const
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         const float NdotV = clamp(N.dot(wo), 0.0f, 1.0f);
         // Rational fit from the Material X project
@@ -1200,7 +1260,7 @@ struct CharlieSheen final : public BSDF, MxSheenParams {
         return clamp(albedo * (r.x / r.y), 0.0f, 1.0f);
     }
 
-    Sample eval(const Vec3& wo, const Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         const Vec3 L = wi, V = wo;
         const Vec3 H       = (L + V).normalize();
@@ -1220,7 +1280,8 @@ struct CharlieSheen final : public BSDF, MxSheenParams {
                  pdf, 1.0f };
     }
 
-    Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float rz) const
     {
         Vec3 out_dir;
         float pdf;
@@ -1234,20 +1295,20 @@ struct CharlieSheen final : public BSDF, MxSheenParams {
 // Tizian Zeltner, Brent Burley, Matt Jen-Yuan Chiang - Siggraph 2022
 // https://tizianzeltner.com/projects/Zeltner2022Practical/
 struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
-    ZeltnerBurleySheen(const MxSheenParams& params)
+    OSL_HOSTDEVICE ZeltnerBurleySheen(const MxSheenParams& params)
         : BSDF(MX_SHEEN_ID), MxSheenParams(params)
     {
     }
 
 #define USE_LTC_SAMPLING 1
 
-    Color3 get_albedo(const Vec3& wo) const
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         const float NdotV = clamp(N.dot(wo), 1e-5f, 1.0f);
         return Color3(fetch_ltc(NdotV).z);
     }
 
-    Sample eval(const Vec3& wo, const Vec3& wi) const
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         const Vec3 L = wi, V = wo;
         const float NdotV = clamp(N.dot(V), 0.0f, 1.0f);
@@ -1275,7 +1336,8 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
 #endif
     }
 
-    Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float rz) const
     {
 #if USE_LTC_SAMPLING == 1
         const Vec3 V      = wo;
@@ -1306,7 +1368,7 @@ struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
     }
 
 private:
-    Vec3 fetch_ltc(float NdotV) const
+    OSL_HOSTDEVICE Vec3 fetch_ltc(float NdotV) const
     {
         // To avoid look-up tables, we use a fit of the LTC coefficients derived by Stephen Hill
         // for the implementation in MaterialX:
@@ -1337,9 +1399,8 @@ private:
 };
 
 
-Color3
-evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
-                       const ClosureColor* closure)
+OSL_HOSTDEVICE Color3
+evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
 {
     // Null closure, the layer is fully transparent
     if (closure == nullptr)
@@ -1435,8 +1496,8 @@ evaluate_layer_opacity(const OSL::ShaderGlobals& sg,
     return weight;
 }
 
-void
-process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
+OSL_HOSTDEVICE void
+process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                        const ClosureColor* closure, const Color3& w)
 {
     if (!closure)
@@ -1538,8 +1599,8 @@ process_medium_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
 }
 
 // recursively walk through the closure tree, creating bsdfs as we go
-void
-process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
+OSL_HOSTDEVICE void
+process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                      const ClosureColor* closure, const Color3& w,
                      bool light_only)
 {
@@ -1764,7 +1825,14 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                     break;
                 }
                 }
+#ifndef __CUDACC__
                 OSL_ASSERT(ok && "Invalid closure invoked in surface shader");
+#else
+                // TODO: We should never get here, but we sometimes do, e.g. in
+                // the render-material-layer test.
+                if (false && !ok)
+                    printf("Invalid closure invoked in surface shader\n");
+#endif
             }
             break;
         }
@@ -1780,8 +1848,8 @@ process_bsdf_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
 
 OSL_NAMESPACE_ENTER
 
-void
-process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
+OSL_HOSTDEVICE void
+process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                 const ClosureColor* Ci, bool light_only)
 {
     if (!light_only)
@@ -1789,7 +1857,7 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
     process_bsdf_closure(sg, result, Ci, Color3(1), light_only);
 }
 
-Vec3
+OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* closure)
 {
     if (!closure)
@@ -1829,8 +1897,6 @@ process_background_closure(const ClosureColor* closure)
     return weight;
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
 
 typedef MxMicrofacet<MxConductorParams, GGXDist, MX_CONDUCTOR_ID, false>
     MxConductor;

@@ -15,11 +15,13 @@ struct RenderParams {
 
     float3 eye;
     float3 dir;
-    float3 cx;
-    float3 cy;
-
-    float invw;
-    float invh;
+    float3 up;
+    float fov;
+    int aa;
+    int max_bounces;
+    float show_albedo_scale;
+    bool no_jitter;
+    int show_globals;
 
     CUdeviceptr traversal_handle;
     CUdeviceptr output_buffer;
@@ -50,6 +52,15 @@ struct RenderParams {
     CUdeviceptr shader_is_light;
     CUdeviceptr mesh_ids;
     CUdeviceptr surfacearea;
+    CUdeviceptr lightprims;
+    size_t      lightprims_size;
+
+    // for the background
+    int bg_res;
+    int bg_id;
+    CUdeviceptr bg_values;
+    CUdeviceptr bg_rows;
+    CUdeviceptr bg_cols;
 };
 
 

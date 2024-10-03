@@ -481,7 +481,11 @@
 /// to use regular assert() for this purpose if you need to eliminate the
 /// dependency on this header from a particular place (and don't mind that
 /// assert won't format identically on all platforms).
-#ifndef NDEBUG
+///
+/// These macros are no-ops when compiling for CUDA because they were found
+/// to cause strange issues in device code (e.g., function bodies being
+/// eliminated when OSL_DASSERT is used).
+#if !defined(NDEBUG) && !defined(__CUDACC__)
 #    define OSL_DASSERT OSL_ASSERT
 #    define OSL_DASSERT_MSG OSL_ASSERT_MSG
 #else

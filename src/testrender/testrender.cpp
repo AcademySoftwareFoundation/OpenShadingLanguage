@@ -50,6 +50,7 @@ static std::string extraoptions;
 static std::string texoptions;
 static int xres = 640, yres = 480;
 static int aa = 1, max_bounces = 1000000, rr_depth = 5;
+static bool no_jitter          = false;
 static float show_albedo_scale = 0.0f;
 static int show_globals        = 0;
 static int num_threads         = 0;
@@ -173,6 +174,8 @@ getargs(int argc, const char* argv[])
       .hidden();
     ap.arg("-aa %d:N", &aa)
       .help("Trace NxN rays per pixel");
+    ap.arg("--no-jitter", &no_jitter)
+      .help("Disable AA pixel jitter");
     ap.arg("-albedo %f:SCALE", &show_albedo_scale)
       .help("Visualize the albedo of each pixel instead of path tracing");
     ap.arg("-normals")
@@ -287,6 +290,7 @@ main(int argc, const char* argv[])
     rend->attribute("max_bounces", max_bounces);
     rend->attribute("rr_depth", rr_depth);
     rend->attribute("aa", aa);
+    rend->attribute("no_jitter", (int)no_jitter);
     rend->attribute("show_albedo_scale", show_albedo_scale);
     rend->attribute("show_globals", show_globals);
     OIIO::attribute("threads", num_threads);

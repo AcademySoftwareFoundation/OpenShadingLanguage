@@ -14,7 +14,7 @@
 #include "render_params.h"
 
 #include <cuda.h>
-#include <nvrtc.h>
+#include <cuda_runtime.h>
 #include <optix_function_table_definition.h>
 #include <optix_stack_size.h>
 #include <optix_stubs.h>
@@ -31,6 +31,9 @@ const auto optixModuleCreateFn = optixModuleCreateFromPTX;
 #else
 const auto optixModuleCreateFn = optixModuleCreate;
 #endif
+
+
+using namespace testshade;
 
 
 OSL_NAMESPACE_ENTER
@@ -179,6 +182,8 @@ OptixGridRenderer::~OptixGridRenderer()
 {
     for (void* p : m_ptrs_to_free)
         cudaFree(p);
+    for (void* p : m_arrays_to_free)
+        cudaFreeArray(reinterpret_cast<cudaArray_t>(p));
     if (m_optix_ctx)
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
 }
@@ -817,53 +822,82 @@ OptixGridRenderer::get_texture_handle(ustring filename,
 {
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
-        // Open image
+        // Open image to check the number of mip levels
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
             errhandler().errorfmt("Could not load: {} (hash {})", filename,
                                   filename);
             return (TextureHandle*)nullptr;
         }
-
-        OIIO::ROI roi = OIIO::get_roi_full(image.spec());
-        int32_t width = roi.width(), height = roi.height();
-        std::vector<float> pixels(width * height * 4);
-
-        for (int j = 0; j < height; j++) {
-            for (int i = 0; i < width; i++) {
-                image.getpixel(i, j, 0, &pixels[((j * width) + i) * 4 + 0]);
-            }
-        }
-        cudaResourceDesc res_desc = {};
+        int32_t nmiplevels = std::max(image.nmiplevels(), 1);
+        int32_t img_width  = image.xmax() + 1;
+        int32_t img_height = image.ymax() + 1;
 
         // hard-code textures to 4 channels
-        int32_t pitch = width * 4 * sizeof(float);
         cudaChannelFormatDesc channel_desc
             = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
 
+        cudaMipmappedArray_t mipmapArray;
+        cudaExtent extent = make_cudaExtent(img_width, img_height, 0);
+        CUDA_CHECK(cudaMallocMipmappedArray(&mipmapArray, &channel_desc, extent,
+                                            nmiplevels));
+
+        // Copy the pixel data for each mip level
+        std::vector<std::vector<float>> level_pixels(nmiplevels);
+        for (int32_t level = 0; level < nmiplevels; ++level) {
+            image.reset(filename, 0, level);
+            OIIO::ROI roi = OIIO::get_roi_full(image.spec());
+            if (!roi.defined()) {
+                errhandler().errorfmt(
+                    "Could not load mip level {}: {} (hash {})", level,
+                    filename, filename);
+                return (TextureHandle*)nullptr;
+            }
+
+            int32_t width = roi.width(), height = roi.height();
+            level_pixels[level].resize(width * height * 4);
+            for (int j = 0; j < height; j++) {
+                for (int i = 0; i < width; i++) {
+                    image.getpixel(i, j, 0,
+                                   &level_pixels[level][((j * width) + i) * 4]);
+                }
+            }
+
+            cudaArray_t miplevelArray;
+            CUDA_CHECK(
+                cudaGetMipmappedArrayLevel(&miplevelArray, mipmapArray, level));
+
+            // Copy the texel data into the miplevel array
+            int32_t pitch = width * 4 * sizeof(float);
+            CUDA_CHECK(cudaMemcpy2DToArray(miplevelArray, 0, 0,
+                                           level_pixels[level].data(), pitch,
+                                           pitch, height,
+                                           cudaMemcpyHostToDevice));
+        }
+
+        int32_t pitch = img_width * 4 * sizeof(float);
         cudaArray_t pixelArray;
-        CUDA_CHECK(cudaMallocArray(&pixelArray, &channel_desc, width, height));
+        CUDA_CHECK(
+            cudaMallocArray(&pixelArray, &channel_desc, img_width, img_height));
+        CUDA_CHECK(cudaMemcpy2DToArray(pixelArray, 0, 0, level_pixels[0].data(),
+                                       pitch, pitch, img_height,
+                                       cudaMemcpyHostToDevice));
+        m_arrays_to_free.push_back(reinterpret_cast<void*>(pixelArray));
 
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(pixelArray));
+        cudaResourceDesc res_desc  = {};
+        res_desc.resType           = cudaResourceTypeMipmappedArray;
+        res_desc.res.mipmap.mipmap = mipmapArray;
 
-        CUDA_CHECK(cudaMemcpy2DToArray(pixelArray,
-                                       /* offset */ 0, 0, pixels.data(), pitch,
-                                       pitch, height, cudaMemcpyHostToDevice));
-
-        res_desc.resType         = cudaResourceTypeArray;
-        res_desc.res.array.array = pixelArray;
-
-        cudaTextureDesc tex_desc = {};
-        tex_desc.addressMode[0]  = cudaAddressModeWrap;
-        tex_desc.addressMode[1]  = cudaAddressModeWrap;
-        tex_desc.filterMode      = cudaFilterModeLinear;
-        tex_desc.readMode
-            = cudaReadModeElementType;  //cudaReadModeNormalizedFloat;
+        cudaTextureDesc tex_desc     = {};
+        tex_desc.addressMode[0]      = cudaAddressModeWrap;
+        tex_desc.addressMode[1]      = cudaAddressModeWrap;
+        tex_desc.filterMode          = cudaFilterModeLinear;
+        tex_desc.readMode            = cudaReadModeElementType;
         tex_desc.normalizedCoords    = 1;
         tex_desc.maxAnisotropy       = 1;
-        tex_desc.maxMipmapLevelClamp = 99;
+        tex_desc.maxMipmapLevelClamp = float(nmiplevels - 1);
         tex_desc.minMipmapLevelClamp = 0;
-        tex_desc.mipmapFilterMode    = cudaFilterModePoint;
+        tex_desc.mipmapFilterMode    = cudaFilterModeLinear;
         tex_desc.borderColor[0]      = 1.0f;
         tex_desc.sRGB                = 0;
 

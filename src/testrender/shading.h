@@ -6,6 +6,7 @@
 #pragma once
 
 #include <OSL/dual_vec.h>
+#include <OSL/hashes.h>
 #include <OSL/oslclosure.h>
 #include <OSL/oslconfig.h>
 #include <OSL/oslexec.h>
@@ -125,12 +126,12 @@ struct MxDielectricParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    Color3 evalR(float cos_theta) const
+    OSL_HOSTDEVICE Color3 evalR(float cos_theta) const
     {
         return reflection_tint * fresnel_dielectric(cos_theta, ior);
     }
 
-    Color3 evalT(float cos_theta) const
+    OSL_HOSTDEVICE Color3 evalT(float cos_theta) const
     {
         return transmission_tint * (1.0f - fresnel_dielectric(cos_theta, ior));
     }
@@ -143,12 +144,12 @@ struct MxConductorParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    Color3 evalR(float cos_theta) const
+    OSL_HOSTDEVICE Color3 evalR(float cos_theta) const
     {
         return fresnel_conductor(cos_theta, ior, extinction);
     }
 
-    Color3 evalT(float cos_theta) const { return Color3(0.0f); }
+    OSL_HOSTDEVICE Color3 evalT(float cos_theta) const { return Color3(0.0f); }
 
     // Avoid function was declared but never referenced
     // float get_ior() const
@@ -167,13 +168,13 @@ struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {
     float thinfilm_thickness;
     float thinfilm_ior;
 
-    Color3 evalR(float cos_theta) const
+    OSL_HOSTDEVICE Color3 evalR(float cos_theta) const
     {
         return reflection_tint
                * fresnel_generalized_schlick(cos_theta, f0, f90, exponent);
     }
 
-    Color3 evalT(float cos_theta) const
+    OSL_HOSTDEVICE Color3 evalT(float cos_theta) const
     {
         return transmission_tint
                * (Color3(1.0f)
@@ -246,12 +247,15 @@ struct MxMediumVdfParams {
 /// Actual implementations of this class are private
 struct BSDF {
     struct Sample {
-        Sample() : wi(0.0f), weight(0.0f), pdf(0.0f), roughness(0.0f) {}
-        Sample(const Sample& o)
+        OSL_HOSTDEVICE Sample()
+            : wi(0.0f), weight(0.0f), pdf(0.0f), roughness(0.0f)
+        {
+        }
+        OSL_HOSTDEVICE Sample(const Sample& o)
             : wi(o.wi), weight(o.weight), pdf(o.pdf), roughness(o.roughness)
         {
         }
-        Sample(Vec3 wi, Color3 w, float pdf, float r)
+        OSL_HOSTDEVICE Sample(Vec3 wi, Color3 w, float pdf, float r)
             : wi(wi), weight(w), pdf(pdf), roughness(r)
         {
         }
@@ -260,10 +264,17 @@ struct BSDF {
         float pdf;
         float roughness;
     };
-    BSDF(ClosureIDs id = EMPTY_ID) : id(id) {}
-    Color3 get_albedo(const Vec3& /*wo*/) const { return Color3(1); }
-    Sample eval(const Vec3& wo, const Vec3& wi) const { return {}; }
-    Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+    OSL_HOSTDEVICE BSDF(ClosureIDs id = EMPTY_ID) : id(id) {}
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& /*wo*/) const
+    {
+        return Color3(1);
+    }
+    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
+    {
+        return {};
+    }
+    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
+                                 float rz) const
     {
         return {};
     }
@@ -274,25 +285,42 @@ struct BSDF {
 /// NOTE: no need to inherit from BSDF here because we use a "flattened" representation and therefore never nest these
 ///
 struct CompositeBSDF {
-    CompositeBSDF() : num_bsdfs(0), num_bytes(0) {}
+    OSL_HOSTDEVICE CompositeBSDF() : num_bsdfs(0), num_bytes(0) {}
 
-    void prepare(const Vec3& wo, const Color3& path_weight, bool absorb)
+    OSL_HOSTDEVICE void prepare(const Vec3& wo, const Color3& path_weight,
+                                bool absorb)
     {
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
             pdfs[i] = weights[i].dot(path_weight * get_albedo(bsdfs[i], wo))
                       / (path_weight.x + path_weight.y + path_weight.z);
+#ifndef __CUDACC__
+            // TODO: Figure out what to do with weights/albedos with negative
+            //       components (e.g., as might happen when bipolar noise is
+            //       used as a color).
+
+            // The PDF is out-of-range in some test scenes on the CPU path, but
+            // these asserts are no-ops in release builds. The asserts are active
+            // on the CUDA path, so we need to skip them.
             assert(pdfs[i] >= 0);
             assert(pdfs[i] <= 1);
+#endif
             total += pdfs[i];
         }
         if ((!absorb && total > 0) || total > 1) {
-            for (int i = 0; i < num_bsdfs; i++)
+            for (int i = 0; i < num_bsdfs; i++) {
+#ifndef __CUDACC__
                 pdfs[i] /= total;
+#else
+                // TODO: This helps avoid NaNs, but it's not clear where the
+                // NaNs are coming from.
+                pdfs[i] = __fdiv_rz(pdfs[i], total);
+#endif
+            }
         }
     }
 
-    Color3 get_albedo(const Vec3& wo) const
+    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
     {
         Color3 result(0, 0, 0);
         for (int i = 0; i < num_bsdfs; i++)
@@ -300,7 +328,7 @@ struct CompositeBSDF {
         return result;
     }
 
-    BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
+    OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
     {
         BSDF::Sample s = {};
         for (int i = 0; i < num_bsdfs; i++) {
@@ -312,7 +340,8 @@ struct CompositeBSDF {
         return s;
     }
 
-    BSDF::Sample sample(const Vec3& wo, float rx, float ry, float rz) const
+    OSL_HOSTDEVICE BSDF::Sample sample(const Vec3& wo, float rx, float ry,
+                                       float rz) const
     {
         float accum = 0;
         for (int i = 0; i < num_bsdfs; i++) {
@@ -341,7 +370,7 @@ struct CompositeBSDF {
     }
 
     template<typename BSDF_Type, typename... BSDF_Args>
-    bool add_bsdf(const Color3& w, BSDF_Args&&... args)
+    OSL_HOSTDEVICE bool add_bsdf(const Color3& w, BSDF_Args&&... args)
     {
         // make sure we have enough space
         if (num_bsdfs >= MaxEntries)
@@ -358,13 +387,14 @@ struct CompositeBSDF {
 
 private:
     /// Never try to copy this struct because it would invalidate the bsdf pointers
-    CompositeBSDF(const CompositeBSDF& c);
-    CompositeBSDF& operator=(const CompositeBSDF& c);
+    OSL_HOSTDEVICE CompositeBSDF(const CompositeBSDF& c);
+    OSL_HOSTDEVICE CompositeBSDF& operator=(const CompositeBSDF& c);
 
-    Color3 get_albedo(const BSDF* bsdf, const Vec3& wo) const;
-    BSDF::Sample eval(const BSDF* bsdf, const Vec3& wo, const Vec3& wi) const;
-    BSDF::Sample sample(const BSDF* bsdf, const Vec3& wo, float rx, float ry,
-                        float rz) const;
+    OSL_HOSTDEVICE Color3 get_albedo(const BSDF* bsdf, const Vec3& wo) const;
+    OSL_HOSTDEVICE BSDF::Sample eval(const BSDF* bsdf, const Vec3& wo,
+                                     const Vec3& wi) const;
+    OSL_HOSTDEVICE BSDF::Sample sample(const BSDF* bsdf, const Vec3& wo,
+                                       float rx, float ry, float rz) const;
 
     enum { MaxEntries = 8 };
     enum { MaxSize = 256 * sizeof(float) };
@@ -389,10 +419,10 @@ struct ShadingResult {
 
 void
 register_closures(ShadingSystem* shadingsys);
-void
+OSL_HOSTDEVICE void
 process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
                 const ClosureColor* Ci, bool light_only);
-Vec3
+OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* Ci);
 
 OSL_NAMESPACE_EXIT

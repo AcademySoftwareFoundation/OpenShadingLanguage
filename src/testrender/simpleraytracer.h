@@ -80,6 +80,7 @@ public:
 
     virtual void parse_scene_xml(const std::string& scenefile);
     virtual void prepare_render();
+    virtual void prepare_lights();
     virtual void warmup() {}
     virtual void render(int xres, int yres);
     virtual void clear();
@@ -93,6 +94,7 @@ public:
     OIIO::ErrorHandler& errhandler() const { return *m_errhandler; }
 
     const std::vector<bool>& shader_is_light() { return m_shader_is_light; }
+    const std::vector<unsigned>& lightprims() { return m_lightprims; }
 
     Camera camera;
     Scene scene;
@@ -100,6 +102,9 @@ public:
     ShadingSystem* shadingsys = nullptr;
     OIIO::ParamValueList options;
     OIIO::ImageBuf pixelbuf;
+
+    int getBackgroundShaderID() const { return backgroundShaderID; }
+    int getBackgroundResolution() const { return backgroundResolution; }
 
 private:
     // Camera parameters
@@ -112,6 +117,7 @@ private:
     int backgroundShaderID   = -1;
     int backgroundResolution = 1024;
     int aa                   = 1;
+    bool no_jitter           = false;
     int max_bounces          = 1000000;
     int rr_depth             = 5;
     float show_albedo_scale  = 0.0f;

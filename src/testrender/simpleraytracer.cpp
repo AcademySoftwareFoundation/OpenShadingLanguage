@@ -2,20 +2,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-#include <OpenImageIO/filesystem.h>
-#include <OpenImageIO/parallel.h>
-#include <OpenImageIO/timer.h>
 
-#include <pugixml.hpp>
+#ifndef __CUDACC__
+#    include <OpenImageIO/filesystem.h>
+#    include <OpenImageIO/parallel.h>
+#    include <OpenImageIO/timer.h>
+#    include <pugixml.hpp>
 
-#ifdef USING_OIIO_PUGI
+#    ifdef USING_OIIO_PUGI
 namespace pugi = OIIO::pugi;
+#    endif
+
+#    include <OSL/hashes.h>
+#    include "raytracer.h"
+#    include "shading.h"
+#    include "simpleraytracer.h"
 #endif
 
-#include <OSL/hashes.h>
-#include "raytracer.h"
-#include "shading.h"
-#include "simpleraytracer.h"
+#include <cmath>
 
 // Create ustrings for all strings used by the free function renderer services.
 // Required to allow the reverse mapping of hash->string to work when processing messages
@@ -42,6 +46,15 @@ using namespace OSL;
 
 OSL_NAMESPACE_ENTER
 
+
+#ifndef __CUDACC__
+    using ShaderGlobalsType = OSL::ShaderGlobals;
+#else
+    using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
+#endif
+
+
+#ifndef __CUDACC__
 static TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2(TypeDesc::INT, 2);
@@ -844,31 +857,40 @@ SimpleRaytracer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
     }
     return false;
 }
+#endif // #ifndef __CUDACC__
 
 
 
-void
-SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
+void OSL_HOSTDEVICE
+SimpleRaytracer::globals_from_hit(ShaderGlobalsType& sg, const Ray& r,
                                   const Dual2<float>& t, int id, float u,
                                   float v)
 {
+#ifndef __CUDACC__
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
-    Dual2<Vec3> P = r.point(t);
-    // We are missing the projection onto the surface here
-    sg.P             = P.val();
-    sg.dPdx          = P.dx();
-    sg.dPdy          = P.dy();
-    sg.N             = scene.normal(P, sg.Ng, id, u, v);
-    Dual2<Vec2> uv   = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
-    sg.u             = uv.val().x;
-    sg.dudx          = uv.dx().x;
-    sg.dudy          = uv.dy().x;
-    sg.v             = uv.val().y;
-    sg.dvdx          = uv.dx().y;
-    sg.dvdy          = uv.dy().y;
+#endif
+
+#ifndef __CUDACC__
     const int meshid = std::upper_bound(scene.last_index.begin(),
                                         scene.last_index.end(), id)
                        - scene.last_index.begin();
+#else
+    const int meshid = m_meshids[id];
+#endif
+
+    Dual2<Vec3> P = r.point(t);
+    // We are missing the projection onto the surface here
+    sg.P                  = P.val();
+    sg.dPdx               = P.dx();
+    sg.dPdy               = P.dy();
+    sg.N                  = scene.normal(P, sg.Ng, id, u, v);
+    Dual2<Vec2> uv        = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
+    sg.u                  = uv.val().x;
+    sg.dudx               = uv.dx().x;
+    sg.dudy               = uv.dy().x;
+    sg.v                  = uv.val().y;
+    sg.dvdx               = uv.dx().y;
+    sg.dvdy               = uv.dy().y;
     sg.surfacearea        = m_mesh_surfacearea[meshid];
     Dual2<Vec3> direction = r.dual_direction();
     sg.I                  = direction.val();
@@ -882,39 +904,57 @@ SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     sg.raytype        = r.raytype;
     sg.flipHandedness = sg.dPdx.cross(sg.dPdy).dot(sg.N) < 0;
 
+#ifndef __CUDACC__
     // In our SimpleRaytracer, the "renderstate" itself just a pointer to
     // the ShaderGlobals.
     sg.renderstate = &sg;
+#endif
 }
 
-Vec3
+
+
+OSL_HOSTDEVICE Vec3
 SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
                                  int bounce)
 {
-    ShaderGlobals sg;
+    ShaderGlobalsType sg;
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
     sg.I    = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();
     if (bounce >= 0)
         sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
+#ifndef __CUDACC__
     shadingsys->execute(*ctx, *m_shaders[backgroundShaderID], sg);
-    return process_background_closure(sg.Ci);
+#else
+    alignas(8) char closure_pool[256];
+    execute_shader(sg, render_params.bg_id, closure_pool);
+#endif
+    return process_background_closure((const ClosureColor*) sg.Ci);
 }
 
 Color3
 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                    ShadingContext* ctx)
 {
+#ifdef __CUDACC__
+    // Scratch space for the output closures
+    alignas(8) char closure_pool[256];
+    alignas(8) char light_closure_pool[256];
+#endif
+
     constexpr float inf = std::numeric_limits<float>::infinity();
     Ray r               = camera.get(x, y);
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
     int prev_id    = -1;
     float bsdf_pdf = inf;  // camera ray has only one possible direction
+
     for (int b = 0; b <= max_bounces; b++) {
+        ShaderGlobalsType sg;
+
         // trace the ray against the scene
-        Intersection hit = scene.intersect(r, inf, prev_id);
+        Intersection hit = scene.intersect(r, inf, &sg, prev_id);
         if (hit.t == inf) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
@@ -935,8 +975,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         }
 
         // construct a shader globals for the hit point
-        ShaderGlobals sg;
         globals_from_hit(sg, r, hit.t, hit.id, hit.u, hit.v);
+
         if (show_globals) {
             // visualize the main fields of the shader globals
             Vec3 v = sg.Ng;
@@ -954,21 +994,34 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
             path_radiance += path_weight * c;
             break;
         }
+
         const float radius = r.radius + r.spread * hit.t;
-        int shaderID       = scene.shaderid(hit.id);
+
+        int shaderID = scene.shaderid(hit.id);
+
+#ifndef __CUDACC__
         if (shaderID < 0 || !m_shaders[shaderID])
             break;  // no shader attached? done
 
         // execute shader and process the resulting list of closures
         shadingsys->execute(*ctx, *m_shaders[shaderID], sg);
+#else
+        if (shaderID < 0)
+            break;  // no shader attached? done
+        execute_shader(sg, shaderID, closure_pool);
+#endif
         ShadingResult result;
         bool last_bounce = b == max_bounces;
-        process_closure(sg, result, sg.Ci, last_bounce);
+        process_closure(sg, result, (const ClosureColor*)sg.Ci, last_bounce);
+
+#ifndef __CUDACC__
+        const size_t lightprims_size = m_lightprims.size();
+#endif
 
         // add self-emission
         float k = 1;
-        if (m_shader_is_light[shaderID]) {
-            const float light_pick_pdf = 1.0f / m_lightprims.size();
+        if (m_shader_is_light[shaderID] && lightprims_size > 0) {
+            const float light_pick_pdf = 1.0f / lightprims_size;
             // figure out the probability of reaching this point
             float light_pdf = light_pick_pdf
                               * scene.shapepdf(hit.id, r.origin, sg.P);
@@ -1008,27 +1061,29 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                              * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
                                                                         b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
+                ShaderGlobalsType shadow_sg;
                 Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0,
                                               Ray::SHADOW);
                 Intersection shadow_hit = scene.intersect(shadow_ray, inf,
-                                                          hit.id);
+                                                          &shadow_sg, hit.id);
                 if (shadow_hit.t == inf)  // ray reached the background?
                     path_radiance += contrib;
             }
         }
 
         // trace a shadow ray to one of the light emitting primitives
-        if (!m_lightprims.empty()) {
-            const float light_pick_pdf = 1.0f / m_lightprims.size();
+        if (lightprims_size > 0) {
+            const float light_pick_pdf = 1.0f / lightprims_size;
 
             // uniform probability for each light
-            float xl = xi * m_lightprims.size();
+            float xl = xi * lightprims_size;
             int ls   = floorf(xl);
             xl -= ls;
 
             uint32_t lid = m_lightprims[ls];
             if (lid != hit.id) {
                 int shaderID = scene.shaderid(lid);
+
                 // sample a random direction towards the object
                 LightSample sample = scene.sample(lid, sg.P, xl, yi);
                 BSDF::Sample b     = result.bsdf.eval(-sg.I, sample.dir);
@@ -1036,29 +1091,46 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                  * MIS::power_heuristic<MIS::EVAL_WEIGHT>(
                                      light_pick_pdf * sample.pdf, b.pdf);
                 if ((contrib.x + contrib.y + contrib.z) > 0) {
+                    ShaderGlobalsType light_sg;
                     Ray shadow_ray = Ray(sg.P, sample.dir, radius, 0,
                                          Ray::SHADOW);
                     // trace a shadow ray and see if we actually hit the target
                     // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
                     Intersection shadow_hit
-                        = scene.intersect(shadow_ray, sample.dist, hit.id, lid);
-                    if (shadow_hit.t == sample.dist) {
+                        = scene.intersect(shadow_ray, sample.dist, &light_sg,
+                                          hit.id, lid);
+
+#ifndef __CUDACC__
+                    const bool did_hit = shadow_hit.t == sample.dist;
+#else
+                    // The hit distance on the device is not as precise as on
+                    // the CPU, so we need to allow a little wiggle room. An
+                    // epsilon of 1e-3f empirically gives results that closely
+                    // match the CPU for the test scenes, so that's what we're
+                    // using.
+                    const bool did_hit = fabsf(shadow_hit.t - sample.dist) < 1e-3f;
+#endif
+                    if (did_hit) {
                         // setup a shader global for the point on the light
-                        ShaderGlobals light_sg;
                         globals_from_hit(light_sg, shadow_ray, sample.dist, lid,
                                          sample.u, sample.v);
+#ifndef __CUDACC__
                         // execute the light shader (for emissive closures only)
                         shadingsys->execute(*ctx, *m_shaders[shaderID],
                                             light_sg);
+#else
+                        execute_shader(light_sg, shaderID, light_closure_pool);
+#endif
                         ShadingResult light_result;
-                        process_closure(light_sg, light_result, light_sg.Ci,
-                                        true);
+                        process_closure(light_sg, light_result,
+                                        (const ClosureColor*)light_sg.Ci, true);
                         // accumulate contribution
                         path_radiance += contrib * light_result.Le;
                     }
                 }
             }
         }
+
         // trace indirect ray and continue
         BSDF::Sample p = result.bsdf.sample(-sg.I, xi, yi, zi);
         path_weight *= p.weight;
@@ -1077,14 +1149,15 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
     return path_radiance;
 }
 
-Color3
+
+OSL_HOSTDEVICE Color3
 SimpleRaytracer::antialias_pixel(int x, int y, ShadingContext* ctx)
 {
     Color3 result(0, 0, 0);
     for (int si = 0, n = aa * aa; si < n; si++) {
         Sampler sampler(x, y, si);
         // jitter pixel coordinate [0,1)^2
-        Vec3 j = sampler.get();
+        Vec3 j = no_jitter ? Vec3(0, 0, 0) : sampler.get();
         // warp distribution to approximate a tent filter [-1,+1)^2
         j.x *= 2;
         j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
@@ -1100,11 +1173,13 @@ SimpleRaytracer::antialias_pixel(int x, int y, ShadingContext* ctx)
 }
 
 
+#ifndef __CUDACC__
 void
 SimpleRaytracer::prepare_render()
 {
     // Retrieve and validate options
     aa                = std::max(1, options.get_int("aa"));
+    no_jitter         = options.get_int("no_jitter") != 0;
     max_bounces       = options.get_int("max_bounces");
     rr_depth          = options.get_int("rr_depth");
     show_albedo_scale = options.get_float("show_albedo_scale");
@@ -1132,7 +1207,25 @@ SimpleRaytracer::prepare_render()
 
     // build bvh and prepare triangles
     scene.prepare(errhandler());
+    prepare_lights();
 
+#if 0
+    // dump scene to disk as obj for debugging purposes
+    // TODO: make this a feature?
+    FILE* fp = fopen("/tmp/test.obj", "w");
+    for (Vec3 v : scene.verts)
+        fprintf(fp, "v %.9g %.9g %.9g\n", v.x, v.y, v.z);
+    for (TriangleIndices t : scene.triangles)
+        fprintf(fp, "f %d %d %d\n", 1 + t.a, 1 + t.b, 1 + t.c);
+    fclose(fp);
+#endif
+}
+
+
+
+void
+SimpleRaytracer::prepare_lights()
+{
     m_mesh_surfacearea.reserve(scene.last_index.size());
 
     // measure the total surface area of each mesh
@@ -1156,16 +1249,6 @@ SimpleRaytracer::prepare_render()
     if (!m_lightprims.empty())
         errhandler().infofmt("Found {} triangles to be treated as lights",
                              m_lightprims.size());
-#if 0
-    // dump scene to disk as obj for debugging purposes
-    // TODO: make this a feature?
-    FILE* fp = fopen("/tmp/test.obj", "w");
-    for (Vec3 v : scene.verts)
-        fprintf(fp, "v %.9g %.9g %.9g\n", v.x, v.y, v.z);
-    for (TriangleIndices t : scene.triangles)
-        fprintf(fp, "f %d %d %d\n", 1 + t.a, 1 + t.b, 1 + t.c);
-    fclose(fp);
-#endif
 }
 
 
@@ -1212,5 +1295,7 @@ SimpleRaytracer::clear()
 {
     shaders().clear();
 }
+
+#endif // #ifndef __CUDACC__
 
 OSL_NAMESPACE_EXIT

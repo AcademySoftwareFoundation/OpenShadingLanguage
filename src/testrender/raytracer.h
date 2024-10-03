@@ -21,6 +21,11 @@
 #    include <vector_functions.h>  // from CUDA
 #endif
 
+#ifdef __CUDACC__
+#    include "cuda/rend_lib.h"
+#    include "cuda/vec_math.h"
+#endif
+
 // The primitives don't included the intersection routines, etc., from the
 // versions in testrender, since those operations are performed on the GPU.
 //
@@ -33,7 +38,7 @@ class OptixRenderer;  // FIXME -- should not be here
 
 
 // build two vectors orthogonal to the first, assumes n is normalized
-inline void
+inline OSL_HOSTDEVICE void
 ortho(const Vec3& n, Vec3& x, Vec3& y)
 {
     x = (fabsf(n.x) > .01f ? Vec3(n.z, 0, -n.x) : Vec3(0, -n.z, n.y))
@@ -55,6 +60,7 @@ struct Ray {
         DISPLACEMENT = 128
     };
 
+    OSL_HOSTDEVICE
     Ray(const Vec3& o, const Vec3& d, float radius, float spread,
         RayType raytype)
         : origin(o)
@@ -65,7 +71,10 @@ struct Ray {
     {
     }
 
+    OSL_HOSTDEVICE
     Vec3 point(float t) const { return origin + direction * t; }
+
+    OSL_HOSTDEVICE
     Dual2<Vec3> dual_direction() const
     {
         Dual2<Vec3> v;
@@ -76,6 +85,7 @@ struct Ray {
         return v;
     }
 
+    OSL_HOSTDEVICE
     Dual2<Vec3> point(Dual2<float> t) const
     {
         const float r = radius + spread * t.val();
@@ -95,9 +105,10 @@ struct Ray {
 
 
 struct Camera {
-    Camera() {}
+    OSL_HOSTDEVICE Camera() {}
 
     // Set where the camera sits and looks at.
+    OSL_HOSTDEVICE
     void lookat(const Vec3& eye, const Vec3& dir, const Vec3& up, float fov)
     {
         this->eye = eye;
@@ -108,6 +119,7 @@ struct Camera {
     }
 
     // Set resolution
+    OSL_HOSTDEVICE
     void resolution(int w, int h)
     {
         xres = w;
@@ -118,6 +130,7 @@ struct Camera {
     }
 
     // Compute all derived values based on camera parameters.
+    OSL_HOSTDEVICE
     void finalize()
     {
         float k    = OIIO::fast_tan(fov * float(M_PI / 360));
@@ -127,10 +140,21 @@ struct Camera {
     }
 
     // Get a ray for the given screen coordinates.
+    OSL_HOSTDEVICE
     Ray get(float x, float y) const
     {
+        // TODO: On CUDA devices, the normalize() operation can result in vector
+        // components with magnitudes slightly greater than 1.0, which can cause
+        // downstream computations to blow up and produce NaNs. Normalizing the
+        // vector again avoids this issue.
         const Vec3 v = (cx * (x * invw - 0.5f) + cy * (0.5f - y * invh) + dir)
+#ifndef __CUDACC__
                            .normalize();
+#else
+                           .normalize()
+                           .normalized();
+#endif
+
         const float cos_a = dir.dot(v);
         const float spread
             = sqrtf(invw * invh * cx.length() * cy.length() * cos_a) * cos_a;
@@ -164,6 +188,7 @@ struct LightSample {
 using ShaderMap = std::unordered_map<std::string, int>;
 
 struct Scene {
+#ifndef __CUDACC__
     void add_sphere(const Vec3& c, float r, int shaderID, int resolution);
 
     void add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID,
@@ -176,11 +201,16 @@ struct Scene {
     int num_prims() const { return triangles.size(); }
 
     void prepare(OIIO::ErrorHandler& errhandler);
+#endif
 
-    Intersection intersect(const Ray& r, const float tmax,
+    // NB: OptiX needs to populate the ShaderGlobals in the closest-hit program,
+    //     so we need to pass along a pointer to the struct.
+    OSL_HOSTDEVICE
+    Intersection intersect(const Ray& r, const float tmax, void* /*sg_ptr*/,
                            const unsigned skipID1,
                            const unsigned skipID2 = ~0u) const;
 
+    OSL_HOSTDEVICE
     LightSample sample(int primID, const Vec3& x, float xi, float yi) const
     {
         // A Low-Distortion Map Between Triangle and Square
@@ -205,6 +235,7 @@ struct Scene {
         return { dir, sqrtf(d2), pdf, xi, yi };
     }
 
+    OSL_HOSTDEVICE
     float shapepdf(int primID, const Vec3& x, const Vec3& p) const
     {
         const Vec3 va = verts[triangles[primID].a];
@@ -219,6 +250,7 @@ struct Scene {
         return d2 / (0.5f * fabsf(dir.dot(n)));
     }
 
+    OSL_HOSTDEVICE
     float primitivearea(int primID) const
     {
         const Vec3 va = verts[triangles[primID].a];
@@ -227,6 +259,7 @@ struct Scene {
         return 0.5f * (va - vb).cross(va - vc).length();
     }
 
+    OSL_HOSTDEVICE
     Vec3 normal(const Dual2<Vec3>& p, Vec3& Ng, int primID, float u,
                 float v) const
     {
@@ -246,6 +279,7 @@ struct Scene {
         return ((1 - u - v) * na + u * nb + v * nc).normalize();
     }
 
+    OSL_HOSTDEVICE
     Dual2<Vec2> uv(const Dual2<Vec3>& p, const Vec3& n, Vec3& dPdu, Vec3& dPdv,
                    int primID, float u, float v) const
     {
@@ -273,8 +307,9 @@ struct Scene {
         return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc);
     }
 
-    int shaderid(int primID) const { return shaderids[primID]; }
+    OSL_HOSTDEVICE int shaderid(int primID) const { return shaderids[primID]; }
 
+#ifndef __CUDACC__
     // basic triangle data
     std::vector<Vec3> verts;
     std::vector<Vec3> normals;
@@ -287,6 +322,16 @@ struct Scene {
         last_index;  // one entry per mesh, stores the last triangle index (+1) -- also is the start triangle of the next mesh
     // acceleration structure (built over triangles)
     std::unique_ptr<BVH> bvh;
+#else
+    const Vec3* verts;
+    const Vec3* normals;
+    const Vec2* uvs;
+    const TriangleIndices* triangles;
+    const TriangleIndices* uv_triangles;
+    const TriangleIndices* n_triangles;
+    const int* shaderids;
+    OptixTraversableHandle handle;
+#endif
 };
 
 OSL_NAMESPACE_EXIT

@@ -279,6 +279,13 @@ struct BSDF {
         return {};
     }
     ClosureIDs id;
+#ifdef __CUDACC__
+    // TODO: This is a total hack to avoid a misaligned address error
+    // that sometimes occurs with the EnergyCompensatedOrenNayar BSDF.
+    // It's not clear what the issue is or why this fixes it, but that
+    // will take a bit of digging.
+    int pad;
+#endif
 };
 
 /// Represents a weighted sum of BSDFS

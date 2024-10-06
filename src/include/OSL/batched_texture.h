@@ -232,7 +232,7 @@ public:
         , m_errormessage(errormessage)
         , m_mask(mask)
     {
-        ASSERT(chans == 1 || chans == 3);
+        OSL_ASSERT(chans == 1 || chans == 3);
     }
 
     OSL_FORCEINLINE Mask<WidthT> mask() const { return m_mask; }

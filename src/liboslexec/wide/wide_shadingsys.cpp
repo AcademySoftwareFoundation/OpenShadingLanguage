@@ -447,7 +447,7 @@ __OSL_OP1(get_attribute, s)(void* bsg_, int dest_derivs, ustring_pod obj_name_,
                             int mask_)
 {
     Mask mask(mask_);
-    ASSERT(mask.any_on());
+    OSL_ASSERT(mask.any_on());
 
     auto* bsg         = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ustring obj_name  = USTR(obj_name_);
@@ -478,7 +478,7 @@ __OSL_MASKED_OP1(get_attribute,
                      const void* attr_type, void* wide_attr_dest, int mask_)
 {
     Mask mask(mask_);
-    ASSERT(mask.any_on());
+    OSL_ASSERT(mask.any_on());
 
     auto* bsg        = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ustring obj_name = USTR(obj_name_);

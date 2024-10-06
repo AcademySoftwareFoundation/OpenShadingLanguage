@@ -1203,7 +1203,7 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
             } else if (batch_size == 8) {
                 shadingsys->batched<8>().jit_group(shadergroup.get(), ctx);
             } else {
-                ASSERT((batch_size == 4) && "Unsupported batch size");
+                OSL_ASSERT((batch_size == 4) && "Unsupported batch size");
                 shadingsys->batched<4>().jit_group(shadergroup.get(), ctx);
             }
         } else
@@ -2215,7 +2215,7 @@ test_shade(int argc, const char* argv[])
                                                     sub_roi, save);
                         });
                 } else {
-                    ASSERT((batch_size == 4) && "Unsupported batch size");
+                    OSL_ASSERT((batch_size == 4) && "Unsupported batch size");
                     OIIO::ImageBufAlgo::parallel_image(
                         roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
                             batched_shade_region<4>(rend, shadergroup.get(),

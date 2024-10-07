@@ -79,8 +79,8 @@ static inline __device__ void
 trace_ray(OptixTraversableHandle handle, const Payload& payload,
           const float3& origin, const float3& direction, const float tmin)
 {
-    uint32_t p0 = payload.sg_raw[0];
-    uint32_t p1 = payload.sg_raw[1];
+    uint32_t p0 = payload.tracedata_raw[0];
+    uint32_t p1 = payload.tracedata_raw[1];
 
     optixTrace(handle,                         // handle
                origin,                         // origin
@@ -98,8 +98,8 @@ trace_ray(OptixTraversableHandle handle, const Payload& payload,
 
 
 Intersection
-Scene::intersect(const Ray& r, const float tmax, void* sg_ptr,
-                 const unsigned skipID1, const unsigned /*skipID2*/) const
+Scene::intersect(const Ray& r, const float tmax, const unsigned skipID1,
+                 const unsigned /*skipID2*/) const
 {
     // Trace the ray against the scene. If the ID for the hit matches skipID1,
     // "nudge" the ray forward by adjusting tmin to exclude the hit interval
@@ -108,9 +108,10 @@ Scene::intersect(const Ray& r, const float tmax, void* sg_ptr,
     const int num_attempts = 2;
     float tmin             = epsilon;
     for (int attempt = 0; attempt < num_attempts; ++attempt) {
+        TraceData tracedata;
+        tracedata.hit_id = -1;
         Payload payload;
-        payload.sg_ptr = reinterpret_cast<ShaderGlobalsType*>(sg_ptr);
-        TraceData tracedata(*payload.sg_ptr, skipID1);
+        payload.tracedata_ptr = &tracedata;
         trace_ray(handle, payload, V3_TO_F3(r.origin), V3_TO_F3(r.direction),
                   tmin);
         const unsigned int hit_id = static_cast<unsigned int>(tracedata.hit_id);
@@ -268,8 +269,7 @@ __closesthit__deferred()
 {
     Payload payload;
     payload.get();
-    ShaderGlobalsType* sg_ptr = payload.sg_ptr;
-    TraceData* tracedata      = reinterpret_cast<TraceData*>(sg_ptr->tracedata);
+    TraceData* tracedata       = payload.tracedata_ptr;
     const unsigned int hit_idx = optixGetPrimitiveIndex();
     const float3 ray_direction = optixGetWorldRayDirection();
     const float3 ray_origin    = optixGetWorldRayOrigin();

@@ -89,24 +89,4 @@ struct ShaderGlobals {
 };
 }  // namespace OSL_CUDA
 
-struct TraceData {
-    // OUT: The ID of the object that was hit
-    int32_t hit_id;
-    union {
-        // IN:  Set before calling trace to avoid self-intersection
-        int32_t obj_id;
-        // OUT: The hit distance
-        float hit_t;
-    };
-    float hit_u;
-    float hit_v;
-
-    OSL_HOSTDEVICE TraceData(OSL_CUDA::ShaderGlobals& sg, int id)
-    {
-        hit_id       = -1;
-        obj_id       = id;
-        sg.tracedata = (void*)this;
-    }
-};
-
 }  // anonymous namespace

@@ -954,7 +954,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         ShaderGlobalsType sg;
 
         // trace the ray against the scene
-        Intersection hit = scene.intersect(r, inf, &sg, prev_id);
+        Intersection hit = scene.intersect(r, inf, prev_id);
         if (hit.t == inf) {
             // we hit nothing? check background shader
             if (backgroundShaderID >= 0) {
@@ -1064,8 +1064,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 ShaderGlobalsType shadow_sg;
                 Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0,
                                               Ray::SHADOW);
-                Intersection shadow_hit = scene.intersect(shadow_ray, inf,
-                                                          &shadow_sg, hit.id);
+                Intersection shadow_hit = scene.intersect(shadow_ray, inf, hit.id);
                 if (shadow_hit.t == inf)  // ray reached the background?
                     path_radiance += contrib;
             }
@@ -1097,8 +1096,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                     // trace a shadow ray and see if we actually hit the target
                     // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
                     Intersection shadow_hit
-                        = scene.intersect(shadow_ray, sample.dist, &light_sg,
-                                          hit.id, lid);
+                        = scene.intersect(shadow_ray, sample.dist, hit.id, lid);
 
 #ifndef __CUDACC__
                     const bool did_hit = shadow_hit.t == sample.dist;

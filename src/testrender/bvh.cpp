@@ -262,8 +262,8 @@ xorf(float a, unsigned b)
 }
 
 Intersection
-Scene::intersect(const Ray& ray, const float tmax, void* /*sg_ptr*/,
-                 unsigned skipID1, unsigned skipID2) const
+Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1,
+                 unsigned skipID2) const
 {
     struct StackItem {
         BVHNode* node;

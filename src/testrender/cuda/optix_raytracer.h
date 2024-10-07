@@ -12,22 +12,29 @@
 
 #ifdef __CUDACC__
 
+struct TraceData {
+    int32_t hit_id;
+    float hit_t;
+    float hit_u;
+    float hit_v;
+};
+
 struct Payload {
     union {
-        uint32_t sg_raw[2];
-        OSL_CUDA::ShaderGlobals* sg_ptr;
+        uint32_t tracedata_raw[2];
+        TraceData* tracedata_ptr;
     };
 
     __forceinline__ __device__ void set()
     {
-        optixSetPayload_0(sg_raw[0]);
-        optixSetPayload_1(sg_raw[1]);
+        optixSetPayload_0(tracedata_raw[0]);
+        optixSetPayload_1(tracedata_raw[1]);
     }
 
     __forceinline__ __device__ void get()
     {
-        sg_raw[0] = optixGetPayload_0();
-        sg_raw[1] = optixGetPayload_1();
+        tracedata_raw[0] = optixGetPayload_0();
+        tracedata_raw[1] = optixGetPayload_1();
     }
 };
 

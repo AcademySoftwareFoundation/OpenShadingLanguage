@@ -206,7 +206,7 @@ struct Scene {
     // NB: OptiX needs to populate the ShaderGlobals in the closest-hit program,
     //     so we need to pass along a pointer to the struct.
     OSL_HOSTDEVICE
-    Intersection intersect(const Ray& r, const float tmax, void* /*sg_ptr*/,
+    Intersection intersect(const Ray& r, const float tmax,
                            const unsigned skipID1,
                            const unsigned skipID2 = ~0u) const;
 

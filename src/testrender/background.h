@@ -244,7 +244,6 @@ private:
     {
         OSL_DASSERT(x >= 0.0f);
         OSL_DASSERT(x < 1.0f);
-
         *idx = OSL::upper_bound(data, n, x) - data;
         OSL_DASSERT(*idx < n);
         OSL_DASSERT(x < data[*idx]);

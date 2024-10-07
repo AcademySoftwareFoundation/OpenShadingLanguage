@@ -340,7 +340,7 @@ OptixRaytracer::create_modules()
     m_pipeline_compile_options.traversableGraphFlags
         = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_ANY;
     m_pipeline_compile_options.usesMotionBlur     = false;
-    m_pipeline_compile_options.numPayloadValues   = 2;
+    m_pipeline_compile_options.numPayloadValues   = 4;
     m_pipeline_compile_options.numAttributeValues = 3;
     m_pipeline_compile_options.exceptionFlags
         = OPTIX_EXCEPTION_FLAG_STACK_OVERFLOW;

@@ -76,12 +76,13 @@ execute_shader(ShaderGlobalsType& sg, const int shader_id, char* closure_pool)
 
 
 static inline __device__ void
-trace_ray(OptixTraversableHandle handle, const Payload& payload,
-          const float3& origin, const float3& direction, const float tmin)
+trace_ray(OptixTraversableHandle handle, Payload& payload, const float3& origin,
+          const float3& direction, const float tmin)
 {
-    uint32_t p0 = payload.tracedata_raw[0];
-    uint32_t p1 = payload.tracedata_raw[1];
-
+    uint32_t p0 = static_cast<uint32_t>(payload.hit_id);
+    uint32_t p1 = __float_as_uint(payload.hit_t);
+    uint32_t p2 = __float_as_uint(payload.hit_u);
+    uint32_t p3 = __float_as_uint(payload.hit_v);
     optixTrace(handle,                         // handle
                origin,                         // origin
                direction,                      // direction
@@ -93,7 +94,11 @@ trace_ray(OptixTraversableHandle handle, const Payload& payload,
                0,                              // SBT offset
                1,                              // SBT stride
                0,                              // miss SBT offset
-               p0, p1);
+               p0, p1, p2, p3);
+    payload.hit_id = static_cast<int32_t>(p0);
+    payload.hit_t  = __uint_as_float(p1);
+    payload.hit_u  = __uint_as_float(p2);
+    payload.hit_v  = __uint_as_float(p3);
 };
 
 
@@ -108,23 +113,18 @@ Scene::intersect(const Ray& r, const float tmax, const unsigned skipID1,
     const int num_attempts = 2;
     float tmin             = epsilon;
     for (int attempt = 0; attempt < num_attempts; ++attempt) {
-        TraceData tracedata;
-        tracedata.hit_id = -1;
         Payload payload;
-        payload.tracedata_ptr = &tracedata;
+        payload.hit_id = ~0u;
         trace_ray(handle, payload, V3_TO_F3(r.origin), V3_TO_F3(r.direction),
                   tmin);
-        const unsigned int hit_id = static_cast<unsigned int>(tracedata.hit_id);
-        if (hit_id == skipID1) {
-            tmin = tracedata.hit_t + 2.0f * epsilon;
-        } else if (hit_id != ~0u) {
-            return { .t  = tracedata.hit_t,
-                     .u  = tracedata.hit_u,
-                     .v  = tracedata.hit_v,
-                     .id = hit_id };
+        if (payload.hit_id == skipID1) {
+            tmin = payload.hit_t + 2.0f * epsilon;
+        } else if (payload.hit_id != ~0u) {
+            return { payload.hit_t, payload.hit_u, payload.hit_v,
+                     payload.hit_id };
         }
     }
-    return { .t = std::numeric_limits<float>::infinity() };
+    return { std::numeric_limits<float>::infinity() };
 }
 
 
@@ -267,9 +267,6 @@ __miss__setglobals()
 extern "C" __global__ void
 __closesthit__deferred()
 {
-    Payload payload;
-    payload.get();
-    TraceData* tracedata       = payload.tracedata_ptr;
     const unsigned int hit_idx = optixGetPrimitiveIndex();
     const float3 ray_direction = optixGetWorldRayDirection();
     const float3 ray_origin    = optixGetWorldRayOrigin();
@@ -277,10 +274,13 @@ __closesthit__deferred()
     const float2 barycentrics  = optixGetTriangleBarycentrics();
     const float b1             = barycentrics.x;
     const float b2             = barycentrics.y;
-    tracedata->hit_t           = hit_t;
-    tracedata->hit_u           = b1;
-    tracedata->hit_v           = b2;
-    tracedata->hit_id          = static_cast<unsigned int>(hit_idx);
+
+    Payload payload;
+    payload.hit_t  = hit_t;
+    payload.hit_u  = b1;
+    payload.hit_v  = b2;
+    payload.hit_id = hit_idx;
+    payload.set();
 }
 
 

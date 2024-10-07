@@ -29,7 +29,7 @@ OSL_NAMESPACE_EXIT
 
 
 extern "C" {
-    __device__ __constant__ testshade::RenderParams render_params;
+__device__ __constant__ testshade::RenderParams render_params;
 }
 
 extern "C" __global__ void
@@ -143,24 +143,30 @@ __raygen__()
     // Run the OSL group and init functions
     if (render_params.fused_callable)
         // call osl_init_func
-        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
-            0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
-            nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-            0 /*shadeindex - unused*/,
-            sbtdata->data /*interactive_params_ptr*/);
+        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*,
+                        int, void*>(0u, &sg /*shaderglobals_ptr*/,
+                                    params /*groupdata_ptr*/,
+                                    nullptr /*userdata_base_ptr*/,
+                                    nullptr /*output_base_ptr*/,
+                                    0 /*shadeindex - unused*/,
+                                    sbtdata->data /*interactive_params_ptr*/);
     else {
         // call osl_init_func
-        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
-            0u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
-            nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-            0 /*shadeindex - unused*/,
-            sbtdata->data /*interactive_params_ptr*/);
+        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*,
+                        int, void*>(0u, &sg /*shaderglobals_ptr*/,
+                                    params /*groupdata_ptr*/,
+                                    nullptr /*userdata_base_ptr*/,
+                                    nullptr /*output_base_ptr*/,
+                                    0 /*shadeindex - unused*/,
+                                    sbtdata->data /*interactive_params_ptr*/);
         // call osl_group_func
-        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*, int, void*>(
-            1u, &sg /*shaderglobals_ptr*/, params /*groupdata_ptr*/,
-            nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
-            0 /*shadeindex - unused*/,
-            sbtdata->data /*interactive_params_ptr*/);
+        optixDirectCall<void, OSL_CUDA::ShaderGlobals*, void*, void*, void*,
+                        int, void*>(1u, &sg /*shaderglobals_ptr*/,
+                                    params /*groupdata_ptr*/,
+                                    nullptr /*userdata_base_ptr*/,
+                                    nullptr /*output_base_ptr*/,
+                                    0 /*shadeindex - unused*/,
+                                    sbtdata->data /*interactive_params_ptr*/);
     }
 
     float* f_output      = (float*)params;
@@ -171,10 +177,11 @@ __raygen__()
 // Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
 // let's do the texture look-ups in this file.
 extern "C" __device__ float4
-osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy)
+osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx,
+                float dsdy, float dtdy)
 {
-    const float2 dx = {dsdx, dtdx};
-    const float2 dy = {dsdy, dtdy};
+    const float2 dx           = { dsdx, dtdx };
+    const float2 dy           = { dsdy, dtdy };
     cudaTextureObject_t texID = cudaTextureObject_t(handle);
     return tex2DGrad<float4>(texID, s, t, dx, dy);
 }

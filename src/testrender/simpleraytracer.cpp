@@ -48,9 +48,9 @@ OSL_NAMESPACE_ENTER
 
 
 #ifndef __CUDACC__
-    using ShaderGlobalsType = OSL::ShaderGlobals;
+using ShaderGlobalsType = OSL::ShaderGlobals;
 #else
-    using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
+using ShaderGlobalsType = OSL_CUDA::ShaderGlobals;
 #endif
 
 
@@ -857,7 +857,7 @@ SimpleRaytracer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
     }
     return false;
 }
-#endif // #ifndef __CUDACC__
+#endif  // #ifndef __CUDACC__
 
 
 
@@ -930,7 +930,7 @@ SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
     alignas(8) char closure_pool[256];
     execute_shader(sg, render_params.bg_id, closure_pool);
 #endif
-    return process_background_closure((const ClosureColor*) sg.Ci);
+    return process_background_closure((const ClosureColor*)sg.Ci);
 }
 
 Color3
@@ -1108,7 +1108,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                     // epsilon of 1e-3f empirically gives results that closely
                     // match the CPU for the test scenes, so that's what we're
                     // using.
-                    const bool did_hit = fabsf(shadow_hit.t - sample.dist) < 1e-3f;
+                    const bool did_hit = fabsf(shadow_hit.t - sample.dist)
+                                         < 1e-3f;
 #endif
                     if (did_hit) {
                         // setup a shader global for the point on the light
@@ -1209,7 +1210,7 @@ SimpleRaytracer::prepare_render()
     scene.prepare(errhandler());
     prepare_lights();
 
-#if 0
+#    if 0
     // dump scene to disk as obj for debugging purposes
     // TODO: make this a feature?
     FILE* fp = fopen("/tmp/test.obj", "w");
@@ -1218,7 +1219,7 @@ SimpleRaytracer::prepare_render()
     for (TriangleIndices t : scene.triangles)
         fprintf(fp, "f %d %d %d\n", 1 + t.a, 1 + t.b, 1 + t.c);
     fclose(fp);
-#endif
+#    endif
 }
 
 
@@ -1296,6 +1297,6 @@ SimpleRaytracer::clear()
     shaders().clear();
 }
 
-#endif // #ifndef __CUDACC__
+#endif  // #ifndef __CUDACC__
 
 OSL_NAMESPACE_EXIT

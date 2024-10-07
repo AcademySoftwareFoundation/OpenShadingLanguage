@@ -27,7 +27,8 @@ struct TangentFrame {
 
     // build frame from unit normal and unit tangent
     // fallsback to an arbitrary basis if the tangent is 0 or colinear with n
-    static OSL_HOSTDEVICE TangentFrame from_normal_and_tangent(const Vec3& n, const Vec3& t)
+    static OSL_HOSTDEVICE TangentFrame from_normal_and_tangent(const Vec3& n,
+                                                               const Vec3& t)
     {
         Vec3 x      = t - n * dot(n, t);
         float xlen2 = dot(x, x);
@@ -41,7 +42,10 @@ struct TangentFrame {
     }
 
     // transform vector
-    Vec3 OSL_HOSTDEVICE get(float x, float y, float z) const { return x * u + y * v + z * w; }
+    Vec3 OSL_HOSTDEVICE get(float x, float y, float z) const
+    {
+        return x * u + y * v + z * w;
+    }
 
     // untransform vector
     float OSL_HOSTDEVICE getx(const Vec3& a) const { return a.dot(u); }
@@ -52,7 +56,10 @@ struct TangentFrame {
     {
         return Vec3(a.dot(u), a.dot(v), a.dot(w));
     }
-    Vec3 OSL_HOSTDEVICE toworld(const Vec3& a) const { return get(a.x, a.y, a.z); }
+    Vec3 OSL_HOSTDEVICE toworld(const Vec3& a) const
+    {
+        return get(a.x, a.y, a.z);
+    }
 
     Vec3 u, v, w;
 };
@@ -82,8 +89,9 @@ struct Sampling {
         y *= r;
     }
 
-    static OSL_HOSTDEVICE void sample_cosine_hemisphere(const Vec3& N, float rndx, float rndy,
-                                         Vec3& out, float& pdf)
+    static OSL_HOSTDEVICE void sample_cosine_hemisphere(const Vec3& N,
+                                                        float rndx, float rndy,
+                                                        Vec3& out, float& pdf)
     {
         to_unit_disk(rndx, rndy);
         float cos_theta = sqrtf(std::max(1 - rndx * rndx - rndy * rndy, 0.0f));
@@ -91,8 +99,9 @@ struct Sampling {
         pdf = cos_theta * float(M_1_PI);
     }
 
-    static OSL_HOSTDEVICE void sample_uniform_hemisphere(const Vec3& N, float rndx, float rndy,
-                                          Vec3& out, float& pdf)
+    static OSL_HOSTDEVICE void sample_uniform_hemisphere(const Vec3& N,
+                                                         float rndx, float rndy,
+                                                         Vec3& out, float& pdf)
     {
         float phi       = float(2 * M_PI) * rndx;
         float cos_theta = rndy;
@@ -118,7 +127,8 @@ struct MIS {
     // Centralizing the handling of the pdfs this way ensures that all numerical
     // cases can be enumerated and handled robustly without arbitrary epsilons.
     template<MISMode mode>
-    static inline OSL_HOSTDEVICE float power_heuristic(float sampled_pdf, float other_pdf)
+    static inline OSL_HOSTDEVICE float power_heuristic(float sampled_pdf,
+                                                       float other_pdf)
     {
         // NOTE: inf is ok!
         assert(sampled_pdf >= 0);
@@ -159,8 +169,8 @@ struct MIS {
     // such as a BRDF mixture. This updates a (weight, pdf) pair with a new one
     // to represent the sum of both. b is the probability of choosing the provided
     // weight. A running sum should be started with a weight and pdf of 0.
-    static inline OSL_HOSTDEVICE void update_eval(Color3* w, float* pdf, Color3 ow, float opdf,
-                                                  float b)
+    static inline OSL_HOSTDEVICE void
+    update_eval(Color3* w, float* pdf, Color3 ow, float opdf, float b)
     {
 #ifdef __CUDACC__
         // Check for those pesky NaNs

@@ -68,12 +68,9 @@ execute_shader(ShaderGlobalsType& sg, const int shader_id, char* closure_pool)
         render_params.interactive_params)[shader_id];
     const unsigned int shaderIdx = shader_id + 0u;
     optixDirectCall<void, ShaderGlobalsType*, void*, void*, void*, int, void*>(
-        shaderIdx, &sg /*shaderglobals_ptr*/,
-        nullptr /*groupdata_ptr*/,
-        nullptr /*userdata_base_ptr*/,
-        nullptr /*output_base_ptr*/,
-        0 /*shadeindex - unused*/,
-        interactive_ptr /*interactive_params_ptr*/
+        shaderIdx, &sg /*shaderglobals_ptr*/, nullptr /*groupdata_ptr*/,
+        nullptr /*userdata_base_ptr*/, nullptr /*output_base_ptr*/,
+        0 /*shadeindex - unused*/, interactive_ptr /*interactive_params_ptr*/
     );
 }
 
@@ -199,10 +196,11 @@ setupRaytracer(SimpleRaytracer& raytracer, const bool bg_only)
 // Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
 // let's do the texture look-ups in this file.
 extern "C" __device__ float4
-osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx, float dsdy, float dtdy)
+osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx,
+                float dsdy, float dtdy)
 {
-    const float2 dx = {dsdx, dtdx};
-    const float2 dy = {dsdy, dtdy};
+    const float2 dx           = { dsdx, dtdx };
+    const float2 dy           = { dsdy, dtdy };
     cudaTextureObject_t texID = cudaTextureObject_t(handle);
     return tex2DGrad<float4>(texID, s, t, dx, dy);
 }
@@ -247,7 +245,7 @@ __raygen__setglobals()
         return;
 
     SimpleRaytracer raytracer;
-    setupRaytracer(raytracer, /*bg_only=*/ true);
+    setupRaytracer(raytracer, /*bg_only=*/true);
 
     auto evaler = [&](const Dual2<Vec3>& dir) {
         return raytracer.eval_background(dir, nullptr);
@@ -290,7 +288,7 @@ extern "C" __global__ void
 __raygen__deferred()
 {
     SimpleRaytracer raytracer;
-    setupRaytracer(raytracer, /*bg_only=*/ false);
+    setupRaytracer(raytracer, /*bg_only=*/false);
 
     const uint3 launch_index = optixGetLaunchIndex();
     Color3 result = raytracer.antialias_pixel(launch_index.x, launch_index.y,

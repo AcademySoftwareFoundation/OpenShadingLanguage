@@ -53,7 +53,7 @@ struct RenderParams {
     CUdeviceptr mesh_ids;
     CUdeviceptr surfacearea;
     CUdeviceptr lightprims;
-    size_t      lightprims_size;
+    size_t lightprims_size;
 
     // for the background
     int bg_res;

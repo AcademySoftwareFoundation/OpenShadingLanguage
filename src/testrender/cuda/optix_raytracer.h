@@ -26,8 +26,8 @@ struct Payload {
 
     __forceinline__ __device__ void get()
     {
-        sg_raw[0]    = optixGetPayload_0();
-        sg_raw[1]    = optixGetPayload_1();
+        sg_raw[0] = optixGetPayload_0();
+        sg_raw[1] = optixGetPayload_1();
     }
 };
 

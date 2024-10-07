@@ -49,8 +49,7 @@ struct Background {
 #endif
     }
 
-    template<typename F, typename T>
-    void prepare(int resolution, F cb, T* data)
+    template<typename F, typename T> void prepare(int resolution, F cb, T* data)
     {
         // These values are set via set_variables() in CUDA
         res = resolution;
@@ -264,11 +263,12 @@ private:
         return std::min(scaled_sample, 0.99999994f);
     }
 
-    Vec3* values = nullptr;    // actual map
-    float* rows  = nullptr;    // probability of choosing a given row 'y'
-    float* cols  = nullptr;    // probability of choosing a given column 'x', given that we've chosen row 'y'
-    int res      = -1;         // resolution in pixels of the precomputed table
-    float invres = 0.0f;       // 1 / resolution
+    Vec3* values = nullptr;  // actual map
+    float* rows  = nullptr;  // probability of choosing a given row 'y'
+    float* cols
+        = nullptr;  // probability of choosing a given column 'x', given that we've chosen row 'y'
+    int res           = -1;    // resolution in pixels of the precomputed table
+    float invres      = 0.0f;  // 1 / resolution
     float invjacobian = 0.0f;
 };
 

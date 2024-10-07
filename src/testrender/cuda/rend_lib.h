@@ -87,7 +87,7 @@ struct ShaderGlobals {
     int flipHandedness;
     int backfacing;
 };
-}
+}  // namespace OSL_CUDA
 
 struct TraceData {
     // OUT: The ID of the object that was hit

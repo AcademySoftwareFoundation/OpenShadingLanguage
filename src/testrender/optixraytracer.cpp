@@ -441,8 +441,7 @@ OptixRaytracer::create_programs()
     OptixProgramGroupDesc tri_hitgroup_desc = {};
     tri_hitgroup_desc.kind                  = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
     tri_hitgroup_desc.hitgroup.moduleCH     = m_program_module;
-    tri_hitgroup_desc.hitgroup.entryFunctionNameCH
-        = "__closesthit__deferred";
+    tri_hitgroup_desc.hitgroup.entryFunctionNameCH = "__closesthit__deferred";
     create_optix_pg(&tri_hitgroup_desc, 1, &m_program_options,
                     &m_closesthit_group);
 
@@ -722,9 +721,10 @@ OptixRaytracer::create_sbt()
         m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
         m_optix_sbt.callablesRecordCount         = nshaders;
 
-        m_setglobals_optix_sbt.callablesRecordBase          = d_callable_records;
-        m_setglobals_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
-        m_setglobals_optix_sbt.callablesRecordCount         = nshaders;
+        m_setglobals_optix_sbt.callablesRecordBase = d_callable_records;
+        m_setglobals_optix_sbt.callablesRecordStrideInBytes = sizeof(
+            GenericRecord);
+        m_setglobals_optix_sbt.callablesRecordCount = nshaders;
     }
 
     // SetGlobals raygen
@@ -855,9 +855,12 @@ OptixRaytracer::prepare_background()
 {
     if (getBackgroundShaderID() >= 0) {
         const int bg_res = std::max<int>(32, getBackgroundResolution());
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_values), 3 * sizeof(float) * bg_res * bg_res));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_rows), sizeof(float) * bg_res));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_cols), sizeof(float) * bg_res * bg_res));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_values),
+                              3 * sizeof(float) * bg_res * bg_res));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_rows),
+                              sizeof(float) * bg_res));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_cols),
+                              sizeof(float) * bg_res * bg_res));
 
         m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_bg_values));
         m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_bg_rows));
@@ -927,9 +930,10 @@ OptixRaytracer::upload_mesh_data()
     m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_shader_is_light));
 
 
-    const size_t lightprims_size = OptixRaytracer::lightprims().size() * sizeof(uint32_t);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_lightprims),
-                          lightprims_size));
+    const size_t lightprims_size = OptixRaytracer::lightprims().size()
+                                   * sizeof(uint32_t);
+    CUDA_CHECK(
+        cudaMalloc(reinterpret_cast<void**>(&d_lightprims), lightprims_size));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_lightprims),
                           OptixRaytracer::lightprims().data(), lightprims_size,
                           cudaMemcpyHostToDevice));
@@ -1187,8 +1191,8 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 
     // Set up global variables
     OPTIX_CHECK(optixLaunch(m_optix_pipeline, m_cuda_stream, d_launch_params,
-                            sizeof(RenderParams), &m_setglobals_optix_sbt, 32, 1,
-                            1));
+                            sizeof(RenderParams), &m_setglobals_optix_sbt, 32,
+                            1, 1));
     CUDA_SYNC_CHECK();
 
     // Launch real render

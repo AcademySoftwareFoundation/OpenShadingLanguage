@@ -78,11 +78,9 @@ zero_derivs(Masked<Dual2<float>> wr)
 
 
 #define __OSL_GENERIC_DISPATCH2(A, B, NONDERIV_A, NONDERIV_B, DUALTYPE)       \
-    OSL_BATCHOP void __OSL_MASKED_OP2(gabornoise, A,                          \
-                                      B)(char* name_ptr, char* r_ptr,         \
-                                         char* x_ptr, char* bsg, char* opt,   \
-                                         char* varying_direction_ptr,         \
-                                         unsigned int mask_value);            \
+    OSL_BATCHOP void __OSL_MASKED_OP2(gabornoise, A, B)(                      \
+        ustringhash_pod name_ptr, char* r_ptr, char* x_ptr, char* bsg,        \
+        char* opt, char* varying_direction_ptr, unsigned int mask_value);     \
     OSL_BATCHOP void __OSL_MASKED_OP2(noise, A, B)(char* r_ptr, char* x_ptr,  \
                                                    unsigned int mask_value);  \
     OSL_BATCHOP void __OSL_MASKED_OP2(simplexnoise, A,                        \
@@ -105,38 +103,35 @@ zero_derivs(Masked<Dual2<float>> wr)
     OSL_BATCHOP void __OSL_MASKED_OP2(hashnoise, NONDERIV_A,                  \
                                       NONDERIV_B)(char* r_ptr, char* x_ptr,   \
                                                   unsigned int mask_value);   \
-    OSL_BATCHOP void __OSL_MASKED_OP2(genericnoise, A,                        \
-                                      B)(char* name_ptr, char* r_ptr,         \
-                                         char* x_ptr, char* bsg, char* opt,   \
-                                         char* varying_direction_ptr,         \
-                                         unsigned int mask_value)             \
+    OSL_BATCHOP void __OSL_MASKED_OP2(genericnoise, A, B)(                    \
+        ustringhash_pod name_ptr, char* r_ptr, char* x_ptr, char* bsg,        \
+        char* opt, char* varying_direction_ptr, unsigned int mask_value)      \
     {                                                                         \
-        ustring name = USTR(name_ptr);                                        \
-        if (name == Strings::uperlin || name == Strings::noise) {             \
+        ustringhash name = ustringhash_from(name_ptr);                        \
+        if (name == Hashes::uperlin || name == Hashes::noise) {               \
             __OSL_MASKED_OP2(noise, A, B)(r_ptr, x_ptr, mask_value);          \
-        } else if (name == Strings::perlin || name == Strings::snoise) {      \
+        } else if (name == Hashes::perlin || name == Hashes::snoise) {        \
             __OSL_MASKED_OP2(snoise, A, B)(r_ptr, x_ptr, mask_value);         \
-        } else if (name == Strings::simplexnoise                              \
-                   || name == Strings::simplex) {                             \
+        } else if (name == Hashes::simplexnoise || name == Hashes::simplex) { \
             __OSL_MASKED_OP2(simplexnoise, A, B)(r_ptr, x_ptr, mask_value);   \
-        } else if (name == Strings::usimplexnoise                             \
-                   || name == Strings::usimplex) {                            \
+        } else if (name == Hashes::usimplexnoise                              \
+                   || name == Hashes::usimplex) {                             \
             __OSL_MASKED_OP2(usimplexnoise, A, B)(r_ptr, x_ptr, mask_value);  \
-        } else if (name == Strings::cell) {                                   \
+        } else if (name == Hashes::cell) {                                    \
             /* NOTE: calling non derivative version */                        \
             __OSL_MASKED_OP2(cellnoise, NONDERIV_A, NONDERIV_B)               \
             (r_ptr, x_ptr, mask_value);                                       \
             Masked<DUALTYPE> wr(r_ptr, Mask(mask_value));                     \
             zero_derivs(wr);                                                  \
-        } else if (name == Strings::gabor) {                                  \
+        } else if (name == Hashes::gabor) {                                   \
             __OSL_MASKED_OP2(gabornoise, A, B)                                \
             (name_ptr, r_ptr, x_ptr, bsg, opt, varying_direction_ptr,         \
              mask_value);                                                     \
-        } else if (name == Strings::null) {                                   \
+        } else if (name == Hashes::null) {                                    \
             __OSL_MASKED_OP2(nullnoise, A, B)(r_ptr, x_ptr, mask_value);      \
-        } else if (name == Strings::unull) {                                  \
+        } else if (name == Hashes::unull) {                                   \
             __OSL_MASKED_OP2(unullnoise, A, B)(r_ptr, x_ptr, mask_value);     \
-        } else if (name == Strings::hash) {                                   \
+        } else if (name == Hashes::hash) {                                    \
             /* NOTE: calling non derivative version */                        \
             __OSL_MASKED_OP2(hashnoise, NONDERIV_A, NONDERIV_B)               \
             (r_ptr, x_ptr, mask_value);                                       \
@@ -155,9 +150,12 @@ __OSL_GENERIC_DISPATCH2(Wdf, Wdf, Wf, Wf, Dual2<float>)
 
 #define __OSL_GENERIC_DISPATCH3(A, B, C, NONDERIV_A, NONDERIV_B, NONDERIV_C,   \
                                 DUALTYPE)                                      \
-    OSL_BATCHOP void __OSL_MASKED_OP3(gabornoise, A, B, C)(                    \
-        char* name_ptr, char* r_ptr, char* x_ptr, char* y_ptr, char* bsg,      \
-        char* opt, char* varying_direction_ptr, unsigned int mask_value);      \
+    OSL_BATCHOP void __OSL_MASKED_OP3(gabornoise, A, B,                        \
+                                      C)(ustringhash_pod name_ptr,             \
+                                         char* r_ptr, char* x_ptr,             \
+                                         char* y_ptr, char* bsg, char* opt,    \
+                                         char* varying_direction_ptr,          \
+                                         unsigned int mask_value);             \
     OSL_BATCHOP void __OSL_MASKED_OP3(noise, A, B,                             \
                                       C)(char* r_ptr, char* x_ptr,             \
                                          char* y_ptr,                          \
@@ -190,41 +188,43 @@ __OSL_GENERIC_DISPATCH2(Wdf, Wdf, Wf, Wf, Dual2<float>)
                                       NONDERIV_C)(char* r_ptr, char* x_ptr,    \
                                                   char* y_ptr,                 \
                                                   unsigned int mask_value);    \
-    OSL_BATCHOP void __OSL_MASKED_OP3(genericnoise, A, B, C)(                  \
-        char* name_ptr, char* r_ptr, char* x_ptr, char* y_ptr, char* bsg,      \
-        char* opt, char* varying_direction_ptr, unsigned int mask_value)       \
+    OSL_BATCHOP void __OSL_MASKED_OP3(genericnoise, A, B,                      \
+                                      C)(ustringhash_pod name_ptr,             \
+                                         char* r_ptr, char* x_ptr,             \
+                                         char* y_ptr, char* bsg, char* opt,    \
+                                         char* varying_direction_ptr,          \
+                                         unsigned int mask_value)              \
     {                                                                          \
-        ustring name = USTR(name_ptr);                                         \
-        if (name == Strings::uperlin || name == Strings::noise) {              \
+        ustringhash name = ustringhash_from(name_ptr);                         \
+        if (name == Hashes::uperlin || name == Hashes::noise) {                \
             __OSL_MASKED_OP3(noise, A, B, C)(r_ptr, x_ptr, y_ptr, mask_value); \
-        } else if (name == Strings::perlin || name == Strings::snoise) {       \
+        } else if (name == Hashes::perlin || name == Hashes::snoise) {         \
             __OSL_MASKED_OP3(snoise, A, B, C)                                  \
             (r_ptr, x_ptr, y_ptr, mask_value);                                 \
-        } else if (name == Strings::simplexnoise                               \
-                   || name == Strings::simplex) {                              \
+        } else if (name == Hashes::simplexnoise || name == Hashes::simplex) {  \
             __OSL_MASKED_OP3(simplexnoise, A, B, C)                            \
             (r_ptr, x_ptr, y_ptr, mask_value);                                 \
-        } else if (name == Strings::usimplexnoise                              \
-                   || name == Strings::usimplex) {                             \
+        } else if (name == Hashes::usimplexnoise                               \
+                   || name == Hashes::usimplex) {                              \
             __OSL_MASKED_OP3(usimplexnoise, A, B, C)                           \
             (r_ptr, x_ptr, y_ptr, mask_value);                                 \
-        } else if (name == Strings::cell) {                                    \
+        } else if (name == Hashes::cell) {                                     \
             /* NOTE: calling non derivative version */                         \
             __OSL_MASKED_OP3(cellnoise, NONDERIV_A, NONDERIV_B, NONDERIV_C)    \
             (r_ptr, x_ptr, y_ptr, mask_value);                                 \
             Masked<DUALTYPE> wr(r_ptr, Mask(mask_value));                      \
             zero_derivs(wr);                                                   \
-        } else if (name == Strings::gabor) {                                   \
+        } else if (name == Hashes::gabor) {                                    \
             __OSL_MASKED_OP3(gabornoise, A, B, C)                              \
             (name_ptr, r_ptr, x_ptr, y_ptr, bsg, opt, varying_direction_ptr,   \
              mask_value);                                                      \
-        } else if (name == Strings::null) {                                    \
+        } else if (name == Hashes::null) {                                     \
             __OSL_MASKED_OP3(nullnoise, A, B, C)                               \
             (r_ptr, x_ptr, y_ptr, mask_value);                                 \
-        } else if (name == Strings::unull) {                                   \
+        } else if (name == Hashes::unull) {                                    \
             __OSL_MASKED_OP3(unullnoise, A, B, C)                              \
             (r_ptr, x_ptr, y_ptr, mask_value);                                 \
-        } else if (name == Strings::hash) {                                    \
+        } else if (name == Hashes::hash) {                                     \
             /* NOTE: calling non derivative version */                         \
             __OSL_MASKED_OP3(hashnoise, NONDERIV_A, NONDERIV_B, NONDERIV_C)    \
             (r_ptr, x_ptr, y_ptr, mask_value);                                 \

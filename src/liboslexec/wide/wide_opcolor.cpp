@@ -161,14 +161,14 @@ __OSL_MASKED_OP2(wavelength_color, Wv, Wf)(void* bsg_, void* wout_,
 }
 
 
-
 OSL_BATCHOP void
-__OSL_OP(prepend_color_from_vs)(void* bsg_, void* c_, const char* from)
+__OSL_OP(prepend_color_from_vs)(void* bsg_, void* c_, ustringhash_pod from)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
 
     Color3& c(*(Color3*)c_);
-    c = cs.to_rgb(USTR(from), c, context_from_bsg(bsg_));
+    // TODO FIXME
+    //c = cs.to_rgb(ustringhash_from(from), c, context_from_bsg(bsg_));
 }
 
 namespace {
@@ -176,12 +176,12 @@ namespace {
 // NOTE: keep implementation as mirror of ColorSystem::to_rgb
 void
 wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
-                        Masked<Color3> wR, ustring fromspace)
+                        Masked<Color3> wR, ustringhash fromspace)
 {
     // Rather than attempt outer loop vectorization of ColorSystem::to_rgb
     // we will pull it's implementation up and insert SIMD loops inside
     // the uniform branches
-    if (fromspace == Strings::RGB || fromspace == Strings::rgb
+    if (fromspace == Hashes::RGB || fromspace == Hashes::rgb
         || fromspace == cs.colorspace()) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
@@ -190,7 +190,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == Strings::hsv) {
+    if (fromspace == Hashes::hsv) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -201,7 +201,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == Strings::hsl) {
+    if (fromspace == Hashes::hsl) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -212,7 +212,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == Strings::YIQ) {
+    if (fromspace == Hashes::YIQ) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -223,7 +223,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == Strings::XYZ) {
+    if (fromspace == Hashes::XYZ) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -234,7 +234,7 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
         }
         return;
     }
-    if (fromspace == Strings::xyY) {
+    if (fromspace == Hashes::xyY) {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Color3 C = wR[lane];
@@ -249,8 +249,9 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
     // Serialize calls to ocio
     wR.mask().foreach ([=, &cs](ActiveLane lane) -> void {
         Color3 C = wR[lane];
-        Color3 R = cs.ocio_transform(fromspace, Strings::RGB, C, ctx);
-        wR[lane] = R;
+        // TODO FIXME
+        //Color3 R = cs.ocio_transform(fromspace, Hashes::RGB, C, ctx);
+        //wR[lane] = R;
     });
 }
 
@@ -260,14 +261,14 @@ wide_prepend_color_from(ShadingContext* ctx, const ColorSystem& cs,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP2(prepend_color_from, Wv, s)(void* bsg_, void* c_,
-                                            const char* from,
+                                            ustringhash_pod from,
                                             unsigned int mask_value)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
     Masked<Color3> wR(c_, Mask(mask_value));
-    ustring fromspace = USTR(from);
+    ustringhash fromspace = ustringhash_from(from);
 
     wide_prepend_color_from(ctx, cs, wR, fromspace);
 }
@@ -281,9 +282,9 @@ __OSL_MASKED_OP2(prepend_color_from, Wv, Ws)(void* bsg_, void* c_, void* from_,
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
-    Wide<const ustring> wFrom(from_);
+    Wide<const ustringhash> wFrom(from_);
     foreach_unique(wFrom, Mask(mask_value),
-                   [=, &cs](const ustring& from, Mask from_mask) {
+                   [=, &cs](const ustringhash& from, Mask from_mask) {
                        // Reuse the uniform from implementation by restricting results to
                        // just the lanes with the same value of "from".
                        Masked<Color3> wsub_result(c_, from_mask);
@@ -305,16 +306,16 @@ namespace {
 
 template<typename COLOR>
 OSL_NOINLINE void
-wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
-                Masked<COLOR> wOutput, Wide<const COLOR> wInput,
-                ShadingContext* context);
+wide_transformc(const ColorSystem cs, ustringhash fromspace,
+                ustringhash tospace, Masked<COLOR> wOutput,
+                Wide<const COLOR> wInput, ShadingContext* context);
 
 // NOTE: keep implementation as mirror of ColorSystem::transformc
 template<typename COLOR>
 void
-wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
-                Masked<COLOR> wOutput, Wide<const COLOR> wInput,
-                ShadingContext* context)
+wide_transformc(const ColorSystem cs, ustringhash fromspace,
+                ustringhash tospace, Masked<COLOR> wOutput,
+                Wide<const COLOR> wInput, ShadingContext* context)
 {
     // Rather than attempt outer loop vectorization of ColorSystem::transformc
     // we will pull it's implementation up and insert SIMD loops inside
@@ -322,14 +323,14 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
     bool use_colorconfig = false;
     Block<COLOR> bCrgb;
     Wide<COLOR> wCrgb(bCrgb);
-    if (fromspace == Strings::RGB || fromspace == Strings::rgb
-        || fromspace == Strings::linear || fromspace == cs.colorspace()) {
+    if (fromspace == Hashes::RGB || fromspace == Hashes::rgb
+        || fromspace == Hashes::linear || fromspace == cs.colorspace()) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C     = wInput[lane];
             wCrgb[lane] = C;
         }
-    } else if (fromspace == Strings::hsv) {
+    } else if (fromspace == Hashes::hsv) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -338,7 +339,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == Strings::hsl) {
+    } else if (fromspace == Hashes::hsl) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -347,7 +348,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == Strings::YIQ) {
+    } else if (fromspace == Hashes::YIQ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -356,7 +357,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == Strings::XYZ) {
+    } else if (fromspace == Hashes::XYZ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -365,7 +366,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == Strings::xyY) {
+    } else if (fromspace == Hashes::xyY) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -374,7 +375,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wCrgb[ActiveLane(lane)] = R;
             }
         }
-    } else if (fromspace == Strings::sRGB) {
+    } else if (fromspace == Hashes::sRGB) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C = wInput[lane];
@@ -389,14 +390,14 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
 
     if (use_colorconfig) {
         // do things the ColorConfig way, so skip all these other clauses...
-    } else if (tospace == Strings::RGB || tospace == Strings::rgb
-               || tospace == Strings::linear || tospace == cs.colorspace()) {
+    } else if (tospace == Hashes::RGB || tospace == Hashes::rgb
+               || tospace == Hashes::linear || tospace == cs.colorspace()) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR C       = wCrgb[lane];
             wOutput[lane] = C;
         }
-    } else if (tospace == Strings::hsv) {
+    } else if (tospace == Hashes::hsv) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -405,7 +406,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == Strings::hsl) {
+    } else if (tospace == Hashes::hsl) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -414,7 +415,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == Strings::YIQ) {
+    } else if (tospace == Hashes::YIQ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -423,7 +424,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == Strings::XYZ) {
+    } else if (tospace == Hashes::XYZ) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -432,7 +433,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == Strings::xyY) {
+    } else if (tospace == Hashes::xyY) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -441,7 +442,7 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
                 wOutput[ActiveLane(lane)] = Cto;
             }
         }
-    } else if (tospace == Strings::sRGB) {
+    } else if (tospace == Hashes::sRGB) {
         WIDE_TRANSFORMC_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             COLOR Crgb = wCrgb[lane];
@@ -457,9 +458,10 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
     if (use_colorconfig) {
         // Serialize calls to ocio
         wOutput.mask().foreach ([=, &cs](ActiveLane lane) -> void {
-            COLOR C       = wInput[lane];
-            COLOR Cto     = cs.ocio_transform(fromspace, tospace, C, context);
-            wOutput[lane] = Cto;
+            COLOR C = wInput[lane];
+            // TODO FIXME
+            //COLOR Cto     = cs.ocio_transform(fromspace, tospace, C, context);
+            //wOutput[lane] = Cto;
         });
     }
 }
@@ -473,14 +475,14 @@ wide_transformc(const ColorSystem cs, ustring fromspace, ustring tospace,
 OSL_BATCHOP void
 __OSL_MASKED_OP3(transform_color, Wv, s,
                  s)(void* bsg_, void* Cin, int Cin_derivs, void* Cout,
-                    int Cout_derivs, ustring_pod from_, ustring_pod to_,
+                    int Cout_derivs, ustringhash_pod from_, ustringhash_pod to_,
                     unsigned int mask_value)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
-    const ustring& from = USTR(from_);
-    const ustring& to   = USTR(to_);
+    ustringhash from = ustringhash_from(from_);
+    ustringhash to   = ustringhash_from(to_);
 
     if (Cout_derivs) {
         if (Cin_derivs) {
@@ -512,17 +514,18 @@ __OSL_MASKED_OP3(transform_color, Wv, s,
 OSL_BATCHOP void
 __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
                                     void* Cout, int Cout_derivs,
-                                    ustring_pod from_, ustring_pod to_)
+                                    ustringhash_pod from_, ustringhash_pod to_)
 {
     const ColorSystem& cs = cs_from_bsg(bsg_);
     ShadingContext* ctx   = context_from_bsg(bsg_);
 
-    const ustring& from = USTR(from_);
-    const ustring& to   = USTR(to_);
+    ustringhash from = ustringhash_from(from_);
+    ustringhash to   = ustringhash_from(to_);
 
     if (Cout_derivs) {
         if (Cin_derivs) {
-            DCOL(Cout) = cs.transformc(from, to, DCOL(Cin), ctx);
+            // TODO FIXME
+            //DCOL(Cout) = cs.transformc(from, to, DCOL(Cin), ctx);
             return;
         } else {
             // We had output derivs, but not input. Zero the output
@@ -533,7 +536,8 @@ __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
     }
 
     // No-derivs case
-    COL(Cout) = cs.transformc(from, to, COL(Cin), ctx);
+    // TODO FIXME
+    //COL(Cout) = cs.transformc(from, to, COL(Cin), ctx);
     return;
 }
 

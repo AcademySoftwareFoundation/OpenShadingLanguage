@@ -48,12 +48,14 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 #include "define_opname_macros.h"
 
 OSL_BATCHOP int
-__OSL_OP(dict_find_iis)(void* bsg_, int nodeID, ustring_pod query)
+__OSL_OP(dict_find_iis)(void* bsg_, int nodeID, ustringhash_pod query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return bsg->uniform.context->dict_find(
-        nullptr /*causes errors be reported through ShadingContext*/, nodeID,
-        USTR(query));
+    // TODO FIXME
+    //return bsg->uniform.context->dict_find(
+    //    nullptr causes errors be reported through ShadingContext, nodeID,
+    //    ustring_from(query))
+    return 0;
 }
 
 
@@ -73,21 +75,25 @@ __OSL_MASKED_OP3(dict_find, Wi, Wi, Ws)(void* bsg_, void* wout, void* wnodeID,
     mask.foreach ([=](ActiveLane lane) -> void {
         int nodeID    = wNID[lane];
         ustring query = wQ[lane];
-        wOut[lane]    = bsg->uniform.context->dict_find(
-            nullptr /*causes errors be reported through ShadingContext*/,
-            nodeID, query);
+        // TODO FIXME
+        //wOut[lane]    = bsg->uniform.context->dict_find(
+        //    nullptr causes errors be reported through ShadingContext,
+        //    nodeID, query);
     });
 }
 
 
 
 OSL_BATCHOP int
-__OSL_OP(dict_find_iss)(void* bsg_, ustring_pod dictionary, ustring_pod query)
+__OSL_OP(dict_find_iss)(void* bsg_, ustringhash_pod dictionary,
+                        ustringhash_pod query)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return bsg->uniform.context->dict_find(
-        nullptr /*causes errors be reported through ShadingContext*/,
-        USTR(dictionary), USTR(query));
+    // TOOD FIXME
+    //return bsg->uniform.context->dict_find(
+    //    nullptr causes errors be reported through ShadingContext,
+    //    ustring_from(dictionary), ustring_from(query));
+    return 0;
 }
 
 
@@ -108,9 +114,10 @@ __OSL_MASKED_OP3(dict_find, Wi, Ws, Ws)(void* bsg_, void* wout,
     mask.foreach ([=](ActiveLane lane) -> void {
         ustring dictionary = wD[lane];
         ustring query      = wQ[lane];
-        wOut[lane]         = bsg->uniform.context->dict_find(
-            nullptr /*causes errors be reported through ShadingContext*/,
-            dictionary, query);
+        //TODO FIXME
+        //wOut[lane]         = bsg->uniform.context->dict_find(
+        //    nullptr causes errors be reported through ShadingContext,
+        //    dictionary, query);
     });
 }
 
@@ -119,7 +126,9 @@ OSL_BATCHOP int
 __OSL_OP(dict_next)(void* bsg_, int nodeID)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return bsg->uniform.context->dict_next(nodeID);
+    // TODO FIXME
+    //return bsg->uniform.context->dict_next(nodeID);
+    return 0;
 }
 
 
@@ -138,20 +147,23 @@ __OSL_MASKED_OP(dict_next)(void* bsg_, void* wout, void* wNodeID,
 
     mask.foreach ([=](ActiveLane lane) -> void {
         int nodeID = wNID[lane];
-        wR[lane]   = bsg->uniform.context->dict_next(nodeID);
+        // TODO FIXME
+        //wR[lane]   = bsg->uniform.context->dict_next(nodeID);
     });
 }
 
 
 
 OSL_BATCHOP int
-__OSL_OP(dict_value)(void* bsg_, int nodeID, ustring_pod attribname,
+__OSL_OP(dict_value)(void* bsg_, int nodeID, ustringhash_pod attribname,
                      long long type, void* data)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
-    return bsg->uniform.context->dict_value(nodeID, USTR(attribname),
-                                            TYPEDESC(type), data,
-                                            /*treat_ustrings_as_hash*/ false);
+    // TODO FIXME
+    //return bsg->uniform.context->dict_value(nodeID, ustring_from(attribname),
+    //                                        TYPEDESC(type), data,
+    //                                        treat_ustrings_as_hash false);
+    return 0;
 }
 
 namespace {  // anonymous
@@ -169,9 +181,11 @@ template<typename ValueT> struct DictValueGetter<ValueT, false> {
             ustring attribname = wAttribName[lane];
 
             ValueT value;
-            int result = context->dict_value(nodeID, attribname, wdest.type(),
-                                             &value,
-                                             /*treat_ustrings_as_hash*/ false);
+            // TODO FIXME
+            //int result = context->dict_value(nodeID, attribname, wdest.type(),
+            //                                 &value,
+            //                                 treat_ustrings_as_hash false);
+            int result = 0;
             wout[lane] = result;
             if (result) {
                 dest[lane] = value;
@@ -192,9 +206,11 @@ template<typename ValueT> struct DictValueGetter<ValueT, true> {
             int nodeID         = wNID[lane];
             ustring attribname = wAttribName[lane];
             ElementType value[dest_array.length()];
-            int result = context->dict_value(nodeID, attribname, wdest.type(),
-                                             &value[0],
-                                             /*treat_ustrings_as_hash*/ false);
+            // TODO FIXME
+            //int result = context->dict_value(nodeID, attribname, wdest.type(),
+            //                                 &value[0],
+            //                                 treat_ustrings_as_hash false);
+            int result = 0;
             auto dest  = dest_array[lane];
             for (int element = 0; element < dest.length(); ++element) {
                 dest[element] = value[element];

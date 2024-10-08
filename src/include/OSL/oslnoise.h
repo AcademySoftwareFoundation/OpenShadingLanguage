@@ -90,7 +90,6 @@ template <typename S, typename T>  OSL_HOSTDEVICE Vec3  vhashnoise (S x, T y);
 }   // namespace oslnoise
 
 
-
 ///////////////////////////////////////////////////////////////////////
 // Implementation follows...
 //
@@ -110,7 +109,7 @@ typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
                                  const float *period, NoiseParams *params);
 typedef void (*NoiseImplFunc)(float *out, const float *in,
                               const float *period, NoiseParams *params);
-
+#ifndef INCLUDED_FROM_WIDE
 OSLNOISEPUBLIC OSL_HOSTDEVICE
 float simplexnoise1 (float x, int seed=0, float *dnoise_dx=NULL);
 
@@ -127,7 +126,7 @@ OSLNOISEPUBLIC OSL_HOSTDEVICE
 float simplexnoise4 (float x, float y, float z, float w, int seed=0,
                      float *dnoise_dx=NULL, float *dnoise_dy=NULL,
                      float *dnoise_dz=NULL, float *dnoise_dw=NULL);
-
+#endif
 
 namespace {
 
@@ -2797,6 +2796,7 @@ struct PeriodicSNoise : PeriodicSNoiseImpl<CGDefault> {};
 struct PeriodicSNoiseScalar : PeriodicSNoiseImpl<CGScalar> {};
 
 
+#ifndef INCLUDED_FROM_WIDE
 struct SimplexNoise {
     OSL_HOSTDEVICE SimplexNoise () { }
 
@@ -2908,7 +2908,7 @@ struct SimplexNoise {
         result = make_Vec3 (r0, r1, r2);
     }
 };
-
+#endif
 
 // Scalar version of SimplexNoise that is SIMD friendly suitable to be
 // inlined inside of a SIMD loops
@@ -3024,6 +3024,7 @@ struct SimplexNoiseScalar {
     }
 };
 
+#ifndef INCLUDED_FROM_WIDE
 // Unsigned simplex noise
 struct USimplexNoise {
     OSL_HOSTDEVICE USimplexNoise () { }
@@ -3151,6 +3152,7 @@ struct USimplexNoise {
     }
 
 };
+#endif
 
 // Scalar version of USimplexNoise that is SIMD friendly suitable to be
 // inlined inside of a SIMD loops

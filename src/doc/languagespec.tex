@@ -3488,42 +3488,43 @@ The \emph{type} may be any of of \float, \color, \point, \vector, or
 performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
-\apiitem{float {\ce linearstep} (float edge0, float edge1, float x) \\
-\emph{type} {\ce linearstep} (\emph{type} edge0, \emph{type} edge1, \emph{type} x)}
+\apiitem{float {\ce linearstep} (float low, float high, float x) \\
+\emph{type} {\ce linearstep} (\emph{type} low, \emph{type} high, \emph{type} x)}
 \indexapi{linearstep()}
-Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
+Returns 0 if $x \le {\mathit low}$, and 1 if $x \ge {\mathit high}$,
 and performs a linear
-interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
-This is equivalent to {\cf step(edge0, x)} when {\cf edge0 == edge1}.
+interpolation between 0 and 1 when ${\mathit low} < x < {\mathit high}$.
+This is equivalent to {\cf step(low, x)} when {\cf low == high}.
 For \color and \point-like types, the computations are
 performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
-\apiitem{float {\ce smoothstep} (float edge0, float edge1, float x) \\
-\emph{type} {\ce smoothstep} (\emph{type} edge0, \emph{type} edge1, \emph{type} x)}
+\apiitem{float {\ce smoothstep} (float low, float high, float x) \\
+\emph{type} {\ce smoothstep} (\emph{type} low, \emph{type} high, \emph{type} x)}
 \indexapi{smoothstep()}
-Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
+Returns 0 if $x \le {\mathit low}$, and 1 if $x \ge {\mathit high}$,
 and performs a smooth Hermite
-interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
+interpolation between 0 and 1 when ${\mathit low} < x < {\mathit high}$.
 This is useful in cases where you would want a thresholding function
-with a smooth transition.
+with a smooth transition.  In the degenerate case where ${\mathit high} \le
+{\mathit low}$, the return value will be 0 if $x < {\mathit high}$ and 1 if $x
+\ge {\mathit high}$, making the behavior identical to `step(high, x)`.
 
 The \emph{type} may be any of of \float, \color, \point, \vector, or
 \normal.  For \color and \point-like types, the computations are
 performed component-by-component.
 \apiend
 
-\apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps) \\
-\emph{type} {\ce smooth_linearstep} (\emph{type} edge0, \emph{type} edge1, \emph{type} x, \emph{type} eps)}
+\apiitem{float {\ce smooth_linearstep} (float low, float high, float x, float eps) \\
+\emph{type} {\ce smooth_linearstep} (\emph{type} low, \emph{type} high, \emph{type} x, \emph{type} eps)}
 \indexapi{smooth_linearstep()}
-This function is strictly linear between ${\mathit edge0}+{\mathit eps}$ and ${\mathit edge1}-{\mathit eps}$
-but smoothly ramps to 0 between ${\mathit edge0}-{\mathit eps}$ and ${\mathit edge0}+{\mathit eps}$
-and smoothly ramps to 1 between ${\mathit edge1}-{\mathit eps}$ and ${\mathit edge1}+{\mathit eps}$.
-It is 0 when $x \le {\mathit edge0}-{\mathit eps}$, and 1 if $x \ge {\mathit edge1}+{\mathit eps}$,
-and performs a linear
-interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
-For \color and \point-like types, the computations are
-performed component-by-component.
+This function returns 0 if $x < {\mathit low}-{\mathit eps}$, and 1 if
+$x \ge {\mathit high}+{\mathit eps}$, is strictly linear between
+${\mathit low}+{\mathit eps}$ and ${\mathit high}-{\mathit eps}$ but smoothly
+ramps to 0 between ${\mathit low}-{\mathit eps}$ and ${\mathit low}+{\mathit eps}$
+and smoothly ramps to 1 between ${\mathit high}-{\mathit eps}$ and
+${\mathit high}+{\mathit eps}$. For \color and \point-like types, the
+computations are performed component-by-component.
 \apiend
 
 

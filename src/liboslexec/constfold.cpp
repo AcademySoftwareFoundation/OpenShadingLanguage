@@ -2501,10 +2501,10 @@ DECLFOLDER(constfold_texture)
 // Keep from repeating the same tedious code for {s,t,r, }{width,blur,wrap}
 #define CHECK(field, ctype, osltype)                                      \
     if (name == Strings::field && !field##_set) {                         \
-        if (valuetype == osltype && *(ctype*)value == opt.field)          \
+        if (valuetype == osltype && *(ctype*)value == (ctype)opt.field)   \
             elide = true;                                                 \
         else if (osltype == TypeDesc::FLOAT && valuetype == TypeDesc::INT \
-                 && *(int*)value == opt.field)                            \
+                 && *(int*)value == (int)opt.field)                       \
             elide = true;                                                 \
         else                                                              \
             field##_set = true;                                           \
@@ -2520,8 +2520,8 @@ DECLFOLDER(constfold_texture)
     {                                                                          \
         if (valuetype == osltype) {                                            \
             ctype* v = (ctype*)value;                                          \
-            if (*v == opt.s##field && *v == opt.t##field                       \
-                && *v == opt.r##field)                                         \
+            if (*v == (ctype)opt.s##field && *v == (ctype)opt.t##field         \
+                && *v == (ctype)opt.r##field)                                  \
                 elide = true;                                                  \
             else {                                                             \
                 s##field##_set = true;                                         \
@@ -2530,8 +2530,8 @@ DECLFOLDER(constfold_texture)
             }                                                                  \
         } else if (osltype == TypeDesc::FLOAT && valuetype == TypeDesc::INT) { \
             int* v = (int*)value;                                              \
-            if (*v == opt.s##field && *v == opt.t##field                       \
-                && *v == opt.r##field)                                         \
+            if (*v == (ctype)opt.s##field && *v == (ctype)opt.t##field         \
+                && *v == (ctype)opt.r##field)                                  \
                 elide = true;                                                  \
             else {                                                             \
                 s##field##_set = true;                                         \
@@ -2573,7 +2573,8 @@ DECLFOLDER(constfold_texture)
             else if (name == Strings::interp && !interp_set)
             {
                 if (value && valuetype == TypeDesc::STRING
-                    && tex_interp_to_code(*(ustring*)value) == opt.interpmode)
+                    && tex_interp_to_code(*(ustring*)value)
+                           == (int)opt.interpmode)
                     elide = true;
                 else
                     interp_set = true;

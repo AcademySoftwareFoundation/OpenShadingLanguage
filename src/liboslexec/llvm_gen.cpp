@@ -2574,7 +2574,8 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
     bool sblur_set = false, tblur_set = false, rblur_set = false;
     bool swrap_set = false, twrap_set = false, rwrap_set = false;
     bool firstchannel_set = false, fill_set = false, interp_set = false;
-    bool time_set = false, subimage_set = false;
+    // bool time_set = false;
+    bool subimage_set = false;
 
     Opcode& op(rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg; a < op.nargs(); ++a) {
@@ -2645,8 +2646,8 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
 #define PARAM_STRING_CODE(paramname, decoder, fieldname)                    \
     if (name == Strings::paramname && valtype == TypeDesc::STRING) {        \
         if (Val.is_constant()) {                                            \
-            int code = decoder(Val.get_string());                           \
-            if (!paramname##_set && code == optdefaults.fieldname)          \
+            int code = (int)decoder(Val.get_string());                      \
+            if (!paramname##_set && code == (int)optdefaults.fieldname)     \
                 continue;                                                   \
             if (code >= 0) {                                                \
                 llvm::Value* val = rop.ll.constant(code);                   \
@@ -2672,7 +2673,7 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
 
         if (name == Strings::wrap && valtype == TypeDesc::STRING) {
             if (Val.is_constant()) {
-                int mode = TextureOpt::decode_wrapmode(Val.get_string());
+                int mode = (int)TextureOpt::decode_wrapmode(Val.get_string());
                 llvm::Value* val = rop.ll.constant(mode);
                 rop.ll.call_function("osl_texture_set_stwrap_code", opt, val);
                 if (tex3d)
@@ -2692,7 +2693,6 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
         PARAM_STRING_CODE(rwrap, TextureOpt::decode_wrapmode, rwrap)
 
         PARAM_FLOAT(fill)
-        PARAM_FLOAT(time)
         PARAM_INT(firstchannel)
         PARAM_INT(subimage)
 
@@ -2751,6 +2751,16 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
                                  rop.ll.constant(nchans), val);
             continue;
         }
+
+        // PARAM_FLOAT(time)
+        if (name == Strings::time
+            && (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {
+            // NOTE: currently no supported 3d texture format makes use of
+            // time. So there is no time in the TextureOpt struct, but will
+            // silently accept and ignore the time option.
+            continue;
+        }
+
         rop.shadingcontext()->errorfmt(
             "Unknown texture{} optional argument: \"{}\", <{}> ({}:{})",
             tex3d ? "3d" : "", name, valtype, op.sourcefile(), op.sourceline());

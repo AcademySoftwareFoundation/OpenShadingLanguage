@@ -296,7 +296,7 @@ public:
 
     inline llvm::Value* getTempMask(const std::string& name = "")
     {
-        ASSERT(
+        OSL_ASSERT(
             !m_temp_scopes.empty()
             && "An instance of BatchedBackendLLVM::TempScope must exist higher up in the call stack");
         return getOrAllocateTemp(TypeSpec(TypeDesc::INT), false /*derivs*/,

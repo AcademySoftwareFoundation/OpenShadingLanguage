@@ -589,7 +589,7 @@ BatchedSimpleRenderer<WidthT>::get_array_attribute_uniform(
     BatchedShaderGlobals* bsg, ustringhash object, ustringhash name, int index,
     RefData val)
 {
-    ASSERT(!name.empty());
+    OSL_ASSERT(!name.empty());
 
     auto g = m_uniform_attr_getters.find(name);
     if (g != m_uniform_attr_getters.end()) {

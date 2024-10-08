@@ -307,7 +307,7 @@ init_wide_function_map(const ConcreteT&, ShadingSystemImpl& shadingsys)
                       << std::endl
                       << "OIIO::Plugin::geterror()="
                       << OIIO::Plugin::geterror();
-            ASSERT(
+            OSL_ASSERT(
                 0
                 && "Unable to find precompiled OSL library function in shared library.  This indicates a build/configuration problem.  We can't continue");
         }

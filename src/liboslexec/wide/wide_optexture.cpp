@@ -218,7 +218,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
                   Wide<const Vec3> wdPdz, BatchedTextureOutputs& outputs)
 {
     Mask status(false);
-    ASSERT(nullptr != bsg);
+    OSL_ASSERT(nullptr != bsg);
     ShadingContext* context = bsg->uniform.context;
     if (!texture_thread_info)
         texture_thread_info = context->texture_thread_info();
@@ -233,7 +233,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
     MaskedData alphaRef  = outputs.alpha();
     bool has_derivs      = resultRef.has_derivs() | alphaRef.has_derivs();
 
-    ASSERT(resultRef.valid());
+    OSL_ASSERT(resultRef.valid());
 
     // Convert our BatchedTextureOptions to a single TextureOpt
     // and submit them 1 at a time through existing non-batched interface
@@ -403,7 +403,7 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
                     BatchedTextureOutputs& outputs)
 {
     Mask status(false);
-    ASSERT(nullptr != bsg);
+    OSL_ASSERT(nullptr != bsg);
     ShadingContext* context = bsg->uniform.context;
     if (!texture_thread_info)
         texture_thread_info = context->texture_thread_info();
@@ -417,7 +417,7 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
     MaskedData resultRef = outputs.result();
     MaskedData alphaRef  = outputs.alpha();
 
-    ASSERT(resultRef.valid());
+    OSL_ASSERT(resultRef.valid());
 
     // Convert our BatchedTextureOptions to a single TextureOpt
     // and submit them 1 at a time through existing non-batched interface
@@ -567,7 +567,7 @@ transformWideTextureGradients(BatchedTextureOutputs& outputs,
                 }
             }
         } else {
-            // keep assert out of inlined code
+            // keep OSL_assert out of inlined code
             OSL_DASSERT(Masked<Color3>::is(resultRef));
             OSL_FORCEINLINE_BLOCK
             {
@@ -642,7 +642,7 @@ transformWideTextureGradientsTexture3d(BatchedTextureOutputs& outputs,
                 }
             }
         } else {
-            // keep assert out of inlined code
+            // keep OSL_assert out of inlined code
             OSL_DASSERT(Masked<Color3>::is(resultRef));
             OSL_FORCEINLINE_BLOCK
             {
@@ -762,7 +762,7 @@ __OSL_MASKED_OP(texture3d)(void* bsg_, void* name, void* handle,
                            int alphaHasDerivs, void* errormessage, int mask_)
 {
     Mask mask(mask_);
-    ASSERT(!mask.all_off());
+    OSL_ASSERT(!mask.all_off());
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     auto& opt = *reinterpret_cast<const BatchedTextureOptions*>(opt_);
@@ -815,7 +815,7 @@ __OSL_MASKED_OP(environment)(void* bsg_, void* name, void* handle,
                              int alphaHasDerivs, void* errormessage, int mask_)
 {
     Mask mask(mask_);
-    ASSERT(!mask.all_off());
+    OSL_ASSERT(!mask.all_off());
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     auto& opt = *reinterpret_cast<const BatchedTextureOptions*>(opt_);

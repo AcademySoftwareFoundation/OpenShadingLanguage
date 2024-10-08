@@ -9,6 +9,8 @@
 
 #include "oslexec_pvt.h"
 
+#include <OSL/rs_free_function.h>
+
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
@@ -89,9 +91,8 @@ PointCloud::~PointCloud()
 int
 RendererServices::pointcloud_search(ShaderGlobals* sg, ustringhash filename,
                                     const Vec3& center, float radius,
-                                    int max_points, bool sort,
-                                    size_t* out_indices, float* out_distances,
-                                    int derivs_offset)
+                                    int max_points, bool sort, int* out_indices,
+                                    float* out_distances, int derivs_offset)
 {
 #ifdef USE_PARTIO
     if (filename.empty())
@@ -123,14 +124,19 @@ RendererServices::pointcloud_search(ShaderGlobals* sg, ustringhash filename,
             return 0;  // No "position" attribute -- fail
     }
 
-    static_assert(sizeof(size_t) == sizeof(Partio::ParticleIndex),
-                  "Partio ParticleIndex should be the size of a size_t");
-    // FIXME -- if anybody cares about an architecture in which that is not
-    // the case, we can easily allocate local space to retrieve the indices,
-    // then copy them back to the caller's indices.
+    // RS::pointcloud_search takes size_t index array (because of the
+    // presumed use of Partio underneath), but OSL only has int, so we
+    // have to allocate and copy out.  But, on architectures where int
+    // and size_t are the same, we can take a shortcut and let
+    // pointcloud_search fill in the array in place (assuming it's
+    // passed in the first place).
+    Partio::ParticleIndex* indices;
+    if (out_indices && sizeof(int) == sizeof(Partio::ParticleIndex))
+        indices = (Partio::ParticleIndex*)out_indices;
+    else
+        indices = OSL_ALLOCA(Partio::ParticleIndex, max_points);
 
-    Partio::ParticleIndex* indices = (Partio::ParticleIndex*)out_indices;
-    float* dist2                   = out_distances;
+    float* dist2 = out_distances;
     if (!dist2)  // If not supplied, allocate our own
         dist2 = (float*)sg->context->alloc_scratch(max_points * sizeof(float),
                                                    sizeof(float));
@@ -153,6 +159,11 @@ RendererServices::pointcloud_search(ShaderGlobals* sg, ustringhash filename,
             indices[i] = sorted[i].second;
         }
     }
+
+    // Only copy out if we need to
+    if (out_indices && sizeof(int) != sizeof(Partio::ParticleIndex))
+        for (int i = 0; i < count; ++i)
+            ((int*)out_indices)[i] = indices[i];
 
     if (out_distances) {
         // Convert the squared distances to straight distances
@@ -203,7 +214,7 @@ RendererServices::pointcloud_search(ShaderGlobals* sg, ustringhash filename,
 
 int
 RendererServices::pointcloud_get(ShaderGlobals* sg, ustringhash filename,
-                                 size_t* indices, int count,
+                                 const int* in_indices, int count,
                                  ustringhash attr_name, TypeDesc attr_type,
                                  void* out_data)
 {
@@ -256,19 +267,22 @@ RendererServices::pointcloud_get(ShaderGlobals* sg, ustringhash filename,
         count = maxn;
     }
 
-    static_assert(sizeof(size_t) == sizeof(Partio::ParticleIndex),
-                  "Partio ParticleIndex should be the size of a size_t");
-    // FIXME -- if anybody cares about an architecture in which that is not
-    // the case, we can easily allocate local space to retrieve the indices,
-    // then copy them back to the caller's indices.
+    Partio::ParticleIndex* indices;
+    if (sizeof(int) == sizeof(Partio::ParticleIndex)) {
+        indices = (Partio::ParticleIndex*)in_indices;
+    } else {
+        indices = OSL_ALLOCA(Partio::ParticleIndex, count);
+        for (int i = 0; i < count; i++)
+            indices[i] = in_indices[i];
+    }
 
     // Actual data query
     if (partio_type == TypeString) {
         // strings are special cases because they are stored as int index
         int* strindices = OSL_ALLOCA(int, count);
-        const_cast<Partio::ParticlesData*>(cloud)->data(
-            *attr, count, (const Partio::ParticleIndex*)indices,
-            /*sorted=*/false, (void*)strindices);
+        const_cast<Partio::ParticlesData*>(cloud)->data(*attr, count, indices,
+                                                        /*sorted=*/false,
+                                                        (void*)strindices);
         const auto& strings = cloud->indexedStrs(*attr);
         int sicount         = int(strings.size());
         for (int i = 0; i < count; ++i) {
@@ -281,9 +295,9 @@ RendererServices::pointcloud_get(ShaderGlobals* sg, ustringhash filename,
         }
     } else {
         // All cases aside from strings are simple.
-        const_cast<Partio::ParticlesData*>(cloud)->data(
-            *attr, count, (const Partio::ParticleIndex*)indices,
-            /*sorted=*/false, out_data);
+        const_cast<Partio::ParticlesData*>(cloud)->data(*attr, count, indices,
+                                                        /*sorted=*/false,
+                                                        out_data);
         // FIXME: it is regrettable that we need this const_cast (and the
         // one a few lines above). It's to work around a bug in partio where
         // they fail to declare this method as const, even though it could
@@ -379,89 +393,76 @@ RendererServices::pointcloud_write(ShaderGlobals* /*sg*/, ustringhash filename,
 
 namespace pvt {
 
-OSL_SHADEOP int
-osl_pointcloud_search(ShaderGlobals* sg, ustringhash_pod filename_,
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_pointcloud_search(OpaqueExecContextPtr oec, ustringhash_pod filename_,
                       void* center, float radius, int max_points, int sort,
-                      void* out_indices, void* out_distances, int derivs_offset,
-                      int nattrs, ...)
+                      void* out_indices_, void* out_distances_,
+                      int derivs_offset, int nattrs, const void* names_,
+                      const void* types_, const void* values_)
 {
+#ifndef __CUDA_ARCH__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
+#endif
 
-    // RS::pointcloud_search takes size_t index array (because of the
-    // presumed use of Partio underneath), but OSL only has int, so we
-    // have to allocate and copy out.  But, on architectures where int
-    // and size_t are the same, we can take a shortcut and let
-    // pointcloud_search fill in the array in place (assuming it's
-    // passed in the first place).
-    size_t* indices;
-    if (sizeof(int) == sizeof(size_t) && out_indices)
-        indices = (size_t*)out_indices;
-    else
-        indices = OSL_ALLOCA(size_t, max_points);
+    int* out_indices     = (int*)out_indices_;
+    float* out_distances = (float*)out_distances_;
 
     ustringhash filename = ustringhash_from(filename_);
-    int count = sg->renderer->pointcloud_search(sg, filename, *((Vec3*)center),
-                                                radius, max_points, sort,
-                                                indices, (float*)out_distances,
-                                                derivs_offset);
-    va_list args;
-    va_start(args, nattrs);
+    int count = rs_pointcloud_search(oec, filename, *((Vec3*)center), radius,
+                                     max_points, sort, out_indices,
+                                     out_distances, derivs_offset);
+
+    auto names  = (const ustringhash*)names_;
+    auto types  = (const TypeDesc*)types_;
+    auto values = (void**)values_;
+
     for (int i = 0; i < nattrs; i++) {
-        ustringhash_pod attr_name_ = (ustringhash_pod)va_arg(args,
-                                                             ustringhash_pod);
-        ustringhash attr_name      = ustringhash_from(attr_name_);
-        long long lltype           = va_arg(args, long long);
-        TypeDesc attr_type         = TYPEDESC(lltype);
-        void* out_data             = va_arg(args, void*);
-        sg->renderer->pointcloud_get(sg, filename, indices, count, attr_name,
-                                     attr_type, out_data);
+        rs_pointcloud_get(oec, filename, out_indices, count, names[i], types[i],
+                          values[i]);
     }
-    va_end(args);
 
-    // Only copy out if we need to
-    if (out_indices && sizeof(int) != sizeof(size_t))
-        for (int i = 0; i < count; ++i)
-            ((int*)out_indices)[i] = indices[i];
-
+#ifndef __CUDA_ARCH__
     shadingsys.pointcloud_stats(1, 0, count);
+#endif
 
     return count;
 }
 
 
 
-OSL_SHADEOP int
-osl_pointcloud_get(ShaderGlobals* sg, ustringhash_pod filename_,
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_pointcloud_get(OpaqueExecContextPtr oec, ustringhash_pod filename_,
                    void* in_indices, int count, ustringhash_pod attr_name_,
                    long long attr_type, void* out_data)
 {
+#ifndef __CUDA_ARCH__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
 
-    size_t* indices = OSL_ALLOCA(size_t, count);
-    for (int i = 0; i < count; ++i)
-        indices[i] = ((int*)in_indices)[i];
-
     shadingsys.pointcloud_stats(0, 1, 0);
+#endif
 
     ustringhash filename  = ustringhash_from(filename_);
     ustringhash attr_name = ustringhash_from(attr_name_);
-    return sg->renderer->pointcloud_get(sg, filename, (size_t*)indices, count,
-                                        attr_name, TYPEDESC(attr_type),
-                                        out_data);
+    return rs_pointcloud_get(oec, filename, (int*)in_indices, count, attr_name,
+                             TYPEDESC(attr_type), out_data);
 }
 
 
 
-OSL_SHADEOP void
-osl_pointcloud_write_helper(ustringhash_pod* names_, TypeDesc* types,
-                            void** values, int index, ustringhash_pod name_,
-                            long long type, void* val)
+OSL_SHADEOP OSL_HOSTDEVICE void
+osl_pointcloud_write_helper(void* names_, void* types_, void* values_,
+                            int index, ustringhash_pod name_, long long type,
+                            void* val)
 {
-    auto names       = reinterpret_cast<ustringhash*>(names_);
+    auto names       = (ustringhash*)names_;
+    auto types       = (TypeDesc*)types_;
+    auto values      = (void**)values_;
     ustringhash name = ustringhash_from(name_);
     names[index]     = name;
     types[index]     = TYPEDESC(type);
@@ -470,22 +471,28 @@ osl_pointcloud_write_helper(ustringhash_pod* names_, TypeDesc* types,
 
 
 
-OSL_SHADEOP int
-osl_pointcloud_write(ShaderGlobals* sg, ustringhash_pod filename_,
-                     const Vec3* pos, int nattribs,
-                     const ustringhash_pod* names_, const TypeDesc* types,
-                     const void** values)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
+                     const void* pos_, int nattribs, const void* names_,
+                     const void* types_, const void* values_)
 {
+#ifndef __CUDA_ARCH__
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     ShadingSystemImpl& shadingsys(sg->context->shadingsys());
     if (shadingsys.no_pointcloud())  // Debug mode to skip pointcloud expense
         return 0;
 
     shadingsys.pointcloud_stats(0, 0, 0, 1);
-    ustringhash filename = ustringhash_from(filename_);
-    auto names           = reinterpret_cast<const ustringhash*>(names_);
+#endif
 
-    return sg->renderer->pointcloud_write(sg, filename, *pos, nattribs, names,
-                                          types, values);
+    ustringhash filename = ustringhash_from(filename_);
+    auto pos             = (const Vec3*)pos_;
+    auto names           = (const ustringhash*)names_;
+    auto types           = (const TypeDesc*)types_;
+    auto values          = (const void**)values_;
+
+    return rs_pointcloud_write(oec, filename, *pos, nattribs, names, types,
+                               values);
 }
 
 }  // namespace pvt

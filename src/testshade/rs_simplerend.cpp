@@ -15,7 +15,7 @@
 
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_xform_time(OSL::OpaqueExecContextPtr /*ec*/,
                          OSL::Matrix44& result, OSL::TransformationPtr xform,
                          float /*time*/)
@@ -27,7 +27,7 @@ rs_get_matrix_xform_time(OSL::OpaqueExecContextPtr /*ec*/,
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr ec,
                                  OSL::Matrix44& result,
                                  OSL::TransformationPtr xform, float time)
@@ -39,7 +39,7 @@ rs_get_inverse_matrix_xform_time(OSL::OpaqueExecContextPtr ec,
     return ok;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_space_time(OSL::OpaqueExecContextPtr /*ec*/,
                          OSL::Matrix44& result, OSL::ustringhash from,
                          float /*time*/)
@@ -54,7 +54,7 @@ rs_get_matrix_space_time(OSL::OpaqueExecContextPtr /*ec*/,
     }
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
                                  OSL::Matrix44& result, OSL::ustringhash to,
                                  float time)
@@ -125,7 +125,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
     }
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_xform(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& result,
                     OSL::TransformationPtr xform)
 {
@@ -136,7 +136,7 @@ rs_get_matrix_xform(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& result,
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
                             OSL::TransformationPtr xform)
 {
@@ -148,7 +148,7 @@ rs_get_inverse_matrix_xform(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
     return ok;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_matrix_space(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& /*result*/,
                     OSL::ustringhash from)
 {
@@ -159,7 +159,7 @@ rs_get_matrix_space(OSL::OpaqueExecContextPtr /*ec*/, OSL::Matrix44& /*result*/,
     }
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
                             OSL::ustringhash to)
 {
@@ -170,7 +170,7 @@ rs_get_inverse_matrix_space(OSL::OpaqueExecContextPtr ec, OSL::Matrix44& result,
     return ok;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash /*from*/,
                     OSL::ustringhash /*to*/, float /*time*/,
                     const OSL::Vec3* /*Pin*/, OSL::Vec3* /*Pout*/,
@@ -179,21 +179,191 @@ rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash /*from*/,
     return false;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_texture(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+           OSL::TextureSystem::TextureHandle* texture_handle,
+           OSL::TextureSystem::Perthread* texture_thread_info,
+           OSL::TextureOpt& options, float s, float t, float dsdx, float dtdx,
+           float dsdy, float dtdy, int nchannels, float* result,
+           float* dresultds, float* dresultdt, OSL::ustringhash* errormessage)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->texture(filename, texture_handle, texture_thread_info,
+                                 options, sg, s, t, dsdx, dtdx, dsdy, dtdy,
+                                 nchannels, result, dresultds, dresultdt,
+                                 errormessage);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_texture3d(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+             OSL::TextureSystem::TextureHandle* texture_handle,
+             OSL::TextureSystem::Perthread* texture_thread_info,
+             OSL::TextureOpt& options, const OSL::Vec3& P,
+             const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
+             const OSL::Vec3& dPdz, int nchannels, float* result,
+             float* dresultds, float* dresultdt, float* dresultdr,
+             OSL::ustringhash* errormessage)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->texture3d(filename, texture_handle,
+                                   texture_thread_info, options, sg, P, dPdx,
+                                   dPdy, dPdz, nchannels, result, dresultds,
+                                   dresultdt, dresultdr, errormessage);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_environment(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+               OSL::TextureSystem::TextureHandle* texture_handle,
+               OSL::TextureSystem::Perthread* texture_thread_info,
+               OSL::TextureOpt& options, const OSL::Vec3& R,
+               const OSL::Vec3& dRdx, const OSL::Vec3& dRdy, int nchannels,
+               float* result, float* dresultds, float* dresultdt,
+               OSL::ustringhash* errormessage)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->environment(filename, texture_handle,
+                                     texture_thread_info, options, sg, R, dRdx,
+                                     dRdy, nchannels, result, dresultds,
+                                     dresultdt, errormessage);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_get_texture_info(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+                    OSL::TextureSystem::TextureHandle* texture_handle,
+                    OSL::TextureSystem::Perthread* texture_thread_info,
+                    int subimage, OSL::ustringhash dataname,
+                    OSL::TypeDesc datatype, void* data,
+                    OSL::ustringhash* errormessage)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->get_texture_info(filename, texture_handle,
+                                          texture_thread_info, sg, subimage,
+                                          dataname, datatype, data,
+                                          errormessage);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_get_texture_info_st(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+                       OSL::TextureSystem::TextureHandle* texture_handle,
+                       float s, float t,
+                       OSL::TextureSystem::Perthread* texture_thread_info,
+                       int subimage, OSL::ustringhash dataname,
+                       OSL::TypeDesc datatype, void* data,
+                       OSL::ustringhash* errormessage)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->get_texture_info(filename, texture_handle, s, t,
+                                          texture_thread_info, sg, subimage,
+                                          dataname, datatype, data,
+                                          errormessage);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE int
+rs_pointcloud_search(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+                     const OSL::Vec3& center, float radius, int max_points,
+                     bool sort, int* out_indices, float* out_distances,
+                     int derivs_offset)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->pointcloud_search(sg, filename, center, radius,
+                                           max_points, sort, out_indices,
+                                           out_distances, derivs_offset);
+#else
+    return 0;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE int
+rs_pointcloud_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+                  const int* indices, int count, OSL::ustringhash attr_name,
+                  OSL::TypeDesc attr_type, void* out_data)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->pointcloud_get(sg, filename, indices, count, attr_name,
+                                        attr_type, out_data);
+#else
+    return 0;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_pointcloud_write(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
+                    const OSL::Vec3& pos, int nattribs,
+                    const OSL::ustringhash* names, const OSL::TypeDesc* types,
+                    const void** data)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->pointcloud_write(sg, filename, pos, nattribs, names,
+                                          types, data);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_trace(OSL::OpaqueExecContextPtr ec, OSL::TraceOpt& options,
+         const OSL::Vec3& P, const OSL::Vec3& dPdx, const OSL::Vec3& dPdy,
+         const OSL::Vec3& R, const OSL::Vec3& dRdx, const OSL::Vec3& dRdy)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->trace(options, sg, P, dPdx, dPdy, R, dRdx, dRdy);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
+rs_trace_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash name,
+             OSL::TypeDesc type, void* val, bool derivatives)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = (OSL::ShaderGlobals*)ec;
+    return sg->renderer->getmessage(sg, OSL::Strings::trace, name, type, val,
+                                    derivatives);
+#else
+    return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_string(OSL::ustringhash value, void* result)
 {
     reinterpret_cast<OSL::ustringhash*>(result)[0] = value;
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_int(int value, void* result)
 {
     reinterpret_cast<int*>(result)[0] = value;
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_int2(int value1, int value2, void* result)
 {
     reinterpret_cast<int*>(result)[0] = value1;
@@ -201,7 +371,7 @@ rs_get_attribute_constant_int2(int value1, int value2, void* result)
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_int3(int value1, int value2, int value3, void* result)
 {
     reinterpret_cast<int*>(result)[0] = value1;
@@ -210,7 +380,7 @@ rs_get_attribute_constant_int3(int value1, int value2, int value3, void* result)
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_int4(int value1, int value2, int value3, int value4,
                                void* result)
 {
@@ -221,7 +391,7 @@ rs_get_attribute_constant_int4(int value1, int value2, int value3, int value4,
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_float(float value, bool derivatives, void* result)
 {
     reinterpret_cast<float*>(result)[0] = value;
@@ -232,7 +402,7 @@ rs_get_attribute_constant_float(float value, bool derivatives, void* result)
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_float2(float value1, float value2, bool derivatives,
                                  void* result)
 {
@@ -247,7 +417,7 @@ rs_get_attribute_constant_float2(float value1, float value2, bool derivatives,
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_float3(float value1, float value2, float value3,
                                  bool derivatives, void* result)
 {
@@ -265,7 +435,7 @@ rs_get_attribute_constant_float3(float value1, float value2, float value3,
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_float4(float value1, float value2, float value3,
                                  float value4, bool derivatives, void* result)
 {
@@ -286,7 +456,7 @@ rs_get_attribute_constant_float4(float value1, float value2, float value3,
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_shade_index(OSL::OpaqueExecContextPtr oec, void* result)
 
 {
@@ -294,7 +464,7 @@ rs_get_shade_index(OSL::OpaqueExecContextPtr oec, void* result)
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
                  OSL::ustringhash_pod name_, OSL::TypeDesc_pod _type,
                  bool derivatives, int index, void* result)
@@ -366,7 +536,7 @@ rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
     return false;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_interpolated_s(OSL::OpaqueExecContextPtr ec, bool derivatives, void* val)
 {
     ((float*)val)[0] = OSL::get_u(ec);
@@ -377,7 +547,7 @@ rs_get_interpolated_s(OSL::OpaqueExecContextPtr ec, bool derivatives, void* val)
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_interpolated_t(OSL::OpaqueExecContextPtr ec, bool derivatives, void* val)
 {
     ((float*)val)[0] = OSL::get_v(ec);
@@ -388,7 +558,7 @@ rs_get_interpolated_t(OSL::OpaqueExecContextPtr ec, bool derivatives, void* val)
     return true;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_interpolated_red(OSL::OpaqueExecContextPtr ec, bool derivatives,
                         void* val)
 {
@@ -403,7 +573,7 @@ rs_get_interpolated_red(OSL::OpaqueExecContextPtr ec, bool derivatives,
     return false;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_interpolated_green(OSL::OpaqueExecContextPtr ec, bool derivatives,
                           void* val)
 {
@@ -418,7 +588,7 @@ rs_get_interpolated_green(OSL::OpaqueExecContextPtr ec, bool derivatives,
     return false;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_interpolated_blue(OSL::OpaqueExecContextPtr ec, bool derivatives,
                          void* val)
 {
@@ -433,7 +603,7 @@ rs_get_interpolated_blue(OSL::OpaqueExecContextPtr ec, bool derivatives,
     return false;
 }
 
-OSL_RSOP bool
+OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_interpolated_test(void* val)
 {
     printf("rs_get_interpolated_test\n");
@@ -441,7 +611,7 @@ rs_get_interpolated_test(void* val)
     return true;
 }
 
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_errorfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues)
@@ -454,7 +624,7 @@ rs_errorfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
                        argValues);
 }
 
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_warningfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
               int32_t arg_count, const OSL::EncodedType* argTypes,
               uint32_t argValuesSize, uint8_t* argValues)
@@ -469,7 +639,7 @@ rs_warningfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
 }
 
 
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_printfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues)
@@ -483,7 +653,7 @@ rs_printfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
 }
 
 
-OSL_RSOP void
+OSL_RSOP OSL_HOSTDEVICE void
 rs_filefmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename_hash,
            OSL::ustringhash fmt_specification, int32_t arg_count,
            const OSL::EncodedType* argTypes, uint32_t argValuesSize,

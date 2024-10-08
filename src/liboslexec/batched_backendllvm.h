@@ -359,6 +359,14 @@ public:
     ///
     llvm::Type* llvm_type_batched_trace_options();
 
+    llvm::Type* llvm_type_noise_options();
+    llvm::Type* llvm_type_noise_options_ptr();
+    llvm::Value* temp_noise_options_ptr();
+    llvm::Value* temp_noise_options_void_ptr()
+    {
+        return ll.void_ptr(temp_noise_options_ptr());
+    }
+
     /// Return the ShaderGlobals pointer.
     ///
     llvm::Value* sg_ptr() const { return m_llvm_shaderglobals_ptr; }
@@ -814,6 +822,7 @@ private:
     llvm::Value* m_llvm_temp_wide_matrix_ptr;  // for gen_tranform
     llvm::Value* m_llvm_temp_batched_texture_options_ptr;
     llvm::Value* m_llvm_temp_batched_trace_options_ptr;
+    llvm::Value* m_llvm_temp_noise_options_ptr;
 
     llvm::BasicBlock* m_exit_instance_block;  // exit point for the instance
     llvm::Type* m_llvm_type_sg;         // LLVM type of ShaderGlobals struct
@@ -821,6 +830,7 @@ private:
     llvm::Type* m_llvm_type_closure_component;
     llvm::Type* m_llvm_type_batched_texture_options;
     llvm::Type* m_llvm_type_batched_trace_options;
+    llvm::Type* m_llvm_type_noise_options;
     llvm::PointerType* m_llvm_type_prepare_closure_func;
     llvm::PointerType* m_llvm_type_setup_closure_func;
     int m_llvm_local_mem;   // Amount of memory we use for locals

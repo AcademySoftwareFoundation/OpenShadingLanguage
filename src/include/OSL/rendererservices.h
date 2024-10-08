@@ -478,9 +478,8 @@ public:
     /// Return the number of points found, always < max_points
     virtual int pointcloud_search(ShaderGlobals* sg, ustringhash filename,
                                   const OSL::Vec3& center, float radius,
-                                  int max_points, bool sort,
-                                  size_t* out_indices, float* out_distances,
-                                  int derivs_offset);
+                                  int max_points, bool sort, int* out_indices,
+                                  float* out_distances, int derivs_offset);
 
     /// Retrieve an attribute for an index list. The result is another array
     /// of the requested type stored in out_data.
@@ -489,7 +488,7 @@ public:
     /// NOTE: During shader execution when attr_type==TypeDesc::STRING,
     ///       out_data should be populated with a ustringhash
     virtual int pointcloud_get(ShaderGlobals* sg, ustringhash filename,
-                               size_t* indices, int count,
+                               const int* indices, int count,
                                ustringhash attr_name, TypeDesc attr_type,
                                void* out_data);
 
@@ -504,21 +503,7 @@ public:
                                   const TypeDesc* types, const void** data);
 
     /// Options for the trace call.
-    struct TraceOpt {
-        float mindist;         ///< ignore hits closer than this
-        float maxdist;         ///< ignore hits farther than this
-        bool shade;            ///< whether to shade what is hit
-        ustringhash traceset;  ///< named trace set
-        TraceOpt() : mindist(0.0f), maxdist(1.0e30), shade(false) {}
-
-        enum class LLVMMemberIndex {
-            mindist = 0,
-            maxdist,
-            shade,
-            traceset,
-            count
-        };
-    };
+    using TraceOpt = OSL::TraceOpt;
 
     /// Immediately trace a ray from P in the direction R.  Return true
     /// if anything hit, otherwise false.

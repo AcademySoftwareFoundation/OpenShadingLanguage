@@ -751,7 +751,16 @@ public:
             return NULL;
     }
 
-    void pointcloud_stats(int search, int get, int results, int writes = 0);
+    void pointcloud_stats(int search, int get, int results, int writes = 0)
+    {
+        m_stat_pointcloud_searches += search;
+        m_stat_pointcloud_gets += get;
+        m_stat_pointcloud_searches_total_results += results;
+        if (search && !results)
+            ++m_stat_pointcloud_failures;
+        OIIO::atomic_max(m_stat_pointcloud_max_results, results);
+        m_stat_pointcloud_writes += writes;
+    }
 
     /// Is the named symbol among the renderer outputs?
     bool is_renderer_output(ustring layername, ustring paramname,
@@ -1013,12 +1022,12 @@ private:
     atomic_ll m_stat_getattribute_calls;   ///< Stat: Number of getattribute
     atomic_ll m_stat_get_userdata_calls;   ///< Stat: # of get_userdata calls
     atomic_ll m_stat_noise_calls;          ///< Stat: # of noise calls
-    long long m_stat_pointcloud_searches;
-    long long m_stat_pointcloud_searches_total_results;
-    int m_stat_pointcloud_max_results;
-    int m_stat_pointcloud_failures;
-    long long m_stat_pointcloud_gets;
-    long long m_stat_pointcloud_writes;
+    atomic_ll m_stat_pointcloud_searches;
+    atomic_ll m_stat_pointcloud_searches_total_results;
+    atomic_int m_stat_pointcloud_max_results;
+    atomic_int m_stat_pointcloud_failures;
+    atomic_ll m_stat_pointcloud_gets;
+    atomic_ll m_stat_pointcloud_writes;
     atomic_ll m_stat_layers_executed;           ///< Total layers executed
     atomic_ll m_stat_total_shading_time_ticks;  ///< Total shading time (ticks)
     atomic_ll m_stat_reparam_calls_total;
@@ -2316,12 +2325,6 @@ public:
         return thread_info()->llvm_thread_info;
     }
 
-    TextureOpt* texture_options_ptr() { return &m_textureopt; }
-
-    RendererServices::NoiseOpt* noise_options_ptr() { return &m_noiseopt; }
-
-    RendererServices::TraceOpt* trace_options_ptr() { return &m_traceopt; }
-
     void* alloc_scratch(size_t size, size_t align = 1)
     {
         return m_scratch_pool.alloc(size, align);
@@ -2435,10 +2438,6 @@ private:
     int m_stat_layers_executed;     ///< Number of layers executed
     long long m_ticks;              ///< Time executing the shader
 
-    TextureOpt m_textureopt;                ///< texture call options
-    RendererServices::NoiseOpt m_noiseopt;  ///< noise call options
-    RendererServices::TraceOpt m_traceopt;  ///< trace call options
-
     SimplePool<20 * 1024> m_closure_pool;
     SimplePool<64 * 1024> m_scratch_pool;
 
@@ -2487,8 +2486,7 @@ private:
 };
 
 
-#ifndef __CUDACC__
-inline int
+OSL_HOSTDEVICE inline int
 tex_interp_to_code(ustringhash modename)
 {
     int mode = -1;
@@ -2503,6 +2501,7 @@ tex_interp_to_code(ustringhash modename)
     return mode;
 }
 
+#ifndef __CUDACC__
 inline int
 tex_interp_to_code(ustring modename)
 {
@@ -2529,7 +2528,7 @@ struct NoiseParams {
     float bandwidth;
     float impulses;
 
-    NoiseParams()
+    OSL_HOSTDEVICE NoiseParams()
         : anisotropic(0)
         , do_filter(true)
         , direction(1.0f, 0.0f, 0.0f)

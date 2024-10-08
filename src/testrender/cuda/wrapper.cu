@@ -220,15 +220,9 @@ __closesthit__closest_hit_osl()
     *(int*)&closure_pool[0] = 0;
     sg.renderstate          = &closure_pool[0];
 
-    // Create some run-time options structs. The OSL shader fills in the structs
-    // as it executes, based on the options specified in the shader source.
-    NoiseOptCUDA noiseopt;
-    TextureOptCUDA textureopt;
-    TraceOptCUDA traceopt;
-
     // Pack the pointers to the options structs in a faux "context",
     // which is a rough stand-in for the host ShadingContext.
-    ShadingContextCUDA shading_context = { &noiseopt, &textureopt, &traceopt };
+    ShadingContextCUDA shading_context;
 
     sg.context = &shading_context;
 

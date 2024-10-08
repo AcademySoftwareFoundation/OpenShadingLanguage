@@ -1173,7 +1173,7 @@ OptixGridRenderer::register_inline_functions()
     shadingsys->register_inline_function(ustring("osl_fabs_ff"));
     shadingsys->register_inline_function(ustring("osl_fabs_ii"));
     shadingsys->register_inline_function(ustring("osl_floor_ff"));
-    shadingsys->register_inline_function(ustring("osl_get_texture_options"));
+    shadingsys->register_inline_function(ustring("osl_init_texture_options"));
     shadingsys->register_inline_function(ustring("osl_getchar_isi"));
     shadingsys->register_inline_function(ustring("osl_hash_is"));
     shadingsys->register_inline_function(ustring("osl_log10_ff"));
@@ -1241,7 +1241,7 @@ OptixGridRenderer::register_inline_functions()
 
     // It's also possible to unregister functions to restore the default
     // inlining behavior when needed.
-    shadingsys->unregister_inline_function(ustring("osl_get_texture_options"));
+    shadingsys->unregister_inline_function(ustring("osl_init_texture_options"));
     shadingsys->unregister_noinline_function(ustring("osl_get_inverse_matrix"));
 
     // clang-format on

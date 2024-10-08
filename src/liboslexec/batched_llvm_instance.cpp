@@ -845,6 +845,55 @@ BatchedBackendLLVM::llvm_type_batched_trace_options()
 
 
 llvm::Type*
+BatchedBackendLLVM::llvm_type_noise_options()
+{
+    if (m_llvm_type_noise_options)
+        return m_llvm_type_noise_options;
+
+    std::vector<llvm::Type*> comp_types;
+    comp_types.push_back(ll.type_int());     // anisotropic;
+    comp_types.push_back(ll.type_int());     // do_filter;
+    comp_types.push_back(ll.type_triple());  // direction;
+    comp_types.push_back(ll.type_float());   // bandwidth;
+    comp_types.push_back(ll.type_float());   // impulses;
+
+    m_llvm_type_noise_options = ll.type_struct(comp_types, "NoiseOptions");
+
+    std::vector<unsigned int> offset_by_index;
+    offset_by_index.push_back(offsetof(NoiseParams, anisotropic));
+    offset_by_index.push_back(offsetof(NoiseParams, do_filter));
+    offset_by_index.push_back(offsetof(NoiseParams, direction));
+    offset_by_index.push_back(offsetof(NoiseParams, bandwidth));
+    offset_by_index.push_back(offsetof(NoiseParams, impulses));
+    ll.validate_struct_data_layout(m_llvm_type_noise_options, offset_by_index);
+
+    return m_llvm_type_noise_options;
+}
+
+
+
+llvm::Type*
+BatchedBackendLLVM::llvm_type_noise_options_ptr()
+{
+    return ll.type_ptr(llvm_type_noise_options());
+}
+
+
+
+llvm::Value*
+BatchedBackendLLVM::temp_noise_options_ptr()
+{
+    if (m_llvm_temp_noise_options_ptr == nullptr) {
+        // Don't worry about what basic block we are currently inside of because
+        // we insert all alloca's to the top function, not the current insertion point
+        m_llvm_temp_noise_options_ptr = ll.op_alloca(llvm_type_noise_options());
+    }
+    return m_llvm_temp_noise_options_ptr;
+}
+
+
+
+llvm::Type*
 BatchedBackendLLVM::llvm_type_sg_ptr()
 {
     return ll.type_ptr(llvm_type_sg());
@@ -1855,6 +1904,7 @@ BatchedBackendLLVM::build_llvm_init()
     m_llvm_temp_wide_matrix_ptr             = nullptr;
     m_llvm_temp_batched_texture_options_ptr = nullptr;
     m_llvm_temp_batched_trace_options_ptr   = nullptr;
+    m_llvm_temp_noise_options_ptr           = nullptr;
 
     // Set up a new IR builder
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_name);
@@ -1993,6 +2043,7 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     m_llvm_temp_wide_matrix_ptr             = nullptr;
     m_llvm_temp_batched_texture_options_ptr = nullptr;
     m_llvm_temp_batched_trace_options_ptr   = nullptr;
+    m_llvm_temp_noise_options_ptr           = nullptr;
 
     llvm::BasicBlock* entry_bb = ll.new_basic_block(unique_layer_name);
     m_exit_instance_block      = NULL;
@@ -2430,6 +2481,7 @@ BatchedBackendLLVM::initialize_llvm_group()
     m_llvm_type_closure_component       = NULL;
     m_llvm_type_batched_texture_options = NULL;
     m_llvm_type_batched_trace_options   = NULL;
+    m_llvm_type_noise_options           = NULL;
 
     initialize_llvm_helper_function_map();
 

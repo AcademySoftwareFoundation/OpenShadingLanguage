@@ -218,6 +218,19 @@ TypeDesc_from(TypeDesc_pod type)
 
 
 
+/// Options for the trace call.
+struct TraceOpt {
+    float mindist;         ///< ignore hits closer than this
+    float maxdist;         ///< ignore hits farther than this
+    bool shade;            ///< whether to shade what is hit
+    ustringhash traceset;  ///< named trace set
+    OSL_HOSTDEVICE TraceOpt() : mindist(0.0f), maxdist(1.0e30), shade(false) {}
+
+    enum class LLVMMemberIndex { mindist = 0, maxdist, shade, traceset, count };
+};
+
+
+
 // N.B. SymArena is not really "configuration", but we cram it here for
 // lack of a better home.
 

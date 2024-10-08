@@ -201,7 +201,7 @@ DECL(osl_splineinverse_dfdff, "xXhXXii")
 DECL(osl_splineinverse_dffdf, "xXhXXii")
 DECL(osl_setmessage, "xXhLXihi")
 DECL(osl_getmessage, "iXhhLXiihi")
-DECL(osl_pointcloud_search, "iXhXfiiXXii*")
+DECL(osl_pointcloud_search, "iXhXfiiXXiiXXX")
 DECL(osl_pointcloud_get, "iXhXihLX")
 DECL(osl_pointcloud_write, "iXhXiXXX")
 DECL(osl_pointcloud_write_helper, "xXXXihLX")
@@ -237,9 +237,9 @@ DECL(osl_uninit_check, "xLXXhihihhihihii")
 DECL(osl_get_attribute, "iXihhiiLX")
 DECL(osl_bind_interpolated_param, "iXhLiXiXiXi")
 DECL(osl_incr_get_userdata_calls, "xX")
-DECL(osl_get_texture_options, "XX");
-DECL(osl_get_noise_options, "XX");
-DECL(osl_get_trace_options, "XX");
+DECL(osl_init_texture_options, "xXX");
+DECL(osl_init_noise_options, "xXX");
+DECL(osl_init_trace_options, "xXX");
 
 
 // The following are defined inside llvm_ops.cpp. Only include these
@@ -408,6 +408,7 @@ DECL(osl_trace_set_maxdist, "xXf")
 DECL(osl_trace_set_shade, "xXi")
 DECL(osl_trace_set_traceset, "xXh")
 DECL(osl_trace, "iXXXXXXXX")
+DECL(osl_trace_get, "iXhLXi")
 
 #ifdef OSL_LLVM_NO_BITCODE
 DECL(osl_calculatenormal, "xXXX")

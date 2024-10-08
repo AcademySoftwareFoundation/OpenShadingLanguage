@@ -2566,8 +2566,8 @@ llvm_gen_texture_options(BackendLLVM& rop, int opnum, int first_optional_arg,
                          llvm::Value*& dalphadx, llvm::Value*& dalphady,
                          llvm::Value*& errormessage)
 {
-    llvm::Value* opt          = rop.ll.call_function("osl_get_texture_options",
-                                                     rop.sg_void_ptr());
+    llvm::Value* opt = rop.temp_texture_options_void_ptr();
+    rop.ll.call_function("osl_init_texture_options", rop.sg_void_ptr(), opt);
     llvm::Value* missingcolor = NULL;
     TextureOpt optdefaults;  // So we can check the defaults
     bool swidth_set = false, twidth_set = false, rwidth_set = false;
@@ -2973,8 +2973,8 @@ LLVMGEN(llvm_gen_environment)
 static llvm::Value*
 llvm_gen_trace_options(BackendLLVM& rop, int opnum, int first_optional_arg)
 {
-    llvm::Value* opt = rop.ll.call_function("osl_get_trace_options",
-                                            rop.sg_void_ptr());
+    llvm::Value* opt = rop.temp_trace_options_void_ptr();
+    rop.ll.call_function("osl_init_trace_options", rop.sg_void_ptr(), opt);
     Opcode& op(rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg; a < op.nargs(); ++a) {
         Symbol& Name(*rop.opargsym(op, a));
@@ -3068,8 +3068,8 @@ arg_typecode(Symbol* sym, bool derivs)
 static llvm::Value*
 llvm_gen_noise_options(BackendLLVM& rop, int opnum, int first_optional_arg)
 {
-    llvm::Value* opt = rop.ll.call_function("osl_get_noise_options",
-                                            rop.sg_void_ptr());
+    llvm::Value* opt = rop.temp_noise_options_void_ptr();
+    rop.ll.call_function("osl_init_noise_options", rop.sg_void_ptr(), opt);
 
     Opcode& op(rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg; a < op.nargs(); ++a) {
@@ -3523,6 +3523,28 @@ LLVMGEN(llvm_gen_getmessage)
     OSL_DASSERT(Result.typespec().is_int() && Name.typespec().is_string());
     OSL_DASSERT(has_source == 0 || Source.typespec().is_string());
 
+    if (has_source && Source.is_constant() && Source.get_string() == "trace") {
+        llvm::Value* args[5];
+        args[0] = rop.sg_void_ptr();
+        args[1] = rop.llvm_load_value(Name);
+
+        if (Data.typespec().is_closure_based()) {
+            // FIXME: secret handshake for closures ...
+            args[2] = rop.ll.constant(
+                TypeDesc(TypeDesc::UNKNOWN, Data.typespec().arraylength()));
+            // We need a void ** here so the function can modify the closure
+            args[3] = rop.llvm_void_ptr(Data);
+        } else {
+            args[2] = rop.ll.constant(Data.typespec().simpletype());
+            args[3] = rop.llvm_void_ptr(Data);
+        }
+        args[4] = rop.ll.constant((int)Data.has_derivs());
+
+        llvm::Value* r = rop.ll.call_function("osl_trace_get", args);
+        rop.llvm_store_value(r, Result);
+        return true;
+    }
+
     llvm::Value* args[9];
     args[0] = rop.sg_void_ptr();
     args[1] = has_source ? rop.llvm_load_value(Source)
@@ -3921,6 +3943,11 @@ LLVMGEN(llvm_gen_pointcloud_search)
     }
     int nattrs = (op.nargs() - attr_arg_offset) / 2;
 
+    // Generate local space for the names/types/values arrays
+    llvm::Value* names  = rop.ll.op_alloca(rop.ll.type_int64(), nattrs);
+    llvm::Value* types  = rop.ll.op_alloca(rop.ll.type_typedesc(), nattrs);
+    llvm::Value* values = rop.ll.op_alloca(rop.ll.type_void_ptr(), nattrs);
+
     std::vector<llvm::Value*> args;
     args.push_back(rop.sg_void_ptr());              // 0 sg
     args.push_back(rop.llvm_load_value(Filename));  // 1 filename
@@ -3934,7 +3961,8 @@ LLVMGEN(llvm_gen_pointcloud_search)
 
     args.push_back(Sort ? rop.llvm_load_value(*Sort)  // 5 sort
                         : rop.ll.constant(0));
-    args.push_back(rop.ll.constant_ptr(NULL));  // 6 indices
+    constexpr int indicesArgumentIndex = 6;     // 6 indices
+    args.push_back(NULL);                       // 6 indices
     args.push_back(rop.ll.constant_ptr(NULL));  // 7 distances
     args.push_back(rop.ll.constant(0));         // 8 derivs_offset
     args.push_back(NULL);                       // 9 nattrs
@@ -3952,7 +3980,7 @@ LLVMGEN(llvm_gen_pointcloud_search)
         TypeDesc simpletype = Value.typespec().simpletype();
         if (Name.is_constant() && Name.get_string() == u_index
             && simpletype.elementtype() == TypeDesc::INT) {
-            args[6] = rop.llvm_void_ptr(Value);
+            args[indicesArgumentIndex] = rop.llvm_void_ptr(Value);
         } else if (Name.is_constant() && Name.get_string() == u_distance
                    && simpletype.elementtype() == TypeDesc::FLOAT) {
             args[7] = rop.llvm_void_ptr(Value);
@@ -3967,9 +3995,12 @@ LLVMGEN(llvm_gen_pointcloud_search)
             //TODO: Implement custom attribute arguments for OptiX
 
             // It is a regular attribute, push it to the arg list
-            args.push_back(rop.llvm_load_value(Name));
-            args.push_back(rop.ll.constant(simpletype));
-            args.push_back(rop.llvm_void_ptr(Value));
+            llvm::Value* write_args[]
+                = { rop.ll.void_ptr(names),    rop.ll.void_ptr(types),
+                    rop.ll.void_ptr(values),   rop.ll.constant(extra_attrs),
+                    rop.llvm_load_value(Name), rop.ll.constant(simpletype),
+                    rop.llvm_void_ptr(Value) };
+            rop.ll.call_function("osl_pointcloud_write_helper", write_args);
             if (Value.has_derivs())
                 clear_derivs_of.push_back(&Value);
             extra_attrs++;
@@ -3979,13 +4010,14 @@ LLVMGEN(llvm_gen_pointcloud_search)
                             capacity);
     }
 
-    if (rop.use_optix()) {
-        // TODO: Implement proper variadic arguments for OptiX.
-        // In the meantime, dropping the custom attributes lets shader ptx compile properly.
-        args[9] = rop.ll.constant(0);
-        args.push_back(rop.ll.void_ptr_null());
-    } else {
-        args[9] = rop.ll.constant(extra_attrs);
+    args[9] = rop.ll.constant(extra_attrs);
+    args.push_back(rop.ll.void_ptr(names));   // attribute names array
+    args.push_back(rop.ll.void_ptr(types));   // attribute types array
+    args.push_back(rop.ll.void_ptr(values));  // attribute values array
+
+    if (!args[indicesArgumentIndex]) {
+        llvm::Value* indices = rop.ll.op_alloca(rop.ll.type_int(), capacity);
+        args[indicesArgumentIndex] = rop.ll.void_ptr(indices);
     }
 
     if (Max_points.is_constant()) {
@@ -4043,7 +4075,6 @@ LLVMGEN(llvm_gen_pointcloud_get)
     llvm::Value* cond           = rop.ll.op_le(elem_count_val, count);
     llvm::Value* clampedCount   = rop.ll.op_select(cond, elem_count_val, count);
 
-    // Convert 32bit indices to 64bit
     llvm::Value* args[] = {
         rop.sg_void_ptr(),
         rop.llvm_load_value(Filename),

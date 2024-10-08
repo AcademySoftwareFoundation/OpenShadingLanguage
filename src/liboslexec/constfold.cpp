@@ -2646,8 +2646,8 @@ DECLFOLDER(constfold_pointcloud_search)
 
     // We're doing a fixed query, so instead of running at every shade,
     // perform the search now.
-    const int maxconst = 256;  // Max number of points to consider a constant
-    size_t indices[maxconst + 1];  // Make room for one more!
+    const int maxconst = 256;   // Max number of points to consider a constant
+    int indices[maxconst + 1];  // Make room for one more!
     float distances[maxconst + 1];
     int maxpoints    = std::min(maxconst + 1, Max_points.get_int());
     ustring filename = Filename.get_string();
@@ -2701,16 +2701,7 @@ DECLFOLDER(constfold_pointcloud_search)
             // "index" is a special case -- it's retrieving the hit point
             // indices, not data on those hit points.
             //
-            // Because the presumed Partio underneath passes indices as
-            // size_t, but OSL only allows int parameters, we need to
-            // copy.  But just cast if size_t and int are the same size.
-            if (sizeof(size_t) == sizeof(int)) {
-                const_data = indices;
-            } else {
-                int* int_indices = (int*)const_data;
-                for (int i = 0; i < count; ++i)
-                    int_indices[i] = (int)indices[i];
-            }
+            const_data = indices;
         } else {
             // Named queries.
             bool ok = rop.renderer()->pointcloud_get(rop.shaderglobals(),
@@ -2771,15 +2762,10 @@ DECLFOLDER(constfold_pointcloud_get)
     if (count >= 1024)  // Too many, don't bother folding
         return 0;
 
-    // Must transfer to size_t array
-    size_t* indices = OSL_ALLOCA(size_t, count);
-    for (int i = 0; i < count; ++i)
-        indices[i] = Indices.get_int(i);
-
     TypeDesc valtype = Data.typespec().simpletype();
     std::vector<char> data(valtype.size());
     int ok = rop.renderer()->pointcloud_get(rop.shaderglobals(), filename,
-                                            indices, count,
+                                            (int*)Indices.data(), count,
                                             Attr_name.get_string(), valtype,
                                             &data[0]);
     rop.shadingsys().pointcloud_stats(0, 1, 0);

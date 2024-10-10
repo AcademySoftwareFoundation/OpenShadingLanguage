@@ -31,16 +31,7 @@ half_area(const Box3& b)
 inline float
 comp(const Vec3& vec, int i)
 {
-#ifndef __INTEL_LLVM_COMPILER
-    // This seems good enough for everybody but icx
     return (reinterpret_cast<const float*>(&vec))[i];
-#else
-    // icx sure does go bonkers with aliasing assumptions. It's really Imath's
-    // fault, but we need to deal with the fallout here. This is the only
-    // idiom I could find that reliably works.
-    float v[3] = { vec.x, vec.y, vec.z };
-    return v[i];
-#endif
 }
 
 

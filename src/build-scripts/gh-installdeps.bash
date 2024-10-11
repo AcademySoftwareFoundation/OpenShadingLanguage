@@ -102,14 +102,12 @@ else
         time sudo apt-get -q install -y ${EXTRA_DEP_PACKAGES}
     fi
 
-    export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
-
-    # Nonstandard python versions
-    if [[ "${PYTHON_VERSION}" == "3.9" ]] ; then
-        time sudo apt-get -q install -y python3.9-dev python3-numpy
-        pip3 --version
+    time sudo apt-get -q install -y python3-numpy
+    if [[ "${PIP_INSTALLS}" != "" ]] ; then
+        time pip3 install ${PIP_INSTALLS}
     fi
-    pip3 install numpy
+
+    export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
 
     if [[ "$CXX" == "g++-9" ]] ; then
         time sudo apt-get install -y g++-9

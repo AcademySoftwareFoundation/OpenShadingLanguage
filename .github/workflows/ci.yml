@@ -439,6 +439,7 @@ jobs:
                             LLVM_VERSION=17.0.6
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
+                            USE_PYTHON=0
                             QT_VERSION=0
 
     runs-on: ${{matrix.runner}}

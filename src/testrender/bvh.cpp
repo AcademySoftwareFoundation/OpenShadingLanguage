@@ -26,6 +26,16 @@ half_area(const Box3& b)
     return d.x * d.y + d.y * d.z + d.z * d.x;
 }
 
+
+// Workaround for Imath::Vec3 undefined behavior of operator[]
+inline float
+comp(const Vec3& vec, int i)
+{
+    return (reinterpret_cast<const float*>(&vec))[i];
+}
+
+
+
 static constexpr int NumBins  = 16;
 static constexpr int MaxDepth = 64;
 
@@ -73,8 +83,8 @@ build_bvh(OIIO::cspan<Vec3> verts, OIIO::cspan<TriangleIndices> triangles,
 
             float binFactor[3];
             for (int axis = 0; axis < 3; axis++) {
-                binFactor[axis] = current.centroid.max[axis]
-                                  - current.centroid.min[axis];
+                binFactor[axis] = comp(current.centroid.max, axis)
+                                  - comp(current.centroid.min, axis);
                 binFactor[axis] = (binFactor[axis] > 0)
                                       ? float(0.999f * NumBins)
                                             / binFactor[axis]
@@ -86,7 +96,8 @@ build_bvh(OIIO::cspan<Vec3> verts, OIIO::cspan<TriangleIndices> triangles,
                 Box3 bbox     = triangle_bounds[prim];
                 Vec3 center   = bbox.center();
                 for (int axis = 0; axis < 3; axis++) {
-                    int binID = (int)((center[axis] - current.centroid.min[axis])
+                    int binID = (int)((comp(center, axis)
+                                       - comp(current.centroid.min, axis))
                                       * binFactor[axis]);
                     OSL_ASSERT(binID >= 0 && binID < NumBins);
                     binN[axis][binID]++;
@@ -145,9 +156,10 @@ build_bvh(OIIO::cspan<Vec3> verts, OIIO::cspan<TriangleIndices> triangles,
                 for (unsigned i = current.left; i < current.right;) {
                     unsigned prim = bvh->indices[i];
                     Box3 bbox     = triangle_bounds[prim];
-                    float center  = bbox.center()[bestAxis];
-                    int binID = (int)((center - current.centroid.min[bestAxis])
-                                      * binFactor[bestAxis]);
+                    float center  = comp(bbox.center(), bestAxis);
+                    int binID
+                        = (int)((center - comp(current.centroid.min, bestAxis))
+                                * binFactor[bestAxis]);
                     OSL_ASSERT(binID >= 0 && binID < NumBins);
                     if (binID <= bestBin) {
                         boundsL.extendBy(bbox);
@@ -264,13 +276,14 @@ Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1,
     const Vec3 dir = ray.direction;
     const Vec3 rdir(1 / dir.x, 1 / dir.y, 1 / dir.z);
     int kz = 0;
-    if (fabsf(dir.y) > fabsf(dir[kz]))
+    if (fabsf(dir.y) > fabsf(comp(dir, kz)))
         kz = 1;
-    if (fabsf(dir.z) > fabsf(dir[kz]))
+    if (fabsf(dir.z) > fabsf(comp(dir, kz)))
         kz = 2;
     int kx = kz == 2 ? 0 : kz + 1;
     int ky = kx == 2 ? 0 : kx + 1;
-    const Vec3 shearDir(dir[kx] / dir[kz], dir[ky] / dir[kz], rdir[kz]);
+    const Vec3 shearDir(comp(dir, kx) / comp(dir, kz),
+                        comp(dir, ky) / comp(dir, kz), comp(rdir, kz));
     for (int stackPtr = 1; stackPtr != 0;) {
         if (result.t < stack[--stackPtr].dist)
             continue;
@@ -283,12 +296,12 @@ Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1,
                 const Vec3 A   = verts[triangles[id].a] - org;
                 const Vec3 B   = verts[triangles[id].b] - org;
                 const Vec3 C   = verts[triangles[id].c] - org;
-                const float Ax = A[kx] - shearDir.x * A[kz];
-                const float Ay = A[ky] - shearDir.y * A[kz];
-                const float Bx = B[kx] - shearDir.x * B[kz];
-                const float By = B[ky] - shearDir.y * B[kz];
-                const float Cx = C[kx] - shearDir.x * C[kz];
-                const float Cy = C[ky] - shearDir.y * C[kz];
+                const float Ax = comp(A, kx) - shearDir.x * comp(A, kz);
+                const float Ay = comp(A, ky) - shearDir.y * comp(A, kz);
+                const float Bx = comp(B, kx) - shearDir.x * comp(B, kz);
+                const float By = comp(B, ky) - shearDir.y * comp(B, kz);
+                const float Cx = comp(C, kx) - shearDir.x * comp(C, kz);
+                const float Cy = comp(C, ky) - shearDir.y * comp(C, kz);
                 // TODO: could use Kahan's algorithm here
                 // https://pharr.org/matt/blog/2019/11/03/difference-of-floats
                 const float U = Cx * By - Cy * Bx;
@@ -299,9 +312,9 @@ Scene::intersect(const Ray& ray, const float tmax, unsigned skipID1,
                 const float det = U + V + W;
                 if (det == 0)
                     continue;
-                const float Az      = A[kz];
-                const float Bz      = B[kz];
-                const float Cz      = C[kz];
+                const float Az      = comp(A, kz);
+                const float Bz      = comp(B, kz);
+                const float Cz      = comp(C, kz);
                 const float T       = shearDir.z * (U * Az + V * Bz + W * Cz);
                 const unsigned mask = signmask(det);
                 if (xorf(T, mask) < 0)

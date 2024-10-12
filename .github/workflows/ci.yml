@@ -370,32 +370,59 @@ jobs:
             setenvs: export LLVM_VERSION=10.0.0
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc11/C++17 llvm16 exr3.2 py3.9 avx2 batch-b16avx512
+          - desc: latest releases gcc11/C++17 llvm17 exr3.2 py3.10 avx2 batch-b16avx512
             nametag: linux-latest-releases
-            runner: ubuntu-22.04
-            cxx_compiler: g++-11
+            runner: ubuntu-24.04
+            cc_compiler: gcc-13
+            cxx_compiler: g++-13
             cxx_std: 17
-            fmt_ver: 10.1.0
-            openexr_ver: v3.2.1
+            fmt_ver: 11.0.2
+            opencolorio_ver: v2.4.0
+            openexr_ver: v3.3.0
             openimageio_ver: main
-            pybind11_ver: v2.11.1
-            python_ver: "3.10"
+            pybind11_ver: v2.13.5
+            python_ver: "3.12"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=16.0.4
+            setenvs: export LLVM_VERSION=17.0.6
                             LLVM_DISTRO_NAME=ubuntu-22.04
-                            OPENCOLORIO_VERSION=v2.2.0
-                            PUGIXML_VERSION=v1.13
+                            OPENCOLORIO_VERSION=v2.4.0
+                            LIBTIFF_VERSION=v4.7.0
+                            PTEX_VERSION=v2.4.3
+                            PUGIXML_VERSION=v1.14
+                            FREETYPE_VERSION=VER-2-13-3
+          - desc: latest releases +OIIO3 gcc11/C++17 llvm17 exr3.2 py3.10 avx2 batch-b16avx512
+            nametag: linux-latest-releases-oiio3dev
+            runner: ubuntu-24.04
+            cc_compiler: gcc-13
+            cxx_compiler: g++-13
+            cxx_std: 17
+            fmt_ver: 11.0.2
+            opencolorio_ver: v2.4.0
+            openexr_ver: v3.3.0
+            openimageio_ver: dev-3.0
+            pybind11_ver: v2.13.5
+            python_ver: "3.12"
+            simd: avx2,f16c
+            batched: b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: export LLVM_VERSION=17.0.6
+                            LLVM_DISTRO_NAME=ubuntu-22.04
+                            OPENCOLORIO_VERSION=v2.4.0
+                            LIBTIFF_VERSION=v4.7.0
+                            PTEX_VERSION=v2.4.3
+                            PUGIXML_VERSION=v1.14
+                            FREETYPE_VERSION=VER-2-13-3
           - desc: bleeding edge gcc12/C++17 llvm17 oiio/ocio/exr/pybind-main py3.10 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
-            runner: ubuntu-22.04
-            cxx_compiler: g++-12
+            runner: ubuntu-24.04
+            cc_compiler: gcc-13
+            cxx_compiler: g++-13
             cxx_std: 17
             fmt_ver: master
             openexr_ver: main
             openimageio_ver: main
             pybind11_ver: master
-            python_ver: "3.10"
+            python_ver: "3.12"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=17.0.6

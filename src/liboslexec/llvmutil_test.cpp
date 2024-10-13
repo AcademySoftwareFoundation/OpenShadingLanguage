@@ -23,7 +23,6 @@ static int memtest  = 0;
 static void
 getargs(int argc, char* argv[])
 {
-    bool help = false;
     OIIO::ArgParse ap;
     // clang-format off
     ap.intro("llvmutil_test\n" OIIO_INTRO_STRING);
@@ -35,15 +34,7 @@ getargs(int argc, char* argv[])
     ap.arg("--memtest %d:ITERATIONS", &memtest)
       .help("Memory test mode");
     // clang-format on
-    if (ap.parse(argc, (const char**)argv) < 0) {
-        std::cerr << ap.geterror() << std::endl;
-        ap.usage();
-        exit(EXIT_FAILURE);
-    }
-    if (help) {
-        ap.usage();
-        exit(EXIT_FAILURE);
-    }
+    ap.parse_args(argc, (const char**)argv);
 }
 
 

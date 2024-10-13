@@ -369,7 +369,6 @@ test_hash()
 static void
 getargs(int argc, const char* argv[])
 {
-    bool help = false;
     OIIO::ArgParse ap;
     // clang-format off
     ap.intro("oslnoise_test  (" OSL_INTRO_STRING ")");
@@ -384,15 +383,7 @@ getargs(int argc, const char* argv[])
       .help("Number of trials");
     // clang-format on
 
-    if (ap.parse(argc, (const char**)argv) < 0) {
-        std::cerr << ap.geterror() << std::endl;
-        ap.usage();
-        exit(EXIT_FAILURE);
-    }
-    if (help) {
-        ap.usage();
-        exit(EXIT_FAILURE);
-    }
+    ap.parse_args(argc, (const char**)argv);
 }
 
 

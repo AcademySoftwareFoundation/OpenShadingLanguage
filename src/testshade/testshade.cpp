@@ -711,8 +711,6 @@ getargs(int argc, const char* argv[])
     ap.arg("filename")
       .hidden()
       .action([&](cspan<const char*> argv){ stash_shader_arg(argv); });
-    ap.arg("--help")
-      .help("Print help message");
     ap.arg("-v", &verbose)
       .help("Verbose messages");
     ap.arg("-t %d:NTHREADS", &num_threads)
@@ -863,16 +861,7 @@ getargs(int argc, const char* argv[])
       .help("journal jbuffer size in MB");
 
     // clang-format on
-    if (ap.parse(argc, argv) < 0) {
-        std::cerr << ap.geterror() << std::endl;
-        ap.usage();
-        exit(EXIT_FAILURE);
-    }
-    if (ap["help"].get<int>()) {
-        ap.usage();
-        print_info();
-        exit(EXIT_SUCCESS);
-    }
+    ap.parse_args(argc, argv);
 }
 
 
@@ -909,7 +898,7 @@ process_shader_setup_args(int argc, const char* argv[])
       .action([&](cspan<const char*> argv){ specify_expr(argv); });
 
     // clang-format on
-    if (ap.parse(argc, argv) < 0
+    if (ap.parse_args(argc, argv) < 0
         || (shadernames.empty() && groupspec.empty())) {
         std::cerr << "ERROR: No shader or group was specified.\n";
         std::cerr << ap.geterror() << std::endl;

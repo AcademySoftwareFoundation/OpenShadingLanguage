@@ -224,24 +224,15 @@ getargs(int argc, const char* argv[])
       .help("Set extra TextureSystem options");
 
     // clang-format on
-    if (ap["help"].get<int>()) {
-        ap.print_help();
-        ap.abort();
-        exit(EXIT_SUCCESS);
-    }
-    if (ap.parse(argc, argv) < 0) {
-        std::cerr << ap.geterror() << "\n\n";
-        ap.usage();
-        exit(EXIT_FAILURE);
-    }
+    ap.parse_args(argc, argv);
     if (scenefile.empty()) {
         std::cerr << "testrender: Must specify an xml scene file to open\n\n";
-        ap.usage();
+        ap.print_help();
         exit(EXIT_FAILURE);
     }
     if (imagefile.empty()) {
         std::cerr << "testrender: Must specify a filename for output render\n\n";
-        ap.usage();
+        ap.print_help();
         exit(EXIT_FAILURE);
     }
 }

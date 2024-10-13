@@ -251,12 +251,9 @@ main(int argc, char* argv[])
       .help("Output information about just this parameter");
     // clang-format on
 
-    if (ap.parse(argc, (const char**)argv) < 0) {
-        std::cerr << ap.geterror() << std::endl;
-        ap.usage();
-        return EXIT_FAILURE;
-    } else if (filenames.empty()) {
-        ap.usage();
+    ap.parse_args(argc, (const char**)argv);
+    if (filenames.empty()) {
+        ap.print_help();
         return EXIT_SUCCESS;
     }
 

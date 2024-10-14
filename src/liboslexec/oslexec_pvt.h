@@ -23,9 +23,12 @@
 #    include <OSL/hashes.h>
 #endif
 
+#include <OpenImageIO/Imath.h>
+
 #include <OpenImageIO/color.h>
 #include <OpenImageIO/paramlist.h>
 #include <OpenImageIO/refcnt.h>
+#include <OpenImageIO/texture.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/ustring.h>
 
@@ -2491,13 +2494,13 @@ tex_interp_to_code(ustringhash modename)
 {
     int mode = -1;
     if (modename == Hashes::smartcubic)
-        mode = TextureOpt::InterpSmartBicubic;
+        mode = (int)TextureOpt::InterpSmartBicubic;
     else if (modename == Hashes::linear)
-        mode = TextureOpt::InterpBilinear;
+        mode = (int)TextureOpt::InterpBilinear;
     else if (modename == Hashes::cubic)
-        mode = TextureOpt::InterpBicubic;
+        mode = (int)TextureOpt::InterpBicubic;
     else if (modename == Hashes::closest)
-        mode = TextureOpt::InterpClosest;
+        mode = (int)TextureOpt::InterpClosest;
     return mode;
 }
 
@@ -2507,13 +2510,13 @@ tex_interp_to_code(ustring modename)
 {
     int mode = -1;
     if (modename == Strings::smartcubic)
-        mode = TextureOpt::InterpSmartBicubic;
+        mode = (int)TextureOpt::InterpSmartBicubic;
     else if (modename == Strings::linear)
-        mode = TextureOpt::InterpBilinear;
+        mode = (int)TextureOpt::InterpBilinear;
     else if (modename == Strings::cubic)
-        mode = TextureOpt::InterpBicubic;
+        mode = (int)TextureOpt::InterpBicubic;
     else if (modename == Strings::closest)
-        mode = TextureOpt::InterpClosest;
+        mode = (int)TextureOpt::InterpClosest;
     return mode;
 }
 #endif

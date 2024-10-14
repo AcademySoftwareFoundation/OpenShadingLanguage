@@ -4275,10 +4275,10 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* wide_const_fone_value  = rop.ll.wide_constant(1.0f);
     llvm::Value* const_zero_value       = rop.ll.constant(0);
 #if defined(OIIO_TEXTUREOPTBATCH_VERSION) && OIIO_TEXTUREOPTBATCH_VERSION >= 2
-    llvm::Value* wrap_default_value     = rop.ll.constant8(
+    llvm::Value* wrap_default_value = rop.ll.constant8(
         static_cast<uint8_t>(Tex::Wrap::Default));
 #else
-    llvm::Value* wrap_default_value     = rop.ll.constant(
+    llvm::Value* wrap_default_value = rop.ll.constant(
         static_cast<int>(Tex::Wrap::Default));
 #endif
 
@@ -4299,12 +4299,12 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* twrap        = wrap_default_value;
     llvm::Value* rwrap        = wrap_default_value;
 #if defined(OIIO_TEXTUREOPTBATCH_VERSION) && OIIO_TEXTUREOPTBATCH_VERSION >= 2
-    llvm::Value* mipmode      = rop.ll.constant8(
+    llvm::Value* mipmode = rop.ll.constant8(
         static_cast<uint8_t>(Tex::MipMode::Default));
     llvm::Value* interpmode = rop.ll.constant8(
         static_cast<uint8_t>(Tex::InterpMode::SmartBicubic));
 #else
-    llvm::Value* mipmode      = rop.ll.constant(
+    llvm::Value* mipmode = rop.ll.constant(
         static_cast<int>(Tex::MipMode::Default));
     llvm::Value* interpmode = rop.ll.constant(
         static_cast<int>(Tex::InterpMode::SmartBicubic));
@@ -4415,44 +4415,46 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
         continue;                                                   \
     }
 
-#define PARAM_UNIFORM_STRING_INT_CODE(paramname, decoder, llvm_decoder, fieldname) \
-    if (name == Strings::paramname && valtype == TypeDesc::STRING) {           \
-        if (valIsVarying) {                                                    \
-            is_##fieldname##_uniform = false;                                  \
-            continue;                                                          \
-        }                                                                      \
-        llvm::Value* val = nullptr;                                            \
-        if (Val.is_constant()) {                                               \
-            int mode = int(decoder(Val.get_string()));                         \
-            val      = rop.ll.constant(mode);                                  \
-        } else {                                                               \
-            val = rop.llvm_load_value(Val);                                    \
-            llvm::Value* scalar_value_uh                                       \
-                = rop.ll.call_function("osl_gen_ustringhash_pod", val);        \
-            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh);        \
-        }                                                                      \
-        fieldname = val;                                                       \
-        continue;                                                              \
+#define PARAM_UNIFORM_STRING_INT_CODE(paramname, decoder, llvm_decoder, \
+                                      fieldname)                        \
+    if (name == Strings::paramname && valtype == TypeDesc::STRING) {    \
+        if (valIsVarying) {                                             \
+            is_##fieldname##_uniform = false;                           \
+            continue;                                                   \
+        }                                                               \
+        llvm::Value* val = nullptr;                                     \
+        if (Val.is_constant()) {                                        \
+            int mode = int(decoder(Val.get_string()));                  \
+            val      = rop.ll.constant(mode);                           \
+        } else {                                                        \
+            val = rop.llvm_load_value(Val);                             \
+            llvm::Value* scalar_value_uh                                \
+                = rop.ll.call_function("osl_gen_ustringhash_pod", val); \
+            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh); \
+        }                                                               \
+        fieldname = val;                                                \
+        continue;                                                       \
     }
 
-#define PARAM_UNIFORM_STRING_UINT8_CODE(paramname, decoder, llvm_decoder, fieldname) \
-    if (name == Strings::paramname && valtype == TypeDesc::STRING) {           \
-        if (valIsVarying) {                                                    \
-            is_##fieldname##_uniform = false;                                  \
-            continue;                                                          \
-        }                                                                      \
-        llvm::Value* val = nullptr;                                            \
-        if (Val.is_constant()) {                                               \
-            int mode = int(decoder(Val.get_string()));                         \
-            val      = rop.ll.constant8(uint8_t(mode));                        \
-        } else {                                                               \
-            val = rop.llvm_load_value(Val);                                    \
-            llvm::Value* scalar_value_uh                                       \
-                = rop.ll.call_function("osl_gen_ustringhash_pod", val);        \
-            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh);        \
-        }                                                                      \
-        fieldname = val;                                                       \
-        continue;                                                              \
+#define PARAM_UNIFORM_STRING_UINT8_CODE(paramname, decoder, llvm_decoder, \
+                                        fieldname)                        \
+    if (name == Strings::paramname && valtype == TypeDesc::STRING) {      \
+        if (valIsVarying) {                                               \
+            is_##fieldname##_uniform = false;                             \
+            continue;                                                     \
+        }                                                                 \
+        llvm::Value* val = nullptr;                                       \
+        if (Val.is_constant()) {                                          \
+            int mode = int(decoder(Val.get_string()));                    \
+            val      = rop.ll.constant8(uint8_t(mode));                   \
+        } else {                                                          \
+            val = rop.llvm_load_value(Val);                               \
+            llvm::Value* scalar_value_uh                                  \
+                = rop.ll.call_function("osl_gen_ustringhash_pod", val);   \
+            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh);   \
+        }                                                                 \
+        fieldname = val;                                                  \
+        continue;                                                         \
     }
 
         if (name == Strings::wrap && valtype == TypeDesc::STRING) {

@@ -720,6 +720,7 @@ public:
     /// Return an llvm::Value holding the given string constant (as
     /// determined by the ustring_rep).
     llvm::Value* constant(ustring s);
+    llvm::Value* constant_real_ustring(ustring s);
     llvm::Value* constant(string_view s) { return constant(ustring(s)); }
 
     llvm::Constant* constant_array(cspan<llvm::Constant*> constants);
@@ -752,6 +753,7 @@ public:
     llvm::Constant* wide_constant(size_t i);
     llvm::Constant* wide_constant_bool(bool b);
     llvm::Value* wide_constant(ustring s);
+    llvm::Value* wide_constant_real_ustring(ustring s);
     llvm::Value* wide_constant(string_view s)
     {
         return wide_constant(ustring(s));
@@ -1060,10 +1062,14 @@ private:
     IRBuilder& builder();
 
     int m_debug;
-    bool m_dumpasm           = false;
-    bool m_jit_fma           = false;
-    bool m_jit_aggressive    = false;
+    bool m_dumpasm        = false;
+    bool m_jit_fma        = false;
+    bool m_jit_aggressive = false;
+#ifndef OSL_USTRINGREP_IS_HASH
     UstringRep m_ustring_rep = UstringRep::charptr;
+#else
+    UstringRep m_ustring_rep = UstringRep::hash;
+#endif
     PerThreadInfo::Impl* m_thread;
     llvm::LLVMContext* m_llvm_context;
     llvm::Module* m_llvm_module;

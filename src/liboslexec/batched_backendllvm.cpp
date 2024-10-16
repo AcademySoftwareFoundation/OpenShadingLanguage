@@ -1895,7 +1895,8 @@ BatchedBackendLLVM::llvm_test_nonzero(const Symbol& val, bool test_derivs)
 
 bool
 BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
-                                     int arrayindex, int srccomp, int dstcomp)
+                                     int srcarrayindex, int dstarrayindex,
+                                     int srccomp, int dstcomp)
 {
     OSL_DEV_ONLY(std::cout << "llvm_assign_impl arrayindex=" << arrayindex
                            << " Result(" << Result.name()
@@ -1915,25 +1916,28 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
     const TypeSpec& result_t(Result.typespec());
     const TypeSpec& src_t(Src.typespec());
 
-    llvm::Value* arrind = arrayindex >= 0 ? ll.constant(arrayindex) : NULL;
+    llvm::Value* sarrind = srcarrayindex >= 0 ? ll.constant(srcarrayindex)
+                                              : NULL;
+    llvm::Value* darrind = dstarrayindex >= 0 ? ll.constant(dstarrayindex)
+                                              : NULL;
 
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
         if (Src.typespec().is_closure()) {
-            llvm::Value* srcval = llvm_load_value(Src, 0, arrind, 0,
+            llvm::Value* srcval = llvm_load_value(Src, 0, sarrind, 0,
                                                   TypeUnknown, op_is_uniform);
-            llvm_store_value(srcval, Result, 0, arrind, 0);
+            llvm_store_value(srcval, Result, 0, darrind, 0);
         } else {
             llvm::Value* null_value = ll.constant_ptr(NULL, ll.type_void_ptr());
             if (!op_is_uniform)
                 null_value = ll.widen_value(null_value);
-            llvm_store_value(null_value, Result, 0, arrind, 0);
+            llvm_store_value(null_value, Result, 0, darrind, 0);
         }
         return true;
     }
 
     if (Result.typespec().is_matrix() && Src.typespec().is_int_or_float()) {
         // Handle m=f, m=i separately
-        llvm::Value* src = llvm_load_value(Src, 0, arrind, 0,
+        llvm::Value* src = llvm_load_value(Src, 0, sarrind, 0,
                                            TypeDesc::FLOAT /*cast*/,
                                            op_is_uniform);
         // m=f sets the diagonal components to f, the others to zero
@@ -1945,7 +1949,7 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
 
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
-                llvm_store_value(i == j ? src : zero, Result, 0, arrind,
+                llvm_store_value(i == j ? src : zero, Result, 0, darrind,
                                  i * 4 + j);
         llvm_zero_derivs(Result);  // matrices don't have derivs currently
         return true;
@@ -1955,34 +1959,36 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
 
     // The following code handles f=f, f=i, v=v, v=f, v=i, m=m, s=s.
     // Remember that llvm_load_value will automatically convert scalar->triple.
-    TypeDesc rt              = Result.typespec().simpletype();
-    TypeDesc basetype        = TypeDesc::BASETYPE(rt.basetype);
-    const int num_components = rt.aggregate;
-    const bool singlechan    = (srccomp != -1) || (dstcomp != -1);
+    TypeDesc rt                     = Result.typespec().simpletype();
+    TypeDesc basetype               = TypeDesc::BASETYPE(rt.basetype);
+    const int num_components        = rt.aggregate;
+    const bool singlechan           = (srccomp != -1) || (dstcomp != -1);
+    const bool scalar_to_array_elem = (Src.arraylen() == 0
+                                       && dstarrayindex != -1);
 
     // Because we are not mem-copying arrays wholesale,
     // We will add an outer array index loop to copy 1 element or entire array
-    int start_array_index = arrayindex;
+    int start_array_index = srcarrayindex;
     int end_array_index   = start_array_index + 1;
-    if (start_array_index == -1) {
+    if (srcarrayindex == -1 && dstarrayindex == -1) {
         if (result_t.is_array() && src_t.is_array()) {
-            start_array_index = 0;
-            end_array_index   = std::min(result_t.arraylength(),
-                                         src_t.arraylength());
+            start_array_index = dstarrayindex = srcarrayindex = 0;
+            end_array_index = std::min(result_t.arraylength(),
+                                       src_t.arraylength());
         }
     }
-    for (arrayindex = start_array_index; arrayindex < end_array_index;
-         ++arrayindex) {
-        arrind = arrayindex >= 0 ? ll.constant(arrayindex) : NULL;
-
-        if (!singlechan) {
+    for (srcarrayindex = start_array_index; srcarrayindex < end_array_index;
+         ++srcarrayindex, ++dstarrayindex) {
+        sarrind = srcarrayindex >= 0 ? ll.constant(srcarrayindex) : NULL;
+        darrind = dstarrayindex >= 0 ? ll.constant(dstarrayindex) : NULL;
+        if (!singlechan && !scalar_to_array_elem) {
             for (int i = 0; i < num_components; ++i) {
                 // Automatically handle widening the source value to match the destination's
                 llvm::Value* src_val
                     = Src.is_constant()
-                          ? llvm_load_constant_value(Src, arrayindex, i,
+                          ? llvm_load_constant_value(Src, srcarrayindex, i,
                                                      basetype, op_is_uniform)
-                          : llvm_load_value(Src, 0, arrind, i, basetype,
+                          : llvm_load_value(Src, 0, sarrind, i, basetype,
                                             op_is_uniform);
                 if (!src_val)
                     return false;
@@ -1992,7 +1998,19 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
                              << ll.llvm_typenameof(src_val) << std::endl);
                 // The llvm_load_value above should have handled bool to int conversions
                 // when the basetype == Typedesc::INT
-                llvm_store_value(src_val, Result, 0, arrind, i);
+                llvm_store_value(src_val, Result, 0, darrind, i);
+            }
+        } else if (scalar_to_array_elem) {
+            for (int i = 0; i < num_components; ++i) {
+                llvm::Value* src_val
+                    = Src.is_constant()
+                          ? llvm_load_constant_value(Src, -1, i, basetype,
+                                                     op_is_uniform)
+                          : llvm_load_value(Src, 0, NULL, i, basetype,
+                                            op_is_uniform);
+                if (!src_val)
+                    return false;
+                llvm_store_value(src_val, Result, 0, darrind, i);
             }
         } else {
             // connect individual component of an aggregate type
@@ -2002,9 +2020,9 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
             // Automatically handle widening the source value to match the destination's
             llvm::Value* src_val
                 = Src.is_constant()
-                      ? llvm_load_constant_value(Src, arrayindex, srccomp,
+                      ? llvm_load_constant_value(Src, srcarrayindex, srccomp,
                                                  basetype, op_is_uniform)
-                      : llvm_load_value(Src, 0, arrind, srccomp, basetype,
+                      : llvm_load_value(Src, 0, sarrind, srccomp, basetype,
                                         op_is_uniform);
             if (!src_val)
                 return false;
@@ -2016,9 +2034,9 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
             // the single element requested.
             if (dstcomp == -1) {
                 for (int i = 0; i < num_components; ++i)
-                    llvm_store_value(src_val, Result, 0, arrind, i);
+                    llvm_store_value(src_val, Result, 0, darrind, i);
             } else
-                llvm_store_value(src_val, Result, 0, arrind, dstcomp);
+                llvm_store_value(src_val, Result, 0, darrind, dstcomp);
         }
 
         // Handle derivatives
@@ -2037,25 +2055,25 @@ BatchedBackendLLVM::llvm_assign_impl(const Symbol& Result, const Symbol& Src,
                         if (Src.has_derivs()) {
                             // src and result both have derivs -- copy them
                             // allow a uniform Src to store to a varying Result,
-                            val = llvm_load_value(Src, d, arrind, i,
+                            val = llvm_load_value(Src, d, sarrind, i,
                                                   TypeUnknown, op_is_uniform);
                         }
-                        llvm_store_value(val, Result, d, arrind, i);
+                        llvm_store_value(val, Result, d, darrind, i);
                     }
                 } else {
                     llvm::Value* val = zero;
                     if (Src.has_derivs()) {
                         // src and result both have derivs -- copy them
                         // allow a uniform Src to store to a varying Result,
-                        val = llvm_load_value(Src, d, arrind, srccomp,
+                        val = llvm_load_value(Src, d, sarrind, srccomp,
                                               TypeUnknown, op_is_uniform);
                     }
 
                     if (dstcomp == -1) {
                         for (int i = 0; i < num_components; ++i)
-                            llvm_store_value(val, Result, d, arrind, i);
+                            llvm_store_value(val, Result, d, darrind, i);
                     } else
-                        llvm_store_value(val, Result, d, arrind, dstcomp);
+                        llvm_store_value(val, Result, d, darrind, dstcomp);
                 }
             }
         }

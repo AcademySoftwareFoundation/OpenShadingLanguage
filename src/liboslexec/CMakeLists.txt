@@ -141,11 +141,7 @@ endif()
 if (BUILD_SHARED_LIBS)
     # oslcomp symbols used in oslexec
     list(APPEND lib_src
-        ../liboslcomp/ast.cpp
-        ../liboslcomp/codegen.cpp
-        ../liboslcomp/oslcomp.cpp
         ../liboslcomp/symtab.cpp
-        ../liboslcomp/typecheck.cpp
         )
 endif ()
 
@@ -153,9 +149,6 @@ file (GLOB exec_headers "*.h")
 file (GLOB compiler_headers "../liboslcomp/*.h")
 
 FLEX_BISON ( osolex.l osogram.y oso lib_src exec_headers )
-if (BUILD_SHARED_LIBS)
-    FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl lib_src compiler_headers )
-endif()
 
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 
@@ -581,7 +574,6 @@ target_link_libraries (${local_lib}
     PRIVATE
         pugixml::pugixml
         ${CMAKE_DL_LIBS}
-        ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
     )
 

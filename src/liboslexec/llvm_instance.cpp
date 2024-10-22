@@ -1899,11 +1899,11 @@ BackendLLVM::initialize_llvm_group()
         bool varargs      = false;
         const char* types = i->second.argtypes;
         int advance;
-        TypeSpec rettype = OSLCompilerImpl::type_from_code(types, &advance);
+        TypeSpec rettype = TypeSpec::type_from_code(types, &advance);
         types += advance;
         std::vector<llvm::Type*> params;
         while (*types) {
-            TypeSpec t = OSLCompilerImpl::type_from_code(types, &advance);
+            TypeSpec t = TypeSpec::type_from_code(types, &advance);
             if (t.simpletype().basetype == TypeDesc::UNKNOWN) {
                 OSL_DASSERT(*types == '*');
                 if (*types == '*')

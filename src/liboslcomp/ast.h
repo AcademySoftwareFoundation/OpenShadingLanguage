@@ -349,11 +349,6 @@ protected:
     /// coercion if acceptfloat is false.
     Symbol* coerce(Symbol* sym, const TypeSpec& type, bool acceptfloat = false);
 
-    /// Return the c_str giving a human-readable name of a type, fully
-    /// accounting for exotic types like structs, etc.
-    /// N.B.: just conveniently wraps the compiler's identical method.
-    const char* type_c_str(const TypeSpec& type) const;
-
     /// Assign the struct variable named by srcsym to the struct
     /// variable named by dstsym by assigning each field individually.
     /// In the case of dstsym naming an array of structs, arrayindex

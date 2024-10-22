@@ -163,7 +163,7 @@ ShaderMaster::resolve_syms()
     oparg_ptrs.reserve(m_args.size());
     for (auto&& a : m_args)
         oparg_ptrs.push_back(symbol(a));
-    OSLCompilerImpl::track_variable_lifetimes(m_ops, oparg_ptrs, allsymptrs);
+    track_variable_lifetimes_main(m_ops, oparg_ptrs, allsymptrs);
 
     // Figure out which ray types are queried
     m_raytype_queries = 0;

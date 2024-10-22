@@ -1812,8 +1812,8 @@ ASTfunction_call::codegen(Symbol* dest)
     std::vector<TypeSpec> polyargs;
     const char* param_argcodes = func()->argcodes().c_str();
     int len;
-    m_compiler->type_from_code(param_argcodes, &len);  // skip ret type
-    m_compiler->typespecs_from_codes(param_argcodes + len, polyargs);
+    TypeSpec::type_from_code(param_argcodes, &len);  // skip ret type
+    TypeSpec::typespecs_from_codes(param_argcodes + len, polyargs);
 
     // Generate code for all the individual arguments.  Remember the
     // individual indices for arguments that are array elements or

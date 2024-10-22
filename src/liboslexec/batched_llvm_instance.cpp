@@ -154,7 +154,7 @@ possibly_wide_type_from_code(const char* code, int* advance, bool& is_uniform)
         is_uniform = true;
     }
 
-    TypeSpec t = OSLCompilerImpl::type_from_code(code + i, advance);
+    TypeSpec t = TypeSpec::type_from_code(code + i, advance);
 
     if (advance)
         *advance += i;

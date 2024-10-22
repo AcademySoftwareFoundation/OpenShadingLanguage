@@ -275,15 +275,6 @@ ASTNode::printchildren(std::ostream& out, int indentlevel) const
 }
 
 
-
-const char*
-ASTNode::type_c_str(const TypeSpec& type) const
-{
-    return m_compiler->type_c_str(type);
-}
-
-
-
 void
 ASTNode::list_to_vec(const ref& A, std::vector<ref>& vec)
 {
@@ -401,14 +392,14 @@ ASTfunction_declaration::ASTfunction_declaration(OSLCompilerImpl* comp,
 
     // Build up the argument signature for this declared function
     m_typespec           = type;
-    std::string argcodes = m_compiler->code_from_type(m_typespec);
+    std::string argcodes = m_typespec.code_from_type();
     for (ASTNode* arg = form; arg; arg = arg->nextptr()) {
         const TypeSpec& t(arg->typespec());
         if (t == TypeSpec() /* UNKNOWN */) {
             m_typespec = TypeDesc::UNKNOWN;
             return;
         }
-        argcodes += m_compiler->code_from_type(t);
+        argcodes += t.code_from_type();
         OSL_ASSERT(arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration* v = (ASTvariable_declaration*)arg;
         if (v->init())

@@ -98,6 +98,10 @@ public:
     /// is not responsible for freeing the characters.
     const char* c_str() const;
 
+    /// Return the c_str giving a human-readable name of a type, fully
+    /// accounting for exotic types like structs, etc.
+    const char* type_c_str() const;
+
     /// Stream output
     friend std::ostream& operator<<(std::ostream& o, const TypeSpec& t)
     {
@@ -372,6 +376,28 @@ public:
                || (dst.is_float_based() && !dst.is_array()
                    && (src.is_float() || src.is_int()));
     }
+
+    /// Given a pointer to a type code string that we use for argument
+    /// checking ("p", "v", etc.) return the TypeSpec of the first type
+    /// described by the string (UNKNOWN if it couldn't be recognized).
+    /// If 'advance' is non-NULL, set *advance to the number of
+    /// characters taken by the first code so the caller can advance
+    /// their pointer to the next code in the string.
+    static TypeSpec type_from_code(const char* code, int* advance = nullptr);
+
+    /// Return the argument checking code ("p", "v", etc.) corresponding
+    /// to the type.
+    std::string code_from_type() const;
+
+    /// Take a type code string (possibly containing many types)
+    /// and turn it into a human-readable string.
+    static std::string typelist_from_code(const char* code);
+
+    /// Take a type code string (possibly containing many types) and
+    /// turn it into a TypeSpec vector.
+    static void typespecs_from_codes(const char* code,
+                              std::vector<TypeSpec>& types);
+
 
 private:
     TypeDesc m_simple;  ///< Data if it's a simple type
@@ -1124,6 +1150,16 @@ private:
 
 
 typedef std::vector<Opcode> OpcodeVec;
+
+/// Called after code is generated, this function loops over all the ops
+/// and figures out the lifetimes of all variables, based on whether the
+/// args in each op are read or written. This function is used both in
+/// the compiler and the runtime optimizer.
+void track_variable_lifetimes_main(
+    const OpcodeVec& ircode,
+    const SymbolPtrVec& opargs,
+    const SymbolPtrVec& allsyms,
+    std::vector<int>* bblock_ids = nullptr);
 
 
 

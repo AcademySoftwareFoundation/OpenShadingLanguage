@@ -540,9 +540,8 @@ RuntimeOptimizer::insert_code(int opnum, ustring opname,
 {
     OpcodeVec& code(inst()->ops());
     std::vector<int>& opargs(inst()->args());
-    ustring method = (opnum < (int)code.size())
-                         ? code[opnum].method()
-                         : main_method_name;
+    ustring method = (opnum < (int)code.size()) ? code[opnum].method()
+                                                : main_method_name;
     int nargs      = args_to_add.size();
     Opcode op(opname, method, opargs.size(), nargs);
     code.insert(code.begin() + opnum, op);
@@ -2518,7 +2517,8 @@ RuntimeOptimizer::track_variable_lifetimes(const SymbolPtrVec& allsymptrs)
     if (m_bblockids.size() != inst()->ops().size())
         find_basic_blocks();
 
-    track_variable_lifetimes_main(inst()->ops(), oparg_ptrs, allsymptrs, &m_bblockids);
+    track_variable_lifetimes_main(inst()->ops(), oparg_ptrs, allsymptrs,
+                                  &m_bblockids);
 }
 
 

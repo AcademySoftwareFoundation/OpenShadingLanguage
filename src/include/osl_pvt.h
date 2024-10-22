@@ -396,7 +396,7 @@ public:
     /// Take a type code string (possibly containing many types) and
     /// turn it into a TypeSpec vector.
     static void typespecs_from_codes(const char* code,
-                              std::vector<TypeSpec>& types);
+                                     std::vector<TypeSpec>& types);
 
 
 private:
@@ -1155,11 +1155,11 @@ typedef std::vector<Opcode> OpcodeVec;
 /// and figures out the lifetimes of all variables, based on whether the
 /// args in each op are read or written. This function is used both in
 /// the compiler and the runtime optimizer.
-void track_variable_lifetimes_main(
-    const OpcodeVec& ircode,
-    const SymbolPtrVec& opargs,
-    const SymbolPtrVec& allsyms,
-    std::vector<int>* bblock_ids = nullptr);
+void
+track_variable_lifetimes_main(const OpcodeVec& ircode,
+                              const SymbolPtrVec& opargs,
+                              const SymbolPtrVec& allsyms,
+                              std::vector<int>* bblock_ids = nullptr);
 
 
 

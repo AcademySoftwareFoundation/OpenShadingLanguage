@@ -118,7 +118,8 @@ TypeSpec::new_struct(StructSpec* n)
     return (int)m_structs.size() - 1;
 }
 
-TypeSpec TypeSpec::type_from_code(const char* code, int* advance)
+TypeSpec
+TypeSpec::type_from_code(const char* code, int* advance)
 {
     TypeSpec t;
     int i = 0;
@@ -259,8 +260,7 @@ TypeSpec::code_from_type() const
 
 
 void
-TypeSpec::typespecs_from_codes(const char* code,
-                                      std::vector<TypeSpec>& types)
+TypeSpec::typespecs_from_codes(const char* code, std::vector<TypeSpec>& types)
 {
     types.clear();
     while (code && *code) {

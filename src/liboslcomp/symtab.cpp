@@ -339,8 +339,7 @@ static ustring op_while("while");
 static ustring op_dowhile("dowhile");
 
 void
-track_variable_lifetimes_main(const OpcodeVec& code,
-                              const SymbolPtrVec& opargs,
+track_variable_lifetimes_main(const OpcodeVec& code, const SymbolPtrVec& opargs,
                               const SymbolPtrVec& allsyms,
                               std::vector<int>* bblockids)
 {

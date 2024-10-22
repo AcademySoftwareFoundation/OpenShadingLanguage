@@ -12,7 +12,7 @@ add_executable (osltoy ${osltoy_srcs})
 set_target_properties (osltoy PROPERTIES FOLDER "Tools")
 target_link_libraries (osltoy
     PRIVATE
-        oslexec
+        oslexec oslcomp
         $<TARGET_NAME_IF_EXISTS:Qt5::Core>
         $<TARGET_NAME_IF_EXISTS:Qt5::Gui>
         $<TARGET_NAME_IF_EXISTS:Qt5::Widgets>

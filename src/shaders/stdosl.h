@@ -607,6 +607,39 @@ closure color subsurface_bssrdf(normal N, color albedo, color radius, float anis
 closure color sheen_bsdf(normal N, color albedo, float roughness) BUILTIN;
 
 
+// Constructs a hair BSDF based on the Chiang hair shading model. This node does not support vertical layering.
+//  \param N                            Normal vector of the surface.
+//  \param curve_direction              Direction of the hair geometry.
+//  \param tint_R                       Color multiplier for the R-lobe.
+//  \param tint_TT                      Color multiplier for the TT-lobe.
+//  \param tint_TRT                     Color multiplier for the TRT-lobe.
+//  \param ior                          Index of refraction.
+//  \param longitudual_roughness_R      Longitudinal roughness (ν) for the R-lobe  , range [0.0, ∞)
+//  \param longitudual_roughness_TT     Longitudinal roughness (ν) for the TT-lobe , range [0.0, ∞)
+//  \param longitudual_roughness_TRT    Longitudinal roughness (ν) for the TRT-lobe, range [0.0, ∞)
+//  \param azimuthal_roughness_R        Azimuthal roughness (s) for the R-lobe  , range [0.0, ∞)
+//  \param azimuthal_roughness_TT       Azimuthal roughness (s) for the TT-lobe , range [0.0, ∞)
+//  \param azimuthal_roughness_TRT      Azimuthal roughness (s) for the TRT-lobe, range [0.0, ∞)
+//  \param cuticle_angle                Cuticle angle in radians, Values above 0.5 tilt the scales towards the root of the fiber, range [0.0, 1.0], with 0.5 specifying no tilt.
+//  \param absorption_coefficient       Absorption coefficient normalized to the hair fiber diameter.
+closure color chiang_hair_bsdf(
+    normal  N,
+    vector  curve_direction,
+    color   tint_R,
+    color   tint_TT,
+    color   tint_TRT,
+    float   ior,
+    float   longitudual_roughness_R,
+    float   longitudual_roughness_TT,
+    float   longitudual_roughness_TRT,
+    float   azimuthal_roughness_R,
+    float   azimuthal_roughness_TT,
+    float   azimuthal_roughness_TRT,
+    float   cuticle_angle,
+    color   absorption_coefficient
+) BUILTIN;
+
+
 // -------------------------------------------------------------//
 // EDF closures                                                 //
 // -------------------------------------------------------------//

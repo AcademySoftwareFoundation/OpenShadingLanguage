@@ -106,13 +106,13 @@ color4 __operator__div__(color4 a, color4 b)
 
 color4 __operator__div__(color4 a, int b)
 {
-    float b_inv = 1/b;
+    float b_inv = 1.0 / float(b);
     return a * color4(color(b_inv), b_inv);
 }
 
 color4 __operator__div__(color4 a, float b)
 {
-    float b_inv = 1/b;
+    float b_inv = 1.0 / b;
     return a * color4(color(b_inv), b_inv);
 }
 
@@ -131,7 +131,7 @@ int __operator__eq__(color4 a, color4 b)
     return (a.rgb == b.rgb) && (a.a == b.a);
 }
 
-int __operator__ne__(color4 a, color4 b)
+int __operator__neq__(color4 a, color4 b)
 {
     return (a.rgb != b.rgb) || (a.a != b.a);
 }
@@ -181,11 +181,6 @@ color4 mix(color4 a, color4 b, float x )
 {
     return color4(mix(a.rgb, b.rgb, x),
                   mix(a.a, b.a, x));
-}
-
-float dot(color4 a, color b)
-{
-    return dot(a.rgb, b);
 }
 
 color4 smoothstep(color4 edge0, color4 edge1, color4 c)

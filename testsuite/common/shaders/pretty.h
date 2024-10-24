@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+#pragma once
+#define PRETTY_H
+
 
 // pretty(x) rounds very small values to zero and turns -0 values into +0.
 // This is useful for testsuite to eliminate some pesky LSB errors that

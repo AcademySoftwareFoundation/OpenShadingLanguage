@@ -105,13 +105,13 @@ vector2 __operator__div__(vector2 a, vector2 b)
 
 vector2 __operator__div__(vector2 a, int b)
 {
-    float b_inv = 1/b;
+    float b_inv = 1.0 / float(b);
     return a * vector2(b_inv, b_inv);
 }
 
 vector2 __operator__div__(vector2 a, float b)
 {
-    float b_inv = 1/b;
+    float b_inv = 1.0 / b;
     return a * vector2(b_inv, b_inv);
 }
 
@@ -130,7 +130,7 @@ int __operator__eq__(vector2 a, vector2 b)
     return (a.x == b.x) && (a.y == b.y);
 }
 
-int __operator__ne__(vector2 a, vector2 b)
+int __operator__neq__(vector2 a, vector2 b)
 {
     return (a.x != b.x) || (a.y != b.y);
 }
@@ -221,6 +221,17 @@ vector2 max(vector2 a, vector2 b)
                     max(a.y, b.y));
 }
 
+vector2 min(vector2 a, vector2 b)
+{
+    return vector2 (min(a.x, b.x),
+                    min(a.y, b.y));
+}
+
+vector2 min(vector2 a, float b)
+{
+    return min(a, vector2(b, b));
+}
+
 vector2 max(vector2 a, float b)
 {
     return max(a, vector2(b, b));
@@ -229,17 +240,6 @@ vector2 max(vector2 a, float b)
 vector2 normalize(vector2 a)
 {
     return a / length(a);
-}
-
-vector2 min(vector2 a, vector2 b)
-{
-    return vector2 (min(a.x, a.x),
-                    min(b.y, b.y));
-}
-
-vector2 min(vector2 a, float b)
-{
-    return min(a, vector2(b, b));
 }
 
 vector2 mod(vector2 a, vector2 b)
@@ -307,13 +307,11 @@ vector2 acos(vector2 a)
 vector2 atan2(vector2 a, float f)
 {
     return vector2(atan2(a.x, f),
-                  atan2(a.y, f));
+                   atan2(a.y, f));
 }
 
 vector2 atan2(vector2 a, vector2 b)
 {
     return vector2(atan2(a.x, b.x),
-                  atan2(a.y, b.y));
+                   atan2(a.y, b.y));
 }
-
-

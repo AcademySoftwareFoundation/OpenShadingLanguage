@@ -7,6 +7,9 @@
 #define MATRIX33_H
 
 
+// matrix33 is just a trick to make what appears to be a 3x3 matrix, but
+// underneath using a native OSL (4x4) matrix with appropriate zeroed extra
+// components to make the math all work out equivalently.
 struct matrix33
 {
     matrix m;
@@ -159,6 +162,3 @@ normal transform(matrix33 a, normal b)
 {
     return transform(a.m, b);
 }
-
-
-

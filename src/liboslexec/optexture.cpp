@@ -28,8 +28,10 @@ namespace pvt {
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
 {
+#if defined(OIIO_TEXTUREOPT_VERSION) && OIIO_TEXTUREOPT_VERSION >= 2
+    new (opt) TextureOpt;
+#else
     // TODO: Simplify when TextureOpt() has __device__ marker.
-    // new (opt) TextureOpt;
     TextureOpt* o          = reinterpret_cast<TextureOpt*>(opt);
     o->firstchannel        = 0;
     o->subimage            = 0;
@@ -46,20 +48,21 @@ osl_init_texture_options(OpaqueExecContextPtr oec, void* opt)
     o->twidth              = 1.0f;
     o->fill                = 0.0f;
     o->missingcolor        = nullptr;
-    o->time                = 0.0f;
+    o->time                = 0.0f;  // Deprecated
     o->rnd                 = -1.0f;
-    o->samples             = 1;
+    o->samples             = 1;  // Deprecated
     o->rwrap               = TextureOpt::WrapDefault;
     o->rblur               = 0.0f;
     o->rwidth              = 1.0f;
-#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+#    ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
     o->colortransformid = 0;
     int* envlayout      = (int*)&o->colortransformid + 1;
-#else
+#    else
     int* envlayout = (int*)&o->rwidth + 1;
-#endif
+#    endif
     // envlayout is private so we access it from the last public member for now.
     *envlayout = 0;
+#endif
 }
 
 
@@ -89,7 +92,7 @@ decode_wrapmode(ustringhash_pod name_)
 OSL_SHADEOP OSL_HOSTDEVICE int
 osl_texture_decode_wrapmode(ustringhash_pod name_)
 {
-    return decode_wrapmode(name_);
+    return (int)decode_wrapmode(name_);
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
@@ -202,7 +205,8 @@ osl_texture_set_fill(void* opt, float x)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_texture_set_time(void* opt, float x)
 {
-    ((TextureOpt*)opt)->time = x;
+    // Not used by the texture system
+    // ((TextureOpt*)opt)->time = x;
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE int

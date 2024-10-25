@@ -4274,8 +4274,15 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* wide_const_fzero_value = rop.ll.wide_constant(0.0f);
     llvm::Value* wide_const_fone_value  = rop.ll.wide_constant(1.0f);
     llvm::Value* const_zero_value       = rop.ll.constant(0);
-    llvm::Value* wrap_default_value     = rop.ll.constant(
+#if defined(OIIO_TEXTUREOPTBATCH_VERSION) && OIIO_TEXTUREOPTBATCH_VERSION >= 2
+    // Possible future TextureOptBatch v2 -- not active yet
+    llvm::Value* wrap_default_value = rop.ll.constant8(
+        static_cast<uint8_t>(Tex::Wrap::Default));
+#else
+    // OIIO <= 3.0
+    llvm::Value* wrap_default_value = rop.ll.constant(
         static_cast<int>(Tex::Wrap::Default));
+#endif
 
     llvm::Value* sblur  = wide_const_fzero_value;
     llvm::Value* tblur  = wide_const_fzero_value;
@@ -4293,10 +4300,19 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* swrap        = wrap_default_value;
     llvm::Value* twrap        = wrap_default_value;
     llvm::Value* rwrap        = wrap_default_value;
-    llvm::Value* mipmode      = rop.ll.constant(
+#if defined(OIIO_TEXTUREOPTBATCH_VERSION) && OIIO_TEXTUREOPTBATCH_VERSION >= 2
+    // Possible future TextureOptBatch v2 -- not active yet
+    llvm::Value* mipmode = rop.ll.constant8(
+        static_cast<uint8_t>(Tex::MipMode::Default));
+    llvm::Value* interpmode = rop.ll.constant8(
+        static_cast<uint8_t>(Tex::InterpMode::SmartBicubic));
+#else
+    // OIIO <= 3.0
+    llvm::Value* mipmode = rop.ll.constant(
         static_cast<int>(Tex::MipMode::Default));
     llvm::Value* interpmode = rop.ll.constant(
         static_cast<int>(Tex::InterpMode::SmartBicubic));
+#endif
     llvm::Value* anisotropic         = rop.ll.constant(32);
     llvm::Value* conservative_filter = rop.ll.constant(1);
     llvm::Value* fill                = rop.ll.constant(0.0f);
@@ -4403,24 +4419,46 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
         continue;                                                   \
     }
 
-#define PARAM_UNIFORM_STRING_CODE(paramname, decoder, llvm_decoder, fieldname) \
-    if (name == Strings::paramname && valtype == TypeDesc::STRING) {           \
-        if (valIsVarying) {                                                    \
-            is_##fieldname##_uniform = false;                                  \
-            continue;                                                          \
-        }                                                                      \
-        llvm::Value* val = nullptr;                                            \
-        if (Val.is_constant()) {                                               \
-            int mode = decoder(Val.get_string());                              \
-            val      = rop.ll.constant(mode);                                  \
-        } else {                                                               \
-            val = rop.llvm_load_value(Val);                                    \
-            llvm::Value* scalar_value_uh                                       \
-                = rop.ll.call_function("osl_gen_ustringhash_pod", val);        \
-            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh);        \
-        }                                                                      \
-        fieldname = val;                                                       \
-        continue;                                                              \
+#define PARAM_UNIFORM_STRING_INT_CODE(paramname, decoder, llvm_decoder, \
+                                      fieldname)                        \
+    if (name == Strings::paramname && valtype == TypeDesc::STRING) {    \
+        if (valIsVarying) {                                             \
+            is_##fieldname##_uniform = false;                           \
+            continue;                                                   \
+        }                                                               \
+        llvm::Value* val = nullptr;                                     \
+        if (Val.is_constant()) {                                        \
+            int mode = int(decoder(Val.get_string()));                  \
+            val      = rop.ll.constant(mode);                           \
+        } else {                                                        \
+            val = rop.llvm_load_value(Val);                             \
+            llvm::Value* scalar_value_uh                                \
+                = rop.ll.call_function("osl_gen_ustringhash_pod", val); \
+            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh); \
+        }                                                               \
+        fieldname = val;                                                \
+        continue;                                                       \
+    }
+
+#define PARAM_UNIFORM_STRING_UINT8_CODE(paramname, decoder, llvm_decoder, \
+                                        fieldname)                        \
+    if (name == Strings::paramname && valtype == TypeDesc::STRING) {      \
+        if (valIsVarying) {                                               \
+            is_##fieldname##_uniform = false;                             \
+            continue;                                                     \
+        }                                                                 \
+        llvm::Value* val = nullptr;                                       \
+        if (Val.is_constant()) {                                          \
+            int mode = int(decoder(Val.get_string()));                    \
+            val      = rop.ll.constant8(uint8_t(mode));                   \
+        } else {                                                          \
+            val = rop.llvm_load_value(Val);                               \
+            llvm::Value* scalar_value_uh                                  \
+                = rop.ll.call_function("osl_gen_ustringhash_pod", val);   \
+            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh);   \
+        }                                                                 \
+        fieldname = val;                                                  \
+        continue;                                                         \
     }
 
         if (name == Strings::wrap && valtype == TypeDesc::STRING) {
@@ -4434,7 +4472,7 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             }
             llvm::Value* val = nullptr;
             if (Val.is_constant()) {
-                int mode = TextureOpt::decode_wrapmode(Val.get_string());
+                int mode = int(TextureOpt::decode_wrapmode(Val.get_string()));
                 val      = rop.ll.constant(mode);
             } else {
                 val = rop.llvm_load_value(Val);
@@ -4450,14 +4488,33 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             }
             continue;
         }
-        PARAM_UNIFORM_STRING_CODE(swrap, OIIO::TextureOpt::decode_wrapmode,
-                                  osl_texture_decode_wrapmode, swrap)
-        PARAM_UNIFORM_STRING_CODE(twrap, OIIO::TextureOpt::decode_wrapmode,
-                                  osl_texture_decode_wrapmode, twrap)
+#if defined(OIIO_TEXTUREOPTBATCH_VERSION) && OIIO_TEXTUREOPTBATCH_VERSION >= 2
+        // Possible future TextureOptBatch v2 -- not active yet
+        PARAM_UNIFORM_STRING_UINT8_CODE(swrap, OIIO::Tex::decode_wrapmode,
+                                        osl_texture_decode_wrapmode, swrap)
+        PARAM_UNIFORM_STRING_UINT8_CODE(twrap, OIIO::Tex::decode_wrapmode,
+                                        osl_texture_decode_wrapmode, twrap)
         if (tex3d) {
-            PARAM_UNIFORM_STRING_CODE(rwrap, OIIO::TextureOpt::decode_wrapmode,
-                                      osl_texture_decode_wrapmode, rwrap)
+            PARAM_UNIFORM_STRING_UINT8_CODE(rwrap, OIIO::Tex::decode_wrapmode,
+                                            osl_texture_decode_wrapmode, rwrap)
         }
+        PARAM_UNIFORM_STRING_UINT8_CODE(interp, tex_interp_to_code,
+                                        osl_texture_decode_interpmode,
+                                        interpmode)
+#else
+        // OIIO <= 3.0
+        PARAM_UNIFORM_STRING_INT_CODE(swrap, OIIO::TextureOpt::decode_wrapmode,
+                                      osl_texture_decode_wrapmode, swrap)
+        PARAM_UNIFORM_STRING_INT_CODE(twrap, OIIO::TextureOpt::decode_wrapmode,
+                                      osl_texture_decode_wrapmode, twrap)
+        if (tex3d) {
+            PARAM_UNIFORM_STRING_INT_CODE(rwrap,
+                                          OIIO::TextureOpt::decode_wrapmode,
+                                          osl_texture_decode_wrapmode, rwrap)
+        }
+        PARAM_UNIFORM_STRING_INT_CODE(interp, tex_interp_to_code,
+                                      osl_texture_decode_interpmode, interpmode)
+#endif
 
         PARAM_UNIFORM_FLOAT(fill)
         PARAM_UNIFORM_INT(firstchannel)
@@ -4478,10 +4535,6 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             subimagename     = val;
             continue;
         }
-
-        PARAM_UNIFORM_STRING_CODE(interp, tex_interp_to_code,
-                                  osl_texture_decode_interpmode, interpmode)
-
 
         if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             OSL_ASSERT(
@@ -4569,7 +4622,7 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
 #undef PARAM_WIDE_FLOAT_S_T_R
 #undef PARAM_UNIFORM_FLOAT
 #undef PARAM_UNIFORM_INT
-#undef PARAM_UNIFORM_STRING_CODE
+#undef PARAM_UNIFORM_STRING_INT_CODE
     }
 
     // The LLVMMemberIndex will be the same for any width of BatchedTextureOptions,

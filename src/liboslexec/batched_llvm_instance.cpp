@@ -717,14 +717,24 @@ BatchedBackendLLVM::llvm_type_batched_texture_options()
     sg_types.push_back(ll.type_wide_float());  // rnd
 
     // Uniform values of the batch
-    sg_types.push_back(ll.type_int());                 // firstchannel
-    sg_types.push_back(ll.type_int());                 // subimage
-    sg_types.push_back(vp);                            // subimagename
-    sg_types.push_back(ll.type_int());                 // swrap
-    sg_types.push_back(ll.type_int());                 // twrap
-    sg_types.push_back(ll.type_int());                 // rwrap
-    sg_types.push_back(ll.type_int());                 // mipmode
-    sg_types.push_back(ll.type_int());                 // interpmode
+    sg_types.push_back(ll.type_int());  // firstchannel
+    sg_types.push_back(ll.type_int());  // subimage
+    sg_types.push_back(vp);             // subimagename
+#if defined(OIIO_TEXTUREOPTBATCH_VERSION) && OIIO_TEXTUREOPTBATCH_VERSION >= 2
+    // Possible future TextureOptBatch v2 -- not active yet
+    sg_types.push_back(ll.type_int8());  // swrap
+    sg_types.push_back(ll.type_int8());  // twrap
+    sg_types.push_back(ll.type_int8());  // rwrap
+    sg_types.push_back(ll.type_int8());  // mipmode
+    sg_types.push_back(ll.type_int8());  // interpmode
+#else
+    // OIIO <= 3.0
+    sg_types.push_back(ll.type_int());  // swrap
+    sg_types.push_back(ll.type_int());  // twrap
+    sg_types.push_back(ll.type_int());  // rwrap
+    sg_types.push_back(ll.type_int());  // mipmode
+    sg_types.push_back(ll.type_int());  // interpmode
+#endif
     sg_types.push_back(ll.type_int());                 // anisotropic
     sg_types.push_back(ll.type_int());                 // conservative_filter
     sg_types.push_back(ll.type_float());               // fill

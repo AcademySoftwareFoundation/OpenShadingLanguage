@@ -32,6 +32,41 @@ osl_get_texture_options(void* sg_)
     ShaderGlobals* sg = (ShaderGlobals*)sg_;
     TextureOpt* opt   = sg->context->texture_options_ptr();
     new (opt) TextureOpt;
+#if defined(OIIO_TEXTUREOPT_VERSION) && OIIO_TEXTUREOPT_VERSION >= 2
+    new (opt) TextureOpt;
+#else
+    // TODO: Simplify when TextureOpt() has __device__ marker.
+    TextureOpt* o          = reinterpret_cast<TextureOpt*>(opt);
+    o->firstchannel        = 0;
+    o->subimage            = 0;
+    o->subimagename        = ustring();
+    o->swrap               = TextureOpt::WrapDefault;
+    o->twrap               = TextureOpt::WrapDefault;
+    o->mipmode             = TextureOpt::MipModeDefault;
+    o->interpmode          = TextureOpt::InterpSmartBicubic;
+    o->anisotropic         = 32;
+    o->conservative_filter = true;
+    o->sblur               = 0.0f;
+    o->tblur               = 0.0f;
+    o->swidth              = 1.0f;
+    o->twidth              = 1.0f;
+    o->fill                = 0.0f;
+    o->missingcolor        = nullptr;
+    o->time                = 0.0f;  // Deprecated
+    o->rnd                 = -1.0f;
+    o->samples             = 1;  // Deprecated
+    o->rwrap               = TextureOpt::WrapDefault;
+    o->rblur               = 0.0f;
+    o->rwidth              = 1.0f;
+#    ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+    o->colortransformid = 0;
+    int* envlayout      = (int*)&o->colortransformid + 1;
+#    else
+    int* envlayout = (int*)&o->rwidth + 1;
+#    endif
+    // envlayout is private so we access it from the last public member for now.
+    *envlayout = 0;
+#endif
     return opt;
 }
 
@@ -45,7 +80,7 @@ osl_texture_set_firstchannel(void* opt, int x)
 OSL_SHADEOP int
 osl_texture_decode_wrapmode(ustring_pod name)
 {
-    return OIIO::TextureOpt::decode_wrapmode(ustring_from(USTR(name)));
+    return int(OIIO::TextureOpt::decode_wrapmode(ustring_from(USTR(name))));
 }
 
 OSL_SHADEOP void
@@ -158,7 +193,8 @@ osl_texture_set_fill(void* opt, float x)
 OSL_SHADEOP void
 osl_texture_set_time(void* opt, float x)
 {
-    ((TextureOpt*)opt)->time = x;
+    // Not used by the texture system
+    // ((TextureOpt*)opt)->time = x;
 }
 
 OSL_SHADEOP int

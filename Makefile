@@ -152,10 +152,6 @@ ifneq (${USE_SIMD},)
 MY_CMAKE_FLAGS += -DUSE_SIMD:STRING="${USE_SIMD}"
 endif
 
-ifneq (${USE_BATCHED},)
-MY_CMAKE_FLAGS += -DUSE_BATCHED:STRING="${USE_BATCHED}"
-endif
-
 ifneq (${VEC_REPORT},)
 MY_CMAKE_FLAGS += -DVEC_REPORT:BOOL="${VEC_REPORT}"
 endif
@@ -402,7 +398,7 @@ help:
 	@echo "                                  avx, avx2, avx512f)"
 	@echo "      OSL_USE_OPTIX=1          Build the OptiX test renderer"
 	@echo "      USE_BATCHED=targets      Build batched SIMD execution of shaders for (comma-separated choices:"
-	@echo "                                  0, b8_AVX, b8_AVX2, b8_AVX2_noFMA,"
+	@echo "                                  0, b4_SSE2, b8_AVX, b8_AVX2, b8_AVX2_noFMA,"
 	@echo "                                  b8_AVX512, b8_AVX512_noFMA,"
 	@echo "                                  b16_AVX512, b16_AVX512_noFMA)"
 	@echo "      VEC_REPORT=0             Generate compiler vectorization reports"

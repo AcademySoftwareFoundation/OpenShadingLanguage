@@ -76,6 +76,15 @@ TypeSpec::c_str() const
 }
 
 
+const char*
+TypeSpec::type_c_str() const
+{
+    if (is_structure())
+        return ustring::fmtformat("struct {}", structspec()->name()).c_str();
+    else
+        return c_str();
+}
+
 
 int
 TypeSpec::structure_id(const char* name, bool add)
@@ -109,6 +118,157 @@ TypeSpec::new_struct(StructSpec* n)
     return (int)m_structs.size() - 1;
 }
 
+TypeSpec
+TypeSpec::type_from_code(const char* code, int* advance)
+{
+    TypeSpec t;
+    int i = 0;
+    switch (code[i]) {
+    case 'i': t = TypeInt; break;
+    case 'f': t = TypeFloat; break;
+    case 'c': t = TypeColor; break;
+    case 'p': t = TypePoint; break;
+    case 'v': t = TypeVector; break;
+    case 'n': t = TypeNormal; break;
+    case 'm': t = TypeMatrix; break;
+    case 's': t = TypeString; break;
+    case 'h': t = OSL::TypeUInt64; break;  // ustringhash_pod
+    case 'x': t = TypeDesc(TypeDesc::NONE); break;
+    case 'X': t = TypeDesc(TypeDesc::PTR); break;
+    case 'L': t = TypeDesc(TypeDesc::LONGLONG); break;
+    case 'C':  // color closure
+        t = TypeSpec(TypeColor, true);
+        break;
+    case 'S':  // structure
+        // Following the 'S' is the numeric structure ID
+        t = TypeSpec("struct", atoi(code + i + 1));
+        // Skip to the last digit
+        while (isdigit(code[i + 1]))
+            ++i;
+        break;
+    case '?': break;  // anything will match, so keep 'UNKNOWN'
+    case '*': break;  // anything will match, so keep 'UNKNOWN'
+    case '.': break;  // anything will match, so keep 'UNKNOWN'
+    default:
+        OSL_DASSERT_MSG(0, "Don't know how to decode type code '%d'",
+                        (int)code[0]);
+        if (advance)
+            *advance = 1;
+        return TypeSpec();
+    }
+    ++i;
+
+    if (code[i] == '[') {
+        ++i;
+        t.make_array(-1);  // signal arrayness, unknown length
+        if (isdigit(code[i]) || code[i] == ']') {
+            if (isdigit(code[i]))
+                t.make_array(atoi(code + i));
+            while (isdigit(code[i]))
+                ++i;
+            if (code[i] == ']')
+                ++i;
+        }
+    }
+
+    if (advance)
+        *advance = i;
+    return t;
+}
+
+std::string
+TypeSpec::typelist_from_code(const char* code)
+{
+    std::string ret;
+    while (*code) {
+        // Handle some special cases
+        int advance = 1;
+        if (ret.length())
+            ret += ", ";
+        if (*code == '.') {
+            ret += "...";
+        } else if (*code == 'T') {
+            ret += "...";
+        } else if (*code == '?') {
+            ret += "<any>";
+        } else {
+            TypeSpec t = TypeSpec::type_from_code(code, &advance);
+            ret += t.type_c_str();
+        }
+        code += advance;
+        if (*code == '[') {
+            ret += "[]";
+            ++code;
+            while (isdigit(*code))
+                ++code;
+            if (*code == ']')
+                ++code;
+        }
+    }
+
+    return ret;
+}
+
+
+
+std::string
+TypeSpec::code_from_type() const
+{
+    std::string out;
+    TypeDesc elem = elementtype().simpletype();
+    if (is_structure() || is_structure_array()) {
+        out = Strutil::fmt::format("S{}", structure());
+    } else if (is_closure() || is_closure_array()) {
+        out = 'C';
+    } else {
+        if (elem == TypeInt)
+            out = 'i';
+        else if (elem == TypeFloat)
+            out = 'f';
+        else if (elem == TypeColor)
+            out = 'c';
+        else if (elem == TypePoint)
+            out = 'p';
+        else if (elem == TypeVector)
+            out = 'v';
+        else if (elem == TypeNormal)
+            out = 'n';
+        else if (elem == TypeMatrix)
+            out = 'm';
+        else if (elem == TypeString)
+            out = 's';
+        else if (elem == TypeDesc::NONE)
+            out = 'x';
+        else {
+            out = 'x';
+            // This only happens in error circumstances. Seems safe to
+            // return the code for 'void' and hope everything sorts itself
+            // out with the downstream errors.
+        }
+    }
+
+    if (is_array()) {
+        if (is_unsized_array())
+            out += "[]";
+        else
+            out += Strutil::fmt::format("[{}]", arraylength());
+    }
+
+    return out;
+}
+
+
+
+void
+TypeSpec::typespecs_from_codes(const char* code, std::vector<TypeSpec>& types)
+{
+    types.clear();
+    while (code && *code) {
+        int advance;
+        types.push_back(TypeSpec::type_from_code(code, &advance));
+        code += advance;
+    }
+}
 
 
 bool

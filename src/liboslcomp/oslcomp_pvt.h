@@ -192,27 +192,6 @@ public:
     }
     bool declaring_shader_formals() const { return m_declaring_shader_formals; }
 
-    /// Given a pointer to a type code string that we use for argument
-    /// checking ("p", "v", etc.) return the TypeSpec of the first type
-    /// described by the string (UNKNOWN if it couldn't be recognized).
-    /// If 'advance' is non-NULL, set *advance to the number of
-    /// characters taken by the first code so the caller can advance
-    /// their pointer to the next code in the string.
-    static TypeSpec type_from_code(const char* code, int* advance = NULL);
-
-    /// Return the argument checking code ("p", "v", etc.) corresponding
-    /// to the type.
-    std::string code_from_type(TypeSpec type) const;
-
-    /// Take a type code string (possibly containing many types)
-    /// and turn it into a human-readable string.
-    std::string typelist_from_code(const char* code) const;
-
-    /// Take a type code string (possibly containing many types) and
-    /// turn it into a TypeSpec vector.
-    void typespecs_from_codes(const char* code,
-                              std::vector<TypeSpec>& types) const;
-
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.
     int emitcode(const char* opname, size_t nargs, Symbol** args,
@@ -326,10 +305,6 @@ public:
         return loops ? m_loop_nesting : m_total_nesting;
     }
 
-    /// Return the c_str giving a human-readable name of a type, fully
-    /// accounting for exotic types like structs, etc.
-    const char* type_c_str(const TypeSpec& type) const;
-
     /// Given symbols sym1 and sym2, both the same kind of struct, and the
     /// index of a field we're interested, find the symbols that represent
     /// that field in the each sym and place them in field1 and field2,
@@ -346,10 +321,6 @@ public:
                            ustring sym1, ustring sym2, Symbol*& field1,
                            Symbol*& field2);
 
-    static void track_variable_lifetimes(const OpcodeVec& ircode,
-                                         const SymbolPtrVec& opargs,
-                                         const SymbolPtrVec& allsyms,
-                                         std::vector<int>* bblock_ids = NULL);
     static void coalesce_temporaries(SymbolPtrVec& symtab);
 
     ustring main_filename() const { return m_main_filename; }
@@ -399,7 +370,7 @@ private:
 
     void track_variable_lifetimes()
     {
-        track_variable_lifetimes(m_ircode, m_opargs, symtab().allsyms());
+        track_variable_lifetimes_main(m_ircode, m_opargs, symtab().allsyms());
     }
 
     void track_variable_dependencies();

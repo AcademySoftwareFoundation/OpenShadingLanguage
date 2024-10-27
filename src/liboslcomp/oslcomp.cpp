@@ -85,11 +85,6 @@ OSLCompiler::output_filename() const
 namespace pvt {  // OSL::pvt
 
 
-static ustring op_for("for");
-static ustring op_while("while");
-static ustring op_dowhile("dowhile");
-
-
 
 OSLCompilerImpl::OSLCompilerImpl(ErrorHandler* errhandler)
     : m_errhandler(errhandler ? errhandler : &ErrorHandler::default_handler())
@@ -769,7 +764,7 @@ OSLCompilerImpl::write_oso_symbol(const Symbol* sym)
             if (i > 0)
                 fieldlist += ",";
             fieldlist += structspec->field(i).name.string();
-            signature += code_from_type(structspec->field(i).type);
+            signature += structspec->field(i).type.code_from_type();
         }
         osofmt(
             "{}%struct{{\"{}\"}} %structfields{{{}}} %structfieldtypes{{\"{}\"}} %structnfields{{{}}}",
@@ -1068,19 +1063,6 @@ OSLCompilerImpl::pop_nesting(bool isloop)
 }
 
 
-
-const char*
-OSLCompilerImpl::type_c_str(const TypeSpec& type) const
-{
-    if (type.is_structure())
-        return ustring::fmtformat("struct {}", type.structspec()->name())
-            .c_str();
-    else
-        return type.c_str();
-}
-
-
-
 void
 OSLCompilerImpl::struct_field_pair(Symbol* sym1, Symbol* sym2, int fieldnum,
                                    Symbol*& field1, Symbol*& field2)
@@ -1157,92 +1139,6 @@ OSLCompilerImpl::check_for_illegal_writes()
                 check_write_legality(op, opnum, s);
         }
         ++opnum;
-    }
-}
-
-
-
-/// Called after code is generated, this function loops over all the ops
-/// and figures out the lifetimes of all variables, based on whether the
-/// args in each op are read or written.
-void
-OSLCompilerImpl::track_variable_lifetimes(const OpcodeVec& code,
-                                          const SymbolPtrVec& opargs,
-                                          const SymbolPtrVec& allsyms,
-                                          std::vector<int>* bblockids)
-{
-    // Clear the lifetimes for all symbols
-    for (auto&& s : allsyms)
-        s->clear_rw();
-
-    // Keep track of the nested loops we're inside. We track them by pairs
-    // of begin/end instruction numbers for that loop body, including
-    // conditional evaluation (skip the initialization). Note that the end
-    // is inclusive. We use this vector of ranges as a stack.
-    typedef std::pair<int, int> intpair;
-    std::vector<intpair> loop_bounds;
-
-    // For each op, mark its arguments as being used at that op
-    int opnum = 0;
-    for (auto&& op : code) {
-        if (op.opname() == op_for || op.opname() == op_while
-            || op.opname() == op_dowhile) {
-            // If this is a loop op, we need to mark its control variable
-            // (the only arg) as used for the duration of the loop!
-            OSL_DASSERT(op.nargs() == 1);  // loops should have just one arg
-            SymbolPtr s  = opargs[op.firstarg()];
-            int loopcond = op.jump(0);  // after initialization, before test
-            int loopend  = op.farthest_jump() - 1;  // inclusive end
-            s->mark_rw(opnum + 1, true, true);
-            s->mark_rw(loopend, true, true);
-            // Also push the loop bounds for this loop
-            loop_bounds.push_back(std::make_pair(loopcond, loopend));
-        }
-
-        // Some work to do for each argument to the op...
-        for (int a = 0; a < op.nargs(); ++a) {
-            SymbolPtr s = opargs[op.firstarg() + a];
-            OSL_DASSERT(s->dealias() == s);  // Make sure it's de-aliased
-
-            // Mark that it's read and/or written for this op
-            bool readhere    = op.argread(a);
-            bool writtenhere = op.argwrite(a);
-            s->mark_rw(opnum, readhere, writtenhere);
-
-            // Adjust lifetimes of symbols whose values need to be preserved
-            // between loop iterations.
-            for (auto oprange : loop_bounds) {
-                int loopcond = oprange.first;
-                int loopend  = oprange.second;
-                OSL_DASSERT(s->firstuse() <= loopend);
-                // Special case: a temp or local, even if written inside a
-                // loop, if it's entire lifetime is within one basic block
-                // and it's strictly written before being read, then its
-                // lifetime is truly local and doesn't need to be expanded
-                // for the duration of the loop.
-                if (bblockids
-                    && (s->symtype() == SymTypeLocal
-                        || s->symtype() == SymTypeTemp)
-                    && (*bblockids)[s->firstuse()] == (*bblockids)[s->lastuse()]
-                    && s->lastwrite() < s->firstread()) {
-                    continue;
-                }
-                // Syms written before or inside the loop, and referenced
-                // inside or after the loop, need to preserve their value
-                // for the duration of the loop. We know it's referenced
-                // inside the loop because we're here examining it!
-                if (s->firstwrite() <= loopend) {
-                    s->mark_rw(loopcond, readhere, writtenhere);
-                    s->mark_rw(loopend, readhere, writtenhere);
-                }
-            }
-        }
-
-        ++opnum;  // Advance to the next op index
-
-        // Pop any loop bounds for loops we've just exited
-        while (!loop_bounds.empty() && loop_bounds.back().second < opnum)
-            loop_bounds.pop_back();
     }
 }
 

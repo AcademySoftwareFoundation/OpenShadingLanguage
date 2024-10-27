@@ -402,7 +402,7 @@ ASTunary_expression::typecheck(TypeSpec expected)
         for (FunctionSymbol* f = m_function_overload; f; f = f->nextpoly()) {
             const char* code = f->argcodes().c_str();
             int advance;
-            TypeSpec returntype = m_compiler->type_from_code(code, &advance);
+            TypeSpec returntype = TypeSpec::type_from_code(code, &advance);
             code += advance;
             if (code[0] && check_simple_arg(t, code, true) && !code[0]) {
                 return m_typespec = returntype;
@@ -475,7 +475,7 @@ ASTbinary_expression::typecheck(TypeSpec expected)
         for (FunctionSymbol* f = m_function_overload; f; f = f->nextpoly()) {
             const char* code = f->argcodes().c_str();
             int advance;
-            TypeSpec returntype = m_compiler->type_from_code(code, &advance);
+            TypeSpec returntype = TypeSpec::type_from_code(code, &advance);
             code += advance;
             if (code[0] && check_simple_arg(l, code, true) && code[0]
                 && check_simple_arg(r, code, true) && !code[0]) {  // NOSONAR
@@ -710,7 +710,7 @@ ASTtype_constructor::typecheck(TypeSpec expected, bool report, bool bind)
         bool coerce = co;
         for (const char** pat = patterns; *pat; ++pat) {
             const char* code = *pat;
-            if (check_arglist(type_c_str(expected), args(), code + 1, coerce,
+            if (check_arglist(expected.type_c_str(), args(), code + 1, coerce,
                               bind))
                 return expected;
         }
@@ -1041,7 +1041,7 @@ ASTNode::check_simple_arg(const TypeSpec& argtype, const char*& formals,
                           bool coerce)
 {
     int advance;
-    TypeSpec formaltype = m_compiler->type_from_code(formals, &advance);
+    TypeSpec formaltype = TypeSpec::type_from_code(formals, &advance);
     formals += advance;
     // std::cerr << "\targ is " << argtype.string()
     //           << ", formal is " << formaltype.string() << "\n";
@@ -1100,7 +1100,7 @@ ASTNode::check_arglist(const char* /*funcname*/, ASTNode::ref arg,
         if (arg->nodetype() == compound_initializer_node) {
             int advance;
             // Get the TypeSpec from the argument string.
-            TypeSpec formaltype = m_compiler->type_from_code(formals, &advance);
+            TypeSpec formaltype = TypeSpec::type_from_code(formals, &advance);
 
             // See if the initlist can be used to construct a formaltype.
             ASTcompound_initializer::TypeAdjuster ta(
@@ -1532,7 +1532,7 @@ class CandidateFunctions {
 
         int advance;
         const char* formals = func->argcodes().c_str();
-        TypeSpec rtype      = m_compiler->type_from_code(formals, &advance);
+        TypeSpec rtype      = TypeSpec::type_from_code(formals, &advance);
         formals += advance;
 
         InitBindings bindings;
@@ -1575,7 +1575,7 @@ class CandidateFunctions {
                 return kNoMatch;
 
             TypeSpec argtype;
-            TypeSpec formaltype = m_compiler->type_from_code(formals, &advance);
+            TypeSpec formaltype = TypeSpec::type_from_code(formals, &advance);
             formals += advance;
 
             if (arg->nodetype() == ASTNode::compound_initializer_node) {
@@ -1694,14 +1694,14 @@ public:
     {
         int advance;
         const char* formals = sym->argcodes().c_str();
-        TypeSpec returntype = m_compiler->type_from_code(formals, &advance);
+        TypeSpec returntype = TypeSpec::type_from_code(formals, &advance);
         formals += advance;
         std::string msg = "    ";
         if (ASTNode* decl = sym->node())
             msg += Strutil::fmt::format("{}:{}\t", decl->sourcefile(),
                                         decl->sourceline());
         msg += Strutil::fmt::format("{} {} ({})\n", returntype, sym->name(),
-                                    m_compiler->typelist_from_code(formals));
+                                    TypeSpec::typelist_from_code(formals));
         return msg;
     }
 
@@ -1900,7 +1900,7 @@ class LegacyOverload {
         for (FunctionSymbol* poly = m_root; poly; poly = poly->nextpoly()) {
             const char* code = poly->argcodes().c_str();
             int advance;
-            TypeSpec returntype = m_compiler->type_from_code(code, &advance);
+            TypeSpec returntype = TypeSpec::type_from_code(code, &advance);
             code += advance;
             if ((m_func->*m_check_arglist)(name, m_func->args(), code,
                                            coerceargs, false)) {
@@ -2216,7 +2216,7 @@ OSLCompilerImpl::initialize_builtin_funcs()
             ustring poly(builtin_func_args[i + j]);
             Symbol* last = symtab().clash(funcname);
             OSL_DASSERT(last == NULL || last->symtype() == SymTypeFunction);
-            TypeSpec rettype  = type_from_code(poly.c_str());
+            TypeSpec rettype  = TypeSpec::type_from_code(poly.c_str());
             FunctionSymbol* f = new FunctionSymbol(funcname, rettype);
             f->nextpoly((FunctionSymbol*)last);
             f->argcodes(poly);
@@ -2229,164 +2229,6 @@ OSLCompilerImpl::initialize_builtin_funcs()
         i += npoly;
     }
 }
-
-
-
-TypeSpec
-OSLCompilerImpl::type_from_code(const char* code, int* advance)
-{
-    TypeSpec t;
-    int i = 0;
-    switch (code[i]) {
-    case 'i': t = TypeInt; break;
-    case 'f': t = TypeFloat; break;
-    case 'c': t = TypeColor; break;
-    case 'p': t = TypePoint; break;
-    case 'v': t = TypeVector; break;
-    case 'n': t = TypeNormal; break;
-    case 'm': t = TypeMatrix; break;
-    case 's': t = TypeString; break;
-    case 'h': t = OSL::TypeUInt64; break;  // ustringhash_pod
-    case 'x': t = TypeDesc(TypeDesc::NONE); break;
-    case 'X': t = TypeDesc(TypeDesc::PTR); break;
-    case 'L': t = TypeDesc(TypeDesc::LONGLONG); break;
-    case 'C':  // color closure
-        t = TypeSpec(TypeColor, true);
-        break;
-    case 'S':  // structure
-        // Following the 'S' is the numeric structure ID
-        t = TypeSpec("struct", atoi(code + i + 1));
-        // Skip to the last digit
-        while (isdigit(code[i + 1]))
-            ++i;
-        break;
-    case '?': break;  // anything will match, so keep 'UNKNOWN'
-    case '*': break;  // anything will match, so keep 'UNKNOWN'
-    case '.': break;  // anything will match, so keep 'UNKNOWN'
-    default:
-        OSL_DASSERT_MSG(0, "Don't know how to decode type code '%d'",
-                        (int)code[0]);
-        if (advance)
-            *advance = 1;
-        return TypeSpec();
-    }
-    ++i;
-
-    if (code[i] == '[') {
-        ++i;
-        t.make_array(-1);  // signal arrayness, unknown length
-        if (isdigit(code[i]) || code[i] == ']') {
-            if (isdigit(code[i]))
-                t.make_array(atoi(code + i));
-            while (isdigit(code[i]))
-                ++i;
-            if (code[i] == ']')
-                ++i;
-        }
-    }
-
-    if (advance)
-        *advance = i;
-    return t;
-}
-
-
-
-std::string
-OSLCompilerImpl::typelist_from_code(const char* code) const
-{
-    std::string ret;
-    while (*code) {
-        // Handle some special cases
-        int advance = 1;
-        if (ret.length())
-            ret += ", ";
-        if (*code == '.') {
-            ret += "...";
-        } else if (*code == 'T') {
-            ret += "...";
-        } else if (*code == '?') {
-            ret += "<any>";
-        } else {
-            TypeSpec t = type_from_code(code, &advance);
-            ret += type_c_str(t);
-        }
-        code += advance;
-        if (*code == '[') {
-            ret += "[]";
-            ++code;
-            while (isdigit(*code))
-                ++code;
-            if (*code == ']')
-                ++code;
-        }
-    }
-
-    return ret;
-}
-
-
-
-std::string
-OSLCompilerImpl::code_from_type(TypeSpec type) const
-{
-    std::string out;
-    TypeDesc elem = type.elementtype().simpletype();
-    if (type.is_structure() || type.is_structure_array()) {
-        out = Strutil::fmt::format("S{}", type.structure());
-    } else if (type.is_closure() || type.is_closure_array()) {
-        out = 'C';
-    } else {
-        if (elem == TypeInt)
-            out = 'i';
-        else if (elem == TypeFloat)
-            out = 'f';
-        else if (elem == TypeColor)
-            out = 'c';
-        else if (elem == TypePoint)
-            out = 'p';
-        else if (elem == TypeVector)
-            out = 'v';
-        else if (elem == TypeNormal)
-            out = 'n';
-        else if (elem == TypeMatrix)
-            out = 'm';
-        else if (elem == TypeString)
-            out = 's';
-        else if (elem == TypeDesc::NONE)
-            out = 'x';
-        else {
-            out = 'x';
-            // This only happens in error circumstances. Seems safe to
-            // return the code for 'void' and hope everything sorts itself
-            // out with the downstream errors.
-        }
-    }
-
-    if (type.is_array()) {
-        if (type.is_unsized_array())
-            out += "[]";
-        else
-            out += Strutil::fmt::format("[{}]", type.arraylength());
-    }
-
-    return out;
-}
-
-
-
-void
-OSLCompilerImpl::typespecs_from_codes(const char* code,
-                                      std::vector<TypeSpec>& types) const
-{
-    types.clear();
-    while (code && *code) {
-        int advance;
-        types.push_back(type_from_code(code, &advance));
-        code += advance;
-    }
-}
-
 
 
 };  // namespace pvt

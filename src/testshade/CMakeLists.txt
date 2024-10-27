@@ -77,7 +77,7 @@ add_executable ( testshade ${testshade_srcs} testshademain.cpp )
 
 target_link_libraries (testshade
                        PRIVATE
-                           oslexec oslquery)
+                           oslexec oslquery oslcomp)
 
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
@@ -104,7 +104,7 @@ if (NOT CODECOV)
 
     target_link_libraries (libtestshade
                            PRIVATE
-                               oslexec oslquery)
+                               oslexec oslquery oslcomp)
     set_target_properties (libtestshade PROPERTIES PREFIX "")
 
     install_targets ( libtestshade )

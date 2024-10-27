@@ -53,4 +53,4 @@ endmacro ()
 
 
 add_oiio_plugin (oslinput.cpp
-        LINK_LIBRARIES oslexec)
+        LINK_LIBRARIES oslexec oslcomp)

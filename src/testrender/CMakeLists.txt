@@ -21,6 +21,7 @@ if (OSL_USE_OPTIX)
 
     set (testrender_rend_lib_srcs
         cuda/rend_lib.cu
+        ../testshade/rs_simplerend.cpp
         )
 
     # We need to make sure that the PTX files are regenerated whenever these

@@ -364,35 +364,6 @@ make_float3(const float4& a)
 
 
 
-// FIXME:
-// clang++ 9.0 seems to have trouble with tex2d<float4>() look-ups,
-// so we'll declare this external and implement texture lookups in
-// CUDA files compiled by nvcc (optix_grid_renderer.cu and
-// optix_raytrace.cu).
-// (clang++ 9.0 error 'undefined __nv_tex_surf_handler')
-extern __device__ float4
-osl_tex2DLookup(void* handle, float s, float t);
-
-__device__ int
-osl_texture(void* sg_, OSL::ustringhash_pod name, void* handle, void* opt_,
-            float s, float t, float dsdx, float dtdx, float dsdy, float dtdy,
-            int chans, void* result, void* dresultdx, void* dresultdy,
-            void* alpha, void* dalphadx, void* dalphady,
-            void* ustringhash_errormessage)
-{
-    if (!handle)
-        return 0;
-    // cudaTextureObject_t texID = cudaTextureObject_t(handle);
-    float4 fromTexture = osl_tex2DLookup(handle, s, t);
-    // see note above
-    // float4 fromTexture = tex2D<float4>(texID, s, t);
-    *((float3*)result) = make_float3(fromTexture.x, fromTexture.y,
-                                     fromTexture.z);
-    return 1;
-}
-
-
-
 __device__ int
 osl_range_check_err(int indexvalue, int length, OSL::ustringhash_pod symname,
                     void* sg, OSL::ustringhash_pod sourcefile, int sourceline,

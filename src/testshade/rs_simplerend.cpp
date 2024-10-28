@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-#ifndef OSL_HOST_RS_BITCODE
+#if !defined(__CUDACC__) && !defined(OSL_HOST_RS_BITCODE)
 #    error OSL_HOST_RS_BITCODE must be defined by your build system.
 #endif
 
 #include <OpenImageIO/fmath.h>
 
-#include <OSL/fmt_util.h>
-#include <OSL/journal.h>
+#ifndef __CUDACC__
+#    include <OSL/fmt_util.h>
+#    include <OSL/journal.h>
+#endif
 #include <OSL/rendererservices.h>
 #include <OSL/rs_free_function.h>
 
@@ -181,6 +183,14 @@ rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash /*from*/,
     return false;
 }
 
+#ifdef __CUDACC__
+// This texture lookup function needs to be compiled by NVCC because clang
+// doesn't know how to handle CUDA texture intrinsics. This function must be
+// defined in the CUDA source for testshade and testrender.
+extern "C" __device__ float4
+osl_tex2DLookup(void* handle, float s, float t);
+#endif
+
 OSL_RSOP OSL_HOSTDEVICE bool
 rs_texture(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
            OSL::TextureSystem::TextureHandle* texture_handle,
@@ -196,7 +206,12 @@ rs_texture(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
                                  nchannels, result, dresultds, dresultdt,
                                  errormessage);
 #else
-    return false;
+    if (!texture_handle)
+        return false;
+    const float4 fromTexture = osl_tex2DLookup((void*)texture_handle, s, t);
+    *((float3*)result)       = make_float3(fromTexture.x, fromTexture.y,
+                                           fromTexture.z);
+    return true;
 #endif
 }
 
@@ -613,6 +628,7 @@ rs_get_interpolated_test(void* val)
     return true;
 }
 
+#ifndef __CUDACC__
 OSL_RSOP OSL_HOSTDEVICE void
 rs_errorfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,
@@ -668,3 +684,4 @@ rs_filefmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename_hash,
                       filename_hash, fmt_specification, arg_count, argTypes,
                       argValuesSize, argValues);
 }
+#endif  // #ifndef __CUDACC__

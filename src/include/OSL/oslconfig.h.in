@@ -210,7 +210,7 @@ static_assert(sizeof(TypeDesc_pod) == sizeof(TypeDesc),
               "TypeDesc size differs from its POD counterpart");
 
 /// Convenience function to convert to a TypeDesc.
-inline TypeDesc
+OSL_HOSTDEVICE inline TypeDesc
 TypeDesc_from(TypeDesc_pod type)
 {
     return OSL::bitcast<OSL::TypeDesc>(type);

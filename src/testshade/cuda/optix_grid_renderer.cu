@@ -168,8 +168,6 @@ __raygen__()
     output_buffer[pixel] = { f_output[1], f_output[2], f_output[3] };
 }
 
-
-
 // Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
 // let's do the texture look-ups in this file.
 extern "C" __device__ float4

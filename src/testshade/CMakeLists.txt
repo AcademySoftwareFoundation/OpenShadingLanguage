@@ -21,6 +21,7 @@ if (OSL_USE_OPTIX)
 
     set (testshade_rend_lib_srcs
         ../testrender/cuda/rend_lib.cu
+        rs_simplerend.cpp
         )
 
     set ( testshade_cuda_headers

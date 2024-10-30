@@ -110,16 +110,15 @@ Scene::intersect(const Ray& r, const float tmax, const unsigned skipID1,
     // Trace the ray against the scene. If the ID for the hit matches skipID1,
     // "nudge" the ray forward by adjusting tmin to exclude the hit interval
     // and try again.
-    const float epsilon    = 1e-6f;
     const int num_attempts = 2;
-    float tmin             = epsilon;
+    float tmin             = 0.0f;
     for (int attempt = 0; attempt < num_attempts; ++attempt) {
         Payload payload;
         payload.hit_id = ~0u;
         trace_ray(handle, payload, V3_TO_F3(r.origin), V3_TO_F3(r.direction),
                   tmin);
         if (payload.hit_id == skipID1) {
-            tmin = payload.hit_t + 2.0f * epsilon;
+            tmin = __uint_as_float(__float_as_uint(payload.hit_t) + 1u);
         } else if (payload.hit_id != ~0u) {
             return { payload.hit_t, payload.hit_u, payload.hit_v,
                      payload.hit_id };

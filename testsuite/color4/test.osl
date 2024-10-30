@@ -1,0 +1,122 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#include "color4.h"
+#include "../common/shaders/pretty.h"
+
+#define OSL_UNITTEST_VERBOSE 1
+#include "../common/shaders/osl-unittest.h"
+
+color4 mkcolor4(float x, float y, float z, float w) {
+    return color4(color(x, y, z), w);
+}
+
+float xcomp(color4 v) { return v.rgb.r; }
+float ycomp(color4 v) { return v.rgb.g; }
+float zcomp(color4 v) { return v.rgb.b; }
+float wcomp(color4 v) { return v.a; }
+
+#define TEST_UNARY_VAL(func, val) \
+    OSL_CHECK_EQUAL(func(val), mkcolor4(func(xcomp(val)), func(ycomp(val)), \
+                                        func(zcomp(val)), func(wcomp(val))))
+
+#define TEST_BINARY_VAL(func, valA, valB)                      \
+    OSL_CHECK_EQUAL(func(valA, valB),                          \
+                    mkcolor4(func(xcomp(valA), xcomp(valB)),   \
+                             func(ycomp(valA), ycomp(valB)),   \
+                             func(zcomp(valA), zcomp(valB)),   \
+                             func(wcomp(valA), wcomp(valB))))
+
+#define TEST_UNARY(func) \
+    TEST_UNARY_VAL(func, mkcolor4(0.5, 1.5, 2.5, 3.5))
+
+#define TEST_BINARY(func) \
+    TEST_BINARY_VAL(func, mkcolor4(0.5, 1.5, 2.5, 3.5),     \
+                          mkcolor4(10.0, 20.0, 30.0, 40.0))
+
+
+
+shader
+test (color4 param1 = color4 ({0.5, 1.5, 2.5}, 3.5),
+      color4 param2 = color4 ({10.0, 20.0, 30.0}, 40.0)
+     )
+{
+    printf("parameter initialization: param1 = %s\n", tostring(param1));
+    printf("parameter initialization: param2 = %s\n", tostring(param2));
+    printf("\n");
+
+    OSL_CHECK_EQUAL(param1, mkcolor4(0.5, 1.5, 2.5, 3.5));
+    OSL_CHECK_EQUAL(-param1, mkcolor4(-0.5, -1.5, -2.5, -3.5));
+    OSL_CHECK(param1 != param2);
+
+    OSL_CHECK_EQUAL(param1 + param2, mkcolor4(10.5, 21.5, 32.5, 43.5));
+    OSL_CHECK_EQUAL(param1 + 1, mkcolor4(1.5, 2.5, 3.5, 4.5));
+    OSL_CHECK_EQUAL(param1 + 1.0, mkcolor4(1.5, 2.5, 3.5, 4.5));
+    OSL_CHECK_EQUAL(1 + param1, mkcolor4(1.5, 2.5, 3.5, 4.5));
+    OSL_CHECK_EQUAL(1.0 + param1, mkcolor4(1.5, 2.5, 3.5, 4.5));
+
+    OSL_CHECK_EQUAL(param2 - param1, mkcolor4(9.5, 18.5, 27.5, 36.5));
+    OSL_CHECK_EQUAL(param1 - 1, mkcolor4(-0.5, 0.5, 1.5, 2.5));
+    OSL_CHECK_EQUAL(param1 - 1.0, mkcolor4(-0.5, 0.5, 1.5, 2.5));
+    OSL_CHECK_EQUAL(1 - param1, mkcolor4(0.5, -0.5, -1.5, -2.5));
+    OSL_CHECK_EQUAL(1.0 - param1, mkcolor4(0.5, -0.5, -1.5, -2.5));
+
+    OSL_CHECK_EQUAL(param1 * param2, mkcolor4(5.0, 30.0, 75.0, 140.0));
+    OSL_CHECK_EQUAL(param1 * 2, mkcolor4(1.0, 3.0, 5.0, 7.0));
+    OSL_CHECK_EQUAL(param1 * 2.0, mkcolor4(1.0, 3.0, 5.0, 7.0));
+    OSL_CHECK_EQUAL(2 * param1, mkcolor4(1.0, 3.0, 5.0, 7.0));
+    OSL_CHECK_EQUAL(2.0 * param1, mkcolor4(1.0, 3.0, 5.0, 7.0));
+
+    OSL_CHECK_EQUAL(param1 / param2, mkcolor4(0.05, 1.5/20.0, 2.5/30.0, 3.5/40.0));
+    OSL_CHECK_EQUAL(param1 / 2, mkcolor4(0.25, 0.75, 1.25, 1.75));
+    OSL_CHECK_EQUAL(param1 / 2.0, mkcolor4(0.25, 0.75, 1.25, 1.75));
+    OSL_CHECK_EQUAL(2 / param1, mkcolor4(4.0, 2.0/1.5, 2.0/2.5, 2.0/3.5));
+    OSL_CHECK_EQUAL(2.0 / param1, mkcolor4(4.0, 2.0/1.5, 2.0/2.5, 2.0/3.5));
+
+    TEST_UNARY_VAL(abs, mkcolor4(0.5, 1.5, 2.5, 3.5));
+    TEST_UNARY_VAL(abs, mkcolor4(-0.5, -1.5, -2.5, -3.5));
+    TEST_UNARY_VAL(ceil, mkcolor4(0.5, 1.5, 2.5, 3.5));
+    TEST_UNARY_VAL(ceil, mkcolor4(-0.5, -1.5, -2.5, -3.5));
+    TEST_UNARY_VAL(floor, mkcolor4(0.5, 1.5, 2.5, 3.5));
+    TEST_UNARY_VAL(floor, mkcolor4(-0.5, -1.5, -2.5, -3.5));
+
+    TEST_UNARY(sqrt);
+    TEST_UNARY(exp);
+    TEST_UNARY(log);
+    TEST_UNARY(log2);
+
+    OSL_CHECK_EQUAL(mix(mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(21.0, 22.0, 23.0, 24.0), 0.0), mkcolor4(1.0, 2.0, 3.0, 4.0));
+    OSL_CHECK_EQUAL(mix(mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(21.0, 22.0, 23.0, 24.0), 1.0), mkcolor4(21.0, 22.0, 23.0, 24.0));
+    OSL_CHECK_EQUAL(mix(mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(21.0, 22.0, 23.0, 24.0), 0.5), mkcolor4(11.0, 12.0, 13.0, 14.0));
+
+    OSL_CHECK_EQUAL(smoothstep(mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(11.0, 12.0, 13.0, 14.0), mkcolor4(0.0, 0.0, 0.0, 0.0)), mkcolor4(0.0, 0.0, 0.0, 0.0));
+    OSL_CHECK_EQUAL(smoothstep(mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(11.0, 12.0, 13.0, 14.0), mkcolor4(20.0, 20.0, 20.0, 20.0)), mkcolor4(1.0, 1.0, 1.0, 1.0));
+    OSL_CHECK_EQUAL(smoothstep(mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(11.0, 12.0, 13.0, 14.0), mkcolor4(6.0, 7.0, 8.0, 9.0)), mkcolor4(0.5, 0.5, 0.5, 0.5));
+    
+    OSL_CHECK_EQUAL(clamp(mkcolor4(0.0, 0.0, 0.0, 0.0), mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(2.0, 3.0, 4.0, 5.0)), mkcolor4(1.0, 2.0, 3.0, 4.0));
+    OSL_CHECK_EQUAL(clamp(mkcolor4(10.0, 10.0, 10.0, 10.0), mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(2.0, 3.0, 4.0, 5.0)), mkcolor4(2.0, 3.0, 4.0, 5.0));
+    OSL_CHECK_EQUAL(clamp(mkcolor4(1.5, 2.5, 3.5, 4.5), mkcolor4(1.0, 2.0, 3.0, 4.0), mkcolor4(2.0, 3.0, 4.0, 5.0)), mkcolor4(1.5, 2.5, 3.5, 4.5));
+
+    OSL_CHECK_EQUAL(clamp(mkcolor4(0.25, 0.5, 0.75, 0.8), 1.0, 2.0), mkcolor4(1.0, 1.0, 1.0, 1.0));
+    OSL_CHECK_EQUAL(clamp(mkcolor4(2.25, 2.5, 3.5, 4.5), 1.0, 2.0), mkcolor4(2.0, 2.0, 2.0, 2.0));
+    OSL_CHECK_EQUAL(clamp(mkcolor4(1.25, 1.5, 1.75, 1.875), 1.0, 2.0), mkcolor4(1.25, 1.5, 1.75, 1.875));
+
+    OSL_CHECK_EQUAL(max(mkcolor4(1.0, 4.0, 2.0, 5.0), mkcolor4(2.0, 3.0, 3.5, 4.0)), mkcolor4(2.0, 4.0, 3.5, 5.0));
+    OSL_CHECK_EQUAL(min(mkcolor4(1.0, 4.0, 2.0, 5.0), mkcolor4(2.0, 3.0, 3.5, 4.0)), mkcolor4(1.0, 3.0, 2.0, 4.0));
+
+    TEST_BINARY_VAL(fmod, mkcolor4(5.0, 8.0, 10.0, 13.0),
+                          mkcolor4(2.0, 3.0, 4.0, 5.0));
+    TEST_BINARY_VAL(pow, mkcolor4(2.0, 3.0, 4.0, 5.0), mkcolor4(-1.0, 2.0, 0.5, 3.0));
+    TEST_UNARY_VAL(sign, mkcolor4(0.5, -0.6, 0.7, -0.8));
+    TEST_UNARY_VAL(sign, mkcolor4(-0.5, 0.6, -0.7, 0.8));
+    TEST_UNARY(sin);
+    TEST_UNARY(cos);
+    TEST_UNARY(tan);
+    TEST_UNARY_VAL(asin, mkcolor4(0.5, 0.25, 0.75, 0.125));
+    TEST_UNARY_VAL(acos, mkcolor4(0.5, 0.25, 0.75, 0.125));
+    TEST_BINARY(atan2);
+    OSL_CHECK_EQUAL(atan2(mkcolor4(2.0, 0.5, 1.0, 0.25), 1.0),
+                    mkcolor4(atan2(2.0, 1.0), atan2(0.5, 1.0),
+                            atan2(1.0, 1.0), atan2(0.25, 1.0)));
+}

@@ -1,0 +1,113 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#include "vector2.h"
+#include "../common/shaders/pretty.h"
+
+#define OSL_UNITTEST_VERBOSE 1
+#include "../common/shaders/osl-unittest.h"
+
+float xcomp(vector2 v) { return v.x; }
+float ycomp(vector2 v) { return v.y; }
+
+#define TEST_UNARY_VAL(func, val) \
+    OSL_CHECK_EQUAL(func(val), vector2(func(xcomp(val)), func(ycomp(val))))
+
+#define TEST_BINARY_VAL(func, valA, valB) \
+    OSL_CHECK_EQUAL(func(valA, valB), vector2(func(xcomp(valA), xcomp(valB)), \
+                                              func(ycomp(valA), ycomp(valB))))
+
+#define TEST_UNARY(func) \
+    TEST_UNARY_VAL(func, vector2(0.5, 1.5))
+
+#define TEST_BINARY(func) \
+    TEST_BINARY_VAL(func, vector2(0.5, 1.5), vector2(1.0, 4.0))
+
+
+
+shader
+test (vector2 param1 = vector2 (0.5, 1.5),
+      vector2 param2 = vector2 (0.25, 0.25)
+     )
+{
+    printf("parameter initialization: param1 = %g %g\n", param1.x, param1.y);
+    printf("parameter initialization: param2 = %g %g\n", param2.x, param2.y);
+    printf("\n");
+
+    OSL_CHECK_EQUAL(param1, vector2(0.5, 1.5));
+    OSL_CHECK_EQUAL(-param1, vector2(-0.5, -1.5));
+    OSL_CHECK(param1 != param2);
+
+    OSL_CHECK_EQUAL(param1 + param2, vector2(0.75, 1.75));
+    OSL_CHECK_EQUAL(param1 + 1, vector2(1.5, 2.5));
+    OSL_CHECK_EQUAL(param1 + 1.0, vector2(1.5, 2.5));
+    OSL_CHECK_EQUAL(1 + param1, vector2(1.5, 2.5));
+    OSL_CHECK_EQUAL(1.0 + param1, vector2(1.5, 2.5));
+
+    OSL_CHECK_EQUAL(param1 - param2, vector2(0.25, 1.25));
+    OSL_CHECK_EQUAL(param1 - 1, vector2(-0.5, 0.5));
+    OSL_CHECK_EQUAL(param1 - 1.0, vector2(-0.5, 0.5));
+    OSL_CHECK_EQUAL(1 - param1, vector2(0.5, -0.5));
+    OSL_CHECK_EQUAL(1.0 - param1, vector2(0.5, -0.5));
+
+    OSL_CHECK_EQUAL(param1 * param2, vector2(0.125, 0.375));
+    OSL_CHECK_EQUAL(param1 * 2, vector2(1.0, 3.0));
+    OSL_CHECK_EQUAL(param1 * 2.0, vector2(1.0, 3.0));
+    OSL_CHECK_EQUAL(2 * param1, vector2(1.0, 3.0));
+    OSL_CHECK_EQUAL(2.0 * param1, vector2(1.0, 3.0));
+
+    OSL_CHECK_EQUAL(param1 / param2, vector2(2.0, 6.0));
+    OSL_CHECK_EQUAL(param1 / 2, vector2(0.25, 0.75));
+    OSL_CHECK_EQUAL(param1 / 2.0, vector2(0.25, 0.75));
+    OSL_CHECK_EQUAL(2 / param1, vector2(4.0, 2.0/1.5));
+    OSL_CHECK_EQUAL(2.0 / param1, vector2(4.0, 2.0/1.5));
+
+    TEST_UNARY_VAL(abs, vector2(0.5, 1.5));
+    TEST_UNARY_VAL(abs, vector2(-0.5, -1.5));
+    TEST_UNARY_VAL(ceil, vector2(0.5, 1.5));
+    TEST_UNARY_VAL(ceil, vector2(-0.5, -1.5));
+    TEST_UNARY_VAL(floor, vector2(0.5, 1.5));
+    TEST_UNARY_VAL(floor, vector2(-0.5, -1.5));
+
+    TEST_UNARY(sqrt);
+    TEST_UNARY(exp);
+    TEST_UNARY(log);
+    TEST_UNARY(log2);
+
+    OSL_CHECK_EQUAL(mix(vector2(1.0, 2.0), vector2(21.0, 22.0), 0.0), vector2(1.0, 2.0));
+    OSL_CHECK_EQUAL(mix(vector2(1.0, 2.0), vector2(21.0, 22.0), 1.0), vector2(21.0, 22.0));
+    OSL_CHECK_EQUAL(mix(vector2(1.0, 2.0), vector2(21.0, 22.0), 0.5), vector2(11.0, 12.0));
+
+    OSL_CHECK_EQUAL(dot(vector2(1.0, 2.0), vector2(3.0, 4.0)), 11.0);
+    OSL_CHECK_EQUAL(length(vector2(3.0, 4.0)), 5.0);
+
+    OSL_CHECK_EQUAL(smoothstep(vector2(1.0, 2.0), vector2(3.0, 4.0), vector2(0.0, 0.0)), vector2(0.0, 0.0));
+    OSL_CHECK_EQUAL(smoothstep(vector2(1.0, 2.0), vector2(3.0, 4.0), vector2(10.0, 10.0)), vector2(1.0, 1.0));
+    OSL_CHECK_EQUAL(smoothstep(vector2(1.0, 2.0), vector2(3.0, 4.0), vector2(2.0, 3.0)), vector2(0.5, 0.5));
+    
+    OSL_CHECK_EQUAL(clamp(vector2(0.0, 0.0), vector2(1.0, 2.0), vector2(2.0, 3.0)), vector2(1.0, 2.0));
+    OSL_CHECK_EQUAL(clamp(vector2(10.0, 10.0), vector2(1.0, 2.0), vector2(2.0, 3.0)), vector2(2.0, 3.0));
+    OSL_CHECK_EQUAL(clamp(vector2(1.5, 2.5), vector2(1.0, 2.0), vector2(2.0, 3.0)), vector2(1.5, 2.5));
+
+    OSL_CHECK_EQUAL(clamp(vector2(0.25, 0.5), 1.0, 2.0), vector2(1.0, 1.0));
+    OSL_CHECK_EQUAL(clamp(vector2(2.25, 2.5), 1.0, 2.0), vector2(2.0, 2.0));
+    OSL_CHECK_EQUAL(clamp(vector2(1.25, 1.5), 1.0, 2.0), vector2(1.25, 1.5));
+
+    OSL_CHECK_EQUAL(max(vector2(1.0, 4.0), vector2(2.0, 3.0)), vector2(2.0, 4.0));
+    OSL_CHECK_EQUAL(min(vector2(1.0, 4.0), vector2(2.0, 3.0)), vector2(1.0, 3.0));
+
+    OSL_CHECK_EQUAL(normalize(vector2(1.0, -1.0)), vector2(sqrt(2.0)/2, -sqrt(2.0)/2));
+    
+    TEST_BINARY_VAL(fmod, vector2(5.0, 8.0), vector2(2.0, 3.0));
+    TEST_BINARY_VAL(pow, vector2(2.0, 3.0), vector2(2.5, 3.5));
+    TEST_UNARY_VAL(sign, vector2(0.5, -0.5));
+    TEST_UNARY_VAL(sign, vector2(-0.5, 0.5));
+    TEST_UNARY(sin);
+    TEST_UNARY(cos);
+    TEST_UNARY(tan);
+    TEST_UNARY_VAL(asin, vector2(0.5, 0.25));
+    TEST_UNARY_VAL(acos, vector2(0.5, 0.25));
+    TEST_BINARY(atan2);
+    OSL_CHECK_EQUAL(atan2(vector2(2.0, 0.5), 1.0), vector2(atan2(2.0, 1.0), atan2(0.5, 1.0)));
+}

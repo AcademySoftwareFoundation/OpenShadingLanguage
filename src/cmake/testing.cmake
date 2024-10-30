@@ -252,7 +252,7 @@ macro (osl_add_all_tests)
                 bug-param-duplicate bug-peep bug-return
                 calculatenormal-reg
                 cellnoise closure closure-array closure-layered closure-parameters closure-zero closure-conditional
-                color color-reg colorspace comparison
+                color color2 color4 color-reg colorspace comparison
                 complement-reg compile-buffer compassign-bool compassign-reg
                 component-range
                 control-flow-reg connect-components
@@ -378,7 +378,7 @@ macro (osl_add_all_tests)
                 userdata userdata-partial userdata-custom userdata-passthrough
                 vararray-connect vararray-default
                 vararray-deserialize vararray-param
-                vecctr vector vector-reg
+                vecctr vector vector2 vector4 vector-reg
                 wavelength_color wavelength_color-reg Werror xml xml-reg )
 
     # Only run the ocio test if the OIIO we are using has OCIO support

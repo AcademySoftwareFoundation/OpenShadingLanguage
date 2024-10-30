@@ -518,7 +518,7 @@ Operator    | Overload function name | notes
 `>` | `__operator__gt__` | 
 `>=` | `__operator__ge__` |
 `==` | `__operator__eq__` |
-`!=` | `__operator__ne__` |
+`!=` | `__operator__neq__` |
 `\&` | `__operator__bitand__` |
 `^` | `__operator__xor__` |
 `\|` | `__operator__bitor__` |

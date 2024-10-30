@@ -1064,7 +1064,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 ShaderGlobalsType shadow_sg;
                 Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0,
                                               Ray::SHADOW);
-                Intersection shadow_hit = scene.intersect(shadow_ray, inf, hit.id);
+                Intersection shadow_hit = scene.intersect(shadow_ray, inf,
+                                                          hit.id);
                 if (shadow_hit.t == inf)  // ray reached the background?
                     path_radiance += contrib;
             }

@@ -35,7 +35,6 @@ if (OSL_USE_OPTIX)
         shading.h
         shading.cpp
         simpleraytracer.cpp
-        cuda/vec_math.h
         )
 
     # Generate PTX for all of the CUDA files

@@ -23,7 +23,6 @@
 
 #ifdef __CUDACC__
 #    include "cuda/rend_lib.h"
-#    include "cuda/vec_math.h"
 #endif
 
 // The primitives don't included the intersection routines, etc., from the

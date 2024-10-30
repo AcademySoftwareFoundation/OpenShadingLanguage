@@ -10,7 +10,6 @@
 
 #include "optix_raytracer.h"
 #include "rend_lib.h"
-#include "vec_math.h"
 
 #include "../background.h"
 #include "../bvh.h"
@@ -25,6 +24,13 @@
 // clang-format on
 
 #include <cstdint>
+
+
+// Conversion macros for casting between vector types
+#define F3_TO_V3(f3) (*reinterpret_cast<const OSL::Vec3*>(&f3))
+#define F3_TO_C3(f3) (*reinterpret_cast<const OSL::Color3*>(&f3))
+#define V3_TO_F3(v3) (*reinterpret_cast<const float3*>(&v3))
+#define C3_TO_F3(c3) (*reinterpret_cast<const float3*>(&c3))
 
 
 OSL_NAMESPACE_ENTER

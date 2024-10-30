@@ -1,0 +1,24 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+displacement
+disp
+(
+    float scale = 1,
+    float amplitude = 1,
+    int octaves = 4,
+    color Cs = 1
+  )
+{
+    float amount = 0;
+    point b = P * scale;
+    float a = amplitude;
+    for (int i = 0; i < octaves; i++) {
+        amount += a * noise(b);
+        b *= 2.0;
+        a *= 0.5;
+    }
+    P += amount * N;
+}

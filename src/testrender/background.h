@@ -153,6 +153,8 @@ struct Background {
     template<typename F>
     OSL_HOSTDEVICE void prepare_cuda(int stride, int idx, F cb)
     {
+        // N.B. This needs to run on a single-warp launch, since there is no
+        // synchronization across warps in OptiX.
         prepare_cuda_01(stride, idx, cb);
         if (idx == 0)
             prepare_cuda_02();

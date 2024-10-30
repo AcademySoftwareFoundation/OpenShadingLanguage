@@ -1157,7 +1157,7 @@ SimpleRaytracer::antialias_pixel(int x, int y, ShadingContext* ctx)
     for (int si = 0, n = aa * aa; si < n; si++) {
         Sampler sampler(x, y, si);
         // jitter pixel coordinate [0,1)^2
-        Vec3 j = no_jitter ? Vec3(0, 0, 0) : sampler.get();
+        Vec3 j = no_jitter ? Vec3(0.5f, 0.5f, 0) : sampler.get();
         // warp distribution to approximate a tent filter [-1,+1)^2
         j.x *= 2;
         j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);

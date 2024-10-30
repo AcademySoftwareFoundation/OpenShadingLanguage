@@ -16,12 +16,7 @@
 #include "../raytracer.h"
 #include "../render_params.h"
 #include "../sampling.h"
-
-// clang-format off
-// These files must be included in this specific order
-#include "../shading.h"
 #include "../shading.cpp"
-// clang-format on
 
 #include <cstdint>
 

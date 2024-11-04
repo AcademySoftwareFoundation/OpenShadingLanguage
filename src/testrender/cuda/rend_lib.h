@@ -12,10 +12,6 @@
 #include "../raytracer.h"
 
 
-#define RAYTRACER_HIT_QUAD   0
-#define RAYTRACER_HIT_SPHERE 1
-
-
 OSL_NAMESPACE_ENTER
 
 

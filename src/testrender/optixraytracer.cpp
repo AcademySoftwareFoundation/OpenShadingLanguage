@@ -83,6 +83,12 @@ OSL_NAMESPACE_ENTER
         }                                                                  \
     }
 
+
+#define DEVICE_ALLOC(size) reinterpret_cast<CUdeviceptr>(device_alloc(size))
+#define COPY_TO_DEVICE(dst_device, src_host, size) \
+    copy_to_device(reinterpret_cast<void*>(dst_device), src_host, size)
+
+
 static void
 context_log_cb(unsigned int level, const char* tag, const char* message,
                void* /*cbdata */)
@@ -116,10 +122,10 @@ OptixRaytracer::~OptixRaytracer()
 {
     if (m_optix_ctx)
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
-    for (void* ptr : m_ptrs_to_free)
+    for (CUdeviceptr ptr : m_ptrs_to_free)
         cudaFree(reinterpret_cast<void*>(ptr));
-    for (void* ptr : m_arrays_to_free)
-        cudaFreeArray(reinterpret_cast<cudaArray_t>(ptr));
+    for (cudaArray_t arr : m_arrays_to_free)
+        cudaFreeArray(arr);
 }
 
 
@@ -133,6 +139,7 @@ OptixRaytracer::device_alloc(size_t size)
         errhandler().errorfmt("cudaMalloc({}) failed with error: {}\n", size,
                               cudaGetErrorString(res));
     }
+    m_ptrs_to_free.push_back(reinterpret_cast<CUdeviceptr>(ptr));
     return ptr;
 }
 
@@ -237,18 +244,13 @@ OptixRaytracer::synch_attributes()
         const size_t podDataSize = cpuDataSize
                                    - sizeof(ustringhash) * numStrings;
 
-        CUDA_CHECK(
-            cudaMalloc(reinterpret_cast<void**>(&d_color_system),
-                       podDataSize + sizeof(ustringhash_pod) * numStrings));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_color_system), colorSys,
-                              podDataSize, cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_color_system));
+        d_color_system = DEVICE_ALLOC(podDataSize
+                                      + sizeof(ustringhash_pod) * numStrings);
+        COPY_TO_DEVICE(d_color_system, colorSys, podDataSize);
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_osl_printf_buffer),
-                              OSL_PRINTF_BUFFER_SIZE));
+        d_osl_printf_buffer = DEVICE_ALLOC(OSL_PRINTF_BUFFER_SIZE);
         CUDA_CHECK(cudaMemset(reinterpret_cast<void*>(d_osl_printf_buffer), 0,
                               OSL_PRINTF_BUFFER_SIZE));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_osl_printf_buffer));
 
         // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
         // FIXME -- Should probably handle alignment better.
@@ -260,8 +262,7 @@ OptixRaytracer::synch_attributes()
         for (const ustringhash* end = cpuStringHash + numStrings;
              cpuStringHash < end; ++cpuStringHash) {
             ustringhash_pod devStr = cpuStringHash->hash();
-            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(gpuStrings), &devStr,
-                                  sizeof(devStr), cudaMemcpyHostToDevice));
+            COPY_TO_DEVICE(gpuStrings, &devStr, sizeof(devStr));
             gpuStrings += sizeof(ustringhash_pod);
         }
     }
@@ -556,13 +557,10 @@ OptixRaytracer::create_shaders()
     }
 
     // Upload per-material interactive buffer table
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_interactive_params),
-                          sizeof(void*) * material_interactive_params.size()));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_interactive_params),
-                          material_interactive_params.data(),
-                          sizeof(void*) * material_interactive_params.size(),
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_interactive_params));
+    d_interactive_params = DEVICE_ALLOC(sizeof(void*)
+                                        * material_interactive_params.size());
+    COPY_TO_DEVICE(d_interactive_params, material_interactive_params.data(),
+                   sizeof(void*) * material_interactive_params.size());
 }
 
 
@@ -650,12 +648,8 @@ OptixRaytracer::create_sbt()
         GenericRecord raygen_record;
         CUdeviceptr d_raygen_record;
         OPTIX_CHECK(optixSbtRecordPackHeader(m_raygen_group, &raygen_record));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygen_record),
-                              sizeof(GenericRecord)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_raygen_record),
-                              &raygen_record, sizeof(GenericRecord),
-                              cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_raygen_record));
+        d_raygen_record = DEVICE_ALLOC(sizeof(GenericRecord));
+        COPY_TO_DEVICE(d_raygen_record, &raygen_record, sizeof(GenericRecord));
 
         m_optix_sbt.raygenRecord = d_raygen_record;
     }
@@ -665,12 +659,8 @@ OptixRaytracer::create_sbt()
         GenericRecord miss_record;
         CUdeviceptr d_miss_record;
         OPTIX_CHECK(optixSbtRecordPackHeader(m_miss_group, &miss_record));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_miss_record),
-                              sizeof(GenericRecord)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_miss_record),
-                              &miss_record, sizeof(GenericRecord),
-                              cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_miss_record));
+        d_miss_record = DEVICE_ALLOC(sizeof(GenericRecord));
+        COPY_TO_DEVICE(d_miss_record, &miss_record, sizeof(GenericRecord));
 
         m_optix_sbt.missRecordBase          = d_miss_record;
         m_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
@@ -685,13 +675,9 @@ OptixRaytracer::create_sbt()
         OPTIX_CHECK(
             optixSbtRecordPackHeader(m_closesthit_group, &hitgroup_records[0]));
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroup_records),
-                              nhitgroups * sizeof(GenericRecord)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_hitgroup_records),
-                              &hitgroup_records[0],
-                              nhitgroups * sizeof(GenericRecord),
-                              cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_hitgroup_records));
+        d_hitgroup_records = DEVICE_ALLOC(nhitgroups * sizeof(GenericRecord));
+        COPY_TO_DEVICE(d_hitgroup_records, &hitgroup_records[0],
+                       nhitgroups * sizeof(GenericRecord));
 
         m_optix_sbt.hitgroupRecordBase          = d_hitgroup_records;
         m_optix_sbt.hitgroupRecordStrideInBytes = sizeof(GenericRecord);
@@ -709,13 +695,9 @@ OptixRaytracer::create_sbt()
                                                  &callable_records[idx]));
         }
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_callable_records),
-                              (nshaders) * sizeof(GenericRecord)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_callable_records),
-                              callable_records.data(),
-                              (nshaders) * sizeof(GenericRecord),
-                              cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_callable_records));
+        d_callable_records = DEVICE_ALLOC((nshaders) * sizeof(GenericRecord));
+        COPY_TO_DEVICE(d_callable_records, callable_records.data(),
+                       (nshaders) * sizeof(GenericRecord));
 
         m_optix_sbt.callablesRecordBase          = d_callable_records;
         m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
@@ -733,14 +715,9 @@ OptixRaytracer::create_sbt()
         CUdeviceptr d_setglobals_raygen_record;
         OPTIX_CHECK(
             optixSbtRecordPackHeader(m_setglobals_raygen_group, &record));
-        CUDA_CHECK(
-            cudaMalloc(reinterpret_cast<void**>(&d_setglobals_raygen_record),
-                       sizeof(GenericRecord)));
-        CUDA_CHECK(
-            cudaMemcpy(reinterpret_cast<void*>(d_setglobals_raygen_record),
-                       &record, sizeof(GenericRecord), cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(
-            reinterpret_cast<void*>(d_setglobals_raygen_record));
+        d_setglobals_raygen_record = DEVICE_ALLOC(sizeof(GenericRecord));
+        COPY_TO_DEVICE(d_setglobals_raygen_record, &record,
+                       sizeof(GenericRecord));
 
         m_setglobals_optix_sbt.raygenRecord = d_setglobals_raygen_record;
     }
@@ -750,14 +727,9 @@ OptixRaytracer::create_sbt()
         GenericRecord record;
         CUdeviceptr d_setglobals_miss_record;
         OPTIX_CHECK(optixSbtRecordPackHeader(m_setglobals_miss_group, &record));
-        CUDA_CHECK(
-            cudaMalloc(reinterpret_cast<void**>(&d_setglobals_miss_record),
-                       sizeof(GenericRecord)));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_setglobals_miss_record),
-                              &record, sizeof(GenericRecord),
-                              cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(
-            reinterpret_cast<void*>(d_setglobals_miss_record));
+        d_setglobals_miss_record = DEVICE_ALLOC(sizeof(GenericRecord));
+        COPY_TO_DEVICE(d_setglobals_miss_record, &record,
+                       sizeof(GenericRecord));
 
         m_setglobals_optix_sbt.missRecordBase = d_setglobals_miss_record;
         m_setglobals_optix_sbt.missRecordStrideInBytes = sizeof(GenericRecord);
@@ -797,20 +769,12 @@ OptixRaytracer::build_accel()
     accel_options.operation              = OPTIX_BUILD_OPERATION_BUILD;
 
     const size_t vertices_size = sizeof(Vec3) * scene.verts.size();
-    CUDA_CHECK(
-        cudaMalloc(reinterpret_cast<void**>(&d_vertices), vertices_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_vertices),
-                          scene.verts.data(), vertices_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_vertices));
+    d_vertices                 = DEVICE_ALLOC(vertices_size);
+    COPY_TO_DEVICE(d_vertices, scene.verts.data(), vertices_size);
 
     const size_t indices_size = scene.triangles.size() * sizeof(int32_t) * 3;
-    CUDA_CHECK(
-        cudaMalloc(reinterpret_cast<void**>(&d_vert_indices), indices_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_vert_indices),
-                          scene.triangles.data(), indices_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_vert_indices));
+    d_vert_indices            = DEVICE_ALLOC(indices_size);
+    COPY_TO_DEVICE(d_vert_indices, scene.triangles.data(), indices_size);
 
     const uint32_t triangle_input_flags[1] = { OPTIX_GEOMETRY_FLAG_NONE };
     OptixBuildInput triangle_input         = {};
@@ -836,9 +800,7 @@ OptixRaytracer::build_accel()
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_temp_buffer),
                           gas_buffer_sizes.tempSizeInBytes));
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_accel_output_buffer),
-                          gas_buffer_sizes.outputSizeInBytes));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_accel_output_buffer));
+    d_accel_output_buffer = DEVICE_ALLOC(gas_buffer_sizes.outputSizeInBytes);
 
     OPTIX_CHECK(optixAccelBuild(
         m_optix_ctx, 0, &accel_options, &triangle_input, 1, d_temp_buffer,
@@ -855,16 +817,9 @@ OptixRaytracer::prepare_background()
 {
     if (getBackgroundShaderID() >= 0) {
         const int bg_res = std::max<int>(32, getBackgroundResolution());
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_values),
-                              3 * sizeof(float) * bg_res * bg_res));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_rows),
-                              sizeof(float) * bg_res));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_bg_cols),
-                              sizeof(float) * bg_res * bg_res));
-
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_bg_values));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_bg_rows));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_bg_cols));
+        d_bg_values      = DEVICE_ALLOC(3 * sizeof(float) * bg_res * bg_res);
+        d_bg_rows        = DEVICE_ALLOC(sizeof(float) * bg_res);
+        d_bg_cols        = DEVICE_ALLOC(sizeof(float) * bg_res * bg_res);
     }
 }
 
@@ -875,46 +830,29 @@ OptixRaytracer::upload_mesh_data()
 {
     // Upload the extra geometry data to the device
     const size_t uvs_size = sizeof(Vec2) * scene.uvs.size();
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_uvs), uvs_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_uvs), scene.uvs.data(),
-                          uvs_size, cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_uvs));
+    d_uvs                 = DEVICE_ALLOC(uvs_size);
+    COPY_TO_DEVICE(d_uvs, scene.uvs.data(), uvs_size);
 
     const size_t uv_indices_size = scene.uv_triangles.size() * sizeof(int32_t)
                                    * 3;
-    CUDA_CHECK(
-        cudaMalloc(reinterpret_cast<void**>(&d_uv_indices), uv_indices_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_uv_indices),
-                          scene.uv_triangles.data(), uv_indices_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_uv_indices));
+    d_uv_indices = DEVICE_ALLOC(uv_indices_size);
+    COPY_TO_DEVICE(d_uv_indices, scene.uv_triangles.data(), uv_indices_size);
 
     const size_t normals_size = sizeof(Vec3) * scene.normals.size();
     if (normals_size > 0) {
-        CUDA_CHECK(
-            cudaMalloc(reinterpret_cast<void**>(&d_normals), normals_size));
-        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_normals),
-                              scene.normals.data(), normals_size,
-                              cudaMemcpyHostToDevice));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_normals));
+        d_normals = DEVICE_ALLOC(normals_size);
+        COPY_TO_DEVICE(d_normals, scene.normals.data(), normals_size);
     }
 
     const size_t normal_indices_size = scene.n_triangles.size()
                                        * sizeof(int32_t) * 3;
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_normal_indices),
-                          normal_indices_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_normal_indices),
-                          scene.n_triangles.data(), normal_indices_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_normal_indices));
+    d_normal_indices = DEVICE_ALLOC(normal_indices_size);
+    COPY_TO_DEVICE(d_normal_indices, scene.n_triangles.data(),
+                   normal_indices_size);
 
     const size_t shader_ids_size = scene.shaderids.size() * sizeof(int);
-    CUDA_CHECK(
-        cudaMalloc(reinterpret_cast<void**>(&d_shader_ids), shader_ids_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_shader_ids),
-                          scene.shaderids.data(), shader_ids_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_shader_ids));
+    d_shader_ids                 = DEVICE_ALLOC(shader_ids_size);
+    COPY_TO_DEVICE(d_shader_ids, scene.shaderids.data(), shader_ids_size);
 
     // TODO: These could be packed, but for now just use ints instead of bools
     std::vector<int32_t> shader_is_light;
@@ -922,22 +860,16 @@ OptixRaytracer::upload_mesh_data()
         shader_is_light.push_back(is_light);
     const size_t shader_is_light_size = shader_is_light.size()
                                         * sizeof(int32_t);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_shader_is_light),
-                          shader_is_light_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_shader_is_light),
-                          shader_is_light.data(), shader_is_light_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_shader_is_light));
+    d_shader_is_light = DEVICE_ALLOC(shader_is_light_size);
+    COPY_TO_DEVICE(d_shader_is_light, shader_is_light.data(),
+                   shader_is_light_size);
 
 
     const size_t lightprims_size = OptixRaytracer::lightprims().size()
                                    * sizeof(uint32_t);
-    CUDA_CHECK(
-        cudaMalloc(reinterpret_cast<void**>(&d_lightprims), lightprims_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_lightprims),
-                          OptixRaytracer::lightprims().data(), lightprims_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_lightprims));
+    d_lightprims = DEVICE_ALLOC(lightprims_size);
+    COPY_TO_DEVICE(d_lightprims, OptixRaytracer::lightprims().data(),
+                   lightprims_size);
 
     // Copy the mesh ID for each triangle to the device
     std::vector<int> mesh_ids;
@@ -948,11 +880,8 @@ OptixRaytracer::upload_mesh_data()
         mesh_ids.push_back(meshid);
     }
     const size_t mesh_ids_size = mesh_ids.size() * sizeof(int32_t);
-    CUDA_CHECK(
-        cudaMalloc(reinterpret_cast<void**>(&d_mesh_ids), mesh_ids_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_mesh_ids), mesh_ids.data(),
-                          mesh_ids_size, cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_mesh_ids));
+    d_mesh_ids                 = DEVICE_ALLOC(mesh_ids_size);
+    COPY_TO_DEVICE(d_mesh_ids, mesh_ids.data(), mesh_ids_size);
 
     // Copy the mesh surface areas to the device
     std::vector<float> mesh_surfacearea;
@@ -971,12 +900,9 @@ OptixRaytracer::upload_mesh_data()
 
     const size_t mesh_surfacearea_size = mesh_surfacearea.size()
                                          * sizeof(float);
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_surfacearea),
-                          mesh_surfacearea_size));
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_surfacearea),
-                          mesh_surfacearea.data(), mesh_surfacearea_size,
-                          cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_surfacearea));
+    d_surfacearea = DEVICE_ALLOC(mesh_surfacearea_size);
+    COPY_TO_DEVICE(d_surfacearea, mesh_surfacearea.data(),
+                   mesh_surfacearea_size);
 }
 
 
@@ -1061,7 +987,7 @@ OptixRaytracer::get_texture_handle(ustring filename,
         CUDA_CHECK(cudaMemcpy2DToArray(pixelArray, 0, 0, level_pixels[0].data(),
                                        pitch, pitch, img_height,
                                        cudaMemcpyHostToDevice));
-        m_arrays_to_free.push_back(reinterpret_cast<void*>(pixelArray));
+        m_arrays_to_free.push_back(pixelArray);
 
         cudaResourceDesc res_desc  = {};
         res_desc.resType           = cudaResourceTypeMipmappedArray;
@@ -1123,12 +1049,8 @@ OptixRaytracer::warmup()
 void
 OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 {
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_output_buffer),
-                          xres * yres * 4 * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_launch_params),
-                          sizeof(RenderParams)));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_output_buffer));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_launch_params));
+    d_output_buffer = DEVICE_ALLOC(xres * yres * 4 * sizeof(float));
+    d_launch_params = DEVICE_ALLOC(sizeof(RenderParams));
 
     m_xres = xres;
     m_yres = yres;
@@ -1186,8 +1108,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.bg_rows   = d_bg_rows;
     params.bg_cols   = d_bg_cols;
 
-    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_launch_params), &params,
-                          sizeof(RenderParams), cudaMemcpyHostToDevice));
+    COPY_TO_DEVICE(d_launch_params, &params, sizeof(RenderParams));
 
     // Set up global variables
     OPTIX_CHECK(optixLaunch(m_optix_pipeline, m_cuda_stream, d_launch_params,

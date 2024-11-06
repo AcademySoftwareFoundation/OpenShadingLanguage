@@ -104,8 +104,8 @@ private:
     OSL::Matrix44 m_object2common;  // "object" space to "common" space matrix
 
     // CUdeviceptrs that need to be freed after we are done
-    std::vector<void*> m_ptrs_to_free;
-    std::vector<void*> m_arrays_to_free;
+    std::vector<CUdeviceptr> m_ptrs_to_free;
+    std::vector<cudaArray_t> m_arrays_to_free;
 };
 
 

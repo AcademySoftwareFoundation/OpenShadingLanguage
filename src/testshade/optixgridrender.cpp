@@ -86,6 +86,11 @@ OSL_NAMESPACE_ENTER
     }
 
 
+#define DEVICE_ALLOC(size) reinterpret_cast<CUdeviceptr>(device_alloc(size))
+#define COPY_TO_DEVICE(dst_device, src_host, size) \
+    copy_to_device(reinterpret_cast<void*>(dst_device), src_host, size)
+
+
 static void
 context_log_cb(unsigned int level, const char* tag, const char* message,
                void* /*cbdata */)
@@ -180,12 +185,12 @@ OptixGridRenderer::load_ptx_file(string_view filename)
 
 OptixGridRenderer::~OptixGridRenderer()
 {
-    for (void* p : m_ptrs_to_free)
-        cudaFree(p);
-    for (void* p : m_arrays_to_free)
-        cudaFreeArray(reinterpret_cast<cudaArray_t>(p));
     if (m_optix_ctx)
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
+    for (CUdeviceptr ptr : m_ptrs_to_free)
+        cudaFree(reinterpret_cast<void*>(ptr));
+    for (cudaArray_t arr : m_arrays_to_free)
+        cudaFreeArray(arr);
 }
 
 
@@ -252,29 +257,23 @@ OptixGridRenderer::synch_attributes()
         const size_t podDataSize = cpuDataSize
                                    - sizeof(ustringhash) * numStrings;
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_color_system),
-                              podDataSize + sizeof(uint64_t) * numStrings));
+        d_color_system = DEVICE_ALLOC(podDataSize
+                                      + sizeof(uint64_t) * numStrings);
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_color_system), colorSys,
                               podDataSize, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_osl_printf_buffer),
-                              OSL_PRINTF_BUFFER_SIZE));
+        d_osl_printf_buffer = DEVICE_ALLOC(OSL_PRINTF_BUFFER_SIZE);
         CUDA_CHECK(cudaMemset(reinterpret_cast<void*>(d_osl_printf_buffer), 0,
                               OSL_PRINTF_BUFFER_SIZE));
 
         // Transforms
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_object2common),
-                              sizeof(OSL::Matrix44)));
+        d_object2common = DEVICE_ALLOC(sizeof(OSL::Matrix44));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_object2common),
                               &m_object2common, sizeof(OSL::Matrix44),
                               cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_shader2common),
-                              sizeof(OSL::Matrix44)));
+        d_shader2common = DEVICE_ALLOC(sizeof(OSL::Matrix44));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_shader2common),
                               &m_shader2common, sizeof(OSL::Matrix44),
                               cudaMemcpyHostToDevice));
-
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_color_system));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_osl_printf_buffer));
 
         // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
         // FIXME -- Should probably handle alignment better.
@@ -730,26 +729,12 @@ OptixGridRenderer::make_optix_materials()
     setglobals_raygenRecord.data = nullptr;
     setglobals_missRecord.data   = nullptr;
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygenRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_missRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroupRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_callablesRecord),
-                          callables * sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_raygenRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_missRecord),
-                          sizeof(GenericRecord)));
-
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_raygenRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_missRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_hitgroupRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_callablesRecord));
-    m_ptrs_to_free.push_back(
-        reinterpret_cast<void*>(d_setglobals_raygenRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_setglobals_missRecord));
+    d_raygenRecord            = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_missRecord              = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_hitgroupRecord          = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_callablesRecord         = DEVICE_ALLOC(callables * sizeof(GenericRecord));
+    d_setglobals_raygenRecord = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_setglobals_missRecord   = DEVICE_ALLOC(sizeof(GenericRecord));
 
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_raygenRecord),
                           &raygenRecord, sizeof(GenericRecord),
@@ -882,7 +867,7 @@ OptixGridRenderer::get_texture_handle(ustring filename,
         CUDA_CHECK(cudaMemcpy2DToArray(pixelArray, 0, 0, level_pixels[0].data(),
                                        pitch, pitch, img_height,
                                        cudaMemcpyHostToDevice));
-        m_arrays_to_free.push_back(reinterpret_cast<void*>(pixelArray));
+        m_arrays_to_free.push_back(pixelArray);
 
         cudaResourceDesc res_desc  = {};
         res_desc.resType           = cudaResourceTypeMipmappedArray;
@@ -941,13 +926,8 @@ OptixGridRenderer::warmup()
 void
 OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 {
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_output_buffer),
-                          xres * yres * 4 * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_launch_params),
-                          sizeof(RenderParams)));
-
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_output_buffer));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_launch_params));
+    d_output_buffer = DEVICE_ALLOC(xres * yres * 4 * sizeof(float));
+    d_launch_params = DEVICE_ALLOC(sizeof(RenderParams));
 
     m_xres = xres;
     m_yres = yres;
@@ -1153,19 +1133,15 @@ OptixGridRenderer::register_named_transforms()
     }
 
     // Push the names and transforms to the device
-    size_t sz = sizeof(uint64_t) * xform_name_buffer.size();
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_xform_name_buffer), sz));
+    size_t sz           = sizeof(uint64_t) * xform_name_buffer.size();
+    d_xform_name_buffer = DEVICE_ALLOC(sz);
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_xform_name_buffer),
                           xform_name_buffer.data(), sz,
                           cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_name_buffer));
-
-    sz = sizeof(OSL::Matrix44) * xform_buffer.size();
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_xform_buffer), sz));
+    sz             = sizeof(OSL::Matrix44) * xform_buffer.size();
+    d_xform_buffer = DEVICE_ALLOC(sz);
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_xform_buffer),
                           xform_buffer.data(), sz, cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_buffer));
-
     m_num_named_xforms = xform_name_buffer.size();
 }
 

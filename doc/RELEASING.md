@@ -334,8 +334,15 @@ Odds and ends to do after the tag is pushed and the announcements are sent:
 - Re-read RELEASING.md and ensure that the instructions match what you
   have done. Update as necessary.
 
-- For annual beta releases, post a short message to the "Open Shading
-  Language" channel of the ASWF slack. It can be a one-line announcement and
-  then just a link to the GitHub release page for this version.
+- Go to [OSL's docs hosted on readthedocs.org](https://docs.openshadinglanguage.org),
+  and ensure that the new release is built, visible, and is the default
+  release shown (specified in the Admin section). I tend to keep the latest
+  patch of each minor release available for reference indefinitely, but hide
+  the docs for earlier patch releases within that minor release series.
 
+- Edit the top-level CMakeList.txt to update the version to the *next*
+  anticipated release on the branch, in order to ensure that anybody building
+  from subsequent patches won't get a release number that advertises itself
+  incorrectly as a prior tagged release. Also edit CHANGES.md to add a new
+  (blank) heading for the next patch or release.
 

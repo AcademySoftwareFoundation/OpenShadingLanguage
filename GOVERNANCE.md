@@ -20,21 +20,24 @@ guidance.
 The OSL project grows and thrives from assistance from Contributors.
 Contributors include anyone in the community who contributes code,
 documentation, or other technical artifacts that have been incorporated into
-the projects repository.
+the project repository.
 
 Anyone can be a Contributor. You need no formal approval from the project,
 beyond the legal forms.
 
 ### How to Become a Contributor
 
-* Review the coding standards to ensure your contribution is in line
-  with the project's coding and styling guidelines.
+* Review the coding standards and [contributing guidelines](CONTRIBUTING.md)
+  to ensure your contribution is in line with the project's coding and styling
+  guidelines.
 
 * Sign the Individual CLA, or if you are employed by an organization that
   might have any claim to IP you create, have your organization sign the
   Corporate CLA.
 
-* Submit your code as a PR with the appropriate DCO sign-off.
+* Submit your code as a PR with the appropriate DCO sign-off on each commit.
+  The easiest way to do this is to ensure that you commit your code with `git
+  commit -s`.
 
 ## Committers
 
@@ -75,9 +78,9 @@ request that the TSC restore them to active Committer status.
 
 ## Technical Steering Committee
 
-The Technical Steering Committee (TSC) has final authority over this
-project. As defined in the project charter, TSC responsibilities include,
-but are not limited to:
+The Technical Steering Committee (TSC) has final authority over this project.
+As defined in the project charter, in addition to committer activities, TSC
+responsibilities also include, but are not limited to:
 
 * Coordinating technical direction of the Project.
 
@@ -136,7 +139,7 @@ Current voting members of the TSC are:
 * Nicolas Guiard - Isotropix
 * Clint Hanson - DNEG
 * Adrien Herubel - Autodesk
-* Lee Kerley - Sony Pictures Imageworks
+* Lee Kerley - Apple
 * Mitch Prater - Laika
 * Brecht Van Lommel - Blender
 * Alex Wells - Intel
@@ -179,6 +182,9 @@ her absence. Meetings may also be streamed online where appropriate;
 connection details will be posted to the osl-dev mail list in advance of the
 scheduled meeting.
 
+The biweekly TSC meetings can be found on the [ASWF Calendar](https://calendar.openshadinglanguage.org),
+just click on the OSL TSC meeting entries to get the Zoom link.
+
 Items are added to the TSC agenda which are considered contentious or are
 modifications of governance, contribution policy, TSC membership, or release
 process, in addition to topics involving the high-level technical direction
@@ -206,5 +212,6 @@ archived in the project repository.
 
 Due to the challenges of scheduling a global meeting with participants in
 several time zones, the TSC will seek to resolve as many agenda items as
-possible outside of meetings on the public mailing list.
+possible outside of meetings on the public mailing list or through GitHub
+issues, discussions, and pull requests.
 

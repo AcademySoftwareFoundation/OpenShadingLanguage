@@ -4,6 +4,8 @@
 Inlining Options for OptiX and CUDA
 ===================================
 
+hey hey
+
 When compiling shaders for OptiX and CUDA (and in general), there is a tradeoff
 between compile speed and shade-time performance. The LLVM optimizer generally
 does a good job of balancing these concerns, but there might be cases where a

@@ -188,7 +188,8 @@ rs_transform_points(OSL::OpaqueExecContextPtr /*ec*/, OSL::ustringhash /*from*/,
 // doesn't know how to handle CUDA texture intrinsics. This function must be
 // defined in the CUDA source for testshade and testrender.
 extern "C" __device__ float4
-osl_tex2DLookup(void* handle, float s, float t);
+osl_tex2DLookup(void* handle, float s, float t, float dsdx, float dtdx,
+                float dsdy, float dtdy);
 #endif
 
 OSL_RSOP OSL_HOSTDEVICE bool
@@ -208,7 +209,8 @@ rs_texture(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
 #else
     if (!texture_handle)
         return false;
-    const float4 fromTexture = osl_tex2DLookup((void*)texture_handle, s, t);
+    const float4 fromTexture = osl_tex2DLookup(texture_handle, s, t, dsdx, dtdx,
+                                               dsdy, dtdy);
     *((float3*)result)       = make_float3(fromTexture.x, fromTexture.y,
                                            fromTexture.z);
     return true;

@@ -16,7 +16,6 @@ if (OSL_USE_OPTIX)
     list (APPEND testrender_srcs optixraytracer.cpp)
     set (testrender_cuda_srcs
         cuda/optix_raytracer.cu
-        cuda/wrapper.cu
         )
 
     set (testrender_rend_lib_srcs
@@ -25,17 +24,22 @@ if (OSL_USE_OPTIX)
         )
 
     # We need to make sure that the PTX files are regenerated whenever these
-    # headers change.
+    # files change.
     set (testrender_cuda_headers
         cuda/rend_lib.h
-        render_params.h)
-
-    set ( extra_cuda_headers
-        render_params.h )
+        background.h
+        optics.h
+        render_params.h
+        raytracer.h
+        sampling.h
+        shading.h
+        shading.cpp
+        simpleraytracer.cpp
+        )
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testrender_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} ${extra_cuda_headers} ptx_generated "" )
+        NVCC_COMPILE ( ${cudasrc} "${testrender_cuda_headers}" ptx_generated "" )
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 
@@ -55,7 +59,7 @@ if (OSL_USE_OPTIX)
     list (APPEND ptx_list ${rend_lib_ptx})
 
     add_custom_target (testrender_ptx ALL
-        DEPENDS ${ptx_list}
+        DEPENDS ${ptx_list} ${testrender_cuda_headers}
         SOURCES ${testrender_cuda_srcs} )
 
     # Install the PTX files in a fixed location so that they can be

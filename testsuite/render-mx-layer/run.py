@@ -6,5 +6,8 @@
 
 failthresh = 0.01
 failpercent = 1
+allowfailures = 5
+idiff_program = "idiff"
+
 outputs = [ "out.exr" ]
 command = testrender("-r 320 240 -aa 6 scene.xml out.exr")

@@ -179,7 +179,8 @@ macro ( TESTSUITE )
             AND NOT EXISTS "${_testsrcdir}/NOOPTIX-FIXME"
             AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION")
             # Unoptimized
-            if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+            if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY"
+                AND NOT EXISTS "${_testsrcdir}/OPTIX_OPTIMIZEONLY")
                 add_one_testsuite ("${_testname}.optix" "${_testsrcdir}"
                                    ENV TESTSHADE_OPT=0 TESTSHADE_OPTIX=1 )
             endif ()

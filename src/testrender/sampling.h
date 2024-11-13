@@ -14,7 +14,7 @@ OSL_NAMESPACE_ENTER
 
 struct TangentFrame {
     // build frame from unit normal
-    static TangentFrame from_normal(const Vec3& n)
+    static OSL_HOSTDEVICE TangentFrame from_normal(const Vec3& n)
     {
         // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
         const float sign = copysignf(1.0f, n.z);
@@ -27,7 +27,8 @@ struct TangentFrame {
 
     // build frame from unit normal and unit tangent
     // fallsback to an arbitrary basis if the tangent is 0 or colinear with n
-    static TangentFrame from_normal_and_tangent(const Vec3& n, const Vec3& t)
+    static OSL_HOSTDEVICE TangentFrame from_normal_and_tangent(const Vec3& n,
+                                                               const Vec3& t)
     {
         Vec3 x      = t - n * dot(n, t);
         float xlen2 = dot(x, x);
@@ -41,18 +42,24 @@ struct TangentFrame {
     }
 
     // transform vector
-    Vec3 get(float x, float y, float z) const { return x * u + y * v + z * w; }
+    Vec3 OSL_HOSTDEVICE get(float x, float y, float z) const
+    {
+        return x * u + y * v + z * w;
+    }
 
     // untransform vector
-    float getx(const Vec3& a) const { return a.dot(u); }
-    float gety(const Vec3& a) const { return a.dot(v); }
-    float getz(const Vec3& a) const { return a.dot(w); }
+    float OSL_HOSTDEVICE getx(const Vec3& a) const { return a.dot(u); }
+    float OSL_HOSTDEVICE gety(const Vec3& a) const { return a.dot(v); }
+    float OSL_HOSTDEVICE getz(const Vec3& a) const { return a.dot(w); }
 
-    Vec3 tolocal(const Vec3& a) const
+    Vec3 OSL_HOSTDEVICE tolocal(const Vec3& a) const
     {
         return Vec3(a.dot(u), a.dot(v), a.dot(w));
     }
-    Vec3 toworld(const Vec3& a) const { return get(a.x, a.y, a.z); }
+    Vec3 OSL_HOSTDEVICE toworld(const Vec3& a) const
+    {
+        return get(a.x, a.y, a.z);
+    }
 
     Vec3 u, v, w;
 };
@@ -60,7 +67,7 @@ struct TangentFrame {
 struct Sampling {
     /// Warp the unit disk onto the unit sphere
     /// http://psgraphics.blogspot.com/2011/01/improved-code-for-concentric-map.html
-    static void to_unit_disk(float& x, float& y)
+    static OSL_HOSTDEVICE void to_unit_disk(float& x, float& y)
     {
         const float PI_OVER_4 = float(M_PI_4);
         const float PI_OVER_2 = float(M_PI_2);
@@ -82,8 +89,9 @@ struct Sampling {
         y *= r;
     }
 
-    static void sample_cosine_hemisphere(const Vec3& N, float rndx, float rndy,
-                                         Vec3& out, float& pdf)
+    static OSL_HOSTDEVICE void sample_cosine_hemisphere(const Vec3& N,
+                                                        float rndx, float rndy,
+                                                        Vec3& out, float& pdf)
     {
         to_unit_disk(rndx, rndy);
         float cos_theta = sqrtf(std::max(1 - rndx * rndx - rndy * rndy, 0.0f));
@@ -91,8 +99,9 @@ struct Sampling {
         pdf = cos_theta * float(M_1_PI);
     }
 
-    static void sample_uniform_hemisphere(const Vec3& N, float rndx, float rndy,
-                                          Vec3& out, float& pdf)
+    static OSL_HOSTDEVICE void sample_uniform_hemisphere(const Vec3& N,
+                                                         float rndx, float rndy,
+                                                         Vec3& out, float& pdf)
     {
         float phi       = float(2 * M_PI) * rndx;
         float cos_theta = rndy;
@@ -118,7 +127,8 @@ struct MIS {
     // Centralizing the handling of the pdfs this way ensures that all numerical
     // cases can be enumerated and handled robustly without arbitrary epsilons.
     template<MISMode mode>
-    static inline float power_heuristic(float sampled_pdf, float other_pdf)
+    static inline OSL_HOSTDEVICE float power_heuristic(float sampled_pdf,
+                                                       float other_pdf)
     {
         // NOTE: inf is ok!
         assert(sampled_pdf >= 0);
@@ -159,9 +169,16 @@ struct MIS {
     // such as a BRDF mixture. This updates a (weight, pdf) pair with a new one
     // to represent the sum of both. b is the probability of choosing the provided
     // weight. A running sum should be started with a weight and pdf of 0.
-    static inline void update_eval(Color3* w, float* pdf, Color3 ow, float opdf,
-                                   float b)
+    static inline OSL_HOSTDEVICE void
+    update_eval(Color3* w, float* pdf, Color3 ow, float opdf, float b)
     {
+#ifdef __CUDACC__
+        // Check for those pesky NaNs
+        assert(*pdf == *pdf);
+        assert(b == b);
+        assert(opdf == opdf);
+#endif
+
         // NOTE: inf is ok!
         assert(*pdf >= 0);
         assert(opdf >= 0);
@@ -193,6 +210,7 @@ struct MIS {
 // "Practical Hash-based Owen Scrambling" - Brent Burley - JCGT 2020
 //    https://jcgt.org/published/0009/04/01/
 struct Sampler {
+    OSL_HOSTDEVICE
     Sampler(int px, int py, int si)
         : seed(((px & 2047) << 22) | ((py & 2047) << 11))
         , index(reversebits(si))
@@ -200,6 +218,7 @@ struct Sampler {
         assert(si < (1 << 24));
     }
 
+    OSL_HOSTDEVICE
     Vec3 get()
     {
         static const uint32_t zmatrix[24] = {
@@ -234,7 +253,7 @@ struct Sampler {
 private:
     uint32_t seed, index;
 
-    static uint32_t hash(uint32_t s)
+    static OSL_HOSTDEVICE uint32_t hash(uint32_t s)
     {
         // https://github.com/skeeto/hash-prospector
         s ^= s >> 16;
@@ -245,7 +264,7 @@ private:
         return s;
     }
 
-    static uint32_t reversebits(uint32_t x)
+    static OSL_HOSTDEVICE uint32_t reversebits(uint32_t x)
     {
 #if defined(__clang__)
         return __builtin_bitreverse32(x);
@@ -259,7 +278,7 @@ private:
 #endif
     }
 
-    static uint32_t owen_scramble(uint32_t p, uint32_t s)
+    static OSL_HOSTDEVICE uint32_t owen_scramble(uint32_t p, uint32_t s)
     {
         // https://psychopath.io/post/2021_01_30_building_a_better_lk_hash
         // assumes reversed input

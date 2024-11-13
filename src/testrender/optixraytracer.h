@@ -45,6 +45,7 @@ public:
     void cleanup_programs();
     void build_accel();
     void upload_mesh_data();
+    void prepare_background();
     void prepare_render() override;
     void warmup() override;
     void render(int xres, int yres) override;
@@ -87,7 +88,6 @@ private:
     OptixPipelineLinkOptions m_pipeline_link_options       = {};
     OptixProgramGroupOptions m_program_options             = {};
     OptixModule m_program_module                           = {};
-    OptixModule m_wrapper_module                           = {};
     OptixModule m_rend_lib_module                          = {};
     OptixModule m_shadeops_module                          = {};
     OptixProgramGroup m_raygen_group                       = {};
@@ -115,7 +115,11 @@ private:
     CUdeviceptr d_shader_is_light     = 0;
     CUdeviceptr d_mesh_ids            = 0;
     CUdeviceptr d_surfacearea         = 0;
+    CUdeviceptr d_lightprims          = 0;
     CUdeviceptr d_interactive_params  = 0;
+    CUdeviceptr d_bg_values           = 0;
+    CUdeviceptr d_bg_rows             = 0;
+    CUdeviceptr d_bg_cols             = 0;
     CUdeviceptr d_osl_printf_buffer   = 0;
     CUdeviceptr d_color_system        = 0;
 
@@ -137,7 +141,9 @@ private:
     std::string m_materials_ptx;
     std::unordered_map<ustringhash, optix::TextureSampler> m_samplers;
 
-    std::vector<CUdeviceptr> device_ptrs;
+    // CUdeviceptrs that need to be freed after we are done
+    std::vector<CUdeviceptr> m_ptrs_to_free;
+    std::vector<cudaArray_t> m_arrays_to_free;
 };
 
 

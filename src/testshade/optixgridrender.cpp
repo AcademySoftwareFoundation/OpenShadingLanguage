@@ -14,7 +14,7 @@
 #include "render_params.h"
 
 #include <cuda.h>
-#include <nvrtc.h>
+#include <cuda_runtime.h>
 #include <optix_function_table_definition.h>
 #include <optix_stack_size.h>
 #include <optix_stubs.h>
@@ -31,6 +31,9 @@ const auto optixModuleCreateFn = optixModuleCreateFromPTX;
 #else
 const auto optixModuleCreateFn = optixModuleCreate;
 #endif
+
+
+using namespace testshade;
 
 
 OSL_NAMESPACE_ENTER
@@ -81,6 +84,11 @@ OSL_NAMESPACE_ENTER
             exit(1);                                                       \
         }                                                                  \
     }
+
+
+#define DEVICE_ALLOC(size) reinterpret_cast<CUdeviceptr>(device_alloc(size))
+#define COPY_TO_DEVICE(dst_device, src_host, size) \
+    copy_to_device(reinterpret_cast<void*>(dst_device), src_host, size)
 
 
 static void
@@ -177,10 +185,12 @@ OptixGridRenderer::load_ptx_file(string_view filename)
 
 OptixGridRenderer::~OptixGridRenderer()
 {
-    for (void* p : m_ptrs_to_free)
-        cudaFree(p);
     if (m_optix_ctx)
         OPTIX_CHECK(optixDeviceContextDestroy(m_optix_ctx));
+    for (CUdeviceptr ptr : m_ptrs_to_free)
+        cudaFree(reinterpret_cast<void*>(ptr));
+    for (cudaArray_t arr : m_arrays_to_free)
+        cudaFreeArray(arr);
 }
 
 
@@ -247,29 +257,23 @@ OptixGridRenderer::synch_attributes()
         const size_t podDataSize = cpuDataSize
                                    - sizeof(ustringhash) * numStrings;
 
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_color_system),
-                              podDataSize + sizeof(uint64_t) * numStrings));
+        d_color_system = DEVICE_ALLOC(podDataSize
+                                      + sizeof(uint64_t) * numStrings);
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_color_system), colorSys,
                               podDataSize, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_osl_printf_buffer),
-                              OSL_PRINTF_BUFFER_SIZE));
+        d_osl_printf_buffer = DEVICE_ALLOC(OSL_PRINTF_BUFFER_SIZE);
         CUDA_CHECK(cudaMemset(reinterpret_cast<void*>(d_osl_printf_buffer), 0,
                               OSL_PRINTF_BUFFER_SIZE));
 
         // Transforms
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_object2common),
-                              sizeof(OSL::Matrix44)));
+        d_object2common = DEVICE_ALLOC(sizeof(OSL::Matrix44));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_object2common),
                               &m_object2common, sizeof(OSL::Matrix44),
                               cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_shader2common),
-                              sizeof(OSL::Matrix44)));
+        d_shader2common = DEVICE_ALLOC(sizeof(OSL::Matrix44));
         CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_shader2common),
                               &m_shader2common, sizeof(OSL::Matrix44),
                               cudaMemcpyHostToDevice));
-
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_color_system));
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_osl_printf_buffer));
 
         // then copy the device string to the end, first strings starting at dataPtr - (numStrings)
         // FIXME -- Should probably handle alignment better.
@@ -725,26 +729,12 @@ OptixGridRenderer::make_optix_materials()
     setglobals_raygenRecord.data = nullptr;
     setglobals_missRecord.data   = nullptr;
 
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_raygenRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_missRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_hitgroupRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_callablesRecord),
-                          callables * sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_raygenRecord),
-                          sizeof(GenericRecord)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_setglobals_missRecord),
-                          sizeof(GenericRecord)));
-
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_raygenRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_missRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_hitgroupRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_callablesRecord));
-    m_ptrs_to_free.push_back(
-        reinterpret_cast<void*>(d_setglobals_raygenRecord));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_setglobals_missRecord));
+    d_raygenRecord            = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_missRecord              = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_hitgroupRecord          = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_callablesRecord         = DEVICE_ALLOC(callables * sizeof(GenericRecord));
+    d_setglobals_raygenRecord = DEVICE_ALLOC(sizeof(GenericRecord));
+    d_setglobals_missRecord   = DEVICE_ALLOC(sizeof(GenericRecord));
 
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_raygenRecord),
                           &raygenRecord, sizeof(GenericRecord),
@@ -817,53 +807,82 @@ OptixGridRenderer::get_texture_handle(ustring filename,
 {
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
-        // Open image
+        // Open image to check the number of mip levels
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
             errhandler().errorfmt("Could not load: {} (hash {})", filename,
                                   filename);
             return (TextureHandle*)nullptr;
         }
-
-        OIIO::ROI roi = OIIO::get_roi_full(image.spec());
-        int32_t width = roi.width(), height = roi.height();
-        std::vector<float> pixels(width * height * 4);
-
-        for (int j = 0; j < height; j++) {
-            for (int i = 0; i < width; i++) {
-                image.getpixel(i, j, 0, &pixels[((j * width) + i) * 4 + 0]);
-            }
-        }
-        cudaResourceDesc res_desc = {};
+        int32_t nmiplevels = std::max(image.nmiplevels(), 1);
+        int32_t img_width  = image.xmax() + 1;
+        int32_t img_height = image.ymax() + 1;
 
         // hard-code textures to 4 channels
-        int32_t pitch = width * 4 * sizeof(float);
         cudaChannelFormatDesc channel_desc
             = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
 
+        cudaMipmappedArray_t mipmapArray;
+        cudaExtent extent = make_cudaExtent(img_width, img_height, 0);
+        CUDA_CHECK(cudaMallocMipmappedArray(&mipmapArray, &channel_desc, extent,
+                                            nmiplevels));
+
+        // Copy the pixel data for each mip level
+        std::vector<std::vector<float>> level_pixels(nmiplevels);
+        for (int32_t level = 0; level < nmiplevels; ++level) {
+            image.reset(filename, 0, level);
+            OIIO::ROI roi = OIIO::get_roi_full(image.spec());
+            if (!roi.defined()) {
+                errhandler().errorfmt(
+                    "Could not load mip level {}: {} (hash {})", level,
+                    filename, filename);
+                return (TextureHandle*)nullptr;
+            }
+
+            int32_t width = roi.width(), height = roi.height();
+            level_pixels[level].resize(width * height * 4);
+            for (int j = 0; j < height; j++) {
+                for (int i = 0; i < width; i++) {
+                    image.getpixel(i, j, 0,
+                                   &level_pixels[level][((j * width) + i) * 4]);
+                }
+            }
+
+            cudaArray_t miplevelArray;
+            CUDA_CHECK(
+                cudaGetMipmappedArrayLevel(&miplevelArray, mipmapArray, level));
+
+            // Copy the texel data into the miplevel array
+            int32_t pitch = width * 4 * sizeof(float);
+            CUDA_CHECK(cudaMemcpy2DToArray(miplevelArray, 0, 0,
+                                           level_pixels[level].data(), pitch,
+                                           pitch, height,
+                                           cudaMemcpyHostToDevice));
+        }
+
+        int32_t pitch = img_width * 4 * sizeof(float);
         cudaArray_t pixelArray;
-        CUDA_CHECK(cudaMallocArray(&pixelArray, &channel_desc, width, height));
+        CUDA_CHECK(
+            cudaMallocArray(&pixelArray, &channel_desc, img_width, img_height));
+        CUDA_CHECK(cudaMemcpy2DToArray(pixelArray, 0, 0, level_pixels[0].data(),
+                                       pitch, pitch, img_height,
+                                       cudaMemcpyHostToDevice));
+        m_arrays_to_free.push_back(pixelArray);
 
-        m_ptrs_to_free.push_back(reinterpret_cast<void*>(pixelArray));
+        cudaResourceDesc res_desc  = {};
+        res_desc.resType           = cudaResourceTypeMipmappedArray;
+        res_desc.res.mipmap.mipmap = mipmapArray;
 
-        CUDA_CHECK(cudaMemcpy2DToArray(pixelArray,
-                                       /* offset */ 0, 0, pixels.data(), pitch,
-                                       pitch, height, cudaMemcpyHostToDevice));
-
-        res_desc.resType         = cudaResourceTypeArray;
-        res_desc.res.array.array = pixelArray;
-
-        cudaTextureDesc tex_desc = {};
-        tex_desc.addressMode[0]  = cudaAddressModeWrap;
-        tex_desc.addressMode[1]  = cudaAddressModeWrap;
-        tex_desc.filterMode      = cudaFilterModeLinear;
-        tex_desc.readMode
-            = cudaReadModeElementType;  //cudaReadModeNormalizedFloat;
+        cudaTextureDesc tex_desc     = {};
+        tex_desc.addressMode[0]      = cudaAddressModeWrap;
+        tex_desc.addressMode[1]      = cudaAddressModeWrap;
+        tex_desc.filterMode          = cudaFilterModeLinear;
+        tex_desc.readMode            = cudaReadModeElementType;
         tex_desc.normalizedCoords    = 1;
         tex_desc.maxAnisotropy       = 1;
-        tex_desc.maxMipmapLevelClamp = 99;
+        tex_desc.maxMipmapLevelClamp = float(nmiplevels - 1);
         tex_desc.minMipmapLevelClamp = 0;
-        tex_desc.mipmapFilterMode    = cudaFilterModePoint;
+        tex_desc.mipmapFilterMode    = cudaFilterModeLinear;
         tex_desc.borderColor[0]      = 1.0f;
         tex_desc.sRGB                = 0;
 
@@ -907,13 +926,8 @@ OptixGridRenderer::warmup()
 void
 OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 {
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_output_buffer),
-                          xres * yres * 4 * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_launch_params),
-                          sizeof(RenderParams)));
-
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_output_buffer));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_launch_params));
+    d_output_buffer = DEVICE_ALLOC(xres * yres * 4 * sizeof(float));
+    d_launch_params = DEVICE_ALLOC(sizeof(RenderParams));
 
     m_xres = xres;
     m_yres = yres;
@@ -1119,19 +1133,15 @@ OptixGridRenderer::register_named_transforms()
     }
 
     // Push the names and transforms to the device
-    size_t sz = sizeof(uint64_t) * xform_name_buffer.size();
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_xform_name_buffer), sz));
+    size_t sz           = sizeof(uint64_t) * xform_name_buffer.size();
+    d_xform_name_buffer = DEVICE_ALLOC(sz);
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_xform_name_buffer),
                           xform_name_buffer.data(), sz,
                           cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_name_buffer));
-
-    sz = sizeof(OSL::Matrix44) * xform_buffer.size();
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_xform_buffer), sz));
+    sz             = sizeof(OSL::Matrix44) * xform_buffer.size();
+    d_xform_buffer = DEVICE_ALLOC(sz);
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void*>(d_xform_buffer),
                           xform_buffer.data(), sz, cudaMemcpyHostToDevice));
-    m_ptrs_to_free.push_back(reinterpret_cast<void*>(d_xform_buffer));
-
     m_num_named_xforms = xform_name_buffer.size();
 }
 

@@ -10,17 +10,48 @@
 
 OSL_NAMESPACE_ENTER
 
+
+// std::upper_bound is not supported in device code, so define a version of it here.
+// Adapted from the LLVM Project, see https://llvm.org/LICENSE.txt for license information.
+template<typename T>
+inline OSL_HOSTDEVICE const T*
+upper_bound(const T* data, int count, const T value)
+{
+    const T* first = data;
+    const T value_ = value;
+    int len        = count;
+    while (len != 0) {
+        int l2     = len / 2;
+        const T* m = first;
+        m += l2;
+        if (value_ < *m)
+            len = l2;
+        else {
+            first = ++m;
+            len -= l2 + 1;
+        }
+    }
+    return first;
+}
+
+
 struct Background {
+    OSL_HOSTDEVICE
     Background() : values(0), rows(0), cols(0) {}
+
+    OSL_HOSTDEVICE
     ~Background()
     {
+#ifndef __CUDACC__
         delete[] values;
         delete[] rows;
         delete[] cols;
+#endif
     }
 
     template<typename F, typename T> void prepare(int resolution, F cb, T* data)
     {
+        // These values are set via set_variables() in CUDA
         res = resolution;
         if (res < 32)
             res = 32;  // validate
@@ -29,6 +60,7 @@ struct Background {
         values      = new Vec3[res * res];
         rows        = new float[res];
         cols        = new float[res * res];
+
         for (int y = 0, i = 0; y < res; y++) {
             for (int x = 0; x < res; x++, i++) {
                 values[i] = cb(map(x + 0.5f, y + 0.5f), data);
@@ -43,8 +75,9 @@ struct Background {
                     cols[i - res + x] /= cols[i - 1];
         }
         // normalize the pdf across all scanlines
-        for (int y = 0; y < res; y++)
+        for (int y = 0; y < res; y++) {
             rows[y] /= rows[res - 1];
+        }
 
         // both eval and sample below return a "weight" that is
         // value[i] / row*col_pdf, so might as well bake it into the table
@@ -65,6 +98,7 @@ struct Background {
 #endif
     }
 
+    OSL_HOSTDEVICE
     Vec3 eval(const Vec3& dir, float& pdf) const
     {
         // map from sphere to unit-square
@@ -90,6 +124,7 @@ struct Background {
         return values[i];
     }
 
+    OSL_HOSTDEVICE
     Vec3 sample(float rx, float ry, Dual2<Vec3>& dir, float& pdf) const
     {
         float row_pdf, col_pdf;
@@ -101,8 +136,98 @@ struct Background {
         return values[y * res + x];
     }
 
+#ifdef __CUDACC__
+    OSL_HOSTDEVICE
+    void set_variables(Vec3* values_in, float* rows_in, float* cols_in,
+                       int res_in)
+    {
+        values      = values_in;
+        rows        = rows_in;
+        cols        = cols_in;
+        res         = res_in;
+        invres      = __frcp_rn(res);
+        invjacobian = __fdiv_rn(res * res, float(4 * M_PI));
+        assert(res >= 32);
+    }
+
+    template<typename F>
+    OSL_HOSTDEVICE void prepare_cuda(int stride, int idx, F cb)
+    {
+        // N.B. This needs to run on a single-warp launch, since there is no
+        // synchronization across warps in OptiX.
+        prepare_cuda_01(stride, idx, cb);
+        if (idx == 0)
+            prepare_cuda_02();
+        prepare_cuda_03(stride, idx);
+    }
+
+    // Pre-compute the 'values' table in parallel
+    template<typename F>
+    OSL_HOSTDEVICE void prepare_cuda_01(int stride, int idx, F cb)
+    {
+        for (int y = 0; y < res; y++) {
+            const int row_start = y * res;
+            const int row_end   = row_start + res;
+            int i               = row_start + idx;
+            for (int x = idx; x < res; x += stride, i += stride) {
+                if (i >= row_end)
+                    continue;
+                values[i] = cb(map(x + 0.5f, y + 0.5f));
+            }
+        }
+    }
+
+    // Compute 'cols' and 'rows' using a single thread
+    OSL_HOSTDEVICE void prepare_cuda_02()
+    {
+        for (int y = 0, i = 0; y < res; y++) {
+            for (int x = 0; x < res; x++, i++) {
+                cols[i] = std::max(std::max(values[i].x, values[i].y),
+                                   values[i].z)
+                          + ((x > 0) ? cols[i - 1] : 0.0f);
+            }
+            rows[y] = cols[i - 1] + ((y > 0) ? rows[y - 1] : 0.0f);
+            // normalize the pdf for this scanline (if it was non-zero)
+            if (cols[i - 1] > 0) {
+                for (int x = 0; x < res; x++) {
+                    cols[i - res + x] = __fdiv_rn(cols[i - res + x],
+                                                  cols[i - 1]);
+                }
+            }
+        }
+    }
+
+    // Normalize the row PDFs and finalize the 'values' table
+    OSL_HOSTDEVICE void prepare_cuda_03(int stride, int idx)
+    {
+        // normalize the pdf across all scanlines
+        for (int y = idx; y < res; y += stride) {
+            rows[y] = __fdiv_rn(rows[y], rows[res - 1]);
+        }
+
+        // both eval and sample below return a "weight" that is
+        // value[i] / row*col_pdf, so might as well bake it into the table
+        for (int y = 0; y < res; y++) {
+            float row_pdf       = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
+            const int row_start = y * res;
+            const int row_end   = row_start + res;
+            int i               = row_start + idx;
+            for (int x = idx; x < res; x += stride, i += stride) {
+                if (i >= row_end)
+                    continue;
+                float col_pdf       = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
+                const float divisor = __fmul_rn(__fmul_rn(row_pdf, col_pdf),
+                                                invjacobian);
+                values[i].x         = __fdiv_rn(values[i].x, divisor);
+                values[i].y         = __fdiv_rn(values[i].y, divisor);
+                values[i].z         = __fdiv_rn(values[i].z, divisor);
+            }
+        }
+    }
+#endif
+
 private:
-    Dual2<Vec3> map(float x, float y) const
+    OSL_HOSTDEVICE Dual2<Vec3> map(float x, float y) const
     {
         // pixel coordinates of entry (x,y)
         Dual2<float> u     = Dual2<float>(x, 1, 0) * invres;
@@ -115,14 +240,16 @@ private:
         return make_Vec3(sin_phi * ct, sin_phi * st, cos_phi);
     }
 
-    static float sample_cdf(const float* data, unsigned int n, float x,
-                            unsigned int* idx, float* pdf)
+    static OSL_HOSTDEVICE float sample_cdf(const float* data, unsigned int n,
+                                           float x, unsigned int* idx,
+                                           float* pdf)
     {
-        OSL_DASSERT(x >= 0);
-        OSL_DASSERT(x < 1);
-        *idx = std::upper_bound(data, data + n, x) - data;
+        OSL_DASSERT(x >= 0.0f);
+        OSL_DASSERT(x < 1.0f);
+        *idx = OSL::upper_bound(data, n, x) - data;
         OSL_DASSERT(*idx < n);
         OSL_DASSERT(x < data[*idx]);
+
         float scaled_sample;
         if (*idx == 0) {
             *pdf          = data[0];
@@ -137,12 +264,13 @@ private:
         return std::min(scaled_sample, 0.99999994f);
     }
 
-    Vec3* values;  // actual map
-    float* rows;   // probability of choosing a given row 'y'
-    float* cols;  // probability of choosing a given column 'x', given that we've chosen row 'y'
-    int res;       // resolution in pixels of the precomputed table
-    float invres;  // 1 / resolution
-    float invjacobian;
+    Vec3* values = nullptr;  // actual map
+    float* rows  = nullptr;  // probability of choosing a given row 'y'
+    float* cols
+        = nullptr;  // probability of choosing a given column 'x', given that we've chosen row 'y'
+    int res           = -1;    // resolution in pixels of the precomputed table
+    float invres      = 0.0f;  // 1 / resolution
+    float invjacobian = 0.0f;
 };
 
 OSL_NAMESPACE_EXIT

@@ -41,15 +41,15 @@ threshold. This tends to be most helpful with relatively low values, < 30.
 * `optix_no_inline`: Don't inline any functions. Offers the best compile times
 at the expense of shade-time performance. This option is not recommended, but is
 included for benchmarking and tuning purposes.
-    
+
 * `optix_no_inline_layer_funcs`: Don't inline the shader layer functions. This
 can moderately improve compile times at the expense of shade-time performance.
-    
+
 * `optix_merge_layer_funcs`: Allow layer functions that are only called once to
 be merged into their caller, even if `optix_no_inline_layer_funcs` is set. This
 can help restore some of the shade-time performance lost by enabling
 `optix_no_inline_layer_funcs`.
-    
+
 * `optix_no_inline_rend_lib`: Don't inline any functions defined in the
 renderer-supplied `rend_lib` module. As an alternative, the renderer can simply
 not supply the LLVM bitcode for the `rend_lib` module to the `ShadingSystem`.
@@ -90,7 +90,7 @@ An example tuning workflow might include the following steps:
 
 1. Run `analyze-ptx.py` on the "shadeops" and "rend_lib" PTX files to generate
    a list of the functions contained in those modules.
-   
+
    ```bash
    $ analyze_ptx.py shadeop_cuda.ptx
    $ analyze_ptx.py rend_lib_myrender.ptx
@@ -101,11 +101,11 @@ An example tuning workflow might include the following steps:
     ```bash
     $ analyze_ptx.py myshader.ptx
     ```
-    
+
 3. View the summary file (`myshader-summary.txt`) and the callgraph
    (`myshader-callgraph.gv`) to deterimine which library functions were _not_
    inlined. They will appear as boxes with a dashed outline in the callgraph.
-   
+
    In particular, be on the lookout for trivial functions (e.g., `osl_floor_ff`)
    which have not been inlined. If such functions appear, that might be a sign
    that the inline thresholds need to be adjusted, or that it might be

@@ -57,7 +57,7 @@ jobs:
             container: aswftesting/ci-osl:2022-clang13
             vfxyear: 2022
             cxx_std: 17
-            openimageio_ver: release
+            openimageio_ver: v2.5.17.0
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: avx2,f16c
@@ -68,6 +68,7 @@ jobs:
             container: aswftesting/ci-osl:2022-clang12
             vfxyear: 2022
             cxx_std: 17
+            opencolorio_ver: v2.2.1
             openimageio_ver: main
             python_ver: 3.9
             pybind11_ver: v2.7.0
@@ -94,7 +95,8 @@ jobs:
             cxx_compiler: icpc
             cxx_std: 17
             fmt_ver: 7.1.3
-            openimageio_ver: release
+            opencolorio_ver: v2.3.2
+            openimageio_ver: v2.5.17.0
             # Changes to OIIO's simd.h starting in commit 68666db9 (from PR
             # #4187) seem to trigger compiler bugs in icc and generate wrong
             # SIMD code. It's probably not worth tracking down for just this
@@ -108,7 +110,7 @@ jobs:
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF -DEXTRA_CPP_ARGS=-fp-model=consistent"
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=7.1.3
-                            USE_OPENVDB=0
+                            USE_OPENVDB=0 OPENCOLORIO_CXX=g++
           - desc: icx/C++17 llvm14 py3.9 oiio2.3 avx2
             nametag: linux-icx
             runner: ubuntu-latest
@@ -118,13 +120,14 @@ jobs:
             cxx_compiler: icpx
             cxx_std: 17
             fmt_ver: 7.1.3
+            opencolorio_ver: v2.3.2
             openimageio_ver: main
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
-                            OPENCOLORIO_VERSION=v2.3.2 OPENCOLORIO_CXX=g++
+                            OPENCOLORIO_CXX=g++
           - desc: gcc11/C++17 llvm15 py3.10 oiio-rel avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
@@ -249,6 +252,7 @@ jobs:
       CC: ${{matrix.cc_compiler}}
       CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
       FMT_VERSION: ${{matrix.fmt_ver}}
+      OPENCOLORIO_VERSION: ${{matrix.opencolorio_ver}}
       OPENEXR_VERSION: ${{matrix.openexr_ver}}
       OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
       PYBIND11_VERSION: ${{matrix.pybind11_ver}}
@@ -356,14 +360,14 @@ jobs:
                             LLVM_VERSION=9.0.0
                             PUGIXML_VERSION=v1.9
                             CTEST_TEST_TIMEOUT=240
-          - desc: gcc10/C++17 llvm10 oiio-release avx2
+          - desc: gcc10/C++17 llvm10 oiio-2.5 avx2
             nametag: linux-2021ish-gcc10-llvm10
             runner: ubuntu-20.04
             cxx_compiler: g++-10
             cxx_std: 17
             fmt_ver: 7.0.1
             openexr_ver: v3.1.11
-            openimageio_ver: release
+            openimageio_ver: v2.5.17.0
             pybind11_ver: v2.8.1
             python_ver: 3.8
             simd: avx2,f16c
@@ -386,28 +390,6 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=17.0.6
                             LLVM_DISTRO_NAME=ubuntu-22.04
-                            OPENCOLORIO_VERSION=v2.4.0
-                            LIBTIFF_VERSION=v4.7.0
-                            PTEX_VERSION=v2.4.3
-                            PUGIXML_VERSION=v1.14
-                            FREETYPE_VERSION=VER-2-13-3
-          - desc: latest releases +OIIO3 gcc11/C++17 llvm17 exr3.2 py3.10 avx2 batch-b16avx512
-            nametag: linux-latest-releases-oiio3dev
-            runner: ubuntu-24.04
-            cc_compiler: gcc-13
-            cxx_compiler: g++-13
-            cxx_std: 17
-            fmt_ver: 11.0.2
-            opencolorio_ver: v2.4.0
-            openexr_ver: v3.3.0
-            openimageio_ver: dev-3.0
-            pybind11_ver: v2.13.5
-            python_ver: "3.12"
-            simd: avx2,f16c
-            batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=17.0.6
-                            LLVM_DISTRO_NAME=ubuntu-22.04
-                            OPENCOLORIO_VERSION=v2.4.0
                             LIBTIFF_VERSION=v4.7.0
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.14
@@ -419,6 +401,7 @@ jobs:
             cxx_compiler: g++-13
             cxx_std: 17
             fmt_ver: master
+            opencolorio_ver: main
             openexr_ver: main
             openimageio_ver: main
             pybind11_ver: master
@@ -427,7 +410,6 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=17.0.6
                             LLVM_DISTRO_NAME=ubuntu-22.04
-                            OPENCOLORIO_VERSION=main
                             PUGIXML_VERSION=master
           - desc: clang14/C++17 llvm14 py3.8 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
@@ -436,15 +418,15 @@ jobs:
             cc_compiler: clang
             cxx_std: 17
             fmt_ver: 8.1.1
+            opencolorio_ver: v2.2.1
             openexr_ver: v3.1.11
-            openimageio_ver: main
+            openimageio_ver: release
             pybind11_ver: v2.9.2
             python_ver: 3.8
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=14.0.0
                             LLVM_DISTRO_NAME=ubuntu-18.04
-                            OPENCOLORIO_VERSION=v2.1.2
                             PUGIXML_VERSION=v1.11.4
             # Test formatting. This test entry doesn't do a full build, it
             # just runs clang-format on everything, and passes if nothing is
@@ -456,6 +438,7 @@ jobs:
             runner: ubuntu-latest
             cxx_std: 17
             extra_artifacts: "src/*.*"
+            opencolorio_ver: v2.4.0
             openexr_ver: v3.1.11
             openimageio_ver: release
             python_ver: "3.10"
@@ -475,6 +458,7 @@ jobs:
       CC: ${{matrix.cc_compiler}}
       CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
       FMT_VERSION: ${{matrix.fmt_ver}}
+      OPENCOLORIO_VERSION: ${{matrix.opencolorio_ver}}
       OPENEXR_VERSION: ${{matrix.openexr_ver}}
       OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
       PYBIND11_VERSION: ${{matrix.pybind11_ver}}
@@ -537,7 +521,7 @@ jobs:
             cc_compiler: /usr/local/opt/llvm/bin/clang
             cxx_compiler: /usr/local/opt/llvm/bin/clang++
             cxx_std: 17
-            openimageio_ver: main
+            openimageio_ver: release
             python_ver: "3.11"
             aclang: 14
             setenvs: export DO_BREW_UPDATE=1 CTEST_TEST_TIMEOUT=120

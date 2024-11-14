@@ -84,6 +84,8 @@ private:
 
 SimpleRaytracer::SimpleRaytracer()
 {
+    std::string random_message = "Hello, I'm a random message!";
+    
     m_errhandler.reset(new SimpleRaytracer::ErrorHandler(*this));
 
     Matrix44 M;

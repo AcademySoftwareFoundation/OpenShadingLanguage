@@ -458,7 +458,7 @@ The OSL language specification can be found at
 distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
 installed binary distribution.
 
-[Experimental OSL Documentation on ReadTheDocs](https://open-shading-language.readthedocs.io/)
+[OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
 This will be the future documentation. It's probably as complete as the PDF,
 but it needs some proofreading, so the PDF is still considered the
 authoritative source for now. But some time soon, the old PDF specification

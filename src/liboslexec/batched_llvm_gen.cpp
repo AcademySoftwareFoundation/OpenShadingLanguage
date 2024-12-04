@@ -4426,6 +4426,27 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
         continue;                                                              \
     }
 
+#define PARAM_UNIFORM_STRING_INT_CODE(paramname, decoder, llvm_decoder, \
+                                      fieldname)                        \
+    if (name == Strings::paramname && valtype == TypeDesc::STRING) {    \
+        if (valIsVarying) {                                             \
+            is_##fieldname##_uniform = false;                           \
+            continue;                                                   \
+        }                                                               \
+        llvm::Value* val = nullptr;                                     \
+        if (Val.is_constant()) {                                        \
+            int mode = int(decoder(Val.get_string()));                  \
+            val      = rop.ll.constant(mode);                           \
+        } else {                                                        \
+            val = rop.llvm_load_value(Val);                             \
+            llvm::Value* scalar_value_uh                                \
+                = rop.ll.call_function("osl_gen_ustringhash_pod", val); \
+            val = rop.ll.call_function(#llvm_decoder, scalar_value_uh); \
+        }                                                               \
+        fieldname = val;                                                \
+        continue;                                                       \
+    }
+
         if (name == Strings::wrap && valtype == TypeDesc::STRING) {
             if (valIsVarying) {
                 is_swrap_uniform = false;

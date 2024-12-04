@@ -18,11 +18,9 @@ using OIIO::Tex::Wrap;
 
 struct UniformTextureOptions {
     // Options that must be the same for all points we're texturing at once
-    int firstchannel = 0;  ///< First channel of the lookup
-    int subimage     = 0;  ///< Subimage or face ID
-    ustring subimagename;  ///< Subimage name
-#if defined(OIIO_TEXTUREOPTBATCH_VERSION) && OIIO_TEXTUREOPTBATCH_VERSION >= 2
-    // Future expansion of an ideal v2 of OIIO's TextureOptBatch. But not yet.
+    int firstchannel = 0;                  ///< First channel of the lookup
+    int subimage     = 0;                  ///< Subimage or face ID
+    ustring subimagename;                  ///< Subimage name
     Tex::Wrap swrap = Tex::Wrap::Default;  ///< Wrap mode in the s direction
     Tex::Wrap twrap = Tex::Wrap::Default;  ///< Wrap mode in the t direction
     Tex::Wrap rwrap
@@ -30,19 +28,8 @@ struct UniformTextureOptions {
     Tex::MipMode mipmode = Tex::MipMode::Default;  ///< Mip mode
     Tex::InterpMode interpmode
         = Tex::InterpMode::SmartBicubic;  ///< Interpolation mode
-    int anisotropic         = 32;         ///< Maximum anisotropic ratio
-    int conservative_filter = 1;          ///< True: over-blur rather than alias
-#else
-    // Original (v1) sizing and layout of the TextureOptBatch struct.
-    int swrap      = int(Tex::Wrap::Default);  ///< Wrap mode in the s direction
-    int twrap      = int(Tex::Wrap::Default);  ///< Wrap mode in the t direction
-    int rwrap      = int(Tex::Wrap::Default);  ///< Wrap mode in r (volumetric)
-    int mipmode    = int(Tex::MipMode::Default);  ///< Mip mode
-    int interpmode = int(
-        Tex::InterpMode::SmartBicubic);  ///< Interpolation mode
-    int anisotropic         = 32;        ///< Maximum anisotropic ratio
-    int conservative_filter = 1;         ///< True: over-blur rather than alias
-#endif
+    int anisotropic           = 32;       ///< Maximum anisotropic ratio
+    int conservative_filter   = 1;        ///< True: over-blur rather than alias
     float fill                = 0.0f;     ///< Fill value for missing channels
     const float* missingcolor = nullptr;  ///< Color for missing texture
 };

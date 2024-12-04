@@ -6,8 +6,6 @@
 #    error OSL_HOST_RS_BITCODE must be defined by your build system.
 #endif
 
-#include <OpenImageIO/fmath.h>
-
 #include <OSL/fmt_util.h>
 #include <OSL/journal.h>
 #include <OSL/rendererservices.h>

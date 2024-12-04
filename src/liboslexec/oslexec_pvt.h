@@ -25,12 +25,9 @@
 #    include "string_hash.h"
 #endif
 
-#include <OpenImageIO/Imath.h>
-
 #include <OpenImageIO/color.h>
 #include <OpenImageIO/paramlist.h>
 #include <OpenImageIO/refcnt.h>
-#include <OpenImageIO/texture.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/ustring.h>
 
@@ -2515,13 +2512,13 @@ tex_interp_to_code(StringParam modename)
 {
     int mode = -1;
     if (modename == STRING_PARAMS(smartcubic))
-        mode = (int)TextureOpt::InterpSmartBicubic;
+        mode = TextureOpt::InterpSmartBicubic;
     else if (modename == STRING_PARAMS(linear))
-        mode = (int)TextureOpt::InterpBilinear;
+        mode = TextureOpt::InterpBilinear;
     else if (modename == STRING_PARAMS(cubic))
-        mode = (int)TextureOpt::InterpBicubic;
+        mode = TextureOpt::InterpBicubic;
     else if (modename == STRING_PARAMS(closest))
-        mode = (int)TextureOpt::InterpClosest;
+        mode = TextureOpt::InterpClosest;
     return mode;
 }
 

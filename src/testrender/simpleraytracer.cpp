@@ -471,9 +471,26 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 }
             }
             shadingsys->ShaderGroupEnd(*group);
-            if (name_attr)
-                shadermap.emplace(name_attr.value(), int(shaders().size()));
-            shaders().emplace_back(group);
+            if (name_attr) {
+                if (auto it = shadermap.find(name); it != shadermap.end()) {
+                    int shaderID = it->second;
+                    if (shaderID >= 0 && shaderID < int(shaders().size())) {
+                        fprintf(stderr, "Updating shader %d - %s\n", shaderID, shadertype.c_str());
+                        // we already have a material under this name,
+                        Material& m = shaders()[shaderID];
+                        // TODO: could we query the shadertype directly from the ShaderGroup?
+                        if (shadertype == "displacement")
+                            m.disp = group;
+                        else if (shadertype == "surface")
+                            m.surf = group;
+                        // skip the rest which would add a new material
+                        continue;
+                    }
+                } else {
+                    shadermap.emplace(name, int(shaders().size()));
+                }
+            }
+            shaders().emplace_back(Material { group, nullptr });
             m_shader_is_light.emplace_back(
                 is_light_attr ? strtobool(is_light_attr.value()) : false);
         } else {
@@ -925,7 +942,7 @@ SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
     if (bounce >= 0)
         sg.raytype = bounce > 0 ? Ray::DIFFUSE : Ray::CAMERA;
 #ifndef __CUDACC__
-    shadingsys->execute(*ctx, *m_shaders[backgroundShaderID], sg);
+    shadingsys->execute(*ctx, *m_shaders[backgroundShaderID].surf, sg);
 #else
     alignas(8) char closure_pool[256];
     execute_shader(sg, render_params.bg_id, closure_pool);
@@ -1000,11 +1017,11 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         int shaderID = scene.shaderid(hit.id);
 
 #ifndef __CUDACC__
-        if (shaderID < 0 || !m_shaders[shaderID])
+        if (shaderID < 0 || !m_shaders[shaderID].surf)
             break;  // no shader attached? done
 
         // execute shader and process the resulting list of closures
-        shadingsys->execute(*ctx, *m_shaders[shaderID], sg);
+        shadingsys->execute(*ctx, *m_shaders[shaderID].surf, sg);
 #else
         if (shaderID < 0)
             break;  // no shader attached? done
@@ -1116,7 +1133,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                          sample.u, sample.v);
 #ifndef __CUDACC__
                         // execute the light shader (for emissive closures only)
-                        shadingsys->execute(*ctx, *m_shaders[shaderID],
+                        shadingsys->execute(*ctx, *m_shaders[shaderID].surf,
                                             light_sg);
 #else
                         execute_shader(light_sg, shaderID, light_closure_pool);
@@ -1205,6 +1222,122 @@ SimpleRaytracer::prepare_render()
         backgroundResolution = 0;
     }
 
+    bool have_displacement = false;
+    for (const Material& m : shaders()) {
+        if (m.disp) {
+            have_displacement = true;
+            break;
+        }
+    }
+    if (have_displacement) {
+        errhandler().infofmt("Evaluating displacement shaders");
+        // Loop through all triangles and run displacement shader if there is one
+        // or copy the input point if there is none
+        std::vector<Vec3> disp_verts(scene.verts.size(), Vec3(0, 0, 0));
+        std::vector<int> valance(scene.verts.size(), 0); // number of times each vertex has been displaced
+
+        OSL::PerThreadInfo* thread_info = shadingsys->create_thread_info();
+        ShadingContext* ctx             = shadingsys->get_context(thread_info);
+
+        bool has_smooth_normals = false;
+        for (int primID = 0, nprims = scene.triangles.size(); primID < nprims; primID++) {
+            Vec3 p[3], n[3];
+            Vec2 uv[3];
+
+            p[0] = scene.verts[scene.triangles[primID].a];
+            p[1] = scene.verts[scene.triangles[primID].b];
+            p[2] = scene.verts[scene.triangles[primID].c];
+
+            valance[scene.triangles[primID].a]++;
+            valance[scene.triangles[primID].b]++;
+            valance[scene.triangles[primID].c]++;
+
+            int shaderID = scene.shaderid(primID);
+            if (shaderID < 0 || !m_shaders[shaderID].disp) {
+                disp_verts[scene.triangles[primID].a] += p[0];
+                disp_verts[scene.triangles[primID].b] += p[1];
+                disp_verts[scene.triangles[primID].c] += p[2];
+                continue;
+            }
+
+
+            Vec3 Ng = (p[0] - p[1]).cross(p[0] - p[2]);
+            float area = 0.5f * Ng.length();
+            Ng = Ng.normalize();
+            if (scene.n_triangles[primID].a >= 0) {
+                n[0] = scene.normals[scene.n_triangles[primID].a];
+                n[1] = scene.normals[scene.n_triangles[primID].b];
+                n[2] = scene.normals[scene.n_triangles[primID].c];
+                has_smooth_normals = true;
+            } else {
+                n[0] = n[1] = n[2] = Ng;
+            }
+
+            if (scene.uv_triangles[primID].a >= 0) {
+                uv[0] = scene.uvs[scene.uv_triangles[primID].a];
+                uv[1] = scene.uvs[scene.uv_triangles[primID].b];
+                uv[2] = scene.uvs[scene.uv_triangles[primID].c];
+            } else {
+                uv[0] = uv[1] = uv[2] = Vec2(0, 0);
+            }
+
+            // displace each vertex
+            for (int i = 0; i < 3; i++) {
+                ShaderGlobals sg = {};
+                sg.P = p[i];
+                sg.Ng = Ng;
+                sg.N = n[i];
+                sg.u = uv[i].x;
+                sg.v = uv[i].y;
+                sg.I = (p[i] - camera.eye).normalize();
+                sg.surfacearea = area;
+                sg.renderstate = &sg;
+
+                shadingsys->execute(*ctx, *m_shaders[shaderID].disp, sg);
+
+                p[i] = sg.P;
+            }
+            disp_verts[scene.triangles[primID].a] += p[0];
+            disp_verts[scene.triangles[primID].b] += p[1];
+            disp_verts[scene.triangles[primID].c] += p[2];
+        }
+
+        // release context
+        shadingsys->release_context(ctx);
+        shadingsys->destroy_thread_info(thread_info);
+
+        // average each vertex by the number of times it was displaced
+        for (int i = 0, n = scene.verts.size(); i < n; i++) {
+            if (valance[i] > 0)
+                disp_verts[i] /= float(valance[i]);
+            else
+                disp_verts[i] = scene.verts[i];
+        }
+        // replace old data with the new
+        scene.verts = std::move(disp_verts);
+
+        if (has_smooth_normals) {
+            // Recompute the vertex normals (if we had some)
+            std::vector<Vec3> disp_normals(scene.normals.size(), Vec3(0, 0, 0));
+            for (int primID = 0, nprims = scene.triangles.size(); primID < nprims; primID++) {
+                if (scene.n_triangles[primID].a >= 0) {
+                    Vec3 p[3];
+                    p[0] = scene.verts[scene.triangles[primID].a];
+                    p[1] = scene.verts[scene.triangles[primID].b];
+                    p[2] = scene.verts[scene.triangles[primID].c];
+                    // don't normalize to weight by area
+                    Vec3 Ng = (p[0] - p[1]).cross(p[0] - p[2]);
+                    disp_normals[scene.n_triangles[primID].a] += Ng;
+                    disp_normals[scene.n_triangles[primID].b] += Ng;
+                    disp_normals[scene.n_triangles[primID].c] += Ng;
+                }
+            }
+            for (Vec3& n : disp_normals)
+                n = n.normalize();
+            scene.normals = std::move(disp_normals);
+        }
+    }
+
     // build bvh and prepare triangles
     scene.prepare(errhandler());
     prepare_lights();
@@ -1241,7 +1374,7 @@ SimpleRaytracer::prepare_lights()
     // collect all light emitting triangles
     for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
         int shaderID = scene.shaderid(t);
-        if (shaderID < 0 || !m_shaders[shaderID])
+        if (shaderID < 0 || !m_shaders[shaderID].surf)
             continue;  // no shader attached
         if (m_shader_is_light[shaderID])
             m_lightprims.emplace_back(t);

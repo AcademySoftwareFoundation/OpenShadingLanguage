@@ -32,7 +32,7 @@ permissions: read-all
 
 jobs:
 
-  aswf:
+  aswf-old:
     name: "VFX${{matrix.vfxyear}} ${{matrix.desc}}"
     strategy:
       fail-fast: false
@@ -49,7 +49,7 @@ jobs:
             python_ver: 2.7
             pybind11_ver: v2.4.2
             setenvs: export CMAKE_VERSION=3.15.5
-          - desc: clang9/C++14 llvm9 oiio-release boost1.66 avx2 exr2.4 py2.7
+          - desc: clang9/C++14 llvm9 oiio-2.5 boost1.66 avx2 exr2.4 py2.7
             nametag: linux-clang9-llvm9
             runner: ubuntu-20.04
             container: aswftesting/ci-osl:2019-clang9
@@ -58,7 +58,7 @@ jobs:
             cxx_compiler: clang++
             cxx_std: 14
             openexr_ver: v2.4.3
-            openimageio_ver: release
+            openimageio_ver: v2.5.17.0
             python_ver: 2.7
             # pybind11_ver: v2.9.0
             simd: avx
@@ -151,42 +151,6 @@ jobs:
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
                             OPENCOLORIO_CXX=g++
-          - desc: gcc11/C++17 llvm15 py3.10 oiio-rel avx2
-            nametag: linux-vfx2023
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2023-clang15
-            vfxyear: 2023
-            cxx_std: 17
-            openimageio_ver: release
-            python_ver: "3.10"
-            pybind11_ver: v2.9.0
-            simd: avx2,f16c
-            batched: b8_AVX2
-          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 OIIO-main avx2
-            nametag: linux-optix7-2023
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2023-clang15
-            vfxyear: 2023
-            cxx_std: 17
-            openimageio_ver: main
-            python_ver: "3.10"
-            pybind11_ver: v2.10.0
-            simd: avx2,f16c
-            skip_tests: 1
-            setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
-                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
-          - desc: gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
-            nametag: linux-vfx2024
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2024-clang17
-            vfxyear: 2024
-            cxx_std: 17
-            openimageio_ver: release
-            python_ver: "3.11"
-            pybind11_ver: v2.11.1
-            simd: avx2,f16c
-            batched: b8_AVX2
-            # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
           - desc: oldest everything gcc6/C++14 llvm9 py2.7 boost1.66 oiio2.3 no-simd exr2.4
             nametag: linux-oldest
             runner: ubuntu-latest
@@ -241,6 +205,147 @@ jobs:
             #   allowed exceptions. So we trust that OIIO itself tests the
             #   texture system adequately and is able to ignore the benign
             #   "leaks."
+
+    runs-on: ${{matrix.runner}}
+    container:
+        image: ${{ matrix.container }}
+        volumes:
+          - /node20217:/node20217:rw,rshared
+          - /node20217:/__e/node20:ro,rshared
+    env:
+      CXX: ${{matrix.cxx_compiler}}
+      CC: ${{matrix.cc_compiler}}
+      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
+      FMT_VERSION: ${{matrix.fmt_ver}}
+      OPENCOLORIO_VERSION: ${{matrix.opencolorio_ver}}
+      OPENEXR_VERSION: ${{matrix.openexr_ver}}
+      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
+      PYBIND11_VERSION: ${{matrix.pybind11_ver}}
+      PYTHON_VERSION: ${{matrix.python_ver}}
+      USE_BATCHED: ${{matrix.batched}}
+      USE_SIMD: ${{matrix.simd}}
+      ABI_CHECK: ${{matrix.abi_check}}
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+    steps:
+      # Install nodejs 20 with glibc 2.17, to work around the face that the
+      # GHA runners are insisting on a node version that is too new for the
+      # glibc in the ASWF containers prior to 2023.
+      - name: install nodejs20glibc2.17
+        run: |
+          curl --silent https://unofficial-builds.nodejs.org/download/release/v20.18.1/node-v20.18.1-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217 -f -
+      # We would like to use harden-runner, but it flags too many false
+      # positives, every time we download a dependency. We should use it only
+      # on CI runs where we are producing artifacts that users might rely on.
+      # - name: Harden Runner
+      #   uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813 # v1.4.3
+      #   with:
+      #     egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+      - name: Prepare ccache timestamp
+        id: ccache_cache_keys
+        run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
+      - name: ccache
+        id: ccache
+        uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.4
+        with:
+          path: /tmp/ccache
+          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
+          restore-keys: ${{github.job}}-${{matrix.nametag}}-
+      - name: Build setup
+        run: |
+            ${{matrix.setenvs}}
+            src/build-scripts/ci-startup.bash
+      - name: Remove existing OIIO
+        if: matrix.openimageio_ver != ''
+        run: |
+            sudo rm -rf /usr/local/include/OpenImageIO
+            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
+            sudo rm -rf /usr/local/lib*/libOpenImageIO*
+            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
+      - name: Dependencies
+        run: |
+            ${{matrix.depcmds}}
+            src/build-scripts/gh-installdeps.bash
+      - name: Build
+        run: |
+            src/build-scripts/ci-build.bash
+      - name: Testsuite
+        if: matrix.skip_tests != '1'
+        run: src/build-scripts/ci-test.bash
+      - name: Check out ABI standard
+        if: matrix.abi_check != ''
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+        with:
+          ref: ${{matrix.abi_check}}
+          path: abi_standard
+      - name: Build ABI standard
+        if: matrix.abi_check != ''
+        run: |
+            mkdir -p abi_standard/build
+            pushd abi_standard
+            export LD_LIBRARY_PATH="${PWD}/build/lib:${LD_LIBRARY_PATH}"
+            src/build-scripts/ci-build.bash
+            popd
+      - name: Check ABI
+        if: matrix.abi_check != ''
+        run: |
+            src/build-scripts/ci-abicheck.bash ./build abi_standard/build \
+                  liboslexec liboslcomp liboslquery liboslnoise
+      - uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3.1.0
+        if: failure()
+        with:
+          name: osl-${{github.job}}-${{matrix.nametag}}
+          path: |
+            build/cmake-save
+            build/compat_reports
+            build/*.cmake
+            build/CMake*
+            build/testsuite/*/*.*
+
+
+  aswf:
+    name: "VFX${{matrix.vfxyear}} ${{matrix.desc}}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - desc: gcc11/C++17 llvm15 py3.10 oiio-rel avx2
+            nametag: linux-vfx2023
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2023-clang15
+            vfxyear: 2023
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: "3.10"
+            pybind11_ver: v2.9.0
+            simd: avx2,f16c
+            batched: b8_AVX2
+          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 boost1.80 exr3.1 OIIO-main avx2
+            nametag: linux-optix7-2023
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2023-clang15
+            vfxyear: 2023
+            cxx_std: 17
+            openimageio_ver: main
+            python_ver: "3.10"
+            pybind11_ver: v2.10.0
+            simd: avx2,f16c
+            skip_tests: 1
+            setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
+                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
+          - desc: gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
+            nametag: linux-vfx2024
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2024-clang17
+            vfxyear: 2024
+            cxx_std: 17
+            openimageio_ver: release
+            python_ver: "3.11"
+            pybind11_ver: v2.11.1
+            simd: avx2,f16c
+            batched: b8_AVX2
+            # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
 
           # Test ABI stability. `abi_check` is the version or commit that we
           # believe is the current standard against which we don't want to

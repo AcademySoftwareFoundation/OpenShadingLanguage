@@ -19,7 +19,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.29)
+* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.31)
 
 * A suitable C++14 or C++17 compiler to build OSL itself, which may be any of:
    - GCC 6.1 or newer (tested through gcc 12.1)
@@ -28,7 +28,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
    - Intel C++ compiler icc version 17 or newer or LLVM-based icx compiler
      version 2022 or newer.
 
-* **[OpenImageIO](http://openimageio.org) 2.4 or newer** (tested through 2.5 and main)
+* **[OpenImageIO](http://openimageio.org) 2.4 or 2.5** (tested through 2.5.17)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -55,9 +55,9 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
       recommended that you use 11.0 or higher.
 
-* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.85)
+* [Boost](https://www.boost.org) 1.55 or newer (tested through boost 1.86)
 * [Ilmbase or Imath](https://github.com/AcademySoftwareFoundation/Imath) 2.4
-   or newer (recommended: 3.1 or higher; tested through 3.2)
+   or newer (recommended: 3.1 or higher; tested through Imath 3.1)
    NOTE: OSL 1.13.x is the last release family that will support
    Imath/OpenEXR 2.x.
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
@@ -71,9 +71,9 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12)
+    * Python >= 2.7 (tested against 2.7, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13)
       NOTE: OSL 1.13.x is the last release family that will support Python 2.7.
-    * pybind11 >= 2.4.2 (Tested through 2.12. Note that pybind11 v2.10+ does
+    * pybind11 >= 2.4.2 (Tested through 2.13. Note that pybind11 v2.10+ does
       not support Python < 3.6.)
     * NumPy
 * (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.7).

@@ -1,8 +1,20 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.13.12.0 -- 1 Oct? 2024 (compared to 1.13.11.0)
+Release 1.13.12.0 -- 4 Dec 2024 (compared to 1.13.11.0)
 ---------------------------------------------------------
+- *bsdfs*: Anisotropic_vdf closure should not set IOR [#1870](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1870) (by Christopher Kulla)
+- *shaders*: Bugs in vector2.h, vector4.h, color2.h, color4.h, docs [#1892](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1892)
+- *build*: Support for LLVM 19 [#1873](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1873)
+- *build*: Fix LLVM find package picking up system-wide libraries [#1866](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1866) (by Sergey Sharybin)
+- *build*: Fixes for supporting OIIO 3.0 [#1881](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1881) [#1885](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1885) [#1888](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1888)
+- *fix*: Typo in dual.h made invalid template DualStorage [#1871](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1871)
+- *ci*: Add VFX Platform 2024 to CI [#1854](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1854)
+- *ci*: Deal with OIIO renaming its master -> main [#1867](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1867)
+- *ci*: Various adjustments for OIIO 3.0 becoming the release [#1901](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1901)
+- *ci*: Fix broken CI for ASWF 2021 and 2022 containers (#1905)
+- *ci*: Only test against maximum OpenImageIO 2.5.17.0 (because it doesn't
+  yet build properly against OIIO 3.0)
 
 
 Release 1.13.11.0 -- 1 Sep 2024 (compared to 1.13.10.0)

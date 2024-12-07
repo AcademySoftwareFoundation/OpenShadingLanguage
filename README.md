@@ -469,12 +469,15 @@ its APIs. -->
 There is also a [PDF
 version](https://readthedocs.org/projects/open-shading-language/downloads/pdf/latest/).
 
-For those interested in learning to program shaders in OSL, there is the
-[Siggraph 2022 Educator's Forum](https://dl.acm.org/doi/proceedings/10.1145/3532724)
-[OSL Shaders for RenderMan](https://dl.acm.org/doi/abs/10.1145/3532724.3535604) course,
-which uses RenderMan in the examples and
-[Supplementary Materials](https://github.com/LaikaStudios/OSLShadersForRenderMan),
-but which is primarily about shader writing in OSL.
+For those interested in learning to program OSL shaders there is the
+[Siggraph 2024 Course](https://dl.acm.org/doi/proceedings/10.1145/3664475), 
+[Shader Writing in Open Shading Language](https://dl.acm.org/doi/10.1145/3664475.3664534)
+and its companion 
+[Supplementary Materials](https://github.com/LaikaStudios/OSLShaderWriting),
+which use RenderMan<sup>&reg;</sup> in the examples but which are primarily about writing OSL shaders.
+
+There is also the [Shader Writing in Open Shading Language book](https://www.routledge.com/Shader-Writing-in-Open-Shading-Language-with-RenderManr-Examples/Prater/p/book/9781032421100).
+This covers all the material from the Siggraph course but in far greater detail. It also includes much more information about how OSL operates and covers a much broader range of shader examples.
 
 
 Contact & reporting problems

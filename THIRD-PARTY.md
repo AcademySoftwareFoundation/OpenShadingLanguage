@@ -112,6 +112,10 @@ SPDX-License-Identifier: Apache-2.0
   Many bits of code flow back and forth between OIIO and OSL, especially
   parts of the CMake build system.
 
+* ninjatracing.py utility for build profiling is Apache-2.0 licensed
+  and comes from https://github.com/nico/ninjatracing.
+  Copyright 2018 Nico Weber.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at

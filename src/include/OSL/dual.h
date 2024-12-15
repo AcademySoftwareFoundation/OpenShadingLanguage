@@ -1311,27 +1311,29 @@ safe_fmod (const Dual<T,P>& a, const Dual<T,P>& b)
 
 
 
-OSL_HOSTDEVICE OSL_FORCEINLINE float smoothstep(float e0, float e1, float x) {
-    if (x < e0) return 0.0f;
-    else if (x >= e1) return 1.0f;
-    else {
-        float t = (x - e0)/(e1 - e0);
+OSL_HOSTDEVICE OSL_FORCEINLINE float smoothstep(float low, float high, float x) {
+    if (x >= high) {
+        return 1.0f;
+    } else if (x <= low) {
+        return 0.0f;
+    } else {
+        float t = (x - low) / (high - low);
         return (3.0f-2.0f*t)*(t*t);
     }
 }
 
-// f(t) = (3-2t)t^2,   t = (x-e0)/(e1-e0)
+// f(t) = (3-2t)t^2,   t = (x-low)/(high-low)
 template<class T, int P>
-OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> smoothstep (const Dual<T,P> &e0, const Dual<T,P> &e1, const Dual<T,P> &x)
+OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> smoothstep (const Dual<T,P> &low, const Dual<T,P> &high, const Dual<T,P> &x)
 {
-   if (x.val() < e0.val()) {
-      return Dual<T,P> (T(0));
-   }
-   else if (x.val() >= e1.val()) {
-      return Dual<T,P> (T(1));
-   }
-   Dual<T,P> t = (x - e0)/(e1-e0);
-   return  (T(3) - T(2)*t)*t*t;
+    if (x.val() >= high.val()) {
+        return Dual<T,P>(T(1));
+    } else if (x.val() <= low.val()) {
+        return Dual<T,P>(T(0));
+    } else {
+        Dual<T,P> t = (x - low) / (high - low);
+        return  (T(3) - T(2)*t)*t*t;
+    }
 }
 
 

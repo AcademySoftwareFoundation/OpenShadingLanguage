@@ -163,7 +163,6 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
             lanes_with_data.foreach ([=](ActiveLane lane) -> void {
                 ustring msg_sourcefile = msg_wsourcefile[lane];
                 int msg_sourceline     = msg_wsourceline[lane];
-
                 bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                     lanes_with_data,
                     "message \"{}\" already exists (created here: {}:{})"
@@ -183,6 +182,7 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
         lanes_that_getmessage_called_on.foreach ([=](ActiveLane lane) -> void {
             ustring msg_sourcefile = msg_wsourcefile[lane];
             int msg_sourceline     = msg_wsourceline[lane];
+
             bsg->uniform.context->batched<__OSL_WIDTH>().errorfmt(
                 Mask(Lane(lane)),
                 "message \"{}\" was queried before being set (queried here: {}:{})"
@@ -201,18 +201,19 @@ impl_setmessage(BatchedShaderGlobals* bsg, ustring sourcefile, int sourceline,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP2(setmessage, s, WX)(BatchedShaderGlobals* bsg_,
-                                    ustring_pod name_, long long type,
+                                    ustringhash_pod name_, long long type,
                                     void* wvalue, int layeridx,
-                                    ustring_pod sourcefile_, int sourceline,
+                                    ustringhash_pod sourcefile_, int sourceline,
                                     unsigned int mask_value)
 {
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
 
-    ustring name = USTR(name_);
+    ustring name = ustring_from(name_);
+
     MaskedData wsrcval(TYPEDESC(type), false /*has_derivs*/, mask, wvalue);
 
-    ustring sourcefile = USTR(sourcefile_);
+    ustring sourcefile = ustring_from(sourcefile_);
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -238,8 +239,8 @@ __OSL_MASKED_OP2(setmessage, s, WX)(BatchedShaderGlobals* bsg_,
 OSL_BATCHOP void
 __OSL_MASKED_OP2(setmessage, Ws, WX)(BatchedShaderGlobals* bsg_, void* wname,
                                      long long type, void* wvalue, int layeridx,
-                                     ustring_pod sourcefile_, int sourceline,
-                                     unsigned int mask_value)
+                                     ustringhash_pod sourcefile_,
+                                     int sourceline, unsigned int mask_value)
 {
     Mask mask(mask_value);
     OSL_ASSERT(mask.any_on());
@@ -247,7 +248,7 @@ __OSL_MASKED_OP2(setmessage, Ws, WX)(BatchedShaderGlobals* bsg_, void* wname,
     Wide<const ustring> wName(wname);
     MaskedData wsrcval(TYPEDESC(type), false /*has_derivs*/, mask, wvalue);
 
-    ustring sourcefile = USTR(sourcefile_);
+    ustring sourcefile = ustring_from(sourcefile_);
 
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
@@ -275,14 +276,15 @@ __OSL_MASKED_OP2(setmessage, Ws, WX)(BatchedShaderGlobals* bsg_, void* wname,
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP(getmessage)(void* bsg_, void* result, ustring_pod source_,
-                            ustring_pod name_, long long type_, void* val,
-                            int derivs, int layeridx, ustring_pod sourcefile_,
-                            int sourceline, unsigned int mask_value)
+__OSL_MASKED_OP(getmessage)(void* bsg_, void* result, ustringhash_pod source_,
+                            ustringhash_pod name_, long long type_, void* val,
+                            int derivs, int layeridx,
+                            ustringhash_pod sourcefile_, int sourceline,
+                            unsigned int mask_value)
 {
-    ustring source     = USTR(source_);
-    ustring name       = USTR(name_);
-    ustring sourcefile = USTR(sourcefile_);
+    ustring source     = ustring_from(source_);
+    ustring name       = ustring_from(name_);
+    ustring sourcefile = ustring_from(sourcefile_);
 
     Mask mask(mask_value);
 
@@ -301,7 +303,7 @@ __OSL_MASKED_OP(getmessage)(void* bsg_, void* result, ustring_pod source_,
     static ustring ktrace("trace");
     OSL_ASSERT(val != nullptr);
     MaskedData valRef(type, derivs, mask, val);
-    if (USTR(source_) == ktrace) {
+    if (source == ktrace) {
         // Source types where we need to ask the renderer
         return bsg->uniform.renderer->batched(WidthTag())
             ->getmessage(bsg, wR, source, name, valRef);

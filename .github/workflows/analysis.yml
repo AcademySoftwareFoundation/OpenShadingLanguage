@@ -39,13 +39,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: sonar gcc9/C++14 llvm13 py3.9 exr3.1 oiio2.3 avx2
+          - desc: sonar gcc9/C++17 llvm13 py3.9 exr3.1 oiio3.0 avx2
             nametag: static-analysis-sonar
             os: ubuntu-latest
             vfxyear: 2023
             vfxsuffix: -clang15
             cxx_std: 17
-            openimageio_ver: main
+            openimageio_ver: release
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c
@@ -53,7 +53,7 @@ jobs:
             coverage: 1
             # skip_tests: 1
             sonar: 1
-            setenvs: export SONAR_SCANNER_VERSION=4.7.0.2747
+            setenvs: export xSONAR_SCANNER_VERSION=4.7.0.2747
                             SONAR_SERVER_URL="https://sonarcloud.io"
                             BUILD_WRAPPER_OUT_DIR=bw_output
                             OSL_CMAKE_BUILD_WRAPPER="build-wrapper-linux-x86-64 --out-dir bw_output"
@@ -68,7 +68,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     container:
-      image: aswf/ci-osl:${{matrix.vfxyear}}${{matrix.vfxsuffix}}
+      image: aswf/ci-osl:2023-clang15
     env:
       CXX: ${{matrix.cxx_compiler}}
       CC: ${{matrix.cc_compiler}}

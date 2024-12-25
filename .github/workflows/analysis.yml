@@ -42,12 +42,12 @@ jobs:
           - desc: sonar gcc9/C++17 llvm13 py3.9 exr3.1 oiio3.0 avx2
             nametag: static-analysis-sonar
             os: ubuntu-latest
-            vfxyear: 2023
-            vfxsuffix: -clang15
+            vfxyear: 2024
+            vfxsuffix: -clang17
             cxx_std: 17
             openimageio_ver: release
-            python_ver: "3.10"
-            pybind11_ver: v2.10.0
+            python_ver: "3.11"
+            pybind11_ver: v2.12.0
             simd: avx2,f16c
             batched: b8_AVX2,b16_AVX512
             coverage: 1
@@ -55,20 +55,20 @@ jobs:
             sonar: 1
             setenvs: export xSONAR_SCANNER_VERSION=4.7.0.2747
                             SONAR_SERVER_URL="https://sonarcloud.io"
-                            BUILD_WRAPPER_OUT_DIR=bw_output
-                            OSL_CMAKE_BUILD_WRAPPER="build-wrapper-linux-x86-64 --out-dir bw_output"
-                            CMAKE_BUILD_TYPE=Debug
+                            BUILD_WRAPPER_OUT_DIR=/__w/OpenShadingLanguage/OpenShadingLanguage/bw_output
+                            OSL_CMAKE_BUILD_WRAPPER="build-wrapper-linux-x86-64 --out-dir /__w/OpenShadingLanguage/OpenShadingLanguage/bw_output"
+                            OSL_CMAKE_BUILD_TYPE=Debug
+                            OSL_CMAKE_FLAGS="-DOSL_TEST_BIG_TIMEOUT=1200 -DUSE_QT=0"
                             CMAKE_UNITY_BUILD=OFF
                             CODECOV=1
                             TESTRENDER_AA=1
                             OSL_TESTSUITE_SKIP_DIFF=1
                             CTEST_TEST_TIMEOUT=1200
-                            OSL_CMAKE_FLAGS="-DOSL_TEST_BIG_TIMEOUT=1200 -DUSE_QT=0"
                             CTEST_EXCLUSIONS="broken|noise-reg.regress|noise-gabor-reg.regress"
 
     runs-on: ${{ matrix.os }}
     container:
-      image: aswf/ci-osl:2023-clang15
+      image: aswf/ci-osl:2024-clang17
     env:
       CXX: ${{matrix.cxx_compiler}}
       CC: ${{matrix.cc_compiler}}

@@ -8,6 +8,8 @@
 # any command in it fails. This is crucial for CI tests.
 set -ex
 
+export OSL_CMAKE_BUILD_TYPE=${OSL_CMAKE_BUILD_TYPE:=${CMAKE_BUILD_TYPE:=Release}}
+
 if [[ "$USE_SIMD" != "" ]] ; then
     OSL_CMAKE_FLAGS="$OSL_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
 fi
@@ -18,7 +20,7 @@ fi
 
 pushd build
 cmake .. -G "$CMAKE_GENERATOR" \
-        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
+        -DCMAKE_BUILD_TYPE="${OSL_CMAKE_BUILD_TYPE}" \
         -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
         -DCMAKE_INSTALL_PREFIX="$OSL_ROOT" \
         -DUSE_PYTHON="${USE_PYTHON:=1}" \

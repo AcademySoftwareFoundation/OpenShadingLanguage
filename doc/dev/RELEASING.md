@@ -10,17 +10,18 @@
 Our release numbers are of the form `MAJOR.MINOR.PATCH.TWEAK`, and we follow
 an almost-semantic-versioning scheme.
 
-MAJOR changes are those that break backward-compatibility of the public APIs,
+MAJOR releases are those that break backward-compatibility of the public APIs,
 requiring existing application code to change their source code where it calls
 OSL API functions in order to compile and work correctly.
 
-MINOR changes guarantee API backward-compatibility with prior releases that
+MINOR releases guarantee API backward-compatibility with prior releases that
 have the same major number, but can introduce ABI or link incompatibilities.
 Applications using OSL need to be recompiled to move to a new minor release,
-but should not need to change their source code. Minor releases are allowed
-to drop support for sufficiently old compilers and dependencies.
+but should not need to change their source code (except, of course, to take
+advantage of new features). Minor releases are allowed to drop support for
+sufficiently old compilers and dependencies.
 
-PATCH changes guarantee both API and ABI/link backward-compatibility with
+PATCH releases guarantee both API and ABI/link backward-compatibility with
 prior releases that have the same minor number. Features and new public API
 calls may be added (thus deviating from strict semantic versioning), but only
 if they preserve ABI/link compatibility. This means that standalone functions
@@ -32,7 +33,7 @@ guarantee that any compilers or dependencies supported for the first release
 of a minor series will continue to be supported for all patches to that minor
 series.
 
-TWEAK changes are restricted to critical bug fixes or build breaks that do
+TWEAK releases are restricted to critical bug fixes or build breaks that do
 not alter public APIs in any way.
 
 ### Cadence of releases
@@ -66,10 +67,10 @@ for releases.
 
 In the "main" branch:
 
-- TWEAK changes within "main" only guarantee ABI back-compatibility, but may
+- TWEAK tags within "main" only guarantee ABI back-compatibility, but may
   have additions or non-bug-fix behavior changes (akin to patch releases
   within a release branch).
-- PATCH changes within "main" are allowed to break ABI or API (changes that
+- PATCH tags within "main" are allowed to break ABI or API (changes that
   would require minor or major releases, if they were not in "main").
 - Beware of unmarked breaks in compatibility of commits in main that are
   in between developer preview tags.
@@ -83,10 +84,10 @@ In the "main" branch:
 (and thus the branch markers will move over time). Branch names obey the
 following conventions:
 
-- `main` is the area for arbitrary changes intended for the next year's major
-  or minor release.
-- `dev-1.2` are the areas for staging additions to the next month's patch
-  release for the designated minor version series.
+- `main` is the area for arbitrary changes intended for the next year's
+  major or minor release.
+- `dev-1.2` are the areas for staging additions that will become the next
+  tweak or patch release for the minor version series.
 - `release` is a special branch marker that is always set to the latest tag of
   the currently supported, stable release family. People can count on
   "release" always being the latest stable release, whatever that may be at
@@ -133,8 +134,8 @@ project during this soft freeze.
 By mid-June (about 1-2 months before the beta of a new annual big release),
 you should branch and mark it as an alpha.
 
-At the tip of "main," create a new branch named `dev-MAJOR.MINOR` that will be
-the staging area for the next release.
+At the tip of "main", create a new branch named `dev-MAJOR.MINOR` that will
+be the staging area for the next release.
 
 Customarily, at that point we add a commit to main (but not to the new
 dev-MAJ.MIN branch) that bumps main's version to the next minor level, to
@@ -144,7 +145,8 @@ branch, and henceforth, any big or compatibility-breaking changes will only be
 committed to main and not backported to the release branch. (Though we are
 loose about this rule during the alpha period and allow continued breaking
 changes in the alpha, but by the time we call it beta, we allow no more
-breaking changes.)
+breaking changes.) Also at this stage, the main branch's CHANGES.md should
+have a heading added at the top for the *next* version.
 
 
 ### Prior to a release
@@ -169,18 +171,17 @@ breaking changes.)
    
 3. Ensure docs are up to date:
 
-   - Actually read the [README.md](../README.md), [INSTALL.md](../INSTALL.md),
-     and other repository docs and make sure all the information is up to
-     date. Check the "contributor credits" in the README against the recent
-     repo history to be sure new contributors are listed. Also check the
-     list of films and make sure it includes any recent productions that are
-     known to have used OSL.
-   - Skim the primary user documentation to look for any obvious errors,
-     especially the parts that describe new features. In the case of PDF docs
-     (such as osl-languagespec.pdf), make sure that a new PDF book is built if
-     the documentation source has been changed since the last release.
-   - If we are using any online docs (like readthedocs), make sure it is
-     building and looks correct on the web site.
+   - [README.md](README.md): Actually read it! Make sure it all seems
+     accurate and up to date.
+   - [INSTALL.md](INSTALL.md): Be sure that it accurately reflects the
+     current minimum and latest-tested versions of each dependency.
+   - [CREDITS.md](CREDITS.md): Check against the recent repo history to be
+     sure new contributors are listed.
+   - [SECURITY.md](SECURITY.md): Make sure it accurately reflects the
+     status of which branches get updates.
+   - Skim the [user documentation](https://docs.openshadinglanguage.org) to
+     ensure it's building correctly and doesn't have any obvious errors,
+     especially the parts that describe new features.
 
 4. Make sure the the top-level CMakeLists.txt file is updated:
 
@@ -229,17 +230,33 @@ truly critical bugs or build breaks that users will encounter.
 
 The following are the steps for making the release:
 
-1. Edit the top-level CMakeLists.txt to remove any RC designation
-   (i.e., `PROJECT_VERSION_RELEASE_TYPE` should be set to `""`).
+1. Double check the top-level CMakeLists.txt to ensure the right version
+   number and type of version designation (i.e.,
+   `PROJECT_VERSION_RELEASE_TYPE` should be set appropriately).
 
 2. Edit CHANGES.md to reflect the correct date of the release and ensure it
    includes any last-minute changes that were made during beta or release
-   candidate stages.
+   candidate stages. Please see the section "Generating release notes" below.
 
-3. Push it to **your** GitHub, make sure it passes CI.
+3. Push it to **your** GitHub fork, make sure it passes CI.
    
-4. Tag the release: `git tag v1.2.3.4` (no more beta, RC, or dev suffix).
+4. Tag the release with a signed tag:
+
+       $ git tag -s v1.2.3.4      # add a signed tag
+       $ git tag -v v1.2.3.4      # verify the tag
    
+   Be sure that the tag also reflects if it's an alpha (v1.2.3.4-alpha),
+   beta (v1.2.3.4-beta), release candidate (v1.2.3.4-RC1), or developer
+   preview (v1.2.3.4-dev). If it's a final release, just use the plain
+   version number (v1.2.3.4).
+
+   Note that the tag signing requires you to have a GPG key set up and
+   associated with your GitHub account. Please see [GitHub's signed tagging    instructions](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-tags) for more information.
+
+   If you get errors messages "gpg: signing failed: Inappropriate ioctl for device", then the solution is to first:
+
+       $ export GPG_TTY=$(tty)
+
 5. If this will now be the recommended stable release, move the `release`
    branch marker to the same position.
 
@@ -253,7 +270,7 @@ The following are the steps for making the release:
    select "Draft a new release." Choose the new tag you just pushed. Make the
    release title "Open Shading Language v1.2.3.4" (and beta, etc., designation
    if applicable). In the description, paste the release notes for this
-   release (from Changes.md). If this is a beta or release candidate, check
+   release (from CHANGES.md). If this is a beta or release candidate, check
    "this is a pre-release" box at the bottom.
 
 8. Announce the release on the [osl-dev mail list](https://lists.aswf.io/g/osl-dev)
@@ -346,3 +363,87 @@ Odds and ends to do after the tag is pushed and the announcements are sent:
   incorrectly as a prior tagged release. Also edit CHANGES.md to add a new
   (blank) heading for the next patch or release.
 
+
+## Generating release notes
+
+We strongly encourage the use of "conventional commit" prefixes in commit
+messages. See [CONTRIBUTING.md](CONTRIBUTING.md#commit-messages) for details.
+
+Many PRs are submitted (even by the author of this section you are now
+reading!) without the conventional commit prefix. The person who approves and
+merges the commit should take responsibility during the merge process to edit
+the commit message to add the appropriate prefix (and for that matter, to edit
+any part of the commit message for clarity). But at the end of the day, if we
+end up with some commits lacking a conventional commit prefix, it's no big
+deal -- we can fix it all up by hand when we make the release notes. But
+having CC prefixes in as many commit messages possible helps make the release
+notes process be simpler and more automated.
+
+We have been using the [git-cliff](https://github.com/orhun/git-cliff) tool
+as the starting point for release notes. The command we use is:
+
+    git cliff -c src/doc/cliff.toml -d v1.2.3.4..HEAD > cliff.out.md
+
+where v1.2.3.4 in this example is the tag of the last release. You could also
+use commit hashes to denote the range of changes you want to document.
+
+**For monthly patch releases**
+
+We have found that the git-cliff output is most of what we need for the patch
+releases, and can be copied into the CHANGES.md file with only some minor
+editing needed. The template for the patch release notes can be found in
+[Changes-skeleton-patch.md](doc/dev/Changes-skeleton-patch.md).
+
+* Get rid of the headings that git-cliff generates. We don't use the headings
+  for the patch releases.
+* Add prefixes to any commits that don't have them (they will be marked as
+  "uncategorized" by git-cliff), and feel free to change any of the existing
+  prefixes that you think are wrong or could be improved for clarity.
+* Rearrange the order of the entries to be logical and readable. I prefer the
+  order: feature enhancements, bug fixes, build system fixes that might impact
+  users, internal changes, test improvements, documentation and administrative
+  changes.
+* For patch releases, feel free to omit any entries that you think are not
+  user-facing and are too minor to be worth mentioning in the release notes.
+
+Strive to keep the release notes just long enough for users to know if the
+patch contains any fixes relevant to them, but short enough to be read at a
+glance and without extraneous detail.
+
+Here is an example of well-constructed monthly patch release notes:
+https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/releases/tag/v1.13.12.0
+
+**For annual major/minor releases**
+
+For major releases, the git-cliff output is just a starting point and need
+significant editing to get the detail and quality level we expect for our
+major releases. A simple bullet list of commits is not sufficient -- we aim
+for a prose-based description of important changes that "tell the story" of
+the year's work and will be thoroughly understood by our stakeholders who need
+to understand what has changed.
+
+* Copy all the headings from [Changes-skeleton-major.md](doc/dev/Changes-skeleton-major.md)
+  or the previous year's release notes to get the skeleton of the major and
+  minor headers that you fit everything into. Note that it mostly corresponds
+  to sections of the git-cliff output, but with a more carefully constructed
+  hierarchy of categories.
+* Add prefixes to any commits that don't have them (they will be marked as
+  "uncategorized" by git-cliff), and feel free to change any of the existing
+  prefixes that you think are wrong or could be improved for clarity.
+* Rearrange the git-cliff output into the hierarchy of our preferred major
+  release notes organization. Within each section and subsection, group
+  similar changes together. The chronological order of the commits isn't as
+  important as clearly explaining what changed over the course of the year.
+* The git-cliff output is a good starting point for populating the notes with
+  every PR, plus automatically adding a reference and link to the PR and the
+  name of the author of the patch.
+* Look with a skeptical eye at the one-line bullet points from git-cliff (i.e,
+  from the first line of each PR's commit message). Often, they are too terse
+  or tend to [bury the lede](https://www.dictionary.com/e/slang/bury-the-lede/).
+  Expand into as much explanation is necessary for users who need to know
+  about the change or feature to know whether it is relevant and have some
+  idea what to do or that they should look at the relevant PRs for more
+  detail.
+
+Here is an example of well-constructed annual major release notes:
+https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/releases/tag/v1.14.3.0

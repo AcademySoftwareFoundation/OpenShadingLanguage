@@ -60,7 +60,6 @@ public:
         llvm::Type* llvm_type_bool  = llvm::Type::getInt1Ty(context);
         llvm::Type* llvm_type_int32 = llvm::Type::getInt32Ty(context);
 
-#if OSL_LLVM_VERSION >= 110
         m_llvm_mask_type = llvm::FixedVectorType::get(llvm_type_bool, WidthT);
         // NOTE:  OSL doesn't have any 16 bit data types, so 32bit version
         // of the mask promotion will always be correct here.  Should 16 bit
@@ -71,19 +70,13 @@ public:
         // livein.
         m_native_mask_type = llvm::FixedVectorType::get(llvm_type_int32,
                                                         WidthT);
-#    if OSL_LLVM_VERSION >= 112
+#if OSL_LLVM_VERSION >= 112
         m_wide_zero_initializer = llvm::ConstantDataVector::getSplat(
             WidthT, llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
-#    else
+#else
         m_wide_zero_initializer = llvm::ConstantVector::getSplat(
             llvm::ElementCount(WidthT, false),
             llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
-#    endif
-#else
-        m_llvm_mask_type   = llvm::VectorType::get(llvm_type_bool, WidthT);
-        m_native_mask_type = llvm::VectorType::get(llvm_type_int32, WidthT);
-        m_wide_zero_initializer = llvm::ConstantVector::getSplat(
-            WidthT, llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
 #endif
     }
 

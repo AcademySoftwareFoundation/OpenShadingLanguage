@@ -38,7 +38,7 @@ macro (oslc_compile)
     list (APPEND oslc_args "-I${CMAKE_SOURCE_DIR}/src/shaders")
     add_custom_command (OUTPUT ${osofile}
         COMMAND oslc ${oslc_args} "${oslfile}" -o "${osofile}"
-        MAIN_DEPENDENCY ${oslsrc}
+        MAIN_DEPENDENCY ${oslfile}
         DEPENDS ${_shader_DEPENDS} "${stdosl_header}" oslc
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "oslc ${oslsrc_we}")

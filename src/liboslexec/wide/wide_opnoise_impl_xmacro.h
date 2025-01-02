@@ -59,7 +59,8 @@ __OSL_NOISE_OP2(Wf, Wf)(char* r_ptr, char* x_ptr, unsigned int mask_value)
 {
     Masked<float> wresult(r_ptr, Mask(mask_value));
     Wide<const float> wx(x_ptr);
-
+    // TODO FIXME
+    /*
     typedef BatchedCGPolicy<Param::WF, Param::WF> Policy;
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
@@ -74,7 +75,7 @@ __OSL_NOISE_OP2(Wf, Wf)(char* r_ptr, char* x_ptr, unsigned int mask_value)
             });
         return;
     }
-
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {
@@ -99,7 +100,8 @@ __OSL_NOISE_OP3(Wf, Wf, Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
     Masked<float> wresult(r_ptr, Mask(mask_value));
     Wide<const float> wx(x_ptr);
     Wide<const float> wy(y_ptr);
-
+    // TODO FIXME
+    /*
     typedef BatchedCGPolicy<Param::WF, Param::WF, Param::WF> Policy;
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
@@ -115,7 +117,7 @@ __OSL_NOISE_OP3(Wf, Wf, Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
             });
         return;
     }
-
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {
@@ -139,7 +141,8 @@ __OSL_NOISE_OP2(Wf, Wv)(char* r_ptr, char* p_ptr, unsigned int mask_value)
 {
     Masked<float> wresult(r_ptr, Mask(mask_value));
     Wide<const Vec3> wp(p_ptr);
-
+    // TODO FIXME
+    /*
     typedef BatchedCGPolicy<Param::WF, Param::WV> Policy;
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
@@ -154,6 +157,7 @@ __OSL_NOISE_OP2(Wf, Wv)(char* r_ptr, char* p_ptr, unsigned int mask_value)
             });
         return;
     }
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {
@@ -178,6 +182,8 @@ __OSL_NOISE_OP3(Wf, Wv, Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
     Masked<float> wresult(r_ptr, Mask(mask_value));
     Wide<const Vec3> wp(p_ptr);
     Wide<const float> wt(t_ptr);
+    // TODO FIXME
+    /*
     typedef BatchedCGPolicy<Param::WF, Param::WV, Param::WF> Policy;
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
@@ -193,6 +199,7 @@ __OSL_NOISE_OP3(Wf, Wv, Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
             });
         return;
     }
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {
@@ -219,6 +226,8 @@ __OSL_NOISE_OP2(Wv, Wv)(char* r_ptr, char* p_ptr, unsigned int mask_value)
     Masked<Vec3> wresult(r_ptr, Mask(mask_value));
     Wide<const Vec3> wp(p_ptr);
     typedef BatchedCGPolicy<Param::WV, Param::WV> Policy;
+    // TODO FIXME
+    /*
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
             && wresult.mask().count() < Policy::simd_threshold)) {
@@ -232,6 +241,7 @@ __OSL_NOISE_OP2(Wv, Wv)(char* r_ptr, char* p_ptr, unsigned int mask_value)
             });
         return;
     }
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {
@@ -255,6 +265,8 @@ __OSL_NOISE_OP2(Wv, Wf)(char* r_ptr, char* x_ptr, unsigned int mask_value)
     Masked<Vec3> wresult(r_ptr, Mask(mask_value));
     Wide<const float> wx(x_ptr);
     typedef BatchedCGPolicy<Param::WV, Param::WF> Policy;
+    // TODO FIXME
+    /*
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
             && wresult.mask().count() < Policy::simd_threshold)) {
@@ -268,6 +280,7 @@ __OSL_NOISE_OP2(Wv, Wf)(char* r_ptr, char* x_ptr, unsigned int mask_value)
             });
         return;
     }
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {
@@ -292,6 +305,8 @@ __OSL_NOISE_OP3(Wv, Wv, Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
     Masked<Vec3> wresult(r_ptr, Mask(mask_value));
     Wide<const Vec3> wp(p_ptr);
     Wide<const float> wt(t_ptr);
+    // TODO FIXME
+    /*
     typedef BatchedCGPolicy<Param::WV, Param::WV, Param::WF> Policy;
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
@@ -307,6 +322,7 @@ __OSL_NOISE_OP3(Wv, Wv, Wf)(char* r_ptr, char* p_ptr, char* t_ptr,
             });
         return;
     }
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {
@@ -332,6 +348,8 @@ __OSL_NOISE_OP3(Wv, Wf, Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
     Masked<Vec3> wresult(r_ptr, Mask(mask_value));
     Wide<const float> wx(x_ptr);
     Wide<const float> wy(y_ptr);
+    // TODO FIXME
+    /*
     typedef BatchedCGPolicy<Param::WV, Param::WF, Param::WF> Policy;
     if (Policy::simd_threshold > __OSL_WIDTH
         || (Policy::simd_threshold > 1
@@ -347,6 +365,7 @@ __OSL_NOISE_OP3(Wv, Wf, Wf)(char* r_ptr, char* x_ptr, char* y_ptr,
             });
         return;
     }
+*/
     __OSL_XMACRO_SFM_IMPLNAME impl;
     OSL_FORCEINLINE_BLOCK
     {

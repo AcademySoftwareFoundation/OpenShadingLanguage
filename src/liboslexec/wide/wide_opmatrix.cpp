@@ -51,7 +51,7 @@ inline void
 block_ustringhash_from_ptr(Block<ustringhash>& b, const void* w_ptr)
 {
     for (int i = 0; i < __OSL_WIDTH; ++i)
-        b.set(i, reinterpret_cast<const ustring*>(w_ptr)[i]);
+        b.set(i, reinterpret_cast<const ustringhash*>(w_ptr)[i]);
 }
 
 
@@ -532,39 +532,42 @@ makeIdentity(Masked<Matrix44> wrm)
 
 OSL_FORCEINLINE Mask
 impl_get_uniform_from_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
-                                    const char* from)
+                                    ustringhash_pod from_)
 {
+    ustringhash from    = ustringhash_from(from_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
 
-    if (USTR(from) == Strings::common
-        || USTR(from) == ctx->shadingsys().commonspace_synonym()) {
+    if (from == Hashes::common
+        || from == ctx->shadingsys().commonspace_synonym_hash()) {
         makeIdentity(wrm);
 
         return wrm.mask();
     }
 
-    if (USTR(from) == Strings::shader) {
+    if (from == Hashes::shader) {
         ctx->batched<__OSL_WIDTH>().renderer()->get_matrix(
             bsg, wrm, bsg->varying.shader2common, bsg->varying.time);
         // NOTE: matching scalar version of code which ignores the renderservices return value
         return wrm.mask();
     }
-    if (USTR(from) == Strings::object) {
+    if (from == Hashes::object) {
         ctx->batched<__OSL_WIDTH>().renderer()->get_matrix(
             bsg, wrm, bsg->varying.object2common, bsg->varying.time);
         // NOTE: matching scalar version of code which ignores the renderservices return value
         return wrm.mask();
     }
 
-    Mask succeeded = ctx->batched<__OSL_WIDTH>().renderer()->get_matrix(
-        bsg, wrm, USTR(from), bsg->varying.time);
+    Mask succeeded
+        = ctx->batched<__OSL_WIDTH>().renderer()->get_matrix(bsg, wrm, from,
+                                                             bsg->varying.time);
     auto failedResults = wrm & succeeded.invert();
     if (failedResults.mask().any_on()) {
         makeIdentity(failedResults);
         ShadingContext* ctx = bsg->uniform.context;
         if (ctx->shadingsys().unknown_coordsys_error()) {
-            ctx->errorfmt("Unknown transformation \"{}\"", from);
+            // TODO FIXME
+            //ctx->errorfmt("Unknown transformation \"{}\"", from);
         }
     }
     return succeeded;
@@ -572,24 +575,25 @@ impl_get_uniform_from_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
 
 OSL_FORCEINLINE Mask
 impl_get_uniform_to_inverse_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
-                                          const char* to)
+                                          ustringhash_pod to_)
 {
+    ustringhash to      = ustringhash_from(to_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
 
-    if (USTR(to) == Strings::common
-        || USTR(to) == ctx->shadingsys().commonspace_synonym()) {
+    if (to == Hashes::common
+        || to == ctx->shadingsys().commonspace_synonym_hash()) {
         makeIdentity(wrm);
         return wrm.mask();
     }
-    if (USTR(to) == Strings::shader) {
+    if (to == Hashes::shader) {
         dispatch_get_inverse_matrix(ctx->batched<__OSL_WIDTH>().renderer(), bsg,
                                     wrm, bsg->varying.shader2common,
                                     bsg->varying.time);
         // NOTE: matching scalar version of code which ignores the renderservices return value
         return wrm.mask();
     }
-    if (USTR(to) == Strings::object) {
+    if (to == Hashes::object) {
         dispatch_get_inverse_matrix(ctx->batched<__OSL_WIDTH>().renderer(), bsg,
                                     wrm, bsg->varying.object2common,
                                     bsg->varying.time);
@@ -602,13 +606,14 @@ impl_get_uniform_to_inverse_matrix_masked(void* bsg_, Masked<Matrix44> wrm,
     // so no need to make sure that the values are valid (assuming FP exceptions are disabled)
     Mask succeeded
         = dispatch_get_inverse_matrix(ctx->batched<__OSL_WIDTH>().renderer(),
-                                      bsg, wrm, USTR(to), bsg->varying.time);
+                                      bsg, wrm, to, bsg->varying.time);
 
     auto failedResults = wrm & succeeded.invert();
     if (failedResults.mask().any_on()) {
         makeIdentity(failedResults);
         if (ctx->shadingsys().unknown_coordsys_error()) {
-            ctx->errorfmt("Unknown transformation \"{}\"", to);
+            // TODO FIXME
+            //ctx->errorfmt("Unknown transformation \"{}\"", to);
         }
     }
     return succeeded;
@@ -641,7 +646,8 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
                                      Masked<Matrix44> wMfrom)
 {
     // Deal with a varying 'from' space
-    ustring commonspace_synonym = ctx->shadingsys().commonspace_synonym();
+    ustringhash commonspace_synonym
+        = ctx->shadingsys().commonspace_synonym_hash();
 
     // Use int instead of Mask<> to allow reduction clause in openmp simd declaration
     int common_space_bits { 0 };
@@ -651,20 +657,23 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
 
     OSL_FORCEINLINE_BLOCK
     {
+        // TODO re-enable failing for unknown reason after change from Strings:: to Hashes::
+        /*
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
                            reduction(|
                                      : common_space_bits, shader_space_bits,
                                        object_space_bits, named_space_bits))
+	*/
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
-            ustringhash from = wFrom[lane];
+            ustringhash from = unproxy(wFrom[lane]);
             if (wMfrom.mask()[lane]) {
-                if (from == Strings::common || from == commonspace_synonym) {
+                if (from == Hashes::common || from == commonspace_synonym) {
                     // inline of Mask::set_on(lane)
                     common_space_bits |= 1 << lane;
-                } else if (from == Strings::shader) {
+                } else if (from == Hashes::shader) {
                     // inline of Mask::set_on(lane)
                     shader_space_bits |= 1 << lane;
-                } else if (from == Strings::object) {
+                } else if (from == Hashes::object) {
                     // inline of Mask::set_on(lane)
                     object_space_bits |= 1 << lane;
                 } else {
@@ -714,9 +723,10 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustringhash from = wFrom[lane];
-                        ctx->batched<__OSL_WIDTH>().errorfmt(
-                            Mask(Lane(lane)), "Unknown transformation \"{}\"",
-                            ustring(from));
+                        // TODO FIXME
+                        //ctx->batched<__OSL_WIDTH>().errorfmt(
+                        //    Mask(Lane(lane)), "Unknown transformation \"{}\"",
+                        //    ustring(from));
                     }
                 }
             }
@@ -731,7 +741,7 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
 
 OSL_BATCHOP void
 __OSL_MASKED_OP2(prepend_matrix_from, Wm, s)(void* bsg_, void* wr,
-                                             const char* from,
+                                             ustringhash_pod from_,
                                              unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -739,7 +749,7 @@ __OSL_MASKED_OP2(prepend_matrix_from, Wm, s)(void* bsg_, void* wr,
     Block<Matrix44> wMfrom;
     Masked<Matrix44> from_matrix(wMfrom, Mask(mask_value));
     /*Mask succeeded =*/
-    impl_get_uniform_from_matrix_masked(bsg, from_matrix, from);
+    impl_get_uniform_from_matrix_masked(bsg, from_matrix, from_);
 
     Masked<Matrix44> wrm(wr, Mask(mask_value));
 
@@ -779,7 +789,8 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
                                   Masked<Matrix44> wMto)
 {
     // Deal with a varying 'to' space
-    ustring commonspace_synonym = ctx->shadingsys().commonspace_synonym();
+    ustringhash commonspace_synonym
+        = ctx->shadingsys().commonspace_synonym_hash();
 
     // Use int instead of Mask<> to allow reduction clause in openmp simd declaration
     int common_space_bits { 0 };
@@ -789,20 +800,22 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
 
     OSL_FORCEINLINE_BLOCK
     {
+        // TODO re-enable failing for unknown reason after change from Strings:: to Hashes::
+        /*
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
                            reduction(|
                                      : common_space_bits, shader_space_bits,
-                                       object_space_bits, named_space_bits))
+                                       object_space_bits, named_space_bits))*/
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustringhash to = wTo[lane];
             if (wMto.mask()[lane]) {
-                if (to == Strings::common || to == commonspace_synonym) {
+                if (to == Hashes::common || to == commonspace_synonym) {
                     // inline of Mask::set_on(lane)
                     common_space_bits |= 1 << lane;
-                } else if (to == Strings::shader) {
+                } else if (to == Hashes::shader) {
                     // inline of Mask::set_on(lane)
                     shader_space_bits |= 1 << lane;
-                } else if (to == Strings::object) {
+                } else if (to == Hashes::object) {
                     // inline of Mask::set_on(lane)
                     object_space_bits |= 1 << lane;
                 } else {
@@ -850,9 +863,10 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
                 for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
                     if (failedLanes[lane]) {
                         ustringhash to = wTo[lane];
-                        ctx->batched<__OSL_WIDTH>().errorfmt(
-                            Mask(Lane(lane)), "Unknown transformation \"{}\"",
-                            ustring(to));
+                        // TODO FIXME
+                        //ctx->batched<__OSL_WIDTH>().errorfmt(
+                        //    Mask(Lane(lane)), "Unknown transformation \"{}\"",
+                        //    ustring(to));
                     }
                 }
             }
@@ -867,18 +881,19 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
 
 OSL_FORCEINLINE Mask
 impl_get_uniform_from_to_matrix_masked(BatchedShaderGlobals* bsg,
-                                       Masked<Matrix44> wrm, const char* from,
-                                       const char* to)
+                                       Masked<Matrix44> wrm,
+                                       ustringhash_pod from_,
+                                       ustringhash_pod to_)
 {
     Block<Matrix44> wMfrom, wMto;
     Masked<Matrix44> from_matrix(wMfrom, wrm.mask());
     Mask succeeded = impl_get_uniform_from_matrix_masked(bsg, from_matrix,
-                                                         from);
+                                                         from_);
 
     // NOTE: even if we failed to get a from matrix, it should have been set to
     // identity, so we still need to try to get the to matrix for the original mask
     Masked<Matrix44> to_matrix(wMto, wrm.mask());
-    succeeded &= impl_get_uniform_to_inverse_matrix_masked(bsg, to_matrix, to);
+    succeeded &= impl_get_uniform_to_inverse_matrix_masked(bsg, to_matrix, to_);
 
     impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
     return succeeded;
@@ -886,27 +901,27 @@ impl_get_uniform_from_to_matrix_masked(BatchedShaderGlobals* bsg,
 }  // namespace
 
 OSL_BATCHOP int
-__OSL_MASKED_OP3(get_from_to_matrix, Wm, s, s)(void* bsg_, void* wr,
-                                               const char* from, const char* to,
-                                               unsigned int mask_value)
+__OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
+                 s)(void* bsg_, void* wr, ustringhash_pod from_,
+                    ustringhash_pod to_, unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     Masked<Matrix44> wrm(wr, Mask(mask_value));
-    return impl_get_uniform_from_to_matrix_masked(bsg, wrm, from, to).value();
+    return impl_get_uniform_from_to_matrix_masked(bsg, wrm, from_, to_).value();
 }
 
 
 OSL_BATCHOP int
 __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
-                 Ws)(void* bsg_, void* wr, const char* from, void* w_to_ptr,
-                     unsigned int mask_value)
+                 Ws)(void* bsg_, void* wr, ustringhash_pod from_,
+                     void* w_to_ptr, unsigned int mask_value)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
     ShadingContext* ctx = bsg->uniform.context;
     Block<Matrix44> wMfrom;
     Masked<Matrix44> from_matrix(wMfrom, Mask(mask_value));
     Mask succeeded = impl_get_uniform_from_matrix_masked(bsg, from_matrix,
-                                                         from);
+                                                         from_);
 
     Block<ustringhash> bwToSpace;
     block_ustringhash_from_ptr(bwToSpace, w_to_ptr);
@@ -927,7 +942,7 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, s,
 
 OSL_BATCHOP int
 __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
-                 s)(void* bsg_, void* wr, void* w_from_ptr, const char* to,
+                 s)(void* bsg_, void* wr, void* w_from_ptr, ustringhash_pod to_,
                     unsigned int mask_value)
 {
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -940,7 +955,7 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
     Block<Matrix44> wMto;
     Masked<Matrix44> to_matrix(wMto, Mask(mask_value));
     Mask succeeded = impl_get_uniform_to_inverse_matrix_masked(bsg, to_matrix,
-                                                               to);
+                                                               to_);
 
     Block<Matrix44> wMfrom;
     // NOTE: even if we failed to get a to matrix, it should have been set to
@@ -1001,34 +1016,30 @@ __OSL_MASKED_OP3(get_from_to_matrix, Wm, Ws,
 
 OSL_BATCHOP int
 __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
-                 s)(void* bsg_, void* WM_, ustring_pod from_, ustring_pod to_,
-                    unsigned int mask_value)
+                 s)(void* bsg_, void* WM_, ustringhash_pod from_,
+                    ustringhash_pod to_, unsigned int mask_value)
 {
-    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ustringhash from = ustringhash_from(from_);
+    ustringhash to   = ustringhash_from(to_);
+    auto* bsg        = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
 
     Mask mask(mask_value);
     Masked<Matrix44> mm(WM_, mask);
     ShadingContext* ctx = bsg->uniform.context;
-
-    ustring from = USTR(from_);
-    ustring to   = USTR(to_);
 
     Mask succeeded;
     // Avoid matrix concatenation if possible by detecting when the
     // adjacent matrix would be identity
     // We don't expect both from and to == common, so we are not
     // optimizing for it
-    if (from == Strings::common
-        || from == ctx->shadingsys().commonspace_synonym()) {
-        succeeded = impl_get_uniform_to_inverse_matrix_masked(bsg, mm,
-                                                              to.c_str());
-    } else if (to == Strings::common
-               || to == ctx->shadingsys().commonspace_synonym()) {
-        succeeded = impl_get_uniform_from_matrix_masked(bsg, mm, from.c_str());
+    if (from == Hashes::common
+        || from == ctx->shadingsys().commonspace_synonym_hash()) {
+        succeeded = impl_get_uniform_to_inverse_matrix_masked(bsg, mm, to_);
+    } else if (to == Hashes::common
+               || to == ctx->shadingsys().commonspace_synonym_hash()) {
+        succeeded = impl_get_uniform_from_matrix_masked(bsg, mm, from_);
     } else {
-        succeeded = impl_get_uniform_from_to_matrix_masked(bsg, mm,
-                                                           from.c_str(),
-                                                           to.c_str());
+        succeeded = impl_get_uniform_from_to_matrix_masked(bsg, mm, from_, to_);
     }
     return succeeded.value();
 }
@@ -1037,7 +1048,7 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
 
 OSL_BATCHOP int
 __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
-                 s)(void* bsg_, void* WM_, void* wfrom_, ustring_pod to_,
+                 s)(void* bsg_, void* WM_, void* wfrom_, ustringhash_pod to_,
                     unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -1049,8 +1060,6 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
     block_ustringhash_from_ptr(bwfrom_space, wfrom_);
     Wide<const ustringhash> wfrom_space(bwfrom_space);
 
-    ustring to_space = USTR(to_);
-
     Block<Matrix44> wMfrom, wMto;
     Masked<Matrix44> from_matrix(wMfrom, wrm.mask());
     ShadingContext* ctx = bsg->uniform.context;
@@ -1058,8 +1067,7 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
     Mask succeeded = impl_get_varying_from_matrix_batched(bsg, ctx, wfrom_space,
                                                           from_matrix);
     Masked<Matrix44> to_matrix(wMto, wrm.mask() & succeeded);
-    succeeded &= impl_get_uniform_to_inverse_matrix_masked(bsg, to_matrix,
-                                                           to_space.c_str());
+    succeeded &= impl_get_uniform_to_inverse_matrix_masked(bsg, to_matrix, to_);
 
     impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
     return succeeded.value();
@@ -1069,7 +1077,7 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, Ws,
 
 OSL_BATCHOP int
 __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
-                 Ws)(void* bsg_, void* WM_, ustring_pod from_, void* wto_,
+                 Ws)(void* bsg_, void* WM_, ustringhash_pod from_, void* wto_,
                      unsigned int mask_value)
 {
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -1077,7 +1085,6 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
     Mask mask(mask_value);
     Masked<Matrix44> wrm(WM_, mask);
 
-    ustring from = USTR(from_);
     Block<ustringhash> bwto_space;
     block_ustringhash_from_ptr(bwto_space, wto_);
     Wide<const ustringhash> wto_space(bwto_space);
@@ -1087,7 +1094,7 @@ __OSL_MASKED_OP3(build_transform_matrix, Wm, s,
     ShadingContext* ctx = bsg->uniform.context;
 
     Mask succeeded = impl_get_uniform_from_matrix_masked(bsg, from_matrix,
-                                                         from.c_str());
+                                                         from_);
     Masked<Matrix44> to_matrix(wMto, wrm.mask() & succeeded);
     succeeded &= impl_get_varying_to_matrix_masked(bsg, ctx, wto_space,
                                                    to_matrix);

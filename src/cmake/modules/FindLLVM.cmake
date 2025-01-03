@@ -99,7 +99,7 @@ endif ()
 execute_process (COMMAND ${LLVM_CONFIG} --shared-mode
        OUTPUT_VARIABLE LLVM_SHARED_MODE
        OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (LLVM_VERSION VERSION_GREATER_EQUAL 9.0 AND (LLVM_SHARED_MODE STREQUAL "shared"))
+if (LLVM_SHARED_MODE STREQUAL "shared")
     find_library ( _CLANG_CPP_LIBRARY
                    NAMES "clang-cpp"
                    PATHS ${LLVM_LIB_DIR}

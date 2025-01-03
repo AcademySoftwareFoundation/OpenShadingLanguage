@@ -19,16 +19,18 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) **3.15 or newer** (tested through 3.30)
+* Build system: [CMake](https://cmake.org/) **3.19 or newer** (tested
+  through 3.31)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
-   - **GCC 9.3** or newer (tested through gcc 12.1)
-   - **Clang 5** or newer (tested through clang 18)
+   - **GCC 9.3** or newer (tested through gcc 13.1)
+   - **Clang 5** or newer (tested through clang 19)
    - Microsoft Visual Studio 2017 or newer
    - Intel C++ compiler **icc version 19** or newer or LLVM-based icx compiler
      version 2022 or newer.
 
-* **[OpenImageIO](http://openimageio.org) 2.4 or newer** (tested through 2.5 and main)
+* **[OpenImageIO](http://openimageio.org) 2.5 or newer** (tested through 3.0
+  and main)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -47,8 +49,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* [LLVM](http://www.llvm.org) 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, or 19,
-  including clang libraries.
+* [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, or 19, including
+  clang libraries.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.

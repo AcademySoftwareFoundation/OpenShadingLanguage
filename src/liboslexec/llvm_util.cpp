@@ -1896,6 +1896,10 @@ void
 LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 {
 #ifdef OSL_LLVM_NEW_PASS_MANAGER
+#    if OSL_LLVM_VERSION <= 110
+#        error "New pass manager not supported in LLVM 11 and earlier"
+#    endif
+
     OSL_DEV_ONLY(std::cout << "setup_new_optimization_passes " << optlevel);
     OSL_ASSERT(m_new_pass_manager == nullptr);
 

@@ -27,7 +27,6 @@
 #include <llvm/IR/Constant.h>
 #include <llvm/IR/DerivedTypes.h>
 
-#include "../liboslcomp/oslcomp_pvt.h"
 #include "batched_backendllvm.h"
 #include "oslexec_pvt.h"
 

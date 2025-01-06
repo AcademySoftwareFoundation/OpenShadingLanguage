@@ -10,7 +10,6 @@
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/timer.h>
 
-#include "../liboslcomp/oslcomp_pvt.h"
 #include "batched_analysis.h"
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"

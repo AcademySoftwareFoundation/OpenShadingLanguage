@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "oslcomp_pvt.h"
+#include "osl_pvt.h"
+#include "symtab.h"
 
 #include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;

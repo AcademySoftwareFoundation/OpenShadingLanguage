@@ -11,7 +11,6 @@
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/thread.h>
 
-#include "../liboslcomp/oslcomp_pvt.h"
 #include "oslexec_pvt.h"
 
 

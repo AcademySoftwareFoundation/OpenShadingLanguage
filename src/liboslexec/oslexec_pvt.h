@@ -1931,6 +1931,21 @@ public:
             return nullptr;
     }
 
+    // Find the SymLocationDesc for this named param but only if it matches
+    // the arena type, returning its pointer or nullptr if that name is not
+    // found.
+    // Try to look up the sym with the full layer.name specification first.
+    // If that fails, try again based on name only.
+    const SymLocationDesc* find_symloc(ustring name, ustring layer,
+                                       SymArena arena) const
+    {
+        ustring layersym = ustring::fmtformat("{}.{}", layer, name);
+        auto symloc      = find_symloc(layersym, arena);
+        if (!symloc)
+            symloc = find_symloc(name, arena);
+        return symloc;
+    }
+
     // Given a data block for interactive params, allocate space for it to
     // live with the group and copy the initial data.
     void setup_interactive_arena(cspan<uint8_t> paramblock);

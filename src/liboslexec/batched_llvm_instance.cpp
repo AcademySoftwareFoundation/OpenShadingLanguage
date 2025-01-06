@@ -1190,11 +1190,8 @@ BatchedBackendLLVM::llvm_assign_initial_value(
 
         llvm::Value* got_userdata = nullptr;
         // See if userdata input placement has been used for this symbol
-        ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
-                                              sym.name());
-        symloc           = group().find_symloc(layersym, SymArena::UserData);
-        if (!symloc)
-            symloc = group().find_symloc(sym.name(), SymArena::UserData);
+        symloc = group().find_symloc(sym.name(), inst()->layername(),
+                                     SymArena::UserData);
         if (symloc) {
             // We had a userdata pre-placement record for this variable.
             // Just copy from the correct offset location!
@@ -2361,13 +2358,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     {
         if (!s.renderer_output())  // Skip if not a renderer output
             continue;
-        // Try to look up the sym among the outputs with the full layer.name
-        // specification first. If that fails, look for name only.
-        ustring layersym = ustring::fmtformat("{}.{}", inst()->layername(),
-                                              s.name());
-        auto symloc      = group().find_symloc(layersym, SymArena::Outputs);
-        if (!symloc)
-            symloc = group().find_symloc(s.name(), SymArena::Outputs);
+        auto symloc = group().find_symloc(s.name(), inst()->layername(),
+                                          SymArena::Outputs);
         if (!symloc) {
             // std::cout << "No output copy for " << s.name()
             //           << " because no symloc was found\n";

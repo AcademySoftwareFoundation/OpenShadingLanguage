@@ -18,7 +18,6 @@
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 
-#include "../liboslcomp/oslcomp_pvt.h"
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
 

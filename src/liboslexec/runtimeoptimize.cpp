@@ -2698,6 +2698,15 @@ RuntimeOptimizer::track_variable_dependencies()
         if (s.symtype() == SymTypeGlobal && s.everwritten()
             && !s.typespec().is_closure_based() && s.mangled() != Strings::N)
             s.has_derivs(true);
+        // If the renderer requests a symbol to be written as an output with
+        // derivs, mark them to be generated.
+        if (s.renderer_output()) {
+            auto symloc = group().find_symloc(s.name(), inst()->layername(),
+                                              SymArena::Outputs);
+            if (symloc && symloc->derivs && s.everwritten()
+                && !s.typespec().is_closure_based())
+                s.has_derivs(true);
+        }
         if (s.has_derivs())
             add_dependency(symdeps, DerivSym, snum);
         ++snum;

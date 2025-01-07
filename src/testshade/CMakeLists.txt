@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} -std=c++${CMAKE_CXX_STANDARD})
+
 # The 'testshade' executable
 set ( testshade_srcs
       testshade.cpp

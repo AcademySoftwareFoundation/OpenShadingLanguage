@@ -16,6 +16,8 @@
 #include <OSL/fmt_util.h>
 #include <OSL/hashes.h>
 
+#include <OpenImageIO/Imath.h>
+
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
 

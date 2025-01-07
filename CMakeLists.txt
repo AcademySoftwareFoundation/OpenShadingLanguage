@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-cmake_minimum_required (VERSION 3.15)
+cmake_minimum_required (VERSION 3.19)
 
 set (OSL_VERSION "1.14.3.0")
 set (OSL_VERSION_OVERRIDE "" CACHE STRING

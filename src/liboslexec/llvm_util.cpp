@@ -13,8 +13,8 @@
 #include <OSL/oslconfig.h>
 #include <OSL/wide.h>
 
-#if OSL_LLVM_VERSION < 90
-#    error "LLVM minimum version required for OSL is 9.0"
+#if OSL_LLVM_VERSION < 110
+#    error "LLVM minimum version required for OSL is 11.0"
 #endif
 
 #include "llvm_passes.h"
@@ -29,12 +29,10 @@
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
-#if OSL_LLVM_VERSION >= 100
-#    include <llvm/IR/IntrinsicsX86.h>
-#endif
-#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/IntrinsicsX86.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
@@ -1678,11 +1676,7 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
 inline uint64_t
 get_alignment(const llvm::StructLayout* layout)
 {
-#    if OSL_LLVM_VERSION < 100
-    return layout->getAlignment();
-#    else
     return layout->getAlignment().value();
-#    endif
 }
 #endif
 
@@ -4217,11 +4211,7 @@ LLVM_Util::llvm_type(const TypeDesc& typedesc)
 llvm::VectorType*
 LLVM_Util::llvm_vector_type(llvm::Type* elementtype, unsigned numelements)
 {
-#if OSL_LLVM_VERSION >= 110
     return llvm::FixedVectorType::get(elementtype, numelements);
-#else
-    return llvm::VectorType::get(elementtype, numelements);
-#endif
 }
 
 
@@ -4319,14 +4309,7 @@ LLVM_Util::op_alloca(llvm::Type* llvmtype, int n, const std::string& name,
     llvm::AllocaInst* allocainst = builder().CreateAlloca(llvmtype, numalloc,
                                                           name);
     if (align > 0) {
-#if OSL_LLVM_VERSION >= 110
-        using AlignmentType = llvm::Align;
-#elif OSL_LLVM_VERSION >= 100
-        using AlignmentType = llvm::MaybeAlign;
-#else
-        using AlignmentType = int;
-#endif
-        allocainst->setAlignment(AlignmentType(align));
+        allocainst->setAlignment(llvm::Align(align));
     }
     OSL_ASSERT(previousIP.isSet());
     m_builder->restoreIP(previousIP);
@@ -4366,15 +4349,9 @@ LLVM_Util::call_function(llvm::Value* func, cspan<llvm::Value*> args)
         llvm::outs() << "\t" << *a << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
-#if OSL_LLVM_VERSION >= 110
     llvm::Value* r = builder().CreateCall(
         static_cast<llvm::Function*>(func)->getFunctionType(), func,
         llvm::ArrayRef<llvm::Value*>(args.data(), args.size()));
-#else
-    llvm::Value* r
-        = builder().CreateCall(func, llvm::ArrayRef<llvm::Value*>(args.data(),
-                                                                  args.size()));
-#endif
     //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
 }
@@ -4448,12 +4425,7 @@ void
 LLVM_Util::op_memset(llvm::Value* ptr, int val, int len, int align)
 {
     builder().CreateMemSet(ptr, builder().getInt8((unsigned char)val),
-                           uint64_t(len),
-#if OSL_LLVM_VERSION >= 100
-                           llvm::MaybeAlign(align));
-#else
-                           unsigned(align));
-#endif
+                           uint64_t(len), llvm::MaybeAlign(align));
 }
 
 
@@ -4462,11 +4434,7 @@ void
 LLVM_Util::op_memset(llvm::Value* ptr, int val, llvm::Value* len, int align)
 {
     builder().CreateMemSet(ptr, builder().getInt8((unsigned char)val), len,
-#if OSL_LLVM_VERSION >= 100
                            llvm::MaybeAlign(align));
-#else
-                           unsigned(align));
-#endif
 }
 
 
@@ -4483,13 +4451,8 @@ void
 LLVM_Util::op_memcpy(llvm::Value* dst, int dstalign, llvm::Value* src,
                      int srcalign, int len)
 {
-#if OSL_LLVM_VERSION >= 100
     builder().CreateMemCpy(dst, llvm::MaybeAlign(dstalign), src,
                            llvm::MaybeAlign(srcalign), uint64_t(len));
-#else
-    builder().CreateMemCpy(dst, (unsigned)dstalign, src, (unsigned)srcalign,
-                           uint64_t(len));
-#endif
 }
 
 
@@ -4557,11 +4520,7 @@ LLVM_Util::op_linearize_4x_indices(llvm::Value* wide_index)
 std::array<llvm::Value*, 2>
 LLVM_Util::op_split_16x(llvm::Value* vector_val)
 {
-#if OSL_LLVM_VERSION >= 110
-    using index_t = int32_t;
-#else
-    using index_t = uint32_t;
-#endif
+    using index_t                       = int32_t;
     const index_t extractLanes0_to_7[]  = { 0, 1, 2, 3, 4, 5, 6, 7 };
     const index_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
 
@@ -4578,11 +4537,7 @@ LLVM_Util::op_split_16x(llvm::Value* vector_val)
 std::array<llvm::Value*, 2>
 LLVM_Util::op_split_8x(llvm::Value* vector_val)
 {
-#if OSL_LLVM_VERSION >= 110
-    using index_t = int32_t;
-#else
-    using index_t = uint32_t;
-#endif
+    using index_t                      = int32_t;
     const index_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
     const index_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
 
@@ -4601,11 +4556,7 @@ LLVM_Util::op_quarter_16x(llvm::Value* vector_val)
 {
     OSL_ASSERT(m_vector_width == 16);
 
-#if OSL_LLVM_VERSION >= 110
-    using index_t = int32_t;
-#else
-    using index_t = uint32_t;
-#endif
+    using index_t                        = int32_t;
     const index_t extractLanes0_to_3[]   = { 0, 1, 2, 3 };
     const index_t extractLanes4_to_7[]   = { 4, 5, 6, 7 };
     const index_t extractLanes8_to_11[]  = { 8, 9, 10, 11 };
@@ -4631,11 +4582,7 @@ llvm::Value*
 LLVM_Util::op_combine_8x_vectors(llvm::Value* half_vec_1,
                                  llvm::Value* half_vec_2)
 {
-#if OSL_LLVM_VERSION >= 110
     using index_t = int32_t;
-#else
-    using index_t = uint32_t;
-#endif
     static constexpr index_t combineIndices[]
         = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     return builder().CreateShuffleVector(half_vec_1, half_vec_2,
@@ -4646,11 +4593,7 @@ llvm::Value*
 LLVM_Util::op_combine_4x_vectors(llvm::Value* half_vec_1,
                                  llvm::Value* half_vec_2)
 {
-#if OSL_LLVM_VERSION >= 110
-    using index_t = int32_t;
-#else
-    using index_t = uint32_t;
-#endif
+    using index_t                             = int32_t;
     static constexpr index_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
     return builder().CreateShuffleVector(half_vec_1, half_vec_2,
                                          toArrayRef(combineIndices));
@@ -6813,14 +6756,10 @@ LLVM_Util::ptx_compile_group(llvm::Module*, const std::string& name,
     target_machine->addPassesToEmitFile(mpm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
                                         llvm::CodeGenFileType::AssemblyFile);
-#    elif OSL_LLVM_VERSION >= 100
-    target_machine->addPassesToEmitFile(mpm, assembly_stream,
-                                        nullptr,  // FIXME: Correct?
-                                        llvm::CGFT_AssemblyFile);
 #    else
     target_machine->addPassesToEmitFile(mpm, assembly_stream,
                                         nullptr,  // FIXME: Correct?
-                                        llvm::TargetMachine::CGFT_AssemblyFile);
+                                        llvm::CGFT_AssemblyFile);
 #    endif
 
     // Run the optimization passes on the module to generate the PTX

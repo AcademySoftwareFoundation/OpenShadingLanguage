@@ -48,7 +48,7 @@ set (OSL_USING_IMATH 3)
 
 # OpenImageIO
 checked_find_package (OpenImageIO REQUIRED
-                      VERSION_MIN 2.4
+                      VERSION_MIN 2.5
                       DEFINITIONS OIIO_HIDE_FORMAT=1)
 
 checked_find_package (pugixml REQUIRED
@@ -57,7 +57,7 @@ checked_find_package (pugixml REQUIRED
 
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
-                      VERSION_MIN 9.0
+                      VERSION_MIN 11.0
                       VERSION_MAX 19.9
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
 # ensure include directory is added (in case of non-standard locations
@@ -70,15 +70,6 @@ add_compile_definitions (OSL_LLVM_VERSION=${OSL_LLVM_VERSION})
 add_compile_definitions (OSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
 if (LLVM_NAMESPACE)
     add_compile_definitions (LLVM_NAMESPACE=${LLVM_NAMESPACE})
-endif ()
-if (APPLE AND LLVM_VERSION VERSION_EQUAL 10.0.1 AND EXISTS "/usr/local/Cellar/llvm")
-    message (WARNING
-             "${ColorYellow}If you are using LLVM 10.0.1 installed by Homebrew, "
-             "please note that a known bug in LLVM may produce a link error where "
-             "it says it can't find libxml2.tbd. If you encounter this, please "
-             "try upgrading to a newer LLVM: \n"
-             "    brew upgrade llvm \n"
-             "${ColorReset}\n")
 endif ()
 if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0 AND CMAKE_COMPILER_IS_CLANG
     AND ANY_CLANG_VERSION_STRING VERSION_LESS 15.0)

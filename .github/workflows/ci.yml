@@ -200,7 +200,7 @@ jobs:
         run: |
             src/build-scripts/ci-abicheck.bash ./build abi_standard/build \
                   liboslexec liboslcomp liboslquery liboslnoise
-      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: failure()
         with:
           name: osl-${{github.job}}-${{matrix.nametag}}
@@ -447,7 +447,7 @@ jobs:
         run: |
             src/build-scripts/ci-abicheck.bash ./build abi_standard/build \
                   liboslexec liboslcomp liboslquery liboslnoise
-      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: failure()
         with:
           name: osl-${{github.job}}-${{matrix.nametag}}
@@ -616,7 +616,7 @@ jobs:
       - name: Testsuite
         if: matrix.skip_tests != '1'
         run: src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: failure()
         with:
           name: osl-${{github.job}}-${{matrix.nametag}}
@@ -696,7 +696,7 @@ jobs:
             src/build-scripts/ci-build.bash
       - name: Testsuite
         run: src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: failure()
         with:
           name: osl-${{github.job}}-${{matrix.nametag}}

@@ -48,6 +48,9 @@ brew install --display-times -q llvm${LLVMBREWVER}
 if [[ "${USE_QT}" != "0" ]] ; then
     brew install --display-times -q qt${QT_VERSION}
 fi
+if [[ "${EXTRA_BREW_PACKAGES}" != "" ]] ; then
+    brew install --display-times -q ${EXTRA_BREW_PACKAGES}
+fi
 
 echo ""
 echo "After brew installs:"
@@ -61,6 +64,8 @@ pip${PYTHON_VERSION} install numpy || true
 export PATH=${HOMEBREW_PREFIX}/opt/qt5/bin:$PATH
 export PATH=${HOMEBREW_PREFIX}/opt/python/libexec/bin:$PATH
 export PYTHONPATH=${HOMEBREW_PREFIX}/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
+echo "PYTHONPATH=$PYTHONPATH"
+ls ${HOMEBREW_PREFIX}/lib/python${PYTHON_VERSION}
 # export PATH=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}/bin:$PATH
 export LLVM_DIRECTORY=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}
 export LLVM_ROOT=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}

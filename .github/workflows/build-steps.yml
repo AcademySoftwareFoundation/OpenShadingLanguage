@@ -128,22 +128,6 @@ jobs:
         run: |
             ${{inputs.setenvs}}
             src/build-scripts/ci-startup.bash
-      - name: Remove existing OpenEXR
-        if: inputs.openexr_ver != ''
-        shell: bash
-        run: |
-            sudo rm -rf /usr/local/include/OpenEXR
-            sudo rm -rf /usr/local/lib*/cmake/OpenEXR
-            sudo rm -rf /usr/local/lib*/libOpenOpenEXR*
-            sudo rm -rf /usr/local/lib*/python*/site-packages/OpenOpenEXR*
-      - name: Remove existing OIIO
-        if: inputs.openimageio_ver != ''
-        shell: bash
-        run: |
-            sudo rm -rf /usr/local/include/OpenImageIO
-            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
-            sudo rm -rf /usr/local/lib*/libOpenImageIO*
-            sudo rm -rf /usr/local/lib*/python*/site-packages/OpenImageIO*
       - name: Dependencies
         shell: bash
         run: |
@@ -155,6 +139,9 @@ jobs:
                 if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then \
                     OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0 -DCMAKE_UNITY_BUILD=ON" ; \
                     source src/build-scripts/build_openimageio.bash ; \
+                else \
+                    brew install --display-times -q openimageio ; \
+                    PYTHONPATH=$PYTHONPATH:/usr/local/lib/python${PYTHON_VERSION}/site-packages ; \
                 fi
                 src/build-scripts/save-env.bash
             elif [[ "$RUNNER_OS" == "Windows" ]]; then

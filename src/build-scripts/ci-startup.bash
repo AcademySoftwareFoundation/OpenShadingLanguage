@@ -11,11 +11,8 @@
 # Environment variables we always need
 export PATH=/usr/local/bin/_ccache:/usr/lib/ccache:$PATH
 export USE_CCACHE=${USE_CCACHE:=1}
-export CCACHE_CPP2=1
-export CCACHE_DIR=/tmp/ccache
-if [[ "${RUNNER_OS}" == "macOS" ]] ; then
-    export CCACHE_DIR=$HOME/.ccache
-fi
+export CCACHE_CPP2=
+export CCACHE_DIR=$HOME/.ccache
 mkdir -p $CCACHE_DIR
 
 export OSL_ROOT=$PWD/dist
@@ -33,12 +30,13 @@ export PYTHONPATH=/usr/local/lib64/python${PYTHON_VERSION}/site-packages:$PYTHON
 export PYTHONPATH=$OSL_ROOT/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 export BUILD_MISSING_DEPS=${BUILD_MISSING_DEPS:=1}
 export COMPILER=${COMPILER:=gcc}
+export CC=${CC:=gcc}
 export CXX=${CXX:=g++}
 export OSL_CI=true
 export USE_NINJA=${USE_NINJA:=1}
 export CMAKE_GENERATOR=${CMAKE_GENERATOR:=Ninja}
 export CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:=Release}
-export CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD:=11}
+export CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD:=17}
 
 export LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=$HOME/ext}
 export CMAKE_PREFIX_PATH=${LOCAL_DEPS_DIR}/dist:${CMAKE_PREFIX_PATH}
@@ -50,6 +48,10 @@ export TESTSUITE_CLEANUP_ON_SUCCESS=${TESTSUITE_CLEANUP_ON_SUCCESS:=1}
 
 # For CI, default to building missing dependencies automatically
 export OpenImageIO_BUILD_MISSING_DEPS=${OpenImageIO_BUILD_MISSING_DEPS:=all}
+
+# Sonar
+export BUILD_WRAPPER_OUT_DIR="${PWD}/bw_output"
+export BW_OUTPUT_DIR="${PWD}/bw_output"
 
 # Parallel builds
 if [[ `uname -s` == "Linux" ]] ; then
@@ -84,8 +86,10 @@ ls
 env | sort
 
 if [[ `uname -s` == "Linux" ]] ; then
+    echo "nprocs: " `nproc`
     head -40 /proc/cpuinfo
-elif [[ ${RUNNER_OS} == "macOS" ]] ; then
+elif [[ "${RUNNER_OS}" == "macOS" ]] ; then
+    echo "nprocs: " `sysctl -n hw.ncpu`
     sysctl machdep.cpu.features
 fi
 

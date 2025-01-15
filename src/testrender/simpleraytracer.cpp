@@ -475,7 +475,8 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 if (auto it = shadermap.find(name); it != shadermap.end()) {
                     int shaderID = it->second;
                     if (shaderID >= 0 && shaderID < int(shaders().size())) {
-                        fprintf(stderr, "Updating shader %d - %s\n", shaderID, shadertype.c_str());
+                        print(stderr, "Updating shader {} - {}\n", shaderID,
+                              shadertype);
                         // we already have a material under this name,
                         Material& m = shaders()[shaderID];
                         // TODO: could we query the shadertype directly from the ShaderGroup?
@@ -1234,13 +1235,15 @@ SimpleRaytracer::prepare_render()
         // Loop through all triangles and run displacement shader if there is one
         // or copy the input point if there is none
         std::vector<Vec3> disp_verts(scene.verts.size(), Vec3(0, 0, 0));
-        std::vector<int> valance(scene.verts.size(), 0); // number of times each vertex has been displaced
+        std::vector<int> valance(scene.verts.size(), 0);
+        // ^ number of times each vertex has been displaced
 
         OSL::PerThreadInfo* thread_info = shadingsys->create_thread_info();
         ShadingContext* ctx             = shadingsys->get_context(thread_info);
 
         bool has_smooth_normals = false;
-        for (int primID = 0, nprims = scene.triangles.size(); primID < nprims; primID++) {
+        for (int primID = 0, nprims = scene.triangles.size(); primID < nprims;
+             primID++) {
             Vec3 p[3], n[3];
             Vec2 uv[3];
 
@@ -1261,13 +1264,13 @@ SimpleRaytracer::prepare_render()
             }
 
 
-            Vec3 Ng = (p[0] - p[1]).cross(p[0] - p[2]);
+            Vec3 Ng    = (p[0] - p[1]).cross(p[0] - p[2]);
             float area = 0.5f * Ng.length();
-            Ng = Ng.normalize();
+            Ng         = Ng.normalize();
             if (scene.n_triangles[primID].a >= 0) {
-                n[0] = scene.normals[scene.n_triangles[primID].a];
-                n[1] = scene.normals[scene.n_triangles[primID].b];
-                n[2] = scene.normals[scene.n_triangles[primID].c];
+                n[0]               = scene.normals[scene.n_triangles[primID].a];
+                n[1]               = scene.normals[scene.n_triangles[primID].b];
+                n[2]               = scene.normals[scene.n_triangles[primID].c];
                 has_smooth_normals = true;
             } else {
                 n[0] = n[1] = n[2] = Ng;
@@ -1283,18 +1286,16 @@ SimpleRaytracer::prepare_render()
 
             // displace each vertex
             for (int i = 0; i < 3; i++) {
-                ShaderGlobals sg = {};
-                sg.P = p[i];
-                sg.Ng = Ng;
-                sg.N = n[i];
-                sg.u = uv[i].x;
-                sg.v = uv[i].y;
-                sg.I = (p[i] - camera.eye).normalize();
+                ShaderGlobals sg;
+                sg.P           = p[i];
+                sg.Ng          = Ng;
+                sg.N           = n[i];
+                sg.u           = uv[i].x;
+                sg.v           = uv[i].y;
+                sg.I           = (p[i] - camera.eye).normalize();
                 sg.surfacearea = area;
                 sg.renderstate = &sg;
-
                 shadingsys->execute(*ctx, *m_shaders[shaderID].disp, sg);
-
                 p[i] = sg.P;
             }
             disp_verts[scene.triangles[primID].a] += p[0];
@@ -1319,7 +1320,8 @@ SimpleRaytracer::prepare_render()
         if (has_smooth_normals) {
             // Recompute the vertex normals (if we had some)
             std::vector<Vec3> disp_normals(scene.normals.size(), Vec3(0, 0, 0));
-            for (int primID = 0, nprims = scene.triangles.size(); primID < nprims; primID++) {
+            for (int primID = 0, nprims = scene.triangles.size();
+                 primID < nprims; primID++) {
                 if (scene.n_triangles[primID].a >= 0) {
                     Vec3 p[3];
                     p[0] = scene.verts[scene.triangles[primID].a];

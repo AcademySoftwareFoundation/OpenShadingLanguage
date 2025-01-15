@@ -14,7 +14,7 @@
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {  // OSL::pvt
 
@@ -333,4 +333,4 @@ relaxed_equivalent(const TypeSpec& a, const TypeSpec& b)
 
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

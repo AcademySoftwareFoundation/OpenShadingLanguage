@@ -6,7 +6,7 @@
 
 #include <OSL/oslconfig.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 namespace pvt {
@@ -48,4 +48,4 @@ private:
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 struct TangentFrame {
     // build frame from unit normal
@@ -292,4 +292,4 @@ private:
 };
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

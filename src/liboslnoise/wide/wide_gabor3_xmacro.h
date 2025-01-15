@@ -26,7 +26,7 @@
 #include "wide_gabornoise.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace __OSL_WIDE_PVT {
 
@@ -68,4 +68,4 @@ wide_pgabor3<__OSL_XMACRO_ANISOTROPIC, __OSL_XMACRO_FILTER_POLICY>(
 
 
 };  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

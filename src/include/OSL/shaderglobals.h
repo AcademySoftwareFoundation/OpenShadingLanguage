@@ -5,7 +5,7 @@
 #pragma once
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 struct ClosureColor;
 class ShadingContext;
@@ -480,4 +480,4 @@ get_max_warnings_per_thread(const OpaqueExecContextPtr oec)
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

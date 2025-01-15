@@ -14,7 +14,7 @@
 // specifying the string literal and the name to use for the variable.
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -68,4 +68,4 @@ namespace Hashes {
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

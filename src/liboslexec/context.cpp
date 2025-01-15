@@ -22,7 +22,7 @@
 
 #include "oslexec_pvt.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 static mutex buffered_errors_mutex;
 #if OSL_USE_BATCHED
@@ -678,4 +678,4 @@ template class ShadingContext::Batched<4>;
 #endif
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

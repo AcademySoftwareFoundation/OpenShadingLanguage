@@ -8,7 +8,7 @@
 #include <OSL/oslconfig.h>
 #include <algorithm>  // upper_bound
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 // std::upper_bound is not supported in device code, so define a version of it here.
@@ -273,4 +273,4 @@ private:
     float invjacobian = 0.0f;
 };
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

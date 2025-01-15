@@ -8,7 +8,7 @@
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 /// Wrapper class for holding a "device" pointer -- GPU or whatnot. It
@@ -54,4 +54,4 @@ private:
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

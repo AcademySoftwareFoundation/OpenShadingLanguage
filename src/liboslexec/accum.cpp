@@ -7,7 +7,7 @@
 #include "lpeparse.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 
@@ -201,4 +201,4 @@ Accumulator::end(void* flush_data)
         m_outputs[i].flush(flush_data);
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

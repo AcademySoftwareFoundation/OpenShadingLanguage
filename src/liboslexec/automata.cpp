@@ -8,7 +8,7 @@
 #include <cstdio>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace Strutil = OIIO::Strutil;
 
@@ -687,4 +687,4 @@ DfOptimizedAutomata::compileFrom(const DfAutomata& dfautomata)
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -4,7 +4,7 @@
 
 cmake_minimum_required (VERSION 3.19)
 
-set (OSL_VERSION "1.14.3.0")
+set (OSL_VERSION "1.14.4.0")
 set (OSL_VERSION_OVERRIDE "" CACHE STRING
      "Version override (use with caution)!")
 mark_as_advanced (OSL_VERSION_OVERRIDE)
@@ -163,22 +163,32 @@ add_compile_definitions (OSL_INTERNAL=1)
 # OIIO_DISABLE_DEPRECATED before including any OIIO headers.
 add_compile_definitions (OIIO_DISABLE_DEPRECATED=900000)
 
-# Set the default namespace. For symbol hiding reasons, it's important that
-# the project name is a subset of the namespace name.
-set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING
-     "Customized outer namespace base name (version will be added)")
-option (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH
+# Namespace settings
+#
+# The "outer namespace" defaults to the project name, but it can be overridden
+# to allow custom builds that put everything inside a unique namespace that
+# can't conflict with default builds.
+set (${PROJ_NAME}_OUTER_NAMESPACE ${PROJECT_NAME} CACHE STRING
+     "Customized outer namespace")
+set (PROJ_NAMESPACE "${${PROJ_NAME}_OUTER_NAMESPACE}")  # synonym
+if (NOT ${PROJ_NAME}_OUTER_NAMESPACE STREQUAL ${PROJECT_NAME})
+    set (${PROJ_NAME}_CUSTOM_OUTER_NAMESPACE 1)
+endif ()
+# There is also an inner namespace that is either vMAJ_MIN or vMAJ_MIN_PATCH,
+# depending on the setting of ${PROJ_NAME}_INNER_NAMESPACE_INCLUDE_PATCH.
+option (${PROJ_NAME}_INNER_NAMESPACE_INCLUDE_PATCH
         "Should the inner namespace include the patch number" ${${PROJECT_NAME}_DEV_RELEASE})
-set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
-string(REGEX MATCH ${PROJECT_NAME} NAMESPACE_HAS_PROJECT_NAME ${PROJ_NAMESPACE})
-if (NOT NAMESPACE_HAS_PROJECT_NAME)
-    set (PROJ_NAMESPACE ${PROJECT_NAME}_${PROJ_NAMESPACE})
+if (${PROJ_NAME}_INNER_NAMESPACE_INCLUDE_PATCH)
+    set (PROJ_VERSION_NAMESPACE "v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}_${PROJECT_VERSION_PATCH}")
+else ()
+    set (PROJ_VERSION_NAMESPACE "v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
 endif ()
-set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
-if (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH)
-    set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE_V}_${PROJECT_VERSION_PATCH}")
-endif ()
-message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
+# PROJ_NAMESPACE_V combines the outer and inner namespaces into one symbol
+set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_${PROJ_VERSION_NAMESPACE}")
+message(STATUS "Outer namespace PROJ_OUTER_NAMESPACE:   ${PROJ_NAMESPACE}")
+message(STATUS "Inner namespace PROJ_VERSION_NAMESPACE: ${PROJ_VERSION_NAMESPACE}")
+message(STATUS "Joint namespace PROJ_NAMESPACE_V:       ${PROJ_NAMESPACE_V}")
+
 
 # Define OSL_INTERNAL symbol only when building OSL itself, will not be
 # defined for downstream projects using OSL.

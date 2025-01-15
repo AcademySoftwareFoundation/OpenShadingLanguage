@@ -18,7 +18,7 @@
 
 #include "oslexec_pvt.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace __OSL_WIDE_PVT {
 
@@ -930,6 +930,6 @@ __OSL_OP(get_textureinfo_uniform)(void* bsg_, ustring_pod name_, void* handle,
 
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #include "undef_opname_macros.h"

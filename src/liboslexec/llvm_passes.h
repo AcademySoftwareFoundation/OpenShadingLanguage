@@ -18,7 +18,7 @@
 #include <llvm/Pass.h>
 #include <llvm/Support/Casting.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -438,4 +438,4 @@ template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>::ID = 0;
 }  // end of anonymous namespace
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

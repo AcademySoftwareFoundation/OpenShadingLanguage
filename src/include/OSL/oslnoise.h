@@ -21,7 +21,7 @@
 #include <OSL/sfmath.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 namespace oslnoise {
@@ -3379,4 +3379,4 @@ DECLNOISE (hashnoise, HashNoise)
 }   // namespace oslnoise
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

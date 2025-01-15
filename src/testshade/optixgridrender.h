@@ -14,7 +14,7 @@
 #include "simplerend.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 class OptixGridRenderer final : public SimpleRenderer {
@@ -110,4 +110,4 @@ private:
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

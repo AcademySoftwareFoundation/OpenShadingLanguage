@@ -25,7 +25,7 @@
 #include <OpenImageIO/fmath.h>
 #include "splineimpl.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -155,4 +155,4 @@ osl_splineinverse_dffdf(void* out, ustringhash_pod spline_, void* x,
 
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

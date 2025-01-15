@@ -7,7 +7,7 @@
 
 using namespace OSL;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 struct UniqueStringCache {
     UniqueStringCache()
@@ -1004,4 +1004,4 @@ template class BatchedSimpleRenderer<8>;
 template class BatchedSimpleRenderer<4>;
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

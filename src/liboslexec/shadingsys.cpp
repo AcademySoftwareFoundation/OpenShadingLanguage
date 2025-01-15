@@ -56,7 +56,7 @@ extern unsigned char shadeops_cuda_ptx_compiled_ops_block[];
 #endif
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 
@@ -4440,7 +4440,7 @@ ShadingContext::ocio_transform(ustring fromspace, ustring tospace,
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 
 

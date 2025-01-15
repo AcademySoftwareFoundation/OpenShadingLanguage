@@ -6,7 +6,7 @@
 
 #include <OSL/dual_vec.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 
@@ -181,4 +181,4 @@ struct UNullNoise {
 };
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

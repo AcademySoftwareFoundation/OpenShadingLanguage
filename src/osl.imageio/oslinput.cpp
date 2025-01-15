@@ -22,7 +22,7 @@ using namespace OIIO;
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 /// OSLInput is an ImageInput that behaves as if it's reading an image,
@@ -701,4 +701,4 @@ OSLInput::read_native_tile(int subimage, int miplevel, int x, int y, int z,
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

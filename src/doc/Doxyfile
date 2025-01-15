@@ -697,7 +697,7 @@ SHOW_FILES             = YES
 # Folder Tree View (if specified).
 # The default value is: YES.
 
-SHOW_NAMESPACES        = YES
+SHOW_NAMESPACES        = NO
 
 # The FILE_VERSION_FILTER tag can be used to specify a program or script that
 # doxygen should invoke to get the current version for each file (typically from
@@ -2162,6 +2162,8 @@ PREDEFINED             = DOXYGEN_SHOULD_SKIP_THIS \
                          OSL_HOSTDEVICE= \
                          OSL_NAMESPACE_BEGIN="namespace OSL {" \
                          OSL_NAMESPACE_END="}" \
+                         OSL_NS_BEGIN="namespace OSL {" \
+                         OSL_NS_END="}" \
                          OSL_CONSTEXPR14=constexpr \
                          OSL_CONSTEXPR17=constexpr \
                          OSL_CONSTEXPR20=constexpr \

@@ -10,7 +10,7 @@
 #include <fstream>
 #include <iostream>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 int
 decode_message(uint64_t format_hash, int32_t arg_count,
@@ -436,4 +436,4 @@ Reader::process_entries_for_thread(int thread_index)
 
 }  //namespace journal
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

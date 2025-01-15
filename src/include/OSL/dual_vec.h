@@ -26,7 +26,7 @@
 #include <OSL/dual.h>
 #include <OSL/Imathx/Imathx.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 #if 0 // appears unused
 /// Templated trick to be able to derive what type we use to represent
@@ -559,4 +559,4 @@ distance (const Vec3 &a, const Dual<Vec3,P> &b)
     return length (a - b);
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

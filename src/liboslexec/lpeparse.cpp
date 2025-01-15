@@ -6,7 +6,7 @@
 #include <OSL/oslclosure.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 
@@ -452,4 +452,4 @@ Parser::parse(const char* text)
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

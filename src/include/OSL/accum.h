@@ -9,7 +9,7 @@
 #include <list>
 #include <stack>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 class Aov {
 public:
@@ -230,4 +230,4 @@ private:
 };
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

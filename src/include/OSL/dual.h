@@ -13,7 +13,7 @@
 #include <OpenImageIO/fmath.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 // Shortcut notation for enable_if trickery
@@ -1367,4 +1367,4 @@ ifloor (const Dual<T,P> &x)
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -52,7 +52,7 @@ using namespace OSL::pvt;
 }
 
 %{
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 int yylex(YYSTYPE* yylval_param, YYLTYPE* yylloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler);
@@ -61,7 +61,7 @@ void yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSLCompilerImpl* oslcompil
 TypeDesc osllextype (int lex);
 
 } // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 %}
 
 

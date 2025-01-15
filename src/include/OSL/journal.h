@@ -13,7 +13,7 @@
 #include <OSL/oslconfig.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 /// Journal Buffer approach:  each thread gets its own chain of pages within
 /// the shared journal buffer for recording errors, warnings, etc.
@@ -361,4 +361,4 @@ private:
 
 }  // namespace journal
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

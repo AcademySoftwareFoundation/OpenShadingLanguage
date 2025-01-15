@@ -15,7 +15,7 @@
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -1234,4 +1234,4 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
 } // namespace __OSL_WIDE_PVT or pvt
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

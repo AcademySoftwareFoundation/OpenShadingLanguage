@@ -12,7 +12,7 @@
 
 #include <OpenImageIO/fmath.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -232,4 +232,4 @@ floor(const Dual2<Vec3>& vd)
 
 }  // namespace pvt
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

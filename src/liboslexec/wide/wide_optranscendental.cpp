@@ -24,7 +24,7 @@
 
 #include <OpenImageIO/fmath.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
@@ -105,6 +105,6 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 #include "wide_opunary_per_component_float_or_vector_xmacro.h"
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #include "undef_opname_macros.h"

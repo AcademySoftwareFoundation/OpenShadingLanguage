@@ -5,7 +5,7 @@
 #include "lpexp.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 
@@ -192,4 +192,4 @@ lpexp::Rule::genAuto(NdfAutomata& automata) const
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

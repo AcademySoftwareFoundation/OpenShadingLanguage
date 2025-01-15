@@ -12,7 +12,7 @@
 #include "../raytracer.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 // TODO: update types from char * to ustringhash or ustringhash_pod
@@ -30,7 +30,7 @@ extern __device__ CUdeviceptr xform_name_buffer;
 extern __device__ CUdeviceptr xform_buffer;
 }  // namespace pvt
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 namespace {  // anonymous namespace
 

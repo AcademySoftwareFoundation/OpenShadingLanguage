@@ -109,7 +109,7 @@ struct ParameterTestParams {
 }  // anonymous namespace
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 static TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
@@ -1123,4 +1123,4 @@ SimpleRenderer::filefmt(OSL::ShaderGlobals* sg, OSL::ustringhash filename_hash,
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

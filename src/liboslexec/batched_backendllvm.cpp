@@ -17,7 +17,7 @@
 using namespace OSL;
 using namespace OSL::pvt;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace Strings {
 
@@ -2180,4 +2180,4 @@ BatchedBackendLLVM::llvm_print_mask(const char* title, llvm::Value* mask)
 }
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

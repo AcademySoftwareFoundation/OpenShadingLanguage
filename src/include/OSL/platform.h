@@ -508,7 +508,7 @@
 #    define OSL_ALLOCA(type, size) (assert(size < (1<<20)), (size) != 0 ? (reinterpret_cast<type*>(alloca((size) * sizeof(type)))) : nullptr)
 #endif
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 /// Standards-compliant bit cast of two equally sized types. This is used
@@ -610,4 +610,4 @@ DataT* assume_aligned(DataT* ptr)
 
 static constexpr int MaxSupportedSimdLaneCount = 16;
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

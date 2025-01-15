@@ -48,7 +48,7 @@ static ustring u_I("I");
 static ustring main_method_name("___main___");
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {  // OSL::pvt
 
@@ -3577,4 +3577,4 @@ RuntimeOptimizer::police_failed_optimizations()
 }
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

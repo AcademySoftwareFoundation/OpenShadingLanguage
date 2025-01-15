@@ -19,7 +19,7 @@ namespace Strutil    = OIIO::Strutil;
 using OIIO::string_view;
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 
@@ -392,4 +392,4 @@ OSLQuery::open_bytecode(string_view buffer)
     return ok;
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

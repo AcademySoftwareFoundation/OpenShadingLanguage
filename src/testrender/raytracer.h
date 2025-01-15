@@ -31,7 +31,7 @@
 // See the source files in the cuda subdirectory for the implementations.
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 class OptixRenderer;  // FIXME -- should not be here
 
@@ -333,4 +333,4 @@ struct Scene {
 #endif
 };
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

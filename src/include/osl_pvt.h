@@ -9,7 +9,7 @@
 #include <OSL/oslconfig.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 class ASTNode;
@@ -1164,7 +1164,7 @@ track_variable_lifetimes_main(const OpcodeVec& ircode,
 
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 
 

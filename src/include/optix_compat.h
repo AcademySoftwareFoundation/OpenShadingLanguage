@@ -27,7 +27,7 @@ using float3      = OSL::Vec3;
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 #if OSL_USE_OPTIX
 
@@ -86,4 +86,4 @@ cudaFree(void* p)
 
 #endif
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

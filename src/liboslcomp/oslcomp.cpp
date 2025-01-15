@@ -36,7 +36,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 OSLCompiler::OSLCompiler(ErrorHandler* errhandler)
@@ -1393,4 +1393,4 @@ OSLCompilerImpl::syms_used_in_op_range(OpcodeVec::const_iterator opbegin,
 
 };  // namespace pvt
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -9,7 +9,7 @@
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 void
 Scene::add_model(const std::string& filename, const ShaderMap& shadermap,
@@ -267,4 +267,4 @@ Scene::add_quad(const Vec3& p, const Vec3& ex, const Vec3& ey, int shaderID,
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

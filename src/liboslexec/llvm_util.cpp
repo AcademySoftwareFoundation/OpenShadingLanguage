@@ -128,7 +128,7 @@
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 // Convert our cspan<> to llvm's ArrayRef.
@@ -6885,4 +6885,4 @@ LLVM_Util::getCurrentInliningSite() const
 }
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

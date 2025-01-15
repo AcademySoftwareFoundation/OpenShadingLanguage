@@ -6,7 +6,7 @@
 
 #include "gabornoise.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -415,4 +415,4 @@ pgabor3(const Dual2<Vec3>& P, const Vec3& Pperiod, const NoiseParams* opt)
 
 };  // namespace pvt
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

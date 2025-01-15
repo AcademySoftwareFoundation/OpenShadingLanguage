@@ -8,7 +8,7 @@
 
 #include <OSL/oslconfig.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 // clang-format off
@@ -371,4 +371,4 @@ Mask<WidthT>::invoke_foreach(FunctorT f) const
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

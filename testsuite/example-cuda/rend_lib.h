@@ -6,17 +6,16 @@
 
 #include <OSL/device_string.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 // Create an OptiX variable for each of the 'standard' strings declared in
 // <OSL/strdecls.h>.
 namespace DeviceStrings {
-#define STRDECL(str, var_name) \
-    extern __device__ OSL_NAMESPACE::DeviceString var_name;
+#define STRDECL(str, var_name) extern __device__ OSL::DeviceString var_name;
 
 #include <OSL/strdecls.h>
 #undef STRDECL
 }  // namespace DeviceStrings
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #include "closures.h"
 

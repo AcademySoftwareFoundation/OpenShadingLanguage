@@ -64,7 +64,7 @@ using OIIO::spin_mutex;
 namespace Strutil = OIIO::Strutil;
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 
@@ -2705,4 +2705,4 @@ protected:
 };  // namespace pvt
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

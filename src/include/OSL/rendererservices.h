@@ -10,7 +10,7 @@
 #include <OSL/variant.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 class RendererServices;
 template<int WidthT> class BatchedRendererServices;
@@ -594,4 +594,4 @@ protected:
 
 
 OSL_PRAGMA_WARNING_POP
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

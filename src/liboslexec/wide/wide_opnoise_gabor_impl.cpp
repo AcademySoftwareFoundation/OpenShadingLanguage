@@ -17,7 +17,7 @@
 
 using namespace OSL;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 #include "define_opname_macros.h"
@@ -191,7 +191,7 @@ __OSL_NOISE_OP2(Wdv, Wdv)(char* name, char* r_ptr, char* p_ptr, char* bsg,
 
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #undef LOOKUP_WIDE_GABOR_IMPL_BY_OPT
 

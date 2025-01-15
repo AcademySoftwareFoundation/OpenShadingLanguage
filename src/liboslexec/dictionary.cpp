@@ -21,7 +21,7 @@ namespace pugi = OIIO::pugi;
 #include "oslexec_pvt.h"
 #include <OSL/fmt_util.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {  // OSL::pvt
 
@@ -506,4 +506,4 @@ osl_dict_value(OpaqueExecContextPtr oec, int nodeID,
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

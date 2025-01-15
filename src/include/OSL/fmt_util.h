@@ -15,7 +15,7 @@
 // functions must be ustringhash.  To make this easier, these wrappers
 // automatically convert ustring and const char * to ustringhash.
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 // PackedArgs is similar to tuple but packs its data back to back
@@ -143,4 +143,4 @@ warningfmt(OpaqueExecContextPtr oec, const SpecifierT& fmt_specification,
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -17,7 +17,7 @@
 #include <OpenImageIO/fmath.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 #ifdef __OSL_WIDE_PVT
     namespace __OSL_WIDE_PVT {
@@ -278,4 +278,4 @@ namespace sfm
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

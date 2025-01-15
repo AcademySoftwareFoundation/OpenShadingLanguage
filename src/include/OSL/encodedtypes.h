@@ -6,7 +6,7 @@
 
 #include <OSL/oslconfig.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 // Substitute for variable argument list, which is traditionally used with a printf, with arrays
@@ -214,4 +214,4 @@ template<> struct TypeEncoder<uint8_t> {
 }  // namespace pvt
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

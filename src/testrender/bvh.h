@@ -7,7 +7,7 @@
 #include <OSL/oslconfig.h>
 #include <memory>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 struct BVHNode {
     float bounds[6];
@@ -41,4 +41,4 @@ struct BVH {
     std::unique_ptr<unsigned[]> indices;
 };
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -18,7 +18,7 @@ using namespace OSL::pvt;
 #    undef RGB
 #endif
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 
@@ -185,4 +185,4 @@ shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
                        shadelocations, roi, OIIO::paropt(popt));
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

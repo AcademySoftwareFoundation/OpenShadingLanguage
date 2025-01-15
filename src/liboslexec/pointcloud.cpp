@@ -11,7 +11,7 @@
 
 #include <OSL/rs_free_function.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 #ifdef USE_PARTIO
@@ -496,4 +496,4 @@ osl_pointcloud_write(OpaqueExecContextPtr oec, ustringhash_pod filename_,
 }
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

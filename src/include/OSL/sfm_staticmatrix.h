@@ -9,7 +9,7 @@
 
 using namespace std;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace __OSL_WIDE_PVT {
 
@@ -476,4 +476,4 @@ struct DynamicMatrix44 {
 
 }  // namespace sfm
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

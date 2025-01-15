@@ -10,7 +10,7 @@
 
 #include <OSL/oslconfig.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 #ifdef USE_PARTIO
@@ -151,4 +151,4 @@ TypeDescOfPartioType(const Partio::ParticleAttribute* ptype)
 #endif
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

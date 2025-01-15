@@ -11,7 +11,7 @@
 using namespace OSL;
 using namespace OSL::pvt;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 #ifdef OIIO_TEXTURESYSTEM_CREATE_SHARED
@@ -349,4 +349,4 @@ template class OSLEXECPUBLIC BatchedRendererServices<16>;
 template class OSLEXECPUBLIC BatchedRendererServices<8>;
 template class OSLEXECPUBLIC BatchedRendererServices<4>;
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

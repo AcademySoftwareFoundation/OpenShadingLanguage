@@ -23,7 +23,7 @@
 
 #include "opcolor_impl.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -519,4 +519,4 @@ osl_transformc(OpaqueExecContextPtr oec, void* Cin, int Cin_derivs, void* Cout,
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

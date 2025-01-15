@@ -12,7 +12,7 @@
 #include <OpenImageIO/refcnt.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 // Various forward declarations
 class RendererServices;
@@ -1164,4 +1164,4 @@ shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
 #endif
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

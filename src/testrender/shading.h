@@ -14,7 +14,7 @@
 #include "sampling.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 enum ClosureIDs {
@@ -432,4 +432,4 @@ process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
 OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* Ci);
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

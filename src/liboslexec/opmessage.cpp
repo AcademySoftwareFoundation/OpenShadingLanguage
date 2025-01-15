@@ -23,7 +23,7 @@
 //
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 
@@ -138,4 +138,4 @@ osl_getmessage(ShaderGlobals* sg, ustringhash_pod source_,
 
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

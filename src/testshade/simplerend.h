@@ -20,7 +20,7 @@
 
 #include "render_state.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 void
@@ -253,4 +253,4 @@ protected:
                                   ustringhash name, void* val);
 };
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

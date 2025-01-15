@@ -14,7 +14,7 @@
 
 using namespace OSL;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
@@ -248,6 +248,6 @@ __OSL_GENERIC_DISPATCH2(Wdv, Wdv, Wv, Wv, Dual2<Vec3>)
 
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #include "undef_opname_macros.h"

@@ -11,7 +11,7 @@
 #include <OSL/dual_vec.h>
 #include <OSL/wide.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 struct NoiseParams;
 
@@ -121,4 +121,4 @@ wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<Vec3>> wP,
 
 }  // namespace __OSL_WIDE_PVT
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

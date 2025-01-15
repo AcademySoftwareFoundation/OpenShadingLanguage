@@ -10,22 +10,29 @@ name: CI
 on:
   push:
     # Skip jobs when only documentation files are changed
-    paths-ignore:
-      - '**.md'
-      - '**.rst'
-      - '**.tex'
+    # Skip jobs when only documentation files are changed
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.rst'
+      - '!**.tex'
+      - '!**/analysis.yml'
+      - '!**/docs.yml'
+      - '!**.properties'
+      - '!doc/**'
   pull_request:
-    paths-ignore:
-      - '**.md'
-      - '**.rst'
-      - '**.tex'
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.rst'
+      - '!**.tex'
+      - '!doc/**'
   schedule:
     # Full nightly build, for the main project repo (not for forks)
     - cron: "0 6 * * *"
       if: github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
   workflow_dispatch:
     # This allows manual triggering of the workflow from the web
-
 
 permissions: read-all
 
@@ -181,25 +188,6 @@ jobs:
       - name: Testsuite
         if: matrix.skip_tests != '1'
         run: src/build-scripts/ci-test.bash
-      - name: Check out ABI standard
-        if: matrix.abi_check != ''
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
-        with:
-          ref: ${{matrix.abi_check}}
-          path: abi_standard
-      - name: Build ABI standard
-        if: matrix.abi_check != ''
-        run: |
-            mkdir -p abi_standard/build
-            pushd abi_standard
-            export LD_LIBRARY_PATH="${PWD}/build/lib:${LD_LIBRARY_PATH}"
-            src/build-scripts/ci-build.bash
-            popd
-      - name: Check ABI
-        if: matrix.abi_check != ''
-        run: |
-            src/build-scripts/ci-abicheck.bash ./build abi_standard/build \
-                  liboslexec liboslcomp liboslquery liboslnoise
       - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: failure()
         with:
@@ -212,28 +200,56 @@ jobs:
             build/testsuite/*/*.*
 
 
-  aswf:
-    name: "VFX${{matrix.vfxyear}} ${{matrix.desc}}"
+
+  linux:
+    name: "${{matrix.desc}}"
+    uses: ./.github/workflows/build-steps.yml
+    with:
+      nametag: ${{ matrix.nametag || 'unnamed!' }}
+      runner: ${{ matrix.runner || 'ubuntu-latest' }}
+      container: ${{ matrix.container }}
+      cc_compiler: ${{ matrix.cc_compiler || 'gcc' }}
+      cxx_compiler: ${{ matrix.cxx_compiler || 'g++' }}
+      cxx_std: ${{ matrix.cxx_std || '17' }}
+      build_type: ${{ matrix.build_type || 'Release' }}
+      depcmds: ${{ matrix.depcmds }}
+      extra_artifacts: ${{ matrix.extra_artifacts }}
+      fmt_ver: ${{ matrix.fmt_ver }}
+      opencolorio_ver: ${{ matrix.opencolorio_ver }}
+      openexr_ver: ${{ matrix.openexr_ver }}
+      openimageio_ver: ${{ matrix.openimageio_ver }}
+      pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_ver: ${{ matrix.python_ver }}
+      setenvs: ${{ matrix.setenvs }}
+      simd: ${{ matrix.simd }}
+      batched: ${{ matrix.batched }}
+      skip_build: ${{ matrix.skip_build }}
+      skip_tests: ${{ matrix.skip_tests }}
+      abi_check: ${{ matrix.abi_check }}
+      build_docs: ${{ matrix.build_docs }}
+      generator: ${{ matrix.generator }}
+      ctest_args: ${{ matrix.ctest_args }}
+      ctest_test_timeout: ${{ matrix.ctest_test_timeout || '800' }}
+      coverage: ${{ matrix.coverage || 0 }}
+      sonar: ${{ matrix.sonar || 0 }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc11/C++17 llvm15 py3.10 oiio-rel avx2
+          - desc: VP2023 gcc11/C++17 llvm15 py3.10 oiio-rel avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
-            vfxyear: 2023
             cxx_std: 17
             openimageio_ver: release
             python_ver: "3.10"
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: GPU Cuda11 gcc11/C++17 llvm15 py3.10 OIIO-main avx2
+          - desc: VP2023 GPU Cuda11 gcc11/C++17 llvm15 py3.10 OIIO-main avx2
             nametag: linux-optix7-2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
-            vfxyear: 2023
             cxx_std: 17
             openimageio_ver: main
             python_ver: "3.10"
@@ -242,11 +258,10 @@ jobs:
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
-          - desc: gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
+          - desc: VP2024 gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
             nametag: linux-vfx2024
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2024-clang17
-            vfxyear: 2024
             cxx_std: 17
             openimageio_ver: release
             python_ver: "3.11"
@@ -260,7 +275,6 @@ jobs:
             nametag: sanitizer
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2024-clang17
-            vfxyear: 2024
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
@@ -304,7 +318,6 @@ jobs:
             nametag: linux-vfx2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
-            vfxyear: 2023
             cc_compiler: gcc
             cxx_compiler: g++
             cxx_std: 17
@@ -324,7 +337,6 @@ jobs:
             nametag: linux-icc
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
-            vfxyear: 2023
             cc_compiler: icc
             cxx_compiler: icpc
             cxx_std: 17
@@ -349,7 +361,6 @@ jobs:
             nametag: linux-icx
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
-            vfxyear: 2023
             cc_compiler: icx
             cxx_compiler: icpx
             cxx_std: 17
@@ -363,108 +374,6 @@ jobs:
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF" USE_OPENVDB=0
                             OPENCOLORIO_CXX=g++
 
-    runs-on: ${{matrix.runner}}
-    container:
-        image: ${{ matrix.container }}
-    env:
-      CXX: ${{matrix.cxx_compiler}}
-      CC: ${{matrix.cc_compiler}}
-      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
-      FMT_VERSION: ${{matrix.fmt_ver}}
-      OPENCOLORIO_VERSION: ${{matrix.opencolorio_ver}}
-      OPENEXR_VERSION: ${{matrix.openexr_ver}}
-      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
-      PYBIND11_VERSION: ${{matrix.pybind11_ver}}
-      PYTHON_VERSION: ${{matrix.python_ver}}
-      USE_BATCHED: ${{matrix.batched}}
-      USE_SIMD: ${{matrix.simd}}
-      ABI_CHECK: ${{matrix.abi_check}}
-      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
-    steps:
-      # We would like to use harden-runner, but it flags too many false
-      # positives, every time we download a dependency. We should use it only
-      # on CI runs where we are producing artifacts that users might rely on.
-      # - name: Harden Runner
-      #   uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813 # v1.4.3
-      #   with:
-      #     egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.4
-        with:
-          path: /tmp/ccache
-          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
-          restore-keys: ${{github.job}}-${{matrix.nametag}}-
-      - name: Build setup
-        run: |
-            ${{matrix.setenvs}}
-            src/build-scripts/ci-startup.bash
-      - name: Remove existing OpenEXR
-        if: matrix.openexr_ver != ''
-        run: |
-            sudo rm -rf /usr/local/include/OpenEXR
-            sudo rm -rf /usr/local/lib*/cmake/OpenEXR
-            sudo rm -rf /usr/local/lib*/libOpenOpenEXR*
-            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenOpenEXR*
-      - name: Remove existing OIIO
-        if: matrix.openimageio_ver != ''
-        run: |
-            sudo rm -rf /usr/local/include/OpenImageIO
-            sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
-            sudo rm -rf /usr/local/lib*/libOpenImageIO*
-            sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO*
-      - name: Dependencies
-        run: |
-            ${{matrix.depcmds}}
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        if: matrix.skip_tests != '1'
-        run: src/build-scripts/ci-test.bash
-      - name: Check out ABI standard
-        if: matrix.abi_check != ''
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
-        with:
-          ref: ${{matrix.abi_check}}
-          path: abi_standard
-      - name: Build ABI standard
-        if: matrix.abi_check != ''
-        run: |
-            mkdir -p abi_standard/build
-            pushd abi_standard
-            export LD_LIBRARY_PATH="${PWD}/build/lib:${LD_LIBRARY_PATH}"
-            src/build-scripts/ci-build.bash
-            popd
-      - name: Check ABI
-        if: matrix.abi_check != ''
-        run: |
-            src/build-scripts/ci-abicheck.bash ./build abi_standard/build \
-                  liboslexec liboslcomp liboslquery liboslnoise
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: failure()
-        with:
-          name: osl-${{github.job}}-${{matrix.nametag}}
-          path: |
-            build/cmake-save
-            build/compat_reports
-            build/*.cmake
-            build/CMake*
-            build/testsuite/*/*.*
-
-
-  ubuntu:
-    name: "Ubuntu ${{matrix.desc}}"
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
           - desc: Debug gcc7/C++17 llvm11 py3.8 oiio2.5 exr3.1 sse4
             nametag: linux-debug-gcc7-llvm11
             runner: ubuntu-20.04
@@ -571,137 +480,69 @@ jobs:
                             USE_PYTHON=0
                             QT_VERSION=0
 
-    runs-on: ${{matrix.runner}}
-    env:
-      CXX: ${{matrix.cxx_compiler}}
-      CC: ${{matrix.cc_compiler}}
-      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
-      FMT_VERSION: ${{matrix.fmt_ver}}
-      OPENCOLORIO_VERSION: ${{matrix.opencolorio_ver}}
-      OPENEXR_VERSION: ${{matrix.openexr_ver}}
-      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
-      PYBIND11_VERSION: ${{matrix.pybind11_ver}}
-      PYTHON_VERSION: ${{matrix.python_ver}}
-      USE_BATCHED: ${{matrix.batched}}
-      USE_SIMD: ${{matrix.simd}}
-    steps:
-      # We would like to use harden-runner, but it flags too many false
-      # positives, every time we download a dependency. We should use it only
-      # on CI runs where we are producing artifacts that users might rely on.
-      # - name: Harden Runner
-      #   uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813 # v1.4.3
-      #   with:
-      #     egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.4
-        with:
-          path: /tmp/ccache
-          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
-          restore-keys: ${{github.job}}-${{matrix.nametag}}-
-      - name: Build setup
-        run: |
-            ${{matrix.setenvs}}
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            ${{matrix.depcmds}}
-            src/build-scripts/gh-installdeps.bash
-      - name: Build
-        run: src/build-scripts/ci-build.bash
-      - name: Testsuite
-        if: matrix.skip_tests != '1'
-        run: src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: failure()
-        with:
-          name: osl-${{github.job}}-${{matrix.nametag}}
-          path: |
-            build/cmake-save
-            build/*.cmake
-            build/CMake*
-            build/testsuite/*/*.*
-            ${{ matrix.extra_artifacts }}
-
 
   macos:
-    name: "${{matrix.runner}} C++${{matrix.cxx_std}} py${{matrix.python_ver}} ${{matrix.desc}}"
+    name: "${{matrix.desc}}"
+    uses: ./.github/workflows/build-steps.yml
+    with:
+      nametag: ${{ matrix.nametag || 'unnamed!' }}
+      runner: ${{ matrix.runner }}
+      container: ${{ matrix.container }}
+      cc_compiler: ${{ matrix.cc_compiler || 'clang' }}
+      cxx_compiler: ${{ matrix.cxx_compiler || 'clang++' }}
+      cxx_std: ${{ matrix.cxx_std || '17' }}
+      batched: ${{ matrix.batched }}
+      build_type: ${{ matrix.build_type || 'Release' }}
+      depcmds: ${{ matrix.depcmds }}
+      extra_artifacts: ${{ matrix.extra_artifacts }}
+      fmt_ver: ${{ matrix.fmt_ver }}
+      opencolorio_ver: ${{ matrix.opencolorio_ver }}
+      openexr_ver: ${{ matrix.openexr_ver }}
+      openimageio_ver: ${{ matrix.openimageio_ver }}
+      pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_ver: ${{ matrix.python_ver }}
+      setenvs: ${{ matrix.setenvs }}
+      simd: ${{ matrix.simd }}
+      skip_build: ${{ matrix.skip_build }}
+      skip_tests: ${{ matrix.skip_tests }}
+      abi_check: ${{ matrix.abi_check }}
+      build_docs: ${{ matrix.build_docs }}
+      generator: ${{ matrix.generator }}
+      ctest_args: ${{ matrix.ctest_args }}
+      ctest_test_timeout: ${{ matrix.ctest_test_timeout || '800' }}
+      coverage: ${{ matrix.coverage || 0 }}
+      sonar: ${{ matrix.sonar || 0 }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - desc: MacOS-13 llvm17
+          - desc: MacOS-13-Intel llvm17
             runner: macos-13
-            nametag: macos13-p311
+            nametag: macos13-p313
             cc_compiler: /usr/local/opt/llvm/bin/clang
             cxx_compiler: /usr/local/opt/llvm/bin/clang++
             cxx_std: 17
-            openimageio_ver: release
-            python_ver: "3.11"
+            python_ver: "3.13"
             aclang: 14
             setenvs: export DO_BREW_UPDATE=1 CTEST_TEST_TIMEOUT=120
+                            EXTRA_BREW_PACKAGES="openimageio"
           - desc: MacOS-14-ARM llvm17
             runner: macos-14
-            nametag: macos14-arm-p311
+            nametag: macos14-arm-p313
             cc_compiler: clang
             cxx_compiler: clang++
-            Xcc_compiler: /usr/local/opt/llvm/bin/clang
-            Xcxx_compiler: /usr/local/opt/llvm/bin/clang++
             cxx_std: 17
-            openimageio_ver: main
-            python_ver: "3.11"
+            python_ver: "3.13"
             aclang: 15
             setenvs: export DO_BREW_UPDATE=1
+                            EXTRA_BREW_PACKAGES="openimageio"
+          - desc: MacOS-15-ARM aclang16/C++17/py3.13
+            runner: macos-15
+            nametag: macos15-arm-py313
+            cc_compiler: clang
+            cxx_compiler: clang++
+            cxx_std: 17
+            python_ver: "3.13"
+            openimageio_ver: main
 
-    runs-on: ${{matrix.runner}}
-    env:
-      CXX: ${{matrix.cxx_compiler}}
-      CC: ${{matrix.cc_compiler}}
-      CMAKE_CXX_STANDARD: ${{matrix.cxx_std}}
-      PYTHON_VERSION: ${{matrix.python_ver}}
-      OPENIMAGEIO_VERSION: ${{matrix.openimageio_ver}}
-    steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
-      - name: Prepare ccache timestamp
-        id: ccache_cache_keys
-        run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
-      - name: ccache
-        id: ccache
-        uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.4
-        with:
-          path: /Users/runner/.ccache
-          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
-          restore-keys: ${{github.job}}-${{matrix.nametag}}-
-      - name: Build setup
-        run: |
-            ${{matrix.setenvs}}
-            src/build-scripts/ci-startup.bash
-      - name: Dependencies
-        run: |
-            source src/build-scripts/install_homebrew_deps.bash
-            if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then \
-                OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0 -DCMAKE_UNITY_BUILD=ON" ; \
-                source src/build-scripts/build_openimageio.bash ; \
-            else \
-                brew install --display-times -q openimageio ; \
-                PYTHONPATH=$PYTHONPATH:/usr/local/python${PYTHON_VERSION}/site-packages ; \
-            fi
-            src/build-scripts/save-env.bash
-      - name: Build
-        run: |
-            src/build-scripts/ci-build.bash
-      - name: Testsuite
-        run: src/build-scripts/ci-test.bash
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
-        if: failure()
-        with:
-          name: osl-${{github.job}}-${{matrix.nametag}}
-          path: |
-            build/cmake-save
-            build/*.cmake
-            build/CMake*
-            build/testsuite/*/*.*
+

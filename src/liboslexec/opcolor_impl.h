@@ -54,7 +54,7 @@ namespace {  // anon namespace to avoid duplicate OptiX symbols
 #ifdef __CUDACC__
 OSL_CONSTANT_DATA const float cie_colour_match[81*3] =
 #else
-OSL_CONSTANT_DATA const float cie_colour_match[81 * 3] OSL_ALIGNAS(64) =
+OSL_CONSTANT_DATA OSL_ALIGNAS(64) const float cie_colour_match[81 * 3] =
 #endif
 {
     0.0014,0.0000,0.0065, 0.0022,0.0001,0.0105, 0.0042,0.0001,0.0201,

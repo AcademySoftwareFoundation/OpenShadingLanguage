@@ -1137,9 +1137,8 @@ BatchedBackendLLVM::llvm_assign_initial_value(
                         : ll.wide_constant(std::numeric_limits<int>::min());
             }
         } else if (sym.typespec().is_string_based()) {
-            u = sym.is_uniform()
-                    ? ll.constant(Strings::uninitialized_string)
-                    : ll.wide_constant(Strings::uninitialized_string);
+            u = sym.is_uniform() ? ll.constant(uint64_t(0))
+                                 : ll.wide_constant(uint64_t(0));
         }
         if (u) {
             //std::cout << "Assigning uninit value to symbol=" << sym.name().c_str() << std::endl;

@@ -248,14 +248,14 @@ struct AttributeNeeded {
 // "C" linkage (no C++ name mangling).
 #define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
 
-
+/*
 // Handy re-casting macros
 inline ustring
 USTR(ustring_pod s) noexcept
 {
     return OSL::bitcast<ustring>(s);
 }
-
+*/
 
 #define MAT(m)      (*(Matrix44*)m)
 #define VEC(v)      (*(Vec3*)v)
@@ -676,6 +676,10 @@ public:
     ustring commonspace_synonym() const
     {
         return ustring_from(m_shading_state_uniform.m_commonspace_synonym);
+    }
+    ustringhash commonspace_synonym_hash() const
+    {
+        return ustringhash_from(m_shading_state_uniform.m_commonspace_synonym);
     }
 
     bool llvm_jit_fma() const { return m_llvm_jit_fma; }
@@ -2182,40 +2186,52 @@ public:
         inline void errorfmt(Mask<WidthT> mask, const Str& fmt,
                              Args&&... args) const
         {
+            // TODO FIXME
+            /*
             m_sc.record_error(ErrorHandler::EH_ERROR,
                               fmtformat(fmt, std::forward<Args>(args)...),
                               static_cast<Mask<MaxSupportedSimdLaneCount>>(
                                   mask));
+*/
         }
 
         template<typename Str, typename... Args>
         inline void warningfmt(Mask<WidthT> mask, const Str& fmt,
                                Args&&... args) const
         {
+            // TODO FIXME
+            /*
             m_sc.record_error(ErrorHandler::EH_WARNING,
                               fmtformat(fmt, std::forward<Args>(args)...),
                               static_cast<Mask<MaxSupportedSimdLaneCount>>(
                                   mask));
+*/
         }
 
         template<typename Str, typename... Args>
         inline void infofmt(Mask<WidthT> mask, const Str& fmt,
                             Args&&... args) const
         {
+            // TODO FIXME
+            /*
             m_sc.record_error(ErrorHandler::EH_INFO,
                               fmtformat(fmt, std::forward<Args>(args)...),
                               static_cast<Mask<MaxSupportedSimdLaneCount>>(
                                   mask));
+*/
         }
 
         template<typename Str, typename... Args>
         inline void messagefmt(Mask<WidthT> mask, const Str& fmt,
                                Args&&... args) const
         {
+            // TODO FIXME
+            /*
             m_sc.record_error(ErrorHandler::EH_MESSAGE,
                               fmtformat(fmt, std::forward<Args>(args)...),
                               static_cast<Mask<MaxSupportedSimdLaneCount>>(
                                   mask));
+*/
         }
     };
 
@@ -2400,25 +2416,29 @@ public:
     template<typename... Args>
     inline void errorfmt(const char* fmt, const Args&... args) const
     {
-        record_error(ErrorHandler::EH_ERROR, fmtformat(fmt, args...));
+        //TODO FIXME
+        //record_error(ErrorHandler::EH_ERROR, fmtformat(fmt, args...));
     }
 
     template<typename... Args>
     inline void warningfmt(const char* fmt, const Args&... args) const
     {
-        record_error(ErrorHandler::EH_WARNING, fmtformat(fmt, args...));
+        //TODO FIXME
+        //record_error(ErrorHandler::EH_WARNING, fmtformat(fmt, args...));
     }
 
     template<typename... Args>
     inline void infofmt(const char* fmt, const Args&... args) const
     {
-        record_error(ErrorHandler::EH_INFO, fmtformat(fmt, args...));
+        //TODO FIXME
+        //record_error(ErrorHandler::EH_INFO, fmtformat(fmt, args...));
     }
 
     template<typename... Args>
     inline void messagefmt(const char* fmt, const Args&... args) const
     {
-        record_error(ErrorHandler::EH_MESSAGE, fmtformat(fmt, args...));
+        //TODO FIXME
+        //record_error(ErrorHandler::EH_MESSAGE, fmtformat(fmt, args...));
     }
 
     void reserve_heap(size_t size)

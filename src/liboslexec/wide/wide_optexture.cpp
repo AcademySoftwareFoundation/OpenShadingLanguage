@@ -33,7 +33,7 @@ namespace {
 
 
 Mask
-default_texture(BatchedRendererServices* bsr, ustring filename,
+default_texture(BatchedRendererServices* bsr, ustringhash_pod filename,
                 TextureSystem::TextureHandle* texture_handle,
                 TextureSystem::Perthread* texture_thread_info,
                 const BatchedTextureOptions& options, BatchedShaderGlobals* bsg,
@@ -49,7 +49,7 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
         texture_thread_info = context->texture_thread_info();
     if (!texture_handle)
         texture_handle
-            = bsr->texturesys()->get_texture_handle(filename,
+            = bsr->texturesys()->get_texture_handle(ustring_from(filename),
                                                     texture_thread_info);
 
     Mask mask = outputs.mask();
@@ -172,7 +172,8 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
                 } else {
-                    errormessage[lane] = Strings::unknown;
+                    // TODO FIXME
+                    //errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
                 context->batched<__OSL_WIDTH>().errorfmt(
@@ -186,7 +187,7 @@ default_texture(BatchedRendererServices* bsr, ustring filename,
 
 
 OSL_FORCEINLINE Mask
-dispatch_texture(BatchedRendererServices* bsr, ustring filename,
+dispatch_texture(BatchedRendererServices* bsr, ustringhash_pod filename,
                  TextureSystem::TextureHandle* texture_handle,
                  TextureSystem::Perthread* texture_thread_info,
                  const BatchedTextureOptions& options,
@@ -196,9 +197,9 @@ dispatch_texture(BatchedRendererServices* bsr, ustring filename,
                  Wide<const float> dtdy, BatchedTextureOutputs& outputs)
 {
     if (bsr->is_overridden_texture()) {
-        return bsr->texture(filename, texture_handle, texture_thread_info,
-                            options, bsg, s, t, dsdx, dtdx, dsdy, dtdy,
-                            outputs);
+        return bsr->texture(ustringhash_from(filename), texture_handle,
+                            texture_thread_info, options, bsg, s, t, dsdx, dtdx,
+                            dsdy, dtdy, outputs);
     } else {
         return default_texture(bsr, filename, texture_handle,
                                texture_thread_info, options, bsg, s, t, dsdx,
@@ -209,7 +210,7 @@ dispatch_texture(BatchedRendererServices* bsr, ustring filename,
 
 
 Mask
-default_texture3d(BatchedRendererServices* bsr, ustring filename,
+default_texture3d(BatchedRendererServices* bsr, ustringhash_pod filename,
                   TextureSystem::TextureHandle* texture_handle,
                   TextureSystem::Perthread* texture_thread_info,
                   const BatchedTextureOptions& options,
@@ -224,7 +225,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
         texture_thread_info = context->texture_thread_info();
     if (!texture_handle)
         texture_handle
-            = bsr->texturesys()->get_texture_handle(filename,
+            = bsr->texturesys()->get_texture_handle(ustring_from(filename),
                                                     texture_thread_info);
 
     Mask mask = outputs.mask();
@@ -359,7 +360,8 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
                 } else {
-                    errormessage[lane] = Strings::unknown;
+                    // TODO FIXME
+                    //errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
                 context->batched<__OSL_WIDTH>().errorfmt(
@@ -373,7 +375,7 @@ default_texture3d(BatchedRendererServices* bsr, ustring filename,
 
 
 OSL_FORCEINLINE Mask
-dispatch_texture3d(BatchedRendererServices* bsr, ustring filename,
+dispatch_texture3d(BatchedRendererServices* bsr, ustringhash_pod filename,
                    TextureSystem::TextureHandle* texture_handle,
                    TextureSystem::Perthread* texture_thread_info,
                    const BatchedTextureOptions& options,
@@ -382,8 +384,9 @@ dispatch_texture3d(BatchedRendererServices* bsr, ustring filename,
                    Wide<const Vec3> dPdz, BatchedTextureOutputs& outputs)
 {
     if (bsr->is_overridden_texture3d()) {
-        return bsr->texture3d(filename, texture_handle, texture_thread_info,
-                              options, bsg, P, dPdx, dPdy, dPdz, outputs);
+        return bsr->texture3d(ustringhash_from(filename), texture_handle,
+                              texture_thread_info, options, bsg, P, dPdx, dPdy,
+                              dPdz, outputs);
     } else {
         return default_texture3d(bsr, filename, texture_handle,
                                  texture_thread_info, options, bsg, P, dPdx,
@@ -394,7 +397,7 @@ dispatch_texture3d(BatchedRendererServices* bsr, ustring filename,
 
 
 Mask
-default_environment(BatchedRendererServices* bsr, ustring filename,
+default_environment(BatchedRendererServices* bsr, ustringhash_pod filename,
                     TextureSystem::TextureHandle* texture_handle,
                     TextureSystem::Perthread* texture_thread_info,
                     const BatchedTextureOptions& options,
@@ -409,7 +412,7 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
         texture_thread_info = context->texture_thread_info();
     if (!texture_handle)
         texture_handle
-            = bsr->texturesys()->get_texture_handle(filename,
+            = bsr->texturesys()->get_texture_handle(ustring_from(filename),
                                                     texture_thread_info);
 
     Mask mask = outputs.mask();
@@ -506,7 +509,8 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
                 if (errMsgSize) {
                     errormessage[lane] = ustring(err);
                 } else {
-                    errormessage[lane] = Strings::unknown;
+                    // TODO FIXME
+                    //errormessage[lane] = Strings::unknown;
                 }
             } else if (errMsgSize) {
                 context->batched<__OSL_WIDTH>().errorfmt(
@@ -521,7 +525,7 @@ default_environment(BatchedRendererServices* bsr, ustring filename,
 
 
 OSL_FORCEINLINE Mask
-dispatch_environment(BatchedRendererServices* bsr, ustring filename,
+dispatch_environment(BatchedRendererServices* bsr, ustringhash_pod filename,
                      TextureSystem::TextureHandle* texture_handle,
                      TextureSystem::Perthread* texture_thread_info,
                      const BatchedTextureOptions& options,
@@ -530,8 +534,9 @@ dispatch_environment(BatchedRendererServices* bsr, ustring filename,
                      BatchedTextureOutputs& outputs)
 {
     if (bsr->is_overridden_texture3d()) {
-        return bsr->environment(filename, texture_handle, texture_thread_info,
-                                options, bsg, R, dRdx, dRdy, outputs);
+        return bsr->environment(ustringhash_from(filename), texture_handle,
+                                texture_thread_info, options, bsg, R, dRdx,
+                                dRdy, outputs);
     } else {
         return default_environment(bsr, filename, texture_handle,
                                    texture_thread_info, options, bsg, R, dRdx,
@@ -703,7 +708,7 @@ transformWideTextureGradientsTexture3d(BatchedTextureOutputs& outputs,
 }
 
 OSL_BATCHOP int
-__OSL_MASKED_OP(texture)(void* bsg_, ustring_pod name_, void* handle,
+__OSL_MASKED_OP(texture)(void* bsg_, ustringhash_pod name_, void* handle,
                          const void* opt_, const void* s, const void* t,
                          const void* dsdx, const void* dtdx, const void* dsdy,
                          const void* dtdy, int chans, void* result,
@@ -722,8 +727,8 @@ __OSL_MASKED_OP(texture)(void* bsg_, ustring_pod name_, void* handle,
                                   (bool)alphaHasDerivs, errormessage, mask);
 
     Mask retVal
-        = dispatch_texture(bsg->uniform.renderer->batched(WidthTag()),
-                           USTR(name_), (TextureSystem::TextureHandle*)handle,
+        = dispatch_texture(bsg->uniform.renderer->batched(WidthTag()), name_,
+                           (TextureSystem::TextureHandle*)handle,
                            bsg->uniform.context->texture_thread_info(), opt,
                            bsg, Wide<const float>(s), Wide<const float>(t),
                            Wide<const float>(dsdx), Wide<const float>(dtdx),
@@ -744,7 +749,8 @@ __OSL_MASKED_OP(texture)(void* bsg_, ustring_pod name_, void* handle,
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int i = 0; i < __OSL_WIDTH; ++i) {
             if (retVal[i]) {
-                err[i] = Strings::_emptystring_;
+                // TODO FIXME
+                //err[i] = Strings::_emptystring_;
             }
         }
     }
@@ -755,7 +761,7 @@ __OSL_MASKED_OP(texture)(void* bsg_, ustring_pod name_, void* handle,
 
 
 OSL_BATCHOP int
-__OSL_MASKED_OP(texture3d)(void* bsg_, ustring_pod name_, void* handle,
+__OSL_MASKED_OP(texture3d)(void* bsg_, ustringhash_pod name_, void* handle,
                            const void* opt_, const void* wP, const void* wPdx,
                            const void* wPdy, const void* wPdz, int chans,
                            void* result, int resultHasDerivs, void* alpha,
@@ -778,8 +784,8 @@ __OSL_MASKED_OP(texture3d)(void* bsg_, ustring_pod name_, void* handle,
     // NOTE:  If overridden, BatchedRendererServiced::texture is responsible
     // for correcting our str texture space gradients into xyz-space gradients
     Mask retVal
-        = dispatch_texture3d(bsg->uniform.renderer->batched(WidthTag()),
-                             USTR(name_), (TextureSystem::TextureHandle*)handle,
+        = dispatch_texture3d(bsg->uniform.renderer->batched(WidthTag()), name_,
+                             (TextureSystem::TextureHandle*)handle,
                              bsg->uniform.context->texture_thread_info(), opt,
                              bsg, Wide<const Vec3>(wP), Wide<const Vec3>(wPdx),
                              Wide<const Vec3>(wPdy), Wide<const Vec3>(wPdz),
@@ -798,7 +804,8 @@ __OSL_MASKED_OP(texture3d)(void* bsg_, ustring_pod name_, void* handle,
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int i = 0; i < __OSL_WIDTH; ++i) {
             if (retVal[i]) {
-                err[i] = Strings::_emptystring_;
+                // TODO FIXME
+                //err[i] = Strings::_emptystring_;
             }
         }
     }
@@ -808,7 +815,7 @@ __OSL_MASKED_OP(texture3d)(void* bsg_, ustring_pod name_, void* handle,
 
 
 OSL_BATCHOP int
-__OSL_MASKED_OP(environment)(void* bsg_, ustring_pod name_, void* handle,
+__OSL_MASKED_OP(environment)(void* bsg_, ustringhash_pod name_, void* handle,
                              const void* opt_, const void* wR, const void* wRdx,
                              const void* wRdy, int chans, void* result,
                              int resultHasDerivs, void* alpha,
@@ -825,12 +832,13 @@ __OSL_MASKED_OP(environment)(void* bsg_, ustring_pod name_, void* handle,
 
     // NOTE:  If overridden, BatchedRendererServiced::texture is responsible
     // for correcting our str texture space gradients into xyz-space gradients
-    Mask retVal = dispatch_environment(
-        bsg->uniform.renderer->batched(WidthTag()), USTR(name_),
-        (TextureSystem::TextureHandle*)handle,
-        bsg->uniform.context->texture_thread_info(), opt, bsg,
-        Wide<const Vec3>(wR), Wide<const Vec3>(wRdx), Wide<const Vec3>(wRdy),
-        outputs);
+    Mask retVal
+        = dispatch_environment(bsg->uniform.renderer->batched(WidthTag()),
+                               name_, (TextureSystem::TextureHandle*)handle,
+                               bsg->uniform.context->texture_thread_info(), opt,
+                               bsg, Wide<const Vec3>(wR),
+                               Wide<const Vec3>(wRdx), Wide<const Vec3>(wRdy),
+                               outputs);
 
     // For now, just zero out the result derivatives.  If somebody needs
     // derivatives of environment lookups, we'll fix it.  The reason
@@ -867,7 +875,8 @@ __OSL_MASKED_OP(environment)(void* bsg_, ustring_pod name_, void* handle,
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
         for (int i = 0; i < __OSL_WIDTH; ++i) {
             if (retVal[i]) {
-                err[i] = Strings::_emptystring_;
+                // TODO FIXME
+                //err[i] = Strings::_emptystring_;
             }
         }
     }
@@ -878,7 +887,7 @@ __OSL_MASKED_OP(environment)(void* bsg_, ustring_pod name_, void* handle,
 
 
 OSL_BATCHOP TextureSystem::TextureHandle*
-__OSL_OP(resolve_udim_uniform)(void* bsg_, const char* name, void* handle,
+__OSL_OP(resolve_udim_uniform)(void* bsg_, ustringhash_pod name, void* handle,
                                float S, float T)
 {
     // recreate TypeDesc
@@ -886,14 +895,14 @@ __OSL_OP(resolve_udim_uniform)(void* bsg_, const char* name, void* handle,
 
     return bsg->uniform.renderer->batched(WidthTag())
         ->resolve_udim_uniform(bsg, bsg->uniform.context->texture_thread_info(),
-                               USTR(name),
+                               ustringhash_from(name),
                                (RendererServices::TextureHandle*)handle, S, T);
 }
 
 
 
 OSL_BATCHOP void
-__OSL_MASKED_OP(resolve_udim)(void* bsg_, const char* name, void* handle,
+__OSL_MASKED_OP(resolve_udim)(void* bsg_, ustringhash_pod name, void* handle,
                               void* wS_, void* wT_, void* wResult_,
                               int mask_value)
 {
@@ -902,7 +911,8 @@ __OSL_MASKED_OP(resolve_udim)(void* bsg_, const char* name, void* handle,
 
     bsg->uniform.renderer->batched(WidthTag())
         ->resolve_udim(bsg, bsg->uniform.context->texture_thread_info(),
-                       USTR(name), (RendererServices::TextureHandle*)handle,
+                       ustringhash_from(name),
+                       (RendererServices::TextureHandle*)handle,
                        Wide<const float>(wS_), Wide<const float>(wT_),
                        Masked<RendererServices::TextureHandle*>(
                            wResult_, Mask(mask_value)));
@@ -911,9 +921,9 @@ __OSL_MASKED_OP(resolve_udim)(void* bsg_, const char* name, void* handle,
 
 
 OSL_BATCHOP int
-__OSL_OP(get_textureinfo_uniform)(void* bsg_, ustring_pod name_, void* handle,
-                                  ustring_pod dataname_, const void* attr_type,
-                                  void* attr_dest)
+__OSL_OP(get_textureinfo_uniform)(void* bsg_, ustringhash_pod name_,
+                                  void* handle, ustringhash_pod dataname_,
+                                  const void* attr_type, void* attr_dest)
 {
     // recreate TypeDesc
     auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -923,8 +933,9 @@ __OSL_OP(get_textureinfo_uniform)(void* bsg_, ustring_pod name_, void* handle,
     bool retVal = bsg->uniform.renderer->batched(WidthTag())
                       ->get_texture_info_uniform(
                           bsg, bsg->uniform.context->texture_thread_info(),
-                          USTR(name_), (RendererServices::TextureHandle*)handle,
-                          0 /*FIXME-ptex*/, USTR(dataname_), dest);
+                          ustringhash_from(name_),
+                          (RendererServices::TextureHandle*)handle,
+                          0 /*FIXME-ptex*/, ustringhash_from(dataname_), dest);
     return retVal;
 }
 

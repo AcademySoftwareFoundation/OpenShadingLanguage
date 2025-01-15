@@ -210,8 +210,10 @@ __OSL_OP(closure_to_string)(void* bsg_, ClosureColor* c)
     // Special case for printing closures
     std::ostringstream stream;
     stream.imbue(std::locale::classic());  // force C locale
-    print_closure(stream, c, &bsg->uniform.context->shadingsys(), false);
-    return ustring(stream.str()).c_str();
+    // TODO FIXME
+    //print_closure(stream, c, &bsg->uniform.context->shadingsys(), false);
+    //return ustring(stream.str()).c_str();
+    return NULL;
 }
 
 

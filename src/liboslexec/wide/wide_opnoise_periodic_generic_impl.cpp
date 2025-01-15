@@ -24,9 +24,12 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 
 
 #define __OSL_GENERIC_DISPATCH3(A, B, C, NONDERIV_A, NONDERIV_B, DUALTYPE)           \
-    OSL_BATCHOP void __OSL_MASKED_OP3(gaborpnoise, A, B, C)(                         \
-        char* name_ptr, char* r_ptr, char* x_ptr, char* px_ptr, char* bsg,           \
-        char* opt, char* varying_direction_ptr, unsigned int mask_value);            \
+    OSL_BATCHOP void __OSL_MASKED_OP3(gaborpnoise, A, B,                             \
+                                      C)(ustringhash_pod name_ptr,                   \
+                                         char* r_ptr, char* x_ptr,                   \
+                                         char* px_ptr, char* bsg, char* opt,         \
+                                         char* varying_direction_ptr,                \
+                                         unsigned int mask_value);                   \
     OSL_BATCHOP void __OSL_MASKED_OP3(pnoise, A, B,                                  \
                                       C)(char* r_ptr, char* x_ptr,                   \
                                          char* px_ptr,                               \
@@ -43,18 +46,21 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
                                       C)(char* r_ptr, char* x_ptr,                   \
                                          char* px_ptr,                               \
                                          unsigned int mask_value);                   \
-    OSL_BATCHOP void __OSL_MASKED_OP3(genericpnoise, A, B, C)(                       \
-        char* name_ptr, char* r_ptr, char* x_ptr, char* px_ptr, char* bsg,           \
-        char* opt, char* varying_direction_ptr, unsigned int mask_value)             \
+    OSL_BATCHOP void __OSL_MASKED_OP3(genericpnoise, A, B,                           \
+                                      C)(ustringhash_pod name_ptr,                   \
+                                         char* r_ptr, char* x_ptr,                   \
+                                         char* px_ptr, char* bsg, char* opt,         \
+                                         char* varying_direction_ptr,                \
+                                         unsigned int mask_value)                    \
     {                                                                                \
-        ustring name = USTR(name_ptr);                                               \
-        if (name == Strings::uperlin || name == Strings::noise) {                    \
+        ustringhash name = ustringhash_from(name_ptr);                               \
+        if (name == Hashes::uperlin || name == Hashes::noise) {                      \
             __OSL_MASKED_OP3(pnoise, A, B, C)                                        \
             (r_ptr, x_ptr, px_ptr, mask_value);                                      \
-        } else if (name == Strings::perlin || name == Strings::snoise) {             \
+        } else if (name == Hashes::perlin || name == Hashes::snoise) {               \
             __OSL_MASKED_OP3(psnoise, A, B, C)                                       \
             (r_ptr, x_ptr, px_ptr, mask_value);                                      \
-        } else if (name == Strings::cell) {                                          \
+        } else if (name == Hashes::cell) {                                           \
             /* NOTE: calling non derivative version */                               \
             __OSL_MASKED_OP3(pcellnoise, NONDERIV_A, NONDERIV_B, C)                  \
             (r_ptr, x_ptr, px_ptr, mask_value);                                      \
@@ -67,11 +73,11 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
                 /* TODO: add helper that operates on Block<Dual2<T>> SOA directly */ \
                 wr[lane] = result;                                                   \
             }                                                                        \
-        } else if (name == Strings::gabor) {                                         \
+        } else if (name == Hashes::gabor) {                                          \
             __OSL_MASKED_OP3(gaborpnoise, A, B, C)                                   \
             (name_ptr, r_ptr, x_ptr, px_ptr, bsg, opt, varying_direction_ptr,        \
              mask_value);                                                            \
-        } else if (name == Strings::hash) {                                          \
+        } else if (name == Hashes::hash) {                                           \
             /* NOTE: calling non derivative version */                               \
             __OSL_MASKED_OP3(phashnoise, NONDERIV_A, NONDERIV_B, C)                  \
             (r_ptr, x_ptr, px_ptr, mask_value);                                      \
@@ -95,9 +101,9 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
 #define __OSL_GENERIC_DISPATCH5(A, B, C, D, E, NONDERIV_A, NONDERIV_B,               \
                                 NONDERIV_C, DUALTYPE)                                \
     OSL_BATCHOP void __OSL_MASKED_OP5(gaborpnoise, A, B, C, D, E)(                   \
-        char* name_ptr, char* r_ptr, char* x_ptr, char* y_ptr, char* px_ptr,         \
-        char* py_ptr, char* bsg, char* opt, char* varying_direction_ptr,             \
-        unsigned int mask_value);                                                    \
+        ustringhash_pod name_ptr, char* r_ptr, char* x_ptr, char* y_ptr,             \
+        char* px_ptr, char* py_ptr, char* bsg, char* opt,                            \
+        char* varying_direction_ptr, unsigned int mask_value);                       \
     OSL_BATCHOP void __OSL_MASKED_OP5(pnoise, A, B, C, D,                            \
                                       E)(char* r_ptr, char* x_ptr,                   \
                                          char* y_ptr, char* px_ptr,                  \
@@ -121,18 +127,18 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
                                          char* py_ptr,                               \
                                          unsigned int mask_value);                   \
     OSL_BATCHOP void __OSL_MASKED_OP5(genericpnoise, A, B, C, D, E)(                 \
-        char* name_ptr, char* r_ptr, char* x_ptr, char* y_ptr, char* px_ptr,         \
-        char* py_ptr, char* bsg, char* opt, char* varying_direction_ptr,             \
-        unsigned int mask_value)                                                     \
+        ustringhash_pod name_ptr, char* r_ptr, char* x_ptr, char* y_ptr,             \
+        char* px_ptr, char* py_ptr, char* bsg, char* opt,                            \
+        char* varying_direction_ptr, unsigned int mask_value)                        \
     {                                                                                \
-        ustring name = USTR(name_ptr);                                               \
-        if (name == Strings::uperlin || name == Strings::noise) {                    \
+        ustringhash name = ustringhash_from(name_ptr);                               \
+        if (name == Hashes::uperlin || name == Hashes::noise) {                      \
             __OSL_MASKED_OP5(pnoise, A, B, C, D, E)                                  \
             (r_ptr, x_ptr, y_ptr, px_ptr, py_ptr, mask_value);                       \
-        } else if (name == Strings::perlin || name == Strings::snoise) {             \
+        } else if (name == Hashes::perlin || name == Hashes::snoise) {               \
             __OSL_MASKED_OP5(psnoise, A, B, C, D, E)                                 \
             (r_ptr, x_ptr, y_ptr, px_ptr, py_ptr, mask_value);                       \
-        } else if (name == Strings::cell) {                                          \
+        } else if (name == Hashes::cell) {                                           \
             /* NOTE: calling non derivative version */                               \
             __OSL_MASKED_OP5(pcellnoise, NONDERIV_A, NONDERIV_B, NONDERIV_C,         \
                              D, E)                                                   \
@@ -146,11 +152,11 @@ OSL_USING_DATA_WIDTH(__OSL_WIDTH)
                 /* TODO: add helper that operates on Block<Dual2<T>> SOA directly */ \
                 wr[lane] = result;                                                   \
             }                                                                        \
-        } else if (name == Strings::gabor) {                                         \
+        } else if (name == Hashes::gabor) {                                          \
             __OSL_MASKED_OP5(gaborpnoise, A, B, C, D, E)                             \
             (name_ptr, r_ptr, x_ptr, y_ptr, px_ptr, py_ptr, bsg, opt,                \
              varying_direction_ptr, mask_value);                                     \
-        } else if (name == Strings::hash) {                                          \
+        } else if (name == Hashes::hash) {                                           \
             /* NOTE: calling non derivative version */                               \
             __OSL_MASKED_OP5(phashnoise, NONDERIV_A, NONDERIV_B, NONDERIV_C,         \
                              D, E)                                                   \

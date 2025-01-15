@@ -48,7 +48,11 @@
 #        define OSL_DLL_EXPORT
 #        define OSL_DLL_LOCAL
 #    else
-#        define OSL_DLL_IMPORT __declspec(dllimport)
+#        ifndef OSL_NO_DLL_IMPORTS
+#            define OSL_DLL_IMPORT __declspec(dllimport)
+#        else
+#            define OSL_DLL_IMPORT
+#        endif
 #        define OSL_DLL_EXPORT __declspec(dllexport)
 #        define OSL_DLL_LOCAL
 #    endif

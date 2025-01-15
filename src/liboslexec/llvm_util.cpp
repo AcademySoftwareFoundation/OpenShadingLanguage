@@ -562,10 +562,15 @@ LLVM_Util::ustring_rep(UstringRep rep)
     }
     m_llvm_type_ustring_ptr = llvm::PointerType::get(m_llvm_type_ustring, 0);
 
-    // Batched versions haven't been updated to handle hash yet.
-    // For now leave them using the real ustring regardless of UstringRep
-    m_llvm_type_wide_ustring = llvm_vector_type(m_llvm_type_real_ustring,
-                                                m_vector_width);
+    if (m_ustring_rep == UstringRep::charptr) {
+        m_llvm_type_wide_ustring = llvm_vector_type(m_llvm_type_real_ustring,
+                                                    m_vector_width);
+    } else {
+        OSL_ASSERT(m_ustring_rep == UstringRep::hash);
+        m_llvm_type_wide_ustring
+            = llvm_vector_type(llvm::Type::getInt64Ty(*m_llvm_context),
+                               m_vector_width);
+    }
     m_llvm_type_wide_ustring_ptr
         = llvm::PointerType::get(m_llvm_type_wide_ustring, 0);
 }
@@ -3560,6 +3565,11 @@ LLVM_Util::constant(ustring s)
     }
 }
 
+llvm::Value*
+LLVM_Util::constant_real_ustring(ustring s)
+{
+    return constant_ptr((void*)s.c_str(), type_char_ptr());
+}
 
 
 llvm::Value*
@@ -3568,7 +3578,12 @@ LLVM_Util::wide_constant(ustring s)
     return builder().CreateVectorSplat(m_vector_width, constant(s));
 }
 
-
+llvm::Value*
+LLVM_Util::wide_constant_real_ustring(ustring s)
+{
+    return builder().CreateVectorSplat(m_vector_width,
+                                       constant_real_ustring(s));
+}
 
 llvm::Value*
 LLVM_Util::llvm_mask_to_native(llvm::Value* llvm_mask)

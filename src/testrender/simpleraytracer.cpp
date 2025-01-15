@@ -475,8 +475,7 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                 if (auto it = shadermap.find(name); it != shadermap.end()) {
                     int shaderID = it->second;
                     if (shaderID >= 0 && shaderID < int(shaders().size())) {
-                        print(stderr, "Updating shader {} - {}\n", shaderID,
-                              shadertype);
+                        fprintf(stderr, "Updating shader %d - %s\n", shaderID, shadertype.c_str());
                         // we already have a material under this name,
                         Material& m = shaders()[shaderID];
                         // TODO: could we query the shadertype directly from the ShaderGroup?
@@ -1221,6 +1220,122 @@ SimpleRaytracer::prepare_render()
     } else {
         // we aren't directly evaluating the background
         backgroundResolution = 0;
+    }
+
+    bool have_displacement = false;
+    for (const Material& m : shaders()) {
+        if (m.disp) {
+            have_displacement = true;
+            break;
+        }
+    }
+    if (have_displacement) {
+        errhandler().infofmt("Evaluating displacement shaders");
+        // Loop through all triangles and run displacement shader if there is one
+        // or copy the input point if there is none
+        std::vector<Vec3> disp_verts(scene.verts.size(), Vec3(0, 0, 0));
+        std::vector<int> valance(scene.verts.size(), 0); // number of times each vertex has been displaced
+
+        OSL::PerThreadInfo* thread_info = shadingsys->create_thread_info();
+        ShadingContext* ctx             = shadingsys->get_context(thread_info);
+
+        bool has_smooth_normals = false;
+        for (int primID = 0, nprims = scene.triangles.size(); primID < nprims; primID++) {
+            Vec3 p[3], n[3];
+            Vec2 uv[3];
+
+            p[0] = scene.verts[scene.triangles[primID].a];
+            p[1] = scene.verts[scene.triangles[primID].b];
+            p[2] = scene.verts[scene.triangles[primID].c];
+
+            valance[scene.triangles[primID].a]++;
+            valance[scene.triangles[primID].b]++;
+            valance[scene.triangles[primID].c]++;
+
+            int shaderID = scene.shaderid(primID);
+            if (shaderID < 0 || !m_shaders[shaderID].disp) {
+                disp_verts[scene.triangles[primID].a] += p[0];
+                disp_verts[scene.triangles[primID].b] += p[1];
+                disp_verts[scene.triangles[primID].c] += p[2];
+                continue;
+            }
+
+
+            Vec3 Ng = (p[0] - p[1]).cross(p[0] - p[2]);
+            float area = 0.5f * Ng.length();
+            Ng = Ng.normalize();
+            if (scene.n_triangles[primID].a >= 0) {
+                n[0] = scene.normals[scene.n_triangles[primID].a];
+                n[1] = scene.normals[scene.n_triangles[primID].b];
+                n[2] = scene.normals[scene.n_triangles[primID].c];
+                has_smooth_normals = true;
+            } else {
+                n[0] = n[1] = n[2] = Ng;
+            }
+
+            if (scene.uv_triangles[primID].a >= 0) {
+                uv[0] = scene.uvs[scene.uv_triangles[primID].a];
+                uv[1] = scene.uvs[scene.uv_triangles[primID].b];
+                uv[2] = scene.uvs[scene.uv_triangles[primID].c];
+            } else {
+                uv[0] = uv[1] = uv[2] = Vec2(0, 0);
+            }
+
+            // displace each vertex
+            for (int i = 0; i < 3; i++) {
+                ShaderGlobals sg = {};
+                sg.P = p[i];
+                sg.Ng = Ng;
+                sg.N = n[i];
+                sg.u = uv[i].x;
+                sg.v = uv[i].y;
+                sg.I = (p[i] - camera.eye).normalize();
+                sg.surfacearea = area;
+                sg.renderstate = &sg;
+
+                shadingsys->execute(*ctx, *m_shaders[shaderID].disp, sg);
+
+                p[i] = sg.P;
+            }
+            disp_verts[scene.triangles[primID].a] += p[0];
+            disp_verts[scene.triangles[primID].b] += p[1];
+            disp_verts[scene.triangles[primID].c] += p[2];
+        }
+
+        // release context
+        shadingsys->release_context(ctx);
+        shadingsys->destroy_thread_info(thread_info);
+
+        // average each vertex by the number of times it was displaced
+        for (int i = 0, n = scene.verts.size(); i < n; i++) {
+            if (valance[i] > 0)
+                disp_verts[i] /= float(valance[i]);
+            else
+                disp_verts[i] = scene.verts[i];
+        }
+        // replace old data with the new
+        scene.verts = std::move(disp_verts);
+
+        if (has_smooth_normals) {
+            // Recompute the vertex normals (if we had some)
+            std::vector<Vec3> disp_normals(scene.normals.size(), Vec3(0, 0, 0));
+            for (int primID = 0, nprims = scene.triangles.size(); primID < nprims; primID++) {
+                if (scene.n_triangles[primID].a >= 0) {
+                    Vec3 p[3];
+                    p[0] = scene.verts[scene.triangles[primID].a];
+                    p[1] = scene.verts[scene.triangles[primID].b];
+                    p[2] = scene.verts[scene.triangles[primID].c];
+                    // don't normalize to weight by area
+                    Vec3 Ng = (p[0] - p[1]).cross(p[0] - p[2]);
+                    disp_normals[scene.n_triangles[primID].a] += Ng;
+                    disp_normals[scene.n_triangles[primID].b] += Ng;
+                    disp_normals[scene.n_triangles[primID].c] += Ng;
+                }
+            }
+            for (Vec3& n : disp_normals)
+                n = n.normalize();
+            scene.normals = std::move(disp_normals);
+        }
     }
 
     bool have_displacement = false;

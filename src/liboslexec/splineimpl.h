@@ -4,7 +4,7 @@
 
 #pragma once
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -292,4 +292,4 @@ struct SplineInterp {
 
 };  // namespace Spline
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

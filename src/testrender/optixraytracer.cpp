@@ -34,7 +34,7 @@ const auto optixModuleCreateFn = optixModuleCreate;
 #endif
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 #define CUDA_CHECK(call)                                               \
@@ -1266,4 +1266,4 @@ OptixRaytracer::clear()
     }
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -11,7 +11,7 @@
 #endif
 
 #include "batched_cg_policy.h"
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 namespace {
@@ -37,7 +37,7 @@ template<> struct BatchedCGPolicy<Param::WDV, Param::WDV, Param::WDF> {
 }  // namespace
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 // To improve parallel compile times, split noise with float results and
 // Vec3 results into different cpp files

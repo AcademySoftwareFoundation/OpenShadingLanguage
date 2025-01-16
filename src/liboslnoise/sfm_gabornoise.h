@@ -7,7 +7,7 @@
 #include "gabornoise.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace __OSL_WIDE_PVT {
 
@@ -672,4 +672,4 @@ scalar_pgabor3(const Dual2<Vec3>& P, const Vec3& Pperiod,
 
 }  // namespace __OSL_WIDE_PVT
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

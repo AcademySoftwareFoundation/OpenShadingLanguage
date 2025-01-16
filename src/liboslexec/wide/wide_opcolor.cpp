@@ -22,7 +22,7 @@
 #include "opcolor_impl.h"
 #include "opcolor.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
@@ -539,6 +539,6 @@ __OSL_OP3(transform_color, v, s, s)(void* bsg_, void* Cin, int Cin_derivs,
 
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #include "undef_opname_macros.h"

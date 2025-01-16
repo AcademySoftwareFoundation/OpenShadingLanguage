@@ -14,7 +14,7 @@
 #include "render_params.h"
 #include "simpleraytracer.h"
 
-OSL_NAMESPACE_ENTER;
+OSL_NAMESPACE_BEGIN;
 
 
 class OptixRaytracer final : public SimpleRaytracer {
@@ -147,4 +147,4 @@ private:
 };
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

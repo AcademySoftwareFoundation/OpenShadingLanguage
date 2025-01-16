@@ -55,7 +55,7 @@
 #include <OpenImageIO/span.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 /// Various compile-time defaults are defined here that could, in
 /// principle, be redefined if you are using OSL in some particular
@@ -306,7 +306,7 @@ using ConstIndex = std::integral_constant<int, N>;
 #endif
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 
 namespace std {  // not necessary in C++17, then we can just say std::hash

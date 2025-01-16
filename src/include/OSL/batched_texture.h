@@ -6,7 +6,7 @@
 
 #include <OSL/wide.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace Tex {
 
@@ -279,11 +279,10 @@ private:
     Mask<WidthT> m_mask;
 };
 
-#define __OSL_USING_BATCHED_TEXTURE(WIDTH_OF_OSL_DATA)             \
-    using BatchedTextureOutputs                                    \
-        = OSL_NAMESPACE::BatchedTextureOutputs<WIDTH_OF_OSL_DATA>; \
-    using BatchedTextureOptions                                    \
-        = OSL_NAMESPACE::BatchedTextureOptions<WIDTH_OF_OSL_DATA>;
+#define __OSL_USING_BATCHED_TEXTURE(WIDTH_OF_OSL_DATA)   \
+    using BatchedTextureOutputs                          \
+        = OSL::BatchedTextureOutputs<WIDTH_OF_OSL_DATA>; \
+    using BatchedTextureOptions = OSL::BatchedTextureOptions<WIDTH_OF_OSL_DATA>;
 
 #undef OSL_USING_DATA_WIDTH
 #ifdef __OSL_USING_SHADERGLOBALS
@@ -297,4 +296,4 @@ private:
         __OSL_USING_BATCHED_TEXTURE(WIDTH_OF_OSL_DATA)
 #endif
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

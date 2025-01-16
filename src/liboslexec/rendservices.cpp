@@ -16,7 +16,7 @@ using namespace OSL::pvt;
 #include <OSL/encodedtypes.h>
 #include <OSL/fmt_util.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 #ifdef OIIO_TEXTURESYSTEM_CREATE_SHARED
@@ -549,4 +549,4 @@ RendererServices::batched(WidthOf<4>)
     return nullptr;
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

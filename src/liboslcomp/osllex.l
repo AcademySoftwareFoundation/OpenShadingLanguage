@@ -120,12 +120,12 @@ using namespace OSL::pvt;
 #pragma GCC visibility push(hidden)
 #endif
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
     void preprocess (const char *str, OSLCompilerImpl* oslcompiler, YYLTYPE* yyloc_param);
     int osllex(YYSTYPE* yylval_param, YYLTYPE* yyloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler);
 }
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 #define YY_DECL int OSL::pvt::osllex(YYSTYPE* yylval_param, YYLTYPE* yyloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler)
 
 // Macro that sets the yylloc line variables to the current parse line.
@@ -292,7 +292,7 @@ OSL_NAMESPACE_EXIT
 
 %%
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {   // OSL::pvt
 
 void
@@ -412,7 +412,7 @@ OSLCompilerImpl::osl_parse_buffer (const std::string &preprocessed_buffer)
 }
 
 }; // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC visibility pop

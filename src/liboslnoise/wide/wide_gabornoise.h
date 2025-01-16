@@ -25,7 +25,7 @@
     }                                                                             \
     Wide<const Vec3> wDirection(*opt_varying_direction);
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace __OSL_WIDE_PVT {
 
@@ -382,4 +382,4 @@ wide_pgabor3(Masked<Dual2<Vec3>> wResult, Wide<const Dual2<Vec3>> wP,
 
 #undef __OSL_SETUP_WIDE_DIRECTION
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

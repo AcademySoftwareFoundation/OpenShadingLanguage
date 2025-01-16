@@ -66,17 +66,33 @@
 
 
 // Establish the name spaces
-namespace @PROJ_NAMESPACE_V@ { }
-namespace @PROJ_NAME@ = @PROJ_NAMESPACE_V@;
+namespace @PROJ_NAMESPACE@ {
+    // Current version's new inner namespace is inline so it's used by default.
+    inline namespace @PROJ_VERSION_NAMESPACE@ { }
+    // Legacy namespaces:
+    // namespace v1_13 { }
+}
+#cmakedefine01 OSL_CUSTOM_OUTER_NAMESPACE
+#if OSL_CUSTOM_OUTER_NAMESPACE
+namespace OSL = @PROJ_NAMESPACE@;
+#endif
 
-// Macros to use in each file to enter and exit the right name spaces.
-#define @PROJ_NAME@_NAMESPACE @PROJ_NAMESPACE_V@
-#define @PROJ_NAME@_NAMESPACE_STRING "@PROJ_NAMESPACE_V@"
-#define @PROJ_NAME@_NAMESPACE_ENTER namespace @PROJ_NAMESPACE_V@ {
-#define @PROJ_NAME@_NAMESPACE_EXIT }
+
+// Macros to declare things in the current version's inline namespace.
+#define OSL_NAMESPACE_BEGIN namespace @PROJ_NAMESPACE@ { inline namespace @PROJ_VERSION_NAMESPACE@ {
+#define OSL_NAMESPACE_END } }
+#define OSL_CURRENT_NAMESPACE @PROJ_NAMESPACE@::@PROJ_VERSION_NAMESPACE@
+
+// Macros for defining legacy namespaces with an explicit version
+#define OSL_NS_BEGIN(ver) namespace @PROJ_NAMESPACE@ { namespace ver {
+#define OSL_NS_END } }
+
+// Legacy definitions, DEPRECATED(1.14)
+#define OSL_NAMESPACE_ENTER OSL_NAMESPACE_BEGIN
+#define OSL_NAMESPACE_EXIT OSL_NAMESPACE_END
 
 
-// Which CPP standard (11, 14, etc.) was this copy of OIIO *built* with?
+// Which CPP standard (11, 14, etc.) was this copy of OSL *built* with?
 #define @PROJ_NAME@_BUILD_CPP @CMAKE_CXX_STANDARD@
 
 // DEPRECATED(2.1): old macros separately giving compatibility.

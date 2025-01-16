@@ -9,13 +9,13 @@
 
 // Make all the strings defined in OSL
 // available to the renderer services free functions
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace Strings {
 #define STRDECL(str, var_name) OSLEXECPUBLIC extern const ustring var_name;
 #include <OSL/strdecls.h>
 #undef STRDECL
 };  // namespace Strings
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #ifdef OSL_HOST_RS_BITCODE
 extern "C" {
@@ -351,7 +351,7 @@ rs_warningfmt(OSL::OpaqueExecContextPtr oec, OSL::ustringhash fmt_specification,
 #if 0
 // C++ helpers to accept variable arguements and encode messages to be sent
 // through renderer service free functions
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 // PackedArgs is similar to tuple but packs its data back to back
@@ -467,5 +467,5 @@ warningfmt(OpaqueExecContextPtr oec, const SpecifierT& fmt_specification,
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 #endif

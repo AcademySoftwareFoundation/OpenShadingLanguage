@@ -19,7 +19,7 @@
 
 using namespace OSL;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
@@ -364,7 +364,7 @@ __OSL_NOISE_OP3(Wdv, Wdv, Wdf)(char* r_ptr, char* p_ptr, char* t_ptr,
 
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #undef __OSL_NOISE_OP2
 #undef __OSL_NOISE_OP3

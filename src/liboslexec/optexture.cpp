@@ -21,7 +21,7 @@
 #include <OSL/rs_free_function.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 
@@ -635,4 +635,4 @@ osl_trace_get(OpaqueExecContextPtr oec, ustringhash_pod name_, long long type_,
 
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

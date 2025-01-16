@@ -7,7 +7,7 @@
 #include <OSL/oslconfig.h>
 #include <cstring>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 /// Labels for light walks
 ///
@@ -146,4 +146,4 @@ typedef ClosureComponent* ClosureComponentPtr;
 typedef ClosureAdd* ClosureAddPtr;
 typedef ClosureMul* ClosureMulPtr;
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

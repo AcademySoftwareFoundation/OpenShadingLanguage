@@ -25,7 +25,7 @@ class raw_svector_ostream;
 }
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {  // OSL::pvt
 
@@ -844,4 +844,4 @@ private:
 
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

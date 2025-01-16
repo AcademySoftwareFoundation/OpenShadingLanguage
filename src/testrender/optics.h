@@ -7,7 +7,7 @@
 #include <OSL/oslconfig.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 static inline OSL_HOSTDEVICE float
 fresnel_dielectric(float cosi, float eta)
@@ -108,4 +108,4 @@ fresnel_generalized_schlick(float cos_theta, Color3 F0, Color3 F90,
     return OIIO::lerp(F0, F90, m);
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

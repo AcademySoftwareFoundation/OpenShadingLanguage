@@ -7,7 +7,7 @@
 #include "lpexp.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 
@@ -121,4 +121,4 @@ private:
 };
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

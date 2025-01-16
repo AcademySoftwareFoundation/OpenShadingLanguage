@@ -23,7 +23,7 @@
 
 #include <OpenImageIO/fmath.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
@@ -1438,6 +1438,6 @@ __OSL_MASKED_OP4(smoothstep, Wdf, Wf, Wdf, Wf)(void* r_, void* e0_, void* e1_,
 }
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #include "undef_opname_macros.h"

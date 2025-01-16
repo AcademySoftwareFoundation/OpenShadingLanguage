@@ -17,7 +17,7 @@
 #include "sampling.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 class SimpleRaytracer : public RendererServices {
@@ -194,4 +194,4 @@ private:
     friend class ErrorHandler;
 };
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

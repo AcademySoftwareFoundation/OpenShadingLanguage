@@ -17,7 +17,7 @@
     memcpy(__builtin_assume_aligned(dst, alignment), \
            __builtin_assume_aligned(src, alignment), size);
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 extern __device__ CUdeviceptr s_color_system;
 extern __device__ CUdeviceptr osl_printf_buffer_start;
@@ -28,7 +28,7 @@ extern __device__ uint64_t num_named_xforms;
 extern __device__ CUdeviceptr xform_name_buffer;
 extern __device__ CUdeviceptr xform_buffer;
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 
 // Taken from the SimplePool class

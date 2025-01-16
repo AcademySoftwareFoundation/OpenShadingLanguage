@@ -20,7 +20,7 @@
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 //Forward declare
 class ShadingContext;
@@ -164,4 +164,4 @@ private:
 }  // namespace pvt
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

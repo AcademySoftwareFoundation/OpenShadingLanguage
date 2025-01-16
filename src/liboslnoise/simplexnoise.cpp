@@ -50,7 +50,7 @@
 #include <OSL/oslnoise.h>
 #include <OpenImageIO/fmath.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -745,4 +745,4 @@ simplexnoise4(float x, float y, float z, float w, int seed, float* dnoise_dx,
 
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

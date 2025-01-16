@@ -44,7 +44,7 @@ namespace Hashes {
 
 using namespace OSL;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 #ifndef __CUDACC__
@@ -1298,4 +1298,4 @@ SimpleRaytracer::clear()
 
 #endif  // #ifndef __CUDACC__
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

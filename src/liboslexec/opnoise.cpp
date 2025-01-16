@@ -13,7 +13,7 @@
 
 #include <OpenImageIO/fmath.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 
@@ -978,6 +978,6 @@ osl_hash_ivf(void* x, float y)
 
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #endif

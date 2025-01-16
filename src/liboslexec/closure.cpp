@@ -16,7 +16,7 @@
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 const ustring Labels::NONE       = ustring(NULL);
 const ustring Labels::CAMERA     = ustring("C");
@@ -146,4 +146,4 @@ print_closure(std::ostream& out, const ClosureColor* closure,
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

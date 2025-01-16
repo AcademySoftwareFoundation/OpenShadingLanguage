@@ -37,7 +37,7 @@ using namespace OSL;
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 static constexpr TypeDesc TypeFloatArray2(TypeDesc::FLOAT, 2);
 static constexpr TypeDesc TypeFloatArray4(TypeDesc::FLOAT, 4);
@@ -554,4 +554,4 @@ OSLToyRenderer::get_camera_screen_window(ShaderGlobals* /*sg*/, bool derivs,
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

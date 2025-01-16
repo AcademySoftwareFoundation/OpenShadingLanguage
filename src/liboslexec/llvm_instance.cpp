@@ -128,7 +128,7 @@ extern unsigned char shadeops_cuda_llvm_compiled_ops_block[];
 
 using namespace OSL::pvt;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -2519,4 +2519,4 @@ BackendLLVM::run()
 
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

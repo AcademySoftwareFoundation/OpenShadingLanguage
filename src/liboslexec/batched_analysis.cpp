@@ -25,7 +25,7 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace Strings {
 
@@ -2989,4 +2989,4 @@ BatchedAnalysis::dump_layer(ShaderInstance* inst)
 }
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

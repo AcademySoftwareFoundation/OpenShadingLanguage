@@ -35,7 +35,7 @@ struct Payload {
     }
 };
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 struct SimpleRaytracer {
     using ShadingContext = ShadingContextCUDA;
@@ -69,6 +69,6 @@ struct SimpleRaytracer {
                                           ShadingContext* ctx = nullptr);
 };
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #endif  // #ifdef __CUDACC__

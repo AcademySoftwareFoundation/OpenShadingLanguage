@@ -21,7 +21,7 @@
 using namespace OSL;
 using namespace OSL::pvt;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 
@@ -8745,4 +8745,4 @@ LLVMGEN(llvm_gen_end)
 
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

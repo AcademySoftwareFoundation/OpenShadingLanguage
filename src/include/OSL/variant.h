@@ -8,7 +8,7 @@
 #include <OSL/oslconfig.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 // TODO: When minimum required C++ reaches C++17, replace with std::variant.
 template<typename TBuiltinArg> class ArgVariant {
@@ -251,4 +251,4 @@ public:
 };
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

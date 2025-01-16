@@ -19,7 +19,7 @@
 #include <OSL/sfmath.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 #ifdef __OSL_WIDE_PVT
 namespace __OSL_WIDE_PVT {
@@ -576,4 +576,4 @@ ColorSystem::blackbody_rgb(float T) const
 }
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

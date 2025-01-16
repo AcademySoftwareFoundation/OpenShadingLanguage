@@ -15,7 +15,7 @@
 
 #include "define_opname_macros.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
@@ -216,4 +216,4 @@ __OSL_OP(closure_to_string)(void* bsg_, ClosureColor* c)
 
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

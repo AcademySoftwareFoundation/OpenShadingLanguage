@@ -23,7 +23,7 @@
 #include "shading_state_uniform.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 
@@ -114,4 +114,4 @@ get_max_warnings_per_thread(OpaqueExecContextPtr oec)
 }  //namespace pvt
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

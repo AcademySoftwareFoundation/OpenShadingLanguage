@@ -18,7 +18,7 @@
 
 // clang-format off
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 // Choose to treat helper functions as static
@@ -494,4 +494,4 @@ det4x4(const Imath::Matrix44<F>& m)
 }
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

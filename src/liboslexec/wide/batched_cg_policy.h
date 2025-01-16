@@ -13,7 +13,7 @@
 
 using namespace OSL;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 namespace {
@@ -45,6 +45,6 @@ template<Param... ParamListT> struct BatchedCGPolicy {
 }  // namespace
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #endif

@@ -35,7 +35,7 @@ class QSplitter;
 class QTextEdit;
 class CodeEditor;
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 class ShadingSystem;
 class RendererServices;
@@ -232,4 +232,4 @@ private:
 
 
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

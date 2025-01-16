@@ -33,7 +33,7 @@ OIIO_NAMESPACE_END
 
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace QtUtils {
 
 
@@ -193,4 +193,4 @@ private:
 
 
 }  // end namespace QtUtils
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

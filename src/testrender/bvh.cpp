@@ -8,7 +8,7 @@
 #include <Imath/ImathBox.h>
 #include <OpenImageIO/timer.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 using Box3 = Imath::Box3f;
 
@@ -370,4 +370,4 @@ Scene::prepare(OIIO::ErrorHandler& errhandler)
     bvh = build_bvh(verts, triangles, errhandler);
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

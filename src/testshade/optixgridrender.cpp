@@ -36,7 +36,7 @@ const auto optixModuleCreateFn = optixModuleCreate;
 using namespace testshade;
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 #define CUDA_CHECK(call)                                               \
@@ -1257,4 +1257,4 @@ OptixGridRenderer::register_inline_functions()
     // clang-format on
 }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

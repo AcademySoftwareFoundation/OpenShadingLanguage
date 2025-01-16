@@ -41,7 +41,7 @@ static ustring u_sqrt("sqrt");
 static ustring u_sub("sub");
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {  // OSL::pvt
 
@@ -3070,4 +3070,4 @@ DECLFOLDER(constfold_raytype)
 
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

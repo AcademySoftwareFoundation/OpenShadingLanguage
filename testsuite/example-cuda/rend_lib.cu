@@ -8,11 +8,11 @@
 
 #include "rend_lib.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 extern __device__ char* s_color_system;
 }
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 // Taken from the SimplePool class
 __device__ static inline size_t

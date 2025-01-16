@@ -30,7 +30,7 @@ Sony Pictures Imageworks terms, above.
 
 // #include <OSL/oslconfig.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 using OIIO::cspan;
 using OIIO::span;
@@ -304,4 +304,4 @@ OSLQuery::getparam(ustring name) const
 // more documentation
 /// <inc oslinfo_source>
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

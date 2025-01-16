@@ -9,7 +9,7 @@
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslconfig.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 
 struct ClosureParam {
@@ -61,4 +61,4 @@ struct ClosureParam {
 
 #define CLOSURE_FINISH_PARAM(st) { TypeDesc(), sizeof(st), nullptr, alignof(st) }
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

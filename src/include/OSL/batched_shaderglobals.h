@@ -12,7 +12,7 @@
 
 #include <OSL/shaderglobals.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {
 class BatchedBackendLLVM;
@@ -197,8 +197,7 @@ template<int WidthT> struct alignas(64) BatchedShaderGlobals {
 };
 
 #define __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA) \
-    using BatchedShaderGlobals                       \
-        = OSL_NAMESPACE::BatchedShaderGlobals<WIDTH_OF_OSL_DATA>;
+    using BatchedShaderGlobals = OSL::BatchedShaderGlobals<WIDTH_OF_OSL_DATA>;
 
 #undef OSL_USING_DATA_WIDTH
 #ifdef __OSL_USING_BATCHED_TEXTURE
@@ -212,4 +211,4 @@ template<int WidthT> struct alignas(64) BatchedShaderGlobals {
         __OSL_USING_SHADERGLOBALS(WIDTH_OF_OSL_DATA)
 #endif
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

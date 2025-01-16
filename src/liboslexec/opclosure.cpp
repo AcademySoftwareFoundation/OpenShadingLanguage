@@ -9,7 +9,7 @@
 #include <OSL/genclosure.h>
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace pvt {
 
 
@@ -95,4 +95,4 @@ osl_closure_to_ustringhash(ShaderGlobals* sg, ClosureColor* c)
 
 
 }  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

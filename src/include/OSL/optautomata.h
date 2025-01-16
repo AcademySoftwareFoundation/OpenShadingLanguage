@@ -11,7 +11,7 @@
 
 #include <vector>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 class DfAutomata;
 
@@ -68,4 +68,4 @@ protected:
     std::vector<State> m_states;
 };
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

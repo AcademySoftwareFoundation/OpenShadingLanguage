@@ -20,7 +20,7 @@ using namespace OSL::pvt;
 #include "llvm/IR/Module.h"
 
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 namespace pvt {  // OSL::pvt
 
@@ -657,4 +657,4 @@ append_constant_arg(BackendLLVM& rop, const TArgVariant& arg,
 
 
 };  // namespace pvt
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

@@ -18,7 +18,7 @@
 
 #include "oslexec_pvt.h"
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 namespace __OSL_WIDE_PVT {
 
 OSL_USING_DATA_WIDTH(__OSL_WIDTH)
@@ -1605,6 +1605,6 @@ __OSL_MASKED_OP2(determinant, Wf, Wm)(void* wr_, void* wm_,
 }
 
 }  // namespace __OSL_WIDE_PVT
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END
 
 #include "undef_opname_macros.h"

@@ -12,7 +12,7 @@
 #include <OSL/mask.h>
 #include <OSL/oslconfig.h>
 
-OSL_NAMESPACE_ENTER
+OSL_NAMESPACE_BEGIN
 
 // template<DataT>
 // struct ImplDefinedProxy
@@ -3485,27 +3485,25 @@ MaskedData<WidthT>::assign_all_from_scalar(const void* ptr_data) const
 }
 
 
-#define __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)                             \
-    template<typename DataT>                                            \
-    using Block = OSL_NAMESPACE::Block<DataT, WIDTH_OF_OSL_DATA>;       \
-                                                                        \
-    using Mask = OSL_NAMESPACE::Mask<WIDTH_OF_OSL_DATA>;                \
-                                                                        \
-    using MaskedData = OSL_NAMESPACE::MaskedData<WIDTH_OF_OSL_DATA>;    \
-                                                                        \
-    template<typename DataT>                                            \
-    using Wide = OSL_NAMESPACE::Wide<DataT, WIDTH_OF_OSL_DATA>;         \
-                                                                        \
-    template<typename DataT>                                            \
-    using UniformAsWide                                                 \
-        = OSL_NAMESPACE::UniformAsWide<DataT, WIDTH_OF_OSL_DATA>;       \
-                                                                        \
-    template<typename DataT>                                            \
-    using Masked = OSL_NAMESPACE::Masked<DataT, WIDTH_OF_OSL_DATA>;     \
-    template<typename DataT>                                            \
-    using MaskedDx = OSL_NAMESPACE::MaskedDx<DataT, WIDTH_OF_OSL_DATA>; \
-    template<typename DataT>                                            \
-    using MaskedDy = OSL_NAMESPACE::MaskedDy<DataT, WIDTH_OF_OSL_DATA>;
+#define __OSL_USING_WIDE(WIDTH_OF_OSL_DATA)                                    \
+    template<typename DataT>                                                   \
+    using Block = OSL::Block<DataT, WIDTH_OF_OSL_DATA>;                        \
+                                                                               \
+    using Mask = OSL::Mask<WIDTH_OF_OSL_DATA>;                                 \
+                                                                               \
+    using MaskedData = OSL::MaskedData<WIDTH_OF_OSL_DATA>;                     \
+                                                                               \
+    template<typename DataT> using Wide = OSL::Wide<DataT, WIDTH_OF_OSL_DATA>; \
+                                                                               \
+    template<typename DataT>                                                   \
+    using UniformAsWide = OSL::UniformAsWide<DataT, WIDTH_OF_OSL_DATA>;        \
+                                                                               \
+    template<typename DataT>                                                   \
+    using Masked = OSL::Masked<DataT, WIDTH_OF_OSL_DATA>;                      \
+    template<typename DataT>                                                   \
+    using MaskedDx = OSL::MaskedDx<DataT, WIDTH_OF_OSL_DATA>;                  \
+    template<typename DataT>                                                   \
+    using MaskedDy = OSL::MaskedDy<DataT, WIDTH_OF_OSL_DATA>;
 
 
 // Use inside of
@@ -3523,4 +3521,4 @@ MaskedData<WidthT>::assign_all_from_scalar(const void* ptr_data) const
 
 #undef __OSL_INHERIT_BASE_CTORS
 
-OSL_NAMESPACE_EXIT
+OSL_NAMESPACE_END

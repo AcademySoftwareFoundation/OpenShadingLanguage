@@ -328,7 +328,7 @@ jobs:
             fmt_ver: 10.1.1
             pybind11_ver: v2.10.0
             skip_tests: 1
-            abi_check: 35b12e4420a59fc04b4fb46388e5d0a575ea8c60
+            abi_check: 42ccf223af1e929fd84a13773e8748b719b1e595
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_BUILD_TESTS=0 -DBUILD_TESTING=OFF -DUSE_QT=0"
                             OPENIMAGEIO_CMAKE_FLAGS="-DUSE_PYTHON=0"
                             CMAKE_BUILD_TYPE=RelWithDebInfo

@@ -493,7 +493,8 @@ OptixRaytracer::create_shaders()
                               outputs.data());
         shadingsys->optimize_group(groupref.surf.get(), nullptr);
 
-        if (!shadingsys->find_symbol(*groupref.surf.get(), ustring(outputs[0]))) {
+        if (!shadingsys->find_symbol(*groupref.surf.get(),
+                                     ustring(outputs[0]))) {
             // FIXME: This is for cases where testshade is run with 1x1 resolution
             //        Those tests may not have a Cout parameter to write to.
             if (m_xres > 1 && m_yres > 1) {
@@ -518,8 +519,9 @@ OptixRaytracer::create_shaders()
         }
 
         void* interactive_params = nullptr;
-        shadingsys->getattribute(groupref.surf.get(), "device_interactive_params",
-                                 TypeDesc::PTR, &interactive_params);
+        shadingsys->getattribute(groupref.surf.get(),
+                                 "device_interactive_params", TypeDesc::PTR,
+                                 &interactive_params);
         material_interactive_params.push_back(interactive_params);
 
         OptixModule optix_module;

@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 
-# Utility script to download and build OpenEXR & IlmBase
-#
+# Utility script to download and build OpenEXR & Imath
+
 # Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
-
 
 # Exit the whole script if any command fails.
 set -ex
 
 # Which OpenEXR to retrieve, how to build it
 OPENEXR_REPO=${OPENEXR_REPO:=https://github.com/AcademySoftwareFoundation/openexr.git}
-OPENEXR_VERSION=${OPENEXR_VERSION:=v3.1.11}
+OPENEXR_VERSION=${OPENEXR_VERSION:=v3.2.4}
 
 # Where to install the final results
 LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=${PWD}/ext}
@@ -28,10 +27,10 @@ pwd
 echo "Building OpenEXR ${OPENEXR_VERSION}"
 echo "OpenEXR build dir will be: ${OPENEXR_BUILD_DIR}"
 echo "OpenEXR install dir will be: ${OPENEXR_INSTALL_DIR}"
-echo "OpenEXR Build type is ${OPENEXR_BUILD_TYPE}"
+echo "OpenEXR build type is ${OPENEXR_BUILD_TYPE}"
 echo "CMAKE_PREFIX_PATH is ${CMAKE_PREFIX_PATH}"
 
-# Clone OpenEXR project (including IlmBase) from GitHub and build
+# Clone OpenEXR project (including Imath) from GitHub and build
 if [[ ! -e ${OPENEXR_SOURCE_DIR} ]] ; then
     echo "git clone ${OPENEXR_REPO} ${OPENEXR_SOURCE_DIR}"
     git clone ${OPENEXR_REPO} ${OPENEXR_SOURCE_DIR}
@@ -42,14 +41,13 @@ pushd ${OPENEXR_SOURCE_DIR}
 git checkout ${OPENEXR_VERSION} --force
 echo "Building OpenEXR from commit" `git rev-parse --short HEAD`
 
-cmake   -S . -B ${OPENEXR_BUILD_DIR} \
+cmake   -S ${OPENEXR_SOURCE_DIR} -B ${OPENEXR_BUILD_DIR} \
         -DCMAKE_BUILD_TYPE=${OPENEXR_BUILD_TYPE} \
         -DCMAKE_INSTALL_PREFIX="${OPENEXR_INSTALL_DIR}" \
         -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
-        -DILMBASE_PACKAGE_PREFIX="${OPENEXR_INSTALL_DIR}" \
+        -DBUILD_SHARED_LIBS=${OpenEXR_LOCAL_BUILD_SHARED_LIBS:=ON} \
         -DOPENEXR_BUILD_UTILS=0 \
         -DBUILD_TESTING=0 \
-        -DPYILMBASE_ENABLE=0 \
         -DOPENEXR_VIEWERS_ENABLE=0 \
         -DINSTALL_OPENEXR_EXAMPLES=0 \
         -DOPENEXR_INSTALL_EXAMPLES=0 \
@@ -64,9 +62,8 @@ popd
 
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.
-export ILMBASE_ROOT=$OPENEXR_INSTALL_DIR
+export OpenEXR_ROOT=$OPENEXR_INSTALL_DIR
 export OPENEXR_ROOT=$OPENEXR_INSTALL_DIR
-export ILMBASE_LIBRARY_DIR=$OPENEXR_INSTALL_DIR/lib
 export OPENEXR_LIBRARY_DIR=$OPENEXR_INSTALL_DIR/lib
 export LD_LIBRARY_PATH=$OPENEXR_ROOT/lib:$LD_LIBRARY_PATH
 

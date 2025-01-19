@@ -38,7 +38,12 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         if (NOT LLVM_BC_GENERATOR)
             message (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
         endif ()
-        message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
+        if (LLVM_BC_GENERATOR)
+            execute_process ( COMMAND ${LLVM_BC_GENERATOR} -dumpversion
+                              OUTPUT_VARIABLE LLVM_BC_GENERATOR_VERSION
+                              OUTPUT_STRIP_TRAILING_WHITESPACE )
+        endif ()
+        message (VERBOSE "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} v${LLVM_BC_GENERATOR_VERSION} to generate bitcode.")
 
         if (NOT LLVM_AS_TOOL)
             find_program (LLVM_AS_TOOL NAMES "llvm-as"

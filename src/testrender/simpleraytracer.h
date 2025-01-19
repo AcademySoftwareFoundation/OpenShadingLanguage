@@ -86,7 +86,8 @@ public:
 
     virtual void parse_scene_xml(const std::string& scenefile);
     virtual void prepare_render();
-    virtual void prepare_lights();
+    void prepare_lights();
+    void prepare_geometry();
     virtual void warmup() {}
     virtual void render(int xres, int yres);
     virtual void clear();

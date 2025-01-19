@@ -1223,6 +1223,58 @@ SimpleRaytracer::prepare_render()
         backgroundResolution = 0;
     }
 
+    prepare_geometry();
+
+    // build bvh and prepare triangles
+    scene.prepare(errhandler());
+    prepare_lights();
+
+#    if 0
+    // dump scene to disk as obj for debugging purposes
+    // TODO: make this a feature?
+    FILE* fp = fopen("/tmp/test.obj", "w");
+    for (Vec3 v : scene.verts)
+        fprintf(fp, "v %.9g %.9g %.9g\n", v.x, v.y, v.z);
+    for (TriangleIndices t : scene.triangles)
+        fprintf(fp, "f %d %d %d\n", 1 + t.a, 1 + t.b, 1 + t.c);
+    fclose(fp);
+#    endif
+}
+
+
+
+void
+SimpleRaytracer::prepare_lights()
+{
+    m_mesh_surfacearea.reserve(scene.last_index.size());
+
+    // measure the total surface area of each mesh
+    int first_index = 0;
+    for (int last_index : scene.last_index) {
+        float area = 0;
+        for (int index = first_index; index < last_index; index++) {
+            area += scene.primitivearea(index);
+        }
+        m_mesh_surfacearea.emplace_back(area);
+        first_index = last_index;
+    }
+    // collect all light emitting triangles
+    for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
+        int shaderID = scene.shaderid(t);
+        if (shaderID < 0 || !m_shaders[shaderID].surf)
+            continue;  // no shader attached
+        if (m_shader_is_light[shaderID])
+            m_lightprims.emplace_back(t);
+    }
+    if (!m_lightprims.empty())
+        errhandler().infofmt("Found {} triangles to be treated as lights",
+                             m_lightprims.size());
+}
+
+
+void
+SimpleRaytracer::prepare_geometry()
+{
     bool have_displacement = false;
     for (const Material& m : shaders()) {
         if (m.disp) {
@@ -1342,54 +1394,7 @@ SimpleRaytracer::prepare_render()
             scene.normals = std::move(disp_normals);
         }
     }
-
-    // build bvh and prepare triangles
-    scene.prepare(errhandler());
-    prepare_lights();
-
-#    if 0
-    // dump scene to disk as obj for debugging purposes
-    // TODO: make this a feature?
-    FILE* fp = fopen("/tmp/test.obj", "w");
-    for (Vec3 v : scene.verts)
-        fprintf(fp, "v %.9g %.9g %.9g\n", v.x, v.y, v.z);
-    for (TriangleIndices t : scene.triangles)
-        fprintf(fp, "f %d %d %d\n", 1 + t.a, 1 + t.b, 1 + t.c);
-    fclose(fp);
-#    endif
 }
-
-
-
-void
-SimpleRaytracer::prepare_lights()
-{
-    m_mesh_surfacearea.reserve(scene.last_index.size());
-
-    // measure the total surface area of each mesh
-    int first_index = 0;
-    for (int last_index : scene.last_index) {
-        float area = 0;
-        for (int index = first_index; index < last_index; index++) {
-            area += scene.primitivearea(index);
-        }
-        m_mesh_surfacearea.emplace_back(area);
-        first_index = last_index;
-    }
-    // collect all light emitting triangles
-    for (unsigned t = 0, n = scene.num_prims(); t < n; t++) {
-        int shaderID = scene.shaderid(t);
-        if (shaderID < 0 || !m_shaders[shaderID].surf)
-            continue;  // no shader attached
-        if (m_shader_is_light[shaderID])
-            m_lightprims.emplace_back(t);
-    }
-    if (!m_lightprims.empty())
-        errhandler().infofmt("Found {} triangles to be treated as lights",
-                             m_lightprims.size());
-}
-
-
 
 void
 SimpleRaytracer::render(int xres, int yres)

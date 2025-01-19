@@ -1027,6 +1027,9 @@ OptixRaytracer::prepare_render()
     // Set up the OptiX Context
     init_optix_context(camera.xres, camera.yres);
 
+    // run displacement
+    prepare_geometry();
+
     // Set up the OptiX scene graph
     build_accel();
     prepare_lights();

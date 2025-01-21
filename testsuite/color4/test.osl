@@ -42,8 +42,8 @@ test (color4 param1 = color4 ({0.5, 1.5, 2.5}, 3.5),
       color4 param2 = color4 ({10.0, 20.0, 30.0}, 40.0)
      )
 {
-    printf("parameter initialization: param1 = %s\n", tostring(param1));
-    printf("parameter initialization: param2 = %s\n", tostring(param2));
+    printf("parameter initialization: param1 = %g %g\n", param1.rgb, param1.a);
+    printf("parameter initialization: param2 = %g %g\n", param2.rgb, param2.a);
     printf("\n");
 
     OSL_CHECK_EQUAL(param1, mkcolor4(0.5, 1.5, 2.5, 3.5));

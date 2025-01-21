@@ -37,8 +37,10 @@ test (vector4 param1 = vector4 (0.5, 1.5, 2.5, 3.5),
       vector4 param2 = vector4 (10.0, 20.0, 30.0, 40.0)
      )
 {
-    printf("parameter initialization: param1 = %s\n", tostring(param1));
-    printf("parameter initialization: param2 = %s\n", tostring(param2));
+    printf("parameter initialization: param1 = %g %g %g %g\n",
+           param1.x, param1.y, param1.z, param1.w);
+    printf("parameter initialization: param2 = %g %g %g %g\n",
+           param2.x, param2.y, param2.z, param2.w);
     printf("\n");
 
     OSL_CHECK_EQUAL(param1, vector4(0.5, 1.5, 2.5, 3.5));

@@ -23,35 +23,59 @@
 #endif
 
 
-string tostring(int x) { return format("%d", x); }
-string tostring(float x) { return format("%g", x); }
-string tostring(color x) { return format("%g", x); }
-string tostring(point x) { return format("%g", x); }
-string tostring(vector x) { return format("%g", x); }
-string tostring(normal x) { return format("%g", x); }
-string tostring(string x) { return x; }
+
+void failmsg(string file, int line, string xs, int x, string ys, int y)
+{
+    printf("\nFAIL: %s:%d: %s (%d) == %s (%d)\n\n", file, line, xs, x, ys, y);
+}
+
+void failmsg(string file, int line, string xs, float x, string ys, float y)
+{
+    printf("\nFAIL: %s:%d: %s (%g) == %s (%g)\n\n", file, line, xs, x, ys, y);
+}
+
+void failmsg(string file, int line, string xs, color x, string ys, color y)
+{
+    printf("\nFAIL: %s:%d: %s (%g) == %s (%g)\n\n", file, line, xs, x, ys, y);
+}
+
+void failmsg(string file, int line, string xs, vector x, string ys, vector y)
+{
+    printf("\nFAIL: %s:%d: %s (%g) == %s (%g)\n\n", file, line, xs, x, ys, y);
+}
 
 #ifdef COLOR2_H
-string tostring(color2 x) { return format("%g %g", x.r, x.a); }
+void failmsg(string file, int line, string xs, color2 x, string ys, color2 y)
+{
+    printf("\nFAIL: %s:%d: %s (%g %g) == %s (%g %g)\n\n",
+           file, line, xs, x.r, x.a, ys, y.r, y.a);
+}
 #endif
 
 #ifdef COLOR4_H
-string tostring(color4 x)
+void failmsg(string file, int line, string xs, color4 x, string ys, color4 y)
 {
-    return format("%g %g %g %g", x.rgb.r, x.rgb.g, x.rgb.b, x.a);
+    printf("\nFAIL: %s:%d: %s (%g %g) == %s (%g %g)\n\n",
+           file, line, xs, x.rgb, x.a, ys, y.rgb, y.a);
 }
 #endif
 
 #ifdef VECTOR2_H
-string tostring(vector2 x) { return format("%g %g", x.x, x.y); }
+void failmsg(string file, int line, string xs, vector2 x, string ys, vector2 y)
+{
+    printf("\nFAIL: %s:%d: %s (%g %g) == %s (%g %g)\n\n",
+           file, line, xs, x.x, x.y, ys, y.x, y.y);
+}
 #endif
 
 #ifdef VECTOR4_H
-string tostring(vector4 x)
+void failmsg(string file, int line, string xs, vector4 x, string ys, vector4 y)
 {
-    return format("%g %g %g %g", x.x, x.y, x.z, x.w);
+    printf("\nFAIL: %s:%d: %s (%g %g %g %g) == %s (%g %g %g %g)\n\n",
+           file, line, xs, x.x, x.y, x.z, x.w, ys, y.x, y.y, y.z, y.w);
 }
 #endif
+
 
 
 // Macros to test conditions in shaders.
@@ -80,15 +104,14 @@ string tostring(vector4 x)
 
 
 // Check that two expressions are equal. For non-built-in types, this
-// requires that a tostring() function is defined for that type.
+// requires that a failmsg() function is defined for that type.
 #define OSL_CHECK_EQUAL(x,y)                                                \
     do {                                                                    \
         if ((x) == (y)) {                                                   \
             if (OSL_UNITTEST_VERBOSE)                                       \
                 printf("PASS: %s == %s\n", #x, #y);                         \
         } else {                                                            \
-            printf("\nFAIL: %s:%d: %s (%s) == %s (%s)\n\n",                 \
-                   __FILE__, __LINE__, #x, tostring(x), #y, tostring(y));   \
+            failmsg(__FILE__, __LINE__, #x, x, #y, y);                      \
             if (OSL_UNITTEST_EXIT_ON_FAILURE)                               \
                 exit();                                                     \
         }                                                                   \

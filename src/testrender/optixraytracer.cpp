@@ -484,16 +484,17 @@ OptixRaytracer::create_shaders()
 
     for (const auto& groupref : shaders()) {
         std::string group_name, fused_name;
-        shadingsys->getattribute(groupref.get(), "groupname", group_name);
-        shadingsys->getattribute(groupref.get(), "group_fused_name",
+        shadingsys->getattribute(groupref.surf.get(), "groupname", group_name);
+        shadingsys->getattribute(groupref.surf.get(), "group_fused_name",
                                  fused_name);
 
-        shadingsys->attribute(groupref.get(), "renderer_outputs",
+        shadingsys->attribute(groupref.surf.get(), "renderer_outputs",
                               TypeDesc(TypeDesc::STRING, outputs.size()),
                               outputs.data());
-        shadingsys->optimize_group(groupref.get(), nullptr);
+        shadingsys->optimize_group(groupref.surf.get(), nullptr);
 
-        if (!shadingsys->find_symbol(*groupref.get(), ustring(outputs[0]))) {
+        if (!shadingsys->find_symbol(*groupref.surf.get(),
+                                     ustring(outputs[0]))) {
             // FIXME: This is for cases where testshade is run with 1x1 resolution
             //        Those tests may not have a Cout parameter to write to.
             if (m_xres > 1 && m_yres > 1) {
@@ -504,7 +505,7 @@ OptixRaytracer::create_shaders()
 
         // Retrieve the compiled ShaderGroup PTX
         std::string osl_ptx;
-        shadingsys->getattribute(groupref.get(), "ptx_compiled_version",
+        shadingsys->getattribute(groupref.surf.get(), "ptx_compiled_version",
                                  OSL::TypeDesc::PTR, &osl_ptx);
         if (osl_ptx.empty()) {
             errhandler().errorfmt("Failed to generate PTX for ShaderGroup {}",
@@ -518,8 +519,9 @@ OptixRaytracer::create_shaders()
         }
 
         void* interactive_params = nullptr;
-        shadingsys->getattribute(groupref.get(), "device_interactive_params",
-                                 TypeDesc::PTR, &interactive_params);
+        shadingsys->getattribute(groupref.surf.get(),
+                                 "device_interactive_params", TypeDesc::PTR,
+                                 &interactive_params);
         material_interactive_params.push_back(interactive_params);
 
         OptixModule optix_module;
@@ -1024,6 +1026,9 @@ OptixRaytracer::prepare_render()
 {
     // Set up the OptiX Context
     init_optix_context(camera.xres, camera.yres);
+
+    // run displacement
+    prepare_geometry();
 
     // Set up the OptiX scene graph
     build_accel();

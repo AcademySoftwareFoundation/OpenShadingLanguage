@@ -19,6 +19,12 @@
 
 OSL_NAMESPACE_BEGIN
 
+struct Material {
+    ShaderGroupRef surf;
+    ShaderGroupRef disp;
+};
+
+using MaterialVec = std::vector<Material>;
 
 class SimpleRaytracer : public RendererServices {
 public:
@@ -80,7 +86,8 @@ public:
 
     virtual void parse_scene_xml(const std::string& scenefile);
     virtual void prepare_render();
-    virtual void prepare_lights();
+    void prepare_lights();
+    void prepare_geometry();
     virtual void warmup() {}
     virtual void render(int xres, int yres);
     virtual void clear();
@@ -89,7 +96,7 @@ public:
     virtual void finalize_pixel_buffer() {}
 
     // ShaderGroupRef storage
-    std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
+    MaterialVec& shaders() { return m_shaders; }
 
     OIIO::ErrorHandler& errhandler() const { return *m_errhandler; }
 
@@ -122,7 +129,7 @@ private:
     int rr_depth             = 5;
     float show_albedo_scale  = 0.0f;
     int show_globals         = 0;
-    std::vector<ShaderGroupRef> m_shaders;
+    MaterialVec m_shaders;
     std::vector<bool> m_shader_is_light;
     std::vector<float>
         m_mesh_surfacearea;  // surface area of all triangles in each mesh (one entry per mesh)

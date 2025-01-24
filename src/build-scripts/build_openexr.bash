@@ -69,6 +69,5 @@ export OpenEXR_ROOT=$OPENEXR_INSTALL_DIR
 if [[ $(uname -s) != "Windows" && "${RUNNER_OS}" != "Windows" ]]; then
     export OPENEXR_ROOT=$OPENEXR_INSTALL_DIR
 fi
-export OPENEXR_LIBRARY_DIR=$OPENEXR_INSTALL_DIR/lib
-export LD_LIBRARY_PATH=$OPENEXR_ROOT/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$OpenEXR_ROOT/lib:$LD_LIBRARY_PATH
 

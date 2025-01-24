@@ -126,11 +126,6 @@ fi
 echo "LLVM_ROOT = $LLVM_ROOT"
 
 
-# source src/build-scripts/build_openexr.bash
-# export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$OPENEXR_ROOT"
-# source src/build-scripts/build_opencolorio.bash
-
-
 mkdir -p winflexbison
 pushd winflexbison
 WFBZIP=win_flex_bison-2.5.25.zip

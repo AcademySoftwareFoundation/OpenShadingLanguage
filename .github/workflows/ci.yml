@@ -605,16 +605,29 @@ jobs:
           # Windows 2022 / MSVS 17 case is below. It's not working yet,
           # work in progress.
           #
-          # - desc: Windows-2022 VS2022
-          #   runner: windows-2022
-          #   nametag: windows-2022
-          #   generator: "Visual Studio 17 2022"
-          #   python_ver: "3.9"
-          #   # opencolorio_ver: v2.2.1
-          #   openexr_ver: v3.3.2
-          #   openimageio_ver: release
-          #   skip_tests: 1
-          #   skip_build: 1
-          #   setenvs: export LLVM_VERSION=18.1.8
-          #                   OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
-          #                   OpenImageIO_BUILD_MISSING_DEPS=Freetype
+          - desc: Windows-2022 VS2022
+            runner: windows-2022
+            nametag: windows-2022
+            generator: "Visual Studio 17 2022"
+            python_ver: "3.9"
+            opencolorio_ver: v2.3.2
+            openexr_ver: v3.3.2
+            openimageio_ver: release
+            skip_tests: 1
+            setenvs: export LLVM_VERSION=18.1.8
+                            OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
+                            PUGIXML_VERSION=v1.14
+                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
+          - desc: Windows-2025 VS2022
+            runner: windows-2025
+            nametag: windows-2025
+            generator: "Visual Studio 17 2022"
+            python_ver: "3.9"
+            opencolorio_ver: v2.3.2
+            openexr_ver: v3.3.2
+            openimageio_ver: release
+            skip_tests: 1
+            setenvs: export LLVM_VERSION=18.1.8
+                            OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
+                            PUGIXML_VERSION=v1.14
+                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"

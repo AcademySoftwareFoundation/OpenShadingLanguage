@@ -2085,7 +2085,7 @@ BackendLLVM::run()
 #endif
 
 #ifdef OSL_LLVM_NO_BITCODE
-        OSL_ASSERT(!use_rs_bitcode());
+        OSL_DASSERT(!use_rs_bitcode());
         ll.module(ll.new_module("llvm_ops"));
 #    if OSL_USE_OPTIX
         if (use_optix()) {

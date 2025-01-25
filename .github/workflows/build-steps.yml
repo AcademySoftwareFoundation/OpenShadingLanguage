@@ -120,9 +120,6 @@ jobs:
           path: ./ccache
           key: ${{github.job}}-${{inputs.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
           restore-keys: ${{github.job}}-
-      - name: Setup Nuget.exe (Windows only)
-        if: runner.os == 'Windows'
-        uses: nuget/setup-nuget@a21f25cd3998bf370fde17e3f1b4c12c175172f9 # v2.0.0
       - name: Build setup
         shell: bash
         run: |

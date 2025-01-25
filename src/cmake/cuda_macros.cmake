@@ -122,7 +122,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         # these are warnings triggered by the dllimport/export attributes not being supported when
         # compiling for Cuda. When all 3rd parties have their export macro fixed these warnings
         # can be restored.
-        set (CLANG_MSVC_FIX "${CLANG_MSVC_FIX} -Wno-ignored-attributes -Wno-unknown-attributes")
+        set (CLANG_MSVC_FIX -Wno-ignored-attributes -Wno-unknown-attributes)
     endif ()
 
     if (NOT LLVM_OPAQUE_POINTERS AND ${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)

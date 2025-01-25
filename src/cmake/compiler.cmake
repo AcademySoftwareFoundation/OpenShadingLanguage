@@ -37,10 +37,7 @@ if (CMAKE_CXX_STANDARD VERSION_LESS CMAKE_CXX_MINIMUM)
     message (FATAL_ERROR "C++${CMAKE_CXX_STANDARD} is not supported, minimum is C++${CMAKE_CXX_MINIMUM}")
 endif ()
 # Remember the -std flags we need will be used later for custom Cuda builds
-set (CSTD_FLAGS "")
-if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_INTEL)
-    set (CSTD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
-endif ()
+set (CSTD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
 
 
 ###########################################################################
@@ -218,14 +215,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD"
     # For FreeBSD, minimum arch of i586 is needed for atomic cpu instructions
     add_compile_options (-march=i586)
 endif ()
-
-
-# Remember the -std flags we need will be used later for custom Cuda builds
-set (CSTD_FLAGS "")
-if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_INTEL)
-    set (CSTD_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
-endif ()
-
 
 
 # We will use this for ccache and timing

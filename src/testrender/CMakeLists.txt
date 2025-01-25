@@ -79,7 +79,7 @@ add_executable (testrender ${testrender_srcs})
 
 target_link_libraries (testrender
     PRIVATE
-        oslexec oslquery
+        oslexec oslquery oslcomp
         pugixml::pugixml
         Threads::Threads)
 

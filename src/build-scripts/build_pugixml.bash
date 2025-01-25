@@ -13,39 +13,40 @@ set -ex
 PUGIXML_REPO=${PUGIXML_REPO:=https://github.com/zeux/pugixml.git}
 PUGIXML_VERSION=${PUGIXML_VERSION:=v1.11.4}
 
-# Where to put pugixml repo source (default to the ext area)
-PUGIXML_SRC_DIR=${PUGIXML_SRC_DIR:=${PWD}/ext/pugixml}
-# Temp build area (default to a build/ subdir under source)
-PUGIXML_BUILD_DIR=${PUGIXML_BUILD_DIR:=${PUGIXML_SRC_DIR}/build}
-# Install area for pugixml (default to ext/dist)
 LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=${PWD}/ext}
+PUGIXML_SOURCE_DIR=${PUGIXML_SOURCE_DIR:=${LOCAL_DEPS_DIR}/pugixml}
+PUGIXML_BUILD_DIR=${PUGIXML_BUILD_DIR:=${PUGIXML_SOURCE_DIR}/build}
 PUGIXML_INSTALL_DIR=${PUGIXML_INSTALL_DIR:=${LOCAL_DEPS_DIR}/dist}
-#PUGIXML_BUILD_OPTS=${PUGIXML_BUILD_OPTS:=}
+PUGIXML_BUILD_TYPE=${PUGIXML_BUILD_TYPE:=Release}
 
 pwd
-echo "pugixml install dir will be: ${PUGIXML_INSTALL_DIR}"
-
-mkdir -p ./ext
-pushd ./ext
+echo "Building Pugixml ${PUGIXML_VERSION}"
+echo "Pugixml source dir will be: ${PUGIXML_SOURCE_DIR}"
+echo "Pugixml build dir will be: ${PUGIXML_BUILD_DIR}"
+echo "Pugixml install dir will be: ${PUGIXML_INSTALL_DIR}"
+echo "Pugixml build type is ${PUGIXML_BUILD_TYPE}"
+echo "CMAKE_PREFIX_PATH is ${CMAKE_PREFIX_PATH}"
 
 # Clone pugixml project from GitHub and build
-if [[ ! -e ${PUGIXML_SRC_DIR} ]] ; then
-    echo "git clone ${PUGIXML_REPO} ${PUGIXML_SRC_DIR}"
-    git clone ${PUGIXML_REPO} ${PUGIXML_SRC_DIR}
+if [[ ! -e ${PUGIXML_SOURCE_DIR} ]] ; then
+    echo "git clone ${PUGIXML_REPO} ${PUGIXML_SOURCE_DIR}"
+    git clone ${PUGIXML_REPO} ${PUGIXML_SOURCE_DIR}
 fi
-cd ${PUGIXML_SRC_DIR}
+mkdir -p ${PUGIXML_INSTALL_DIR} && true
 
+pushd ${PUGIXML_SOURCE_DIR}
 echo "git checkout ${PUGIXML_VERSION} --force"
 git checkout ${PUGIXML_VERSION} --force
 echo "Building pugixml from commit" `git rev-parse --short HEAD`
 
 if [[ -z $DEP_DOWNLOAD_ONLY ]]; then
-    time cmake -S . -B ${PUGIXML_BUILD_DIR} -DCMAKE_BUILD_TYPE=Release \
+    time cmake -S ${PUGIXML_SOURCE_DIR} -B ${PUGIXML_BUILD_DIR} \
+               -DCMAKE_BUILD_TYPE=${PUGIXML_BUILD_TYPE} \
                -DCMAKE_INSTALL_PREFIX=${PUGIXML_INSTALL_DIR} \
-               -DBUILD_SHARED_LIBS=ON \
+               -DBUILD_SHARED_LIBS=${PUGIXML_LOCAL_BUILD_SHARED_LIBS:=ON} \
                -DBUILD_TESTS=OFF \
-               ${PUGIXML_BUILD_OPTS} ..
-    time cmake --build ${PUGIXML_BUILD_DIR} --config Release --target install
+               ${PUGIXML_CMAKE_FLAGS}
+    time cmake --build ${PUGIXML_BUILD_DIR} --target install --config ${PUGIXML_BUILD_TYPE}
 fi
 
 # ls -R ${PUGIXML_INSTALL_DIR}

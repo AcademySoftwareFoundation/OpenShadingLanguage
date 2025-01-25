@@ -63,7 +63,12 @@ popd
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.
 export OpenEXR_ROOT=$OPENEXR_INSTALL_DIR
-export OPENEXR_ROOT=$OPENEXR_INSTALL_DIR
++# Environment variables are case insensitive on Windows, don't set
++# it a second time with different case. This seems to trigger a bug
++# where the next cmake command fails to find the compiler.
++if [[ $(uname -s) != "Windows" && "${RUNNER_OS}" != "Windows" ]]; then
++  export OPENEXR_ROOT=$OPENEXR_INSTALL_DIR
++fi
 export OPENEXR_LIBRARY_DIR=$OPENEXR_INSTALL_DIR/lib
 export LD_LIBRARY_PATH=$OPENEXR_ROOT/lib:$LD_LIBRARY_PATH
 

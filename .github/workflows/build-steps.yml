@@ -144,7 +144,7 @@ jobs:
             elif [[ "$RUNNER_OS" == "Windows" ]]; then
                 src/build-scripts/gh-win-installdeps.bash
             fi
-      - name:  Install sonar-scanner and build-wrapper
+      - name: Install sonar-scanner and build-wrapper
         if: inputs.sonar == '1'
         uses: sonarsource/sonarcloud-github-c-cpp@e4882e1621ad2fb48dddfa48287411bed34789b1 # v2.0.2
       - name: Build

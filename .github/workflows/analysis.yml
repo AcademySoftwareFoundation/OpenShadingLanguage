@@ -85,7 +85,7 @@ jobs:
           - desc: sonar VP2024 gcc11/C++17 llvm17 py3.11 oiio-rel avx2
             nametag: static-analysis-sonar
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2024-clang17
+            container: aswf/ci-osl:2024-clang17
             cxx_std: 17
             openimageio_ver: release
             python_ver: "3.11"
@@ -95,6 +95,15 @@ jobs:
             coverage: 1
             # skip_tests: 1
             sonar: 1
+            depcmds: |
+                find /usr/local -name "*OpenImageIO*" -print ;
+                sudo rm -rf /usr/local/include/OpenImageIO ;
+                sudo rm -rf /usr/local/lib*/cmake/OpenImageIO ;
+                sudo rm -rf /usr/local/lib*/libOpenImageIO* ;
+                sudo rm -rf /usr/local/share/cmake/OpenImageIO ;
+                sudo rm -rf /usr/local/lib*/python3.9/site-packages/OpenImageIO* ;
+                ls /usr/local/include
+                # This container's old OIIO interferes with the one we build
             setenvs: export xSONAR_SCANNER_VERSION=4.7.0.2747
                             SONAR_SERVER_URL="https://sonarcloud.io"
                             BUILD_WRAPPER_OUT_DIR=/__w/OpenShadingLanguage/OpenShadingLanguage/bw_output

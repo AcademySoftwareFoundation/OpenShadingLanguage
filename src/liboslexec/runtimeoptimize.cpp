@@ -3369,29 +3369,40 @@ RuntimeOptimizer::run()
                 Symbol* sym1 = opargsym(op, 1);
                 OSL_DASSERT(sym1 && sym1->typespec().is_string());
                 if (sym1->is_constant()) {
+                    const auto insert = [&](const AttributeNeeded& attr) {
+                        auto found = m_attributes_needed.find(attr);
+                        if (found == m_attributes_needed.end())
+                            m_attributes_needed.insert(attr);
+                        else if (attr.derivs && !found->derivs) {
+                            m_attributes_needed.erase(found);
+                            m_attributes_needed.insert(attr);
+                        }
+                    };
                     if (op.nargs() == 3) {
                         Symbol* sym2 = opargsym(op, 2);
                         // getattribute( attributename, result )
-                        m_attributes_needed.insert(
-                            AttributeNeeded(sym1->get_string(), ustring(),
-                                            sym2->typespec().simpletype()));
+                        insert(AttributeNeeded(sym1->get_string(), ustring(),
+                                               sym2->typespec().simpletype(),
+                                               sym2->has_derivs()));
                     } else if (op.nargs() == 4) {
                         Symbol* sym2 = opargsym(op, 2);
                         Symbol* sym3 = opargsym(op, 3);
                         if (sym2->typespec().is_string()) {
                             // getattribute( scopename, attributename, result )
                             if (sym2->is_constant()) {
-                                m_attributes_needed.insert(AttributeNeeded(
+                                insert(AttributeNeeded(
                                     sym2->get_string(), sym1->get_string(),
-                                    sym3->typespec().simpletype()));
+                                    sym3->typespec().simpletype(),
+                                    sym3->has_derivs()));
                             } else {
                                 m_unknown_attributes_needed = true;
                             }
                         } else {
                             // getattribute( attributename, arrayindex, result )
-                            m_attributes_needed.insert(
+                            insert(
                                 AttributeNeeded(sym1->get_string(), ustring(),
-                                                sym3->typespec().simpletype()));
+                                                sym3->typespec().simpletype(),
+                                                sym3->has_derivs()));
                         }
                     } else if (op.nargs() == 5) {
                         Symbol* sym2 = opargsym(op, 2);
@@ -3399,9 +3410,10 @@ RuntimeOptimizer::run()
                         if (sym2->typespec().is_string()) {
                             // getattribute( scopename, attributename, arrayindex, result )
                             if (sym2->is_constant()) {
-                                m_attributes_needed.insert(AttributeNeeded(
+                                insert(AttributeNeeded(
                                     sym2->get_string(), sym1->get_string(),
-                                    sym4->typespec().simpletype()));
+                                    sym4->typespec().simpletype(),
+                                    sym4->has_derivs()));
                             } else {
                                 m_unknown_attributes_needed = true;
                             }

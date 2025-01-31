@@ -483,6 +483,9 @@ public:
     ///   ptr userdata_offsets       Retrieves a pointer to the array of
     ///                                 int describing the userdata offsets
     ///                                 within the heap.
+    ///   ptr userdata_derivs        Retrieves a pointer to the array of
+    ///                                 bools (as bytes) describing if derivatives
+    ///                                 are requested for each userdata.
     ///   int num_attributes_needed  The number of attribute/scope pairs that
     ///                                are known to be queried by the group (the
     ///                                length of the attributes_needed and
@@ -499,6 +502,9 @@ public:
     ///                                in the attributes_needed array.
     ///   ptr attribute_types        Retrieves a pointer to the array of
     ///                                 TypeDesc describing the attributes.
+    ///   ptr attribute_derivs       Retrieves a pointer to the array of
+    ///                                 bools (as bytes) describing if derivatives
+    ///                                 are requested for each attribute.
     ///   int unknown_attributes_needed  Nonzero if additional attributes may be
     ///                                  needed, whose names will not be known
     ///                                  until the shader actually runs.

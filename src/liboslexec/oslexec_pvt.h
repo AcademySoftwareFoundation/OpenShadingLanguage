@@ -218,10 +218,11 @@ struct AttributeNeeded {
     ustring name;
     ustring scope;
     TypeDesc type;
+    bool derivs;
 
     AttributeNeeded(ustring name, ustring scope = ustring(),
-                    TypeDesc type = TypeUnknown)
-        : name(name), scope(scope), type(type)
+                    TypeDesc type = TypeUnknown, bool derivs = false)
+        : name(name), scope(scope), type(type), derivs(derivs)
     {
     }
 
@@ -240,6 +241,7 @@ struct AttributeNeeded {
         // Ignore vector semantics
         // if (a.type.vecsemantics != b.type.vecsemantics)
         //     return a.type.vecsemantics < b.type.vecsemantics;
+        // Do not sort based on derivs
         return false;  // they are equal
     }
 };
@@ -2035,6 +2037,7 @@ private:
     std::vector<ustring> m_attributes_needed;
     std::vector<ustring> m_attribute_scopes;
     std::vector<TypeDesc> m_attribute_types;
+    std::vector<char> m_attribute_derivs;
     std::vector<ustring> m_renderer_outputs;  ///< Names of renderer outputs
     std::vector<SymLocationDesc> m_symlocs;   ///< SORTED!!
     bool m_unknown_textures_needed;

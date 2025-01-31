@@ -2190,7 +2190,7 @@ them will be removed entirely in OSL 2.0.
         shaders should pass a unit length (see Section [](#sec-stdlib-geom))
         dir vector.
 
-    `"mindist",` *`float`*
+    `"maxdist",` *`float`*
       : The maximum hit distance (default: infinite).
 
     `"shade",` *`int`*

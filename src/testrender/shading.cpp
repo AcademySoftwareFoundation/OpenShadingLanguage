@@ -885,10 +885,8 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
         // if transmission is enabled, punt on
         if (EnableTransmissionLobe)
             return Color3(1.0f);
-        // FIXME: this heuristic is not particularly good, and looses energy
-        // compared to the reference solution
 
-        return MxMicrofacetParams::evalR(
+        return MxMicrofacetParams::dirAlbedoR(
             get_fresnel_angle(MxMicrofacetParams::N.dot(wo)));
     }
 

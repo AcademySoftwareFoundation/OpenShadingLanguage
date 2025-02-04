@@ -90,6 +90,9 @@ macro (add_one_testsuite testname testsrcdir)
             # Make sure libnvrtc-builtins.so is reachable
             set_property (TEST ${testname} APPEND PROPERTY ENVIRONMENT LD_LIBRARY_PATH=${CUDA_TOOLKIT_ROOT_DIR}/lib64:$ENV{LD_LIBRARY_PATH})
         endif()
+        if (DEFINED ENV{OSL_TESTSUITE_OPTIX_THRESH_SCALE})
+            set_property (TEST ${testname} APPEND PROPERTY ENVIRONMENT OSL_TESTSUITE_THRESH_SCALE=$ENV{OSL_TESTSUITE_OPTIX_THRESH_SCALE})
+        endif ()
     endif ()
     if (${testname} MATCHES "-reg")
         # These are batched shading regression tests. Some are quite

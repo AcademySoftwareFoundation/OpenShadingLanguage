@@ -406,6 +406,16 @@ if "DEBUG" in os.environ and os.environ["DEBUG"] :
     hardfail *= 2.0
     failpercent *= 2.0
 
+# Allow an environment variable to scale the testsuite image comparison
+# thresholds:
+if 'OSL_TESTSUITE_THRESH_SCALE' in os.environ :
+    thresh_scale = float(os.getenv('OSL_TESTSUITE_THRESH_SCALE', '1.0'))
+    failthresh *= thresh_scale
+    hardfail *= thresh_scale
+    failpercent *= thresh_scale
+    failrelative *= thresh_scale
+    allowfailures = int(allowfailures * thresh_scale)
+
 # Force out.txt to be in the outputs
 ##if "out.txt" not in outputs :
 ##    outputs.append ("out.txt")

@@ -3122,7 +3122,18 @@ RuntimeOptimizer::printinst(std::ostream& out) const
     return out;
 }
 
+std::string
+RuntimeOptimizer::serialize()
+{
+    std::ostringstream ss {};
+    int nlayers = (int)group().nlayers();
+    for (int layer = 0; layer < nlayers; ++layer) {
+        set_inst(layer);
+        printinst(ss);
+    }
 
+    return ss.str();
+}
 
 void
 RuntimeOptimizer::run()

@@ -50,6 +50,29 @@ shadertype_from_name(string_view name)
     return ShaderType::Unknown;
 }
 
+std::string
+optix_cache_wrap(const std::string& ptx, size_t groupdata_size)
+{
+    // Cache string is the ptx file with groupdata size on top as a comment.
+    // This way the cache string is a valid ptx program, which can be useful
+    // for debugging.
+    return fmtformat("// {}\n{}", groupdata_size, ptx);
+}
+
+void
+optix_cache_unwrap(const std::string& cache_value, std::string& ptx,
+                   size_t& groupdata_size)
+{
+    size_t groupdata_end_index = cache_value.find('\n');
+    if (groupdata_end_index != std::string::npos) {
+        constexpr int offset = 3;  // Account for the "// " prefix
+        std::string groupdata_string
+            = cache_value.substr(offset, groupdata_end_index - offset);
+        groupdata_size = std::stoll(groupdata_string);
+
+        ptx = cache_value.substr(groupdata_end_index + 1);
+    }
+}
 
 };  // namespace pvt
 OSL_NAMESPACE_END

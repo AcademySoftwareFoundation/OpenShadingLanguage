@@ -144,28 +144,22 @@ struct MxDielectricParams : public MxMicrofacetBaseParams {
 
         // Rational quadratic fit for GGX directional albedo
         // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_specular.glsl
-        float x = OIIO::clamp(cos_theta, 0.0f, 1.0f);
-        float y = sqrtf(roughness_x * roughness_y); // average alpha
+        float x  = OIIO::clamp(cos_theta, 0.0f, 1.0f);
+        float y  = sqrtf(roughness_x * roughness_y);  // average alpha
         float x2 = x * x;
         float y2 = y * y;
-        Vec2 num = Vec2(0.1003f, 0.9345f) +
-                   Vec2(-0.6303f, -2.323f) * x +
-                   Vec2(9.748f, 2.229f) * y +
-                   Vec2(-2.038f, -3.748f) * x * y +
-                   Vec2(29.34f, 1.424f) * x2 +
-                   Vec2(-8.245f, -0.7684f) * y2 +
-                   Vec2(-26.44f, 1.436f) * x2 * y +
-                   Vec2(19.99f, 0.2913f) * x * y2 +
-                   Vec2(-5.448f, 0.6286f) * x2 * y2;
-        Vec2 den = Vec2(1.0f, 1.0f) +
-                   Vec2(-1.765f, 0.2281f) * x +
-                   Vec2(8.263f, 15.94f) * y +
-                   Vec2(11.53f, -55.83f) * x * y +
-                   Vec2(28.96f, 13.08f) * x2 +
-                   Vec2(-7.507f, 41.26f) * y2 +
-                   Vec2(-36.11f, 54.9f) * x2 * y +
-                   Vec2(15.86f, 300.2f) * x * y2 +
-                   Vec2(33.37f, -285.1f) * x2 * y2;
+        Vec2 num = Vec2(0.1003f, 0.9345f) + Vec2(-0.6303f, -2.323f) * x
+                   + Vec2(9.748f, 2.229f) * y + Vec2(-2.038f, -3.748f) * x * y
+                   + Vec2(29.34f, 1.424f) * x2 + Vec2(-8.245f, -0.7684f) * y2
+                   + Vec2(-26.44f, 1.436f) * x2 * y
+                   + Vec2(19.99f, 0.2913f) * x * y2
+                   + Vec2(-5.448f, 0.6286f) * x2 * y2;
+        Vec2 den = Vec2(1.0f, 1.0f) + Vec2(-1.765f, 0.2281f) * x
+                   + Vec2(8.263f, 15.94f) * y + Vec2(11.53f, -55.83f) * x * y
+                   + Vec2(28.96f, 13.08f) * x2 + Vec2(-7.507f, 41.26f) * y2
+                   + Vec2(-36.11f, 54.9f) * x2 * y
+                   + Vec2(15.86f, 300.2f) * x * y2
+                   + Vec2(33.37f, -285.1f) * x2 * y2;
         float a = OIIO::clamp(num.x / den.x, 0.0f, 1.0f);
         float b = OIIO::clamp(num.y / den.y, 0.0f, 1.0f);
         return reflection_tint * (f0 * a + f90 * b);
@@ -227,28 +221,22 @@ struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {
     {
         // Rational quadratic fit for GGX directional albedo
         // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_specular.glsl
-        float x = OIIO::clamp(cos_theta, 0.0f, 1.0f);
-        float y = sqrtf(roughness_x * roughness_y); // average alpha
+        float x  = OIIO::clamp(cos_theta, 0.0f, 1.0f);
+        float y  = sqrtf(roughness_x * roughness_y);  // average alpha
         float x2 = x * x;
         float y2 = y * y;
-        Vec2 num = Vec2(0.1003f, 0.9345f) +
-                   Vec2(-0.6303f, -2.323f) * x +
-                   Vec2(9.748f, 2.229f) * y +
-                   Vec2(-2.038f, -3.748f) * x * y +
-                   Vec2(29.34f, 1.424f) * x2 +
-                   Vec2(-8.245f, -0.7684f) * y2 +
-                   Vec2(-26.44f, 1.436f) * x2 * y +
-                   Vec2(19.99f, 0.2913f) * x * y2 +
-                   Vec2(-5.448f, 0.6286f) * x2 * y2;
-        Vec2 den = Vec2(1.0f, 1.0f) +
-                   Vec2(-1.765f, 0.2281f) * x +
-                   Vec2(8.263f, 15.94f) * y +
-                   Vec2(11.53f, -55.83f) * x * y +
-                   Vec2(28.96f, 13.08f) * x2 +
-                   Vec2(-7.507f, 41.26f) * y2 +
-                   Vec2(-36.11f, 54.9f) * x2 * y +
-                   Vec2(15.86f, 300.2f) * x * y2 +
-                   Vec2(33.37f, -285.1f) * x2 * y2;
+        Vec2 num = Vec2(0.1003f, 0.9345f) + Vec2(-0.6303f, -2.323f) * x
+                   + Vec2(9.748f, 2.229f) * y + Vec2(-2.038f, -3.748f) * x * y
+                   + Vec2(29.34f, 1.424f) * x2 + Vec2(-8.245f, -0.7684f) * y2
+                   + Vec2(-26.44f, 1.436f) * x2 * y
+                   + Vec2(19.99f, 0.2913f) * x * y2
+                   + Vec2(-5.448f, 0.6286f) * x2 * y2;
+        Vec2 den = Vec2(1.0f, 1.0f) + Vec2(-1.765f, 0.2281f) * x
+                   + Vec2(8.263f, 15.94f) * y + Vec2(11.53f, -55.83f) * x * y
+                   + Vec2(28.96f, 13.08f) * x2 + Vec2(-7.507f, 41.26f) * y2
+                   + Vec2(-36.11f, 54.9f) * x2 * y
+                   + Vec2(15.86f, 300.2f) * x * y2
+                   + Vec2(33.37f, -285.1f) * x2 * y2;
         float a = OIIO::clamp(num.x / den.x, 0.0f, 1.0f);
         float b = OIIO::clamp(num.y / den.y, 0.0f, 1.0f);
         return reflection_tint * (f0 * a + f90 * b);

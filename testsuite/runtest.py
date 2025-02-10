@@ -454,7 +454,7 @@ else :
                    failthresh=failthresh, failpercent=failpercent, filter_re=filter_re)
     
 if ret == 0 and cleanup_on_success :
-    for ext in image_extensions + [ ".txt", ".diff" ] :
+    for ext in image_extensions + [ ".txt", ".diff", ".oso" ] :
         files = glob.iglob (srcdir + '/*' + ext)
         baselineFiles = glob.iglob (srcdir + '/baseline/*' + ext) 
         for f in chain(files,baselineFiles) :

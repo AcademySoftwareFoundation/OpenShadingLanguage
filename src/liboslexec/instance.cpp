@@ -847,6 +847,7 @@ ShaderGroup::setup_interactive_arena(cspan<uint8_t> paramblock)
 }
 
 
+
 void
 ShaderGroup::generate_optix_cache_key(const std::string& code)
 {
@@ -863,6 +864,8 @@ ShaderGroup::generate_optix_cache_key(const std::string& code)
 
     m_optix_cache_key = cache_key;
 }
+
+
 
 std::string
 ShaderGroup::serialize() const

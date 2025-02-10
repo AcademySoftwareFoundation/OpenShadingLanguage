@@ -849,7 +849,7 @@ ShaderGroup::setup_interactive_arena(cspan<uint8_t> paramblock)
 
 
 void
-ShaderGroup::generate_optix_cache_key(const std::string& code)
+ShaderGroup::generate_optix_cache_key(string_view code)
 {
     const uint64_t ir_key = Strutil::strhash(code);
 

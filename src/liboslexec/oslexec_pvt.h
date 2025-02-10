@@ -1852,7 +1852,7 @@ public:
     ustring name() const { return m_name; }
 
     // Generate and memoize the cache key so we don't calculate it twice
-    void generate_optix_cache_key(const std::string& code);
+    void generate_optix_cache_key(string_view code);
     std::string optix_cache_key() const { return m_optix_cache_key; }
 
     std::string serialize() const;

@@ -82,10 +82,10 @@ struct PerThreadInfo {
 namespace pvt {
 
 void
-optix_cache_unwrap(const std::string& cache_value, std::string& ptx,
+optix_cache_unwrap(string_view cache_value, std::string& ptx,
                    size_t& groupdata_size);
 std::string
-optix_cache_wrap(const std::string& ptx, size_t groupdata_size);
+optix_cache_wrap(string_view ptx, size_t groupdata_size);
 
 // forward definitions
 class ShadingSystemImpl;

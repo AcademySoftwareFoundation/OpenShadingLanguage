@@ -3122,6 +3122,8 @@ RuntimeOptimizer::printinst(std::ostream& out) const
     return out;
 }
 
+
+
 std::string
 RuntimeOptimizer::serialize()
 {
@@ -3134,6 +3136,8 @@ RuntimeOptimizer::serialize()
 
     return ss.str();
 }
+
+
 
 void
 RuntimeOptimizer::run()

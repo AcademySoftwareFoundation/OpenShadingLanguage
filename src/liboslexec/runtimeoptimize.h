@@ -460,6 +460,8 @@ public:
                        fmtformat(fmt, std::forward<Args>(args)...));
     }
 
+    std::string serialize();
+
 private:
     int m_optimize;                        ///< Current optimization level
     bool m_opt_simplify_param;             ///< Turn instance params into const?

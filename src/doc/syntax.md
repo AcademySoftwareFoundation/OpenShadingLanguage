@@ -88,9 +88,9 @@ Some examples of variable declarations are
 
 Arrays are also supported, declared as follows:
 
-> *type variablename* `[` *arraylen* `}`
+> *type variablename* `[` *arraylen* `]`
 >
-> *type variablename* `[` *arraylen* `}` `=` `{` *init0 `,` *init1* ... `}`
+> *type variablename* `[` *arraylen* `]` `=` `{` *init0 `,` *init1* ... `}`
 
 Array variables in OSL must have a constant length (though function parameters
 and shader parameters may have undetermined length).  Some examples of array

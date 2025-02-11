@@ -426,7 +426,7 @@ jobs:
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.14
                             FREETYPE_VERSION=VER-2-13-3
-          - desc: bleeding edge gcc12/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
+          - desc: bleeding edge gcc13/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-24.04
             cc_compiler: gcc-13

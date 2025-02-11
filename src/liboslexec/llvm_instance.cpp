@@ -2281,6 +2281,14 @@ BackendLLVM::run()
                 group().llvm_compiled_layer(nlayers - 1));
     }
 
+    if (shadingsys().use_optix_cache()) {
+        std::string cache_key = group().optix_cache_key();
+        renderer()->cache_insert(
+            "optix_ptx", cache_key,
+            optix_cache_wrap(group().m_llvm_ptx_compiled_version,
+                             group().llvm_groupdata_size()));
+    }
+
     // We are destroying the entire module below,
     // no reason to bother destroying individual functions
 #if 0

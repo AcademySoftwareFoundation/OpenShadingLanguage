@@ -426,10 +426,13 @@ LLVMGEN(llvm_gen_printf_legacy)
     }
 #endif
 
-    // Some ops prepend things
-    if (op.opname() == op_error || op.opname() == op_warning) {
-        s = fmtformat("Shader {} [{}]: {}", op.opname(),
-                      rop.inst()->shadername(), s);
+    // TODO: optix cache should handle ustrings generated during llvm-gen
+    if (!rop.use_optix_cache()) {
+        // Some ops prepend things
+        if (op.opname() == op_error || op.opname() == op_warning) {
+            s = fmtformat("Shader {} [{}]: {}", op.opname(),
+                          rop.inst()->shadername(), s);
+        }
     }
 
     // Now go back and put the new format string in its place
@@ -709,10 +712,12 @@ LLVMGEN(llvm_gen_print_fmt)
             }
         }
     }
-    // Some ops prepend things
-    if (op.opname() == op_error || op.opname() == op_warning) {
-        s = fmtformat("Shader {} [{}]: {}", op.opname(),
-                      rop.inst()->shadername(), s);
+    if (!rop.use_optix_cache()) {
+        // Some ops prepend things
+        if (op.opname() == op_error || op.opname() == op_warning) {
+            s = fmtformat("Shader {} [{}]: {}", op.opname(),
+                          rop.inst()->shadername(), s);
+        }
     }
     ustring s_ustring(s.c_str());
     call_args.push_back(rop.llvm_const_hash(s_ustring));

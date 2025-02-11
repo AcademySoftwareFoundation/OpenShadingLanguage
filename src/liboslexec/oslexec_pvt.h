@@ -78,6 +78,12 @@ struct PerThreadInfo {
 
 namespace pvt {
 
+void
+optix_cache_unwrap(string_view cache_value, std::string& ptx,
+                   size_t& groupdata_size);
+std::string
+optix_cache_wrap(string_view ptx, size_t groupdata_size);
+
 // forward definitions
 class ShadingSystemImpl;
 class ShaderInstance;
@@ -627,6 +633,7 @@ public:
     TextureSystem* texturesys() const { return m_texturesys; }
 
     bool use_optix() const { return m_use_optix; }
+    bool use_optix_cache() const { return m_use_optix_cache; }
     bool debug_nan() const { return m_debugnan; }
     bool debug_uninit() const { return m_debug_uninit; }
     bool lockgeom_default() const { return m_lockgeom_default; }
@@ -940,9 +947,10 @@ private:
     std::vector<ustring> m_raytypes;          ///< Names of ray types
     std::vector<ustring> m_renderer_outputs;  ///< Names of renderer outputs
     std::vector<SymLocationDesc> m_symlocs;
-    int m_max_local_mem_KB;           ///< Local storage can a shader use
-    int m_compile_report;             ///< Print compilation report?
-    bool m_use_optix;                 ///< This is an OptiX-based renderer
+    int m_max_local_mem_KB;  ///< Local storage can a shader use
+    int m_compile_report;    ///< Print compilation report?
+    bool m_use_optix;        ///< This is an OptiX-based renderer
+    bool m_use_optix_cache;  ///< Renderer-enabled caching for OptiX ptx
     int m_max_optix_groupdata_alloc;  ///< Maximum OptiX groupdata buffer allocation
     bool m_buffer_printf;             ///< Buffer/batch printf output?
     bool m_no_noise;                  ///< Substitute trivial noise calls
@@ -1829,6 +1837,10 @@ public:
     void name(ustring name) { m_name = name; }
     ustring name() const { return m_name; }
 
+    // Generate and memoize the cache key so we don't calculate it twice
+    void generate_optix_cache_key(string_view code);
+    std::string optix_cache_key() const { return m_optix_cache_key; }
+
     std::string serialize() const;
 
     void lock() const { m_mutex.lock(); }
@@ -2015,6 +2027,8 @@ private:
     bool m_unknown_attributes_needed;
     atomic_ll m_executions { 0 };  ///< Number of times the group executed
     atomic_ll m_stat_total_shading_time_ticks { 0 };  // Shading time (ticks)
+
+    std::string m_optix_cache_key;
 
     // PTX assembly for compiled ShaderGroup
     std::string m_llvm_ptx_compiled_version;

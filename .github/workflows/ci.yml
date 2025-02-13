@@ -378,15 +378,15 @@ jobs:
                             USE_OPENVDB=0
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
 
-          - desc: Debug gcc7/C++17 llvm11 py3.8 oiio2.5 exr3.1 sse4
+          - desc: Debug gcc9/C++17 llvm11 py3.10 oiio2.5 exr3.1 sse4
             nametag: linux-debug-gcc7-llvm11
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             cxx_compiler: g++-9
             cxx_std: 17
             openexr_ver: v3.1.11
             openimageio_ver: v2.5.4.0
             pybind11_ver: v2.7.0
-            python_ver: 3.8
+            python_ver: "3.10"
             simd: sse4.2
             setenvs: export CMAKE_BUILD_TYPE=Debug
                             LLVM_VERSION=11.0.0 LLVM_DISTRO_NAME=ubuntu-20.04
@@ -394,14 +394,14 @@ jobs:
                             CTEST_TEST_TIMEOUT=240
           - desc: gcc10/C++17 llvm11 oiio-2.5 avx2
             nametag: linux-2021ish-gcc10-llvm11
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             cxx_compiler: g++-10
             cxx_std: 17
             fmt_ver: 7.0.1
             openexr_ver: v3.1.11
             openimageio_ver: v2.5.17.0
             pybind11_ver: v2.8.1
-            python_ver: 3.8
+            python_ver: "3.10"
             simd: avx2,f16c
             setenvs: export LLVM_VERSION=11.0.0 LLVM_DISTRO_NAME=ubuntu-20.04
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
@@ -443,9 +443,9 @@ jobs:
             setenvs: export LLVM_VERSION=17.0.6
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             PUGIXML_VERSION=master
-          - desc: clang14/C++17 llvm14 py3.8 avx2 batch-b16avx512
+          - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             cxx_compiler: clang++
             cc_compiler: clang
             cxx_std: 17
@@ -454,7 +454,7 @@ jobs:
             openexr_ver: v3.1.11
             openimageio_ver: release
             pybind11_ver: v2.9.2
-            python_ver: 3.8
+            python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=14.0.0

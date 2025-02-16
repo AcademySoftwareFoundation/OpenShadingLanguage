@@ -1,8 +1,41 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.14.4.0 -- in progress (compared to 1.13)
+Release 1.15 (in progress) -- compared to 1.14
 -------------------------------------------------------------
+
+### New minimum dependencies, toolchain, and compatibility changes:
+
+### ✏️  OSL Language, standard library, and oslc compiler (for shader writers):
+
+### ☀️  testshade/testrender/osltoy improvements
+
+### ⛰️  API changes and new ShadingSystem features (for renderer writers):
+
+### 🚀  SIMD batched shading mode
+
+### 🚀  OptiX GPU rendering
+
+### 🐛/🔧  Internals: fixes, improvements, and developer concerns
+
+### 🏗  Build/test/CI and platform ports
+* CMake build system and scripts:
+* Dependency version support:
+* Testing and Continuous integration (CI) systems:
+* Platform support:
+
+### 📚  Documentation
+
+### 🏢  Project Administration
+
+
+---
+
+---
+
+Release 1.14 (v1.14.4.0 - 12 Feb 2025) -- compared to 1.13
+-------------------------------------------------------------
+- v1.14.4.0-beta1 - 12 Feb 2025
 
 ### New minimum dependencies, toolchain, and compatibility changes:
 * **C++**: Raise C++ standard to 17 (from 14), gcc min to 9.3 (from 6.3), clang min to 5.0 [#1847](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1847) (1.14.2.0)

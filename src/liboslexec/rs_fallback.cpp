@@ -8,6 +8,7 @@
 
 #include <OSL/journal.h>
 
+#include "oslexec_pvt.h"
 
 // Fallback is to reroute calls back through the virtual function
 // based RendererServices from ShaderGlobals.

@@ -368,14 +368,14 @@ rs_trace_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash name,
 #endif
 }
 
-#ifdef __CUDA_ARCH__ // Host side uses rs_fallback implementation.
+#ifdef __CUDA_ARCH__  // Host side uses rs_fallback implementation.
 OSL_RSOP OSL_HOSTDEVICE void*
 rs_allocate_closure(OSL::OpaqueExecContextPtr ec, size_t size, size_t alignment)
 {
-    auto sg = (OSL::ShaderGlobals*)ec;
-    uintptr_t ptr  = OIIO::round_to_multiple_of_pow2((uintptr_t)sg.renderstate,
-                                                     alignment);
-    sg.renderstate = (void*)(ptr + size);
+    auto sg       = (OSL::ShaderGlobals*)ec;
+    uintptr_t ptr = OIIO::round_to_multiple_of_pow2((uintptr_t)sg->renderstate,
+                                                    alignment);
+    sg->renderstate = (void*)(ptr + size);
     return (void*)ptr;
 }
 #endif

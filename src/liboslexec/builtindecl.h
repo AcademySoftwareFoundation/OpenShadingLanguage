@@ -111,7 +111,7 @@
 
 DECL(osl_add_closure_closure, "XXXX")
 DECL(osl_mul_closure_float, "XXXf")
-DECL(osl_mul_closure_color, "XXXc")
+DECL(osl_mul_closure_color, "XXXX")
 DECL(osl_allocate_closure_component, "XXii")
 DECL(osl_allocate_weighted_closure_component, "XXiiX")
 DECL(osl_closure_to_string, "sXX")

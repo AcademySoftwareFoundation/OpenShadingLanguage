@@ -19,14 +19,13 @@ OSL_SHADEOP OSL_HOSTDEVICE const void*
 osl_add_closure_closure(OpaqueExecContextPtr oec, const void* a_,
                         const void* b_)
 {
-    ShaderGlobals* sg     = (ShaderGlobals*)oec;
     const ClosureColor* a = (const ClosureColor*)a_;
     const ClosureColor* b = (const ClosureColor*)b_;
     if (a == NULL)
         return b;
     if (b == NULL)
         return a;
-    ClosureAdd* add = (ClosureAdd*)rs_allocate_closure(sg, sizeof(ClosureAdd),
+    ClosureAdd* add = (ClosureAdd*)rs_allocate_closure(oec, sizeof(ClosureAdd),
                                                        alignof(ClosureAdd));
     if (add) {
         add->id       = ClosureColor::ADD;
@@ -38,17 +37,17 @@ osl_add_closure_closure(OpaqueExecContextPtr oec, const void* a_,
 
 
 OSL_SHADEOP OSL_HOSTDEVICE const void*
-osl_mul_closure_color(OpaqueExecContextPtr oec, const void* a_, const Color3* w)
+osl_mul_closure_color(OpaqueExecContextPtr oec, const void* a_, const void* w_)
 {
-    ShaderGlobals* sg     = (ShaderGlobals*)oec;
     const ClosureColor* a = (const ClosureColor*)a_;
+    const Color3* w       = (const Color3*)w_;
     if (a == NULL)
         return NULL;
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;
     if (w->x == 1.0f && w->y == 1.0f && w->z == 1.0f)
         return a;
-    ClosureMul* mul = (ClosureMul*)rs_allocate_closure(sg, sizeof(ClosureMul),
+    ClosureMul* mul = (ClosureMul*)rs_allocate_closure(oec, sizeof(ClosureMul),
                                                        alignof(ClosureMul));
     if (mul) {
         mul->id      = ClosureColor::MUL;
@@ -62,7 +61,6 @@ osl_mul_closure_color(OpaqueExecContextPtr oec, const void* a_, const Color3* w)
 OSL_SHADEOP OSL_HOSTDEVICE const void*
 osl_mul_closure_float(OpaqueExecContextPtr oec, const void* a_, float w)
 {
-    ShaderGlobals* sg     = (ShaderGlobals*)oec;
     const ClosureColor* a = (const ClosureColor*)a_;
     if (a == NULL)
         return NULL;
@@ -70,7 +68,7 @@ osl_mul_closure_float(OpaqueExecContextPtr oec, const void* a_, float w)
         return NULL;
     if (w == 1.0f)
         return a;
-    ClosureMul* mul = (ClosureMul*)rs_allocate_closure(sg, sizeof(ClosureMul),
+    ClosureMul* mul = (ClosureMul*)rs_allocate_closure(oec, sizeof(ClosureMul),
                                                        alignof(ClosureMul));
     if (mul) {
         mul->id      = ClosureColor::MUL;
@@ -84,11 +82,10 @@ osl_mul_closure_float(OpaqueExecContextPtr oec, const void* a_, float w)
 OSL_SHADEOP OSL_HOSTDEVICE void*
 osl_allocate_closure_component(OpaqueExecContextPtr oec, int id, int size)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)oec;
     // Allocate the component and the mul back to back
     const size_t needed = sizeof(ClosureComponent) + size;
     ClosureComponent* comp
-        = (ClosureComponent*)rs_allocate_closure(sg, needed,
+        = (ClosureComponent*)rs_allocate_closure(oec, needed,
                                                  alignof(ClosureComponent));
     if (comp) {
         comp->id = id;
@@ -101,15 +98,15 @@ osl_allocate_closure_component(OpaqueExecContextPtr oec, int id, int size)
 
 OSL_SHADEOP OSL_HOSTDEVICE void*
 osl_allocate_weighted_closure_component(OpaqueExecContextPtr oec, int id,
-                                        int size, const Color3* w)
+                                        int size, const void* w_)
 {
-    ShaderGlobals* sg = (ShaderGlobals*)oec;
+    const Color3* w = (const Color3*)w_;
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;
     // Allocate the component and the mul back to back
     const size_t needed = sizeof(ClosureComponent) + size;
     ClosureComponent* comp
-        = (ClosureComponent*)rs_allocate_closure(sg, needed,
+        = (ClosureComponent*)rs_allocate_closure(oec, needed,
                                                  alignof(ClosureComponent));
     if (comp) {
         comp->id = id;

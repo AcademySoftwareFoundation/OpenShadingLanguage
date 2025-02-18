@@ -17,8 +17,6 @@
 
 #include "render_state.h"
 
-#include "oslexec_pvt.h"
-
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
 OSL_RSOP OSL_HOSTDEVICE bool
@@ -370,19 +368,17 @@ rs_trace_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash name,
 #endif
 }
 
+#ifdef __CUDA_ARCH__ // Host side uses rs_fallback implementation.
 OSL_RSOP OSL_HOSTDEVICE void*
 rs_allocate_closure(OSL::OpaqueExecContextPtr ec, size_t size, size_t alignment)
 {
     auto sg = (OSL::ShaderGlobals*)ec;
-#ifndef __CUDA_ARCH__
-    return sg->context->allocate_closure(size, alignment);
-#else
     uintptr_t ptr  = OIIO::round_to_multiple_of_pow2((uintptr_t)sg.renderstate,
                                                      alignment);
     sg.renderstate = (void*)(ptr + size);
     return (void*)ptr;
-#endif
 }
+#endif
 
 OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_string(OSL::ustringhash value, void* result)

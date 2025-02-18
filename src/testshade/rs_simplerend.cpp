@@ -17,6 +17,8 @@
 
 #include "render_state.h"
 
+#include "oslexec_pvt.h"
+
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
 OSL_RSOP OSL_HOSTDEVICE bool

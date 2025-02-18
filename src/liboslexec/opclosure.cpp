@@ -15,10 +15,13 @@ namespace pvt {
 
 
 
-OSL_SHADEOP OSL_HOSTDEVICE const ClosureColor*
-osl_add_closure_closure(ShaderGlobals* sg, const ClosureColor* a,
-                        const ClosureColor* b)
+OSL_SHADEOP OSL_HOSTDEVICE const void*
+osl_add_closure_closure(OpaqueExecContextPtr oec, const void* a_,
+                        const void* b_)
 {
+    ShaderGlobals* sg     = (ShaderGlobals*)oec;
+    const ClosureColor* a = (const ClosureColor*)a_;
+    const ClosureColor* b = (const ClosureColor*)b_;
     if (a == NULL)
         return b;
     if (b == NULL)
@@ -34,9 +37,11 @@ osl_add_closure_closure(ShaderGlobals* sg, const ClosureColor* a,
 }
 
 
-OSL_SHADEOP OSL_HOSTDEVICE const ClosureColor*
-osl_mul_closure_color(ShaderGlobals* sg, const ClosureColor* a, const Color3* w)
+OSL_SHADEOP OSL_HOSTDEVICE const void*
+osl_mul_closure_color(OpaqueExecContextPtr oec, const void* a_, const Color3* w)
 {
+    ShaderGlobals* sg     = (ShaderGlobals*)oec;
+    const ClosureColor* a = (const ClosureColor*)a_;
     if (a == NULL)
         return NULL;
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
@@ -54,9 +59,11 @@ osl_mul_closure_color(ShaderGlobals* sg, const ClosureColor* a, const Color3* w)
 }
 
 
-OSL_SHADEOP OSL_HOSTDEVICE const ClosureColor*
-osl_mul_closure_float(ShaderGlobals* sg, const ClosureColor* a, float w)
+OSL_SHADEOP OSL_HOSTDEVICE const void*
+osl_mul_closure_float(OpaqueExecContextPtr oec, const void* a_, float w)
 {
+    ShaderGlobals* sg     = (ShaderGlobals*)oec;
+    const ClosureColor* a = (const ClosureColor*)a_;
     if (a == NULL)
         return NULL;
     if (w == 0.0f)
@@ -74,9 +81,10 @@ osl_mul_closure_float(ShaderGlobals* sg, const ClosureColor* a, float w)
 }
 
 
-OSL_SHADEOP OSL_HOSTDEVICE ClosureComponent*
-osl_allocate_closure_component(ShaderGlobals* sg, int id, int size)
+OSL_SHADEOP OSL_HOSTDEVICE void*
+osl_allocate_closure_component(OpaqueExecContextPtr oec, int id, int size)
 {
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     // Allocate the component and the mul back to back
     const size_t needed = sizeof(ClosureComponent) + size;
     ClosureComponent* comp
@@ -91,10 +99,11 @@ osl_allocate_closure_component(ShaderGlobals* sg, int id, int size)
 
 
 
-OSL_SHADEOP OSL_HOSTDEVICE ClosureColor*
-osl_allocate_weighted_closure_component(ShaderGlobals* sg, int id, int size,
-                                        const Color3* w)
+OSL_SHADEOP OSL_HOSTDEVICE void*
+osl_allocate_weighted_closure_component(OpaqueExecContextPtr oec, int id,
+                                        int size, const Color3* w)
 {
+    ShaderGlobals* sg = (ShaderGlobals*)oec;
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;
     // Allocate the component and the mul back to back
@@ -111,8 +120,10 @@ osl_allocate_weighted_closure_component(ShaderGlobals* sg, int id, int size,
 
 // Deprecated, remove when conversion from ustring to ustringhash is finished
 OSL_SHADEOP const char*
-osl_closure_to_string(ShaderGlobals* sg, ClosureColor* c)
+osl_closure_to_string(OpaqueExecContextPtr oec, const void* c_)
 {
+    ShaderGlobals* sg     = (ShaderGlobals*)oec;
+    const ClosureColor* c = (const ClosureColor*)c_;
     // Special case for printing closures
     std::ostringstream stream;
     stream.imbue(std::locale::classic());  // force C locale
@@ -122,8 +133,10 @@ osl_closure_to_string(ShaderGlobals* sg, ClosureColor* c)
 }
 
 OSL_SHADEOP ustringhash_pod
-osl_closure_to_ustringhash(ShaderGlobals* sg, ClosureColor* c)
+osl_closure_to_ustringhash(OpaqueExecContextPtr oec, const void* c_)
 {
+    ShaderGlobals* sg     = (ShaderGlobals*)oec;
+    const ClosureColor* c = (const ClosureColor*)c_;
     // Special case for printing closures
     std::ostringstream stream;
     stream.imbue(std::locale::classic());  // force C locale

@@ -317,7 +317,8 @@ rs_trace_get(OSL::OpaqueExecContextPtr oec, OSL::ustringhash name,
              OSL::TypeDesc type, void* val, bool derivatives);
 
 /// Allocates memory for a closure color. May return null if no memory could
-/// be allocated.
+/// be allocated. It is the renderers responsibility to clean up these
+/// allocations after a shader is run and the closures have been processed.
 OSL_RSOP OSL_HOSTDEVICE void*
 rs_allocate_closure(OSL::OpaqueExecContextPtr oec, size_t size,
                     size_t alignment);

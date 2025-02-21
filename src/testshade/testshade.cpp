@@ -945,21 +945,23 @@ setup_transformations(SimpleRenderer& rend, OSL::Matrix44& Mshad,
     rend.name_transform("myspace", Mmyspace);
 }
 
-// NOTE:  each host thread could end up with its own RenderState.
-//        Starting simple with a single instance for now
-static RenderState theRenderState;
+// A single render context shared by all render threads.
+static RenderContext theRenderState;
 
 
 // Set up the ShaderGlobals fields for pixel (x,y).
 static void
-setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys, int x, int y)
+setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys,
+                    RenderState& renderState, int x, int y)
 {
     // Just zero the whole thing out to start
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
 
     // Any state data needed by SimpleRenderer or its free function equivalent
     // will need to be passed here the ShaderGlobals.
-    sg.renderstate = &theRenderState;
+    renderState.context = &theRenderState;
+    renderState.closure_pool = nullptr; // Use inbuilt closure pool.
+    sg.renderstate      = &renderState;
 
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.
@@ -1182,7 +1184,8 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
         ShadingContext* ctx             = shadingsys->get_context(thread_info);
         raytype_bit = shadingsys->raytype_bit(ustring(raytype_name));
         ShaderGlobals sg;
-        setup_shaderglobals(sg, shadingsys, 0, 0);
+        RenderState renderState;
+        setup_shaderglobals(sg, shadingsys, renderState, 0, 0);
 
 #if OSL_USE_BATCHED
         if (batched) {
@@ -1586,6 +1589,7 @@ shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
 
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
+    RenderState renderState;
 
     raytype_bit = shadingsys->raytype_bit(ustring(raytype_name));
 
@@ -1606,7 +1610,7 @@ shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
             // set it up rigged to look like we're rendering a single
             // quadrilateral that exactly fills the viewport, and that
             // setup is done in the following function call:
-            setup_shaderglobals(shaderglobals, shadingsys, x, y);
+            setup_shaderglobals(shaderglobals, shadingsys, renderState, x, y);
 
             if (this_threads_index == uninitialized_thread_index) {
                 this_threads_index = next_thread_index.fetch_add(1u);

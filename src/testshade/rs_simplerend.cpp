@@ -66,7 +66,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
     using OSL::Matrix44;
 
 
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rs = OSL::get_rs<RenderState>(ec)->context;
     if (to == OSL::Hashes::camera || to == OSL::Hashes::screen
         || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
         Matrix44 M { rs->world_to_camera };
@@ -372,11 +372,8 @@ rs_trace_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash name,
 OSL_RSOP OSL_HOSTDEVICE void*
 rs_allocate_closure(OSL::OpaqueExecContextPtr ec, size_t size, size_t alignment)
 {
-    auto sg       = (OSL::ShaderGlobals*)ec;
-    uintptr_t ptr = OIIO::round_to_multiple_of_pow2((uintptr_t)sg->renderstate,
-                                                    alignment);
-    sg->renderstate = (void*)(ptr + size);
-    return (void*)ptr;
+    auto rs = OSL::get_rs<RenderState>(ec);
+    return rs->closure_pool->allocate(size, alignment);
 }
 #endif
 
@@ -503,7 +500,7 @@ rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
     auto object              = OSL::ustringhash_from(object_);
     auto name                = OSL::ustringhash_from(name_);
     const OSL::TypeDesc type = OSL::TypeDesc_from(_type);
-    auto rs                  = OSL::get_rs<RenderState>(oec);
+    auto rs                  = OSL::get_rs<RenderState>(oec)->context;
 
     // The many branches in the code below handle the case where we don't know
     // the attribute name at compile time. In the case it is known, dead-code
@@ -648,7 +645,7 @@ rs_errorfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rs = OSL::get_rs<RenderState>(ec)->context;
 
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_errorfmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
@@ -661,7 +658,7 @@ rs_warningfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
               int32_t arg_count, const OSL::EncodedType* argTypes,
               uint32_t argValuesSize, uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rs = OSL::get_rs<RenderState>(ec)->context;
 
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_warningfmt(OSL::get_max_warnings_per_thread(ec),
@@ -676,7 +673,7 @@ rs_printfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rs = OSL::get_rs<RenderState>(ec)->context;
 
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_printfmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
@@ -691,7 +688,7 @@ rs_filefmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename_hash,
            const OSL::EncodedType* argTypes, uint32_t argValuesSize,
            uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rs = OSL::get_rs<RenderState>(ec)->context;
 
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_filefmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),

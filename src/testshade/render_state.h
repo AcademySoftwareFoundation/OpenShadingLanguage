@@ -10,7 +10,7 @@
 // All the the state free functions in rs_simplerend.cpp will need to do their job
 // NOTE:  Additional data is here that will be used by rs_simplerend.cpp in future PR's
 //        procedurally generating ShaderGlobals.
-struct RenderState {
+struct RenderContext {
     int xres;
     int yres;
     OSL::Matrix44 world_to_camera;
@@ -22,6 +22,35 @@ struct RenderState {
     float hither;
     float yon;
     void* journal_buffer;
+};
+
+class StackClosurePool {
+    alignas(8) char buffer[256];
+    void* ptr;
+
+public:
+    StackClosurePool() { reset(); }
+
+    void reset()
+    {
+      ptr = &buffer[0];
+      *(int*)ptr = 0;
+    }
+
+    void* allocate(size_t size, size_t alignment)
+    {
+        uintptr_t p = OIIO::round_to_multiple_of_pow2((uintptr_t)ptr,
+                                                      alignment);
+        ptr         = (void*)(p + size);
+        if (ptr <= &buffer[256])
+            return p;
+        return nullptr;
+    }
+}
+
+struct RenderState {
+    RenderContext* context;
+    StackClosurePool* closure_pool;
 };
 
 

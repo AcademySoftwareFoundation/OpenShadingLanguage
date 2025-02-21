@@ -959,9 +959,9 @@ setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys,
 
     // Any state data needed by SimpleRenderer or its free function equivalent
     // will need to be passed here the ShaderGlobals.
-    renderState.context = &theRenderState;
-    renderState.closure_pool = nullptr; // Use inbuilt closure pool.
-    sg.renderstate      = &renderState;
+    renderState.context      = &theRenderState;
+    renderState.closure_pool = nullptr;  // Use inbuilt closure pool.
+    sg.renderstate           = &renderState;
 
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.

@@ -48,7 +48,8 @@ __device__ __constant__ RenderParams render_params;
 
 
 static inline __device__ void
-execute_shader(ShaderGlobalsType& sg, const int shader_id, StackClosurePool& closure_pool)
+execute_shader(ShaderGlobalsType& sg, const int shader_id,
+               StackClosurePool& closure_pool)
 {
     if (shader_id < 0) {
         // TODO: should probably never get here ...

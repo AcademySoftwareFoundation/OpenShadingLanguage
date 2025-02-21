@@ -46,7 +46,7 @@ public:
             return (void*)p;
         return nullptr;
     }
-}
+};
 
 struct RenderState {
     RenderContext* context;

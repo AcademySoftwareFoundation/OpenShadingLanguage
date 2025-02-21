@@ -39,14 +39,15 @@ __direct_callable__dummy_rend_lib()
 {
 }
 
-__device__ void*
+
+__device__ const void*
 osl_add_closure_closure(void* sg_, const void* a_, const void* b_)
 {
-    a_                         = __builtin_assume_aligned(a_, alignof(float));
-    b_                         = __builtin_assume_aligned(b_, alignof(float));
-    ShaderGlobals* sg          = (ShaderGlobals*)sg_;
-    const OSL::ClosureColor* a = (const OSL::ClosureColor*)a_;
-    const OSL::ClosureColor* b = (const OSL::ClosureColor*)b_;
+    a_                          = __builtin_assume_aligned(a_, alignof(float));
+    b_                          = __builtin_assume_aligned(b_, alignof(float));
+    OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
+    const OSL::ClosureColor* a  = (const OSL::ClosureColor*)a_;
+    const OSL::ClosureColor* b  = (const OSL::ClosureColor*)b_;
     if (a == NULL)
         return b;
     if (b == NULL)
@@ -63,15 +64,15 @@ osl_add_closure_closure(void* sg_, const void* a_, const void* b_)
     return add;
 }
 
-__device__ void*
+__device__ const void*
 osl_mul_closure_color(void* sg_, const void* a_, const void* w_)
 {
     a_ = __builtin_assume_aligned(a_, alignof(float));
     w_ = __builtin_assume_aligned(w_, alignof(float));
 
-    ShaderGlobals* sg          = (ShaderGlobals*)sg_;
-    const OSL::ClosureColor* a = (const OSL::ClosureColor*)a_;
-    const OSL::Color3* w       = (const OSL::Color3*)w_;
+    OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
+    const OSL::ClosureColor* a  = (const OSL::ClosureColor*)a_;
+    const OSL::Color3* w        = (const OSL::Color3*)w_;
     if (a == NULL)
         return NULL;
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
@@ -90,13 +91,13 @@ osl_mul_closure_color(void* sg_, const void* a_, const void* w_)
     return mul;
 }
 
-__device__ void*
+__device__ const void*
 osl_mul_closure_float(void* sg_, const void* a_, float w)
 {
     a_ = __builtin_assume_aligned(a_, alignof(float));
 
-    ShaderGlobals* sg          = (ShaderGlobals*)sg_;
-    const OSL::ClosureColor* a = (const OSL::ClosureColor*)a_;
+    OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
+    const OSL::ClosureColor* a  = (const OSL::ClosureColor*)a_;
     if (a == NULL)
         return NULL;
     if (w == 0.0f)
@@ -118,8 +119,8 @@ osl_mul_closure_float(void* sg_, const void* a_, float w)
 __device__ void*
 osl_allocate_closure_component(void* sg_, int id, int size)
 {
-    ShaderGlobals* sg  = (ShaderGlobals*)sg_;
-    auto* closure_pool = ((RenderState*)sg->renderstate)->closure_pool;
+    OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
+    auto* closure_pool          = ((RenderState*)sg->renderstate)->closure_pool;
     // Allocate the component and the mul back to back
     const size_t needed = sizeof(OSL::ClosureComponent) + size;
     OSL::ClosureComponent* comp

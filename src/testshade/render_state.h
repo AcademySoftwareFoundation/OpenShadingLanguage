@@ -29,14 +29,17 @@ class StackClosurePool {
     void* ptr;
 
 public:
+    OSL_HOSTDEVICE
     StackClosurePool() { reset(); }
 
+    OSL_HOSTDEVICE
     void reset()
     {
         ptr        = &buffer[0];
         *(int*)ptr = 0;
     }
 
+    OSL_HOSTDEVICE
     void* allocate(size_t size, size_t alignment)
     {
         uintptr_t p = OIIO::round_to_multiple_of_pow2((uintptr_t)ptr,

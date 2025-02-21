@@ -33,8 +33,8 @@ public:
 
     void reset()
     {
-      ptr = &buffer[0];
-      *(int*)ptr = 0;
+        ptr        = &buffer[0];
+        *(int*)ptr = 0;
     }
 
     void* allocate(size_t size, size_t alignment)
@@ -43,7 +43,7 @@ public:
                                                       alignment);
         ptr         = (void*)(p + size);
         if (ptr <= &buffer[256])
-            return p;
+            return (void*)p;
         return nullptr;
     }
 }

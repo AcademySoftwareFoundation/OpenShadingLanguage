@@ -26,184 +26,123 @@ alignment_offset_calc(void* ptr, size_t alignment)
 // These functions are declared extern to prevent name mangling.
 extern "C" {
 
-__device__ void*
-closure_component_allot(void* pool, int id, size_t prim_size,
-                        const OSL::Color3& w)
-{
-    ((OSL::ClosureComponent*)pool)->id = id;
-    ((OSL::ClosureComponent*)pool)->w  = w;
-
-    size_t needed = (sizeof(OSL::ClosureComponent) - sizeof(void*) + prim_size
-                     + (alignof(OSL::ClosureComponent) - 1))
-                    & ~(alignof(OSL::ClosureComponent) - 1);
-    char* char_ptr = (char*)pool;
-
-    return (void*)&char_ptr[needed];
-}
-
 
 __device__ void*
-closure_mul_allot(void* pool, const OSL::Color3& w, OSL::ClosureColor* c)
+osl_add_closure_closure(void* sg_, const void* a_, const void* b_)
 {
-    ((OSL::ClosureMul*)pool)->id      = OSL::ClosureColor::MUL;
-    ((OSL::ClosureMul*)pool)->weight  = w;
-    ((OSL::ClosureMul*)pool)->closure = c;
-
-    size_t needed = (sizeof(OSL::ClosureMul)
-                     + (alignof(OSL::ClosureComponent) - 1))
-                    & ~(alignof(OSL::ClosureComponent) - 1);
-    char* char_ptr = (char*)pool;
-
-    return &char_ptr[needed];
+    a_                         = __builtin_assume_aligned(a_, alignof(float));
+    b_                         = __builtin_assume_aligned(b_, alignof(float));
+    ShaderGlobals* sg          = (ShaderGlobals*)sg_;
+    const OSL::ClosureColor* a = (const OSL::ClosureColor*)a_;
+    const OSL::ClosureColor* b = (const OSL::ClosureColor*)b_;
+    if (a == NULL)
+        return b;
+    if (b == NULL)
+        return a;
+    auto* closure_pool = ((RenderState*)sg->renderstate)->closure_pool;
+    OSL::ClosureAdd* add
+        = (OSL::ClosureAdd*)closure_pool->allocate(sizeof(OSL::ClosureAdd),
+                                                   alignof(OSL::ClosureAdd));
+    if (add) {
+        add->id       = OSL::ClosureColor::ADD;
+        add->closureA = a;
+        add->closureB = b;
+    }
+    return add;
 }
-
 
 __device__ void*
-closure_mul_float_allot(void* pool, const float& w, OSL::ClosureColor* c)
+osl_mul_closure_color(void* sg_, const void* a_, const void* w_)
 {
-    ((OSL::ClosureMul*)pool)->id       = OSL::ClosureColor::MUL;
-    ((OSL::ClosureMul*)pool)->weight.x = w;
-    ((OSL::ClosureMul*)pool)->weight.y = w;
-    ((OSL::ClosureMul*)pool)->weight.z = w;
-    ((OSL::ClosureMul*)pool)->closure  = c;
+    a_ = __builtin_assume_aligned(a_, alignof(float));
+    w_ = __builtin_assume_aligned(w_, alignof(float));
 
-    size_t needed = (sizeof(OSL::ClosureMul)
-                     + (alignof(OSL::ClosureComponent) - 1))
-                    & ~(alignof(OSL::ClosureComponent) - 1);
-    char* char_ptr = (char*)pool;
-
-    return &char_ptr[needed];
+    ShaderGlobals* sg          = (ShaderGlobals*)sg_;
+    const OSL::ClosureColor* a = (const OSL::ClosureColor*)a_;
+    const OSL::Color3* w       = (const OSL::Color3*)w_;
+    if (a == NULL)
+        return NULL;
+    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
+        return NULL;
+    if (w->x == 1.0f && w->y == 1.0f && w->z == 1.0f)
+        return a;
+    auto* closure_pool = ((RenderState*)sg->renderstate)->closure_pool;
+    OSL::ClosureMul* mul
+        = (OSL::ClosureMul*)closure_pool->allocate(sizeof(OSL::ClosureMul),
+                                                   alignof(OSL::ClosureMul));
+    if (mul) {
+        mul->id      = OSL::ClosureColor::MUL;
+        mul->weight  = *w;
+        mul->closure = a;
+    }
+    return mul;
 }
-
 
 __device__ void*
-closure_add_allot(void* pool, OSL::ClosureColor* a, OSL::ClosureColor* b)
+osl_mul_closure_float(void* sg_, const void* a_, float w)
 {
-    ((OSL::ClosureAdd*)pool)->id       = OSL::ClosureColor::ADD;
-    ((OSL::ClosureAdd*)pool)->closureA = a;
-    ((OSL::ClosureAdd*)pool)->closureB = b;
+    a_ = __builtin_assume_aligned(a_, alignof(float));
 
-    size_t needed = (sizeof(OSL::ClosureAdd)
-                     + (alignof(OSL::ClosureComponent) - 1))
-                    & ~(alignof(OSL::ClosureComponent) - 1);
-    char* char_ptr = (char*)pool;
-
-    return &char_ptr[needed];
+    ShaderGlobals* sg          = (ShaderGlobals*)sg_;
+    const OSL::ClosureColor* a = (const OSL::ClosureColor*)a_;
+    if (a == NULL)
+        return NULL;
+    if (w == 0.0f)
+        return NULL;
+    if (w == 1.0f)
+        return a;
+    auto* closure_pool = ((RenderState*)sg->renderstate)->closure_pool;
+    OSL::ClosureMul* mul
+        = (OSL::ClosureMul*)closure_pool->allocate(sizeof(OSL::ClosureMul),
+                                                   alignof(OSL::ClosureMul));
+    if (mul) {
+        mul->id      = OSL::ClosureColor::MUL;
+        mul->weight  = OSL::Color3(w);
+        mul->closure = a;
+    }
+    return mul;
 }
-
 
 __device__ void*
 osl_allocate_closure_component(void* sg_, int id, int size)
 {
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
-
-    OSL::Color3 w = OSL::Color3(1, 1, 1);
-    // Fix up the alignment
-    void* ret = ((char*)sg_ptr->renderstate)
-                + alignment_offset_calc(sg_ptr->renderstate,
-                                        alignof(OSL::ClosureComponent));
-
-    size = max(4, size);
-
-    sg_ptr->renderstate = closure_component_allot(ret, id, size, w);
-
-    return ret;
+    ShaderGlobals* sg  = (ShaderGlobals*)sg_;
+    auto* closure_pool = ((RenderState*)sg->renderstate)->closure_pool;
+    // Allocate the component and the mul back to back
+    const size_t needed = sizeof(OSL::ClosureComponent) + size;
+    OSL::ClosureComponent* comp
+        = (OSL::ClosureComponent*)
+              closure_pool->allocate(needed, alignof(OSL::ClosureComponent));
+    if (comp) {
+        comp->id = id;
+        comp->w  = OSL::Color3(1.0f);
+    }
+    return comp;
 }
-
 
 __device__ void*
 osl_allocate_weighted_closure_component(void* sg_, int id, int size,
-                                        const OSL::Color3* w)
+                                        const void* w_)
 {
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
+    w_ = __builtin_assume_aligned(w_, alignof(float));
 
-    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
+    ShaderGlobals* sg    = (ShaderGlobals*)sg_;
+    const OSL::Color3* w = (const OSL::Color3*)w_;
+    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;
+    auto* closure_pool = ((RenderState*)sg->renderstate)->closure_pool;
+    // Allocate the component and the mul back to back
+    const size_t needed = sizeof(OSL::ClosureComponent) + size;
+    OSL::ClosureComponent* comp
+        = (OSL::ClosureComponent*)
+              closure_pool->allocate(needed, alignof(OSL::ClosureComponent));
+    if (comp) {
+        comp->id = id;
+        comp->w  = *w;
     }
-
-    size = max(4, size);
-
-    // Fix up the alignment
-    void* ret = ((char*)sg_ptr->renderstate)
-                + alignment_offset_calc(sg_ptr->renderstate,
-                                        alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_component_allot(ret, id, size, *w);
-
-    return ret;
+    return comp;
 }
 
-
-__device__ void*
-osl_mul_closure_color(void* sg_, OSL::ClosureColor* a, const OSL::Color3* w)
-{
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
-
-    if (a == NULL) {
-        return NULL;
-    }
-
-    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
-        return NULL;
-    }
-
-    if (w->x == 1.0f && w->y == 1.0f && w->z == 1.0f) {
-        return a;
-    }
-
-    // Fix up the alignment
-    void* ret = ((char*)sg_ptr->renderstate)
-                + alignment_offset_calc(sg_ptr->renderstate,
-                                        alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_mul_allot(ret, *w, a);
-
-    return ret;
-}
-
-
-__device__ void*
-osl_mul_closure_float(void* sg_, OSL::ClosureColor* a, float w)
-{
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
-
-    if (a == NULL || w == 0.0f) {
-        return NULL;
-    }
-
-    if (w == 1.0f) {
-        return a;
-    }
-
-    // Fix up the alignment
-    void* ret = ((char*)sg_ptr->renderstate)
-                + alignment_offset_calc(sg_ptr->renderstate,
-                                        alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_mul_float_allot(ret, w, a);
-
-    return ret;
-}
-
-
-__device__ void*
-osl_add_closure_closure(void* sg_, OSL::ClosureColor* a, OSL::ClosureColor* b)
-{
-    ShaderGlobals* sg_ptr = (ShaderGlobals*)sg_;
-
-    if (a == NULL) {
-        return b;
-    }
-
-    if (b == NULL) {
-        return a;
-    }
-
-    // Fix up the alignment
-    void* ret = ((char*)sg_ptr->renderstate)
-                + alignment_offset_calc(sg_ptr->renderstate,
-                                        alignof(OSL::ClosureComponent));
-    sg_ptr->renderstate = closure_add_allot(ret, a, b);
-
-    return ret;
-}
 
 #define IS_STRING(type) (type.basetype == OSL::TypeDesc::STRING)
 #define IS_PTR(type)    (type.basetype == OSL::TypeDesc::PTR)
@@ -230,8 +169,8 @@ osl_bind_interpolated_param(void* sg_, OSL::ustring_pod name, long long type,
     char status = *userdata_initialized;
     if (status == 0) {
         bool ok               = rend_get_userdata(HDSTR(name), userdata_data,
-                                    symbol_data_size, (*(OSL::TypeDesc*)&type),
-                                    userdata_index);
+                                                  symbol_data_size, (*(OSL::TypeDesc*)&type),
+                                                  userdata_index);
         *userdata_initialized = status = 1 + ok;
     }
     if (status == 2) {

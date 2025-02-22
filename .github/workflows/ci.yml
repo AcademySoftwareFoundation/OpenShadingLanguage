@@ -234,6 +234,7 @@ jobs:
       ctest_test_timeout: ${{ matrix.ctest_test_timeout || '800' }}
       coverage: ${{ matrix.coverage || 0 }}
       sonar: ${{ matrix.sonar || 0 }}
+      llvm_action_ver: ${{ matrix.llvm_action_ver }}
     strategy:
       fail-fast: false
       matrix:
@@ -438,11 +439,10 @@ jobs:
             openimageio_ver: main
             pybind11_ver: master
             python_ver: "3.12"
+            llvm_action_ver: "18.1.7"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=17.0.6
-                            LLVM_DISTRO_NAME=ubuntu-22.04
-                            PUGIXML_VERSION=master
+            setenvs: export PUGIXML_VERSION=master
           - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
             runner: ubuntu-22.04

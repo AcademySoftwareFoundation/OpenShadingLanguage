@@ -118,7 +118,7 @@ public:
 //Not recommended for production renderer but fine for osldeformer
 std::atomic<uint32_t> next_thread_index { 0 };
 constexpr uint32_t uninitialized_thread_index = -1;
-thread_local uint32_t this_threads_index = uninitialized_thread_index;
+thread_local uint32_t this_threads_index      = uninitialized_thread_index;
 
 
 int
@@ -290,14 +290,13 @@ main(int argc, char* argv[])
         // Run the shader (will automagically optimize and JIT the first
         // time it executes).
 
-        if(this_threads_index == uninitialized_thread_index) {
-                
-                this_threads_index = next_thread_index.fetch_add(1u);
-            }
-            int thread_index = this_threads_index;
+        if (this_threads_index == uninitialized_thread_index) {
+            this_threads_index = next_thread_index.fetch_add(1u);
+        }
+        int thread_index = this_threads_index;
 
-        shadsys->execute(*ctx, *mygroup.get(), thread_index, /*shade point index= */ i,
-                         shaderglobals,
+        shadsys->execute(*ctx, *mygroup.get(), thread_index,
+                         /*shade point index= */ i, shaderglobals,
                          /*userdata arena start=*/&userdata,
                          /*output arena start=*/&Pout);
 

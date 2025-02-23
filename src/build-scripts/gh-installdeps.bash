@@ -84,13 +84,15 @@ else
         time sudo apt-get update
     fi
 
-    time sudo apt-get -q install -y \
-        git cmake ninja-build ccache g++ \
-        libboost-dev libboost-thread-dev libboost-filesystem-dev \
-        libtiff-dev libgif-dev libpng-dev \
-        flex bison libbison-dev \
-        libpugixml-dev \
-        libopencolorio-dev
+    if [[ "${SKIP_SYSTEM_DEPS_INSTALL}" != "1" ]] ; then
+        time sudo apt-get -q install -y \
+            git cmake ccache ninja-build g++ \
+            libboost-dev libboost-thread-dev libboost-filesystem-dev \
+            libtiff-dev libgif-dev libpng-dev \
+            flex bison libbison-dev \
+            libpugixml-dev \
+            libopencolorio-dev
+    fi
 
     if [[ "${QT_VERSION:-5}" == "5" ]] ; then
         time sudo apt-get -q install -y qt5-default || /bin/true
@@ -101,7 +103,9 @@ else
         time sudo apt-get -q install -y ${EXTRA_DEP_PACKAGES}
     fi
 
-    time sudo apt-get -q install -y python3-numpy
+    if [[ "${USE_PYTHON}" != "0" ]] ; then
+        time sudo apt-get -q install -y python3-numpy
+    fi
     if [[ "${PIP_INSTALLS}" != "" ]] ; then
         time pip3 install ${PIP_INSTALLS}
     fi
@@ -167,16 +171,18 @@ fi
 # Packages we need to build from scratch.
 #
 
-source src/build-scripts/build_pybind11.bash
+if [[ "$PYBIND11_VERSION" != "0" ]] ; then
+    source src/build-scripts/build_pybind11.bash
+fi
 
 if [[ "$OPENEXR_VERSION" != "" ]] ; then
     source src/build-scripts/build_openexr.bash
 fi
 
-# if [[ "$PUGIXML_VERSION" != "" ]] ; then
+if [[ "$PUGIXML_VERSION" != "0" ]] ; then
     source src/build-scripts/build_pugixml.bash
     export MY_CMAKE_FLAGS+=" -DUSE_EXTERNAL_PUGIXML=1 "
-# fi
+fi
 
 if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
     source src/build-scripts/build_opencolorio.bash

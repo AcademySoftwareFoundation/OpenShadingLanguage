@@ -848,6 +848,25 @@ ShaderGroup::setup_interactive_arena(cspan<uint8_t> paramblock)
 
 
 
+void
+ShaderGroup::generate_optix_cache_key(string_view code)
+{
+    const uint64_t ir_key = Strutil::strhash(code);
+
+    std::string safegroup;
+    safegroup = Strutil::replace(name(), "/", "_", true);
+    safegroup = Strutil::replace(safegroup, ":", "_", true);
+
+    // Cache key includes the groupname in addition to the serialized IR.
+    // This is because the groupname makes its way into the ptx's direct callable name,
+    // but isn't included in the serialization.
+    std::string cache_key = fmtformat("cache-osl-ptx-{}-{}", safegroup, ir_key);
+
+    m_optix_cache_key = cache_key;
+}
+
+
+
 std::string
 ShaderGroup::serialize() const
 {

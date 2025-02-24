@@ -558,6 +558,8 @@ are 1D and statically sized, using the usual syntax for C-like languages:
     float c[3] = { 0.1, 0.2, 3.14 };   // Initialize the array
 
     float f = c[1];                    // Access one element
+
+    float d[10][3];                    // Invalid, multi-dimensional arrays not supported
 ```
 
 The built-in function `arraylength()` returns the number of elements in an

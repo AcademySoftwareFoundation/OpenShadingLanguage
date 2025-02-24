@@ -580,6 +580,19 @@ public:
         }
     };
 
+    // Default no-op implementations of the caching api.
+    // Currently used for caching optix ptx before llvm generation.
+    virtual void cache_insert(string_view cachename, string_view key,
+                              string_view value) const
+    {
+    }
+
+    virtual bool cache_get(string_view cachename, string_view key,
+                           std::string& value) const
+    {
+        return false;
+    }
+
     /// A renderer may choose to support batched execution by providing pointers
     /// to objects satisfying the BatchedRendererServices<WidthOf<#>> interface
     /// for specific batch sizes.

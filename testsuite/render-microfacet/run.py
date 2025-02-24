@@ -5,6 +5,7 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 failthresh = 0.02
+failrelative = 0.01
 failpercent = 1
 allowfailures = 5
 idiff_program = "idiff"

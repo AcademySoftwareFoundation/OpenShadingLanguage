@@ -1719,8 +1719,8 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                     varying_nchecks = ll.void_ptr(llvm_get_pointer(count_sym));
                 }
             }
-        } else if (((op.opname() == op_spline) || 
-                    (op.opname() == op_splineinverse))
+        } else if (((op.opname() == op_spline)
+                    || (op.opname() == op_splineinverse))
                    && i == 4) {
             // If an explicit knot count was provided to spline|splineinverse we should
             // limit our check of knot values to that count

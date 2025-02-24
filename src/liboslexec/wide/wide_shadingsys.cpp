@@ -169,10 +169,10 @@ __OSL_OP2(uninit_check_values_offset, X,
         ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {})",
-            typedesc, symbolname, sourcefile, sourceline,
+            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            shadername, opnum, opname, argnum);
+            USTR(shadername), opnum, USTR(opname), argnum);
     }
 }
 
@@ -233,10 +233,80 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
         ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
-            typedesc, symbolname, sourcefile, sourceline,
+            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            shadername, opnum, opname, argnum, lanes_uninit.value());
+            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
+    }
+}
+
+
+
+// Many parameters, but the 3 parameters used in the function name
+// correspond to:  "vals", "firstcheck", and "nchecks"
+OSL_BATCHOP void
+__OSL_MASKED_OP3(uninit_check_values_offset, WX,
+                 i, Wi)(int mask_value, long long typedesc_, void* vals_,
+                    void* bsg_, ustring_pod sourcefile, int sourceline,
+                    ustring_pod groupname_, int layer, ustring_pod layername_,
+                    ustring_pod shadername, int opnum, ustring_pod opname,
+                    int argnum, ustring_pod symbolname, int firstcheck,
+                    int *nchecks_)
+{
+    TypeDesc typedesc   = TYPEDESC(typedesc_);
+    auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    ShadingContext* ctx = bsg->uniform.context;
+    const Mask mask(mask_value);
+
+    Mask lanes_uninit(false);
+
+    if (typedesc.basetype == TypeDesc::FLOAT) {
+        float* vals = (float*)vals_;
+        mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
+            int nchecks = nchecks_[lane];
+            for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c) {
+                if (!std::isfinite(vals[c * __OSL_WIDTH + lane])) {
+                    lanes_uninit.set_on(lane);
+                    vals[c * __OSL_WIDTH + lane] = 0;
+                }
+            }
+        });
+    }
+    if (typedesc.basetype == TypeDesc::INT) {
+        int* vals = (int*)vals_;
+        mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
+            int nchecks = nchecks_[lane];
+            for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c) {
+                if (vals[c * __OSL_WIDTH + lane]
+                    == std::numeric_limits<int>::min()) {
+                    lanes_uninit.set_on(lane);
+                    vals[c * __OSL_WIDTH + lane] = 0;
+                }
+            }
+        });
+    }
+    if (typedesc.basetype == TypeDesc::STRING) {
+        ustring* vals = (ustring*)vals_;
+        mask.foreach ([=, &lanes_uninit](ActiveLane lane) -> void {
+            int nchecks = nchecks_[lane];
+            for (int c = firstcheck, e = firstcheck + nchecks; c < e; ++c) {
+                if (vals[c * __OSL_WIDTH + lane]
+                    == Strings::uninitialized_string) {
+                    lanes_uninit.set_on(lane);
+                    vals[c * __OSL_WIDTH + lane] = ustring();
+                }
+            }
+        });
+    }
+    if (lanes_uninit.any_on()) {
+        ustring groupname = USTR(groupname_);
+        ustring layername = USTR(layername_);
+        ctx->errorfmt(
+            "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
+            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
+            groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
+            layername.empty() ? "<unnamed layer>" : layername.c_str(),
+            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
     }
 }
 
@@ -299,10 +369,10 @@ __OSL_MASKED_OP2(uninit_check_values_offset, X,
         ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
-            typedesc, symbolname, sourcefile, sourceline,
+            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            shadername, opnum, opname, argnum, lanes_uninit.value());
+            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
     }
 }
 
@@ -367,10 +437,10 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
         ustring layername = USTR(layername_);
         ctx->errorfmt(
             "Detected possible use of uninitialized value in {} {} at {}:{} (group {}, layer {} {}, shader {}, op {} '{}', arg {}) for lanes({:x}) of batch",
-            typedesc, symbolname, sourcefile, sourceline,
+            typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            shadername, opnum, opname, argnum, lanes_uninit.value());
+            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
     }
 }
 

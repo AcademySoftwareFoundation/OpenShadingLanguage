@@ -143,6 +143,9 @@ static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_mxcompref("mxcompref");
 static ustring op_useparam("useparam");
+static ustring op_pointcloud_get("pointcloud_get");
+static ustring op_spline("spline");
+static ustring op_splineinverse("splineinverse");
 static ustring unknown_shader_group_name("<Unknown Shader Group Name>");
 
 
@@ -1135,8 +1138,10 @@ BackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
             // don't generate uninit test code for it.
             continue;
         }
-        if (op.opname() == Strings::op_dowhile && i == 0) {
-            // The first argument of 'dowhile' is the condition temp, but
+        if (((op.opname() == Strings::op_dowhile) || 
+             (op.opname() == Strings::op_while)) 
+            && i == 0) {
+            // The first argument of 'dowhile' or "while" is the condition temp, but
             // most likely its initializer has not run yet. Unless there is
             // no "condition" code block, in that case we should still test
             // it for uninit.
@@ -1185,6 +1190,20 @@ BackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
             comp              = ll.op_add(comp, col_ind);
             offset            = comp;
             ncheck            = ll.constant(1);
+        } else if (op.opname() == op_pointcloud_get && i == 2) {
+            // int pointcloud_get (string ptcname, int indices[], int count, string attr, type data[])
+            // will only read indices[0..count-1], so limit the check to count
+            OSL_ASSERT(3 < op.nargs());
+            ncheck = llvm_load_value(*opargsym(op, 3));
+        } else if (((op.opname() == op_spline) || 
+                    (op.opname() == op_splineinverse))
+                   && i == 4) {
+            // If an explicit knot count was provided to spline|splineinverse we should
+            // limit our check of knot values to that count
+            bool has_knot_count = (op.nargs() == 5);
+            if (has_knot_count) {
+                ncheck = llvm_load_value(*opargsym(op, 3));
+            }
         }
 
         llvm::Value* args[] = { ll.constant(t),

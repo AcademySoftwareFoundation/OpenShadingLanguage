@@ -1138,8 +1138,8 @@ BackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
             // don't generate uninit test code for it.
             continue;
         }
-        if (((op.opname() == Strings::op_dowhile) || 
-             (op.opname() == Strings::op_while)) 
+        if (((op.opname() == Strings::op_dowhile)
+             || (op.opname() == Strings::op_while))
             && i == 0) {
             // The first argument of 'dowhile' or "while" is the condition temp, but
             // most likely its initializer has not run yet. Unless there is
@@ -1195,8 +1195,8 @@ BackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
             // will only read indices[0..count-1], so limit the check to count
             OSL_ASSERT(3 < op.nargs());
             ncheck = llvm_load_value(*opargsym(op, 3));
-        } else if (((op.opname() == op_spline) || 
-                    (op.opname() == op_splineinverse))
+        } else if (((op.opname() == op_spline)
+                    || (op.opname() == op_splineinverse))
                    && i == 4) {
             // If an explicit knot count was provided to spline|splineinverse we should
             // limit our check of knot values to that count

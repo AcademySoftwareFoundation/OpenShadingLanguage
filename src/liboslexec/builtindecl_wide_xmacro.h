@@ -373,7 +373,8 @@ DECL(__OSL_MASKED_OP(range_check), "xXiisXsisiss")
 DECL(__OSL_OP2(uninit_check_values_offset, X, i), "xLXXsisissisisii")
 DECL(__OSL_MASKED_OP2(uninit_check_values_offset, X, Wi), "xiLXXsisissisisXi")
 DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, i), "xiLXXsisissisisii")
-DECL(__OSL_MASKED_OP3(uninit_check_values_offset, WX, i, Wi), "xiLXXsisissisisiX")
+DECL(__OSL_MASKED_OP3(uninit_check_values_offset, WX, i, Wi),
+     "xiLXXsisissisisiX")
 DECL(__OSL_MASKED_OP2(uninit_check_values_offset, WX, Wi), "xiLXXsisissisisXi")
 
 DECL(__OSL_OP1(get_attribute, s), "iXissiiXXi")

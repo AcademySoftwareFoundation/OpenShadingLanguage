@@ -1624,7 +1624,7 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
 
         llvm::Value* ncheck = ll.constant(int(t.numelements() * t.aggregate));
         llvm::Value* varying_nchecks = nullptr;
-        llvm::Value* offset = ll.constant(0);
+        llvm::Value* offset          = ll.constant(0);
         BatchedBackendLLVM::TempScope temp_scope(*this);
         llvm::Value* loc_varying_offsets = nullptr;
 
@@ -1709,13 +1709,13 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
             // int pointcloud_get (string ptcname, int indices[], int count, string attr, type data[])
             // will only read indices[0..count-1], so limit the check to count
             OSL_ASSERT(3 < op.nargs());
-            Symbol& count_sym             = *opargsym(op, 3);
+            Symbol& count_sym = *opargsym(op, 3);
             if (count_sym.is_uniform()) {
                 ncheck = llvm_load_value(count_sym);
             } else {
-                // Don't think we can have a uniform indices array that 
+                // Don't think we can have a uniform indices array that
                 // has a varying index count
-                if(!sym.is_uniform()) {
+                if (!sym.is_uniform()) {
                     varying_nchecks = ll.void_ptr(llvm_get_pointer(count_sym));
                 }
             }
@@ -1753,15 +1753,15 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
             if (sym.is_uniform()) {
                 ll.call_function(build_name(
                                      FuncSpec("uninit_check_values_offset")
-                                         .arg_uniform(TypeDesc::PTR) // vals
-                                         .arg_varying(TypeInt)       // firstcheck
+                                         .arg_uniform(TypeDesc::PTR)  // vals
+                                         .arg_varying(TypeInt)  // firstcheck
                                          .mask()),
                                  args);
             } else {
                 ll.call_function(build_name(
                                      FuncSpec("uninit_check_values_offset")
-                                         .arg_varying(TypeDesc::PTR) // vals
-                                         .arg_varying(TypeInt)       // firstcheck
+                                         .arg_varying(TypeDesc::PTR)  // vals
+                                         .arg_varying(TypeInt)  // firstcheck
                                          .mask()),
                                  args);
             }
@@ -1785,8 +1785,8 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                         ncheck };
                 ll.call_function(build_name(
                                      FuncSpec("uninit_check_values_offset")
-                                         .arg_uniform(TypeDesc::PTR) // vals
-                                         .arg_uniform(TypeInt)),     // firstcheck
+                                         .arg_uniform(TypeDesc::PTR)  // vals
+                                         .arg_uniform(TypeInt)),  // firstcheck
                                  args);
             } else {
                 if (varying_nchecks != nullptr) {
@@ -1807,13 +1807,13 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                             ll.constant(sym.unmangled()),
                             offset,
                             varying_nchecks };
-                    ll.call_function(build_name(
-                                        FuncSpec("uninit_check_values_offset")
-                                            .arg_varying(TypeDesc::PTR)     // vals
-                                            .arg_uniform(TypeInt) // firstcheck
-                                            .arg_varying(TypeInt) // nchecks
-                                            .mask()),
-                                    args);
+                    ll.call_function(
+                        build_name(FuncSpec("uninit_check_values_offset")
+                                       .arg_varying(TypeDesc::PTR)  // vals
+                                       .arg_uniform(TypeInt)  // firstcheck
+                                       .arg_varying(TypeInt)  // nchecks
+                                       .mask()),
+                        args);
                 } else {
                     llvm::Value* args[]
                         = { ll.mask_as_int(ll.current_mask()),
@@ -1832,12 +1832,12 @@ BatchedBackendLLVM::llvm_generate_debug_uninit(const Opcode& op)
                             ll.constant(sym.unmangled()),
                             offset,
                             ncheck };
-                    ll.call_function(build_name(
-                                        FuncSpec("uninit_check_values_offset")
-                                            .arg_varying(TypeDesc::PTR) // vals
-                                            .arg_uniform(TypeInt)       // firstcheck
-                                            .mask()),
-                                    args);
+                    ll.call_function(
+                        build_name(FuncSpec("uninit_check_values_offset")
+                                       .arg_varying(TypeDesc::PTR)  // vals
+                                       .arg_uniform(TypeInt)  // firstcheck
+                                       .mask()),
+                        args);
                 }
             }
         }

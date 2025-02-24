@@ -236,7 +236,8 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
+            USTR(shadername), opnum, USTR(opname), argnum,
+            lanes_uninit.value());
     }
 }
 
@@ -245,13 +246,13 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
 // Many parameters, but the 3 parameters used in the function name
 // correspond to:  "vals", "firstcheck", and "nchecks"
 OSL_BATCHOP void
-__OSL_MASKED_OP3(uninit_check_values_offset, WX,
-                 i, Wi)(int mask_value, long long typedesc_, void* vals_,
-                    void* bsg_, ustring_pod sourcefile, int sourceline,
-                    ustring_pod groupname_, int layer, ustring_pod layername_,
-                    ustring_pod shadername, int opnum, ustring_pod opname,
-                    int argnum, ustring_pod symbolname, int firstcheck,
-                    int *nchecks_)
+__OSL_MASKED_OP3(uninit_check_values_offset, WX, i,
+                 Wi)(int mask_value, long long typedesc_, void* vals_,
+                     void* bsg_, ustring_pod sourcefile, int sourceline,
+                     ustring_pod groupname_, int layer, ustring_pod layername_,
+                     ustring_pod shadername, int opnum, ustring_pod opname,
+                     int argnum, ustring_pod symbolname, int firstcheck,
+                     int* nchecks_)
 {
     TypeDesc typedesc   = TYPEDESC(typedesc_);
     auto* bsg           = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
@@ -306,7 +307,8 @@ __OSL_MASKED_OP3(uninit_check_values_offset, WX,
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
+            USTR(shadername), opnum, USTR(opname), argnum,
+            lanes_uninit.value());
     }
 }
 
@@ -372,7 +374,8 @@ __OSL_MASKED_OP2(uninit_check_values_offset, X,
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
+            USTR(shadername), opnum, USTR(opname), argnum,
+            lanes_uninit.value());
     }
 }
 
@@ -440,7 +443,8 @@ __OSL_MASKED_OP2(uninit_check_values_offset, WX,
             typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
             groupname.empty() ? "<unnamed group>" : groupname.c_str(), layer,
             layername.empty() ? "<unnamed layer>" : layername.c_str(),
-            USTR(shadername), opnum, USTR(opname), argnum, lanes_uninit.value());
+            USTR(shadername), opnum, USTR(opname), argnum,
+            lanes_uninit.value());
     }
 }
 

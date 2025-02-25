@@ -8,3 +8,5 @@ ERROR: [RendererServices::texture] ImageInput::create() called with no filename
 ERROR: Detected possible use of uninitialized value in float[3] A at test.osl:22 (group unnamed_group_1, layer 0 test_0, shader test, op 7 'aref', arg 1)
 ERROR: Detected possible use of uninitialized value in color C at test.osl:28 (group unnamed_group_1, layer 0 test_0, shader test, op 12 'compref', arg 1)
 ERROR: Detected possible use of uninitialized value in matrix M at test.osl:34 (group unnamed_group_1, layer 0 test_0, shader test, op 17 'mxcompref', arg 1)
+ERROR: Detected possible use of uninitialized value in float[20] knots3 at test.osl:54 (group unnamed_group_1, layer 0 test_0, shader test, op 44 'spline', arg 4)
+ERROR: Detected possible use of uninitialized value in float[20] knots4 at test.osl:55 (group unnamed_group_1, layer 0 test_0, shader test, op 46 'splineinverse', arg 4)

@@ -1,0 +1,12 @@
+Compiled test0.osl -> test0.oso
+Compiled test1.osl -> test1.oso
+Compiled test2.osl -> test2.oso
+Compiled test3.osl -> test3.oso
+
+Output dst to out0.tif
+
+Output dst to out1.tif
+
+Output dst to out2.tif
+
+Output dst to out3.tif

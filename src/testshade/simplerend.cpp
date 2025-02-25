@@ -508,6 +508,10 @@ SimpleRenderer::get_userdata(bool derivatives, ustringhash name, TypeDesc type,
     // look up something specific to the primitive, rather than have hard-
     // coded names.
 
+    if (name == RS::Hashes::face_idx && type == TypeInt) {
+        ((int*)val)[0] = int(4 * sg->u);
+        return true;
+    }
     if (name == RS::Hashes::s && type == TypeFloat) {
         ((float*)val)[0] = sg->u;
         if (derivatives) {
@@ -682,6 +686,7 @@ SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
                                           TypeDesc type, bool derivatives,
                                           InterpolatedGetterSpec& spec)
 {
+    static const OIIO::ustring rs_get_interpolated_face_idx("rs_get_interpolated_face_idx");
     static const OIIO::ustring rs_get_interpolated_s("rs_get_interpolated_s");
     static const OIIO::ustring rs_get_interpolated_t("rs_get_interpolated_t");
     static const OIIO::ustring rs_get_interpolated_red(
@@ -711,7 +716,10 @@ SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
     static const OIIO::ustring rs_get_attribute_constant_float4(
         "rs_get_attribute_constant_float4");
 
-    if (param_name == RS::Hashes::s && type == OIIO::TypeFloat) {
+    if (param_name == RS::Hashes::face_idx && type == OIIO::TypeInt) {
+        spec.set(rs_get_interpolated_face_idx,
+                 InterpolatedSpecBuiltinArg::OpaqueExecutionContext);
+    } else if (param_name == RS::Hashes::s && type == OIIO::TypeFloat) {
         spec.set(rs_get_interpolated_s,
                  InterpolatedSpecBuiltinArg::OpaqueExecutionContext,
                  InterpolatedSpecBuiltinArg::Derivatives);

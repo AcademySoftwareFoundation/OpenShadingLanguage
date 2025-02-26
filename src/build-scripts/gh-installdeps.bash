@@ -132,7 +132,9 @@ else
         set +e; source /opt/intel/oneapi/setvars.sh --config oneapi_2022.1.0.cfg; set -e
     fi
 
-    source src/build-scripts/build_llvm.bash
+    if [[ "$LLVM_VERSION" != "" ]] ; then
+        source src/build-scripts/build_llvm.bash
+    fi
 fi
 
 if [[ "$CMAKE_VERSION" != "" ]] ; then

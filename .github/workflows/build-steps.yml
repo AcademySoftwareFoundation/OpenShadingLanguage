@@ -44,6 +44,8 @@ on:
         type: string
       python_ver:
         type: string
+      llvm_action_ver:
+        type: string
       setenvs:
         type: string
       simd:
@@ -125,6 +127,11 @@ jobs:
         run: |
             ${{inputs.setenvs}}
             src/build-scripts/ci-startup.bash
+      - name: Install LLVM and Clang
+        if: inputs.llvm_action_ver != ''
+        uses: KyleMayes/install-llvm-action@e0a8dc9cb8a22e8a7696e8a91a4e9581bec13181 # v2.0.5
+        with:
+          version: ${{ inputs.llvm_action_ver }}
       - name: Dependencies
         shell: bash
         run: |

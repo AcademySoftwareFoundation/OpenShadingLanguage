@@ -1587,7 +1587,8 @@ struct Analyzer {
                          write_iter != write_end; ++write_iter) {
                         if (write_iter->is_initial_assignment()
                             || write_iter->is_user_data_preplacement_copy()
-                            || write_iter->is_user_data_interpolated()) {                            // The initial assignment of all parameters happens before any instructions are generated?
+                            || write_iter->is_user_data_interpolated()) {
+                            // The initial assignment of all parameters happens before any instructions are generated?
                             // perhaps there is an ordering issue here for init_ops which could have early outs
                             // although not sure what that would do to execution, certainly returns in init_ops would
                             // bring us back to the m_execution_scope_stack.end_pos()

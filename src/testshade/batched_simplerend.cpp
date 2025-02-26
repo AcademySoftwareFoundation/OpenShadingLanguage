@@ -21,7 +21,7 @@ struct UniqueStringCache {
         , red("red")
         , green("green")
         , blue("blue")
-        , face_idx("face_idx")        
+        , face_idx("face_idx")
         , lookupTable("lookupTable")
         , blahblah("blahblah")
         , options("options")
@@ -668,13 +668,12 @@ BatchedSimpleRenderer<WidthT>::get_userdata(ustringhash name,
     if (name == ucache().face_idx && Masked<int>::is(val)) {
         Masked<int> out(val);
         for (int i = 0; i < WidthT; ++i) {
-           if (out[i].is_on()) {
-               out[i] = int(4 * bsg->varying.u[i]);
-           }
+            if (out[i].is_on()) {
+                out[i] = int(4 * bsg->varying.u[i]);
+            }
         }
         return out.mask();
-    }
-    else if (name == ucache().s && Masked<float>::is(val)) {
+    } else if (name == ucache().s && Masked<float>::is(val)) {
         Masked<float> out(val);
         for (int i = 0; i < WidthT; ++i) {
             // NOTE: assigning to out[i] will mask by itself

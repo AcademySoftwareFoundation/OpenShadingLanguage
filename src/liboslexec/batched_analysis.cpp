@@ -1135,7 +1135,8 @@ public:
         , m_op_num(op_num_)
         , m_loop_op_index(NoLoopIndex())
     {
-        OSL_ASSERT(is_initial_assignment() || is_user_data_preplacement_copy() || is_user_data_interpolated());
+        OSL_ASSERT(is_initial_assignment() || is_user_data_preplacement_copy()
+                   || is_user_data_interpolated());
     }
 
     OSL_FORCEINLINE DependencyTreeTracker::Position pos_in_tree() const
@@ -1161,7 +1162,7 @@ public:
 
     OSL_FORCEINLINE int op_num() const
     {
-#if 0 // For getting callstack in debugger
+#if 0  // For getting callstack in debugger
         if(is_initial_assignment()
           || is_user_data_preplacement_copy()
           || is_user_data_interpolated()) {
@@ -1170,8 +1171,7 @@ public:
             __builtin_trap();
         }
 #endif
-        OSL_ASSERT(!is_initial_assignment()
-                   && !is_user_data_preplacement_copy()
+        OSL_ASSERT(!is_initial_assignment() && !is_user_data_preplacement_copy()
                    && !is_user_data_interpolated());
         return m_op_num;
     }
@@ -1585,10 +1585,9 @@ struct Analyzer {
                     // Then the current write needs to be masked
                     for (auto write_iter = write_chronology.begin();
                          write_iter != write_end; ++write_iter) {
-                        if (write_iter->is_initial_assignment() ||
-                            write_iter->is_user_data_preplacement_copy() ||
-                            write_iter->is_user_data_interpolated()) {
-                            // The initial assignment of all parameters happens before any instructions are generated?
+                        if (write_iter->is_initial_assignment()
+                            || write_iter->is_user_data_preplacement_copy()
+                            || write_iter->is_user_data_interpolated()) {                            // The initial assignment of all parameters happens before any instructions are generated?
                             // perhaps there is an ordering issue here for init_ops which could have early outs
                             // although not sure what that would do to execution, certainly returns in init_ops would
                             // bring us back to the m_execution_scope_stack.end_pos()
@@ -2224,7 +2223,7 @@ struct Analyzer {
                 // NOTE: as this is the initial assignment to a parameter
                 // there could be no other reads/write to deal with to the symbol
                 OSL_ASSERT(m_write_chronology_by_symbol.find(&s)
-                            == m_write_chronology_by_symbol.end()); 
+                           == m_write_chronology_by_symbol.end());
 
                 // bind_interpolated_param will have written to s
                 // so we need a write event to model that and prevent
@@ -2271,12 +2270,16 @@ struct Analyzer {
                 // NOTE: as this is the initial assignment to a parameter
                 // there could be no other reads/write to deal with to the symbol
                 // unless it was interpolated
-                if (!interpolate_param && (m_write_chronology_by_symbol.find(&s)
-                    != m_write_chronology_by_symbol.end())) {
-                    __builtin_trap();
+#if 0  // For getting callstack in debugger
+                if (!interpolate_param
+                    && (m_write_chronology_by_symbol.find(&s)
+                        != m_write_chronology_by_symbol.end())) {
+                        __builtin_trap();
                 }
-                OSL_ASSERT(interpolate_param || (m_write_chronology_by_symbol.find(&s)
-                           == m_write_chronology_by_symbol.end()));
+#endif
+                OSL_ASSERT(interpolate_param
+                           || (m_write_chronology_by_symbol.find(&s)
+                               == m_write_chronology_by_symbol.end()));
 
                 m_write_chronology_by_symbol[&s].push_back(
                     WriteEvent(m_conditional_symbol_stack.top_pos(),
@@ -2445,8 +2448,9 @@ struct Analyzer {
                                 // no need to continue checking additional writes
                                 break;
                             }
-                        } else if (write_iter->is_user_data_interpolated() ||
-                                   write_iter->is_user_data_preplacement_copy()) {
+                        } else if (write_iter->is_user_data_interpolated()
+                                   || write_iter
+                                          ->is_user_data_preplacement_copy()) {
                             // the interpolated assignment should be the 1st write entry,
                             // so bool status should be unknown
                             OSL_ASSERT(b_status == BoolStatus::Unknown);

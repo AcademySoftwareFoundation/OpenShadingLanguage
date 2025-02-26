@@ -686,7 +686,8 @@ SimpleRenderer::build_interpolated_getter(const ShaderGroup& group,
                                           TypeDesc type, bool derivatives,
                                           InterpolatedGetterSpec& spec)
 {
-    static const OIIO::ustring rs_get_interpolated_face_idx("rs_get_interpolated_face_idx");
+    static const OIIO::ustring rs_get_interpolated_face_idx(
+        "rs_get_interpolated_face_idx");
     static const OIIO::ustring rs_get_interpolated_s("rs_get_interpolated_s");
     static const OIIO::ustring rs_get_interpolated_t("rs_get_interpolated_t");
     static const OIIO::ustring rs_get_interpolated_red(

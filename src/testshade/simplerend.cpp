@@ -1049,7 +1049,7 @@ SimpleRenderer::add_output(string_view varname_, string_view filename,
 
 
 void
-SimpleRenderer::export_state(RenderState& state) const
+SimpleRenderer::export_state(RenderContext& state) const
 {
     state.xres   = m_xres;
     state.yres   = m_yres;
@@ -1073,7 +1073,7 @@ SimpleRenderer::errorfmt(OSL::ShaderGlobals* sg,
                          const EncodedType* arg_types, uint32_t arg_values_size,
                          uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+    RenderContext* rs = reinterpret_cast<RenderState*>(sg->renderstate)->context;
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_errorfmt(OSL::get_thread_index(sg), OSL::get_shade_index(sg),
                        fmt_specification, arg_count, arg_types, arg_values_size,
@@ -1086,7 +1086,7 @@ SimpleRenderer::warningfmt(OSL::ShaderGlobals* sg,
                            int32_t arg_count, const EncodedType* arg_types,
                            uint32_t arg_values_size, uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+    RenderContext* rs = reinterpret_cast<RenderState*>(sg->renderstate)->context;
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_warningfmt(OSL::get_max_warnings_per_thread(sg),
                          OSL::get_thread_index(sg), OSL::get_shade_index(sg),
@@ -1102,7 +1102,7 @@ SimpleRenderer::printfmt(OSL::ShaderGlobals* sg,
                          const EncodedType* arg_types, uint32_t arg_values_size,
                          uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+    RenderContext* rs = reinterpret_cast<RenderState*>(sg->renderstate)->context;
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_printfmt(OSL::get_thread_index(sg), OSL::get_shade_index(sg),
                        fmt_specification, arg_count, arg_types, arg_values_size,
@@ -1115,7 +1115,7 @@ SimpleRenderer::filefmt(OSL::ShaderGlobals* sg, OSL::ustringhash filename_hash,
                         const EncodedType* arg_types, uint32_t arg_values_size,
                         uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
+    RenderContext* rs = reinterpret_cast<RenderState*>(sg->renderstate)->context;
     OSL::journal::Writer jw { rs->journal_buffer };
     jw.record_filefmt(OSL::get_thread_index(sg), OSL::get_shade_index(sg),
                       filename_hash, fmt_specification, arg_count, arg_types,

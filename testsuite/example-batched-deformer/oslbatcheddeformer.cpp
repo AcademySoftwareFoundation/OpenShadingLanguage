@@ -128,10 +128,7 @@ class MyBatchedRendererServices final
     {
         return false;
     }
-    bool is_overridden_get_matrix_WmWsWf() const override
-    {
-        return false;
-    }
+    bool is_overridden_get_matrix_WmWsWf() const override { return false; }
     bool is_overridden_get_inverse_matrix_WmsWf() const override
     {
         return false;
@@ -140,30 +137,12 @@ class MyBatchedRendererServices final
     {
         return false;
     }
-    bool is_overridden_texture() const override
-    {
-        return false;
-    }
-    bool is_overridden_texture3d() const override
-    {
-        return false;
-    }
-    bool is_overridden_environment() const override
-    {
-        return false;
-    }
-    bool is_overridden_pointcloud_search() const override
-    {
-        return false;
-    }
-    bool is_overridden_pointcloud_get() const override
-    {
-        return false;
-    }
-    bool is_overridden_pointcloud_write() const override
-    {
-        return false;
-    }
+    bool is_overridden_texture() const override { return false; }
+    bool is_overridden_texture3d() const override { return false; }
+    bool is_overridden_environment() const override { return false; }
+    bool is_overridden_pointcloud_search() const override { return false; }
+    bool is_overridden_pointcloud_get() const override { return false; }
+    bool is_overridden_pointcloud_write() const override { return false; }
 };
 
 // RendererServices is the interface through which OSL requests things back
@@ -243,8 +222,9 @@ main(int argc, char* argv[])
         std::cout
             << "Error:  Hardware doesn't support 4, 8 or 16 wide SIMD or the OSL has not been configured and built with a proper USE_BATCHED."
             << std::endl;
-        std::cout << "Error:  e.g.:  USE_BATCHED=b4_SSE2,b8_AVX2,b8_AVX512,b16_AVX512"
-                  << std::endl;
+        std::cout
+            << "Error:  e.g.:  USE_BATCHED=b4_SSE2,b8_AVX2,b8_AVX512,b16_AVX512"
+            << std::endl;
         return -1;
     }
 
@@ -439,8 +419,7 @@ main(int argc, char* argv[])
 
     if (batch_width == 16) {
         batched_shadepoints(std::integral_constant<int, 16> {});
-    }
-    else if (batch_width == 8) {
+    } else if (batch_width == 8) {
         batched_shadepoints(std::integral_constant<int, 8> {});
     } else {
         batched_shadepoints(std::integral_constant<int, 4> {});

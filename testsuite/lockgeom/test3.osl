@@ -1,0 +1,9 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader test3(int face_idx = 3 [[int lockgeom = 0]],
+               output color dst = 0)
+{
+    dst = color(face_idx * 0.25, 0, 0);
+}

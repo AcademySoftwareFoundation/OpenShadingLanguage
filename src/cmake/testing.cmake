@@ -308,6 +308,7 @@ macro (osl_add_all_tests)
                 layers-nonlazycopy layers-repeatedoutputs
                 lazytrace
                 length-reg linearstep
+                lockgeom
                 logic loop luminance-reg
                 matrix matrix-reg matrix-arithmetic-reg
                 matrix-compref-reg max-reg message message-no-closure message-reg

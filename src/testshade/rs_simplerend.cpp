@@ -366,6 +366,15 @@ rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
     return false;
 }
 
+
+OSL_RSOP bool
+rs_get_interpolated_face_idx(OSL::OpaqueExecContextPtr ec, void* val)
+{
+    ((int*)val)[0] = int(4 * OSL::get_u(ec));
+    return true;
+}
+
+
 OSL_RSOP bool
 rs_get_interpolated_s(OSL::OpaqueExecContextPtr ec, bool derivatives, void* val)
 {

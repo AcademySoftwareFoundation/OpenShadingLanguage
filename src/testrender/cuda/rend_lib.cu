@@ -355,6 +355,283 @@ osl_printf(void* sg_, OSL::ustringhash_pod fmt_str_hash, void* args)
 }
 
 
+#define OSL_TEXTURE_SET_HOSTDEVICE OSL_DEVICE
+#define OSL_SHADEOP
+using OSL::TextureOpt;
+using OSL::TraceOpt;
+using OSL::ustring;
+using OSL::ustringhash;
+using OSL::ustringhash_from;
+using OSL::ustringhash_pod;
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_firstchannel(void* opt, int x)
+{
+    ((TextureOpt*)opt)->firstchannel = x;
+}
+
+OSL_TEXTURE_SET_HOSTDEVICE inline TextureOpt::Wrap
+decode_wrapmode(ustringhash_pod name_)
+{
+    // TODO: Enable when decode_wrapmode has __device__ marker.
+#ifndef __CUDA_ARCH__
+    ustringhash name_hash = ustringhash_from(name_);
+#    ifdef OIIO_TEXTURESYSTEM_SUPPORTS_DECODE_BY_USTRINGHASH
+    return TextureOpt::decode_wrapmode(name_hash);
+#    else
+    ustring name = ustring_from(name_hash);
+    return TextureOpt::decode_wrapmode(name);
+#    endif
+#else
+    return TextureOpt::WrapDefault;
+#endif
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE int
+osl_texture_decode_wrapmode(ustringhash_pod name_)
+{
+    return (int)decode_wrapmode(name_);
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_swrap(void* opt, ustringhash_pod x_)
+{
+    ((TextureOpt*)opt)->swrap = decode_wrapmode(x_);
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_twrap(void* opt, ustringhash_pod x_)
+{
+    ((TextureOpt*)opt)->twrap = decode_wrapmode(x_);
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_rwrap(void* opt, ustringhash_pod x_)
+{
+    ((TextureOpt*)opt)->rwrap = decode_wrapmode(x_);
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_stwrap(void* opt, ustringhash_pod x_)
+{
+    TextureOpt::Wrap code     = decode_wrapmode(x_);
+    ((TextureOpt*)opt)->swrap = code;
+    ((TextureOpt*)opt)->twrap = code;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_swrap_code(void* opt, int mode)
+{
+    ((TextureOpt*)opt)->swrap = (TextureOpt::Wrap)mode;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_twrap_code(void* opt, int mode)
+{
+    ((TextureOpt*)opt)->twrap = (TextureOpt::Wrap)mode;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_rwrap_code(void* opt, int mode)
+{
+    ((TextureOpt*)opt)->rwrap = (TextureOpt::Wrap)mode;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_stwrap_code(void* opt, int mode)
+{
+    ((TextureOpt*)opt)->swrap = (TextureOpt::Wrap)mode;
+    ((TextureOpt*)opt)->twrap = (TextureOpt::Wrap)mode;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_sblur(void* opt, float x)
+{
+    ((TextureOpt*)opt)->sblur = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_tblur(void* opt, float x)
+{
+    ((TextureOpt*)opt)->tblur = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_rblur(void* opt, float x)
+{
+    ((TextureOpt*)opt)->rblur = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_stblur(void* opt, float x)
+{
+    ((TextureOpt*)opt)->sblur = x;
+    ((TextureOpt*)opt)->tblur = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_swidth(void* opt, float x)
+{
+    ((TextureOpt*)opt)->swidth = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_twidth(void* opt, float x)
+{
+    ((TextureOpt*)opt)->twidth = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_rwidth(void* opt, float x)
+{
+    ((TextureOpt*)opt)->rwidth = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_stwidth(void* opt, float x)
+{
+    ((TextureOpt*)opt)->swidth = x;
+    ((TextureOpt*)opt)->twidth = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_fill(void* opt, float x)
+{
+    ((TextureOpt*)opt)->fill = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_time(void* opt, float x)
+{
+    // Not used by the texture system
+    // ((TextureOpt*)opt)->time = x;
+}
+
+#if 0
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE int
+osl_texture_decode_interpmode(ustringhash_pod name_)
+{
+    ustringhash name_hash = ustringhash_from(name_);
+    return tex_interp_to_code(name_hash);
+}
+#endif
+
+#if 0
+/* Not needed on GPU */
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_interp(void* opt, ustringhash_pod modename_)
+{
+    using namespace OSL;
+    ustringhash modename_hash = ustringhash_from(modename_);
+    int mode                  = OSL::tex_interp_to_code(modename_hash);
+    if (mode >= 0)
+        ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
+}
+#endif
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_interp_code(void* opt, int mode)
+{
+    ((TextureOpt*)opt)->interpmode = (TextureOpt::InterpMode)mode;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_subimage(void* opt, int subimage)
+{
+    ((TextureOpt*)opt)->subimage = subimage;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_subimagename(void* opt, ustringhash_pod subimagename_)
+{
+    ustringhash subimagename_hash = ustringhash_from(subimagename_);
+#ifndef __CUDA_ARCH__
+    // TODO: Enable when subimagename is ustringhash.
+    ustring subimagename             = ustring_from(subimagename_hash);
+    ((TextureOpt*)opt)->subimagename = subimagename;
+#else
+    // TODO: HACK to get this data through in some form, it won't be a valid
+    // ustring but the GPU clients can at least convert it back to a hash.
+    static_assert(sizeof(ustring) == sizeof(ustringhash), "Sizes must match");
+    memcpy((void*)(&((TextureOpt*)opt)->subimagename), &subimagename_hash,
+           sizeof(subimagename_hash));
+#endif
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_missingcolor_arena(void* opt, const void* missing)
+{
+    ((TextureOpt*)opt)->missingcolor = (const float*)missing;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_texture_set_missingcolor_alpha(void* opt, int alphaindex,
+                                   float missingalpha)
+{
+    float* m = (float*)((TextureOpt*)opt)->missingcolor;
+    if (m)
+        m[alphaindex] = missingalpha;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_init_trace_options(OSL::OpaqueExecContextPtr oec, void* opt)
+{
+    new (opt) TraceOpt;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_trace_set_mindist(void* opt, float x)
+{
+    ((TraceOpt*)opt)->mindist = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_trace_set_maxdist(void* opt, float x)
+{
+    ((TraceOpt*)opt)->maxdist = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_trace_set_shade(void* opt, int x)
+{
+    ((TraceOpt*)opt)->shade = x;
+}
+
+
+OSL_SHADEOP OSL_TEXTURE_SET_HOSTDEVICE void
+osl_trace_set_traceset(void* opt, const ustringhash_pod x)
+{
+    ((TraceOpt*)opt)->traceset = ustringhash_from(x);
+}
+
 
 __forceinline__ __device__ float3
 make_float3(const float4& a)

@@ -235,6 +235,7 @@ jobs:
       coverage: ${{ matrix.coverage || 0 }}
       sonar: ${{ matrix.sonar || 0 }}
       llvm_action_ver: ${{ matrix.llvm_action_ver }}
+      clang_format: ${{ matrix.clang_format }}
     strategy:
       fail-fast: false
       matrix:
@@ -467,22 +468,20 @@ jobs:
             # the console output).
           - desc: "clang-format"
             nametag: clang-format
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
             cxx_std: 17
             extra_artifacts: "src/*.*"
-            opencolorio_ver: v2.4.0
-            openexr_ver: v3.1.11
-            openimageio_ver: release
             python_ver: "3.10"
-            simd: avx2,f16c
-            batched: b8_AVX2
+            pybind11_ver: "0"
+            skip_build: 1
             skip_tests: 1
-            setenvs: export BUILDTARGET=clang-format
-                            LLVM_VERSION=17.0.6
-                            LLVM_DISTRO_NAME=ubuntu-22.04
-                            OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
-                            USE_PYTHON=0
-                            QT_VERSION=0
+            clang_format: 1
+            setenvs: export OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
+                            USE_PYTHON=0 QT_VERSION=0 PUGIXML_VERSION=0
+                            SKIP_APT_GET_UPDATE=0
+                            SKIP_SYSTEM_DEPS_INSTALL=1
+                            EXTRA_DEP_PACKAGES="clang-format-17"
+                            CLANG_FORMAT_EXE=clang-format-17
 
 
   macos:

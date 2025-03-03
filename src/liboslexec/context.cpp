@@ -86,14 +86,21 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int threadindex,
     if (sgroup.nlayers()) {
         sgroup.start_running();
         if (!sgroup.jitted()) {
-            auto ctx = shadingsys().get_context(thread_info());
-            shadingsys().optimize_group(sgroup, ctx, true /*do_jit*/);
+            // Reuse "this" ShadingContext vs creating a new one,
+            // but match previous behavior of default null texture thread info
+            // as if we created a new ShadingContext
+            process_errors(); // process any buffered errors before reusing "this" context
+            auto existing_tti = texture_thread_info();
+            texture_thread_info(nullptr);
+            shadingsys().optimize_group(sgroup, this, true /*do_jit*/);
             if (shadingsys().m_greedyjit
                 && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().optimize_all_groups();
             }
-            shadingsys().release_context(ctx);
+            // Restore "this" ShadingContext
+            process_errors(); // process any buffered errors before restoring "this" context
+            texture_thread_info(existing_tti);
         }
         if (sgroup.does_nothing())
             return false;
@@ -260,19 +267,23 @@ ShadingContext::Batched<WidthT>::execute_init(
     if (sgroup.nlayers()) {
         sgroup.start_running();
         if (!sgroup.batch_jitted()) {
-            // Matching ShadingContext::execute_init behavior
-            // of grabbing another context.
-            // TODO:  Is this necessary, why can't we just use the
-            // the existing context()?
-            //shadingsys().template batched<WidthT>().jit_group(sgroup, &context());
-            auto ctx = shadingsys().get_context(context().thread_info());
-            shadingsys().template batched<WidthT>().jit_group(sgroup, ctx);
+            // Reuse "this" ShadingContext vs creating a new one,
+            // but match previous behavior of default null texture thread info
+            // as if we created a new ShadingContext
+            context().process_errors(); // process any buffered errors before reusing "this" context
+            auto existing_tti = context().texture_thread_info();
+            context().texture_thread_info(nullptr);
+            shadingsys().template batched<WidthT>().jit_group(sgroup, &context());
+
             if (shadingsys().m_greedyjit
                 && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().template batched<WidthT>().jit_all_groups();
             }
-            shadingsys().release_context(ctx);
+            
+            // Restore "this" ShadingContext
+            context().process_errors(); // process any buffered errors before restoring "this" context
+            context().texture_thread_info(existing_tti);
         }
         // To handle layers that were not used but still possibly had
         // render outputs, we always generate a run function even for

@@ -89,7 +89,7 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int threadindex,
             // Reuse "this" ShadingContext vs creating a new one,
             // but match previous behavior of default null texture thread info
             // as if we created a new ShadingContext
-            process_errors(); // process any buffered errors before reusing "this" context
+            process_errors();  // process any buffered errors before reusing "this" context
             auto existing_tti = texture_thread_info();
             texture_thread_info(nullptr);
             shadingsys().optimize_group(sgroup, this, true /*do_jit*/);
@@ -99,7 +99,7 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int threadindex,
                 shadingsys().optimize_all_groups();
             }
             // Restore "this" ShadingContext
-            process_errors(); // process any buffered errors before restoring "this" context
+            process_errors();  // process any buffered errors before restoring "this" context
             texture_thread_info(existing_tti);
         }
         if (sgroup.does_nothing())
@@ -270,19 +270,22 @@ ShadingContext::Batched<WidthT>::execute_init(
             // Reuse "this" ShadingContext vs creating a new one,
             // but match previous behavior of default null texture thread info
             // as if we created a new ShadingContext
-            context().process_errors(); // process any buffered errors before reusing "this" context
+            context()
+                .process_errors();  // process any buffered errors before reusing "this" context
             auto existing_tti = context().texture_thread_info();
             context().texture_thread_info(nullptr);
-            shadingsys().template batched<WidthT>().jit_group(sgroup, &context());
+            shadingsys().template batched<WidthT>().jit_group(sgroup,
+                                                              &context());
 
             if (shadingsys().m_greedyjit
                 && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().template batched<WidthT>().jit_all_groups();
             }
-            
+
             // Restore "this" ShadingContext
-            context().process_errors(); // process any buffered errors before restoring "this" context
+            context()
+                .process_errors();  // process any buffered errors before restoring "this" context
             context().texture_thread_info(existing_tti);
         }
         // To handle layers that were not used but still possibly had

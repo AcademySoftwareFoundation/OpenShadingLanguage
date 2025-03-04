@@ -425,7 +425,9 @@ nominated for major awards.)
   Moon Night (series),
   Obi-Wan Kenobi (series),
   The Boys (S3),
-  Andor (S1)
+  Andor (S1),
+  Troll,
+  She-Hulk (series)
 * **(2023)**
   Ant-Man and the Wasp: Quantumania,
   The Mandalorian S3,
@@ -434,11 +436,16 @@ nominated for major awards.)
   Guardians of the Galaxy 3,
   Spider-Man: Across the Spider-Verse,
   Elemental,
+  Indiana Jones and the Dial of Destiny,
   The Marvels,
   Leo
-* **(2024 / upcoming)**
+* **(2024)**
   Ghostbusters: Frozen Empire,
   Inside Out 2,
+  Red One,
+  Dream Productions (series)
+* **(2025 / upcoming)**
+  Win or Lose (series),
   In Your Dreams,
   ...
 

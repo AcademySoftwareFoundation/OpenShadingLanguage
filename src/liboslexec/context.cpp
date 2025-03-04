@@ -71,20 +71,20 @@ ShadingContext::~ShadingContext()
 ShadingContext::RestoreState
 ShadingContext::repurposeForJit()
 {
-    process_errors();  
+    process_errors();
     // Match previous behavior of nullptr value for texture thread info
     // as if we created a new ShadingContext
-    RestoreState restore_state{texture_thread_info()};
+    RestoreState restore_state { texture_thread_info() };
     texture_thread_info(nullptr);
     return restore_state;
 }
 
-    // Process any errors from JIT and restore the texture_thread_info;
+// Process any errors from JIT and restore the texture_thread_info
 void
-ShadingContext::restoreFromJit(const RestoreState &restore_state)
+ShadingContext::restoreFromJit(const RestoreState& restore_state)
 {
     // Restore "this" ShadingContext for execution
-    process_errors();  
+    process_errors();
     texture_thread_info(restore_state.m_pre_jit_texture_thread_info);
 }
 

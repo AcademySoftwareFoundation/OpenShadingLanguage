@@ -2521,15 +2521,15 @@ private:
 
 
     struct RestoreState {
-        TextureSystem::Perthread* m_pre_jit_texture_thread_info;  
+        TextureSystem::Perthread* m_pre_jit_texture_thread_info;
     };
 
-    // Rather than allocate an addtional ShadingContext for JIT
+    // Rather than allocate an additional ShadingContext for JIT
     // reuse this one by processing any existing errors
     // and saving off any necessary state to be restored afterwards
     RestoreState repurposeForJit();
     // Process any errors from JIT and restore the state
-    void restoreFromJit(const RestoreState &);
+    void restoreFromJit(const RestoreState&);
 };
 
 

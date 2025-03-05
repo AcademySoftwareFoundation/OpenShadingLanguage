@@ -439,9 +439,13 @@ nominated for major awards.)
   Indiana Jones and the Dial of Destiny,
   The Marvels,
   Leo
-* **(2024 / upcoming)**
+* **(2024)**
   Ghostbusters: Frozen Empire,
   Inside Out 2,
+  Red One,
+  Dream Productions (series)
+* **(2025 / upcoming)**
+  Win or Lose (series),
   In Your Dreams,
   ...
 

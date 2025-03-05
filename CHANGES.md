@@ -11,9 +11,7 @@ Release 1.14 (beta1 - 4 Mar 2025) -- compared to 1.13
 * **Imath**: Raise Imath minimum to 3.1 (from 2.4) [#1853](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1853) (1.14.2.0)
 * **CMake** 3.19 [#1914](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1914)
 * **OpenImageIO**: Raise minimum to 2.5. [#1914](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1914)
-  Note that it is likely that 1.14 is the last release family that will
-  support OIIO 2.x, and beginnign wth next year's OSL release, OpenImageIO
-  3.0+ will be the new minimum.
+  Note that it is likely that 1.14 is the last release family that will support OIIO 2.x, and beginning with next year's OSL release, OpenImageIO 3.0+ will be the new minimum.
 * **LLVM**: New minimum LLVM release is 11.0. [#1914](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1914)
 * **NO Boost**: Boost is no longer a dependency of OSL.
 
@@ -28,12 +26,12 @@ Release 1.14 (beta1 - 4 Mar 2025) -- compared to 1.13
   - *testrender*: Implement OpenPBR's sheen BRDF [#1819](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1819) (by Christopher Kulla) (1.14.1.0)
   - *testrender*: Modify testrender to work with triangle meshes [#1865](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1865) (by Christopher Kulla) (1.14.3.0)
   - *testrender*: OptiX testrender overhaul (take two) [#1897](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1897) (by Tim Grant) (1.14.3.0)
-  - *osltoy*: Osltoy - Add command line and GUI ways to adjust include search paths [#1876](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1876) (by Maxwell Iverson) (1.14.3.0)
   - *testrender*: Full OptiX support in testrender [#1896](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1896) [#1897](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1897) (by Tim Grant) (1.14.3.0)
   - *testrender*: Implement new Oren-Nayar model from OpenPBR [#1817](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1817) (by Christopher Kulla) (1.14.1.0)
   - *testrender*: Implement OpenPBR's sheen BRDF [#1819](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1819) (by Christopher Kulla) (1.14.1.0)
   - *testrender*: Implement basic displacement shader support [#1898](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1898) (by Christopher Kulla)
   - *testrender*: Improvements to energy conservation between layered BSDFs [#1935](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1935) (by Jonathan Stone)
+  - *osltoy*: Add command line and GUI ways to adjust include search paths [#1876](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1876) (by Maxwell Iverson) (1.14.3.0)
 
 ### ⛰️  API changes and new ShadingSystem features (for renderer writers):
 - The big switch to `ustringhash`: To better accommodate GPU execution, and to

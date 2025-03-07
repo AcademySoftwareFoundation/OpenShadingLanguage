@@ -857,10 +857,14 @@ ShaderGroup::generate_optix_cache_key(string_view code)
     safegroup = Strutil::replace(name(), "/", "_", true);
     safegroup = Strutil::replace(safegroup, ":", "_", true);
 
-    // Cache key includes the groupname in addition to the serialized IR.
-    // This is because the groupname makes its way into the ptx's direct callable name,
-    // but isn't included in the serialization.
-    std::string cache_key = fmtformat("cache-osl-ptx-{}-{}", safegroup, ir_key);
+    ShaderInstance* inst = layer(nlayers() - 1);
+    ustring layername    = inst->layername();
+
+    // Cache key includes group and entry layer names in addition to the serialized IR.
+    // This is because the group and layer names make their way into the ptx's
+    // direct callable name, but isn't included in the serialization.
+    std::string cache_key = fmtformat("cache-osl-ptx-{}-{}-{}", safegroup,
+                                      layername, ir_key);
 
     m_optix_cache_key = cache_key;
 }

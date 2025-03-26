@@ -808,7 +808,7 @@ the computations are performed component-by-component (separately for `x`,
     return value will be `0` if the string doesn't appear to hold valid
     representation of the destination type.
 
-`string` **`substr`** `(string str, output string results[], string sep, int maxsplit)` <br> `string` **`substr`** `(string str, output string results[], string sep)` <br> `string` **`substr`** `(string str, output string results[])`
+`int` **`split`** `(string str, output string results[], string sep, int maxsplit)` <br> `int` **`split`** `(string str, output string results[], string sep)` <br> `int` **`split`** `(string str, output string results[])`
 
   : Fills the `result` array with the words in the string `str`, using `sep`
     as the delimiter string.  If `maxsplit` is supplied, at most `maxsplit`

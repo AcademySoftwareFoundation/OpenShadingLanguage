@@ -945,7 +945,7 @@ SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
 #ifndef __CUDACC__
     shadingsys->execute(*ctx, *m_shaders[backgroundShaderID].surf, sg);
 #else
-    alignas(8) char closure_pool[256];
+    StackClosurePool closure_pool;
     execute_shader(sg, render_params.bg_id, closure_pool);
 #endif
     return process_background_closure((const ClosureColor*)sg.Ci);
@@ -957,8 +957,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 {
 #ifdef __CUDACC__
     // Scratch space for the output closures
-    alignas(8) char closure_pool[256];
-    alignas(8) char light_closure_pool[256];
+    StackClosurePool closure_pool;
+    StackClosurePool light_closure_pool;
 #endif
 
     constexpr float inf = std::numeric_limits<float>::infinity();

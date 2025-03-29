@@ -4316,6 +4316,9 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
     llvm::Value* anisotropic         = rop.ll.constant(32);
     llvm::Value* conservative_filter = rop.ll.constant(1);
     llvm::Value* fill                = rop.ll.constant(0.0f);
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+    llvm::Value* colortransformid = rop.ll.constant(0);
+#endif
 
     bool is_swrap_uniform = true;
     bool is_twrap_uniform = true;
@@ -4606,6 +4609,18 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
             continue;
         }
 
+        if (name == Strings::colorspace && valtype == TypeDesc::STRING) {
+            if (Val.is_constant()) {
+                // Just ignore this option for now.
+                // FIXME: need full implementation
+                continue;
+            } else {
+                rop.shadingcontext()->errorfmt(
+                    "texture{} optional argument \"{}\" must be constant after optimization ({}:{})",
+                    tex3d ? "3d" : "", name, op.sourcefile(), op.sourceline());
+                continue;
+            }
+        }
         if (name == Strings::time
             && (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {
             // NOTE: currently no supported 3d texture format makes use of time.
@@ -4692,6 +4707,14 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
                              rop.ll.GEP(bto_type, bto, 0,
                                         static_cast<int>(
                                             LLVMMemberIndex::missingcolor)));
+
+#ifdef OIIO_TEXTURESYSTEM_SUPPORTS_COLORSPACE
+    // FIXME: We currently ignore the color space, so just make it 0
+    rop.ll.op_unmasked_store(
+        colortransformid,
+        rop.ll.GEP(bto_type, bto, 0,
+                   static_cast<int>(LLVMMemberIndex::colortransformid)));
+#endif
 
     // blur's and width's are always communicated as wide, we we will handle them here
     rop.ll.op_unmasked_store(sblur, rop.ll.GEP(bto_type, bto, 0,
@@ -4936,6 +4959,7 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM& rop, int opnum,
             continue;
         }
 
+        SKIP_PARAM_WIDE_STRING(colorspace)
         SKIP_PARAM_WIDE_FLOAT(time)
 
         rop.shadingcontext()->errorfmt(

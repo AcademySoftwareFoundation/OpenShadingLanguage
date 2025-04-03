@@ -69,6 +69,9 @@ ls ${HOMEBREW_PREFIX}/lib/python${PYTHON_VERSION}
 # export PATH=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}/bin:$PATH
 export LLVM_DIRECTORY=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}
 export LLVM_ROOT=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}
+export PATH=$LLVM_ROOT/bin:$PATH
+echo LLVM_ROOT=${LLVM_ROOT}
+# ls $LLVM_ROOT
 export PATH=${HOMEBREW_PREFIX}/opt/flex/bin:${HOMEBREW_PREFIX}/opt/bison/bin:$PATH
 
 # Save the env for use by other stages

@@ -1,0 +1,13 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test (string filename = "grey.exr",
+      output color Cout = 0)
+{
+    Cout = (color)texture (filename, u, v);
+    printf("color space - none specified: %g\n", Cout);
+    Cout = (color)texture (filename, u, v, "colorspace", "sRGB");
+    printf("color space - sRGB: %g\n", Cout);
+}

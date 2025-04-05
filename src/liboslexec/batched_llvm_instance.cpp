@@ -769,6 +769,7 @@ BatchedBackendLLVM::llvm_type_batched_texture_options()
     sg_types.push_back(ll.type_int());                 // conservative_filter
     sg_types.push_back(ll.type_float());               // fill
     sg_types.push_back(ll.type_ptr(ll.type_float()));  // missingcolor
+    sg_types.push_back(ll.type_int());                 // colortransformid
 
     // Private internal data
     sg_types.push_back(ll.type_int());  // envlayout
@@ -2748,7 +2749,9 @@ BatchedBackendLLVM::build_offsets_of_BatchedTextureOptions(
     offset_by_index.push_back(uniform_offset
                               + offsetof(UniformTextureOptions, missingcolor));
     offset_by_index.push_back(
-        offsetof(BatchedTextureOptions<WidthT>, private_envlayout));
+        uniform_offset + offsetof(UniformTextureOptions, colortransformid));
+    offset_by_index.push_back(
+        uniform_offset + offsetof(UniformTextureOptions, private_envlayout));
 }
 
 

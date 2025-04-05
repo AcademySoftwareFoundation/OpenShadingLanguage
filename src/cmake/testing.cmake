@@ -392,7 +392,7 @@ macro (osl_add_all_tests)
                 test-fmt-cxpf  test-fmt-noise test-fmt-matrixcolor 
                 test-fmt-stpf test-fmt-errorwarning test-fmt-errorwarning-repeats
                 texture-alpha texture-alpha-derivs
-                texture-blur texture-connected-options
+                texture-blur texture-colorspace texture-connected-options
                 texture-derivs texture-environment texture-errormsg
                 texture-environment-opts-reg
                 texture-firstchannel texture-interp

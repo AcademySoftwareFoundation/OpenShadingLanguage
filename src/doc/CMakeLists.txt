@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-set (public_docs osl-languagespec.pdf
+set (public_docs 
                  testshade.md.html
                  osltoy.md.html
                  markdeep.min.js

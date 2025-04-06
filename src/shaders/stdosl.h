@@ -184,6 +184,22 @@ int isfinite (float x) BUILTIN;
 float erf (float x) BUILTIN;
 float erfc (float x) BUILTIN;
 
+// Currently, only implemented for 'vector' and 'float' types.
+#if 0
+// normal remap(normal x, normal minIn, normal maxIn, normal minOut, normal maxOut) { return 1; }
+vector remap(vector x, vector minIn, vector maxIn, float minOut, float maxOut) { return minOut + (x - minIn) * (maxOut - minOut) / (maxIn - minIn); }
+vector remap(vector x, vector minIn, vector maxIn, vector minOut, vector maxOut) { return minOut + (x - minIn) * (maxOut - minOut) / (maxIn - minIn); }
+// point remap(point x, point minIn, point maxIn, point minOut, point maxOut) { return 1; }
+// color remap(color x, color minIn, color maxIn, color minOut, color maxOut) { return 1; }
+float remap(float x, float minIn, float maxIn, float minOut, float maxOut) { return minOut + (x - minIn) * (maxOut - minOut) / (maxIn - minIn); }
+#else
+vector remap (vector x, vector minIn, vector maxIn, float minOut, float maxOut) BUILTIN;
+vector remap (vector x, vector minIn, vector maxIn, vector minOut, vector maxOut) BUILTIN;
+float  remap (float x, float minIn, float maxIn, float minOut, float maxOut) BUILTIN;
+#endif
+closure color remap (closure x, closure minIn, closure maxIn, float minOut, float maxOut) { return minOut + (x - minIn) * (maxOut - minOut) / (maxIn - minIn); }
+closure color remap (closure x, closure minIn, closure maxIn, closure minOut, closure maxOut) { return minOut + (x - minIn) * (maxOut - minOut) / (maxIn - minIn); }
+
 // Vector functions
 
 vector cross (vector a, vector b) BUILTIN;

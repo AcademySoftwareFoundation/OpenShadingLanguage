@@ -17,7 +17,7 @@ Dependencies
 ------------
 
 OSL requires the following dependencies or tools.
-NEW or CHANGED dependencies since the last major release are **bold**.
+NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
 * Build system: [CMake](https://cmake.org/) **3.19 or newer** (tested
   through 4.0)
@@ -50,7 +50,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X).
 
 * [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, or 19, including
-  clang libraries.
+  clang libraries. **LLVM 20 is not yet supported.**
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.

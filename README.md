@@ -421,6 +421,7 @@ nominated for major awards.)
   Bullet Train,
   Slumberland,
   Glass Onion,
+  Puss in Boots: The Last Wish,
   Archive 81 (series),
   Moon Night (series),
   Obi-Wan Kenobi (series),
@@ -438,7 +439,9 @@ nominated for major awards.)
   Elemental,
   Indiana Jones and the Dial of Destiny,
   The Marvels,
-  Leo
+  Leo,
+  The Boys (S4),
+  The Moon
 * **(2024)**
   Ghostbusters: Frozen Empire,
   Inside Out 2,
@@ -447,6 +450,7 @@ nominated for major awards.)
 * **(2025 / upcoming)**
   Win or Lose (series),
   In Your Dreams,
+  A Minecraft Movie,
   ...
 
 

@@ -943,6 +943,14 @@ the computations are performed component-by-component (separately for `x`,
       : The value to return for any channels that are requested,
         but not present in the texture file (default: 0).
 
+    `"interp",` *`string`*
+      : Overrides the texture interpolation method: `"smartcubic"` (the
+        default), `"cubic"`, `"linear"`, or `"closest"`.
+
+    `"colorspace"`, *`string`*
+      : Specifies the color space of the data in the texture file.
+        (This option was added to OSL in version 1.14.)
+
     `"missingcolor",` *`color`*, `"missingalpha",` *`float`*
       : If present, supplies a missing color (and alpha value) that will
         be used for missing or broken textures -- *instead of* treating
@@ -961,10 +969,6 @@ the computations are performed component-by-component (separately for `x`,
         system will be stored in the specified variable rather than issuing error
         calls to the renderer, thus leaving it up to the shader to handle any
         errors. The error message stored will be `""` if no error occurred.
-
-    `"interp",` *`string`*
-      : Overrides the texture interpolation method: `"smartcubic"` (the 
-        default), `"cubic"`, `"linear"`, or `"closest"`.
 
 
 *`type`* **`texture3d`** `(string filename, point p,` *`...params...`* `)` <br> *`type`* **`texture3d`** `(string filename, point p, vector dpdx, vector dpdy, vector dpdz,` *`...params...`* `)`
@@ -1034,6 +1038,10 @@ the computations are performed component-by-component (separately for `x`,
         as an error, you must not supply the optional ``"missingcolor"``
         parameter.
 
+    `"colorspace"`, *`string`*
+      : Specifies the color space of the data in the texture file.
+        (This option was added to OSL in version 1.14.)
+
     `"time"`, *`float`*
       : A time value to use if the volume texture specifies a time-varying
         local transformation (default: 0).
@@ -1094,6 +1102,10 @@ the computations are performed component-by-component (separately for `x`,
         it as an error.  If you want a missing or broken texture to be reported
         as an error, you must not supply the optional `"missingcolor"`
         parameter.
+
+    `"colorspace"`, *`string`*
+      : Specifies the color space of the data in the texture file.
+        (This option was added to OSL in version 1.14.)
 
     "alpha", *`floatvariable`*
       : The alpha channel (presumed to be the next channel following the

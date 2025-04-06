@@ -319,73 +319,73 @@ point step (point edge, point x) BUILTIN;
 vector step (vector edge, vector x) BUILTIN;
 normal step (normal edge, normal x) BUILTIN;
 float step (float edge, float x) BUILTIN;
-float smoothstep (float edge0, float edge1, float x) BUILTIN;
+float smoothstep (float low, float high, float x) BUILTIN;
 
-color smoothstep (color edge0, color edge1, color x)
+color smoothstep (color low, color high, color x)
 {
-    return color (smoothstep(edge0[0], edge1[0], x[0]),
-                  smoothstep(edge0[1], edge1[1], x[1]),
-                  smoothstep(edge0[2], edge1[2], x[2]));
+    return color (smoothstep(low[0], high[0], x[0]),
+                  smoothstep(low[1], high[1], x[1]),
+                  smoothstep(low[2], high[2], x[2]));
 }
-vector smoothstep (vector edge0, vector edge1, vector x)
+vector smoothstep (vector low, vector high, vector x)
 {
-    return vector (smoothstep(edge0[0], edge1[0], x[0]),
-                   smoothstep(edge0[1], edge1[1], x[1]),
-                   smoothstep(edge0[2], edge1[2], x[2]));
+    return vector (smoothstep(low[0], high[0], x[0]),
+                   smoothstep(low[1], high[1], x[1]),
+                   smoothstep(low[2], high[2], x[2]));
 }
 
-float linearstep (float edge0, float edge1, float x) {
+float linearstep (float low, float high, float x) {
     float result;
-    if (edge0 != edge1) {
-        float xclamped = clamp (x, edge0, edge1);
-        result = (xclamped - edge0) / (edge1 - edge0);
+    if (low != high) {
+        float xclamped = clamp (x, low, high);
+        result = (xclamped - low) / (high - low);
     } else {  // special case: edges coincide
-        result = step (edge0, x);
+        result = step (low, x);
     }
     return result;
 }
-color linearstep (color edge0, color edge1, color x)
+color linearstep (color low, color high, color x)
 {
-    return color (linearstep(edge0[0], edge1[0], x[0]),
-                  linearstep(edge0[1], edge1[1], x[1]),
-                  linearstep(edge0[2], edge1[2], x[2]));
+    return color (linearstep(low[0], high[0], x[0]),
+                  linearstep(low[1], high[1], x[1]),
+                  linearstep(low[2], high[2], x[2]));
 }
-vector linearstep (vector edge0, vector edge1, vector x)
+vector linearstep (vector low, vector high, vector x)
 {
-    return vector (linearstep(edge0[0], edge1[0], x[0]),
-                   linearstep(edge0[1], edge1[1], x[1]),
-                   linearstep(edge0[2], edge1[2], x[2]));
+    return vector (linearstep(low[0], high[0], x[0]),
+                   linearstep(low[1], high[1], x[1]),
+                   linearstep(low[2], high[2], x[2]));
 }
 
-float smooth_linearstep (float edge0, float edge1, float x_, float eps_) {
+float smooth_linearstep (float low, float high, float x_, float eps_) {
     float result;
-    if (edge0 != edge1) {
+    if (low != high) {
         float rampup (float x, float r) { return 0.5/r * x*x; }
-        float width_inv = 1.0 / (edge1 - edge0);
+        float width_inv = 1.0 / (high - low);
         float eps = eps_ * width_inv;
-        float x = (x_ - edge0) * width_inv;
+        float x = (x_ - low) * width_inv;
         if      (x <= -eps)                result = 0;
         else if (x >= eps && x <= 1.0-eps) result = x;
         else if (x >= 1.0+eps)             result = 1;
         else if (x < eps)                  result = rampup (x+eps, 2.0*eps);
         else /* if (x < 1.0+eps) */        result = 1.0 - rampup (1.0+eps - x, 2.0*eps);
     } else {
-        result = step (edge0, x_);
+        result = step (low, x_);
     }
     return result;
 }
 
-color smooth_linearstep (color edge0, color edge1, color x, color eps)
+color smooth_linearstep (color low, color high, color x, color eps)
 {
-    return color (smooth_linearstep(edge0[0], edge1[0], x[0], eps[0]),
-                  smooth_linearstep(edge0[1], edge1[1], x[1], eps[1]),
-                  smooth_linearstep(edge0[2], edge1[2], x[2], eps[2]));
+    return color (smooth_linearstep(low[0], high[0], x[0], eps[0]),
+                  smooth_linearstep(low[1], high[1], x[1], eps[1]),
+                  smooth_linearstep(low[2], high[2], x[2], eps[2]));
 }
-vector smooth_linearstep (vector edge0, vector edge1, vector x, vector eps)
+vector smooth_linearstep (vector low, vector high, vector x, vector eps)
 {
-    return vector (smooth_linearstep(edge0[0], edge1[0], x[0], eps[0]),
-                   smooth_linearstep(edge0[1], edge1[1], x[1], eps[1]),
-                   smooth_linearstep(edge0[2], edge1[2], x[2], eps[2]));
+    return vector (smooth_linearstep(low[0], high[0], x[0], eps[0]),
+                   smooth_linearstep(low[1], high[1], x[1], eps[1]),
+                   smooth_linearstep(low[2], high[2], x[2], eps[2]));
 }
 
 float aastep (float edge, float s, float dedge, float ds) {

@@ -164,7 +164,7 @@ float  mix (float  x, float  y, float  a) BUILTIN;
 closure color mix (closure color x, closure color y, float a) { return x*(1-a) + y*a; }
 closure color mix (closure color x, closure color y, color a) { return x*(1-a) + y*a; }
 
-#if 0
+#if 0 // Assuming x != y
 normal unmix (normal x, normal y, normal a) { return (a - x) / (y - x); }
 normal unmix (normal x, normal y, float  a) { return (a - x) / (y - x); }
 vector unmix (vector x, vector y, vector a) { return (a - x) / (y - x); }
@@ -185,8 +185,8 @@ color  unmix (color  x, color  y, color  a) BUILTIN;
 color  unmix (color  x, color  y, float  a) BUILTIN;
 float  unmix (float  x, float  y, float  a) BUILTIN;
 #endif
-closure color unmix (closure color x, closure color y, float a) { return (a - x) / (y - x); }
-closure color unmix (closure color x, closure color y, color a) { return (a - x) / (y - x); }
+// closure color unmix (closure color x, closure color y, float a) { return (a - x) / (y - x); }
+// closure color unmix (closure color x, closure color y, color a) { return (a - x) / (y - x); }
 
 // TODO: ADD REMAP FROM MIX AND UNMIX
 

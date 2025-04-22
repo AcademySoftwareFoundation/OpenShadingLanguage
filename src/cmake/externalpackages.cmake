@@ -87,8 +87,9 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     if (CMAKE_COMPILER_IS_GNUCC AND (GCC_VERSION VERSION_LESS 7.0))
         message (WARNING "${ColorYellow}LLVM 16+ requires gcc 7.0 or higher.${ColorReset}\n")
     endif ()
-    if (CMAKE_COMPILER_IS_CLANG AND (CLANG_VERSION_STRING VERSION_LESS 5.0
-                                     OR APPLE_CLANG_VERSION_STRING VERSION_LESS 5.0))
+    if (CMAKE_COMPILER_IS_CLANG
+        AND NOT (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0
+                 OR APPLECLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0))
         message (WARNING "${ColorYellow}LLVM 16+ requires clang 5.0 or higher.${ColorReset}\n")
     endif ()
 endif ()

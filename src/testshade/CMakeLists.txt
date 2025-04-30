@@ -35,7 +35,7 @@ if (OSL_USE_OPTIX)
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testshade_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} ${extra_cuda_headers} ptx_generated "-I../testrender/cuda" )
+        NVCC_COMPILE ( ${cudasrc} ${extra_cuda_headers} ptx_generated "-I../testrender/cuda" "")
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 

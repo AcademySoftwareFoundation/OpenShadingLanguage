@@ -39,7 +39,7 @@ if (OSL_USE_OPTIX)
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testrender_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} "${testrender_cuda_headers}" ptx_generated "" )
+        NVCC_COMPILE ( ${cudasrc} "${testrender_cuda_headers}" ptx_generated "" BSDL)
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 
@@ -79,7 +79,7 @@ add_executable (testrender ${testrender_srcs})
 
 target_link_libraries (testrender
     PRIVATE
-        oslexec oslquery oslcomp
+        oslexec oslquery oslcomp BSDL
         pugixml::pugixml
         Threads::Threads)
 

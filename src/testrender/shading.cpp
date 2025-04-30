@@ -8,6 +8,9 @@
 #include "optics.h"
 #include "sampling.h"
 
+#include <BSDL/SPI/bsdf_thinlayer_impl.h>
+#include <BSDL/spectrum_impl.h>
+
 using namespace OSL;
 
 
@@ -38,11 +41,89 @@ is_black(const Color3& c)
 
 }  // anonymous namespace
 
-
 OSL_NAMESPACE_BEGIN
+
+// BSDL expects this minimum functionality. We could put it in BSDF but
+// the roughness() method interferes with other BSDFs
+struct BSDLLobe : public BSDF {
+    template<typename LOBE>
+    OSL_HOSTDEVICE BSDLLobe(LOBE* lobe, float rough, float l0, bool tr)
+        : BSDF(lobe), m_roughness(rough)
+    {
+    }
+
+    OSL_HOSTDEVICE float roughness() const { return m_roughness; }
+
+    float m_roughness;
+};
+
+// This is the thin wrapper to insert spi::ThinLayerLobe into testrender
+struct SpiThinLayer : public bsdl::spi::ThinLayerLobe<BSDLLobe> {
+    using Base = bsdl::spi::ThinLayerLobe<BSDLLobe>;
+
+    static constexpr int closureid() { return SPI_THINLAYER; }
+
+    OSL_HOSTDEVICE SpiThinLayer(const Data& data, const Vec3& wo,
+                                float path_roughness)
+        : Base(this,
+               bsdl::BsdfGlobals(wo,
+                                 data.N,  // Nf
+                                 data.N,  // Ngf
+                                 false,   // backfacing
+                                 path_roughness,
+                                 1.0f,  // outer_ior
+                                 0),    // hero wavelength off
+               data)
+    {
+    }
+
+    OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
+    {
+        bsdl::Sample s = Base::eval_impl(Base::frame.local(wo),
+                                         Base::frame.local(wi), true, true);
+        return { wi, s.weight.toRGB(0), s.pdf, s.roughness };
+    }
+    OSL_HOSTDEVICE BSDF::Sample sample(const Vec3& wo, float rx, float ry,
+                                       float rz) const
+    {
+        bsdl::Sample s = Base::sample_impl(Base::frame.local(wo),
+                                           { rx, ry, rz }, true, true);
+        return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,
+                 s.roughness };
+    }
+};
 
 
 #ifndef __CUDACC__
+// Helper to register BSDL closures
+struct BSDLtoOSL {
+    template<typename BSDF> void visit()
+    {
+        const auto e = BSDF::template entry<typename BSDF::Data>();
+        std::vector<ClosureParam> params;
+        for (int i = 0; true; ++i) {
+            const bsdl::LobeParam& in = e.params[i];
+            TypeDesc osltype;
+            switch (in.type) {
+            case bsdl::ParamType::NONE: osltype = TypeDesc(); break;
+            case bsdl::ParamType::VECTOR: osltype = OSL::TypeVector; break;
+            case bsdl::ParamType::INT: osltype = OSL::TypeInt; break;
+            case bsdl::ParamType::FLOAT: osltype = OSL::TypeFloat; break;
+            case bsdl::ParamType::COLOR: osltype = OSL::TypeColor; break;
+            case bsdl::ParamType::STRING: osltype = OSL::TypeString; break;
+            case bsdl::ParamType::CLOSURE: osltype = TypeDesc::PTR; break;
+            }
+            params.push_back({ osltype, in.offset, in.key, in.type_size });
+            if (in.type == bsdl::ParamType::NONE)
+                break;
+        }
+        shadingsys->register_closure(e.name, BSDF::closureid(), params.data(),
+                                     nullptr, nullptr);
+    }
+
+    OSL::ShadingSystem* shadingsys;
+};
+
 void
 register_closures(OSL::ShadingSystem* shadingsys)
 {
@@ -228,16 +309,17 @@ register_closures(OSL::ShadingSystem* shadingsys)
 
     for (const BuiltinClosures& b : builtins)
         shadingsys->register_closure(b.name, b.id, b.params, nullptr, nullptr);
+
+    // BSDFs coming from BSDL
+    using bsdl_set = bsdl::TypeList<SpiThinLayer>;
+    // Register them
+    bsdl_set::apply(BSDLtoOSL { shadingsys });
 }
 #endif  // ifndef __CUDACC__
 
-OSL_NAMESPACE_END
-
-namespace {  // anonymous namespace
-
 template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
     OSL_HOSTDEVICE Diffuse(const DiffuseParams& params)
-        : BSDF(DIFFUSE_ID), DiffuseParams(params)
+        : BSDF(this), DiffuseParams(params)
     {
         if (trans)
             N = -N;
@@ -259,7 +341,7 @@ template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
 
 struct OrenNayar final : public BSDF, OrenNayarParams {
     OSL_HOSTDEVICE OrenNayar(const OrenNayarParams& params)
-        : BSDF(OREN_NAYAR_ID), OrenNayarParams(params)
+        : BSDF(this), OrenNayarParams(params)
     {
     }
     OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
@@ -297,7 +379,7 @@ struct OrenNayar final : public BSDF, OrenNayarParams {
 struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
     OSL_HOSTDEVICE
     EnergyCompensatedOrenNayar(const MxOrenNayarDiffuseParams& params)
-        : BSDF(MX_OREN_NAYAR_DIFFUSE_ID), MxOrenNayarDiffuseParams(params)
+        : BSDF(this), MxOrenNayarDiffuseParams(params)
     {
     }
     OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
@@ -368,7 +450,7 @@ private:
 
 struct Phong final : public BSDF, PhongParams {
     OSL_HOSTDEVICE Phong(const PhongParams& params)
-        : BSDF(PHONG_ID), PhongParams(params)
+        : BSDF(this), PhongParams(params)
     {
     }
     OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
@@ -411,7 +493,7 @@ struct Phong final : public BSDF, PhongParams {
 
 struct Ward final : public BSDF, WardParams {
     OSL_HOSTDEVICE Ward(const WardParams& params)
-        : BSDF(WARD_ID), WardParams(params)
+        : BSDF(this), WardParams(params)
     {
     }
     OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
@@ -617,7 +699,7 @@ struct BeckmannDist {
 template<typename Distribution, int Refract>
 struct Microfacet final : public BSDF, MicrofacetParams {
     OSL_HOSTDEVICE Microfacet(const MicrofacetParams& params)
-        : BSDF(MICROFACET_ID)
+        : BSDF(this)
         , MicrofacetParams(params)
         , tf(TangentFrame::from_normal_and_tangent(N, U))
     {
@@ -844,21 +926,14 @@ private:
     TangentFrame tf;
 };
 
-typedef Microfacet<GGXDist, 0> MicrofacetGGXRefl;
-typedef Microfacet<GGXDist, 1> MicrofacetGGXRefr;
-typedef Microfacet<GGXDist, 2> MicrofacetGGXBoth;
-typedef Microfacet<BeckmannDist, 0> MicrofacetBeckmannRefl;
-typedef Microfacet<BeckmannDist, 1> MicrofacetBeckmannRefr;
-typedef Microfacet<BeckmannDist, 2> MicrofacetBeckmannBoth;
-
 
 // We use the CRTP to inherit the parameters because each MaterialX closure uses a different set of parameters
-template<typename MxMicrofacetParams, typename Distribution, ClosureIDs ID,
+template<typename MxMicrofacetParams, typename Distribution,
          bool EnableTransmissionLobe>
 struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
     OSL_HOSTDEVICE MxMicrofacet(const MxMicrofacetParams& params,
                                 float refraction_ior)
-        : BSDF(ID)
+        : BSDF(this)
         , MxMicrofacetParams(params)
         , tf(TangentFrame::from_normal_and_tangent(MxMicrofacetParams::N,
                                                    MxMicrofacetParams::U))
@@ -1133,7 +1208,7 @@ private:
 
 struct Reflection final : public BSDF, ReflectionParams {
     OSL_HOSTDEVICE Reflection(const ReflectionParams& params)
-        : BSDF(REFLECTION_ID), ReflectionParams(params)
+        : BSDF(this), ReflectionParams(params)
     {
     }
     OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
@@ -1164,7 +1239,7 @@ struct Reflection final : public BSDF, ReflectionParams {
 
 struct Refraction final : public BSDF, RefractionParams {
     OSL_HOSTDEVICE Refraction(const RefractionParams& params)
-        : BSDF(REFRACTION_ID), RefractionParams(params)
+        : BSDF(this), RefractionParams(params)
     {
     }
     OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const
@@ -1188,7 +1263,7 @@ struct Refraction final : public BSDF, RefractionParams {
 };
 
 struct Transparent final : public BSDF {
-    OSL_HOSTDEVICE Transparent() : BSDF(TRANSPARENT_ID) {}
+    OSL_HOSTDEVICE Transparent() : BSDF(this) {}
     OSL_HOSTDEVICE Sample eval(const Vec3& /*wo*/, const Vec3& /*wi*/) const
     {
         return {};
@@ -1204,7 +1279,7 @@ struct Transparent final : public BSDF {
 
 struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
     OSL_HOSTDEVICE MxBurleyDiffuse(const MxBurleyDiffuseParams& params)
-        : BSDF(MX_BURLEY_DIFFUSE_ID), MxBurleyDiffuseParams(params)
+        : BSDF(this), MxBurleyDiffuseParams(params)
     {
     }
 
@@ -1240,7 +1315,7 @@ struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
 // https://dassaultsystemes-technology.github.io/EnterprisePBRShadingModel/spec-2022x.md.html#components/sheen
 struct CharlieSheen final : public BSDF, MxSheenParams {
     OSL_HOSTDEVICE CharlieSheen(const MxSheenParams& params)
-        : BSDF(MX_SHEEN_ID), MxSheenParams(params)
+        : BSDF(this), MxSheenParams(params)
     {
     }
 
@@ -1294,7 +1369,7 @@ struct CharlieSheen final : public BSDF, MxSheenParams {
 // https://tizianzeltner.com/projects/Zeltner2022Practical/
 struct ZeltnerBurleySheen final : public BSDF, MxSheenParams {
     OSL_HOSTDEVICE ZeltnerBurleySheen(const MxSheenParams& params)
-        : BSDF(MX_SHEEN_ID), MxSheenParams(params)
+        : BSDF(this), MxSheenParams(params)
     {
     }
 
@@ -1396,7 +1471,6 @@ private:
     }
 };
 
-
 OSL_HOSTDEVICE Color3
 evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
 {
@@ -1448,8 +1522,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                     closure = nullptr;
                     break;
                 }
-                MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, false>
-                    mf(params, 1.0f);
+                MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params,
+                                                                    1.0f);
                 weight *= w * mf.get_albedo(-sg.I);
                 closure = nullptr;
                 break;
@@ -1462,9 +1536,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                     closure = nullptr;
                     break;
                 }
-                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
-                             MX_GENERALIZED_SCHLICK_ID, false>
-                    mf(params, 1.0f);
+                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(
+                    params, 1.0f);
                 weight *= w * mf.get_albedo(-sg.I);
                 closure = nullptr;
                 break;
@@ -1598,9 +1671,9 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
 
 // recursively walk through the closure tree, creating bsdfs as we go
 OSL_HOSTDEVICE void
-process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
-                     const ClosureColor* closure, const Color3& w,
-                     bool light_only)
+process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
+                     ShadingResult& result, const ClosureColor* closure,
+                     const Color3& w, bool light_only)
 {
     static const ustringhash uh_ggx("ggx");
     static const ustringhash uh_beckmann("beckmann");
@@ -1735,35 +1808,34 @@ process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                         = *comp->as<MxDielectricParams>();
                     if (is_black(params.transmission_tint))
                         ok = result.bsdf.add_bsdf<
-                            MxMicrofacet<MxDielectricParams, GGXDist,
-                                         MX_DIELECTRIC_ID, false>>(cw, params,
-                                                                   1.0f);
+                            MxMicrofacet<MxDielectricParams, GGXDist, false>>(
+                            cw, params, 1.0f);
                     else
-                        ok = result.bsdf.add_bsdf<MxMicrofacet<
-                            MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, true>>(
+                        ok = result.bsdf.add_bsdf<
+                            MxMicrofacet<MxDielectricParams, GGXDist, true>>(
                             cw, params, result.refraction_ior);
                     break;
                 }
                 case MX_CONDUCTOR_ID: {
                     const MxConductorParams& params
                         = *comp->as<MxConductorParams>();
-                    ok = result.bsdf.add_bsdf<MxMicrofacet<
-                        MxConductorParams, GGXDist, MX_CONDUCTOR_ID, false>>(
-                        cw, params, 1.0f);
+                    ok = result.bsdf.add_bsdf<
+                        MxMicrofacet<MxConductorParams, GGXDist, false>>(cw,
+                                                                         params,
+                                                                         1.0f);
                     break;
                 };
                 case MX_GENERALIZED_SCHLICK_ID: {
                     const MxGeneralizedSchlickParams& params
                         = *comp->as<MxGeneralizedSchlickParams>();
                     if (is_black(params.transmission_tint))
-                        ok = result.bsdf.add_bsdf<
-                            MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
-                                         MX_GENERALIZED_SCHLICK_ID, false>>(
-                            cw, params, 1.0f);
+                        ok = result.bsdf.add_bsdf<MxMicrofacet<
+                            MxGeneralizedSchlickParams, GGXDist, false>>(cw,
+                                                                         params,
+                                                                         1.0f);
                     else
-                        ok = result.bsdf.add_bsdf<
-                            MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
-                                         MX_GENERALIZED_SCHLICK_ID, true>>(
+                        ok = result.bsdf.add_bsdf<MxMicrofacet<
+                            MxGeneralizedSchlickParams, GGXDist, true>>(
                             cw, params, result.refraction_ior);
                     break;
                 };
@@ -1822,6 +1894,13 @@ process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
                     ok = true;
                     break;
                 }
+                case SpiThinLayer::closureid(): {
+                    const SpiThinLayer::Data& params
+                        = *comp->as<SpiThinLayer::Data>();
+                    ok = result.bsdf.add_bsdf<SpiThinLayer>(cw, params, -sg.I,
+                                                            path_roughness);
+                    break;
+                }
                 }
 #ifndef __CUDACC__
                 OSL_ASSERT(ok && "Invalid closure invoked in surface shader");
@@ -1842,17 +1921,14 @@ process_bsdf_closure(const ShaderGlobalsType& sg, ShadingResult& result,
     }
 }
 
-}  // anonymous namespace
-
-OSL_NAMESPACE_BEGIN
 
 OSL_HOSTDEVICE void
-process_closure(const ShaderGlobalsType& sg, ShadingResult& result,
-                const ClosureColor* Ci, bool light_only)
+process_closure(const ShaderGlobalsType& sg, float path_roughness,
+                ShadingResult& result, const ClosureColor* Ci, bool light_only)
 {
     if (!light_only)
         process_medium_closure(sg, result, Ci, Color3(1));
-    process_bsdf_closure(sg, result, Ci, Color3(1), light_only);
+    process_bsdf_closure(sg, path_roughness, result, Ci, Color3(1), light_only);
 }
 
 OSL_HOSTDEVICE Vec3
@@ -1895,317 +1971,22 @@ process_background_closure(const ClosureColor* closure)
     return weight;
 }
 
-
-typedef MxMicrofacet<MxConductorParams, GGXDist, MX_CONDUCTOR_ID, false>
-    MxConductor;
-typedef MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, true>
-    MxDielectric;
-typedef MxMicrofacet<MxDielectricParams, GGXDist, MX_DIELECTRIC_ID, false>
-    MxDielectricOpaque;
-typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
-                     MX_GENERALIZED_SCHLICK_ID, true>
-    MxGeneralizedSchlick;
-typedef MxMicrofacet<MxGeneralizedSchlickParams, GGXDist,
-                     MX_GENERALIZED_SCHLICK_ID, false>
-    MxGeneralizedSchlickOpaque;
-
 OSL_HOSTDEVICE Color3
-CompositeBSDF::get_albedo(const BSDF* bsdf, const Vec3& wo) const
+BSDF::get_albedo_vrtl(const Vec3& wo) const
 {
-    static const ustringhash uh_ggx("ggx");
-    static const ustringhash uh_beckmann("beckmann");
-    static const ustringhash uh_default("default");
-
-    Color3 albedo(0);
-    switch (bsdf->id) {
-    case DIFFUSE_ID:
-        albedo = BSDF_CAST(Diffuse<0>, bsdf)->get_albedo(wo);
-        break;
-    case TRANSPARENT_ID:
-    case MX_TRANSPARENT_ID:
-        albedo = BSDF_CAST(Transparent, bsdf)->get_albedo(wo);
-        break;
-    case OREN_NAYAR_ID:
-        albedo = BSDF_CAST(OrenNayar, bsdf)->get_albedo(wo);
-        break;
-    case TRANSLUCENT_ID:
-        albedo = BSDF_CAST(Diffuse<1>, bsdf)->get_albedo(wo);
-        break;
-    case PHONG_ID: albedo = BSDF_CAST(Phong, bsdf)->get_albedo(wo); break;
-    case WARD_ID: albedo = BSDF_CAST(Ward, bsdf)->get_albedo(wo); break;
-    case REFLECTION_ID:
-    case FRESNEL_REFLECTION_ID:
-        albedo = BSDF_CAST(Reflection, bsdf)->get_albedo(wo);
-        break;
-    case REFRACTION_ID:
-        albedo = BSDF_CAST(Refraction, bsdf)->get_albedo(wo);
-        break;
-    case MICROFACET_ID: {
-        const int refract      = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        const ustringhash dist = ((MicrofacetBeckmannRefl*)bsdf)->dist;
-        if (dist == uh_default || dist == uh_beckmann) {
-            switch (refract) {
-            case 0:
-                albedo = BSDF_CAST(MicrofacetBeckmannRefl, bsdf)->get_albedo(wo);
-                break;
-            case 1:
-                albedo = BSDF_CAST(MicrofacetBeckmannRefr, bsdf)->get_albedo(wo);
-                break;
-            case 2:
-                albedo = BSDF_CAST(MicrofacetBeckmannBoth, bsdf)->get_albedo(wo);
-                break;
-            }
-        } else if (dist == uh_ggx) {
-            switch (refract) {
-            case 0:
-                albedo = BSDF_CAST(MicrofacetGGXRefl, bsdf)->get_albedo(wo);
-                break;
-            case 1:
-                albedo = BSDF_CAST(MicrofacetGGXRefr, bsdf)->get_albedo(wo);
-                break;
-            case 2:
-                albedo = BSDF_CAST(MicrofacetGGXBoth, bsdf)->get_albedo(wo);
-                break;
-            }
-        }
-        break;
-    }
-    case MX_CONDUCTOR_ID:
-        albedo = BSDF_CAST(MxConductor, bsdf)->get_albedo(wo);
-        break;
-    case MX_DIELECTRIC_ID:
-        if (is_black(((MxDielectricOpaque*)bsdf)->transmission_tint))
-            albedo = BSDF_CAST(MxDielectricOpaque, bsdf)->get_albedo(wo);
-        else
-            albedo = BSDF_CAST(MxDielectric, bsdf)->get_albedo(wo);
-        break;
-    case MX_OREN_NAYAR_DIFFUSE_ID:
-        albedo = BSDF_CAST(EnergyCompensatedOrenNayar, bsdf)->get_albedo(wo);
-        break;
-    case MX_BURLEY_DIFFUSE_ID:
-        albedo = BSDF_CAST(MxBurleyDiffuse, bsdf)->get_albedo(wo);
-        break;
-    case MX_SHEEN_ID:
-        if (BSDF_CAST(CharlieSheen, bsdf)->mode == 1)
-            albedo = BSDF_CAST(ZeltnerBurleySheen, bsdf)->get_albedo(wo);
-        else
-            albedo = BSDF_CAST(CharlieSheen, bsdf)->get_albedo(wo);
-        break;
-    case MX_GENERALIZED_SCHLICK_ID: {
-        const Color3& tint = ((MxGeneralizedSchlick*)bsdf)->transmission_tint;
-        if (is_black(tint))
-            albedo = BSDF_CAST(MxGeneralizedSchlickOpaque, bsdf)->get_albedo(wo);
-        else
-            albedo = BSDF_CAST(MxGeneralizedSchlick, bsdf)->get_albedo(wo);
-        break;
-    }
-    default: break;
-    }
-    return albedo;
+    return dispatch([&](auto bsdf) { return bsdf.get_albedo(wo); });
 }
 
-
 OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::sample(const BSDF* bsdf, const Vec3& wo, float rx, float ry,
-                      float rz) const
+BSDF::eval_vrtl(const Vec3& wo, const Vec3& wi) const
 {
-    static const ustringhash uh_ggx("ggx");
-    static const ustringhash uh_beckmann("beckmann");
-    static const ustringhash uh_default("default");
-
-    BSDF::Sample sample = {};
-    switch (bsdf->id) {
-    case DIFFUSE_ID:
-        sample = BSDF_CAST(Diffuse<0>, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case TRANSPARENT_ID:
-    case MX_TRANSPARENT_ID:
-        sample = BSDF_CAST(Transparent, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case OREN_NAYAR_ID:
-        sample = BSDF_CAST(OrenNayar, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case TRANSLUCENT_ID:
-        sample = BSDF_CAST(Diffuse<1>, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case PHONG_ID:
-        sample = BSDF_CAST(Phong, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case WARD_ID: sample = BSDF_CAST(Ward, bsdf)->sample(wo, rx, ry, rz); break;
-    case REFLECTION_ID:
-    case FRESNEL_REFLECTION_ID:
-        sample = BSDF_CAST(Reflection, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case REFRACTION_ID:
-        sample = BSDF_CAST(Refraction, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case MICROFACET_ID: {
-        const int refract      = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        const ustringhash dist = ((MicrofacetBeckmannRefl*)bsdf)->dist;
-        if (dist == uh_default || dist == uh_beckmann) {
-            switch (refract) {
-            case 0:
-                sample = BSDF_CAST(MicrofacetBeckmannRefl, bsdf)
-                             ->sample(wo, rx, ry, rz);
-                break;
-            case 1:
-                sample = BSDF_CAST(MicrofacetBeckmannRefr, bsdf)
-                             ->sample(wo, rx, ry, rz);
-                break;
-            case 2:
-                sample = BSDF_CAST(MicrofacetBeckmannBoth, bsdf)
-                             ->sample(wo, rx, ry, rz);
-                break;
-            }
-        } else if (dist == uh_ggx) {
-            switch (refract) {
-            case 0:
-                sample
-                    = BSDF_CAST(MicrofacetGGXRefl, bsdf)->sample(wo, rx, ry, rz);
-                break;
-            case 1:
-                sample
-                    = BSDF_CAST(MicrofacetGGXRefr, bsdf)->sample(wo, rx, ry, rz);
-                break;
-            case 2:
-                sample
-                    = BSDF_CAST(MicrofacetGGXBoth, bsdf)->sample(wo, rx, ry, rz);
-                break;
-            }
-        }
-        break;
-    }
-    case MX_CONDUCTOR_ID:
-        sample = BSDF_CAST(MxConductor, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case MX_DIELECTRIC_ID:
-        if (is_black(((MxDielectricOpaque*)bsdf)->transmission_tint))
-            sample = BSDF_CAST(MxDielectricOpaque, bsdf)->sample(wo, rx, ry, rz);
-        else
-            sample = BSDF_CAST(MxDielectric, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case MX_BURLEY_DIFFUSE_ID:
-        sample = BSDF_CAST(MxBurleyDiffuse, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case MX_OREN_NAYAR_DIFFUSE_ID:
-        sample = BSDF_CAST(EnergyCompensatedOrenNayar, bsdf)
-                     ->sample(wo, rx, ry, rz);
-        break;
-    case MX_SHEEN_ID:
-        if (BSDF_CAST(CharlieSheen, bsdf)->mode == 1)
-            sample = BSDF_CAST(ZeltnerBurleySheen, bsdf)->sample(wo, rx, ry, rz);
-        else
-            sample = BSDF_CAST(CharlieSheen, bsdf)->sample(wo, rx, ry, rz);
-        break;
-    case MX_GENERALIZED_SCHLICK_ID: {
-        const Color3& tint = ((MxGeneralizedSchlick*)bsdf)->transmission_tint;
-        if (is_black(tint)) {
-            sample = BSDF_CAST(MxGeneralizedSchlickOpaque, bsdf)
-                         ->sample(wo, rx, ry, rz);
-        } else {
-            sample
-                = BSDF_CAST(MxGeneralizedSchlick, bsdf)->sample(wo, rx, ry, rz);
-        }
-        break;
-    }
-    default: break;
-    }
-    return sample;
+    return dispatch([&](auto bsdf) { return bsdf.eval(wo, wi); });
 }
 
-
 OSL_HOSTDEVICE BSDF::Sample
-CompositeBSDF::eval(const BSDF* bsdf, const Vec3& wo, const Vec3& wi) const
+BSDF::sample_vrtl(const Vec3& wo, float rx, float ry, float rz) const
 {
-    static const ustringhash uh_ggx("ggx");
-    static const ustringhash uh_beckmann("beckmann");
-    static const ustringhash uh_default("default");
-
-    BSDF::Sample sample = {};
-    switch (bsdf->id) {
-    case DIFFUSE_ID: sample = BSDF_CAST(Diffuse<0>, bsdf)->eval(wo, wi); break;
-    case TRANSPARENT_ID:
-    case MX_TRANSPARENT_ID:
-        sample = BSDF_CAST(Transparent, bsdf)->eval(wo, wi);
-        break;
-    case OREN_NAYAR_ID:
-        sample = BSDF_CAST(OrenNayar, bsdf)->eval(wo, wi);
-        break;
-    case TRANSLUCENT_ID:
-        sample = BSDF_CAST(Diffuse<1>, bsdf)->eval(wo, wi);
-        break;
-    case PHONG_ID: sample = BSDF_CAST(Phong, bsdf)->eval(wo, wi); break;
-    case WARD_ID: sample = BSDF_CAST(Ward, bsdf)->eval(wo, wi); break;
-    case REFLECTION_ID:
-    case FRESNEL_REFLECTION_ID:
-        sample = BSDF_CAST(Reflection, bsdf)->eval(wo, wi);
-        break;
-    case REFRACTION_ID:
-        sample = BSDF_CAST(Refraction, bsdf)->eval(wo, wi);
-        break;
-    case MICROFACET_ID: {
-        const int refract      = ((MicrofacetBeckmannRefl*)bsdf)->refract;
-        const ustringhash dist = ((MicrofacetBeckmannRefl*)bsdf)->dist;
-        if (dist == uh_default || dist == uh_beckmann) {
-            switch (refract) {
-            case 0:
-                sample = BSDF_CAST(MicrofacetBeckmannRefl, bsdf)->eval(wo, wi);
-                break;
-            case 1:
-                sample = BSDF_CAST(MicrofacetBeckmannRefr, bsdf)->eval(wo, wi);
-                break;
-            case 2:
-                sample = BSDF_CAST(MicrofacetBeckmannBoth, bsdf)->eval(wo, wi);
-                break;
-            }
-        } else if (dist == uh_ggx) {
-            switch (refract) {
-            case 0:
-                sample = BSDF_CAST(MicrofacetGGXRefl, bsdf)->eval(wo, wi);
-                break;
-            case 1:
-                sample = BSDF_CAST(MicrofacetGGXRefr, bsdf)->eval(wo, wi);
-                break;
-            case 2:
-                sample = BSDF_CAST(MicrofacetGGXBoth, bsdf)->eval(wo, wi);
-                break;
-            }
-        }
-        break;
-    }
-    case MX_CONDUCTOR_ID:
-        sample = BSDF_CAST(MxConductor, bsdf)->eval(wo, wi);
-        break;
-    case MX_DIELECTRIC_ID:
-        if (is_black(((MxDielectricOpaque*)bsdf)->transmission_tint))
-            sample = BSDF_CAST(MxDielectricOpaque, bsdf)->eval(wo, wi);
-        else
-            sample = BSDF_CAST(MxDielectric, bsdf)->eval(wo, wi);
-        break;
-    case MX_BURLEY_DIFFUSE_ID:
-        sample = BSDF_CAST(MxBurleyDiffuse, bsdf)->eval(wo, wi);
-        break;
-    case MX_OREN_NAYAR_DIFFUSE_ID:
-        sample = BSDF_CAST(EnergyCompensatedOrenNayar, bsdf)->eval(wo, wi);
-        break;
-    case MX_SHEEN_ID:
-        if (BSDF_CAST(CharlieSheen, bsdf)->mode == 1)
-            sample = BSDF_CAST(ZeltnerBurleySheen, bsdf)->eval(wo, wi);
-        else
-            sample = BSDF_CAST(CharlieSheen, bsdf)->eval(wo, wi);
-        break;
-    case MX_GENERALIZED_SCHLICK_ID: {
-        const Color3& tint = ((MxGeneralizedSchlick*)bsdf)->transmission_tint;
-        if (is_black(tint)) {
-            sample = BSDF_CAST(MxGeneralizedSchlickOpaque, bsdf)->eval(wo, wi);
-        } else {
-            sample = BSDF_CAST(MxGeneralizedSchlick, bsdf)->eval(wo, wi);
-        }
-        break;
-    }
-    default: break;
-    }
-    return sample;
+    return dispatch([&](auto bsdf) { return bsdf.sample(wo, rx, ry, rz); });
 }
 
 

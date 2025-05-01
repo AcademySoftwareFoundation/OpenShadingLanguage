@@ -1,6 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14.5.1 (3 May 2025) -- compared to 1.14.5.0
+-------------------------------------------------------------
+- *build*: Fix various MacOS problems with GitHub and CMake [#1982](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1982)
+- *build*: Remove unused symbol that was removed from OIIO main [#1984](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1984)
+
+
+
 Release 1.14 (6 Apr 2025) -- compared to 1.13
 -------------------------------------------------------------
 - v1.14.4.0-beta1 - 4 Mar 2025

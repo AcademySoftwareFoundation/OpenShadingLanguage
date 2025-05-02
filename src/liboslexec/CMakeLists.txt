@@ -539,6 +539,9 @@ target_include_directories (${local_lib}
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
         ${ROBINMAP_INCLUDES}
     )
+
+target_include_directories (${local_lib}  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+
 target_compile_definitions (${local_lib}
     PRIVATE
         OSL_EXPORTS
@@ -607,16 +610,19 @@ install_targets (${local_lib})
 if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_executable (accum_test accum_test.cpp)
     target_link_libraries (accum_test PRIVATE oslexec ${CMAKE_DL_LIBS})
+    target_include_directories (accum_test  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     set_target_properties (accum_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
 
     add_executable (dual_test dual_test.cpp)
     target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO Imath::Imath ${CMAKE_DL_LIBS})
+    target_include_directories (dual_test  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
 
     add_executable (llvmutil_test llvmutil_test.cpp)
     target_link_libraries (llvmutil_test PRIVATE oslexec ${CMAKE_DL_LIBS})
+    target_include_directories (llvmutil_test  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     set_target_properties (llvmutil_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_llvmutil ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llvmutil_test)
 endif ()

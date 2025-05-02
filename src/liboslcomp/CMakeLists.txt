@@ -30,6 +30,7 @@ target_link_libraries (${local_lib}
         ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}
         ${LLVM_SYSTEM_LIBRARIES})
+target_include_directories (${local_lib}  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 
 # link with (system) library to prevent missing symbols inside clangDriver.lib
 if (MSVC)

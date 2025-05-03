@@ -80,7 +80,7 @@ jobs:
             old_node: 1
             cxx_std: 17
             opencolorio_ver: v2.2.1
-            openimageio_ver: v3.0.2.0
+            openimageio_ver: v3.0.6.1
             python_ver: 3.9
             pybind11_ver: v2.7.0
             simd: avx2,f16c
@@ -371,7 +371,7 @@ jobs:
             cxx_std: 17
             fmt_ver: 7.1.3
             opencolorio_ver: v2.3.2
-            openimageio_ver: v3.0.2.0
+            openimageio_ver: v3.0.6.1
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c

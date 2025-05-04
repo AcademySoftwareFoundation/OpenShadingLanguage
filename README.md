@@ -495,10 +495,11 @@ Contact & reporting problems
 ----------------------------
 
 Simple "how do I...", "I'm having trouble", or "is this a bug" questions are
-best asked on the [osl-dev developer mail
-list](https://lists.aswf.io/g/osl-dev).
+best asked on the [osl-dev developer mail list](https://lists.aswf.io/g/osl-dev).
 That's where the most people will see it and potentially be able to answer
-your question quickly (more so than a GH "issue").
+your question quickly (more so than a GH "issue"). For quick questions, you
+could also try the [ASWF Slack](https://slack.aswf.io) `#openshadinglanguage`
+channel.
 
 Bugs, build problems, and discovered vulnerabilities that you are relatively
 certain is a legit problem in the code, and for which you can give clear

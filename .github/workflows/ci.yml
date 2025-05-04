@@ -80,7 +80,7 @@ jobs:
             old_node: 1
             cxx_std: 17
             opencolorio_ver: v2.2.1
-            openimageio_ver: v3.0.2.0
+            openimageio_ver: v3.0.6.1
             python_ver: 3.9
             pybind11_ver: v2.7.0
             simd: avx2,f16c
@@ -371,7 +371,7 @@ jobs:
             cxx_std: 17
             fmt_ver: 7.1.3
             opencolorio_ver: v2.3.2
-            openimageio_ver: v3.0.2.0
+            openimageio_ver: v3.0.6.1
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c
@@ -520,17 +520,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: MacOS-13-Intel llvm17
+          - desc: MacOS-13-Intel llvm17 oiio-release
             runner: macos-13
             nametag: macos13-p313
-            cc_compiler: /usr/local/opt/llvm/bin/clang
-            cxx_compiler: /usr/local/opt/llvm/bin/clang++
+            cc_compiler: clang
+            cxx_compiler: clang++
             cxx_std: 17
             python_ver: "3.13"
             aclang: 14
-            setenvs: export DO_BREW_UPDATE=0 CTEST_TEST_TIMEOUT=120
+            ctest_test_timeout: 120
+            setenvs: export HOMEBREW_PREFIX=/usr/local
                             EXTRA_BREW_PACKAGES="openimageio"
-          - desc: MacOS-14-ARM llvm17
+                            LLVMBREWVER="@17"
+          - desc: MacOS-14-ARM llvm19 oiio-release
             runner: macos-14
             nametag: macos14-arm-p313
             cc_compiler: clang
@@ -538,9 +540,9 @@ jobs:
             cxx_std: 17
             python_ver: "3.13"
             aclang: 15
-            setenvs: export DO_BREW_UPDATE=0
-                            EXTRA_BREW_PACKAGES="openimageio"
-          - desc: MacOS-15-ARM aclang16/C++17/py3.13
+            setenvs: export EXTRA_BREW_PACKAGES="openimageio"
+                            LLVMBREWVER="@19"
+          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm19 oiio-main
             runner: macos-15
             nametag: macos15-arm-py313
             cc_compiler: clang
@@ -548,6 +550,7 @@ jobs:
             cxx_std: 17
             python_ver: "3.13"
             openimageio_ver: main
+            setenvs: export LLVMBREWVER="@19"
 
 
   windows:

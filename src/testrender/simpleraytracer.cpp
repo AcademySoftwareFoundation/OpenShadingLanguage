@@ -1030,7 +1030,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 #endif
         ShadingResult result;
         bool last_bounce = b == max_bounces;
-        process_closure(sg, result, (const ClosureColor*)sg.Ci, last_bounce);
+        process_closure(sg, r.roughness, result, (const ClosureColor*)sg.Ci,
+                        last_bounce);
 
 #ifndef __CUDACC__
         const size_t lightprims_size = m_lightprims.size();
@@ -1080,7 +1081,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                                                         b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
                 ShaderGlobalsType shadow_sg;
-                Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0,
+                Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0, 0,
                                               Ray::SHADOW);
                 Intersection shadow_hit = scene.intersect(shadow_ray, inf,
                                                           hit.id);
@@ -1110,7 +1111,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                                      light_pick_pdf * sample.pdf, b.pdf);
                 if ((contrib.x + contrib.y + contrib.z) > 0) {
                     ShaderGlobalsType light_sg;
-                    Ray shadow_ray = Ray(sg.P, sample.dir, radius, 0,
+                    Ray shadow_ray = Ray(sg.P, sample.dir, radius, 0, 0,
                                          Ray::SHADOW);
                     // trace a shadow ray and see if we actually hit the target
                     // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
@@ -1140,7 +1141,7 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                         execute_shader(light_sg, shaderID, light_closure_pool);
 #endif
                         ShadingResult light_result;
-                        process_closure(light_sg, light_result,
+                        process_closure(light_sg, r.roughness, light_result,
                                         (const ClosureColor*)light_sg.Ci, true);
                         // accumulate contribution
                         path_radiance += contrib * light_result.Le;
@@ -1157,7 +1158,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         r.direction = p.wi;
         r.radius    = radius;
         // Just simply use roughness as spread slope
-        r.spread = std::max(r.spread, p.roughness);
+        r.spread    = std::max(r.spread, p.roughness);
+        r.roughness = p.roughness;
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
             && !(path_weight.z > 0))
             break;  // filter out all 0's or NaNs

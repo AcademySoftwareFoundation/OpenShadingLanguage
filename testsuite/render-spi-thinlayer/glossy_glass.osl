@@ -1,0 +1,30 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+closure color thinlayer(
+    normal N,                 // normal
+    vector U,                 // side vector
+    float IOR,                // Dielectric IOR
+    float roughness,          // Roughness
+    float anisotropy,         // Anisotropy (0-1)
+    float thickness,          // World space thickness to fake
+    color refl_tint,          // Reflection tint
+    color refr_tint,          // Refraction tint
+    color sigma_t) [[ int builtin = 1 ]];   // Internal extintion (sgima_a + sigma_s)
+
+shader glossy_glass (float Kr = 1, color Cs = 1, color absorption = 0,
+                     float xalpha = 0.01, float yalpha = 0.01)
+{
+    vector U;
+    if (abs(N[0]) > 0.01)
+        U = vector(N[2], 0, -N[0]);
+    else
+        U = vector(0, -N[2], N[1]);
+    U = normalize(U);
+
+    float eta = 1.5;
+    float roughness = max(xalpha, yalpha);
+    float anisotropy = 1 - min(xalpha, yalpha) / roughness;
+    Ci  = (Kr * Cs) * thinlayer(N, U, eta, roughness, anisotropy, 1.0, color(1), color(1), absorption);
+}

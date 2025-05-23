@@ -15,7 +15,7 @@ if (CUDA_NO_FTZ)
 endif ()
 
 # Compile a CUDA file to PTX using NVCC
-function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
+function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args extra_libs)
     get_filename_component ( cuda_src_we ${cuda_src} NAME_WE )
     get_filename_component ( cuda_src_dir ${cuda_src} DIRECTORY )
     set (cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.ptx" )
@@ -35,6 +35,14 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
         set (NVCC_FTZ_FLAG "--ftz=true")
     endif ()
 
+    set (EXTRA_INCLUDES "")
+    foreach (LIB ${extra_libs})
+        get_target_property(INCLUDES ${LIB} INTERFACE_INCLUDE_DIRECTORIES)
+        foreach (INCLUDE_DIR ${INCLUDES})
+            list (APPEND EXTRA_INCLUDES "-I${INCLUDE_DIR}")
+        endforeach()
+    endforeach()
+    
     add_custom_command ( OUTPUT ${cuda_ptx}
         COMMAND ${CUDA_NVCC_EXECUTABLE}
             "-I${OPTIX_INCLUDES}"
@@ -43,6 +51,7 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
+            ${EXTRA_INCLUDES}
             ${ALL_OpenImageIO_INCLUDES}
             ${ALL_IMATH_INCLUDES}
             "-DFMT_DEPRECATED=\"\""
@@ -56,7 +65,7 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args )
             ${OSL_EXTRA_NVCC_ARGS}
             ${cuda_src} -o ${cuda_ptx}
         MAIN_DEPENDENCY ${cuda_src}
-        DEPENDS ${cuda_src} ${cuda_headers} oslexec
+        DEPENDS ${cuda_src} ${cuda_headers} ${extra_libs} oslexec
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 endfunction ()
 

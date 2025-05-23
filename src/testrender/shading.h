@@ -10,6 +10,10 @@
 #include <OSL/oslclosure.h>
 #include <OSL/oslconfig.h>
 #include <OSL/oslexec.h>
+
+#include "bsdl_config.h"
+#include <BSDL/static_virtual.h>
+
 #include "optics.h"
 #include "sampling.h"
 
@@ -50,11 +54,11 @@ enum ClosureIDs {
     MX_MEDIUM_VDF_ID,
     MX_LAYER_ID,
     // TODO: adding vdfs would require extending testrender with volume support ...
+    // BSDL SPI closures
+    SPI_THINLAYER,
     EMPTY_ID
 };
 
-
-namespace {  // anonymous namespace
 
 // these structures hold the parameters of each closure type
 // they will be contained inside ClosureComponent
@@ -298,15 +302,58 @@ struct MxMediumVdfParams {
     ustringhash label;
 };
 
-}  // anonymous namespace
+struct GGXDist;
+struct BeckmannDist;
 
+template<int trans> struct Diffuse;
 
-// Cast a BSDF* to the specified sub-type
-#define BSDF_CAST(BSDF_TYPE, bsdf) reinterpret_cast<const BSDF_TYPE*>(bsdf)
+template<typename Distribution, int Refract> struct Microfacet;
+using MicrofacetGGXRefl      = Microfacet<GGXDist, 0>;
+using MicrofacetGGXRefr      = Microfacet<GGXDist, 1>;
+using MicrofacetGGXBoth      = Microfacet<GGXDist, 2>;
+using MicrofacetBeckmannRefl = Microfacet<BeckmannDist, 0>;
+using MicrofacetBeckmannRefr = Microfacet<BeckmannDist, 1>;
+using MicrofacetBeckmannBoth = Microfacet<BeckmannDist, 2>;
+
+template<typename MxMicrofacetParams, typename Distribution,
+         bool EnableTransmissionLobe>
+struct MxMicrofacet;
+
+using MxGeneralizedSchlick
+    = MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true>;
+using MxGeneralizedSchlickOpaque
+    = MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>;
+using MxDielectric       = MxMicrofacet<MxDielectricParams, GGXDist, true>;
+using MxDielectricOpaque = MxMicrofacet<MxDielectricParams, GGXDist, false>;
+using MxConductor        = MxMicrofacet<MxConductorParams, GGXDist, false>;
+
+struct Transparent;
+struct OrenNayar;
+struct Phong;
+struct Ward;
+struct Reflection;
+struct Refraction;
+struct MxBurleyDiffuse;
+struct EnergyCompensatedOrenNayar;
+struct ZeltnerBurleySheen;
+struct CharlieSheen;
+struct SpiThinLayer;
+
+// StaticVirtual generates a switch/case dispatch method for us given
+// a list of possible subtypes. We just need to forward declare them.
+using AbstractBSDF = bsdl::StaticVirtual<
+    Diffuse<0>, Transparent, OrenNayar, Diffuse<1>, Phong, Ward, Reflection,
+    Refraction, MicrofacetBeckmannRefl, MicrofacetBeckmannRefr,
+    MicrofacetBeckmannBoth, MicrofacetGGXRefl, MicrofacetGGXRefr,
+    MicrofacetGGXBoth, MxConductor, MxDielectricOpaque, MxDielectric,
+    MxBurleyDiffuse, EnergyCompensatedOrenNayar, ZeltnerBurleySheen,
+    CharlieSheen, MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer>;
+
+// Then we just need to inherit from AbstractBSDF
 
 /// Individual BSDF (diffuse, phong, refraction, etc ...)
 /// Actual implementations of this class are private
-struct BSDF {
+struct BSDF : public AbstractBSDF {
     struct Sample {
         OSL_HOSTDEVICE Sample()
             : wi(0.0f), weight(0.0f), pdf(0.0f), roughness(0.0f)
@@ -325,7 +372,13 @@ struct BSDF {
         float pdf;
         float roughness;
     };
-    OSL_HOSTDEVICE BSDF(ClosureIDs id = EMPTY_ID) : id(id) {}
+    // We get the specific BSDF type as a template parameter LOBE in
+    // the constructor. We pass it to AbstractBSDF and it computes an
+    // id internally to remember.
+    template<typename LOBE> OSL_HOSTDEVICE BSDF(LOBE* lobe) : AbstractBSDF(lobe)
+    {
+    }
+    // Default implementations, to be overriden by subclasses
     OSL_HOSTDEVICE Color3 get_albedo(const Vec3& /*wo*/) const
     {
         return Color3(1);
@@ -339,7 +392,13 @@ struct BSDF {
     {
         return {};
     }
-    ClosureIDs id;
+    // And the "virtual" versions of the above. They are implemented via
+    // dispatch with a lambda, but it has to be written after subclasses
+    // with their inline methods have been defined. See shading.cpp
+    OSL_HOSTDEVICE Color3 get_albedo_vrtl(const Vec3& wo) const;
+    OSL_HOSTDEVICE Sample eval_vrtl(const Vec3& wo, const Vec3& wi) const;
+    OSL_HOSTDEVICE Sample sample_vrtl(const Vec3& wo, float rx, float ry,
+                                      float rz) const;
 #ifdef __CUDACC__
     // TODO: This is a total hack to avoid a misaligned address error
     // that sometimes occurs with the EnergyCompensatedOrenNayar BSDF.
@@ -360,7 +419,8 @@ struct CompositeBSDF {
     {
         float total = 0;
         for (int i = 0; i < num_bsdfs; i++) {
-            pdfs[i] = weights[i].dot(path_weight * get_albedo(bsdfs[i], wo))
+            pdfs[i] = weights[i].dot(path_weight
+                                     * bsdfs[i]->get_albedo_vrtl(wo))
                       / (path_weight.x + path_weight.y + path_weight.z);
 #ifndef __CUDACC__
             // TODO: Figure out what to do with weights/albedos with negative
@@ -392,7 +452,7 @@ struct CompositeBSDF {
     {
         Color3 result(0, 0, 0);
         for (int i = 0; i < num_bsdfs; i++)
-            result += weights[i] * get_albedo(bsdfs[i], wo);
+            result += weights[i] * bsdfs[i]->get_albedo_vrtl(wo);
         return result;
     }
 
@@ -400,7 +460,7 @@ struct CompositeBSDF {
     {
         BSDF::Sample s = {};
         for (int i = 0; i < num_bsdfs; i++) {
-            BSDF::Sample b = eval(bsdfs[i], wo, wi);
+            BSDF::Sample b = bsdfs[i]->eval_vrtl(wo, wi);
             b.weight *= weights[i];
             MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf, pdfs[i]);
             s.roughness += b.roughness * pdfs[i];
@@ -416,7 +476,7 @@ struct CompositeBSDF {
             if (rx < (pdfs[i] + accum)) {
                 rx = (rx - accum) / pdfs[i];
                 rx = std::min(rx, 0.99999994f);  // keep result in [0,1)
-                BSDF::Sample s = sample(bsdfs[i], wo, rx, ry, rz);
+                BSDF::Sample s = bsdfs[i]->sample_vrtl(wo, rx, ry, rz);
                 s.weight *= weights[i] * (1 / pdfs[i]);
                 s.pdf *= pdfs[i];
                 if (s.pdf == 0.0f)
@@ -424,7 +484,7 @@ struct CompositeBSDF {
                 // we sampled PDF i, now figure out how much the other bsdfs contribute to the chosen direction
                 for (int j = 0; j < num_bsdfs; j++) {
                     if (i != j) {
-                        BSDF::Sample b = eval(bsdfs[j], wo, s.wi);
+                        BSDF::Sample b = bsdfs[j]->eval_vrtl(wo, s.wi);
                         b.weight *= weights[j];
                         MIS::update_eval(&s.weight, &s.pdf, b.weight, b.pdf,
                                          pdfs[j]);
@@ -458,11 +518,8 @@ private:
     OSL_HOSTDEVICE CompositeBSDF(const CompositeBSDF& c);
     OSL_HOSTDEVICE CompositeBSDF& operator=(const CompositeBSDF& c);
 
-    OSL_HOSTDEVICE Color3 get_albedo(const BSDF* bsdf, const Vec3& wo) const;
     OSL_HOSTDEVICE BSDF::Sample eval(const BSDF* bsdf, const Vec3& wo,
                                      const Vec3& wi) const;
-    OSL_HOSTDEVICE BSDF::Sample sample(const BSDF* bsdf, const Vec3& wo,
-                                       float rx, float ry, float rz) const;
 
     enum { MaxEntries = 8 };
     enum { MaxSize = 256 * sizeof(float) };
@@ -488,8 +545,8 @@ struct ShadingResult {
 void
 register_closures(ShadingSystem* shadingsys);
 OSL_HOSTDEVICE void
-process_closure(const OSL::ShaderGlobals& sg, ShadingResult& result,
-                const ClosureColor* Ci, bool light_only);
+process_closure(const OSL::ShaderGlobals& sg, float path_roughness,
+                ShadingResult& result, const ClosureColor* Ci, bool light_only);
 OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* Ci);
 

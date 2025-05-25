@@ -1,3 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
 #define BAKE_BSDL_TABLES 1
 
 #define BSDL_UNROLL()  // Do nothing

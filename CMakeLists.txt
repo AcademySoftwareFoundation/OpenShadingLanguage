@@ -250,6 +250,7 @@ add_subdirectory (src/liboslcomp)
 add_subdirectory (src/liboslquery)
 add_subdirectory (src/liboslexec)
 add_subdirectory (src/liboslnoise)
+add_subdirectory (src/libbsdl)
 add_subdirectory (src/oslc)
 add_subdirectory (src/oslinfo)
 

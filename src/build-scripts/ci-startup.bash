@@ -13,6 +13,7 @@ export PATH=/usr/local/bin/_ccache:/usr/lib/ccache:$PATH
 export USE_CCACHE=${USE_CCACHE:=1}
 export CCACHE_CPP2=
 export CCACHE_DIR=$HOME/.ccache
+export CCACHE_COMPRESSION=yes
 mkdir -p $CCACHE_DIR
 
 export DISTDIR=$PWD/dist

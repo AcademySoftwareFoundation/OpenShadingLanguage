@@ -148,21 +148,10 @@ cmake --version
 
 
 if [[ "$OPTIX_VERSION" != "" ]] ; then
-    echo "Requested OPTIX_VERSION = '${OPTIX_VERSION}'"
-    mkdir -p $LOCAL_DEPS_DIR/dist/include/internal
-    OPTIXLOC=https://developer.download.nvidia.com/redist/optix/v${OPTIX_VERSION}
-    for f in optix.h optix_device.h optix_function_table.h \
-             optix_function_table_definition.h optix_host.h \
-             optix_stack_size.h optix_stubs.h optix_types.h optix_7_device.h \
-             optix_7_host.h optix_7_types.h \
-             internal/optix_7_device_impl.h \
-             internal/optix_7_device_impl_exception.h \
-             internal/optix_7_device_impl_transformations.h
-        do
-        curl --retry 100 -m 120 --connect-timeout 30 \
-            $OPTIXLOC/include/$f > $LOCAL_DEPS_DIR/dist/include/$f
-    done
-    export OptiX_ROOT=$LOCAL_DEPS_DIR/dist
+    OPTIXREPO=${OPTIXREPO:=https://github.com/NVIDIA/optix-dev}
+    echo "Requested OPTIX_VERSION = '${OPTIX_VERSION}' from ${OPTIXREPO}"
+    export OptiX_ROOT=$LOCAL_DEPS_DIR/dist/optix-dev
+    git clone -b v${OPTIX_VERSION} ${OPTIXREPO} ${OptiX_ROOT}
 fi
 
 

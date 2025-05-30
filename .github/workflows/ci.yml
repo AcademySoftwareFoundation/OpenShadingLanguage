@@ -546,7 +546,7 @@ jobs:
             pybind11_ver: v2.11.1
             simd: avx2,f16c
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1"
-                            OPTIX_VERSION=9.0.0
+                            OPTIX_VERSION=7.0.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
             # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
 

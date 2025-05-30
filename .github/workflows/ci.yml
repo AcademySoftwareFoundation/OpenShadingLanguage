@@ -260,7 +260,8 @@ jobs:
             pybind11_ver: v2.10.0
             simd: avx2,f16c
             skip_tests: 1
-            setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
+            setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1"
+                            OPTIX_VERSION=7.0.0
                             OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
           - desc: VP2024 gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
             nametag: linux-vfx2024

@@ -62,14 +62,6 @@ if (OPTIX_INCLUDE_DIR)
     set(OPTIX_VERSION "${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO}")
 endif ()
 
-# OptiX 7 doesn't link to any libraries
-if (OPTIX_VERSION VERSION_LESS 7)
-    OPTIX_find_api_library(optix ${OPTIX_VERSION})
-    OPTIX_find_api_library(optixu ${OPTIX_VERSION})
-    OPTIX_find_api_library(optix_prime ${OPTIX_VERSION})
-    set (OPTIX_LIBRARIES ${optix_LIBRARY})
-endif ()
-
 mark_as_advanced (
     OPTIX_INCLUDE_DIR
     OPTIX_LIBRARIES
@@ -79,19 +71,11 @@ mark_as_advanced (
 include (FindPackageHandleStandardArgs)
 
 
-if (${OPTIX_VERSION_MAJOR} LESS 7)
-    find_package_handle_standard_args (OptiX
-        FOUND_VAR     OPTIX_FOUND
-        REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES OPTIX_VERSION
-        VERSION_VAR   OPTIX_VERSION
-        )
-else ()
-    find_package_handle_standard_args (OptiX
-        FOUND_VAR     OPTIX_FOUND
-        REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_VERSION
-        VERSION_VAR   OPTIX_VERSION
-        )
-endif()
+find_package_handle_standard_args (OptiX
+    FOUND_VAR     OPTIX_FOUND
+    REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_VERSION
+    VERSION_VAR   OPTIX_VERSION
+    )
 
 if (OPTIX_FOUND)
     set (OPTIX_INCLUDES ${OPTIX_INCLUDE_DIR})

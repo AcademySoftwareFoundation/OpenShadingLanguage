@@ -154,12 +154,7 @@ if [[ "$OPTIX_VERSION" != "" ]] ; then
     git clone -b v${OPTIX_VERSION} ${OPTIXREPO} ${OptiX_ROOT}
     export PATH=$PATH:/usr/local/cuda-12/bin
     export LD_LIBRARY_PATH=/usr/local/cuda-12/lib64:$LD_LIBRARY_PATH
-    ls -al /usr/lib64/*nv* || true
-    ls -al /usr/lib64/*opt* || true
-    ls -al /usr/lib/*nv* || true
-    ls -al /usr/lib/*opt* || true
-    ls -al /usr/lib/x86_64-linux-gnu/*nv* || true
-    ls -al /usr/lib/x86_64-linux-gnu/*opt* || true
+    find / -name "*nv*so" -print || true
 fi
 
 

@@ -543,7 +543,8 @@ jobs:
           #                   OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
           - desc: VP2025 gcc11/C++17 llvm19 py3.11 oiio-rel avx2
             nametag: linux-optix-vfx2025
-            runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
+            runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-20.04-gpu-t4-4c-16g-176h') || 'ubuntu-latest' }}
+            # runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
             container: aswf/ci-osl:2025
             cxx_std: 17
             # openimageio_ver: release

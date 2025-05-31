@@ -88,6 +88,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container }}
+      options: --gpus all 'all,"capabilities=all"'
 
     env:
       CXX: ${{inputs.cxx_compiler}}

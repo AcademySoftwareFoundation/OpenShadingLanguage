@@ -33,25 +33,6 @@ find_path (OPTIX_INCLUDE_DIR
     HINTS ${OPTIXHOME}/include
     PATH_SUFFIXES include )
 
-# Macro adapted from https://github.com/nvpro-samples/optix_advanced_samples
-macro(OPTIX_find_api_library name version)
-    find_library(${name}_LIBRARY
-        NAMES ${name}.${version} ${name}
-        PATHS "${OPTIXHOME}/lib64"
-        NO_DEFAULT_PATH
-        )
-    find_library(${name}_LIBRARY
-        NAMES ${name}.${version} ${name}
-        )
-    if (${name}_LIBRARY STREQUAL "${name}_LIBRARY-NOTFOUND")
-        if (WIN32)
-            set (${name}_LIBRARY "${OPTIXHOME}/lib64/${name}.${version}.lib")
-        else ()
-            set (${name}_LIBRARY "${OPTIXHOME}/lib64/lib${name}.so")
-        endif ()
-    endif()
-endmacro()
-
 if (OPTIX_INCLUDE_DIR)
     # Pull out the API version from optix.h
     file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX "define OPTIX_VERSION")

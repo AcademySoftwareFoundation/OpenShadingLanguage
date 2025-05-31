@@ -544,7 +544,8 @@ jobs:
           - desc: VP2024 gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
             nametag: linux-optix-vfx2025
             runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
-            container: aswftesting/ci-osl:2025
+            # container: aswftesting/ci-osl:2025
+            container: aswftesting/ci-osl:2024-clang17
             cxx_std: 17
             # openimageio_ver: release
             python_ver: "3.11"

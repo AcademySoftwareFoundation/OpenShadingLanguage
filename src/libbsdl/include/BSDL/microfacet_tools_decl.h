@@ -14,11 +14,14 @@ BSDL_ENTER_NAMESPACE
 struct GGXDist {
     BSDL_INLINE_METHOD GGXDist() : ax(0), ay(0) {}
 
-    BSDL_INLINE_METHOD GGXDist(float rough, float aniso)
+    BSDL_INLINE_METHOD GGXDist(float rough, float aniso,
+                               bool flip_aniso = false)
         : ax(SQR(rough)), ay(ax)
     {
         assert(rough >= 0 && rough <= 1);
         assert(aniso >= 0 && aniso <= 1);
+        if (flip_aniso)
+            aniso = -aniso;
         constexpr float ALPHA_MIN = 1e-5f;
         ax                        = std::max(ax * (1 + aniso), ALPHA_MIN);
         ay                        = std::max(ay * (1 - aniso), ALPHA_MIN);
@@ -126,5 +129,12 @@ private:
     float Eo;
     float Eo_avg;
 };
+
+// Turquin style microfacet with multiple scattering
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+eval_turquin_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                                float E_ms, const Imath::V3f& wo,
+                                const Imath::V3f& wi);
 
 BSDL_LEAVE_NAMESPACE

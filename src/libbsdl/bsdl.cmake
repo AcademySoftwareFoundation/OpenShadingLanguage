@@ -21,7 +21,7 @@ function(ADD_BSDL_LIBRARY NAME)
 
     if (DEFINED bsdl_SPECTRAL_COLOR_SPACES)
         add_executable(jakobhanika_luts ${CMAKE_CURRENT_SOURCE_DIR}/${bsdl_SUBDIR}/src/jakobhanika_luts.cpp)
-        target_link_libraries(genluts PRIVATE Threads::Threads)
+        target_link_libraries(jakobhanika_luts PRIVATE Threads::Threads)
         foreach(CS ${bsdl_SPECTRAL_COLOR_SPACES})
             set(JACOBHANIKA_${CS} ${CMAKE_CURRENT_BINARY_DIR}/jakobhanika_${CS}.cpp)
             list(APPEND BSDL_LUTS_CPP ${JACOBHANIKA_${CS}})

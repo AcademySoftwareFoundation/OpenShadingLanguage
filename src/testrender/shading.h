@@ -325,7 +325,7 @@ using MxGeneralizedSchlickOpaque
     = MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>;
 using MxDielectric       = MxMicrofacet<MxDielectricParams, GGXDist, true>;
 using MxDielectricOpaque = MxMicrofacet<MxDielectricParams, GGXDist, false>;
-using MxConductor        = MxMicrofacet<MxConductorParams, GGXDist, false>;
+struct MxConductor;
 
 struct Transparent;
 struct OrenNayar;

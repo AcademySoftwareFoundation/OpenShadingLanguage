@@ -298,4 +298,35 @@ MicrofacetMS<Fresnel>::computeFmiss() const
     return Fmiss;
 }
 
+// Turquin style microfacet with multiple scattering
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+eval_turquin_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                                float E_ms, const Imath::V3f& wo,
+                                const Imath::V3f& wi)
+{
+    const float cosNO = wo.z;
+    const float cosNI = wi.z;
+    if (cosNI <= 0 || cosNO <= 0)
+        return {};
+
+    // get half vector
+    Imath::V3f m    = (wo + wi).normalized();
+    float cosMO     = m.dot(wo);
+    const float D   = dist.D(m);
+    const float G1  = dist.G1(wo);
+    const float out = dist.G2_G1(wi, wo);
+    float s_pdf     = (G1 * D) / (4.0f * cosNO);
+    // fresnel term between outgoing direction and microfacet
+    const Power F = fresnel.eval(cosMO);
+    // From "Practical multiple scattering compensation for microfacet models" - Emmanuel Turquin
+    // equation 16. Should we use F0 for msf scaling? Doesn't make a big difference.
+    const Power F_ms = F;
+    const float msf  = E_ms / (1 - E_ms);
+    const Power one(1, 1);
+    const Power O = out * F * (one + F_ms * msf);
+
+    return { wi, O, s_pdf, -1 /* roughness set by caller */ };
+}
+
 BSDL_LEAVE_NAMESPACE

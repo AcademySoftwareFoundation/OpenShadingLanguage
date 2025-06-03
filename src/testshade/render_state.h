@@ -47,6 +47,7 @@ public:
         ptr         = (void*)(p + size);
         if (ptr <= &buffer[256])
             return (void*)p;
+        assert(false);
         return nullptr;
     }
 };

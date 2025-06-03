@@ -14,7 +14,7 @@
 #include <OSL/dual_vec.h>
 #include <OSL/oslconfig.h>
 #include "bvh.h"
-
+#include "../testshade/render_state.h"
 
 #if OSL_USE_OPTIX
 #    include <optix.h>

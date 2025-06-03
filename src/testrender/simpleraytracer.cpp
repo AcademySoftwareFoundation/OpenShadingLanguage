@@ -921,12 +921,6 @@ SimpleRaytracer::globals_from_hit(ShaderGlobalsType& sg, const Ray& r,
     }
     sg.raytype        = r.raytype;
     sg.flipHandedness = sg.dPdx.cross(sg.dPdy).dot(sg.N) < 0;
-
-#ifndef __CUDACC__
-    // In our SimpleRaytracer, the "renderstate" itself just a pointer to
-    // the ShaderGlobals.
-    sg.renderstate = &sg;
-#endif
 }
 
 
@@ -1349,7 +1343,6 @@ SimpleRaytracer::prepare_geometry()
                 sg.v             = uv[i].y;
                 sg.I             = (p[i] - camera.eye).normalize();
                 sg.surfacearea   = area;
-                sg.renderstate   = &sg;
 
                 shadingsys->execute(*ctx, *m_shaders[shaderID].disp, sg);
 

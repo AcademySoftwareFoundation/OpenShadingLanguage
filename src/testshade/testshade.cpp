@@ -952,7 +952,8 @@ static RenderContext theRenderContext;
 // Set up the ShaderGlobals fields for pixel (x,y).
 static void
 setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys,
-                    RenderState& renderState, int x, int y)
+                    RenderState& renderState, StackClosurePool* closure_pool,
+                    int x, int y)
 {
     // Just zero the whole thing out to start
     memset((char*)&sg, 0, sizeof(ShaderGlobals));
@@ -960,8 +961,10 @@ setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys,
     // Any state data needed by SimpleRenderer or its free function equivalent
     // will need to be passed here the ShaderGlobals.
     renderState.context      = &theRenderContext;
-    renderState.closure_pool = nullptr;  // Use inbuilt closure pool.
+    renderState.closure_pool = closure_pool;
     sg.renderstate           = &renderState;
+    if (closure_pool)
+        closure_pool->reset();
 
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.
@@ -1185,7 +1188,8 @@ setup_output_images(SimpleRenderer* rend, ShadingSystem* shadingsys,
         raytype_bit = shadingsys->raytype_bit(ustring(raytype_name));
         ShaderGlobals sg;
         RenderState renderState;
-        setup_shaderglobals(sg, shadingsys, renderState, 0, 0);
+        StackClosurePool closure_pool;
+        setup_shaderglobals(sg, shadingsys, renderState, &closure_pool, 0, 0);
 
 #if OSL_USE_BATCHED
         if (batched) {
@@ -1590,6 +1594,7 @@ shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
     // Set up shader globals and a little test grid of points to shade.
     ShaderGlobals shaderglobals;
     RenderState renderState;
+    StackClosurePool closure_pool;
 
     raytype_bit = shadingsys->raytype_bit(ustring(raytype_name));
 
@@ -1610,7 +1615,8 @@ shade_region(SimpleRenderer* rend, ShaderGroup* shadergroup, OIIO::ROI roi,
             // set it up rigged to look like we're rendering a single
             // quadrilateral that exactly fills the viewport, and that
             // setup is done in the following function call:
-            setup_shaderglobals(shaderglobals, shadingsys, renderState, x, y);
+            setup_shaderglobals(shaderglobals, shadingsys, renderState,
+                                &closure_pool, x, y);
 
             if (this_threads_index == uninitialized_thread_index) {
                 this_threads_index = next_thread_index.fetch_add(1u);

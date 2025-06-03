@@ -368,14 +368,12 @@ rs_trace_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash name,
 #endif
 }
 
-#ifdef __CUDA_ARCH__  // Host side uses rs_fallback implementation.
 OSL_RSOP OSL_HOSTDEVICE void*
 rs_allocate_closure(OSL::OpaqueExecContextPtr ec, size_t size, size_t alignment)
 {
     auto rs = OSL::get_rs<RenderState>(ec);
     return rs->closure_pool->allocate(size, alignment);
 }
-#endif
 
 OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_string(OSL::ustringhash value, void* result)

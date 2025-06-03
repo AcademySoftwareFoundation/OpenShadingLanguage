@@ -17,6 +17,22 @@
 
 #include "render_state.h"
 
+
+// Create constexpr hashes for all strings used by the free function renderer services.
+// NOTE:  Actually ustring's should also be instantiated in host code someplace as well
+// to allow the reverse mapping of hash->string to work when processing messages
+namespace RS {
+namespace {
+namespace Hashes {
+#define RS_STRDECL(str, var_name) \
+    constexpr OSL::ustringhash var_name(OSL::strhash(str));
+#include "rs_strdecls.h"
+#undef RS_STRDECL
+};  //namespace Hashes
+}  // unnamed namespace
+};  //namespace RS
+
+
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
 OSL_RSOP OSL_HOSTDEVICE bool

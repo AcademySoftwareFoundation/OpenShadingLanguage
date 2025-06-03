@@ -139,7 +139,7 @@ osl_allocate_weighted_closure_component(void* sg_, int id, int size,
 {
     w_ = __builtin_assume_aligned(w_, alignof(float));
 
-    ShaderGlobals* sg    = (ShaderGlobals*)sg_;
+    OSL_CUDA::ShaderGlobals* sg    = (OSL_CUDA::ShaderGlobals*)sg_;
     const OSL::Color3* w = (const OSL::Color3*)w_;
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;

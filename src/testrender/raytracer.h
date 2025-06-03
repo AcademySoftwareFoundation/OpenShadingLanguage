@@ -61,11 +61,12 @@ struct Ray {
 
     OSL_HOSTDEVICE
     Ray(const Vec3& o, const Vec3& d, float radius, float spread,
-        RayType raytype)
+        float roughness, RayType raytype)
         : origin(o)
         , direction(d)
         , radius(radius)
         , spread(spread)
+        , roughness(roughness)
         , raytype(static_cast<int>(raytype))
     {
     }
@@ -97,7 +98,7 @@ struct Ray {
     }
 
     Vec3 origin, direction;
-    float radius, spread;
+    float radius, spread, roughness;
     int raytype;
 };
 
@@ -157,7 +158,7 @@ struct Camera {
         const float cos_a = dir.dot(v);
         const float spread
             = sqrtf(invw * invh * cx.length() * cy.length() * cos_a) * cos_a;
-        return Ray(eye, v, 0, spread, Ray::CAMERA);
+        return Ray(eye, v, 0, spread, 0.0f, Ray::CAMERA);
     }
 
     // Specified by user:

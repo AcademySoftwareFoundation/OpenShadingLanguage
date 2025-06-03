@@ -522,6 +522,7 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
     target_link_libraries (${batched_target_lib}
         PUBLIC
             OpenImageIO::OpenImageIO
+            ${local_lib}
         )
     if (partio_FOUND)
         target_link_libraries(${batched_target_lib} PRIVATE partio::partio ZLIB::ZLIB)

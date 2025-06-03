@@ -59,7 +59,8 @@ checked_find_package (pugixml REQUIRED
 checked_find_package (LLVM REQUIRED
                       VERSION_MIN 11.0
                       VERSION_MAX 19.9
-                      PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
+                      PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES
+                            LLVM_SHARED_MODE)
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
 link_directories ("${LLVM_LIB_DIR}")
@@ -86,8 +87,9 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
     if (CMAKE_COMPILER_IS_GNUCC AND (GCC_VERSION VERSION_LESS 7.0))
         message (WARNING "${ColorYellow}LLVM 16+ requires gcc 7.0 or higher.${ColorReset}\n")
     endif ()
-    if (CMAKE_COMPILER_IS_CLANG AND (CLANG_VERSION_STRING VERSION_LESS 5.0
-                                     OR APPLE_CLANG_VERSION_STRING VERSION_LESS 5.0))
+    if (CMAKE_COMPILER_IS_CLANG
+        AND NOT (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0
+                 OR APPLECLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0))
         message (WARNING "${ColorYellow}LLVM 16+ requires clang 5.0 or higher.${ColorReset}\n")
     endif ()
 endif ()

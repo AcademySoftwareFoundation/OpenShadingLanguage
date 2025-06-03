@@ -33,5 +33,29 @@ test (output color Cout = 0)
         x += M[1][2];       // NOT an error
         x += M[0][0];       // An error
     }
+    float knots[20];
+    float knots2[20];
+    float knots3[20];
+    float knots4[20];
+    int index=0;
+    // Ensure no false positive for temporary condition variable
+    while (index < 10) {
+        knots[index] = x*index;
+        knots2[index] = (1.0-x)*index;
+        knots3[index] = 2*x*index;
+        knots4[index] = 2*(1.0-x)*index;
+        ++index;
+    }
+    // Ensure no false positive for accessing initialized portion of a partially initialized array
+    x += spline ("linear", x, 10, knots);
+    x += splineinverse ("linear", x, 10, knots2);
+
+    // Accessing uninitialized portion of a partially initialized array
+    x += spline ("linear", x, 15, knots3);
+    x += splineinverse ("linear", x, 15, knots4);
+
+    // pointcloud_get could also have false postive and read partially initialized array
+    // leaving pointcloud_get out, as not all builds are configured for pointcloud support    
+
     Cout[0] += x;  // force x results to not be optimized away
 }

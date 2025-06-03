@@ -17,10 +17,10 @@ Dependencies
 ------------
 
 OSL requires the following dependencies or tools.
-NEW or CHANGED dependencies since the last major release are **bold**.
+NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
 * Build system: [CMake](https://cmake.org/) **3.19 or newer** (tested
-  through 3.31)
+  through 4.0)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
    - **GCC 9.3** or newer (tested through gcc 13.1)
@@ -50,7 +50,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X).
 
 * [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, or 19, including
-  clang libraries.
+  clang libraries. **LLVM 20 is not yet supported.**
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.
@@ -63,16 +63,16 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
   old, and it's better to install a newer Bison (via Homebrew is one way to
   do this easily).
-* [PugiXML](http://pugixml.org/) >= 1.8 (we have tested through 1.13).
+* [PugiXML](http://pugixml.org/) >= 1.8 (we have tested through 1.19).
 * (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
   If it is not found at build time, the OSL `pointcloud` functions will not
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * **Python >= 3.7** (tested through 3.12)
+    * **Python >= 3.7** (tested through 3.13)
     * **pybind11 >= 2.7** (tested through 2.13)
-    * NumPy
-* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.7).
+    * NumPy (tested through 2.2.4)
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.8).
   If not found at build time, the `osltoy` application will be disabled.
 
 

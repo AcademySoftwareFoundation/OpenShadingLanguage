@@ -308,6 +308,7 @@ macro (osl_add_all_tests)
                 layers-nonlazycopy layers-repeatedoutputs
                 lazytrace
                 length-reg linearstep
+                lockgeom
                 logic loop luminance-reg
                 matrix matrix-reg matrix-arithmetic-reg
                 matrix-compref-reg max-reg message message-no-closure message-reg
@@ -371,6 +372,7 @@ macro (osl_add_all_tests)
                 render-mx-layer
                 render-mx-sheen
                 render-microfacet render-oren-nayar
+                render-spi-thinlayer
                 render-uv render-veachmis render-ward
                 render-raytypes
                 select select-reg shaderglobals shortcircuit
@@ -391,7 +393,7 @@ macro (osl_add_all_tests)
                 test-fmt-cxpf  test-fmt-noise test-fmt-matrixcolor 
                 test-fmt-stpf test-fmt-errorwarning test-fmt-errorwarning-repeats
                 texture-alpha texture-alpha-derivs
-                texture-blur texture-connected-options
+                texture-blur texture-colorspace texture-connected-options
                 texture-derivs texture-environment texture-errormsg
                 texture-environment-opts-reg
                 texture-firstchannel texture-interp

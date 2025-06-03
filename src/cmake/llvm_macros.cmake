@@ -60,7 +60,9 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         endif ()
 
         if (APPLE)
-            list (APPEND LLVM_COMPILE_FLAGS -isysroot ${CMAKE_OSX_SYSROOT})
+            if (CMAKE_OSX_SYSROOT)
+                list (APPEND LLVM_COMPILE_FLAGS -isysroot ${CMAKE_OSX_SYSROOT})
+            endif ()
             if (CMAKE_OSX_DEPLOYMENT_TARGET)
                 list (APPEND LLVM_COMPILE_FLAGS -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET})
             endif ()

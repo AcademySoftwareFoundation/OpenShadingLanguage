@@ -80,7 +80,7 @@ jobs:
             old_node: 1
             cxx_std: 17
             opencolorio_ver: v2.2.1
-            openimageio_ver: v3.0.2.0
+            openimageio_ver: v3.0.6.1
             python_ver: 3.9
             pybind11_ver: v2.7.0
             simd: avx2,f16c
@@ -156,7 +156,7 @@ jobs:
         run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
-        uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.4
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: /tmp/ccache
           key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
@@ -234,6 +234,8 @@ jobs:
       ctest_test_timeout: ${{ matrix.ctest_test_timeout || '800' }}
       coverage: ${{ matrix.coverage || 0 }}
       sonar: ${{ matrix.sonar || 0 }}
+      llvm_action_ver: ${{ matrix.llvm_action_ver }}
+      clang_format: ${{ matrix.clang_format }}
     strategy:
       fail-fast: false
       matrix:
@@ -330,7 +332,7 @@ jobs:
             fmt_ver: 10.1.1
             pybind11_ver: v2.10.0
             skip_tests: 1
-            abi_check: 42ccf223af1e929fd84a13773e8748b719b1e595
+            abi_check: e3aa2cf5a17a59e906c7125ff8d546b1561e812f
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_BUILD_TESTS=0 -DBUILD_TESTING=OFF -DUSE_QT=0"
                             OPENIMAGEIO_CMAKE_FLAGS="-DUSE_PYTHON=0"
                             CMAKE_BUILD_TYPE=RelWithDebInfo
@@ -369,7 +371,7 @@ jobs:
             cxx_std: 17
             fmt_ver: 7.1.3
             opencolorio_ver: v2.3.2
-            openimageio_ver: v3.0.2.0
+            openimageio_ver: v3.0.6.1
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c
@@ -378,15 +380,15 @@ jobs:
                             USE_OPENVDB=0
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
 
-          - desc: Debug gcc7/C++17 llvm11 py3.8 oiio2.5 exr3.1 sse4
+          - desc: Debug gcc9/C++17 llvm11 py3.10 oiio2.5 exr3.1 sse4
             nametag: linux-debug-gcc7-llvm11
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             cxx_compiler: g++-9
             cxx_std: 17
             openexr_ver: v3.1.11
             openimageio_ver: v2.5.4.0
             pybind11_ver: v2.7.0
-            python_ver: 3.8
+            python_ver: "3.10"
             simd: sse4.2
             setenvs: export CMAKE_BUILD_TYPE=Debug
                             LLVM_VERSION=11.0.0 LLVM_DISTRO_NAME=ubuntu-20.04
@@ -394,14 +396,14 @@ jobs:
                             CTEST_TEST_TIMEOUT=240
           - desc: gcc10/C++17 llvm11 oiio-2.5 avx2
             nametag: linux-2021ish-gcc10-llvm11
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             cxx_compiler: g++-10
             cxx_std: 17
             fmt_ver: 7.0.1
             openexr_ver: v3.1.11
             openimageio_ver: v2.5.17.0
             pybind11_ver: v2.8.1
-            python_ver: 3.8
+            python_ver: "3.10"
             simd: avx2,f16c
             setenvs: export LLVM_VERSION=11.0.0 LLVM_DISTRO_NAME=ubuntu-20.04
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
@@ -412,11 +414,11 @@ jobs:
             cc_compiler: gcc-13
             cxx_compiler: g++-13
             cxx_std: 17
-            fmt_ver: 11.0.2
-            opencolorio_ver: v2.4.0
-            openexr_ver: v3.3.0
+            fmt_ver: 11.1.4
+            opencolorio_ver: v2.4.2
+            openexr_ver: v3.3.3
             openimageio_ver: release
-            pybind11_ver: v2.13.5
+            pybind11_ver: v2.13.6
             python_ver: "3.12"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
@@ -424,7 +426,7 @@ jobs:
                             LLVM_DISTRO_NAME=ubuntu-22.04
                             LIBTIFF_VERSION=v4.7.0
                             PTEX_VERSION=v2.4.3
-                            PUGIXML_VERSION=v1.14
+                            PUGIXML_VERSION=v1.15
                             FREETYPE_VERSION=VER-2-13-3
           - desc: bleeding edge gcc13/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
@@ -438,14 +440,13 @@ jobs:
             openimageio_ver: main
             pybind11_ver: master
             python_ver: "3.12"
+            llvm_action_ver: "18.1.7"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=17.0.6
-                            LLVM_DISTRO_NAME=ubuntu-22.04
-                            PUGIXML_VERSION=master
-          - desc: clang14/C++17 llvm14 py3.8 avx2 batch-b16avx512
+            setenvs: export PUGIXML_VERSION=master
+          - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
-            runner: ubuntu-20.04
+            runner: ubuntu-22.04
             cxx_compiler: clang++
             cc_compiler: clang
             cxx_std: 17
@@ -454,7 +455,7 @@ jobs:
             openexr_ver: v3.1.11
             openimageio_ver: release
             pybind11_ver: v2.9.2
-            python_ver: 3.8
+            python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=14.0.0
@@ -467,22 +468,20 @@ jobs:
             # the console output).
           - desc: "clang-format"
             nametag: clang-format
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
             cxx_std: 17
             extra_artifacts: "src/*.*"
-            opencolorio_ver: v2.4.0
-            openexr_ver: v3.1.11
-            openimageio_ver: release
             python_ver: "3.10"
-            simd: avx2,f16c
-            batched: b8_AVX2
+            pybind11_ver: "0"
+            skip_build: 1
             skip_tests: 1
-            setenvs: export BUILDTARGET=clang-format
-                            LLVM_VERSION=17.0.6
-                            LLVM_DISTRO_NAME=ubuntu-22.04
-                            OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
-                            USE_PYTHON=0
-                            QT_VERSION=0
+            clang_format: 1
+            setenvs: export OPENIMAGEIO_CMAKE_FLAGS=-DUSE_PYTHON=0
+                            USE_PYTHON=0 QT_VERSION=0 PUGIXML_VERSION=0
+                            SKIP_APT_GET_UPDATE=0
+                            SKIP_SYSTEM_DEPS_INSTALL=1
+                            EXTRA_DEP_PACKAGES="clang-format-17"
+                            CLANG_FORMAT_EXE=clang-format-17
 
 
   macos:
@@ -521,17 +520,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: MacOS-13-Intel llvm17
+          - desc: MacOS-13-Intel llvm17 oiio-release
             runner: macos-13
             nametag: macos13-p313
-            cc_compiler: /usr/local/opt/llvm/bin/clang
-            cxx_compiler: /usr/local/opt/llvm/bin/clang++
+            cc_compiler: clang
+            cxx_compiler: clang++
             cxx_std: 17
             python_ver: "3.13"
             aclang: 14
-            setenvs: export DO_BREW_UPDATE=1 CTEST_TEST_TIMEOUT=120
+            ctest_test_timeout: 120
+            setenvs: export HOMEBREW_PREFIX=/usr/local
                             EXTRA_BREW_PACKAGES="openimageio"
-          - desc: MacOS-14-ARM llvm17
+                            LLVMBREWVER="@17"
+          - desc: MacOS-14-ARM llvm19 oiio-release
             runner: macos-14
             nametag: macos14-arm-p313
             cc_compiler: clang
@@ -539,9 +540,9 @@ jobs:
             cxx_std: 17
             python_ver: "3.13"
             aclang: 15
-            setenvs: export DO_BREW_UPDATE=1
-                            EXTRA_BREW_PACKAGES="openimageio"
-          - desc: MacOS-15-ARM aclang16/C++17/py3.13
+            setenvs: export EXTRA_BREW_PACKAGES="openimageio"
+                            LLVMBREWVER="@19"
+          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm19 oiio-main
             runner: macos-15
             nametag: macos15-arm-py313
             cc_compiler: clang
@@ -549,6 +550,7 @@ jobs:
             cxx_std: 17
             python_ver: "3.13"
             openimageio_ver: main
+            setenvs: export LLVMBREWVER="@19"
 
 
   windows:

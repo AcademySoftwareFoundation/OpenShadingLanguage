@@ -421,11 +421,14 @@ nominated for major awards.)
   Bullet Train,
   Slumberland,
   Glass Onion,
+  Puss in Boots: The Last Wish,
   Archive 81 (series),
   Moon Night (series),
   Obi-Wan Kenobi (series),
   The Boys (S3),
-  Andor (S1)
+  Andor (S1),
+  Troll,
+  She-Hulk (series)
 * **(2023)**
   Ant-Man and the Wasp: Quantumania,
   The Mandalorian S3,
@@ -434,12 +437,20 @@ nominated for major awards.)
   Guardians of the Galaxy 3,
   Spider-Man: Across the Spider-Verse,
   Elemental,
+  Indiana Jones and the Dial of Destiny,
   The Marvels,
-  Leo
-* **(2024 / upcoming)**
+  Leo,
+  The Boys (S4),
+  The Moon
+* **(2024)**
   Ghostbusters: Frozen Empire,
   Inside Out 2,
+  Red One,
+  Dream Productions (series)
+* **(2025 / upcoming)**
+  Win or Lose (series),
   In Your Dreams,
+  A Minecraft Movie,
   ...
 
 
@@ -484,10 +495,11 @@ Contact & reporting problems
 ----------------------------
 
 Simple "how do I...", "I'm having trouble", or "is this a bug" questions are
-best asked on the [osl-dev developer mail
-list](https://lists.aswf.io/g/osl-dev).
+best asked on the [osl-dev developer mail list](https://lists.aswf.io/g/osl-dev).
 That's where the most people will see it and potentially be able to answer
-your question quickly (more so than a GH "issue").
+your question quickly (more so than a GH "issue"). For quick questions, you
+could also try the [ASWF Slack](https://slack.aswf.io) `#openshadinglanguage`
+channel.
 
 Bugs, build problems, and discovered vulnerabilities that you are relatively
 certain is a legit problem in the code, and for which you can give clear

@@ -28,14 +28,18 @@ echo ""
 echo "Before my brew installs:"
 brew list --versions
 
-brew install --display-times -q gcc ccache cmake ninja || true
+if [[ "${BREW_UNLINK_PACKAGES}" != "" ]] ; then
+    brew unlink ${BREW_UNLINK_PACKAGES} || true
+fi
+
+
+if [[ "${DO_BREW_CMAKE_INSTALL:=1}" != "0" ]] ; then
+    brew install --display-times -q cmake || true
+fi
+brew install --display-times -q gcc ccache ninja || true
 brew link --overwrite gcc
 brew install --display-times -q python@${PYTHON_VERSION} || true
-# brew unlink python@3.8 || true
-# brew unlink python@3.9 || true
-brew unlink python@3.10 || true
 brew link --overwrite --force python@${PYTHON_VERSION} || true
-#brew upgrade --display-times -q cmake || true
 brew install --display-times -q imath openexr opencolorio || true
 #brew install --display-times -q freetype
 brew install --display-times -q partio pugixml || true
@@ -69,6 +73,9 @@ ls ${HOMEBREW_PREFIX}/lib/python${PYTHON_VERSION}
 # export PATH=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}/bin:$PATH
 export LLVM_DIRECTORY=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}
 export LLVM_ROOT=${HOMEBREW_PREFIX}/opt/llvm${LLVMBREWVER}
+export PATH=$LLVM_ROOT/bin:$PATH
+echo LLVM_ROOT=${LLVM_ROOT}
+# ls $LLVM_ROOT
 export PATH=${HOMEBREW_PREFIX}/opt/flex/bin:${HOMEBREW_PREFIX}/opt/bison/bin:$PATH
 
 # Save the env for use by other stages

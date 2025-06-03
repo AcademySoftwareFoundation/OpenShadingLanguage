@@ -44,6 +44,8 @@ on:
         type: string
       python_ver:
         type: string
+      llvm_action_ver:
+        type: string
       setenvs:
         type: string
       simd:
@@ -55,6 +57,8 @@ on:
       abi_check:
         type: string
       build_docs:
+        type: string
+      clang_format:
         type: string
       generator:
         type: string
@@ -125,6 +129,11 @@ jobs:
         run: |
             ${{inputs.setenvs}}
             src/build-scripts/ci-startup.bash
+      - name: Install LLVM and Clang
+        if: inputs.llvm_action_ver != ''
+        uses: KyleMayes/install-llvm-action@6ba6e2cd3813def9879be378609d87cb3ef3bac3 # v2.0.6
+        with:
+          version: ${{ inputs.llvm_action_ver }}
       - name: Dependencies
         shell: bash
         run: |
@@ -155,6 +164,10 @@ jobs:
         if: inputs.skip_tests != '1'
         shell: bash
         run: src/build-scripts/ci-test.bash
+      - name: clang-format
+        if: inputs.clang_format == '1'
+        shell: bash
+        run: src/build-scripts/run-clang-format.bash
       - name: Code coverage
         if: inputs.coverage == '1'
         run: src/build-scripts/ci-coverage.bash

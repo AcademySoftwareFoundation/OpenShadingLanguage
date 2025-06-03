@@ -946,7 +946,7 @@ setup_transformations(SimpleRenderer& rend, OSL::Matrix44& Mshad,
 }
 
 // A single render context shared by all render threads.
-static RenderContext theRenderState;
+static RenderContext theRenderContext;
 
 
 // Set up the ShaderGlobals fields for pixel (x,y).
@@ -959,7 +959,7 @@ setup_shaderglobals(ShaderGlobals& sg, ShadingSystem* shadingsys,
 
     // Any state data needed by SimpleRenderer or its free function equivalent
     // will need to be passed here the ShaderGlobals.
-    renderState.context      = &theRenderState;
+    renderState.context      = &theRenderContext;
     renderState.closure_pool = nullptr;  // Use inbuilt closure pool.
     sg.renderstate           = &renderState;
 
@@ -2143,7 +2143,7 @@ test_shade(int argc, const char* argv[])
     rend->prepare_render();
     if (use_rs_bitcode) {
         // SimpleRend to supply the required state for render service free functions
-        rend->export_state(theRenderState);
+        rend->export_context(theRenderContext);
     }
 
     double setuptime = timer.lap();
@@ -2171,7 +2171,7 @@ test_shade(int argc, const char* argv[])
 
 
     //Send the populated Journal Buffer to the renderer
-    theRenderState.journal_buffer = jbuffer.get();
+    theRenderContext.journal_buffer = jbuffer.get();
 
 
     // Allow a settable number of iterations to "render" the whole image,

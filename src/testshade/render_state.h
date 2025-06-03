@@ -25,7 +25,7 @@ struct RenderContext {
 };
 
 class StackClosurePool {
-    alignas(8) char buffer[256];
+    alignas(8) char buffer[512];
     void* ptr;
 
 public:

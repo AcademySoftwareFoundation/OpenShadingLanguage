@@ -25,7 +25,7 @@ struct RenderContext {
 };
 
 class StackClosurePool {
-    static constexpr size_t capacity = 512;
+    static constexpr size_t capacity = 1024;
     alignas(8) char buffer[capacity];
     void* ptr;
 

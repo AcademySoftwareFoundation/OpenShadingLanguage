@@ -25,7 +25,8 @@ struct RenderContext {
 };
 
 class StackClosurePool {
-    alignas(8) char buffer[512];
+    static constexpr size_t capacity = 512;
+    alignas(8) char buffer[capacity];
     void* ptr;
 
 public:
@@ -45,7 +46,7 @@ public:
         uintptr_t p = OIIO::round_to_multiple_of_pow2((uintptr_t)ptr,
                                                       alignment);
         ptr         = (void*)(p + size);
-        if (ptr <= &buffer[256])
+        if (ptr <= &buffer[capacity])
             return (void*)p;
         assert(false);
         return nullptr;

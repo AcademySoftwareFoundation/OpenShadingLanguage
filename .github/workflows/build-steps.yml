@@ -88,7 +88,9 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container }}
-
+      options: ${{ (contains(inputs.runner, 'gpu') && '-e NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility --gpus all') || '-e A=x' }}
+      # ^^ need extra options on the GPU runners to ensure OptiX is visible
+      # in the container.
     env:
       CXX: ${{inputs.cxx_compiler}}
       CC: ${{inputs.cc_compiler}}

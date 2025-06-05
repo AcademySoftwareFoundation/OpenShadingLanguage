@@ -3212,7 +3212,11 @@ LLVM_Util::loop_after_block() const
 llvm::Type*
 LLVM_Util::type_union(cspan<llvm::Type*> types)
 {
+#if OSL_LLVM_VERSION >= 200
+    llvm::DataLayout target(module()->getDataLayout());
+#else
     llvm::DataLayout target(module());
+#endif
     size_t max_size  = 0;
     size_t max_align = 1;
     for (auto t : types) {

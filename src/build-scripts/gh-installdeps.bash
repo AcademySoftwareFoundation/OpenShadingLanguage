@@ -152,6 +152,9 @@ if [[ "$OPTIX_VERSION" != "" ]] ; then
     echo "Requested OPTIX_VERSION = '${OPTIX_VERSION}' from ${OPTIXREPO}"
     export OptiX_ROOT=$LOCAL_DEPS_DIR/dist/optix-dev
     git clone -b v${OPTIX_VERSION} ${OPTIXREPO} ${OptiX_ROOT}
+    export PATH=$PATH:/usr/local/cuda-12/bin
+    export LD_LIBRARY_PATH=/usr/local/cuda-12/lib64:$LD_LIBRARY_PATH
+    find / -name "*nv*so" -print || true
 fi
 
 

@@ -41,7 +41,7 @@ cp -r ${OSL_BUILD_DIR}/CMake* ${OSL_BUILD_DIR}/*.cmake ${OSL_BUILD_DIR}/cmake-sa
 if [[ "$BUILDTARGET" != "none" ]] ; then
     echo "Parallel build ${CMAKE_BUILD_PARALLEL_LEVEL} of target ${BUILDTARGET}"
     time ${OSL_CMAKE_BUILD_WRAPPER} cmake --build ${OSL_BUILD_DIR} --target ${BUILDTARGET} --config ${OSL_CMAKE_BUILD_TYPE}
-    ccache --show-stats
+    ccache --show-stats || true
 fi
 
 if [[ "${DEBUG_CI:=0}" != "0" ]] ; then

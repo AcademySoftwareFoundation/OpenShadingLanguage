@@ -229,12 +229,13 @@ set (MY_RULE_LAUNCH "")
 # logic here makes it work even if the user is unaware of ccache. If it's
 # not found on the system, it will simply be silently not used.
 option (USE_CCACHE "Use ccache if found" ON)
-find_program (CCACHE_FOUND ccache)
-if (CCACHE_FOUND AND USE_CCACHE)
+find_program (CCACHE_EXE ccache)
+if (CCACHE_EXE AND USE_CCACHE)
     if (CMAKE_COMPILER_IS_CLANG AND USE_QT AND (NOT DEFINED ENV{CCACHE_CPP2}))
         message (STATUS "Ignoring ccache because clang + Qt + env CCACHE_CPP2 is not set")
     else ()
-        set (MY_RULE_LAUNCH ccache)
+        set (MY_RULE_LAUNCH ${CCACHE_EXE})
+        message (STATUS "ccache enabled: ${CCACHE_EXE}")
     endif ()
 endif ()
 

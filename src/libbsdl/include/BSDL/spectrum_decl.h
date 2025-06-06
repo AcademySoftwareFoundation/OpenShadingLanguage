@@ -308,6 +308,16 @@ struct Power {
 };
 
 BSDL_INLINE Power
+sqrt(Power x)
+{
+    x = x.clamped(0.0f, std::numeric_limits<float>::max());
+    BSDL_UNROLL()
+    for (int i = 0; i != Power::N; ++i)
+        x.data[i] = sqrtf(x.data[i]);
+    return x;
+}
+
+BSDL_INLINE Power
 operator-(Power o)
 {
     return Power([&](int i) { return -o[i]; }, 1);

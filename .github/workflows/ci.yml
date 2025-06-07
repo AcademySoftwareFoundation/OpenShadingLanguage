@@ -261,6 +261,18 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2
             # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
+          - desc: VP2025 gcc11/C++17 llvm18 py3.11 oiio-3.0 avx2
+            nametag: linux-vfx2025
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2025-clang18
+            cxx_std: 17
+            python_ver: "3.11"
+            # pybind11_ver: v2.11.1
+            simd: avx2,f16c
+            batched: b8_AVX2
+            setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery"
+            # ^^ exclude python-oslquery test until the ASWF container properly
+            #    includes OIIO's python bindings, then we can remove that.
 
           # Address and leak sanitizers
           - desc: sanitizers
@@ -661,5 +673,4 @@ jobs:
             skip_tests: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && '0') || '1' }}
             setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1"
                             OPTIX_VERSION=8.0.0
-                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
                             CTEST_EXCLUSIONS="broken|render-microfacet|example-cuda|python-oslquery"

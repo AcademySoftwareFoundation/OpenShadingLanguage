@@ -20,6 +20,7 @@
 
 #include <cstring>
 #include <memory>
+#include <cstdint>
 
 #include <OSL/oslversion.h>
 

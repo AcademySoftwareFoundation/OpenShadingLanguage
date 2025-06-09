@@ -217,10 +217,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD"
 endif ()
 
 
-# We will use this for ccache and timing
-set (MY_RULE_LAUNCH "")
-
-
 ###########################################################################
 # Use ccache if found
 #
@@ -234,7 +230,12 @@ if (CCACHE_EXE AND USE_CCACHE)
     if (CMAKE_COMPILER_IS_CLANG AND USE_QT AND (NOT DEFINED ENV{CCACHE_CPP2}))
         message (STATUS "Ignoring ccache because clang + Qt + env CCACHE_CPP2 is not set")
     else ()
-        set (MY_RULE_LAUNCH ${CCACHE_EXE})
+        if (NOT ${CXX_COMPILER_LAUNCHER} MATCHES "ccache")
+            set (CXX_COMPILER_LAUNCHER ${CCACHE_EXR} ${CXX_COMPILER_LAUNCHER})
+        endif ()
+        if (NOT ${C_COMPILER_LAUNCHER} MATCHES "ccache")
+            set (C_COMPILER_LAUNCHER ${CCACHE_EXR} ${C_COMPILER_LAUNCHER})
+        endif ()
         message (STATUS "ccache enabled: ${CCACHE_EXE}")
     endif ()
 endif ()
@@ -248,14 +249,8 @@ endif ()
 # set `-j 1` or CMAKE_BUILD_PARALLEL_LEVEL to 1.
 option (TIME_COMMANDS "Time each compile and link command" OFF)
 if (TIME_COMMANDS)
-    set (MY_RULE_LAUNCH "${CMAKE_COMMAND} -E time ${MY_RULE_LAUNCH}")
-endif ()
-
-
-# Note: This must be after any option that alters MY_RULE_LAUNCH
-if (MY_RULE_LAUNCH)
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${MY_RULE_LAUNCH})
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ${MY_RULE_LAUNCH})
+    set (CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${CXX_COMPILER_LAUNCHER})
+    set (C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${C_COMPILER_LAUNCHER})
 endif ()
 
 

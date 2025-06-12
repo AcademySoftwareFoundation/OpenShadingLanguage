@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-
 #pragma once
 
 #include <BSDL/config.h>
@@ -32,6 +31,12 @@ struct GGXDist {
     BSDL_INLINE_METHOD float G2_G1(Imath::V3f wi, Imath::V3f wo) const;
     BSDL_INLINE_METHOD Imath::V3f sample(const Imath::V3f& wo, float randu,
                                          float randv) const;
+
+    // Reflection specific improved sample/pdf functions
+    BSDL_INLINE_METHOD Imath::V3f
+    sample_reflection(const Imath::V3f& wo, float randu, float randv) const;
+    BSDL_INLINE_METHOD float pdf_reflection(const Imath::V3f& wo,
+                                            const Imath::V3f& wi) const;
 
     BSDL_INLINE_METHOD float roughness() const { return std::max(ax, ay); }
 
@@ -131,10 +136,29 @@ private:
 };
 
 // Turquin style microfacet with multiple scattering
-template<typename Dist, typename Fresnel>
+template<typename Fresnel>
 BSDL_INLINE Sample
-eval_turquin_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+eval_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
                                 float E_ms, const Imath::V3f& wo,
                                 const Imath::V3f& wi);
+
+template<typename Fresnel>
+BSDL_INLINE Sample
+sample_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
+                                  float E_ms, const Imath::V3f& wo,
+                                  const Imath::V3f& rnd);
+
+// SPI style microfacet with multiple scattering
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+eval_spi_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                            float E_ms, float E_ms_avg, const Imath::V3f& wo,
+                            const Imath::V3f& wi);
+
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+sample_spi_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                              float E_ms, float E_ms_avg, const Imath::V3f& wo,
+                              const Imath::V3f& rnd);
 
 BSDL_LEAVE_NAMESPACE

@@ -12,5 +12,6 @@ if (NOT BUILD_SHARED_LIBS)
 endif ()
 
 add_executable ( oslc ${oslc_srcs} )
+target_include_directories ( oslc  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 target_link_libraries ( oslc PRIVATE oslcomp ${CMAKE_DL_LIBS})
 install_targets (oslc)

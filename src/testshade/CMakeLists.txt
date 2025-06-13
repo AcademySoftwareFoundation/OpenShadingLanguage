@@ -77,6 +77,8 @@ EMBED_LLVM_BITCODE_IN_CPP ( "${rs_srcs}" "_host" "testshade_llvm_compiled_rs" te
 
 add_executable ( testshade ${testshade_srcs} testshademain.cpp )
 
+target_include_directories (testshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+
 target_link_libraries (testshade
                        PRIVATE
                            oslexec oslquery oslcomp)
@@ -107,12 +109,14 @@ if (NOT CODECOV)
     target_link_libraries (libtestshade
                            PRIVATE
                                oslexec oslquery oslcomp)
+    target_include_directories (libtestshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     set_target_properties (libtestshade PROPERTIES PREFIX "")
 
     install_targets ( libtestshade )
 
     # The 'testshade_dso' executable
     add_executable ( testshade_dso testshade_dso.cpp )
+    target_include_directories (testshade_dso BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     target_link_libraries (testshade_dso
                            PRIVATE
                                OpenImageIO::OpenImageIO

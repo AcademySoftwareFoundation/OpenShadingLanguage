@@ -3863,19 +3863,15 @@ LLVMGEN(llvm_gen_closure)
                                      id_int, size_int);
     llvm::Value* comp_void_ptr = return_ptr;
 
-    // For the weighted closures, we need a surrounding "if" so that it's safe
-    // for osl_allocate_weighted_closure_component to return NULL (unless we
-    // know for sure that it's constant weighted and that the weight is
-    // not zero).
-    llvm::BasicBlock* next_block = NULL;
-    if (weighted && !(weight->is_constant() && !rop.is_zero(*weight))) {
-        llvm::BasicBlock* notnull_block = rop.ll.new_basic_block(
-            "non_null_closure");
-        next_block        = rop.ll.new_basic_block("");
-        llvm::Value* cond = rop.ll.op_ne(return_ptr, rop.ll.void_ptr_null());
-        rop.ll.op_branch(cond, notnull_block, next_block);
-        // new insert point is nonnull_block
-    }
+    // We need a surrounding "if" so that it's safe for closure allocation to
+    // return NULL, either because it has zero weight, or renderer services ran
+    // out of memory in the closure pool.
+    llvm::BasicBlock* notnull_block = rop.ll.new_basic_block(
+        "non_null_closure");
+    llvm::BasicBlock* next_block = rop.ll.new_basic_block("");
+    llvm::Value* cond = rop.ll.op_ne(return_ptr, rop.ll.void_ptr_null());
+    rop.ll.op_branch(cond, notnull_block, next_block);
+    // new insert point is nonnull_block
 
     llvm::Value* comp_ptr
         = rop.ll.ptr_cast(comp_void_ptr, rop.llvm_type_closure_component_ptr());

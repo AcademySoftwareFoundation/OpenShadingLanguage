@@ -48,16 +48,19 @@ __device__ __constant__ RenderParams render_params;
 
 
 static inline __device__ void
-execute_shader(ShaderGlobalsType& sg, const int shader_id, char* closure_pool)
+execute_shader(ShaderGlobalsType& sg, const int shader_id,
+               StackClosurePool& closure_pool)
 {
     if (shader_id < 0) {
         // TODO: should probably never get here ...
         return;
     }
 
-    // Pack the "closure pool" into one of the ShaderGlobals pointers
-    *(int*)&closure_pool[0] = 0;
-    sg.renderstate          = &closure_pool[0];
+    closure_pool.reset();
+    RenderState renderState;
+    // TODO: renderState.context = ...
+    renderState.closure_pool = &closure_pool;
+    sg.renderstate           = &renderState;
 
     // Pack the pointers to the options structs in a faux "context",
     // which is a rough stand-in for the host ShadingContext.

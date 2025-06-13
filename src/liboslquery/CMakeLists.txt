@@ -18,6 +18,7 @@ target_link_libraries (${local_lib}
     PUBLIC
         OpenImageIO::OpenImageIO_Util
     )
+target_include_directories (${local_lib}  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 
 target_compile_features (${local_lib}
                          INTERFACE cxx_std_${DOWNSTREAM_CXX_STANDARD})

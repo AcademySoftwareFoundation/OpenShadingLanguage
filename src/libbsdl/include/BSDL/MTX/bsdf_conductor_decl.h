@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-
 #pragma once
 
 #include <BSDL/bsdf_decl.h>

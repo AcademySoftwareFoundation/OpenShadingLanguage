@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-
 #pragma once
 
 #include <BSDL/MTX/bsdf_conductor_decl.h>
@@ -122,15 +121,9 @@ BSDL_INLINE_METHOD Sample
 ConductorLobe<BSDF_ROOT>::sample_impl(const Imath::V3f& wo,
                                       const Imath::V3f& rnd) const
 {
-    const float cosNO = wo.z;
-    if (cosNO <= 0)
-        return {};
-
-    // sample microfacet (half vector)
-    // generate outgoing direction
-    Imath::V3f wi = reflect(wo, dist.sample(wo, rnd.x, rnd.y));
-    // evaluate brdf on outgoing direction
-    return eval_impl(wo, wi);
+    Sample s = sample_turquin_microms_reflection(dist, fresnel, E_ms, wo, rnd);
+    s.roughness = Base::roughness();
+    return s;
 }
 
 }  // namespace mtx

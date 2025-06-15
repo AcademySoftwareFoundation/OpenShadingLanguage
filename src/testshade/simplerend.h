@@ -145,7 +145,7 @@ public:
     size_t noutputs() const { return m_outputbufs.size(); }
 
     virtual void init_shadingsys(ShadingSystem* ss) { shadingsys = ss; }
-    virtual void export_state(RenderState&) const;
+    virtual void export_context(RenderContext&) const;
     virtual void prepare_render() {}
     virtual void warmup() {}
     virtual void render(int /*xres*/, int /*yres*/) {}

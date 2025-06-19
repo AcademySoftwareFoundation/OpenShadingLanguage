@@ -307,14 +307,15 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture(oec, name, (TextureSystem::TextureHandle*)handle,
 #ifndef __CUDA_ARCH__
-                         sg->context->texture_thread_info(),
+                         sg->context->texture_thread_info(), *opt, s, t, dsdx,
+                         dtdx, dsdy, dtdy, 4,
 #else
-                         nullptr,
+                         nullptr, *opt, s, t, dsdx, dtdx, dsdy, dtdy,
+                         chans + (alpha ? 1 : 0),  // # chans we're asking
 #endif
-                         *opt, s, t, dsdx, dtdx, dsdy, dtdy, 4,
                          (float*)&result_simd,
-                         derivs ? (float*)&dresultds_simd : NULL,
-                         derivs ? (float*)&dresultdt_simd : NULL,
+                         derivs ? (float*)&dresultds_simd : nullptr,
+                         derivs ? (float*)&dresultdt_simd : nullptr,
                          errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
@@ -341,7 +342,7 @@ osl_texture(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     }
 
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = em.hash();
     return ok;
 }
 
@@ -385,11 +386,13 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_texture3d(oec, name, (TextureSystem::TextureHandle*)handle,
 #ifndef __CUDA_ARCH__
-                           sg->context->texture_thread_info(),
+                           sg->context->texture_thread_info(), *opt, P, dPdx,
+                           dPdy, dPdz, 4,
 #else
-                           nullptr,
+                           nullptr, *opt, P, dPdx, dPdy, dPdz,
+                           chans + (alpha ? 1 : 0),  // # chans we're asking
 #endif
-                           *opt, P, dPdx, dPdy, dPdz, 4, (float*)&result_simd,
+                           (float*)&result_simd,
                            derivs ? (float*)&dresultds_simd : nullptr,
                            derivs ? (float*)&dresultdt_simd : nullptr,
                            derivs ? (float*)&dresultdr_simd : nullptr,
@@ -421,7 +424,7 @@ osl_texture3d(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     }
 
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = em.hash();
     return ok;
 }
 
@@ -459,12 +462,14 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     ustringhash name = ustringhash_from(name_);
     bool ok = rs_environment(oec, name, (TextureSystem::TextureHandle*)handle,
 #ifndef __CUDA_ARCH__
-                             sg->context->texture_thread_info(),
+                             sg->context->texture_thread_info(), *opt, R, dRdx,
+                             dRdy, 4,
 #else
-                             nullptr,
+                             nullptr, *opt, R, dRdx, dRdy,
+                             chans + (alpha ? 1 : 0),  // # chans we're asking
 #endif
-                             *opt, R, dRdx, dRdy, 4, (float*)&local_result,
-                             NULL, NULL, errormessage ? &em : nullptr);
+                             (float*)&local_result, nullptr, nullptr,
+                             errormessage ? &em : nullptr);
 
     for (int i = 0; i < chans; ++i)
         result[i] = local_result[i];
@@ -492,7 +497,7 @@ osl_environment(OpaqueExecContextPtr oec, ustringhash_pod name_, void* handle,
     }
 
     if (errormessage)
-        *errormessage = ok ? ustringhash {}.hash() : em.hash();
+        *errormessage = em.hash();
     return ok;
 }
 

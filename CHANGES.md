@@ -1,6 +1,21 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14.6.0 (2 Jul 2025) -- compared to 1.14.5.1
+-------------------------------------------------------------
+- *fix*: Check for errors in ShadingSystem::ReParameter() [#1998](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1998) (by cmstein)
+- *fix*: Pass the real number of channels to rs_texture and rs_texture3d on gpu [#2004](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2004)
+- *build*: Link batched libraries with liboslexec [#1987](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1987) (by John Haddon)
+- *build*: Update include directives for OpenImageIO_ROOT [#1997](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1997) (by cmstein)
+- *build(optix)*: Simplify FindOptiX.cmake a bit now that OptiX 7 is the minimum [#1988](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1988)
+- *build(optix)*: Get OptiX headers from new improved location [#1989](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1989)
+- *build*: Add compatibility with LLVM 20.1 [#1993](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1993) (by Sven-Hendrik Haase)
+- *ci*: Remove Windows-2019 job [#1990](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1990)
+- *ci*: GPU/OptiX full build and test [#1992](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1992)
+- *ci*: Improve CI caching scheme [#1994](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1994)
+- *ci*: Add vp2025 test [#1995](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1995)
+
+
 Release 1.14.5.1 (3 May 2025) -- compared to 1.14.5.0
 -------------------------------------------------------------
 - *build*: Fix various MacOS problems with GitHub and CMake [#1982](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1982)

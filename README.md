@@ -451,6 +451,8 @@ nominated for major awards.)
   Win or Lose (series),
   In Your Dreams,
   A Minecraft Movie,
+  K-Pop Demon Hunters,
+  Elio,
   ...
 
 

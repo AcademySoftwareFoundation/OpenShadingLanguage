@@ -211,8 +211,8 @@ rs_texture(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename,
         return false;
     const float4 fromTexture = osl_tex2DLookup(texture_handle, s, t, dsdx, dtdx,
                                                dsdy, dtdy);
-    *((float3*)result)       = make_float3(fromTexture.x, fromTexture.y,
-                                           fromTexture.z);
+    for (int c = 0; c < nchannels; ++c)
+        result[c] = ((const float*)&fromTexture)[c];
     return true;
 #endif
 }

@@ -24,6 +24,9 @@
 #ifndef BSDL_UNROLL
 #    define BSDL_UNROLL() _Pragma("unroll")
 #endif
+#ifndef BSDL_STRHASH
+#    define BSDL_STRHASH(str) reinterpret_cast<intptr_t>(str)
+#endif
 
 #include <cassert>
 #include <cmath>

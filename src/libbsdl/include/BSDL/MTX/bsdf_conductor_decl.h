@@ -36,7 +36,9 @@ template<typename BSDF_ROOT> struct ConductorLobe : public Lobe<BSDF_ROOT> {
         // fresnel params
         Imath::C3f IOR;
         Imath::C3f extinction;
-        const char* distribution;
+        Stringhash distribution;
+        float thinfilm_thickness;
+        float thinfilm_ior;
         using lobe_type = ConductorLobe<BSDF_ROOT>;
     };
     template<typename D> static typename LobeRegistry<D>::Entry entry()
@@ -48,7 +50,8 @@ template<typename BSDF_ROOT> struct ConductorLobe : public Lobe<BSDF_ROOT> {
                  { R::param(&D::N), R::param(&D::U), R::param(&D::roughness_x),
                    R::param(&D::roughness_y), R::param(&D::IOR),
                    R::param(&D::extinction), R::param(&D::distribution),
-                   R::close() } };
+                   R::param(&D::thinfilm_thickness, "thinfilm_thickness"),
+                   R::param(&D::thinfilm_ior, "thinfilm_ior"), R::close() } };
     }
 
     template<typename T>

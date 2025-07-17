@@ -15,6 +15,111 @@ namespace pvt {
 class ASTNode;
 class StructSpec;
 
+/// A location in the OSL source
+/// Conversions from the FLEX/Bison convention happens in from_yyloc()
+/// It's tempting to make this class also track the straight byte-offset
+/// in the file, which would help us when we print out errors, code in the
+/// OSO's and whathaveyou. But the action of the preprocessor kills our
+/// ability to do so, as the parser doesn't ever see the user's version
+/// of the source
+struct SrcLoc {
+    static const uint32_t kUnknown { uint32_t(-1) };
+
+    ustring filename;
+    // this storage asymmetry is weird, but it's what you want:
+    // the column markers work like a normal STL [begin, end) span,
+    // but the line markers are actually [start, stop] because they
+    // need to say on which line the non-inclusive `column_end` side is
+    uint32_t line_start = kUnknown;  ///< start line number, 0-based, inclusive
+    uint32_t column_begin
+        = kUnknown;  ///< start col number, 0-based, [begin, end)-style like the STL
+    uint32_t line_stop = kUnknown;  ///< finish line number, 0-based, inclusive
+    uint32_t column_end
+        = kUnknown;  ///< finish col number, 0-based, [begin, end)-style like the STL
+
+    SrcLoc() = default;
+
+    SrcLoc(ustring filename, int first_line, int first_column, int last_line, int last_column) :
+        filename(filename)
+    {
+        from_yyloc(first_line, first_column, last_line, last_column);
+    }
+
+    explicit operator bool() const { return !filename.empty(); }
+
+    /// Convert the classic/built-in representation of a YYLTYPE
+    /// to our convention
+    void from_yyloc(int first_line, int first_column, int last_line,
+                    int last_column)
+    {
+        // we go from 1-based to 0-based
+        line_start   = first_line   ? first_line - 1   : kUnknown;
+        column_begin = first_column ? first_column - 1 : kUnknown;
+        line_stop    = last_line    ? last_line - 1    : kUnknown;
+        column_end   = last_column  ? last_column - 1  : kUnknown;
+    }
+
+    bool operator==(const SrcLoc& other) const
+    {
+        return line_start == other.line_start
+               && column_begin == other.column_begin
+               && line_stop == other.line_stop
+               && column_end == other.column_end;
+    }
+
+    bool operator!=(const SrcLoc& other) const { return !(*this == other); }
+
+    /// Operator < compares the start locations only.
+    /// This is what you want, trust me
+    bool operator<(const SrcLoc& other) const
+    {
+        return line_start < other.line_start
+               || (line_start == other.line_start
+                   && column_begin < other.column_begin);
+    }
+
+    /// How many lines spanned by this token.
+    /// Unlike colcount(), which needs care to be used, this is always correct.
+    /// Also, unlike colcount(), this is probably nowhere near as useful
+    size_t linecount() const { return line_stop - line_start + 1; }
+
+    /// How many columns spanned by this token.
+    /// N.B. This needs to be used with care: first off it is only ever a correct
+    /// notion when first_lineno() == last_lineno(), because we don't know how
+    /// long lines are. Further, the parser counts all whitespace as _one_ character
+    /// so '\t' counts as one, not 8 (or 4, or whatever your terminal is set to)
+    size_t colcount() const { return column_end - column_begin; }
+
+    /// Line number, 1-based, for humans, first line of the location span, inclusive
+    int first_lineno() const { return line_start + 1; }
+
+    /// Column number, 1-based, for humans, first line of the location span, inclusive
+    int first_colno() const { return column_begin + 1; }
+
+    /// Line number, 1-based, for humans, last line of the location span, inclusive
+    int last_lineno() const { return line_stop + 1; }
+
+    /// Column number, 1-based, for humans, last character of the location span, inclusive
+    // (because of our internal representation this does not need a "+1")
+    int last_colno() const { return column_end; }
+
+    // see also fmt::formatter at the end of the file
+    friend std::ostream& operator<<(std::ostream& out, const SrcLoc& sl)
+    {
+        if (sl.column_begin != kUnknown)
+            return out << fmtformat("{}:{}:{}", sl.filename, sl.last_lineno(),
+                                    sl.last_colno());
+        else if (sl.line_start != kUnknown)
+            return out << fmtformat("{}:{}", sl.filename, sl.last_lineno());
+        else if (!sl.filename.empty())
+            return out << fmtformat("{}", sl.filename);
+
+        // if there is no filename we print nothing
+        return out;
+    }
+};
+
+
 
 /// Kinds of shaders
 ///
@@ -937,7 +1042,7 @@ typedef std::vector<Symbol*> SymbolPtrVec;
 class Opcode {
 public:
     Opcode(ustring op, ustring method, size_t firstarg = 0, size_t nargs = 0)
-        : m_firstarg((int)firstarg), m_method(method), m_sourceline(0)
+        : m_firstarg((int)firstarg), m_method(method)
     {
         reset(op, nargs);  // does most of the heavy lifting
     }
@@ -959,13 +1064,11 @@ public:
     int nargs() const { return m_nargs; }
     ustring method() const { return m_method; }
     void method(ustring method) { m_method = method; }
-    void source(ustring sourcefile, int sourceline)
-    {
-        m_sourcefile = sourcefile;
-        m_sourceline = sourceline;
-    }
-    ustring sourcefile() const { return m_sourcefile; }
-    int sourceline() const { return m_sourceline; }
+    void source(const SrcLoc& srcloc) { m_srcloc = srcloc; }
+    ustring sourcefile() const { return m_srcloc.filename; }
+    const SrcLoc& srcloc() const { return m_srcloc; }
+    // removeme
+    int sourceline() const { return m_srcloc.first_lineno(); }
 
     void set_args(size_t firstarg, size_t nargs)
     {
@@ -1131,8 +1234,7 @@ private:
     int m_nargs;                    ///< Total number of arguments
     ustring m_method;               ///< Which param or method this code is for
     int m_jump[max_jumps];          ///< Jump addresses (-1 means none)
-    ustring m_sourcefile;           ///< Source filename for this op
-    int m_sourceline;               ///< Line of source code for this op
+    SrcLoc m_srcloc;                ///< Location in source code for this op
     unsigned int m_argread;         ///< Bit field - which args are read
     unsigned int m_argwrite;        ///< Bit field - which args are written
     unsigned int m_argtakesderivs;  ///< Bit field - which args take derivs
@@ -1172,5 +1274,6 @@ OSL_NAMESPACE_END
 #if FMT_VERSION >= 100000
 FMT_BEGIN_NAMESPACE
 template<> struct formatter<OSL::pvt::TypeSpec> : ostream_formatter {};
+template<> struct formatter<OSL::pvt::SrcLoc> : ostream_formatter {};
 FMT_END_NAMESPACE
 #endif

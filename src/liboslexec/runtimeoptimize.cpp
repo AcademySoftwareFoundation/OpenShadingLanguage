@@ -551,8 +551,7 @@ RuntimeOptimizer::insert_code(int opnum, ustring opname,
     if ((relation == -1 && opnum > 0)
         || (relation == 1 && opnum < (int)code.size() - 1)) {
         code[opnum].method(code[opnum + relation].method());
-        code[opnum].source(code[opnum + relation].sourcefile(),
-                           code[opnum + relation].sourceline());
+        code[opnum].source(code[opnum + relation].srcloc());
     }
 
     // Unless we were inserting at the end, we may need to adjust
@@ -668,8 +667,7 @@ RuntimeOptimizer::insert_useparam(size_t opnum,
     if (opnum < code.size() - 1) {
         // We have no parse node, but we set the new instruction's
         // "source" to the one of the statement right after.
-        code[opnum].source(code[opnum + 1].sourcefile(),
-                           code[opnum + 1].sourceline());
+        code[opnum].source(code[opnum + 1].srcloc());
         // Set the method id to the same as the statement right after
         code[opnum].method(code[opnum + 1].method());
     } else {

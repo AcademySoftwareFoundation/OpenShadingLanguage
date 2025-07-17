@@ -13,6 +13,7 @@ target_include_directories (${local_lib}
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
     PRIVATE
         ../liboslexec)
+target_include_directories (${local_lib}  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 target_link_libraries (${local_lib}
     PUBLIC
         OpenImageIO::OpenImageIO
@@ -45,6 +46,7 @@ install_targets (${local_lib})
 if (OSL_BUILD_TESTS AND BUILD_TESTING)
     add_executable (oslnoise_test oslnoise_test.cpp)
     set_target_properties (oslnoise_test PROPERTIES FOLDER "Unit Tests")
+    target_include_directories (oslnoise_test BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     target_link_libraries (oslnoise_test PRIVATE oslnoise)
     add_test (unit_oslnoise ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/oslnoise_test)
 endif()

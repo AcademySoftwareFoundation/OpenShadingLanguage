@@ -49,8 +49,8 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, or 19, including
-  clang libraries. **LLVM 20 is not yet supported.**
+* [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, including
+  clang libraries.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.

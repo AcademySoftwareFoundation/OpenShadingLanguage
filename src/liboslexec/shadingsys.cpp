@@ -3412,30 +3412,36 @@ ShadingSystemImpl::ReParameter(ShaderGroup& group, string_view layername_,
         return false;
 
     // Do the deed
-    int offset  = group.interactive_param_offset(layerindex, sym->name());
-    size_t size = type.size();
-    m_stat_reparam_calls_total += 1;
-    m_stat_reparam_bytes_total += size;
+    int offset = group.interactive_param_offset(layerindex, sym->name());
 
-    // Copy ustringhashes instead of ustrings
-    const void* payload;
-    ustringhash string_hash;
-    if (type == TypeDesc::STRING) {
-        string_hash = ustringhash_from(*reinterpret_cast<const ustring*>(val));
-        payload     = &string_hash;
+    if (offset >= 0) {
+        size_t size = type.size();
+        m_stat_reparam_calls_total += 1;
+        m_stat_reparam_bytes_total += size;
+
+        // Copy ustringhashes instead of ustrings
+        const void* payload;
+        ustringhash string_hash;
+        if (type == TypeDesc::STRING) {
+            string_hash = ustringhash_from(
+                *reinterpret_cast<const ustring*>(val));
+            payload = &string_hash;
+        } else
+            payload = val;
+
+        if (memcmp(group.interactive_arena_ptr() + offset, payload, size)) {
+            memcpy(group.interactive_arena_ptr() + offset, payload,
+                   type.size());
+            if (use_optix())
+                renderer()->copy_to_device(
+                    group.device_interactive_arena().d_get() + offset, payload,
+                    type.size());
+            m_stat_reparam_calls_changed += 1;
+            m_stat_reparam_bytes_changed += size;
+        }
+        return true;
     } else
-        payload = val;
-
-    if (memcmp(group.interactive_arena_ptr() + offset, payload, size)) {
-        memcpy(group.interactive_arena_ptr() + offset, payload, type.size());
-        if (use_optix())
-            renderer()->copy_to_device(group.device_interactive_arena().d_get()
-                                           + offset,
-                                       payload, type.size());
-        m_stat_reparam_calls_changed += 1;
-        m_stat_reparam_bytes_changed += size;
-    }
-    return true;
+        return true;
 }
 
 

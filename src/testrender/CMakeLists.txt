@@ -77,6 +77,8 @@ endif ()
 
 add_executable (testrender ${testrender_srcs})
 
+target_include_directories (testrender BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+
 target_link_libraries (testrender
     PRIVATE
         oslexec oslquery oslcomp BSDL

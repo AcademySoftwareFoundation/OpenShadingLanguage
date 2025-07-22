@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-
 #pragma once
 
 #include <BSDL/config.h>
@@ -14,11 +13,14 @@ BSDL_ENTER_NAMESPACE
 struct GGXDist {
     BSDL_INLINE_METHOD GGXDist() : ax(0), ay(0) {}
 
-    BSDL_INLINE_METHOD GGXDist(float rough, float aniso)
+    BSDL_INLINE_METHOD GGXDist(float rough, float aniso,
+                               bool flip_aniso = false)
         : ax(SQR(rough)), ay(ax)
     {
         assert(rough >= 0 && rough <= 1);
         assert(aniso >= 0 && aniso <= 1);
+        if (flip_aniso)
+            aniso = -aniso;
         constexpr float ALPHA_MIN = 1e-5f;
         ax                        = std::max(ax * (1 + aniso), ALPHA_MIN);
         ay                        = std::max(ay * (1 - aniso), ALPHA_MIN);
@@ -29,6 +31,12 @@ struct GGXDist {
     BSDL_INLINE_METHOD float G2_G1(Imath::V3f wi, Imath::V3f wo) const;
     BSDL_INLINE_METHOD Imath::V3f sample(const Imath::V3f& wo, float randu,
                                          float randv) const;
+
+    // Reflection specific improved sample/pdf functions
+    BSDL_INLINE_METHOD Imath::V3f
+    sample_reflection(const Imath::V3f& wo, float randu, float randv) const;
+    BSDL_INLINE_METHOD float pdf_reflection(const Imath::V3f& wo,
+                                            const Imath::V3f& wi) const;
 
     BSDL_INLINE_METHOD float roughness() const { return std::max(ax, ay); }
 
@@ -126,5 +134,31 @@ private:
     float Eo;
     float Eo_avg;
 };
+
+// Turquin style microfacet with multiple scattering
+template<typename Fresnel>
+BSDL_INLINE Sample
+eval_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
+                                float E_ms, const Imath::V3f& wo,
+                                const Imath::V3f& wi);
+
+template<typename Fresnel>
+BSDL_INLINE Sample
+sample_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
+                                  float E_ms, const Imath::V3f& wo,
+                                  const Imath::V3f& rnd);
+
+// SPI style microfacet with multiple scattering
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+eval_spi_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                            float E_ms, float E_ms_avg, const Imath::V3f& wo,
+                            const Imath::V3f& wi);
+
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+sample_spi_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                              float E_ms, float E_ms_avg, const Imath::V3f& wo,
+                              const Imath::V3f& rnd);
 
 BSDL_LEAVE_NAMESPACE

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-
 #pragma once
 
 #include <BSDL/config.h>
@@ -68,6 +67,50 @@ GGXDist::sample(const Imath::V3f& wo, float randu, float randv) const
 
     const Imath::V3f N = p.x * T1 + p2o * T2 + p3 * V;
     return Imath::V3f(ax * N.x, ay * N.y, std::max(N.z, 0.0f)).normalized();
+}
+
+BSDL_INLINE_METHOD Imath::V3f
+GGXDist::sample_reflection(const Imath::V3f& wo, float randu, float randv) const
+{
+    // From "Bounded VNDF Sampling for Smith–GGX Reflections" Eto - Tokuyoshi.
+    // This code is taken from listing 1 almost verbatim.
+    Imath::V3f i_std = Imath::V3f(wo.x * ax, wo.y * ay, wo.z).normalized();
+    // Sample a spherical cap
+    const float phi = 2.0f * PI * randu;
+    const float a   = CLAMP(std::min(ax, ay), 0.0f, 1.0f);  // Eq. 6
+    const float s   = 1 + sqrtf(SQR(wo.x) + SQR(wo.y));  // Omit sgn for a <=1
+    const float a2  = SQR(a);
+    const float s2  = SQR(s);
+    const float k   = (1 - a2) * s2 / (s2 + a2 * SQR(wo.z));  // Eq. 5
+    const float b   = k * i_std.z;
+    const float z   = (1 - randv) * (1 + b) - b;
+    const float sinTheta = sqrtf(CLAMP(1 - SQR(z), 0.0f, 1.0f));
+    constexpr auto cos   = BSDLConfig::Fast::cosf;
+    constexpr auto sin   = BSDLConfig::Fast::sinf;
+    Imath::V3f o_std     = { sinTheta * cos(phi), sinTheta * sin(phi), z };
+    // Compute the microfacet normal m
+    Imath::V3f m_std = i_std + o_std;
+    Imath::V3f m = Imath::V3f(m_std.x * ax, m_std.y * ay, m_std.z).normalized();
+    // Return the reflection vector o
+    return 2 * wo.dot(m) * m - wo;
+}
+
+BSDL_INLINE_METHOD float
+GGXDist::pdf_reflection(const Imath::V3f& wo, const Imath::V3f& wi) const
+{
+    // From "Bounded VNDF Sampling for Smith–GGX Reflections" Eto - Tokuyoshi.
+    // This code is taken from listing 2 almost verbatim.
+    const Imath::V3f m  = (wo + wi).normalized();
+    const float ndf     = D(m);
+    const Imath::V2f ai = { wo.x * ax, wo.y * ay };
+    const float len2    = ai.dot(ai);
+    const float t       = sqrtf(len2 + SQR(wo.z));
+    const float a       = CLAMP(std::min(ax, ay), 0.0f, 1.0f);  // Eq. 6
+    const float s  = 1 + sqrtf(SQR(wo.x) + SQR(wo.y));  // Omit sgn for a <=1
+    const float a2 = SQR(a);
+    const float s2 = SQR(s);
+    const float k  = (1 - a2) * s2 / (s2 + a2 * SQR(wo.z));  // Eq. 5
+    return ndf / (2 * (k * wo.z + t));  // Eq. 8 * || dm/do ||
 }
 
 template<typename BSDF>
@@ -296,6 +339,118 @@ MicrofacetMS<Fresnel>::computeFmiss() const
     assert(Fmiss.min(1) >= 0);
     assert(Fmiss.max() <= 1);
     return Fmiss;
+}
+
+// Turquin style microfacet with multiple scattering
+template<typename Fresnel>
+BSDL_INLINE Sample
+eval_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
+                                float E_ms, const Imath::V3f& wo,
+                                const Imath::V3f& wi)
+{
+    const float cosNO = wo.z;
+    const float cosNI = wi.z;
+    if (cosNI <= 0 || cosNO <= 0)
+        return {};
+
+    // get half vector
+    Imath::V3f m    = (wo + wi).normalized();
+    float cosMO     = m.dot(wo);
+    const float D   = dist.D(m);
+    const float G1  = dist.G1(wo);
+    float s_pdf     = dist.pdf_reflection(wo, wi);
+    const float out = dist.G2_G1(wi, wo) * (G1 * D) / (4.0f * cosNO * s_pdf);
+    // fresnel term between outgoing direction and microfacet
+    const Power F = fresnel.eval(cosMO);
+    // From "Practical multiple scattering compensation for microfacet models" - Emmanuel Turquin
+    // equation 16. Should we use F0 for msf scaling? Doesn't make a big difference.
+    const Power F_ms = F;
+    const float msf  = E_ms / (1 - E_ms);
+    const Power one(1, 1);
+    const Power O = out * F * (one + F_ms * msf);
+
+    return { wi, O, s_pdf, -1 /* roughness set by caller */ };
+}
+
+template<typename Fresnel>
+BSDL_INLINE Sample
+sample_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
+                                  float E_ms, const Imath::V3f& wo,
+                                  const Imath::V3f& rnd)
+{
+    const float cosNO = wo.z;
+    if (cosNO <= 0)
+        return {};
+
+    Imath::V3f wi = dist.sample_reflection(wo, rnd.x, rnd.y);
+    if (wi.z <= 0)
+        return {};
+
+    // evaluate brdf on outgoing direction
+    return eval_turquin_microms_reflection(dist, fresnel, E_ms, wo, wi);
+}
+
+// SPI style microfacet with multiple scattering, with a diffuse lobe
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+eval_spi_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                            float E_ms, float E_ms_avg, const Imath::V3f& wo,
+                            const Imath::V3f& wi)
+{
+    const float cosNO = wo.z;
+    const float cosNI = wi.z;
+    if (cosNI <= 0 || cosNO <= 0)
+        return {};
+
+    // get half vector
+    Imath::V3f m    = (wo + wi).normalized();
+    float cosMO     = m.dot(wo);
+    const float D   = dist.D(m);
+    const float G1  = dist.G1(wo);
+    const float out = dist.G2_G1(wi, wo);
+    float s_pdf     = (G1 * D) / (4.0f * cosNO);
+    // fresnel term between outgoing direction and microfacet
+    const Power F = fresnel.eval(cosMO);
+    const Power O = out * F;
+
+    const Power one = Power(1, 1);
+    // Like Turquin we are using F_avg = F instead of an average fresnel, the
+    // render integrator has an average effect for high roughness.
+    //const Power F0 = fresnel.F0();
+    const Power F_avg = F;
+    // Evaluate multiple scattering lobe, roughness set by caller. The
+    // 1 / (1 - F_avg * E_ms_avg) term comes from the series summation.
+    const Power O_ms = SQR(F_avg) * (1 - E_ms_avg) / (one - F_avg * E_ms_avg);
+
+    Sample ec = { wi, O_ms, E_ms * cosNI * ONEOVERPI, -1 };
+    ec.update(O, s_pdf, 1 - E_ms);
+
+    return ec;
+}
+
+template<typename Dist, typename Fresnel>
+BSDL_INLINE Sample
+sample_spi_microms_reflection(const Dist& dist, const Fresnel& fresnel,
+                              float E_ms, float E_ms_avg, const Imath::V3f& wo,
+                              const Imath::V3f& rnd)
+{
+    const float cosNO = wo.z;
+    if (cosNO <= 0)
+        return {};
+
+    Imath::V3f wi;
+    if (rnd.z < E_ms) {
+        // sample diffuse energy compensation lobe
+        wi = sample_cos_hemisphere(rnd.x, rnd.y);
+    } else {
+        // sample microfacet (half vector)
+        // generate outgoing direction
+        wi = reflect(wo, dist.sample(wo, rnd.x, rnd.y));
+        if (wi.z <= 0)
+            return {};
+    }
+    // evaluate brdf on outgoing direction
+    return eval_spi_microms_reflection(dist, fresnel, E_ms, E_ms_avg, wo, wi);
 }
 
 BSDL_LEAVE_NAMESPACE

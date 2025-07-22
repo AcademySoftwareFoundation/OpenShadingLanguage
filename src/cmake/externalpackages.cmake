@@ -58,7 +58,7 @@ checked_find_package (pugixml REQUIRED
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
                       VERSION_MIN 11.0
-                      VERSION_MAX 19.9
+                      VERSION_MAX 20.9
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES
                             LLVM_SHARED_MODE)
 # ensure include directory is added (in case of non-standard locations
@@ -201,6 +201,7 @@ if (OSL_USE_OPTIX)
         target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
     endfunction()
 else ()
+    message(STATUS "CUDA/OptiX support disabled")
     function (osl_optix_target TARGET)
     endfunction()
 endif ()

@@ -36,11 +36,16 @@ on:
 
 permissions: read-all
 
+# Allow subsequent pushes to the same PR or REF to cancel any previous jobs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 
 jobs:
 
   aswf-old:
-    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') }}
+    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
     name: "VFX${{matrix.vfxyear}} ${{matrix.desc}}"
     strategy:
       fail-fast: false
@@ -87,7 +92,7 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
           - desc: gcc9/C++17 llvm11 py3.9 exr3.1 oiio3.0 sse2 batch-b4sse2
-            nametag: linux-vfx2021
+            nametag: linux-vfx2022-clang
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang13
             vfxyear: 2022
@@ -151,20 +156,21 @@ jobs:
       #   with:
       #     egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+      - name: Build setup
+        run: |
+            ${{matrix.setenvs}}
+            src/build-scripts/ci-startup.bash
       - name: Prepare ccache timestamp
         id: ccache_cache_keys
         run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          path: /tmp/ccache
-          key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
-          restore-keys: ${{github.job}}-${{matrix.nametag}}-
-      - name: Build setup
-        run: |
-            ${{matrix.setenvs}}
-            src/build-scripts/ci-startup.bash
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
+          restore-keys: ${{matrix.nametag}}-
+          save-always: true
       - name: Remove existing OpenEXR
         if: matrix.openexr_ver != ''
         run: |
@@ -203,7 +209,7 @@ jobs:
 
 
   linux:
-    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') }}
+    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
     name: "${{matrix.desc}}"
     uses: ./.github/workflows/build-steps.yml
     with:
@@ -250,19 +256,7 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: VP2023 GPU Cuda11 gcc11/C++17 llvm15 py3.10 OIIO-main avx2
-            nametag: linux-optix7-2023
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2023-clang15
-            cxx_std: 17
-            openimageio_ver: main
-            python_ver: "3.10"
-            pybind11_ver: v2.10.0
-            simd: avx2,f16c
-            skip_tests: 1
-            setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1" OPTIX_VERSION=7.0
-                            OPENIMAGEIO_CMAKE_FLAGS=-DBUILD_FMT_VERSION=9.1.0
-          - desc: VP2024 gcc11/C++17 llvm17 py3.11 boost1.82 oiio-rel avx2
+          - desc: VP2024 gcc11/C++17 llvm17 py3.11 oiio-rel avx2
             nametag: linux-vfx2024
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2024-clang17
@@ -273,6 +267,18 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2
             # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
+          - desc: VP2025 gcc11/C++17 llvm18 py3.11 oiio-3.0 avx2
+            nametag: linux-vfx2025
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2025-clang18
+            cxx_std: 17
+            python_ver: "3.11"
+            # pybind11_ver: v2.11.1
+            simd: avx2,f16c
+            batched: b8_AVX2
+            setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery"
+            # ^^ exclude python-oslquery test until the ASWF container properly
+            #    includes OIIO's python bindings, then we can remove that.
 
           # Address and leak sanitizers
           - desc: sanitizers
@@ -319,7 +325,7 @@ jobs:
           # break the ABI. Basically, we will build that version as well as
           # the current one, and compare the resulting libraries.
           - desc: abi check
-            nametag: linux-vfx2023
+            nametag: linux-abi
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
             cc_compiler: gcc
@@ -485,7 +491,7 @@ jobs:
 
 
   macos:
-    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'linux-only') }}
+    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'optix-only') }}
     name: "${{matrix.desc}}"
     uses: ./.github/workflows/build-steps.yml
     with:
@@ -554,7 +560,7 @@ jobs:
 
 
   windows:
-    if: ${{ ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'macos-only') }}
+    if: ${{ ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
     name: "${{matrix.desc}}"
     uses: ./.github/workflows/build-steps.yml
     with:
@@ -589,20 +595,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: Windows-2019 VS2019
-            runner: windows-2019
-            nametag: windows-2019
-            generator: "Visual Studio 16 2019"
-            python_ver: "3.9"
-            opencolorio_ver: v2.3.2
-            openexr_ver: v3.3.2
-            openimageio_ver: release
-            skip_tests: 1
-            setenvs: export LLVM_VERSION=18.1.8
-                            OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
-                            PUGIXML_VERSION=v1.14
-                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
-
           #
           # Windows 2022 / MSVS 17 case is below. It's not working yet,
           # work in progress.
@@ -633,3 +625,58 @@ jobs:
                             OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
                             PUGIXML_VERSION=v1.14
                             OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
+
+
+  optix-gpu:
+    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') }}
+    name: "${{matrix.desc}}"
+    uses: ./.github/workflows/build-steps.yml
+    with:
+      nametag: ${{ matrix.nametag || 'unnamed!' }}
+      runner: ${{ matrix.runner || 'ubuntu-latest' }}
+      container: ${{ matrix.container }}
+      cc_compiler: ${{ matrix.cc_compiler || 'gcc' }}
+      cxx_compiler: ${{ matrix.cxx_compiler || 'g++' }}
+      cxx_std: ${{ matrix.cxx_std || '17' }}
+      build_type: ${{ matrix.build_type || 'Release' }}
+      depcmds: ${{ matrix.depcmds }}
+      extra_artifacts: ${{ matrix.extra_artifacts }}
+      fmt_ver: ${{ matrix.fmt_ver }}
+      opencolorio_ver: ${{ matrix.opencolorio_ver }}
+      openexr_ver: ${{ matrix.openexr_ver }}
+      openimageio_ver: ${{ matrix.openimageio_ver }}
+      pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_ver: ${{ matrix.python_ver }}
+      setenvs: ${{ matrix.setenvs }}
+      simd: ${{ matrix.simd }}
+      batched: ${{ matrix.batched }}
+      skip_build: ${{ matrix.skip_build }}
+      skip_tests: ${{ matrix.skip_tests }}
+      abi_check: ${{ matrix.abi_check }}
+      build_docs: ${{ matrix.build_docs }}
+      generator: ${{ matrix.generator }}
+      ctest_args: ${{ matrix.ctest_args }}
+      ctest_test_timeout: ${{ matrix.ctest_test_timeout || '800' }}
+      coverage: ${{ matrix.coverage || 0 }}
+      sonar: ${{ matrix.sonar || 0 }}
+      llvm_action_ver: ${{ matrix.llvm_action_ver }}
+      clang_format: ${{ matrix.clang_format }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - desc: OptiX ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'GPU') || 'build only' }} VP2025 gcc11/C++17 llvm18 py3.11 oiio-rel avx2
+            # ^^ This will run on GPU when on the ASWF account, but is a
+            # "build only" test on user accounts. Similar conditionals below
+            # select the right runner type and whether tests are run.
+            nametag: linux-optix-vfx2025
+            runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-20.04-gpu-t4-4c-16g-176h') || 'ubuntu-latest' }}
+            container: aswf/ci-osl:2025-clang18
+            cxx_std: 17
+            python_ver: "3.11"
+            pybind11_ver: v2.11.1
+            simd: avx2,f16c
+            skip_tests: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && '0') || '1' }}
+            setenvs: export OSL_CMAKE_FLAGS="-DOSL_USE_OPTIX=1"
+                            OPTIX_VERSION=8.0.0
+                            CTEST_EXCLUSIONS="broken|render-microfacet|example-cuda|python-oslquery"

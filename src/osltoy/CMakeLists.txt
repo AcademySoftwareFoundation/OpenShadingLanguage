@@ -9,6 +9,7 @@ endif()
 set (osltoy_srcs
      osltoymain.cpp osltoyapp.cpp codeeditor.cpp osltoyrenderer.cpp)
 add_executable (osltoy ${osltoy_srcs})
+target_include_directories (osltoy BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 set_target_properties (osltoy PROPERTIES FOLDER "Tools")
 target_link_libraries (osltoy
     PRIVATE

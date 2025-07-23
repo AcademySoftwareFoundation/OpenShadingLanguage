@@ -532,13 +532,13 @@ jobs:
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
-            openimageio_ver: lg-buildpng
+            openimageio_ver: dev-3.0
             python_ver: "3.13"
             aclang: 14
             ctest_test_timeout: 120
             setenvs: export HOMEBREW_PREFIX=/usr/local
                             LLVMBREWVER="@17"
-                            OPENIMAGEIO_REPO=lgritz/OpenImageIO
+                            USE_OPENVDB=0
           - desc: MacOS-14-ARM llvm19 oiio-release
             runner: macos-14
             nametag: macos14-arm-p313

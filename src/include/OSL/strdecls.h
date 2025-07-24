@@ -14,6 +14,10 @@
 #    error Do not include this file unless STRDECL is defined
 #endif
 
+// avoid naming conflict with MSVC macro
+#ifdef RGB
+#    undef RGB
+#endif
 
 STRDECL("", _emptystring_)
 STRDECL("camera", camera)

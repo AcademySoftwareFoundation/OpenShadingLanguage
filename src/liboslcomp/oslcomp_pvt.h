@@ -49,95 +49,141 @@ public:
 
     bool osl_parse_buffer(const std::string& preprocessed_buffer);
 
-    /// The name of the file we're currently parsing
-    ///
-    ustring filename() const { return m_filename; }
-
     /// Set the name of the file we're currently parsing (should only
     /// be called by the lexer!)
-    void filename(ustring f)
+    void update_filename(ustring f)
     {
-        m_filename = f;
+        m_srcloc.filename = f;
         m_file_dependencies.emplace(f);
     }
 
-    /// The line we're currently parsing
-    ///
-    int lineno() const { return m_lineno; }
+    /// Update the location we're currently parsing
+    // Often times this code is written in the Flex file, but we keep it here instead
+    // to clarify its special relation to SrcLoc::from_yyloc(), as the two are joined
+    // at the hip anyways. In the Flex file this is invoked by the YY_USER_ACTION macro.
+    // When the function returns, the four values {first,last}{colum,line} bound the
+    // `text` that was passed in
+    void update_srcloc(int* first_line, int* first_column, int* last_line,
+                    int* last_column, const char* text)
+    {
+        // update the state of the parser
+        *first_line   = *last_line;
+        *first_column = *last_column;
 
-    /// Set the line we're currently parsing (should only be called by
-    /// the lexer!)
-    void lineno(int l) { m_lineno = l; }
+        for (int i = 0; text[i] != '\0'; i++) {
+            if (text[i] == '\n') {
+                (*last_line)++;
+                *last_column = 1;
+            } else {
+                (*last_column)++;
+            }
+        }
 
-    /// Increment the line count
-    ///
-    int incr_lineno() { return ++m_lineno; }
+        m_srcloc.from_yyloc(*first_line, *first_column, *last_line,
+                            *last_column);
+    }
+
+    /// Retrieve the location of the lexeme/segment currently being parsed, as well as its filename
+    const SrcLoc& srcloc() const { return m_srcloc; }
 
     ErrorHandler& errhandler() const { return *m_errhandler; }
 
+    /// Support for errorfmt/warningfmt/etc...
+    void message_srcloc(const SrcLoc& srcloc) const
+    {
+        string_view lines = retrieve_source_lines(srcloc);
+        m_errhandler->messagefmt("{}\n", lines);
+        // see if we can underline the span,
+        // N.B. this simple method will only work on srclocs spanning one line,
+        // multiline is rather messier to do well, as we'd probably want to interleave
+        // the source text with the underlining
+        if (srcloc.column_begin != SrcLoc::kUnknown) {
+            std::string marker(lines.substr(0, srcloc.column_begin));
+            // replace all non-whitespace with one space so we
+            // don't mess up alignment if there are tabs
+            for (char& c : marker)
+                if (isgraph(c))
+                    c = ' ';
+
+            marker += std::string(srcloc.colcount(), '^');
+            m_errhandler->messagefmt("{}\n", marker);
+        }
+    }
+
     /// Error reporting
     template<typename... Args>
-    void errorfmt(ustring filename, int line, const char* format,
+    void errorfmt(const SrcLoc& srcloc, const char* format,
                   const Args&... args) const
     {
         OSL_DASSERT(format && format[0]);
         std::string msg = OIIO::Strutil::fmt::format(format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
-        if (filename.size())
-            m_errhandler->errorfmt("{}:{}: error: {}", filename, line, msg);
-        else
+        if (srcloc) {
+            m_errhandler->errorfmt("{}: error: {}", srcloc, msg);
+            message_srcloc(srcloc);
+        } else {
             m_errhandler->errorfmt("error: {}", msg);
+        }
+
         m_err = true;
     }
 
     /// Warning reporting
     template<typename... Args>
-    void warningfmt(ustring filename, int line, const char* format,
+    void warningfmt(const SrcLoc& srcloc, const char* format,
                     const Args&... args) const
     {
         OSL_DASSERT(format && format[0]);
-        if (nowarn(filename, line))
+        if (nowarn(srcloc))
             return;  // skip if the filename/line is on the nowarn list
         std::string msg = OIIO::Strutil::fmt::format(format, args...);
-        if (msg.size() && msg.back() == '\n')  // trim extra newline
-            msg.pop_back();
         if (m_err_on_warning) {
-            errorfmt(filename, line, "{}", msg);
+            errorfmt(srcloc, "{}", msg);
             return;
         }
-        if (filename.size())
-            m_errhandler->warningfmt("{}:{}: warning: {}", filename, line, msg);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
+
+        if (srcloc) {
+            m_errhandler->warningfmt("{}: warning: {}", srcloc, msg);
+            message_srcloc(srcloc);
+        }
         else
             m_errhandler->warningfmt("warning: {}", msg);
     }
 
     /// Info reporting
     template<typename... Args>
-    void infofmt(ustring filename, int line, const char* format,
+    void infofmt(const SrcLoc& srcloc, const char* format,
                  const Args&... args) const
     {
         OSL_DASSERT(format && format[0]);
         std::string msg = OIIO::Strutil::fmt::format(format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
-        if (filename.size())
-            m_errhandler->infofmt("{}:{}: info: {}", filename, line, msg);
+
+        if (srcloc) {
+            m_errhandler->infofmt("{}: info: {}", srcloc, msg);
+            message_srcloc(srcloc);
+        }
         else
-            m_errhandler->infofmt("info: {}", msg);
+            m_errhandler->infofmt("info: {}", srcloc, msg);
     }
 
     /// message reporting
     template<typename... Args>
-    void messagefmt(ustring filename, int line, const char* format,
+    void messagefmt(const SrcLoc& srcloc, const char* format,
                     const Args&... args) const
     {
         OSL_DASSERT(format && format[0]);
         std::string msg = OIIO::Strutil::fmt::format(format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
-        if (filename.size())
-            m_errhandler->messagefmt("{}:{}: {}", filename, line, msg);
+        if (srcloc) {
+            m_errhandler->messagefmt("{}: {}", srcloc, msg);
+            message_srcloc(srcloc);
+        }
         else
             m_errhandler->messagefmt("{}", msg);
     }
@@ -339,13 +385,14 @@ public:
     // Add a pragma nowarn for the following line
     void pragma_nowarn()
     {
-        m_nowarn_lines.insert({ filename(), lineno() + 1 });
+        // we use human numbers, we need the following line
+        m_nowarn_lines.insert({ m_srcloc.filename, m_srcloc.last_lineno() + 1 });
     }
 
     // Is the line among the 'do not warn' list
-    bool nowarn(ustring filename, int line) const
+    bool nowarn(const SrcLoc& srcloc) const
     {
-        return m_nowarn_lines.find({ filename, line }) != m_nowarn_lines.end();
+        return m_nowarn_lines.find({ srcloc.filename, srcloc.last_lineno() }) != m_nowarn_lines.end();
     }
 
     std::stack<TypeSpec>& typespec_stack() { return m_typespec_stack; }
@@ -419,14 +466,25 @@ private:
         return static_cast<ASTshader_declaration*>(m_shader.get());
     }
 
-    // Retrieve the particular line of a file.
-    string_view retrieve_source(ustring filename, int line);
+    string_view retrieve_source_impl(const SrcLoc& srcloc,
+                                     bool full_lines) const;
 
-    // Clear internal caches that speed up retrieve_source().
+    /// Retrieve the given location range from a file, in full lines
+    string_view retrieve_source_lines(const SrcLoc& srcloc) const
+    {
+        return retrieve_source_impl(srcloc, true);
+    }
+
+    /// Retrieve the given location range from a file, just the covered tokens
+    string_view retrieve_source_tokens(const SrcLoc& srcloc) const
+    {
+        return retrieve_source_impl(srcloc, false);
+    }
+
+    // Clear internal caches that speed up retrieve_source_xxx().
     void clear_filecontents_cache();
 
-    ustring m_filename;                      ///< Current file we're parsing
-    int m_lineno;                            ///< Current line we're parsing
+    SrcLoc m_srcloc;                         ///< Location of the lexeme/segment being parsed
     std::string m_output_filename;           ///< Output filename
     ustring m_main_filename;                 ///< Main input filename
     std::string m_cwd;                       ///< Current working directory
@@ -461,12 +519,19 @@ private:
     int m_main_method_start;     ///< Instruction where 'main' starts
     bool m_declaring_shader_formals;  ///< Are we declaring shader formals?
     std::set<std::pair<ustring, int>> m_nowarn_lines;  ///< Lines for 'nowarn'
-    typedef std::unordered_map<ustring, std::string> FCMap;
-    FCMap m_filecontents_map;   ///< Contents of source files we've seen
-    ustring m_last_sourcefile;  ///< Last filename for retrieve_source
-    std::string* m_last_filecontents = nullptr;  //< Last file contents
-    int m_last_sourceline;
-    size_t m_last_sourceline_offset;
+
+    struct FileLines {
+        std::string text;
+        std::vector<uint32_t> lines;
+        FileLines(ustring fname);
+
+        explicit operator bool() const { return !lines.empty(); }
+    };
+    typedef std::unordered_map<ustring, FileLines> FCMap;
+    mutable FCMap m_filecontents_map;              ///< Contents of source files we've seen
+    mutable ustring m_last_sourcefile;             ///< Last filename for retrieve_source
+    mutable FileLines* m_last_filelines = nullptr; ///< Last file contents
+
     std::string m_deps_filename;            ///< Where to write deps? -MF
     std::string m_deps_target;              ///< Custom target: -MF
     std::set<ustring> m_file_dependencies;  ///< All include file dependencies

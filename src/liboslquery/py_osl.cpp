@@ -30,7 +30,6 @@ declare_oslqueryparam(py::module& m)
         .def_readwrite("varlenarray", &Parameter::varlenarray)
         .def_readwrite("isstruct", &Parameter::isstruct)
         .def_readwrite("isclosure", &Parameter::isclosure)
-        .def_readwrite("type", &Parameter::type)
         .def_property_readonly(
             "value",
             [](const Parameter& p) {

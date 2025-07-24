@@ -424,7 +424,7 @@ jobs:
             opencolorio_ver: v2.4.2
             openexr_ver: v3.3.3
             openimageio_ver: release
-            pybind11_ver: v2.13.6
+            pybind11_ver: v3.0.0
             python_ver: "3.12"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
@@ -460,7 +460,7 @@ jobs:
             opencolorio_ver: v2.2.1
             openexr_ver: v3.1.11
             openimageio_ver: release
-            pybind11_ver: v2.9.2
+            pybind11_ver: v2.13.6
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
@@ -532,22 +532,23 @@ jobs:
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
+            openimageio_ver: dev-3.0
             python_ver: "3.13"
             aclang: 14
             ctest_test_timeout: 120
             setenvs: export HOMEBREW_PREFIX=/usr/local
-                            EXTRA_BREW_PACKAGES="openimageio"
                             LLVMBREWVER="@17"
+                            USE_OPENVDB=0
           - desc: MacOS-14-ARM llvm19 oiio-release
             runner: macos-14
             nametag: macos14-arm-p313
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
+            openimageio_ver: main
             python_ver: "3.13"
             aclang: 15
-            setenvs: export EXTRA_BREW_PACKAGES="openimageio"
-                            LLVMBREWVER="@19"
+            setenvs: export LLVMBREWVER="@19"
           - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm19 oiio-main
             runner: macos-15
             nametag: macos15-arm-py313

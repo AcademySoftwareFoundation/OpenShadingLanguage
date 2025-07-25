@@ -1,6 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14.7.0 (1 Aug? 2025) -- compared to 1.14.6.0
+-------------------------------------------------------------
+
+
+
 Release 1.14.6.0 (2 Jul 2025) -- compared to 1.14.5.1
 -------------------------------------------------------------
 - *fix*: Check for errors in ShadingSystem::ReParameter() [#1998](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1998) (by cmstein)

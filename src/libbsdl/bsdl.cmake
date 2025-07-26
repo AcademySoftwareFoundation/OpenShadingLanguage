@@ -16,7 +16,8 @@ function(ADD_BSDL_LIBRARY NAME)
     add_executable (genluts ${CMAKE_CURRENT_SOURCE_DIR}/${bsdl_SUBDIR}/src/genluts.cpp)
     target_link_libraries(genluts PRIVATE BSDL_BOOTSTRAP Threads::Threads)
     file(MAKE_DIRECTORY ${BSDL_GEN_HEADERS}/BSDL/SPI)
-    add_custom_command(TARGET genluts POST_BUILD USES_TERMINAL COMMAND $<TARGET_FILE:genluts> ${BSDL_GEN_HEADERS}/BSDL/SPI
+    file(MAKE_DIRECTORY ${BSDL_GEN_HEADERS}/BSDL/MTX)
+    add_custom_command(TARGET genluts POST_BUILD USES_TERMINAL COMMAND $<TARGET_FILE:genluts> ${BSDL_GEN_HEADERS}/BSDL
                     COMMENT "Generating BSDL lookup tables ...")
 
     if (DEFINED bsdl_SPECTRAL_COLOR_SPACES)

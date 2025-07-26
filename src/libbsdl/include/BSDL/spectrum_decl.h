@@ -130,6 +130,10 @@ struct Spectrum {
         }
     }
 
+    static BSDL_INLINE_METHOD float get_dispersion_ior(const float dispersion,
+                                                       const float basic_ior,
+                                                       const float wavelength);
+
     template<typename T>
     static BSDL_INLINE_METHOD T lookup(float lambda, const T array[LAMBDA_RES]);
 };

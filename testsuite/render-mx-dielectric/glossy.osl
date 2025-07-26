@@ -13,6 +13,9 @@ glossy
     color Ct = 0.0
         [[  string description = "Transmission tint",
             float UImin = 0, float UImax = 1 ]],
+    color Base = 1.0
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]],
     float ior = 1.5
         [[  string description = "Index of refraction",
             float UImin = 1.0, float UImax = 3.0 ]],
@@ -28,5 +31,7 @@ glossy
     float alpha_x = alpha * (1.0 - anisotropy);
     float alpha_y = alpha;
     vector U = normalize(cross(N, dPdv));
-    Ci = dielectric_bsdf(N, U, Cr, Ct, alpha_x, alpha_y, ior, "ggx");
+    closure color under = Base * diffuse(N);
+    closure color over = dielectric_bsdf(N, U, Cr, Ct, alpha_x, alpha_y, ior, "ggx");
+    Ci = layer(over, under);
 }

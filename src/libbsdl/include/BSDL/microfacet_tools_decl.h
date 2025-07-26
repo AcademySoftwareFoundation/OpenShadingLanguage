@@ -11,8 +11,6 @@
 BSDL_ENTER_NAMESPACE
 
 struct GGXDist {
-    BSDL_INLINE_METHOD GGXDist() : ax(0), ay(0) {}
-
     BSDL_INLINE_METHOD GGXDist(float rough, float aniso,
                                bool flip_aniso = false)
         : ax(SQR(rough)), ay(ax)
@@ -25,18 +23,22 @@ struct GGXDist {
         ax                        = std::max(ax * (1 + aniso), ALPHA_MIN);
         ay                        = std::max(ay * (1 - aniso), ALPHA_MIN);
     }
+    GGXDist() = default;
 
     BSDL_INLINE_METHOD float D(const Imath::V3f& Hr) const;
+    // When using sample_for_refl this gives you D_refl / D for convenience
+    BSDL_INLINE_METHOD float D_refl_D(const Imath::V3f& wo,
+                                      const Imath::V3f& m) const;
     BSDL_INLINE_METHOD float G1(Imath::V3f w) const;
     BSDL_INLINE_METHOD float G2_G1(Imath::V3f wi, Imath::V3f wo) const;
+    // Plain visible micro normal sampling. PDF is G1 * D
     BSDL_INLINE_METHOD Imath::V3f sample(const Imath::V3f& wo, float randu,
                                          float randv) const;
 
-    // Reflection specific improved sample/pdf functions
+    // Reflection specific improved sample function. Gives you a micro
+    // normal that won't reflect under the surface. PDF is D_refl_D() * D
     BSDL_INLINE_METHOD Imath::V3f
-    sample_reflection(const Imath::V3f& wo, float randu, float randv) const;
-    BSDL_INLINE_METHOD float pdf_reflection(const Imath::V3f& wo,
-                                            const Imath::V3f& wi) const;
+    sample_for_refl(const Imath::V3f& wo, float randu, float randv) const;
 
     BSDL_INLINE_METHOD float roughness() const { return std::max(ax, ay); }
 
@@ -94,7 +96,8 @@ struct MiniMicrofacetGGX : public MiniMicrofacet<GGXDist> {
     };
     static BSDL_INLINE_METHOD Energy& get_energy();
 
-    static const char* lut_header() { return "microfacet_tools_luts.h"; }
+    static constexpr const char* NS = "spi";
+    static const char* lut_header() { return "SPI/microfacet_tools_luts.h"; }
     static const char* struct_name() { return "MiniMicrofacetGGX"; }
 };
 

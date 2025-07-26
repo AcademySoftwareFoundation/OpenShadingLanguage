@@ -49,7 +49,8 @@ struct SheenLTC {
     typedef const Imath::V3f (*V32_array)[32];
     static BSDL_INLINE_METHOD V32_array param_ptr();
 
-    static const char* lut_header() { return "bsdf_sheenltc_luts.h"; }
+    static constexpr const char* NS = "spi";
+    static const char* lut_header() { return "SPI/bsdf_sheenltc_luts.h"; }
     static const char* struct_name() { return "SheenLTC"; }
 
     BSDL_INLINE_METHOD float calculate_phi(const Imath::V3f& v) const;

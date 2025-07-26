@@ -4,6 +4,7 @@
 #define BSDL_INLINE_METHOD inline OSL_HOSTDEVICE
 #define BSDL_DECL          OSL_DEVICE
 #define BSDL_UNROLL()      // Do nothing
+#define BSDL_STRHASH(str)  OSL::strhash(str)
 
 #include <BSDL/config.h>
 

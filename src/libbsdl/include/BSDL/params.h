@@ -12,6 +12,8 @@
 
 BSDL_ENTER_NAMESPACE
 
+using Stringhash = uintptr_t;
+
 enum class ParamType : uint8_t {
     NONE = 0,
     VECTOR,
@@ -39,7 +41,7 @@ template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<Imath::V3f>::get(
 template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<int>::get()         { return ParamType::INT;     }
 template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<float>::get()       { return ParamType::FLOAT;   }
 template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<Imath::C3f>::get()  { return ParamType::COLOR;   }
-template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<const char*>::get() { return ParamType::STRING;  }
+template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<Stringhash>::get()  { return ParamType::STRING;  }
 template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<const void*>::get() { return ParamType::CLOSURE; }
 // clang-format on
 

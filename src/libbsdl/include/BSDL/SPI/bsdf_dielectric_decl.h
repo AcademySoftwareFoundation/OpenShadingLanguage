@@ -13,6 +13,7 @@ BSDL_ENTER_NAMESPACE
 namespace spi {
 
 struct DielectricFresnel {
+    DielectricFresnel() = default;
     BSDL_INLINE_METHOD DielectricFresnel(float _eta, bool backside);
     BSDL_INLINE_METHOD float eval(const float c) const;
     BSDL_INLINE_METHOD float avg() const;
@@ -49,6 +50,8 @@ template<typename Dist, int side> struct Dielectric {
     {
     }
 
+    Dielectric() = default;
+
     BSDL_INLINE_METHOD Sample eval(Imath::V3f wo, Imath::V3f wi, bool doreflect,
                                    bool dorefract) const;
     BSDL_INLINE_METHOD Sample sample(Imath::V3f wo, float randu, float randv,
@@ -79,12 +82,17 @@ struct DielectricFront : public Dielectric<GGXDist, 0> {
     BSDL_INLINE_METHOD DielectricFront(const GGXDist& dist,
                                        const DielectricFresnel& fresnel,
                                        float prob_clamp);
+    DielectricFront() = default;
     struct Energy {
         float data[Nf * Nr * Nc];
     };
     static BSDL_INLINE_METHOD Energy& get_energy();
 
-    static const char* lut_header() { return "bsdf_dielectric_front_luts.h"; }
+    static constexpr const char* NS = "spi";
+    static const char* lut_header()
+    {
+        return "SPI/bsdf_dielectric_front_luts.h";
+    }
     static const char* struct_name() { return "DielectricFront"; }
 };
 
@@ -94,12 +102,17 @@ struct DielectricBack : public Dielectric<GGXDist, 1> {
     BSDL_INLINE_METHOD DielectricBack(const bsdl::GGXDist& dist,
                                       const DielectricFresnel& fresnel,
                                       float prob_clamp);
+    DielectricBack() = default;
     struct Energy {
         float data[Nf * Nr * Nc];
     };
     static BSDL_INLINE_METHOD Energy& get_energy();
 
-    static const char* lut_header() { return "bsdf_dielectric_back_luts.h"; }
+    static constexpr const char* NS = "spi";
+    static const char* lut_header()
+    {
+        return "SPI/bsdf_dielectric_back_luts.h";
+    }
     static const char* struct_name() { return "DielectricBack"; }
 };
 

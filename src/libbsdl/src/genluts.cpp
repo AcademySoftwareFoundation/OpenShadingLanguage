@@ -10,6 +10,7 @@
 #include <BSDL/config.h>
 using BSDLConfig = bsdl::BSDLDefaultConfig;
 
+#include <BSDL/MTX/bsdf_dielectric_impl.h>
 #include <BSDL/SPI/bsdf_backscatter_impl.h>
 #include <BSDL/SPI/bsdf_clearcoat_impl.h>
 #include <BSDL/SPI/bsdf_dielectric_impl.h>
@@ -25,14 +26,17 @@ using BSDLConfig = bsdl::BSDLDefaultConfig;
 #include <tuple>
 #include <vector>
 
-#define BAKE_BSDF_LIST(E)     \
-    E(spi::MiniMicrofacetGGX) \
-    E(spi::PlasticGGX)        \
-    E(spi::DielectricFront)   \
-    E(spi::DielectricBack)    \
-    E(spi::CharlieSheen)      \
-    E(spi::SheenLTC)          \
-    E(spi::Thinlayer)
+#define BAKE_BSDF_LIST(E)       \
+    E(spi::MiniMicrofacetGGX)   \
+    E(spi::PlasticGGX)          \
+    E(spi::DielectricFront)     \
+    E(spi::DielectricBack)      \
+    E(spi::CharlieSheen)        \
+    E(spi::SheenLTC)            \
+    E(spi::Thinlayer)           \
+    E(mtx::DielectricReflFront) \
+    E(mtx::DielectricBothFront) \
+    E(mtx::DielectricBothBack)
 
 #define LUT_PLACEHOLDER(type)                           \
     BSDL_ENTER_NAMESPACE                                \
@@ -138,8 +142,8 @@ compute_E(float cos_theta, const BSDF& bsdf, uint32_t fresnel_index,
         E = LERP(1.0f / (1.0f + i), E, out);
     }
     assert(E >= 0);
-    assert(E <= 1);
-    return E;
+    assert(E <= 1.01f);  // Allow for some error
+    return std::min(E, 1.0f);
 }
 
 template<typename BSDF>
@@ -174,7 +178,7 @@ bake_emiss_tables(const std::string& output_dir)
 
     fprintf(outf, "#pragma once\n\n");
     fprintf(outf, "BSDL_ENTER_NAMESPACE\n\n");
-    fprintf(outf, "namespace spi {\n\n");
+    fprintf(outf, "namespace %s {\n\n", BSDF::NS);
     fprintf(outf, "BSDL_INLINE_METHOD %s::Energy& %s::get_energy()\n",
             BSDF::struct_name(), BSDF::struct_name());
     fprintf(outf, "{\n");
@@ -193,7 +197,7 @@ bake_emiss_tables(const std::string& output_dir)
     fprintf(outf, "    }};\n");
     fprintf(outf, "    return energy;\n");
     fprintf(outf, "}\n\n");
-    fprintf(outf, "} // namespace spi \n\n");
+    fprintf(outf, "} // namespace %s \n\n", BSDF::NS);
     fprintf(outf, "BSDL_LEAVE_NAMESPACE\n");
     fclose(outf);
     printf("Wrote LUTs to %s\n", out_file.c_str());

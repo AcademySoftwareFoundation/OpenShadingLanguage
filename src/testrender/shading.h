@@ -122,82 +122,6 @@ struct MxMicrofacetBaseParams {
     ustringhash label;
 };
 
-struct MxDielectricParams : public MxMicrofacetBaseParams {
-    Color3 reflection_tint;
-    Color3 transmission_tint;
-    float ior;
-    // optional
-    float thinfilm_thickness;
-    float thinfilm_ior;
-
-    OSL_HOSTDEVICE Color3 evalR(float cos_theta) const
-    {
-        return reflection_tint * fresnel_dielectric(cos_theta, ior);
-    }
-
-    OSL_HOSTDEVICE Color3 evalT(float cos_theta) const
-    {
-        return transmission_tint * (1.0f - fresnel_dielectric(cos_theta, ior));
-    }
-
-    OSL_HOSTDEVICE Color3 dirAlbedoR(float cos_theta) const
-    {
-        float iorRatio = (ior - 1.0f) / (ior + 1.0f);
-        Color3 f0(iorRatio * iorRatio);
-        Color3 f90(1.0f);
-
-        // Rational quadratic fit for GGX directional albedo
-        // https://github.com/AcademySoftwareFoundation/MaterialX/blob/main/libraries/pbrlib/genglsl/lib/mx_microfacet_specular.glsl
-        float x  = OIIO::clamp(cos_theta, 0.0f, 1.0f);
-        float y  = sqrtf(roughness_x * roughness_y);  // average alpha
-        float x2 = x * x;
-        float y2 = y * y;
-        Vec2 num = Vec2(0.1003f, 0.9345f) + Vec2(-0.6303f, -2.323f) * x
-                   + Vec2(9.748f, 2.229f) * y + Vec2(-2.038f, -3.748f) * x * y
-                   + Vec2(29.34f, 1.424f) * x2 + Vec2(-8.245f, -0.7684f) * y2
-                   + Vec2(-26.44f, 1.436f) * x2 * y
-                   + Vec2(19.99f, 0.2913f) * x * y2
-                   + Vec2(-5.448f, 0.6286f) * x2 * y2;
-        Vec2 den = Vec2(1.0f, 1.0f) + Vec2(-1.765f, 0.2281f) * x
-                   + Vec2(8.263f, 15.94f) * y + Vec2(11.53f, -55.83f) * x * y
-                   + Vec2(28.96f, 13.08f) * x2 + Vec2(-7.507f, 41.26f) * y2
-                   + Vec2(-36.11f, 54.9f) * x2 * y
-                   + Vec2(15.86f, 300.2f) * x * y2
-                   + Vec2(33.37f, -285.1f) * x2 * y2;
-        float a = OIIO::clamp(num.x / den.x, 0.0f, 1.0f);
-        float b = OIIO::clamp(num.y / den.y, 0.0f, 1.0f);
-        return reflection_tint * (f0 * a + f90 * b);
-    }
-};
-
-struct MxConductorParams : public MxMicrofacetBaseParams {
-    Color3 ior;
-    Color3 extinction;
-    // optional
-    float thinfilm_thickness;
-    float thinfilm_ior;
-
-    OSL_HOSTDEVICE Color3 evalR(float cos_theta) const
-    {
-        return fresnel_conductor(cos_theta, ior, extinction);
-    }
-
-    OSL_HOSTDEVICE Color3 evalT(float cos_theta) const { return Color3(0.0f); }
-
-    OSL_HOSTDEVICE Color3 dirAlbedoR(float cos_theta) const
-    {
-        // TODO: Integrate the MaterialX fit for GGX directional albedo, which
-        //       may improve multiscatter compensation for conductors.
-        return evalR(cos_theta);
-    }
-
-    // Avoid function was declared but never referenced
-    // float get_ior() const
-    // {
-    //     return 0;  // no transmission possible
-    // }
-};
-
 struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {
     Color3 reflection_tint;
     Color3 transmission_tint;
@@ -323,9 +247,8 @@ using MxGeneralizedSchlick
     = MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true>;
 using MxGeneralizedSchlickOpaque
     = MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>;
-using MxDielectric       = MxMicrofacet<MxDielectricParams, GGXDist, true>;
-using MxDielectricOpaque = MxMicrofacet<MxDielectricParams, GGXDist, false>;
 struct MxConductor;
+struct MxDielectric;
 
 struct Transparent;
 struct OrenNayar;
@@ -345,9 +268,9 @@ using AbstractBSDF = bsdl::StaticVirtual<
     Diffuse<0>, Transparent, OrenNayar, Diffuse<1>, Phong, Ward, Reflection,
     Refraction, MicrofacetBeckmannRefl, MicrofacetBeckmannRefr,
     MicrofacetBeckmannBoth, MicrofacetGGXRefl, MicrofacetGGXRefr,
-    MicrofacetGGXBoth, MxConductor, MxDielectricOpaque, MxDielectric,
-    MxBurleyDiffuse, EnergyCompensatedOrenNayar, ZeltnerBurleySheen,
-    CharlieSheen, MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer>;
+    MicrofacetGGXBoth, MxConductor, MxDielectric, MxBurleyDiffuse,
+    EnergyCompensatedOrenNayar, ZeltnerBurleySheen, CharlieSheen,
+    MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer>;
 
 // Then we just need to inherit from AbstractBSDF
 

@@ -102,6 +102,7 @@ template<typename BSDF_ROOT> struct Lobe : public BSDF_ROOT {
     {
         sample_filter.thinfilm = f;
     }
+    BSDL_INLINE_METHOD bool single_wavelength() const { return false; }
 
     Frame frame;
     typename BsdfGlobals::Filter sample_filter;

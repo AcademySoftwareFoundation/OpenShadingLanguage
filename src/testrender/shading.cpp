@@ -9,6 +9,7 @@
 #include "sampling.h"
 
 #include <BSDL/MTX/bsdf_conductor_impl.h>
+#include <BSDL/MTX/bsdf_dielectric_impl.h>
 #include <BSDL/SPI/bsdf_thinlayer_impl.h>
 #include <BSDL/spectrum_impl.h>
 
@@ -109,6 +110,41 @@ struct MxConductor : public bsdl::mtx::ConductorLobe<BSDLLobe> {
                                  data.N,  // Ngf
                                  false,   // backfacing
                                  path_roughness,
+                                 1.0f,  // outer_ior
+                                 0),    // hero wavelength off
+               data)
+    {
+    }
+
+    OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
+    {
+        bsdl::Sample s = Base::eval_impl(Base::frame.local(wo),
+                                         Base::frame.local(wi));
+        return { wi, s.weight.toRGB(0), s.pdf, s.roughness };
+    }
+    OSL_HOSTDEVICE BSDF::Sample sample(const Vec3& wo, float rx, float ry,
+                                       float rz) const
+    {
+        bsdl::Sample s = Base::sample_impl(Base::frame.local(wo),
+                                           { rx, ry, rz });
+        return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,
+                 s.roughness };
+    }
+};
+
+// This is the thin wrapper to insert mtx::ConductorLobe into testrender
+struct MxDielectric : public bsdl::mtx::DielectricLobe<BSDLLobe> {
+    using Base = bsdl::mtx::DielectricLobe<BSDLLobe>;
+
+    static constexpr int closureid() { return MX_DIELECTRIC_ID; }
+
+    OSL_HOSTDEVICE MxDielectric(const Data& data, const Vec3& wo,
+                                bool backfacing, float path_roughness)
+        : Base(this,
+               bsdl::BsdfGlobals(wo,
+                                 data.N,  // Nf
+                                 data.N,  // Ngf
+                                 backfacing, path_roughness,
                                  1.0f,  // outer_ior
                                  0),    // hero wavelength off
                data)
@@ -241,22 +277,6 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_FLOAT_PARAM(MxBurleyDiffuseParams, roughness),
             CLOSURE_STRING_KEYPARAM(MxBurleyDiffuseParams, label, "label"),
             CLOSURE_FINISH_PARAM(MxBurleyDiffuseParams) } },
-        { "dielectric_bsdf",
-          MX_DIELECTRIC_ID,
-          { CLOSURE_VECTOR_PARAM(MxDielectricParams, N),
-            CLOSURE_VECTOR_PARAM(MxDielectricParams, U),
-            CLOSURE_COLOR_PARAM(MxDielectricParams, reflection_tint),
-            CLOSURE_COLOR_PARAM(MxDielectricParams, transmission_tint),
-            CLOSURE_FLOAT_PARAM(MxDielectricParams, roughness_x),
-            CLOSURE_FLOAT_PARAM(MxDielectricParams, roughness_y),
-            CLOSURE_FLOAT_PARAM(MxDielectricParams, ior),
-            CLOSURE_STRING_PARAM(MxDielectricParams, distribution),
-            CLOSURE_FLOAT_KEYPARAM(MxDielectricParams, thinfilm_thickness,
-                                   "thinfilm_thickness"),
-            CLOSURE_FLOAT_KEYPARAM(MxDielectricParams, thinfilm_ior,
-                                   "thinfilm_ior"),
-            CLOSURE_STRING_KEYPARAM(MxDielectricParams, label, "label"),
-            CLOSURE_FINISH_PARAM(MxDielectricParams) } },
         { "generalized_schlick_bsdf",
           MX_GENERALIZED_SCHLICK_ID,
           { CLOSURE_VECTOR_PARAM(MxGeneralizedSchlickParams, N),
@@ -333,7 +353,7 @@ register_closures(OSL::ShadingSystem* shadingsys)
         shadingsys->register_closure(b.name, b.id, b.params, nullptr, nullptr);
 
     // BSDFs coming from BSDL
-    using bsdl_set = bsdl::TypeList<SpiThinLayer, MxConductor>;
+    using bsdl_set = bsdl::TypeList<SpiThinLayer, MxConductor, MxDielectric>;
     // Register them
     bsdl_set::apply(BSDLtoOSL { shadingsys });
 }
@@ -1494,7 +1514,8 @@ private:
 };
 
 OSL_HOSTDEVICE Color3
-evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
+evaluate_layer_opacity(const ShaderGlobalsType& sg, float path_roughness,
+                       const ClosureColor* closure)
 {
     // Null closure, the layer is fully transparent
     if (closure == nullptr)
@@ -1536,17 +1557,11 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
                 closure = nullptr;
                 break;
             }
-            case MX_DIELECTRIC_ID: {
-                const MxDielectricParams& params
-                    = *comp->as<MxDielectricParams>();
-                // Transmissive dielectrics are opaque
-                if (!is_black(params.transmission_tint)) {
-                    closure = nullptr;
-                    break;
-                }
-                MxMicrofacet<MxDielectricParams, GGXDist, false> mf(params,
-                                                                    1.0f);
-                weight *= w * mf.get_albedo(-sg.I);
+            case MxDielectric::closureid(): {
+                const MxDielectric::Data& params
+                    = *comp->as<MxDielectric::Data>();
+                MxDielectric d(params, -sg.I, sg.backfacing, path_roughness);
+                weight *= w * (Color3(1) - d.filter_o(-sg.I).toRGB(0));
                 closure = nullptr;
                 break;
             }
@@ -1590,8 +1605,9 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, const ClosureColor* closure)
 }
 
 OSL_HOSTDEVICE void
-process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
-                       const ClosureColor* closure, const Color3& w)
+process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
+                       ShadingResult& result, const ClosureColor* closure,
+                       const Color3& w)
 {
     if (!closure)
         return;
@@ -1621,7 +1637,8 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
             const MxLayerParams* params  = comp->as<MxLayerParams>();
             Color3 base_w                = weight
                             * (Color3(1)
-                               - clamp(evaluate_layer_opacity(sg, params->top),
+                               - clamp(evaluate_layer_opacity(sg, path_roughness,
+                                                              params->top),
                                        0.f, 1.f));
             closure                   = params->top;
             ptr_stack[stack_idx]      = params->base;
@@ -1656,13 +1673,13 @@ process_medium_closure(const ShaderGlobalsType& sg, ShadingResult& result,
             closure               = nullptr;
             break;
         }
-        case MX_DIELECTRIC_ID: {
-            const ClosureComponent* comp = closure->as_comp();
-            const auto& params           = *comp->as<MxDielectricParams>();
-            if (!is_black(weight * comp->w * params.transmission_tint)) {
+        case MxDielectric::closureid(): {
+            const ClosureComponent* comp     = closure->as_comp();
+            const MxDielectric::Data& params = *comp->as<MxDielectric::Data>();
+            if (!is_black(weight * comp->w * params.refr_tint)) {
                 // TODO: properly track a medium stack here ...
-                result.refraction_ior = sg.backfacing ? 1.0f / params.ior
-                                                      : params.ior;
+                result.refraction_ior = sg.backfacing ? 1.0f / params.IOR
+                                                      : params.IOR;
             }
             closure = nullptr;
             break;
@@ -1825,17 +1842,12 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
                     ok = result.bsdf.add_bsdf<MxBurleyDiffuse>(cw, params);
                     break;
                 }
-                case MX_DIELECTRIC_ID: {
-                    const MxDielectricParams& params
-                        = *comp->as<MxDielectricParams>();
-                    if (is_black(params.transmission_tint))
-                        ok = result.bsdf.add_bsdf<
-                            MxMicrofacet<MxDielectricParams, GGXDist, false>>(
-                            cw, params, 1.0f);
-                    else
-                        ok = result.bsdf.add_bsdf<
-                            MxMicrofacet<MxDielectricParams, GGXDist, true>>(
-                            cw, params, result.refraction_ior);
+                case MxDielectric::closureid(): {
+                    const MxDielectric::Data& params
+                        = *comp->as<MxDielectric::Data>();
+                    ok = result.bsdf.add_bsdf<MxDielectric>(cw, params, -sg.I,
+                                                            sg.backfacing,
+                                                            path_roughness);
                     break;
                 }
                 case MxConductor::closureid(): {
@@ -1897,7 +1909,8 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
                     Color3 base_w
                         = weight
                           * (Color3(1, 1, 1)
-                             - clamp(evaluate_layer_opacity(sg, srcparams->top),
+                             - clamp(evaluate_layer_opacity(sg, path_roughness,
+                                                            srcparams->top),
                                      0.f, 1.f));
                     closure = srcparams->top;
                     weight  = cw;
@@ -1947,7 +1960,7 @@ process_closure(const ShaderGlobalsType& sg, float path_roughness,
                 ShadingResult& result, const ClosureColor* Ci, bool light_only)
 {
     if (!light_only)
-        process_medium_closure(sg, result, Ci, Color3(1));
+        process_medium_closure(sg, path_roughness, result, Ci, Color3(1));
     process_bsdf_closure(sg, path_roughness, result, Ci, Color3(1), light_only);
 }
 

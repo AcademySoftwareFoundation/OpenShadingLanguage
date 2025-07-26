@@ -70,7 +70,7 @@ GGXDist::sample(const Imath::V3f& wo, float randu, float randv) const
 }
 
 BSDL_INLINE_METHOD Imath::V3f
-GGXDist::sample_reflection(const Imath::V3f& wo, float randu, float randv) const
+GGXDist::sample_for_refl(const Imath::V3f& wo, float randu, float randv) const
 {
     // From "Bounded VNDF Sampling for Smith–GGX Reflections" Eto - Tokuyoshi.
     // This code is taken from listing 1 almost verbatim.
@@ -91,17 +91,14 @@ GGXDist::sample_reflection(const Imath::V3f& wo, float randu, float randv) const
     // Compute the microfacet normal m
     Imath::V3f m_std = i_std + o_std;
     Imath::V3f m = Imath::V3f(m_std.x * ax, m_std.y * ay, m_std.z).normalized();
-    // Return the reflection vector o
-    return 2 * wo.dot(m) * m - wo;
+    return m;
 }
 
 BSDL_INLINE_METHOD float
-GGXDist::pdf_reflection(const Imath::V3f& wo, const Imath::V3f& wi) const
+GGXDist::D_refl_D(const Imath::V3f& wo, const Imath::V3f& m) const
 {
     // From "Bounded VNDF Sampling for Smith–GGX Reflections" Eto - Tokuyoshi.
     // This code is taken from listing 2 almost verbatim.
-    const Imath::V3f m  = (wo + wi).normalized();
-    const float ndf     = D(m);
     const Imath::V2f ai = { wo.x * ax, wo.y * ay };
     const float len2    = ai.dot(ai);
     const float t       = sqrtf(len2 + SQR(wo.z));
@@ -110,7 +107,7 @@ GGXDist::pdf_reflection(const Imath::V3f& wo, const Imath::V3f& wi) const
     const float a2 = SQR(a);
     const float s2 = SQR(s);
     const float k  = (1 - a2) * s2 / (s2 + a2 * SQR(wo.z));  // Eq. 5
-    return ndf / (2 * (k * wo.z + t));  // Eq. 8 * || dm/do ||
+    return 2 * wo.z /* * D(m) */ / (k * wo.z + t);           // Eq. 8
 }
 
 template<typename BSDF>
@@ -357,19 +354,21 @@ eval_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
     Imath::V3f m    = (wo + wi).normalized();
     float cosMO     = m.dot(wo);
     const float D   = dist.D(m);
+    float D_refl_D  = dist.D_refl_D(wo, m);
+    float D_refl    = D_refl_D * D;
     const float G1  = dist.G1(wo);
-    float s_pdf     = dist.pdf_reflection(wo, wi);
-    const float out = dist.G2_G1(wi, wo) * (G1 * D) / (4.0f * cosNO * s_pdf);
+    float pdf       = D_refl / (4 * cosNO);
+    const float out = dist.G2_G1(wi, wo) * G1 / D_refl_D;
     // fresnel term between outgoing direction and microfacet
     const Power F = fresnel.eval(cosMO);
     // From "Practical multiple scattering compensation for microfacet models" - Emmanuel Turquin
     // equation 16. Should we use F0 for msf scaling? Doesn't make a big difference.
     const Power F_ms = F;
-    const float msf  = E_ms / (1 - E_ms);
+    const float msf  = E_ms / std::max(0.01f, 1 - E_ms);
     const Power one(1, 1);
     const Power O = out * F * (one + F_ms * msf);
 
-    return { wi, O, s_pdf, -1 /* roughness set by caller */ };
+    return { wi, O, pdf, -1 /* roughness set by caller */ };
 }
 
 template<typename Fresnel>
@@ -382,7 +381,8 @@ sample_turquin_microms_reflection(const GGXDist& dist, const Fresnel& fresnel,
     if (cosNO <= 0)
         return {};
 
-    Imath::V3f wi = dist.sample_reflection(wo, rnd.x, rnd.y);
+    Imath::V3f m  = dist.sample_for_refl(wo, rnd.x, rnd.y);
+    Imath::V3f wi = reflect(wo, m);
     if (wi.z <= 0)
         return {};
 

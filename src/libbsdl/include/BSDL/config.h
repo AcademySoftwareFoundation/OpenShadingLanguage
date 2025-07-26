@@ -89,6 +89,10 @@ struct BSDLDefaultConfig {
     };
 
     static constexpr int HERO_WAVELENGTH_CHANNELS = 4;
+    // Use bounded visible normals for refraction. Biased but cleaner.
+    // Note this has to be available for genluts.cpp, don't override it independently.
+    static constexpr bool use_bvn_refraction = true;
+
 
     enum class ColorSpaceTag { sRGB, ACEScg };
 

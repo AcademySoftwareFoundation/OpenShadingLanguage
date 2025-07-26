@@ -133,15 +133,21 @@ DielectricBoth::eval(Imath::V3f wo, Imath::V3f wi) const
         const float cosMO  = m.dot(wo);
         if (cosMO <= 0)
             return {};
-        const float D = d.D(m);
-        // Reflection optimized density
-        const float D_refl_D = d.D_refl_D(wo, m);
-        const float D_refl   = D_refl_D * D;
-        const float G1       = d.G1(wo);
-        const Power F        = f.eval(cosMO);
-        const float out      = d.G2_G1(wi, wo) * G1 / D_refl_D;
-        const float pdf      = D_refl / (4.0f * cosNO) * F[0];
-        return { wi, Power(out, 1), pdf, 0 };
+        const float D  = d.D(m);
+        const float G1 = d.G1(wo);
+        const Power F  = f.eval(cosMO);
+        if constexpr (BSDLConfig::use_bvn_refraction) {
+            // Reflection optimized density
+            const float D_refl_D = d.D_refl_D(wo, m);
+            const float D_refl   = D_refl_D * D;
+            const float out      = d.G2_G1(wi, wo) * G1 / D_refl_D;
+            const float pdf      = D_refl / (4.0f * cosNO) * F[0];
+            return { wi, Power(out, 1), pdf, 0 };
+        } else {
+            const float out = d.G2_G1(wi, wo);
+            const float pdf = (G1 * D * F[0]) / (4.0f * cosNO);
+            return { wi, Power(out, 1), pdf, 0 };
+        }
     } else if (cosNI < 0) {
         // flip to same side as N
         const Imath::V3f Ht = (f.eta * wi + wo).normalized()
@@ -154,16 +160,24 @@ DielectricBoth::eval(Imath::V3f wo, Imath::V3f wi) const
         const float Ft = 1.0f - f.eval(cosHO)[0];
         if (Ht.z <= 0 || cosHO <= 0 || cosHI >= 0 || Ft <= 0)
             return {};
-        const float D = d.D(Ht);
-        // Reflection optimized density
-        const float D_refl_D = d.D_refl_D(wo, Ht);
-        const float D_refl   = D_refl_D * D;
-        const float G1       = d.G1(wo);
-        float J              = (-cosHI * cosHO * SQR(f.eta))
+        const float D  = d.D(Ht);
+        const float G1 = d.G1(wo);
+        float J        = (-cosHI * cosHO * SQR(f.eta))
                   / (wo.z * SQR(cosHI * f.eta + cosHO));
-        float pdf       = D_refl * J * Ft;
-        const float out = d.G2_G1({ wi.x, wi.y, -wi.z }, wo) * G1 / D_refl_D;
-        return { wi, Power(out, 1), pdf, 0 };
+        if constexpr (BSDLConfig::use_bvn_refraction) {
+            // Reflection optimized density
+            const float D_refl_D = d.D_refl_D(wo, Ht);
+            const float D_refl   = D_refl_D * D;
+            float pdf            = D_refl * J * Ft;
+            const float out      = d.G2_G1({ wi.x, wi.y, -wi.z }, wo) * G1
+                              / D_refl_D;
+            return { wi, Power(out, 1), pdf, 0 };
+        } else {
+            const float out = d.G2_G1({ wi.x, wi.y, -wi.z }, wo);
+
+            float pdf = J * G1 * D * Ft;
+            return { wi, Power(out, 1), pdf, 0 };
+        }
 
     } else
         return {};
@@ -176,9 +190,13 @@ DielectricBoth::sample(Imath::V3f wo, float randu, float randv,
     // This skips micro normals not valid for reflection, but they
     // could be valid for refraction. Energy is ok because we renormalize
     // this lobe, but refraction will be biased for high roughness. We
-    // trade that for reduced noise.
-    const Imath::V3f m = d.sample_for_refl(wo, randu, randv);
-    const float cosMO  = wo.dot(m);
+    // trade that for reduced noise. We can disable BVN at compile time.
+    Imath::V3f m;
+    if constexpr (BSDLConfig::use_bvn_refraction)
+        m = d.sample_for_refl(wo, randu, randv);
+    else
+        m = d.sample(wo, randu, randv);
+    const float cosMO = wo.dot(m);
     if (cosMO <= 0)
         return {};
     const float F       = f.eval(cosMO)[0];

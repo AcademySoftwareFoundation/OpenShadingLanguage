@@ -426,20 +426,19 @@ jobs:
             openimageio_ver: release
             pybind11_ver: v3.0.0
             python_ver: "3.12"
+            llvm_action_ver: "18.1.7"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LLVM_VERSION=17.0.6
-                            LLVM_DISTRO_NAME=ubuntu-22.04
-                            LIBTIFF_VERSION=v4.7.0
+            setenvs: export LIBTIFF_VERSION=v4.7.0
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.15
                             FREETYPE_VERSION=VER-2-13-3
-          - desc: bleeding edge gcc13/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
+          - desc: bleeding edge gcc14/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-24.04
-            cc_compiler: gcc-13
-            cxx_compiler: g++-13
-            cxx_std: 17
+            cc_compiler: gcc-14
+            cxx_compiler: g++-14
+            cxx_std: 20
             fmt_ver: master
             opencolorio_ver: main
             openexr_ver: main

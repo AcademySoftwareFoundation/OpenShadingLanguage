@@ -52,6 +52,28 @@ Spectrum::spec_to_xyz(Power wave, float lambda_0)
     return total;
 }
 
+// Modify basic IOR to get the dispersion IOR.
+BSDL_INLINE_METHOD
+float
+Spectrum::get_dispersion_ior(const float dispersion, const float basic_ior,
+                             const float wavelength)
+{
+    // Fraunhofer D, F and C spectral lines, in micrometers squared
+    const float nD2 = SQR(589.3f * 1e-3f);
+    const float nF2 = SQR(486.1f * 1e-3f);
+    const float nC2 = SQR(656.3f * 1e-3f);
+
+    // convert Abbe number to Cauchy coefficients
+    const float abbe    = 1 / dispersion;
+    const float cauchyC = ((basic_ior - 1.0f) / abbe)
+                          * ((nC2 * nF2) / (nC2 - nF2));
+    const float cauchyB = basic_ior - cauchyC * (1.0f / nD2);
+
+    // Cauchy's equation with two terms
+    // wavelength converted from nanometers to micrometers
+    return cauchyB + cauchyC / SQR(wavelength * 1e-3f);
+}
+
 BSDL_INLINE_METHOD
 Power::Power(const Imath::C3f rgb, float lambda_0)
 {

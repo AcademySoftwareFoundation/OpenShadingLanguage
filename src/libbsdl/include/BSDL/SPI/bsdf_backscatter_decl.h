@@ -61,7 +61,8 @@ struct CharlieSheen : public SheenMicrofacet<CharlieDist> {
     };
     static BSDL_INLINE_METHOD Energy& get_energy();
 
-    static const char* lut_header() { return "bsdf_backscatter_luts.h"; }
+    static constexpr const char* NS = "spi";
+    static const char* lut_header() { return "SPI/bsdf_backscatter_luts.h"; }
     static const char* struct_name() { return "CharlieSheen"; }
 };
 

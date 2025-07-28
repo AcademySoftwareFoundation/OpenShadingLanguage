@@ -24,6 +24,9 @@
 #ifndef BSDL_UNROLL
 #    define BSDL_UNROLL() _Pragma("unroll")
 #endif
+#ifndef BSDL_STRHASH
+#    define BSDL_STRHASH(str) reinterpret_cast<intptr_t>(str)
+#endif
 
 #include <cassert>
 #include <cmath>
@@ -86,6 +89,10 @@ struct BSDLDefaultConfig {
     };
 
     static constexpr int HERO_WAVELENGTH_CHANNELS = 4;
+    // Use bounded visible normals for refraction. Biased but cleaner.
+    // Note this has to be available for genluts.cpp, don't override it independently.
+    static constexpr bool use_bvn_refraction = true;
+
 
     enum class ColorSpaceTag { sRGB, ACEScg };
 

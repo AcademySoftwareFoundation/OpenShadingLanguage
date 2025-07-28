@@ -17,6 +17,11 @@
 #    error "LLVM minimum version required for OSL is 11.0"
 #endif
 
+OSL_PRAGMA_WARNING_PUSH
+#if OSL_GNUC_VERSION >= 140000
+OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wmaybe-uninitialized")
+#endif
+
 #include "llvm_passes.h"
 
 #include <llvm/InitializePasses.h>
@@ -127,6 +132,8 @@
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
+
+OSL_PRAGMA_WARNING_POP
 
 OSL_NAMESPACE_BEGIN
 

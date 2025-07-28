@@ -82,6 +82,7 @@ target_include_directories (testshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 target_link_libraries (testshade
                        PRIVATE
                            oslexec oslquery oslcomp)
+add_dependencies(testshade testshade_ptx)
 
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
@@ -98,6 +99,7 @@ osl_optix_target(testshade)
 if (NOT CODECOV)
     # The 'libtestshade' library
     add_library ( "libtestshade" ${testshade_srcs} )
+    add_dependencies(libtestshade testshade)
 
     set_target_properties (libtestshade
                            PROPERTIES

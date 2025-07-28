@@ -194,7 +194,7 @@ if (USE_LLVM_BITCODE)
     EMBED_LLVM_BITCODE_IN_CPP ( "${llvm_ops_srcs}" "_host" "osl_llvm_compiled_ops" lib_src "" "${include_dirs}")
 
     set (rs_dependent_ops_srcs
-         opmatrix.cpp opfmt.cpp optexture.cpp pointcloud.cpp
+         opmatrix.cpp opfmt.cpp optexture.cpp pointcloud.cpp opclosure.cpp
          )
     # Achieve the effect of absorbing osl_llvm_compiled_ops by adding its 
     # sources to rs_dependent_ops_srcs which avoids having to do it at runtime.
@@ -217,6 +217,7 @@ if (USE_LLVM_BITCODE)
             ${CMAKE_SOURCE_DIR}/src/liboslexec/opmatrix.cpp
             ${CMAKE_SOURCE_DIR}/src/liboslexec/optexture.cpp
             ${CMAKE_SOURCE_DIR}/src/liboslexec/pointcloud.cpp
+            ${CMAKE_SOURCE_DIR}/src/liboslexec/opclosure.cpp
             ${CMAKE_SOURCE_DIR}/src/liboslnoise/gabornoise.cpp
             ${CMAKE_SOURCE_DIR}/src/liboslnoise/simplexnoise.cpp
         )

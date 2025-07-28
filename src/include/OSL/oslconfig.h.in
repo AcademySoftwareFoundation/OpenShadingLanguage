@@ -123,7 +123,11 @@ template<typename Str, typename... Args>
 OSL_NODISCARD inline std::string
 fmtformat(const Str& fmt, Args&&... args)
 {
+#if OSL_CPLUSPLUS_VERSION >= 20 || FMT_VERSION >= 100000
+    return ::fmt::vformat(fmt, ::fmt::make_format_args(args...));
+#else
     return OIIO::Strutil::fmt::format(fmt, std::forward<Args>(args)...);
+#endif
 }
 
 // TODO: notice the fmt argument is not templatised, this is because
@@ -132,13 +136,18 @@ fmtformat(const Str& fmt, Args&&... args)
 // OIIO should fix this if possible.
 template<typename OutIt, typename... Args>
 OSL_NODISCARD inline auto
-fmtformat_to_n(OutIt &out, size_t n, const string_view& fmt, Args&&... args)
+fmtformat_to_n(OutIt& out, size_t n, string_view fmt, Args&&... args)
 {
     // DOES NOT EXIST AS PUBLIC API
     //return OIIO::Strutil::fmt::format_to_n(out, n, fmt, std::forward<Args>(args)...);
     // So call directly into underlying fmt library OIIO is using
     // TODO:  Add format_to_n as a public API in OIIO
+#if OSL_CPLUSPLUS_VERSION >= 20 || FMT_VERSION >= 100000
+    std::string str = fmtformat(fmt, std::forward<Args>(args)...);
+    return ::fmt::format_to_n(out, n, "{}", str);
+#else
     return ::fmt::format_to_n(out, n, ::fmt::string_view{fmt.begin(), fmt.length()}, std::forward<Args>(args)...);
+#endif
 }
 
 

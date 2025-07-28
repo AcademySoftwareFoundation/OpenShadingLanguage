@@ -82,7 +82,9 @@ target_include_directories (testshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 target_link_libraries (testshade
                        PRIVATE
                            oslexec oslquery oslcomp)
-add_dependencies(testshade testshade_ptx)
+if (OSL_USE_OPTIX)
+    add_dependencies(testshade testshade_ptx)
+endif ()
 
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 

@@ -122,6 +122,15 @@ ls -R -l "$DEP_DIR"
 
 if [[ "$LLVM_VERSION" != "" ]] ; then
     source src/build-scripts/build_llvm.bash
+elif [[ "$LLVM_GOOGLE_DRIVE_ID" != "" ]] then
+    mkdir -p $HOME/llvm
+    pushd $HOME/llvm
+    #LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
+    LLVM_ZIP_FILENAME=llvm-build.zip
+    time curl -L "https://drive.usercontent.google.com/download?id=${LLVM_GOOGLE_DRIVE_ID}&confirm=xxx" -o $LLVM_ZIP_FILENAME
+    unzip $LLVM_ZIP_FILENAME > /dev/null
+    export LLVM_ROOT=$PWD/llvm-build
+    popd
 fi
 echo "LLVM_ROOT = $LLVM_ROOT"
 

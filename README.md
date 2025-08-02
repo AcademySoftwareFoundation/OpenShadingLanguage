@@ -441,7 +441,8 @@ nominated for major awards.)
   The Marvels,
   Leo,
   The Boys (S4),
-  The Moon
+  The Moon,
+  Migration,
 * **(2024)**
   Ghostbusters: Frozen Empire,
   Inside Out 2,
@@ -453,6 +454,8 @@ nominated for major awards.)
   A Minecraft Movie,
   K-Pop Demon Hunters,
   Elio,
+  Fantastic Four: First Steps,
+  Bad Guys 2,
   ...
 
 

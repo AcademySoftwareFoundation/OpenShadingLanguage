@@ -1,9 +1,12 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.14.7.0 (1 Aug? 2025) -- compared to 1.14.6.0
+Release 1.14.7.0 (2 Aug 2025) -- compared to 1.14.6.0
 -------------------------------------------------------------
-
+- *build*: Support for building with gcc14 and for C++20. [#2010](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2010)
+- *build*: Serialize builds in testshade [#2012](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2012) (by Jean-Francois Panisset)
+- *deps*: Support for pybind11 3.0 [#2007](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2007)
+- *ci*: Fix Windows CI with special LLVM pre-build [#2011](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2011)
 
 
 Release 1.14.6.0 (2 Jul 2025) -- compared to 1.14.5.1

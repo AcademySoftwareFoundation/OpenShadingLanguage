@@ -11,27 +11,82 @@ Release 1.15 (in progress) -- compared to 1.14
 ### ☀️  testshade/testrender/osltoy improvements
 
 ### ⛰️  API changes and new ShadingSystem features (for renderer writers):
+  - *BSDL Library*: The internal Imageworks BSDF library has been open sourced and included with OSL as a header-only library for renderer authors. [#1986](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1986) (by Alejandro Conty) (1.15.0.0) And subsequent enhancements:
+    - *bsdl*: Implement MX conductor with multiple scattering [#1991](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1991) (by Alejandro Conty) (1.15.0.0)
+    - *bsdl*: Change MX conductor to sample bounded visible normals [#2000](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2000) (by Alejandro Conty) (1.15.0.0)
+    - *bsdl*: Add BSDF for MaterialX dielectric with Multiple Scattering [#2009](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2009) (by Alejandro Conty) (1.15.0.0)
 
 ### 🚀  SIMD batched shading mode
 
 ### 🚀  OptiX GPU rendering
 
 ### 🐛/🔧  Internals: fixes, improvements, and developer concerns
+  - *perf*: Share Shading Context when optimizing/jitting a shader [#1952](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1952) (by Alex Wells) (1.15.0.0)
+  - *fix*: Check for errors in ShadingSystem::ReParameter() [#1998](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1998) (by cmstein) (1.15.0.0)
+  - *fix*: Pass the real number of channels to rs_texture and rs_texture3d on gpu [#2004](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2004) (1.15.0.0)
 
 ### 🏗  Build/test/CI and platform ports
 * CMake build system and scripts:
+    - *build*: Link batched libraries with liboslexec [#1987](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1987) (by John Haddon) (1.15.0.0)
+    - *build*: Simplify FindOptiX.cmake a bit now that OptiX 7 is the minimum [#1988](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1988) (1.15.0.0)
+    - *build*: Update include directives for OpenImageIO_ROOT [#1997](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1997) (by cmstein) (1.15.0.0)
+    - *build*: Serialize builds in testshade [#2012](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2012) (by Jean-Francois Panisset) (1.15.0.0)
 * Dependency version support:
+    - *deps*: Remove unused symbol that was removed from OIIO main [#1984](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1984) (1.15.0.0)
+    - *deps*: Add compatibility with LLVM 20.1 [#1993](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1993) (by Sven-Hendrik Haase) (1.15.0.0)
+    - *deps*: Test against pybind11 3.0 and minor fixes [#2007](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2007) (1.15.0.0)
+    - *deps*: Test C++20 and gcc14 + fixes needed [#2010](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2010) (1.15.0.0)
 * Testing and Continuous integration (CI) systems:
+    - *ci*: Get OptiX headers from new improved location [#1989](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1989) (1.15.0.0)
+    - *ci*: Remove Windows-2019 job [#1990](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1990) (1.15.0.0)
+    - *ci*: GPU/OptiX full build and test [#1992](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1992) (1.15.0.0)
+    - *ci*: Improve CI caching scheme [#1994](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1994) (1.15.0.0)
+    - *ci*: Add vp2025 test [#1995](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1995) (1.15.0.0)
+    - *ci*: Fix Windows CI with special LLVM pre-build [#2011](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2011) (1.15.0.0)
+    - *tests*: Add optix ref output for new test added in PR 1991 [#1996](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1996) (1.15.0.0)
 * Platform support:
+    - *build(Mac)*: Fix various MacOS problems with GitHub and CMake [#1982](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1982) (1.15.0.0)
 
 ### 📚  Documentation
 
 ### 🏢  Project Administration
+  - *admin*: Set up new issue templates [#1981](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1981) (1.15.0.0)
+
+
 
 
 ---
 
 ---
+
+Release 1.14.7.0 (2 Aug 2025) -- compared to 1.14.6.0
+-------------------------------------------------------------
+- *build*: Support for building with gcc14 and for C++20. [#2010](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2010)
+- *build*: Serialize builds in testshade [#2012](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2012) (by Jean-Francois Panisset)
+- *deps*: Support for pybind11 3.0 [#2007](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2007)
+- *ci*: Fix Windows CI with special LLVM pre-build [#2011](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2011)
+
+
+Release 1.14.6.0 (2 Jul 2025) -- compared to 1.14.5.1
+-------------------------------------------------------------
+- *fix*: Check for errors in ShadingSystem::ReParameter() [#1998](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1998) (by cmstein)
+- *fix*: Pass the real number of channels to rs_texture and rs_texture3d on gpu [#2004](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2004)
+- *build*: Link batched libraries with liboslexec [#1987](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1987) (by John Haddon)
+- *build*: Update include directives for OpenImageIO_ROOT [#1997](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1997) (by cmstein)
+- *build(optix)*: Simplify FindOptiX.cmake a bit now that OptiX 7 is the minimum [#1988](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1988)
+- *build(optix)*: Get OptiX headers from new improved location [#1989](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1989)
+- *build*: Add compatibility with LLVM 20.1 [#1993](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1993) (by Sven-Hendrik Haase)
+- *ci*: Remove Windows-2019 job [#1990](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1990)
+- *ci*: GPU/OptiX full build and test [#1992](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1992)
+- *ci*: Improve CI caching scheme [#1994](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1994)
+- *ci*: Add vp2025 test [#1995](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1995)
+
+
+Release 1.14.5.1 (3 May 2025) -- compared to 1.14.5.0
+-------------------------------------------------------------
+- *build*: Fix various MacOS problems with GitHub and CMake [#1982](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1982)
+- *build*: Remove unused symbol that was removed from OIIO main [#1984](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1984)
+
 
 Release 1.14 (6 Apr 2025) -- compared to 1.13
 -------------------------------------------------------------

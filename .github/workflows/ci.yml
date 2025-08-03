@@ -51,24 +51,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - desc: gcc9/C++17 llvm11 py3.7 oiio2.5 sse4 batch-b8avx2
-          #   nametag: linux-vfx2021
-          #   runner: ubuntu-latest
-          #   container: aswftesting/ci-osl:2021-clang11
-          #   vfxyear: 2021
-          #   old_node: 1
-          #   cxx_std: 17
-          #   openexr_ver: v3.1.3
-          #   openimageio_ver: v2.5.4.0
-          #   python_ver: 3.7
-          #   pybind11_ver: v2.7.0
-          #   simd: sse4.2
-          #   batched: b8_AVX2_noFMA
-          #   setenvs: export USE_OPENVDB=0
-          - desc: gcc9/C++17 llvm13 py3.9 exr3.1 oiio-rel avx2
+          - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio-rel avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang13
+            container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -77,10 +63,10 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: clang12/C++17 llvm12 oiio-main py3.9 avx2 batch-avx512
-            nametag: linux-clang12-llvm12-batch
+          - desc: clang14/C++17 llvm14 oiio-main py3.9 avx2 batch-avx512
+            nametag: linux-clang14-llvm14-batch
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang12
+            container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -91,10 +77,10 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: USE_OPENVDB=0
-          - desc: gcc9/C++17 llvm11 py3.9 exr3.1 oiio3.0 sse2 batch-b4sse2
+          - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio3.0 sse2 batch-b4sse2
             nametag: linux-vfx2022-clang
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang13
+            container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -104,10 +90,10 @@ jobs:
             pybind11_ver: v2.9.0
             simd: sse2
             batched: b4_SSE2
-          - desc: oldest everything gcc9/C++17 llvm11 py3.9 oiio2.5 no-simd
+          - desc: oldest everything gcc9/C++17 llvm14 py3.9 oiio2.5 no-simd
             nametag: linux-oldest
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang11
+            container: aswftesting/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -280,7 +266,7 @@ jobs:
             # ^^ exclude python-oslquery test until the ASWF container properly
             #    includes OIIO's python bindings, then we can remove that.
 
-          # Address and leak sanitizers
+          # Address and leak sanitizers (debug build)
           - desc: sanitizers
             nametag: sanitizer
             runner: ubuntu-latest
@@ -386,8 +372,8 @@ jobs:
                             USE_OPENVDB=0
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
 
-          - desc: Debug gcc9/C++17 llvm11 py3.10 oiio2.5 exr3.1 sse4
-            nametag: linux-debug-gcc7-llvm11
+          - desc: Debug gcc9/C++17 llvm14 py3.10 oiio2.5 exr3.1 sse4
+            nametag: linux-debug-gcc9-llvm14
             runner: ubuntu-22.04
             cxx_compiler: g++-9
             cxx_std: 17
@@ -397,11 +383,11 @@ jobs:
             python_ver: "3.10"
             simd: sse4.2
             setenvs: export CMAKE_BUILD_TYPE=Debug
-                            LLVM_VERSION=11.0.0 LLVM_DISTRO_NAME=ubuntu-20.04
+                            LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             PUGIXML_VERSION=v1.9
                             CTEST_TEST_TIMEOUT=240
-          - desc: gcc10/C++17 llvm11 oiio-2.5 avx2
-            nametag: linux-2021ish-gcc10-llvm11
+          - desc: gcc10/C++17 llvm14 oiio-2.5 avx2
+            nametag: linux-2021ish-gcc10-llvm14
             runner: ubuntu-22.04
             cxx_compiler: g++-10
             cxx_std: 17
@@ -411,7 +397,7 @@ jobs:
             pybind11_ver: v2.8.1
             python_ver: "3.10"
             simd: avx2,f16c
-            setenvs: export LLVM_VERSION=11.0.0 LLVM_DISTRO_NAME=ubuntu-20.04
+            setenvs: export LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
           - desc: latest releases gcc11/C++17 llvm17 oiio-3.0 exr3.2 py3.12 avx2 batch-b16avx512

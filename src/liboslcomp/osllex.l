@@ -103,18 +103,12 @@ using namespace OSL::pvt;
 
 // flex itself will generate fatal warnings about signed vs unsigned.
 // Bypass that nonsense.
-#if OSL_GNUC_VERSION >= 60000
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#endif
+OSL_GCC_ONLY_PRAGMA(GCC diagnostic ignored "-Wsign-compare")
 
 // flex uses the 'register' keyword, warned because it's deprecated in C++17.
-#if defined(__clang__)
-#pragma GCC diagnostic ignored "-Wdeprecated-register"
-#pragma GCC diagnostic ignored "-Wregister"
-#endif
-#if OSL_GNUC_VERSION >= 90000
-#pragma GCC diagnostic ignored "-Wregister"
-#endif
+OSL_CLANG_PRAGMA(GCC diagnostic ignored "-Wdeprecated-register")
+OSL_CLANG_PRAGMA(GCC diagnostic ignored "-Wregister")
+OSL_GCC_ONLY_PRAGMA(GCC diagnostic ignored "-Wregister")
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC visibility push(hidden)

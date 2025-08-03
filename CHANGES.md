@@ -1,6 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14.8.0 (1 Sep? 2025) -- compared to 1.14.7.0
+-------------------------------------------------------------
+
+
+
 Release 1.14.7.0 (2 Aug 2025) -- compared to 1.14.6.0
 -------------------------------------------------------------
 - *build*: Support for building with gcc14 and for C++20. [#2010](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2010)

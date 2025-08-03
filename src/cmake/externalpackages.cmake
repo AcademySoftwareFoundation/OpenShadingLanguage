@@ -84,14 +84,6 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
         message (WARNING "${ColorYellow}LLVM 16+ requires C++17 or higher. "
             "Please set CMAKE_CXX_STANDARD to 17 or higher.${ColorReset}\n")
     endif ()
-    if (CMAKE_COMPILER_IS_GNUCC AND (GCC_VERSION VERSION_LESS 7.0))
-        message (WARNING "${ColorYellow}LLVM 16+ requires gcc 7.0 or higher.${ColorReset}\n")
-    endif ()
-    if (CMAKE_COMPILER_IS_CLANG
-        AND NOT (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0
-                 OR APPLECLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0))
-        message (WARNING "${ColorYellow}LLVM 16+ requires clang 5.0 or higher.${ColorReset}\n")
-    endif ()
 endif ()
 
 # Use opaque pointers starting with LLVM 16

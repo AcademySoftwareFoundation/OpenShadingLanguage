@@ -134,12 +134,6 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         set (CLANG_MSVC_FIX -Wno-ignored-attributes -Wno-unknown-attributes)
     endif ()
 
-    if (NOT LLVM_OPAQUE_POINTERS AND ${LLVM_VERSION} VERSION_GREATER_EQUAL 15.0)
-        # Until we fully support opaque pointers, we need to disable
-        # them when using LLVM 15.
-        list (APPEND LLVM_COMPILE_FLAGS -Xclang -no-opaque-pointers)
-    endif ()
-
     if (NOT CUDA_NO_FTZ)
         set (CLANG_FTZ_FLAG "-fcuda-flush-denormals-to-zero")
     endif ()
@@ -221,14 +215,10 @@ function ( CUDA_SHADEOPS_COMPILE prefix output_bc output_ptx input_srcs headers 
         list ( APPEND shadeops_bc_list ${shadeops_bc} )
     endforeach ()
 
-    if (LLVM_NEW_PASS_MANAGER)
-      # There is no --nvptx-assign-valid-global-names flag for the new
-      # pass manager, but it appears to run this pass by default.
-      string(REPLACE "-O" "O" opt_tool_flags ${CUDA_OPT_FLAG_CLANG})
-      set (opt_tool_flags -passes="default<${opt_tool_flags}>")
-    else()
-      set (opt_tool_flags ${CUDA_OPT_FLAG_CLANG} --nvptx-assign-valid-global-names)
-    endif ()
+    # There is no --nvptx-assign-valid-global-names flag for the new
+    # pass manager, but it appears to run this pass by default.
+    string(REPLACE "-O" "O" opt_tool_flags ${CUDA_OPT_FLAG_CLANG})
+    set (opt_tool_flags -passes="default<${opt_tool_flags}>")
 
     # Link all of the individual LLVM bitcode files, and emit PTX for the linked bitcode
     add_custom_command ( OUTPUT ${linked_bc} ${linked_ptx}

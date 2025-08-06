@@ -19,17 +19,17 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) **3.19 or newer** (tested
+* Build system: [CMake](https://cmake.org/) 3.19 or newer (tested
   through 4.0)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
-   - **GCC 9.3** or newer (tested through gcc 13.1)
-   - **Clang 5** or newer (tested through clang 19)
+   - GCC 9.3 or newer (tested through gcc 13.1)
+   - Clang 5 or newer (tested through clang 20)
    - Microsoft Visual Studio 2017 or newer
-   - Intel C++ compiler **icc version 19** or newer or LLVM-based icx compiler
+   - Intel C++ compiler icc version 19 or newer or LLVM-based icx compiler
      version 2022 or newer.
 
-* **[OpenImageIO](http://openimageio.org) 2.5 or newer** (tested through 3.0
+* [OpenImageIO](http://openimageio.org) 2.5 or newer (tested through 3.0
   and main)
 
     OSL uses OIIO both for its texture mapping functionality as well as
@@ -49,15 +49,15 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, including
-  clang libraries.
+* [LLVM](http://www.llvm.org) **14.0 or newer**, 15, 16, 17, 18, 19, 20,
+  including clang libraries.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.
     * [Cuda](https://developer.nvidia.com/cuda-downloads) 9.0 or higher. It is
       recommended that you use 11.0 or higher.
 
-* [Imath](https://github.com/AcademySoftwareFoundation/Imath) **3.1 or newer**.
+* [Imath](https://github.com/AcademySoftwareFoundation/Imath) 3.1 or newer.
 * [Flex](https://github.com/westes/flex) 2.5.35 or newer and
   [GNU Bison](https://www.gnu.org/software/bison/) 2.7 or newer.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
@@ -70,7 +70,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
     * **Python >= 3.9** (tested through 3.13)
-    * **pybind11 >= 2.7** (tested through 3.0)
+    * pybind11 >= 2.7 (tested through 3.0)
     * NumPy (tested through 2.2.4)
 * (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.8).
   If not found at build time, the `osltoy` application will be disabled.

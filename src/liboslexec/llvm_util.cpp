@@ -13,8 +13,8 @@
 #include <OSL/oslconfig.h>
 #include <OSL/wide.h>
 
-#if OSL_LLVM_VERSION < 110
-#    error "LLVM minimum version required for OSL is 11.0"
+#if OSL_LLVM_VERSION < 140
+#    error "LLVM minimum version required for OSL is 14.0"
 #endif
 
 OSL_PRAGMA_WARNING_PUSH
@@ -51,12 +51,8 @@ OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wmaybe-uninitialized")
 #else
 #    include <llvm/TargetParser/Host.h>
 #endif
+#include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/raw_os_ostream.h>
-#if OSL_LLVM_VERSION < 140
-#    include <llvm/Support/TargetRegistry.h>
-#else
-#    include <llvm/MC/TargetRegistry.h>
-#endif
 
 #include <llvm/Analysis/BasicAliasAnalysis.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
@@ -86,46 +82,39 @@ OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wmaybe-uninitialized")
 
 #include <llvm/Support/DynamicLibrary.h>
 
-#if OSL_LLVM_VERSION >= 120
-#    include <llvm/CodeGen/Passes.h>
-#endif
+#include <llvm/CodeGen/Passes.h>
 
-#ifdef OSL_LLVM_NEW_PASS_MANAGER
 // New pass manager
-#    include <llvm/Analysis/LoopAnalysisManager.h>
-#    include <llvm/Passes/PassBuilder.h>
-#    include <llvm/Transforms/IPO/ArgumentPromotion.h>
-#    include <llvm/Transforms/IPO/ConstantMerge.h>
-#    include <llvm/Transforms/IPO/DeadArgumentElimination.h>
-#    include <llvm/Transforms/IPO/GlobalDCE.h>
-#    include <llvm/Transforms/IPO/GlobalOpt.h>
-#    include <llvm/Transforms/IPO/SCCP.h>
-#    include <llvm/Transforms/IPO/StripDeadPrototypes.h>
-#    include <llvm/Transforms/Scalar/ADCE.h>
-#    include <llvm/Transforms/Scalar/CorrelatedValuePropagation.h>
-#    include <llvm/Transforms/Scalar/DCE.h>
-#    include <llvm/Transforms/Scalar/DeadStoreElimination.h>
-#    include <llvm/Transforms/Scalar/EarlyCSE.h>
-#    include <llvm/Transforms/Scalar/IndVarSimplify.h>
-#    include <llvm/Transforms/Scalar/JumpThreading.h>
-#    include <llvm/Transforms/Scalar/LICM.h>
-#    include <llvm/Transforms/Scalar/LoopDeletion.h>
-#    include <llvm/Transforms/Scalar/LoopIdiomRecognize.h>
-#    include <llvm/Transforms/Scalar/LoopRotation.h>
-#    include <llvm/Transforms/Scalar/LoopUnrollPass.h>
-#    include <llvm/Transforms/Scalar/LowerExpectIntrinsic.h>
-#    include <llvm/Transforms/Scalar/MemCpyOptimizer.h>
-#    include <llvm/Transforms/Scalar/Reassociate.h>
-#    include <llvm/Transforms/Scalar/SCCP.h>
-#    include <llvm/Transforms/Scalar/SROA.h>
-#    include <llvm/Transforms/Scalar/SimpleLoopUnswitch.h>
-#    include <llvm/Transforms/Scalar/SimplifyCFG.h>
-#    include <llvm/Transforms/Scalar/TailRecursionElimination.h>
-#    include <llvm/Transforms/Utils/Mem2Reg.h>
-#else
-// Legacy pass manager
-#    include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#endif
+#include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Transforms/IPO/ArgumentPromotion.h>
+#include <llvm/Transforms/IPO/ConstantMerge.h>
+#include <llvm/Transforms/IPO/DeadArgumentElimination.h>
+#include <llvm/Transforms/IPO/GlobalDCE.h>
+#include <llvm/Transforms/IPO/GlobalOpt.h>
+#include <llvm/Transforms/IPO/SCCP.h>
+#include <llvm/Transforms/IPO/StripDeadPrototypes.h>
+#include <llvm/Transforms/Scalar/ADCE.h>
+#include <llvm/Transforms/Scalar/CorrelatedValuePropagation.h>
+#include <llvm/Transforms/Scalar/DCE.h>
+#include <llvm/Transforms/Scalar/DeadStoreElimination.h>
+#include <llvm/Transforms/Scalar/EarlyCSE.h>
+#include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#include <llvm/Transforms/Scalar/JumpThreading.h>
+#include <llvm/Transforms/Scalar/LICM.h>
+#include <llvm/Transforms/Scalar/LoopDeletion.h>
+#include <llvm/Transforms/Scalar/LoopIdiomRecognize.h>
+#include <llvm/Transforms/Scalar/LoopRotation.h>
+#include <llvm/Transforms/Scalar/LoopUnrollPass.h>
+#include <llvm/Transforms/Scalar/LowerExpectIntrinsic.h>
+#include <llvm/Transforms/Scalar/MemCpyOptimizer.h>
+#include <llvm/Transforms/Scalar/Reassociate.h>
+#include <llvm/Transforms/Scalar/SCCP.h>
+#include <llvm/Transforms/Scalar/SROA.h>
+#include <llvm/Transforms/Scalar/SimpleLoopUnswitch.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#include <llvm/Transforms/Scalar/TailRecursionElimination.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
 
 // additional includes for PTX generation
 #include <llvm/Analysis/TargetLibraryInfo.h>
@@ -198,9 +187,7 @@ static std::unique_ptr<std::vector<std::shared_ptr<LLVMMemoryManager>>>
 static int jit_mem_hold_users = 0;
 
 
-#if OSL_LLVM_VERSION >= 120
 llvm::raw_os_ostream raw_cout(std::cout);
-#endif
 
 };  // namespace
 
@@ -396,14 +383,11 @@ public:
 // New pass manager state, mainly here because these are template classes
 // for which forward declarations in a public header are tricky.
 struct LLVM_Util::NewPassManager {
-#ifdef OSL_LLVM_NEW_PASS_MANAGER
     llvm::LoopAnalysisManager loop_analysis_manager;
     llvm::FunctionAnalysisManager function_analysis_manager;
     llvm::CGSCCAnalysisManager cgscc_analysis_manager;
     llvm::ModuleAnalysisManager module_analysis_manager;
-
     llvm::ModulePassManager module_pass_manager;
-#endif
 };
 
 
@@ -457,12 +441,6 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
         OIIO::spin_lock lock(llvm_global_mutex);
         if (!m_thread->llvm_context) {
             m_thread->llvm_context = new llvm::LLVMContext();
-#if OSL_LLVM_VERSION >= 150 && !defined(OSL_LLVM_OPAQUE_POINTERS)
-            m_thread->llvm_context->setOpaquePointers(false);
-            // FIXME: For now, keep using typed pointers. We're going to have
-            // to fix this and switch to opaque pointers by llvm 16.
-#endif
-            //static SetCommandLineOptionsForLLVM sSetCommandLineOptionsForLLVM;
         }
 
         if (!m_thread->llvm_jitmm) {
@@ -621,28 +599,6 @@ LLVM_Util::SetupLLVM()
     llvm::initializeGlobalISel(registry);
     llvm::initializeTarget(registry);
     llvm::initializeCodeGen(registry);
-
-#ifndef OSL_LLVM_NEW_PASS_MANAGER
-    // LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks
-    static llvm::RegisterPass<
-        LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<4>>
-        sRegCustomPass2(
-            "PreventBitMasksFromBeingLiveinsToBasicBlocks<4>",
-            "Prevent Bit Masks <4xi1> From Being Liveins To Basic Blocks Pass",
-            false /* Only looks at CFG */, false /* Analysis Pass */);
-    static llvm::RegisterPass<
-        LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>>
-        sRegCustomPass0(
-            "PreventBitMasksFromBeingLiveinsToBasicBlocks<8>",
-            "Prevent Bit Masks <8xi1> From Being Liveins To Basic Blocks Pass",
-            false /* Only looks at CFG */, false /* Analysis Pass */);
-    static llvm::RegisterPass<
-        LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>>
-        sRegCustomPass1(
-            "PreventBitMasksFromBeingLiveinsToBasicBlocks<16>",
-            "Prevent Bit Masks <16xi1> From Being Liveins To Basic Blocks Pass",
-            false /* Only looks at CFG */, false /* Analysis Pass */);
-#endif
 
     if (debug()) {
         for (auto t : llvm::TargetRegistry::targets())
@@ -1559,12 +1515,9 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
 
     options.NoZerosInBSS          = false;
     options.GuaranteedTailCallOpt = false;
-#if OSL_LLVM_VERSION < 120
-    options.StackAlignmentOverride = 0;
-#endif
-    options.FunctionSections = true;
-    options.UseInitArray     = false;
-    options.FloatABIType     = llvm::FloatABI::Default;
+    options.FunctionSections      = true;
+    options.UseInitArray          = false;
+    options.FloatABIType          = llvm::FloatABI::Default;
 #if OSL_LLVM_VERSION < 190
     options.RelaxELFRelocations = false;
 #endif
@@ -1818,10 +1771,7 @@ LLVM_Util::nvptx_target_machine()
         options.AllowFPOpFusion       = llvm::FPOpFusion::Fast;
         options.NoZerosInBSS          = 0;
         options.GuaranteedTailCallOpt = 0;
-#if OSL_LLVM_VERSION < 120
-        options.StackAlignmentOverride = 0;
-#endif
-        options.UseInitArray = 0;
+        options.UseInitArray          = 0;
 
         // Verify that the NVPTX target has been initialized
         std::string error;
@@ -1892,21 +1842,12 @@ LLVM_Util::InstallLazyFunctionCreator(void* (*P)(const std::string&))
 void
 LLVM_Util::setup_optimization_passes(int optlevel, bool target_host)
 {
-#ifdef OSL_LLVM_NEW_PASS_MANAGER
     setup_new_optimization_passes(optlevel, target_host);
-#else
-    setup_legacy_optimization_passes(optlevel, target_host);
-#endif
 }
 
 void
 LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 {
-#ifdef OSL_LLVM_NEW_PASS_MANAGER
-#    if OSL_LLVM_VERSION <= 110
-#        error "New pass manager not supported in LLVM 11 and earlier"
-#    endif
-
     OSL_DEV_ONLY(std::cout << "setup_new_optimization_passes " << optlevel);
     OSL_ASSERT(m_new_pass_manager == nullptr);
 
@@ -2004,7 +1945,7 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
     case 12: {
         llvm::ModulePassManager& mpm = m_new_pass_manager->module_pass_manager;
 
-#    if 0  // PRETTY_GOOD_KEEP_AS_REF
+#if 0  // PRETTY_GOOD_KEEP_AS_REF
         mpm.addPass(llvm::ModuleInlinerWrapperPass());
         mpm.addPass(
             llvm::createModuleToFunctionPassAdaptor(llvm::SimplifyCFGPass()));
@@ -2013,11 +1954,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         {
             llvm::FunctionPassManager fpm;
             fpm.addPass(llvm::SimplifyCFGPass());
-#        if OSL_LLVM_VERSION < 160
+#    if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-#        else
+#    else
             fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#        endif
+#    endif
             fpm.addPass(llvm::EarlyCSEPass());
 
             fpm.addPass(llvm::ReassociatePass());
@@ -2031,11 +1972,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             fpm.addPass(llvm::DCEPass());
 
             fpm.addPass(llvm::JumpThreadingPass());
-#        if OSL_LLVM_VERSION < 160
+#    if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-#        else
+#    else
             fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#        endif
+#    endif
             fpm.addPass(llvm::InstCombinePass());
 
             // Added
@@ -2045,7 +1986,7 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 
         mpm.addPass(llvm::GlobalDCEPass());
         mpm.addPass(llvm::ConstantMergePass());
-#    else
+#else
         mpm.addPass(llvm::ModuleInlinerWrapperPass());
         mpm.addPass(
             llvm::createModuleToFunctionPassAdaptor(llvm::SimplifyCFGPass()));
@@ -2054,14 +1995,14 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         {
             llvm::FunctionPassManager fpm;
             fpm.addPass(llvm::SimplifyCFGPass());
-#        if OSL_LLVM_VERSION < 160
+#    if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-#        else
+#    else
             // PreserveCFG is the same behavior as earlier versions, but changing
             // to ModifyCFG here and other places may improve performance.
             // https://reviews.llvm.org/D138238
             fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#        endif
+#    endif
             fpm.addPass(llvm::EarlyCSEPass());
 
             // Eliminate and remove as much as possible up front
@@ -2082,7 +2023,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
                 llvm::LoopPassManager lpm;
                 const bool use_memory_ssa = true;  // Needed by LICM
                 lpm.addPass(llvm::LoopRotatePass());
+#    if OSL_LLVM_VERSION >= 150
                 lpm.addPass(llvm::LICMPass(llvm::LICMOptions()));
+#    else
+                lpm.addPass(llvm::LICMPass());
+#    endif
                 lpm.addPass(llvm::SimpleLoopUnswitchPass(false));
                 fpm.addPass(createFunctionToLoopPassAdaptor(std::move(lpm),
                                                             use_memory_ssa));
@@ -2121,7 +2066,7 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 
         mpm.addPass(llvm::GlobalDCEPass());
         mpm.addPass(llvm::ConstantMergePass());
-#    endif
+#endif
         break;
     }
     case 13: {
@@ -2132,11 +2077,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
         {
             llvm::FunctionPassManager fpm;
             fpm.addPass(llvm::SimplifyCFGPass());
-#    if OSL_LLVM_VERSION < 160
+#if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-#    else
+#else
             fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#    endif
+#endif
             fpm.addPass(llvm::EarlyCSEPass());
             fpm.addPass(llvm::LowerExpectIntrinsicPass());
 
@@ -2153,11 +2098,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::DCEPass());
 
-#    if OSL_LLVM_VERSION < 160
+#if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-#    else
+#else
             fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#    endif
+#endif
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::SimplifyCFGPass());
             fpm.addPass(llvm::PromotePass());
@@ -2201,10 +2146,10 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
                 llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
         }
 
-#    if OSL_LLVM_VERSION < 150
+#if OSL_LLVM_VERSION < 150
         mpm.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
             llvm::ArgumentPromotionPass()));
-#    endif
+#endif
 
         {
             llvm::FunctionPassManager fpm;
@@ -2212,11 +2157,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::JumpThreadingPass());
             fpm.addPass(llvm::SimplifyCFGPass());
-#    if OSL_LLVM_VERSION < 160
+#if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-#    else
+#else
             fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#    endif
+#endif
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::TailCallElimPass());
             mpm.addPass(
@@ -2238,18 +2183,18 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
 
         mpm.addPass(llvm::ModuleInlinerWrapperPass());
 
-#    if OSL_LLVM_VERSION < 150
+#if OSL_LLVM_VERSION < 150
         mpm.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(
             llvm::ArgumentPromotionPass()));
-#    endif
+#endif
 
         {
             llvm::FunctionPassManager fpm;
-#    if OSL_LLVM_VERSION < 160
+#if OSL_LLVM_VERSION < 160
             fpm.addPass(llvm::SROAPass());
-#    else
+#else
             fpm.addPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#    endif
+#endif
             fpm.addPass(llvm::InstCombinePass());
             fpm.addPass(llvm::SimplifyCFGPass());
             fpm.addPass(llvm::ReassociatePass());
@@ -2258,7 +2203,11 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
                 llvm::LoopPassManager lpm;
                 const bool use_memory_ssa = true;  // Needed by LICM
                 lpm.addPass(llvm::LoopRotatePass());
+#if OSL_LLVM_VERSION >= 150
                 lpm.addPass(llvm::LICMPass(llvm::LICMOptions()));
+#else
+                lpm.addPass(llvm::LICMPass());
+#endif
                 lpm.addPass(llvm::SimpleLoopUnswitchPass(false));
                 fpm.addPass(createFunctionToLoopPassAdaptor(std::move(lpm),
                                                             use_memory_ssa));
@@ -2332,323 +2281,8 @@ LLVM_Util::setup_new_optimization_passes(int optlevel, bool target_host)
             };
         }
     }
-#endif
 }
 
-void
-LLVM_Util::setup_legacy_optimization_passes(int optlevel, bool target_host)
-{
-#ifndef OSL_LLVM_NEW_PASS_MANAGER
-#    if OSL_LLVM_VERSION >= 160
-#        error "Legacy pass manager not supported in LLVM 16 and newer"
-#    endif
-
-    OSL_DEV_ONLY(std::cout << "setup_legacy_optimization_passes " << optlevel);
-    OSL_DASSERT(m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
-
-    // Construct the per-function passes and module-wide (interprocedural
-    // optimization) passes.
-
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager& fpm = (*m_llvm_func_passes);
-
-    m_llvm_module_passes           = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager& mpm = (*m_llvm_module_passes);
-
-    llvm::TargetMachine* target_machine = nullptr;
-    if (target_host) {
-        target_machine = execengine()->getTargetMachine();
-        llvm::Triple ModuleTriple(module()->getTargetTriple());
-        // Add an appropriate TargetLibraryInfo pass for the module's triple.
-        llvm::TargetLibraryInfoImpl TLII(ModuleTriple);
-        mpm.add(new llvm::TargetLibraryInfoWrapperPass(TLII));
-        mpm.add(createTargetTransformInfoWrapperPass(
-            target_machine ? target_machine->getTargetIRAnalysis()
-                           : llvm::TargetIRAnalysis()));
-        fpm.add(createTargetTransformInfoWrapperPass(
-            target_machine ? target_machine->getTargetIRAnalysis()
-                           : llvm::TargetIRAnalysis()));
-    }
-
-    // llvm_optimize 0-3 corresponds to the same set of optimizations
-    // as clang: -O0, -O1, -O2, -O3
-    // Tests on production shaders suggest the sweet spot between JIT time
-    // and runtime performance is O1.
-    //
-    // Optlevels 10, 11, 12, 13 explicitly create optimization passes. They
-    // are stripped down versions of clang's -O0, -O1, -O2, -O3. They try to
-    // provide similar results with improved optimization time by removing
-    // some expensive passes that were repeated many times and omitting
-    // other passes that are not applicable or not profitable. Useful for
-    // debugging, optlevel 10 adds next to no additional passes.
-    switch (optlevel) {
-    default: {
-        // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
-        // same set of optimizations as clang -O1, -O2, -O3
-        llvm::PassManagerBuilder builder;
-        builder.OptLevel = optlevel;
-        // Time spent in JIT is considerably higher if there is no inliner specified
-        builder.Inliner            = llvm::createFunctionInliningPass();
-        builder.DisableUnrollLoops = false;
-        builder.SLPVectorize       = false;
-        builder.LoopVectorize      = false;
-        if (target_machine)
-            target_machine->adjustPassManager(builder);
-
-        builder.populateFunctionPassManager(fpm);
-        builder.populateModulePassManager(mpm);
-        break;
-    }
-    case 10:
-        // truly add no optimizations
-        break;
-    case 11: {
-        // The least we would want to do
-        mpm.add(llvm::createFunctionInliningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createGlobalDCEPass());
-        break;
-    }
-    case 12: {
-#    if 0  // PRETTY_GOOD_KEEP_AS_REF
-        mpm.add(llvm::createFunctionInliningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createGlobalDCEPass());
-
-        mpm.add(llvm::createTypeBasedAAWrapperPass());
-        mpm.add(llvm::createBasicAAWrapperPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createSROAPass());
-        mpm.add(llvm::createEarlyCSEPass());
-
-        mpm.add(llvm::createReassociatePass());
-        mpm.add(llvm::createConstantPropagationPass());
-        mpm.add(llvm::createDeadCodeEliminationPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-
-        mpm.add(llvm::createPromoteMemoryToRegisterPass());
-        mpm.add(llvm::createAggressiveDCEPass());
-
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createDeadCodeEliminationPass());
-
-        mpm.add(llvm::createJumpThreadingPass());
-        mpm.add(llvm::createSROAPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-
-        // Added
-        mpm.add(llvm::createDeadStoreEliminationPass());
-
-        mpm.add(llvm::createGlobalDCEPass());
-        mpm.add(llvm::createConstantMergePass());
-#    else
-        mpm.add(llvm::createFunctionInliningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createGlobalDCEPass());
-
-        mpm.add(llvm::createTypeBasedAAWrapperPass());
-        mpm.add(llvm::createBasicAAWrapperPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createSROAPass());
-        mpm.add(llvm::createEarlyCSEPass());
-
-        // Eliminate and remove as much as possible up front
-        mpm.add(llvm::createReassociatePass());
-#        if OSL_LLVM_VERSION < 120
-        mpm.add(llvm::createConstantPropagationPass());
-#        endif
-        mpm.add(llvm::createDeadCodeEliminationPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-
-        mpm.add(llvm::createPromoteMemoryToRegisterPass());
-        mpm.add(llvm::createAggressiveDCEPass());
-
-        //        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createReassociatePass());
-        // TODO: investigate if the loop optimization passes rely on metadata from clang
-        // we might need to recreate that meta data in OSL's loop code to enable these passes
-        mpm.add(llvm::createLoopRotatePass());
-        mpm.add(llvm::createLICMPass());
-#        if OSL_LLVM_VERSION < 150
-        mpm.add(llvm::createLoopUnswitchPass(false));
-#        endif
-        //        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createIndVarSimplifyPass());
-        // Don't think we emitted any idioms that should be converted to a loop
-        // mpm.add(llvm::createLoopIdiomPass());
-        mpm.add(llvm::createLoopDeletionPass());
-        mpm.add(llvm::createLoopUnrollPass());
-        // GVN is expensive but should pay for itself in reducing JIT time
-        mpm.add(llvm::createGVNPass());
-
-
-        mpm.add(llvm::createSCCPPass());
-        //        mpm.add(llvm::createInstructionCombiningPass());
-        // JumpThreading combo had a good improvement on JIT time
-        mpm.add(llvm::createJumpThreadingPass());
-        // optional, didn't  seem to help more than it cost
-        // mpm.add(llvm::createCorrelatedValuePropagationPass());
-        mpm.add(llvm::createDeadStoreEliminationPass());
-        mpm.add(llvm::createAggressiveDCEPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        // Place late as possible to minimize #instrs it has to process
-        mpm.add(llvm::createInstructionCombiningPass());
-
-        mpm.add(llvm::createPromoteMemoryToRegisterPass());
-        mpm.add(llvm::createDeadCodeEliminationPass());
-
-        mpm.add(llvm::createGlobalDCEPass());
-        mpm.add(llvm::createConstantMergePass());
-#    endif
-        break;
-    }
-    case 13: {
-        mpm.add(llvm::createGlobalDCEPass());
-
-        mpm.add(llvm::createTypeBasedAAWrapperPass());
-        mpm.add(llvm::createBasicAAWrapperPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createSROAPass());
-        mpm.add(llvm::createEarlyCSEPass());
-        mpm.add(llvm::createLowerExpectIntrinsicPass());
-
-        mpm.add(llvm::createReassociatePass());
-#    if OSL_LLVM_VERSION < 120
-        mpm.add(llvm::createConstantPropagationPass());
-#    endif
-        mpm.add(llvm::createDeadCodeEliminationPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-
-        mpm.add(llvm::createPromoteMemoryToRegisterPass());
-        mpm.add(llvm::createAggressiveDCEPass());
-
-        // The InstructionCombining is much more expensive that all the other
-        // optimizations, should attempt to reduce the number of times it is
-        // executed, if at all
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createDeadCodeEliminationPass());
-
-        mpm.add(llvm::createSROAPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createPromoteMemoryToRegisterPass());
-        mpm.add(llvm::createGlobalOptimizerPass());
-        mpm.add(llvm::createReassociatePass());
-#    if OSL_LLVM_VERSION < 120
-        mpm.add(llvm::createIPConstantPropagationPass());
-#    else
-        // createIPConstantPropagationPass disappeared with LLVM 12.
-        // Comments in their PR indicate that IPSCCP is better, but I don't
-        // know if that means such a pass should be *right here*. I leave it
-        // to others who use opt==13 to continue to curate this particular
-        // list of passes.
-        mpm.add(llvm::createIPSCCPPass());
-#    endif
-
-        mpm.add(llvm::createDeadArgEliminationPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createPruneEHPass());
-        mpm.add(llvm::createPostOrderFunctionAttrsLegacyPass());
-        mpm.add(llvm::createReversePostOrderFunctionAttrsPass());
-        mpm.add(llvm::createFunctionInliningPass());
-#    if OSL_LLVM_VERSION < 120
-        mpm.add(llvm::createConstantPropagationPass());
-#    endif
-        mpm.add(llvm::createDeadCodeEliminationPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-
-#    if OSL_LLVM_VERSION < 150
-        mpm.add(llvm::createArgumentPromotionPass());
-#    endif
-        mpm.add(llvm::createAggressiveDCEPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createJumpThreadingPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createSROAPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createTailCallEliminationPass());
-
-        mpm.add(llvm::createFunctionInliningPass());
-#    if OSL_LLVM_VERSION < 120
-        mpm.add(llvm::createConstantPropagationPass());
-#    endif
-
-        mpm.add(llvm::createIPSCCPPass());
-        mpm.add(llvm::createDeadArgEliminationPass());
-        mpm.add(llvm::createAggressiveDCEPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-
-        mpm.add(llvm::createFunctionInliningPass());
-#    if OSL_LLVM_VERSION < 150
-        mpm.add(llvm::createArgumentPromotionPass());
-#    endif
-        mpm.add(llvm::createSROAPass());
-
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createReassociatePass());
-        mpm.add(llvm::createLoopRotatePass());
-        mpm.add(llvm::createLICMPass());
-#    if OSL_LLVM_VERSION < 150
-        mpm.add(llvm::createLoopUnswitchPass(false));
-#    endif
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createIndVarSimplifyPass());
-        mpm.add(llvm::createLoopIdiomPass());
-        mpm.add(llvm::createLoopDeletionPass());
-        mpm.add(llvm::createLoopUnrollPass());
-        mpm.add(llvm::createGVNPass());
-
-        mpm.add(llvm::createMemCpyOptPass());
-        mpm.add(llvm::createSCCPPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-        mpm.add(llvm::createJumpThreadingPass());
-        mpm.add(llvm::createCorrelatedValuePropagationPass());
-        mpm.add(llvm::createDeadStoreEliminationPass());
-        mpm.add(llvm::createAggressiveDCEPass());
-        mpm.add(llvm::createCFGSimplificationPass());
-        mpm.add(llvm::createInstructionCombiningPass());
-
-        mpm.add(llvm::createFunctionInliningPass());
-        mpm.add(llvm::createAggressiveDCEPass());
-        mpm.add(llvm::createStripDeadPrototypesPass());
-        mpm.add(llvm::createGlobalDCEPass());
-        mpm.add(llvm::createConstantMergePass());
-        mpm.add(llvm::createVerifierPass());
-        break;
-    }
-    };  // switch(optlevel)
-
-    // Add some extra passes if they are needed
-    if (target_host) {
-        if (!m_supports_llvm_bit_masks_natively) {
-            switch (m_vector_width) {
-            case 16:
-                // MUST BE THE FINAL PASS!
-                mpm.add(
-                    new LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>());
-                break;
-            case 8:
-                // MUST BE THE FINAL PASS!
-                mpm.add(
-                    new LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>());
-                break;
-            case 4:
-                // MUST BE THE FINAL PASS!
-                mpm.add(
-                    new LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<4>());
-                break;
-            default:
-                std::cout << "m_vector_width = " << m_vector_width << "\n";
-                OSL_ASSERT(0 && "unsupported bit mask width");
-            };
-        }
-    }
-#endif
-}
 
 
 void
@@ -2662,19 +2296,9 @@ LLVM_Util::do_optimize(std::string* out_err)
         return;
 #endif
 
-#ifdef OSL_LLVM_NEW_PASS_MANAGER
     // New pass manager
     m_new_pass_manager->module_pass_manager.run(
         *m_llvm_module, m_new_pass_manager->module_analysis_manager);
-#else
-    // Legacy pass manager
-    m_llvm_func_passes->doInitialization();
-    for (auto&& I : m_llvm_module->functions())
-        if (!I.isDeclaration())
-            m_llvm_func_passes->run(I);
-    m_llvm_func_passes->doFinalization();
-    m_llvm_module_passes->run(*m_llvm_module);
-#endif
 }
 
 
@@ -4492,13 +4116,6 @@ llvm::Value*
 LLVM_Util::op_load(llvm::Type* type, llvm::Value* ptr,
                    const std::string& llname)
 {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-    OSL_PRAGMA_WARNING_PUSH
-    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    OSL_ASSERT(type
-               == ptr->getType()->getScalarType()->getPointerElementType());
-    OSL_PRAGMA_WARNING_POP
-#endif
     return builder().CreateLoad(type, ptr, llname);
 }
 
@@ -6168,13 +5785,6 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, llvm::Value* elem,
                const std::string& llname)
 {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-    OSL_PRAGMA_WARNING_PUSH
-    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    OSL_ASSERT(type
-               == ptr->getType()->getScalarType()->getPointerElementType());
-    OSL_PRAGMA_WARNING_POP
-#endif
     return builder().CreateGEP(type, ptr, elem, llname);
 }
 
@@ -6184,13 +5794,6 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem,
                const std::string& llname)
 {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-    OSL_PRAGMA_WARNING_PUSH
-    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    OSL_ASSERT(type
-               == ptr->getType()->getScalarType()->getPointerElementType());
-    OSL_PRAGMA_WARNING_POP
-#endif
     return builder().CreateConstGEP1_32(type, ptr, elem, llname);
 }
 
@@ -6200,13 +5803,6 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
                const std::string& llname)
 {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-    OSL_PRAGMA_WARNING_PUSH
-    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    OSL_ASSERT(type
-               == ptr->getType()->getScalarType()->getPointerElementType());
-    OSL_PRAGMA_WARNING_POP
-#endif
     return builder().CreateConstGEP2_32(type, ptr, elem1, elem2, llname);
 }
 
@@ -6215,13 +5811,6 @@ llvm::Value*
 LLVM_Util::GEP(llvm::Type* type, llvm::Value* ptr, int elem1, int elem2,
                int elem3, const std::string& llname)
 {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-    OSL_PRAGMA_WARNING_PUSH
-    OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations")
-    OSL_ASSERT(type
-               == ptr->getType()->getScalarType()->getPointerElementType());
-    OSL_PRAGMA_WARNING_POP
-#endif
     llvm::Value* elements[3] = { constant(elem1), constant(elem2),
                                  constant(elem3) };
     return builder().CreateGEP(type, ptr, toArrayRef(elements), llname);

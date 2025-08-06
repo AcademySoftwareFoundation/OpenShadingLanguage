@@ -68,16 +68,10 @@ public:
         // what the native mask type should be.  And if necessary maintain a
         // 16 bit and 32 bit native mask representation to be passed as a
         // livein.
-        m_native_mask_type = llvm::FixedVectorType::get(llvm_type_int32,
-                                                        WidthT);
-#if OSL_LLVM_VERSION >= 112
+        m_native_mask_type      = llvm::FixedVectorType::get(llvm_type_int32,
+                                                             WidthT);
         m_wide_zero_initializer = llvm::ConstantDataVector::getSplat(
             WidthT, llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
-#else
-        m_wide_zero_initializer = llvm::ConstantVector::getSplat(
-            llvm::ElementCount(WidthT, false),
-            llvm::ConstantInt::get(context, llvm::APInt(32, 0)));
-#endif
     }
 
     bool run(llvm::Function& F) const
@@ -403,37 +397,6 @@ public:
         return llvm::PreservedAnalyses::all();
     }
 };
-
-// Legacy pass manager adapter
-template<int WidthT>
-class LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks final
-    : public llvm::FunctionPass {
-    PreventBitMasksFromBeingLiveinsToBasicBlocks<WidthT> m_pass;
-
-public:
-    static char ID;
-
-    LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks() : FunctionPass(ID) {}
-
-    bool doInitialization(llvm::Module& M) override
-    {
-        m_pass.initialize(M.getContext());
-        return false;  // Module was not changed
-    }
-
-    bool runOnFunction(llvm::Function& F) override { return m_pass.run(F); }
-};
-
-// No need to worry about static variable collisions if included multiple
-// places because of the anonymous namespace, each translation unit
-// including this file will need its own static members defined. LLVM will
-// assign IDs when they get registered, so this initialization value is not
-// important.
-template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<4>::ID = 0;
-
-template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<8>::ID = 0;
-
-template<> char LegacyPreventBitMasksFromBeingLiveinsToBasicBlocks<16>::ID = 0;
 
 }  // end of anonymous namespace
 

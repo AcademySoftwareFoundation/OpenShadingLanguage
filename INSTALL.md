@@ -69,7 +69,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * **Python >= 3.7** (tested through 3.13)
+    * **Python >= 3.9** (tested through 3.13)
     * **pybind11 >= 2.7** (tested through 3.0)
     * NumPy (tested through 2.2.4)
 * (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.8).

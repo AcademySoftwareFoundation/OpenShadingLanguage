@@ -51,20 +51,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc9/C++17 llvm11 py3.7 oiio2.5 sse4 batch-b8avx2
-            nametag: linux-vfx2021
-            runner: ubuntu-latest
-            container: aswftesting/ci-osl:2021-clang11
-            vfxyear: 2021
-            old_node: 1
-            cxx_std: 17
-            openexr_ver: v3.1.3
-            openimageio_ver: v2.5.4.0
-            python_ver: 3.7
-            pybind11_ver: v2.7.0
-            simd: sse4.2
-            batched: b8_AVX2_noFMA
-            setenvs: export USE_OPENVDB=0
+          # - desc: gcc9/C++17 llvm11 py3.7 oiio2.5 sse4 batch-b8avx2
+          #   nametag: linux-vfx2021
+          #   runner: ubuntu-latest
+          #   container: aswftesting/ci-osl:2021-clang11
+          #   vfxyear: 2021
+          #   old_node: 1
+          #   cxx_std: 17
+          #   openexr_ver: v3.1.3
+          #   openimageio_ver: v2.5.4.0
+          #   python_ver: 3.7
+          #   pybind11_ver: v2.7.0
+          #   simd: sse4.2
+          #   batched: b8_AVX2_noFMA
+          #   setenvs: export USE_OPENVDB=0
           - desc: gcc9/C++17 llvm13 py3.9 exr3.1 oiio-rel avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
@@ -104,16 +104,16 @@ jobs:
             pybind11_ver: v2.9.0
             simd: sse2
             batched: b4_SSE2
-          - desc: oldest everything gcc9/C++17 llvm9 py3.7 oiio2.5 no-simd
+          - desc: oldest everything gcc9/C++17 llvm11 py3.9 oiio2.5 no-simd
             nametag: linux-oldest
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2021-clang11
-            vfxyear: 2021
+            container: aswftesting/ci-osl:2022-clang11
+            vfxyear: 2022
             old_node: 1
             cxx_std: 17
             openexr_ver: v3.1.0
             openimageio_ver: v2.5.4.0
-            python_ver: 3.7
+            python_ver: 3.9
             pybind11_ver: v2.7.0
             # simd: 0
             setenvs: export PUGIXML_VERSION=v1.8

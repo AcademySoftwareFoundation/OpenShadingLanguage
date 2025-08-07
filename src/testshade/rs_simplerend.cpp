@@ -17,6 +17,22 @@
 
 #include "render_state.h"
 
+
+// Create constexpr hashes for all strings used by the free function renderer services.
+// NOTE:  Actually ustring's should also be instantiated in host code someplace as well
+// to allow the reverse mapping of hash->string to work when processing messages
+namespace RS {
+namespace {
+namespace Hashes {
+#define RS_STRDECL(str, var_name) \
+    constexpr OSL::ustringhash var_name(OSL::strhash(str));
+#include "rs_strdecls.h"
+#undef RS_STRDECL
+};  //namespace Hashes
+}  // unnamed namespace
+};  //namespace RS
+
+
 // Keep free functions in sync with virtual function based SimpleRenderer.
 
 OSL_RSOP OSL_HOSTDEVICE bool
@@ -66,24 +82,24 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
     using OSL::Matrix44;
 
 
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rc = OSL::get_rs<RenderState>(ec)->context;
     if (to == OSL::Hashes::camera || to == OSL::Hashes::screen
         || to == OSL::Hashes::NDC || to == RS::Hashes::raster) {
-        Matrix44 M { rs->world_to_camera };
+        Matrix44 M { rc->world_to_camera };
 
         if (to == OSL::Hashes::screen || to == OSL::Hashes::NDC
             || to == RS::Hashes::raster) {
-            float depthrange      = (double)rs->yon - (double)rs->hither;
-            OSL::ustringhash proj = rs->projection;
+            float depthrange      = (double)rc->yon - (double)rc->hither;
+            OSL::ustringhash proj = rc->projection;
 
             if (proj == RS::Hashes::perspective) {
-                float tanhalffov = OIIO::fast_tan(0.5f * rs->fov * M_PI
+                float tanhalffov = OIIO::fast_tan(0.5f * rc->fov * M_PI
                                                   / 180.0);
                 // clang-format off
                 Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
                                            0, 1/tanhalffov, 0, 0,
-                                           0, 0, rs->yon/depthrange, 1,
-                                           0, 0, -(rs->yon*rs->hither)/depthrange, 0);
+                                           0, 0, rc->yon/depthrange, 1,
+                                           0, 0, -(rc->yon*rc->hither)/depthrange, 0);
                 // clang-format on
                 M = M * camera_to_screen;
             } else {
@@ -91,7 +107,7 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
                 Matrix44 camera_to_screen (1, 0, 0, 0,
                                            0, 1, 0, 0,
                                            0, 0, 1/depthrange, 0,
-                                           0, 0, -(rs->hither)/depthrange, 1);
+                                           0, 0, -(rc->hither)/depthrange, 1);
                 // clang-format on
                 M = M * camera_to_screen;
             }
@@ -107,8 +123,8 @@ rs_get_inverse_matrix_space_time(OSL::OpaqueExecContextPtr ec,
                 M = M * screen_to_ndc;
                 if (to == RS::Hashes::raster) {
                     // clang-format off
-                    Matrix44 ndc_to_raster (rs->xres, 0, 0, 0,
-                                            0, rs->yres, 0, 0,
+                    Matrix44 ndc_to_raster (rc->xres, 0, 0, 0,
+                                            0, rc->yres, 0, 0,
                                             0, 0, 1, 0,
                                             0, 0, 0, 1);
                     M = M * ndc_to_raster;
@@ -368,6 +384,13 @@ rs_trace_get(OSL::OpaqueExecContextPtr ec, OSL::ustringhash name,
 #endif
 }
 
+OSL_RSOP OSL_HOSTDEVICE void*
+rs_allocate_closure(OSL::OpaqueExecContextPtr ec, size_t size, size_t alignment)
+{
+    auto rs = OSL::get_rs<RenderState>(ec);
+    return rs->closure_pool->allocate(size, alignment);
+}
+
 OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_string(OSL::ustringhash value, void* result)
 {
@@ -491,7 +514,7 @@ rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
     auto object              = OSL::ustringhash_from(object_);
     auto name                = OSL::ustringhash_from(name_);
     const OSL::TypeDesc type = OSL::TypeDesc_from(_type);
-    auto rs                  = OSL::get_rs<RenderState>(oec);
+    auto rc                  = OSL::get_rs<RenderState>(oec)->context;
 
     // The many branches in the code below handle the case where we don't know
     // the attribute name at compile time. In the case it is known, dead-code
@@ -500,38 +523,38 @@ rs_get_attribute(OSL::OpaqueExecContextPtr oec, OSL::ustringhash_pod object_,
         return rs_get_attribute_constant_int(OSL_VERSION, result);
     if (name == RS::Hashes::camera_resolution
         && type == OSL::TypeDesc(OSL::TypeDesc::INT, 2))
-        return rs_get_attribute_constant_int2(rs->xres, rs->yres, result);
+        return rs_get_attribute_constant_int2(rc->xres, rc->yres, result);
     if (name == RS::Hashes::camera_projection && type == OSL::TypeString)
-        return rs_get_attribute_constant_string(rs->projection, result);
+        return rs_get_attribute_constant_string(rc->projection, result);
     if (name == RS::Hashes::camera_pixelaspect && type == OSL::TypeFloat)
-        return rs_get_attribute_constant_float(rs->pixelaspect, derivatives,
+        return rs_get_attribute_constant_float(rc->pixelaspect, derivatives,
                                                result);
     if (name == RS::Hashes::camera_screen_window
         && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 4))
-        return rs_get_attribute_constant_float4(rs->screen_window[0],
-                                                rs->screen_window[1],
-                                                rs->screen_window[2],
-                                                rs->screen_window[3],
+        return rs_get_attribute_constant_float4(rc->screen_window[0],
+                                                rc->screen_window[1],
+                                                rc->screen_window[2],
+                                                rc->screen_window[3],
                                                 derivatives, result);
     if (name == RS::Hashes::camera_fov && type == OSL::TypeFloat)
-        return rs_get_attribute_constant_float(rs->fov, derivatives, result);
+        return rs_get_attribute_constant_float(rc->fov, derivatives, result);
     if (name == RS::Hashes::camera_clip
         && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 2))
-        return rs_get_attribute_constant_float2(rs->hither, rs->yon,
+        return rs_get_attribute_constant_float2(rc->hither, rc->yon,
                                                 derivatives, result);
     if (name == RS::Hashes::camera_clip_near && type == OSL::TypeFloat)
-        return rs_get_attribute_constant_float(rs->hither, derivatives, result);
+        return rs_get_attribute_constant_float(rc->hither, derivatives, result);
     if (name == RS::Hashes::camera_clip_far && type == OSL::TypeFloat)
-        return rs_get_attribute_constant_float(rs->yon, derivatives, result);
+        return rs_get_attribute_constant_float(rc->yon, derivatives, result);
     if (name == RS::Hashes::camera_shutter
         && type == OSL::TypeDesc(OSL::TypeDesc::FLOAT, 2))
-        return rs_get_attribute_constant_float2(rs->shutter[0], rs->shutter[1],
+        return rs_get_attribute_constant_float2(rc->shutter[0], rc->shutter[1],
                                                 derivatives, result);
     if (name == RS::Hashes::camera_shutter_open && type == OSL::TypeFloat)
-        return rs_get_attribute_constant_float(rs->shutter[0], derivatives,
+        return rs_get_attribute_constant_float(rc->shutter[0], derivatives,
                                                result);
     if (name == RS::Hashes::camera_shutter_close && type == OSL::TypeFloat)
-        return rs_get_attribute_constant_float(rs->shutter[1], derivatives,
+        return rs_get_attribute_constant_float(rc->shutter[1], derivatives,
                                                result);
 
     if (name == RS::Hashes::shading_index && type == OSL::TypeInt)
@@ -643,9 +666,9 @@ rs_errorfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rc = OSL::get_rs<RenderState>(ec)->context;
 
-    OSL::journal::Writer jw { rs->journal_buffer };
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_errorfmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
                        fmt_specification, arg_count, argTypes, argValuesSize,
                        argValues);
@@ -656,9 +679,9 @@ rs_warningfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
               int32_t arg_count, const OSL::EncodedType* argTypes,
               uint32_t argValuesSize, uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rc = OSL::get_rs<RenderState>(ec)->context;
 
-    OSL::journal::Writer jw { rs->journal_buffer };
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_warningfmt(OSL::get_max_warnings_per_thread(ec),
                          OSL::get_thread_index(ec), OSL::get_shade_index(ec),
                          fmt_specification, arg_count, argTypes, argValuesSize,
@@ -671,9 +694,9 @@ rs_printfmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash fmt_specification,
             int32_t arg_count, const OSL::EncodedType* argTypes,
             uint32_t argValuesSize, uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rc = OSL::get_rs<RenderState>(ec)->context;
 
-    OSL::journal::Writer jw { rs->journal_buffer };
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_printfmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
                        fmt_specification, arg_count, argTypes, argValuesSize,
                        argValues);
@@ -686,9 +709,9 @@ rs_filefmt(OSL::OpaqueExecContextPtr ec, OSL::ustringhash filename_hash,
            const OSL::EncodedType* argTypes, uint32_t argValuesSize,
            uint8_t* argValues)
 {
-    auto rs = OSL::get_rs<RenderState>(ec);
+    auto rc = OSL::get_rs<RenderState>(ec)->context;
 
-    OSL::journal::Writer jw { rs->journal_buffer };
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_filefmt(OSL::get_thread_index(ec), OSL::get_shade_index(ec),
                       filename_hash, fmt_specification, arg_count, argTypes,
                       argValuesSize, argValues);

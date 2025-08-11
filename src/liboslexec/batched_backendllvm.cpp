@@ -1304,25 +1304,6 @@ BatchedBackendLLVM::llvm_store_value(llvm::Value* new_val, llvm::Value* dst_ptr,
         if (!type.is_closure_based() && t.aggregate > 1)
             dst_ptr = ll.GEP(dst_type, dst_ptr, 0, component);
 
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-        if ((const llvm::Type*)ll.type_ptr(ll.llvm_typeof(new_val))
-            != ll.llvm_typeof(dst_ptr)) {
-            std::cerr << " new_val type=";
-            {
-                llvm::raw_os_ostream os_cerr(std::cerr);
-                ll.llvm_typeof(new_val)->print(os_cerr);
-            }
-            std::cerr << " dest_ptr type=";
-            {
-                llvm::raw_os_ostream os_cerr(std::cerr);
-                ll.llvm_typeof(dst_ptr)->print(os_cerr);
-            }
-            std::cerr << std::endl;
-        }
-        OSL_ASSERT((const llvm::Type*)ll.type_ptr(ll.llvm_typeof(new_val))
-                   == ll.llvm_typeof(dst_ptr));
-#endif
-
         // Finally, store the value.
         ll.op_store(new_val, dst_ptr);
         return true;

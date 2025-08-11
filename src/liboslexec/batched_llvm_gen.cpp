@@ -1056,18 +1056,6 @@ LLVMGEN(llvm_gen_andor)
     // sometimes we could not force the data type to be an bool and it remains
     // an int, for those cases we will need to convert the boolean to int
     if (!result.forced_llvm_bool()) {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-        llvm::Type* resultType = rop.ll.llvm_typeof(
-            rop.llvm_get_pointer(result));
-        OSL_ASSERT(
-            (resultType
-             == reinterpret_cast<llvm::Type*>(rop.ll.type_wide_int_ptr()))
-            || (resultType
-                == reinterpret_cast<llvm::Type*>(rop.ll.type_int_ptr())));
-        llvm::Type* typeOfR = rop.ll.llvm_typeof(i1_res);
-        OSL_ASSERT(typeOfR == rop.ll.type_wide_bool()
-                   || typeOfR == rop.ll.type_bool());
-#endif
         i1_res = rop.ll.op_bool_to_int(i1_res);
     }
 
@@ -2170,15 +2158,6 @@ LLVMGEN(llvm_gen_bitwise_binary_op)
     // We allowed boolean values to pass through or,and,xor
     // so we might need to promote to integer before storage
     if (!Result.forced_llvm_bool()) {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-        llvm::Type* resultType = rop.ll.llvm_typeof(
-            rop.llvm_get_pointer(Result));
-        OSL_ASSERT(
-            (resultType
-             == reinterpret_cast<llvm::Type*>(rop.ll.type_wide_int_ptr()))
-            || (resultType
-                == reinterpret_cast<llvm::Type*>(rop.ll.type_int_ptr())));
-#endif
         llvm::Type* typeOfR = rop.ll.llvm_typeof(r);
         if (typeOfR == rop.ll.type_wide_bool()
             || typeOfR == rop.ll.type_bool()) {
@@ -3075,15 +3054,6 @@ LLVMGEN(llvm_gen_compare_op)
             final_result = rop.ll.llvm_mask_to_native(final_result);
         }
     } else {
-#ifndef OSL_LLVM_OPAQUE_POINTERS
-        llvm::Type* resultType = rop.ll.llvm_typeof(
-            rop.llvm_get_pointer(Result));
-        OSL_ASSERT(
-            (resultType
-             == reinterpret_cast<llvm::Type*>(rop.ll.type_wide_int_ptr()))
-            || (resultType
-                == reinterpret_cast<llvm::Type*>(rop.ll.type_int_ptr())));
-#endif
         final_result = rop.ll.op_bool_to_int(final_result);
     }
 

@@ -692,7 +692,7 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
     control_area_layout->addWidget(restartButton);
 
     searchPathEditor
-        = new OSLToySearchPathEditor(this, [this](auto&& paths) mutable {
+        = new OSLToySearchPathEditor(this, [&](auto&& paths) mutable {
               update_include_search_paths(paths);
           });
 
@@ -1052,7 +1052,7 @@ OSLToyMainWindow::timed_rerender_trigger(void)
         m_working = 1;
         renderer()->set_time(now);
     }
-    trigger_pool.push([=](int) { this->osl_do_rerender(now); });
+    trigger_pool.push([&](int) { this->osl_do_rerender(now); });
 }
 
 
@@ -1300,10 +1300,10 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
         diddleCheckbox->setCheckState(Qt::Checked);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     connect(diddleCheckbox, &QCheckBox::checkStateChanged, this,
-            [=](Qt::CheckState state) { set_param_diddle(param, int(state)); });
+            [&](Qt::CheckState state) { set_param_diddle(param, int(state)); });
 #else
     connect(diddleCheckbox, &QCheckBox::stateChanged, this,
-            [=](int state) { set_param_diddle(param, state); });
+            [&](int state) { set_param_diddle(param, state); });
 #endif
     layout->addWidget(diddleCheckbox, row, 0);
 
@@ -1332,7 +1332,7 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
         layout->addWidget(adjustWidget, row, 2);
         param->widgets.push_back(adjustWidget);
         connect<void (QSpinBox::*)(int)>(adjustWidget, &QSpinBox::valueChanged,
-                                         this, [=](int) {
+                                         this, [&](int) {
                                              set_param_instance_value(param);
                                          });
     } else if (param->type == TypeDesc::FLOAT) {
@@ -1341,7 +1341,7 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
         param->widgets.push_back(adjustWidget);
         connect<void (QDoubleSpinBox::*)(double)>(
             adjustWidget, &QDoubleSpinBox::valueChanged, this,
-            [=](double) { set_param_instance_value(param); });
+            [&](double) { set_param_instance_value(param); });
     } else if (param->type.is_vec3()) {
         auto xyzBox    = new QWidget;
         auto xyzLayout = new QHBoxLayout;
@@ -1367,7 +1367,7 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
             param->widgets.push_back(adjustWidget);
             connect<void (QDoubleSpinBox::*)(double)>(
                 adjustWidget, &QDoubleSpinBox::valueChanged, this,
-                [=](double) { set_param_instance_value(param); });
+                [&](double) { set_param_instance_value(param); });
         }
         layout->addWidget(xyzBox, row, 2);
     } else if (param->type == TypeDesc::STRING) {
@@ -1376,12 +1376,12 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
         layout->addWidget(adjustWidget, row, 2);
         param->widgets.push_back(adjustWidget);
         connect(adjustWidget, &QLineEdit::returnPressed, this,
-                [=]() { set_param_instance_value(param); });
+                [&]() { set_param_instance_value(param); });
     }
 
     auto resetButton = new QPushButton("Reset");
     connect(resetButton, &QPushButton::clicked, this,
-            [=]() { reset_param_to_default(param); });
+            [&]() { reset_param_to_default(param); });
     layout->addWidget(resetButton, row, 3);
 
     set_ui_to_paramval(param);

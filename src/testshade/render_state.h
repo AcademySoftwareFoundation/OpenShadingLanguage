@@ -10,7 +10,7 @@
 // All the the state free functions in rs_simplerend.cpp will need to do their job
 // NOTE:  Additional data is here that will be used by rs_simplerend.cpp in future PR's
 //        procedurally generating ShaderGlobals.
-struct RenderState {
+struct RenderContext {
     int xres;
     int yres;
     OSL::Matrix44 world_to_camera;
@@ -24,17 +24,36 @@ struct RenderState {
     void* journal_buffer;
 };
 
+class StackClosurePool {
+    static constexpr size_t capacity = 1024;
+    alignas(8) char buffer[capacity];
+    void* ptr;
 
-// Create constexpr hashes for all strings used by the free function renderer services.
-// NOTE:  Actually ustring's should also be instantiated in host code someplace as well
-// to allow the reverse mapping of hash->string to work when processing messages
-namespace RS {
-namespace {
-namespace Hashes {
-#define RS_STRDECL(str, var_name) \
-    constexpr OSL::ustringhash var_name(OSL::strhash(str));
-#include "rs_strdecls.h"
-#undef RS_STRDECL
-};  //namespace Hashes
-}  // unnamed namespace
-};  //namespace RS
+public:
+    OSL_HOSTDEVICE
+    StackClosurePool() { reset(); }
+
+    OSL_HOSTDEVICE
+    void reset()
+    {
+        ptr        = &buffer[0];
+        *(int*)ptr = 0;
+    }
+
+    OSL_HOSTDEVICE
+    void* allocate(size_t size, size_t alignment)
+    {
+        uintptr_t p = OIIO::round_to_multiple_of_pow2((uintptr_t)ptr,
+                                                      alignment);
+        ptr         = (void*)(p + size);
+        if (ptr <= &buffer[capacity])
+            return (void*)p;
+        assert(false);
+        return nullptr;
+    }
+};
+
+struct RenderState {
+    RenderContext* context;
+    StackClosurePool* closure_pool;
+};

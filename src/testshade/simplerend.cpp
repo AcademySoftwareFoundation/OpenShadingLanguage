@@ -25,6 +25,21 @@ namespace Strings {
 }  // namespace RS
 
 
+// Create constexpr hashes for all strings used by the free function renderer services.
+// NOTE:  Actually ustring's should also be instantiated in host code someplace as well
+// to allow the reverse mapping of hash->string to work when processing messages
+namespace RS {
+namespace {
+namespace Hashes {
+#define RS_STRDECL(str, var_name) \
+    constexpr OSL::ustringhash var_name(OSL::strhash(str));
+#include "rs_strdecls.h"
+#undef RS_STRDECL
+};  //namespace Hashes
+}  // unnamed namespace
+};  //namespace RS
+
+
 using namespace OSL;
 
 
@@ -1058,22 +1073,22 @@ SimpleRenderer::add_output(string_view varname_, string_view filename,
 
 
 void
-SimpleRenderer::export_state(RenderState& state) const
+SimpleRenderer::export_context(RenderContext& context) const
 {
-    state.xres   = m_xres;
-    state.yres   = m_yres;
-    state.fov    = m_fov;
-    state.hither = m_hither;
-    state.yon    = m_yon;
+    context.xres   = m_xres;
+    context.yres   = m_yres;
+    context.fov    = m_fov;
+    context.hither = m_hither;
+    context.yon    = m_yon;
 
-    state.world_to_camera = OSL::Matrix44(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-                                          0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-                                          0.0, 1.0);
+    context.world_to_camera = OSL::Matrix44(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                                            0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+                                            0.0, 1.0);
     //perspective is not  a member of StringParams (i.e not in strdecls.h)
-    state.projection  = RS::Hashes::perspective;
-    state.pixelaspect = m_pixelaspect;
-    std::copy_n(m_screen_window, 4, state.screen_window);
-    std::copy_n(m_shutter, 2, state.shutter);
+    context.projection  = RS::Hashes::perspective;
+    context.pixelaspect = m_pixelaspect;
+    std::copy_n(m_screen_window, 4, context.screen_window);
+    std::copy_n(m_shutter, 2, context.shutter);
 }
 
 void
@@ -1082,8 +1097,8 @@ SimpleRenderer::errorfmt(OSL::ShaderGlobals* sg,
                          const EncodedType* arg_types, uint32_t arg_values_size,
                          uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
-    OSL::journal::Writer jw { rs->journal_buffer };
+    RenderContext* rc = reinterpret_cast<RenderState*>(sg->renderstate)->context;
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_errorfmt(OSL::get_thread_index(sg), OSL::get_shade_index(sg),
                        fmt_specification, arg_count, arg_types, arg_values_size,
                        argValues);
@@ -1095,8 +1110,8 @@ SimpleRenderer::warningfmt(OSL::ShaderGlobals* sg,
                            int32_t arg_count, const EncodedType* arg_types,
                            uint32_t arg_values_size, uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
-    OSL::journal::Writer jw { rs->journal_buffer };
+    RenderContext* rc = reinterpret_cast<RenderState*>(sg->renderstate)->context;
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_warningfmt(OSL::get_max_warnings_per_thread(sg),
                          OSL::get_thread_index(sg), OSL::get_shade_index(sg),
                          fmt_specification, arg_count, arg_types,
@@ -1111,8 +1126,8 @@ SimpleRenderer::printfmt(OSL::ShaderGlobals* sg,
                          const EncodedType* arg_types, uint32_t arg_values_size,
                          uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
-    OSL::journal::Writer jw { rs->journal_buffer };
+    RenderContext* rc = reinterpret_cast<RenderState*>(sg->renderstate)->context;
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_printfmt(OSL::get_thread_index(sg), OSL::get_shade_index(sg),
                        fmt_specification, arg_count, arg_types, arg_values_size,
                        argValues);
@@ -1124,8 +1139,8 @@ SimpleRenderer::filefmt(OSL::ShaderGlobals* sg, OSL::ustringhash filename_hash,
                         const EncodedType* arg_types, uint32_t arg_values_size,
                         uint8_t* argValues)
 {
-    RenderState* rs = reinterpret_cast<RenderState*>(sg->renderstate);
-    OSL::journal::Writer jw { rs->journal_buffer };
+    RenderContext* rc = reinterpret_cast<RenderState*>(sg->renderstate)->context;
+    OSL::journal::Writer jw { rc->journal_buffer };
     jw.record_filefmt(OSL::get_thread_index(sg), OSL::get_shade_index(sg),
                       filename_hash, fmt_specification, arg_count, arg_types,
                       arg_values_size, argValues);

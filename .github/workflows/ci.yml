@@ -266,13 +266,24 @@ jobs:
             pybind11_ver: v2.11.1
             simd: avx2,f16c
             batched: b8_AVX2
-            # setenvs: export CONAN_PACKAGES="ptex/2.4.2@aswf/vfx2024"
           - desc: VP2025 gcc11/C++17 llvm18 py3.11 oiio-3.0 avx2
             nametag: linux-vfx2025
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2025-clang18
             cxx_std: 17
             python_ver: "3.11"
+            # pybind11_ver: v2.11.1
+            simd: avx2,f16c
+            batched: b8_AVX2
+            setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery"
+            # ^^ exclude python-oslquery test until the ASWF container properly
+            #    includes OIIO's python bindings, then we can remove that.
+          - desc: VP2026 gcc14/C++20 llvm20 py3.13 oiio-3.1 avx2
+            nametag: linux-vfx2026
+            runner: ubuntu-latest
+            container: aswftesting/ci-osl:2026-clang20
+            cxx_std: 20
+            python_ver: "3.13"
             # pybind11_ver: v2.11.1
             simd: avx2,f16c
             batched: b8_AVX2

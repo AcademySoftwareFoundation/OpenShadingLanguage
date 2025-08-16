@@ -6,6 +6,7 @@
 
 import os
 import glob
+import shlex
 import sys
 import platform
 import subprocess
@@ -14,8 +15,9 @@ import filecmp
 import shutil
 import re
 from itertools import chain
-
-from optparse import OptionParser
+from collections.abc import Iterator
+from typing import Union
+import argparse
 
 
 def make_relpath (path, start=os.curdir):
@@ -40,17 +42,38 @@ OSL_TESTSUITE_ROOT = make_relpath(os.getenv('OSL_TESTSUITE_ROOT',
 os.environ['OSLHOME'] = os.path.join(OSL_SOURCE_DIR, "src")
 OSL_REGRESSION_TEST = os.environ.get("OSL_REGRESSION_TEST", None)
 
-
 # Options for the command line
-parser = OptionParser()
-parser.add_option("-p", "--path", help="add to executable path",
-                  action="store", type="string", dest="path", default="")
-parser.add_option("--devenv-config", help="use a MS Visual Studio configuration",
-                  action="store", type="string", dest="devenv_config", default="")
-parser.add_option("--solution-path", help="MS Visual Studio solution path",
-                  action="store", type="string", dest="solution_path", default="")
-(options, args) = parser.parse_args()
+parser = argparse.ArgumentParser()
+parser.add_argument("-p", "--path", help="add to executable path",
+                    action="store", dest="path", default="")
+parser.add_argument("--devenv-config", help="use a MS Visual Studio configuration",
+                    action="store", dest="devenv_config", default="")
+parser.add_argument("--solution-path", help="MS Visual Studio solution path",
+                    action="store", dest="solution_path", default="")
+parser.add_argument("--backend", help="use this backend to execute test",
+                    action="store", default="OSO")
+parser.add_argument("--baseline", help="backend baseline to compare to, by default same as the backend being tested",
+                    action='store', default=None)
+parser.add_argument("--lazy_oslc", help="only compile shader if the source or the compiler are younger than the corresponding artifact",
+                    action='store_true')
 
+class AppendEdit(argparse.Action):
+    """ Convert filter_re argument into the corresponding --edit argument """
+    def __call__(self, parser, namespace, values, option_string=None):
+        modifiers = ''
+        if values[0] == '~':
+            values = values[1:]
+            modifiers += 'v'
+        setattr(namespace, self.dest, f"m/{values}/{modifiers}")
+
+parser.add_argument("--filter_re", help="only compare lines matching these python re's, and not matching the ones where the first character is '~'",
+                    action=AppendEdit, dest='edits', default=[])
+parser.add_argument("--edit", help="apply these edits to the lines before comparing. s/// is used for regsub and m// is used for matching",
+                    action='append', dest='edits', default=[])
+parser.add_argument("args", nargs='*')
+options = parser.parse_args()
+
+args = options.args
 if args and len(args) > 0 :
     srcdir = args[0]
     srcdir = os.path.abspath (srcdir) + "/"
@@ -59,14 +82,30 @@ if args and len(args) > 1 :
     OSL_BUILD_DIR = args[1]
 OSL_BUILD_DIR = os.path.normpath (OSL_BUILD_DIR)
 
+options.backend = options.backend.upper()
+if options.backend not in ["OSO", "MSB"]:
+    print("WARNING: requested unknown backend '%s', using 'OSO'" % options.backend)
+    options.backend = "OSO"
+
+if options.baseline:
+    options.baseline = options.baseline.upper()
+    if options.baseline not in ["OSO", "MSB"]:
+        print("WARNING: requested unknown baseline backend '%s', using '%s' (same as backend)" % (options.baseline, options.backend))
+        options.baseline = options.backend
+
 tmpdir = "."
 tmpdir = os.path.abspath (tmpdir)
-if platform.system() == 'Windows' :
-    redirect = " >> out.txt 2>&1 "
-else :
-    redirect = " >> out.txt 2>>out.txt "
+out_txt = "out.txt"
 
-refdir = "ref/"
+if platform.system() == 'Windows' :
+    redirect = " >> %s 2>&1 " % out_txt
+else :
+    redirect = " >> %s 2>>%s " % (out_txt, out_txt)
+
+refbasedir = "ref"       # base directory for references
+refdir = refbasedir      # this is usually <refbasedir>/<backend>
+refdir_fallback = refdir # this is what we use if <refdir>/myfile does not exists
+baselinedir = "baseline"
 mytest = os.path.split(os.path.abspath(os.getcwd()))[-1]
 if str(mytest).endswith('.opt') or str(mytest).endswith('.optix') :
     mytest = mytest.split('.')[0]
@@ -76,7 +115,7 @@ test_source_dir = os.getenv('OSL_TESTSUITE_SRC',
 #                               os.path.basename(os.path.abspath(srcdir)))
 
 command = ""
-outputs = [ "out.txt" ]    # default
+outputs = [ out_txt ]    # default
 
 # Control image differencing
 failureok = 0
@@ -89,11 +128,31 @@ idiff_program = "oiiotool"
 idiff_postfilecmd = ""
 skip_diff = int(os.environ.get("OSL_TESTSUITE_SKIP_DIFF", "0"))
 
-filter_re = None
 cleanup_on_success = False
 if int(os.getenv('TESTSUITE_CLEANUP_ON_SUCCESS', '0')) :
     cleanup_on_success = True
 oslcargs = "-Wall"
+oslinfoargs = ""
+testshadeargs = ""
+testrenderargs = ""
+testoptixargs = ""
+
+if options.backend != "OSO":
+    if options.backend == "MSB":
+        oslcargs += " -g -msb -save-temps"
+    else:
+        print("ERROR: requested backend '%s', but runtest.py doesn't know the corresponding option for 'oslc'. Abort." % options.backend)
+        exit(1)
+    #oslinfoargs += "" # no change needed
+    testshadeargs += " --backend " + options.backend
+    testrenderargs += " --backend " + options.backend
+    testoptixargs += " --backend " + options.backend
+    refdir = os.path.join(refdir, options.backend)
+
+if not options.baseline:
+    baselinedir = "baseline/" + options.backend
+elif options.baseline != "OSO":
+    baselinedir = "baseline/" + options.baseline
 
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
                      ".dpx", ".iff", ".psd" ]
@@ -101,26 +160,37 @@ image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
 compile_osl_files = True
 splitsymbol = ';'
 
+#print("OSL_BUILD_DIR=%s" % (OSL_BUILD_DIR if OSL_BUILD_DIR else '(None)'))
+#print("OSL_SOURCE_DIR=%s" % (OSL_SOURCE_DIR if OSL_SOURCE_DIR else '(None)'))
+#print("OSL_TESTSUITE_DIR=%s" % (OSL_TESTSUITE_DIR if OSL_TESTSUITE_DIR else '(None)'))
+#print("OpenImageIO_ROOT=%s" % (OpenImageIO_ROOT if OpenImageIO_ROOT else '(None)'))
+#print("OSL_TESTSUITE_ROOT=%s" % (OSL_TESTSUITE_ROOT if OSL_TESTSUITE_ROOT else '(None)'))
+#print("OSL_REGRESSION_TEST=%s" % (OSL_REGRESSION_TEST if OSL_REGRESSION_TEST else '(None)'))
+
 #print ("srcdir = " + srcdir)
 #print ("tmpdir = " + tmpdir)
-#print ("path = " + path)
-#print ("refdir = " + refdir)
+#print ("path = " + path) # path variable seems to be undefined
+print ("baselinedir = " + baselinedir)
+print ("refdir = " + refdir)
+print ("refdir_fallback = " + refdir_fallback)
 print ("test source dir = ", test_source_dir)
-
+print ("backend = ", options.backend )
+print ("baseline = ", options.baseline if options.baseline else "(None)" )
+print (f"edit = {options.edits}")
 if platform.system() == 'Windows' :
-    if not os.path.exists("./ref") :
-        test_source_ref_dir = os.path.join (test_source_dir, "ref")
+    if not os.path.exists(os.path.join(".", refbasedir)) :
+        test_source_ref_dir = os.path.join (test_source_dir, refbasedir)
         if os.path.exists(test_source_ref_dir) :
-            shutil.copytree (test_source_ref_dir, "./ref")
+            shutil.copytree (test_source_ref_dir, os.path.join(".", refbasedir))
     if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
         shutil.copytree (os.path.join (test_source_dir, "src"), "./src")
     if not os.path.exists(os.path.abspath("data")) :
         shutil.copytree (test_source_dir, os.path.abspath("data"))
 else :
-    if not os.path.exists("./ref") :
-        test_source_ref_dir = os.path.join (test_source_dir, "ref")
+    if not os.path.exists(os.path.join(".", refbasedir)) :
+        test_source_ref_dir = os.path.join (test_source_dir, refbasedir)
         if os.path.exists(test_source_ref_dir) :
-            os.symlink (test_source_ref_dir, "./ref")
+            os.symlink (test_source_ref_dir, os.path.join(".", refbasedir))
     if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
         os.symlink (os.path.join (test_source_dir, "src"), "./src")
     if not os.path.exists("./data") :
@@ -133,39 +203,179 @@ pythonbin = sys.executable
 
 # Handy functions...
 
+def s_edit(sub_pat: str, input: Iterator[str]):
+    """
+    A generator that returns a regsubbed version of the stream passed as input
+    This is more or less sed's or PERL's 's/pat/sub/modifiers;'
+    The character after the leading 's' can be anything, and exactly three must be present
+    in the string, after escaping with backslash. Unlike PERL, we don't implement
+    matching delimiters (in PERL you'd have s{pat}{sub}modifiers, for all delimiters
+    that come in open/close pairs, but this is not implemented here)
+    Currently accepted modifiers are:
+      - i - case-insensitive matching
+      - g - global replace
+    """
+
+    # absorb leading 's'
+    if sub_pat[0] == 's':
+        sub_pat = sub_pat[1:]
+
+    # split and manage escaping
+    toks = []
+    for tok in sub_pat.split(sub_pat[0])[1:]:
+        if len(toks) and toks[-1][-1] == '\\':
+            toks[-1] = toks[-1][:-1] + tok
+        else:
+            toks.append(tok)
+
+    try:
+        pat, sub, modifiers = toks
+    except:
+        raise ValueError(f"Malformed substitution expression '{sub_pat}'")
+
+    flags = re.IGNORECASE if 'i' in modifiers else re.NOFLAG
+    count = 0 if 'g' in modifiers else 1
+    expr = re.compile(pat, flags)
+    for line in input:
+        yield expr.sub(sub, line, count=count)
+
+
+def m_edit(match_pat: str, input: Iterator[str]):
+    """
+    A generator that returns a grepped version of the stream passed as input
+    This is more or less PERL's 'print if m/pat/modifiers;'
+    The character after the leading 'm' can be anything, and exactly two must be present
+    in the string, after escaping with backslash. Unlike PERL, we don't implement
+    matching delimiters (in PERL you'd have m{pat}modifiers, for all delimiters
+    that come in open/close pairs, but this is not implemented here)
+    Currently accepted modifiers are:
+      - i - case-insensitive matching
+      - v - invert the meaning of the match (like `grep -v`)
+      - a<num> - also match num lines after an actual match
+      - b<num> - also match num lines before an actual match
+    """
+
+    # absorb leading 'm'
+    if match_pat[0] == 'm':
+        match_pat = match_pat[1:]
+
+    # split and manage escaping
+    toks = []
+    for tok in match_pat.split(match_pat[0])[1:]:
+        if len(toks) and toks[-1][-1] == '\\':
+            toks[-1] = toks[-1][:-1] + tok
+        else:
+            toks.append(tok)
+
+    try:
+        pat, modifiers = toks
+    except:
+        raise ValueError(f"Malformed match expression '{match_pat}'")
+
+    flags = re.IGNORECASE if 'i' in modifiers else re.NOFLAG
+    invert = 'v' in modifiers
+    after = 0
+    before = 0
+    if 'a' in modifiers:
+        start = modifiers.index('a') + 1
+        end = start
+        while end < len(modifiers) and modifiers[end].isdigit():
+            end += 1
+        after = int(modifiers[start:end])
+
+    if 'b' in modifiers:
+        start = modifiers.index('b') + 1
+        end = start
+        while end < len(modifiers) and modifiers[end].isdigit():
+            end += 1
+        before = int(modifiers[start:end])
+
+    beforebuf = []
+    aftercount = 0
+    expr = re.compile(pat, flags)
+    for line in input:
+        yielded = False
+        if aftercount:
+            aftercount -= 1
+            yielded = True
+            yield line
+            # when we re-enter the generator we
+            # go to check the match before looping around
+        elif before:
+            # don't capture a line during the "after" phase,
+            # otherwise it would flow out twice
+            beforebuf.append(line)
+            while len(beforebuf) > before:
+                beforebuf.pop(0)
+
+        ismatch = expr.search(line) is not None
+        if invert:
+            ismatch = not ismatch
+        if not ismatch:
+            continue
+
+        # if we're here, the line is a match
+        aftercount = after
+        # spool out the before buffer
+        yielded = yielded or len(beforebuf) > 0
+        while len(beforebuf):
+            yield beforebuf.pop(0)
+
+
+        # as well as our matching line, unless it's already gone out
+        if not yielded:
+            yield line
+
+def edit_file(fname: str, edits: list[str]) -> list[str]:
+    with open(fname, 'r') as f:
+        gen = f
+        # build our edit chain
+        for edit in edits:
+            try:
+                if edit[0] == 's':
+                    gen = s_edit(edit, gen)
+                elif edit[0] == 'm':
+                    gen = m_edit(edit, gen)
+                else:
+                    print(f"Unknown edit command '{edit[0]}' in expression '{edit}'")
+            except:
+                print(f"Can't add edit command '{edit}'")
+        # spool it all back out
+        return list(gen)
+
 # Compare two text files. Returns 0 if they are equal otherwise returns
 # a non-zero value and writes the differences to "diff_file".
 # Based on the command-line interface to difflib example from the Python
-# documentation
-def text_diff (fromfile, tofile, diff_file=None, filter_re=None):
+# documentation, with the added twist that we apply the edits before the diff
+def text_diff (fromfile: str, tofile: str, diff_file: str =None, edits: list[str] =[]):
     import time
     try:
         fromdate = time.ctime (os.stat (fromfile).st_mtime)
         todate = time.ctime (os.stat (tofile).st_mtime)
-        if filter_re:
-          filt = re.compile(filter_re)
-          fromlines = [l for l in open (fromfile, 'r').readlines() if filt.match(l) is not None]
-          tolines   = [l for l in open (tofile, 'r').readlines() if filt.match(l) is not None]
-        else:         
-          fromlines = open (fromfile, 'r').readlines()
-          tolines   = open (tofile, 'r').readlines()
+
+        fromlines = edit_file(fromfile, edits)
+        tolines = edit_file(tofile, edits)
+    except FileNotFoundError as e:
+        print ("File not found:", e.filename)
+        return -1
     except:
         print ("Unexpected error:", sys.exc_info()[0])
         return -1
         
-    diff = difflib.unified_diff(fromlines, tolines, fromfile, tofile,
+    diff = difflib.unified_diff(fromlines, tolines,
+                                fromfile, tofile,
                                 fromdate, todate)
     # Diff is a generator, but since we need a way to tell if it is
     # empty we just store all the text in advance
-    diff_lines = [l for l in diff]
+    diff_lines = list(diff)
     if not diff_lines:
         return 0
     if diff_file:
         try:
             open (diff_file, 'w').writelines (diff_lines)
             print ("Diff " + fromfile + " vs " + tofile + " was:\n-------")
-#            print (diff)
-            print ("".join(diff_lines))
+            for l in diff_lines:
+                print(l, end='')
         except:
             print ("Unexpected error:", sys.exc_info()[0])
     return 1
@@ -197,6 +407,44 @@ def oiio_app (app):
         return app + " "
 
 
+def get_artifacts(source_or_cmd: str) -> list[str]:
+    """
+    Try to divine the resulting artifacts from a job.
+    If unable, return empty list
+    (Work in progress)
+    """
+    toks = shlex.split(source_or_cmd)
+    source = toks[-1]  # FIXME: this is horrible
+    if source.endswith(".osl"):
+        if options.backend.upper() == "OSO":
+            return [source[:-1] + 'o']
+        elif options.backend.upper() == "MSB":
+            return [source[:-1] + 'm']
+    return []
+
+oslc_mtime = None
+def needsrecompile(source: str) -> bool:
+    """
+    Determine if the given shader needs to be recompiled
+    """
+    global oslc_mtime
+    if not options.lazy_oslc:
+        return True
+    artifact = get_artifacts(source)
+    if not len(artifact):
+        return True
+    artifact = artifact[0]
+    artifact_mtime = os.path.getmtime(artifact) if os.path.exists(artifact) else 0
+    if not oslc_mtime:
+        oslc_bin = osl_app("oslc").strip()
+        oslc_mtime = os.path.getmtime(oslc_bin)
+    src_mtime = os.path.getmtime(source)
+    if src_mtime > artifact_mtime or oslc_mtime > artifact_mtime:
+        return True
+    # "cache hit"
+    return False
+
+
 # Construct a command that will compile the shader file, appending output to
 # the file "out.txt".
 def oslc (args) :
@@ -206,7 +454,7 @@ def oslc (args) :
 # Construct a command that will run oslinfo, appending output to
 # the file "out.txt".
 def oslinfo (args) :
-    return (osl_app("oslinfo") + args + redirect + " ;\n")
+    return (osl_app("oslinfo") + oslinfoargs + " "+ args + redirect + " ;\n")
 
 
 # Construct a command that runs oiiotool, appending console output
@@ -256,14 +504,14 @@ def testshade (args) :
         testshadename = os.environ['OSL_TESTSHADE_NAME'] + " "
     else :
         testshadename = osl_app("testshade")
-    return (testshadename + args + redirect + " ;\n")
+    return (testshadename + " " + testshadeargs + " " + args + redirect + " ;\n")
 
 
 # Construct a command that run testrender with the specified arguments,
 # appending output to the file "out.txt".
 def testrender (args) :
     os.environ["optix_log_level"] = "0"
-    return (osl_app("testrender") + " " + args + redirect + " ;\n")
+    return (osl_app("testrender") + " " + testrenderargs + " " + args + redirect + " ;\n")
 
 
 # Construct a command that run testoptix with the specified arguments,
@@ -272,17 +520,17 @@ def testoptix (args) :
     # Disable OptiX logging to prevent messages from the library from
     # appearing in the program output.
     os.environ["optix_log_level"] = "0"
-    return (osl_app("testoptix") + " " + args + redirect + " ;\n")
+    return (osl_app("testoptix") + " " + testoptixargs + " " + args + redirect + " ;\n")
 
 
 # Run 'command'.  For each file in 'outputs', compare it to the copy
-# in 'ref/'.  If all outputs match their reference copies, return 0
+# in refdir.  If all outputs match their reference copies, return 0
 # to pass.  If any outputs do not match their references return 1 to
 # fail.
-def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regression=None, filter_re=None) :
+def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regression=None, edits=[]) :
 #    print ("working dir = " + tmpdir)
     os.chdir (srcdir)
-    open ("out.txt", "w").close()    # truncate out.txt
+    open (out_txt, "w").close()    # truncate out_txt
 
     if options.path != "" :
         sys.path = [options.path] + sys.path
@@ -307,15 +555,18 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
         test_environ["TESTSHADE_RS_BITCODE"] = "1"
 
     print ("command = ", command)
+
     for sub_command in command.split(splitsymbol):
-        sub_command = sub_command.lstrip().rstrip()
-        #print ("running = ", sub_command)
+        sub_command = sub_command.strip()
+        if not sub_command:
+            continue
+        print ("running = ", sub_command)
         cmdret = subprocess.call (sub_command, shell=True, env=test_environ)
         if cmdret != 0 and failureok == 0 :
             print ("#### Error: this command failed: ", sub_command)
             print ("FAIL")
             print ("Output was:\n--------")
-            print (open ("out.txt", 'r').read())
+            print (open (out_txt, 'r').read())
             print ("--------")
             return (1)
 
@@ -324,22 +575,29 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
 
     err = 0
     if regression == "BASELINE" :
-        if not os.path.exists("./baseline") :
-            os.mkdir("./baseline") 
+        if not os.path.exists(os.path.join(".", baselinedir)) :
+            os.makedirs(os.path.join(".", baselinedir))
         for out in outputs :
-            shutil.move(out, "./baseline/"+out) 
+            shutil.move(out, os.path.join(".", baselinedir, out)) 
     else :
         for out in outputs :
-            extension = os.path.splitext(out)[1]
+            basefname,extension = os.path.splitext(out)
             ok = 0
-            # We will first compare out to ref/out, and if that fails, we
-            # will compare it to everything else with the same extension in
+            # We will first compare out to <refdir>/out, and if that fails, we
+            # will compare it to everything else with the same basefilename and extension in
             # the ref directory.  That allows us to have multiple matching
             # variants for different platforms, etc.
             if regression != None:
-                testfiles = ["baseline/"+out]
-            else :                     
-                testfiles = ["ref/"+out] + glob.glob (os.path.join ("ref", "*"+extension))
+                testfiles = [os.path.join(baselinedir, out)]
+            else:
+                if os.path.exists(refdir):
+                    testfiles = [os.path.join (refdir,out)] + glob.glob (os.path.join (refdir, basefname+"*"+extension))
+                else:
+                    testfiles = [os.path.join(refdir_fallback, out)] + glob.glob(os.path.join(refdir_fallback, basefname+"*" + extension))
+                # requires python 3.7+ to preserve ordering
+                dedup = lambda lst: list(dict.fromkeys(lst))
+                testfiles = dedup(testfiles)
+            cmpresult = None
             for testfile in (testfiles) :
                 # print ("comparing " + out + " to " + testfile)
                 if extension == ".tif" or extension == ".exr" :
@@ -348,7 +606,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
                     # print ("cmpcommand = ", cmpcommand)
                     cmpresult = os.system (cmpcommand)
                 elif extension == ".txt" :
-                    cmpresult = text_diff (out, testfile, out + ".diff", filter_re=filter_re)
+                    cmpresult = text_diff (out, testfile, out + ".diff", edits=edits)
                 else :
                     # anything else
                     cmpresult = 0 if filecmp.cmp (out, testfile) else 1
@@ -363,7 +621,10 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
                 print ("PASS: ", out, " matches ", testfile)
             else :
                 err = 1
-                print ("NO MATCH for ", out)
+                if cmpresult is None:
+                    print("NO REFERENCE FOUND for ", out)
+                else:
+                    print ("NO MATCH for ", out)
                 print ("FAIL ", out)
                 if extension == ".txt" :
                     # If we failed to get a match for a text file, print the
@@ -371,13 +632,17 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
                     print ("-----" + out + "----->")
                     print (open(out,'r').read() + "<----------")
                     print ("Diff was:\n-------")
-                    print (open (out+".diff", 'r').read())
+                    try:
+                        print (open (out+".diff", 'r').read())
+                        pass
+                    except FileNotFoundError as e:
+                        print ("File not found:", e.filename)
                 if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
                     # If we failed to get a match for an image, send the idiff
                     # results to the console
                     testfile = None
                     if regression != None:
-                        testfile = os.path.join ("baseline/", out)
+                        testfile = os.path.join (baselinedir, out)
                     else :
                         testfile = os.path.join (refdir, out)
                     os.system (oiiodiff (out, testfile, silent=False))
@@ -387,7 +652,8 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0, regress
 
 ##########################################################################
 
-
+# flush every line, even when we're going into a pipe
+sys.stdout.reconfigure(line_buffering=True, write_through=True)
 
 #
 # Read the individual run.py file for this test, which will define 
@@ -416,49 +682,64 @@ if 'OSL_TESTSUITE_THRESH_SCALE' in os.environ :
     failrelative *= thresh_scale
     allowfailures = int(allowfailures * thresh_scale)
 
-# Force out.txt to be in the outputs
-##if "out.txt" not in outputs :
-##    outputs.append ("out.txt")
+# Force out_txt to be in the outputs
+##if out_txt not in outputs :
+##    outputs.append (out_txt)
 
 # Force any local shaders to compile automatically, prepending the
 # compilation onto whatever else the individual run.py file requested.
 for filetype in [ "*.osl", "*.h", "*.oslgroup", "*.xml" ] :
     for testfile in glob.glob (os.path.join (test_source_dir, filetype)) :
-        shutil.copyfile (testfile, os.path.basename(testfile))
+        dest = os.path.basename(testfile)
+        if options.lazy_oslc and (not os.path.exists(dest) or os.path.getmtime(testfile) > os.path.getmtime(dest)):
+            shutil.copyfile (testfile, dest)
 if compile_osl_files :
     compiles = ""
     oslfiles = glob.glob ("*.osl")
     oslfiles.sort() ## sort the shaders to compile so that they always compile in the same order
     for testfile in oslfiles :
-        compiles += oslc (testfile)
+        if needsrecompile(testfile):
+            compiles += oslc (testfile)
+        else:
+            # pretend we did compile
+            compiles += 'echo "Compiled %s -> %s" %s ;\n' % (testfile, get_artifacts(testfile)[0], redirect)
     command = compiles + command
 
 # If either out.exr or out.tif is in the reference directory but somehow
 # is not in the outputs list, put it there anyway!
-if (os.path.exists("ref/out.exr") and ("out.exr" not in outputs)) :
+if (os.path.exists(os.path.join(refdir, "out.exr")) and ("out.exr" not in outputs)) :
     outputs.append ("out.exr")
-if (os.path.exists("ref/out.tif") and ("out.tif" not in outputs)) :
+if (os.path.exists(os.path.join(refdir, "out.tif")) and ("out.tif" not in outputs)) :
     outputs.append ("out.tif")
 
 # Run the test and check the outputs
 if OSL_REGRESSION_TEST != None :
-    # need to produce baseline images
-    ret = runtest (command, outputs, failureok=failureok,
-                   failthresh=failthresh, failpercent=failpercent, regression="BASELINE", filter_re=filter_re)
+    # need to produce baseline images, but we only know how to do this if the backend and the baseline are the same
+    ret = 0
+    if options.baseline == options.backend:
+        print(" -- Building baseline data for backend %s" % options.backend)
+        ret = runtest (command, outputs, failureok=failureok,
+                   failthresh=failthresh, failpercent=failpercent, regression="BASELINE", edits=options.edits)
     if ret == 0 :
         # run again comparing against baseline, not ref
         ret = runtest (command, outputs, failureok=failureok,
-                       failthresh=failthresh, failpercent=failpercent, regression=OSL_REGRESSION_TEST, filter_re=filter_re)
+                       failthresh=failthresh, failpercent=failpercent, regression=OSL_REGRESSION_TEST, edits=options.edits)
 else :                   
     ret = runtest (command, outputs, failureok=failureok,
-                   failthresh=failthresh, failpercent=failpercent, filter_re=filter_re)
+                   failthresh=failthresh, failpercent=failpercent, edits=options.edits)
     
 if ret == 0 and cleanup_on_success :
     for ext in image_extensions + [ ".txt", ".diff", ".oso" ] :
         files = glob.iglob (srcdir + '/*' + ext)
-        baselineFiles = glob.iglob (srcdir + '/baseline/*' + ext) 
+        baselineFiles = glob.iglob (os.path.join(srcdir, baselinedir, '*' + ext)) 
         for f in chain(files,baselineFiles) :
             os.remove(f)
             #print('REMOVED ', f)
+
+if ret != 0:
+    print("Reproduce with:")
+    test_build_dir = os.path.join(OSL_BUILD_DIR, make_relpath(test_source_dir, OSL_SOURCE_DIR))
+    print("cd", test_build_dir)
+    print(command)
 
 sys.exit (ret)

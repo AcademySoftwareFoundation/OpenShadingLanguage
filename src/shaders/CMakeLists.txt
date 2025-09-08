@@ -1,15 +1,6 @@
 file (GLOB shader_headers "*.h")
 file (GLOB shader_source "*.osl")
 
-# FIXME -- is this really necessary?
-if (${CMAKE_GENERATOR} MATCHES "(Visual Studio.*)")
-    # Work around visual studio outputting oslc.exe in a subfolder
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc"
-        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/../oslc/${CMAKE_BUILD_TYPE}/oslc.exe" "${CMAKE_CURRENT_BINARY_DIR}/../oslc/"
-        DEPENDS oslc)
-endif ()
-
-
 # Macro to compile a shader with oslc. Syntax is:
 #   oslc_compile (OSL osl_source_file
 #                 [ DEPENDS list_of_dependencies ]
@@ -37,7 +28,7 @@ macro (oslc_compile)
     endforeach ()
     list (APPEND oslc_args "-I${CMAKE_SOURCE_DIR}/src/shaders")
     add_custom_command (OUTPUT ${osofile}
-        COMMAND oslc ${oslc_args} "${oslfile}" -o "${osofile}"
+        COMMAND $<TARGET_FILE_DIR:oslc>/$<TARGET_FILE_NAME:oslc> ${oslc_args} "${oslfile}" -o "${osofile}"
         MAIN_DEPENDENCY ${oslfile}
         DEPENDS ${_shader_DEPENDS} "${stdosl_header}" oslc
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

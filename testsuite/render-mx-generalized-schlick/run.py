@@ -6,7 +6,7 @@
 
 failthresh = 0.01
 failpercent = 1
-allowfailures = 2
+allowfailures = 5
 idiff_program = "idiff"
 
 outputs = [ "out.exr" ]

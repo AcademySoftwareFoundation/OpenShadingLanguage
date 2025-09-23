@@ -20,6 +20,7 @@
 
 #include <cstring>
 #include <memory>
+#include <cstdint>
 
 #include <OSL/oslversion.h>
 
@@ -207,8 +208,10 @@
 #    define OSL_GCC_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
 #    if defined(__clang__)
 #        define OSL_CLANG_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
+#        define OSL_GCC_ONLY_PRAGMA(UnQuotedPragma)
 #    else
 #        define OSL_CLANG_PRAGMA(UnQuotedPragma)
+#        define OSL_GCC_ONLY_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
 #    endif
 #    if defined(__INTEL_COMPILER)
 #        define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
@@ -227,6 +230,7 @@
 #    define OSL_PRAGMA_VISIBILITY_PUSH /* N/A on MSVS */
 #    define OSL_PRAGMA_VISIBILITY_POP  /* N/A on MSVS */
 #    define OSL_GCC_PRAGMA(UnQuotedPragma)
+#    define OSL_GCC_ONLY_PRAGMA(UnQuotedPragma)
 #    define OSL_CLANG_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
@@ -237,6 +241,7 @@
 #    define OSL_PRAGMA_VISIBILITY_PUSH
 #    define OSL_PRAGMA_VISIBILITY_POP
 #    define OSL_GCC_PRAGMA(UnQuotedPragma)
+#    define OSL_GCC_ONLY_PRAGMA(UnQuotedPragma)
 #    define OSL_CLANG_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)

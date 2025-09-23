@@ -22,7 +22,6 @@ OPENIMAGEIO_CXXFLAGS=${OPENIMAGEIO_CXXFLAGS:=""}
 BASEDIR=$PWD
 
 pwd
-echo "Building OpenImageIO ${OPENIMAGEIO_VERSION}"
 echo "OpenImageIO build dir will be: ${OPENIMAGEIO_BUILD_DIR}"
 echo "OpenImageIO install dir will be: ${OPENIMAGEIO_INSTALL_DIR}"
 echo "OpenImageIO Build type is ${OPENIMAGEIO_BUILD_TYPE}"
@@ -39,7 +38,7 @@ mkdir -p ${OPENIMAGEIO_BUILD_DIR} && true
 pushd $OPENIMAGEIO_SOURCE_DIR
 git fetch --all -p
 git checkout $OPENIMAGEIO_VERSION --force
-echo "Building OpenImageIO from commit" `git rev-parse --short HEAD`
+echo "Building OpenImageIO from ${OPENIMAGEIO_REPO} / ${OPENIMAGEIO_VERSION} @ commit" `git rev-parse --short HEAD`
 
 if [[ "$USE_SIMD" != "" ]] ; then
     OPENIMAGEIO_CMAKE_FLAGS+=" -DUSE_SIMD=$USE_SIMD"

@@ -49,6 +49,9 @@ if (CMAKE_COMPILER_IS_GNUCC)
                      OUTPUT_VARIABLE GCC_VERSION
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
     message (VERBOSE "Using gcc ${GCC_VERSION} as the compiler")
+    if (GCC_VERSION VERSION_LESS 9.0)
+        message (ERROR "gcc minimum version is 9.0")
+    endif ()
 else ()
     set (GCC_VERSION 0)
 endif ()
@@ -67,6 +70,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" APPLECLANG_VERSION_STRING ${clang_full_version_string})
         set (ANY_CLANG_VERSION_STRING ${APPLECLANG_VERSION_STRING})
         message (VERBOSE "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${APPLECLANG_VERSION_STRING}")
+        if (APPLECLANG_VERSION_STRING VERSION_LESS 5.0)
+            message (ERROR "Apple clang minimum version is 5.0")
+        endif ()
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "IntelLLVM")
         set (CMAKE_COMPILER_IS_INTELCLANG 1)
         string (REGEX MATCH "[0-9]+(\\.[0-9]+)+" INTELCLANG_VERSION_STRING ${clang_full_version_string})
@@ -77,6 +83,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})
         set (ANY_CLANG_VERSION_STRING ${CLANG_VERSION_STRING})
         message (VERBOSE "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${CLANG_VERSION_STRING}")
+        if (CLANG_VERSION_STRING VERSION_LESS 5.0)
+            message (ERROR "clang minimum version is 5.0")
+        endif ()
     endif ()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set (CMAKE_COMPILER_IS_INTEL 1)
@@ -180,9 +189,7 @@ if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_I
     add_compile_options ("-Wno-error=strict-overflow")
     add_compile_options ("-Wno-unused-local-typedefs")
     add_compile_options ("-Wno-unused-result")
-    if (NOT ${GCC_VERSION} VERSION_LESS 6.0)
-        add_compile_options ("-Wno-error=misleading-indentation")
-    endif ()
+    add_compile_options ("-Wno-error=misleading-indentation")
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
@@ -217,10 +224,6 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD"
 endif ()
 
 
-# We will use this for ccache and timing
-set (MY_RULE_LAUNCH "")
-
-
 ###########################################################################
 # Use ccache if found
 #
@@ -229,12 +232,18 @@ set (MY_RULE_LAUNCH "")
 # logic here makes it work even if the user is unaware of ccache. If it's
 # not found on the system, it will simply be silently not used.
 option (USE_CCACHE "Use ccache if found" ON)
-find_program (CCACHE_FOUND ccache)
-if (CCACHE_FOUND AND USE_CCACHE)
+find_program (CCACHE_EXE ccache)
+if (CCACHE_EXE AND USE_CCACHE)
     if (CMAKE_COMPILER_IS_CLANG AND USE_QT AND (NOT DEFINED ENV{CCACHE_CPP2}))
         message (STATUS "Ignoring ccache because clang + Qt + env CCACHE_CPP2 is not set")
     else ()
-        set (MY_RULE_LAUNCH ccache)
+        if (NOT ${CXX_COMPILER_LAUNCHER} MATCHES "ccache")
+            set (CXX_COMPILER_LAUNCHER ${CCACHE_EXR} ${CXX_COMPILER_LAUNCHER})
+        endif ()
+        if (NOT ${C_COMPILER_LAUNCHER} MATCHES "ccache")
+            set (C_COMPILER_LAUNCHER ${CCACHE_EXR} ${C_COMPILER_LAUNCHER})
+        endif ()
+        message (STATUS "ccache enabled: ${CCACHE_EXE}")
     endif ()
 endif ()
 
@@ -247,14 +256,8 @@ endif ()
 # set `-j 1` or CMAKE_BUILD_PARALLEL_LEVEL to 1.
 option (TIME_COMMANDS "Time each compile and link command" OFF)
 if (TIME_COMMANDS)
-    set (MY_RULE_LAUNCH "${CMAKE_COMMAND} -E time ${MY_RULE_LAUNCH}")
-endif ()
-
-
-# Note: This must be after any option that alters MY_RULE_LAUNCH
-if (MY_RULE_LAUNCH)
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${MY_RULE_LAUNCH})
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ${MY_RULE_LAUNCH})
+    set (CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${CXX_COMPILER_LAUNCHER})
+    set (C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${C_COMPILER_LAUNCHER})
 endif ()
 
 
@@ -280,10 +283,8 @@ endif ()
 # legit problem later.
 #
 set (GLIBCXX_USE_CXX11_ABI "" CACHE STRING "For gcc, use the new C++11 library ABI (0|1)")
-if (CMAKE_COMPILER_IS_GNUCC AND ${GCC_VERSION} VERSION_GREATER_EQUAL 5.0)
-    if (NOT ${GLIBCXX_USE_CXX11_ABI} STREQUAL "")
-        add_compile_definitions (_GLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI})
-    endif ()
+if (CMAKE_COMPILER_IS_GNUCC AND NOT ${GLIBCXX_USE_CXX11_ABI} STREQUAL "")
+    add_compile_definitions (_GLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI})
 endif ()
 
 

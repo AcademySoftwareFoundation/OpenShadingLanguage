@@ -120,7 +120,8 @@ struct Background {
         int i         = y * res + x;
         float row_pdf = rows[y] - (y > 0 ? rows[y - 1] : 0.0f);
         float col_pdf = cols[i] - (x > 0 ? cols[i - 1] : 0.0f);
-        pdf           = row_pdf * col_pdf * invjacobian;
+        // FIXME: This sometimes comes out negative in Optix
+        pdf = std::max(0.0f, row_pdf * col_pdf * invjacobian);
         return values[i];
     }
 
@@ -132,7 +133,8 @@ struct Background {
         ry  = sample_cdf(rows, res, ry, &y, &row_pdf);
         rx  = sample_cdf(cols + y * res, res, rx, &x, &col_pdf);
         dir = map(x + rx, y + ry);
-        pdf = row_pdf * col_pdf * invjacobian;
+        // FIXME: This sometimes comes out negative in Optix
+        pdf = std::max(0.0f, row_pdf * col_pdf * invjacobian);
         return values[y * res + x];
     }
 

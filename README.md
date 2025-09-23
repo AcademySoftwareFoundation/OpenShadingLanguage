@@ -441,7 +441,8 @@ nominated for major awards.)
   The Marvels,
   Leo,
   The Boys (S4),
-  The Moon
+  The Moon,
+  Migration,
 * **(2024)**
   Ghostbusters: Frozen Empire,
   Inside Out 2,
@@ -451,6 +452,10 @@ nominated for major awards.)
   Win or Lose (series),
   In Your Dreams,
   A Minecraft Movie,
+  K-Pop Demon Hunters,
+  Elio,
+  Fantastic Four: First Steps,
+  Bad Guys 2,
   ...
 
 
@@ -556,7 +561,7 @@ Gritz, Nicolas Guiard, Euan Haahr, Derek Haase, Sven-Hendrik Haase, John
 Haddon, Niklas Harrysson, Daniel Heckenberg, Chris Hellmuth, Adrien Herubel,
 Dan Horák, Thiago Ize, Matt Johnson, Ronan Keryell, Chris Kulla, Elvic Liang,
 Max Liani, Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro,
-Patrick Mours, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jino Park, Alexei
+Patrick Mours, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois Panisset, Jino Park, Alexei
 Pawlow, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz, Patrick
 Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark Sisson, Sandip
 Shukla, Cliff Stein, Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari,

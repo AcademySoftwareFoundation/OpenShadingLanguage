@@ -2518,6 +2518,18 @@ private:
     // wide data offsets should be used
     int batch_size_executed;
     bool execution_is_batched() const { return batch_size_executed != 0; }
+
+
+    struct RestoreState {
+        TextureSystem::Perthread* m_pre_jit_texture_thread_info;
+    };
+
+    // Rather than allocate an additional ShadingContext for JIT
+    // reuse this one by processing any existing errors
+    // and saving off any necessary state to be restored afterwards
+    RestoreState repurposeForJit();
+    // Process any errors from JIT and restore the state
+    void restoreFromJit(const RestoreState&);
 };
 
 

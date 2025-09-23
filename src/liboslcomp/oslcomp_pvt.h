@@ -365,7 +365,8 @@ private:
     template<typename... Args>
     inline void osofmt(const char* fmt, Args&&... args) const
     {
-        fmt::print(*m_osofile, fmt, std::forward<Args>(args)...);
+        *m_osofile << OIIO::Strutil::fmt::format(fmt,
+                                                 std::forward<Args>(args)...);
     }
 
     void track_variable_lifetimes()

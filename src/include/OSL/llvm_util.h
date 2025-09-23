@@ -1240,7 +1240,6 @@ private:
     llvm::Value* op_combine_4x_vectors(llvm::Value* half_vec_1,
                                        llvm::Value* half_vec_2);
 
-    void setup_legacy_optimization_passes(int optlevel, bool target_host);
     void setup_new_optimization_passes(int optlevel, bool target_host);
 };
 

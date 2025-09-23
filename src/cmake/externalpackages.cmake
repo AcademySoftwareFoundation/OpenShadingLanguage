@@ -57,8 +57,8 @@ checked_find_package (pugixml REQUIRED
 
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
-                      VERSION_MIN 11.0
-                      VERSION_MAX 19.9
+                      VERSION_MIN 14.0
+                      VERSION_MAX 20.9
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES
                             LLVM_SHARED_MODE)
 # ensure include directory is added (in case of non-standard locations
@@ -79,36 +79,7 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 15.0 AND CMAKE_COMPILER_IS_CLANG
          "If you are using LLVM 15 or higher, you should also use clang version "
          "15 or higher, or you may get build errors.${ColorReset}\n")
 endif ()
-if (LLVM_VERSION VERSION_GREATER_EQUAL 16.0)
-    if (CMAKE_CXX_STANDARD VERSION_LESS 17)
-        message (WARNING "${ColorYellow}LLVM 16+ requires C++17 or higher. "
-            "Please set CMAKE_CXX_STANDARD to 17 or higher.${ColorReset}\n")
-    endif ()
-    if (CMAKE_COMPILER_IS_GNUCC AND (GCC_VERSION VERSION_LESS 7.0))
-        message (WARNING "${ColorYellow}LLVM 16+ requires gcc 7.0 or higher.${ColorReset}\n")
-    endif ()
-    if (CMAKE_COMPILER_IS_CLANG
-        AND NOT (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0
-                 OR APPLECLANG_VERSION_STRING VERSION_GREATER_EQUAL 5.0))
-        message (WARNING "${ColorYellow}LLVM 16+ requires clang 5.0 or higher.${ColorReset}\n")
-    endif ()
-endif ()
 
-# Use opaque pointers starting with LLVM 16
-if (${LLVM_VERSION} VERSION_GREATER_EQUAL 16.0)
-  set(LLVM_OPAQUE_POINTERS ON)
-  add_compile_definitions (OSL_LLVM_OPAQUE_POINTERS)
-else()
-  set(LLVM_OPAQUE_POINTERS OFF)
-endif()
-
-# Enable new pass manager for LLVM 16+
-if (${LLVM_VERSION} VERSION_GREATER_EQUAL 16.0)
-  set(LLVM_NEW_PASS_MANAGER ON)
-  add_compile_definitions (OSL_LLVM_NEW_PASS_MANAGER)
-else()
-  set(LLVM_NEW_PASS_MANAGER OFF)
-endif()
 
 
 checked_find_package (partio)
@@ -201,6 +172,7 @@ if (OSL_USE_OPTIX)
         target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
     endfunction()
 else ()
+    message(STATUS "CUDA/OptiX support disabled")
     function (osl_optix_target TARGET)
     endfunction()
 endif ()

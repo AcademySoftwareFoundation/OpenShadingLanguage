@@ -35,7 +35,7 @@ if (OSL_USE_OPTIX)
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testshade_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} ${extra_cuda_headers} ptx_generated "-I../testrender/cuda" )
+        NVCC_COMPILE ( ${cudasrc} ${extra_cuda_headers} ptx_generated "-I../testrender/cuda" "")
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 
@@ -77,9 +77,14 @@ EMBED_LLVM_BITCODE_IN_CPP ( "${rs_srcs}" "_host" "testshade_llvm_compiled_rs" te
 
 add_executable ( testshade ${testshade_srcs} testshademain.cpp )
 
+target_include_directories (testshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+
 target_link_libraries (testshade
                        PRIVATE
                            oslexec oslquery oslcomp)
+if (OSL_USE_OPTIX)
+    add_dependencies(testshade testshade_ptx)
+endif ()
 
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
@@ -96,6 +101,7 @@ osl_optix_target(testshade)
 if (NOT CODECOV)
     # The 'libtestshade' library
     add_library ( "libtestshade" ${testshade_srcs} )
+    add_dependencies(libtestshade testshade)
 
     set_target_properties (libtestshade
                            PROPERTIES
@@ -107,12 +113,14 @@ if (NOT CODECOV)
     target_link_libraries (libtestshade
                            PRIVATE
                                oslexec oslquery oslcomp)
+    target_include_directories (libtestshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     set_target_properties (libtestshade PROPERTIES PREFIX "")
 
     install_targets ( libtestshade )
 
     # The 'testshade_dso' executable
     add_executable ( testshade_dso testshade_dso.cpp )
+    target_include_directories (testshade_dso BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     target_link_libraries (testshade_dso
                            PRIVATE
                                OpenImageIO::OpenImageIO

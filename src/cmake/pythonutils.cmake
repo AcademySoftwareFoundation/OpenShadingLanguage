@@ -31,7 +31,7 @@ macro (find_python)
     endif ()
     checked_find_package (Python3 ${PYTHON_VERSION}
                           ${_req}
-                          VERSION_MIN 3.7
+                          VERSION_MIN 3.9
                           COMPONENTS Interpreter Development
                           PRINT Python3_VERSION Python3_EXECUTABLE
                                 Python3_LIBRARIES

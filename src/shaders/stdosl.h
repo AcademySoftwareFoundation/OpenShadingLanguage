@@ -164,7 +164,6 @@ float  mix (float  x, float  y, float  a) BUILTIN;
 closure color mix (closure color x, closure color y, float a) { return x*(1-a) + y*a; }
 closure color mix (closure color x, closure color y, color a) { return x*(1-a) + y*a; }
 
-#if 0 // Assuming x != y
 normal unmix (normal x, normal y, normal a) { return (a - x) / (y - x); }
 normal unmix (normal x, normal y, float  a) { return (a - x) / (y - x); }
 vector unmix (vector x, vector y, vector a) { return (a - x) / (y - x); }
@@ -174,17 +173,6 @@ point  unmix (point  x, point  y, float  a) { return (a - x) / (y - x); }
 color  unmix (color  x, color  y, color  a) { return (a - x) / (y - x); }
 color  unmix (color  x, color  y, float  a) { return (a - x) / (y - x); }
 float  unmix (float  x, float  y, float  a) { return (a - x) / (y - x); }
-#else
-normal unmix (normal x, normal y, normal a) BUILTIN;
-normal unmix (normal x, normal y, float  a) BUILTIN;
-vector unmix (vector x, vector y, vector a) BUILTIN;
-vector unmix (vector x, vector y, float  a) BUILTIN;
-point  unmix (point  x, point  y, point  a) BUILTIN;
-point  unmix (point  x, point  y, float  a) BUILTIN;
-color  unmix (color  x, color  y, color  a) BUILTIN;
-color  unmix (color  x, color  y, float  a) BUILTIN;
-float  unmix (float  x, float  y, float  a) BUILTIN;
-#endif
 // closure color unmix (closure color x, closure color y, float a) { return (a - x) / (y - x); }
 // closure color unmix (closure color x, closure color y, color a) { return (a - x) / (y - x); }
 

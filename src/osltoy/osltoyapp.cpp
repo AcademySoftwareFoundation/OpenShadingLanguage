@@ -9,6 +9,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QCheckBox>
+#include <QRadioButton>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QErrorMessage>
@@ -721,6 +722,12 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
     connect(maintimer, &QTimer::timeout, this,
             &OSLToyMainWindow::timed_rerender_trigger);
     maintimer->start();
+
+    std::cout << "m_selectedoutput initialized to: " << m_selectedoutput << "\n";
+    // Provide the callback to the renderer
+    m_renderer->set_output_callback([this]() {
+        return this->selected_output();  // Return the selected output
+    });
 }
 
 
@@ -1232,7 +1239,7 @@ OSLToyMainWindow::restart_time()
 void
 OSLToyMainWindow::build_shader_group()
 {
-    // std::cout << "Rebuilding group\n";
+    std::cout << "Rebuilding group\n";
     ShadingSystem* ss = renderer()->shadingsys();
     ShaderGroupRef group;
     if (m_groupspec.size()) {
@@ -1248,6 +1255,20 @@ OSLToyMainWindow::build_shader_group()
         ss->ShaderGroupEnd();
     }
     renderer()->set_shadergroup(group);
+
+    // Doing OSLQuery here before the getattraibute calls
+    bool default_output_set = false;
+    OSLQuery oslquery = ss->oslquery(*group, 0);                        // can I assume that there is only ever one group 
+    std::cout << "number of params: " << oslquery.nparams() << "\n";
+    for (size_t p = 0; p < oslquery.nparams(); ++p) {
+        auto param = oslquery.getparam(p);
+        // Set first output param as default
+        if (param->isoutput && !default_output_set) {
+            m_selectedoutput = param->name;
+            std::cout << "Default output set to " << m_selectedoutput << "\n";
+            break;
+        }
+    }
 
     m_shader_uses_time            = false;
     int num_globals_needed        = 0;
@@ -1295,6 +1316,35 @@ void
 OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
                                             QGridLayout* layout, int row)
 {
+    // Handle output parameters with radio buttons
+    if (param->isoutput) {
+        // Create a radio button for the output parameter
+        auto outputRadioButton = new QRadioButton(this);
+        layout->addWidget(outputRadioButton, row, 0);
+
+        // Label for the output parameter
+        auto nameLabel = new QLabel(
+            OSL::fmtformat("<i>output</i>&nbsp;  <b>{}</b>", param->name)
+                .c_str());
+        nameLabel->setTextFormat(Qt::RichText);
+        layout->addWidget(nameLabel, row, 1);
+
+        // Connect the radio button to save the selected output and rerender
+        connect(outputRadioButton, &QRadioButton::toggled, this,
+                [this, param](bool checked) {
+                    if (checked) {
+                        // Save the selected output parameter
+                        m_selectedoutput = param->name;
+                        std::cout << "Selected output: " << m_selectedoutput
+                                  << "\n";
+                        ustring outputs[] = { m_selectedoutput };
+                        renderer()->shadingsys()->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1), &outputs);
+                        rerender_needed();
+                    }
+                });
+
+        return;  // Skip the rest of the function for output parameters
+    }
     auto diddleCheckbox = new QCheckBox("  ");
     if (m_diddlers[param->name.string()])
         diddleCheckbox->setCheckState(Qt::Checked);

@@ -9,8 +9,10 @@
 
 #include <OSL/hashes.h>
 #include <OSL/oslexec.h>
+#include <OSL/oslquery.h>
 
 #include "osltoyrenderer.h"
+#include "osltoyapp.h"
 
 // Create ustrings for all strings used by the free function renderer services.
 // Required to allow the reverse mapping of hash->string to work when processing messages
@@ -49,7 +51,19 @@ OSLToyRenderer::OSLToyRenderer()
 {
     m_shadingsys = new ShadingSystem(this);
     m_shadingsys->attribute("allow_shader_replacement", 1);
-    ustring outputs[] = { ustring("Cout") };
+
+
+
+    ustring selected_output = ustring("Cout");  // Default to "Cout"
+    if (m_output_callback) {
+        selected_output = m_output_callback();  // Call the callback
+    } else {
+        std::cerr << "Warning: Output callback is not set. Using default 'Cout'.\n";
+    }
+
+    std::cout << "CONSTRUCTOR Rendering to output: " << selected_output << "\n";
+    ustring outputs[] = { selected_output };
+
     m_shadingsys->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1),
                             &outputs);
     // set attributes for the shadingsys
@@ -123,13 +137,33 @@ OSLToyRenderer::OSLToyRenderer()
 
 
 void
+OSLToyRenderer::set_output_callback(std::function<ustring()> callback) {
+    m_output_callback = callback;
+}
+
+
+
+void
 OSLToyRenderer::render_image()
 {
     if (!m_framebuffer.initialized())
         m_framebuffer.reset(
             OIIO::ImageSpec(m_xres, m_yres, 3, TypeDesc::FLOAT));
+    
+    // Use the callback to get the selected output
+    ustring selected_output = ustring("Cout");  // Default to "Cout"
+    if (m_output_callback) {
+        selected_output = m_output_callback();  // Call the callback
+    } else {
+        std::cerr << "Warning: Output callback is not set. Using default 'Cout'.\n";
+    }
 
-    static ustring outputs[] = { ustring("Cout") };
+    std::cout << "RENDER_IMAGE Rendering to output: " << selected_output << "\n";
+    ustring outputs[] = { selected_output };
+
+    m_shadingsys->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1),
+                            &outputs);
+
     OIIO::paropt popt(0, OIIO::paropt::SplitDir::Tile, 4096);
     shade_image(*shadingsys(), *shadergroup(), &m_shaderglobals_template,
                 m_framebuffer, outputs, ShadePixelCenters, OIIO::ROI(), popt);

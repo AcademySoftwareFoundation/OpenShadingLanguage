@@ -6,6 +6,7 @@
 
 #include <map>
 #include <memory>
+#include <functional>
 #include <unordered_map>
 
 #include <OpenImageIO/imagebuf.h>
@@ -62,6 +63,8 @@ public:
 
     OIIO::ImageBuf& framebuffer() { return m_framebuffer; }
 
+    void set_output_callback(std::function<ustring()> callback);
+
     void render_image();
 
     // vvv Methods necessary to be a RendererServices
@@ -89,6 +92,8 @@ public:
                               ShaderGlobals* sg, void* val);
 
 private:
+    std::function<ustring()> m_output_callback;  // Store the callback
+
     OIIO::spin_mutex m_mutex;
     ShadingSystem* m_shadingsys;
     ShaderGroupRef m_group;

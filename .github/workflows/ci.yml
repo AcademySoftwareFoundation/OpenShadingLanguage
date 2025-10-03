@@ -51,7 +51,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio-rel avx2
+          - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio-2.5 avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -63,7 +63,7 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: clang14/C++17 llvm14 oiio-main py3.9 avx2 batch-avx512
+          - desc: clang14/C++17 llvm14 oiio-3.0 py3.9 avx2 batch-avx512
             nametag: linux-clang14-llvm14-batch
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -71,7 +71,7 @@ jobs:
             old_node: 1
             cxx_std: 17
             opencolorio_ver: v2.2.1
-            openimageio_ver: v3.0.6.1
+            openimageio_ver: v3.0.11.0
             python_ver: 3.9
             pybind11_ver: v2.7.0
             simd: avx2,f16c
@@ -232,22 +232,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: VP2023 gcc11/C++17 llvm15 py3.10 oiio-rel avx2
+          - desc: VP2023 gcc11/C++17 llvm15 py3.10 oiio-3.0 avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
             cxx_std: 17
-            openimageio_ver: release
+            openimageio_ver: v3.0.11.0
             python_ver: "3.10"
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: VP2024 gcc11/C++17 llvm17 py3.11 oiio-rel avx2
+          - desc: VP2024 gcc11/C++17 llvm17 py3.11 oiio-3.0 avx2
             nametag: linux-vfx2024
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2024-clang17
             cxx_std: 17
-            openimageio_ver: release
+            openimageio_ver: v3.0.11.0
             python_ver: "3.11"
             pybind11_ver: v2.11.1
             simd: avx2,f16c
@@ -340,7 +340,7 @@ jobs:
                             OPENIMAGEIO_CMAKE_FLAGS="-DUSE_PYTHON=0"
                             CMAKE_BUILD_TYPE=RelWithDebInfo
 
-          - desc: icc/C++17 llvm14 py3.9 oiio-main avx2
+          - desc: icc/C++17 llvm14 py3.9 oiio-2.5 avx2
             nametag: linux-icc
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
@@ -374,7 +374,7 @@ jobs:
             cxx_std: 17
             fmt_ver: 7.1.3
             opencolorio_ver: v2.3.2
-            openimageio_ver: v3.0.6.1
+            openimageio_ver: v3.0.11.0
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c
@@ -411,7 +411,7 @@ jobs:
             setenvs: export LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc11/C++17 llvm17 oiio-3.0 exr3.2 py3.12 avx2 batch-b16avx512
+          - desc: latest releases gcc11/C++17 llvm17 oiio-rel exr3.2 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
             cc_compiler: gcc-13
@@ -453,7 +453,7 @@ jobs:
             cc_compiler: clang
             cxx_std: 17
             fmt_ver: 8.1.1
-            opencolorio_ver: v2.2.1
+            opencolorio_ver: v2.5.0
             openexr_ver: v3.1.11
             openimageio_ver: release
             pybind11_ver: v2.13.6

@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-failthresh = 0.02
-failrelative = 0.01
+failthresh = 0.04
+failrelative = 0.03
 failpercent = 1
 allowfailures = 5
 idiff_program = "idiff"

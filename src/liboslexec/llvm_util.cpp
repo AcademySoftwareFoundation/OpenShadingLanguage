@@ -1487,7 +1487,16 @@ LLVM_Util::supports_isa(TargetISA target)
             continue;
         }
         OSL_DEV_ONLY(std::cout << "Testing for cpu feature:" << f << std::endl);
-        if (sCpuFeatures[f] == false) {
+        // The required CPU feature for the specified target might not be in
+        // the sCpuFeatures. This happens, for example, when the code is probing
+        // the best target ISA when the requested one is UNKNOWN. In this case
+        // it is possible that this function is called for the TargetISA::AVX512
+        // on an ARM CPU.
+        // This function might be called from multiple threads, so it is important
+        // to keep the access to sCpuFeatures read-only.
+        const auto cpu_feature_it = sCpuFeatures.find(f);
+        if (cpu_feature_it == sCpuFeatures.end()
+            || cpu_feature_it->second == false) {
             OSL_DEV_ONLY(std::cout << "MISSING cpu feature:" << f << std::endl);
             return false;
         }

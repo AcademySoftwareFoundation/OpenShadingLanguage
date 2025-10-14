@@ -442,7 +442,7 @@ jobs:
             openimageio_ver: main
             pybind11_ver: master
             python_ver: "3.12"
-            llvm_action_ver: "18.1.7"
+            llvm_action_ver: "21.1.3"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export PUGIXML_VERSION=master
@@ -545,7 +545,7 @@ jobs:
             python_ver: "3.13"
             aclang: 15
             setenvs: export LLVMBREWVER="@19"
-          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm19 oiio-main
+          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm21 oiio-main
             runner: macos-15
             nametag: macos15-arm-py313
             cc_compiler: clang
@@ -553,7 +553,6 @@ jobs:
             cxx_std: 17
             python_ver: "3.13"
             openimageio_ver: main
-            setenvs: export LLVMBREWVER="@19"
 
 
   windows:

@@ -171,11 +171,11 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
     llvm::raw_string_ostream errstream(preproc_errors);
     clang::DiagnosticOptions* diagOptions = new clang::DiagnosticOptions();
     clang::TextDiagnosticPrinter* diagPrinter
-        = new clang::TextDiagnosticPrinter(errstream, diagOptions);
+        = new clang::TextDiagnosticPrinter(errstream, *diagOptions);
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(
         new clang::DiagnosticIDs);
     clang::DiagnosticsEngine* diagEngine
-        = new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
+        = new clang::DiagnosticsEngine(diagIDs, *diagOptions, diagPrinter);
     inst.setDiagnostics(diagEngine);
 
     const std::shared_ptr<clang::TargetOptions> targetopts
@@ -183,7 +183,7 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
     targetopts->Triple = llvm::sys::getDefaultTargetTriple();
     clang::TargetInfo* target
         = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(),
-                                              targetopts);
+                                              *targetopts);
 
     inst.setTarget(target);
 

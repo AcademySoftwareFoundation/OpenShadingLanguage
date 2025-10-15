@@ -508,7 +508,10 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
     endforeach(target_src)
     
     add_library ( ${batched_target_lib} MODULE ${TARGET_LIB_SOURCES} )
-      
+    if (WIN32)
+        set_target_properties( ${batched_target_lib} PROPERTIES PREFIX "lib" )
+    endif()
+
     target_include_directories (${batched_target_lib}
         PUBLIC
             ${CMAKE_INSTALL_FULL_INCLUDEDIR}

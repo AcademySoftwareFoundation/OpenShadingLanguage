@@ -98,7 +98,7 @@ __OSL_MASKED_OP2(hash, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustring s = wS[lane];
             if (wR.mask()[lane]) {

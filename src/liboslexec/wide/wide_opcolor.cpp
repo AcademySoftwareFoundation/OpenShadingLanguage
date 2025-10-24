@@ -68,7 +68,7 @@ __OSL_MASKED_OP2(blackbody, Wv, Wf)(void* bsg_, void* wout_, void* wtemp_,
     Block<int> computeRequiredBlock;
     Wide<int> wcomputeRequired(computeRequiredBlock);
 
-    OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+    OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
         float temperature      = wL[lane];
         bool canNotLookup      = !cs.can_lookup_blackbody(temperature);

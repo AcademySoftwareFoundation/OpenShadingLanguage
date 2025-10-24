@@ -200,6 +200,21 @@
 #endif
 
 // Compiler-specific pragmas
+//
+// - OSL_PRAGMA_WARNING_PUSH/POP pushes/pops warning options (for all
+//   compilers).
+// - OSL_PRAGMA_VISIBILITY_PUSH/POP pushes/pops symbol visibility options (for
+//   all compilers that support it).
+// - OSL_GCC_PRAGMA makes a pragma for all gcc-like compilers, but does nothing
+//   for MSVS.
+// - OSL_GCC_ONLY_PRAGMA makes a pragma for real gcc only.
+// - OSL_CLANG_PRAGMA makes a pragma for all clang-based compilers (including
+//   Apple clang and Intel LLVM).
+// - OSL_NONINTEL_CLANG_PRAGMA makes a pragma for regular clang and Apple
+//   clang, but not Intel clang.
+// - OSL_INTEL_CLASSIC_PRAGMA makes a pragma for icc only.
+// - OSL_INTEL_LLVM_PRAGMA makes a pragma for icx only.
+// - OSL_MSVS_PRAGMA makes a pragma for MSVS only.
 #if defined(__GNUC__) /* gcc, clang, icc */
 #    define OSL_PRAGMA_WARNING_PUSH    OSL_PRAGMA(GCC diagnostic push)
 #    define OSL_PRAGMA_WARNING_POP     OSL_PRAGMA(GCC diagnostic pop)
@@ -223,6 +238,11 @@
 #    else
 #        define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
 #    endif
+#    if defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER)
+#        define OSL_NONINTEL_CLANG_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
+#    else
+#        define OSL_NONINTEL_CLANG_PRAGMA(UnQuotedPragma)
+#    endif
 #    define OSL_MSVS_PRAGMA(UnQuotedPragma)
 #elif defined(_MSC_VER)
 #    define OSL_PRAGMA_WARNING_PUSH __pragma(warning(push))
@@ -232,6 +252,7 @@
 #    define OSL_GCC_PRAGMA(UnQuotedPragma)
 #    define OSL_GCC_ONLY_PRAGMA(UnQuotedPragma)
 #    define OSL_CLANG_PRAGMA(UnQuotedPragma)
+#    define OSL_NONINTEL_CLANG_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
 #    define OSL_MSVS_PRAGMA(UnQuotedPragma) OSL_PRAGMA(UnQuotedPragma)
@@ -243,6 +264,7 @@
 #    define OSL_GCC_PRAGMA(UnQuotedPragma)
 #    define OSL_GCC_ONLY_PRAGMA(UnQuotedPragma)
 #    define OSL_CLANG_PRAGMA(UnQuotedPragma)
+#    define OSL_NONINTEL_CLANG_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_CLASSIC_PRAGMA(UnQuotedPragma)
 #    define OSL_INTEL_LLVM_PRAGMA(UnQuotedPragma)
 #    define OSL_MSVS_PRAGMA(UnQuotedPragma)
@@ -291,6 +313,7 @@
 #define OSL_OMP_SIMD_LOOP(...) OSL_OMP_PRAGMA(omp simd __VA_ARGS__)
 
 #if (OSL_GNUC_VERSION || OSL_INTEL_CLASSIC_COMPILER_VERSION || OSL_INTEL_LLVM_COMPILER_VERSION)
+    // GCC, icc, icx: Use a simd loop for sure
 #   define OSL_OMP_COMPLEX_SIMD_LOOP(...) OSL_OMP_SIMD_LOOP(__VA_ARGS__)
 #else
     // Ignore requests to vectorize complex/nested SIMD loops for certain

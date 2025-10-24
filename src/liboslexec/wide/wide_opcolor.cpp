@@ -56,6 +56,9 @@ __OSL_OP(blackbody_vf)(void* bsg_, void* out, float temp)
 
 
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_NONINTEL_CLANG_PRAGMA(GCC diagnostic ignored "-Wpass-failed")
+
 OSL_BATCHOP void
 __OSL_MASKED_OP2(blackbody, Wv, Wf)(void* bsg_, void* wout_, void* wtemp_,
                                     unsigned int mask_value)
@@ -68,7 +71,7 @@ __OSL_MASKED_OP2(blackbody, Wv, Wf)(void* bsg_, void* wout_, void* wtemp_,
     Block<int> computeRequiredBlock;
     Wide<int> wcomputeRequired(computeRequiredBlock);
 
-    OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+    OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
         float temperature      = wL[lane];
         bool canNotLookup      = !cs.can_lookup_blackbody(temperature);
@@ -104,6 +107,8 @@ __OSL_MASKED_OP2(blackbody, Wv, Wf)(void* bsg_, void* wout_, void* wtemp_,
         }
     }
 }
+
+OSL_PRAGMA_WARNING_POP
 
 
 

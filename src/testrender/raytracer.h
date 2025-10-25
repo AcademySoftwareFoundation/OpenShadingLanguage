@@ -9,12 +9,12 @@
 
 #include <OpenImageIO/fmath.h>
 
+#include "../testshade/render_state.h"
 #include "optix_compat.h"
 #include "render_params.h"
 #include <OSL/dual_vec.h>
 #include <OSL/oslconfig.h>
 #include "bvh.h"
-
 
 #if OSL_USE_OPTIX
 #    include <optix.h>

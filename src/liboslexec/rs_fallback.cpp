@@ -8,6 +8,7 @@
 
 #include <OSL/journal.h>
 
+#include "oslexec_pvt.h"
 
 // Fallback is to reroute calls back through the virtual function
 // based RendererServices from ShaderGlobals.
@@ -313,6 +314,18 @@ rs_trace_get(OSL::OpaqueExecContextPtr exec_ctx, OSL::ustringhash name,
                                     derivatives);
 #else
     return false;
+#endif
+}
+
+OSL_RSOP OSL_HOSTDEVICE void*
+rs_allocate_closure(OSL::OpaqueExecContextPtr exec_ctx, size_t size,
+                    size_t alignment)
+{
+#ifndef __CUDA_ARCH__
+    auto sg = get_sg(exec_ctx);
+    return sg->context->allocate_closure(size, alignment);
+#else
+    return nullptr;
 #endif
 }
 

@@ -109,29 +109,14 @@
     DECL(osl_##name##_dvdvv, "xXXX")
 
 
-
-#ifndef __CUDA_ARCH__
-DECL(osl_add_closure_closure, "CXCC")
-DECL(osl_mul_closure_float, "CXCf")
-DECL(osl_mul_closure_color, "CXCc")
-DECL(osl_allocate_closure_component, "CXii")
-DECL(osl_allocate_weighted_closure_component, "CXiiX")
-DECL(osl_closure_to_string, "sXC")
-DECL(osl_closure_to_ustringhash, "hXC")
-#else
-// TODO: Figure out why trying to match the signatures between host and device
-//       definitions fails with 'LLVM had to make a cast' assertion failure.
-//
-//       In the meantime, use a signature that matches the definitions in rend_lib.cu,
-//       where void* is used instead of ClosureColor* and ShaderGlobals*.
 DECL(osl_add_closure_closure, "XXXX")
 DECL(osl_mul_closure_float, "XXXf")
-DECL(osl_mul_closure_color, "XXXc")
+DECL(osl_mul_closure_color, "XXXX")
 DECL(osl_allocate_closure_component, "XXii")
 DECL(osl_allocate_weighted_closure_component, "XXiiX")
 DECL(osl_closure_to_string, "sXX")
 DECL(osl_closure_to_ustringhash, "hXX")
-#endif
+
 DECL(osl_format, "hh*")
 DECL(osl_gen_ustringhash_pod, "hs")
 DECL(osl_gen_ustring, "sh")

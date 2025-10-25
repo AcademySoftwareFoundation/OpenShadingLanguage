@@ -115,9 +115,6 @@ OSLToyRenderer::OSLToyRenderer()
     // That also implies that our normal points to (0,0,1)
     sg.N  = Vec3(0, 0, 1);
     sg.Ng = Vec3(0, 0, 1);
-    // In our SimpleRenderer, the "renderstate" itself just a pointer to
-    // the ShaderGlobals.
-    // sg.renderstate = &sg;
 }
 
 

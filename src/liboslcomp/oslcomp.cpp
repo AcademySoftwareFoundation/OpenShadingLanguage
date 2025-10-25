@@ -171,19 +171,32 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
     llvm::raw_string_ostream errstream(preproc_errors);
     clang::DiagnosticOptions* diagOptions = new clang::DiagnosticOptions();
     clang::TextDiagnosticPrinter* diagPrinter
+#if OSL_LLVM_VERSION < 210
         = new clang::TextDiagnosticPrinter(errstream, diagOptions);
+#else
+        = new clang::TextDiagnosticPrinter(errstream, *diagOptions);
+#endif
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(
         new clang::DiagnosticIDs);
     clang::DiagnosticsEngine* diagEngine
+#if OSL_LLVM_VERSION < 210
         = new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
+#else
+        = new clang::DiagnosticsEngine(diagIDs, *diagOptions, diagPrinter);
+#endif
     inst.setDiagnostics(diagEngine);
 
     const std::shared_ptr<clang::TargetOptions> targetopts
         = std::make_shared<clang::TargetOptions>(inst.getTargetOpts());
     targetopts->Triple = llvm::sys::getDefaultTargetTriple();
     clang::TargetInfo* target
+#if OSL_LLVM_VERSION < 210
         = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(),
                                               targetopts);
+#else
+        = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(),
+                                              *targetopts);
+#endif
 
     inst.setTarget(target);
 

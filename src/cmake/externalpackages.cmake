@@ -58,7 +58,7 @@ checked_find_package (pugixml REQUIRED
 # LLVM library setup
 checked_find_package (LLVM REQUIRED
                       VERSION_MIN 14.0
-                      VERSION_MAX 20.9
+                      VERSION_MAX 21.9
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES
                             LLVM_SHARED_MODE)
 # ensure include directory is added (in case of non-standard locations

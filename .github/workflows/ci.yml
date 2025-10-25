@@ -467,7 +467,7 @@ jobs:
             cc_compiler: clang
             cxx_std: 17
             fmt_ver: 8.1.1
-            opencolorio_ver: v2.2.1
+            opencolorio_ver: v2.5.0
             openexr_ver: v3.1.11
             openimageio_ver: release
             pybind11_ver: v2.13.6

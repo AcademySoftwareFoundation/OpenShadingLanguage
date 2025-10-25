@@ -376,7 +376,7 @@ spline_evaluate_loop_over_wide(const MatrixT& M, RAccessorT wR, XAccessorT wX,
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_COMPLEX_SIMD_LOOP(simdlen(vec_width))
         for (int lane = 0; lane < vec_width; ++lane) {
             X_Type x   = wX[lane];
             auto knots = wK[lane];

@@ -442,7 +442,7 @@ jobs:
             openimageio_ver: main
             pybind11_ver: master
             python_ver: "3.12"
-            llvm_action_ver: "21.1.3"
+            llvm_action_ver: "18.1.7"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export PUGIXML_VERSION=master

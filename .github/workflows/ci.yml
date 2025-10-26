@@ -436,7 +436,7 @@ jobs:
             cc_compiler: gcc-14
             cxx_compiler: g++-14
             cxx_std: 20
-            fmt_ver: 12.0.0
+            fmt_ver: master
             opencolorio_ver: main
             openexr_ver: main
             openimageio_ver: main

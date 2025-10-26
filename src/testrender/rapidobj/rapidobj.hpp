@@ -4178,17 +4178,17 @@ inline std::error_code make_error_code(rapidobj_errc err)
 
 namespace detail {
 
-constexpr std::size_t operator"" _GiB(unsigned long long int gibibytes) noexcept
+constexpr std::size_t operator""_GiB(unsigned long long int gibibytes) noexcept
 {
     return static_cast<std::size_t>(1024 * 1024 * 1024 * gibibytes);
 }
 
-constexpr std::size_t operator"" _MiB(unsigned long long int mebibytes) noexcept
+constexpr std::size_t operator""_MiB(unsigned long long int mebibytes) noexcept
 {
     return static_cast<std::size_t>(1024 * 1024 * mebibytes);
 }
 
-constexpr std::size_t operator"" _KiB(unsigned long long int kibibytes) noexcept
+constexpr std::size_t operator""_KiB(unsigned long long int kibibytes) noexcept
 {
     return static_cast<std::size_t>(1024 * kibibytes);
 }

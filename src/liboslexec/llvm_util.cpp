@@ -476,27 +476,13 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
     m_llvm_type_longlong = (llvm::Type*)llvm::Type::getInt64Ty(*m_llvm_context);
     m_llvm_type_void     = (llvm::Type*)llvm::Type::getVoidTy(*m_llvm_context);
 
-    m_llvm_type_int_ptr      = llvm::PointerType::get(m_llvm_type_int, 0);
-    m_llvm_type_int8_ptr     = llvm::PointerType::get(m_llvm_type_int8, 0);
-    m_llvm_type_int64_ptr    = llvm::PointerType::get(m_llvm_type_int64, 0);
-    m_llvm_type_bool_ptr     = llvm::PointerType::get(m_llvm_type_bool, 0);
-    m_llvm_type_char_ptr     = llvm::PointerType::get(m_llvm_type_char, 0);
-    m_llvm_type_void_ptr     = m_llvm_type_char_ptr;
-    m_llvm_type_float_ptr    = llvm::PointerType::get(m_llvm_type_float, 0);
-    m_llvm_type_longlong_ptr = llvm::PointerType::get(m_llvm_type_int64, 0);
-    m_llvm_type_double_ptr   = llvm::PointerType::get(m_llvm_type_double, 0);
-
     // A triple is a struct composed of 3 floats
     std::vector<llvm::Type*> triplefields(3, m_llvm_type_float);
     m_llvm_type_triple = type_struct(triplefields, "Vec3");
-    m_llvm_type_triple_ptr
-        = (llvm::PointerType*)llvm::PointerType::get(m_llvm_type_triple, 0);
 
     // A matrix is a struct composed 16 floats
     std::vector<llvm::Type*> matrixfields(16, m_llvm_type_float);
     m_llvm_type_matrix = type_struct(matrixfields, "Matrix4");
-    m_llvm_type_matrix_ptr
-        = (llvm::PointerType*)llvm::PointerType::get(m_llvm_type_matrix, 0);
 
     // Setup up wide aliases
     // TODO:  why are there casts to the base class llvm::Type *?
@@ -511,6 +497,48 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
     m_llvm_type_wide_longlong = llvm_vector_type(m_llvm_type_longlong,
                                                  m_vector_width);
 
+    // A twide riple is a struct composed of 3 wide floats
+    std::vector<llvm::Type*> triple_wide_fields(3, m_llvm_type_wide_float);
+    m_llvm_type_wide_triple = type_struct(triple_wide_fields, "WideVec3");
+
+    // A wide matrix is a struct composed 16 wide floats
+    std::vector<llvm::Type*> matrix_wide_fields(16, m_llvm_type_wide_float);
+    m_llvm_type_wide_matrix = type_struct(matrix_wide_fields, "WideMatrix4");
+
+#if OSL_LLVM_VERSION >= 210
+    // All opaque pointers now. Eventually, all the typed ones can go away.
+    m_llvm_type_void_ptr       = llvm::PointerType::get(*m_llvm_context, 0);
+    m_llvm_type_int_ptr        = m_llvm_type_void_ptr;
+    m_llvm_type_int8_ptr       = m_llvm_type_void_ptr;
+    m_llvm_type_int64_ptr      = m_llvm_type_void_ptr;
+    m_llvm_type_bool_ptr       = m_llvm_type_void_ptr;
+    m_llvm_type_char_ptr       = m_llvm_type_void_ptr;
+    m_llvm_type_float_ptr      = m_llvm_type_void_ptr;
+    m_llvm_type_longlong_ptr   = m_llvm_type_void_ptr;
+    m_llvm_type_double_ptr     = m_llvm_type_void_ptr;
+    m_llvm_type_triple_ptr     = m_llvm_type_void_ptr;
+    m_llvm_type_matrix_ptr     = m_llvm_type_void_ptr;
+    m_llvm_type_wide_char_ptr  = m_llvm_type_void_ptr;
+    m_llvm_type_wide_void_ptr  = m_llvm_type_void_ptr;
+    m_llvm_type_wide_int_ptr   = m_llvm_type_void_ptr;
+    m_llvm_type_wide_bool_ptr  = m_llvm_type_void_ptr;
+    m_llvm_type_wide_float_ptr = m_llvm_type_void_ptr;
+#else
+    // Old style typed pointers. These are marked as deprecated in LLVM 21,
+    // and will be removed in some subsequent version.
+    m_llvm_type_int_ptr      = llvm::PointerType::get(m_llvm_type_int, 0);
+    m_llvm_type_int8_ptr     = llvm::PointerType::get(m_llvm_type_int8, 0);
+    m_llvm_type_int64_ptr    = llvm::PointerType::get(m_llvm_type_int64, 0);
+    m_llvm_type_bool_ptr     = llvm::PointerType::get(m_llvm_type_bool, 0);
+    m_llvm_type_char_ptr     = llvm::PointerType::get(m_llvm_type_char, 0);
+    m_llvm_type_void_ptr     = m_llvm_type_char_ptr;
+    m_llvm_type_float_ptr    = llvm::PointerType::get(m_llvm_type_float, 0);
+    m_llvm_type_longlong_ptr = llvm::PointerType::get(m_llvm_type_int64, 0);
+    m_llvm_type_double_ptr   = llvm::PointerType::get(m_llvm_type_double, 0);
+    m_llvm_type_triple_ptr
+        = (llvm::PointerType*)llvm::PointerType::get(m_llvm_type_triple, 0);
+    m_llvm_type_matrix_ptr
+        = (llvm::PointerType*)llvm::PointerType::get(m_llvm_type_matrix, 0);
     m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char,
                                                        0);
     m_llvm_type_wide_void_ptr = llvm_vector_type(m_llvm_type_void_ptr,
@@ -520,14 +548,7 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
                                                        0);
     m_llvm_type_wide_float_ptr = llvm::PointerType::get(m_llvm_type_wide_float,
                                                         0);
-
-    // A triple is a struct composed of 3 floats
-    std::vector<llvm::Type*> triple_wide_fields(3, m_llvm_type_wide_float);
-    m_llvm_type_wide_triple = type_struct(triple_wide_fields, "WideVec3");
-
-    // A matrix is a struct composed 16 floats
-    std::vector<llvm::Type*> matrix_wide_fields(16, m_llvm_type_wide_float);
-    m_llvm_type_wide_matrix = type_struct(matrix_wide_fields, "WideMatrix4");
+#endif
 
     ustring_rep(m_ustring_rep);  // setup ustring-related types
 }
@@ -545,14 +566,20 @@ LLVM_Util::ustring_rep(UstringRep rep)
         OSL_ASSERT(m_ustring_rep == UstringRep::hash);
         m_llvm_type_ustring = llvm::Type::getInt64Ty(*m_llvm_context);
     }
-    m_llvm_type_ustring_ptr = llvm::PointerType::get(m_llvm_type_ustring, 0);
 
     // Batched versions haven't been updated to handle hash yet.
     // For now leave them using the real ustring regardless of UstringRep
     m_llvm_type_wide_ustring = llvm_vector_type(m_llvm_type_real_ustring,
                                                 m_vector_width);
+
+#if OSL_LLVM_VERSION >= 210
+    m_llvm_type_ustring_ptr      = m_llvm_type_void_ptr;
+    m_llvm_type_wide_ustring_ptr = m_llvm_type_void_ptr;
+#else
+    m_llvm_type_ustring_ptr = llvm::PointerType::get(m_llvm_type_ustring, 0);
     m_llvm_type_wide_ustring_ptr
         = llvm::PointerType::get(m_llvm_type_wide_ustring, 0);
+#endif
 }
 
 
@@ -1790,8 +1817,13 @@ LLVM_Util::nvptx_target_machine()
                    && "PTX compile error: LLVM Target is not initialized");
 
         m_nvptx_target_machine = llvm_target->createTargetMachine(
-            ModuleTriple.str(), CUDA_TARGET_ARCH, "+ptx50", options,
-            llvm::Reloc::Static, llvm::CodeModel::Small,
+#if OSL_LLVM_VERSION >= 210
+            llvm::Triple(ModuleTriple.str()),
+#else
+            ModuleTriple.str(),
+#endif
+            CUDA_TARGET_ARCH, "+ptx50", options, llvm::Reloc::Static,
+            llvm::CodeModel::Small,
 #if OSL_LLVM_VERSION >= 180
             llvm::CodeGenOptLevel::Default
 #else
@@ -2911,7 +2943,11 @@ LLVM_Util::type_struct_field_at_index(llvm::Type* type, int index)
 llvm::PointerType*
 LLVM_Util::type_ptr(llvm::Type* type)
 {
+#if OSL_LLVM_VERSION >= 210
+    return m_llvm_type_void_ptr;
+#else
     return llvm::PointerType::get(type, 0);
+#endif
 }
 
 llvm::Type*
@@ -2959,8 +2995,12 @@ llvm::PointerType*
 LLVM_Util::type_function_ptr(llvm::Type* rettype, cspan<llvm::Type*> params,
                              bool varargs)
 {
+#if OSL_LLVM_VERSION >= 210
+    return m_llvm_type_void_ptr;
+#else
     llvm::FunctionType* functype = type_function(rettype, params, varargs);
     return llvm::PointerType::getUnqual(functype);
+#endif
 }
 
 
@@ -3784,8 +3824,7 @@ llvm::Value*
 LLVM_Util::ptr_to_cast(llvm::Value* val, llvm::Type* type,
                        const std::string& llname)
 {
-    return builder().CreatePointerCast(val, llvm::PointerType::get(type, 0),
-                                       llname);
+    return builder().CreatePointerCast(val, type_ptr(type), llname);
 }
 
 
@@ -3803,14 +3842,22 @@ llvm::Value*
 LLVM_Util::ptr_cast(llvm::Value* val, const TypeDesc& type,
                     const std::string& llname)
 {
+#if OSL_LLVM_VERSION >= 210
+    return ptr_cast(val, m_llvm_type_void_ptr, llname);
+#else
     return ptr_cast(val, llvm::PointerType::get(llvm_type(type), 0), llname);
+#endif
 }
 
 
 llvm::Value*
 LLVM_Util::wide_ptr_cast(llvm::Value* val, const TypeDesc& type)
 {
+#if OSL_LLVM_VERSION >= 210
+    return ptr_cast(val, m_llvm_type_void_ptr);
+#else
     return ptr_cast(val, llvm::PointerType::get(llvm_vector_type(type), 0));
+#endif
 }
 
 

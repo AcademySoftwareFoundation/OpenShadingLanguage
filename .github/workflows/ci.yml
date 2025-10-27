@@ -557,7 +557,7 @@ jobs:
             openimageio_ver: main
             python_ver: "3.13"
             setenvs: export LLVMBREWVER="@19"
-          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm19 oiio-main
+          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm21 oiio-main
             runner: macos-15
             nametag: macos15-arm-py313
             cc_compiler: clang
@@ -565,7 +565,6 @@ jobs:
             cxx_std: 17
             python_ver: "3.13"
             openimageio_ver: main
-            setenvs: export LLVMBREWVER="@19"
 
 
   windows:

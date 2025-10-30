@@ -284,15 +284,15 @@ struct Scene {
     {
         float cosx = dot(p.dx().normalized(), N);
         float cosy = dot(p.dy().normalized(), N);
-        float cosI = dot(I.normalized(), N);
+        float cosI = dot(-I.normalized(), N);
 
         if (abs(cosI)>1e-3 )
         {
             float deltaX = p.dx().length() * cosx / cosI;
             float deltaY = p.dy().length() * cosy / cosI;
 
-            p.dx() -= I.normalized() * deltaX; 
-            p.dy() -= I.normalized() * deltaY; 
+            p.dx() += I.normalized() * deltaX; 
+            p.dy() += I.normalized() * deltaY; 
         }
     }
 

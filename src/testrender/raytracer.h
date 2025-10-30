@@ -322,16 +322,16 @@ struct Scene {
             // TODO: smooth out dPdu and dPdv by storing per vertex tangents
         }
 
-        // L represent planes constructed from opposite points
-        // scaled to return 1.0 for scalar product with itself
-        Vec3 La = vb.cross(vc);
-        La /= dot(va, La);
+        // L represent planes constructed from opposite points perpendicular
+        // to N and scaled to return 1.0 for scalar product with itself
+        Vec3 La = n.cross(vc - vb);
+        La /= dot(va - vb, La);
 
-        Vec3 Lb = va.cross(vc);
-        Lb /= dot(vb, Lb);
+        Vec3 Lb = n.cross(va - vc);
+        Lb /= dot(vb - vc, Lb);
 
-        Vec3 Lc = va.cross(vb);
-        Lc /= dot(vc, Lc);
+        Vec3 Lc = n.cross(vb - va);
+        Lc /= dot(vc - va, Lc);
 
         Vec2 dTdx = dot(La, p.dx()) * ta + 
                     dot(Lb, p.dx()) * tb + 

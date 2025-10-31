@@ -900,7 +900,7 @@ SimpleRaytracer::globals_from_hit(ShaderGlobalsType& sg, const Ray& r,
     sg.I                  = direction.val();
     sg.dIdx               = direction.dx();
     sg.dIdy               = direction.dy();
-    Dual2<Vec3> P = r.point(t);
+    Dual2<Vec3> P         = r.point(t);
     sg.P                  = P.val();
     sg.N                  = scene.normal(P, sg.Ng, id, u, v);
     // Projecting onto the surface here

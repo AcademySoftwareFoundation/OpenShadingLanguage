@@ -68,6 +68,25 @@ CodeEditor::CodeEditor(QWidget* parent, const std::string& filename)
 
 
 
+void
+CodeEditor::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Tab) {
+        // replace the tab key with 4 spaces
+        // TODO: make this a configurable preference?
+        auto replacement
+            = QKeyEvent(QEvent::KeyPress, Qt::Key_Space,
+                        Qt::KeyboardModifiers(event->nativeModifiers()),
+                        "    ");
+        QPlainTextEdit::keyPressEvent(&replacement);
+        return;
+    }
+
+    QPlainTextEdit::keyPressEvent(event);
+}
+
+
+
 QFont
 CodeEditor::fixedFont()
 {

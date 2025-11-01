@@ -896,25 +896,26 @@ SimpleRaytracer::globals_from_hit(ShaderGlobalsType& sg, const Ray& r,
     const int meshid = m_meshids[id];
 #endif
 
-    Dual2<Vec3> P = r.point(t);
-    // We are missing the projection onto the surface here
-    sg.P                  = P.val();
-    sg.dPdx               = P.dx();
-    sg.dPdy               = P.dy();
-    sg.N                  = scene.normal(P, sg.Ng, id, u, v);
-    Dual2<Vec2> uv        = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
-    sg.u                  = uv.val().x;
-    sg.dudx               = uv.dx().x;
-    sg.dudy               = uv.dy().x;
-    sg.v                  = uv.val().y;
-    sg.dvdx               = uv.dx().y;
-    sg.dvdy               = uv.dy().y;
-    sg.surfacearea        = m_mesh_surfacearea[meshid];
     Dual2<Vec3> direction = r.dual_direction();
     sg.I                  = direction.val();
     sg.dIdx               = direction.dx();
     sg.dIdy               = direction.dy();
-    sg.backfacing         = sg.Ng.dot(sg.I) > 0;
+    Dual2<Vec3> P         = r.point(t);
+    sg.P                  = P.val();
+    sg.N                  = scene.normal(P, sg.Ng, id, u, v);
+    // Projecting onto the surface here
+    scene.project(P, sg.N, sg.I);
+    sg.dPdx        = P.dx();
+    sg.dPdy        = P.dy();
+    Dual2<Vec2> uv = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
+    sg.u           = uv.val().x;
+    sg.dudx        = uv.dx().x;
+    sg.dudy        = uv.dy().x;
+    sg.v           = uv.val().y;
+    sg.dvdx        = uv.dx().y;
+    sg.dvdy        = uv.dy().y;
+    sg.surfacearea = m_mesh_surfacearea[meshid];
+    sg.backfacing  = sg.Ng.dot(sg.I) > 0;
     if (sg.backfacing) {
         sg.N  = -sg.N;
         sg.Ng = -sg.Ng;

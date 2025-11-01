@@ -282,16 +282,15 @@ struct Scene {
     OSL_HOSTDEVICE
     void project(Dual2<Vec3>& p, const Vec3& N, const Vec3& I) const
     {
-        Vec3 nI = I.normalized();
+        Vec3 nI    = I.normalized();
         float cosI = dot(-nI, N);
 
-        if (fabsf(cosI)>1e-3f)
-        {
+        if (fabsf(cosI) > 1e-3f) {
             float deltaX = dot(p.dx(), N) / cosI;
             float deltaY = dot(p.dy(), N) / cosI;
 
-            p.dx() += nI * deltaX; 
-            p.dy() += nI * deltaY; 
+            p.dx() += nI * deltaX;
+            p.dy() += nI * deltaY;
         }
     }
 
@@ -332,13 +331,11 @@ struct Scene {
         Vec3 Lc = n.cross(vb - va);
         Lc /= dot(vc - va, Lc);
 
-        Vec2 dTdx = dot(La, p.dx()) * ta
-                  + dot(Lb, p.dx()) * tb
-                  + dot(Lc, p.dx()) * tc;
+        Vec2 dTdx = dot(La, p.dx()) * ta + dot(Lb, p.dx()) * tb
+                    + dot(Lc, p.dx()) * tc;
 
-        Vec2 dTdy = dot(La, p.dy()) * ta
-                  + dot(Lb, p.dy()) * tb
-                  + dot(Lc, p.dy()) * tc;
+        Vec2 dTdy = dot(La, p.dy()) * ta + dot(Lb, p.dy()) * tb
+                    + dot(Lc, p.dy()) * tc;
 
         return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc, dTdx, dTdy);
     }

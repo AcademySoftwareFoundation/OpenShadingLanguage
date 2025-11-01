@@ -905,17 +905,17 @@ SimpleRaytracer::globals_from_hit(ShaderGlobalsType& sg, const Ray& r,
     sg.N                  = scene.normal(P, sg.Ng, id, u, v);
     // Projecting onto the surface here
     scene.project(P, sg.N, sg.I);
-    sg.dPdx               = P.dx();
-    sg.dPdy               = P.dy();
-    Dual2<Vec2> uv        = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
-    sg.u                  = uv.val().x;
-    sg.dudx               = uv.dx().x;
-    sg.dudy               = uv.dy().x;
-    sg.v                  = uv.val().y;
-    sg.dvdx               = uv.dx().y;
-    sg.dvdy               = uv.dy().y;
-    sg.surfacearea        = m_mesh_surfacearea[meshid];
-    sg.backfacing         = sg.Ng.dot(sg.I) > 0;
+    sg.dPdx        = P.dx();
+    sg.dPdy        = P.dy();
+    Dual2<Vec2> uv = scene.uv(P, sg.N, sg.dPdu, sg.dPdv, id, u, v);
+    sg.u           = uv.val().x;
+    sg.dudx        = uv.dx().x;
+    sg.dudy        = uv.dy().x;
+    sg.v           = uv.val().y;
+    sg.dvdx        = uv.dx().y;
+    sg.dvdy        = uv.dy().y;
+    sg.surfacearea = m_mesh_surfacearea[meshid];
+    sg.backfacing  = sg.Ng.dot(sg.I) > 0;
     if (sg.backfacing) {
         sg.N  = -sg.N;
         sg.Ng = -sg.Ng;

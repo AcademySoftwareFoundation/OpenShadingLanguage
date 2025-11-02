@@ -411,25 +411,25 @@ jobs:
             setenvs: export LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc11/C++17 llvm17 oiio-rel exr3.2 py3.12 avx2 batch-b16avx512
+          - desc: latest releases gcc13/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
             cc_compiler: gcc-13
             cxx_compiler: g++-13
             cxx_std: 17
-            fmt_ver: 11.1.4
-            opencolorio_ver: v2.4.2
-            openexr_ver: v3.3.3
+            fmt_ver: 12.1.0
+            opencolorio_ver: v2.5.0
+            openexr_ver: v3.4.2
             openimageio_ver: release
-            pybind11_ver: v3.0.0
+            pybind11_ver: v3.0.1
             python_ver: "3.12"
             llvm_action_ver: "18.1.7"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LIBTIFF_VERSION=v4.7.0
+            setenvs: export LIBTIFF_VERSION=v4.7.1
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.15
-                            FREETYPE_VERSION=VER-2-13-3
+                            FREETYPE_VERSION=VER-2-14-3
           - desc: bleeding edge gcc14/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-24.04
@@ -446,23 +446,26 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export PUGIXML_VERSION=master
+                            PTEX_VERSION=v2.4.3
+                            PUGIXML_VERSION=v1.15
+                            FREETYPE_VERSION=VER-2-14-3
           - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
             nametag: linux-latest-releases-clang
             runner: ubuntu-22.04
             cxx_compiler: clang++
             cc_compiler: clang
             cxx_std: 17
-            fmt_ver: 8.1.1
+            fmt_ver: 12.1.0
             opencolorio_ver: v2.5.0
-            openexr_ver: v3.1.11
+            openexr_ver: v3.4.2
             openimageio_ver: release
-            pybind11_ver: v2.13.6
+            pybind11_ver: v3.0.1
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=14.0.0
                             LLVM_DISTRO_NAME=ubuntu-18.04
-                            PUGIXML_VERSION=v1.11.4
+                            PUGIXML_VERSION=v1.15
             # Test formatting. This test entry doesn't do a full build, it
             # just runs clang-format on everything, and passes if nothing is
             # misformatted. Upon failure, the build artifact will be the full

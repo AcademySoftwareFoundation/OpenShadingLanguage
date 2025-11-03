@@ -362,6 +362,9 @@ splineinverse_search(const MatrixT& M, R_T& result, X_T& xval, KArrayT knots,
 
 namespace {  // unnamed
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_NONINTEL_CLANG_PRAGMA(GCC diagnostic ignored "-Wpass-failed")
+
 template<bool IsBasisUConstantT, int BasisStepT, typename MatrixT,
          typename RAccessorT, typename XAccessorT, typename KAccessorT>
 OSL_FORCEINLINE void
@@ -376,7 +379,7 @@ spline_evaluate_loop_over_wide(const MatrixT& M, RAccessorT wR, XAccessorT wX,
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_SIMD_LOOP(simdlen(vec_width))
         for (int lane = 0; lane < vec_width; ++lane) {
             X_Type x   = wX[lane];
             auto knots = wK[lane];
@@ -546,6 +549,8 @@ splineinverse_evaluate_wide(RAccessorT wR, ustring spline_basis, XAccessorT wX,
 
     impl_by_basis[basis_type](wR, wX, wK, knot_count);
 }
+
+OSL_PRAGMA_WARNING_POP
 
 }  // namespace
 

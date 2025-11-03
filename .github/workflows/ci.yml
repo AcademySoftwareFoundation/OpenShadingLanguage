@@ -428,8 +428,27 @@ jobs:
           - desc: latest releases gcc11/C++17 llvm17 oiio-3.0 exr3.2 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
-            cc_compiler: gcc-13
-            cxx_compiler: g++-13
+            cc_compiler: gcc-14
+            cxx_compiler: g++-14
+            cxx_std: 17
+            fmt_ver: 12.1.0
+            opencolorio_ver: v2.5.0
+            openexr_ver: v3.4.2
+            openimageio_ver: release
+            pybind11_ver: v3.0.1
+            python_ver: "3.12"
+            llvm_action_ver: "18.1.7"
+            simd: avx2,f16c
+            batched: b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: export LIBTIFF_VERSION=v4.7.1
+                            PTEX_VERSION=v2.4.3
+                            PUGIXML_VERSION=v1.15
+                            FREETYPE_VERSION=VER-2-14-3
+          - desc: latest releases clang18/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
+            nametag: linux-latest-releases
+            runner: ubuntu-24.04
+            cc_compiler: clang
+            cxx_compiler: clang++
             cxx_std: 17
             fmt_ver: 11.1.4
             opencolorio_ver: v2.4.2

@@ -90,6 +90,10 @@ __OSL_MASKED_OP2(strlen, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 }
 
 
+
+OSL_PRAGMA_WARNING_PUSH
+OSL_NONINTEL_CLANG_PRAGMA(GCC diagnostic ignored "-Wpass-failed")
+
 OSL_BATCHOP void
 __OSL_MASKED_OP2(hash, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 {
@@ -98,7 +102,7 @@ __OSL_MASKED_OP2(hash, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 
     OSL_FORCEINLINE_BLOCK
     {
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustring s = wS[lane];
             if (wR.mask()[lane]) {
@@ -107,6 +111,8 @@ __OSL_MASKED_OP2(hash, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
         }
     }
 }
+
+OSL_PRAGMA_WARNING_POP
 
 
 

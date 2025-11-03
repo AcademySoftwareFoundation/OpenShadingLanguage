@@ -128,6 +128,9 @@ calculatenormal(const Dual2<Vec3>& tmpP, bool flipHandedness)
 
 
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_NONINTEL_CLANG_PRAGMA(GCC diagnostic ignored "-Wpass-failed")
+
 OSL_BATCHOP void
 __OSL_OP2(length, Wf, Wv)(void* r_, void* V_)
 {
@@ -136,7 +139,7 @@ __OSL_OP2(length, Wf, Wv)(void* r_, void* V_)
         Wide<const Vec3> wV(V_);
         Wide<float> wr(r_);
 
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 V   = wV[lane];
             float r  = sfm::length(V);
@@ -155,7 +158,7 @@ __OSL_MASKED_OP2(length, Wf, Wv)(void* r_, void* V_, unsigned int mask_value)
         Wide<const Vec3> wV(V_);
         Masked<float> wr(r_, Mask(mask_value));
 
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 V = wV[lane];
             if (wr.mask()[lane]) {
@@ -165,6 +168,8 @@ __OSL_MASKED_OP2(length, Wf, Wv)(void* r_, void* V_, unsigned int mask_value)
         }
     }
 }
+
+OSL_PRAGMA_WARNING_POP
 
 
 
@@ -208,6 +213,9 @@ __OSL_MASKED_OP2(length, Wdf, Wdv)(void* r_, void* V_, unsigned int mask_value)
 
 
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_NONINTEL_CLANG_PRAGMA(GCC diagnostic ignored "-Wpass-failed")
+
 OSL_BATCHOP void
 __OSL_OP2(area, Wf, Wdv)(void* r_, void* DP_)
 {
@@ -217,7 +225,7 @@ __OSL_OP2(area, Wf, Wdv)(void* r_, void* DP_)
 
         Wide<float> wr(r_);
 
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> DP = wDP[lane];
 
@@ -240,7 +248,7 @@ __OSL_MASKED_OP2(area, Wf, Wdv)(void* r_, void* DP_, unsigned int mask_value)
 
         Masked<float> wr(r_, Mask(mask_value));
 
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Dual2<Vec3> DP = wDP[lane];
             if (wr.mask()[lane]) {
@@ -252,6 +260,8 @@ __OSL_MASKED_OP2(area, Wf, Wdv)(void* r_, void* DP_, unsigned int mask_value)
         }
     }
 }
+
+OSL_PRAGMA_WARNING_POP
 
 
 
@@ -447,6 +457,9 @@ __OSL_MASKED_OP3(distance, Wdf, Wdv, Wdv)(void* r_, void* a_, void* b_,
 
 
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_NONINTEL_CLANG_PRAGMA(GCC diagnostic ignored "-Wpass-failed")
+
 OSL_BATCHOP void
 __OSL_OP2(normalize, Wv, Wv)(void* r_, void* V_)
 {
@@ -455,7 +468,7 @@ __OSL_OP2(normalize, Wv, Wv)(void* r_, void* V_)
         Wide<const Vec3> wV(V_);
         Wide<Vec3> wr(r_);
 
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 V   = wV[lane];
             Vec3 N   = sfm::normalize(V);
@@ -473,7 +486,7 @@ __OSL_MASKED_OP2(normalize, Wv, Wv)(void* r_, void* V_, unsigned int mask_value)
         Wide<const Vec3> wV(V_);
         Masked<Vec3> wr(r_, Mask(mask_value));
 
-        OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+        OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             Vec3 V = wV[lane];
             if (wr.mask()[lane]) {
@@ -484,6 +497,7 @@ __OSL_MASKED_OP2(normalize, Wv, Wv)(void* r_, void* V_, unsigned int mask_value)
     }
 }
 
+OSL_PRAGMA_WARNING_POP
 
 
 OSL_BATCHOP void

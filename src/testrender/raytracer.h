@@ -279,6 +279,22 @@ struct Scene {
         return ((1 - u - v) * na + u * nb + v * nc).normalize();
     }
 
+    // Project differentials onto surface defined by N
+    OSL_HOSTDEVICE
+    void project(Dual2<Vec3>& p, const Vec3& N, const Vec3& I) const
+    {
+        Vec3 nI    = I.normalized();
+        float cosI = dot(-nI, N);
+
+        if (fabsf(cosI) > 1e-3f) {
+            float deltaX = dot(p.dx(), N) / cosI;
+            float deltaY = dot(p.dy(), N) / cosI;
+
+            p.dx() += nI * deltaX;
+            p.dy() += nI * deltaY;
+        }
+    }
+
     OSL_HOSTDEVICE
     Dual2<Vec2> uv(const Dual2<Vec3>& p, const Vec3& n, Vec3& dPdu, Vec3& dPdv,
                    int primID, float u, float v) const
@@ -304,7 +320,25 @@ struct Scene {
             dPdv         = (-dt12.x * dp02 + dt02.x * dp12) * invdet;
             // TODO: smooth out dPdu and dPdv by storing per vertex tangents
         }
-        return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc);
+
+        // L represent planes constructed from opposite points perpendicular
+        // to N and scaled to return 1.0 for scalar product with itself
+        Vec3 La = n.cross(vc - vb);
+        La /= dot(va - vb, La);
+
+        Vec3 Lb = n.cross(va - vc);
+        Lb /= dot(vb - vc, Lb);
+
+        Vec3 Lc = n.cross(vb - va);
+        Lc /= dot(vc - va, Lc);
+
+        Vec2 dTdx = dot(La, p.dx()) * ta + dot(Lb, p.dx()) * tb
+                    + dot(Lc, p.dx()) * tc;
+
+        Vec2 dTdy = dot(La, p.dy()) * ta + dot(Lb, p.dy()) * tb
+                    + dot(Lc, p.dy()) * tc;
+
+        return Dual2<Vec2>((1 - u - v) * ta + u * tb + v * tc, dTdx, dTdy);
     }
 
     OSL_HOSTDEVICE int shaderid(int primID) const { return shaderids[primID]; }

@@ -1252,7 +1252,11 @@ OptixRaytracer::finalize_pixel_buffer()
                           reinterpret_cast<void*>(d_output_buffer),
                           m_xres * m_yres * 3 * sizeof(float),
                           cudaMemcpyDeviceToHost));
+#if OIIO_VERSION_GREATER_EQUAL(3, 1, 0)
+    pixelbuf.set_pixels(OIIO::ROI::All(), OIIO::make_cspan(tmp_buff));
+#else
     pixelbuf.set_pixels(OIIO::ROI::All(), OIIO::TypeFloat, tmp_buff.data());
+#endif
 }
 
 

@@ -679,7 +679,7 @@ jobs:
             # select the right runner type and whether tests are run.
             nametag: linux-optix-vfx2025
             runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-20.04-gpu-t4-4c-16g-176h') || 'ubuntu-latest' }}
-            container: aswf/ci-osl:2025-clang18
+            container: aswf/ci-osl:2025-clang18.2
             cxx_std: 17
             python_ver: "3.11"
             pybind11_ver: v2.11.1

@@ -1088,8 +1088,13 @@ OptixGridRenderer::finalize_pixel_buffer()
                           m_xres * m_yres * 3 * sizeof(float),
                           cudaMemcpyDeviceToHost));
     OIIO::ImageBuf* buf = outputbuf(0);
-    if (buf)
+    if (buf) {
+#if OIIO_VERSION_GREATER_EQUAL(3, 1, 0)
+        buf->set_pixels(OIIO::ROI::All(), OIIO::make_cspan(tmp_buff));
+#else
         buf->set_pixels(OIIO::ROI::All(), OIIO::TypeFloat, tmp_buff.data());
+#endif
+    }
 }
 
 

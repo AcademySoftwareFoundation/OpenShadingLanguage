@@ -516,7 +516,11 @@ SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 {
     // SimpleRaytracer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
-    result = *reinterpret_cast<const Matrix44*>(xform);
+    if (xform)
+        result = *reinterpret_cast<const Matrix44*>(xform);
+    else
+        result = Matrix44(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
     return true;
 }
 
@@ -543,7 +547,10 @@ SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 {
     // SimpleRaytracer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
-    result = *reinterpret_cast<const Matrix44*>(xform);
+    if (xform)
+        result = *reinterpret_cast<const Matrix44*>(xform);
+    else
+        result = Matrix44(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     return true;
 }
 

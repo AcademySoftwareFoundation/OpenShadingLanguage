@@ -373,9 +373,9 @@ jobs:
             cc_compiler: icx
             cxx_compiler: icpx
             cxx_std: 17
-            fmt_ver: 7.1.3
+            # fmt_ver: 7.1.3
             python_ver: "3.11"
-            pybind11_ver: v2.11.0
+            # pybind11_ver: v2.11.0
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF"

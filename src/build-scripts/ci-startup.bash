@@ -35,7 +35,7 @@ export ASAN_OPTIONS=print_suppressions=0:detect_odr_violation=1
 # export UBSAN_OPTIONS=suppressions=$PWD/src/build-scripts/ubsan-suppressions.txt
 
 export PYTHON_VERSION=${PYTHON_VERSION:="3.7"}
-export PYTHONPATH=$DISTDIR/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
+export PYTHONPATH=$DISTDIR/lib/python${PYTHON_VERSION}/site-packages:${OpenImageIO_ROOT}/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 cmake --version
 export OSL_CI=true
 export USE_NINJA=${USE_NINJA:=1}

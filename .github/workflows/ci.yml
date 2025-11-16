@@ -381,6 +381,7 @@ jobs:
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF"
                             USE_OPENVDB=0
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
+                            OpenImageIO_ROOT=/usr/local
 
           - desc: Debug gcc9/C++17 llvm14 py3.10 oiio2.5 exr3.1 sse4
             nametag: linux-debug-gcc9-llvm14

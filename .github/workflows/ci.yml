@@ -367,7 +367,8 @@ jobs:
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
           - desc: icx/C++17 llvm18 py3.11 oiio-3.0 avx2
             nametag: linux-icx
-            runner: ubuntu-latest
+            # runner: ubuntu-latest
+            runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
             container: aswf/ci-osl:2025-clang18
             cc_compiler: icx
             cxx_compiler: icpx

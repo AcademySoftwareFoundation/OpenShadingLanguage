@@ -374,7 +374,7 @@ jobs:
             cxx_std: 17
             fmt_ver: 7.1.3
             opencolorio_ver: v2.3.2
-            openimageio_ver: v3.0.11.0
+            openimageio_ver: release
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c

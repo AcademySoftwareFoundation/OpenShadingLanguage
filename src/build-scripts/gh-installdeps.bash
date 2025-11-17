@@ -70,7 +70,8 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
         # repo require a libstd++ too new for the ASWF containers we run CI on
         # because their default install of gcc 9 based toolchain.
         sudo cp src/build-scripts/oneAPI.repo /etc/yum.repos.d
-        sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.1.0.x86_64
+        sudo yum install -y intel-oneapi-compiler-dpcpp-cpp
+        # sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.1.0.x86_64
         # sudo yum install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic
         set +e; source /opt/intel/oneapi/setvars.sh; set -e
         echo "Verifying installation of Intel(r) oneAPI DPC++/C++ Compiler:"
@@ -190,6 +191,7 @@ if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
     export ENABLE_ICO=0 ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
     export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
     export ENABLE_TARGA=0 ENABLE_WEBP=0 ENABLE_jpegxl=0 ENABLE_libuhdr=0
+    export ENABLE_OPENJPH=0 ENABLE_LBRAW=0 ENABLE_OPENJPEG=0 ENABLE_JXL=0
     # We don't need to run OIIO's tests
     export OPENIMAGEIO_CMAKE_FLAGS+=" -DOIIO_BUILD_TESTING=OFF -DOIIO_BUILD_TESTS=0"
     # Don't let warnings in OIIO break OSL's CI run

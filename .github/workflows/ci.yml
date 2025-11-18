@@ -373,16 +373,17 @@ jobs:
             cxx_compiler: icpx
             cxx_std: 17
             fmt_ver: 7.1.3
-            opencolorio_ver: v2.3.2
+            # opencolorio_ver: v2.3.2
             openimageio_ver: release
             python_ver: "3.10"
-            pybind11_ver: v2.10.0
+            # pybind11_ver: v2.10.0
             simd: avx2,f16c
             batched: b8_AVX2_noFMA
             setenvs: export OSL_CMAKE_FLAGS="-DSTOP_ON_WARNING=OFF"
                             USE_OPENVDB=0
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
                             OPENIMAGEIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
+                            OpenImageIO_BUILD_MISSING_DEPS=""
 
           - desc: Debug gcc9/C++17 llvm14 py3.10 oiio2.5 exr3.1 sse4
             nametag: linux-debug-gcc9-llvm14

@@ -210,5 +210,17 @@ if [[ "$ABI_CHECK" != "" ]] ; then
     source src/build-scripts/build_abi_tools.bash
 fi
 
+if [[ "$USE_ICC" != "" ]] ; then
+    # We used gcc for the prior dependency builds, but use icc for OSL itself
+    echo "which icpc:" $(which icpc)
+    export CXX=icpc
+    export CC=icc
+elif [[ "$USE_ICX" != "" ]] ; then
+    # We used gcc for the prior dependency builds, but use icx for OSL itself
+    echo "which icpx:" $(which icpx)
+    export CXX=icpx
+    export CC=icx
+fi
+
 # Save the env for use by other stages
 src/build-scripts/save-env.bash

@@ -12,6 +12,9 @@ on:
   workflow_call:
     # This inputs receive values via the "with:" section in ci_workflow.yml
     inputs:
+      disable:
+        type: boolean
+        default: false
       build:
         type: string
       runner:
@@ -85,6 +88,7 @@ jobs:
 
   steps:
     name: "${{inputs.cxx_compiler}} c++${{inputs.cxx_std}} py${{inputs.python_ver}}"
+    if: ${{ !inputs.disable }}
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container }}

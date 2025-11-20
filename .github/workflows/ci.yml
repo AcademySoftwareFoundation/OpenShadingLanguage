@@ -10,7 +10,6 @@ name: CI
 on:
   push:
     # Skip jobs when only documentation files are changed
-    # Skip jobs when only documentation files are changed
     paths:
       - '**'
       - '!**.md'
@@ -200,6 +199,7 @@ jobs:
     uses: ./.github/workflows/build-steps.yml
     with:
       nametag: ${{ matrix.nametag || 'unnamed!' }}
+      disable: ${{ matrix.disable || false }}
       runner: ${{ matrix.runner || 'ubuntu-latest' }}
       container: ${{ matrix.container }}
       cc_compiler: ${{ matrix.cc_compiler || 'gcc' }}
@@ -367,7 +367,13 @@ jobs:
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
           - desc: icx/C++17 llvm14 py3.10 oiio-3.0 avx2
             nametag: linux-icx
-            runner: ubuntu-latest
+            # This job variation needs a bigger runner with more "disk space",
+            # so only enable it when running on the main repo. Sorry, CI can't
+            # currently test with icx you people's individual forks until we
+            # figure out a way to require less space. Until then, they'll need
+            # to submit the PR to see how it does on icx.
+            runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
+            disable: ${{ github.repository_owner != 'AcademySoftwareFoundation' }}
             container: aswftesting/ci-osl:2023-clang15
             cc_compiler: icx
             cxx_compiler: icpx

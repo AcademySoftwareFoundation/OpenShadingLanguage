@@ -78,13 +78,24 @@ test_source_dir = os.getenv('OSL_TESTSUITE_SRC',
 command = ""
 outputs = [ "out.txt" ]    # default
 
-# Control image differencing
+# The image comparison thresholds are tricky to remember. Here's the key:
+# A test fails if more than `failpercent` of pixel values differ by more
+# than `failthresh` AND the difference is more than `failrelative` times the
+# correct pixel value, or if even one pixel differs by more than `hardfail`.
+failthresh = 0.004         # "Failure" threshold for any pixel value
+hardfail = 0.01            # Even one pixel this wrong => hard failure
+failpercent = 0.02         # Ok fo this percentage of pixels to "fail"
+failrelative = 0.001       # Ok to fail up to this amount vs the pixel value
+allowfailures = 0          # Freebie failures
+
+# Some tests are designed for the app running to "fail" (in the sense of
+# terminating with an error return code), for example, a test that is designed
+# to present an error condition to check that it issues the right error. That
+# "failure" is a success of the test! For those cases, set `failureok = 1` to
+# indicate that the app having an error is fine, and the full test will pass
+# or fail based on comparing the output files.
 failureok = 0
-failthresh = 0.004
-hardfail = 0.01
-failpercent = 0.02
-failrelative = 0.001
-allowfailures = 0
+
 idiff_program = "oiiotool"
 idiff_postfilecmd = ""
 skip_diff = int(os.environ.get("OSL_TESTSUITE_SKIP_DIFF", "0"))

@@ -23,7 +23,7 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
         sed -i 's,^mirrorlist=,#,; s,^#baseurl=http://mirror\.centos\.org/centos/$releasever,baseurl=https://vault.centos.org/7.9.2009,' /etc/yum.repos.d/CentOS-Base.repo
     fi
 
-    sudo /usr/bin/yum install -y giflib giflib-devel || true
+    # sudo /usr/bin/yum install -y giflib giflib-devel || true
     # sudo /usr/bin/yum install -y ffmpeg ffmpeg-devel || true
 
     if [[ "${CONAN_LLVM_VERSION}" != "" ]] ; then
@@ -88,7 +88,7 @@ else
         time sudo apt-get -q install -y \
             git cmake ccache ninja-build g++ \
             libboost-dev libboost-thread-dev libboost-filesystem-dev \
-            libtiff-dev libgif-dev libpng-dev \
+            libtiff-dev libpng-dev \
             flex bison libbison-dev \
             libpugixml-dev \
             libopencolorio-dev

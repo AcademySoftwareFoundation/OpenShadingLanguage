@@ -1261,7 +1261,8 @@ OSLToyMainWindow::build_shader_group()
         OSLQuery oslquery = ss->oslquery(*group, 0);         // can I assume that there is only ever one group? 
         for (size_t p = 0; p < oslquery.nparams(); ++p) {
             auto param = oslquery.getparam(p);
-            if (param->isoutput && (param->type == TypeDesc::COLOR)) {
+            // Has to be output and vec3, so we can display as color
+            if (param->isoutput && param->type.is_vec3()) {
                 m_selectedoutput = param->name;
                 break;
             }
@@ -1333,8 +1334,10 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
         typetext = OSL::fmtformat("closure {}", typetext);
     if (param->isstruct)
         typetext = OSL::fmtformat("struct {}", param->structname);
-    if (param->isoutput) {
+    if (param->isoutput) 
         typetext = OSL::fmtformat("output {}", typetext);
+    
+    if ((param->isoutput) && (param->type.is_vec3())) {
         // Create a radio button for the output parameter
         auto outputRadioButton = new QRadioButton(this);
         layout->addWidget(outputRadioButton, row, 0);

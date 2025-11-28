@@ -1238,7 +1238,7 @@ OSLToyMainWindow::restart_time()
 void
 OSLToyMainWindow::build_shader_group()
 {
-    std::cout << "Rebuilding group\n";
+    // std::cout << "Rebuilding group\n";
     ShadingSystem* ss = renderer()->shadingsys();
     ShaderGroupRef group;
     if (m_groupspec.size()) {
@@ -1257,7 +1257,6 @@ OSLToyMainWindow::build_shader_group()
 
     // Doing OSLQuery here before the getattraibute calls
     OSLQuery oslquery = ss->oslquery(*group, 0);                        // can I assume that there is only ever one group 
-    std::cout << "number of params: " << oslquery.nparams() << "\n";
     for (size_t p = 0; p < oslquery.nparams(); ++p) {
         auto param = oslquery.getparam(p);
         // Set first output param as renderer output if none selected

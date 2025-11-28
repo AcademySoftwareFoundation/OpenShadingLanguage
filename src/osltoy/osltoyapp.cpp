@@ -1319,15 +1319,31 @@ void
 OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
                                             QGridLayout* layout, int row)
 {
-    // Handle output parameters with radio buttons
+    auto diddleCheckbox = new QCheckBox("  ");
+    if (m_diddlers[param->name.string()])
+        diddleCheckbox->setCheckState(Qt::Checked);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    connect(diddleCheckbox, &QCheckBox::checkStateChanged, this,
+            [&](Qt::CheckState state) { set_param_diddle(param, int(state)); });
+#else
+    connect(diddleCheckbox, &QCheckBox::stateChanged, this,
+            [&](int state) { set_param_diddle(param, state); });
+#endif
+
+    std::string typetext(param->type.c_str());
+    if (param->isclosure)
+        typetext = OSL::fmtformat("closure {}", typetext);
+    if (param->isstruct)
+        typetext = OSL::fmtformat("struct {}", param->structname);
     if (param->isoutput) {
+        typetext = OSL::fmtformat("output {}", typetext);
         // Create a radio button for the output parameter
         auto outputRadioButton = new QRadioButton(this);
         layout->addWidget(outputRadioButton, row, 0);
 
         // Label for the output parameter
         auto nameLabel = new QLabel(
-            OSL::fmtformat("<i>output</i>&nbsp;  <b>{}</b>", param->name)
+            OSL::fmtformat("<i>{}</i>&nbsp;  <b>{}</b>", typetext, param->name)
                 .c_str());
         nameLabel->setTextFormat(Qt::RichText);
         layout->addWidget(nameLabel, row, 1);
@@ -1341,33 +1357,16 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
                     }
                 });
 
-        if (m_selectedoutput == param->name) {
+        // Check the radio button if this parameter is the currently selected output
+        if (m_selectedoutput == param->name) 
             outputRadioButton->setChecked(true);
-        }
 
         return;  // Skip the rest of the function for output parameters
     }
-    auto diddleCheckbox = new QCheckBox("  ");
-    if (m_diddlers[param->name.string()])
-        diddleCheckbox->setCheckState(Qt::Checked);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    connect(diddleCheckbox, &QCheckBox::checkStateChanged, this,
-            [&](Qt::CheckState state) { set_param_diddle(param, int(state)); });
-#else
-    connect(diddleCheckbox, &QCheckBox::stateChanged, this,
-            [&](int state) { set_param_diddle(param, state); });
-#endif
-    layout->addWidget(diddleCheckbox, row, 0);
-
-    std::string typetext(param->type.c_str());
-    if (param->isclosure)
-        typetext = OSL::fmtformat("closure {}", typetext);
-    if (param->isstruct)
-        typetext = OSL::fmtformat("struct {}", param->structname);
-    if (param->isoutput)
-        typetext = OSL::fmtformat("output {}", typetext);
     //    auto typeLabel = QtUtils::mtmt{}<i>{}</i>", typetext);
     //    layout->addWidget (typeLabel, row, 1);
+    layout->addWidget(diddleCheckbox, row, 0);
+
     auto nameLabel = new QLabel(
         OSL::fmtformat("<i>{}</i>&nbsp;  <b>{}</b>", typetext, param->name)
             .c_str());

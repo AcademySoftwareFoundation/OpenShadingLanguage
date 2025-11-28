@@ -1261,10 +1261,8 @@ OSLToyMainWindow::build_shader_group()
         OSLQuery oslquery = ss->oslquery(*group, 0);         // can I assume that there is only ever one group? 
         for (size_t p = 0; p < oslquery.nparams(); ++p) {
             auto param = oslquery.getparam(p);
-            // 
             if (param->isoutput && (param->type == TypeDesc::COLOR)) {
                 m_selectedoutput = param->name;
-                std::cout << "Defaulting selected output to first output param: " << m_selectedoutput << "\n";
                 break;
             }
         }

@@ -723,7 +723,6 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
             &OSLToyMainWindow::timed_rerender_trigger);
     maintimer->start();
 
-    std::cout << "m_selectedoutput initialized to: " << m_selectedoutput << "\n";
     // Provide the callback to the renderer
     m_renderer->set_output_callback([this]() {
         return this->selected_output();  // Return the selected output
@@ -1257,18 +1256,19 @@ OSLToyMainWindow::build_shader_group()
     renderer()->set_shadergroup(group);
 
     // Doing OSLQuery here before the getattraibute calls
-    bool default_output_set = false;
     OSLQuery oslquery = ss->oslquery(*group, 0);                        // can I assume that there is only ever one group 
     std::cout << "number of params: " << oslquery.nparams() << "\n";
     for (size_t p = 0; p < oslquery.nparams(); ++p) {
         auto param = oslquery.getparam(p);
-        // Set first output param as default
-        if (param->isoutput && !default_output_set) {
+        // Set first output param as renderer output if none selected
+        if (param->isoutput && m_selectedoutput.empty()) {
             m_selectedoutput = param->name;
-            std::cout << "Default output set to " << m_selectedoutput << "\n";
             break;
         }
     }
+
+    ustring outputs[] = { m_selectedoutput };
+    ss->attribute(group.get(), "renderer_outputs", TypeDesc(TypeDesc::STRING, 1), &outputs);
 
     m_shader_uses_time            = false;
     int num_globals_needed        = 0;
@@ -1335,13 +1335,12 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
                     if (checked) {
                         // Save the selected output parameter
                         m_selectedoutput = param->name;
-                        std::cout << "Selected output: " << m_selectedoutput
-                                  << "\n";
-                        ustring outputs[] = { m_selectedoutput };
-                        renderer()->shadingsys()->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1), &outputs);
-                        rerender_needed();
                     }
                 });
+
+        if (m_selectedoutput == param->name) {
+            outputRadioButton->setChecked(true);
+        }
 
         return;  // Skip the rest of the function for output parameters
     }

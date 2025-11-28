@@ -210,7 +210,7 @@ private:
     bool m_shader_uses_time = false;
 
     // The currently selected output
-    ustring m_selectedoutput = ustring("Cout"); // Default to "Cout"
+    ustring m_selectedoutput = ustring(""); // Empty until set by user 
 
     std::vector<std::string> m_include_search_paths;
 

@@ -55,13 +55,6 @@ OSLToyRenderer::OSLToyRenderer()
 
 
     ustring selected_output = ustring("Cout");  // Default to "Cout"
-    if (m_output_callback) {
-        selected_output = m_output_callback();  // Call the callback
-    } else {
-        std::cerr << "Warning: Output callback is not set. Using default 'Cout'.\n";
-    }
-
-    std::cout << "CONSTRUCTOR Rendering to output: " << selected_output << "\n";
     ustring outputs[] = { selected_output };
 
     m_shadingsys->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1),
@@ -158,7 +151,6 @@ OSLToyRenderer::render_image()
         std::cerr << "Warning: Output callback is not set. Using default 'Cout'.\n";
     }
 
-    std::cout << "RENDER_IMAGE Rendering to output: " << selected_output << "\n";
     ustring outputs[] = { selected_output };
 
     m_shadingsys->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1),

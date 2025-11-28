@@ -51,12 +51,7 @@ OSLToyRenderer::OSLToyRenderer()
 {
     m_shadingsys = new ShadingSystem(this);
     m_shadingsys->attribute("allow_shader_replacement", 1);
-
-
-
-    ustring selected_output = ustring("Cout");  // Default to "Cout"
-    ustring outputs[] = { selected_output };
-
+    ustring outputs[] = { ustring("Cout") };
     m_shadingsys->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1),
                             &outputs);
     // set attributes for the shadingsys
@@ -130,8 +125,9 @@ OSLToyRenderer::OSLToyRenderer()
 
 
 void
-OSLToyRenderer::set_output_callback(std::function<ustring()> callback) {
-    m_output_callback = callback;
+OSLToyRenderer::set_output_getter(std::function<ustring()> getter) 
+{
+    m_get_selected_output = getter;
 }
 
 
@@ -143,16 +139,15 @@ OSLToyRenderer::render_image()
         m_framebuffer.reset(
             OIIO::ImageSpec(m_xres, m_yres, 3, TypeDesc::FLOAT));
     
-    // Use the callback to get the selected output
-    ustring selected_output = ustring("Cout");  // Default to "Cout"
-    if (m_output_callback) {
-        selected_output = m_output_callback();  // Call the callback
+    // Use the getter to get the selected output in the app
+    ustring selected_output = ustring("Cout");      // Default to "Cout"
+    if (m_get_selected_output) {
+        selected_output = m_get_selected_output();
     } else {
-        std::cerr << "Warning: Output callback is not set. Using default 'Cout'.\n";
+        std::cerr << "Warning: m_get_selected_output() is not set. Using default 'Cout'.\n";
     }
 
     ustring outputs[] = { selected_output };
-
     m_shadingsys->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1),
                             &outputs);
 

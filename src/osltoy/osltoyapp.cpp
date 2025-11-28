@@ -724,7 +724,7 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
     maintimer->start();
 
     // Provide the callback to the renderer
-    m_renderer->set_output_callback([this]() {
+    m_renderer->set_output_getter([this]() {
         return this->selected_output();  // Return the selected output
     });
 }
@@ -1255,14 +1255,18 @@ OSLToyMainWindow::build_shader_group()
     }
     renderer()->set_shadergroup(group);
 
-    // Doing OSLQuery here before the getattraibute calls
-    OSLQuery oslquery = ss->oslquery(*group, 0);                        // can I assume that there is only ever one group 
-    for (size_t p = 0; p < oslquery.nparams(); ++p) {
-        auto param = oslquery.getparam(p);
-        // Set first output param as renderer output if none selected
-        if (param->isoutput && m_selectedoutput.empty()) {
-            m_selectedoutput = param->name;
-            break;
+    // Doing OSLQuery here before the getattribute calls to 
+    // set first output param in param list as renderer output if none selected
+    if (m_selectedoutput.empty()) {
+        OSLQuery oslquery = ss->oslquery(*group, 0);         // can I assume that there is only ever one group? 
+        for (size_t p = 0; p < oslquery.nparams(); ++p) {
+            auto param = oslquery.getparam(p);
+            // 
+            if (param->isoutput && (param->type == TypeDesc::COLOR)) {
+                m_selectedoutput = param->name;
+                std::cout << "Defaulting selected output to first output param: " << m_selectedoutput << "\n";
+                break;
+            }
         }
     }
 

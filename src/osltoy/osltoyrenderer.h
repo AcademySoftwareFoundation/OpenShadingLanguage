@@ -63,7 +63,7 @@ public:
 
     OIIO::ImageBuf& framebuffer() { return m_framebuffer; }
 
-    void set_output_callback(std::function<ustring()> callback);
+    void set_output_getter(std::function<ustring()> getter);
 
     void render_image();
 
@@ -92,7 +92,7 @@ public:
                               ShaderGlobals* sg, void* val);
 
 private:
-    std::function<ustring()> m_output_callback;  // Store the callback
+    std::function<ustring()> m_get_selected_output;  // Store the getter function that gets selection from app
 
     OIIO::spin_mutex m_mutex;
     ShadingSystem* m_shadingsys;

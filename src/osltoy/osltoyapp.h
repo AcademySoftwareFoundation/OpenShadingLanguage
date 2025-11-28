@@ -87,6 +87,7 @@ public:
     CodeEditor* add_new_editor_window(const std::string& filename = "");
 
     OSLToyRenderer* renderer() const { return m_renderer.get(); }
+    
     ustring selected_output() const { return m_selectedoutput; }
 
     ShadingSystem* shadingsys() const;

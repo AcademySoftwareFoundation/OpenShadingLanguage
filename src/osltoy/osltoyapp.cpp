@@ -9,7 +9,6 @@
 #include <QAction>
 #include <QApplication>
 #include <QCheckBox>
-#include <QRadioButton>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QErrorMessage>
@@ -24,6 +23,7 @@
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QScrollArea>
 #include <QSlider>
 #include <QSpinBox>
@@ -1255,10 +1255,11 @@ OSLToyMainWindow::build_shader_group()
     }
     renderer()->set_shadergroup(group);
 
-    // Doing OSLQuery here before the getattribute calls to 
+    // Doing OSLQuery here before the getattribute calls to
     // set first output param in param list as renderer output if none selected
     if (m_selectedoutput.empty()) {
-        OSLQuery oslquery = ss->oslquery(*group, 0);         // can I assume that there is only ever one group? 
+        OSLQuery oslquery = ss->oslquery(
+            *group, 0);  // can I assume that there is only ever one group?
         for (size_t p = 0; p < oslquery.nparams(); ++p) {
             auto param = oslquery.getparam(p);
             // Has to be output and vec3, so we can display as color
@@ -1270,7 +1271,8 @@ OSLToyMainWindow::build_shader_group()
     }
 
     ustring outputs[] = { m_selectedoutput };
-    ss->attribute(group.get(), "renderer_outputs", TypeDesc(TypeDesc::STRING, 1), &outputs);
+    ss->attribute(group.get(), "renderer_outputs",
+                  TypeDesc(TypeDesc::STRING, 1), &outputs);
 
     m_shader_uses_time            = false;
     int num_globals_needed        = 0;
@@ -1334,9 +1336,9 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
         typetext = OSL::fmtformat("closure {}", typetext);
     if (param->isstruct)
         typetext = OSL::fmtformat("struct {}", param->structname);
-    if (param->isoutput) 
+    if (param->isoutput)
         typetext = OSL::fmtformat("output {}", typetext);
-    
+
     if ((param->isoutput) && (param->type.is_vec3())) {
         // Create a radio button for the output parameter
         auto outputRadioButton = new QRadioButton(this);
@@ -1359,7 +1361,7 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
                 });
 
         // Check the radio button if this parameter is the currently selected output
-        if (m_selectedoutput == param->name) 
+        if (m_selectedoutput == param->name)
             outputRadioButton->setChecked(true);
 
         return;  // Skip the rest of the function for output parameters

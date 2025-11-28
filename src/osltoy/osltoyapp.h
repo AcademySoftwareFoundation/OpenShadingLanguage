@@ -87,7 +87,7 @@ public:
     CodeEditor* add_new_editor_window(const std::string& filename = "");
 
     OSLToyRenderer* renderer() const { return m_renderer.get(); }
-    
+
     ustring selected_output() const { return m_selectedoutput; }
 
     ShadingSystem* shadingsys() const;
@@ -155,7 +155,7 @@ private:
     // Set up the status bar
     void createStatusBar();
 
-    
+
 
     // Actions. To make these do things, put them in the .cpp and give them
     // bodies. Delete the ones that don't correspond to concepts in your
@@ -211,7 +211,7 @@ private:
     bool m_shader_uses_time = false;
 
     // The currently selected output
-    ustring m_selectedoutput = ustring(""); // Empty until set by user 
+    ustring m_selectedoutput = ustring("");  // Empty until set by user
 
     std::vector<std::string> m_include_search_paths;
 

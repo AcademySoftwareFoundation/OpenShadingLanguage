@@ -11,8 +11,8 @@
 #include <OSL/oslexec.h>
 #include <OSL/oslquery.h>
 
-#include "osltoyrenderer.h"
 #include "osltoyapp.h"
+#include "osltoyrenderer.h"
 
 // Create ustrings for all strings used by the free function renderer services.
 // Required to allow the reverse mapping of hash->string to work when processing messages
@@ -122,7 +122,7 @@ OSLToyRenderer::OSLToyRenderer()
 
 
 void
-OSLToyRenderer::set_output_getter(std::function<ustring()> getter) 
+OSLToyRenderer::set_output_getter(std::function<ustring()> getter)
 {
     m_get_selected_output = getter;
 }
@@ -135,13 +135,14 @@ OSLToyRenderer::render_image()
     if (!m_framebuffer.initialized())
         m_framebuffer.reset(
             OIIO::ImageSpec(m_xres, m_yres, 3, TypeDesc::FLOAT));
-    
+
     // Use the getter to get the selected output in the app
-    ustring selected_output = ustring("Cout");      // Default to "Cout"
+    ustring selected_output = ustring("Cout");  // Default to "Cout"
     if (m_get_selected_output) {
         selected_output = m_get_selected_output();
     } else {
-        std::cerr << "Warning: m_get_selected_output() is not set. Using default 'Cout'.\n";
+        std::cerr
+            << "Warning: m_get_selected_output() is not set. Using default 'Cout'.\n";
     }
 
     ustring outputs[] = { selected_output };

@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
-#include <functional>
 #include <unordered_map>
 
 #include <OpenImageIO/imagebuf.h>
@@ -92,7 +92,8 @@ public:
                               ShaderGlobals* sg, void* val);
 
 private:
-    std::function<ustring()> m_get_selected_output;  // Store the getter function that gets selection from app
+    std::function<ustring()>
+        m_get_selected_output;  // Store the getter function that gets selection from app
 
     OIIO::spin_mutex m_mutex;
     ShadingSystem* m_shadingsys;

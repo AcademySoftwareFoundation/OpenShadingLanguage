@@ -56,6 +56,9 @@ __OSL_OP(blackbody_vf)(void* bsg_, void* out, float temp)
 
 
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_NONINTEL_CLANG_PRAGMA(GCC diagnostic ignored "-Wpass-failed")
+
 OSL_BATCHOP void
 __OSL_MASKED_OP2(blackbody, Wv, Wf)(void* bsg_, void* wout_, void* wtemp_,
                                     unsigned int mask_value)
@@ -68,7 +71,7 @@ __OSL_MASKED_OP2(blackbody, Wv, Wf)(void* bsg_, void* wout_, void* wtemp_,
     Block<int> computeRequiredBlock;
     Wide<int> wcomputeRequired(computeRequiredBlock);
 
-    OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))
+    OSL_OMP_SIMD_LOOP(simdlen(__OSL_WIDTH))
     for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
         float temperature      = wL[lane];
         bool canNotLookup      = !cs.can_lookup_blackbody(temperature);
@@ -104,6 +107,8 @@ __OSL_MASKED_OP2(blackbody, Wv, Wf)(void* bsg_, void* wout_, void* wtemp_,
         }
     }
 }
+
+OSL_PRAGMA_WARNING_POP
 
 
 
@@ -296,7 +301,7 @@ __OSL_MASKED_OP2(prepend_color_from, Wv, Ws)(void* bsg_, void* c_, void* from_,
 namespace {
 
 // Note: Clang 14 seems to no longer allow vectorizing these loops
-#if ((OSL_GCCVERSION && OSL_CLANG_VERSION < 140000) \
+#if ((OSL_CLANG_VERSION && OSL_CLANG_VERSION < 140000) \
      || OSL_INTEL_CLASSIC_COMPILER_VERSION || OSL_INTEL_LLVM_COMPILER_VERSION)
 #    define WIDE_TRANSFORMC_OMP_SIMD_LOOP(...) OSL_OMP_SIMD_LOOP(__VA_ARGS__)
 #else

@@ -98,7 +98,7 @@ __raygen__()
     //       networks, so there should be (at least) some mechanism to issue a
     //       warning or error if the closure or param storage can possibly be
     //       exceeded.
-    alignas(8) char closure_pool[256];
+    StackClosurePool closure_pool;
     alignas(8) char params[256];
 
     OSL_CUDA::ShaderGlobals sg;
@@ -137,8 +137,11 @@ __raygen__()
     sg.object2common = reinterpret_cast<void*>(render_params.object2common);
 
     // Pack the "closure pool" into one of the ShaderGlobals pointers
-    *(int*)&closure_pool[0] = 0;
-    sg.renderstate          = &closure_pool[0];
+    closure_pool.reset();
+    RenderState renderState;
+    // TODO: renderState.context = ...
+    renderState.closure_pool = &closure_pool;
+    sg.renderstate           = &renderState;
 
     // Run the OSL group and init functions
     if (render_params.fused_callable)

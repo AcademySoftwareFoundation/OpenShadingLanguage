@@ -516,7 +516,11 @@ SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 {
     // SimpleRaytracer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
-    result = *reinterpret_cast<const Matrix44*>(xform);
+    if (xform)
+        result = *reinterpret_cast<const Matrix44*>(xform);
+    else
+        result = Matrix44(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
     return true;
 }
 
@@ -543,7 +547,10 @@ SimpleRaytracer::get_matrix(ShaderGlobals* /*sg*/, Matrix44& result,
 {
     // SimpleRaytracer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
-    result = *reinterpret_cast<const Matrix44*>(xform);
+    if (xform)
+        result = *reinterpret_cast<const Matrix44*>(xform);
+    else
+        result = Matrix44(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     return true;
 }
 
@@ -921,12 +928,6 @@ SimpleRaytracer::globals_from_hit(ShaderGlobalsType& sg, const Ray& r,
     }
     sg.raytype        = r.raytype;
     sg.flipHandedness = sg.dPdx.cross(sg.dPdy).dot(sg.N) < 0;
-
-#ifndef __CUDACC__
-    // In our SimpleRaytracer, the "renderstate" itself just a pointer to
-    // the ShaderGlobals.
-    sg.renderstate = &sg;
-#endif
 }
 
 
@@ -945,7 +946,7 @@ SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx,
 #ifndef __CUDACC__
     shadingsys->execute(*ctx, *m_shaders[backgroundShaderID].surf, sg);
 #else
-    alignas(8) char closure_pool[256];
+    StackClosurePool closure_pool;
     execute_shader(sg, render_params.bg_id, closure_pool);
 #endif
     return process_background_closure((const ClosureColor*)sg.Ci);
@@ -957,8 +958,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 {
 #ifdef __CUDACC__
     // Scratch space for the output closures
-    alignas(8) char closure_pool[256];
-    alignas(8) char light_closure_pool[256];
+    StackClosurePool closure_pool;
+    StackClosurePool light_closure_pool;
 #endif
 
     constexpr float inf = std::numeric_limits<float>::infinity();
@@ -1349,7 +1350,6 @@ SimpleRaytracer::prepare_geometry()
                 sg.v             = uv[i].y;
                 sg.I             = (p[i] - camera.eye).normalize();
                 sg.surfacearea   = area;
-                sg.renderstate   = &sg;
 
                 shadingsys->execute(*ctx, *m_shaders[shaderID].disp, sg);
 

@@ -12,6 +12,9 @@ on:
   workflow_call:
     # This inputs receive values via the "with:" section in ci_workflow.yml
     inputs:
+      disable:
+        type: boolean
+        default: false
       build:
         type: string
       runner:
@@ -85,6 +88,7 @@ jobs:
 
   steps:
     name: "${{inputs.cxx_compiler}} c++${{inputs.cxx_std}} py${{inputs.python_ver}}"
+    if: ${{ !inputs.disable }}
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container }}
@@ -101,6 +105,7 @@ jobs:
       CTEST_TEST_TIMEOUT: ${{inputs.ctest_test_timeout}}
       USE_SIMD: ${{inputs.simd}}
       FMT_VERSION: ${{inputs.fmt_ver}}
+      fmt_BUILD_VERSION: ${{inputs.fmt_ver}}
       OPENCOLORIO_VERSION: ${{inputs.opencolorio_ver}}
       OPENEXR_VERSION: ${{inputs.openexr_ver}}
       OPENIMAGEIO_VERSION: ${{inputs.openimageio_ver}}
@@ -134,7 +139,7 @@ jobs:
           restore-keys: ${{inputs.nametag}}
       - name: Install LLVM and Clang
         if: inputs.llvm_action_ver != ''
-        uses: KyleMayes/install-llvm-action@a7a1a882e2d06ebe05d5bb97c3e1f8c984ae96fc # v2.0.7
+        uses: KyleMayes/install-llvm-action@98e68e10c96dffcb7bfed8b2144541a66b49aa02 # v2.0.8
         with:
           version: ${{ inputs.llvm_action_ver }}
       - name: Dependencies

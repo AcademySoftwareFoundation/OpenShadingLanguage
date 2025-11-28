@@ -2242,48 +2242,10 @@ public:
     }
 #endif
 
-    ClosureComponent* closure_component_allot(int id, size_t prim_size,
-                                              const Color3& w)
+    void* allocate_closure(size_t size, size_t alignment)
     {
-        // Allocate the component and the mul back to back
-        size_t needed          = sizeof(ClosureComponent) + prim_size;
-        ClosureComponent* comp = (ClosureComponent*)m_closure_pool.alloc(
-            needed, alignof(ClosureComponent));
-        comp->id = id;
-        comp->w  = w;
-        return comp;
+        return m_closure_pool.alloc(size, alignment);
     }
-
-    ClosureMul* closure_mul_allot(const Color3& w, const ClosureColor* c)
-    {
-        ClosureMul* mul = (ClosureMul*)m_closure_pool.alloc(sizeof(ClosureMul),
-                                                            alignof(ClosureMul));
-        mul->id         = ClosureColor::MUL;
-        mul->weight     = w;
-        mul->closure    = c;
-        return mul;
-    }
-
-    ClosureMul* closure_mul_allot(float w, const ClosureColor* c)
-    {
-        ClosureMul* mul = (ClosureMul*)m_closure_pool.alloc(sizeof(ClosureMul),
-                                                            alignof(ClosureMul));
-        mul->id         = ClosureColor::MUL;
-        mul->weight.setValue(w, w, w);
-        mul->closure = c;
-        return mul;
-    }
-
-    ClosureAdd* closure_add_allot(const ClosureColor* a, const ClosureColor* b)
-    {
-        ClosureAdd* add = (ClosureAdd*)m_closure_pool.alloc(sizeof(ClosureAdd),
-                                                            alignof(ClosureAdd));
-        add->id         = ClosureColor::ADD;
-        add->closureA   = a;
-        add->closureB   = b;
-        return add;
-    }
-
 
     /// Find the named symbol in the (already-executed!) stack of shaders of
     /// the given use. If a layer is given, search just that layer. If no

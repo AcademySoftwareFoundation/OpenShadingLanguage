@@ -10,7 +10,6 @@ name: CI
 on:
   push:
     # Skip jobs when only documentation files are changed
-    # Skip jobs when only documentation files are changed
     paths:
       - '**'
       - '!**.md'
@@ -51,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio-rel avx2
+          - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio-2.5 avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -63,7 +62,7 @@ jobs:
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: clang14/C++17 llvm14 oiio-main py3.9 avx2 batch-avx512
+          - desc: clang14/C++17 llvm14 oiio-3.0 py3.9 avx2 batch-avx512
             nametag: linux-clang14-llvm14-batch
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2022-clang14
@@ -71,7 +70,7 @@ jobs:
             old_node: 1
             cxx_std: 17
             opencolorio_ver: v2.2.1
-            openimageio_ver: v3.0.6.1
+            openimageio_ver: v3.0.11.0
             python_ver: 3.9
             pybind11_ver: v2.7.0
             simd: avx2,f16c
@@ -200,6 +199,7 @@ jobs:
     uses: ./.github/workflows/build-steps.yml
     with:
       nametag: ${{ matrix.nametag || 'unnamed!' }}
+      disable: ${{ matrix.disable || false }}
       runner: ${{ matrix.runner || 'ubuntu-latest' }}
       container: ${{ matrix.container }}
       cc_compiler: ${{ matrix.cc_compiler || 'gcc' }}
@@ -232,22 +232,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: VP2023 gcc11/C++17 llvm15 py3.10 oiio-rel avx2
+          - desc: VP2023 gcc11/C++17 llvm15 py3.10 oiio-3.0 avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
             cxx_std: 17
-            openimageio_ver: release
+            openimageio_ver: v3.0.11.0
             python_ver: "3.10"
             pybind11_ver: v2.9.0
             simd: avx2,f16c
             batched: b8_AVX2
-          - desc: VP2024 gcc11/C++17 llvm17 py3.11 oiio-rel avx2
+          - desc: VP2024 gcc11/C++17 llvm17 py3.11 oiio-3.0 avx2
             nametag: linux-vfx2024
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2024-clang17
             cxx_std: 17
-            openimageio_ver: release
+            openimageio_ver: v3.0.11.0
             python_ver: "3.11"
             pybind11_ver: v2.11.1
             simd: avx2,f16c
@@ -340,7 +340,7 @@ jobs:
                             OPENIMAGEIO_CMAKE_FLAGS="-DUSE_PYTHON=0"
                             CMAKE_BUILD_TYPE=RelWithDebInfo
 
-          - desc: icc/C++17 llvm14 py3.9 oiio-main avx2
+          - desc: icc/C++17 llvm14 py3.9 oiio-2.5 avx2
             nametag: linux-icc
             runner: ubuntu-latest
             container: aswftesting/ci-osl:2023-clang15
@@ -367,14 +367,20 @@ jobs:
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
           - desc: icx/C++17 llvm14 py3.10 oiio-3.0 avx2
             nametag: linux-icx
-            runner: ubuntu-latest
+            # This job variation needs a bigger runner with more "disk space",
+            # so only enable it when running on the main repo. Sorry, CI can't
+            # currently test with icx you people's individual forks until we
+            # figure out a way to require less space. Until then, they'll need
+            # to submit the PR to see how it does on icx.
+            runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
+            disable: ${{ github.repository_owner != 'AcademySoftwareFoundation' }}
             container: aswftesting/ci-osl:2023-clang15
             cc_compiler: icx
             cxx_compiler: icpx
             cxx_std: 17
             fmt_ver: 7.1.3
             opencolorio_ver: v2.3.2
-            openimageio_ver: v3.0.6.1
+            openimageio_ver: v3.0.11.0
             python_ver: "3.10"
             pybind11_ver: v2.10.0
             simd: avx2,f16c
@@ -411,25 +417,44 @@ jobs:
             setenvs: export LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc11/C++17 llvm17 oiio-3.0 exr3.2 py3.12 avx2 batch-b16avx512
+          - desc: latest releases gcc13/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
-            cc_compiler: gcc-13
-            cxx_compiler: g++-13
+            cc_compiler: gcc-14
+            cxx_compiler: g++-14
             cxx_std: 17
-            fmt_ver: 11.1.4
-            opencolorio_ver: v2.4.2
-            openexr_ver: v3.3.3
+            fmt_ver: 12.1.0
+            opencolorio_ver: v2.5.0
+            openexr_ver: v3.4.2
             openimageio_ver: release
-            pybind11_ver: v3.0.0
+            pybind11_ver: v3.0.1
             python_ver: "3.12"
             llvm_action_ver: "18.1.7"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export LIBTIFF_VERSION=v4.7.0
+            setenvs: export LIBTIFF_VERSION=v4.7.1
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.15
-                            FREETYPE_VERSION=VER-2-13-3
+                            FREETYPE_VERSION=VER-2-14-3
+          - desc: latest releases clang18/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
+            nametag: linux-latest-releases
+            runner: ubuntu-24.04
+            cc_compiler: clang
+            cxx_compiler: clang++
+            cxx_std: 17
+            fmt_ver: 12.1.0
+            opencolorio_ver: v2.5.0
+            openexr_ver: v3.4.2
+            openimageio_ver: release
+            pybind11_ver: v3.0.1
+            python_ver: "3.12"
+            llvm_action_ver: "18.1.7"
+            simd: avx2,f16c
+            batched: b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: export LIBTIFF_VERSION=v4.7.1
+                            PTEX_VERSION=v2.4.3
+                            PUGIXML_VERSION=v1.15
+                            FREETYPE_VERSION=VER-2-14-3
           - desc: bleeding edge gcc14/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-24.04
@@ -446,23 +471,26 @@ jobs:
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export PUGIXML_VERSION=master
+                            PTEX_VERSION=v2.4.3
+                            PUGIXML_VERSION=v1.15
+                            FREETYPE_VERSION=VER-2-14-3
           - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
-            nametag: linux-latest-releases-clang
+            nametag: linux-clang14
             runner: ubuntu-22.04
             cxx_compiler: clang++
             cc_compiler: clang
             cxx_std: 17
-            fmt_ver: 8.1.1
-            opencolorio_ver: v2.2.1
-            openexr_ver: v3.1.11
+            fmt_ver: 12.1.0
+            opencolorio_ver: v2.5.0
+            openexr_ver: v3.4.2
             openimageio_ver: release
-            pybind11_ver: v2.13.6
+            pybind11_ver: v3.0.1
             python_ver: "3.10"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LLVM_VERSION=14.0.0
                             LLVM_DISTRO_NAME=ubuntu-18.04
-                            PUGIXML_VERSION=v1.11.4
+                            PUGIXML_VERSION=v1.15
             # Test formatting. This test entry doesn't do a full build, it
             # just runs clang-format on everything, and passes if nothing is
             # misformatted. Upon failure, the build artifact will be the full
@@ -522,15 +550,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: MacOS-13-Intel llvm17 oiio-release
-            runner: macos-13
-            nametag: macos13-p313
+          - desc: MacOS-15-Intel aclang17/C++17/py3.13 llvm17 oiio-release
+            runner: macos-15-intel
+            nametag: macos15-p313
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
             openimageio_ver: dev-3.0
             python_ver: "3.13"
-            aclang: 14
             ctest_test_timeout: 120
             setenvs: export HOMEBREW_PREFIX=/usr/local
                             LLVMBREWVER="@17"
@@ -543,9 +570,8 @@ jobs:
             cxx_std: 17
             openimageio_ver: main
             python_ver: "3.13"
-            aclang: 15
             setenvs: export LLVMBREWVER="@19"
-          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm19 oiio-main
+          - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm21 oiio-main
             runner: macos-15
             nametag: macos15-arm-py313
             cc_compiler: clang
@@ -553,7 +579,6 @@ jobs:
             cxx_std: 17
             python_ver: "3.13"
             openimageio_ver: main
-            setenvs: export LLVMBREWVER="@19"
 
 
   windows:

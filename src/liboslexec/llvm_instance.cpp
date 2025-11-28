@@ -2116,7 +2116,11 @@ BackendLLVM::run()
             // for NVPTX (https://www.llvm.org/docs/NVPTXUsage.html#triples).
             ll.module()->setDataLayout(
                 "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+#        if OSL_LLVM_VERSION < 210
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
+#        else
+            ll.module()->setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
+#        endif
         }
 #    endif
 #else
@@ -2181,7 +2185,12 @@ BackendLLVM::run()
 
             shadeops_module->setDataLayout(
                 "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+#        if OSL_LLVM_VERSION < 210
             shadeops_module->setTargetTriple("nvptx64-nvidia-cuda");
+#        else
+            shadeops_module->setTargetTriple(
+                llvm::Triple("nvptx64-nvidia-cuda"));
+#        endif
 
             std::unique_ptr<llvm::Module> shadeops_ptr(shadeops_module);
             llvm::Linker::linkModules(*ll.module(), std::move(shadeops_ptr),
@@ -2208,7 +2217,12 @@ BackendLLVM::run()
 
                 rend_lib_module->setDataLayout(
                     "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+#        if OSL_LLVM_VERSION < 210
                 rend_lib_module->setTargetTriple("nvptx64-nvidia-cuda");
+#        else
+                rend_lib_module->setTargetTriple(
+                    llvm::Triple("nvptx64-nvidia-cuda"));
+#        endif
 
                 for (llvm::Function& fn : *rend_lib_module) {
                     fn.addFnAttr("osl-rend_lib-function", "true");
@@ -2225,7 +2239,11 @@ BackendLLVM::run()
             // The triple is empty with recent versions of LLVM (e.g., 15) for reasons that aren't
             // clear. So we must set them to the expected values.
             // See: https://llvm.org/docs/NVPTXUsage.html
+#    if OSL_LLVM_VERSION < 210
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
+#    else
+            ll.module()->setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
+#    endif
             ll.module()->setDataLayout(
                 "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
 

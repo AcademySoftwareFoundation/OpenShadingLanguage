@@ -23,6 +23,7 @@
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QScrollArea>
 #include <QSlider>
 #include <QSpinBox>
@@ -721,6 +722,11 @@ OSLToyMainWindow::OSLToyMainWindow(OSLToyRenderer* rend, int xr, int yr)
     connect(maintimer, &QTimer::timeout, this,
             &OSLToyMainWindow::timed_rerender_trigger);
     maintimer->start();
+
+    // Provide the callback to the renderer
+    m_renderer->set_output_getter([this]() {
+        return this->selected_output();  // Return the selected output
+    });
 }
 
 
@@ -1249,6 +1255,25 @@ OSLToyMainWindow::build_shader_group()
     }
     renderer()->set_shadergroup(group);
 
+    // Doing OSLQuery here before the getattribute calls to
+    // set first output param in param list as renderer output if none selected
+    if (m_selectedoutput.empty()) {
+        OSLQuery oslquery = ss->oslquery(
+            *group, 0);  // can I assume that there is only ever one group?
+        for (size_t p = 0; p < oslquery.nparams(); ++p) {
+            auto param = oslquery.getparam(p);
+            // Has to be output and vec3, so we can display as color
+            if (param->isoutput && param->type.is_vec3()) {
+                m_selectedoutput = param->name;
+                break;
+            }
+        }
+    }
+
+    ustring outputs[] = { m_selectedoutput };
+    ss->attribute(group.get(), "renderer_outputs",
+                  TypeDesc(TypeDesc::STRING, 1), &outputs);
+
     m_shader_uses_time            = false;
     int num_globals_needed        = 0;
     const ustring* globals_needed = nullptr;
@@ -1305,7 +1330,6 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
     connect(diddleCheckbox, &QCheckBox::stateChanged, this,
             [&](int state) { set_param_diddle(param, state); });
 #endif
-    layout->addWidget(diddleCheckbox, row, 0);
 
     std::string typetext(param->type.c_str());
     if (param->isclosure)
@@ -1314,8 +1338,38 @@ OSLToyMainWindow::make_param_adjustment_row(ParamRec* param,
         typetext = OSL::fmtformat("struct {}", param->structname);
     if (param->isoutput)
         typetext = OSL::fmtformat("output {}", typetext);
+
+    if ((param->isoutput) && (param->type.is_vec3())) {
+        // Create a radio button for the output parameter
+        auto outputRadioButton = new QRadioButton(this);
+        layout->addWidget(outputRadioButton, row, 0);
+
+        // Label for the output parameter
+        auto nameLabel = new QLabel(
+            OSL::fmtformat("<i>{}</i>&nbsp;  <b>{}</b>", typetext, param->name)
+                .c_str());
+        nameLabel->setTextFormat(Qt::RichText);
+        layout->addWidget(nameLabel, row, 1);
+
+        // Connect the radio button to save the selected output and rerender
+        connect(outputRadioButton, &QRadioButton::toggled, this,
+                [this, param](bool checked) {
+                    if (checked) {
+                        // Save the selected output parameter
+                        m_selectedoutput = param->name;
+                    }
+                });
+
+        // Check the radio button if this parameter is the currently selected output
+        if (m_selectedoutput == param->name)
+            outputRadioButton->setChecked(true);
+
+        return;  // Skip the rest of the function for output parameters
+    }
     //    auto typeLabel = QtUtils::mtmt{}<i>{}</i>", typetext);
     //    layout->addWidget (typeLabel, row, 1);
+    layout->addWidget(diddleCheckbox, row, 0);
+
     auto nameLabel = new QLabel(
         OSL::fmtformat("<i>{}</i>&nbsp;  <b>{}</b>", typetext, param->name)
             .c_str());

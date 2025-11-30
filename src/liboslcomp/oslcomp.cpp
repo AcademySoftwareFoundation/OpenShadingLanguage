@@ -130,7 +130,9 @@ OSLCompilerImpl::preprocess_file(const std::string& filename,
     // Read file contents into a string
     std::string instring;
     if (!OIIO::Filesystem::read_text_file(filename, instring)) {
-        errorfmt(ustring(filename), 0, "Could not open \"{}\"\n", filename);
+        SrcLoc srcloc;
+        srcloc.filename = filename;
+        errorfmt(srcloc, "Could not open \"{}\"\n", filename);
         return false;
     }
     return preprocess_buffer(instring, filename, stdoslpath, defines,
@@ -256,7 +258,7 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
         while (preproc_errors.size()
                && preproc_errors[preproc_errors.size() - 1] == '\n')
             preproc_errors.erase(preproc_errors.size() - 1);
-        errorfmt(ustring(), -1, "{}", preproc_errors);
+        errorfmt(SrcLoc(), "{}", preproc_errors);
         return false;
     }
     return true;
@@ -418,7 +420,7 @@ OSLCompilerImpl::compile(string_view filename,
                          string_view stdoslpath)
 {
     if (!OIIO::Filesystem::exists(filename)) {
-        errorfmt(ustring(), 0, "Input file \"{}\" not found", filename);
+        errorfmt(SrcLoc(), "Input file \"{}\" not found", filename);
         return false;
     }
 
@@ -435,9 +437,11 @@ OSLCompilerImpl::compile(string_view filename,
     if (stdoslpath.empty()) {
         stdoslpath = find_stdoslpath(includepaths);
     }
-    if (stdoslpath.empty() || !OIIO::Filesystem::exists(stdoslpath))
-        warningfmt(ustring(filename), 0, "Unable to find \"stdosl.h\"");
-    else {
+    if (stdoslpath.empty() || !OIIO::Filesystem::exists(stdoslpath)) {
+        SrcLoc srcloc;
+        srcloc.filename = filename;
+        warningfmt(srcloc, "Unable to find \"stdosl.h\"");
+    } else {
         // Add the directory of stdosl.h to the include paths
         includepaths.push_back(OIIO::Filesystem::parent_path(stdoslpath));
     }
@@ -456,7 +460,7 @@ OSLCompilerImpl::compile(string_view filename,
             if (shader())
                 shader()->typecheck();
             else
-                errorfmt(ustring(), 0, "No shader function defined");
+                errorfmt(SrcLoc(), "No shader function defined");
         }
 
         // Print the parse tree if there were no errors
@@ -485,7 +489,7 @@ OSLCompilerImpl::compile(string_view filename,
             OIIO::ofstream oso_output;
             OIIO::Filesystem::open(oso_output, m_output_filename);
             if (!oso_output.good()) {
-                errorfmt(ustring(), 0, "Could not open \"{}\"",
+                errorfmt(SrcLoc(), "Could not open \"{}\"",
                          m_output_filename);
                 return false;
             }
@@ -498,7 +502,7 @@ OSLCompilerImpl::compile(string_view filename,
 
             oso_output.close();
             if (!oso_output.good()) {
-                errorfmt(ustring(), 0, "Failed to write to \"{}\"",
+                errorfmt(SrcLoc(), "Failed to write to \"{}\"",
                          m_output_filename);
                 return false;
             }
@@ -531,8 +535,11 @@ OSLCompilerImpl::compile_buffer(string_view sourcecode, std::string& osobuffer,
     if (stdoslpath.empty()) {
         stdoslpath = find_stdoslpath(includepaths);
     }
-    if (stdoslpath.empty() || !OIIO::Filesystem::exists(stdoslpath))
-        warningfmt(ustring(filename), 0, "Unable to find \"stdosl.h\"");
+    if (stdoslpath.empty() || !OIIO::Filesystem::exists(stdoslpath)) {
+        SrcLoc srcloc;
+        srcloc.filename = filename;
+        warningfmt(srcloc, "Unable to find \"stdosl.h\"");
+    }
 
     std::string preprocess_result;
     if (!preprocess_buffer(sourcecode, filename, stdoslpath, defines,
@@ -548,7 +555,7 @@ OSLCompilerImpl::compile_buffer(string_view sourcecode, std::string& osobuffer,
             if (shader())
                 shader()->typecheck();
             else
-                errorfmt(ustring(), 0, "No shader function defined");
+                errorfmt(SrcLoc(), "No shader function defined");
         }
 
         // Print the parse tree if there were no errors
@@ -627,7 +634,7 @@ OSLCompilerImpl::write_dependency_file(string_view filename)
         if (depfile != stdout)
             fclose(depfile);
     } else {
-        errorfmt(ustring(), 0,
+        errorfmt(SrcLoc(),
                  "Could not open dependency file '{}' for writing",
                  m_deps_filename);
     }
@@ -692,9 +699,14 @@ OSLCompilerImpl::write_oso_metadata(const ASTNode* metanode) const
     bool ok = metavar->param_default_literals(metasym, metavar->init().get(),
                                               pdl, ",");
     if (ok) {
+        if (OIIO::Strutil::starts_with(metasym->name(), "osl_"))
+            warningfmt(
+                metanode->sourceloc(),
+                "Metadata names starting with \"osl_\" are reserved for internal OSL use ({})",
+                metasym->name());
         osofmt("%meta{{{},{},{}}} ", ts, metasym->name(), pdl);
     } else {
-        errorfmt(metanode->sourcefile(), metanode->sourceline(),
+        errorfmt(metanode->sourceloc(),
                  "Don't know how to print metadata {} ({}) with node type {}",
                  metasym->name(), ts, metavar->init()->nodetypename());
     }
@@ -862,13 +874,16 @@ OSLCompilerImpl::write_oso_file(string_view options,
     osofmt("# options: {}\n", options);
 
     ASTshader_declaration* shaderdecl = shader_decl();
-    osofmt("{} {}", shaderdecl->shadertypename(), shaderdecl->shadername());
+    osofmt("{} {}\t", shaderdecl->shadertypename(), shaderdecl->shadername());
 
     // output global hints and metadata
-    int hints = 0;
+    {
+        osofmt("%meta{{{},{},\"{}\"}} ", TypeString, "osl_version",
+               OSL_LIBRARY_VERSION_STRING);
+        osofmt("%meta{{{},{},\"{}\"}} ", TypeString, "osl_compile_options", options);
+    }
+
     for (ASTNode::ref m = shaderdecl->metadata(); m; m = m->next()) {
-        if (hints++ == 0)
-            osofmt("\t");
         write_oso_metadata(m.get());
     }
 
@@ -891,7 +906,7 @@ OSLCompilerImpl::write_oso_file(string_view options,
     }
 
     // Output all opcodes
-    int lastline = -1;
+    SrcLoc lastsrcloc;
     ustring lastfile;
     ustring lastmethod("___uninitialized___");
     for (auto& op : m_ircode) {
@@ -899,15 +914,15 @@ OSLCompilerImpl::write_oso_file(string_view options,
             osofmt("code {}\n", op.method());
             lastmethod = op.method();
             lastfile   = ustring();
-            lastline   = -1;
+            lastsrcloc  = SrcLoc();
         }
 
         if (/*m_debug &&*/ !op.sourcefile().empty()) {
             ustring file = op.sourcefile();
-            int line     = op.sourceline();
-            if (file != lastfile || line != lastline)
-                osofmt("# {}:{}\n# {}\n", file, line,
-                       retrieve_source(file, line));
+            SrcLoc srcloc = op.srcloc();
+            if (file != lastfile || srcloc != lastsrcloc)
+                osofmt("# {}:{}:{}\n# {}\n", file, srcloc.first_lineno(), srcloc.first_colno(),
+                       retrieve_source_lines(srcloc));
         }
 
         // Op name
@@ -935,18 +950,30 @@ OSLCompilerImpl::write_oso_file(string_view options,
         // %filename and %line document the source code file and line that
         // contained code that generated this op.  To avoid clutter, we
         // only output these hints when they DIFFER from the previous op.
-        if (!op.sourcefile().empty()) {
-            if (op.sourcefile() != lastfile) {
-                lastfile = op.sourcefile();
+        if (op.srcloc()) {
+            if (op.srcloc().filename != lastfile) {
+                lastfile = op.srcloc().filename;
                 osofmt("{}%filename{{\"{}\"}}", firsthint ? '\t' : ' ',
                        lastfile);
                 firsthint = false;
             }
-            if (op.sourceline() != lastline) {
-                lastline = op.sourceline();
-                osofmt("{}%line{{{}}}", firsthint ? '\t' : ' ', lastline);
+            if (op.srcloc().last_lineno() != lastsrcloc.last_lineno()) {
+                osofmt("{}%line{{{}}}", firsthint ? '\t' : ' ', op.srcloc().last_lineno());
                 firsthint = false;
             }
+            if (op.srcloc() != lastsrcloc) {
+                // n.b.: we need to use last_colno()+1 because the parser will use
+                // srcloc.from_yyloc() to pull in this data, and so we want it to be
+                // in that representation (1-based, [begin,end) style) but our
+                // last_colno() is inclusive (the methods return [first,last])
+                // I'll be the first to admit this is confusing
+                osofmt("{}%srcloc{{{},{},{},{}}}", firsthint ? '\t' : ' ',
+                       lastsrcloc.first_lineno(), lastsrcloc.first_colno(),
+                       lastsrcloc.last_lineno(), lastsrcloc.last_colno()+1);
+                firsthint = false;
+            }
+            // note this is unconditional
+            lastsrcloc = op.srcloc();
         }
 
         // %argrw documents which arguments are read, written, or both (rwW).
@@ -993,71 +1020,80 @@ OSLCompilerImpl::write_oso_file(string_view options,
 }
 
 
+OSLCompilerImpl::FileLines::FileLines(ustring filename)
+{
+    // Read the file and prepare its line lookup table
+    // this eager idea is ok, because either this code is used when OSO is emitted,
+    // and so the majority of the lines are needed anyways, or it's used in error
+    // reporting where the small time penalty is not important
+    bool ok = OIIO::Filesystem::read_text_file(filename, text);
+    if (ok) {
+        lines.push_back(0);  // line 0 starts at 0
+        // split lines
+        const char* base = text.c_str(); // help the compiler optimize the loop
+        for (uint32_t i = 0, e = text.size(); i < e; ++i)
+            if (base[i] == '\n')
+                lines.push_back(i + 1); // line starts on the _next_ character!
+
+    } else {
+        text = "<file not found>";
+    }
+}
+
+
 
 void
 OSLCompilerImpl::clear_filecontents_cache()
 {
     m_filecontents_map.clear();
     m_last_sourcefile.clear();
-    m_last_filecontents      = nullptr;
-    m_last_sourceline        = 1;  // note we call the first line "1" for users
-    m_last_sourceline_offset = 0;
+    m_last_filelines = nullptr;
 }
 
 
 
 string_view
-OSLCompilerImpl::retrieve_source(ustring filename, int line)
+OSLCompilerImpl::retrieve_source_impl(const SrcLoc& srcloc,
+                                      bool full_lines) const
 {
     // If we don't have a valid "last", look it up in the cache.
-    if (filename != m_last_sourcefile || !m_last_filecontents) {
-        m_last_sourceline        = 1;
-        m_last_sourceline_offset = 0;
-        auto found               = m_filecontents_map.find(filename);
-        if (found == m_filecontents_map.end()) {
+    if (srcloc.filename != m_last_sourcefile || !m_last_filelines) {
+        auto it = m_filecontents_map.find(srcloc.filename);
+        if (it == m_filecontents_map.end()) {
             // If it wasn't in the cache, read the file and add it.
-            std::string contents;
-            bool ok = OIIO::Filesystem::read_text_file(filename, contents);
-            if (ok) {
-                m_last_sourcefile            = filename;
-                m_filecontents_map[filename] = std::move(contents);
-                m_last_filecontents          = &m_filecontents_map[filename];
-            } else {
-                m_last_sourcefile   = ustring();
-                m_last_filecontents = nullptr;
-                return "<file not found>";
-            }
-        } else {
-            m_last_sourcefile   = filename;
-            m_last_filecontents = &found->second;
+            it = m_filecontents_map.emplace(srcloc.filename, srcloc.filename).first;
         }
+
+        m_last_sourcefile   = srcloc.filename;
+        m_last_filelines = &it->second;
     }
 
+    // file not found has an appropriate "file not found" text string inside
+    if (!*m_last_filelines)
+        return m_last_filelines->text;
+
+    // first/last line are 1-based and inclusive, whereas we turn them into
+    // 0-based, [begin,end) like an STL range
+    uint32_t begin_line = srcloc.line_start;
+    uint32_t end_line = srcloc.line_stop + 1;
+    if (begin_line >= m_last_filelines->lines.size())
+        return "<line not found>";
+
     // Now read lines up to and including the file we want.
-    OIIO::string_view s(*m_last_filecontents);
-    int orig_sourceline = line;
-    if (line >= m_last_sourceline) {
-        // Shortcut: the line we want is in the same file as the last read,
-        // and at least as far in the file. Start the search from where we
-        // left off last time.
-        s.remove_prefix(m_last_sourceline_offset);
-        line -= m_last_sourceline - 1;
-    } else {
-        // If we have to backtrack at all, backtrack to the file start.
-        m_last_sourceline_offset = 0;
-        m_last_sourceline        = 1;
+    string_view s(m_last_filelines->text);
+    size_t begin_offset = m_last_filelines->lines[begin_line];
+    size_t end_offset   = m_last_filelines->lines[end_line];
+    if (full_lines == 0) {
+        begin_offset += srcloc.column_begin;
+        // the end needs to be one line before, plus the column_end
+        end_offset = m_last_filelines->lines[end_line - 1]
+                     + srcloc.column_end;
     }
-    size_t offset = m_last_sourceline_offset;
-    for (; line > 1; --line) {
-        size_t p = s.find_first_of('\n');
-        if (p == OIIO::string_view::npos)
-            return "<line not found>";
-        s.remove_prefix(p + 1);
-        offset += p + 1;
-    }
-    s                        = s.substr(0, s.find_first_of('\n'));
-    m_last_sourceline_offset = offset;
-    m_last_sourceline        = orig_sourceline;
+    s = s.substr(begin_offset, end_offset - begin_offset);
+    // drop the last trailing newline if there
+    if (s.back() == '\n')
+        s.remove_suffix(1);
+
     return s;
 }
 
@@ -1136,14 +1172,14 @@ OSLCompilerImpl::check_write_legality(const Opcode& op, int opnum,
 {
     // We can never write to constant symbols
     if (sym->symtype() == SymTypeConst) {
-        errorfmt(op.sourcefile(), op.sourceline(),
+        errorfmt(op.srcloc(),
                  "Attempted to write to a constant value");
     }
 
     // Params can only write if it's part of their initialization
     if (sym->symtype() == SymTypeParam
         && (opnum < sym->initbegin() || opnum >= sym->initend())) {
-        errorfmt(op.sourcefile(), op.sourceline(),
+        errorfmt(op.srcloc(),
                  "cannot write to non-output parameter \"{}\"", sym->name());
     }
 }

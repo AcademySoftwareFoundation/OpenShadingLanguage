@@ -7,6 +7,11 @@
 
 set -ex
 
+# Make extra space on the runners
+df -h .
+time rm -rf /usr/local/lib/android /host/root/usr/local/lib/android &
+sleep 3
+
 
 #
 # Install system packages when those are acceptable for dependencies.
@@ -207,6 +212,9 @@ fi
 if [[ "$ABI_CHECK" != "" ]] ; then
     source src/build-scripts/build_abi_tools.bash
 fi
+
+df -h .
+df -h /host/root || true
 
 # Save the env for use by other stages
 src/build-scripts/save-env.bash

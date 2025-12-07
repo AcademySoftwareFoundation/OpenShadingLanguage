@@ -112,6 +112,7 @@ jobs:
       volumes:
         - /node20217:/node20217:rw,rshared
         - /node20217:/__e/node20:ro,rshared
+      options: -v /:/host/root ${{ (contains(inputs.runner, 'gpu') && '-e NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility --gpus all') || '-e A=x' }}
     env:
       CXX: ${{matrix.cxx_compiler}}
       CC: ${{matrix.cc_compiler}}
@@ -367,13 +368,10 @@ jobs:
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
           - desc: icx/C++17 llvm14 py3.10 oiio-3.0 avx2
             nametag: linux-icx
-            # This job variation needs a bigger runner with more "disk space",
-            # so only enable it when running on the main repo. Sorry, CI can't
-            # currently test with icx you people's individual forks until we
-            # figure out a way to require less space. Until then, they'll need
-            # to submit the PR to see how it does on icx.
-            runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
-            disable: ${{ github.repository_owner != 'AcademySoftwareFoundation' }}
+            runner: ubuntu-latest
+            # If we ever need the big runner:
+            #   runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
+            #   disable: ${{ github.repository_owner != 'AcademySoftwareFoundation' }}
             container: aswftesting/ci-osl:2023-clang15
             cc_compiler: icx
             cxx_compiler: icpx

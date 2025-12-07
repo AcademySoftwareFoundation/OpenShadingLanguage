@@ -1,6 +1,41 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.15 (Oct?? ??, 2026) -- compared to 1.15
+-------------------------------------------------------------
+
+### New minimum dependencies, toolchain, and compatibility changes:
+
+### ✏️  OSL Language, standard library, and oslc compiler (for shader writers):
+
+### ⛰️  API changes and new ShadingSystem features (for renderer writers):
+
+### ☀️  testshade/testrender/osltoy improvements
+
+### 🚀  SIMD batched shading mode
+
+### 🚀  OptiX GPU rendering
+
+### 🐛/🔧  Internals: fixes, improvements, and developer concerns
+
+### 🏗  Build/test/CI and platform ports
+* CMake build system and scripts:
+* Dependency version support:
+* Testing and Continuous integration (CI) systems:
+* Platform support:
+
+### 📚  Documentation
+
+### 🏢  Project Administration
+
+
+---
+
+---
+
+
+
+
 Release 1.15 (Dec ??, 2025) -- compared to 1.14
 -------------------------------------------------------------
 - Beta 1: Dec 8, 2025

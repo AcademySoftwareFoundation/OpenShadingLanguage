@@ -21,6 +21,9 @@ on:
         type: string
       container:
         type: string
+      container_volumes:
+        type: string
+        default: '[]'
       cc_compiler:
         type: string
       cxx_compiler:
@@ -92,9 +95,11 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container }}
-      options: ${{ (contains(inputs.runner, 'gpu') && '-e NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility --gpus all') || '-e A=x' }}
-      # ^^ need extra options on the GPU runners to ensure OptiX is visible
-      # in the container.
+      volumes: ${{ fromJson( inputs.container_volumes ) }}
+      options: -v /:/host/root ${{ (contains(inputs.runner, 'gpu') && '-e NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility --gpus all') || '-e A=x' }}
+      # Extra options:
+      # - Ensure the GPU runners have OptiX is visible in the container.
+      # - Mount the native filesystem under /host/root
     env:
       CXX: ${{inputs.cxx_compiler}}
       CC: ${{inputs.cc_compiler}}

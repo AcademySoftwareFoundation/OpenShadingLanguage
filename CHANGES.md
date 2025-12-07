@@ -1,20 +1,28 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.15 (in progress) -- compared to 1.14
+Release 1.15 (Dec ??, 2025) -- compared to 1.14
 -------------------------------------------------------------
+- Beta 1: Dec 8, 2025
 
 ### New minimum dependencies, toolchain, and compatibility changes:
+* *Python*: 3.9 minimum (from 3.7) [#2017](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2017) (1.15.0.0)
+* *LLVM*: New minimum Raise llvm minimum to 14.0 (from 11.0). [#2019](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2019) (1.15.0.0)
 
 ### ✏️  OSL Language, standard library, and oslc compiler (for shader writers):
-
-### ☀️  testshade/testrender/osltoy improvements
+* No changes to the language in this release.
 
 ### ⛰️  API changes and new ShadingSystem features (for renderer writers):
-  - *BSDL Library*: The internal Imageworks BSDF library has been open sourced and included with OSL as a header-only library for renderer authors. [#1986](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1986) (by Alejandro Conty) (1.15.0.0) And subsequent enhancements:
+* *BSDL Library*: The internal Imageworks BSDF library has been open sourced and included with OSL as a header-only library for renderer authors. [#1986](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1986) (by Alejandro Conty) (1.15.0.0) And subsequent enhancements:
     - *bsdl*: Implement MX conductor with multiple scattering [#1991](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1991) (by Alejandro Conty) (1.15.0.0)
     - *bsdl*: Change MX conductor to sample bounded visible normals [#2000](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2000) (by Alejandro Conty) (1.15.0.0)
     - *bsdl*: Add BSDF for MaterialX dielectric with Multiple Scattering [#2009](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2009) (by Alejandro Conty) (1.15.0.0)
+* Continued work on "rs free function" migration:
+    - *api*: Add rs_allocate_closure free function. [#1944](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1944) (by Curtis Black) (1.15.0.0)
+
+### ☀️  testshade/testrender/osltoy improvements
+  - *testrender*: Fix uv derivatives for testrender [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk) (1.14.8.0, 1.15.0.0)
+  - *testrender*: Default to identity for unknown testrender xforms [#2043](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2043) (by Chris Hellmuth) (1.14.8.0, 1.15.0.0)
 
 ### 🚀  SIMD batched shading mode
 
@@ -24,6 +32,7 @@ Release 1.15 (in progress) -- compared to 1.14
   - *perf*: Share Shading Context when optimizing/jitting a shader [#1952](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1952) (by Alex Wells) (1.15.0.0)
   - *fix*: Check for errors in ShadingSystem::ReParameter() [#1998](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1998) (by cmstein) (1.15.0.0)
   - *fix*: Pass the real number of channels to rs_texture and rs_texture3d on gpu [#2004](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2004) (1.15.0.0)
+  - *int*: LLVM_Util::supports_isa is not thread-safe [#2029](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2029) (by Sergey Sharybin) (1.15.0.0)
 
 ### 🏗  Build/test/CI and platform ports
 * CMake build system and scripts:
@@ -31,11 +40,19 @@ Release 1.15 (in progress) -- compared to 1.14
     - *build*: Simplify FindOptiX.cmake a bit now that OptiX 7 is the minimum [#1988](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1988) (1.15.0.0)
     - *build*: Update include directives for OpenImageIO_ROOT [#1997](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1997) (by cmstein) (1.15.0.0)
     - *build*: Serialize builds in testshade [#2012](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2012) (by Jean-Francois Panisset) (1.15.0.0)
+    - *build*: Simplify some clauses involving old compilers [#2016](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2016) (1.15.0.0)
+    - *build/batch*: Batch shading compiler directives were wrong [#2015](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2015) (1.15.0.0)
+    - *build/windows*: Ensure 'lib' prefix is on the dynamicaly loaded batched shading libraries for windows [#2025](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2025) (by Alex Fuller) (1.15.0.0)
+    - *build*: Use generator expressions to find oslc and compile shaders with it [#2026](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2026) (by Alex Fuller) (1.15.0.0)
+    - *build*: Suppress warning for SIMD loop vectorization failure with clang [#2032](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2032) (1.15.0.0)
+    - *build*: Fix compiler warnings with clang 21 + C++20 [#2033](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2033) (1.15.0.0)
 * Dependency version support:
     - *deps*: Remove unused symbol that was removed from OIIO main [#1984](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1984) (1.15.0.0)
     - *deps*: Add compatibility with LLVM 20.1 [#1993](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1993) (by Sven-Hendrik Haase) (1.15.0.0)
     - *deps*: Test against pybind11 3.0 and minor fixes [#2007](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2007) (1.15.0.0)
     - *deps*: Test C++20 and gcc14 + fixes needed [#2010](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2010) (1.15.0.0)
+    - *deps*: Use more modern span-based set_pixels with OIIO 3.1. [#2042](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2042) (1.15.0.0)
+    - *deps*: Add compatibility with LLVM 21 [#2030](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2030) (by Christian Heusel) [#2034](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2034) (by Alex Fuller) (1.15.0.0)
 * Testing and Continuous integration (CI) systems:
     - *ci*: Get OptiX headers from new improved location [#1989](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1989) (1.15.0.0)
     - *ci*: Remove Windows-2019 job [#1990](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1990) (1.15.0.0)
@@ -44,6 +61,15 @@ Release 1.15 (in progress) -- compared to 1.14
     - *ci*: Add vp2025 test [#1995](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1995) (1.15.0.0)
     - *ci*: Fix Windows CI with special LLVM pre-build [#2011](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2011) (1.15.0.0)
     - *tests*: Add optix ref output for new test added in PR 1991 [#1996](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1996) (1.15.0.0)
+    - *ci*: Add a VFX 2026 platform test [#2020](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2020) (1.15.0.0)
+    - *ci*: Adjust comparison threshold for render-microfacet test [#2027](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2027) (1.15.0.0)
+    - *ci*: Adjust test matrix for recent OIIO and OCIO releases [#2028](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2028) (1.15.0.0)
+    - *ci*: Drop deprecated macos-13 (intel) platform, add macos-15-intel [#2031](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2031) (1.15.0.0)
+    - *ci*: Unbreak optix jobs by locking down container [#2041](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2041) (1.15.0.0)
+    - *ci*: Bump 'latest' test dependency versions [#2038](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2038) (1.15.0.0)
+    - *ci*: Use bigger runner for icx job variation, needs more disk space [#2047](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2047) (1.15.0.0)
+    - *ci*: Fix failing render-microfacet.opt test [#2048](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2048) (1.15.0.0)
+    - *ci*: Fix change deprecated sonarqube action, improve run conditions [#2052](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2052) (1.15.0.0)
 * Platform support:
     - *build(Mac)*: Fix various MacOS problems with GitHub and CMake [#1982](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1982) (1.15.0.0)
 
@@ -58,6 +84,29 @@ Release 1.15 (in progress) -- compared to 1.14
 ---
 
 ---
+
+Release 1.14.8.0 (1 Dec 2025) -- compared to 1.14.7.0
+-------------------------------------------------------------
+  - *testrender*: Fix uv derivatives for testrender [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk)
+  - *testrender*: Default to identity for unknown testrender xforms [#2043](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2043) (by Chris Hellmuth)
+  - *fix(batch)*: Batch shading compiler directives were wrong [#2015](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2015)
+  - *fix*: LLVM_Util::supports_isa is not thread-safe [#2029](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2029) (by Sergey Sharybin)
+  - *build*: Simplify some clauses involving old compilers [#2016](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2016)
+  - *build(windows)*: Ensure 'lib' prefix is on the dynamically loaded batched shading libraries for windows [#2025](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2025) (by Alex Fuller)
+  - *build*: Use generator expressions to find oslc and compile shaders with it [#2026](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2026) (by Alex Fuller)
+  - *build*: Fix compiler warnings with clang 21 + C++20 [#2033](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2033)
+  - *build*: Suppress warning for SIMD loop vectorization failure with clang [#2032](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2032)
+  - *deps*: Use more modern span-based set_pixels with OIIO 3.1. [#2042](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2042)
+  - *deps*: Add compatibility with LLVM 21 [#2030](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2030) (by Christian Heusel)  [#2034](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2034) (by Alex Fuller)
+  - *ci*: Add a VFX 2026 platform test [#2020](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2020)
+  - *ci*: Adjust comparison threshold for render-microfacet test [#2027](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2027)
+  - *ci*: Adjust to latest OIIO's new OCIO minimum
+  - *ci*: Drop deprecated macos-13 (intel) platform, add macos-15-intel [#2031](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2031)
+  - *ci*: Unbreak optix jobs by locking down container [#2041](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2041)
+  - *ci*: Bump 'latest' test dependency versions [#2038](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2038)
+  - *ci*: Use bigger runner for icx job variation, needs more disk space [#2047](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2047)
+  - *ci*: Fix failing render-microfacet.opt test [#2048](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2048)
+
 
 Release 1.14.7.0 (2 Aug 2025) -- compared to 1.14.6.0
 -------------------------------------------------------------

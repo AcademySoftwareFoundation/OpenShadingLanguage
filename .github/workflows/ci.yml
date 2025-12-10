@@ -53,7 +53,7 @@ jobs:
           - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio-2.5 avx2
             nametag: linux-vfx2022
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang14
+            container: aswf/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -65,7 +65,7 @@ jobs:
           - desc: clang14/C++17 llvm14 oiio-3.0 py3.9 avx2 batch-avx512
             nametag: linux-clang14-llvm14-batch
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang14
+            container: aswf/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -79,7 +79,7 @@ jobs:
           - desc: gcc9/C++17 llvm14 py3.9 exr3.1 oiio3.0 sse2 batch-b4sse2
             nametag: linux-vfx2022-clang
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang14
+            container: aswf/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -92,7 +92,7 @@ jobs:
           - desc: oldest everything gcc9/C++17 llvm14 py3.9 oiio2.5 no-simd
             nametag: linux-oldest
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2022-clang14
+            container: aswf/ci-osl:2022-clang14
             vfxyear: 2022
             old_node: 1
             cxx_std: 17
@@ -236,7 +236,7 @@ jobs:
           - desc: VP2023 gcc11/C++17 llvm15 py3.10 oiio-3.0 avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2023-clang15
+            container: aswf/ci-osl:2023-clang15
             cxx_std: 17
             openimageio_ver: v3.0.11.0
             python_ver: "3.10"
@@ -246,17 +246,18 @@ jobs:
           - desc: VP2024 gcc11/C++17 llvm17 py3.11 oiio-3.0 avx2
             nametag: linux-vfx2024
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2024-clang17
+            container: aswf/ci-osl:2024-clang17
             cxx_std: 17
             openimageio_ver: v3.0.11.0
             python_ver: "3.11"
             pybind11_ver: v2.11.1
             simd: avx2,f16c
             batched: b8_AVX2
+            setenvs: export REMOVE_INSTALLED_OPENIMAGEIO=1
           - desc: VP2025 gcc11/C++17 llvm18 py3.11 oiio-3.0 avx2
             nametag: linux-vfx2025
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2025-clang18
+            container: aswf/ci-osl:2025-clang18
             cxx_std: 17
             python_ver: "3.11"
             # pybind11_ver: v2.11.1
@@ -268,7 +269,7 @@ jobs:
           - desc: VP2026 gcc14/C++20 llvm20 py3.13 oiio-3.1 avx2
             nametag: linux-vfx2026
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2026-clang20
+            container: aswf/ci-osl:2026-clang20
             cxx_std: 20
             python_ver: "3.13"
             # pybind11_ver: v2.11.1
@@ -282,7 +283,7 @@ jobs:
           - desc: sanitizers
             nametag: sanitizer
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2024-clang17
+            container: aswf/ci-osl:2024-clang17
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
@@ -298,6 +299,7 @@ jobs:
                             OSL_OPTIONS=llvm_debugging_symbols=1
                             TESTRENDER_AA=1
                             OSL_TESTSUITE_SKIP_DIFF=1
+                            REMOVE_INSTALLED_OPENIMAGEIO=1
             # Sanitizer notes:
             # - There are a handful of tests we disable entirely with
             #   CTEST_EXCLUSIONS because they are irrelevant or just cannot be
@@ -325,7 +327,7 @@ jobs:
           - desc: abi check
             nametag: linux-abi
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2023-clang15
+            container: aswf/ci-osl:2023-clang15
             cc_compiler: gcc
             cxx_compiler: g++
             cxx_std: 17
@@ -344,7 +346,7 @@ jobs:
           - desc: icc/C++17 llvm14 py3.9 oiio-2.5 avx2
             nametag: linux-icc
             runner: ubuntu-latest
-            container: aswftesting/ci-osl:2023-clang15
+            container: aswf/ci-osl:2023-clang15
             cc_compiler: icc
             cxx_compiler: icpc
             cxx_std: 17
@@ -372,7 +374,7 @@ jobs:
             # If we ever need the big runner:
             #   runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
             #   disable: ${{ github.repository_owner != 'AcademySoftwareFoundation' }}
-            container: aswftesting/ci-osl:2023-clang15
+            container: aswf/ci-osl:2023-clang15
             cc_compiler: icx
             cxx_compiler: icpx
             cxx_std: 17

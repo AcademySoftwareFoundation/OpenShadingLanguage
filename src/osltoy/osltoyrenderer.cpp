@@ -9,7 +9,9 @@
 
 #include <OSL/hashes.h>
 #include <OSL/oslexec.h>
+#include <OSL/oslquery.h>
 
+#include "osltoyapp.h"
 #include "osltoyrenderer.h"
 
 // Create ustrings for all strings used by the free function renderer services.
@@ -115,6 +117,17 @@ OSLToyRenderer::OSLToyRenderer()
     // That also implies that our normal points to (0,0,1)
     sg.N  = Vec3(0, 0, 1);
     sg.Ng = Vec3(0, 0, 1);
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals.
+    // sg.renderstate = &sg;
+}
+
+
+
+void
+OSLToyRenderer::set_output_getter(std::function<ustring()> getter)
+{
+    m_get_selected_output = getter;
 }
 
 
@@ -126,7 +139,19 @@ OSLToyRenderer::render_image()
         m_framebuffer.reset(
             OIIO::ImageSpec(m_xres, m_yres, 3, TypeDesc::FLOAT));
 
-    static ustring outputs[] = { ustring("Cout") };
+    // Use the getter to get the selected output in the app
+    ustring selected_output = ustring("Cout");  // Default to "Cout"
+    if (m_get_selected_output) {
+        selected_output = m_get_selected_output();
+    } else {
+        std::cerr
+            << "Warning: m_get_selected_output() is not set. Using default 'Cout'.\n";
+    }
+
+    ustring outputs[] = { selected_output };
+    m_shadingsys->attribute("renderer_outputs", TypeDesc(TypeDesc::STRING, 1),
+                            &outputs);
+
     OIIO::paropt popt(0, OIIO::paropt::SplitDir::Tile, 4096);
     shade_image(*shadingsys(), *shadergroup(), &m_shaderglobals_template,
                 m_framebuffer, outputs, ShadePixelCenters, OIIO::ROI(), popt);

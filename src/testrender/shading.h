@@ -14,9 +14,10 @@
 #include "bsdl_config.h"
 #include <BSDL/static_virtual.h>
 
+#include "bvh.h"
 #include "optics.h"
+#include "raytracer.h"
 #include "sampling.h"
-
 
 OSL_NAMESPACE_BEGIN
 
@@ -226,6 +227,35 @@ struct MxMediumVdfParams {
     ustringhash label;
 };
 
+
+struct MediumParams {
+    Color3 sigma_t       = Color3(0.0f);  // extinction coefficient
+    Color3 sigma_s       = Color3(0.0f);  // scattering
+    float medium_g       = 0.0f;          // volumetric anisotropy
+    float refraction_ior = 1.0f;
+    int priority         = 0;
+
+    OSL_HOSTDEVICE bool is_vaccum() const
+    {
+        return sigma_s.x <= 0.0f && sigma_s.y <= 0.0f && sigma_s.z <= 0.0f;
+    }
+
+    OSL_HOSTDEVICE bool is_special_priority() const { return priority == 0; }
+
+    OSL_HOSTDEVICE float avg_sigma_t() const
+    {
+        return (sigma_t.x + sigma_t.y + sigma_t.z) / 3;
+    }
+
+    OSL_HOSTDEVICE bool operator==(const MediumParams& rhs) const
+    {
+        return refraction_ior == rhs.refraction_ior && medium_g == rhs.medium_g
+               && sigma_t.x == rhs.sigma_t.x && sigma_t.y == rhs.sigma_t.y
+               && sigma_t.z == rhs.sigma_t.z && sigma_s.x == rhs.sigma_s.x
+               && sigma_s.y == rhs.sigma_s.y && sigma_s.z == rhs.sigma_s.z;
+    }
+};
+
 struct GGXDist;
 struct BeckmannDist;
 
@@ -261,6 +291,10 @@ struct EnergyCompensatedOrenNayar;
 struct ZeltnerBurleySheen;
 struct CharlieSheen;
 struct SpiThinLayer;
+struct HenyeyGreenstein;
+
+struct HomogeneousMedium;
+struct EmptyMedium;
 
 // StaticVirtual generates a switch/case dispatch method for us given
 // a list of possible subtypes. We just need to forward declare them.
@@ -270,9 +304,12 @@ using AbstractBSDF = bsdl::StaticVirtual<
     MicrofacetBeckmannBoth, MicrofacetGGXRefl, MicrofacetGGXRefr,
     MicrofacetGGXBoth, MxConductor, MxDielectric, MxBurleyDiffuse,
     EnergyCompensatedOrenNayar, ZeltnerBurleySheen, CharlieSheen,
-    MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer>;
+    MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer,
+    HenyeyGreenstein>;
 
-// Then we just need to inherit from AbstractBSDF
+using AbstractMedium = bsdl::StaticVirtual<HomogeneousMedium, EmptyMedium>;
+
+// Then we just need to inherit from AbstractBSDF or AbstractMedium
 
 /// Individual BSDF (diffuse, phong, refraction, etc ...)
 /// Actual implementations of this class are private
@@ -331,6 +368,52 @@ struct BSDF : public AbstractBSDF {
 #endif
 };
 
+struct Medium : public AbstractMedium {
+    struct Sample {
+        OSL_HOSTDEVICE Sample() : t(0.0f), transmittance(0.0f), weight(0.0f) {}
+        OSL_HOSTDEVICE Sample(const Sample& o)
+            : t(o.t), transmittance(o.transmittance), weight(o.weight)
+        {
+        }
+        OSL_HOSTDEVICE Sample(float t, Color3 transmittance, Color3 weight)
+            : t(t), transmittance(transmittance), weight(weight)
+        {
+        }
+        float t;
+        Color3 transmittance;
+        Color3 weight;
+    };
+
+    template<typename LOBE>
+    OSL_HOSTDEVICE Medium(LOBE* lobe)
+        : AbstractMedium(lobe)
+    {
+    }
+    
+    OSL_HOSTDEVICE const MediumParams* get_params() const { return {}; }
+
+    OSL_HOSTDEVICE const MediumParams* get_params_vrtl() const;
+
+    OSL_HOSTDEVICE Sample sample(Ray& r, Sampler& sampler,
+                                 Intersection& hit) const
+    {
+        return {};
+    }
+
+    OSL_HOSTDEVICE Sample sample_vrtl(Ray& r, Sampler& sampler,
+                                      Intersection& hit) const;
+
+    OSL_HOSTDEVICE BSDF::Sample sample_phase_func(const Vec3& wo, float rx,
+                                                  float ry,
+                                                  float rz) const {
+                                                    return {};
+                                                  }
+    OSL_HOSTDEVICE BSDF::Sample sample_phase_func_vrtl(const Vec3& wo, float rx,
+                                                       float ry,
+                                                       float rz) const;
+
+};
+
 /// Represents a weighted sum of BSDFS
 /// NOTE: no need to inherit from BSDF here because we use a "flattened" representation and therefore never nest these
 ///
@@ -381,7 +464,7 @@ struct CompositeBSDF {
 
     OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
     {
-        BSDF::Sample s = {};
+        BSDF::Sample s {};
         for (int i = 0; i < num_bsdfs; i++) {
             BSDF::Sample b = bsdfs[i]->eval_vrtl(wo, wi);
             b.weight *= weights[i];
@@ -454,22 +537,164 @@ private:
     int num_bsdfs, num_bytes;
 };
 
-struct ShadingResult {
-    Color3 Le          = Color3(0.0f);
-    CompositeBSDF bsdf = {};
-    // medium data
-    Color3 sigma_s       = Color3(0.0f);
-    Color3 sigma_t       = Color3(0.0f);
-    float medium_g       = 0.0f;  // volumetric anisotropy
-    float refraction_ior = 1.0f;
-    int priority         = 0;
+struct MediumStack {
+    OSL_HOSTDEVICE MediumStack() : depth(0), num_bytes(0) {}
+
+    OSL_HOSTDEVICE Medium* current() const
+    {
+        // return the highest-priority medium
+        return depth > 0 ? mediums[0] : nullptr;
+    }
+
+    OSL_HOSTDEVICE const MediumParams* current_params() const
+    {
+        if (depth > 0 && mediums[0]) {
+            const MediumParams* params = mediums[0]->get_params_vrtl();
+            if (params) {
+                return params;
+            }
+        }
+        return nullptr;
+    }
+
+    OSL_HOSTDEVICE bool in_medium() const { return depth > 0; }
+
+    OSL_HOSTDEVICE int size() const { return depth; }
+
+    OSL_HOSTDEVICE bool integrate(Ray& r, Sampler& sampler, Intersection& hit,
+                                  Color3& path_weight, Color3& path_radiance,
+                                  float& bsdf_pdf) const
+    {
+        if (depth <= 0) {
+            return false;
+        }
+
+        Medium::Sample combined_sample { 1.0f, Color3(1.0f), Color3(1.0f) };
+        bool scatter = false;
+
+        for (int i = 0; i < depth; ++i) {
+            Medium::Sample s = mediums[i]->sample_vrtl(r, sampler, hit);
+
+            combined_sample.transmittance *= s.transmittance;
+            combined_sample.weight *= s.weight;
+
+            scatter           = s.t < hit.t || scatter;
+            combined_sample.t = s.t < combined_sample.t ? s.t
+                                                        : combined_sample.t;
+        }
+
+        if (!(combined_sample.transmittance.x > 0
+              || combined_sample.transmittance.y > 0
+              || combined_sample.transmittance.z > 0)) {
+            return false;
+        }
+
+        path_weight *= combined_sample.transmittance;
+
+        Vec3 rand_phase = sampler.get();
+        if (scatter) {
+
+            BSDF::Sample phase_sample = mediums[0]->sample_phase_func_vrtl(
+                -r.direction, rand_phase.x, rand_phase.y, rand_phase.z);
+            if (phase_sample.pdf <= 0.0f) {
+                return false;
+            }
+
+            path_weight *= phase_sample.weight;
+            r.direction = phase_sample.wi;
+            bsdf_pdf    = phase_sample.pdf;
+            return true;
+        }
+
+        return false;
+    }
+
+    template<typename Medium_Type, typename... Medium_Args>
+    OSL_HOSTDEVICE bool add_medium(Medium_Args&&... args)
+    {
+        if (depth >= MaxEntries)
+            return false;
+
+        if (num_bytes + sizeof(Medium_Type) > MaxSize)
+            return false;
+
+        Medium_Type* new_medium = new (pool + num_bytes)
+            Medium_Type(std::forward<Medium_Args>(args)...);
+
+        if (!new_medium) {
+            return false;
+        }
+
+        const MediumParams* new_params = new_medium->get_params_vrtl();
+        int insert_pos                 = depth;
+
+        for (int i = 0; i < depth; ++i) {
+            if (!mediums[i]) {
+                continue;
+            }
+
+            const MediumParams* existing_params = mediums[i]->get_params_vrtl();
+            if (existing_params
+                && new_params->priority > existing_params->priority) {
+                insert_pos = i;
+                break;
+            }
+        }
+
+        for (int j = depth; j > insert_pos; --j) {
+            mediums[j] = mediums[j - 1];
+        }
+
+        mediums[insert_pos] = new_medium;
+        depth++;
+        num_bytes += sizeof(Medium_Type);
+
+        return true;
+    }
+
+    OSL_HOSTDEVICE void pop_medium()
+    {
+        if (depth > 0) {
+            depth--;
+        }
+    }
+
+    OSL_HOSTDEVICE bool false_intersection_with(const MediumParams& params)
+    {
+        const MediumParams* current = current_params();
+        return (current
+                && ((params.priority < current->priority)
+                    || (params.is_special_priority()
+                        && current->is_special_priority() && depth > 1)));
+    }
+
+private:
+    /// Never try to copy this struct because it would invalidate the medium pointers
+    OSL_HOSTDEVICE MediumStack(const MediumStack& c);
+    OSL_HOSTDEVICE MediumStack& operator=(const MediumStack& c);
+
+    enum { MaxEntries = 8 };
+    enum { MaxSize = 256 * sizeof(float) };
+
+    Medium* mediums[MaxEntries];
+    float cdf[MaxEntries];
+    char pool[MaxSize];
+    int depth, num_bytes;
 };
+
+struct ShadingResult {
+    Color3 Le                = Color3(0.0f);
+    CompositeBSDF bsdf       = {};
+    MediumParams medium_data = {};
+};
+
 
 void
 register_closures(ShadingSystem* shadingsys);
 OSL_HOSTDEVICE void
 process_closure(const OSL::ShaderGlobals& sg, float path_roughness,
-                ShadingResult& result, const ClosureColor* Ci, bool light_only);
+                ShadingResult& result, MediumStack& medium_stack,
+                const ClosureColor* Ci, bool light_only);
 OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* Ci);
 

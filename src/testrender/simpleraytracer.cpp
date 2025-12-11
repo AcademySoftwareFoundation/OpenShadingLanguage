@@ -968,6 +968,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
     Color3 path_radiance(0, 0, 0);
     int prev_id    = -1;
     float bsdf_pdf = inf;  // camera ray has only one possible direction
+    MediumStack medium_stack;
+
 
     for (int b = 0; b <= max_bounces; b++) {
         ShaderGlobalsType sg;
@@ -991,6 +993,10 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 }
             }
             break;
+        }
+        
+        if (medium_stack.integrate(r, sampler, hit, path_weight, path_radiance, bsdf_pdf)) {
+            continue;
         }
 
         // construct a shader globals for the hit point
@@ -1031,8 +1037,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 #endif
         ShadingResult result;
         bool last_bounce = b == max_bounces;
-        process_closure(sg, r.roughness, result, (const ClosureColor*)sg.Ci,
-                        last_bounce);
+        process_closure(sg, r.roughness, result, medium_stack,
+                        (const ClosureColor*)sg.Ci, last_bounce);
 
 #ifndef __CUDACC__
         const size_t lightprims_size = m_lightprims.size();
@@ -1143,7 +1149,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
 #endif
                         ShadingResult light_result;
                         process_closure(light_sg, r.roughness, light_result,
-                                        (const ClosureColor*)light_sg.Ci, true);
+                                        medium_stack, (const ClosureColor*)light_sg.Ci, 
+                                        true);
                         // accumulate contribution
                         path_radiance += contrib * light_result.Le;
                     }
@@ -1161,14 +1168,20 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
         // Just simply use roughness as spread slope
         r.spread    = std::max(r.spread, p.roughness);
         r.roughness = p.roughness;
+        
+        if (sg.backfacing) {  // if exiting
+            medium_stack.pop_medium();
+        }
+        
         if (!(path_weight.x > 0) && !(path_weight.y > 0)
-            && !(path_weight.z > 0))
+            && !(path_weight.z > 0) && b > 10)
             break;  // filter out all 0's or NaNs
         prev_id  = hit.id;
         r.origin = sg.P;
     }
     return path_radiance;
 }
+
 
 
 OSL_HOSTDEVICE Color3

@@ -1,0 +1,31 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+emitter
+    [[ string description = "Spot emitter material" ]]
+(
+    float power = 1
+        [[ string description = "Total power of the light",
+           float UImin = 0 ]],
+    color Cs = 1
+        [[ string description = "Base color",
+           float UImin = 0, float UImax = 1 ]],
+    float spread = 90
+        [[ string description = "Spread angle in degrees",
+           float UImin = 1, float UImax = 180 ]]
+)
+{
+    vector wo = normalize(I);
+    
+    float cosAngle = dot(N, -wo);
+    
+    float halfSpread = radians(spread * 0.5);
+    float cosThreshold = cos(halfSpread);
+    
+    float falloff = (cosAngle > cosThreshold) ? 1 : 0;
+    
+    Ci = (power / (M_PI * surfacearea())) * Cs * falloff * emission();
+}

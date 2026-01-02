@@ -7,16 +7,13 @@ Release 1.15 (Jan 1?, 2026) -- compared to 1.14
 
 ### New minimum dependencies, toolchain, and compatibility changes:
 * *Python*: 3.9 minimum (from 3.7) [#2017](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2017) (1.15.0.0)
-* *LLVM*: New minimum Raise llvm minimum to 14.0 (from 11.0). [#2019](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2019) (1.15.0.0)
+* *LLVM*: Raise llvm minimum to 14.0 (from 11.0). [#2019](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2019) (1.15.0.0)
 
 ### ✏️  OSL Language, standard library, and oslc compiler (for shader writers):
 * No changes to the language in this release.
 
 ### ⛰️  API changes and new ShadingSystem features (for renderer writers):
-* *BSDL Library*: The internal Imageworks BSDF library has been open sourced and included with OSL as a header-only library for renderer authors. [#1986](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1986) (by Alejandro Conty) (1.15.0.0) And subsequent enhancements:
-    - *bsdl*: Implement MX conductor with multiple scattering [#1991](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1991) (by Alejandro Conty) (1.15.0.0)
-    - *bsdl*: Change MX conductor to sample bounded visible normals [#2000](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2000) (by Alejandro Conty) (1.15.0.0)
-    - *bsdl*: Add BSDF for MaterialX dielectric with Multiple Scattering [#2009](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2009) (by Alejandro Conty) (1.15.0.0)
+* *BSDL Library*: The internal Imageworks BSDF library has been open sourced and included with OSL as a header-only library for renderer authors. [#1986](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1986) (by Alejandro Conty) (1.15.0.0) And subsequent enhancements: [#1991](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1991) [#2000](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2000) [#2009](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2009) (all by Alejandro Conty) (1.15.0.0)
 * Continued work on "rs free function" migration:
     - *api*: Add rs_allocate_closure free function. [#1944](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1944) (by Curtis Black) (1.15.0.0)
 

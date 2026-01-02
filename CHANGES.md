@@ -1,9 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.15 (Jan 1?, 2026) -- compared to 1.14
+Release 1.15 (Jan 1, 2026) -- compared to 1.14
 -------------------------------------------------------------
 - Beta 1: Dec 20, 2025
+- Supported Release: Jan 1, 2026
 
 ### New minimum dependencies, toolchain, and compatibility changes:
 * *Python*: 3.9 minimum (from 3.7) [#2017](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2017) (1.15.0.0)

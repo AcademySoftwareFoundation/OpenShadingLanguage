@@ -7,6 +7,11 @@
 
 set -ex
 
+# Make extra space on the runners
+df -h .
+time rm -rf /usr/local/lib/android /host/root/usr/local/lib/android &
+sleep 3
+
 
 #
 # Install system packages when those are acceptable for dependencies.
@@ -23,7 +28,7 @@ if [[ "$ASWF_ORG" != ""  ]] ; then
         sed -i 's,^mirrorlist=,#,; s,^#baseurl=http://mirror\.centos\.org/centos/$releasever,baseurl=https://vault.centos.org/7.9.2009,' /etc/yum.repos.d/CentOS-Base.repo
     fi
 
-    sudo /usr/bin/yum install -y giflib giflib-devel || true
+    # sudo /usr/bin/yum install -y giflib giflib-devel || true
     # sudo /usr/bin/yum install -y ffmpeg ffmpeg-devel || true
 
     if [[ "${CONAN_LLVM_VERSION}" != "" ]] ; then
@@ -88,7 +93,7 @@ else
         time sudo apt-get -q install -y \
             git cmake ccache ninja-build g++ \
             libboost-dev libboost-thread-dev libboost-filesystem-dev \
-            libtiff-dev libgif-dev libpng-dev \
+            libtiff-dev libpng-dev \
             flex bison libbison-dev \
             libpugixml-dev \
             libopencolorio-dev
@@ -181,6 +186,14 @@ if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
 fi
 
 if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
+
+    if [[ "$REMOVE_INSTALLED_OPENIMAGEIO" == "1" ]] ; then
+        sudo rm -rf /usr/local/include/OpenImageIO
+        sudo rm -rf /usr/local/lib*/cmake/OpenImageIO
+        sudo rm -rf /usr/local/lib*/libOpenImageIO*
+        sudo rm -rf /usr/local/lib*/python*/site-packages/OpenImageIO*
+    fi
+
     # There are many parts of OIIO we don't need to build for OSL's tests
     export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0
     export ENABLE_iconvert=0 ENABLE_testtex=0
@@ -194,7 +207,7 @@ if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
     export OPENIMAGEIO_CMAKE_FLAGS+=" -DOIIO_BUILD_TESTING=OFF -DOIIO_BUILD_TESTS=0"
     # Don't let warnings in OIIO break OSL's CI run
     export OPENIMAGEIO_CMAKE_FLAGS+=" -DSTOP_ON_WARNING=OFF"
-    export OPENIMAGEIO_CMAKE_FLAGS+=" -DUSE_OPENGL=0"
+    export OPENIMAGEIO_CMAKE_FLAGS+=" -DUSE_OPENGL=0 -DUSE_JXL=0"
     export OPENIMAGEIO_CMAKE_FLAGS+=" -DUSE_OPENCV=0 -DUSE_FFMPEG=0 -DUSE_QT=0"
     if [[ "${OPENIMAGEIO_UNITY:-1}" != "0" ]] ; then
         # Speed up the OIIO build by doing a "unity" build. (Note: this is
@@ -207,6 +220,9 @@ fi
 if [[ "$ABI_CHECK" != "" ]] ; then
     source src/build-scripts/build_abi_tools.bash
 fi
+
+df -h .
+df -h /host/root || true
 
 # Save the env for use by other stages
 src/build-scripts/save-env.bash

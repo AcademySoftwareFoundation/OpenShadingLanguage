@@ -13,11 +13,27 @@ on:
   push:
     branches:
       - main
+      - dev-1.14
+      - dev-1.15
       - '*analysis*'
-    paths-ignore:
-      - '**.md'
-      - '**.rst'
-      - '**.tex'
+      - '*sonar*'
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.rst'
+      - '!**/ci.yml'
+      - '!**/docs.yml'
+      - '!**/scorecard.yml'
+      - '!**/wheel.yml'
+      - '!**.properties'
+      - '!docs/**'
+  # Run analysis on PRs only if the branch name indicates that the purpose of
+  # the PR is related to the Sonar analysis. We don't run on every PR because
+  # the analysis run is very expensive and just isn't usually necessary.
+  pull_request:
+    branches:
+      - '*analysis*'
+      - '*sonar*'
   # Allow manual kicking off of the workflow from github.com
   workflow_dispatch:
 
@@ -97,7 +113,7 @@ jobs:
         run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
-        uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # v3.0.4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: /tmp/ccache
           key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}

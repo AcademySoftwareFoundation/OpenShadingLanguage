@@ -8,9 +8,9 @@ security vulnerabilities.
 | Version / branch  | Supported                                            |
 | --------- | ---------------------------------------------------- |
 | main      | :white_check_mark: :construction: ALL fixes immediately, but this is a branch under development with a frequently unstable ABI and occasionally unstable API. |
-| 1.14.x    | :white_check_mark: All fixes that can be backported without breaking ABI compatibility. New tagged releases monthly. |
-| 1.13.x    | :warning: Only the most critical fixes, only if they can be easily backported. |
-| <= 1.12.x | :x: No longer receiving patches of any kind. |
+| 1.15.x    | :white_check_mark: All fixes that can be backported without breaking ABI compatibility. New tagged releases monthly. |
+| 1.14.x    | :warning: Only the most critical fixes, only if they can be easily backported. |
+| <= 1.13.x | :x: No longer receiving patches of any kind. |
 
 
 ## Reporting a Vulnerability

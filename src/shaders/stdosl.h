@@ -337,8 +337,7 @@ vector smoothstep (vector edge0, vector edge1, vector x)
 float linearstep (float edge0, float edge1, float x) {
     float result;
     if (edge0 != edge1) {
-        float xclamped = clamp (x, edge0, edge1);
-        result = (xclamped - edge0) / (edge1 - edge0);
+        result = clamp((x - edge0) / (edge1 - edge0), 0, 1);
     } else {  // special case: edges coincide
         result = step (edge0, x);
     }

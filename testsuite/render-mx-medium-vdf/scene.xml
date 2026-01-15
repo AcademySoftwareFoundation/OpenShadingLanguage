@@ -1,0 +1,78 @@
+<World>
+    <Camera eye="0, 0, 80" look_at="0,0,0" fov="14.0" />
+
+    <!-- Environment light -->
+    <ShaderGroup is_light="yes">
+        vector sun_dir 0.0 1.0 0.5;
+        shader envmap layer1;
+    </ShaderGroup>
+
+    <Background resolution="1024" />
+
+    <!-- Back plane -->
+    <ShaderGroup>
+        color Cs 0.25 0.25 0.25; 
+        shader matte layer1;
+    </ShaderGroup>
+    <Quad corner="-10,-10,-5" edge_x="20,0,0" edge_y="0,20,0" />
+
+    <!-- Red -->
+    <ShaderGroup>
+        param color albedo 0.25 0.25 0.25;
+        param float transmission_depth 0.5;
+        param color transmission_color 0.98 0.78 0.82;
+        param float anisotropy 0.0;
+        param float ior 1.0;
+        param int priority 1;
+        shader medium layer1;
+    </ShaderGroup>
+    <Sphere center="0.0,2.0,0" radius="1.6" />
+
+    <!-- Orange -->
+    <ShaderGroup>
+        param color albedo 0.25 0.25 0.25;
+        param float transmission_depth 0.5;
+        param color transmission_color 0.99 0.84 0.70;
+        param float anisotropy 0.0;
+        param float ior 1.0;
+        param int priority 1;
+        shader medium layer1;
+    </ShaderGroup>
+    <Sphere center="1.902,0.618,0" radius="1.6" />
+
+    <!-- Yellow -->
+    <ShaderGroup>
+        param color albedo 0.25 0.25 0.25;
+        param float transmission_depth 0.5;
+        param color transmission_color 0.98 0.96 0.72;
+        param float anisotropy 0.0;
+        param float ior 1.0;
+        param int priority 1;
+        shader medium layer1;
+    </ShaderGroup>
+    <Sphere center="1.176,-1.618,0" radius="1.6" />
+
+    <!-- Green -->
+    <ShaderGroup>
+        param color albedo 0.25 0.25 0.25;
+        param float transmission_depth 0.5;
+        param color transmission_color 0.76 0.92 0.84;
+        param float anisotropy 0.0;
+        param float ior 1.0;
+        param int priority 1;
+        shader medium layer1;
+    </ShaderGroup>
+    <Sphere center="-1.176,-1.618,0" radius="1.6" />
+
+    <!-- Blue -->
+    <ShaderGroup>
+        param color albedo 0.25 0.25 0.25;
+        param float transmission_depth 0.5;
+        param color transmission_color 0.78 0.86 0.96;
+        param float anisotropy 0.0;
+        param float ior 1.0;
+        param int priority 1;
+        shader medium layer1;
+    </ShaderGroup>
+    <Sphere center="-1.902,0.618,0" radius="1.6" />
+</World>

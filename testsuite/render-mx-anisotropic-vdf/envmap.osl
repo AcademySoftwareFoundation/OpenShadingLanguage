@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader envmap(
+    color sky = color(0.7,0.8,0.9),
+    color horizon = color(0.3,0.6,0.9),
+    color sun = color(0.9,0.8,0.7),
+    vector sun_dir = vector(0,1,1),
+    float sun_angle = 5.0)
+{
+   vector dir = normalize(I);
+   vector sd = normalize(sun_dir);
+   color c = mix(horizon, sky, dir.y * dir.y);
+   float cos_ang = cos(radians(sun_angle / 2));
+   if (dot(dir, normalize(sun_dir)) > cos_ang)
+      c += sun / (1 - cos_ang); // normalize
+   Ci = c * background();
+}

@@ -13,10 +13,12 @@
 
 #include "bsdl_config.h"
 #include <BSDL/static_virtual.h>
+#include <queue>
 
+#include "bvh.h"
 #include "optics.h"
+#include "raytracer.h"
 #include "sampling.h"
-
 
 OSL_NAMESPACE_BEGIN
 
@@ -226,6 +228,35 @@ struct MxMediumVdfParams {
     ustringhash label;
 };
 
+
+struct MediumParams {
+    Color3 sigma_t       = Color3(0.0f);  // extinction coefficient
+    Color3 sigma_s       = Color3(0.0f);  // scattering
+    float medium_g       = 0.0f;          // volumetric anisotropy
+    float refraction_ior = 1.0f;
+    int priority         = 0;
+
+    OSL_HOSTDEVICE bool is_vaccum() const
+    {
+        return sigma_s.x <= 0.0f && sigma_s.y <= 0.0f && sigma_s.z <= 0.0f;
+    }
+
+    OSL_HOSTDEVICE bool is_special_priority() const { return priority == 0; }
+
+    OSL_HOSTDEVICE float avg_sigma_t() const
+    {
+        return (sigma_t.x + sigma_t.y + sigma_t.z) / 3;
+    }
+
+    OSL_HOSTDEVICE bool operator==(const MediumParams& rhs) const
+    {
+        return refraction_ior == rhs.refraction_ior && medium_g == rhs.medium_g
+               && sigma_t.x == rhs.sigma_t.x && sigma_t.y == rhs.sigma_t.y
+               && sigma_t.z == rhs.sigma_t.z && sigma_s.x == rhs.sigma_s.x
+               && sigma_s.y == rhs.sigma_s.y && sigma_s.z == rhs.sigma_s.z;
+    }
+};
+
 struct GGXDist;
 struct BeckmannDist;
 
@@ -261,6 +292,10 @@ struct EnergyCompensatedOrenNayar;
 struct ZeltnerBurleySheen;
 struct CharlieSheen;
 struct SpiThinLayer;
+struct HenyeyGreenstein;
+
+struct HomogeneousMedium;
+struct EmptyMedium;
 
 // StaticVirtual generates a switch/case dispatch method for us given
 // a list of possible subtypes. We just need to forward declare them.
@@ -270,9 +305,12 @@ using AbstractBSDF = bsdl::StaticVirtual<
     MicrofacetBeckmannBoth, MicrofacetGGXRefl, MicrofacetGGXRefr,
     MicrofacetGGXBoth, MxConductor, MxDielectric, MxBurleyDiffuse,
     EnergyCompensatedOrenNayar, ZeltnerBurleySheen, CharlieSheen,
-    MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer>;
+    MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer,
+    HenyeyGreenstein>;
 
-// Then we just need to inherit from AbstractBSDF
+using AbstractMedium = bsdl::StaticVirtual<HomogeneousMedium, EmptyMedium>;
+
+// Then we just need to inherit from AbstractBSDF or AbstractMedium
 
 /// Individual BSDF (diffuse, phong, refraction, etc ...)
 /// Actual implementations of this class are private
@@ -329,6 +367,40 @@ struct BSDF : public AbstractBSDF {
     // will take a bit of digging.
     int pad;
 #endif
+};
+
+struct Medium : public AbstractMedium {
+    struct Sample {
+        OSL_HOSTDEVICE Sample() : t(0.0f), transmittance(0.0f), weight(0.0f) {}
+        OSL_HOSTDEVICE Sample(const Sample& o)
+            : t(o.t), transmittance(o.transmittance), weight(o.weight)
+        {
+        }
+        OSL_HOSTDEVICE Sample(float t, Color3 transmittance, Color3 weight)
+            : t(t), transmittance(transmittance), weight(weight)
+        {
+        }
+        float t;
+        Color3 transmittance;
+        Color3 weight;
+    };
+    template<typename LOBE>
+    OSL_HOSTDEVICE Medium(LOBE* lobe) : AbstractMedium(lobe)
+    {
+    }
+
+    OSL_HOSTDEVICE const MediumParams* get_params() const { return {}; }
+
+    OSL_HOSTDEVICE const MediumParams* get_params_vrtl() const;
+
+    OSL_HOSTDEVICE BSDF::Sample sample_phase_func(const Vec3& wo, float rx,
+                                                  float ry, float rz) const
+    {
+        return {};
+    }
+
+    OSL_HOSTDEVICE BSDF::Sample
+    sample_phase_func_vrtl(const Vec3& wo, float rx, float ry, float rz) const;
 };
 
 /// Represents a weighted sum of BSDFS
@@ -454,22 +526,271 @@ private:
     int num_bsdfs, num_bytes;
 };
 
-struct ShadingResult {
-    Color3 Le          = Color3(0.0f);
-    CompositeBSDF bsdf = {};
-    // medium data
-    Color3 sigma_s       = Color3(0.0f);
-    Color3 sigma_t       = Color3(0.0f);
-    float medium_g       = 0.0f;  // volumetric anisotropy
-    float refraction_ior = 1.0f;
-    int priority         = 0;
+struct MediumStack {
+    OSL_HOSTDEVICE MediumStack() : depth(0), num_bytes(0) {}
+
+    OSL_HOSTDEVICE Medium* get_current_medium() const
+    {
+        // return the highest-priority medium
+        return depth > 0 ? mediums[0] : nullptr;
+    }
+
+    OSL_HOSTDEVICE const MediumParams* get_current_params() const
+    {
+        if (depth > 0) {
+            const MediumParams* params = mediums[0]->get_params_vrtl();
+            return params;
+        }
+        return nullptr;
+    }
+
+    OSL_HOSTDEVICE bool in_medium() const { return depth > 0; }
+
+    OSL_HOSTDEVICE int size() const { return depth; }
+
+    OSL_HOSTDEVICE bool integrate(Ray& r, Sampler& sampler, Intersection& hit,
+                                  Color3& path_weight, Color3& path_radiance,
+                                  float& bsdf_pdf)
+    {
+        if (depth <= 0) {
+            return false;
+        }
+
+        if (need_to_compute_current_params) {
+            // only compute data for overlapping mediums
+            // if a new medium was added to the stack
+            MediumParams new_params;
+            num_overlapping = 0;
+
+            for (int i = 0; i < depth; i++) {
+                const MediumParams* params_i = mediums[i]->get_params_vrtl();
+
+                if (i == 0) {
+                    // current params has to have the same priority is mediums[0]
+                    new_params.priority = params_i->priority;
+                }
+                if (params_i->priority != new_params.priority) {
+                    continue;
+                }
+                overlapping_medium_indices[num_overlapping] = i;
+                new_params.sigma_t += params_i->sigma_t;
+                new_params.sigma_s += params_i->sigma_s;
+                cdf[num_overlapping] = new_params.avg_sigma_t();
+                num_overlapping++;
+            }
+
+            if (num_overlapping > 1) {
+                float avg_combined_sigma_t = new_params.avg_sigma_t();
+
+                for (int i = 0; i < num_overlapping; i++) {
+                    cdf[i] /= avg_combined_sigma_t;
+                }
+            }
+
+            current_params                 = new_params;
+            need_to_compute_current_params = false;
+        }
+
+        Vec3 rand_vol  = sampler.get();
+        float t_volume = -logf(1.0f - rand_vol.x)
+                         / current_params.avg_sigma_t();
+        Color3 weight;
+        Color3 tr;
+        bool scatter = t_volume < hit.t;
+        if (scatter) {
+            r.origin = r.point(t_volume);
+            tr       = transmittance(current_params.sigma_t, t_volume);
+            Color3 combined_albedo = current_params.sigma_s
+                                     / current_params.sigma_t;
+            weight = combined_albedo / tr;
+        } else {
+            tr     = transmittance(current_params.sigma_t, hit.t);
+            weight = Color3(1.0 / tr.x, 1.0 / tr.y, 1.0 / tr.z);
+        }
+
+        if (!(tr.x > 0 || tr.y > 0 || tr.z > 0)) {
+            return false;
+        }
+
+        path_weight *= tr;
+
+        if (scatter) {
+            Vec3 rand_phase = sampler.get();
+
+            int index = 0;
+            if (num_overlapping > 1) {
+                Vec3 rand_index = sampler.get();
+
+                for (index = 0; index < num_overlapping; ++index) {
+                    if (rand_index.x < cdf[index]) {
+                        break;
+                    }
+                }
+            }
+
+            index = fmin(index, num_overlapping - 1);
+
+            int medium_index = overlapping_medium_indices[index];
+
+            BSDF::Sample phase_sample
+                = mediums[medium_index]->sample_phase_func_vrtl(-r.direction,
+                                                                rand_phase.x,
+                                                                rand_phase.y,
+                                                                rand_phase.z);
+
+            if (phase_sample.pdf <= 0.0f) {
+                return false;
+            }
+
+            path_weight *= phase_sample.weight;
+            r.direction = phase_sample.wi;
+            bsdf_pdf    = phase_sample.pdf;
+            return true;
+        }
+
+        return false;
+    }
+
+    template<typename Medium_Type, typename... Medium_Args>
+    OSL_HOSTDEVICE bool add_medium(Medium_Args&&... args)
+    {
+        if (depth >= MaxEntries)
+            return false;
+
+        if (num_bytes + sizeof(Medium_Type) > MaxSize)
+            return false;
+
+        Medium_Type* new_medium = new (pool + num_bytes)
+            Medium_Type(std::forward<Medium_Args>(args)...);
+
+        if (!new_medium) {
+            return false;
+        }
+
+        const MediumParams* new_params = new_medium->get_params_vrtl();
+        int insert_pos                 = depth;
+
+        for (int i = 0; i < depth; ++i) {
+            if (!mediums[i]) {
+                continue;
+            }
+
+            const MediumParams* existing_params = mediums[i]->get_params_vrtl();
+            if (existing_params
+                && new_params->priority > existing_params->priority) {
+                insert_pos = i;
+                break;
+            }
+        }
+
+        for (int j = depth; j > insert_pos; --j) {
+            mediums[j] = mediums[j - 1];
+        }
+
+        mediums[insert_pos] = new_medium;
+
+        entry_order[depth]  = new_medium;
+        medium_sizes[depth] = sizeof(Medium_Type);
+
+        need_to_compute_current_params = true;
+        depth++;
+        num_bytes += sizeof(Medium_Type);
+
+        return true;
+    }
+
+    OSL_HOSTDEVICE void pop_medium()
+    {
+        if (depth <= 0)
+            return;
+
+        depth--;
+
+        Medium* medium_to_remove = entry_order[depth];
+        int size_to_remove       = medium_sizes[depth];
+
+        for (int i = 0; i < depth + 1; ++i) {
+            if (mediums[i] == medium_to_remove) {
+                for (int j = i; j < depth; ++j) {
+                    mediums[j] = mediums[j + 1];
+                }
+                mediums[depth] = nullptr;
+                break;
+            }
+        }
+
+        entry_order[depth]  = nullptr;
+        medium_sizes[depth] = 0;
+
+        num_bytes -= size_to_remove;
+
+        need_to_compute_current_params = true;
+    }
+
+
+    OSL_HOSTDEVICE bool
+    false_intersection_with(const MediumParams& entrant_params)
+    {
+        const MediumParams* current = get_current_params();
+        if (!current)
+            return false;
+
+        // special priority will always record an intersection
+        if (!entrant_params.is_special_priority()
+            && !current->is_special_priority())
+            return false;
+
+        if (entrant_params.priority == current->priority && depth > 1)
+            return true;
+
+        return entrant_params.priority > current->priority;
+    }
+
+
+    OSL_HOSTDEVICE Color3 transmittance(const Color3& sigma_t,
+                                        float distance) const
+    {  // Beer-Lambert law
+        return Color3(expf(-sigma_t.x * distance), expf(-sigma_t.y * distance),
+                      expf(-sigma_t.z * distance));
+    }
+
+private:
+    /// Never try to copy this struct because it would invalidate the medium pointers
+    OSL_HOSTDEVICE MediumStack(const MediumStack& c);
+    OSL_HOSTDEVICE MediumStack& operator=(const MediumStack& c);
+
+    enum { MaxEntries = 8 };
+    enum { MaxSize = 256 * sizeof(float) };
+
+    Medium* mediums[MaxEntries];
+    Medium* entry_order[MaxEntries];
+    int medium_sizes[MaxEntries];
+
+    // overlapping medium data
+    float cdf[MaxEntries];
+    int overlapping_medium_indices[MaxEntries];
+    int num_overlapping;
+    MediumParams current_params;
+    bool need_to_compute_current_params;
+
+
+    char pool[MaxSize];
+    int depth, num_bytes;
 };
+
+struct ShadingResult {
+    Color3 Le                = Color3(0.0f);
+    CompositeBSDF bsdf       = {};
+    MediumParams medium_data = {};
+};
+
 
 void
 register_closures(ShadingSystem* shadingsys);
 OSL_HOSTDEVICE void
 process_closure(const OSL::ShaderGlobals& sg, float path_roughness,
-                ShadingResult& result, const ClosureColor* Ci, bool light_only);
+                ShadingResult& result, MediumStack& medium_stack,
+                const ClosureColor* Ci, bool light_only);
 OSL_HOSTDEVICE Vec3
 process_background_closure(const ClosureColor* Ci);
 

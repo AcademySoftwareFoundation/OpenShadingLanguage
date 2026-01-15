@@ -1,0 +1,41 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+glossy
+    [[ string description = "Glossy glass material" ]]
+(
+    color Cr = 1.0
+        [[  string description = "Reflectance tint",
+            float UImin = 0, float UImax = 1 ]],
+    color Ct = 1.0
+        [[  string description = "Transmission tint",
+            float UImin = 0, float UImax = 1 ]],
+    float ior = 1.5
+        [[  string description = "Index of refraction",
+            float UImin = 1.0, float UImax = 3.0 ]],
+    float roughness = 0.5
+        [[  string description = "Roughness of the surface",
+            float UImin = 0, float UImax = 1 ]],
+    float anisotropy = 0.0
+        [[  string description = "Anisotropy of the surface",
+            float UImin = 0, float UImax = 1 ]],
+    float transmission_depth = 1.0
+        [[  string description = "Mean free path (0.0 is black, infinity is transparent)",
+            float UImin = 0, float UImax = 100 ]],
+    float medium_anisotropy = 1.0
+        [[  string description = "Anisotropy of the medium",
+            float UImin = 0, float UImax = 100 ]],
+    int priority = 0
+        [[  string description = "Priority for overlapping mediums. Zero is a special 'off' priority",
+            float UImin = 0, float UImax = 8 ]], // Same as MaxEntries in MediumStack
+  )
+{
+    float alpha = roughness * roughness;
+    float alpha_x = alpha * (1.0 - anisotropy);
+    float alpha_y = alpha;
+    vector U = normalize(cross(N, dPdv));
+    Ci = dielectric_bsdf(N, U, Cr, Ct, alpha_x, alpha_y, ior, "ggx") + medium_vdf(color(0.5), transmission_depth, Cr, 0.0, ior, priority);
+}

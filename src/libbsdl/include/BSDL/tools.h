@@ -13,6 +13,12 @@
 BSDL_ENTER_NAMESPACE
 
 BSDL_INLINE float
+MAX(float a, float b)
+{
+    return std::max(a, b);
+}
+
+BSDL_INLINE float
 MAX_ABS_XYZ(const Imath::V3f& v)
 {
     return std::max(fabsf(v.x), std::max(fabsf(v.y), fabsf(v.z)));

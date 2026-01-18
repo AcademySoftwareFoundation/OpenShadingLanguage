@@ -20,16 +20,16 @@ OSL requires the following dependencies or tools.
 NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
 * Build system: [CMake](https://cmake.org/) 3.19 or newer (tested
-  through 4.0)
+  through 4.2)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
-   - GCC 9.3 or newer (tested through gcc 13.1)
+   - GCC 9.3 or newer (tested through gcc 14)
    - Clang 5 or newer (tested through clang 20)
    - Microsoft Visual Studio 2017 or newer
    - Intel C++ compiler icc version 19 or newer or LLVM-based icx compiler
      version 2022 or newer.
 
-* [OpenImageIO](http://openimageio.org) 2.5 or newer (tested through 3.0
+* [OpenImageIO](http://openimageio.org) 2.5 or newer (tested through 3.1
   and main)
 
     OSL uses OIIO both for its texture mapping functionality as well as
@@ -63,16 +63,16 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
   old, and it's better to install a newer Bison (via Homebrew is one way to
   do this easily).
-* [PugiXML](http://pugixml.org/) >= 1.8 (we have tested through 1.19).
+* [PugiXML](http://pugixml.org/) >= 1.8 (we have tested through 1.15).
 * (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
   If it is not found at build time, the OSL `pointcloud` functions will not
   be operative.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
-    * **Python >= 3.9** (tested through 3.13)
+    * **Python >= 3.9** (tested through 3.14)
     * pybind11 >= 2.7 (tested through 3.0)
-    * NumPy (tested through 2.2.4)
-* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.8).
+    * NumPy (tested through 2.4)
+* (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.10).
   If not found at build time, the `osltoy` application will be disabled.
 
 

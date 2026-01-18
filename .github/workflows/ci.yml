@@ -625,7 +625,7 @@ jobs:
             runner: windows-2022
             nametag: windows-2022
             generator: "Visual Studio 17 2022"
-            python_ver: "3.9"
+            python_ver: "3.12"
             opencolorio_ver: v2.3.2
             openexr_ver: v3.3.2
             openimageio_ver: release
@@ -638,7 +638,7 @@ jobs:
             runner: windows-2025
             nametag: windows-2025
             generator: "Visual Studio 17 2022"
-            python_ver: "3.9"
+            python_ver: "3.12"
             opencolorio_ver: v2.3.2
             openexr_ver: v3.3.2
             openimageio_ver: release

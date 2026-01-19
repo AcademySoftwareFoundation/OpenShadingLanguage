@@ -92,14 +92,13 @@ public:
                               ShaderGlobals* sg, void* val);
 
 private:
-    std::function<ustring()>
-        m_get_selected_output;  // Store the getter function that gets selection from app
-
     OIIO::spin_mutex m_mutex;
     ShadingSystem* m_shadingsys;
     ShaderGroupRef m_group;
     ShaderGlobals m_shaderglobals_template;
     OIIO::ImageBuf m_framebuffer;
+    // Store the getter function that gets selection from app
+    std::function<ustring()> m_get_selected_output;
 
     // Camera parameters
     Matrix44 m_world_to_camera;

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -62,6 +63,8 @@ public:
 
     OIIO::ImageBuf& framebuffer() { return m_framebuffer; }
 
+    void set_output_getter(std::function<ustring()> getter);
+
     void render_image();
 
     // vvv Methods necessary to be a RendererServices
@@ -94,6 +97,8 @@ private:
     ShaderGroupRef m_group;
     ShaderGlobals m_shaderglobals_template;
     OIIO::ImageBuf m_framebuffer;
+    // Store the getter function that gets selection from app
+    std::function<ustring()> m_get_selected_output;
 
     // Camera parameters
     Matrix44 m_world_to_camera;

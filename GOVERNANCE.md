@@ -137,10 +137,10 @@ Current voting members of the TSC are:
 * Eric Enderton - NVIDIA
 * Stephen Friedman - Pixar
 * Nicolas Guiard - Isotropix
-* Clint Hanson - DNEG
-* Adrien Herubel - Autodesk
+* Thiago Ize - Autodesk
 * Lee Kerley - Apple
 * Mitch Prater - Laika
+* Alexey Smolenchuk - DNEG
 * Brecht Van Lommel - Blender
 * Alex Wells - Intel
 

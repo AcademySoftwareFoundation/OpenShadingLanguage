@@ -100,7 +100,7 @@ int
 CodeEditor::char_width_pixels() const
 {
     QFontMetrics metrics(fixedFont());
-#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0) 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
     return metrics.horizontalAdvance(QLatin1Char('M'));
 #else
     // QFontMetric.width() deprecated from 5.11, marked as such in 5.13

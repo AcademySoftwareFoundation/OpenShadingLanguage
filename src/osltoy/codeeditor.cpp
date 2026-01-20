@@ -53,6 +53,8 @@ CodeEditor::CodeEditor(QWidget* parent, const std::string& filename)
     setLineWrapMode(QPlainTextEdit::NoWrap);
     document()->setDefaultFont(fixedFont());
 
+    setTabStopDistance(4 * char_width_pixels());
+
     lineNumberArea = new LineNumberArea(this);
 
     connect(this, SIGNAL(blockCountChanged(int)), this,

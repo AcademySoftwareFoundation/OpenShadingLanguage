@@ -64,7 +64,6 @@ CodeEditor::CodeEditor(QWidget* parent, const std::string& filename)
 
     updateLineNumberAreaWidth(0);
     highlightCurrentLine();
-    setTabStopDistance(4 * char_width_pixels());
 }
 
 
@@ -99,12 +98,11 @@ CodeEditor::text_string() const
 int
 CodeEditor::char_width_pixels() const
 {
-    QFontMetrics metrics(fixedFont());
 #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
-    return metrics.horizontalAdvance(QLatin1Char('M'));
+    return fontMetrics().horizontalAdvance(QLatin1Char('M'));
 #else
     // QFontMetric.width() deprecated from 5.11, marked as such in 5.13
-    return metrics.width(QLatin1Char('M'));
+    return fontMetrics().width(QLatin1Char('M'));
 #endif
 }
 

@@ -1,0 +1,36 @@
+<World>
+   <Camera eye="50, 50, 300" dir="0,0,-1" fov="60" />
+   
+   <ShaderGroup>color Cs 0.75 0.25 0.25; shader matte layer1;</ShaderGroup>
+   <Quad corner="0, 0, 0" edge_x="0,100,0" edge_y="0,0,150" /> <!-- Left -->
+
+   <ShaderGroup>color Cs 0.25 0.25 0.75; shader matte layer1;</ShaderGroup>
+   <Quad corner="100, 0, 0" edge_x="0,0,150" edge_y="0,100,0" /> <!-- Right -->
+   
+   <ShaderGroup>color Cs 0.25 0.25 0.25; shader matte layer1;</ShaderGroup>
+   <Quad corner="0, 0, 0" edge_x="100,0,0" edge_y="0,100,0" /> <!-- Back -->
+   <Quad corner="0, 0, 0" edge_x="0,0,150" edge_y="100,0,0" /> <!-- Botm -->
+   <Quad corner="0,100,0" edge_x="100,0,0" edge_y="0,0,150" /> <!-- Top  -->
+
+   <ShaderGroup>color Cs 0.35 0.35 0.35; shader matte layer1;</ShaderGroup>
+   <Sphere center="50,50,70"        radius="25" /> <!-- Grey -->
+   
+
+   <ShaderGroup is_light="yes">float power 90000; shader emitter layer1</ShaderGroup>
+   <Quad corner="40, 99.95, 40" edge_x="20, 0, 0" edge_y="0, 0, 20" /> <!--Lite -->
+
+   <ShaderGroup>
+      param color albedo 0.85 0.85 0.85;
+      param float extinction 0.01;
+      param float anisotropy 0.25;
+
+      shader anisotropic layer1;
+   </ShaderGroup>
+   <Quad corner="0,0,0" edge_x="99.9,0,0" edge_y="0,99.9,0" /> <!-- Bottom -->
+   <Quad corner="0,0,0" edge_x="99.9,0,0" edge_y="0,0,149.9" /> <!-- Back -->
+   <Quad corner="0,0,0" edge_x="0,99.9,0" edge_y="0,0,149.9" /> <!-- Left -->
+   <Quad corner="99.9,0,0" edge_x="0,99.9,0" edge_y="0,0,149.9" /> <!-- Right -->
+   <Quad corner="0,99.9,0" edge_x="99.9,0,0" edge_y="0,0,149.9" /> <!-- Front -->
+   <Quad corner="0,0,149.9" edge_x="99.9,0,0" edge_y="0,99.9,0" /> <!-- Top -->   
+
+</World>

@@ -126,6 +126,31 @@ Here are the steps to check out, build, and test the OSL distribution:
 
         make test
 
+Conda Environment
+-----------------
+
+To simplify installation of Python and other dependencies, you can use
+the provided Conda environment setup script located at `src/build-scripts/` 
+by running:
+
+    source src/build-scripts/configure_conda_env.bash
+
+**This script will:**
+  * Check for Miniconda installation.
+  * Create a Conda environment named `osl-env` if it doesn't exist.
+  * Install all required dependencies into the environment.
+  * Activate the environment for the current shell session.
+
+After running this script, the `osl-env` environment will be created, and
+all you need to do when opening a new shell session is simply activate the 
+Conda environment.
+
+**When to use it:**  
+Run this script after cloning the repository and before building OSL. It 
+sets up a consistent development environment without manually installing 
+all dependencies. If you already have all required dependencies installed, 
+running it is optional.
+
 Troubleshooting
 ----------------
 

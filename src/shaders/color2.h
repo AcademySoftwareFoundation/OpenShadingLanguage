@@ -183,6 +183,12 @@ color2 mix(color2 a, color2 b, float x )
                   mix(a.a, b.a, x));
 }
 
+color2 unmix(color2 a, color2 b, float x )
+{
+    return color2(unmix(a.r, b.r, x),
+                  unmix(a.a, b.a, x));
+}
+
 color2 smoothstep(color2 edge0, color2 edge1, color2 c)
 {
     return color2(smoothstep(edge0.r, edge1.r, c.r),

@@ -1,6 +1,16 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.15.1.0 (Feb 1, 2026) -- compared to 1.15.0.0
+-------------------------------------------------------------
+  - *testrender*: Fix uv derivatives for testrender [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk)
+  - *osltoy*: Autodetect output color variable [#2051](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2051) (by Silvia Lopez)
+  - *build*: Add Conda environment setup and dependency installation script [#2023](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2023) (by Alexandru Biscoveanu)
+  - *ci*: Bump python we test on Windows runners [#2066](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2066)
+  - *ci*: Lock bleeding edge to pybind11 latest version [#2069](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2069)
+  - *admin*: TSC roster changes [#2065](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2065)
+
+
 Release 1.15 (Jan 1, 2026) -- compared to 1.14
 -------------------------------------------------------------
 - Beta 1: Dec 20, 2025

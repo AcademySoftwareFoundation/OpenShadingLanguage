@@ -465,7 +465,8 @@ jobs:
             opencolorio_ver: main
             openexr_ver: main
             openimageio_ver: main
-            pybind11_ver: master
+            pybind11_ver: v3.0.1
+            # pybind11_ver: master
             python_ver: "3.12"
             llvm_action_ver: "18.1.7"
             simd: avx2,f16c

@@ -438,6 +438,7 @@ nominated for major awards.)
   Spider-Man: Across the Spider-Verse,
   Elemental,
   Indiana Jones and the Dial of Destiny,
+  Nimona,
   The Marvels,
   Leo,
   The Boys (S4),
@@ -445,17 +446,25 @@ nominated for major awards.)
   Migration,
 * **(2024)**
   Ghostbusters: Frozen Empire,
+  The Garfield Movie,
   Inside Out 2,
   Red One,
-  Dream Productions (series)
-* **(2025 / upcoming)**
+  Dream Productions (series),
+  The Lord of the Rings: The Rings of Power (S2),
+* **(2025)**
   Win or Lose (series),
   A Minecraft Movie,
   K-Pop Demon Hunters,
+  Fountain of Youth,
   Elio,
   Fantastic Four: First Steps,
+  Heads of State,
   Bad Guys 2,
   In Your Dreams,
+  The Last of Us (S2),
+  Murderbot (S1),
+* **(2026 / upcoming)**
+  GOAT,
   ...
 
 
@@ -552,22 +561,24 @@ The current project leadership is documented in the
 
 Many people have contributed features, bug fixes, and other changes to OSL
 over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
-Bidgolirad, Nicholas Bishop, Curtis Black, Rasmus Bonnedal, Solomon Boulos,
-Stefan Bruens, Stefan Büttner, Matthaus G. Chajdas, Clark Chen, Mehdi
-Chinoune, Alejandro Conty, Damien Courtois, Dieter De Baets, Thomas Dinges,
-Daniel Dresser, Mads Drøschler, Peter Ellerington, Luke Emrose, Louis Feng,
-Mark Final, Henri Fousse, Stephen Friedman, Syoyo Fujita, Tim Grant, Larry
-Gritz, Nicolas Guiard, Euan Haahr, Derek Haase, Sven-Hendrik Haase, John
-Haddon, Niklas Harrysson, Daniel Heckenberg, Chris Hellmuth, Adrien Herubel,
-Dan Horák, Thiago Ize, Matt Johnson, Ronan Keryell, Chris Kulla, Elvic Liang,
-Max Liani, Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro,
-Patrick Mours, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois Panisset, Jino Park, Alexei
-Pawlow, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz, Patrick
-Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark Sisson, Sandip
-Shukla, Cliff Stein, Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari,
-Brecht Van Lommel, Thibault Vergne, Alexander von Knorring, Aidan Welch, Alex
-Wells, Roman Zulak. (Listed alphabetically; if we've left anybody out, it is
-inadvertent, please let us know.)
+Bidgolirad, Alexandru Biscoveanu, Nicholas Bishop, Curtis Black, Rasmus
+Bonnedal, Solomon Boulos, Stefan Bruens, Stefan Büttner, Matthaus G. Chajdas,
+Clark Chen, Mehdi Chinoune, Alejandro Conty, Damien Courtois, Dieter De Baets,
+Thomas Dinges, Daniel Dresser, Mads Drøschler, Peter Ellerington, Luke Emrose,
+Louis Feng, Mark Final, Henri Fousse, Stephen Friedman, Syoyo Fujita, Alex
+Fuller, Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase,
+Sven-Hendrik Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Chris
+Hellmuth, Christian Heusel, Adrien Herubel, Dan Horák, Thiago Ize, Matt
+Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Silvia Lopez,
+Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, Patrick Mours,
+Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois Panisset, Jino Park,
+Alexei Pawlow, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz,
+Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark
+Sisson, Sandip Shukla, Alexey Smolenchuk, Cliff Stein, Stephan Steinbach, Luya
+Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel, Thibault Vergne,
+Alexander von Knorring, Aidan Welch, Alex Wells, Roman Zulak. (Listed
+alphabetically; if we've left anybody out, it is inadvertent, please let us
+know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

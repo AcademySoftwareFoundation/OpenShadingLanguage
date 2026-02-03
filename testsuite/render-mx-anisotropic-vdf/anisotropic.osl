@@ -1,0 +1,19 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+volume
+anisotropic
+    [[ string description = "Volume medium material" ]]
+(
+    color albedo = 1.0
+        [[  string description = "Scattering color" ]],
+    float extinction = 1.0
+        [[  string description = "Volume extinction coefficient" ]],
+    float anisotropy = 0.0
+        [[  string description = "Directionality of scattering (-1=back, 0=isotropic, 1=forward)",
+            float UImin = -1, float UImax = 1 ]],
+  )
+{
+    Ci = transparent() + anisotropic_vdf(albedo, extinction, anisotropy);
+}

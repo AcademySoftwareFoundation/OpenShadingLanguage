@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.15 (Oct?? ??, 2026) -- compared to 1.15
+Release 1.16 (Oct?? ??, 2026) -- compared to 1.15
 -------------------------------------------------------------
 
 ### New minimum dependencies, toolchain, and compatibility changes:
@@ -11,6 +11,8 @@ Release 1.15 (Oct?? ??, 2026) -- compared to 1.15
 ### ⛰️  API changes and new ShadingSystem features (for renderer writers):
 
 ### ☀️  testshade/testrender/osltoy improvements
+  - *testrender*: Fix uv derivatives [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk)
+  - *osltoy*: Autodetect output color variable [#2051](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2051) (by Silvia)
 
 ### 🚀  SIMD batched shading mode
 
@@ -20,13 +22,19 @@ Release 1.15 (Oct?? ??, 2026) -- compared to 1.15
 
 ### 🏗  Build/test/CI and platform ports
 * CMake build system and scripts:
+  - *build*: Add Conda environment setup and dependency installation script [#2023](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2023) (by Alexandru Biscoveanu)
 * Dependency version support:
 * Testing and Continuous integration (CI) systems:
+  - *ci*: Switch all containers from aswftesting to aswf [#2061](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2061)
+  - *ci*: Save time by not redundantly installing gif library [#2049](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2049)
+  - *ci*: Bump python we test on Windows runners [#2066](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2066)
+  - *ci*: Lock bleeding edge to pybind11 latest version [#2069](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2069)
 * Platform support:
 
 ### 📚  Documentation
 
 ### 🏢  Project Administration
+  - *admin*: TSC roster changes [#2065](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2065)
 
 
 ---
@@ -36,9 +44,20 @@ Release 1.15 (Oct?? ??, 2026) -- compared to 1.15
 
 
 
-Release 1.15 (Dec ??, 2025) -- compared to 1.14
+Release 1.15.1.0 (Feb 1, 2026) -- compared to 1.15.0.0
 -------------------------------------------------------------
-- Beta 1: Dec 8, 2025
+  - *testrender*: Fix uv derivatives for testrender [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk)
+  - *osltoy*: Autodetect output color variable [#2051](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2051) (by Silvia Lopez)
+  - *build*: Add Conda environment setup and dependency installation script [#2023](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2023) (by Alexandru Biscoveanu)
+  - *ci*: Bump python we test on Windows runners [#2066](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2066)
+  - *ci*: Lock bleeding edge to pybind11 latest version [#2069](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2069)
+  - *admin*: TSC roster changes [#2065](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2065)
+
+
+Release 1.15 (Jan 1, 2026) -- compared to 1.14
+-------------------------------------------------------------
+- Beta 1: Dec 20, 2025
+- Supported Release: Jan 1, 2026
 
 ### New minimum dependencies, toolchain, and compatibility changes:
 * *Python*: 3.9 minimum (from 3.7) [#2017](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2017) (1.15.0.0)
@@ -55,10 +74,6 @@ Release 1.15 (Dec ??, 2025) -- compared to 1.14
 ### ☀️  testshade/testrender/osltoy improvements
   - *testrender*: Fix uv derivatives for testrender [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk) (1.14.8.0, 1.15.0.0)
   - *testrender*: Default to identity for unknown testrender xforms [#2043](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2043) (by Chris Hellmuth) (1.14.8.0, 1.15.0.0)
-
-### 🚀  SIMD batched shading mode
-
-### 🚀  OptiX GPU rendering
 
 ### 🐛/🔧  Internals: fixes, improvements, and developer concerns
   - *perf*: Share Shading Context when optimizing/jitting a shader [#1952](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1952) (by Alex Wells) (1.15.0.0)
@@ -105,12 +120,8 @@ Release 1.15 (Dec ??, 2025) -- compared to 1.14
 * Platform support:
     - *build(Mac)*: Fix various MacOS problems with GitHub and CMake [#1982](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1982) (1.15.0.0)
 
-### 📚  Documentation
-
 ### 🏢  Project Administration
   - *admin*: Set up new issue templates [#1981](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/1981) (1.15.0.0)
-
-
 
 
 ---

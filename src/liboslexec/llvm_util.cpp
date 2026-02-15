@@ -1529,9 +1529,15 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
 
     llvm::TargetOptions options;
     // Enables FMA's in IR generation.
-    // However cpu feature set may or may not support FMA's independently
-    options.AllowFPOpFusion = jit_fma() ? llvm::FPOpFusion::Fast
-                                        : llvm::FPOpFusion::Standard;
+    // However cpu feature set may or may not support FMA's independently.
+    // Note: This is confusingly named, LLVM's FPOpFution choices are Strict
+    // (no fma used), Standard (fma used for actual fma circumstances), and
+    // Fast (fused ops beyond just fma's, any time it thinks it will be
+    // faster). Since we call the option "jit_fma", we interpret that as
+    // switching between Strict and Standard. We will need some other control
+    // if we ever want full "Fast" mode.
+    options.AllowFPOpFusion = jit_fma() ? llvm::FPOpFusion::Standard
+                                        : llvm::FPOpFusion::Strict;
     // Unfortunately enabling UnsafeFPMath allows reciprocals, which we don't want for divides
     // To match results for existing unit tests we might need to disable UnsafeFPMath
     // TODO: investigate if reciprocals can be disabled by other means.

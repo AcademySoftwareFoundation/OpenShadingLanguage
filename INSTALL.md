@@ -115,7 +115,7 @@ Here are the steps to check out, build, and test the OSL distribution:
    dist/
 
 5. Add the "dist/bin" to your `$PATH`, and "dist/lib" to your
-   `$LD_LIBRAY_PATH` (or `$DYLD_LIBRARY_PATH` on MacOS), or copy the contents
+   `$LD_LIBRARY_PATH` (or `$DYLD_LIBRARY_PATH` on MacOS), or copy the contents
    of those files to appropriate directories.  Public include files
    (those needed when building applications that incorporate OSL)
    can be found in "dist/include", and documentation can be found

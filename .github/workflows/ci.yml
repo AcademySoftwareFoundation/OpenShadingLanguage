@@ -29,7 +29,6 @@ on:
   schedule:
     # Full nightly build, for the main project repo (not for forks)
     - cron: "0 6 * * *"
-      if: github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
   workflow_dispatch:
     # This allows manual triggering of the workflow from the web
 
@@ -44,7 +43,7 @@ concurrency:
 jobs:
 
   aswf-old:
-    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
+    if: ${{ (github.event.repository.fork == false || github.event_name != 'schedule') && ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
     name: "VFX${{matrix.vfxyear}} ${{matrix.desc}}"
     strategy:
       fail-fast: false
@@ -195,7 +194,7 @@ jobs:
 
 
   linux:
-    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
+    if: ${{ (github.event.repository.fork == false || github.event_name != 'schedule') && ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
     name: "${{matrix.desc}}"
     uses: ./.github/workflows/build-steps.yml
     with:
@@ -516,7 +515,7 @@ jobs:
 
 
   macos:
-    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'optix-only') }}
+    if: ${{ (github.event.repository.fork == false || github.event_name != 'schedule') && ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'optix-only') }}
     name: "${{matrix.desc}}"
     uses: ./.github/workflows/build-steps.yml
     with:
@@ -651,7 +650,7 @@ jobs:
 
 
   optix-gpu:
-    if: ${{ ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') }}
+    if: ${{ (github.event.repository.fork == false || github.event_name != 'schedule') && ! contains(github.ref, 'windows-only') && ! contains(github.ref, 'macos-only') }}
     name: "${{matrix.desc}}"
     uses: ./.github/workflows/build-steps.yml
     with:

@@ -1013,7 +1013,7 @@ OptixGridRenderer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
             if (format[j] == '%') {
                 fmt_string            = "%";
                 bool format_end_found = false;
-                for (size_t i = 0; !format_end_found; i++) {
+                for (; !format_end_found; ) {
                     j++;
                     fmt_string += format[j];
                     switch (format[j]) {

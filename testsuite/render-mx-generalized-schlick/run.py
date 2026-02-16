@@ -6,6 +6,7 @@
 
 failthresh = 0.01
 failpercent = 1
+hardfail = 0.085
 allowfailures = 5
 idiff_program = "idiff"
 

@@ -1698,8 +1698,7 @@ public:
         formals += advance;
         std::string msg = "    ";
         if (ASTNode* decl = sym->node())
-            msg += Strutil::fmt::format("{}:{}\t", decl->sourcefile(),
-                                        decl->sourceline());
+            msg += Strutil::fmt::format("{}\t", decl->sourceloc());
         msg += Strutil::fmt::format("{} {} ({})\n", returntype, sym->name(),
                                     TypeSpec::typelist_from_code(formals));
         return msg;
@@ -2034,7 +2033,7 @@ ASTfunction_call::typecheck(TypeSpec expected)
     }
 
     // Fix up actual arguments compound initializers that were paired with
-    // user function formal arguments that are unsigned arrays. They were
+    // user function formal arguments that are unsized arrays. They were
     // not yet typechecked, do so now.
     if (any_args_are_compound_initializers && is_user_function()) {
         ASTNode* formal = user_function()->formals().get();

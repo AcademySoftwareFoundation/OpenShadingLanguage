@@ -243,12 +243,9 @@ template<typename MxMicrofacetParams, typename Distribution,
          bool EnableTransmissionLobe>
 struct MxMicrofacet;
 
-using MxGeneralizedSchlick
-    = MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, true>;
-using MxGeneralizedSchlickOpaque
-    = MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false>;
 struct MxConductor;
 struct MxDielectric;
+struct MxGeneralizedSchlick;
 
 struct Transparent;
 struct OrenNayar;
@@ -268,9 +265,9 @@ using AbstractBSDF = bsdl::StaticVirtual<
     Diffuse<0>, Transparent, OrenNayar, Diffuse<1>, Phong, Ward, Reflection,
     Refraction, MicrofacetBeckmannRefl, MicrofacetBeckmannRefr,
     MicrofacetBeckmannBoth, MicrofacetGGXRefl, MicrofacetGGXRefr,
-    MicrofacetGGXBoth, MxConductor, MxDielectric, MxBurleyDiffuse,
-    EnergyCompensatedOrenNayar, ZeltnerBurleySheen, CharlieSheen,
-    MxGeneralizedSchlickOpaque, MxGeneralizedSchlick, SpiThinLayer>;
+    MicrofacetGGXBoth, MxConductor, MxDielectric, MxGeneralizedSchlick,
+    MxBurleyDiffuse, EnergyCompensatedOrenNayar, ZeltnerBurleySheen,
+    CharlieSheen, SpiThinLayer>;
 
 // Then we just need to inherit from AbstractBSDF
 

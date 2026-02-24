@@ -10,6 +10,7 @@
 
 #include <BSDL/MTX/bsdf_conductor_impl.h>
 #include <BSDL/MTX/bsdf_dielectric_impl.h>
+#include <BSDL/MTX/bsdf_schlick_impl.h>
 #include <BSDL/SPI/bsdf_thinlayer_impl.h>
 #include <BSDL/spectrum_impl.h>
 
@@ -60,7 +61,46 @@ struct BSDLLobe : public BSDF {
     float m_roughness;
 };
 
-// This is the thin wrapper to insert spi::ThinLayerLobe into testrender
+// Standard wrapper: adapts a BSDL lobe for use in testrender's closure system.
+// Provides closureid(), constructor from Data, and eval/sample that convert
+// between world-space and the lobe's local shading frame.
+#define BSDL_WRAP(myclass, bsdlclass, ID)                                      \
+    struct myclass : public bsdl ::bsdlclass<BSDLLobe> {                       \
+        using Base = bsdl ::bsdlclass<BSDLLobe>;                               \
+        static constexpr int closureid()                                       \
+        {                                                                      \
+            return ID;                                                         \
+        }                                                                      \
+        OSL_HOSTDEVICE myclass(const Data& data, const Vec3& wo,               \
+                               bool backfacing, float path_roughness)          \
+            : Base(this,                                                       \
+                   bsdl::BsdfGlobals(wo, data.N, data.N, backfacing,           \
+                                     path_roughness, 1.0f, 0),                 \
+                   data)                                                       \
+        {                                                                      \
+        }                                                                      \
+        OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const \
+        {                                                                      \
+            bsdl::Sample s = Base::eval_impl(Base::frame.local(wo),            \
+                                             Base::frame.local(wi));           \
+            return { wi, s.weight.toRGB(0), s.pdf, s.roughness };              \
+        }                                                                      \
+        OSL_HOSTDEVICE BSDF::Sample sample(const Vec3& wo, float rx, float ry, \
+                                           float rz) const                     \
+        {                                                                      \
+            bsdl::Sample s = Base::sample_impl(Base::frame.local(wo),          \
+                                               { rx, ry, rz });                \
+            return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,        \
+                     s.roughness };                                            \
+        }                                                                      \
+    }
+
+BSDL_WRAP(MxConductor, mtx::ConductorLobe, MX_CONDUCTOR_ID);
+BSDL_WRAP(MxDielectric, mtx::DielectricLobe, MX_DIELECTRIC_ID);
+BSDL_WRAP(MxGeneralizedSchlick, mtx::SchlickLobe, MX_GENERALIZED_SCHLICK_ID);
+
+// These two need a special wrapper, different methods
+
 struct SpiThinLayer : public bsdl::spi::ThinLayerLobe<BSDLLobe> {
     using Base = bsdl::spi::ThinLayerLobe<BSDLLobe>;
 
@@ -91,77 +131,6 @@ struct SpiThinLayer : public bsdl::spi::ThinLayerLobe<BSDLLobe> {
     {
         bsdl::Sample s = Base::sample_impl(Base::frame.local(wo),
                                            { rx, ry, rz }, true, true);
-        return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,
-                 s.roughness };
-    }
-};
-
-// This is the thin wrapper to insert mtx::ConductorLobe into testrender
-struct MxConductor : public bsdl::mtx::ConductorLobe<BSDLLobe> {
-    using Base = bsdl::mtx::ConductorLobe<BSDLLobe>;
-
-    static constexpr int closureid() { return MX_CONDUCTOR_ID; }
-
-    OSL_HOSTDEVICE MxConductor(const Data& data, const Vec3& wo,
-                               float path_roughness)
-        : Base(this,
-               bsdl::BsdfGlobals(wo,
-                                 data.N,  // Nf
-                                 data.N,  // Ngf
-                                 false,   // backfacing
-                                 path_roughness,
-                                 1.0f,  // outer_ior
-                                 0),    // hero wavelength off
-               data)
-    {
-    }
-
-    OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
-    {
-        bsdl::Sample s = Base::eval_impl(Base::frame.local(wo),
-                                         Base::frame.local(wi));
-        return { wi, s.weight.toRGB(0), s.pdf, s.roughness };
-    }
-    OSL_HOSTDEVICE BSDF::Sample sample(const Vec3& wo, float rx, float ry,
-                                       float rz) const
-    {
-        bsdl::Sample s = Base::sample_impl(Base::frame.local(wo),
-                                           { rx, ry, rz });
-        return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,
-                 s.roughness };
-    }
-};
-
-// This is the thin wrapper to insert mtx::ConductorLobe into testrender
-struct MxDielectric : public bsdl::mtx::DielectricLobe<BSDLLobe> {
-    using Base = bsdl::mtx::DielectricLobe<BSDLLobe>;
-
-    static constexpr int closureid() { return MX_DIELECTRIC_ID; }
-
-    OSL_HOSTDEVICE MxDielectric(const Data& data, const Vec3& wo,
-                                bool backfacing, float path_roughness)
-        : Base(this,
-               bsdl::BsdfGlobals(wo,
-                                 data.N,  // Nf
-                                 data.N,  // Ngf
-                                 backfacing, path_roughness,
-                                 1.0f,  // outer_ior
-                                 0),    // hero wavelength off
-               data)
-    {
-    }
-
-    OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
-    {
-        bsdl::Sample s = Base::eval_impl(Base::frame.local(wo),
-                                         Base::frame.local(wi));
-        return { wi, s.weight.toRGB(0), s.pdf, s.roughness };
-    }
-    OSL_HOSTDEVICE BSDF::Sample sample(const Vec3& wo, float rx, float ry,
-                                       float rz) const
-    {
-        bsdl::Sample s = Base::sample_impl(Base::frame.local(wo),
-                                           { rx, ry, rz });
         return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,
                  s.roughness };
     }
@@ -277,24 +246,6 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_FLOAT_PARAM(MxBurleyDiffuseParams, roughness),
             CLOSURE_STRING_KEYPARAM(MxBurleyDiffuseParams, label, "label"),
             CLOSURE_FINISH_PARAM(MxBurleyDiffuseParams) } },
-        { "generalized_schlick_bsdf",
-          MX_GENERALIZED_SCHLICK_ID,
-          { CLOSURE_VECTOR_PARAM(MxGeneralizedSchlickParams, N),
-            CLOSURE_VECTOR_PARAM(MxGeneralizedSchlickParams, U),
-            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, reflection_tint),
-            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, transmission_tint),
-            CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, roughness_x),
-            CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, roughness_y),
-            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f0),
-            CLOSURE_COLOR_PARAM(MxGeneralizedSchlickParams, f90),
-            CLOSURE_FLOAT_PARAM(MxGeneralizedSchlickParams, exponent),
-            CLOSURE_STRING_PARAM(MxGeneralizedSchlickParams, distribution),
-            CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams,
-                                   thinfilm_thickness, "thinfilm_thickness"),
-            CLOSURE_FLOAT_KEYPARAM(MxGeneralizedSchlickParams, thinfilm_ior,
-                                   "thinfilm_ior"),
-            CLOSURE_STRING_KEYPARAM(MxGeneralizedSchlickParams, label, "label"),
-            CLOSURE_FINISH_PARAM(MxGeneralizedSchlickParams) } },
         { "translucent_bsdf",
           MX_TRANSLUCENT_ID,
           { CLOSURE_VECTOR_PARAM(MxTranslucentParams, N),
@@ -353,7 +304,8 @@ register_closures(OSL::ShadingSystem* shadingsys)
         shadingsys->register_closure(b.name, b.id, b.params, nullptr, nullptr);
 
     // BSDFs coming from BSDL
-    using bsdl_set = bsdl::TypeList<SpiThinLayer, MxConductor, MxDielectric>;
+    using bsdl_set = bsdl::TypeList<SpiThinLayer, MxConductor, MxDielectric,
+                                    MxGeneralizedSchlick>;
     // Register them
     bsdl_set::apply(BSDLtoOSL { shadingsys });
 }
@@ -1565,18 +1517,17 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, float path_roughness,
                 closure = nullptr;
                 break;
             }
-            case MX_GENERALIZED_SCHLICK_ID: {
-                const MxGeneralizedSchlickParams& params
-                    = *comp->as<MxGeneralizedSchlickParams>();
+            case MxGeneralizedSchlick::closureid(): {
+                const MxGeneralizedSchlick::Data& params
+                    = *comp->as<MxGeneralizedSchlick::Data>();
+                closure = nullptr;
                 // Transmissive dielectrics are opaque
-                if (!is_black(params.transmission_tint)) {
-                    closure = nullptr;
+                if (!is_black(params.refr_tint)) {
                     break;
                 }
-                MxMicrofacet<MxGeneralizedSchlickParams, GGXDist, false> mf(
-                    params, 1.0f);
-                weight *= w * mf.get_albedo(-sg.I);
-                closure = nullptr;
+                MxGeneralizedSchlick d(params, -sg.I, sg.backfacing,
+                                       path_roughness);
+                weight *= w * (Color3(1) - d.filter_o(-sg.I).toRGB(0));
                 break;
             }
             case MX_SHEEN_ID: {
@@ -1684,12 +1635,13 @@ process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
             closure = nullptr;
             break;
         }
-        case MX_GENERALIZED_SCHLICK_ID: {
+        case MxGeneralizedSchlick::closureid(): {
             const ClosureComponent* comp = closure->as_comp();
-            const auto& params = *comp->as<MxGeneralizedSchlickParams>();
-            if (!is_black(weight * comp->w * params.transmission_tint)) {
+            const MxGeneralizedSchlick::Data& params
+                = *comp->as<MxGeneralizedSchlick::Data>();
+            if (!is_black(weight * comp->w * params.refr_tint)) {
                 // TODO: properly track a medium stack here ...
-                float avg_F0  = clamp((params.f0.x + params.f0.y + params.f0.z)
+                float avg_F0  = clamp((params.F0.x + params.F0.y + params.F0.z)
                                           / 3.0f,
                                       0.0f, 0.99f);
                 float sqrt_F0 = sqrtf(avg_F0);
@@ -1850,27 +1802,21 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
                                                             path_roughness);
                     break;
                 }
+                case MxGeneralizedSchlick::closureid(): {
+                    const MxGeneralizedSchlick::Data& params
+                        = *comp->as<MxGeneralizedSchlick::Data>();
+                    ok = result.bsdf.add_bsdf<MxGeneralizedSchlick>(
+                        cw, params, -sg.I, sg.backfacing, path_roughness);
+                    break;
+                }
                 case MxConductor::closureid(): {
                     const MxConductor::Data& params
                         = *comp->as<MxConductor::Data>();
                     ok = result.bsdf.add_bsdf<MxConductor>(cw, params, -sg.I,
+                                                           sg.backfacing,
                                                            path_roughness);
                     break;
                 }
-                case MX_GENERALIZED_SCHLICK_ID: {
-                    const MxGeneralizedSchlickParams& params
-                        = *comp->as<MxGeneralizedSchlickParams>();
-                    if (is_black(params.transmission_tint))
-                        ok = result.bsdf.add_bsdf<MxMicrofacet<
-                            MxGeneralizedSchlickParams, GGXDist, false>>(cw,
-                                                                         params,
-                                                                         1.0f);
-                    else
-                        ok = result.bsdf.add_bsdf<MxMicrofacet<
-                            MxGeneralizedSchlickParams, GGXDist, true>>(
-                            cw, params, result.refraction_ior);
-                    break;
-                };
                 case MX_TRANSLUCENT_ID: {
                     const MxTranslucentParams* srcparams
                         = comp->as<MxTranslucentParams>();

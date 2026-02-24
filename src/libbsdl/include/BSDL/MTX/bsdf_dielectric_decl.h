@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <BSDL/SPI/bsdf_dielectric_decl.h>
 #include <BSDL/bsdf_decl.h>
 #include <BSDL/microfacet_tools_decl.h>
 
@@ -20,6 +19,7 @@ struct DielectricFresnel {
     static BSDL_INLINE_METHOD DielectricFresnel from_table_index(float tx,
                                                                  bool backside);
     BSDL_INLINE_METHOD float table_index() const;
+    BSDL_INLINE_METHOD float refraction_eta() const { return eta; }
 
     float eta;
 
@@ -27,7 +27,9 @@ struct DielectricFresnel {
     static constexpr float IOR_MAX = 5.0f;
 };
 
-struct DielectricRefl {
+// Microfacet dielectric, generic over the Fresnel model.
+// Concrete types (Dielectric, Schlick) inherit from this.
+template<typename Fresnel> struct DielectricBSDF {
     // describe how tabulation should be done
     static constexpr int Nc = 16;
     static constexpr int Nr = 16;
@@ -38,20 +40,17 @@ struct DielectricRefl {
         return std::max(float(i) * (1.0f / (Nc - 1)), 1e-6f);
     }
 
-    explicit BSDL_INLINE_METHOD
-    DielectricRefl(float cosNO, float roughness_index, float fresnel_index);
-
     BSDL_INLINE_METHOD
-    DielectricRefl(const GGXDist& dist, const DielectricFresnel& fresnel,
-                   float cosNO, float roughness);
+    DielectricBSDF(const GGXDist& dist, const Fresnel& fresnel, float cosNO,
+                   float roughness, bool dorefr);
 
-    DielectricRefl() = default;
+    DielectricBSDF() = default;
 
     BSDL_INLINE_METHOD Sample eval(Imath::V3f wo, Imath::V3f wi) const;
     BSDL_INLINE_METHOD Sample sample(Imath::V3f wo, float randu, float randv,
                                      float randw) const;
 
-    BSDL_INLINE_METHOD DielectricFresnel fresnel() const { return f; }
+    BSDL_INLINE_METHOD Fresnel fresnel() const { return f; }
 
     struct Energy {
         float data[Nf * Nr * Nc];
@@ -60,81 +59,44 @@ struct DielectricRefl {
 
 protected:
     GGXDist d;
-    DielectricFresnel f;
-    float E_ms;  // No fresnel here
+    Fresnel f;
+    float E_ms;
+    bool dorefr;
 };
 
-struct DielectricReflFront : public DielectricRefl {
-    DielectricReflFront() = default;
+// For table baking purposes, they can't be templated because of the baking
+// logic in genluts.cpp
+struct DielectricReflFront : public DielectricBSDF<DielectricFresnel> {
     explicit BSDL_INLINE_METHOD DielectricReflFront(float cosNO,
                                                     float roughness_index,
                                                     float fresnel_index);
-    static BSDL_INLINE_METHOD Energy& get_energy();
     static const char* lut_header()
     {
         return "MTX/bsdf_dielectric_reflfront_luts.h";
     }
     static const char* struct_name() { return "DielectricReflFront"; }
+    static BSDL_INLINE_METHOD Energy& get_energy();
 };
-
-struct DielectricBoth {
-    static constexpr int Nc = 16;
-    static constexpr int Nr = 16;
-    static constexpr int Nf = 32;
-
-    static constexpr float get_cosine(int i)
-    {
-        return std::max(float(i) * (1.0f / (Nc - 1)), 1e-6f);
-    }
-
-    DielectricBoth() = default;
-    explicit BSDL_INLINE_METHOD DielectricBoth(float cosNO,
-                                               float roughness_index,
-                                               float fresnel_index,
-                                               bool backside);
-    BSDL_INLINE_METHOD
-    DielectricBoth(const GGXDist& dist, const DielectricFresnel& fresnel);
-
-    BSDL_INLINE_METHOD DielectricFresnel fresnel() const { return f; }
-
-    BSDL_INLINE_METHOD Sample eval(Imath::V3f wo, Imath::V3f wi) const;
-    BSDL_INLINE_METHOD Sample sample(Imath::V3f wo, float randu, float randv,
-                                     float randw) const;
-
-    struct Energy {
-        float data[Nf * Nr * Nc];
-    };
-    static constexpr const char* NS = "mtx";
-
-protected:
-    GGXDist d;
-    DielectricFresnel f;
-};
-
-struct DielectricBothFront : public DielectricBoth {
-    DielectricBothFront() = default;
+struct DielectricBothFront : public DielectricBSDF<DielectricFresnel> {
     explicit BSDL_INLINE_METHOD DielectricBothFront(float cosNO,
                                                     float roughness_index,
                                                     float fresnel_index);
-    static BSDL_INLINE_METHOD Energy& get_energy();
     static const char* lut_header()
     {
         return "MTX/bsdf_dielectric_bothfront_luts.h";
     }
     static const char* struct_name() { return "DielectricBothFront"; }
+    static BSDL_INLINE_METHOD Energy& get_energy();
 };
-
-struct DielectricBothBack : public DielectricBoth {
-    DielectricBothBack() = default;
+struct DielectricBothBack : public DielectricBSDF<DielectricFresnel> {
     explicit BSDL_INLINE_METHOD
     DielectricBothBack(float cosNO, float roughness_index, float fresnel_index);
-    static BSDL_INLINE_METHOD Energy& get_energy();
-
     static const char* lut_header()
     {
         return "MTX/bsdf_dielectric_bothback_luts.h";
     }
     static const char* struct_name() { return "DielectricBothBack"; }
+    static BSDL_INLINE_METHOD Energy& get_energy();
 };
 
 template<typename BSDF_ROOT> struct DielectricLobe : public Lobe<BSDF_ROOT> {
@@ -192,10 +154,7 @@ template<typename BSDF_ROOT> struct DielectricLobe : public Lobe<BSDF_ROOT> {
 protected:
     BSDL_INLINE_METHOD Power get_tint(float cosNI) const;
 
-    union {
-        DielectricRefl refl;
-        DielectricBoth both;
-    } spec;
+    DielectricBSDF<DielectricFresnel> spec;
     Power refl_tint;
     Power refr_tint;
     Power wo_absorption;

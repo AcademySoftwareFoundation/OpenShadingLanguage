@@ -70,7 +70,7 @@ ConductorFresnel::avg() const
                             d = -0.07785134f;
             const float x = IOR[i], y = extinction[i];
             const float p = a + b * x + c * y + d * x * y;
-            return p / (1 + p);
+            return CLAMP(p / (1 + p), 0.0f, 1.0f);
         },
         lambda_0);
 }

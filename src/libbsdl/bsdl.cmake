@@ -9,7 +9,7 @@ function(ADD_BSDL_LIBRARY NAME)
     # Bootstrap version of BSDL (without luts)
     add_library(BSDL_BOOTSTRAP INTERFACE)
     target_include_directories(BSDL_BOOTSTRAP INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/${bsdl_SUBDIR}/include)
-    target_link_libraries(BSDL_BOOTSTRAP INTERFACE ${ARNOLD_IMATH_TARGETS})
+    target_link_libraries(BSDL_BOOTSTRAP INTERFACE Imath::Imath)
 
     # LUT generation tool
     set(BSDL_GEN_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/${bsdl_SUBDIR}/geninclude)

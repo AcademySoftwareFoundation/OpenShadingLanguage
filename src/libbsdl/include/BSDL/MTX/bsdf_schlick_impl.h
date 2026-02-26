@@ -16,8 +16,8 @@ namespace mtx {
 SchlickFresnel::SchlickFresnel(Power F0, Power F90, float exponent, float _eta,
                                bool backfacing)
     : DielectricFresnel(_eta, backfacing)
-    , F0(F0)
-    , F90(F90)
+    , F0(F0.clamped(0, 1))
+    , F90(F90.clamped(0, 1))
     , exponent(exponent)
     , tir_cos(eta >= 1
                   ? 0

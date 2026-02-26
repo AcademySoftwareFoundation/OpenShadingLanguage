@@ -3278,11 +3278,14 @@ RuntimeOptimizer::run()
     m_userdata_needed.clear();
     m_attributes_needed.clear();
     bool does_nothing = true;
+    int active_layers = 0;
+    int n_texture_ops = 0;
     std::vector<uint8_t> interactive_data;
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst(layer);
         if (inst()->unused())
             continue;  // no need to print or gather stats for unused layers
+        ++active_layers;
         FOREACH_SYM(Symbol & s, inst())
         {
             // set the layer numbers
@@ -3355,6 +3358,7 @@ RuntimeOptimizer::run()
                 }
             }
             if (opd->flags & OpDescriptor::Tex) {
+                ++n_texture_ops;
                 // for all the texture ops, arg 1 is the texture name
                 Symbol* sym = opargsym(op, 1);
                 OSL_DASSERT(sym && sym->typespec().is_string());
@@ -3445,6 +3449,23 @@ RuntimeOptimizer::run()
     group().does_nothing(does_nothing);
     group().setup_interactive_arena(interactive_data);
 
+    // Compute the maximum depth of the shader network: the length of the
+    // longest chain of layer-to-layer connections. Layers are already in
+    // topological order, so a single forward pass suffices.
+    std::vector<int> layer_depth(nlayers, 0);
+    int max_network_depth = 0;
+    for (int layer = 0; layer < nlayers; ++layer) {
+        if (group()[layer]->unused())
+            continue;
+        layer_depth[layer] = 1;
+        for (auto&& c : group()[layer]->connections()) {
+            if (!group()[c.srclayer]->unused())
+                layer_depth[layer] = std::max(layer_depth[layer],
+                                              layer_depth[c.srclayer] + 1);
+        }
+        max_network_depth = std::max(max_network_depth, layer_depth[layer]);
+    }
+
     m_stat_specialization_time = rop_timer();
     {
         // adjust memory stats
@@ -3468,12 +3489,16 @@ RuntimeOptimizer::run()
             new_nops, old_nops,
             100.0 * double((long long)new_nops - (long long)old_nops)
                 / double(old_nops));
+        shadingcontext()->infofmt(" Group active layers: {}", active_layers);
+        shadingcontext()->infofmt(" Group network connection depth: {}",
+                                  max_network_depth);
+        shadingcontext()->infofmt(" Group texture ops: {}", n_texture_ops);
     }
     if (shadingsys().m_compile_report > 1) {
         if (does_nothing)
-            shadingcontext()->infofmt("Group does nothing");
+            shadingcontext()->infofmt(" Group does nothing");
         if (m_textures_needed.size()) {
-            shadingcontext()->infofmt("Group needs textures:");
+            shadingcontext()->infofmt(" Group needs textures:");
             for (auto&& f : m_textures_needed)
                 shadingcontext()->infofmt("    {}", f);
             if (m_unknown_textures_needed)
@@ -3481,13 +3506,13 @@ RuntimeOptimizer::run()
                     "    Also may construct texture names on the fly.");
         }
         if (m_userdata_needed.size()) {
-            shadingcontext()->infofmt("Group potentially needs userdata:");
+            shadingcontext()->infofmt(" Group potentially needs userdata:");
             for (auto&& f : m_userdata_needed)
                 shadingcontext()->infofmt("    {} {} {}", f.name, f.type,
                                           f.derivs ? "(derivs)" : "");
         }
         if (m_attributes_needed.size()) {
-            shadingcontext()->infofmt("Group needs attributes:");
+            shadingcontext()->infofmt(" Group needs attributes:");
             for (auto&& f : m_attributes_needed)
                 shadingcontext()->infofmt("    {} {} {}", f.name, f.scope,
                                           f.type);

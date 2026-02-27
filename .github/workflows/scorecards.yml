@@ -27,8 +27,7 @@ concurrency:
 jobs:
   analysis:
     name: Scorecards analysis
-    if: |
-      github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
+    if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     permissions:
       # Needed to upload the results to code-scanning dashboard.

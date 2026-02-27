@@ -49,8 +49,7 @@ jobs:
 
   aswf:
     name: "SonarCloud Analysis"
-    if: |
-      github.repository == 'AcademySoftwareFoundation/OpenShadingLanguage'
+    if: github.event.repository.fork == false
     strategy:
       fail-fast: false
       matrix:

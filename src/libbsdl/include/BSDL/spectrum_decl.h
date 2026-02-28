@@ -276,7 +276,7 @@ struct Power {
     }
     BSDL_INLINE_METHOD Power scale_clamped(float maxv) const
     {
-        const float scale = 1 / std::max(maxv, max());
+        const float scale = maxv / std::max(maxv, max());
         return Power([&](int i) { return data[i] * scale; }, 1);
     }
     BSDL_INLINE_METHOD bool is_zero(float eps = 0) const

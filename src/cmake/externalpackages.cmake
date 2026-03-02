@@ -118,14 +118,42 @@ if (OSL_USE_OPTIX)
             message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
         endif ()
 
-        checked_find_package (CUDA REQUIRED
+        if (CUDA_TOOLKIT_ROOT_DIR)
+            set (CUDAToolkit_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
+        endif ()
+
+        checked_find_package (CUDAToolkit REQUIRED
                              VERSION_MIN 9.0
                              RECOMMEND_MIN 11.0
                              RECOMMEND_MIN_REASON
                                 "We don't actively test CUDA older than 11"
-                             PRINT CUDA_INCLUDES)
-        set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
-        include_directories (BEFORE "${CUDA_INCLUDES}")
+                             PRINT CUDAToolkit_INCLUDE_DIRS CUDAToolkit_NVCC_EXECUTABLE)
+
+        # Compatibility bridge: legacy CUDA variables.
+        set (CUDA_FOUND ${CUDAToolkit_FOUND})
+        set (CUDA_VERSION ${CUDAToolkit_VERSION})
+        set (CUDA_INCLUDES ${CUDAToolkit_INCLUDE_DIRS})
+        if (CUDA_INCLUDES)
+            list (GET CUDA_INCLUDES 0 CUDA_INCLUDES)
+        endif ()
+
+        # Derive the root dir.  See https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html
+        if (CUDAToolkit_LIBRARY_ROOT)
+            set (CUDA_TOOLKIT_ROOT_DIR "${CUDAToolkit_LIBRARY_ROOT}")
+        elseif (CUDAToolkit_TARGET_DIR)
+            set (CUDA_TOOLKIT_ROOT_DIR "${CUDAToolkit_TARGET_DIR}")
+        elseif (CUDAToolkit_BIN_DIR)
+            get_filename_component (CUDA_TOOLKIT_ROOT_DIR "${CUDAToolkit_BIN_DIR}" DIRECTORY)
+        endif ()
+        if (NOT CUDA_TOOLKIT_ROOT_DIR)
+            message (FATAL_ERROR "Could not determine CUDA toolkit root directory.")
+        endif ()
+
+        if (CUDAToolkit_NVCC_EXECUTABLE)
+            set (CUDA_NVCC_EXECUTABLE "${CUDAToolkit_NVCC_EXECUTABLE}")
+        else ()
+            find_program (CUDA_NVCC_EXECUTABLE NAMES nvcc HINTS "${CUDA_TOOLKIT_ROOT_DIR}/bin")
+        endif ()
 
         STRING (FIND ${LLVM_TARGETS} "NVPTX" nvptx_index)
         if (NOT ${nvptx_index} GREATER -1)
@@ -138,7 +166,11 @@ if (OSL_USE_OPTIX)
         # suffixes earlier in the suffix list. Don't forget to restore after
         # so that this only applies to these library searches right here.
         set (save_lib_path ${CMAKE_FIND_LIBRARY_SUFFIXES})
-        if (CUDA_PREFER_STATIC_LIBS)
+        if (CUDA_PREFER_STATIC_LIBS AND TARGET CUDA::cudart_static)
+            set (cudart_lib CUDA::cudart_static)
+        elseif (TARGET CUDA::cudart)
+            set (cudart_lib CUDA::cudart)
+        elseif (CUDA_PREFER_STATIC_LIBS)
             set (CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
             find_library(cudart_lib REQUIRED
                          NAMES cudart_static cudart
@@ -148,7 +180,6 @@ if (OSL_USE_OPTIX)
                          NAMES cudart
                          PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
         endif ()
-        # Is it really a good idea to completely reset CUDA_LIBRARIES here?
         set(CUDA_LIBRARIES ${cudart_lib})
         set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl rt)
         set (CMAKE_FIND_LIBRARY_SUFFIXES ${save_lib_path})

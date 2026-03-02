@@ -106,7 +106,6 @@ static ParamValueList params;
 static std::vector<ParamHints> param_hints;
 static ParamValueList reparams;
 static std::string reparam_layer;
-static ErrorHandler errhandler;
 static int iters                = 1;
 static std::string raytype_name = "camera";
 static int raytype_bit          = 0;
@@ -206,7 +205,8 @@ set_shadingsys_options()
     shadingsys->attribute("llvm_debug", (llvm_debug ? 2 : 0));
 
     shadingsys->attribute("debug", debug2 ? 2 : (debug1 ? 1 : 0));
-    shadingsys->attribute("compile_report", debug1 | debug2);
+    if (debug1 || debug2)
+        shadingsys->attribute("compile_report", 1);
     int opt = 2;  // default
     if (O0)
         opt = 0;
@@ -669,27 +669,28 @@ stash_userdata(cspan<const char*> argv)
 void
 print_info()
 {
-    ErrorHandler errhandler;
-    SimpleRenderer* rend = nullptr;
+    std::unique_ptr<SimpleRenderer> rend;
 #if OSL_USE_OPTIX
     if (use_optix)
-        rend = new OptixGridRenderer;
+        rend.reset(new OptixGridRenderer);
     else
 #endif
-        rend = new SimpleRenderer;
+        rend.reset(new SimpleRenderer);
     auto texturesys = TextureSystem::create();
 #if OIIO_TEXTURESYSTEM_CREATE_SHARED
-    shadingsys = new ShadingSystem(rend, texturesys.get(), &errhandler);
+    auto shadingsys = std::make_unique<ShadingSystem>(rend.get(),
+                                                      texturesys.get(),
+                                                      &rend->errhandler());
 #else
-    shadingsys = new ShadingSystem(rend, texturesys, &errhandler);
+    auto shadingsys = std::make_unique<ShadingSystem>(rend.get(), texturesys,
+                                                      &rend->errhandler());
 #endif
-    rend->init_shadingsys(shadingsys);
+    rend->init_shadingsys(shadingsys.get());
     set_shadingsys_options();
 
     std::cout << "\n" << shadingsys->getstats(5) << "\n";
 
-    delete shadingsys;
-    delete rend;
+    shadingsys.reset();
 }
 
 
@@ -1945,13 +1946,13 @@ test_shade(int argc, const char* argv[])
                   3.5);
     }
 
-    SimpleRenderer* rend = nullptr;
+    std::unique_ptr<SimpleRenderer> rend;
 #if OSL_USE_OPTIX
     if (use_optix)
-        rend = new OptixGridRenderer;
+        rend.reset(new OptixGridRenderer);
     else
 #endif
-        rend = new SimpleRenderer;
+        rend.reset(new SimpleRenderer);
 
     // Other renderer and global options
     if (debug1 || verbose)
@@ -1981,7 +1982,7 @@ test_shade(int argc, const char* argv[])
     // object that services callbacks from the shading system, the
     // TextureSystem (note: passing nullptr just makes the ShadingSystem
     // make its own TS), and an error handler.
-    shadingsys = new ShadingSystem(rend, texturesys, &errhandler);
+    shadingsys = new ShadingSystem(rend.get(), texturesys, &rend->errhandler());
     rend->init_shadingsys(shadingsys);
 
     // Register the layout of all closures known to this renderer
@@ -2122,14 +2123,16 @@ test_shade(int argc, const char* argv[])
 
 #if OSL_USE_OPTIX
     if (use_optix) {
-        reinterpret_cast<OptixGridRenderer*>(rend)->set_transforms(Mobj, Mshad);
-        reinterpret_cast<OptixGridRenderer*>(rend)->register_named_transforms();
-        reinterpret_cast<OptixGridRenderer*>(rend)->synch_attributes();
+        reinterpret_cast<OptixGridRenderer*>(rend.get())
+            ->set_transforms(Mobj, Mshad);
+        reinterpret_cast<OptixGridRenderer*>(rend.get())
+            ->register_named_transforms();
+        reinterpret_cast<OptixGridRenderer*>(rend.get())->synch_attributes();
     }
 #endif
 
     // Set up the image outputs requested on the command line
-    setup_output_images(rend, shadingsys, shadergroup);
+    setup_output_images(rend.get(), shadingsys, shadergroup);
 
     if (debug1)
         test_group_attributes(shadergroup.get());
@@ -2204,21 +2207,24 @@ test_shade(int argc, const char* argv[])
                 if (batch_size == 16) {
                     OIIO::ImageBufAlgo::parallel_image(
                         roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
-                            batched_shade_region<16>(rend, shadergroup.get(),
-                                                     sub_roi, save);
+                            batched_shade_region<16>(rend.get(),
+                                                     shadergroup.get(), sub_roi,
+                                                     save);
                         });
                 } else if (batch_size == 8) {
                     OIIO::ImageBufAlgo::parallel_image(
                         roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
-                            batched_shade_region<8>(rend, shadergroup.get(),
-                                                    sub_roi, save);
+                            batched_shade_region<8>(rend.get(),
+                                                    shadergroup.get(), sub_roi,
+                                                    save);
                         });
                 } else {
                     OSL_ASSERT((batch_size == 4) && "Unsupported batch size");
                     OIIO::ImageBufAlgo::parallel_image(
                         roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
-                            batched_shade_region<4>(rend, shadergroup.get(),
-                                                    sub_roi, save);
+                            batched_shade_region<4>(rend.get(),
+                                                    shadergroup.get(), sub_roi,
+                                                    save);
                         });
                 }
             } else
@@ -2226,7 +2232,8 @@ test_shade(int argc, const char* argv[])
             {
                 OIIO::ImageBufAlgo::parallel_image(
                     roi, num_threads, [&](OIIO::ROI sub_roi) -> void {
-                        shade_region(rend, shadergroup.get(), sub_roi, save);
+                        shade_region(rend.get(), shadergroup.get(), sub_roi,
+                                     save);
                     });
             }
 #endif
@@ -2255,7 +2262,7 @@ test_shade(int argc, const char* argv[])
     journal::TrackRecentlyReported tracker_error_warnings(
         limit_errors, error_history_capacity, limit_warnings,
         warning_history_capacity);
-    TestshadeReporter reporter(&errhandler, tracker_error_warnings);
+    TestshadeReporter reporter(&rend->errhandler(), tracker_error_warnings);
     OSL::journal::Reader jreader(jbuffer.get(), reporter);
     jreader.process();
     // Need to call journal::initialize_buffer before re-using the jbuffer
@@ -2351,8 +2358,6 @@ test_shade(int argc, const char* argv[])
         std::cout << "ERRORS left in ImageCache:\n" << err << "\n";
         retcode = EXIT_FAILURE;
     }
-
-    delete rend;
 
     return retcode;
 }

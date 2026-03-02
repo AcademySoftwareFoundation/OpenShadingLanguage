@@ -68,9 +68,8 @@ ShadingSystem::ShadingSystem(RendererServices* renderer,
         err = &ErrorHandler::default_handler();
     }
     m_impl = new ShadingSystemImpl(renderer, texturesystem, err);
-#ifndef NDEBUG
-    err->infofmt("creating new ShadingSystem {:p}", (void*)this);
-#endif
+    if (m_impl->debug())
+        err->debugfmt("creating new ShadingSystem {:p}", (void*)this);
 }
 
 

@@ -589,8 +589,9 @@ ShadingSystemImpl::loadshader(string_view cname)
     }
     if (ok) {
         ++m_stat_shaders_loaded;
-        infofmt("Loaded \"{}\" (took {})", filename,
-                Strutil::timeintervalformat(loadtime, 2));
+        if (debug())
+            infofmt("Loaded \"{}\" (took {})", filename,
+                    Strutil::timeintervalformat(loadtime, 2));
         OSL_DASSERT(r);
         r->resolve_syms();
         // if (debug()) {
@@ -643,8 +644,9 @@ ShadingSystemImpl::LoadMemoryCompiledShader(string_view shadername,
     }
     if (ok) {
         ++m_stat_shaders_loaded;
-        infofmt("Loaded \"{}\" (took {})", shadername,
-                Strutil::timeintervalformat(loadtime, 2));
+        if (debug())
+            infofmt("Loaded \"{}\" (took {})", shadername,
+                    Strutil::timeintervalformat(loadtime, 2));
         OSL_DASSERT(r);
         r->resolve_syms();
         // if (debug()) {

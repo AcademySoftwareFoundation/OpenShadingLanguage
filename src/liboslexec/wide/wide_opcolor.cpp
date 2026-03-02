@@ -302,7 +302,7 @@ namespace {
 
 // Note: Clang 14 seems to no longer allow vectorizing these loops
 #if ((OSL_CLANG_VERSION && OSL_CLANG_VERSION < 140000) \
-     || OSL_INTEL_CLASSIC_COMPILER_VERSION || OSL_INTEL_LLVM_COMPILER_VERSION)
+     || OSL_INTEL_LLVM_COMPILER_VERSION)
 #    define WIDE_TRANSFORMC_OMP_SIMD_LOOP(...) OSL_OMP_SIMD_LOOP(__VA_ARGS__)
 #else
 #    define WIDE_TRANSFORMC_OMP_SIMD_LOOP(...)

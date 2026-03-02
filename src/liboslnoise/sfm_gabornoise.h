@@ -356,19 +356,7 @@ gabor_cell(const sfm::GaborUniformParams& gup, const sfm::GaborParams& gp,
                 Dual2<float> gk     = gabor_kernel(w_i_t_s_f, omega_i_t_s_f,
                                                    phi_i_t_s_f, a_i_t_s_f,
                                                    x_k_i_t);  // 2D
-#if defined(__AVX512F__) && defined(__INTEL_COMPILER) \
-    && (__INTEL_COMPILER < 1800)
-                // icc17 with AVX512 had some incorrect results
-                // due to the not_finite code path executing even
-                // when the value was finite.  Workaround: using isnan | isinf
-                // instead of isfinite avoided the issue.
-                // icc18u3 doesn't exhibit the problem
-                // NOTE: tried using bitwise | to avoid branches and got internal compiler error
-                //bool not_finite = std::isnan(gk.val()) | std::isinf(gk.val());
-                bool not_finite = std::isnan(gk.val()) || std::isinf(gk.val());
-#else
-                bool not_finite = !std::isfinite(gk.val());
-#endif
+                bool not_finite     = !std::isfinite(gk.val());
                 if (OSL_UNLIKELY(not_finite)) {
                     // Numeric failure of the filtered version.  Fall
                     // back on the unfiltered.

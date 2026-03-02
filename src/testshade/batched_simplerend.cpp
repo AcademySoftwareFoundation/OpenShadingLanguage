@@ -180,17 +180,7 @@ BatchedSimpleRenderer<WidthT>::get_matrix(BatchedShaderGlobals* bsg,
 
         OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
         for (int lane = 0; lane < WidthT; ++lane) {
-#    if __INTEL_COMPILER >= 1900
-            // Used load + blend + store instead of masked store to temporarily work around
-            // an icc19u5 issue when automatic ISA dispatch is used causing scatters to be generated
-            Matrix44 m = result[lane];
-            if (result.mask()[lane]) {
-                m = uniformTransform;
-            }
-            result[ActiveLane(lane)] = m;
-#    else
             result[lane] = uniformTransform;
-#    endif
         }
 #endif
     }

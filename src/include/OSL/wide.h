@@ -1904,7 +1904,7 @@ private:
 }  // namespace pvt
 
 
-#if OSL_INTEL_CLASSIC_COMPILER_VERSION || OSL_GNUC_VERSION
+#if OSL_GNUC_VERSION
 // Workaround for error #3466: inheriting constructors must be inherited from a direct base class
 #    define __OSL_INHERIT_BASE_CTORS(DERIVED, BASE) \
         using Base = typename DERIVED::BASE;        \
@@ -3210,8 +3210,7 @@ template<typename DataT, int WidthT>
 OSL_FORCEINLINE bool
 testIfAnyLaneIsNonZero(const Wide<DataT, WidthT>& wvalues)
 {
-#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION \
-    && !OSL_INTEL_LLVM_COMPILER_VERSION
+#if OSL_ANY_CLANG && !OSL_INTEL_LLVM_COMPILER_VERSION
     int anyLaneIsOn = 0;
     OSL_OMP_PRAGMA(omp simd simdlen(WidthT) reduction(max : anyLaneIsOn))
     for (int i = 0; i < WidthT; ++i) {

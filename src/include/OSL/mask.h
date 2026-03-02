@@ -20,19 +20,6 @@ OSL_NAMESPACE_BEGIN
 using std::popcount;
 using std::countr_zero;
 
-#elif OSL_INTEL_CLASSIC_COMPILER_VERSION
-
-#include <immintrin.h>
-
-OSL_FORCEINLINE int popcount(uint32_t x) noexcept { return _mm_popcnt_u32(x);}
-OSL_FORCEINLINE int popcount(uint64_t x) noexcept { return _mm_popcnt_u64(x); }
-OSL_FORCEINLINE int countr_zero(uint32_t x) noexcept { return _bit_scan_forward(x); }
-OSL_FORCEINLINE int countr_zero(uint64_t x) noexcept {
-    unsigned __int32 index;
-    _BitScanForward64(&index, x);
-    return static_cast<int>(index);
-}
-
 #elif defined(__GNUC__) || defined(__clang__)
 
 OSL_FORCEINLINE int popcount(uint32_t x) noexcept { return __builtin_popcount(x); }

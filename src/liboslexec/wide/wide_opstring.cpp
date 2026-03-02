@@ -75,7 +75,7 @@ __OSL_MASKED_OP2(strlen, Wi, Ws)(void* wr_, void* ws_, unsigned int mask_value)
 
     OSL_FORCEINLINE_BLOCK
     {
-#if (!OSL_CLANG_VERSION || OSL_INTEL_CLASSIC_COMPILER_VERSION)
+#if !OSL_CLANG_VERSION
         // Clang 11 generated SIMD crashes at runtime
         // TODO: investigate clang crash when vectorizing
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH))

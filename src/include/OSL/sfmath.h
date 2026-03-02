@@ -68,23 +68,7 @@ namespace sfm
        OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     */
 
-#if OSL_INTEL_CLASSIC_COMPILER_VERSION
-    // std::isinf wasn't vectorizing and was branchy. This slightly
-    // perturbed version fairs better and is branch free when vectorized
-    // with the Intel compiler.
-    OSL_FORCEINLINE OSL_HOSTDEVICE int isinf (float x) {
-        int r = 0;
-        // NOTE: using bitwise | to avoid branches
-        if (!(std::isfinite(x)|std::isnan(x))) {
-            r = static_cast<int>(copysignf(1.0f,x));
-        }
-        return r;
-    }
-#else
-    // Other compilers don't seem to vectorize well no matter what, so just
-    // use the standard version.
     using std::isinf;
-#endif
 
     template<typename T>
     OSL_FORCEINLINE OSL_HOSTDEVICE T
@@ -191,7 +175,7 @@ namespace sfm
         }
     }
 
-#if OSL_ANY_CLANG && !OSL_INTEL_CLASSIC_COMPILER_VERSION && !OSL_INTEL_LLVM_COMPILER_VERSION
+#if OSL_ANY_CLANG && !OSL_INTEL_LLVM_COMPILER_VERSION
 
     // To make clang's loop vectorizor happy
     // we need to make sure result of min and max

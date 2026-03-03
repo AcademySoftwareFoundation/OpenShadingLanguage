@@ -552,7 +552,7 @@ jobs:
         include:
           - desc: MacOS-15-Intel aclang17/C++17/py3.13 llvm17 oiio-release
             runner: macos-15-intel
-            nametag: macos15-p313
+            nametag: macos15
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
@@ -564,7 +564,7 @@ jobs:
                             USE_OPENVDB=0
           - desc: MacOS-14-ARM llvm19 oiio-release
             runner: macos-14
-            nametag: macos14-arm-p313
+            nametag: macos14-arm
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
@@ -573,11 +573,19 @@ jobs:
             setenvs: export LLVMBREWVER="@19"
           - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm21 oiio-main
             runner: macos-15
-            nametag: macos15-arm-py313
+            nametag: macos15-arm
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
             python_ver: "3.13"
+            openimageio_ver: main
+          - desc: MacOS-26-ARM aclang16/C++17/py3.14 llvm21 oiio-main
+            runner: macos-26
+            nametag: macos26-arm
+            cc_compiler: clang
+            cxx_compiler: clang++
+            cxx_std: 17
+            python_ver: "3.14"
             openimageio_ver: main
 
 

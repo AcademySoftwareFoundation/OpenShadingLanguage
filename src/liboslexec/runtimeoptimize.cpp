@@ -3280,6 +3280,7 @@ RuntimeOptimizer::run()
     bool does_nothing = true;
     int active_layers = 0;
     int n_texture_ops = 0;
+    int n_noise_ops   = 0;
     std::vector<uint8_t> interactive_data;
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst(layer);
@@ -3367,6 +3368,13 @@ RuntimeOptimizer::run()
                 } else {
                     m_unknown_textures_needed = true;
                 }
+            }
+            if (op.opname() == Strings::noise || op.opname() == Strings::snoise
+                || op.opname() == Strings::pnoise
+                || op.opname() == Strings::psnoise
+                || op.opname() == Strings::cellnoise
+                || op.opname() == Strings::hashnoise) {
+                ++n_noise_ops;
             }
             if (op.opname() == u_closure) {
                 // It's either 'closure result weight name' or 'closure result name'
@@ -3493,6 +3501,7 @@ RuntimeOptimizer::run()
         shadingcontext()->infofmt(" Group network connection depth: {}",
                                   max_network_depth);
         shadingcontext()->infofmt(" Group texture ops: {}", n_texture_ops);
+        shadingcontext()->infofmt(" Group noise ops: {}", n_noise_ops);
     }
     if (shadingsys().m_compile_report > 1) {
         if (does_nothing)

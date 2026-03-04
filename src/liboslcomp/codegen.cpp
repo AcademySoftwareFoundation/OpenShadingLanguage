@@ -465,9 +465,9 @@ ASTcompound_initializer::codegen(Symbol* sym)
 Symbol*
 ASTassign_expression::codegen(Symbol* dest)
 {
-    OSL_DASSERT(m_op == Assign);  // all else handled by binary_op
-
     ASTindex* index = NULL;
+    Symbol *ind = NULL, *ind2 = NULL, *ind3 = NULL;
+
     if (var()->nodetype() == index_node) {
         // Assigning to an individual component or array element
         index = (ASTindex*)var().get();
@@ -482,7 +482,24 @@ ASTassign_expression::codegen(Symbol* dest)
         dest = var()->codegen();
     }
 
-    Symbol* operand = expr()->codegen(dest);
+    // For compound assignments (+=, *=, etc.), read the current LHS value,
+    // apply the binary op, and use the result as the operand for plain assign.
+    // Index expressions are evaluated once and reused for the write because they
+    // are the only ones at the moment that could have side effects.
+    Symbol* operand;
+    if (m_op != Assign) {
+        Symbol* lhs_read;
+        if (index) {
+            lhs_read = index->codegen(NULL, ind, ind2, ind3);
+        } else {
+            lhs_read = var()->codegen();
+        }
+        Symbol* rhs = expr()->codegen();
+        operand     = m_compiler->make_temporary(typespec());
+        emitcode(opword(), operand, lhs_read, rhs);
+    } else {
+        operand = expr()->codegen(dest);
+    }
     OSL_DASSERT(operand != NULL);
 
     if (typespec().is_structure_array()) {
@@ -500,7 +517,8 @@ ASTassign_expression::codegen(Symbol* dest)
         // Assignment of struct copies each element individually
         if (operand != dest) {
             StructSpec* structspec = typespec().structspec();
-            Symbol* arrayindex     = index ? index->index()->codegen() : NULL;
+            Symbol* arrayindex = index ? (ind ? ind : index->index()->codegen())
+                                       : NULL;
             if (arrayindex) {
                 // Special case -- assignment to a element of an array of
                 // structs.  Beware the temp that may have been created above,
@@ -528,7 +546,7 @@ ASTassign_expression::codegen(Symbol* dest)
     }
 
     if (index) {
-        index->codegen_assign(operand);
+        index->codegen_assign(operand, ind, ind2, ind3);
         dest = operand;  // so transitive assignment works for array refs
     } else if (operand != dest) {
         emitcode(typespec().is_array() ? "arraycopy" : "assign", dest, operand);

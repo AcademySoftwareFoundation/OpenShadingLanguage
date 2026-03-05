@@ -24,7 +24,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
    - **GCC 9.3** or newer (tested through gcc 13.1)
-   - **Clang 5** or newer (tested through clang 19)
+   - **Clang 5** or newer (tested through clang 22)
    - Microsoft Visual Studio 2017 or newer
    - Intel C++ compiler **icc version 19** or newer or LLVM-based icx compiler
      version 2022 or newer.
@@ -49,7 +49,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
     $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X).
 
-* [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+* [LLVM](http://www.llvm.org) 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
    including clang libraries.
 
 * (optional) For GPU rendering on NVIDIA GPUs:

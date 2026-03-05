@@ -1581,7 +1581,11 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
     // TODO: investigate if reciprocals can be disabled by other means.
     // Perhaps enable UnsafeFPMath, then modify creation of DIV instructions
     // to remove the arcp (allow reciprocal) flag on that instructions
+#if OSL_LLVM_VERSION < 220
+    // UnsafeFPMath was removed from TargetOptions in LLVM 22; FP math
+    // control is now handled via per-instruction fast-math flags in IR.
     options.UnsafeFPMath = false;
+#endif
     // Since there are OSL language functions isinf and isnan,
     // we cannot assume there will not be infs and NANs
     options.NoInfsFPMath = false;
@@ -1846,7 +1850,11 @@ LLVM_Util::nvptx_target_machine()
         // N.B. 'Standard' only allow fusion of 'blessed' ops (currently just
         // fmuladd). To truly disable FMA and never fuse FP-ops, we need to
         // instead use llvm::FPOpFusion::Strict.
-        options.UnsafeFPMath                           = 1;
+#if OSL_LLVM_VERSION < 220
+        // UnsafeFPMath was removed from TargetOptions in LLVM 22; FP math
+        // control is now handled via per-instruction fast-math flags in IR.
+        options.UnsafeFPMath = 1;
+#endif
         options.NoInfsFPMath                           = 1;
         options.NoNaNsFPMath                           = 1;
         options.HonorSignDependentRoundingFPMathOption = 0;
@@ -1861,8 +1869,13 @@ LLVM_Util::nvptx_target_machine()
 
         // Verify that the NVPTX target has been initialized
         std::string error;
+#if OSL_LLVM_VERSION >= 220
+        const llvm::Target* llvm_target
+            = llvm::TargetRegistry::lookupTarget(ModuleTriple, error);
+#else
         const llvm::Target* llvm_target
             = llvm::TargetRegistry::lookupTarget(ModuleTriple.str(), error);
+#endif
         OSL_ASSERT(llvm_target
                    && "PTX compile error: LLVM Target is not initialized");
 

@@ -42,17 +42,58 @@ AVG_RGB(const Imath::C3f& c)
     return (c.x + c.y + c.z) * (1.0f / 3);
 }
 
+// Exponentiate to a compile time known positive integer constant.
+// This expands into the minimum number of multiplications.
+//
+//    Usage: pown<n>(x) is x^n
+//
+template<unsigned E, typename F>
+constexpr F
+pown(F x)
+{
+    if constexpr (E == 0)
+        return F(1);
+    else if constexpr (E == 1)
+        return x;
+    else {
+        constexpr unsigned half      = E / 2;
+        constexpr unsigned remainder = E % 2;
+        const F rec                  = pown<half>(x);
+        if constexpr (remainder == 0)
+            return rec * rec;
+        else
+            return rec * rec * x;
+    }
+}
+
 template<typename T>
 BSDL_INLINE constexpr T
 SQR(T x)
 {
-    return x * x;
+    return pown<2>(x);
+}
+
+// CUDA has a problem with std::max/min and constexpr, they take const
+// references. This makes nvcc complain because a reference to constexpr is
+// not defined in device code. So we define these taking values.
+template<typename T>
+BSDL_INLINE T
+MAX(T a, T b)
+{
+    return a > b ? a : b;
+}
+
+template<typename T>
+BSDL_INLINE T
+MIN(T a, T b)
+{
+    return a < b ? a : b;
 }
 
 BSDL_INLINE float
 CLAMP(float x, float a, float b)
 {
-    return std::min(std::max(x, a), b);
+    return MIN(MAX(x, a), b);
 }
 
 BSDL_INLINE Imath::C3f
@@ -436,7 +477,7 @@ struct Frame {
     BSDL_INLINE_METHOD Frame(const Imath::V3f& Z, const Imath::V3f& _X)
         : X(_X), Z(Z)
     {
-        if (MAX_ABS_XYZ(X) < 1e-4f) {
+        if (MAX_ABS_XYZ(X) < 1e-4f || fabsf(Z.dot(X.normalized())) > 0.999f) {
             // X not provided, pick arbitrary
             auto XY = ortho_build(Z);
             X       = std::get<0>(XY);

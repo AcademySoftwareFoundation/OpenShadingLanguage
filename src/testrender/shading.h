@@ -246,6 +246,7 @@ struct MxMicrofacet;
 struct MxConductor;
 struct MxDielectric;
 struct MxGeneralizedSchlick;
+struct MxSheen;
 
 struct Transparent;
 struct OrenNayar;
@@ -265,9 +266,8 @@ using AbstractBSDF = bsdl::StaticVirtual<
     Diffuse<0>, Transparent, OrenNayar, Diffuse<1>, Phong, Ward, Reflection,
     Refraction, MicrofacetBeckmannRefl, MicrofacetBeckmannRefr,
     MicrofacetBeckmannBoth, MicrofacetGGXRefl, MicrofacetGGXRefr,
-    MicrofacetGGXBoth, MxConductor, MxDielectric, MxGeneralizedSchlick,
-    MxBurleyDiffuse, EnergyCompensatedOrenNayar, ZeltnerBurleySheen,
-    CharlieSheen, SpiThinLayer>;
+    MicrofacetGGXBoth, MxConductor, MxDielectric, MxGeneralizedSchlick, MxSheen,
+    MxBurleyDiffuse, EnergyCompensatedOrenNayar, SpiThinLayer>;
 
 // Then we just need to inherit from AbstractBSDF
 

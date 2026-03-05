@@ -11,10 +11,9 @@
 using BSDLConfig = bsdl::BSDLDefaultConfig;
 
 #include <BSDL/MTX/bsdf_dielectric_impl.h>
-#include <BSDL/SPI/bsdf_backscatter_impl.h>
+#include <BSDL/MTX/bsdf_sheen_impl.h>
 #include <BSDL/SPI/bsdf_clearcoat_impl.h>
 #include <BSDL/SPI/bsdf_dielectric_impl.h>
-#include <BSDL/SPI/bsdf_sheenltc_impl.h>
 #include <BSDL/SPI/bsdf_thinlayer_impl.h>
 #include <BSDL/bsdf_impl.h>
 #include <BSDL/microfacet_tools_impl.h>
@@ -31,9 +30,9 @@ using BSDLConfig = bsdl::BSDLDefaultConfig;
     E(spi::PlasticGGX)          \
     E(spi::DielectricFront)     \
     E(spi::DielectricBack)      \
-    E(spi::CharlieSheen)        \
-    E(spi::SheenLTC)            \
     E(spi::Thinlayer)           \
+    E(mtx::ContyKullaSheen)     \
+    E(mtx::ZeltnerBurleySheen)  \
     E(mtx::DielectricReflFront) \
     E(mtx::DielectricBothFront) \
     E(mtx::DielectricBothBack)

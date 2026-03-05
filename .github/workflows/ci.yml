@@ -416,7 +416,7 @@ jobs:
             setenvs: export LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
                             PUGIXML_VERSION=v1.10
-          - desc: latest releases gcc13/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
+          - desc: latest releases gcc13/C++17 llvm20 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
             cc_compiler: gcc-14
@@ -629,7 +629,7 @@ jobs:
           # Windows 2022 / MSVS 17 case is below. It's not working yet,
           # work in progress.
           #
-          - desc: Windows-2022 VS2022
+          - desc: Windows-2022 VS2022 llvm20 oiio3.1
             runner: windows-2022
             nametag: windows-2022
             generator: "Visual Studio 17 2022"
@@ -642,7 +642,7 @@ jobs:
                             PUGIXML_VERSION=v1.14
                             OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
                             LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
-          - desc: Windows-2025 VS2022
+          - desc: Windows-2025 VS2022 llvm20 oiio3.1
             runner: windows-2025
             nametag: windows-2025
             generator: "Visual Studio 17 2022"

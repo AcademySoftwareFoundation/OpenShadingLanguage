@@ -5,14 +5,14 @@
 
 #pragma once
 
-#include <BSDL/SPI/bsdf_sheenltc_decl.h>
+#include <BSDL/MTX/bsdf_sheen_decl.h>
 
 BSDL_ENTER_NAMESPACE
 
-namespace spi {
+namespace mtx {
 
-BSDL_INLINE_METHOD SheenLTC::V32_array
-SheenLTC::param_ptr()
+BSDL_INLINE_METHOD ZeltnerBurleySheen::V32_array
+ZeltnerBurleySheen::param_ptr()
 {
     static Param param = { {
         // clang-format off
@@ -277,6 +277,6 @@ SheenLTC::param_ptr()
     return param.data;
 }
 
-}  // namespace spi
+}  // namespace mtx
 
 BSDL_LEAVE_NAMESPACE

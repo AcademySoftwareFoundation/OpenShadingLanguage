@@ -125,6 +125,11 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: '0'
+      - name: Install LLVM and Clang
+        if: inputs.llvm_action_ver != ''
+        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
+        with:
+          version: ${{ inputs.llvm_action_ver }}
       - name: Build setup
         shell: bash
         run: |
@@ -142,11 +147,6 @@ jobs:
           # path: ./ccache
           key: ${{inputs.nametag}}-${{steps.ccache_cache_keys.outputs.date}}
           restore-keys: ${{inputs.nametag}}
-      - name: Install LLVM and Clang
-        if: inputs.llvm_action_ver != ''
-        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
-        with:
-          version: ${{ inputs.llvm_action_ver }}
       - name: Dependencies
         shell: bash
         run: |

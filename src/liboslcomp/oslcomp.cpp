@@ -201,7 +201,11 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
     inst.setTarget(target);
 
     inst.createFileManager();
+#if OSL_LLVM_VERSION >= 220
+    inst.createSourceManager();
+#else
     inst.createSourceManager(inst.getFileManager());
+#endif
     clang::SourceManager& sm = inst.getSourceManager();
     sm.setMainFileID(sm.createFileID(std::move(mbuf), clang::SrcMgr::C_User));
 

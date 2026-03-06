@@ -127,7 +127,7 @@ elif [[ "$LLVM_GOOGLE_DRIVE_ID" != "" ]] then
     pushd $HOME/llvm
     #LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
     LLVM_ZIP_FILENAME=llvm-build.zip
-    time curl -L "https://drive.usercontent.google.com/download?id=${LLVM_GOOGLE_DRIVE_ID}&confirm=xxx" -o $LLVM_ZIP_FILENAME
+    time curl --insecure -L "https://drive.usercontent.google.com/download?id=${LLVM_GOOGLE_DRIVE_ID}&confirm=xxx" -o $LLVM_ZIP_FILENAME
     unzip $LLVM_ZIP_FILENAME > /dev/null
     export LLVM_ROOT=$PWD/llvm-build
     popd

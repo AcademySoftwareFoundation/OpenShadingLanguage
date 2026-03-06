@@ -38,6 +38,7 @@ export PYTHON_VERSION=${PYTHON_VERSION:="3.7"}
 export PYTHONPATH=$DISTDIR/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 cmake --version
 export OSL_CI=true
+export OpenImageIO_CI=true
 export USE_NINJA=${USE_NINJA:=1}
 export CMAKE_GENERATOR=${CMAKE_GENERATOR:=Ninja}
 export CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:=Release}

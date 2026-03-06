@@ -580,6 +580,7 @@ jobs:
       depcmds: ${{ matrix.depcmds }}
       extra_artifacts: ${{ matrix.extra_artifacts }}
       fmt_ver: ${{ matrix.fmt_ver }}
+      llvm_action_ver: ${{ matrix.llvm_action_ver }}
       opencolorio_ver: ${{ matrix.opencolorio_ver }}
       openexr_ver: ${{ matrix.openexr_ver }}
       openimageio_ver: ${{ matrix.openimageio_ver }}

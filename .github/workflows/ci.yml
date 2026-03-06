@@ -563,7 +563,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: MacOS-15-Intel aclang17/C++17/py3.13 llvm17 oiio-release
+          - desc: MacOS-15-Intel aclang17/C++17/py3.13 llvm18 oiio-release
             runner: macos-15-intel
             nametag: macos15-p313
             cc_compiler: clang
@@ -573,8 +573,8 @@ jobs:
             python_ver: "3.13"
             ctest_test_timeout: 120
             setenvs: export HOMEBREW_PREFIX=/usr/local
-                            LLVMBREWVER="@17"
-                            USE_OPENVDB=0
+                            LLVMBREWVER="@18"
+                            INSTALL_OPENVDB=0 INSTALL_QT=0
           - desc: MacOS-14-ARM llvm19 oiio-release
             runner: macos-14
             nametag: macos14-arm-p313

@@ -28,33 +28,37 @@ echo ""
 echo "Before my brew installs:"
 brew list --versions
 
-if [[ "${BREW_UNLINK_PACKAGES}" != "" ]] ; then
-    brew unlink ${BREW_UNLINK_PACKAGES} || true
+if [[ "$OSL_BREW_INSTALL_PACKAGES" == "" ]] ; then
+    OSL_BREW_INSTALL_PACKAGES=" \
+        bison \
+        ccache \
+        expat \
+        flex \
+        fmt \
+        imath \
+        llvm${LLVMBREWVER} \
+        ninja \
+        numpy \
+        opencolorio \
+        openexr \
+        partio \
+        ptex \
+        pugixml \
+        pybind11 \
+        robin-map \
+        tbb \
+        "
+    if [[ "${USE_OPENVDB:=1}" != "0" ]] && [[ "${INSTALL_OPENVDB:=1}" != "0" ]] ; then
+        OSL_BREW_INSTALL_PACKAGES+=" openvdb"
+    fi
+    if [[ "${USE_QT:=1}" != "0" ]] && [[ "${INSTALL_QT:=1}" != "0" ]] ; then
+        OSL_BREW_INSTALL_PACKAGES+=" qt${QT_VERSION}"
+    fi
+    if [[ "${EXTRA_BREW_PACKAGES}" != "" ]] ; then
+        brew install --display-times -q ${EXTRA_BREW_PACKAGES}
+    fi
 fi
-
-
-if [[ "${DO_BREW_CMAKE_INSTALL:=1}" != "0" ]] ; then
-    brew install --display-times -q cmake || true
-fi
-brew install --display-times -q gcc ccache ninja || true
-brew link --overwrite gcc
-brew install --display-times -q python@${PYTHON_VERSION} || true
-brew link --overwrite --force python@${PYTHON_VERSION} || true
-brew install --display-times -q imath openexr opencolorio || true
-#brew install --display-times -q freetype
-brew install --display-times -q partio pugixml || true
-brew install --display-times -q pybind11 numpy || true
-brew install --display-times -q tbb || true
-brew install --display-times -q openvdb || true
-brew install --display-times -q flex bison
-brew install --display-times -q fmt
-brew install --display-times -q llvm${LLVMBREWVER}
-if [[ "${USE_QT}" != "0" ]] ; then
-    brew install --display-times -q qt${QT_VERSION}
-fi
-if [[ "${EXTRA_BREW_PACKAGES}" != "" ]] ; then
-    brew install --display-times -q ${EXTRA_BREW_PACKAGES}
-fi
+brew install --display-times -q $OSL_BREW_INSTALL_PACKAGES $OSL_BREW_EXTRA_INSTALL_PACKAGES || true
 
 echo ""
 echo "After brew installs:"

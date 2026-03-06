@@ -299,7 +299,7 @@
 #endif // OSL_DEBUG
 
 
-#if OSL_DEBUG
+#ifdef OSL_DEBUG
 	// Disable OPENMP_SIMD when debugging
 	#undef OSL_OPENMP_SIMD
 #endif
@@ -326,7 +326,7 @@
 // advisory. Put this attribute before the function return type, just like
 // you would use 'inline'. Note that if OSL_DEBUG is true, it just becomes
 // ordinary inline.
-#if OSL_DEBUG
+#ifdef OSL_DEBUG
 #    define OSL_FORCEINLINE inline
 #elif defined(__CUDACC__)
 #    define OSL_FORCEINLINE __inline__
@@ -363,7 +363,7 @@
 // NOTE:  only supported by Intel C++ compiler.
 // Unsupported compilers may instead use command line flags to increase their inlining
 // limits/thresholds
-#if OSL_DEBUG
+#ifdef OSL_DEBUG
 	#define OSL_FORCEINLINE_BLOCK
 #else
 	#define OSL_FORCEINLINE_BLOCK OSL_INTEL_PRAGMA(forceinline recursive)

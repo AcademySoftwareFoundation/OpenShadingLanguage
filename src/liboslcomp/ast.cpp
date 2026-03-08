@@ -1044,12 +1044,6 @@ ASTassign_expression::ASTassign_expression(OSLCompilerImpl* comp, ASTNode* var,
                                            Operator op, ASTNode* expr)
     : ASTNode(assign_expression_node, comp, op, var, expr)
 {
-    if (op != Assign) {
-        // Rejigger to straight assignment and binary op
-        m_op          = Assign;
-        m_children[1] = new ASTbinary_expression(comp, op, var, expr);
-    }
-
     check_symbol_writeability(var);
 }
 
@@ -1176,6 +1170,24 @@ ASTbinary_expression::ASTbinary_expression(OSLCompilerImpl* comp, Operator op,
     }
 }
 
+
+
+ASTbinary_expression::ASTbinary_expression(OSLCompilerImpl* comp, Operator op,
+                                           ASTNode::ref left,
+                                           ASTNode::ref right)
+    : ASTNode(binary_expression_node, comp, op)
+{
+    addchild(left);
+    addchild(right);
+    // Check for a user-overloaded function for this operator.
+    // Disallow a few ops from overloading.
+    if (op != And && op != Or) {
+        ustring funcname = ustring::fmtformat("__operator__{}__", opword());
+        Symbol* sym      = comp->symtab().find(funcname);
+        if (sym && sym->symtype() == SymTypeFunction)
+            m_function_overload = (FunctionSymbol*)sym;
+    }
+}
 
 
 ASTNode*

@@ -8,10 +8,13 @@
 #include "optics.h"
 #include "sampling.h"
 
+#include <BSDL/MTX/bsdf_burley_diffuse_impl.h>
 #include <BSDL/MTX/bsdf_conductor_impl.h>
 #include <BSDL/MTX/bsdf_dielectric_impl.h>
+#include <BSDL/MTX/bsdf_oren_nayar_diffuse_impl.h>
 #include <BSDL/MTX/bsdf_schlick_impl.h>
 #include <BSDL/MTX/bsdf_sheen_impl.h>
+#include <BSDL/MTX/bsdf_translucent_impl.h>
 #include <BSDL/SPI/bsdf_thinlayer_impl.h>
 #include <BSDL/spectrum_impl.h>
 
@@ -104,6 +107,10 @@ BSDL_WRAP(MxConductor, mtx::ConductorLobe, MX_CONDUCTOR_ID);
 BSDL_WRAP(MxDielectric, mtx::DielectricLobe, MX_DIELECTRIC_ID);
 BSDL_WRAP(MxGeneralizedSchlick, mtx::SchlickLobe, MX_GENERALIZED_SCHLICK_ID);
 BSDL_WRAP(MxSheen, mtx::SheenLobe, MX_SHEEN_ID);
+BSDL_WRAP(MxBurleyDiffuse, mtx::BurleyDiffuseLobe, MX_BURLEY_DIFFUSE_ID);
+BSDL_WRAP(MxOrenNayarDiffuse, mtx::OrenNayarDiffuseLobe,
+          MX_OREN_NAYAR_DIFFUSE_ID);
+BSDL_WRAP(MxTranslucent, mtx::TranslucentLobe, MX_TRANSLUCENT_ID);
 
 // These two need a special wrapper, different methods
 
@@ -236,28 +243,6 @@ register_closures(OSL::ShadingSystem* shadingsys)
             CLOSURE_FINISH_PARAM(RefractionParams) } },
         { "transparent", TRANSPARENT_ID, { CLOSURE_FINISH_PARAM(EmptyParams) } },
         // See MATERIALX_CLOSURES in stdosl.h
-        { "oren_nayar_diffuse_bsdf",
-          MX_OREN_NAYAR_DIFFUSE_ID,
-          { CLOSURE_VECTOR_PARAM(MxOrenNayarDiffuseParams, N),
-            CLOSURE_COLOR_PARAM(MxOrenNayarDiffuseParams, albedo),
-            CLOSURE_FLOAT_PARAM(MxOrenNayarDiffuseParams, roughness),
-            CLOSURE_STRING_KEYPARAM(MxOrenNayarDiffuseParams, label, "label"),
-            CLOSURE_INT_KEYPARAM(MxOrenNayarDiffuseParams, energy_compensation,
-                                 "energy_compensation"),
-            CLOSURE_FINISH_PARAM(MxOrenNayarDiffuseParams) } },
-        { "burley_diffuse_bsdf",
-          MX_BURLEY_DIFFUSE_ID,
-          { CLOSURE_VECTOR_PARAM(MxBurleyDiffuseParams, N),
-            CLOSURE_COLOR_PARAM(MxBurleyDiffuseParams, albedo),
-            CLOSURE_FLOAT_PARAM(MxBurleyDiffuseParams, roughness),
-            CLOSURE_STRING_KEYPARAM(MxBurleyDiffuseParams, label, "label"),
-            CLOSURE_FINISH_PARAM(MxBurleyDiffuseParams) } },
-        { "translucent_bsdf",
-          MX_TRANSLUCENT_ID,
-          { CLOSURE_VECTOR_PARAM(MxTranslucentParams, N),
-            CLOSURE_COLOR_PARAM(MxTranslucentParams, albedo),
-            CLOSURE_STRING_KEYPARAM(MxTranslucentParams, label, "label"),
-            CLOSURE_FINISH_PARAM(MxTranslucentParams) } },
         { "transparent_bsdf",
           MX_TRANSPARENT_ID,
           { CLOSURE_FINISH_PARAM(EmptyParams) } },
@@ -302,8 +287,10 @@ register_closures(OSL::ShadingSystem* shadingsys)
         shadingsys->register_closure(b.name, b.id, b.params, nullptr, nullptr);
 
     // BSDFs coming from BSDL
-    using bsdl_set = bsdl::TypeList<SpiThinLayer, MxConductor, MxDielectric,
-                                    MxGeneralizedSchlick, MxSheen>;
+    using bsdl_set
+        = bsdl::TypeList<SpiThinLayer, MxConductor, MxDielectric,
+                         MxGeneralizedSchlick, MxSheen, MxBurleyDiffuse,
+                         MxOrenNayarDiffuse, MxTranslucent>;
     // Register them
     bsdl_set::apply(BSDLtoOSL { shadingsys });
 }
@@ -328,115 +315,6 @@ template<int trans> struct Diffuse final : public BSDF, DiffuseParams {
         float pdf;
         Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
         return { out_dir, Color3(1.0f), pdf, 1.0f };
-    }
-};
-
-struct OrenNayar final : public BSDF, OrenNayarParams {
-    OSL_HOSTDEVICE OrenNayar(const OrenNayarParams& params)
-        : BSDF(this), OrenNayarParams(params)
-    {
-    }
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
-    {
-        float NL = N.dot(wi);
-        float NV = N.dot(wo);
-        if (NL > 0 && NV > 0) {
-            float LV = wo.dot(wi);
-            float s  = LV - NL * NV;
-            // Simplified math from: "A tiny improvement of Oren-Nayar reflectance model"
-            // by Yasuhiro Fujii
-            // http://mimosa-pudica.net/improved-oren-nayar.html
-            // NOTE: This is using the math to match the original qualitative ON model
-            // (QON in the paper above) and not the tweak proposed in the text which
-            // is a slightly different BRDF (FON in the paper above). This is done for
-            // backwards compatibility purposes only.
-            float s2    = sigma * sigma;
-            float A     = 1 - 0.50f * s2 / (s2 + 0.33f);
-            float B     = 0.45f * s2 / (s2 + 0.09f);
-            float stinv = s > 0 ? s / std::max(NL, NV) : 0.0f;
-            return { wi, Color3(A + B * stinv), NL * float(M_1_PI), 1.0f };
-        }
-        return {};
-    }
-    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                                 float /*rz*/) const
-    {
-        Vec3 out_dir;
-        float pdf;
-        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
-        return eval(wo, out_dir);
-    }
-};
-
-struct EnergyCompensatedOrenNayar : public BSDF, MxOrenNayarDiffuseParams {
-    OSL_HOSTDEVICE
-    EnergyCompensatedOrenNayar(const MxOrenNayarDiffuseParams& params)
-        : BSDF(this), MxOrenNayarDiffuseParams(params)
-    {
-    }
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const OSL::Vec3& wi) const
-    {
-        float NL = N.dot(wi);
-        float NV = N.dot(wo);
-        if (NL > 0 && NV > 0) {
-            float LV = wo.dot(wi);
-            float s  = LV - NL * NV;
-            // Code below from Jamie Portsmouth's tech report on Energy conversion Oren-Nayar
-            // See slack thread for whitepaper:
-            // https://academysoftwarefdn.slack.com/files/U03SWQFPD08/F06S50CUKV1/oren_nayar.pdf
-
-            // TODO: rho should be the albedo which is a parameter of the closure in the Mx parameters
-            // This only matters for the color-saturation aspect of the BRDF which is rather subtle anyway
-            // and not always desireable for artists. Hardcoding to 1 leaves the coloring entirely up to the
-            // closure weight.
-
-            const Color3 rho  = albedo;
-            const float sigma = roughness;
-
-            float AF      = 1.0f / (1.0f + constant1_FON * sigma);
-            float stinv   = s > 0 ? s / std::max(NL, NV) : s;
-            float f_ss    = AF * (1.0 + sigma * stinv);  // single-scatt. BRDF
-            float EFo     = E_FON_analytic(NV);  // EFo at rho=1 (analytic)
-            float EFi     = E_FON_analytic(NL);  // EFi at rho=1 (analytic)
-            float avgEF   = AF * (1.0f + constant2_FON * sigma);  // avg. albedo
-            Color3 rho_ms = (rho * rho) * avgEF
-                            / (Color3(1.0f)
-                               - rho * std::max(0.0f, 1.0f - avgEF));
-            float f_ms = std::max(1e-7f, 1.0f - EFo)
-                         * std::max(1e-7f, 1.0f - EFi)
-                         / std::max(1e-7f, 1.0f - avgEF);  // multi-scatter lobe
-            return { wi, Color3(rho * f_ss + rho_ms * f_ms), NL * float(M_1_PI),
-                     1.0f };
-        }
-        return {};
-    }
-
-    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                                 float /*rz*/) const
-    {
-        Vec3 out_dir;
-        float pdf;
-        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
-        return eval(wo, out_dir);
-    }
-
-private:
-    static constexpr float constant1_FON = float(0.5 - 2.0 / (3.0 * M_PI));
-    static constexpr float constant2_FON = float(2.0 / 3.0
-                                                 - 28.0 / (15.0 * M_PI));
-
-    OSL_HOSTDEVICE float E_FON_analytic(float mu) const
-    {
-        const float sigma = roughness;
-        float AF          = 1.0f
-                   / (1.0f
-                      + constant1_FON * sigma);  // Fujii model A coefficient
-        float BF = sigma * AF;                   // Fujii model B coefficient
-        float Si = sqrtf(std::max(0.0f, 1.0f - mu * mu));
-        float G  = Si * (OIIO::fast_acos(mu) - Si * mu)
-                  + 2.0 * ((Si / mu) * (1.0 - Si * Si * Si) - Si) / 3.0f;
-        float E = AF + (BF * float(M_1_PI)) * G;
-        return E;
     }
 };
 
@@ -1269,38 +1147,6 @@ struct Transparent final : public BSDF {
     }
 };
 
-struct MxBurleyDiffuse final : public BSDF, MxBurleyDiffuseParams {
-    OSL_HOSTDEVICE MxBurleyDiffuse(const MxBurleyDiffuseParams& params)
-        : BSDF(this), MxBurleyDiffuseParams(params)
-    {
-    }
-
-    OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo) const { return albedo; }
-
-    OSL_HOSTDEVICE Sample eval(const Vec3& wo, const Vec3& wi) const
-    {
-        const Vec3 L = wi, V = wo;
-        const Vec3 H = (L + V).normalize();
-        float LdotH  = clamp(dot(L, H), 0.0f, 1.0f);
-        float NdotV  = clamp(dot(N, V), 0.0f, 1.0f);
-        float NdotL  = clamp(dot(N, L), 0.0f, 1.0f);
-        float F90    = 0.5f + (2.0f * roughness * LdotH * LdotH);
-        float refL   = fresnel_schlick(NdotL, 1.0f, F90);
-        float refV   = fresnel_schlick(NdotV, 1.0f, F90);
-        float pdf    = NdotL * float(M_1_PI);
-        return { wi, albedo * refL * refV, pdf, 1.0f };
-    }
-
-    OSL_HOSTDEVICE Sample sample(const Vec3& wo, float rx, float ry,
-                                 float rz) const
-    {
-        Vec3 out_dir;
-        float pdf;
-        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
-        return eval(wo, out_dir);
-    }
-};
-
 OSL_HOSTDEVICE Color3
 evaluate_layer_opacity(const ShaderGlobalsType& sg, float path_roughness,
                        const ClosureColor* closure)
@@ -1539,10 +1385,14 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
                     ok = result.bsdf.add_bsdf<Diffuse<0>>(
                         cw, *comp->as<DiffuseParams>());
                     break;
-                case OREN_NAYAR_ID:
-                    ok = result.bsdf.add_bsdf<OrenNayar>(
-                        cw, *comp->as<OrenNayarParams>());
+                case OREN_NAYAR_ID: {
+                    const OrenNayarParams& orig = *comp->as<OrenNayarParams>();
+                    const MxOrenNayarDiffuse::Data params
+                        = { orig.N, { 1, 1, 1 }, orig.sigma, false, 0 };
+                    ok = result.bsdf.add_bsdf<MxOrenNayarDiffuse>(
+                        cw, params, -sg.I, sg.backfacing, path_roughness);
                     break;
+                }
                 case TRANSLUCENT_ID:
                     ok = result.bsdf.add_bsdf<Diffuse<1>>(
                         cw, *comp->as<DiffuseParams>());
@@ -1603,27 +1453,20 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
                 case TRANSPARENT_ID:
                     ok = result.bsdf.add_bsdf<Transparent>(cw);
                     break;
-                case MX_OREN_NAYAR_DIFFUSE_ID: {
-                    const MxOrenNayarDiffuseParams* srcparams
-                        = comp->as<MxOrenNayarDiffuseParams>();
-                    if (srcparams->energy_compensation) {
-                        // energy compensation handled by its own BSDF
-                        ok = result.bsdf.add_bsdf<EnergyCompensatedOrenNayar>(
-                            cw, *srcparams);
-                    } else {
-                        // translate MaterialX parameters into existing closure
-                        OrenNayarParams params = {};
-                        params.N               = srcparams->N;
-                        params.sigma           = srcparams->roughness;
-                        ok = result.bsdf.add_bsdf<OrenNayar>(
-                            cw * srcparams->albedo, params);
-                    }
+                case MxOrenNayarDiffuse::closureid(): {
+                    const MxOrenNayarDiffuse::Data& params
+                        = *comp->as<MxOrenNayarDiffuse::Data>();
+                    ok = result.bsdf.add_bsdf<MxOrenNayarDiffuse>(
+                        cw, params, -sg.I, sg.backfacing, path_roughness);
                     break;
                 }
-                case MX_BURLEY_DIFFUSE_ID: {
-                    const MxBurleyDiffuseParams& params
-                        = *comp->as<MxBurleyDiffuseParams>();
-                    ok = result.bsdf.add_bsdf<MxBurleyDiffuse>(cw, params);
+                case MxBurleyDiffuse::closureid(): {
+                    const MxBurleyDiffuse::Data& params
+                        = *comp->as<MxBurleyDiffuse::Data>();
+                    ok = result.bsdf.add_bsdf<MxBurleyDiffuse>(cw, params,
+                                                               -sg.I,
+                                                               sg.backfacing,
+                                                               path_roughness);
                     break;
                 }
                 case MxDielectric::closureid(): {
@@ -1649,13 +1492,12 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
                                                            path_roughness);
                     break;
                 }
-                case MX_TRANSLUCENT_ID: {
-                    const MxTranslucentParams* srcparams
-                        = comp->as<MxTranslucentParams>();
-                    DiffuseParams params = {};
-                    params.N             = srcparams->N;
-                    ok = result.bsdf.add_bsdf<Diffuse<1>>(cw * srcparams->albedo,
-                                                          params);
+                case MxTranslucent::closureid(): {
+                    const MxTranslucent::Data& params
+                        = *comp->as<MxTranslucent::Data>();
+                    ok = result.bsdf.add_bsdf<MxTranslucent>(cw, params, -sg.I,
+                                                             sg.backfacing,
+                                                             path_roughness);
                     break;
                 }
                 case MX_TRANSPARENT_ID: {

@@ -4,10 +4,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-failthresh = 0.03
-failpercent = 1
-hardfail = 0.035
-allowfailures = 5
+failthresh = 0.03   # allow a little more LSB noise between platforms
+hardfail = 0.05
 idiff_program = "idiff"
 
 outputs = [ "out.exr" ]

@@ -94,6 +94,10 @@ struct BSDLLobe : public BSDF {
             return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,        \
                      s.roughness };                                            \
         }                                                                      \
+        OSL_HOSTDEVICE Color3 get_albedo(const Vec3& wo)                       \
+        {                                                                      \
+            return Base::albedo_impl().toRGB(0);                               \
+        }                                                                      \
     }
 
 BSDL_WRAP(MxConductor, mtx::ConductorLobe, MX_CONDUCTOR_ID);

@@ -465,6 +465,7 @@ nominated for major awards.)
   Murderbot (S1),
 * **(2026 / upcoming)**
   GOAT,
+  Hoppers,
   ...
 
 
@@ -573,12 +574,12 @@ Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Silvia Lopez,
 Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, Patrick Mours,
 Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois Panisset, Jino Park,
 Alexei Pawlow, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz,
-Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark
-Sisson, Sandip Shukla, Alexey Smolenchuk, Cliff Stein, Stephan Steinbach, Luya
-Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel, Thibault Vergne,
-Alexander von Knorring, Aidan Welch, Alex Wells, Roman Zulak. (Listed
-alphabetically; if we've left anybody out, it is inadvertent, please let us
-know.)
+Patrick Scheibe, Roeland Schoukens, Alex Schworer, Jonathan Scruggs, Sergey
+Sharybin, Mark Sisson, Sandip Shukla, Alexey Smolenchuk, Cliff Stein, Stephan
+Steinbach, Taraash, Luya Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel,
+Thibault Vergne, Alexander von Knorring, Aidan Welch, Alex Wells, Roman Zulak.
+(Listed alphabetically; if we've left anybody out, it is inadvertent, please
+let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

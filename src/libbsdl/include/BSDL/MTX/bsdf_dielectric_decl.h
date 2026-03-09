@@ -149,6 +149,11 @@ template<typename BSDF_ROOT> struct DielectricLobe : public Lobe<BSDF_ROOT> {
         return !dorefr ? E_ms * wo_absorption : Power::ZERO();
     }
 
+    BSDL_INLINE_METHOD Power albedo_impl() const
+    {
+        return !dorefr ? refl_tint * (1 - E_ms) : Power::UNIT();
+    }
+
     BSDL_INLINE_METHOD bool single_wavelength() const { return dispersion; }
 
 protected:

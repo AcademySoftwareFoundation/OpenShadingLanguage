@@ -95,23 +95,6 @@ struct MicrofacetParams {
 
 // MATERIALX_CLOSURES
 
-struct MxOrenNayarDiffuseParams {
-    Vec3 N;
-    Color3 albedo;
-    float roughness;
-    // optional
-    ustringhash label;
-    int energy_compensation;
-};
-
-struct MxBurleyDiffuseParams {
-    Vec3 N;
-    Color3 albedo;
-    float roughness;
-    // optional
-    ustringhash label;
-};
-
 // common to all MaterialX microfacet closures
 struct MxMicrofacetBaseParams {
     Vec3 N, U;
@@ -247,15 +230,15 @@ struct MxConductor;
 struct MxDielectric;
 struct MxGeneralizedSchlick;
 struct MxSheen;
+struct MxBurleyDiffuse;
+struct MxOrenNayarDiffuse;
+struct MxTranslucent;
 
 struct Transparent;
-struct OrenNayar;
 struct Phong;
 struct Ward;
 struct Reflection;
 struct Refraction;
-struct MxBurleyDiffuse;
-struct EnergyCompensatedOrenNayar;
 struct ZeltnerBurleySheen;
 struct CharlieSheen;
 struct SpiThinLayer;
@@ -263,11 +246,11 @@ struct SpiThinLayer;
 // StaticVirtual generates a switch/case dispatch method for us given
 // a list of possible subtypes. We just need to forward declare them.
 using AbstractBSDF = bsdl::StaticVirtual<
-    Diffuse<0>, Transparent, OrenNayar, Diffuse<1>, Phong, Ward, Reflection,
-    Refraction, MicrofacetBeckmannRefl, MicrofacetBeckmannRefr,
-    MicrofacetBeckmannBoth, MicrofacetGGXRefl, MicrofacetGGXRefr,
-    MicrofacetGGXBoth, MxConductor, MxDielectric, MxGeneralizedSchlick, MxSheen,
-    MxBurleyDiffuse, EnergyCompensatedOrenNayar, SpiThinLayer>;
+    Diffuse<0>, Transparent, Diffuse<1>, Phong, Ward, Reflection, Refraction,
+    MicrofacetBeckmannRefl, MicrofacetBeckmannRefr, MicrofacetBeckmannBoth,
+    MicrofacetGGXRefl, MicrofacetGGXRefr, MicrofacetGGXBoth, MxConductor,
+    MxDielectric, MxGeneralizedSchlick, MxSheen, MxBurleyDiffuse,
+    MxOrenNayarDiffuse, MxTranslucent, SpiThinLayer>;
 
 // Then we just need to inherit from AbstractBSDF
 

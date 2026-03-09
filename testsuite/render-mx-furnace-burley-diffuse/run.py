@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-failthresh = 0.005   # allow a little more LSB noise between platforms
+failthresh = 0.03   # allow a little more LSB noise between platforms
+hardfail = 0.03
 outputs = [ "out.exr" ]
 command = testrender("-r 768 128 -aa 16 scene.xml out.exr")

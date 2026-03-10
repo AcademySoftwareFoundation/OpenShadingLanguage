@@ -1,6 +1,15 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14.9.0 (10 Mar 2026) -- compared to 1.14.8.0
+-------------------------------------------------------------
+  - *feat*: Add more shader group diagnostics to `compile_report`: when `compile_report >= 1`, report number of active layers, maximum connection depth of the shader network, number of texture ops, and number of noise ops. [#2085](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2085)
+  - *testshade*: Use the renderer's own error handler and convert raw pointers to `unique_ptr` [#2082](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2082)
+  - *build*: Support LLVM 22 and clang 22 [#2086](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2086)
+  - *ci*: Several CI improvements (disk space, container names, nightly workflow control, Python version, gif library dedup) [#2074](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2074) [#2061](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2061) [#2055](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2055) [#2066](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2066) [#2049](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2049)
+  - *docs*: Fix typo [#2077](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2077)
+
+
 Release 1.14.8.0 (1 Dec 2025) -- compared to 1.14.7.0
 -------------------------------------------------------------
   - *testrender*: Fix uv derivatives for testrender [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk)

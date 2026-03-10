@@ -438,6 +438,7 @@ nominated for major awards.)
   Spider-Man: Across the Spider-Verse,
   Elemental,
   Indiana Jones and the Dial of Destiny,
+  Nimona,
   The Marvels,
   Leo,
   The Boys (S4),
@@ -445,17 +446,26 @@ nominated for major awards.)
   Migration,
 * **(2024)**
   Ghostbusters: Frozen Empire,
+  The Garfield Movie,
   Inside Out 2,
   Red One,
-  Dream Productions (series)
-* **(2025 / upcoming)**
+  Dream Productions (series),
+  The Lord of the Rings: The Rings of Power (S2),
+* **(2025)**
   Win or Lose (series),
   A Minecraft Movie,
   K-Pop Demon Hunters,
+  Fountain of Youth,
   Elio,
   Fantastic Four: First Steps,
+  Heads of State,
   Bad Guys 2,
   In Your Dreams,
+  The Last of Us (S2),
+  Murderbot (S1),
+* **(2026 / upcoming)**
+  GOAT,
+  Hoppers,
   ...
 
 

@@ -73,6 +73,11 @@ template<typename BSDF_ROOT> struct SchlickLobe : public Lobe<BSDF_ROOT> {
         return !dorefr ? Power(E_ms, 1) : Power::ZERO();
     }
 
+    BSDL_INLINE_METHOD Power albedo_impl() const
+    {
+        return !dorefr ? refl_tint * (1 - E_ms) : Power::UNIT();
+    }
+
 protected:
     BSDL_INLINE_METHOD Power get_tint(float cosNI) const;
 

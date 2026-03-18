@@ -1,5 +1,6 @@
 <World>
    <Camera eye="0, 0, 10" look_at="0,0,0" fov="30" />
+   <Option max_bounces="int 5" />
 
    <ShaderGroup>
       shader envmap layer1;

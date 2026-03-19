@@ -110,6 +110,13 @@ if (NOT CODECOV)
                            OUTPUT_NAME libtestshade${OSL_LIBNAME_SUFFIX}
                            )
 
+    # Only libtestshade exports test_shade; keep it out of the global map.
+    if (VISIBILITY_MAP_COMMAND)
+        set_property (TARGET libtestshade
+                      APPEND PROPERTY LINK_FLAGS
+                      -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/testshade_symbols.map)
+    endif ()
+
     target_link_libraries (libtestshade
                            PRIVATE
                                oslexec oslquery oslcomp)

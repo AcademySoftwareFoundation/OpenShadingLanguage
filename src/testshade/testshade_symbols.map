@@ -1,0 +1,4 @@
+{
+    global: test_shade;
+    local: *;
+};

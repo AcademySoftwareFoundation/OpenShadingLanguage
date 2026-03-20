@@ -115,6 +115,41 @@ osl_allocate_weighted_closure_component(OpaqueExecContextPtr oec, int id,
     return comp;
 }
 
+OSL_SHADEOP OSL_HOSTDEVICE void*
+osl_allocate_debug_closure_component(OpaqueExecContextPtr oec, int id, int size)
+{
+    const size_t needed = sizeof(ClosureComponent) + size;
+    ClosureComponent* comp
+        = (ClosureComponent*)rs_allocate_debug_closure(oec, needed,
+                                                       alignof(ClosureComponent));
+    if (comp) {
+        comp->id = id;
+        comp->w  = Color3(1.0f);
+    }
+    return comp;
+}
+
+
+
+OSL_SHADEOP OSL_HOSTDEVICE void*
+osl_allocate_weighted_debug_closure_component(OpaqueExecContextPtr oec, int id,
+                                              int size, const void* w_)
+{
+    const Color3* w = (const Color3*)w_;
+    if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
+        return NULL;
+    const size_t needed = sizeof(ClosureComponent) + size;
+    ClosureComponent* comp
+        = (ClosureComponent*)rs_allocate_debug_closure(oec, needed,
+                                                       alignof(ClosureComponent));
+    if (comp) {
+        comp->id = id;
+        comp->w  = *w;
+    }
+    return comp;
+}
+
+
 // Deprecated, remove when conversion from ustring to ustringhash is finished
 OSL_SHADEOP const char*
 osl_closure_to_string(OpaqueExecContextPtr oec, const void* c_)

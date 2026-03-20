@@ -7347,8 +7347,13 @@ LLVMGEN(llvm_gen_closure)
     llvm::Value* sg_ptr     = rop.sg_void_ptr();
     llvm::Value* id_int     = rop.ll.constant(clentry->id);
     llvm::Value* size_int   = rop.ll.constant(clentry->struct_size);
-    FuncSpec func_spec(weighted ? "allocate_weighted_closure_component"
-                                : "allocate_closure_component");
+    bool is_debug = (closure_name == "debug");
+    FuncSpec func_spec(weighted
+                           ? (is_debug
+                                  ? "allocate_weighted_debug_closure_component"
+                                  : "allocate_weighted_closure_component")
+                           : (is_debug ? "allocate_debug_closure_component"
+                                       : "allocate_closure_component"));
     func_spec.mask();
 
     // make sure that any temps created to widen uniform values

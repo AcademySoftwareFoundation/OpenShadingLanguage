@@ -200,6 +200,40 @@ __OSL_MASKED_OP(allocate_weighted_closure_component)(void* bsg_,
     init_closure_component(wComp, id, size, wWeight, comp_mem);
 }
 
+OSL_BATCHOP void
+__OSL_MASKED_OP(allocate_debug_closure_component)(void* bsg_, void* wide_out_,
+                                                  int id, int size,
+                                                  unsigned int mask_value)
+{
+    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+
+    Masked<ClosureComponentPtr> wComp(wide_out_, Mask(mask_value));
+    Block<Color3> one_block;
+    assign_all(one_block, Color3(1.0f));
+    Wide<const Color3> wWeight(&one_block);
+    ClosureComponent* comp_mem
+        = bsg->uniform.context->batched<__OSL_WIDTH>().closure_component_allot(
+            size);
+    init_closure_component(wComp, id, size, wWeight, comp_mem);
+}
+
+
+
+OSL_BATCHOP void
+__OSL_MASKED_OP(allocate_weighted_debug_closure_component)(
+    void* bsg_, void* wide_out_, int id, int size, void* wide_weight_,
+    unsigned int mask_value)
+{
+    // TODO return nullptr if all are 0 or masked?
+    auto* bsg = reinterpret_cast<BatchedShaderGlobals*>(bsg_);
+    Masked<ClosureComponentPtr> wComp(wide_out_, Mask(mask_value));
+    Wide<const Color3> wWeight(wide_weight_);
+    ClosureComponent* comp_mem
+        = bsg->uniform.context->batched<__OSL_WIDTH>().closure_component_allot(
+            size);
+    init_closure_component(wComp, id, size, wWeight, comp_mem);
+}
+
 // This currently duplicates the scalar version of the op, but
 // accesses the context through BatchedShaderGlobals instead of ShaderGlobals
 // future work would extend this to operate on a whole batch of closures at once

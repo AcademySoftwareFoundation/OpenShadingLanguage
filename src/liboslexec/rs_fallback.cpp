@@ -329,6 +329,13 @@ rs_allocate_closure(OSL::OpaqueExecContextPtr exec_ctx, size_t size,
 #endif
 }
 
+OSL_RSOP OSL_HOSTDEVICE void*
+rs_allocate_debug_closure(OSL::OpaqueExecContextPtr exec_ctx, size_t size,
+                          size_t alignment)
+{
+    return rs_allocate_closure(exec_ctx, size, alignment);
+}
+
 OSL_RSOP OSL_HOSTDEVICE void
 rs_errorfmt(OSL::OpaqueExecContextPtr exec_ctx,
             OSL::ustringhash fmt_specification, int32_t count,

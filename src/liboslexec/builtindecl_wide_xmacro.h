@@ -170,6 +170,8 @@
 
 DECL(__OSL_MASKED_OP(allocate_closure_component), "xXXiii")
 DECL(__OSL_MASKED_OP(allocate_weighted_closure_component), "xXXiiXi")
+DECL(__OSL_MASKED_OP(allocate_debug_closure_component), "xXXiii")
+DECL(__OSL_MASKED_OP(allocate_weighted_debug_closure_component), "xXXiiXi")
 DECL(__OSL_MASKED_OP(add_closure_closure), "xXXXXi")
 DECL(__OSL_MASKED_OP(mul_closure_float), "xXXXXi")
 DECL(__OSL_MASKED_OP(mul_closure_color), "xXXXXi")

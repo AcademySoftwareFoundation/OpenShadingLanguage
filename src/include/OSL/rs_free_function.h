@@ -323,6 +323,16 @@ OSL_RSOP OSL_HOSTDEVICE void*
 rs_allocate_closure(OSL::OpaqueExecContextPtr oec, size_t size,
                     size_t alignment);
 
+/// Allocates memory for a debug closure specifically. This is called instead
+/// of rs_allocate_closure when the closure being allocated is the OSL
+/// `debug()` closure. Renderers can override this to handle debug closures
+/// differently (e.g., allocate from a separate pool, or return nullptr to
+/// suppress debug closures in production builds). The default fallback
+/// implementation simply delegates to rs_allocate_closure.
+OSL_RSOP OSL_HOSTDEVICE void*
+rs_allocate_debug_closure(OSL::OpaqueExecContextPtr oec, size_t size,
+                          size_t alignment);
+
 /// Report errors, warnings, printf, and fprintf.
 /// Fmtlib style format specifier is used (vs. printf style)
 /// Arguments are represented as EncodedTypes (encodedtypes.h) and

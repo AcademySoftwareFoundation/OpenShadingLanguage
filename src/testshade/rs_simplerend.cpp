@@ -391,6 +391,13 @@ rs_allocate_closure(OSL::OpaqueExecContextPtr ec, size_t size, size_t alignment)
     return rs->closure_pool->allocate(size, alignment);
 }
 
+OSL_RSOP OSL_HOSTDEVICE void*
+rs_allocate_debug_closure(OSL::OpaqueExecContextPtr ec, size_t size,
+                          size_t alignment)
+{
+    return rs_allocate_closure(ec, size, alignment);
+}
+
 OSL_RSOP OSL_HOSTDEVICE bool
 rs_get_attribute_constant_string(OSL::ustringhash value, void* result)
 {

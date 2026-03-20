@@ -120,6 +120,8 @@ jobs:
       ABI_CHECK: ${{inputs.abi_check}}
       ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node16
       ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+      SETENVS: ${{inputs.setenvs}}
+      DEPCMDS: ${{inputs.depcmds}}
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -128,7 +130,7 @@ jobs:
       - name: Build setup
         shell: bash
         run: |
-            ${{inputs.setenvs}}
+            eval "$SETENVS"
             src/build-scripts/ci-startup.bash
       - name: Prepare ccache timestamp
         id: ccache_cache_keys
@@ -150,7 +152,7 @@ jobs:
       - name: Dependencies
         shell: bash
         run: |
-            ${{inputs.depcmds}}
+            eval "$DEPCMDS"
             if [[ "$RUNNER_OS" == "Linux" ]]; then
                 src/build-scripts/gh-installdeps.bash
             elif [[ "$RUNNER_OS" == "macOS" ]]; then
@@ -212,10 +214,10 @@ jobs:
         run: |
             which sonar-scanner
             ls -l /__w/OpenShadingLanguage/OpenShadingLanguage/bw_output
-            echo "BUILD_OUTPUT_DIR is " "${{ env.BUILD_WRAPPER_OUT_DIR }}"
+            echo "BUILD_OUTPUT_DIR is ${BUILD_WRAPPER_OUT_DIR}"
             find . -name "*.gcov" -print
-            # sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}"
-            time sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" --define sonar.cfamily.build-wrapper-output="$BUILD_WRAPPER_OUT_DIR" --define sonar.cfamily.gcov.reportsPath="_coverage" --define sonar.cfamily.threads="$PARALLEL"
+            # sonar-scanner --define sonar.cfamily.build-wrapper-output="${BUILD_WRAPPER_OUT_DIR}"
+            time sonar-scanner --define sonar.host.url="${SONAR_SERVER_URL}" --define sonar.cfamily.build-wrapper-output="$BUILD_WRAPPER_OUT_DIR" --define sonar.cfamily.gcov.reportsPath="_coverage" --define sonar.cfamily.threads="$PARALLEL"
         # Consult https://docs.sonarcloud.io/advanced-setup/ci-based-analysis/sonarscanner-cli/ for more information and options
       - name: Check ABI
         if: inputs.abi_check != ''

@@ -449,6 +449,7 @@ jobs:
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.15
                             FREETYPE_VERSION=VER-2-14-3
+                            OpenImageIO_DEPENDENCY_BUILD_ALLOW_UNVERIFIED_TAGS=ON
           - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
             nametag: linux-clang14
             runner: ubuntu-22.04

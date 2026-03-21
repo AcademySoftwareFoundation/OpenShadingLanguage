@@ -3854,14 +3854,13 @@ LLVMGEN(llvm_gen_closure)
     llvm::Value* sg_ptr     = rop.sg_void_ptr();
     llvm::Value* id_int     = rop.ll.constant(clentry->id);
     llvm::Value* size_int   = rop.ll.constant(clentry->struct_size);
-    bool is_debug = (closure_name == "debug");
+    bool is_debug           = (closure_name == "debug");
     llvm::Value* return_ptr
         = weighted
-              ? rop.ll.call_function(is_debug
-                                         ? "osl_allocate_weighted_debug_closure_component"
-                                         : "osl_allocate_weighted_closure_component",
-                                     sg_ptr, id_int, size_int,
-                                     rop.llvm_void_ptr(*weight))
+              ? rop.ll.call_function(
+                  is_debug ? "osl_allocate_weighted_debug_closure_component"
+                           : "osl_allocate_weighted_closure_component",
+                  sg_ptr, id_int, size_int, rop.llvm_void_ptr(*weight))
               : rop.ll.call_function(is_debug
                                          ? "osl_allocate_debug_closure_component"
                                          : "osl_allocate_closure_component",

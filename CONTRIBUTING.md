@@ -10,6 +10,13 @@ why it's an open source project. Please review this document to get a
 briefing on our process.
 
 
+General Tips for Open Source Development
+----------------------------------------
+
+* GitHub's [Open Source Guides](https://opensource.guide/)
+  - Especially the guide on [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
+
+
 Mail List and Slack
 -------------------
 
@@ -17,12 +24,12 @@ Contributors should be reading the osl-dev mail list:
 
 * [osl-dev](https://lists.aswf.io/g/osl-dev)
 
-You can sign up for the mail list on your own using the link above.
+  You can sign up for the mail list on your own using the link above.
 
-The [ASWF Slack](https://slack.aswf.io/) has an `openshadinglanguage` channel.
-Sign up for the Slack on your own, then under "channels", select "browse
-channels" and you should see the openshadinglanguage channel (among those of
-the other projects and working groups).
+* The [ASWF Slack](https://slack.aswf.io/) has an `openshadinglanguage`
+channel. Sign up for the Slack on your own, then under "channels", select
+"browse channels" and you should see the openshadinglanguage channel (among
+those of the other projects and working groups).
 
 
 Bug Reports and Issue Tracking
@@ -34,25 +41,56 @@ https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues
 
 **If you are merely asking a question ("how do I...")**, please do not file an
 issue, but instead ask the question on the [OSL developer mail
-list](https://lists.aswf.io/g/osl-dev).
+list](https://lists.aswf.io/g/osl-dev) or on the Slack channel.
 
 If you are submitting a bug report, please be sure to note which version of
 OSL you are using, on what platform (OS/version, which compiler you used,
 and any special build flags or other unusual environmental issues). Please
-give an account of
+give a specific, as-detailed-as-possible account of
 
-* what you tried
-* what happened
-* what you expected to happen instead
+* what you tried (command line, source code example)
+* what you expected to happen
+* what actually happened (crash? error message? ran but didn't give the
+  correct result?)
 
-with enough detail that others can reproduce the problem.
+with enough detail that others can easily reproduce the problem just by
+following your instructions. Please quote the exact error message you
+received. If you are having trouble building, please post the full cmake
+output of a fresh VERBOSE=1 build.
+
+Suspected security vulnerabilities should be reported by the same process.
+If confidentiality precludes a public question or issue for any reason, you
+may contact us privately at [security@openimageio.org](security@openimageio.org).
+
+
+Policy on AI Tools
+------------------
+
+Please read our [Policy on AI Coding Assistants](docs/dev/AI_Policy.md)
+before contributing or particpating in the project in any way mediated by "AI"
+assistants.
+
+High-level summary:
+- Human must always be in the loop, and is the responsible party for
+  the contents of a PR (including fully understanding and being able
+  to explain, defend, and modify it in response to review comments).
+- Interact with the project and community yourself, not by agent.
+- Disclose what tools you used and how. At a minimum, we require an
+  "Assisted-by: TOOL/MODEL" line in the commit comments and PR description.
+- Don't waste maintainer's time with low quality PRs.
+
+Please do read the whole [Policy on AI Coding Assistants](docs/dev/AI_Policy.md)
+for all the details.
 
 
 Contributor License Agreement (CLA) and Intellectual Property
 -------------------------------------------------------------
 
-To protect the project -- and the contributors! -- we do require a
-Contributor License Agreement (CLA) for anybody submitting changes.
+To protect the project -- and the contributors! -- we do require a Contributor
+License Agreement (CLA) for anybody submitting changes. This is for your own
+safety, as it prevents any possible future disputes between code authors and
+their employers or anyone else who might think they might own the IP output of
+the author.
 
 * [Corporate CLA](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/ASWF/CLA-corporate.md) :
   If you are writing the code as part of your job, or if there is any
@@ -65,15 +103,28 @@ Contributor License Agreement (CLA) for anybody submitting changes.
   equipment, and you're SURE you are the sole owner of any intellectual
   property you contribute.
 
-The easiest way to sign CLAs is digitally [using EasyCLA](https://corporate.v1.easycla.lfx.linuxfoundation.org).
+Please note that it is extremely common (nearly ubiquitous in the US and
+Canada, and maybe other places) for full-time employees of technology and
+entertainment companies to have IP clauses in their employment agreement (in
+that pile of paperwork you sign on your first day of work and then promptly
+forget about) that give the company rights to any code you write, even on your
+own time. The Open Shading Language project expects you to know and follow the
+rules of your employer and to have them sign a corporate CLA if necessary.
+
+The easiest way to sign CLAs is digitally [using
+EasyCLA](https://corporate.v1.easycla.lfx.linuxfoundation.org). There are
+detailed step-by-step instructions about using the EasyCLA system for
+[corporate CLAs](https://docs.linuxfoundation.org/lfx/easycla/v2-current/contributors/corporate-contributor)
+and [individual CLAs](https://docs.linuxfoundation.org/lfx/easycla/v2-current/contributors/individual-contributor#github).
+
 Companies who prefer not to use the online tools may sign, scan, and email
 the executed copy to manager@lfprojects.org.
 
-The CLA allows a company to name a "CLA Manager" (who does not need
-signatory power) who has the ability to use the online system to add or
-delete individual employees of the company who are authorized to submit pull
-requests, without needing to get an executive to amend and sign the
-agreement each time.
+The corporate CLA allows a company to name a "CLA Manager" (who does not need
+signatory power) who has the ability to use the online system to add or delete
+individual employees of the company who are authorized to submit pull
+requests, without needing to get an executive to amend and sign the agreement
+each time.
 
 Please note that these CLAs are based on the Apache 2.0 CLAs, and differ
 minimally, only as much as was required to correctly describe the EasyCLA
@@ -93,12 +144,88 @@ as a part of the commit message.
 Here is an example Signed-off-by line, which indicates that the submitter
 accepts the DCO:
 
-`Signed-off-by: John Doe <john.doe@example.com>`
+    Signed-off-by: John Doe <john.doe@example.com>
 
 You can include this automatically when you commit a change to your local
-git repository using <code>git commit -s</code>. You might also want to
+git repository using `git commit -s`. You might also want to
 leverage this [command line tool](https://github.com/coderanger/dco) for
 automatically adding the signoff message on commits.
+
+
+Commit messages
+---------------
+
+### Summary heuristic
+
+Look at the commit history of the project to get a sense of the style and
+level of detail that is expected in commit messages.
+
+### General guidelines and expectations
+
+The first line of the commit message should be a short (less than 80
+characters) summary of the change, prefixed with the general nature of the
+change (see below).
+
+The rest of the commit message should be a more detailed explanation of the
+changes. Some commits are self-explanatory and don't need more than the
+summary line. Others may need a more detailed explanation. Hallmarks of
+a good commit message include:
+
+* An explanation of why the change is necessary and what you hope to
+  accomplish with it.
+* A description of any major user- or developer-facing changes that people
+  should be aware of: changes in APIs or behaviors, new features, etc.
+* An explanation of any tricky implementation details or design decisions that
+  might not be immediately obvious to someone reading the code.
+* Guideposts for somebody reviewing the code to understand the rationale and
+  have any supporting background information to fully understanding the code
+  changes.
+
+Remember that at some point in the future, a developer unfamiliar with your
+change (maybe you, long after you've forgotten the details) might need to
+understand or fix your patch. Keep that person in mind as your audience and
+strive to write a commit message that explains the context in a way that saves
+them time and effort. Be the hero in the story of their future debugging
+effort!
+
+### Using "conventional commits" prefixes
+
+We strive to follow the recommendations known as [conventional
+commits](https://www.conventionalcommits.org/), which means that we would like
+merged commit messages to have their first line start with one of the
+following prefixes:
+
+- `feat:`  new features
+- `fix:`  bug fixes
+- `perf:`  performance improvements
+- `api:`  changes to the public APIs
+- `int:`  changes to code internals that don't affect the public API
+- `build:`  changes to the build system
+- `test:`  changes to the test suite or unit tests
+- `ci:`  changes to the CI system
+- `docs:`  changes to the documentation
+- `refactor:`  code refactoring
+- `style:`  formatting or other stylistic non-functional changes to the code
+- `admin:`  project administration or policy changes
+- `revert:`  reverting a previous commit
+
+Obviously, some (if not most) PRs may qualify for more than one of these
+categories (for example, a new feature may also introduce a new API call, add
+tests, and include new documentation). If that is the case, use your best
+judgment to pick the category that best captures the essence or most important
+aspect of the change. When ambiguous, consider the list above to be a priority
+ranking (e.g., a change that fixes a bug and adds a new test should be listed
+under `fix:`, because that appears first in the list).
+
+It is also encouraged, when it makes sense to do so, to put a subcategory in
+parenthesis after the prefix, like `fix(optix):` or `feat(oslc):`.  If there
+is no clear single format or class that is the man focus of the patch, then
+you can omit the subcategory.
+
+API or ABI-breaking changes should additionally be marked with an exclamation
+point at the end of the prefix, like `feat!:` or `api!:` to make it easily
+identifiable as a breaking change from the first line of the commit message.
+
 
 
 Pull Requests and Code Review
@@ -114,7 +241,7 @@ repository. The protocol is like this:
 own repository on GitHub, and then clone it to get a repository on your
 local machine.
 
-2. Edit, compile, and test your changes.  Run clang-format (see the
+2. Edit, compile, and test your changes. Run clang-format (see the
 instructions on coding style below). Our current formatting standard,
 as checked by our CI, uses clang-format 17.0.
 
@@ -142,7 +269,10 @@ this takes a few rounds of give and take. Please don't take it hard if your
 first try is not accepted. It happens to all of us.
 
 8. After approval, one of the senior developers (with commit approval to the
-official main repository) will merge your fixes into the master branch.
+official main repository) will merge your fixes into the main branch.
+
+Please see the [Code Review](doc/dev/CodeReview.md) document for more
+explanaton of the code review process.
 
 
 Coding Style
@@ -224,9 +354,9 @@ capitalize new words: `class CustomerList;` In general, local variables
 should start with lower case. Macros should be `ALL_CAPS`, if used at all.
 
 If your class is extremely similar to, or modeled after, something in the
-standard library, Boost, or something else we interoperate with, it's ok to
+standard library, or something else we interoperate with, it's ok to
 use their naming conventions. For example, very general utility classes and
-templates (the kind of thing you would normally find in std or boost) should
+templates (the kind of thing you would normally find in std) should
 be lower case with underscores separating words, as they would be if they
 were standards.
 
@@ -259,7 +389,7 @@ Namespaces: yes, use them!
 
 #### Third-party libraries
 
-Prefer C++11 `std` rather than Boost or other third party libraries, where
+Prefer C++17 `std` rather than other third party libraries, where
 both can do the same task.
 
 If you see a third party library already used as a dependency (such as OIIO,

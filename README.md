@@ -570,7 +570,7 @@ Louis Feng, Mark Final, Henri Fousse, Stephen Friedman, Syoyo Fujita, Alex
 Fuller, Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase,
 Sven-Hendrik Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Chris
 Hellmuth, Christian Heusel, Adrien Herubel, Dan Horák, Thiago Ize, Matt
-Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Silvia Lopez,
+Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Sv. Lockal, Silvia Lopez,
 Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, Patrick Mours,
 Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois Panisset, Jino Park,
 Alexei Pawlow, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz,

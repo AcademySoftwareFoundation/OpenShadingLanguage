@@ -567,7 +567,7 @@ jobs:
 
 
   windows:
-    if: ${{ ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
+    if: ${{ (github.event.repository.fork == false || github.event_name != 'schedule') && ! contains(github.ref, 'linux-only') && ! contains(github.ref, 'macos-only') && ! contains(github.ref, 'optix-only') }}
     name: "${{matrix.desc}}"
     uses: ./.github/workflows/build-steps.yml
     with:

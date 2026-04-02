@@ -1,6 +1,16 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14.10.0 (1 Apr 2026) -- compared to 1.14.9.0
+---------------------------------------------------------
+  - *build*: Fix compilation with ld.lld [#2094](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2094) (by Sv. Lockal)
+  - *test*: Check in reference images for Mac ARM debug case [#2083](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2083)
+  - *ci*: Add Windows 2025 with MSVS 2026 job variant to CI [#2093](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2093)
+  - *ci*: For security, replace some workflow substitutions with safer env substitutions [#2088](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2088)
+  - *ci*: Various fixes for unexpected CI runner breakages: Windows curl LLVM download [#2089](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2089), Mac homebrew installations [#2091](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2091), Mac compiler path [#2096](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2096), fmt/OIIO main build [#2095](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2095), update certificates to be able to install Intel compilers [#2101](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2101).
+  - *ci*: Repair broken CI from OIIO locking down dependency hashes [#2102](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2102)
+
+
 Release 1.14.9.0 (10 Mar 2026) -- compared to 1.14.8.0
 -------------------------------------------------------------
   - *feat*: Add more shader group diagnostics to `compile_report`: when `compile_report >= 1`, report number of active layers, maximum connection depth of the shader network, number of texture ops, and number of noise ops. [#2085](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2085)

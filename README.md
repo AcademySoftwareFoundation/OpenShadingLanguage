@@ -517,13 +517,27 @@ or issue, you may contact the project administrator privately at
 [lg@larrygritz.com](lg@larrygritz.com).
 
 
-Contributing
-------------
+Contributing and developer documentation
+----------------------------------------
 
 OSL welcomes code contributions, and nearly 50 people have done so over the
 years. We take code contributions via the usual GitHub pull request (PR)
-mechanism. Please see [CONTRIBUTING](CONTRIBUTING.md) for detailed
-instructions.
+mechanism.
+
+* [CONTRIBUTING](CONTRIBUTING.md) has detailed instructions about the
+  development process.
+* [AI Policy](doc/dev/AI_Policy.md) decribes our policies on AI coding
+  assistance tools.
+* [RELEASING](doc/dev/RELEASING.md) explains our policies and procedures for
+  making releases. We have a major, possibly-compatibility-breaking, release
+  annually in September/October, and minor bug fix and safe feature addition
+  release at the beginning of every month.
+* Other developer documentation is in the [doc/dev](doc/dev) directory.
+* You may also have luck learning a bit about the organization and
+  architecture of the project by reading the [DeepWiki Analysis of
+  OpenShadingLanguage](https://deepwiki.com/AcademySoftwareFoundation/OpenShadingLanguage).
+  But take it with a grain of salt -- like any LLM-generated summary, there
+  may be inaccuracies lurking.
 
 
 Contacts, Links, and References

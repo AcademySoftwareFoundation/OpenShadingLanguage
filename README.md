@@ -480,21 +480,8 @@ how to build and install OSL.
 Documentation
 -------------
 
-The OSL language specification can be found at
-[src/doc/osl-languagespec.pdf](src/doc/osl-languagespec.pdf) (in a source
-distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
-installed binary distribution.
-
-[OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
-This will be the future documentation. It's probably as complete as the PDF,
-but it needs some proofreading, so the PDF is still considered the
-authoritative source for now. But some time soon, the old PDF specification
-will be deprecated in favor of
-this online documentation.
-<!-- is the best place to start if you are interested in how to use OSL,
-its APIs. -->
-There is also a [PDF
-version](https://readthedocs.org/projects/open-shading-language/downloads/pdf/latest/).
+The OSL language specification can be found at [OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
+There is also a [PDF version](https://readthedocs.org/projects/open-shading-language/downloads/pdf/stable/).
 
 For those interested in learning to program OSL shaders there is the
 [Siggraph 2024 Course](https://dl.acm.org/doi/proceedings/10.1145/3664475), 
@@ -559,13 +546,11 @@ Contacts, Links, and References
 
 [OSL GitHub page](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage)
 
+[OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
+
 [Read or subscribe to the OSL development mail list](https://lists.aswf.io/g/osl-dev)
 
-[Most recent PDF of the OSL language specification](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/src/doc/osl-languagespec.pdf
-)
-
 [OSL home page](http://openshadinglanguage.org)
-
 
 
 

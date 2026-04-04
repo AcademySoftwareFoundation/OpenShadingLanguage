@@ -104,7 +104,7 @@ so I studied its python build script and found we can use same logic for install
 It still needs some other works to make it complete for all dependencies (optional).
 
 We will keep Pixar name on it as inspiration code (or we can keep their copyright)
-You can Run the installer from: `yourpath/OpenShadingLanguage/doc/build_install/windows/build_osl.bat`
+You can Run the installer from: `yourpath/OpenShadingLanguage/docs/build_install/windows/build_osl.bat`
 
 ---
 
@@ -144,11 +144,11 @@ For running batch scripts without any problem I recommend to create some base en
 
 |
 
-Open `doc/build_install/windows/osl_env_vars_setup.bat` in your editor and edit paths' values based on your installation folders.
+Open `docs/build_install/windows/osl_env_vars_setup.bat` in your editor and edit paths' values based on your installation folders.
 
 ### **2.3 Set Flags based on your needs**
 
-The main build launcher is here `doc/build_install/windows/build_osl.bat`
+The main build launcher is here `docs/build_install/windows/build_osl.bat`
 
 For now we can not assign pre-installed llvm so we have to build all together at once and put all of them in one directory.
 
@@ -196,7 +196,7 @@ Based on Environment Variables you set in previous sections you can just call th
 **My Method:**
 
 - Open Powershell
-- Go to: yourPath/OpenShadingLanguage/doc/build_install/windows
+- Go to: yourPath/OpenShadingLanguage/docs/build_install/windows
 - Run build_osl.bat release
 
 ### **3.1 Running the code based on your config**
@@ -295,7 +295,7 @@ That's it
 TIP: this process is getting better, I will update the document soon
 
 **Conclusion:**
-For easy installation you just need to setup your Environment Variables in `yourPath/OpenShadingLanguage/doc/build_install/windows/osl_env_vars_setup.bat` based on your paths
+For easy installation you just need to setup your Environment Variables in `yourPath/OpenShadingLanguage/docs/build_install/windows/osl_env_vars_setup.bat` based on your paths
 
 It is a custom setup, for example all dependencies are built before osl, because I had lots of issues on using external installation (like llvm)
 and I tried this method on llvm 7, 8 and 9, all with error, so my current build setup is on llvm 11 and C++14, it can be changed in code. (I am trying to make it easy to use for changing configs with arguments)

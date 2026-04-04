@@ -18,14 +18,14 @@ on:
       - '!**/analysis.yml'
       - '!**/docs.yml'
       - '!**.properties'
-      - '!doc/**'
+      - '!docs/**'
   pull_request:
     paths:
       - '**'
       - '!**.md'
       - '!**.rst'
       - '!**.tex'
-      - '!doc/**'
+      - '!docs/**'
   schedule:
     # Full nightly build, for the main project repo (not for forks)
     - cron: "0 6 * * *"

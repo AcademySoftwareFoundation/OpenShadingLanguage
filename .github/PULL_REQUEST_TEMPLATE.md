@@ -30,7 +30,7 @@ instructions!
 <!-- Put an 'x' in the boxes as you complete the checklist items -->
 
 - [ ] **I have read the guidelines** on [contributions](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/CONTRIBUTING.md) and [code review procedures](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/docs/dev/CodeReview.md).
-- [ ] **I have read the [Policy on AI Coding Assistants](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/doc/dev/AI_Policy.md)**
+- [ ] **I have read the [Policy on AI Coding Assistants](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/docs/dev/AI_Policy.md)**
   and if I used AI coding assistants, I have an `Assisted-by: TOOL / MODEL`
   line in the pull request description above.
 - [ ] **I have updated the documentation** if my PR adds features or changes

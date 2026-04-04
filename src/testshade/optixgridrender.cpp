@@ -1171,7 +1171,7 @@ OptixGridRenderer::register_inline_functions()
     // ShadingSystem attributes enable some degree of fine tuning. This
     // mechanism has been added to offer a finer degree of control
     //
-    // Please refer to doc/app_integration/OptiX-Inlining-Options.md for more
+    // Please refer to docs/app_integration/OptiX-Inlining-Options.md for more
     // details about the inlining options.
 
     // These functions are all 5 instructions or less in the PTX, with most of

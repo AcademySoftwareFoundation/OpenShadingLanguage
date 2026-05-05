@@ -15,16 +15,19 @@ security vulnerabilities.
 
 ## Reporting a Vulnerability
 
-If you think you've found a potential vulnerability in OSL, please report it
-by emailing the project administrators at
-[security@openshadinglanguage.org](security@openshadinglanguage.org). Only the
-project administrators have access to these messages. Include detailed steps to
-reproduce the issue, and any other information that could aid an
-investigation. Our policy is to respond to vulnerability reports within 14
-days.
+If you think you've found a potential vulnerability in OSL, please
+report it to the maintainers. Include detailed steps to reproduce the issue,
+and any other information that could aid an investigation.
 
-Our policy is to address critical security vulnerabilities rapidly and post
-patches as quickly as possible.
+The best way to report a vulnerability is to file a GitHub [security
+advisory](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/security/advisories/new).
+If that is not possible, it is also fine to email your report to
+security@openshadinglanguage.org. Only the project administrators have access
+to these reports.
+
+Our policy is to respond to vulnerability reports within 14 days, and to
+address critical security vulnerabilities rapidly and post patches as quickly
+as possible.
 
 
 ## Other security features

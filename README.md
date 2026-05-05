@@ -504,14 +504,14 @@ your question quickly (more so than a GH "issue"). For quick questions, you
 could also try the [ASWF Slack](https://slack.aswf.io) `#openshadinglanguage`
 channel.
 
-Bugs, build problems, and discovered vulnerabilities that you are relatively
-certain is a legit problem in the code, and for which you can give clear
-instructions for how to reproduce, should be [reported as
+A bug or build problem that you are relatively certain is a legit problem in
+the code, and **for which you can give clear instructions for how to
+reproduce**, should be [reported as
 issues](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues).
 
-If you think you've found a potential vulnerability in OSL, please
-confidentially report it by emailing the project administrators at
-[security@openshadinglanguage.org](security@openshadinglanguage.org).
+To report a security vulnerability that is serious enough that it should not
+be discussed publicly until a patch is ready, please file a GitHub [security
+advisory](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/security/advisories/new).
 
 If any other issue requires confidentiality that precludes a public question
 or issue, you may contact the project administrator privately at

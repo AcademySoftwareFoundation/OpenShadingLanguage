@@ -1,6 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.15.4.0 (May 5, 2026) -- compared to 1.15.3.0
+---------------------------------------------------------
+  - *fix*: Fix crash in exception handling after OSL JIT on Ubuntu 24.04, caused by a libgcc 14.2 bug; workaround by disabling EH frames registration in the JIT MemoryManager [#2113](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2113) (by Sergey Sharybin)
+  - *build*: Port many recent build improvements from OpenImageIO: better dependency reporting, improved ccache detection, TIME_COMMANDS fix, generate compile_commands.json [#2106](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2106)
+  - *ci*: Port CI improvements from OIIO: shared steps workflow, upgraded GitHub Actions versions, restored pybind11 bleeding edge test [#2107](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2107)
+  - *ci*: Various CI runner breakage fixes: wrong MSVS 2022 runner name [#2108](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2108), fmtlib renamed from master to main [#2103](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2103), skip OpenEXR utility builds and stop running nightly CI on forks [#2097](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2097)
+  - *docs*: Fix outdated documentation references (point to ReadTheDocs, remove stale PDF references and old LaTeX build scaffolding) [#2104](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2104)
+  - *docs*: Add AI contribution policy document; minor improvements to README, CONTRIBUTING, and PR template [#2099](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2099)
+  - *admin*: Rename top-level `doc/` directory to `docs/` to match OpenImageIO and most other ASWF projects [#2105](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2105)
+  - *admin*: Update security reporting instructions to prefer GitHub security advisories over email [#2112](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2112)
+
+
 Release 1.15.3.0 (1 Apr 2026) -- compared to 1.15.2.0
 ---------------------------------------------------------
   - *bsdl*: Incorporate diffuse MaterialX BSDFs into BSDL library [#2092](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2092) (by Alejandro Conty)

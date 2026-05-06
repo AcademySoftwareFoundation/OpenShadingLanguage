@@ -466,6 +466,7 @@ nominated for major awards.)
 * **(2026 / upcoming)**
   GOAT,
   Hoppers,
+  Project Hail Mary,
   ...
 
 

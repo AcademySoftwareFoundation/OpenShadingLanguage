@@ -1,0 +1,91 @@
+<World>
+   <Camera eye="50, 50, 300" dir="0,0,-1" fov="60" />
+   
+   <ShaderGroup>color Cs 0.75 0.25 0.25; shader matte layer1;</ShaderGroup>
+   <Quad corner="0, 0, 0" edge_x="0,100,0" edge_y="0,0,150" /> <!-- Left -->
+
+   <ShaderGroup>color Cs 0.25 0.25 0.75; shader matte layer1;</ShaderGroup>
+   <Quad corner="100, 0, 0" edge_x="0,0,150" edge_y="0,100,0" /> <!-- Right -->
+   
+   <ShaderGroup>color Cs 0.25 0.25 0.25; shader matte layer1;</ShaderGroup>
+   <Quad corner="0, 0, 0" edge_x="100,0,0" edge_y="0,100,0" /> <!-- Back -->
+   <Quad corner="0, 0, 0" edge_x="0,0,150" edge_y="100,0,0" /> <!-- Botm -->
+   <Quad corner="0,100,0" edge_x="100,0,0" edge_y="0,0,150" /> <!-- Top  -->
+
+   <ShaderGroup is_light="yes">float power 26000; shader emitter layer1</ShaderGroup>
+   <Quad corner="40, 99.99, 40" edge_x="20, 0, 0" edge_y="0, 0, 20" /> <!--Lite -->
+
+   <!-- Spheres testing special  priority -->
+   <ShaderGroup>
+      color Cr 1.0 1.0 0.0;
+      float roughness 0.1;
+      float anisotropy 0.0;
+      float ior 1.1;
+      int priority 0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="65,70,70" radius="12" />
+
+   <ShaderGroup>
+      color Cr 1.0 1.0 0.0;
+      float roughness 0.1;
+      float anisotropy 0.0;
+      float ior 1.1;
+      int priority 0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="80,70,70" radius="12" />
+
+   <!-- Spheres testing non special priority -->
+   <ShaderGroup>
+      color Cr 0.0 1.0 1.0;
+      float roughness 0.3;
+      float anisotropy 0.0;
+      float ior 1.4;
+      int priority 1;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="20,70,70" radius="12" />
+
+   <ShaderGroup>
+      color Cr 0.0 1.0 1.0;
+      float roughness 0.3;
+      float anisotropy 0.0;
+      float ior 1.4;
+      int priority 1;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="35,70,70" radius="12" />
+
+   <!-- Spheres testing ordering priority -->
+   <ShaderGroup>
+      color Cr 0.0 0.0 1.0;
+      float roughness 0.1;
+      float anisotropy 0.0;
+      float ior 1.2;
+      int priority 2;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="30,30,70" radius="20" />
+
+   <ShaderGroup>
+      color Cr 0.0 1.0 0.0;
+      float roughness 0.2;
+      float anisotropy 0.0;
+      float ior 1.2;
+      int priority 1;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="50,30,70" radius="20" />
+   
+   <ShaderGroup>
+      color Cr 1.0 0.0 0.0;
+      float roughness 0.3;
+      float anisotropy 0.0;
+      float ior 1.2;
+      int priority 0;
+      shader glossy layer1;
+   </ShaderGroup>
+   <Sphere center="70,30,70" radius="20" />
+
+</World>

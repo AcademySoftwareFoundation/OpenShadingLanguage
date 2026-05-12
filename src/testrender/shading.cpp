@@ -4,6 +4,7 @@
 
 
 #include "shading.h"
+#include "OSL/oslconfig.h"
 #include <OSL/genclosure.h>
 #include "optics.h"
 #include "sampling.h"
@@ -16,6 +17,7 @@
 #include <BSDL/MTX/bsdf_sheen_impl.h>
 #include <BSDL/MTX/bsdf_translucent_impl.h>
 #include <BSDL/SPI/bsdf_thinlayer_impl.h>
+#include <BSDL/SPI/bsdf_volume_impl.h>
 #include <BSDL/spectrum_impl.h>
 
 using namespace OSL;
@@ -1147,6 +1149,52 @@ struct Transparent final : public BSDF {
     }
 };
 
+struct HenyeyGreenstein : public bsdl::spi::VolumeLobe<BSDLLobe> {
+    using Base = bsdl::spi::VolumeLobe<BSDLLobe>;
+
+    OSL_HOSTDEVICE HenyeyGreenstein(const Data& data, const Vec3& wo,
+                                    float path_roughness)
+        : Base(this,
+               bsdl::BsdfGlobals(wo,
+                                 Vec3(0),  // Nf
+                                 Vec3(0),  // Ngf
+                                 false, path_roughness,
+                                 1.0f,  // outer_ior
+                                 0),    // hero wavelength off
+               data)
+    {
+    }
+
+    OSL_HOSTDEVICE BSDF::Sample eval(const Vec3& wo, const Vec3& wi) const
+    {
+        bsdl::Sample s = Base::eval_impl(Base::frame.local(wo),
+                                         Base::frame.local(wi));
+        return { wi, s.weight.toRGB(0), s.pdf, s.roughness };
+    }
+    OSL_HOSTDEVICE BSDF::Sample sample(const Vec3& wo, float rx, float ry,
+                                       float rz) const
+    {
+        bsdl::Sample s = Base::sample_impl(Base::frame.local(wo),
+                                           { rx, ry, rz });
+        return { Base::frame.world(s.wi), s.weight.toRGB(0), s.pdf,
+                 s.roughness };
+    }
+};
+
+
+BSDF::Sample
+MediumParams::sample_phase_func(const Vec3& wo, float rx, float ry,
+                                float rz) const
+{
+    if (is_vaccum()) {
+        return { Vec3(1.0f), Color3(1.0f), 0.0f, 0.0f };
+    }
+
+    HenyeyGreenstein::Data data { medium_g, medium_g, 0.0f };
+    HenyeyGreenstein phase_func(data, wo, 0.0f);
+    return phase_func.sample(wo, rx, ry, rz);
+}
+
 OSL_HOSTDEVICE Color3
 evaluate_layer_opacity(const ShaderGlobalsType& sg, float path_roughness,
                        const ClosureColor* closure)
@@ -1235,8 +1283,8 @@ evaluate_layer_opacity(const ShaderGlobalsType& sg, float path_roughness,
 
 OSL_HOSTDEVICE void
 process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
-                       ShadingResult& result, const ClosureColor* closure,
-                       const Color3& w)
+                       ShadingResult& result, MediumStack& medium_stack,
+                       const ClosureColor* closure, const Color3& w)
 {
     if (!closure)
         return;
@@ -1278,37 +1326,86 @@ process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
             const ClosureComponent* comp = closure->as_comp();
             Color3 cw                    = weight * comp->w;
             const auto& params           = *comp->as<MxAnisotropicVdfParams>();
-            result.sigma_t               = cw * params.extinction;
-            result.sigma_s               = params.albedo * result.sigma_t;
-            result.medium_g              = params.anisotropy;
-            closure                      = nullptr;
+            result.medium_data.sigma_t   = cw * params.extinction;
+            result.medium_data.sigma_s   = params.albedo
+                                         * result.medium_data.sigma_t;
+            result.medium_data.medium_g = params.anisotropy;
+            result.medium_data.priority = 0;  // always intersect
+
+            // clamp sigma_s to be less than sigma_t
+            result.medium_data.sigma_s
+                = { std::min(result.medium_data.sigma_s.x,
+                             result.medium_data.sigma_t.x),
+                    std::min(result.medium_data.sigma_s.y,
+                             result.medium_data.sigma_t.y),
+                    std::min(result.medium_data.sigma_s.z,
+                             result.medium_data.sigma_t.z) };
+
+            closure = nullptr;
             break;
         }
         case MX_MEDIUM_VDF_ID: {
             const ClosureComponent* comp = closure->as_comp();
             Color3 cw                    = weight * comp->w;
             const auto& params           = *comp->as<MxMediumVdfParams>();
-            result.sigma_t = { -OIIO::fast_log(params.transmission_color.x),
-                               -OIIO::fast_log(params.transmission_color.y),
-                               -OIIO::fast_log(params.transmission_color.z) };
-            // NOTE: closure weight scales the extinction parameter
-            result.sigma_t *= cw / params.transmission_depth;
-            result.sigma_s  = params.albedo * result.sigma_t;
-            result.medium_g = params.anisotropy;
-            // TODO: properly track a medium stack here ...
-            result.refraction_ior = sg.backfacing ? 1.0f / params.ior
-                                                  : params.ior;
-            result.priority       = params.priority;
-            closure               = nullptr;
+
+            // when both albedo and transmission_color are black, this is
+            // a vacuum medium used only to carry the IOR for dielectric
+            // surfaces.
+            bool is_vacuum = is_black(params.albedo)
+                             && is_black(params.transmission_color);
+
+            if (is_vacuum) {
+                result.medium_data.sigma_t = Color3(0.0f);
+                result.medium_data.sigma_s = Color3(0.0f);
+            } else {
+                constexpr float epsilon = 1e-10f;
+                const Color3& t_color   = params.transmission_color;
+                result.medium_data.sigma_t
+                    = Color3(-OIIO::fast_log(fmaxf(t_color.x, epsilon)),
+                             -OIIO::fast_log(fmaxf(t_color.y, epsilon)),
+                             -OIIO::fast_log(fmaxf(t_color.z, epsilon)));
+
+                result.medium_data.sigma_t *= cw / params.transmission_depth;
+                result.medium_data.sigma_s = params.albedo
+                                             * result.medium_data.sigma_t;
+
+                // clamp sigma_s to be less than sigma_t
+                result.medium_data.sigma_s
+                    = { std::min(result.medium_data.sigma_s.x,
+                                 result.medium_data.sigma_t.x),
+                        std::min(result.medium_data.sigma_s.y,
+                                 result.medium_data.sigma_t.y),
+                        std::min(result.medium_data.sigma_s.z,
+                                 result.medium_data.sigma_t.z) };
+            }
+
+            result.medium_data.medium_g = params.anisotropy;
+
+            result.medium_data.refraction_ior = sg.backfacing
+                                                    ? 1.0f / params.ior
+                                                    : params.ior;
+            result.medium_data.priority       = params.priority;
+
+            closure = nullptr;
             break;
         }
         case MxDielectric::closureid(): {
             const ClosureComponent* comp     = closure->as_comp();
             const MxDielectric::Data& params = *comp->as<MxDielectric::Data>();
             if (!is_black(weight * comp->w * params.refr_tint)) {
-                // TODO: properly track a medium stack here ...
-                result.refraction_ior = sg.backfacing ? 1.0f / params.IOR
-                                                      : params.IOR;
+                float new_ior = sg.backfacing ? 1.0f / params.IOR : params.IOR;
+
+                result.medium_data.refraction_ior = new_ior;
+
+                const MediumParams* current_params
+                    = medium_stack.get_current_params();
+                if (current_params
+                    && result.medium_data.priority
+                           <= current_params->priority) {
+                    result.medium_data.refraction_ior
+                        = current_params->refraction_ior;
+                }
             }
             closure = nullptr;
             break;
@@ -1318,13 +1415,23 @@ process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
             const MxGeneralizedSchlick::Data& params
                 = *comp->as<MxGeneralizedSchlick::Data>();
             if (!is_black(weight * comp->w * params.refr_tint)) {
-                // TODO: properly track a medium stack here ...
                 float avg_F0  = clamp((params.F0.x + params.F0.y + params.F0.z)
                                           / 3.0f,
                                       0.0f, 0.99f);
                 float sqrt_F0 = sqrtf(avg_F0);
                 float ior     = (1 + sqrt_F0) / (1 - sqrt_F0);
-                result.refraction_ior = sg.backfacing ? 1.0f / ior : ior;
+                float new_ior = sg.backfacing ? 1.0f / ior : ior;
+
+                result.medium_data.refraction_ior = new_ior;
+
+                const MediumParams* current_params
+                    = medium_stack.get_current_params();
+                if (current_params
+                    && result.medium_data.priority
+                           <= current_params->priority) {
+                    result.medium_data.refraction_ior
+                        = current_params->refraction_ior;
+                }
             }
             closure = nullptr;
             break;
@@ -1341,8 +1448,9 @@ process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
 // recursively walk through the closure tree, creating bsdfs as we go
 OSL_HOSTDEVICE void
 process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
-                     ShadingResult& result, const ClosureColor* closure,
-                     const Color3& w, bool light_only)
+                     ShadingResult& result, MediumStack& medium_stack,
+                     const ClosureColor* closure, const Color3& w,
+                     bool light_only)
 {
     static const ustringhash uh_ggx("ggx");
     static const ustringhash uh_beckmann("beckmann");
@@ -1472,16 +1580,29 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
                 case MxDielectric::closureid(): {
                     const MxDielectric::Data& params
                         = *comp->as<MxDielectric::Data>();
-                    ok = result.bsdf.add_bsdf<MxDielectric>(cw, params, -sg.I,
-                                                            sg.backfacing,
-                                                            path_roughness);
+
+                    if (medium_stack.false_intersection_with(
+                            result.medium_data)) {
+                        ok = result.bsdf.add_bsdf<Transparent>(cw);
+                    } else {
+                        ok = result.bsdf.add_bsdf<MxDielectric>(cw, params,
+                                                                -sg.I,
+                                                                sg.backfacing,
+                                                                path_roughness);
+                    }
                     break;
                 }
                 case MxGeneralizedSchlick::closureid(): {
                     const MxGeneralizedSchlick::Data& params
                         = *comp->as<MxGeneralizedSchlick::Data>();
-                    ok = result.bsdf.add_bsdf<MxGeneralizedSchlick>(
-                        cw, params, -sg.I, sg.backfacing, path_roughness);
+
+                    if (medium_stack.false_intersection_with(
+                            result.medium_data)) {
+                        ok = result.bsdf.add_bsdf<Transparent>(cw);
+                    } else {
+                        ok = result.bsdf.add_bsdf<MxGeneralizedSchlick>(
+                            cw, params, -sg.I, sg.backfacing, path_roughness);
+                    }
                     break;
                 }
                 case MxConductor::closureid(): {
@@ -1574,11 +1695,14 @@ process_bsdf_closure(const ShaderGlobalsType& sg, float path_roughness,
 
 OSL_HOSTDEVICE void
 process_closure(const ShaderGlobalsType& sg, float path_roughness,
-                ShadingResult& result, const ClosureColor* Ci, bool light_only)
+                ShadingResult& result, MediumStack& medium_stack,
+                const ClosureColor* Ci, bool light_only)
 {
     if (!light_only)
-        process_medium_closure(sg, path_roughness, result, Ci, Color3(1));
-    process_bsdf_closure(sg, path_roughness, result, Ci, Color3(1), light_only);
+        process_medium_closure(sg, path_roughness, result, medium_stack, Ci,
+                               Color3(1));
+    process_bsdf_closure(sg, path_roughness, result, medium_stack, Ci,
+                         Color3(1), light_only);
 }
 
 OSL_HOSTDEVICE Vec3
@@ -1638,6 +1762,5 @@ BSDF::sample_vrtl(const Vec3& wo, float rx, float ry, float rz) const
 {
     return dispatch([&](auto bsdf) { return bsdf.sample(wo, rx, ry, rz); });
 }
-
 
 OSL_NAMESPACE_END

@@ -362,6 +362,7 @@ macro (osl_add_all_tests)
                 render-cornell
                 render-displacement
                 render-furnace-diffuse
+                render-mx-anisotropic-vdf
                 render-mx-furnace-burley-diffuse
                 render-mx-furnace-oren-nayar
                 render-mx-furnace-sheen
@@ -371,7 +372,9 @@ macro (osl_add_all_tests)
                 render-mx-generalized-schlick render-mx-generalized-schlick-glass
                 render-mx-layer
                 render-mx-sheen
-                render-microfacet render-oren-nayar
+                render-mx-medium-vdf
+                render-mx-medium-vdf-glass
+		render-microfacet render-oren-nayar
                 render-spi-thinlayer
                 render-uv render-veachmis render-ward
                 render-raytypes

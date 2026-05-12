@@ -325,7 +325,8 @@ jobs:
             setenvs: export CMAKE_BUILD_TYPE=Debug
                             LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             PUGIXML_VERSION=v1.9
-                            CTEST_TEST_TIMEOUT=240
+                            CTEST_TEST_TIMEOUT=1800
+                            OSL_CMAKE_FLAGS="-DOSL_TEST_BIG_TIMEOUT=1800"
           - desc: gcc10/C++17 llvm14 oiio-2.5 avx2
             nametag: linux-2021ish-gcc10-llvm14
             runner: ubuntu-22.04

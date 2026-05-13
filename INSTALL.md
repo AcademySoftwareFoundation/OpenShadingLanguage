@@ -26,8 +26,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
    - GCC 9.3 or newer (tested through gcc 14)
    - Clang 5 or newer (tested through clang 22)
    - Microsoft Visual Studio 2017 or newer
-   - Intel C++ compiler icc version 19 or newer or LLVM-based icx compiler
-     version 2022 or newer.
+   - **Intel LLVM-based icx compiler version 2022 or newer** (note: the classic `icc` compiler is no longer supported).
 
 * [OpenImageIO](http://openimageio.org) 2.5 or newer (tested through 3.1
   and main)

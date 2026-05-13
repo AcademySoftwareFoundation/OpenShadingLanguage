@@ -5,36 +5,55 @@ Release 1.16 (Oct?? ??, 2026) -- compared to 1.15
 -------------------------------------------------------------
 
 ### New minimum dependencies, toolchain, and compatibility changes:
+  - *build*: Remove support for the deprecated Intel `icc` classic compiler [#2075](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2075)
 
 ### ✏️  OSL Language, standard library, and oslc compiler (for shader writers):
 
 ### ⛰️  API changes and new ShadingSystem features (for renderer writers):
+  - *feat/ShadingSystem*: Add more shader group diagnostics to `compile_report`: active layer count, connection depth, texture and noise op counts [#2085](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2085) (1.16.0.0, 1.15.2.0, 1.14.9.0)
+  - *bsdl*: Move GeneralizedSchlick lobe from testrender into BSDL library, unifying DielectricRefl/DielectricBoth into a single `DielectricBSDF<Fresnel>` template [#2078](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2078) (by Alejandro Conty) (1.16.0.0, 1.15.2.0)
+  - *bsdl*: Move MaterialX sheen BSDF into BSDL as `mtx::SheenLobe`, consolidating sheen implementations from testrender and SPI into one place [#2084](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2084) (by Alejandro Conty) (1.16.0.0, 1.15.2.0)
+  - *bsdl*: Incorporate diffuse MaterialX BSDFs into BSDL library [#2092](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2092) (by Alejandro Conty) (1.16.0.0, 1.15.3.0)
+  - *bsdl*: Clamp BSDL/MTX Fresnel inputs to [0,1] and fix bootstrap Imath link [#2081](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2081) (by Alejandro Conty) (1.16.0.0, 1.15.2.0)
 
 ### ☀️  testshade/testrender/osltoy improvements
   - *testrender*: Fix uv derivatives [#1978] [#2037](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2037) (by Alexey Smolenchuk)
-  - *osltoy*: Autodetect output color variable [#2051](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2051) (by Silvia)
+  - *osltoy*: Autodetect output color variable [#2051](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2051) (by Silvia Lopez)
+  - *testshade*: Route errors through renderer's own error handler; convert raw pointers to `unique_ptr` [#2082](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2082) (1.16.0.0, 1.15.2.0, 1.14.9.0)
 
 ### 🚀  SIMD batched shading mode
 
 ### 🚀  OptiX GPU rendering
 
 ### 🐛/🔧  Internals: fixes, improvements, and developer concerns
+  - *fix*: Make `linearstep` definitely return 1 for x > edge1 [#2064](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2064) (by Roeland Schoukens) (1.16.0.0, 1.15.2.0)
+  - *perf/fix*: Change default JIT FMA mode to Strict (no fused multiply-add), improving cross-platform numerical consistency [#2076](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2076) (1.16.0.0, 1.15.2.0)
 
 ### 🏗  Build/test/CI and platform ports
 * CMake build system and scripts:
   - *build*: Add Conda environment setup and dependency installation script [#2023](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2023) (by Alexandru Biscoveanu)
+  - *build*: Fix compilation with ld.lld [#2094](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2094) (by Sv. Lockal) (1.16.0.0, 1.15.3.0, 1.14.10.0)
 * Dependency version support:
+  - *deps*: Support building with LLVM 22 / clang 22 [#2086](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2086) (1.16.0.0, 1.15.2.0, 1.14.9.0)
 * Testing and Continuous integration (CI) systems:
   - *ci*: Switch all containers from aswftesting to aswf [#2061](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2061)
   - *ci*: Save time by not redundantly installing gif library [#2049](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2049)
   - *ci*: Bump python we test on Windows runners [#2066](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2066)
   - *ci*: Lock bleeding edge to pybind11 latest version [#2069](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2069)
+  - *ci*: Stop nightly CI workflows on user forks [#2074](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2074) (1.16.0.0, 1.15.2.0)
+  - *ci*: For security, replace some workflow substitutions with safer env substitutions [#2088](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2088) (1.16.0.0, 1.15.3.0, 1.14.10.0)
+  - *ci*: Some minor LLVM dependency improvements [#2090](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2090) (1.16.0.0, 1.15.3.0)
+  - *ci*: New CI platform variants: macOS 26 ARM [#2079](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2079) (1.16.0.0, 1.15.2.0), Windows 2025 with MSVS 2026 [#2093](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2093) (1.16.0.0, 1.15.3.0, 1.14.10.0)
+  - *ci*: Various fixes for unexpected CI runner breakages: Windows curl LLVM download [#2089](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2089), Mac homebrew installations [#2091](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2091) (1.16.0.0, 1.15.2.0, 1.14.10.0), fmt/OIIO main build [#2095](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2095), Mac compiler path [#2096](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2096), Intel compiler certificate update [#2101](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2101), OIIO dependency hash lockdown [#2102](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2102) (1.16.0.0, 1.15.3.0, 1.14.10.0)
+  - *testing*: Check in reference images for Mac ARM debug case [#2083](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2083) (1.16.0.0, 1.15.2.0, 1.14.10.0)
 * Platform support:
 
 ### 📚  Documentation
+  - *docs*: Fix typo [#2077](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2077) (by Taraash) (1.16.0.0, 1.15.2.0)
 
 ### 🏢  Project Administration
   - *admin*: TSC roster changes [#2065](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2065)
+  - *admin*: Fix link to icon used for Slack release announcements [#2070](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2070) (1.16.0.0, 1.15.2.0)
 
 
 ---
@@ -42,6 +61,36 @@ Release 1.16 (Oct?? ??, 2026) -- compared to 1.15
 ---
 
 
+
+
+Release 1.15.3.0 (1 Apr 2026) -- compared to 1.15.2.0
+---------------------------------------------------------
+  - *bsdl*: Incorporate diffuse MaterialX BSDFs into BSDL library [#2092](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2092) (by Alejandro Conty)
+  - *build*: Fix compilation with ld.lld [#2094](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2094) (by Sv. Lockal) (1.15.3.0, 1.14.10.0)
+  - *ci*: Add Windows 2025 with MSVS 2026 job variant to CI [#2093](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2093) (1.15.3.0, 1.14.10.0)
+  - *ci*: For security, replace some workflow substitutions with safer env substitutions [#2088](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2088) (1.15.3.0, 1.14.10.0)
+  - *ci*: Some minor LLVM dependency improvements [#2090](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2090)
+  - *ci*: Various fixes for unexpected CI runner breakages: fmt/OIIO main build [#2095](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2095), Mac compiler path [#2096](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2096), Intel compiler certificate update [#2101](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2101), OIIO dependency hash lockdown [#2102](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2102) (1.15.3.0, 1.14.10.0)
+
+
+Release 1.15.2.0 (Mar 10, 2026) -- compared to 1.15.1.0
+-------------------------------------------------------------
+  - *feat*: Add more shader group diagnostics to `compile_report` (active layers, connection depth, texture and noise op counts) [#2085](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2085)
+  - *bsdl improvements*:
+    - *bsdl*: Move GeneralizedSchlick lobe from testrender into BSDL library, unifying DielectricRefl/DielectricBoth into a single `DielectricBSDF<Fresnel>` template [#2078](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2078) (by Alejandro Conty)
+    - *bsdl*: Move MaterialX sheen BSDF into BSDL as `mtx::SheenLobe`, consolidating sheen implementations from testrender and SPI into one place [#2084](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2084) (by Alejandro Conty)
+    - *bsdl*: Clamp BSDL/MTX Fresnel inputs to [0,1] and fix bootstrap Imath link [#2081](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2081) (by Alejandro Conty)
+  - *fix*: Make `linearstep` definitely return 1 for x > edge1 [#2064](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2064) (by Roeland Schoukens)
+  - *perf/fix*: Change default JIT FMA mode to Strict (no fused multiply-add), improving cross-platform numerical consistency [#2076](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2076)
+  - *testshade*: Route errors through renderer's own error handler; convert raw pointers to `unique_ptr` [#2082](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2082)
+  - *build*: Support LLVM 22 / clang 22 for building [#2086](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2086)
+  - *ci*: Add macOS 26 (ARM) to the CI lineup [#2079](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2079)
+  - *ci*: Stop nightly CI workflows on user forks [#2074](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2074)
+  - *ci*: Fix Windows curl LLVM download failure [#2089](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2089)
+  - *ci*: Fix and speed up Mac CI dependency installations via Homebrew [#2091](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2091)
+  - *testing*: Check in ref images for Mac ARM debug case [#2083](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2083)
+  - *docs*: Fix typo [#2077](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2077) (by Taraash)
+  - *admin*: Fix link to icon used for Slack release announcements [#2070](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2070)
 
 
 Release 1.15.1.0 (Feb 1, 2026) -- compared to 1.15.0.0
@@ -127,6 +176,25 @@ Release 1.15 (Jan 1, 2026) -- compared to 1.14
 ---
 
 ---
+
+Release 1.14.10.0 (1 Apr 2026) -- compared to 1.14.9.0
+---------------------------------------------------------
+  - *build*: Fix compilation with ld.lld [#2094](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2094) (by Sv. Lockal)
+  - *test*: Check in reference images for Mac ARM debug case [#2083](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2083)
+  - *ci*: Add Windows 2025 with MSVS 2026 job variant to CI [#2093](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2093)
+  - *ci*: For security, replace some workflow substitutions with safer env substitutions [#2088](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2088)
+  - *ci*: Various fixes for unexpected CI runner breakages: Windows curl LLVM download [#2089](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2089), Mac homebrew installations [#2091](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2091), Mac compiler path [#2096](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2096), fmt/OIIO main build [#2095](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2095), update certificates to be able to install Intel compilers [#2101](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2101)
+  - *ci*: Repair broken CI from OIIO locking down dependency hashes [#2102](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2102)
+
+
+Release 1.14.9.0 (10 Mar 2026) -- compared to 1.14.8.0
+-------------------------------------------------------------
+  - *feat*: Add more shader group diagnostics to `compile_report`: when `compile_report >= 1`, report number of active layers, maximum connection depth of the shader network, number of texture ops, and number of noise ops. [#2085](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2085)
+  - *testshade*: Use the renderer's own error handler and convert raw pointers to `unique_ptr` [#2082](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2082)
+  - *build*: Support LLVM 22 and clang 22 [#2086](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2086)
+  - *ci*: Several CI improvements (disk space, container names, nightly workflow control, Python version, gif library dedup) [#2074](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2074) [#2061](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2061) [#2055](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2055) [#2066](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2066) [#2049](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2049)
+  - *docs*: Fix typo [#2077](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2077)
+
 
 Release 1.14.8.0 (1 Dec 2025) -- compared to 1.14.7.0
 -------------------------------------------------------------

@@ -465,6 +465,8 @@ nominated for major awards.)
   Murderbot (S1),
 * **(2026 / upcoming)**
   GOAT,
+  Hoppers,
+  Project Hail Mary,
   ...
 
 
@@ -478,21 +480,8 @@ how to build and install OSL.
 Documentation
 -------------
 
-The OSL language specification can be found at
-[src/doc/osl-languagespec.pdf](src/doc/osl-languagespec.pdf) (in a source
-distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
-installed binary distribution.
-
-[OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
-This will be the future documentation. It's probably as complete as the PDF,
-but it needs some proofreading, so the PDF is still considered the
-authoritative source for now. But some time soon, the old PDF specification
-will be deprecated in favor of
-this online documentation.
-<!-- is the best place to start if you are interested in how to use OSL,
-its APIs. -->
-There is also a [PDF
-version](https://readthedocs.org/projects/open-shading-language/downloads/pdf/latest/).
+The OSL language specification can be found at [OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
+There is also a [PDF version](https://readthedocs.org/projects/open-shading-language/downloads/pdf/stable/).
 
 For those interested in learning to program OSL shaders there is the
 [Siggraph 2024 Course](https://dl.acm.org/doi/proceedings/10.1145/3664475), 
@@ -515,27 +504,41 @@ your question quickly (more so than a GH "issue"). For quick questions, you
 could also try the [ASWF Slack](https://slack.aswf.io) `#openshadinglanguage`
 channel.
 
-Bugs, build problems, and discovered vulnerabilities that you are relatively
-certain is a legit problem in the code, and for which you can give clear
-instructions for how to reproduce, should be [reported as
+A bug or build problem that you are relatively certain is a legit problem in
+the code, and **for which you can give clear instructions for how to
+reproduce**, should be [reported as
 issues](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues).
 
-If you think you've found a potential vulnerability in OSL, please
-confidentially report it by emailing the project administrators at
-[security@openshadinglanguage.org](security@openshadinglanguage.org).
+To report a security vulnerability that is serious enough that it should not
+be discussed publicly until a patch is ready, please file a GitHub [security
+advisory](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/security/advisories/new).
 
 If any other issue requires confidentiality that precludes a public question
 or issue, you may contact the project administrator privately at
 [lg@larrygritz.com](lg@larrygritz.com).
 
 
-Contributing
-------------
+Contributing and developer documentation
+----------------------------------------
 
 OSL welcomes code contributions, and nearly 50 people have done so over the
 years. We take code contributions via the usual GitHub pull request (PR)
-mechanism. Please see [CONTRIBUTING](CONTRIBUTING.md) for detailed
-instructions.
+mechanism.
+
+* [CONTRIBUTING](CONTRIBUTING.md) has detailed instructions about the
+  development process.
+* [AI Policy](docs/dev/AI_Policy.md) decribes our policies on AI coding
+  assistance tools.
+* [RELEASING](docs/dev/RELEASING.md) explains our policies and procedures for
+  making releases. We have a major, possibly-compatibility-breaking, release
+  annually in September/October, and minor bug fix and safe feature addition
+  release at the beginning of every month.
+* Other developer documentation is in the [docs/dev](docs/dev) directory.
+* You may also have luck learning a bit about the organization and
+  architecture of the project by reading the [DeepWiki Analysis of
+  OpenShadingLanguage](https://deepwiki.com/AcademySoftwareFoundation/OpenShadingLanguage).
+  But take it with a grain of salt -- like any LLM-generated summary, there
+  may be inaccuracies lurking.
 
 
 Contacts, Links, and References
@@ -543,13 +546,11 @@ Contacts, Links, and References
 
 [OSL GitHub page](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage)
 
+[OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
+
 [Read or subscribe to the OSL development mail list](https://lists.aswf.io/g/osl-dev)
 
-[Most recent PDF of the OSL language specification](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/src/doc/osl-languagespec.pdf
-)
-
 [OSL home page](http://openshadinglanguage.org)
-
 
 
 
@@ -569,12 +570,12 @@ Louis Feng, Mark Final, Henri Fousse, Stephen Friedman, Syoyo Fujita, Alex
 Fuller, Tim Grant, Larry Gritz, Nicolas Guiard, Euan Haahr, Derek Haase,
 Sven-Hendrik Haase, John Haddon, Niklas Harrysson, Daniel Heckenberg, Chris
 Hellmuth, Christian Heusel, Adrien Herubel, Dan Horák, Thiago Ize, Matt
-Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Silvia Lopez,
+Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Sv. Lockal, Silvia Lopez,
 Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro, Patrick Mours,
 Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois Panisset, Jino Park,
 Alexei Pawlow, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz,
 Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark
-Sisson, Sandip Shukla, Alexey Smolenchuk, Cliff Stein, Stephan Steinbach, Luya
+Sisson, Sandip Shukla, Alexey Smolenchuk, Cliff Stein, Stephan Steinbach, Taraash, Luya
 Tshimbalanga, Esteban Tovagliari, Brecht Van Lommel, Thibault Vergne,
 Alexander von Knorring, Aidan Welch, Alex Wells, Roman Zulak. (Listed
 alphabetically; if we've left anybody out, it is inadvertent, please let us

@@ -348,12 +348,22 @@ public:
         return mm->allocateDataSection(Size, Alignment, SectionID, SectionName,
                                        IsReadOnly);
     }
-    void registerEHFrames(uint8_t* Addr, uint64_t LoadAddr,
-                          size_t Size) override
+
+    // This memory manager is only used during JIT, where it is unnecessary to
+    // register EH frames in the process, as the generated code is not being
+    // executed yet. On certain platforms registering EH frames could lead to
+    // crashes due to a bug in libgcc:
+    //
+    //   https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119151
+    //
+    // For example, the crash can be observed on Ubuntu 24.04 which is shipped
+    // with the affected version of libgcc. To side-step the crash, simply do
+    // not register EH frames as they are not needed during JIT.
+    void registerEHFrames(uint8_t* /*Addr*/, uint64_t /*LoadAddr*/,
+                          size_t /*Size*/) override
     {
-        mm->registerEHFrames(Addr, LoadAddr, Size);
     }
-    void deregisterEHFrames() override { mm->deregisterEHFrames(); }
+    void deregisterEHFrames() override {}
 
     uint64_t getSymbolAddress(const std::string& Name) override
     {

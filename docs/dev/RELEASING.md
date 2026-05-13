@@ -392,7 +392,7 @@ use commit hashes to denote the range of changes you want to document.
 We have found that the git-cliff output is most of what we need for the patch
 releases, and can be copied into the CHANGES.md file with only some minor
 editing needed. The template for the patch release notes can be found in
-[Changes-skeleton-patch.md](doc/dev/Changes-skeleton-patch.md).
+[Changes-skeleton-patch.md](docs/dev/Changes-skeleton-patch.md).
 
 * Get rid of the headings that git-cliff generates. We don't use the headings
   for the patch releases.
@@ -422,7 +422,7 @@ for a prose-based description of important changes that "tell the story" of
 the year's work and will be thoroughly understood by our stakeholders who need
 to understand what has changed.
 
-* Copy all the headings from [Changes-skeleton-major.md](doc/dev/Changes-skeleton-major.md)
+* Copy all the headings from [Changes-skeleton-major.md](docs/dev/Changes-skeleton-major.md)
   or the previous year's release notes to get the skeleton of the major and
   minor headers that you fit everything into. Note that it mostly corresponds
   to sections of the git-cliff output, but with a more carefully constructed

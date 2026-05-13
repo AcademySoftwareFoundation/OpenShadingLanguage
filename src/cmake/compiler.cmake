@@ -20,6 +20,7 @@ message (VERBOSE "CMAKE_SYSTEM_VERSION   = ${CMAKE_SYSTEM_VERSION}")
 message (VERBOSE "CMAKE_SYSTEM_PROCESSOR = ${CMAKE_SYSTEM_PROCESSOR}")
 message (STATUS  "CMAKE_CXX_COMPILER     = ${CMAKE_CXX_COMPILER}")
 message (STATUS  "CMAKE_CXX_COMPILER_ID  = ${CMAKE_CXX_COMPILER_ID}")
+message (VERBOSE "CMAKE_CXX_COMPILE_FEATURES = ${CMAKE_CXX_COMPILE_FEATURES}")
 
 
 ###########################################################################
@@ -72,6 +73,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         message (VERBOSE "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${APPLECLANG_VERSION_STRING}")
         if (APPLECLANG_VERSION_STRING VERSION_LESS 5.0)
             message (ERROR "Apple clang minimum version is 5.0")
+        elseif (APPLECLANG_VERSION_STRING VERSION_LESS 10.0)
+            message (WARNING "Apple clang minimum version is 10.0. Older versions might work, but we don't test or support them.")
         endif ()
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "IntelLLVM")
         set (CMAKE_COMPILER_IS_INTELCLANG 1)
@@ -85,11 +88,16 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lan
         message (VERBOSE "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${CLANG_VERSION_STRING}")
         if (CLANG_VERSION_STRING VERSION_LESS 5.0)
             message (ERROR "clang minimum version is 5.0")
+        elseif (CLANG_VERSION_STRING VERSION_LESS 10.0)
+            message (WARNING "clang minimum version is 10.0. Older versions might work, but we don't test or support them.")
         endif ()
     endif ()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set (CMAKE_COMPILER_IS_INTEL 1)
     message (VERBOSE "Using Intel as the compiler")
+endif ()
+if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
+    set (COMPILER_IS_GCC_OR_ANY_CLANG TRUE)
 endif ()
 
 
@@ -107,12 +115,12 @@ else ()
 endif()
 option (EXTRA_WARNINGS "Enable lots of extra pedantic warnings" OFF)
 if (NOT MSVC)
-    add_compile_options ("-Wall")
+    add_compile_options (-Wall)
     if (EXTRA_WARNINGS)
-        add_compile_options ("-Wextra")
+        add_compile_options (-Wextra)
     endif ()
     if (STOP_ON_WARNING)
-        add_compile_options ("-Werror")
+        add_compile_options (-Werror)
     endif ()
 endif ()
 
@@ -232,18 +240,31 @@ endif ()
 # logic here makes it work even if the user is unaware of ccache. If it's
 # not found on the system, it will simply be silently not used.
 option (USE_CCACHE "Use ccache if found" ON)
-find_program (CCACHE_EXE ccache)
-if (CCACHE_EXE AND USE_CCACHE)
-    if (CMAKE_COMPILER_IS_CLANG AND USE_QT AND (NOT DEFINED ENV{CCACHE_CPP2}))
-        message (STATUS "Ignoring ccache because clang + Qt + env CCACHE_CPP2 is not set")
+if (USE_CCACHE)
+    find_program (CCACHE_EXE ccache
+                  PATHS "${PROJECT_SOURCE_DIR}/ext/dist/"
+                        "${PROJECT_SOURCE_DIR}/ext/dist/bin")
+    if (CCACHE_EXE)
+        if (CMAKE_COMPILER_IS_CLANG AND USE_QT AND (NOT DEFINED ENV{CCACHE_CPP2}))
+            message (STATUS "Ignoring ccache because clang + Qt + env CCACHE_CPP2 is not set")
+        else ()
+            message (STATUS "CMAKE_CXX_COMPILER_LAUNCHER: ${CMAKE_CXX_COMPILER_LAUNCHER}")
+            
+            if (NOT CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache")
+                set (CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_EXE})
+                message (STATUS "first if CMAKE_CXX_COMPILER_LAUNCHER: ${CMAKE_CXX_COMPILER_LAUNCHER}")
+            else ()
+                message (STATUS "first else CMAKE_CXX_COMPILER_LAUNCHER: '${CMAKE_CXX_COMPILER_LAUNCHER}'")
+            endif ()
+            if (NOT CMAKE_C_COMPILER_LAUNCHER MATCHES "ccache")
+                set (CMAKE_C_COMPILER_LAUNCHER ${CCACHE_EXE})
+            endif ()
+            message (STATUS "ccache enabled: ${CCACHE_EXE}")
+            message (STATUS "CCACHE_DIR env: $ENV{CCACHE_DIR}")
+            message (STATUS "CMAKE_CXX_COMPILER_LAUNCHER: ${CMAKE_CXX_COMPILER_LAUNCHER}")
+        endif ()
     else ()
-        if (NOT ${CXX_COMPILER_LAUNCHER} MATCHES "ccache")
-            set (CXX_COMPILER_LAUNCHER ${CCACHE_EXR} ${CXX_COMPILER_LAUNCHER})
-        endif ()
-        if (NOT ${C_COMPILER_LAUNCHER} MATCHES "ccache")
-            set (C_COMPILER_LAUNCHER ${CCACHE_EXR} ${C_COMPILER_LAUNCHER})
-        endif ()
-        message (STATUS "ccache enabled: ${CCACHE_EXE}")
+        message (STATUS "ccache not found")
     endif ()
 endif ()
 
@@ -256,8 +277,8 @@ endif ()
 # set `-j 1` or CMAKE_BUILD_PARALLEL_LEVEL to 1.
 option (TIME_COMMANDS "Time each compile and link command" OFF)
 if (TIME_COMMANDS)
-    set (CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${CXX_COMPILER_LAUNCHER})
-    set (C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${C_COMPILER_LAUNCHER})
+    set (CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${CMAKE_CXX_COMPILER_LAUNCHER})
+    set (CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E time ${CMAKE_C_COMPILER_LAUNCHER})
 endif ()
 
 
@@ -296,20 +317,38 @@ endif ()
 # the proper compiler directives added to generate code for those ISA
 # capabilities.
 #
-set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, ssse3, sse4.1, sse4.2, avx, avx2, avx512f, f16c, aes)")
+set_cache (USE_SIMD "" "Use SIMD directives (0, sse2, sse3, ssse3, sse4.1, sse4.2, avx, avx2, avx512f, f16c, aes)")
 set (SIMD_COMPILE_FLAGS "")
+message (STATUS "Compiling with SIMD level ${USE_SIMD}")
 if (NOT USE_SIMD STREQUAL "")
-    message (STATUS "Compiling with SIMD level ${USE_SIMD}")
     if (USE_SIMD STREQUAL "0")
-        set (SIMD_COMPILE_FLAGS ${SIMD_COMPILE_FLAGS} "-DOIIO_NO_SSE=1")
+        set (SIMD_COMPILE_FLAGS ${SIMD_COMPILE_FLAGS} "-DOIIO_NO_SIMD=1")
     else ()
-        string (REPLACE "," ";" SIMD_FEATURE_LIST ${USE_SIMD})
+        set(_highest_msvc_arch 0)
+        string (REPLACE "," ";" SIMD_FEATURE_LIST "${USE_SIMD}")
         foreach (feature ${SIMD_FEATURE_LIST})
             message (VERBOSE "SIMD feature: ${feature}")
             if (MSVC OR CMAKE_COMPILER_IS_INTEL)
-                set (SIMD_COMPILE_FLAGS ${SIMD_COMPILE_FLAGS} "/arch:${feature}")
+                if (feature STREQUAL "sse2")
+                    list (APPEND SIMD_COMPILE_FLAGS "/D__SSE2__")
+                endif ()
+                if (feature STREQUAL "sse4.1")
+                    list (APPEND SIMD_COMPILE_FLAGS "/D__SSE2__" "/D__SSE4_1__")
+                endif ()
+                if (feature STREQUAL "sse4.2")
+                    list (APPEND SIMD_COMPILE_FLAGS "/D__SSE2__" "/D__SSE4_2__")
+                endif ()
+                if (feature STREQUAL "avx" AND _highest_msvc_arch LESS 1)
+                    set(_highest_msvc_arch 1)
+                endif ()
+                if (feature STREQUAL "avx2" AND _highest_msvc_arch LESS 2)
+                    set(_highest_msvc_arch 2)
+                endif ()
+                if (feature STREQUAL "avx512f" AND _highest_msvc_arch LESS 3)
+                    set(_highest_msvc_arch 3)
+                endif ()
             else ()
-                set (SIMD_COMPILE_FLAGS ${SIMD_COMPILE_FLAGS} "-m${feature}")
+                list (APPEND SIMD_COMPILE_FLAGS "-m${feature}")
             endif ()
             if (feature STREQUAL "fma" AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
                 # If fma is requested, for numerical accuracy sake, turn it
@@ -319,9 +358,24 @@ if (NOT USE_SIMD STREQUAL "")
                 add_compile_options ("-ffp-contract=off")
             endif ()
         endforeach()
+
+        # Only add a single /arch flag representing the highest level of support.
+        if (MSVC OR CMAKE_COMPILER_IS_INTEL)
+            if (_highest_msvc_arch EQUAL 1)
+                list (APPEND SIMD_COMPILE_FLAGS "/arch:AVX")
+            endif ()
+            if (_highest_msvc_arch EQUAL 2)
+                list (APPEND SIMD_COMPILE_FLAGS "/arch:AVX2")
+            endif ()
+            if (_highest_msvc_arch EQUAL 3)
+                list (APPEND SIMD_COMPILE_FLAGS "/arch:AVX512")
+            endif ()
+        endif ()
+        unset(_highest_msvc_arch)
     endif ()
     add_compile_options (${SIMD_COMPILE_FLAGS})
 endif ()
+
 
 ###########################################################################
 # Batched SIMD shader execution options.
@@ -395,7 +449,7 @@ endif ()
 ###########################################################################
 # Sanitizer options
 #
-set (SANITIZE "" CACHE STRING "Build code using sanitizer (address, thread)")
+set_cache (SANITIZE "" "Build code using sanitizer (address, thread, undefined)")
 if (SANITIZE AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
     message (STATUS "Compiling for sanitizer=${SANITIZE}")
     string (REPLACE "," ";" SANITIZE_FEATURE_LIST ${SANITIZE})
@@ -433,9 +487,7 @@ if (CLANG_TIDY)
                  DOC "Path to clang-tidy executable")
     message (STATUS "CLANG_TIDY_EXE ${CLANG_TIDY_EXE}")
     if (CLANG_TIDY_EXE)
-        set (CMAKE_CXX_CLANG_TIDY
-             "${CLANG_TIDY_EXE}"
-             )
+        set (CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
         if (CLANG_TIDY_ARGS)
             list (APPEND CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_ARGS})
         endif ()
@@ -511,7 +563,7 @@ endif ()
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 if (EXTRA_CPP_ARGS)
     message (STATUS "Extra C++ args: ${EXTRA_CPP_ARGS}")
-    add_compile_options ("${EXTRA_CPP_ARGS}")
+    add_compile_options (${EXTRA_CPP_ARGS})
 endif()
 set (EXTRA_DSO_LINK_ARGS "" CACHE STRING "Extra command line definitions when building DSOs")
 
@@ -519,13 +571,13 @@ set (EXTRA_DSO_LINK_ARGS "" CACHE STRING "Extra command line definitions when bu
 ###########################################################################
 # Set the versioning for shared libraries.
 #
-if (${PROJECT_NAME}_SUPPORTED_RELEASE)
+if (${PROJECT_NAME}_SUPPORTED_RELEASE AND NOT SKBUILD)
     # Supported releases guarantee ABI back-compatibility within the release
     # family, so SO versioning is major.minor.
     set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
          CACHE STRING "Set the SO version for dynamic libraries")
 else ()
-    # Development master makes no ABI stability guarantee, so we make the
+    # Main development branch makes no ABI stability guarantee, so we make the
     # SO naming capture down to the major.minor.patch level.
     set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
          CACHE STRING "Set the SO version for dynamic libraries")
@@ -537,7 +589,7 @@ message(VERBOSE "Setting SOVERSION to: ${SOVERSION}")
 # BUILD_SHARED_LIBS, if turned off, will disable building of .so/.dll
 # dynamic libraries and instead only build static libraries.
 #
-option (BUILD_SHARED_LIBS "Build shared libraries (set to OFF to build static libs)" ON)
+set_option (BUILD_SHARED_LIBS "Build shared libraries (set to OFF to build static libs)" ON)
 if (NOT BUILD_SHARED_LIBS)
     add_compile_definitions (${PROJECT_NAME}_STATIC_DEFINE=1)
 endif ()
@@ -599,6 +651,11 @@ endif ()
 set (CMAKE_SKIP_BUILD_RPATH  FALSE)
 # When building, don't use the install RPATH already (but later on when installing)
 set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+
+###########################################################################
+# Generate compile_commands.json for use by editors and tools.
+set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 ###########################################################################

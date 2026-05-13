@@ -11,7 +11,7 @@ set_option (${PROJECT_NAME}_ALWAYS_PREFER_CONFIG
             "Prefer a dependency's exported config file if it's available" OFF)
 
 set_cache (${PROJECT_NAME}_BUILD_MISSING_DEPS ""
-     "Try to download and build any of these missing dependencies (or 'all')")
+     "Try to download and build any of these missing dependencies (or 'all' or 'required')")
 set_cache (${PROJECT_NAME}_BUILD_LOCAL_DEPS ""
      "Force local builds of these dependencies if possible (or 'all')")
 
@@ -37,6 +37,15 @@ else ()
     set_cache (LOCAL_BUILD_SHARED_LIBS_DEFAULT OFF
                DOC "Should a local dependency build, if necessary, build shared libraries" ADVANCED)
 endif ()
+
+# Search for regular libraries before searching for macOS frameworks.
+if (APPLE)
+    set_cache (CMAKE_FIND_FRAMEWORK LAST
+               DOC "Set relative priority of finding frameworks vs. regular libraries" ADVANCED)
+endif ()
+
+set_option (${PROJECT_NAME}_DEPENDENCY_BUILD_ALLOW_UNVERIFIED_TAGS
+            "Allow dependency auto-build to use unverified tags -- Dangerous" OFF)
 
 
 # Track all build deps we find with checked_find_package
@@ -71,7 +80,18 @@ function (dump_matching_variables pattern)
 endfunction ()
 
 
-# Helper: Print a report about missing dependencies and give insructions on
+
+# Utility: if `condition` is true, append `addition` to variable `var`
+macro (string_append_if var condition addition)
+    # message (STATUS "string_append_if ${var} ${condition}='${${condition}}' '${addition}'")
+    if (${condition})
+        string (APPEND ${var} ${addition})
+    endif ()
+endmacro()
+
+
+
+# Helper: Print a report about missing dependencies and give instructions on
 # how to turn on automatic local dependency building.
 function (print_package_notfound_report)
     message (STATUS)
@@ -84,7 +104,9 @@ function (print_package_notfound_report)
         list (SORT CFP_EXTERNAL_BUILD_DEPS_FOUND CASE INSENSITIVE)
         list (REMOVE_DUPLICATES CFP_EXTERNAL_BUILD_DEPS_FOUND)
         foreach (_pkg IN LISTS CFP_EXTERNAL_BUILD_DEPS_FOUND)
-            message (STATUS "    ${_pkg} ${${_pkg}_VERSION}")
+            set (_msg "${_pkg} ${${_pkg}_VERSION} ")
+            string_append_if (_msg ${_pkg}_REQUIRED " (REQUIRED)")
+            message (STATUS "    ${_msg}")
         endforeach ()
     endif ()
     if (CFP_ALL_BUILD_DEPS_BADVERSION)
@@ -92,11 +114,13 @@ function (print_package_notfound_report)
         list (SORT CFP_ALL_BUILD_DEPS_BADVERSION CASE INSENSITIVE)
         list (REMOVE_DUPLICATES CFP_ALL_BUILD_DEPS_BADVERSION)
         foreach (_pkg IN LISTS CFP_ALL_BUILD_DEPS_BADVERSION)
+            set (_msg "${_pkg}")
+            string_append_if (_msg ${_pkg}_REQUIRED " (REQUIRED)")
+            string_append_if (_msg ${_pkg}_NOT_FOUND_EXPLANATION " ${_pkg}_NOT_FOUND_EXPLANATION")
             if (_pkg IN_LIST CFP_LOCALLY_BUILT_DEPS)
-                message (STATUS "    ${_pkg} ${${_pkg}_NOT_FOUND_EXPLANATION} ${ColorMagenta}(${${_pkg}_VERSION} BUILT LOCALLY)${ColorReset}")
-            else ()
-                message (STATUS "    ${_pkg} ${${_pkg}_NOT_FOUND_EXPLANATION}")
+                string (APPEND _msg " ${ColorMagenta}(${${_pkg}_VERSION} BUILT LOCALLY)${ColorReset} in ${${_pkg}_build_elapsed_time}s)${ColorReset}")
             endif ()
+            message (STATUS "    ${_msg}")
         endforeach ()
     endif ()
     if (CFP_ALL_BUILD_DEPS_NOTFOUND)
@@ -104,11 +128,13 @@ function (print_package_notfound_report)
         list (SORT CFP_ALL_BUILD_DEPS_NOTFOUND CASE INSENSITIVE)
         list (REMOVE_DUPLICATES CFP_ALL_BUILD_DEPS_NOTFOUND)
         foreach (_pkg IN LISTS CFP_ALL_BUILD_DEPS_NOTFOUND)
+            set (_msg "${_pkg} ${_${_pkg}_version_range}")
+            string_append_if (_msg ${_pkg}_REQUIRED " (REQUIRED)")
+            string_append_if (_msg ${_pkg}_NOT_FOUND_EXPLANATION " ${_pkg}_NOT_FOUND_EXPLANATION")
             if (_pkg IN_LIST CFP_LOCALLY_BUILT_DEPS)
-                message (STATUS "    ${_pkg} ${_${_pkg}_version_range} ${${_pkg}_NOT_FOUND_EXPLANATION} ${ColorMagenta}(${${_pkg}_VERSION} BUILT LOCALLY)${ColorReset}")
-            else ()
-                message (STATUS "    ${_pkg} ${_${_pkg}_version_range} ${${_pkg}_NOT_FOUND_EXPLANATION}")
+                string (APPEND _msg " ${ColorMagenta}(${${_pkg}_VERSION} BUILT LOCALLY in ${${_pkg}_build_elapsed_time}s)${ColorReset}")
             endif ()
+            message (STATUS "    ${_msg}")
         endforeach ()
     endif ()
     if (CFP_LOCALLY_BUILDABLE_DEPS_NOTFOUND OR CFP_LOCALLY_BUILDABLE_DEPS_BADVERSION)
@@ -118,6 +144,8 @@ function (print_package_notfound_report)
             message (STATUS "    ${_pkg}")
         endforeach ()
         message (STATUS "${ColorBoldWhite}To build them automatically if not found, build again with option:${ColorReset}")
+        message (STATUS "    ${ColorBoldGreen}-D${PROJECT_NAME}_BUILD_MISSING_DEPS=required${ColorReset}")
+        message (STATUS "  or")
         message (STATUS "    ${ColorBoldGreen}-D${PROJECT_NAME}_BUILD_MISSING_DEPS=all${ColorReset}")
     endif ()
     message (STATUS)
@@ -281,7 +309,7 @@ macro (checked_find_package pkgname)
     #
     cmake_parse_arguments(_pkg   # prefix
         # noValueKeywords:
-        "REQUIRED;CONFIG;PREFER_CONFIG;DEBUG;NO_RECORD_NOTFOUND;NO_FP_RANGE_CHECK"
+        "REQUIRED;OPTIONAL;CONFIG;PREFER_CONFIG;DEBUG;NO_RECORD_NOTFOUND;NO_FP_RANGE_CHECK"
         # singleValueKeywords:
         "ENABLE;ISDEPOF;VERSION_MIN;VERSION_MAX;RECOMMEND_MIN;RECOMMEND_MIN_REASON;BUILD_LOCAL"
         # multiValueKeywords:
@@ -298,18 +326,27 @@ macro (checked_find_package pkgname)
         set (${pkgname}_FIND_QUIETLY true)
         set (${pkgname_upper}_FIND_QUIETLY true)
     endif ()
-    if ("${pkgname}" IN_LIST ${PROJECT_NAME}_REQUIRED_DEPS OR "ALL" IN_LIST ${PROJECT_NAME}_REQUIRED_DEPS)
+    if ("${pkgname}" IN_LIST ${PROJECT_NAME}_REQUIRED_DEPS
+        OR "ALL" IN_LIST ${PROJECT_NAME}_REQUIRED_DEPS
+        OR "all" IN_LIST ${PROJECT_NAME}_REQUIRED_DEPS)
         set (_pkg_REQUIRED 1)
     endif ()
-    if ("${pkgname}" IN_LIST ${PROJECT_NAME}_OPTIONAL_DEPS OR "ALL" IN_LIST ${PROJECT_NAME}_OPTIONAL_DEPS)
+    if ("${pkgname}" IN_LIST ${PROJECT_NAME}_OPTIONAL_DEPS
+        OR "ALL" IN_LIST ${PROJECT_NAME}_OPTIONAL_DEPS
+        OR "all" IN_LIST ${PROJECT_NAME}_OPTIONAL_DEPS)
         set (_pkg_REQUIRED 0)
+        set (_pkg_OPTIONAL 1)
     endif ()
     # string (TOLOWER "${_pkg_BUILD_LOCAL}" _pkg_BUILD_LOCAL)
     if ("${pkgname}" IN_LIST ${PROJECT_NAME}_BUILD_LOCAL_DEPS
+        OR ${PROJECT_NAME}_BUILD_LOCAL_DEPS STREQUAL "ALL"
         OR ${PROJECT_NAME}_BUILD_LOCAL_DEPS STREQUAL "all")
         set (_pkg_BUILD_LOCAL "always")
     elseif ("${pkgname}" IN_LIST ${PROJECT_NAME}_BUILD_MISSING_DEPS
-            OR ${PROJECT_NAME}_BUILD_MISSING_DEPS STREQUAL "all")
+            OR ${PROJECT_NAME}_BUILD_MISSING_DEPS STREQUAL "ALL"
+            OR ${PROJECT_NAME}_BUILD_MISSING_DEPS STREQUAL "all"
+            OR ("required" IN_LIST ${PROJECT_NAME}_BUILD_MISSING_DEPS
+                AND _pkg_REQUIRED))
         set_if_not (_pkg_BUILD_LOCAL "missing")
     endif ()
     set (${pkgname}_local_build_script "${PROJECT_SOURCE_DIR}/src/cmake/build_${pkgname}.cmake")
@@ -336,6 +373,12 @@ macro (checked_find_package pkgname)
             set (_quietskip true)
         endif ()
     endif ()
+    if (NOT _enable)
+        set (_pkg_OPTIONAL 1)
+        set (_pkg_REQUIRED 0)
+        message(STATUS "Forcing optional of disabled ${pkgname}")
+    endif ()
+    set (${pkgname}_REQUIRED ${_pkg_REQUIRED})
     set (_config_status "")
     unset (_${pkgname}_version_range)
     if (_pkg_BUILD_LOCAL AND NOT _pkg_NO_FP_RANGE_CHECK)
@@ -356,7 +399,7 @@ macro (checked_find_package pkgname)
     #
     set (${pkgname}_FOUND FALSE)
     set (${pkgname}_LOCAL_BUILD FALSE)
-    if (_enable OR _pkg_REQUIRED)
+    if (_enable OR (_pkg_REQUIRED AND NOT _pkg_OPTIONAL))
         # Unless instructed not to, try to find the package externally
         # installed.
         if (${pkgname}_FOUND OR ${pkgname_upper}_FOUND OR _pkg_BUILD_LOCAL STREQUAL "always")
@@ -426,7 +469,7 @@ macro (checked_find_package pkgname)
         #   ${pkgname}_REFIND_ARGS    : additional arguments to pass to find_package
         if (${pkgname}_REFIND)
             message (STATUS "Refinding ${pkgname} with ${pkgname}_ROOT=${${pkgname}_ROOT}")
-            find_package (${pkgname} ${_pkg_UNPARSED_ARGUMENTS} ${${pkgname}_REFIND_ARGS})
+            find_package (${pkgname} ${${pkgname}_REFIND_VERSION} REQUIRED ${_pkg_UNPARSED_ARGUMENTS} ${${pkgname}_REFIND_ARGS})
             unset (${pkgname}_REFIND)
         endif()
         # It's all downhill from here: if we found the package, follow the
@@ -483,6 +526,74 @@ endmacro()
 
 
 
+
+# Function: remove_prefixes_from_variable
+# Removes specified directory prefixes from a given environment variable or CMake variable.
+#
+# Parameters:
+#   VAR_TYPE  - Type of variable to modify:
+#               'ENV'   for environment variables
+#               'CMAKE' for CMake variables
+#   VAR_NAME  - Name of the variable to modify.
+#   PREFIXES  - List of directory prefixes to remove from the variable's value.
+#
+# Description:
+#   This function updates the specified variable by removing any paths that start
+#   with the given prefixes. It is useful for excluding certain directories
+#   (e.g., Homebrew paths) from environment variables or CMake variables to prevent
+#   unintended dependencies during the build process.
+#
+# Usage Example:
+#   remove_prefixes_from_variable(ENV LD_LIBRARY_PATH "/opt/homebrew" "/usr/local")
+#   remove_prefixes_from_variable(CMAKE CMAKE_PREFIX_PATH "${HOMEBREW_PREFIXES}")
+function(remove_prefixes_from_variable VAR_TYPE VAR_NAME PREFIXES)
+    # Retrieve the original value based on the variable type
+    if(VAR_TYPE STREQUAL "ENV")
+        if(DEFINED ENV{${VAR_NAME}})
+            set(_original_value "$ENV{${VAR_NAME}}")
+        else()
+            return()
+        endif()
+    elseif(VAR_TYPE STREQUAL "CMAKE")
+        if(DEFINED ${VAR_NAME})
+            set(_original_value "${${VAR_NAME}}")
+        else()
+            return()
+        endif()
+    else()
+        message(FATAL_ERROR "Invalid VAR_TYPE: ${VAR_TYPE}. Expected 'ENV' or 'CMAKE'.")
+    endif()
+
+    # Convert the variable value into a list of paths
+    string(REPLACE ":" ";" _path_list "${_original_value}")
+
+    foreach(_prefix ${PREFIXES})
+        # Normalize the prefix path
+        file(TO_CMAKE_PATH "${_prefix}" _norm_prefix)
+        foreach(_path IN LISTS _path_list)
+            # Normalize paths to avoid issues with different formats
+            file(TO_CMAKE_PATH "${_path}" _norm_path)
+            # Check if the normalized path starts with the normalized prefix
+            string(FIND "${_norm_path}" "${_norm_prefix}" _pos)
+            if(_pos EQUAL 0)
+                list(REMOVE_ITEM _path_list "${_path}")
+            endif()
+        endforeach()
+    endforeach()
+
+    # Convert the list back to the appropriate separator
+    string(REPLACE ";" ":" _new_value "${_path_list}")
+
+    # Update the variable based on the variable type
+    if(VAR_TYPE STREQUAL "ENV")
+        set(ENV{${VAR_NAME}} "${_new_value}")
+        message(STATUS "${ColorYellow}Updated environment variable ${VAR_NAME}: ${_new_value}")
+    else()
+        set(${VAR_NAME} "${_new_value}" PARENT_SCOPE)
+        message(STATUS "${ColorYellow}Updated CMake variable ${VAR_NAME}: ${_new_value}")
+    endif()
+endfunction()
+
 # Helper to build a dependency with CMake. Given a package name, git repo and
 # tag, and optional cmake args, it will clone the repo into the surrounding
 # project's build area, configures, and build sit, and installs it into a
@@ -502,35 +613,92 @@ macro (build_dependency_with_cmake pkgname)
         # noValueKeywords:
         "NOINSTALL"
         # singleValueKeywords:
-        "GIT_REPOSITORY;GIT_TAG;VERSION"
+        "GIT_REPOSITORY;GIT_TAG;GIT_COMMIT;VERSION;SOURCE_SUBDIR;QUIET"
         # multiValueKeywords:
         "CMAKE_ARGS"
         # argsToParse:
         ${ARGN})
 
     message (STATUS "Building local ${pkgname} ${_pkg_VERSION} from ${_pkg_GIT_REPOSITORY}")
+    string (TIMESTAMP ${pkgname}_build_start_time "%s")
+
+    if(DEFINED ${pkgname}_CMAKELISTS_TEMPLATE_PATH AND ${pkgname}_CMAKELISTS_TEMPLATE_PATH)
+        message (STATUS "cmakelist template provided on: ${${pkgname}_CMAKELISTS_TEMPLATE_PATH}")
+    endif()
 
     set (${pkgname}_LOCAL_SOURCE_DIR "${${PROJECT_NAME}_LOCAL_DEPS_ROOT}/${pkgname}")
     set (${pkgname}_LOCAL_BUILD_DIR "${${PROJECT_NAME}_LOCAL_DEPS_ROOT}/${pkgname}-build")
     set (${pkgname}_LOCAL_INSTALL_DIR "${${PROJECT_NAME}_LOCAL_DEPS_ROOT}/dist")
     message (STATUS "Downloading local ${_pkg_GIT_REPOSITORY}")
 
-    set (_pkg_quiet OUTPUT_QUIET)
+    unset (${pkgname}_GIT_CLONE_ARGS)
+    unset (_pkg_exec_quiet)
+    if (NOT "${_pkg_GIT_TAG}" STREQUAL "")
+        # If a tag or branch is specified, do a shallow clone for efficiency.
+        list (APPEND ${pkgname}_GIT_CLONE_ARGS -b ${_pkg_GIT_TAG} --depth 1)
+    endif ()
+    if (_pkg_QUIET OR "${_pkg_QUIET}" STREQUAL "")
+        list (APPEND ${pkgname}_GIT_CLONE_ARGS -q ERROR_VARIABLE ${pkgname}_clone_errors)
+        set (_pkg_exec_quiet OUTPUT_QUIET)
+    endif ()
 
     # Clone the repo if we don't already have it
     find_package (Git REQUIRED)
     if (NOT IS_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR})
+        message (STATUS "COMMAND ${GIT_EXECUTABLE} clone ${_pkg_GIT_REPOSITORY} "
+                                "${${pkgname}_LOCAL_SOURCE_DIR} "
+                                "${${pkgname}_GIT_CLONE_ARGS} "
+                        "${_pkg_exec_quiet}")
         execute_process(COMMAND ${GIT_EXECUTABLE} clone ${_pkg_GIT_REPOSITORY}
-                                -b ${_pkg_GIT_TAG} --depth 1 -q
                                 ${${pkgname}_LOCAL_SOURCE_DIR}
-                        ${_pkg_quiet})
+                                ${${pkgname}_GIT_CLONE_ARGS}
+                        ${_pkg_exec_quiet})
         if (NOT IS_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR})
             message (FATAL_ERROR "Could not download ${_pkg_GIT_REPOSITORY}")
         endif ()
     endif ()
-    execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${_pkg_GIT_TAG}
-                    WORKING_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR}
-                    ${_pkg_quiet})
+    # Checkout and verify the source against the expected commit hash to
+    # guard against tag tampering in upstream repositories.
+    if (${PROJECT_NAME}_DEPENDENCY_BUILD_ALLOW_UNVERIFIED_TAGS
+            AND NOT "${_pkg_GIT_TAG}" STREQUAL "")
+        # Special case for CI bleeding edge test, which sets
+        # ${PROJECT_NAME}_DEPENDENCY_BUILD_ALLOW_UNVERIFIED_TAGS to force
+        # the unsafe practice of allowing main/master testing.
+        execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${_pkg_GIT_TAG}
+                        WORKING_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR}
+                        ${_pkg_exec_quiet})
+    elseif (NOT "${_pkg_GIT_TAG}" STREQUAL "" AND NOT "${_pkg_GIT_COMMIT}" STREQUAL "")
+        # Both tag and commit: checkout tag, verify it matches expected commit.
+        execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${_pkg_GIT_TAG}
+                        WORKING_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR}
+                        ${_pkg_exec_quiet})
+        execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+                        WORKING_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR}
+                        OUTPUT_VARIABLE _pkg_actual_commit
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if (NOT "${_pkg_actual_commit}" STREQUAL "${_pkg_GIT_COMMIT}")
+            message (FATAL_ERROR
+                "${pkgname}: Tag ${_pkg_GIT_TAG} resolved to commit "
+                "${_pkg_actual_commit}, but expected ${_pkg_GIT_COMMIT}. "
+                "This may indicate the tag was tampered with or moved.")
+        endif ()
+    elseif (NOT "${_pkg_GIT_COMMIT}" STREQUAL "")
+        # Only commit hash specified: checkout that commit directly.
+        execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${_pkg_GIT_COMMIT}
+                        WORKING_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR}
+                        ${_pkg_exec_quiet})
+    elseif (NOT "${_pkg_GIT_TAG}" STREQUAL "")
+        # Only tag, no commit pin — warn about missing verification.
+        message (WARNING
+            "${pkgname}: No GIT_COMMIT specified to verify tag ${_pkg_GIT_TAG}. "
+            "Consider pinning a commit hash for supply chain security.")
+        execute_process(COMMAND ${GIT_EXECUTABLE} checkout ${_pkg_GIT_TAG}
+                        WORKING_DIRECTORY ${${pkgname}_LOCAL_SOURCE_DIR}
+                        ${_pkg_exec_quiet})
+    else ()
+        message (FATAL_ERROR
+            "${pkgname}: Neither GIT_TAG nor GIT_COMMIT was specified.")
+    endif ()
 
     # Configure the package
     if (${PROJECT_NAME}_DEPENDENCY_BUILD_VERBOSE)
@@ -546,28 +714,52 @@ macro (build_dependency_with_cmake pkgname)
                                 )
     endif ()
 
+    
+    # if a CMakeLists.txt path is specified, add it to the repository. This will replace existing ones
+    # this should be set before calling the macro
+    if(DEFINED ${pkgname}_CMAKELISTS_TEMPLATE_PATH AND NOT "${${pkgname}_CMAKELISTS_TEMPLATE_PATH}" STREQUAL "")
+        message(STATUS "Adding custom CMakeLists.txt for ${pkgname}")
+        configure_file("${${pkgname}_CMAKELISTS_TEMPLATE_PATH}" 
+                      "${${pkgname}_LOCAL_SOURCE_DIR}/${_pkg_SOURCE_SUBDIR}/CMakeLists.txt"
+                      @ONLY)
+    endif()
+
+    # Make sure to inherit CMAKE_IGNORE_PATH
+    set(_pkg_CMAKE_ARGS ${_pkg_CMAKE_ARGS} ${_pkg_CMAKE_ARGS})
+    if (CMAKE_IGNORE_PATH)
+        string(REPLACE ";" "\\;" CMAKE_IGNORE_PATH_ESCAPED "${CMAKE_IGNORE_PATH}")
+        list(APPEND _pkg_CMAKE_ARGS "-DCMAKE_IGNORE_PATH=${CMAKE_IGNORE_PATH_ESCAPED}")
+    endif()
+
+    # Pass along any CMAKE_MSVC_RUNTIME_LIBRARY
+    if (WIN32 AND CMAKE_MSVC_RUNTIME_LIBRARY)
+        list (APPEND _pkg_CMAKE_ARGS -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY})
+    endif ()
+
     execute_process (COMMAND
         ${CMAKE_COMMAND}
             # Put things in our special local build areas
-                -S ${${pkgname}_LOCAL_SOURCE_DIR}
+                -S ${${pkgname}_LOCAL_SOURCE_DIR}/${_pkg_SOURCE_SUBDIR}
                 -B ${${pkgname}_LOCAL_BUILD_DIR}
                 -DCMAKE_INSTALL_PREFIX=${${pkgname}_LOCAL_INSTALL_DIR}
             # Same build type as us
                 -DCMAKE_BUILD_TYPE=${${PROJECT_NAME}_DEPENDENCY_BUILD_TYPE}
+                -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
+                -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
             # Shhhh
                 -DCMAKE_MESSAGE_INDENT="        "
                 -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF
                 ${_pkg_cmake_verbose}
             # Build args passed by caller
                 ${_pkg_CMAKE_ARGS}
-        ${pkg_quiet}
+        ${_pkg_exec_quiet}
         )
 
     # Build the package
     execute_process (COMMAND ${CMAKE_COMMAND}
                         --build ${${pkgname}_LOCAL_BUILD_DIR}
                         --config ${${PROJECT_NAME}_DEPENDENCY_BUILD_TYPE}
-                     ${pkg_quiet}
+                     ${_pkg_exec_quiet}
                     )
 
     # Install the project, unless instructed not to do so
@@ -576,11 +768,14 @@ macro (build_dependency_with_cmake pkgname)
                             --build ${${pkgname}_LOCAL_BUILD_DIR}
                             --config ${${PROJECT_NAME}_DEPENDENCY_BUILD_TYPE}
                             --target install
-                         ${pkg_quiet}
+                         ${_pkg_exec_quiet}
                         )
         set (${pkgname}_ROOT ${${pkgname}_LOCAL_INSTALL_DIR})
         list (APPEND CMAKE_PREFIX_PATH ${${pkgname}_LOCAL_INSTALL_DIR})
     endif ()
+    string (TIMESTAMP ${pkgname}_build_end_time "%s")
+    math (EXPR ${pkgname}_build_elapsed_time "${${pkgname}_build_end_time} - ${${pkgname}_build_start_time}")
+    # message (STATUS "Build time of ${${pkgname}_build_elapsed_time}s")
 endmacro ()
 
 
@@ -595,7 +790,7 @@ macro (install_local_dependency_libs pkgname libname)
             "${${pkgname}_LOCAL_INSTALL_DIR}/lib/*${libname}*"
             "${${pkgname}_LOCAL_INSTALL_DIR}/lib/${${PROJECT_NAME}_DEPENDENCY_BUILD_TYPE}/*${libname}*"
          )
-    install (FILES ${_lib_files} TYPE LIB)
+    install (FILES ${_lib_files} TYPE LIB COMPONENT user)
     # message("${pkgname}_LOCAL_INSTALL_DIR = ${${pkgname}_LOCAL_INSTALL_DIR}")
     # message("  lib files = ${_lib_files}")
     if (WIN32)
@@ -605,7 +800,7 @@ macro (install_local_dependency_libs pkgname libname)
                 "${${pkgname}_LOCAL_INSTALL_DIR}/bin/${${PROJECT_NAME}_DEPENDENCY_BUILD_TYPE}/*${libname}*.dll"
              )
         # message("  dll files = ${_lib_files}")
-        install (FILES ${_lib_files} TYPE BIN)
+        install (FILES ${_lib_files} TYPE BIN COMPONENT user)
     endif ()
     unset (_lib_files)
 endmacro ()

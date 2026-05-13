@@ -332,7 +332,7 @@ __OSL_MASKED_OP(getmessage)(void* bsg_, void* result, ustring_pod source_,
                     Mask(lane),
                     "type mismatch for message \"{}\" ({} as {} here: {}:{})"
                     " cannot fetch as {} from {}:{}",
-                    name.c_str(), has_data ? "created" : "queried",
+                    name, has_data ? "created" : "queried",
                     m->type == TypeDesc::PTR ? "closure color"
                                              : m->type.c_str(),
                     msg_sourcefile, msg_sourceline,

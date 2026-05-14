@@ -1,1 +1,1 @@
-Requesting CLA to sign - this PR should be declined automatically with a link to the form. 
+Requesting CLA to sign - this PR should be declined automatically with a link to the form.  

@@ -183,7 +183,7 @@ jobs:
           - desc: VP2023 gcc11/C++17 llvm15 py3.10 oiio-3.0 avx2
             nametag: linux-vfx2023
             runner: ubuntu-latest
-            container: aswf/ci-osl:2023-clang15
+            container: aswf/ci-osl:2023-clang15.2
             cxx_std: 17
             openimageio_ver: v3.0.11.0
             python_ver: "3.10"
@@ -274,7 +274,7 @@ jobs:
           - desc: abi check
             nametag: linux-abi
             runner: ubuntu-latest
-            container: aswf/ci-osl:2023-clang15
+            container: aswf/ci-osl:2023-clang15.2
             cc_compiler: gcc
             cxx_compiler: g++
             cxx_std: 17
@@ -297,7 +297,7 @@ jobs:
             # If we ever need the big runner:
             #   runner: ${{ (github.repository_owner == 'AcademySoftwareFoundation' && 'ubuntu-22.04-8c-32g-300h') || 'ubuntu-latest' }}
             #   disable: ${{ github.repository_owner != 'AcademySoftwareFoundation' }}
-            container: aswf/ci-osl:2023-clang15
+            container: aswf/ci-osl:2023-clang15.2
             cc_compiler: icx
             cxx_compiler: icpx
             cxx_std: 17

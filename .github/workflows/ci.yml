@@ -302,7 +302,6 @@ jobs:
             cxx_compiler: icpx
             cxx_std: 17
             fmt_ver: 7.1.3
-            opencolorio_ver: v2.3.2
             openimageio_ver: v3.0.15.0
             python_ver: "3.10"
             pybind11_ver: v2.10.0

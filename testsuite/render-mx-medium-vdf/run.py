@@ -6,5 +6,6 @@
 
 failthresh = 0.01
 failpercent = 1
+
 outputs = [ "out.exr" ]
-command = testrender("-v -r 196 196 -aa 64 scene.xml out.exr")
+command = testrender("-v -r 196 196 -aa 32 scene.xml out.exr")

@@ -300,7 +300,15 @@ ASTassign_expression::typecheck(TypeSpec /*expected*/)
         return TypeSpec();
     }
 
-    OSL_DASSERT(m_op == Assign);  // all else handled by binary_op
+    // For compound assignments (+=, *=, etc. call it @=) we need to
+    // validate that the binary op @ is applicable to var() and expr(),
+    // and then that its result can be assigned into var().
+
+    if (m_op != Assign) {
+        ASTbinary_expression bin(m_compiler, Operator(m_op), var(), expr());
+        et = bin.typecheck(vt);
+    }
+
     ustring varname;
     if (var()->nodetype() == variable_ref_node)
         varname = ((ASTvariable_ref*)var().get())->name();

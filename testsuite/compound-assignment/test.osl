@@ -1,0 +1,23 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Test assigning to float from int without temporary works properly.
+// Should really validate the generated oso too.
+
+shader
+test()
+{
+    int a[8] = { 1, 2, 3, 4, 0, 0, 0, 0 };
+    int b[4] = { 1, 2, 3, 4 };
+    int i = 0, j = 0;
+    for (int k = 0; k < 4; ++k) {
+        printf("i: %d, j: %d\n", i, j);
+        a[i++] += b[j++];
+    }
+
+    // Print all elements of 'a' to make sure we didn't write
+    // outside of the scan
+    printf("a: {%d, %d, %d, %d, %d, %d, %d, %d}\n", a[0], a[1], a[2], a[3],
+           a[4], a[5], a[6], a[7]);
+}

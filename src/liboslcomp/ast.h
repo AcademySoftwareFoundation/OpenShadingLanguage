@@ -827,6 +827,12 @@ public:
     ASTbinary_expression(OSLCompilerImpl* comp, Operator op, ASTNode* left,
                          ASTNode* right);
 
+    // this constructor is used to typecheck the compound assignent (+= and friends)
+    // it's almost identical to the normal one, except that because it takes ref's
+    // it doesn't destroy the children unless it's the right thing to do
+    ASTbinary_expression(OSLCompilerImpl* comp, Operator op, ASTNode::ref left,
+                         ASTNode::ref right);
+
     // Special consructor wrapper that can collapse ops between literals
     static ASTNode* make(OSLCompilerImpl* comp, Operator op, ASTNode* left,
                          ASTNode* right);

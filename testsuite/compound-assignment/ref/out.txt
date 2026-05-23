@@ -1,0 +1,7 @@
+Compiled test.osl -> test.oso
+i: 0, j: 0
+i: 1, j: 1
+i: 2, j: 2
+i: 3, j: 3
+a: {2, 4, 6, 8, 0, 0, 0, 0}
+

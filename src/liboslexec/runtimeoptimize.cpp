@@ -3474,6 +3474,11 @@ RuntimeOptimizer::run()
         max_network_depth = std::max(max_network_depth, layer_depth[layer]);
     }
 
+    group().stat_active_layers(active_layers);
+    group().stat_network_depth(max_network_depth);
+    group().stat_texture_ops(n_texture_ops);
+    group().stat_noise_ops(n_noise_ops);
+
     m_stat_specialization_time = rop_timer();
     {
         // adjust memory stats

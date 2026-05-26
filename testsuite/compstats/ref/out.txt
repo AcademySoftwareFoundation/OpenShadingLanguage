@@ -1,0 +1,17 @@
+  Shader compilation stats, post-optimized:
+    Active layers: min=2 max=2 median=2
+      Top shader groups:
+           2 layers  "complex"
+    Network depth: min=2 max=2 median=2
+      Top shader groups:
+           2 depth  "complex"
+    Texture ops: min=1 max=1 median=1
+      Top shader groups:
+           1 ops  "complex"
+    Noise ops: min=2 max=2 median=2
+      Top shader groups:
+           2 ops  "complex"
+stat:compiled_active_layers=2
+stat:compiled_network_depth=2
+stat:compiled_texture_ops=1
+stat:compiled_noise_ops=2

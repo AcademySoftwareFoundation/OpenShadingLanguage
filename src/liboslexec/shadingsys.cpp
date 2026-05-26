@@ -1605,6 +1605,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
 
     lock_guard guard(m_mutex);  // Thread safety
     ATTR_SET("statistics:level", int, m_statslevel);
+    ATTR_SET("stat:rank_groups", int, m_stat_rank_groups);
     ATTR_SET("debug", int, m_debug);
     ATTR_SET("lazylayers", int, m_lazylayers);
     ATTR_SET("lazyglobals", int, m_lazyglobals);
@@ -1797,6 +1798,7 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
     ATTR_DECODE_STRING("searchpath:shader", m_searchpath);
     ATTR_DECODE_STRING("searchpath:library", m_library_searchpath);
     ATTR_DECODE("statistics:level", int, m_statslevel);
+    ATTR_DECODE("stat:rank_groups", int, m_stat_rank_groups);
     ATTR_DECODE("lazylayers", int, m_lazylayers);
     ATTR_DECODE("lazyglobals", int, m_lazyglobals);
     ATTR_DECODE("lazyunconnected", int, m_lazyunconnected);
@@ -2166,6 +2168,22 @@ ShadingSystemImpl::getattribute(ShaderGroup* group, string_view name,
     }
     if (name == "exec_repeat" && type == TypeInt) {
         *(int*)val = group->m_exec_repeat;
+        return true;
+    }
+    if (name == "stat:compiled_active_layers" && type == TypeInt) {
+        *(int*)val = group->stat_active_layers();
+        return true;
+    }
+    if (name == "stat:compiled_network_depth" && type == TypeInt) {
+        *(int*)val = group->stat_network_depth();
+        return true;
+    }
+    if (name == "stat:compiled_texture_ops" && type == TypeInt) {
+        *(int*)val = group->stat_texture_ops();
+        return true;
+    }
+    if (name == "stat:compiled_noise_ops" && type == TypeInt) {
+        *(int*)val = group->stat_noise_ops();
         return true;
     }
     if (name == "ptx_compiled_version" && type.basetype == TypeDesc::PTR) {
@@ -2712,6 +2730,70 @@ ShadingSystemImpl::getstats(int level) const
                     << "\n";
             }
         }
+    }
+
+    // Ranked shader groups by compile-time complexity metrics
+    if (m_stat_groups_compiled > 0) {
+        // Collect a snapshot of all still-live compiled (optimized) groups.
+        std::vector<ShaderGroupRef> groups;
+        {
+            spin_lock lock(m_all_shader_groups_mutex);
+            for (auto&& w : m_all_shader_groups)
+                if (ShaderGroupRef g = w.lock())
+                    if (g->optimized())
+                        groups.push_back(g);
+        }
+        using StatVal = std::pair<int, ustring>;
+        print(out, "  Shader compilation stats, post-optimized:\n");
+        auto emit_ranked_groups =
+            [&](string_view label, string_view unit,
+                std::function<int(const ShaderGroup&)> getter) {
+                if (groups.empty())
+                    return;
+                // Gather values from all compiled groups for aggregate stats.
+                std::vector<int> vals;
+                vals.reserve(groups.size());
+                for (auto&& g : groups)
+                    vals.push_back(getter(*g));
+                std::sort(vals.begin(), vals.end());
+                int vmin    = vals.front();
+                int vmax    = vals.back();
+                int vmedian = vals[vals.size() / 2];
+                print(out, "    {}: min={} max={} median={}\n", label, vmin,
+                      vmax, vmedian);
+                // Ranked list: exclude groups with value 0.
+                std::vector<StatVal> ranked;
+                for (auto&& g : groups) {
+                    int v = getter(*g);
+                    if (v > 0)
+                        ranked.emplace_back(v, g->name());
+                }
+                if (ranked.empty())
+                    return;
+                std::sort(ranked.begin(), ranked.end(),
+                          [](const StatVal& a, const StatVal& b) {
+                              return a.first != b.first ? a.first > b.first
+                                                        : a.second < b.second;
+                          });
+                if ((int)ranked.size() > m_stat_rank_groups)
+                    ranked.resize(m_stat_rank_groups);
+                print(out, "      Top shader groups:\n");
+                for (auto&& [v, name] : ranked)
+                    print(out, "      {:>6} {}  \"{}\"\n", v, unit,
+                          name.size() ? name.c_str() : "<unnamed>");
+            };
+        emit_ranked_groups("Active layers", "layers", [](const ShaderGroup& g) {
+            return g.stat_active_layers();
+        });
+        emit_ranked_groups("Network depth", "depth", [](const ShaderGroup& g) {
+            return g.stat_network_depth();
+        });
+        emit_ranked_groups("Texture ops", "ops", [](const ShaderGroup& g) {
+            return g.stat_texture_ops();
+        });
+        emit_ranked_groups("Noise ops", "ops", [](const ShaderGroup& g) {
+            return g.stat_noise_ops();
+        });
     }
 
     return out.str();

@@ -11,4 +11,4 @@ allowfailures = 5
 idiff_program = "idiff"
 
 outputs = [ "out.exr" ]
-command = testrender("-r 320 240 -aa 4 scene.xml out.exr")
+command = testrender("-r 320 240 -aa 4 --options statistics:level=1 scene.xml out.exr")

@@ -280,7 +280,7 @@ macro (osl_add_all_tests)
                 cellnoise closure closure-array closure-layered closure-parameters closure-zero closure-conditional
                 color color2 color4 color-reg colorspace comparison
                 complement-reg compile-buffer compassign-bool compassign-reg
-                component-range
+                component-range compstats
                 control-flow-reg connect-components
                 const-array-params const-array-fill
                 debugnan debug-uninit

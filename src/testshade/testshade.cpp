@@ -81,6 +81,7 @@ static bool debug_uninit         = false;
 static bool use_group_outputs    = false;
 static bool do_oslquery          = false;
 static bool print_groupdata      = false;
+static bool print_group_stats    = false;
 static bool inbuffer             = false;
 static bool use_shade_image      = false;
 static bool userdata_isconnected = false;
@@ -828,6 +829,8 @@ getargs(int argc, const char* argv[])
       .help("Test OSLQuery at runtime");
     ap.arg("--print-groupdata", &print_groupdata)
         .help("Print groupdata size to stdout");
+    ap.arg("--print-group-stats", &print_group_stats)
+        .help("Print per-group compile stats (active_layers, network_depth, texture_ops, noise_ops) to stdout");
     ap.arg("--inbuffer", &inbuffer)
       .help("Compile osl source from and to jbuffer");
     ap.arg("--no-output-placement")
@@ -2323,6 +2326,23 @@ test_shade(int argc, const char* argv[])
                                  TypeDesc::INT, &groupdata_size);
 
         std::cout << "Groupdata size: " << groupdata_size << "\n";
+    }
+
+    if (print_group_stats && !batched) {
+        int active_layers = 0, network_depth = 0, texture_ops = 0,
+            noise_ops = 0;
+        shadingsys->getattribute(shadergroup.get(),
+                                 "stat:compiled_active_layers", active_layers);
+        shadingsys->getattribute(shadergroup.get(),
+                                 "stat:compiled_network_depth", network_depth);
+        shadingsys->getattribute(shadergroup.get(), "stat:compiled_texture_ops",
+                                 texture_ops);
+        shadingsys->getattribute(shadergroup.get(), "stat:compiled_noise_ops",
+                                 noise_ops);
+        OSL::print("stat:compiled_active_layers={}\n", active_layers);
+        OSL::print("stat:compiled_network_depth={}\n", network_depth);
+        OSL::print("stat:compiled_texture_ops={}\n", texture_ops);
+        OSL::print("stat:compiled_noise_ops={}\n", noise_ops);
     }
 
 

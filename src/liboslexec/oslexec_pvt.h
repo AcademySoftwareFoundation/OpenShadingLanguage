@@ -889,6 +889,7 @@ private:
 
     // Options
     int m_statslevel;             ///< Statistics level
+    int m_stat_rank_groups = 5;   ///< How many groups to list in ranked stats
     bool m_lazylayers;            ///< Evaluate layers on demand?
     bool m_lazyglobals;           ///< Run lazily even if globals write?
     bool m_lazyunconnected;       ///< Run lazily even if not connected?
@@ -1841,6 +1842,15 @@ public:
 
     long long int executions() const { return m_executions; }
 
+    int stat_active_layers() const { return m_stat_active_layers; }
+    void stat_active_layers(int n) { m_stat_active_layers = n; }
+    int stat_network_depth() const { return m_stat_network_depth; }
+    void stat_network_depth(int n) { m_stat_network_depth = n; }
+    int stat_texture_ops() const { return m_stat_texture_ops; }
+    void stat_texture_ops(int n) { m_stat_texture_ops = n; }
+    int stat_noise_ops() const { return m_stat_noise_ops; }
+    void stat_noise_ops(int n) { m_stat_noise_ops = n; }
+
     void start_running()
     {
 #ifndef NDEBUG
@@ -2057,6 +2067,11 @@ private:
     bool m_unknown_attributes_needed;
     atomic_ll m_executions { 0 };  ///< Number of times the group executed
     atomic_ll m_stat_total_shading_time_ticks { 0 };  // Shading time (ticks)
+    // Post-optimization compile stats (written once in RuntimeOptimizer::run)
+    int m_stat_active_layers = 0;  // Non-unused layers after dead-layer elim
+    int m_stat_network_depth = 0;  // Max layer-to-layer connection chain length
+    int m_stat_texture_ops   = 0;  // Texture op count across active layers
+    int m_stat_noise_ops     = 0;  // Noise op count across active layers
 
     std::string m_optix_cache_key;
 

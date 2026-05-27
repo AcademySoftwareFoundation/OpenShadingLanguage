@@ -356,7 +356,7 @@ macro (osl_add_all_tests)
                 printf-reg
                 printf-whole-array
                 raytype raytype-reg raytype-specialized regex-reg
-                reparam reparam-arrays reparam-string testoptix-reparam
+                reparam reparam-arrays reparam-connected-crash reparam-string testoptix-reparam
                 render-background render-bumptest
                 render-bunny
                 render-cornell

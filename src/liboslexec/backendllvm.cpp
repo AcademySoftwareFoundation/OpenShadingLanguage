@@ -232,7 +232,8 @@ BackendLLVM::getLLVMSymbolBase(const Symbol& sym)
                                 llvm_type(sym.typespec().elementtype()));
         return result;
     }
-    if (sym.symtype() == SymTypeParam && sym.interactive() && !sym.connected()) {
+    if (sym.symtype() == SymTypeParam && sym.interactive()
+        && !sym.connected()) {
         // Special case for interactively-edited parameters -- they live in
         // the interactive data block for the group.
         // Generate the pointer to this symbol by offsetting into the

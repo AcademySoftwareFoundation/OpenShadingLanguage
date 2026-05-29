@@ -192,13 +192,7 @@ ustringhash_from(ustringhash u)
 OSL_HOSTDEVICE inline ustringhash
 ustringhash_from(ustringhash_pod u) 
 {
-#if OIIO_VERSION_GREATER_EQUAL(2, 4, 10)
     return ustringhash{u};
-#else
-    // No constructor taking the pod type existed previously
-    // so bitcast it.
-    return OSL::bitcast<ustringhash>(u);
-#endif
 }
 
 /// Convenience function to convert to a ustringhash.

@@ -1,0 +1,5 @@
+Compiled downstream.osl -> downstream.oso
+Compiled upstream.osl -> upstream.oso
+Connect upstream_layer.out to downstream_layer.in
+in = 0.5
+

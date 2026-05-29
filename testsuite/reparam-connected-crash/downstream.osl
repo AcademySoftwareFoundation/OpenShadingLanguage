@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Downstream layer: 'in' will be marked interactive with an instance value
+// via testshade -param:interactive=1
+shader downstream(float in = 0, output float result = 0)
+{
+    printf("in = %g\n", in);
+    result = in;
+}

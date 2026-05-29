@@ -1,0 +1,8 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader upstream(output float out = 0)
+{
+    out = u; // don't constant-fold
+}

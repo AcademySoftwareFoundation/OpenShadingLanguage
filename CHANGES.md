@@ -137,6 +137,16 @@ Release 1.15 (Jan 1, 2026) -- compared to 1.14
 
 ---
 
+Release 1.14.11.0 (1 Jun 2026) -- compared to 1.14.10.0
+---------------------------------------------------------
+  - *ShadingSystem*: Extend per-ShaderGroup complexity statistics: compile-time metrics are now stored as persistent ShaderGroup fields, exposed via `getattribute(group, "stat:compiled_active_layers")` etc., and `getstats()` emits a new "Shader compilation stats, post-optimized" section showing min/max/median and a ranked leaderboard for each metric (controlled by the existing "stat:rank_groups" option). Also adds `--print-group-stats` flag to `testshade`. [#2120](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2120)
+  - *fix*: When a shader parameter is both interactive and connected, the connection now correctly takes precedence (previously the interactive trait incorrectly overrode it, causing writes into a read-only buffer). Fixed in both single-point and batch modes. [#2121](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2121) (by Chris Hellmuth)
+  - *ci*: Various fixes for unexpected CI runner breakages: fmtlib master→main rename [#2103](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2103), wrong Windows-2025/MSVS2022 runner name [#2108](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2108), lock down 2023 container for OCIO stability [#2117](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2117).
+  - *ci*: Remove deprecated Windows-2025 runner (now routes to Windows-2025+VS2026, which we already test). [#2114](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2114)
+  - *ci*: Optimize OpenEXR CI build time; fix nightly-on-forks suppression for Windows jobs. [#2097](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2097)
+  - *docs*: Add AI contribution policy document; update README, CONTRIBUTING, and pull request template with AI policy references; add AI coding assistant configuration. [#2099](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2099) [#2122](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2122)
+
+
 Release 1.14.10.0 (1 Apr 2026) -- compared to 1.14.9.0
 ---------------------------------------------------------
   - *build*: Fix compilation with ld.lld [#2094](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2094) (by Sv. Lockal)

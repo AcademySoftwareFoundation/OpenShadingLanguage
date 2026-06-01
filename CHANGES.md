@@ -1,6 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.15.5.0 (1 Jun 2026) -- compared to 1.15.4.0
+---------------------------------------------------------
+  - *ShadingSystem*: Extend per-ShaderGroup complexity statistics: compile-time metrics are now stored as persistent ShaderGroup fields, exposed via `getattribute(group, "stat:compiled_active_layers")` etc., and `getstats()` emits a new "Shader compilation stats, post-optimized" section showing min/max/median and a ranked leaderboard for each metric (controlled by the existing "stat:rank_groups" option). Also adds `--print-group-stats` flag to `testshade`. [#2120](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2120) (1.15.5.0, 1.14.11.0)
+  - *fix*: When a shader parameter is both interactive and connected, the connection now correctly takes precedence (previously the interactive trait incorrectly overrode it, causing writes into a read-only buffer). Fixed in both single-point and batch modes. [#2121](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2121) (by Chris Hellmuth) (1.15.5.0, 1.14.11.0)
+  - *ci*: Various CI runner fixes: remove deprecated Windows-2025 runner (routes to Windows-2025+VS2026 which we already test) [#2114](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2114), lock down 2023 container to prevent OCIO build breaks [#2117](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2117). (1.15.5.0, 1.14.11.0)
+  - *admin*: Add AI coding assistant configuration (CLAUDE.md, Cursor, Copilot, Codex, OpenCode support). [#2122](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2122) (1.15.5.0, 1.14.11.0)
+
+
 Release 1.15.4.0 (May 5, 2026) -- compared to 1.15.3.0
 ---------------------------------------------------------
   - *fix*: Fix crash in exception handling after OSL JIT on Ubuntu 24.04, caused by a libgcc 14.2 bug; workaround by disabling EH frames registration in the JIT MemoryManager [#2113](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2113) (by Sergey Sharybin)

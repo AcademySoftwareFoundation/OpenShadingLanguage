@@ -259,6 +259,22 @@ TypeSpec::code_from_type() const
 
 
 
+std::string
+TypeSpec::runtime_typecode(bool derivs) const
+{
+    // Reuse code_from_type() for the base char, then collapse all triple
+    // subtypes (c/p/n) to 'v' since the runtime ABI does not distinguish them.
+    OSL_DASSERT(!is_array() && !is_structure() && !is_closure());
+    std::string code = code_from_type();
+    if (code == "c" || code == "p" || code == "n")
+        code = "v";
+    if (derivs && (code == "f" || code == "v"))
+        code = "d" + code;
+    return code;
+}
+
+
+
 void
 TypeSpec::typespecs_from_codes(const char* code, std::vector<TypeSpec>& types)
 {

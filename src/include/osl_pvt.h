@@ -389,6 +389,13 @@ public:
     /// to the type.
     std::string code_from_type() const;
 
+    /// Return the type code used to build mangled osl_* runtime function
+    /// names (e.g. "f" for float, "v" for any triple, "m" for matrix,
+    /// "s" for string, "i" for int).  Unlike code_from_type(), all triple
+    /// subtypes (color, point, vector, normal) collapse to "v".  When
+    /// derivs is true, float and triple types are prefixed with "d".
+    std::string runtime_typecode(bool derivs = false) const;
+
     /// Take a type code string (possibly containing many types)
     /// and turn it into a human-readable string.
     static std::string typelist_from_code(const char* code);
@@ -540,6 +547,13 @@ public:
     /// name by removing the scope prefix. Human readable error messages at
     /// render time should always use the unmangled version for clarity.
     string_view unmangled() const;
+
+    /// Return the runtime type code string for this symbol's type, suitable
+    /// for building mangled osl_* function names.  See TypeSpec::runtime_typecode().
+    std::string arg_typecode(bool derivs = false) const
+    {
+        return typespec().runtime_typecode(derivs);
+    }
 
     /// Data type of this symbol.
     ///

@@ -2359,21 +2359,8 @@ LLVMGEN(llvm_gen_generic)
     std::string name = std::string("osl_") + op.opname().string() + "_";
     for (int i = 0; i < op.nargs(); ++i) {
         Symbol* s(rop.opargsym(op, i));
-        if (any_deriv_args && Result.has_derivs() && s->has_derivs()
-            && !s->typespec().is_matrix())
-            name += "d";
-        if (s->typespec().is_float())
-            name += "f";
-        else if (s->typespec().is_triple())
-            name += "v";
-        else if (s->typespec().is_matrix())
-            name += "m";
-        else if (s->typespec().is_string())
-            name += "s";
-        else if (s->typespec().is_int())
-            name += "i";
-        else
-            OSL_ASSERT(0);
+        bool derivs = any_deriv_args && Result.has_derivs() && s->has_derivs();
+        name += s->arg_typecode(derivs);
     }
 
     if (!Result.has_derivs() || !any_deriv_args) {
@@ -3068,31 +3055,6 @@ LLVMGEN(llvm_gen_trace)
 
 
 
-static std::string
-arg_typecode(Symbol* sym, bool derivs)
-{
-    const TypeSpec& t(sym->typespec());
-    if (t.is_int())
-        return "i";
-    else if (t.is_matrix())
-        return "m";
-    else if (t.is_string())
-        return "s";
-
-    std::string name;
-    if (derivs)
-        name = "d";
-    if (t.is_float())
-        name += "f";
-    else if (t.is_triple())
-        name += "v";
-    else
-        OSL_ASSERT(0);
-    return name;
-}
-
-
-
 static llvm::Value*
 llvm_gen_noise_options(BackendLLVM& rop, int opnum, int first_optional_arg)
 {
@@ -3265,7 +3227,7 @@ LLVMGEN(llvm_gen_noise)
     }
 
     std::string funcname = "osl_" + name.string() + "_"
-                           + arg_typecode(&Result, derivs);
+                           + Result.arg_typecode(derivs);
     llvm::Value* args[10];
     int nargs = 0;
     if (pass_name) {
@@ -3280,18 +3242,18 @@ LLVMGEN(llvm_gen_noise)
         } else
             args[nargs++] = rop.llvm_void_ptr(Result);
     }
-    funcname += arg_typecode(S, derivs);
+    funcname += S->arg_typecode(derivs);
     args[nargs++] = rop.llvm_load_arg(*S, derivs);
     if (T) {
-        funcname += arg_typecode(T, derivs);
+        funcname += T->arg_typecode(derivs);
         args[nargs++] = rop.llvm_load_arg(*T, derivs);
     }
 
     if (periodic) {
-        funcname += arg_typecode(Sper, false /* no derivs */);
+        funcname += Sper->arg_typecode(false);
         args[nargs++] = rop.llvm_load_arg(*Sper, false);
         if (Tper) {
-            funcname += arg_typecode(Tper, false /* no derivs */);
+            funcname += Tper->arg_typecode(false);
             args[nargs++] = rop.llvm_load_arg(*Tper, false);
         }
     }

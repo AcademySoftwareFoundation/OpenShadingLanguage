@@ -61,22 +61,32 @@ test ()
         float sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
         float sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
         //  n1/n2 = sin(theta2)/sin(theta1);
-        printf("   --> verify refract():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+        printf("   --> verify refract():  %.4g/%.4g = sin(%.4g)/sin(%.4g) => %.4g ?= %.4g\n",
               pretty(n1), pretty(n2), pretty(degrees(asin(sin2))), pretty(degrees(asin(sin1))),
               pretty(n1/n2), pretty(sin2/sin1));
         fresnel(vI, vN, eta, Kr, Kt, fR, fT);
-        printf ("   fresnel:  Kr= %g  Kt = %g  R = %g  T = %g\n", pretty(Kr), pretty(Kt),
-                pretty(fR), pretty(fT)); 
+        // The R vector uses %.3g (vs %.4g elsewhere): one of its components
+        // lands right on a 4-significant-digit rounding boundary, where
+        // unavoidable per-platform/per-backend last-bit differences would
+        // otherwise split the rounded output. %.3g masks them.
+        printf ("   fresnel:  Kr= %.4g  Kt = %.4g  R = %.3g  T = %.4g\n", pretty(Kr), pretty(Kt),
+                pretty(fR), pretty(fT));
         cos_incid_angle = dot(vI,vN);
         cos_refr_angle  = dot(fT, -vN);
         sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
         sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
         //  n1/n2 = sin(theta2)/sin(theta1);
-        printf("   --> verify fresnel():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+        // Reduced precision (%.4g) throughout this section's verify/fresnel/
+        // refract prints: the long fresnel chain accumulates last-bit
+        // differences across compilers, platforms, and the JIT-vs-C++ backends
+        // (same ops, different FP fusion/rounding) that surface in the 5th-6th
+        // digit. Limiting printed precision keeps a single portable reference
+        // (it let us drop the per-platform out-*.txt variants).
+        printf("   --> verify fresnel():  %.4g/%.4g = sin(%.4g)/sin(%.4g) => %.4g ?= %.4g\n",
               pretty(n1), pretty(n2), pretty(degrees(asin(sin2))), pretty(degrees(asin(sin1))), pretty(n1/n2), pretty(sin2/sin1));
     }
 
-    { 
+    {
     }
 
     printf (" Varying:\n");
@@ -100,26 +110,30 @@ test ()
         vN = vector(0,0,1);
         vI = normalize(vI);
         vector rR = refract(vI, vN, eta);
-        printf ("   refract (%g, %g, %g) =  %g\n", pretty(vI), pretty(vN), pretty(eta), pretty(rR));
+        // %.4g on the result: the refracted vector's last bit differs per
+        // platform/backend; limiting precision keeps the reference portable.
+        printf ("   refract (%g, %g, %g) =  %.4g\n", pretty(vI), pretty(vN), pretty(eta), pretty(rR));
         float cos_incid_angle = dot(vI,vN);
         float cos_refr_angle  = dot(rR, -vN);
         float sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
         float sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
         //  n1/n2 = sin(theta2)/sin(theta1);
-        printf("   --> verify refract():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+        printf("   --> verify refract():  %.4g/%.4g = sin(%.4g)/sin(%.4g) => %.4g ?= %.4g\n",
               pretty(n1), pretty(n2), pretty(degrees(asin(sin2))), pretty(degrees(asin(sin1))),
               pretty(n1/n2), pretty(sin2/sin1));
         float Kr, Kt;
         vector fR, fT;
         fresnel(vI, vN, eta, Kr, Kt, fR, fT);
-        printf ("   fresnel() -> Kr= %g  Kt = %g  R = %g  T = %g\n", pretty(Kr), pretty(Kt),
-                pretty(pretty(fR)), pretty(pretty(fT))); 
+        // %.4g: see note on the verify-fresnel printf above — the fresnel
+        // chain accumulates last-bit JIT-vs-C++ differences past the 4th digit.
+        printf ("   fresnel() -> Kr= %.4g  Kt = %.4g  R = %.4g  T = %.4g\n", pretty(Kr), pretty(Kt),
+                pretty(pretty(fR)), pretty(pretty(fT)));
         cos_incid_angle = dot(vI,vN);
         cos_refr_angle  = dot(fT, -vN);
         sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
         sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
         //  n1/n2 = sin(theta2)/sin(theta1);
-        printf("   --> verify fresnel():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+        printf("   --> verify fresnel():  %.4g/%.4g = sin(%.4g)/sin(%.4g) => %.4g ?= %.4g\n",
               pretty(n1), pretty(n2), pretty(degrees(asin(sin2))), pretty(degrees(asin(sin1))),
               pretty(n1/n2), pretty(sin2/sin1));
 

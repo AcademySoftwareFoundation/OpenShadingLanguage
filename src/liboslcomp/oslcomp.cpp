@@ -200,6 +200,9 @@ OSLCompilerImpl::preprocess_buffer(const std::string& buffer,
 
     inst.setTarget(target);
 
+#if OSL_LLVM_VERSION >= 220
+    inst.createVirtualFileSystem();
+#endif
     inst.createFileManager();
 #if OSL_LLVM_VERSION >= 220
     inst.createSourceManager();

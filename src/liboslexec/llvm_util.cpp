@@ -684,7 +684,7 @@ LLVM_Util::debug_setup_compilation_unit(const char* compile_unit_name)
         osl_identity,  // Identify the producer of debugging information and code. Usually this is a compiler version string.
         true,          // isOptimized
         "<todo>",  // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
-        OSL_VERSION,  // This indicates runtime version for languages like Objective-C
+        0,  // This indicates runtime version for languages like Objective-C
         llvm::StringRef(),  // SplitName = he name of the file that we'll split debug info out into.
         llvm::DICompileUnit::DebugEmissionKind::
             LineTablesOnly,  // DICompileUnit::DebugEmissionKind

@@ -7,7 +7,7 @@
 [![Open Shading Language Reel 2020](http://img.youtube.com/vi/nmwMz1YnGPA/0.jpg)](https://www.youtube.com/watch?v=nmwMz1YnGPA "Open Shading Language Reel 2020")
 
 [![Build Status](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/workflows/CI/badge.svg)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/actions)
-[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/LICENSE.md)
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/blob/main/LICENSE.md)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3061/badge)](https://bestpractices.coreinfrastructure.org/projects/3061)
 [![Documentation Status](https://readthedocs.org/projects/open-shading-language/badge/?version=main)](https://open-shading-language.readthedocs.io/en/main/?badge=main)
 
@@ -470,15 +470,15 @@ nominated for major awards.)
   ...
 
 
-Building and Installation
--------------------------
+👷 Building and Installation
+----------------------------
 
 Please read the [INSTALL.md](INSTALL.md) file for detailed instructions on
 how to build and install OSL.
 
 
-Documentation
--------------
+💁 Documentation
+----------------
 
 The OSL language specification can be found at [OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
 There is also a [PDF version](https://readthedocs.org/projects/open-shading-language/downloads/pdf/stable/).
@@ -494,8 +494,8 @@ There is also the [Shader Writing in Open Shading Language book](https://www.rou
 This covers all the material from the Siggraph course but in far greater detail. It also includes much more information about how OSL operates and covers a much broader range of shader examples.
 
 
-Contact & reporting problems
-----------------------------
+🚑 Contact & reporting problems
+-------------------------------
 
 Simple "how do I...", "I'm having trouble", or "is this a bug" questions are
 best asked on the [osl-dev developer mail list](https://lists.aswf.io/g/osl-dev).
@@ -518,8 +518,8 @@ or issue, you may contact the project administrator privately at
 [lg@larrygritz.com](lg@larrygritz.com).
 
 
-Contributing and developer documentation
-----------------------------------------
+🔧 Contributing and developer documentation
+-------------------------------------------
 
 OSL welcomes code contributions, and nearly 50 people have done so over the
 years. We take code contributions via the usual GitHub pull request (PR)
@@ -541,16 +541,17 @@ mechanism.
   may be inaccuracies lurking.
 
 
-Contacts, Links, and References
--------------------------------
+☎️ Communications channels and additional resources
+---------------------------------------------------
 
-[OSL GitHub page](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage)
-
-[OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
-
-[Read or subscribe to the OSL development mail list](https://lists.aswf.io/g/osl-dev)
-
-[OSL home page](http://openshadinglanguage.org)
+* [OSL home page](http://openshadinglanguage.org)
+* [OSL GitHub page](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage)
+* [OSL Documentation on ReadTheDocs](https://docs.openshadinglanguage.org)
+* [Developer mail list](https://lists.aswf.io/g/osl-dev)
+* [ASWF Slack](https://slack.aswf.io) (look for the `#openshadinglanguage` channel)
+* Biweekly Technical Steering Committee (TSC) Zoom meetings are on the [ASWF
+  Calendar](https://calendar.openshadinglanguage.org) (click on the OSL
+  meeting entries, every second Monday, to get the Zoom link, anyone may join)
 
 
 

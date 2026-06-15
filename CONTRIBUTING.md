@@ -60,15 +60,15 @@ output of a fresh VERBOSE=1 build.
 
 Suspected security vulnerabilities should be reported by the same process.
 If confidentiality precludes a public question or issue for any reason, you
-may contact us privately at [security@openimageio.org](security@openimageio.org).
+may contact us privately at [security@openshadinglanguage.org](mailto:security@openshadinglanguage.org).
 
 
 Policy on AI Tools
 ------------------
 
 Please read our [Policy on AI Coding Assistants](docs/dev/AI_Policy.md)
-before contributing or particpating in the project in any way mediated by "AI"
-assistants.
+before contributing or participating in the project in any way mediated by
+"AI" assistants.
 
 High-level summary:
 - Human must always be in the loop, and is the responsible party for

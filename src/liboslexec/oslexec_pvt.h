@@ -27,6 +27,7 @@
 
 #include <OpenImageIO/color.h>
 #include <OpenImageIO/paramlist.h>
+#include <OpenImageIO/plugin.h>
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/thread.h>
@@ -94,14 +95,22 @@ typedef std::shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
 class BackendLLVM;
-#if OSL_USE_BATCHED
 class BatchedBackendLLVM;
-#endif
+class BackendCpp;
 struct ConnectedParam;
 
 OSL_DLL_EXPORT void
 print_closure(std::ostream& out, const ClosureColor* closure,
               ShadingSystemImpl* ss, bool treat_ustrings_as_hash);
+
+/// ABI version for generated C++ shader code.  Folding in the OSL major/minor
+/// version *guarantees* incompatibility across minor releases; the trailing
+/// manually-incremented digit covers an incompatible change made *within* a
+/// single minor release cycle.  Must match the identical definition in
+/// osl_cpp_runtime.h (included by generated .cpp files) — a mismatch is caught
+/// loudly, since every generated DSO fails the ABI check at load.
+constexpr int OSL_CPP_ABI_VERSION = 10000 * OSL_VERSION_MAJOR
+                                    + 100 * OSL_VERSION_MINOR + 1;
 
 /// Signature of the function that LLVM generates to run the shader
 /// group.
@@ -124,21 +133,25 @@ typedef int (*OpFolder)(RuntimeOptimizer& rop, int opnum);
 
 /// Signature of an LLVM-IR-generating method
 typedef bool (*OpLLVMGen)(BackendLLVM& rop, int opnum);
-#if OSL_USE_BATCHED
 typedef bool (*OpLLVMGenWide)(BatchedBackendLLVM& rop, int opnum);
-#endif
+
+/// Signature of a Cpp-like emitter
+typedef bool (*OpCppGen)(BackendCpp& rop, int opnum);
+
+
 
 struct OpDescriptor {
-    ustring name;       // name of op
-    OpLLVMGen llvmgen;  // llvm-generating routine
-#if OSL_USE_BATCHED
-    OpLLVMGenWide llvmgenwide;  // wide version of llvm-generating routine
-#endif
-    OpFolder folder;     // constant-folding routine
-    bool simple_assign;  // wholly overwrites arg0, no other writes,
-                         //     no side effects
-    int flags;           // other flags
-    OpDescriptor() {}
+    ustring name;                           // name of op
+    OpLLVMGen llvmgen { nullptr };          // llvm-generating routine
+    OpLLVMGenWide llvmgenwide { nullptr };  // wide version
+    OpFolder folder { nullptr };            // constant-folding routine
+    OpCppGen cppgen { nullptr };            // CPP-generating routine
+    // simple if wholly overwrites arg0, no other writes, no side effects
+    bool simple_assign { false };
+    int flags { 0 };  // other flags
+
+    OpDescriptor() = default;
+
     OpDescriptor(const char* n, OpLLVMGen ll,
 #if OSL_USE_BATCHED
                  OpLLVMGenWide llw,
@@ -252,9 +265,9 @@ struct AttributeNeeded {
     }
 };
 
-// Prefix for OSL shade op declarations. Make them local visibility, but
-// "C" linkage (no C++ name mangling).
-#define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
+// Prefix for OSL shade op declarations.  Export visibility so that DSOs
+// compiled from generated C++ code can resolve these symbols at load time.
+#define OSL_SHADEOP extern "C" OSL_DLL_EXPORT
 
 
 // Handy re-casting macros
@@ -665,6 +678,13 @@ public:
     }
     bool dump_uniform_symbols() const { return m_dump_uniform_symbols; }
     bool dump_varying_symbols() const { return m_dump_varying_symbols; }
+    int debug_output_cpp() const { return m_debug_output_cpp; }
+    const std::string& cpp_output_dir() const { return m_cpp_output_dir; }
+    const std::string& cpp_compiler() const { return m_cpp_compiler; }
+    const std::string& cpp_compiler_flags() const
+    {
+        return m_cpp_compiler_flags;
+    }
     ustring llvm_prune_ir_strategy() const { return m_llvm_prune_ir_strategy; }
     bool fold_getattribute() const { return m_opt_fold_getattribute; }
     bool opt_texture_handle() const { return m_opt_texture_handle; }
@@ -760,7 +780,16 @@ public:
         if (i != m_op_descriptor.end())
             return &(i->second);
         else
-            return NULL;
+            return nullptr;
+    }
+
+    OpDescriptor* op_descriptormod(ustring opname)
+    {
+        OpDescriptorMap::iterator i = m_op_descriptor.find(opname);
+        if (i != m_op_descriptor.end())
+            return &(i->second);
+        else
+            return nullptr;
     }
 
     void pointcloud_stats(int search, int get, int results, int writes = 0)
@@ -947,6 +976,11 @@ private:
     bool m_dump_forced_llvm_bool_symbols;  ///< Output symbols BatchedAnalsysis determined could be forced to be an llvm boolean
     bool m_dump_uniform_symbols;  ///< Output symbols BatchedAnalsysis determined are uniform
     bool m_dump_varying_symbols;  ///< Output symbols BatchedAnalsysis determined are varying
+    // Experimental output of cpp equivalent (0=off, 1=write, 2=compile, 3=execute)
+    int m_debug_output_cpp = 0;
+    std::string m_cpp_output_dir;  // Directory for generated .cpp and .so files
+    std::string m_cpp_compiler;    // C++ compiler for DSO compilation
+    std::string m_cpp_compiler_flags;  // Flags for DSO compilation
     ustring m_llvm_prune_ir_strategy;  ///< LLVM IR pruning strategy
     ustring m_debug_groupname;         ///< Name of sole group to debug
     ustring m_debug_layername;         ///< Name of sole layer to debug
@@ -1088,6 +1122,7 @@ private:
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
     friend class BackendLLVM;
+    friend class BackendCpp;
 #if OSL_USE_BATCHED
     friend class BatchedBackendLLVM;
 #endif
@@ -1805,6 +1840,19 @@ public:
             m_llvm_compiled_layers[layer] = func;
     }
 
+    // DSO handle and entry point for the BackendCpp compiled path
+    // (debug_output_cpp >= 3). Both null when no DSO is loaded.
+    OIIO::Plugin::Handle cpp_dso_handle() const { return m_cpp_dso_handle; }
+    void cpp_dso_handle(OIIO::Plugin::Handle h) { m_cpp_dso_handle = h; }
+    RunLLVMGroupFunc cpp_compiled_version() const
+    {
+        return m_cpp_compiled_version;
+    }
+    void cpp_compiled_version(RunLLVMGroupFunc func)
+    {
+        m_cpp_compiled_version = func;
+    }
+
 #if OSL_USE_BATCHED
     // Hold onto wide versions of llvm functions side by side with scalar
     RunLLVMGroupFuncWide llvm_compiled_wide_version() const
@@ -2033,6 +2081,8 @@ private:
     RunLLVMGroupFunc m_llvm_compiled_version = nullptr;
     RunLLVMGroupFunc m_llvm_compiled_init    = nullptr;
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
+    OIIO::Plugin::Handle m_cpp_dso_handle   = nullptr;  ///< BackendCpp DSO
+    RunLLVMGroupFunc m_cpp_compiled_version = nullptr;  ///< BackendCpp entry
 #if OSL_USE_BATCHED
     RunLLVMGroupFuncWide m_llvm_compiled_wide_version = nullptr;
     RunLLVMGroupFuncWide m_llvm_compiled_wide_init    = nullptr;
@@ -2093,6 +2143,7 @@ private:
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;
+    friend class OSL::pvt::BackendCpp;
 #if OSL_USE_BATCHED
     friend class OSL::pvt::BatchedBackendLLVM;
 #endif

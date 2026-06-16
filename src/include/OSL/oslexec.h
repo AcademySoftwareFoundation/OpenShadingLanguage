@@ -305,6 +305,18 @@ public:
     ///    string only_groupname  Compile only this one group (skip all others)
     ///    int force_derivs       Force all float-based variables to compute
     ///                              and store derivatives. (0)
+    ///    int debug_output_cpp   Debugging output to translate the shader
+    ///                              to C++. Values: 0 = do nothing;
+    ///                              1 = output the cpp to a file;
+    ///                              2 = also compile the file do dso/dll;
+    ///                              3 = load and run the dso instead of
+    ///                              JIT. (default = 0)
+    ///    string cpp_output_dir  For debug_output_cppp > 0, the output
+    ///                              directory. (default: ".")
+    ///    string cpp_compiler    For debug_output_cppp > 0, the C++ compiler
+    ///                              to shell out to. (platform dependent)
+    ///    string cpp_compiler_flags   For debug_output_cppp > 0, C++ fags.
+    ///                           (default: platform dependent)
     ///
     /// Note: the attributes referred to as "string" are actually on the app
     /// side as ustring or const char* (they have the same data layout), NOT

@@ -19,3 +19,4 @@ build
 .opencode/
 .github/copilot-instructions.md
 /specs
+/.cache

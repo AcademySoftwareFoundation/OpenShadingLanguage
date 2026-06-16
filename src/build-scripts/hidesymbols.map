@@ -1,4 +1,11 @@
+/* The osl_* shadeop functions are globally exported (not localized) so that
+ * the C++ source-generation backend's generated shader DSOs can resolve them
+ * from the already-loaded liboslexec at dlopen time. These symbols are
+ * INTERNAL and UNSTABLE: they are exported only for that mechanism, not as a
+ * supported public API. Their signatures may change between releases (the
+ * OSL_CPP_ABI_VERSION check guards against stale DSOs); do not depend on them
+ * from external code. Being visible to the linker is not a support contract. */
 {
-    global: *OSL*; *osl*imageio*; *osl_input_extensions; PyInit*;
-    local: osl_*; *pvt*; *;
+    global: *OSL*; *osl*imageio*; *osl_input_extensions; osl_*; PyInit*;
+    local: *pvt*; *;
 };

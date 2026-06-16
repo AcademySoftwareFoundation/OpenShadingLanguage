@@ -207,7 +207,9 @@ jobs:
             python_ver: "3.13"
             simd: avx2,f16c
             batched: b8_AVX2
-            setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery"
+            # OSL_TEST_CPP_BACKEND=1 also exercises the C++ source-gen backend
+            # (debug_output_cpp=3) on this variant, validating the Linux .so path.
+            setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery" OSL_TEST_CPP_BACKEND=1
             # ^^ exclude python-oslquery test until the ASWF container properly
             #    includes OIIO's python bindings, then we can remove that.
           # Address and leak sanitizers (debug build)
@@ -484,6 +486,9 @@ jobs:
             cxx_std: 17
             python_ver: "3.14"
             openimageio_ver: main
+            # OSL_TEST_CPP_BACKEND=1 also exercises the C++ source-gen backend
+            # (debug_output_cpp=3) on macOS, validating the .dylib DSO path.
+            setenvs: export OSL_TEST_CPP_BACKEND=1
 
 
   windows:

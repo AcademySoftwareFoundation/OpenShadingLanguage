@@ -12,6 +12,7 @@
 #include "oslexec_pvt.h"
 #include <OSL/fmt_util.h>
 #include <OSL/genclosure.h>
+#include "backendcpp.h"
 #include "backendllvm.h"
 #if OSL_USE_BATCHED
 #    include "batched_backendllvm.h"
@@ -1243,6 +1244,15 @@ ShadingSystemImpl::ShadingSystemImpl(RendererServices* renderer,
     if (llvm_debug_env && *llvm_debug_env)
         m_llvm_debug = atoi(llvm_debug_env);
 
+    // Initialize C++ backend defaults from configure-time constants
+    m_cpp_compiler       = OSL_CPP_COMPILER_DEFAULT;
+    m_cpp_compiler_flags = OSL_CPP_COMPILER_FLAGS_DEFAULT;
+
+    // Allow env var to override debug_output_cpp level
+    std::string cpp_debug_env = OIIO::Sysutil::getenv("OSL_DEBUG_OUTPUT_CPP");
+    if (cpp_debug_env.size())
+        m_debug_output_cpp = OIIO::Strutil::stoi(cpp_debug_env);
+
     // Initialize a default set of raytype names.  A particular renderer
     // can override this, add custom names, or change the bits around,
     // if this default ordering is not to its liking.
@@ -1455,6 +1465,7 @@ shading_system_setup_op_descriptors(
     OP (while,       loop_op,             none,          false,     0);
     OP (xor,         bitwise_binary_op,   xor,           true,      0);
 #undef OP
+#undef OP2
 #undef TEX
 #undef SIDE
 #undef STRCHARS
@@ -1587,9 +1598,14 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
         _dst = *(_ctype*)(val);                                        \
         return true;                                                   \
     }
-#define ATTR_SET_STRING(_name, _dst)                 \
+#define ATTR_SET_USTRING(_name, _dst)                \
     if (name == _name && type == TypeDesc::STRING) { \
         _dst = ustring(*(const char**)val);          \
+        return true;                                 \
+    }
+#define ATTR_SET_STRING(_name, _dst)                 \
+    if (name == _name && type == TypeDesc::STRING) { \
+        _dst = std::string(*(const char**)val);      \
         return true;                                 \
     }
 
@@ -1643,7 +1659,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("opt_batched_analysis", int, m_opt_batched_analysis);
     ATTR_SET("llvm_jit_fma", int, m_llvm_jit_fma);
     ATTR_SET("llvm_jit_aggressive", int, m_llvm_jit_aggressive);
-    ATTR_SET_STRING("llvm_jit_target", m_llvm_jit_target);
+    ATTR_SET_USTRING("llvm_jit_target", m_llvm_jit_target);
     ATTR_SET("vector_width", int, m_vector_width);
     ATTR_SET("opt_passes", int, m_opt_passes);
     ATTR_SET("optimize_nondebug", int, m_optimize_nondebug);
@@ -1660,7 +1676,11 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
              m_dump_forced_llvm_bool_symbols);
     ATTR_SET("dump_uniform_symbols", int, m_dump_uniform_symbols);
     ATTR_SET("dump_varying_symbols", int, m_dump_varying_symbols);
-    ATTR_SET_STRING("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
+    ATTR_SET("debug_output_cpp", int, m_debug_output_cpp);
+    ATTR_SET_STRING("cpp_output_dir", m_cpp_output_dir);
+    ATTR_SET_STRING("cpp_compiler", m_cpp_compiler);
+    ATTR_SET_STRING("cpp_compiler_flags", m_cpp_compiler_flags);
+    ATTR_SET_USTRING("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
     ATTR_SET("strict_messages", int, m_strict_messages);
     ATTR_SET("range_checking", int, m_range_checking);
     ATTR_SET("unknown_coordsys_error", int,
@@ -1690,12 +1710,12 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
     ATTR_SET("optix_force_inline_thresh", int, m_optix_force_inline_thresh);
     ATTR_SET_STRINGHASH("commonspace",
                         m_shading_state_uniform.m_commonspace_synonym);
-    ATTR_SET_STRING("debug_groupname", m_debug_groupname);
-    ATTR_SET_STRING("debug_layername", m_debug_layername);
-    ATTR_SET_STRING("opt_layername", m_opt_layername);
-    ATTR_SET_STRING("only_groupname", m_only_groupname);
-    ATTR_SET_STRING("archive_groupname", m_archive_groupname);
-    ATTR_SET_STRING("archive_filename", m_archive_filename);
+    ATTR_SET_USTRING("debug_groupname", m_debug_groupname);
+    ATTR_SET_USTRING("debug_layername", m_debug_layername);
+    ATTR_SET_USTRING("opt_layername", m_opt_layername);
+    ATTR_SET_USTRING("only_groupname", m_only_groupname);
+    ATTR_SET_USTRING("archive_groupname", m_archive_groupname);
+    ATTR_SET_USTRING("archive_filename", m_archive_filename);
 
     // cases for special handling
     if (name == "searchpath:shader" && type == TypeDesc::STRING) {
@@ -1768,6 +1788,7 @@ ShadingSystemImpl::attribute(string_view name, TypeDesc type, const void* val)
 
     return false;
 #undef ATTR_SET
+#undef ATTR_SET_USTRING
 #undef ATTR_SET_STRING
 }
 
@@ -1852,6 +1873,10 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
                 m_dump_forced_llvm_bool_symbols);
     ATTR_DECODE("dump_uniform_symbols", int, m_dump_uniform_symbols);
     ATTR_DECODE("dump_varying_symbols", int, m_dump_varying_symbols);
+    ATTR_DECODE("debug_output_cpp", int, m_debug_output_cpp);
+    ATTR_DECODE_STRING("cpp_output_dir", m_cpp_output_dir);
+    ATTR_DECODE_STRING("cpp_compiler", m_cpp_compiler);
+    ATTR_DECODE_STRING("cpp_compiler_flags", m_cpp_compiler_flags);
     ATTR_DECODE("strict_messages", int, m_strict_messages);
     ATTR_DECODE("error_repeats", int, m_error_repeats);
     ATTR_DECODE("range_checking", int, m_range_checking);
@@ -3901,6 +3926,48 @@ ShadingSystemImpl::optimize_group(ShaderGroup& group, ShadingContext* ctx,
         m_stat_specialization_time += rop.m_stat_specialization_time;
     }
 
+    if (debug_output_cpp() >= 1) {
+        BackendCpp cpper(*this, group, ctx);
+        cpper.run();
+        // Include the group's unique id: a renderer may give multiple groups
+        // the same name (e.g. testrender names every unnamed group "group"),
+        // which would otherwise collide on one .cpp/DSO filename and make later
+        // groups dlopen an earlier group's code.
+        std::string basename = fmtformat("group-cpp-{}_{}.cpp", group.name(),
+                                         group.id());
+        std::string outdir = cpp_output_dir().empty() ? "." : cpp_output_dir();
+        std::string filename   = outdir + "/" + basename;
+        std::string cpp_output = cpper.str();
+        if (!OIIO::Filesystem::is_directory(outdir)) {
+            std::string errmsg;
+            if (!OIIO::Filesystem::create_directory(outdir, errmsg)) {
+                errorfmt("BackendCpp: could not create output directory {} ({})",
+                         outdir, errmsg);
+                return;
+            }
+        }
+        OIIO::Filesystem::write_text_file(filename, cpp_output);
+
+        if (debug_output_cpp() >= 2) {
+#if defined(_WIN32)
+            constexpr const char* dso_ext = ".dll";
+#elif defined(__APPLE__)
+            constexpr const char* dso_ext = ".dylib";
+#else
+            constexpr const char* dso_ext = ".so";
+#endif
+            std::string dso_path = filename.substr(0, filename.size() - 4)
+                                   + dso_ext;
+            if (cpper.compile_to_dso(filename, dso_path)
+                && debug_output_cpp() == 3) {
+                // Level 3: load the freshly-compiled DSO and route execution
+                // through it instead of the JIT (see the layout-only path in
+                // the need_jit block below).
+                cpper.load_dso(dso_path);
+            }
+        }
+    }
+
     if (need_jit) {
         bool cached = false;
         if (use_optix_cache()) {
@@ -3917,6 +3984,11 @@ ShadingSystemImpl::optimize_group(ShaderGroup& group, ShadingContext* ctx,
 
         if (!cached) {
             BackendLLVM lljitter(*this, group, ctx);
+            if (debug_output_cpp() == 3) {
+                // BackendCpp level 3 executes via the compiled DSO, so we
+                // only need the host-side groupdata layout, not a full JIT.
+                lljitter.set_layout_only(true);
+            }
             lljitter.run();
 
             // NOTE: it is now possible to optimize and not JIT

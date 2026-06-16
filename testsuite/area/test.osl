@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Exercise the area() function (differential surface area at P, from P's
+// derivatives). This is the scalar code path; area is otherwise only covered
+// by the batched-regression suite (area-reg), which the C++ backend skips.
+shader test (output float Aout = 0)
+{
+    Aout = area(P);
+}

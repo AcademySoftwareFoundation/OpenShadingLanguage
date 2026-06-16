@@ -1,0 +1,3 @@
+# Excluded from C++-backend testing: this IS the cpp backend's own fixture
+# (it drives debug_output_cpp directly via --options), so a .cpp variant that
+# also forces OSL_DEBUG_OUTPUT_CPP=3 would be circular/meaningless.

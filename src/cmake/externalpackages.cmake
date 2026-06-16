@@ -48,7 +48,7 @@ set (OSL_USING_IMATH 3)
 
 # OpenImageIO
 checked_find_package (OpenImageIO REQUIRED
-                      VERSION_MIN 2.5
+                      VERSION_MIN 3.0
                       DEFINITIONS OIIO_HIDE_FORMAT=1)
 
 checked_find_package (pugixml REQUIRED

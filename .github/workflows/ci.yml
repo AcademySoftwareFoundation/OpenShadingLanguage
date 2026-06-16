@@ -84,34 +84,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - desc: VP2022 gcc9/C++17 llvm14 py3.9 exr3.1 oiio-2.5 avx2
-            nametag: linux-vfx2022
-            runner: ubuntu-latest
-            container: aswf/ci-osl:2022-clang14
-            vfxyear: 2022
-            old_node: 1
-            cxx_std: 17
-            openimageio_ver: v2.5.17.0
-            python_ver: 3.9
-            pybind11_ver: v2.9.0
-            simd: avx2,f16c
-            batched: b8_AVX2
-          - desc: cVP2022 lang14/C++17 llvm14 oiio-3.0 py3.9 avx2 batch-avx512
-            nametag: linux-clang14-llvm14-batch
-            runner: ubuntu-latest
-            container: aswf/ci-osl:2022-clang14
-            vfxyear: 2022
-            old_node: 1
-            cxx_std: 17
-            opencolorio_ver: v2.2.1
-            openimageio_ver: v3.0.11.0
-            python_ver: 3.9
-            pybind11_ver: v2.7.0
-            simd: avx2,f16c
-            batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: USE_OPENVDB=0
           - desc: VP2022 gcc9/C++17 llvm14 py3.9 exr3.1 oiio3.0 sse2 batch-b4sse2
-            nametag: linux-vfx2022-clang
+            nametag: linux-vfx2022
             runner: ubuntu-latest
             container: aswf/ci-osl:2022-clang14
             vfxyear: 2022
@@ -122,8 +96,21 @@ jobs:
             python_ver: 3.9
             pybind11_ver: v2.9.0
             simd: sse2
-            batched: b4_SSE2
-          - desc: VP2022 oldest everything gcc9/C++17 llvm14 py3.9 oiio2.5 no-simd
+          - desc: VP2022 clang14/C++17 llvm14 oiio-3.0 py3.9 avx2 batch-avx512
+            nametag: linux-vfx2022-clang-llvm14-batch
+            runner: ubuntu-latest
+            container: aswf/ci-osl:2022-clang14
+            vfxyear: 2022
+            old_node: 1
+            cxx_std: 17
+            opencolorio_ver: v2.2.1
+            openimageio_ver: v3.0.11.0
+            python_ver: 3.9
+            pybind11_ver: v2.9.0
+            simd: avx2,f16c
+            batched: b4_SSE2,b8_AVX2,b8_AVX512,b16_AVX512
+            setenvs: USE_OPENVDB=0
+          - desc: VP2022 oldest everything gcc9/C++17 llvm14 py3.9 oiio3.0 no-simd
             nametag: linux-oldest
             runner: ubuntu-latest
             container: aswf/ci-osl:2022-clang14
@@ -131,7 +118,7 @@ jobs:
             old_node: 1
             cxx_std: 17
             openexr_ver: v3.1.0
-            openimageio_ver: v2.5.4.0
+            openimageio_ver: v3.0.0.3
             python_ver: 3.9
             pybind11_ver: v2.7.0
             # simd: 0
@@ -207,7 +194,6 @@ jobs:
             container: aswf/ci-osl:2025-clang18
             cxx_std: 17
             python_ver: "3.11"
-            # pybind11_ver: v2.11.1
             simd: avx2,f16c
             batched: b8_AVX2
             setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery"
@@ -219,13 +205,11 @@ jobs:
             container: aswf/ci-osl:2026-clang20
             cxx_std: 20
             python_ver: "3.13"
-            # pybind11_ver: v2.11.1
             simd: avx2,f16c
             batched: b8_AVX2
             setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery"
             # ^^ exclude python-oslquery test until the ASWF container properly
             #    includes OIIO's python bindings, then we can remove that.
-
           # Address and leak sanitizers (debug build)
           - desc: sanitizers
             nametag: sanitizer
@@ -274,12 +258,12 @@ jobs:
           - desc: abi check
             nametag: linux-abi
             runner: ubuntu-latest
-            container: aswf/ci-osl:2023-clang15.2
+            container: aswf/ci-osl:2025-clang18
             cc_compiler: gcc
             cxx_compiler: g++
             cxx_std: 17
             openimageio_ver: release
-            python_ver: "3.10"
+            python_ver: "3.11"
             simd: "avx2,f16c"
             batched: b8_AVX2
             fmt_ver: 10.1.1
@@ -312,13 +296,13 @@ jobs:
                             USE_OPENVDB=0
                             OPENCOLORIO_CMAKE_FLAGS="-DCMAKE_CXX_COMPILER=g++"
 
-          - desc: Debug gcc9/C++17 llvm14 py3.10 oiio2.5 exr3.1 sse4
+          - desc: Debug gcc9/C++17 llvm14 py3.10 oiio3.0 exr3.1 sse4
             nametag: linux-debug-gcc9-llvm14
             runner: ubuntu-22.04
             cxx_compiler: g++-9
             cxx_std: 17
             openexr_ver: v3.1.11
-            openimageio_ver: v2.5.4.0
+            openimageio_ver: v3.0.0.3
             pybind11_ver: v2.7.0
             python_ver: "3.10"
             simd: sse4.2
@@ -327,20 +311,6 @@ jobs:
                             PUGIXML_VERSION=v1.9
                             CTEST_TEST_TIMEOUT=1800
                             OSL_CMAKE_FLAGS="-DOSL_TEST_BIG_TIMEOUT=1200"
-          - desc: gcc10/C++17 llvm14 oiio-2.5 avx2
-            nametag: linux-2021ish-gcc10-llvm14
-            runner: ubuntu-22.04
-            cxx_compiler: g++-10
-            cxx_std: 17
-            fmt_ver: 7.0.1
-            openexr_ver: v3.1.11
-            openimageio_ver: v2.5.17.0
-            pybind11_ver: v2.8.1
-            python_ver: "3.10"
-            simd: avx2,f16c
-            setenvs: export LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
-                            OPENIMAGEIO_CMAKE_FLAGS="-DBUILD_FMT_VERSION=7.0.1"
-                            PUGIXML_VERSION=v1.10
           - desc: latest releases gcc13/C++17 llvm20 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04

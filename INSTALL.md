@@ -28,7 +28,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
    - Microsoft Visual Studio 2017 or newer
    - **Intel LLVM-based icx compiler version 2022 or newer** (note: the classic `icc` compiler is no longer supported).
 
-* [OpenImageIO](http://openimageio.org) 2.5 or newer (tested through 3.1
+* [OpenImageIO](http://openimageio.org) 3.0 or newer (tested through 3.1
   and main)
 
     OSL uses OIIO both for its texture mapping functionality as well as

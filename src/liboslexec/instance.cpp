@@ -768,6 +768,10 @@ ShaderGroup::~ShaderGroup()
     if (m_device_interactive_arena)
         shadingsys().renderer()->device_free(
             m_device_interactive_arena.d_get());
+
+    // Unload the BackendCpp-compiled DSO, if one was loaded.
+    if (m_cpp_dso_handle)
+        OIIO::Plugin::close(m_cpp_dso_handle);
 }
 
 

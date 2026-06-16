@@ -118,6 +118,7 @@ endif ()
 set (OSL_LIBNAME_SUFFIX "" CACHE STRING
      "Optional name appended to ${PROJECT_NAME} libraries that are built")
 option (OSL_BUILD_TESTS "Build the unit tests, testshade, testrender" ON)
+set_option (OSL_TEST_CPP_BACKEND "Also run testsuite cases through the C++ source-gen backend (debug_output_cpp=3)" OFF)
 if (WIN32)
     option (USE_LLVM_BITCODE "Generate embedded LLVM bitcode" OFF)
 else ()

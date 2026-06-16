@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Shader with no renderer-output params.  The optimizer marks it as an
+// empty instance, so the generated group entry dispatches zero layers —
+// verifying that BackendCpp produces a valid (but empty) translation unit.
+shader edge_dead (float x = 1.0, output float internal = 0)
+{
+    internal = x * 2.0;
+}

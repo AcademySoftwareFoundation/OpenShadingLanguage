@@ -1,0 +1,16 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Shader with an unsized-array parameter.  The optimizer resolves the array
+// size from the default initializer before BackendCpp runs, but the
+// generate_groupdata_struct() guard must not crash even if it sees a
+// still-unsized symbol (safety net for future paths).
+shader edge_vararray (float weights[] = {0.5, 0.25, 0.25},
+                      output color Cout = 0)
+{
+    float sum = 0;
+    for (int i = 0; i < arraylength(weights); i++)
+        sum += weights[i];
+    Cout = color(sum, sum, sum);
+}

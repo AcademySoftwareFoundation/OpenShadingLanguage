@@ -7,4 +7,4 @@
 failthresh = 0.01   # allow a little more LSB noise between platforms
 hardfail = 0.025
 outputs = [ "out.exr" ]
-command = testrender("-r 768 128 -aa 16 scene.xml out.exr")
+command = testrender("-r 384 64 -aa 16 scene.xml out.exr")

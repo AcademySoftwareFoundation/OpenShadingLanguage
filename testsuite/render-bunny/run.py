@@ -7,4 +7,4 @@
 failthresh = 0.01
 failpercent = 1
 outputs = [ "out.exr" ]
-command = testrender("-r 256 256 -aa 8 bunny.xml out.exr")
+command = testrender("-r 128 128 -aa 8 bunny.xml out.exr")

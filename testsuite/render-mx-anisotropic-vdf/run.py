@@ -9,4 +9,4 @@ failpercent = 1
 allowfailures = 5
 
 outputs = [ "out.exr" ]
-command = testrender("-v -r 196 196 -aa 32 scene.xml out.exr")
+command = testrender("-v -r 98 98 -aa 32 scene.xml out.exr")

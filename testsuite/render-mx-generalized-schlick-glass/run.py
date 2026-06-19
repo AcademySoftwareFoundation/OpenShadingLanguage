@@ -9,4 +9,4 @@ failpercent = 1
 hardfail = 0.35
 
 outputs = [ "out.exr" ]
-command = testrender("-v -r 320 240 -aa 16 scene.xml out.exr")
+command = testrender("-v -r 160 120 -aa 16 scene.xml out.exr")

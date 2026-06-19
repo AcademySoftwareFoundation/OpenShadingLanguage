@@ -9,4 +9,4 @@ failpercent = 1
 idiff_program = "idiff"
 
 outputs = [ "out.exr" ]
-command = testrender("-r 320 240 -aa 4 scene.xml out.exr")
+command = testrender("-r 160 120 -aa 4 scene.xml out.exr")

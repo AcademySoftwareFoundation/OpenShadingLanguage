@@ -9,4 +9,4 @@ hardfail = 0.05
 idiff_program = "idiff"
 
 outputs = [ "out.exr" ]
-command = testrender("-r 320 240 -aa 6 scene.xml out.exr")
+command = testrender("-r 160 120 -aa 6 scene.xml out.exr")

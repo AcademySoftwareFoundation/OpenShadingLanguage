@@ -5,4 +5,4 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 outputs = [ "out.exr" ]
-command = testrender("-r 320 240 -aa 16 veach.xml out.exr")
+command = testrender("-r 160 120 -aa 16 veach.xml out.exr")

@@ -555,6 +555,10 @@ public:
         return typespec().runtime_typecode(derivs);
     }
 
+    /// The mangled name of the symbol, but only using symbols that are
+    /// safe to use in C++ code.
+    std::string cpp_safe_name() const;
+
     /// Data type of this symbol.
     ///
     const TypeSpec& typespec() const { return m_typespec; }

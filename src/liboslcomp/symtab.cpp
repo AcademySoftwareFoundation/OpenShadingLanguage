@@ -3,6 +3,7 @@
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "osl_pvt.h"
@@ -36,6 +37,61 @@ Symbol::unmangled() const
         Strutil::parse_int(result, val);
         Strutil::parse_char(result, '_');
     }
+    return result;
+}
+
+
+
+std::string
+Symbol::cpp_safe_name() const
+{
+    std::string result;
+    if (m_name.size() && m_name[0] == '$')
+        result = fmtformat("___{}", string_view(m_name).substr(1));
+    else
+        result = m_name.string();
+
+    // Struct fields flatten into symbols whose names embed a '.' separator
+    // (e.g. "p.c"); '.' is illegal in a C++ identifier, so translate it to
+    // "__". Nested fields ("a.b.c") map to "a__b__c".
+    result = Strutil::replace(result, ".", "__", /*global=*/true);
+
+    // Append _osl suffix if the name is a C++ reserved word
+    static const std::unordered_set<std::string> cpp_reserved
+        = { "alignas",       "alignof",     "and",
+            "and_eq",        "asm",         "auto",
+            "bitand",        "bitor",       "bool",
+            "break",         "case",        "catch",
+            "char",          "char8_t",     "char16_t",
+            "char32_t",      "class",       "compl",
+            "concept",       "const",       "consteval",
+            "constexpr",     "constinit",   "const_cast",
+            "continue",      "co_await",    "co_return",
+            "co_yield",      "decltype",    "default",
+            "delete",        "do",          "double",
+            "dynamic_cast",  "else",        "enum",
+            "explicit",      "export",      "extern",
+            "false",         "float",       "for",
+            "friend",        "goto",        "if",
+            "inline",        "int",         "long",
+            "mutable",       "namespace",   "new",
+            "noexcept",      "not",         "not_eq",
+            "nullptr",       "operator",    "or",
+            "or_eq",         "private",     "protected",
+            "public",        "register",    "reinterpret_cast",
+            "requires",      "return",      "short",
+            "signed",        "sizeof",      "static",
+            "static_assert", "static_cast", "struct",
+            "switch",        "template",    "this",
+            "thread_local",  "throw",       "true",
+            "try",           "typedef",     "typeid",
+            "typename",      "union",       "unsigned",
+            "using",         "virtual",     "void",
+            "volatile",      "wchar_t",     "while",
+            "xor",           "xor_eq" };
+    if (cpp_reserved.count(result))
+        result += "_osl";
+
     return result;
 }
 

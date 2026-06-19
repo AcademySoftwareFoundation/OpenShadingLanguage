@@ -145,7 +145,11 @@ ShadingContext::execute_init(ShaderGroup& sgroup, int threadindex,
     clear_runtime_stats();
 
     if (run) {
-        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
+        // Prefer the BackendCpp-compiled DSO entry point (debug_output_cpp==3)
+        // when one has been loaded; otherwise use the JIT-compiled init func.
+        RunLLVMGroupFunc run_func = sgroup.cpp_compiled_version()
+                                        ? sgroup.cpp_compiled_version()
+                                        : sgroup.llvm_compiled_init();
         if (!run_func)
             return false;
         ssg.context             = this;

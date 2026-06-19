@@ -1,0 +1,3 @@
+# Excluded from C++-backend testing: explicit per-layer entry points (--entry)
+# are not supported in the C++ path, and the feature is a candidate for removal
+# (not a planned to-do). See docs/dev/specs/002-backend-cpp/spec.md (Edge Cases).

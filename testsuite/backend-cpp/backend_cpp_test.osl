@@ -1,0 +1,46 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader backend_cpp_test (
+    float in_val = 0.5,
+    output color Cout = 0)
+{
+    // Phase 8 (T032): conditional early-return for out-of-range input.
+    if (in_val < 0) {
+        Cout = color(0, 0, 0);
+        return;
+    }
+    // Loop accumulates sum = 4 * in_val.
+    float sum = 0;
+    for (int i = 0; i < 4; i++)
+        sum = sum + in_val;
+    // if/else on a shader global (u=0.5 at default res): else branch is taken.
+    float scale;
+    if (u > 0.5)
+        scale = 3.0;
+    else
+        scale = 1.5;
+    // Phase 9 (T033): sincos on per-pixel u (can't be folded) feeds output.
+    float sv, cv;
+    sincos(u, sv, cv);
+    // Phase 10 (T034): printf uses per-pixel sv to prevent constant-folding.
+    printf("backend_cpp_test: sv=%f cv=%f\n", sv, cv);
+
+    // Phase 9 (T035): array and component access ops. All values derive from
+    // per-pixel u so they survive constant-folding and exercise the generators.
+    float arr[4];
+    for (int j = 0; j < arraylength(arr); j++)  // arraylength, aassign
+        arr[j] = u * j;
+    float arr2[4];
+    arr2 = arr;                                 // arraycopy
+    float acc = arr2[2] + arr2[3];              // aref
+    color cc = color(0, 0, 0);
+    cc[2] = acc;                                // compassign
+    float c2 = cc[2];                           // compref
+    matrix m = matrix(1);
+    m[2][2] = u;                                // mxcompassign
+    float m22 = m[2][2];                        // mxcompref
+
+    Cout = color(sv, cv, sum * scale + c2 + m22);
+}

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.19)  # Same as top-level CMakeLists.txt
 project(examplecuda LANGUAGES CXX)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -19,12 +19,16 @@ include(check_is_enabled)
 include(checked_find_package)
 
 find_package(OSL REQUIRED)
-find_package(CUDA REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 checked_find_package(LLVM 7.0 REQUIRED)
 checked_find_package(Imath 3.1 REQUIRED)
 checked_find_package(OpenImageIO 2.4 REQUIRED)
 checked_find_package(OptiX REQUIRED)
 
+set(CUDA_TOOLKIT_ROOT_DIR ${CUDAToolkit_ROOT_DIR})
+set(CUDA_INCLUDE_DIRS ${CUDAToolkit_INCLUDE_DIRS})
+set(CUDA_NVCC_EXECUTABLE ${CUDAToolkit_NVCC_EXECUTABLE})
+set(CUDA_LIBRARIES CUDA::cudart)
 
 # Make the build area layout look like we expect
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -34,12 +38,36 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # TODO: what are the path suffixes on other platforms?
 find_library(CUDA_nvrtc_LIBRARY nvrtc HINTS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib lib64)
 find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib/stubs lib64/stubs)
+if (TARGET CUDA::nvrtc)
+    set(CUDA_nvrtc_LIBRARY CUDA::nvrtc)
+endif ()
+if (TARGET CUDA::cuda_driver)
+    set(CUDA_cuda_LIBRARY CUDA::cuda_driver)
+endif ()
 
 # TODO: move to sm_60?
 set(CUDA_TARGET_ARCH sm_35)
 
 set (CMAKE_CXX_STANDARD 17 CACHE STRING
      "C++ standard to build with (17, 20, etc.)")
+
+# Compile a CUDA source file to PTX with NVCC.  (Formerly provided by FindCUDA.cmake)
+function(cuda_compile_ptx out_var cuda_src)
+    cmake_parse_arguments(_ccp "" "" "OPTIONS" ${ARGN})
+    get_filename_component(cuda_src_we ${cuda_src} NAME_WE)
+    set(cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.ptx")
+    add_custom_command(OUTPUT ${cuda_ptx}
+        COMMAND ${CUDA_NVCC_EXECUTABLE}
+                ${_ccp_OPTIONS}
+                -ptx
+                ${cuda_src}
+                -o ${cuda_ptx}
+        MAIN_DEPENDENCY ${cuda_src}
+        DEPENDS ${cuda_src}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+    set(${out_var} ${cuda_ptx} PARENT_SCOPE)
+endfunction()
 
 # Compile our "renderer" to PTX
 cuda_compile_ptx(CUDA_PTX_FILES cuda_grid_renderer.cu

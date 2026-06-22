@@ -88,8 +88,9 @@ endif ()
 
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
-osl_optix_target(testshade)
-
+if (OSL_USE_OPTIX)
+    osl_optix_target(testshade)
+endif ()
 
 # As explained in PR #39, problems were reported with calling OSL from a
 # Houdini plugin.  So this section sets up a version of testshade as a DSO, to

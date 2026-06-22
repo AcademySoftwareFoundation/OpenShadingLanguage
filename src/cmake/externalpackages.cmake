@@ -118,7 +118,7 @@ if (OSL_USE_OPTIX)
             message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
         endif ()
 
-        checked_find_package (CUDA REQUIRED
+        checked_find_package(CUDA REQUIRED
                              VERSION_MIN 9.0
                              RECOMMEND_MIN 11.0
                              RECOMMEND_MIN_REASON
@@ -142,17 +142,16 @@ if (OSL_USE_OPTIX)
                 "first shipped in LLVM 22.1.2. Either upgrade LLVM or downgrade CUDA.${ColorReset}")
         endif ()
 
-        set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
-
-        # If the user wants, try to use static libs here to putting static lib
-        # suffixes earlier in the suffix list. Don't forget to restore after
-        # so that this only applies to these library searches right here.
-        set (save_lib_path ${CMAKE_FIND_LIBRARY_SUFFIXES})
         if (CUDA_PREFER_STATIC_LIBS)
+            # If the user wants, try to use static libs here by putting static
+            # lib suffixes earlier in the suffix list.
+            set (save_lib_path ${CMAKE_FIND_LIBRARY_SUFFIXES})
             set (CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
             find_library(cudart_lib REQUIRED
                          NAMES cudart_static cudart
                          PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+            set (CMAKE_FIND_LIBRARY_SUFFIXES ${save_lib_path})
+            unset (save_lib_path)
         else ()
             find_library(cudart_lib REQUIRED
                          NAMES cudart
@@ -161,8 +160,6 @@ if (OSL_USE_OPTIX)
         # Is it really a good idea to completely reset CUDA_LIBRARIES here?
         set(CUDA_LIBRARIES ${cudart_lib})
         set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl rt)
-        set (CMAKE_FIND_LIBRARY_SUFFIXES ${save_lib_path})
-        unset (save_lib_path)
     endif()
 
     # OptiX setup
@@ -174,17 +171,6 @@ if (OSL_USE_OPTIX)
             message (FATAL_ERROR "Enabling OptiX requires USE_LLVM_BITCODE=1 and USE_FAST_MATH=1")
         endif ()
     endif ()
-
-    function (osl_optix_target TARGET)
-        target_include_directories (${TARGET} BEFORE PRIVATE ${CUDA_INCLUDES} ${OPTIX_INCLUDES})
-        ## XXX: Should -DPTX_PATH point to (or include) CMAKE_CURRENT_BINARY_DIR so tests can run before installation ?
-        target_compile_definitions (${TARGET} PRIVATE PTX_PATH="${OSL_PTX_INSTALL_DIR}")
-        target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
-    endfunction()
-else ()
-    message(STATUS "CUDA/OptiX support disabled")
-    function (osl_optix_target TARGET)
-    endfunction()
 endif ()
 
 

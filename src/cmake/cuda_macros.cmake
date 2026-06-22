@@ -2,9 +2,23 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-set ($OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compiling CUDA code")
+# NOTE: externalpackages.cmake is included before this file
+
+if (CUDA_VERSION VERSION_GREATER 13.0)
+    # CUDA 13+ requires sm_75 at least, so this is the minimum
+    set (CUDA_TARGET_ARCH_NUMBER "75" CACHE STRING "CUDA GPU architecture numeric code (e.g. 60)")
+else ()
+    # CUDA <= 12.x supports old GPUs, so conservatively target sm_60 to give
+    # the widest possible range of GPUs that OSL shaders will run on.
+    set (CUDA_TARGET_ARCH_NUMBER "60" CACHE STRING "CUDA GPU architecture numeric code (e.g. 60)")
+endif ()
+set (CUDA_TARGET_ARCH "sm_${CUDA_TARGET_ARCH_NUMBER}" CACHE STRING "CUDA GPU architecture (e.g. 60)")
+set (OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compiling CUDA code")
 set (CUDA_OPT_FLAG_NVCC "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with nvcc")
 set (CUDA_OPT_FLAG_CLANG "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with clang")
+set (CUDA_EXTRA_LIBS CACHE STRING "Extra lib targets needed for CUDA")
+set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
+set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
 
 # FTZ is enabled by default since it offers the best performance,
 # but it may be disabled to debug numerical issues, to better match
@@ -13,6 +27,15 @@ set (CUDA_NO_FTZ OFF CACHE BOOL "Do not enable force-to-zero when compiling for 
 if (CUDA_NO_FTZ)
     add_compile_definitions (DOSL_CUDA_NO_FTZ=1)
 endif ()
+
+
+function (osl_optix_target TARGET)
+    target_include_directories (${TARGET} BEFORE PRIVATE ${CUDA_INCLUDES} ${OPTIX_INCLUDES})
+    ## XXX: Should -DPTX_PATH point to (or include) CMAKE_CURRENT_BINARY_DIR so tests can run before installation ?
+    target_compile_definitions (${TARGET} PRIVATE PTX_PATH="${OSL_PTX_INSTALL_DIR}")
+    target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+endfunction()
+
 
 # Compile a CUDA file to PTX using NVCC
 function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args extra_libs)
@@ -167,7 +190,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             ${ALL_OpenImageIO_INCLUDES}
             ${ALL_IMATH_INCLUDES}
             ${ALL_OPENEXR_INCLUDES}
-            ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX} ${CUDA_TEXREF_FIX}
+    ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX} ${CUDA_TEXREF_FIX}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security

@@ -127,9 +127,6 @@ option (OSL_BUILD_PLUGINS "Bool OSL plugins, for example OIIO plugin" ON)
 option (OSL_BUILD_SHADERS "Build shaders" ON)
 option (OSL_USE_OPTIX "Include OptiX support" OFF)
 message(STATUS "OSL_USE_OPTIX: ${OSL_USE_OPTIX}")
-set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
-set (CUDA_EXTRA_LIBS CACHE STRING "Extra lib targets needed for CUDA")
-set (CUDA_TARGET_ARCH "sm_60" CACHE STRING "CUDA GPU architecture (e.g. sm_50)")
 set (OSL_SHADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/shaders"
      CACHE STRING "Directory where shaders will be installed")
 set (OSL_PTX_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/ptx"
@@ -210,8 +207,8 @@ include (pythonutils)
 # Dependency finding utilities and all dependency-related options
 include (externalpackages)
 include (flexbison)
-include (cuda_macros)
 include (llvm_macros)
+include (cuda_macros)
 
 # Include all our testing apparatus and utils, but not if it's a subproject
 if (${PROJECT_NAME}_BUILD_TESTS AND PROJECT_IS_TOP_LEVEL)

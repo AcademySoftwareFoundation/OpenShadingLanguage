@@ -60,76 +60,37 @@ class OSOReaderQuery;  // Just so OSLQuery can friend OSLReaderQuery
 
 
 
-/// <doc OSLQuery>
-///                  **OSLQuery Documentation**
+/// `OSLQuery` is a class that lets an application interrogate a compiled
+/// shader for information about its parameters.
 ///
-///
-/// Introduction and Tutorial
-/// =========================
-///
-/// `OSLQuery` is a class that lets an application interrogate a
-/// compiled shader for information about its parameters.
-///
-/// The shader may be an already-compiled shader file on disk (i.e. a
-/// `.oso` file), or the `.oso` equivalent in a string, or the binary
+/// The shader may be an already-compiled shader file on disk (a `.oso`
+/// file), or the `.oso` equivalent in a string buffer, or the binary
 /// representation used by the OSL `ShaderSystem` runtime (as a pointer
-/// to a `ShaderGroup`).  For example,
+/// to a `ShaderGroup`).
 ///
-/// ~~~
-///     OSLQuery oslquery ("polished_oak");
-/// ~~~
-///
-/// It's then easy to retrieve a specific parameter:
-///
-/// ~~~
-///     int nparams = oslquery.nparams();  // number of params
-///
-///     const OSLQuery::Parameter *param;
-///     p = oslquery.getparam (i);            // by index (0..nparams-1)
-///     p = oslquery.getparam ("woodcolor");  // by name
-/// ~~~
-///
-/// And the `Parameter` structure will hold all the information you need
-/// about that parameter. For example:
-///
-/// ~~~
-///     std::cout << "Parameter " << p->name
-///               << " is type " << p->type << "\n"
-/// ~~~
-///
-/// You can find out if the parameter is a closure, an output parameter,
-/// etc. You can also find out its default values, which are stored in
-/// vector fields `idefault`, `fdefault`, and `sdefault` depending on
-/// whether the types is based on int, float, or string, respectively.
-///
-///
-/// OSLQuery class API Reference
-/// ============================
+/// Refer to the "OSLQuery" chapter of the OSL documentation for a full
+/// tutorial and usage examples.
 
 class OSLQUERYPUBLIC OSLQuery {
 public:
-    /// Parameter helper structure
-    /// --------------------------
-    /// `Parameter` holds all the information about a single shader
-    /// parameter.
-    /// <code>
+    /// `Parameter` holds all the information about a single shader parameter.
     struct OSLQUERYPUBLIC Parameter {
-        ustring name;                     //< name
-        TypeDesc type;                    //< data type
-        bool isoutput     = false;        //< is it an output param?
-        bool validdefault = false;        //< false if there's no default val
-        bool varlenarray  = false;        //< is it a varying-length array?
-        bool isstruct     = false;        //< is it a structure?
-        bool isclosure    = false;        //< is it a closure?
-        void* data        = nullptr;      //< pointer to data
-        std::vector<int> idefault;        //< default int values
-        std::vector<float> fdefault;      //< default float values
-        std::vector<ustring> sdefault;    //< default string values
-        std::vector<ustring> spacename;   //< space name for matrices and
-                                          //<  triples, for each array elem.
-        std::vector<ustring> fields;      //< Names of this struct's fields
-        ustring structname;               //< Name of the struct
-        std::vector<Parameter> metadata;  //< Meta-data about the param
+        ustring name;                     ///< name
+        TypeDesc type;                    ///< data type
+        bool isoutput     = false;        ///< is it an output param?
+        bool validdefault = false;        ///< false if there's no default val
+        bool varlenarray  = false;        ///< is it a varying-length array?
+        bool isstruct     = false;        ///< is it a structure?
+        bool isclosure    = false;        ///< is it a closure?
+        void* data        = nullptr;      ///< pointer to data
+        std::vector<int> idefault;        ///< default int values
+        std::vector<float> fdefault;      ///< default float values
+        std::vector<ustring> sdefault;    ///< default string values
+        std::vector<ustring> spacename;   ///< space name for matrices and
+                                          ///<  triples, for each array elem.
+        std::vector<ustring> fields;      ///< Names of this struct's fields
+        ustring structname;               ///< Name of the struct
+        std::vector<Parameter> metadata;  ///< Meta-data about the param
 
         Parameter() {}
         Parameter(const Parameter& src);
@@ -137,7 +98,6 @@ public:
         const Parameter& operator=(const Parameter&);
         const Parameter& operator=(Parameter&&);
     };
-    /// </code>
 
     /// OSLQuery methods
     /// ----------------
@@ -300,8 +260,5 @@ OSLQuery::getparam(ustring name) const
     return nullptr;
 }
 
-
-// more documentation
-/// <inc oslinfo_source>
 
 OSL_NAMESPACE_END

@@ -132,6 +132,16 @@ if (OSL_USE_OPTIX)
             message (FATAL_ERROR "NVPTX target is not available in the provided LLVM build")
         endif()
 
+        # CUDA 13.2+ requires LLVM 22.1.2+ for the _NV_RSQRT_SPECIFIER fix.
+        # See: https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/issues/2129
+        if (CUDA_VERSION VERSION_GREATER_EQUAL "13.2" AND LLVM_VERSION VERSION_LESS "22.1.2")
+            message (FATAL_ERROR
+                "${ColorRed}CUDA ${CUDA_VERSION} requires LLVM 22.1.2 or newer "
+                "(you have LLVM ${LLVM_VERSION}). CUDA 13.2+ needs the "
+                "_NV_RSQRT_SPECIFIER fix from llvm-project commit c1c833734cf0, "
+                "first shipped in LLVM 22.1.2. Either upgrade LLVM or downgrade CUDA.${ColorReset}")
+        endif ()
+
         set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
 
         # If the user wants, try to use static libs here to putting static lib

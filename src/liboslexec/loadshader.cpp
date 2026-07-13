@@ -65,8 +65,7 @@ private:
     size_t m_firstarg;                ///< First argument in current op
     size_t m_nargs;                   ///< Number of args so far in current op
     bool m_reading_instruction;       ///< Are we reading an op?
-    ustring m_sourcefile;             ///< Current source file parsed
-    int m_sourceline;                 ///< Current source code line parsed
+    SrcLoc m_srcloc;                      ///< Current source code location parsed
     ustring m_codesection;            ///< Which entry point are the ops for?
     int m_codesym;                    ///< Which param is being initialized?
     int m_oso_major, m_oso_minor;     ///< oso file format version
@@ -320,11 +319,25 @@ OSOReaderToMaster::hint(string_view hintstring)
     string_view h(hintstring);
 
     if (Strutil::parse_prefix(h, "%filename{\"")) {
-        m_sourcefile = Strutil::parse_until(h, "\"");
+        m_srcloc.filename = Strutil::parse_until(h, "\"");
         return;
     }
     if (Strutil::parse_prefix(h, "%line{")) {
-        Strutil::parse_int(h, m_sourceline);
+        int l = 0;
+        Strutil::parse_int(h, l);
+        m_srcloc.line_start = l - 1; // line_start is 0-based
+        return;
+    }
+    if (Strutil::parse_prefix(h, "%srcloc{")) {
+        int fl = 0, fc = 0, ll = 0, lc = 0;
+        Strutil::parse_int(h, fl);
+        Strutil::parse_char(h, ',');  // skip the separator
+        Strutil::parse_int(h, fc);
+        Strutil::parse_char(h, ',');  // skip the separator
+        Strutil::parse_int(h, ll);
+        Strutil::parse_char(h, ',');  // skip the separator
+        Strutil::parse_int(h, lc);
+        m_srcloc.from_yyloc(fl, fc, ll, lc);
         return;
     }
     if (Strutil::parse_prefix(h, "%structfields{")
@@ -370,10 +383,13 @@ OSOReaderToMaster::hint(string_view hintstring)
         string_view str = Strutil::parse_until(h, "}");
         Strutil::parse_string(str, str, false, Strutil::DeleteQuotes);
         if (str.size() != m_nargs) {
+            // Note that here we report the line number in the OSO, not the
+            // original OSL source, as that's where we found the problem
             m_shadingsys.errorfmt(
-                "Parsing shader {}: malformed hint '{}' on op {} line {}",
+                "Parsing shader {}: malformed hint '{}' on op {} at OSO line {}",
                 m_master->shadername(), hintstring,
-                m_master->m_ops.back().opname(), m_sourceline);
+                m_master->m_ops.back().opname(),
+                lineno());
             m_errors = true;
         }
         for (size_t i = 0; str.size() && i < m_nargs;
@@ -444,7 +460,7 @@ OSOReaderToMaster::hint(string_view hintstring)
 void
 OSOReaderToMaster::codemarker(const char* name)
 {
-    m_sourcefile.clear();
+    m_srcloc.filename.clear();
     int nextop = (int)m_master->m_ops.size();
 
     codeend();  // Mark the end spot, if we were parsing ops before
@@ -541,7 +557,7 @@ void
 OSOReaderToMaster::instruction_end()
 {
     m_master->m_ops.back().set_args(m_firstarg, m_nargs);
-    m_master->m_ops.back().source(m_sourcefile, m_sourceline);
+    m_master->m_ops.back().source(m_srcloc);
     m_reading_instruction = false;
 }
 

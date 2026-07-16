@@ -1031,6 +1031,12 @@ public:
     bool ptx_compile_group(llvm::Module* lib_module, const std::string& name,
                            std::string& out);
 
+
+    // NEW
+    llvm::TargetMachine* amdgpu_target_machine(const std::string& gpu_arch);
+    bool amdgpu_compile_group(llvm::Module* module, const std::string& name, std::string& out_code, const std::string& arch);
+
+
     /// Convert all functions in module's bitcode to a string.
     std::string bitcode_string(llvm::Module* module);
 
@@ -1076,6 +1082,8 @@ private:
     llvm::ExecutionEngine* m_llvm_exec;
     TargetISA m_target_isa = TargetISA::UNKNOWN;
     llvm::TargetMachine* m_nvptx_target_machine;
+    // NEW
+    llvm::TargetMachine* m_amdgpu_target_machine = nullptr;
 
     std::vector<llvm::BasicBlock*> m_return_block;      // stack for func call
     std::vector<llvm::BasicBlock*> m_loop_after_block;  // stack for break

@@ -11,3 +11,7 @@ build
 .vscode
 .envrc
 .DS_Store
+build/
+.ipynb_checkpoints/
+ext/
+rocm.gpg

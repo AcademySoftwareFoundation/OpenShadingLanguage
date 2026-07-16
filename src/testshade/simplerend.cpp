@@ -269,10 +269,12 @@ SimpleRenderer::SimpleRenderer()
 
 // Ensure destructor code gen happens in this .cpp
 SimpleRenderer::~SimpleRenderer() {}
-
-int
+//NEW - Ka
+int 
 SimpleRenderer::supports(string_view feature) const
 {
+    if (feature == "AMDGPU" || feature == "HIP") //- dodanie obslugi AMD
+        return true;
     if (m_use_rs_bitcode && feature == "build_attribute_getter")
         return true;
     else if (m_use_rs_bitcode && feature == "build_interpolated_getter")

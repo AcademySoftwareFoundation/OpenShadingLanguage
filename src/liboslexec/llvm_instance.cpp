@@ -2379,7 +2379,7 @@ BackendLLVM::run()
                 // If we plan to call bitcode_string of a layer's function after
                 // optimization it may not exist after optimization unless we
                 // treat it as external.
-                if (f && (group().is_entry_layer(layer) || llvm_debug())) {
+                if (f && (group().is_entry_layer(layer) || llvm_debug() || shadingsys().use_amdgpu())) {
                     external_functions.insert(f);
                 }
             }
@@ -2500,6 +2500,22 @@ BackendLLVM::run()
         }
     } else
 #endif
+// NEW 
+if (shadingsys().use_amdgpu() || !shadingsys().amdgpu_architecture().string().empty()) {
+        // 1. Zlecamy NASZEJ klasie wyciągnięcie binarnego bitkodu z pamięci
+        std::vector<uint8_t> bitcode = get_llvm_bitcode(init_func->getParent());
+        
+        if (bitcode.empty()) {
+            OSL_ASSERT(0 && "Unable to generate AMDGPU Bitcode");
+        } else {
+            std::cout << "[DEBUG-LLVM] Sukces: Artefakt AMDGPU dodany do grupy.\n"; // Dodaj to
+            // 2. Pakujemy gotowe bajty w nowy Artefakt i dodajemy do wektora
+            group().m_compiled_gpu_artifacts.push_back(
+                CompiledGPUArtifact(bitcode, shadingsys().amdgpu_architecture().string(), "llvm_bitcode", OSL_LLVM_VERSION)
+            );
+        }
+    } else 
+// END NEW
     {
         // Force the JIT to happen now and retrieve the JITed function pointers
         // for the initialization and all public entry points.
@@ -2539,9 +2555,9 @@ BackendLLVM::run()
     }
     ll.delete_func_body (init_func);
 #endif
-
     // Free the exec and module to reclaim all the memory.  This definitely
     // saves memory, and has almost no effect on runtime.
+    
     ll.execengine(NULL);
 
     // N.B. Destroying the EE should have destroyed the module as well.

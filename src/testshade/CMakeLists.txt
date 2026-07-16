@@ -5,7 +5,8 @@
 # The 'testshade' executable
 set ( testshade_srcs
       testshade.cpp
-      simplerend.cpp )
+      simplerend.cpp
+      ../testrender/hip_raytracer.cpp) # New 
 
 if (OSL_BUILD_BATCHED)
     list(APPEND testshade_srcs
@@ -75,13 +76,20 @@ list(APPEND include_dirs ${OpenImageIO_INCLUDES})
 
 EMBED_LLVM_BITCODE_IN_CPP ( "${rs_srcs}" "_host" "testshade_llvm_compiled_rs" testshade_srcs "-DOSL_HOST_RS_BITCODE=1" "${include_dirs}")
 
+# --- INTEGRACJA AMD ROCm HIP  ---
+find_package(HIP REQUIRED)
+
+# Budowanie głównego programu wykonywalnego testshade
 add_executable ( testshade ${testshade_srcs} testshademain.cpp )
 
 target_include_directories (testshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+target_include_directories (testshade PRIVATE ${HIP_INCLUDE_DIRS})
 
 target_link_libraries (testshade
                        PRIVATE
-                           oslexec oslquery oslcomp)
+                           oslexec oslquery oslcomp
+                           hip::host)
+
 if (OSL_USE_OPTIX)
     add_dependencies(testshade testshade_ptx)
 endif ()
@@ -117,9 +125,13 @@ if (NOT CODECOV)
                       -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/testshade_symbols.map)
     endif ()
 
+    # Linkowanie nagłówków i bibliotek HIP również do wersji bibliotecznej (DSO)
+    target_include_directories (libtestshade PRIVATE ${HIP_INCLUDE_DIRS})
     target_link_libraries (libtestshade
                            PRIVATE
-                               oslexec oslquery oslcomp)
+                               oslexec oslquery oslcomp
+                               hip::host)
+
     target_include_directories (libtestshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
     set_target_properties (libtestshade PROPERTIES PREFIX "")
 

@@ -66,7 +66,35 @@ namespace Strutil = OIIO::Strutil;
 
 OSL_NAMESPACE_BEGIN
 
+// NEW
+enum class GPUBackendKind {
+    None = 0,
+    NVPTX = 1,   // NEW for CUDA/OptiX
+    AMDGPU = 2   // NEW for HIP/ROCm
+};
 
+struct GPUTargetDesc {
+    GPUBackendKind backend = GPUBackendKind::None;
+    std::string triple;
+    std::vector<std::string> archs;
+    std::string artifact_format;
+
+    GPUTargetDesc() = default;
+    GPUTargetDesc(GPUBackendKind b, const std::string& t, const std::vector<std::string>& a, const std::string& f)
+        : backend(b), triple(t), archs(a), artifact_format(f) {}
+};
+
+struct CompiledGPUArtifact {
+    std::vector<uint8_t> payload;
+    std::string architecture;
+    std::string format;
+    int llvm_version;
+
+    CompiledGPUArtifact() : llvm_version(0) {}
+    CompiledGPUArtifact(const std::vector<uint8_t>& p, const std::string& arch, const std::string& fmt, int llvm_ver)
+        : payload(p), architecture(arch), format(fmt), llvm_version(llvm_ver) {}
+};
+// END NEW
 
 struct PerThreadInfo {
     PerThreadInfo();
@@ -639,6 +667,13 @@ public:
 
     bool use_optix() const { return m_use_optix; }
     bool use_optix_cache() const { return m_use_optix_cache; }
+
+    // NEW 
+    bool use_amdgpu() const { return m_use_amdgpu; }
+    bool use_amdgpu_cache() const { return m_use_amdgpu_cache; }
+    ustring amdgpu_architecture() const { return m_amdgpu_architecture; }
+    // END NEW
+
     bool debug_nan() const { return m_debugnan; }
     bool debug_uninit() const { return m_debug_uninit; }
     bool lockgeom_default() const { return m_lockgeom_default; }
@@ -965,6 +1000,12 @@ private:
     int m_compile_report;    ///< Print compilation report?
     bool m_use_optix;        ///< This is an OptiX-based renderer
     bool m_use_optix_cache;  ///< Renderer-enabled caching for OptiX ptx
+    // NEW  
+    bool m_use_amdgpu = false;
+    bool m_use_amdgpu_cache = true;
+    ustring m_amdgpu_architecture;
+    void amdgpu_cache_unwrap(const std::string& cache_value, ShaderGroup& group);
+    // END NEW
     int m_max_optix_groupdata_alloc;  ///< Maximum OptiX groupdata buffer allocation
     bool m_buffer_printf;             ///< Buffer/batch printf output?
     bool m_no_noise;                  ///< Substitute trivial noise calls
@@ -984,9 +1025,12 @@ private:
     int m_optix_no_inline_thresh;  ///< Disable inlining for functions larger than the threshold
     int m_optix_force_inline_thresh;  ///< Force inling for functions smaller than the threshold
 
+
     ustring m_colorspace;  ///< What RGB colors mean
 
     ShadingStateUniform m_shading_state_uniform;
+    
+    OSL::GPUTargetDesc m_gpu_target;        //NEW
 
     std::shared_ptr<OIIO::ColorConfig>
         m_colorconfig;  ///< OIIO/OCIO color configuration
@@ -1855,6 +1899,13 @@ public:
     void generate_optix_cache_key(string_view code);
     std::string optix_cache_key() const { return m_optix_cache_key; }
 
+    // NEW 
+    std::string amdgpu_cache_key() const {
+        return m_name.string();   
+    }
+    // END NEW
+
+
     std::string serialize() const;
 
     void lock() const { m_mutex.lock(); }
@@ -2062,6 +2113,10 @@ private:
 
     // PTX assembly for compiled ShaderGroup
     std::string m_llvm_ptx_compiled_version;
+    
+    // NASZ KONTENER NA BINARIA AMDGPU
+    std::vector<uint8_t> m_amdgpu_elf;  //NEWNEW 
+    std::vector<OSL::CompiledGPUArtifact> m_compiled_gpu_artifacts; //NEWNEW 
 
     ParamValueList m_pending_params;          // Pending Parameter() values
     std::vector<ParamHints> m_pending_hints;  // ParamHints of pending params

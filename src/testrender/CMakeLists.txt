@@ -8,7 +8,8 @@ set (testrender_srcs
      simpleraytracer.cpp
      scene.cpp
      bvh.cpp
-     testrender.cpp)
+     testrender.cpp
+     hip_raytracer.cpp) # New - Na
 
 find_package(Threads REQUIRED)
 
@@ -75,15 +76,23 @@ if (CMAKE_COMPILER_IS_INTELCLANG)
     # model, although with slightly different numerical results.
 endif ()
 
+# --- INTEGRACJA AMD ROCm HIP  ---
+find_package(HIP REQUIRED)
+
+# Tworzenie celu wykonywalnego testrender (tylko RAZ w pliku)
 add_executable (testrender ${testrender_srcs})
 
 target_include_directories (testrender BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+# Dodajemy ścieżki do nagłówków HIP
+target_include_directories (testrender PRIVATE ${HIP_INCLUDE_DIRS})
 
+# Linkowanie bibliotek rdzenia OSL oraz sterownika hosta HIP
 target_link_libraries (testrender
     PRIVATE
         oslexec oslquery oslcomp BSDL
         pugixml::pugixml
-        Threads::Threads)
+        Threads::Threads
+        hip::host)
 
 osl_optix_target (testrender)
 

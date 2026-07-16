@@ -149,9 +149,41 @@ file (GLOB exec_headers "*.h")
 file (GLOB compiler_headers "../liboslcomp/*.h")
 
 FLEX_BISON ( osolex.l osogram.y oso lib_src exec_headers )
+# NEW - KB
+set(OSL_AMDGPU_TARGET_ARCH "" CACHE STRING "Target AMD GPU architecture (e.g. gfx900, gfx1030)")
+if(OSL_AMDGPU_TARGET_ARCH)
+    message(STATUS "====> AMDGPU CROSS-COMPILATION: Forced target architecture -> ${OSL_AMDGPU_TARGET_ARCH}")
+    add_definitions(-DOSL_AMDGPU_TARGET_ARCH="${OSL_AMDGPU_TARGET_ARCH}")
+endif()
 
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
+# NEW - Ka
+if (LLVM_CONFIG AND EXISTS ${LLVM_CONFIG})
+    execute_process(COMMAND ${LLVM_CONFIG} --targets-built
+                    OUTPUT_VARIABLE LLVM_TARGETS
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+    if (LLVM_TARGETS MATCHES "AMDGPU")
+        message(STATUS "AMDGPU Backend: Supported target found in LLVM.")
+        add_definitions(-DOSL_ENABLE_AMDGPU=1)
+
+        # W LLVM komponenty podaje się bez prefiksów. 
+        # Nazwa 'amdgpu' jest nadrzędna i zazwyczaj wystarcza.
+        # Jeśli OSL nie widzi llvm_map_components_to_libnames, 
+        # używamy bezpośredniego zapytania do llvm-config:
+        execute_process(COMMAND ${LLVM_CONFIG} --libfiles amdgpu codegen asmparser
+                        OUTPUT_VARIABLE AMDGPU_LLVM_LIBS
+                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+        
+        # Konwersja tekstu z llvm-config na listę CMake
+        string(REPLACE " " ";" AMDGPU_LLVM_LIBS "${AMDGPU_LLVM_LIBS}")
+        string(REPLACE "\n" ";" AMDGPU_LLVM_LIBS "${AMDGPU_LLVM_LIBS}")
+        
+        message(STATUS "AMDGPU Backend: Linked libraries: ${AMDGPU_LLVM_LIBS}")
+    else()
+        message(STATUS "AMDGPU Backend: Not supported by your LLVM installation.")
+    endif()
+endif()
 
 macro ( REQUIRE_INF_NAN SRC )
     if (CMAKE_COMPILER_IS_INTELCLANG)
@@ -581,6 +613,8 @@ target_link_libraries (${local_lib}
         pugixml::pugixml
         ${CMAKE_DL_LIBS}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
+        ${AMDGPU_LLVM_LIBS}  # NEW - Ka
+
     )
 
 target_compile_features (${local_lib}

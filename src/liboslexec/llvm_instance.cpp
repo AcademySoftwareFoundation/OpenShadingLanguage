@@ -2320,6 +2320,16 @@ BackendLLVM::run()
 
     initialize_llvm_group();
 
+    if (m_layout_only) {
+        // BackendCpp (debug_output_cpp==3) path: force the groupdata layout
+        // so sym.dataoffset() and group().llvm_groupdata_size() are
+        // populated, then skip IR generation and JIT. Execution routes
+        // through the compiled DSO instead.
+        llvm_type_groupdata();
+        m_stat_llvm_irgen_time += timer.lap();
+        return;
+    }
+
     // Generate the LLVM IR for each layer.  Skip unused layers.
     m_llvm_local_mem          = 0;
     llvm::Function* init_func = build_llvm_init();

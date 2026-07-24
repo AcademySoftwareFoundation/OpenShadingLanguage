@@ -12,7 +12,7 @@ CLANG_FORMAT_EXE=${CLANG_FORMAT_EXE:="clang-format"}
 echo "Running " `which clang-format` " version " `${CLANG_FORMAT_EXE} --version`
 
 files=`find ./{src,testsuite} \( -name '*.h' -o -name '*.cpp' -o -name '*.cu' \) -print \
-       | grep -Ev 'testsuite/.*\.h|src/shaders'`
+       | grep -Ev 'src/shaders|testsuite/.*\.h|/ref/'`
 
 
 ${CLANG_FORMAT_EXE}  -i -style=file $files

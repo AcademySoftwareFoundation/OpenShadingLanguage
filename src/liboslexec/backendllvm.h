@@ -41,6 +41,13 @@ public:
     /// and store the llvm::Function* handle to it with the ShaderGroup.
     virtual void run();
 
+    /// When set before run(), only the groupdata layout pass executes:
+    /// sym.dataoffset() and group().llvm_groupdata_size() are populated, but
+    /// IR generation and JIT are skipped. Used by the BackendCpp
+    /// (debug_output_cpp==3) path, which executes via a compiled DSO yet
+    /// still relies on the host-side groupdata layout.
+    void set_layout_only(bool lo) { m_layout_only = lo; }
+
     /// Set additional Module/Function options for the CUDA/OptiX target.
     void prepare_module_for_cuda_jit();
 
@@ -557,6 +564,7 @@ private:
     std::vector<int> m_layer_remap;      ///< Remapping of layer ordering
     std::set<int> m_layers_already_run;  ///< List of layers run
     int m_num_used_layers;               ///< Number of layers actually used
+    bool m_layout_only = false;          ///< Run groupdata layout pass only
 
     double m_stat_total_llvm_time;  ///<   total time spent on LLVM
     double m_stat_llvm_setup_time;  ///<     llvm setup time

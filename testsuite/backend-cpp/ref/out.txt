@@ -1,0 +1,13 @@
+Compiled backend_cpp_test.osl -> backend_cpp_test.oso
+Compiled edge_dead.osl -> edge_dead.oso
+Compiled edge_vararray.osl -> edge_vararray.oso
+Compiled layer_a.osl -> layer_a.oso
+Connect layer_a.out_val to backend_cpp_test_0.in_val
+
+Output backend_cpp_test_0.Cout to out.tif
+backend_cpp_test: sv=0.479426 cv=0.877583
+
+
+Output ev.Cout to edge_vararray_out.tif
+ERROR: BackendCpp: DSO ./group-cpp-abimismatch_1.DSO ABI version -999 does not match runtime ABI version NNN
+

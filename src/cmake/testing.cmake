@@ -43,8 +43,11 @@ macro (add_one_testsuite testname testsrcdir)
                                       --solution-path "${CMAKE_BINARY_DIR}" )
         endif ()
     endif ()
+    get_target_property(_oiio_inc OpenImageIO::OpenImageIO INTERFACE_INCLUDE_DIRECTORIES)
     list (APPEND _tst_ENV
               OpenImageIO_ROOT=${OpenImageIO_ROOT}
+              OIIO_INCLUDE_DIR=${_oiio_inc}
+              IMATH_INCLUDE_DIR=${IMATH_INCLUDES}
               OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
               OSL_BUILD_DIR=${CMAKE_BINARY_DIR}
               OSL_TESTSUITE_ROOT=${testsuite}
@@ -113,6 +116,7 @@ macro ( TESTSUITE )
     set (test_all_optix $ENV{TESTSUITE_OPTIX})
     set (test_all_batched $ENV{TESTSUITE_BATCHED})
     set (test_all_rs_bitcode $ENV{TESTSUITE_RS_BITCODE})
+    set (test_all_cpp $ENV{TESTSUITE_CPP})
     # Add the tests if all is well.
     set (ALL_TEST_LIST "")
     set (_testsuite "${CMAKE_SOURCE_DIR}/testsuite")
@@ -261,6 +265,46 @@ macro ( TESTSUITE )
                                 ENV TESTSHADE_OPT=2 OSL_REGRESSION_TEST=RS_BITCODE )
         endif ()
 
+        # Also run the test through the C++ source-generation backend
+        # (OSL_DEBUG_OUTPUT_CPP=3): emit a .cpp shader, compile it to a DSO, and
+        # execute that instead of the JIT, validated against the same reference
+        # as the JIT path. Gated by the OSL_TEST_CPP_BACKEND option (or the
+        # TESTSUITE_CPP env var, for ad-hoc runs) because compiling a DSO per
+        # group more than doubles testing time, so it's opt-in (CI variants).
+        #
+        # A test is cpp-eligible iff it actually executes a shader -- i.e. its
+        # run.py invokes testshade or testrender (this auto-skips the oslc/
+        # oslinfo/python compile- or query-only tests, which have no cpp aspect,
+        # without needing a per-test marker).  optix and batched-regression
+        # tests, and any test with an explicit NOCPP marker, are excluded.
+        # NOTE: example-* tests execute shaders via their own binaries (not
+        # testshade/testrender), so they are not auto-included here -- a known,
+        # deferred gap.
+        #
+        # Run at both opt levels like the JIT path: -O0 actually executes every
+        # shader op (so each runtime op implementation is verified), while -O2
+        # exercises the constant-folded path.
+        set (_cpp_eligible OFF)
+        if ((OSL_TEST_CPP_BACKEND OR test_all_cpp)
+            AND NOT _testname MATCHES "optix"
+            AND NOT EXISTS "${_testsrcdir}/BATCHED_REGRESSION"
+            AND NOT EXISTS "${_testsrcdir}/NOCPP"
+            AND EXISTS "${_testsrcdir}/run.py")
+            file (STRINGS "${_testsrcdir}/run.py" _cpp_runs_shader
+                  REGEX "testshade|testrender")
+            if (_cpp_runs_shader)
+                set (_cpp_eligible ON)
+            endif ()
+        endif ()
+        if (_cpp_eligible AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+            add_one_testsuite ("${_testname}.cpp" "${_testsrcdir}"
+                                ENV TESTSHADE_OPT=0 OSL_DEBUG_OUTPUT_CPP=3 )
+        endif ()
+        if (_cpp_eligible AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
+            add_one_testsuite ("${_testname}.cpp.opt" "${_testsrcdir}"
+                                ENV TESTSHADE_OPT=2 OSL_DEBUG_OUTPUT_CPP=3 )
+        endif ()
+
     endforeach ()
     message (VERBOSE "Added tests: ${ALL_TEST_LIST}")
 endmacro ()
@@ -269,7 +313,8 @@ macro (osl_add_all_tests)
     # List all the individual testsuite tests here, except those that need
     # special installed tests.
     TESTSUITE ( aastep allowconnect-err andor-reg and-or-not-synonyms
-                arithmetic area-reg arithmetic-reg
+                backend-cpp
+                arithmetic area area-reg arithmetic-reg
                 array array-reg array-copy array-copy-reg array-derivs array-range
                 array-aassign array-assign-reg array-length-reg
                 bitwise-and-reg bitwise-or-reg bitwise-shl-reg  bitwise-shr-reg bitwise-xor-reg

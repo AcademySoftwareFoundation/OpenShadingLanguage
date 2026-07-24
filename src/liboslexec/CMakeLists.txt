@@ -123,6 +123,7 @@ set (lib_src
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
           shadeimage.cpp
+          backendcpp.cpp
           backendllvm.cpp
           llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
           rs_fallback.cpp
@@ -246,6 +247,13 @@ if (USE_LLVM_BITCODE)
             DESTINATION ${OSL_PTX_INSTALL_DIR})
 
     endif ()
+    # Also compile llvm_ops.cpp as a native object so that generated shader
+    # DSOs (cpp backend, debug_output_cpp >= 2) can link osl_* symbols from
+    # liboslexec at load time.  The bitcode copy (above) is still used by the
+    # LLVM JIT for full inlining; the native copy provides the same functions
+    # as exported symbols.  OSL_COMPILING_TO_BITCODE is NOT set here, so the
+    # OSL_SHADEOP macro expands to extern "C" OSL_DLL_EXPORT.
+    list (APPEND lib_src llvm_ops.cpp)
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due
     # to clang being unable to compile MSVC C++ header files at this time.
@@ -544,12 +552,46 @@ target_include_directories (${local_lib}
 
 target_include_directories (${local_lib}  BEFORE PRIVATE ${OpenImageIO_INCLUDES})
 
+# Collect include paths and platform base flags for compile_to_dso() defaults
+get_target_property(_oiio_incs OpenImageIO::OpenImageIO INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(_imath_incs Imath::Imath INTERFACE_INCLUDE_DIRECTORIES)
+if (MSVC)
+    set(_cpp_base_flags "/LD /O2 /std:c++17")
+    set(_I "/I ")
+elseif (APPLE)
+    # -undefined dynamic_lookup: generated DSO resolves osl_* symbols from the
+    # already-loaded liboslexec at dlopen time without needing an explicit -l.
+    set(_cpp_base_flags "-shared -fPIC -O2 -std=c++17 -undefined dynamic_lookup")
+    set(_I "-I")
+else ()
+    # On Linux, generated DSOs resolve osl_* symbols from the already-loaded
+    # liboslexec at dlopen time. This requires those symbols to be exported in
+    # liboslexec's dynamic symbol table — see src/build-scripts/hidesymbols.map,
+    # which globally exports osl_* for exactly this reason.
+    set(_cpp_base_flags "-shared -fPIC -O2 -std=c++17")
+    set(_I "-I")
+endif ()
+set(_cpp_inc_flags
+    "${_I}${CMAKE_CURRENT_SOURCE_DIR}"
+    "${_I}${CMAKE_SOURCE_DIR}/src/include"
+    "${_I}${CMAKE_BINARY_DIR}/include"
+)
+foreach(_inc ${_oiio_incs})
+    list(APPEND _cpp_inc_flags "${_I}${_inc}")
+endforeach()
+foreach(_inc ${_imath_incs})
+    list(APPEND _cpp_inc_flags "${_I}${_inc}")
+endforeach()
+list(JOIN _cpp_inc_flags " " _cpp_inc_flags_str)
+
 target_compile_definitions (${local_lib}
     PRIVATE
         OSL_EXPORTS
         CUDA_TARGET_ARCH="${CUDA_TARGET_ARCH}"
         OSL_CUDA_VERSION="${CUDA_VERSION}"
         OSL_OPTIX_VERSION="${OPTIX_VERSION}"
+        OSL_CPP_COMPILER_DEFAULT="${CMAKE_CXX_COMPILER}"
+        OSL_CPP_COMPILER_FLAGS_DEFAULT="${_cpp_base_flags} ${_cpp_inc_flags_str}"
     )
 if (partio_FOUND)
     target_link_libraries(${local_lib} PRIVATE partio::partio ZLIB::ZLIB)

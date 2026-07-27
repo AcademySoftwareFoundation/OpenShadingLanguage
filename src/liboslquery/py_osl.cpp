@@ -26,6 +26,10 @@ declare_oslqueryparam(py::module& m)
                                    return PY_STR(p.name.string());
                                })
         .def_readwrite("type", &Parameter::type)
+        .def_property(
+            "type_name",
+            [](const Parameter& p) { return PY_STR(p.type_name()); },
+            [](Parameter& p, const std::string& t) { p.type_name(t); })
         .def_readwrite("isoutput", &Parameter::isoutput)
         .def_readwrite("varlenarray", &Parameter::varlenarray)
         .def_readwrite("isstruct", &Parameter::isstruct)
@@ -171,9 +175,6 @@ declare_oslquery(py::module& m)
 
 PYBIND11_MODULE(oslquery, m)
 {
-    // Force an OIIO module load so we have TypeDesc, among other things.
-    py::module oiio = py::module::import("OpenImageIO");
-
     // Global (OSL scope) functions and symbols
     m.attr("osl_version")    = OSL_VERSION;
     m.attr("VERSION")        = OSL_VERSION;

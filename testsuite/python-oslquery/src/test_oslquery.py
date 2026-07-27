@@ -30,8 +30,8 @@ def printparam(p, indent="    ") :
         # as tuples.
         print (indent, "{}{} {} = {}".format(
                     "output " if p.isoutput else "",
-                    p.type, p.name,
-                    "'{}'".format(p.value) if p.type == "string" else p.value))
+                    p.type_name, p.name,
+                    "'{}'".format(p.value) if p.type_name == "string" else p.value))
     if p.spacename :
         print (indent, "    space:", p.spacename)
     # Metadata are themselves another tuple of Parameter objects hanging off

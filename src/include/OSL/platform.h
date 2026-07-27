@@ -427,6 +427,15 @@
 // [[deprecated(msg)]] instead.
 #define OSL_DEPRECATED(msg) [[deprecated(msg)]]
 
+// OSL_DEPRECATED_EXTERNAL marks things deprecated for downstream apps, but
+// still is allowed for internal use. Generally, this is used when we want to
+// deprecate for users but can't quite extract it internally yet.
+#ifndef OSL_INTERNAL
+#  define OSL_DEPRECATED_EXTERNAL(msg) [[deprecated(msg)]]
+#else
+#  define OSL_DEPRECATED_EXTERNAL(msg)
+#endif
+
 
 // OSL_FALLTHROUGH at the end of a `case` label's statements documents that
 // the switch statement case is intentionally falling through to the code for

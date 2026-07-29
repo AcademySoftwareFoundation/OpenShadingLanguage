@@ -68,22 +68,32 @@ macro (add_one_testsuite testname testsrcdir)
     add_test ( NAME ${testname} COMMAND ${_tst_COMMAND} )
     # message ("Test -- env ${_tst_ENV} cmd ${_tst_COMMAND}")
     set_tests_properties (${testname} PROPERTIES ENVIRONMENT "${_tst_ENV}" )
-    # Certain tests are already internally multi-threaded, so to keep them
-    # from piling up together, allocate a few cores each.
+
+    # Certain tests get special labels and other properties
     if (${testname} MATCHES "^render-")
+        # Render tests are expensive and quite well internally multithreaded,
+        # so give them long timeouts, high costs, and reserve procs.
         set_tests_properties (${testname} PROPERTIES LABELS render
-                              PROCESSORS 4 COST 10 TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
-    endif ()
-    # For debug builds, render tests are very slow, so give them a longer timeout
-    if (${testname} MATCHES "render-" AND ${CMAKE_BUILD_TYPE} STREQUAL Debug)
-        set_tests_properties (${testname} PROPERTIES TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
+                              PROCESSORS 4 COST 10
+                              TIMEOUT ${OSL_TEST_BIG_TIMEOUT})
+        if (${testname} MATCHES "cpp")
+            # Render tests doing full C++ compiles are even more expensive,
+            # and cut back their procs because the compilation by external
+            # cpp is quite expensive but can't be internally parallized.
+            set_tests_properties (${testname} PROPERTIES
+                                  PROCESSORS 2 COST 20)
+        endif ()
     endif ()
     # Some labeling for fun
     if (${testname} MATCHES "^texture")
+        # Texture tests are internally multithreaded, so give them 2 cores,
+        # and they are medium expensive.
         set_tests_properties (${testname} PROPERTIES LABELS texture
                               PROCESSORS 2 COST 4)
     endif ()
     if (${testname} MATCHES "noise")
+        # Noise tests are internally multithreaded, so give them 2 cores,
+        # and they are medium expensive.
         set_tests_properties (${testname} PROPERTIES LABELS noise
                               PROCESSORS 2 COST 4)
     endif ()
@@ -296,7 +306,8 @@ macro ( TESTSUITE )
                 set (_cpp_eligible ON)
             endif ()
         endif ()
-        if (_cpp_eligible AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+        if (_cpp_eligible AND NOT _testname MATCHES "render"
+            AND NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
             add_one_testsuite ("${_testname}.cpp" "${_testsrcdir}"
                                 ENV TESTSHADE_OPT=0 OSL_DEBUG_OUTPUT_CPP=3 )
         endif ()

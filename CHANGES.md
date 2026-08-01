@@ -1,6 +1,16 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.15.6.0 (1 Aug 2026) -- compared to 1.15.5.0
+---------------------------------------------------------
+  - *osltoy*: Improved readability of the cursor-highlighted line in the code editor. [#2067](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2067) (by @silvialpz / Silvia Lopez)
+  - *build*: Fix compilation and runtime errors with LLVM 22. [#2124](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2124) (by @sergeyvfx / Sergey Sharybin)
+  - *build*: Check for the bad combination of Cuda >= 13.2 with LLVM < 22.1.2, which fails to build. [#2133](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2133) (by @lgritz / Larry Gritz)
+  - *build*: ci: turn unity builds off when building OIIO for CI, to unbreak he Windows CI jobs. [#2143](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2143) (by @lgritz / Larry Gritz)
+  - *admin*: Clarify security policy on what is not considered a vulnerability. [#2128](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2128) (by @lgritz / Larry Gritz)
+  - *admin*: Fix some minor discrepancies in project admin docs. [#2127](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2127) (by @lgritz / Larry Gritz)
+
+
 Release 1.15.5.0 (1 Jun 2026) -- compared to 1.15.4.0
 ---------------------------------------------------------
   - *ShadingSystem*: Extend per-ShaderGroup complexity statistics: compile-time metrics are now stored as persistent ShaderGroup fields, exposed via `getattribute(group, "stat:compiled_active_layers")` etc., and `getstats()` emits a new "Shader compilation stats, post-optimized" section showing min/max/median and a ranked leaderboard for each metric (controlled by the existing "stat:rank_groups" option). Also adds `--print-group-stats` flag to `testshade`. [#2120](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2120) (1.15.5.0, 1.14.11.0)

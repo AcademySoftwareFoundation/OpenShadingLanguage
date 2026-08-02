@@ -99,81 +99,82 @@ public:
         const Parameter& operator=(Parameter&&);
     };
 
-    /// OSLQuery methods
-    /// ----------------
+    // OSLQuery methods
+    // ----------------
 
-    OSLQuery();
-    ///< Construct an uninitialized OSLQuery. It will not hold any
+    /// Construct an uninitialized OSLQuery. It will not hold any
     /// information about a shader until `open()` is called.
+    OSLQuery();
 
+    /// Construct an OSLQuery and open a compiled shader from a disk file.
+    /// The `shadername` may be either the name of the `.oso` file, or the
+    /// name of the shader. The optional `searchpath` parameter gives a
+    /// colon-separated list of directories to search for compiled shaders.
     OSLQuery(string_view shadername, string_view searchpath = string_view())
     {
         open(shadername, searchpath);
     }
-    ///< Construct an OSLQuery and open a compiled shader from a disk file.
-    /// The `shadername` may be either the name of the `.oso` file, or the
-    /// name of the shader. The optional `searchpath` parameter gives a
-    /// colon-separated list of directories to search for compiled shaders.
 
-    OSL_DEPRECATED("Use ShadingSystem::oslquery(group,layernum)")
-    OSLQuery(const ShaderGroup* group, int layernum);
-    ///< Construct an OSLQuery and initialize it with an existing
+    /// Construct an OSLQuery and initialize it with an existing
     /// `ShaderGroup` (which must have been built using the `ShadingSystem`
     /// runtime API for OSL). This constructor only exists in liboslexec,
     /// with a full shading system, and not in liboslquery.
     /// This is deprecated, and instead we recommend retrieving an OSLQuery
     /// via `ShadingSystem::oslquery(group, layernum)`.
     // DEPRECATED(1.12)
+    OSL_DEPRECATED("Use ShadingSystem::oslquery(group,layernum)")
+    OSLQuery(const ShaderGroup* group, int layernum);
 
+    /// Clean up and destruct the `OSLQuery`.
     ~OSLQuery();
-    ///< Clean up and destruct the `OSLQuery`.
 
-    bool open(string_view shadername, string_view searchpath = string_view());
-    ///< For an uninitialized `OSLQuery` object, initialize it with info on
+    /// For an uninitialized `OSLQuery` object, initialize it with info on
     /// the named shader with optional searchpath.  Return true for success,
     /// false if the shader could not be found or opened properly.
+    bool open(string_view shadername, string_view searchpath = string_view());
 
-    bool open_bytecode(string_view buffer);
-    ///< Get info on the shader from it's compiled bytecode (i.e., like the
+    /// Get info on the shader from it's compiled bytecode (i.e., like the
     /// contents of an `.oso` file, but in a string).  Return `true` for
     /// success, false if the shader could not be found or opened properly.
     ///
     /// This is meant to be called from an app which caches bytecodes from
     /// it's own side and wants to get shader info on runtime without
     /// creating a temporary file.
+    bool open_bytecode(string_view buffer);
 
-    bool init(const ShaderGroup* group, int layernum);
-    ///< Meant to be called at runtime from an app with a full ShadingSystem,
+    /// Meant to be called at runtime from an app with a full ShadingSystem,
     /// fill out an OSLQuery structure for the given layer of the group.
     /// This is much faster than using open() to read it from an oso file on
     /// disk.
+    ///
     /// This is deprecated, and instead we recommend retrieving an OSLQuery
     /// via `ShadingSystem::oslquery(group, layernum)`.
-    // DEPRECATED(1.12)
+    /// DEPRECATED(1.12)
+    bool init(const ShaderGroup* group, int layernum);
 
-    const ustring shadertype(void) const { return m_shadertypename; }
-    ///< Return the shader type: "surface", "displacement", "volume",
+    /// Return the shader type: "surface", "displacement", "volume",
     /// "light", or "shader" (for generic shaders).
+    const ustring shadertype(void) const { return m_shadertypename; }
 
+    /// Get the name of the shader.
     const ustring shadername(void) const { return m_shadername; }
-    ///< Get the name of the shader.
 
+    /// How many parameters does the shader have
     size_t nparams(void) const { return (int)m_params.size(); }
-    ///< How many parameters does the shader have
 
+    /// Retrieve a parameter, either by index or by name. Return nullptr if
+    /// the index is out of range, or if the named parameter is not found.
     const Parameter* getparam(size_t i) const;
     const Parameter* getparam(const std::string& name) const;
     const Parameter* getparam(ustring name) const;
-    ///< Retrieve a parameter, either by index or by name. Return nullptr if
-    /// the index is out of range, or if the named parameter is not found.
 
+    /// Retrieve a reference to the list of the shader's parameters.
     const std::vector<Parameter>& parameters(void) const { return m_params; }
-    ///< Retrieve a reference to the list of the shader's parameters.
 
+    /// Retrieve a reference to the metadata about the shader.
     const std::vector<Parameter>& metadata(void) const { return m_meta; }
-    ///< Retrieve a reference to the metadata about the shader.
 
-    ///> Return error string, empty if there was no error, and reset the
+    /// Return error string, empty if there was no error, and reset the
     /// error string.
     std::string geterror(bool clear_error = true)
     {

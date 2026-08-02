@@ -546,6 +546,7 @@ jobs:
                             PUGIXML_VERSION=v1.14
                             OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
                             LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
+                            OPENIMAGEIO_UNITY=0
           - desc: Windows-2025 VS2026
             runner: windows-2025-vs2026
             nametag: windows-2025-vs2026
@@ -559,6 +560,7 @@ jobs:
                             PUGIXML_VERSION=v1.14
                             OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
                             LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
+                            OPENIMAGEIO_UNITY=0
 
 
   optix-gpu:

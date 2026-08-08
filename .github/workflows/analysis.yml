@@ -101,10 +101,10 @@ jobs:
       # positives, every time we download a dependency. We should use it only
       # on CI runs where we are producing artifacts that users might rely on.
       # - name: Harden Runner
-      #   uses: step-security/harden-runner@248ae51c2e8cc9622ecf50685c8bf7150c6e8813 # v1.4.3
+      #   uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
       #   with:
       #     egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: '0'
       - name: Prepare ccache timestamp
@@ -112,7 +112,7 @@ jobs:
         run: echo "::set-output name=date::`date -u +'%Y-%m-%dT%H:%M:%SZ'`"
       - name: ccache
         id: ccache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: /tmp/ccache
           key: ${{github.job}}-${{matrix.nametag}}-${{steps.ccache_cache_keys.outputs.date}}

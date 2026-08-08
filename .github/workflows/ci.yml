@@ -330,7 +330,7 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LIBTIFF_VERSION=v4.7.1
                             PTEX_VERSION=v2.4.3
-                            PUGIXML_VERSION=v1.15
+                            PUGIXML_VERSION=v1.16
                             FREETYPE_VERSION=VER-2-14-3
           - desc: latest releases clang18/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
@@ -349,7 +349,7 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export LIBTIFF_VERSION=v4.7.1
                             PTEX_VERSION=v2.4.3
-                            PUGIXML_VERSION=v1.15
+                            PUGIXML_VERSION=v1.16
                             FREETYPE_VERSION=VER-2-14-3
           - desc: bleeding edge gcc14/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
@@ -369,7 +369,6 @@ jobs:
             batched: b8_AVX2,b8_AVX512,b16_AVX512
             setenvs: export PUGIXML_VERSION=master
                             PTEX_VERSION=v2.4.3
-                            PUGIXML_VERSION=v1.15
                             FREETYPE_VERSION=VER-2-14-3
                             OpenImageIO_DEPENDENCY_BUILD_ALLOW_UNVERIFIED_TAGS=ON
           - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
@@ -557,7 +556,7 @@ jobs:
             openimageio_ver: release
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
-                            PUGIXML_VERSION=v1.14
+                            PUGIXML_VERSION=v1.16
                             OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
                             LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
                             OPENIMAGEIO_UNITY=0

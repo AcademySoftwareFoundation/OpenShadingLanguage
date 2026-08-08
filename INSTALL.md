@@ -62,7 +62,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
   Note that on some MacOS/xcode releases, the system-installed Bison is too
   old, and it's better to install a newer Bison (via Homebrew is one way to
   do this easily).
-* [PugiXML](http://pugixml.org/) >= 1.8 (we have tested through 1.15).
+* [PugiXML](http://pugixml.org/) >= 1.8 (we have tested through 1.16).
 * (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
   If it is not found at build time, the OSL `pointcloud` functions will not
   be operative.

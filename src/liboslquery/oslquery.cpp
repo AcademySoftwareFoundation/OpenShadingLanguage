@@ -351,6 +351,22 @@ OSLQuery::Parameter::operator=(Parameter&& src)
 
 
 
+std::string
+OSLQuery::Parameter::type_name() const
+{
+    return type.c_str();
+}
+
+
+
+void
+OSLQuery::Parameter::type_name(const std::string& typestring)
+{
+    type = TypeDesc(typestring);
+}
+
+
+
 OSLQuery::OSLQuery() {}
 
 

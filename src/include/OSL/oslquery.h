@@ -97,6 +97,11 @@ public:
         Parameter(Parameter&& src);
         const Parameter& operator=(const Parameter&);
         const Parameter& operator=(Parameter&&);
+
+        /// Return the type as a string ("float", "color[7]", etc.)
+        std::string type_name() const;
+        /// Set the type as a string
+        void type_name(const std::string& typestring);
     };
 
     // OSLQuery methods

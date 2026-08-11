@@ -448,6 +448,7 @@ nominated for major awards.)
   Ghostbusters: Frozen Empire,
   The Garfield Movie,
   Inside Out 2,
+  Despicable Me 4,
   Red One,
   Dream Productions (series),
   The Lord of the Rings: The Rings of Power (S2),
@@ -467,6 +468,9 @@ nominated for major awards.)
   GOAT,
   Hoppers,
   Project Hail Mary,
+  Toy Story 5,
+  Minions & Monsters,
+  Spider-Man: Brand New Day,
   ...
 
 

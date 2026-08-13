@@ -12,6 +12,36 @@
 
 OSL_NAMESPACE_BEGIN
 
+// Version of fmtformat_to_n that is "safe" in the sense of catching
+// exceptions, not crashing (!), and turning an error into an output that
+// hopefully will make it easier to track down where things are going awry.
+template<typename OutIt, typename... Args>
+OSL_NODISCARD inline auto
+fmtformat_to_n_safe(OutIt& out, size_t n, string_view fmt, Args&&... args)
+{
+    // DOES NOT EXIST AS PUBLIC API
+    // return OIIO::Strutil::fmt::format_to_n(out, n, fmt, std::forward<Args>(args)...);
+    // So call directly into underlying fmt library OIIO is using
+    // TODO:  Add format_to_n as a public API in OIIO
+    try {
+#if OSL_CPLUSPLUS_VERSION >= 20 || FMT_VERSION >= 100000
+        std::string str = fmtformat(fmt, std::forward<Args>(args)...);
+        return ::fmt::format_to_n(out, n, "{}", str);
+#else
+        return ::fmt::format_to_n(out, n,
+                                  ::fmt::string_view { fmt.begin(),
+                                                       fmt.length() },
+                                  std::forward<Args>(args)...);
+#endif
+    } catch (const std::exception& e) {
+        return ::fmt::format_to_n(out, n,
+                                  "MIS-FORMAT: format \"{}\" threw \"{}\"", fmt,
+                                  e.what());
+    }
+}
+
+
+
 int
 decode_message(uint64_t format_hash, int32_t arg_count,
                const EncodedType* arg_types, const uint8_t* arg_values,
@@ -81,7 +111,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
                         const char* arg_string = arg_value.c_str();
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length + 1,
                                                           replacement_region,
                                                           arg_string);
@@ -91,7 +121,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         int32_t arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);
@@ -101,7 +131,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         float arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);
@@ -111,7 +141,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         double arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);
@@ -121,7 +151,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         int64_t arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);
@@ -131,7 +161,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         uint32_t arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);
@@ -141,7 +171,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         uint64_t arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);
@@ -152,7 +182,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         const void* arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);
@@ -163,7 +193,7 @@ decode_message(uint64_t format_hash, int32_t arg_count,
                         OSL::TypeDesc arg_value;
                         memcpy(&arg_value, &arg_values[arg_offset],
                                sizeof(arg_value));
-                        auto result = OSL::fmtformat_to_n(replacement_str,
+                        auto result = fmtformat_to_n_safe(replacement_str,
                                                           rs_max_length,
                                                           replacement_region,
                                                           arg_value);

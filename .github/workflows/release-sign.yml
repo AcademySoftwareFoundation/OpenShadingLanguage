@@ -49,13 +49,13 @@ jobs:
         shell: bash
 
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Create archive
         run: git archive --format=tar.gz -o ${OSL_TARBALL} --prefix ${OSL_PREFIX} ${TAG}
 
       - name: Sign archive with Sigstore
-        uses: sigstore/gh-action-sigstore-python@f514d46b907ebcd5bedc05145c03b69c1edd8b46 # v3.0.0
+        uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
         with:
           inputs: ${{ env.OSL_TARBALL }}
           upload-signing-artifacts: false

@@ -1,0 +1,35 @@
+<World>
+   <Camera eye="0, 0, 30" look_at="0,0,0" fov="70" />
+
+   <!-- Three named groups of deliberately differing complexity, so that the
+        ranked stats have something to rank:
+          heavy: 3 layers, depth 3, 1 texture op, 2 noise ops
+          mid:   2 layers, depth 2, 0 texture ops, 2 noise ops
+          light: 2 layers, depth 2, 0 texture ops, 0 noise ops
+        "mid" and "light" tie with "heavy" on nothing, but "mid" ties with
+        "heavy" on noise ops and with "light" on layers/depth, exercising the
+        name-ascending tie-break. -->
+
+   <ShaderGroup name="heavy">
+      shader layer_a la;
+      shader layer_b lb;
+      shader mtl m;
+      connect la.Cout lb.Cin;
+      connect lb.Cout m.Cin;
+   </ShaderGroup>
+   <Sphere center="-6,0,0" radius="2" />
+
+   <ShaderGroup name="mid">
+      shader layer_b lb;
+      shader mtl m;
+      connect lb.Cout m.Cin;
+   </ShaderGroup>
+   <Sphere center=" 0,0,0" radius="2" />
+
+   <ShaderGroup name="light">
+      shader simple s;
+      shader mtl m;
+      connect s.Cout m.Cin;
+   </ShaderGroup>
+   <Sphere center=" 6,0,0" radius="2" />
+</World>

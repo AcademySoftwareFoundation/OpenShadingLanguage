@@ -206,7 +206,7 @@ RendererServices::errorfmt(OSL::ShaderGlobals* sg,
     OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
                         arg_values, message);
     ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-    ctx->errorfmt(message.c_str());
+    ctx->errorfmt("{}", message);
 }
 
 
@@ -221,7 +221,7 @@ RendererServices::warningfmt(OSL::ShaderGlobals* sg,
         std::string message;
         OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
                             arg_values, message);
-        ctx->warningfmt(message.c_str());
+        ctx->warningfmt("{}", message);
     }
 }
 
@@ -236,7 +236,7 @@ RendererServices::printfmt(OSL::ShaderGlobals* sg,
     OSL::decode_message(fmt_specification.hash(), arg_count, arg_types,
                         arg_values, message);
     ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-    ctx->messagefmt(message.c_str());
+    ctx->messagefmt("{}", message);
 }
 
 
@@ -254,7 +254,7 @@ RendererServices::filefmt(OSL::ShaderGlobals* sg,
     // the message with the filename and hand it to the current error handler.
     auto file_message   = OSL::fmtformat("{}:{}", filename_hash, message);
     ShadingContext* ctx = (ShadingContext*)((ShaderGlobals*)sg)->context;
-    ctx->messagefmt(file_message.c_str());
+    ctx->messagefmt("{}", file_message);
 }
 
 

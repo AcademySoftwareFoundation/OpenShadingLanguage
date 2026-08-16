@@ -1,0 +1,16 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader
+test (output color Cout = 0)
+{
+    // Regression test: nonsensical filename that seems to contain formatting
+    // specifications.
+    string filename = (u < 2.0) ? "{:d}.tif" : "../common/textures/mandrill.tif";
+    Cout = texture (filename, u, v);
+
+    // For good measure, also test print and error with a bad string.
+    printf("Printing {:f}\n");
+    error("Weird error: {:f}\n");
+}

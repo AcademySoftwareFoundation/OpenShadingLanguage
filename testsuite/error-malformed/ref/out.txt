@@ -1,0 +1,7 @@
+Compiled test.osl -> test.oso
+
+Output Cout to out.tif
+ERROR: [RendererServices::texture] Could not open file: {:d}.tif: No such file or directory
+Printing {:f}
+ERROR: Shader error [test]: Weird error: {:f}
+

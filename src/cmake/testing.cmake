@@ -286,7 +286,7 @@ macro (osl_add_all_tests)
                 debugnan debug-uninit
                 derivs derivs-muldiv-clobber
                 draw_string
-                error-dupes error-serialized
+                error-dupes error-malformed error-serialized
                 example-deformer
                 example-batched-deformer
                 exit exponential

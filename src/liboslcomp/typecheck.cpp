@@ -1221,7 +1221,7 @@ ASTfunction_call::typecheck_printf_args(const char* format, ASTNode* arg)
                 && formatchar != 's') {
                 errorfmt(
                     "{} has mismatched format string and arguments (arg {} needs %s)",
-                    m_name);
+                    m_name, argnum);
                 return false;
             }
             if (simpletype.basetype == TypeDesc::INT && formatchar != 'd'

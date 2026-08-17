@@ -394,6 +394,33 @@ public:
     ///   library build dependencies and their versions (for example,
     ///   "OIIO-2.3.0,LLVM-10.0.0,OpenEXR-2.5.0").
     ///
+    /// - `stat:compiled_<metric>:<subkey>` : Post-optimization compile
+    ///   statistics aggregated over *all* shader groups, where `<metric>` is
+    ///   one of `active_layers`, `network_depth`, `texture_ops`, or
+    ///   `noise_ops` (the same metrics available for a single group via
+    ///   `getattribute(group, "stat:compiled_<metric>", ...)`), and
+    ///   `<subkey>` is one of:
+    ///
+    ///   - `int top_count` : How many groups have a nonzero value for this
+    ///     metric. This is the full count, not clipped by the
+    ///     `stat:rank_groups` option (which affects only the printed report).
+    ///   - `string top_names[n]` : Names of the highest-valued groups, best
+    ///     first. Fills `min(n, top_count)` entries; any remainder is filled
+    ///     with empty strings. A group that was never named yields an empty
+    ///     string.
+    ///   - `int top_values[n]` : The corresponding metric values, in the same
+    ///     order as `top_names`; any remainder is filled with 0.
+    ///   - `int min`, `int max`, `int median` : Distribution of the metric.
+    ///     Unlike the ranked list, these include groups whose value is 0.
+    ///
+    ///   Only groups that have already been optimized are considered;
+    ///   querying these does not force optimization of any group. Ranking is
+    ///   by value descending, ties broken by group name ascending. If no
+    ///   group has been optimized yet, all of these succeed and report 0.
+    ///   Each query re-gathers from the live groups, so `top_names` and
+    ///   `top_values` may disagree if groups are created or destroyed
+    ///   between the two calls.
+    ///
     bool getattribute(string_view name, TypeDesc type, void* val);
 
     /// Shortcut getattribute() for retrieving a single integer.

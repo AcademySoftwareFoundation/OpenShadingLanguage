@@ -2329,20 +2329,40 @@ test_shade(int argc, const char* argv[])
     }
 
     if (print_group_stats && !batched) {
-        int active_layers = 0, network_depth = 0, texture_ops = 0,
-            noise_ops = 0;
-        shadingsys->getattribute(shadergroup.get(),
-                                 "stat:compiled_active_layers", active_layers);
-        shadingsys->getattribute(shadergroup.get(),
-                                 "stat:compiled_network_depth", network_depth);
-        shadingsys->getattribute(shadergroup.get(), "stat:compiled_texture_ops",
-                                 texture_ops);
-        shadingsys->getattribute(shadergroup.get(), "stat:compiled_noise_ops",
-                                 noise_ops);
-        OSL::print("stat:compiled_active_layers={}\n", active_layers);
-        OSL::print("stat:compiled_network_depth={}\n", network_depth);
-        OSL::print("stat:compiled_texture_ops={}\n", texture_ops);
-        OSL::print("stat:compiled_noise_ops={}\n", noise_ops);
+        static const char* metrics[] = { "active_layers", "network_depth",
+                                         "texture_ops", "noise_ops" };
+        // Per-group values.
+        for (const char* metric : metrics) {
+            std::string key = OSL::fmtformat("stat:compiled_{}", metric);
+            int v           = 0;
+            shadingsys->getattribute(shadergroup.get(), key, v);
+            OSL::print("{}={}\n", key, v);
+        }
+        // Ranked and aggregate values across all of the shading system's
+        // groups, via the system-level (no ShaderGroup*) getattribute.
+        for (const char* metric : metrics) {
+            std::string key = OSL::fmtformat("stat:compiled_{}", metric);
+            int count = 0, vmin = 0, vmax = 0, vmedian = 0;
+            shadingsys->getattribute(key + ":top_count", count);
+            shadingsys->getattribute(key + ":min", vmin);
+            shadingsys->getattribute(key + ":max", vmax);
+            shadingsys->getattribute(key + ":median", vmedian);
+            OSL::print("{}: min={} max={} median={} top_count={}\n", key, vmin,
+                       vmax, vmedian, count);
+            if (count <= 0)
+                continue;
+            std::vector<ustring> names(count);
+            std::vector<int> values(count);
+            shadingsys->getattribute(key + ":top_names",
+                                     TypeDesc(TypeDesc::STRING, count),
+                                     names.data());
+            shadingsys->getattribute(key + ":top_values",
+                                     TypeDesc(TypeDesc::INT, count),
+                                     values.data());
+            for (int i = 0; i < count; ++i)
+                OSL::print("{}: top[{}]={} \"{}\"\n", key, i, values[i],
+                           names[i]);
+        }
     }
 
 

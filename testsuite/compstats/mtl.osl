@@ -1,0 +1,10 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Terminal layer for the multi-group scene: consumes an upstream color so
+// that the layers feeding it survive optimization.
+surface mtl(color Cin = 0)
+{
+    Ci = Cin * emission();
+}

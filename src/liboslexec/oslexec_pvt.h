@@ -615,6 +615,22 @@ public:
 
     std::string getstats(int level = 1) const;
 
+    /// One metric's worth of post-optimization compile statistics, gathered
+    /// fresh from all currently live, optimized shader groups.
+    struct GroupStatSnapshot {
+        // (value, groupname) for the groups whose value is > 0, sorted by
+        // value descending, then by group name ascending.
+        std::vector<std::pair<int, ustring>> ranked;
+        int vmin = 0, vmax = 0, vmedian = 0;  ///< Over ALL optimized groups
+        int ngroups = 0;  ///< How many optimized groups were examined
+    };
+
+    /// Gather the named per-group compile stat -- one of "active_layers",
+    /// "network_depth", "texture_ops", "noise_ops" -- across every live,
+    /// optimized shader group. Returns false (leaving snap untouched) if the
+    /// metric name is not recognized.
+    bool gather_group_stats(string_view metric, GroupStatSnapshot& snap) const;
+
     ErrorHandler& errhandler() const { return *m_err; }
 
     ShaderMaster::ref loadshader(string_view name);

@@ -1814,6 +1814,58 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
         return true;                                       \
     }
 
+    // Ranked and aggregate post-optimization compile stats, across all live
+    // optimized groups:
+    //   stat:compiled_<metric>:top_count    int      -- # groups with value>0
+    //   stat:compiled_<metric>:top_names    string[] -- ranked group names
+    //   stat:compiled_<metric>:top_values   int[]    -- ranked values
+    //   stat:compiled_<metric>:min/max/median  int   -- incl. zero-valued
+    // These are handled before taking m_mutex: gather_group_stats() needs
+    // only m_all_shader_groups_mutex, and acquiring that while holding
+    // m_mutex would establish a new lock ordering.
+    if (Strutil::starts_with(name, "stat:compiled_")) {
+        string_view rest = name.substr(sizeof("stat:compiled_") - 1);
+        size_t colon     = rest.find(':');
+        GroupStatSnapshot snap;
+        if (colon != string_view::npos
+            && gather_group_stats(rest.substr(0, colon), snap)) {
+            string_view sub = rest.substr(colon + 1);
+            if (sub == "top_count" && type == TypeInt) {
+                *(int*)val = (int)snap.ranked.size();
+                return true;
+            }
+            if (sub == "top_names" && type.basetype == TypeDesc::STRING) {
+                size_t n = std::min(type.numelements(), snap.ranked.size());
+                for (size_t i = 0; i < n; ++i)
+                    ((ustring*)val)[i] = snap.ranked[i].second;
+                for (size_t i = n; i < type.numelements(); ++i)
+                    ((ustring*)val)[i] = ustring();
+                return true;
+            }
+            if (sub == "top_values" && type.basetype == TypeDesc::INT) {
+                size_t n = std::min(type.numelements(), snap.ranked.size());
+                for (size_t i = 0; i < n; ++i)
+                    ((int*)val)[i] = snap.ranked[i].first;
+                for (size_t i = n; i < type.numelements(); ++i)
+                    ((int*)val)[i] = 0;
+                return true;
+            }
+            if (sub == "min" && type == TypeInt) {
+                *(int*)val = snap.vmin;
+                return true;
+            }
+            if (sub == "max" && type == TypeInt) {
+                *(int*)val = snap.vmax;
+                return true;
+            }
+            if (sub == "median" && type == TypeInt) {
+                *(int*)val = snap.vmedian;
+                return true;
+            }
+        }
+        // Unrecognized metric or subkey: fall through to the ordinary lookup.
+    }
+
     lock_guard guard(m_mutex);  // Thread safety
 
     ATTR_DECODE_STRING("searchpath:shader", m_searchpath);
@@ -2759,69 +2811,93 @@ ShadingSystemImpl::getstats(int level) const
 
     // Ranked shader groups by compile-time complexity metrics
     if (m_stat_groups_compiled > 0) {
-        // Collect a snapshot of all still-live compiled (optimized) groups.
-        std::vector<ShaderGroupRef> groups;
-        {
-            spin_lock lock(m_all_shader_groups_mutex);
-            for (auto&& w : m_all_shader_groups)
-                if (ShaderGroupRef g = w.lock())
-                    if (g->optimized())
-                        groups.push_back(g);
-        }
-        using StatVal = std::pair<int, ustring>;
         print(out, "  Shader compilation stats, post-optimized:\n");
-        auto emit_ranked_groups =
-            [&](string_view label, string_view unit,
-                std::function<int(const ShaderGroup&)> getter) {
-                if (groups.empty())
-                    return;
-                // Gather values from all compiled groups for aggregate stats.
-                std::vector<int> vals;
-                vals.reserve(groups.size());
-                for (auto&& g : groups)
-                    vals.push_back(getter(*g));
-                std::sort(vals.begin(), vals.end());
-                int vmin    = vals.front();
-                int vmax    = vals.back();
-                int vmedian = vals[vals.size() / 2];
-                print(out, "    {}: min={} max={} median={}\n", label, vmin,
-                      vmax, vmedian);
-                // Ranked list: exclude groups with value 0.
-                std::vector<StatVal> ranked;
-                for (auto&& g : groups) {
-                    int v = getter(*g);
-                    if (v > 0)
-                        ranked.emplace_back(v, g->name());
-                }
-                if (ranked.empty())
-                    return;
-                std::sort(ranked.begin(), ranked.end(),
-                          [](const StatVal& a, const StatVal& b) {
-                              return a.first != b.first ? a.first > b.first
-                                                        : a.second < b.second;
-                          });
-                if ((int)ranked.size() > m_stat_rank_groups)
-                    ranked.resize(m_stat_rank_groups);
-                print(out, "      Top shader groups:\n");
-                for (auto&& [v, name] : ranked)
-                    print(out, "      {:>6} {}  \"{}\"\n", v, unit,
-                          name.size() ? name.c_str() : "<unnamed>");
-            };
-        emit_ranked_groups("Active layers", "layers", [](const ShaderGroup& g) {
-            return g.stat_active_layers();
-        });
-        emit_ranked_groups("Network depth", "depth", [](const ShaderGroup& g) {
-            return g.stat_network_depth();
-        });
-        emit_ranked_groups("Texture ops", "ops", [](const ShaderGroup& g) {
-            return g.stat_texture_ops();
-        });
-        emit_ranked_groups("Noise ops", "ops", [](const ShaderGroup& g) {
-            return g.stat_noise_ops();
-        });
+        // Purely formatting -- gather_group_stats() does the gathering,
+        // sorting and aggregating, so this report and the "stat:compiled_*"
+        // getattribute queries can never disagree.
+        auto emit_ranked_groups = [&](string_view label, string_view unit,
+                                      string_view metric) {
+            GroupStatSnapshot snap;
+            if (!gather_group_stats(metric, snap) || snap.ngroups == 0)
+                return;
+            print(out, "    {}: min={} max={} median={}\n", label, snap.vmin,
+                  snap.vmax, snap.vmedian);
+            if (snap.ranked.empty())
+                return;
+            int n = std::min((int)snap.ranked.size(), m_stat_rank_groups);
+            print(out, "      Top shader groups:\n");
+            for (int i = 0; i < n; ++i) {
+                auto&& [v, name] = snap.ranked[i];
+                print(out, "      {:>6} {}  \"{}\"\n", v, unit,
+                      name.size() ? name.c_str() : "<unnamed>");
+            }
+        };
+        emit_ranked_groups("Active layers", "layers", "active_layers");
+        emit_ranked_groups("Network depth", "depth", "network_depth");
+        emit_ranked_groups("Texture ops", "ops", "texture_ops");
+        emit_ranked_groups("Noise ops", "ops", "noise_ops");
     }
 
     return out.str();
+}
+
+
+
+bool
+ShadingSystemImpl::gather_group_stats(string_view metric,
+                                      GroupStatSnapshot& snap) const
+{
+    // Captureless lambdas convert to plain function pointers.
+    int (*getter)(const ShaderGroup&) = nullptr;
+    if (metric == "active_layers")
+        getter = [](const ShaderGroup& g) { return g.stat_active_layers(); };
+    else if (metric == "network_depth")
+        getter = [](const ShaderGroup& g) { return g.stat_network_depth(); };
+    else if (metric == "texture_ops")
+        getter = [](const ShaderGroup& g) { return g.stat_texture_ops(); };
+    else if (metric == "noise_ops")
+        getter = [](const ShaderGroup& g) { return g.stat_noise_ops(); };
+    else
+        return false;
+
+    // Collect a snapshot of all still-live compiled (optimized) groups.
+    // Note that unlike the per-group getattribute() queries, this never
+    // forces optimization of a group that isn't optimized yet.
+    std::vector<ShaderGroupRef> groups;
+    {
+        spin_lock lock(m_all_shader_groups_mutex);
+        for (auto&& w : m_all_shader_groups)
+            if (ShaderGroupRef g = w.lock())
+                if (g->optimized())
+                    groups.push_back(g);
+    }
+    snap.ngroups = (int)groups.size();
+    if (groups.empty())
+        return true;
+
+    // Aggregates are over all compiled groups, including zero-valued ones.
+    std::vector<int> vals;
+    vals.reserve(groups.size());
+    for (auto&& g : groups)
+        vals.push_back(getter(*g));
+    std::sort(vals.begin(), vals.end());
+    snap.vmin    = vals.front();
+    snap.vmax    = vals.back();
+    snap.vmedian = vals[vals.size() / 2];
+
+    // Ranked list: exclude groups with value 0.
+    using StatVal = std::pair<int, ustring>;
+    for (auto&& g : groups) {
+        int v = getter(*g);
+        if (v > 0)
+            snap.ranked.emplace_back(v, g->name());
+    }
+    std::sort(snap.ranked.begin(), snap.ranked.end(),
+              [](const StatVal& a, const StatVal& b) {
+                  return a.first != b.first ? a.first > b.first
+                                            : a.second < b.second;
+              });
+    return true;
 }
 
 

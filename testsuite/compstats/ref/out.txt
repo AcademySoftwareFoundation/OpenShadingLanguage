@@ -15,3 +15,42 @@ stat:compiled_active_layers=2
 stat:compiled_network_depth=2
 stat:compiled_texture_ops=1
 stat:compiled_noise_ops=2
+stat:compiled_active_layers: min=2 max=2 median=2 top_count=1
+stat:compiled_active_layers: top[0]=2 "complex"
+stat:compiled_network_depth: min=2 max=2 median=2 top_count=1
+stat:compiled_network_depth: top[0]=2 "complex"
+stat:compiled_texture_ops: min=1 max=1 median=1 top_count=1
+stat:compiled_texture_ops: top[0]=1 "complex"
+stat:compiled_noise_ops: min=2 max=2 median=2 top_count=1
+stat:compiled_noise_ops: top[0]=2 "complex"
+  Shader compilation stats, post-optimized:
+    Active layers: min=2 max=3 median=2
+      Top shader groups:
+           3 layers  "heavy"
+           2 layers  "light"
+           2 layers  "mid"
+    Network depth: min=2 max=3 median=2
+      Top shader groups:
+           3 depth  "heavy"
+           2 depth  "light"
+           2 depth  "mid"
+    Texture ops: min=0 max=1 median=0
+      Top shader groups:
+           1 ops  "heavy"
+    Noise ops: min=0 max=2 median=2
+      Top shader groups:
+           2 ops  "heavy"
+           2 ops  "mid"
+stat:compiled_active_layers: min=2 max=3 median=2 top_count=3
+stat:compiled_active_layers: top[0]=3 "heavy"
+stat:compiled_active_layers: top[1]=2 "light"
+stat:compiled_active_layers: top[2]=2 "mid"
+stat:compiled_network_depth: min=2 max=3 median=2 top_count=3
+stat:compiled_network_depth: top[0]=3 "heavy"
+stat:compiled_network_depth: top[1]=2 "light"
+stat:compiled_network_depth: top[2]=2 "mid"
+stat:compiled_texture_ops: min=0 max=1 median=0 top_count=1
+stat:compiled_texture_ops: top[0]=1 "heavy"
+stat:compiled_noise_ops: min=0 max=2 median=2 top_count=2
+stat:compiled_noise_ops: top[0]=2 "heavy"
+stat:compiled_noise_ops: top[1]=2 "mid"

@@ -41,6 +41,7 @@ static bool runstats             = false;
 static bool saveptx              = false;
 static bool warmup               = false;
 static bool profile              = false;
+static bool print_group_stats    = false;
 static bool O0 = false, O1 = false, O2 = false;
 static int llvm_opt              = 1;  // LLVM optimization level
 static bool debugnan             = false;
@@ -164,6 +165,8 @@ getargs(int argc, const char* argv[])
       .hidden(); // DEPRECATED 1.7
     ap.arg("--profile", &profile)
       .help("Print profile information");
+    ap.arg("--print-group-stats", &print_group_stats)
+      .help("Print ranked/aggregate compile stats across all shader groups");
     ap.arg("--saveptx", &saveptx)
       .help("Save the generated PTX (OptiX mode only)");
     ap.arg("--warmup", &warmup)
@@ -376,6 +379,36 @@ main(int argc, const char* argv[])
         if (texturesys)
             std::cout << texturesys->getstats(5) << "\n";
         std::cout << ustring::getstats() << "\n";
+    }
+
+    if (print_group_stats) {
+        // Ranked and aggregate compile stats across every shader group the
+        // shading system knows about, via the system-level getattribute.
+        static const char* metrics[] = { "active_layers", "network_depth",
+                                         "texture_ops", "noise_ops" };
+        for (const char* metric : metrics) {
+            std::string key = OSL::fmtformat("stat:compiled_{}", metric);
+            int count = 0, vmin = 0, vmax = 0, vmedian = 0;
+            shadingsys->getattribute(key + ":top_count", count);
+            shadingsys->getattribute(key + ":min", vmin);
+            shadingsys->getattribute(key + ":max", vmax);
+            shadingsys->getattribute(key + ":median", vmedian);
+            OSL::print("{}: min={} max={} median={} top_count={}\n", key, vmin,
+                       vmax, vmedian, count);
+            if (count <= 0)
+                continue;
+            std::vector<ustring> names(count);
+            std::vector<int> values(count);
+            shadingsys->getattribute(key + ":top_names",
+                                     TypeDesc(TypeDesc::STRING, count),
+                                     names.data());
+            shadingsys->getattribute(key + ":top_values",
+                                     TypeDesc(TypeDesc::INT, count),
+                                     values.data());
+            for (int i = 0; i < count; ++i)
+                OSL::print("{}: top[{}]={} \"{}\"\n", key, i, values[i],
+                           names[i]);
+        }
     }
 
     // We're done with the shading system now, destroy it

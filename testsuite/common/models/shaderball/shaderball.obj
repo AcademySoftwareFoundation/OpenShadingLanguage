@@ -1,3 +1,10 @@
+# StandardShaderBall, Copyright (c) Chris Rydalch, André Mazzone,
+# and Thomas Anagnostou.
+# https://github.com/usd-wg/assets/tree/main/full_assets/StandardShaderBall
+# Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+# SPDX-License-Identifier: CC-BY-4.0
+# Modified from the upstream USD asset: converted to Wavefront OBJ via
+# Blender. See README.md in this directory for details.
 # Blender 3.4.1
 # www.blender.org
 mtllib shaderball.mtl

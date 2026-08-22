@@ -37,6 +37,6 @@
     <ShaderGroup name="sss_bars">
         string texture_path "data/maps/sss_bars.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
-    <Model filename="data/../common/models/shaderball/shaderball.obj" />
+    <Model filename="../common/models/shaderball/shaderball.obj" />
 
 </World>

@@ -2,7 +2,7 @@
    <Camera eye="0, 1.5, 25" dir="0,0,-1" fov="14.5" />
 
    <ShaderGroup>color Cs 0.35 0.35 0.35; shader matte layer1;</ShaderGroup>
-   <Model filename="data/../common/models/bunny/bunny.obj" /> <!-- Grey -->
+   <Model filename="../common/models/bunny/bunny.obj" /> <!-- Grey -->
 
    <ShaderGroup>color Cs 0.75 0.25 0.25; shader matte layer1;</ShaderGroup>
    <Quad corner="-1.5, 0, -1.5" edge_x="0,3,0" edge_y="0,0,3" /> <!-- Left -->

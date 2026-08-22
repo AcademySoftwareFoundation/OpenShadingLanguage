@@ -1,0 +1,20 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+diffuse_textured
+(
+    string texture_path = "maps/uvgrid.exr"
+        [[ string description = "Base color texture" ]]
+)
+{
+    color base = texture(texture_path, u, 1 - v,
+                        "colorspace", "ACEScg");
+
+    base = clamp(base, color(0.0), color(1.0));
+
+    normal Nn = normalize(N);
+    Ci = base * diffuse(Nn);
+}

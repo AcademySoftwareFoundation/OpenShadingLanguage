@@ -1,0 +1,30 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+plastic
+(
+    float base = 1.0
+        [[ string description = "Base weight" ]],
+    color base_color = color(0.8, 0.8, 0.8)
+        [[ string description = "Base color" ]],
+    float specular_roughness = 0.2
+        [[ string description = "Specular roughness" ]]
+)
+{
+    normal Nn = normalize(N);
+    float safe_roughness = max(specular_roughness, 0.01);
+
+    float specular_weight = 0.5;
+    float diffuse_weight = 1.0 - specular_weight;
+
+    closure color diffuse_lobe = (diffuse_weight * base * base_color) * diffuse(Nn);
+    closure color specular_lobe = specular_weight * microfacet("ggx", Nn,
+                                              safe_roughness,
+                                              safe_roughness,
+                                              0);
+
+    Ci = diffuse_lobe + specular_lobe;
+}

@@ -1,0 +1,23 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+
+surface
+emitter
+    [[ string description = "Lambertian emitter material" ]]
+(
+    float power = 1
+        [[  string description = "Total power of the light",
+            float UImin = 0 ]],
+    color Cs = 1
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]]
+  )
+{
+    // Because emission() expects a weight in radiance, we must convert by dividing
+    // the power (in Watts) by the surface area and the factor of PI implied by
+    // uniform emission over the hemisphere. N.B.: The total power is BEFORE Cs
+    // filters the color!
+    Ci = (power / (M_PI * surfacearea())) * Cs * emission();
+}

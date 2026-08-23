@@ -136,8 +136,8 @@ struct Camera {
         float k    = OIIO::fast_tan(fov * float(M_PI / 360));
         Vec3 right = dir.cross(up).normalize();
         // fov is horizontal
-        cx         = right * k;
-        cy         = (cx.cross(dir)).normalize() * k * yres / xres;
+        cx = right * k;
+        cy = (cx.cross(dir)).normalize() * k * yres / xres;
     }
 
     // Get a ray for the given screen coordinates.
@@ -148,7 +148,8 @@ struct Camera {
         // components with magnitudes slightly greater than 1.0, which can cause
         // downstream computations to blow up and produce NaNs. Normalizing the
         // vector again avoids this issue.
-        const Vec3 v = (cx * (x * invw - 0.5f) * 2.f + cy * (0.5f - y * invh) * 2.f + dir)
+        const Vec3 v = (cx * (x * invw - 0.5f) * 2.f
+                        + cy * (0.5f - y * invh) * 2.f + dir)
 #ifndef __CUDACC__
                            .normalize();
 #else

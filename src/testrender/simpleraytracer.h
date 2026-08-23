@@ -85,6 +85,7 @@ public:
                                float yon, int xres, int yres);
 
     virtual void parse_scene_xml(const std::string& scenefile);
+    virtual void prepare_camera_spaces();
     virtual void prepare_render();
     void prepare_lights();
     void prepare_geometry();
@@ -113,7 +114,7 @@ public:
     int getBackgroundShaderID() const { return backgroundShaderID; }
     int getBackgroundResolution() const { return backgroundResolution; }
 
-private:
+protected:
     // Camera parameters
     Matrix44 m_world_to_camera;
     ustringhash m_projection;
@@ -121,6 +122,11 @@ private:
     float m_shutter[2];
     float m_screen_window[4];
 
+    // Named transforms
+    typedef std::map<ustringhash, std::shared_ptr<Transformation>> TransformMap;
+    TransformMap m_named_xforms;
+
+private:
     int backgroundShaderID   = -1;
     int backgroundResolution = 1024;
     int aa                   = 1;
@@ -139,10 +145,6 @@ private:
     class ErrorHandler;  // subclass ErrorHandler for SimpleRaytracer
     std::unique_ptr<OIIO::ErrorHandler> m_errhandler;
     bool m_had_error = false;
-
-    // Named transforms
-    typedef std::map<ustringhash, std::shared_ptr<Transformation>> TransformMap;
-    TransformMap m_named_xforms;
 
     // Attribute and userdata retrieval -- for fast dispatch, use a hash
     // table to map attribute names to functions that retrieve them. We

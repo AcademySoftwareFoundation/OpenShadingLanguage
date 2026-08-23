@@ -114,6 +114,8 @@ OptixRaytracer::OptixRaytracer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
+
+	cache = OIIO::ImageCache::create ();
 }
 
 
@@ -930,7 +932,7 @@ OptixRaytracer::get_texture_handle(ustring filename,
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
         // Open image to check the number of mip levels
-        OIIO::ImageBuf image;
+        OIIO::ImageBuf image(filename, 0, 0, cache);
         if (!image.init_spec(filename, 0, 0)) {
             errhandler().errorfmt("Could not load: {} (hash {})", filename,
                                   filename);
@@ -1091,6 +1093,27 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.color_system          = d_color_system;
     params.test_str_1            = test_str_1;
     params.test_str_2            = test_str_2;
+
+    // Named transforms
+    int nxforms = m_named_xforms.size();
+    params.num_named_xforms  = nxforms;
+    params.xform_name_buffer = DEVICE_ALLOC(sizeof(ustringhash)*nxforms);
+    params.xform_buffer      = DEVICE_ALLOC(sizeof(Transformation)*nxforms);
+    
+    std::vector<ustringhash> names;
+    std::vector<Transformation> xforms;
+    names.reserve(nxforms);
+    xforms.reserve(nxforms);
+
+    for (auto &pair : m_named_xforms)
+    {
+        names.push_back(pair.first);
+        xforms.push_back(*pair.second);
+    }
+
+    COPY_TO_DEVICE(params.xform_name_buffer, names.data(), sizeof(ustringhash)*nxforms);
+    COPY_TO_DEVICE(params.xform_buffer, xforms.data(), sizeof(Transformation)*nxforms);
+    CUDA_SYNC_CHECK();
 
     // Mesh data
     params.verts           = d_vertices;

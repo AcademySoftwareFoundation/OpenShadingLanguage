@@ -1097,7 +1097,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.num_named_xforms  = nxforms;
     params.xform_name_buffer = DEVICE_ALLOC(sizeof(ustringhash) * nxforms);
     params.xform_buffer      = DEVICE_ALLOC(sizeof(Transformation) * nxforms);
-    
+
     std::vector<ustringhash> names;
     std::vector<Transformation> xforms;
     names.reserve(nxforms);

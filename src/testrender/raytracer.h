@@ -44,9 +44,9 @@ ortho(const Vec3& n, Vec3& x, Vec3& y)
     float sign    = copysignf(1.0f, n.z);
     const float a = -1.0f / (sign + n.z);
     const float b = n.x * n.y * a;
-    // Negate to match previous implementation
-    x = -Vec3(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x);
-    y = -Vec3(b, sign + n.y * n.y * a, -n.y);
+
+    x = Vec3(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x);
+    y = Vec3(b, sign + n.y * n.y * a, -n.y);
 }
 
 

@@ -41,7 +41,7 @@ inline OSL_HOSTDEVICE void
 ortho(const Vec3& n, Vec3& x, Vec3& y)
 {
     // https://research.pixar.com/docs/2017.Others.DBCHKLV.pdf
-    float sign = copysignf(1.0f, n.z);
+    float sign    = copysignf(1.0f, n.z);
     const float a = -1.0f / (sign + n.z);
     const float b = n.x * n.y * a;
     // Negate to match previous implementation

@@ -114,6 +114,8 @@ OptixRaytracer::OptixRaytracer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
+
+    cache = OIIO::ImageCache::create();
 }
 
 
@@ -930,7 +932,7 @@ OptixRaytracer::get_texture_handle(ustring filename,
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
         // Open image to check the number of mip levels
-        OIIO::ImageBuf image;
+        OIIO::ImageBuf image(filename, 0, 0, cache);
         if (!image.init_spec(filename, 0, 0)) {
             errhandler().errorfmt("Could not load: {} (hash {})", filename,
                                   filename);
@@ -1001,7 +1003,7 @@ OptixRaytracer::get_texture_handle(ustring filename,
         tex_desc.filterMode          = cudaFilterModeLinear;
         tex_desc.readMode            = cudaReadModeElementType;
         tex_desc.normalizedCoords    = 1;
-        tex_desc.maxAnisotropy       = 1;
+        tex_desc.maxAnisotropy       = 16;
         tex_desc.maxMipmapLevelClamp = float(nmiplevels - 1);
         tex_desc.minMipmapLevelClamp = 0;
         tex_desc.mipmapFilterMode    = cudaFilterModeLinear;

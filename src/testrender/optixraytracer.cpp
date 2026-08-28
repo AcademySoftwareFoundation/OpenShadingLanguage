@@ -114,8 +114,6 @@ OptixRaytracer::OptixRaytracer()
 
     CUDA_CHECK(cudaSetDevice(0));
     CUDA_CHECK(cudaStreamCreate(&m_cuda_stream));
-
-    cache = OIIO::ImageCache::create();
 }
 
 
@@ -932,13 +930,21 @@ OptixRaytracer::get_texture_handle(ustring filename,
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
         // Open image to check the number of mip levels
-        OIIO::ImageBuf image(filename, 0, 0, cache);
+        OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
             errhandler().errorfmt("Could not load: {} (hash {})", filename,
                                   filename);
             return (TextureHandle*)nullptr;
         }
+#if 1
+        // Workaround until OpenImageIO fix nmiplevels() call
+        int32_t nmiplevels = 0;
+        auto inp = OIIO::ImageInput::open(filename.c_str());
+        while (inp->seek_subimage(0, nmiplevels))
+            nmiplevels++;
+#else
         int32_t nmiplevels = std::max(image.nmiplevels(), 1);
+#endif
         int32_t img_width  = image.xmax() + 1;
         int32_t img_height = image.ymax() + 1;
 

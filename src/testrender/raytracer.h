@@ -41,6 +41,7 @@ inline OSL_HOSTDEVICE void
 ortho(const Vec3& n, Vec3& x, Vec3& y)
 {
     // https://research.pixar.com/docs/2017.Others.DBCHKLV.pdf
+    // Duff, et al. "Building an Orthonormal Basis, Revisited", JCGT 6(1) 2017.
     float sign    = copysignf(1.0f, n.z);
     const float a = -1.0f / (sign + n.z);
     const float b = n.x * n.y * a;

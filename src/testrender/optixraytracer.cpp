@@ -939,7 +939,7 @@ OptixRaytracer::get_texture_handle(ustring filename,
 #if 1
         // Workaround until OpenImageIO fix nmiplevels() call
         int32_t nmiplevels = 0;
-        auto inp = OIIO::ImageInput::open(filename.c_str());
+        auto inp           = OIIO::ImageInput::open(filename.c_str());
         while (inp->seek_subimage(0, nmiplevels))
             nmiplevels++;
 #else

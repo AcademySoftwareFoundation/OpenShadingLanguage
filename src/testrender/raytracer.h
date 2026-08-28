@@ -40,9 +40,14 @@ class OptixRenderer;  // FIXME -- should not be here
 inline OSL_HOSTDEVICE void
 ortho(const Vec3& n, Vec3& x, Vec3& y)
 {
-    x = (fabsf(n.x) > .01f ? Vec3(n.z, 0, -n.x) : Vec3(0, -n.z, n.y))
-            .normalize();
-    y = n.cross(x);
+    // https://research.pixar.com/docs/2017.Others.DBCHKLV.pdf
+    // Duff, et al. "Building an Orthonormal Basis, Revisited", JCGT 6(1) 2017.
+    float sign    = copysignf(1.0f, n.z);
+    const float a = -1.0f / (sign + n.z);
+    const float b = n.x * n.y * a;
+
+    x = Vec3(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x);
+    y = Vec3(b, sign + n.y * n.y * a, -n.y);
 }
 
 

@@ -17,6 +17,7 @@ struct TangentFrame {
     static OSL_HOSTDEVICE TangentFrame from_normal(const Vec3& n)
     {
         // https://research.pixar.com/docs/2017.Others.DBCHKLV.pdf
+        // Duff, et al. "Building an Orthonormal Basis, Revisited", JCGT 6(1) 2017.
         const float sign = copysignf(1.0f, n.z);
         const float a    = -1 / (sign + n.z);
         const float b    = n.x * n.y * a;

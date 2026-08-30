@@ -1,10 +1,8 @@
-# StandardShaderBall, Copyright (c) Chris Rydalch, André Mazzone,
-# and Thomas Anagnostou.
+# StandardShaderBall, from the USD Working Group asset repository:
 # https://github.com/usd-wg/assets/tree/main/full_assets/StandardShaderBall
-# Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+# Copyright (c) Chris Rydalch, André Mazzone, Thomas Anagnostou.
 # SPDX-License-Identifier: CC-BY-4.0
-# Modified from the upstream USD asset: converted to Wavefront OBJ via
-# Blender. See README.md in this directory for details.
+# Converted from USD to OBJ via Blender. See README.md in this directory for details.
 # Blender 3.4.1 MTL File: 'shaderball-light-geo.blend'
 # www.blender.org
 

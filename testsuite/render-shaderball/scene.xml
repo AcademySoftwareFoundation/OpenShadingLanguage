@@ -11,31 +11,31 @@
         is_light="yes">float power 1; shader emitter layer1
     </ShaderGroup>
     <ShaderGroup name="back">
-        string texture_path "data/maps/wall_back.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/wall_back.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <ShaderGroup name="front">
-        string texture_path "data/maps/wall_front.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/wall_front.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <ShaderGroup name="ground">
-        string texture_path "data/maps/ground.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/ground.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <ShaderGroup name="left">
-        string texture_path "data/maps/wall_left.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/wall_left.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <ShaderGroup name="right">
-        string texture_path "data/maps/wall_right.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/wall_right.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <ShaderGroup name="top">
-        string texture_path "data/maps/wall_top.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/wall_top.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <ShaderGroup name="material_surface">
         color Base 0.5 0.5 0.5; float roughness 1.0; shader glossy layer1;
     </ShaderGroup>
     <ShaderGroup name="neutral">
-        string texture_path "data/maps/neutral.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/neutral.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <ShaderGroup name="sss_bars">
-        string texture_path "data/maps/sss_bars.ACEScg.exr"; shader diffuse_textured layer1;
+        string texture_path "../common/textures/shaderball/sss_bars.ACEScg.exr"; shader diffuse_textured layer1;
     </ShaderGroup>
     <Model filename="../common/models/shaderball/shaderball.obj" />
 

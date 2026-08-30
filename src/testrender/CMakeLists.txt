@@ -85,6 +85,10 @@ target_link_libraries (testrender
         pugixml::pugixml
         Threads::Threads)
 
+if (OSL_USE_OPTIX)
+    add_dependencies(testrender testrender_ptx)
+endif ()
+
 osl_optix_target (testrender)
 
 install ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )

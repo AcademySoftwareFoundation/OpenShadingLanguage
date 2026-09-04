@@ -24,7 +24,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:
    - GCC 9.3 or newer (tested through gcc 14)
-   - Clang 5 or newer (tested through clang 22)
+   - Clang 5 or newer (tested through clang 23)
    - Microsoft Visual Studio 2017 or newer
    - **Intel LLVM-based icx compiler version 2022 or newer** (note: the classic `icc` compiler is no longer supported).
 
@@ -49,7 +49,7 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X).
 
 * [LLVM](http://www.llvm.org) **14.0 or newer**, 15, 16, 17, 18, 19, 20, 21,
-  22, including clang libraries.
+  22, 23, including clang libraries.
 
 * (optional) For GPU rendering on NVIDIA GPUs:
     * [OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) 7.0 or higher.

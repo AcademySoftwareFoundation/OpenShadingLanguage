@@ -78,7 +78,6 @@ OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wmaybe-uninitialized")
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
-#include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
 
 #include <llvm/Support/DynamicLibrary.h>
 
@@ -1558,14 +1557,22 @@ LLVM_Util::make_jit_execengine(std::string* err, TargetISA requestedISA,
     // control is now handled via per-instruction fast-math flags in IR.
     options.UnsafeFPMath = false;
 #endif
+#if OSL_LLVM_VERSION < 230
+    // NoInfsFPMath, NoNaNsFPMath, and NoSignedZerosFPMath were removed from
+    // TargetOptions in LLVM 23; like UnsafeFPMath before them, FP math
+    // control is now handled via per-instruction fast-math flags in IR.
+    // The values we set here all matched LLVM's own defaults, so simply
+    // dropping them for LLVM 23+ preserves the existing behavior.
+    //
     // Since there are OSL language functions isinf and isnan,
     // we cannot assume there will not be infs and NANs
     options.NoInfsFPMath = false;
     options.NoNaNsFPMath = false;
-    // We will not be setting up any exception handling for FP math
-    options.NoTrappingFPMath = true;
     // Debatable, but perhaps some tests care about the sign of +0 vs. -0
     options.NoSignedZerosFPMath = false;
+#endif
+    // We will not be setting up any exception handling for FP math
+    options.NoTrappingFPMath = true;
     // We will NOT be changing rounding mode dynamically
     options.HonorSignDependentRoundingFPMathOption = false;
 
@@ -1824,8 +1831,12 @@ LLVM_Util::nvptx_target_machine()
         // control is now handled via per-instruction fast-math flags in IR.
         options.UnsafeFPMath = 1;
 #endif
-        options.NoInfsFPMath                           = 1;
-        options.NoNaNsFPMath                           = 1;
+#if OSL_LLVM_VERSION < 230
+        // Removed from TargetOptions in LLVM 23; fast-math relaxations are
+        // now expressed with per-instruction fast-math flags in IR.
+        options.NoInfsFPMath = 1;
+        options.NoNaNsFPMath = 1;
+#endif
         options.HonorSignDependentRoundingFPMathOption = 0;
         options.FloatABIType          = llvm::FloatABI::Default;
         options.AllowFPOpFusion       = llvm::FPOpFusion::Fast;

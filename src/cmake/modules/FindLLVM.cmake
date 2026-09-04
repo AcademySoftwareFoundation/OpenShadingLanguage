@@ -116,19 +116,26 @@ if (LLVM_SHARED_MODE STREQUAL "shared")
     endif ()
 endif ()
 
-foreach (COMPONENT clangFrontend clangDriver clangSerialization
-                   clangParse clangSema clangAnalysis clangAST
-                   clangASTMatchers clangEdit clangLex
-                   clangSupport clangAPINotes clangBasic
-                   clangOptions clangAnalysisLifetimeSafety)
-    find_library ( _CLANG_${COMPONENT}_LIBRARY
-                  NAMES ${COMPONENT}
-                  PATHS ${LLVM_LIB_DIR}
-                  NO_DEFAULT_PATH)
-    if (_CLANG_${COMPONENT}_LIBRARY)
-        list (APPEND CLANG_LIBRARIES ${_CLANG_${COMPONENT}_LIBRARY})
-    endif ()
-endforeach ()
+# libclang-cpp contains all the clang components we need, so the separate
+# static archives are only a fallback for when it isn't present (such as an
+# LLVM built with LLVM_LINK_LLVM_DYLIB=OFF). Linking both is redundant, and
+# some LLVM distributions build the static archives in a form the system
+# linker can't consume.
+if (NOT _CLANG_CPP_LIBRARY)
+    foreach (COMPONENT clangFrontend clangDriver clangSerialization
+                       clangParse clangSema clangAnalysis clangAST
+                       clangASTMatchers clangEdit clangLex
+                       clangSupport clangAPINotes clangBasic
+                       clangOptions clangAnalysisLifetimeSafety)
+        find_library ( _CLANG_${COMPONENT}_LIBRARY
+                      NAMES ${COMPONENT}
+                      PATHS ${LLVM_LIB_DIR}
+                      NO_DEFAULT_PATH)
+        if (_CLANG_${COMPONENT}_LIBRARY)
+            list (APPEND CLANG_LIBRARIES ${_CLANG_${COMPONENT}_LIBRARY})
+        endif ()
+    endforeach ()
+endif ()
 
 
 # shared llvm library may not be available, this is not an error if we use LLVM_STATIC.

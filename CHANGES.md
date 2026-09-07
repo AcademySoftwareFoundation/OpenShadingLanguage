@@ -1,6 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.15.7.0 (7 Sep 2026) -- compared to 1.15.6.0
+---------------------------------------------------------
+  - *ShadingSystem*: Query ranked and aggregate post-optimization ShaderGroup compile stats (active_layers, network_depth, texture_ops, noise_ops) through new system `getattribute` keys. [#2147](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2147) (1.15.7.0, 1.14.12.0) (by @lgritz / Larry Gritz)
+  - *python*: The OSLQuery Python bindings no longer require the OpenImageIO Python types: a new `OSLQuery.Parameter.type_name` property returns the parameter's type as a string, and the OpenImageIO module is no longer force-imported at startup. This lets Python programs use OSLQuery alongside an OpenImageIO built against a different binding library (pybind11 vs nanobind). [#2142](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2142) (by @lgritz / Larry Gritz)
+  - *testrender*: Fix discontinuities in principal directions by switching to a more robust method of building an orthonormal basis from a normal. [#2154](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2154) (by @AlexeySmolenchuk / Alexey Smolenchuk)
+  - *fix*: Repair unsafe string formatting of certain errors (a plain error message that happened to contain brace characters could confuse the formatting engine). [#2145](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2145) (1.15.7.0, 1.14.12.0) (by @lgritz / Larry Gritz)
+  - *build*: Support LLVM 23. [#2159](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2159) (1.15.7.0, 1.14.12.0) (by @lgritz / Larry Gritz)
+  - *build*: Correctly serialize the CUDA build of testrender. [#2157](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2157) (by @jfpanisset / Jean-Francois Panisset) (1.15.7.0, 1.14.12.0)
+  - *ci*: Update all GitHub Actions to their latest versions. [#2144](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2144) (by @lgritz / Larry Gritz)
+  - *ci*: Fix broken CI caused by a recent OIIO change and a libtiff vs webp conflict. [#2160](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2160) (1.15.7.0, 1.14.12.0) (by @lgritz / Larry Gritz)
+
+
 Release 1.15.6.0 (1 Aug 2026) -- compared to 1.15.5.0
 ---------------------------------------------------------
   - *osltoy*: Improved readability of the cursor-highlighted line in the code editor. [#2067](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2067) (by @silvialpz / Silvia Lopez)
@@ -146,6 +158,16 @@ Release 1.15 (Jan 1, 2026) -- compared to 1.14
 ---
 
 ---
+
+Release 1.14.12.0 (7 Sep 2026) -- compared to 1.14.11.0
+---------------------------------------------------------
+  - *ShadingSystem*: Query ranked and aggregate post-optimization ShaderGroup compile stats (active_layers, network_depth, texture_ops, noise_ops) through new system `getattribute` keys. [#2147](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2147) (@lgritz / Larry Gritz)
+  - *jit*: Fix a crash in exception handling after OSL JIT on Ubuntu 24.04 (a libgcc 14.2 bug -- could affect other systems using that version). [#2113](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2113) (by @sergeyvfx / Sergey Sharybin)
+  - *RendererServices*: Repair unsafe string formatting of certain errors. [#2145](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2145) (@lgritz / Larry Gritz)
+  - *build*: Support LLVM 23. [#2159](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2159) (@lgritz / Larry Gritz)
+  - *build*: Correctly serialize the CUDA build of testrender. [#2157](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2157) (by @jfpanisset / Jean-Francois Panisset) (@lgritz / Larry Gritz)
+  - *ci*: Various fixes for CI breakage [#2143](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2143) [#2160](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2160), only test against OIIO 3.1 or lower, and backport container fixes for the old ASWF images. (@lgritz / Larry Gritz)
+
 
 Release 1.14.11.0 (1 Jun 2026) -- compared to 1.14.10.0
 ---------------------------------------------------------

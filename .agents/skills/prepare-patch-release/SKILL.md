@@ -1,6 +1,7 @@
 ---
 name: prepare-patch-release
-description: Do all the tasks needed for a patch release of the project.argument-hint: [new-version]
+description: Do all the tasks needed for a patch release of the project.
+argument-hint: [new-version]
 ---
 
 Do all the tasks needed for a patch release of the project. These patch

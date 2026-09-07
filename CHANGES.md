@@ -1,6 +1,16 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.14.12.0 (7 Sep 2026) -- compared to 1.14.11.0
+---------------------------------------------------------
+  - *ShadingSystem*: Query ranked and aggregate post-optimization ShaderGroup compile stats (active_layers, network_depth, texture_ops, noise_ops) through new system `getattribute` keys. [#2147](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2147) (@lgritz / Larry Gritz)
+  - *jit*: Fix a crash in exception handling after OSL JIT on Ubuntu 24.04 (a libgcc 14.2 bug -- could affect other systems using that version). [#2113](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2113) (by @sergeyvfx / Sergey Sharybin)
+  - *RendererServices*: Repair unsafe string formatting of certain errors. [#2145](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2145) (@lgritz / Larry Gritz)
+  - *build*: Support LLVM 23. [#2159](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2159) (@lgritz / Larry Gritz)
+  - *build*: Correctly serialize the CUDA build of testrender. [#2157](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2157) (by @jfpanisset / Jean-Francois Panisset) (@lgritz / Larry Gritz)
+  - *ci*: Various fixes for CI breakage [#2143](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2143) [#2160](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2160), only test against OIIO 3.1 or lower, and backport container fixes for the old ASWF images. (@lgritz / Larry Gritz)
+
+
 Release 1.14.11.0 (1 Jun 2026) -- compared to 1.14.10.0
 ---------------------------------------------------------
   - *ShadingSystem*: Extend per-ShaderGroup complexity statistics: compile-time metrics are now stored as persistent ShaderGroup fields, exposed via `getattribute(group, "stat:compiled_active_layers")` etc., and `getstats()` emits a new "Shader compilation stats, post-optimized" section showing min/max/median and a ranked leaderboard for each metric (controlled by the existing "stat:rank_groups" option). Also adds `--print-group-stats` flag to `testshade`. [#2120](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2120)

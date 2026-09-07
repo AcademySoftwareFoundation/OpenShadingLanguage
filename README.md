@@ -584,8 +584,9 @@ Gritz, Nicolas Guiard, Euan Haahr, Derek Haase, Sven-Hendrik Haase, John
 Haddon, Niklas Harrysson, Daniel Heckenberg, Chris Hellmuth, Adrien Herubel,
 Dan Horák, Thiago Ize, Matt Johnson, Ronan Keryell, Chris Kulla, Elvic Liang,
 Max Liani, Sv. Lockal, Adam Martinez, John Mertic, Bastien Montagne, Steena Monteiro,
-Patrick Mours, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jino Park, Alexei
-Pawlow, Mitch Prater, Jay Reynolds, Declan Russell, Benoit Ruiz, Patrick
+Patrick Mours, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Jean-Francois
+Panisset, Jino Park, Alexei Pawlow, Mitch Prater, Jay Reynolds, Declan
+Russell, Benoit Ruiz, Patrick
 Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Mark Sisson, Sandip
 Shukla, Cliff Stein, Stephan Steinbach, Luya Tshimbalanga, Esteban Tovagliari,
 Brecht Van Lommel, Thibault Vergne, Alexander von Knorring, Aidan Welch, Alex

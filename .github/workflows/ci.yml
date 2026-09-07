@@ -300,7 +300,7 @@ jobs:
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
-            openimageio_ver: main
+            openimageio_ver: v3.1.17.0
             python_ver: "3.11"
             pybind11_ver: v2.11.1
             simd: avx2,f16c
@@ -478,7 +478,7 @@ jobs:
             fmt_ver: main
             opencolorio_ver: main
             openexr_ver: main
-            openimageio_ver: main
+            openimageio_ver: dev-3.1
             pybind11_ver: master
             python_ver: "3.12"
             llvm_action_ver: "18.1.7"
@@ -571,7 +571,7 @@ jobs:
             cc_compiler: /usr/bin/clang
             cxx_compiler: /usr/bin/clang++
             cxx_std: 17
-            openimageio_ver: dev-3.0
+            openimageio_ver: v3.0.21.0
             python_ver: "3.13"
             ctest_test_timeout: 120
             setenvs: export HOMEBREW_PREFIX=/usr/local
@@ -583,7 +583,7 @@ jobs:
             cc_compiler: /usr/bin/clang
             cxx_compiler: /usr/bin/clang++
             cxx_std: 17
-            openimageio_ver: main
+            openimageio_ver: v3.1.17.0
             python_ver: "3.13"
             setenvs: export LLVMBREWVER="@19"
           - desc: MacOS-15-ARM aclang16/C++17/py3.13 llvm21 oiio-main
@@ -593,7 +593,7 @@ jobs:
             cxx_compiler: /usr/bin/clang++
             cxx_std: 17
             python_ver: "3.13"
-            openimageio_ver: main
+            openimageio_ver: v3.1.17.0
 
 
   windows:

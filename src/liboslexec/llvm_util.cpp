@@ -2729,7 +2729,10 @@ LLVM_Util::validate_global_mappings(
     std::vector<std::string>& names_of_unmapped_globals)
 {
     for (llvm::GlobalVariable& global : m_llvm_module->globals()) {
-        if (global.hasExternalLinkage()) {
+        // Only external *declarations* need an address supplied from outside
+        // the module. A definition with external linkage is allocated by the
+        // JIT itself, so reporting it as unmapped is a false positive.
+        if (global.hasExternalLinkage() && global.isDeclaration()) {
             void* global_addr
                 = llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(
                     global.getName().data());

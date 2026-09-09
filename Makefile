@@ -293,6 +293,9 @@ test: build
 	    PYTHONPATH=${working_dir}/${build_dir}/lib/python/site-packages:${PYTHONPATH} \
 	    ctest -E broken ${TEST_FLAGS} \
 	  )
+	# PYTHONPATH here is a convenience for interactive use; the python` tests
+	# set their own via a CTest ENVIRONMENT property, which wins,` and which
+	# is how a backend-specific variant finds its module.`
 	@ ( if [[ "${CODECOV}" == "1" ]] ; then \
 	      cd ${build_dir} ; \
 	      lcov -b . -d . -c -o cov.info ; \

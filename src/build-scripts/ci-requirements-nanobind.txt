@@ -1,0 +1,13 @@
+# CI-only: nanobind for CMake (`python -m nanobind --cmake_dir`). Used on Linux
+# (gh-installdeps) and Windows (gh-win-installdeps) with pip --require-hashes.
+# macOS CI uses `brew install nanobind` instead (install_homebrew_deps.bash).
+#
+# Only needed when OSL_PYTHON_BINDINGS_BACKEND is nanobind or both. If this
+# install fails, src/cmake/build_nanobind.cmake builds nanobind locally
+# instead, so CI still works -- it's just slower.
+#
+# Keep this version in sync with nanobind_BUILD_VERSION in
+# src/cmake/build_nanobind.cmake. When bumping the pin, get the wheel sha256
+# from https://pypi.org/pypi/nanobind/<ver>/json
+nanobind==3.0.1 \
+    --hash=sha256:4b49491fe8bf483a5e0342125b8fe56237e490ba642c7e296170b8cd256a7764

@@ -4,8 +4,6 @@
 
 #include "py_osl.h"
 
-#include <pybind11/embed.h>
-
 namespace PyOSL {
 
 using namespace OSL;
@@ -13,28 +11,36 @@ using namespace OSL;
 
 
 void
-declare_oslqueryparam(py::module& m)
+declare_oslqueryparam(py_module& m)
 {
-    using namespace pybind11::literals;
     using Parameter = OSLQuery::Parameter;
 
     py::class_<Parameter>(m, "Parameter")
         .def(py::init<>())
         .def(py::init<const Parameter&>())
-        .def_property_readonly("name",
-                               [](const Parameter& p) {
-                                   return PY_STR(p.name.string());
-                               })
-        .def_readwrite("type", &Parameter::type)
-        .def_property(
+        .OSL_PY_PROP_RO("name",
+                        [](const Parameter& p) {
+                            return osl_py::str(p.name.string());
+                        })
+        // NOTE: this exposes an OIIO TypeDesc, and OSL's module never
+        // registers that type -- it relies on OpenImageIO's Python module
+        // having registered it. So reading `type` only works if OIIO's module
+        // has been imported AND was built with the same binding framework as
+        // this one (each framework has its own type registry and they can't
+        // see each other's); otherwise it raises TypeError. Both backends
+        // behave identically here, and this predates the nanobind work.
+        // `type_name` gives the same information as a plain string with no
+        // such coupling, and is what callers should prefer.
+        .OSL_PY_RW("type", &Parameter::type)
+        .OSL_PY_PROP_RW(
             "type_name",
-            [](const Parameter& p) { return PY_STR(p.type_name()); },
+            [](const Parameter& p) { return osl_py::str(p.type_name()); },
             [](Parameter& p, const std::string& t) { p.type_name(t); })
-        .def_readwrite("isoutput", &Parameter::isoutput)
-        .def_readwrite("varlenarray", &Parameter::varlenarray)
-        .def_readwrite("isstruct", &Parameter::isstruct)
-        .def_readwrite("isclosure", &Parameter::isclosure)
-        .def_property_readonly(
+        .OSL_PY_RW("isoutput", &Parameter::isoutput)
+        .OSL_PY_RW("varlenarray", &Parameter::varlenarray)
+        .OSL_PY_RW("isstruct", &Parameter::isstruct)
+        .OSL_PY_RW("isclosure", &Parameter::isclosure)
+        .OSL_PY_PROP_RO(
             "value",
             [](const Parameter& p) {
                 py::object result;
@@ -50,7 +56,7 @@ declare_oslqueryparam(py::module& m)
                     result = py::none();
                 return result;
             })
-        .def_property_readonly(
+        .OSL_PY_PROP_RO(
             "spacename",
             [](const Parameter& p) {
                 py::object result;
@@ -65,41 +71,36 @@ declare_oslqueryparam(py::module& m)
                 }
                 return result;
             })
-        .def_property_readonly(
-            "fields",
-            [](const Parameter& p) {
-                py::object result;
-                if (p.isstruct) {
-                    TypeDesc t(TypeDesc::STRING, p.fields.size());
-                    result = C_to_val_or_tuple(cspan<ustring>(p.fields), t);
-                } else {
-                    result = py::none();
-                }
-                return result;
-            })
-        .def_property_readonly("structname",
-                               [](const Parameter& p) {
-                                   return PY_STR(p.structname.string());
-                               })
-        .def_property_readonly(
-            "metadata", [](const Parameter& p) { return p.metadata; },
-            py::return_value_policy::reference_internal);
+        .OSL_PY_PROP_RO("fields",
+                        [](const Parameter& p) {
+                            py::object result;
+                            if (p.isstruct) {
+                                TypeDesc t(TypeDesc::STRING, p.fields.size());
+                                result = C_to_val_or_tuple(cspan<ustring>(
+                                                               p.fields),
+                                                           t);
+                            } else {
+                                result = py::none();
+                            }
+                            return result;
+                        })
+        .OSL_PY_PROP_RO("structname",
+                        [](const Parameter& p) {
+                            return osl_py::str(p.structname.string());
+                        })
+        .OSL_PY_PROP_RO("metadata",
+                        [](const Parameter& p) { return p.metadata; });
 }
 
 
 
 void
-declare_oslquery(py::module& m)
+declare_oslquery(py_module& m)
 {
-    using namespace pybind11::literals;
-
     py::class_<OSLQuery>(m, "OSLQuery")
         .def(py::init<>())
-        .def(py::init([](const std::string& shadername,
-                         const std::string& searchpath) {
-                 return OSLQuery(shadername, searchpath);
-             }),
-             "shadername"_a, "searchpath"_a = "")
+        .def(py::init<const std::string&, const std::string&>(), "shadername"_a,
+             "searchpath"_a = "")
 
         //    OSLQuery (const ShaderGroup *group, int layernum)
 
@@ -124,42 +125,35 @@ declare_oslquery(py::module& m)
         .def("shadername",
              [](const OSLQuery& self) { return self.shadername().string(); })
 
-        .def_property_readonly("nparams",
-                               [](const OSLQuery& p) { return p.nparams(); })
-        .def_property_readonly(
-            "parameters",
-            [](const OSLQuery& self) { return self.parameters(); },
-            py::return_value_policy::reference_internal)
+        .OSL_PY_PROP_RO("nparams",
+                        [](const OSLQuery& p) { return p.nparams(); })
+        .OSL_PY_PROP_RO("parameters",
+                        [](const OSLQuery& self) { return self.parameters(); })
 
-        .def_property_readonly(
-            "metadata", [](const OSLQuery& self) { return self.metadata(); },
-            py::return_value_policy::reference_internal)
+        .OSL_PY_PROP_RO("metadata",
+                        [](const OSLQuery& self) { return self.metadata(); })
 
         .def("__len__", [](const OSLQuery& p) { return p.nparams(); })
-        .def(
-            "__getitem__",
-            [](const OSLQuery& self, size_t i) {
-                auto p = self.getparam(i);
-                if (!p)
-                    throw py::index_error();
-                return *p;
-            },
-            py::return_value_policy::reference_internal)
-        .def(
-            "__getitem__",
-            [](const OSLQuery& self, const std::string& name) {
-                auto p = self.getparam(name);
-                if (!p)
-                    throw py::key_error("parameter '" + name
-                                        + "' does not exist");
-                return *p;
-            },
-            py::return_value_policy::reference_internal)
+        .def("__getitem__",
+             [](const OSLQuery& self, size_t i) {
+                 auto p = self.getparam(i);
+                 if (!p)
+                     throw py::index_error();
+                 return *p;
+             })
+        .def("__getitem__",
+             [](const OSLQuery& self, const std::string& name) {
+                 auto p = self.getparam(name);
+                 if (!p)
+                     osl_py::throw_key_error("parameter '" + name
+                                             + "' does not exist");
+                 return *p;
+             })
         .def(
             "__iter__",
             [](const OSLQuery& self) {
-                return py::make_iterator(self.parameters().begin(),
-                                         self.parameters().end());
+                return osl_py::make_iterator<OSLQuery>(self.parameters().begin(),
+                                                       self.parameters().end());
             },
             py::keep_alive<0, 1>())
 
@@ -173,21 +167,59 @@ declare_oslquery(py::module& m)
 
 
 
-PYBIND11_MODULE(oslquery, m)
+// Global (OSL scope) symbols
+void
+declare_module_attributes(py_module& m)
 {
-    // Global (OSL scope) functions and symbols
     m.attr("osl_version")    = OSL_VERSION;
     m.attr("VERSION")        = OSL_VERSION;
-    m.attr("VERSION_STRING") = PY_STR(OSL_LIBRARY_VERSION_STRING);
+    m.attr("VERSION_STRING") = osl_py::str(OSL_LIBRARY_VERSION_STRING);
     m.attr("VERSION_MAJOR")  = OSL_VERSION_MAJOR;
     m.attr("VERSION_MINOR")  = OSL_VERSION_MINOR;
     m.attr("VERSION_PATCH")  = OSL_VERSION_PATCH;
-    m.attr("INTRO_STRING")   = PY_STR(OSL_INTRO_STRING);
-    m.attr("__version__")    = PY_STR(OSL_LIBRARY_VERSION_STRING);
+    m.attr("INTRO_STRING")   = osl_py::str(OSL_INTRO_STRING);
+    m.attr("__version__")    = osl_py::str(OSL_LIBRARY_VERSION_STRING);
+}
 
-    // Main OSL classes
+
+
+#if defined(OSL_PY_BACKEND_NANOBIND)
+
+}  // namespace PyOSL
+// NB_MODULE, unlike PYBIND11_MODULE, must appear at global scope, so the
+// namespace has to close before it rather than after.
+
+// When both backends are built, this module is the second one and lives
+// inside a package whose __init__.py re-exports it, so it needs a distinct
+// name. When nanobind is the only backend, it is a drop-in replacement for
+// the pybind11 module and takes the plain name.
+#    if defined(OSL_PY_NANOBIND_ISOLATED_PACKAGE)
+NB_MODULE(_oslquery, m)
+#    else
+NB_MODULE(oslquery, m)
+#    endif
+{
+#    if PY_VERSION_HEX < 0x030a0000
+    // Python 3.9 tears the interpreter down in an order that makes nanobind
+    // report leaks that aren't there. Not an issue on 3.10+.
+    // https://github.com/wjakob/nanobind/discussions/1405
+    py::set_leak_warnings(false);
+#    endif
+
+    PyOSL::declare_module_attributes(m);
+    PyOSL::declare_oslqueryparam(m);
+    PyOSL::declare_oslquery(m);
+}
+
+#else
+
+PYBIND11_MODULE(oslquery, m)
+{
+    declare_module_attributes(m);
     declare_oslqueryparam(m);
     declare_oslquery(m);
 }
 
 }  // namespace PyOSL
+
+#endif

@@ -54,6 +54,8 @@ on:
         type: string
       pybind11_ver:
         type: string
+      python_bindings_backend:
+        type: string
       python_action_ver:
         type: string
       python_ver:
@@ -133,6 +135,7 @@ jobs:
       OPENEXR_VERSION: ${{inputs.openexr_ver}}
       OPENIMAGEIO_VERSION: ${{inputs.openimageio_ver}}
       PYBIND11_VERSION: ${{inputs.pybind11_ver}}
+      OSL_PYTHON_BINDINGS_BACKEND: ${{inputs.python_bindings_backend}}
       PYTHON_VERSION: ${{inputs.python_ver}}
       USE_BATCHED: ${{inputs.batched}}
       ABI_CHECK: ${{inputs.abi_check}}

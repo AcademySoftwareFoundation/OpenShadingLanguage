@@ -20,6 +20,29 @@ add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest
 set (OSL_TEST_BIG_TIMEOUT 800 CACHE STRING "Timeout for tests that take a long time")
 
 
+# Build a single "PYTHONPATH=..." entry suitable for a CTest ENVIRONMENT
+# property, putting prefix_dir first.
+#
+# This is how the python tests find the module: which binding backend a given
+# test run exercises is decided entirely by which directory this points at.
+# (It also means `ctest` run directly in the build tree works -- previously
+# PYTHONPATH was only ever set by the `make test` wrapper.)
+#
+# On Windows, deliberately don't append the inherited PYTHONPATH: entries are
+# separated by ';' there, which CMake would then split as a list separator
+# when this is used as a test ENVIRONMENT entry.
+function (osl_tests_pythonpath_env_entry out_var prefix_dir)
+    if (WIN32)
+        set (_pythonpath "${prefix_dir}")
+    elseif (DEFINED ENV{PYTHONPATH} AND NOT "$ENV{PYTHONPATH}" STREQUAL "")
+        set (_pythonpath "${prefix_dir}:$ENV{PYTHONPATH}")
+    else ()
+        set (_pythonpath "${prefix_dir}")
+    endif ()
+    set (${out_var} "PYTHONPATH=${_pythonpath}" PARENT_SCOPE)
+endfunction ()
+
+
 # add_one_testsuite() - set up one testsuite entry
 #
 # Usage:
@@ -481,8 +504,42 @@ macro (osl_add_all_tests)
     # We also exclude these tests if this is a sanitizer build, because the
     # Python interpreter itself won't be linked with the right asan
     # libraries to run correctly.
+    #
+    # These go through add_one_testsuite directly rather than TESTSUITE(),
+    # because they need a per-variant PYTHONPATH (which is the *only* thing
+    # that selects which binding backend a run exercises), and because none of
+    # the variants TESTSUITE() generates -- optimized, batched, rs_bitcode,
+    # optix -- mean anything for a test that never executes a shader.
     if (USE_PYTHON AND Python3_Development_FOUND AND NOT SANITIZE)
-        TESTSUITE ( python-oslquery )
+        set (_py_testsrc "${CMAKE_SOURCE_DIR}/testsuite/python-oslquery")
+        osl_tests_pythonpath_env_entry (_pybind_pypath
+                                        "${CMAKE_BINARY_DIR}/lib/python/site-packages")
+        if (OSL_PYTHON_BINDINGS_BACKEND STREQUAL "both")
+            # In "both" mode the nanobind module is kept in its own build-tree
+            # package so it doesn't shadow the pybind11 one, which owns
+            # lib/python/site-packages.
+            osl_tests_pythonpath_env_entry (_nb_pypath
+                                            "${CMAKE_BINARY_DIR}/lib/python/nanobind")
+        else ()
+            # nanobind-only builds put the module exactly where pybind11
+            # would have, so the same path serves.
+            set (_nb_pypath "${_pybind_pypath}")
+        endif ()
+
+        set (_nb_suffix ".nanobind")
+        if (OSL_BUILD_PYTHON_PYBIND11)
+            add_one_testsuite ("python-oslquery" "${_py_testsrc}"
+                               ENV TESTSHADE_OPT=0 "${_pybind_pypath}")
+        else ()
+            # Whichever backend is the only one built gets the plain test
+            # name; the suffix exists to disambiguate, so with nothing to
+            # disambiguate from it would just be noise.
+            set (_nb_suffix "")
+        endif ()
+        if (OSL_BUILD_PYTHON_NANOBIND)
+            add_one_testsuite ("python-oslquery${_nb_suffix}" "${_py_testsrc}"
+                               ENV TESTSHADE_OPT=0 "${_nb_pypath}")
+        endif ()
     endif ()
 
     # Only run openvdb-related tests if the local OIIO has openvdb support.

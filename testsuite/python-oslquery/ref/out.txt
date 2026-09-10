@@ -32,4 +32,12 @@ Shader:  shader test
         meta:  string s = 'I have
 "Escape"	sequences
 '
+  Empty string properties:
+    structname of a non-struct param: ''
+    default Parameter name: ''
+    default Parameter structname: ''
+    default Parameter type_name: 'unknown'
+    default Parameter value: None
+    default Parameter fields: None
+    default Parameter spacename: None
 Done.

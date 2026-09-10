@@ -174,6 +174,12 @@ if [[ "$PYBIND11_VERSION" != "0" ]] ; then
     source src/build-scripts/build_pybind11.bash
 fi
 
+# nanobind is only needed for the non-default python binding backends. Install
+# the pinned wheel if we can; CMake builds it locally if this doesn't work out.
+if [[ "${OSL_PYTHON_BINDINGS_BACKEND:-}" == "nanobind" || "${OSL_PYTHON_BINDINGS_BACKEND:-}" == "both" ]] ; then
+    pip3 install --require-hashes -r src/build-scripts/ci-requirements-nanobind.txt || true
+fi
+
 if [[ "$OPENEXR_VERSION" != "" ]] ; then
     source src/build-scripts/build_openexr.bash
 fi

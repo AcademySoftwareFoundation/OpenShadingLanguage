@@ -1,5 +1,5 @@
 <World>
-   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="50.0468" />
 
    <ShaderGroup>
       string filename "../common/textures/kitchen_probe.hdr";

@@ -85,10 +85,19 @@ endif ()
 checked_find_package (partio)
 
 
-# From pythonutils.cmake
+# From pythonutils.cmake. Which binding framework(s) we need is selected by
+# OSL_PYTHON_BINDINGS_BACKEND; only look for the ones actually asked for, so
+# that e.g. a nanobind-only build doesn't require pybind11 to be installed.
 find_python ()
-if (USE_PYTHON)
+if (USE_PYTHON AND OSL_BUILD_PYTHON_PYBIND11)
     checked_find_package (pybind11 REQUIRED VERSION_MIN 2.7)
+endif ()
+if (USE_PYTHON AND OSL_BUILD_PYTHON_NANOBIND)
+    discover_nanobind_cmake_dir ()
+    checked_find_package (nanobind CONFIG REQUIRED
+                          VERSION_MIN 2.8.0
+                          NO_FP_RANGE_CHECK
+                          BUILD_LOCAL missing)
 endif ()
 
 

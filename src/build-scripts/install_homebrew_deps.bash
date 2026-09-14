@@ -67,6 +67,12 @@ brew list --versions
 # Needed on some systems
 pip${PYTHON_VERSION} install numpy || true
 
+# nanobind is only needed for the non-default python binding backends. If it
+# can't be installed, the build falls back to CMake building it locally.
+if [[ "${OSL_PYTHON_BINDINGS_BACKEND:-}" == "nanobind" || "${OSL_PYTHON_BINDINGS_BACKEND:-}" == "both" ]] ; then
+    brew install nanobind || true
+fi
+
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.
 export PATH=${HOMEBREW_PREFIX}/opt/qt5/bin:$PATH

@@ -11,3 +11,4 @@ specs/*
 # we add specs that we intend to commit and make available to all project
 # developers, they must be individually added here.
 !specs/002-backend-cpp
+!specs/003-nanobind-python-bindings

@@ -64,6 +64,7 @@ jobs:
       openexr_ver: ${{ matrix.openexr_ver }}
       openimageio_ver: ${{ matrix.openimageio_ver }}
       pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_bindings_backend: ${{ matrix.python_bindings_backend }}
       python_ver: ${{ matrix.python_ver }}
       setenvs: ${{ matrix.setenvs }}
       simd: ${{ matrix.simd }}
@@ -148,6 +149,7 @@ jobs:
       openexr_ver: ${{ matrix.openexr_ver }}
       openimageio_ver: ${{ matrix.openimageio_ver }}
       pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_bindings_backend: ${{ matrix.python_bindings_backend }}
       python_ver: ${{ matrix.python_ver }}
       setenvs: ${{ matrix.setenvs }}
       simd: ${{ matrix.simd }}
@@ -196,9 +198,7 @@ jobs:
             python_ver: "3.11"
             simd: avx2,f16c
             batched: b8_AVX2
-            setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery"
-            # ^^ exclude python-oslquery test until the ASWF container properly
-            #    includes OIIO's python bindings, then we can remove that.
+            setenvs: export CTEST_EXCLUSIONS="broken"
           - desc: VP2026 gcc14/C++20 llvm20 py3.13 oiio-3.1 avx2
             nametag: linux-vfx2026
             runner: ubuntu-latest
@@ -209,9 +209,7 @@ jobs:
             batched: b8_AVX2
             # OSL_TEST_CPP_BACKEND=1 also exercises the C++ source-gen backend
             # (debug_output_cpp=3) on this variant, validating the Linux .so path.
-            setenvs: export CTEST_EXCLUSIONS="broken|python-oslquery" OSL_TEST_CPP_BACKEND=1
-            # ^^ exclude python-oslquery test until the ASWF container properly
-            #    includes OIIO's python bindings, then we can remove that.
+            setenvs: export CTEST_EXCLUSIONS="broken" OSL_TEST_CPP_BACKEND=1
           # Address and leak sanitizers (debug build)
           - desc: sanitizers
             nametag: sanitizer
@@ -432,6 +430,7 @@ jobs:
       openexr_ver: ${{ matrix.openexr_ver }}
       openimageio_ver: ${{ matrix.openimageio_ver }}
       pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_bindings_backend: ${{ matrix.python_bindings_backend }}
       python_ver: ${{ matrix.python_ver }}
       setenvs: ${{ matrix.setenvs }}
       simd: ${{ matrix.simd }}
@@ -512,6 +511,7 @@ jobs:
       openexr_ver: ${{ matrix.openexr_ver }}
       openimageio_ver: ${{ matrix.openimageio_ver }}
       pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_bindings_backend: ${{ matrix.python_bindings_backend }}
       python_ver: ${{ matrix.python_ver }}
       setenvs: ${{ matrix.setenvs }}
       simd: ${{ matrix.simd }}
@@ -582,6 +582,7 @@ jobs:
       openexr_ver: ${{ matrix.openexr_ver }}
       openimageio_ver: ${{ matrix.openimageio_ver }}
       pybind11_ver: ${{ matrix.pybind11_ver }}
+      python_bindings_backend: ${{ matrix.python_bindings_backend }}
       python_ver: ${{ matrix.python_ver }}
       setenvs: ${{ matrix.setenvs }}
       simd: ${{ matrix.simd }}

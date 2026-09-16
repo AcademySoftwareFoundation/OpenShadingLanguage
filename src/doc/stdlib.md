@@ -166,6 +166,12 @@ the computations are performed component-by-component (separately for `x`,
     $ x*(1-\alpha) + y*(\alpha) $
 
 
+*`type`* **`unmix`** (*`type`* `x`, *`type`* `y`, *`type`* `alpha`) <br> *`type`* **`unmix`** (*`type`* `x`, *`type`* `y, float alpha`)
+  : The `unmix` function returns a inverse of `mix`, similar to inverse linear interpolation:
+    $ (x - (\alpha)) / (y - x) $
+    The x and y value can't be the same, as we can't divide by zero.
+
+
 *`type`* **`select`** (*`type`* `x`, *`type`* `y`, *`type`* `cond`) <br> *`type`* **`select`** (*`type`* `x`, *`type`* `y, float cond`) <br> *`type`* **`select`** (*`type`* `x`, *`type`* `y, int cond`)
   : The `select` function returns `x` if `cond` is zero, or `y`
     if `cond` is nonzero. This is roughly equivalent to `(cond ? y : x)`,

@@ -497,6 +497,10 @@ which use RenderMan<sup>&reg;</sup> in the examples but which are primarily abou
 There is also the [Shader Writing in Open Shading Language book](https://www.routledge.com/Shader-Writing-in-Open-Shading-Language-with-RenderManr-Examples/Prater/p/book/9781032421100).
 This covers all the material from the Siggraph course but in far greater detail. It also includes much more information about how OSL operates and covers a much broader range of shader examples.
 
+For those interested in integrating OSL into a renderer, [OSL in RTIOW](https://github.com/jinhgkim/Path-Tracer)
+is a small example that extends the path tracer from
+[Ray Tracing in One Weekend](https://raytracing.github.io/) with OSL shading.
+
 
 🚑 Contact & reporting problems
 -------------------------------

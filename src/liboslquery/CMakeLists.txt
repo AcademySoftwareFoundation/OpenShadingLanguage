@@ -40,11 +40,27 @@ install_targets (${local_lib})
 
 
 # from pythonutils.cmake
+#
+# Both backends compile the very same sources; the only difference is the
+# OSL_PY_BACKEND_NANOBIND define (set by setup_python_module_nanobind), which
+# py_backend.h keys off. When OSL_PYTHON_BINDINGS_BACKEND is "both", we get
+# two targets from one source list.
 if (USE_PYTHON AND Python3_Development_FOUND)
     file (GLOB python_srcs py_*.cpp)
-    setup_python_module (TARGET    pyoslquery
-                         MODULE    oslquery
-                         SOURCES   ${python_srcs}
-                         LIBS      oslquery
-                         )
+    if (OSL_BUILD_PYTHON_PYBIND11)
+        setup_python_module (TARGET    pyoslquery
+                             MODULE    oslquery
+                             SOURCES   ${python_srcs}
+                             LIBS      oslquery
+                             )
+    endif ()
+    if (OSL_BUILD_PYTHON_NANOBIND)
+        setup_python_module_nanobind (
+                             TARGET        pyoslquery_nanobind
+                             MODULE        oslquery
+                             SOURCES       ${python_srcs}
+                             LIBS          oslquery
+                             PACKAGE_FILES nanobind/__init__.py
+                             )
+    endif ()
 endif ()

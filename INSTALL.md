@@ -69,8 +69,20 @@ NEW or CHANGED minimum dependencies since the last major release are **bold**.
 * (optional) Python: If you are building the Python bindings or running the
   testsuite:
     * **Python >= 3.9** (tested through 3.14)
-    * pybind11 >= 2.7 (tested through 3.0)
     * NumPy (tested through 2.4)
+    * A binding framework, depending on `OSL_PYTHON_BINDINGS_BACKEND` (see
+      [Python binding backends](#python-binding-backends) below):
+        * pybind11 >= 2.7 (tested through 3.0) -- needed for the `pybind11`
+          backend and for `both`. It is the auto-selected default when
+          OpenImageIO is older than 3.2 or Python is older than 3.10.
+        * nanobind >= 2.8.0 (tested through 3.0), with Python >= 3.10 -- needed
+          for the `nanobind` backend and for `both`. It is the auto-selected
+          default when OpenImageIO is 3.2 or newer and Python is 3.10 or newer.
+          Usually installed as a Python package (`pip install nanobind`, or
+          `brew install nanobind`), which is enough: the build locates it by
+          asking the interpreter. If it is not installed, the build fetches and
+          builds it locally (it is a small header/CMake package, not a
+          compiled library).
 * (optional) Qt5 >= 5.6 or Qt6 (tested Qt5 through 5.15 and Qt6 through 6.10).
   If not found at build time, the `osltoy` application will be disabled.
 
@@ -124,6 +136,56 @@ Here are the steps to check out, build, and test the OSL distribution:
    test suite with:
 
         make test
+
+Python binding backends
+-----------------------
+
+OSL's Python bindings (the `oslquery` module, wrapping `OSLQuery`) can be
+built with either [pybind11](https://github.com/pybind/pybind11) or
+[nanobind](https://github.com/wjakob/nanobind). Both are generated from one
+set of sources and expose exactly the same Python API; which one you get is a
+build-time choice:
+
+    cmake -B build -S .                                          # auto (see below)
+    cmake -B build -S . -DOSL_PYTHON_BINDINGS_BACKEND=nanobind
+    cmake -B build -S . -DOSL_PYTHON_BINDINGS_BACKEND=pybind11
+    cmake -B build -S . -DOSL_PYTHON_BINDINGS_BACKEND=both
+
+or equivalently by setting an environment variable of the same name.
+
+When `OSL_PYTHON_BINDINGS_BACKEND` is left unset, OSL auto-selects `nanobind`
+when both of these hold, and `pybind11` otherwise:
+
+* OpenImageIO is 3.2 or newer. Reading `OSLQuery.Parameter.type` (see below)
+  needs OSL's and OpenImageIO's Python modules to have been built with the
+  same binding framework, and OpenImageIO switched its own default to nanobind
+  in 3.2; matching it keeps `type` working out of the box.
+* Python is 3.10 or newer (nanobind's minimum).
+
+nanobind does not have to be installed for this -- if it is missing the build
+fetches and builds it locally. If that local build is not possible in your
+environment, configure with `-DOSL_PYTHON_BINDINGS_BACKEND=pybind11`.
+
+With `pybind11` or `nanobind`, you get a single `oslquery` module installed in
+the usual place, and it makes no difference to Python code which one it is.
+With `both`, the pybind11 module keeps the ordinary location and the nanobind
+one is installed alongside it under a `nanobind/` subdirectory of the
+site-packages directory; put that subdirectory on `PYTHONPATH` to import it
+instead. `both` exists so that the testsuite can run against each backend and
+confirm they agree; it is not intended for deployment.
+
+Why this is a choice at all: `OSLQuery.Parameter.type` returns an OpenImageIO
+`TypeDesc`, and reading that attribute only works if OpenImageIO's own Python
+module has been imported *and* was built with the same binding framework as
+OSL's. (Each framework keeps its own registry of bound C++ types, and they
+cannot see each other's.) So if you use that attribute, build OSL's bindings
+to match whatever OpenImageIO you are pairing them with. Otherwise the
+attribute raises `TypeError`.
+
+Everything else in the module is free of that constraint, and
+`Parameter.type_name` -- a plain string such as `"color"` or `"float[4]"` --
+gives you the same information with no coupling to OpenImageIO at all. Prefer
+it. `type` is retained for backward compatibility.
 
 Conda Environment
 -----------------

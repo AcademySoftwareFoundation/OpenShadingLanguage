@@ -23,11 +23,10 @@ def printparam(p, indent="    ") :
                     "output " if p.isoutput else "",
                     p.name, p.value))
     else :
-        # All other parameter types. Note how we check for output-ness, the
-        # type is an OpenImageIO::TypeDesc but it can print like a string,
-        # if the type is a string we surround it with single quotes to make
-        # it clear. Aggregate types will have their `value` print correctly
-        # as tuples.
+        # All other parameter types. Note how we check for output-ness.
+        # p.type_name is the type as a plain string; if the type is a string
+        # we surround the value with single quotes to make it clear.
+        # Aggregate types will have their `value` print correctly as tuples.
         print (indent, "{}{} {} = {}".format(
                     "output " if p.isoutput else "",
                     p.type_name, p.name,
@@ -56,15 +55,24 @@ try:
     # Iterating over the query object itself is iterating over the
     # parameters to the shader:
     print ("  Parameters:")
-    for i in range(len(q)) :
-        printparam(q[i])
-    # FIXME(pybind11): The following way of looping over params should work.
-    # But on Mac, with a combination of python 3.8/3.9 and pybind11 2.6, it
-    # crashes. Works with older pybind11, so I think it's a pybind11 bug
-    # that will get fixed at some point. Try it again later.
-    #
-    # for p in q :
-    #     printparam(p)
+    for p in q :
+        printparam(p)
+
+    # Properties backed by a ustring that is empty or default-constructed.
+    # These are worth exercising explicitly because printparam above only
+    # reaches structname for parameters that are structs, so the empty case
+    # went untested for years. It matters: ustring::c_str() is NULL for an
+    # empty ustring, so any binding that converts via a raw char* instead of
+    # ustring::string() crashes here rather than producing ''.
+    print ("  Empty string properties:")
+    print ("    structname of a non-struct param:", repr(q[0].structname))
+    empty = oslquery.Parameter()
+    print ("    default Parameter name:", repr(empty.name))
+    print ("    default Parameter structname:", repr(empty.structname))
+    print ("    default Parameter type_name:", repr(empty.type_name))
+    print ("    default Parameter value:", repr(empty.value))
+    print ("    default Parameter fields:", repr(empty.fields))
+    print ("    default Parameter spacename:", repr(empty.spacename))
 
     print ("Done.")
 except Exception as detail:

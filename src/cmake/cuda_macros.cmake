@@ -153,6 +153,8 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         # wrappers still include it. Search OSL's compatibility headers first.
         set (CUDA_COMPAT_INCLUDE
              "-I${PROJECT_SOURCE_DIR}/src/cmake/cuda_compat")
+        list (APPEND exec_headers
+              "${PROJECT_SOURCE_DIR}/src/cmake/cuda_compat/crt/math_functions.hpp")
     endif ()
 
     list (TRANSFORM IMATH_INCLUDES PREPEND -I

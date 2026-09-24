@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.19)
 project(examplecuda LANGUAGES CXX)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -20,9 +20,9 @@ include(checked_find_package)
 
 find_package(OSL REQUIRED)
 find_package(CUDA REQUIRED)
-checked_find_package(LLVM 7.0 REQUIRED)
+checked_find_package(LLVM 14.0 REQUIRED)
 checked_find_package(Imath 3.1 REQUIRED)
-checked_find_package(OpenImageIO 2.4 REQUIRED)
+checked_find_package(OpenImageIO 3.0 REQUIRED)
 checked_find_package(OptiX REQUIRED)
 
 
@@ -35,8 +35,7 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 find_library(CUDA_nvrtc_LIBRARY nvrtc HINTS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib lib64)
 find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib/stubs lib64/stubs)
 
-# TODO: move to sm_60?
-set(CUDA_TARGET_ARCH sm_35)
+set(CUDA_TARGET_ARCH sm_75)
 
 set (CMAKE_CXX_STANDARD 17 CACHE STRING
      "C++ standard to build with (17, 20, etc.)")

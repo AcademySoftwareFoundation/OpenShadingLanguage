@@ -87,8 +87,7 @@ target_link_libraries (testrender
 
 if (OSL_USE_OPTIX)
     add_dependencies(testrender testrender_ptx)
+    osl_optix_target (testrender)
 endif ()
-
-osl_optix_target (testrender)
 
 install ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )

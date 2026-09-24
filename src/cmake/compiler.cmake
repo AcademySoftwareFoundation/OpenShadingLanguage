@@ -468,6 +468,107 @@ endif ()
 
 
 ###########################################################################
+# Safety/security hardening options
+#
+# Explanation of levels:
+#  0 : do nothing, not recommended.
+#  1 : enable features that have no (or nearly no) performance impact,
+#      recommended default for optimized, shipping code.
+#  2 : enable features that trade off performance for security, recommended
+#      for debugging or deploying in security-sensitive environments.
+#  3 : enable features that have a significant performance impact, to maximize
+#      finding bugs without regard to performance. Only recommended for
+#      debugging.
+#
+# Some documentation:
+# https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
+# https://www.gnu.org/software/libc/manual/html_node/Source-Fortification.html
+# https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
+# https://libcxx.llvm.org/Hardening.html
+# https://www.productive-cpp.com/hardening-cpp-programs-stack-protector/
+# https://medium.com/@simontoth/daily-bit-e-of-c-hardened-mode-of-standard-library-implementations-18be2422c372
+# https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html
+#
+# N.B. Definitions made here must also be listed in HARDENING_DEFINITIONS so
+# that they can be excluded from the LLVM bitcode we compile for JIT and
+# GPU use (see OSL_llvm_macros.cmake and cuda_macros.cmake).
+
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set (${PROJ_NAME}_HARDENING_DEFAULT 2)  # Extensive
+else ()
+    set (${PROJ_NAME}_HARDENING_DEFAULT 1)  # Fast
+endif ()
+set_cache (${PROJ_NAME}_HARDENING ${${PROJ_NAME}_HARDENING_DEFAULT}
+           "Turn on security hardening features 0=none, 1=fast, 2=extensive, 3=debug")
+# libc++ hardening modes are supported starting with libc++ 18, which is
+# first shipped by LLVM clang 18 and Apple clang 17.
+if (CLANG_VERSION_STRING VERSION_GREATER_EQUAL 18.0
+    OR APPLECLANG_VERSION_STRING VERSION_GREATER_EQUAL 17.0)
+    set (_libcpp_has_hardening_modes TRUE)
+endif ()
+# Implementation:
+add_compile_definitions (${PROJ_NAME}_HARDENING_DEFAULT=${${PROJ_NAME}_HARDENING})
+if (${PROJ_NAME}_HARDENING GREATER_EQUAL 1)
+    # Enable PIE and pie to build as position-independent executables and
+    # libraries, needed for address space randomization used by some kernels.
+    set (CMAKE_POSITION_INDEPENDENT_CODE ON)
+    # Features that should not detectably affect performance
+    if (COMPILER_IS_GCC_OR_ANY_CLANG)
+        # Protect against stack overwrites. Is allegedly not a performance
+        # tradeoff.
+        add_compile_options (-fstack-protector-strong)
+        add_link_options (-fstack-protector-strong)
+    endif ()
+    # Defining _FORTIFY_SOURCE provides buffer overflow checks in modern gcc &
+    # clang with some compiler-assisted deduction of buffer lengths) for the
+    # many C functions such as memcpy, strcpy, sprintf, etc. But it requires
+    # optimization, so we don't do it for debug builds. It is also incompatible
+    # with the address and memory sanitizers, which predefine _FORTIFY_SOURCE=0
+    # themselves; defining it again would be ineffective and trigger a
+    # -Wmacro-redefined error, so we skip it when such a sanitizer is enabled.
+    if ((CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR
+         GCC_VERSION VERSION_GREATER_EQUAL 14)
+         AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug"
+         AND NOT SANITIZE MATCHES "address|memory")
+        add_compile_definitions (_FORTIFY_SOURCE=${${PROJ_NAME}_HARDENING})
+    endif ()
+endif ()
+if (${PROJ_NAME}_HARDENING EQUAL 1)
+    # Setting _LIBCPP_HARDENING_MODE enables various hardening features in
+    # clang/llvm's libc++ 18.0 and later.
+    if (_libcpp_has_hardening_modes)
+        add_compile_definitions (_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
+    endif ()
+elseif (${PROJ_NAME}_HARDENING EQUAL 2)
+    # Features that might impact performance measurably
+    if (GCC_VERSION VERSION_GREATER_EQUAL 14)
+        # I've had trouble turning this on in older gcc
+        add_compile_definitions (_GLIBCXX_ASSERTIONS)
+    endif ()
+    if (_libcpp_has_hardening_modes)
+        add_compile_definitions (_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
+    endif ()
+elseif (${PROJ_NAME}_HARDENING EQUAL 3)
+    # Debugging features that might impact performance significantly
+    if (GCC_VERSION VERSION_GREATER_EQUAL 14)
+        # I've had trouble turning this on in older gcc
+        add_compile_definitions (_GLIBCXX_ASSERTIONS)
+        # N.B. _GLIBCXX_DEBUG changes ABI, so don't do this:
+        #   add_compile_definitions (_GLIBCXX_DEBUG)
+    endif ()
+    if (_libcpp_has_hardening_modes)
+        add_compile_definitions (_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
+    endif ()
+endif ()
+unset (_libcpp_has_hardening_modes)
+# Hardening-related definitions (by regex) that must not be passed along to
+# the LLVM bitcode that we compile for JIT or GPU use. They would introduce
+# calls to fortified libc functions (__memcpy_chk, etc.) or libc++ assertion
+# handlers that are not available to JIT-ed or device code.
+set (HARDENING_DEFINITIONS "^_FORTIFY_SOURCE=|^_LIBCPP_HARDENING_MODE=|^_GLIBCXX_ASSERTIONS$")
+
+
+###########################################################################
 # clang-tidy options
 #
 # clang-tidy is a static analyzer that is part of the LLVM tools. It has a

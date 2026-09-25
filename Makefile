@@ -144,7 +144,7 @@ MY_CMAKE_FLAGS += -DVEC_REPORT:BOOL="${VEC_REPORT}"
 endif
 
 ifneq (${TEST},)
-TEST_FLAGS += -R ${TEST}
+TEST_FLAGS += -R '${TEST}'
 endif
 
 ifneq (${USE_CCACHE},)

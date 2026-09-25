@@ -1,0 +1,2 @@
+testsuite/*.h
+src/shaders/*.h

@@ -521,7 +521,7 @@ endif ()
 # Note: skip all of this checking, setup, and cmake-format target if this
 # is being built as a subproject.
 if (PROJECT_IS_TOP_LEVEL)
-    set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
+    set_cache (CLANG_FORMAT_EXE_HINT "" "clang-format executable's directory (will search if not specified" PATH)
     set (CLANG_FORMAT_INCLUDES  "src/*.cpp" "src/*.h" "src/*.cu"
         CACHE STRING "Glob patterns to include for clang-format")
     set (CLANG_FORMAT_EXCLUDES

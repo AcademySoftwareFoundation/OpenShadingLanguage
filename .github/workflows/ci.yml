@@ -324,7 +324,7 @@ jobs:
             # the console output).
           - desc: "clang-format"
             nametag: clang-format
-            runner: ubuntu-24.04
+            runner: ubuntu-26.04
             cxx_std: 17
             extra_artifacts: "src/*.*"
             python_ver: "3.10"
@@ -336,8 +336,8 @@ jobs:
                             USE_PYTHON=0 QT_VERSION=0 PUGIXML_VERSION=0
                             SKIP_APT_GET_UPDATE=0
                             SKIP_SYSTEM_DEPS_INSTALL=1
-                            EXTRA_DEP_PACKAGES="clang-format-17"
-                            CLANG_FORMAT_EXE=clang-format-17
+                            EXTRA_DEP_PACKAGES="clang-format-22"
+                            CLANG_FORMAT_EXE=clang-format-22
 
 
   macos:

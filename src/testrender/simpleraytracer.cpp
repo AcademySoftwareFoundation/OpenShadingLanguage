@@ -1116,8 +1116,8 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                 LightSample sample = scene.sample(lid, sg.P, xl, yi);
                 BSDF::Sample b     = result.bsdf.eval(-sg.I, sample.dir);
                 Color3 contrib     = path_weight * b.weight
-                                 * MIS::power_heuristic<MIS::EVAL_WEIGHT>(
-                                     light_pick_pdf * sample.pdf, b.pdf);
+                                     * MIS::power_heuristic<MIS::EVAL_WEIGHT>(
+                                         light_pick_pdf * sample.pdf, b.pdf);
                 if ((contrib.x + contrib.y + contrib.z) > 0) {
                     ShaderGlobalsType light_sg;
                     Ray shadow_ray = Ray(sg.P, sample.dir, radius, 0, 0,

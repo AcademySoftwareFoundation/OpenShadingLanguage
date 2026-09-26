@@ -268,7 +268,9 @@ SimpleRenderer::SimpleRenderer()
 
 
 // Ensure destructor code gen happens in this .cpp
-SimpleRenderer::~SimpleRenderer() {}
+SimpleRenderer::~SimpleRenderer()
+{
+}
 
 int
 SimpleRenderer::supports(string_view feature) const

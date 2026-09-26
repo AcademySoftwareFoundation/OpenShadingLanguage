@@ -73,10 +73,7 @@ struct BSDLLobe : public BSDF {
 #define BSDL_WRAP(myclass, bsdlclass, ID)                                      \
     struct myclass : public bsdl ::bsdlclass<BSDLLobe> {                       \
         using Base = bsdl ::bsdlclass<BSDLLobe>;                               \
-        static constexpr int closureid()                                       \
-        {                                                                      \
-            return ID;                                                         \
-        }                                                                      \
+        static constexpr int closureid() { return ID; }                        \
         OSL_HOSTDEVICE myclass(const Data& data, const Vec3& wo,               \
                                bool backfacing, float path_roughness)          \
             : Base(this,                                                       \
@@ -355,8 +352,8 @@ struct Phong final : public BSDF, PhongParams {
             float cosTheta  = OIIO::fast_safe_pow(ry, 1 / (exponent + 1));
             float sinTheta2 = 1 - cosTheta * cosTheta;
             float sinTheta  = sinTheta2 > 0 ? sqrtf(sinTheta2) : 0;
-            Vec3 wi         = TangentFrame::from_normal(R).get(cp * sinTheta,
-                                                               sp * sinTheta, cosTheta);
+            Vec3 wi = TangentFrame::from_normal(R).get(cp * sinTheta,
+                                                       sp * sinTheta, cosTheta);
             return eval(wo, wi);
         }
         return {};
@@ -414,9 +411,9 @@ struct Ward final : public BSDF, WardParams {
             //                  and sin(atan(x)) == x/sqrt(1+x^2)
             float thetaDenom = (cosPhi * cosPhi) / (ax * ax)
                                + (sinPhi * sinPhi) / (ay * ay);
-            float tanTheta2 = -OIIO::fast_log(1 - ry) / thetaDenom;
-            float cosTheta  = 1 / sqrtf(1 + tanTheta2);
-            float sinTheta  = cosTheta * sqrtf(tanTheta2);
+            float tanTheta2  = -OIIO::fast_log(1 - ry) / thetaDenom;
+            float cosTheta   = 1 / sqrtf(1 + tanTheta2);
+            float sinTheta   = cosTheta * sqrtf(tanTheta2);
 
             Vec3 h;  // already normalized because expressed from spherical coordinates
             h.x = sinTheta * cosPhi;
@@ -499,9 +496,9 @@ struct GGXDist {
         float Ru = 1 - 2 * randv;
         float u2 = fabsf(Ru);
         float z  = (u2 * (u2 * (u2 * 0.27385f - 0.73369f) + 0.46341f))
-                  / (u2 * (u2 * (u2 * 0.093073f + 0.309420f) - 1.0f)
-                     + 0.597999f);
-        slope.y = copysignf(1.0f, Ru) * z * sqrtf(1.0f + slope.x * slope.x);
+                   / (u2 * (u2 * (u2 * 0.093073f + 0.309420f) - 1.0f)
+                      + 0.597999f);
+        slope.y  = copysignf(1.0f, Ru) * z * sqrtf(1.0f + slope.x * slope.x);
 
         return slope;
     }
@@ -820,8 +817,8 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
             const float cos_theta_t2 = 1.0f
                                        - (1.0f - cos_theta * cos_theta)
                                              * refraction_ior * refraction_ior;
-            const float cos_theta_t = cos_theta_t2 > 0 ? sqrtf(cos_theta_t2)
-                                                       : 0.0f;
+            const float cos_theta_t  = cos_theta_t2 > 0 ? sqrtf(cos_theta_t2)
+                                                        : 0.0f;
             return cos_theta_t;
         }
         return cos_theta;
@@ -896,10 +893,10 @@ struct MxMicrofacet final : public BSDF, MxMicrofacetParams {
                 // probability
                 float invHt2 = 1 / ht.dot(ht);
                 float pdf    = (fabsf(cosHI * cosHO)
-                             * (refraction_ior * refraction_ior) * (G1 * Dt)
-                             * invHt2)
-                            / wo_l.z;
-                float out = G2 / G1;
+                                * (refraction_ior * refraction_ior) * (G1 * Dt)
+                                * invHt2)
+                               / wo_l.z;
+                float out    = G2 / G1;
                 // figure out lobe probabilities
                 const Color3 Fr      = MxMicrofacetParams::evalR(cosHOf);
                 const float weight_t = Ft.x + Ft.y + Ft.z;
@@ -1317,7 +1314,7 @@ process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
         case MX_LAYER_ID: {
             const ClosureComponent* comp = closure->as_comp();
             const MxLayerParams* params  = comp->as<MxLayerParams>();
-            Color3 base_w                = weight
+            Color3 base_w = weight
                             * (Color3(1)
                                - clamp(evaluate_layer_opacity(sg, path_roughness,
                                                               params->top),
@@ -1333,9 +1330,9 @@ process_medium_closure(const ShaderGlobalsType& sg, float path_roughness,
             const auto& params           = *comp->as<MxAnisotropicVdfParams>();
             result.medium_data.sigma_t   = cw * params.extinction;
             result.medium_data.sigma_s   = params.albedo
-                                         * result.medium_data.sigma_t;
-            result.medium_data.medium_g = params.anisotropy;
-            result.medium_data.priority = 0;  // always intersect
+                                           * result.medium_data.sigma_t;
+            result.medium_data.medium_g  = params.anisotropy;
+            result.medium_data.priority  = 0;  // always intersect
 
             // clamp sigma_s to be less than sigma_t
             result.medium_data.sigma_s

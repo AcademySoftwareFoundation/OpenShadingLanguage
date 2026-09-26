@@ -80,7 +80,7 @@ ShaderInstance::~ShaderInstance()
                      + vectorbytes(m_sparams);
     off_t connectionmem = vectorbytes(m_connections);
     off_t totalmem      = (symmem + parammem + connectionmem
-                      + sizeof(ShaderInstance));
+                           + sizeof(ShaderInstance));
     {
         spin_lock lock(ss.m_stat_mutex);
         ss.m_stat_mem_inst_syms -= symmem;

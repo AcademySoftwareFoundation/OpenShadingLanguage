@@ -14,8 +14,7 @@ OSL_NAMESPACE_BEGIN
 class Aov {
 public:
     virtual void write(void* flush_data, Color3& color, float alpha,
-                       bool has_color, bool has_alpha)
-        = 0;
+                       bool has_color, bool has_alpha) = 0;
 };
 
 /// AOV slot where the integrator will write to

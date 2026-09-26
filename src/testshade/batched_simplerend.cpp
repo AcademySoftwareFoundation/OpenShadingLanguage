@@ -140,7 +140,9 @@ BatchedSimpleRenderer<WidthT>::BatchedSimpleRenderer(SimpleRenderer& sr)
         = &BatchedSimpleRenderer::get_camera_shutter_close<RefData>;
 }
 
-template<int WidthT> BatchedSimpleRenderer<WidthT>::~BatchedSimpleRenderer() {}
+template<int WidthT> BatchedSimpleRenderer<WidthT>::~BatchedSimpleRenderer()
+{
+}
 
 
 
@@ -378,9 +380,7 @@ BatchedSimpleRenderer<WidthT>::trace(
 
         if ((bsg->varying.u[lane] / dot_val) > 0.5) {
             result[lane] = 1;
-        }
-
-        else {
+        } else {
             result[lane] = 0;
         }
     }

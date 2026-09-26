@@ -296,11 +296,11 @@ ZeltnerBurleySheen::fetch_coeffs(float cosNO) const
         const float x = CLAMP(cosNO, 0.0f, 1.0f);
         const float y = std::max(roughness, 1e-3f);
         // Fitted approximation of the paper's tabulated LTC coefficients (A, B, R).
-        const float A = ((2.58126f * x + 0.813703f * y) * y)
-                        / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
-        const float B = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y
-                        / (0.0000254053f + 1.71228f * x - 1.71506f * x * y
-                           + 1.34174f * y * y);
+        const float A    = ((2.58126f * x + 0.813703f * y) * y)
+                           / (1.0f + 0.310327f * x * x + 2.60994f * x * y);
+        const float B    = sqrtf(1.0f - x) * (y - 1.0f) * y * y * y
+                           / (0.0000254053f + 1.71228f * x - 1.71506f * x * y
+                              + 1.34174f * y * y);
         const float invs = (0.0379424f + y * (1.32227f + y))
                            / (y * (0.0206607f + 1.58491f * y));
         const float m = y
@@ -309,7 +309,7 @@ ZeltnerBurleySheen::fetch_coeffs(float cosNO) const
                         / (0.046391f + y);
         const float o = y * (0.000654023f + (-0.0207818f + 0.119681f * y) * y)
                         / (1.26264f + y * (-1.92021f + y));
-        float q                 = (x - m) * invs;
+        float q       = (x - m) * invs;
         const float inv_sqrt2pi = 0.39894228040143f;
         float R = BSDLConfig::Fast::expf(-0.5f * q * q) * invs * inv_sqrt2pi
                   + o;

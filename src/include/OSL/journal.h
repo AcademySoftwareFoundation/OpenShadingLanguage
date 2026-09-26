@@ -108,18 +108,14 @@ class OSLEXECPUBLIC Reporter {
 public:
     virtual ~Reporter() {}
     virtual void report_error(int thread_index, int shade_index,
-                              const OSL::string_view& message)
-        = 0;
+                              const OSL::string_view& message)      = 0;
     virtual void report_warning(int thread_index, int shade_index,
-                                const OSL::string_view& message)
-        = 0;
+                                const OSL::string_view& message)    = 0;
     virtual void report_print(int thread_index, int shade_index,
-                              const OSL::string_view& message)
-        = 0;
+                              const OSL::string_view& message)      = 0;
     virtual void report_file_print(int thread_index, int shade_index,
                                    const OSL::string_view& filename,
-                                   const OSL::string_view& message)
-        = 0;
+                                   const OSL::string_view& message) = 0;
 };
 
 /// Utility class to look for repeated errors or warnings over

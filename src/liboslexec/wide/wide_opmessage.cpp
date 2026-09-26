@@ -355,8 +355,7 @@ __OSL_MASKED_OP(getmessage)(void* bsg_, void* result, ustring_pod source_,
         // Use int instead of Mask<> to allow reduction clause in openmp simd declaration
         int lanes_set_by_deeper_layer_bits { 0 };
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
-                           reduction(|
-                                     : lanes_set_by_deeper_layer_bits))
+                           reduction(| : lanes_set_by_deeper_layer_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             int msg_layerid = msg_wlayeridx[lane];
             // NOTE: using bitwise & to avoid branches

@@ -141,9 +141,9 @@ BatchedBackendLLVM::llvm_call_layer(int layer, bool unconditional)
     // Before the merge, keeping in case we broke it
     //std::string name = fmtformat("{}_{}_{}", m_library_selector,  parent->layername().c_str(),
     //                             parent->id());
-    std::string name
-        = Strutil::fmt::format("{}_{}", m_library_selector,
-                               layer_function_name(group(), *parent));
+    std::string name = Strutil::fmt::format("{}_{}", m_library_selector,
+                                            layer_function_name(group(),
+                                                                *parent));
 
     // Mark the call as a fast call
     llvm::Value* funccall = ll.call_function(name.c_str(), args);
@@ -655,9 +655,10 @@ LLVMGEN(llvm_gen_aref)
     int num_components = Src.typespec().simpletype().aggregate;
     for (int d = 0; d <= 2; ++d) {
         for (int c = 0; c < num_components; ++c) {
-            llvm::Value* val
-                = rop.llvm_load_value(Src, d, index, c, TypeDesc::UNKNOWN,
-                                      op_is_uniform, index_is_uniform);
+            llvm::Value* val = rop.llvm_load_value(Src, d, index, c,
+                                                   TypeDesc::UNKNOWN,
+                                                   op_is_uniform,
+                                                   index_is_uniform);
             rop.storeLLVMValue(val, Result, c, d);
         }
         if (!Result.has_derivs())
@@ -1088,10 +1089,12 @@ LLVMGEN(llvm_gen_if)
             rop.llvm_debug() ? std::string("then (uniform)") + cond_name
                              : std::string());
         llvm::BasicBlock* else_block
-            = elseBlockRequired ? rop.ll.new_basic_block(
-                  rop.llvm_debug() ? std::string("else (uniform)") + cond_name
-                                   : std::string())
-                                : nullptr;
+            = elseBlockRequired
+                  ? rop.ll.new_basic_block(rop.llvm_debug()
+                                               ? std::string("else (uniform)")
+                                                     + cond_name
+                                               : std::string())
+                  : nullptr;
         llvm::BasicBlock* after_block = rop.ll.new_basic_block(
             rop.llvm_debug() ? std::string("after_if (uniform)") + cond_name
                              : std::string());
@@ -1142,16 +1145,19 @@ LLVMGEN(llvm_gen_if)
                              : std::string());
 
         llvm::BasicBlock* test_else_block
-            = elseBlockRequired ? rop.ll.new_basic_block(
-                  rop.llvm_debug()
-                      ? std::string("test_else (varying)") + cond_name
-                      : std::string())
-                                : nullptr;
+            = elseBlockRequired
+                  ? rop.ll.new_basic_block(
+                        rop.llvm_debug()
+                            ? std::string("test_else (varying)") + cond_name
+                            : std::string())
+                  : nullptr;
         llvm::BasicBlock* else_block
-            = elseBlockRequired ? rop.ll.new_basic_block(
-                  rop.llvm_debug() ? std::string("else (varying)") + cond_name
-                                   : std::string())
-                                : nullptr;
+            = elseBlockRequired
+                  ? rop.ll.new_basic_block(rop.llvm_debug()
+                                               ? std::string("else (varying)")
+                                                     + cond_name
+                                               : std::string())
+                  : nullptr;
 
         llvm::BasicBlock* after_block = rop.ll.new_basic_block(
             rop.llvm_debug() ? std::string("after_if (varying)") + cond_name
@@ -1407,9 +1413,9 @@ LLVMGEN(llvm_gen_mul)
 
     bool op_is_uniform = A.is_uniform() && B.is_uniform();
 
-    TypeDesc type = Result.typespec().simpletype();
-    bool is_float = !Result.typespec().is_closure_based()
-                    && Result.typespec().is_float_based();
+    TypeDesc type      = Result.typespec().simpletype();
+    bool is_float      = !Result.typespec().is_closure_based()
+                         && Result.typespec().is_float_based();
     int num_components = type.aggregate;
 
     bool resultIsUniform = Result.is_uniform();
@@ -1594,7 +1600,7 @@ LLVMGEN(llvm_gen_div)
         c_one = (op_is_uniform) ? (is_float)
                                       ? rop.ll.constant(1.0f)
                                       : rop.ll.constant(static_cast<int>(1))
-                : (is_float) ? rop.ll.wide_constant(1.0f)
+                : (is_float)    ? rop.ll.wide_constant(1.0f)
                                 : rop.ll.wide_constant(static_cast<int>(1));
     }
 
@@ -1627,8 +1633,8 @@ LLVMGEN(llvm_gen_div)
                 // An alternative to the selecting the replacing the results
                 // is to selectively change the divisor to a non zero
                 llvm::Value* divisor = rop.ll.op_select(b_not_zero, b, c_one);
-                a_div_b              = rop.ll.op_select(b_not_zero,
-                                                        rop.ll.op_div(a, divisor), c_zero);
+                a_div_b = rop.ll.op_select(b_not_zero,
+                                           rop.ll.op_div(a, divisor), c_zero);
                 // Alternatively we could call a library function
                 // Alternatively we could could emit SIMD intrinsics directly
             }
@@ -1880,7 +1886,7 @@ LLVMGEN(llvm_gen_mix)
                && Result.typespec().is_float_based());
     int num_components = type.aggregate;
     int x_components   = X.typespec().aggregate();
-    bool derivs        = (Result.has_derivs()
+    bool derivs = (Result.has_derivs()
                    && (A.has_derivs() || B.has_derivs() || X.has_derivs()));
 
     llvm::Value* one;
@@ -2556,17 +2562,17 @@ LLVMGEN(llvm_gen_mxcompref)
                 std::string("range clamped row or col:") + M.name().c_str());
             // copy the indices into our temporary
             rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
-            llvm::Value* args[]   = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                      rop.ll.mask_as_int(rop.ll.current_mask()),
-                                      rop.ll.constant(4),
-                                      rop.ll.constant(M.name()),
-                                      rop.sg_void_ptr(),
-                                      rop.ll.constant(op.sourcefile()),
-                                      rop.ll.constant(op.sourceline()),
-                                      rop.ll.constant(rop.group().name()),
-                                      rop.ll.constant(rop.layer()),
-                                      rop.ll.constant(rop.inst()->layername()),
-                                      rop.ll.constant(rop.inst()->shadername()) };
+            llvm::Value* args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(4),
+                                    rop.ll.constant(M.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
             const char* func_name = rop.build_name(
                 FuncSpec("range_check").mask());
             rop.ll.call_function(func_name, args);
@@ -2659,17 +2665,17 @@ LLVMGEN(llvm_gen_mxcompassign)
                 std::string("range clamped row:") + Result.name().c_str());
             // copy the indices into our temporary
             rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
-            llvm::Value* args[]   = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                      rop.ll.mask_as_int(rop.ll.current_mask()),
-                                      rop.ll.constant(4),
-                                      rop.ll.constant(Result.name()),
-                                      rop.sg_void_ptr(),
-                                      rop.ll.constant(op.sourcefile()),
-                                      rop.ll.constant(op.sourceline()),
-                                      rop.ll.constant(rop.group().name()),
-                                      rop.ll.constant(rop.layer()),
-                                      rop.ll.constant(rop.inst()->layername()),
-                                      rop.ll.constant(rop.inst()->shadername()) };
+            llvm::Value* args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(4),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
             const char* func_name = rop.build_name(
                 FuncSpec("range_check").mask());
             rop.ll.call_function(func_name, args);
@@ -2913,9 +2919,7 @@ LLVMGEN(llvm_gen_filterwidth)
             // Don't have 2nd order derivs
             rop.llvm_zero_derivs(Result);
         }
-    }
-
-    else {  //If source has no derivs
+    } else {  //If source has no derivs
         // No derivs to be had
         rop.llvm_assign_zero(Result);
     }
@@ -2953,7 +2957,7 @@ LLVMGEN(llvm_gen_compare_op)
     int num_components = std::max(A.typespec().aggregate(),
                                   B.typespec().aggregate());
     bool float_based   = A.typespec().is_float_based()
-                       || B.typespec().is_float_based();
+                         || B.typespec().is_float_based();
     TypeDesc cast(float_based ? TypeDesc::FLOAT : TypeDesc::UNKNOWN);
 
     llvm::Value* final_result = 0;
@@ -3112,10 +3116,11 @@ LLVMGEN(llvm_gen_regex)
     if (op_is_uniform && !match_is_uniform) {
         // allocate a temporary to hold the uniform match result
         // then afterwards broadcast it out to the varying match
-        temp_match_array
-            = rop.getOrAllocateTemp(Match.typespec(), false /*derivs*/,
-                                    true /*is_uniform*/, false /*forceBool*/,
-                                    "uniform match result");
+        temp_match_array = rop.getOrAllocateTemp(Match.typespec(),
+                                                 false /*derivs*/,
+                                                 true /*is_uniform*/,
+                                                 false /*forceBool*/,
+                                                 "uniform match result");
         call_args.push_back(rop.ll.void_ptr(temp_match_array));
     } else {
         call_args.push_back(rop.llvm_void_ptr(Match));
@@ -3203,8 +3208,8 @@ LLVMGEN(llvm_gen_construct_triple)
 
     bool space_is_uniform = Space.is_uniform();
     bool op_is_uniform    = X.is_uniform() && Y.is_uniform() && Z.is_uniform()
-                         && space_is_uniform;
-    bool resultIsUniform = Result.is_uniform();
+                            && space_is_uniform;
+    bool resultIsUniform  = Result.is_uniform();
     OSL_ASSERT(op_is_uniform || !resultIsUniform);
 
     // First, copy the floats into the vector
@@ -3267,12 +3272,13 @@ LLVMGEN(llvm_gen_construct_triple)
         llvm::Value* transform        = rop.temp_wide_matrix_ptr();
         llvm::Value* succeeded_as_int = nullptr;
         {
-            llvm::Value* args[]
-                = { rop.sg_void_ptr(), rop.ll.void_ptr(transform),
-                    space_is_uniform ? rop.llvm_load_value(Space)
-                                     : rop.llvm_void_ptr(Space),
-                    rop.ll.constant(Strings::common),
-                    rop.ll.mask_as_int(rop.ll.current_mask()) };
+            llvm::Value* args[] = { rop.sg_void_ptr(),
+                                    rop.ll.void_ptr(transform),
+                                    space_is_uniform
+                                        ? rop.llvm_load_value(Space)
+                                        : rop.llvm_void_ptr(Space),
+                                    rop.ll.constant(Strings::common),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()) };
 
             // Dynamically build function name
             FuncSpec func_spec("build_transform_matrix");
@@ -3593,10 +3599,11 @@ LLVMGEN(llvm_gen_transform)
 
             rop.ll.call_function(rop.build_name(func_spec), args);
         } else {
-            llvm::Value* args[]
-                = { rop.llvm_void_ptr(*P), rop.llvm_void_ptr(*Result),
-                    rop.ll.void_ptr(transform), succeeded_as_int,
-                    rop.ll.mask_as_int(rop.ll.current_mask()) };
+            llvm::Value* args[] = { rop.llvm_void_ptr(*P),
+                                    rop.llvm_void_ptr(*Result),
+                                    rop.ll.void_ptr(transform),
+                                    succeeded_as_int,
+                                    rop.ll.mask_as_int(rop.ll.current_mask()) };
 
             // definitely not a nonlinear transformation
 
@@ -3685,12 +3692,14 @@ LLVMGEN(llvm_gen_transformc)
             // From or To must be varying, setup a loop to call the library
             // function with uniform from and to values adjusting the mask
             // to identify which lanes match the from and to combinations.
-            llvm::Value* FromVal
-                = rop.llvm_load_value(From, 0 /*deriv*/, 0 /*component*/,
-                                      TypeDesc::UNKNOWN, From.is_uniform());
-            llvm::Value* ToVal
-                = rop.llvm_load_value(To, 0 /*deriv*/, 0 /*component*/,
-                                      TypeDesc::UNKNOWN, To.is_uniform());
+            llvm::Value* FromVal = rop.llvm_load_value(From, 0 /*deriv*/,
+                                                       0 /*component*/,
+                                                       TypeDesc::UNKNOWN,
+                                                       From.is_uniform());
+            llvm::Value* ToVal   = rop.llvm_load_value(To, 0 /*deriv*/,
+                                                       0 /*component*/,
+                                                       TypeDesc::UNKNOWN,
+                                                       To.is_uniform());
 
             llvm::Value* args[] = {
                 rop.sg_void_ptr(),
@@ -4324,33 +4333,35 @@ llvm_batched_texture_options(BatchedBackendLLVM& rop, int opnum,
         // data could be varying
         bool valIsVarying = !Val.is_uniform();
 
-#define PARAM_WIDE_FLOAT(paramname)                                            \
-    if (name == Strings::paramname                                             \
-        && (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {         \
-        llvm::Value* val                                                       \
-            = rop.llvm_load_value(Val, /*deriv=*/0, /*component=*/0,           \
-                                  TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
-        if (valtype == TypeDesc::INT)                                          \
-            val = rop.ll.op_int_to_float(val);                                 \
-        paramname = val;                                                       \
-        continue;                                                              \
+#define PARAM_WIDE_FLOAT(paramname)                                      \
+    if (name == Strings::paramname                                       \
+        && (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {   \
+        llvm::Value* val = rop.llvm_load_value(Val, /*deriv=*/0,         \
+                                               /*component=*/0,          \
+                                               TypeDesc::UNKNOWN,        \
+                                               /*op_is_uniform=*/false); \
+        if (valtype == TypeDesc::INT)                                    \
+            val = rop.ll.op_int_to_float(val);                           \
+        paramname = val;                                                 \
+        continue;                                                        \
     }
 
-#define PARAM_WIDE_FLOAT_S_T_R(paramname)                                      \
-    if (name == Strings::paramname                                             \
-        && (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {         \
-        llvm::Value* val                                                       \
-            = rop.llvm_load_value(Val, /*deriv=*/0, /*component=*/0,           \
-                                  TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
-        if (valtype == TypeDesc::INT) {                                        \
-            val = rop.ll.op_int_to_float(val);                                 \
-        }                                                                      \
-        s##paramname = val;                                                    \
-        t##paramname = val;                                                    \
-        if (tex3d) {                                                           \
-            r##paramname = val;                                                \
-        }                                                                      \
-        continue;                                                              \
+#define PARAM_WIDE_FLOAT_S_T_R(paramname)                                \
+    if (name == Strings::paramname                                       \
+        && (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) {   \
+        llvm::Value* val = rop.llvm_load_value(Val, /*deriv=*/0,         \
+                                               /*component=*/0,          \
+                                               TypeDesc::UNKNOWN,        \
+                                               /*op_is_uniform=*/false); \
+        if (valtype == TypeDesc::INT) {                                  \
+            val = rop.ll.op_int_to_float(val);                           \
+        }                                                                \
+        s##paramname = val;                                              \
+        t##paramname = val;                                              \
+        if (tex3d) {                                                     \
+            r##paramname = val;                                          \
+        }                                                                \
+        continue;                                                        \
     }
 
         PARAM_WIDE_FLOAT_S_T_R(width)
@@ -4869,9 +4880,10 @@ llvm_batched_texture_varying_options(BatchedBackendLLVM& rop, int opnum,
 
 #define PARAM_VARYING(paramname, paramtype, fieldname)                         \
     if (name == Strings::paramname && valtype == paramtype) {                  \
-        llvm::Value* wide_val                                                  \
-            = rop.llvm_load_value(Val, /*deriv=*/0, /*component=*/0,           \
-                                  TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
+        llvm::Value* wide_val = rop.llvm_load_value(Val, /*deriv=*/0,          \
+                                                    /*component=*/0,           \
+                                                    TypeDesc::UNKNOWN,         \
+                                                    /*op_is_uniform=*/false);  \
         llvm::Value* scalar_value = rop.ll.op_extract(wide_val, leadLane);     \
         rop.ll.op_unmasked_store(scalar_value,                                 \
                                  rop.ll.GEP(bto_type, bto, 0,                  \
@@ -5005,9 +5017,10 @@ LLVMGEN(llvm_gen_texture)
     // We will just load the filename here if we are uniform, otherwise just remember where the filename
     // is so we can update it later in the loop over varying options
     static constexpr int filenameArgumentIndex = 1;
-    llvm::Value* filenameVal
-        = rop.llvm_load_value(Filename, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Filename.is_uniform());
+    llvm::Value* filenameVal    = rop.llvm_load_value(Filename, /*deriv=*/0,
+                                                      /*component=*/0,
+                                                      TypeDesc::UNKNOWN,
+                                                      Filename.is_uniform());
     args[filenameArgumentIndex] = Filename.is_uniform() ? filenameVal : nullptr;
 
     args[2] = rop.ll.constant_ptr(texture_handle);
@@ -5222,10 +5235,11 @@ LLVMGEN(llvm_gen_texture3d)
 
     // We will just load the filename here if we are uniform, otherwise just remember where the filename
     // is so we can update it later in the loop over varying options
-    int filenameArgumentIndex = 1;
-    llvm::Value* filenameVal
-        = rop.llvm_load_value(Filename, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Filename.is_uniform());
+    int filenameArgumentIndex   = 1;
+    llvm::Value* filenameVal    = rop.llvm_load_value(Filename, /*deriv=*/0,
+                                                      /*component=*/0,
+                                                      TypeDesc::UNKNOWN,
+                                                      Filename.is_uniform());
     args[filenameArgumentIndex] = fileNameIsUniform ? filenameVal : nullptr;
 
     args[2] = rop.ll.constant_ptr(texture_handle);
@@ -5419,10 +5433,11 @@ LLVMGEN(llvm_gen_environment)
 
     // We will just load the filename here if we are uniform, otherwise just remember where the filename
     // is so we can update it later in the loop over varying options
-    int filenameArgumentIndex = 1;
-    llvm::Value* filenameVal
-        = rop.llvm_load_value(Filename, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Filename.is_uniform());
+    int filenameArgumentIndex   = 1;
+    llvm::Value* filenameVal    = rop.llvm_load_value(Filename, /*deriv=*/0,
+                                                      /*component=*/0,
+                                                      TypeDesc::UNKNOWN,
+                                                      Filename.is_uniform());
     args[filenameArgumentIndex] = fileNameIsUniform ? filenameVal : nullptr;
 
     args[2] = rop.ll.constant_ptr(texture_handle);
@@ -5498,13 +5513,15 @@ LLVMGEN(llvm_gen_environment)
     rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
 
     llvm::BasicBlock* bin_block = rop.ll.new_basic_block(
-        rop.llvm_debug() ? std::string(
-            "bin_environment_options (varying environment options)")
-                         : std::string());
+        rop.llvm_debug()
+            ? std::string(
+                  "bin_environment_options (varying environment options)")
+            : std::string());
     llvm::BasicBlock* after_block = rop.ll.new_basic_block(
-        rop.llvm_debug() ? std::string(
-            "after_bin_environment_options (varying environment options)")
-                         : std::string());
+        rop.llvm_debug()
+            ? std::string(
+                  "after_bin_environment_options (varying environment options)")
+            : std::string());
     rop.ll.op_branch(bin_block);
     {
         llvm::Value* remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
@@ -5681,21 +5698,22 @@ llvm_batched_trace_varying_options(BatchedBackendLLVM& rop, int opnum,
 
         OSL_ASSERT(!Val.is_constant() && "can't be a varying constant");
 
-#define PARAM_VARYING(paramname, paramtype)                                    \
-    if (name == Strings::paramname && valtype == paramtype) {                  \
-        llvm::Value* wide_val                                                  \
-            = rop.llvm_load_value(Val, /*deriv=*/0, /*component=*/0,           \
-                                  TypeDesc::UNKNOWN, /*op_is_uniform=*/false); \
-        llvm::Value* scalar_value = rop.ll.op_extract(wide_val, leadLane);     \
-        rop.ll.op_unmasked_store(                                              \
-            scalar_value,                                                      \
-            rop.ll.GEP(bto_type, bto, 0,                                       \
-                       static_cast<int>(                                       \
-                           TraceOpt::LLVMMemberIndex::paramname)));            \
-        remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value,        \
-                                                          wide_val,            \
-                                                          remainingMask);      \
-        continue;                                                              \
+#define PARAM_VARYING(paramname, paramtype)                                   \
+    if (name == Strings::paramname && valtype == paramtype) {                 \
+        llvm::Value* wide_val = rop.llvm_load_value(Val, /*deriv=*/0,         \
+                                                    /*component=*/0,          \
+                                                    TypeDesc::UNKNOWN,        \
+                                                    /*op_is_uniform=*/false); \
+        llvm::Value* scalar_value = rop.ll.op_extract(wide_val, leadLane);    \
+        rop.ll.op_unmasked_store(                                             \
+            scalar_value,                                                     \
+            rop.ll.GEP(bto_type, bto, 0,                                      \
+                       static_cast<int>(                                      \
+                           TraceOpt::LLVMMemberIndex::paramname)));           \
+        remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value,       \
+                                                          wide_val,           \
+                                                          remainingMask);     \
+        continue;                                                             \
     }
         PARAM_VARYING(mindist, TypeDesc::FLOAT)
         PARAM_VARYING(maxdist, TypeDesc::FLOAT)
@@ -6367,9 +6385,9 @@ LLVMGEN(llvm_gen_getattribute)
     bool array_lookup  = rop.opargsym(op, nargs - 2)->typespec().is_int();
     bool object_lookup = rop.opargsym(op, 2)->typespec().is_string()
                          && nargs >= 4;
-    int object_slot = (int)object_lookup;
-    int attrib_slot = object_slot + 1;
-    int index_slot  = array_lookup ? nargs - 2 : 0;
+    int object_slot    = (int)object_lookup;
+    int attrib_slot    = object_slot + 1;
+    int index_slot     = array_lookup ? nargs - 2 : 0;
 
     Symbol& Result = *rop.opargsym(op, 0);
     Symbol& ObjectName
@@ -6405,20 +6423,21 @@ LLVMGEN(llvm_gen_getattribute)
     if (false == op_is_uniform) {
         OSL_ASSERT((!result_is_uniform) && (!destination_is_uniform));
 
-        llvm::Value* args[]
-            = { rop.sg_void_ptr(),
-                rop.ll.constant((int)Destination.has_derivs()),
-                object_lookup ? rop.llvm_load_value(ObjectName)
-                              : rop.ll.constant(ustring()),
-                attribute_is_uniform ? rop.llvm_load_value(Attribute)
-                                     : rop.llvm_void_ptr(Attribute),
-                rop.ll.constant((int)array_lookup),
-                array_lookup ? rop.llvm_load_value(Index)
-                             : rop.ll.constant((
-                                 int)0),  // Never load a symbol that is invalid
-                rop.ll.constant_ptr((void*)dest_type),
-                rop.llvm_void_ptr(Destination),
-                rop.ll.mask_as_int(rop.ll.current_mask()) };
+        llvm::Value* args[] = {
+            rop.sg_void_ptr(),
+            rop.ll.constant((int)Destination.has_derivs()),
+            object_lookup ? rop.llvm_load_value(ObjectName)
+                          : rop.ll.constant(ustring()),
+            attribute_is_uniform ? rop.llvm_load_value(Attribute)
+                                 : rop.llvm_void_ptr(Attribute),
+            rop.ll.constant((int)array_lookup),
+            array_lookup ? rop.llvm_load_value(Index)
+                         : rop.ll.constant(
+                               (int)0),  // Never load a symbol that is invalid
+            rop.ll.constant_ptr((void*)dest_type),
+            rop.llvm_void_ptr(Destination),
+            rop.ll.mask_as_int(rop.ll.current_mask())
+        };
 
         FuncSpec func_spec("get_attribute");
         func_spec.arg(Attribute, attribute_is_uniform);
@@ -6445,18 +6464,19 @@ LLVMGEN(llvm_gen_getattribute)
             uniformDestination = rop.ll.void_ptr(tempUniformDestination);
         }
 
-        llvm::Value* args[]
-            = { rop.sg_void_ptr(),
-                rop.ll.constant((int)Destination.has_derivs()),
-                object_lookup ? rop.llvm_load_value(ObjectName)
-                              : rop.ll.constant(ustring()),
-                rop.llvm_load_value(Attribute),
-                rop.ll.constant((int)array_lookup),
-                array_lookup ? rop.llvm_load_value(Index)
-                             : rop.ll.constant((
-                                 int)0),  // Never load a symbol that is invalid
-                rop.ll.constant_ptr((void*)dest_type),
-                uniformDestination };
+        llvm::Value* args[] = {
+            rop.sg_void_ptr(),
+            rop.ll.constant((int)Destination.has_derivs()),
+            object_lookup ? rop.llvm_load_value(ObjectName)
+                          : rop.ll.constant(ustring()),
+            rop.llvm_load_value(Attribute),
+            rop.ll.constant((int)array_lookup),
+            array_lookup ? rop.llvm_load_value(Index)
+                         : rop.ll.constant(
+                               (int)0),  // Never load a symbol that is invalid
+            rop.ll.constant_ptr((void*)dest_type),
+            uniformDestination
+        };
 
         llvm::Value* r = rop.ll.call_function(
             rop.build_name(FuncSpec("get_attribute_uniform")), args);
@@ -6516,9 +6536,10 @@ LLVMGEN(llvm_gen_gettextureinfo)
     // otherwise just remember where the spline name
     // is so we can update it later in the loop over varying spline names
     int fileNameArgumentIndex = args.size();
-    llvm::Value* fileNameVal
-        = rop.llvm_load_value(Filename, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Filename.is_uniform());
+    llvm::Value* fileNameVal  = rop.llvm_load_value(Filename, /*deriv=*/0,
+                                                    /*component=*/0,
+                                                    TypeDesc::UNKNOWN,
+                                                    Filename.is_uniform());
     args.push_back(Filename.is_uniform() ? fileNameVal : nullptr);
 
     RendererServices::TextureHandle* texture_handle = NULL;
@@ -6589,9 +6610,10 @@ LLVMGEN(llvm_gen_gettextureinfo)
     args.push_back(texture_handle_value);
 
     int dataNameArgumentIndex = args.size();
-    llvm::Value* dataNameVal
-        = rop.llvm_load_value(Dataname, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Dataname.is_uniform());
+    llvm::Value* dataNameVal  = rop.llvm_load_value(Dataname, /*deriv=*/0,
+                                                    /*component=*/0,
+                                                    TypeDesc::UNKNOWN,
+                                                    Dataname.is_uniform());
     args.push_back(Dataname.is_uniform() ? dataNameVal : nullptr);
 
     // this is passes a TypeDesc to an LLVM op-code
@@ -6831,18 +6853,20 @@ LLVMGEN(llvm_gen_getmessage)
         rop.ll.call_function(rop.build_name(FuncSpec("getmessage").mask()),
                              args);
     } else {
-        llvm::Value* nameVal
-            = rop.llvm_load_value(Name, /*deriv=*/0, /*component=*/0,
-                                  TypeDesc::UNKNOWN, nameVal_is_uniform);
+        llvm::Value* nameVal = rop.llvm_load_value(Name, /*deriv=*/0,
+                                                   /*component=*/0,
+                                                   TypeDesc::UNKNOWN,
+                                                   nameVal_is_uniform);
         if (nameVal_is_uniform) {
             args[nameArgumentIndex] = nameVal;
         }
 
-        llvm::Value* sourceVal
-            = has_source
-                  ? rop.llvm_load_value(Source, /*deriv=*/0, /*component=*/0,
-                                        TypeDesc::UNKNOWN, sourceVal_is_uniform)
-                  : rop.ll.constant(ustring());
+        llvm::Value* sourceVal = has_source
+                                     ? rop.llvm_load_value(Source, /*deriv=*/0,
+                                                           /*component=*/0,
+                                                           TypeDesc::UNKNOWN,
+                                                           sourceVal_is_uniform)
+                                     : rop.ll.constant(ustring());
         if (sourceVal_is_uniform) {
             args[sourceArgumentIndex] = sourceVal;
         }
@@ -7121,10 +7145,11 @@ LLVMGEN(llvm_gen_spline)
 
     llvm::Value* temp_uniform_results = nullptr;
     if (op_is_uniform && !Result.is_uniform()) {
-        temp_uniform_results
-            = rop.getOrAllocateTemp(Result.typespec(), Result.has_derivs(),
-                                    true /*is_uniform*/, false /*forceBool*/,
-                                    "uniform spline result");
+        temp_uniform_results = rop.getOrAllocateTemp(Result.typespec(),
+                                                     Result.has_derivs(),
+                                                     true /*is_uniform*/,
+                                                     false /*forceBool*/,
+                                                     "uniform spline result");
         args.push_back(rop.ll.void_ptr(temp_uniform_results));
 
     } else {
@@ -7134,9 +7159,10 @@ LLVMGEN(llvm_gen_spline)
     // otherwise just remember where the spline name
     // is so we can update it later in the loop over varying spline names
     int splineNameArgumentIndex = args.size();
-    llvm::Value* splineNameVal
-        = rop.llvm_load_value(Spline, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Spline.is_uniform());
+    llvm::Value* splineNameVal  = rop.llvm_load_value(Spline, /*deriv=*/0,
+                                                      /*component=*/0,
+                                                      TypeDesc::UNKNOWN,
+                                                      Spline.is_uniform());
 
     if (op_is_uniform) {
         // We are going to be calling a function from the scalar version
@@ -7562,9 +7588,10 @@ LLVMGEN(llvm_gen_pointcloud_search)
 
     constexpr int fileNameArgumentIndex = 2;  // 2 filename
     OSL_ASSERT(args.size() == fileNameArgumentIndex);
-    llvm::Value* fileNameVal
-        = rop.llvm_load_value(Filename, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Filename.is_uniform());
+    llvm::Value* fileNameVal = rop.llvm_load_value(Filename, /*deriv=*/0,
+                                                   /*component=*/0,
+                                                   TypeDesc::UNKNOWN,
+                                                   Filename.is_uniform());
     args.push_back(Filename.is_uniform() ? fileNameVal : nullptr);
 
     args.push_back(nullptr /*deferred*/);  // 3 center
@@ -7572,9 +7599,10 @@ LLVMGEN(llvm_gen_pointcloud_search)
                                      false /*is_uniform*/));  // 4 radius
     constexpr int maxPointsArgumentIndex = 5;                 // 5 max_points
     OSL_ASSERT(args.size() == maxPointsArgumentIndex);
-    llvm::Value* maxPointsVal
-        = rop.llvm_load_value(Max_points, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Max_points.is_uniform());
+    llvm::Value* maxPointsVal = rop.llvm_load_value(Max_points, /*deriv=*/0,
+                                                    /*component=*/0,
+                                                    TypeDesc::UNKNOWN,
+                                                    Max_points.is_uniform());
     args.push_back(Max_points.is_uniform() ? maxPointsVal : nullptr);
 
     constexpr int sortArgumentIndex = 6;  // 6 sort
@@ -7748,9 +7776,10 @@ LLVMGEN(llvm_gen_pointcloud_search)
     }
     // Clear derivs if necessary
     if (!clear_derivs_of.empty()) {
-        llvm::Value* count
-            = rop.llvm_load_value(Result, /*deriv=*/0, /*component=*/0,
-                                  TypeDesc::UNKNOWN, /*is_uniform*/ false);
+        llvm::Value* count = rop.llvm_load_value(Result, /*deriv=*/0,
+                                                 /*component=*/0,
+                                                 TypeDesc::UNKNOWN,
+                                                 /*is_uniform*/ false);
         // NOTE: normally BatchedAnalysis would have handled requiring masking, however
         // the clearing of these derivs is conditional based on the count stored in Result.
         // We will always need masking when clearing the results, so choose to just do
@@ -7788,20 +7817,23 @@ LLVMGEN(llvm_gen_pointcloud_get)
 
     BatchedBackendLLVM::TempScope temp_scope(rop);
 
-    llvm::Value* count_value
-        = rop.llvm_load_value(Count, /*deriv*/ 0, /*component*/ 0,
-                              TypeDesc::UNKNOWN, Count.is_uniform());
+    llvm::Value* count_value = rop.llvm_load_value(Count, /*deriv*/ 0,
+                                                   /*component*/ 0,
+                                                   TypeDesc::UNKNOWN,
+                                                   Count.is_uniform());
 
     constexpr int fileNameArgumentIndex = 1;
-    llvm::Value* fileNameVal
-        = rop.llvm_load_value(Filename, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Filename.is_uniform());
+    llvm::Value* fileNameVal = rop.llvm_load_value(Filename, /*deriv=*/0,
+                                                   /*component=*/0,
+                                                   TypeDesc::UNKNOWN,
+                                                   Filename.is_uniform());
 
     constexpr int maskArgumentIndex = 8;
 
-    llvm::Value* wcount_val
-        = rop.llvm_load_value(Count, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, /*is_uniform*/ false);
+    llvm::Value* wcount_val       = rop.llvm_load_value(Count, /*deriv=*/0,
+                                                        /*component=*/0,
+                                                        TypeDesc::UNKNOWN,
+                                                        /*is_uniform*/ false);
     int element_count             = std::min(Data.typespec().arraylength(),
                                              Indices.typespec().arraylength());
     llvm::Value* welem_count_val  = rop.ll.wide_constant(element_count);
@@ -7980,9 +8012,10 @@ LLVMGEN(llvm_gen_pointcloud_write)
     }
 
     constexpr int fileNameArgumentIndex = 1;
-    llvm::Value* fileNameVal
-        = rop.llvm_load_value(Filename, /*deriv=*/0, /*component=*/0,
-                              TypeDesc::UNKNOWN, Filename.is_uniform());
+    llvm::Value* fileNameVal = rop.llvm_load_value(Filename, /*deriv=*/0,
+                                                   /*component=*/0,
+                                                   TypeDesc::UNKNOWN,
+                                                   Filename.is_uniform());
 
     constexpr int maskArgumentIndex = 7;
 
@@ -8389,9 +8422,9 @@ LLVMGEN(llvm_gen_split)
 
     OSL_ASSERT(R.is_uniform() == Results.is_uniform());
 
-    bool op_is_uniform = Str.is_uniform()
-                         && ((!optSep) || (*optSep).is_uniform())
-                         && ((!optMaxsplit) || (*optMaxsplit).is_uniform());
+    bool op_is_uniform     = Str.is_uniform()
+                             && ((!optSep) || (*optSep).is_uniform())
+                             && ((!optMaxsplit) || (*optMaxsplit).is_uniform());
     bool result_is_uniform = Results.is_uniform();
     OSL_ASSERT(op_is_uniform || (op_is_uniform == result_is_uniform));
 
@@ -8418,10 +8451,11 @@ LLVMGEN(llvm_gen_split)
 
     llvm::Value* temp_results_array = nullptr;
     if (op_is_uniform && !result_is_uniform) {
-        temp_results_array
-            = rop.getOrAllocateTemp(Results.typespec(), false /*derivs*/,
-                                    true /*is_uniform*/, false /*forceBool*/,
-                                    "uniform split result");
+        temp_results_array = rop.getOrAllocateTemp(Results.typespec(),
+                                                   false /*derivs*/,
+                                                   true /*is_uniform*/,
+                                                   false /*forceBool*/,
+                                                   "uniform split result");
         args.push_back(rop.ll.void_ptr(temp_results_array));
     } else {
         args.push_back(rop.llvm_void_ptr(Results));
@@ -8500,9 +8534,9 @@ LLVMGEN(llvm_gen_split)
                 llvm::Value* elem_ptr = rop.ll.GEP(elem_type,
                                                    temp_results_array, ai);
                 elem                  = rop.ll.op_load(elem_type, elem_ptr);
-                elem                  = rop.ll.call_function("osl_gen_ustring",
-                                                             rop.ll.ptr_to_int64_cast(elem));
-                elem                  = rop.ll.widen_value(elem);
+                elem = rop.ll.call_function("osl_gen_ustring",
+                                            rop.ll.ptr_to_int64_cast(elem));
+                elem = rop.ll.widen_value(elem);
             }
             rop.llvm_store_value(elem, Results, 0 /*deriv*/,
                                  array_index /*arrayindex*/, 0 /* component*/);
@@ -8671,9 +8705,9 @@ LLVMGEN(llvm_gen_luminance)
         llvm::Value* scaled_green = rop.ll.op_mul(green_scale, green);
         llvm::Value* scaled_blue  = rop.ll.op_mul(blue_scale, blue);
 
-        llvm::Value* result
-            = rop.ll.op_add(rop.ll.op_add(scaled_red, scaled_green),
-                            scaled_blue);
+        llvm::Value* result = rop.ll.op_add(rop.ll.op_add(scaled_red,
+                                                          scaled_green),
+                                            scaled_blue);
 
         OSL_ASSERT(op_is_uniform || !result_is_uniform);
         if (op_is_uniform && !result_is_uniform) {

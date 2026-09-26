@@ -353,8 +353,7 @@ public:
 #ifdef __OSL_SUPPORTS_b16_AVX512
 template<>
 const NameAndSignature
-    ConcreteTargetLibraryHelper<16, TargetISA::AVX512>::library_functions[]
-    = {
+    ConcreteTargetLibraryHelper<16, TargetISA::AVX512>::library_functions[] = {
 #    define DECL_INDIRECT(name, signature) \
         NameAndSignature { #name, signature },
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
@@ -370,7 +369,7 @@ const NameAndSignature
 #    undef __OSL_WIDTH
 #    undef DECL
 #    undef DECL_INDIRECT
-      };
+    };
 template<>
 const char*
     ConcreteTargetLibraryHelper<16, TargetISA::AVX512>::library_selector_string
@@ -400,15 +399,13 @@ const NameAndSignature
       };
 template<>
 const char* ConcreteTargetLibraryHelper<
-    16, TargetISA::AVX512_noFMA>::library_selector_string
-    = "b16_AVX512_noFMA_";
+    16, TargetISA::AVX512_noFMA>::library_selector_string = "b16_AVX512_noFMA_";
 #endif
 
 #ifdef __OSL_SUPPORTS_b8_AVX512
 template<>
 const NameAndSignature
-    ConcreteTargetLibraryHelper<8, TargetISA::AVX512>::library_functions[]
-    = {
+    ConcreteTargetLibraryHelper<8, TargetISA::AVX512>::library_functions[] = {
 #    define DECL_INDIRECT(name, signature) \
         NameAndSignature { #name, signature },
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
@@ -424,7 +421,7 @@ const NameAndSignature
 #    undef __OSL_WIDTH
 #    undef DECL
 #    undef DECL_INDIRECT
-      };
+    };
 template<>
 const char*
     ConcreteTargetLibraryHelper<8, TargetISA::AVX512>::library_selector_string
@@ -454,15 +451,13 @@ const NameAndSignature
       };
 template<>
 const char* ConcreteTargetLibraryHelper<
-    8, TargetISA::AVX512_noFMA>::library_selector_string
-    = "b8_AVX512_noFMA_";
+    8, TargetISA::AVX512_noFMA>::library_selector_string = "b8_AVX512_noFMA_";
 #endif
 
 #ifdef __OSL_SUPPORTS_b8_AVX2
 template<>
 const NameAndSignature
-    ConcreteTargetLibraryHelper<8, TargetISA::AVX2>::library_functions[]
-    = {
+    ConcreteTargetLibraryHelper<8, TargetISA::AVX2>::library_functions[] = {
 #    define DECL_INDIRECT(name, signature) \
         NameAndSignature { #name, signature },
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
@@ -478,7 +473,7 @@ const NameAndSignature
 #    undef __OSL_WIDTH
 #    undef DECL
 #    undef DECL_INDIRECT
-      };
+    };
 template<>
 const char*
     ConcreteTargetLibraryHelper<8, TargetISA::AVX2>::library_selector_string
@@ -507,16 +502,14 @@ const NameAndSignature
 #    undef DECL_INDIRECT
       };
 template<>
-const char*
-    ConcreteTargetLibraryHelper<8, TargetISA::AVX2_noFMA>::library_selector_string
-    = "b8_AVX2_noFMA_";
+const char* ConcreteTargetLibraryHelper<
+    8, TargetISA::AVX2_noFMA>::library_selector_string = "b8_AVX2_noFMA_";
 #endif
 
 #ifdef __OSL_SUPPORTS_b8_AVX
 template<>
 const NameAndSignature
-    ConcreteTargetLibraryHelper<8, TargetISA::AVX>::library_functions[]
-    = {
+    ConcreteTargetLibraryHelper<8, TargetISA::AVX>::library_functions[] = {
 #    define DECL_INDIRECT(name, signature) \
         NameAndSignature { #name, signature },
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
@@ -532,7 +525,7 @@ const NameAndSignature
 #    undef __OSL_WIDTH
 #    undef DECL
 #    undef DECL_INDIRECT
-      };
+    };
 template<>
 const char*
     ConcreteTargetLibraryHelper<8, TargetISA::AVX>::library_selector_string
@@ -542,8 +535,7 @@ const char*
 #ifdef __OSL_SUPPORTS_b4_SSE2
 template<>
 const NameAndSignature
-    ConcreteTargetLibraryHelper<4, TargetISA::x64>::library_functions[]
-    = {
+    ConcreteTargetLibraryHelper<4, TargetISA::x64>::library_functions[] = {
 #    define DECL_INDIRECT(name, signature) \
         NameAndSignature { #name, signature },
 #    define DECL(name, signature) DECL_INDIRECT(name, signature)
@@ -559,7 +551,7 @@ const NameAndSignature
 #    undef __OSL_WIDTH
 #    undef DECL
 #    undef DECL_INDIRECT
-      };
+    };
 template<>
 const char*
     ConcreteTargetLibraryHelper<4, TargetISA::x64>::library_selector_string
@@ -1205,11 +1197,10 @@ BatchedBackendLLVM::llvm_assign_initial_value(
             const int deriv_count = (symloc->derivs && sym.has_derivs()) ? 3
                                                                          : 1;
 
-            llvm::Value* sym_offset = ll.constanti64(symloc->offset);
-            llvm::Value* userdata_sym_base_ptr
-                = ll.ptr_cast(ll.offset_ptr(m_llvm_userdata_base_ptr,
-                                            sym_offset),
-                              type.scalartype());
+            llvm::Value* sym_offset            = ll.constanti64(symloc->offset);
+            llvm::Value* userdata_sym_base_ptr = ll.ptr_cast(
+                ll.offset_ptr(m_llvm_userdata_base_ptr, sym_offset),
+                type.scalartype());
             llvm::Type* userdata_type = ll.llvm_type(type.scalartype());
             bool isBase32bit          = (symloc->type != TypeDesc::STRING);
             int bytesPerElem          = isBase32bit ? 4 : 8;
@@ -1876,7 +1867,7 @@ BatchedBackendLLVM::build_llvm_code(int beginop, int endop,
                 llvm_generate_debug_uninit(op);
             if (shadingsys().llvm_debug_ops())
                 llvm_generate_debug_op_printf(op);
-                // TODO: optionally enable
+            // TODO: optionally enable
 #ifdef OSL_DEV
             std::cout << "Generating :" << op.opname() << std::endl;
             if (op.requires_masking())
@@ -1932,7 +1923,8 @@ BatchedBackendLLVM::build_llvm_init()
         ll.make_function(unique_name, false,
                          ll.type_void(),  // return type
                          {
-                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+                             llvm_type_sg_ptr(),
+                             llvm_type_groupdata_ptr(),
                              ll.type_void_ptr(),  // wide_shader_index
                              ll.type_void_ptr(),  // userdata_base_ptr
                              ll.type_void_ptr(),  // output_base_ptr
@@ -2062,9 +2054,9 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
     OSL_ASSERT(m_library_selector);
-    std::string unique_layer_name
-        = fmtformat("{}_{}", m_library_selector,
-                    layer_function_name(group(), *inst()));
+    std::string unique_layer_name = fmtformat("{}_{}", m_library_selector,
+                                              layer_function_name(group(),
+                                                                  *inst()));
 
     bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function(ll.make_function(
@@ -2072,7 +2064,8 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         !is_entry_layer,  // fastcall for non-entry layer functions
         ll.type_void(),   // return type
         {
-            llvm_type_sg_ptr(), llvm_type_groupdata_ptr(),
+            llvm_type_sg_ptr(),
+            llvm_type_groupdata_ptr(),
             ll.type_void_ptr(),  // wide_shader_index
             ll.type_void_ptr(),  // userdata_base_ptr
             ll.type_void_ptr(),  // output_base_ptr

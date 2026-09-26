@@ -41,9 +41,9 @@ osl_bind_interpolated_param(void* sg_, OSL::ustring_pod name, long long type,
 {
     char status = *userdata_initialized;
     if (status == 0) {
-        bool ok               = rend_get_userdata(HDSTR(name), userdata_data,
-                                                  symbol_data_size, (*(OSL::TypeDesc*)&type),
-                                                  userdata_index);
+        bool ok = rend_get_userdata(HDSTR(name), userdata_data,
+                                    symbol_data_size, (*(OSL::TypeDesc*)&type),
+                                    userdata_index);
         *userdata_initialized = status = 1 + ok;
     }
     if (status == 2) {

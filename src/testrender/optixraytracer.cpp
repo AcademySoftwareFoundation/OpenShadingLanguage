@@ -837,7 +837,7 @@ OptixRaytracer::upload_mesh_data()
 
     const size_t uv_indices_size = scene.uv_triangles.size() * sizeof(int32_t)
                                    * 3;
-    d_uv_indices = DEVICE_ALLOC(uv_indices_size);
+    d_uv_indices                 = DEVICE_ALLOC(uv_indices_size);
     COPY_TO_DEVICE(d_uv_indices, scene.uv_triangles.data(), uv_indices_size);
 
     const size_t normals_size = sizeof(Vec3) * scene.normals.size();
@@ -848,7 +848,7 @@ OptixRaytracer::upload_mesh_data()
 
     const size_t normal_indices_size = scene.n_triangles.size()
                                        * sizeof(int32_t) * 3;
-    d_normal_indices = DEVICE_ALLOC(normal_indices_size);
+    d_normal_indices                 = DEVICE_ALLOC(normal_indices_size);
     COPY_TO_DEVICE(d_normal_indices, scene.n_triangles.data(),
                    normal_indices_size);
 
@@ -862,14 +862,14 @@ OptixRaytracer::upload_mesh_data()
         shader_is_light.push_back(is_light);
     const size_t shader_is_light_size = shader_is_light.size()
                                         * sizeof(int32_t);
-    d_shader_is_light = DEVICE_ALLOC(shader_is_light_size);
+    d_shader_is_light                 = DEVICE_ALLOC(shader_is_light_size);
     COPY_TO_DEVICE(d_shader_is_light, shader_is_light.data(),
                    shader_is_light_size);
 
 
     const size_t lightprims_size = OptixRaytracer::lightprims().size()
                                    * sizeof(uint32_t);
-    d_lightprims = DEVICE_ALLOC(lightprims_size);
+    d_lightprims                 = DEVICE_ALLOC(lightprims_size);
     COPY_TO_DEVICE(d_lightprims, OptixRaytracer::lightprims().data(),
                    lightprims_size);
 
@@ -902,7 +902,7 @@ OptixRaytracer::upload_mesh_data()
 
     const size_t mesh_surfacearea_size = mesh_surfacearea.size()
                                          * sizeof(float);
-    d_surfacearea = DEVICE_ALLOC(mesh_surfacearea_size);
+    d_surfacearea                      = DEVICE_ALLOC(mesh_surfacearea_size);
     COPY_TO_DEVICE(d_surfacearea, mesh_surfacearea.data(),
                    mesh_surfacearea_size);
 }
@@ -1211,8 +1211,8 @@ OptixRaytracer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
                         format_end_found = true;
                         break;
                     case 's':
-                        src = (src + sizeof(double) - 1)
-                              & ~(sizeof(double) - 1);
+                        src               = (src + sizeof(double) - 1)
+                                            & ~(sizeof(double) - 1);
                         uint64_t str_hash = *reinterpret_cast<const uint64_t*>(
                             &ptr[src]);
                         const char* str = ustring::from_hash(str_hash).c_str();

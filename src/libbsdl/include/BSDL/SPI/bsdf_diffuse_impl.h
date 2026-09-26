@@ -85,9 +85,9 @@ BasicDiffuseLobe<BSDF_ROOT>::eval_impl(const Imath::V3f& wo,
         const float s     = wo.dot(wi) - cosNO * cosNI;
         const float stinv = s > 0 ? s / std::max(cosNO, cosNI) : s;
         const float ON    = (1 - 0.235f * diff_rough)
-                         * MAX(1 + diff_rough * stinv, 0.0f);
-        sample.weight = diff_color * ON;
-        sample.pdf    = diff_scale * cosNI * ONEOVERPI;
+                            * MAX(1 + diff_rough * stinv, 0.0f);
+        sample.weight     = diff_color * ON;
+        sample.pdf        = diff_scale * cosNI * ONEOVERPI;
     }
     return sample;
 }
@@ -102,10 +102,10 @@ BasicDiffuseLobe<BSDF_ROOT>::sample_impl(const Imath::V3f& wo,
         return {};
 
     const bool trans = rnd.x < diff_trans;
-    const float x    = trans ? Sample::stretch(rnd.x, 0, diff_trans)
-                             : Sample::stretch(rnd.x, diff_trans, 1 - diff_trans);
-    Imath::V3f wi    = sample_cos_hemisphere(x, rnd.y);
-    wi.z             = trans ? -wi.z : wi.z;  // Flip if transmissive
+    const float x = trans ? Sample::stretch(rnd.x, 0, diff_trans)
+                          : Sample::stretch(rnd.x, diff_trans, 1 - diff_trans);
+    Imath::V3f wi = sample_cos_hemisphere(x, rnd.y);
+    wi.z          = trans ? -wi.z : wi.z;  // Flip if transmissive
     // evaluate brdf on outgoing direction
     return eval_impl(wo, wi);
 }
@@ -210,12 +210,12 @@ DiffuseTLobe<BSDF_ROOT>::eval_impl(const Imath::V3f& wo,
         const float uoplus2 = (1.0f + uo) * (1.0f + uo);
         const float math2   = 1.0f / (uiplus2 * uoplus2);
         const float math3   = (ui * ui + 2.0f * uo + 3.0f * ui * uo)
-                            * (uo * uo + 2.0f * ui + 3.0f * ui * uo);
-        const float math4 = (ui * ui * ui + uo * uo * uo
-                             + ui * uo
-                                   * (2.0f * (1.0f + ui * ui + uo * uo)
-                                      + 3.0f * (ui + uo) + 6.0f * ui * uo))
-                            * ui * uo / (ui + uo);
+                              * (uo * uo + 2.0f * ui + 3.0f * ui * uo);
+        const float math4   = (ui * ui * ui + uo * uo * uo
+                               + ui * uo
+                                     * (2.0f * (1.0f + ui * ui + uo * uo)
+                                        + 3.0f * (ui + uo) + 6.0f * ui * uo))
+                              * ui * uo / (ui + uo);
 
         Power b
             = 0.25f * m_c * Hterm * Hterm

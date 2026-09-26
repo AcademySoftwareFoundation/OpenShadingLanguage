@@ -143,7 +143,7 @@ wavelength_color_XYZ(float lambda_nm)
 // I tuned this a bit, and with the current values we can have all
 // blackbody results accurate to within 0.1% with a table size of 317
 // (about 5 KB of data).
-#define BB_DRAPER          800.0f /* really 798K, below this visible BB is negligible */
+#define BB_DRAPER 800.0f /* really 798K, below this visible BB is negligible */
 #define BB_MAX_TABLE_RANGE 12000.0f /* max temp for which we use the table */
 #define BB_TABLE_XPOWER \
     1.5f  // NOTE: not used, hardcoded into expressions below
@@ -202,7 +202,7 @@ public:
         float wlm      = wavelength_nm * 1e-9f;  // Wavelength in meters
         const float c1 = 3.74183e-16f;           // 2*pi*h*c^2, W*m^2
         const float c2 = 1.4388e-2f;             // h*c/k, m*K
-            // h is Planck's const, k is Boltzmann's
+        // h is Planck's const, k is Boltzmann's
         //const float inverse_of_wlm5 = std::pow(wlm,-5.0f);
         // Rather than calling powf, just implement exact power and inverse
         // directly here.  Confirmed with ICC that identical optimized assembly
@@ -540,9 +540,9 @@ ColorSystem::lookup_blackbody_rgb(float T /*Kelvin*/) const
         // Have all gathers use the same indices by having different base registers
         // for each of the 6 components
         Color3((blackbody_components + 0)[sti], (blackbody_components + 1)[sti],
-                         (blackbody_components + 2)[sti]),
+               (blackbody_components + 2)[sti]),
         Color3((blackbody_components + 3)[sti], (blackbody_components + 4)[sti],
-                         (blackbody_components + 5)[sti]),
+               (blackbody_components + 5)[sti]),
         remainder);
 #else
     Color3 rgb = OIIO::lerp(m_blackbody_table[ti], m_blackbody_table[ti + 1],

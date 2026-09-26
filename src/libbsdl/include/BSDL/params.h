@@ -51,7 +51,7 @@ template <> BSDL_INLINE_METHOD constexpr ParamType ParamTypeOf<const void*>::get
 // returns a pointer like base::*member for inherited members.
 template<typename T> struct offset_in {
     template<typename T1, typename T2>
-    static BSDL_INLINE_METHOD constexpr size_t of(T1 T2::*member)
+    static BSDL_INLINE_METHOD constexpr size_t of(T1 T2::* member)
     {
         // When a caller passes &type::foo as member, if foo is in a parent class it
         // will resolve as Parent::* (thanks C++) and T2 is NOT the intended struct we
@@ -74,7 +74,7 @@ template<typename D> struct LobeRegistry {
         LobeParam params[MAX_PARAMS];
     };
     template<typename T1, typename T2>
-    static constexpr LobeParam param(T1 T2::*field, const char* key = nullptr)
+    static constexpr LobeParam param(T1 T2::* field, const char* key = nullptr)
     {
         return { ParamTypeOf<T1>::get(), (int)offset_in<Data>::of(field), key,
                  sizeof(T1) };

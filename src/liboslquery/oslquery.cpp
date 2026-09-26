@@ -367,11 +367,15 @@ OSLQuery::Parameter::type_name(const std::string& typestring)
 
 
 
-OSLQuery::OSLQuery() {}
+OSLQuery::OSLQuery()
+{
+}
 
 
 
-OSLQuery::~OSLQuery() {}
+OSLQuery::~OSLQuery()
+{
+}
 
 
 

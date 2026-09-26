@@ -918,8 +918,9 @@ protected:
     unsigned m_initialized : 1;     ///< If a param, has it been initialized?
     unsigned m_interpolated : 1;    ///< Is the param overridden by geom?
     unsigned m_interactive : 1;     ///< May the param change interactively?
-    unsigned m_noninteractive : 1;  ///< The param def won't modify interactively
-    unsigned m_allowconnect : 1;    ///< Is the param allowd to connect?
+    unsigned m_noninteractive
+        : 1;                      ///< The param def won't modify interactively
+    unsigned m_allowconnect : 1;  ///< Is the param allowd to connect?
     unsigned m_renderer_output : 1;  ///< Is this sym a renderer output?
     unsigned m_readonly : 1;         ///< read-only symbol
     unsigned m_is_uniform : 1;  ///< symbol is uniform under batched execution
@@ -932,8 +933,8 @@ protected:
     int m_scope;            ///< Scope where this symbol was declared
     int m_dataoffset;       ///< Offset of the data (-1 for unknown)
     int m_wide_dataoffset;  ///< Offset of the wide data (-1 for unknown)
-        // N.B. dataoffset is just used in temporary ways, like offsets into
-        // constant tables. It's not part of the actual memory address!
+    // N.B. dataoffset is just used in temporary ways, like offsets into
+    // constant tables. It's not part of the actual memory address!
     int m_initializers;           ///< Number of default initializers
     ASTNode* m_node = nullptr;    ///< Ptr to the declaration of this symbol
     Symbol* m_alias = nullptr;    ///< Another symbol that this is an alias for

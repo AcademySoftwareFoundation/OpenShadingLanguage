@@ -21,9 +21,9 @@ Spectrum::lookup(float lambda, const T array[LAMBDA_RES])
     const float lambda_fidx = fmodf(std::max(0.0f, lambda - LAMBDA_MIN),
                                     LAMBDA_RANGE)
                               / LAMBDA_STEP;
-    const int lo    = std::min(int(lambda_fidx), LAMBDA_RES - 2);
-    const int hi    = lo + 1;
-    const float mix = lambda_fidx - lo;
+    const int lo            = std::min(int(lambda_fidx), LAMBDA_RES - 2);
+    const int hi            = lo + 1;
+    const float mix         = lambda_fidx - lo;
     return LERP(mix, array[lo], array[hi]);
 }
 
@@ -142,7 +142,7 @@ ACEScgColorSpace::upsample_impl(const Imath::C3f _rgb, float lambda_0) const
     constexpr float safe = 0.7f;
     const float scale    = std::max(maxrgb, safe);
     Imath::C3f rgb       = _rgb * (safe / scale);
-    auto curve           = JakobHanikaUpsampler(BSDLConfig::get_jakobhanika_lut(
+    auto curve = JakobHanikaUpsampler(BSDLConfig::get_jakobhanika_lut(
                                           BSDLConfig::ColorSpaceTag::ACEScg))
                      .lookup(rgb.x, rgb.y, rgb.z);
     Power w;
@@ -161,7 +161,7 @@ ACEScgColorSpace::downsample_impl(const Power wave, float lambda_0) const
     constexpr float JH_range_correction = 1;  //400.0f / 470.0f;
     Imath::C3f total = Spectrum::spec_to_xyz<60>(wave, lambda_0)
                        * JH_range_correction;
-    Imath::V3f cv = { total.x, total.y, total.z };
+    Imath::V3f cv    = { total.x, total.y, total.z };
     // This is ACEScg
     Imath::V3f XYZ_to_RGB[3] = { { 1.641023f, -0.324803f, -0.236425f },
                                  { -0.663663f, 1.615332f, 0.016756f },

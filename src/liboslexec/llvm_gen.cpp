@@ -918,7 +918,7 @@ LLVMGEN(llvm_gen_mul)
     TypeDesc type                  = Result.typespec().simpletype();
     OSL_MAYBE_UNUSED bool is_float = !Result.typespec().is_closure_based()
                                      && Result.typespec().is_float_based();
-    int num_components = type.aggregate;
+    int num_components             = type.aggregate;
 
     // multiplication involving closures
     if (Result.typespec().is_closure()) {
@@ -1223,7 +1223,7 @@ LLVMGEN(llvm_gen_mix)
                 && Result.typespec().is_float_based());
     int num_components = type.aggregate;
     int x_components   = X.typespec().aggregate();
-    bool derivs        = (Result.has_derivs()
+    bool derivs = (Result.has_derivs()
                    && (A.has_derivs() || B.has_derivs() || X.has_derivs()));
 
     llvm::Value* one         = rop.ll.constant(1.0f);
@@ -1964,9 +1964,10 @@ LLVMGEN(llvm_gen_matrix)
     } else {
         if (nfloats == 1) {
             for (int i = 0; i < 16; i++) {
-                llvm::Value* src_val
-                    = ((i % 4) == (i / 4)) ? rop.llvm_load_value(
-                          *rop.opargsym(op, 1 + using_space))
+                llvm::Value* src_val = ((i % 4) == (i / 4))
+                                           ? rop.llvm_load_value(
+                                                 *rop.opargsym(op,
+                                                               1 + using_space))
                                            : rop.ll.constant(0.0f);
                 rop.llvm_store_value(src_val, Result, 0, i);
             }
@@ -2208,7 +2209,7 @@ LLVMGEN(llvm_gen_compare_op)
     int num_components = std::max(A.typespec().aggregate(),
                                   B.typespec().aggregate());
     bool float_based   = A.typespec().is_float_based()
-                       || B.typespec().is_float_based();
+                         || B.typespec().is_float_based();
     TypeDesc cast(float_based ? TypeDesc::FLOAT : TypeDesc::UNKNOWN);
 
     llvm::Value* final_result = 0;
@@ -3271,9 +3272,9 @@ LLVMGEN(llvm_gen_noise)
         llvm::outs() << "    " << *args[i] << "\n";
 #endif
 
-    llvm::Value* r
-        = rop.ll.call_function(funcname.c_str(),
-                               cspan<llvm::Value*>(args, args + nargs));
+    llvm::Value* r = rop.ll.call_function(funcname.c_str(),
+                                          cspan<llvm::Value*>(args,
+                                                              args + nargs));
     if (outdim == 1 && !derivs) {
         // Just plain float (no derivs) returns its value
         rop.llvm_store_value(r, Result);
@@ -3318,9 +3319,9 @@ LLVMGEN(llvm_gen_getattribute)
     bool array_lookup  = rop.opargsym(op, nargs - 2)->typespec().is_int();
     bool object_lookup = rop.opargsym(op, 2)->typespec().is_string()
                          && nargs >= 4;
-    int object_slot = (int)object_lookup;
-    int attrib_slot = object_slot + 1;
-    int index_slot  = array_lookup ? nargs - 2 : 0;
+    int object_slot    = (int)object_lookup;
+    int attrib_slot    = object_slot + 1;
+    int index_slot     = array_lookup ? nargs - 2 : 0;
 
     Symbol& Result = *rop.opargsym(op, 0);
     Symbol& ObjectName

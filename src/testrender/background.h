@@ -66,7 +66,7 @@ struct Background {
                 values[i] = cb(map(x + 0.5f, y + 0.5f), data);
                 cols[i]   = std::max(std::max(values[i].x, values[i].y),
                                      values[i].z)
-                          + ((x > 0) ? cols[i - 1] : 0.0f);
+                            + ((x > 0) ? cols[i - 1] : 0.0f);
             }
             rows[y] = cols[i - 1] + ((y > 0) ? rows[y - 1] : 0.0f);
             // normalize the pdf for this scanline (if it was non-zero)

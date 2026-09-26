@@ -263,7 +263,7 @@ local machine.
 
 2. Edit, compile, and test your changes. Run clang-format (see the
 instructions on coding style below). Our current formatting standard,
-as checked by our CI, uses clang-format 17.0.
+as checked by our CI, uses clang-format 22.0.
 
 3. Push your changes to your fork (each unrelated pull request to a separate
 "topic branch", please).
@@ -321,7 +321,7 @@ file in which it appears.
 
 #### Formatting
 
-We use [clang-format](https://clang.llvm.org/docs/ClangFormat.html) v17
+We use [clang-format](https://clang.llvm.org/docs/ClangFormat.html) v22
 to uniformly format our source code prior to PR submission. Make sure that
 clang-format is installed on your local machine, and just run
 

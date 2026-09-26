@@ -149,8 +149,8 @@ struct MxGeneralizedSchlickParams : public MxMicrofacetBaseParams {
                    + Vec2(-36.11f, 54.9f) * x2 * y
                    + Vec2(15.86f, 300.2f) * x * y2
                    + Vec2(33.37f, -285.1f) * x2 * y2;
-        float a = OIIO::clamp(num.x / den.x, 0.0f, 1.0f);
-        float b = OIIO::clamp(num.y / den.y, 0.0f, 1.0f);
+        float a  = OIIO::clamp(num.x / den.x, 0.0f, 1.0f);
+        float b  = OIIO::clamp(num.y / den.y, 0.0f, 1.0f);
         return reflection_tint * (f0 * a + f90 * b);
     }
 };
@@ -530,8 +530,8 @@ struct MediumStack {
             return false;
         }
 
-        Vec3 weighted_sigma_s = path_weight * current_params.sigma_s
-                                / current_params.sigma_t;
+        Vec3 weighted_sigma_s    = path_weight * current_params.sigma_s
+                                   / current_params.sigma_t;
         float channel_weights[3] = { weighted_sigma_s.x, weighted_sigma_s.y,
                                      weighted_sigma_s.z };
 
@@ -573,8 +573,8 @@ struct MediumStack {
 
         Color3 density = scatter ? (current_params.sigma_t * tr) : tr;
         float pdf      = density.x * channel_weights[0]
-                    + density.y * channel_weights[1]
-                    + density.z * channel_weights[2];
+                         + density.y * channel_weights[1]
+                         + density.z * channel_weights[2];
 
         if (pdf <= 0.0f) {
             return false;

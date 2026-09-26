@@ -30,10 +30,10 @@ ShaderMaster::~ShaderMaster()
     size_t symmem     = vectorbytes(m_symbols);
     size_t defaultmem = vectorbytes(m_idefaults) + vectorbytes(m_fdefaults)
                         + vectorbytes(m_sdefaults);
-    size_t constmem = vectorbytes(m_iconsts) + vectorbytes(m_fconsts)
-                      + vectorbytes(m_sconsts);
-    size_t totalmem = (opmem + argmem + symmem + defaultmem + constmem
-                       + sizeof(ShaderMaster));
+    size_t constmem   = vectorbytes(m_iconsts) + vectorbytes(m_fconsts)
+                        + vectorbytes(m_sconsts);
+    size_t totalmem   = (opmem + argmem + symmem + defaultmem + constmem
+                         + sizeof(ShaderMaster));
     {
         ShadingSystemImpl& ss(shadingsys());
         OIIO::spin_lock lock(ss.m_stat_mutex);
@@ -184,10 +184,10 @@ ShaderMaster::resolve_syms()
     size_t symmem     = vectorbytes(m_symbols);
     size_t defaultmem = vectorbytes(m_idefaults) + vectorbytes(m_fdefaults)
                         + vectorbytes(m_sdefaults);
-    size_t constmem = vectorbytes(m_iconsts) + vectorbytes(m_fconsts)
-                      + vectorbytes(m_sconsts);
-    size_t totalmem = (opmem + argmem + symmem + defaultmem + constmem
-                       + sizeof(ShaderMaster));
+    size_t constmem   = vectorbytes(m_iconsts) + vectorbytes(m_fconsts)
+                        + vectorbytes(m_sconsts);
+    size_t totalmem   = (opmem + argmem + symmem + defaultmem + constmem
+                         + sizeof(ShaderMaster));
     {
         ShadingSystemImpl& ss(shadingsys());
         OIIO::spin_lock lock(ss.m_stat_mutex);

@@ -1816,9 +1816,9 @@ public:
                 // std::sort can call 'rank' multiple times, and we can't use an
                 // address to store the actual count (as we are sorting!).
                 userstructs = 0;
-                for (Candidates::const_reverse_iterator i
-                     = m_candidates.rbegin(),
-                     e = m_candidates.rend();
+                for (Candidates::const_reverse_iterator
+                         i = m_candidates.rbegin(),
+                         e = m_candidates.rend();
                      i != e; ++i) {
                     if (i->rtype.is_structure_based() && ++userstructs > 1)
                         break;

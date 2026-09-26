@@ -1956,7 +1956,7 @@ template<typename ConstDataT, int WidthT> struct UniformAsWideImpl {
     explicit OSL_FORCEINLINE UniformAsWideImpl(const void* ptr_uniform_data,
                                                int derivIndex = 0)
         : m_ref_uniform_data(
-            reinterpret_cast<ConstDataT*>(ptr_uniform_data)[derivIndex])
+              reinterpret_cast<ConstDataT*>(ptr_uniform_data)[derivIndex])
     {
     }
 
@@ -2471,7 +2471,7 @@ template<typename DataT, int WidthT> struct Masked {
     explicit OSL_FORCEINLINE Masked(void* ptr_wide_data, Mask<WidthT> mask,
                                     DerivIndexT derivIndex = DerivIndexT {})
         : m_ref_wide_data(
-            *pvt::block_cast<DataT, WidthT>(ptr_wide_data, derivIndex))
+              *pvt::block_cast<DataT, WidthT>(ptr_wide_data, derivIndex))
         , m_mask(mask)
     {
     }
@@ -2562,7 +2562,7 @@ struct Masked<ElementT[ArrayLenT], WidthT> {
     explicit OSL_FORCEINLINE Masked(void* ptr_wide_data, Mask<WidthT> mask,
                                     DerivIndexT derivIndex = DerivIndexT {})
         : m_array_of_wide_data(&pvt::block_cast<ElementType, WidthT>(
-            ptr_wide_data)[ArrayLen * derivIndex])
+              ptr_wide_data)[ArrayLen * derivIndex])
         , m_mask(mask)
     {
     }
@@ -2632,8 +2632,8 @@ template<typename ElementT, int WidthT> struct Masked<ElementT[], WidthT> {
                                     Mask<WidthT> mask,
                                     DerivIndexT derivIndex = DerivIndexT {})
         : m_array_of_wide_data(
-            pvt::assume_aligned(&pvt::block_cast<ElementType, WidthT>(
-                ptr_wide_data)[array_length * derivIndex]))
+              pvt::assume_aligned(&pvt::block_cast<ElementType, WidthT>(
+                  ptr_wide_data)[array_length * derivIndex]))
         , m_array_length(array_length)
         , m_mask(mask)
     {
@@ -2720,8 +2720,7 @@ struct MaskedDeriv : public Masked<DataT, WidthT> {
     template<typename FirstT, typename... ListT,
              std::enable_if_t<std::is_same<typename std::decay<FirstT>::type,
                                            MaskedDeriv>::value,
-                              bool>
-             = true>
+                              bool> = true>
     OSL_FORCEINLINE MaskedDeriv(FirstT&& first, ListT&&... argList)
         : Masked<DataT, WidthT>(std::forward<FirstT>(first),
                                 std::forward<ListT>(argList)...)
@@ -2732,8 +2731,7 @@ struct MaskedDeriv : public Masked<DataT, WidthT> {
     template<typename FirstT, typename... ListT,
              std::enable_if_t<!std::is_same<typename std::decay<FirstT>::type,
                                             MaskedDeriv>::value,
-                              bool>
-             = true>
+                              bool> = true>
     OSL_FORCEINLINE MaskedDeriv(FirstT&& first, ListT&&... argList)
         : Masked<DataT, WidthT>(std::forward<FirstT>(first),
                                 std::forward<ListT>(argList)...,
@@ -2794,8 +2792,7 @@ foreach_unique(Wide<DataT, WidthT> wdata, Mask<WidthT> data_mask, FunctorT f)
         OSL_FORCEINLINE_BLOCK
         {
             OSL_OMP_PRAGMA(omp simd simdlen(WidthT)
-                               reduction(|
-                                         : matching_lanes_bits))
+                               reduction(| : matching_lanes_bits))
             for (int lane = 0; lane < WidthT; ++lane) {
                 // NOTE: the comparison ignores the remaining_mask
                 bool lane_matches = (lead_data == wdata[lane]);
@@ -3184,8 +3181,7 @@ template<typename DataT, int DerivIndexT> struct RefDeriv : public Ref<DataT> {
     template<typename FirstT, typename... ListT,
              std::enable_if_t<!std::is_same<typename std::decay<FirstT>::type,
                                             RefDeriv>::value,
-                              bool>
-             = true>
+                              bool> = true>
     explicit OSL_FORCEINLINE RefDeriv(FirstT&& first, ListT&&... argList)
         : Ref<DataT>(std::forward<FirstT>(first),
                      std::forward<ListT>(argList)...,

@@ -83,10 +83,9 @@ OSL_SHADEOP OSL_HOSTDEVICE void*
 osl_allocate_closure_component(OpaqueExecContextPtr oec, int id, int size)
 {
     // Allocate the component and the mul back to back
-    const size_t needed = sizeof(ClosureComponent) + size;
-    ClosureComponent* comp
-        = (ClosureComponent*)rs_allocate_closure(oec, needed,
-                                                 alignof(ClosureComponent));
+    const size_t needed    = sizeof(ClosureComponent) + size;
+    ClosureComponent* comp = (ClosureComponent*)
+        rs_allocate_closure(oec, needed, alignof(ClosureComponent));
     if (comp) {
         comp->id = id;
         comp->w  = Color3(1.0f);
@@ -104,10 +103,9 @@ osl_allocate_weighted_closure_component(OpaqueExecContextPtr oec, int id,
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;
     // Allocate the component and the mul back to back
-    const size_t needed = sizeof(ClosureComponent) + size;
-    ClosureComponent* comp
-        = (ClosureComponent*)rs_allocate_closure(oec, needed,
-                                                 alignof(ClosureComponent));
+    const size_t needed    = sizeof(ClosureComponent) + size;
+    ClosureComponent* comp = (ClosureComponent*)
+        rs_allocate_closure(oec, needed, alignof(ClosureComponent));
     if (comp) {
         comp->id = id;
         comp->w  = *w;

@@ -1049,8 +1049,8 @@ OptixGridRenderer::processPrintfBuffer(void* buffer_data, size_t buffer_size)
                         format_end_found = true;
                         break;
                     case 's':
-                        src = (src + sizeof(uint64_t) - 1)
-                              & ~(sizeof(uint64_t) - 1);
+                        src               = (src + sizeof(uint64_t) - 1)
+                                            & ~(sizeof(uint64_t) - 1);
                         uint64_t str_hash = *reinterpret_cast<const uint64_t*>(
                             &ptr[src]);
                         ustring str = ustring::from_hash(str_hash);

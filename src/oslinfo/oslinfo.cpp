@@ -190,8 +190,8 @@ oslinfo(const std::string& name)
             for (size_t f = 0; f < p->fields.size(); ++f) {
                 if (f)
                     std::cout << ", ";
-                std::string fieldname = p->name.string() + '.'
-                                        + p->fields[f].string();
+                std::string fieldname            = p->name.string() + '.'
+                                                   + p->fields[f].string();
                 const OSLQuery::Parameter* field = g.getparam(fieldname);
                 if (field)
                     std::cout << field->type.c_str() << ' ' << p->fields[f];

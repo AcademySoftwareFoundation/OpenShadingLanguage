@@ -241,8 +241,8 @@ initialize_buffer(uint8_t* const buffer, uint32_t buf_size, uint32_t page_size,
     org.additional_bytes_required = 0;
     org.exceeded_page_size        = 0;
     org.free_pos                  = org.calc_end_of_page_infos()
-                   // Pre-allocate 1 page per thread
-                   + org.page_size * org.thread_count;
+                                    // Pre-allocate 1 page per thread
+                                    + org.page_size * org.thread_count;
 
     if (org.free_pos > org.buf_size) {
         return false;

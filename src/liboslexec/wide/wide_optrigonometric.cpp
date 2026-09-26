@@ -188,7 +188,7 @@ __OSL_OP3(sincos, Wdf, Wdf, Wf)(void* theta_, void* rsine_, void* rcosine_)
             float rcosine;
             impl_sincos(theta.val(), rsine, rcosine);
             wrsine[lane]   = Dual2<float>(rsine, rcosine * theta.dx(),
-                                        rcosine * theta.dy());
+                                          rcosine * theta.dy());
             wrcosine[lane] = rcosine;
         }
     }
@@ -214,8 +214,8 @@ __OSL_MASKED_OP3(sincos, Wdf, Wdf, Wf)(void* theta_, void* rsine_,
                 float rcosine;
                 impl_sincos(theta.val(), rsine, rcosine);
                 wrsine[ActiveLane(lane)]   = Dual2<float>(rsine,
-                                                        rcosine * theta.dx(),
-                                                        rcosine * theta.dy());
+                                                          rcosine * theta.dx(),
+                                                          rcosine * theta.dy());
                 wrcosine[ActiveLane(lane)] = rcosine;
             }
         }
@@ -292,7 +292,7 @@ __OSL_OP3(sincos, Wdf, Wdf, Wdf)(void* theta_, void* rsine_, void* rcosine_)
             float rcosine;
             impl_sincos(theta.val(), rsine, rcosine);
             wrsine[lane]   = Dual2<float>(rsine, rcosine * theta.dx(),
-                                        rcosine * theta.dy());
+                                          rcosine * theta.dy());
             wrcosine[lane] = Dual2<float>(rcosine, -rsine * theta.dx(),
                                           -rsine * theta.dy());
         }
@@ -319,8 +319,8 @@ __OSL_MASKED_OP3(sincos, Wdf, Wdf, Wdf)(void* theta_, void* rsine_,
                 float rcosine;
                 impl_sincos(theta.val(), rsine, rcosine);
                 wrsine[ActiveLane(lane)]   = Dual2<float>(rsine,
-                                                        rcosine * theta.dx(),
-                                                        rcosine * theta.dy());
+                                                          rcosine * theta.dx(),
+                                                          rcosine * theta.dy());
                 wrcosine[ActiveLane(lane)] = Dual2<float>(rcosine,
                                                           -rsine * theta.dx(),
                                                           -rsine * theta.dy());
@@ -421,8 +421,8 @@ __OSL_MASKED_OP3(sincos, Wdv, Wdv, Wv)(void* theta_, void* rsine_,
                 Vec3 rcosine;
                 impl_sincos(theta.val(), rsine, rcosine);
                 wrsine[ActiveLane(lane)]   = Dual2<Vec3>(rsine,
-                                                       rcosine * theta.dx(),
-                                                       rcosine * theta.dy());
+                                                         rcosine * theta.dx(),
+                                                         rcosine * theta.dy());
                 wrcosine[ActiveLane(lane)] = rcosine;
             }
         }
@@ -499,7 +499,7 @@ __OSL_OP3(sincos, Wdv, Wdv, Wdv)(void* theta_, void* rsine_, void* rcosine_)
             Vec3 rcosine;
             impl_sincos(theta.val(), rsine, rcosine);
             wrsine[lane]   = Dual2<Vec3>(rsine, rcosine * theta.dx(),
-                                       rcosine * theta.dy());
+                                         rcosine * theta.dy());
             wrcosine[lane] = Dual2<Vec3>(rcosine, -rsine * theta.dx(),
                                          -rsine * theta.dy());
         }
@@ -526,8 +526,8 @@ __OSL_MASKED_OP3(sincos, Wdv, Wdv, Wdv)(void* theta_, void* rsine_,
                 Vec3 rcosine;
                 impl_sincos(theta.val(), rsine, rcosine);
                 wrsine[ActiveLane(lane)]   = Dual2<Vec3>(rsine,
-                                                       rcosine * theta.dx(),
-                                                       rcosine * theta.dy());
+                                                         rcosine * theta.dx(),
+                                                         rcosine * theta.dy());
                 wrcosine[ActiveLane(lane)] = Dual2<Vec3>(rcosine,
                                                          -rsine * theta.dx(),
                                                          -rsine * theta.dy());

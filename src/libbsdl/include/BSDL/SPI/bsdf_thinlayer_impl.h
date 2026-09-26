@@ -17,7 +17,9 @@ BSDL_ENTER_NAMESPACE
 namespace spi {
 
 BSDL_INLINE_METHOD
-ThinFresnel::ThinFresnel(float eta) : eta(CLAMP(eta, IOR_MIN, IOR_MAX)) {}
+ThinFresnel::ThinFresnel(float eta) : eta(CLAMP(eta, IOR_MIN, IOR_MAX))
+{
+}
 
 BSDL_INLINE_METHOD float
 ThinFresnel::eval(const float c) const
@@ -339,11 +341,9 @@ template<typename T>
 BSDL_INLINE_METHOD
 ThinLayerLobe<BSDF_ROOT>::ThinLayerLobe(T* lobe, const BsdfGlobals& globals,
                                         const Data& data)
-    :
-
-    Base(lobe, globals.visible_normal(data.N), data.T,
-         globals.regularize_roughness(CLAMP(data.roughness, 0.0f, 1.0f)),
-         globals.lambda_0, true)
+    : Base(lobe, globals.visible_normal(data.N), data.T,
+           globals.regularize_roughness(CLAMP(data.roughness, 0.0f, 1.0f)),
+           globals.lambda_0, true)
     , spec(Base::roughness(), data.anisotropy, data.IOR, data.thickness,
            data.prob_clamp, globals.wave(data.sigma_t))
     ,

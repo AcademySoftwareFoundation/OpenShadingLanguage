@@ -262,7 +262,7 @@ ASTNode::emitcode(const char* opname, Symbol* arg0, Symbol* arg1, Symbol* arg2,
 {
     Symbol* args[4] = { arg0, arg1, arg2, arg3 };
     size_t nargs    = (arg0 != NULL) + (arg1 != NULL) + (arg2 != NULL)
-                   + (arg3 != NULL);
+                      + (arg3 != NULL);
     return m_compiler->emitcode(opname, nargs, args, this);
 }
 
@@ -830,11 +830,11 @@ ASTvariable_declaration::codegen_initializer(ref init, Symbol* sym)
                 = static_cast<ASTcompound_initializer*>(init.get());
             init = cinit->initlist();
             if (cinit->canconstruct()) {
-                bool paraminit
-                    = (m_compiler->codegen_method()
-                           != m_compiler->main_method_name()
-                       && (m_sym->symtype() == SymTypeParam
-                           || m_sym->symtype() == SymTypeOutputParam));
+                bool paraminit = (m_compiler->codegen_method()
+                                      != m_compiler->main_method_name()
+                                  && (m_sym->symtype() == SymTypeParam
+                                      || m_sym->symtype()
+                                             == SymTypeOutputParam));
                 if (paraminit) {
                     // For parameter initialization, don't really generate ops if it
                     // can be statically initialized.
@@ -1773,16 +1773,14 @@ ASTfunction_call::argwrite(int arg) const
     if (is_user_function()) {
         // assume all are readable except return value
         if (typespec().is_void()) {
-            ASTvariable_declaration* formal
-                = (ASTvariable_declaration*)list_nth(user_function()->formals(),
-                                                     arg);
+            ASTvariable_declaration* formal = (ASTvariable_declaration*)
+                list_nth(user_function()->formals(), arg);
             return formal->is_output();
         } else {
             if (arg == 0)
                 return true;  // return value always writes
-            ASTvariable_declaration* formal
-                = (ASTvariable_declaration*)list_nth(user_function()->formals(),
-                                                     arg - 1);
+            ASTvariable_declaration* formal = (ASTvariable_declaration*)
+                list_nth(user_function()->formals(), arg - 1);
             return formal->is_output();
         }
     } else {  // built-in function

@@ -151,7 +151,9 @@ BatchedBackendLLVM::BatchedBackendLLVM(ShadingSystemImpl& shadingsys,
 
 
 
-BatchedBackendLLVM::~BatchedBackendLLVM() {}
+BatchedBackendLLVM::~BatchedBackendLLVM()
+{
+}
 
 
 

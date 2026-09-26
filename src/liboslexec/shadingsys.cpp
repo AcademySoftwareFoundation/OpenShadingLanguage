@@ -374,10 +374,11 @@ ShadingSystem::BatchedExecutor<WidthT>::execute_layer(
     void* output_base_ptr, ustring layername)
 {
     int layernumber = m_shading_system.find_layer(*ctx.group(), layername);
-    return (layernumber >= 0) ? ctx.batched<WidthT>().execute_layer(
-               batch_size, wide_shadeindex, globals_batch, userdata_base_ptr,
-               output_base_ptr, layernumber)
-                              : false;
+    return (layernumber >= 0)
+               ? ctx.batched<WidthT>().execute_layer(
+                     batch_size, wide_shadeindex, globals_batch,
+                     userdata_base_ptr, output_base_ptr, layernumber)
+               : false;
 }
 
 template<int WidthT>
@@ -391,10 +392,11 @@ ShadingSystem::BatchedExecutor<WidthT>::execute_layer(
     OSL_ASSERT(symbol);
     const Symbol* sym = reinterpret_cast<const Symbol*>(symbol);
     int layernumber   = sym->layer();
-    return (layernumber >= 0) ? ctx.batched<WidthT>().execute_layer(
-               batch_size, wide_shadeindex, globals_batch, userdata_base_ptr,
-               output_base_ptr, layernumber)
-                              : false;
+    return (layernumber >= 0)
+               ? ctx.batched<WidthT>().execute_layer(
+                     batch_size, wide_shadeindex, globals_batch,
+                     userdata_base_ptr, output_base_ptr, layernumber)
+               : false;
 }
 #endif
 
@@ -1024,7 +1026,9 @@ register_JIT_Global(const char* global_var_name, void* global_var_addr)
     LLVM_Util::add_global_mapping(global_var_name, global_var_addr);
 }
 
-PerThreadInfo::PerThreadInfo() {}
+PerThreadInfo::PerThreadInfo()
+{
+}
 
 
 
@@ -3509,10 +3513,10 @@ ShadingSystemImpl::ShaderGroupBegin(string_view groupname, string_view usage,
     }
 
     if (err) {
-        std::string msg
-            = fmtformat("ShaderGroupBegin: error parsing group description: {}\n"
-                        "        group: {}",
-                        errdesc, g->name());
+        std::string msg = fmtformat(
+            "ShaderGroupBegin: error parsing group description: {}\n"
+            "        group: {}",
+            errdesc, g->name());
         if (errstatement.empty()) {
             size_t offset     = p.data() - groupspec.data();
             size_t begin_stmt = std::min(groupspec.find_last_of(';', offset),

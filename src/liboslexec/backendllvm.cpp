@@ -41,7 +41,9 @@ BackendLLVM::BackendLLVM(ShadingSystemImpl& shadingsys, ShaderGroup& group,
 
 
 
-BackendLLVM::~BackendLLVM() {}
+BackendLLVM::~BackendLLVM()
+{
+}
 
 
 
@@ -331,8 +333,8 @@ BackendLLVM::llvm_get_pointer(const Symbol& sym, int deriv,
         result = it->second;
         if (result) {
             TypeSpec elemtype = sym.typespec().elementtype();
-            result            = llvm_ptr_cast(result, llvm_typedesc(elemtype),
-                                              llnamefmt("cast_to_{}_", sym.typespec()));
+            result = llvm_ptr_cast(result, llvm_typedesc(elemtype),
+                                   llnamefmt("cast_to_{}_", sym.typespec()));
         }
         return result;
     } else {
@@ -823,11 +825,11 @@ BackendLLVM::llvm_assign_impl(Symbol& Result, Symbol& Src, int arrayindex,
                         = Src.is_constant()
                               ? llvm_load_constant_value(Src, a, i, basetype)
                               : llvm_load_value(
-                                  Src, 0,
-                                  Src.typespec().is_array() ? const_arrind
-                                                            : nullptr,
-                                  (Src.typespec().aggregate() == 1) ? 0 : i,
-                                  basetype);
+                                    Src, 0,
+                                    Src.typespec().is_array() ? const_arrind
+                                                              : nullptr,
+                                    (Src.typespec().aggregate() == 1) ? 0 : i,
+                                    basetype);
                     if (!src_val)
                         return false;
                     llvm_store_value(src_val, Result, 0, const_arrind, i);

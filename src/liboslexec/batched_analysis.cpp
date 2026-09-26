@@ -344,7 +344,7 @@ public:
             { &psg().shader2common, &psg().object2common, &psg().time });
 
         m_lookup[op_transform]  = Dependency { &is_transform_using_space,
-                                              syms_4_space };
+                                               syms_4_space };
         m_lookup[op_transformn] = Dependency { &is_transform_using_space,
                                                syms_4_space };
         m_lookup[op_transformv] = Dependency { &is_transform_using_space,
@@ -788,9 +788,7 @@ public:
         {
         }
 
-        OSL_FORCEINLINE Position()
-        { /* uninitialzied */
-        }
+        OSL_FORCEINLINE Position() { /* uninitialzied */ }
 
         Position(const Position&) = default;
 

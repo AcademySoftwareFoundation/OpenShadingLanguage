@@ -563,7 +563,7 @@ HairDiffuseLobe<BSDF_ROOT>::HairDiffuseLobe(T* lobe, const BsdfGlobals& globals,
 
     Power abs = globals.wave(data.absorption);
     color     = Power([&](int i) { return fast_exp(-abs[i] * d); },
-                  globals.lambda_0);
+                      globals.lambda_0);
 }
 
 template<typename BSDF_ROOT>
@@ -583,10 +583,10 @@ HairDiffuseLobe<BSDF_ROOT>::eval_impl(const Imath::V3f& wo,
         ecc2longrough(eccentricity, anisotropy));
     const float D_theta = PhysicalHairLobe<BSDF_ROOT>::Mp(sin_i, sin_o, cos_i,
                                                           cos_o, v);
-    const float D_phi   = fabsf(eccentricity) > 0.001f
-                              ? PhysicalHairLobe<BSDF_ROOT>::TrimmedLogistic(phi,
-                                                                             s)
-                              : 0.5f * ONEOVERPI;  // Isotropic
+    const float D_phi = fabsf(eccentricity) > 0.001f
+                            ? PhysicalHairLobe<BSDF_ROOT>::TrimmedLogistic(phi,
+                                                                           s)
+                            : 0.5f * ONEOVERPI;  // Isotropic
     return { wi, color, D_theta * D_phi, Base::roughness() };
 }
 

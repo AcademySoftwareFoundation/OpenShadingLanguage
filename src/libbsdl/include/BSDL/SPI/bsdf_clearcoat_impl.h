@@ -17,7 +17,9 @@ BSDL_ENTER_NAMESPACE
 namespace spi {
 
 BSDL_INLINE_METHOD
-PlasticFresnel::PlasticFresnel(float eta) : eta(CLAMP(eta, IOR_MIN, IOR_MAX)) {}
+PlasticFresnel::PlasticFresnel(float eta) : eta(CLAMP(eta, IOR_MIN, IOR_MAX))
+{
+}
 
 BSDL_INLINE_METHOD Power
 PlasticFresnel::eval(const float c) const

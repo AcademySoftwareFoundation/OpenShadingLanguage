@@ -116,8 +116,8 @@ void* __dso_handle = 0;  // necessary to avoid linkage issues in bitcode
 #        define OSL_SHADEOP \
             extern "C" OSL_LLVM_EXPORT __attribute__((always_inline))
 #    else
-    // Native compilation: export so generated shader DSOs can link against
-    // these symbols in liboslexec at load time.
+// Native compilation: export so generated shader DSOs can link against
+// these symbols in liboslexec at load time.
 #        define OSL_SHADEOP extern "C" OSL_DLL_EXPORT
 #    endif
 #endif

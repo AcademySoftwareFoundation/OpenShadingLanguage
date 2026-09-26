@@ -133,8 +133,8 @@ private:
                         const std::string& hotkey = "",
                         ACT trigger_action        = nullptr)
     {
-        QAction* act = new QAction(label.size() ? label.c_str() : name.c_str(),
-                                   this);
+        QAction* act  = new QAction(label.size() ? label.c_str() : name.c_str(),
+                                    this);
         actions[name] = act;
         if (hotkey.size())
             act->setShortcut(QString(hotkey.c_str()));

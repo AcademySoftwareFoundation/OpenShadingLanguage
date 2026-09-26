@@ -82,9 +82,9 @@ BSDL_INLINE_METHOD
 DielectricReflFront::DielectricReflFront(float cosNO, float roughness_index,
                                          float fresnel_index)
     : DielectricBSDF<DielectricFresnel>(
-        GGXDist(roughness_index, 0),
-        DielectricFresnel::from_table_index(fresnel_index, false), cosNO,
-        roughness_index, false, 1)
+          GGXDist(roughness_index, 0),
+          DielectricFresnel::from_table_index(fresnel_index, false), cosNO,
+          roughness_index, false, 1)
 {
 }
 
@@ -92,9 +92,9 @@ BSDL_INLINE_METHOD
 DielectricBothFront::DielectricBothFront(float cosNO, float roughness_index,
                                          float fresnel_index)
     : DielectricBSDF<DielectricFresnel>(
-        GGXDist(roughness_index, 0),
-        DielectricFresnel::from_table_index(fresnel_index, false), cosNO,
-        roughness_index, true, 1)
+          GGXDist(roughness_index, 0),
+          DielectricFresnel::from_table_index(fresnel_index, false), cosNO,
+          roughness_index, true, 1)
 {
 }
 
@@ -102,9 +102,9 @@ BSDL_INLINE_METHOD
 DielectricBothBack::DielectricBothBack(float cosNO, float roughness_index,
                                        float fresnel_index)
     : DielectricBSDF<DielectricFresnel>(
-        GGXDist(roughness_index, 0),
-        DielectricFresnel::from_table_index(fresnel_index, true), cosNO,
-        roughness_index, true, 1)
+          GGXDist(roughness_index, 0),
+          DielectricFresnel::from_table_index(fresnel_index, true), cosNO,
+          roughness_index, true, 1)
 {
 }
 
@@ -167,15 +167,15 @@ DielectricBSDF<Fresnel>::eval(Imath::V3f wo, Imath::V3f wi) const
         const float D  = d.D(Ht);
         const float G1 = d.G1(wo);
         float J        = (-cosHI * cosHO * SQR(f.refraction_eta()))
-                  / (wo.z * SQR(cosHI * f.refraction_eta() + cosHO));
+                         / (wo.z * SQR(cosHI * f.refraction_eta() + cosHO));
         if constexpr (BSDLConfig::use_bvn_refraction) {
             // Reflection optimized density
             const float D_refl_D = d.D_refl_D(wo, Ht);
             const float D_refl   = D_refl_D * D;
             float pdf            = D_refl * J * Pt;
             const Power out      = Ft
-                              * (d.G2_G1({ wi.x, wi.y, -wi.z }, wo) * G1
-                                 / (D_refl_D * Pt));
+                                   * (d.G2_G1({ wi.x, wi.y, -wi.z }, wo) * G1
+                                      / (D_refl_D * Pt));
             return { wi, out, pdf, 0 };
         } else {
             const Power out = Ft * (d.G2_G1({ wi.x, wi.y, -wi.z }, wo) / Pt);

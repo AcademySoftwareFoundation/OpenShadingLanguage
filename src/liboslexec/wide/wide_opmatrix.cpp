@@ -652,9 +652,8 @@ impl_get_varying_from_matrix_batched(BatchedShaderGlobals* bsg,
     OSL_FORCEINLINE_BLOCK
     {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
-                           reduction(|
-                                     : common_space_bits, shader_space_bits,
-                                       object_space_bits, named_space_bits))
+                           reduction(| : common_space_bits, shader_space_bits,
+                                     object_space_bits, named_space_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustringhash from = wFrom[lane];
             if (wMfrom.mask()[lane]) {
@@ -790,9 +789,8 @@ impl_get_varying_to_matrix_masked(BatchedShaderGlobals* bsg,
     OSL_FORCEINLINE_BLOCK
     {
         OSL_OMP_PRAGMA(omp simd simdlen(__OSL_WIDTH)
-                           reduction(|
-                                     : common_space_bits, shader_space_bits,
-                                       object_space_bits, named_space_bits))
+                           reduction(| : common_space_bits, shader_space_bits,
+                                     object_space_bits, named_space_bits))
         for (int lane = 0; lane < __OSL_WIDTH; ++lane) {
             ustringhash to = wTo[lane];
             if (wMto.mask()[lane]) {

@@ -31,7 +31,9 @@ BackendCpp::BackendCpp(ShadingSystemImpl& shadingsys, ShaderGroup& group,
 
 
 
-BackendCpp::~BackendCpp() {}
+BackendCpp::~BackendCpp()
+{
+}
 
 
 
@@ -952,8 +954,8 @@ BackendCpp::generate_layer_func(int layer)
             const bool src_agg = st.aggregate > 1;
             auto dcomp         = [&](int i) {
                 return dt.aggregate == TypeDesc::MATRIX44
-                                   ? fmtformat("{}[{}][{}]", dstagg, i / 4, i % 4)
-                                   : fmtformat("{}[{}]", dstagg, i);
+                           ? fmtformat("{}[{}][{}]", dstagg, i / 4, i % 4)
+                           : fmtformat("{}[{}]", dstagg, i);
             };
             auto sval = [&](int comp) -> std::string {
                 if (!src_agg)
@@ -2537,7 +2539,7 @@ cpp_gen_spline(BackendCpp& rop, int opnum)
     // Use result derivatives only if the result and an input both carry them.
     bool result_derivs = Result.has_derivs()
                          && (Value.has_derivs() || Knots.has_derivs());
-    std::string name = fmtformat("osl_{}_", op.opname());
+    std::string name   = fmtformat("osl_{}_", op.opname());
     if (result_derivs)
         name += "d";
     if (Result.typespec().is_float())
@@ -2558,9 +2560,10 @@ cpp_gen_spline(BackendCpp& rop, int opnum)
              == TypeDesc::VEC3)
         name += "v";
 
-    std::string knotcount
-        = has_knot_count ? rop.cpp_value_str(Knot_count)
-                         : fmtformat("{}", Knots.typespec().arraylength());
+    std::string knotcount = has_knot_count
+                                ? rop.cpp_value_str(Knot_count)
+                                : fmtformat("{}",
+                                            Knots.typespec().arraylength());
 
     // The x value is passed by void*; a constant x has no address, so
     // materialize it into a temp (cpp_void_ptr_arg handles const scalars).
@@ -2941,9 +2944,9 @@ cpp_gen_getattribute(BackendCpp& rop, int opnum)
     bool array_lookup  = rop.opargsym(op, nargs - 2)->typespec().is_int();
     bool object_lookup = rop.opargsym(op, 2)->typespec().is_string()
                          && nargs >= 4;
-    int object_slot = (int)object_lookup;
-    int attrib_slot = object_slot + 1;
-    int index_slot  = array_lookup ? nargs - 2 : 0;
+    int object_slot    = (int)object_lookup;
+    int attrib_slot    = object_slot + 1;
+    int index_slot     = array_lookup ? nargs - 2 : 0;
 
     Symbol& Result      = *rop.opargsym(op, 0);
     Symbol& ObjectName  = *rop.opargsym(op, object_slot);
@@ -3009,10 +3012,10 @@ bool
 cpp_gen_setmessage(BackendCpp& rop, int opnum)
 {
     Opcode& op(rop.inst()->ops()[opnum]);
-    Symbol& Name = *rop.opargsym(op, 0);
-    Symbol& Data = *rop.opargsym(op, 1);
-    std::string dataptr
-        = rop.cpp_void_ptr_arg(Data, fmtformat("___msgdata{}", opnum));
+    Symbol& Name        = *rop.opargsym(op, 0);
+    Symbol& Data        = *rop.opargsym(op, 1);
+    std::string dataptr = rop.cpp_void_ptr_arg(Data, fmtformat("___msgdata{}",
+                                                               opnum));
     rop.outputfmtln(
         "osl_setmessage((OSL::ShaderGlobals*)sg, {}, {}LL, {}, {}, {}ULL, {});",
         rop.cpp_spacename_pod(Name), cpp_message_type_packed(Data), dataptr,
@@ -4588,8 +4591,8 @@ cpp_gen_sincos(BackendCpp& rop, int opnum)
     }
 
     // Theta: by value for plain float (no derivs, not triple); else void*
-    bool theta_by_ptr = (theta_deriv && result_derivs)
-                        || Theta.typespec().is_triple();
+    bool theta_by_ptr     = (theta_deriv && result_derivs)
+                            || Theta.typespec().is_triple();
     std::string theta_arg = theta_by_ptr
                                 ? fmtformat("(void*)&{}", Theta.cpp_safe_name())
                                 : rop.cpp_value_str(Theta);

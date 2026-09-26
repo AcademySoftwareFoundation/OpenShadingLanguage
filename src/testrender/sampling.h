@@ -232,10 +232,10 @@ struct Sampler {
         seed += 4;  // advance depth for next call
         uint32_t scrambled_index = owen_scramble(index, hash(seed - 4))
                                    & 0xFFFFFF;
-        uint32_t result_x = scrambled_index;  // already reversed
-        uint32_t result_y = 0;
-        uint32_t result_z = 0;
-        uint32_t ymatrix  = 1;
+        uint32_t result_x        = scrambled_index;  // already reversed
+        uint32_t result_y        = 0;
+        uint32_t result_z        = 0;
+        uint32_t ymatrix         = 1;
         for (int c = 0; c < 24; c++) {
             uint32_t bit = (scrambled_index >> c) & 1;
             result_y ^= bit * ymatrix;

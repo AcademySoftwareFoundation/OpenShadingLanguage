@@ -507,7 +507,7 @@ scalar_gabor(const Dual2<Vec3>& P, const sfm::GaborUniformParams& gup,
             gup, gp, P);
     float gabor_variance = 1.0f
                            / (4.0f * sqrtf(2.0f) * (gup.a * gup.a * gup.a));
-    float scale = 1.0f / (3.0f * sqrtf(gabor_variance));
+    float scale          = 1.0f / (3.0f * sqrtf(gabor_variance));
     scale *= 0.5f;  // empirical -- make it fit in [-1..1]
 
     return result * scale;
@@ -523,10 +523,10 @@ scalar_gabor3(const Dual2<Vec3>& P, const sfm::GaborUniformParams& gup,
     if (FilterPolicyT::active)
         sfm::gabor_setup_filter(P, gp);
 
-        // Trade off between 3x code generation with compile time known seed value
-        // versus runtime seed value with dynamic masking to storing results.
-        // Normally we would choose compile time known values,
-        // but this is a large amount of code to let be duplicated 3 times.
+    // Trade off between 3x code generation with compile time known seed value
+    // versus runtime seed value with dynamic masking to storing results.
+    // Normally we would choose compile time known values,
+    // but this is a large amount of code to let be duplicated 3 times.
 #if OSL_GNUC_VERSION
     Dual2<Vec3> result = make_Vec3(
         sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, false /*periodic*/>(
@@ -566,7 +566,7 @@ scalar_gabor3(const Dual2<Vec3>& P, const sfm::GaborUniformParams& gup,
 #endif
     float gabor_variance = 1.0f
                            / (4.0f * sqrtf(2.0f) * (gup.a * gup.a * gup.a));
-    float scale = 1.0f / (3.0f * sqrtf(gabor_variance));
+    float scale          = 1.0f / (3.0f * sqrtf(gabor_variance));
     scale *= 0.5f;  // empirical -- make it fit in [-1..1]
 
     return result * scale;
@@ -588,7 +588,7 @@ scalar_pgabor(const Dual2<Vec3>& P, const Vec3& Pperiod,
                               0 /*seed*/>(gup, gp, P);
     float gabor_variance = 1.0f
                            / (4.0f * sqrtf(2.0f) * (gup.a * gup.a * gup.a));
-    float scale = 1.0f / (3.0f * sqrtf(gabor_variance));
+    float scale          = 1.0f / (3.0f * sqrtf(gabor_variance));
     scale *= 0.5f;  // empirical -- make it fit in [-1..1]
 
     return result * scale;
@@ -606,10 +606,10 @@ scalar_pgabor3(const Dual2<Vec3>& P, const Vec3& Pperiod,
     if (FilterPolicyT::active)
         sfm::gabor_setup_filter(P, gp);
 
-        // Trade off between 3x code generation with compile time known seed value
-        // versus runtime seed value with dynamic masking to storing results.
-        // Normally we would choose compile time known values,
-        // but this is a large amount of code to let be duplicated 3 times.
+    // Trade off between 3x code generation with compile time known seed value
+    // versus runtime seed value with dynamic masking to storing results.
+    // Normally we would choose compile time known values,
+    // but this is a large amount of code to let be duplicated 3 times.
 #if OSL_GNUC_VERSION
     Dual2<Vec3> result = make_Vec3(
         sfm::gabor_evaluate<AnisotropicT, FilterPolicyT, true /*periodic*/,
@@ -649,7 +649,7 @@ scalar_pgabor3(const Dual2<Vec3>& P, const Vec3& Pperiod,
 #endif
     float gabor_variance = 1.0f
                            / (4.0f * sqrtf(2.0f) * (gup.a * gup.a * gup.a));
-    float scale = 1.0f / (3.0f * sqrtf(gabor_variance));
+    float scale          = 1.0f / (3.0f * sqrtf(gabor_variance));
     scale *= 0.5f;  // empirical -- make it fit in [-1..1]
 
     return result * scale;

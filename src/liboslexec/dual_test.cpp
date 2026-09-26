@@ -130,8 +130,7 @@ main(int /*argc*/, char* /*argv*/[])
     Benchmarker bench;
     Dual2f v(1.5f, 0.01f, 0.01f);
     clobber(v);
-    bench(
-        "-Dual2f", [&](const Dual2f& v) { return DoNotOptimize(-v); }, v);
+    bench("-Dual2f", [&](const Dual2f& v) { return DoNotOptimize(-v); }, v);
     bench(
         "fast_neg(Dual2f)",
         [&](const Dual2f& v) { return DoNotOptimize(fast_neg(v)); }, v);

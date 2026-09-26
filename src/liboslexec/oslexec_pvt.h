@@ -1483,11 +1483,11 @@ public:
         // outputs, or if it sets globals (but only if lazyglobals is off),
         // or if it has no downstream connections (but only if
         // lazyunconnected is off).
-        bool used
-            = (outgoing_connections() || renderer_outputs()
-               || (writes_globals() && !shadingsys().m_lazyglobals)
-               || (!outgoing_connections() && !shadingsys().m_lazyunconnected)
-               || (!shadingsys().m_lazyerror && has_error_op()));
+        bool used = (outgoing_connections() || renderer_outputs()
+                     || (writes_globals() && !shadingsys().m_lazyglobals)
+                     || (!outgoing_connections()
+                         && !shadingsys().m_lazyunconnected)
+                     || (!shadingsys().m_lazyerror && has_error_op()));
         return !used || merged_unused();
     }
 
@@ -1671,7 +1671,7 @@ private:
     {
         uintptr_t ptrbits = reinterpret_cast<uintptr_t>(ptr);
         uintptr_t offset  = OIIO::round_to_multiple(ptrbits, alignment)
-                           - ptrbits;
+                            - ptrbits;
         OSL_DASSERT((ptrbits + offset) % alignment == 0);
         return offset;
     }

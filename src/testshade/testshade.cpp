@@ -2173,9 +2173,10 @@ test_shade(int argc, const char* argv[])
     const size_t jbuffer_bytes = jbufferMB * 1024 * 1024;
     std::unique_ptr<uint8_t[]> jbuffer(new uint8_t[jbuffer_bytes]);
     constexpr int jbuffer_pagesize = 1024;
-    bool init_buffer_success
-        = OSL::journal::initialize_buffer(jbuffer.get(), jbuffer_bytes,
-                                          jbuffer_pagesize, num_threads);
+    bool init_buffer_success = OSL::journal::initialize_buffer(jbuffer.get(),
+                                                               jbuffer_bytes,
+                                                               jbuffer_pagesize,
+                                                               num_threads);
 
     if (!init_buffer_success) {
         std::cout << "Buffer allocation failed" << std::endl;

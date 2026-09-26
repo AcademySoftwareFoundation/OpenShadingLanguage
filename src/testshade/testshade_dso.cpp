@@ -30,8 +30,8 @@ main(int argc, const char* argv[])
 
     std::string pluginname = std::string("libtestshade.")
                              + Plugin::plugin_extension();
-    Plugin::Handle handle = Plugin::open(pluginname,
-                                         false /* NOT RTLD_GLOBAL! */);
+    Plugin::Handle handle  = Plugin::open(pluginname,
+                                          false /* NOT RTLD_GLOBAL! */);
     if (!handle) {
         std::cerr << "Could not open " << pluginname << "\n";
         exit(1);

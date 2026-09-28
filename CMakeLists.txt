@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-cmake_minimum_required (VERSION 3.19)
+cmake_minimum_required (VERSION 3.23)
 
 set (OSL_VERSION "1.16.0.0")
 set (OSL_VERSION_OVERRIDE "" CACHE STRING
@@ -28,15 +28,6 @@ if (${PROJECT_NAME}_SUPPORTED_RELEASE)
     set (${PROJECT_NAME}_DEV_RELEASE OFF)
 else ()
     set (${PROJECT_NAME}_DEV_RELEASE ON)
-endif ()
-
-# Set PROJECT_IS_TOP_LEVEL to ON if if this is the top level project (not
-# if this is included as a subproject of something else). Note that this is
-# handled automatically for CMake >= 3.21.
-if (CMAKE_VERSION VERSION_LESS 3.21)
-    if ("${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}")
-        set (PROJECT_IS_TOP_LEVEL ON)
-    endif ()
 endif ()
 
 # Set up module path for our own cmake modules and add some esential ones
@@ -83,6 +74,7 @@ message (STATUS "Project install prefix = ${CMAKE_INSTALL_PREFIX}")
 message (STATUS "Configuration types    = ${CMAKE_CONFIGURATION_TYPES}")
 message (STATUS "Build type             = ${CMAKE_BUILD_TYPE}")
 message (STATUS "Supported release      = ${${PROJECT_NAME}_SUPPORTED_RELEASE}")
+message (STATUS "Project is top level   = ${PROJECT_IS_TOP_LEVEL}")
 
 # Make the build area layout look a bit more like the final dist layout
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

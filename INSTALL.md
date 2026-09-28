@@ -19,7 +19,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED minimum dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.19 or newer (tested
+* Build system: [CMake](https://cmake.org/) 3.23 or newer (tested
   through 4.2)
 
 * A suitable C++17 compiler to build OSL itself, which may be any of:

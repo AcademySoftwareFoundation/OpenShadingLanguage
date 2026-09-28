@@ -314,6 +314,7 @@ jobs:
             python_action_ver: "3.9"
             simd: sse4.2
             setenvs: export CMAKE_BUILD_TYPE=Debug
+                            CMAKE_VERSION=3.23.0
                             LLVM_VERSION=14.0.0 LLVM_DISTRO_NAME=ubuntu-18.04
                             PUGIXML_VERSION=v1.8
 

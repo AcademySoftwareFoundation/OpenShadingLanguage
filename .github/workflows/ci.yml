@@ -245,6 +245,7 @@ jobs:
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.16
                             FREETYPE_VERSION=VER-2-14-3
+                            OSL_HARDENING=3
           - desc: latest releases clang18/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
@@ -284,6 +285,7 @@ jobs:
                             PTEX_VERSION=v2.4.3
                             FREETYPE_VERSION=VER-2-14-3
                             OpenImageIO_DEPENDENCY_BUILD_ALLOW_UNVERIFIED_TAGS=ON
+                            OSL_HARDENING=2
           - desc: clang14/C++17 llvm14 py3.10 avx2 batch-b16avx512
             nametag: linux-clang14
             runner: ubuntu-22.04

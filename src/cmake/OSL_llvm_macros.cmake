@@ -19,6 +19,10 @@ function ( EMBED_LLVM_BITCODE_IN_CPP src_list suffix output_name list_to_append_
         list ( APPEND src_bc_list ${src_bc} )
 
         get_property (CURRENT_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
+        # Exclude hardening definitions that are unsuitable for JIT/GPU code
+        if (HARDENING_DEFINITIONS)
+            list (FILTER CURRENT_DEFINITIONS EXCLUDE REGEX "${HARDENING_DEFINITIONS}")
+        endif ()
         message (VERBOSE "Current #defines are ${CURRENT_DEFINITIONS}")
         foreach (def ${CURRENT_DEFINITIONS})
             set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")

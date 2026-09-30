@@ -157,6 +157,13 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
               "${PROJECT_SOURCE_DIR}/src/cmake/cuda_compat/crt/math_functions.hpp")
     endif ()
 
+    # Load libstdc++ before OSL headers while CUDA's __noinline__ macro is hidden.
+    if (NOT WIN32 AND LLVM_VERSION VERSION_LESS 18.0)
+        set (CUDA_STDLIB_HEADER "${PROJECT_SOURCE_DIR}/src/cmake/cuda_compat/cuda_stdlib.h")
+        set (CLANG_CUDA_COMPAT_FLAGS -include "${CUDA_STDLIB_HEADER}")
+        list (APPEND exec_headers "${CUDA_STDLIB_HEADER}")
+    endif ()
+
     list (TRANSFORM IMATH_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
     list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
@@ -167,6 +174,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
     add_custom_command (OUTPUT ${bc_cuda}
         COMMAND ${LLVM_BC_GENERATOR}
             ${CUDA_COMPAT_INCLUDE}
+            ${CLANG_CUDA_COMPAT_FLAGS}
             "-I${OPTIX_INCLUDES}"
             "-I${CUDA_INCLUDES}"
             "-I${CMAKE_CURRENT_SOURCE_DIR}"

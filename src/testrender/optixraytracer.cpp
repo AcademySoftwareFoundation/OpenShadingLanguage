@@ -936,7 +936,15 @@ OptixRaytracer::get_texture_handle(ustring filename,
                                   filename);
             return (TextureHandle*)nullptr;
         }
+#if 1
+        // Workaround until OpenImageIO fix nmiplevels() call
+        int32_t nmiplevels = 0;
+        auto inp           = OIIO::ImageInput::open(filename.c_str());
+        while (inp->seek_subimage(0, nmiplevels))
+            nmiplevels++;
+#else
         int32_t nmiplevels = std::max(image.nmiplevels(), 1);
+#endif
         int32_t img_width  = image.xmax() + 1;
         int32_t img_height = image.ymax() + 1;
 
@@ -1001,7 +1009,7 @@ OptixRaytracer::get_texture_handle(ustring filename,
         tex_desc.filterMode          = cudaFilterModeLinear;
         tex_desc.readMode            = cudaReadModeElementType;
         tex_desc.normalizedCoords    = 1;
-        tex_desc.maxAnisotropy       = 1;
+        tex_desc.maxAnisotropy       = 16;
         tex_desc.maxMipmapLevelClamp = float(nmiplevels - 1);
         tex_desc.minMipmapLevelClamp = 0;
         tex_desc.mipmapFilterMode    = cudaFilterModeLinear;

@@ -226,15 +226,15 @@ jobs:
                             PUGIXML_VERSION=v1.9
                             CTEST_TEST_TIMEOUT=1800
                             OSL_CMAKE_FLAGS="-DOSL_TEST_BIG_TIMEOUT=1200"
-          - desc: latest releases gcc13/C++17 llvm20 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
+          - desc: latest releases gcc13/C++17 llvm18 oiio-rel exr3.5 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
             cc_compiler: gcc-14
             cxx_compiler: g++-14
             cxx_std: 17
             fmt_ver: 12.1.0
-            opencolorio_ver: v2.5.0
-            openexr_ver: v3.4.2
+            opencolorio_ver: v2.6.0
+            openexr_ver: v3.5.2
             openimageio_ver: release
             pybind11_ver: v3.0.1
             python_ver: "3.12"
@@ -245,15 +245,15 @@ jobs:
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.16
                             FREETYPE_VERSION=VER-2-14-3
-          - desc: latest releases clang18/C++17 llvm18 oiio-rel exr3.4 py3.12 avx2 batch-b16avx512
+          - desc: latest releases clang18/C++17 llvm18 oiio-rel exr3.5 py3.12 avx2 batch-b16avx512
             nametag: linux-latest-releases
             runner: ubuntu-24.04
             cc_compiler: clang
             cxx_compiler: clang++
             cxx_std: 17
             fmt_ver: 12.1.0
-            opencolorio_ver: v2.5.0
-            openexr_ver: v3.4.2
+            opencolorio_ver: v2.6.0
+            openexr_ver: v3.5.2
             openimageio_ver: release
             pybind11_ver: v3.0.1
             python_ver: "3.12"
@@ -264,7 +264,7 @@ jobs:
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.16
                             FREETYPE_VERSION=VER-2-14-3
-          - desc: bleeding edge gcc14/C++17 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
+          - desc: bleeding edge gcc14/C++20 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-24.04
             cc_compiler: gcc-14
@@ -475,7 +475,7 @@ jobs:
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
                             PUGIXML_VERSION=v1.14
-                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
+                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo;zstd"
                             LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
                             OPENIMAGEIO_UNITY=0
           - desc: Windows-2025 VS2026
@@ -483,13 +483,13 @@ jobs:
             nametag: windows-2025-vs2026
             generator: "Visual Studio 18 2026"
             python_ver: "3.12"
-            opencolorio_ver: v2.5.1
-            openexr_ver: v3.4.5
+            opencolorio_ver: v2.6.0
+            openexr_ver: v3.5.2
             openimageio_ver: release
             skip_tests: 1
             setenvs: export OSL_CMAKE_FLAGS="-DUSE_LLVM_BTCODE=ON"
                             PUGIXML_VERSION=v1.16
-                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo"
+                            OpenImageIO_BUILD_MISSING_DEPS="Freetype;TIFF;libdeflate;libjpeg-turbo;zstd"
                             LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
                             OPENIMAGEIO_UNITY=0
 

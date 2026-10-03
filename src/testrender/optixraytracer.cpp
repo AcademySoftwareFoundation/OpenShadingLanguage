@@ -1103,15 +1103,15 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     names.reserve(nxforms);
     xforms.reserve(nxforms);
 
-    for (auto &pair : m_named_xforms) {
+    for (auto& pair : m_named_xforms) {
         names.push_back(pair.first);
         xforms.push_back(*pair.second);
     }
 
     COPY_TO_DEVICE(params.xform_name_buffer, names.data(),
-                   sizeof(ustringhash)*nxforms);
+                   sizeof(ustringhash) * nxforms);
     COPY_TO_DEVICE(params.xform_buffer, xforms.data(),
-                   sizeof(Transformation)*nxforms);
+                   sizeof(Transformation) * nxforms);
     CUDA_SYNC_CHECK();
 
     // Mesh data

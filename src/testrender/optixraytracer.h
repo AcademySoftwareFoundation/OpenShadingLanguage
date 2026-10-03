@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include <OpenImageIO/imagecache.h>
 #include <OpenImageIO/ustring.h>
-
 
 #include <OSL/oslexec.h>
 
@@ -146,8 +144,6 @@ private:
     // CUdeviceptrs that need to be freed after we are done
     std::vector<CUdeviceptr> m_ptrs_to_free;
     std::vector<cudaArray_t> m_arrays_to_free;
-
-    std::shared_ptr<OIIO::ImageCache> cache;
 };
 
 

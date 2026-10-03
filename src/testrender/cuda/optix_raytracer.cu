@@ -245,6 +245,10 @@ __raygen__setglobals()
         OSL::pvt::test_str_2            = render_params.test_str_2;
     }
 
+    OSL::pvt::num_named_xforms  = render_params.num_named_xforms;
+    OSL::pvt::xform_name_buffer = render_params.xform_name_buffer;
+    OSL::pvt::xform_buffer      = render_params.xform_buffer;
+
     if (render_params.bg_id < 0)
         return;
 

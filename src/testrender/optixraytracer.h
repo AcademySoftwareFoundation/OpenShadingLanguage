@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <OpenImageIO/ustring.h>
 #include <OpenImageIO/imagecache.h>
+#include <OpenImageIO/ustring.h>
+
 
 #include <OSL/oslexec.h>
 

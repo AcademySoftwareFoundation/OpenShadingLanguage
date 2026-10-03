@@ -518,49 +518,51 @@ SimpleRaytracer::prepare_camera_spaces()
     Vec3 right = camera.cx.normalized();
     Vec3 up    = camera.cy.normalized();
 
-    Matrix44 camera_to_world = {right.x,      right.y,      right.z,      0,
-                                up.x,         up.y,         up.z,         0,
-                                camera.dir.x, camera.dir.y, camera.dir.z, 0,
-                                camera.eye.x, camera.eye.y, camera.eye.z, 1};
+    Matrix44 camera_to_world = { right.x,      right.y,      right.z,      0,
+                                 up.x,         up.y,         up.z,         0,
+                                 camera.dir.x, camera.dir.y, camera.dir.z, 0,
+                                 camera.eye.x, camera.eye.y, camera.eye.z, 1 };
 
-    name_transform("camera", camera_to_world );
+    name_transform("camera", camera_to_world);
 
     // Seems never used once moved to named transforms
     m_world_to_camera = camera_to_world.inverse();
-    Matrix44 M = m_world_to_camera;
-    float depthrange = (double)m_yon-(double)m_hither;
+    Matrix44 M        = m_world_to_camera;
+    float depthrange  = (double)m_yon - (double)m_hither;
+    // clang-format off
     if (m_projection == RS::Hashes::perspective) {
         float tanhalffov = tanf (0.5f * m_fov * M_PI/180.0);
-        Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
+        Matrix44 camera_to_screen ( 1/tanhalffov, 0, 0, 0,
                                     0, 1/tanhalffov, 0, 0,
                                     0, 0, m_yon/depthrange, 1,
                                     0, 0, -m_yon*m_hither/depthrange, 0);
         M = M * camera_to_screen;
     } else {
-        Matrix44 camera_to_screen (1, 0, 0, 0,
+        Matrix44 camera_to_screen ( 1, 0, 0, 0,
                                     0, 1, 0, 0,
                                     0, 0, 1/depthrange, 0,
                                     0, 0, -m_hither/depthrange, 1);
         M = M * camera_to_screen;
     }
-    name_transform("screen", M.inverse() );
+    name_transform("screen", M.inverse());
 
-    float aspect = (float)camera.yres / (float)camera.xres;
+    float aspect     = (float)camera.yres / (float)camera.xres;
     float screenleft = -1.0, screenwidth = 2.0;
-    float screenbottom = -1.0*aspect, screenheight = 2.0*aspect;
+    float screenbottom = -1.0 * aspect, screenheight = 2.0 * aspect;
     Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
                             0, 1/screenheight, 0, 0,
                             0, 0, 1, 0,
                             -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
     M = M * screen_to_ndc;
-    name_transform("NDC", M.inverse() );
+    name_transform("NDC", M.inverse());
 
     Matrix44 ndc_to_raster (camera.xres, 0, 0, 0,
                             0, camera.yres, 0, 0,
                             0, 0, 1, 0,
                             0, 0, 0, 1);
     M = M * ndc_to_raster;
-    name_transform("raster", M.inverse() );
+    name_transform("raster", M.inverse());
+    // clang-format on
 }
 
 

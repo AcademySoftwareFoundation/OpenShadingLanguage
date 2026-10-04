@@ -141,7 +141,7 @@ jobs:
             setenvs: export OSL_CMAKE_FLAGS="-DSANITIZE=address -DOSL_TEST_BIG_TIMEOUT=1200"
                             CMAKE_BUILD_TYPE=Debug
                             CTEST_TEST_TIMEOUT=1200
-                            CTEST_EXCLUSIONS="broken|noise-reg.regress|noise-gabor-reg.regress|example-.*deformer|spline-reg.regress.batched|osl-imageio"
+                            CTEST_EXCLUSIONS="broken|noise-reg.regress|noise-gabor-reg.regress|example-.*deformer|example-tinyrender|spline-reg.regress.batched|osl-imageio"
                             OSL_OPTIONS=llvm_debugging_symbols=1
                             TESTRENDER_AA=1
                             OSL_TESTSUITE_SKIP_DIFF=1

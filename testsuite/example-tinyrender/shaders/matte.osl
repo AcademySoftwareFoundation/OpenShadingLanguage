@@ -1,0 +1,18 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+surface
+matte
+    [[ string help = "Lambertian diffuse material" ]]
+(
+    float Kd = 1
+        [[  string help = "Diffuse scaling",
+            float min = 0, float max = 1 ]],
+    color Cs = 1
+        [[  string help = "Base color",
+            float min = 0, float max = 1 ]]
+  )
+{
+    Ci = Kd * Cs * diffuse (N);
+}

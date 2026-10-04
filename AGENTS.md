@@ -16,7 +16,7 @@ render time. C++17 codebase.
 **Core libraries**
 
 - `src/liboslcomp/` — Shader compiler. Flex/Bison lexer+parser → AST → `.oso`
-  bytecode. Entry point: `oslcomp.h`
+  bytecode. Entry point: `src/include/OSL/oslcomp.h`
 - `src/liboslexec/` — Shader execution engine. Loads `.oso`, optimizes shader
   groups, JIT-compiles to native via LLVM. Key files: `backendllvm.cpp`,
   `llvm_gen.cpp`, `llvm_ops.cpp`, `instance.cpp`. Contains `wide/`
@@ -70,8 +70,10 @@ By default, builds into `./build` and installs into `./dist`.
 - Test output lands in `build/testsuite/<testname>/`; references in
   `testsuite/<testname>/ref/`
 - For platform-specific diffs, add a variant ref (e.g. `out-win.txt`) rather
-  than overwriting
-- Be conservative loosening image diff thresholds — use the minimum needed
+  than overwriting; a test passes if its output matches any file in `ref/`
+  with the same extension
+- Be conservative loosening image diff thresholds (`failthresh`, `hardfail`,
+  `failpercent`, set per test in its `run.py`) — use the minimum needed
 - Check uploaded CI artifacts before changing references when local
   reproduction is unclear
 
@@ -164,6 +166,9 @@ OSL source → (Flex/Bison) → AST → (liboslcomp) → `.oso` bytecode → (li
 - Add a subsystem tag when it helps, e.g. `fix(exr):` or `perf(IBA):`.
 - Write commit messages and PR descriptions that explain why the change is
   needed, what behavior changes, and any non-obvious implementation choices.
+- After changing a dependency minimum version, a file or directory path, or a
+  build/test command, check `AGENTS.md` for statements about it and correct
+  any that are now wrong, as part of the same change.
 
 ## Spec-driven design
 

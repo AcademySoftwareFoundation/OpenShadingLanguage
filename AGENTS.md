@@ -20,7 +20,7 @@ render time. C++17 codebase.
 - `src/liboslexec/` — Shader execution engine. Loads `.oso`, optimizes shader
   groups, JIT-compiles to native via LLVM. Key files: `backendllvm.cpp`,
   `llvm_gen.cpp`, `llvm_ops.cpp`, `instance.cpp`. Contains `wide/`
-  subdirectory for SIMD batched execution (SSE2/AVX/AVX-512)
+  subdirectory for SIMD batched execution (SSE2/AVX/AVX2/AVX-512)
 - `src/liboslquery/` — Query compiled shader metadata and parameters
 - `src/liboslnoise/` — Noise function implementations
 - `src/libbsdl/` — BSDF/closure library
@@ -69,8 +69,6 @@ By default, builds into `./build` and installs into `./dist`.
 
 - Test output lands in `build/testsuite/<testname>/`; references in
   `testsuite/<testname>/ref/`
-- Read `testsuite/TESTSUITE-README.md` before updating references or
-  diagnosing failures
 - For platform-specific diffs, add a variant ref (e.g. `out-win.txt`) rather
   than overwriting
 - Be conservative loosening image diff thresholds — use the minimum needed
@@ -79,9 +77,10 @@ By default, builds into `./build` and installs into `./dist`.
 
 ## Code formatting and file conventions
 
-- `clang-format` enforced (`.clang-format`); CI rejects non-conforming code —
-  run `make clang-format` before committing
-- Lines ~80 cols; ASCII only in code and comments; `#pragma once` for headers
+- `clang-format` enforced (`.clang-format`: WebKit-based, 80-char line limit,
+  4-space indent); CI rejects non-conforming code — run `make clang-format`
+  before committing
+- ASCII only in code and comments; `#pragma once` for headers
 - New files: standard copyright + SPDX notice
 - `CamelCase` classes, `snake_case` locals, `ALL_CAPS` macros, `m_foo` private
   members
@@ -139,7 +138,7 @@ classes and headers from OIIO:
   `char*` strings.
 - Prefer `OSL::span` rather than passing raw pointers + a separate length, or
   passing a raw pointer with an implied (but not explicitly passed) length.
-  `OSL::cspan` is a synonmym when the underlying data is const/non-mutable.
+  `OSL::cspan` is a synonym when the underlying data is const/non-mutable.
   `OSL::span<std::byte>` or `OSL::cspan<std::byte>` can be used to represent
   contiguous untyped data. These are our equivalent of C++ `std::span`.
 - Use these guidelines always for new code, but do not churn existing code
@@ -152,14 +151,9 @@ classes and headers from OIIO:
 OSL source → (Flex/Bison) → AST → (liboslcomp) → `.oso` bytecode → (liboslexec) → LLVM IR → JIT native code
 
 
-## Code Style
-
-- clang-format config in `.clang-format` (WebKit-based, 80-char line limit, 4-space indent)
-- Run `make clang-format` before submitting changes
-
 ## Key Dependencies
 
-- **LLVM 14+** (JIT compilation), **OpenImageIO 2.5+** (textures, image I/O, utilities), **Imath 3.1+** (math types), **Flex/Bison** (parser generation), **pybind11** (Python bindings, optional)
+- **LLVM 14+** (JIT compilation), **OpenImageIO 3.0+** (textures, image I/O, utilities), **Imath 3.1+** (math types), **Flex/Bison** (parser generation), **pybind11 2.7+** or **nanobind 2.8+** (Python bindings, optional)
 
 ## Commits and PRs
 
@@ -182,16 +176,15 @@ to `docs/dev/specs/<NNN-feature-name>` and write that path to
 
 The speckit bash scripts expect a `specs/` directory at the project root. A
 symlink satisfies this without committing speckit infrastructure to the repo.
-This symlink is set up by the setup-agents script, and is not committed to
-the repo. All saved specs live in `docs/dev/specs`.
+This symlink is set up by the `.agents/setup-agent` script, and is not
+committed to the repo. All saved specs live in `docs/dev/specs`.
 
 ## AI policy
 
-Refer to `docs/dev/AI_Policy.md`.
-
 See `docs/dev/AI_Policy.md`. Key rule: if AI assistance contributed materially
-to a patch, the commit must include `Assisted-by: <TOOL> / <MODEL>`. The human
-author is responsible for understanding, testing, and defending all changes.
+to a patch, the commit and PR description must include
+`Assisted-by: <TOOL> / <MODEL>`. The human author is responsible for
+understanding, testing, and defending all changes.
 
 ## References
 

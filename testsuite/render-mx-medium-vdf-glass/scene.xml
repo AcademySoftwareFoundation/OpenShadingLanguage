@@ -1,5 +1,5 @@
 <World>
-   <Camera eye="50, 50, 300" dir="0,0,-1" fov="60" />
+   <Camera eye="50, 50, 300" dir="0,0,-1" fov="32.2042" />
    
    <ShaderGroup>color Cs 0.75 0.25 0.25; shader matte layer1;</ShaderGroup>
    <Quad corner="0, 0, 0" edge_x="0,100,0" edge_y="0,0,150" /> <!-- Left -->

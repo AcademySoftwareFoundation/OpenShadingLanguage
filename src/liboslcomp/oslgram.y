@@ -45,13 +45,15 @@ using namespace OSL::pvt;
 // This is the definition for the union that defines YYSTYPE
 %union
 {
-    int         i;  // For integer falues
+    int         i;  // For integer values
     float       f;  // For float values
     ASTNode    *n;  // Abstract Syntax Tree node
     const char *s;  // For string values -- guaranteed to be a ustring.c_str()
 }
 
 %{
+#define SRCLOC(yyloc) SrcLoc(oslcompiler->srcloc().filename, yyloc.first_line, yyloc.first_column, yyloc.last_line, yyloc.last_column)
+
 OSL_NAMESPACE_BEGIN
 namespace pvt {
 
@@ -184,7 +186,7 @@ shader_or_function_declaration
                                                          ustring($2), $7 /*formals*/,
                                                          $11 /*statements*/,
                                                          NULL /*metadata*/,
-                                                         @2.first_line);
+                                                         SRCLOC(@2));
                         oslcompiler->remember_function_decl (f);
                         f->add_meta (concat($4, $10));
                         $$ = f;
@@ -195,7 +197,7 @@ shader_or_function_declaration
                                                         ustring($2), $7 /*formals*/,
                                                         $11 /*statements*/,
                                                         concat($4,$10) /*meta*/);
-                        $$->sourceline (@2.first_line);
+                        $$->sourceloc(SRCLOC(@2));
                         if (oslcompiler->shader_is_defined()) {
                         yyerror (&yylloc, scanner, oslcompiler, YY_("Only one shader is allowed per file."));
                             delete $$;
@@ -227,7 +229,7 @@ formal_param
                                             t, ustring($3), $4 /*init*/,
                                             oslcompiler->declaring_shader_formals() /*isparam*/,
                                             false /*ismeta*/, is_output,
-                                            false /*instlist*/, @3.first_line);
+                                            false /*instlist*/, SRCLOC(@3));
                     if (! oslcompiler->declaring_shader_formals() && !is_output) {
                         // these are function formals, not shader formals,
                         var->sym()->readonly (true);
@@ -244,7 +246,7 @@ formal_param
                                             ustring($3), $5 /*init*/,
                                             oslcompiler->declaring_shader_formals() /*isparam*/,
                                             false /*ismeta*/, $1 /*isoutput*/,
-                                            true /* initlist */, @3.first_line);
+                                            true /* initlist */, SRCLOC(@3));
                     var->add_meta ($6);
                     $$ = var;
                 }
@@ -253,8 +255,7 @@ formal_param
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     if (! t.is_structure() && ! t.is_triple() && ! t.is_matrix())
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Can't use '= {{...}}' initializer "
                                               "except with arrays, structs, vectors, "
                                               "or matrix ({})", $3);
@@ -263,7 +264,7 @@ formal_param
                                             oslcompiler->declaring_shader_formals() /*isparam*/,
                                             false /*ismeta*/, $1 /*isoutput*/,
                                             true /* initializer list */,
-                                            @3.first_line);
+                                            SRCLOC(@3));
                     var->add_meta ($5);
                     $$ = var;
                 }
@@ -291,7 +292,7 @@ metadatum
                                            true /* ismeta */,
                                            false /* isoutput */,
                                            false /* initlist */,
-                                           @2.first_line);
+                                           SRCLOC(@2));
                     $$ = var;
                 }
         | simple_typename IDENTIFIER arrayspec initializer_list
@@ -299,15 +300,14 @@ metadatum
                     TypeDesc simple = osllextype ($1);
                     simple.arraylen = $3;
                     if (simple.arraylen < 1)
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Invalid array length for {}", $2);
                     TypeSpec t (simple, false);
                     auto var = new ASTvariable_declaration (oslcompiler, t, 
                                      ustring ($2), $4, false,
-                                     true /* ismeata */, false /* output */,
+                                     true /* ismeta */, false /* output */,
                                      true /* initializer list */,
-                                     @2.first_line);
+                                     SRCLOC(@2));
                     $$ = var;
                 }
         ;
@@ -329,7 +329,7 @@ function_declaration
                     auto f = new ASTfunction_declaration (oslcompiler,
                                                      oslcompiler->typespec_stack().top(),
                                                      ustring($2), $5, $8, NULL,
-                                                     @2.first_line);
+                                                     SRCLOC(@2));
                     oslcompiler->remember_function_decl (f);
                     f->add_meta ($7);
                     $$ = f;
@@ -343,12 +343,12 @@ struct_declaration
                     ustring name ($2);
                     Symbol *s = oslcompiler->symtab().clash (name);
                     if (s) {
-                        oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "\"{}\" already declared in this scope", name);
                         // FIXME -- print the file and line of the other definition
                     }
                     if (OIIO::Strutil::starts_with (name, "___")) {
-                        oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "\"{}\" : sorry, can't start with three underscores", name);
                     }
                     oslcompiler->symtab().new_struct (name);
@@ -380,8 +380,7 @@ typed_field
                     TypeSpec t = oslcompiler->current_typespec();
                     StructSpec *s = oslcompiler->symtab().current_struct();
                     if (s->lookup_field (name) >= 0)
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Field \"{}\" already exists in struct \"{}\"",
                                               name, s->name());
                     else
@@ -395,13 +394,11 @@ typed_field
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if (t.arraylength() < 1)
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Invalid array length for {}", name);
                     StructSpec *s = oslcompiler->symtab().current_struct();
                     if (s->lookup_field (name) >= 0)
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Field \"{}\" already exists in struct \"{}\"",
                                               name, s->name());
                     else
@@ -431,7 +428,7 @@ def_expression
                     $$ = new ASTvariable_declaration (oslcompiler,
                                       t, ustring($1), $2, false /*isparam*/,
                                       false /*ismeta*/, false /*isoutput*/,
-                                      false /*initlist*/, @1.first_line);
+                                      false /*initlist*/, SRCLOC(@1));
                 }
         | IDENTIFIER arrayspec initializer_list_opt
                 {
@@ -439,25 +436,23 @@ def_expression
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if ($2 < 1)
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Invalid array length for {}", $1);
                     $$ = new ASTvariable_declaration (oslcompiler, t,
                                  ustring($1), $3, false, false, false,
-                                 true /* initlist */, @1.first_line);
+                                 true /* initlist */, SRCLOC(@1));
                 }
         | IDENTIFIER initializer_list
                 {
                     TypeSpec t = oslcompiler->current_typespec();
                     if (! t.is_structure() && ! t.is_triple() && ! t.is_matrix())
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Can't use '= {{...}}' initializer "
                                               "except with arrays, struct, vectors, "
                                               "or matrix ({})", $1);
                     $$ = new ASTvariable_declaration (oslcompiler, t,
                                  ustring($1), $2, false, false, false,
-                                 true /* initlist */, @1.first_line);
+                                 true /* initlist */, SRCLOC(@1));
                 }
         ;
 
@@ -483,17 +478,16 @@ compound_initializer
         : '{' init_expression_list '}'
                 {
                     $$ = new ASTcompound_initializer (oslcompiler, $2);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         | '{' '}'
                 {
                     if (!oslcompiler->declaring_shader_formals())
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Empty compound initializers '{{ }}' "
                                               "only allowed for shader parameters.");
                     $$ = new ASTcompound_initializer (oslcompiler, nullptr);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         ;
 
@@ -571,8 +565,7 @@ arrayspec
         : '[' INT_LITERAL ']'
                 {
                     if ($2 < 1)
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Invalid array length ({})", $2);
                     $$ = $2;
                 }
@@ -599,8 +592,7 @@ typespec
                         oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
                     else {
                         oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
-                        oslcompiler->errorfmt(oslcompiler->filename(),
-                                              oslcompiler->lineno(),
+                        oslcompiler->errorfmt(oslcompiler->srcloc(),
                                               "Unknown struct name: {}", $1);
                     }
                     $$ = 0;
@@ -640,8 +632,7 @@ typespec_or_shadertype
                             oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
                         else {
                             oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
-                            oslcompiler->errorfmt(oslcompiler->filename(),
-                                                  oslcompiler->lineno(),
+                            oslcompiler->errorfmt(oslcompiler->srcloc(),
                                                   "Unknown struct name: {}", $1);
                         }
                         $$ = (int)ShaderType::Unknown;
@@ -681,12 +672,12 @@ conditional_statement
         : IF_TOKEN '(' compound_expression ')' statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         | IF_TOKEN '(' compound_expression ')' statement ELSE statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5, $7);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         ;
 
@@ -696,14 +687,14 @@ loop_statement
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopWhile,
                                                 NULL, $3, NULL, $5);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         | DO statement WHILE '(' compound_expression ')' ';'
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopDo,
                                                 NULL, $5, NULL, $2);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         | FOR '(' 
                 {
@@ -714,7 +705,7 @@ loop_statement
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopFor,
                                                 $4, $5, $7, $9);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                     oslcompiler->symtab().pop ();
                 }
         ;
@@ -790,7 +781,7 @@ expression
                          $$ = $2;
                     } else {
                         $$ = new ASTunary_expression (oslcompiler, $1, $2);
-                        $$->sourceline (@1.first_line);
+                        $$->sourceloc(SRCLOC(@1));
                     }
                 }
         | '(' compound_expression ')'
@@ -802,8 +793,7 @@ expression
                         //     color x = Cd * (a, b, c); // same as:  x = Cd * c
                         // when they really meant
                         //     color x = Cd * color(a, b, c);
-                        oslcompiler->warningfmt(oslcompiler->filename(),
-                                                @1.first_line,
+                        oslcompiler->warningfmt(SRCLOC(@1),
                                                 "Comma operator inside parenthesis is probably an error -- it is not a vector/color.");
                     }
                     $$ = $2;
@@ -820,17 +810,17 @@ variable_lvalue
         | id_or_field '[' expression ']'
                 {
                     $$ = new ASTindex (oslcompiler, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | id_or_field '[' expression ']' '[' expression ']'
                 {
                     $$ = new ASTindex (oslcompiler, $1, $3, $6);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | id_or_field '[' expression ']' '[' expression ']' '[' expression ']'
                 {
                     $$ = new ASTindex (oslcompiler, $1, $3, $6, $9);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         ;
 
@@ -842,7 +832,7 @@ id_or_field
         | variable_lvalue '.' IDENTIFIER
                 {
                     $$ = new ASTstructselect (oslcompiler, $1, ustring($3));
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         ;
 
@@ -861,109 +851,109 @@ binary_expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Or, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression AND_OP expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::And, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '|' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::BitOr, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '^' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Xor, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '&' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::BitAnd, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression EQ_OP expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Equal, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression NE_OP expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::NotEqual, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '>' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Greater, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression GE_OP expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::GreaterEqual, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '<' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Less, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression LE_OP expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::LessEqual, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression SHL_OP expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::ShiftLeft, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression SHR_OP expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::ShiftRight, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '+' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Add, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '-' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Sub, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '*' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Mul, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '/' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Div, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | expression '%' expression
                 {
                     $$ = ASTbinary_expression::make(oslcompiler,
                                     ASTNode::Mod, $1, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         ;
 
@@ -990,7 +980,7 @@ type_constructor
                 {
                     $$ = new ASTtype_constructor (oslcompiler,
                                                   TypeSpec (osllextype ($1)), $3);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         ;
 
@@ -998,7 +988,7 @@ function_call
         : IDENTIFIER '(' function_args_opt ')'
                 {
                     $$ = new ASTfunction_call (oslcompiler, ustring($1), $3);
-                    $$->sourceline (@1.first_line);
+                    $$->sourceloc(SRCLOC(@1));
                 }
         ;
 
@@ -1018,52 +1008,52 @@ assign_expression
         : variable_lvalue '=' expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::Assign, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue MUL_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::Mul, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue DIV_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::Div, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue ADD_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::Add, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue SUB_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::Sub, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue BIT_AND_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::BitAnd, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue BIT_OR_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::BitOr, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue XOR_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::Xor, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue SHL_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::ShiftLeft, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         | variable_lvalue SHR_ASSIGN expression
                 {
                     $$ = new ASTassign_expression (oslcompiler, $1, ASTNode::ShiftRight, $3);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         ;
 
@@ -1071,7 +1061,7 @@ ternary_expression
         : expression '?' expression ':' expression
                 {
                     $$ = new ASTternary_expression (oslcompiler, $1, $3, $5);
-                    $$->sourceline (@2.first_line);
+                    $$->sourceloc(SRCLOC(@2));
                 }
         ;
 
@@ -1099,7 +1089,7 @@ string_literal_group
 void
 OSL::pvt::yyerror (YYLTYPE* yylloc_param, void* yyscanner, OSLCompilerImpl* oslcompiler, const char* err)
 {
-    oslcompiler->errorfmt(oslcompiler->filename(), oslcompiler->lineno(),
+    oslcompiler->errorfmt(oslcompiler->srcloc(),
                           "Syntax error: {}", err);
 }
 

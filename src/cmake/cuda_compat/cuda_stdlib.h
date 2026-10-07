@@ -9,6 +9,6 @@
 // Related upstream fix: https://github.com/llvm/llvm-project/pull/66138
 #pragma push_macro("__noinline__")
 #undef __noinline__
-#include <string>
 #include <memory>
+#include <string>
 #pragma pop_macro("__noinline__")

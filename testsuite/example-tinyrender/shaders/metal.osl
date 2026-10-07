@@ -1,0 +1,20 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#include "rtiow.h"
+
+surface
+metal
+    [[ string help = "Reflective metal material" ]]
+(
+    color Cs = 0.8
+        [[  string help = "Reflection color",
+            float min = 0, float max = 1 ]],
+    float fuzz = 0
+        [[  string help = "Blur of the reflection",
+            float min = 0, float max = 1 ]]
+  )
+{
+    Ci = Cs * rtiow_metal(N, fuzz);
+}

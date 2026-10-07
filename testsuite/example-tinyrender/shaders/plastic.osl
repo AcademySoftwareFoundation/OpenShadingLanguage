@@ -1,0 +1,26 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#include "rtiow.h"
+
+surface
+plastic
+    [[ string help = "Diffuse base with a glossy reflection added on top" ]]
+(
+    color Cs = 0.8
+        [[  string help = "Base color",
+            float min = 0, float max = 1 ]],
+    float Kd = 0.8
+        [[  string help = "Diffuse scaling",
+            float min = 0, float max = 1 ]],
+    float Ks = 0.2
+        [[  string help = "Reflection scaling",
+            float min = 0, float max = 1 ]],
+    float fuzz = 0.1
+        [[  string help = "Blur of the reflection",
+            float min = 0, float max = 1 ]]
+  )
+{
+    Ci = Kd * Cs * diffuse(N) + Ks * rtiow_metal(N, fuzz);
+}

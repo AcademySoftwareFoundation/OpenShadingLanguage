@@ -75,6 +75,7 @@ public:
     static QFont fixedFont();
 
 protected:
+    void keyPressEvent(QKeyEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
 private slots:

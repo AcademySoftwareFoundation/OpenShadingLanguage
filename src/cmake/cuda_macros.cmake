@@ -78,6 +78,10 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
 
     # Setup the compile flags
     get_property (CURRENT_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
+    # Exclude hardening definitions that are unsuitable for JIT/GPU code
+    if (HARDENING_DEFINITIONS)
+        list (FILTER CURRENT_DEFINITIONS EXCLUDE REGEX "${HARDENING_DEFINITIONS}")
+    endif ()
     message (VERBOSE "Current #defines are ${CURRENT_DEFINITIONS}")
     foreach (def ${CURRENT_DEFINITIONS})
         set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")

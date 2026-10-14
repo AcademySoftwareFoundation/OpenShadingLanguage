@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-set ($OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compiling CUDA code")
+set (OSL_EXTRA_NVCC_ARGS "" CACHE STRING "Custom args passed to nvcc when compiling CUDA code")
 set (CUDA_OPT_FLAG_NVCC "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with nvcc")
 set (CUDA_OPT_FLAG_CLANG "-O3" CACHE STRING "The optimization level to use when compiling CUDA/C++ files with clang")
 
@@ -148,6 +148,22 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         set (CUDA_TEXREF_FIX "-D__CLANG_CUDA_TEXTURE_INTRINSICS_H__")
     endif()
 
+    if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "13.0")
+        # CUDA 13 removed texture_fetch_functions.h, but older Clang CUDA
+        # wrappers still include it. Search OSL's compatibility headers first.
+        set (CUDA_COMPAT_INCLUDE
+             "-I${PROJECT_SOURCE_DIR}/src/cmake/cuda_compat")
+        list (APPEND exec_headers
+              "${PROJECT_SOURCE_DIR}/src/cmake/cuda_compat/crt/math_functions.hpp")
+    endif ()
+
+    # Load libstdc++ before OSL headers while CUDA's __noinline__ macro is hidden.
+    if (NOT WIN32 AND LLVM_VERSION VERSION_LESS 18.0)
+        set (CUDA_STDLIB_HEADER "${PROJECT_SOURCE_DIR}/src/cmake/cuda_compat/cuda_stdlib.h")
+        set (CLANG_CUDA_COMPAT_FLAGS -include "${CUDA_STDLIB_HEADER}")
+        list (APPEND exec_headers "${CUDA_STDLIB_HEADER}")
+    endif ()
+
     list (TRANSFORM IMATH_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_IMATH_INCLUDES)
     list (TRANSFORM OPENEXR_INCLUDES PREPEND -I
@@ -157,6 +173,8 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
 
     add_custom_command (OUTPUT ${bc_cuda}
         COMMAND ${LLVM_BC_GENERATOR}
+            ${CUDA_COMPAT_INCLUDE}
+            ${CLANG_CUDA_COMPAT_FLAGS}
             "-I${OPTIX_INCLUDES}"
             "-I${CUDA_INCLUDES}"
             "-I${CMAKE_CURRENT_SOURCE_DIR}"

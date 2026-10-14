@@ -12,6 +12,9 @@ build
 .envrc
 .DS_Store
 
+# OptiX disk cache database files
+optix*cache.db*
+
 # AI coding tool directories — generated locally by .agents/setup-agent
 .claude/
 .codex/

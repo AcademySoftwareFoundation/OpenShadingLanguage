@@ -13,6 +13,14 @@ set -ex
 
 $OSL_ROOT/bin/testshade --help
 
+echo ; echo "Results of testshade --buildinfo:"
+$OSL_ROOT/bin/testshade --buildinfo | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+# Note: the above both echos the --buildinfo output, and also appends it to the
+# message that will be visible in the GHA summary log page so it's easy to
+# see at a glance which build chain & dependencies were used across all the
+# tests.
+echo
+
 echo "Parallel test ${CTEST_PARALLEL_LEVEL}"
 echo "Default timeout ${CTEST_TEST_TIMEOUT}"
 echo "Test exclusions '${CTEST_EXCLUSIONS}'"

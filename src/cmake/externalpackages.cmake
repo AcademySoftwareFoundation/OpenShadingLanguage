@@ -119,49 +119,73 @@ endif ()
 option (CUDA_PREFER_STATIC_LIBS "Prefer static CUDA libraries" OFF)
 if (OSL_USE_OPTIX)
     if (USE_LLVM_BITCODE)
-        if (NOT CUDA_TOOLKIT_ROOT_DIR AND NOT $ENV{CUDA_TOOLKIT_ROOT_DIR} STREQUAL "")
-            set (CUDA_TOOLKIT_ROOT_DIR $ENV{CUDA_TOOLKIT_ROOT_DIR})
+        # FindCUDAToolkit uses CUDAToolkit_ROOT. Honor the old FindCUDA input
+        # as a fallback so existing OSL build scripts keep working.
+        if (NOT CUDAToolkit_ROOT
+            AND "$ENV{CUDAToolkit_ROOT}" STREQUAL "")
+            if (CUDA_TOOLKIT_ROOT_DIR)
+                set (CUDAToolkit_ROOT "${CUDA_TOOLKIT_ROOT_DIR}")
+            elseif (NOT "$ENV{CUDA_TOOLKIT_ROOT_DIR}" STREQUAL "")
+                set (CUDAToolkit_ROOT "$ENV{CUDA_TOOLKIT_ROOT_DIR}")
+            endif ()
         endif ()
 
-        if (NOT CUDA_FIND_QUIETLY OR NOT OptiX_FIND_QUIETLY)
-            message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
+        if (NOT CUDAToolkit_FIND_QUIETLY OR NOT OptiX_FIND_QUIETLY)
+            message (STATUS "CUDAToolkit_ROOT = ${CUDAToolkit_ROOT}")
         endif ()
 
-        checked_find_package (CUDA REQUIRED
-                             VERSION_MIN 9.0
-                             RECOMMEND_MIN 11.0
-                             RECOMMEND_MIN_REASON
-                                "We don't actively test CUDA older than 11"
-                             PRINT CUDA_INCLUDES)
-        set (CUDA_INCLUDES ${CUDA_TOOLKIT_ROOT_DIR}/include)
-        include_directories (BEFORE "${CUDA_INCLUDES}")
+        checked_find_package (CUDAToolkit REQUIRED
+                              VERSION_MIN 9.0
+                              RECOMMEND_MIN 11.0
+                              RECOMMEND_MIN_REASON
+                                  "We don't actively test CUDA older than 11"
+                              PRINT CUDAToolkit_INCLUDE_DIRS
+                                    CUDAToolkit_NVCC_EXECUTABLE)
+
+        # CUDA 13 moved its C++ Core Libraries (CCCL) under include/cccl.
+        # New CMake releases report that path, but older supported releases
+        # do not, so augment the discovered list when that directory exists.
+        set (OSL_CUDA_INCLUDE_DIRS ${CUDAToolkit_INCLUDE_DIRS})
+        foreach (cuda_include_dir IN LISTS CUDAToolkit_INCLUDE_DIRS)
+            if (IS_DIRECTORY "${cuda_include_dir}/cccl")
+                list (APPEND OSL_CUDA_INCLUDE_DIRS
+                      "${cuda_include_dir}/cccl")
+            endif ()
+        endforeach ()
+        list (FILTER OSL_CUDA_INCLUDE_DIRS EXCLUDE REGEX "^$")
+        list (REMOVE_DUPLICATES OSL_CUDA_INCLUDE_DIRS)
+        include_directories (BEFORE ${OSL_CUDA_INCLUDE_DIRS})
+
+        # Clang's --cuda-path needs the toolkit root, not the target-specific
+        # library directory. FindCUDAToolkit normally reports it directly.
+        if (CUDAToolkit_LIBRARY_ROOT)
+            set (OSL_CUDA_TOOLKIT_ROOT "${CUDAToolkit_LIBRARY_ROOT}")
+        elseif (CUDAToolkit_BIN_DIR)
+            get_filename_component (OSL_CUDA_TOOLKIT_ROOT
+                                    "${CUDAToolkit_BIN_DIR}" DIRECTORY)
+        else ()
+            message (FATAL_ERROR
+                     "Could not determine the CUDA toolkit root directory")
+        endif ()
 
         STRING (FIND ${LLVM_TARGETS} "NVPTX" nvptx_index)
         if (NOT ${nvptx_index} GREATER -1)
             message (FATAL_ERROR "NVPTX target is not available in the provided LLVM build")
         endif()
 
-        set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
+        set (OSL_CUDA_LIB_FLAGS "--cuda-path=${OSL_CUDA_TOOLKIT_ROOT}")
 
-        # If the user wants, try to use static libs here to putting static lib
-        # suffixes earlier in the suffix list. Don't forget to restore after
-        # so that this only applies to these library searches right here.
-        set (save_lib_path ${CMAKE_FIND_LIBRARY_SUFFIXES})
+        # Imported targets carry the platform-specific system dependencies
+        # needed by the selected CUDA runtime, including on Windows.
         if (CUDA_PREFER_STATIC_LIBS)
-            set (CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-            find_library(cudart_lib REQUIRED
-                         NAMES cudart_static cudart
-                         PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+            set (OSL_CUDA_RUNTIME_TARGET CUDA::cudart_static)
         else ()
-            find_library(cudart_lib REQUIRED
-                         NAMES cudart
-                         PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64" "${CUDA_TOOLKIT_ROOT_DIR}/x64" "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+            set (OSL_CUDA_RUNTIME_TARGET CUDA::cudart)
         endif ()
-        # Is it really a good idea to completely reset CUDA_LIBRARIES here?
-        set(CUDA_LIBRARIES ${cudart_lib})
-        set(CUDA_EXTRA_LIBS ${CUDA_EXTRA_LIBS} dl rt)
-        set (CMAKE_FIND_LIBRARY_SUFFIXES ${save_lib_path})
-        unset (save_lib_path)
+        if (NOT TARGET ${OSL_CUDA_RUNTIME_TARGET})
+            message (FATAL_ERROR
+                     "CUDA runtime target ${OSL_CUDA_RUNTIME_TARGET} not found")
+        endif ()
     endif()
 
     # OptiX setup
@@ -175,10 +199,16 @@ if (OSL_USE_OPTIX)
     endif ()
 
     function (osl_optix_target TARGET)
-        target_include_directories (${TARGET} BEFORE PRIVATE ${CUDA_INCLUDES} ${OPTIX_INCLUDES})
+        target_include_directories (${TARGET} BEFORE PRIVATE
+                                    ${OSL_CUDA_INCLUDE_DIRS}
+                                    ${OPTIX_INCLUDES})
         ## XXX: Should -DPTX_PATH point to (or include) CMAKE_CURRENT_BINARY_DIR so tests can run before installation ?
         target_compile_definitions (${TARGET} PRIVATE PTX_PATH="${OSL_PTX_INSTALL_DIR}")
-        target_link_libraries (${TARGET} PRIVATE ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+        target_link_libraries (${TARGET} PRIVATE
+                               ${OSL_CUDA_RUNTIME_TARGET}
+                               ${CUDA_EXTRA_LIBS}
+                               ${OPTIX_LIBRARIES}
+                               ${OPTIX_EXTRA_LIBS})
     endfunction()
 else ()
     message(STATUS "CUDA/OptiX support disabled")

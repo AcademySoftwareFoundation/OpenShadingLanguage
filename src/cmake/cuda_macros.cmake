@@ -30,6 +30,8 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args ext
           OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
     list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
+    set (ALL_CUDA_INCLUDES ${OSL_CUDA_INCLUDE_DIRS})
+    list (TRANSFORM ALL_CUDA_INCLUDES PREPEND -I)
 
     if (NOT CUDA_NO_FTZ)
         set (NVCC_FTZ_FLAG "--ftz=true")
@@ -44,9 +46,9 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args ext
     endforeach()
     
     add_custom_command ( OUTPUT ${cuda_ptx}
-        COMMAND ${CUDA_NVCC_EXECUTABLE}
+        COMMAND ${CUDAToolkit_NVCC_EXECUTABLE}
             "-I${OPTIX_INCLUDES}"
-            "-I${CUDA_INCLUDES}"
+            ${ALL_CUDA_INCLUDES}
             "-I${CMAKE_CURRENT_SOURCE_DIR}"
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
@@ -54,7 +56,7 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args ext
             ${EXTRA_INCLUDES}
             ${ALL_OpenImageIO_INCLUDES}
             ${ALL_IMATH_INCLUDES}
-            "-DFMT_DEPRECATED=\"\""
+            -DFMT_DEPRECATED=
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx
@@ -66,7 +68,8 @@ function ( NVCC_COMPILE cuda_src extra_headers ptx_generated extra_nvcc_args ext
             ${cuda_src} -o ${cuda_ptx}
         MAIN_DEPENDENCY ${cuda_src}
         DEPENDS ${cuda_src} ${cuda_headers} ${extra_libs} oslexec
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        VERBATIM )
 endfunction ()
 
 # Function to compile a C++ source file to CUDA-compatible LLVM bitcode
@@ -142,7 +145,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         set (CLANG_FTZ_FLAG "-fcuda-flush-denormals-to-zero")
     endif ()
 
-    if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "12.0")
+    if ("${CUDAToolkit_VERSION}" VERSION_GREATER_EQUAL "12.0")
         # The textureReference API was removed in CUDA 12.0, but it's still referenced
         # in the clang headers, so compilation will fail with 12.0 and newer toolkits
         # due to the missing definitions.
@@ -152,7 +155,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         set (CUDA_TEXREF_FIX "-D__CLANG_CUDA_TEXTURE_INTRINSICS_H__")
     endif()
 
-    if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "13.0")
+    if ("${CUDAToolkit_VERSION}" VERSION_GREATER_EQUAL "13.0")
         # CUDA 13 removed texture_fetch_functions.h, but older Clang CUDA
         # wrappers still include it. Search OSL's compatibility headers first.
         set (CUDA_COMPAT_INCLUDE
@@ -174,13 +177,15 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
           OUTPUT_VARIABLE ALL_OPENEXR_INCLUDES)
     list (TRANSFORM OpenImageIO_INCLUDES PREPEND -I
           OUTPUT_VARIABLE ALL_OpenImageIO_INCLUDES)
+    set (ALL_CUDA_INCLUDES ${OSL_CUDA_INCLUDE_DIRS})
+    list (TRANSFORM ALL_CUDA_INCLUDES PREPEND -I)
 
     add_custom_command (OUTPUT ${bc_cuda}
         COMMAND ${LLVM_BC_GENERATOR}
             ${CUDA_COMPAT_INCLUDE}
             ${CLANG_CUDA_COMPAT_FLAGS}
             "-I${OPTIX_INCLUDES}"
-            "-I${CUDA_INCLUDES}"
+            ${ALL_CUDA_INCLUDES}
             "-I${CMAKE_CURRENT_SOURCE_DIR}"
             "-I${CMAKE_SOURCE_DIR}/src/liboslexec"
             "-I${CMAKE_BINARY_DIR}/include"
@@ -189,7 +194,7 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             ${ALL_OpenImageIO_INCLUDES}
             ${ALL_IMATH_INCLUDES}
             ${ALL_OPENEXR_INCLUDES}
-            ${LLVM_COMPILE_FLAGS} ${CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX} ${CUDA_TEXREF_FIX}
+            ${LLVM_COMPILE_FLAGS} ${OSL_CUDA_LIB_FLAGS} ${CLANG_MSVC_FIX} ${CUDA_TEXREF_FIX}
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE -D__CUDADEVRT_INTERNAL__
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security
@@ -197,7 +202,8 @@ function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
             ${src} -o ${asm_cuda}
         COMMAND ${LLVM_AS_TOOL} -f -o ${bc_cuda} ${asm_cuda}
         DEPENDS ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        VERBATIM )
 endfunction ()
 
 # Compile a CUDA source file to LLVM bitcode, and then serialize the bitcode to

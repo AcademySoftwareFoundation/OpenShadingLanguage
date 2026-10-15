@@ -120,14 +120,29 @@ macro (add_one_testsuite testname testsrcdir)
         set_tests_properties (${testname} PROPERTIES LABELS noise
                               PROCESSORS 2 COST 4)
     endif ()
-    if (${testname} MATCHES "optix")
+    if ("${testname}" MATCHES "optix")
         set_tests_properties (${testname} PROPERTIES LABELS optix)
-        if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "10.0")
-            # Make sure libnvrtc-builtins.so is reachable
-            set_property (TEST ${testname} APPEND PROPERTY ENVIRONMENT LD_LIBRARY_PATH=${CUDA_TOOLKIT_ROOT_DIR}/lib64:$ENV{LD_LIBRARY_PATH})
-        endif()
         if (DEFINED ENV{OSL_TESTSUITE_OPTIX_THRESH_SCALE})
             set_property (TEST ${testname} APPEND PROPERTY ENVIRONMENT OSL_TESTSUITE_THRESH_SCALE=$ENV{OSL_TESTSUITE_OPTIX_THRESH_SCALE})
+        endif ()
+    endif ()
+    if ("${testname}" MATCHES "optix|example-cuda")
+        # Make sure the CUDA and NVRTC runtime libraries are reachable. CTest
+        # adds the host platform's path separator for this operation.
+        if (WIN32)
+            set_property (TEST ${testname} APPEND PROPERTY
+                          ENVIRONMENT_MODIFICATION
+                          "PATH=path_list_prepend:${CUDAToolkit_BIN_DIR}")
+            # CUDA 13 places Windows runtime DLLs in bin/x64.
+            if (IS_DIRECTORY "${CUDAToolkit_BIN_DIR}/x64")
+                set_property (TEST ${testname} APPEND PROPERTY
+                              ENVIRONMENT_MODIFICATION
+                              "PATH=path_list_prepend:${CUDAToolkit_BIN_DIR}/x64")
+            endif ()
+        else ()
+            set_property (TEST ${testname} APPEND PROPERTY
+                          ENVIRONMENT_MODIFICATION
+                          "LD_LIBRARY_PATH=path_list_prepend:${CUDAToolkit_LIBRARY_DIR}")
         endif ()
     endif ()
     if (${testname} MATCHES "-reg")
@@ -556,7 +571,7 @@ macro (osl_add_all_tests)
     endif ()
 
     # Only run the OptiX tests if OptiX and CUDA are found
-    if (OPTIX_FOUND AND CUDA_FOUND)
+    if (OPTIX_FOUND AND CUDAToolkit_FOUND)
         TESTSUITE ( testoptix testoptix-noise example-cuda)
     endif ()
 

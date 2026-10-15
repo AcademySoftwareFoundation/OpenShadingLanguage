@@ -2,28 +2,25 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
-cmake_minimum_required(VERSION 3.15)
-project(examplecuda LANGUAGES CXX)
+# Keep this in sync with the top-level project.
+cmake_minimum_required (VERSION 3.23)
+project (examplecuda LANGUAGES CXX)
 
 if (NOT CMAKE_BUILD_TYPE)
     set (CMAKE_BUILD_TYPE "Release")
 endif ()
 
 # Is there a better way to get the location of the main OSL CMakeLists.txt?
-set(OSL_LIST_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../")
+set (OSL_LIST_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../")
 # We have to make the path absolute or CMake will fail to find the file...
-get_filename_component(OSL_LIST_DIR ${OSL_LIST_DIR} ABSOLUTE)
-set(CMAKE_MODULE_PATH "${OSL_LIST_DIR}/src/cmake;${OSL_LIST_DIR}/src/cmake/modules")
+get_filename_component (OSL_LIST_DIR "${OSL_LIST_DIR}" ABSOLUTE)
+list (APPEND CMAKE_MODULE_PATH
+      "${OSL_LIST_DIR}/src/cmake"
+      "${OSL_LIST_DIR}/src/cmake/modules")
 
-include(check_is_enabled)
-include(checked_find_package)
-
-find_package(OSL REQUIRED)
-find_package(CUDA REQUIRED)
-checked_find_package(LLVM 7.0 REQUIRED)
-checked_find_package(Imath 3.1 REQUIRED)
-checked_find_package(OpenImageIO 2.4 REQUIRED)
-checked_find_package(OptiX REQUIRED)
+find_package (OSL REQUIRED)
+find_package (CUDAToolkit 9.0 REQUIRED)
+find_package (OptiX 7.0 REQUIRED)
 
 
 # Make the build area layout look like we expect
@@ -31,59 +28,81 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# TODO: what are the path suffixes on other platforms?
-find_library(CUDA_nvrtc_LIBRARY nvrtc HINTS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib lib64)
-find_library(CUDA_cuda_LIBRARY cuda HINTS ${CUDA_TOOLKIT_ROOT_DIR} PATH_SUFFIXES lib/stubs lib64/stubs)
-
-# TODO: move to sm_60?
-set(CUDA_TARGET_ARCH sm_35)
+if (CUDAToolkit_VERSION VERSION_GREATER_EQUAL 13.0)
+    set (cuda_default_arch "sm_75")
+else ()
+    set (cuda_default_arch "sm_60")
+endif ()
+set (CUDA_TARGET_ARCH "${cuda_default_arch}" CACHE STRING
+     "CUDA GPU architecture (e.g. sm_60)")
 
 set (CMAKE_CXX_STANDARD 17 CACHE STRING
      "C++ standard to build with (17, 20, etc.)")
 
-# Compile our "renderer" to PTX
-cuda_compile_ptx(CUDA_PTX_FILES cuda_grid_renderer.cu
-    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc
-            --std=c++${CMAKE_CXX_STANDARD}
-            --expt-relaxed-constexpr
-            -I${OSL_INCLUDES}
-            -I${IMATH_INCLUDES}
-            -I${OpenImageIO_INCLUDES}
-            -I${OPTIX_INCLUDES}
-)
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/cuda_grid_renderer.ptx
-    COMMAND ${CMAKE_COMMAND} -E rename ${CUDA_PTX_FILES} ${CMAKE_BINARY_DIR}/cuda_grid_renderer.ptx
-    DEPENDS ${CUDA_PTX_FILES}
-)
-add_custom_target(cuda_grid_renderer_ptx ALL
-    DEPENDS ${CMAKE_BINARY_DIR}/cuda_grid_renderer.ptx cuda_grid_renderer.cu
-    SOURCES cuda_grid_renderer.cu
-)
+get_target_property (imath_include_dirs Imath::Imath
+                     INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property (oiio_include_dirs OpenImageIO::OpenImageIO
+                     INTERFACE_INCLUDE_DIRECTORIES)
+set (cuda_toolkit_include_dirs ${CUDAToolkit_INCLUDE_DIRS})
+foreach (cuda_include_dir IN LISTS CUDAToolkit_INCLUDE_DIRS)
+    if (IS_DIRECTORY "${cuda_include_dir}/cccl")
+        list (APPEND cuda_toolkit_include_dirs "${cuda_include_dir}/cccl")
+    endif ()
+endforeach ()
+list (FILTER cuda_toolkit_include_dirs EXCLUDE REGEX "^$")
+list (REMOVE_DUPLICATES cuda_toolkit_include_dirs)
+set (cuda_ptx_include_dirs ${OSL_INCLUDES}
+                           ${imath_include_dirs}
+                           ${oiio_include_dirs}
+                           ${OPTIX_INCLUDES}
+                           ${cuda_toolkit_include_dirs})
+list (TRANSFORM cuda_ptx_include_dirs PREPEND -I)
 
-# Compile the rend_lib shadeops to PTX
-cuda_compile_ptx(CUDA_PTX_FILES rend_lib.cu
-    OPTIONS --gpu-architecture=${CUDA_TARGET_ARCH} --use_fast_math -dc
-            --std=c++${CMAKE_CXX_STANDARD}
-            --expt-relaxed-constexpr
-            -I${OSL_INCLUDES}
-            -I${IMATH_INCLUDES}
-            -I${OpenImageIO_INCLUDES}
-            -I${OPTIX_INCLUDES}
-)
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/rend_lib.ptx
-    COMMAND ${CMAKE_COMMAND} -E rename ${CUDA_PTX_FILES} ${CMAKE_BINARY_DIR}/rend_lib.ptx
-    DEPENDS ${CUDA_PTX_FILES}
-)
-add_custom_target(rend_lib_ptx ALL
-    DEPENDS ${CMAKE_BINARY_DIR}/rend_lib.ptx rend_lib.cu
-    SOURCES rend_lib.cu
-)
+# Compile a CUDA source file to PTX with NVCC. This replaces the helper that
+# was supplied by the deprecated FindCUDA module.
+function (compile_cuda_to_ptx cuda_src ptx_generated)
+    get_filename_component (cuda_src_we "${cuda_src}" NAME_WE)
+    set (cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.ptx")
+    file (GLOB cuda_headers "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+
+    add_custom_command (OUTPUT "${cuda_ptx}"
+        COMMAND "${CUDAToolkit_NVCC_EXECUTABLE}"
+                --gpu-architecture=${CUDA_TARGET_ARCH}
+                --use_fast_math
+                --std=c++${CMAKE_CXX_STANDARD}
+                --expt-relaxed-constexpr
+                -dc -ptx
+                ${cuda_ptx_include_dirs}
+                "${CMAKE_CURRENT_SOURCE_DIR}/${cuda_src}"
+                -o "${cuda_ptx}"
+        MAIN_DEPENDENCY "${cuda_src}"
+        DEPENDS ${cuda_headers}
+        VERBATIM)
+
+    set (${ptx_generated} "${cuda_ptx}" PARENT_SCOPE)
+endfunction ()
+
+compile_cuda_to_ptx (cuda_grid_renderer.cu cuda_grid_renderer_ptx_file)
+add_custom_target (cuda_grid_renderer_ptx ALL
+                   DEPENDS "${cuda_grid_renderer_ptx_file}"
+                   SOURCES cuda_grid_renderer.cu)
+
+compile_cuda_to_ptx (rend_lib.cu rend_lib_ptx_file)
+add_custom_target (rend_lib_ptx ALL
+                   DEPENDS "${rend_lib_ptx_file}"
+                   SOURCES rend_lib.cu)
 
 # Compile and link the main executable
-add_executable(example-cuda example-cuda.cpp cuda_grid_renderer.cpp)
+add_executable (example-cuda example-cuda.cpp cuda_grid_renderer.cpp)
+add_dependencies (example-cuda cuda_grid_renderer_ptx rend_lib_ptx)
 
-target_link_libraries(example-cuda PRIVATE OSL::oslexec OSL::oslquery ${CUDA_LIBRARIES} ${CUDA_nvrtc_LIBRARY} ${CUDA_cuda_LIBRARY})
-target_include_directories(example-cuda PRIVATE ${CUDA_INCLUDE_DIRS})
-set_property(TARGET example-cuda PROPERTY CXX_STANDARD 17)
+target_link_libraries (example-cuda PRIVATE
+                       OSL::oslexec
+                       OSL::oslquery
+                       CUDA::cudart
+                       CUDA::nvrtc
+                       CUDA::cuda_driver)
+target_include_directories (example-cuda PRIVATE ${cuda_toolkit_include_dirs})
+set_property (TARGET example-cuda PROPERTY CXX_STANDARD 17)
 
-install(TARGETS example-cuda DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+install (TARGETS example-cuda DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})

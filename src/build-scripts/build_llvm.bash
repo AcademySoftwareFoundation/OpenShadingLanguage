@@ -20,7 +20,7 @@ if [[ `uname` == "Linux" ]] ; then
     : ${LLVM_DISTRO_NAME:=ubuntu-18.04}
     LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-${LLVM_DISTRO_NAME}.tar.xz
     echo LLVMTAR = $LLVMTAR
-    curl --location https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
+    curl --fail --retry 5 --retry-delay 10 --location https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
     ls -l $LLVMTAR
     tar xf $LLVMTAR
     rm -f $LLVMTAR
@@ -30,7 +30,7 @@ elif [[ `uname -s` == "Windows" || "${RUNNER_OS}" == "Windows" ]] ; then
     : ${LLVM_DISTRO_NAME:=ubuntu-18.04}
     LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz
     echo LLVMTAR = $LLVMTAR
-    curl --location https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
+    curl --fail --retry 5 --retry-delay 10 --location https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
     ls -l $LLVMTAR
     tar xf $LLVMTAR
     rm -f $LLVMTAR

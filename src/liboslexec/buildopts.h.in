@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+// Build options recorded at configure time, private to liboslexec.
+
+#pragma once
+
+// Semicolon-separated list of "Package version" (or "Package NONE") for
+// every dependency that checked_find_package looked for.
+#define OSL_ALL_BUILD_DEPS_FOUND "@CFP_ALL_BUILD_DEPS_FOUND@"

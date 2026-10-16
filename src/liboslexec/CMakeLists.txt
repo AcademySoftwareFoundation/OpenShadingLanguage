@@ -203,7 +203,7 @@ if (USE_LLVM_BITCODE)
 
     EMBED_LLVM_BITCODE_IN_CPP ( "${rs_dependent_ops_srcs}" "_host_rs" "osl_llvm_compiled_rs_dependent_ops" lib_src "" "${include_dirs}")
 
-    if (CUDA_FOUND)
+    if (CUDAToolkit_FOUND)
         add_compile_definitions (OSL_LLVM_CUDA_BITCODE)
 
         # The shadeops are compiled to both LLVM bitcode and PTX, and embedded
@@ -588,7 +588,7 @@ target_compile_definitions (${local_lib}
     PRIVATE
         OSL_EXPORTS
         CUDA_TARGET_ARCH="${CUDA_TARGET_ARCH}"
-        OSL_CUDA_VERSION="${CUDA_VERSION}"
+        OSL_CUDA_VERSION="${CUDAToolkit_VERSION}"
         OSL_OPTIX_VERSION="${OPTIX_VERSION}"
         OSL_CPP_COMPILER_DEFAULT="${CMAKE_CXX_COMPILER}"
         OSL_CPP_COMPILER_FLAGS_DEFAULT="${_cpp_base_flags} ${_cpp_inc_flags_str}"

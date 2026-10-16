@@ -11,11 +11,29 @@
 #include <cuda_runtime.h>
 #include <optix_device.h>
 
+#include <cstdint>
+
 #include "rend_lib.h"
 
-#define MEMCPY_ALIGNED(dst, src, size, alignment)    \
-    memcpy(__builtin_assume_aligned(dst, alignment), \
-           __builtin_assume_aligned(src, alignment), size);
+// Older Clang CUDA builds on Windows can resolve __builtin_assume_aligned to
+// an MSVC host-only declaration. Express the same device-side alignment
+// promise with __builtin_assume instead.
+template<int Alignment, class T>
+__device__ inline T*
+device_assume_aligned(T* ptr)
+{
+#if defined(_WIN32)
+    __builtin_assume((reinterpret_cast<std::uintptr_t>(ptr) & (Alignment - 1))
+                     == 0);
+    return ptr;
+#else
+    return static_cast<T*>(__builtin_assume_aligned(ptr, Alignment));
+#endif
+}
+
+#define MEMCPY_ALIGNED(dst, src, size, alignment) \
+    memcpy(device_assume_aligned<alignment>(dst), \
+           device_assume_aligned<alignment>(src), size);
 
 OSL_NAMESPACE_BEGIN
 namespace pvt {
@@ -448,12 +466,12 @@ osl_range_check_err(int indexvalue, int length, OSL::ustringhash_pod symname,
 }
 
 
-#define MAT(m) (*(OSL::Matrix44*)__builtin_assume_aligned(m, alignof(float)))
+#define MAT(m) (*(OSL::Matrix44*)device_assume_aligned<alignof(float)>(m))
 
 __device__ int
 osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 {
-    r                           = __builtin_assume_aligned(r, alignof(float));
+    r                           = device_assume_aligned<alignof(float)>(r);
     OSL::ustringhash from       = OSL::ustringhash_from(from_);
     OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
     if (from == OSL::Hashes::common) {
@@ -498,7 +516,7 @@ osl_get_matrix(void* sg_, void* r, OSL::ustringhash_pod from_)
 __device__ int
 osl_get_inverse_matrix(void* sg_, void* r, OSL::ustringhash_pod to_)
 {
-    r                           = __builtin_assume_aligned(r, alignof(float));
+    r                           = device_assume_aligned<alignof(float)>(r);
     OSL::ustringhash to         = OSL::ustringhash_from(to_);
     OSL_CUDA::ShaderGlobals* sg = (OSL_CUDA::ShaderGlobals*)sg_;
     if (to == OSL::Hashes::common) {

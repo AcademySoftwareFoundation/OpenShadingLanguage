@@ -1,0 +1,22 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+#include "rtiow.h"
+
+surface
+glass
+    [[ string help = "Dielectric material" ]]
+(
+    color Cs = 1
+        [[  string help = "Transmission color",
+            float min = 0, float max = 1 ]],
+    float ior = 1.5
+        [[  string help = "Index of refraction",
+            float min = 1, float max = 3 ]]
+  )
+{
+    float eta = backfacing() ? ior : 1.0 / ior;
+
+    Ci = Cs * rtiow_dielectric(N, eta);
+}

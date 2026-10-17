@@ -383,6 +383,7 @@ macro (osl_add_all_tests)
                 error-dupes error-malformed error-serialized
                 example-deformer
                 example-batched-deformer
+                example-tinyrender
                 exit exponential
                 filterwidth-reg
                 for-reg format-reg fprintf

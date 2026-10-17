@@ -71,15 +71,30 @@ vcpkg list
 ########################################################################
 # Dependency method #2: Build from source ourselves
 #
+# If the CI workflow restored the built dependencies from its cache (see
+# gh-win-deps-cache-key.bash), OSL_DEPS_CACHE_HIT is "true" and we skip
+# the builds, only setting the variables that the build scripts export.
 #
 
-src/build-scripts/build_zlib.bash
-export ZLIB_ROOT=$PWD/ext/dist
+# build_dep SCRIPT ROOTVAR : source a dependency build script, or on a
+# cache hit, just set ROOTVAR to where the build would have installed it.
+build_dep () {
+    if [[ "$OSL_DEPS_CACHE_HIT" == "true" ]] ; then
+        echo "Using cached build from $1"
+        export $2=$LOCAL_DEPS_DIR/dist
+    else
+        source src/build-scripts/$1
+    fi
+}
 
-src/build-scripts/build_libpng.bash
+if [[ "$OSL_DEPS_CACHE_HIT" != "true" ]] ; then
+    src/build-scripts/build_zlib.bash
+    src/build-scripts/build_libpng.bash
+fi
+export ZLIB_ROOT=$PWD/ext/dist
 export PNG_ROOT=$PWD/ext/dist
 
-source src/build-scripts/build_pybind11.bash
+build_dep build_pybind11.bash pybind11_ROOT
 export pybind11_ROOT=$PWD/ext/dist
 
 # nanobind is only needed for the non-default python binding backends. Install
@@ -90,16 +105,16 @@ fi
 
 
 if [[ "$OPENEXR_VERSION" != "" ]] ; then
-    source src/build-scripts/build_openexr.bash
+    build_dep build_openexr.bash OpenEXR_ROOT
 fi
 
 if [[ "$PUGIXML_VERSION" != "" ]] ; then
-    source src/build-scripts/build_pugixml.bash
+    build_dep build_pugixml.bash pugixml_ROOT
     export OSL_CMAKE_FLAGS+=" -DUSE_EXTERNAL_PUGIXML=1 "
 fi
 
 if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
-    source src/build-scripts/build_opencolorio.bash
+    build_dep build_opencolorio.bash OpenColorIO_ROOT
 fi
 
 cp $DEP_DIR/lib/*.lib $DEP_DIR/bin || true
@@ -126,7 +141,8 @@ if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
         # only a savings in CI where there are only 1-2 cores available.)
         export OPENIMAGEIO_CMAKE_FLAGS+=" -DCMAKE_UNITY_BUILD=ON -DCMAKE_UNITY_BUILD_MODE=BATCH"
     fi
-    source src/build-scripts/build_openimageio.bash
+    build_dep build_openimageio.bash OpenImageIO_ROOT
+    export PYTHONPATH=$OpenImageIO_ROOT/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 fi
 
 cp $DEP_DIR/lib/*.lib $DEP_DIR/bin || true

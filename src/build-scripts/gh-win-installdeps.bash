@@ -13,6 +13,10 @@ mkdir -p "$DEP_DIR"
 mkdir -p ext
 VCPKG_INSTALLATION_ROOT=/c/vcpkg
 
+# Retry downloads a few times to ride out transient network failures, and
+# fail on HTTP errors rather than saving an error page as the download.
+CURL_RETRY_FLAGS="--fail --retry 5 --retry-delay 10"
+
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:=.}
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$DEP_DIR"
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$VCPKG_INSTALLATION_ROOT/installed/x64-windows-release"
@@ -127,14 +131,31 @@ ls -R -l "$DEP_DIR"
 if [[ "$LLVM_VERSION" != "" ]] ; then
     echo "Running llvm_build.bash"
     source src/build-scripts/build_llvm.bash
-elif [[ "$LLVM_GOOGLE_DRIVE_ID" != "" ]] then
-    echo "Installing LLVM from google drive"
+elif [[ "$LLVM_GOOGLE_DRIVE_ID" != "" ]] ; then
     mkdir -p $HOME/llvm
     pushd $HOME/llvm
-    #LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
-    LLVM_ZIP_FILENAME=llvm-build.zip
-    time curl --insecure -L "https://drive.usercontent.google.com/download?id=${LLVM_GOOGLE_DRIVE_ID}&confirm=xxx" -o $LLVM_ZIP_FILENAME
-    unzip $LLVM_ZIP_FILENAME > /dev/null
+    # The llvm-build dir may already be present if restored by actions/cache
+    # (keyed on LLVM_GOOGLE_DRIVE_ID), in which case skip the download. This
+    # also keeps us from tripping Google Drive's per-file download quota.
+    if [[ -d llvm-build ]] ; then
+        echo "Using cached LLVM from google drive id ${LLVM_GOOGLE_DRIVE_ID}"
+    else
+        echo "Installing LLVM from google drive"
+        #LLVM_GOOGLE_DRIVE_ID="1uy7PNVlTQ-H56unXGOS6siRWtNcdS1J7"
+        LLVM_ZIP_FILENAME=llvm-build.zip
+        time curl $CURL_RETRY_FLAGS --insecure -L "https://drive.usercontent.google.com/download?id=${LLVM_GOOGLE_DRIVE_ID}&confirm=xxx" -o $LLVM_ZIP_FILENAME
+        # When the download quota is exceeded, Google Drive returns an HTML
+        # error page with HTTP status 200, so check that we got a real zip.
+        if ! unzip -tq $LLVM_ZIP_FILENAME > /dev/null ; then
+            echo "ERROR: LLVM download from google drive is not a valid zip file."
+            echo "Google Drive may have exceeded its download quota. Contents:"
+            head -c 2000 $LLVM_ZIP_FILENAME
+            echo
+            exit 1
+        fi
+        unzip $LLVM_ZIP_FILENAME > /dev/null
+        rm -f $LLVM_ZIP_FILENAME
+    fi
     export LLVM_ROOT=$PWD/llvm-build
     popd
 else
@@ -146,7 +167,7 @@ echo "LLVM_ROOT = $LLVM_ROOT"
 mkdir -p winflexbison
 pushd winflexbison
 WFBZIP=win_flex_bison-2.5.25.zip
-curl --location https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/$WFBZIP -o $WFBZIP
+curl $CURL_RETRY_FLAGS --location https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/$WFBZIP -o $WFBZIP
 unzip $WFBZIP
 export FLEX_ROOT=$PWD
 export BISON_ROOT=$PWD

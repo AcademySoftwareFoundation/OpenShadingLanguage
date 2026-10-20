@@ -8,15 +8,16 @@
 
 #include <OSL/hashes.h>
 
+#include "example_common/cuda/rend_lib.h"
+#include "example_common/render_state.h"
 #include "optix_raytracer.h"
-#include "rend_lib.h"
 
-#include "../background.h"
-#include "../bvh.h"
-#include "../raytracer.h"
-#include "../render_params.h"
-#include "../sampling.h"
-#include "../shading.cpp"
+#include "testrender/background.h"
+#include "testrender/bvh.h"
+#include "testrender/raytracer.h"
+#include "testrender/render_params.h"
+#include "testrender/sampling.h"
+#include "testrender/shading.cpp"
 
 #include <cstdint>
 
@@ -312,6 +313,6 @@ __raygen__deferred()
 
 // We need to pull in the definition of SimpleRaytracer::subpixel_radiance(),
 // which is shared between the host and CUDA renderers.
-#include "../simpleraytracer.cpp"
+#include "testrender/simpleraytracer.cpp"
 
 //------------------------------------------------------------------------------

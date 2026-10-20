@@ -9,9 +9,6 @@
 #include <OSL/hashes.h>
 #include <OSL/oslexec.h>
 
-#include "../raytracer.h"
-
-
 OSL_NAMESPACE_BEGIN
 
 

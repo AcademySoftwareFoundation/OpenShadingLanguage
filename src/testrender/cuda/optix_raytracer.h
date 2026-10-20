@@ -3,10 +3,10 @@
 #include <OSL/oslconfig.h>
 #include <optix.h>
 
-#include "../background.h"
-#include "../raytracer.h"
-#include "../sampling.h"
-#include "rend_lib.h"
+#include "example_common/cuda/rend_lib.h"
+#include "testrender/background.h"
+#include "testrender/raytracer.h"
+#include "testrender/sampling.h"
 
 #include <cstdint>
 

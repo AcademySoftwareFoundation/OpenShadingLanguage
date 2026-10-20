@@ -4,6 +4,12 @@
 
 #pragma once
 
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+
+#include <OpenImageIO/fmath.h>
+
 #include <OSL/hashes.h>
 #include <OSL/oslconfig.h>
 

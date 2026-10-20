@@ -19,7 +19,7 @@
 namespace RS {
 namespace Strings {
 #define RS_STRDECL(str, var_name) const OSL::ustring var_name { str };
-#include "rs_strdecls.h"
+#include "example_common/rs_strdecls.h"
 #undef RS_STRDECL
 }  // namespace Strings
 }  // namespace RS
@@ -33,7 +33,7 @@ namespace {
 namespace Hashes {
 #define RS_STRDECL(str, var_name) \
     constexpr OSL::ustringhash var_name(OSL::strhash(str));
-#include "rs_strdecls.h"
+#include "example_common/rs_strdecls.h"
 #undef RS_STRDECL
 };  //namespace Hashes
 }  // unnamed namespace

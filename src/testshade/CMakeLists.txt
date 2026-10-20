@@ -3,6 +3,11 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testshade' executable
+set (example_common_dir "${PROJECT_SOURCE_DIR}/src/example_common")
+list (APPEND exec_headers
+    "${example_common_dir}/render_state.h"
+    "${example_common_dir}/rs_strdecls.h")
+
 set ( testshade_srcs
       testshade.cpp
       simplerend.cpp )
@@ -13,29 +18,35 @@ if (OSL_BUILD_BATCHED)
 endif()
 
 if (OSL_USE_OPTIX)
+    # NVCC_COMPILE and MAKE_CUDA_BITCODE use custom commands rather than the
+    # target's include directories.
+    list (APPEND OSL_CUDA_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
     list (APPEND testshade_srcs optixgridrender.cpp)
     set ( testshade_cuda_srcs
         cuda/optix_grid_renderer.cu
         )
 
     set (testshade_rend_lib_srcs
-        ../testrender/cuda/rend_lib.cu
-        rs_simplerend.cpp
+        "${example_common_dir}/cuda/rend_lib.cu"
+        "${example_common_dir}/rs_simplerend.cpp"
         )
 
     set ( testshade_cuda_headers
-        ../testrender/cuda/rend_lib.h
-        ../testrender/raytracer.h
+        "${example_common_dir}/cuda/rend_lib.h"
+        "${example_common_dir}/render_state.h"
+        "${example_common_dir}/rs_strdecls.h"
         )
+    list (APPEND exec_headers "${example_common_dir}/cuda/rend_lib.h")
 
     # We need to make sure that the PTX files are regenerated whenever these
     # headers change.
     set ( extra_cuda_headers
-        render_params.h )
+        render_params.h
+        ${testshade_cuda_headers} )
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testshade_cuda_srcs})
-        NVCC_COMPILE ( ${cudasrc} ${extra_cuda_headers} ptx_generated "-I../testrender/cuda" "")
+        NVCC_COMPILE ( ${cudasrc} "${extra_cuda_headers}" ptx_generated "" "")
         list (APPEND ptx_list ${ptx_generated})
     endforeach ()
 
@@ -65,10 +76,11 @@ if (OSL_USE_OPTIX)
 endif()
 
 set ( rs_srcs
-    rs_simplerend.cpp )
+    "${example_common_dir}/rs_simplerend.cpp" )
 
 set(include_dirs ${CMAKE_CURRENT_SOURCE_DIR})
 list(APPEND include_dirs ${CMAKE_SOURCE_DIR}/src/include)
+list(APPEND include_dirs ${PROJECT_SOURCE_DIR}/src)
 list(APPEND include_dirs ${CMAKE_BINARY_DIR}/include)
 list(APPEND include_dirs ${IMATH_INCLUDES})
 list(APPEND include_dirs ${OpenImageIO_INCLUDES})
@@ -77,7 +89,8 @@ EMBED_LLVM_BITCODE_IN_CPP ( "${rs_srcs}" "_host" "testshade_llvm_compiled_rs" te
 
 add_executable ( testshade ${testshade_srcs} testshademain.cpp )
 
-target_include_directories (testshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+target_include_directories (testshade BEFORE PRIVATE
+                            ${OpenImageIO_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 
 target_link_libraries (testshade
                        PRIVATE
@@ -120,7 +133,8 @@ if (NOT CODECOV)
     target_link_libraries (libtestshade
                            PRIVATE
                                oslexec oslquery oslcomp)
-    target_include_directories (libtestshade BEFORE PRIVATE ${OpenImageIO_INCLUDES})
+    target_include_directories (libtestshade BEFORE PRIVATE
+                                ${OpenImageIO_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
     set_target_properties (libtestshade PROPERTIES PREFIX "")
 
     install_targets ( libtestshade )

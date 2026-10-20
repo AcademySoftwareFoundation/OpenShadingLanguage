@@ -7,7 +7,8 @@
 
 #include <optix_device.h>
 
-#include "rend_lib.h"
+#include "example_common/cuda/rend_lib.h"
+#include "example_common/render_state.h"
 
 
 #include "render_params.h"
@@ -80,7 +81,8 @@ __raygen__()
     uint3 launch_dims  = optixGetLaunchDimensions();
     uint3 launch_index = optixGetLaunchIndex();
 
-    auto sbtdata = reinterpret_cast<GenericData*>(optixGetSbtDataPointer());
+    auto sbtdata = reinterpret_cast<testshade::GenericData*>(
+        optixGetSbtDataPointer());
 
     const float invw      = render_params.invw;
     const float invh      = render_params.invh;
@@ -130,7 +132,7 @@ __raygen__()
     sg.backfacing  = 0;
 
     // NB: These variables are not used in the current iteration of the sample
-    sg.raytype        = OSL::Ray::CAMERA;
+    sg.raytype        = 1;  // "camera" is the first default OSL ray type.
     sg.flipHandedness = 0;
 
     sg.shader2common = reinterpret_cast<void*>(render_params.shader2common);

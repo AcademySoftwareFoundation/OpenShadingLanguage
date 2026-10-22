@@ -532,6 +532,8 @@ foreach(batched_target ${BATCHED_TARGET_LIST})
         
 endforeach(batched_target)
 
+configure_file (buildopts.h.in "${CMAKE_CURRENT_BINARY_DIR}/buildopts.h" @ONLY)
+
 add_library (${local_lib} ${lib_src})
 target_include_directories (${local_lib}
     PUBLIC
@@ -539,6 +541,7 @@ target_include_directories (${local_lib}
         ${IMATH_INCLUDES}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
+        "${CMAKE_CURRENT_BINARY_DIR}"
         ${ROBINMAP_INCLUDES}
     )
 

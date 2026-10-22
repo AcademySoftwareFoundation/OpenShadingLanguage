@@ -380,7 +380,24 @@ public:
     /// - `string osl:simd`, `string hw:simd` : A comma-separated list of
     ///   CPU hardware SIMD features. The `osl:simd` is a list of features
     ///   enabled when OSL was built, and `hw:simd` is a list of features
-    ///   detected on the actual hardware at runtime.
+    ///   detected on the actual hardware at runtime. `build:simd` is a
+    ///   synonym for `osl:simd`.
+    ///
+    /// - `string build:compiler` : The compiler used to build OSL (for
+    ///   example, "gcc 11.2" or "Apple clang 17.0").
+    ///
+    /// - `string build:platform` : The OS and CPU architecture OSL was
+    ///   built for (for example, "Linux/x86_64" or "MacOS/ARM").
+    ///
+    /// - `string build:dependencies` : A semicolon-separated list of the
+    ///   dependencies examined when OSL was built, each as "name version",
+    ///   or "name NONE" if it was not found or not enabled.
+    ///
+    /// - `string build:batched`, `string hw:batched` : A comma-separated
+    ///   list of batched SIMD targets (for example, "b8_AVX2,b16_AVX512").
+    ///   The `build:batched` lists all targets that were built into OSL,
+    ///   and `hw:batched` lists only those that the hardware we're running
+    ///   on can execute. Both are empty if batched execution was not built.
     ///
     /// - `string osl:cuda_version` : The version string of the Cuda version
     ///   OSL is using (empty string if no Cuda support was enabled at build

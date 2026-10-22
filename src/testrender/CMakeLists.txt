@@ -3,7 +3,7 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testrender' executable
-set (example_common_dir "${PROJECT_SOURCE_DIR}/src/example_common")
+set (test_common_dir "${PROJECT_SOURCE_DIR}/src/test_common")
 
 set (testrender_srcs
      shading.cpp
@@ -24,16 +24,16 @@ if (OSL_USE_OPTIX)
         )
 
     set (testrender_rend_lib_srcs
-        "${example_common_dir}/cuda/rend_lib.cu"
-        "${example_common_dir}/rs_simplerend.cpp"
+        "${test_common_dir}/cuda/rend_lib.cu"
+        "${test_common_dir}/rs_simplerend.cpp"
         )
 
     # We need to make sure that the PTX files are regenerated whenever these
     # files change.
     set (testrender_cuda_headers
-        "${example_common_dir}/cuda/rend_lib.h"
-        "${example_common_dir}/render_state.h"
-        "${example_common_dir}/rs_strdecls.h"
+        "${test_common_dir}/cuda/rend_lib.h"
+        "${test_common_dir}/render_state.h"
+        "${test_common_dir}/rs_strdecls.h"
         background.h
         optics.h
         render_params.h
@@ -44,9 +44,9 @@ if (OSL_USE_OPTIX)
         simpleraytracer.cpp
         )
     list (APPEND exec_headers
-        "${example_common_dir}/cuda/rend_lib.h"
-        "${example_common_dir}/render_state.h"
-        "${example_common_dir}/rs_strdecls.h")
+        "${test_common_dir}/cuda/rend_lib.h"
+        "${test_common_dir}/render_state.h"
+        "${test_common_dir}/rs_strdecls.h")
 
     # Generate PTX for all of the CUDA files
     foreach (cudasrc ${testrender_cuda_srcs})

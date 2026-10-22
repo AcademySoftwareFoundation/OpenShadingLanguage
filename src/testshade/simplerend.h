@@ -18,7 +18,7 @@
 #    include "batched_simplerend.h"
 #endif
 
-#include "example_common/render_state.h"
+#include "test_common/render_state.h"
 
 OSL_NAMESPACE_BEGIN
 

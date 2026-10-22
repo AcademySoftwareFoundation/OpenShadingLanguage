@@ -7,8 +7,8 @@
 
 #include <optix_device.h>
 
-#include "example_common/cuda/rend_lib.h"
-#include "example_common/render_state.h"
+#include "test_common/cuda/rend_lib.h"
+#include "test_common/render_state.h"
 
 
 #include "render_params.h"

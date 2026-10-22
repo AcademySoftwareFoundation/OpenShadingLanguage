@@ -3,10 +3,10 @@
 # https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
 # The 'testshade' executable
-set (example_common_dir "${PROJECT_SOURCE_DIR}/src/example_common")
+set (test_common_dir "${PROJECT_SOURCE_DIR}/src/test_common")
 list (APPEND exec_headers
-    "${example_common_dir}/render_state.h"
-    "${example_common_dir}/rs_strdecls.h")
+    "${test_common_dir}/render_state.h"
+    "${test_common_dir}/rs_strdecls.h")
 
 set ( testshade_srcs
       testshade.cpp
@@ -27,16 +27,16 @@ if (OSL_USE_OPTIX)
         )
 
     set (testshade_rend_lib_srcs
-        "${example_common_dir}/cuda/rend_lib.cu"
-        "${example_common_dir}/rs_simplerend.cpp"
+        "${test_common_dir}/cuda/rend_lib.cu"
+        "${test_common_dir}/rs_simplerend.cpp"
         )
 
     set ( testshade_cuda_headers
-        "${example_common_dir}/cuda/rend_lib.h"
-        "${example_common_dir}/render_state.h"
-        "${example_common_dir}/rs_strdecls.h"
+        "${test_common_dir}/cuda/rend_lib.h"
+        "${test_common_dir}/render_state.h"
+        "${test_common_dir}/rs_strdecls.h"
         )
-    list (APPEND exec_headers "${example_common_dir}/cuda/rend_lib.h")
+    list (APPEND exec_headers "${test_common_dir}/cuda/rend_lib.h")
 
     # We need to make sure that the PTX files are regenerated whenever these
     # headers change.
@@ -76,7 +76,7 @@ if (OSL_USE_OPTIX)
 endif()
 
 set ( rs_srcs
-    "${example_common_dir}/rs_simplerend.cpp" )
+    "${test_common_dir}/rs_simplerend.cpp" )
 
 set(include_dirs ${CMAKE_CURRENT_SOURCE_DIR})
 list(APPEND include_dirs ${CMAKE_SOURCE_DIR}/src/include)

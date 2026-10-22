@@ -37,7 +37,7 @@
 #    include "optixgridrender.h"
 #endif
 
-#include "example_common/render_state.h"
+#include "test_common/render_state.h"
 #include "simplerend.h"
 
 

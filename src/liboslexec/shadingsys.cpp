@@ -28,6 +28,7 @@
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/timer.h>
 
+#include "buildopts.h"
 #include "opcolor.h"
 
 using namespace OSL;
@@ -1585,11 +1586,109 @@ osl_simd_caps()
     if (OIIO_AVX512CD_ENABLED)   caps.emplace_back ("avx512cd");
     if (OIIO_AVX512BW_ENABLED)   caps.emplace_back ("avx512bw");
     if (OIIO_AVX512VL_ENABLED)   caps.emplace_back ("avx512vl");
+    if (OIIO_SIMD_NEON)          caps.emplace_back ("neon");
     if (OIIO_FMA_ENABLED)        caps.emplace_back ("fma");
     if (OIIO_F16C_ENABLED)       caps.emplace_back ("f16c");
     // if (OIIO_POPCOUNT_ENABLED)   caps.emplace_back ("popcnt");
     return OIIO::Strutil::join (caps, ",");
     // clang-format on
+}
+
+
+
+// Return a string describing the compiler used to build OSL.
+// (Modeled on oiio_build_compiler in OIIO's imageio.cpp.)
+static std::string
+osl_build_compiler()
+{
+#if OSL_INTEL_LLVM_COMPILER_VERSION
+    return fmtformat("Intel icx {}.{}", __clang_major__, __clang_minor__);
+#elif OSL_APPLE_CLANG_VERSION
+    return fmtformat("Apple clang {}.{}", __clang_major__, __clang_minor__);
+#elif OSL_CLANG_VERSION
+    return fmtformat("clang {}.{}", __clang_major__, __clang_minor__);
+#elif OSL_GNUC_VERSION
+    return fmtformat("gcc {}.{}", __GNUC__, __GNUC_MINOR__);
+#elif OSL_MSVS_VERSION
+    return fmtformat("MSVS {}", OSL_MSVS_VERSION);
+#else
+    return "unknown compiler?";
+#endif
+}
+
+
+
+// Return "OS/arch" for the platform OSL was built for.
+// (Modeled on oiio_build_platform in OIIO's imageio.cpp.)
+static std::string
+osl_build_platform()
+{
+    std::string platform;
+#if defined(__linux__)
+    platform = "Linux";
+#elif defined(__APPLE__)
+    platform = "MacOS";
+#elif defined(_WIN32)
+    platform = "Windows";
+#elif defined(__MINGW32__)
+    platform = "MinGW";
+#elif defined(__FreeBSD__)
+    platform = "FreeBSD";
+#else
+    platform = "UnknownOS";
+#endif
+    platform += "/";
+#if defined(__x86_64__) || defined(_M_AMD64)
+    platform += "x86_64";
+#elif defined(__i386__) || defined(_M_IX86)
+    platform += "i386";
+#elif defined(_M_ARM64) || defined(__aarch64__) || defined(__aarch64) \
+    || defined(__ARM_ARCH)
+    platform += "ARM";
+#else
+    platform += "unknown arch?";
+#endif
+    return platform;
+}
+
+
+
+// Return a comma-separated list of the batched SIMD targets that were
+// compiled into OSL (e.g. "b8_AVX2,b16_AVX512"). If hw_only is true, list
+// only the ones that the hardware we're running on can execute.
+static std::string
+osl_batched_targets(bool hw_only)
+{
+    std::vector<string_view> targets;
+    OSL_MAYBE_UNUSED auto add = [&](string_view name, TargetISA isa) {
+        if (!hw_only || LLVM_Util::supports_isa(isa))
+            targets.emplace_back(name);
+    };
+#ifdef __OSL_SUPPORTS_b4_SSE2
+    add("b4_SSE2", TargetISA::x64);
+#endif
+#ifdef __OSL_SUPPORTS_b8_AVX
+    add("b8_AVX", TargetISA::AVX);
+#endif
+#ifdef __OSL_SUPPORTS_b8_AVX2
+    add("b8_AVX2", TargetISA::AVX2);
+#endif
+#ifdef __OSL_SUPPORTS_b8_AVX2_noFMA
+    add("b8_AVX2_noFMA", TargetISA::AVX2_noFMA);
+#endif
+#ifdef __OSL_SUPPORTS_b8_AVX512
+    add("b8_AVX512", TargetISA::AVX512);
+#endif
+#ifdef __OSL_SUPPORTS_b8_AVX512_noFMA
+    add("b8_AVX512_noFMA", TargetISA::AVX512_noFMA);
+#endif
+#ifdef __OSL_SUPPORTS_b16_AVX512
+    add("b16_AVX512", TargetISA::AVX512);
+#endif
+#ifdef __OSL_SUPPORTS_b16_AVX512_noFMA
+    add("b16_AVX512_noFMA", TargetISA::AVX512_noFMA);
+#endif
+    return OIIO::Strutil::join(targets, ",");
 }
 
 
@@ -2086,19 +2185,40 @@ ShadingSystemImpl::getattribute(string_view name, TypeDesc type, void* val)
             == (char*)&colorsystem().colorspace());
         return true;
     }
-    if (name == "osl:simd" && type == TypeDesc::STRING) {
+    if ((name == "osl:simd" || name == "build:simd")
+        && type == TypeDesc::STRING) {
         *(const char**)val = ustring(osl_simd_caps()).c_str();
         return true;
     }
+    if (name == "build:compiler" && type == TypeDesc::STRING) {
+        *(const char**)val = ustring(osl_build_compiler()).c_str();
+        return true;
+    }
+    if (name == "build:platform" && type == TypeDesc::STRING) {
+        *(const char**)val = ustring(osl_build_platform()).c_str();
+        return true;
+    }
+    if (name == "build:dependencies" && type == TypeDesc::STRING) {
+        *(const char**)val = ustring(OSL_ALL_BUILD_DEPS_FOUND).c_str();
+        return true;
+    }
+    if (name == "build:batched" && type == TypeDesc::STRING) {
+        *(const char**)val = ustring(osl_batched_targets(false)).c_str();
+        return true;
+    }
+    if (name == "hw:batched" && type == TypeDesc::STRING) {
+        *(const char**)val = ustring(osl_batched_targets(true)).c_str();
+        return true;
+    }
     if (name == "hw:simd" && type == TypeDesc::STRING) {
-        return OIIO::getattribute("hw:string", type, val);
+        return OIIO::getattribute("hw:simd", type, val);
     }
     if (name == "osl:cuda_version" && type == TypeDesc::STRING) {
-        *(const char**)val = OSL_CUDA_VERSION;
+        *(const char**)val = ustring(OSL_CUDA_VERSION).c_str();
         return true;
     }
     if (name == "osl:optix_version" && type == TypeDesc::STRING) {
-        *(const char**)val = OSL_OPTIX_VERSION;
+        *(const char**)val = ustring(OSL_OPTIX_VERSION).c_str();
         return true;
     }
     if (name == "osl:dependencies" && type == TypeDesc::STRING) {

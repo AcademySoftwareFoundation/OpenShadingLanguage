@@ -696,6 +696,97 @@ print_info()
 
 
 
+// Print the build toolchain, back ends, dependencies, and the hardware
+// we're running on. Almost all of it comes from ShadingSystem attributes.
+static void
+print_build_info()
+{
+    using OIIO::Strutil::fmt::format;
+    int columns        = OIIO::Sysutil::terminal_columns() - 2;
+    auto print_wrapped = [&](const std::string& s) {
+        OIIO::print("{}\n", OIIO::Strutil::wordwrap(s, columns, 4));
+    };
+
+    SimpleRenderer rend;
+    auto texturesys = TextureSystem::create();
+#if OIIO_TEXTURESYSTEM_CREATE_SHARED
+    ShadingSystem ss(&rend, texturesys.get(), &rend.errhandler());
+#else
+    ShadingSystem ss(&rend, texturesys, &rend.errhandler());
+#endif
+    auto ss_string_attr = [&](string_view name) {
+        ustring val;
+        ss.getattribute(name, val);
+        return val.string();
+    };
+
+    std::string platform = ss_string_attr("build:platform");
+    print_wrapped(format("OSL {} | {}", OSL_LIBRARY_VERSION_STRING, platform));
+    print_wrapped(format("    Build compiler: {} | C++{}/{}",
+                         ss_string_attr("build:compiler"), OSL_BUILD_CPP,
+                         __cplusplus));
+    std::string simd = ss_string_attr("build:simd");
+    print_wrapped(format("    HW features enabled at build: {}",
+                         simd.size() ? simd : std::string("no SIMD")));
+
+    // Back ends: the single-point CPU path is always present; batched and
+    // OptiX only if they were enabled when OSL was built.
+    std::vector<std::string> backends;
+    size_t slash = platform.find('/');
+    backends.push_back(format("{} single", slash != std::string::npos
+                                               ? platform.substr(slash + 1)
+                                               : platform));
+    std::string batched    = ss_string_attr("build:batched");
+    std::string hw_batched = ss_string_attr("hw:batched");
+    if (batched.size()) {
+        if (hw_batched == batched)
+            backends.push_back("batched " + batched);
+        else if (hw_batched.empty())
+            backends.push_back(
+                format("batched {} (none usable on this HW)", batched));
+        else
+            backends.push_back(
+                format("batched {} (this HW: {})", batched, hw_batched));
+    }
+    if (ss_string_attr("osl:optix_version").size())
+        backends.push_back("OptiX");
+    print_wrapped("    Back ends: " + OIIO::Strutil::join(backends, ", "));
+
+    // Note if the OIIO we're running with differs from the one we built
+    // against.
+    std::vector<std::string> deps;
+    std::string alldeps      = ss_string_attr("build:dependencies");
+    std::string oiio_runtime = OIIO::get_string_attribute("version");
+    for (auto dep : OIIO::Strutil::splitsv(alldeps, ";")) {
+        std::string d(dep);
+        if (OIIO::Strutil::starts_with(dep, "OpenImageIO ")
+            && oiio_runtime != OIIO_VERSION_STRING)
+            d += format(" (runtime {})", oiio_runtime);
+        deps.push_back(d);
+    }
+    print_wrapped("    Dependencies: " + OIIO::Strutil::join(deps, ", "));
+
+    std::string hw = format("    Running on: {} cores, {:.1f} GB, SIMD {}",
+                            OIIO::Sysutil::hardware_concurrency(),
+                            OIIO::Sysutil::physical_memory() / double(1 << 30),
+                            ss_string_attr("hw:simd"));
+#if OSL_USE_OPTIX
+    int ndevices = 0, driver = 0;
+    if (cudaGetDeviceCount(&ndevices) == cudaSuccess && ndevices > 0) {
+        cudaDeviceProp prop;
+        cudaDriverGetVersion(&driver);
+        if (cudaGetDeviceProperties(&prop, 0) == cudaSuccess)
+            hw += format(", GPU {} (CUDA driver {}.{})", prop.name,
+                         driver / 1000, (driver % 1000) / 10);
+    } else {
+        hw += ", no CUDA device";
+    }
+#endif
+    print_wrapped(hw);
+}
+
+
+
 static void
 getargs(int argc, const char* argv[])
 {
@@ -715,6 +806,9 @@ getargs(int argc, const char* argv[])
       .action([&](cspan<const char*> argv){ stash_shader_arg(argv); });
     ap.arg("-v", &verbose)
       .help("Verbose messages");
+    ap.arg("--buildinfo")
+      .help("Print OSL build information, then exit")
+      .action([&](cspan<const char*>){ print_build_info(); exit(EXIT_SUCCESS); });
     ap.arg("-t %d:NTHREADS", &num_threads)
       .help("Set thread count (default = 0: auto-detect #cores)");
     ap.arg("--optix", &use_optix)

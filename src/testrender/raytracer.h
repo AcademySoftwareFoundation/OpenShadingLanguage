@@ -9,7 +9,6 @@
 
 #include <OpenImageIO/fmath.h>
 
-#include "../testshade/render_state.h"
 #include "optix_compat.h"
 #include "render_params.h"
 #include <OSL/dual_vec.h>
@@ -19,10 +18,6 @@
 #if OSL_USE_OPTIX
 #    include <optix.h>
 #    include <vector_functions.h>  // from CUDA
-#endif
-
-#ifdef __CUDACC__
-#    include "cuda/rend_lib.h"
 #endif
 
 // The primitives don't included the intersection routines, etc., from the

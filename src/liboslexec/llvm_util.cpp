@@ -516,19 +516,21 @@ LLVM_Util::LLVM_Util(const PerThreadInfo& per_thread_info, int debuglevel,
 
 #if OSL_LLVM_VERSION >= 210
     // All opaque pointers now. Eventually, all the typed ones can go away.
-    m_llvm_type_void_ptr       = llvm::PointerType::get(*m_llvm_context, 0);
-    m_llvm_type_int_ptr        = m_llvm_type_void_ptr;
-    m_llvm_type_int8_ptr       = m_llvm_type_void_ptr;
-    m_llvm_type_int64_ptr      = m_llvm_type_void_ptr;
-    m_llvm_type_bool_ptr       = m_llvm_type_void_ptr;
-    m_llvm_type_char_ptr       = m_llvm_type_void_ptr;
-    m_llvm_type_float_ptr      = m_llvm_type_void_ptr;
-    m_llvm_type_longlong_ptr   = m_llvm_type_void_ptr;
-    m_llvm_type_double_ptr     = m_llvm_type_void_ptr;
-    m_llvm_type_triple_ptr     = m_llvm_type_void_ptr;
-    m_llvm_type_matrix_ptr     = m_llvm_type_void_ptr;
-    m_llvm_type_wide_char_ptr  = m_llvm_type_void_ptr;
-    m_llvm_type_wide_void_ptr  = m_llvm_type_void_ptr;
+    m_llvm_type_void_ptr      = llvm::PointerType::get(*m_llvm_context, 0);
+    m_llvm_type_int_ptr       = m_llvm_type_void_ptr;
+    m_llvm_type_int8_ptr      = m_llvm_type_void_ptr;
+    m_llvm_type_int64_ptr     = m_llvm_type_void_ptr;
+    m_llvm_type_bool_ptr      = m_llvm_type_void_ptr;
+    m_llvm_type_char_ptr      = m_llvm_type_void_ptr;
+    m_llvm_type_float_ptr     = m_llvm_type_void_ptr;
+    m_llvm_type_longlong_ptr  = m_llvm_type_void_ptr;
+    m_llvm_type_double_ptr    = m_llvm_type_void_ptr;
+    m_llvm_type_triple_ptr    = m_llvm_type_void_ptr;
+    m_llvm_type_matrix_ptr    = m_llvm_type_void_ptr;
+    m_llvm_type_wide_char_ptr = m_llvm_type_void_ptr;
+    // Not a pointer to a wide type, but a vector of pointers
+    m_llvm_type_wide_void_ptr  = llvm_vector_type(m_llvm_type_void_ptr,
+                                                  m_vector_width);
     m_llvm_type_wide_int_ptr   = m_llvm_type_void_ptr;
     m_llvm_type_wide_bool_ptr  = m_llvm_type_void_ptr;
     m_llvm_type_wide_float_ptr = m_llvm_type_void_ptr;
@@ -1771,7 +1773,11 @@ LLVM_Util::validate_struct_data_layout(
             llvm::raw_os_ostream os_cout(std::cout);
             OSL_DEV_ONLY(et->print(os_cout));
         }
-        OSL_ASSERT(expected_offset_by_index[index] == actual_offset);
+        OSL_ASSERT_MSG(expected_offset_by_index[index] == actual_offset,
+                       "%s element %d: expected offset %u, LLVM offset %u",
+                       structTy->getName().str().c_str(), index,
+                       expected_offset_by_index[index],
+                       unsigned(actual_offset));
         OSL_DEV_ONLY(std::cout << std::endl);
     }
     if (static_cast<int>(expected_offset_by_index.size())

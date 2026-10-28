@@ -58,8 +58,7 @@ static int num_threads         = 0;
 static int iters               = 1;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
-static bool shadingsys_options_set = false;
-static bool use_optix              = OIIO::Strutil::stoi(
+static bool use_optix = OIIO::Strutil::stoi(
     OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
 static bool optix_no_inline             = false;
 static bool optix_no_inline_layer_funcs = false;
@@ -126,8 +125,6 @@ set_shadingsys_options()
     // this is where we would do:
     //      shadingsys->attribute("raytypes", TypeDesc(TypeDesc::STRING, num_raytypes),
     //                           raytype_names);
-
-    shadingsys_options_set = true;
 }
 
 

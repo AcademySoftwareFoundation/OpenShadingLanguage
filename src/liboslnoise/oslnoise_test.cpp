@@ -29,13 +29,27 @@ const float eps         = 0.001;  // Comparison threshold for results
 
 
 
-namespace std {  // hack!
-inline float
-abs(const Vec3& a)
+// Like OIIO_CHECK_EQUAL_THRESH, but for Vec3: passes if no component
+// differs by more than eps. (OIIO_CHECK_EQUAL_THRESH itself needs a
+// std::abs(Vec3), and adding one to namespace std is undefined behavior.)
+static bool
+check_vec3_thresh(const Vec3& x, const Vec3& y, float eps, const char* xstr,
+                  const char* ystr, const char* file, int line)
 {
-    return std::max(std::max(abs(a.x), abs(a.y)), abs(a.z));
+    float diff = std::max(std::max(std::abs(x.x - y.x), std::abs(x.y - y.y)),
+                          std::abs(x.z - y.z));
+    if (diff <= eps)
+        return true;
+    OSL::print("{}:{}:\nFAILED: {} == {}\n"
+               "\tvalues were '({} {} {})' and '({} {} {})', diff was {}\n",
+               file, line, xstr, ystr, x.x, x.y, x.z, y.x, y.y, y.z, diff);
+    return false;
 }
-}  // namespace std
+
+#define CHECK_VEC3_THRESH(x, y, eps)                                \
+    (check_vec3_thresh((x), (y), (eps), #x, #y, __FILE__, __LINE__) \
+         ? ((void)0)                                                \
+         : (void)++unit_test_failures)
 
 
 // Image test for visual check
@@ -165,10 +179,10 @@ test_perlin()
         Vec3 vs4 = vsnoise(p, t);
         // std::cerr << "Vec3" << vs2 << ",";
         // std::cerr << i << " " << vs1 << ' ' << vs2 << ' ' << vs3 << ' ' << vs4 << "\n";
-        OIIO_CHECK_EQUAL_THRESH(vs1, vresults_1d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs2, vresults_2d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs3, vresults_3d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs4, vresults_4d[i], eps);
+        CHECK_VEC3_THRESH(vs1, vresults_1d[i], eps);
+        CHECK_VEC3_THRESH(vs2, vresults_2d[i], eps);
+        CHECK_VEC3_THRESH(vs3, vresults_3d[i], eps);
+        CHECK_VEC3_THRESH(vs4, vresults_4d[i], eps);
     }
 
     // Make sure the right thing happens at integer cell boundaries.
@@ -246,10 +260,10 @@ test_cell()
         Vec3 vs3 = vcellnoise(p);
         Vec3 vs4 = vcellnoise(p, t);
         // std::cerr << "Vec3" << vs4 << ",";
-        OIIO_CHECK_EQUAL_THRESH(vs1, vresults_1d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs2, vresults_2d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs3, vresults_3d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs4, vresults_4d[i], eps);
+        CHECK_VEC3_THRESH(vs1, vresults_1d[i], eps);
+        CHECK_VEC3_THRESH(vs2, vresults_2d[i], eps);
+        CHECK_VEC3_THRESH(vs3, vresults_3d[i], eps);
+        CHECK_VEC3_THRESH(vs4, vresults_4d[i], eps);
     }
 
     // Make sure the right thing happens at integer cell boundaries
@@ -328,10 +342,10 @@ test_hash()
         Vec3 vs3 = vhashnoise(p);
         Vec3 vs4 = vhashnoise(p, t);
         // std::cerr << "Vec3" << vs4 << ",";
-        OIIO_CHECK_EQUAL_THRESH(vs1, vresults_1d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs2, vresults_2d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs3, vresults_3d[i], eps);
-        OIIO_CHECK_EQUAL_THRESH(vs4, vresults_4d[i], eps);
+        CHECK_VEC3_THRESH(vs1, vresults_1d[i], eps);
+        CHECK_VEC3_THRESH(vs2, vresults_2d[i], eps);
+        CHECK_VEC3_THRESH(vs3, vresults_3d[i], eps);
+        CHECK_VEC3_THRESH(vs4, vresults_4d[i], eps);
     }
 
     // Make sure the right thing happens at integer cell boundaries.

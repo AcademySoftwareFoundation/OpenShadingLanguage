@@ -1061,8 +1061,8 @@ public:
 
 private:
     ustring m_s;
-    int m_i;
-    float m_f;
+    int m_i   = 0;
+    float m_f = 0.0f;
 };
 
 

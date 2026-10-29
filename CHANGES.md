@@ -3,7 +3,16 @@
 
 Release 1.15.8.0 (29 Oct 2026) -- compared to 1.15.7.0
 ---------------------------------------------------------
-
+  - *ShadingSystem*: New read-only system `getattribute` queries describing how OSL was built: `build:platform`, `build:compiler`, `build:simd`, `build:dependencies`, `build:batched`, and `hw:batched`. New `testshade --buildinfo` prints them along with the running hardware (mirroring `oiiotool --buildinfo`), and CI shows this in the job summary. [#2186](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2186) (by @lgritz / Larry Gritz)
+  - *batch*: Fix batched shading, which was broken for LLVM 21+ (the wide void pointer type was mistakenly scalar, corrupting the batched ShaderGlobals layout and wide UDIM texture handle loads). CI's bleeding edge job now tests LLVM 23. [#2196](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2196) (by @lgritz / Larry Gritz)
+  - *oslc*: Fix uninitialized .oso default values for `matrix("from", "to")` parameters, which could write "nan" into the .oso and make OSLQuery fail to parse the shader and lose its parameters. [#2199](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2199) (by @ThiagoIze / Thiago Ize)
+  - *optix*: Let LLVM choose the PTX ISA version instead of forcing PTX 5.0, which is invalid for newer targets such as sm_75. [#2166](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2166) (by @tgrant-nv / Tim Grant)
+  - *build*: Sync dependency_utils.cmake with OpenImageIO: more robust locally-built dependencies, per-package build logs, and clearer failure messages. [#2170](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2170) (by @lgritz / Larry Gritz)
+  - *build*: Fix Makefile wrapper to properly quote the test regex for `make test TEST=...`. [#2168](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2168) (by @lgritz / Larry Gritz)
+  - *ci*: Speed up and de-flake Windows CI: cache the LLVM download and retry curl downloads, avoiding Google Drive quota failures [#2187](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2187), and cache the dependencies built from source, cutting job time from ~30 to ~10 minutes [#2188](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2188) (by @lgritz / Larry Gritz)
+  - *ci*: Test OpenImageIO 3.2, OpenEXR 3.5, and OpenColorIO 2.6 in the "latest releases" job. [#2178](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2178) (by @lgritz / Larry Gritz)
+  - *ci*: Retire old CI runners: drop the 2022 CentOS containers, adding a plain Ubuntu job for the oldest dependencies [#2167](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2167), and drop MacOS 14 [#2177](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2177) (by @lgritz / Larry Gritz)
+  - *test*: Stop adding a `std::abs(Vec3)` overload (undefined behavior) in oslnoise_test. [#2194](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2194) (by @lgritz / Larry Gritz)
 
 
 Release 1.15.7.0 (7 Sep 2026) -- compared to 1.15.6.0

@@ -59,20 +59,19 @@ static std::vector<std::string> entrylayers;
 static std::vector<std::string> entryoutputs;
 static std::vector<int> entrylayer_index;
 static std::vector<const ShaderSymbol*> entrylayer_symbols;
-static bool debug1        = false;
-static bool debug2        = false;
-static bool llvm_debug    = false;
-static bool verbose       = false;
-static bool runstats      = false;
-static bool batched       = false;
-static int max_batch_size = -1;
-static int batch_size     = -1;
-static bool vary_Pdxdy    = false;
-static bool vary_udxdy    = false;
-static bool vary_vdxdy    = false;
-static bool saveptx       = false;
-static bool warmup        = false;
-static bool profile       = false;
+static bool debug1     = false;
+static bool debug2     = false;
+static bool llvm_debug = false;
+static bool verbose    = false;
+static bool runstats   = false;
+static bool batched    = false;
+static int batch_size  = -1;
+static bool vary_Pdxdy = false;
+static bool vary_udxdy = false;
+static bool vary_vdxdy = false;
+static bool saveptx    = false;
+static bool warmup     = false;
+static bool profile    = false;
 static bool O0 = false, O1 = false, O2 = false;
 static int llvm_opt              = 1;  // LLVM optimization level
 static bool pixelcenters         = false;
@@ -118,8 +117,7 @@ static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 static ShaderGroupRef shadergroup;
 static std::string archivegroup;
-static int exprcount               = 0;
-static bool shadingsys_options_set = false;
+static int exprcount = 0;
 static float uscale = 1, vscale = 1;
 static float uoffset = 0, voffset = 0;
 static std::vector<const char*> shader_setup_args;
@@ -283,10 +281,6 @@ set_shadingsys_options()
     if (const char* opt_env = getenv("TESTSHADE_BATCHED"))
         batched = atoi(opt_env);
 
-    max_batch_size = 16;
-    if (const char* opt_env = getenv("TESTSHADE_MAX_BATCH_SIZE"))
-        max_batch_size = atoi(opt_env);
-
     batch_size = -1;
     if (const char* opt_env = getenv("TESTSHADE_BATCH_SIZE"))
         batch_size = atoi(opt_env);
@@ -351,8 +345,6 @@ set_shadingsys_options()
         // FIXME: For now, output placement is disabled for OptiX mode
         output_placement = false;
     }
-
-    shadingsys_options_set = true;
 }
 
 

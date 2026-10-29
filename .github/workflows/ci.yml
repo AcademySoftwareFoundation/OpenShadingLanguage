@@ -306,7 +306,7 @@ jobs:
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.15
                             FREETYPE_VERSION=VER-2-14-3
-          - desc: bleeding edge gcc14/C++20 llvm17 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
+          - desc: bleeding edge gcc14/C++20 llvm23 oiio/ocio/exr/pybind-main py3.12 avx2 batch-b16avx512
             nametag: linux-bleeding-edge
             runner: ubuntu-24.04
             cc_compiler: gcc-14
@@ -319,10 +319,10 @@ jobs:
             # pybind11_ver: v3.0.1
             pybind11_ver: master
             python_ver: "3.12"
-            llvm_action_ver: "18.1.7"
             simd: avx2,f16c
             batched: b8_AVX2,b8_AVX512,b16_AVX512
-            setenvs: export PUGIXML_VERSION=master
+            setenvs: export LLVM_APT_VERSION=23
+                            PUGIXML_VERSION=master
                             PTEX_VERSION=v2.4.3
                             PUGIXML_VERSION=v1.15
                             FREETYPE_VERSION=VER-2-14-3

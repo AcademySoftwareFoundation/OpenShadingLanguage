@@ -146,6 +146,36 @@ else
     if [[ "$LLVM_VERSION" != "" ]] ; then
         source src/build-scripts/build_llvm.bash
     fi
+
+    # Install LLVM and clang packages from apt.llvm.org. LLVM_APT_VERSION is
+    # an LLVM major version (gets that series' latest release), or "main" for
+    # the nightly snapshot of LLVM's main branch. (The llvm.org release
+    # tarballs from LLVM 19 on can't be used for this: their static libraries
+    # are LTO bitcode that the system linker can't read.)
+    if [[ "$LLVM_APT_VERSION" != "" ]] ; then
+        codename=$(lsb_release -cs)
+        if [[ "$LLVM_APT_VERSION" == "main" ]] ; then
+            llvm_apt_suite=llvm-toolchain-${codename}
+        else
+            llvm_apt_suite=llvm-toolchain-${codename}-${LLVM_APT_VERSION}
+        fi
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+        echo "deb http://apt.llvm.org/${codename}/ ${llvm_apt_suite} main" \
+            | sudo tee /etc/apt/sources.list.d/llvm.list
+        time sudo apt-get update
+        if [[ "$LLVM_APT_VERSION" == "main" ]] ; then
+            # The snapshot's major version is the highest one available
+            LLVM_APT_VERSION=$(apt-cache search --names-only '^llvm-[0-9]+-dev$' \
+                               | sed -E 's/^llvm-([0-9]+)-dev .*/\1/' | sort -n | tail -1)
+        fi
+        time sudo apt-get install -y llvm-${LLVM_APT_VERSION}-dev \
+            libclang-${LLVM_APT_VERSION}-dev \
+            libclang-cpp${LLVM_APT_VERSION}-dev clang-${LLVM_APT_VERSION}
+        export LLVM_ROOT=/usr/lib/llvm-${LLVM_APT_VERSION}
+        export PATH=${LLVM_ROOT}/bin:$PATH
+        llvm-config --version
+    fi
 fi
 
 if [[ "$CMAKE_VERSION" != "" ]] ; then

@@ -1,6 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.15.8.0 (29 Oct 2026) -- compared to 1.15.7.0
+---------------------------------------------------------
+
+
+
 Release 1.15.7.0 (7 Sep 2026) -- compared to 1.15.6.0
 ---------------------------------------------------------
   - *ShadingSystem*: Query ranked and aggregate post-optimization ShaderGroup compile stats (active_layers, network_depth, texture_ops, noise_ops) through new system `getattribute` keys. [#2147](https://github.com/AcademySoftwareFoundation/OpenShadingLanguage/pull/2147) (1.15.7.0, 1.14.12.0) (by @lgritz / Larry Gritz)

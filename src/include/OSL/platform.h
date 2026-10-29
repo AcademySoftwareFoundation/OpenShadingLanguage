@@ -24,7 +24,7 @@
 
 #include <OSL/oslversion.h>
 
-#if defined(__x86_64__) && !defined(__CUDA_ARCH__)
+#if defined(__x86_64__) && !defined(__CUDA_ARCH__) && !defined(__arm64ec__)
 #   include <x86intrin.h>
 #endif
 
@@ -563,7 +563,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE To bitcast(const From& src) noexcept {
     return dst;
 }
 
-#if defined(__x86_64__) && !defined(__CUDA_ARCH__) && \
+#if defined(__x86_64__) && !defined(__CUDA_ARCH__) && !defined(__arm64ec__) && \
     (defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) \
      || OSL_CLANG_VERSION >= 100000 || OSL_APPLE_CLANG_VERSION >= 130000)
 // On x86/x86_64 for certain compilers we can use Intel CPU intrinsics for

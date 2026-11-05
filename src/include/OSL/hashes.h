@@ -54,7 +54,13 @@ template<size_t V> static constexpr size_t HashConstEval = V;
 
 namespace {  // Scope Hashes variables to just this translation unit
 namespace Hashes {
-#ifdef __CUDA_ARCH__  // TODO: restrict to CUDA version < 11.4, otherwise the contexpr should work
+// nvcc needs the __device__ variables: its device code cannot reference a constexpr host
+// variable of class type (CUDA 13.2 still rejects it). Clang can use the constexpr variables
+// in device code, and it would emit the __device__ ones with external linkage (LLVM 23), which
+// makes llvm-link fail with "symbol multiply defined" when it links the bitcode of several
+// source files. nvcc preprocesses the device code with its host compiler, which defines
+// __clang__ when it is clang, so test for nvcc with __NVCC__.
+#if defined(__CUDA_ARCH__) && defined(__NVCC__)
 #    define STRDECL(str, var_name) \
         __device__ const OSL::ustringhash var_name(OSL::strhash(str));
 #else

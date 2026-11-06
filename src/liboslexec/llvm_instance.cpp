@@ -21,6 +21,8 @@
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
 
+#include <llvm/Target/TargetMachine.h>
+
 #if OSL_USE_OPTIX
 #    include <llvm/Linker/Linker.h>
 #endif
@@ -1976,15 +1978,22 @@ BackendLLVM::prepare_module_for_cuda_jit()
     const int force_inline_thresh = shadingsys().optix_force_inline_thresh();
 
     // Adjust the linkage for the library and group functions:
-    //  * Set external linkage for the library functions to prevent the
-    //    function signatures from being changed by dead arg elimination
-    //    passes. The signatures need to match the shadeops PTX module.
+    //  * Keep library calls compatible with the definitions in the separate
+    //    PTX module. LLVM 23 needs available_externally definitions so dead
+    //    argument elimination cannot replace call arguments with poison based
+    //    on bitcode bodies that are later discarded.
     //
     //  * Set private linkage for the layer functions to help avoid
     //    collisions between layer functions from different ShaderGroups.
     for (llvm::Function& fn : *ll.module()) {
         if (fn.hasFnAttribute("osl-lib-function")) {
+#if OSL_LLVM_VERSION >= 230
+            fn.setLinkage(fn.isDeclaration()
+                              ? llvm::GlobalValue::ExternalLinkage
+                              : llvm::GlobalValue::AvailableExternallyLinkage);
+#else
             fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
+#endif
         }
 #if OSL_LLVM_VERSION >= 180
         else if (fn.getName().starts_with(group().name().c_str()))
@@ -2113,19 +2122,15 @@ BackendLLVM::run()
         ll.module(ll.new_module("llvm_ops"));
 #    if OSL_USE_OPTIX
         if (use_optix()) {
-            // If the module is created from LLVM bitcode, the target and
-            // data layout is inherited from that, but if creating an empty
-            // module like here, have to manually set those, otherwise
-            // compiling will later fail because the NVPTX target is not found.
-            // The target triple and data layout used here are those specified
-            // for NVPTX (https://www.llvm.org/docs/NVPTXUsage.html#triples).
-            ll.module()->setDataLayout(
-                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+            // An empty module needs an explicit NVPTX triple and data layout.
+            // Set the triple before asking the target machine for its layout.
 #        if OSL_LLVM_VERSION < 210
             ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
 #        else
             ll.module()->setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
 #        endif
+            ll.module()->setDataLayout(
+                ll.nvptx_target_machine()->createDataLayout());
         }
 #    endif
 #else
@@ -2178,6 +2183,16 @@ BackendLLVM::run()
             }
 
         } else {
+            // Give every module the same layout before linking. The target
+            // machine needs the destination module's triple first.
+#    if OSL_LLVM_VERSION < 210
+            ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
+#    else
+            ll.module()->setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
+#    endif
+            const llvm::DataLayout nvptx_layout
+                = ll.nvptx_target_machine()->createDataLayout();
+            ll.module()->setDataLayout(nvptx_layout);
 #    ifdef OSL_LLVM_CUDA_BITCODE
             llvm::Module* shadeops_module = ll.module_from_bitcode(
                 (char*)shadeops_cuda_llvm_compiled_ops_block,
@@ -2188,8 +2203,7 @@ BackendLLVM::run()
                     "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
                     err);
 
-            shadeops_module->setDataLayout(
-                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+            shadeops_module->setDataLayout(nvptx_layout);
 #        if OSL_LLVM_VERSION < 210
             shadeops_module->setTargetTriple("nvptx64-nvidia-cuda");
 #        else
@@ -2220,8 +2234,7 @@ BackendLLVM::run()
                         "llvm::parseBitcodeFile returned '{}' for cuda llvm_ops\n",
                         err);
 
-                rend_lib_module->setDataLayout(
-                    "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
+                rend_lib_module->setDataLayout(nvptx_layout);
 #        if OSL_LLVM_VERSION < 210
                 rend_lib_module->setTargetTriple("nvptx64-nvidia-cuda");
 #        else
@@ -2240,17 +2253,6 @@ BackendLLVM::run()
 #    else
             OSL_ASSERT(0 && "Must generate LLVM CUDA bitcode for OptiX");
 #    endif
-            // Ensure that the correct target triple and data layout are set when targeting NVPTX.
-            // The triple is empty with recent versions of LLVM (e.g., 15) for reasons that aren't
-            // clear. So we must set them to the expected values.
-            // See: https://llvm.org/docs/NVPTXUsage.html
-#    if OSL_LLVM_VERSION < 210
-            ll.module()->setTargetTriple("nvptx64-nvidia-cuda");
-#    else
-            ll.module()->setTargetTriple(llvm::Triple("nvptx64-nvidia-cuda"));
-#    endif
-            ll.module()->setDataLayout(
-                "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-i128:128:128-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64");
 
             // Tag each function as an OSL library function to help with
             // inlining and optimization after codegen.

@@ -1978,15 +1978,22 @@ BackendLLVM::prepare_module_for_cuda_jit()
     const int force_inline_thresh = shadingsys().optix_force_inline_thresh();
 
     // Adjust the linkage for the library and group functions:
-    //  * Set external linkage for the library functions to prevent the
-    //    function signatures from being changed by dead arg elimination
-    //    passes. The signatures need to match the shadeops PTX module.
+    //  * Keep library calls compatible with the definitions in the separate
+    //    PTX module. LLVM 23 needs available_externally definitions so dead
+    //    argument elimination cannot replace call arguments with poison based
+    //    on bitcode bodies that are later discarded.
     //
     //  * Set private linkage for the layer functions to help avoid
     //    collisions between layer functions from different ShaderGroups.
     for (llvm::Function& fn : *ll.module()) {
         if (fn.hasFnAttribute("osl-lib-function")) {
+#if OSL_LLVM_VERSION >= 230
+            fn.setLinkage(fn.isDeclaration()
+                              ? llvm::GlobalValue::ExternalLinkage
+                              : llvm::GlobalValue::AvailableExternallyLinkage);
+#else
             fn.setLinkage(llvm::GlobalValue::ExternalLinkage);
+#endif
         }
 #if OSL_LLVM_VERSION >= 180
         else if (fn.getName().starts_with(group().name().c_str()))

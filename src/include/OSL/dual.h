@@ -1010,8 +1010,8 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> fast_atan(const Dual<T,P> &a)
     return dualfunc (a, f, df);
 }
 
-// f(x,y) = atan2(y,x); f'(x) =  y x' / (x^2 + y^2),
-//                      f'(y) = -x y' / (x^2 + y^2)
+// f(x,y) = atan2(y,x); f'(x) = -y / (x^2 + y^2),
+//                      f'(y) =  x / (x^2 + y^2)
 // reference:  http://en.wikipedia.org/wiki/Atan2
 // (above link has other formulations)
 template<class T, int P>
@@ -1019,7 +1019,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> atan2 (const Dual<T,P> &y, const Dual<T
 {
     T atan2xy = std::atan2 (y.val(), x.val());
     T denom = (x.val() == T(0) && y.val() == T(0)) ? T(0) : T(1) / (x.val()*x.val() + y.val()*y.val());
-    return dualfunc (y, x, atan2xy, -x.val()*denom, y.val()*denom);
+    return dualfunc (y, x, atan2xy, x.val()*denom, -y.val()*denom);
 }
 
 template<class T, int P>
@@ -1027,7 +1027,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> fast_atan2(const Dual<T,P> &y, const Du
 {
     T atan2xy = OIIO::fast_atan2(y.val(), x.val());
     T denom = (x.val() == 0 && y.val() == 0) ? 0.0f : 1.0f / (x.val() * x.val() + y.val() * y.val());
-    return dualfunc (y, x, atan2xy, -x.val()*denom, y.val()*denom);
+    return dualfunc (y, x, atan2xy, x.val()*denom, -y.val()*denom);
 }
 
 // f(x) = log(a), f'(x) = 1/x
